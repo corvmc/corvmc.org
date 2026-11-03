@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, eq, isNull, isNotNull, gt, gte, lt, or } from 'drizzle-orm';
+import { and, eq, isNull, isNotNull, gt, gte, lt, or } from 'drizzle-orm';
 import { buildDateInTz } from '$lib/server/reservation/timezone';
 import {
 	createTemporaryUser,
@@ -10,6 +10,7 @@ import {
 	listLockUsers,
 	getLockUser,
 	queryDeviceHealth,
+	UtecRateLimitedError,
 	generateLockCode,
 	lockDateTime,
 	LOCK_GRACE_MINUTES,
@@ -195,11 +196,9 @@ async function notifyStaffLockOffline(health: LockDeviceHealth): Promise<void> {
  * the lock is reachable or not, so an `add` succeeding says nothing. Only
  * `sync_status` on the user itself says the code is on the device — that is
  * what `lockSyncedAt` records, and what the member-facing surfaces key on.
+ * `list` carries it on every row, so one call answers for every booking.
  */
-async function reconcileSyncState(
-	errors: string[],
-	upcoming?: { now: Date; limit: number }
-): Promise<number> {
+async function reconcileSyncState(errors: string[], upcoming?: { now: Date }): Promise<number> {
 	let count = 0;
 
 	const outstanding = and(
@@ -207,27 +206,27 @@ async function reconcileSyncState(
 		isNotNull(reservation.lockAccessId),
 		isNull(reservation.lockSyncedAt)
 	);
-	const select = db
+	const rows = await db
 		.select({ id: reservation.id, lockAccessId: reservation.lockAccessId })
-		.from(reservation);
-	const rows = upcoming
-		? await select
-				.where(
-					and(
+		.from(reservation)
+		.where(
+			upcoming
+				? and(
 						outstanding,
 						lt(reservation.startsAt, provisioningWindow(upcoming.now).end),
 						gt(reservation.endsAt, upcoming.now)
 					)
-				)
-				.orderBy(asc(reservation.startsAt))
-				.limit(upcoming.limit)
-		: await select.where(outstanding);
+				: outstanding
+		);
+	if (rows.length === 0) return 0;
+
+	const synced = new Set(
+		(await listLockUsers()).filter((u) => u.syncStatus === 1).map((u) => String(u.id))
+	);
 
 	for (const row of rows) {
+		if (!synced.has(String(row.lockAccessId))) continue;
 		try {
-			const detail = await getLockUser(Number(row.lockAccessId));
-			if (detail?.syncStatus !== 1) continue;
-
 			await db
 				.update(reservation)
 				.set({ lockSyncedAt: new Date(), updatedAt: new Date() })
@@ -243,25 +242,33 @@ async function reconcileSyncState(
 	return count;
 }
 
-/**
- * U-tec reads per 15-minute pass. Soonest-first, so a cap that bites defers the
- * bookings with the most time to spare; the daily pass stays unbounded.
- */
-export const UPCOMING_SYNC_CAP = 25;
+/** What one 15-minute pass did, and why it made no U-tec reads if it did not. */
+export interface UpcomingSyncResult {
+	confirmed: number;
+	errors: string[];
+	skipped?: 'lock-offline' | 'rate-limited';
+}
 
 /**
  * The 15-minute pass of `reconcileSyncState`: only bookings inside the
  * confirmation window that have not ended. `door_code_ready` keys on the
  * `lockSyncedAt` this stamps. Never throws, so it cannot fail its batch.
+ *
+ * An offline lock or a U-tec cooldown is a skip, not an error: nothing can
+ * sync, and the daily lock-access run is the one that alerts on an outage.
  */
-export async function reconcileUpcomingSync(
-	now = new Date()
-): Promise<{ confirmed: number; errors: string[] }> {
+export async function reconcileUpcomingSync(now = new Date()): Promise<UpcomingSyncResult> {
 	const errors: string[] = [];
 	try {
-		const confirmed = await reconcileSyncState(errors, { now, limit: UPCOMING_SYNC_CAP });
+		if (!(await queryDeviceHealth()).online) {
+			return { confirmed: 0, errors, skipped: 'lock-offline' };
+		}
+		const confirmed = await reconcileSyncState(errors, { now });
 		return { confirmed, errors };
 	} catch (err) {
+		if (err instanceof UtecRateLimitedError) {
+			return { confirmed: 0, errors, skipped: 'rate-limited' };
+		}
 		const msg = `Sync reconciliation failed: ${(err as Error).message}`;
 		console.error(msg);
 		return { confirmed: 0, errors: [...errors, msg] };
