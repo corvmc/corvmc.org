@@ -75,6 +75,32 @@ test('a search typed before hydration still reaches ?q=', async ({ page }) => {
 	await expect(page.locator('input[name="q"]')).toHaveValue('sprockets');
 });
 
+/**
+ * Focus lands on the server-rendered input, then hydration finishes. The input
+ * must still hold focus, or the next keystrokes go to the body — the wiped
+ * search in #2224. The `value` attribute is the marker: Svelte strips it once
+ * the binding has hydrated, so typing only starts after hydration.
+ */
+test('focus given before hydration survives it', async ({ page }) => {
+	let held = 0;
+	await page.route('**/_app/immutable/entry/*.js', async (route) => {
+		held++;
+		await new Promise((r) => setTimeout(r, 1500));
+		await route.continue();
+	});
+
+	await page.goto('/directory', { waitUntil: 'commit' });
+	const search = page.locator('input[name="q"]');
+	await search.focus();
+	await expect(search).not.toHaveAttribute('value');
+	expect(held, 'the entry chunk was never intercepted, so nothing was delayed').toBeGreaterThan(0);
+
+	await expect(search).toBeFocused();
+	await page.keyboard.type('sprockets');
+	await expect(search).toHaveValue('sprockets');
+	await expect(page).toHaveURL(/[?&]q=sprockets/);
+});
+
 test('the search survives a tab switch', async ({ page }) => {
 	await page.goto('/directory');
 

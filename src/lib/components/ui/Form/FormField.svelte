@@ -241,16 +241,7 @@
 	});
 </script>
 
-<!-- `<div class="fieldset">` for a single control: daisyUI 5 styles `.fieldset`
-     and `.fieldset-legend` by class with an explicit `display`, so the element
-     swap is invisible, and a one-control `<fieldset>` announces a group that
-     isn't one. -->
-<svelte:element
-	this={labelsOneControl ? 'div' : 'fieldset'}
-	class="fieldset {className}"
-	oninput={() => form?.changed()}
-	onchange={() => form?.changed()}
->
+{#snippet body()}
 	<svelte:element
 		this={labelsOneControl ? 'label' : 'legend'}
 		class="fieldset-legend"
@@ -409,4 +400,28 @@
 	{:else}
 		<input class="input w-full" class:ghost={readonly} {...rest} {...inputProps} bind:value />
 	{/if}
-</svelte:element>
+{/snippet}
+
+<!-- `<div class="fieldset">` for a single control: daisyUI 5 styles `.fieldset`
+     and `.fieldset-legend` by class with an explicit `display`, so the element
+     swap is invisible, and a one-control `<fieldset>` announces a group that
+     isn't one. Two literal branches, not `<svelte:element>`: hydrating that inside
+     an async-gated block re-inserts the server-rendered node, which blurs a
+     focused input, so the visitor's next keystrokes land nowhere (#2224). -->
+{#if labelsOneControl}
+	<div
+		class="fieldset {className}"
+		oninput={() => form?.changed()}
+		onchange={() => form?.changed()}
+	>
+		{@render body()}
+	</div>
+{:else}
+	<fieldset
+		class="fieldset {className}"
+		oninput={() => form?.changed()}
+		onchange={() => form?.changed()}
+	>
+		{@render body()}
+	</fieldset>
+{/if}
