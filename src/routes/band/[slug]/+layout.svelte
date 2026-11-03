@@ -24,7 +24,7 @@
 	import { navTrail } from '$lib/components/layout/nav-trail';
 	import { setBreadcrumbTrail } from '$lib/components/ui/breadcrumbs';
 	import { page } from '$app/state';
-	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { getBandLayout, requireBandLayoutSession } from '$lib/remote/layout.remote';
 	import { setBandLayoutContext } from './layout-context';
 	import {
 		activeBandNavKey,
@@ -52,6 +52,15 @@
 		}
 	});
 
+	// The sign-in gate first, then the data (#2197): kit 3 gives a query no page, so the gate takes it
+	// as an argument, and the data query stays unkeyed so a mutation's `.refresh()` finds it.
+	// Serial, not beside it — two queries in flight at once is the kit ≥2.65 render loop.
+	// Runs once per mount: a slug change inside the panel falls back to `getBandLayout`'s own
+	// forward, which drops the subpage.
+	await requireBandLayoutSession({
+		slug: page.params.slug!,
+		path: page.url.pathname + page.url.search
+	});
 	let layout = $derived(await getBandLayout(page.params.slug!));
 
 	// The gating itself lives in `nav-items.ts` as data, so it can be asserted

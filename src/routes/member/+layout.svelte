@@ -22,7 +22,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
 	import { EntityViewer } from '$lib/components/ui/entity';
-	import { getMemberLayout } from '$lib/remote/layout.remote';
+	import { getMemberLayout, requireLayoutSession } from '$lib/remote/layout.remote';
 	import { setMemberLayoutContext } from './layout-context';
 	import { panelTabs } from '$lib/components/layout/panel-tabs';
 	import { navTrail } from '$lib/components/layout/nav-trail';
@@ -66,6 +66,10 @@
 		}
 	});
 
+	// The sign-in gate first, then the data (#2197): kit 3 gives a query no page, so the gate takes it
+	// as an argument, and the data query stays unkeyed so a mutation's `.refresh()` finds it.
+	// Serial, not beside it — two queries in flight at once is the kit ≥2.65 render loop.
+	await requireLayoutSession(page.url.pathname + page.url.search);
 	let layout = $derived(await getMemberLayout());
 
 	const panels = $derived(panelTabs(layout));
