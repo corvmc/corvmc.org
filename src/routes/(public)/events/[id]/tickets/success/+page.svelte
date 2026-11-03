@@ -69,11 +69,13 @@
 			     Stripe webhook). Free claims send nothing, so don't promise one. -->
 			<p class="text-muted">
 				{#if isFreeClaim}
-					Save the {data.tickets.length > 1 ? 'codes' : 'code'} below — that's your confirmation. No email
-					is sent for free tickets.
+					{m.public_events_id_tickets_success_save_codes_below_s_confirma({
+						count: data.tickets.length
+					})}
 				{:else}
-					A confirmation email and receipt will be sent to {data.tickets[0]?.attendeeEmail ??
-						'your email'}.
+					{m.public_events_id_tickets_success_confirmation_email_receipt({
+						value: data.tickets[0]?.attendeeEmail ?? m.public_events_id_tickets_success_email()
+					})}
 				{/if}
 			</p>
 		</CardBody>

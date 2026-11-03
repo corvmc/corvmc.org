@@ -27,8 +27,7 @@
 
 {#if sale.status === 'paid'}
 	<Alert type="success">
-		Paid. {sale.quantity}
-		{sale.quantity === 1 ? 'ticket' : 'tickets'} checked in. Let them in.
+		{m.member_volunteer_door_door_sale_status_paid_tickets_checked({ quantity: sale.quantity })}
 	</Alert>
 {:else if sale.status === 'cancelled'}
 	<Alert type="warning">{m.member_volunteer_door_door_sale_status_sale_was_cancelled_no()}</Alert>

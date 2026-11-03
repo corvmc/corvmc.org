@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * Theme and CSS, as one control.
 	 *
@@ -142,8 +143,12 @@
 
 			<p class="mt-1 text-xs opacity-60">
 				{#if forked}
-					Wrapped in <code>.band-site-container</code>, so a bare selector like <code>h1</code> only ever
-					affects your page. Max 50KB; external stylesheets and scripts are stripped.
+					<ParaglideMessage
+						message={m.band_slug_page_editor_style_panel_wrapped_band_site_containe}
+						inputs={{}}
+						>{#snippet code({ children })}<code>{@render children?.()}</code
+							>{/snippet}</ParaglideMessage
+					>
 				{:else}
 					{m.band_slug_page_editor_style_panel_read_only_customize_take_t()}
 				{/if}

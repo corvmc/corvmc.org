@@ -98,8 +98,14 @@
 
 	{#if s.mergedIntoId}
 		<Alert type="info" href={resolve(`/member/suggestions/${s.mergedIntoId}`)}>
-			Merged into <span class="font-medium">{s.mergedIntoTitle ?? 'another suggestion'}</span> — the votes
-			moved across.
+			<ParaglideMessage
+				message={m.member_suggestions_id_merged_into_votes_moved_across}
+				inputs={{
+					mergedIntoTitle: s.mergedIntoTitle ?? m.member_suggestions_id_another_suggestion()
+				}}
+				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+					>{/snippet}</ParaglideMessage
+			>
 		</Alert>
 	{:else if s.visibility !== 'visible'}
 		<Alert type={s.visibility === 'hidden' ? 'error' : 'warning'}>
@@ -175,7 +181,10 @@
 				</Badge>
 				<p class="whitespace-pre-wrap">{s.body}</p>
 				<div class="text-muted">
-					Suggested by {s.authorName ?? 'a former member'} · {formatDateTime(s.createdAt)}
+					{m.member_suggestions_id_suggested_by({
+						authorName: s.authorName ?? m.member_suggestions_id_former_member(),
+						formatDateTime: formatDateTime(s.createdAt)
+					})}
 					{#if s.editedAt}
 						{m.member_suggestions_id_edited({ formatDateTime: formatDateTime(s.editedAt) })}
 					{/if}

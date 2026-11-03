@@ -35,8 +35,10 @@
 			<span class="font-semibold">{invite.name}</span>
 			<p class="text-subtle">
 				{#if kindLabel}{kindLabel} ·
-				{/if}{invite.invitedByName ?? 'Someone'} invited you as
-				{invite.role}
+				{/if}{m.groups_email_invite_card_invited_as({
+					invitedByName: invite.invitedByName ?? m.groups_email_invite_card_someone(),
+					role: invite.role
+				})}
 			</p>
 			<p class="text-muted text-sm">
 				{#if invite.expired}{m.groups_email_invite_card_invitation_expired_ask_them_send({

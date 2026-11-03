@@ -62,9 +62,16 @@
 
 		{#if sale.onSale}
 			<p class="text-muted">
-				{sale.sold} sold{sale.quantity ? ` of ${sale.quantity}` : ''}, suggested {formatCents(
-					sale.priceCents ?? 0
-				)}. Cancelling the gig refunds every buyer.
+				{sale.quantity
+					? m.band_slug_events_event_id_ticket_sale_card_sold_of({
+							sold: sale.sold,
+							quantity: sale.quantity,
+							price: formatCents(sale.priceCents ?? 0)
+						})
+					: m.band_slug_events_event_id_ticket_sale_card_sold({
+							sold: sale.sold,
+							price: formatCents(sale.priceCents ?? 0)
+						})}
 			</p>
 		{:else}
 			<p class="text-muted">

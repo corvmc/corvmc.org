@@ -232,8 +232,7 @@
 										length2: history.length
 									})}
 								{:else}
-									{history.length}
-									{history.length === 1 ? 'reservation' : 'reservations'}, newest first.
+									{m.member_reservations_reservations_newest_first({ length: history.length })}
 								{/if}
 							</p>
 						{/if}

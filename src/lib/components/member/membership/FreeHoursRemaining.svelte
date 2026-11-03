@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { formatDate } from '$lib/utils/format';
 	import { creditsToHours } from '$lib/config';
 	import { getMembershipStatus } from '$lib/remote/reservations.remote';
@@ -23,9 +24,15 @@
 			{@const hoursRemaining = creditsToHours(membership.freeHoursBalance)}
 			<div class="flex items-center gap-2">
 				<IconClock size={18} class={hasHours ? 'text-success' : 'opacity-40'} />
-				<span class={hasHours ? 'font-medium' : 'font-medium opacity-40'}>{hoursRemaining}</span>
-				<span class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}"
-					>free {hoursRemaining === 1 ? 'hour' : 'hours'} remaining</span
+				<ParaglideMessage
+					message={m.member_membership_free_hours_remaining_free_hours_remaining}
+					inputs={{ hoursRemaining }}
+					>{#snippet span({ children })}<span
+							class={hasHours ? 'font-medium' : 'font-medium opacity-40'}
+							>{@render children?.()}</span
+						>{/snippet}{#snippet span2({ children })}<span
+							class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}">{@render children?.()}</span
+						>{/snippet}</ParaglideMessage
 				>
 			</div>
 			{#if membership.creditsResetAt}

@@ -243,8 +243,9 @@
 					{/if}
 					{#if !open}
 						<ReopenAction action={reopen} id={job.id} capability="contractor.reopen">
-							Back to {job.scheduledFor ? 'booked' : 'asked'}. Ledger entries stay; completing it
-							again books only the difference.
+							{(job.scheduledFor
+								? m.contractor_engagement_card_back_booked_ledger_entries_stay
+								: m.contractor_engagement_card_back_asked_ledger_entries_stay)()}
 						</ReopenAction>
 					{/if}
 				</div>

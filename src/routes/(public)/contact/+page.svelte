@@ -152,7 +152,8 @@
 		<div class="space-y-6">
 			<div>
 				<h3 class="mb-2 flex items-center gap-2 font-semibold">
-					<span class="text-cmc-teal"><IconMapPin size={18} /></span> Visit Us
+					<span class="text-cmc-teal"><IconMapPin size={18} /></span>
+					{m.public_contact_visit_us()}
 				</h3>
 				<p class="text-muted">
 					{address.street}<br />
@@ -165,7 +166,8 @@
 
 			<div>
 				<h3 class="mb-2 flex items-center gap-2 font-semibold">
-					<span class="text-cmc-teal"><IconMail size={18} /></span> Email
+					<span class="text-cmc-teal"><IconMail size={18} /></span>
+					{m.public_contact_email_heading()}
 				</h3>
 				<a href="mailto:info@corvmc.org" class="link text-sm"
 					>{m.public_contact_info_corvmc_org()}</a
@@ -182,7 +184,7 @@
 						<div class="collapse-content text-muted">
 							<ParaglideMessage
 								message={m.public_contact_get_started_free_memberships_available}
-								inputs={{ public_contact_create_account: m.public_contact_create_account() }}
+								inputs={{}}
 								>{#snippet a({ children })}<a
 										href={signInHref({ register: true, returnTo: '/member' })}
 										class="link">{@render children?.()}</a
@@ -203,11 +205,7 @@
 							>{m.public_contact_how_do_i_submit_music()}</summary
 						>
 						<div class="collapse-content text-muted">
-							<ParaglideMessage
-								message={m.public_contact_all_ages_all_genres_if}
-								inputs={{
-									public_contact_booking_corvmc_org: m.public_contact_booking_corvmc_org()
-								}}
+							<ParaglideMessage message={m.public_contact_all_ages_all_genres_if} inputs={{}}
 								>{#snippet a({ children })}<a href="mailto:booking@corvmc.org" class="link"
 										>{@render children?.()}</a
 									>{/snippet}</ParaglideMessage

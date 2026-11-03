@@ -15,8 +15,10 @@
 	"ballot_ballot_detail_cancel_ballot_2": "Cancel this ballot",
 	"ballot_ballot_detail_cancelling_final_no_result_ever": "Cancelling is final. No result is ever shown for a cancelled ballot, including votes already cast.",
 	"ballot_ballot_detail_cast_my_vote": "Cast my vote",
+	"ballot_ballot_detail_certified_by": "Certified by {value} on {formatDateShortYear}.",
 	"ballot_ballot_detail_certified_result": "Certified result",
 	"ballot_ballot_detail_certifier": "Certifier",
+	"ballot_ballot_detail_certifier_2": "the certifier",
 	"ballot_ballot_detail_certifier_changed": "Certifier changed",
 	"ballot_ballot_detail_certify": "Certify",
 	"ballot_ballot_detail_certify_result": "Certify the result",
@@ -28,6 +30,8 @@
 	"ballot_ballot_detail_choice": "Your choice",
 	"ballot_ballot_detail_choice_2": "Choice",
 	"ballot_ballot_detail_choices": "Choices",
+	"ballot_ballot_detail_closed_certify": "Voting has closed. You are the certifier: check the result below and certify it.",
+	"ballot_ballot_detail_closed_waiting": "Voting has closed. The result is waiting for {name} to certify it.",
 	"ballot_ballot_detail_closes": "Closes",
 	"ballot_ballot_detail_committee": "Committee",
 	"ballot_ballot_detail_details": "Details",
@@ -42,6 +46,16 @@
 	"ballot_ballot_detail_only_committee_can_own_project": "Only a committee can own a project. Leave blank to decide later.",
 	"ballot_ballot_detail_open": "Open",
 	"ballot_ballot_detail_open_voting": "Open voting",
+	"ballot_ballot_detail_opening_freezes_roll_people_can": [
+		{
+			"declarations": ["input value", "input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Opening freezes the roll: {value} person can vote, and nobody can be added by joining, reaching the membership age or finishing orientation later. The question and choices can no longer be edited, and everyone on the roll is notified.",
+				"countPlural=*": "Opening freezes the roll: {value} people can vote, and nobody can be added by joining, reaching the membership age or finishing orientation later. The question and choices can no longer be edited, and everyone on the roll is notified."
+			}
+		}
+	],
 	"ballot_ballot_detail_outcome": "Outcome",
 	"ballot_ballot_detail_outcome_recorded": "Outcome recorded",
 	"ballot_ballot_detail_override": "Override",
@@ -50,6 +64,8 @@
 	"ballot_ballot_detail_passed_authorises_work": "Passed: it authorises the work",
 	"ballot_ballot_detail_placeholder": "Choose one",
 	"ballot_ballot_detail_project": "Project",
+	"ballot_ballot_detail_project_linked_ballot": "The project is linked to this ballot.",
+	"ballot_ballot_detail_project_linked_ballot_suggestion_decide": "The project is linked to this ballot and to the suggestion it decided, which moves to Planned with it.",
 	"ballot_ballot_detail_project_name": "Project name",
 	"ballot_ballot_detail_project_started": "Project started",
 	"ballot_ballot_detail_put_member_roll_rule_leaves": "Put a member on the roll the rule leaves off, or take someone off it. Each change is recorded in the audit log with its reason. Nobody who has already voted can be taken off.",
@@ -163,6 +179,8 @@
 	"classified_post_fields_title": "Title",
 	"classified_post_fields_wanted_offered_trade": "Wanted, offered or trade",
 	"contractor_engagement_card_also_marks_work_order_done": "This also marks the work order done.",
+	"contractor_engagement_card_back_asked_ledger_entries_stay": "Back to asked. Ledger entries stay; completing it again books only the difference.",
+	"contractor_engagement_card_back_booked_ledger_entries_stay": "Back to booked. Ledger entries stay; completing it again books only the difference.",
 	"contractor_engagement_card_basis": "Basis",
 	"contractor_engagement_card_basis_value": "Basis for that value",
 	"contractor_engagement_card_book": "Book",
@@ -404,6 +422,21 @@
 	"events_ticket_purchase_fields_reset_suggested": "Reset to suggested",
 	"events_ticket_purchase_fields_suggested_ticket_minimum": "Suggested {formatCents} a ticket, {formatCents2} minimum.",
 	"events_ticket_purchase_fields_suggested_ticket_pay_what_can": "Suggested {formatCents} a ticket — pay what you can, from $0.",
+	"events_ticket_purchase_fields_tickets": [
+		{
+			"declarations": [
+				"input quantity",
+				"input formatCents",
+				"input formatCents2",
+				"local quantityPlural = quantity: plural"
+			],
+			"selectors": ["quantityPlural"],
+			"match": {
+				"quantityPlural=one": "{#span}{quantity} × {formatCents} ticket{/span} {#span2}{formatCents2}{/span2}",
+				"quantityPlural=*": "{#span}{quantity} × {formatCents} tickets{/span} {#span2}{formatCents2}{/span2}"
+			}
+		}
+	],
 	"events_ticket_purchase_fields_total": "Total",
 	"events_ticket_purchase_fields_value_label": "The Collective",
 	"events_ticket_purchase_fields_where_should_go": "Where should it go?",
@@ -533,7 +566,9 @@
 	"groups_edit_session_optional_replaces_current_one": "Optional. Replaces the current one.",
 	"groups_edit_session_success_toast": "Session updated",
 	"groups_email_invite_card_invitation_expired_ask_them_send": "This invitation expired on {formatDate}. Ask them to send a new one.",
+	"groups_email_invite_card_invited_as": "{invitedByName} invited you as {role}",
 	"groups_email_invite_card_link_email_works_until": "The link is in your email, and works until {formatDate}.",
+	"groups_email_invite_card_someone": "Someone",
 	"groups_ends": "Ends",
 	"groups_every_month": "Every month",
 	"groups_every_other_week": "Every other week",
@@ -649,8 +684,23 @@
 	"groups_staff_group_detail_joined": "Joined",
 	"groups_staff_group_detail_make_chair": "Make chair",
 	"groups_staff_group_detail_make_chair_2": "Make {title} a chair",
+	"groups_staff_group_detail_members_since": [
+		{
+			"declarations": [
+				"input memberCount",
+				"input formatDateShortYear",
+				"local memberCountPlural = memberCount: plural"
+			],
+			"selectors": ["memberCountPlural"],
+			"match": {
+				"memberCountPlural=one": "{memberCount} member · since {formatDateShortYear}",
+				"memberCountPlural=*": "{memberCount} members · since {formatDateShortYear}"
+			}
+		}
+	],
 	"groups_staff_group_detail_no_chairs": "No chairs",
 	"groups_staff_group_detail_no_recorded_changes": "No recorded changes",
+	"groups_staff_group_detail_not_listed_publicly_set_visibility": "Not listed publicly. Set visibility to Public above and it appears at {#code}/groups/{slug}{/code}.",
 	"groups_staff_group_detail_person_label": "Member",
 	"groups_staff_group_detail_public_page": "Public page",
 	"groups_staff_group_detail_reactivate": "Reactivate",
@@ -705,7 +755,9 @@
 	"inbox_enquiry_thread_enquiry_closed": "Enquiry closed",
 	"inbox_enquiry_thread_enquiry_reopened": "Enquiry reopened",
 	"inbox_enquiry_thread_reopen": "Reopen",
+	"inbox_enquiry_thread_reply_goes_as_email_from": "Your reply goes to {contactName} as an email from {bandName}. They never see your address, and you never see theirs — their answer comes back here.",
 	"inbox_enquiry_thread_subtitle": "Sent through your public booking form",
+	"inbox_enquiry_thread_them": "them",
 	"inbox_enquiry_thread_title": "Booking enquiry",
 	"inbox_group_chat_empty_everyone_reads": "{topicName} is empty. Everyone in {groupName} reads it.",
 	"inbox_group_chat_s_own_thread_everyone_group": "This is {groupName}'s own thread — everyone in the group reads it. Say something.",
@@ -752,11 +804,13 @@
 	"inbox_thread_timeline_no_messages_conversation_yet": "No messages in this conversation yet.",
 	"inventory_category_manager_modal_actions": "Actions",
 	"inventory_category_manager_modal_add": "Add",
+	"inventory_category_manager_modal_add_category": "Add Category",
 	"inventory_category_manager_modal_cancel": "Cancel",
 	"inventory_category_manager_modal_category_added": "Category added",
 	"inventory_category_manager_modal_category_updated": "Category updated",
 	"inventory_category_manager_modal_description": "No categories",
 	"inventory_category_manager_modal_edit": "Edit",
+	"inventory_category_manager_modal_edit_category": "Edit Category",
 	"inventory_category_manager_modal_name": "Name",
 	"inventory_category_manager_modal_new_category": "+ New Category",
 	"inventory_category_manager_modal_order": "Order",
@@ -813,10 +867,9 @@
 	"member_membership_benefits_grid_practice_time": "Practice Time",
 	"member_membership_benefits_grid_shows_community": "Shows & Community",
 	"member_membership_benefits_grid_sustaining_member_benefits": "Sustaining Member Benefits",
-	"member_membership_cancelled_banner_free_practice_hours": "{freeHours} free practice hours",
 	"member_membership_cancelled_banner_label": "Resume Membership",
 	"member_membership_cancelled_banner_resume_sustaining_members": "Resume your sustaining membership?",
-	"member_membership_cancelled_banner_sustaining_membership_has": "Your sustaining membership has been cancelled, but your benefits — including {#strong}{member_membership_cancelled_banner_free_practice_hours}{/strong} — are still active until {#strong2}{endDate}{/strong2}. You can pick it back up anytime before then.",
+	"member_membership_cancelled_banner_sustaining_membership_has": "Your sustaining membership has been cancelled, but your benefits — including {#strong}{freeHours} free practice hours{/strong} — are still active until {#strong2}{endDate}{/strong2}. You can pick it back up anytime before then.",
 	"member_membership_cancelled_banner_toast": "Membership resumed",
 	"member_membership_community_impact_chipping_keep_things_runn": "chipping in to keep things running",
 	"member_membership_community_impact_free_hours": "Free Hours",
@@ -825,11 +878,10 @@
 	"member_membership_community_impact_showing_up_collective_eve": "showing up for the Collective every month",
 	"member_membership_community_impact_sustaining_members": "Sustaining Members",
 	"member_membership_community_impact_what_we_re_building_toget": "What We're Building Together",
-	"member_membership_contribution_card_benefits_including_stay": "Your benefits — including {#strong}{member_membership_contribution_card_free_practice_hours}{/strong} — stay active until {#strong2}{nextBilling}{/strong2}, and you can pick it back up any time before then.",
+	"member_membership_contribution_card_benefits_including_stay": "Your benefits — including {#strong}{quantity} free practice hours{/strong} — stay active until {#strong2}{nextBilling}{/strong2}, and you can pick it back up any time before then.",
 	"member_membership_contribution_card_contribution": "Your Contribution",
 	"member_membership_contribution_card_contribution_updated": "Contribution updated",
 	"member_membership_contribution_card_fees_covered": "+ ${feeAmount} fees covered",
-	"member_membership_contribution_card_free_practice_hours": "{quantity} free practice hours",
 	"member_membership_contribution_card_label": "Cancel Membership",
 	"member_membership_contribution_card_manage_monthly_support": "Manage your monthly support",
 	"member_membership_contribution_card_membership_cancelled": "Membership cancelled",
@@ -838,14 +890,25 @@
 	"member_membership_contribution_card_next_bill": "Next bill {nextBilling}",
 	"member_membership_credit_balance_card_free_practice_hours": "Free Practice Hours",
 	"member_membership_credit_balance_card_hours_refresh": "Your hours refresh on {#strong}{refreshDate}{/strong}",
-	"member_membership_credit_balance_card_lock_regular_practice": "{#strong}{member_membership_credit_balance_card_recurring_reservations}{/strong} to lock in your regular practice times",
+	"member_membership_credit_balance_card_lock_regular_practice": "{#strong}Recurring reservations{/strong} to lock in your regular practice times",
 	"member_membership_credit_balance_card_monthly_allocation": "Your monthly allocation",
-	"member_membership_credit_balance_card_priority_booking": "Priority booking",
-	"member_membership_credit_balance_card_recurring_reservations": "Recurring reservations",
 	"member_membership_credit_balance_card_remaining": "Remaining",
 	"member_membership_credit_balance_card_total_month": "Total This Month",
 	"member_membership_credit_balance_card_used": "Used",
-	"member_membership_credit_balance_card_when_last_minute_openi": "{#strong}{member_membership_credit_balance_card_priority_booking}{/strong} when last-minute openings pop up",
+	"member_membership_credit_balance_card_when_last_minute_openi": "{#strong}Priority booking{/strong} when last-minute openings pop up",
+	"member_membership_free_hours_remaining_free_hours_remaining": [
+		{
+			"declarations": [
+				"input hoursRemaining",
+				"local hoursRemainingPlural = hoursRemaining: plural"
+			],
+			"selectors": ["hoursRemainingPlural"],
+			"match": {
+				"hoursRemainingPlural=one": "{#span}{hoursRemaining}{/span} {#span2}free hour remaining{/span2}",
+				"hoursRemainingPlural=*": "{#span}{hoursRemaining}{/span} {#span2}free hours remaining{/span2}"
+			}
+		}
+	],
 	"member_membership_free_hours_remaining_get_free_practice_hou": "Get free practice hours each month with a sustaining membership.",
 	"member_membership_free_hours_remaining_learn_more": "Learn More",
 	"member_membership_free_hours_remaining_loading_free_hours": "Loading free hours...",
@@ -887,12 +950,21 @@
 	"member_membership_subscription_form_aria_label": "Monthly contribution amount",
 	"member_membership_subscription_form_become_sustaining_member": "Become a Sustaining Member",
 	"member_membership_subscription_form_checkbox_label": "Cover processing fees so the Collective receives 100% of your contribution",
+	"member_membership_subscription_form_free_practice_hours_ever": [
+		{
+			"declarations": ["input freeHours", "local freeHoursPlural = freeHours: plural"],
+			"selectors": ["freeHoursPlural"],
+			"match": {
+				"freeHoursPlural=one": "= {freeHours} free practice hour every month",
+				"freeHoursPlural=*": "= {freeHours} free practice hours every month"
+			}
+		}
+	],
 	"member_membership_subscription_form_monthly_contribution": "Monthly contribution",
 	"member_membership_subscription_form_new_monthly_total": "New monthly total",
 	"member_membership_subscription_form_processing_fees": "+ ${feeDisplay} processing fees",
 	"member_membership_subscription_form_total_per_month": "= ${totalDisplay} total per month",
 	"member_update_contribution": "Update Contribution",
-	"moderation_appeal_panel_appeal": "Appeal {toLowerCase}",
 	"moderation_appeal_panel_appealed_member_staff_will_look": "You appealed this on {formatDate}. A member of staff will look at it and email you the answer; nothing changes until then.",
 	"moderation_appeal_panel_if_think_decision_was_wrong": "If you think this decision was wrong, you can ask a different member of staff to look at it again. You get one appeal per decision.",
 	"moderation_appeal_panel_label": "Appeal this decision",
@@ -900,7 +972,7 @@
 	"moderation_appeal_panel_staff_s_reason": "Staff's reason: {#span}{notes}{/span}",
 	"moderation_appeal_panel_submit_label": "Send appeal",
 	"moderation_appeal_panel_success_toast": "Appeal sent",
-	"moderation_appeal_panel_text": "{#span}{moderation_appeal_panel_appeal}{/span} on {formatDate}.",
+	"moderation_appeal_panel_text": "{#span}Appeal {toLowerCase}{/span} on {formatDate}.",
 	"moderation_appeal_panel_why_do_think_was_wrong": "Why do you think it was wrong?",
 	"project_activity_card_description": "Assignments, ticks, schedule changes and engagements show up here as they happen.",
 	"project_activity_card_title": "Nothing recorded yet",
@@ -915,6 +987,7 @@
 	"public_programs": "Programs",
 	"public_site_footer_501_c_3_nonprofit": "501(c)(3) Nonprofit",
 	"public_site_footer_bylaws": "Bylaws",
+	"public_site_footer_corvallis_music_collective_all_rights": "© {getFullYear} Corvallis Music Collective. All rights reserved.",
 	"public_site_footer_facebook": "Facebook",
 	"public_site_footer_groups": "Groups",
 	"public_site_footer_instagram": "Instagram",
@@ -955,8 +1028,20 @@
 	"reservations_booking_confirm_step_comp": "Comp",
 	"reservations_booking_confirm_step_comp_makes_reservation_ful": "Comp makes this reservation fully free without using the member's free hours.",
 	"reservations_booking_confirm_step_confirm_leaves_full_amount": "Confirm leaves the full amount due at the door.",
+	"reservations_booking_confirm_step_confirmation_opens_we_ll_h": "Confirmation opens {confirmOpensLabel}. We'll hold the room until then — or pay now to lock it in.",
+	"reservations_booking_confirm_step_confirmation_opens_we_ll_h_2": "Confirmation opens {confirmOpensLabel}. We'll hold the room until then — or pay now to lock it in with your free hours.",
 	"reservations_booking_confirm_step_future_instances_generated": "Future instances are generated automatically. You'll confirm each one individually.",
 	"reservations_booking_confirm_step_hr_hr": "{durationHours} hr × ${formatDollars}/hr",
+	"reservations_booking_confirm_step_hrs_own_free_hours_apply": [
+		{
+			"declarations": ["input freeHours", "local freeHoursPlural = freeHours: plural"],
+			"selectors": ["freeHoursPlural"],
+			"match": {
+				"freeHoursPlural=one": "{freeHours} hr of your own free hours apply.",
+				"freeHoursPlural=*": "{freeHours} hrs of your own free hours apply."
+			}
+		}
+	],
 	"reservations_booking_confirm_step_more": "and {value} more...",
 	"reservations_booking_confirm_step_no_upcoming_instances_next": "No upcoming instances in the next 60 days.",
 	"reservations_booking_confirm_step_pay": "You pay:",
@@ -991,10 +1076,9 @@
 	"reservations_booking_payment_step_0_00_covered_by_free": "$0.00 (covered by free hours)",
 	"reservations_booking_payment_step_checkbox_label": "Cover ${formatDollars} processing fee so the Collective receives 100%",
 	"reservations_booking_payment_step_free_hours_available": "Free hours ({creditsToHours} of {creditsToHours2} available)",
-	"reservations_booking_payment_step_learn_more": "Learn more",
 	"reservations_booking_payment_step_processing_fee_coverage": "Processing fee coverage",
 	"reservations_booking_payment_step_room_rental_hr_hr": "Room rental ({durationHours}hr × ${formatDollars}/hr)",
-	"reservations_booking_payment_step_sustaining_members_get_fre": "Sustaining members get free rehearsal hours every month. {#a}{reservations_booking_payment_step_learn_more}{/a}",
+	"reservations_booking_payment_step_sustaining_members_get_fre": "Sustaining members get free rehearsal hours every month. {#a}Learn more{/a}",
 	"reservations_booking_payment_step_total": "Total",
 	"reservations_booking_policy_booking_policy": "Booking Policy",
 	"reservations_booking_policy_hours": "Hours",
@@ -1099,11 +1183,13 @@
 	"volunteer_candidate_column_all": "All",
 	"volunteer_candidate_column_ask_take": "Ask {title} to take this?",
 	"volunteer_candidate_column_asked_they_ll_see_their": "Asked. They'll see it on their dashboard.",
+	"volunteer_candidate_column_cleared_as": "Cleared as of {value}.",
 	"volunteer_candidate_column_everybody_with_volunteer_profile": "Everybody with a volunteer profile is already on this shift.",
 	"volunteer_candidate_column_has_worked": "Has worked it",
 	"volunteer_candidate_column_interested": "Interested",
 	"volunteer_candidate_column_invitation_holds_no_place_shift": "An invitation holds no place — the shift still counts as needing somebody until {title} says yes. You can ask more people than the shift has room for.",
 	"volunteer_candidate_column_invite": "Invite",
+	"volunteer_candidate_column_missing_clearance": "They don't hold {names} as of this shift's date. Adding them anyway is recorded on its log.",
 	"volunteer_candidate_column_nobody_left_group": "Nobody left in this group",
 	"volunteer_candidate_column_nobody_matches_who_not_already": "Nobody matches that who is not already on the shift.",
 	"volunteer_candidate_column_not_cleared": "· {blocked} not cleared",
@@ -1112,6 +1198,7 @@
 	"volunteer_candidate_column_send_invitation": "Send the invitation",
 	"volunteer_candidate_column_staff_add_booking_not_claim": "A staff add is a booking, not a claim — {title} lands confirmed, gets the reminder the day before, and the shift completes afterwards with hours to log.",
 	"volunteer_candidate_column_toast": "Added over: {join}",
+	"volunteer_candidate_column_today": "today",
 	"volunteer_candidate_column_try_all": "Try All.",
 	"volunteer_candidate_column_who_ask": "Who to ask",
 	"volunteer_candidate_column_who_ask_2": "Who to ask · {askable}",
@@ -1159,8 +1246,7 @@
 	"volunteer_open_shifts_success_toast": "Claimed. Staff confirm next.",
 	"volunteer_open_shifts_try_every_open_shift_add": "Try every open shift, or add a role to your list.",
 	"volunteer_open_shifts_when_staff_post_shifts_ones": "When staff post shifts, the ones for roles you picked show first.",
-	"volunteer_profile_fields_account_settings": "account settings",
-	"volunteer_profile_fields_change": "Change this in your {#a}{volunteer_profile_fields_account_settings}{/a}.",
+	"volunteer_profile_fields_change": "Change this in your {#a}account settings{/a}.",
 	"volunteer_profile_fields_description": "For shift-day contact.",
 	"volunteer_profile_fields_email": "Email",
 	"volunteer_profile_fields_first_name": "First name",
@@ -1200,10 +1286,9 @@
 	"volunteer_work_order_hours_approve": "Approve",
 	"volunteer_work_order_hours_by": "{formatVolunteerHours} of {roleName} by {title} on {formatDateShort}.",
 	"volunteer_work_order_hours_description": "Shared with the member.",
-	"volunteer_work_order_hours_hours_queue": "hours queue",
 	"volunteer_work_order_hours_modal_title": "Approve these hours?",
 	"volunteer_work_order_hours_note_optional": "Note (optional)",
-	"volunteer_work_order_hours_return_log_correction_use": "To return a log for correction, use the {#a}{volunteer_work_order_hours_hours_queue}{/a}.",
+	"volunteer_work_order_hours_return_log_correction_use": "To return a log for correction, use the {#a}hours queue{/a}.",
 	"volunteer_work_order_hours_success_toast": "Hours approved",
 	"volunteer_work_order_reports_out_use": "out of use",
 	"volunteer_work_order_reports_title": "Reported problems",
@@ -1211,6 +1296,8 @@
 	"volunteer_work_order_view_aria_label": "{rating} out of 5",
 	"volunteer_work_order_view_asked": "Asked",
 	"volunteer_work_order_view_briefing": "Briefing",
+	"volunteer_work_order_view_called_off": "Called off {date}. Claims and bookings stay on the roster — they are who you need to tell.",
+	"volunteer_work_order_view_called_off_by": "Called off {date} by {name}. Claims and bookings stay on the roster — they are who you need to tell.",
 	"volunteer_work_order_view_called_off_tell_people": "Called off. Tell the people on it.",
 	"volunteer_work_order_view_cancel_shift": "Cancel shift",
 	"volunteer_work_order_view_cancel_shift_2": "Cancel this shift?",
@@ -1249,6 +1336,16 @@
 	"volunteer_work_order_view_not_tied_event": "not tied to an event",
 	"volunteer_work_order_view_notified": "✓ Notified",
 	"volunteer_work_order_view_notify_all": "Notify all",
+	"volunteer_work_order_view_people_still_shift_will_emailed": [
+		{
+			"declarations": ["input toNotify", "local toNotifyPlural = toNotify: plural"],
+			"selectors": ["toNotifyPlural"],
+			"match": {
+				"toNotifyPlural=one": "{toNotify} person still on this shift will be emailed that it is off. Anybody you already marked by hand is skipped, and pressing this twice mails nobody twice.",
+				"toNotifyPlural=*": "{toNotify} people still on this shift will be emailed that it is off. Anybody you already marked by hand is skipped, and pressing this twice mails nobody twice."
+			}
+		}
+	],
 	"volunteer_work_order_view_remove": "Remove",
 	"volunteer_work_order_view_same_role_times_capacity_later": "Same role, times and capacity, on a later date. A weekly slot is 7.",
 	"volunteer_work_order_view_sent_they_know": "Sent. They know.",

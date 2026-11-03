@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m as msg } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import type { Snippet } from 'svelte';
 	import RecordFrame from '$lib/components/ui/RecordFrame.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -76,10 +77,10 @@
 	{#snippet header()}
 		<StatusBadge status={isDeactivated ? 'deactivated' : 'active'} />
 		<span class="text-muted">
-			{group.memberCount}
-			{group.memberCount === 1 ? 'member' : 'members'} · since {formatDateShortYear(
-				group.createdAt
-			)}
+			{msg.groups_staff_group_detail_members_since({
+				memberCount: group.memberCount,
+				formatDateShortYear: formatDateShortYear(group.createdAt)
+			})}
 		</span>
 		{#if !isDeactivated}
 			<AddChairAction groupId={id} />
@@ -211,8 +212,12 @@
 				>
 			{:else}
 				<span class="text-fg-2">
-					Not listed publicly. Set visibility to Public above and it appears at
-					<code class="text-xs">/groups/{group.slug}</code>.
+					<ParaglideMessage
+						message={msg.groups_staff_group_detail_not_listed_publicly_set_visibility}
+						inputs={{ slug: group.slug }}
+						>{#snippet code({ children })}<code class="text-xs">{@render children?.()}</code
+							>{/snippet}</ParaglideMessage
+					>
 				</span>
 			{/if}
 		</Fact>

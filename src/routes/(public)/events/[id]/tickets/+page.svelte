@@ -90,7 +90,7 @@
 				<p class="mt-3 text-muted text-sm">
 					<ParaglideMessage
 						message={m.public_events_id_tickets_no_one_turned_away_lack_2}
-						inputs={{ public_events_id_tickets_get_touch: m.public_events_id_tickets_get_touch() }}
+						inputs={{}}
 						>{#snippet a({ children })}<a href={resolve('/contact')} class="link"
 								>{@render children?.()}</a
 							>{/snippet}</ParaglideMessage
@@ -102,7 +102,9 @@
 					{#if soldOut}
 						<span class="font-medium text-error">{isFreeEvent ? 'Full' : 'Sold out'}</span>
 					{:else}
-						{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining
+						{(isFreeEvent
+							? m.public_events_id_tickets_spots_remaining
+							: m.public_tickets_remaining)({ remaining: data.remaining })}
 					{/if}
 				</p>
 			{/if}
@@ -110,7 +112,11 @@
 	</Card>
 
 	{#if soldOut}
-		<Alert type="warning">This event is {isFreeEvent ? 'full' : 'sold out'}.</Alert>
+		<Alert type="warning"
+			>{(isFreeEvent
+				? m.public_events_id_tickets_event_full
+				: m.public_events_id_tickets_event_sold_out)()}</Alert
+		>
 	{:else if isFreeEvent}
 		<Form remote={claimFreeTicket} onsuccess={handleSuccess}>
 			<input {...freeTicketFields.eventId.as('hidden', page.params.id!)} />

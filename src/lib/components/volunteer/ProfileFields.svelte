@@ -91,11 +91,7 @@
 />
 
 {#snippet emailHint()}
-	<ParaglideMessage
-		message={m.volunteer_profile_fields_change}
-		inputs={{
-			volunteer_profile_fields_account_settings: m.volunteer_profile_fields_account_settings()
-		}}
+	<ParaglideMessage message={m.volunteer_profile_fields_change} inputs={{}}
 		>{#snippet a({ children })}<a href={resolve('/member/account')} class="link link-primary"
 				>{@render children?.()}</a
 			>{/snippet}</ParaglideMessage

@@ -141,7 +141,9 @@
 			     without a date is the bug this column exists to fix: a card valid
 			     today does not cover a shift the week after it lapses. -->
 			<p class="text-subtle text-xs">
-				Cleared as of {startsAt ? formatDateShort(startsAt) : 'today'}.
+				{msg.volunteer_candidate_column_cleared_as({
+					value: startsAt ? formatDateShort(startsAt) : msg.volunteer_candidate_column_today()
+				})}
 			</p>
 			<SearchInput bind:value={search} placeholder={msg.volunteer_candidate_column_placeholder()} />
 			<div class="flex flex-wrap gap-1" class:opacity-50={!!search}>
@@ -225,8 +227,9 @@
 								</p>
 								{#if f.blocked}
 									<p class="text-sm text-error">
-										They don't hold {row.missing.map((m) => m.name).join(' and ')} as of this shift's
-										date. Adding them anyway is recorded on its log.
+										{msg.volunteer_candidate_column_missing_clearance({
+											names: new Intl.ListFormat('en').format(row.missing.map((m) => m.name))
+										})}
 									</p>
 								{/if}
 							{/snippet}

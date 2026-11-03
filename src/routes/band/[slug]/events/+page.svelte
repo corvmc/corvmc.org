@@ -74,7 +74,9 @@
 								{formatDate(invite.startsAt)}{invite.location ? ` · ${invite.location}` : ''}
 							</p>
 							<p class="text-subtle">
-								Added by {invite.ownerBandName ?? 'CMC staff'}
+								{m.band_slug_events_added_by({
+									ownerBandName: invite.ownerBandName ?? m.band_slug_events_cmc_staff()
+								})}
 							</p>
 						</div>
 						{#if isAdmin}

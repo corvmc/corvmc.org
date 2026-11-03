@@ -98,8 +98,9 @@
 	<PageContent width="2xl">
 		{#if !evt.isOwner}
 			<p class="text-muted text-sm">
-				Your band is credited on this bill{ownerActName ? `, added by ${ownerActName}` : ''}. Only
-				the band that created the listing can change it.
+				{ownerActName
+					? m.band_slug_events_event_id_credited_added_by({ name: ownerActName })
+					: m.band_slug_events_event_id_credited()}
 			</p>
 		{:else if evt.status === 'cancelled'}
 			<p class="text-muted text-sm">{m.band_slug_events_event_id_event_cancelled_so_can_no()}</p>

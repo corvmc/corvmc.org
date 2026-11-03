@@ -159,9 +159,7 @@
 			{m.public_membership_pick_contribution()}
 		</h2>
 		<p class="mx-auto max-w-2xl text-base leading-relaxed text-fg-2">
-			<ParaglideMessage
-				message={m.public_membership_s_sliding_scale_every_earns}
-				inputs={{ public_membership_5_month: m.public_membership_5_month() }}
+			<ParaglideMessage message={m.public_membership_s_sliding_scale_every_earns} inputs={{}}
 				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 					>{/snippet}</ParaglideMessage
 			>
@@ -202,12 +200,7 @@
 		{/each}
 	</div>
 	<p class="mt-8 text-center text-sm text-fg-3">
-		<ParaglideMessage
-			message={m.public_membership_not_looking_join_monthly_there}
-			inputs={{
-				public_membership_other_ways_support_collective:
-					m.public_membership_other_ways_support_collective()
-			}}
+		<ParaglideMessage message={m.public_membership_not_looking_join_monthly_there} inputs={{}}
 			>{#snippet a({ children })}<a href={resolve('/contribute')} class="text-cmc-teal underline"
 					>{@render children?.()}</a
 				>{/snippet}</ParaglideMessage

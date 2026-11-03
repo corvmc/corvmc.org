@@ -10,6 +10,7 @@
 	"layout_notifications": "Notifications",
 	"layout_notifications_empty": "No notifications yet",
 	"layout_notifications_mark_all_read": "Mark all read",
+	"layout_page_title": "{title} — CorvMC",
 	"layout_sidebar_title": "CorvMC",
 	"layout_sign_out": "Sign Out",
 	"layout_to_public_site": "To Public Site"

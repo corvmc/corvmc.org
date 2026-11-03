@@ -36,7 +36,9 @@
 
 <svelte:head>
 	<title
-		>{download.status === 'ready' ? download.releaseTitle : 'Your download'} — your download</title
+		>{download.status === 'ready'
+			? m.public_music_download_title({ title: download.releaseTitle })
+			: m.public_music_download_title_pending()}</title
 	>
 	<!-- Never indexed: the URL in the address bar IS the entitlement. -->
 	<meta name="robots" content="noindex, nofollow" />

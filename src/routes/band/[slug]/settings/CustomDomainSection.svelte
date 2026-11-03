@@ -70,8 +70,14 @@
 		<InfoCard title={domain.domain}>
 			{#if domain.status === 'active'}
 				<p class="text-sm">
-					Your site is live at <strong>{domain.domain}</strong>. Point the domain at
-					<code class="text-xs">{domain.cnameTarget}</code> with a CNAME record if you haven't already.
+					<ParaglideMessage
+						message={m.band_slug_settings_custom_domain_section_site_live_at_point}
+						inputs={{ domain: domain.domain, cnameTarget: domain.cnameTarget }}
+						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+							>{/snippet}{#snippet code({ children })}<code class="text-xs"
+								>{@render children?.()}</code
+							>{/snippet}</ParaglideMessage
+					>
 				</p>
 			{:else if domain.status === 'failed'}
 				<p class="text-sm">

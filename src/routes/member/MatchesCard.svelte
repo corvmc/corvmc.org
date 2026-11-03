@@ -82,7 +82,7 @@
 			<p class="mt-3 text-subtle">
 				<ParaglideMessage
 					message={m.member_matches_card_add_closer_matches}
-					inputs={{ missingSentence, member_matches_card_profile: m.member_matches_card_profile() }}
+					inputs={{ missingSentence }}
 					>{#snippet a({ children })}<a href={resolve('/member/profile')} class="link link-primary"
 							>{@render children?.()}</a
 						>{/snippet}</ParaglideMessage

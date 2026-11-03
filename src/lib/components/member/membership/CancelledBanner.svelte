@@ -28,8 +28,7 @@
 			<ParaglideMessage
 				message={m.member_membership_cancelled_banner_sustaining_membership_has}
 				inputs={{
-					member_membership_cancelled_banner_free_practice_hours:
-						m.member_membership_cancelled_banner_free_practice_hours({ freeHours }),
+					freeHours,
 					endDate
 				}}
 				>{#snippet strong({ children })}<strong>{@render children?.()}</strong

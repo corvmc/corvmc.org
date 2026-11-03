@@ -98,8 +98,7 @@
 				<ParaglideMessage
 					message={m.band_slug_music_payouts_not_fixed_buyers_see_split}
 					inputs={{
-						suggested,
-						band_slug_music_payouts_suggested: m.band_slug_music_payouts_suggested()
+						suggested
 					}}>{#snippet em({ children })}<em>{@render children?.()}</em>{/snippet}</ParaglideMessage
 				>
 			</p>

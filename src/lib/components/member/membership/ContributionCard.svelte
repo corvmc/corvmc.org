@@ -99,10 +99,7 @@
 						<ParaglideMessage
 							message={m.member_membership_contribution_card_benefits_including_stay}
 							inputs={{
-								member_membership_contribution_card_free_practice_hours:
-									m.member_membership_contribution_card_free_practice_hours({
-										quantity: subscription.quantity
-									}),
+								quantity: subscription.quantity,
 								nextBilling
 							}}
 							>{#snippet strong({ children })}<strong>{@render children?.()}</strong

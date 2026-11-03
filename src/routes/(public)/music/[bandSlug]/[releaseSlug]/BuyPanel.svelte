@@ -190,9 +190,7 @@
 						<ParaglideMessage
 							message={m.public_music_band_slug_release_slug_buy_panel_buying_as_ll_s}
 							inputs={{
-								viewerEmail,
-								public_music_band_slug_release_slug_buy_panel_purchases:
-									m.public_music_band_slug_release_slug_buy_panel_purchases()
+								viewerEmail
 							}}
 							>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
 								>{/snippet}{#snippet a({ children })}<a
@@ -212,7 +210,7 @@
 					<p class="text-muted">
 						<ParaglideMessage
 							message={m.public_music_band_slug_release_slug_buy_panel_got_account_la}
-							inputs={{ public_sign: m.public_sign() }}
+							inputs={{}}
 							>{#snippet a({ children })}<a
 									class="link"
 									href={signInHref({ returnTo: here(page.url) })}>{@render children?.()}</a

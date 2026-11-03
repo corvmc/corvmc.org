@@ -223,9 +223,7 @@
 	"member_events_id_manage_after_report_was_upheld_against": "After a report was upheld against one of your listings, staff check your listings before they go on the calendar. Their note: \"{reason}\"",
 	"member_events_id_manage_already_calendar_publish_anyway_if": "{#a}{title}{/a} is already on the calendar for {formatDateShort}. Publish anyway if it's a different show.",
 	"member_events_id_manage_back_drafts": "Back in your drafts",
-	"member_events_id_manage_back_events": "Back to your events",
 	"member_events_id_manage_cancel_show": "Cancel the show",
-	"member_events_id_manage_cancelled": "cancelled",
 	"member_events_id_manage_delete": "Delete",
 	"member_events_id_manage_delete_listing_was_never_public": "Delete this listing? It was never public, so nothing is lost but this.",
 	"member_events_id_manage_description": "Description",
@@ -236,7 +234,7 @@
 	"member_events_id_manage_fix_publish_again_when_re": "Fix it and publish again when you're ready.",
 	"member_events_id_manage_jpeg_png_webp_up_10": "JPEG, PNG or WebP, up to 10 MB.",
 	"member_events_id_manage_listing_deleted": "Listing deleted",
-	"member_events_id_manage_listing_doesn_t_exist_isn": "This listing doesn't exist, or it isn't yours. {#a}{member_events_id_manage_back_events}{/a}",
+	"member_events_id_manage_listing_doesn_t_exist_isn": "This listing doesn't exist, or it isn't yours. {#a}Back to your events{/a}",
 	"member_events_id_manage_listing_saved": "Listing saved",
 	"member_events_id_manage_listing_with_staff_review_ll": "This listing is with staff for review. You'll hear back once they've looked at it.",
 	"member_events_id_manage_marked_as_cancelled": "Marked as cancelled",
@@ -248,7 +246,7 @@
 	"member_events_id_manage_put_show_public_calendar": "Put this show on the public calendar?",
 	"member_events_id_manage_replace_label": "Replace poster",
 	"member_events_id_manage_save_changes": "Save changes",
-	"member_events_id_manage_show_not_happening_stays_calendar": "Is this show not happening? It stays on the calendar marked {#strong}{member_events_id_manage_cancelled}{/strong} until its date passes, so anyone who had the date finds out. If you just want it gone, take it down instead.",
+	"member_events_id_manage_show_not_happening_stays_calendar": "Is this show not happening? It stays on the calendar marked {#strong}cancelled{/strong} until its date passes, so anyone who had the date finds out. If you just want it gone, take it down instead.",
 	"member_events_id_manage_staff_check_listings_before_they": "Staff check your listings before they go on the calendar.",
 	"member_events_id_manage_staff_didn_t_publish_listing": "Staff didn't publish this listing.",
 	"member_events_id_manage_staff_took_listing_off_calendar": "Staff took this listing off the calendar.",
@@ -267,10 +265,12 @@
 	"member_events_id_price": "Price",
 	"member_events_id_re_going": "You're going!",
 	"member_events_id_rsvp": "RSVP",
+	"member_events_id_spots_remaining": "{remaining} spots remaining",
 	"member_events_id_suggested": "suggested",
 	"member_events_id_suggested_per_ticket": "suggested, per ticket",
 	"member_events_id_ticket": "Your ticket",
 	"member_events_id_tickets": "Your tickets",
+	"member_events_id_tickets_remaining": "{remaining} tickets remaining",
 	"member_events_id_title": "Copy link to this event",
 	"member_events_id_yes_cancel_my_rsvp": "Yes, cancel my RSVP",
 	"member_events_my_listings_section_description": "Know about a gig around town? Put it on the calendar so the rest of the scene finds out.",
@@ -452,11 +452,10 @@
 	"member_learn_more": "Learn More",
 	"member_looking": "Looking for",
 	"member_looking_members": "Looking for members",
-	"member_matches_card_add_closer_matches": "Add {missingSentence} to your {#a}{member_matches_card_profile}{/a} for closer matches.",
+	"member_matches_card_add_closer_matches": "Add {missingSentence} to your {#a}profile{/a} for closer matches.",
 	"member_matches_card_add_profile_we_ll_suggest": "Add {missingSentence} to your profile and we’ll suggest people to meet.",
 	"member_matches_card_change_who_can_see": "Change who can see you",
 	"member_matches_card_nothing_suggest_yet_check_back": "Nothing to suggest yet. Check back once more members and bands have filled in what they’re after.",
-	"member_matches_card_profile": "profile",
 	"member_matches_card_profile_hidden_so_we_re": "Your profile is hidden, so we're not suggesting people to meet — and you're not being suggested to anyone either.",
 	"member_matches_card_title": "Find your people",
 	"member_matches_card_update_profile": "Update your profile",
@@ -487,6 +486,19 @@
 	"member_messages_conversation_list_aria_label": "Inbox",
 	"member_messages_conversation_list_empty_title": "No messages yet",
 	"member_messages_conversation_list_just_mine": "Just mine",
+	"member_messages_conversation_list_message_requests_waiting": [
+		{
+			"declarations": [
+				"input pendingRequests",
+				"local pendingRequestsPlural = pendingRequests: plural"
+			],
+			"selectors": ["pendingRequestsPlural"],
+			"match": {
+				"pendingRequestsPlural=one": "{pendingRequests} message request is waiting for you.",
+				"pendingRequestsPlural=*": "{pendingRequests} message requests are waiting for you."
+			}
+		}
+	],
 	"member_messages_conversation_list_messages": "Messages",
 	"member_messages_description": "Pick a conversation on the left.",
 	"member_messages_id_block": "Block",
@@ -495,6 +507,7 @@
 	"member_messages_id_conversation_has_been_closed": "This conversation has been closed.",
 	"member_messages_id_conversation_with_another_member": "Your conversation with another member",
 	"member_messages_id_conversation_with_corvmc_staff": "Your conversation with CorvMC staff",
+	"member_messages_id_member": "This member",
 	"member_messages_id_member_s_account_no_longer": "This member's account is no longer active.",
 	"member_messages_id_report_direct_thread_anything_else_would": "Anything else that would help us review this",
 	"member_messages_id_report_direct_thread_details_optional": "Details (optional)",
@@ -507,6 +520,7 @@
 	"member_messages_id_request_accepted": "Request accepted",
 	"member_messages_id_request_declined": "Request declined",
 	"member_messages_id_start_new_message_if_need": "Start a new message if you need anything else.",
+	"member_messages_id_would_like_start_conversation_with": "{counterpartName} would like to start a conversation with you. They cannot send anything else unless you accept.",
 	"member_messages_title": "No conversation selected",
 	"member_my": "My {many}",
 	"member_my_groups": "My Groups",
@@ -602,13 +616,14 @@
 	"member_reservations_create_modal_submit_label": "Book Session",
 	"member_reservations_dismiss": "Dismiss",
 	"member_reservations_id_booked": "Booked for",
-	"member_reservations_id_code_hasn_t_reached_door": "Your code hasn't reached the door and we don't have a backup to give you right now. Don't wait outside — {#a}{member_reservations_id_get_touch}{/a} and someone will let you in.",
+	"member_reservations_id_code_hasn_t_reached_door": "Your code hasn't reached the door and we don't have a backup to give you right now. Don't wait outside — {#a}get in touch{/a} and someone will let you in.",
 	"member_reservations_id_door_code": "Door Code",
 	"member_reservations_id_door_code_issued_but_door": "Your door code is issued but the door hasn't confirmed it yet. It should be ready before your session — check back here, and get in touch if it still isn't showing.",
 	"member_reservations_id_door_code_will_appear_here": "Your door code will appear here before your reservation.",
+	"member_reservations_id_due": "${formatDollars} due",
+	"member_reservations_id_due_at_door": "${formatDollars} due at door",
 	"member_reservations_id_due_cash_at_door_card": "{#span}${formatDollars}{/span} due — cash at the door, or card online.",
 	"member_reservations_id_enter_code_door_keypad_get": "Enter this code on the door keypad to get in. It works for the length of your reservation.",
-	"member_reservations_id_get_touch": "get in touch",
 	"member_reservations_id_not_confirmed_yet": "Not confirmed yet",
 	"member_reservations_id_notes": "Notes",
 	"member_reservations_id_paid_booking_confirmed": "Paid. Your booking is confirmed.",
@@ -616,6 +631,21 @@
 	"member_reservations_id_pay_checkbox_label": "Cover processing fees so the Collective receives 100%",
 	"member_reservations_id_pay_free_hours_applied_hr": "Free hours applied ({creditsApplicable} hr)",
 	"member_reservations_id_pay_free_hours_available": "Free hours ({creditsApplicable} of {availableHours} available)",
+	"member_reservations_id_pay_hours": [
+		{
+			"declarations": [
+				"input formatTime",
+				"input formatTime2",
+				"input durationHours",
+				"local durationHoursPlural = durationHours: plural"
+			],
+			"selectors": ["durationHoursPlural"],
+			"match": {
+				"durationHoursPlural=one": "{formatTime}–{formatTime2} ({durationHours} hour)",
+				"durationHoursPlural=*": "{formatTime}–{formatTime2} ({durationHours} hours)"
+			}
+		}
+	],
 	"member_reservations_id_pay_pay": "Pay ${formatDollars}",
 	"member_reservations_id_pay_pay_with_free_hours": "Pay with free hours",
 	"member_reservations_id_pay_processing_fee_coverage": "Processing fee coverage",
@@ -634,7 +664,7 @@
 	"member_reservations_id_we_couldn_t_confirm_usual": "We couldn't confirm your usual code reached the door, so this one will get you in for now. Staff know about it. If it doesn't work, call us rather than waiting outside.",
 	"member_reservations_manage_recurring_reservations_ends": "Ends {formatDateShortYear}",
 	"member_reservations_manage_recurring_reservations_my_recurri": "My Recurring Reservations",
-	"member_reservations_manage_recurring_reservations_no_active": "No active recurring reservations. Use {#strong}{member_reserve_space}{/strong} at the top of this page and pick a frequency on the first step to start a series.",
+	"member_reservations_manage_recurring_reservations_no_active": "No active recurring reservations. Use {#strong}Reserve Space{/strong} at the top of this page and pick a frequency on the first step to start a series.",
 	"member_reservations_manage_recurring_reservations_recurring": "Recurring Reservations",
 	"member_reservations_manage_recurring_reservations_sustaining": "Sustaining members can set up recurring weekly, biweekly, or monthly reservations.",
 	"member_reservations_my_reservations": "My Reservations",
@@ -646,6 +676,16 @@
 	"member_reservations_reservation_card_label": "Pay with credits",
 	"member_reservations_reservation_card_success_toast": "Paid with credits",
 	"member_reservations_reservation_card_uses_free_hours_nothing": "Uses your free hours. Nothing is charged.",
+	"member_reservations_reservations_newest_first": [
+		{
+			"declarations": ["input length", "local lengthPlural = length: plural"],
+			"selectors": ["lengthPlural"],
+			"match": {
+				"lengthPlural=one": "{length} reservation, newest first.",
+				"lengthPlural=*": "{length} reservations, newest first."
+			}
+		}
+	],
 	"member_reservations_reserve_practice_space": "Reserve Practice Space",
 	"member_reservations_show_all": "Show all {length}",
 	"member_reservations_showing_most_recent_reservations": "Showing your {length} most recent of {length2} reservations.",
@@ -679,17 +719,21 @@
 	"member_suggestions_create_suggestion_new_suggestion": "New suggestion",
 	"member_suggestions_empty": "Be the first to say what the collective should do next.",
 	"member_suggestions_empty_title": "No suggestions yet",
+	"member_suggestions_id_another_suggestion": "another suggestion",
 	"member_suggestions_id_ballot": "Ballot",
 	"member_suggestions_id_edit_suggestion": "Edit your suggestion",
 	"member_suggestions_id_edit_with_staff_suggestion_below": "Your edit is with staff. The suggestion below is still what everyone else sees until they approve it.",
 	"member_suggestions_id_edit_withdrawn": "Edit withdrawn",
 	"member_suggestions_id_edited": "· edited {formatDateTime}",
+	"member_suggestions_id_former_member": "a former member",
+	"member_suggestions_id_merged_into_votes_moved_across": "Merged into {#span}{mergedIntoTitle}{/span} — the votes moved across.",
 	"member_suggestions_id_official_response": "Official response",
 	"member_suggestions_id_other_members_have_already_voted": "Other members have already voted for this, so staff check changes before they go live — otherwise the words people backed could be swapped out from under them. Your suggestion stays up unchanged in the meantime.",
 	"member_suggestions_id_remove_vote": "Remove your vote",
 	"member_suggestions_id_request_edit": "Request an edit",
 	"member_suggestions_id_staff_started_work": "Staff started work on this: {#span}{name}{/span}.",
 	"member_suggestions_id_subtitle": "Suggestion",
+	"member_suggestions_id_suggested_by": "Suggested by {authorName} · {formatDateTime}",
 	"member_suggestions_id_take_edit_back_can_submit": "Take this edit back? You can submit a different one afterwards.",
 	"member_suggestions_id_updated": "Updated",
 	"member_suggestions_id_vote_suggestion": "Vote for this suggestion",
@@ -703,6 +747,8 @@
 	"member_suggestions_suggestion_card_flag": "Flag",
 	"member_suggestions_suggestion_card_staff": "Staff:",
 	"member_suggestions_title": "Suggestions",
+	"member_suggestions_unvote_label": "Remove your vote for {title}",
+	"member_suggestions_vote_label": "Vote for {title}",
 	"member_tags": "Tags",
 	"member_takes_suggestion_off_board_straight": "This takes the suggestion off the board straight away while staff look at it. If they don't agree with the report, it goes back up.",
 	"member_teaches_privately": "Teaches privately",
@@ -726,12 +772,35 @@
 	"member_volunteer_door_card_will_not_tap": "Card will not tap?",
 	"member_volunteer_door_charging": "Charging {formatCents}.",
 	"member_volunteer_door_collective_shows_starting_within_day": "Collective shows starting within a day appear here. A band's own gig is sold by the band.",
-	"member_volunteer_door_corvmc_org_events": "corvmc.org/events/{id}",
 	"member_volunteer_door_door_sale_status_card_accepted_recordi": "Card accepted. Recording the sale…",
 	"member_volunteer_door_door_sale_status_card_was_accepted_but": "The card was accepted, but Stripe has not confirmed it yet. Let them in; the tickets will be checked in when it does.",
+	"member_volunteer_door_door_sale_status_paid_tickets_checked": [
+		{
+			"declarations": ["input quantity", "local quantityPlural = quantity: plural"],
+			"selectors": ["quantityPlural"],
+			"match": {
+				"quantityPlural=one": "Paid. {quantity} ticket checked in. Let them in.",
+				"quantityPlural=*": "Paid. {quantity} tickets checked in. Let them in."
+			}
+		}
+	],
 	"member_volunteer_door_door_sale_status_sale_was_cancelled_no": "This sale was cancelled. Nothing was charged.",
 	"member_volunteer_door_door_sales": "Door sales",
 	"member_volunteer_door_each_ticket": "Each ticket",
+	"member_volunteer_door_event_floor": ", floor {floor}",
+	"member_volunteer_door_event_left": ", {count} left",
+	"member_volunteer_door_event_over": ", over capacity by {count}",
+	"member_volunteer_door_event_suggested": "{title}: suggested {price}",
+	"member_volunteer_door_free_tickets_checked_let_them": [
+		{
+			"declarations": ["input freeLetIn", "local freeLetInPlural = freeLetIn: plural"],
+			"selectors": ["freeLetInPlural"],
+			"match": {
+				"freeLetInPlural=one": "Free. {freeLetIn} ticket checked in. Let them in.",
+				"freeLetInPlural=*": "Free. {freeLetIn} tickets checked in. Let them in."
+			}
+		}
+	],
 	"member_volunteer_door_hand_phone_over_have_them": "Hand the phone over and have them tap their card.",
 	"member_volunteer_door_how_many": "How many",
 	"member_volunteer_door_next_sale": "Next sale",
@@ -739,7 +808,7 @@
 	"member_volunteer_door_no_show_at_door": "No show at the door",
 	"member_volunteer_door_online_sales_closed_show": "Online sales are closed for this show.",
 	"member_volunteer_door_take_payment": "Take payment",
-	"member_volunteer_door_they_can_buy_their_own": "They can buy on their own phone at {#a}{member_volunteer_door_corvmc_org_events}{/a}.",
+	"member_volunteer_door_they_can_buy_their_own": "They can buy on their own phone at {#a}corvmc.org/events/{id}{/a}.",
 	"member_volunteer_door_whatever_they_can_pay_at": "Whatever they can pay, at or above the floor. Under {formatCents} in total is free.",
 	"member_volunteer_feedback_signup_id_action_label": "Back to volunteering",
 	"member_volunteer_feedback_signup_id_already_answered_shift": "You already answered for this shift.",
@@ -763,6 +832,9 @@
 	"member_volunteer_interests_success_toast": "Saved. Staff see this when they're looking for people.",
 	"member_volunteer_label": "Log these hours",
 	"member_volunteer_no_time_was_booked_say": "No time was booked for this — say how long it took.",
+	"member_volunteer_profile_clearance_expires": "{name} expires {date}. Staff renew these.",
+	"member_volunteer_profile_clearance_expires_soon": "{name} expires soon. Staff renew these.",
+	"member_volunteer_profile_clearance_lapsed": "{name} has lapsed. Staff renew these.",
 	"member_volunteer_profile_comes_off_record_file_again": "It comes off the record. File it again any time.",
 	"member_volunteer_profile_contact_info": "Contact info",
 	"member_volunteer_profile_fix": "Fix it",

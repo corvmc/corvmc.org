@@ -443,7 +443,9 @@
 
 					{#if data.remaining !== null && !soldOut}
 						<span class="text-muted"
-							>{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining</span
+							>{(isFreeEvent
+								? m.member_events_id_spots_remaining
+								: m.member_events_id_tickets_remaining)({ remaining: data.remaining })}</span
 						>
 					{/if}
 				</div>

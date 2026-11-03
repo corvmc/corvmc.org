@@ -387,7 +387,7 @@
 					<Alert type="warning">
 						<ParaglideMessage
 							message={m.band_slug_music_release_id_release_has_price_but_payouts}
-							inputs={{ band_set_up_payouts: m.band_set_up_payouts() }}
+							inputs={{}}
 							>{#snippet a({ children })}<a
 									class="link"
 									href={resolve(`/band/${band.slug}/music/payouts`)}>{@render children?.()}</a
@@ -558,9 +558,12 @@
 								<input {...fields.slug.as('hidden', slug)} />
 								<input {...fields.releaseId.as('hidden', releaseId)} />
 								<p>
-									Delete <strong>{release.title}</strong> and its
-									{tracks.length}
-									{tracks.length === 1 ? 'track' : 'tracks'}?
+									<ParaglideMessage
+										message={m.band_slug_music_release_id_delete_its_tracks}
+										inputs={{ title: release.title, length: tracks.length }}
+										>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+											>{/snippet}</ParaglideMessage
+									>
 								</p>
 								<p class="text-muted">
 									{m.band_slug_music_release_id_if_anyone_has_bought_release()}

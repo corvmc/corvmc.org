@@ -79,10 +79,7 @@
 				<span
 					><ParaglideMessage
 						message={m.member_membership_credit_balance_card_lock_regular_practice}
-						inputs={{
-							member_membership_credit_balance_card_recurring_reservations:
-								m.member_membership_credit_balance_card_recurring_reservations()
-						}}
+						inputs={{}}
 						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 							>{/snippet}</ParaglideMessage
 					></span
@@ -93,10 +90,7 @@
 				<span
 					><ParaglideMessage
 						message={m.member_membership_credit_balance_card_when_last_minute_openi}
-						inputs={{
-							member_membership_credit_balance_card_priority_booking:
-								m.member_membership_credit_balance_card_priority_booking()
-						}}
+						inputs={{}}
 						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 							>{/snippet}</ParaglideMessage
 					></span

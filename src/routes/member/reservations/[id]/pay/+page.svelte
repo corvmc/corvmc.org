@@ -52,10 +52,11 @@
 		<CardBody>
 			<p class="font-medium">{formatDateLong(res.startsAt)}</p>
 			<p>
-				{formatTime(res.startsAt)}–{formatTime(res.endsAt)} ({durationHours} hour{durationHours ===
-				1
-					? ''
-					: 's'})
+				{m.member_reservations_id_pay_hours({
+					formatTime: formatTime(res.startsAt),
+					formatTime2: formatTime(res.endsAt),
+					durationHours
+				})}
 			</p>
 			{#if res.notes}
 				<p class="text-muted">{res.notes}</p>

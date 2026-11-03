@@ -87,9 +87,7 @@
 			     break-glass code is confirmed on the lock right now, which happens
 			     mid-rotation. Standing outside is the failure mode. -->
 			<Alert type="error">
-				<ParaglideMessage
-					message={m.member_reservations_id_code_hasn_t_reached_door}
-					inputs={{ member_reservations_id_get_touch: m.member_reservations_id_get_touch() }}
+				<ParaglideMessage message={m.member_reservations_id_code_hasn_t_reached_door} inputs={{}}
 					>{#snippet a({ children })}<a class="link" href={resolve('/contact')}
 							>{@render children?.()}</a
 						>{/snippet}</ParaglideMessage
@@ -150,7 +148,9 @@
 			{#if owesBalance}
 				{#if (res.cashDueCents ?? 0) > 0}
 					<span class="text-sm font-medium">
-						${formatDollars(res.cashDueCents ?? 0)} due{isPast ? '' : ' at door'}
+						{(isPast ? m.member_reservations_id_due : m.member_reservations_id_due_at_door)({
+							formatDollars: formatDollars(res.cashDueCents ?? 0)
+						})}
 					</span>
 				{/if}
 				<Button href="/member/reservations/{res.id}/pay" variant="primary" outline>

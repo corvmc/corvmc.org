@@ -71,11 +71,7 @@
 		{/each}
 	</ul>
 	<p class="mt-2 text-subtle text-xs">
-		<ParaglideMessage
-			message={m.volunteer_work_order_hours_return_log_correction_use}
-			inputs={{
-				volunteer_work_order_hours_hours_queue: m.volunteer_work_order_hours_hours_queue()
-			}}
+		<ParaglideMessage message={m.volunteer_work_order_hours_return_log_correction_use} inputs={{}}
 			>{#snippet a({ children })}<a class="link" href={resolve('/staff/members/volunteers/hours')}
 					>{@render children?.()}</a
 				>{/snippet}</ParaglideMessage
