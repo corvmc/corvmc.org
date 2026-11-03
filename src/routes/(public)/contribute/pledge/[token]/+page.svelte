@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { pageTitle } from '$lib/config';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -61,7 +62,12 @@
 						</Alert>
 					{:else}
 						<p class="text-center">
-							Confirm that you'll bring <strong>{pending.entryName}</strong>?
+							<ParaglideMessage
+								message={m.public_contribute_pledge_token_confirm_ll_bring}
+								inputs={{ entryName: pending.entryName }}
+								>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+									>{/snippet}</ParaglideMessage
+							>
 						</p>
 						<Form remote={confirmWishlistPledge} onsuccess={(r) => (outcome = r ?? null)}>
 							<input {...fields.token.as('hidden', token)} />

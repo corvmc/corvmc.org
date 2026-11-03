@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -43,8 +44,12 @@
 		<input {...fields.id.as('hidden', assetId)} />
 		<div class="mb-3 rounded bg-base-200 p-3 text-sm">
 			<p>
-				{m.actions_record_form8282_unit_was_donated_disposed_within()}{#if dueBy}, by
-					<strong>{toLocalDate(dueBy)}</strong>{/if}.
+				{m.actions_record_form8282_unit_was_donated_disposed_within()}{#if dueBy}<ParaglideMessage
+						message={m.actions_record_form8282_by}
+						inputs={{ toLocalDate: toLocalDate(dueBy) }}
+						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+							>{/snippet}</ParaglideMessage
+					>{/if}.
 			</p>
 			<!-- The system cannot decide this. Whether it is reportable turns on
 			     whether the donor filed a Form 8283 that CMC signed, which is a fact

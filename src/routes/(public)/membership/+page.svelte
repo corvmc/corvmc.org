@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Hero from '$lib/components/public/Hero.svelte';
 	import Tile from '$lib/components/public/Tile.svelte';
 	import Section from '$lib/components/public/Section.svelte';
@@ -158,9 +159,12 @@
 			{m.public_membership_pick_contribution()}
 		</h2>
 		<p class="mx-auto max-w-2xl text-base leading-relaxed text-fg-2">
-			It's a sliding scale: every <strong>{m.public_membership_5_month()}</strong> earns you another free
-			hour of practice time — up to 12. Every tier gets the same member benefits, you just walk away with
-			more practice hours. Change or cancel anytime.
+			<ParaglideMessage
+				message={m.public_membership_s_sliding_scale_every_earns}
+				inputs={{ public_membership_5_month: m.public_membership_5_month() }}
+				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 	</div>
 	<div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
@@ -198,9 +202,15 @@
 		{/each}
 	</div>
 	<p class="mt-8 text-center text-sm text-fg-3">
-		Not looking to join monthly? There are <a
-			href={resolve('/contribute')}
-			class="text-cmc-teal underline">{m.public_membership_other_ways_support_collective()}</a
-		>.
+		<ParaglideMessage
+			message={m.public_membership_not_looking_join_monthly_there}
+			inputs={{
+				public_membership_other_ways_support_collective:
+					m.public_membership_other_ways_support_collective()
+			}}
+			>{#snippet a({ children })}<a href={resolve('/contribute')} class="text-cmc-teal underline"
+					>{@render children?.()}</a
+				>{/snippet}</ParaglideMessage
+		>
 	</p>
 </Section>

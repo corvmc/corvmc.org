@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * Hours logged against this work order, approved from here as from the queue.
 	 * Returning a log stays on the queue, where the note to the member is written.
@@ -70,10 +71,14 @@
 		{/each}
 	</ul>
 	<p class="mt-2 text-subtle text-xs">
-		To return a log for correction, use the <a
-			class="link"
-			href={resolve('/staff/members/volunteers/hours')}
-			>{m.volunteer_work_order_hours_hours_queue()}</a
-		>.
+		<ParaglideMessage
+			message={m.volunteer_work_order_hours_return_log_correction_use}
+			inputs={{
+				volunteer_work_order_hours_hours_queue: m.volunteer_work_order_hours_hours_queue()
+			}}
+			>{#snippet a({ children })}<a class="link" href={resolve('/staff/members/volunteers/hours')}
+					>{@render children?.()}</a
+				>{/snippet}</ParaglideMessage
+		>
 	</p>
 </InfoCard>

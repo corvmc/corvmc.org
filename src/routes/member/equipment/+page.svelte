@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
@@ -263,7 +264,12 @@
 				{#if costEstimate === 0}
 					<span class="font-medium">{m.member_equipment_free_sustaining_members()}</span>
 				{:else}
-					Estimated cost: <span class="font-semibold">{formatCents(costEstimate)}</span>
+					<ParaglideMessage
+						message={m.member_equipment_estimated_cost}
+						inputs={{ formatCents: formatCents(costEstimate) }}
+						>{#snippet span({ children })}<span class="font-semibold">{@render children?.()}</span
+							>{/snippet}</ParaglideMessage
+					>
 				{/if}
 			</div>
 		{:else if isFreeForm && pickupDateValue && returnDateValue}

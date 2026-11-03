@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { formatMonthDay } from '$lib/utils/format';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
@@ -62,22 +63,43 @@
 		</div>
 
 		<div class="mt-4 rounded-lg bg-primary/5 p-3 text-center">
-			<p class="text-muted">Your hours refresh on <strong>{refreshDate}</strong></p>
+			<p class="text-muted">
+				<ParaglideMessage
+					message={m.member_membership_credit_balance_card_hours_refresh}
+					inputs={{ refreshDate }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
+			</p>
 		</div>
 
 		<div class="mt-4 space-y-2 border-t border-base-200 pt-4">
 			<div class="flex items-start gap-2">
 				<IconCircleCheck size={20} class="mt-0.5 shrink-0 text-success" />
 				<span
-					><strong>{m.member_membership_credit_balance_card_recurring_reservations()}</strong> to lock
-					in your regular practice times</span
+					><ParaglideMessage
+						message={m.member_membership_credit_balance_card_lock_regular_practice}
+						inputs={{
+							member_membership_credit_balance_card_recurring_reservations:
+								m.member_membership_credit_balance_card_recurring_reservations()
+						}}
+						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+							>{/snippet}</ParaglideMessage
+					></span
 				>
 			</div>
 			<div class="flex items-start gap-2">
 				<IconCircleCheck size={20} class="mt-0.5 shrink-0 text-success" />
 				<span
-					><strong>{m.member_membership_credit_balance_card_priority_booking()}</strong> when last-minute
-					openings pop up</span
+					><ParaglideMessage
+						message={m.member_membership_credit_balance_card_when_last_minute_openi}
+						inputs={{
+							member_membership_credit_balance_card_priority_booking:
+								m.member_membership_credit_balance_card_priority_booking()
+						}}
+						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+							>{/snippet}</ParaglideMessage
+					></span
 				>
 			</div>
 		</div>

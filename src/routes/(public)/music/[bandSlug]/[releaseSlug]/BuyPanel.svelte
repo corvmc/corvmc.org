@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
@@ -186,10 +187,19 @@
 				{#if viewerEmail}
 					<input {...fields.email.as('hidden', viewerEmail)} />
 					<p class="text-muted">
-						Buying as <span class="font-medium">{viewerEmail}</span> — it'll be in your
-						<a class="link" href={resolve('/member/purchases')}
-							>{m.public_music_band_slug_release_slug_buy_panel_purchases()}</a
-						> straight away.
+						<ParaglideMessage
+							message={m.public_music_band_slug_release_slug_buy_panel_buying_as_ll_s}
+							inputs={{
+								viewerEmail,
+								public_music_band_slug_release_slug_buy_panel_purchases:
+									m.public_music_band_slug_release_slug_buy_panel_purchases()
+							}}
+							>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+								>{/snippet}{#snippet a({ children })}<a
+									class="link"
+									href={resolve('/member/purchases')}>{@render children?.()}</a
+								>{/snippet}</ParaglideMessage
+						>
 					</p>
 				{:else}
 					<FormField
@@ -200,9 +210,14 @@
 						required
 					/>
 					<p class="text-muted">
-						Got an account?
-						<a class="link" href={signInHref({ returnTo: here(page.url) })}> {m.public_sign()} </a>
-						and it lands in your Purchases too.
+						<ParaglideMessage
+							message={m.public_music_band_slug_release_slug_buy_panel_got_account_la}
+							inputs={{ public_sign: m.public_sign() }}
+							>{#snippet a({ children })}<a
+									class="link"
+									href={signInHref({ returnTo: here(page.url) })}>{@render children?.()}</a
+								>{/snippet}</ParaglideMessage
+						>
 					</p>
 				{/if}
 			</div>

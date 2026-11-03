@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -203,10 +204,16 @@
 
 			{#if ask.deliveredUrl}
 				<p class="mt-3 text-sm">
-					We have
-					<a href={ask.deliveredUrl} class="link" target="_blank" rel="external noreferrer"
-						>{m.public_act_token_art()}</a
-					>. Uploading another replaces it.
+					<ParaglideMessage
+						message={m.public_act_token_we_have_uploading_another_replaces}
+						inputs={{ public_act_token_art: m.public_act_token_art() }}
+						>{#snippet a({ children })}<a
+								href={ask.deliveredUrl}
+								class="link"
+								target="_blank"
+								rel="external noreferrer">{@render children?.()}</a
+							>{/snippet}</ParaglideMessage
+					>
 				</p>
 			{/if}
 

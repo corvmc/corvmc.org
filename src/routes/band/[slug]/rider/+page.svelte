@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m as msg } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -151,9 +152,12 @@
 
 	{#if overCapacity}
 		<Alert type="warning" class="mb-4">
-			This rider asks for <strong>{rider.channelCount}</strong> channels and the room's desk takes
-			<strong>{data.consoleChannels}</strong>. That is not a problem to solve here — the house
-			engineer will combine or drop inputs — but it is worth agreeing which ones before load-in.
+			<ParaglideMessage
+				message={msg.band_slug_rider_rider_asks_channels_room_s}
+				inputs={{ channelCount: rider.channelCount, consoleChannels: data.consoleChannels }}
+				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}</ParaglideMessage
+			>
 		</Alert>
 	{/if}
 

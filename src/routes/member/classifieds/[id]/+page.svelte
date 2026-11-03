@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -113,7 +114,12 @@
 			<p>
 				{withheldCopy[post.displayStatus]}
 				{#if post.visibilityNote}
-					Staff's note: <span class="italic">{post.visibilityNote}</span>
+					<ParaglideMessage
+						message={m.member_staff_s_note}
+						inputs={{ visibilityNote: post.visibilityNote }}
+						>{#snippet span({ children })}<span class="italic">{@render children?.()}</span
+							>{/snippet}</ParaglideMessage
+					>
 				{/if}
 			</p>
 		</Alert>

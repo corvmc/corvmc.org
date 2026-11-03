@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
@@ -87,9 +88,13 @@
 				</p>
 			{:else if !isFreeEvent}
 				<p class="mt-3 text-muted text-sm">
-					No one is turned away for lack of funds. If the price is a barrier,
-					<a href={resolve('/contact')} class="link">{m.public_events_id_tickets_get_touch()}</a> or just
-					come to the door.
+					<ParaglideMessage
+						message={m.public_events_id_tickets_no_one_turned_away_lack_2}
+						inputs={{ public_events_id_tickets_get_touch: m.public_events_id_tickets_get_touch() }}
+						>{#snippet a({ children })}<a href={resolve('/contact')} class="link"
+								>{@render children?.()}</a
+							>{/snippet}</ParaglideMessage
+					>
 				</p>
 			{/if}
 			{#if data.remaining !== null}

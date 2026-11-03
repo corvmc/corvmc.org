@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Form from '$lib/components/ui/Form/Form.svelte';
@@ -61,12 +62,15 @@
 	<input {...saveBandEpk.fields.epk.as('hidden', epkJson)} />
 
 	<Alert type="info">
-		Everything on this page is free for every act. Contacts and phone numbers go only in the press
-		kit you download and send — they are never published on your public page, where a booker reaches
-		you through a contact form instead. What you need on stage is a separate document: your <a
-			href={riderHref}
-			class="link">{m.band_slug_press_kit_press_kit_form_tech_rider()}</a
-		>.
+		<ParaglideMessage
+			message={m.band_slug_press_kit_press_kit_form_everything_page_free_ever}
+			inputs={{
+				band_slug_press_kit_press_kit_form_tech_rider:
+					m.band_slug_press_kit_press_kit_form_tech_rider()
+			}}
+			>{#snippet a({ children })}<a href={riderHref} class="link">{@render children?.()}</a
+				>{/snippet}</ParaglideMessage
+		>
 	</Alert>
 
 	<!-- Public: what a stranger reads -->

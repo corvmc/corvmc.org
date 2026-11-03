@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
@@ -238,8 +239,12 @@
 									<input {...fields.releaseId.as('hidden', releaseId)} />
 									<input {...fields.trackId.as('hidden', track.id)} />
 									<p>
-										Delete <strong>{track.title}</strong>? The audio file is removed for good.
-										Anyone who already bought this release keeps their download.
+										<ParaglideMessage
+											message={m.band_slug_music_release_id_delete_audio_file_removed_good}
+											inputs={{ title: track.title }}
+											>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+												>{/snippet}</ParaglideMessage
+										>
 									</p>
 								</div>
 							{/snippet}
@@ -380,11 +385,14 @@
 					<!-- The state that would otherwise fail silently at Publish: a price
 					     is set but nothing can take the money. -->
 					<Alert type="warning">
-						This release has a price, but payouts are not set up yet, so nobody can buy it.
-						<a class="link" href={resolve(`/band/${band.slug}/music/payouts`)}
-							>{m.band_set_up_payouts()}</a
+						<ParaglideMessage
+							message={m.band_slug_music_release_id_release_has_price_but_payouts}
+							inputs={{ band_set_up_payouts: m.band_set_up_payouts() }}
+							>{#snippet a({ children })}<a
+									class="link"
+									href={resolve(`/band/${band.slug}/music/payouts`)}>{@render children?.()}</a
+								>{/snippet}</ParaglideMessage
 						>
-						— or set the price to zero to give it away.
 					</Alert>
 				{/if}
 
@@ -486,7 +494,14 @@
 								{@const fields = unpublishReleaseForm.for(releaseId).fields}
 								<input {...fields.slug.as('hidden', slug)} />
 								<input {...fields.releaseId.as('hidden', releaseId)} />
-								<p>Hide <strong>{release.title}</strong> from the site?</p>
+								<p>
+									<ParaglideMessage
+										message={m.band_slug_music_release_id_hide_from_site}
+										inputs={{ title: release.title }}
+										>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+											>{/snippet}</ParaglideMessage
+									>
+								</p>
 							{/snippet}
 						</Action>
 					</div>
@@ -512,8 +527,12 @@
 							<input {...fields.slug.as('hidden', slug)} />
 							<input {...fields.releaseId.as('hidden', releaseId)} />
 							<p>
-								Publish <strong>{release.title}</strong>? It becomes visible on your band's profile
-								and at its own address.
+								<ParaglideMessage
+									message={m.band_slug_music_release_id_publish_becomes_visible_band_s}
+									inputs={{ title: release.title }}
+									>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+										>{/snippet}</ParaglideMessage
+								>
 							</p>
 						{/snippet}
 					</Action>

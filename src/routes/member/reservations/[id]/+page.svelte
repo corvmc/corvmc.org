@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { formatDollars } from '$lib/utils/format';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
@@ -86,10 +87,13 @@
 			     break-glass code is confirmed on the lock right now, which happens
 			     mid-rotation. Standing outside is the failure mode. -->
 			<Alert type="error">
-				Your code hasn't reached the door and we don't have a backup to give you right now. Don't
-				wait outside — <a class="link" href={resolve('/contact')}
-					>{m.member_reservations_id_get_touch()}</a
-				> and someone will let you in.
+				<ParaglideMessage
+					message={m.member_reservations_id_code_hasn_t_reached_door}
+					inputs={{ member_reservations_id_get_touch: m.member_reservations_id_get_touch() }}
+					>{#snippet a({ children })}<a class="link" href={resolve('/contact')}
+							>{@render children?.()}</a
+						>{/snippet}</ParaglideMessage
+				>
 			</Alert>
 		{:else if res.lockCode}
 			<p class="text-muted">
@@ -106,8 +110,12 @@
 		     tells a member less than the list they came from (#895). -->
 		<InfoCard title={m.member_reservations_id_not_confirmed_yet()}>
 			<p>
-				<span class="font-medium">${formatDollars(data.totalCents)}</span>
-				due — cash at the door, or card online.
+				<ParaglideMessage
+					message={m.member_reservations_id_due_cash_at_door_card}
+					inputs={{ formatDollars: formatDollars(data.totalCents) }}
+					>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+						>{/snippet}</ParaglideMessage
+				>
 			</p>
 			<UnconfirmedNotice startsAt={res.startsAt} class="space-y-1 text-muted" />
 		</InfoCard>

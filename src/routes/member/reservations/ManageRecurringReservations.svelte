@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { CancelSeriesAction } from '$lib/components/actions';
 	import { getLocalUser } from '$lib/remote/users.remote';
@@ -65,8 +66,12 @@
 		     thing. An empty list with nothing else in it read as a feature with
 		     no way in, and a walk reached exactly that conclusion (#1001). -->
 		<p class="text-muted">
-			No active recurring reservations. Use <strong>{m.member_reserve_space()}</strong> at the top of
-			this page and pick a frequency on the first step to start a series.
+			<ParaglideMessage
+				message={m.member_reservations_manage_recurring_reservations_no_active}
+				inputs={{ member_reserve_space: m.member_reserve_space() }}
+				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 	{/each}
 {/if}

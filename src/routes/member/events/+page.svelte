@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -162,7 +163,11 @@
 							class="join-item {activeFilter === null ? 'latched' : ''}"
 							onclick={() => (activeFilter = null)}
 						>
-							All <span class="ml-1 opacity-60">{upcoming.length}</span>
+							<ParaglideMessage message={m.member_events_all} inputs={{ length: upcoming.length }}
+								>{#snippet span({ children })}<span class="ml-1 opacity-60"
+										>{@render children?.()}</span
+									>{/snippet}</ParaglideMessage
+							>
 						</Button>
 						{#each allTags as tag (tag)}
 							<Button

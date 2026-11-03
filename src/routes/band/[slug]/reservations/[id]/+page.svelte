@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -129,10 +130,13 @@
 			<!-- The session is running and nothing here opens the door. Standing
 			     outside is the failure mode, so this one is loud. -->
 			<Alert type="error">
-				This session's code hasn't reached the door and we don't have a backup to give you right
-				now. Don't wait outside — <a class="link" href={resolve('/contact')}
-					>{m.band_slug_reservations_id_get_touch()}</a
-				> and someone will let the band in.
+				<ParaglideMessage
+					message={m.band_slug_reservations_id_session_s_code_hasn_t}
+					inputs={{ band_slug_reservations_id_get_touch: m.band_slug_reservations_id_get_touch() }}
+					>{#snippet a({ children })}<a class="link" href={resolve('/contact')}
+							>{@render children?.()}</a
+						>{/snippet}</ParaglideMessage
+				>
 			</Alert>
 		{:else if res.lockCode}
 			<p class="text-muted">

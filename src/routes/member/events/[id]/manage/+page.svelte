@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
@@ -75,8 +76,13 @@
 	<PageHeader width="2xl" title={m.member_events_id_manage_title()} />
 	<PageContent width="2xl">
 		<Alert type="warning">
-			This listing doesn't exist, or it isn't yours.
-			<a href={resolve('/member/events')} class="link">{m.member_events_id_manage_back_events()}</a>
+			<ParaglideMessage
+				message={m.member_events_id_manage_listing_doesn_t_exist_isn}
+				inputs={{ member_events_id_manage_back_events: m.member_events_id_manage_back_events() }}
+				>{#snippet a({ children })}<a href={resolve('/member/events')} class="link"
+						>{@render children?.()}</a
+					>{/snippet}</ParaglideMessage
+			>
 		</Alert>
 	</PageContent>
 {:else}
@@ -192,11 +198,14 @@
 					{#snippet form()}
 						<input {...withdrawFields.eventId.as('hidden', eventId)} />
 						<p class="py-2">
-							Is this show not happening? It stays on the calendar marked <strong
-								>{m.member_events_id_manage_cancelled()}</strong
+							<ParaglideMessage
+								message={m.member_events_id_manage_show_not_happening_stays_calendar}
+								inputs={{
+									member_events_id_manage_cancelled: m.member_events_id_manage_cancelled()
+								}}
+								>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+									>{/snippet}</ParaglideMessage
 							>
-							until its date passes, so anyone who had the date finds out. If you just want it gone, take
-							it down instead.
 						</p>
 					{/snippet}
 				</Action>
@@ -207,9 +216,16 @@
 			<Alert type="warning">
 				<strong>{m.member_events_id_manage_might_already_listed()}</strong>
 				<p class="mt-1">
-					<a href={resolve(`/events/${duplicate.id}`)} class="link">{duplicate.title}</a>
-					is already on the calendar for {formatDateShort(duplicate.startsAt)}. Publish anyway if
-					it's a different show.
+					<ParaglideMessage
+						message={m.member_events_id_manage_already_calendar_publish_anyway_if}
+						inputs={{
+							title: duplicate.title,
+							formatDateShort: formatDateShort(duplicate.startsAt)
+						}}
+						>{#snippet a({ children })}<a href={resolve(`/events/${duplicate.id}`)} class="link"
+								>{@render children?.()}</a
+							>{/snippet}</ParaglideMessage
+					>
 				</p>
 			</Alert>
 		{/if}

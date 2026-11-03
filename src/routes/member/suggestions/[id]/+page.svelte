@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -65,7 +66,12 @@
 	-->
 	{#if project}
 		<Alert type="success">
-			Staff started work on this: <span class="font-medium">{project.name}</span>.
+			<ParaglideMessage
+				message={m.member_suggestions_id_staff_started_work}
+				inputs={{ name: project.name }}
+				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+					>{/snippet}</ParaglideMessage
+			>
 		</Alert>
 	{/if}
 
@@ -100,7 +106,12 @@
 			<p>
 				{withheldCopy[s.visibility] ?? 'This is not on the board right now.'}
 				{#if s.visibilityNote}
-					Staff's note: <span class="italic">{s.visibilityNote}</span>
+					<ParaglideMessage
+						message={m.member_staff_s_note}
+						inputs={{ visibilityNote: s.visibilityNote }}
+						>{#snippet span({ children })}<span class="italic">{@render children?.()}</span
+							>{/snippet}</ParaglideMessage
+					>
 				{/if}
 			</p>
 			{#if isMine && s.visibility === 'hidden'}

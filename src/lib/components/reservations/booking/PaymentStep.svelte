@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 	import { resolve } from '$app/paths';
 	import { getReservationPricing } from '$lib/remote/reservations.remote';
@@ -167,9 +168,17 @@
 
 			{#if !pricing.isSustainingMember}
 				<div class="mt-2 rounded-box border border-base-300 bg-base-200 px-4 py-3 text-sm">
-					Sustaining members get free rehearsal hours every month.
-					<a href={resolve('/member/membership')} target="_blank" class="link link-primary"
-						>{m.reservations_booking_payment_step_learn_more()}</a
+					<ParaglideMessage
+						message={m.reservations_booking_payment_step_sustaining_members_get_fre}
+						inputs={{
+							reservations_booking_payment_step_learn_more:
+								m.reservations_booking_payment_step_learn_more()
+						}}
+						>{#snippet a({ children })}<a
+								href={resolve('/member/membership')}
+								target="_blank"
+								class="link link-primary">{@render children?.()}</a
+							>{/snippet}</ParaglideMessage
 					>
 				</div>
 			{/if}

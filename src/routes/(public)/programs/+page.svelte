@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Hero from '$lib/components/public/Hero.svelte';
 	import Tile from '$lib/components/public/Tile.svelte';
 	import Section from '$lib/components/public/Section.svelte';
@@ -98,18 +99,24 @@
 				{m.public_programs_cmc_maintains_gear_library_available()}
 			</p>
 			<p class="mb-4 text-base leading-relaxed text-fg-2">
-				Need an amp for a gig, an instrument for a session, or a speaker for an event? We don't have
-				a full catalogue online yet — <a href={resolve('/contact')} class="link"
-					>{m.public_programs_reach_out()}</a
-				> and we'll tell you what we've got, or come by and take a look.
+				<ParaglideMessage
+					message={m.public_programs_need_amp_gig_instrument_session}
+					inputs={{ public_programs_reach_out: m.public_programs_reach_out() }}
+					>{#snippet a({ children })}<a href={resolve('/contact')} class="link"
+							>{@render children?.()}</a
+						>{/snippet}</ParaglideMessage
+				>
 			</p>
 			<Tile fill="tint-teal" pad="sm" align="start" class="mt-4">
 				<IconGuitarPick size={20} class="mt-0.5 shrink-0 text-cmc-teal" />
 				<p class="text-muted leading-relaxed">
-					Got gear collecting dust? We accept instrument and equipment donations in any condition —
-					email <a href="mailto:contact@corvmc.org" class="link"
-						>{m.public_programs_contact_corvmc_org()}</a
-					>.
+					<ParaglideMessage
+						message={m.public_programs_got_gear_collecting_dust_we}
+						inputs={{ public_programs_contact_corvmc_org: m.public_programs_contact_corvmc_org() }}
+						>{#snippet a({ children })}<a href="mailto:contact@corvmc.org" class="link"
+								>{@render children?.()}</a
+							>{/snippet}</ParaglideMessage
+					>
 				</p>
 			</Tile>
 		</div>

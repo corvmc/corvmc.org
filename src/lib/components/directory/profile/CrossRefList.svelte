@@ -17,18 +17,21 @@
 	};
 
 	let {
-		label,
+		kind,
 		items,
 		note
 	}: {
-		label: 'Bands' | 'Members';
+		kind: 'bands' | 'members';
 		items: CrossRef[];
 		note?: string;
 	} = $props();
 </script>
 
 {#if items.length > 0}
-	<ProfileSection title={label} {note}>
+	<ProfileSection
+		title={kind === 'bands' ? m.directory_profile_bands() : m.directory_profile_members()}
+		{note}
+	>
 		<div class="rel-list">
 			{#each items as item, i (item.href ?? `${item.name}-${i}`)}
 				{#if item.private}

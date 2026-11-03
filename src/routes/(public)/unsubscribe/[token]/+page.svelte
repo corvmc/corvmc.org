@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
@@ -35,8 +36,12 @@
 	{:else if done}
 		<h1 class="text-2xl font-bold">{m.public_unsubscribe_token_unsubscribed()}</h1>
 		<p class="opacity-70">
-			You've been unsubscribed from <strong>{data.audienceName}</strong>. You won't receive any more
-			emails from this list.
+			<ParaglideMessage
+				message={m.public_unsubscribe_token_ve_been_unsubscribed_from_won}
+				inputs={{ audienceName: data.audienceName }}
+				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 		<!-- The single-list unsubscribe is the main driver of spam complaints:
 		     people leave one list, keep getting mail from another, and hit "mark as
@@ -60,7 +65,12 @@
 	{:else}
 		<h1 class="text-2xl font-bold">{m.public_unsubscribe_token_unsubscribe()}</h1>
 		<p class="opacity-70">
-			Stop receiving emails from <strong>{data.audienceName}</strong>?
+			<ParaglideMessage
+				message={m.public_unsubscribe_token_stop_receiving_emails_from}
+				inputs={{ audienceName: data.audienceName }}
+				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 		<Form remote={confirmUnsubscribe} onsuccess={() => (done = true)}>
 			<input {...fields.token.as('hidden', token)} />

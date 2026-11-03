@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -90,8 +91,12 @@
 		<div class="space-y-4">
 			<input {...deleteFields.bandId.as('hidden', band.id)} />
 			<Alert type="error">
-				Are you sure you want to permanently delete <strong>{band.name}</strong>? All future
-				reservations will be cancelled and all members will be removed.
+				<ParaglideMessage
+					message={m.band_slug_settings_sure_want_permanently_delete_all}
+					inputs={{ name: band.name }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			</Alert>
 			<div class="flex justify-end pt-2">
 				<SubmitButton
