@@ -32,6 +32,10 @@
 	} = $props();
 </script>
 
-<svelte:element this={`h${level}`} class={clsx('card-title', size && SIZES[size], className)}>
-	{@render children()}
-</svelte:element>
+{#if level === 2}
+	<h2 class={clsx('card-title', size && SIZES[size], className)}>{@render children()}</h2>
+{:else if level === 4}
+	<h4 class={clsx('card-title', size && SIZES[size], className)}>{@render children()}</h4>
+{:else}
+	<h3 class={clsx('card-title', size && SIZES[size], className)}>{@render children()}</h3>
+{/if}

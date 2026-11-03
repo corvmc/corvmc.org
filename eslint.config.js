@@ -22,6 +22,7 @@ import noTrackedCommandInEffect from './eslint-rules/no-tracked-command-in-effec
 import preferTermMessages from './eslint-rules/prefer-term-messages.js';
 import clubTimeDates from './eslint-rules/club-time-dates.js';
 import noWordingLocators from './eslint-rules/no-wording-locators.js';
+import noSvelteElement from './eslint-rules/no-svelte-element.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -67,7 +68,8 @@ const customPlugin = {
 		'prefer-term-messages': preferTermMessages,
 		// Registered, not enabled, for the same reason: ~870 hits in specs and e2e.
 		// `pnpm test-wording-census` counts them; enable it once they are cleared (#2189).
-		'no-wording-locators': noWordingLocators
+		'no-wording-locators': noWordingLocators,
+		'no-svelte-element': noSvelteElement
 	}
 };
 
@@ -192,7 +194,8 @@ export default defineConfig(
 			'custom/no-inline-alert-action': 'error',
 			'custom/page-header-width-matches-content': 'error',
 			'custom/no-concurrent-remote-queries': 'error',
-			'custom/definite-action-labels': 'error'
+			'custom/definite-action-labels': 'error',
+			'custom/no-svelte-element': 'error'
 		}
 	},
 	{

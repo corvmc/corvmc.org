@@ -151,15 +151,17 @@
 
 {#snippet titleRow()}
 	<div class="flex flex-wrap items-baseline gap-2">
-		{#if heading}
-			<!--
-				`truncate` on the inner element, never on the heading: `layout.css`
-				sets `text-wrap: balance` on h1–h6 unlayered, and unlayered CSS beats
-				every @layer, so nowrap silently fails to apply there.
-			-->
-			<svelte:element this={`h${heading}`} class="min-w-0 font-semibold {titleSize}">
-				{@render titleText()}
-			</svelte:element>
+		<!--
+			`truncate` on the inner element, never on the heading: `layout.css`
+			sets `text-wrap: balance` on h1–h6 unlayered, and unlayered CSS beats
+			every @layer, so nowrap silently fails to apply there.
+		-->
+		{#if heading === 2}
+			<h2 class="min-w-0 font-semibold {titleSize}">{@render titleText()}</h2>
+		{:else if heading === 3}
+			<h3 class="min-w-0 font-semibold {titleSize}">{@render titleText()}</h3>
+		{:else if heading === 4}
+			<h4 class="min-w-0 font-semibold {titleSize}">{@render titleText()}</h4>
 		{:else}
 			{@render titleText()}
 		{/if}
