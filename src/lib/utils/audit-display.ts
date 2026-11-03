@@ -205,6 +205,8 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			const amount = d.costCents === null ? 'an invoice' : `a ${formatCents(d.costCents)} invoice`;
 			return `Recorded ${amount} from ${d.contractorName}${d.invoiceRef ? ` (${d.invoiceRef})` : ''}`;
 		}
+		case 'equipment_loan.checked_out_unscheduled':
+			return `Checked out ${entry.details.equipmentName ?? 'a loan'} without scheduling it: “${entry.details.reason}”`;
 		case 'project.edited':
 			return `Edited the project's ${entry.details.fields.map((f) => PROJECT_FIELDS[f] ?? f).join(', ')}`;
 		case 'project.status_changed': {

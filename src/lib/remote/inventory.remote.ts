@@ -1247,7 +1247,8 @@ export const checkoutLoanForm = form('unchecked', async (data, issue) => {
 	await checkoutLoan(loanId, {
 		dueDate: result.data!.dueDate,
 		assetId: result.data!.assetId,
-		actorId: currentUser.id
+		actorId: currentUser.id,
+		reason: result.data!.reason
 	});
 	void getStaffLoanDetail(loanId).refresh();
 	return { success: true };

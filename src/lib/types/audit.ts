@@ -48,6 +48,7 @@ export const auditActions = [
 	'work_order.member_invited',
 	'contractor_job.status_changed',
 	'contractor_job.invoice_recorded',
+	'equipment_loan.checked_out_unscheduled',
 	'project.edited',
 	'project.status_changed',
 	'project.duty_list_applied',
@@ -198,6 +199,13 @@ export interface AuditDetailsByAction {
 		contractorName: string;
 		costCents: number | null;
 		invoiceRef: string | null;
+	};
+	/** The subject is the borrower. A requested loan checked out without scheduling it (#2234). */
+	'equipment_loan.checked_out_unscheduled': {
+		loanId: string;
+		equipmentName: string | null;
+		warnings: string[];
+		reason: string;
 	};
 	'project.edited': { fields: ProjectField[] };
 	/** `suggestionMoved` when the suggestion it answers moved with it. */
