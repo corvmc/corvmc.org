@@ -596,6 +596,7 @@ spec that walks it.
 Services are tested against real SQLite. `vi.mock` is for outside services: Stripe, Postmark, the
 U-tec lock, R2. A partial `drizzle-orm` mock is a second copy of drizzle's export list, and every
 new operator a service imports breaks the sibling specs that hold one.
+`scripts/no-drizzle-orm-mock.spec.ts` fails on any `vi.mock('drizzle-orm'…)`.
 
 ### Time code runs at its edges
 
@@ -611,7 +612,7 @@ spec body across them, and across viewer zones (`.claude/rules/testing.md`).
 | UTC dates shown as the club's day (#1984, #1985)                        | untimezoned date formatting                 | lint rule (#2000)               |
 | A listing remote checked the wrong permission (#2002, #2031)            | a listing remote outside the listing guards | invariant spec                  |
 | Hold times reachable only through a rebook                              | a service option no form reaches            | `pnpm form-reachability` report |
-| Sibling specs broke after a service imported a new drizzle operator     | partial `drizzle-orm` mocks                 | real SQLite                     |
+| Sibling specs broke after a service imported a new drizzle operator     | partial `drizzle-orm` mocks                 | real SQLite + invariant spec    |
 | `getByRole('button', { name: 'Edit' })` broke when "Edit Hold" appeared | inexact role locators                       | lint rule                       |
 
 ## Forms: no raw elements
