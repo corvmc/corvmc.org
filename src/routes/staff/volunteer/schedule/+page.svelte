@@ -264,6 +264,7 @@
 		{/if}
 	</FilterBar>
 
+	<!-- eslint-disable-next-line custom/no-interactive-await -- #2358 -->
 	{#await schedule then data}
 		{@const cancelled = data.shifts.filter(
 			(s) => s.cancelledAt && matchesProject(s, projectFilter)

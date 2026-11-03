@@ -197,6 +197,7 @@
 				{:else if assignees}
 					<!-- Its own data, awaited here: the composer is below the fold and
 					     the staff list is a whole extra round trip. -->
+					<!-- eslint-disable-next-line custom/no-interactive-await -- #2357 -->
 					{#await assignees() then staffUsers}
 						<label class="flex items-center gap-2 text-sm">
 							<span class="text-subtle">{m.inbox_thread_composer_assign()}</span>

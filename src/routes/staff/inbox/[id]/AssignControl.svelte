@@ -42,6 +42,7 @@
 	} = $props();
 </script>
 
+<!-- eslint-disable-next-line custom/no-interactive-await -- #2357 -->
 {#await getAssignableStaff()}
 	<div class="flex items-end gap-2 py-2">
 		<span class="loading loading-xs loading-spinner"></span>

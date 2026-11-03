@@ -122,6 +122,7 @@
 			<option value="published">{m.staff_projects_productions_published()}</option>
 			<option value="cancelled">{m.staff_cancelled()}</option>
 		</Select>
+		<!-- eslint-disable-next-line custom/no-interactive-await -- #2359 -->
 		{#await result then data}
 			<Select
 				size="sm"

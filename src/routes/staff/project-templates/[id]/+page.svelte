@@ -59,6 +59,7 @@
 	];
 </script>
 
+<!-- eslint-disable-next-line custom/no-interactive-await -- #2359 -->
 {#await data then d}
 	{@const anchorLabel = dutyListAnchorLabels[d.list.anchor]}
 	{@const roleOptions = d.roles.map((r) => ({ value: r.id, label: r.name }))}

@@ -52,6 +52,7 @@
 	import { visibleActions, reservationPaymentState } from '$lib/utils/reservation-actions';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { getStaffReservationsPage } from '$lib/remote/reservations.remote';
+	import { Latest } from '$lib/latest.svelte';
 
 	type Row = Awaited<ReturnType<typeof getStaffReservationsPage>>['list']['rows'][number];
 	type Closure = Extract<Row, { kind: 'closure' }>;
@@ -86,22 +87,17 @@
 	// JAVASCRIPT-SVELTEKIT-3's unhandled rejections came from. Not awaited, because awaiting would
 	// suspend the page into the layout boundary's pending snippet on every keystroke.
 	const pageData = $derived(getStaffReservationsPage(filters));
+	const latestPage = new Latest(() => pageData);
 
 	const result = $derived(pageData.then((d) => d.list));
 	const counts = $derived(pageData.then((d) => d.counts));
-	const unresolved = $derived(pageData.then((d) => d.unresolved));
 	const hourlyRates = $derived(pageData.then((d) => d.hourlyRates));
 	// Latched, not `{#await}`ed: every refresh hands `.then()` a fresh promise, the
-	// `{#await}` re-pends, and its subtree unmounts — an open New Closure dialog
-	// and what was typed in it with it (#2350). A notification's `invalidateAll()`
-	// is enough.
-	let canManageClosures = $state(false);
-	$effect(() => {
-		pageData.then(
-			(d) => (canManageClosures = d.canManageClosures),
-			() => {}
-		);
-	});
+	// `{#await}` re-pends, and its subtree unmounts — an open dialog and what was
+	// typed in it with it (#2350, #2352). A notification's `invalidateAll()` is enough.
+	const settled = $derived(latestPage.current);
+	const canManageClosures = $derived(settled?.canManageClosures ?? false);
+	const unresolvedCount = $derived(settled?.unresolved.length ?? 0);
 
 	let resolveOpen = $state(false);
 
@@ -170,22 +166,16 @@
 
 <PageHeader title={m.staff_reservations_title()}>
 	<div class="flex gap-2">
-		{#await Promise.all([unresolved, counts])}
-			<Button variant="ghost" size="sm" onclick={() => (resolveOpen = true)}
-				>{m.staff_resolve()}</Button
-			>
-		{:then [unresolvedData]}
-			<Button
-				variant={unresolvedData.length > 0 ? 'warning' : 'ghost'}
-				size="sm"
-				onclick={() => (resolveOpen = true)}
-			>
-				{m.staff_resolve()}
-				{#if unresolvedData.length > 0}
-					<Badge>{unresolvedData.length}</Badge>
-				{/if}
-			</Button>
-		{/await}
+		<Button
+			variant={unresolvedCount > 0 ? 'warning' : 'ghost'}
+			size="sm"
+			onclick={() => (resolveOpen = true)}
+		>
+			{m.staff_resolve()}
+			{#if unresolvedCount > 0}
+				<Badge>{unresolvedCount}</Badge>
+			{/if}
+		</Button>
 		<RecurringSeriesModal />
 		{#if canManageClosures}<CreateClosureAction data-testid="new-closure" />{/if}
 		<CreateReservation />
@@ -602,6 +592,10 @@
 	{/if}
 {/snippet}
 
-{#await Promise.all([unresolved, hourlyRates]) then [unresolvedData, rates]}
-	<ResolveModal bind:open={resolveOpen} unresolved={unresolvedData} hourlyRates={rates} />
-{/await}
+{#if settled}
+	<ResolveModal
+		bind:open={resolveOpen}
+		unresolved={settled.unresolved}
+		hourlyRates={settled.hourlyRates}
+	/>
+{/if}

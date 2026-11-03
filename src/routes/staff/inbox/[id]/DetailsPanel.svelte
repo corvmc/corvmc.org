@@ -163,6 +163,7 @@
 					<SectionLabel label={m.staff_inbox_id_details_panel_tags()} />
 					<!-- The same query as History; the remote layer dedupes it, and
 					     splitting the columns apart is what makes each one readable. -->
+					<!-- eslint-disable-next-line custom/no-interactive-await -- #2357 -->
 					{#await getInboxThreadContext(thread.id) then context}
 						<div class="flex flex-wrap items-center gap-1">
 							{#each context.tags as tag (tag)}

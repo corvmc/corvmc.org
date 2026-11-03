@@ -14,6 +14,7 @@
 
 <svelte:boundary>
 	<InfoCard title={m.member_account_email_subscriptions_section_title()}>
+		<!-- eslint-disable-next-line custom/no-interactive-await -- #2359 -->
 		{#await lists}
 			<div class="flex justify-center p-4">
 				<span class="loading loading-sm loading-spinner"></span>

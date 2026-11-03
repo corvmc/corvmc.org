@@ -102,6 +102,7 @@
 <PageHeader title={m.staff_roles()} subtitle={m.staff_volunteering()} />
 
 <PageContent>
+	<!-- eslint-disable-next-line custom/no-interactive-await -- #2358 -->
 	{#await data then { roles, certifications }}
 		{@const groups = groupedRoles(roles)}
 		{@const live = roles.filter((r) => r.isActive).length}

@@ -17,6 +17,7 @@
 	let { userId, onsuccess }: { userId: string; onsuccess: () => void } = $props();
 </script>
 
+<!-- eslint-disable-next-line custom/no-interactive-await -- #2356 -->
 {#await getActiveCertifications() then catalog}
 	{#if catalog.length > 0}
 		<Action

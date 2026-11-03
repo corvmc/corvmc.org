@@ -40,6 +40,7 @@
 	because they are separate decisions: an upheld report about an event must not
 	quietly cost someone their suggestion-posting rights, or the reverse.
 -->
+<!-- eslint-disable-next-line custom/no-interactive-await -- #2356 -->
 {#await getMemberStandings(id) then standings}
 	{@const restricted = (['community_event', 'suggestion'] as const).filter(
 		(scope) => standings[scope].status !== 'none'

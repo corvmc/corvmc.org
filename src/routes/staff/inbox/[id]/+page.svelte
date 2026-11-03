@@ -154,6 +154,7 @@
 		disabled: a web thread replies by email to the address the contact form
 		captured, and a portal thread's reply is the message row itself.
 	-->
+	<!-- eslint-disable-next-line custom/no-interactive-await -- #2357 -->
 	{#await getInboxEnabledChannels() then enabledChannels}
 		{@const channelDisabled =
 			!isAlwaysEnabledChannel(t.channel) &&
