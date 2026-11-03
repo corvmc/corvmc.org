@@ -53,7 +53,8 @@ const {
 	returnHolding,
 	listAccessRegister,
 	AccessHoldingNotFoundError,
-	AccessHoldingReturnedError
+	AccessHoldingReturnedError,
+	AccessHoldingValidationError
 } = await import('./access-register-service');
 
 const dialect = new SQLiteSyncDialect();
@@ -128,6 +129,39 @@ describe('returnHolding', () => {
 		await expect(returnHolding('ah-1', { returnedByUserId: 's' })).rejects.toThrow(
 			AccessHoldingReturnedError
 		);
+	});
+
+	it('records a return on the day it happened, not after the issue', async () => {
+		updateReturning = [{ id: 'ah-1' }];
+		const returnedAt = new Date('2026-01-10T20:00:00Z');
+
+		await returnHolding('ah-1', { returnedByUserId: 'staff-2', returnedAt });
+
+		expect(updated[0]).toMatchObject({ returnedAt });
+		const { sql } = dialect.sqlToQuery(whereArgs[0] as SQL);
+		expect(sql).toContain('"access_holding"."issued_at" <= ?');
+	});
+
+	it('refuses a return dated before the issue', async () => {
+		updateReturning = [];
+		selectResults = [[{ returnedAt: null, issuedAt: new Date('2026-02-01T20:00:00Z') }]];
+
+		await expect(
+			returnHolding('ah-1', {
+				returnedByUserId: 's',
+				returnedAt: new Date('2026-01-10T20:00:00Z')
+			})
+		).rejects.toThrow(AccessHoldingValidationError);
+	});
+
+	it('refuses a return dated in the future', async () => {
+		await expect(
+			returnHolding('ah-1', {
+				returnedByUserId: 's',
+				returnedAt: new Date(Date.now() + 2 * 86_400_000)
+			})
+		).rejects.toThrow(AccessHoldingValidationError);
+		expect(updated).toHaveLength(0);
 	});
 
 	it('says so when the holding does not exist', async () => {

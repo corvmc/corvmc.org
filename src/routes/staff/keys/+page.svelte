@@ -130,6 +130,12 @@
 								{#snippet form()}
 									<input {...ret.fields.id.as('hidden', row.id)} />
 									<p>{row.holderName} handed back {row.label}.</p>
+									<Field
+										field={ret.fields.returnedOn}
+										type="date"
+										label="Returned on"
+										value={clubToday()}
+									/>
 									<Field field={ret.fields.notes} type="textarea" label="Notes" />
 								{/snippet}
 							</Action>
