@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { formatDateInTz, formatTimeInTz } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -46,8 +46,11 @@ const {
 	LOCK_GRACE_MINUTES,
 	testConnection,
 	buildAuthorizeUrl,
-	exchangeAuthorizationCode
+	exchangeAuthorizationCode,
+	UtecRateLimitedError,
+	UtecApiError
 } = await import('./ultraloc-client');
+const kv = await import('$lib/server/kv');
 
 let lastBody: any = null;
 let lastUrl: string | null = null;
@@ -332,6 +335,107 @@ describe('listLockUsers', () => {
 	it('returns an empty array when no users are present', async () => {
 		mockFetch({ devices: [{ id: 'DEV-1' }] });
 		expect(await listLockUsers()).toEqual([]);
+	});
+
+	// An error is not an empty lock: diffs against that would act on nothing.
+	it('throws when the device answers with an error instead of users', async () => {
+		mockFetch({ devices: [{ id: 'DEV-1', error: { code: 'DEVICE_OFFLINE', message: 'x' } }] });
+		await expect(listLockUsers()).rejects.toBeInstanceOf(UtecApiError);
+	});
+});
+
+describe('rate limiting', () => {
+	const NOW = 1_750_000_000_000;
+	let store: Map<string, unknown>;
+	let fetchMock: ReturnType<typeof vi.fn>;
+	let consoleSpy: ReturnType<typeof vi.spyOn>;
+
+	/** KV as a store, so the cooldown one call writes is what the next call reads. */
+	beforeEach(() => {
+		vi.useFakeTimers({ toFake: ['Date'] });
+		vi.setSystemTime(NOW);
+		store = new Map([['ultraloc:token', { accessToken: 'tok', expiresAt: NOW + 1_000_000 }]]);
+		vi.mocked(kv.getJson).mockImplementation(
+			async (key: string) => (store.get(key) as never) ?? null
+		);
+		vi.mocked(kv.putJson).mockImplementation(async (key: string, value: unknown) => {
+			store.set(key, value);
+		});
+		consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+		consoleSpy.mockRestore();
+		vi.mocked(kv.getJson).mockReset();
+		vi.mocked(kv.getJson).mockResolvedValue({
+			accessToken: 'tok',
+			expiresAt: Date.now() + 1_000_000
+		});
+		vi.mocked(kv.putJson).mockReset();
+	});
+
+	function respond(res: Partial<Response> & { body?: unknown }) {
+		fetchMock = vi.fn(async () => ({
+			ok: res.status === undefined || res.status === 200,
+			status: res.status ?? 200,
+			headers: new Headers(res.headers as HeadersInit),
+			json: async () => res.body,
+			text: async () => ''
+		}));
+		vi.stubGlobal('fetch', fetchMock);
+	}
+
+	it('treats a 429 as a throttle, honours Retry-After, and makes no call until it passes', async () => {
+		respond({ status: 429, headers: { 'Retry-After': '120' } as never });
+
+		const first = await listLockUsers().catch((e) => e);
+		expect(first).toBeInstanceOf(UtecRateLimitedError);
+		expect((first as InstanceType<typeof UtecRateLimitedError>).until.getTime()).toBe(
+			NOW + 120_000
+		);
+		expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+		await expect(queryDeviceHealth()).rejects.toBeInstanceOf(UtecRateLimitedError);
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+		vi.setSystemTime(NOW + 121_000);
+		respond({ body: { payload: { devices: [{ users: [] }] } } });
+		expect(await listLockUsers()).toEqual([]);
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+
+	it('treats an error code naming a rate limit as a throttle, for the rest of the window', async () => {
+		respond({
+			body: {
+				payload: { devices: [{ error: { code: 'RATE_LIMIT_EXCEEDED', message: 'slow down' } }] }
+			}
+		});
+
+		const err = await listLockUsers().catch((e) => e);
+
+		expect(err).toBeInstanceOf(UtecRateLimitedError);
+		expect((err as InstanceType<typeof UtecRateLimitedError>).until.getTime()).toBe(
+			NOW + 15 * 60_000
+		);
+	});
+
+	it('does not pause the lock for an ordinary error', async () => {
+		respond({ body: { payload: { error: { code: 'USER_LIMIT', message: 'lock is full' } } } });
+
+		await expect(listLockUsers()).rejects.toBeInstanceOf(UtecApiError);
+		expect(store.has('ultraloc:cooldownUntil')).toBe(false);
+	});
+
+	it('reports a non-200 as a distinct error carrying its status', async () => {
+		respond({ status: 504 });
+
+		const err = await listLockUsers().catch((e) => e);
+
+		expect(err).toBeInstanceOf(UtecApiError);
+		expect((err as InstanceType<typeof UtecApiError>).status).toBe(504);
+		expect(store.has('ultraloc:cooldownUntil')).toBe(false);
 	});
 });
 
