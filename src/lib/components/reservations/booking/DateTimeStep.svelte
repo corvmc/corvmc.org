@@ -302,6 +302,10 @@
 					</div>
 				</fieldset>
 			{/if}
+
+			{#if frequency}
+				<Form.Field name="recurringUntil" type="date" label="Until (optional)" min={date} />
+			{/if}
 		{/if}
 	{/if}
 

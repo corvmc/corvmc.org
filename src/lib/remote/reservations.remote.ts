@@ -142,6 +142,7 @@ import { requireGroupRole } from '$lib/server/group/group-context';
 import { paginate } from '$lib/server/db/paginate';
 import { ensureContactPhone } from '$lib/server/user/user-service';
 import { PHONE_REQUIRED_MESSAGE, isValidPhone } from '$lib/utils/phone';
+import { recurringSeriesEnd, UNTIL_BEFORE_START } from '$lib/server/reservation/series-until';
 import {
 	DEFAULT_TIMEZONE,
 	SEARCH_LIMIT,
@@ -947,9 +948,10 @@ export const previewRecurringInstances = query(
 		date: z.string(),
 		startTime: z.string(),
 		frequency: z.enum(['weekly', 'biweekly', 'monthly']),
-		monthlyMode: z.enum(['weekday', 'monthday']).optional()
+		monthlyMode: z.enum(['weekday', 'monthday']).optional(),
+		until: z.string().optional()
 	}),
-	async ({ date, startTime, frequency, monthlyMode }) => {
+	async ({ date, startTime, frequency, monthlyMode, until }) => {
 		const startsAt = buildDateInTz(date, startTime, DEFAULT_TIMEZONE);
 		const rruleString = buildRRule(
 			startsAt,
@@ -958,7 +960,9 @@ export const previewRecurringInstances = query(
 		);
 		const now = new Date();
 		// Show ~60 days of preview
-		const windowEnd = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+		const sixtyDays = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+		const seriesEnd = recurringSeriesEnd({ recurring: frequency, date, recurringUntil: until });
+		const windowEnd = seriesEnd && seriesEnd < sixtyDays ? seriesEnd : sixtyDays;
 		const occurrences = getOccurrences(rruleString, now, windowEnd);
 		return {
 			dates: occurrences.slice(0, 8).map((d) => d.toISOString()),
@@ -1579,6 +1583,7 @@ async function payReservationRemainder(opts: {
 const bookAndPaySchema = createReservationSchema.extend({
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
 	monthlyMode: z.enum(['weekday', 'monthday']).optional(),
+	recurringUntil: z.string().optional(),
 	coverFees: z.boolean().default(false),
 	skipPayment: z.enum(['', 'on']).optional()
 });
@@ -1592,6 +1597,8 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	if (!(await ensureContactPhone(locals.user.id, data.phone))) {
 		invalid(issue.phone(PHONE_REQUIRED_MESSAGE));
 	}
+	const seriesEndsAt = recurringSeriesEnd(data);
+	if (seriesEndsAt === null) invalid(issue.recurringUntil(UNTIL_BEFORE_START));
 
 	const recurringFrequency = data.recurring || undefined;
 	const isRecurring = recurringFrequency != null;
@@ -1657,7 +1664,8 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 			prototypeReservationId: res.id,
 			frequency: recurringFrequency as RecurringFrequency,
 			prototypeStartsAt: startsAt,
-			monthlyMode: data.monthlyMode
+			monthlyMode: data.monthlyMode,
+			endsAt: seriesEndsAt
 		});
 	}
 
@@ -1775,7 +1783,8 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 /** Instructor: book the room to teach (optionally recurring). */
 const instructorBookingSchema = createReservationSchema.extend({
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
-	monthlyMode: z.enum(['weekday', 'monthday']).optional()
+	monthlyMode: z.enum(['weekday', 'monthday']).optional(),
+	recurringUntil: z.string().optional()
 });
 
 /**
@@ -1818,6 +1827,8 @@ export const bookInstructorReservation = form(instructorBookingSchema, async (da
 	if (!(await ensureContactPhone(currentUser.id, data.phone))) {
 		invalid(issue.phone(PHONE_REQUIRED_MESSAGE));
 	}
+	const seriesEndsAt = recurringSeriesEnd(data);
+	if (seriesEndsAt === null) invalid(issue.recurringUntil(UNTIL_BEFORE_START));
 
 	const recurringFrequency = data.recurring || undefined;
 	const isRecurring = recurringFrequency != null;
@@ -1852,7 +1863,8 @@ export const bookInstructorReservation = form(instructorBookingSchema, async (da
 			prototypeReservationId: res.id,
 			frequency: recurringFrequency as RecurringFrequency,
 			prototypeStartsAt: startsAt,
-			monthlyMode: data.monthlyMode
+			monthlyMode: data.monthlyMode,
+			endsAt: seriesEndsAt
 		});
 	}
 
@@ -1867,6 +1879,7 @@ const bandBookingSchema = createReservationSchema.extend({
 	slug: z.string().min(1),
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
 	monthlyMode: z.enum(['weekday', 'monthday']).optional(),
+	recurringUntil: z.string().optional(),
 	coverFees: z.boolean().default(false),
 	// Set only by the pay step's submit, so a plain booking never charges.
 	payNow: z.enum(['', 'on']).optional()
@@ -1879,6 +1892,8 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 	if (!(await ensureContactPhone(currentUser.id, data.phone))) {
 		invalid(issue.phone(PHONE_REQUIRED_MESSAGE));
 	}
+	const seriesEndsAt = recurringSeriesEnd(data);
+	if (seriesEndsAt === null) invalid(issue.recurringUntil(UNTIL_BEFORE_START));
 
 	const recurringFrequency = data.recurring || undefined;
 	const isRecurring = recurringFrequency != null;
@@ -1936,7 +1951,8 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 			prototypeReservationId: res.id,
 			frequency: recurringFrequency as RecurringFrequency,
 			prototypeStartsAt: startsAt,
-			monthlyMode: data.monthlyMode
+			monthlyMode: data.monthlyMode,
+			endsAt: seriesEndsAt
 		});
 	}
 
