@@ -24,6 +24,7 @@ import clubTimeDates from './eslint-rules/club-time-dates.js';
 import noWordingLocators from './eslint-rules/no-wording-locators.js';
 import noSvelteElement from './eslint-rules/no-svelte-element.js';
 import noLiteralUiText from './eslint-rules/no-literal-ui-text.js';
+import noManualFieldName from './eslint-rules/no-manual-field-name.js';
 import noInteractiveAwait from './eslint-rules/no-interactive-await.js';
 
 import prettier from 'eslint-config-prettier';
@@ -73,6 +74,7 @@ const customPlugin = {
 		'no-svelte-element': noSvelteElement,
 		// Enabled below for shipped `.svelte` (#2099).
 		'no-literal-ui-text': noLiteralUiText,
+		'no-manual-field-name': noManualFieldName,
 		'no-interactive-await': noInteractiveAwait
 	}
 };
@@ -216,6 +218,103 @@ export default defineConfig(
 		rules: {
 			'custom/no-literal-ui-text': ['error', { allow: ['h1 { /* your styles here */ }'] }]
 		}
+	},
+	{
+		// Kit 3 rejects a hand-written name in a remote form (#2196). The ignores are the
+		// files not yet migrated; `pnpm field-name-census` lists their sites. The list
+		// only shrinks.
+		files: ['src/**/*.svelte'],
+		ignores: [
+			'**/*.stories.svelte',
+			'**/*.test.svelte',
+			'src/lib/components/actions/AddSubscriberAction.svelte',
+			'src/lib/components/actions/CreateAudienceAction.svelte',
+			'src/lib/components/actions/InviteMemberAction.svelte',
+			'src/lib/components/actions/UnpublishEventAction.svelte',
+			'src/lib/components/events/ListingEditForm.svelte',
+			'src/lib/components/events/ListingPosterCard.svelte',
+			'src/lib/components/groups/AddChairAction.svelte',
+			'src/lib/components/groups/CommitteeGrantsAction.svelte',
+			'src/lib/components/groups/CreateGroupAction.svelte',
+			'src/lib/components/groups/InviteGroupMemberAction.svelte',
+			'src/lib/components/inbox/ThreadComposer.svelte',
+			'src/lib/components/inventory/ItemResources.svelte',
+			'src/lib/components/volunteer/CandidateColumn.svelte',
+			'src/lib/components/volunteer/LogHoursForMemberAction.svelte',
+			'src/lib/components/volunteer/MyShiftCard.svelte',
+			'src/lib/components/volunteer/OpenShifts.svelte',
+			'src/lib/components/volunteer/ShiftChecklist.svelte',
+			'src/lib/components/volunteer/WorkOrderHours.svelte',
+			'src/lib/components/volunteer/WorkOrderView.svelte',
+			'src/routes/(public)/contact/+page.svelte',
+			'src/routes/(public)/events/[id]/tickets/+page.svelte',
+			'src/routes/(public)/events/[id]/vendors/apply/+page.svelte',
+			'src/routes/(public)/subscribe/[slug]/+page.svelte',
+			'src/routes/(public)/subscribe/+page.svelte',
+			'src/routes/band/[slug]/edit/BandProfileForm.svelte',
+			'src/routes/band/[slug]/events/ImportGigsModal.svelte',
+			'src/routes/member/account/+page.svelte',
+			'src/routes/member/classifieds/[id]/+page.svelte',
+			'src/routes/member/events/[id]/manage/+page.svelte',
+			'src/routes/member/groups/[slug]/CommitteeOpenItems.svelte',
+			'src/routes/member/groups/[slug]/edit/GroupProfileForm.svelte',
+			'src/routes/member/messages/ComposeAction.svelte',
+			'src/routes/member/profile/ProfileForm.svelte',
+			'src/routes/member/suggestions/[id]/+page.svelte',
+			'src/routes/member/suggestions/CreateSuggestionAction.svelte',
+			'src/routes/member/suggestions/SuggestionCard.svelte',
+			'src/routes/member/volunteer/feedback/[signupId]/+page.svelte',
+			'src/routes/member/volunteer/profile/+page.svelte',
+			'src/routes/member/volunteer/shifts/[signupId]/+page.svelte',
+			'src/routes/member/volunteer/shifts/[signupId]/check-in/+page.svelte',
+			'src/routes/staff/access/PersonAccess.svelte',
+			'src/routes/staff/access/RevokeClearanceAction.svelte',
+			'src/routes/staff/bands/acts/ClaimExternalActAction.svelte',
+			'src/routes/staff/classifieds/[id]/+page.svelte',
+			'src/routes/staff/events/[id]/production/+page.svelte',
+			'src/routes/staff/events/[id]/production/ArtifactRequestsPanel.svelte',
+			'src/routes/staff/events/[id]/production/DeliverablesCard.svelte',
+			'src/routes/staff/grants/[id]/+page.svelte',
+			'src/routes/staff/grants/funders/+page.svelte',
+			'src/routes/staff/groups/[id]/BandRecord.svelte',
+			'src/routes/staff/help/[id]/+page.svelte',
+			'src/routes/staff/help/+page.svelte',
+			'src/routes/staff/help/create/+page.svelte',
+			'src/routes/staff/inbox/[id]/AssignControl.svelte',
+			'src/routes/staff/inbox/SaveViewDialog.svelte',
+			'src/routes/staff/inventory/loans/[id]/+page.svelte',
+			'src/routes/staff/inventory/problems/[id]/+page.svelte',
+			'src/routes/staff/inventory/RestockList.svelte',
+			'src/routes/staff/members/[id]/panels/GrantCertificationAction.svelte',
+			'src/routes/staff/members/[id]/panels/OrientationCard.svelte',
+			'src/routes/staff/members/[id]/panels/VolunteerPanel.svelte',
+			'src/routes/staff/members/instructors/GrantInstructorAction.svelte',
+			'src/routes/staff/members/volunteers/+page.svelte',
+			'src/routes/staff/members/volunteers/hours/+page.svelte',
+			'src/routes/staff/project-templates/[id]/+page.svelte',
+			'src/routes/staff/project-templates/+page.svelte',
+			'src/routes/staff/projects/[id]/EquipmentAction.svelte',
+			'src/routes/staff/renewals/[id]/+page.svelte',
+			'src/routes/staff/settings/+page.svelte',
+			'src/routes/staff/sponsors/[id]/+page.svelte',
+			'src/routes/staff/venues/[id]/+page.svelte',
+			'src/routes/staff/venues/[id]/VenueFeeds.svelte',
+			'src/routes/staff/volunteer/ConfirmFixedCard.svelte',
+			'src/routes/staff/volunteer/HoursToReviewCard.svelte',
+			'src/routes/staff/volunteer/LapsingCard.svelte',
+			'src/routes/staff/volunteer/NeedsConfirmingCard.svelte',
+			'src/routes/staff/volunteer/NeedsSchedulingCard.svelte',
+			'src/routes/staff/volunteer/NewWorkOrderAction.svelte',
+			'src/routes/staff/volunteer/roles/[id]/+page.svelte',
+			'src/routes/staff/volunteer/roles/[id]/RoleGrantsCard.svelte',
+			'src/routes/staff/volunteer/roles/[id]/RoleRequirementsCard.svelte',
+			'src/routes/staff/volunteer/roles/+page.svelte',
+			'src/routes/staff/volunteer/schedule/+page.svelte',
+			'src/routes/staff/volunteer/schedule/recurring/RecurringPanel.svelte',
+			'src/routes/staff/volunteer/schedule/recurring/RecurringWork.svelte',
+			'src/routes/staff/volunteer/shifts/[id]/EngageContractorAction.svelte'
+		],
+		rules: { 'custom/no-manual-field-name': 'error' }
 	},
 	{
 		// FileUpload is the one place the native picker lives.
