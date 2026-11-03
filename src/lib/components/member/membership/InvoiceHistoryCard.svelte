@@ -5,7 +5,7 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { IconReceipt, IconFileDownload } from '@tabler/icons-svelte';
-	import { formatCents } from '$lib/utils/format';
+	import { formatCents, formatMonthDayYear } from '$lib/utils/format';
 	import type { BillingInvoice } from '$lib/server/finance/billing-service';
 
 	let {
@@ -27,8 +27,7 @@
 		uncollectible: { label: 'Unpaid', variant: 'error' }
 	};
 
-	const date = (value: Date) =>
-		value.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+	const date = formatMonthDayYear;
 </script>
 
 <Card>

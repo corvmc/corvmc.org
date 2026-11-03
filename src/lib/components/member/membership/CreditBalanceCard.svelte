@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatMonthDay } from '$lib/utils/format';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { IconMusic, IconCircleCheck } from '@tabler/icons-svelte';
@@ -21,12 +22,7 @@
 	const allocatedHours = $derived(creditsToHours(allocatedThisMonth));
 	const usedHours = $derived(creditsToHours(usedThisMonth));
 	const remaining = $derived(creditsToHours(credits.free_hours ?? 0));
-	const refreshDate = $derived(
-		subscription.currentPeriodEnd.toLocaleDateString('en-US', {
-			month: 'long',
-			day: 'numeric'
-		})
-	);
+	const refreshDate = $derived(formatMonthDay(subscription.currentPeriodEnd));
 </script>
 
 <Card>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatHistoryTime, formatDateShortYear } from '$lib/utils/format';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -42,14 +43,14 @@
 				{/if}
 
 				{#if campaign.sentAt}
-					<Fact label="Sent at">{new Date(campaign.sentAt).toLocaleString()}</Fact>
+					<Fact label="Sent at">{formatHistoryTime(new Date(campaign.sentAt))}</Fact>
 				{/if}
 
 				{#if campaign.scheduledFor && !campaign.sentAt}
-					<Fact label="Scheduled for">{new Date(campaign.scheduledFor).toLocaleString()}</Fact>
+					<Fact label="Scheduled for">{formatHistoryTime(new Date(campaign.scheduledFor))}</Fact>
 				{/if}
 
-				<Fact label="Created">{new Date(campaign.createdAt).toLocaleDateString()}</Fact>
+				<Fact label="Created">{formatDateShortYear(new Date(campaign.createdAt))}</Fact>
 			</DefinitionList>
 		</InfoCard>
 

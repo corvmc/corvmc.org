@@ -26,7 +26,7 @@
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { formatDateTimeShort, formatDateShortYear } from '$lib/utils/format';
+	import { formatDateTimeShort, formatDateShortYear, formatHistoryTime } from '$lib/utils/format';
 	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
 	import { toast } from 'svelte-sonner';
 
@@ -196,15 +196,16 @@
 
 		<Fact label="Stripe ID" mono>{member.stripeId ?? '—'}</Fact>
 
-		<Fact label="Joined">{new Date(member.createdAt).toLocaleString()}</Fact>
+		<Fact label="Joined">{formatHistoryTime(new Date(member.createdAt))}</Fact>
 
 		{#if member.deletedAt}
-			<Fact label="Deactivated">{new Date(member.deletedAt).toLocaleString()}</Fact>
+			<Fact label="Deactivated">{formatHistoryTime(new Date(member.deletedAt))}</Fact>
 		{/if}
 
 		{#if member.bannedAt}
 			<Fact label="Banned">
-				{new Date(member.bannedAt).toLocaleString()} by {member.bannedByName ?? 'a removed account'}
+				{formatHistoryTime(new Date(member.bannedAt))} by {member.bannedByName ??
+					'a removed account'}
 			</Fact>
 			<Fact label="Ban reason" class="whitespace-pre-line">{member.banReason}</Fact>
 		{/if}

@@ -2,7 +2,7 @@
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { previewRecurringEvents, startEventSeries } from '$lib/remote/events.remote';
-	import { toLocalDate, toLocalTime } from '$lib/utils/format';
+	import { toLocalDate, toLocalTime, formatDate } from '$lib/utils/format';
 
 	// Makes an existing listing the first of a series. Not on the create modal,
 	// which collects only what the row needs.
@@ -26,11 +26,7 @@
 	});
 
 	function formatOccurrence(iso: string): string {
-		return new Date(iso).toLocaleDateString(undefined, {
-			weekday: 'short',
-			month: 'short',
-			day: 'numeric'
-		});
+		return formatDate(new Date(iso));
 	}
 </script>
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { utcCalendarDate } from '$lib/utils/format';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -58,7 +59,7 @@
 			field={fields.signedOn}
 			type="date"
 			label="Signed on"
-			value={signedOn ? signedOn.toISOString().slice(0, 10) : ''}
+			value={signedOn ? utcCalendarDate(signedOn) : ''}
 		/>
 		<Field
 			field={fields.appraisalRef}
