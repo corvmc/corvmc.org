@@ -339,7 +339,6 @@
 	"src/lib/server/correlated-sql.spec.ts",
 	"src/lib/server/cron/schedule.ts",
 	"src/lib/server/cron/sentry-check-in.ts",
-	"src/lib/server/db/constraint-errors.ts",
 	"src/lib/server/db/raw-sql-tables.spec.ts",
 	"src/lib/server/db/schema/audio.ts",
 	"src/lib/server/db/schema/authentication.ts",

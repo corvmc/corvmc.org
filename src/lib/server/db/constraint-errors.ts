@@ -6,16 +6,16 @@
 /**
  * Matches D1/SQLite unique-violation text on the error or its wrapped cause.
  *
- * D1 raises "UNIQUE constraint failed: ...", and drizzle wraps it in a
- * DrizzleQueryError whose own message is the SQL, keeping the driver text in
- * `cause`. A case-sensitive check for lowercase 'unique' on the outer message
- * matched neither, which let a raw D1_ERROR escape as a 500
- * (JAVASCRIPT-SVELTEKIT-2D).
+ * drizzle wraps the driver's "UNIQUE constraint failed: ..." in an error whose
+ * own message is the SQL, so the text is in `cause` (JAVASCRIPT-SVELTEKIT-2D).
+ * Duck-typed rather than `instanceof Error`: an error built in another realm,
+ * such as a native driver under vitest's VM pool, fails `instanceof`.
  */
 export function isUniqueConstraintError(err: unknown): boolean {
-	for (let current: unknown = err, depth = 0; current instanceof Error && depth < 4; depth++) {
+	let current = err as { message?: unknown; cause?: unknown } | null | undefined;
+	for (let depth = 0; depth < 4 && typeof current?.message === 'string'; depth++) {
 		if (/unique constraint/i.test(current.message)) return true;
-		current = (current as { cause?: unknown }).cause;
+		current = current.cause as typeof current;
 	}
 	return false;
 }
