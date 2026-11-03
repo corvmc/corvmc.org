@@ -7,41 +7,25 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // really is unconditional: a stale disabled row must not be able to break
 // replies on either of them.
 
-let rows: { channel: string; enabled: boolean; config?: unknown }[] = [];
-const dbInsert = vi.fn();
-const dbUpdate = vi.fn();
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
 
-function chain(result: unknown) {
-	const self: Record<string, unknown> = {};
-	for (const m of ['from', 'where', 'limit', 'set', 'values']) {
-		self[m] = () => self;
-	}
-	self.then = (resolve: (v: unknown) => unknown) => resolve(result);
-	return self;
-}
-
-vi.mock('$lib/server/db', () => ({
-	db: {
-		select: () => chain(rows),
-		insert: (...args: unknown[]) => {
-			dbInsert(...args);
-			return chain([]);
-		},
-		update: (...args: unknown[]) => {
-			dbUpdate(...args);
-			return chain([]);
-		}
-	}
-}));
-vi.mock('$lib/server/db/schema/inbox', () => ({ inboxChannelConfig: { channel: 'channel' } }));
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }));
+vi.mock('$lib/server/db', () => ({ db: testDb }));
 
 const { getAllChannelConfigs, getChannelConfig, isChannelEnabled, updateChannelConfig } =
 	await import('./channel-config-service');
 
+const rows = () =>
+	sqlite.prepare('select channel, enabled from inbox_channel_config order by channel').all();
+const seed = (channel: string, enabled: boolean) =>
+	sqlite
+		.prepare('insert into inbox_channel_config (id, channel, enabled) values (?, ?, ?)')
+		.run(`cfg-${channel}`, channel, enabled ? 1 : 0);
+
 beforeEach(() => {
-	vi.clearAllMocks();
-	rows = [];
+	sqlite.exec('delete from inbox_channel_config');
 });
 
 describe.each(['web', 'portal'] as const)('always-enabled channel: %s', (channel) => {
@@ -51,7 +35,7 @@ describe.each(['web', 'portal'] as const)('always-enabled channel: %s', (channel
 	});
 
 	it('is enabled even when a row says otherwise', async () => {
-		rows = [{ channel, enabled: false }];
+		seed(channel, false);
 
 		expect(await isChannelEnabled(channel)).toBe(true);
 		const all = await getAllChannelConfigs();
@@ -63,8 +47,7 @@ describe.each(['web', 'portal'] as const)('always-enabled channel: %s', (channel
 		// reads as a bug the next time someone debugs a channel.
 		await updateChannelConfig(channel, false);
 
-		expect(dbInsert).not.toHaveBeenCalled();
-		expect(dbUpdate).not.toHaveBeenCalled();
+		expect(rows()).toEqual([]);
 	});
 });
 
@@ -74,9 +57,22 @@ describe('configurable channels', () => {
 		expect(await isChannelEnabled('sms')).toBe(false);
 	});
 
+	it('read their own row, not another channel’s', async () => {
+		seed('sms', true);
+
+		expect(await isChannelEnabled('sms')).toBe(true);
+		expect(await isChannelEnabled('email')).toBe(false);
+	});
+
 	it('are still writable', async () => {
-		rows = [];
 		await updateChannelConfig('email', true);
-		expect(dbInsert).toHaveBeenCalled();
+		expect(rows()).toEqual([{ channel: 'email', enabled: 1 }]);
+	});
+
+	it('update the existing row rather than adding a second', async () => {
+		seed('email', true);
+		await updateChannelConfig('email', false);
+
+		expect(rows()).toEqual([{ channel: 'email', enabled: 0 }]);
 	});
 });

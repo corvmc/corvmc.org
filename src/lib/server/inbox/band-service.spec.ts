@@ -1,119 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // band-service is the boundary between one act and the enquiries its public
-// booking form collects. Three invariants matter more than anything else it
-// does, and each has a concrete failure behind it:
+// booking form collects. Three invariants matter more than anything else:
 //
 //   1. Ownership is `inbox_thread.group_id = <the resolved band>` in the WHERE
-//      clause. The thread id is the only thing a client supplies, so without
-//      this, one band's admin reads another band's booking negotiation by
-//      guessing a uuid.
-//   2. Nothing here reads inbox_note. Notes are staff-private, the same reason
-//      portal-service exists instead of reusing getThread().
-//   3. Nothing here writes inbox_participant. Every member-side query in
-//      direct-service and portal-service finds its threads by joining that
-//      table, so a participant row on a band thread would surface a booking
-//      enquiry in /member/messages.
+//      clause, so one band's admin cannot read another's by guessing a uuid.
+//   2. Nothing here reads inbox_note. Notes are staff-private.
+//   3. Nothing here writes inbox_participant: a participant row on a band
+//      thread would surface a booking enquiry in /member/messages.
 //
-// These tests pin all three against the query the service actually builds.
+// Against a real SQLite, because a mocked `db` agrees with any WHERE.
 
-const TABLES = {
-	inboxThread: {
-		__table: 'inbox_thread',
-		id: 'thread.id',
-		channel: 'thread.channel',
-		groupId: 'thread.groupId',
-		status: 'thread.status',
-		awaitingReplySince: 'thread.awaitingReplySince',
-		lastMessageAt: 'thread.lastMessageAt'
-	},
-	inboxMessage: { __table: 'inbox_message', threadId: 'message.threadId' },
-	inboxNote: { __table: 'inbox_note' },
-	inboxParticipant: { __table: 'inbox_participant' },
-	inboxGroupRead: {
-		__table: 'inbox_group_read',
-		threadId: 'read.threadId',
-		userId: 'read.userId',
-		lastReadAt: 'read.lastReadAt'
-	}
-};
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
 
-/** Tables reached by any select/insert/update/join in the call under test. */
-let touched: string[] = [];
-/** Results handed to each awaited query, in order. */
-let results: unknown[] = [];
-/** Every `set(...)` argument, in call order. */
-let sets: unknown[] = [];
+vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
 
-function chain() {
-	const self: Record<string, unknown> = {};
-	const passthrough = ['where', 'orderBy', 'limit', 'offset', 'groupBy', '$dynamic', 'values'];
-	for (const m of passthrough) self[m] = () => self;
-	self.set = (v: unknown) => {
-		sets.push(v);
-		return self;
-	};
-	self.returning = () => self;
-	self.onConflictDoUpdate = () => self;
-	for (const m of ['from', 'innerJoin', 'leftJoin']) {
-		self[m] = (table: { __table?: string }) => {
-			if (table?.__table) touched.push(table.__table);
-			return self;
-		};
-	}
-	self.then = (resolve: (v: unknown) => unknown) => resolve(results.shift() ?? []);
-	return self;
-}
-
-vi.mock('$lib/server/db', () => ({
-	db: {
-		select: () => chain(),
-		insert: (table: { __table?: string }) => {
-			if (table?.__table) touched.push(table.__table);
-			return chain();
-		},
-		update: (table: { __table?: string }) => {
-			if (table?.__table) touched.push(table.__table);
-			return chain();
-		}
-	}
-}));
-vi.mock('$lib/server/db/schema/inbox', () => TABLES);
-
-const eq = vi.fn((a: unknown, b: unknown) => ({ op: 'eq', a, b }));
-vi.mock('drizzle-orm', () => ({
-	eq: (...a: unknown[]) => eq(...(a as [unknown, unknown])),
-	inArray: (a: unknown, b: unknown) => ({ op: 'inArray', a, b }),
-	and: (...a: unknown[]) => ({ op: 'and', a }),
-	or: (...a: unknown[]) => ({ op: 'or', a }),
-	desc: vi.fn(),
-	asc: vi.fn(),
-	count: vi.fn(),
-	gt: vi.fn(),
-	isNull: vi.fn(),
-	sql: vi.fn()
-}));
-
-vi.mock('$lib/config', () => ({ BAND_ENQUIRY_SUBJECT: 'Booking enquiry' }));
-
-const paginate = vi.fn(async () => ({ rows: [], total: 0 }));
-vi.mock('$lib/server/db/paginate', () => ({
-	paginate: (...a: unknown[]) => paginate(...(a as []))
-}));
-
-const findOrCreateThread = vi.fn(async () => ({ id: 'thread-new' }));
-const reopenThread = vi.fn(async () => undefined);
-vi.mock('./thread-service', () => ({
-	findOrCreateThread: (...a: unknown[]) => findOrCreateThread(...(a as [])),
-	reopenThread: (...a: unknown[]) => reopenThread(...(a as []))
-}));
-
-const addInboundMessage = vi.fn(async () => ({ id: 'message-1' }));
-const addOutboundMessage = vi.fn(async () => ({ id: 'message-2' }));
-vi.mock('./message-service', () => ({
-	addInboundMessage: (...a: unknown[]) => addInboundMessage(...(a as [])),
-	addOutboundMessage: (...a: unknown[]) => addOutboundMessage(...(a as []))
-}));
+// The outward email is the outside service; everything up to it is real.
+const dispatchReply = vi.fn(async () => 'pm-1');
+vi.mock('./channel-dispatcher', () => ({ dispatchReply: () => dispatchReply() }));
 
 const {
 	getBandThread,
@@ -126,213 +34,233 @@ const {
 	bandOfThread
 } = await import('./band-service');
 
+const T0 = 1_750_000_000;
+
+function thread(
+	id: string,
+	opts: { channel?: string; groupId?: string | null; status?: string; awaiting?: number } = {}
+) {
+	sqlite
+		.prepare(
+			`insert into inbox_thread (id, channel, group_id, status, subject, contact_email, last_message_at, awaiting_reply_since)
+			 values (?, ?, ?, ?, 'Booking enquiry', 'ada@example.com', ?, ?)`
+		)
+		.run(
+			id,
+			opts.channel ?? 'band',
+			opts.groupId === undefined ? 'band-1' : opts.groupId,
+			opts.status ?? 'open',
+			T0,
+			opts.awaiting ?? null
+		);
+}
+
+function message(id: string, threadId: string, body: string) {
+	sqlite
+		.prepare(
+			`insert into inbox_message (id, thread_id, direction, body, author_name, author_user_id, created_at)
+			 values (?, ?, 'outbound', ?, 'Wren', 'user-1', ?)`
+		)
+		.run(id, threadId, body, T0);
+}
+
+const count = (table: string) =>
+	(sqlite.prepare(`select count(*) as n from ${table}`).get() as { n: number }).n;
+const statusOf = (id: string) =>
+	sqlite
+		.prepare('select status, awaiting_reply_since as awaiting from inbox_thread where id = ?')
+		.get(id);
+
 beforeEach(() => {
 	vi.clearAllMocks();
-	touched = [];
-	results = [];
-	sets = [];
-	paginate.mockResolvedValue({ rows: [], total: 0 });
-	findOrCreateThread.mockResolvedValue({ id: 'thread-new' });
-	addInboundMessage.mockResolvedValue({ id: 'message-1' });
-	addOutboundMessage.mockResolvedValue({ id: 'message-2' });
+	for (const t of [
+		'inbox_group_read',
+		'inbox_participant',
+		'inbox_note',
+		'inbox_message',
+		'inbox_thread'
+	]) {
+		sqlite.exec(`delete from ${t}`);
+	}
 });
 
-/** Did the service constrain a query on the band that owns the thread? */
-function scopedToBand(groupId: string) {
-	return eq.mock.calls.some(([a, b]) => a === TABLES.inboxThread.groupId && b === groupId);
-}
-
-/** …and on the channel, so a portal or direct thread can never be reached here? */
-function scopedToChannel() {
-	return eq.mock.calls.some(([a, b]) => a === TABLES.inboxThread.channel && b === 'band');
-}
-
 describe('getBandThread', () => {
-	it('scopes to the owning band and the band channel', async () => {
-		results = [[{ id: 'thread-1', subject: 'Booking enquiry', status: 'open' }], []];
-
-		await getBandThread('thread-1', 'band-1');
-
-		expect(scopedToBand('band-1')).toBe(true);
-		expect(scopedToChannel()).toBe(true);
+	it('returns null for another band’s thread', async () => {
+		thread('t1', { groupId: 'band-2' });
+		expect(await getBandThread('t1', 'band-1')).toBeNull();
 	});
 
-	it('never reads inbox_note', async () => {
-		results = [[{ id: 'thread-1', status: 'open' }], []];
-
-		await getBandThread('thread-1', 'band-1');
-
-		expect(touched).toContain('inbox_thread');
-		expect(touched).toContain('inbox_message');
-		expect(touched).not.toContain('inbox_note');
+	it('returns null for a thread on another channel', async () => {
+		// group_id is set too, so only the channel predicate refuses it.
+		thread('t1', { channel: 'portal' });
+		expect(await getBandThread('t1', 'band-1')).toBeNull();
 	});
 
-	it('returns null without fetching messages when the thread is another band’s', async () => {
-		// The WHERE clause is what refuses, so the row simply is not there. If this
-		// ever reads inbox_message first, the refusal has moved to a post-hoc check
-		// on a conversation already loaded into memory.
-		results = [[]];
+	it('never returns inbox_note content', async () => {
+		thread('t1');
+		message('m1', 't1', 'yes');
+		sqlite.exec(
+			`insert into inbox_note (id, thread_id, author_user_id, body) values ('n1', 't1', 'staff-1', 'STAFF-ONLY')`
+		);
 
-		expect(await getBandThread('thread-1', 'band-1')).toBeNull();
-		expect(touched).not.toContain('inbox_message');
+		const result = await getBandThread('t1', 'band-1');
+
+		expect(result?.messages).toHaveLength(1);
+		expect(JSON.stringify(result)).not.toContain('STAFF-ONLY');
 	});
 
 	it('does not return author user ids', async () => {
-		results = [
-			[{ id: 'thread-1', status: 'open' }],
-			[{ id: 'm1', direction: 'outbound', body: 'yes', authorName: 'Wren' }]
-		];
+		thread('t1');
+		message('m1', 't1', 'yes');
 
-		const thread = await getBandThread('thread-1', 'band-1');
+		const result = await getBandThread('t1', 'band-1');
 
 		// The timeline orients on `direction` — the band reads as an organisation,
 		// like staff do — so a bandmate's id has no reader and is not sent.
-		expect(thread?.messages[0]).not.toHaveProperty('authorUserId');
-		expect(thread?.messages[0].authorName).toBe('Wren');
+		expect(result?.messages[0]).not.toHaveProperty('authorUserId');
+		expect(result?.messages[0].authorName).toBe('Wren');
 	});
 });
 
 describe('listBandThreads', () => {
-	it('scopes to the owning band and never joins inbox_participant', async () => {
-		await listBandThreads('band-1', 'user-1', { page: 1, pageSize: 20 });
+	it('lists only this band’s band-channel threads', async () => {
+		thread('mine');
+		thread('theirs', { groupId: 'band-2' });
+		thread('portal', { channel: 'portal' });
 
-		expect(scopedToBand('band-1')).toBe(true);
-		expect(scopedToChannel()).toBe(true);
-		expect(touched).not.toContain('inbox_participant');
-		// The read cursor lives in its own table precisely so that it cannot.
-		expect(touched).toContain('inbox_group_read');
+		const result = await listBandThreads('band-1', 'user-1', { page: 1, pageSize: 20 });
+
+		expect(result.rows.map((r) => r.id)).toEqual(['mine']);
 	});
 });
 
 describe('handleBandEnquiry', () => {
-	it('always opens a new thread, owned by the band', async () => {
-		await handleBandEnquiry({
-			groupId: 'band-1',
-			name: 'Ada',
-			email: 'ada@example.com',
-			message: 'Can you play the 14th?'
-		});
+	const enquiry = {
+		groupId: 'band-1',
+		name: 'Ada',
+		email: 'ada@example.com',
+		message: 'Can you play the 14th?'
+	};
 
-		expect(findOrCreateThread).toHaveBeenCalledWith(
-			expect.objectContaining({
-				channel: 'band',
-				groupId: 'band-1',
-				contactEmail: 'ada@example.com'
-			})
-		);
-		expect(addInboundMessage).toHaveBeenCalledWith(
-			expect.objectContaining({ threadId: 'thread-new', authorName: 'Ada' })
-		);
+	it('always opens a new thread, owned by the band', async () => {
+		const first = await handleBandEnquiry(enquiry);
+		const second = await handleBandEnquiry(enquiry);
+
+		expect(first.threadId).not.toBe(second.threadId);
+		expect(
+			sqlite.prepare('select channel, group_id from inbox_thread where id = ?').get(first.threadId)
+		).toEqual({ channel: 'band', group_id: 'band-1' });
+		expect(count('inbox_message')).toBe(2);
 	});
 
 	it('writes no participant row for the enquirer or the band', async () => {
-		await handleBandEnquiry({
-			groupId: 'band-1',
-			name: 'Ada',
-			email: 'ada@example.com',
-			message: 'hello'
-		});
-
-		expect(touched).not.toContain('inbox_participant');
+		await handleBandEnquiry(enquiry);
+		expect(count('inbox_participant')).toBe(0);
 	});
 });
 
 describe('replyToBandThread', () => {
-	it('refuses a thread that is not this band’s, without sending anything', async () => {
-		results = [[]];
-
-		expect(
-			await replyToBandThread({
-				threadId: 'thread-1',
-				groupId: 'band-1',
-				userId: 'user-1',
-				userName: 'Wren',
-				body: 'sure'
-			})
-		).toBeNull();
-		expect(addOutboundMessage).not.toHaveBeenCalled();
+	const reply = (groupId: string) => ({
+		threadId: 't1',
+		groupId,
+		userId: 'user-1',
+		userName: 'Wren',
+		body: 'sure'
 	});
 
-	it('sends through addOutboundMessage, which is what dispatches the email', async () => {
-		results = [[{ id: 'thread-1', status: 'open' }], [{ id: 'thread-1' }]];
+	it('refuses a thread that is not this band’s, without sending anything', async () => {
+		thread('t1', { groupId: 'band-2' });
 
-		const result = await replyToBandThread({
-			threadId: 'thread-1',
-			groupId: 'band-1',
-			userId: 'user-1',
-			userName: 'Wren',
-			body: 'sure'
-		});
+		expect(await replyToBandThread(reply('band-1'))).toBeNull();
+		expect(dispatchReply).not.toHaveBeenCalled();
+		expect(count('inbox_message')).toBe(0);
+	});
 
-		expect(scopedToBand('band-1')).toBe(true);
-		expect(addOutboundMessage).toHaveBeenCalledWith(
-			expect.objectContaining({ threadId: 'thread-1', authorName: 'Wren', authorUserId: 'user-1' })
-		);
-		expect(result).toEqual({ messageId: 'message-2' });
+	it('refuses a resolved thread', async () => {
+		thread('t1', { status: 'resolved' });
+
+		expect(await replyToBandThread(reply('band-1'))).toBeNull();
+		expect(dispatchReply).not.toHaveBeenCalled();
+	});
+
+	it('sends, records the message, and stamps the sender’s cursor', async () => {
+		thread('t1');
+
+		const result = await replyToBandThread(reply('band-1'));
+
+		expect(dispatchReply).toHaveBeenCalledTimes(1);
+		expect(result?.messageId).toEqual(expect.any(String));
+		expect(
+			sqlite.prepare('select user_id from inbox_group_read where thread_id = ?').all('t1')
+		).toEqual([{ user_id: 'user-1' }]);
+		expect(count('inbox_participant')).toBe(0);
 	});
 });
 
 describe('setBandThreadStatus', () => {
-	it('scopes the update to the owning band', async () => {
-		results = [[{ id: 'thread-1' }]];
+	it('reports false and changes nothing when the row belongs to someone else', async () => {
+		thread('t1', { groupId: 'band-2' });
 
-		expect(await setBandThreadStatus('thread-1', 'band-1', 'resolved')).toBe(true);
-		expect(scopedToBand('band-1')).toBe(true);
+		expect(await setBandThreadStatus('t1', 'band-1', 'resolved')).toBe(false);
+		expect(statusOf('t1')).toMatchObject({ status: 'open' });
 	});
 
 	it('clears the awaiting-reply marker when resolving, and not when reopening', async () => {
-		results = [[{ id: 'thread-1' }]];
-		await setBandThreadStatus('thread-1', 'band-1', 'resolved');
-		expect(sets[0]).toMatchObject({ status: 'resolved', awaitingReplySince: null });
+		thread('t1', { awaiting: T0 });
+		expect(await setBandThreadStatus('t1', 'band-1', 'resolved')).toBe(true);
+		expect(statusOf('t1')).toEqual({ status: 'resolved', awaiting: null });
 
-		sets = [];
-		results = [[{ id: 'thread-1' }]];
-		await setBandThreadStatus('thread-1', 'band-1', 'open');
-		expect(sets[0]).not.toHaveProperty('awaitingReplySince');
-	});
-
-	it('reports false when the row belongs to someone else', async () => {
-		results = [[]];
-		expect(await setBandThreadStatus('thread-1', 'other-band', 'resolved')).toBe(false);
+		thread('t2', { status: 'resolved', awaiting: T0 });
+		await setBandThreadStatus('t2', 'band-1', 'open');
+		expect(statusOf('t2')).toEqual({ status: 'open', awaiting: T0 });
 	});
 });
 
 describe('markBandThreadRead', () => {
 	it('writes no cursor for a thread the band does not own', async () => {
 		// Otherwise the row itself confirms a thread exists at that id.
-		results = [[]];
+		thread('t1', { groupId: 'band-2' });
 
-		await markBandThreadRead('thread-1', 'band-1', 'user-1');
+		await markBandThreadRead('t1', 'band-1', 'user-1');
 
-		expect(touched).not.toContain('inbox_group_read');
+		expect(count('inbox_group_read')).toBe(0);
 	});
 
-	it('writes the cursor to inbox_group_read, never inbox_participant', async () => {
-		results = [[{ id: 'thread-1' }], []];
+	it('writes one cursor to inbox_group_read, never inbox_participant', async () => {
+		thread('t1');
 
-		await markBandThreadRead('thread-1', 'band-1', 'user-1');
+		await markBandThreadRead('t1', 'band-1', 'user-1');
+		await markBandThreadRead('t1', 'band-1', 'user-1');
 
-		expect(touched).toContain('inbox_group_read');
-		expect(touched).not.toContain('inbox_participant');
+		expect(count('inbox_group_read')).toBe(1);
+		expect(count('inbox_participant')).toBe(0);
 	});
 });
 
 describe('countBandUnread', () => {
-	it('counts only this band’s open threads', async () => {
-		results = [[{ count: 3 }]];
-
-		expect(await countBandUnread('band-1', 'user-1')).toBe(3);
-		expect(scopedToBand('band-1')).toBe(true);
-		expect(eq.mock.calls.some(([a, b]) => a === TABLES.inboxThread.status && b === 'open')).toBe(
-			true
+	it('counts only this band’s open threads this reader has not caught up on', async () => {
+		thread('unread');
+		thread('read');
+		sqlite.exec(
+			`insert into inbox_group_read (id, thread_id, user_id, last_read_at) values ('r1', 'read', 'user-1', ${T0 + 10})`
 		);
+		thread('resolved', { status: 'resolved' });
+		thread('theirs', { groupId: 'band-2' });
+
+		expect(await countBandUnread('band-1', 'user-1')).toBe(1);
+		// Another bandmate's cursor is not this reader's.
+		expect(await countBandUnread('band-1', 'user-2')).toBe(2);
 	});
 });
 
 describe('bandOfThread', () => {
+	it('answers the owning band for a band thread', async () => {
+		thread('t1');
+		expect(await bandOfThread('t1')).toBe('band-1');
+	});
+
 	it('answers null for a thread on any other channel', async () => {
-		results = [[]];
-		expect(await bandOfThread('thread-1')).toBeNull();
-		expect(scopedToChannel()).toBe(true);
+		thread('t1', { channel: 'group' });
+		expect(await bandOfThread('t1')).toBeNull();
 	});
 });

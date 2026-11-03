@@ -1,318 +1,139 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// The staff queue must never show a member↔member conversation unless it has
-// been reported. That rule lives in one exported predicate, `staffVisibleThread`,
-// and in a one-line refusal at the top of getThread().
-//
-// Both are easy to lose by accident: the predicate looks like just another
-// filter and would be natural to move inside an `if (filters.…)` branch, and the
-// getThread guard is a single statement in a function that otherwise has no
-// authorisation logic at all. These tests fail if either moves.
+// The staff queue must never show a member↔member conversation — nor a band's
+// booking queue or a group's own room — unless it has been reported. That rule
+// lives in one exported predicate, `staffVisibleThread`, and in a one-line
+// refusal at the top of getThread(). Both are easy to lose by accident, so
+// these run every reader against a real SQLite holding a thread on each channel.
 
-const TABLES = {
-	inboxThread: {
-		__table: 'inbox_thread',
-		id: 'thread.id',
-		channel: 'thread.channel',
-		status: 'thread.status',
-		subject: 'thread.subject',
-		preview: 'thread.preview',
-		contactName: 'thread.contactName',
-		contactEmail: 'thread.contactEmail',
-		contactPhone: 'thread.contactPhone',
-		contactExternalId: 'thread.contactExternalId',
-		assignedToUserId: 'thread.assignedToUserId',
-		snoozedUntil: 'thread.snoozedUntil',
-		messageCount: 'thread.messageCount',
-		lastMessageAt: 'thread.lastMessageAt',
-		createdAt: 'thread.createdAt',
-		updatedAt: 'thread.updatedAt'
-	},
-	inboxMessage: {
-		__table: 'inbox_message',
-		threadId: 'message.threadId',
-		createdAt: 'm.createdAt'
-	},
-	inboxNote: {
-		__table: 'inbox_note',
-		id: 'note.id',
-		threadId: 'note.threadId',
-		authorUserId: 'note.authorUserId',
-		body: 'note.body',
-		createdAt: 'note.createdAt'
-	},
-	inboxParticipant: {
-		__table: 'inbox_participant',
-		threadId: 'participant.threadId',
-		userId: 'participant.userId',
-		role: 'participant.role'
-	}
-};
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
 
-let touched: string[] = [];
-let results: unknown[] = [];
-/** Every `where(...)` argument, in call order. */
-let wheres: unknown[] = [];
-
-function chain() {
-	const self: Record<string, unknown> = {};
-	for (const m of ['orderBy', 'limit', 'offset', 'groupBy', '$dynamic', 'set', 'values']) {
-		self[m] = () => self;
-	}
-	self.where = (w: unknown) => {
-		wheres.push(w);
-		return self;
-	};
-	for (const m of ['from', 'innerJoin', 'leftJoin']) {
-		self[m] = (table: { __table?: string }) => {
-			if (table?.__table) touched.push(table.__table);
-			return self;
-		};
-	}
-	self.then = (resolve: (v: unknown) => unknown) => resolve(results.shift() ?? []);
-	return self;
-}
-
-vi.mock('$lib/server/db', () => ({
-	db: {
-		select: () => chain(),
-		insert: () => chain(),
-		update: () => chain(),
-		delete: () => chain()
-	}
-}));
-vi.mock('$lib/server/db/schema/inbox', () => TABLES);
-vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: { __table: 'user', id: 'user.id', name: 'user.name' }
-}));
-vi.mock('drizzle-orm/sqlite-core', () => ({ alias: (t: unknown) => t }));
-vi.mock('$lib/server/db/paginate', () => ({
-	paginate: vi.fn(async () => ({ data: [], total: 0 }))
-}));
-
-vi.mock('drizzle-orm', () => ({
-	eq: (a: unknown, b: unknown) => ({ op: 'eq', a, b }),
-	ne: (a: unknown, b: unknown) => ({ op: 'ne', a, b }),
-	and: (...a: unknown[]) => ({ op: 'and', a }),
-	or: (...a: unknown[]) => ({ op: 'or', a }),
-	like: (a: unknown, b: unknown) => ({ op: 'like', a, b }),
-	asc: vi.fn(),
-	desc: vi.fn(),
-	count: vi.fn(),
-	inArray: vi.fn(),
-	notInArray: (a: unknown, b: unknown) => ({ op: 'notInArray', a, b }),
-	isNull: vi.fn(),
-	isNotNull: vi.fn(),
-	lte: vi.fn(),
-	sql: (strings: TemplateStringsArray, ...v: unknown[]) => ({
-		op: 'sql',
-		text: strings.join('?'),
-		v
-	})
-}));
+vi.mock('$lib/server/db', () => ({ db: testDb }));
 
 const {
 	listThreads,
 	getThread,
 	getUnresolvedCount,
 	countThreadsByStatus,
-	listThreadsByContactEmail,
-	staffVisibleThread
+	listThreadsByContactEmail
 } = await import('./thread-service');
 
-beforeEach(() => {
-	touched = [];
-	results = [];
-	wheres = [];
-});
+const EMAIL = 'someone@example.com';
+const PRIVATE = ['direct', 'band', 'group'] as const;
 
-/** Walk a nested predicate tree looking for the private-channel exclusion. */
-function containsPrivateExclusion(node: unknown): boolean {
-	if (node === staffVisibleThread) return true;
-	if (!node || typeof node !== 'object') return false;
-	const n = node as Record<string, unknown>;
-	if (
-		n.op === 'notInArray' &&
-		n.a === TABLES.inboxThread.channel &&
-		Array.isArray(n.b) &&
-		n.b.includes('direct') &&
-		n.b.includes('band')
-	) {
-		return true;
-	}
-	return Object.values(n).some((v) =>
-		Array.isArray(v) ? v.some(containsPrivateExclusion) : containsPrivateExclusion(v)
-	);
+function thread(id: string, channel: string) {
+	// Every thread carries the same address and a searchable preview, so a
+	// reader that dropped the predicate would have something to return.
+	sqlite
+		.prepare(
+			`insert into inbox_thread (id, channel, status, subject, preview, contact_email, last_message_at)
+			 values (?, ?, 'open', 'hello', 'hello there', ?, 1750000000)`
+		)
+		.run(id, channel, EMAIL);
+	sqlite
+		.prepare(
+			`insert into inbox_message (id, thread_id, direction, body) values (?, ?, 'inbound', 'private words')`
+		)
+		.run(`m-${id}`, id);
+	sqlite
+		.prepare(
+			`insert into inbox_note (id, thread_id, author_user_id, body) values (?, ?, 'staff-1', 'staff note')`
+		)
+		.run(`n-${id}`, id);
 }
 
-describe('staffVisibleThread', () => {
-	it('excludes every private channel unless a pending flag exists', () => {
-		// The predicate is an OR: not one of the private channels, or a pending
-		// inbox_thread flag. Both halves matter — the first is the rule, the
-		// second is the only way back in.
-		//
-		// `band` is here for a different reason than `direct` but with the same
-		// force: a booking negotiation belongs to the act, and CorvMC hosting it
-		// is not the same as CorvMC being party to it.
-		const node = staffVisibleThread as unknown as Record<string, unknown>;
-		expect(node.op).toBe('or');
-		const [notPrivate, flagged] = node.a as Record<string, unknown>[];
-		expect(notPrivate.op).toBe('notInArray');
-		expect(notPrivate.a).toBe(TABLES.inboxThread.channel);
-		// `group` is here because it was NOT, and every band's own room sat in
-		// the staff queue as a result (#1296). A new private channel that skips
-		// this list is the same bug again.
-		expect(notPrivate.b).toEqual(['direct', 'band', 'group']);
-		expect(flagged.op).toBe('sql');
-		expect(flagged.text).toContain('content_flag');
-		expect(flagged.text).toContain("cf.entity_type = 'inbox_thread'");
-		expect(flagged.text).toContain("cf.status = 'pending'");
-	});
+function flag(threadId: string, status: string) {
+	sqlite
+		.prepare(
+			`insert into content_flag (id, entity_type, entity_id, reported_by_user_id, reason, status)
+			 values (?, 'inbox_thread', ?, 'member-1', 'harassment', ?)`
+		)
+		.run(`f-${threadId}-${status}`, threadId, status);
+}
+
+const ids = (rows: { id: string }[]) => rows.map((r) => r.id).sort();
+
+beforeEach(() => {
+	for (const t of ['content_flag', 'inbox_note', 'inbox_message', 'inbox_thread']) {
+		sqlite.exec(`delete from ${t}`);
+	}
+	thread('email', 'email');
+	thread('portal', 'portal');
+	for (const channel of PRIVATE) thread(channel, channel);
+	// Only a pending report brings a private thread in; a dismissed one does not.
+	thread('reported-dm', 'direct');
+	flag('reported-dm', 'pending');
+	thread('dismissed-dm', 'direct');
+	flag('dismissed-dm', 'dismissed');
 });
+
+const VISIBLE = ['email', 'portal', 'reported-dm'];
 
 describe('listThreads', () => {
 	it('applies the exclusion with no filters at all', async () => {
 		// The regression this guards: the exclusion drifting inside an
 		// `if (filters.…)` branch, where it would only apply on a filtered view.
-		await listThreads({}, { page: 1, pageSize: 20 });
-		expect(wheres.length).toBeGreaterThan(0);
-		expect(wheres.every(containsPrivateExclusion)).toBe(true);
+		const result = await listThreads({}, { page: 1, pageSize: 20 });
+		expect(ids(result.rows)).toEqual(VISIBLE);
 	});
 
 	it('still applies it alongside a search, which LIKEs the private preview', async () => {
-		await listThreads({ search: 'hello' }, { page: 1, pageSize: 20 });
-		expect(wheres.every(containsPrivateExclusion)).toBe(true);
+		const result = await listThreads({ search: 'hello' }, { page: 1, pageSize: 20 });
+		expect(ids(result.rows)).toEqual(VISIBLE);
 	});
 
-	it('still applies it when filtering by channel', async () => {
-		await listThreads({ channel: 'email' }, { page: 1, pageSize: 20 });
-		expect(wheres.every(containsPrivateExclusion)).toBe(true);
+	it.each(PRIVATE)('still applies it when filtering by the %s channel', async (channel) => {
+		const result = await listThreads({ channel }, { page: 1, pageSize: 20 });
+		expect(ids(result.rows)).toEqual(channel === 'direct' ? ['reported-dm'] : []);
 	});
 });
 
 describe('listThreadsByContactEmail', () => {
 	it('applies the exclusion, rather than relying on a null contactEmail', async () => {
-		// This one reads threads by a denormalised address and selects `preview`.
-		// A direct thread has no contactEmail today, so it cannot match — but that
-		// is an accident of what we happen to store, not a rule. This test is what
-		// makes it a rule.
-		await listThreadsByContactEmail('someone@example.com', { page: 1, pageSize: 10 });
-		expect(wheres.length).toBeGreaterThan(0);
-		expect(wheres.every(containsPrivateExclusion)).toBe(true);
+		// Every private thread here carries the address, which is the day this
+		// test exists for: matching on it must still not reveal them.
+		const result = await listThreadsByContactEmail(EMAIL, { page: 1, pageSize: 10 });
+		expect(ids(result.rows)).toEqual(VISIBLE);
 	});
 });
 
 describe('the aggregate counts', () => {
-	it('getUnresolvedCount excludes direct threads from the staff badge', async () => {
-		results = [[{ count: 3 }]];
-		await getUnresolvedCount();
-		expect(wheres.every(containsPrivateExclusion)).toBe(true);
+	it('getUnresolvedCount excludes private threads from the staff badge', async () => {
+		expect(await getUnresolvedCount()).toBe(VISIBLE.length);
 	});
 
 	it('countThreadsByStatus excludes them from the status tabs', async () => {
-		results = [[]];
-		await countThreadsByStatus();
-		expect(wheres.length).toBeGreaterThan(0);
-		expect(wheres.every(containsPrivateExclusion)).toBe(true);
+		expect((await countThreadsByStatus()).open).toBe(VISIBLE.length);
 	});
 });
 
 describe('getThread', () => {
-	// Queue a *complete* result set every time, so that a getThread with its
-	// refusal removed would sail through and return the conversation. Queuing
-	// only the channel probe would make these pass either way — the second query
-	// would come back empty and the function would return null for the wrong
-	// reason.
-	const fullThreadOn = (channel: 'direct' | 'band' | 'group') => () => [
-		[{ channel }],
-		[{ id: 'thread-1', channel, subject: 'private' }],
-		[{ id: 'm1', body: 'private words' }],
-		[{ id: 'n1', body: 'staff note' }]
-	];
-	const fullDirectThread = fullThreadOn('direct');
-	const fullBandThread = fullThreadOn('band');
-	const fullGroupThread = fullThreadOn('group');
-
-	it('returns null for a direct thread even when every row is there to return', async () => {
-		results = fullDirectThread();
-		expect(await getThread('thread-1')).toBeNull();
+	it.each([...PRIVATE, 'dismissed-dm'])('returns null for the %s thread', async (id) => {
+		expect(await getThread(id)).toBeNull();
 	});
 
-	it('reads no messages or notes for a direct thread', async () => {
-		// Refused before the fetch, not filtered after it. If this ever reads
-		// inbox_message or inbox_note for a direct thread, the conversation has
-		// already been loaded into memory on a staff request.
-		results = fullDirectThread();
-		await getThread('thread-1');
-		expect(touched).not.toContain('inbox_message');
-		expect(touched).not.toContain('inbox_note');
-	});
-
-	it('returns null for a band thread even when every row is there to return', async () => {
-		// A band's booking conversation reaches staff only through a report, the
-		// same way a DM does. Knowing the thread id is not a way in.
-		results = fullBandThread();
-		expect(await getThread('thread-1')).toBeNull();
-	});
-
-	it('reads no messages or notes for a band thread', async () => {
-		results = fullBandThread();
-		await getThread('thread-1');
-		expect(touched).not.toContain('inbox_message');
-		expect(touched).not.toContain('inbox_note');
-	});
-
-	// #1304 turns an announcement into a `channel: 'group'` thread — published,
-	// pinned, leadership-only. That is a new *kind* of group thread, and a new
-	// kind of group thread slipping past this guard is exactly what #1296 was.
-	// Refused on the channel, so no shape of one can be read.
-	it('returns null for an announcement-shaped group thread', async () => {
-		results = [
-			[{ channel: 'group' }],
-			[
-				{
-					id: 'thread-1',
-					channel: 'group',
-					subject: 'Rehearsal moves to Thursdays',
-					pinned: true,
-					publishedAt: new Date('2026-09-02'),
-					postPolicy: 'leadership',
-					notifyPolicy: 'email'
-				}
-			],
-			[{ id: 'm1', body: 'From Thursday we are in the big room.' }],
-			[{ id: 'n1', body: 'staff note' }]
-		];
-
-		expect(await getThread('thread-1')).toBeNull();
-		expect(touched).not.toContain('inbox_message');
-		expect(touched).not.toContain('inbox_note');
-	});
-
-	it('returns null for a group chat even when every row is there to return', async () => {
-		// A band's or committee's own room. Staff hosting it is not staff being
-		// in it, and knowing the thread id is not a way in (#1296).
-		results = fullGroupThread();
-		expect(await getThread('thread-1')).toBeNull();
-	});
-
-	it('reads no messages or notes for a group chat', async () => {
-		results = fullGroupThread();
-		await getThread('thread-1');
-		expect(touched).not.toContain('inbox_message');
-		expect(touched).not.toContain('inbox_note');
+	it.each(PRIVATE)('refuses a %s thread before reading anything else', async (id) => {
+		// Refused before the fetch, not filtered after it: the channel probe is the
+		// only query a staff request for a private thread may make.
+		const select = vi.spyOn(testDb, 'select');
+		try {
+			await getThread(id);
+			expect(select).toHaveBeenCalledTimes(1);
+		} finally {
+			select.mockRestore();
+		}
 	});
 
 	it('returns null when the thread does not exist', async () => {
-		results = [[]];
 		expect(await getThread('nope')).toBeNull();
 	});
 
 	it('still serves a portal thread, notes and all', async () => {
-		results = [[{ channel: 'portal' }], [{ id: 'thread-1', channel: 'portal' }], [], []];
-		const thread = await getThread('thread-1');
-		expect(thread).not.toBeNull();
-		expect(touched).toContain('inbox_message');
-		expect(touched).toContain('inbox_note');
+		const result = await getThread('portal');
+		expect(result?.messages).toHaveLength(1);
+		expect(result?.notes).toHaveLength(1);
 	});
 });

@@ -36,15 +36,11 @@ vi.mock('$env/dynamic/private', () => ({
 
 // The band branch resolves the act's name, which is the whole reason it is a
 // separate branch: it is what signs the message.
-const mockBandRows = vi.fn((): unknown[] => [{ name: 'Wren Halloway' }]);
-vi.mock('$lib/server/db', () => {
-	const chain: Record<string, unknown> = {};
-	for (const m of ['from', 'where', 'limit']) chain[m] = () => chain;
-	chain.then = (resolve: (v: unknown) => unknown) => resolve(mockBandRows());
-	return { db: { select: () => chain } };
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
 });
-vi.mock('$lib/server/db/schema/group', () => ({ group: { id: 'group.id', name: 'group.name' } }));
-vi.mock('drizzle-orm', () => ({ eq: (a: unknown, b: unknown) => ({ op: 'eq', a, b }) }));
+vi.mock('$lib/server/db', () => ({ db: testDb }));
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -52,7 +48,12 @@ beforeEach(() => {
 	mockSendInboxReply.mockResolvedValue('pm-message-id');
 	mockBuildReplyToAddress.mockReturnValue('reply+thread-1.sig@replies.test');
 	mockSendMetaMessage.mockResolvedValue('mid-out-1');
-	mockBandRows.mockReturnValue([{ name: 'Wren Halloway' }]);
+	sqlite.exec('delete from "group"');
+	sqlite.exec(
+		`insert into "group" (id, name, slug, kind) values
+			('band-1', 'Wren Halloway', 'wren-halloway', 'band'),
+			('band-2', 'Other Act', 'other-act', 'band')`
+	);
 });
 
 // ---------------------------------------------------------------------------
@@ -271,6 +272,12 @@ describe('dispatchReply — band channel', () => {
 		await dispatchReply(bandParams());
 
 		expect(mockSendInboxReply.mock.calls[0][0].replyTo).toBeNull();
+	});
+
+	it('signs with the thread’s own band, not another', async () => {
+		await dispatchReply(bandParams({ groupId: 'band-2' }));
+
+		expect(mockSendInboxReply.mock.calls[0][0].fromName).toBe('Other Act via CorvMC');
 	});
 
 	it('refuses a band thread with no owning band', async () => {
