@@ -465,7 +465,6 @@
 	"src/lib/server/production/production-service.ts",
 	"src/lib/server/project/project-service.spec.ts",
 	"src/lib/server/project/project-service.ts",
-	"src/lib/server/purchase/purchase-service.spec.ts",
 	"src/lib/server/purchase/purchase-service.ts",
 	"src/lib/server/rate-limit.ts",
 	"src/lib/server/report/bucket.ts",

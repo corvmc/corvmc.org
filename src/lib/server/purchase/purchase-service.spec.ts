@@ -1,138 +1,191 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * The receipt list, and the two things about it that are easy to get wrong.
- *
- * **Tickets are rows, not orders.** `ticket` has one row per pass and no order
- * table, so a four-ticket purchase reads as four purchases unless it is grouped
- * by `purchase_id`. A member who bought once and sees four lines will assume
- * they were charged four times.
- *
- * **Music is flagged and tickets are not.** The storefront can be switched off
- * while the ticketing that predates it keeps selling, so the page has to survive
- * one source going quiet rather than erroring or vanishing.
+ * The receipt list, against a real SQLite. **Tickets are rows, not orders**: a
+ * four-ticket purchase reads as four purchases unless grouped by
+ * `purchase_id`. **Music is flagged and tickets are not**: the page has to
+ * survive the storefront being switched off.
  */
-type Row = Record<string, unknown>;
 
-const state = { music: [] as Row[], tickets: [] as Row[], bandAudio: true };
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
 
-function chain(rows: unknown[]) {
-	const self: Record<string, unknown> = {};
-	for (const key of ['from', 'where', 'orderBy', 'limit', 'innerJoin', 'leftJoin', 'groupBy']) {
-		self[key] = () => self;
-	}
-	self.then = (resolve: (v: unknown) => void) => resolve(rows);
-	return self;
-}
+vi.mock('$lib/server/db', () => ({ db: testDb }));
 
-vi.mock('$lib/server/db', () => ({
-	db: { select: () => chain(state.tickets) }
-}));
-
-vi.mock('drizzle-orm', () => ({
-	and: (...p: unknown[]) => `and(${p.join(',')})`,
-	eq: (a: unknown, b: unknown) => `eq(${String(a)},${String(b)})`,
-	inArray: (a: unknown, b: unknown) => `inArray(${String(a)},${String(b)})`,
-	sql: Object.assign(
-		(strings: TemplateStringsArray, ...values: unknown[]) =>
-			strings.raw.join('?') + values.map(String).join(''),
-		{ raw: (s: string) => s }
-	)
-}));
-
+let bandAudio = true;
 vi.mock('$lib/server/feature-flags', () => ({
-	isFeatureEnabled: async () => state.bandAudio
+	isFeatureEnabled: async () => bandAudio
 }));
 
-vi.mock('$lib/server/audio/purchase-service', () => ({
-	listPurchasesForUser: async () => state.music
+// Imported only through the audio purchase service, never called here.
+vi.mock('$lib/server/stripe', () => ({ stripe: {} }));
+vi.mock('$lib/server/finance/payment-service', () => ({ checkout: vi.fn() }));
+vi.mock('$lib/server/event-bus/event-bus', () => ({
+	domainEvents: { emit: vi.fn() }
 }));
 
 const service = await import('./purchase-service');
 
-/** One paid record, as the audio service hands it over. */
-function musicRow(overrides: Row = {}): Row {
-	return {
-		purchaseId: 'mus-1',
-		downloadToken: 'tok_abc',
-		amountPaidCents: 1000,
-		paidAt: new Date('2026-03-01T00:00:00Z'),
-		releaseTitle: 'Marys Peak',
-		releaseSlug: 'marys-peak',
-		bandName: 'The Voltage Thieves',
-		bandSlug: 'thevoltagethieves',
-		...overrides
-	};
+const at = (iso: string) => new Date(iso).getTime() / 1000;
+
+function seedCatalogue() {
+	sqlite.exec(
+		`insert into "group" (id, kind, name, slug) values ('band-1', 'band', 'The Voltage Thieves', 'thevoltagethieves')`
+	);
+	sqlite.exec(
+		`insert into audio_release (id, group_id, title, slug, status) values ('rel-1', 'band-1', 'Marys Peak', 'marys-peak', 'published')`
+	);
+	sqlite
+		.prepare(
+			`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id) values ('evt-1', 'Summer Solstice Set', ?, ?, 'staff')`
+		)
+		.run(at('2026-09-15T00:00:00Z'), at('2026-09-15T03:00:00Z'));
 }
 
-/** One ticket order, already grouped by the database. */
-function ticketRow(overrides: Row = {}): Row {
-	return {
-		purchaseId: 'tix-1',
-		eventId: 'evt-1',
-		eventTitle: 'Summer Solstice Set',
-		eventStartsAt: new Date('2026-09-15T00:00:00Z'),
-		quantity: 2,
-		amountCents: 1600,
-		purchasedAt: Math.floor(new Date('2026-02-01T00:00:00Z').getTime() / 1000),
-		...overrides
-	};
+function music(
+	purchaseId: string,
+	opts: {
+		userId?: string;
+		status?: string;
+		paidAt?: string;
+		amount?: number;
+	} = {}
+) {
+	sqlite
+		.prepare(
+			`insert into release_purchase (id, release_id, user_id, buyer_email, purchase_id, amount_paid_cents,
+			   platform_fee_cents, band_net_cents, download_token, status, paid_at)
+			 values (?, 'rel-1', ?, 'u1@example.com', ?, ?, 0, 0, ?, ?, ?)`
+		)
+		.run(
+			`row-${purchaseId}`,
+			opts.userId ?? 'u1',
+			purchaseId,
+			opts.amount ?? 1000,
+			`tok-${purchaseId}`,
+			opts.status ?? 'paid',
+			at(opts.paidAt ?? '2026-03-01T00:00:00Z')
+		);
+}
+
+let code = 0;
+function ticket(
+	purchaseId: string,
+	opts: {
+		userId?: string;
+		status?: string;
+		createdAt?: string;
+		price?: number;
+		contribution?: number;
+	} = {}
+) {
+	code += 1;
+	sqlite
+		.prepare(
+			`insert into ticket (id, event_id, purchase_id, user_id, attendee_name, attendee_email, code,
+			   status, unit_price_cents, contribution_cents, created_at)
+			 values (?, 'evt-1', ?, ?, 'Ada', 'u1@example.com', ?, ?, ?, ?, ?)`
+		)
+		.run(
+			`tix-${code}`,
+			purchaseId,
+			opts.userId ?? 'u1',
+			`CODE${code}`,
+			opts.status ?? 'valid',
+			opts.price ?? 800,
+			opts.contribution ?? 0,
+			at(opts.createdAt ?? '2026-02-01T00:00:00Z')
+		);
 }
 
 beforeEach(() => {
-	state.music = [];
-	state.tickets = [];
-	state.bandAudio = true;
+	bandAudio = true;
+	for (const t of ['ticket', 'event_listing', 'release_purchase', 'audio_release', '"group"'])
+		sqlite.exec(`delete from ${t}`);
+	seedCatalogue();
 });
 
 describe('listPurchasesForUser', () => {
 	it('returns both kinds, tagged', async () => {
-		state.music = [musicRow()];
-		state.tickets = [ticketRow()];
+		music('mus-1');
+		ticket('tix-1');
 
 		const rows = await service.listPurchasesForUser('u1');
 
-		expect(rows.map((r) => r.kind)).toEqual(['music', 'ticket']);
+		expect(rows.map((r) => [r.kind, r.id])).toEqual([
+			['music', 'mus-1'],
+			['ticket', 'tix-1']
+		]);
+		expect(rows[0]).toMatchObject({
+			downloadToken: 'tok-mus-1',
+			bandSlug: 'thevoltagethieves'
+		});
 	});
 
 	it('sorts newest first, across both sources', async () => {
-		// The whole reason they are merged in JS: two tables that cannot be
-		// usefully unioned still have to interleave by date.
-		state.music = [
-			musicRow({ purchaseId: 'old', paidAt: new Date('2026-01-01T00:00:00Z') }),
-			musicRow({ purchaseId: 'new', paidAt: new Date('2026-06-01T00:00:00Z') })
-		];
-		state.tickets = [ticketRow({ purchaseId: 'mid' })];
+		// The reason they are merged in JS: two tables that cannot be unioned
+		// still have to interleave by date.
+		music('old', { paidAt: '2026-01-01T00:00:00Z' });
+		music('new', { paidAt: '2026-06-01T00:00:00Z' });
+		ticket('mid');
 
 		const rows = await service.listPurchasesForUser('u1');
 
 		expect(rows.map((r) => r.id)).toEqual(['new', 'mid', 'old']);
 	});
 
-	it('carries a ticket order’s quantity rather than one row per pass', async () => {
-		state.tickets = [ticketRow({ quantity: 4, amountCents: 3200 })];
+	it('groups a ticket order into one row with its quantity and total', async () => {
+		// The buyer's gift is recorded once, on the order's first ticket.
+		ticket('order', { contribution: 500, createdAt: '2026-02-01T00:00:00Z' });
+		for (let i = 0; i < 3; i++) ticket('order', { createdAt: '2026-02-01T00:00:05Z' });
 
 		const rows = await service.listPurchasesForUser('u1');
 
-		expect(rows).toHaveLength(1);
-		expect(rows[0]).toMatchObject({ kind: 'ticket', quantity: 4, amountCents: 3200 });
+		expect(rows).toEqual([
+			expect.objectContaining({
+				kind: 'ticket',
+				id: 'order',
+				quantity: 4,
+				amountCents: 3700
+			})
+		]);
 	});
 
-	it('turns a grouped epoch back into a date', async () => {
-		// `MIN(created_at)` comes back as a raw number, not the Date drizzle's
-		// column mode would produce — the page formats it and would print NaN.
-		state.tickets = [ticketRow()];
+	it('dates a ticket order by its first pass, as a Date', async () => {
+		// `MIN(created_at)` comes back as a raw epoch; the page would print NaN.
+		ticket('order', { createdAt: '2026-02-01T00:00:05Z' });
+		ticket('order', { createdAt: '2026-02-01T00:00:00Z' });
 
-		const rows = await service.listPurchasesForUser('u1');
+		const [row] = await service.listPurchasesForUser('u1');
 
-		expect(rows[0].purchasedAt).toBeInstanceOf(Date);
-		expect(rows[0].purchasedAt?.toISOString()).toBe('2026-02-01T00:00:00.000Z');
+		expect(row.purchasedAt).toEqual(new Date('2026-02-01T00:00:00Z'));
+	});
+
+	it('leaves out cancelled tickets, unpaid records, and other members’ purchases', async () => {
+		ticket('cancelled', { status: 'cancelled' });
+		ticket('theirs', { userId: 'u2' });
+		music('pending', { status: 'pending' });
+		music('refunded', { status: 'refunded' });
+		music('their-record', { userId: 'u2' });
+
+		expect(await service.listPurchasesForUser('u1')).toEqual([]);
+	});
+
+	it('keeps pending and checked-in tickets', async () => {
+		ticket('pending', { status: 'pending' });
+		ticket('used', { status: 'checked_in' });
+
+		const ids = (await service.listPurchasesForUser('u1')).map((r) => r.id).sort();
+
+		expect(ids).toEqual(['pending', 'used']);
 	});
 
 	it('drops music when the storefront is off, and keeps tickets', async () => {
-		state.bandAudio = false;
-		state.music = [musicRow()];
-		state.tickets = [ticketRow()];
+		bandAudio = false;
+		music('mus-1');
+		ticket('tix-1');
 
 		const rows = await service.listPurchasesForUser('u1');
 
@@ -144,9 +197,8 @@ describe('listPurchasesForUser', () => {
 	});
 
 	it('keeps a free record as a purchase', async () => {
-		// A band can price a record at nothing and still want the sale on the
-		// buyer's list — it is how they get the download link back.
-		state.music = [musicRow({ amountPaidCents: 0 })];
+		// How a buyer of a $0 record gets the download link back.
+		music('free', { amount: 0 });
 
 		const rows = await service.listPurchasesForUser('u1');
 
