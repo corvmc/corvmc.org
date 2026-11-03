@@ -1,92 +1,31 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// ---------------------------------------------------------------------------
-// Mocks — all vi.mock factories must not reference top-level variables
-// ---------------------------------------------------------------------------
-
-vi.mock('$lib/server/db', () => {
-	const db = {
-		select: vi.fn(),
-		selectDistinct: vi.fn(),
-		insert: vi.fn(),
-		update: vi.fn(),
-		delete: vi.fn()
-	};
-
-	return { db };
+// Campaigns against a real SQLite with the real built-in resolver: who gets a
+// blast is a set of joins. Postmark, the token signer and sponsor credits stay
+// mocked; the renderer is spied on for the markdown it is handed.
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db/schema/marketing', () => ({
-	campaign: {
-		id: 'campaign.id',
-		scheduledFor: 'campaign.scheduledFor',
-		sentAt: 'campaign.sentAt'
-	},
-	campaignAudience: {
-		campaignId: 'campaignAudience.campaignId',
-		audienceId: 'campaignAudience.audienceId'
-	},
-	audience: { id: 'audience.id', name: 'audience.name', systemKey: 'audience.systemKey' },
-	audienceMember: {
-		audienceId: 'audienceMember.audienceId',
-		subscriberId: 'audienceMember.subscriberId',
-		unsubscribedAt: 'audienceMember.unsubscribedAt'
-	},
-	subscriber: {
-		id: 'subscriber.id',
-		email: 'subscriber.email',
-		name: 'subscriber.name',
-		suppressedAt: 'subscriber.suppressedAt'
-	}
-}));
-
-vi.mock('drizzle-orm', () => ({
-	eq: vi.fn((col: unknown, val: unknown) => ({ col, val, op: 'eq' })),
-	and: vi.fn((...args: unknown[]) => ({ args, op: 'and' })),
-	sql: vi.fn((strings: TemplateStringsArray, ...vals: unknown[]) => ({ strings, vals, op: 'sql' })),
-	isNull: vi.fn((col: unknown) => ({ col, op: 'isNull' })),
-	lte: vi.fn((col: unknown, val: unknown) => ({ col, val, op: 'lte' })),
-	inArray: vi.fn((col: unknown, vals: unknown) => ({ col, vals, op: 'inArray' }))
-}));
-
-vi.mock('./system-audiences', () => ({
-	isSystemAudienceKey: vi.fn((key: unknown) => key === 'all-members' || key === 'event-interest'),
-	resolveSystemAudienceRecipients: vi.fn(async () => [])
-}));
+vi.mock('$lib/server/db', () => ({ db: testDb }));
 
 vi.mock('./campaign-render', () => ({
 	renderCampaignPreview: vi.fn(() => '<html>preview</html>'),
 	renderCampaignForSend: vi.fn(() => '<html>send</html>')
 }));
-
-vi.mock('$lib/server/sponsor/credit-service', () => ({
-	creditsForEvent: vi.fn(async () => [])
-}));
-
-vi.mock('./unsubscribe', () => ({
-	signUnsubscribeToken: vi.fn(() => 'unsub-token')
-}));
-
+vi.mock('$lib/server/sponsor/credit-service', () => ({ creditsForEvent: vi.fn(async () => []) }));
+vi.mock('./unsubscribe', () => ({ signUnsubscribeToken: vi.fn(() => 'unsub-token') }));
 vi.mock('$lib/server/notification/email', () => ({
 	sendBroadcastBatch: vi.fn().mockResolvedValue(undefined)
 }));
+vi.mock('$env/dynamic/private', () => ({ env: { PUBLIC_SITE_URL: 'https://test.com' } }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { PUBLIC_SITE_URL: 'https://test.com' }
-}));
-
-// ---------------------------------------------------------------------------
-// Imports after mocks
-// ---------------------------------------------------------------------------
-
-import { db } from '$lib/server/db';
-import { isNull } from 'drizzle-orm';
-import { sendBroadcastBatch } from '$lib/server/notification/email';
-import { creditsForEvent } from '$lib/server/sponsor/credit-service';
-import { renderCampaignForSend, renderCampaignPreview } from './campaign-render';
-import { signUnsubscribeToken } from './unsubscribe';
-import { resolveSystemAudienceRecipients } from './system-audiences';
-import {
+const { sendBroadcastBatch } = await import('$lib/server/notification/email');
+const { creditsForEvent } = await import('$lib/server/sponsor/credit-service');
+const { renderCampaignForSend, renderCampaignPreview } = await import('./campaign-render');
+const { signUnsubscribeToken } = await import('./unsubscribe');
+const {
 	deriveCampaignStatus,
 	createCampaign,
 	updateCampaign,
@@ -94,653 +33,487 @@ import {
 	scheduleCampaign,
 	sendNow,
 	executeSend,
+	processDueCampaigns,
 	CampaignNotFoundError,
 	CampaignValidationError,
 	CampaignStateError
-} from './campaign-service';
+} = await import('./campaign-service');
 
-// ---------------------------------------------------------------------------
-// Test fixtures
-// ---------------------------------------------------------------------------
+const NOW = new Date('2026-06-15T12:00:00Z');
+const NOW_S = NOW.getTime() / 1000;
+const HOUR = 3600;
 
-const mockCampaign = {
-	id: 'camp-1',
-	subject: 'Hello World',
-	markdownBody: '# Hello',
-	htmlBody: '<h1>Hello</h1>',
-	sentById: 'user-1',
-	scheduledFor: null as Date | null,
-	sentAt: null as Date | null,
-	recipientCount: null as number | null,
-	createdAt: new Date(),
-	updatedAt: new Date()
-};
-
-const mockRecipient = {
-	subscriberId: 'sub-1',
-	email: 'member@example.com',
-	name: 'Test Member',
-	audienceId: 'aud-1'
-};
-
-// ---------------------------------------------------------------------------
-// DB mock helpers
-// ---------------------------------------------------------------------------
-
-let selectResults: unknown[][] = [];
-let selectCallIndex = 0;
-
-/**
- * Build a chainable proxy whose `.then` resolves to the next item in
- * selectResults. Every method call returns the same proxy so Drizzle-style
- * chains work: db.select().from(t).where(c).limit(1) → result.
- */
-function makeChainable() {
-	const proxy: any = new Proxy(() => proxy, {
-		get(_, prop) {
-			if (prop === 'then') {
-				return (resolve: (v: unknown[]) => void) => {
-					const result = selectResults[selectCallIndex] ?? [];
-					selectCallIndex++;
-					return resolve(result);
-				};
-			}
-			return () => proxy;
-		}
-	});
-	return proxy;
+function camp(
+	id: string,
+	opts: { scheduledFor?: number; sentAt?: number; eventId?: string; subject?: string } = {}
+) {
+	sqlite
+		.prepare(
+			`insert into campaign (id, subject, markdown_body, html_body, sent_by_id, scheduled_for, sent_at, event_id, created_at, updated_at)
+			 values (?, ?, '# Hello', '<h1>Hello</h1>', 'user-1', ?, ?, ?, ?, ?)`
+		)
+		.run(
+			id,
+			opts.subject ?? 'Hello World',
+			opts.scheduledFor ?? null,
+			opts.sentAt ?? null,
+			opts.eventId ?? null,
+			NOW_S - HOUR,
+			NOW_S - HOUR
+		);
 }
 
-/**
- * Build an insert chain that tracks inserted values and resolves
- * `.returning()` from the next selectResults slot.
- */
-function makeInsertChain(insertedRows: unknown[][]) {
-	return vi.fn((_table: unknown) => ({
-		values: vi.fn((vals: unknown) => {
-			insertedRows.push(Array.isArray(vals) ? vals : [vals]);
-			return {
-				returning: vi.fn(() => {
-					const result = selectResults[selectCallIndex] ?? [{ ...mockCampaign }];
-					selectCallIndex++;
-					return Promise.resolve(result);
-				})
-			};
-		})
-	}));
+function aud(id: string, systemKey: string | null = null) {
+	sqlite
+		.prepare(`insert into audience (id, name, slug, system_key) values (?, ?, ?, ?)`)
+		.run(id, id, systemKey ?? id, systemKey);
 }
 
-/**
- * Build an update chain that tracks set-values and resolves
- * `.returning()` from the next selectResults slot.
- */
-function makeUpdateChain(updatedSets: unknown[]) {
-	return vi.fn(() => ({
-		set: vi.fn((vals: unknown) => {
-			updatedSets.push(vals);
-			return {
-				where: vi.fn(() => ({
-					returning: vi.fn(() => {
-						const result = selectResults[selectCallIndex] ?? [{ ...mockCampaign }];
-						selectCallIndex++;
-						return Promise.resolve(result);
-					})
-				}))
-			};
-		})
-	}));
+function target(campaignId: string, ...audienceIds: string[]) {
+	for (const a of audienceIds) {
+		sqlite
+			.prepare(`insert into campaign_audience (campaign_id, audience_id) values (?, ?)`)
+			.run(campaignId, a);
+	}
 }
 
-/**
- * Build a delete chain that resolves immediately.
- */
-function makeDeleteChain(deletedWheres: unknown[]) {
-	return vi.fn(() => ({
-		where: vi.fn((condition: unknown) => {
-			deletedWheres.push(condition);
-			return Promise.resolve({ rowCount: 1 });
-		})
-	}));
+function sub(id: string, email: string, opts: { userId?: string; suppressedAt?: number } = {}) {
+	sqlite
+		.prepare(
+			`insert into subscriber (id, email, name, user_id, suppressed_at) values (?, ?, ?, ?, ?)`
+		)
+		.run(id, email, `Name ${id}`, opts.userId ?? null, opts.suppressedAt ?? null);
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+function member(audienceId: string, subscriberId: string, unsubscribedAt?: number) {
+	sqlite
+		.prepare(
+			`insert into audience_member (audience_id, subscriber_id, unsubscribed_at) values (?, ?, ?)`
+		)
+		.run(audienceId, subscriberId, unsubscribedAt ?? null);
+}
 
-describe('campaign-service', () => {
-	let insertedRows: unknown[][];
-	let updatedSets: unknown[];
-	let deletedWheres: unknown[];
+function account(id: string, email: string) {
+	sqlite
+		.prepare(`insert into user (id, name, email, email_verified) values (?, ?, ?, 1)`)
+		.run(id, id, email);
+}
 
-	beforeEach(() => {
-		vi.clearAllMocks();
-		selectResults = [];
-		selectCallIndex = 0;
-		insertedRows = [];
-		updatedSets = [];
-		deletedWheres = [];
+const campRow = (id: string) =>
+	sqlite.prepare('select * from campaign where id = ?').get(id) as
+		| {
+				subject: string;
+				scheduled_for: number | null;
+				sent_at: number | null;
+				recipient_count: number | null;
+		  }
+		| undefined;
+const links = (campaignId: string) =>
+	(
+		sqlite
+			.prepare(
+				'select audience_id from campaign_audience where campaign_id = ? order by audience_id'
+			)
+			.all(campaignId) as { audience_id: string }[]
+	).map((r) => r.audience_id);
+const sentTo = () => vi.mocked(sendBroadcastBatch).mock.calls.flatMap(([m]) => m.map((x) => x.to));
 
-		vi.mocked(db.select).mockImplementation(() => makeChainable());
-		vi.mocked(db.selectDistinct).mockImplementation(() => makeChainable());
-		vi.mocked(db.insert).mockImplementation(makeInsertChain(insertedRows) as any);
-		vi.mocked(db.update).mockImplementation(makeUpdateChain(updatedSets) as any);
-		vi.mocked(db.delete).mockImplementation(makeDeleteChain(deletedWheres) as any);
+beforeEach(() => {
+	vi.clearAllMocks();
+	vi.useFakeTimers({ toFake: ['Date'] });
+	vi.setSystemTime(NOW);
+	for (const t of [
+		'campaign_audience',
+		'campaign',
+		'audience_member',
+		'subscriber',
+		'audience',
+		'event_rsvp',
+		'user'
+	]) {
+		sqlite.exec(`delete from ${t}`);
+	}
+	aud('aud-1');
+	aud('aud-2');
+});
+
+afterEach(() => {
+	vi.useRealTimers();
+});
+
+describe('deriveCampaignStatus', () => {
+	it('returns "sent" when sentAt is set, regardless of scheduledFor', () => {
+		expect(deriveCampaignStatus(null, NOW)).toBe('sent');
+		expect(deriveCampaignStatus(NOW, NOW)).toBe('sent');
 	});
 
-	// -------------------------------------------------------------------------
-	// deriveCampaignStatus — pure function, no mocks needed
-	// -------------------------------------------------------------------------
-
-	describe('deriveCampaignStatus', () => {
-		it('returns "sent" when sentAt is set, regardless of scheduledFor', () => {
-			expect(deriveCampaignStatus(null, new Date())).toBe('sent');
-			expect(deriveCampaignStatus(new Date(), new Date())).toBe('sent');
-		});
-
-		it('returns "draft" when sentAt is null and scheduledFor is null', () => {
-			expect(deriveCampaignStatus(null, null)).toBe('draft');
-		});
-
-		it('returns "scheduled" when scheduledFor is in the future', () => {
-			const future = new Date(Date.now() + 60_000);
-			expect(deriveCampaignStatus(future, null)).toBe('scheduled');
-		});
-
-		it('returns "sending" when scheduledFor is in the past and sentAt is null', () => {
-			const past = new Date(Date.now() - 60_000);
-			expect(deriveCampaignStatus(past, null)).toBe('sending');
-		});
+	it('returns "draft" when sentAt is null and scheduledFor is null', () => {
+		expect(deriveCampaignStatus(null, null)).toBe('draft');
 	});
 
-	// -------------------------------------------------------------------------
-	// createCampaign
-	// -------------------------------------------------------------------------
-
-	describe('createCampaign', () => {
-		it('throws when subject exceeds 500 characters', async () => {
-			await expect(
-				createCampaign({
-					subject: 'x'.repeat(501),
-					markdownBody: '# Hi',
-					audienceIds: ['aud-1'],
-					sentById: 'user-1'
-				})
-			).rejects.toThrow(CampaignValidationError);
-		});
-
-		it('throws when audienceIds is empty', async () => {
-			await expect(
-				createCampaign({
-					subject: 'Hello',
-					markdownBody: '# Hi',
-					audienceIds: [],
-					sentById: 'user-1'
-				})
-			).rejects.toThrow(CampaignValidationError);
-		});
-
-		it('throws when more than 20 audiences are provided', async () => {
-			const ids = Array.from({ length: 21 }, (_, i) => `aud-${i}`);
-			await expect(
-				createCampaign({
-					subject: 'Hello',
-					markdownBody: '# Hi',
-					audienceIds: ids,
-					sentById: 'user-1'
-				})
-			).rejects.toThrow(CampaignValidationError);
-		});
-
-		it("previews the credit for a show's sponsors", async () => {
-			vi.mocked(creditsForEvent).mockResolvedValueOnce([
-				{ sponsorId: 's1', name: 'Block 15', website: null, logoKey: null }
-			]);
-			selectResults = [[{ ...mockCampaign, id: 'camp-new' }]];
-
-			await createCampaign({
-				subject: 'Hello',
-				markdownBody: '# Hi',
-				audienceIds: ['aud-1'],
-				sentById: 'user-1',
-				eventId: 'evt-1'
-			});
-
-			expect(vi.mocked(renderCampaignPreview).mock.calls[0][0]).toContain('Sponsored by Block 15.');
-		});
-
-		it('inserts campaign row then audience links, returns created row', async () => {
-			const created = { ...mockCampaign, id: 'camp-new' };
-			selectResults = [[created]]; // consumed by insert().values().returning()
-
-			const result = await createCampaign({
-				subject: 'Hello World',
-				markdownBody: '# Hello',
-				audienceIds: ['aud-1', 'aud-2'],
-				sentById: 'user-1'
-			});
-
-			expect(result.id).toBe('camp-new');
-			// Two insert calls: campaign + campaignAudience
-			expect(db.insert).toHaveBeenCalledTimes(2);
-			// The second insert carries two audience link rows
-			const audienceRows = insertedRows[1] as { campaignId: string; audienceId: string }[];
-			expect(audienceRows).toHaveLength(2);
-			expect(audienceRows[0].audienceId).toBe('aud-1');
-			expect(audienceRows[1].audienceId).toBe('aud-2');
-		});
+	it('returns "scheduled" when scheduledFor is in the future', () => {
+		expect(deriveCampaignStatus(new Date(NOW.getTime() + 60_000), null)).toBe('scheduled');
 	});
 
-	// -------------------------------------------------------------------------
-	// updateCampaign
-	// -------------------------------------------------------------------------
+	it('returns "sending" when scheduledFor is in the past and sentAt is null', () => {
+		expect(deriveCampaignStatus(new Date(NOW.getTime() - 60_000), null)).toBe('sending');
+	});
+});
 
-	describe('updateCampaign', () => {
-		it('throws when campaign is not found', async () => {
-			selectResults = [[]];
+describe('createCampaign', () => {
+	const base = { subject: 'Hello', markdownBody: '# Hi', sentById: 'user-1' };
 
-			await expect(updateCampaign('camp-999', { subject: 'New Subject' })).rejects.toThrow(
-				CampaignNotFoundError
-			);
-		});
-
-		it('throws when campaign is sent (non-draft)', async () => {
-			selectResults = [[{ ...mockCampaign, sentAt: new Date() }]];
-
-			await expect(updateCampaign('camp-1', { subject: 'New Subject' })).rejects.toThrow(
-				CampaignStateError
-			);
-		});
-
-		it('throws when campaign is scheduled (non-draft)', async () => {
-			selectResults = [[{ ...mockCampaign, scheduledFor: new Date(Date.now() + 60_000) }]];
-
-			await expect(updateCampaign('camp-1', { subject: 'New Subject' })).rejects.toThrow(
-				CampaignStateError
-			);
-		});
-
-		it('validates subject length on update', async () => {
-			selectResults = [[{ ...mockCampaign }]];
-
-			await expect(updateCampaign('camp-1', { subject: 'x'.repeat(501) })).rejects.toThrow(
-				CampaignValidationError
-			);
-		});
-
-		it('validates audienceIds not empty on update', async () => {
-			selectResults = [[{ ...mockCampaign }]];
-
-			await expect(updateCampaign('camp-1', { audienceIds: [] })).rejects.toThrow(
-				CampaignValidationError
-			);
-		});
-
-		it('replaces audience links when audienceIds are provided', async () => {
-			selectResults = [
-				[{ ...mockCampaign }], // getCampaignRaw
-				[{ ...mockCampaign }] // update().returning()
-			];
-
-			await updateCampaign('camp-1', { audienceIds: ['aud-3'] });
-
-			// Deletes old links then inserts new ones
-			expect(db.delete).toHaveBeenCalled();
-			expect(db.insert).toHaveBeenCalled();
-			const newLinks = insertedRows[0] as { campaignId: string; audienceId: string }[];
-			expect(newLinks[0].audienceId).toBe('aud-3');
-		});
+	it('throws when subject exceeds 500 characters', async () => {
+		await expect(
+			createCampaign({ ...base, subject: 'x'.repeat(501), audienceIds: ['aud-1'] })
+		).rejects.toThrow(CampaignValidationError);
 	});
 
-	// -------------------------------------------------------------------------
-	// deleteCampaign
-	// -------------------------------------------------------------------------
-
-	describe('deleteCampaign', () => {
-		it('throws when campaign is not found', async () => {
-			selectResults = [[]];
-
-			await expect(deleteCampaign('camp-999')).rejects.toThrow(CampaignNotFoundError);
-		});
-
-		it('throws when campaign is not in draft status', async () => {
-			selectResults = [[{ ...mockCampaign, sentAt: new Date() }]];
-
-			await expect(deleteCampaign('camp-1')).rejects.toThrow(CampaignStateError);
-		});
-
-		it('deletes a draft campaign', async () => {
-			selectResults = [[{ ...mockCampaign }]];
-
-			await expect(deleteCampaign('camp-1')).resolves.not.toThrow();
-			expect(db.delete).toHaveBeenCalled();
-		});
+	it('throws when audienceIds is empty', async () => {
+		await expect(createCampaign({ ...base, audienceIds: [] })).rejects.toThrow(
+			CampaignValidationError
+		);
 	});
 
-	// -------------------------------------------------------------------------
-	// scheduleCampaign
-	// -------------------------------------------------------------------------
-
-	describe('scheduleCampaign', () => {
-		it('throws when campaign is not in draft status', async () => {
-			selectResults = [[{ ...mockCampaign, sentAt: new Date() }]];
-			const future = new Date(Date.now() + 60_000);
-
-			await expect(scheduleCampaign('camp-1', future)).rejects.toThrow(CampaignStateError);
-		});
-
-		it('throws when scheduledFor is in the past', async () => {
-			selectResults = [[{ ...mockCampaign }]];
-			const past = new Date(Date.now() - 60_000);
-
-			await expect(scheduleCampaign('camp-1', past)).rejects.toThrow(CampaignValidationError);
-		});
-
-		it('sets scheduledFor on a draft campaign', async () => {
-			selectResults = [[{ ...mockCampaign }]];
-			const future = new Date(Date.now() + 60_000);
-
-			await expect(scheduleCampaign('camp-1', future)).resolves.not.toThrow();
-			expect(db.update).toHaveBeenCalled();
-			const setCall = updatedSets[0] as { scheduledFor: Date };
-			expect(setCall.scheduledFor).toBe(future);
-		});
+	it('throws when more than 20 audiences are provided', async () => {
+		const ids = Array.from({ length: 21 }, (_, i) => `aud-${i}`);
+		await expect(createCampaign({ ...base, audienceIds: ids })).rejects.toThrow(
+			CampaignValidationError
+		);
 	});
 
-	// -------------------------------------------------------------------------
-	// sendNow
-	// -------------------------------------------------------------------------
+	it("previews the credit for a show's sponsors", async () => {
+		vi.mocked(creditsForEvent).mockResolvedValueOnce([
+			{ sponsorId: 's1', name: 'Block 15', website: null, logoKey: null }
+		]);
 
-	describe('sendNow', () => {
-		it('throws when campaign is not in draft status', async () => {
-			selectResults = [[{ ...mockCampaign, sentAt: new Date() }]];
+		await createCampaign({ ...base, audienceIds: ['aud-1'], eventId: 'evt-1' });
 
-			await expect(sendNow('camp-1')).rejects.toThrow(CampaignStateError);
-		});
-
-		it('updates scheduledFor and calls executeSend for a draft campaign', async () => {
-			// sendNow → getCampaignRaw
-			// executeSend → getCampaignRaw → getRecipientsForCampaign (audienceIds) → 0 recipients
-			selectResults = [
-				[{ ...mockCampaign }], // sendNow getCampaignRaw
-				[{ ...mockCampaign }], // executeSend getCampaignRaw
-				[] // getRecipientsForCampaign audienceIds (empty → early return)
-			];
-
-			await sendNow('camp-1');
-
-			// First update is from sendNow (sets scheduledFor=now)
-			// Second update is from executeSend (marks sentAt, recipientCount=0)
-			expect(db.update).toHaveBeenCalledTimes(2);
-		});
+		expect(vi.mocked(renderCampaignPreview).mock.calls[0][0]).toContain('Sponsored by Block 15.');
 	});
 
-	// -------------------------------------------------------------------------
-	// executeSend
-	// -------------------------------------------------------------------------
+	it('inserts the campaign row and its audience links', async () => {
+		const result = await createCampaign({ ...base, audienceIds: ['aud-1', 'aud-2'] });
 
-	describe('executeSend', () => {
-		it('throws when campaign is not found', async () => {
-			selectResults = [[]];
+		expect(campRow(result.id)?.subject).toBe('Hello');
+		expect(links(result.id)).toEqual(['aud-1', 'aud-2']);
+	});
+});
 
-			await expect(executeSend('camp-999')).rejects.toThrow(CampaignNotFoundError);
+describe('updateCampaign', () => {
+	it('throws when campaign is not found', async () => {
+		await expect(updateCampaign('camp-999', { subject: 'New' })).rejects.toThrow(
+			CampaignNotFoundError
+		);
+	});
+
+	it('throws when campaign is sent (non-draft)', async () => {
+		camp('camp-1', { sentAt: NOW_S - 60 });
+		await expect(updateCampaign('camp-1', { subject: 'New' })).rejects.toThrow(CampaignStateError);
+		expect(campRow('camp-1')?.subject).toBe('Hello World');
+	});
+
+	it('throws when campaign is scheduled (non-draft)', async () => {
+		camp('camp-1', { scheduledFor: NOW_S + 60 });
+		await expect(updateCampaign('camp-1', { subject: 'New' })).rejects.toThrow(CampaignStateError);
+	});
+
+	it('validates subject length on update', async () => {
+		camp('camp-1');
+		await expect(updateCampaign('camp-1', { subject: 'x'.repeat(501) })).rejects.toThrow(
+			CampaignValidationError
+		);
+	});
+
+	it('validates audienceIds not empty on update', async () => {
+		camp('camp-1');
+		await expect(updateCampaign('camp-1', { audienceIds: [] })).rejects.toThrow(
+			CampaignValidationError
+		);
+	});
+
+	it('replaces audience links when audienceIds are provided, and only this campaign’s', async () => {
+		camp('camp-1');
+		camp('camp-2');
+		target('camp-1', 'aud-1', 'aud-2');
+		target('camp-2', 'aud-1');
+
+		await updateCampaign('camp-1', { audienceIds: ['aud-3'] });
+
+		expect(links('camp-1')).toEqual(['aud-3']);
+		expect(links('camp-2')).toEqual(['aud-1']);
+	});
+});
+
+describe('deleteCampaign', () => {
+	it('throws when campaign is not found', async () => {
+		await expect(deleteCampaign('camp-999')).rejects.toThrow(CampaignNotFoundError);
+	});
+
+	it('throws when campaign is not in draft status', async () => {
+		camp('camp-1', { sentAt: NOW_S - 60 });
+		await expect(deleteCampaign('camp-1')).rejects.toThrow(CampaignStateError);
+		expect(campRow('camp-1')).toBeDefined();
+	});
+
+	it('deletes a draft campaign', async () => {
+		camp('camp-1');
+		camp('camp-2');
+
+		await deleteCampaign('camp-1');
+
+		expect(campRow('camp-1')).toBeUndefined();
+		expect(campRow('camp-2')).toBeDefined();
+	});
+});
+
+describe('scheduleCampaign', () => {
+	const future = new Date(NOW.getTime() + 60_000);
+
+	it('throws when campaign is not in draft status', async () => {
+		camp('camp-1', { sentAt: NOW_S - 60 });
+		await expect(scheduleCampaign('camp-1', future)).rejects.toThrow(CampaignStateError);
+	});
+
+	it('throws when scheduledFor is in the past', async () => {
+		camp('camp-1');
+		await expect(scheduleCampaign('camp-1', new Date(NOW.getTime() - 60_000))).rejects.toThrow(
+			CampaignValidationError
+		);
+	});
+
+	it('sets scheduledFor on a draft campaign', async () => {
+		camp('camp-1');
+
+		await scheduleCampaign('camp-1', future);
+
+		expect(campRow('camp-1')?.scheduled_for).toBe(future.getTime() / 1000);
+	});
+});
+
+describe('sendNow', () => {
+	it('throws when campaign is not in draft status', async () => {
+		camp('camp-1', { sentAt: NOW_S - 60 });
+		await expect(sendNow('camp-1')).rejects.toThrow(CampaignStateError);
+	});
+
+	it('sends a draft campaign inline and marks it sent', async () => {
+		camp('camp-1');
+		target('camp-1', 'aud-1');
+		sub('sub-1', 'member@example.com');
+		member('aud-1', 'sub-1');
+
+		await sendNow('camp-1');
+
+		expect(sentTo()).toEqual(['member@example.com']);
+		expect(campRow('camp-1')).toMatchObject({
+			scheduled_for: NOW_S,
+			sent_at: NOW_S,
+			recipient_count: 1
 		});
+	});
+});
 
-		it('throws when campaign is already sent', async () => {
-			selectResults = [[{ ...mockCampaign, sentAt: new Date() }]];
+describe('executeSend', () => {
+	it('throws when campaign is not found', async () => {
+		await expect(executeSend('camp-999')).rejects.toThrow(CampaignNotFoundError);
+	});
 
-			await expect(executeSend('camp-1')).rejects.toThrow(CampaignStateError);
+	it('throws when campaign is already sent', async () => {
+		camp('camp-1', { sentAt: NOW_S - 60 });
+		await expect(executeSend('camp-1')).rejects.toThrow(CampaignStateError);
+		expect(sendBroadcastBatch).not.toHaveBeenCalled();
+	});
+
+	it('returns 0 and marks campaign sent with recipientCount 0 when no recipients', async () => {
+		camp('camp-1');
+
+		expect(await executeSend('camp-1')).toBe(0);
+
+		expect(sendBroadcastBatch).not.toHaveBeenCalled();
+		expect(campRow('camp-1')).toMatchObject({ sent_at: NOW_S, recipient_count: 0 });
+	});
+
+	it("credits the show's sponsors below the body it sends (#583)", async () => {
+		vi.mocked(creditsForEvent).mockResolvedValueOnce([
+			{ sponsorId: 's1', name: 'Troubadour Music', website: null, logoKey: null }
+		]);
+		camp('camp-1', { eventId: 'evt-1' });
+		target('camp-1', 'aud-1');
+		sub('sub-1', 'member@example.com');
+		member('aud-1', 'sub-1');
+
+		await executeSend('camp-1');
+
+		expect(creditsForEvent).toHaveBeenCalledWith('evt-1', 'campaign');
+		const [markdown] = vi.mocked(renderCampaignForSend).mock.calls[0];
+		expect(markdown).toContain('# Hello');
+		expect(markdown).toContain('Sponsored by Troubadour Music.');
+	});
+
+	it('looks up no sponsors for a blast about no show', async () => {
+		camp('camp-1');
+		target('camp-1', 'aud-1');
+		sub('sub-1', 'member@example.com');
+		member('aud-1', 'sub-1');
+
+		await executeSend('camp-1');
+
+		expect(creditsForEvent).not.toHaveBeenCalled();
+		expect(vi.mocked(renderCampaignForSend).mock.calls[0][0]).toBe('# Hello');
+	});
+
+	it('sends one message per recipient, with one-click unsubscribe headers', async () => {
+		camp('camp-1');
+		target('camp-1', 'aud-1');
+		sub('sub-1', 'member@example.com');
+		member('aud-1', 'sub-1');
+
+		expect(await executeSend('camp-1')).toBe(1);
+
+		expect(sendBroadcastBatch).toHaveBeenCalledOnce();
+		const [messages] = vi.mocked(sendBroadcastBatch).mock.calls[0];
+		expect(messages).toHaveLength(1);
+		expect(messages[0]).toMatchObject({
+			to: 'member@example.com',
+			subject: 'Hello World',
+			tag: 'campaign'
 		});
+		// RFC 8058
+		expect(messages[0].headers).toEqual([
+			{ Name: 'List-Unsubscribe', Value: '<https://test.com/unsubscribe/unsub-token>' },
+			{ Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' }
+		]);
+	});
 
-		it('returns 0 and marks campaign sent with recipientCount 0 when no recipients', async () => {
-			selectResults = [
-				[{ ...mockCampaign }], // getCampaignRaw
-				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
-				[] // getRecipientsForCampaign → audienceIds select (empty)
-			];
+	it('leaves out suppressed, unsubscribed and untargeted subscribers', async () => {
+		aud('aud-other');
+		camp('camp-1');
+		target('camp-1', 'aud-1');
+		sub('sub-ok', 'ok@example.com');
+		sub('sub-supp', 'supp@example.com', { suppressedAt: NOW_S - HOUR });
+		sub('sub-unsub', 'unsub@example.com');
+		sub('sub-else', 'else@example.com');
+		member('aud-1', 'sub-ok');
+		member('aud-1', 'sub-supp');
+		member('aud-1', 'sub-unsub', NOW_S - HOUR);
+		member('aud-other', 'sub-else');
 
-			const count = await executeSend('camp-1');
+		expect(await executeSend('camp-1')).toBe(1);
+		expect(sentTo()).toEqual(['ok@example.com']);
+	});
 
-			expect(count).toBe(0);
-			expect(sendBroadcastBatch).not.toHaveBeenCalled();
-			expect(db.update).toHaveBeenCalled();
-			const setCall = updatedSets[0] as { recipientCount: number };
-			expect(setCall.recipientCount).toBe(0);
-		});
+	// Regression: a subscriber in two of the campaign's audiences used to get
+	// one copy per audience. Built-ins overlap every static list.
+	it('sends exactly one message to a subscriber who is in two targeted audiences', async () => {
+		camp('camp-1');
+		target('camp-1', 'aud-1', 'aud-2');
+		sub('sub-1', 'member@example.com');
+		member('aud-1', 'sub-1');
+		member('aud-2', 'sub-1');
 
-		it("credits the show's sponsors below the body it sends (#583)", async () => {
-			vi.mocked(creditsForEvent).mockResolvedValueOnce([
-				{ sponsorId: 's1', name: 'Troubadour Music', website: null, logoKey: null }
-			]);
-			selectResults = [
-				[{ ...mockCampaign, eventId: 'evt-1' }],
-				[{ eventId: 'evt-1' }],
-				[{ audienceId: 'aud-1' }],
-				[mockRecipient]
-			];
+		expect(await executeSend('camp-1')).toBe(1);
+		expect(sentTo()).toEqual(['member@example.com']);
+	});
 
-			await executeSend('camp-1');
+	it('sends one message when a member is in both a built-in and a static audience', async () => {
+		aud('aud-system', 'all-members');
+		camp('camp-1');
+		target('camp-1', 'aud-1', 'aud-system');
+		account('user-1', 'member@example.com');
+		sub('sub-1', 'member@example.com', { userId: 'user-1' });
+		member('aud-1', 'sub-1');
 
-			expect(creditsForEvent).toHaveBeenCalledWith('evt-1', 'campaign');
-			const [markdown] = vi.mocked(renderCampaignForSend).mock.calls[0];
-			expect(markdown).toContain('# Hello');
-			expect(markdown).toContain('Sponsored by Troubadour Music.');
-		});
+		expect(await executeSend('camp-1')).toBe(1);
+		expect(sentTo()).toEqual(['member@example.com']);
+	});
 
-		it('looks up no sponsors for a blast about no show', async () => {
-			selectResults = [
-				[{ ...mockCampaign, eventId: null }],
-				[{ eventId: null }],
-				[{ audienceId: 'aud-1' }],
-				[mockRecipient]
-			];
+	it('reaches members of a built-in audience who never subscribed to anything', async () => {
+		aud('aud-system', 'all-members');
+		camp('camp-1');
+		target('camp-1', 'aud-system');
+		account('user-1', 'member@example.com');
 
-			await executeSend('camp-1');
+		expect(await executeSend('camp-1')).toBe(1);
+		expect(sentTo()).toEqual(['member@example.com']);
+	});
 
-			expect(creditsForEvent).not.toHaveBeenCalled();
-			expect(vi.mocked(renderCampaignForSend).mock.calls[0][0]).toBe('# Hello');
-		});
+	// #857: the event audience is the one built-in whose membership depends on
+	// the campaign, so the campaign's show has to reach the resolver.
+	it("resolves the event audience against the campaign's show", async () => {
+		aud('aud-event', 'event-interest');
+		camp('camp-1', { eventId: 'evt-9' });
+		target('camp-1', 'aud-event');
+		account('user-1', 'going@example.com');
+		account('user-2', 'elsewhere@example.com');
+		const rsvp = sqlite.prepare(
+			`insert into event_rsvp (event_id, user_id, attendee_name, attendee_email) values (?, ?, 'x', 'x@example.com')`
+		);
+		rsvp.run('evt-9', 'user-1');
+		rsvp.run('evt-other', 'user-2');
 
-		it('calls sendBroadcastBatch with one message per recipient', async () => {
-			selectResults = [
-				[{ ...mockCampaign }], // getCampaignRaw
-				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
-				[{ audienceId: 'aud-1' }], // getRecipientsForCampaign → audienceIds
-				[mockRecipient] // getRecipientsForCampaign → selectDistinct subscribers
-			];
+		await executeSend('camp-1');
 
-			const count = await executeSend('camp-1');
+		expect(sentTo()).toEqual(['going@example.com']);
+	});
 
-			expect(count).toBe(1);
-			expect(sendBroadcastBatch).toHaveBeenCalledOnce();
-			const [messages] = vi.mocked(sendBroadcastBatch).mock.calls[0];
-			expect(messages).toHaveLength(1);
-			expect(messages[0].to).toBe(mockRecipient.email);
-			expect(messages[0].subject).toBe(mockCampaign.subject);
-			expect(messages[0].tag).toBe('campaign');
-			// one-click unsubscribe headers (RFC 8058)
-			expect(messages[0].headers).toEqual([
-				{ Name: 'List-Unsubscribe', Value: '<https://test.com/unsubscribe/unsub-token>' },
-				{ Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' }
-			]);
-		});
+	it('scopes a deduplicated recipient to a deterministic audience', async () => {
+		// The retained audienceId scopes the unsubscribe token, so it must not
+		// depend on row order coming back from the database.
+		camp('camp-1');
+		target('camp-1', 'aud-2', 'aud-1');
+		sub('sub-1', 'member@example.com');
+		member('aud-2', 'sub-1');
+		member('aud-1', 'sub-1');
 
-		it('filters out globally-suppressed subscribers in the recipient query', async () => {
-			selectResults = [
-				[{ ...mockCampaign }],
-				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
-				[{ audienceId: 'aud-1' }],
-				[mockRecipient]
-			];
+		await executeSend('camp-1');
 
-			await executeSend('camp-1');
+		expect(signUnsubscribeToken).toHaveBeenCalledWith('sub-1', 'aud-1');
+	});
 
-			// The recipient WHERE clause must include isNull(subscriber.suppressedAt).
-			const isNullCols = vi.mocked(isNull).mock.calls.map((c) => c[0]);
-			expect(isNullCols).toContain('subscriber.suppressedAt');
-		});
+	// #988: a mid-batch Postmark failure had left the row matching
+	// processDueCampaigns' predicate, so the cron re-sent to the whole list.
+	it('marks the campaign sent before the batch, so a failed send is never re-queued', async () => {
+		camp('camp-1', { scheduledFor: NOW_S - 60 });
+		target('camp-1', 'aud-1');
+		sub('sub-1', 'member@example.com');
+		member('aud-1', 'sub-1');
+		vi.mocked(sendBroadcastBatch).mockRejectedValueOnce(new Error('Postmark 500'));
 
-		it('marks campaign as sent with correct recipient count after sending', async () => {
-			selectResults = [
-				[{ ...mockCampaign }],
-				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
-				[{ audienceId: 'aud-1' }],
-				[mockRecipient]
-			];
+		await expect(executeSend('camp-1')).rejects.toThrow('Postmark 500');
 
-			await executeSend('camp-1');
+		expect(campRow('camp-1')).toMatchObject({ sent_at: NOW_S, recipient_count: 1 });
+		expect(await processDueCampaigns()).toBe(0);
+	});
 
-			const setCall = updatedSets[0] as { recipientCount: number; sentAt: Date };
-			expect(setCall.recipientCount).toBe(1);
-			expect(setCall.sentAt).toBeInstanceOf(Date);
-		});
+	it('builds unsubscribe URL from env.PUBLIC_SITE_URL and renders per-recipient HTML', async () => {
+		camp('camp-1');
+		target('camp-1', 'aud-1');
+		sub('sub-1', 'member@example.com');
+		member('aud-1', 'sub-1');
 
-		// Regression: a subscriber who belongs to two of the campaign's audiences
-		// used to receive one copy per audience, because the recipient query
-		// selectDistinct'd a tuple that included audienceId. Built-in audiences
-		// overlap every static list, so this went from rare to routine.
-		it('sends exactly one message to a subscriber who is in two targeted audiences', async () => {
-			selectResults = [
-				[{ ...mockCampaign }], // getCampaignRaw
-				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
-				[
-					{ audienceId: 'aud-1', id: 'aud-1', systemKey: null },
-					{ audienceId: 'aud-2', id: 'aud-2', systemKey: null }
-				], // campaign's audiences
-				[
-					{ ...mockRecipient, audienceId: 'aud-1' },
-					{ ...mockRecipient, audienceId: 'aud-2' }
-				] // same subscriber, once per audience
-			];
+		await executeSend('camp-1');
 
-			const count = await executeSend('camp-1');
+		expect(signUnsubscribeToken).toHaveBeenCalledWith('sub-1', 'aud-1');
+		expect(renderCampaignForSend).toHaveBeenCalledWith(
+			'# Hello',
+			'Name sub-1',
+			'https://test.com/unsubscribe/unsub-token'
+		);
+	});
+});
 
-			expect(count).toBe(1);
-			const [messages] = vi.mocked(sendBroadcastBatch).mock.calls[0];
-			expect(messages).toHaveLength(1);
-			expect(messages[0].to).toBe(mockRecipient.email);
-		});
+describe('processDueCampaigns', () => {
+	it('sends only campaigns that are due and unsent', async () => {
+		camp('due', { scheduledFor: NOW_S - 60 });
+		camp('later', { scheduledFor: NOW_S + HOUR });
+		camp('draft');
+		camp('done', { scheduledFor: NOW_S - HOUR, sentAt: NOW_S - 60 });
 
-		it('sends one message when a member is in both a built-in and a static audience', async () => {
-			vi.mocked(resolveSystemAudienceRecipients).mockResolvedValueOnce([
-				{ ...mockRecipient, audienceId: 'aud-system' }
-			]);
-			selectResults = [
-				[{ ...mockCampaign }],
-				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
-				[
-					{ audienceId: 'aud-1', id: 'aud-1', systemKey: null },
-					{ audienceId: 'aud-system', id: 'aud-system', systemKey: 'all-members' }
-				],
-				[{ ...mockRecipient, audienceId: 'aud-1' }] // static-list query
-			];
+		expect(await processDueCampaigns()).toBe(1);
 
-			const count = await executeSend('camp-1');
-
-			expect(count).toBe(1);
-			expect(resolveSystemAudienceRecipients).toHaveBeenCalledWith(
-				'aud-system',
-				'all-members',
-				// The campaign's show, or null when it names none (#857).
-				null
-			);
-		});
-
-		it('does not run the static-list query when every targeted audience is built-in', async () => {
-			vi.mocked(resolveSystemAudienceRecipients).mockResolvedValueOnce([
-				{ ...mockRecipient, audienceId: 'aud-system' }
-			]);
-			selectResults = [
-				[{ ...mockCampaign }],
-				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
-				[{ audienceId: 'aud-system', id: 'aud-system', systemKey: 'all-members' }]
-			];
-
-			const count = await executeSend('camp-1');
-
-			expect(count).toBe(1);
-			expect(db.selectDistinct).not.toHaveBeenCalled();
-		});
-
-		// #857. The event audience is the one built-in whose membership depends on
-		// the campaign, so the campaign's show has to reach the resolver.
-		it("passes the campaign's show to the event audience", async () => {
-			vi.mocked(resolveSystemAudienceRecipients).mockResolvedValueOnce([
-				{ ...mockRecipient, audienceId: 'aud-event' }
-			]);
-			selectResults = [
-				[{ ...mockCampaign }],
-				[{ eventId: 'evt-9' }], // the campaign names a show
-				[{ audienceId: 'aud-event', id: 'aud-event', systemKey: 'event-interest' }]
-			];
-
-			await executeSend('camp-1');
-
-			expect(resolveSystemAudienceRecipients).toHaveBeenCalledWith(
-				'aud-event',
-				'event-interest',
-				'evt-9'
-			);
-		});
-
-		it('scopes a deduplicated recipient to a deterministic audience', async () => {
-			// The retained audienceId scopes the unsubscribe token, so it must not
-			// depend on row order coming back from the database.
-			const rows = [
-				{ ...mockRecipient, audienceId: 'aud-2' },
-				{ ...mockRecipient, audienceId: 'aud-1' }
-			];
-			selectResults = [
-				[{ ...mockCampaign }],
-				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
-				[
-					{ audienceId: 'aud-1', id: 'aud-1', systemKey: null },
-					{ audienceId: 'aud-2', id: 'aud-2', systemKey: null }
-				],
-				rows
-			];
-
-			await executeSend('camp-1');
-
-			expect(signUnsubscribeToken).toHaveBeenCalledWith(mockRecipient.subscriberId, 'aud-1');
-		});
-
-		// #988: a mid-batch Postmark failure had left the row matching
-		// processDueCampaigns' predicate, so the cron re-sent to the whole list.
-		it('marks the campaign sent before the batch, so a failed send is never re-queued', async () => {
-			selectResults = [
-				[{ ...mockCampaign }],
-				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
-				[{ audienceId: 'aud-1' }],
-				[mockRecipient]
-			];
-			vi.mocked(sendBroadcastBatch).mockRejectedValueOnce(new Error('Postmark 500'));
-
-			await expect(executeSend('camp-1')).rejects.toThrow('Postmark 500');
-
-			const claim = updatedSets.at(-1) as { sentAt?: Date; recipientCount?: number };
-			expect(claim.sentAt).toBeInstanceOf(Date);
-			expect(claim.recipientCount).toBe(1);
-		});
-
-		it('builds unsubscribe URL from env.PUBLIC_SITE_URL and renders per-recipient HTML', async () => {
-			selectResults = [
-				[{ ...mockCampaign }],
-				[{ eventId: null }], // getRecipientsForCampaign → campaign scope (#857)
-				[{ audienceId: 'aud-1' }],
-				[mockRecipient]
-			];
-
-			await executeSend('camp-1');
-
-			expect(signUnsubscribeToken).toHaveBeenCalledWith(
-				mockRecipient.subscriberId,
-				mockRecipient.audienceId
-			);
-			expect(renderCampaignForSend).toHaveBeenCalledWith(
-				mockCampaign.markdownBody,
-				mockRecipient.name,
-				'https://test.com/unsubscribe/unsub-token'
-			);
-		});
+		expect(campRow('due')?.sent_at).toBe(NOW_S);
+		expect(campRow('later')?.sent_at).toBeNull();
+		expect(campRow('draft')?.sent_at).toBeNull();
 	});
 });
