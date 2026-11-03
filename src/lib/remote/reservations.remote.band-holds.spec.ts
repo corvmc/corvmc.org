@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import { and, eq, gt, ne } from 'drizzle-orm';
-import { reservation } from '$lib/server/db/schema/reservation';
+import { reservation } from '#lib/server/db/schema/reservation.js';
 
 /**
  * A group's holds include the ones booked through its listings.

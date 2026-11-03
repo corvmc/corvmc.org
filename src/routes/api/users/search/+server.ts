@@ -1,11 +1,11 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { requireCapability } from '$lib/server/authorization';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
+import { requireCapability } from '#lib/server/authorization.js';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { or } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { SEARCH_LIMIT } from '$lib/config';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { SEARCH_LIMIT } from '#lib/config.js';
 
 export const GET: RequestHandler = async ({ url }) => {
 	await requireCapability('user.list');

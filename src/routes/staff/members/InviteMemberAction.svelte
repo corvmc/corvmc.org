@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import CheckboxGroup from '$lib/components/ui/Form/CheckboxGroup.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import CheckboxGroup from '#lib/components/ui/Form/CheckboxGroup.svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { groupKindLabels } from '$lib/terms';
-	import { getMemberInviteGroups, inviteMemberForm } from '$lib/remote/users.remote';
+	import { groupKindLabels } from '#lib/terms.js';
+	import { getMemberInviteGroups, inviteMemberForm } from '#lib/remote/users.remote.js';
 
 	const { fields } = inviteMemberForm;
 

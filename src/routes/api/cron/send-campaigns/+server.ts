@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { processDueCampaigns } from '$lib/server/marketing/campaign-service';
+import { processDueCampaigns } from '#lib/server/marketing/campaign-service.js';
 
 /**
  * Cron endpoint for sending scheduled campaigns.

@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Groups shows each staffer the views their capabilities allow (#2086).
 let held: string[] = [];
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: async (cap: string) => held.includes(cap)
 }));
 let kind: string | null = null;
-vi.mock('$lib/server/group/group-service', () => ({
+vi.mock('#lib/server/group/group-service.js', () => ({
 	getGroupDetail: async (id: string) => (kind ? { id, kind } : null)
 }));
 

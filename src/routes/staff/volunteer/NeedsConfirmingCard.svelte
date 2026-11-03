@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Claims on upcoming shifts nobody has confirmed.
 	 *
@@ -12,18 +12,18 @@
 	 * Grouped by shift, because "confirm everyone on Saturday" is one decision and six
 	 * modals was the old cost of it.
 	 */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import { IconCheck } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
-	import { formatDateShort, relativeDay } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
-	import { confirmSignup, confirmSignups } from '$lib/remote/volunteer.remote';
-	import type { MemberRef } from '$lib/types/entity';
+	import { formatDateShort, relativeDay } from '#lib/utils/format.js';
+	import { DEFAULT_TIMEZONE } from '#lib/config.js';
+	import { confirmSignup, confirmSignups } from '#lib/remote/volunteer.remote.js';
+	import type { MemberRef } from '#lib/types/entity.js';
 
 	type Claim = {
 		signupId: string;

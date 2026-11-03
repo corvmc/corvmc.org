@@ -1,7 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 import { createAttachmentKey } from 'svelte/attachments';
 
 vi.mock('$env/dynamic/public', () => ({ env: {} }));
@@ -64,7 +64,7 @@ function failingRemoteForm() {
 	return instance as never;
 }
 
-vi.mock('$lib/remote/flags.remote', () => ({ submitEventReport: failingRemoteForm() }));
+vi.mock('#lib/remote/flags.remote.js', () => ({ submitEventReport: failingRemoteForm() }));
 
 const ReportEventAction = (await import('./ReportEventAction.svelte')).default;
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Reopen a record in a terminal state. Rendered only for holders of the
 	 * admin-only `<domain>.reopen`, and deliberately quiet: an escape hatch, not a
@@ -10,8 +10,8 @@
 	import type { RemoteForm } from '@sveltejs/kit';
 	import Action from '../ui/Action.svelte';
 	import { Field } from '../ui/Form';
-	import { getStaffLayout } from '$lib/remote/layout.remote';
-	import { hasCapability, type Capability } from '$lib/config';
+	import { getStaffLayout } from '#lib/remote/layout.remote.js';
+	import { hasCapability, type Capability } from '#lib/config.js';
 
 	let {
 		action,

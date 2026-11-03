@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import FreeformTagInput from '#lib/components/ui/FreeformTagInput.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
 	import {
 		classifiedKindOptions,
 		classifiedCategoryOptions,
 		CLASSIFIED_GEAR_DISCLAIMER,
 		type ClassifiedTagKind
-	} from '$lib/config';
+	} from '#lib/config.js';
 
 	/** The fields of a classified post, shared by the create and edit modals. */
 	let {

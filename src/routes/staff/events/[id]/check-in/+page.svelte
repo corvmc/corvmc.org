@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { CancelTicketAction } from '$lib/components/actions';
-	import { checkInTicket, getStaffCheckIn } from '$lib/remote/events.remote';
+	import { CancelTicketAction } from '#lib/components/actions/index.js';
+	import { checkInTicket, getStaffCheckIn } from '#lib/remote/events.remote.js';
 	import { page } from '$app/state';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
 	import DoorScanner from './DoorScanner.svelte';
 	const { fields } = checkInTicket;
 

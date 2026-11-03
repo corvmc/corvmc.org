@@ -47,7 +47,7 @@ function chainable(sink?: unknown[]) {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		// The claim path writes with a conditional statement through `all`, so the
 		// capacity test and the write are one round trip. Capturing the SQL lets
@@ -70,7 +70,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/authorization', () => ({ topPositionFor: vi.fn(() => null) }));
+vi.mock('#lib/server/authorization.js', () => ({ topPositionFor: vi.fn(() => null) }));
 
 const getShiftById = vi.fn();
 vi.mock('./work-order-service', () => ({
@@ -95,7 +95,7 @@ vi.mock('./member-certification-service', () => ({
 }));
 
 const recordAuditEntry = vi.fn();
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...a)
 }));
 

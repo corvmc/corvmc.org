@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { drainReminders } from '$lib/server/reminders/drain';
+import { drainReminders } from '#lib/server/reminders/drain.js';
 
 /**
  * Send whatever reminders are owed. One job for the whole registry.

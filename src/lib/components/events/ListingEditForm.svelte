@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { addIsoDays } from '$lib/utils/deadline';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
-	import { errorMessage } from '$lib/error-message';
-	import { updateEvent, checkRebook, checkConflicts } from '$lib/remote/events.remote';
-	import { clubInstant, formatDollars, toLocalDate, toLocalTime } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { addIsoDays } from '#lib/utils/deadline.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import ConflictWarnings from '#lib/components/reservations/ConflictWarnings.svelte';
+	import { errorMessage } from '#lib/error-message.js';
+	import { updateEvent, checkRebook, checkConflicts } from '#lib/remote/events.remote.js';
+	import { clubInstant, formatDollars, toLocalDate, toLocalTime } from '#lib/utils/format.js';
 
 	/**
 	 * Every `updateEvent` field, for a listing of any source: the advertisement,

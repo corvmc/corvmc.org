@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import { IconCheck, IconMapPin } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import {
 		toLocalDate,
 		formatShortMonth,
@@ -10,12 +10,12 @@
 		formatDayOfWeek,
 		formatDate,
 		formatTime
-	} from '$lib/utils/format';
-	import { priceDisplay, ticketingMode } from '$lib/utils/event-ticketing';
-	import { hashPattern } from '$lib/utils/patterns';
-	import { imageSrc } from '$lib/utils/images';
-	import { groupGigs } from '$lib/utils/gig-groups';
-	import type { CalendarEntry } from '$lib/types/calendar';
+	} from '#lib/utils/format.js';
+	import { priceDisplay, ticketingMode } from '#lib/utils/event-ticketing.js';
+	import { hashPattern } from '#lib/utils/patterns.js';
+	import { imageSrc } from '#lib/utils/images.js';
+	import { groupGigs } from '#lib/utils/gig-groups.js';
+	import type { CalendarEntry } from '#lib/types/calendar.js';
 
 	let {
 		events,

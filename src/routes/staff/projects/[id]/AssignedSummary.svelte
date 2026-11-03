@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { IconUser } from '@tabler/icons-svelte';
-	import Avatar from '$lib/components/ui/Avatar.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { contractorJobStatusBadge } from '$lib/config';
+	import Avatar from '#lib/components/ui/Avatar.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { contractorJobStatusBadge } from '#lib/config.js';
 	import { engagementLabel, type Task } from './task-view';
 
 	/**

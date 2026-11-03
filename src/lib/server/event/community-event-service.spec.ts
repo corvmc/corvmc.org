@@ -30,7 +30,7 @@ const insertValues = vi.fn();
 const updateSet = vi.fn();
 const deleteCalled = vi.fn();
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({
@@ -60,27 +60,27 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const emit = vi.fn(() => Promise.resolve());
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...a: unknown[]) => emit(...(a as [])), on: vi.fn() }
 }));
 
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const uploadFile = vi.fn();
 const deleteObject = vi.fn();
 const detachSlot = vi.fn();
 const replaceSlot = vi.fn().mockResolvedValue({ mediaId: 'm1', attachmentId: 'a1' });
-vi.mock('$lib/server/media/media-service', () => ({
+vi.mock('#lib/server/media/media-service.js', () => ({
 	detachSlot: (...a: unknown[]) => detachSlot(...(a as [])),
 	replaceSlot: (...a: unknown[]) => replaceSlot(...(a as []))
 }));
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	uploadFile: (...a: unknown[]) => uploadFile(...(a as [])),
 	deleteObject: (...a: unknown[]) => deleteObject(...(a as []))
 }));
 
 const allowRateLimited = vi.fn(async () => true);
-vi.mock('$lib/server/rate-limit', () => ({
+vi.mock('#lib/server/rate-limit.js', () => ({
 	allowRateLimited: (...a: unknown[]) => allowRateLimited(...(a as []))
 }));
 
@@ -102,12 +102,12 @@ vi.mock('./event-service', () => ({
 // `vi.hoisted` because the imports below are hoisted above this line: a plain
 // `const` would still be in its temporal dead zone when the factory runs.
 const { getStandingMock } = vi.hoisted(() => ({ getStandingMock: vi.fn() }));
-vi.mock('$lib/server/moderation/standing-service', () => ({
+vi.mock('#lib/server/moderation/standing-service.js', () => ({
 	getStanding: (...a: unknown[]) => getStandingMock(...(a as []))
 }));
 
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	createCommunityEvent,
 	publishCommunityEvent,
@@ -446,7 +446,7 @@ describe('listPendingSubmissions', () => {
 		// Assert on the SQL drizzle actually produced rather than on the mock's
 		// call shape, which the chainable proxy erases.
 		const { eq } = await import('drizzle-orm');
-		const { eventListing } = await import('$lib/server/db/schema/event');
+		const { eventListing } = await import('#lib/server/db/schema/event.js');
 		const { sql: rendered, params } = new SQLiteSyncDialect().sqlToQuery(
 			eq(eventListing.status, 'pending_review')
 		);

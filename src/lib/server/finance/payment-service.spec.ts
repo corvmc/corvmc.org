@@ -54,7 +54,7 @@ const mockStripe = {
 	}
 };
 
-vi.mock('$lib/server/stripe', () => ({
+vi.mock('#lib/server/stripe.js', () => ({
 	stripe: mockStripe
 }));
 
@@ -74,10 +74,10 @@ vi.mock('./credit-service', () => mockCreditService);
 // mocked above because these tests are about what checkout asks it to do.
 // ---------------------------------------------------------------------------
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const cacheRows = () =>
 	sqlite

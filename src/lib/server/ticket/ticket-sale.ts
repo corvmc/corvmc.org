@@ -1,5 +1,5 @@
-import { db } from '$lib/server/db';
-import { ticketSale } from '$lib/server/db/schema/ticket';
+import { db } from '#lib/server/db/index.js';
+import { ticketSale } from '#lib/server/db/schema/ticket.js';
 
 /** The terms a listing is sold on. See `ticketSale` for what each one means. */
 export interface TicketSaleTerms {

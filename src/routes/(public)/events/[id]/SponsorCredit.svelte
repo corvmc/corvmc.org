@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** The show's sponsors, disclosed as sponsored (#583). */
-	import { SPONSOR_CREDIT_LEAD } from '$lib/utils/sponsor-credit';
+	import { SPONSOR_CREDIT_LEAD } from '#lib/utils/sponsor-credit.js';
 
 	type Credit = { name: string; website: string | null; logoUrl: string | null };
 

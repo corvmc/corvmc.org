@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import { IconBrandFacebook, IconBrandInstagram } from '@tabler/icons-svelte';
-	import { getFooterInfo } from '$lib/remote/settings.remote';
+	import { getFooterInfo } from '#lib/remote/settings.remote.js';
 
 	// One query, not two. Two remote queries in flight in one component crashes past kit 2.64
 	// (JAVASCRIPT-SVELTEKIT-2H), and this footer renders on every public route.

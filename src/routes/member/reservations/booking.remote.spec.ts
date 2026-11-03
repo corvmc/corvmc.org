@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
-import { DomainError } from '$lib/server/domain-error';
+import { mockUser } from '#lib/server/db/test-factory.js';
+import { DomainError } from '#lib/server/domain-error.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -76,9 +76,9 @@ const reservationServiceMock = {
 	ReservationAuthorizationError
 };
 
-vi.mock('$lib/server/reservation/reservation-service', () => reservationServiceMock);
+vi.mock('#lib/server/reservation/reservation-service.js', () => reservationServiceMock);
 
-vi.mock('$lib/server/reservation/timezone', () => ({
+vi.mock('#lib/server/reservation/timezone.js', () => ({
 	formatDateInTz: vi.fn(() => ''),
 	buildDateInTz: vi.fn((date: string, time: string) => new Date(`${date}T${time}:00`))
 }));
@@ -86,8 +86,8 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 // `termsFor` and `getBookingTerms` come through real: they are pure, and a
 // stubbed rate resolver would let this spec pass while the resolver it is
 // standing in for returned something else. Only the config *read* is faked.
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 
@@ -95,14 +95,14 @@ const recurringSeriesServiceMock = {
 	create: vi.fn(async () => ({ id: 'series-1' }))
 };
 
-vi.mock('$lib/server/reservation/recurring-series-service', () => recurringSeriesServiceMock);
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => recurringSeriesServiceMock);
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	requireFeature: vi.fn(async () => undefined)
 }));
 
 const can = vi.fn(async (_cap: string) => false);
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: (...a: unknown[]) => can(...(a as [string])),
 	requireCapability: vi.fn(async () => testUser),
 	requireCapabilityOrOwner: vi.fn(),
@@ -124,14 +124,14 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: { select: () => chainable() }
 }));
 
 // Contact-phone gate. Mocked at the service boundary (like reservation-service
 // above) so these tests stay about the handler wiring, not the DB read/write.
 const ensureContactPhone = vi.fn(async () => true);
-vi.mock('$lib/server/user/user-service', () => ({ ensureContactPhone }));
+vi.mock('#lib/server/user/user-service.js', () => ({ ensureContactPhone }));
 
 /** Stands in for the `issue` helper SvelteKit hands the form handler. */
 const issueProxy = new Proxy(
@@ -185,7 +185,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { bookAndPayReservation } = (await import('$lib/remote/reservations.remote')) as any;
+const { bookAndPayReservation } = (await import('#lib/remote/reservations.remote.js')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

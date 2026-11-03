@@ -34,7 +34,7 @@
 </script>
 
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * A segmented allocation control: one total, divided between two parties, with
 	 * a third fixed segment that cannot be dragged.

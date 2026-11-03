@@ -1,5 +1,5 @@
-import { domainEvents } from '$lib/server/event-bus';
-import { priorBookingCount } from '$lib/server/reservation/reservation-service';
+import { domainEvents } from '#lib/server/event-bus/index.js';
+import { priorBookingCount } from '#lib/server/reservation/reservation-service.js';
 import {
 	cancelOrientationFor,
 	completeOrientation,

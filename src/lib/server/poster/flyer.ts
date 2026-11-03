@@ -1,6 +1,6 @@
 import { render } from '@cf-wasm/og';
-import { DEFAULT_TIMEZONE } from '$lib/config';
-import { priceDisplay } from '$lib/utils/event-ticketing';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import { priceDisplay } from '#lib/utils/event-ticketing.js';
 import lexendRegular from './assets/Lexend-Regular.ttf?inline';
 import lexendBold from './assets/Lexend-Bold.ttf?inline';
 import speaker from './assets/cmc-speaker.png?inline';

@@ -2,19 +2,19 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { command, form } from './_remote';
-import { can, requireUser } from '$lib/server/authorization';
-import { requireProjectCommittee } from '$lib/server/group/group-context';
-import { mapDomainError } from '$lib/server/errors';
-import { DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_TITLE_MAX } from '$lib/config';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { getProjectById } from '$lib/server/project/project-service';
+import { can, requireUser } from '#lib/server/authorization.js';
+import { requireProjectCommittee } from '#lib/server/group/group-context.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_TITLE_MAX } from '#lib/config.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { getProjectById } from '#lib/server/project/project-service.js';
 import { getProjectActivity, getProjectDetail } from './projects.remote';
 import {
 	createSection,
 	deleteSection,
 	renameSection,
 	reorderSections
-} from '$lib/server/project/project-section-service';
+} from '#lib/server/project/project-section-service.js';
 import {
 	addDuty,
 	assignMembers,
@@ -35,10 +35,10 @@ import {
 	setTaskEquipment,
 	unassignMember,
 	unassignTask
-} from '$lib/server/project/project-task-service';
-import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
-import { listContractors } from '$lib/server/contractor/contractor-service';
-import { loadWorkOrderView } from '$lib/server/volunteer/work-order-view';
+} from '#lib/server/project/project-task-service.js';
+import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
+import { listContractors } from '#lib/server/contractor/contractor-service.js';
+import { loadWorkOrderView } from '#lib/server/volunteer/work-order-view.js';
 
 /**
  * A project's task list: its work orders as a checklist, with sections.

@@ -23,7 +23,7 @@ function chain(): unknown {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain()),
 		insert: vi.fn(() => ({
@@ -42,7 +42,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const dispatchEmailOnly = vi.hoisted(() => vi.fn(async () => undefined));
-vi.mock('$lib/server/notification/dispatcher', () => ({ dispatchEmailOnly }));
+vi.mock('#lib/server/notification/dispatcher.js', () => ({ dispatchEmailOnly }));
 
 const {
 	PLEDGE_DAYS,

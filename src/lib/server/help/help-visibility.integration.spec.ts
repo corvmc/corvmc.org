@@ -17,7 +17,7 @@ const MIGRATIONS_FOLDER = join(import.meta.dirname, '..', '..', '..', '..', 'mig
 const CONTENT_DIR = join(import.meta.dirname, '..', '..', '..', 'content', 'help');
 
 const { dbRef } = vi.hoisted(() => ({ dbRef: { current: null as unknown } }));
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	get db() {
 		return dbRef.current;
 	}
@@ -27,7 +27,7 @@ vi.mock('$app/server', () => ({
 		throw new Error('help visibility must resolve without a request event');
 	}
 }));
-vi.mock('$lib/server/finance/subscription-service', () => ({
+vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	isSustainingMember: async () => false
 }));
 

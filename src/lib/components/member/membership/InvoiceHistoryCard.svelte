@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { IconReceipt, IconFileDownload } from '@tabler/icons-svelte';
-	import { formatCents, formatMonthDayYear } from '$lib/utils/format';
-	import type { BillingInvoice } from '$lib/server/finance/billing-service';
+	import { formatCents, formatMonthDayYear } from '#lib/utils/format.js';
+	import type { BillingInvoice } from '#lib/server/finance/billing-service.js';
 
 	let {
 		invoices,

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { getDoorSale } from '$lib/remote/door.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { getDoorSale } from '#lib/remote/door.remote.js';
 
 	/**
 	 * After the tap: the webhook is what checks the order in, so poll for it,

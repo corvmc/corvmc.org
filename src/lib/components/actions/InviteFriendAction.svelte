@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { inviteFriendForm } from '$lib/remote/users.remote';
+	import { inviteFriendForm } from '#lib/remote/users.remote.js';
 	import { Field } from '../ui/Form';
 	import { toast } from 'svelte-sonner';
 

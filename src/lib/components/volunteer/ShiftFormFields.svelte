@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
 	import type { RemoteForm } from '@sveltejs/kit';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { searchEvents } from '$lib/remote/events.remote';
-	import { searchWorkAssets } from '$lib/remote/maintenance-schedules.remote';
-	import { VOLUNTEER_SHIFT_TITLE_MAX, VOLUNTEER_SHIFT_NOTES_MAX } from '$lib/config';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { searchEvents } from '#lib/remote/events.remote.js';
+	import { searchWorkAssets } from '#lib/remote/maintenance-schedules.remote.js';
+	import { VOLUNTEER_SHIFT_TITLE_MAX, VOLUNTEER_SHIFT_NOTES_MAX } from '#lib/config.js';
 
 	/** The shape SearchSelect hands back, and the shape an edit form seeds it with. */
 	type ShiftEvent = { id: string; title: string; when?: string };

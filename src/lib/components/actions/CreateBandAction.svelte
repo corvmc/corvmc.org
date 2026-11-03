@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { createBandApi } from '$lib/remote/bands.remote';
+	import { createBandApi } from '#lib/remote/bands.remote.js';
 	import { Field } from '../ui/Form';
 	import SearchSelect from '../ui/Form/SearchSelect.svelte';
 

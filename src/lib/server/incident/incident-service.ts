@@ -1,13 +1,13 @@
-import { db } from '$lib/server/db';
-import { incident, incidentNote } from '$lib/server/db/schema/incident';
-import { user } from '$lib/server/db/schema/authentication';
-import { eventListing } from '$lib/server/db/schema/event';
+import { db } from '#lib/server/db/index.js';
+import { incident, incidentNote } from '#lib/server/db/schema/incident.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
 import { and, asc, count, desc, eq, ne, or } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { DomainError } from '$lib/server/domain-error';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import type { IncidentCategory, IncidentStatusFilter } from '$lib/config';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import type { IncidentCategory, IncidentStatusFilter } from '#lib/config.js';
 
 /**
  * The incident & safety log. docs/specs/incident-log-spec.md

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 	import { IconFlag, IconX } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
 	import {
@@ -11,11 +11,11 @@
 		requestableArtifactLabels,
 		workDoneConditionLabels,
 		type RequestableArtifact
-	} from '$lib/config';
-	import { formatCents, formatDateShort, formatDateShortYear } from '$lib/utils/format';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { cancelTaskForm, resolveTaskForm } from '$lib/remote/tasks.remote';
+	} from '#lib/config.js';
+	import { formatCents, formatDateShort, formatDateShortYear } from '#lib/utils/format.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { cancelTaskForm, resolveTaskForm } from '#lib/remote/tasks.remote.js';
 	import AssignPicker from './AssignPicker.svelte';
 	import DutyItems from './DutyItems.svelte';
 	import EquipmentAction from './EquipmentAction.svelte';

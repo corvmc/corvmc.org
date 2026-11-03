@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
-	import RecordFrame from '$lib/components/ui/RecordFrame.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import StaffGroupDetail from '$lib/components/groups/StaffGroupDetail.svelte';
-	import ApplicationsCard from '$lib/components/groups/ApplicationsCard.svelte';
-	import { getStaffCommitteePage } from '$lib/remote/groups.remote';
+	import RecordFrame from '#lib/components/ui/RecordFrame.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import StaffGroupDetail from '#lib/components/groups/StaffGroupDetail.svelte';
+	import ApplicationsCard from '#lib/components/groups/ApplicationsCard.svelte';
+	import { getStaffCommitteePage } from '#lib/remote/groups.remote.js';
 
 	/**
 	 * One committee: its applications for whoever reviews them, and the settings,

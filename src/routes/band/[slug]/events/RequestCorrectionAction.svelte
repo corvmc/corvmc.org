@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * "The date is wrong." An act credited on somebody else's listing had only
 	 * accept and decline, so a bad listing and no listing were the only two
@@ -9,9 +9,9 @@
 	 * `requestListingCorrectionForm` for why not to the owner directly.
 	 */
 	import { IconMessageReport } from '@tabler/icons-svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { requestListingCorrectionForm } from '$lib/remote/band-events.remote';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { requestListingCorrectionForm } from '#lib/remote/band-events.remote.js';
 
 	let { slug, eventId }: { slug: string; eventId: string } = $props();
 

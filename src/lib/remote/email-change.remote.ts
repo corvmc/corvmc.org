@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { can, requireCapability } from '$lib/server/authorization';
+import { can, requireCapability } from '#lib/server/authorization.js';
 import {
 	EmailChangeRejectedError,
 	cancelEmailChange as cancelEmailChangeService,
@@ -10,7 +10,7 @@ import {
 	getEmailChangeRequest as getEmailChangeRequestService,
 	getPendingEmailChange as getPendingEmailChangeService,
 	requestEmailChange as requestEmailChangeService
-} from '$lib/server/user/email-change-service';
+} from '#lib/server/user/email-change-service.js';
 
 // ---------------------------------------------------------------------------
 // Staff: propose, resend, cancel

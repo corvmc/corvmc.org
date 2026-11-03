@@ -6,16 +6,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // space, ticket terms and media stay mocked as the calls this job makes.
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const mockSaveTicketSale = vi.fn();
-vi.mock('$lib/server/ticket/ticket-sale', () => ({ saveTicketSale: mockSaveTicketSale }));
+vi.mock('#lib/server/ticket/ticket-sale.js', () => ({ saveTicketSale: mockSaveTicketSale }));
 
 const mockAttachExisting = vi.fn();
-vi.mock('$lib/server/media/media-service', () => ({
+vi.mock('#lib/server/media/media-service.js', () => ({
 	attachExisting: (...args: unknown[]) => mockAttachExisting(...args)
 }));
 
@@ -28,7 +28,7 @@ vi.mock('./conflict-service', () => ({
 	hasConflict: (...args: unknown[]) => mockHasConflict(...args)
 }));
 
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const mockGetOccurrences = vi.fn();
 const mockGenerationWindowEnd = vi.fn();
@@ -39,13 +39,13 @@ vi.mock('./rrule-helpers', () => ({
 
 // Mocked so a regression that opens a production per occurrence is caught (#2009).
 const mockCreateShowProject = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/production/production-project', () => ({
+vi.mock('#lib/server/production/production-project.js', () => ({
 	createShowProject: (...args: unknown[]) => mockCreateShowProject(...args),
 	announceProductionCreated: vi.fn().mockResolvedValue(undefined)
 }));
 
 const mockEmit = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...args: unknown[]) => mockEmit(...args) }
 }));
 

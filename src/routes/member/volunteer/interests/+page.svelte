@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Latest } from '$lib/latest.svelte';
+	import { Latest } from '#lib/latest.svelte.js';
 	import { isRedirect } from '@sveltejs/kit';
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	/**
 	 * Step two: what you'd like to help with.
 	 *
@@ -14,13 +14,16 @@
 	 */
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Form, { SubmitButton } from '$lib/components/ui/Form';
-	import InterestFields from '$lib/components/volunteer/InterestFields.svelte';
-	import { getVolunteerInterestsPage, saveVolunteerInterests } from '$lib/remote/volunteer.remote';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Form, { SubmitButton } from '#lib/components/ui/Form/index.js';
+	import InterestFields from '#lib/components/volunteer/InterestFields.svelte';
+	import {
+		getVolunteerInterestsPage,
+		saveVolunteerInterests
+	} from '#lib/remote/volunteer.remote.js';
 
 	// One query rather than three. Not `{#await}`: a refresh would re-pend it and
 	// remount the form mid-edit.

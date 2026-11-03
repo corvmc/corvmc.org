@@ -1,6 +1,6 @@
 import type Stripe from 'stripe';
 import { syncFromWebhook } from './band-subscription-service';
-import { stripe } from '$lib/server/stripe';
+import { stripe } from '#lib/server/stripe.js';
 
 /**
  * Handles checkout.session.completed for band_premium subscriptions.

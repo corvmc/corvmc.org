@@ -1,6 +1,6 @@
-import { db } from '$lib/server/db';
-import { audience, audienceMember, subscriber } from '$lib/server/db/schema/marketing';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { audience, audienceMember, subscriber } from '#lib/server/db/schema/marketing.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, eq, inArray, isNotNull, isNull, sql, type SQL } from 'drizzle-orm';
 import {
 	SYSTEM_AUDIENCES,

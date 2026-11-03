@@ -1,6 +1,6 @@
 import { updated } from '$app/state';
 import { toast } from 'svelte-sonner';
-import { isStaleRemoteResponse } from '$lib/stale-remote-response';
+import { isStaleRemoteResponse } from '#lib/stale-remote-response.js';
 
 /**
  * Recover a remote-function call that failed because the tab is older than the

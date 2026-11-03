@@ -15,16 +15,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // nobody has heard of widens access instead of erasing it.
 // ---------------------------------------------------------------------------
 
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 const getUserRoles = vi.fn<(userId: string) => Promise<string[]>>();
 const isSustainingMember = vi.fn<(userId: string) => Promise<boolean>>();
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	getUserRoles: (id: string) => getUserRoles(id),
 	committeeCapabilitiesFor: async () => []
 }));
-vi.mock('$lib/server/finance/subscription-service', () => ({
+vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	isSustainingMember: (id: string) => isSustainingMember(id)
 }));
 

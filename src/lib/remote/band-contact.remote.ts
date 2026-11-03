@@ -24,17 +24,17 @@ import { error, invalid } from '@sveltejs/kit';
 import { getRequestEvent } from '$app/server';
 import { form } from './_remote';
 import { eq, and, isNull } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
-import { bandSite } from '$lib/server/db/schema/band-site';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { verifyTurnstile } from '$lib/server/turnstile';
-import { allowRateLimited } from '$lib/server/rate-limit';
-import { dispatchEmailOnly } from '$lib/server/notification/dispatcher';
-import { handleBandEnquiry } from '$lib/server/inbox/band-service';
-import { listBandAdmins } from '$lib/server/band/band-service';
-import type { StandaloneEmailContent } from '$lib/types/notification-email';
-import type { BandEpk } from '$lib/types/band-page';
+import { db } from '#lib/server/db/index.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { verifyTurnstile } from '#lib/server/turnstile.js';
+import { allowRateLimited } from '#lib/server/rate-limit.js';
+import { dispatchEmailOnly } from '#lib/server/notification/dispatcher.js';
+import { handleBandEnquiry } from '#lib/server/inbox/band-service.js';
+import { listBandAdmins } from '#lib/server/band/band-service.js';
+import type { StandaloneEmailContent } from '#lib/types/notification-email.js';
+import type { BandEpk } from '#lib/types/band-page.js';
 
 /** The address a band put on its profile, back when that field was published. */
 function profileEmail(contact: unknown): string | undefined {

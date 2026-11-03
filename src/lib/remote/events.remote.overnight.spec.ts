@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // Regression: a show that runs past midnight (9 PM – 1 AM) is entered as one
@@ -24,16 +24,16 @@ const eventServiceMock = {
 	listPast: vi.fn(async () => [])
 };
 
-vi.mock('$lib/server/event/event-service', () => eventServiceMock);
+vi.mock('#lib/server/event/event-service.js', () => eventServiceMock);
 
-vi.mock('$lib/server/reservation/recurring-series-service', () => ({
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => ({
 	createEventSeries: vi.fn(async () => ({ id: 'series-1' })),
 	getByEvent: vi.fn(async () => null),
 	getEventSeries: vi.fn(async () => null),
 	cancel: vi.fn()
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	isFeatureEnabled: vi.fn(async () => true),
 	requireFeature: vi.fn(async () => undefined)
 }));
@@ -53,7 +53,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: { select: () => chainable() }
 }));
 
@@ -83,7 +83,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { createEvent, updateEvent } = (await import('$lib/remote/events.remote')) as any;
+const { createEvent, updateEvent } = (await import('#lib/remote/events.remote.js')) as any;
 
 const issue: any = new Proxy(() => undefined, { get: () => () => undefined });
 

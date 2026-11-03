@@ -8,25 +8,26 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 const mockUploadFile = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/storage', async () => {
-	const actual = await vi.importActual<typeof import('$lib/server/storage')>('$lib/server/storage');
+vi.mock('#lib/server/storage.js', async () => {
+	const actual =
+		await vi.importActual<typeof import('#lib/server/storage.js')>('#lib/server/storage.js');
 	return { ...actual, uploadFile: (...a: unknown[]) => mockUploadFile(...a) };
 });
 
 const mockReplaceSlot = vi.fn().mockResolvedValue({ mediaId: 'm1', attachmentId: 'a1' });
 const mockDetachSlot = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/media/media-service', () => ({
+vi.mock('#lib/server/media/media-service.js', () => ({
 	replaceSlot: (...a: unknown[]) => mockReplaceSlot(...a),
 	detachSlot: (...a: unknown[]) => mockDetachSlot(...a)
 }));
 
 const mockRequireGroupRole = vi.fn().mockResolvedValue({ group: { id: 'band-1' } });
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: (...a: unknown[]) => mockRequireGroupRole(...a)
 }));
 
 const mockGetReleaseById = vi.fn();
-vi.mock('$lib/server/audio/audio-service', () => ({
+vi.mock('#lib/server/audio/audio-service.js', () => ({
 	getReleaseById: (...a: unknown[]) => mockGetReleaseById(...a)
 }));
 

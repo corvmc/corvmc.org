@@ -2,7 +2,7 @@
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import EntityChip from './EntityChip.svelte';
 	import EntityGallery from './EntityGallery.svelte';
-	import { fakeRef } from '$lib/test/fixtures';
+	import { fakeRef } from '#lib/test/fixtures.js';
 	import DefinitionList from '../DefinitionList/DefinitionList.svelte';
 	import Fact from '../DefinitionList/Fact.svelte';
 

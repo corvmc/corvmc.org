@@ -1,7 +1,7 @@
 import { page, type Locator } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 
 // One file for the staff event actions: they mock the same two modules, and each
 // export below is the stub its own component's spec used before the merge.
@@ -24,7 +24,7 @@ const mount = async (...args: Parameters<typeof render>) => {
 const trigger = () => screen.getByRole('button');
 const items = () => page.getByRole('dialog').getByRole('listitem');
 
-vi.mock('$lib/remote/events.remote', () => {
+vi.mock('#lib/remote/events.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => issues[name] ?? null

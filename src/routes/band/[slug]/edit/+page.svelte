@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import { getBandProfileEditor } from '$lib/remote/directory.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import { getBandProfileEditor } from '#lib/remote/directory.remote.js';
 	import { getBandLayoutContext } from '../layout-context';
 	import BandProfileForm from './BandProfileForm.svelte';
 

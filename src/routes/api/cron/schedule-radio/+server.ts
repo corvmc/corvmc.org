@@ -1,8 +1,8 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { scheduleRadio } from '$lib/server/audio/radio-service';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
+import { scheduleRadio } from '#lib/server/audio/radio-service.js';
+import { isFeatureEnabled } from '#lib/server/feature-flags.js';
 
 /**
  * Keep CMC Radio's timetable ahead of wall clock.

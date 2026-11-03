@@ -1,6 +1,6 @@
 import { and, gte, lte, type SQL, type SQLWrapper } from 'drizzle-orm';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 /**
  * A date range a report was asked for, in **club time**.

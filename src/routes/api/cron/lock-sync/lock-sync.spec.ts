@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockReconcileUpcomingSync = vi.fn();
 
-vi.mock('$lib/server/lock/lock-service', () => ({
+vi.mock('#lib/server/lock/lock-service.js', () => ({
 	reconcileUpcomingSync: (...args: unknown[]) => mockReconcileUpcomingSync(...args)
 }));
 

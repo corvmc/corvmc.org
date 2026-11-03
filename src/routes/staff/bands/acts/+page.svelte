@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { getStaffExternalActs } from '$lib/remote/external-acts.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { getStaffExternalActs } from '#lib/remote/external-acts.remote.js';
 	import CreateExternalActAction from './CreateExternalActAction.svelte';
 	import ClaimExternalActAction from './ClaimExternalActAction.svelte';
-	import { formatDateShort } from '$lib/utils/format';
+	import { formatDateShort } from '#lib/utils/format.js';
 
 	/**
 	 * External acts — parties CMC has booked that are not members of anything

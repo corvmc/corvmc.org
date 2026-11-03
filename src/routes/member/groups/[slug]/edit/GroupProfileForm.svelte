@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import RichTextEditor from '$lib/components/ui/Form/RichTextEditor.svelte';
-	import { getGroupEditor, updateGroupProfileForm } from '$lib/remote/groups.remote';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import RichTextEditor from '#lib/components/ui/Form/RichTextEditor.svelte';
+	import { getGroupEditor, updateGroupProfileForm } from '#lib/remote/groups.remote.js';
 
 	// Plain resolved props, never an awaited query — see the page's comment.
 	let { group }: { group: Awaited<ReturnType<typeof getGroupEditor>> } = $props();

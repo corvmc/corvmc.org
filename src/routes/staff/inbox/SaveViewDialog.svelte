@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Name the filter combination you are looking at, and keep it as a tab.
 	 *
@@ -7,11 +7,11 @@
 	 * bookmark of this page describe the same thing — which is why saving one
 	 * needs nothing but a name.
 	 */
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { saveInboxView } from '$lib/remote/inbox.remote';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { saveInboxView } from '#lib/remote/inbox.remote.js';
 	import { filters } from './filters.svelte';
 
 	let { open = $bindable(false) }: { open?: boolean } = $props();

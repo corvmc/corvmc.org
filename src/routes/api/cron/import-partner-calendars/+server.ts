@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { runPartnerImports } from '$lib/server/event/partner-import-service';
+import { runPartnerImports } from '#lib/server/event/partner-import-service.js';
 
 /**
  * Copy every unpaused partner feed onto the gig guide (#1459). A feed that

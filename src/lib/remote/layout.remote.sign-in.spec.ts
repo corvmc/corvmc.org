@@ -1,6 +1,6 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 
-import { resolveBandSlug } from '$lib/server/band/band-address-service';
+import { resolveBandSlug } from '#lib/server/band/band-address-service.js';
 
 /**
  * A signed-out request for a panel layout is the sign-in interrupt (#1999):
@@ -9,43 +9,43 @@ import { resolveBandSlug } from '$lib/server/band/band-address-service';
  * page arrives as the gate's argument.
  */
 
-vi.mock('$lib/server/band/band-service', () => ({
+vi.mock('#lib/server/band/band-service.js', () => ({
 	getBySlug: vi.fn(async () => null),
 	getUserRole: vi.fn(async () => null),
 	listForUser: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/band/band-address-service', () => ({
+vi.mock('#lib/server/band/band-address-service.js', () => ({
 	resolveBandSlug: vi.fn(async () => null)
 }));
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	capabilitySet: () => [],
 	isElevated: vi.fn(async () => false),
 	positionsFor: vi.fn(async () => []),
 	committeeCapabilitiesFor: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/inventory/item-service', () => ({
+vi.mock('#lib/server/inventory/item-service.js', () => ({
 	hasLoanableItems: vi.fn(async () => false)
 }));
-vi.mock('$lib/server/feature-flags', () => ({ getAllFeatureFlags: vi.fn(async () => ({})) }));
-vi.mock('$lib/server/inbox/unified-service', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({ getAllFeatureFlags: vi.fn(async () => ({})) }));
+vi.mock('#lib/server/inbox/unified-service.js', () => ({
 	countUnifiedUnread: vi.fn(async () => 0),
 	countUnifiedUnreadFor: vi.fn(async () => 0)
 }));
-vi.mock('$lib/server/inbox/direct-service', () => ({
+vi.mock('#lib/server/inbox/direct-service.js', () => ({
 	countPendingRequests: vi.fn(async () => 0)
 }));
-vi.mock('$lib/server/moderation/moderation-service', () => ({
+vi.mock('#lib/server/moderation/moderation-service.js', () => ({
 	acceptsDirectMessages: vi.fn(async () => true)
 }));
-vi.mock('$lib/server/notification/in-app-service', () => ({
+vi.mock('#lib/server/notification/in-app-service.js', () => ({
 	getForUser: vi.fn(async () => []),
 	getUnreadCount: vi.fn(async () => 0)
 }));
-vi.mock('$lib/server/user/staff-queue-counts', () => ({
+vi.mock('#lib/server/user/staff-queue-counts.js', () => ({
 	countStaffQueues: vi.fn(async () => ({}))
 }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (v: unknown) => v ?? null }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: (v: unknown) => v ?? null }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 let currentUser: { id: string; name: string; email: string } | null = null;
 

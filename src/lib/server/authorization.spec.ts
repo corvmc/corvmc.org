@@ -32,7 +32,7 @@ function chainable() {
 /** How many times `db.select()` was called — the memo test's whole assertion. */
 export const selectCalls = { n: 0 };
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => {
 			selectCalls.n++;
@@ -54,8 +54,8 @@ vi.mock('$app/server', () => ({ getRequestEvent: () => ({ locals }) }));
 const committeeGrantsFor = vi.fn(async (_userId: string) => [] as unknown[]);
 const roleGrantAllows = vi.fn(async (..._args: unknown[]) => false);
 const listCommitteeHolders = vi.fn(async (_cap: string) => [] as unknown[]);
-vi.mock('$lib/server/capability/capability-grants', async (orig) => ({
-	...(await orig<typeof import('$lib/server/capability/capability-grants')>()),
+vi.mock('#lib/server/capability/capability-grants.js', async (orig) => ({
+	...(await orig<typeof import('#lib/server/capability/capability-grants.js')>()),
 	committeeGrantsFor,
 	roleGrantAllows,
 	listCommitteeHolders
@@ -134,7 +134,7 @@ describe('findStaffUserByEmail', () => {
 		// Derived from positionOrder rather than a hardcoded pair, so a new
 		// position is recognised as staff mail without touching this query — and
 		// a legacy `member` row never is.
-		const { positionOrder } = await import('$lib/config');
+		const { positionOrder } = await import('#lib/config.js');
 		await findStaffUserByEmail('ada@corvmc.org');
 
 		const placeholders = positionOrder.map(() => '?').join(', ');
@@ -535,7 +535,7 @@ describe('config and better-auth agree', () => {
 		// `grantsCapability` re-implements the decision that `authorize()` makes.
 		// This is the test that stops the two drifting apart.
 		const { capabilities, positions, positionOrder, grantsCapability, positionsGranting } =
-			await import('$lib/config');
+			await import('#lib/config.js');
 
 		const every = Object.entries(capabilities).flatMap(([r, actions]) =>
 			(actions as readonly string[]).map((a) => `${r}.${a}` as never)

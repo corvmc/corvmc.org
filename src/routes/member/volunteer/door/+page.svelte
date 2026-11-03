@@ -1,35 +1,35 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { browser } from '$app/environment';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { pageTitle, TICKET_MIN_CHARGE_CENTS } from '$lib/config';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { formatCents, formatTime } from '$lib/utils/format';
+	import { pageTitle, TICKET_MIN_CHARGE_CENTS } from '#lib/config.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import MoneyField from '#lib/components/ui/Form/MoneyField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { formatCents, formatTime } from '#lib/utils/format.js';
 	import {
 		cancelDoorSale,
 		getDoorEvents,
 		getTerminalConnection,
 		simulateDoorTap,
 		startDoorSale
-	} from '$lib/remote/door.remote';
+	} from '#lib/remote/door.remote.js';
 	import {
 		connectDoorReader,
 		describeTapError,
 		takeTap,
 		tapToPayBridge,
 		type TapToPayBridge
-	} from '$lib/door/tap-to-pay';
-	import { capacityNote } from '$lib/door/capacity';
+	} from '#lib/door/tap-to-pay.js';
+	import { capacityNote } from '#lib/door/capacity.js';
 	import DoorSaleStatus from './DoorSaleStatus.svelte';
 
 	/**

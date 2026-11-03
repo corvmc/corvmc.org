@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * One shift the member is on, with the two-step rail that is the whole point.
 	 *
@@ -9,14 +9,14 @@
 	 * that from a booking. Claimed → Booked, with only the reached step lit,
 	 * says it without needing a sentence.
 	 */
-	import Action from '$lib/components/ui/Action.svelte';
-	import { shiftLabel, shiftRoleSuffix } from '$lib/utils/shift-label';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { shiftLabel, shiftRoleSuffix } from '#lib/utils/shift-label.js';
 	import ShiftProgress from './ShiftProgress.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
-	import { formatDateShort } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
-	import { cancelMySignup } from '$lib/remote/volunteer.remote';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { DEFAULT_TIMEZONE } from '#lib/config.js';
+	import { cancelMySignup } from '#lib/remote/volunteer.remote.js';
 
 	let {
 		shift

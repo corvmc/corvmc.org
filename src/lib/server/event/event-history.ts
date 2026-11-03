@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { eventListing } from '$lib/server/db/schema/event';
-import { production } from '$lib/server/db/schema/production';
-import type { AuditSubjectFilter } from '$lib/server/audit/audit-service';
-import { listAuditFeed } from '$lib/server/audit/audit-feed';
-import type { FeedPage } from '$lib/types/activity';
+import { db } from '#lib/server/db/index.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { production } from '#lib/server/db/schema/production.js';
+import type { AuditSubjectFilter } from '#lib/server/audit/audit-service.js';
+import { listAuditFeed } from '#lib/server/audit/audit-feed.js';
+import type { FeedPage } from '#lib/types/activity.js';
 
 /**
  * Whose entries an event's History reads: the listing's own, and its show's.

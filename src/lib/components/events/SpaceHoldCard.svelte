@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import type { ReservationRef } from '$lib/types/entity';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import type { ReservationRef } from '#lib/types/entity.js';
 	import EditHoldAction from './EditHoldAction.svelte';
 
 	/**

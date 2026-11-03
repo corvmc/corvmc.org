@@ -6,24 +6,24 @@
 	for the same thing again is a reminder, not a second row.
 -->
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
-	import { formatDateShort } from '$lib/utils/format';
-	import { requestableArtifacts, requestableArtifactLabels } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { requestableArtifacts, requestableArtifactLabels } from '#lib/config.js';
 	import {
 		askForArtifact,
 		dropArtifactRequest,
 		usePosterArt,
 		usePosterArtWithFooter
-	} from '$lib/remote/productions.remote';
-	import { searchAskableListings } from '$lib/remote/external-acts.remote';
-	import type { OutstandingRequest } from '$lib/types/artifact-request';
+	} from '#lib/remote/productions.remote.js';
+	import { searchAskableListings } from '#lib/remote/external-acts.remote.js';
+	import type { OutstandingRequest } from '#lib/types/artifact-request.js';
 
 	// The picker writes a plain hidden input; the Action's form is not a `<Form>`.
 	const artistField = {

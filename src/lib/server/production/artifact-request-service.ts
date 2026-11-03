@@ -1,19 +1,23 @@
-import { db } from '$lib/server/db';
-import { artifactRequest } from '$lib/server/db/schema/artifact-request';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { eventBand, eventListing } from '$lib/server/db/schema/event';
-import { media, mediaAttachment } from '$lib/server/db/schema/media';
-import { venue } from '$lib/server/db/schema/venue';
+import { db } from '#lib/server/db/index.js';
+import { artifactRequest } from '#lib/server/db/schema/artifact-request.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { eventBand, eventListing } from '#lib/server/db/schema/event.js';
+import { media, mediaAttachment } from '#lib/server/db/schema/media.js';
+import { venue } from '#lib/server/db/schema/venue.js';
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { getEventRiderSummaries } from '$lib/server/band/rider-service';
-import { attachExisting, listAttachedEntries, replaceSlot } from '$lib/server/media/media-service';
-import { resolveImageUrl, uploadFile } from '$lib/server/storage';
-import { mediaKey } from '$lib/server/storage-keys';
-import { DomainError } from '$lib/server/domain-error';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { getEventRiderSummaries } from '#lib/server/band/rider-service.js';
+import {
+	attachExisting,
+	listAttachedEntries,
+	replaceSlot
+} from '#lib/server/media/media-service.js';
+import { resolveImageUrl, uploadFile } from '#lib/server/storage.js';
+import { mediaKey } from '#lib/server/storage-keys.js';
+import { DomainError } from '#lib/server/domain-error.js';
 import { assertNotTerminal } from './production-scope';
-import { SEARCH_LIMIT, type RequestableArtifact } from '$lib/config';
-import type { OutstandingRequest, PosterAsk } from '$lib/types/artifact-request';
+import { SEARCH_LIMIT, type RequestableArtifact } from '#lib/config.js';
+import type { OutstandingRequest, PosterAsk } from '#lib/types/artifact-request.js';
 
 export type { OutstandingRequest, PosterAsk };
 

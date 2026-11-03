@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import Harness from './EntityChipHarness.svelte';
-import { fakeRef } from '$lib/test/fixtures';
-import '$lib/test/locators';
+import { fakeRef } from '#lib/test/fixtures.js';
+import '#lib/test/locators.js';
 
 describe('EntityChip', () => {
 	it('derives its link from the viewer rather than a prop', async () => {

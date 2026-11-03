@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Form from '$lib/components/ui/Form';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Form from '#lib/components/ui/Form/index.js';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import ReservationCardShell from './ReservationCardShell.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
-	import { cancelBandReservation } from '$lib/remote/reservations.remote';
+	import { cancelBandReservation } from '#lib/remote/reservations.remote.js';
 	import { toast } from 'svelte-sonner';
-	import type { MemberRef, ReservationRef } from '$lib/types/entity';
+	import type { MemberRef, ReservationRef } from '#lib/types/entity.js';
 
 	/**
 	 * One of the act's own bookings, on the same card the member panel uses.

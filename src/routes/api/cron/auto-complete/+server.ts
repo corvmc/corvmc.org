@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { autoCompleteExpired } from '$lib/server/reservation/reservation-service';
+import { autoCompleteExpired } from '#lib/server/reservation/reservation-service.js';
 
 /**
  * Cron endpoint for auto-completing paid reservations past their end time.

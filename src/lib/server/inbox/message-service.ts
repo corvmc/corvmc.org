@@ -1,7 +1,7 @@
-import { db } from '$lib/server/db';
-import { inboxThread, inboxMessage, inboxNote } from '$lib/server/db/schema/inbox';
+import { db } from '#lib/server/db/index.js';
+import { inboxThread, inboxMessage, inboxNote } from '#lib/server/db/schema/inbox.js';
 import { eq, sql, desc, and, asc } from 'drizzle-orm';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { truncatePreview } from './thread-service';
 import { dispatchReply } from './channel-dispatcher';
 

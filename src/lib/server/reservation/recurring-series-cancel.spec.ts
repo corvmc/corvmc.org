@@ -8,12 +8,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite({ foreignKeys: true });
 });
 
 // D1 runs a batch as one transaction; better-sqlite3's drizzle has no `batch`, so this is it.
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			sqlite.exec('begin');
@@ -39,8 +39,8 @@ const { emit, refund, promoteNextWaitlisted } = vi.hoisted(() => ({
 	refund: vi.fn(),
 	promoteNextWaitlisted: vi.fn(async () => ({ promoted: false }))
 }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit, on: vi.fn() } }));
-vi.mock('$lib/server/finance/payment-service', () => ({ refund }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit, on: vi.fn() } }));
+vi.mock('#lib/server/finance/payment-service.js', () => ({ refund }));
 vi.mock('./waitlist-service', () => ({ promoteNextWaitlisted }));
 
 const svc = await import('./recurring-series-service');

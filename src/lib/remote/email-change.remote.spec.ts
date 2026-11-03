@@ -7,7 +7,7 @@ import type { ZodType } from 'zod';
 
 const requireCapability = vi.fn(async (_cap: string) => ({ id: 'staff-1' }));
 const can = vi.fn(async (_cap: string) => true);
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap),
 	can: (cap: string) => can(cap)
 }));
@@ -20,7 +20,7 @@ const service = {
 	getEmailChangeRequest: vi.fn(async () => null),
 	confirmEmailChange: vi.fn(async () => ({ status: 'invalid' }))
 };
-vi.mock('$lib/server/user/email-change-service', () => ({
+vi.mock('#lib/server/user/email-change-service.js', () => ({
 	EmailChangeRejectedError: Rejected,
 	...Object.fromEntries(
 		Object.entries(service).map(([k, fn]) => [k, (...a: unknown[]) => fn(...(a as []))])

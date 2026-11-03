@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * Hours logged against this work order, approved from here as from the queue.
 	 * Returning a log stays on the queue, where the note to the member is written.
 	 */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import { approveVolunteerHours, type getStaffShiftPage } from '$lib/remote/volunteer.remote';
-	import { formatVolunteerHours, volunteerHourStatusLabels } from '$lib/config';
-	import { formatDateShort } from '$lib/utils/format';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { approveVolunteerHours, type getStaffShiftPage } from '#lib/remote/volunteer.remote.js';
+	import { formatVolunteerHours, volunteerHourStatusLabels } from '#lib/config.js';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 
 	type Log = Awaited<ReturnType<typeof getStaffShiftPage>>['hours'][number];

@@ -1,4 +1,4 @@
-import { reservationCancellerLabels, type ReservationCanceller } from '$lib/config';
+import { reservationCancellerLabels, type ReservationCanceller } from '#lib/config.js';
 import { formatDateTime } from './format';
 
 export interface CancellationFacts {

@@ -1,17 +1,17 @@
-import { db } from '$lib/server/db';
-import { containsLiteral } from '$lib/server/db/like';
-import { volunteerHourLog, volunteerRole } from '$lib/server/db/schema/volunteer';
-import { user } from '$lib/server/db/schema/authentication';
-import { group, groupMember } from '$lib/server/db/schema/group';
+import { db } from '#lib/server/db/index.js';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { volunteerHourLog, volunteerRole } from '#lib/server/db/schema/volunteer.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { eq, and, or, inArray, isNull, gte, lte, desc, count, sql, type SQL } from 'drizzle-orm';
-import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
-import { memberRefColumns, toMemberRef, type MemberRefRow } from '$lib/server/entity/refs';
-import type { MemberRef } from '$lib/types/entity';
-import { buildDateInTz, formatDateInTz } from '$lib/server/reservation/timezone';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { DomainError } from '$lib/server/errors';
+import { paginate, type PaginationInput, type PaginatedResult } from '#lib/server/db/paginate.js';
+import { memberRefColumns, toMemberRef, type MemberRefRow } from '#lib/server/entity/refs.js';
+import type { MemberRef } from '#lib/types/entity.js';
+import { buildDateInTz, formatDateInTz } from '#lib/server/reservation/timezone.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { DomainError } from '#lib/server/errors.js';
 import {
 	DEFAULT_TIMEZONE,
 	VOLUNTEER_BACKDATE_LIMIT_DAYS,
@@ -22,13 +22,13 @@ import {
 	VOLUNTEER_REVIEW_MINUTES_OVER,
 	volunteerHourStatusLabels,
 	type HourLogException
-} from '$lib/config';
+} from '#lib/config.js';
 import { getActiveVolunteerRoleById } from './volunteer-role-service';
 import { VolunteerRoleNotFoundError } from './volunteer-role-service';
 import { requireActiveVolunteer } from './volunteer-profile-service';
 import { flagUnclearedLogs } from './member-certification-service';
-import { chunk } from '$lib/server/utils/chunk';
-import type { VolunteerHourLog, VolunteerHourStatus } from '$lib/server/db/schema/volunteer';
+import { chunk } from '#lib/server/utils/chunk.js';
+import type { VolunteerHourLog, VolunteerHourStatus } from '#lib/server/db/schema/volunteer.js';
 
 const TZ = DEFAULT_TIMEZONE;
 

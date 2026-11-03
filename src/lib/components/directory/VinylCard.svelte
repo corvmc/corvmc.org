@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
-	import logoMono from '$lib/assets/cmc-logo-mono.svg';
-	import { hashPattern } from '$lib/utils/patterns';
-	import { initials } from '$lib/utils/format';
-	import { imageSrc } from '$lib/utils/images';
+	import logoMono from '#lib/assets/cmc-logo-mono.svg';
+	import { hashPattern } from '#lib/utils/patterns.js';
+	import { initials } from '#lib/utils/format.js';
+	import { imageSrc } from '#lib/utils/images.js';
 
 	interface Props {
 		href: ResolvedPathname;

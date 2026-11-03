@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DomainError } from '$lib/server/domain-error';
-import { mockUser } from '$lib/server/db/test-factory';
+import { DomainError } from '#lib/server/domain-error.js';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -76,7 +76,7 @@ const bandServiceMock = {
 	}
 };
 
-vi.mock('$lib/server/band/band-service', () => bandServiceMock);
+vi.mock('#lib/server/band/band-service.js', () => bandServiceMock);
 
 const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
 
@@ -84,7 +84,7 @@ const hasAnyRole = vi.fn(async () => false);
 // What `requireGroupRole`'s `allowStaff` branch asks: any position, matching
 // `requireStaff()`. `hasAnyRole` is the two literal role rows and is narrower.
 const isElevated = vi.fn(async () => false);
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	hasAnyRole: (...a: unknown[]) => hasAnyRole(...(a as [])),
 	isElevated: (...a: unknown[]) => isElevated(...(a as [])),
 	requireUser: () => testUser
@@ -105,7 +105,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainable()
 	}
@@ -143,7 +143,7 @@ const {
 	leave,
 	updateMyBandMembership,
 	searchBandUsers: searchUsers
-} = (await import('$lib/remote/bands.remote')) as any;
+} = (await import('#lib/remote/bands.remote.js')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

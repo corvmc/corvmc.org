@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { suppressByEmail } from '$lib/server/marketing/subscriber-service';
+import { suppressByEmail } from '#lib/server/marketing/subscriber-service.js';
 
 // ---------------------------------------------------------------------------
 // Postmark event webhook (bounces + spam complaints)

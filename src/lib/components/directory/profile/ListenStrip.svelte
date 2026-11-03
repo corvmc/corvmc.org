@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import ProfileSection from './ProfileSection.svelte';
-	import { orderEmbeddableServices } from '$lib/utils/directory-display';
-	import type { ProfileLink } from '$lib/server/db/schema/authentication';
+	import { orderEmbeddableServices } from '#lib/utils/directory-display.js';
+	import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
 
 	let { links }: { links: ProfileLink[] } = $props();
 

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { resolveTaskForm, reopenTaskForm } from '$lib/remote/tasks.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { resolveTaskForm, reopenTaskForm } from '#lib/remote/tasks.remote.js';
 	import TaskCheck from './TaskCheck.svelte';
 	import type { Task } from './task-view';
 

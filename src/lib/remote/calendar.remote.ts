@@ -3,11 +3,11 @@ import {
 	listPublicCalendarEvents,
 	listPublicUpcomingEvents,
 	countPublicUpcomingEvents
-} from '$lib/server/event/event-service';
-import { toCalendarEntry } from '$lib/server/event/calendar-entry';
-import { buildDateInTz, formatDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
-import { monthSchema, gigGuideSchema, GIG_GUIDE_PAGE_SIZE } from '$lib/types/calendar';
+} from '#lib/server/event/event-service.js';
+import { toCalendarEntry } from '#lib/server/event/calendar-entry.js';
+import { buildDateInTz, formatDateInTz } from '#lib/server/reservation/timezone.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import { monthSchema, gigGuideSchema, GIG_GUIDE_PAGE_SIZE } from '#lib/types/calendar.js';
 
 // ---------------------------------------------------------------------------
 // Public calendar — unified month view across CMC and band events

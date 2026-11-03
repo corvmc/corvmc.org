@@ -8,21 +8,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 let bandAudio = true;
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	isFeatureEnabled: async () => bandAudio
 }));
 
 // Imported only through the audio purchase service, never called here.
-vi.mock('$lib/server/stripe', () => ({ stripe: {} }));
-vi.mock('$lib/server/finance/payment-service', () => ({ checkout: vi.fn() }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/stripe.js', () => ({ stripe: {} }));
+vi.mock('#lib/server/finance/payment-service.js', () => ({ checkout: vi.fn() }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: vi.fn() }
 }));
 

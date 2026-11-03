@@ -1,22 +1,22 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { Turnstile } from 'svelte-turnstile';
 	import type { RemoteFormIssue } from '@sveltejs/kit';
-	import { MARKET_MAX_TABLES_REQUESTED, pageTitle } from '$lib/config';
+	import { MARKET_MAX_TABLES_REQUESTED, pageTitle } from '#lib/config.js';
 	import {
 		TURNSTILE_SITE_KEY,
 		TURNSTILE_RESPONSE_FIELD,
 		turnstileFailureMessage
-	} from '$lib/turnstile';
-	import { formatDateTime, fullDate } from '$lib/utils/format';
-	import { getVendorApplyPage, submitVendorApplicationForm } from '$lib/remote/market.remote';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	} from '#lib/turnstile.js';
+	import { formatDateTime, fullDate } from '#lib/utils/format.js';
+	import { getVendorApplyPage, submitVendorApplicationForm } from '#lib/remote/market.remote.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 
 	/**
 	 * A vendor's application for a table at a market day. No account needed:

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The filters, in the main pane rather than a modal or a strip above the list.
 	 *
@@ -13,12 +13,12 @@
 	 * have already made and can see the result of.
 	 */
 	import { IconX } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import { contactSubjects, inboxViews } from '$lib/config';
-	import { getInboxFilterCounts, getAssignableStaff } from '$lib/remote/inbox.remote';
-	import type { InboxView } from '$lib/config';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import { contactSubjects, inboxViews } from '#lib/config.js';
+	import { getInboxFilterCounts, getAssignableStaff } from '#lib/remote/inbox.remote.js';
+	import type { InboxView } from '#lib/config.js';
 
 	let {
 		view = $bindable(),

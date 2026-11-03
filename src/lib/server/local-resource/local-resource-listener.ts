@@ -1,7 +1,7 @@
-import { domainEvents } from '$lib/server/event-bus';
-import { dispatch, dispatchEmailOnly } from '$lib/server/notification/dispatcher';
-import { listUsersWithCapability } from '$lib/server/authorization';
-import { captureException } from '$lib/server/sentry';
+import { domainEvents } from '#lib/server/event-bus/index.js';
+import { dispatch, dispatchEmailOnly } from '#lib/server/notification/dispatcher.js';
+import { listUsersWithCapability } from '#lib/server/authorization.js';
+import { captureException } from '#lib/server/sentry.js';
 
 /**
  * Public tips for the local resources directory (#1498). Staff hear one arrived,

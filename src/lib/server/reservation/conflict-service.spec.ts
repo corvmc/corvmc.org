@@ -6,16 +6,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // The overlap and status predicates are SQL, so they run against real rows.
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 // The `teaching*` keys are fixtures, not decoration: without them `termsFor`
 // falls through to the DEFAULT_TEACHING_* constants and an instructor case
 // would be asserting against the module's own defaults rather than against
 // anything this mock controls.
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	getConfigsByPrefix: vi.fn(async () => ({
 		operatingHoursStart: '09:00',
 		operatingHoursEnd: '22:00',
@@ -41,7 +41,7 @@ import {
 	getValidationWarnings
 } from './conflict-service';
 import { buildDateInTz } from './timezone';
-import { addCalendarDays, forEachClockEdge, viewerTimeZones } from '$lib/test/clock-edges';
+import { addCalendarDays, forEachClockEdge, viewerTimeZones } from '#lib/test/clock-edges.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

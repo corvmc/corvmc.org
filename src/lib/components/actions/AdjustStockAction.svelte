@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { correctStock } from '$lib/remote/inventory.remote';
+	import { correctStock } from '#lib/remote/inventory.remote.js';
 	import { Field } from '../ui/Form';
 
 	const { fields } = correctStock;

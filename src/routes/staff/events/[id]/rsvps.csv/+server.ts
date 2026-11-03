@@ -1,10 +1,10 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireListingWriter } from '$lib/server/event/listing-guard';
-import { getById } from '$lib/server/event/event-service';
-import { listRsvpRoster } from '$lib/server/event/rsvp-service';
-import { rosterCsv } from '$lib/server/roster/roster';
-import { csvResponse } from '$lib/server/report/csv';
+import { requireListingWriter } from '#lib/server/event/listing-guard.js';
+import { getById } from '#lib/server/event/event-service.js';
+import { listRsvpRoster } from '#lib/server/event/rsvp-service.js';
+import { rosterCsv } from '#lib/server/roster/roster.js';
+import { csvResponse } from '#lib/server/report/csv.js';
 
 /**
  * An event's RSVPs as CSV. A `+server.ts` because a download needs a

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The top of the hours queue, with its actions, and a link to the rest. Only
 	 * exceptions wait here; every other log counted when it was entered.
@@ -8,18 +8,18 @@
 	 * The full queue is a page, and a dashboard card that grows a filter bar has become the
 	 * table it was meant to summarise.
 	 */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import HourLogExceptions from '$lib/components/volunteer/HourLogExceptions.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import HourLogExceptions from '#lib/components/volunteer/HourLogExceptions.svelte';
 	import { IconCheck, IconArrowBackUp } from '@tabler/icons-svelte';
-	import { formatDateShort } from '$lib/utils/format';
-	import { formatVolunteerHours, type HourLogException } from '$lib/config';
-	import { approveVolunteerHours, rejectVolunteerHours } from '$lib/remote/volunteer.remote';
-	import type { MemberRef } from '$lib/types/entity';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { formatVolunteerHours, type HourLogException } from '#lib/config.js';
+	import { approveVolunteerHours, rejectVolunteerHours } from '#lib/remote/volunteer.remote.js';
+	import type { MemberRef } from '#lib/types/entity.js';
 
 	type Log = {
 		id: string;

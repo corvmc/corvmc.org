@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import {
 		getLocalResourceCategories,
 		createLocalResourceCategoryForm,
 		updateLocalResourceCategoryForm,
 		deleteLocalResourceCategoryForm
-	} from '$lib/remote/local-resources.remote';
+	} from '#lib/remote/local-resources.remote.js';
 
 	/** Labels with an order, like equipment categories. A category in use cannot be deleted. */
 	const categories = $derived(await getLocalResourceCategories());

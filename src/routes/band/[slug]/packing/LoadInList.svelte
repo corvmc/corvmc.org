@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import {
 		claimPackingItem,
 		releasePackingItem,
 		assignPackingItem,
 		setPackingItemPacked
-	} from '$lib/remote/packing.remote';
-	import { packingCategoryLabels, type PackingCategory } from '$lib/config';
-	import type { PackingListView } from '$lib/server/band/packing-service';
+	} from '#lib/remote/packing.remote.js';
+	import { packingCategoryLabels, type PackingCategory } from '#lib/config.js';
+	import type { PackingListView } from '#lib/server/band/packing-service.js';
 	import { IconCheck, IconPackage } from '@tabler/icons-svelte';
 
 	/**

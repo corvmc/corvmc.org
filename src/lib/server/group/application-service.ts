@@ -1,19 +1,22 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import { and, desc, eq, inArray, isNull, sql, asc } from 'drizzle-orm';
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
-import { DomainError } from '$lib/server/domain-error';
-import { getRowCount } from '$lib/server/db';
-import { groupApplication, groupApplicationChoice } from '$lib/server/db/schema/group-application';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import { invite } from '$lib/server/band/band-service';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
+import { DomainError } from '#lib/server/domain-error.js';
+import { getRowCount } from '#lib/server/db/index.js';
+import {
+	groupApplication,
+	groupApplicationChoice
+} from '#lib/server/db/schema/group-application.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import { invite } from '#lib/server/band/band-service.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import {
 	groupApplicationQuestions,
 	type ApplicationGroupKind,
 	type GroupApplicationStatus
-} from '$lib/config';
+} from '#lib/config.js';
 
 /**
  * Applying to a `by_application` group, and a reviewer answering.

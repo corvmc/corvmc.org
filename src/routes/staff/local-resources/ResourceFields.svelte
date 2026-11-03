@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { Field } from '$lib/components/ui/Form';
+	import { m } from '#lib/paraglide/messages.js';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
 
 	/**

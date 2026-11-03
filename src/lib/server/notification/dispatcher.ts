@@ -1,19 +1,19 @@
 import { sendEmailWithTemplate, sendTemplateBatch } from './email/postmark-client';
 import { buildNotificationEmail } from './email/build-model';
 import { normalizeNotificationModel } from './email/normalize-model';
-import { NOTIFICATION_TYPES } from '$lib/server/db/schema/notification';
-import { NOTIFICATION_CATEGORIES } from '$lib/email/notification-category';
+import { NOTIFICATION_TYPES } from '#lib/server/db/schema/notification.js';
+import { NOTIFICATION_CATEGORIES } from '#lib/email/notification-category.js';
 import { createNotification, createNotifications } from './in-app-service';
 import { getPreference } from './preference-service';
 import { isDeliverable, listBatchRecipients } from './recipient';
 import { pushToUser } from './sse';
-import { captureException } from '$lib/server/sentry';
-import { afterResponse } from '$lib/server/after-response';
+import { captureException } from '#lib/server/sentry.js';
+import { afterResponse } from '#lib/server/after-response.js';
 import type {
 	NotificationEmailContent,
 	NotificationEmailPayload,
 	StandaloneEmailContent
-} from '$lib/types/notification-email';
+} from '#lib/types/notification-email.js';
 
 // ---------------------------------------------------------------------------
 // Notification dispatcher

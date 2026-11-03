@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** Every address on a roster to the clipboard, comma-separated and deduplicated. */
 	import { toast } from 'svelte-sonner';
 	import { IconCopy } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { uniqueEmails } from '$lib/utils/unique-emails';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { uniqueEmails } from '#lib/utils/unique-emails.js';
 
 	let {
 		emails

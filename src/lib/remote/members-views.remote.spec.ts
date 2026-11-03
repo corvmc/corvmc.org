@@ -6,26 +6,26 @@ const requireCapability = vi.fn(async (cap: string) => {
 	if (!held.has(cap)) throw new Error('403: Not permitted');
 	return { id: 'staff-1' };
 });
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap),
 	requireCapabilityOrOwner: vi.fn(),
 	requireUser: vi.fn(),
 	can: async (cap: string) => held.has(cap),
 	getUserRoles: vi.fn()
 }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 const listStaffUsers = vi.fn(async () => ({ rows: [], pagination: {} }));
 const listAllStaffUsers = vi.fn(async () => []);
-vi.mock('$lib/server/user/user-roster', () => ({
+vi.mock('#lib/server/user/user-roster.js', () => ({
 	listStaffUsers,
 	listAllStaffUsers,
 	userRosterFilters: {}
 }));
 const listInstructorRoster = vi.fn(async () => ({ rows: [], pagination: {}, pending: 0 }));
-vi.mock('$lib/server/instructor/instructor-service', () => ({ listInstructorRoster }));
+vi.mock('#lib/server/instructor/instructor-service.js', () => ({ listInstructorRoster }));
 const listAllInstructors = vi.fn(async () => []);
-vi.mock('$lib/server/instructor/instructor-roster', () => ({
+vi.mock('#lib/server/instructor/instructor-roster.js', () => ({
 	listAllInstructors,
 	toServiceFilters: (f: unknown) => f,
 	instructorRosterFilters: { extend: () => ({}) }

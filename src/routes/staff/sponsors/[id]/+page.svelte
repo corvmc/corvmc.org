@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/** One sponsor: who to call, and every term of support they have given. */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import SponsorFields from '$lib/components/sponsor/SponsorFields.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import SponsorFields from '#lib/components/sponsor/SponsorFields.svelte';
 	import SponsorshipFields from './SponsorshipFields.svelte';
 	import PlacementFields from './PlacementFields.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import {
 		getSponsorDetail,
 		updateSponsor,
@@ -29,10 +29,10 @@
 		removePlacement,
 		setSponsorLogo,
 		removeSponsorLogo
-	} from '$lib/remote/sponsors.remote';
-	import { sponsorshipStatusLabels, sponsorshipStatusBadge } from '$lib/config';
-	import { formatCents, formatDateShortYear } from '$lib/utils/format';
-	import { formatIsoDay } from '$lib/utils/deadline';
+	} from '#lib/remote/sponsors.remote.js';
+	import { sponsorshipStatusLabels, sponsorshipStatusBadge } from '#lib/config.js';
+	import { formatCents, formatDateShortYear } from '#lib/utils/format.js';
+	import { formatIsoDay } from '#lib/utils/deadline.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';

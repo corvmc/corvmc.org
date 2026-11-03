@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { positionOrder, type Capability, type Position } from '$lib/config';
+import { positionOrder, type Capability, type Position } from '#lib/config.js';
 
 /**
  * The volunteer hours CSV.
@@ -14,9 +14,9 @@ import { positionOrder, type Capability, type Position } from '$lib/config';
 // positions actually grant.
 let heldPositions: Position[] = ['staff'];
 const requested: string[] = [];
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
-	const config = await import('$lib/config');
+	const config = await import('#lib/config.js');
 	const holds = (cap: Capability) =>
 		heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
 	return {
@@ -31,12 +31,12 @@ vi.mock('$lib/server/authorization', async () => {
 
 let exportRows: unknown[] = [];
 const listApprovedHoursForExport = vi.fn(async () => exportRows);
-vi.mock('$lib/server/volunteer/volunteer-report-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-report-service.js', () => ({
 	listApprovedHoursForExport: (...a: unknown[]) => listApprovedHoursForExport(...(a as []))
 }));
 
 const HOUR_VALUE_CENTS = 3766;
-vi.mock('$lib/server/volunteer/hour-value', () => ({
+vi.mock('#lib/server/volunteer/hour-value.js', () => ({
 	getHourValueCents: vi.fn(async () => HOUR_VALUE_CENTS),
 	getHourValueSource: vi.fn(async () => 'Independent Sector, Oregon, 2025')
 }));

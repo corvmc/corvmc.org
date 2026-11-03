@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const kvStore = new Map<string, unknown>();
 
-vi.mock('$lib/server/kv', () => ({
+vi.mock('#lib/server/kv.js', () => ({
 	getJson: vi.fn(async (key: string) => (kvStore.has(key) ? kvStore.get(key) : null)),
 	putJson: vi.fn(async (key: string, value: unknown) => {
 		kvStore.set(key, value);
@@ -19,7 +19,7 @@ const mockStripeProducts = {
 	create: vi.fn(),
 	update: vi.fn()
 };
-vi.mock('$lib/server/stripe', () => ({
+vi.mock('#lib/server/stripe.js', () => ({
 	stripe: { products: mockStripeProducts }
 }));
 

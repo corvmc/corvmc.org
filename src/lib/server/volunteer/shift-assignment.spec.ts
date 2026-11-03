@@ -17,7 +17,7 @@ const MIGRATIONS_FOLDER = join(import.meta.dirname, '..', '..', '..', '..', 'mig
 const sqlite = new DatabaseSync(':memory:');
 const base = drizzle({ client: sqlite });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: new Proxy({}, { get: (_, prop) => Reflect.get(base as object, prop, base) }),
 	getRowCount: () => 0
 }));

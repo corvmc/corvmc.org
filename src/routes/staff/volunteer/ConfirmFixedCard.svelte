@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Scheduled repairs whose window has passed with their equipment reports still
 	 * open, because staff did not flag them "close reports on completion" (#1544).
 	 * Resolving closes the work order and its reports, and tells each reporter.
 	 */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { resolve } from '$app/paths';
-	import { formatDateShort } from '$lib/utils/format';
-	import { resolveWorkOrder } from '$lib/remote/volunteer.remote';
-	import { NO_ROLE_LABEL } from '$lib/utils/shift-label';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { resolveWorkOrder } from '#lib/remote/volunteer.remote.js';
+	import { NO_ROLE_LABEL } from '#lib/utils/shift-label.js';
 
 	type FinishedOrder = {
 		id: string;

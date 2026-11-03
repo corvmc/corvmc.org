@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Every work order a coordinator staffs, in one table by date (#1933). A shift
 	 * is a work order with a window, so the ones still waiting for a time are the
@@ -11,33 +11,33 @@
 	 * Cancelled shifts are a notify list under the divider, not rows to staff.
 	 */
 	import { page } from '$app/state';
-	import { NO_ROLE_LABEL, shiftLabel } from '$lib/utils/shift-label';
+	import { NO_ROLE_LABEL, shiftLabel } from '#lib/utils/shift-label.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import { Latest } from '$lib/latest.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { isOverdue } from '$lib/utils/work-order-due';
-	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import { Latest } from '#lib/latest.svelte.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { isOverdue } from '#lib/utils/work-order-due.js';
+	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
 	import NewWorkOrderAction from '../NewWorkOrderAction.svelte';
 	import ScheduleViews from './ScheduleViews.svelte';
 	import { PROJECT_FILTERS, matchesProject, parseProjectFilter } from './project-filter';
-	import { formatDateShort, relativeDay } from '$lib/utils/format';
+	import { formatDateShort, relativeDay } from '#lib/utils/format.js';
 	import {
 		DEFAULT_TIMEZONE,
 		contractorJobViews,
 		contractorJobViewLabels,
 		type ContractorJobView
-	} from '$lib/config';
-	import { getSchedulePage, confirmShiftClaims } from '$lib/remote/volunteer.remote';
+	} from '#lib/config.js';
+	import { getSchedulePage, confirmShiftClaims } from '#lib/remote/volunteer.remote.js';
 
 	/** `'all'` drops both bounds rather than passing a wide one, so it is really everything. */
 	const WINDOWS = [7, 14, 30, 'all'] as const;

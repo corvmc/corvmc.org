@@ -4,7 +4,7 @@
  * in (#1841). Each reads one item's slice of a table that has its own list.
  */
 
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	acquisition,
 	acquisitionLine,
@@ -12,8 +12,8 @@ import {
 	purchaseOrder,
 	purchaseOrderLine,
 	workRequest
-} from '$lib/server/db/schema/inventory';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/inventory.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 
 /**

@@ -1,5 +1,5 @@
-import { db } from '$lib/server/db';
-import { lockFallbackCode, reservation } from '$lib/server/db/schema/reservation';
+import { db } from '#lib/server/db/index.js';
+import { lockFallbackCode, reservation } from '#lib/server/db/schema/reservation.js';
 import { and, desc, eq, isNull, isNotNull } from 'drizzle-orm';
 import {
 	addLockUser,
@@ -8,7 +8,7 @@ import {
 	generateLockCode,
 	LOCK_GRACE_MINUTES
 } from './ultraloc-client';
-import type { LockFallbackCode } from '$lib/server/db/schema/reservation';
+import type { LockFallbackCode } from '#lib/server/db/schema/reservation.js';
 
 // The break-glass door code.
 //

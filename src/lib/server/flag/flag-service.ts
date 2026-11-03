@@ -1,22 +1,22 @@
-import { db } from '$lib/server/db';
-import { toBandRef, toFlagTargetRef } from '$lib/server/entity/refs';
+import { db } from '#lib/server/db/index.js';
+import { toBandRef, toFlagTargetRef } from '#lib/server/entity/refs.js';
 import { DomainError } from '../domain-error';
-import { contentFlag } from '$lib/server/db/schema/flag';
-import type { FlagEntityType, FlagStatus } from '$lib/server/db/schema/flag';
-import { surfaces, type StandingScope } from '$lib/config';
-import { user } from '$lib/server/db/schema/authentication';
-import { group } from '$lib/server/db/schema/group';
-import { eventListing } from '$lib/server/db/schema/event';
-import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
-import type { InboxMessageDirection } from '$lib/server/db/schema/inbox';
-import { suggestion } from '$lib/server/db/schema/suggestion';
-import { moderationAppeal } from '$lib/server/db/schema/moderation';
-import { classifiedPost } from '$lib/server/db/schema/classified';
+import { contentFlag } from '#lib/server/db/schema/flag.js';
+import type { FlagEntityType, FlagStatus } from '#lib/server/db/schema/flag.js';
+import { surfaces, type StandingScope } from '#lib/config.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { inboxThread, inboxMessage, inboxParticipant } from '#lib/server/db/schema/inbox.js';
+import type { InboxMessageDirection } from '#lib/server/db/schema/inbox.js';
+import { suggestion } from '#lib/server/db/schema/suggestion.js';
+import { moderationAppeal } from '#lib/server/db/schema/moderation.js';
+import { classifiedPost } from '#lib/server/db/schema/classified.js';
 import { eq, ne, and, desc, count, inArray, isNull, getTableColumns, asc } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
 
 // ---------------------------------------------------------------------------
 // Limits
@@ -205,11 +205,11 @@ export async function createFlag(params: CreateFlagParams) {
 	// uses one below: it keeps the two domains from importing each other.
 	// withholdForReview only moves `visible` rows, so repeat reports are no-ops.
 	if (params.entityType === 'suggestion') {
-		const { withholdForReview } = await import('$lib/server/suggestion/suggestion-service');
+		const { withholdForReview } = await import('#lib/server/suggestion/suggestion-service.js');
 		await withholdForReview(params.entityId, { flagId: flag.id });
 	}
 	if (params.entityType === 'classified_post') {
-		const { withholdForReview } = await import('$lib/server/classified/classified-service');
+		const { withholdForReview } = await import('#lib/server/classified/classified-service.js');
 		await withholdForReview(params.entityId);
 	}
 
@@ -326,13 +326,13 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 
 	if (params.resolution === 'resolved' && existing.entityType === 'event') {
 		if (params.unpublishEvent) {
-			const { unpublishWithNotice } = await import('$lib/server/event/event-service');
+			const { unpublishWithNotice } = await import('#lib/server/event/event-service.js');
 			await unpublishWithNotice(existing.entityId, { notes: params.notes });
 		}
 	}
 
 	if (existing.entityType === 'suggestion') {
-		const svc = await import('$lib/server/suggestion/suggestion-service');
+		const svc = await import('#lib/server/suggestion/suggestion-service.js');
 
 		if (params.resolution === 'resolved') {
 			// Upheld: off the board for good. The author's standing is handled above,
@@ -361,7 +361,7 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 
 	// Same rule as suggestions: the report already withheld the post, so dismissal restores it.
 	if (existing.entityType === 'classified_post') {
-		const { setVisibility } = await import('$lib/server/classified/classified-service');
+		const { setVisibility } = await import('#lib/server/classified/classified-service.js');
 		const upheld = params.resolution === 'resolved';
 		await setVisibility(existing.entityId, {
 			visibility: upheld ? 'hidden' : 'visible',
@@ -386,7 +386,7 @@ export async function resolveFlag(flagId: string, params: ResolveFlagParams) {
 		});
 
 		if (subject) {
-			const { restrictStanding } = await import('$lib/server/moderation/standing-service');
+			const { restrictStanding } = await import('#lib/server/moderation/standing-service.js');
 			await restrictStanding({
 				userId: subject.userId,
 				scope: subject.scope,
@@ -563,11 +563,11 @@ async function standingSubjectOf(
 	entityId: string,
 	context: { reporterUserId: string | null }
 ): Promise<StandingSubject | null> {
-	const { scopeForFlag } = await import('$lib/server/moderation/standing-service');
+	const { scopeForFlag } = await import('#lib/server/moderation/standing-service.js');
 
 	switch (entityType) {
 		case 'event': {
-			const { getById } = await import('$lib/server/event/event-service');
+			const { getById } = await import('#lib/server/event/event-service.js');
 			const evt = await getById(entityId);
 			const scope = scopeForFlag('event', {
 				eventSource: evt?.source,
@@ -577,7 +577,7 @@ async function standingSubjectOf(
 		}
 		case 'suggestion': {
 			const { getSuggestionForModeration } =
-				await import('$lib/server/suggestion/suggestion-service');
+				await import('#lib/server/suggestion/suggestion-service.js');
 			const target = await getSuggestionForModeration(entityId);
 			const scope = scopeForFlag('suggestion');
 			// Null when the author has deleted their account: there is nobody left
@@ -585,7 +585,7 @@ async function standingSubjectOf(
 			return target?.authorUserId && scope ? { userId: target.authorUserId, scope } : null;
 		}
 		case 'classified_post': {
-			const { getPostForModeration } = await import('$lib/server/classified/classified-service');
+			const { getPostForModeration } = await import('#lib/server/classified/classified-service.js');
 			const target = await getPostForModeration(entityId);
 			const scope = scopeForFlag('classified_post');
 			return target && scope ? { userId: target.authorUserId, scope } : null;

@@ -1,13 +1,13 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import { ORIENTATION_WAIVED_REASON_MAX } from '$lib/config';
+import { requireCapability } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { ORIENTATION_WAIVED_REASON_MAX } from '#lib/config.js';
 import {
 	getOrientation,
 	waiveOrientation as waiveService
-} from '$lib/server/volunteer/orientation-service';
+} from '#lib/server/volunteer/orientation-service.js';
 
 /**
  * Whether a member has been shown around the space.

@@ -16,12 +16,12 @@ const WITHHELD = 'events/posters/withheld/evt-1-aaaaaaaa-bbbb-cccc-dddd-eeeeeeee
 let listing: Listing | null = null;
 
 const getById = vi.fn(async (_id: string) => listing);
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	getById: (id: string) => getById(id)
 }));
 
 const requireCapability = vi.fn(async (_cap: string) => ({ id: 'staff-1' }));
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap)
 }));
 
@@ -31,7 +31,7 @@ const arrayBuffer = vi.fn(async () => new ArrayBuffer(0));
 let storedObject: unknown = { body, size: 4096, arrayBuffer };
 
 const getPrivateObject = vi.fn(async (_key: string) => storedObject);
-vi.mock('$lib/server/private-storage', () => ({
+vi.mock('#lib/server/private-storage.js', () => ({
 	getPrivateObject: (key: string) => getPrivateObject(key)
 }));
 

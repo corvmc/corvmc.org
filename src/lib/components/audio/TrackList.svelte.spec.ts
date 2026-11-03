@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
-import { formatTrackLength } from '$lib/utils/audio';
+import { formatTrackLength } from '#lib/utils/audio.js';
 
 /**
  * The one behaviour worth a browser test: a list of tracks shares a single

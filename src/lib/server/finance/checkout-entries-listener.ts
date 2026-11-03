@@ -1,4 +1,4 @@
-import { calculateProcessingFee } from '$lib/finance/fees';
+import { calculateProcessingFee } from '#lib/finance/fees.js';
 import { recordEntriesBestEffort, type RecordEntryInput } from './financial-entry-service';
 import { showProjectIdForEvent } from './show-project';
 import type Stripe from 'stripe';

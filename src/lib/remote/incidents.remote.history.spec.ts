@@ -4,11 +4,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // query by name skips Kit's refresh-everything, so each must name the History
 // card's query too or the card shows the page as it was before the write.
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: vi.fn(async () => ({ id: 'staff-1', name: 'Pat' })),
 	can: vi.fn()
 }));
-vi.mock('$lib/server/incident/incident-service', () => ({
+vi.mock('#lib/server/incident/incident-service.js', () => ({
 	fileShowIncident: vi.fn(),
 	acceptIncident: vi.fn(),
 	addIncidentNote: vi.fn(),
@@ -22,8 +22,8 @@ vi.mock('$lib/server/incident/incident-service', () => ({
 	INCIDENT_NOTE_MAX: 2000,
 	INCIDENT_SUMMARY_MAX: 200
 }));
-vi.mock('$lib/server/incident/incident-retention', () => ({ setIncidentRetain: vi.fn() }));
-vi.mock('$lib/server/audit/audit-feed', () => ({ listAuditFeed: vi.fn() }));
+vi.mock('#lib/server/incident/incident-retention.js', () => ({ setIncidentRetain: vi.fn() }));
+vi.mock('#lib/server/audit/audit-feed.js', () => ({ listAuditFeed: vi.fn() }));
 
 const refreshed: [unknown, unknown][] = [];
 vi.mock('$app/server', () => ({

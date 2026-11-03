@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { fullDate } from '$lib/utils/format';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { fullDate } from '#lib/utils/format.js';
 	import { IconCircleCheck } from '@tabler/icons-svelte';
-	import { getTicketPurchaseSuccess } from '$lib/remote/events.remote';
+	import { getTicketPurchaseSuccess } from '#lib/remote/events.remote.js';
 	import { page } from '$app/state';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
 
 	const purchaseId = page.url.searchParams.get('purchase_id') ?? '';
 	let data = $derived(await getTicketPurchaseSuccess({ eventId: page.params.id!, purchaseId }));

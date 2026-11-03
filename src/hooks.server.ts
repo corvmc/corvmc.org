@@ -2,23 +2,23 @@ import { sequence } from '@sveltejs/kit/hooks';
 import * as Sentry from '@sentry/sveltekit';
 import type { Handle, HandleServerError } from '@sveltejs/kit';
 import { building, dev } from '$app/environment';
-import { auth } from '$lib/server/auth';
+import { auth } from '#lib/server/auth.js';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
-import { registerListeners } from '$lib/server/event-bus/register-listeners';
-import { initDb } from '$lib/server/db';
-import { initStorage } from '$lib/server/storage';
-import { initPrivateStorage } from '$lib/server/private-storage';
-import { initKv } from '$lib/server/kv';
-import { resolvePendingInvites } from '$lib/server/group/group-invite-service';
-import { resolveMemberInvite } from '$lib/server/user/member-invite-service';
-import { captureException } from '$lib/server/sentry';
-import { SENTRY_DSN } from '$lib/sentry-dsn';
-import { isLocalOrigin } from '$lib/sentry-local-origin';
+import { registerListeners } from '#lib/server/event-bus/register-listeners.js';
+import { initDb } from '#lib/server/db/index.js';
+import { initStorage } from '#lib/server/storage.js';
+import { initPrivateStorage } from '#lib/server/private-storage.js';
+import { initKv } from '#lib/server/kv.js';
+import { resolvePendingInvites } from '#lib/server/group/group-invite-service.js';
+import { resolveMemberInvite } from '#lib/server/user/member-invite-service.js';
+import { captureException } from '#lib/server/sentry.js';
+import { SENTRY_DSN } from '#lib/sentry-dsn.js';
+import { isLocalOrigin } from '#lib/sentry-local-origin.js';
 import { env as publicEnv } from '$env/dynamic/public';
-import { bandSiteUrl, bandSlugFromHost, isAppDomain } from '$lib/utils/band-site-url';
-import { groupPublicPath } from '$lib/utils/canonical-address';
-import { resolveBandSubdomain } from '$lib/server/band/band-host-service';
-import { resolveBandSlug } from '$lib/server/band/band-address-service';
+import { bandSiteUrl, bandSlugFromHost, isAppDomain } from '#lib/utils/band-site-url.js';
+import { groupPublicPath } from '#lib/utils/canonical-address.js';
+import { resolveBandSubdomain } from '#lib/server/band/band-host-service.js';
+import { resolveBandSlug } from '#lib/server/band/band-address-service.js';
 
 /**
  * Sessions whose pending group invites have already been resolved.

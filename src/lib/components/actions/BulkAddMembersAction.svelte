@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { bulkAddMembers } from '$lib/remote/marketing.remote';
+	import { bulkAddMembers } from '#lib/remote/marketing.remote.js';
 
 	const { fields } = bulkAddMembers;
 

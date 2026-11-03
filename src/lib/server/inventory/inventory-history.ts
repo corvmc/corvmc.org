@@ -1,11 +1,11 @@
 import { desc, eq, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { stockMovement } from '$lib/server/db/schema/inventory';
-import { jobsForAsset } from '$lib/server/contractor/contractor-job-service';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { stockMovement } from '#lib/server/db/schema/inventory.js';
+import { jobsForAsset } from '#lib/server/contractor/contractor-job-service.js';
 import { listLoans } from './loan-service';
-import { stockReasonLabels, type ContractorJobStatus, type StockReason } from '$lib/config';
-import { feedLimit, mergeFeed, type FeedItem, type FeedPage } from '$lib/types/activity';
+import { stockReasonLabels, type ContractorJobStatus, type StockReason } from '#lib/config.js';
+import { feedLimit, mergeFeed, type FeedItem, type FeedPage } from '#lib/types/activity.js';
 
 /**
  * The history cards on an item's and a unit's pages, as feed rows. Each read

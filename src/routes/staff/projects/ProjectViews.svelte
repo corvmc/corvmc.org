@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import { hasCapability, type Capability } from '$lib/config';
-	import { getStaffLayout } from '$lib/remote/layout.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import { hasCapability, type Capability } from '#lib/config.js';
+	import { getStaffLayout } from '#lib/remote/layout.remote.js';
 	import { resolve } from '$app/paths';
 	import type { ResolvedPathname } from '$app/types';
 

@@ -8,11 +8,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * real SQLite, because the answers are the rows the moves leave behind.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			const out = [];
@@ -22,7 +22,7 @@ vi.mock('$lib/server/db', () => ({
 	}),
 	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => {
 		throw new Error('outside a request');
@@ -32,7 +32,7 @@ vi.mock('./cancellation-notice', () => ({
 	announceShowsCancelled: async () => undefined,
 	openDeliverablesOnProductions: async () => []
 }));
-vi.mock('$lib/server/volunteer/show-cancellation', () => ({
+vi.mock('#lib/server/volunteer/show-cancellation.js', () => ({
 	cancelShiftsForProduction: async () => 0
 }));
 

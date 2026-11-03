@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { getBandRiderPage } from '$lib/remote/rider.remote';
-	import StagePlot from '$lib/components/rider/StagePlot.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { getBandRiderPage } from '#lib/remote/rider.remote.js';
+	import StagePlot from '#lib/components/rider/StagePlot.svelte';
 	import {
 		riderElementKindLabels,
 		riderInputSourceLabels,
 		riderMonitorFormatLabels,
 		riderStandTypeLabels
-	} from '$lib/config';
+	} from '#lib/config.js';
 	import { getBandLayoutContext } from '../../layout-context';
 	import { resolve } from '$app/paths';
 

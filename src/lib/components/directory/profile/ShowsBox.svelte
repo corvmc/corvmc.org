@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import ProfileSection from './ProfileSection.svelte';
-	import GigList from '$lib/components/events/GigList.svelte';
-	import type { CalendarEntry } from '$lib/types/calendar';
+	import GigList from '#lib/components/events/GigList.svelte';
+	import type { CalendarEntry } from '#lib/types/calendar.js';
 
 	let {
 		upcoming,

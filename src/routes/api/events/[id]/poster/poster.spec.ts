@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { positionOrder, type Capability, type Position } from '$lib/config';
+import { positionOrder, type Capability, type Position } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -10,8 +10,9 @@ const mockDeleteObject = vi.fn().mockResolvedValue(undefined);
 const mockGetById = vi.fn();
 
 // Keep the real validateUpload so the endpoint exercises real validation.
-vi.mock('$lib/server/storage', async () => {
-	const actual = await vi.importActual<typeof import('$lib/server/storage')>('$lib/server/storage');
+vi.mock('#lib/server/storage.js', async () => {
+	const actual =
+		await vi.importActual<typeof import('#lib/server/storage.js')>('#lib/server/storage.js');
 	return {
 		...actual,
 		uploadFile: (...args: unknown[]) => mockUploadFile(...args),
@@ -24,9 +25,9 @@ vi.mock('$lib/server/storage', async () => {
 let heldPositions: Position[] = ['staff'];
 let signedIn = true;
 const requestedCapabilities: string[] = [];
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
-	const config = await import('$lib/config');
+	const config = await import('#lib/config.js');
 	const holds = (cap: Capability) =>
 		signedIn && heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
 	return {
@@ -44,10 +45,10 @@ vi.mock('$lib/server/authorization', async () => {
 // The listing guard's committee half: a show's poster is also its committee's.
 let listingProject: { projectId: string | null; productionId: string | null } | null = null;
 let onCommittee = false;
-vi.mock('$lib/server/production/production-scope', () => ({
+vi.mock('#lib/server/production/production-scope.js', () => ({
 	projectOfEvent: async () => listingProject
 }));
-vi.mock('$lib/server/group/group-context', async () => {
+vi.mock('#lib/server/group/group-context.js', async () => {
 	const { error } = await import('@sveltejs/kit');
 	return {
 		requireProjectCommittee: async () => {
@@ -59,27 +60,27 @@ vi.mock('$lib/server/group/group-context', async () => {
 
 const mockReplaceSlot = vi.fn().mockResolvedValue({ mediaId: 'm1', attachmentId: 'a1' });
 const mockDetachSlot = vi.fn();
-vi.mock('$lib/server/media/media-service', () => ({
+vi.mock('#lib/server/media/media-service.js', () => ({
 	replaceSlot: (...args: unknown[]) => mockReplaceSlot(...args),
 	detachSlot: (...args: unknown[]) => mockDetachSlot(...args)
 }));
 
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	getById: (...args: unknown[]) => mockGetById(...args)
 }));
 
 // db.update().set().where() chain — only reached on the happy path.
 const whereSpy = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		update: () => ({ set: () => ({ where: whereSpy }) })
 	}
 }));
 
-vi.mock('$lib/server/db/schema/event', () => ({ eventListing: {} }));
+vi.mock('#lib/server/db/schema/event.js', () => ({ eventListing: {} }));
 
 const mockRecordAudit = vi.fn();
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...args: unknown[]) => mockRecordAudit(...args)
 }));
 

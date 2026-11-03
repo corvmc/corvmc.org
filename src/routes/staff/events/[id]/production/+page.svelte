@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { getStaffEventProduction } from '$lib/remote/events.remote';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { getStaffEventProduction } from '#lib/remote/events.remote.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
 	import {
 		formatDateShort,
 		formatDateTime,
@@ -21,29 +21,29 @@
 		fullDate,
 		toLocalDate,
 		toLocalDateTime
-	} from '$lib/utils/format';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
+	} from '#lib/utils/format.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
 	import { goto } from '$app/navigation';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
-	import { createShift } from '$lib/remote/volunteer.remote';
-	import { listActInDirectory } from '$lib/remote/external-acts.remote';
-	import { applyDutyList } from '$lib/remote/duty-lists.remote';
-	import { toastWarnings } from '$lib/utils/toast-warnings';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import ShiftFormFields from '#lib/components/volunteer/ShiftFormFields.svelte';
+	import { createShift } from '#lib/remote/volunteer.remote.js';
+	import { listActInDirectory } from '#lib/remote/external-acts.remote.js';
+	import { applyDutyList } from '#lib/remote/duty-lists.remote.js';
+	import { toastWarnings } from '#lib/utils/toast-warnings.js';
 	import {
 		createProduction,
 		updateProduction,
 		setProductionProducer,
 		openHostShift
-	} from '$lib/remote/productions.remote';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
+	} from '#lib/remote/productions.remote.js';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
 	import ProductionStatusAction from './ProductionStatusAction.svelte';
-	import { isTerminalProduction } from '$lib/production/status';
+	import { isTerminalProduction } from '#lib/production/status.js';
 	import RunOfShowPanel from './RunOfShowPanel.svelte';
 	import SettlementPanel from './SettlementPanel.svelte';
 	import ShowBudgetCard from './ShowBudgetCard.svelte';

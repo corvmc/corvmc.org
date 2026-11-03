@@ -15,7 +15,7 @@
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 
-vi.mock('$lib/server/db', async () => {
+vi.mock('#lib/server/db/index.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
 	const { drizzle } = await import('drizzle-orm/node-sqlite');
 	const { migrate } = await import('drizzle-orm/node-sqlite/migrator');
@@ -38,9 +38,9 @@ vi.mock('$lib/server/db', async () => {
 });
 
 const emit = vi.fn();
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit } }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit } }));
 
-const { client } = (await import('$lib/server/db')) as unknown as {
+const { client } = (await import('#lib/server/db/index.js')) as unknown as {
 	client: import('node:sqlite').DatabaseSync;
 };
 const { expireWaitlisted } = await import('./waitlist-service');

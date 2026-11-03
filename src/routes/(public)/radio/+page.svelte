@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { onMount } from 'svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { getRadioPage } from '$lib/remote/radio.remote';
-	import { writeWidgetState } from '$lib/components/radio/radio-dismiss';
-	import { formatTrackLength } from '$lib/utils/audio';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { getRadioPage } from '#lib/remote/radio.remote.js';
+	import { writeWidgetState } from '#lib/components/radio/radio-dismiss.js';
+	import { formatTrackLength } from '#lib/utils/audio.js';
 	import { IconRadio } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
 

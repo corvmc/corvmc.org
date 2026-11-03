@@ -1,8 +1,8 @@
 import { error, redirect } from '@sveltejs/kit';
-import { getAssetByTag } from '$lib/server/inventory/asset-service';
-import { capabilitySet, positionsFor } from '$lib/server/authorization';
-import { entityHref } from '$lib/utils/entity-href';
-import { signInHref } from '$lib/utils/sign-in';
+import { getAssetByTag } from '#lib/server/inventory/asset-service.js';
+import { capabilitySet, positionsFor } from '#lib/server/authorization.js';
+import { entityHref } from '#lib/utils/entity-href.js';
+import { signInHref } from '#lib/utils/sign-in.js';
 import type { PageServerLoad } from './$types';
 
 /**

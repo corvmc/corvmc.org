@@ -41,7 +41,7 @@ import {
 	validateSplit as validateCoreSplit,
 	type Split
 } from './split';
-import { TICKET_COLLECTIVE_SHARE_BPS, TICKET_MIN_CHARGE_CENTS } from '$lib/config';
+import { TICKET_COLLECTIVE_SHARE_BPS, TICKET_MIN_CHARGE_CENTS } from '#lib/config.js';
 import { calculateCardPresentFee } from './fees';
 
 export type TicketSplitInput = {

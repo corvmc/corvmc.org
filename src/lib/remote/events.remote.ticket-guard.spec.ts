@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // Who reaches each ticket action on the listing page (#1949). Sale terms ride
@@ -14,7 +14,7 @@ let persona: Persona = 'staff';
 const denied = () => Object.assign(new Error('403: Not permitted'), { status: 403 });
 const STAFF_CAPS = ['event.read', 'event.manage', 'event.manageTickets'];
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: vi.fn(async (cap: string) => persona === 'staff' && STAFF_CAPS.includes(cap)),
 	requireCapability: vi.fn(async (cap: string) => {
 		if (persona !== 'staff' || !STAFF_CAPS.includes(cap)) throw denied();
@@ -23,7 +23,7 @@ vi.mock('$lib/server/authorization', () => ({
 	requireUser: vi.fn(() => mockUser({ id: `${persona}-1` }))
 }));
 
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireProjectCommittee: vi.fn(async (projectId: string | null, cap: string) => {
 		if (persona === 'booker' && projectId === 'proj-show' && cap === 'production.book') {
 			return { user: mockUser({ id: 'booker-1' }), groups: [], via: 'committee' };
@@ -32,13 +32,13 @@ vi.mock('$lib/server/group/group-context', () => ({
 	})
 }));
 
-vi.mock('$lib/server/production/production-scope', () => ({
+vi.mock('#lib/server/production/production-scope.js', () => ({
 	projectOfEvent: vi.fn(async () => ({ projectId: 'proj-show', productionId: 'prod-1' }))
 }));
 
 const createTickets = vi.fn(async () => []);
 const cancelTicketService = vi.fn(async () => undefined);
-vi.mock('$lib/server/ticket/ticket-service', async (orig) => ({
+vi.mock('#lib/server/ticket/ticket-service.js', async (orig) => ({
 	...(await orig<object>()),
 	createTickets: (...a: unknown[]) => createTickets(...(a as [])),
 	cancelTicket: (...a: unknown[]) => cancelTicketService(...(a as [])),
@@ -68,7 +68,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { compTickets, cancelTicket } = (await import('$lib/remote/events.remote')) as any;
+const { compTickets, cancelTicket } = (await import('#lib/remote/events.remote.js')) as any;
 
 const issue = new Proxy({}, { get: () => (msg: string) => msg });
 const COMP = { eventId: 'evt-show', attendeeName: 'Guest', attendeeEmail: 'g@x.org', quantity: 2 };

@@ -1,6 +1,6 @@
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
-import { parseFields, toHref, type UrlFields } from '$lib/utils/url-filters';
+import { parseFields, toHref, type UrlFields } from '#lib/utils/url-filters.js';
 
 /**
  * Filter state that lives in the URL, so a reload — or a link a staffer pastes
@@ -43,4 +43,4 @@ export function urlState<S extends Record<string, unknown>>(path: string, fields
 	return values;
 }
 
-export { oneOf, positiveInt, text, type UrlField, type UrlFields } from '$lib/utils/url-filters';
+export { oneOf, positiveInt, text, type UrlField, type UrlFields } from '#lib/utils/url-filters.js';

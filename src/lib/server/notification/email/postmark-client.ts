@@ -1,6 +1,6 @@
 import { ServerClient } from 'postmark';
 import { env } from '$env/dynamic/private';
-import { captureException } from '$lib/server/sentry';
+import { captureException } from '#lib/server/sentry.js';
 
 // ---------------------------------------------------------------------------
 // Postmark email client

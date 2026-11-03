@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The volunteer coordinator's dashboard.
 	 *
@@ -18,10 +18,10 @@
 	 * 4. the action is on the row, in a modal — no navigation to finish a task;
 	 * 5. every card links to the table it summarises, which is the escape hatch.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
 	import NeedsConfirmingCard from './NeedsConfirmingCard.svelte';
 	import ShortStaffedCard from './ShortStaffedCard.svelte';
@@ -30,9 +30,9 @@
 	import ConfirmFixedCard from './ConfirmFixedCard.svelte';
 	import LapsingCard from './LapsingCard.svelte';
 	import NewWorkOrderAction from './NewWorkOrderAction.svelte';
-	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
-	import { getVolunteerWorklist } from '$lib/remote/volunteer.remote';
+	import LogHoursForMemberAction from '#lib/components/volunteer/LogHoursForMemberAction.svelte';
+	import { DEFAULT_TIMEZONE } from '#lib/config.js';
+	import { getVolunteerWorklist } from '#lib/remote/volunteer.remote.js';
 
 	const work = $derived(await getVolunteerWorklist());
 

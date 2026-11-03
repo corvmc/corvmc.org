@@ -8,17 +8,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const mockCreate = vi.fn(async (_args: unknown) => ({ id: 'cus_band' }));
-vi.mock('$lib/server/stripe', () => ({
+vi.mock('#lib/server/stripe.js', () => ({
 	stripe: { customers: { create: mockCreate } }
 }));
-vi.mock('$lib/server/finance/payment-service', () => ({ checkout: vi.fn() }));
+vi.mock('#lib/server/finance/payment-service.js', () => ({ checkout: vi.fn() }));
 
 const { ensureBandStripeCustomer, bandContactEmail } = await import('./band-subscription-service');
 

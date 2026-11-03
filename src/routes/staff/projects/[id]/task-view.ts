@@ -1,16 +1,16 @@
-import type { getProjectDetail } from '$lib/remote/projects.remote';
+import type { getProjectDetail } from '#lib/remote/projects.remote.js';
 import {
 	clubToday,
 	contractorJobStatusLabels,
 	contractorJobStatusesWithoutSpend as WITHOUT_SPEND
-} from '$lib/config';
+} from '#lib/config.js';
 import {
 	formatCents,
 	formatDateShort,
 	formatDateTimeShort,
 	formatTime,
 	toLocalDate
-} from '$lib/utils/format';
+} from '#lib/utils/format.js';
 
 /** Pure reading of the task list, kept out of the components so it can be tested. */
 

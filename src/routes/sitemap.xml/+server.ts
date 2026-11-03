@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
-import { listPublicUpcomingEvents } from '$lib/server/event/event-service';
-import { listPublicBands } from '$lib/server/directory/directory-service';
+import { listPublicUpcomingEvents } from '#lib/server/event/event-service.js';
+import { listPublicBands } from '#lib/server/directory/directory-service.js';
 
 const STATIC_ROUTES = [
 	'/',

@@ -1,10 +1,10 @@
-import { db } from '$lib/server/db';
-import { moderationAppeal } from '$lib/server/db/schema/moderation';
-import { contentFlag, type FlagEntityType, type FlagOrigin } from '$lib/server/db/schema/flag';
-import { memberStanding } from '$lib/server/db/schema/standing';
-import { suggestion } from '$lib/server/db/schema/suggestion';
-import { eventListing } from '$lib/server/db/schema/event';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { moderationAppeal } from '#lib/server/db/schema/moderation.js';
+import { contentFlag, type FlagEntityType, type FlagOrigin } from '#lib/server/db/schema/flag.js';
+import { memberStanding } from '#lib/server/db/schema/standing.js';
+import { suggestion } from '#lib/server/db/schema/suggestion.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, count, desc, eq, isNull, ne } from 'drizzle-orm';
 import {
 	APPEAL_BODY_MAX,
@@ -12,10 +12,10 @@ import {
 	type AppealOutcome,
 	type AppealVerdict,
 	type StandingScope
-} from '$lib/config';
-import { DomainError } from '$lib/server/domain-error';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
+} from '#lib/config.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
 import { restoreStanding } from './standing-service';
 
 // The rules are argued in docs/specs/shipped/moderation-appeals-spec.md. Appeals
@@ -449,7 +449,7 @@ export async function decideAppeal(
 
 	if (contentOutcome === 'restored') {
 		if (flag.entityType === 'suggestion') {
-			const { setVisibility } = await import('$lib/server/suggestion/suggestion-service');
+			const { setVisibility } = await import('#lib/server/suggestion/suggestion-service.js');
 			await setVisibility(flag.entityId, {
 				visibility: 'visible',
 				note: params.notes,
@@ -458,7 +458,7 @@ export async function decideAppeal(
 		} else if (flag.entityType === 'event') {
 			// Directly, not through the standing-aware submit: a staffer has just
 			// decided this listing should be public, so it must not queue again.
-			const { publish } = await import('$lib/server/event/event-service');
+			const { publish } = await import('#lib/server/event/event-service.js');
 			await publish(flag.entityId);
 		}
 	}

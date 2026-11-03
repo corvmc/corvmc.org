@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
-import { positionOrder, type Capability, type Position } from '$lib/config';
+import { positionOrder, type Capability, type Position } from '#lib/config.js';
 
 // Applying a duty list to a project belongs to the committee that owns it, with
 // `project.manage` as the staff cover. The fake guard reads the real matrix.
@@ -30,11 +30,11 @@ let committeeOf: string[] = [];
 let signedIn = true;
 
 async function holds(cap: Capability) {
-	const config = await import('$lib/config');
+	const config = await import('#lib/config.js');
 	return heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
 }
 
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
 	return {
 		requireUser: () => {
@@ -51,19 +51,19 @@ vi.mock('$lib/server/authorization', async () => {
 });
 
 const requireProjectCommittee = vi.hoisted(() => vi.fn());
-vi.mock('$lib/server/group/group-context', () => ({ requireProjectCommittee }));
+vi.mock('#lib/server/group/group-context.js', () => ({ requireProjectCommittee }));
 
 const applyDutyList = vi.hoisted(() => vi.fn());
-vi.mock('$lib/server/volunteer/duty-list-service', () => ({
+vi.mock('#lib/server/volunteer/duty-list-service.js', () => ({
 	applyDutyList,
 	listDutyLists: vi.fn(async () => [])
 }));
 const COMMITTEE = 'committee-1';
-vi.mock('$lib/server/project/project-service', () => ({
+vi.mock('#lib/server/project/project-service.js', () => ({
 	getProjectById: vi.fn(async (id: string) => ({ id, groupId: COMMITTEE }))
 }));
-vi.mock('$lib/remote/groups.remote', () => ({ getMemberGroup: vi.fn() }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/remote/groups.remote.js', () => ({ getMemberGroup: vi.fn() }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 const { applyDutyListToProjectForm } = (await import('./projects.remote')) as unknown as Record<
 	string,
@@ -73,7 +73,7 @@ const { applyDutyListToProjectForm } = (await import('./projects.remote')) as un
 const PROJECT = '00000000-0000-4000-8000-000000000001';
 const input = { projectId: PROJECT, dutyListId: 'dl-1' };
 
-const { grantsCapability, positions } = await import('$lib/config');
+const { grantsCapability, positions } = await import('#lib/config.js');
 const staffCover = positionOrder.filter((p) => grantsCapability(positions[p], 'project.manage'));
 const others = positionOrder.filter((p) => !grantsCapability(positions[p], 'project.manage'));
 

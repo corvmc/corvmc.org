@@ -1,10 +1,10 @@
 import { and, eq } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { dutyList } from '$lib/server/db/schema/volunteer';
-import { eventListing } from '$lib/server/db/schema/event';
-import { production } from '$lib/server/db/schema/production';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
+import { db } from '#lib/server/db/index.js';
+import { dutyList } from '#lib/server/db/schema/volunteer.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { production } from '#lib/server/db/schema/production.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
 import { applyDutyList, DutyListAlreadyAppliedError } from './duty-list-service';
 
 /**

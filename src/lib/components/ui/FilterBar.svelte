@@ -8,7 +8,7 @@
 </script>
 
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Filter toolbar layout. Owns no filter state — pages keep their own `$state`
 	 * and pass the controls in.

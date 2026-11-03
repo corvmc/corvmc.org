@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const can = vi.fn(async (_cap: string) => true);
 let currentUser: { id: string } | null = { id: 'staff-1' };
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: async (cap: string) => {
 		const { error } = await import('@sveltejs/kit');
 		if (!currentUser) throw error(401, 'Not authenticated');
@@ -34,13 +34,13 @@ const requireGroupRole = vi.fn(async () => ({
 	group: { id: 'band-1', slug: 'the-velvet-underground', kind: 'band' },
 	role: 'owner'
 }));
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole,
 	requireBandRole: requireGroupRole,
 	requireProgramRole: requireGroupRole
 }));
 
-vi.mock('$lib/server/band/band-service', () => ({
+vi.mock('#lib/server/band/band-service.js', () => ({
 	listAll: vi.fn(async () => []),
 	listForUser: vi.fn(async () => []),
 	getByIdWithDetails: vi.fn(async () => ({ id: 'band-1', name: 'The Velvet Underground' })),
@@ -75,7 +75,7 @@ vi.mock('$lib/server/band/band-service', () => ({
 	BandTierManagedByStripeError: class BandTierManagedByStripeError extends Error {}
 }));
 
-vi.mock('$lib/server/group/group-invite-service', () => ({
+vi.mock('#lib/server/group/group-invite-service.js', () => ({
 	createInvite: vi.fn(),
 	listForGroup: vi.fn(async () => []),
 	revoke: vi.fn()
@@ -95,7 +95,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({ db: { select: () => chainable() } }));
+vi.mock('#lib/server/db/index.js', () => ({ db: { select: () => chainable() } }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({

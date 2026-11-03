@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { positionOrder, type Capability, type Position } from '$lib/config';
+import { positionOrder, type Capability, type Position } from '#lib/config.js';
 
 /**
  * The private contact table's guarantees.
@@ -43,7 +43,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainable(),
 		insert: (table: unknown) => ({
@@ -68,9 +68,9 @@ vi.mock('$lib/server/db', () => ({
 // Guards are simulated against the real matrix. `guard` records which one ran.
 let heldPositions: Position[] = ['staff'];
 const guard = vi.fn((_name: string) => {});
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
-	const config = await import('$lib/config');
+	const config = await import('#lib/config.js');
 	return {
 		requireCapability: async (cap: Capability) => {
 			guard(cap);

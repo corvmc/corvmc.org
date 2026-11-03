@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { error, isHttpError, isRedirect } from '@sveltejs/kit';
-import { mockUser } from '$lib/server/db/test-factory';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
+import { mockUser } from '#lib/server/db/test-factory.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 
 // #2095: any active member of the booking band may pay a band session; the
 // booker's free hours settle it first, and the payer is charged the rest.
@@ -36,7 +36,7 @@ const bandRow = () => ({
 
 // Rows served per table, so the reservation read and the booker lookup differ.
 const rows = new Map<unknown, unknown[]>();
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => {
 			let table: unknown;
@@ -51,7 +51,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: vi.fn(async () => false),
 	requireCapability: vi.fn(),
 	requireCapabilityOrOwner: vi.fn(),
@@ -64,17 +64,17 @@ const requireGroupRole = vi.fn(async (ref: { id?: string; slug?: string }) => {
 	if (!bandMemberIds.has(currentUser.id)) throw error(403, 'Not a member of this group');
 	return { user: currentUser, group: band, role: 'member' };
 });
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: (...a: unknown[]) => requireGroupRole(...(a as [{ id?: string }]))
 }));
 
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 })),
 	getBookingTerms: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 
-vi.mock('$lib/server/reservation/timezone', () => ({
+vi.mock('#lib/server/reservation/timezone.js', () => ({
 	formatDateInTz: vi.fn(() => ''),
 	buildDateInTz: vi.fn(() => startsAt)
 }));
@@ -86,9 +86,9 @@ const getFreeHoursWallet = vi.fn(async (id: string) => ({
 	resetAt: new Date(startsAt.getTime() + 7 * DAY)
 }));
 const commitReservationCredits = vi.fn();
-vi.mock('$lib/server/reservation/reservation-credit-service', async (importOriginal) => {
+vi.mock('#lib/server/reservation/reservation-credit-service.js', async (importOriginal) => {
 	const actual =
-		await importOriginal<typeof import('$lib/server/reservation/reservation-credit-service')>();
+		await importOriginal<typeof import('#lib/server/reservation/reservation-credit-service.js')>();
 	commitReservationCredits.mockImplementation(
 		async (p: {
 			userId: string;
@@ -108,7 +108,7 @@ vi.mock('$lib/server/reservation/reservation-credit-service', async (importOrigi
 	};
 });
 
-vi.mock('$lib/server/finance/reservation-entries', () => ({
+vi.mock('#lib/server/finance/reservation-entries.js', () => ({
 	recordReservationCredit: vi.fn(async () => undefined),
 	recordReservationCash: vi.fn(),
 	recordReservationCardPresent: vi.fn()
@@ -119,18 +119,18 @@ const checkout = vi.fn(async (_o: Record<string, unknown>) => ({
 	paid: false,
 	checkoutUrl: 'https://checkout.test/session'
 }));
-vi.mock('$lib/server/finance/payment-service', () => ({
+vi.mock('#lib/server/finance/payment-service.js', () => ({
 	checkout: (o: Record<string, unknown>) => checkout(o),
 	recordCashPayment: vi.fn(async () => ({ paymentRecordId: 'rec-0' })),
 	refund: vi.fn()
 }));
 const ensureStripeCustomer = vi.fn(async (..._a: unknown[]) => 'cus_test');
-vi.mock('$lib/server/finance/stripe-customer-service', () => ({
+vi.mock('#lib/server/finance/stripe-customer-service.js', () => ({
 	ensureStripeCustomer: (...a: unknown[]) => ensureStripeCustomer(...a)
 }));
 
 const create = vi.fn(async () => bandRow());
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	create: () => create(),
 	createWaitlisted: vi.fn(),
 	announceConfirmed: vi.fn(async () => undefined),
@@ -144,8 +144,10 @@ vi.mock('$lib/server/reservation/reservation-service', () => ({
 	ReservationValidationError: class extends Error {}
 }));
 
-vi.mock('$lib/server/user/user-service', () => ({ ensureContactPhone: vi.fn(async () => true) }));
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/user/user-service.js', () => ({
+	ensureContactPhone: vi.fn(async () => true)
+}));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
@@ -172,7 +174,7 @@ vi.mock('$app/server', () => ({
 }));
 
 const { payReservation, getReservationPayment, bookBandReservation } =
-	(await import('$lib/remote/reservations.remote')) as any;
+	(await import('#lib/remote/reservations.remote.js')) as any;
 
 async function settle(p: Promise<unknown>): Promise<unknown> {
 	try {

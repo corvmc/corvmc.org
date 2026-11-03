@@ -2,21 +2,21 @@ import {
 	bookedForJob,
 	completedJobEntries,
 	lateInvoiceEntries
-} from '$lib/server/finance/contractor-entries';
-import { entriesStatement, listForSubject } from '$lib/server/finance/financial-entry-service';
-import { db } from '$lib/server/db';
-import { contractor, contractorJob } from '$lib/server/db/schema/contractor';
-import type { ContractorJob } from '$lib/server/db/schema/contractor';
-import { inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
-import { volunteerRole, workOrder } from '$lib/server/db/schema/volunteer';
+} from '#lib/server/finance/contractor-entries.js';
+import { entriesStatement, listForSubject } from '#lib/server/finance/financial-entry-service.js';
+import { db } from '#lib/server/db/index.js';
+import { contractor, contractorJob } from '#lib/server/db/schema/contractor.js';
+import type { ContractorJob } from '#lib/server/db/schema/contractor.js';
+import { inventoryAsset, inventoryItem } from '#lib/server/db/schema/inventory.js';
+import { volunteerRole, workOrder } from '#lib/server/db/schema/volunteer.js';
 import { and, asc, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import { assetStatusChange, setAssetStatus } from '$lib/server/inventory/asset-service';
-import { prepareResolveWorkOrder } from '$lib/server/volunteer/work-order-service';
+import { DomainError } from '#lib/server/domain-error.js';
+import { assetStatusChange, setAssetStatus } from '#lib/server/inventory/asset-service.js';
+import { prepareResolveWorkOrder } from '#lib/server/volunteer/work-order-service.js';
 import { getContractorById } from './contractor-service';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import type { RecordEntryInput } from '$lib/server/finance/financial-entry-service';
-import type { ContractorJobStatus, ContractorJobView } from '$lib/config';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import type { RecordEntryInput } from '#lib/server/finance/financial-entry-service.js';
+import type { ContractorJobStatus, ContractorJobView } from '#lib/config.js';
 
 /**
  * One contractor's engagement on a work order, from "we asked them" to the

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import type { RosterImportResult } from '$lib/types/roster-import';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import type { RosterImportResult } from '#lib/types/roster-import.js';
 
 	/**
 	 * What the last roster import did with every address, so staff can see who

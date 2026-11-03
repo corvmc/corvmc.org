@@ -2,9 +2,9 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form, command } from './_remote';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { requireFeature } from '$lib/server/feature-flags';
-import { mapDomainError } from '$lib/server/errors';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { requireFeature } from '#lib/server/feature-flags.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import {
 	createRelease,
 	deleteRelease,
@@ -22,19 +22,19 @@ import {
 	setRadioOptIn,
 	unpublishRelease,
 	updateRelease
-} from '$lib/server/audio/audio-service';
+} from '#lib/server/audio/audio-service.js';
 import {
 	releaseKinds,
 	RELEASE_TITLE_MAX,
 	TRACK_TITLE_MAX,
 	LONG_TEXT_MAX,
 	AUDIO_MIN_PRICE_CENTS
-} from '$lib/config';
+} from '#lib/config.js';
 import {
 	createDashboardLink,
 	createOnboardingLink,
 	getPayoutStatus
-} from '$lib/server/audio/connect-service';
+} from '#lib/server/audio/connect-service.js';
 
 // ---------------------------------------------------------------------------
 // Guards

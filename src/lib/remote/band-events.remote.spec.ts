@@ -42,7 +42,7 @@ const requireGroupRole = vi.fn(async (ref: { slug?: string }, minRole: string, _
 		role
 	};
 });
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: (...a: unknown[]) =>
 		requireGroupRole(...(a as [{ slug?: string }, string, unknown?]))
 }));
@@ -53,7 +53,7 @@ const getEventLineup = vi.fn(async () => [] as unknown[]);
 const getById = vi.fn(async () => null as unknown);
 const updateBandEvent = vi.fn(async () => undefined);
 const isCreditedOn = vi.fn(async () => true);
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	listBandEvents: (...a: unknown[]) => listBandEvents(...(a as [])),
 	getEventLineups: (...a: unknown[]) => getEventLineups(...(a as [])),
 	getEventLineup: (...a: unknown[]) => getEventLineup(...(a as [])),
@@ -72,7 +72,7 @@ vi.mock('$lib/server/event/event-service', () => ({
 	unpublish: vi.fn()
 }));
 
-vi.mock('$lib/server/band/band-service', () => ({ searchBandsByName: vi.fn(async () => []) }));
+vi.mock('#lib/server/band/band-service.js', () => ({ searchBandsByName: vi.fn(async () => []) }));
 
 const startPortalConversation = vi.fn(
 	async (_params: {
@@ -84,10 +84,10 @@ const startPortalConversation = vi.fn(
 	}) =>
 		({ threadId: 'thread-1', messageId: 'msg-1' }) as { threadId: string; messageId: string } | null
 );
-vi.mock('$lib/server/inbox/portal-service', () => ({
+vi.mock('#lib/server/inbox/portal-service.js', () => ({
 	startPortalConversation: (p: any) => startPortalConversation(p)
 }));
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	resolveImageUrl: (k: string | null) => k,
 	validateUpload: vi.fn(() => null)
 }));

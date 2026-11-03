@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
-	import { formatDate, formatTime } from '$lib/utils/format';
-	import { priceDisplay } from '$lib/utils/event-ticketing';
-	import { hashPattern, darkTextPatterns } from '$lib/utils/patterns';
-	import { imageSrc } from '$lib/utils/images';
+	import { formatDate, formatTime } from '#lib/utils/format.js';
+	import { priceDisplay } from '#lib/utils/event-ticketing.js';
+	import { hashPattern, darkTextPatterns } from '#lib/utils/patterns.js';
+	import { imageSrc } from '#lib/utils/images.js';
 
 	interface Props {
 		href: ResolvedPathname;

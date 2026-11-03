@@ -15,12 +15,15 @@ import { env } from '$env/dynamic/private';
 import { DomainError } from '../domain-error';
 import { env as publicEnv } from '$env/dynamic/public';
 import { eq, and, isNull, ne } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
-import { bandSite } from '$lib/server/db/schema/band-site';
-import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
+import { db } from '#lib/server/db/index.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
+import { baseDomainFromSiteUrl } from '#lib/utils/band-site-url.js';
 import { forgetCustomDomain } from './band-host-service';
-import type { CustomDomainStatus, CustomDomainVerification } from '$lib/server/db/schema/band-site';
+import type {
+	CustomDomainStatus,
+	CustomDomainVerification
+} from '#lib/server/db/schema/band-site.js';
 
 const API_BASE = 'https://api.cloudflare.com/client/v4';
 

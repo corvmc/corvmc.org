@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { getAudienceOptions } from '$lib/remote/marketing.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getAudienceOptions } from '#lib/remote/marketing.remote.js';
 
 	/**
 	 * The audience checkboxes and their recipient total, owning the query behind them.

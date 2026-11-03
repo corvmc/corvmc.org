@@ -39,7 +39,7 @@ const listMemberUpcomingShows = vi.fn(async (..._a: unknown[]) => [] as unknown[
 const listMemberPastShows = vi.fn(async (..._a: unknown[]) => [] as unknown[]);
 const countMemberPastShows = vi.fn(async (..._a: unknown[]) => 0);
 
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	listBandEventsUpcoming: (...a: unknown[]) => listBandEventsUpcoming(...(a as [])),
 	listBandEventsPast: (...a: unknown[]) => listBandEventsPast(...(a as [])),
 	countBandPastEvents: (...a: unknown[]) => countBandPastEvents(...(a as [])),
@@ -48,13 +48,13 @@ vi.mock('$lib/server/event/event-service', () => ({
 	countMemberPastShows: (...a: unknown[]) => countMemberPastShows(...(a as []))
 }));
 
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	resolveImageUrl: (key: string | null) => (key ? `https://cdn.test/${key}` : null)
 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
-vi.mock('$lib/server/authorization', () => ({ requireUser: () => ({ id: 'u1' }) }));
-vi.mock('$lib/server/group/group-context', () => ({ requireGroupRole: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
+vi.mock('#lib/server/authorization.js', () => ({ requireUser: () => ({ id: 'u1' }) }));
+vi.mock('#lib/server/group/group-context.js', () => ({ requireGroupRole: vi.fn() }));
 
 import {
 	getBandShows,
@@ -62,7 +62,7 @@ import {
 	getMemberShows,
 	getMemberPastShows
 } from './directory.remote';
-import { PAST_SHOWS_PAGE_SIZE } from '$lib/types/calendar';
+import { PAST_SHOWS_PAGE_SIZE } from '#lib/types/calendar.js';
 
 function fakeRow(id: string, extra: Record<string, unknown> = {}) {
 	return {

@@ -1,8 +1,8 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import Roster from './Roster.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import type { RosterPerson } from '$lib/types/roster';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import type { RosterPerson } from '#lib/types/roster.js';
 	import type { RosterState } from './roster-state.svelte';
 
 	const { Story } = defineMeta({

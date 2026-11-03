@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconPlus } from '@tabler/icons-svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { suggestionCategories, suggestionCategoryLabels } from '$lib/config';
-	import { createSuggestion, getMySuggestionStanding } from '$lib/remote/suggestions.remote';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { suggestionCategories, suggestionCategoryLabels } from '#lib/config.js';
+	import { createSuggestion, getMySuggestionStanding } from '#lib/remote/suggestions.remote.js';
 
 	/**
 	 * "Suggest something", owning the standing query that decides its wording.

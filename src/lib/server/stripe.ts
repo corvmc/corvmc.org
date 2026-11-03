@@ -1,8 +1,8 @@
 import Stripe from 'stripe';
 import { env } from '$env/dynamic/private';
-import { createStripeGateway } from '$lib/server/finance/gateway/stripe-gateway';
-import { createFakeGateway } from '$lib/server/finance/gateway/fake-gateway';
-import type { PaymentDriver, PaymentGateway } from '$lib/server/finance/gateway/types';
+import { createStripeGateway } from '#lib/server/finance/gateway/stripe-gateway.js';
+import { createFakeGateway } from '#lib/server/finance/gateway/fake-gateway.js';
+import type { PaymentDriver, PaymentGateway } from '#lib/server/finance/gateway/types.js';
 
 let _gateway: PaymentGateway | null = null;
 

@@ -1,6 +1,6 @@
 import type Stripe from 'stripe';
-import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
+import { db } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
 import { eq } from 'drizzle-orm';
 import { announceConfirmed } from './reservation-service';
 

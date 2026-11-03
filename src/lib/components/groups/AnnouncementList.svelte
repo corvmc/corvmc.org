@@ -1,20 +1,20 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import { invalidateAll } from '$app/navigation';
-	import { formatDateShort } from '$lib/utils/format';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import {
 		deleteAnnouncement,
 		pinAnnouncement,
 		publishAnnouncement
-	} from '$lib/remote/announcements.remote';
+	} from '#lib/remote/announcements.remote.js';
 	import AnnouncementComposer from './AnnouncementComposer.svelte';
-	import type { AnnouncementView } from '$lib/server/group/announcement-service';
+	import type { AnnouncementView } from '#lib/server/group/announcement-service.js';
 
 	/**
 	 * A group's announcements, wherever they are shown.

@@ -1,10 +1,10 @@
 import { and, desc, eq, isNotNull, or } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { DomainError } from '$lib/server/domain-error';
-import { suggestion } from '$lib/server/db/schema/suggestion';
-import { project } from '$lib/server/db/schema/project';
-import { ballot, type Ballot } from '$lib/server/db/schema/ballot';
-import { ballotStatusOf, getBallot } from '$lib/server/ballot/ballot-service';
+import { db } from '#lib/server/db/index.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { suggestion } from '#lib/server/db/schema/suggestion.js';
+import { project } from '#lib/server/db/schema/project.js';
+import { ballot, type Ballot } from '#lib/server/db/schema/ballot.js';
+import { ballotStatusOf, getBallot } from '#lib/server/ballot/ballot-service.js';
 import {
 	assertCommittee,
 	getProjectById,

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
-	import { getPublicAudienceBySlug, subscribeToAudience } from '$lib/remote/marketing.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form, { Field, SubmitButton } from '#lib/components/ui/Form/index.js';
+	import { getPublicAudienceBySlug, subscribeToAudience } from '#lib/remote/marketing.remote.js';
 	import { page } from '$app/state';
 
 	let data = $derived(await getPublicAudienceBySlug(page.params.slug!));

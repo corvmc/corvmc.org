@@ -1,15 +1,15 @@
 import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
 import { form } from './_remote';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { allowRateLimited } from '$lib/server/rate-limit';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { allowRateLimited } from '#lib/server/rate-limit.js';
 import {
 	MAX_BAND_SLUG_LENGTH,
 	SlugUnavailableError,
 	assertValidBandSlug,
 	changeBandSlug,
 	normalizeBandSlug
-} from '$lib/server/band/band-address-service';
+} from '#lib/server/band/band-address-service.js';
 
 /**
  * A band's free address — {slug}.corvmc.org and everything else keyed on the

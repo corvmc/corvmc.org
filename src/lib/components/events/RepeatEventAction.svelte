@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { previewRecurringEvents, startEventSeries } from '$lib/remote/events.remote';
-	import { toLocalDate, toLocalTime, formatDate } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { previewRecurringEvents, startEventSeries } from '#lib/remote/events.remote.js';
+	import { toLocalDate, toLocalTime, formatDate } from '#lib/utils/format.js';
 
 	// Makes an existing listing the first of a series. Not on the create modal,
 	// which collects only what the row needs.

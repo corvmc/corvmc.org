@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { IconSearch } from '@tabler/icons-svelte';
 
 	let {
@@ -9,7 +9,7 @@
 	} = $props();
 
 	let query = $state('');
-	import type { HelpArticle } from '$lib/server/db/schema';
+	import type { HelpArticle } from '#lib/server/db/schema.js';
 
 	let results = $state<Pick<HelpArticle, 'id' | 'title' | 'slug' | 'summary'>[]>([]);
 	let open = $state(false);

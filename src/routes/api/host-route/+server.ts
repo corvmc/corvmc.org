@@ -1,5 +1,5 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { resolveCustomDomain } from '$lib/server/band/band-host-service';
+import { resolveCustomDomain } from '#lib/server/band/band-host-service.js';
 
 /**
  * Maps a custom domain to the band slug whose site it serves.

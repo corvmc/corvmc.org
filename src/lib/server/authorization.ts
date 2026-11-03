@@ -1,10 +1,10 @@
 import { error } from '@sveltejs/kit';
 import { getRequestEvent } from '$app/server';
 import { createAccessControl, role as buildRole } from 'better-auth/plugins/access';
-import { db } from '$lib/server/db';
-import { role, modelHasRole } from '$lib/server/db/schema/authorization';
+import { db } from '#lib/server/db/index.js';
+import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
 import { eq, and, getColumnTable, getTableName, sql, inArray, type AnyColumn } from 'drizzle-orm';
-import { user } from '$lib/server/db/schema/authentication';
+import { user } from '#lib/server/db/schema/authentication.js';
 import {
 	capabilities,
 	positions,
@@ -13,7 +13,7 @@ import {
 	grantRuleFor,
 	type Capability,
 	type Position
-} from '$lib/config';
+} from '#lib/config.js';
 import {
 	committeeAllows,
 	committeeGrantsFor,
@@ -23,14 +23,14 @@ import {
 	roleGrantAllows,
 	type CapabilityScope,
 	type CommitteeGrant
-} from '$lib/server/capability/capability-grants';
+} from '#lib/server/capability/capability-grants.js';
 
-export type { CapabilityScope } from '$lib/server/capability/capability-grants';
+export type { CapabilityScope } from '#lib/server/capability/capability-grants.js';
 
 // ---------------------------------------------------------------------------
 // Capabilities
 //
-// Guards name a capability; the matrix in `$lib/config` says who holds it.
+// Guards name a capability; the matrix in `#lib/config.js` says who holds it.
 // See docs/specs/shipped/admin-vs-staff-spec.md.
 //
 // The access controller is built HERE rather than in config.ts because

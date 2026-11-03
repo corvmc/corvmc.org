@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The duties that come with a work order (`work_task`), ticked on change
 	 * rather than behind a Save. A duty is a level below a work order and not
 	 * another one: `doneByUserId` is attribution, never credit, and nothing here
 	 * touches hours.
 	 */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { setWorkTaskDone } from '$lib/remote/duty-lists.remote';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { setWorkTaskDone } from '#lib/remote/duty-lists.remote.js';
 
 	type Task = {
 		id: string;

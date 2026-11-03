@@ -48,7 +48,7 @@ const { forgetCustomDomain, BandNotFoundError } = vi.hoisted(() => ({
 	}
 }));
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainableSelect()),
 		delete: vi.fn(() => {
@@ -72,9 +72,9 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/band/band-host-service', () => ({ forgetCustomDomain }));
+vi.mock('#lib/server/band/band-host-service.js', () => ({ forgetCustomDomain }));
 
-vi.mock('$lib/server/band/band-service', () => ({ BandNotFoundError }));
+vi.mock('#lib/server/band/band-service.js', () => ({ BandNotFoundError }));
 
 import {
 	MAX_BAND_SLUG_LENGTH,
@@ -84,7 +84,7 @@ import {
 	normalizeBandSlug,
 	resolveBandSlug
 } from './band-address-service';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 

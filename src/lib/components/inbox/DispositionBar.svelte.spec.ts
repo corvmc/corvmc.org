@@ -7,7 +7,7 @@ import { render } from 'vitest-browser-svelte';
 // window listeners answer to.
 const disposeThread = vi.fn(() => Promise.resolve({ ok: true }));
 
-vi.mock('$lib/remote/inbox.remote', () => ({
+vi.mock('#lib/remote/inbox.remote.js', () => ({
 	disposeThread: (...args: unknown[]) => disposeThread(...(args as [])),
 	undoThreadDisposition: vi.fn(() => Promise.resolve({ undone: false }))
 }));

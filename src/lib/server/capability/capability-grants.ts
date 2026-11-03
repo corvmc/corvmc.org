@@ -1,23 +1,23 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { group, groupCapability, groupMember } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
-import { projectCommittee } from '$lib/server/db/schema/project';
-import { eventListing } from '$lib/server/db/schema/event';
+import { db } from '#lib/server/db/index.js';
+import { group, groupCapability, groupMember } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { projectCommittee } from '#lib/server/db/schema/project.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
 import {
 	volunteerRoleCapability,
 	volunteerSignup,
 	workOrder
-} from '$lib/server/db/schema/volunteer';
-import { grantRuleFor, type Capability } from '$lib/config';
-import { allowlisted, type CommitteeGrant } from '$lib/server/capability/grant-rules';
+} from '#lib/server/db/schema/volunteer.js';
+import { grantRuleFor, type Capability } from '#lib/config.js';
+import { allowlisted, type CommitteeGrant } from '#lib/server/capability/grant-rules.js';
 
 export {
 	allowlisted,
 	committeeAllows,
 	type CapabilityScope,
 	type CommitteeGrant
-} from '$lib/server/capability/grant-rules';
+} from '#lib/server/capability/grant-rules.js';
 
 const DAY_MS = 86_400_000;
 

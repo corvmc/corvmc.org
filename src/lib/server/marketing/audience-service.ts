@@ -1,6 +1,6 @@
-import { db } from '$lib/server/db';
-import { audience, audienceMember, subscriber } from '$lib/server/db/schema/marketing';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { audience, audienceMember, subscriber } from '#lib/server/db/schema/marketing.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, sql, isNull, asc } from 'drizzle-orm';
 import { findOrCreateByEmail } from './subscriber-service';
 import {
@@ -10,7 +10,7 @@ import {
 	isSystemAudienceKey,
 	previewSystemAudience
 } from './system-audiences';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 
 // ---------------------------------------------------------------------------
 // Errors

@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
-import { verifyTurnstile } from '$lib/server/turnstile';
+import { verifyTurnstile } from '#lib/server/turnstile.js';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import { localResourceStatuses } from '$lib/config';
+import { requireCapability } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { localResourceStatuses } from '#lib/config.js';
 import {
 	createCategory,
 	createResource,
@@ -25,7 +25,7 @@ import {
 	LOCAL_RESOURCE_DESCRIPTION_MAX,
 	LOCAL_RESOURCE_FIELD_MAX,
 	LOCAL_RESOURCE_NAME_MAX
-} from '$lib/server/local-resource/local-resource-service';
+} from '#lib/server/local-resource/local-resource-service.js';
 
 /**
  * The local resources directory. The public list is unguarded — the service

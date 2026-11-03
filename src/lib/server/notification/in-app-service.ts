@@ -1,5 +1,5 @@
-import { db } from '$lib/server/db';
-import { notification } from '$lib/server/db/schema/notification';
+import { db } from '#lib/server/db/index.js';
+import { notification } from '#lib/server/db/schema/notification.js';
 import { eq, isNull, and, desc, sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------

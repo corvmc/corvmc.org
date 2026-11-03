@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { auditActionLabel, summarizeAuditEntry } from './audit-display';
-import type { AuditEntry } from '$lib/types/audit';
+import type { AuditEntry } from '#lib/types/audit.js';
 
 function entry<E extends AuditEntry>(action: E['action'], details: E['details']): AuditEntry {
 	return {

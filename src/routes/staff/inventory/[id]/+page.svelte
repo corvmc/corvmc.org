@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
-	import CategoryOptions from '$lib/components/inventory/CategoryOptions.svelte';
-	import ItemResources from '$lib/components/inventory/ItemResources.svelte';
+	import CategoryOptions from '#lib/components/inventory/CategoryOptions.svelte';
+	import ItemResources from '#lib/components/inventory/ItemResources.svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {
 		getStaffItemDetail,
@@ -11,15 +11,15 @@
 		editItem,
 		deactivateItem,
 		reactivateItem
-	} from '$lib/remote/inventory.remote';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
+	} from '#lib/remote/inventory.remote.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
 	import {
 		ActivateToggleAction,
 		AddAssetAction,
@@ -28,18 +28,18 @@
 		MarkOrderedAction,
 		ReceiveStockAction,
 		UseStockAction
-	} from '$lib/components/actions';
-	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	} from '#lib/components/actions/index.js';
+	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import { formatDateShort, formatCents, titleCase } from '$lib/utils/format';
-	import { acquisitionKindLabels, equipmentConditionBadge, unitsOfMeasure } from '$lib/config';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import { formatDateShort, formatCents, titleCase } from '#lib/utils/format.js';
+	import { acquisitionKindLabels, equipmentConditionBadge, unitsOfMeasure } from '#lib/config.js';
 
 	const { fields } = editItem;
 

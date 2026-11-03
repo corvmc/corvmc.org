@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const dispatchEmailOnly = vi.fn(async () => undefined);
-vi.mock('$lib/server/notification/dispatcher', () => ({
+vi.mock('#lib/server/notification/dispatcher.js', () => ({
 	dispatchEmailOnly: (...args: unknown[]) => dispatchEmailOnly(...(args as [])),
 	dispatch: vi.fn()
 }));
 
 const captureException = vi.fn();
-vi.mock('$lib/server/sentry', () => ({
+vi.mock('#lib/server/sentry.js', () => ({
 	captureException: (...args: unknown[]) => captureException(...(args as []))
 }));
 

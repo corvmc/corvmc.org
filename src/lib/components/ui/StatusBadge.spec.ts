@@ -14,15 +14,15 @@ import {
 	incidentStatuses,
 	ballotStatuses,
 	contractorJobStatuses
-} from '$lib/config';
-import { ticketStatuses } from '$lib/server/db/schema/ticket';
-import { reservationStatuses } from '$lib/server/db/schema/reservation';
-import { eventStatuses } from '$lib/server/db/schema/event';
-import { productionStatuses } from '$lib/server/db/schema/production';
-import { flagStatuses } from '$lib/server/db/schema/flag';
-import { groupMemberStatuses } from '$lib/server/db/schema/group';
-import { bandTiers } from '$lib/server/db/schema/band-site';
-import { inviteStatuses } from '$lib/server/db/schema/group-invite';
+} from '#lib/config.js';
+import { ticketStatuses } from '#lib/server/db/schema/ticket.js';
+import { reservationStatuses } from '#lib/server/db/schema/reservation.js';
+import { eventStatuses } from '#lib/server/db/schema/event.js';
+import { productionStatuses } from '#lib/server/db/schema/production.js';
+import { flagStatuses } from '#lib/server/db/schema/flag.js';
+import { groupMemberStatuses } from '#lib/server/db/schema/group.js';
+import { bandTiers } from '#lib/server/db/schema/band-site.js';
+import { inviteStatuses } from '#lib/server/db/schema/group-invite.js';
 
 /**
  * An unmapped status falls back to a neutral dot that says nothing. Before this

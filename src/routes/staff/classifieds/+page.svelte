@@ -1,25 +1,25 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
-	import { rowLink } from '$lib/actions/row-link';
-	import { relativeDay } from '$lib/utils/format';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { relativeDay } from '#lib/utils/format.js';
 	import {
 		classifiedKindLabel,
 		classifiedCategoryLabels,
 		classifiedVisibilityLabels,
 		type ClassifiedVisibility
-	} from '$lib/config';
-	import { getStaffClassifieds } from '$lib/remote/classifieds.remote';
+	} from '#lib/config.js';
+	import { getStaffClassifieds } from '#lib/remote/classifieds.remote.js';
 
 	// Opens on what is waiting for staff: nothing in it is visible to members.
 	let tab = $state<ClassifiedVisibility>('pending_review');

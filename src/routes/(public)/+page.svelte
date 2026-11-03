@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Hero from '$lib/components/public/Hero.svelte';
-	import Section from '$lib/components/public/Section.svelte';
-	import Tile from '$lib/components/public/Tile.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Hero from '#lib/components/public/Hero.svelte';
+	import Section from '#lib/components/public/Section.svelte';
+	import Tile from '#lib/components/public/Tile.svelte';
 	import { IconMusic, IconMicrophone, IconHeartHandshake, IconSchool } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import PosterCard from '$lib/components/events/PosterCard.svelte';
-	import { getPublicEvents } from '$lib/remote/events.remote';
-	import { signInHref } from '$lib/utils/sign-in';
+	import Button from '#lib/components/ui/Button.svelte';
+	import PosterCard from '#lib/components/events/PosterCard.svelte';
+	import { getPublicEvents } from '#lib/remote/events.remote.js';
+	import { signInHref } from '#lib/utils/sign-in.js';
 
 	const JOIN_HREF = signInHref({ register: true, returnTo: '/member' });
 

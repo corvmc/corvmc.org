@@ -22,9 +22,9 @@ const groupOfThread = vi.fn(async (_id: string) => ({
 	channel: 'group' as const
 }));
 
-vi.mock('$lib/server/authorization', () => ({ requireUser: () => currentUser }));
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn() }));
-vi.mock('$lib/server/inbox/direct-service', () => ({
+vi.mock('#lib/server/authorization.js', () => ({ requireUser: () => currentUser }));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn() }));
+vi.mock('#lib/server/inbox/direct-service.js', () => ({
 	startDirectThread: vi.fn(),
 	replyToDirectThread: vi.fn(),
 	acceptDirectThread: vi.fn(),
@@ -32,33 +32,35 @@ vi.mock('$lib/server/inbox/direct-service', () => ({
 	getDirectThread: vi.fn(async () => null),
 	counterpartOf: vi.fn()
 }));
-vi.mock('$lib/server/inbox/portal-service', () => ({ getPortalThread: vi.fn(async () => null) }));
-vi.mock('$lib/server/inbox/group-chat-service', () => ({
+vi.mock('#lib/server/inbox/portal-service.js', () => ({
+	getPortalThread: vi.fn(async () => null)
+}));
+vi.mock('#lib/server/inbox/group-chat-service.js', () => ({
 	getGroupChat: (...a: [string, string?, string?]) => getGroupChat(...a)
 }));
-vi.mock('$lib/server/inbox/band-service', () => ({ getBandThread: vi.fn() }));
-vi.mock('$lib/server/inbox/unified-service', () => ({
+vi.mock('#lib/server/inbox/band-service.js', () => ({ getBandThread: vi.fn() }));
+vi.mock('#lib/server/inbox/unified-service.js', () => ({
 	listUnifiedConversations: vi.fn(),
 	groupOfThread: (id: string) => groupOfThread(id)
 }));
-vi.mock('$lib/server/band/band-service', () => ({
+vi.mock('#lib/server/band/band-service.js', () => ({
 	listForUser: vi.fn(async () => [{ id: 'group-1', status: 'active', role: 'member' }])
 }));
-vi.mock('$lib/server/moderation/moderation-service', () => ({
+vi.mock('#lib/server/moderation/moderation-service.js', () => ({
 	blockUser: vi.fn(),
 	unblockUser: vi.fn(),
 	listBlockedBy: vi.fn(),
 	getMessagingState: vi.fn(),
 	setAcceptsDirectMessages: vi.fn()
 }));
-vi.mock('$lib/server/flag/flag-service', () => ({
+vi.mock('#lib/server/flag/flag-service.js', () => ({
 	createFlag: vi.fn(),
 	countUnresolvedReportsBy: vi.fn(),
 	FLAG_REASON_MAX: 100,
 	FLAG_DESCRIPTION_MAX: 1000
 }));
-vi.mock('$lib/server/inbox/thread-service', () => ({ updateStatus: vi.fn() }));
-vi.mock('$lib/remote/layout.remote', () => ({
+vi.mock('#lib/server/inbox/thread-service.js', () => ({ updateStatus: vi.fn() }));
+vi.mock('#lib/remote/layout.remote.js', () => ({
 	getMemberLayout: () => ({ refresh: () => undefined })
 }));
 

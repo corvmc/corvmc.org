@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { mapDomainError } from '$lib/server/errors';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import {
 	getBandSubscription,
 	createBandPremiumCheckout,
@@ -12,7 +12,7 @@ import {
 	cancelBandSubscription,
 	resumeBandSubscription,
 	getBandPremiumPricing
-} from '$lib/server/band/band-subscription-service';
+} from '#lib/server/band/band-subscription-service.js';
 
 // ---------------------------------------------------------------------------
 // Queries

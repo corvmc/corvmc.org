@@ -5,7 +5,7 @@
  * Kept free of `$app` and of runes so the policy can be unit-tested as a plain
  * table, the way `entity-href` and `canonical-address` are. The reactive half
  * — seeding state at mount and mirroring it back into the address bar — is
- * `$lib/urlState.svelte.ts`.
+ * `#lib/urlState.svelte.js`.
  */
 
 /** How one query parameter is read and written. */

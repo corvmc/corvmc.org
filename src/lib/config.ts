@@ -1,4 +1,4 @@
-import type { CreditType } from '$lib/server/db/schema/finance';
+import type { CreditType } from '#lib/server/db/schema/finance.js';
 
 // ---------------------------------------------------------------------------
 // Site
@@ -308,7 +308,7 @@ export type GroupKind = (typeof groupKinds)[number];
 export const ANNOUNCEMENT_TITLE_MAX = 200;
 export const ANNOUNCEMENT_BODY_MAX = 10000;
 
-// What to call a group kind (`groupKindLabels`) lives in `$lib/terms`.
+// What to call a group kind (`groupKindLabels`) lives in `#lib/terms.js`.
 
 /**
  * How someone gets onto the roster.
@@ -1596,7 +1596,7 @@ export const SHIFT_FEEDBACK_COMMENT_MAX = 2000;
  *
  * `new Date().toISOString().slice(0, 10)` is the UTC date, which is tomorrow's
  * date in club time from 5pm PT onward — a date-input defaulted that way offers
- * a day the service rejects as being in the future. Client-safe: `$lib/config`
+ * a day the service rejects as being in the future. Client-safe: `#lib/config.js`
  * carries no server imports.
  */
 export function clubToday(now: Date = new Date()): string {
@@ -2800,7 +2800,7 @@ export type EntitySubtypeKey = MemberSubtype | EventSource | BookerType;
  * `config.ts` rather than beside the tables because `$lib/server` cannot be
  * imported from the browser, and every one of these values is read by a
  * `.svelte` file. The rendering half (icon, avatar shape) lives in
- * `$lib/components/ui/entity/registry.ts`, which carries Svelte icon
+ * `#lib/components/ui/entity/registry.js`, which carries Svelte icon
  * components and so cannot be imported by server code.
  *
  * Adding a value here without adding it to `entityKinds` fails
@@ -2829,7 +2829,7 @@ export const entityTypes = [
 ] as const;
 export type EntityType = (typeof entityTypes)[number];
 
-// What to call each one (`entityLabels`) lives in `$lib/terms`, read from the
+// What to call each one (`entityLabels`) lives in `#lib/terms.js`, read from the
 // message catalog.
 
 /**
@@ -2839,7 +2839,7 @@ export type EntityType = (typeof entityTypes)[number];
  * instead of re-deriving the route with a nested ternary.
  *
  * Keyed by string rather than `FlagEntityType` because that type lives in
- * `$lib/server/db/schema/flag` and cannot be imported here.
+ * `#lib/server/db/schema/flag.js` and cannot be imported here.
  * `registry.spec.ts` asserts every value of it is covered.
  */
 export const flagEntityTypeToEntity: Record<string, EntityType> = {

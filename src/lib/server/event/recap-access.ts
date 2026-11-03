@@ -1,4 +1,4 @@
-import { can } from '$lib/server/authorization';
+import { can } from '#lib/server/authorization.js';
 
 /**
  * Why the caller may upload recap photos for this event: `event.uploadRecap`

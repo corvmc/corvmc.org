@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import { IconCheck } from '@tabler/icons-svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import { CashReceivedAction, NoShowReservationAction } from '$lib/components/actions';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import { CashReceivedAction, NoShowReservationAction } from '#lib/components/actions/index.js';
 	import { invalidateAll } from '$app/navigation';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import type { MemberRef } from '$lib/types/entity';
-	import type { BookerType } from '$lib/config';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { formatCents, formatDate, formatTimeRange } from '$lib/utils/format';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import type { MemberRef } from '#lib/types/entity.js';
+	import type { BookerType } from '#lib/config.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { formatCents, formatDate, formatTimeRange } from '#lib/utils/format.js';
 
 	let {
 		open = $bindable(false),

@@ -1,6 +1,6 @@
-import { db, getRowCount } from '$lib/server/db';
+import { db, getRowCount } from '#lib/server/db/index.js';
 import { staffVisible } from './calendar-totals-service';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import {
 	eventListing,
 	eventBand,
@@ -9,7 +9,7 @@ import {
 	type EventKind,
 	type EventBandStatus,
 	type LineupEntry
-} from '$lib/server/db/schema/event';
+} from '#lib/server/db/schema/event.js';
 import {
 	eventListingColumns,
 	eventPosterKeySql,
@@ -18,29 +18,29 @@ import {
 	noSaleTerms,
 	type ListingSaleTerms
 } from './event-columns';
-import { saveTicketSale, type TicketSaleTerms } from '$lib/server/ticket/ticket-sale';
-import { bandSaleBlocker, refundBandTicketSale } from '$lib/server/ticket/ticket-seller';
-import type { EventSource } from '$lib/config';
-import { groupMember } from '$lib/server/db/schema/group';
-import { group } from '$lib/server/db/schema/group';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { createExternalAct } from '$lib/server/directory/entry-service';
-import { user } from '$lib/server/db/schema/authentication';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { ticket } from '$lib/server/db/schema/ticket';
-import { eventRsvp } from '$lib/server/db/schema/event-rsvp';
-import { contentFlag } from '$lib/server/db/schema/flag';
-import { venue } from '$lib/server/db/schema/venue';
-import { production } from '$lib/server/db/schema/production';
-import { cancelProductionsForEvent } from '$lib/server/production/production-service';
-import { openDeliverablesOnListing } from '$lib/server/production/cancellation-notice';
-import { assertProjectTakesListing } from '$lib/server/production/production-scope';
+import { saveTicketSale, type TicketSaleTerms } from '#lib/server/ticket/ticket-sale.js';
+import { bandSaleBlocker, refundBandTicketSale } from '#lib/server/ticket/ticket-seller.js';
+import type { EventSource } from '#lib/config.js';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { createExternalAct } from '#lib/server/directory/entry-service.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { ticket } from '#lib/server/db/schema/ticket.js';
+import { eventRsvp } from '#lib/server/db/schema/event-rsvp.js';
+import { contentFlag } from '#lib/server/db/schema/flag.js';
+import { venue } from '#lib/server/db/schema/venue.js';
+import { production } from '#lib/server/db/schema/production.js';
+import { cancelProductionsForEvent } from '#lib/server/production/production-service.js';
+import { openDeliverablesOnListing } from '#lib/server/production/cancellation-notice.js';
+import { assertProjectTakesListing } from '#lib/server/production/production-scope.js';
 import {
 	cancelDeliverablesForEvent,
 	cancelShiftsForEvent
-} from '$lib/server/volunteer/show-cancellation';
+} from '#lib/server/volunteer/show-cancellation.js';
 import { showBlockers } from './show-readiness';
-import { requireProgramGroup } from '$lib/server/group/group-kind';
+import { requireProgramGroup } from '#lib/server/group/group-kind.js';
 import {
 	eq,
 	sql,
@@ -60,47 +60,51 @@ import {
 } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { memberRefColumns } from '$lib/server/entity/refs';
-import type { EventStatus } from '$lib/server/db/schema/event';
-import { staffCreate, adjustWindow } from '$lib/server/reservation/reservation-service';
-import { getProductionByEvent } from '$lib/server/production/production-service';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { memberRefColumns } from '#lib/server/entity/refs.js';
+import type { EventStatus } from '#lib/server/db/schema/event.js';
+import { staffCreate, adjustWindow } from '#lib/server/reservation/reservation-service.js';
+import { getProductionByEvent } from '#lib/server/production/production-service.js';
 import {
 	announceProductionCreated,
 	createShowProject,
 	deleteShowProject
-} from '$lib/server/production/production-project';
+} from '#lib/server/production/production-project.js';
 import {
 	placePendingWorkOrders,
 	shiftAnchoredWorkOrders
-} from '$lib/server/volunteer/retime-work-orders';
+} from '#lib/server/volunteer/retime-work-orders.js';
 import type { BatchItem } from 'drizzle-orm/batch';
-import type { EventEditField } from '$lib/types/audit';
-import { project } from '$lib/server/db/schema/project';
-import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
-import { hasConflict } from '$lib/server/reservation/conflict-service';
-import { listingHoldBooker } from '$lib/server/reservation/event-hold';
-import { captureException } from '$lib/server/sentry';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { uploadFile, deleteObject } from '$lib/server/storage';
-import { copyToPrivate, copyFromPrivate, deletePrivateObject } from '$lib/server/private-storage';
+import type { EventEditField } from '#lib/types/audit.js';
+import { project } from '#lib/server/db/schema/project.js';
+import { cancel as cancelReservation } from '#lib/server/reservation/reservation-service.js';
+import { hasConflict } from '#lib/server/reservation/conflict-service.js';
+import { listingHoldBooker } from '#lib/server/reservation/event-hold.js';
+import { captureException } from '#lib/server/sentry.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { uploadFile, deleteObject } from '#lib/server/storage.js';
+import {
+	copyToPrivate,
+	copyFromPrivate,
+	deletePrivateObject
+} from '#lib/server/private-storage.js';
 import {
 	detachSlot,
 	findByKey,
 	isKeyReferenced,
 	replaceSlot
-} from '$lib/server/media/media-service';
-import { isWithheldPosterKey, mediaKey, withheldPosterKey } from '$lib/server/storage-keys';
-import { ReservationConflictError } from '$lib/server/reservation/reservation-service';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
+} from '#lib/server/media/media-service.js';
+import { isWithheldPosterKey, mediaKey, withheldPosterKey } from '#lib/server/storage-keys.js';
+import { ReservationConflictError } from '#lib/server/reservation/reservation-service.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import {
 	formatDateFull,
 	formatDateInTz,
 	buildDateInTz,
 	nextDay
-} from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE, TICKET_MIN_CHARGE_CENTS } from '$lib/config';
-import { formatCents } from '$lib/utils/format';
+} from '#lib/server/reservation/timezone.js';
+import { DEFAULT_TIMEZONE, TICKET_MIN_CHARGE_CENTS } from '#lib/config.js';
+import { formatCents } from '#lib/utils/format.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -184,7 +188,7 @@ export class BandTicketSaleUnavailableError extends DomainError {
 // EventService — create, update, publish, cancel events
 // ---------------------------------------------------------------------------
 
-export type { EventStatus } from '$lib/server/db/schema/event';
+export type { EventStatus } from '#lib/server/db/schema/event.js';
 
 /**
  * The managing group's own `event_group` row.
@@ -819,7 +823,7 @@ export async function update(
 			// to follow. Best-effort: a lock outage must not fail the re-time, and
 			// the daily job will reconcile whatever is left.
 			try {
-				const { syncAccessWindow } = await import('$lib/server/lock/lock-service');
+				const { syncAccessWindow } = await import('#lib/server/lock/lock-service.js');
 				await syncAccessWindow(existing.reservationId, previousStartsAt, previousEndsAt);
 			} catch (err) {
 				console.error(
@@ -1162,7 +1166,7 @@ export async function unpublish(eventId: string): Promise<void> {
 		throw new EventStateError(`Cannot unpublish an event with status "${existing.status}"`);
 	}
 
-	const { getTicketsSold } = await import('$lib/server/ticket/ticket-service');
+	const { getTicketsSold } = await import('#lib/server/ticket/ticket-service.js');
 	const sold = await getTicketsSold(eventId);
 	if (sold > 0) {
 		throw new EventStateError(`Cannot unpublish: ${sold} ticket(s) have been sold`);
@@ -1207,7 +1211,7 @@ export async function unpublishWithNotice(
 	if (!row || row.status !== 'published') return;
 
 	if (opts.staffActionBy && row.source === 'community' && row.createdByUserId) {
-		const { fileStaffAction } = await import('$lib/server/flag/flag-service');
+		const { fileStaffAction } = await import('#lib/server/flag/flag-service.js');
 		await fileStaffAction({
 			entityType: 'event',
 			entityId: eventId,

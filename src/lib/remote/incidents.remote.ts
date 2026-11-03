@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { can, requireCapability } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import { DEFAULT_TIMEZONE, incidentCategories, incidentStatusFilters } from '$lib/config';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { can, requireCapability } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { DEFAULT_TIMEZONE, incidentCategories, incidentStatusFilters } from '#lib/config.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import {
 	acceptIncident,
 	addIncidentNote,
@@ -18,9 +18,9 @@ import {
 	INCIDENT_LOCATION_MAX,
 	INCIDENT_NOTE_MAX,
 	INCIDENT_SUMMARY_MAX
-} from '$lib/server/incident/incident-service';
-import { setIncidentRetain } from '$lib/server/incident/incident-retention';
-import { listAuditFeed } from '$lib/server/audit/audit-feed';
+} from '#lib/server/incident/incident-service.js';
+import { setIncidentRetain } from '#lib/server/incident/incident-retention.js';
+import { listAuditFeed } from '#lib/server/audit/audit-feed.js';
 import { historyArgs } from './_history';
 
 /**

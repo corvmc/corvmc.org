@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Latest } from '$lib/latest.svelte';
+	import { Latest } from '#lib/latest.svelte.js';
 	import { isRedirect } from '@sveltejs/kit';
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Step one of volunteer onboarding: who you are, and whether you're 18.
 	 *
@@ -12,13 +12,13 @@
 	 * Reaching this page with a profile already saved redirects back out; the
 	 * check lives in getVolunteerStartStep, not here.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Form, { SubmitButton } from '$lib/components/ui/Form';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import ProfileFields from '$lib/components/volunteer/ProfileFields.svelte';
-	import { getVolunteerStartStep, startVolunteerOnboarding } from '$lib/remote/volunteer.remote';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Form, { SubmitButton } from '#lib/components/ui/Form/index.js';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import ProfileFields from '#lib/components/volunteer/ProfileFields.svelte';
+	import { getVolunteerStartStep, startVolunteerOnboarding } from '#lib/remote/volunteer.remote.js';
 
 	// Not `{#await}`: a refresh would re-pend it and remount the form mid-entry.
 	const step = new Latest(() => getVolunteerStartStep());

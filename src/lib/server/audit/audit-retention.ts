@@ -1,7 +1,7 @@
 import { and, eq, inArray, lt, ne, notInArray, or, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { auditLog } from '$lib/server/db/schema/audit';
-import { incident } from '$lib/server/db/schema/incident';
+import { db } from '#lib/server/db/index.js';
+import { auditLog } from '#lib/server/db/schema/audit.js';
+import { incident } from '#lib/server/db/schema/incident.js';
 
 /**
  * Retention (#1376): rows older than 24 months are deleted, except

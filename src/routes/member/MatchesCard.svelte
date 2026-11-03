@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import BadgeList from '$lib/components/ui/BadgeList.svelte';
-	import EntityCard from '$lib/components/ui/entity/EntityCard.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import BadgeList from '#lib/components/ui/BadgeList.svelte';
+	import EntityCard from '#lib/components/ui/entity/EntityCard.svelte';
 	import { resolve } from '$app/paths';
-	import type { getMemberDashboard } from '$lib/remote/users.remote';
+	import type { getMemberDashboard } from '#lib/remote/users.remote.js';
 
 	/**
 	 * Who this member should meet, from the answer they already gave.

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { setAnnouncementMute } from '$lib/remote/announcements.remote';
+	import { setAnnouncementMute } from '#lib/remote/announcements.remote.js';
 
 	/**
 	 * Silence one group without silencing the rest.

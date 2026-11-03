@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** The equipment reports this work order answers; resolving it closes them together. */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import type { getStaffShiftPage } from '$lib/remote/volunteer.remote';
-	import { formatDateShort } from '$lib/utils/format';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import type { getStaffShiftPage } from '#lib/remote/volunteer.remote.js';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 
 	type Report = Awaited<ReturnType<typeof getStaffShiftPage>>['reports'][number];

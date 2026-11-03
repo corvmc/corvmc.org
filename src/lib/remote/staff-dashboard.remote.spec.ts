@@ -10,7 +10,7 @@ vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: { id: 'u1' } } })
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => ({ id: 'u1' }),
 	positionsFor: vi.fn(async () => (caps.length ? ['staff'] : [])),
 	capabilitySet: () => caps,
@@ -20,24 +20,24 @@ vi.mock('$lib/server/authorization', () => ({
 const listRoomDays = vi.fn(async () => [{ date: '2026-10-28', reservations: [] }]);
 const listUpcomingShows = vi.fn(async () => []);
 const listMemberSummary = vi.fn(async () => ({ newThisMonth: 2, recent: [] }));
-vi.mock('$lib/server/user/staff-dashboard-service', () => ({
+vi.mock('#lib/server/user/staff-dashboard-service.js', () => ({
 	listRoomDays: () => listRoomDays(),
 	listUpcomingShows: () => listUpcomingShows(),
 	listMemberSummary: () => listMemberSummary()
 }));
-vi.mock('$lib/server/user/staff-queue-counts', () => ({
+vi.mock('#lib/server/user/staff-queue-counts.js', () => ({
 	countStaffQueues: async () => ({ inboxUnread: 3 })
 }));
 const listLowStock = vi.fn(async () => []);
-vi.mock('$lib/server/inventory/stock-service', () => ({ listLowStock: () => listLowStock() }));
+vi.mock('#lib/server/inventory/stock-service.js', () => ({ listLowStock: () => listLowStock() }));
 const listShortStaffedShifts = vi.fn(async () => []);
-vi.mock('$lib/server/volunteer/work-order-service', () => ({
+vi.mock('#lib/server/volunteer/work-order-service.js', () => ({
 	listShortStaffedShifts: () => listShortStaffedShifts()
 }));
 const listDeadlines = vi.fn(async () => [
 	{ module: 'grant', subjectId: 'g1', on: '2026-11-01', title: 'Report' }
 ]);
-vi.mock('$lib/server/development/deadline-service', () => ({
+vi.mock('#lib/server/development/deadline-service.js', () => ({
 	listDevelopmentDeadlinesBetween: () => listDeadlines()
 }));
 

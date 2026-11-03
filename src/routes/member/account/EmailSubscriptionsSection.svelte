@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { SubscribeAction, UnsubscribeAction } from '$lib/components/actions';
-	import { getMyEmailSubscriptions } from '$lib/remote/account.remote';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { retryQuery } from '$lib/utils/retry-query';
-	import { Latest } from '$lib/latest.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { SubscribeAction, UnsubscribeAction } from '#lib/components/actions/index.js';
+	import { getMyEmailSubscriptions } from '#lib/remote/account.remote.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { retryQuery } from '#lib/utils/retry-query.js';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	/**
 	 * The account page's Email Subscriptions card, owning its own query. See DirectMessagesSection.

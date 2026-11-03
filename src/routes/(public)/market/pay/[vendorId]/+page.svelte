@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
-	import { pageTitle } from '$lib/config';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { formatCents, formatDateTime } from '$lib/utils/format';
-	import { goToCheckout } from '$lib/utils/checkout-navigation';
-	import { getVendorFeePage, payVendorFeeForm } from '$lib/remote/market.remote';
+	import { pageTitle } from '#lib/config.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import MoneyField from '#lib/components/ui/Form/MoneyField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { formatCents, formatDateTime } from '#lib/utils/format.js';
+	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
+	import { getVendorFeePage, payVendorFeeForm } from '#lib/remote/market.remote.js';
 
 	/**
 	 * Where an accepted market vendor pays their table fee (#1502). Linked from

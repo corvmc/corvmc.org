@@ -29,8 +29,8 @@
  * unit-tested as a plain table, the way `directory-display.ts` is.
  */
 import { resolve } from '$app/paths';
-import { surfaces } from '$lib/config';
-import type { EntityRef, Panel, Viewer } from '$lib/types/entity';
+import { surfaces } from '#lib/config.js';
+import type { EntityRef, Panel, Viewer } from '#lib/types/entity.js';
 
 type Candidate = { panel: Panel; href: string };
 

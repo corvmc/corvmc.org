@@ -79,7 +79,7 @@ const customPlugin = {
 	}
 };
 
-/** `$lib` is gone in kit 3, and `#lib` resolves only with the file's extension. */
+/** `#lib` is gone in kit 3, and `#lib` resolves only with the file's extension. */
 const LIB_IMPORT_PATTERNS = [
 	{
 		regex: '^\\$lib(/|$)',
@@ -367,7 +367,7 @@ export default defineConfig(
 		rules: { 'custom/no-domain-imports-in-ui': 'error' }
 	},
 	{
-		// Kit 3 removes `$lib` and requires an extension on every `#lib` import (#2199).
+		// Kit 3 removes `#lib` and requires an extension on every `#lib` import (#2199).
 		// The block below repeats these patterns, because its own options replace them.
 		files: ['src/**/*.{ts,svelte}', 'scripts/**/*.ts', 'e2e/**/*.ts', '.storybook/**/*.ts'],
 		rules: { 'no-restricted-imports': ['error', { patterns: LIB_IMPORT_PATTERNS }] }

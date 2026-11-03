@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import { getAuditLog } from '$lib/remote/audit.remote';
-	import { auditActions, type AuditAction } from '$lib/types/audit';
-	import { auditActionLabel, summarizeAuditEntry } from '$lib/utils/audit-display';
-	import { formatDateTimeShort } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import { getAuditLog } from '#lib/remote/audit.remote.js';
+	import { auditActions, type AuditAction } from '#lib/types/audit.js';
+	import { auditActionLabel, summarizeAuditEntry } from '#lib/utils/audit-display.js';
+	import { formatDateTimeShort } from '#lib/utils/format.js';
 
 	// `searchText`, not `search`: FilterBar's `search` snippet shadows a same-named binding.
 	let searchText = $state('');

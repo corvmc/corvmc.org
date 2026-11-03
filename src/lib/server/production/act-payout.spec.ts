@@ -14,15 +14,15 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	// `await import`, not `require`: the helper is TypeScript, which Node's
 	// require cannot load. An async hoisted factory still resolves before the
 	// mock below is asked for a database.
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: testDb,
 	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => {
 		throw new Error('outside a request');
@@ -33,7 +33,7 @@ const { recordSlotPayout, undoSlotPayout, getSettlement, PayoutError } =
 	await import('./settlement-service');
 const { ProductionTerminalError } = await import('./production-scope');
 const { poolBalanceCents, totalsByKindAndCategory } =
-	await import('$lib/server/finance/financial-entry-service');
+	await import('#lib/server/finance/financial-entry-service.js');
 
 const EVENT = 'evt-1';
 const PROD = 'prod-1';
@@ -43,10 +43,10 @@ const STAFF = 'usr-staff';
 const YEAR = { from: new Date('2020-01-01'), to: new Date('2030-01-01') };
 
 async function seed(opts: { poolCents?: number; guaranteeCents?: number | null } = {}) {
-	const { user } = await import('$lib/server/db/schema/authentication');
-	const { eventListing } = await import('$lib/server/db/schema/event');
-	const { production, productionSlot } = await import('$lib/server/db/schema/production');
-	const { financialEntry } = await import('$lib/server/db/schema/financial');
+	const { user } = await import('#lib/server/db/schema/authentication.js');
+	const { eventListing } = await import('#lib/server/db/schema/event.js');
+	const { production, productionSlot } = await import('#lib/server/db/schema/production.js');
+	const { financialEntry } = await import('#lib/server/db/schema/financial.js');
 
 	await testDb
 		.insert(user)
@@ -63,7 +63,7 @@ async function seed(opts: { poolCents?: number; guaranteeCents?: number | null }
 		// The listing announces the production by sitting on its project (#2076).
 		projectId: 'proj-1'
 	} as never);
-	const { project } = await import('$lib/server/db/schema/project');
+	const { project } = await import('#lib/server/db/schema/project.js');
 	await testDb.insert(project).values({ id: 'proj-1', name: 'A show', kind: 'production' });
 	await testDb
 		.insert(production)

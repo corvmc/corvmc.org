@@ -2,14 +2,14 @@ import { z } from 'zod';
 import { error, invalid, redirect } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { paymentDriver, stripe } from '$lib/server/stripe';
+import { paymentDriver, stripe } from '#lib/server/stripe.js';
 import {
 	FAKE_CARDS,
 	completeFakeCheckout,
 	getFakeSession,
 	outcomeForCard
-} from '$lib/server/finance/gateway/fake-gateway';
-import { handleCheckoutCompleted } from '$lib/server/finance/webhook-handlers';
+} from '#lib/server/finance/gateway/fake-gateway.js';
+import { handleCheckoutCompleted } from '#lib/server/finance/webhook-handlers.js';
 
 /**
  * The in-app checkout page's data, for both drivers: an `ui_mode: 'elements'`

@@ -1,5 +1,5 @@
-import { listGrantDeadlinesBetween } from '$lib/server/grant/grant-service';
-import { listSponsorshipDeadlinesBetween } from '$lib/server/sponsor/sponsor-service';
+import { listGrantDeadlinesBetween } from '#lib/server/grant/grant-service.js';
+import { listSponsorshipDeadlinesBetween } from '#lib/server/sponsor/sponsor-service.js';
 
 /**
  * Development's deadlines across its two modules (#1477), for the reminder sweep

@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import {
 		cancelPayAtReader,
 		getReaderPayment,
 		simulatePayAtReader
-	} from '$lib/remote/reservations.remote';
+	} from '#lib/remote/reservations.remote.js';
 
 	/**
 	 * After the amount is on the reader: the webhook settles the booking, so poll

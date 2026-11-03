@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import type { Heading } from '$lib/utils/markdown';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { Heading } from '#lib/utils/markdown.js';
 
 	let { headings }: { headings: Heading[] } = $props();
 

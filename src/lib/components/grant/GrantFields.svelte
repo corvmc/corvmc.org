@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** The create and edit forms share every field; `value` pre-fills the edit. */
-	import { Field, MoneyField } from '$lib/components/ui/Form';
-	import type { createGrant } from '$lib/remote/grants.remote';
-	import { grantStatuses, grantStatusLabels, type GrantStatus } from '$lib/config';
+	import { Field, MoneyField } from '#lib/components/ui/Form/index.js';
+	import type { createGrant } from '#lib/remote/grants.remote.js';
+	import { grantStatuses, grantStatusLabels, type GrantStatus } from '#lib/config.js';
 
 	interface Value {
 		funderId: string;

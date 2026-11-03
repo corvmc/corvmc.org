@@ -8,7 +8,7 @@ let currentUser: { id: string; name: string; email: string } | null = null;
 let evt: Record<string, unknown> | null = null;
 let mine: unknown = null;
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => {
 		if (!currentUser) throw new Error('401: Not authenticated');
 		return currentUser;
@@ -19,25 +19,25 @@ vi.mock('@sveltejs/kit', () => ({
 		throw new Error(`${status}: ${message}`);
 	}
 }));
-vi.mock('$lib/server/event/event-service', () => ({ getById: vi.fn(async () => evt) }));
+vi.mock('#lib/server/event/event-service.js', () => ({ getById: vi.fn(async () => evt) }));
 const svc = {
 	createRsvp: vi.fn(async () => undefined),
 	cancelRsvp: vi.fn(async () => undefined),
 	getUserRsvp: vi.fn(async () => mine),
 	listRsvpRoster: vi.fn(async () => [] as unknown[])
 };
-vi.mock('$lib/server/event/rsvp-service', () => svc);
+vi.mock('#lib/server/event/rsvp-service.js', () => svc);
 
 const refresh = vi.fn();
 const refreshPublic = vi.fn();
-vi.mock('$lib/remote/events.remote', () => ({
+vi.mock('#lib/remote/events.remote.js', () => ({
 	getPublicEventDetail: () => ({ refresh: refreshPublic })
 }));
 const roster = { requireListingWriter: vi.fn(async (): Promise<unknown> => ({ id: 'staff-1' })) };
-vi.mock('$lib/server/event/listing-guard', () => ({
+vi.mock('#lib/server/event/listing-guard.js', () => ({
 	requireListingWriter: (...a: unknown[]) => roster.requireListingWriter(...(a as []))
 }));
-vi.mock('$lib/server/entity/refs', () => ({
+vi.mock('#lib/server/entity/refs.js', () => ({
 	toMemberRef: (r: { id: string; name: string; email: string }) => ({
 		type: 'member',
 		id: r.id,

@@ -10,45 +10,49 @@ let group: Record<string, unknown> | null = null;
 
 const getBySlug = vi.fn(async () => group);
 const getUserRole = vi.fn(async () => 'owner' as string | null);
-vi.mock('$lib/server/band/band-service', () => ({
+vi.mock('#lib/server/band/band-service.js', () => ({
 	getBySlug: () => getBySlug(),
 	getUserRole: () => getUserRole(),
 	listForUser: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/band/band-address-service', () => ({
+vi.mock('#lib/server/band/band-address-service.js', () => ({
 	resolveBandSlug: vi.fn(async () => null)
 }));
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	capabilitySet: vi.fn(() => ({})),
 	isElevated: vi.fn(async () => false),
 	positionsFor: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/inventory/item-service', () => ({
+vi.mock('#lib/server/inventory/item-service.js', () => ({
 	hasLoanableItems: vi.fn(async () => false)
 }));
-vi.mock('$lib/server/feature-flags', () => ({ getAllFeatureFlags: vi.fn(async () => ({})) }));
-vi.mock('$lib/server/inbox/thread-service', () => ({ getUnresolvedCount: vi.fn(async () => 0) }));
-vi.mock('$lib/server/inbox/band-service', () => ({ countBandUnread: vi.fn(async () => 0) }));
-vi.mock('$lib/server/inbox/group-chat-service', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({ getAllFeatureFlags: vi.fn(async () => ({})) }));
+vi.mock('#lib/server/inbox/thread-service.js', () => ({
+	getUnresolvedCount: vi.fn(async () => 0)
+}));
+vi.mock('#lib/server/inbox/band-service.js', () => ({ countBandUnread: vi.fn(async () => 0) }));
+vi.mock('#lib/server/inbox/group-chat-service.js', () => ({
 	countGroupChatUnread: vi.fn(async () => 0)
 }));
-vi.mock('$lib/server/inbox/unified-service', () => ({ countUnifiedUnread: vi.fn(async () => 0) }));
-vi.mock('$lib/server/inbox/direct-service', () => ({
+vi.mock('#lib/server/inbox/unified-service.js', () => ({
+	countUnifiedUnread: vi.fn(async () => 0)
+}));
+vi.mock('#lib/server/inbox/direct-service.js', () => ({
 	countPendingRequests: vi.fn(async () => 0)
 }));
-vi.mock('$lib/server/volunteer/volunteer-signup-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-signup-service.js', () => ({
 	countVolunteerWorkWaiting: vi.fn(async () => 0)
 }));
-vi.mock('$lib/server/event/community-event-service', () => ({
+vi.mock('#lib/server/event/community-event-service.js', () => ({
 	countPendingSubmissions: vi.fn(async () => 0)
 }));
-vi.mock('$lib/server/suggestion/suggestion-service', () => ({
+vi.mock('#lib/server/suggestion/suggestion-service.js', () => ({
 	countAwaitingModeration: vi.fn(async () => 0),
 	countAwaitingResponse: vi.fn(async () => 0),
 	countPendingEdits: vi.fn(async () => 0)
 }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (v: unknown) => v ?? null }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: (v: unknown) => v ?? null }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({

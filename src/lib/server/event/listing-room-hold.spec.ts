@@ -6,11 +6,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * it follows the listing, are all rows and predicates.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			const out = [];
@@ -23,12 +23,12 @@ vi.mock('$lib/server/db', () => ({
 		return Number(x?.meta?.changes ?? x?.changes ?? 0);
 	}
 }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: vi.fn(), on: vi.fn() }
 }));
-vi.mock('$lib/server/lock/lock-service', () => ({ syncAccessWindow: vi.fn() }));
+vi.mock('#lib/server/lock/lock-service.js', () => ({ syncAccessWindow: vi.fn() }));
 // Site config reads KV; an empty store is the defaults.
-vi.mock('$lib/server/kv', () => ({
+vi.mock('#lib/server/kv.js', () => ({
 	getJson: async () => null,
 	putJson: async () => undefined,
 	listKeys: async () => [],
@@ -36,13 +36,13 @@ vi.mock('$lib/server/kv', () => ({
 }));
 
 const events = await import('./event-service');
-const { hasConflict } = await import('$lib/server/reservation/conflict-service');
-const { notAProgramHold } = await import('$lib/server/reservation/program-hold');
-const { eventBookerJoin } = await import('$lib/server/reservation/event-hold');
-const { toBookerRef } = await import('$lib/server/entity/refs');
-const { reservation } = await import('$lib/server/db/schema/reservation');
-const { eventListing } = await import('$lib/server/db/schema/event');
-const { db } = await import('$lib/server/db');
+const { hasConflict } = await import('#lib/server/reservation/conflict-service.js');
+const { notAProgramHold } = await import('#lib/server/reservation/program-hold.js');
+const { eventBookerJoin } = await import('#lib/server/reservation/event-hold.js');
+const { toBookerRef } = await import('#lib/server/entity/refs.js');
+const { reservation } = await import('#lib/server/db/schema/reservation.js');
+const { eventListing } = await import('#lib/server/db/schema/event.js');
+const { db } = await import('#lib/server/db/index.js');
 const { eq } = await import('drizzle-orm');
 
 const STAFF = 'u-staff';

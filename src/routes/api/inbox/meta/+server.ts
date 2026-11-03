@@ -1,13 +1,13 @@
 import { json, error, text } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { handleMetaInbound, handleMetaEcho } from '$lib/server/inbox/inbound-handlers';
-import { isChannelEnabled } from '$lib/server/inbox/channel-config-service';
+import { handleMetaInbound, handleMetaEcho } from '#lib/server/inbox/inbound-handlers.js';
+import { isChannelEnabled } from '#lib/server/inbox/channel-config-service.js';
 import {
 	verifyMetaSignature,
 	normalizeMetaEvent,
 	type MetaWebhookPayload
-} from '$lib/server/inbox/meta-client';
+} from '#lib/server/inbox/meta-client.js';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const mode = url.searchParams.get('hub.mode');

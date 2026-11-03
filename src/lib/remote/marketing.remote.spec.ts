@@ -14,7 +14,7 @@ import { isValidationError } from '@sveltejs/kit';
 const unsubscribe = vi.fn(async () => undefined);
 const getAudience = vi.fn(async (id: string) => ({ id, name: 'Newsletter' }));
 
-vi.mock('$lib/server/marketing/audience-service', () => ({
+vi.mock('#lib/server/marketing/audience-service.js', () => ({
 	listAudiences: vi.fn(),
 	getAudience: (...args: unknown[]) => getAudience(...(args as [string])),
 	getAudienceBySlug: vi.fn(),
@@ -32,12 +32,12 @@ vi.mock('$lib/server/marketing/audience-service', () => ({
 const verifyUnsubscribeToken = vi.fn((token: string) =>
 	token === 'good-token' ? { subscriberId: 'sub-1', audienceId: 'aud-1' } : null
 );
-vi.mock('$lib/server/marketing/unsubscribe', () => ({
+vi.mock('#lib/server/marketing/unsubscribe.js', () => ({
 	verifyUnsubscribeToken: (...args: unknown[]) => verifyUnsubscribeToken(...(args as [string])),
 	signUnsubscribeToken: vi.fn()
 }));
 
-vi.mock('$lib/server/marketing/campaign-service', () => ({
+vi.mock('#lib/server/marketing/campaign-service.js', () => ({
 	listCampaigns: vi.fn(),
 	getCampaign: vi.fn(),
 	createCampaign: vi.fn(),
@@ -50,18 +50,20 @@ vi.mock('$lib/server/marketing/campaign-service', () => ({
 }));
 
 const findOrCreateByEmail = vi.fn(async () => ({ id: 'sub-1' }));
-vi.mock('$lib/server/marketing/subscriber-service', () => ({
+vi.mock('#lib/server/marketing/subscriber-service.js', () => ({
 	findOrCreateByEmail: (...a: unknown[]) => findOrCreateByEmail(...(a as []))
 }));
 
 const verifyTurnstile = vi.fn(async () => true);
-vi.mock('$lib/server/turnstile', () => ({
+vi.mock('#lib/server/turnstile.js', () => ({
 	verifyTurnstile: (...a: unknown[]) => verifyTurnstile(...(a as []))
 }));
-vi.mock('$lib/server/authorization', () => ({ requireCapability: vi.fn(async () => undefined) }));
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
-vi.mock('$lib/server/utils/slug', () => ({ generateSlug: vi.fn(), ensureUniqueSlug: vi.fn() }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/authorization.js', () => ({
+	requireCapability: vi.fn(async () => undefined)
+}));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/utils/slug.js', () => ({ generateSlug: vi.fn(), ensureUniqueSlug: vi.fn() }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { computeSplit, suggestedShareCents } from '$lib/finance/split';
-import { AUDIO_PLATFORM_FEE_BPS, RADIO_PRO_ATTESTATION } from '$lib/config';
+import { computeSplit, suggestedShareCents } from '#lib/finance/split.js';
+import { AUDIO_PLATFORM_FEE_BPS, RADIO_PRO_ATTESTATION } from '#lib/config.js';
 
 /**
  * The collective's own sales report, and the one thing it must never get wrong:
@@ -11,14 +11,14 @@ import { AUDIO_PLATFORM_FEE_BPS, RADIO_PRO_ATTESTATION } from '$lib/config';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 // Reached only through audio-service's imports: R2 and the image transform URL.
 vi.mock('./audio-storage', () => ({ deleteAudioObject: vi.fn() }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: () => null }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: () => null }));
 
 const service = await import('./staff-audio-service');
 

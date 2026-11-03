@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { createLoan, getAvailableItems } from '$lib/remote/inventory.remote';
+	import { createLoan, getAvailableItems } from '#lib/remote/inventory.remote.js';
 	import { Field } from '../ui/Form';
-	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { errorMessage } from '$lib/error-message';
-	import { retryQuery } from '$lib/utils/retry-query';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
+	import { retryQuery } from '#lib/utils/retry-query.js';
 
 	const { fields } = createLoan;
 

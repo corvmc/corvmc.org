@@ -10,7 +10,7 @@ import {
 	RIDER_MAX_ELEMENTS,
 	RIDER_MAX_INPUTS_PER_ELEMENT,
 	RIDER_MIC_PREF_MAX
-} from '$lib/config';
+} from '#lib/config.js';
 
 /**
  * What a rider editor posts.

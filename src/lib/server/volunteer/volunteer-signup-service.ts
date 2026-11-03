@@ -1,4 +1,4 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	workOrder,
 	volunteerSignup,
@@ -6,8 +6,8 @@ import {
 	volunteerProfile,
 	volunteerHourLog,
 	volunteerShiftFeedback
-} from '$lib/server/db/schema/volunteer';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/volunteer.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import {
 	and,
 	asc,
@@ -23,18 +23,18 @@ import {
 	or,
 	sql
 } from 'drizzle-orm';
-import { workRequest } from '$lib/server/db/schema/inventory';
-import { containsLiteral } from '$lib/server/db/like';
-import { DomainError } from '$lib/server/errors';
+import { workRequest } from '#lib/server/db/schema/inventory.js';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { DomainError } from '#lib/server/errors.js';
 import {
 	requireActiveVolunteer,
 	VolunteerProfileBlockedError,
 	VolunteerProfileNotFoundError
 } from './volunteer-profile-service';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import type { MemberRef } from '$lib/types/entity';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '#lib/config.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import type { MemberRef } from '#lib/types/entity.js';
 import {
 	getShiftById,
 	notOnCancelledListing,
@@ -43,10 +43,10 @@ import {
 } from './work-order-service';
 import { missingRequirements } from './member-certification-service';
 import { isScheduled } from './scheduled';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
-import type { VolunteerSignup } from '$lib/server/db/schema/volunteer';
-import type { VolunteerSignupStatus } from '$lib/config';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
+import type { VolunteerSignup } from '#lib/server/db/schema/volunteer.js';
+import type { VolunteerSignupStatus } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Signups

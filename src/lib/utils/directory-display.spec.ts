@@ -8,7 +8,7 @@ import {
 	contactForView,
 	toPublicMemberProfile
 } from './directory-display';
-import type { ProfileLink, DirectoryContact } from '$lib/server/db/schema/authentication';
+import type { ProfileLink, DirectoryContact } from '#lib/server/db/schema/authentication.js';
 
 const spotify: ProfileLink = {
 	label: 'Spotify',

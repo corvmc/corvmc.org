@@ -1,32 +1,32 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import ManageRecurringReservations from './ManageRecurringReservations.svelte';
-	import BookingPolicy from '$lib/components/reservations/BookingPolicy.svelte';
-	import FreeHoursRemaining from '$lib/components/member/membership/FreeHoursRemaining.svelte';
+	import BookingPolicy from '#lib/components/reservations/BookingPolicy.svelte';
+	import FreeHoursRemaining from '#lib/components/member/membership/FreeHoursRemaining.svelte';
 
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { confirmWaitlisted, getMemberReservationsPage } from '$lib/remote/reservations.remote';
+	import { confirmWaitlisted, getMemberReservationsPage } from '#lib/remote/reservations.remote.js';
 
 	const { fields } = confirmWaitlisted;
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
 	import CreateModal from './CreateModal.svelte';
 	import TeachingCreateModal from './TeachingCreateModal.svelte';
 	import ReservationCard from './ReservationCard.svelte';
 	import OverdueTable from './OverdueTable.svelte';
 	import { Tabs } from 'bits-ui';
 	import clsx from 'clsx';
-	import { formatMonthDayYear, formatTimeRange } from '$lib/utils/format';
-	import { groupReservationsByMonth } from '$lib/utils/reservation-groups';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
+	import { formatMonthDayYear, formatTimeRange } from '#lib/utils/format.js';
+	import { groupReservationsByMonth } from '#lib/utils/reservation-groups.js';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
 
 	let activeTab = $state<'active' | 'all'>('active');
 

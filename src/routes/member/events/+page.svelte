@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import PosterCard from '$lib/components/events/PosterCard.svelte';
-	import GigList from '$lib/components/events/GigList.svelte';
-	import TicketStub from '$lib/components/events/TicketStub.svelte';
-	import TicketQRModal from '$lib/components/events/TicketQRModal.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import Carousel from '$lib/components/ui/Carousel.svelte';
-	import ButtonGroup from '$lib/components/ui/ButtonGroup.svelte';
-	import { tagToTapeVariant } from '$lib/utils/tag-colors';
-	import { getMemberEventsPage } from '$lib/remote/events.remote';
+	import Button from '#lib/components/ui/Button.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import PosterCard from '#lib/components/events/PosterCard.svelte';
+	import GigList from '#lib/components/events/GigList.svelte';
+	import TicketStub from '#lib/components/events/TicketStub.svelte';
+	import TicketQRModal from '#lib/components/events/TicketQRModal.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import Carousel from '#lib/components/ui/Carousel.svelte';
+	import ButtonGroup from '#lib/components/ui/ButtonGroup.svelte';
+	import { tagToTapeVariant } from '#lib/utils/tag-colors.js';
+	import { getMemberEventsPage } from '#lib/remote/events.remote.js';
 	// Still needed on its own for the lazy "show more" pager, which is not a fan-out.
-	import { getPublicGigGuide } from '$lib/remote/calendar.remote';
+	import { getPublicGigGuide } from '#lib/remote/calendar.remote.js';
 	import MyListingsSection from './MyListingsSection.svelte';
 	import AddShowAction from './AddShowAction.svelte';
-	import type { CalendarEntry } from '$lib/types/calendar';
+	import type { CalendarEntry } from '#lib/types/calendar.js';
 
 	interface EventItem {
 		id: string;

@@ -11,18 +11,18 @@
  * module already knows: a `pending` row exists before the redirect, the webhook's
  * domain event flips it to `paid`, and a cron sweep clears what was abandoned.
  */
-import { db } from '$lib/server/db';
-import { audioRelease, audioTrack, releasePurchase } from '$lib/server/db/schema/audio';
-import { group } from '$lib/server/db/schema/group';
+import { db } from '#lib/server/db/index.js';
+import { audioRelease, audioTrack, releasePurchase } from '#lib/server/db/schema/audio.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { and, count, eq, lt, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import { checkout } from '$lib/server/finance/payment-service';
-import { getStripeProductId } from '$lib/server/finance/product-config-service';
+import { DomainError } from '#lib/server/domain-error.js';
+import { checkout } from '#lib/server/finance/payment-service.js';
+import { getStripeProductId } from '#lib/server/finance/product-config-service.js';
 import { destinationFor } from './connect-service';
-import { recordAudioRefund } from '$lib/server/finance/audio-entries';
-import { validateSplit } from '$lib/finance/audio-split';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { stripe } from '$lib/server/stripe';
+import { recordAudioRefund } from '#lib/server/finance/audio-entries.js';
+import { validateSplit } from '#lib/finance/audio-split.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { stripe } from '#lib/server/stripe.js';
 
 export class ReleaseNotForSaleError extends DomainError {
 	readonly httpStatus = 404;

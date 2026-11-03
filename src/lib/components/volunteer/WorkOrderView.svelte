@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * One work order: who is on it, who to ask, its engagements, hours, reports
@@ -8,26 +8,26 @@
 	 * list of people still to be told, and the candidate column withdraws.
 	 */
 	import type { Snippet } from 'svelte';
-	import { shiftLabel } from '$lib/utils/shift-label';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import type { Crumb } from '$lib/components/ui/breadcrumbs';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { shiftLabel } from '#lib/utils/shift-label.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import type { Crumb } from '#lib/components/ui/breadcrumbs.js';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import ShiftRoleFields from './ShiftRoleFields.svelte';
 	import ShiftChecklist from './ShiftChecklist.svelte';
 	import CandidateColumn from './CandidateColumn.svelte';
 	import WorkOrderHours from './WorkOrderHours.svelte';
 	import WorkOrderReports from './WorkOrderReports.svelte';
-	import EngagementCard from '$lib/components/contractor/EngagementCard.svelte';
-	import { formatDateShort, formatDateShortYear, toLocalDateTime } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
+	import EngagementCard from '#lib/components/contractor/EngagementCard.svelte';
+	import { formatDateShort, formatDateShortYear, toLocalDateTime } from '#lib/utils/format.js';
+	import { DEFAULT_TIMEZONE } from '#lib/config.js';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { IconCheck, IconUserX, IconUserMinus, IconPencil } from '@tabler/icons-svelte';
@@ -42,7 +42,7 @@
 		duplicateShift,
 		updateShift,
 		type getStaffShiftPage
-	} from '$lib/remote/volunteer.remote';
+	} from '#lib/remote/volunteer.remote.js';
 
 	type View = Omit<Awaited<ReturnType<typeof getStaffShiftPage>>, 'contractors'>;
 	let {

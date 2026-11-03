@@ -1,27 +1,27 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	/**
 	 * "Who to ask": the shortlist beside the roster, judged on the shift's date.
 	 * Owns `getShiftCandidates` because it is keyed by shift *and* scope, which
 	 * the page query does not carry. Each candidate gets one flag line, the
 	 * highest-priority one: it decides whether you can ask this person.
 	 */
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import { toast } from 'svelte-sonner';
-	import { formatDateShort } from '$lib/utils/format';
-	import { formatVolunteerHours } from '$lib/config';
-	import { Latest } from '$lib/latest.svelte';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { formatVolunteerHours } from '#lib/config.js';
+	import { Latest } from '#lib/latest.svelte.js';
 	import {
 		assignShiftToMember,
 		inviteMemberToShift,
 		getShiftCandidates
-	} from '$lib/remote/volunteer.remote';
+	} from '#lib/remote/volunteer.remote.js';
 
 	let {
 		shiftId,

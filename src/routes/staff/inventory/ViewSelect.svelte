@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { Select } from '$lib/components/ui/Form';
+	import { m } from '#lib/paraglide/messages.js';
+	import { Select } from '#lib/components/ui/Form/index.js';
 	import {
 		hasCapability,
 		inventoryListViews,
 		inventoryListViewMeta,
 		type InventoryListView
-	} from '$lib/config';
-	import { getStaffLayout } from '$lib/remote/layout.remote';
+	} from '#lib/config.js';
+	import { getStaffLayout } from '#lib/remote/layout.remote.js';
 
 	let {
 		value,

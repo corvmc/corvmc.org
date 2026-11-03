@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
 	import {
 		suggestionCategories,
 		suggestionStatuses,
 		suggestionCategoryLabels,
 		suggestionStatusLabels
-	} from '$lib/config';
-	import { getSuggestionBoard } from '$lib/remote/suggestions.remote';
+	} from '#lib/config.js';
+	import { getSuggestionBoard } from '#lib/remote/suggestions.remote.js';
 	import SuggestionCard from './SuggestionCard.svelte';
 	import StandingNotice from './StandingNotice.svelte';
 	import CreateSuggestionAction from './CreateSuggestionAction.svelte';

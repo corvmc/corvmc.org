@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
-import { NOTIFICATION_TYPES } from '$lib/server/db/schema/notification';
+import { NOTIFICATION_TYPES } from '#lib/server/db/schema/notification.js';
 
 /**
  * Email headings and button labels are sentence case (#646).

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // #669: a staff refund used to write `refundedAt` and nothing else, so the row
 // kept its `paidAt` and went on reading as Paid. The one action is now two —
@@ -23,7 +23,7 @@ function chain() {
 /** Payloads passed to `db.update(...).set(...)`, in call order. */
 const updateSets: Record<string, unknown>[] = [];
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chain(),
 		update: () => ({
@@ -36,7 +36,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const requireCapability = vi.fn(async () => undefined);
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => staffUser,
 	requireCapability,
 	can: vi.fn(async () => true),
@@ -45,14 +45,14 @@ vi.mock('$lib/server/authorization', () => ({
 }));
 
 const refundPayment = vi.fn(async () => undefined);
-vi.mock('$lib/server/finance/payment-service', () => ({
+vi.mock('#lib/server/finance/payment-service.js', () => ({
 	refund: refundPayment,
 	checkout: vi.fn(),
 	recordCashPayment: vi.fn()
 }));
 
 const reverseReservationCredits = vi.fn(async () => undefined);
-vi.mock('$lib/server/reservation/reservation-credit-service', () => ({
+vi.mock('#lib/server/reservation/reservation-credit-service.js', () => ({
 	commitReservationCredits: vi.fn(),
 	computeReservationCredit: vi.fn(),
 	commitCreditsAndSettleIfCovered: vi.fn(),
@@ -69,7 +69,7 @@ const cancel = vi.fn(
 		_options?: { staffOverride?: boolean; authorizedActor?: boolean }
 	) => undefined
 );
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	staffCreate: vi.fn(),
 	create: vi.fn(),
 	createWaitlisted: vi.fn(),
@@ -86,7 +86,7 @@ vi.mock('$lib/server/reservation/reservation-service', () => ({
 	ReservationValidationError: class extends Error {}
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
@@ -114,7 +114,7 @@ vi.mock('$app/server', () => ({
 }));
 
 const { refundOnlyReservation, refundAndCancelReservation } =
-	(await import('$lib/remote/reservations.remote')) as any;
+	(await import('#lib/remote/reservations.remote.js')) as any;
 
 const paidRow = {
 	createdByUserId: ownerId,

@@ -1,16 +1,16 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	acquisition,
 	equipmentCategory,
 	inventoryItem,
 	purchaseOrder,
 	purchaseOrderLine
-} from '$lib/server/db/schema/inventory';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/inventory.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import type { OrderStatus } from '$lib/config';
+import { DomainError } from '#lib/server/domain-error.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import type { OrderStatus } from '#lib/config.js';
 
 /**
  * Purchase orders — what the collective has decided to buy, before it exists.

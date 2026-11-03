@@ -41,7 +41,7 @@ vi.mock('@sveltejs/kit/hooks', () => ({
 }));
 
 const mockRegisterListeners = vi.fn();
-vi.mock('$lib/server/event-bus/register-listeners', () => ({
+vi.mock('#lib/server/event-bus/register-listeners.js', () => ({
 	registerListeners: (...args: unknown[]) => mockRegisterListeners(...args)
 }));
 
@@ -51,7 +51,7 @@ vi.mock('$app/environment', () => ({
 }));
 
 const mockGetSession = vi.fn();
-vi.mock('$lib/server/auth', () => ({
+vi.mock('#lib/server/auth.js', () => ({
 	auth: {
 		api: {
 			getSession: (...args: unknown[]) => mockGetSession(...args)
@@ -64,29 +64,29 @@ vi.mock('better-auth/svelte-kit', () => ({
 	svelteKitHandler: (...args: unknown[]) => mockSvelteKitHandler(...args)
 }));
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	initDb: vi.fn()
 }));
 
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	initStorage: vi.fn()
 }));
 
-vi.mock('$lib/server/kv', () => ({
+vi.mock('#lib/server/kv.js', () => ({
 	initKv: vi.fn()
 }));
 
 const mockResolvePendingInvites = vi.fn();
-vi.mock('$lib/server/group/group-invite-service', () => ({
+vi.mock('#lib/server/group/group-invite-service.js', () => ({
 	resolvePendingInvites: (...args: unknown[]) => mockResolvePendingInvites(...args)
 }));
 const mockResolveMemberInvite = vi.fn();
-vi.mock('$lib/server/user/member-invite-service', () => ({
+vi.mock('#lib/server/user/member-invite-service.js', () => ({
 	resolveMemberInvite: (...args: unknown[]) => mockResolveMemberInvite(...args)
 }));
 
 const mockCaptureException = vi.fn();
-vi.mock('$lib/server/sentry', () => ({
+vi.mock('#lib/server/sentry.js', () => ({
 	captureException: (...args: unknown[]) => mockCaptureException(...args)
 }));
 
@@ -97,12 +97,12 @@ vi.mock('$env/dynamic/public', () => ({
 }));
 
 const mockResolveBandSubdomain = vi.fn();
-vi.mock('$lib/server/band/band-host-service', () => ({
+vi.mock('#lib/server/band/band-host-service.js', () => ({
 	resolveBandSubdomain: (...args: unknown[]) => mockResolveBandSubdomain(...args)
 }));
 
 const mockResolveBandSlug = vi.fn();
-vi.mock('$lib/server/band/band-address-service', () => ({
+vi.mock('#lib/server/band/band-address-service.js', () => ({
 	resolveBandSlug: (...args: unknown[]) => mockResolveBandSlug(...args)
 }));
 

@@ -11,7 +11,7 @@ vi.mock('./channel-config-service', () => ({
 }));
 
 const mockSendInboxReply = vi.fn(async (_params: Record<string, unknown>) => 'pm-message-id');
-vi.mock('$lib/server/notification/email/postmark-client', () => ({
+vi.mock('#lib/server/notification/email/postmark-client.js', () => ({
 	sendInboxReply: (params: Record<string, unknown>) => mockSendInboxReply(params)
 }));
 
@@ -37,10 +37,10 @@ vi.mock('$env/dynamic/private', () => ({
 // The band branch resolves the act's name, which is the whole reason it is a
 // separate branch: it is what signs the message.
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 beforeEach(() => {
 	vi.clearAllMocks();

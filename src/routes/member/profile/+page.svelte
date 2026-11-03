@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { env } from '$env/dynamic/public';
-	import { getMemberProfileEditor } from '$lib/remote/directory.remote';
+	import { getMemberProfileEditor } from '#lib/remote/directory.remote.js';
 
 	// Read above the awaited query below: a declaration after a top-level await
 	// is async-gated, and the header renders before it resolves.
 	const memberLayout = getMemberLayoutContext();
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
 	import { IconEye } from '@tabler/icons-svelte';
 	import { getMemberLayoutContext } from '../layout-context';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import AddressCard from '$lib/components/ui/AddressCard.svelte';
-	import { canonicalAddress } from '$lib/utils/canonical-address';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import AddressCard from '#lib/components/ui/AddressCard.svelte';
+	import { canonicalAddress } from '#lib/utils/canonical-address.js';
 	import ProfileForm from './ProfileForm.svelte';
 	import TeachingCard from './TeachingCard.svelte';
 

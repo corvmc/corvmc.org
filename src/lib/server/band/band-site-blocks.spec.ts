@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { Block } from '$lib/server/db/schema/band-page';
+import type { Block } from '#lib/server/db/schema/band-page.js';
 
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	resolveImageUrl: vi.fn((key: string | null | undefined) =>
 		key ? `https://media.test/${key}` : null
 	)

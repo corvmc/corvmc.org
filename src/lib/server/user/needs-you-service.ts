@@ -1,13 +1,13 @@
 import { resolve } from '$app/paths';
-import { sortNeedsYou, type NeedsYouItem } from '$lib/types/needs-you';
-import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
+import { sortNeedsYou, type NeedsYouItem } from '#lib/types/needs-you.js';
+import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '#lib/config.js';
 import {
 	listUnloggedCompletions,
 	listSignupsForUser
-} from '$lib/server/volunteer/volunteer-signup-service';
-import { listUserLoans } from '$lib/server/inventory/loan-service';
-import { countPendingRequests } from '$lib/server/inbox/direct-service';
-import { getMemberSubscription } from '$lib/server/finance/subscription-service';
+} from '#lib/server/volunteer/volunteer-signup-service.js';
+import { listUserLoans } from '#lib/server/inventory/loan-service.js';
+import { countPendingRequests } from '#lib/server/inbox/direct-service.js';
+import { getMemberSubscription } from '#lib/server/finance/subscription-service.js';
 import { reservationNeedsYouItems, type ReservationNeedingYou } from './reservation-needs-you';
 
 /**

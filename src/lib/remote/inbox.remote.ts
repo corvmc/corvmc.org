@@ -2,12 +2,16 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form, command } from './_remote';
-import { verifyTurnstile } from '$lib/server/turnstile';
-import { requireCapability, requireUser, listUsersWithCapability } from '$lib/server/authorization';
-import { getUserContact } from '$lib/server/user/user-service';
-import { dispatch } from '$lib/server/notification/dispatcher';
-import { handleContactForm } from '$lib/server/inbox/inbound-handlers';
-import { getStaffLayout, getMemberLayout } from '$lib/remote/layout.remote';
+import { verifyTurnstile } from '#lib/server/turnstile.js';
+import {
+	requireCapability,
+	requireUser,
+	listUsersWithCapability
+} from '#lib/server/authorization.js';
+import { getUserContact } from '#lib/server/user/user-service.js';
+import { dispatch } from '#lib/server/notification/dispatcher.js';
+import { handleContactForm } from '#lib/server/inbox/inbound-handlers.js';
+import { getStaffLayout, getMemberLayout } from '#lib/remote/layout.remote.js';
 import {
 	listThreads,
 	getThread,
@@ -23,21 +27,21 @@ import {
 	addThreadTag,
 	removeThreadTag,
 	getDailyScope
-} from '$lib/server/inbox/thread-service';
-import type { ListThreadsFilters } from '$lib/server/inbox/thread-service';
+} from '#lib/server/inbox/thread-service.js';
+import type { ListThreadsFilters } from '#lib/server/inbox/thread-service.js';
 import {
 	getAllChannelConfigs,
 	getEnabledChannels,
 	updateChannelConfig as updateChannelConfigSvc
-} from '$lib/server/inbox/channel-config-service';
-import { addOutboundMessage, addNote } from '$lib/server/inbox/message-service';
-import { testMetaConnection as testMetaConnectionSvc } from '$lib/server/inbox/meta-client';
+} from '#lib/server/inbox/channel-config-service.js';
+import { addOutboundMessage, addNote } from '#lib/server/inbox/message-service.js';
+import { testMetaConnection as testMetaConnectionSvc } from '#lib/server/inbox/meta-client.js';
 import {
 	listSavedViews,
 	createSavedView,
 	deleteSavedView
-} from '$lib/server/inbox/saved-view-service';
-import { jsonObjectField } from '$lib/utils/zod-json';
+} from '#lib/server/inbox/saved-view-service.js';
+import { jsonObjectField } from '#lib/utils/zod-json.js';
 import {
 	listPortalThreads,
 	countOpenPortalThreads,
@@ -47,11 +51,11 @@ import {
 	replyToPortalThread,
 	markPortalThreadRead,
 	MAX_OPEN_PORTAL_THREADS
-} from '$lib/server/inbox/portal-service';
-import { submitContactFormSchema } from '$lib/server/db/schema/inbox';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE, inboxChannels, inboxViews, staffInboxChannels } from '$lib/config';
-import type { InboxView } from '$lib/config';
+} from '#lib/server/inbox/portal-service.js';
+import { submitContactFormSchema } from '#lib/server/db/schema/inbox.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { DEFAULT_TIMEZONE, inboxChannels, inboxViews, staffInboxChannels } from '#lib/config.js';
+import type { InboxView } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Public forms

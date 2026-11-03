@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * One booking enquiry, wherever it is read from — the band's own panel or
 	 * the member's unified Messages list (#1250).
@@ -10,10 +10,10 @@
 	 */
 	import { untrack } from 'svelte';
 	import { IconCheck, IconRotateClockwise } from '@tabler/icons-svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import ThreadTimeline from './ThreadTimeline.svelte';
 	import ThreadComposer from './ThreadComposer.svelte';
 	import ThreadHeader from './ThreadHeader.svelte';
@@ -21,7 +21,7 @@
 		sendBandReply,
 		setBandConversationStatus,
 		markBandConversationRead
-	} from '$lib/remote/band-messages.remote';
+	} from '#lib/remote/band-messages.remote.js';
 
 	let {
 		thread,

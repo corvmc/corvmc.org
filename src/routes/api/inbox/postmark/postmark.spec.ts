@@ -8,7 +8,7 @@ const mockHandlePostmarkInbound = vi.fn(async () => ({
 	thread: { id: 't1' },
 	message: { id: 'm1' }
 }));
-vi.mock('$lib/server/inbox/inbound-handlers', () => ({
+vi.mock('#lib/server/inbox/inbound-handlers.js', () => ({
 	handlePostmarkInbound: (...args: unknown[]) => mockHandlePostmarkInbound(...(args as []))
 }));
 

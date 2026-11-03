@@ -1,11 +1,11 @@
-import { db } from '$lib/server/db';
-import { packingItem, packingList } from '$lib/server/db/schema/packing';
-import { groupMember } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
-import { rider, riderElement } from '$lib/server/db/schema/rider';
+import { db } from '#lib/server/db/index.js';
+import { packingItem, packingList } from '#lib/server/db/schema/packing.js';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { rider, riderElement } from '#lib/server/db/schema/rider.js';
 import { appendOwnElements } from './rider-service';
 import { aliasedTable, and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import {
 	packingCategories,
 	PACKING_ITEM_NOTES_MAX,
@@ -15,7 +15,7 @@ import {
 	PACKING_NOTES_MAX,
 	type PackingCategory,
 	type RiderElementKind
-} from '$lib/config';
+} from '#lib/config.js';
 
 /**
  * A band's packing list — what goes in the van, who is bringing it, and whether

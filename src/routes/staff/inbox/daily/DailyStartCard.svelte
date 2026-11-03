@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * What a Daily session would cover, before you commit to it.
 	 *
@@ -8,10 +8,10 @@
 	 * a week" is a set with a shape, and a session with a shape feels finishable.
 	 */
 	import { IconPlayerPlay } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import type { DailyScope } from '$lib/server/inbox/thread-service';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import type { DailyScope } from '#lib/server/inbox/thread-service.js';
 
 	let {
 		scope,

@@ -6,11 +6,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			sqlite.exec('begin');
@@ -28,8 +28,8 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const { applyDutyList } = await import('./duty-list-service');
-const { updateProductionDetails } = await import('$lib/server/production/production-service');
-const { updateProject, attachToProject } = await import('$lib/server/project/project-service');
+const { updateProductionDetails } = await import('#lib/server/production/production-service.js');
+const { updateProject, attachToProject } = await import('#lib/server/project/project-service.js');
 
 const T = Date.UTC(2026, 10, 7, 1, 0) / 1000;
 const rows = () =>

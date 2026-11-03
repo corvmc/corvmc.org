@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { RADIO_PRO_ATTESTATION } from '$lib/config';
+import { RADIO_PRO_ATTESTATION } from '#lib/config.js';
 
 /**
  * The station's programming rules. `pickNextTrack` is pure and asserted
@@ -8,12 +8,12 @@ import { RADIO_PRO_ATTESTATION } from '$lib/config';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: () => null }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: () => null }));
 
 const radio = await import('./radio-service');
 

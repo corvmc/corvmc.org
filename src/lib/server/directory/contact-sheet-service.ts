@@ -1,12 +1,12 @@
-import { db } from '$lib/server/db';
-import { directoryEntryLink } from '$lib/server/db/schema/directory-link';
-import { directoryEntry } from '$lib/server/db/schema/directory';
+import { db } from '#lib/server/db/index.js';
+import { directoryEntryLink } from '#lib/server/db/schema/directory-link.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
 import { and, eq, isNull } from 'drizzle-orm';
-import { requireCapability } from '$lib/server/authorization';
-import { DomainError } from '$lib/server/domain-error';
-import { sanitizeBio } from '$lib/utils/markdown';
+import { requireCapability } from '#lib/server/authorization.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { sanitizeBio } from '#lib/utils/markdown.js';
 import { writeContactUnguarded, type ContactData } from './contact-service';
-import type { ProfileLink } from '$lib/server/db/schema/authentication';
+import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
 
 /**
  * The contact-sheet link, and the only surface an external act can reach.

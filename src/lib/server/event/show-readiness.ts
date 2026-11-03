@@ -1,4 +1,4 @@
-import type { ProductionStatus } from '$lib/server/db/schema/production';
+import type { ProductionStatus } from '#lib/server/db/schema/production.js';
 
 /**
  * The facts about a show that two readers check: the publish gate

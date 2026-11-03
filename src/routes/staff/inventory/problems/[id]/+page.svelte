@@ -1,26 +1,26 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
-	import { formatDateShort, formatDateTime } from '$lib/utils/format';
-	import { NO_ROLE_LABEL } from '$lib/utils/shift-label';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
+	import { formatDateShort, formatDateTime } from '#lib/utils/format.js';
+	import { NO_ROLE_LABEL } from '#lib/utils/shift-label.js';
 	import {
 		getEquipmentReport,
 		dismissEquipmentReport,
 		sendEquipmentReportToWorkOrder
-	} from '$lib/remote/work-requests.remote';
+	} from '#lib/remote/work-requests.remote.js';
 
 	let id = $derived(page.params.id!);
 	let report = $derived(await getEquipmentReport(id));

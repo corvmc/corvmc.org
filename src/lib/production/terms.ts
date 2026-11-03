@@ -1,4 +1,4 @@
-import { formatCents } from '$lib/utils/format';
+import { formatCents } from '#lib/utils/format.js';
 
 /**
  * The deal an act is offered, in one sentence.

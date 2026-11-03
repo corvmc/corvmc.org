@@ -30,7 +30,7 @@ function chain(queue: () => unknown[]): unknown {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain(() => (selectResults.length > 0 ? selectResults.shift()! : []))),
 		insert: vi.fn(() => ({

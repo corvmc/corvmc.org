@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
-	import Hero from '$lib/components/public/Hero.svelte';
-	import Section from '$lib/components/public/Section.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
+	import Hero from '#lib/components/public/Hero.svelte';
+	import Section from '#lib/components/public/Section.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
 	import { resolve } from '$app/paths';
-	import { signInHref } from '$lib/utils/sign-in';
-	import JoinGroupAction from '$lib/components/groups/JoinGroupAction.svelte';
-	import { getPublicGroupPage } from '$lib/remote/groups.remote';
+	import { signInHref } from '#lib/utils/sign-in.js';
+	import JoinGroupAction from '#lib/components/groups/JoinGroupAction.svelte';
+	import { getPublicGroupPage } from '#lib/remote/groups.remote.js';
 
 	/**
 	 * A program's public page — name, what it is, and the way in.

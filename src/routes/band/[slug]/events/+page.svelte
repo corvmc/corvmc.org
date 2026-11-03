@@ -1,27 +1,27 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import BadgeList from '$lib/components/ui/BadgeList.svelte';
-	import { rowLink } from '$lib/actions/row-link';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import BadgeList from '#lib/components/ui/BadgeList.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import ImportGigsModal from './ImportGigsModal.svelte';
 	import CreateEventModal from './CreateEventModal.svelte';
-	import { formatDate, formatTime } from '$lib/utils/format';
-	import { describeTerms } from '$lib/production/terms';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
+	import { formatDate, formatTime } from '#lib/utils/format.js';
+	import { describeTerms } from '#lib/production/terms.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
 	import {
 		getBandEventsPage,
 		confirmLineupSlotForm,
 		declineLineupSlotForm
-	} from '$lib/remote/band-events.remote';
+	} from '#lib/remote/band-events.remote.js';
 	import RequestCorrectionAction from './RequestCorrectionAction.svelte';
 	import { getBandLayoutContext } from '../layout-context';
 	import { invalidateAll } from '$app/navigation';

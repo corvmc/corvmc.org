@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { cancelStalePendingTickets } from '$lib/server/ticket/ticket-service';
+import { cancelStalePendingTickets } from '#lib/server/ticket/ticket-service.js';
 
 /**
  * Cron endpoint for cancelling orphaned `pending` tickets. Pending rows are

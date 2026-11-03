@@ -1,15 +1,15 @@
-import { db } from '$lib/server/db';
-import { workRequest, inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
-import { user } from '$lib/server/db/schema/authentication';
-import { workOrder, volunteerRole } from '$lib/server/db/schema/volunteer';
+import { db } from '#lib/server/db/index.js';
+import { workRequest, inventoryAsset, inventoryItem } from '#lib/server/db/schema/inventory.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { workOrder, volunteerRole } from '#lib/server/db/schema/volunteer.js';
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, or } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { toGenericRef } from '$lib/server/entity/refs';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { toGenericRef } from '#lib/server/entity/refs.js';
 import { AssetNotFoundError, setAssetStatus } from './asset-service';
-import type { EquipmentCondition } from '$lib/config';
-import { DomainError } from '$lib/server/domain-error';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
+import type { EquipmentCondition } from '#lib/config.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 
 /**
  * Flags: what somebody noticed about one unit.

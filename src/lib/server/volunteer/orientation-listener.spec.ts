@@ -17,7 +17,7 @@ const MIGRATIONS_FOLDER = join(import.meta.dirname, '..', '..', '..', '..', 'mig
 const sqlite = new DatabaseSync(':memory:');
 const base = drizzle({ client: sqlite });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: new Proxy(
 		{},
 		{
@@ -38,7 +38,7 @@ vi.mock('$lib/server/db', () => ({
 
 /** A real emitter would do, but a hand-rolled one keeps the assertions direct. */
 const handlers = new Map<string, ((e: { data: unknown }) => Promise<void>)[]>();
-vi.mock('$lib/server/event-bus', () => ({
+vi.mock('#lib/server/event-bus/index.js', () => ({
 	domainEvents: {
 		on(name: string, fn: (e: { data: unknown }) => Promise<void>) {
 			handlers.set(name, [...(handlers.get(name) ?? []), fn]);
@@ -46,13 +46,13 @@ vi.mock('$lib/server/event-bus', () => ({
 		emit: vi.fn()
 	}
 }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { on: vi.fn(), emit: vi.fn() }
 }));
 
 /** The orientation setting. An empty role is the feature switched off. */
 const settings = vi.hoisted(() => new Map<string, string | number>());
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	config: async (key: string) => {
 		const defaults: Record<string, string | number> = {
 			'volunteer.orientationRoleId': '',

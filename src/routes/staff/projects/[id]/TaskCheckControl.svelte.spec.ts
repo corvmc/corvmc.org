@@ -5,7 +5,7 @@ import type { Task } from './task-view';
 import '../../../layout.css';
 import '../../../retro-buttons.css';
 
-vi.mock('$lib/remote/tasks.remote', () => {
+vi.mock('#lib/remote/tasks.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => null

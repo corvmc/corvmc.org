@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import type { RemoteForm } from '@sveltejs/kit';
 	import { toast } from 'svelte-sonner';
@@ -10,11 +10,11 @@
 	import SubmitButton from './Form/SubmitButton.svelte';
 	import { IconCheck, IconX } from '@tabler/icons-svelte';
 	import { getErrorBoundary } from './ErrorToastBoundary.svelte';
-	import { reportError } from '$lib/report-error';
-	import { errorMessage } from '$lib/error-message';
+	import { reportError } from '#lib/report-error.js';
+	import { errorMessage } from '#lib/error-message.js';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { signInInterruptFor } from '$lib/utils/sign-in';
+	import { signInInterruptFor } from '#lib/utils/sign-in.js';
 
 	// ---------------------------------------------------------------------------
 	// Props

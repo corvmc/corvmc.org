@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ALL_FLAGS } from '$lib/server/feature-flags';
+import { ALL_FLAGS } from '#lib/server/feature-flags.js';
 import { featureMeta } from './feature-meta';
 
 // The two assertions `feature-flags.spec.ts` already gives the `FeatureFlag`

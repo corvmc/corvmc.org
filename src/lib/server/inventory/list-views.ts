@@ -1,13 +1,13 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	inventoryAsset,
 	inventoryLoan,
 	purchaseOrder,
 	purchaseOrderLine,
 	workRequest
-} from '$lib/server/db/schema/inventory';
+} from '#lib/server/db/schema/inventory.js';
 import { and, eq, isNotNull, isNull, lt, sql } from 'drizzle-orm';
-import type { InventoryListView } from '$lib/config';
+import type { InventoryListView } from '#lib/config.js';
 
 /**
  * The item ids a cross-item view on the Inventory list keeps, as a subquery for

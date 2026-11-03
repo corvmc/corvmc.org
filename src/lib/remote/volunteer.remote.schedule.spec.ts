@@ -24,11 +24,11 @@ vi.mock('$app/server', () => {
 	};
 });
 
-vi.mock('$lib/server/db', () => ({ db: {}, getRowCount: () => 0 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {}, getRowCount: () => 0 }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const held = new Set<string>();
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
 	return {
 		requireUser: () => ({ id: 'usr-1' }),
@@ -46,14 +46,14 @@ const svc = vi.hoisted(() => ({
 	listWorkOrdersByIds: vi.fn(),
 	listJobs: vi.fn()
 }));
-vi.mock('$lib/server/volunteer/work-order-service', () => ({
+vi.mock('#lib/server/volunteer/work-order-service.js', () => ({
 	listShifts: svc.listShifts,
 	listWorkOrders: svc.listWorkOrders,
 	listWorkOrdersByIds: svc.listWorkOrdersByIds,
 	isScheduled: (w: { startsAt: Date | null; endsAt: Date | null }) =>
 		w.startsAt !== null && w.endsAt !== null
 }));
-vi.mock('$lib/server/contractor/contractor-job-service', () => ({ listJobs: svc.listJobs }));
+vi.mock('#lib/server/contractor/contractor-job-service.js', () => ({ listJobs: svc.listJobs }));
 
 const { getSchedulePage } = (await import('./volunteer.remote')) as unknown as {
 	getSchedulePage: (args: object) => Promise<{

@@ -1,12 +1,12 @@
-import { db } from '$lib/server/db';
-import { rider, riderElement, riderInput } from '$lib/server/db/schema/rider';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { eventBand } from '$lib/server/db/schema/event';
-import { mediaAttachment } from '$lib/server/db/schema/media';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { rider, riderElement, riderInput } from '#lib/server/db/schema/rider.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { eventBand } from '#lib/server/db/schema/event.js';
+import { mediaAttachment } from '#lib/server/db/schema/media.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import {
 	riderElementKinds,
 	RIDER_ELEMENT_LABEL_MAX,
@@ -21,7 +21,7 @@ import {
 	type RiderMonitorFormat,
 	type RiderProvidedBy,
 	type RiderStandType
-} from '$lib/config';
+} from '#lib/config.js';
 
 /**
  * A band's tech rider — the input list, the gear, and who answers for each bit.

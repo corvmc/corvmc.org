@@ -1,6 +1,6 @@
-import { stripe } from '$lib/server/stripe';
+import { stripe } from '#lib/server/stripe.js';
 import { stripeSettledCents, type RangeFilter } from './financial-entry-service';
-import { captureException } from '$lib/server/sentry';
+import { captureException } from '#lib/server/sentry.js';
 
 /**
  * Does the record still agree with Stripe? (#1183)

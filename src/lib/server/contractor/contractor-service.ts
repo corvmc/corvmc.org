@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
-import { contractor } from '$lib/server/db/schema/contractor';
+import { db } from '#lib/server/db/index.js';
+import { contractor } from '#lib/server/db/schema/contractor.js';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import type { ContractorTrade } from '$lib/config';
+import { DomainError } from '#lib/server/domain-error.js';
+import type { ContractorTrade } from '#lib/config.js';
 
 /**
  * The people the collective pays to do work.

@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { untrack, type Snippet } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { resolve } from '$app/paths';
-	import { getUserPage } from '$lib/remote/users.remote';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Avatar from '$lib/components/ui/Avatar.svelte';
+	import { getUserPage } from '#lib/remote/users.remote.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Avatar from '#lib/components/ui/Avatar.svelte';
 	import { TAB_LABELS, type TabKey } from './tabs';
 	import UserScoreboard from './panels/UserScoreboard.svelte';
 	import OverviewPanel from './panels/OverviewPanel.svelte';

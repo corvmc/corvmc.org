@@ -43,9 +43,9 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-vi.mock('$lib/server/audit/audit-feed', () => ({ listAuditFeed: vi.fn() }));
+vi.mock('#lib/server/audit/audit-feed.js', () => ({ listAuditFeed: vi.fn() }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => ({ id: 'user-1' }),
 	requireCapability: vi.fn(async () => ({ id: 'staff-1' })),
 	isElevated: vi.fn(async () => false)
@@ -81,7 +81,7 @@ const requireProgramRole = vi.fn(
 		return ctx;
 	}
 );
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: (...a: unknown[]) =>
 		requireGroupRole(...(a as Parameters<typeof requireGroupRole>)),
 	requireProgramRole: (...a: unknown[]) =>
@@ -104,7 +104,7 @@ const band = {
 const { BandMemberExistsError } = vi.hoisted(() => ({
 	BandMemberExistsError: class BandMemberExistsError extends Error {}
 }));
-vi.mock('$lib/server/band/band-service', () => ({
+vi.mock('#lib/server/band/band-service.js', () => ({
 	getMembers: vi.fn(async () => []),
 	getRosterMembers: vi.fn(async () => []),
 	getUserRole: vi.fn(async () => null),
@@ -126,19 +126,19 @@ const invites = {
 	listForGroup: vi.fn(async () => []),
 	revoke: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/group/group-invite-service', () => ({
+vi.mock('#lib/server/group/group-invite-service.js', () => ({
 	createInvite: (...a: unknown[]) => invites.createInvite(...(a as [])),
 	listForGroup: (...a: unknown[]) => invites.listForGroup(...(a as [])),
 	revoke: (...a: unknown[]) => invites.revoke(...(a as []))
 }));
 
-vi.mock('$lib/server/group/roster-import-service', () => ({
+vi.mock('#lib/server/group/roster-import-service.js', () => ({
 	importRoster: vi.fn(),
 	parseRosterImport: vi.fn(),
 	RosterImportInputError: class extends Error {}
 }));
 
-vi.mock('$lib/server/group/group-service', () => ({
+vi.mock('#lib/server/group/group-service.js', () => ({
 	STAFF_GROUP_KINDS: ['club', 'committee'],
 	setChairRole: vi.fn(),
 	createGroup: vi.fn(),
@@ -155,49 +155,49 @@ vi.mock('$lib/server/group/group-service', () => ({
 	updateGroupProfile: vi.fn(),
 	updateGroupSettings: vi.fn()
 }));
-vi.mock('$lib/server/group/announcement-service', () => ({
+vi.mock('#lib/server/group/announcement-service.js', () => ({
 	getMuteState: vi.fn(),
 	listForManager: vi.fn(),
 	listPublished: vi.fn()
 }));
 // Mocked like every other service here. Unmocked it reaches the real
-// `$lib/server/db`, which builds `relations.ts` against a schema index whose
+// `#lib/server/db/index.js`, which builds `relations.ts` against a schema index whose
 // `directory` module this file replaces — so the failure surfaces as
 // "Cannot read properties of undefined (reading 'userId')" in relations.
 const listForGroup = vi.hoisted(() => vi.fn(async () => [] as unknown[]));
-vi.mock('$lib/server/group/application-service', () => ({
+vi.mock('#lib/server/group/application-service.js', () => ({
 	listForGroup,
 	listForApplicant: vi.fn(async () => []),
 	hasOpenApplication: vi.fn(async () => false)
 }));
-vi.mock('$lib/server/event/event-service', () => ({ listGroupSessions: vi.fn(async () => []) }));
+vi.mock('#lib/server/event/event-service.js', () => ({ listGroupSessions: vi.fn(async () => []) }));
 const listDutyLists = vi.hoisted(() => vi.fn());
-vi.mock('$lib/server/volunteer/duty-list-service', () => ({ listDutyLists }));
-vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({
+vi.mock('#lib/server/volunteer/duty-list-service.js', () => ({ listDutyLists }));
+vi.mock('#lib/server/volunteer/volunteer-role-service.js', () => ({
 	listVolunteerRoles: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/volunteer/deliverables-service', () => ({
+vi.mock('#lib/server/volunteer/deliverables-service.js', () => ({
 	countCommitteeUnfinished: vi.fn(async () => 0)
 }));
-vi.mock('$lib/server/volunteer/maintenance-schedule-service', () => ({
+vi.mock('#lib/server/volunteer/maintenance-schedule-service.js', () => ({
 	listMaintenanceSchedules: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/project/project-service', () => ({
+vi.mock('#lib/server/project/project-service.js', () => ({
 	listProjects: vi.fn(async () => []),
 	listCommitteeProjectEvents: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/group/group-totals-service', () => ({ getClubTotals: vi.fn() }));
-vi.mock('$lib/server/group/file-service', () => ({ list: vi.fn(), getUsage: vi.fn() }));
-vi.mock('$lib/server/capability/capability-grant-service', () => ({
+vi.mock('#lib/server/group/group-totals-service.js', () => ({ getClubTotals: vi.fn() }));
+vi.mock('#lib/server/group/file-service.js', () => ({ list: vi.fn(), getUsage: vi.fn() }));
+vi.mock('#lib/server/capability/capability-grant-service.js', () => ({
 	setCommitteeCapabilityGrants: vi.fn()
 }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (v: unknown) => v }));
-vi.mock('$lib/server/errors', () => ({
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: (v: unknown) => v }));
+vi.mock('#lib/server/errors.js', () => ({
 	mapDomainError: (err: unknown) => {
 		throw err;
 	}
 }));
-vi.mock('$lib/server/db/schema/directory', () => ({
+vi.mock('#lib/server/db/schema/directory.js', () => ({
 	directoryVisibilities: ['hidden', 'members', 'public']
 }));
 

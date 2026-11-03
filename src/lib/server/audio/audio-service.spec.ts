@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { RADIO_PRO_ATTESTATION } from '$lib/config';
+import { RADIO_PRO_ATTESTATION } from '#lib/config.js';
 
 /**
  * Track numbering, the publish preconditions and the price rule, against a real
@@ -8,12 +8,12 @@ import { RADIO_PRO_ATTESTATION } from '$lib/config';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
 // better-sqlite3's drizzle has no `batch`; D1's runs the statements in order, as this does.
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			const out = [];
@@ -26,7 +26,7 @@ vi.mock('$lib/server/db', () => ({
 // R2 and the image transform URL are the outside services.
 const deleteAudioObject = vi.fn(async (_key: string) => undefined);
 vi.mock('./audio-storage', () => ({ deleteAudioObject }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: () => null }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: () => null }));
 
 const service = await import('./audio-service');
 

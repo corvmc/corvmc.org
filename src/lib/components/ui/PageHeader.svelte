@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount, type Snippet } from 'svelte';
-	import { setDefaultButtonSize } from '$lib/components/ui/Button.svelte';
+	import { setDefaultButtonSize } from '#lib/components/ui/Button.svelte';
 	import Breadcrumbs from './Breadcrumbs.svelte';
 	import { getBreadcrumbTrail, pageCrumbs, type Crumb } from './breadcrumbs';
-	import { pageTitle } from '$lib/config';
+	import { pageTitle } from '#lib/config.js';
 	import { PAGE_WIDTH, type PageWidth } from './page-width';
 	import { MediaQuery } from 'svelte/reactivity';
 	import OverflowMenu from './OverflowMenu.svelte';

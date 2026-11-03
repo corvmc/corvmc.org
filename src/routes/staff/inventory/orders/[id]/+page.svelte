@@ -1,28 +1,28 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import {
 		getOrder,
 		markOrderPlaced,
 		dropOrder,
 		closeOrder,
 		reopenOrderForm
-	} from '$lib/remote/inventory.remote';
-	import { ReopenAction } from '$lib/components/actions';
-	import { orderStatusLabels, orderStatusBadge, type OrderStatus } from '$lib/config';
-	import { formatCents, formatDateShort } from '$lib/utils/format';
-	import { isOrderLate } from '$lib/utils/order-late';
+	} from '#lib/remote/inventory.remote.js';
+	import { ReopenAction } from '#lib/components/actions/index.js';
+	import { orderStatusLabels, orderStatusBadge, type OrderStatus } from '#lib/config.js';
+	import { formatCents, formatDateShort } from '#lib/utils/format.js';
+	import { isOrderLate } from '#lib/utils/order-late.js';
 	import { resolve } from '$app/paths';
 
 	/**

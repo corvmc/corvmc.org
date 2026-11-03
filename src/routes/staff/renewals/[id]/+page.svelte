@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** One permit, license or policy: when it expires, who renews it, and its certificate. */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import RenewalFields from '$lib/components/renewal/RenewalFields.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import RenewalFields from '#lib/components/renewal/RenewalFields.svelte';
 	import { IconFileText } from '@tabler/icons-svelte';
 	import {
 		getRenewalDetail,
@@ -18,9 +18,9 @@
 		deleteRenewal,
 		uploadRenewalDocument,
 		removeRenewalDocument
-	} from '$lib/remote/renewals.remote';
-	import { renewalKindLabels } from '$lib/config';
-	import { formatIsoDay } from '$lib/utils/deadline';
+	} from '#lib/remote/renewals.remote.js';
+	import { renewalKindLabels } from '#lib/config.js';
+	import { formatIsoDay } from '#lib/utils/deadline.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';

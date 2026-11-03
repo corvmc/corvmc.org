@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { removeBandEventPoster } from '$lib/remote/band-events.remote';
+	import { removeBandEventPoster } from '#lib/remote/band-events.remote.js';
 
 	// The band panel's own events live in `band-events.remote`, guarded by
 	// `requireGroupRole({ slug }, 'admin')` and scoped to the band named by the

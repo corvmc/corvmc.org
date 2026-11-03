@@ -10,25 +10,25 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 /** The whole schema, replayed from the committed migrations. Why: #847. */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
 // `getRowCount` reads D1's `meta.changes`; better-sqlite3 reports `changes` at
 // the top level. Left real, every update here would look like it matched no
 // rows — which is a false *pass* on any test expecting a throw.
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: testDb,
 	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
 }));
 
 const invite = vi.fn(async () => undefined);
-vi.mock('$lib/server/band/band-service', () => ({
+vi.mock('#lib/server/band/band-service.js', () => ({
 	invite: (...a: unknown[]) => invite(...(a as []))
 }));
 
 const emit = vi.fn(async (..._a: unknown[]) => undefined);
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...a: unknown[]) => emit(...a) }
 }));
 
@@ -45,8 +45,8 @@ const APPLICANT = 'usr-applicant';
 const CHAIR = 'usr-chair';
 
 async function seed() {
-	const { user } = await import('$lib/server/db/schema/authentication');
-	const { group } = await import('$lib/server/db/schema/group');
+	const { user } = await import('#lib/server/db/schema/authentication.js');
+	const { group } = await import('#lib/server/db/schema/group.js');
 	await testDb.insert(user).values([
 		{ id: APPLICANT, name: 'Ada', email: 'ada@example.com', emailVerified: false },
 		{ id: CHAIR, name: 'Chair', email: 'chair@example.com', emailVerified: false }
@@ -89,7 +89,7 @@ beforeEach(async () => {
 const answers = { experience: 'Booked a basement series', vision: 'Somewhere to play at 17' };
 
 async function onRoster(groupId: string, status: 'active' | 'pending') {
-	const { groupMember } = await import('$lib/server/db/schema/group');
+	const { groupMember } = await import('#lib/server/db/schema/group.js');
 	await testDb.insert(groupMember).values({
 		id: `gm-${groupId}`,
 		groupId,
@@ -316,7 +316,7 @@ describe('the committee apply page', () => {
 
 describe('the staff list badge', () => {
 	async function counts() {
-		const { group } = await import('$lib/server/db/schema/group');
+		const { group } = await import('#lib/server/db/schema/group.js');
 		const rows = await testDb
 			.select({ id: group.id, open: svc.openApplicationCount(group.id) })
 			.from(group);

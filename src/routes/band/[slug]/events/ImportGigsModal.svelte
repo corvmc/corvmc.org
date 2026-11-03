@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { importGigsForm } from '$lib/remote/band-events.remote';
-	import { parseGigImport, GIG_IMPORT_MAX_LINES } from '$lib/utils/gig-import';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { importGigsForm } from '#lib/remote/band-events.remote.js';
+	import { parseGigImport, GIG_IMPORT_MAX_LINES } from '#lib/utils/gig-import.js';
 	import { invalidateAll } from '$app/navigation';
 
 	// The `slug` is back to being read. It used to ride the form and be ignored,

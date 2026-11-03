@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { inboxChannels, staffInboxChannels, alwaysEnabledInboxChannels } from '$lib/config';
+import { inboxChannels, staffInboxChannels, alwaysEnabledInboxChannels } from '#lib/config.js';
 import { inboxChannelMeta } from './inbox-channel-meta';
 
 // The Inbox Channels tab reads `inboxChannelMeta[cfg.channel]` and then

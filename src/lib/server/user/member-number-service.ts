@@ -13,8 +13,8 @@
  * since those profiles shipped.
  */
 import { and, eq, isNull, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 
 /**
  * How many times `assignMemberNumber` will try.

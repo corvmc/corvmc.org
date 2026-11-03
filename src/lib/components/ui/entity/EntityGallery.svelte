@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { entityTypes, type EntityType } from '$lib/config';
-	import { entityLabels } from '$lib/terms';
+	import { entityTypes, type EntityType } from '#lib/config.js';
+	import { entityLabels } from '#lib/terms.js';
 
 	/**
 	 * Stories-only: renders one snippet per entity type, labelled.

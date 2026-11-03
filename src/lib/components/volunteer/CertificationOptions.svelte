@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getActiveCertifications } from '$lib/remote/volunteer.remote';
+	import { getActiveCertifications } from '#lib/remote/volunteer.remote.js';
 
 	/**
 	 * Active certification `<option>`s, owning the query behind them.

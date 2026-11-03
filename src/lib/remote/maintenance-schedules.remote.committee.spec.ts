@@ -13,21 +13,21 @@ const requireCommitteeMember = vi.fn(async (groupId: string | null, cover: strin
 		role: 'member'
 	};
 });
-vi.mock('$lib/server/group/group-context', () => ({ requireCommitteeMember }));
-vi.mock('$lib/server/authorization', () => ({ requireCapability: vi.fn() }));
+vi.mock('#lib/server/group/group-context.js', () => ({ requireCommitteeMember }));
+vi.mock('#lib/server/authorization.js', () => ({ requireCapability: vi.fn() }));
 
 const createService = vi.fn(async () => ({ id: 'ms-1' }));
 const retireService = vi.fn(async () => undefined);
 const getScheduleGroupId = vi.fn(async () => 'grp-own');
-vi.mock('$lib/server/volunteer/maintenance-schedule-service', () => ({
+vi.mock('#lib/server/volunteer/maintenance-schedule-service.js', () => ({
 	createMaintenanceSchedule: createService,
 	listMaintenanceSchedules: vi.fn(async () => []),
 	retireMaintenanceSchedule: retireService,
 	getScheduleGroupId
 }));
 
-vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({ listVolunteerRoles: vi.fn() }));
-vi.mock('$lib/server/project/project-service', () => ({ listProjects: vi.fn() }));
+vi.mock('#lib/server/volunteer/volunteer-role-service.js', () => ({ listVolunteerRoles: vi.fn() }));
+vi.mock('#lib/server/project/project-service.js', () => ({ listProjects: vi.fn() }));
 vi.mock('./volunteer.remote', () => ({
 	getVolunteerWorklist: () => ({ refresh: async () => undefined })
 }));

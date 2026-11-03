@@ -9,10 +9,10 @@ vi.mock('$env/dynamic/private', () => ({
 
 // The stale-state sweeps are WHERE clauses over real rows.
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 // Product config — contribution product id used to match the contribution line
 vi.mock('./product-config-service', () => ({
@@ -31,7 +31,7 @@ const mockStripe = {
 	// Credit reconciliation reads the latest paid invoice; none here.
 	invoices: { list: vi.fn(async () => ({ data: [] })) }
 };
-vi.mock('$lib/server/stripe', () => ({ stripe: mockStripe }));
+vi.mock('#lib/server/stripe.js', () => ({ stripe: mockStripe }));
 
 function asyncIterableOf<T>(items: T[]) {
 	return {
@@ -52,7 +52,7 @@ function asyncIterableOf<T>(items: T[]) {
 // Mock band subscription service (reused verbatim for bands)
 // ---------------------------------------------------------------------------
 const mockSyncFromWebhook = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/band/band-subscription-service', () => ({
+vi.mock('#lib/server/band/band-subscription-service.js', () => ({
 	syncFromWebhook: mockSyncFromWebhook
 }));
 

@@ -1,7 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 
 const remoteForm = (action: string) => ({
 	enhance: () => ({ method: 'POST', action }),
@@ -19,12 +19,12 @@ const attachable = vi.hoisted(() => ({
 	rows: [] as { id: string; title: string; startsAt: Date }[]
 }));
 
-vi.mock('$lib/remote/productions.remote', () => ({
+vi.mock('#lib/remote/productions.remote.js', () => ({
 	createProduction: remoteForm('?/createProduction'),
 	createShow: remoteForm('?/createShow'),
 	getAttachableListings: vi.fn(async () => attachable.rows)
 }));
-vi.mock('$lib/remote/events.remote', () => ({
+vi.mock('#lib/remote/events.remote.js', () => ({
 	createEvent: remoteForm('?/createEvent'),
 	getProgramGroups: vi.fn(async () => [])
 }));

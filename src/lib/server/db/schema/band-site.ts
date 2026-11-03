@@ -65,7 +65,7 @@ export type CustomDomainVerification = z.infer<typeof customDomainVerificationSc
  * property the free half needs — one per band, created with the band, never
  * deleted while it lives — so a read needs no fallback and a move would buy
  * nothing but a migration. Which audience each half of `epk` is for is decided
- * in `$lib/server/band/press-kit.ts`, not here.
+ * in `#lib/server/band/press-kit.js`, not here.
  *
  * Separated from `group` because of the bought half. Two consequences fall out
  * of that. `groupId` is NOT NULL, so a site cannot exist for an external act
@@ -146,7 +146,7 @@ export const bandSite = sqliteTable(
 		// The free half of this row. Two audiences are mixed in here — the
 		// marketing a stranger may read, and the advance material only a venue the
 		// band emailed should see — so nothing reads this column raw:
-		// `publicPressKit()` / `fullPressKit()` in `$lib/server/band/press-kit.ts`
+		// `publicPressKit()` / `fullPressKit()` in `#lib/server/band/press-kit.js`
 		// are the only ways out of it.
 		epk: text('epk', { mode: 'json' }).$type<BandEpk>(),
 

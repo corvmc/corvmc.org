@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { toGenericRef } from '$lib/server/entity/refs';
+import { toGenericRef } from '#lib/server/entity/refs.js';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
@@ -8,8 +8,8 @@ import {
 	requireCapability,
 	requireCapabilityOrOwner,
 	requireUser
-} from '$lib/server/authorization';
-import { itemSections } from '$lib/server/inventory/item-sections';
+} from '#lib/server/authorization.js';
+import { itemSections } from '#lib/server/inventory/item-sections.js';
 import {
 	createCategory,
 	createItem as createItemService,
@@ -24,7 +24,7 @@ import {
 	softDeleteItem,
 	updateCategory,
 	updateItem
-} from '$lib/server/inventory/item-service';
+} from '#lib/server/inventory/item-service.js';
 import {
 	bindAssetTag,
 	createAsset as createAssetService,
@@ -37,20 +37,20 @@ import {
 	resolveForm8282,
 	setAssetStatus,
 	updateAsset
-} from '$lib/server/inventory/asset-service';
-import { listLowStock } from '$lib/server/inventory/stock-service';
+} from '#lib/server/inventory/asset-service.js';
+import { listLowStock } from '#lib/server/inventory/stock-service.js';
 import {
 	listAssetHistory,
 	listLoanFeed,
 	listMovementFeed
-} from '$lib/server/inventory/inventory-history';
+} from '#lib/server/inventory/inventory-history.js';
 import { historyArgs } from './_history';
 import {
 	fulfilSuggestion,
 	getSuggestionBrief,
 	listPlannedGear
-} from '$lib/server/suggestion/suggestion-service';
-import { contractorSpend } from '$lib/server/contractor/contractor-job-service';
+} from '#lib/server/suggestion/suggestion-service.js';
+import { contractorSpend } from '#lib/server/contractor/contractor-job-service.js';
 import {
 	acknowledgeForm8283,
 	adjustStock,
@@ -65,7 +65,7 @@ import {
 	spendByCategory,
 	spendBySource,
 	updateAcquisition
-} from '$lib/server/inventory/acquisition-service';
+} from '#lib/server/inventory/acquisition-service.js';
 import {
 	applyReceipt,
 	cancelOrder,
@@ -75,8 +75,8 @@ import {
 	onOrderQuantities,
 	placeOrder,
 	reopenOrder
-} from '$lib/server/inventory/order-service';
-import { form8282Status } from '$lib/server/inventory/form-8282';
+} from '#lib/server/inventory/order-service.js';
+import { form8282Status } from '#lib/server/inventory/form-8282.js';
 import {
 	linkArticle,
 	listItemResources,
@@ -84,8 +84,8 @@ import {
 	listMemberItemResources,
 	reportDamage,
 	unlinkArticle
-} from '$lib/server/inventory/resources-service';
-import { mapDomainError } from '$lib/server/errors';
+} from '#lib/server/inventory/resources-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import {
 	getLoanById,
 	scheduleLoan,
@@ -95,8 +95,8 @@ import {
 	returnLoan as returnLoanService,
 	listLoans,
 	listUserLoans
-} from '$lib/server/inventory/loan-service';
-import { scheduleLoanSchema, checkoutLoanSchema } from '$lib/server/db/schema/inventory';
+} from '#lib/server/inventory/loan-service.js';
+import { scheduleLoanSchema, checkoutLoanSchema } from '#lib/server/db/schema/inventory.js';
 import {
 	LONG_TEXT_MAX,
 	SHORT_TEXT_MAX,
@@ -114,9 +114,9 @@ import {
 	type LoanStatus,
 	DEFAULT_TIMEZONE,
 	clubToday
-} from '$lib/config';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { getDonationWishlist, isOnWishlist } from '$lib/server/inventory/wishlist-service';
+} from '#lib/config.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { getDonationWishlist, isOnWishlist } from '#lib/server/inventory/wishlist-service.js';
 import {
 	confirmGuestPledge,
 	fulfilPledges,
@@ -125,9 +125,9 @@ import {
 	pledgeEntry,
 	releasePledge,
 	startGuestPledge
-} from '$lib/server/inventory/pledge-service';
-import { verifyTurnstile } from '$lib/server/turnstile';
-import { allowRateLimited } from '$lib/server/rate-limit';
+} from '#lib/server/inventory/pledge-service.js';
+import { verifyTurnstile } from '#lib/server/turnstile.js';
+import { allowRateLimited } from '#lib/server/rate-limit.js';
 
 /**
  * A calendar date the operator typed, as an instant.
@@ -316,9 +316,9 @@ export const getMemberEquipment = query(memberEquipmentFilters, async (filters) 
 
 export const getMemberEquipmentMeta = query(z.void(), async () => {
 	const currentUser = requireUser();
-	const { getBalance } = await import('$lib/server/finance/credit-service');
+	const { getBalance } = await import('#lib/server/finance/credit-service.js');
 	const { isSustainingMember: checkSustaining } =
-		await import('$lib/server/finance/subscription-service');
+		await import('#lib/server/finance/subscription-service.js');
 
 	// The local snapshot, not `getSubscription` — that is
 	// `stripe.subscriptions.list()`, a network round trip to price one loan

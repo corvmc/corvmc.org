@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getNotificationType } from '$lib/server/db/schema/notification';
-import { NOTIFICATION_CATEGORIES } from '$lib/email/notification-category';
+import { getNotificationType } from '#lib/server/db/schema/notification.js';
+import { NOTIFICATION_CATEGORIES } from '#lib/email/notification-category.js';
 
 vi.mock('./email/postmark-client', () => ({
 	sendEmailWithTemplate: vi.fn(),

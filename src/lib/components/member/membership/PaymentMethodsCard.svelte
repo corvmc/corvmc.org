@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
 	import { IconCreditCard } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
 	import AddCardModal from './AddCardModal.svelte';
-	import { forgetCard, makeDefaultCard } from '$lib/remote/billing.remote';
-	import type { SavedCard } from '$lib/server/finance/billing-service';
+	import { forgetCard, makeDefaultCard } from '#lib/remote/billing.remote.js';
+	import type { SavedCard } from '#lib/server/finance/billing-service.js';
 
 	let {
 		cards,

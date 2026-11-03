@@ -1,17 +1,20 @@
 import { parse as parseCsv } from 'csv-parse/browser/esm/sync';
 import { z } from 'zod';
 import { and, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { INVITE_EXPIRY_DAYS, ROSTER_IMPORT_MAX } from '$lib/config';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { groupInvite } from '$lib/server/db/schema/group-invite';
-import { groupApplication, groupApplicationChoice } from '$lib/server/db/schema/group-application';
-import { user } from '$lib/server/db/schema/authentication';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { captureException } from '$lib/server/sentry';
-import { DomainError } from '$lib/server/domain-error';
-import type { RosterImportResult } from '$lib/types/roster-import';
+import { db } from '#lib/server/db/index.js';
+import { INVITE_EXPIRY_DAYS, ROSTER_IMPORT_MAX } from '#lib/config.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { groupInvite } from '#lib/server/db/schema/group-invite.js';
+import {
+	groupApplication,
+	groupApplicationChoice
+} from '#lib/server/db/schema/group-application.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { captureException } from '#lib/server/sentry.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import type { RosterImportResult } from '#lib/types/roster-import.js';
 
 export type { RosterImportResult };
 

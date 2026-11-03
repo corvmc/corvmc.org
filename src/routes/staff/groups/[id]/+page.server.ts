@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { getGroupDetail } from '$lib/server/group/group-service';
+import { getGroupDetail } from '#lib/server/group/group-service.js';
 import type { PageServerLoad } from './$types';
 
 /**

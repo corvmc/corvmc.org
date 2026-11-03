@@ -12,16 +12,16 @@ const mockRequireGroupRole = vi.fn(async (ref: { slug: string }, min: string) =>
 	if (role === 'member' && min !== 'member') throw Object.assign(new Error('403'), { status: 403 });
 	return { group: { id: 'band-1', slug: ref.slug }, role };
 });
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: (...a: unknown[]) => mockRequireGroupRole(...(a as [{ slug: string }, string]))
 }));
 
 // The band's customer is read from its site row, for real.
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 const setCustomer = (stripeCustomerId: string | null) => {
 	sqlite.exec('delete from band_site');
 	sqlite
@@ -36,7 +36,7 @@ const setCustomer = (stripeCustomerId: string | null) => {
 const mockListCards = vi.fn(async () => [{ id: 'pm_1', brand: 'visa', last4: '4242' }]);
 const mockRememberCard = vi.fn(async () => undefined);
 const mockRemoveCard = vi.fn(async () => undefined);
-vi.mock('$lib/server/finance/billing-service', () => ({
+vi.mock('#lib/server/finance/billing-service.js', () => ({
 	createSetupIntent: vi.fn(async () => 'seti_1_secret_x'),
 	listCards: (...a: unknown[]) => mockListCards(...(a as [])),
 	listInvoices: vi.fn(async () => []),
@@ -46,18 +46,20 @@ vi.mock('$lib/server/finance/billing-service', () => ({
 }));
 
 const mockRetrieve = vi.fn();
-vi.mock('$lib/server/stripe', () => ({
+vi.mock('#lib/server/stripe.js', () => ({
 	paymentDriver: () => 'stripe',
 	stripe: { setupIntents: { retrieve: (...a: unknown[]) => mockRetrieve(...(a as [])) } }
 }));
-vi.mock('$lib/server/authorization', () => ({ requireMember: vi.fn() }));
-vi.mock('$lib/server/finance/gateway/fake-gateway', () => ({ completeFakeSetupIntent: vi.fn() }));
-vi.mock('$lib/server/errors', () => ({
+vi.mock('#lib/server/authorization.js', () => ({ requireMember: vi.fn() }));
+vi.mock('#lib/server/finance/gateway/fake-gateway.js', () => ({
+	completeFakeSetupIntent: vi.fn()
+}));
+vi.mock('#lib/server/errors.js', () => ({
 	mapDomainError: (e: unknown) => {
 		throw e;
 	}
 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 // SvelteKit validates every export of a .remote.ts at import time, so the stubs
 // carry the same marker the real helpers attach. Same shape as

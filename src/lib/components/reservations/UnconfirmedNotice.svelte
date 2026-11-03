@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { formatDateShort } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import {
 		confirmWindowOpensAt,
 		withinConfirmationWindow,
 		UNCONFIRMED_RELEASE_NOTICE
-	} from '$lib/config';
+	} from '#lib/config.js';
 
 	/**
 	 * What a member is told about a booking still waiting on them.

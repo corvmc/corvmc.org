@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { isEventHold } from '$lib/config';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { isEventHold } from '#lib/config.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import {
 		ConfirmReservationAction,
 		CompleteReservationAction,
@@ -17,31 +17,31 @@
 		CashReceivedAction,
 		CompReservationAction,
 		RefundReservationAction
-	} from '$lib/components/actions';
-	import DayTimeline from '$lib/components/reservations/DayTimeline.svelte';
-	import RecordNav from '$lib/components/ui/RecordNav.svelte';
-	import CopyableId from '$lib/components/ui/CopyableId.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
+	} from '#lib/components/actions/index.js';
+	import DayTimeline from '#lib/components/reservations/DayTimeline.svelte';
+	import RecordNav from '#lib/components/ui/RecordNav.svelte';
+	import CopyableId from '#lib/components/ui/CopyableId.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
 	import { IconUserPlus } from '@tabler/icons-svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 	import {
 		fullDate,
 		formatTime,
 		durationHours as calcDurationHours,
 		formatCents
-	} from '$lib/utils/format';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
-	import Button from '$lib/components/ui/Button.svelte';
+	} from '#lib/utils/format.js';
+	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import {
 		visibleActions,
 		reservationPaymentState,
 		overlappingReservations
-	} from '$lib/utils/reservation-actions';
-	import { getStaffReservationDetail } from '$lib/remote/reservations.remote';
-	import { describeCancellation } from '$lib/utils/reservation-cancellation';
-	import { retryDoorCodes } from '$lib/remote/lock.remote';
+	} from '#lib/utils/reservation-actions.js';
+	import { getStaffReservationDetail } from '#lib/remote/reservations.remote.js';
+	import { describeCancellation } from '#lib/utils/reservation-cancellation.js';
+	import { retryDoorCodes } from '#lib/remote/lock.remote.js';
 	import { page } from '$app/state';
 
 	let data = $derived(await getStaffReservationDetail(page.params.id!));

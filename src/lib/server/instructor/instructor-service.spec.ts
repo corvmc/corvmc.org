@@ -13,7 +13,7 @@
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 
-vi.mock('$lib/server/db', async () => {
+vi.mock('#lib/server/db/index.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
 	const { drizzle } = await import('drizzle-orm/node-sqlite');
 	const { migrate } = await import('drizzle-orm/node-sqlite/migrator');
@@ -38,7 +38,7 @@ vi.mock('$lib/server/db', async () => {
 	};
 });
 
-const { client } = (await import('$lib/server/db')) as unknown as {
+const { client } = (await import('#lib/server/db/index.js')) as unknown as {
 	client: import('node:sqlite').DatabaseSync;
 };
 const svc = await import('./instructor-service');
@@ -298,7 +298,7 @@ describe('what gets announced', () => {
 	// The events are real here — only the database is substituted — so this
 	// asserts the emit actually happens rather than that a mock was called.
 	async function captureEvents<T>(name: T, run: () => Promise<void>) {
-		const { domainEvents } = await import('$lib/server/event-bus/event-bus');
+		const { domainEvents } = await import('#lib/server/event-bus/event-bus.js');
 		const seen: Record<string, unknown>[] = [];
 		const off = domainEvents.on(name as never, (e: unknown) => {
 			seen.push((e as { data: Record<string, unknown> }).data);

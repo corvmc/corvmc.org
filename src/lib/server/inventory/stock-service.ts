@@ -1,4 +1,4 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import { onOrderQuantities } from './order-service';
 import {
 	equipmentCategory,
@@ -8,9 +8,9 @@ import {
 	stockMovement,
 	STOCK_REASON_SIGN,
 	type StockReason
-} from '$lib/server/db/schema/inventory';
+} from '#lib/server/db/schema/inventory.js';
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 
 /**
  * The ledger.

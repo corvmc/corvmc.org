@@ -2,9 +2,9 @@ import { handleErrorWithSentry, replayIntegration } from '@sentry/sveltekit';
 import * as Sentry from '@sentry/sveltekit';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/public';
-import { SENTRY_DSN } from '$lib/sentry-dsn';
-import { isLocalOrigin } from '$lib/sentry-local-origin';
-import { isStaleRemoteResponse } from '$lib/stale-remote-response';
+import { SENTRY_DSN } from '#lib/sentry-dsn.js';
+import { isLocalOrigin } from '#lib/sentry-local-origin.js';
+import { isStaleRemoteResponse } from '#lib/stale-remote-response.js';
 
 /**
  * Expected stale-deploy chunk failures: a tab opened before a deploy can't load

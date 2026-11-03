@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { getStaffCategories, createArticle } from '$lib/remote/help.remote';
+	import { getStaffCategories, createArticle } from '#lib/remote/help.remote.js';
 	const { fields } = createArticle;
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import MarkdownEditor from '$lib/components/help/MarkdownEditor.svelte';
-	import { helpAudiences, helpAudienceLabels } from '$lib/config';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import MarkdownEditor from '#lib/components/help/MarkdownEditor.svelte';
+	import { helpAudiences, helpAudienceLabels } from '#lib/config.js';
 
 	let categories = $derived(await getStaffCategories());
 

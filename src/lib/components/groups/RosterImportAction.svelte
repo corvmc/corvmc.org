@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { ROSTER_IMPORT_MAX } from '$lib/config';
-	import { importStaffGroupRoster } from '$lib/remote/groups.remote';
-	import type { RosterImportResult } from '$lib/types/roster-import';
+	import { ROSTER_IMPORT_MAX } from '#lib/config.js';
+	import { importStaffGroupRoster } from '#lib/remote/groups.remote.js';
+	import type { RosterImportResult } from '#lib/types/roster-import.js';
 
 	/**
 	 * Staff only: a pasted list or a CSV (a Zeffy export) onto a roster. An

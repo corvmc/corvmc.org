@@ -1,7 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 import type { ComponentProps } from 'svelte';
 import Harness from './ProjectsTable.test.svelte';
 import '../../layout.css';

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 import { error } from '@sveltejs/kit';
-import { can } from '$lib/server/authorization';
+import { can } from '#lib/server/authorization.js';
 
 // Regression: staff confirming/pricing a reservation on a member's behalf must key
 // free hours to the reservation OWNER, never the acting staff user. The staff
@@ -28,7 +28,7 @@ function chain() {
 // Payloads passed to `db.update(...).set(...)`, in call order.
 const updateSets: Record<string, unknown>[] = [];
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chain(),
 		update: () => ({
@@ -40,7 +40,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const isStaffMock = vi.fn(async () => true);
 	return {
 		requireUser: () => staffUser,
@@ -65,15 +65,15 @@ vi.mock('$lib/server/authorization', async () => {
 // `termsFor` and `getBookingTerms` come through real: they are pure, and a
 // stubbed rate resolver would let this spec pass while the resolver it is
 // standing in for returned something else. Only the config *read* is faked.
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 
 // Owner has no free hours; the acting staff user has a big balance. If pricing keyed
 // to the wrong user, the staff balance would leak credits onto the member's booking.
 const getBalance = vi.fn(async (userId: string) => (userId === ownerId ? 0 : 100));
-vi.mock('$lib/server/finance/credit-service', () => ({ getBalance }));
+vi.mock('#lib/server/finance/credit-service.js', () => ({ getBalance }));
 
 const commitReservationCredits = vi.fn(async (params: { userId: string; totalCents: number }) => ({
 	creditUnits: 0,
@@ -81,9 +81,9 @@ const commitReservationCredits = vi.fn(async (params: { userId: string; totalCen
 	remainingCents: params.totalCents,
 	alreadyCommitted: false
 }));
-vi.mock('$lib/server/reservation/reservation-credit-service', async (importOriginal) => {
+vi.mock('#lib/server/reservation/reservation-credit-service.js', async (importOriginal) => {
 	const actual =
-		await importOriginal<typeof import('$lib/server/reservation/reservation-credit-service')>();
+		await importOriginal<typeof import('#lib/server/reservation/reservation-credit-service.js')>();
 	return {
 		// Keep the real pricing math so the pricing test reflects production behavior.
 		computeReservationCredit: actual.computeReservationCredit,
@@ -96,7 +96,7 @@ vi.mock('$lib/server/reservation/reservation-credit-service', async (importOrigi
 });
 
 const confirm = vi.fn(async () => undefined);
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	create: vi.fn(),
 	createWaitlisted: vi.fn(),
 	confirm,
@@ -108,7 +108,7 @@ vi.mock('$lib/server/reservation/reservation-service', () => ({
 	ReservationConflictError: class extends Error {}
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
@@ -136,7 +136,7 @@ vi.mock('$app/server', () => ({
 }));
 
 const { confirmReservation, getReservationPricing } =
-	(await import('$lib/remote/reservations.remote')) as any;
+	(await import('#lib/remote/reservations.remote.js')) as any;
 
 beforeEach(() => {
 	// requireCapabilityOrOwner short-circuits on ownership without consulting `can`,

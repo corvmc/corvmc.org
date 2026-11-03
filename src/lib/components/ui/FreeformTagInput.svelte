@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Free text in, new tags out: whatever is typed becomes a tag, lowercased.
 	 * `suggestions` only autocompletes — it never constrains, so a value not on
@@ -8,7 +8,7 @@
 	 * refuse to.
 	 */
 	import { IconX } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 
 	let {
 		value = $bindable<string[]>([]),

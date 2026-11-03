@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Which show this blast is about (#857). Sets `campaign.eventId`, the one
 	 * thing that makes the "This show's audience" built-in resolve to anybody
@@ -8,10 +8,10 @@
 	 * `SearchSelect` rather than a `<select>`: the list is every live listing,
 	 * and it queries on keystroke rather than with the page.
 	 */
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { searchEvents } from '$lib/remote/events.remote';
-	import { getEventAudienceCount } from '$lib/remote/marketing.remote';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { searchEvents } from '#lib/remote/events.remote.js';
+	import { getEventAudienceCount } from '#lib/remote/marketing.remote.js';
 
 	type EventOption = { id: string; title: string; when: string };
 

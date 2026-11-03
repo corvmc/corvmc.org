@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { errorMessage } from '$lib/error-message';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { createEvent, getProgramGroups } from '$lib/remote/events.remote';
-	import { createShow } from '$lib/remote/productions.remote';
-	import { clubToday } from '$lib/config';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { createEvent, getProgramGroups } from '#lib/remote/events.remote.js';
+	import { createShow } from '#lib/remote/productions.remote.js';
+	import { clubToday } from '#lib/config.js';
 
 	/**
 	 * Only what the row cannot exist without (#1822's rule); the listing page

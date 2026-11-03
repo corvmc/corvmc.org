@@ -1,6 +1,6 @@
 import { readFileSync, globSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
-import { migratedSqlite } from '$lib/server/testing/migrated-sqlite';
+import { migratedSqlite } from '#lib/server/testing/migrated-sqlite.js';
 
 /** The #2033 backfill copies each list's anchor and trigger onto what it already stamped. */
 

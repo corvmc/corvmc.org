@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
-import { getStandings, restoreStanding } from '$lib/server/moderation/standing-service';
-import { standingScopes } from '$lib/config';
+import { requireCapability } from '#lib/server/authorization.js';
+import { getStandings, restoreStanding } from '#lib/server/moderation/standing-service.js';
+import { standingScopes } from '#lib/config.js';
 
 // Staff-side standing, for every scope at once.
 //

@@ -15,7 +15,7 @@ const calls = {
 let selectRows: unknown[] = [];
 let groupedRows: unknown[] = [];
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => ({
 			from: () => ({
@@ -50,7 +50,7 @@ vi.mock('$lib/server/db', () => ({
 		})
 	}
 }));
-vi.mock('$lib/server/db/paginate', () => ({ paginate: vi.fn() }));
+vi.mock('#lib/server/db/paginate.js', () => ({ paginate: vi.fn() }));
 
 const {
 	wakeSnoozedThreads,
@@ -62,7 +62,7 @@ const {
 	undoLastDisposition,
 	nudgeStaleAwaiting
 } = await import('./thread-service');
-const { inboxThread } = await import('$lib/server/db/schema/inbox');
+const { inboxThread } = await import('#lib/server/db/schema/inbox.js');
 
 /** Render a captured SET-side fragment — `undoState` is raw SQL, not a value. */
 function renderSet(fragment: SQL): string {

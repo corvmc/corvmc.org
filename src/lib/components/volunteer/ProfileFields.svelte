@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import type { RemoteFormField } from '@sveltejs/kit';
 	/**
@@ -16,7 +16,7 @@
 	 * also renders a form marks the later declarations async-gated, and every
 	 * `bind:value` then blows up with effect_update_depth_exceeded.
 	 */
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { resolve } from '$app/paths';
 
 	let {

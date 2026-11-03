@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { createCommitteeProjectWorkOrderForm } from '$lib/remote/projects.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { createCommitteeProjectWorkOrderForm } from '#lib/remote/projects.remote.js';
 
 	/** Open unscheduled work on one of the committee's own projects. */
 	let {

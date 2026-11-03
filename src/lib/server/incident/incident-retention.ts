@@ -1,7 +1,7 @@
 import { and, eq, lt } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { incident } from '$lib/server/db/schema/incident';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
+import { db } from '#lib/server/db/index.js';
+import { incident } from '#lib/server/db/schema/incident.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { IncidentNotFoundError, fitAuditText } from './incident-service';
 
 /**

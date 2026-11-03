@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/private';
-import { isLocalOrigin } from '$lib/sentry-local-origin';
-import { captureException } from '$lib/server/sentry';
+import { isLocalOrigin } from '#lib/sentry-local-origin.js';
+import { captureException } from '#lib/server/sentry.js';
 
 const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 

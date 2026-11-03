@@ -1,10 +1,10 @@
-import { db } from '$lib/server/db';
-import { workOrder, volunteerSignup, volunteerRole } from '$lib/server/db/schema/volunteer';
-import { eventListing } from '$lib/server/db/schema/event';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { workOrder, volunteerSignup, volunteerRole } from '#lib/server/db/schema/volunteer.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, count, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/errors';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { DomainError } from '#lib/server/errors.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import {
 	contractorJobStatusesWithoutSpend,
 	DEFAULT_TIMEZONE,
@@ -12,11 +12,11 @@ import {
 	VOLUNTEER_SHIFT_MAX_MINUTES,
 	VOLUNTEER_SHIFT_NOTES_MAX,
 	VOLUNTEER_SHIFT_TITLE_MAX
-} from '$lib/config';
-import type { WorkOrder, VolunteerRoleGroup } from '$lib/server/db/schema/volunteer';
-import { chunk } from '$lib/server/utils/chunk';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import type { WorkOrderField } from '$lib/types/audit';
+} from '#lib/config.js';
+import type { WorkOrder, VolunteerRoleGroup } from '#lib/server/db/schema/volunteer.js';
+import { chunk } from '#lib/server/utils/chunk.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import type { WorkOrderField } from '#lib/types/audit.js';
 
 import { getLiveSchedule, nextOccurrenceInsert } from './maintenance-schedule-service';
 

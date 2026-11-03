@@ -5,7 +5,7 @@
 	import DefinitionList from '../DefinitionList/DefinitionList.svelte';
 	import Fact from '../DefinitionList/Fact.svelte';
 	import Button from '../Button.svelte';
-	import { fakeRef } from '$lib/test/fixtures';
+	import { fakeRef } from '#lib/test/fixtures.js';
 
 	// Remote URLs, as IdCard.stories.svelte already uses: `imageSrc` passes
 	// anything without the /cdn-cgi/image/ marker through untouched.

@@ -6,10 +6,14 @@ import type {
 	ProjectField,
 	WorkOrderAssignmentMode,
 	WorkOrderField
-} from '$lib/types/audit';
-import { contractorJobStatusLabels, formatVolunteerHours, projectStatusLabels } from '$lib/config';
-import { formatCents, formatDateShort } from '$lib/utils/format';
-import type { FeedItem } from '$lib/types/activity';
+} from '#lib/types/audit.js';
+import {
+	contractorJobStatusLabels,
+	formatVolunteerHours,
+	projectStatusLabels
+} from '#lib/config.js';
+import { formatCents, formatDateShort } from '#lib/utils/format.js';
+import type { FeedItem } from '#lib/types/activity.js';
 
 /** `user.roles_changed` → "User roles changed". Derived, so a new action needs no label entry. */
 export function auditActionLabel(action: AuditAction): string {

@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { can, requireCapability } from '$lib/server/authorization';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
+import { can, requireCapability } from '#lib/server/authorization.js';
+import { isFeatureEnabled } from '#lib/server/feature-flags.js';
 import {
 	listAllReleases,
 	radioPoolStats,
@@ -11,11 +11,11 @@ import {
 	salesTotals,
 	setRadioExclusion,
 	withholdRelease
-} from '$lib/server/audio/staff-audio-service';
-import { getRadioNow, getRecentlyPlayed } from '$lib/server/audio/radio-service';
-import { refundPurchase } from '$lib/server/audio/purchase-service';
-import { mapDomainError } from '$lib/server/errors';
-import { LONG_TEXT_MAX } from '$lib/config';
+} from '#lib/server/audio/staff-audio-service.js';
+import { getRadioNow, getRecentlyPlayed } from '#lib/server/audio/radio-service.js';
+import { refundPurchase } from '#lib/server/audio/purchase-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { LONG_TEXT_MAX } from '#lib/config.js';
 
 /**
  * Staff music tools.

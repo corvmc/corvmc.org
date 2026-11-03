@@ -1,26 +1,26 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import VolunteerStatusTabs from './VolunteerStatusTabs.svelte';
 	import MemberViews from '../../MemberViews.svelte';
-	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
+	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
 	import { resolve } from '$app/paths';
-	import { urlState, oneOf, text, positiveInt } from '$lib/urlState.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { formatDateShort, relativeDay } from '$lib/utils/format';
-	import { formatVolunteerHours, volunteerHourStatuses } from '$lib/config';
-	import HourLogExceptions from '$lib/components/volunteer/HourLogExceptions.svelte';
+	import { urlState, oneOf, text, positiveInt } from '#lib/urlState.svelte.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import LogHoursForMemberAction from '#lib/components/volunteer/LogHoursForMemberAction.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { formatDateShort, relativeDay } from '#lib/utils/format.js';
+	import { formatVolunteerHours, volunteerHourStatuses } from '#lib/config.js';
+	import HourLogExceptions from '#lib/components/volunteer/HourLogExceptions.svelte';
 	import { IconCheck, IconArrowBackUp } from '@tabler/icons-svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { toast } from 'svelte-sonner';
@@ -30,7 +30,7 @@
 		approveVolunteerHours,
 		approveVolunteerHoursBulk,
 		rejectVolunteerHours
-	} from '$lib/remote/volunteer.remote';
+	} from '#lib/remote/volunteer.remote.js';
 
 	type StatusView = (typeof volunteerHourStatuses)[number] | 'all';
 	const statusViews: StatusView[] = [...volunteerHourStatuses, 'all'];

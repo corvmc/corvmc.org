@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getArticleBySlug, resolveHelpReader } from '$lib/server/help/help-service';
+import { getArticleBySlug, resolveHelpReader } from '#lib/server/help/help-service.js';
 
 export const GET: RequestHandler = async ({ locals, params }) => {
 	if (!locals.user) return error(401, 'Not authenticated');

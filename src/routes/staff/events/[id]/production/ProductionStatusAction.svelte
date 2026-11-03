@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * Move a production one step along the usual path.
@@ -13,17 +13,17 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { IconDots } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { advanceProduction, reopenProduction } from '$lib/remote/productions.remote';
-	import { getStaffLayout } from '$lib/remote/layout.remote';
-	import { hasCapability } from '$lib/config';
-	import { isTerminalProduction } from '$lib/production/status';
-	import type { ProductionStatus } from '$lib/server/db/schema/production';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { advanceProduction, reopenProduction } from '#lib/remote/productions.remote.js';
+	import { getStaffLayout } from '#lib/remote/layout.remote.js';
+	import { hasCapability } from '#lib/config.js';
+	import { isTerminalProduction } from '#lib/production/status.js';
+	import type { ProductionStatus } from '#lib/server/db/schema/production.js';
 
 	let {
 		production,

@@ -1,24 +1,24 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import { goto } from '$app/navigation';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
-	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
-	import LocationField from '$lib/components/inventory/LocationField.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
+	import MoneyField from '#lib/components/ui/Form/MoneyField.svelte';
+	import LocationField from '#lib/components/inventory/LocationField.svelte';
 	import IntakeLines from './IntakeLines.svelte';
-	import { getIntakePage, recordIntake } from '$lib/remote/inventory.remote';
+	import { getIntakePage, recordIntake } from '#lib/remote/inventory.remote.js';
 	import { page } from '$app/state';
-	import { acquisitionKinds, acquisitionKindLabels, clubToday } from '$lib/config';
+	import { acquisitionKinds, acquisitionKindLabels, clubToday } from '#lib/config.js';
 	import { toast } from 'svelte-sonner';
-	import { formatDate } from '$lib/utils/format';
+	import { formatDate } from '#lib/utils/format.js';
 
 	/**
 	 * Entering a whole arrival in one sitting.

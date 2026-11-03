@@ -1,6 +1,6 @@
-import { getJson, putJson } from '$lib/server/kv';
-import { DomainError } from '$lib/server/domain-error';
-import { ORIENTATION_DEFAULT_TASKS } from '$lib/config';
+import { getJson, putJson } from '#lib/server/kv.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { ORIENTATION_DEFAULT_TASKS } from '#lib/config.js';
 
 /** The caller asked for a config key that is not in the registry. */
 export class UnknownSiteConfigKeyError extends DomainError {
@@ -83,7 +83,7 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	'ballot.memberOfRecordDays': 60,
 
 	// Only keys something reads live here. The org's name, short name, contact
-	// email and timezone were staff-editable and read by nothing: `$lib/config`
+	// email and timezone were staff-editable and read by nothing: `#lib/config.js`
 	// holds SITE_NAME and DEFAULT_TIMEZONE, and the staff contact address is the
 	// STAFF_CONTACT_EMAIL binding. `site-config-consumers.spec.ts` fails on a key
 	// added here with no reader, which is how those four survived for so long.

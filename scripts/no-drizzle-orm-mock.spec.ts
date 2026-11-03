@@ -6,7 +6,7 @@ import { sourceFiles } from './lib/source-files';
  * No spec mocks `drizzle-orm` or one of its subpaths. A mock of it is a second
  * copy of drizzle's export list, so a new operator in a service breaks sibling
  * specs, and a mocked operator agrees with any WHERE. A spec that needs SQL
- * uses `migratedSqlite()`; one that does not mocks `$lib/server/db` (#2050).
+ * uses `migratedSqlite()`; one that does not mocks `#lib/server/db/index.js` (#2050).
  */
 const MOCK = /\bvi\.(?:do)?[mM]ock\(\s*['"`]drizzle-orm(?:\/[^'"`]*)?['"`]/;
 
@@ -28,7 +28,7 @@ describe('no drizzle-orm mocks', () => {
 		]) {
 			expect(MOCK.test(line), line).toBe(true);
 		}
-		expect(MOCK.test("vi.mock('$lib/server/db', () => ({ db: testDb }));")).toBe(false);
+		expect(MOCK.test("vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));")).toBe(false);
 	});
 
 	it('no file mocks drizzle-orm', () => {

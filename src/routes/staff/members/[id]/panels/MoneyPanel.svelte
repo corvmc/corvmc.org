@@ -1,32 +1,32 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import {
 		getUserMembership,
 		getUserCredits,
 		getUserCreditHistory,
 		getUserPayments,
 		getUserPage
-	} from '$lib/remote/users.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import Table from '$lib/components/ui/Table.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import CopyableId from '$lib/components/ui/CopyableId.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { AdjustCreditsAction } from '$lib/components/actions';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { creditsToHours, creditCompCeiling, hasCapability } from '$lib/config';
-	import { getStaffLayout } from '$lib/remote/layout.remote';
+	} from '#lib/remote/users.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import Table from '#lib/components/ui/Table.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import CopyableId from '#lib/components/ui/CopyableId.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { AdjustCreditsAction } from '#lib/components/actions/index.js';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { creditsToHours, creditCompCeiling, hasCapability } from '#lib/config.js';
+	import { getStaffLayout } from '#lib/remote/layout.remote.js';
 	import {
 		formatCents,
 		formatDateTimeShort,
 		formatDateShortYear,
 		titleCase
-	} from '$lib/utils/format';
-	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
+	} from '#lib/utils/format.js';
+	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
 
 	let { id }: { id: string } = $props();
 

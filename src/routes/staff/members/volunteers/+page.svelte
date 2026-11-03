@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * Everybody who signed up, as one roster (#1934). The under-18 queue is the
@@ -10,37 +10,37 @@
 	 * Each row carries exactly one action, resolved by what is outstanding — a row
 	 * offering Confirm, Chase and Log Hours at once has not decided what it is for.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import BadgeList from '$lib/components/ui/BadgeList.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Roster from '$lib/components/roster/Roster.svelte';
-	import { rosterState } from '$lib/components/roster/roster-state.svelte';
-	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
-	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
-	import CertificationOptions from '$lib/components/volunteer/CertificationOptions.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import BadgeList from '#lib/components/ui/BadgeList.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Roster from '#lib/components/roster/Roster.svelte';
+	import { rosterState } from '#lib/components/roster/roster-state.svelte.js';
+	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
+	import LogHoursForMemberAction from '#lib/components/volunteer/LogHoursForMemberAction.svelte';
+	import CertificationOptions from '#lib/components/volunteer/CertificationOptions.svelte';
 	import MemberRecordPanel from '../[id]/MemberRecordPanel.svelte';
 	import MemberViews from '../MemberViews.svelte';
 	import { subline, type RosterRow } from './subline';
 	import { resolve } from '$app/paths';
-	import { oneOf, text } from '$lib/urlState.svelte';
-	import { withQuery } from '$lib/utils/with-query';
-	import { formatDateShort } from '$lib/utils/format';
+	import { oneOf, text } from '#lib/urlState.svelte.js';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import {
 		formatVolunteerHours,
 		volunteerProfileStatuses,
 		volunteerProfileStatusLabels
-	} from '$lib/config';
+	} from '#lib/config.js';
 	import {
 		getStaffVolunteers,
 		getStaffVolunteerEmails,
 		getVolunteerStatusCounts,
 		confirmSignup,
 		approveVolunteerSignup
-	} from '$lib/remote/volunteer.remote';
+	} from '#lib/remote/volunteer.remote.js';
 
 	type StatusFilter = (typeof volunteerProfileStatuses)[number] | '';
 

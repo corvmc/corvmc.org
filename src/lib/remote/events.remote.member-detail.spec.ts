@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // `getMemberEventDetail` is callable by id from anywhere, so it answers only for
 // a signed-in member and only for a listing the public page would show (#2254).
@@ -7,7 +7,7 @@ import { mockUser } from '$lib/server/db/test-factory';
 let signedIn = true;
 const unauthenticated = () => Object.assign(new Error('401'), { status: 401 });
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: vi.fn(async () => false),
 	requireCapability: vi.fn(async () => {
 		throw Object.assign(new Error('403'), { status: 403 });
@@ -37,19 +37,19 @@ const getById = vi.fn(async (id: string) => ({
 	externalTicketUrl: null,
 	status
 }));
-vi.mock('$lib/server/event/event-service', async (orig) => ({
+vi.mock('#lib/server/event/event-service.js', async (orig) => ({
 	...(await orig<object>()),
 	getById: (id: string) => getById(id),
 	getEventLineup: vi.fn(async () => []),
 	listUpcoming: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/event/rsvp-service', async (orig) => ({
+vi.mock('#lib/server/event/rsvp-service.js', async (orig) => ({
 	...(await orig<object>()),
 	countRsvps: vi.fn(async () => 0),
 	getUserRsvp: vi.fn(async () => null)
 }));
-vi.mock('$lib/server/ticket/ticket-seller', () => ({ sellerFor: vi.fn(async () => null) }));
-vi.mock('$lib/server/finance/subscription-service', async (orig) => ({
+vi.mock('#lib/server/ticket/ticket-seller.js', () => ({ sellerFor: vi.fn(async () => null) }));
+vi.mock('#lib/server/finance/subscription-service.js', async (orig) => ({
 	...(await orig<object>()),
 	isSustainingMember: vi.fn(async () => false)
 }));
@@ -68,7 +68,7 @@ vi.mock('$app/server', () => ({
 	query: (...args: unknown[]) => mark(typeof args[0] === 'function' ? args[0] : args[1], 'query')
 }));
 
-const { getMemberEventDetail } = (await import('$lib/remote/events.remote')) as any;
+const { getMemberEventDetail } = (await import('#lib/remote/events.remote.js')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

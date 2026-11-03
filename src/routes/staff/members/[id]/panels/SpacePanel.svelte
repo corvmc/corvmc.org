@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { getUserReservations } from '$lib/remote/users.remote';
-	import { getUserRecurringSeries } from '$lib/remote/reservations.remote';
-	import { getUserLoans } from '$lib/remote/inventory.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import Table from '$lib/components/ui/Table.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import BookerTypeIcon from '$lib/components/reservations/BookerTypeIcon.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getUserReservations } from '#lib/remote/users.remote.js';
+	import { getUserRecurringSeries } from '#lib/remote/reservations.remote.js';
+	import { getUserLoans } from '#lib/remote/inventory.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import Table from '#lib/components/ui/Table.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import BookerTypeIcon from '#lib/components/reservations/BookerTypeIcon.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateTimeShort, formatDateShortYear, formatTimeRange } from '$lib/utils/format';
+	import { formatDateTimeShort, formatDateShortYear, formatTimeRange } from '#lib/utils/format.js';
 
 	import OrientationCard from './OrientationCard.svelte';
 

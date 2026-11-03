@@ -1,15 +1,15 @@
 <script lang="ts" module>
-	import type { getProjectActivity } from '$lib/remote/projects.remote';
+	import type { getProjectActivity } from '#lib/remote/projects.remote.js';
 
 	export type ActivityPage = NonNullable<Awaited<ReturnType<typeof getProjectActivity>>>;
 </script>
 
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { RemoteQuery } from '@sveltejs/kit';
 	import { resolve } from '$app/paths';
-	import { ActivityFeedCard, type ActivityRow } from '$lib/components/ui/ActivityFeed';
-	import { surfaces } from '$lib/config';
+	import { ActivityFeedCard, type ActivityRow } from '#lib/components/ui/ActivityFeed/index.js';
+	import { surfaces } from '#lib/config.js';
 
 	/** A project's or a work order's history, beside the page's load-bearing query. */
 	let {

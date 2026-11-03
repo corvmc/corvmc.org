@@ -1,24 +1,24 @@
 import { z } from 'zod';
-import { countStaffQueues } from '$lib/server/user/staff-queue-counts';
+import { countStaffQueues } from '#lib/server/user/staff-queue-counts.js';
 import { error, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
-import { listForUser, getBySlug, getUserRole } from '$lib/server/band/band-service';
-import { resolveBandSlug } from '$lib/server/band/band-address-service';
+import { listForUser, getBySlug, getUserRole } from '#lib/server/band/band-service.js';
+import { resolveBandSlug } from '#lib/server/band/band-address-service.js';
 import {
 	capabilitySet,
 	committeeCapabilitiesFor,
 	isElevated,
 	positionsFor
-} from '$lib/server/authorization';
-import { hasLoanableItems } from '$lib/server/inventory/item-service';
-import { getAllFeatureFlags } from '$lib/server/feature-flags';
-import { countUnifiedUnread } from '$lib/server/inbox/unified-service';
-import { countPendingRequests } from '$lib/server/inbox/direct-service';
-import { acceptsDirectMessages } from '$lib/server/moderation/moderation-service';
-import { getForUser, getUnreadCount } from '$lib/server/notification/in-app-service';
-import { resolveImageUrl } from '$lib/server/storage';
-import { captureException } from '$lib/server/sentry';
-import { safeReturnPath, signInHref } from '$lib/utils/sign-in';
+} from '#lib/server/authorization.js';
+import { hasLoanableItems } from '#lib/server/inventory/item-service.js';
+import { getAllFeatureFlags } from '#lib/server/feature-flags.js';
+import { countUnifiedUnread } from '#lib/server/inbox/unified-service.js';
+import { countPendingRequests } from '#lib/server/inbox/direct-service.js';
+import { acceptsDirectMessages } from '#lib/server/moderation/moderation-service.js';
+import { getForUser, getUnreadCount } from '#lib/server/notification/in-app-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { captureException } from '#lib/server/sentry.js';
+import { safeReturnPath, signInHref } from '#lib/utils/sign-in.js';
 
 /** The authenticated caller, as the three layout queries below have already narrowed it. */
 type SignedInUser = NonNullable<App.Locals['user']>;

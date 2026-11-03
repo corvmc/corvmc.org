@@ -1,5 +1,5 @@
 import { addDays, format, isBefore, isSameDay, nextMonday } from 'date-fns';
-import { formatDate } from '$lib/utils/format';
+import { formatDate } from '#lib/utils/format.js';
 
 export type SnoozePreset = {
 	/** The row's label, and its identity — stable whatever date it resolves to. */

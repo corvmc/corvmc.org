@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { titleCase } from '$lib/utils/format';
+import { titleCase } from '#lib/utils/format.js';
 import {
 	CONFIRMATION_WINDOW_DAYS,
 	LONG_TEXT_MAX,
@@ -8,31 +8,35 @@ import {
 	creditCompCeiling,
 	creditsToHours,
 	hoursToCredits
-} from '$lib/config';
-import { mapDomainError } from '$lib/server/errors';
+} from '#lib/config.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { getUserTotals } from '$lib/server/user/user-totals-service';
-import { listAllStaffUsers, listStaffUsers, userRosterFilters } from '$lib/server/user/user-roster';
-import { rosterEmails } from '$lib/server/roster/roster';
+import { getUserTotals } from '#lib/server/user/user-totals-service.js';
+import {
+	listAllStaffUsers,
+	listStaffUsers,
+	userRosterFilters
+} from '#lib/server/user/user-roster.js';
+import { rosterEmails } from '#lib/server/roster/roster.js';
 
-import { requireCapability, can, requireUser } from '$lib/server/authorization';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { role, modelHasRole } from '$lib/server/db/schema/authorization';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { groupMember } from '$lib/server/db/schema/group';
-import { group } from '$lib/server/db/schema/group';
+import { requireCapability, can, requireUser } from '#lib/server/authorization.js';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { eq, or, gt, gte, lte, ne, inArray, isNull, sql, and } from 'drizzle-orm';
-import { getUserRoles } from '$lib/server/authorization';
-import { positionChangeRefusal } from '$lib/server/access/position-service';
-import { toEventRef } from '$lib/server/entity/refs';
-import { jsonArrayField } from '$lib/utils/zod-json';
-import { auditFeedItem } from '$lib/utils/audit-display';
-import { FEED_MAX, feedLimit, type FeedPage } from '$lib/types/activity';
-import { listByUser, list as listPayments } from '$lib/server/finance/payment-cache-service';
+import { getUserRoles } from '#lib/server/authorization.js';
+import { positionChangeRefusal } from '#lib/server/access/position-service.js';
+import { toEventRef } from '#lib/server/entity/refs.js';
+import { jsonArrayField } from '#lib/utils/zod-json.js';
+import { auditFeedItem } from '#lib/utils/audit-display.js';
+import { FEED_MAX, feedLimit, type FeedPage } from '#lib/types/activity.js';
+import { listByUser, list as listPayments } from '#lib/server/finance/payment-cache-service.js';
 import {
 	getAllBalances,
 	getBalance,
@@ -41,18 +45,21 @@ import {
 	deductCredits,
 	listTransactions,
 	InsufficientCreditsError
-} from '$lib/server/finance/credit-service';
-import { getMemberSubscription, mapDbSubscription } from '$lib/server/finance/subscription-service';
-import { listUpcoming } from '$lib/server/event/event-service';
-import { getUserOverview as getUserOverviewService } from '$lib/server/user/user-overview-service';
-import { listNeedsYou } from '$lib/server/user/needs-you-service';
+} from '#lib/server/finance/credit-service.js';
+import {
+	getMemberSubscription,
+	mapDbSubscription
+} from '#lib/server/finance/subscription-service.js';
+import { listUpcoming } from '#lib/server/event/event-service.js';
+import { getUserOverview as getUserOverviewService } from '#lib/server/user/user-overview-service.js';
+import { listNeedsYou } from '#lib/server/user/needs-you-service.js';
 import {
 	coveredByFreeHours,
 	freeHoursResetAt
-} from '$lib/server/reservation/reservation-credit-service';
-import { getReservationConfig } from '$lib/server/reservation/config';
-import { listForMember as listReservationsForMember } from '$lib/server/reservation/reservation-service';
-import { listActiveSessions, getLastLoginAt } from '$lib/server/user/user-service';
+} from '#lib/server/reservation/reservation-credit-service.js';
+import { getReservationConfig } from '#lib/server/reservation/config.js';
+import { listForMember as listReservationsForMember } from '#lib/server/reservation/reservation-service.js';
+import { listActiveSessions, getLastLoginAt } from '#lib/server/user/user-service.js';
 import {
 	inviteMember,
 	listInviteGroups,
@@ -60,7 +67,7 @@ import {
 	memberInviteStatusFilters,
 	resendMemberInvite,
 	revokeMemberInvite
-} from '$lib/server/user/member-invite-service';
+} from '#lib/server/user/member-invite-service.js';
 import {
 	deactivateUser as deactivateUserService,
 	deactivateUsers as deactivateUsersService,
@@ -68,15 +75,15 @@ import {
 	purgeUser as purgeUserService,
 	banUser as banUserService,
 	unbanUser as unbanUserService
-} from '$lib/server/user/user-service';
-import { resolveImageUrl } from '$lib/server/storage';
-import { recordAuditEntry, listAuditEntriesForSubject } from '$lib/server/audit/audit-service';
-import type { AuditProfileField } from '$lib/types/audit';
-import { findMatchesFor, isProfileComplete } from '$lib/server/directory/directory-service';
+} from '#lib/server/user/user-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { recordAuditEntry, listAuditEntriesForSubject } from '#lib/server/audit/audit-service.js';
+import type { AuditProfileField } from '#lib/types/audit.js';
+import { findMatchesFor, isProfileComplete } from '#lib/server/directory/directory-service.js';
 import { startOfWeek, endOfWeek } from 'date-fns';
-import type { CreditType } from '$lib/server/db/schema/finance';
+import type { CreditType } from '#lib/server/db/schema/finance.js';
 import type { BatchItem } from 'drizzle-orm/batch';
-import { parseBirthDateInput } from '$lib/utils/age';
+import { parseBirthDateInput } from '#lib/utils/age.js';
 
 // ---------------------------------------------------------------------------
 // Staff list queries
@@ -149,7 +156,7 @@ export const getStaffCredits = query(staffCreditsFilters, async (filters) => {
 			search: filters.search || undefined,
 			creditType: (filters.creditType || undefined) as CreditType | undefined,
 			source: (filters.source ||
-				undefined) as import('$lib/server/finance/credit-service').CreditTransactionFilters['source'],
+				undefined) as import('#lib/server/finance/credit-service.js').CreditTransactionFilters['source'],
 			from: filters.from || undefined,
 			to: filters.to || undefined
 		},

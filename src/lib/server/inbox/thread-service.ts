@@ -1,12 +1,12 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	inboxThread,
 	inboxMessage,
 	inboxNote,
 	inboxParticipant,
 	inboxThreadTag
-} from '$lib/server/db/schema/inbox';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/inbox.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { alias } from 'drizzle-orm/sqlite-core';
 import {
 	eq,
@@ -23,14 +23,14 @@ import {
 	notInArray,
 	sql
 } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
+import { containsLiteral } from '#lib/server/db/like.js';
 import type { SQL } from 'drizzle-orm';
-import type { InboxChannel, InboxThreadStatus } from '$lib/server/db/schema/inbox';
-import type { PaginationInput } from '$lib/server/db/paginate';
-import { paginate } from '$lib/server/db/paginate';
+import type { InboxChannel, InboxThreadStatus } from '#lib/server/db/schema/inbox.js';
+import type { PaginationInput } from '#lib/server/db/paginate.js';
+import { paginate } from '#lib/server/db/paginate.js';
 import { z } from 'zod';
-import { contactSubjects, inboxThreadStatuses } from '$lib/config';
-import type { InboxView } from '$lib/config';
+import { contactSubjects, inboxThreadStatuses } from '#lib/config.js';
+import type { InboxView } from '#lib/config.js';
 
 /**
  * The one expression that keeps conversations the collective is not party to out

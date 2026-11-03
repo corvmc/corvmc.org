@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { onMount } from 'svelte';
 	import type {
 		StripeCheckoutElementsSdk,
 		StripeCheckoutSavedPaymentMethod,
 		Appearance
 	} from '@stripe/stripe-js';
-	import { loadStripeOrReport, PAYMENTS_UNAVAILABLE } from '$lib/stripe';
-	import { reportError } from '$lib/report-error';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { loadStripeOrReport, PAYMENTS_UNAVAILABLE } from '#lib/stripe.js';
+	import { reportError } from '#lib/report-error.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 
 	/**
 	 * Stripe's Payment Element, mounted on our own page.

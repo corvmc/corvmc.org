@@ -1,8 +1,8 @@
 import { and, asc, count, desc, gt, gte, lt, lte, type SQL } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { closure } from '$lib/server/db/schema/reservation';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginatedResult } from '$lib/server/db/paginate';
+import { db } from '#lib/server/db/index.js';
+import { closure } from '#lib/server/db/schema/reservation.js';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginatedResult } from '#lib/server/db/paginate.js';
 
 /**
  * Closures as rows of the staff reservations list (#1833): one timeline of

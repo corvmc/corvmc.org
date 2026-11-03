@@ -9,18 +9,18 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: testDb,
 	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
 }));
 
 const emit = vi.fn(async (..._args: unknown[]) => undefined);
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit } }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit } }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const { cancelShiftsForEvent, cancelShiftsForProduction, cancelDeliverablesForEvent } =
 	await import('./show-cancellation');
@@ -38,11 +38,11 @@ const PROD = 'prod-1';
 const inHours = (n: number) => new Date(Date.now() + n * 3_600_000);
 
 async function seed() {
-	const { user } = await import('$lib/server/db/schema/authentication');
-	const { eventListing } = await import('$lib/server/db/schema/event');
-	const { production } = await import('$lib/server/db/schema/production');
+	const { user } = await import('#lib/server/db/schema/authentication.js');
+	const { eventListing } = await import('#lib/server/db/schema/event.js');
+	const { production } = await import('#lib/server/db/schema/production.js');
 	const { volunteerRole, workOrder, volunteerSignup } =
-		await import('$lib/server/db/schema/volunteer');
+		await import('#lib/server/db/schema/volunteer.js');
 
 	await testDb.insert(user).values(
 		[STAFF, ADA, BO].map((id) => ({
@@ -52,7 +52,7 @@ async function seed() {
 			emailVerified: false
 		})) as never
 	);
-	const { project } = await import('$lib/server/db/schema/project');
+	const { project } = await import('#lib/server/db/schema/project.js');
 	await testDb.insert(project).values({ id: 'proj-show', name: 'A show', kind: 'production' });
 	await testDb
 		.insert(production)

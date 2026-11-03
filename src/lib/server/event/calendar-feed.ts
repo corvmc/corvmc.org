@@ -1,9 +1,9 @@
 import ical, { ICalCalendarMethod, ICalEventStatus } from 'ical-generator';
 import { Feed } from 'feed';
 import xss from 'xss';
-import { endsForExport, UID_DOMAIN } from '$lib/utils/calendar';
-import { formatDate } from '$lib/utils/format';
-import { placeLine } from '$lib/utils/place';
+import { endsForExport, UID_DOMAIN } from '#lib/utils/calendar.js';
+import { formatDate } from '#lib/utils/format.js';
+import { placeLine } from '#lib/utils/place.js';
 
 /** The listing fields both feeds read. `CalendarEventRow` satisfies it. */
 export interface FeedEvent {

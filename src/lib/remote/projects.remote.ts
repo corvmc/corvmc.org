@@ -2,21 +2,21 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { can, requireCapability, requireUser } from '$lib/server/authorization';
-import { requireProjectCommittee } from '$lib/server/group/group-context';
-import { getMemberGroup } from '$lib/remote/groups.remote';
-import { mapDomainError } from '$lib/server/errors';
-import { requireSurface } from '$lib/surfaces';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
+import { requireProjectCommittee } from '#lib/server/group/group-context.js';
+import { getMemberGroup } from '#lib/remote/groups.remote.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { requireSurface } from '#lib/surfaces.js';
 import {
 	projectStatuses,
 	projectViews,
 	DEFAULT_TIMEZONE,
 	VOLUNTEER_SHIFT_NOTES_MAX,
 	surfaces
-} from '$lib/config';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { db } from '$lib/server/db';
-import { suggestion } from '$lib/server/db/schema/suggestion';
+} from '#lib/config.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { db } from '#lib/server/db/index.js';
+import { suggestion } from '#lib/server/db/schema/suggestion.js';
 import { asc, eq } from 'drizzle-orm';
 import {
 	attachToProject,
@@ -33,18 +33,18 @@ import {
 	setProjectStatus,
 	startProjectFromSuggestion,
 	updateProject
-} from '$lib/server/project/project-service';
+} from '#lib/server/project/project-service.js';
 import {
 	listProjectProgress,
 	listProjectTasks,
 	scopeContractorMoney,
 	requireTaskInProject
-} from '$lib/server/project/project-task-service';
-import { ACTIVITY_MAX, listActivity } from '$lib/server/project/project-activity';
-import { getProjectOrigin, startProjectFromBallot } from '$lib/server/project/decision-chain';
-import { applyDutyList, listDutyLists } from '$lib/server/volunteer/duty-list-service';
-import { createWorkOrder } from '$lib/server/volunteer/work-order-service';
-import { publish as publishEvent } from '$lib/server/event/event-service';
+} from '#lib/server/project/project-task-service.js';
+import { ACTIVITY_MAX, listActivity } from '#lib/server/project/project-activity.js';
+import { getProjectOrigin, startProjectFromBallot } from '#lib/server/project/decision-chain.js';
+import { applyDutyList, listDutyLists } from '#lib/server/volunteer/duty-list-service.js';
+import { createWorkOrder } from '#lib/server/volunteer/work-order-service.js';
+import { publish as publishEvent } from '#lib/server/event/event-service.js';
 
 /**
  * Projects — staff surfaces, plus one committee write.

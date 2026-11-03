@@ -1,37 +1,37 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import MoneyField from '#lib/components/ui/Form/MoneyField.svelte';
 	import { IconCheck, IconX, IconArrowBackUp, IconTable } from '@tabler/icons-svelte';
-	import { formatCents, formatDateTime, toLocalDateTime } from '$lib/utils/format';
+	import { formatCents, formatDateTime, toLocalDateTime } from '#lib/utils/format.js';
 	import {
 		marketVendorStatuses,
 		marketVendorStatusLabels,
 		type MarketVendorStatus
-	} from '$lib/config';
-	import PreviousMarketNote from '$lib/components/market/PreviousMarketNote.svelte';
+	} from '#lib/config.js';
+	import PreviousMarketNote from '#lib/components/market/PreviousMarketNote.svelte';
 	import {
 		decideVendorForm,
 		getStaffMarketVendors,
 		openMarketDayForm,
 		setTableLabelForm,
 		withdrawVendorForm
-	} from '$lib/remote/market.remote';
+	} from '#lib/remote/market.remote.js';
 
 	/**
 	 * A market day's vendor applications. docs/specs/shipped/market-vendors-spec.md.

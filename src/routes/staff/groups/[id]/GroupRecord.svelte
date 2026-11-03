@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { GroupKind } from '$lib/config';
+	import type { GroupKind } from '#lib/config.js';
 	import BandRecord from './BandRecord.svelte';
 	import ClubRecord from './ClubRecord.svelte';
 	import CommitteeRecord from './CommitteeRecord.svelte';

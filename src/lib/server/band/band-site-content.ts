@@ -1,16 +1,16 @@
-import { db } from '$lib/server/db';
-import { groupMember } from '$lib/server/db/schema/group';
-import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
-import { user } from '$lib/server/db/schema/authentication';
-import { listFor as listMediaFor } from '$lib/server/media/media-service';
-import { resolveImageUrl } from '$lib/server/storage';
+import { db } from '#lib/server/db/index.js';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { directoryEntry, directoryTag } from '#lib/server/db/schema/directory.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { listFor as listMediaFor } from '#lib/server/media/media-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
 import {
 	listBandEventsUpcoming,
 	listBandEventsPast,
 	type EventRow
-} from '$lib/server/event/event-service';
+} from '#lib/server/event/event-service.js';
 import { eq, and } from 'drizzle-orm';
-import type { Block } from '$lib/server/db/schema/band-page';
+import type { Block } from '#lib/server/db/schema/band-page.js';
 
 /**
  * Everything `BandSiteRenderer` needs beyond the block config.

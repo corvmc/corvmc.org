@@ -5,7 +5,7 @@ import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 // Mocks
 // ---------------------------------------------------------------------------
 //
-// `$lib/server/db` and `$lib/server/private-storage` are faked; `storage-keys`
+// `#lib/server/db/index.js` and `#lib/server/private-storage.js` are faked; `storage-keys`
 // is NOT. Those are pure functions with no bucket, and mocking them would
 // replace the sanitization this module is supposed to apply with a stub that
 // always agrees.
@@ -50,7 +50,7 @@ function selectChain(record: { where?: unknown }) {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => {
 			const record: { op: 'select'; where?: unknown } = { op: 'select' };
@@ -99,9 +99,9 @@ const putPrivateObject = vi.fn(async (key: string, _body: ArrayBuffer, _type: st
 	return key;
 });
 
-vi.mock('$lib/server/private-storage', async () => {
-	const actual = await vi.importActual<typeof import('$lib/server/private-storage')>(
-		'$lib/server/private-storage'
+vi.mock('#lib/server/private-storage.js', async () => {
+	const actual = await vi.importActual<typeof import('#lib/server/private-storage.js')>(
+		'#lib/server/private-storage.js'
 	);
 	return {
 		// The real validator and the real constants: policy is what this module is
@@ -132,7 +132,7 @@ const {
 	DOCUMENT_QUOTA_BYTES,
 	DOCUMENT_QUOTA_FILES
 } = await import('./file-service');
-const { deletePrivateObject } = await import('$lib/server/private-storage');
+const { deletePrivateObject } = await import('#lib/server/private-storage.js');
 
 // ---------------------------------------------------------------------------
 // Helpers

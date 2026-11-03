@@ -1,7 +1,7 @@
-import { countCommitteeUnfinished } from '$lib/server/volunteer/deliverables-service';
+import { countCommitteeUnfinished } from '#lib/server/volunteer/deliverables-service.js';
 import { z } from 'zod';
 import { historyArgs } from './_history';
-import { listAuditFeed } from '$lib/server/audit/audit-feed';
+import { listAuditFeed } from '#lib/server/audit/audit-feed.js';
 import { error, invalid, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
@@ -10,19 +10,19 @@ import {
 	SHORT_TEXT_MAX,
 	groupJoinPolicies,
 	type GroupApplicationStatus
-} from '$lib/config';
-import { mapDomainError } from '$lib/server/errors';
-import { getClubTotals } from '$lib/server/group/group-totals-service';
-import { setCommitteeCapabilityGrants } from '$lib/server/capability/capability-grant-service';
-import { allowlisted } from '$lib/server/capability/grant-rules';
-import { can, requireCapability, requireUser } from '$lib/server/authorization';
-import { requireGroupRole, requireProgramRole } from '$lib/server/group/group-context';
+} from '#lib/config.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { getClubTotals } from '#lib/server/group/group-totals-service.js';
+import { setCommitteeCapabilityGrants } from '#lib/server/capability/capability-grant-service.js';
+import { allowlisted } from '#lib/server/capability/grant-rules.js';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
+import { requireGroupRole, requireProgramRole } from '#lib/server/group/group-context.js';
 import {
 	hasOpenApplication,
 	listForApplicant,
 	listForGroup
-} from '$lib/server/group/application-service';
-import { directoryVisibilities } from '$lib/server/db/schema/directory';
+} from '#lib/server/group/application-service.js';
+import { directoryVisibilities } from '#lib/server/db/schema/directory.js';
 import {
 	acceptInvitation,
 	declineInvitation,
@@ -37,30 +37,30 @@ import {
 	updateMember,
 	updateOwnMembership,
 	BandMemberExistsError
-} from '$lib/server/band/band-service';
+} from '#lib/server/band/band-service.js';
 import {
 	createInvite as createEmailInvite,
 	listForGroup as listEmailInvites,
 	listInvitesForEmail,
 	revoke as revokeEmailInviteService
-} from '$lib/server/group/group-invite-service';
+} from '#lib/server/group/group-invite-service.js';
 import {
 	importRoster,
 	parseRosterImport,
 	RosterImportInputError
-} from '$lib/server/group/roster-import-service';
-import { resolveImageUrl } from '$lib/server/storage';
+} from '#lib/server/group/roster-import-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
 import {
 	getMuteState,
 	listForManager,
 	listPublished
-} from '$lib/server/group/announcement-service';
-import { listGroupSessions } from '$lib/server/event/event-service';
-import { listCommitteeProjectEvents, listProjects } from '$lib/server/project/project-service';
-import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
-import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
-import { listMaintenanceSchedules } from '$lib/server/volunteer/maintenance-schedule-service';
-import { list as listFiles, getUsage as getDocumentUsage } from '$lib/server/group/file-service';
+} from '#lib/server/group/announcement-service.js';
+import { listGroupSessions } from '#lib/server/event/event-service.js';
+import { listCommitteeProjectEvents, listProjects } from '#lib/server/project/project-service.js';
+import { listDutyLists } from '#lib/server/volunteer/duty-list-service.js';
+import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
+import { listMaintenanceSchedules } from '#lib/server/volunteer/maintenance-schedule-service.js';
+import { list as listFiles, getUsage as getDocumentUsage } from '#lib/server/group/file-service.js';
 import {
 	STAFF_GROUP_KINDS,
 	createGroup,
@@ -77,7 +77,7 @@ import {
 	setChairRole,
 	updateGroupProfile,
 	updateGroupSettings
-} from '$lib/server/group/group-service';
+} from '#lib/server/group/group-service.js';
 
 /**
  * `/staff/clubs` and `/staff/committees` — the only places a club or committee is made.

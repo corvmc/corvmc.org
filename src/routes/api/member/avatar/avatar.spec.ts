@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockSetUserAvatar = vi.fn().mockResolvedValue('users/avatars/user-1.png');
 const mockClearUserAvatar = vi.fn().mockResolvedValue(undefined);
 
-vi.mock('$lib/server/directory/profile-service', () => ({
+vi.mock('#lib/server/directory/profile-service.js', () => ({
 	setUserAvatar: (...args: unknown[]) => mockSetUserAvatar(...args),
 	clearUserAvatar: (...args: unknown[]) => mockClearUserAvatar(...args)
 }));

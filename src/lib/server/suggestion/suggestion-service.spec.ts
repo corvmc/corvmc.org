@@ -32,7 +32,7 @@ const batchCalled = vi.fn();
 const onConflictDoNothing = vi.fn();
 const onConflictDoUpdate = vi.fn();
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({
@@ -74,10 +74,10 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const emit = vi.fn(() => Promise.resolve());
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...a: unknown[]) => emit(...(a as [])), on: vi.fn() }
 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 // Posting standing is one shared service now; here it is a mock, so the queue
 // positions below are about suggestions and nothing else.
@@ -85,12 +85,12 @@ vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 // `const` would still be in its temporal dead zone when the mock factory runs.
 const { getStandingMock } = vi.hoisted(() => ({ getStandingMock: vi.fn() }));
 const GOOD_STANDING = { status: 'none', reason: null, triggeringFlagId: null, updatedAt: null };
-vi.mock('$lib/server/moderation/standing-service', () => ({
+vi.mock('#lib/server/moderation/standing-service.js', () => ({
 	getStanding: (...a: unknown[]) => getStandingMock(...(a as []))
 }));
 
 const { fileStaffActionMock } = vi.hoisted(() => ({ fileStaffActionMock: vi.fn() }));
-vi.mock('$lib/server/flag/flag-service', () => ({
+vi.mock('#lib/server/flag/flag-service.js', () => ({
 	fileStaffAction: (...a: unknown[]) => fileStaffActionMock(...(a as []))
 }));
 
@@ -113,7 +113,7 @@ import {
 	SuggestionMergeError,
 	SuggestionValidationError
 } from './suggestion-service';
-import { SUGGESTION_TITLE_MAX, SUGGESTION_BODY_MAX } from '$lib/config';
+import { SUGGESTION_TITLE_MAX, SUGGESTION_BODY_MAX } from '#lib/config.js';
 
 beforeEach(() => {
 	selectResultQueue = [];

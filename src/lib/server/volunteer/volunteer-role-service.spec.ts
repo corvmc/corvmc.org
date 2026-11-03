@@ -29,7 +29,7 @@ function chainable(result?: unknown[]) {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({
@@ -72,7 +72,7 @@ import {
 	VOLUNTEER_ROLE_DESCRIPTION_MAX,
 	VOLUNTEER_ROLE_NAME_MAX,
 	VOLUNTEER_SHIFT_MAX_CAPACITY
-} from '$lib/config';
+} from '#lib/config.js';
 
 const ROLE = { id: 'role-1', name: 'Front Desk', isActive: true, displayOrder: 0 };
 

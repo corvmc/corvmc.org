@@ -1,12 +1,18 @@
 import { and, desc, eq, lte, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { eventListing } from '$lib/server/db/schema/event';
-import { media, mediaAttachment } from '$lib/server/db/schema/media';
-import { DomainError } from '$lib/server/domain-error';
-import { attach, detach, listFor, record, setDescription } from '$lib/server/media/media-service';
-import { resolveImageUrl, uploadFile, validateUpload } from '$lib/server/storage';
-import { mediaKey } from '$lib/server/storage-keys';
-import { markdownExcerpt } from '$lib/utils/markdown';
+import { db } from '#lib/server/db/index.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { media, mediaAttachment } from '#lib/server/db/schema/media.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import {
+	attach,
+	detach,
+	listFor,
+	record,
+	setDescription
+} from '#lib/server/media/media-service.js';
+import { resolveImageUrl, uploadFile, validateUpload } from '#lib/server/storage.js';
+import { mediaKey } from '#lib/server/storage-keys.js';
+import { markdownExcerpt } from '#lib/utils/markdown.js';
 
 /**
  * Recap photos: an event's `gallery` slot on `media_attachment`.

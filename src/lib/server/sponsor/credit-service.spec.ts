@@ -18,7 +18,7 @@ function chainable(kind: string) {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable('select')),
 		insert: vi.fn(() => chainable('insert')),
@@ -27,10 +27,10 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const uploadFile = vi.fn(async () => undefined);
-vi.mock('$lib/server/storage', () => ({ uploadFile }));
+vi.mock('#lib/server/storage.js', () => ({ uploadFile }));
 const replaceSlot = vi.fn(async () => ({ mediaId: 'm1', attachmentId: 'a1' }));
 const detachSlot = vi.fn(async () => undefined);
-vi.mock('$lib/server/media/media-service', () => ({ replaceSlot, detachSlot }));
+vi.mock('#lib/server/media/media-service.js', () => ({ replaceSlot, detachSlot }));
 
 const {
 	toCredits,

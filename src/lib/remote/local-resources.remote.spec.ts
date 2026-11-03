@@ -8,10 +8,10 @@ const requireCapability = vi.fn(async (cap: string) => {
 	if (!held.has(cap)) throw new Error(`403: ${cap}`);
 	return { id: 'acting-staff' };
 });
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap)
 }));
-vi.mock('$lib/server/turnstile', () => ({ verifyTurnstile: vi.fn(async () => true) }));
+vi.mock('#lib/server/turnstile.js', () => ({ verifyTurnstile: vi.fn(async () => true) }));
 
 const TIP = { id: 'lr-9', name: 'Fret Shop', submitterEmail: 'fan@example.com' };
 const service = {
@@ -23,7 +23,7 @@ const service = {
 	LOCAL_RESOURCE_FIELD_MAX: 200,
 	LOCAL_RESOURCE_NAME_MAX: 120
 };
-vi.mock('$lib/server/local-resource/local-resource-service', () => service);
+vi.mock('#lib/server/local-resource/local-resource-service.js', () => service);
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: {} }),

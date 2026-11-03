@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { generateRecurring } from '$lib/server/reservation/generation-job';
+import { generateRecurring } from '#lib/server/reservation/generation-job.js';
 
 /**
  * Cron endpoint for generating recurring instances.

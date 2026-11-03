@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import type { getProjectsPage } from '$lib/remote/projects.remote';
-	import { isProjectArchived, type ProjectView } from '$lib/config';
-	import { formatCents, formatDateShort } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import type { getProjectsPage } from '#lib/remote/projects.remote.js';
+	import { isProjectArchived, type ProjectView } from '#lib/config.js';
+	import { formatCents, formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
-	import { rowLink } from '$lib/actions/row-link';
+	import { rowLink } from '#lib/actions/row-link.js';
 
 	type ProjectRow = Awaited<ReturnType<typeof getProjectsPage>>['projects'][number];
 

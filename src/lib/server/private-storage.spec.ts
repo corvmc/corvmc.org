@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 const publicPut = vi.fn(async () => undefined);
 const publicGet = vi.fn(async (_key: string) => null as unknown);
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	getBucket: () => ({ put: publicPut, get: publicGet })
 }));
 

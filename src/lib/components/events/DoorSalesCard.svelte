@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { formatCents } from '$lib/utils/format';
-	import { withQuery } from '$lib/utils/with-query';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { formatCents } from '#lib/utils/format.js';
+	import { withQuery } from '#lib/utils/with-query.js';
 
 	/**
 	 * What this show took at the door (#1809): tapped card sales and free

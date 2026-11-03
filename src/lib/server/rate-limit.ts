@@ -1,4 +1,4 @@
-import { getJson, putJson } from '$lib/server/kv';
+import { getJson, putJson } from '#lib/server/kv.js';
 
 /**
  * Soft KV-backed rate limit: allow at most `max` hits per `key` within

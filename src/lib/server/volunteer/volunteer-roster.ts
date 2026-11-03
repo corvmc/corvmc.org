@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { allRosterRows, rosterCsv } from '$lib/server/roster/roster';
+import { allRosterRows, rosterCsv } from '#lib/server/roster/roster.js';
 import { listVolunteers, type VolunteerListRow } from './volunteer-profile-service';
-import { volunteerProfileStatuses } from '$lib/config';
+import { volunteerProfileStatuses } from '#lib/config.js';
 
 /**
  * The volunteers roster's filters under the keys its page writes to the URL,

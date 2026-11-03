@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // `setStaffEventLineup` decides one thing, and it is a consent decision.
@@ -19,7 +19,7 @@ import { mockUser } from '$lib/server/db/test-factory';
 const setEventLineup = vi.fn(async () => undefined);
 let eventRow: Record<string, unknown> | null = null;
 
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	getById: vi.fn(async () => eventRow),
 	setEventLineup: (...args: unknown[]) => setEventLineup(...(args as [])),
 	// Imported at module load by events.remote; unused here.
@@ -34,24 +34,24 @@ vi.mock('$lib/server/event/event-service', () => ({
 	listPublicCalendarEvents: vi.fn()
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: vi.fn(async () => true),
 	requireCapability: vi.fn(async () => mockUser({ id: 'staff-1' })),
 	requireUser: vi.fn(() => mockUser({ id: 'staff-1' }))
 }));
 
 // A show's bill is guarded through its project; the guard itself has its own spec.
-vi.mock('$lib/server/production/production-scope', () => ({
+vi.mock('#lib/server/production/production-scope.js', () => ({
 	projectOfEvent: vi.fn(async () => ({
 		projectId: eventRow?.source === 'cmc' ? 'proj-1' : null,
 		productionId: eventRow?.source === 'cmc' ? 'prod-1' : null
 	}))
 }));
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireProjectCommittee: vi.fn(async () => ({ user: mockUser({ id: 'staff-1' }), groups: [] }))
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	isFeatureEnabled: vi.fn(async () => true),
 	requireFeature: vi.fn(async () => undefined)
 }));
@@ -84,7 +84,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { setStaffEventLineup } = (await import('$lib/remote/events.remote')) as any;
+const { setStaffEventLineup } = (await import('#lib/remote/events.remote.js')) as any;
 
 const BILL = JSON.stringify([{ name: 'Paper Wolves', bandId: 'band-1', billingOrder: 0 }]);
 

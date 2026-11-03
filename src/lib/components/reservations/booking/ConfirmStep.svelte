@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import type { BookerType } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { BookerType } from '#lib/config.js';
 	import {
 		getReservationPricing,
 		previewRecurringInstances
-	} from '$lib/remote/reservations.remote';
-	import { getFormContext } from '$lib/components/ui/Form/Form.svelte';
-	import * as Form from '$lib/components/ui/Form';
-	import Button from '$lib/components/ui/Button.svelte';
+	} from '#lib/remote/reservations.remote.js';
+	import { getFormContext } from '#lib/components/ui/Form/Form.svelte';
+	import * as Form from '#lib/components/ui/Form/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import {
 		clubInstant,
 		formatDate,
@@ -17,8 +17,8 @@
 		fullDate,
 		toLocalDate,
 		toLocalTime
-	} from '$lib/utils/format';
-	import { confirmWindowOpensAt, creditsToHours, withinConfirmationWindow } from '$lib/config';
+	} from '#lib/utils/format.js';
+	import { confirmWindowOpensAt, creditsToHours, withinConfirmationWindow } from '#lib/config.js';
 	import type { RemoteFormField } from '@sveltejs/kit';
 
 	let {

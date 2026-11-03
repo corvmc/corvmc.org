@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { formatMonthDay } from '$lib/utils/format';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import { formatMonthDay } from '#lib/utils/format.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import { IconMusic, IconCircleCheck } from '@tabler/icons-svelte';
-	import type { SubscriptionInfo, Credits } from '$lib/server/db/schema/finance';
-	import { creditsToHours } from '$lib/config';
+	import type { SubscriptionInfo, Credits } from '#lib/server/db/schema/finance.js';
+	import { creditsToHours } from '#lib/config.js';
 
 	let {
 		credits,

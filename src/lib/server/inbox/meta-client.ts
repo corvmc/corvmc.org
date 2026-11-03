@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import { env } from '$env/dynamic/private';
-import { META_STANDARD_WINDOW_MS } from '$lib/config';
+import { META_STANDARD_WINDOW_MS } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Meta Graph API client — Instagram DMs and Facebook Messenger

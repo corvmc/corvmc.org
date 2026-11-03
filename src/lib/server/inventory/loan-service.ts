@@ -1,31 +1,31 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	equipmentCategory,
 	inventoryAsset,
 	inventoryItem,
 	inventoryLoan
-} from '$lib/server/db/schema/inventory';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/inventory.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, sql, or, desc, count, inArray, isNull, isNotNull, gte, lt } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { memberRefColumns, toGenericRef, toMemberRef } from '$lib/server/entity/refs';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { getBalance, deductCredits, addCredits } from '$lib/server/finance/credit-service';
-import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
-import { recordCashPayment } from '$lib/server/finance/payment-service';
-import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
-import { isSustainingMember } from '$lib/server/finance/subscription-service';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { memberRefColumns, toGenericRef, toMemberRef } from '#lib/server/entity/refs.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { getBalance, deductCredits, addCredits } from '#lib/server/finance/credit-service.js';
+import { InsufficientCreditsError } from '#lib/server/finance/credit-service.js';
+import { recordCashPayment } from '#lib/server/finance/payment-service.js';
+import { ensureStripeCustomer } from '#lib/server/finance/stripe-customer-service.js';
+import { isSustainingMember } from '#lib/server/finance/subscription-service.js';
 import { getAvailableQuantity } from './stock-service';
 import { setAssetStatus, settleTerminalUnit } from './asset-service';
 import { hasBlockingFlag, raiseFlag } from './work-request-service';
-import type { EquipmentCondition } from '$lib/config';
+import type { EquipmentCondition } from '#lib/config.js';
 import { movementStatement, recordMovement } from './stock-service';
-import { loanDailyRateCents, loanChargeDays, estimateLoanCost } from '$lib/config';
-import { captureException } from '$lib/server/sentry';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import type { PricingTier, LoanStatus } from '$lib/config';
-import { DomainError } from '$lib/server/domain-error';
+import { loanDailyRateCents, loanChargeDays, estimateLoanCost } from '#lib/config.js';
+import { captureException } from '#lib/server/sentry.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import type { PricingTier, LoanStatus } from '#lib/config.js';
+import { DomainError } from '#lib/server/domain-error.js';
 
 // ---------------------------------------------------------------------------
 // Errors

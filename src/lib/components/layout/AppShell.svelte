@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import { onMount } from 'svelte';
 	import { Toaster } from 'svelte-sonner';
@@ -8,7 +8,7 @@
 	import type { AppChrome } from './chrome';
 	import Sidebar from './Sidebar.svelte';
 	import { IconWorld } from '@tabler/icons-svelte';
-	import logo from '$lib/assets/cmc-compact-logo.svg';
+	import logo from '#lib/assets/cmc-compact-logo.svg';
 	import Button from '../ui/Button.svelte';
 	import Select from '../ui/Form/Select.svelte';
 

@@ -1,19 +1,19 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	directoryTag,
 	type DirectoryTagKind,
 	type LookingFor
-} from '$lib/server/db/schema/directory';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/directory.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, desc, eq, sql, type SQLWrapper } from 'drizzle-orm';
-import type { DirectorySort } from '$lib/utils/directory-browse';
-import { containsLiteral, startsWithLiteral } from '$lib/server/db/like';
-import { resolveImageUrl } from '$lib/server/storage';
-import { captureException } from '$lib/server/sentry';
-import { blockExistsBetween } from '$lib/server/moderation/moderation-service';
-import { toBandRef, toMemberRef } from '$lib/server/entity/refs';
-import type { BandRef, MemberRef } from '$lib/types/entity';
+import type { DirectorySort } from '#lib/utils/directory-browse.js';
+import { containsLiteral, startsWithLiteral } from '#lib/server/db/like.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { captureException } from '#lib/server/sentry.js';
+import { blockExistsBetween } from '#lib/server/moderation/moderation-service.js';
+import { toBandRef, toMemberRef } from '#lib/server/entity/refs.js';
+import type { BandRef, MemberRef } from '#lib/types/entity.js';
 
 // ---------------------------------------------------------------------------
 // Types

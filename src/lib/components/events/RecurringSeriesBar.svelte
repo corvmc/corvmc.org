@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { cancelEventSeries } from '$lib/remote/events.remote';
-	import { fullDate } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { cancelEventSeries } from '#lib/remote/events.remote.js';
+	import { fullDate } from '#lib/utils/format.js';
 
 	/**
 	 * The series a listing belongs to, and the one control on it: stop making

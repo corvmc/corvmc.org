@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The rows of a conversation list, shared by the member's Messages and a
 	 * band's pre-filtered view of the same query (#1250).
@@ -9,9 +9,9 @@
 	 */
 	import type { ResolvedPathname } from '$app/types';
 	import { page } from '$app/state';
-	import { relativeDay } from '$lib/utils/format';
+	import { relativeDay } from '#lib/utils/format.js';
 	import { channelIcon, channelLabel } from './channels';
-	import type { UnifiedConversation } from '$lib/types/conversation';
+	import type { UnifiedConversation } from '#lib/types/conversation.js';
 
 	let {
 		rows,

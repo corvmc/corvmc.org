@@ -1,13 +1,13 @@
-import { db } from '$lib/server/db';
-import { sponsor, sponsorship, sponsorPlacement } from '$lib/server/db/schema/sponsor';
-import { eventListing } from '$lib/server/db/schema/event';
-import { media, mediaAttachment } from '$lib/server/db/schema/media';
+import { db } from '#lib/server/db/index.js';
+import { sponsor, sponsorship, sponsorPlacement } from '#lib/server/db/schema/sponsor.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { media, mediaAttachment } from '#lib/server/db/schema/media.js';
 import { and, desc, eq } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import { uploadFile } from '$lib/server/storage';
-import { mediaKey } from '$lib/server/storage-keys';
-import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
-import { creditedSponsorshipStatuses, type SponsorshipStatus } from '$lib/config';
+import { DomainError } from '#lib/server/domain-error.js';
+import { uploadFile } from '#lib/server/storage.js';
+import { mediaKey } from '#lib/server/storage-keys.js';
+import { detachSlot, replaceSlot } from '#lib/server/media/media-service.js';
+import { creditedSponsorshipStatuses, type SponsorshipStatus } from '#lib/config.js';
 import { SponsorNotFoundError, SponsorshipNotFoundError } from './sponsor-service';
 
 export class PlacementEmptyError extends DomainError {

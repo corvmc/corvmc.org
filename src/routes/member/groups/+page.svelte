@@ -1,24 +1,24 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { replaceState } from '$app/navigation';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import CommitteeApplyModal from './CommitteeApplyModal.svelte';
-	import JoinGroupAction from '$lib/components/groups/JoinGroupAction.svelte';
-	import AnswerGroupInviteAction from '$lib/components/groups/AnswerGroupInviteAction.svelte';
-	import EmailInviteCard from '$lib/components/groups/EmailInviteCard.svelte';
-	import { getMemberGroups } from '$lib/remote/groups.remote';
-	import { withdrawGroupApplication } from '$lib/remote/group-applications.remote';
-	import { groupApplicationStatusLabels } from '$lib/config';
+	import JoinGroupAction from '#lib/components/groups/JoinGroupAction.svelte';
+	import AnswerGroupInviteAction from '#lib/components/groups/AnswerGroupInviteAction.svelte';
+	import EmailInviteCard from '#lib/components/groups/EmailInviteCard.svelte';
+	import { getMemberGroups } from '#lib/remote/groups.remote.js';
+	import { withdrawGroupApplication } from '#lib/remote/group-applications.remote.js';
+	import { groupApplicationStatusLabels } from '#lib/config.js';
 
 	// Above the awaited query, so `fields.X.as()` is not compiled async-gated.
 	const withdrawFields = withdrawGroupApplication.fields;

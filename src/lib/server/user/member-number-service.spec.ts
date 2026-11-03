@@ -41,7 +41,7 @@ const updateFn = vi.fn(() => ({
 	}
 }));
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainableSelect(),
 		update: (...args: unknown[]) => updateFn(...(args as []))

@@ -1,32 +1,32 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { env } from '$env/dynamic/public';
-	import { canonicalAddress } from '$lib/utils/canonical-address';
-	import { getDirectoryBand, getBandPastShows } from '$lib/remote/directory.remote';
-	import { ReportContentAction } from '$lib/components/actions';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import { pageTitle } from '$lib/config';
-	import { m } from '$lib/paraglide/messages.js';
-	import { many } from '$lib/terms';
+	import { canonicalAddress } from '#lib/utils/canonical-address.js';
+	import { getDirectoryBand, getBandPastShows } from '#lib/remote/directory.remote.js';
+	import { ReportContentAction } from '#lib/components/actions/index.js';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import { pageTitle } from '#lib/config.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import { many } from '#lib/terms.js';
 	import ProfileHeader, {
 		type ProfilePill
-	} from '$lib/components/directory/profile/ProfileHeader.svelte';
-	import QuickFacts from '$lib/components/directory/profile/QuickFacts.svelte';
-	import ProseBlock from '$lib/components/directory/profile/ProseBlock.svelte';
-	import ListenStrip from '$lib/components/directory/profile/ListenStrip.svelte';
-	import ShowsBox from '$lib/components/directory/profile/ShowsBox.svelte';
+	} from '#lib/components/directory/profile/ProfileHeader.svelte';
+	import QuickFacts from '#lib/components/directory/profile/QuickFacts.svelte';
+	import ProseBlock from '#lib/components/directory/profile/ProseBlock.svelte';
+	import ListenStrip from '#lib/components/directory/profile/ListenStrip.svelte';
+	import ShowsBox from '#lib/components/directory/profile/ShowsBox.svelte';
 	import CrossRefList, {
 		type CrossRef
-	} from '$lib/components/directory/profile/CrossRefList.svelte';
-	import TagCloud from '$lib/components/directory/profile/TagCloud.svelte';
-	import LinksBox from '$lib/components/directory/profile/LinksBox.svelte';
-	import PressBox from '$lib/components/directory/profile/PressBox.svelte';
-	import PressPhoto from '$lib/components/directory/profile/PressPhoto.svelte';
-	import VideoBox from '$lib/components/directory/profile/VideoBox.svelte';
-	import ContactForm from '$lib/components/directory/profile/ContactForm.svelte';
-	import ProfileGrid from '$lib/components/directory/profile/ProfileGrid.svelte';
+	} from '#lib/components/directory/profile/CrossRefList.svelte';
+	import TagCloud from '#lib/components/directory/profile/TagCloud.svelte';
+	import LinksBox from '#lib/components/directory/profile/LinksBox.svelte';
+	import PressBox from '#lib/components/directory/profile/PressBox.svelte';
+	import PressPhoto from '#lib/components/directory/profile/PressPhoto.svelte';
+	import VideoBox from '#lib/components/directory/profile/VideoBox.svelte';
+	import ContactForm from '#lib/components/directory/profile/ContactForm.svelte';
+	import ProfileGrid from '#lib/components/directory/profile/ProfileGrid.svelte';
 
 	const MEMBERS_BASE = '/member/directory/members';
 

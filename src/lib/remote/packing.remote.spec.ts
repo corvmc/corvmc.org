@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 /**
  * Guard tests for the packing-list remote functions.
@@ -26,7 +26,7 @@ const serviceMock = {
 	promoteOwnItems: vi.fn(async () => ({ promoted: 1, added: 1 })),
 	PackingAlreadyClaimedError: FakeAlreadyClaimed
 };
-vi.mock('$lib/server/band/packing-service', () => serviceMock);
+vi.mock('#lib/server/band/packing-service.js', () => serviceMock);
 
 const testUser = mockUser({ id: 'user-member', name: 'Sam' });
 const band = { id: 'band-1', name: 'The Voltage Thieves', slug: 'the-voltage-thieves' };
@@ -36,14 +36,14 @@ const band = { id: 'band-1', name: 'The Voltage Thieves', slug: 'the-voltage-thi
  * role asked for*, which is the thing a later edit could silently loosen.
  */
 const requireGroupRole = vi.fn(async () => ({ user: testUser, group: band, role: 'member' }));
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	get requireGroupRole() {
 		return requireGroupRole;
 	}
 }));
 
-vi.mock('$lib/server/band/band-service', () => ({ getMembers: vi.fn(async () => []) }));
-vi.mock('$lib/server/errors', () => ({
+vi.mock('#lib/server/band/band-service.js', () => ({ getMembers: vi.fn(async () => []) }));
+vi.mock('#lib/server/errors.js', () => ({
 	mapDomainError: (err: unknown) => {
 		throw err;
 	}

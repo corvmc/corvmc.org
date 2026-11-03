@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { Turnstile } from 'svelte-turnstile';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { pledgeWishlistAsGuest } from '$lib/remote/inventory.remote';
-	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
-	import type { WishlistPledgeSubject } from '$lib/config';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { pledgeWishlistAsGuest } from '#lib/remote/inventory.remote.js';
+	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '#lib/turnstile.js';
+	import type { WishlistPledgeSubject } from '#lib/config.js';
 
 	/**
 	 * A non-member's pledge (#1565). Nothing is held until the email link is

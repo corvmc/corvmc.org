@@ -2,10 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 
 // auth.ts pulls in db + sentry at import time; stub them so importing the
 // module (for the pure reason-deriving helper) doesn't require a real DB.
-vi.mock('$lib/server/db', () => ({ db: {} }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 
 import {
 	AUTH_IP_ADDRESS_HEADERS,

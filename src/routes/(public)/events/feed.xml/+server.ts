@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
-import { listPublicUpcomingEvents } from '$lib/server/event/event-service';
-import { buildRssFeed } from '$lib/server/event/calendar-feed';
+import { listPublicUpcomingEvents } from '#lib/server/event/event-service.js';
+import { buildRssFeed } from '#lib/server/event/calendar-feed.js';
 
 const FEED_SIZE = 100;
 

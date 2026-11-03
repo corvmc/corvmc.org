@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { surfaces } from '$lib/config';
+import { surfaces } from '#lib/config.js';
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {

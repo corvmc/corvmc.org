@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
-	import { getReservationPolicy } from '$lib/remote/reservations.remote';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import { getReservationPolicy } from '#lib/remote/reservations.remote.js';
 
 	/** "09:00" → "9 AM", "21:30" → "9:30 PM" */
 	function fmtHour(hhmm: string): string {

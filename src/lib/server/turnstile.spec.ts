@@ -8,7 +8,7 @@ const { mockEnv, captureExceptionMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: mockEnv }));
-vi.mock('$lib/server/sentry', () => ({ captureException: captureExceptionMock }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: captureExceptionMock }));
 
 import { verifyTurnstile, turnstileSecret, TURNSTILE_TEST_SECRET } from './turnstile';
 import { submitContactFormSchema } from './db/schema/inbox';

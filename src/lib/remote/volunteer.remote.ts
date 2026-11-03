@@ -1,35 +1,38 @@
 import { z } from 'zod';
 import { historyArgs } from './_history';
-import { listAuditFeed } from '$lib/server/audit/audit-feed';
-import { listIncidentsFiledBy } from '$lib/server/incident/incident-service';
+import { listAuditFeed } from '#lib/server/audit/audit-feed.js';
+import { listIncidentsFiledBy } from '#lib/server/incident/incident-service.js';
 import { error, invalid, redirect } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { can, requireCapability, requireUser } from '$lib/server/authorization';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import {
 	listRoleGrants,
 	setRoleCapabilityGrants
-} from '$lib/server/capability/capability-grant-service';
-import { toEventRef } from '$lib/server/entity/refs';
+} from '#lib/server/capability/capability-grant-service.js';
+import { toEventRef } from '#lib/server/entity/refs.js';
 import { getStaffLayout } from './layout.remote';
 import { getProjectTaskPage } from './tasks.remote';
 import { getProjectActivity } from './projects.remote';
-import { ACTIVITY_MAX, listActivity } from '$lib/server/project/project-activity';
-import { loadWorkOrderView } from '$lib/server/volunteer/work-order-view';
-import { getVolunteerProfile } from '$lib/server/volunteer/volunteer-profile-service';
-import { listAllVolunteers, volunteerRosterFilters } from '$lib/server/volunteer/volunteer-roster';
-import { rosterEmails } from '$lib/server/roster/roster';
-import { listInterestsForUser } from '$lib/server/volunteer/volunteer-interest-service';
+import { ACTIVITY_MAX, listActivity } from '#lib/server/project/project-activity.js';
+import { loadWorkOrderView } from '#lib/server/volunteer/work-order-view.js';
+import { getVolunteerProfile } from '#lib/server/volunteer/volunteer-profile-service.js';
+import {
+	listAllVolunteers,
+	volunteerRosterFilters
+} from '#lib/server/volunteer/volunteer-roster.js';
+import { rosterEmails } from '#lib/server/roster/roster.js';
+import { listInterestsForUser } from '#lib/server/volunteer/volunteer-interest-service.js';
 import {
 	getSignupForUser,
 	listSignupsForUser
-} from '$lib/server/volunteer/volunteer-signup-service';
-import { mapDomainError } from '$lib/server/errors';
-import { jsonArrayField } from '$lib/utils/zod-json';
-import { byDueAt } from '$lib/utils/work-order-due';
-import { suggestSkills } from '$lib/server/directory/directory-service';
-import { listMyPrograms } from '$lib/server/group/group-service';
-import { renderMarkdown } from '$lib/utils/markdown';
+} from '#lib/server/volunteer/volunteer-signup-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { jsonArrayField } from '#lib/utils/zod-json.js';
+import { byDueAt } from '#lib/utils/work-order-due.js';
+import { suggestSkills } from '#lib/server/directory/directory-service.js';
+import { listMyPrograms } from '#lib/server/group/group-service.js';
+import { renderMarkdown } from '#lib/utils/markdown.js';
 import {
 	createVolunteerRole as createRoleService,
 	updateVolunteerRole as updateRoleService,
@@ -37,7 +40,7 @@ import {
 	restoreVolunteerRole as restoreRoleService,
 	deleteVolunteerRole as deleteRoleService,
 	listVolunteerRoles
-} from '$lib/server/volunteer/volunteer-role-service';
+} from '#lib/server/volunteer/volunteer-role-service.js';
 import {
 	submitHours,
 	updateHourLog,
@@ -51,7 +54,7 @@ import {
 	getUserHourSummary,
 	flagHourLogExceptions,
 	type HourLogRow
-} from '$lib/server/volunteer/hour-log-service';
+} from '#lib/server/volunteer/hour-log-service.js';
 import {
 	getVolunteerTotals,
 	getContributedValue,
@@ -59,13 +62,13 @@ import {
 	getHoursByGroup,
 	getHoursByRole,
 	getHoursByMonth
-} from '$lib/server/volunteer/volunteer-report-service';
+} from '#lib/server/volunteer/volunteer-report-service.js';
 import {
 	getInterestsForUser,
 	setInterests,
 	listInterestedMembers,
 	countInterestsByRole
-} from '$lib/server/volunteer/volunteer-interest-service';
+} from '#lib/server/volunteer/volunteer-interest-service.js';
 import {
 	completeVolunteerOnboarding,
 	updateVolunteerProfile as updateProfileService,
@@ -76,7 +79,7 @@ import {
 	listVolunteers,
 	stageOf,
 	type OnboardingStage
-} from '$lib/server/volunteer/volunteer-profile-service';
+} from '#lib/server/volunteer/volunteer-profile-service.js';
 import {
 	createCertification as createCertificationService,
 	updateCertification as updateCertificationService,
@@ -87,16 +90,19 @@ import {
 	getRequirementsForRole,
 	getRequirementsForRoles,
 	setRoleRequirements
-} from '$lib/server/volunteer/volunteer-certification-service';
-import { listWorkTasks, setWorkTaskDoneAsAssignee } from '$lib/server/volunteer/duty-list-service';
-import { listFinishedWorkToConfirm } from '$lib/server/inventory/work-request-service';
-import { getById } from '$lib/server/event/event-service';
+} from '#lib/server/volunteer/volunteer-certification-service.js';
+import {
+	listWorkTasks,
+	setWorkTaskDoneAsAssignee
+} from '#lib/server/volunteer/duty-list-service.js';
+import { listFinishedWorkToConfirm } from '#lib/server/inventory/work-request-service.js';
+import { getById } from '#lib/server/event/event-service.js';
 import {
 	checkIn as checkInTicketService,
 	getEventTickets,
 	getTicketById,
 	getTicketsSold
-} from '$lib/server/ticket/ticket-service';
+} from '#lib/server/ticket/ticket-service.js';
 import {
 	createShift as createShiftService,
 	duplicateShift as duplicateShiftService,
@@ -114,10 +120,10 @@ import {
 	listWorkOrdersByIds,
 	isScheduled,
 	isRoledShift
-} from '$lib/server/volunteer/work-order-service';
-import { listJobs } from '$lib/server/contractor/contractor-job-service';
-import { listContractors } from '$lib/server/contractor/contractor-service';
-import { contractorJobViews } from '$lib/config';
+} from '#lib/server/volunteer/work-order-service.js';
+import { listJobs } from '#lib/server/contractor/contractor-job-service.js';
+import { listContractors } from '#lib/server/contractor/contractor-service.js';
+import { contractorJobViews } from '#lib/config.js';
 import {
 	claimShift as claimShiftService,
 	cancelSignup as cancelSignupService,
@@ -137,12 +143,12 @@ import {
 	listUnloggedCompletions,
 	countVolunteerWorkWaiting,
 	SignupNotFoundError
-} from '$lib/server/volunteer/volunteer-signup-service';
+} from '#lib/server/volunteer/volunteer-signup-service.js';
 import {
 	submitFeedback as submitFeedbackService,
 	getFeedbackContext,
 	summarizeFeedbackByRole
-} from '$lib/server/volunteer/volunteer-feedback-service';
+} from '#lib/server/volunteer/volunteer-feedback-service.js';
 import {
 	grantCertification as grantCertificationService,
 	revokeCertification as revokeCertificationService,
@@ -153,7 +159,7 @@ import {
 	missingFrom,
 	wasHeldOn,
 	listLapsingBeforeRosteredShift
-} from '$lib/server/volunteer/member-certification-service';
+} from '#lib/server/volunteer/member-certification-service.js';
 import {
 	volunteerHourStatuses,
 	volunteerProfileStatuses,
@@ -175,8 +181,8 @@ import {
 	VOLUNTEER_REVIEW_NOTES_MAX,
 	VOLUNTEER_ROLE_DESCRIPTION_MAX,
 	VOLUNTEER_ROLE_NAME_MAX
-} from '$lib/config';
-import type { VolunteerHourStatus } from '$lib/server/db/schema/volunteer';
+} from '#lib/config.js';
+import type { VolunteerHourStatus } from '#lib/server/db/schema/volunteer.js';
 
 // Hours come off the form as a decimal (0.25 steps) and are stored as integer
 // minutes. One place does the conversion so the two can't drift.

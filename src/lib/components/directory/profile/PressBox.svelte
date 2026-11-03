@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import ProfileSection from './ProfileSection.svelte';
-	import type { PressQuote } from '$lib/types/band-page';
+	import type { PressQuote } from '#lib/types/band-page.js';
 
 	/**
 	 * What other people have said, and what the act has done.

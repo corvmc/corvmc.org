@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
-import { eventListing, eventKinds, type EventKind } from '$lib/server/db/schema/event';
+import { db } from '#lib/server/db/index.js';
+import { eventListing, eventKinds, type EventKind } from '#lib/server/db/schema/event.js';
 import { and, count, eq } from 'drizzle-orm';
-import { rangeCondition, type ReportRange } from '$lib/server/report/range';
-import type { EventSource } from '$lib/config';
+import { rangeCondition, type ReportRange } from '#lib/server/report/range.js';
+import type { EventSource } from '#lib/config.js';
 
 /**
  * What the calendar did over a window, for the annual rollup.

@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import PaymentElement from './PaymentElement.svelte';
-	import { getCheckoutSession, payFakeCheckout } from '$lib/remote/checkout.remote';
+	import { getCheckoutSession, payFakeCheckout } from '#lib/remote/checkout.remote.js';
 
 	// Declared above the top-level await below: a declaration that follows one is
 	// async-gated, which would compile `fields.sessionId.as()` into an async

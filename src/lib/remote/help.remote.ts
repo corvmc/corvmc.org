@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import { toGenericRef } from '$lib/server/entity/refs';
-import { BLURB_MAX, SHORT_TEXT_MAX } from '$lib/config';
+import { toGenericRef } from '#lib/server/entity/refs.js';
+import { BLURB_MAX, SHORT_TEXT_MAX } from '#lib/config.js';
 import { error } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
-import { generateSlug } from '$lib/server/utils/slug';
+import { requireCapability } from '#lib/server/authorization.js';
+import { generateSlug } from '#lib/server/utils/slug.js';
 import {
 	listCategories,
 	listNonEmptyCategories,
@@ -21,7 +21,7 @@ import {
 	updateCategory as updateCategorySvc,
 	deleteCategory as deleteCategorySvc,
 	getArticleById
-} from '$lib/server/help/help-service';
+} from '#lib/server/help/help-service.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

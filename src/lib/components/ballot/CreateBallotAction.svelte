@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	/**
 	 * Start a ballot as a draft. Nothing is frozen until someone presses Open.
 	 *
@@ -9,10 +9,10 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconPlus } from '@tabler/icons-svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
-	import { createBallot } from '$lib/remote/ballots.remote';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
+	import { createBallot } from '#lib/remote/ballots.remote.js';
 
 	type Committee = { id: string; name: string; members: { id: string; name: string }[] };
 

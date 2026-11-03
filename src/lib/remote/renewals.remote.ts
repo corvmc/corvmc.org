@@ -2,10 +2,10 @@ import { z } from 'zod';
 import { query } from '$app/server';
 import { invalid } from '@sveltejs/kit';
 import { form } from './_remote';
-import { listUsersWithCapability, requireCapability } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import * as service from '$lib/server/renewal/renewal-service';
-import { clubToday, LONG_TEXT_MAX, SHORT_TEXT_MAX, renewalKinds } from '$lib/config';
+import { listUsersWithCapability, requireCapability } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import * as service from '#lib/server/renewal/renewal-service.js';
+import { clubToday, LONG_TEXT_MAX, SHORT_TEXT_MAX, renewalKinds } from '#lib/config.js';
 
 const optionalText = (max: number) => z.string().max(max).optional();
 

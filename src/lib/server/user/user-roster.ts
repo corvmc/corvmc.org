@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { count, desc, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { memberRefColumns } from '$lib/server/entity/refs';
-import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
-import { allRosterRows, rosterCsv, toRosterPerson } from '$lib/server/roster/roster';
-import type { RosterPerson } from '$lib/types/roster';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { memberRefColumns } from '#lib/server/entity/refs.js';
+import { paginate, type PaginationInput, type PaginatedResult } from '#lib/server/db/paginate.js';
+import { allRosterRows, rosterCsv, toRosterPerson } from '#lib/server/roster/roster.js';
+import type { RosterPerson } from '#lib/types/roster.js';
 import { sustainingUser, userListWhere, type UserListFilters } from './user-totals-service';
 
 export interface UserRosterRow extends RosterPerson {

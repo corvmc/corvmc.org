@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { RemoteFormField } from '@sveltejs/kit';
 	/**
 	 * "What you'd help with" — the grouped role checkboxes plus the availability
@@ -12,9 +12,9 @@
 	 *
 	 * Takes plain props, never a query — see the note in ProfileFields.svelte.
 	 */
-	import { CheckboxGroup } from '$lib/components/ui/Form';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { volunteerRoleGroups, volunteerRoleGroupLabels } from '$lib/config';
+	import { CheckboxGroup } from '#lib/components/ui/Form/index.js';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { volunteerRoleGroups, volunteerRoleGroupLabels } from '#lib/config.js';
 
 	type Role = { id: string; name: string; group: string; descriptionHtml: string | null };
 

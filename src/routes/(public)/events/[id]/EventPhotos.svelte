@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import { imageSrc } from '$lib/utils/images';
+	import { m } from '#lib/paraglide/messages.js';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import { imageSrc } from '#lib/utils/images.js';
 
 	let {
 		eventTitle,

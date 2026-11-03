@@ -1,20 +1,20 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
-	import { getBandHistory, getStaffBandPage, updateMemberRole } from '$lib/remote/bands.remote';
-	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { getBandHistory, getStaffBandPage, updateMemberRole } from '#lib/remote/bands.remote.js';
+	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShort, formatTimeRange } from '$lib/utils/format';
+	import { formatDateShort, formatTimeRange } from '#lib/utils/format.js';
 	import {
 		InviteByEmailAction,
 		InviteMemberAction,
@@ -22,9 +22,9 @@
 		TransferOwnershipAction,
 		RemoveBandMemberAction,
 		RevokeEmailInviteAction
-	} from '$lib/components/actions';
-	import RosterTable from '$lib/components/roster/RosterTable.svelte';
-	import CopyEmailsButton from '$lib/components/roster/CopyEmailsButton.svelte';
+	} from '#lib/components/actions/index.js';
+	import RosterTable from '#lib/components/roster/RosterTable.svelte';
+	import CopyEmailsButton from '#lib/components/roster/CopyEmailsButton.svelte';
 	import StaffBandForm from './StaffBandForm.svelte';
 
 	/** A band's staff record: the page at /staff/groups/[id], and the Bands view's side panel. */

@@ -4,7 +4,7 @@ import {
 	listNonEmptyCategories,
 	listArticlesByCategory,
 	resolveHelpReader
-} from '$lib/server/help/help-service';
+} from '#lib/server/help/help-service.js';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.user) return error(401, 'Not authenticated');

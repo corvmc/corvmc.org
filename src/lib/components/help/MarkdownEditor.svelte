@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
-	import FileUpload from '$lib/components/ui/Form/FileUpload.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import FileUpload from '#lib/components/ui/Form/FileUpload.svelte';
 	import MarkdownPreview from './MarkdownPreview.svelte';
 	import { IconPhoto } from '@tabler/icons-svelte';
 

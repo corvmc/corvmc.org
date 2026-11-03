@@ -1,20 +1,20 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { withQuery } from '$lib/utils/with-query';
+	import { m } from '#lib/paraglide/messages.js';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { invalidateAll } from '$app/navigation';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { formatTimeRange, formatDate, formatScheduleLabel } from '$lib/utils/format';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { getStaffSeriesDetail, cancelDetailSeries } from '$lib/remote/recurring.remote';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { formatTimeRange, formatDate, formatScheduleLabel } from '#lib/utils/format.js';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { getStaffSeriesDetail, cancelDetailSeries } from '#lib/remote/recurring.remote.js';
 	const { fields: cancelFields } = cancelDetailSeries;
 
 	let id = $derived(page.params.id!);

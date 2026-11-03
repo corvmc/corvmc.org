@@ -1,7 +1,7 @@
 import { resolve } from '$app/paths';
-import { withinConfirmationWindow } from '$lib/config';
-import { confirmedUnpaid } from '$lib/utils/reservation-actions';
-import type { NeedsYouItem } from '$lib/types/needs-you';
+import { withinConfirmationWindow } from '#lib/config.js';
+import { confirmedUnpaid } from '#lib/utils/reservation-actions.js';
+import type { NeedsYouItem } from '#lib/types/needs-you.js';
 
 /** A booking the dashboard may ask the member to pay for or confirm. */
 export interface ReservationNeedingYou {

@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import CommitteeGrantsAction from '$lib/components/groups/CommitteeGrantsAction.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import CommitteeGrantsAction from '#lib/components/groups/CommitteeGrantsAction.svelte';
 	import GrantCertificationAction from '../members/[id]/panels/GrantCertificationAction.svelte';
 	import RevokeClearanceAction from './RevokeClearanceAction.svelte';
 	import {
@@ -18,17 +18,17 @@
 		getPersonAccessView,
 		searchAccessPeople,
 		setPosition
-	} from '$lib/remote/access.remote';
+	} from '#lib/remote/access.remote.js';
 	import {
 		grantRuleFor,
 		grantsCapability,
 		positionLabels,
 		positionOrder,
 		positions as matrix
-	} from '$lib/config';
-	import { formatDateShortYear } from '$lib/utils/format';
+	} from '#lib/config.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
 	import { actionLabel, groupByResource } from './capability-label';
-	import { Latest } from '$lib/latest.svelte';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	type Person = { id: string; name: string; email: string };
 	let { person = $bindable(null) }: { person?: Person | null } = $props();

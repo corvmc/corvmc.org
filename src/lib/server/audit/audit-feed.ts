@@ -1,6 +1,6 @@
 import { listAuditEntriesForSubject, type AuditSubjectFilter } from './audit-service';
-import { auditFeedItem } from '$lib/utils/audit-display';
-import type { FeedPage } from '$lib/types/activity';
+import { auditFeedItem } from '#lib/utils/audit-display.js';
+import type { FeedPage } from '#lib/types/activity.js';
 
 /**
  * The audit read as feed rows: what a record's History card renders. Kept out

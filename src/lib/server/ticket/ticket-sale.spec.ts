@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { drizzle } from 'drizzle-orm/d1';
 
 // A bare drizzle instance renders SQL with no D1 binding behind it.
-vi.mock('$lib/server/db', () => ({ db: drizzle({} as never) }));
+vi.mock('#lib/server/db/index.js', () => ({ db: drizzle({} as never) }));
 
 const { saveTicketSale } = await import('./ticket-sale');
 

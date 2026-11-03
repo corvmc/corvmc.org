@@ -1,24 +1,24 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { baseDomainFromSiteUrl } from '#lib/utils/band-site-url.js';
 	import { env } from '$env/dynamic/public';
 	import { resolve } from '$app/paths';
-	import RichTextEditor from '$lib/components/ui/Form/RichTextEditor.svelte';
-	import LinkListEditor from '$lib/components/directory/LinkListEditor.svelte';
-	import VisibilityField from '$lib/components/ui/Form/VisibilityField.svelte';
-	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
-	import { saveBandProfile } from '$lib/remote/directory.remote';
-	import type { getBandProfile } from '$lib/remote/directory.remote';
-	import type { getBandLayout } from '$lib/remote/layout.remote';
-	import type { DirectoryContact, ProfileLink } from '$lib/server/db/schema/authentication';
+	import RichTextEditor from '#lib/components/ui/Form/RichTextEditor.svelte';
+	import LinkListEditor from '#lib/components/directory/LinkListEditor.svelte';
+	import VisibilityField from '#lib/components/ui/Form/VisibilityField.svelte';
+	import FreeformTagInput from '#lib/components/ui/FreeformTagInput.svelte';
+	import { saveBandProfile } from '#lib/remote/directory.remote.js';
+	import type { getBandProfile } from '#lib/remote/directory.remote.js';
+	import type { getBandLayout } from '#lib/remote/layout.remote.js';
+	import type { DirectoryContact, ProfileLink } from '#lib/server/db/schema/authentication.js';
 
 	// The band and profile arrive as plain resolved props, NOT awaited remote
 	// queries. Keeping this component's script fully synchronous matters: a

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { rescheduleTaskForm } from '$lib/remote/tasks.remote';
-	import { toLocalDate, toLocalDateTime } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { rescheduleTaskForm } from '#lib/remote/tasks.remote.js';
+	import { toLocalDate, toLocalDateTime } from '#lib/utils/format.js';
 	import type { Task } from './task-view';
 
 	/**

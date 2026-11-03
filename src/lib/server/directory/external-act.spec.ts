@@ -41,7 +41,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainable(),
 		insert: (table: unknown) => ({
@@ -68,11 +68,11 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/utils/slug', () => ({
+vi.mock('#lib/server/utils/slug.js', () => ({
 	generateSlug: (name: string) => name.toLowerCase().replace(/\s+/g, '-'),
 	ensureUniqueSlug: async (base: string) => base
 }));
-vi.mock('$lib/server/band/band-site-service', () => ({
+vi.mock('#lib/server/band/band-site-service.js', () => ({
 	bandSiteInsert: () => ({ __bandSite: true })
 }));
 

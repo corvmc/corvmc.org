@@ -1,25 +1,25 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The recurring-work definitions. Each writes work orders, one open at a time,
 	 * and those occurrences are rows of the Schedule's other view. A row opens its
 	 * record in the side panel; `?id` is that panel's address.
 	 */
 	import { resolve } from '$app/paths';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { formatDate } from '$lib/utils/format';
-	import { clubToday } from '$lib/config';
-	import { addIsoDays } from '$lib/utils/deadline';
-	import { urlState, text } from '$lib/urlState.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { formatDate } from '#lib/utils/format.js';
+	import { clubToday } from '#lib/config.js';
+	import { addIsoDays } from '#lib/utils/deadline.js';
+	import { urlState, text } from '#lib/urlState.svelte.js';
 	import {
 		getRecurringWorkPage,
 		createRecurringWork,
 		searchWorkAssets
-	} from '$lib/remote/maintenance-schedules.remote';
+	} from '#lib/remote/maintenance-schedules.remote.js';
 	import RecurringPanel from './RecurringPanel.svelte';
 	import { every } from './every';
 

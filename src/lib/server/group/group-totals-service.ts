@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
-import { group, groupMember } from '$lib/server/db/schema/group';
+import { db } from '#lib/server/db/index.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { and, count, eq, isNotNull, isNull, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { openApplicationCount } from '$lib/server/group/application-service';
+import { openApplicationCount } from '#lib/server/group/application-service.js';
 
 /** The staff group lists' "Active" status filter. */
 export const activeGroup = (): SQL => isNull(group.deletedAt);

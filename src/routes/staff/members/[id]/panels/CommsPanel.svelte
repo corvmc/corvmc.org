@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { getUserThreads } from '$lib/remote/inbox.remote';
-	import { getUserNotifications } from '$lib/remote/notifications.remote';
-	import { getUserMarketing } from '$lib/remote/marketing.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getUserThreads } from '#lib/remote/inbox.remote.js';
+	import { getUserNotifications } from '#lib/remote/notifications.remote.js';
+	import { getUserMarketing } from '#lib/remote/marketing.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShortYear, relativeDay } from '$lib/utils/format';
+	import { formatDateShortYear, relativeDay } from '#lib/utils/format.js';
 
 	let { id, email }: { id: string; email: string } = $props();
 </script>

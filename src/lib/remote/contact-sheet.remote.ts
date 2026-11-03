@@ -1,17 +1,17 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { mapDomainError } from '$lib/server/errors';
-import { requireCapability } from '$lib/server/authorization';
-import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
+import { mapDomainError } from '#lib/server/errors.js';
+import { requireCapability } from '#lib/server/authorization.js';
+import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '#lib/config.js';
 import {
 	getContactSheetDisclosure,
 	issueContactSheetLink,
 	saveContactSheet
-} from '$lib/server/directory/contact-sheet-service';
-import { listFor } from '$lib/server/media/media-service';
-import { resolveImageUrl } from '$lib/server/storage';
-import { livePosterRequests } from '$lib/server/production/artifact-request-service';
+} from '#lib/server/directory/contact-sheet-service.js';
+import { listFor } from '#lib/server/media/media-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { livePosterRequests } from '#lib/server/production/artifact-request-service.js';
 
 /**
  * `/act/{token}` — the one surface an external act can reach.

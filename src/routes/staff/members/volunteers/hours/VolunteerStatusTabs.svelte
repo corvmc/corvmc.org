@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import { getVolunteerStatusCounts } from '$lib/remote/volunteer.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import { getVolunteerStatusCounts } from '#lib/remote/volunteer.remote.js';
 
 	/**
 	 * The hour-log status tabs and their counts, owning the query behind the badges.

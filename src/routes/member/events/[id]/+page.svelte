@@ -1,36 +1,40 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
-	import { goToCheckout } from '$lib/utils/checkout-navigation';
+	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
 	import { resolve } from '$app/paths';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import PosterCard from '$lib/components/events/PosterCard.svelte';
-	import TicketStub from '$lib/components/events/TicketStub.svelte';
-	import TicketQRModal from '$lib/components/events/TicketQRModal.svelte';
-	import TicketPurchaseFields from '$lib/components/events/TicketPurchaseFields.svelte';
-	import { fullDate, formatTime, formatCents } from '$lib/utils/format';
-	import { ticketingMode, isFreeEvent as isFree, priceDisplay } from '$lib/utils/event-ticketing';
-	import { sanitizeHtml } from '$lib/utils/markdown';
-	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
-	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
-	import { mapUrl, placeLine } from '$lib/utils/place';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import ShareButton from '$lib/components/ui/ShareButton.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import PosterCard from '#lib/components/events/PosterCard.svelte';
+	import TicketStub from '#lib/components/events/TicketStub.svelte';
+	import TicketQRModal from '#lib/components/events/TicketQRModal.svelte';
+	import TicketPurchaseFields from '#lib/components/events/TicketPurchaseFields.svelte';
+	import { fullDate, formatTime, formatCents } from '#lib/utils/format.js';
+	import {
+		ticketingMode,
+		isFreeEvent as isFree,
+		priceDisplay
+	} from '#lib/utils/event-ticketing.js';
+	import { sanitizeHtml } from '#lib/utils/markdown.js';
+	import { tagToTapeVariant, tagToStickerColor } from '#lib/utils/tag-colors.js';
+	import { googleCalendarUrl, icsDataUrl } from '#lib/utils/calendar.js';
+	import { mapUrl, placeLine } from '#lib/utils/place.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import ShareButton from '#lib/components/ui/ShareButton.svelte';
 	import {
 		purchaseTickets,
 		claimFreeTicket,
 		rsvpToEvent,
 		cancelRsvp,
 		getMemberEventDetailPage
-	} from '$lib/remote/events.remote';
+	} from '#lib/remote/events.remote.js';
 
 	const { fields } = purchaseTickets;
 	const rsvpFields = claimFreeTicket.fields;

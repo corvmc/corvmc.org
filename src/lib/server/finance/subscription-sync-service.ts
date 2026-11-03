@@ -1,14 +1,14 @@
 import type Stripe from 'stripe';
 import { and, eq, isNotNull, notInArray } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { bandSite } from '$lib/server/db/schema/band-site';
-import type { Subscription } from '$lib/server/db/schema/authentication';
-import { stripe } from '$lib/server/stripe';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
+import type { Subscription } from '#lib/server/db/schema/authentication.js';
+import { stripe } from '#lib/server/stripe.js';
 import { buildMemberSubscriptionState } from './subscription-service';
 import { allocateCreditsFromInvoice } from './webhook-handlers';
-import { syncFromWebhook } from '$lib/server/band/band-subscription-service';
-import type { SubscriptionSyncSummary } from '$lib/types/subscription-sync';
+import { syncFromWebhook } from '#lib/server/band/band-subscription-service.js';
+import type { SubscriptionSyncSummary } from '#lib/types/subscription-sync.js';
 
 // ---------------------------------------------------------------------------
 // SubscriptionSyncService — reconcile Stripe subscriptions into local D1

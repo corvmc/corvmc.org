@@ -26,7 +26,7 @@ function chainable(result?: unknown[]) {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({
@@ -56,8 +56,8 @@ import {
 	signedQuantity,
 	transferStock
 } from './stock-service';
-import { STOCK_REASON_SIGN } from '$lib/server/db/schema/inventory';
-import { stockReasons } from '$lib/config';
+import { STOCK_REASON_SIGN } from '#lib/server/db/schema/inventory.js';
+import { stockReasons } from '#lib/config.js';
 
 beforeEach(() => {
 	selectResult = [];

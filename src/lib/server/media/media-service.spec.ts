@@ -4,9 +4,9 @@ import { drizzle } from 'drizzle-orm/d1';
 // ---------------------------------------------------------------------------
 // Mocks
 //
-// Only `$lib/server/db` is mocked, so the drizzle operators (`and`, `eq`,
+// Only `#lib/server/db/index.js` is mocked, so the drizzle operators (`and`, `eq`,
 // `sql`) are the real ones and a test can inspect the conditions the service
-// actually built. `$lib/server/storage` is mocked so the central rule of this
+// actually built. `#lib/server/storage.js` is mocked so the central rule of this
 // module — nothing here deletes an R2 object — is assertable rather than
 // assumed.
 // ---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ function selectChain() {
 	return chain;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => selectChain()),
 		insert: vi.fn((table: unknown) => ({
@@ -61,7 +61,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	deleteObject: vi.fn().mockResolvedValue(undefined),
 	uploadFile: vi.fn()
 }));
@@ -77,9 +77,9 @@ const {
 	liveAttachmentCondition,
 	totalLiveBytes
 } = await import('./media-service');
-const { deleteObject } = await import('$lib/server/storage');
-const { db } = await import('$lib/server/db');
-const { mediaAttachment } = await import('$lib/server/db/schema/media');
+const { deleteObject } = await import('#lib/server/storage.js');
+const { db } = await import('#lib/server/db/index.js');
+const { mediaAttachment } = await import('#lib/server/db/schema/media.js');
 
 /** Walk a drizzle condition and collect the column names it references. */
 function collectColumnNames(condition: unknown): string[] {

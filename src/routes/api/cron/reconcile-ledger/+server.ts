@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { lastClosedWeek, reconcileStripeWindow } from '$lib/server/finance/reconciliation';
+import { lastClosedWeek, reconcileStripeWindow } from '#lib/server/finance/reconciliation.js';
 
 /**
  * Compare last week's record against what hit the Stripe balance (#1183).

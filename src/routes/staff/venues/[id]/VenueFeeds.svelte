@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The venue's partner calendar feeds (#1459). The daily cron copies each
 	 * unpaused feed's upcoming shows onto the gig guide; "Fetch now" runs one
 	 * immediately, paused or not.
 	 */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { formatDateTimeShort } from '$lib/utils/format';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { formatDateTimeShort } from '#lib/utils/format.js';
 	import {
 		getVenueFeeds,
 		addVenueFeed,
 		setVenueFeedPaused,
 		removeVenueFeed,
 		fetchVenueFeed
-	} from '$lib/remote/venues.remote';
+	} from '#lib/remote/venues.remote.js';
 
 	let { venueId }: { venueId: string } = $props();
 

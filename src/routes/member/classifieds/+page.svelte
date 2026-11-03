@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page as pageState } from '$app/state';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
-	import { rowLink } from '$lib/actions/row-link';
-	import { formatDate, relativeDay } from '$lib/utils/format';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { formatDate, relativeDay } from '#lib/utils/format.js';
 	import {
 		classifiedKinds,
 		classifiedCategories,
@@ -27,8 +27,8 @@
 		type ClassifiedKind,
 		type ClassifiedCategory,
 		type ClassifiedTagKind
-	} from '$lib/config';
-	import { getClassifiedBoard } from '$lib/remote/classifieds.remote';
+	} from '#lib/config.js';
+	import { getClassifiedBoard } from '#lib/remote/classifieds.remote.js';
 	import CreateClassifiedAction from './CreateClassifiedAction.svelte';
 
 	type TabKey = 'board' | 'mine';

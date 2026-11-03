@@ -1,6 +1,6 @@
-import { dispatchEmailOnly } from '$lib/server/notification/dispatcher';
-import { captureException } from '$lib/server/sentry';
-import type { NotificationEmailModel } from '$lib/types/notification-email';
+import { dispatchEmailOnly } from '#lib/server/notification/dispatcher.js';
+import { captureException } from '#lib/server/sentry.js';
+import type { NotificationEmailModel } from '#lib/types/notification-email.js';
 
 // ---------------------------------------------------------------------------
 // The emails better-auth's own flows send

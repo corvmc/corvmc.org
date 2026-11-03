@@ -1,4 +1,4 @@
-import { listPlannedGear } from '$lib/server/suggestion/suggestion-service';
+import { listPlannedGear } from '#lib/server/suggestion/suggestion-service.js';
 import { listLowStock } from './stock-service';
 import { claimFor, listLivePledges } from './pledge-service';
 

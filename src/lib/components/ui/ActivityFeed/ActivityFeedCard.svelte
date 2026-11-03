@@ -1,12 +1,12 @@
 <script lang="ts" generics="T extends FeedItem, R extends ActivityRow">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import type { RemoteQuery } from '@sveltejs/kit';
 	import InfoCard from '../InfoCard.svelte';
 	import Alert from '../Alert.svelte';
-	import { errorMessage } from '$lib/error-message';
-	import { FEED_PAGE } from '$lib/types/activity';
-	import { retryQuery } from '$lib/utils/retry-query';
+	import { errorMessage } from '#lib/error-message.js';
+	import { FEED_PAGE } from '#lib/types/activity.js';
+	import { retryQuery } from '#lib/utils/retry-query.js';
 	import type { ActivityRow, FeedItem, FeedPage } from './types';
 	import ActivityFeedPage from './ActivityFeedPage.svelte';
 

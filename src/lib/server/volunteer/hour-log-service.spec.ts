@@ -28,7 +28,7 @@ function chainable(result?: unknown[]) {
 
 const insertValues = vi.fn();
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({
@@ -53,7 +53,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const emit = vi.fn(() => Promise.resolve());
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: {
 		emit: (...args: unknown[]) => emit(...(args as [])),
 		on: vi.fn()
@@ -62,7 +62,7 @@ vi.mock('$lib/server/event-bus/event-bus', () => ({
 
 const deductCredits = vi.fn();
 const addCredits = vi.fn();
-vi.mock('$lib/server/finance/credit-service', () => ({
+vi.mock('#lib/server/finance/credit-service.js', () => ({
 	deductCredits: (...args: unknown[]) => deductCredits(...(args as [])),
 	addCredits: (...args: unknown[]) => addCredits(...(args as [])),
 	getBalance: vi.fn(() => Promise.resolve(0))
@@ -70,7 +70,7 @@ vi.mock('$lib/server/finance/credit-service', () => ({
 
 const getActiveVolunteerRoleById = vi.fn();
 vi.mock('./volunteer-role-service', async () => {
-	const { DomainError } = await import('$lib/server/errors');
+	const { DomainError } = await import('#lib/server/errors.js');
 	class VolunteerRoleNotFoundError extends DomainError {
 		readonly httpStatus = 404;
 		constructor() {
@@ -100,16 +100,16 @@ vi.mock('./member-certification-service', () => ({
 	flagUnclearedLogs: async () => unclearedIds
 }));
 
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 const recordAuditEntry = vi.fn(async (..._args: unknown[]) => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...args: unknown[]) => recordAuditEntry(...args)
 }));
-vi.mock('$lib/server/authorization', () => ({ topPositionFor: vi.fn(() => 'member') }));
+vi.mock('#lib/server/authorization.js', () => ({ topPositionFor: vi.fn(() => 'member') }));
 
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	submitHours,
 	updateHourLog,
@@ -130,7 +130,7 @@ import {
 	VOLUNTEER_BACKDATE_LIMIT_DAYS,
 	VOLUNTEER_MAX_MINUTES_PER_LOG,
 	VOLUNTEER_REVIEW_MINUTES_OVER
-} from '$lib/config';
+} from '#lib/config.js';
 
 const ROLE = { id: 'role-1', name: 'Front Desk', isActive: true, isSpecializedSkill: false };
 const USER_ID = 'user-1';

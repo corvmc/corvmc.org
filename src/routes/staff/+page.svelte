@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import DayTimeline from '$lib/components/reservations/DayTimeline.svelte';
-	import { rowLink } from '$lib/actions/row-link';
-	import { getStaffDashboard } from '$lib/remote/staff-dashboard.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import DayTimeline from '#lib/components/reservations/DayTimeline.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { getStaffDashboard } from '#lib/remote/staff-dashboard.remote.js';
 	import {
 		allStaffNavItems,
 		filterNavItems,
@@ -20,11 +20,11 @@
 		type StaffNavItem
 	} from './nav-items';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import { hasCapability } from '$lib/config';
-	import { formatDateShort, formatDateShortYear, formatTimeRange } from '$lib/utils/format';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import { formatIsoDay } from '$lib/utils/deadline';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import { hasCapability } from '#lib/config.js';
+	import { formatDateShort, formatDateShortYear, formatTimeRange } from '#lib/utils/format.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import { formatIsoDay } from '#lib/utils/deadline.js';
 
 	// Typed by the badge keys, so a new sidebar count cannot reach this page unnamed.
 	const queueLabels: Record<StaffNavBadgeKey, string> = {

@@ -7,7 +7,7 @@
  * drift from the schema's vocabulary in silence.
  */
 
-import type { ActTerms } from '$lib/production/terms';
+import type { ActTerms } from '#lib/production/terms.js';
 
 export type RunOfShowActStatus = 'unlinked' | 'pending' | 'confirmed' | 'declined';
 

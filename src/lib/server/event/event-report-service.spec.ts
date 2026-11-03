@@ -14,11 +14,11 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	// `await import`, not `require`: the helper is TypeScript, which Node's
 	// require cannot load. An async hoisted factory still resolves before the
 	// mock below is asked for a database.
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { getEventTotals } = await import('./event-report-service');
 
@@ -30,7 +30,7 @@ const YEAR = { from: '2026-01-01', to: '2026-12-31' };
 let seq = 0;
 
 async function listing(over: Record<string, unknown> = {}) {
-	const { eventListing } = await import('$lib/server/db/schema/event');
+	const { eventListing } = await import('#lib/server/db/schema/event.js');
 	await testDb.insert(eventListing).values({
 		id: `evt-${++seq}`,
 		title: 'A show',

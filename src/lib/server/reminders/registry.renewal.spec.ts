@@ -8,15 +8,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const listRenewalsExpiringBetween = vi.fn(async (_from: string, _to: string) => [] as unknown[]);
 
-vi.mock('$lib/server/renewal/renewal-service', () => ({ listRenewalsExpiringBetween }));
-vi.mock('$lib/server/inventory/loan-service', () => ({
+vi.mock('#lib/server/renewal/renewal-service.js', () => ({ listRenewalsExpiringBetween }));
+vi.mock('#lib/server/inventory/loan-service.js', () => ({
 	listLoansDueBetween: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/volunteer/volunteer-signup-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-signup-service.js', () => ({
 	listSignupsStartingBetween: vi.fn(async () => []),
 	listCompletionsAwaitingFeedback: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 const { reminders } = await import('./registry');
 

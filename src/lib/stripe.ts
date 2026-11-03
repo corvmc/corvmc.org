@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/public';
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
-import { reportError } from '$lib/report-error';
+import { reportError } from '#lib/report-error.js';
 
 /**
  * Publishable key for Stripe.js on the client.

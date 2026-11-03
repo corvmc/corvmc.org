@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import Hero from '$lib/components/public/Hero.svelte';
-	import Tile from '$lib/components/public/Tile.svelte';
-	import Section from '$lib/components/public/Section.svelte';
+	import Hero from '#lib/components/public/Hero.svelte';
+	import Tile from '#lib/components/public/Tile.svelte';
+	import Section from '#lib/components/public/Section.svelte';
 	import {
 		IconMusic,
 		IconMicrophone,
@@ -12,13 +12,13 @@
 		IconBulb,
 		IconGuitarPick
 	} from '@tabler/icons-svelte';
-	import Keyfob from '$lib/components/illustrations/Keyfob.svelte';
-	import Ticket from '$lib/components/illustrations/Ticket.svelte';
-	import Setlist from '$lib/components/illustrations/Setlist.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Keyfob from '#lib/components/illustrations/Keyfob.svelte';
+	import Ticket from '#lib/components/illustrations/Ticket.svelte';
+	import Setlist from '#lib/components/illustrations/Setlist.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
-	import { signInHref } from '$lib/utils/sign-in';
-	import { getPublicGroups } from '$lib/remote/groups.remote';
+	import { signInHref } from '#lib/utils/sign-in.js';
+	import { getPublicGroups } from '#lib/remote/groups.remote.js';
 
 	/**
 	 * The cards below are hand-written copy; `/groups` is the live list. The link

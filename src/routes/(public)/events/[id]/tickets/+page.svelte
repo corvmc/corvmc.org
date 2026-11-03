@@ -1,22 +1,26 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { goToCheckout } from '$lib/utils/checkout-navigation';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field, Select } from '$lib/components/ui/Form';
-	import { formatCents, fullDate, formatTime } from '$lib/utils/format';
-	import TicketPurchaseFields from '$lib/components/events/TicketPurchaseFields.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { purchaseTickets, claimFreeTicket, getPublicTicketPage } from '$lib/remote/events.remote';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import Alert from '$lib/components/ui/Alert.svelte';
+	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field, Select } from '#lib/components/ui/Form/index.js';
+	import { formatCents, fullDate, formatTime } from '#lib/utils/format.js';
+	import TicketPurchaseFields from '#lib/components/events/TicketPurchaseFields.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import {
+		purchaseTickets,
+		claimFreeTicket,
+		getPublicTicketPage
+	} from '#lib/remote/events.remote.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
 
 	const purchaseFields = purchaseTickets.fields;
 	const freeTicketFields = claimFreeTicket.fields;

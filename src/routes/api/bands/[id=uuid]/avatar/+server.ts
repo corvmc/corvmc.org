@@ -1,12 +1,12 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
+import { db } from '#lib/server/db/index.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { eq } from 'drizzle-orm';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { uploadFile, validateUpload } from '$lib/server/storage';
-import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
-import { mediaKey } from '$lib/server/storage-keys';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { uploadFile, validateUpload } from '#lib/server/storage.js';
+import { detachSlot, replaceSlot } from '#lib/server/media/media-service.js';
+import { mediaKey } from '#lib/server/storage-keys.js';
 
 // ---------------------------------------------------------------------------
 // POST — upload avatar

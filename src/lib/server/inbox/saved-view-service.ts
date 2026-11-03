@@ -1,5 +1,5 @@
-import { db } from '$lib/server/db';
-import { inboxSavedView } from '$lib/server/db/schema/inbox';
+import { db } from '#lib/server/db/index.js';
+import { inboxSavedView } from '#lib/server/db/schema/inbox.js';
 import { and, asc, eq } from 'drizzle-orm';
 
 /**

@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { contractorJobViews } from '$lib/config';
+import { contractorJobViews } from '#lib/config.js';
 import type { PageLoad } from './$types';
 
 /**

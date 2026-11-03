@@ -1,6 +1,6 @@
 <script lang="ts">
-	import BandSiteRenderer from '$lib/components/band-site/BandSiteRenderer.svelte';
-	import { getBandSiteData } from '$lib/remote/band-site.remote';
+	import BandSiteRenderer from '#lib/components/band-site/BandSiteRenderer.svelte';
+	import { getBandSiteData } from '#lib/remote/band-site.remote.js';
 	import { page } from '$app/state';
 
 	let data = $derived(await getBandSiteData(page.params.slug!));

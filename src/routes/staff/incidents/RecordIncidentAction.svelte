@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { clubToday, incidentCategories, incidentCategoryLabels } from '$lib/config';
-	import { recordIncidentForm } from '$lib/remote/incidents.remote';
+	import { clubToday, incidentCategories, incidentCategoryLabels } from '#lib/config.js';
+	import { recordIncidentForm } from '#lib/remote/incidents.remote.js';
 
 	const { fields } = recordIncidentForm;
 	const categoryOptions = incidentCategories.map((c) => ({

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	// Type-0 lock users the site does not account for: standing door codes made
 	// by hand in the U-tec app, which nothing revoked when someone stopped being
 	// a member. Adopting one changes nothing on the lock — it starts tracking it
@@ -8,14 +8,14 @@
 	//
 	// No bulk action here on purpose: each one opens the building for a real
 	// person, and the wrong one revoked locks somebody out.
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
 	import {
 		getUnmanagedLockUsers,
 		adoptUnmanagedCode,
 		getMemberCodes
-	} from '$lib/remote/lock.remote';
+	} from '#lib/remote/lock.remote.js';
 
 	let busyId = $state<number | null>(null);
 	let failure = $state<string | null>(null);

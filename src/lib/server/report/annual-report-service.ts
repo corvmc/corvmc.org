@@ -2,19 +2,19 @@ import type { ReportRange } from './range';
 import {
 	ledgerStartsAt,
 	totalsByKindAndCategory
-} from '$lib/server/finance/financial-entry-service';
+} from '#lib/server/finance/financial-entry-service.js';
 import {
 	getVolunteerTotals,
 	getContributedValue,
 	type VolunteerTotals
-} from '$lib/server/volunteer/volunteer-report-service';
-import type { ContributedValue } from '$lib/server/volunteer/hour-value';
-import { getCommunityStats, type CommunityStats } from '$lib/server/finance/community-stats';
-import { getEventTotals, type EventTotals } from '$lib/server/event/event-report-service';
+} from '#lib/server/volunteer/volunteer-report-service.js';
+import type { ContributedValue } from '#lib/server/volunteer/hour-value.js';
+import { getCommunityStats, type CommunityStats } from '#lib/server/finance/community-stats.js';
+import { getEventTotals, type EventTotals } from '#lib/server/event/event-report-service.js';
 import {
 	getRoomUseTotals,
 	type RoomUseTotals
-} from '$lib/server/reservation/reservation-report-service';
+} from '#lib/server/reservation/reservation-report-service.js';
 import { ledgerWindow, toMoneySection, type MoneySection } from './money';
 
 export type { CategoryLine, MoneySection } from './money';

@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { formatBytes, formatDateShort } from '$lib/utils/format';
-	import { deleteDocument } from '$lib/remote/files.remote';
+	import { formatBytes, formatDateShort } from '#lib/utils/format.js';
+	import { deleteDocument } from '#lib/remote/files.remote.js';
 	import DocumentUploadAction from './DocumentUploadAction.svelte';
-	import type { DocumentUsage, FileView } from '$lib/server/group/file-service';
+	import type { DocumentUsage, FileView } from '#lib/server/group/file-service.js';
 
 	/**
 	 * A group's shared documents, wherever they are shown.

@@ -1,10 +1,10 @@
-import { db } from '$lib/server/db';
-import { localResource, localResourceCategory } from '$lib/server/db/schema/local-resource';
+import { db } from '#lib/server/db/index.js';
+import { localResource, localResourceCategory } from '#lib/server/db/schema/local-resource.js';
 import { and, asc, count, eq, isNull, ne, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import type { LocalResourceStatus } from '$lib/config';
-import { domainEvents, type DomainEvents } from '$lib/server/event-bus';
-import { captureException } from '$lib/server/sentry';
+import { DomainError } from '#lib/server/domain-error.js';
+import type { LocalResourceStatus } from '#lib/config.js';
+import { domainEvents, type DomainEvents } from '#lib/server/event-bus/index.js';
+import { captureException } from '#lib/server/sentry.js';
 
 /**
  * The local resources directory: a public, staff-curated list of music

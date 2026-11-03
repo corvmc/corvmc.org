@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
-	import { saveMemberProfile } from '$lib/remote/directory.remote';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import FileUpload from '$lib/components/ui/Form/FileUpload.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import EntityAvatar from '$lib/components/ui/entity/EntityAvatar.svelte';
-	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
-	import RichTextEditor from '$lib/components/ui/Form/RichTextEditor.svelte';
-	import LinkListEditor from '$lib/components/directory/LinkListEditor.svelte';
-	import VisibilityField from '$lib/components/ui/Form/VisibilityField.svelte';
+	import { saveMemberProfile } from '#lib/remote/directory.remote.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import FileUpload from '#lib/components/ui/Form/FileUpload.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import EntityAvatar from '#lib/components/ui/entity/EntityAvatar.svelte';
+	import FreeformTagInput from '#lib/components/ui/FreeformTagInput.svelte';
+	import RichTextEditor from '#lib/components/ui/Form/RichTextEditor.svelte';
+	import LinkListEditor from '#lib/components/directory/LinkListEditor.svelte';
+	import VisibilityField from '#lib/components/ui/Form/VisibilityField.svelte';
 	import { toast } from 'svelte-sonner';
-	import type { DirectoryContact, ProfileLink } from '$lib/server/db/schema/authentication';
-	import type { getMemberProfile } from '$lib/remote/directory.remote';
+	import type { DirectoryContact, ProfileLink } from '#lib/server/db/schema/authentication.js';
+	import type { getMemberProfile } from '#lib/remote/directory.remote.js';
 
 	// The profile arrives as a plain resolved prop, NOT an awaited remote query.
 	// Keeping this component's script fully synchronous matters: a top-level

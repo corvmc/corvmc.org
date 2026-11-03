@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import StickyBar from '$lib/components/ui/StickyBar.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { ReceiveStockAction } from '$lib/components/actions';
+	import { m } from '#lib/paraglide/messages.js';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import StickyBar from '#lib/components/ui/StickyBar.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { ReceiveStockAction } from '#lib/components/actions/index.js';
 	import { resolve } from '$app/paths';
-	import { getRestockList, markOrdered } from '$lib/remote/inventory.remote';
+	import { getRestockList, markOrdered } from '#lib/remote/inventory.remote.js';
 
 	/**
 	 * The at-or-below-reorder-point view of the Inventory list (#2021): unpaginated

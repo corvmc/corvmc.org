@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
-import { getAllPreferences, setPreference } from '$lib/server/notification/preference-service';
-import { NOTIFICATION_TYPES } from '$lib/server/db/schema/notification';
+import { getAllPreferences, setPreference } from '#lib/server/notification/preference-service.js';
+import { NOTIFICATION_TYPES } from '#lib/server/db/schema/notification.js';
 
 // ---------------------------------------------------------------------------
 // GET /api/notifications/preferences — list all preferences for current user

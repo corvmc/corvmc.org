@@ -1,14 +1,14 @@
 import type { RequestHandler } from './$types';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { getRider } from '$lib/server/band/rider-service';
-import { getMembers } from '$lib/server/band/band-service';
-import { toCsv, csvResponse } from '$lib/server/report/csv';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { getRider } from '#lib/server/band/rider-service.js';
+import { getMembers } from '#lib/server/band/band-service.js';
+import { toCsv, csvResponse } from '#lib/server/report/csv.js';
 import {
 	riderElementKindLabels,
 	riderInputSourceLabels,
 	riderProvidedByLabels,
 	riderStandTypeLabels
-} from '$lib/config';
+} from '#lib/config.js';
 
 const COLUMNS = [
 	'channel',

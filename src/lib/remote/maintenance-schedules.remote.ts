@@ -1,21 +1,21 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
-import { requireCommitteeMember } from '$lib/server/group/group-context';
-import { mapDomainError } from '$lib/server/errors';
-import { DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_NOTES_MAX } from '$lib/config';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
-import { listProjects } from '$lib/server/project/project-service';
+import { requireCapability } from '#lib/server/authorization.js';
+import { requireCommitteeMember } from '#lib/server/group/group-context.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_NOTES_MAX } from '#lib/config.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
+import { listProjects } from '#lib/server/project/project-service.js';
 import {
 	createMaintenanceSchedule as createService,
 	getScheduleGroupId,
 	listMaintenanceSchedules,
 	retireMaintenanceSchedule as retireService,
 	updateMaintenanceSchedule as updateService
-} from '$lib/server/volunteer/maintenance-schedule-service';
-import { searchAssetOptions } from '$lib/server/inventory/asset-service';
+} from '#lib/server/volunteer/maintenance-schedule-service.js';
+import { searchAssetOptions } from '#lib/server/inventory/asset-service.js';
 import { getVolunteerWorklist } from './volunteer.remote';
 import { getMemberGroup } from './groups.remote';
 

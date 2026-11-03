@@ -7,14 +7,14 @@ import { sql } from 'drizzle-orm';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite({ foreignKeys: true });
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const captureException = vi.fn();
-vi.mock('$lib/server/sentry', () => ({ captureException }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException }));
 
 let requestUser: { id: string; name: string; email: string } | null = null;
 let outsideRequest = false;
@@ -96,7 +96,7 @@ describe('recordAuditEntry', () => {
 			expect(captureException).toHaveBeenCalledTimes(1);
 		} finally {
 			// Rebuild for the tests after this one.
-			const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+			const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 			const fresh = migratedSqlite().sqlite;
 			const ddl = fresh
 				.prepare(`select sql from sqlite_master where name like 'audit_log%' and sql is not null`)

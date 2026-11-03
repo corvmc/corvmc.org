@@ -6,16 +6,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 const requireCapability = vi.fn<(cap: string) => Promise<unknown>>();
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap)
 }));
 
 const searchAskableEntries = vi.fn(async (q: string) => [{ id: 'e-1', name: q }]);
-vi.mock('$lib/server/production/artifact-request-service', () => ({
+vi.mock('#lib/server/production/artifact-request-service.js', () => ({
 	searchAskableEntries: (q: string) => searchAskableEntries(q)
 }));
-vi.mock('$lib/server/directory/entry-service', () => ({}));
-vi.mock('$lib/server/event/event-service', () => ({}));
+vi.mock('#lib/server/directory/entry-service.js', () => ({}));
+vi.mock('#lib/server/event/event-service.js', () => ({}));
 
 // Kit refuses a `.remote.ts` export without the `__` marker a real remote has.
 function remote(type: string, run: (arg: unknown) => unknown = () => undefined) {

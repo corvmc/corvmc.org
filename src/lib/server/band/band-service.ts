@@ -1,8 +1,8 @@
-import type { GroupJoinPolicy } from '$lib/config';
-import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
-import { db } from '$lib/server/db';
-import { DomainError } from '$lib/server/domain-error';
-import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
+import type { GroupJoinPolicy } from '#lib/config.js';
+import type { DirectoryVisibility } from '#lib/server/db/schema/authentication.js';
+import { db } from '#lib/server/db/index.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import {
 	group,
 	groupMember,
@@ -10,16 +10,16 @@ import {
 	groupSlugHistory,
 	type GroupMemberStatus,
 	type GroupRole
-} from '$lib/server/db/schema/group';
-import type { GroupKind } from '$lib/config';
-import { user } from '$lib/server/db/schema/authentication';
-import { directoryEntry } from '$lib/server/db/schema/directory';
+} from '#lib/server/db/schema/group.js';
+import type { GroupKind } from '#lib/config.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { groupEntryInsert } from '$lib/server/directory/entry-service';
-import { bandSite } from '$lib/server/db/schema/band-site';
+import { groupEntryInsert } from '#lib/server/directory/entry-service.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
 import { bandSiteInsert, getOrCreateBandSiteId } from './band-site-service';
 import { activeBand, deactivatedBand, isBand, premiumBand } from './band-totals-service';
-import { reservation } from '$lib/server/db/schema/reservation';
+import { reservation } from '#lib/server/db/schema/reservation.js';
 import {
 	eq,
 	and,
@@ -34,23 +34,28 @@ import {
 	exists,
 	type SQL
 } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { bandRefColumns, memberRefColumns, toBandRef, toMemberRef } from '$lib/server/entity/refs';
-import { toRosterPerson } from '$lib/server/roster/roster';
-import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
-import { isReservedSlug } from '$lib/reserved-slugs';
-import { groupGrantsColumn } from '$lib/server/capability/grant-columns';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
-import { detachSlot } from '$lib/server/media/media-service';
-import { deletePrivateObject } from '$lib/server/private-storage';
-import { DocumentPurgeFailedError, listAllKeys } from '$lib/server/group/file-service';
-import { sanitizeBio } from '$lib/utils/markdown';
-import { captureException } from '$lib/server/sentry';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import {
+	bandRefColumns,
+	memberRefColumns,
+	toBandRef,
+	toMemberRef
+} from '#lib/server/entity/refs.js';
+import { toRosterPerson } from '#lib/server/roster/roster.js';
+import { generateSlug, ensureUniqueSlug } from '#lib/server/utils/slug.js';
+import { isReservedSlug } from '#lib/reserved-slugs.js';
+import { groupGrantsColumn } from '#lib/server/capability/grant-columns.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { cancel as cancelReservation } from '#lib/server/reservation/reservation-service.js';
+import { detachSlot } from '#lib/server/media/media-service.js';
+import { deletePrivateObject } from '#lib/server/private-storage.js';
+import { DocumentPurgeFailedError, listAllKeys } from '#lib/server/group/file-service.js';
+import { sanitizeBio } from '#lib/utils/markdown.js';
+import { captureException } from '#lib/server/sentry.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 
-import type { BandTier } from '$lib/server/db/schema/band-site';
+import type { BandTier } from '#lib/server/db/schema/band-site.js';
 
 // ---------------------------------------------------------------------------
 // Types

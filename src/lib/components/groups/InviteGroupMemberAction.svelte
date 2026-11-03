@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { onDestroy } from 'svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import {
 		inviteGroupByEmail,
 		inviteGroupMember,
 		searchGroupUsers
-	} from '$lib/remote/groups.remote';
+	} from '#lib/remote/groups.remote.js';
 
 	/**
 	 * The door an `invite_only` group did not have.

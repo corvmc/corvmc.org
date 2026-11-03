@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 import { render } from 'svelte/server';
 import CreditBalanceCard from './CreditBalanceCard.svelte';
 import InvoiceHistoryCard from './InvoiceHistoryCard.svelte';
-import { forEachClockEdge, viewerTimeZones } from '$lib/test/clock-edges';
+import { forEachClockEdge, viewerTimeZones } from '#lib/test/clock-edges.js';
 
 // The club's calendar day, spelled out with no zone involved.
 function clubMonthDay(clubDate: string): string {
