@@ -30,11 +30,11 @@ const circles = (slot: 'person' | 'open') =>
 // `capacity`, so it needs no `0/1` count beside it.
 describe('AssignedSummary stack', () => {
 	it('draws one dashed slot for a capacity-1 task with nobody on it', async () => {
-		await render(AssignedSummary, { task: task({ capacity: 1 }) });
+		const { container } = await render(AssignedSummary, { task: task({ capacity: 1 }) });
 
 		expect(circles('person')).toBe(0);
 		expect(circles('open')).toBe(1);
-		await expect.element(page.getByText('0/1')).not.toBeInTheDocument();
+		expect(container.textContent).not.toMatch(/\d+\s*\/\s*\d+/);
 	});
 
 	it('draws one circle per wanted person, faces first', async () => {
@@ -47,11 +47,12 @@ describe('AssignedSummary stack', () => {
 	});
 
 	it('names a lone person beside their avatar', async () => {
+		const name = 'Ana Ortiz';
 		await render(AssignedSummary, {
-			task: task({ capacity: 1, claimed: 1, people: [person('a', 'Ana Ortiz')] })
+			task: task({ capacity: 1, claimed: 1, people: [person('a', name)] })
 		});
 
-		await expect.element(page.getByText('Ana Ortiz', { exact: true })).toBeVisible();
+		await expect.element(page.getByText(name, { exact: true })).toBeVisible();
 	});
 
 	it('shows no Open badge on a task open to volunteers', async () => {

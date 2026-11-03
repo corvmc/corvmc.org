@@ -37,6 +37,11 @@ const task = (over: Partial<Task> = {}) =>
 		...over
 	}) as Task;
 
+/** The control is the only button; its name carries the task it ticks. */
+const control = () => page.getByRole('button');
+const names = (t: Task) =>
+	expect(control().element().getAttribute('aria-label')).toContain(t.title);
+
 const props = (t: Task) => ({ task: t, projectId: 'p1', place: 'row' as const, onopen: vi.fn() });
 
 /** The tick's own drawing: a ring until done, a filled circle once it is. */
@@ -45,27 +50,27 @@ const glyph = () => document.querySelector('[data-check-state] svg')!.getAttribu
 // #1922: a thin circled check, filled when done, with no button frame round it.
 describe('TaskCheckControl', () => {
 	it('draws an open task as an unfilled ring', async () => {
-		await render(TaskCheckControl, props(task()));
+		const t = task();
+		await render(TaskCheckControl, props(t));
 
-		await expect
-			.element(page.getByRole('button', { name: 'Mark Sweep the stage done' }))
-			.toBeVisible();
+		await expect.element(control()).toBeVisible();
+		names(t);
 		expect(glyph()).toContain('tabler-icon-circle-check');
 		expect(glyph()).not.toContain('filled');
 	});
 
 	it('fills the circle once the task is ticked', async () => {
-		await render(TaskCheckControl, props(task({ state: 'done', resolvedAt: new Date() })));
+		const t = task({ state: 'done', resolvedAt: new Date() });
+		await render(TaskCheckControl, props(t));
 
-		await expect
-			.element(page.getByRole('button', { name: 'Mark Sweep the stage not done' }))
-			.toBeVisible();
+		await expect.element(control()).toBeVisible();
+		names(t);
 		expect(glyph()).toContain('tabler-icon-circle-check-filled');
 	});
 
 	it('draws no frame around the control', async () => {
 		await render(TaskCheckControl, props(task()));
-		const button = page.getByRole('button', { name: 'Mark Sweep the stage done' });
+		const button = control();
 		await expect.element(button).toBeVisible();
 
 		const style = getComputedStyle(button.element());

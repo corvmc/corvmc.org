@@ -2,6 +2,7 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { forEachClockEdge } from '$lib/test/clock-edges';
+import '$lib/test/locators';
 
 vi.mock('$lib/remote/reservations.remote', () => {
 	const field = (name: string) => ({
@@ -54,16 +55,17 @@ const CreateModal = (await import('./CreateModal.svelte')).default;
 describe('CreateModal', () => {
 	// #1688: the double-booking warning showed, but the submit stayed live.
 	it('holds the submit over a double-booking until staff tick the override', async () => {
-		await render(CreateModal);
-		await page.getByRole('button', { name: 'New Reservation' }).click();
+		const { locator } = await render(CreateModal);
+		await locator.getByRole('button').click();
 
 		// Booker type, member search, then the two time selects.
 		const combos = page.getByRole('combobox');
 		await combos.nth(2).selectOptions('17:00');
 		await combos.nth(3).selectOptions('18:00');
 
-		const submit = page.getByRole('button', { name: 'Create Reservation' });
-		const override = page.getByRole('checkbox', { name: /Book it anyway/ });
+		const dialog = page.getByRole('dialog');
+		const submit = dialog.getByCss('button[type="submit"]');
+		const override = dialog.getByCss('input[type="checkbox"][name$="overrideConflicts"]');
 		await expect.element(override).toBeVisible();
 		await expect.element(submit).toBeDisabled();
 

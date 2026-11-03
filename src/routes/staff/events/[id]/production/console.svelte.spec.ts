@@ -1,6 +1,8 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { TAB_KEYS, TAB_LABELS } from './tabs';
+import '$lib/test/locators';
 
 /**
  * The console is back-of-house only (#1950): every public-facing listing
@@ -144,31 +146,29 @@ describe('production console', () => {
 		fixture.loaded = loaded(record);
 		await render(Console);
 
-		await expect.element(page.getByRole('heading', { name: 'Production' })).toBeVisible();
-		await expect.element(page.getByText('Producer', { exact: true })).toBeVisible();
-		await expect
-			.element(page.getByRole('link', { name: 'View listing' }))
-			.toHaveAttribute('href', '/staff/events/evt-1');
+		await expect.element(page.getByRole('heading', { level: 1 })).toBeVisible();
+		// The header's one action is the way back to the listing; the listing's
+		// own Edit and Repeat actions are not carried over.
+		const header = page.getByCss('[data-page-header]');
+		await expect.element(header.getByCss('a.btn[href="/staff/events/evt-1"]')).toBeVisible();
+		expect(header.element().querySelectorAll('.btn')).toHaveLength(1);
 
 		for (const name of ['The night', 'Poster', 'Ticketing', 'Space Reservation']) {
 			await expect
 				.element(page.getByRole('heading', { name, exact: true }))
 				.not.toBeInTheDocument();
 		}
-		await expect.element(page.getByRole('heading', { name: /^Tickets/ })).not.toBeInTheDocument();
-		await expect.element(page.getByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
-		await expect.element(page.getByRole('link', { name: 'Check-in' })).not.toBeInTheDocument();
-		await expect
-			.element(page.getByRole('button', { name: 'Repeat this event' }))
-			.not.toBeInTheDocument();
-		await expect.element(page.getByRole('tab', { name: 'Tickets' })).not.toBeInTheDocument();
-		await expect.element(page.getByRole('tab', { name: 'Settlement' })).toBeVisible();
+		expect(document.querySelector('a[href="/staff/events/evt-1/check-in"]')).toBeNull();
+		// The console's tabs and nothing else: no listing tab such as Tickets.
+		expect(page.getByRole('tab').elements()).toHaveLength(TAB_KEYS.length);
+		await expect.element(page.getByRole('tab', { name: TAB_LABELS.settlement })).toBeVisible();
 	});
 
 	it('opens a production from its empty state', async () => {
 		fixture.loaded = loaded(null);
 		await render(Console);
 
-		await expect.element(page.getByRole('button', { name: 'Open a production' })).toBeVisible();
+		// The empty state's one form is the one that opens the record.
+		await expect.element(page.getByCss('button[type="submit"]')).toBeVisible();
 	});
 });

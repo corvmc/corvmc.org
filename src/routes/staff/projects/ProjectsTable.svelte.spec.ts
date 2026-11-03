@@ -1,6 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import '$lib/test/locators';
 import type { ComponentProps } from 'svelte';
 import Harness from './ProjectsTable.test.svelte';
 import '../../layout.css';
@@ -30,7 +31,8 @@ const row = {
 describe('ProjectsTable width', () => {
 	it('lets the project column absorb the spare width on a wide page', async () => {
 		await render(Harness, { width: 1400, projects: [row], view: 'active' });
-		const header = page.getByText('Spent', { exact: true });
+		// Spent is the last column; with no actions column nothing follows it.
+		const header = page.getByCss('th').last();
 		await expect.element(header).toBeVisible();
 
 		const table = header.element().closest('table')!.getBoundingClientRect();

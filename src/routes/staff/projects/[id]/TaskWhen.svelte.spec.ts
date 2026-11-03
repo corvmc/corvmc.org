@@ -17,7 +17,8 @@ const task = (over: Partial<Task> = {}) =>
 		...over
 	}) as Task;
 
-const dated = () => page.getByText(/Mar 4/).element() as HTMLElement;
+/** The dated form's root span (the dateless form is a labelled glyph instead). */
+const dated = () => document.querySelector('span.inline-flex:not([role])') as HTMLElement;
 
 // #1922: the When cell is plain date text, red once its day has passed.
 describe('TaskWhen', () => {
