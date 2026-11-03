@@ -6,7 +6,8 @@
 		getAssetHistory,
 		getStaffAssetDetail,
 		editAsset,
-		changeAssetStatus
+		changeAssetStatus,
+		reopenAssetForm
 	} from '$lib/remote/inventory.remote';
 	import { withHash } from '$lib/utils/with-query';
 	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
@@ -21,7 +22,7 @@
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { BindTagAction, RecordForm8282Action } from '$lib/components/actions';
+	import { BindTagAction, RecordForm8282Action, ReopenAction } from '$lib/components/actions';
 	import LocationField from '$lib/components/inventory/LocationField.svelte';
 	import { resolve } from '$app/paths';
 	import { formatDateShort, formatCents, toLocalDate } from '$lib/utils/format';
@@ -56,9 +57,8 @@
 	const form8282 = $derived(data.form8282);
 
 	/**
-	 * `retired` and `lost` are terminal, so the controls that would move a unit
-	 * out of them are not offered — the service refuses anyway, and a button that
-	 * always errors is worse than no button.
+	 * `retired` and `lost` are terminal, so the status controls are not offered;
+	 * leaving them is the admin-only Reopen.
 	 */
 	let isTerminal = $derived(asset.status === 'retired' || asset.status === 'lost');
 </script>
@@ -169,6 +169,11 @@
 
 			<div class="mt-4 flex flex-wrap gap-2">
 				<BindTagAction assetId={id} currentTag={asset.assetTag} />
+				{#if isTerminal}
+					<ReopenAction action={reopenAssetForm} {id} capability="inventory.reopen">
+						Back in service, with a stock adjustment. The {asset.status} entry stays in its history.
+					</ReopenAction>
+				{/if}
 			</div>
 
 			{#if !isTerminal}

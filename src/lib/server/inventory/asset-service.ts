@@ -4,8 +4,10 @@ import {
 	equipmentCategory,
 	inventoryAsset,
 	inventoryItem,
-	inventoryLocation
+	inventoryLocation,
+	stockMovement
 } from '$lib/server/db/schema/inventory';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
 import { and, asc, eq, isNotNull, isNull, notInArray, or } from 'drizzle-orm';
 import { containsLiteral } from '$lib/server/db/like';
 import { user } from '$lib/server/db/schema/authentication';
@@ -39,6 +41,14 @@ export class AssetTagTakenError extends DomainError {
 	constructor(tag: string) {
 		super(`Tag '${tag}' is already bound to another asset`);
 		this.name = 'AssetTagTakenError';
+	}
+}
+
+export class AssetReopenError extends DomainError {
+	readonly httpStatus = 409;
+	constructor(message: string) {
+		super(message);
+		this.name = 'AssetReopenError';
 	}
 }
 
@@ -270,6 +280,64 @@ function movementReasonForStatus(from: AssetStatus, to: AssetStatus) {
 	if (to === 'maintenance') return 'repair_out' as const;
 	if (to === 'in_service' && from === 'maintenance') return 'repair_in' as const;
 	return null;
+}
+
+/**
+ * Put a retired or lost unit back in service, behind the admin-only
+ * `inventory.reopen`: a terminal state is the past. The `retire`/`loss`
+ * movement stays; an `adjust` brings the unit's ledger sum back to one, which
+ * is what an in-service unit counts for. A recorded Form 8282 is kept.
+ */
+export async function reopenAsset(id: string, reason: string, actorId: string) {
+	const why = reason.trim();
+	if (!why) throw new AssetReopenError('Say why it is being reopened');
+	const asset = await getAssetRaw(id);
+	if (!asset) throw new AssetNotFoundError();
+	if (!TERMINAL_STATUSES.includes(asset.status)) {
+		throw new AssetReopenError(`This unit is ${asset.status}, not retired or lost`);
+	}
+
+	const moves = await db
+		.select({ quantity: stockMovement.quantity })
+		.from(stockMovement)
+		.where(eq(stockMovement.assetId, id));
+	const delta = 1 - moves.reduce((total, m) => total + m.quantity, 0);
+
+	const update = db
+		.update(inventoryAsset)
+		.set({ status: 'in_service', retiredAt: null, retiredReason: null, updatedAt: new Date() })
+		.where(and(eq(inventoryAsset.id, id), eq(inventoryAsset.status, asset.status)))
+		.returning();
+	// The status and its movement are one fact: db.batch, never db.transaction.
+	const [[row]] =
+		delta === 0
+			? [await update]
+			: await db.batch([
+					update,
+					movementStatement({
+						itemId: asset.itemId,
+						assetId: id,
+						quantity: delta,
+						reason: 'adjust',
+						locationId: asset.locationId,
+						actorId,
+						notes: `Reopened: ${why}`
+					})
+				]);
+	if (!row) throw new AssetReopenError('This unit changed while you were looking at it');
+
+	await recordAuditEntry({
+		action: 'inventory_asset.reopened',
+		subject: { type: 'inventory_asset', id, label: asset.assetTag ?? asset.serialNumber ?? id },
+		details: {
+			from: asset.status,
+			to: 'in_service',
+			reason: why,
+			retiredReason: asset.retiredReason,
+			stockAdjusted: delta
+		}
+	});
+	return row;
 }
 
 // ---------------------------------------------------------------------------

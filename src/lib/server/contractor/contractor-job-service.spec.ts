@@ -83,6 +83,7 @@ const {
 	cancelJob,
 	declineJob,
 	markJobNoShow,
+	reopenJob,
 	ContractorJobStateError,
 	ContractorJobNotFoundError
 } = await import('./contractor-job-service');
@@ -477,5 +478,87 @@ describe("the work order's log", () => {
 			contractorName: 'Valve Doctor',
 			invoiceRef: 'INV-7'
 		});
+	});
+});
+
+describe('reopenJob (#2259)', () => {
+	it.each(['completed', 'cancelled', 'declined', 'no_show'])(
+		'takes a %s job back, and records why on the work order',
+		async (status) => {
+			selectResults = [[engagement({ status, scheduledFor: new Date('2026-10-01') })]];
+
+			await reopenJob(JOB, '  Marked by mistake ');
+
+			expect(updateValues[0]).toMatchObject({ status: 'booked', completedAt: null });
+			expect(recordAuditEntry).toHaveBeenCalledWith({
+				action: 'contractor_job.reopened',
+				subject: { type: 'work_order', id: WO, label: 'Retube' },
+				details: {
+					engagementId: JOB,
+					contractorName: 'Valve Doctor',
+					from: status,
+					to: 'booked',
+					reason: 'Marked by mistake'
+				}
+			});
+		}
+	);
+
+	it('goes back to asked when it was never booked', async () => {
+		selectResults = [[engagement({ status: 'declined', scheduledFor: null })]];
+
+		await reopenJob(JOB, 'They said yes after all');
+
+		expect(updateValues[0]).toMatchObject({ status: 'asked' });
+	});
+
+	it('touches neither the unit nor the ledger', async () => {
+		selectResults = [[engagement({ status: 'completed', assetId: ASSET })]];
+
+		await reopenJob(JOB, 'Not finished');
+
+		expect(setAssetStatus).not.toHaveBeenCalled();
+		expect(insertValues).toEqual([]);
+		expect(batches).toEqual([]);
+	});
+
+	it('refuses a job that is still open', async () => {
+		selectResults = [[engagement({ status: 'booked' })]];
+
+		await expect(reopenJob(JOB, 'x')).rejects.toThrow(ContractorJobStateError);
+		expect(updateValues).toEqual([]);
+	});
+
+	it('refuses a blank reason', async () => {
+		selectResults = [[engagement({ status: 'completed' })]];
+
+		await expect(reopenJob(JOB, '   ')).rejects.toThrow(ContractorJobStateError);
+		expect(recordAuditEntry).not.toHaveBeenCalled();
+	});
+});
+
+describe('completing a reopened job', () => {
+	it('books only the difference from what the ledger already holds', async () => {
+		selectResults = [
+			[engagement({ status: 'booked', costCents: 18000 })],
+			[{ kind: 'spent', amountCents: -18000 }]
+		];
+
+		await completeJob(JOB, { costCents: 20000, actorId: ACTOR });
+
+		expect(insertValues).toEqual([
+			[expect.objectContaining({ amountCents: -2000, kind: 'spent' })]
+		]);
+	});
+
+	it('books nothing when the cost has not changed', async () => {
+		selectResults = [
+			[engagement({ status: 'booked', costCents: 18000 })],
+			[{ kind: 'spent', amountCents: -18000 }]
+		];
+
+		await completeJob(JOB, { actorId: ACTOR });
+
+		expect(insertValues).toEqual([]);
 	});
 });

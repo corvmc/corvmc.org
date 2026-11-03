@@ -989,6 +989,11 @@ warnings, `transitionProduction` returns them unmoved until they are acknowledge
 `reopenProduction` is behind `production.reopen`, and `assertNotTerminal` in
 `src/lib/server/production/production-scope.ts` is the one read every write path makes first.
 
+Contractor jobs (`reopenJob`, behind `contractor.reopen`), purchase orders (`reopenOrder`) and
+inventory assets (`reopenAsset`, both behind `inventory.reopen`) have the same Reopen, through the
+quiet `ReopenAction`. None reverses money: a reopened job keeps its ledger rows and a re-completion
+books only the difference; a reopened asset's ledger is brought back with an `adjust` movement.
+
 Publishing a CMC event follows the same shape: `publish` in `src/lib/server/event/event-service.ts`
 returns its readiness warnings unpublished until acknowledged with a reason, and writes
 `event.published_over_warnings` when it goes ahead over them.

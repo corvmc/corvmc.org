@@ -9,6 +9,7 @@ import {
 import { user } from '$lib/server/db/schema/authentication';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { DomainError } from '$lib/server/domain-error';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
 import type { OrderStatus } from '$lib/config';
 
 /**
@@ -119,6 +120,40 @@ export async function cancelOrder(id: string) {
 		.update(purchaseOrder)
 		.set({ status: 'cancelled', updatedAt: new Date() })
 		.where(eq(purchaseOrder.id, id));
+}
+
+/**
+ * Take a received or cancelled order back, behind the admin-only
+ * `inventory.reopen`: a terminal state is the past. It goes to `placed` when it
+ * was ever placed, else `draft`. Received quantities and the acquisitions that
+ * carried them stay — the goods arrived, and their cost is on the acquisition.
+ */
+export async function reopenOrder(id: string, reason: string) {
+	const why = reason.trim();
+	if (!why) throw new OrderStateError('Say why it is being reopened');
+	const order = await requireOrder(id);
+	if (order.status !== 'received' && order.status !== 'cancelled') {
+		throw new OrderStateError(`This order is ${order.status}, not closed`);
+	}
+	const to: OrderStatus = order.placedAt ? 'placed' : 'draft';
+
+	const [row] = await db
+		.update(purchaseOrder)
+		.set({ status: to, updatedAt: new Date() })
+		.where(and(eq(purchaseOrder.id, id), eq(purchaseOrder.status, order.status)))
+		.returning();
+	if (!row) throw new OrderStateError('This order changed while you were looking at it');
+
+	await recordAuditEntry({
+		action: 'purchase_order.reopened',
+		subject: {
+			type: 'purchase_order',
+			id,
+			label: order.supplierName ?? order.reference ?? 'Order'
+		},
+		details: { from: order.status, to, reason: why }
+	});
+	return row;
 }
 
 async function requireOrder(id: string) {

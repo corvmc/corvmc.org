@@ -11,7 +11,14 @@
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { getOrder, markOrderPlaced, dropOrder, closeOrder } from '$lib/remote/inventory.remote';
+	import {
+		getOrder,
+		markOrderPlaced,
+		dropOrder,
+		closeOrder,
+		reopenOrderForm
+	} from '$lib/remote/inventory.remote';
+	import { ReopenAction } from '$lib/components/actions';
 	import { orderStatusLabels, orderStatusBadge, type OrderStatus } from '$lib/config';
 	import { formatCents, formatDateShort } from '$lib/utils/format';
 	import { isOrderLate } from '$lib/utils/order-late';
@@ -123,7 +130,12 @@
 			<!-- No card once the order is closed: the whole body is four words, and
 			     a titled box around one sentence is chrome (#1078). -->
 			{#if status !== 'draft' && status !== 'placed'}
-				<p class="text-subtle">This order is closed.</p>
+				<div class="flex items-center justify-between gap-2">
+					<p class="text-subtle">This order is closed.</p>
+					<ReopenAction action={reopenOrderForm} id={order.id} capability="inventory.reopen">
+						Back to {order.placedAt ? 'placed' : 'draft'}. What was received stays received.
+					</ReopenAction>
+				</div>
 			{:else}
 				<InfoCard title="Next step">
 					{#if status === 'draft'}

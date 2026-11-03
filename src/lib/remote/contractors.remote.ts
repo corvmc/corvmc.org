@@ -26,6 +26,7 @@ import {
 	listOverdueJobs,
 	markJobNoShow,
 	recordInvoice,
+	reopenJob,
 	scheduleJob,
 	type Engagement
 } from '$lib/server/contractor/contractor-job-service';
@@ -360,6 +361,22 @@ function closeJobForm(close: (id: string) => Promise<Engagement>) {
 
 export const declineJobForm = closeJobForm(declineJob);
 export const noShowJobForm = closeJobForm(markJobNoShow);
+
+/** Out of a terminal status. Admin-only: a terminal state is the past (#2259). */
+export const reopenJobForm = form(
+	z.object({ id: z.uuid(), reason: z.string().trim().min(1, 'Say why').max(500) }),
+	async (raw) => {
+		await requireCapability('contractor.reopen');
+		const { id, reason } = raw as { id: string; reason: string };
+		try {
+			const job = await reopenJob(id, reason);
+			await refreshWorkOrderPage(job);
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
 
 export const recordInvoiceForm = form(
 	z.object({

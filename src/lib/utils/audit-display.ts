@@ -205,6 +205,12 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			const amount = d.costCents === null ? 'an invoice' : `a ${formatCents(d.costCents)} invoice`;
 			return `Recorded ${amount} from ${d.contractorName}${d.invoiceRef ? ` (${d.invoiceRef})` : ''}`;
 		}
+		case 'contractor_job.reopened':
+			return `Reopened ${entry.details.contractorName}'s engagement from ${contractorJobStatusLabels[entry.details.from].toLowerCase()}: “${entry.details.reason}”`;
+		case 'purchase_order.reopened':
+			return `Reopened the order from ${entry.details.from} to ${entry.details.to}: “${entry.details.reason}”`;
+		case 'inventory_asset.reopened':
+			return `Put the unit back in service from ${entry.details.from}: “${entry.details.reason}”`;
 		case 'equipment_loan.checked_out_unscheduled':
 			return `Checked out ${entry.details.equipmentName ?? 'a loan'} without scheduling it: “${entry.details.reason}”`;
 		case 'project.edited':

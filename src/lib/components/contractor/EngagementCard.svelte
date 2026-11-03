@@ -17,8 +17,10 @@
 		cancelJobForm,
 		declineJobForm,
 		noShowJobForm,
-		recordInvoiceForm
+		recordInvoiceForm,
+		reopenJobForm
 	} from '$lib/remote/contractors.remote';
+	import ReopenAction from '$lib/components/actions/ReopenAction.svelte';
 	import { contractorJobStatusBadge, contractorJobStatusLabels } from '$lib/config';
 	import { formatCents, formatDateShort } from '$lib/utils/format';
 	import { resolve } from '$app/paths';
@@ -38,6 +40,7 @@
 	const decline = $derived(declineJobForm.for(job.id));
 	const noShow = $derived(noShowJobForm.for(job.id));
 	const invoice = $derived(recordInvoiceForm.for(job.id));
+	const reopen = $derived(reopenJobForm.for(job.id));
 </script>
 
 <div id="engagement-{job.id}" class="scroll-mt-24">
@@ -211,6 +214,12 @@
 								<Field field={invoice.fields.paidAt} type="date" label="Paid" />
 							{/snippet}
 						</Action>
+					{/if}
+					{#if !open}
+						<ReopenAction action={reopen} id={job.id} capability="contractor.reopen">
+							Back to {job.scheduledFor ? 'booked' : 'asked'}. Ledger entries stay; completing it
+							again books only the difference.
+						</ReopenAction>
 					{/if}
 				</div>
 			</div>
