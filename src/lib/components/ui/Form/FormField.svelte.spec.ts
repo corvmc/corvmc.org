@@ -1,8 +1,9 @@
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { createRawSnippet } from 'svelte';
 import FormField from './FormField.svelte';
+import FormFieldBind from './FormFieldBind.test.svelte';
 
 // Minimal stand-in for a SvelteKit RemoteFormField. The real object's `.as(type, value)`
 // returns the input attributes (name/value/type/aria-invalid); the second argument is
@@ -124,6 +125,24 @@ describe('FormField', () => {
 
 		const input = container.querySelector('input[type="number"]') as HTMLInputElement;
 		expect(input.name).toBe('n:totalQuantity');
+	});
+
+	// A page that derives from the value (a date picking its slots) binds it; the
+	// field owns the input, so the binding has to be kept current by hand.
+	it('keeps bind:value current on a field-based input', async () => {
+		const field = create_field_proxy(
+			{},
+			() => ({}),
+			() => {},
+			() => ({}),
+			['date']
+		);
+		const { container } = await render(FormFieldBind, { field });
+		const input = container.querySelector('input[type="date"]') as HTMLInputElement;
+
+		await userEvent.fill(input, '2026-12-01');
+
+		await expect.poll(() => container.querySelector('output')?.textContent).toBe('2026-12-01');
 	});
 
 	// A schema that parses the string itself keeps "cleared" (`''`) apart from
