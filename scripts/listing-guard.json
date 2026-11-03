@@ -1,0 +1,19 @@
+{
+	"src/lib/remote/event-photos.remote.ts#uploadEventPhotos": "Scoped event.uploadRecap: staff or the show's photographer grant, not the committee.",
+	"src/lib/remote/event-photos.remote.ts#removeEventPhoto": "Recap curation is staff's (event.manage); open in #2262.",
+	"src/lib/remote/event-photos.remote.ts#saveEventRecapText": "Recap curation is staff's (event.manage); open in #2262.",
+	"src/lib/remote/event-photos.remote.ts#describeEventPhoto": "Recap curation is staff's (event.manage); open in #2262.",
+	"src/lib/remote/events.remote.ts#getStaffCheckIn": "Door check-in list, paired with the event.manageTickets check-in commands.",
+	"src/lib/remote/events.remote.ts#getEventInputList": "Staff-only for now; whether producers need it is open in #2262.",
+	"src/lib/remote/events.remote.ts#publishEvent": "Publishing is staff's call (event.publish).",
+	"src/lib/remote/events.remote.ts#unpublishEvent": "Publishing is staff's call (event.publish).",
+	"src/lib/remote/events.remote.ts#getEventPublishBlockers": "Readiness warnings for publishEvent, which is staff's.",
+	"src/lib/remote/events.remote.ts#cancelEvent": "Cancelling a listing is a staff terminal action.",
+	"src/lib/remote/events.remote.ts#deleteEvent": "Deleting a listing is a staff terminal action.",
+	"src/lib/remote/events.remote.ts#getEventDeletionImpact": "Preview for deleteEvent, which is staff's.",
+	"src/lib/remote/events.remote.ts#compTickets": "event.manageTickets, which no committee seat carries (events.remote.ticket-guard.spec.ts).",
+	"src/lib/remote/events.remote.ts#scanTicketIn": "event.manageTickets, which no committee seat carries.",
+	"src/lib/remote/events.remote.ts#checkInTicket": "event.manageTickets, which no committee seat carries.",
+	"src/lib/remote/market.remote.ts#getStaffMarketVendors": "Staff side of a market day; the committee has getCommitteeMarketVendors.",
+	"src/lib/remote/market.remote.ts#openMarketDayForm": "Opening a market day is staff's; the committee decides vendors through requireMarketDecider."
+}
