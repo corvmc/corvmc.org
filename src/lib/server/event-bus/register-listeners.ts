@@ -11,53 +11,30 @@ import { domainEvents } from './event-bus';
 // supports multiple listeners per event.
 // ---------------------------------------------------------------------------
 
-let registered = false;
+/** Each group imports its listener module lazily, then subscribes. */
+export const listenerGroups: ReadonlyArray<() => Promise<void>> = [
+	registerCheckoutListeners,
+	registerInKindListeners,
+	registerMembershipEntryListeners,
+	registerAudioEntryListeners,
+	registerEquipmentEntryListeners,
+	registerNotificationListeners,
+	registerInboxListeners,
+	registerWaitlistListeners,
+	registerOrientationGroup,
+	registerWorkRequestGroup,
+	registerLockListeners,
+	registerAuditGroup,
+	registerLocalResourceGroup,
+	registerMarketGroup
+];
 
-export function registerListeners(): void {
-	if (registered) return;
-	registered = true;
+let registered: Promise<void> | undefined;
 
-	// --- Checkout fulfillment (migrated from callback pattern) ---
-	registerCheckoutListeners();
-
-	// --- Contributed services into the financial record ---
-	registerInKindListeners();
-
-	// --- Paid contribution invoices into the financial record ---
-	registerMembershipEntryListeners();
-
-	// --- Music sales into the financial record ---
-	registerAudioEntryListeners();
-
-	// --- Equipment loan charges into the financial record ---
-	registerEquipmentEntryListeners();
-
-	// --- Notification dispatch ---
-	registerNotificationListeners();
-
-	// --- Inbox message → staff notification ---
-	registerInboxListeners();
-
-	// --- Waitlist promotion on cancellation ---
-	registerWaitlistListeners();
-
-	// --- A member's first booking raises an orientation shift ---
-	registerOrientationGroup();
-
-	// --- Scheduled work that finished closes the equipment reports it answered ---
-	registerWorkRequestGroup();
-
-	// --- A confirmed booking gets its door code now, not the morning of ---
-	registerLockListeners();
-
-	// --- Staff actions that surface as domain events, into the audit log ---
-	registerAuditGroup();
-
-	// --- Local resources tips: staff hear of one, the submitter hears the outcome ---
-	registerLocalResourceGroup();
-
-	// --- Market vendor fees are refunded when CMC cancels the market ---
-	registerMarketGroup();
+/** Idempotent. Callers need not await it; the promise settles once every group has subscribed. */
+export function registerListeners(): Promise<void> {
+	registered ??= Promise.all(listenerGroups.map((group) => group())).then(() => undefined);
+	return registered;
 }
 
 async function registerMarketGroup(): Promise<void> {

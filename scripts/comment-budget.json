@@ -385,7 +385,6 @@
 	"src/lib/server/entity/refs.ts",
 	"src/lib/server/errors.ts",
 	"src/lib/server/event-bus/event-bus.ts",
-	"src/lib/server/event-bus/register-listeners.spec.ts",
 	"src/lib/server/event-bus/register-listeners.ts",
 	"src/lib/server/event/community-event-service.ts",
 	"src/lib/server/event/create-group-event.spec.ts",

@@ -38,8 +38,7 @@ vi.mock('$lib/server/notification/notification-listeners', () => ({
 
 // The inbox + waitlist listeners dynamically import these modules during
 // registration. Mock them so registration settles without loading the real
-// (heavy, db-backed) implementations, which otherwise causes
-// vi.dynamicImportSettled() to time out.
+// (heavy, db-backed) implementations.
 const mockDispatch = vi.fn();
 vi.mock('$lib/server/notification/dispatcher', () => ({
 	dispatch: (...args: unknown[]) => mockDispatch(...args)
@@ -97,27 +96,21 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 /**
- * Pay the module graph's transform cost once, outside any test's 5s budget.
- *
- * Every test here imports `./register-listeners` inside itself — it has to,
- * because `vi.resetModules()` runs between them and registration is a top-level
- * side effect. That makes the FIRST test the one that pays for compiling the
- * whole listener tree, and on a cold `.vite` in a wide run that alone exceeded
- * the timeout. The failure reads as a broken listener registration; it is
- * nothing of the sort.
+ * Load the listener tree once, one group at a time, outside any test's 5s budget. vmForks links
+ * node_modules ESM racily: two groups linking drizzle-orm at once can leave a module "not linked"
+ * (ERR_VM_MODULE_LINK_FAILURE), and that module stays broken for the rest of the file.
+ * `vi.resetModules()` does not unload node_modules, so later concurrent runs find it linked.
  */
 beforeAll(async () => {
-	await import('./register-listeners');
+	const { listenerGroups } = await import('./register-listeners');
+	for (const group of listenerGroups) await group();
 	vi.resetModules();
 }, 60_000);
 
 describe('registerListeners', () => {
 	it('registers checkout.completed listeners for the five purchasables, the cache and the record', async () => {
 		const { registerListeners } = await import('./register-listeners');
-		registerListeners();
-
-		// Allow async registration to resolve
-		await vi.dynamicImportSettled();
+		await registerListeners();
 
 		expect(registeredHandlers['checkout.completed']).toBeDefined();
 		// One per purchasable, plus the payment cache. Each handler opens with a
@@ -133,16 +126,14 @@ describe('registerListeners', () => {
 
 	it('registers the audit log listeners', async () => {
 		const { registerListeners } = await import('./register-listeners');
-		registerListeners();
-		await vi.dynamicImportSettled();
+		await registerListeners();
 
 		expect(mockRegisterAuditListeners).toHaveBeenCalledOnce();
 	});
 
 	it('invokes handleReservationCheckout with stripe session', async () => {
 		const { registerListeners } = await import('./register-listeners');
-		registerListeners();
-		await vi.dynamicImportSettled();
+		await registerListeners();
 
 		const mockSession = { id: 'cs_test', metadata: {} };
 		const eventData = { stripeSession: mockSession, sessionId: 'cs_test', metadata: {} };
@@ -157,8 +148,7 @@ describe('registerListeners', () => {
 
 	it('invokes handleTicketCheckout with stripe session', async () => {
 		const { registerListeners } = await import('./register-listeners');
-		registerListeners();
-		await vi.dynamicImportSettled();
+		await registerListeners();
 
 		const mockSession = { id: 'cs_test2', metadata: { type: 'ticket' } };
 		const eventData = { stripeSession: mockSession, sessionId: 'cs_test2', metadata: {} };
@@ -173,8 +163,7 @@ describe('registerListeners', () => {
 
 	it('invokes handleBandPremiumCheckout with stripe session', async () => {
 		const { registerListeners } = await import('./register-listeners');
-		registerListeners();
-		await vi.dynamicImportSettled();
+		await registerListeners();
 
 		const mockSession = { id: 'cs_test3', metadata: { subscription_type: 'band_premium' } };
 		const eventData = { stripeSession: mockSession, sessionId: 'cs_test3', metadata: {} };
@@ -189,8 +178,7 @@ describe('registerListeners', () => {
 
 	it('calls registerAllNotificationListeners', async () => {
 		const { registerListeners } = await import('./register-listeners');
-		registerListeners();
-		await vi.dynamicImportSettled();
+		await registerListeners();
 
 		expect(mockRegisterAllNotificationListeners).toHaveBeenCalled();
 	});
@@ -207,8 +195,7 @@ describe('inbox.message_received — staff fan-out', () => {
 	// is exactly why it needs a test sitting on it.
 	async function fire(event: Record<string, unknown>) {
 		const { registerListeners } = await import('./register-listeners');
-		registerListeners();
-		await vi.dynamicImportSettled();
+		await registerListeners();
 		await registeredHandlers['inbox.message_received'][0]({
 			name: 'inbox.message_received',
 			data: event
@@ -254,8 +241,7 @@ describe('reservation.cancelled — waitlist promotion', () => {
 	// `waitlistNotifiedAt`) and offer the same slot to the one behind them.
 	async function fire(event: Record<string, unknown>) {
 		const { registerListeners } = await import('./register-listeners');
-		registerListeners();
-		await vi.dynamicImportSettled();
+		await registerListeners();
 		await registeredHandlers['reservation.cancelled'][0]({
 			name: 'reservation.cancelled',
 			data: event
@@ -283,8 +269,7 @@ describe('reservation.cancelled — waitlist promotion', () => {
 describe('reservation.confirmed — door code', () => {
 	it('mints the door code for the booking that was just confirmed', async () => {
 		const { registerListeners } = await import('./register-listeners');
-		registerListeners();
-		await vi.dynamicImportSettled();
+		await registerListeners();
 
 		await registeredHandlers['reservation.confirmed'][0]({
 			name: 'reservation.confirmed',
@@ -298,8 +283,7 @@ describe('reservation.confirmed — door code', () => {
 describe('reservation.cancelled — door code', () => {
 	it('revokes the door code of the booking that was just cancelled', async () => {
 		const { registerListeners } = await import('./register-listeners');
-		registerListeners();
-		await vi.dynamicImportSettled();
+		await registerListeners();
 
 		for (const handler of registeredHandlers['reservation.cancelled']) {
 			await handler({
