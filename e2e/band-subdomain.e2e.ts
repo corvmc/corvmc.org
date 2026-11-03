@@ -68,7 +68,7 @@ test('a premium band subdomain serves its band site', async ({ page }) => {
 test('the premium microsite renders gallery media from the media tables', async ({ page }) => {
 	await page.goto(`${subdomain(SEED_PREMIUM_BAND_SLUG)}/epk`);
 
-	await expect(page.getByRole('heading', { name: 'Photos' })).toBeVisible();
+	await expect(page.getByTestId('epk-gallery')).toBeVisible();
 });
 
 test('an old subdomain forwards to the address the band moved to', async ({ request }) => {
