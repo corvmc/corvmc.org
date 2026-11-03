@@ -307,7 +307,7 @@
 			<!-- Hidden, not unmounted: the discard question is asked over the form so
 			     that "Keep editing" gives back exactly what was typed. -->
 			{#if askingDiscard}
-				<div class="space-y-4">
+				<div class="space-y-4" data-testid="discard-prompt">
 					<p class="py-4">You have unsaved changes. Closing will lose them.</p>
 					<div class="flex justify-end gap-2">
 						<Button type="button" variant="default" onclick={() => (askingDiscard = false)}>

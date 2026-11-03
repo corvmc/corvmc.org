@@ -67,12 +67,31 @@ function fakeRemoteForm({
 
 const dialog = () => document.querySelector('[role="dialog"]');
 
+/**
+ * Locators by structure (#2189). The trigger is the only button inside the
+ * render container — the modal portals out of it. A confirm dialog's footer
+ * puts Dismiss first and the action last; a form's plain submit is the
+ * `type=submit` without `data-add-another`.
+ */
+const modal = () => page.getByRole('dialog');
+const dismissButton = () => modal().locator('.modal-action button').first();
+const confirmButton = () => modal().locator('.modal-action button').last();
+const submitButton = () => modal().locator('button[type="submit"]:not([data-add-another])');
+const addAnotherButton = () => modal().locator('[data-add-another]');
+const mount = async (props: Record<string, unknown>) => {
+	const screen = await render(ActionHarness, props as never);
+	return { ...screen, trigger: screen.locator.getByRole('button') };
+};
+
+// Fixture copy: these are props the spec passes in, not the app's wording.
+const CONFIRM = 'This cannot be undone.';
+
 describe('Action, callback mode', () => {
 	it('runs on click with no dialog in the way', async () => {
 		const run = vi.fn(async () => 'done');
-		await render(ActionHarness, { action: run, label: 'Retry' });
+		const { trigger } = await mount({ action: run, label: 'Retry' });
 
-		await page.getByRole('button', { name: 'Retry' }).click();
+		await trigger.click();
 
 		await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1));
 		expect(dialog()).toBeNull();
@@ -83,11 +102,11 @@ describe('Action, callback mode', () => {
 	it('disables the trigger while the callback is in flight', async () => {
 		let release: () => void = () => {};
 		const run = vi.fn(() => new Promise<void>((r) => (release = r)));
-		await render(ActionHarness, { action: run, label: 'Retry' });
+		const { trigger } = await mount({ action: run, label: 'Retry' });
 
-		await page.getByRole('button', { name: 'Retry' }).click();
+		await trigger.click();
 
-		await expect.element(page.getByRole('button', { name: 'Retry' })).toBeDisabled();
+		await expect.element(trigger).toBeDisabled();
 		release();
 	});
 
@@ -99,44 +118,51 @@ describe('Action, callback mode', () => {
 	// first assertion unsatisfiable rather than slow. Both halves are asserted:
 	// the flash, then the revert waited for past the window's own length.
 	it('flashes the success label, then goes back to the label', async () => {
-		await render(ActionHarness, {
+		const label = 'Retry';
+		const successLabel = 'Retried';
+		const { trigger } = await mount({
 			action: async () => undefined,
-			label: 'Retry',
-			successLabel: 'Retried',
+			label,
+			successLabel,
 			flashDuration: 2000
 		});
 
-		await page.getByRole('button', { name: 'Retry' }).click();
+		await trigger.click();
 
-		await expect.element(page.getByRole('button', { name: 'Retried' })).toBeVisible();
+		await expect.element(page.getByRole('button', { name: successLabel })).toBeVisible();
 		await expect
-			.element(page.getByRole('button', { name: 'Retry' }), { timeout: 5000 })
+			.element(page.getByRole('button', { name: label }), { timeout: 5000 })
 			.toBeVisible();
 	});
 
 	it('reports the callback result to onsuccess', async () => {
 		const onsuccess = vi.fn();
-		await render(ActionHarness, { action: async () => ({ id: 'x' }), label: 'Retry', onsuccess });
+		const { trigger } = await mount({
+			action: async () => ({ id: 'x' }),
+			label: 'Retry',
+			onsuccess
+		});
 
-		await page.getByRole('button', { name: 'Retry' }).click();
+		await trigger.click();
 
 		await vi.waitFor(() => expect(onsuccess).toHaveBeenCalledWith({ id: 'x' }));
 	});
 
 	it('does not run at all when disabled', async () => {
 		const run = vi.fn(async () => undefined);
-		await render(ActionHarness, { action: run, label: 'Retry', disabled: true });
+		const { trigger } = await mount({ action: run, label: 'Retry', disabled: true });
 
-		await expect.element(page.getByRole('button', { name: 'Retry' })).toBeDisabled();
+		await expect.element(trigger).toBeDisabled();
 		expect(run).not.toHaveBeenCalled();
 	});
 
 	// In a table action cell the label would overflow a square button, so it
 	// moves to the accessible name. Without that the control is unnamed.
 	it('keeps a name when the label is hidden', async () => {
-		await render(ActionHarness, { action: async () => undefined, label: 'Cancel', iconOnly: true });
+		const label = 'Cancel';
+		await render(ActionHarness, { action: async () => undefined, label, iconOnly: true });
 
-		const trigger = page.getByRole('button', { name: 'Cancel' });
+		const trigger = page.getByRole('button', { name: label });
 		await expect.element(trigger).toBeVisible();
 		expect((trigger.element() as HTMLElement).textContent?.trim()).toBe('');
 	});
@@ -145,42 +171,30 @@ describe('Action, callback mode', () => {
 describe('Action, confirm mode', () => {
 	it('asks before running', async () => {
 		const run = vi.fn(async () => undefined);
-		await render(ActionHarness, {
-			action: run,
-			label: 'Delete',
-			confirm: 'This cannot be undone.'
-		});
+		const { trigger } = await mount({ action: run, label: 'Delete', confirm: CONFIRM });
 
-		await page.getByRole('button', { name: 'Delete' }).click();
+		await trigger.click();
 
-		await expect.element(page.getByText('This cannot be undone.')).toBeVisible();
+		await expect.element(modal().getByText(CONFIRM)).toBeVisible();
 		expect(run).not.toHaveBeenCalled();
 	});
 
 	it('runs once the confirmation is given', async () => {
 		const run = vi.fn(async () => undefined);
-		await render(ActionHarness, {
-			action: run,
-			label: 'Delete',
-			confirm: 'This cannot be undone.'
-		});
+		const { trigger } = await mount({ action: run, label: 'Delete', confirm: CONFIRM });
 
-		await page.getByRole('button', { name: 'Delete' }).click();
-		await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+		await trigger.click();
+		await confirmButton().click();
 
 		await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1));
 	});
 
 	it('leaves the action alone when dismissed', async () => {
 		const run = vi.fn(async () => undefined);
-		await render(ActionHarness, {
-			action: run,
-			label: 'Delete',
-			confirm: 'This cannot be undone.'
-		});
+		const { trigger } = await mount({ action: run, label: 'Delete', confirm: CONFIRM });
 
-		await page.getByRole('button', { name: 'Delete' }).click();
-		await page.getByRole('button', { name: 'Dismiss' }).click();
+		await trigger.click();
+		await dismissButton().click();
 
 		await vi.waitFor(() => expect(dialog()).toBeNull());
 		expect(run).not.toHaveBeenCalled();
@@ -198,16 +212,16 @@ describe('Action, callback failure', () => {
 
 	it('tells the member why a confirmed action was refused', async () => {
 		vi.mocked(toast.error).mockClear();
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			action: vi.fn(async () => {
 				throw refusal;
 			}),
 			label: 'Remove',
-			confirm: 'This cannot be undone.'
+			confirm: CONFIRM
 		});
 
-		await page.getByRole('button', { name: 'Remove' }).click();
-		await page.getByRole('dialog').getByRole('button', { name: 'Remove' }).click();
+		await trigger.click();
+		await confirmButton().click();
 
 		await vi.waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith('This is the only card on your membership.')
@@ -216,17 +230,17 @@ describe('Action, callback failure', () => {
 
 	it('surfaces it through the error boundary the panels mount', async () => {
 		vi.mocked(toast.error).mockClear();
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			boundary: true,
 			action: vi.fn(async () => {
 				throw refusal;
 			}),
 			label: 'Remove',
-			confirm: 'This cannot be undone.'
+			confirm: CONFIRM
 		});
 
-		await page.getByRole('button', { name: 'Remove' }).click();
-		await page.getByRole('dialog').getByRole('button', { name: 'Remove' }).click();
+		await trigger.click();
+		await confirmButton().click();
 
 		await vi.waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith('This is the only card on your membership.')
@@ -237,7 +251,7 @@ describe('Action, callback failure', () => {
 describe('Action, form mode', () => {
 	it('submits through the modal and closes it', async () => {
 		const onsuccess = vi.fn();
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			action: fakeRemoteForm({ result: { bandId: 'band-1' } }),
 			label: 'Save',
 			modalTitle: 'Edit',
@@ -245,8 +259,8 @@ describe('Action, form mode', () => {
 			onsuccess
 		});
 
-		await page.getByRole('button', { name: 'Save' }).click();
-		await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
+		await trigger.click();
+		await submitButton().click();
 
 		await vi.waitFor(() => expect(onsuccess).toHaveBeenCalledWith({ bandId: 'band-1' }));
 		await vi.waitFor(() => expect(dialog()).toBeNull());
@@ -262,7 +276,7 @@ describe('Action, form mode', () => {
 		const [key] = Object.keys(outcome);
 		it(`keeps the modal open on a ${key} result`, async () => {
 			const onsuccess = vi.fn();
-			await render(ActionHarness, {
+			const { trigger } = await mount({
 				action: fakeRemoteForm({ result: outcome }),
 				label: 'Book',
 				modalTitle: 'Book the space',
@@ -270,13 +284,13 @@ describe('Action, form mode', () => {
 				onsuccess
 			});
 
-			await page.getByRole('button', { name: 'Book' }).click();
-			await page.getByRole('dialog').getByRole('button', { name: 'Book' }).click();
+			await trigger.click();
+			await submitButton().click();
 
 			// Wait for the submit to actually land — the success flash on the submit
 			// button is the first thing that happens after it — or the assertions
 			// below run before the modal has had a chance to close and pass either way.
-			await expect.element(page.getByRole('button', { name: 'Saved' })).toBeVisible();
+			await expect.element(submitButton()).toHaveAttribute('data-status', 'success');
 			expect(dialog()).not.toBeNull();
 			expect(onsuccess).not.toHaveBeenCalled();
 		});
@@ -290,7 +304,7 @@ describe('Action, form mode', () => {
 	 */
 	it('surfaces a thrown failure, with no onfailure handler', async () => {
 		vi.mocked(toast.error).mockClear();
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			action: fakeRemoteForm({
 				rejectWith: { status: 422, body: { message: 'Not ready to announce: there is no poster.' } }
 			}),
@@ -298,8 +312,8 @@ describe('Action, form mode', () => {
 			fieldName: 'id'
 		});
 
-		await page.getByRole('button', { name: 'Publish' }).click();
-		await page.getByRole('dialog').getByRole('button', { name: 'Publish' }).click();
+		await trigger.click();
+		await submitButton().click();
 
 		await vi.waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith('Not ready to announce: there is no poster.')
@@ -309,15 +323,15 @@ describe('Action, form mode', () => {
 	it('surfaces a thrown failure even when the caller passes onfailure', async () => {
 		vi.mocked(toast.error).mockClear();
 		const onfailure = vi.fn();
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			action: fakeRemoteForm({ rejectWith: { status: 409, body: { message: '3 tickets sold' } } }),
 			label: 'Unpublish',
 			fieldName: 'id',
 			onfailure
 		});
 
-		await page.getByRole('button', { name: 'Unpublish' }).click();
-		await page.getByRole('dialog').getByRole('button', { name: 'Unpublish' }).click();
+		await trigger.click();
+		await submitButton().click();
 
 		await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith('3 tickets sold'));
 		// The handler still runs, and now receives the error rather than the issues.
@@ -332,7 +346,7 @@ describe('Action, form mode', () => {
 	// takes — and the two tests above only ever exercised the other one.
 	it('surfaces a thrown failure through the error boundary the panels mount', async () => {
 		vi.mocked(toast.error).mockClear();
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			boundary: true,
 			action: fakeRemoteForm({
 				rejectWith: { status: 400, body: { message: 'You already have a subscription.' } }
@@ -341,8 +355,8 @@ describe('Action, form mode', () => {
 			fieldName: 'id'
 		});
 
-		await page.getByRole('button', { name: 'Subscribe' }).click();
-		await page.getByRole('dialog').getByRole('button', { name: 'Subscribe' }).click();
+		await trigger.click();
+		await submitButton().click();
 
 		await vi.waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith('You already have a subscription.')
@@ -352,27 +366,30 @@ describe('Action, form mode', () => {
 	// `submitLabel` is separate from `label` because the trigger names the thing
 	// you are opening and the submit names the thing you are doing.
 	it('gives the submit its own label', async () => {
-		await render(ActionHarness, {
+		const label = 'New Band';
+		const submitLabel = 'Create Band';
+		const { trigger } = await mount({
 			action: fakeRemoteForm(),
-			label: 'New Band',
-			submitLabel: 'Create Band',
+			label,
+			submitLabel,
 			fieldName: 'name'
 		});
 
-		await page.getByRole('button', { name: 'New Band' }).click();
+		await trigger.click();
 
-		await expect.element(page.getByRole('button', { name: 'Create Band' })).toBeVisible();
+		await expect.element(submitButton()).toHaveTextContent(submitLabel);
+		await expect.element(submitButton()).not.toHaveTextContent(label);
 	});
 
 	it('renders no footer when the form supplies its own', async () => {
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			action: fakeRemoteForm(),
 			label: 'Save',
 			noFooter: true,
 			fieldName: 'title'
 		});
 
-		await page.getByRole('button', { name: 'Save' }).click();
+		await trigger.click();
 
 		await expect.element(page.getByRole('dialog')).toBeVisible();
 		expect(document.querySelector('[role="dialog"] button[type="submit"]')).toBeNull();
@@ -391,7 +408,7 @@ describe('Action, save and add another', () => {
 	it('keeps the modal open and hands over to onaddanother', async () => {
 		const onsuccess = vi.fn();
 		const onaddanother = vi.fn();
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			action: fakeRemoteForm({ result: { id: 'item-1' } }),
 			label: 'Add Item',
 			modalTitle: 'Add Item',
@@ -401,8 +418,8 @@ describe('Action, save and add another', () => {
 			onaddanother
 		});
 
-		await page.getByRole('button', { name: 'Add Item' }).click();
-		await page.getByRole('button', { name: 'Save and add another' }).click();
+		await trigger.click();
+		await addAnotherButton().click();
 
 		await vi.waitFor(() => expect(onaddanother).toHaveBeenCalledWith({ id: 'item-1' }));
 		expect(onsuccess).toHaveBeenCalledWith({ id: 'item-1' });
@@ -411,7 +428,7 @@ describe('Action, save and add another', () => {
 
 	it('still closes on the plain submit', async () => {
 		const onaddanother = vi.fn();
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			action: fakeRemoteForm({ result: { id: 'item-1' } }),
 			label: 'Add Item',
 			modalTitle: 'Add Item',
@@ -420,24 +437,24 @@ describe('Action, save and add another', () => {
 			onaddanother
 		});
 
-		await page.getByRole('button', { name: 'Add Item' }).click();
-		await page.getByRole('dialog').getByRole('button', { name: 'Add Item' }).click();
+		await trigger.click();
+		await submitButton().click();
 
 		await vi.waitFor(() => expect(dialog()).toBeNull());
 		expect(onaddanother).not.toHaveBeenCalled();
 	});
 
 	it('offers no second submit unless asked', async () => {
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			action: fakeRemoteForm(),
 			label: 'Save',
 			modalTitle: 'Edit',
 			fieldName: 'title'
 		});
 
-		await page.getByRole('button', { name: 'Save' }).click();
+		await trigger.click();
 		await expect.element(page.getByRole('dialog')).toBeVisible();
-		expect(page.getByRole('button', { name: 'Save and add another' }).query()).toBeNull();
+		expect(addAnotherButton().query()).toBeNull();
 	});
 });
 
@@ -450,49 +467,46 @@ describe('Action, canSubmit', () => {
 		...(canSubmit === undefined ? {} : { canSubmit })
 	});
 
-	const submit = () => page.getByRole('dialog').getByRole('button', { name: 'Save' });
-
 	it('disables the modal submit while it is false', async () => {
-		await render(ActionHarness, gated(false));
+		const { trigger } = await mount(gated(false));
 
-		await page.getByRole('button', { name: 'Adjust' }).click();
+		await trigger.click();
 
-		await expect.element(submit()).toBeDisabled();
+		await expect.element(submitButton()).toBeDisabled();
 	});
 
 	it('leaves the trigger enabled so the form can still be opened', async () => {
-		await render(ActionHarness, gated(false));
+		const { trigger } = await mount(gated(false));
 
-		await expect.element(page.getByRole('button', { name: 'Adjust' })).toBeEnabled();
+		await expect.element(trigger).toBeEnabled();
 	});
 
 	it('enables the submit once the gate opens', async () => {
 		const props = gated(false);
-		const { rerender } = await render(ActionHarness, props);
+		const { rerender, trigger } = await mount(props);
 
-		await page.getByRole('button', { name: 'Adjust' }).click();
-		await expect.element(submit()).toBeDisabled();
+		await trigger.click();
+		await expect.element(submitButton()).toBeDisabled();
 
 		await rerender({ ...props, canSubmit: true });
 
-		await expect.element(submit()).toBeEnabled();
+		await expect.element(submitButton()).toBeEnabled();
 	});
 
 	it('gates nothing when it is not given', async () => {
-		await render(ActionHarness, gated());
+		const { trigger } = await mount(gated());
 
-		await page.getByRole('button', { name: 'Adjust' }).click();
+		await trigger.click();
 
-		await expect.element(submit()).toBeEnabled();
+		await expect.element(submitButton()).toBeEnabled();
 	});
 
 	// The original defect, pinned at the DOM: an unread prop reaches the trigger
 	// as an attribute, which is silent — no error, no type failure, no CSS.
 	it('does not leak onto the trigger as an HTML attribute', async () => {
-		await render(ActionHarness, gated(false));
+		const { trigger } = await mount(gated(false));
 
-		const trigger = page.getByRole('button', { name: 'Adjust' }).element();
-		expect(trigger.getAttribute('cansubmit')).toBeNull();
+		expect(trigger.element().getAttribute('cansubmit')).toBeNull();
 	});
 });
 
@@ -501,16 +515,18 @@ describe('Action, canSubmit', () => {
  * the ✕ cost a member the booking they had just typed. #876.
  */
 describe('Action, unsaved changes', () => {
-	const closeButton = () => page.getByRole('button', { name: 'Close' });
+	const closeButton = () => modal().locator('[data-dialog-close]');
+	const note = () => modal().locator('input[name="notes"]');
+	const prompt = () => page.getByTestId('discard-prompt');
 
 	it('closes an untouched dialog without asking', async () => {
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			action: fakeRemoteForm(),
 			label: 'Book',
 			formFieldName: 'notes'
 		});
 
-		await page.getByRole('button', { name: 'Book' }).click();
+		await trigger.click();
 		await expect.element(page.getByRole('dialog')).toBeVisible();
 		await closeButton().click();
 
@@ -518,46 +534,46 @@ describe('Action, unsaved changes', () => {
 	});
 
 	it('asks before discarding a form that has been typed into', async () => {
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			action: fakeRemoteForm(),
 			label: 'Book',
 			formFieldName: 'notes'
 		});
 
-		await page.getByRole('button', { name: 'Book' }).click();
-		await page.getByRole('textbox', { name: 'Note' }).fill('bring the amp');
+		await trigger.click();
+		await note().fill('bring the amp');
 		await closeButton().click();
 
-		await expect.element(page.getByText('You have unsaved changes')).toBeVisible();
+		await expect.element(prompt()).toBeVisible();
 		expect(dialog()).not.toBeNull();
 	});
 
 	it('keeps what was typed when the discard is declined', async () => {
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			action: fakeRemoteForm(),
 			label: 'Book',
 			formFieldName: 'notes'
 		});
 
-		await page.getByRole('button', { name: 'Book' }).click();
-		await page.getByRole('textbox', { name: 'Note' }).fill('bring the amp');
+		await trigger.click();
+		await note().fill('bring the amp');
 		await closeButton().click();
-		await page.getByRole('button', { name: 'Keep editing' }).click();
+		await prompt().getByRole('button').first().click();
 
-		await expect.element(page.getByRole('textbox', { name: 'Note' })).toHaveValue('bring the amp');
+		await expect.element(note()).toHaveValue('bring the amp');
 	});
 
 	it('closes on the second answer when the discard is confirmed', async () => {
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			action: fakeRemoteForm(),
 			label: 'Book',
 			formFieldName: 'notes'
 		});
 
-		await page.getByRole('button', { name: 'Book' }).click();
-		await page.getByRole('textbox', { name: 'Note' }).fill('bring the amp');
+		await trigger.click();
+		await note().fill('bring the amp');
 		await closeButton().click();
-		await page.getByRole('button', { name: 'Discard' }).click();
+		await prompt().getByRole('button').last().click();
 
 		await vi.waitFor(() => expect(dialog()).toBeNull());
 	});
