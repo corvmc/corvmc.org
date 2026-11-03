@@ -45,6 +45,7 @@
 		"docs:check": "node scripts/docs/check-docs-drift.mjs",
 		"class-census": "node scripts/class-census.mjs",
 		"test-wording-census": "node scripts/test-wording-census.mjs",
+		"ui-string-census": "node scripts/ui-string-census.mjs",
 		"form-reachability": "tsx scripts/form-reachability.ts",
 		"email:push": "postmark templates push postmark/templates --force --server-token $POSTMARK_SERVER_TOKEN",
 		"email:pull": "postmark templates pull postmark/templates --server-token $POSTMARK_SERVER_TOKEN",
