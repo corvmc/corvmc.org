@@ -492,11 +492,14 @@ describe('generateRecurringEvents', () => {
 	 * The payoff the media layer was built for: occurrences share the prototype's
 	 * one poster object rather than each copying the R2 binary.
 	 */
-	it.each([
-		['attachment-1', 'shares the prototype poster instead of copying the object'],
+	it.each<{ attached: string | null; label: string }>([
+		{
+			attached: 'attachment-1',
+			label: 'shares the prototype poster instead of copying the object'
+		},
 		// A key with no `media` row: the key is shared anyway and the anomaly reported.
-		[null, 'still shares the key when the prototype poster was never recorded']
-	])('%#: %s', async (attached) => {
+		{ attached: null, label: 'still shares the key when the prototype poster was never recorded' }
+	])('$label', async ({ attached }) => {
 		eventSeries({ reservation: false, posterKey: 'events/posters/eproto-1.webp' });
 		mockAttachExisting.mockResolvedValue(attached);
 
