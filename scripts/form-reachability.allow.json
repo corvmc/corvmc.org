@@ -158,9 +158,6 @@
 		"createdByUserId": "internal: set once at creation",
 		"status": "elsewhere: the lifecycle transition moves it"
 	},
-	"src/lib/server/reservation/recurring-series-service.ts#create(0)": {
-		"endsAt": "#2319: a recurring room booking cannot be given an end date"
-	},
 	"src/lib/server/reservation/reservation-service.ts#cancel(3)": {
 		"actor": "internal: the system actor for jobs and webhooks",
 		"actorUserId": "internal: the system actor for jobs and webhooks"

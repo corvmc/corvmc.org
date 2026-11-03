@@ -131,6 +131,7 @@
 					endTime = fd.get('endTime') as string;
 					recurringFrequency = (fd.get('recurring') as string) || '';
 					const monthlyMode = (fd.get('monthlyMode') as 'weekday' | 'monthday') || 'weekday';
+					const until = (fd.get('recurringUntil') as string) || undefined;
 					if (date && startTime) {
 						const startIso = clubInstant(date, startTime);
 						const endIso = endTime ? clubInstant(date, endTime) : startIso;
@@ -158,7 +159,8 @@
 							date,
 							startTime,
 							frequency: recurringFrequency as 'weekly' | 'biweekly' | 'monthly',
-							monthlyMode
+							monthlyMode,
+							until
 						}).then((result) => {
 							recurringPreview = result;
 						});
