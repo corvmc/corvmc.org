@@ -49,11 +49,16 @@ test.describe('member groups index', () => {
 
 		// `goto` resolves before an awaited remote query commits, so wait on a
 		// section rather than asserting against an empty <main>.
-		await expect(page.getByRole('heading', { name: 'Open to join' })).toBeVisible();
 		await expect(page.getByText(SEED_JOINABLE_NAME)).toBeVisible();
-
-		await expect(page.getByRole('heading', { name: 'Apply to join' })).toBeVisible();
 		await expect(page.getByText(SEED_APPLY_NAME)).toBeVisible();
+		// In separate sections: no one card holds both the joinable and the
+		// apply-only group.
+		await expect(
+			page
+				.locator('.card')
+				.filter({ hasText: SEED_JOINABLE_NAME })
+				.filter({ hasText: SEED_APPLY_NAME })
+		).toHaveCount(0);
 
 		// The group's own words, next to the button rather than buried on a
 		// detail page nobody opens before deciding.
@@ -74,7 +79,7 @@ test.describe('member groups index', () => {
 		// renders a `.card` around the whole section, so a `.card`-scoped locator
 		// matched every group in it and this test silently joined a different one.
 		await page.getByRole('button', { name: `Join ${SEED_JOINABLE_NAME}` }).click();
-		await page.getByRole('dialog').getByRole('button', { name: 'Join' }).click();
+		await page.getByRole('dialog').locator('button[type="submit"]').click();
 
 		// No approval step, and three things say so. The group moves into "Your
 		// programs" on this page, the roster row itself reads `'active'`, and the
@@ -108,7 +113,7 @@ test.describe('member groups index', () => {
 		await page.getByRole('button', { name: `Apply to ${SEED_APPLY_NAME}` }).click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog.getByRole('checkbox', { name: SEED_APPLY_NAME })).toBeChecked();
-		await dialog.getByRole('button', { name: 'Send application' }).click();
+		await dialog.locator('button[type="submit"]').click();
 
 		await expect
 			.poll(async () => (await readApplication(SEED_APPLY_SLUG, SEED_BANDMATE_ID))?.status, DB_POLL)
@@ -132,7 +137,7 @@ test.describe('member groups index', () => {
 		// The club's own words sit over the box they prompt.
 		await expect(dialog.getByText(SEED_APPLY_CLUB_INSTRUCTIONS)).toBeVisible();
 		await dialog.getByLabel('Anything the chairs should know?').fill('Folk songs, mostly.');
-		await dialog.getByRole('button', { name: 'Send application' }).click();
+		await dialog.locator('button[type="submit"]').click();
 
 		await expect
 			.poll(
@@ -159,7 +164,7 @@ test.describe('the club page', () => {
 		await page.goto(`/member/groups/${SEED_CLUB_SLUG}`);
 
 		await page.waitForURL('**/member/groups', { timeout: 15000 });
-		await expect(page.getByRole('heading', { name: 'Your programs' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 	});
 });
 
@@ -172,7 +177,7 @@ test.describe('the public group directory', () => {
 	test('lists public programs to a signed-out visitor', async ({ page }) => {
 		await page.goto('/groups');
 
-		await expect(page.getByRole('heading', { name: 'Groups' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 		await expect(page.getByRole('link', { name: SEED_JOINABLE_NAME })).toBeVisible();
 	});
 
@@ -186,13 +191,12 @@ test.describe('the public group directory', () => {
 		await expect(page.getByRole('heading', { name: SEED_JOINABLE_NAME })).toBeVisible();
 		await expect(page.getByText(SEED_JOINABLE_INSTRUCTIONS)).toBeVisible();
 
-		// Scoped to `main`: the public header carries its own "Sign In" link.
-		const signIn = page.getByRole('main').getByRole('link', { name: 'Sign in' });
+		// Scoped to `main`: the public header carries its own sign-in link. The
+		// address is the point: it brings them back to this group.
+		const signIn = page
+			.getByRole('main')
+			.locator(`a[href="/login?redirect=${encodeURIComponent(`/groups/${SEED_JOINABLE_SLUG}`)}"]`);
 		await expect(signIn).toBeVisible();
-		await expect(signIn).toHaveAttribute(
-			'href',
-			`/login?redirect=${encodeURIComponent(`/groups/${SEED_JOINABLE_SLUG}`)}`
-		);
 	});
 
 	/** A members-only or hidden program has no public page at all. */

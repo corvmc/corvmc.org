@@ -57,7 +57,7 @@ test('an instructor can book teaching time; a member without a grant cannot', as
 	await login(page, SEED_TEACHER_EMAIL, SEED_TEACHER_PASSWORD);
 	await page.goto('/member/reservations');
 
-	const teachingButton = page.getByRole('button', { name: 'Book teaching time' });
+	const teachingButton = page.getByTestId('book-teaching');
 	await expect(teachingButton).toBeVisible({ timeout: 15000 });
 
 	await teachingButton.click();
@@ -94,24 +94,22 @@ test('an instructor can book teaching time; a member without a grant cannot', as
 	const start = await startTime.inputValue();
 	expect(minutesBetween(start, shortest ?? '')).toBe(30);
 
-	const advance = dialog.getByRole('button', { name: 'Continue' });
+	// Each step's own submit, by index: steps stay mounted, hidden.
+	const advance = dialog.locator('[data-step="0"] button[type="submit"]');
 	await expect(advance).toBeEnabled({ timeout: 15000 });
 	await advance.click();
 
-	// 'Confirm', not 'Book Session': that label belongs to `ConfirmStep`'s band
-	// branch. A member-shaped booking submits through Confirm, and with
-	// `payAhead={false}` it is the only action on the step.
-	await dialog.getByRole('button', { name: 'Confirm' }).click();
+	// A member-shaped booking submits through the confirm step's own submit, and
+	// with `payAhead={false}` it is the only action on the step.
+	await dialog.locator('[data-step="1"] button[type="submit"]').click();
 	await expect(dialog).toBeHidden({ timeout: 20000 });
 
 	// A member with no grant is offered nothing — the button is the visible half
 	// of `requireInstructor`, which refuses them on the server regardless.
 	await login(page, SEED_APPLICANT_EMAIL, SEED_APPLICANT_PASSWORD);
 	await page.goto('/member/reservations');
-	await expect(page.getByRole('button', { name: 'Reserve Space' })).toBeVisible({
-		timeout: 15000
-	});
-	await expect(page.getByRole('button', { name: 'Book teaching time' })).toHaveCount(0);
+	await expect(page.getByTestId('book-space')).toBeVisible({ timeout: 15000 });
+	await expect(page.getByTestId('book-teaching')).toHaveCount(0);
 });
 
 test('staff see a waiting application, and approving it clears the queue', async ({ page }) => {
@@ -124,14 +122,14 @@ test('staff see a waiting application, and approving it clears the queue', async
 	// surface allowed to render it.
 	await expect(page.getByText(SEED_APPLICANT_NOTE)).toBeVisible();
 
-	await page.getByRole('button', { name: 'Approve' }).first().click();
+	await page.getByTestId('approve-instructor').first().click();
 	const dialog = page.getByRole('dialog');
 	await expect(dialog).toBeVisible({ timeout: 15000 });
-	await dialog.getByRole('button', { name: 'Approve' }).click();
+	await dialog.locator('button[type="submit"]').click();
 	await expect(dialog).toBeHidden({ timeout: 20000 });
 
 	// They leave Pending and appear among who is teaching.
-	await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(0, { timeout: 15000 });
+	await expect(page.getByTestId('approve-instructor')).toHaveCount(0, { timeout: 15000 });
 	await page.goto('/staff/members/instructors');
 	await expect(page.getByText(SEED_APPLICANT_HEADLINE)).toBeVisible({ timeout: 15000 });
 });

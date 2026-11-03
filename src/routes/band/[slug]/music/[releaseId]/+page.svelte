@@ -473,6 +473,7 @@
 						label="Publish"
 						disabled={tracks.length === 0}
 						modalTitle="Publish release"
+						data-testid="publish-release"
 						submitLabel="Publish"
 						successToast="Release published"
 					>
@@ -496,6 +497,7 @@
 						size="sm"
 						class="text-error"
 						modalTitle="Delete release"
+						data-testid="delete-release"
 						submitLabel="Delete"
 						submitVariant="error"
 						successToast="Release deleted"

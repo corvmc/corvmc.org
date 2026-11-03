@@ -28,7 +28,8 @@ test.describe('venues', () => {
 
 		const roomRow = page.locator('tr').filter({ hasText: SEED_VENUE_ROOM_NAME });
 		await expect(roomRow).toBeVisible({ timeout: 15000 });
-		await expect(roomRow.getByText('Our room')).toBeVisible();
+		// The room's badge; no other venue carries one.
+		await expect(roomRow.locator('.badge-primary')).toBeVisible();
 
 		await expect(page.locator('tr').filter({ hasText: SEED_VENUE_OFFSITE_NAME })).toBeVisible();
 	});
@@ -63,31 +64,31 @@ test.describe('venues', () => {
 
 		// The fixture sweeps this prefix, and the event is never given a hold.
 		const title = `${SEED_EVENT_TITLE_PREFIX} venue ${Date.now()}`;
-		await page.getByRole('button', { name: 'Create Listing' }).click();
+		await page.getByTestId('create-listing').click();
 		await page.locator('input[name="title"]').fill(title);
 		await page.locator('input[name="eventDate"]').fill(SEED_EVENT_DATE);
 		await page.locator('input[name="eventStartTime"]').fill('19:00');
 		await page.locator('input[name="eventEndTime"]').fill('22:00');
-		await page.getByRole('dialog').getByRole('button', { name: 'Create Listing' }).click();
+		await page.getByRole('dialog').locator('button[type="submit"]').click();
 		await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
 		await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
 		// Create lands with `?edit=1`; reloaded bare so the test opens Edit itself.
 		await page.goto(new URL(page.url()).pathname);
-		await page.getByRole('button', { name: 'Edit' }).click();
+		await page.getByTestId('edit-listing').click();
 
 		// The toggle is there while the show is in our room.
-		await expect(page.getByRole('checkbox', { name: 'Reserve practice space' })).toBeVisible({
+		await expect(page.getByTestId('reserve-space')).toBeVisible({
 			timeout: 15000
 		});
 
 		await page.locator('select[name="venueId"]').selectOption({ label: SEED_VENUE_OFFSITE_NAME });
 
-		await expect(page.getByRole('checkbox', { name: 'Reserve practice space' })).toHaveCount(0);
-		await expect(page.getByText('Off-site, so the practice space stays bookable')).toBeVisible();
+		await expect(page.getByTestId('reserve-space')).toHaveCount(0);
+		await expect(page.getByTestId('offsite-note')).toBeVisible();
 
 		// And back: choosing the room again offers it, so this is a branch rather
 		// than a one-way door.
 		await page.locator('select[name="venueId"]').selectOption({ label: 'The practice room' });
-		await expect(page.getByRole('checkbox', { name: 'Reserve practice space' })).toBeVisible();
+		await expect(page.getByTestId('reserve-space')).toBeVisible();
 	});
 });

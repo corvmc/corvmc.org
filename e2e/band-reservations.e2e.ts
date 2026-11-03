@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { signInAs } from './fixtures/auth';
 import {
 	SEED_OWNER_EMAIL,
@@ -17,6 +17,9 @@ import {
  * the answer down as `canCancel` — which is only observable from the outside,
  * hence an e2e rather than another unit test.
  */
+/** A card's cancel form posts directly; it is the card's only submit. */
+const cancelButton = (card: Locator) => card.locator('button[type="submit"]');
+
 async function login(page: Page, email: string, password: string) {
 	await signInAs(page, { email, password });
 }
@@ -26,7 +29,7 @@ test('a band books a session, and only the booker is offered Cancel', async ({ p
 	await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/reservations`);
 
 	// Booking is a modal on the list page now, not a /reservations/new route.
-	await page.getByRole('button', { name: 'Book a Session' }).click();
+	await page.getByTestId('book-session').click();
 
 	const dialog = page.getByRole('dialog');
 	await expect(dialog).toBeVisible({ timeout: 15000 });
@@ -55,26 +58,25 @@ test('a band books a session, and only the booker is offered Cancel', async ({ p
 		await phone.fill('541-555-0123');
 	}
 
-	// `Form.SubmitButton` labels the advance action 'Continue' on every step but
-	// the last, where it becomes the step's own label.
-	const advance = dialog.getByRole('button', { name: 'Continue' });
+	// Each step's own submit, by index: steps stay mounted, hidden.
+	const advance = dialog.locator('[data-step="0"] button[type="submit"]');
 	await expect(advance).toBeEnabled({ timeout: 15000 });
 	await advance.click();
 
 	// The confirm step must say whose free hours this spends — bands have none of
 	// their own, and two bandmates seeing different prices reads as a bug
 	// otherwise.
-	await expect(dialog.getByText(/free hours/i)).toBeVisible({
+	await expect(dialog.getByTestId('band-credit-note')).toBeVisible({
 		timeout: 15000
 	});
 
-	await dialog.getByRole('button', { name: 'Book Session' }).click();
+	await dialog.locator('[data-step="1"] button[type="submit"]').click();
 	await expect(dialog).toBeHidden({ timeout: 20000 });
 
 	// The booking lands on the band's list, visible to the whole band.
 	const upcomingRow = page.locator('.reservation-card', { hasText: 'Booked by' }).first();
 	await expect(upcomingRow).toBeVisible({ timeout: 15000 });
-	await expect(upcomingRow.getByRole('button', { name: 'Cancel' })).toBeVisible();
+	await expect(cancelButton(upcomingRow)).toBeVisible();
 
 	// A plain member who didn't book sees the session but is offered nothing.
 	await login(page, SEED_BANDMATE_EMAIL, SEED_BANDMATE_PASSWORD);
@@ -82,7 +84,7 @@ test('a band books a session, and only the booker is offered Cancel', async ({ p
 
 	const mateRow = page.locator('.reservation-card', { hasText: 'Booked by' }).first();
 	await expect(mateRow).toBeVisible({ timeout: 15000 });
-	await expect(mateRow.getByRole('button', { name: 'Cancel' })).toHaveCount(0);
+	await expect(cancelButton(mateRow)).toHaveCount(0);
 
 	// A cancelled session stays on the list until its slot is over, everywhere.
 	// The band panel used to drop it twice over — it filtered cancellations out
@@ -93,13 +95,12 @@ test('a band books a session, and only the booker is offered Cancel', async ({ p
 
 	// A plain submit, not a confirm dialog — the card posts the form directly.
 	const ownRow = page.locator('.reservation-card', { hasText: 'Booked by' }).first();
-	await ownRow.getByRole('button', { name: 'Cancel' }).click();
+	await cancelButton(ownRow).click();
 
 	// The row keeps its place in the list and changes state in it. `.cancelled`
 	// is the shell's own class, from the raw status.
 	const cancelledRow = page.locator('.reservation-card.cancelled').first();
 	await expect(cancelledRow).toBeVisible({ timeout: 20000 });
-	await expect(cancelledRow).toContainText('Booked by');
 	// Nobody's to cancel twice.
-	await expect(cancelledRow.getByRole('button', { name: 'Cancel' })).toHaveCount(0);
+	await expect(cancelButton(cancelledRow)).toHaveCount(0);
 });

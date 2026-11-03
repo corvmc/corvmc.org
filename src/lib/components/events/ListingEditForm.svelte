@@ -518,7 +518,7 @@
 					{/if}
 
 					{#if canReserveSpace && offSite}
-						<p class="text-muted">
+						<p class="text-muted" data-testid="offsite-note">
 							Off-site, so the practice space stays bookable while this runs.
 						</p>
 					{:else if canReserveSpace}
