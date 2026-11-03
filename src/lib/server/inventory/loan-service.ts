@@ -17,7 +17,7 @@ import { recordCashPayment } from '$lib/server/finance/payment-service';
 import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
 import { isSustainingMember } from '$lib/server/finance/subscription-service';
 import { getAvailableQuantity } from './stock-service';
-import { setAssetStatus } from './asset-service';
+import { setAssetStatus, settleTerminalUnit } from './asset-service';
 import { hasBlockingFlag, raiseFlag } from './work-request-service';
 import type { EquipmentCondition } from '$lib/config';
 import { movementStatement, recordMovement } from './stock-service';
@@ -587,6 +587,8 @@ export async function returnLoan(
 				condition: opts.condition,
 				notes: assetNeedsService ? 'Open report on return' : undefined
 			});
+		} else {
+			await settleTerminalUnit(loan.assetId, opts.actorId ?? null);
 		}
 	}
 

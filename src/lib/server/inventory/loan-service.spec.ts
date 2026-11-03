@@ -96,7 +96,8 @@ vi.mock('./stock-service', () => ({
 }));
 
 vi.mock('./asset-service', () => ({
-	setAssetStatus: vi.fn().mockResolvedValue(undefined)
+	setAssetStatus: vi.fn().mockResolvedValue(undefined),
+	settleTerminalUnit: vi.fn().mockResolvedValue(null)
 }));
 
 const recordAuditEntry = vi.fn(async (..._args: unknown[]) => undefined);
@@ -131,7 +132,7 @@ import {
 } from '$lib/server/finance/credit-service';
 import { recordCashPayment } from '$lib/server/finance/payment-service';
 import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
-import { setAssetStatus } from './asset-service';
+import { setAssetStatus, settleTerminalUnit } from './asset-service';
 import { hasBlockingFlag, raiseFlag } from './work-request-service';
 
 // ---------------------------------------------------------------------------
@@ -560,6 +561,7 @@ describe('LoanService lifecycle', () => {
 			await returnLoan('loan-1');
 
 			expect(setAssetStatus).not.toHaveBeenCalled();
+			expect(settleTerminalUnit).toHaveBeenCalledWith('as-1', null);
 		});
 
 		it('retries with the fresh balance when a concurrent spend races the deduction', async () => {
