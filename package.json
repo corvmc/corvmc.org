@@ -104,7 +104,7 @@
 		"prettier-plugin-svelte": "^4.1.1",
 		"prettier-plugin-tailwindcss": "^0.8.1",
 		"storybook": "^10.6.1",
-		"svelte": "^5.57.0",
+		"svelte": "^5.57.3",
 		"svelte-check": "^4.7.6",
 		"tailwindcss": "^4.3.3",
 		"tsx": "^4.23.15",
@@ -172,7 +172,7 @@
 		},
 		"patchedDependencies": {
 			"yargs@17.7.2": "patches/yargs@17.7.2.patch",
-			"svelte@5.57.0": "patches/svelte@5.57.0.patch"
+			"svelte@5.57.3": "patches/svelte@5.57.3.patch"
 		}
 	}
 }

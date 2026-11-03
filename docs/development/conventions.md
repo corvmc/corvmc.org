@@ -912,7 +912,7 @@ if it's broadly useful.
 `pnpm.patchedDependencies` in `package.json`, sources in `patches/`. Two of them:
 
 - **`yargs@17.7.2`** — drops `"type": "module"` so its CJS entry resolves.
-- **`svelte@5.57.0`** — a two-line fix in `Boundary#resolve`
+- **`svelte@5.57.3`** — a two-line fix in `Boundary#resolve`
   (`src/internal/client/dom/blocks/boundary.js`). Under `experimental.async`, a
   `<svelte:boundary>` with a `pending` snippet parks `$effect`s created while it is pending, then
   hands them back to the `Batch` that `increment_pending()` captured when the awaited work
@@ -929,7 +929,10 @@ if it's broadly useful.
   here.
 
   A `pnpm install` after a Svelte bump will fail loudly if the patch stops applying. When it does,
-  check whether upstream has fixed it before re-rolling the patch.
+  check whether upstream has fixed it before re-rolling the patch. As of 5.57.3 it has not:
+  `Boundary#resolve` still hands its parked reactions (now one `#dirty_reactions` map, moved by
+  `transfer_reactions`) to the captured batch unconditionally, and `Batch#merge` still unlinks
+  the batch it absorbs.
 
 ### Analytics and reporting tools
 
