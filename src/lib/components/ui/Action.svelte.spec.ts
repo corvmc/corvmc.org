@@ -4,6 +4,7 @@ import { render } from 'vitest-browser-svelte';
 import { createAttachmentKey } from 'svelte/attachments';
 import { toast } from 'svelte-sonner';
 import ActionHarness from './Action.test.svelte';
+import '$lib/test/locators';
 
 /**
  * `Action` is the engine behind all 56 `actions/*` components, so what it gets
@@ -74,10 +75,10 @@ const dialog = () => document.querySelector('[role="dialog"]');
  * `type=submit` without `data-add-another`.
  */
 const modal = () => page.getByRole('dialog');
-const dismissButton = () => modal().locator('.modal-action button').first();
-const confirmButton = () => modal().locator('.modal-action button').last();
-const submitButton = () => modal().locator('button[type="submit"]:not([data-add-another])');
-const addAnotherButton = () => modal().locator('[data-add-another]');
+const dismissButton = () => modal().getByCss('.modal-action button').first();
+const confirmButton = () => modal().getByCss('.modal-action button').last();
+const submitButton = () => modal().getByCss('button[type="submit"]:not([data-add-another])');
+const addAnotherButton = () => modal().getByCss('[data-add-another]');
 const mount = async (props: Record<string, unknown>) => {
 	const screen = await render(ActionHarness, props as never);
 	return { ...screen, trigger: screen.locator.getByRole('button') };
@@ -515,8 +516,8 @@ describe('Action, canSubmit', () => {
  * the ✕ cost a member the booking they had just typed. #876.
  */
 describe('Action, unsaved changes', () => {
-	const closeButton = () => modal().locator('[data-dialog-close]');
-	const note = () => modal().locator('input[name="notes"]');
+	const closeButton = () => modal().getByCss('[data-dialog-close]');
+	const note = () => modal().getByCss('input[name="notes"]');
 	const prompt = () => page.getByTestId('discard-prompt');
 
 	it('closes an untouched dialog without asking', async () => {

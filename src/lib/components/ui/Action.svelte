@@ -274,6 +274,7 @@
 		title={iconOnly ? label : undefined}
 		aria-label={iconOnly ? label : undefined}
 		disabled={disabled || status === 'pending'}
+		data-status={status}
 		onclick={handleClick}
 		{variant}
 		{size}
