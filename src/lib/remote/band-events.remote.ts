@@ -123,6 +123,7 @@ export const getBandEventDetail = query(
 			doorsAt: evt.doorsAt,
 			status: evt.status,
 			location: evt.location,
+			address: evt.address,
 			tags: evt.tags,
 			externalTicketUrl: evt.externalTicketUrl,
 			ticketPrice: evt.ticketPrice,
@@ -220,6 +221,7 @@ export const updateBandEventForm = form(
 		eventEndTime: z.string().optional(),
 		doorsTime: z.string().optional(),
 		location: z.string().max(500).optional(),
+		address: z.string().max(500).optional(),
 		tags: z.string().max(500).optional(),
 		externalTicketUrl: z.string().optional(),
 		ticketPriceDollars: z.string().max(12).optional(),
@@ -243,6 +245,7 @@ export const updateBandEventForm = form(
 		if (data.title !== undefined) params.title = data.title;
 		if (data.description !== undefined) params.description = data.description || null;
 		if (data.location !== undefined) params.location = data.location || null;
+		if (data.address !== undefined) params.address = data.address.trim() || null;
 		if (data.tags !== undefined) params.tags = data.tags || null;
 		if (data.externalTicketUrl !== undefined) {
 			params.externalTicketUrl = data.externalTicketUrl || null;

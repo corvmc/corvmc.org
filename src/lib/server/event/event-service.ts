@@ -266,6 +266,7 @@ export interface EventRow {
 	/** What the occasion is, as opposed to whose it is. See `eventKinds`. */
 	kind: EventKind;
 	location: string | null;
+	address: string | null;
 	/** The structured half of `location`. Null means the practice room. */
 	venueId: string | null;
 	externalTicketUrl: string | null;
@@ -303,6 +304,7 @@ export interface CreateEventParams {
 	/** Where it is. Null means the practice room, which is what every event meant before the column. */
 	venueId?: string | null;
 	location?: string | null;
+	address?: string | null;
 	createdByUserId: string;
 	/**
 	 * Open the show's production with the listing. Off by default: a listing is
@@ -336,6 +338,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		ticketQuantity,
 		venueId,
 		location,
+		address,
 		createdByUserId,
 		withProduction = false,
 		reservation: reservationParams,
@@ -420,6 +423,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 				kind,
 				venueId: venueId ?? null,
 				location: location ?? null,
+				address: address ?? null,
 				groupId: groupId ?? null,
 				...(showProjectId ? { projectId: showProjectId } : {}),
 				reservationId,
@@ -497,6 +501,7 @@ export interface UpdateEventParams {
 	tags?: string | null;
 	kind?: EventKind;
 	location?: string | null;
+	address?: string | null;
 	venueId?: string | null;
 	externalTicketUrl?: string | null;
 	ticketingEnabled?: boolean;
@@ -645,7 +650,15 @@ function changedFields(existing: EventRow, params: UpdateEventParams): EventEdit
 	const differs = (a: Date | null | undefined, b: Date | null) =>
 		a !== undefined && (a?.getTime() ?? null) !== (b?.getTime() ?? null);
 	const fields: EventEditField[] = [];
-	const plain = ['title', 'description', 'kind', 'tags', 'location', 'externalTicketUrl'] as const;
+	const plain = [
+		'title',
+		'description',
+		'kind',
+		'tags',
+		'location',
+		'address',
+		'externalTicketUrl'
+	] as const;
 	for (const key of plain) {
 		if (params[key] !== undefined && params[key] !== existing[key]) fields.push(key);
 	}
@@ -713,6 +726,7 @@ export async function update(
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.kind !== undefined) updates.kind = params.kind;
 	if (params.location !== undefined) updates.location = params.location;
+	if (params.address !== undefined) updates.address = params.address;
 	if (params.venueId !== undefined) updates.venueId = params.venueId;
 	if (params.externalTicketUrl !== undefined) {
 		updates.externalTicketUrl = params.externalTicketUrl;
@@ -2387,6 +2401,7 @@ export interface CreateBandEventParams {
 	endsAt?: Date | null;
 	doorsAt?: Date;
 	location?: string;
+	address?: string;
 	tags?: string;
 	externalTicketUrl?: string;
 	/** Door / off-site price in cents. Bands never sell through our checkout. */
@@ -2409,6 +2424,7 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 		endsAt,
 		doorsAt,
 		location,
+		address,
 		tags,
 		externalTicketUrl,
 		ticketPrice,
@@ -2432,6 +2448,7 @@ export async function createBandEvent(params: CreateBandEventParams): Promise<Ev
 			doorsAt: doorsAt ?? null,
 			tags: tags ?? null,
 			location: location ?? null,
+			address: address ?? null,
 			externalTicketUrl: externalTicketUrl ?? null,
 			// The event's owner. The `bandId` on the lineup row below is a different
 			// column with a different meaning — a credit, not authority.
@@ -2900,6 +2917,7 @@ export interface UpdateBandEventParams {
 	endsAt?: Date | null;
 	doorsAt?: Date | null;
 	location?: string | null;
+	address?: string | null;
 	tags?: string | null;
 	externalTicketUrl?: string | null;
 	ticketPrice?: number | null;
@@ -2927,6 +2945,7 @@ export async function updateBandEvent(
 	if (params.endsAt !== undefined) updates.endsAt = params.endsAt;
 	if (params.doorsAt !== undefined) updates.doorsAt = params.doorsAt;
 	if (params.location !== undefined) updates.location = params.location;
+	if (params.address !== undefined) updates.address = params.address;
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.externalTicketUrl !== undefined) updates.externalTicketUrl = params.externalTicketUrl;
 	if (params.ticketPrice !== undefined) assertValidTicketPrice(params.ticketPrice);

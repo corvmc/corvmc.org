@@ -35,6 +35,13 @@ describe('buildIcsFeed', () => {
 		expect(ics).toContain('UID:evt-1@corvmc.org');
 	});
 
+	it('puts the venue and its address in LOCATION', () => {
+		const ics = lines(
+			buildIcsFeed([row({ address: '2527 NW Monroe Ave' })], { origin: ORIGIN, now: NOW })
+		);
+		expect(ics).toContain('LOCATION:Bombs Away Cafe\\, 2527 NW Monroe Ave');
+	});
+
 	it('marks a cancelled show CANCELLED rather than dropping it', () => {
 		const ics = lines(buildIcsFeed([row({ status: 'cancelled' })], { origin: ORIGIN, now: NOW }));
 		expect(ics).toContain('STATUS:CANCELLED');

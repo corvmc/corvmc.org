@@ -102,7 +102,12 @@ export const eventListing = sqliteTable(
 		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
 		source: text('source', { enum: eventSources }).notNull().default('cmc'),
 		kind: text('kind', { enum: eventKinds }).notNull().default('show'),
+		// The venue's name as the poster typed it; on rows older than `address`
+		// it may hold an address too, and is shown as it was written.
 		location: text('location'),
+		// Street address, optional. Never backfilled out of `location`: those
+		// rows are the members' own words (#2133).
+		address: text('address'),
 		/**
 		 * The structured half of `location`, which stays exactly as it is.
 		 *
@@ -383,6 +388,7 @@ export const communityEventSchema = z.object({
 		.regex(/^$|^\d{2}:\d{2}$/, 'Invalid time')
 		.optional(),
 	location: z.string().max(500).optional(),
+	address: z.string().max(500).optional(),
 	tags: z.string().max(500).optional(),
 	externalTicketUrl: z.string().url('Enter a full URL').optional().or(z.literal('')),
 	ticketPriceDollars: z.string().max(12).optional(),

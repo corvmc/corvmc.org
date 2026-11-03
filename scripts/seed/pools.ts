@@ -246,16 +246,19 @@ export const BAND_EVENT_TITLES = [
 	'Co-Headliner with Paper Wolves'
 ];
 
-export const BAND_EVENT_LOCATIONS = [
-	'The Peacock Tavern, 125 SW 2nd St',
-	"Cloud & Kelly's, 126 SW 1st St",
-	'Bombs Away Cafe, 2527 NW Monroe Ave',
-	'Majestic Theatre, 115 SW 2nd St',
-	'House show (DM for address)',
-	'OSU MU Ballroom',
-	'Avery Park Amphitheater',
-	'Block 15 Brewery, 300 SW Jefferson Ave'
+/** Venue and address as the listing form takes them; a house show gives no address. */
+export const BAND_EVENT_PLACES: { location: string; address: string | null }[] = [
+	{ location: 'The Peacock Tavern', address: '125 SW 2nd St, Corvallis, OR' },
+	{ location: "Cloud & Kelly's", address: '126 SW 1st St, Corvallis, OR' },
+	{ location: 'Bombs Away Cafe', address: '2527 NW Monroe Ave, Corvallis, OR' },
+	{ location: 'Majestic Theatre', address: '115 SW 2nd St, Corvallis, OR' },
+	{ location: 'House show (DM for address)', address: null },
+	{ location: 'OSU MU Ballroom', address: null },
+	{ location: 'Avery Park Amphitheater', address: '1200 SW Avery Park Dr, Corvallis, OR' },
+	{ location: 'Block 15 Brewery', address: '300 SW Jefferson Ave, Corvallis, OR' }
 ];
+
+export const BAND_EVENT_LOCATIONS = BAND_EVENT_PLACES.map((p) => p.location);
 
 /**
  * Support acts with no CMC account — the common case on a real bill, and what

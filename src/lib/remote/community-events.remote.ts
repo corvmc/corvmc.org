@@ -103,6 +103,7 @@ export const getMyListing = query(z.string(), async (eventId) => {
 		endsAt: evt.endsAt,
 		doorsAt: evt.doorsAt,
 		location: evt.location,
+		address: evt.address,
 		tags: evt.tags,
 		externalTicketUrl: evt.externalTicketUrl,
 		ticketPrice: evt.ticketPrice,
@@ -235,6 +236,7 @@ export const updateListing = form(
 				// a wrong doors time rather than only how they omit one.
 				doorsAt: data.doorsTime ? buildDateInTz(data.eventDate, data.doorsTime, tz) : null,
 				location: data.location || null,
+				address: data.address?.trim() || null,
 				tags: data.tags || null,
 				externalTicketUrl: data.externalTicketUrl || null,
 				ticketPrice,

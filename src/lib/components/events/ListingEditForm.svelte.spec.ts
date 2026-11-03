@@ -39,6 +39,7 @@ function listing(source: string, ticketingEnabled: boolean) {
 		kind: 'show',
 		source,
 		location: null,
+		address: null,
 		venueId: null,
 		externalTicketUrl: null,
 		startsAt: new Date('2026-11-14T03:00:00Z'),
@@ -100,5 +101,22 @@ describe('ListingEditForm on a cancelled listing', () => {
 			.element(page.getByLabelText('Sell tickets through the site'))
 			.not.toBeInTheDocument();
 		await expect.element(page.getByLabelText('Reserve practice space')).not.toBeInTheDocument();
+	});
+});
+
+// #2133: venue name and street address are two inputs, each seeded from its own column.
+describe('ListingEditForm place fields', () => {
+	it('posts the venue as location and the street address as address', async () => {
+		const base = props('band', false);
+		const { container, locator } = await render(ListingEditForm, {
+			...base,
+			event: { ...base.event, location: 'Bombs Away Cafe', address: '2527 NW Monroe Ave' }
+		});
+
+		await expect.element(locator.getByRole('textbox').first()).toBeVisible();
+		const value = (name: string) =>
+			container.querySelector<HTMLInputElement>(`input[name="${name}"]`)?.value;
+		expect(value('location')).toBe('Bombs Away Cafe');
+		expect(value('address')).toBe('2527 NW Monroe Ave');
 	});
 });

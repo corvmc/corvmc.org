@@ -70,7 +70,11 @@ export async function seedVenues(events: any[]) {
 	if (offSite) {
 		await db
 			.update(eventListing)
-			.set({ venueId: 'seed-venue-hall', location: 'Whiteside Theatre, 361 SW Madison Ave' })
+			.set({
+				venueId: 'seed-venue-hall',
+				location: 'Whiteside Theatre',
+				address: '361 SW Madison Ave, Corvallis, OR'
+			})
 			.where(eq(eventListing.id, offSite.id));
 	}
 

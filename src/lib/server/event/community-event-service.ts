@@ -219,6 +219,7 @@ export interface CreateCommunityEventParams {
 	endsAt?: Date | null;
 	doorsAt?: Date | null;
 	location?: string;
+	address?: string;
 	tags?: string;
 	externalTicketUrl?: string;
 	/** Door / off-site price in cents. CMC never sells these. */
@@ -248,6 +249,7 @@ export async function createCommunityEvent(params: CreateCommunityEventParams): 
 			endsAt: params.endsAt ?? null,
 			doorsAt: params.doorsAt ?? null,
 			location: params.location ?? null,
+			address: params.address ?? null,
 			tags: params.tags ?? null,
 			externalTicketUrl: params.externalTicketUrl ?? null,
 			source: 'community',
@@ -283,6 +285,7 @@ export interface UpdateCommunityEventParams {
 	endsAt?: Date | null;
 	doorsAt?: Date | null;
 	location?: string | null;
+	address?: string | null;
 	tags?: string | null;
 	externalTicketUrl?: string | null;
 	ticketPrice?: number | null;
@@ -320,6 +323,7 @@ export async function updateCommunityEvent(
 	if (params.endsAt !== undefined) updates.endsAt = params.endsAt;
 	if (params.doorsAt !== undefined) updates.doorsAt = params.doorsAt;
 	if (params.location !== undefined) updates.location = params.location;
+	if (params.address !== undefined) updates.address = params.address;
 	if (params.tags !== undefined) updates.tags = params.tags;
 	if (params.externalTicketUrl !== undefined) {
 		updates.externalTicketUrl = params.externalTicketUrl;

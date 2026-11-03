@@ -13,6 +13,7 @@
 	import { sanitizeHtml } from '$lib/utils/markdown';
 	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
 	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
+	import { mapUrl, placeLine } from '$lib/utils/place';
 	import { getPublicEventDetail } from '$lib/remote/events.remote';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import ShareButton from '$lib/components/ui/ShareButton.svelte';
@@ -48,7 +49,7 @@
 		id: evt.id,
 		title: evt.title,
 		description: evt.description,
-		location: evt.location,
+		location: placeLine(evt),
 		startsAt: evt.startsAt,
 		endsAt: evt.endsAt
 	});
@@ -246,7 +247,7 @@
 							{/if}
 						</span>
 					</div>
-					{#if evt.location}
+					{#if evt.location || evt.address}
 						<div class="edet__fact">
 							<span class="edet__fact-label">
 								<svg
@@ -266,7 +267,20 @@
 								>
 								Location
 							</span>
-							<span class="edet__fact-value">{evt.location}</span>
+							<span class="edet__fact-value">
+								{evt.location ?? ''}
+								{#if evt.address}
+									{#if evt.location}<br />{/if}
+									<!-- eslint-disable svelte/no-navigation-without-resolve -- an external map, not an internal route -->
+									<a
+										href={mapUrl(evt)}
+										target="_blank"
+										rel="noopener noreferrer external"
+										class="link">{evt.address}</a
+									>
+									<!-- eslint-enable svelte/no-navigation-without-resolve -->
+								{/if}
+							</span>
 						</div>
 					{/if}
 					<div class="edet__fact">
