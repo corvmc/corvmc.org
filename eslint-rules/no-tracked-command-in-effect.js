@@ -42,12 +42,13 @@ function commandsIn(file) {
  * @param {string} cwd
  */
 function resolveRemote(source, importer, cwd) {
-	const base = source.startsWith('$lib/')
-		? join(cwd, 'src/lib', source.slice('$lib/'.length))
+	const lib = /^[$#]lib\//.test(source);
+	const base = lib
+		? join(cwd, 'src/lib', source.slice('#lib/'.length))
 		: source.startsWith('.')
 			? resolve(dirname(importer), source)
 			: null;
-	return base && `${base}.ts`;
+	return base && `${base.replace(/\.js$/, '')}.ts`;
 }
 
 /** @param {RuleNode} callee */
@@ -110,7 +111,7 @@ export default {
 		return {
 			ImportDeclaration(node) {
 				const source = String(node.source.value ?? '');
-				if (!/\.remote$/.test(source)) return;
+				if (!/\.remote(\.js)?$/.test(source)) return;
 				const file = resolveRemote(source, context.filename, context.cwd);
 				if (!file) return;
 				const exported = commandsIn(file);

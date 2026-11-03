@@ -57,7 +57,9 @@
 		"db:migrate:local": "tsx scripts/db/migrate-local.ts"
 	},
 	"imports": {
-		"#/*": "./src/*"
+		"#/*": "./src/*",
+		"#lib": "./src/lib/index.ts",
+		"#lib/*": "./src/lib/*"
 	},
 	"devDependencies": {
 		"@chromatic-com/storybook": "^5.4.0",

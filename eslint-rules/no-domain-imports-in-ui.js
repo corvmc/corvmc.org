@@ -16,7 +16,7 @@ export default {
 		type: 'problem',
 		docs: {
 			description:
-				'Disallow $lib/remote and $lib/server imports inside src/lib/components/ui/, which must stay domain-free.'
+				'Disallow #lib/remote and #lib/server imports inside src/lib/components/ui/, which must stay domain-free.'
 		},
 		messages: {
 			domainImport:
@@ -30,7 +30,7 @@ export default {
 		 */
 		const check = (node, source) => {
 			if (typeof source !== 'string') return;
-			if (/^\$lib\/(remote|server)\b/.test(source)) {
+			if (/^[$#]lib\/(remote|server)\b/.test(source)) {
 				context.report({ node, messageId: 'domainImport', data: { source } });
 			}
 		};
