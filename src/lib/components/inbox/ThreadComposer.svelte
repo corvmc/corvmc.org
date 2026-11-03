@@ -27,7 +27,7 @@
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
+	import AssigneeSelect from './AssigneeSelect.svelte';
 	import SendOption from './SendOption.svelte';
 
 	let {
@@ -195,25 +195,9 @@
 						class="order-3 sm:order-none"
 					/>
 				{:else if assignees}
-					<!-- Its own data, awaited here: the composer is below the fold and
-					     the staff list is a whole extra round trip. -->
-					<!-- eslint-disable-next-line custom/no-interactive-await -- #2357 -->
-					{#await assignees() then staffUsers}
-						<label class="flex items-center gap-2 text-sm">
-							<span class="text-subtle">{m.inbox_thread_composer_assign()}</span>
-							<Select
-								size="sm"
-								value={assignTo}
-								aria-label={m.inbox_thread_composer_assign()}
-								onchange={(e: Event) => (assignTo = (e.currentTarget as HTMLSelectElement).value)}
-							>
-								<option value="">{m.inbox_thread_composer_nobody()}</option>
-								{#each staffUsers as s (s.id)}
-									<option value={s.id}>{s.name}</option>
-								{/each}
-							</Select>
-						</label>
-					{/await}
+					<!-- Its own data: the composer is below the fold and the staff list
+					     is a whole extra round trip. -->
+					<AssigneeSelect {assignees} bind:value={assignTo} />
 				{/if}
 				<SubmitButton
 					label={isNote

@@ -28,6 +28,7 @@
 	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
 	import { isAlwaysEnabledChannel, isStaffInboxChannel } from '$lib/config';
 	import { formatDate } from '$lib/utils/format';
+	import { Latest } from '$lib/latest.svelte';
 	import { IconAlarmSnooze, IconArrowLeft, IconSend } from '@tabler/icons-svelte';
 	import {
 		getInboxThread,
@@ -79,6 +80,13 @@
 
 	$effect(() => {
 		toolbar.conversation = conversationBar;
+	});
+
+	// Not `{#await}`: a refresh would re-pend it and remount the composer, draft
+	// and all (#2357). Started after the thread lands, so the two never overlap.
+	const channels = new Latest(() => getInboxEnabledChannels());
+	$effect(() => {
+		if (channels.error) throw channels.error.e;
 	});
 </script>
 
@@ -154,8 +162,8 @@
 		disabled: a web thread replies by email to the address the contact form
 		captured, and a portal thread's reply is the message row itself.
 	-->
-	<!-- eslint-disable-next-line custom/no-interactive-await -- #2357 -->
-	{#await getInboxEnabledChannels() then enabledChannels}
+	{#if channels.current}
+		{@const enabledChannels = channels.current}
 		{@const channelDisabled =
 			!isAlwaysEnabledChannel(t.channel) &&
 			(!isStaffInboxChannel(t.channel) || !enabledChannels.includes(t.channel))}
@@ -199,5 +207,5 @@
 				/>
 			</div>
 		</div>
-	{/await}
+	{/if}
 </ThreadPane>

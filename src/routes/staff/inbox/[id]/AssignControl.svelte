@@ -5,6 +5,7 @@
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { Latest } from '$lib/latest.svelte';
 
 	/**
 	 * The "Assigned to" control, with its own data.
@@ -40,15 +41,21 @@
 		threadId: string;
 		assignedToUserId: string | null;
 	} = $props();
+
+	// Not `{#await}`: a refresh would re-pend it and remount the form (#2357).
+	const staff = new Latest(() => getAssignableStaff());
+	$effect(() => {
+		if (staff.error) throw staff.error.e;
+	});
 </script>
 
-<!-- eslint-disable-next-line custom/no-interactive-await -- #2357 -->
-{#await getAssignableStaff()}
+{#if !staff.current}
 	<div class="flex items-end gap-2 py-2">
 		<span class="loading loading-xs loading-spinner"></span>
 		<span class="text-subtle text-sm">{m.staff_inbox_id_assign_control_loading_assignees()}</span>
 	</div>
-{:then staffUsers}
+{:else}
+	{@const staffUsers = staff.current}
 	<Form
 		remote={action}
 		successToast={m.staff_inbox_id_assign_control_success_toast()}
@@ -68,4 +75,4 @@
 		/>
 		<SubmitButton label={m.staff_inbox_id_assign_control_update()} variant="default" size="sm" />
 	</Form>
-{/await}
+{/if}
