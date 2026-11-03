@@ -1,10 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// ---------------------------------------------------------------------------
-// Mock KV
-// ---------------------------------------------------------------------------
-let kvStore: Record<string, string> = {};
+// The aggregates run in SQL (json_extract over the subscription snapshot), so
+// they run against a real SQLite. KV is the outside service.
 
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
+
+vi.mock('$lib/server/db', () => ({ db: testDb }));
+
+let kvStore: Record<string, string> = {};
 vi.mock('$lib/server/kv', () => ({
 	getJson: vi.fn(async (key: string) => {
 		const val = kvStore[key];
@@ -12,85 +18,59 @@ vi.mock('$lib/server/kv', () => ({
 	}),
 	putJson: vi.fn(async (key: string, value: unknown) => {
 		kvStore[key] = JSON.stringify(value);
+	}),
+	deleteKey: vi.fn(async (key: string) => {
+		delete kvStore[key];
 	})
-}));
-
-// ---------------------------------------------------------------------------
-// Mock database
-// ---------------------------------------------------------------------------
-const mockSelect = vi.fn();
-
-vi.mock('$lib/server/db', () => ({
-	db: {
-		select: (...args: unknown[]) => mockSelect(...args)
-	}
-}));
-
-vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: { id: 'id', subscription: 'subscription', deletedAt: 'deleted_at' }
-}));
-
-vi.mock('drizzle-orm', () => ({
-	sql: vi.fn(),
-	eq: vi.fn(),
-	and: vi.fn(),
-	gte: vi.fn(),
-	isNull: vi.fn(),
-	isNotNull: vi.fn(),
-	count: vi.fn(),
-	countDistinct: vi.fn(),
-	sum: vi.fn()
 }));
 
 const { getCommunityStats } = await import('./community-stats');
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+let n = 0;
+function member(opts: { hoursPerReset?: number; deleted?: boolean } = {}) {
+	n++;
+	sqlite
+		.prepare(`insert into user (id, name, email, subscription, deleted_at) values (?, ?, ?, ?, ?)`)
+		.run(
+			`u${n}`,
+			`User ${n}`,
+			`u${n}@example.com`,
+			opts.hoursPerReset === undefined
+				? null
+				: JSON.stringify({ hoursPerReset: opts.hoursPerReset }),
+			opts.deleted ? 1_750_000_000 : null
+		);
+}
+
 describe('getCommunityStats', () => {
 	beforeEach(() => {
-		vi.clearAllMocks();
 		kvStore = {};
+		n = 0;
+		sqlite.exec('delete from user');
 	});
 
-	it('returns aggregated stats from the database', async () => {
-		let callCount = 0;
-		mockSelect.mockImplementation(() => {
-			callCount++;
-			if (callCount === 1) {
-				return {
-					from: () => ({
-						where: () => Promise.resolve([{ memberCount: 12, totalCredits: '47' }])
-					})
-				};
-			}
-			return {
-				from: () => ({
-					where: () => Promise.resolve([{ total: 80 }])
-				})
-			};
-		});
+	it('aggregates sustaining members and their credits, ignoring deleted accounts', async () => {
+		member({ hoursPerReset: 20 });
+		member({ hoursPerReset: 27 });
+		member();
+		member();
+		member({ hoursPerReset: 100, deleted: true });
+		member({ deleted: true });
 
 		const stats = await getCommunityStats();
 
-		expect(stats.sustainingMemberCount).toBe(12);
+		expect(stats.sustainingMemberCount).toBe(2);
 		// hoursPerReset is in credits (30-min blocks); reported as hours = 47 / 2.
 		expect(stats.totalFreeHoursAllocated).toBe(23.5);
-		expect(stats.participationPercent).toBe(15);
+		expect(stats.participationPercent).toBe(50);
 	});
 
 	it('returns zeros when no data exists', async () => {
-		mockSelect.mockImplementation(() => ({
-			from: () => ({
-				where: () => Promise.resolve([{ memberCount: 0, totalCredits: null, total: 0 }])
-			})
-		}));
-
-		const stats = await getCommunityStats();
-
-		expect(stats.sustainingMemberCount).toBe(0);
-		expect(stats.totalFreeHoursAllocated).toBe(0);
-		expect(stats.participationPercent).toBe(0);
+		expect(await getCommunityStats()).toEqual({
+			sustainingMemberCount: 0,
+			totalFreeHoursAllocated: 0,
+			participationPercent: 0
+		});
 	});
 
 	it('returns cached results from KV without re-querying', async () => {
@@ -99,37 +79,21 @@ describe('getCommunityStats', () => {
 			totalFreeHoursAllocated: 20,
 			participationPercent: 10
 		});
+		member({ hoursPerReset: 4 });
 
-		const stats = await getCommunityStats();
-
-		expect(stats.sustainingMemberCount).toBe(5);
-		expect(mockSelect).not.toHaveBeenCalled();
+		expect((await getCommunityStats()).sustainingMemberCount).toBe(5);
 	});
 
 	it('stores result in KV after querying', async () => {
-		let callCount = 0;
-		mockSelect.mockImplementation(() => {
-			callCount++;
-			if (callCount === 1) {
-				return {
-					from: () => ({
-						where: () => Promise.resolve([{ memberCount: 8, totalCredits: '30' }])
-					})
-				};
-			}
-			return {
-				from: () => ({
-					where: () => Promise.resolve([{ total: 40 }])
-				})
-			};
-		});
+		member({ hoursPerReset: 30 });
+		for (let i = 0; i < 4; i++) member();
 
 		await getCommunityStats();
 
-		const cached = JSON.parse(kvStore['community-stats']);
-		expect(cached.sustainingMemberCount).toBe(8);
-		// hoursPerReset is in credits (30-min blocks); reported as hours = 30 / 2.
-		expect(cached.totalFreeHoursAllocated).toBe(15);
-		expect(cached.participationPercent).toBe(20);
+		expect(JSON.parse(kvStore['community-stats'])).toEqual({
+			sustainingMemberCount: 1,
+			totalFreeHoursAllocated: 15,
+			participationPercent: 20
+		});
 	});
 });
