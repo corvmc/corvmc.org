@@ -32,6 +32,10 @@
 	let data = $derived(getDutyListPage(id));
 
 	const anchorOptions = dutyListAnchors.map((a) => ({ value: a, label: dutyListAnchorLabels[a] }));
+	const autoApplyOptions = [
+		{ value: '', label: 'Never' },
+		{ value: 'production.created', label: 'When a production is created' }
+	];
 
 	const kindOptions = [
 		{ value: 'scheduled', label: 'Scheduled — a shift with a start and an end' },
@@ -88,6 +92,13 @@
 					type="select"
 					options={anchorOptions}
 					value={d.list.anchor}
+				/>
+				<FormField
+					name="autoApplyOn"
+					label="Apply automatically"
+					type="select"
+					options={autoApplyOptions}
+					value={d.list.autoApplyOn ?? ''}
 				/>
 				<FormField
 					name="isActive"

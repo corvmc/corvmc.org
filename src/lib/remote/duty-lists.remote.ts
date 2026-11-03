@@ -5,6 +5,9 @@ import { form } from './_remote';
 import { can, requireCapability } from '$lib/server/authorization';
 import { mapDomainError } from '$lib/server/errors';
 import { dutyListAnchors, workDoneConditions } from '$lib/config';
+
+/** The trigger a project template can claim; `''` is never. */
+const autoApplyShape = z.enum(['', 'production.created']).optional();
 import { listCommittees } from '$lib/server/project/project-service';
 import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
 import {
@@ -108,7 +111,8 @@ export const createDutyList = form(
 	z.object({
 		name: z.string().min(1, 'Name is required'),
 		description: z.string().optional(),
-		anchor: z.enum(dutyListAnchors).default('doors')
+		anchor: z.enum(dutyListAnchors).default('doors'),
+		autoApplyOn: autoApplyShape
 	}),
 	async (data) => {
 		const staff = await requireCapability('project.manage');
@@ -117,6 +121,7 @@ export const createDutyList = form(
 				name: data.name,
 				description: data.description,
 				anchor: data.anchor,
+				autoApplyOn: data.autoApplyOn || null,
 				createdByUserId: staff.id
 			});
 			await getDutyLists().refresh();
@@ -136,7 +141,8 @@ export const updateDutyList = form(
 		// `.optional().default(false)`, never a bare required boolean: an unchecked
 		// box is not submitted at all, and kit reports the absence as the boolean's
 		// own validation failure.
-		isActive: z.boolean().optional().default(false)
+		isActive: z.boolean().optional().default(false),
+		autoApplyOn: autoApplyShape
 	}),
 	async (data) => {
 		await requireCapability('project.manage');
@@ -145,6 +151,7 @@ export const updateDutyList = form(
 				name: data.name,
 				description: data.description,
 				anchor: data.anchor,
+				autoApplyOn: data.autoApplyOn === undefined ? undefined : data.autoApplyOn || null,
 				isActive: data.isActive
 			});
 			await Promise.all([getDutyLists().refresh(), getDutyListPage(data.id).refresh()]);

@@ -29,6 +29,7 @@ const {
 	createDutyList,
 	getDutyListDetail,
 	listDutyLists,
+	updateDutyList,
 	DutyListAlreadyAppliedError
 } = await import('./duty-list-service');
 
@@ -384,5 +385,38 @@ describe('createDutyList', () => {
 				createDutyList({ name: `P ${a}`, anchor: a, createdByUserId: 'u1' })
 			).resolves.toMatchObject({ subject: 'project', anchor: a });
 		}
+	});
+});
+
+// #2265: the listener stamps one template, so only one may hold the trigger.
+describe('auto-apply on production.created', () => {
+	const holders = () =>
+		(
+			sqlite
+				.prepare(`SELECT id FROM duty_list WHERE auto_apply_on = 'production.created'`)
+				.all() as { id: string }[]
+		).map((r) => r.id);
+
+	it('moves to whichever template claimed it last', async () => {
+		const made = await createDutyList({
+			name: 'Festival',
+			anchor: 'doors',
+			autoApplyOn: 'production.created',
+			createdByUserId: 'u1'
+		});
+		expect(holders()).toEqual([made.id]);
+
+		await updateDutyList('dl-1', { autoApplyOn: 'production.created' });
+		expect(holders()).toEqual(['dl-1']);
+
+		await updateDutyList('dl-1', { autoApplyOn: null });
+		expect(holders()).toEqual([]);
+	});
+
+	it('leaves the orientation trigger alone', async () => {
+		await updateDutyList('dl-1', { autoApplyOn: 'production.created' });
+		expect(
+			sqlite.prepare(`SELECT auto_apply_on AS t FROM duty_list WHERE id = 'dl-res'`).get()
+		).toEqual({ t: 'reservation.first' });
 	});
 });

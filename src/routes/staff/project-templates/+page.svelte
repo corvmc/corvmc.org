@@ -15,6 +15,10 @@
 	let lists = $derived(getDutyLists());
 
 	const anchorOptions = dutyListAnchors.map((a) => ({ value: a, label: dutyListAnchorLabels[a] }));
+	const autoApplyOptions = [
+		{ value: '', label: 'Never' },
+		{ value: 'production.created', label: 'When a production is created' }
+	];
 </script>
 
 <PageHeader title="Project Templates" subtitle="Planning">
@@ -39,6 +43,12 @@
 				type="select"
 				options={anchorOptions}
 				description="Every item is timed from this."
+			/>
+			<FormField
+				name="autoApplyOn"
+				label="Apply automatically"
+				type="select"
+				options={autoApplyOptions}
 			/>
 		{/snippet}
 	</Action>
