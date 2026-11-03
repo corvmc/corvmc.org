@@ -163,7 +163,9 @@ jobs:
       # grown to 64s went unnoticed for months.
       - run: pnpm test:e2e:prepare
       # Builds the app and serves it via playwright.config.ts's webServer.
-      - run: pnpm test:e2e:run
+      # `--fail-on-flaky-tests`: a test that passes only on a retry fails the job
+      # (#2216). The retries stay so the failed attempt leaves a trace.
+      - run: pnpm test:e2e:run -- --fail-on-flaky-tests
       # The failure log names an `error-context.md` per failed test and, on a
       # retry, a trace. Without this step every one of those paths pointed at a
       # file that was deleted with the runner, so a red E2E could only be

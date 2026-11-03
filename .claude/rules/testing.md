@@ -11,6 +11,18 @@ paths:
 > `gh issue list --state open --label flaky`. The backlog is GitHub Issues, not a
 > markdown file.
 
+## No flaky tests in main
+
+A flaky test is grounds for rejecting the work (owner, 2026-11-02). CI fails the E2E job on any
+test that passed only on a retry (`--fail-on-flaky-tests`), and vitest runs with no `retry`.
+
+- **Never re-run a failed job to get green.** A red that goes green on a re-run is a flake that
+  merged. Read the failure instead.
+- **A flake is diagnosed, filed, fixed, then re-queued.** File it with the `flaky` label, fix it
+  in its own PR, and re-queue the PR it blocked only once that fix has merged.
+- **A test you add or touch is deterministic**: no wall-clock races, no same-second ordering, no
+  fixed sleeps.
+
 ## If you only remember one thing
 
 **A bug fix names its class.** State the class, grep for what else has that shape, and add the
@@ -117,9 +129,10 @@ only; `pnpm test-wording-census` counts the backlog (`custom/no-wording-locators
   establish visibility for the next line. `suggestions.e2e.ts` and `volunteering.e2e.ts` keep a
   `DB_POLL` constant for this; a one-shot read is only safe once a poll in the same test has
   already seen the write.
-- **Retries do not rescue a mutating test.** `retries: 2` on CI helps a test that fails _before_ it
-  writes. One that fails _after_ has already spent the fixture row it needs, so the retry starts
-  from data the fixture never described and fails differently — and the job is red either way.
+- **Retries rescue nothing; they record.** `retries: 2` on CI exists for the trace of the failed
+  attempt (`trace: 'on-first-retry'`). A test that passes on a retry is `flaky`, and
+  `--fail-on-flaky-tests` makes that a red job. A mutating test that fails _after_ it writes has
+  spent the fixture row it needs, so its retry fails differently — red either way.
   Per-test seeding is not the escape hatch: a mid-run write is a second writer on the files the
   preview server holds. See the note at `retries` in `playwright.config.ts`.
 - A red run keeps `.wrangler/e2e-state` on purpose, and the next `e2e/prepare.ts` clears it — or
