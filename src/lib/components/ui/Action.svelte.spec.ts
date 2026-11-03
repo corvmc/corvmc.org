@@ -32,8 +32,14 @@ vi.mock('$app/navigation', () => ({
 function fakeRemoteForm({
 	result,
 	ok = true,
-	rejectWith
-}: { result?: unknown; ok?: boolean; rejectWith?: unknown } = {}) {
+	rejectWith,
+	setFields = () => {}
+}: {
+	result?: unknown;
+	ok?: boolean;
+	rejectWith?: unknown;
+	setFields?: (input: unknown) => void;
+} = {}) {
 	let callback: ((instance: { submit: () => Promise<boolean> }) => unknown) | null = null;
 	const instance: Record<string | symbol, unknown> = { method: 'POST', action: '?/thing' };
 
@@ -53,7 +59,7 @@ function fakeRemoteForm({
 	};
 
 	Object.defineProperties(instance, {
-		fields: { value: { allIssues: () => null } },
+		fields: { value: { allIssues: () => null, set: setFields } },
 		result: { value: undefined, writable: true },
 		enhance: {
 			value: (cb: (instance: { submit: () => Promise<boolean> }) => unknown) => {
@@ -425,6 +431,27 @@ describe('Action, save and add another', () => {
 		await vi.waitFor(() => expect(onaddanother).toHaveBeenCalledWith({ id: 'item-1' }));
 		expect(onsuccess).toHaveBeenCalledWith({ id: 'item-1' });
 		expect(dialog()).not.toBeNull();
+	});
+
+	// Field-bound inputs read the instance's values, which outlive the dialog.
+	it('clears the typed values when it closes, and only then', async () => {
+		const setFields = vi.fn();
+		const { trigger } = await mount({
+			action: fakeRemoteForm({ result: { id: 'item-1' }, setFields }),
+			label: 'Add Item',
+			modalTitle: 'Add Item',
+			fieldName: 'name',
+			addAnotherLabel: 'Save and add another'
+		});
+
+		await trigger.click();
+		await addAnotherButton().click();
+		await vi.waitFor(() => expect(addAnotherButton()).toBeEnabled());
+		expect(setFields).not.toHaveBeenCalled();
+
+		await submitButton().click();
+		await vi.waitFor(() => expect(dialog()).toBeNull());
+		expect(setFields).toHaveBeenCalledWith({});
 	});
 
 	it('still closes on the plain submit', async () => {
