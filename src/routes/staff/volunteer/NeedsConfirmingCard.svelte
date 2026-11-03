@@ -120,9 +120,17 @@
 								successToast={m.staff_confirmed()}
 							>
 								{#snippet form()}
-									<input type="hidden" name="shiftId" value={shift.shiftId} />
-									{#each group.rows as row (row.signupId)}
-										<input type="hidden" name="signupIds" value={row.signupId} />
+									<input
+										{...confirmSignups
+											.for(shift.shiftId)
+											.fields.shiftId.as('hidden', shift.shiftId)}
+									/>
+									{#each group.rows as row, i (row.signupId)}
+										<input
+											{...confirmSignups
+												.for(shift.shiftId)
+												.fields.signupIds[i].as('hidden', row.signupId)}
+										/>
 									{/each}
 									<p class="text-sm">
 										{m.staff_volunteer_needs_confirming_card_all_confirmed_each_the({
@@ -158,8 +166,14 @@
 							successToast={m.staff_confirmed()}
 						>
 							{#snippet form()}
-								<input type="hidden" name="signupId" value={claim.signupId} />
-								<input type="hidden" name="shiftId" value={claim.shiftId} />
+								<input
+									{...confirmSignup
+										.for(claim.signupId)
+										.fields.signupId.as('hidden', claim.signupId)}
+								/>
+								<input
+									{...confirmSignup.for(claim.signupId).fields.shiftId.as('hidden', claim.shiftId)}
+								/>
 								<p class="text-sm">
 									{m.staff_volunteer_needs_confirming_card_they_ll_get_reminder_d({
 										roleName: claim.roleName,

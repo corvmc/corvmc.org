@@ -169,7 +169,9 @@
 						successToast={m.volunteer_work_order_view_sent_they_know()}
 					>
 						{#snippet form()}
-							<input type="hidden" name="shiftId" value={shift.id} />
+							<input
+								{...notifyCancelledShift.for(shift.id).fields.shiftId.as('hidden', shift.id)}
+							/>
 							<p class="text-sm">
 								{m.volunteer_work_order_view_people_still_shift_will_emailed({ toNotify })}
 							</p>
@@ -218,9 +220,11 @@
 								successToast={m.volunteer_work_order_view_confirmed()}
 							>
 								{#snippet form()}
-									<input type="hidden" name="shiftId" value={shift.id} />
-									{#each unconfirmed as c (c.signupId)}
-										<input type="hidden" name="signupIds" value={c.signupId} />
+									<input {...confirmSignups.for(shift.id).fields.shiftId.as('hidden', shift.id)} />
+									{#each unconfirmed as c, i (c.signupId)}
+										<input
+											{...confirmSignups.for(shift.id).fields.signupIds[i].as('hidden', c.signupId)}
+										/>
 									{/each}
 									<p class="text-sm">
 										{m.volunteer_work_order_view_all_confirmed_shift_each_them({
@@ -288,8 +292,16 @@
 													successToast={m.volunteer_work_order_view_marked()}
 												>
 													{#snippet form()}
-														<input type="hidden" name="signupId" value={claimant.signupId} />
-														<input type="hidden" name="shiftId" value={shift.id} />
+														<input
+															{...markSignupNotified
+																.for(claimant.signupId)
+																.fields.signupId.as('hidden', claimant.signupId)}
+														/>
+														<input
+															{...markSignupNotified
+																.for(claimant.signupId)
+																.fields.shiftId.as('hidden', shift.id)}
+														/>
 														<p class="text-sm">
 															{m.volunteer_work_order_view_use_when_reached_them_another()}
 														</p>
@@ -313,8 +325,16 @@
 													successToast={m.volunteer_work_order_view_confirmed()}
 												>
 													{#snippet form()}
-														<input type="hidden" name="signupId" value={claimant.signupId} />
-														<input type="hidden" name="shiftId" value={shift.id} />
+														<input
+															{...confirmSignup
+																.for(claimant.signupId)
+																.fields.signupId.as('hidden', claimant.signupId)}
+														/>
+														<input
+															{...confirmSignup
+																.for(claimant.signupId)
+																.fields.shiftId.as('hidden', shift.id)}
+														/>
 														<p class="text-sm">
 															{m.volunteer_work_order_view_they_ll_get_reminder_day()}
 														</p>
@@ -339,8 +359,16 @@
 													successToast={m.volunteer_work_order_view_taken_off_place_open_again()}
 												>
 													{#snippet form()}
-														<input type="hidden" name="signupId" value={claimant.signupId} />
-														<input type="hidden" name="shiftId" value={shift.id} />
+														<input
+															{...releaseSignup
+																.for(claimant.signupId)
+																.fields.signupId.as('hidden', claimant.signupId)}
+														/>
+														<input
+															{...releaseSignup
+																.for(claimant.signupId)
+																.fields.shiftId.as('hidden', shift.id)}
+														/>
 														<p class="text-sm">
 															{m.volunteer_work_order_view_their_place_opens_up_straight()}
 														</p>
@@ -366,8 +394,16 @@
 													successToast={m.volunteer_work_order_view_marked_as_no_show()}
 												>
 													{#snippet form()}
-														<input type="hidden" name="signupId" value={claimant.signupId} />
-														<input type="hidden" name="shiftId" value={shift.id} />
+														<input
+															{...markSignupNoShow
+																.for(claimant.signupId)
+																.fields.signupId.as('hidden', claimant.signupId)}
+														/>
+														<input
+															{...markSignupNoShow
+																.for(claimant.signupId)
+																.fields.shiftId.as('hidden', shift.id)}
+														/>
 														<p class="text-sm">
 															{m.volunteer_work_order_view_different_from_removing_them_remov()}
 														</p>
@@ -444,7 +480,7 @@
 					>
 						{#snippet icon()}<IconPencil size={16} />{/snippet}
 						{#snippet form()}
-							<input type="hidden" name="id" value={shift.id} />
+							<input {...editForm.fields.id.as('hidden', shift.id)} />
 							<!-- An archived role stays in the list when this shift is on it, or
 							     the select would post an empty role and quietly reassign it. -->
 							<ShiftRoleFields
@@ -465,7 +501,7 @@
 							/>
 							{#if view.reports.length > 0 || shift.closeReportsOnCompletion}
 								<FormField
-									name="closeReports"
+									field={editForm.fields.closeReports}
 									type="select"
 									label={m.volunteer_work_order_view_when_window_ends()}
 									value={shift.closeReportsOnCompletion ? 'close' : 'wait'}
@@ -523,7 +559,7 @@
 							successToast={m.volunteer_work_order_view_called_off_tell_people()}
 						>
 							{#snippet form()}
-								<input type="hidden" name="id" value={shift.id} />
+								<input {...cancelShift.for(shift.id).fields.id.as('hidden', shift.id)} />
 								<p class="text-sm">
 									{m.volunteer_work_order_view_claims_bookings_stay_place_they()}
 								</p>

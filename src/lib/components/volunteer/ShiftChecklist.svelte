@@ -40,10 +40,10 @@
 					remote={setWorkTaskDone.for(task.id)}
 					onchange={(e: Event) => (e.currentTarget as HTMLFormElement).requestSubmit()}
 				>
-					<input type="hidden" name="id" value={task.id} />
-					<input type="hidden" name="shiftId" value={shiftId} />
+					<input {...setWorkTaskDone.for(task.id).fields.id.as('hidden', task.id)} />
+					<input {...setWorkTaskDone.for(task.id).fields.shiftId.as('hidden', shiftId)} />
 					<FormField
-						name="done"
+						field={setWorkTaskDone.for(task.id).fields.done}
 						type="checkbox"
 						checkboxLabel={task.label}
 						value={task.done}

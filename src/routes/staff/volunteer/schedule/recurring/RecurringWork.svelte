@@ -56,39 +56,46 @@
 		>
 			{#snippet form()}
 				<FormField
-					name="name"
+					field={createRecurringWork.fields.name}
 					label={m.staff_name()}
 					type="text"
 					placeholder={m.staff_volunteer_schedule_recurring_recurring_work_monthly_de()}
 				/>
 				<FormField
-					name="volunteerRoleId"
+					field={createRecurringWork.fields.volunteerRoleId}
 					label={m.staff_role()}
 					type="select"
 					options={roleOptions}
 					value={roleOptions[0]?.value}
 				/>
 				<FormField
-					name="intervalDays"
+					field={createRecurringWork.fields.intervalDays}
+					submitAs="text"
 					label={m.staff_repeat_every_days()}
 					type="number"
 					value="30"
 					description={m.staff_volunteer_schedule_recurring_recurring_work_descriptio()}
 				/>
 				<FormField
-					name="firstDueOn"
+					field={createRecurringWork.fields.firstDueOn}
 					label={m.staff_volunteer_schedule_recurring_recurring_work_first_one()}
 					type="date"
 					value={defaultFirstDue}
 				/>
-				<FormField name="capacity" label={m.staff_how_many_people()} type="number" value="1" />
 				<FormField
-					name="projectId"
+					field={createRecurringWork.fields.capacity}
+					submitAs="text"
+					label={m.staff_how_many_people()}
+					type="number"
+					value="1"
+				/>
+				<FormField
+					field={createRecurringWork.fields.projectId}
 					label={m.staff_project()}
 					type="select"
 					options={projectOptions}
 				/>
-				<FormField name="assetId" label={m.staff_equipment()}>
+				<FormField field={createRecurringWork.fields.assetId} label={m.staff_equipment()}>
 					<SearchSelect
 						search={(q) => searchWorkAssets(q)}
 						bind:value={asset}
@@ -98,7 +105,11 @@
 						placeholder={m.staff_search_by_item_tag_serial()}
 					/>
 				</FormField>
-				<FormField name="notes" label={m.staff_notes()} type="textarea" />
+				<FormField
+					field={createRecurringWork.fields.notes}
+					label={m.staff_notes()}
+					type="textarea"
+				/>
 			{/snippet}
 		</Action>
 	{/if}

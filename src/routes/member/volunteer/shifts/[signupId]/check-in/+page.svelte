@@ -83,8 +83,12 @@
 							successToast={m.member_volunteer_shifts_signup_id_check_in_checked()}
 							class="inline"
 						>
-							<input type="hidden" name="ticketId" value={ticket.id} />
-							<input type="hidden" name="signupId" value={signupId} />
+							<input
+								{...checkInAsVolunteer.for(ticket.id).fields.ticketId.as('hidden', ticket.id)}
+							/>
+							<input
+								{...checkInAsVolunteer.for(ticket.id).fields.signupId.as('hidden', signupId)}
+							/>
 							<SubmitButton
 								label={m.member_volunteer_shifts_signup_id_check_in_check_2()}
 								variant="primary"

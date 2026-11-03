@@ -131,10 +131,10 @@
 							remote={setMyWorkTaskDone.for(task.id)}
 							onchange={(e: Event) => (e.currentTarget as HTMLFormElement).requestSubmit()}
 						>
-							<input type="hidden" name="id" value={task.id} />
-							<input type="hidden" name="signupId" value={signupId} />
+							<input {...setMyWorkTaskDone.for(task.id).fields.id.as('hidden', task.id)} />
+							<input {...setMyWorkTaskDone.for(task.id).fields.signupId.as('hidden', signupId)} />
 							<FormField
-								name="done"
+								field={setMyWorkTaskDone.for(task.id).fields.done}
 								type="checkbox"
 								checkboxLabel={task.label}
 								value={task.done}
@@ -201,7 +201,7 @@
 				onsuccess={() => goto(resolve('/member/volunteer'))}
 			>
 				{#snippet form()}
-					<input type="hidden" name="signupId" value={signupId} />
+					<input {...cancelMySignup.for(signupId).fields.signupId.as('hidden', signupId)} />
 					<p class="text-sm">
 						{m.member_volunteer_shifts_signup_id_notice_isn_t_no_show()}
 					</p>
