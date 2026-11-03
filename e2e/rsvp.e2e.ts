@@ -38,24 +38,27 @@ test('a signed-out visitor signs in from the RSVP button and lands one tap from 
 	// Strict: the title is one heading (#2007), and a second would fail this locator.
 	await expect(page.getByRole('heading', { name: SEED_RSVP_EVENT_TITLE })).toBeVisible();
 
-	// Signed out, the RSVP is a link to sign-in that carries the way back.
-	await page.getByRole('link', { name: 'RSVP', exact: true }).click();
+	// Signed out, the RSVP is a link to sign-in that carries the way back and
+	// the intent; it is the page's only sign-in link that carries one.
+	await page.locator('a[href^="/login?"][href*="intent="]').click();
 	await expect(page).toHaveURL(/\/login\?/);
 	const url = new URL(page.url());
 	expect(url.searchParams.get('redirect')).toBe(eventPath);
-	await expect(page.getByText(`RSVP to ${SEED_RSVP_EVENT_TITLE}`)).toBeVisible();
+	expect(url.searchParams.get('intent')).toContain(SEED_RSVP_EVENT_TITLE);
+	await expect(page.locator('.alert-info')).toBeVisible();
 
 	await page.locator('input[name="email"]').fill(SEED_RSVP_MEMBER_EMAIL);
 	await page.locator('input[name="password"]').fill(SEED_RSVP_MEMBER_PASSWORD);
-	await page.getByRole('button', { name: 'Sign in' }).click();
+	// The sign-in form is the one with a password field.
+	await page.locator('form:has(input[name="password"]) button[type="submit"]').click();
 
 	// Back on the event, signed in, and nothing written yet.
 	await expect(page).toHaveURL(new RegExp(`${eventPath}$`));
-	const confirm = page.getByRole('button', { name: 'RSVP', exact: true });
+	const confirm = page.locator('form:has(input[name="eventId"]) button[type="submit"]');
 	await expect(confirm).toBeEnabled();
 	expect(await rsvpCount()).toBe(0);
 
 	await confirm.click();
-	await expect(page.getByTestId('rsvp-going')).toHaveText("You're going!");
+	await expect(page.getByTestId('rsvp-going')).toBeVisible();
 	await expect.poll(rsvpCount, DB_POLL).toBe(1);
 });

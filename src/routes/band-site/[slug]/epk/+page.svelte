@@ -131,7 +131,7 @@
 
 	<!-- Gallery (first 6 photos) -->
 	{#if galleryMedia.length > 0}
-		<section class="page-break mb-8">
+		<section class="page-break mb-8" data-testid="epk-gallery">
 			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">Photos</h2>
 			<div class="grid grid-cols-3 gap-2">
 				{#each galleryMedia.slice(0, 6) as img (img.id)}

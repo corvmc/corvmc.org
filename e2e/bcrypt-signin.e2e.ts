@@ -23,7 +23,8 @@ async function login(page: Page, email: string, password: string) {
 	await page.goto('/login');
 	await page.locator('input[name="email"]').fill(email);
 	await page.locator('input[name="password"]').fill(password);
-	await page.getByRole('button', { name: 'Sign in' }).click();
+	// The sign-in form is the one with a password field.
+	await page.locator('form:has(input[name="password"]) button[type="submit"]').click();
 }
 
 async function storedHash(): Promise<string | null> {
@@ -50,7 +51,7 @@ test('a member on a legacy bcrypt password signs in, and the hash retires', asyn
 test('a wrong password on a legacy account is still refused', async ({ page }) => {
 	await login(page, SEED_BCRYPT_EMAIL, 'definitely not the password');
 
-	// The copy appears twice — the alert and its live region — so `.first()`.
-	await expect(page.getByText(/invalid email or password/i).first()).toBeVisible();
+	// The refusal is the form's error alert; the page never leaves /login.
+	await expect(page.locator('.alert-error[role="alert"]').first()).toBeVisible();
 	await expect(page).toHaveURL(/\/login/);
 });

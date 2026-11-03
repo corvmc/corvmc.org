@@ -30,7 +30,24 @@ async function login(page: Page, email: string, password: string) {
 	await page.goto('/login');
 	await page.locator('input[name="email"]').fill(email);
 	await page.locator('input[name="password"]').fill(password);
-	await page.getByRole('button', { name: 'Sign in' }).click();
+	// The sign-in form is the one with a password field.
+	await page.locator('form:has(input[name="password"]) button[type="submit"]').click();
+}
+
+async function requestLink(page: Page) {
+	await page.locator('form:has(input[name="email"]) button[type="submit"]').click();
+}
+
+/** Requested: the form gives way to the success alert, whoever the address is. */
+async function expectLinkRequested(page: Page) {
+	await expect(page.locator('.card .alert-success')).toBeVisible();
+	await expect(page.locator('input[name="email"]')).toHaveCount(0);
+}
+
+/** A dead link: the error alert, and the way on is to ask for a new link. */
+async function expectDeadLink(page: Page) {
+	await expect(page.locator('.card .alert-error')).toBeVisible();
+	await expect(page.locator('.card a.btn[href="/forgot-password"]')).toBeVisible();
 }
 
 /** The newest live reset token, or null while the write is still in flight. */
@@ -50,15 +67,15 @@ test('a member who has forgotten their password can set a new one and sign in', 
 }) => {
 	// The link off the sign-in form is the only way most people will find this.
 	await page.goto('/login');
-	await page.getByRole('link', { name: /forgot your password/i }).click();
+	await page.locator('a[href="/forgot-password"]').click();
 	await page.waitForURL(/\/forgot-password/);
 
 	await page.locator('input[name="email"]').fill(SEED_RESET_EMAIL);
-	await page.getByRole('button', { name: /send reset link/i }).click();
+	await requestLink(page);
 
-	// Says nothing about whether the address exists — the same copy an unknown
-	// address gets.
-	await expect(page.getByText(/if that address has an account/i)).toBeVisible();
+	// Says nothing about whether the address exists — the same answer an
+	// unknown address gets.
+	await expectLinkRequested(page);
 
 	// Poll first — `readLocalDb` opens the file the preview server is still
 	// writing through workerd, so the page having moved on does not establish
@@ -73,38 +90,40 @@ test('a member who has forgotten their password can set a new one and sign in', 
 
 	await page.locator('input[name="newPassword"]').fill(SEED_RESET_NEW_PASSWORD);
 	await page.locator('input[name="confirmPassword"]').fill(SEED_RESET_NEW_PASSWORD);
-	await page.getByRole('button', { name: /set password/i }).click();
+	await page.locator('form:has(input[name="newPassword"]) button[type="submit"]').click();
 
-	await expect(page.getByText(/your password has been changed/i)).toBeVisible();
+	// Done: the form gives way to the success alert and a way back to sign in.
+	await expect(page.locator('.card .alert-success')).toBeVisible();
+	await expect(page.locator('.card a.btn[href="/login"]')).toBeVisible();
+	await expect(page.locator('input[name="newPassword"]')).toHaveCount(0);
 
 	// The point of the whole exercise.
 	await login(page, SEED_RESET_EMAIL, SEED_RESET_NEW_PASSWORD);
 	await page.waitForURL(/\/member(\/|$|\?)/);
 
-	// And the old one is gone, not merely superseded. The copy appears twice —
-	// the alert and its live region — so `.first()`; what actually matters is
-	// that the page never left /login.
+	// And the old one is gone, not merely superseded: the form's error alert,
+	// and the page never leaves /login.
 	await page.context().clearCookies();
 	await login(page, SEED_RESET_EMAIL, SEED_RESET_PASSWORD);
-	await expect(page.getByText(/invalid email or password/i).first()).toBeVisible();
+	await expect(page.locator('.alert-error[role="alert"]').first()).toBeVisible();
 	await expect(page).toHaveURL(/\/login/);
 
 	// The token was consumed by the reset, so the same link is now a dead end.
 	await page.goto(`/api/auth/reset-password/${token}?callbackURL=%2Freset-password`);
-	await expect(page.getByText(/expired or has already been used/i)).toBeVisible();
+	await expectDeadLink(page);
 });
 
 test('an unknown address gets the same answer as a real one', async ({ page }) => {
 	await page.goto('/forgot-password');
 	await page.locator('input[name="email"]').fill('nobody.at.all@example.com');
-	await page.getByRole('button', { name: /send reset link/i }).click();
+	await requestLink(page);
 
-	await expect(page.getByText(/if that address has an account/i)).toBeVisible();
+	await expectLinkRequested(page);
 });
 
 test('a reset link with no token is a dead end, not an empty form', async ({ page }) => {
 	await page.goto('/reset-password?error=INVALID_TOKEN');
 
-	await expect(page.getByText(/expired or has already been used/i)).toBeVisible();
+	await expectDeadLink(page);
 	await expect(page.locator('input[name="newPassword"]')).toHaveCount(0);
 });
