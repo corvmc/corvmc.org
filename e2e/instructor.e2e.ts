@@ -94,8 +94,9 @@ test('an instructor can book teaching time; a member without a grant cannot', as
 	const start = await startTime.inputValue();
 	expect(minutesBetween(start, shortest ?? '')).toBe(30);
 
-	// Each step's own submit, by index: steps stay mounted, hidden.
-	const advance = dialog.locator('[data-step="0"] button[type="submit"]');
+	// Steps stay mounted, hidden, so each is found by index. `Form.SubmitButton`
+	// (the only button carrying `data-status`) is `type="button"` until the last.
+	const advance = dialog.locator('[data-step="0"] button[data-status]');
 	await expect(advance).toBeEnabled({ timeout: 15000 });
 	await advance.click();
 
