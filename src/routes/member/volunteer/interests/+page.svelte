@@ -30,6 +30,15 @@
 	$effect(() => {
 		if (pageData.error && !isRedirect(pageData.error.e)) throw pageData.error.e;
 	});
+
+	// Latched from the first load: saving refreshes the query, and a recomputed
+	// `onboarding` reads false by the time `onsuccess` runs, so it never moved on.
+	let latched = $state<boolean>();
+	const onboarding = $derived(latched ?? pageData.current?.interests.length === 0);
+	$effect(() => {
+		if (pageData.current && latched === undefined)
+			latched = pageData.current.interests.length === 0;
+	});
 </script>
 
 <PageHeader width="md" title={m.member_preferred_roles()} subtitle={m.member_volunteering()} />
@@ -37,7 +46,6 @@
 <PageContent width="md">
 	{#if pageData.current}
 		{@const { step: me, roles: roleOptions, interests: myInterests } = pageData.current}
-		{@const onboarding = myInterests.length === 0}
 		<Card>
 			<CardBody>
 				{#if roleOptions.length === 0}
