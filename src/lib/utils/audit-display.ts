@@ -7,7 +7,7 @@ import type {
 	WorkOrderAssignmentMode,
 	WorkOrderField
 } from '$lib/types/audit';
-import { contractorJobStatusLabels, projectStatusLabels } from '$lib/config';
+import { contractorJobStatusLabels, formatVolunteerHours, projectStatusLabels } from '$lib/config';
 import { formatCents, formatDateShort } from '$lib/utils/format';
 import type { FeedItem } from '$lib/types/activity';
 
@@ -158,6 +158,8 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			return `Undid the ${formatCents(entry.details.amountCents)} payout to ${entry.details.actName}`;
 		case 'event.published_over_warnings':
 			return `Published the event over ${plural(entry.details.warnings.length, 'warning')}: “${entry.details.reason}”`;
+		case 'volunteer_hours.approved_over_return':
+			return `Approved ${formatVolunteerHours(entry.details.minutes)} from ${entry.details.workedOn} that had been returned: “${entry.details.reason}”`;
 		case 'event.edited_while_cancelled': {
 			const fields = entry.details.fields.map((f) => EVENT_FIELDS[f] ?? f);
 			return fields.length

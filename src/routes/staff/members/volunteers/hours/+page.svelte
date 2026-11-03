@@ -339,6 +339,34 @@
 											/>
 										{/snippet}
 									</Action>
+								{:else if log.status === 'rejected'}
+									<!-- Warn, record, allow (#2233): the reason goes to the audit log. -->
+									<Action
+										action={approveVolunteerHours.for(log.id)}
+										label="Approve anyway"
+										iconOnly
+										icon={checkIcon}
+										variant="ghost"
+										size="sm"
+										modalTitle="Approve returned hours?"
+										submitLabel="Approve anyway"
+										successToast="Hours approved"
+										onsuccess={refreshQueue}
+									>
+										{#snippet form()}
+											<input type="hidden" name="id" value={log.id} />
+											<p class="text-sm">
+												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.member.title} on
+												{formatDateShort(log.workedOn)} were returned to the member.
+											</p>
+											<FormField
+												name="reason"
+												label="Why approve them now?"
+												type="textarea"
+												description="Recorded in the audit log."
+											/>
+										{/snippet}
+									</Action>
 								{/if}
 
 								{#if log.status !== 'rejected'}

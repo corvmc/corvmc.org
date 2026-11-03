@@ -53,7 +53,8 @@ export const auditActions = [
 	'project.duty_list_applied',
 	'project.section_created',
 	'project.section_renamed',
-	'project.section_deleted'
+	'project.section_deleted',
+	'volunteer_hours.approved_over_return'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
@@ -149,6 +150,14 @@ export interface AuditDetailsByAction {
 	'production.payout_undone': ProductionPayout;
 	/** A CMC listing published over its readiness warnings (#1787). */
 	'event.published_over_warnings': { warnings: string[]; reason: string };
+	/** The subject is the volunteer. A returned log approved anyway (#2233). `workedOn` is YYYY-MM-DD. */
+	'volunteer_hours.approved_over_return': {
+		logId: string;
+		workedOn: string;
+		minutes: number;
+		warnings: string[];
+		reason: string;
+	};
 	/** A staff edit to a listing that stays cancelled (#2126). Field names only. */
 	'event.edited_while_cancelled': { fields: EventEditField[] };
 	'work_order.created': { projectId: string | null; title: string };
