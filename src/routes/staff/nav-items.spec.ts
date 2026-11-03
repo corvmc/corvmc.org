@@ -4,7 +4,6 @@ import { join } from 'node:path';
 import {
 	activeNavKey,
 	allStaffNavItems,
-	childHrefsFor,
 	filterNavItems,
 	filterNavSections,
 	sectionHasKey,
@@ -58,12 +57,12 @@ describe('activeNavKey', () => {
 		['/staff/groups/committees', 'groups'],
 		['/staff/groups/abc', 'groups'],
 		['/staff/bands/acts', 'groups'],
-		['/staff/volunteer', 'volunteer'],
+		// The dashboard folded into Schedule (#2379), which owns the rest of the path.
+		['/staff/volunteer', 'volunteer-schedule'],
 		['/staff/members/volunteers', 'users'],
-		['/staff/volunteer/roles', 'volunteer'],
-		// Shift detail lost its own row when the catalog folded into Schedule; it
-		// falls back to the section parent like clearances does.
-		['/staff/volunteer/shifts/abc', 'volunteer'],
+		['/staff/volunteer/roles', 'volunteer-schedule'],
+		['/staff/volunteer/shifts/abc', 'volunteer-schedule'],
+		['/staff/volunteer/schedule/recurring', 'volunteer-schedule'],
 		// `/staff/events/[id]` and everything under it is the general view, which
 		// the Calendar row owns — including the production console, which is a
 		// page you navigate to rather than a section of its own.
@@ -145,13 +144,17 @@ describe('the nav tree', () => {
 	});
 
 	it('folds the volunteer and instructor rosters into Members (#2074)', () => {
-		const volunteer = allStaffNavItems().find((i) => i.key === 'volunteer')!;
-		expect(volunteer.children).toBeUndefined();
-		expect(childHrefsFor(volunteer)).toEqual(['/staff/volunteer']);
 		const members = allStaffNavItems().find((i) => i.key === 'users')!;
 		expect(filterNavItems([members], ['volunteer.read'])).toHaveLength(1);
 		expect(filterNavItems([members], ['instructor.read'])).toHaveLength(1);
 		expect(filterNavItems([members], ['band.read'])).toHaveLength(0);
+	});
+
+	it('folds the Volunteering dashboard into Schedule (#2379)', () => {
+		const schedule = allStaffNavItems().find((i) => i.key === 'volunteer-schedule')!;
+		expect(schedule.badgeKey).toBe('volunteerPending');
+		expect(filterNavItems([schedule], ['volunteer.read'])).toHaveLength(1);
+		expect(allStaffNavItems().some((i) => i.href === '/staff/volunteer')).toBe(false);
 	});
 
 	it('folds Productions into Projects (#2101)', () => {
@@ -201,7 +204,7 @@ describe('the nav tree', () => {
 	it('groups rows by what they are about', () => {
 		const section = (key: string) => staffNavSections.find((s) => s.key === key)!;
 		const keys = (key: string) => section(key).items.map((i) => i.key);
-		expect(keys('people')).toEqual(['users', 'groups', 'volunteer']);
+		expect(keys('people')).toEqual(['users', 'groups']);
 		expect(keys('planning')).toEqual([
 			'suggestions',
 			'ballots',
@@ -257,7 +260,7 @@ describe('route coverage', () => {
 	const unlinked = new Set([
 		// The full hour-log queue, a Members → Volunteers view (#2075).
 		'/staff/members/volunteers/hours',
-		// Roles and clearances: reached from the Volunteering dashboard's header (#1791).
+		// Roles and clearances: reached from the Schedule's header (#1791).
 		'/staff/volunteer/roles',
 		// Members views, reached from its tab bar (#2074).
 		'/staff/members/volunteers',

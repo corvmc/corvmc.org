@@ -748,10 +748,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/volunteer",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/volunteer/roles",
 		"panel": "staff"
 	},

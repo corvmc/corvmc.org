@@ -25,10 +25,6 @@ vi.mock('$lib/server/inventory/asset-service', () => ({ searchAssetOptions }));
 
 vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({ listVolunteerRoles: vi.fn() }));
 vi.mock('$lib/server/project/project-service', () => ({ listProjects: vi.fn() }));
-vi.mock('./volunteer.remote', () => ({
-	getVolunteerWorklist: () => ({ refresh: async () => undefined })
-}));
-
 vi.mock('$app/server', () => {
 	// The last argument is the handler, called directly; `__` is what SvelteKit
 	// checks to accept the export as a remote function.

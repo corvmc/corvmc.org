@@ -5,7 +5,7 @@ import {
 	volunteerRoleInterest
 } from '$lib/server/db/schema/volunteer';
 import { user } from '$lib/server/db/schema/authentication';
-import { and, asc, count, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { containsLiteral } from '$lib/server/db/like';
 import { DomainError } from '$lib/server/errors';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
@@ -406,6 +406,8 @@ export async function listVolunteers(
 		status?: VolunteerProfileStatus;
 		/** Only people holding this clearance today. */
 		certificationId?: string;
+		/** Only these people; an empty list matches nobody. */
+		userIds?: string[];
 	} = {},
 	pagination: PaginationInput = {}
 ): Promise<PaginatedResult<VolunteerListRow>> {
@@ -432,12 +434,19 @@ export async function listVolunteers(
 		? holdsCertificationSql(filters.certificationId)
 		: undefined;
 
+	const onlyThese = filters.userIds
+		? filters.userIds.length > 0
+			? inArray(user.id, filters.userIds)
+			: sql`0`
+		: undefined;
+
 	const where = and(
 		isNull(user.deletedAt),
 		matchesRole,
 		matchesSearch,
 		matchesStatus,
-		holdsClearance
+		holdsClearance,
+		onlyThese
 	);
 
 	// A correlated subquery, deliberately not a join. Joining the hour log
