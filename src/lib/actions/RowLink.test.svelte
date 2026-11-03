@@ -9,7 +9,7 @@
 <table>
 	<tbody>
 		<tr use:rowLink={to}>
-			<td>Name cell</td>
+			<td data-testid="cell">Name cell</td>
 			<td>
 				<div class="dropdown dropdown-end">
 					<Button variant="ghost" size="xs" shape="square" tabindex={0} aria-label="Row actions">
@@ -17,7 +17,7 @@
 					</Button>
 					<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 					<ul tabindex={0} class="menu dropdown-content dropdown-panel w-44">
-						<li><span>Menu body</span></li>
+						<li><span data-testid="menu-body">Menu body</span></li>
 					</ul>
 				</div>
 			</td>

@@ -7,6 +7,9 @@ import '../../../routes/layout.css';
 // At desktop width From, To and the presets sit on one row; FilterBar's 16rem
 // search slot used to wrap the labels above their inputs (#1793).
 
+/** The `<label>` naming an input: located by its `for`, not its text. */
+const labelOf = (input: Element) => document.querySelector(`label[for="${input.id}"]`)!;
+
 const middle = (el: Element) => {
 	const r = el.getBoundingClientRect();
 	return r.top + r.height / 2;
@@ -20,11 +23,11 @@ describe('DateRangeFilter', () => {
 		await expect.element(from).toBeVisible();
 		const row = middle(from.element());
 
+		// Every preset, not only the first and last: the whole set shares the row.
 		for (const el of [
-			page.getByText('From', { exact: true }).element(),
+			labelOf(from.element()),
 			page.getByLabelText('To').element(),
-			page.getByRole('button', { name: 'This year' }).element(),
-			page.getByRole('button', { name: 'All time' }).element()
+			...page.getByRole('button').elements()
 		]) {
 			expect(Math.abs(middle(el) - row)).toBeLessThan(4);
 		}
@@ -35,7 +38,7 @@ describe('DateRangeFilter', () => {
 
 		const to = page.getByLabelText('To');
 		await expect.element(to).toBeVisible();
-		const label = page.getByText('To', { exact: true }).element();
+		const label = labelOf(to.element());
 		expect(Math.abs(middle(label) - middle(to.element()))).toBeLessThan(4);
 	});
 });
