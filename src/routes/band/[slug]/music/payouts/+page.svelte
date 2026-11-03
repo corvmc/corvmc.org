@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
@@ -94,11 +95,13 @@
 		<CardBody>
 			<CardTitle>{m.band_slug_music_payouts_what_collective_takes()}</CardTitle>
 			<p class="text-muted">
-				{suggested}% is <em>{m.band_slug_music_payouts_suggested()}</em>, not fixed. Buyers see the
-				split before they pay and can move it — down to nothing, or up. Card processing comes off
-				the top before either of you is paid, so you and the collective fund it in proportion to
-				what you take — unless the buyer chooses to cover it, in which case you both keep the full
-				amount.
+				<ParaglideMessage
+					message={m.band_slug_music_payouts_not_fixed_buyers_see_split}
+					inputs={{
+						suggested,
+						band_slug_music_payouts_suggested: m.band_slug_music_payouts_suggested()
+					}}>{#snippet em({ children })}<em>{@render children?.()}</em>{/snippet}</ParaglideMessage
+				>
 			</p>
 			<p class="text-muted">
 				{m.band_slug_music_payouts_free_releases_skip_all_record()}

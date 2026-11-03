@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Form from '$lib/components/ui/Form/Form.svelte';
@@ -57,8 +58,12 @@
 	{#if !domain.configured}
 		<div class="alert">
 			<p class="text-sm">
-				Custom domains aren't set up on this site yet. Your band's site is always available at
-				<strong>{freeAddress}</strong>.
+				<ParaglideMessage
+					message={m.band_slug_settings_custom_domain_section_custom_domains_aren}
+					inputs={{ freeAddress }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			</p>
 		</div>
 	{:else if domain.domain}
@@ -153,8 +158,12 @@
 	{:else}
 		<InfoCard title={m.band_slug_settings_custom_domain_section_title()}>
 			<p class="text-sm">
-				Serve your band's site from a domain you own. Your free address,
-				<strong>{freeAddress}</strong>, keeps working either way.
+				<ParaglideMessage
+					message={m.band_slug_settings_custom_domain_section_serve_band_s_site_f}
+					inputs={{ freeAddress }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			</p>
 			<Form
 				remote={setCustomDomain}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { pageTitle, EVENT_TIP_SUBJECT, contactSubjects } from '$lib/config';
 	import { IconMail, IconMapPin } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
@@ -179,9 +180,14 @@
 							>{m.public_contact_how_do_i_become_member()}</summary
 						>
 						<div class="collapse-content text-muted">
-							<a href={signInHref({ register: true, returnTo: '/member' })} class="link"
-								>{m.public_contact_create_account()}</a
-							> to get started. Free memberships are available.
+							<ParaglideMessage
+								message={m.public_contact_get_started_free_memberships_available}
+								inputs={{ public_contact_create_account: m.public_contact_create_account() }}
+								>{#snippet a({ children })}<a
+										href={signInHref({ register: true, returnTo: '/member' })}
+										class="link">{@render children?.()}</a
+									>{/snippet}</ParaglideMessage
+							>
 						</div>
 					</details>
 					<details class="collapse-arrow collapse bg-base-200">
@@ -197,11 +203,15 @@
 							>{m.public_contact_how_do_i_submit_music()}</summary
 						>
 						<div class="collapse-content text-muted">
-							All-ages, all genres — if you make music, we want to hear from you. Use the contact
-							form with "Performance Inquiry" as the subject, or email a link to your music and any
-							dates you have in mind to <a href="mailto:booking@corvmc.org" class="link"
-								>{m.public_contact_booking_corvmc_org()}</a
-							>.
+							<ParaglideMessage
+								message={m.public_contact_all_ages_all_genres_if}
+								inputs={{
+									public_contact_booking_corvmc_org: m.public_contact_booking_corvmc_org()
+								}}
+								>{#snippet a({ children })}<a href="mailto:booking@corvmc.org" class="link"
+										>{@render children?.()}</a
+									>{/snippet}</ParaglideMessage
+							>
 						</div>
 					</details>
 				</div>

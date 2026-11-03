@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m as msg } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { getBandRiderPage } from '$lib/remote/rider.remote';
 	import StagePlot from '$lib/components/rider/StagePlot.svelte';
@@ -171,10 +172,12 @@
 			decides how.
 		-->
 		<p class="over-capacity mb-6">
-			This asks for <strong>{rider.channelCount}</strong> channels and the room's desk takes
-			<strong>{data.consoleChannels}</strong>. Nothing is wrong with the rider — but the house
-			engineer will be combining or dropping inputs, and it is worth agreeing which ones before
-			load-in rather than at it.
+			<ParaglideMessage
+				message={msg.band_slug_rider_list_asks_channels_room_s_desk}
+				inputs={{ channelCount: rider.channelCount, consoleChannels: data.consoleChannels }}
+				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 	{/if}
 

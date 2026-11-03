@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import AppealPanel from '$lib/components/moderation/AppealPanel.svelte';
 	import { getMySuggestionStanding } from '$lib/remote/suggestions.remote';
@@ -22,7 +23,12 @@
 		<p>
 			{m.member_suggestions_standing_notice_suggestions_go_staff_look()}
 			{#if standing.reason}
-				Staff's note: <span class="italic">{standing.reason}</span>
+				<ParaglideMessage
+					message={m.member_suggestions_standing_notice_staff_s_note}
+					inputs={{ reason: standing.reason }}
+					>{#snippet span({ children })}<span class="italic">{@render children?.()}</span
+						>{/snippet}</ParaglideMessage
+				>
 			{/if}
 		</p>
 		<AppealPanel target={{ kind: 'standing', scope: 'suggestion' }} />

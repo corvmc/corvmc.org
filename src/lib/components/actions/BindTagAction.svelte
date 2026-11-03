@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -65,7 +66,14 @@
 		     label stuck to it. -->
 		<div class="mb-3 rounded bg-base-200 p-3 text-sm" data-testid="bind-tag-context">
 			{#if currentTag}
-				<p>This unit currently wears <strong class="font-mono">{currentTag}</strong>.</p>
+				<p>
+					<ParaglideMessage
+						message={m.actions_bind_tag_unit_currently_wears}
+						inputs={{ currentTag }}
+						>{#snippet strong({ children })}<strong class="font-mono">{@render children?.()}</strong
+							>{/snippet}</ParaglideMessage
+					>
+				</p>
 				<p class="mt-1 opacity-70">
 					{m.actions_bind_tag_binding_new_one_keeps_every()}
 				</p>

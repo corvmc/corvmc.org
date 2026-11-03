@@ -307,7 +307,12 @@
 			{/if}
 
 			{#if frequency}
-				<Form.Field name="recurringUntil" type="date" label="Until (optional)" min={date} />
+				<Form.Field
+					name="recurringUntil"
+					type="date"
+					label={m.reservations_booking_date_time_step_label()}
+					min={date}
+				/>
 			{/if}
 		{/if}
 	{/if}

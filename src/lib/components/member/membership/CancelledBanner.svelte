@@ -1,5 +1,6 @@
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { formatMonthDayYear } from '$lib/utils/format';
 	import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit';
 	import { IconAlertTriangle } from '@tabler/icons-svelte';
@@ -24,11 +25,17 @@
 
 	<div>
 		<p>
-			Your sustaining membership has been cancelled, but your benefits — including <strong
-				>{m.member_membership_cancelled_banner_free_practice_hours({ freeHours })}</strong
+			<ParaglideMessage
+				message={m.member_membership_cancelled_banner_sustaining_membership_has}
+				inputs={{
+					member_membership_cancelled_banner_free_practice_hours:
+						m.member_membership_cancelled_banner_free_practice_hours({ freeHours }),
+					endDate
+				}}
+				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}{#snippet strong2({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}</ParaglideMessage
 			>
-			— are still active until <strong>{endDate}</strong>. You can pick it back up anytime before
-			then.
 		</p>
 
 		<div class="mt-3 flex flex-wrap gap-2">

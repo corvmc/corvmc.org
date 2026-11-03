@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
@@ -219,9 +220,12 @@
 				<CardBody class="text-center">
 					<h2 class="text-2xl font-bold">{m.band_upgrade_premium()}</h2>
 					<p class="mt-2 opacity-70">
-						Your band already has <strong>{band.slug}.{baseDomain}</strong>, pointing at your
-						directory profile. Premium turns it into a real website — a block editor, custom CSS,
-						genre themes, a full EPK — and lets you serve it from your own domain.
+						<ParaglideMessage
+							message={m.band_slug_subscription_band_already_has_pointing_at}
+							inputs={{ slug: band.slug, baseDomain }}
+							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}</ParaglideMessage
+						>
 					</p>
 				</CardBody>
 			</Card>
@@ -285,32 +289,60 @@
 					<h3 class="font-bold">{m.band_slug_subscription_what_s_included()}</h3>
 					<ul class="mt-2 space-y-2 text-sm">
 						<li class="flex items-start gap-2">
-							<span class="text-success">&#10003;</span>
-							Your own domain — or keep using {band.slug}.{baseDomain}
+							<ParaglideMessage
+								message={m.band_slug_subscription_own_domain_keep_using}
+								inputs={{ slug: band.slug, baseDomain }}
+								>{#snippet span({ children })}<span class="text-success"
+										>{@render children?.()}</span
+									>{/snippet}</ParaglideMessage
+							>
 						</li>
 						<li class="flex items-start gap-2">
-							<span class="text-success">&#10003;</span>
-							A page that arrives already built — reorder its blocks and hide what you don't need
+							<ParaglideMessage
+								message={m.band_slug_subscription_page_arrives_already_built_reorder}
+								inputs={{}}
+								>{#snippet span({ children })}<span class="text-success"
+										>{@render children?.()}</span
+									>{/snippet}</ParaglideMessage
+							>
 						</li>
 						<li class="flex items-start gap-2">
-							<span class="text-success">&#10003;</span>
-							Genre-themed templates (Punk, Jazz, Metal, Indie, Electronic, Folk)
+							<ParaglideMessage
+								message={m.band_slug_subscription_genre_themed_templates_punk_jazz}
+								inputs={{}}
+								>{#snippet span({ children })}<span class="text-success"
+										>{@render children?.()}</span
+									>{/snippet}</ParaglideMessage
+							>
 						</li>
 						<li class="flex items-start gap-2">
-							<span class="text-success">&#10003;</span>
-							Full custom CSS
+							<ParaglideMessage message={m.band_slug_subscription_full_custom_css} inputs={{}}
+								>{#snippet span({ children })}<span class="text-success"
+										>{@render children?.()}</span
+									>{/snippet}</ParaglideMessage
+							>
 						</li>
 						<!-- The EPK, the embedded player and one press photo are free for
 						     every act now, so selling them here would be selling something
 						     the band already has. What premium adds is presentation and
 						     volume. -->
 						<li class="flex items-start gap-2">
-							<span class="text-success">&#10003;</span>
-							A video section — live clips on your page and in your press kit
+							<ParaglideMessage
+								message={m.band_slug_subscription_video_section_live_clips_page}
+								inputs={{}}
+								>{#snippet span({ children })}<span class="text-success"
+										>{@render children?.()}</span
+									>{/snippet}</ParaglideMessage
+							>
 						</li>
 						<li class="flex items-start gap-2">
-							<span class="text-success">&#10003;</span>
-							Unlimited press photos, instead of one
+							<ParaglideMessage
+								message={m.band_slug_subscription_unlimited_press_photos_instead_one}
+								inputs={{}}
+								>{#snippet span({ children })}<span class="text-success"
+										>{@render children?.()}</span
+									>{/snippet}</ParaglideMessage
+							>
 						</li>
 					</ul>
 				</CardBody>

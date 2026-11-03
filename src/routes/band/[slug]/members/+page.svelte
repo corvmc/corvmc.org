@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m as msg } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
@@ -467,9 +468,12 @@
 		>
 			<div class="space-y-4">
 				<Alert type="warning">
-					You are about to transfer ownership of <strong>{layout.band.name}</strong> to
-					<strong>{transferTarget.name}</strong>. You will be demoted to admin. This cannot be
-					undone without the new owner's consent.
+					<ParaglideMessage
+						message={msg.band_slug_members_about_transfer_ownership_will_demoted}
+						inputs={{ name: layout.band.name, name2: transferTarget.name }}
+						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+							>{/snippet}</ParaglideMessage
+					>
 				</Alert>
 				<input {...transferFields.bandId.as('hidden', layout.band.id)} />
 				<input {...transferFields.newOwnerId.as('hidden', transferTarget.userId)} />

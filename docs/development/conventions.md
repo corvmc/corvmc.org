@@ -663,6 +663,11 @@ in `messages/en.json`. A key is prefixed by its area and then the feature or fil
 changes. Read one as `m.ui_close()` from `$lib/paraglide/messages.js`; an interpolated string
 takes named inputs (`m.ui_pagination_range({ from, to, total })`).
 
+A sentence with inline markup stays one message: the markup goes in as `{#strong}…{/strong}`, and
+`<ParaglideMessage message={m.key} inputs={…}>` from `@inlang/paraglide-js-svelte` renders it,
+taking one snippet per tag (`{#snippet strong({ children })}<strong>{@render children?.()}</strong>{/snippet}`).
+Splitting the sentence into fragment messages leaves pieces that can't be reviewed as a sentence.
+
 `custom/no-literal-ui-text` flags literal copy in `.svelte` files and `pnpm ui-string-census`
 counts it by directory. Glyphs, numbers, entities, `<code>`/`<kbd>` and `aria-hidden` text are
 not copy. Moving a string is not a licence to add one; a sweep notes redundant copy in its PR.

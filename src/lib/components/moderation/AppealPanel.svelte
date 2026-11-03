@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import type { Snippet } from 'svelte';
 	import { fileAppeal, getMyAppeal } from '$lib/remote/appeals.remote';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -52,7 +53,12 @@
 					<div class="space-y-3">
 						{#if view.upheld.notes}
 							<p class="text-muted text-wrap">
-								Staff's reason: <span class="italic">{view.upheld.notes}</span>
+								<ParaglideMessage
+									message={m.moderation_appeal_panel_staff_s_reason}
+									inputs={{ notes: view.upheld.notes }}
+									>{#snippet span({ children })}<span class="italic">{@render children?.()}</span
+										>{/snippet}</ParaglideMessage
+								>
 							</p>
 						{/if}
 						<label class="fieldset w-full">
@@ -79,12 +85,17 @@
 			</p>
 		{:else}
 			<p class="text-wrap">
-				<span class="font-medium"
-					>{m.moderation_appeal_panel_appeal({
-						toLowerCase: appealVerdictLabels[view.appeal.decision.verdict].toLowerCase()
-					})}</span
+				<ParaglideMessage
+					message={m.moderation_appeal_panel_text}
+					inputs={{
+						moderation_appeal_panel_appeal: m.moderation_appeal_panel_appeal({
+							toLowerCase: appealVerdictLabels[view.appeal.decision.verdict].toLowerCase()
+						}),
+						formatDate: formatDate(view.appeal.decision.decidedAt)
+					}}
+					>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
+						>{/snippet}</ParaglideMessage
 				>
-				on {formatDate(view.appeal.decision.decidedAt)}.
 			</p>
 		{/if}
 	</div>

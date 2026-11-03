@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import type { ResolvedPathname } from '$app/types';
 	import Section from '$lib/components/public/Section.svelte';
 	import { page } from '$app/state';
@@ -327,12 +328,14 @@
 			</p>
 		{:else if profileIsIncomplete}
 			<p class="mt-10 text-center text-sm text-fg-3">
-				Don't see your name? Profiles appear here once they have a tagline, a bio, a photo, or one
-				instrument, genre or skill.
-				<a href={resolve('/member/profile')} class="text-cmc-teal underline"
-					>{m.public_directory_add_profile()}</a
+				<ParaglideMessage
+					message={m.public_directory_don_t_see_name_profiles}
+					inputs={{ public_directory_add_profile: m.public_directory_add_profile() }}
+					>{#snippet a({ children })}<a
+							href={resolve('/member/profile')}
+							class="text-cmc-teal underline">{@render children?.()}</a
+						>{/snippet}</ParaglideMessage
 				>
-				to appear here.
 			</p>
 		{/if}
 	{/if}

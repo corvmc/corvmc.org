@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Button from '../ui/Button.svelte';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
@@ -53,8 +54,10 @@
 				{m.actions_delete_event_removes_event_outright_use_something()}
 			</p>
 			<p class="pb-2">
-				If the show was real and isn't happening, <strong>{m.actions_delete_event_cancel()}</strong> it
-				instead: that keeps it on the calendar marked cancelled so anyone who had the date finds out.
+				<ParaglideMessage message={m.actions_delete_event_if_show_was_real_isn} inputs={{}}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			</p>
 
 			{#if impact.rsvpCount > 0 || impact.lineupCount > 0 || impact.hasReservation}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * One work order: who is on it, who to ask, its engagements, hours, reports
 	 * and duties. Rendered by the shift page and by a project's task page, which
@@ -112,9 +113,15 @@
 		{#if shift.startsAt && shift.endsAt}
 			{timeRange(shift.startsAt, shift.endsAt)}
 		{:else if shift.dueAt}
+			{@const due = shift.dueAt}
 			<!-- A deadline is not a window: "done by Friday" is not "happens Friday 6-8". -->
-			due
-			<time datetime={new Date(shift.dueAt).toISOString()}>{formatDateShortYear(shift.dueAt)}</time>
+			<ParaglideMessage
+				message={m.volunteer_work_order_view_due}
+				inputs={{ formatDateShortYear: formatDateShortYear(due) }}
+				>{#snippet time({ children })}<time datetime={new Date(due).toISOString()}
+						>{@render children?.()}</time
+					>{/snippet}</ParaglideMessage
+			>
 		{:else}{m.volunteer_work_order_view_time_arranged()}{/if} ·
 		{#if shift.eventId && shift.eventTitle}
 			<a href={resolve(`/staff/events/${shift.eventId}`)} class="link link-primary">
@@ -450,11 +457,14 @@
 								<FormField
 									name="closeReports"
 									type="select"
-									label="When the window ends"
+									label={m.volunteer_work_order_view_when_window_ends()}
 									value={shift.closeReportsOnCompletion ? 'close' : 'wait'}
 									options={[
-										{ value: 'close', label: 'Close the equipment reports' },
-										{ value: 'wait', label: 'Wait on Today for me to confirm' }
+										{
+											value: 'close',
+											label: m.volunteer_work_order_view_close_equipment_reports()
+										},
+										{ value: 'wait', label: m.volunteer_work_order_view_wait_today_me_confirm() }
 									]}
 								/>
 							{/if}

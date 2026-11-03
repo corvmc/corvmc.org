@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -165,8 +166,12 @@
 					{#if inviteMeta}
 						<Alert type="info" class="text-sm">
 							<span
-								><strong>{inviteMeta.inviterName}</strong> invited you to join
-								<strong>{inviteMeta.groupName}</strong>. Create an account to get started.</span
+								><ParaglideMessage
+									message={m.public_login_invited_join_create_account_get}
+									inputs={{ inviterName: inviteMeta.inviterName, groupName: inviteMeta.groupName }}
+									>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+										>{/snippet}</ParaglideMessage
+								></span
 							>
 						</Alert>
 					{/if}
@@ -174,8 +179,12 @@
 					{#if intent && !inviteMeta}
 						<Alert type="info" class="text-sm">
 							<span
-								>Sign in or create a free account to <strong>{intent}</strong>. You'll come straight
-								back to finish.</span
+								><ParaglideMessage
+									message={m.public_login_sign_create_free_account_ll}
+									inputs={{ intent }}
+									>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+										>{/snippet}</ParaglideMessage
+								></span
 							>
 						</Alert>
 					{/if}

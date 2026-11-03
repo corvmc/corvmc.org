@@ -46,6 +46,6 @@
 			<Field field={fields.reference} type="text" label={m.actions_mark_ordered_reference()} />
 			<MoneyField field={fields.unitCostCents} label={m.actions_unit_cost()} />
 		</div>
-		<Field field={fields.notes} type="textarea" label="Notes" />
+		<Field field={fields.notes} type="textarea" label={m.actions_notes()} />
 	{/snippet}
 </Action>

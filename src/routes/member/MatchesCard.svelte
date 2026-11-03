@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import BadgeList from '$lib/components/ui/BadgeList.svelte';
@@ -79,11 +80,13 @@
 
 		{#if missing.length > 0}
 			<p class="mt-3 text-subtle">
-				Add {missingSentence} to your
-				<a href={resolve('/member/profile')} class="link link-primary"
-					>{m.member_matches_card_profile()}</a
+				<ParaglideMessage
+					message={m.member_matches_card_add_closer_matches}
+					inputs={{ missingSentence, member_matches_card_profile: m.member_matches_card_profile() }}
+					>{#snippet a({ children })}<a href={resolve('/member/profile')} class="link link-primary"
+							>{@render children?.()}</a
+						>{/snippet}</ParaglideMessage
 				>
-				for closer matches.
 			</p>
 		{/if}
 	{/if}

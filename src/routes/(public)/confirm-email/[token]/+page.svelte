@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { pageTitle } from '$lib/config';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -40,8 +41,12 @@
 
 					{#if outcome?.status === 'changed'}
 						<Alert type="success" class="text-sm">
-							You now sign in as <strong>{outcome.email}</strong>. You were signed out everywhere,
-							so sign in again with your usual password.
+							<ParaglideMessage
+								message={m.public_confirm_email_token_now_sign_as_were_signed}
+								inputs={{ email: outcome.email }}
+								>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+									>{/snippet}</ParaglideMessage
+							>
 						</Alert>
 						<Button variant="primary" class="w-full" href={resolve('/login')}
 							>{m.public_sign()}</Button
@@ -56,7 +61,12 @@
 						</Alert>
 					{:else}
 						<p class="text-center">
-							Use <strong>{request.email}</strong> to sign in to your CorvMC account from now on?
+							<ParaglideMessage
+								message={m.public_confirm_email_token_use_sign_corvmc_account_from}
+								inputs={{ email: request.email }}
+								>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+									>{/snippet}</ParaglideMessage
+							>
 						</p>
 						<Form remote={confirmEmailChange} onsuccess={(r) => (outcome = r ?? null)}>
 							<input {...fields.token.as('hidden', token)} />

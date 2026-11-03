@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m as msg } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * One ballot, for everyone who can see it: the vote for an elector, the
 	 * result once it may be read, and the draft controls for its managers.
@@ -362,8 +363,12 @@
 			{:else}
 				{#if data.myVote?.optionId}
 					<p class="mb-3">
-						You voted <strong>{optionLabel.get(data.myVote.optionId)}</strong>. This is a recorded
-						vote: you can change it until voting closes, and after that it appears in the roll call.
+						<ParaglideMessage
+							message={msg.ballot_ballot_detail_voted_recorded_vote_can_change}
+							inputs={{ option: optionLabel.get(data.myVote.optionId) ?? '' }}
+							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}</ParaglideMessage
+						>
 					</p>
 				{:else if secret}
 					<p class="mb-3">

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import type { MemberRef } from '$lib/types/entity';
@@ -101,8 +102,12 @@
 					     way out, beats the old behaviour of hiding the button entirely
 					     and leaving them to guess. -->
 					<Alert type="info">
-						As the owner you can't leave <strong>{bandName}</strong> until you transfer ownership to
-						another active member.
+						<ParaglideMessage
+							message={m.band_slug_members_your_membership_as_owner_can_t_leave}
+							inputs={{ bandName }}
+							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}</ParaglideMessage
+						>
 						{#snippet action()}
 							<Button variant="ghost" size="sm" onclick={ontransfer}
 								>{m.band_slug_members_your_membership_transfer_ownership()}</Button

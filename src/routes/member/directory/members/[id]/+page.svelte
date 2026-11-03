@@ -138,7 +138,7 @@
 
 		<ProfileGrid>
 			{#snippet main()}
-				<ProseBlock label="Bio" markdown={member.bio} />
+				<ProseBlock kind="bio" markdown={member.bio} />
 				<ListenStrip {links} />
 				<ShowsBox
 					upcoming={shows.upcoming}
@@ -150,11 +150,11 @@
 				/>
 			{/snippet}
 			{#snippet side()}
-				<CrossRefList label="Bands" items={bandRefs} note={`${bandRefs.length} active`} />
+				<CrossRefList kind="bands" items={bandRefs} note={`${bandRefs.length} active`} />
 				<TagCloud label={m.member_directory_members_id_plays_genres()} {tags} />
 				<TagCloud label={m.member_skills()} tags={member.skills ?? []} />
 				<LinksBox {links} />
-				<ContactBox label="Contact" {contact} />
+				<ContactBox kind="contact" {contact} />
 			{/snippet}
 		</ProfileGrid>
 	</PageContent>

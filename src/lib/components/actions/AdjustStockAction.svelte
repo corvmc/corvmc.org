@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -70,7 +71,14 @@
 		<!-- The correction is itself a ledger row, so the discrepancy stays
 		     visible rather than a total being quietly overwritten. -->
 		<div class="mb-3 rounded bg-base-200 p-3 text-sm">
-			<p>The system currently shows <strong>{onHand}</strong> on hand.</p>
+			<p>
+				<ParaglideMessage
+					message={m.actions_adjust_stock_system_currently_shows_hand}
+					inputs={{ onHand }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
+			</p>
 			<p class="mt-1 opacity-70">
 				{m.actions_adjust_stock_enter_what_counted_difference_recorded()}
 			</p>

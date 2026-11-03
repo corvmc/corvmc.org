@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import {
@@ -47,8 +48,13 @@
 		{#if reservation.status === 'confirmed' && reservation.lockCode}
 			<p class="px-3 pb-1 text-sm">
 				{#if reservation.lockSyncedAt}
-					Door code:
-					<span class="font-mono font-bold tracking-wider">{reservation.lockCode}</span>
+					<ParaglideMessage
+						message={m.member_reservations_reservation_card_door_code}
+						inputs={{ lockCode: reservation.lockCode }}
+						>{#snippet span({ children })}<span class="font-mono font-bold tracking-wider"
+								>{@render children?.()}</span
+							>{/snippet}</ParaglideMessage
+					>
 				{:else}
 					<!-- Issued, but the lock has not confirmed it. Showing the digits
 					     here would be a promise we cannot keep; the detail page has

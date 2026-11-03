@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -153,8 +154,12 @@
 									{#snippet form()}
 										<input {...retire.fields.id.as('hidden', s.id)} />
 										<p>
-											Stop writing new <strong>{s.name}</strong> work orders? The open one stays until
-											someone closes it.
+											<ParaglideMessage
+												message={m.member_groups_slug_committee_recurring_work_stop_writing_new}
+												inputs={{ name: s.name }}
+												>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+													>{/snippet}</ParaglideMessage
+											>
 										</p>
 									{/snippet}
 								</Action>

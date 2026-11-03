@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
@@ -107,7 +108,12 @@
 
 			{#if normalized}
 				<p class="text-sm">
-					Your band's site moves to <strong>{normalized}.{baseDomain}</strong>.
+					<ParaglideMessage
+						message={m.band_slug_settings_band_address_section_band_s_site_moves}
+						inputs={{ normalized, baseDomain }}
+						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+							>{/snippet}</ParaglideMessage
+					>
 				</p>
 			{/if}
 
@@ -118,9 +124,12 @@
 			{/if}
 
 			<Alert type="warning" class="text-sm">
-				Links to <strong>{slug}.{baseDomain}</strong> will forward to the new address — but only until
-				another band claims it, and then they stop. Update anywhere you've printed or posted the old one.
-				You can only change this a few times a year.
+				<ParaglideMessage
+					message={m.band_slug_settings_band_address_section_links_will_forward_n}
+					inputs={{ slug, baseDomain }}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}</ParaglideMessage
+				>
 			</Alert>
 
 			<div class="flex justify-end pt-2">

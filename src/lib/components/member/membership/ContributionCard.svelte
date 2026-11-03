@@ -1,5 +1,6 @@
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { formatDollars, formatMonthDayYear } from '$lib/utils/format';
@@ -95,13 +96,19 @@
 			>
 				{#snippet form()}
 					<p class="py-4">
-						Your benefits — including <strong
-							>{m.member_membership_contribution_card_free_practice_hours({
-								quantity: subscription.quantity
-							})}</strong
+						<ParaglideMessage
+							message={m.member_membership_contribution_card_benefits_including_stay}
+							inputs={{
+								member_membership_contribution_card_free_practice_hours:
+									m.member_membership_contribution_card_free_practice_hours({
+										quantity: subscription.quantity
+									}),
+								nextBilling
+							}}
+							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}{#snippet strong2({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}</ParaglideMessage
 						>
-						— stay active until <strong>{nextBilling}</strong>, and you can pick it back up any time
-						before then.
 					</p>
 				{/snippet}
 			</Action>

@@ -121,7 +121,7 @@
 
 	<ProfileGrid>
 		{#snippet main()}
-			<ProseBlock label="About" markdown={band.bio} />
+			<ProseBlock kind="about" markdown={band.bio} />
 			<ListenStrip links={band.links} />
 			<ReleasesBox releases={band.releases} bandSlug={band.slug} />
 			<ShowsBox
@@ -136,7 +136,7 @@
 			<VideoBox videos={band.pressKit.videos} />
 		{/snippet}
 		{#snippet side()}
-			<CrossRefList label="Members" items={memberRefs} note={`${band.memberCount} · roles`} />
+			<CrossRefList kind="members" items={memberRefs} note={`${band.memberCount} · roles`} />
 			<TagCloud label={msg.public_directory_bands_slug_genres_influences()} tags={band.genres} />
 			<LinksBox links={band.links} />
 			<div id="booking">

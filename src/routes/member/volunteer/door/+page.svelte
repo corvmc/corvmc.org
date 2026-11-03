@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { browser } from '$app/environment';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -222,10 +223,17 @@
 						? `, over capacity by ${-event.remaining}`
 						: ''}.
 					{#if event.onlineSales}
-						They can buy on their own phone at
-						<a class="link" href={resolve(`/events/${event.id}`)}
-							>{m.member_volunteer_door_corvmc_org_events({ id: event.id })}</a
-						>.
+						<ParaglideMessage
+							message={m.member_volunteer_door_they_can_buy_their_own}
+							inputs={{
+								member_volunteer_door_corvmc_org_events: m.member_volunteer_door_corvmc_org_events({
+									id: event.id
+								})
+							}}
+							>{#snippet a({ children })}<a class="link" href={resolve(`/events/${event.id}`)}
+									>{@render children?.()}</a
+								>{/snippet}</ParaglideMessage
+						>
 					{:else}
 						{m.member_volunteer_door_online_sales_closed_show()}
 					{/if}
