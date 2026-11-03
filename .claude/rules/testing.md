@@ -106,8 +106,8 @@ a spec asserts against those rather than a literal it worked out by hand.
 A test never matches on, or asserts, UI copy. Locate by `button[type=submit]` scoped to its dialog
 or form, then `href`, input `name`, a role with no name inside a scoped container (dialog, form,
 row), aria state, and `data-testid` last. `getByLabel` on a form field is allowed — the label is
-the accessible contract. Assert URL, value, count, visibility or a DB row. New and touched tests
-only; `pnpm test-wording-census` counts the backlog (`custom/no-wording-locators`, #2189).
+the accessible contract. Assert URL, value, count, visibility or a DB row.
+`custom/no-wording-locators` errors on the literal forms in specs and e2e (#2189).
 [conventions.md#locate-and-assert-by-structure](../../docs/development/conventions.md#locate-and-assert-by-structure)
 
 ## e2e
