@@ -60,12 +60,16 @@ test.describe('member sidebar', () => {
 		// end this cluster are in the avatar dropdown now.
 		await expect(navLink(page, '/member/help')).toBeVisible();
 		// The spacer still does its job now that the list is a scroll container.
-		const gap = await nav(page).evaluate((ul) => {
-			const list = ul.getBoundingClientRect();
-			const last = ul.querySelector('a[href="/member/help"]')!.getBoundingClientRect();
-			return list.bottom - last.bottom;
-		});
-		expect(gap).toBeLessThan(40);
+		// Polled: the list can still be re-rendering after the navigation (#2306).
+		await expect
+			.poll(() =>
+				nav(page).evaluate((ul) => {
+					const help = ul.querySelector('a[href="/member/help"]');
+					if (!help) return null;
+					return ul.getBoundingClientRect().bottom - help.getBoundingClientRect().bottom;
+				})
+			)
+			.toBeLessThan(40);
 
 		// The member-context rows are out of the sidebar and in the chrome.
 		for (const href of ['/member/messages', ...ACCOUNT_HREFS]) {
