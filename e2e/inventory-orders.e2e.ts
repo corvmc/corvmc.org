@@ -76,7 +76,7 @@ test.describe('purchase orders', () => {
 		// Intake in order mode: the arrival is posted against this order.
 		await expect(page.locator('input[name="purchaseOrderId"]')).toHaveValue(orderId);
 
-		const qty = page.locator('input[name="lineQty_0"]');
+		const qty = page.locator('input#lineQty_0');
 		await expect(qty).toHaveValue(String(SEED_ORDER_ITEM_REORDER_QUANTITY));
 		await qty.fill('5');
 
