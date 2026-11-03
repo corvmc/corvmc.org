@@ -660,9 +660,8 @@ one place: one file per area under `messages/en/` (`ui`, `layout`, `actions`, `c
 `band`, `member`, `staff`, `public`), each listed in `project.inlang/settings.json`; terms stay
 in `messages/en.json`. A key is prefixed by its area and then the feature or file it serves
 (`ui_`, `layout_`, `actions_cancel_reservation_`, …), and it is not renamed when its wording
-changes. Read one as
-`m.ui_close()` from `$lib/paraglide/messages.js`; an interpolated string takes named inputs
-(`m.ui_pagination_range({ from, to, total })`).
+changes. Read one as `m.ui_close()` from `$lib/paraglide/messages.js`; an interpolated string
+takes named inputs (`m.ui_pagination_range({ from, to, total })`).
 
 `custom/no-literal-ui-text` flags literal copy in `.svelte` files and `pnpm ui-string-census`
 counts it by directory. Glyphs, numbers, entities, `<code>`/`<kbd>` and `aria-hidden` text are
