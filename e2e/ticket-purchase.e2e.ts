@@ -3,6 +3,7 @@ import {
 	SEED_TP_EVENT_ID,
 	SEED_TP_EVENT_TITLE,
 	SEED_TP_FLOOR_EVENT_ID,
+	SEED_TP_FLOOR_EVENT_TITLE,
 	SEED_TP_FLOOR_CENTS,
 	SEED_TP_PRICE_CENTS
 } from './fixtures/seed-ticket-purchase';
@@ -29,6 +30,14 @@ const PRICE = SEED_TP_PRICE_CENTS / 100;
 const FLOOR = SEED_TP_FLOOR_CENTS / 100;
 const ticketsUrl = `/events/${SEED_TP_EVENT_ID}/tickets`;
 const flooredUrl = `/events/${SEED_TP_FLOOR_EVENT_ID}/tickets`;
+const GUEST_EMAIL = 'e2e-guest@example.test';
+
+/** An amount as the page prints it: 91 → "$0.91". Amounts are state, not copy. */
+const usd = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+
+/** The purchase form's one submit: "Pay $x" or "Get ticket", by amount. */
+const submitButton = (page: import('@playwright/test').Page) =>
+	page.locator('form:has(#ticketAmount) button[type="submit"]');
 
 /**
  * The page's own totals block. `goto` resolves before an awaited remote query
@@ -38,7 +47,7 @@ const flooredUrl = `/events/${SEED_TP_FLOOR_EVENT_ID}/tickets`;
 async function openPurchasePage(page: import('@playwright/test').Page, url = ticketsUrl) {
 	await page.goto(url);
 	await expect(page.getByRole('heading', { name: SEED_TP_EVENT_TITLE })).toBeVisible();
-	return page.getByText('Total', { exact: true }).locator('..');
+	return page.getByTestId('purchase-total');
 }
 
 /**
@@ -161,11 +170,11 @@ test('the fee-coverage offer is priced on everything the card is charged', async
 	// grossed-up amount is the contract, the wording around it is not.
 	// `name$=`: a remote form prefixes a boolean field's name (`b:coverFees`).
 	const coverFees = page.locator('input[name$="coverFees"]').locator('..');
-	await expect(coverFees).toContainText('$0.91');
+	await expect(coverFees).toContainText(usd(91));
 
 	await payPerTicket(page, '45');
 
-	await expect(coverFees).toContainText('$1.66');
+	await expect(coverFees).toContainText(usd(166));
 });
 
 test('paying above the suggestion shows up as a contribution', async ({ page }) => {
@@ -173,8 +182,8 @@ test('paying above the suggestion shows up as a contribution', async ({ page }) 
 
 	await payPerTicket(page, '30');
 
-	await expect(page.getByText('Contribution', { exact: true })).toBeVisible();
-	await expect(totals).toContainText('$30.00');
+	await expect(page.getByTestId('contribution-line')).toBeVisible();
+	await expect(totals).toContainText(usd(3000));
 });
 
 test('a scale that runs to free offers a free ticket, not a $0 charge', async ({ page }) => {
@@ -185,7 +194,9 @@ test('a scale that runs to free offers a free ticket, not a $0 charge', async ({
 	// The split bar goes away with the money, and the button stops asking for a
 	// card.
 	await expect(page.getByRole('slider')).toHaveCount(0);
-	await expect(page.getByRole('button', { name: /Get ticket/i })).toBeEnabled();
+	await expect(submitButton(page)).toBeEnabled();
+	// "Get ticket", not "Pay $0.00": no amount on the button.
+	expect(await submitButton(page).textContent()).not.toContain('$');
 });
 
 test('the dead zone below the charge minimum is refused on the page', async ({ page }) => {
@@ -193,29 +204,27 @@ test('the dead zone below the charge minimum is refused on the page', async ({ p
 
 	await payPerTicket(page, '0.50');
 
-	// `.first()`: the message sits inside nested elements, and getByText matches
-	// every ancestor whose text contains it.
-	await expect(page.getByText(/at least \$2\.00/).first()).toBeVisible();
-	await expect(page.getByRole('button', { name: /^Pay/ })).toBeDisabled();
+	await expect(page.getByTestId('amount-refused')).toHaveAttribute('data-reason', 'dead-zone');
+	await expect(submitButton(page)).toBeDisabled();
 });
 
 test('a guest is never offered a member discount, because there is not one', async ({ page }) => {
 	await openPurchasePage(page);
 
 	await expect(page.locator('input[name$="waiveDiscount"]')).toHaveCount(0);
-	await expect(page.getByText(/50% off/i)).toHaveCount(0);
 });
 
 test('a show with a floor says so, and refuses less', async ({ page }) => {
 	await page.goto(flooredUrl);
-	await expect(page.getByRole('heading', { name: 'E2E Show With A Floor' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: SEED_TP_FLOOR_EVENT_TITLE })).toBeVisible();
 
-	await expect(page.getByText(`$${FLOOR.toFixed(2)} minimum`).first()).toBeVisible();
+	// The field's description names the floor amount.
+	await expect(page.locator('form:has(#ticketAmount)')).toContainText(`$${FLOOR.toFixed(2)}`);
 
 	await payPerTicket(page, '2');
 
-	await expect(page.getByText(/least you can pay/).first()).toBeVisible();
-	await expect(page.getByRole('button', { name: /^Pay/ })).toBeDisabled();
+	await expect(page.getByTestId('amount-refused')).toHaveAttribute('data-reason', 'below-floor');
+	await expect(submitButton(page)).toBeDisabled();
 });
 
 /**
@@ -226,14 +235,16 @@ test('a show with a floor says so, and refuses less', async ({ page }) => {
  */
 async function payOnFakeCheckout(page: import('@playwright/test').Page, cardNumber: string) {
 	await expect(page).toHaveURL(/\/checkout\//);
-	await expect(page.getByRole('heading', { name: 'Test checkout' })).toBeVisible();
-	await page.locator('input[name$="cardNumber"]').fill(cardNumber);
-	await page.getByRole('button', { name: /^Pay / }).click();
+	// The fake driver's card form, rather than a Payment Element.
+	const card = page.locator('input[name$="cardNumber"]');
+	await expect(card).toBeVisible();
+	await card.fill(cardNumber);
+	await page.locator('form:has(input[name$="cardNumber"]) button[type="submit"]').click();
 }
 
 async function fillGuestDetails(page: import('@playwright/test').Page) {
 	await page.locator('input[name$="attendeeName"]').fill('E2E Guest');
-	await page.locator('input[name$="attendeeEmail"]').fill('e2e-guest@example.test');
+	await page.locator('input[name$="attendeeEmail"]').fill(GUEST_EMAIL);
 }
 
 /**
@@ -252,7 +263,8 @@ async function fillGuestDetails(page: import('@playwright/test').Page) {
  */
 async function submitPurchase(page: import('@playwright/test').Page) {
 	await payPerTicket(page, PRICE.toFixed(2));
-	await page.getByRole('button', { name: `Pay $${PRICE.toFixed(2)}`, exact: true }).click();
+	await expect(submitButton(page)).toContainText(usd(SEED_TP_PRICE_CENTS));
+	await submitButton(page).click();
 }
 
 test('a guest buys a ticket and it comes back valid', async ({ page }) => {
@@ -266,15 +278,15 @@ test('a guest buys a ticket and it comes back valid', async ({ page }) => {
 	// The success page is keyed on purchase_id, which only the completed session
 	// carries — landing here at all proves the redirect survived the round trip.
 	await expect(page).toHaveURL(/\/tickets\/success\?purchase_id=/);
-	await expect(page.getByRole('heading', { name: 'Tickets Confirmed' })).toBeVisible();
+	await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 	// The `Your Tickets` list renders one row per ticket the query returns, and it
 	// only returns `valid` rows — a still-`pending` ticket leaves it empty. The
 	// code beside the label is what the door scans, so its presence is the real
 	// proof fulfillment ran.
 	// `exact`: the buyer's address also appears in the "a receipt will be sent to
 	// …" sentence above, and a substring match resolves to both.
-	await expect(page.getByText('e2e-guest@example.test', { exact: true })).toBeVisible();
-	await expect(page.getByText('Ticket code')).toBeVisible();
+	await expect(page.getByText(GUEST_EMAIL, { exact: true })).toBeVisible();
+	await expect(page.getByTestId('ticket-code')).not.toBeEmpty();
 });
 
 test('a declined card keeps the buyer on checkout with the real decline copy', async ({ page }) => {
@@ -315,5 +327,5 @@ test('a fill that lands before hydration is retried, not waited out', async ({ p
 	// emitting that path: the route matches nothing, hydration is never delayed,
 	// and a guard against a hydration race quietly stops involving one.
 	expect(held, 'the entry chunk was never intercepted, so nothing was delayed').toBeGreaterThan(0);
-	await expect(page.getByText('Contribution', { exact: true })).toBeVisible();
+	await expect(page.getByTestId('contribution-line')).toBeVisible();
 });

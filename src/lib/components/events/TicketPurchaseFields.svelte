@@ -211,11 +211,11 @@
 {/if}
 
 {#if belowFloor}
-	<p class="text-sm text-error">
+	<p class="text-sm text-error" data-testid="amount-refused" data-reason="below-floor">
 		The least you can pay for this show is {formatCents(floorCents)} a ticket.
 	</p>
 {:else if inDeadZone}
-	<p class="text-sm text-error">
+	<p class="text-sm text-error" data-testid="amount-refused" data-reason="dead-zone">
 		Pay nothing, or at least {formatCents(TICKET_MIN_CHARGE_CENTS)} — below that, card fees take almost
 		all of it.
 	</p>
@@ -284,7 +284,7 @@
 		<span>{formatCents(split.ticketLineUnitCents * quantity)}</span>
 	</div>
 	{#if split.contributionCents > 0}
-		<div class="flex justify-between text-muted">
+		<div class="flex justify-between text-muted" data-testid="contribution-line">
 			<span>Contribution</span>
 			<span>{formatCents(split.contributionCents)}</span>
 		</div>
@@ -295,7 +295,7 @@
 			<span>{formatCents(split.feeCoveredCents)}</span>
 		</div>
 	{/if}
-	<div class="flex justify-between text-lg font-medium">
+	<div class="flex justify-between text-lg font-medium" data-testid="purchase-total">
 		<span>Total</span>
 		<span>{formatCents(split.chargeCents)}</span>
 	</div>
