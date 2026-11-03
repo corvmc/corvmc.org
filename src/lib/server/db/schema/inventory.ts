@@ -115,7 +115,9 @@ export const scheduleLoanSchema = z.object({
 
 export const checkoutLoanSchema = z.object({
 	dueDate: z.coerce.date(),
-	assetId: z.uuid().optional()
+	assetId: z.uuid().optional(),
+	/** Checking out a requested loan without scheduling it: the override's reason. */
+	reason: z.string().trim().max(1000).optional()
 });
 
 // ---------------------------------------------------------------------------

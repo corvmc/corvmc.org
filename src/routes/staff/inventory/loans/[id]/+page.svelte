@@ -10,6 +10,7 @@
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import Action from '$lib/components/ui/Action.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { CancelLoanAction, MarkReturnedAction } from '$lib/components/actions';
 	import Form, { Field, SubmitButton, Select } from '$lib/components/ui/Form';
@@ -184,6 +185,37 @@
 							/>
 						</div>
 					</Form>
+					<!-- Warn, record, allow (#2234): skipping the schedule is audited with a reason. -->
+					{#if loan.itemId}
+						<Action
+							action={checkout}
+							label="Check out without scheduling"
+							variant="ghost"
+							size="xs"
+							class="mt-3"
+							modalTitle="Check out without scheduling?"
+							submitLabel="Check out anyway"
+							successToast="Checked out"
+						>
+							{#snippet form()}
+								<input {...checkoutFields.loanId.as('hidden', id)} />
+								<Field field={checkoutFields.dueDate} type="date" label="Due Date" />
+								{#if needsAsset}
+									<Field name="assetId" label="Unit Handed Over">
+										<Select class="w-full" name="assetId" bind:value={chosenAssetId} required>
+											<option value="" disabled>Select the tag...</option>
+											{#each availableAssets as unit (unit.id)}
+												<option value={unit.id}>
+													{unit.assetTag ?? unit.serialNumber ?? 'Untagged unit'}
+												</option>
+											{/each}
+										</Select>
+									</Field>
+								{/if}
+								<Field field={checkoutFields.reason} type="textarea" label="Why skip scheduling?" />
+							{/snippet}
+						</Action>
+					{/if}
 				{:else if loan.status === 'scheduled'}
 					<h4 class="mb-3 text-sm font-semibold">Mark as Checked Out</h4>
 					<Form remote={checkout} successToast="Checked out" class="space-y-3">

@@ -23,6 +23,7 @@ import type { EquipmentCondition } from '$lib/config';
 import { movementStatement, recordMovement } from './stock-service';
 import { loanDailyRateCents, loanChargeDays, estimateLoanCost } from '$lib/config';
 import { captureException } from '$lib/server/sentry';
+import { recordAuditEntry } from '$lib/server/audit/audit-service';
 import type { PricingTier, LoanStatus } from '$lib/config';
 import { DomainError } from '$lib/server/domain-error';
 
@@ -347,13 +348,28 @@ export interface CheckoutLoanData {
 	/** Which physical unit is being handed over. Required for serialized items. */
 	assetId?: string;
 	actorId?: string;
+	/** Checking out a loan that was never scheduled: the override's reason, for the audit log. */
+	reason?: string | null;
 }
+
+/** Why a requested loan needs a reason to check out (docs/development/conventions.md#workflow-gates). */
+export const UNSCHEDULED_LOAN_WARNING = 'This loan was never scheduled.';
 
 export async function checkoutLoan(loanId: string, data: CheckoutLoanData) {
 	const loan = await getLoanRaw(loanId);
 	if (!loan) throw new LoanNotFoundError();
-	if (loan.status !== 'scheduled') throw new InvalidLoanTransitionError(loan.status, 'checked_out');
+	const reason = data.reason?.trim() || null;
+	// A requested loan skips scheduling over a reason; anything else is not ours to hand over.
+	const overSchedule = loan.status === 'requested' && !!reason;
+	if (loan.status !== 'scheduled' && !overSchedule) {
+		throw new InvalidLoanTransitionError(loan.status, 'checked_out');
+	}
 	if (!loan.itemId) throw new Error('Loan must have an item assigned before checkout');
+	// Scheduling is what reserves the stock, so a skipped one checks it here.
+	if (overSchedule) {
+		const available = await getAvailableQuantity(loan.itemId);
+		if (available < loan.quantity) throw new InsufficientQuantityError(available, loan.quantity);
+	}
 
 	const [item] = await db
 		.select({
@@ -427,6 +443,19 @@ export async function checkoutLoan(loanId: string, data: CheckoutLoanData) {
 	const [[updated]] = custodyUpdate
 		? await db.batch([loanUpdate, custodyUpdate, ledgerEntry])
 		: await db.batch([loanUpdate, ledgerEntry]);
+
+	if (overSchedule) {
+		await recordAuditEntry({
+			action: 'equipment_loan.checked_out_unscheduled',
+			subject: { type: 'user', id: loan.userId, label: member?.name ?? null },
+			details: {
+				loanId,
+				equipmentName: item?.name ?? null,
+				warnings: [UNSCHEDULED_LOAN_WARNING],
+				reason: reason!
+			}
+		});
+	}
 
 	Promise.resolve().then(async () => {
 		try {

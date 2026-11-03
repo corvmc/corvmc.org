@@ -99,6 +99,11 @@ vi.mock('./asset-service', () => ({
 	setAssetStatus: vi.fn().mockResolvedValue(undefined)
 }));
 
+const recordAuditEntry = vi.fn(async (..._args: unknown[]) => undefined);
+vi.mock('$lib/server/audit/audit-service', () => ({
+	recordAuditEntry: (...args: unknown[]) => recordAuditEntry(...args)
+}));
+
 vi.mock('./work-request-service', () => ({
 	hasBlockingFlag: vi.fn().mockResolvedValue(false),
 	raiseFlag: vi.fn().mockResolvedValue({ id: 'flag-1' })
@@ -303,6 +308,59 @@ describe('LoanService lifecycle', () => {
 			await expect(checkoutLoan('loan-1', { dueDate: new Date() })).rejects.toThrow(
 				InvalidLoanTransitionError
 			);
+			expect(recordAuditEntry).not.toHaveBeenCalled();
+		});
+
+		// Warn, record, allow (#2234): scheduling is an ordering step, so a reason
+		// lets a requested loan go out, and the reason is what the audit log keeps.
+		it('checks out a requested loan over a reason and records the override', async () => {
+			selectResultQueue = [
+				[{ id: 'loan-1', status: 'requested', itemId: 'eq-1', userId: 'user-1', quantity: 1 }],
+				[{ name: 'SM58', kind: 'bulk', pricingTier: 'major' }],
+				[{ name: 'Ada' }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'checked_out' }];
+
+			const result = await checkoutLoan('loan-1', {
+				dueDate: new Date('2025-07-22'),
+				reason: 'Member at the counter'
+			});
+
+			expect(result.status).toBe('checked_out');
+			expect(recordAuditEntry).toHaveBeenCalledWith({
+				action: 'equipment_loan.checked_out_unscheduled',
+				subject: { type: 'user', id: 'user-1', label: 'Ada' },
+				details: {
+					loanId: 'loan-1',
+					equipmentName: 'SM58',
+					warnings: [expect.any(String)],
+					reason: 'Member at the counter'
+				}
+			});
+		});
+
+		it('still checks stock for a requested loan, since nothing reserved it', async () => {
+			vi.mocked(getAvailableQuantity).mockResolvedValueOnce(0);
+			selectResultQueue = [
+				[{ id: 'loan-1', status: 'requested', itemId: 'eq-1', userId: 'user-1', quantity: 1 }]
+			];
+
+			await expect(
+				checkoutLoan('loan-1', { dueDate: new Date(), reason: 'Member at the counter' })
+			).rejects.toThrow(InsufficientQuantityError);
+			expect(recordAuditEntry).not.toHaveBeenCalled();
+		});
+
+		it('records nothing for a scheduled checkout', async () => {
+			selectResultQueue = [
+				[{ id: 'loan-1', status: 'scheduled', itemId: 'eq-1', userId: 'user-1' }],
+				[{ name: 'SM58', kind: 'bulk', pricingTier: 'major' }],
+				[{ name: 'Ada' }]
+			];
+			updateResult = [{ id: 'loan-1', status: 'checked_out' }];
+
+			await checkoutLoan('loan-1', { dueDate: new Date(), reason: 'unneeded' });
+			expect(recordAuditEntry).not.toHaveBeenCalled();
 		});
 	});
 
