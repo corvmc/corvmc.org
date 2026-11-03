@@ -101,6 +101,10 @@ vi.mock('./member-certification-service', () => ({
 }));
 
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+const recordAuditEntry = vi.fn(async (..._args: unknown[]) => undefined);
+vi.mock('$lib/server/audit/audit-service', () => ({
+	recordAuditEntry: (...args: unknown[]) => recordAuditEntry(...args)
+}));
 vi.mock('$lib/server/authorization', () => ({ topPositionFor: vi.fn(() => 'member') }));
 
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
@@ -533,6 +537,45 @@ describe('HourLogService', () => {
 		it('throws when the log is gone', async () => {
 			selectResultQueue = [[]];
 			await expect(approveHourLog('missing', STAFF_ID)).rejects.toThrow(HourLogNotFoundError);
+		});
+
+		// Warn, record, allow (#2233): a returned log is not terminal, so staff may
+		// approve it over the warning, and the reason is what the audit log keeps.
+		it('refuses a returned log when no reason is given', async () => {
+			selectResultQueue = [[pendingLog({ status: 'rejected' })]];
+			await expect(approveHourLog('log-1', STAFF_ID, undefined, { reason: '  ' })).rejects.toThrow(
+				HourLogAlreadyReviewedError
+			);
+			expect(db.update).not.toHaveBeenCalled();
+			expect(recordAuditEntry).not.toHaveBeenCalled();
+		});
+
+		it('approves a returned log over a reason and records the override', async () => {
+			const workedOn = new Date('2026-03-10T19:00:00Z');
+			selectResultQueue[0] = [pendingLog({ status: 'rejected', workedOn })];
+			updateResult = [pendingLog({ status: 'approved', workedOn })];
+
+			const row = await approveHourLog('log-1', STAFF_ID, undefined, {
+				reason: 'Returned by mistake'
+			});
+
+			expect(row.status).toBe('approved');
+			expect(recordAuditEntry).toHaveBeenCalledWith({
+				action: 'volunteer_hours.approved_over_return',
+				subject: { type: 'user', id: USER_ID },
+				details: {
+					logId: 'log-1',
+					workedOn: '2026-03-10',
+					minutes: 120,
+					warnings: [expect.any(String)],
+					reason: 'Returned by mistake'
+				}
+			});
+		});
+
+		it('records nothing for an ordinary approval', async () => {
+			await approveHourLog('log-1', STAFF_ID, undefined, { reason: 'unneeded' });
+			expect(recordAuditEntry).not.toHaveBeenCalled();
 		});
 
 		// Two staff clicking approve at once: the UPDATE re-asserts 'pending', so

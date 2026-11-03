@@ -889,6 +889,8 @@ export const approveVolunteerHours = form(
 	z.object({
 		id: z.string().min(1),
 		notes: z.string().max(VOLUNTEER_REVIEW_NOTES_MAX).optional(),
+		/** Approving a returned log: the override's reason, for the audit log only. */
+		reason: z.string().trim().max(1000).optional(),
 		/** The work order page it was approved from, to put back in sync. Not read by the service. */
 		shiftId: z.string().min(1).optional()
 	}),
@@ -896,7 +898,7 @@ export const approveVolunteerHours = form(
 		const staff = await requireCapability('volunteer.reviewHours');
 
 		try {
-			await approveHourLog(data.id, staff.id, data.notes);
+			await approveHourLog(data.id, staff.id, data.notes, { reason: data.reason });
 		} catch (err) {
 			mapDomainError(err);
 		}
