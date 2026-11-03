@@ -62,7 +62,7 @@ test.describe('inventory intake', () => {
 		await expect(page.locator('input#unitTag_1_0')).toHaveCount(0);
 
 		// The serialized line's two unit rows, one left untagged; the counted line adds none.
-		await expect(page.locator('input[name^="unitTag_"]')).toHaveCount(2);
+		await expect(page.locator('input[id^="unitTag_"]')).toHaveCount(2);
 		await expect(page.locator('input#unitTag_0_1')).toHaveValue('');
 
 		await page

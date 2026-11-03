@@ -196,7 +196,7 @@
 						<span class="text-base-content/50">· {riderElementKindLabels[item.kind]}</span>
 					</span>
 					<Field
-						name="{safeFieldPrefix(item.id)}_x_{i}"
+						id="{safeFieldPrefix(item.id)}_x_{i}"
 						type="number"
 						label={m.rider_stage_plot_across()}
 						value={String(at.x)}
@@ -208,7 +208,7 @@
 							})}
 					/>
 					<Field
-						name="{safeFieldPrefix(item.id)}_y_{i}"
+						id="{safeFieldPrefix(item.id)}_y_{i}"
 						type="number"
 						label={m.rider_stage_plot_back()}
 						value={String(at.y)}
