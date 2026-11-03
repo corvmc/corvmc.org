@@ -32,11 +32,13 @@ Three rules from that file are the ones most easily rationalized away, so hold t
 
 You keep the count, because nobody looking at a single PR can.
 
-- A **known CI-only flake** gets re-queued. `volunteering.e2e.ts` is the one documented case.
-- **Three or more round trips** is not bad luck any more. Count them:
-  `gh api repos/corvmc/corvmc.org/issues/<N>/timeline` and count `removed_from_merge_queue`. At
-  that point, stop re-queueing and report the diagnosis, even if every individual failure looked
-  like a flake.
+- **No flaky tests in main.** A flake is grounds for rejecting the work, and CI fails the E2E job
+  on any test that passed only on a retry. **Never re-run a failed job, or re-queue unchanged, to
+  get green.** A flake is diagnosed, filed with the `flaky` label (check
+  `gh issue list --state open --label flaky` first), fixed in its own PR, and the blocked PR is
+  re-queued only once that fix has merged. There is no "known flake" that earns a re-queue.
+- **Count round trips anyway**: `gh api repos/corvmc/corvmc.org/issues/<N>/timeline` and count
+  `removed_from_merge_queue`. Several on one PR is a diagnosis waiting to be written.
 - A spec that fails **on the queue head and nowhere else** is an ordering bug more often than it is
   noise. Say so rather than re-arming and hoping.
 - A rejection that lands **shortly after another PR was ejected** is often downstream of it. GitHub

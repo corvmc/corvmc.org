@@ -67,11 +67,15 @@ long way round when the annotations block came back empty.
 
 3. Classify honestly. It failed on the queue ref, tested against the queue head, so "green on the
    PR's own head" is not evidence of anything.
-   - **A known CI-only flake** — `volunteering.e2e.ts` is the documented one — re-queue with
-     `gh pr merge --auto`. The guard's `enqueued` job clears the label.
-   - **Anything else, including a flake that has now failed three or more times** — leave it
-     labelled, report the diagnosis to the user, and do not re-queue. A test that fails on the
-     queue head and nowhere else is a real ordering bug more often than it is bad luck.
+   - **Never re-run or re-queue unchanged to get green.** No flaky tests in main: a flake is
+     grounds for rejection, and CI fails E2E on any test that passed only on a retry.
+   - **A flake** (fails without the PR's diff being the cause) — diagnose it from the log and
+     traces, file it with the `flaky` label (search `gh issue list --state open --label flaky`
+     first), fix it in its own PR, and re-queue the blocked PR with `gh pr merge --auto` only once
+     that fix has merged. The guard's `enqueued` job clears the label.
+   - **A real failure in the PR** — leave it labelled and report the diagnosis, or fix it on the
+     branch. A test that fails on the queue head and nowhere else is an ordering bug more often
+     than it is bad luck.
    - **No failed run at all** (manual removal, conflict, or the queue's one-hour check timeout) —
      say which, and ask before re-queueing.
 

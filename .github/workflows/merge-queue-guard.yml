@@ -248,17 +248,17 @@ jobs:
             if [ "$ejections" -ge 3 ] 2>/dev/null; then
               cat >> comment.md <<EOF
 
-          > This PR has now been removed from the queue **${ejections} times**. Past three,
-          > \`.claude/agents/qc.md\` says to stop re-queueing and diagnose: a spec that fails on the
-          > queue head and nowhere else is an ordering bug more often than it is noise.
+          > This PR has now been removed from the queue **${ejections} times**. A spec that fails
+          > on the queue head and nowhere else is an ordering bug more often than it is noise.
           EOF
             fi
           fi
 
           cat >> comment.md <<'EOF'
 
-          Auto-merge is disarmed and nothing will re-arm it. Run `/queue-triage` in a Claude
-          session, or re-queue with `gh pr merge --auto`.
+          Auto-merge is disarmed and nothing will re-arm it. Do not re-queue unchanged to get
+          green: diagnose the failure, and if it is a flake, file it with the `flaky` label and
+          fix it before re-queueing. `/queue-triage` in a Claude session is the procedure.
           EOF
 
           gh pr edit "$PR" --add-label queue-rejected
