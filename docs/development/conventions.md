@@ -413,6 +413,10 @@ to author migration SQL yourself, and it does not break the "migrations come onl
   security boundary. `scripts/remote-guard.spec.ts` checks that each one reaches a guard before
   it touches `db`; a remote meant to answer anyone goes in `scripts/remote-guard.public.json`
   with its reason.
+- A remote keyed on an event id guards with `requireListingReader`/`requireListingWriter`
+  (`src/lib/server/event/listing-guard.ts`), which also admit the show's committee. A bare
+  `requireCapability('event.*')` refuses them; `scripts/listing-guard.spec.ts` fails on one
+  unless `scripts/listing-guard.json` says why it is staff-only.
 - A group-scoped guard takes the group as an **argument**, never from `params`. A remote
   function's `params` describe the page the client says it is on; the slug or id is a
   lookup key that the guard resolves before checking the caller's role on what it
