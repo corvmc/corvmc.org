@@ -98,7 +98,9 @@
 							<p class="text-muted">{ticket.attendeeEmail}</p>
 						</div>
 						<div class="text-right">
-							<p class="font-mono text-lg font-bold tracking-wider">{ticket.code}</p>
+							<p class="font-mono text-lg font-bold tracking-wider" data-testid="ticket-code">
+								{ticket.code}
+							</p>
 							<p class="text-subtle">Ticket code</p>
 						</div>
 					</div>

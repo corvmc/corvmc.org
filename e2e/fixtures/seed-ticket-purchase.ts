@@ -28,6 +28,7 @@ export const SEED_TP_EVENT_ID = 'e2e-tp-ticketed';
  * asked for a minimum. A single fixture would only ever exercise one of them.
  */
 export const SEED_TP_FLOOR_EVENT_ID = 'e2e-tp-floored';
+export const SEED_TP_FLOOR_EVENT_TITLE = 'E2E Show With A Floor';
 // Deliberately contains none of the words the spec asserts on ("Contribution",
 // "Total", "discount") — a title that collides with them turns every text
 // assertion into a strict-mode violation.
@@ -69,7 +70,7 @@ export async function seedTicketPurchase(): Promise<void> {
 
 		await db.insert(eventListing).values({
 			id: SEED_TP_FLOOR_EVENT_ID,
-			title: 'E2E Show With A Floor',
+			title: SEED_TP_FLOOR_EVENT_TITLE,
 			description: 'Seeded for the ticket sliding-scale e2e.',
 			startsAt,
 			endsAt,
