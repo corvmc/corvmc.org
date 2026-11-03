@@ -204,7 +204,7 @@ describe('AdjustStockAction', () => {
 
 		await vi.waitFor(() => expect(delta().value).toBe('4'));
 		await expect.element(preview()).toHaveAttribute('data-direction', 'add');
-		await expect.element(preview()).toHaveTextContent(String(4));
+		await expect.element(preview()).toMatchTextContent(String(4));
 	});
 
 	// The half that is easy to get wrong by hand, and the half that doubles the
@@ -216,7 +216,7 @@ describe('AdjustStockAction', () => {
 
 		await vi.waitFor(() => expect(delta().value).toBe('-5'));
 		await expect.element(preview()).toHaveAttribute('data-direction', 'remove');
-		await expect.element(preview()).toHaveTextContent(String(5));
+		await expect.element(preview()).toMatchTextContent(String(5));
 	});
 
 	it('submits zero, and says so, when the count matches', async () => {
@@ -268,7 +268,7 @@ describe('BindTagAction', () => {
 	it('names the tag being replaced when there is one', async () => {
 		await expect.element(await open({ currentTag: TAG })).toBeVisible();
 
-		await expect.element(context().getByCss('strong')).toHaveTextContent(TAG);
+		await expect.element(context().getByCss('strong')).toMatchTextContent(TAG);
 	});
 
 	// The reassurance is the whole reason a rebind is offered rather than a

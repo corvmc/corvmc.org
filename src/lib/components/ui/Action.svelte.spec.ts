@@ -378,8 +378,8 @@ describe('Action, form mode', () => {
 
 		await trigger.click();
 
-		await expect.element(submitButton()).toHaveTextContent(submitLabel);
-		await expect.element(submitButton()).not.toHaveTextContent(label);
+		await expect.element(submitButton()).toMatchTextContent(submitLabel);
+		await expect.element(submitButton()).not.toMatchTextContent(label);
 	});
 
 	it('renders no footer when the form supplies its own', async () => {

@@ -132,8 +132,8 @@ describe('DeleteEventAction', () => {
 
 			// One item each: RSVPs, lineup credits, then the space booking.
 			await expect.poll(() => items().elements().length).toBe(3);
-			await expect.element(items().nth(0)).toHaveTextContent(String(impact.rsvpCount));
-			await expect.element(items().nth(1)).toHaveTextContent(String(impact.lineupCount));
+			await expect.element(items().nth(0)).toMatchTextContent(String(impact.rsvpCount));
+			await expect.element(items().nth(1)).toMatchTextContent(String(impact.lineupCount));
 		} finally {
 			reset();
 		}

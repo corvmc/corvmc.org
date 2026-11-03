@@ -18,7 +18,7 @@ describe('DoorSalesCard', () => {
 
 		// The heading carries the admitted total: card plus free.
 		const admitted = sold.card.tickets + sold.free.tickets;
-		await expect.element(locator.getByRole('heading')).toHaveTextContent(String(admitted));
+		await expect.element(locator.getByRole('heading')).toMatchTextContent(String(admitted));
 		expect(container.textContent).toContain(formatCents(sold.card.grossCents));
 		expect(container.querySelector(tillLink)).toBeNull();
 	});

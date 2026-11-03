@@ -69,7 +69,7 @@ describe('ActivateToggleAction', () => {
 	it('names the kind of thing in the question it asks', async () => {
 		const dialog = await open({ isDeactivated: false, entityLabel: ENTITY });
 
-		await expect.element(dialog).toHaveTextContent(ENTITY);
+		await expect.element(dialog).toMatchTextContent(ENTITY);
 	});
 
 	/**
@@ -91,7 +91,7 @@ describe('ActivateToggleAction', () => {
 			deactivateWarning: WARNING
 		});
 
-		await expect.element(dialog).toHaveTextContent(ENTITY);
+		await expect.element(dialog).toMatchTextContent(ENTITY);
 		expect(submitsTo()).toBe('?/reactivate');
 		expect(document.body.textContent).not.toContain(WARNING);
 	});
