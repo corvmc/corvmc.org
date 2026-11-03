@@ -46,7 +46,8 @@
 		IconContract,
 		IconCertificate
 	} from '@tabler/icons-svelte';
-	import { getStaffLayout } from '$lib/remote/layout.remote';
+	import { getStaffLayout, requireLayoutSession } from '$lib/remote/layout.remote';
+	import { afterGate } from '$lib/utils/sign-in';
 	import { panelTabs } from '$lib/components/layout/panel-tabs';
 	import { navTrail } from '$lib/components/layout/nav-trail';
 	import { setBreadcrumbTrail } from '$lib/components/ui/breadcrumbs';
@@ -81,7 +82,10 @@
 	onMount(() => (starredKeys = readStarred('staff')));
 	const toggleStar = (key: StaffNavKey) => (starredKeys = toggleStarred('staff', key));
 
-	let layout = $derived(await getStaffLayout());
+	// The page the panel was entered on, read once: a path that changed the key on every
+	// navigation would refetch the gate each time. Only a signed-out visitor needs it.
+	const entryPath = page.url.pathname + page.url.search;
+	let layout = $derived(await afterGate(requireLayoutSession(entryPath), getStaffLayout()));
 
 	// Only the rows this viewer can use. `getStaffLayout` settled that they may
 	// open the panel; this settles which of it is worth showing them. Hiding a

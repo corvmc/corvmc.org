@@ -22,7 +22,8 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
 	import { EntityViewer } from '$lib/components/ui/entity';
-	import { getMemberLayout } from '$lib/remote/layout.remote';
+	import { getMemberLayout, requireLayoutSession } from '$lib/remote/layout.remote';
+	import { afterGate } from '$lib/utils/sign-in';
 	import { setMemberLayoutContext } from './layout-context';
 	import { panelTabs } from '$lib/components/layout/panel-tabs';
 	import { navTrail } from '$lib/components/layout/nav-trail';
@@ -66,7 +67,10 @@
 		}
 	});
 
-	let layout = $derived(await getMemberLayout());
+	// The page the panel was entered on, read once: a path that changed the key on every
+	// navigation would refetch the gate each time. Only a signed-out visitor needs it.
+	const entryPath = page.url.pathname + page.url.search;
+	let layout = $derived(await afterGate(requireLayoutSession(entryPath), getMemberLayout()));
 
 	const panels = $derived(panelTabs(layout));
 

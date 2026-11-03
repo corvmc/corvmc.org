@@ -68,8 +68,7 @@ vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
-		locals: { user: { id: 'user-1', name: 'Dev', email: 'dev@example.com' } },
-		url: new URL('http://localhost/staff/sponsors')
+		locals: { user: { id: 'user-1', name: 'Dev', email: 'dev@example.com' } }
 	}),
 	query: (...args: unknown[]) => {
 		const handler = (typeof args[0] === 'function' ? args[0] : args[1]) as (

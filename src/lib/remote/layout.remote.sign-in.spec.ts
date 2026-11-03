@@ -1,9 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
+
+import { resolveBandSlug } from '$lib/server/band/band-address-service';
 
 /**
  * A signed-out request for a panel layout is the sign-in interrupt (#1999):
  * the redirect carries the page it came from, so signing in lands back there.
- * A remote's `url` is the calling page's, from Kit's pathname/search headers.
+ * Kit 3 throws on `event.url` inside a query, so the mock does too, and the
+ * page arrives as the gate's argument.
  */
 
 vi.mock('$lib/server/band/band-service', () => ({
@@ -44,10 +47,14 @@ vi.mock('$lib/server/user/staff-queue-counts', () => ({
 vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (v: unknown) => v ?? null }));
 vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
 
+let currentUser: { id: string; name: string; email: string } | null = null;
+
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
-		locals: { user: null },
-		url: new URL('http://localhost/member/bands?tab=mine')
+		locals: { user: currentUser },
+		get url(): URL {
+			throw new Error('event.url inside a query');
+		}
 	}),
 	query: (...args: unknown[]) => {
 		const handler = (typeof args[0] === 'function' ? args[0] : args[1]) as (
@@ -64,14 +71,54 @@ const layout = (await import('./layout.remote')) as unknown as Record<
 	(...a: unknown[]) => Promise<unknown>
 >;
 
-const BACK = `/login?redirect=${encodeURIComponent('/member/bands?tab=mine')}`;
+const PAGE = '/member/bands?tab=mine';
+const BACK = `/login?redirect=${encodeURIComponent(PAGE)}`;
 
-describe('panel layouts, signed out', () => {
+describe('panel layout gates, signed out', () => {
+	beforeEach(() => (currentUser = null));
+
+	it.each([
+		['requireLayoutSession', [PAGE]],
+		['requireBandLayoutSession', [{ slug: 'some-band', path: PAGE }]]
+	])('%s redirects to sign-in, returning to the page it was given', async (name, args) => {
+		await expect(layout[name](...args)).rejects.toMatchObject({ status: 302, location: BACK });
+	});
+
+	it('drops a return path that leaves the site', async () => {
+		await expect(layout.requireLayoutSession('//evil.example/x')).rejects.toMatchObject({
+			status: 302,
+			location: '/login'
+		});
+	});
+});
+
+describe('panel layout data, signed out', () => {
+	beforeEach(() => (currentUser = null));
+
 	it.each([
 		['getMemberLayout', []],
 		['getStaffLayout', []],
 		['getBandLayout', ['some-band']]
-	])('%s redirects to sign-in, returning to this page', async (name, args) => {
-		await expect(layout[name](...args)).rejects.toMatchObject({ status: 302, location: BACK });
+	])('%s still refuses, without reading the page', async (name, args) => {
+		await expect(layout[name](...args)).rejects.toMatchObject({ status: 302, location: '/login' });
+	});
+});
+
+describe('band layout gate, renamed band', () => {
+	beforeEach(() => {
+		currentUser = { id: 'user-1', name: 'Member', email: 'member@example.com' };
+		vi.mocked(resolveBandSlug).mockResolvedValue({ kind: 'moved', slug: 'new-name' });
+	});
+
+	it('keeps the subpage and query when forwarding an old address', async () => {
+		await expect(
+			layout.requireBandLayoutSession({ slug: 'old-name', path: '/band/old-name/events?view=past' })
+		).rejects.toMatchObject({ status: 302, location: '/band/new-name/events?view=past' });
+	});
+
+	it('forwards to the dashboard when the path is not under the old address', async () => {
+		await expect(
+			layout.requireBandLayoutSession({ slug: 'old-name', path: '/band/old-name-x//evil.example' })
+		).rejects.toMatchObject({ status: 302, location: '/band/new-name' });
 	});
 });

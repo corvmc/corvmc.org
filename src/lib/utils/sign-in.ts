@@ -52,6 +52,17 @@ export function signInHref({ returnTo, register, intent }: SignInOptions = {}): 
 	return (q ? `/login?${q}` : '/login') as ResolvedPathname;
 }
 
+/**
+ * A layout's data, once its sign-in gate has passed. Both run at once; when
+ * both refuse, the gate's refusal wins, because only it knows the return path.
+ */
+export async function afterGate<T>(gate: PromiseLike<unknown>, data: PromiseLike<T>): Promise<T> {
+	const [g, d] = await Promise.allSettled([gate, data]);
+	if (g.status === 'rejected') throw g.reason;
+	if (d.status === 'rejected') throw d.reason;
+	return d.value;
+}
+
 /** The current page as a return path, for an interrupt raised from it. */
 export function here(url: URL): string {
 	return `${url.pathname}${url.search}${url.hash}`;

@@ -24,7 +24,9 @@
 	import { navTrail } from '$lib/components/layout/nav-trail';
 	import { setBreadcrumbTrail } from '$lib/components/ui/breadcrumbs';
 	import { page } from '$app/state';
-	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { untrack } from 'svelte';
+	import { getBandLayout, requireBandLayoutSession } from '$lib/remote/layout.remote';
+	import { afterGate } from '$lib/utils/sign-in';
 	import { setBandLayoutContext } from './layout-context';
 	import {
 		activeBandNavKey,
@@ -52,7 +54,15 @@
 		}
 	});
 
-	let layout = $derived(await getBandLayout(page.params.slug!));
+	// Keyed on the slug alone; the path is read untracked when it changes, so moving between
+	// a band's pages reuses the gate, and an old address still keeps its subpage.
+	const gate = $derived.by(() => {
+		const slug = page.params.slug!;
+		return { slug, path: untrack(() => page.url.pathname + page.url.search) };
+	});
+	let layout = $derived(
+		await afterGate(requireBandLayoutSession(gate), getBandLayout(page.params.slug!))
+	);
 
 	// The gating itself lives in `nav-items.ts` as data, so it can be asserted
 	// against for every role and flag combination — this file has had the role

@@ -18,7 +18,7 @@ import { acceptsDirectMessages } from '$lib/server/moderation/moderation-service
 import { getForUser, getUnreadCount } from '$lib/server/notification/in-app-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { captureException } from '$lib/server/sentry';
-import { here, signInHref } from '$lib/utils/sign-in';
+import { safeReturnPath, signInHref } from '$lib/utils/sign-in';
 
 /** The authenticated caller, as the three layout queries below have already narrowed it. */
 type SignedInUser = NonNullable<App.Locals['user']>;
@@ -102,9 +102,22 @@ async function appChrome(user: SignedInUser) {
 	};
 }
 
+/**
+ * The sign-in interrupt for a panel layout (#2144), apart from the layout's data.
+ * Kit 3 gives a query no page, so the path arrives as the argument; the data
+ * queries stay unparameterized so one cached copy serves every page in the panel
+ * and a command's `.refresh()` needs no path. Their own signed-out redirect is
+ * the fallback, without a return path. Pair with `afterGate` in the layout.
+ */
+export const requireLayoutSession = query(z.string(), async (path) => {
+	const { locals } = getRequestEvent();
+	if (!locals.user) throw redirect(302, signInHref({ returnTo: path }));
+	return true;
+});
+
 export const getMemberLayout = query(async () => {
-	const { locals, url } = getRequestEvent();
-	if (!locals.user) throw redirect(302, signInHref({ returnTo: here(url) }));
+	const { locals } = getRequestEvent();
+	if (!locals.user) throw redirect(302, signInHref());
 	const user = locals.user;
 
 	const [
@@ -174,8 +187,8 @@ export const getMemberLayout = query(async () => {
 });
 
 export const getStaffLayout = query(async () => {
-	const { locals, url } = getRequestEvent();
-	if (!locals.user) throw redirect(302, signInHref({ returnTo: here(url) }));
+	const { locals } = getRequestEvent();
+	if (!locals.user) throw redirect(302, signInHref());
 
 	// "May you open the panel at all": holding a position, or a committee seat that
 	// grants a staff module org-wide (#1578). The capability set below decides
@@ -210,25 +223,44 @@ export const getStaffLayout = query(async () => {
 });
 
 /**
- * Move a dashboard path onto the band's new slug, keeping the subpage.
- *
- * `url.pathname` inside a remote function is the *page* path, which SvelteKit
- * rebuilds from the client-supplied `x-sveltekit-pathname` header — untrusted
- * input. Only rewrite when it has the shape we expect; the prefix check is what
- * stops a crafted header turning this into an open redirect.
+ * Move a dashboard path onto the band's new slug, keeping the subpage. `path`
+ * comes from the client; the prefix check is what stops it becoming an open
+ * redirect.
  */
-function dashboardPathAfterRename(oldSlug: string, newSlug: string): string {
-	const { url } = getRequestEvent();
+function dashboardPathAfterRename(oldSlug: string, newSlug: string, path: string | null): string {
 	const prefix = `/band/${oldSlug}`;
-	if (url.pathname === prefix || url.pathname.startsWith(`${prefix}/`)) {
-		return `/band/${newSlug}${url.pathname.slice(prefix.length)}${url.search}`;
+	const safe = safeReturnPath(path);
+	if (safe && (safe === prefix || safe.startsWith(`${prefix}/`) || safe.startsWith(`${prefix}?`))) {
+		return `/band/${newSlug}${safe.slice(prefix.length)}`;
 	}
 	return `/band/${newSlug}`;
 }
 
+/** Redirect a band's old address to its current one; `path` keeps the subpage. */
+async function forwardRenamedBand(slug: string, path: string | null): Promise<void> {
+	const moved = await resolveBandSlug(slug);
+	if (moved?.kind === 'moved' && moved.slug !== slug) {
+		redirect(302, dashboardPathAfterRename(slug, moved.slug, path));
+	}
+}
+
+/**
+ * `requireLayoutSession` for the band panel, which also needs the path to keep
+ * the subpage when an old address forwards to the band's new one.
+ */
+export const requireBandLayoutSession = query(
+	z.object({ slug: z.string(), path: z.string() }),
+	async ({ slug, path }) => {
+		const { locals } = getRequestEvent();
+		if (!locals.user) throw redirect(302, signInHref({ returnTo: path }));
+		await forwardRenamedBand(slug, path);
+		return true;
+	}
+);
+
 export const getBandLayout = query(z.string(), async (slug) => {
-	const { locals, url } = getRequestEvent();
-	if (!locals.user) throw redirect(302, signInHref({ returnTo: here(url) }));
+	const { locals } = getRequestEvent();
+	if (!locals.user) throw redirect(302, signInHref());
 
 	const band = await getBySlug(slug);
 	if (!band) {
@@ -238,10 +270,7 @@ export const getBandLayout = query(z.string(), async (slug) => {
 		// navigation and would silently discard the submitted form. A stale slug
 		// should fail loudly on write and forward on read — and this query runs
 		// first, so the browser is on the new address before any form can post.
-		const moved = await resolveBandSlug(slug);
-		if (moved?.kind === 'moved' && moved.slug !== slug) {
-			redirect(302, dashboardPathAfterRename(slug, moved.slug));
-		}
+		await forwardRenamedBand(slug, null);
 		throw error(404, 'Band not found');
 	}
 
