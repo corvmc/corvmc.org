@@ -4,111 +4,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // inbox. Two invariants matter more than anything else it does:
 //
 //   1. Ownership is enforced in the WHERE clause, via a join on
-//      inbox_participant. Remote functions are the only guard in this app, and
-//      a guard in the SQL cannot be forgotten at one call site.
-//   2. Nothing here reads inbox_note. Notes are staff-private annotations, and
-//      the reason these functions exist instead of reusing getThread().
+//      inbox_participant. A guard in the SQL cannot be forgotten at one call site.
+//   2. Nothing here reads inbox_note. Notes are staff-private annotations.
 //
-// These tests pin both against the query the service actually builds.
+// A real SQLite, because a mocked `db` agrees with any WHERE.
 
-const TABLES = {
-	inboxThread: {
-		__table: 'inbox_thread',
-		id: 'thread.id',
-		channel: 'thread.channel',
-		status: 'thread.status',
-		lastMessageAt: 'thread.lastMessageAt'
-	},
-	inboxMessage: { __table: 'inbox_message', threadId: 'message.threadId' },
-	inboxNote: { __table: 'inbox_note' },
-	inboxParticipant: {
-		__table: 'inbox_participant',
-		threadId: 'participant.threadId',
-		userId: 'participant.userId',
-		lastReadAt: 'participant.lastReadAt'
-	}
-};
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
 
-/** Tables reached by any select/insert/update/join in the call under test. */
-let touched: string[] = [];
-/** Results handed to each awaited query, in order. */
-let results: unknown[] = [];
-
-function chain() {
-	const self: Record<string, unknown> = {};
-	const passthrough = [
-		'where',
-		'orderBy',
-		'limit',
-		'offset',
-		'groupBy',
-		'$dynamic',
-		'set',
-		'values',
-		'returning'
-	];
-	for (const m of passthrough) self[m] = () => self;
-	for (const m of ['from', 'innerJoin', 'leftJoin']) {
-		self[m] = (table: { __table?: string }) => {
-			if (table?.__table) touched.push(table.__table);
-			return self;
-		};
-	}
-	self.then = (resolve: (v: unknown) => unknown) => resolve(results.shift() ?? []);
-	return self;
-}
-
-const dbUpdate = vi.fn();
-const dbInsert = vi.fn();
-
-vi.mock('$lib/server/db', () => ({
-	db: {
-		select: () => chain(),
-		insert: (table: { __table?: string }) => {
-			dbInsert(table);
-			if (table?.__table) touched.push(table.__table);
-			return chain();
-		},
-		update: (table: { __table?: string }) => {
-			dbUpdate(table);
-			if (table?.__table) touched.push(table.__table);
-			return chain();
-		}
-	}
-}));
-vi.mock('$lib/server/db/schema/inbox', () => TABLES);
-
-const eq = vi.fn((a: unknown, b: unknown) => ({ op: 'eq', a, b }));
-const inArray = vi.fn((a: unknown, b: unknown) => ({ op: 'inArray', a, b }));
-vi.mock('drizzle-orm', () => ({
-	eq: (...a: unknown[]) => eq(...(a as [unknown, unknown])),
-	inArray: (...a: unknown[]) => inArray(...(a as [unknown, unknown])),
-	and: (...a: unknown[]) => ({ op: 'and', a }),
-	or: (...a: unknown[]) => ({ op: 'or', a }),
-	desc: vi.fn(),
-	asc: vi.fn(),
-	count: vi.fn(),
-	gt: vi.fn(),
-	isNull: vi.fn(),
-	sql: vi.fn()
-}));
-
-const paginate = vi.fn();
-vi.mock('$lib/server/db/paginate', () => ({
-	paginate: (...a: unknown[]) => paginate(...(a as []))
-}));
-
-const findOrCreateThread = vi.fn(async () => ({ id: 'thread-new' }));
-const reopenThread = vi.fn(async () => undefined);
-vi.mock('./thread-service', () => ({
-	findOrCreateThread: (...a: unknown[]) => findOrCreateThread(...(a as [])),
-	reopenThread: (...a: unknown[]) => reopenThread(...(a as []))
-}));
-
-const addInboundMessage = vi.fn(async () => ({ id: 'message-1' }));
-vi.mock('./message-service', () => ({
-	addInboundMessage: (...a: unknown[]) => addInboundMessage(...(a as []))
-}));
+vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
 
 const {
 	getPortalThread,
@@ -116,152 +23,185 @@ const {
 	replyToPortalThread,
 	startPortalConversation,
 	markPortalThreadRead,
+	countPortalUnread,
 	MAX_OPEN_PORTAL_THREADS
 } = await import('./portal-service');
 
-beforeEach(() => {
-	vi.clearAllMocks();
-	touched = [];
-	results = [];
-	findOrCreateThread.mockResolvedValue({ id: 'thread-new' });
-	addInboundMessage.mockResolvedValue({ id: 'message-1' });
-});
+const T0 = 1_750_000_000;
 
-/** Did the service constrain a query on the caller's participant row? */
-function joinedOnParticipant(userId: string) {
-	return eq.mock.calls.some(([a, b]) => a === TABLES.inboxParticipant.userId && b === userId);
+function thread(id: string, opts: { channel?: string; status?: string; lastAt?: number } = {}) {
+	sqlite
+		.prepare(
+			`insert into inbox_thread (id, channel, status, subject, last_message_at, created_at, updated_at)
+			 values (?, ?, ?, ?, ?, ?, ?)`
+		)
+		.run(
+			id,
+			opts.channel ?? 'portal',
+			opts.status ?? 'open',
+			`Subject ${id}`,
+			opts.lastAt ?? T0,
+			T0,
+			T0
+		);
 }
 
+function participant(threadId: string, userId: string, lastReadAt: number | null = null) {
+	sqlite
+		.prepare(
+			`insert into inbox_participant (id, thread_id, user_id, role, last_read_at) values (?, ?, ?, 'member', ?)`
+		)
+		.run(`p-${threadId}-${userId}`, threadId, userId, lastReadAt);
+}
+
+function message(id: string, threadId: string, authorUserId: string | null, at: number) {
+	sqlite
+		.prepare(
+			`insert into inbox_message (id, thread_id, direction, body, author_name, author_user_id, created_at)
+			 values (?, ?, 'inbound', ?, ?, ?, ?)`
+		)
+		.run(id, threadId, `body ${id}`, `name ${authorUserId}`, authorUserId, at);
+}
+
+const threadRow = (id: string) =>
+	sqlite.prepare('select status from inbox_thread where id = ?').get(id) as { status: string };
+const lastReadAt = (threadId: string, userId: string) =>
+	(
+		sqlite
+			.prepare('select last_read_at from inbox_participant where thread_id = ? and user_id = ?')
+			.get(threadId, userId) as { last_read_at: number | null }
+	).last_read_at;
+const messagesOn = (threadId: string) =>
+	sqlite.prepare('select author_user_id from inbox_message where thread_id = ?').all(threadId) as {
+		author_user_id: string | null;
+	}[];
+
+beforeEach(() => {
+	for (const t of ['inbox_note', 'inbox_message', 'inbox_participant', 'inbox_thread']) {
+		sqlite.exec(`delete from ${t}`);
+	}
+});
+
 describe('getPortalThread', () => {
-	it('never reads inbox_note', async () => {
-		results = [[{ id: 'thread-1', subject: 'Locker', status: 'open' }], []];
+	it('never returns inbox_note content', async () => {
+		thread('t1');
+		participant('t1', 'member-1');
+		message('m1', 't1', 'member-1', T0);
+		sqlite.exec(
+			`insert into inbox_note (id, thread_id, author_user_id, body) values ('n1', 't1', 'staff-9', 'STAFF-ONLY')`
+		);
 
-		await getPortalThread('thread-1', 'member-1');
+		const result = await getPortalThread('t1', 'member-1');
 
-		expect(touched).toContain('inbox_thread');
-		expect(touched).toContain('inbox_message');
-		expect(touched).not.toContain('inbox_note');
+		expect(result?.messages).toHaveLength(1);
+		expect(JSON.stringify(result)).not.toContain('STAFF-ONLY');
 	});
 
-	it('constrains the thread to the caller and to the portal channel', async () => {
-		results = [[{ id: 'thread-1', status: 'open' }], []];
+	it('returns null for a thread the caller does not participate in', async () => {
+		thread('t1');
+		participant('t1', 'member-2');
 
-		await getPortalThread('thread-1', 'member-1');
+		expect(await getPortalThread('t1', 'member-1')).toBeNull();
+	});
 
-		expect(touched).toContain('inbox_participant');
-		expect(joinedOnParticipant('member-1')).toBe(true);
-		expect(eq).toHaveBeenCalledWith(TABLES.inboxThread.channel, 'portal');
-		expect(eq).toHaveBeenCalledWith(TABLES.inboxThread.id, 'thread-1');
+	it('returns null for a non-portal thread, even with the caller on it', async () => {
+		thread('t1', { channel: 'email' });
+		participant('t1', 'member-1');
+
+		expect(await getPortalThread('t1', 'member-1')).toBeNull();
 	});
 
 	it('echoes the viewer id back', async () => {
 		// The detail page orients its timeline off this. Without it the page has to
 		// await a second query for the reader's identity, and awaiting
-		// getMemberLayout() there deadlocks: the page's own mark-as-read effect
-		// refreshes that query, which re-runs the effect (effect_update_depth_exceeded).
-		results = [[{ id: 'thread-1', status: 'open' }], []];
+		// getMemberLayout() there deadlocks (effect_update_depth_exceeded).
+		thread('t1');
+		participant('t1', 'member-1');
 
-		const thread = await getPortalThread('thread-1', 'member-1');
-
-		expect(thread?.viewerUserId).toBe('member-1');
-	});
-
-	it('returns null when the thread is not the caller’s', async () => {
-		results = [[]];
-		expect(await getPortalThread('someone-elses', 'member-1')).toBeNull();
+		expect((await getPortalThread('t1', 'member-1'))?.viewerUserId).toBe('member-1');
 	});
 
 	it('masks other people’s author ids so no staff id reaches the client', async () => {
-		results = [
-			[{ id: 'thread-1', status: 'open' }],
-			[
-				{ id: 'm1', body: 'hi', authorUserId: 'member-1', authorName: 'Robin' },
-				{ id: 'm2', body: 'hello', authorUserId: 'staff-9', authorName: 'Ada' }
-			]
-		];
+		thread('t1');
+		participant('t1', 'member-1');
+		message('m1', 't1', 'member-1', T0);
+		message('m2', 't1', 'staff-9', T0 + 1);
 
-		const thread = await getPortalThread('thread-1', 'member-1');
+		const result = await getPortalThread('t1', 'member-1');
 
-		expect(thread?.messages[0].authorUserId).toBe('member-1');
-		expect(thread?.messages[1].authorUserId).toBeNull();
+		expect(result?.messages.map((m) => m.authorUserId)).toEqual(['member-1', null]);
 		// The staff member's name is still shown — only the id is withheld.
-		expect(thread?.messages[1].authorName).toBe('Ada');
+		expect(result?.messages[1].authorName).toBe('name staff-9');
 	});
 });
 
 describe('listPortalThreads', () => {
-	it('maps the unread flag to a boolean', async () => {
-		paginate.mockResolvedValue({
-			rows: [
-				{ id: 'a', unread: 1 },
-				{ id: 'b', unread: 0 }
-			],
-			pagination: { page: 1, pageSize: 25, total: 2, totalPages: 1 }
-		});
+	it('scopes the list to the caller and the portal channel', async () => {
+		thread('mine');
+		participant('mine', 'member-1');
+		thread('theirs');
+		participant('theirs', 'member-2');
+		thread('email', { channel: 'email' });
+		participant('email', 'member-1');
 
 		const result = await listPortalThreads('member-1', { page: 1 });
 
-		expect(result.rows[0].unread).toBe(true);
-		expect(result.rows[1].unread).toBe(false);
+		expect(result.rows.map((r) => r.id)).toEqual(['mine']);
 	});
 
-	it('scopes the list to the caller and the portal channel', async () => {
-		paginate.mockResolvedValue({ rows: [], pagination: {} });
+	it('maps the unread flag to a boolean', async () => {
+		thread('read', { lastAt: T0 });
+		participant('read', 'member-1', T0 + 10);
+		thread('unread', { lastAt: T0 + 20 });
+		participant('unread', 'member-1', T0 + 10);
+		thread('never', { lastAt: T0 });
+		participant('never', 'member-1', null);
 
-		await listPortalThreads('member-1', { page: 1 });
+		const result = await listPortalThreads('member-1', { page: 1 });
+		const unread = Object.fromEntries(result.rows.map((r) => [r.id, r.unread]));
 
-		expect(joinedOnParticipant('member-1')).toBe(true);
-		expect(eq).toHaveBeenCalledWith(TABLES.inboxThread.channel, 'portal');
+		expect(unread).toEqual({ read: false, unread: true, never: true });
+		expect(await countPortalUnread('member-1')).toBe(2);
 	});
 });
 
 describe('replyToPortalThread', () => {
-	const reply = { threadId: 'thread-1', userId: 'member-1', userName: 'Robin', body: 'thanks' };
+	const reply = { threadId: 't1', userId: 'member-1', userName: 'Robin', body: 'thanks' };
 
-	it('writes nothing when the thread does not match', async () => {
-		// Covers "not yours", "not a portal thread", "resolved" and "missing"
-		// alike — the query returns no row for any of them.
-		results = [[]];
+	it.each([
+		['not yours', () => (thread('t1'), participant('t1', 'member-2'))],
+		[
+			'not a portal thread',
+			() => (thread('t1', { channel: 'email' }), participant('t1', 'member-1'))
+		],
+		['resolved', () => (thread('t1', { status: 'resolved' }), participant('t1', 'member-1'))],
+		['missing', () => undefined]
+	])('writes nothing when the thread is %s', async (_label, seed) => {
+		seed();
 
 		expect(await replyToPortalThread(reply)).toBeNull();
-		expect(addInboundMessage).not.toHaveBeenCalled();
-	});
-
-	it('restricts writes to open and snoozed threads', async () => {
-		results = [[]];
-
-		await replyToPortalThread(reply);
-
-		expect(inArray).toHaveBeenCalledWith(TABLES.inboxThread.status, ['open', 'snoozed']);
+		expect(messagesOn('t1')).toEqual([]);
 	});
 
 	it('attributes the message to the member and marks it read', async () => {
-		results = [[{ id: 'thread-1', status: 'open' }], []];
+		thread('t1');
+		participant('t1', 'member-1', null);
 
 		const result = await replyToPortalThread(reply);
 
-		expect(result).toEqual({ messageId: 'message-1' });
-		expect(addInboundMessage).toHaveBeenCalledWith(
-			expect.objectContaining({ threadId: 'thread-1', authorUserId: 'member-1' })
-		);
+		expect(result?.messageId).toEqual(expect.any(String));
+		expect(messagesOn('t1')).toEqual([{ author_user_id: 'member-1' }]);
 		// Their own message must not come back to them as unread.
-		expect(dbUpdate).toHaveBeenCalledWith(TABLES.inboxParticipant);
+		expect(lastReadAt('t1', 'member-1')).not.toBeNull();
 	});
 
 	it('wakes a snoozed thread rather than leaving it parked', async () => {
-		results = [[{ id: 'thread-1', status: 'snoozed' }], []];
+		thread('t1', { status: 'snoozed' });
+		participant('t1', 'member-1');
 
 		await replyToPortalThread(reply);
 
-		expect(reopenThread).toHaveBeenCalledWith('thread-1');
-	});
-
-	it('leaves an open thread’s status alone', async () => {
-		results = [[{ id: 'thread-1', status: 'open' }], []];
-
-		await replyToPortalThread(reply);
-
-		expect(reopenThread).not.toHaveBeenCalled();
+		expect(threadRow('t1').status).toBe('open');
 	});
 });
 
@@ -275,35 +215,50 @@ describe('startPortalConversation', () => {
 	};
 
 	it('creates the thread, the participant row, and the first message', async () => {
-		results = [[{ count: 0 }], [], []];
-
 		const result = await startPortalConversation(start);
 
-		expect(result).toEqual({ threadId: 'thread-new', messageId: 'message-1' });
-		expect(findOrCreateThread).toHaveBeenCalledWith(
-			expect.objectContaining({ channel: 'portal', subject: 'Locker rental' })
-		);
-		expect(dbInsert).toHaveBeenCalledWith(TABLES.inboxParticipant);
-		expect(addInboundMessage).toHaveBeenCalledWith(
-			expect.objectContaining({ authorUserId: 'member-1' })
-		);
+		expect(result).not.toBeNull();
+		const created = sqlite
+			.prepare('select channel, subject from inbox_thread where id = ?')
+			.get(result!.threadId);
+		expect(created).toEqual({ channel: 'portal', subject: 'Locker rental' });
+		expect(lastReadAt(result!.threadId, 'member-1')).not.toBeNull();
+		expect(messagesOn(result!.threadId)).toEqual([{ author_user_id: 'member-1' }]);
 	});
 
 	it('refuses once the member is at the open-conversation cap', async () => {
-		results = [[{ count: MAX_OPEN_PORTAL_THREADS }]];
+		for (let i = 0; i < MAX_OPEN_PORTAL_THREADS; i++) {
+			thread(`t${i}`, { status: i % 2 ? 'snoozed' : 'open' });
+			participant(`t${i}`, 'member-1');
+		}
 
 		expect(await startPortalConversation(start)).toBeNull();
-		expect(findOrCreateThread).not.toHaveBeenCalled();
-		expect(addInboundMessage).not.toHaveBeenCalled();
+		expect(sqlite.prepare('select count(*) as n from inbox_thread').get()).toEqual({
+			n: MAX_OPEN_PORTAL_THREADS
+		});
+	});
+
+	it('does not count resolved or other members’ threads toward the cap', async () => {
+		for (let i = 0; i < MAX_OPEN_PORTAL_THREADS; i++) {
+			thread(`r${i}`, { status: 'resolved' });
+			participant(`r${i}`, 'member-1');
+			thread(`o${i}`);
+			participant(`o${i}`, 'member-2');
+		}
+
+		expect(await startPortalConversation(start)).not.toBeNull();
 	});
 });
 
 describe('markPortalThreadRead', () => {
 	it('can only move the caller’s own cursor', async () => {
-		await markPortalThreadRead('thread-1', 'member-1');
+		thread('t1');
+		participant('t1', 'member-1', null);
+		participant('t1', 'member-2', null);
 
-		expect(dbUpdate).toHaveBeenCalledWith(TABLES.inboxParticipant);
-		expect(eq).toHaveBeenCalledWith(TABLES.inboxParticipant.threadId, 'thread-1');
-		expect(eq).toHaveBeenCalledWith(TABLES.inboxParticipant.userId, 'member-1');
+		await markPortalThreadRead('t1', 'member-1');
+
+		expect(lastReadAt('t1', 'member-1')).not.toBeNull();
+		expect(lastReadAt('t1', 'member-2')).toBeNull();
 	});
 });

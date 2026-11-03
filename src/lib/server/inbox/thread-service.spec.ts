@@ -1,32 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
-// thread-service imports the db, drizzle, and schema at module scope. Stub those
-// so the module loads in isolation — we only exercise the pure truncatePreview().
+// Only the pure truncatePreview() is exercised; the db is never reached.
 vi.mock('$lib/server/db', () => ({ db: {} }));
-vi.mock('$lib/server/db/schema/inbox', () => ({
-	inboxThread: { channel: 'thread.channel', id: 'thread.id' },
-	inboxMessage: {},
-	inboxNote: {},
-	inboxParticipant: {}
-}));
-vi.mock('$lib/server/db/schema/authentication', () => ({ user: {} }));
-vi.mock('$lib/server/db/paginate', () => ({ paginate: vi.fn() }));
-vi.mock('drizzle-orm', () => ({
-	eq: vi.fn(),
-	ne: vi.fn(),
-	and: vi.fn(),
-	asc: vi.fn(),
-	desc: vi.fn(),
-	count: vi.fn(),
-	like: vi.fn(),
-	or: vi.fn(),
-	inArray: vi.fn(),
-	notInArray: vi.fn(),
-	isNull: vi.fn(),
-	isNotNull: vi.fn(),
-	lte: vi.fn(),
-	sql: vi.fn()
-}));
 
 const { truncatePreview } = await import('./thread-service');
 

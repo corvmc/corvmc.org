@@ -5,104 +5,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // whether the rows already in the table still mean what they did: General is
 // found by `subject IS NULL` rather than by being the only one, and it sorts
 // first however quiet it gets. Plus the rule that keeps a fresh topic from
-// wearing a dot nobody earned.
+// wearing a dot nobody earned. Against a real SQLite.
 
-const TABLES = {
-	inboxThread: {
-		__table: 'inbox_thread',
-		id: 'thread.id',
-		channel: 'thread.channel',
-		groupId: 'thread.groupId',
-		subject: 'thread.subject',
-		messageCount: 'thread.messageCount',
-		lastMessageAt: 'thread.lastMessageAt'
-	},
-	inboxMessage: { __table: 'inbox_message', threadId: 'message.threadId' },
-	inboxGroupRead: {
-		__table: 'inbox_group_read',
-		threadId: 'read.threadId',
-		userId: 'read.userId',
-		lastReadAt: 'read.lastReadAt',
-		muted: 'read.muted'
-	}
-};
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
 
-let results: unknown[] = [];
-let insertedValues: unknown[] = [];
-let lastWhere: unknown = null;
-let lastJoinOn: unknown[] = [];
-let lastOrderBy: unknown[] = [];
-
-function chain() {
-	const self: Record<string, unknown> = {};
-	for (const m of [
-		'limit',
-		'offset',
-		'groupBy',
-		'$dynamic',
-		'set',
-		'returning',
-		'onConflictDoUpdate'
-	])
-		self[m] = () => self;
-	self.where = (w: unknown) => {
-		lastWhere = w;
-		return self;
-	};
-	self.orderBy = (...o: unknown[]) => {
-		lastOrderBy = o;
-		return self;
-	};
-	self.values = (v: unknown) => {
-		insertedValues.push(v);
-		return self;
-	};
-	self.from = () => self;
-	// The join's own condition, not the where: a mute that is not scoped to one
-	// thread silences every room the reader is in.
-	for (const m of ['innerJoin', 'leftJoin'])
-		self[m] = (_t: unknown, on: unknown) => {
-			lastJoinOn.push(on);
-			return self;
-		};
-	self.then = (resolve: (v: unknown) => unknown) => resolve(results.shift() ?? []);
-	return self;
-}
-
-vi.mock('$lib/server/db', () => ({
-	db: { select: () => chain(), insert: () => chain(), update: () => chain() }
-}));
-vi.mock('$lib/server/db/schema/inbox', () => TABLES);
-vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: { __table: 'user', id: 'user.id' }
-}));
-vi.mock('$lib/server/db/schema/group', () => ({
-	group: { __table: 'group', id: 'group.id', name: 'group.name' },
-	groupMember: { __table: 'group_member' }
-}));
-vi.mock('./message-service', () => ({ touchThread: vi.fn(async () => undefined) }));
-const emitted: [string, unknown][] = [];
+vi.mock('$lib/server/db', () => ({ db: testDb }));
+const emitted: [string, Record<string, unknown>][] = [];
 vi.mock('$lib/server/event-bus/event-bus', () => ({
 	domainEvents: {
-		emit: (name: string, payload: unknown) => {
+		emit: (name: string, payload: Record<string, unknown>) => {
 			emitted.push([name, payload]);
 			return Promise.resolve();
 		},
 		on: vi.fn()
 	}
-}));
-
-vi.mock('drizzle-orm', () => ({
-	eq: (a: unknown, b: unknown) => ({ op: 'eq', a, b }),
-	and: (...a: unknown[]) => ({ op: 'and', a }),
-	or: (...a: unknown[]) => ({ op: 'or', a }),
-	desc: (a: unknown) => ({ op: 'desc', a }),
-	asc: (a: unknown) => ({ op: 'asc', a }),
-	count: () => ({ op: 'count' }),
-	gt: (a: unknown, b: unknown) => ({ op: 'gt', a, b }),
-	isNull: (a: unknown) => ({ op: 'isNull', a }),
-	isNotNull: (a: unknown) => ({ op: 'isNotNull', a }),
-	sql: (strings: TemplateStringsArray, ...v: unknown[]) => ({ op: 'sql', strings: [...strings], v })
 }));
 
 const {
@@ -119,301 +38,285 @@ const {
 	GENERAL_TOPIC
 } = await import('./group-chat-service');
 
-beforeEach(() => {
-	results = [];
-	emitted.length = 0;
-	insertedValues = [];
-	lastWhere = null;
-	lastJoinOn = [];
-	lastOrderBy = [];
-});
+const T0 = 1_750_000_000;
 
-/** Every condition in the (possibly nested) `and`/`or` tree. */
-function flatten(node: unknown): Record<string, unknown>[] {
-	const n = node as Record<string, unknown>;
-	if (!n || typeof n !== 'object') return [];
-	if (n.op === 'and' || n.op === 'or') return (n.a as unknown[]).flatMap(flatten);
-	return [n];
+function topic(
+	id: string,
+	opts: {
+		groupId?: string;
+		subject?: string | null;
+		lastAt?: number | null;
+		postPolicy?: string;
+		notifyPolicy?: string;
+		publishedAt?: number | null;
+	} = {}
+) {
+	sqlite
+		.prepare(
+			`insert into inbox_thread (id, channel, group_id, status, subject, last_message_at, post_policy, notify_policy, published_at)
+			 values (?, 'group', ?, 'open', ?, ?, ?, ?, ?)`
+		)
+		.run(
+			id,
+			opts.groupId ?? 'g1',
+			opts.subject === undefined ? null : opts.subject,
+			opts.lastAt === undefined ? null : opts.lastAt,
+			opts.postPolicy ?? 'members',
+			opts.notifyPolicy ?? 'in_app',
+			opts.publishedAt ?? null
+		);
 }
+
+function cursor(threadId: string, userId: string, lastReadAt: number | null, muted = false) {
+	sqlite
+		.prepare(
+			`insert into inbox_group_read (id, thread_id, user_id, last_read_at, muted) values (?, ?, ?, ?, ?)`
+		)
+		.run(`r-${threadId}-${userId}`, threadId, userId, lastReadAt, muted ? 1 : 0);
+}
+
+function member(userId: string, status = 'active', groupId = 'g1') {
+	sqlite
+		.prepare(`insert or ignore into user (id, name, email) values (?, ?, ?)`)
+		.run(userId, `Name ${userId}`, `${userId}@example.com`);
+	sqlite
+		.prepare(
+			`insert into group_member (id, group_id, user_id, role, status) values (?, ?, ?, 'member', ?)`
+		)
+		.run(`gm-${groupId}-${userId}`, groupId, userId, status);
+}
+
+const threadsOf = (groupId: string) =>
+	sqlite
+		.prepare(`select id, subject from inbox_thread where group_id = ? order by id`)
+		.all(groupId) as { id: string; subject: string | null }[];
+const messageCount = () =>
+	(sqlite.prepare('select count(*) as n from inbox_message').get() as { n: number }).n;
+
+const post = (over: Partial<Parameters<typeof postToGroupChat>[0]> = {}) =>
+	postToGroupChat({
+		groupId: 'g1',
+		groupName: 'The Band',
+		userId: 'u1',
+		userName: 'Ada',
+		body: 'hi',
+		threadId: 't1',
+		...over
+	});
+
+beforeEach(() => {
+	emitted.length = 0;
+	for (const t of ['inbox_group_read', 'inbox_message', 'inbox_thread', 'group_member', 'user']) {
+		sqlite.exec(`delete from "${t}"`);
+	}
+});
 
 describe('getOrCreateGroupChat', () => {
 	it('finds General by a null subject, not by being the only thread', async () => {
 		// The lookup used to be (channel, groupId) alone, which was correct only
-		// while a group could not have a second thread. With topics it would
-		// return whichever one the database handed back first.
-		results = [[{ id: 'general-1' }]];
+		// while a group could not have a second thread.
+		topic('a-named', { subject: 'Tour' });
+		topic('b-general');
 
-		await expect(getOrCreateGroupChat('g1')).resolves.toBe('general-1');
-		expect(flatten(lastWhere)).toContainEqual({ op: 'isNull', a: TABLES.inboxThread.subject });
+		await expect(getOrCreateGroupChat('g1')).resolves.toBe('b-general');
 	});
 
 	it('creates General with no subject when the group has never opened one', async () => {
-		results = [[], [{ id: 'general-new' }]];
+		topic('other-groups', { groupId: 'g2' });
 
-		await expect(getOrCreateGroupChat('g1')).resolves.toBe('general-new');
-		expect(insertedValues[0]).toEqual({ channel: 'group', groupId: 'g1', status: 'open' });
+		const id = await getOrCreateGroupChat('g1');
+
+		expect(threadsOf('g1')).toEqual([{ id, subject: null }]);
+		await expect(getOrCreateGroupChat('g1')).resolves.toBe(id);
 	});
 });
 
 describe('listGroupTopics', () => {
-	const row = (over: Record<string, unknown> = {}) => ({
-		id: 't1',
-		subject: null,
-		messageCount: 0,
-		lastMessageAt: null,
-		lastReadAt: null,
-		postPolicy: 'members',
-		notifyPolicy: 'in_app',
-		...over
-	});
-
 	it('names a null subject General and marks it as such', async () => {
-		results = [[{ id: 'general-1' }], [row({ id: 'general-1' })]];
+		topic('general');
 
 		const [general] = await listGroupTopics('g1', 'u1');
-		expect(general.name).toBe(GENERAL_TOPIC);
-		expect(general.isGeneral).toBe(true);
+		expect(general).toMatchObject({ id: 'general', name: GENERAL_TOPIC, isGeneral: true });
 	});
 
 	it('sorts General first, then by most recent', async () => {
-		results = [[{ id: 'general-1' }], []];
-		await listGroupTopics('g1', 'u1');
+		// General is the quietest here, and still on top — the room you land in
+		// does not move.
+		topic('general', { lastAt: T0 });
+		topic('old', { subject: 'Old', lastAt: T0 + 1 });
+		topic('new', { subject: 'New', lastAt: T0 + 2 });
+		topic('elsewhere', { groupId: 'g2', subject: 'Not ours', lastAt: T0 + 3 });
 
-		// `subject IS NULL` descending puts the null-subject row on top whatever
-		// its last message says — the room you land in does not move.
-		expect(lastOrderBy[0]).toMatchObject({ op: 'desc' });
-		expect(lastOrderBy[1]).toEqual({ op: 'desc', a: TABLES.inboxThread.lastMessageAt });
+		expect((await listGroupTopics('g1', 'u1')).map((t) => t.id)).toEqual(['general', 'new', 'old']);
 	});
 
 	it('marks a topic unread when it has said something since you last read', async () => {
-		results = [
-			[{ id: 'general-1' }],
-			[row({ lastMessageAt: new Date('2026-02-02'), lastReadAt: new Date('2026-02-01') })]
-		];
+		topic('general', { lastAt: T0 + 10 });
+		cursor('general', 'u1', T0);
 
 		expect((await listGroupTopics('g1', 'u1'))[0].unread).toBe(true);
 	});
 
 	it('leaves an empty topic read, however long you have ignored it', async () => {
-		// Otherwise every topic wears a dot the moment somebody creates it, and
-		// the badge is a number nobody can clear.
-		results = [[{ id: 'general-1' }], [row({ lastMessageAt: null, lastReadAt: null })]];
+		// Otherwise every topic wears a dot the moment somebody creates it.
+		topic('general', { lastAt: null });
 
 		expect((await listGroupTopics('g1', 'u1'))[0].unread).toBe(false);
 	});
 
 	it('leaves a topic read once you have caught up', async () => {
-		results = [
-			[{ id: 'general-1' }],
-			[row({ lastMessageAt: new Date('2026-02-01'), lastReadAt: new Date('2026-02-02') })]
-		];
+		topic('general', { lastAt: T0 });
+		cursor('general', 'u1', T0 + 10);
 
 		expect((await listGroupTopics('g1', 'u1'))[0].unread).toBe(false);
 	});
 
+	it('reads only this reader’s cursor', async () => {
+		topic('general', { lastAt: T0 });
+		cursor('general', 'u2', T0 + 10);
+
+		expect((await listGroupTopics('g1', 'u1'))[0].unread).toBe(true);
+	});
+
 	it('never marks a muted topic unread, however much it has said', async () => {
 		// A dot you cannot clear by not caring is not a mute (#1309).
-		results = [
-			[{ id: 'general-1' }],
-			[row({ lastMessageAt: new Date('2026-02-02'), lastReadAt: null, muted: true })]
-		];
+		topic('general', { lastAt: T0 + 10 });
+		cursor('general', 'u1', null, true);
 
-		const [topic] = await listGroupTopics('g1', 'u1');
-		expect(topic.unread).toBe(false);
-		expect(topic.muted).toBe(true);
+		const [t] = await listGroupTopics('g1', 'u1');
+		expect(t).toMatchObject({ unread: false, muted: true });
 	});
 });
 
 describe('the per-room mute', () => {
 	it('keeps a muted room out of the unread badge', async () => {
-		results = [[{ count: 0 }]];
-		await countGroupChatUnread('g1', 'u1');
+		// A reader with no cursor row at all is unread and unmuted both.
+		topic('general', { lastAt: T0 });
+		topic('muted', { subject: 'Muted', lastAt: T0 });
+		cursor('muted', 'u1', null, true);
+		topic('empty', { subject: 'Empty', lastAt: null });
 
-		// A LEFT JOIN with no row is a reader who never opened it — unread and
-		// unmuted both — so the condition has to allow the null.
-		expect(flatten(lastWhere)).toContainEqual({
-			op: 'eq',
-			a: TABLES.inboxGroupRead.muted,
-			b: false
-		});
-		expect(flatten(lastWhere)).toContainEqual({
-			op: 'isNull',
-			a: TABLES.inboxGroupRead.muted
-		});
+		expect(await countGroupChatUnread('g1', 'u1')).toBe(1);
 	});
 
-	it('leaves the muted out of a room notification', async () => {
-		results = [[{ id: 'u2', name: 'Someone' }]];
-		await listGroupChatReaders('g1', 'thread-1');
+	it('leaves the muted out of a room notification, for that room only', async () => {
+		topic('t1');
+		topic('t2', { subject: 'Other' });
+		member('u1');
+		member('u2');
+		member('gone', 'left');
+		cursor('t1', 'u1', null, true);
+		// A mute on another room must not silence this one.
+		cursor('t2', 'u2', null, true);
 
-		expect(lastJoinOn.flatMap(flatten)).toContainEqual({
-			op: 'eq',
-			a: TABLES.inboxGroupRead.threadId,
-			b: 'thread-1'
-		});
-		expect(flatten(lastWhere)).toContainEqual({
-			op: 'eq',
-			a: TABLES.inboxGroupRead.muted,
-			b: false
-		});
+		const readers = await listGroupChatReaders('g1', 't1');
+
+		expect(readers.map((r) => r.id)).toEqual(['u2']);
 	});
 
 	it('asks the roster and nothing else when no room is named', async () => {
-		// The header asks who is on the roster; only the notify path asks who
-		// still wants to hear, and it is the one that passes a thread.
-		results = [[{ id: 'u2', name: 'Someone' }]];
-		await listGroupChatReaders('g1');
+		topic('t1');
+		member('u1');
+		member('u2');
+		member('gone', 'left');
+		cursor('t1', 'u1', null, true);
 
-		expect(flatten(lastWhere)).not.toContainEqual({
-			op: 'eq',
-			a: TABLES.inboxGroupRead.muted,
-			b: false
-		});
+		const readers = await listGroupChatReaders('g1');
+
+		expect(readers.map((r) => r.id).sort()).toEqual(['u1', 'u2']);
 	});
 
 	it('upserts, so a room can be muted before it is ever opened', async () => {
-		await setRoomMute('thread-1', 'u1', true);
+		topic('t1');
 
-		expect(insertedValues[0]).toEqual({ threadId: 'thread-1', userId: 'u1', muted: true });
+		await setRoomMute('t1', 'u1', true);
+		await setRoomMute('t1', 'u1', false);
+
+		expect(sqlite.prepare('select user_id, muted from inbox_group_read').all()).toEqual([
+			{ user_id: 'u1', muted: 0 }
+		]);
 	});
 });
 
 describe('createGroupTopic', () => {
 	it('opens a named topic when the name is free', async () => {
-		results = [[], [{ id: 'topic-1' }]];
+		// Another group's topic of the same name is no clash.
+		topic('elsewhere', { groupId: 'g2', subject: 'Tour logistics' });
 
-		await expect(createGroupTopic('g1', '  Tour logistics  ')).resolves.toBe('topic-1');
+		const id = await createGroupTopic('g1', '  Tour logistics  ');
+
 		// Trimmed, because " Tour" and "Tour" are the same topic to a reader.
-		expect(insertedValues[0]).toMatchObject({ subject: 'Tour logistics', groupId: 'g1' });
+		expect(threadsOf('g1')).toEqual([{ id, subject: 'Tour logistics' }]);
 	});
 
-	it('refuses a name the group already uses', async () => {
-		results = [[{ id: 'existing' }]];
+	it('refuses a name the group already uses, whatever its case', async () => {
+		topic('existing', { subject: 'Tour logistics' });
 
-		await expect(createGroupTopic('g1', 'Tour logistics')).rejects.toBeInstanceOf(
+		await expect(createGroupTopic('g1', 'tour LOGISTICS')).rejects.toBeInstanceOf(
 			TopicNameTakenError
 		);
-		expect(insertedValues).toHaveLength(0);
+		expect(threadsOf('g1')).toHaveLength(1);
 	});
 
-	// A second General would be unreachable beside the null-subject one, which
-	// every list and lookup already calls General.
+	// A second General would be unreachable beside the null-subject one.
 	it.each(['General', 'general', '  GENERAL '])('refuses %o', async (name) => {
-		results = [[]];
-
 		await expect(createGroupTopic('g1', name)).rejects.toBeInstanceOf(TopicNameTakenError);
-		expect(insertedValues).toHaveLength(0);
+		expect(threadsOf('g1')).toEqual([]);
 	});
 });
 
-// #1304. A room differs from a chat topic on two axes and nothing else, so
-// these are the whole of "announcement" as a behaviour.
+// #1304. A room differs from a chat topic on two axes and nothing else.
 describe('room policy', () => {
-	const leadershipRoom = { postPolicy: 'leadership', notifyPolicy: 'email', publishedAt: null };
-
 	it('marks a leadership room read-only for a member, and not for a leader', async () => {
-		results = [
-			[{ id: 'general-1' }],
-			[
-				{
-					id: 'a1',
-					subject: 'Notices',
-					messageCount: 1,
-					lastMessageAt: null,
-					lastReadAt: null,
-					postPolicy: 'leadership',
-					notifyPolicy: 'email'
-				}
-			]
-		];
-		expect((await listGroupTopics('g1', 'u1', false))[0].readOnly).toBe(true);
+		topic('general');
+		topic('a1', { subject: 'Notices', postPolicy: 'leadership', notifyPolicy: 'email' });
 
-		results = [
-			[{ id: 'general-1' }],
-			[
-				{
-					id: 'a1',
-					subject: 'Notices',
-					messageCount: 1,
-					lastMessageAt: null,
-					lastReadAt: null,
-					postPolicy: 'leadership',
-					notifyPolicy: 'email'
-				}
-			]
-		];
-		expect((await listGroupTopics('g1', 'u1', true))[0].readOnly).toBe(false);
+		const readOnly = async (isLeader: boolean) =>
+			(await listGroupTopics('g1', 'u1', isLeader)).find((t) => t.id === 'a1')?.readOnly;
+		expect(await readOnly(false)).toBe(true);
+		expect(await readOnly(true)).toBe(false);
 	});
 
 	it('refuses a member posting to a leadership room', async () => {
-		results = [[leadershipRoom]];
-		await expect(
-			postToGroupChat({
-				groupId: 'g1',
-				groupName: 'The Band',
-				userId: 'u1',
-				userName: 'Ada',
-				body: 'hi',
-				threadId: 't1',
-				isLeader: false
-			})
-		).rejects.toBeInstanceOf(RoomIsReadOnlyError);
+		topic('t1', { postPolicy: 'leadership', notifyPolicy: 'email' });
+
+		await expect(post({ isLeader: false })).rejects.toBeInstanceOf(RoomIsReadOnlyError);
 		// Refused before the insert, not filtered after it.
-		expect(insertedValues).toHaveLength(0);
+		expect(messageCount()).toBe(0);
 	});
 
-	// The whole reason a room can email: a half-written notice must not reach
-	// the roster because somebody saved it.
+	// A half-written notice must not reach the roster because somebody saved it.
 	it('does not notify an unpublished email room', async () => {
-		results = [[leadershipRoom], [{ id: 'm1' }]];
-		await postToGroupChat({
-			groupId: 'g1',
-			groupName: 'The Band',
-			userId: 'u1',
-			userName: 'Ada',
-			body: 'draft',
-			threadId: 't1',
-			isLeader: true
-		});
+		topic('t1', { postPolicy: 'leadership', notifyPolicy: 'email' });
+		member('u1');
+		member('u2');
+
+		await post({ isLeader: true, body: 'draft' });
+
+		expect(messageCount()).toBe(1);
 		expect(emitted).toEqual([]);
 	});
 
-	it('notifies once it is published, and says which policy', async () => {
-		results = [
-			[{ ...leadershipRoom, publishedAt: new Date('2026-09-02') }],
-			[{ id: 'm1' }],
-			[{ id: 'u2', name: 'Bo' }]
-		];
-		await postToGroupChat({
-			groupId: 'g1',
-			groupName: 'The Band',
-			userId: 'u1',
-			userName: 'Ada',
-			body: 'Rehearsal moves',
-			threadId: 't1',
-			isLeader: true
-		});
-		expect(emitted[0][0]).toBe('inbox.group_message');
-		// `email` routes the listener to the batched announcement fan-out and
-		// the notification type whose default is email. `in_app` is the chat
-		// type, whose default is not. Getting this wrong is silent.
-		expect(emitted[0][1]).toMatchObject({ notifyPolicy: 'email' });
+	it('notifies once it is published, says which policy, and skips the sender', async () => {
+		topic('t1', { postPolicy: 'leadership', notifyPolicy: 'email', publishedAt: T0 });
+		member('u1');
+		member('u2');
+
+		await post({ isLeader: true, body: 'Rehearsal moves' });
+
+		expect(emitted.map(([name]) => name)).toEqual(['inbox.group_message']);
+		// `email` routes the listener to the batched announcement fan-out; getting
+		// this wrong is silent.
+		expect(emitted[0][1]).toMatchObject({ notifyPolicy: 'email', recipientIds: ['u2'] });
 	});
 
 	it('keeps a chat topic on the quiet path', async () => {
-		results = [
-			[{ postPolicy: 'members', notifyPolicy: 'in_app', publishedAt: null }],
-			[{ id: 'm1' }],
-			[{ id: 'u2', name: 'Bo' }]
-		];
-		await postToGroupChat({
-			groupId: 'g1',
-			groupName: 'The Band',
-			userId: 'u1',
-			userName: 'Ada',
-			body: 'see you thursday',
-			threadId: 't1'
-		});
+		topic('t1');
+		member('u1');
+		member('u2');
+
+		await post({ body: 'see you thursday' });
+
 		// Unpublished, and it still notifies: publishing is a step an email room
 		// has and a chat topic does not.
 		expect(emitted[0][1]).toMatchObject({ notifyPolicy: 'in_app' });
@@ -421,15 +324,12 @@ describe('room policy', () => {
 });
 
 describe('publishGroupRoom', () => {
-	it('stamps once and reports it', async () => {
-		results = [[{ id: 't1' }]];
-		await expect(publishGroupRoom('t1')).resolves.toBe(true);
-	});
-
-	// The latch. At-least-once delivery means the second publish must emit
+	// The latch. At-least-once delivery means the second publish must report
 	// nothing, or the roster is emailed twice.
-	it('reports nothing on a second publish', async () => {
-		results = [[]];
+	it('stamps once, and reports nothing on a second publish', async () => {
+		topic('t1', { notifyPolicy: 'email' });
+
+		await expect(publishGroupRoom('t1')).resolves.toBe(true);
 		await expect(publishGroupRoom('t1')).resolves.toBe(false);
 	});
 });

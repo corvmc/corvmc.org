@@ -1,199 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// direct-service is the boundary between one member and another member's
-// private conversation. Four things matter more than anything else it does:
-//
-//   1. Every branch that silently drops a message returns the SAME value.
-//      Blocked, self-addressed, deactivated, hidden, messaging-off — a sender
-//      who can tell those apart can tell a decline from an unopened request,
-//      and the whole consent model rests on them not being able to.
-//   2. replyToDirectThread builds ALL of its conditions. Each one alone returns
-//      null on the happy-path mock, so a test that only checks "returned null"
-//      passes after any single one is deleted.
-//   3. getDirectThread does NOT hide the counterpart's authorUserId — the
-//      opposite of portal-service, and the thing a "make these consistent"
-//      refactor would break.
+// The boundary around a member↔member conversation, against a real SQLite:
+//   1. Every branch that silently drops a message returns the SAME value, so a
+//      sender cannot tell a decline from an unopened request.
+//   2. replyToDirectThread enforces ALL of its conditions — each is broken
+//      alone below, against a thread that is otherwise writable.
+//   3. getDirectThread does NOT hide the counterpart's authorUserId.
 //   4. Nothing here reads inbox_note.
 
-const TABLES = {
-	inboxThread: {
-		__table: 'inbox_thread',
-		id: 'thread.id',
-		channel: 'thread.channel',
-		status: 'thread.status',
-		preview: 'thread.preview',
-		messageCount: 'thread.messageCount',
-		lastMessageAt: 'thread.lastMessageAt',
-		createdAt: 'thread.createdAt',
-		$inferSelect: {}
-	},
-	inboxMessage: {
-		__table: 'inbox_message',
-		id: 'message.id',
-		threadId: 'message.threadId',
-		direction: 'message.direction',
-		body: 'message.body',
-		authorName: 'message.authorName',
-		authorUserId: 'message.authorUserId',
-		createdAt: 'message.createdAt'
-	},
-	inboxNote: { __table: 'inbox_note' },
-	inboxParticipant: {
-		__table: 'inbox_participant',
-		id: 'participant.id',
-		threadId: 'participant.threadId',
-		userId: 'participant.userId',
-		role: 'participant.role',
-		lastReadAt: 'participant.lastReadAt',
-		acceptedAt: 'participant.acceptedAt'
-	}
-};
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
 
-let touched: string[] = [];
-let results: unknown[] = [];
-let inserted: { table: string; values: unknown }[] = [];
-let selectedFields: Record<string, unknown>[] = [];
+vi.mock('$lib/server/db', () => ({ db: testDb }));
 
-function chain(record?: (k: string, v: unknown) => void) {
-	const self: Record<string, unknown> = {};
-	for (const m of ['orderBy', 'limit', 'offset', 'groupBy', '$dynamic', 'set', 'returning']) {
-		self[m] = () => self;
-	}
-	self.where = () => self;
-	self.values = (v: unknown) => {
-		record?.('values', v);
-		return self;
-	};
-	for (const m of ['from', 'innerJoin', 'leftJoin']) {
-		self[m] = (table: { __table?: string }) => {
-			if (table?.__table) touched.push(table.__table);
-			return self;
-		};
-	}
-	self.then = (resolve: (v: unknown) => unknown) => resolve(results.shift() ?? []);
-	return self;
-}
-
-vi.mock('$lib/server/db', () => ({
-	db: {
-		select: (fields?: Record<string, unknown>) => {
-			if (fields) selectedFields.push(fields);
-			return chain();
+const emitted: [string, Record<string, unknown>][] = [];
+vi.mock('$lib/server/event-bus/event-bus', () => ({
+	domainEvents: {
+		emit: (name: string, payload: Record<string, unknown>) => {
+			emitted.push([name, payload]);
+			return Promise.resolve();
 		},
-		insert: (table: { __table: string }) => {
-			const entry = { table: table.__table, values: undefined as unknown };
-			inserted.push(entry);
-			touched.push(table.__table);
-			return chain((k, v) => {
-				if (k === 'values') entry.values = v;
-			});
-		},
-		update: (table: { __table?: string }) => {
-			if (table?.__table) touched.push(table.__table);
-			return chain();
-		},
-		delete: () => chain()
+		on: vi.fn()
 	}
 }));
-vi.mock('$lib/server/db/schema/inbox', () => TABLES);
-vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: {
-		__table: 'user',
-		id: 'user.id',
-		name: 'user.name',
-		deletedAt: 'user.deletedAt'
-	}
-}));
-// The directory visibility gate reads the listing table since phase 3a.
-vi.mock('$lib/server/db/schema/directory', () => ({
-	directoryEntry: {
-		__table: 'directory_entry',
-		id: 'directoryEntry.id',
-		userId: 'directoryEntry.userId',
-		visibility: 'directoryEntry.visibility'
-	}
-}));
-vi.mock('drizzle-orm/sqlite-core', () => ({
-	alias: (t: unknown, name: string) => ({ ...(t as object), __alias: name })
-}));
-vi.mock('$lib/server/db/paginate', () => ({
-	paginate: vi.fn(async () => ({ rows: [], total: 0, page: 1, pageSize: 25, totalPages: 0 }))
-}));
 
-vi.mock('drizzle-orm', () => ({
-	eq: (a: unknown, b: unknown) => ({ op: 'eq', a, b }),
-	ne: (a: unknown, b: unknown) => ({ op: 'ne', a, b }),
-	and: (...a: unknown[]) => ({ op: 'and', a }),
-	or: (...a: unknown[]) => ({ op: 'or', a }),
-	gt: (a: unknown, b: unknown) => ({ op: 'gt', a, b }),
-	isNull: (a: unknown) => ({ op: 'isNull', a }),
-	isNotNull: (a: unknown) => ({ op: 'isNotNull', a }),
-	count: () => ({ op: 'count' }),
-	desc: (a: unknown) => ({ op: 'desc', a }),
-	asc: (a: unknown) => ({ op: 'asc', a }),
-	sql: (strings: TemplateStringsArray, ...v: unknown[]) => ({
-		op: 'sql',
-		text: strings.join('?'),
-		v
-	})
-}));
-
-const addPeerMessage = vi.fn(async () => ({ id: 'msg-1' }));
-vi.mock('./message-service', () => ({
-	addPeerMessage: (...a: unknown[]) => addPeerMessage(...(a as [])),
-	addInboundMessage: vi.fn(),
-	addOutboundMessage: vi.fn()
-}));
-
-const markPortalThreadRead = vi.fn(async () => undefined);
-vi.mock('./portal-service', () => ({
-	markPortalThreadRead: (...a: unknown[]) => markPortalThreadRead(...(a as []))
-}));
-
-const updateStatus = vi.fn(async () => undefined);
-vi.mock('./thread-service', () => ({
-	updateStatus: (...a: unknown[]) => updateStatus(...(a as []))
-}));
-
-const isBlockedEitherWay = vi.fn(async () => false);
-const blockUser = vi.fn(async () => undefined);
-type Standing = {
-	status: 'none' | 'restricted' | 'disabled';
-	reason: string | null;
-	triggeringFlagId: string | null;
-	updatedAt: Date | null;
-};
-const getStanding = vi.fn(async (): Promise<Standing> => ({
-	status: 'none',
-	reason: null,
-	triggeringFlagId: null,
-	updatedAt: null
-}));
-// Reachability has three parts: a restriction (`getStanding`), the member's own
-// switch (`user.accepts_direct_messages`, which rides along on the recipient
-// row) and their age (`user.date_of_birth`, which rides along too).
-// `messagingIsDisabled` is the one place they recombine.
-const messagingIsDisabled = vi.fn(async () => false);
-const acceptsDirectMessages = vi.fn(async () => true);
-const isMessagingAgeRestricted = vi.fn(async () => false);
-
-/** A birth date that makes its owner 16, whenever the suite runs. */
-function minorBirthDate(): Date {
-	const d = new Date();
-	d.setFullYear(d.getFullYear() - 16);
-	return d;
-}
-vi.mock('$lib/server/moderation/standing-service', () => ({
-	getStanding: (...a: unknown[]) => getStanding(...(a as []))
-}));
-vi.mock('$lib/server/moderation/moderation-service', () => ({
-	isBlockedEitherWay: (...a: unknown[]) => isBlockedEitherWay(...(a as [])),
-	blockUser: (...a: unknown[]) => blockUser(...(a as [])),
-	messagingIsDisabled: (...a: unknown[]) => messagingIsDisabled(...(a as [])),
-	acceptsDirectMessages: (...a: unknown[]) => acceptsDirectMessages(...(a as [])),
-	isMessagingAgeRestricted: (...a: unknown[]) => isMessagingAgeRestricted(...(a as []))
-}));
-
+// KV is the outside service here.
 const allowRateLimited = vi.fn(async () => true);
 vi.mock('$lib/server/rate-limit', () => ({
 	allowRateLimited: (...a: unknown[]) => allowRateLimited(...(a as []))
@@ -208,465 +41,457 @@ const {
 	countDirectUnread,
 	listDirectThreads
 } = await import('./direct-service');
+const { MAX_PENDING_SENT_REQUESTS } = await import('$lib/config');
+
+const T0 = 1_750_000_000;
+
+/** A birth date, in epoch seconds, that makes its owner 16 whenever the suite runs. */
+function minorBirthSeconds(): number {
+	const d = new Date();
+	d.setFullYear(d.getFullYear() - 16);
+	return Math.floor(d.getTime() / 1000);
+}
+
+function member(
+	id: string,
+	opts: { accepts?: boolean; dob?: number | null; deleted?: boolean } = {}
+) {
+	sqlite
+		.prepare(
+			`insert into user (id, name, email, accepts_direct_messages, date_of_birth, deleted_at)
+			 values (?, ?, ?, ?, ?, ?)`
+		)
+		.run(
+			id,
+			`Name ${id}`,
+			`${id}@example.com`,
+			opts.accepts === false ? 0 : 1,
+			opts.dob ?? null,
+			opts.deleted ? T0 : null
+		);
+}
+
+const block = (blocker: string, blocked: string) =>
+	sqlite
+		.prepare(`insert into user_block (id, blocker_user_id, blocked_user_id) values (?, ?, ?)`)
+		.run(`b-${blocker}-${blocked}`, blocker, blocked);
+
+const standing = (userId: string, status: 'restricted' | 'disabled', reason: string | null) =>
+	sqlite
+		.prepare(
+			`insert into member_standing (user_id, scope, status, reason) values (?, 'messaging', ?, ?)`
+		)
+		.run(userId, status, reason);
+
+/** A direct thread between two members, each accepted or not. */
+function conversation(
+	id: string,
+	parties: Record<string, boolean>,
+	opts: { status?: string; channel?: string; lastAt?: number } = {}
+) {
+	sqlite
+		.prepare(`insert into inbox_thread (id, channel, status, last_message_at) values (?, ?, ?, ?)`)
+		.run(id, opts.channel ?? 'direct', opts.status ?? 'open', opts.lastAt ?? T0);
+	for (const [userId, accepted] of Object.entries(parties)) {
+		sqlite
+			.prepare(
+				`insert into inbox_participant (id, thread_id, user_id, role, accepted_at) values (?, ?, ?, 'member', ?)`
+			)
+			.run(`p-${id}-${userId}`, id, userId, accepted ? T0 : null);
+	}
+}
+
+const count = (table: string) =>
+	(sqlite.prepare(`select count(*) as n from ${table}`).get() as { n: number }).n;
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	touched = [];
-	results = [];
-	inserted = [];
-	selectedFields = [];
-	isBlockedEitherWay.mockResolvedValue(false);
-	blockUser.mockResolvedValue(undefined);
-	messagingIsDisabled.mockResolvedValue(false);
-	acceptsDirectMessages.mockResolvedValue(true);
-	isMessagingAgeRestricted.mockResolvedValue(false);
+	emitted.length = 0;
 	allowRateLimited.mockResolvedValue(true);
-	addPeerMessage.mockResolvedValue({ id: 'msg-1' });
-	getStanding.mockResolvedValue({
-		status: 'none',
-		triggeringFlagId: null,
-		reason: null,
-		updatedAt: null
-	});
+	for (const t of [
+		'inbox_note',
+		'inbox_message',
+		'inbox_participant',
+		'inbox_thread',
+		'user_block',
+		'member_standing',
+		'directory_entry',
+		'user'
+	]) {
+		sqlite.exec(`delete from "${t}"`);
+	}
+	member('alice');
 });
 
 const START = { senderId: 'alice', senderName: 'Alice', recipientId: 'bob', body: 'hi there' };
 
-/** Queue the reads a clean startDirectThread performs. */
-function happyStart() {
-	results = [
-		[{ id: 'bob', acceptsDirectMessages: true }], // recipient lookup
-		[{ count: 0 }], // countOutstandingSentRequests
-		[{ id: 'thread-new' }] // thread insert returning
-	];
-}
-
 describe('startDirectThread — every silent drop looks identical', () => {
-	// The single most important test in this file. Assert the results are equal
-	// to *each other*, not each to a literal: a future "let's give a helpful
-	// error here" change has to notice it is breaking something deliberate.
-	async function outcomeWhen(setup: () => void) {
-		vi.clearAllMocks();
-		results = [];
-		inserted = [];
-		isBlockedEitherWay.mockResolvedValue(false);
-		messagingIsDisabled.mockResolvedValue(false);
-		acceptsDirectMessages.mockResolvedValue(true);
-		getStanding.mockResolvedValue({
-			status: 'none',
-			triggeringFlagId: null,
-			reason: null,
-			updatedAt: null
-		});
-		allowRateLimited.mockResolvedValue(true);
+	// Assert the results are equal to *each other*: a future "helpful error"
+	// change has to notice it is breaking something deliberate.
+	const drops: [string, () => void][] = [
+		['blocked by the recipient', () => (member('bob'), block('bob', 'alice'))],
+		['blocking the recipient', () => (member('bob'), block('alice', 'bob'))],
+		['unknown', () => undefined],
+		['deleted', () => member('bob', { deleted: true })],
+		[
+			'hidden from the directory',
+			() => {
+				member('bob');
+				sqlite.exec(
+					`insert into directory_entry (id, user_id, name, visibility) values ('d1', 'bob', 'Bob', 'hidden')`
+				);
+			}
+		],
+		['switched off by staff', () => (member('bob'), standing('bob', 'disabled', 'harassment'))],
+		// The member's own preference is deliberately indistinguishable from a
+		// staff decision: telling them apart would leak one or the other.
+		['switched off themselves', () => member('bob', { accepts: false })],
+		// A sender who could tell this case apart would learn the recipient's age.
+		['too young', () => member('bob', { dob: minorBirthSeconds() })]
+	];
+
+	it.each(drops)('drops a message to a recipient %s, writing nothing', async (_label, setup) => {
 		setup();
-		const result = await startDirectThread(START);
-		return { result, wrote: inserted.length > 0, messaged: addPeerMessage.mock.calls.length > 0 };
-	}
 
-	it('returns the same thing whether blocked, unknown, hidden, switched off, or too young', async () => {
-		const blocked = await outcomeWhen(() => {
-			results = [[{ id: 'bob', acceptsDirectMessages: true }]];
-			isBlockedEitherWay.mockResolvedValue(true);
-		});
-		const unknownOrHidden = await outcomeWhen(() => {
-			results = [[]]; // recipient lookup finds nobody (deleted or hidden)
-		});
-		const switchedOffByStaff = await outcomeWhen(() => {
-			results = [[{ id: 'bob', acceptsDirectMessages: true }]];
-			getStanding.mockResolvedValue({
-				status: 'disabled',
-				triggeringFlagId: 'flag-1',
-				reason: 'continued messaging after being asked to stop',
-				updatedAt: null
-			});
-		});
-		// A recipient under 18 has to be indistinguishable from the rest of these,
-		// and for a reason the others do not share: a sender who could tell this
-		// case apart would have learned the recipient's age.
-		const tooYoung = await outcomeWhen(() => {
-			results = [[{ id: 'bob', acceptsDirectMessages: true, dateOfBirth: minorBirthDate() }]];
-		});
-		// The member's own preference is a different table from the standing, and
-		// deliberately indistinguishable from outside: telling a sender which one
-		// stopped them would leak either a moderation decision or a personal choice.
-		const switchedOffThemselves = await outcomeWhen(() => {
-			results = [[{ id: 'bob', acceptsDirectMessages: false }]];
-		});
-		const self = await outcomeWhen(() => {
-			results = [];
-		});
-
-		expect(blocked.result).toEqual(unknownOrHidden.result);
-		expect(blocked.result).toEqual(switchedOffByStaff.result);
-		expect(blocked.result).toEqual(switchedOffThemselves.result);
-		expect(blocked.result).toEqual(tooYoung.result);
-		expect(blocked.result).toEqual({ status: 'sent' });
-
-		// And none of them wrote anything.
-		for (const o of [
-			blocked,
-			unknownOrHidden,
-			switchedOffByStaff,
-			switchedOffThemselves,
-			tooYoung
-		]) {
-			expect(o.wrote).toBe(false);
-			expect(o.messaged).toBe(false);
-		}
-		void self;
+		expect(await startDirectThread(START)).toEqual({ status: 'sent' });
+		expect(count('inbox_thread')).toBe(0);
+		expect(count('inbox_message')).toBe(0);
+		expect(emitted).toEqual([]);
 	});
 
-	/**
-	 * The sender side, which is where the two must NOT look alike.
-	 *
-	 * `restricted` carries a staff note and an implied appeal; `ineligible` does
-	 * not, because nobody judged this member. Before #556 a minor got the first
-	 * of those with an empty reason, which read as having been moderated for
-	 * something nobody would name.
-	 */
-	it('tells a sender under 18 they are ineligible, not restricted', async () => {
-		isMessagingAgeRestricted.mockResolvedValue(true);
-		results = [[{ id: 'bob', acceptsDirectMessages: true }]];
-
-		expect(await startDirectThread(START)).toEqual({ status: 'ineligible' });
-		expect(inserted).toHaveLength(0);
-	});
-
-	it('stops a sender who switched their own messaging off, with no reason to give', async () => {
-		// They already know why — they did it. Distinct from a staff restriction,
-		// which quotes the note.
-		results = [[{ id: 'bob', acceptsDirectMessages: true }]];
-		acceptsDirectMessages.mockResolvedValue(false);
-		expect(await startDirectThread(START)).toEqual({ status: 'restricted', reason: null });
-		expect(inserted).toHaveLength(0);
-	});
-
-	it('refuses a self-addressed message without touching the database', async () => {
-		const result = await startDirectThread({ ...START, recipientId: 'alice' });
-		expect(result).toEqual({ status: 'sent' });
-		expect(inserted).toHaveLength(0);
-	});
-
-	it('drops an empty message the same way', async () => {
-		const result = await startDirectThread({ ...START, body: '   ' });
-		expect(result).toEqual({ status: 'sent' });
-		expect(inserted).toHaveLength(0);
+	it('drops a self-addressed or empty message the same way', async () => {
+		expect(await startDirectThread({ ...START, recipientId: 'alice' })).toEqual({ status: 'sent' });
+		member('bob');
+		expect(await startDirectThread({ ...START, body: '   ' })).toEqual({ status: 'sent' });
+		expect(count('inbox_thread')).toBe(0);
 	});
 });
 
 describe('startDirectThread — the branches that DO report back', () => {
+	beforeEach(() => member('bob'));
+
+	/**
+	 * The sender side, which is where the two must NOT look alike: `restricted`
+	 * carries a staff note and an implied appeal; `ineligible` does not, because
+	 * nobody judged this member (#556).
+	 */
+	it('tells a sender under 18 they are ineligible, not restricted', async () => {
+		sqlite
+			.prepare('update user set date_of_birth = ? where id = ?')
+			.run(minorBirthSeconds(), 'alice');
+
+		expect(await startDirectThread(START)).toEqual({ status: 'ineligible' });
+		expect(count('inbox_thread')).toBe(0);
+	});
+
+	it('stops a sender who switched their own messaging off, with no reason to give', async () => {
+		sqlite.exec(`update user set accepts_direct_messages = 0 where id = 'alice'`);
+
+		expect(await startDirectThread(START)).toEqual({ status: 'restricted', reason: null });
+		expect(count('inbox_thread')).toBe(0);
+	});
+
 	it('tells a restricted sender why, quoting the staff note', async () => {
-		results = [[{ id: 'bob', acceptsDirectMessages: true }]];
-		getStanding
-			.mockResolvedValueOnce({
-				status: 'none',
-				reason: null,
-				triggeringFlagId: null,
-				updatedAt: null
-			}) // recipient
-			.mockResolvedValueOnce({
-				status: 'restricted',
-				triggeringFlagId: 'flag-1',
-				reason: 'harassment',
-				updatedAt: null
-			}); // sender
-		expect(await startDirectThread(START)).toEqual({
-			status: 'restricted',
-			reason: 'harassment'
-		});
+		standing('alice', 'restricted', 'harassment');
+
+		expect(await startDirectThread(START)).toEqual({ status: 'restricted', reason: 'harassment' });
 	});
 
-	it('reports the pending-request cap', async () => {
-		results = [[{ id: 'bob', acceptsDirectMessages: true }], [{ count: 5 }]];
-		expect(await startDirectThread(START)).toEqual({ status: 'too_many_pending' });
-		expect(inserted).toHaveLength(0);
-	});
-
-	it('checks the exact database count before spending a rate-limit hit', async () => {
+	it('reports the pending-request cap before spending a rate-limit hit', async () => {
 		// DB truth first, KV backstop second — the reverse would burn the sender's
 		// daily allowance on a request that was never going to be created.
-		results = [[{ id: 'bob', acceptsDirectMessages: true }], [{ count: 5 }]];
-		await startDirectThread(START);
+		for (let i = 0; i < MAX_PENDING_SENT_REQUESTS; i++) {
+			member(`r${i}`);
+			conversation(`pending-${i}`, { alice: true, [`r${i}`]: false });
+		}
+
+		expect(await startDirectThread(START)).toEqual({ status: 'too_many_pending' });
 		expect(allowRateLimited).not.toHaveBeenCalled();
+		expect(count('inbox_thread')).toBe(MAX_PENDING_SENT_REQUESTS);
+	});
+
+	it('does not count an answered or closed request toward the cap', async () => {
+		for (let i = 0; i < MAX_PENDING_SENT_REQUESTS; i++) {
+			member(`r${i}`);
+			conversation(
+				`done-${i}`,
+				{ alice: true, [`r${i}`]: i % 2 === 0 },
+				{
+					status: i % 2 === 0 ? 'open' : 'resolved'
+				}
+			);
+		}
+
+		expect(await startDirectThread(START)).toEqual({ status: 'sent' });
+		expect(count('inbox_thread')).toBe(MAX_PENDING_SENT_REQUESTS + 1);
 	});
 
 	it('reports being rate limited', async () => {
-		results = [[{ id: 'bob', acceptsDirectMessages: true }], [{ count: 0 }]];
 		allowRateLimited.mockResolvedValue(false);
+
 		expect(await startDirectThread(START)).toEqual({ status: 'rate_limited' });
-		expect(inserted).toHaveLength(0);
+		expect(count('inbox_thread')).toBe(0);
 	});
 });
 
 describe('startDirectThread — what a successful request writes', () => {
-	it('stamps the sender as accepted and leaves the recipient null', async () => {
-		// That asymmetry IS the request mechanism. Both stamped would make it an
-		// ordinary conversation; neither stamped would make it unanswerable.
-		happyStart();
-		await startDirectThread(START);
-
-		const participants = inserted.find((i) => i.table === 'inbox_participant');
-		expect(participants).toBeDefined();
-		const rows = participants!.values as { userId: string; acceptedAt: Date | null }[];
-		expect(rows).toHaveLength(2);
-		expect(rows.find((r) => r.userId === 'alice')!.acceptedAt).toBeInstanceOf(Date);
-		expect(rows.find((r) => r.userId === 'bob')!.acceptedAt).toBeNull();
+	beforeEach(async () => {
+		member('bob');
+		expect(await startDirectThread(START)).toEqual({ status: 'sent' });
 	});
 
-	it('opens the thread on the direct channel', async () => {
-		happyStart();
-		await startDirectThread(START);
-		const thread = inserted.find((i) => i.table === 'inbox_thread');
-		expect(thread!.values).toMatchObject({ channel: 'direct', status: 'open' });
+	it('opens one thread on the direct channel', () => {
+		expect(sqlite.prepare('select channel, status from inbox_thread').all()).toEqual([
+			{ channel: 'direct', status: 'open' }
+		]);
 	});
 
-	it('marks the sender as having read their own message', async () => {
-		happyStart();
-		await startDirectThread(START);
-		expect(markPortalThreadRead).toHaveBeenCalledWith('thread-new', 'alice');
+	it('stamps the sender as accepted and leaves the recipient null', () => {
+		// That asymmetry IS the request mechanism.
+		const rows = sqlite
+			.prepare(
+				'select user_id, accepted_at is not null as accepted from inbox_participant order by user_id'
+			)
+			.all();
+		expect(rows).toEqual([
+			{ user_id: 'alice', accepted: 1 },
+			{ user_id: 'bob', accepted: 0 }
+		]);
 	});
 
-	it('writes the message as a request, naming the recipient', async () => {
-		happyStart();
-		await startDirectThread(START);
-		expect(addPeerMessage).toHaveBeenCalledWith(
-			expect.objectContaining({ isRequest: true, recipientUserId: 'bob', authorUserId: 'alice' })
-		);
+	it('marks the sender as having read their own message', () => {
+		const row = sqlite
+			.prepare(`select last_read_at from inbox_participant where user_id = 'alice'`)
+			.get() as { last_read_at: number | null };
+		expect(row.last_read_at).not.toBeNull();
+	});
+
+	it('writes the message as a request, naming the recipient', () => {
+		expect(sqlite.prepare('select author_user_id, body from inbox_message').all()).toEqual([
+			{ author_user_id: 'alice', body: 'hi there' }
+		]);
+		expect(emitted[0]).toEqual([
+			'inbox.direct_message',
+			expect.objectContaining({ isRequest: true, recipientId: 'bob', senderId: 'alice' })
+		]);
 	});
 });
 
 describe('replyToDirectThread', () => {
-	function conditionsBuilt() {
-		// The whole WHERE tree, flattened to the ops it used.
-		const flat: string[] = [];
-		const walk = (n: unknown) => {
-			if (!n || typeof n !== 'object') return;
-			const o = n as Record<string, unknown>;
-			if (typeof o.op === 'string') flat.push(o.op === 'sql' ? String(o.text) : o.op);
-			Object.values(o).forEach((v) => (Array.isArray(v) ? v.forEach(walk) : walk(v)));
-		};
-		andCalls.forEach(walk);
-		return flat;
-	}
+	const reply = (body = 'yo') =>
+		replyToDirectThread({ threadId: 't1', userId: 'alice', userName: 'Alice', body });
 
-	/** Every value bound into a raw `sql` fragment in the WHERE tree. */
-	function paramsBound() {
-		const flat: unknown[] = [];
-		const walk = (n: unknown) => {
-			if (!n || typeof n !== 'object') return;
-			const o = n as Record<string, unknown>;
-			if (o.op === 'sql' && Array.isArray(o.v)) flat.push(...o.v);
-			Object.values(o).forEach((v) => (Array.isArray(v) ? v.forEach(walk) : walk(v)));
-		};
-		andCalls.forEach(walk);
-		return flat;
-	}
-	let andCalls: unknown[] = [];
+	beforeEach(() => member('bob'));
 
-	beforeEach(async () => {
-		andCalls = [];
-		const drizzle = await import('drizzle-orm');
-		vi.spyOn(drizzle, 'and').mockImplementation((...a: unknown[]) => {
-			const node = { op: 'and', a };
-			andCalls.push(node);
-			return node as never;
-		});
+	it('sends on an accepted, open, unblocked conversation', async () => {
+		conversation('t1', { alice: true, bob: true });
+
+		expect(await reply()).toEqual({ messageId: expect.any(String) });
+		expect(emitted[0][1]).toMatchObject({ recipientId: 'bob', isRequest: false });
 	});
 
-	it('returns null when the caller is not on a writable accepted thread', async () => {
-		results = [[]];
-		expect(
-			await replyToDirectThread({ threadId: 't1', userId: 'alice', userName: 'Alice', body: 'yo' })
-		).toBeNull();
+	// Each guard broken alone, against a thread that is otherwise writable — a
+	// test asserting only "returned null" on an empty table would survive the
+	// deletion of any one of them.
+	it.each<[string, () => void]>([
+		['the caller has not accepted', () => conversation('t1', { alice: false, bob: true })],
+		['the counterpart has not accepted', () => conversation('t1', { alice: true, bob: false })],
+		[
+			'the thread is resolved',
+			() => conversation('t1', { alice: true, bob: true }, { status: 'resolved' })
+		],
+		[
+			'the thread is not direct',
+			() => conversation('t1', { alice: true, bob: true }, { channel: 'portal' })
+		],
+		['the caller is not on it', () => conversation('t1', { carol: true, bob: true })],
+		[
+			'the caller blocked them',
+			() => (conversation('t1', { alice: true, bob: true }), block('alice', 'bob'))
+		],
+		[
+			'they blocked the caller',
+			() => (conversation('t1', { alice: true, bob: true }), block('bob', 'alice'))
+		],
+		[
+			'staff switched the counterpart off',
+			() => (conversation('t1', { alice: true, bob: true }), standing('bob', 'disabled', null))
+		],
+		[
+			'the counterpart switched themselves off',
+			() => {
+				conversation('t1', { alice: true, bob: true });
+				sqlite.exec(`update user set accepts_direct_messages = 0 where id = 'bob'`);
+			}
+		],
+		[
+			// Also proves the age cutoff binds as a number: better-sqlite3, like D1,
+			// refuses a Date bound into a raw `sql` fragment.
+			'the counterpart is under 18',
+			() => {
+				conversation('t1', { alice: true, bob: true });
+				sqlite
+					.prepare('update user set date_of_birth = ? where id = ?')
+					.run(minorBirthSeconds(), 'bob');
+			}
+		]
+	])('returns null and writes nothing when %s', async (_label, setup) => {
+		setup();
+
+		expect(await reply()).toBeNull();
+		expect(count('inbox_message')).toBe(0);
 	});
 
-	it('builds every guard, not just one', async () => {
-		// Each of these alone would produce "returned null" on an empty mock, so a
-		// test asserting only the return value would survive deleting any single
-		// one of them.
-		results = [[]];
-		await replyToDirectThread({ threadId: 't1', userId: 'alice', userName: 'Alice', body: 'yo' });
-		const built = conditionsBuilt().join(' | ');
-
-		expect(built).toContain('isNotNull'); // caller has accepted
-		expect(built).toContain('accepted_at IS NOT NULL'); // counterpart has accepted
-		expect(built).toContain('user_block'); // no block either way
-		// All three parts of "cannot be messaged", and where each lives. Named
-		// explicitly because these are raw `sql` strings: #224 renamed
-		// messaging_standing to member_standing and nothing here or in the type
-		// checker noticed, so every list 500'd until it reached production.
-		expect(built).toContain('member_standing'); // staff switched them off…
-		expect(built).toContain("ms.status = 'disabled'");
-		expect(built).toContain('accepts_direct_messages'); // …or they did themselves…
-		expect(built).toContain('date_of_birth'); // …or they are under 18 (#556)
-		// The guard, not just the column. Without it the clause would say nothing
-		// about the members who have given no date — which is most of them.
-		expect(built).toContain('date_of_birth IS NOT NULL');
-		expect(built).not.toContain('messaging_standing');
+	it('still lets a member with no date of birth through', async () => {
+		// The `IS NOT NULL` guard: most members have given no date.
+		conversation('t1', { alice: true, bob: true });
+		expect(await reply()).not.toBeNull();
 	});
 
-	/**
-	 * The values, not just the text — which is a different way for these raw
-	 * fragments to be wrong and the one that got past the assertions above.
-	 *
-	 * Drizzle converts a `Date` for a typed `integer(..., { mode: 'timestamp' })`
-	 * column, but a raw `sql` parameter reaches D1 as it is, and D1 rejects an
-	 * object outright: `D1_TYPE_ERROR: Type 'object' not supported`. The age
-	 * cutoff went in as a `Date` and 500'd every conversation list — the same
-	 * blast radius as the `messaging_standing` rename, from the same cause.
-	 */
-	it('binds no Date into a raw sql fragment', async () => {
-		results = [[]];
-		await replyToDirectThread({ threadId: 't1', userId: 'alice', userName: 'Alice', body: 'yo' });
-
-		// Column and SQL references are objects too and are fine — drizzle resolves
-		// those. A `Date` is the one that reaches the driver unconverted.
-		const dates = paramsBound().filter((v) => v instanceof Date);
-		expect(dates).toEqual([]);
-	});
-
-	it('refuses an empty body without querying', async () => {
-		expect(
-			await replyToDirectThread({ threadId: 't1', userId: 'alice', userName: 'Alice', body: ' ' })
-		).toBeNull();
-		expect(touched).toHaveLength(0);
+	it('refuses an empty body', async () => {
+		conversation('t1', { alice: true, bob: true });
+		expect(await reply(' ')).toBeNull();
+		expect(count('inbox_message')).toBe(0);
 	});
 });
 
 describe('getDirectThread', () => {
-	it('never reads inbox_note', async () => {
-		results = [[{ id: 't1', counterpartId: 'bob' }], []];
-		await getDirectThread('t1', 'alice');
-		expect(touched).not.toContain('inbox_note');
+	beforeEach(() => {
+		member('bob');
+		sqlite.exec(`insert into inbox_thread (id, channel, status) values ('t1', 'direct', 'open')`);
+		sqlite.exec(
+			`insert into inbox_message (id, thread_id, direction, body, author_user_id, created_at)
+			 values ('m1', 't1', 'peer', 'hello', 'bob', ${T0})`
+		);
+		sqlite.exec(
+			`insert into inbox_note (id, thread_id, author_user_id, body) values ('n1', 't1', 'staff-1', 'STAFF-ONLY')`
+		);
+	});
+	const join = (userId: string, accepted: boolean) =>
+		sqlite
+			.prepare(
+				`insert into inbox_participant (id, thread_id, user_id, role, accepted_at) values (?, 't1', ?, 'member', ?)`
+			)
+			.run(`p-${userId}`, userId, accepted ? T0 : null);
+
+	it('never returns inbox_note content', async () => {
+		join('alice', true);
+		join('bob', true);
+
+		expect(JSON.stringify(await getDirectThread('t1', 'alice'))).not.toContain('STAFF-ONLY');
 	});
 
 	it('does NOT mask the other member’s authorUserId', async () => {
-		// The inverse of getPortalThread, which nulls it so no staff ids reach a
-		// member. Here the counterpart is another member, their identity is the
-		// point, and ThreadTimeline needs it to pick a side for each bubble.
-		results = [[{ id: 't1', counterpartId: 'bob' }], []];
-		await getDirectThread('t1', 'alice');
+		// The inverse of getPortalThread. Here the counterpart is another member,
+		// and ThreadTimeline needs the id to pick a side for each bubble.
+		join('alice', true);
+		join('bob', true);
 
-		const messageSelect = selectedFields.find((f) => 'authorUserId' in f);
-		expect(messageSelect).toBeDefined();
-		expect(messageSelect!.authorUserId).toBe(TABLES.inboxMessage.authorUserId);
+		const thread = await getDirectThread('t1', 'alice');
+		expect(thread?.messages[0].authorUserId).toBe('bob');
+		expect(thread?.counterpartId).toBe('bob');
 	});
 
 	it('serves a thread the caller has not accepted yet', async () => {
 		// Report sits next to Accept and Decline on a request, and you can only
-		// report what you can read. If someone "tidies up" this function by adding
-		// the acceptedAt condition the list paths use, Report disappears from the
-		// one place it matters most.
-		results = [[{ id: 't1', counterpartId: 'bob', accepted: 0 }], []];
+		// report what you can read.
+		join('alice', false);
+		join('bob', true);
+
 		const thread = await getDirectThread('t1', 'alice');
-		expect(thread).not.toBeNull();
-		expect(thread!.accepted).toBe(false);
-		expect(thread!.messages).toEqual([]);
+		expect(thread?.accepted).toBe(false);
+		expect(thread?.messages).toHaveLength(1);
 	});
 
 	it('returns null when the caller is not a participant', async () => {
-		results = [[]];
+		join('alice', true);
+		join('bob', true);
+
 		expect(await getDirectThread('t1', 'mallory')).toBeNull();
 	});
 });
 
 describe('the unread count', () => {
-	// The pair that makes a request visible without being a nag: a request shows
-	// in the Messages list, but never adds to the badge. Both halves need pinning
-	// — if either drifts, an unconsented message either follows the recipient
-	// around the site or disappears from where they would look for it.
-	let andCalls: unknown[] = [];
-
-	beforeEach(async () => {
-		andCalls = [];
-		const drizzle = await import('drizzle-orm');
-		vi.spyOn(drizzle, 'and').mockImplementation((...a: unknown[]) => {
-			const node = { op: 'and', a };
-			andCalls.push(node);
-			return node as never;
-		});
+	// A request shows in the Messages list, but never adds to the badge. If
+	// either drifts, an unconsented message either follows the recipient around
+	// the site or disappears from where they would look for it.
+	beforeEach(() => {
+		member('bob');
+		member('carol');
+		conversation('request', { alice: false, bob: true }, { lastAt: T0 });
+		conversation('accepted', { alice: true, carol: true }, { lastAt: T0 + 1 });
 	});
-
-	function flatten(nodes: unknown[]): string[] {
-		const flat: string[] = [];
-		const walk = (n: unknown) => {
-			if (!n || typeof n !== 'object') return;
-			const o = n as Record<string, unknown>;
-			if (typeof o.op === 'string') {
-				flat.push(o.op === 'sql' ? String(o.text) : `${o.op}(${String(o.a)})`);
-			}
-			Object.values(o).forEach((v) => (Array.isArray(v) ? v.forEach(walk) : walk(v)));
-		};
-		nodes.forEach(walk);
-		return flat;
-	}
 
 	it('countDirectUnread counts accepted threads only', async () => {
-		results = [[{ count: 0 }]];
-		await countDirectUnread('alice');
-		const built = flatten(andCalls).join(' | ');
-		// Accepted-only. Without this, a request bumps the nav badge.
-		expect(built).toContain(`isNotNull(${TABLES.inboxParticipant.acceptedAt})`);
+		expect(await countDirectUnread('alice')).toBe(1);
 	});
 
-	it('listDirectThreads does NOT filter requests out of the list', async () => {
-		// The inverse of the above, and the reason they are tested together.
-		await listDirectThreads('alice', { page: 1, pageSize: 25 });
-		const built = flatten(andCalls).join(' | ');
-		expect(built).not.toContain(`isNotNull(${TABLES.inboxParticipant.acceptedAt})`);
-	});
+	it('listDirectThreads lists requests too, tagged so the UI can mark them', async () => {
+		const result = await listDirectThreads('alice', { page: 1, pageSize: 25 });
 
-	it('listDirectThreads tags each row so the UI can mark requests', async () => {
-		await listDirectThreads('alice', { page: 1, pageSize: 25 });
-		const listSelect = selectedFields.find((f) => 'pending' in f);
-		expect(listSelect).toBeDefined();
+		expect(result.rows.map((r) => [r.id, r.pending])).toEqual([
+			['accepted', false],
+			['request', true]
+		]);
 	});
 });
 
 describe('declineDirectThread', () => {
-	it('blocks the sender and closes the conversation', async () => {
-		results = [[{ senderId: 'bob' }]];
-		expect(await declineDirectThread('t1', 'alice')).toBe(true);
-		expect(blockUser).toHaveBeenCalledWith({
-			blockerUserId: 'alice',
-			blockedUserId: 'bob',
-			source: 'declined_request'
-		});
-		expect(updateStatus).toHaveBeenCalledWith('t1', 'resolved');
-	});
+	beforeEach(() => member('bob'));
 
-	it('tells the declining member nothing to pass on to the sender', async () => {
-		results = [[{ senderId: 'bob' }]];
-		const result = await declineDirectThread('t1', 'alice');
-		expect(result).toBe(true); // a bare boolean — no sender-facing payload
+	it('blocks the sender and closes the conversation, telling the decliner nothing more', async () => {
+		conversation('t1', { alice: false, bob: true });
+
+		// A bare boolean — no sender-facing payload.
+		expect(await declineDirectThread('t1', 'alice')).toBe(true);
+		expect(
+			sqlite.prepare('select blocker_user_id, blocked_user_id, source from user_block').all()
+		).toEqual([{ blocker_user_id: 'alice', blocked_user_id: 'bob', source: 'declined_request' }]);
+		expect(sqlite.prepare(`select status from inbox_thread where id = 't1'`).get()).toEqual({
+			status: 'resolved'
+		});
 	});
 
 	it('does nothing when there is no pending request', async () => {
-		results = [[]];
+		conversation('t1', { alice: true, bob: true });
+
 		expect(await declineDirectThread('t1', 'alice')).toBe(false);
-		expect(blockUser).not.toHaveBeenCalled();
-		expect(updateStatus).not.toHaveBeenCalled();
+		expect(count('user_block')).toBe(0);
 	});
 });
 
 describe('acceptDirectThread', () => {
-	// Both halves of "switched off" go through messagingIsDisabled, so accepting
-	// is refused whether staff switched it off or the member did. Asserting on
-	// the standing directly here would pass vacuously.
-	it('refuses when the accepting member has messaging switched off', async () => {
-		messagingIsDisabled.mockResolvedValue(true);
+	beforeEach(() => {
+		member('bob');
+		conversation('t1', { alice: false, bob: true });
+	});
+	const accepted = () =>
+		(
+			sqlite
+				.prepare(
+					`select accepted_at from inbox_participant where thread_id = 't1' and user_id = 'alice'`
+				)
+				.get() as { accepted_at: number | null }
+		).accepted_at;
+
+	// Both halves of "switched off" refuse, whether staff did it or the member.
+	it.each<[string, () => void]>([
+		['staff switched them off', () => standing('alice', 'disabled', null)],
+		[
+			'they switched themselves off',
+			() => sqlite.exec(`update user set accepts_direct_messages = 0 where id = 'alice'`)
+		],
+		['the two have a block between them', () => block('bob', 'alice')]
+	])('refuses when %s', async (_label, setup) => {
+		setup();
+
 		expect(await acceptDirectThread('t1', 'alice')).toBe(false);
+		expect(accepted()).toBeNull();
 	});
 
-	it('refuses when the two have a block between them', async () => {
-		results = [[{ userId: 'bob' }]];
-		isBlockedEitherWay.mockResolvedValue(true);
-		expect(await acceptDirectThread('t1', 'alice')).toBe(false);
-	});
-
-	it('accepts an outstanding request', async () => {
-		results = [[{ userId: 'bob' }], [{ id: 'participant-1' }]];
+	it('accepts an outstanding request, once', async () => {
 		expect(await acceptDirectThread('t1', 'alice')).toBe(true);
+		expect(accepted()).not.toBeNull();
+		expect(await acceptDirectThread('t1', 'alice')).toBe(false);
 	});
 });
