@@ -13,7 +13,7 @@ import type { Report } from './lib/form-reachability';
 const LISTED: Record<string, Record<string, string>> = JSON.parse(
 	readFileSync('scripts/form-reachability.allow.json', 'utf8')
 );
-const ALLOWED = new Map(
+const ALLOWED = new Map<string, string>(
 	Object.entries(LISTED).flatMap(([fn, keys]) =>
 		Object.entries(keys).map(([key, why]) => [`${fn}.${key}`, why] as const)
 	)
