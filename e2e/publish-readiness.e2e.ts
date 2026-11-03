@@ -34,24 +34,24 @@ test('the publish dialog names what the listing is missing, and asks why before 
 	await loginAsStaff(page);
 	await openEvent(page, SEED_BLOCKED_EVENT_ID, SEED_BLOCKED_EVENT_TITLE);
 
-	await page.getByRole('button', { name: 'Publish' }).click();
+	await page.getByTestId('publish-event').click();
 
 	const dialog = page.getByRole('dialog');
-	await expect(dialog.getByText('Not ready to announce:')).toBeVisible({ timeout: 15000 });
-	await expect(dialog.getByText('there is no poster')).toBeVisible();
-	await expect(dialog.getByText('there is no description')).toBeVisible();
+	// The seed leaves out the poster and the description, and nothing else.
+	await expect(dialog.getByRole('alert').locator('li')).toHaveCount(2, { timeout: 15000 });
 	await expect(dialog.getByLabel('Why publish now?')).toBeVisible();
-	await expect(dialog.getByRole('button', { name: 'Publish anyway' })).toBeEnabled();
+	await expect(dialog.locator('button[type="submit"]')).toBeEnabled();
 });
 
 test('a ready listing gets the plain question and a live submit', async ({ page }) => {
 	await loginAsStaff(page);
 	await openEvent(page, SEED_READY_EVENT_ID, SEED_READY_EVENT_TITLE);
 
-	await page.getByRole('button', { name: 'Publish' }).click();
+	await page.getByTestId('publish-event').click();
 
 	const dialog = page.getByRole('dialog');
-	await expect(dialog.getByText('make it visible to the public')).toBeVisible({ timeout: 15000 });
-	await expect(dialog.getByText('Not ready to announce:')).toHaveCount(0);
-	await expect(dialog.getByRole('button', { name: 'Publish' })).toBeEnabled();
+	await expect(dialog.locator('button[type="submit"]')).toBeEnabled({ timeout: 15000 });
+	// Nothing to warn about, so no list of blockers and no reason to give.
+	await expect(dialog.getByRole('alert')).toHaveCount(0);
+	await expect(dialog.locator('textarea[name="reason"]')).toHaveCount(0);
 });

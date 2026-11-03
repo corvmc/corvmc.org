@@ -12,6 +12,8 @@
 
 <!-- A listing only: no production is opened unless Productions is asked for one. -->
 {#if hasCapability(caps, 'event.manage')}
-	<Button variant="default" size="sm" onclick={() => (open = true)}>Create Listing</Button>
+	<Button variant="default" size="sm" data-testid="create-listing" onclick={() => (open = true)}
+		>Create Listing</Button
+	>
 	<CreateEventModal bind:open title="Create Listing" submitLabel="Create Listing" />
 {/if}

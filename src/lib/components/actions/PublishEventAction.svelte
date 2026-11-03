@@ -34,6 +34,7 @@
 	label="Publish"
 	submitLabel={blockers.length > 0 ? 'Publish anyway' : 'Publish'}
 	successToast="Published"
+	data-testid="publish-event"
 	{variant}
 	{size}
 	class={className}

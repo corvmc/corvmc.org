@@ -43,6 +43,7 @@
 	action={bookBandReservation}
 	label="Book a Session"
 	modalTitle="Book a Session"
+	data-testid="book-session"
 	noFooter
 	variant="primary"
 	size="sm"

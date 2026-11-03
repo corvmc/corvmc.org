@@ -9,6 +9,7 @@ import {
 	SEED_PUBLIC_BAND_HOMETOWN,
 	SEED_PUBLIC_BAND_FOUNDED,
 	SEED_HIDDEN_BAND_SLUG,
+	SEED_HIDDEN_BAND_NAME,
 	SEED_MEMBERS_BAND_SLUG,
 	SEED_MEMBERS_BAND_NAME,
 	SEED_RETITLE_BAND_SLUG
@@ -43,6 +44,15 @@ function quickFact(page: import('@playwright/test').Page, label: string) {
 		.locator('dd');
 }
 
+/** The profile form's own submit, told apart by the field only it has. */
+async function saveProfile(page: Page) {
+	await page
+		.locator('form')
+		.filter({ has: page.locator('input[name="tagline"]') })
+		.locator('button[type="submit"]')
+		.click();
+}
+
 async function login(page: Page) {
 	await signInAs(page, { email: SEED_OWNER_EMAIL, password: SEED_OWNER_PASSWORD });
 }
@@ -65,7 +75,7 @@ test('the edit form renders for an owner, and saving preserves hometown and foun
 	// The regression rendered a "Failed to load: effect_update_depth_exceeded"
 	// banner instead of the form.
 	await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 15000 });
-	await expect(page.getByText(/failed to load/i)).toHaveCount(0);
+	await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
 
 	// The profile fields the public page displays are all editable — hometown
 	// and foundedYear were missing entirely, which wiped them on save.
@@ -74,7 +84,7 @@ test('the edit form renders for an owner, and saving preserves hometown and foun
 
 	// Dirty the form so the submit is a real save, then save.
 	await page.locator('input[name="tagline"]').fill('E2E save round-trip');
-	await page.getByRole('button', { name: 'Save' }).click();
+	await saveProfile(page);
 	await expectSuccessToast(page, 15000);
 
 	// The public profile still shows "Based in {hometown}" / "Formed {year}".
@@ -104,7 +114,7 @@ test('a public band appears in the public directory list', async ({ page }) => {
 		timeout: 15000
 	});
 	// The visibility gate still applies to the list, not just the detail page.
-	await expect(page.getByRole('link', { name: /E2E Hidden Band/ })).toHaveCount(0);
+	await expect(page.getByRole('link', { name: new RegExp(SEED_HIDDEN_BAND_NAME) })).toHaveCount(0);
 	await expect(page.getByRole('link', { name: new RegExp(SEED_MEMBERS_BAND_NAME) })).toHaveCount(0);
 });
 
@@ -112,15 +122,18 @@ test('hidden band detail page is not publicly readable', async ({ page }) => {
 	await page.goto(`/directory/bands/${SEED_HIDDEN_BAND_SLUG}`);
 	// The band's own name is the thing that must not leak; the 404's wording is
 	// free to change, so the status is what this asserts.
-	await expect(page.getByText('E2E Hidden Band')).toHaveCount(0);
+	await expect(page.getByText(SEED_HIDDEN_BAND_NAME)).toHaveCount(0);
 });
 
 test('members-only band is withheld publicly but renders in the member directory', async ({
 	page
 }) => {
-	await page.goto(`/directory/bands/${SEED_MEMBERS_BAND_SLUG}`);
-	// .first(): the message is also embedded in the serialized __sveltekit payload.
-	await expect(page.getByText('Band not found').first()).toBeVisible({ timeout: 15000 });
+	const response = await page.goto(`/directory/bands/${SEED_MEMBERS_BAND_SLUG}`);
+	// A real 404, rendered by +error.svelte with the status it answered with.
+	expect(response?.status()).toBe(404);
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText(`${response?.status()}`, {
+		timeout: 15000
+	});
 	await expect(page.getByText(SEED_MEMBERS_BAND_NAME)).toHaveCount(0);
 
 	await login(page);
@@ -164,11 +177,11 @@ test('renaming a band saves cleanly and leaves its address alone', async ({ page
 	await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 15000 });
 
 	await page.locator('input[name="name"]').fill(NEW_NAME);
-	await page.getByRole('button', { name: 'Save' }).click();
+	await saveProfile(page);
 
 	await expectSuccessToast(page, 15000);
-	// The save worked, so nothing on the page may claim the band is missing.
-	await expect(page.getByText('Band not found')).toHaveCount(0);
+	// The save worked, so the page must not have dropped into its failed state.
+	await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
 	// Same URL as before the rename — no slug rotation, nothing to follow.
 	await expect(page).toHaveURL(new RegExp(`/band/${SEED_RETITLE_BAND_SLUG}/edit`));
 
@@ -188,8 +201,8 @@ test('the sidebar New link opens the create-band modal', async ({ page }) => {
 
 	// The My Bands header's New link (#2114). It once pointed at
 	// /member/bands/create, a 404; it must carry the create param instead.
-	const createLink = page.locator('aside').getByRole('link', { name: 'New band' });
-	await expect(createLink).toHaveAttribute('href', '/member/bands?create=1');
+	const createLink = page.locator('aside a[href="/member/bands?create=1"]');
+	await expect(createLink).toBeVisible();
 
 	// Clicking the link (immediately after login, while the layout's async
 	// queries are still settling) opens the create-band modal. The link carries

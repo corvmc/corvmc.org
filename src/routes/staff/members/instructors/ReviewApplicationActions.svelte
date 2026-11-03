@@ -49,6 +49,7 @@
 		action={approveInstructor}
 		label="Approve"
 		modalTitle="Approve {name}"
+		data-testid="approve-instructor"
 		submitLabel="Approve"
 		successToast="Approved"
 		variant="primary"

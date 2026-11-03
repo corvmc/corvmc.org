@@ -21,7 +21,7 @@
 	const result = $derived(getMyMessages({ inbox: slug, channel: 'band', page: enquiryList.page }));
 </script>
 
-<div class="flex min-h-0 flex-col gap-3">
+<div class="flex min-h-0 flex-col gap-3" data-testid="enquiry-list">
 	<!-- "Enquiries", not "Messages": Messages is the page, and this is one of
 	     the two lists on it. -->
 	<SectionLabel label="Enquiries" />

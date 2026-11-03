@@ -34,6 +34,7 @@
 	action={bookInstructorReservation}
 	label="Book teaching time"
 	modalTitle="Book teaching time"
+	data-testid="book-teaching"
 	noFooter
 	variant="ghost"
 	maxWidth="max-w-md"

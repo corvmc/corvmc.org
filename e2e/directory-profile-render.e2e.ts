@@ -22,6 +22,20 @@ import { SEED_PUBLIC_BAND_SLUG, SEED_PUBLIC_BAND_NAME } from './fixtures/seed-ba
  * the symptom is the minified frame reaching the boundary first.
  */
 
+/**
+ * A crash either reaches a boundary, which draws its failed alert, or escapes to
+ * +error.svelte with a 500. Neither may happen.
+ */
+async function openAnswered200(page: Page, path: string) {
+	const response = await page.goto(path);
+	expect(response?.status()).toBe(200);
+}
+
+/** Checked after the content: the failed state replaces it once hydrated. */
+async function expectNoBoundaryFailure(page: Page) {
+	await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
+}
+
 async function login(page: Page) {
 	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
 }
@@ -30,21 +44,17 @@ test('a member-side band profile renders the band, not a minified internals erro
 	page
 }) => {
 	await login(page);
-	await page.goto(`/member/directory/bands/${SEED_PUBLIC_BAND_SLUG}`);
-
+	await openAnswered200(page, `/member/directory/bands/${SEED_PUBLIC_BAND_SLUG}`);
 	await expect(page.locator('body')).toContainText(SEED_PUBLIC_BAND_NAME);
-	await expect(page.locator('body')).not.toContainText('Cannot read properties');
-	await expect(page.locator('body')).not.toContainText('effect_update_depth_exceeded');
+	await expectNoBoundaryFailure(page);
 });
 
 test('a member-side musician profile renders, not a minified internals error', async ({ page }) => {
 	await login(page);
-	await page.goto(`/member/directory/members/${SEED_TARGET_ID}`);
-
-	await expect(page.locator('body')).not.toContainText('Cannot read properties');
-	await expect(page.locator('body')).not.toContainText('effect_update_depth_exceeded');
+	await openAnswered200(page, `/member/directory/members/${SEED_TARGET_ID}`);
 	// Something rendered where the profile goes — the failure mode replaces the whole page.
 	await expect(page.getByRole('heading').first()).toBeVisible();
+	await expectNoBoundaryFailure(page);
 });
 
 /**
@@ -53,12 +63,11 @@ test('a member-side musician profile renders, not a minified internals error', a
  * that failed to load (JAVASCRIPT-SVELTEKIT-2H). It is one query now, inside its own boundary.
  */
 test('the public footer renders alongside the page it sits under', async ({ page }) => {
-	await page.goto('/');
+	await openAnswered200(page, '/');
 
 	const footer = page.locator('footer');
-	await expect(footer).toContainText('Corvallis Music Collective');
-	await expect(footer.getByRole('link', { name: 'Contact' })).toBeVisible();
-	await expect(page.locator('body')).not.toContainText('Cannot read properties');
+	await expect(footer.locator('a[href="/contact"]')).toBeVisible();
+	await expectNoBoundaryFailure(page);
 });
 
 /**

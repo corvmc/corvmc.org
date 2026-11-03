@@ -37,6 +37,13 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
  * list locator, so the identity has to be what separates them.
  */
 const enquirerFor = (retry: number) => (retry === 0 ? 'E2E Booker' : `E2E Booker ${retry}`);
+// Every seeded account shares a domain; no address of any kind may be published.
+const SEED_EMAIL_DOMAIN = SEED_OWNER_EMAIL.slice(SEED_OWNER_EMAIL.indexOf('@'));
+
+/** A chat room row: General at least, since every group has one (#1301). */
+const chatRoom = (page: Page) =>
+	page.locator(`a[href^="/band/${SEED_MEMBERS_BAND_SLUG}/messages/chat/"]`).first();
+
 const ENQUIRER = enquirerFor(0);
 const ENQUIRER_EMAIL = 'e2e.booker@example.com';
 const MESSAGE = 'Would you play a Thursday in April? Door split, 40 minute set.';
@@ -95,7 +102,7 @@ test.describe.serial('band booking enquiries', () => {
 
 		// No address of any kind is published — that is the reason the form exists,
 		// and the reason it is the only thing to assert on here.
-		await expect(page.locator('body')).not.toContainText('@example.com');
+		await expect(page.locator('body')).not.toContainText(SEED_EMAIL_DOMAIN);
 
 		// The token input is created by `window.turnstile.render` on mount, so a
 		// non-empty token proves hydration too: a fill before it is wiped from the
@@ -112,11 +119,15 @@ test.describe.serial('band booking enquiries', () => {
 		await page.locator('input[name="email"]').fill(ENQUIRER_EMAIL);
 		await page.locator('textarea[name="message"]').fill(MESSAGE);
 
-		await page.getByRole('button', { name: 'Send' }).click();
+		await page
+			.locator('form')
+			.filter({ has: page.locator('textarea[name="message"]') })
+			.locator('button[type="submit"]')
+			.click();
 
 		// Generous: this is the run's first write against a cold preview server, and
 		// the round trip opens both a thread and a message.
-		await expect(page.getByText('Sent.')).toBeVisible({ timeout: 30000 });
+		await expect(page.locator('.contact__done')).toBeVisible({ timeout: 30000 });
 
 		// Now the other side of it.
 		await login(page, SEED_OWNER_EMAIL, SEED_OWNER_PASSWORD);
@@ -147,7 +158,12 @@ test.describe.serial('band booking enquiries', () => {
 		await expect(page.getByText(MESSAGE).last()).toBeVisible({ timeout: 15000 });
 
 		// The reply box, addressed at this thread. Sending it is Postmark's job.
-		await expect(page.getByRole('button', { name: 'Send Reply' })).toBeVisible();
+		await expect(
+			page
+				.locator('form')
+				.filter({ has: page.locator('textarea[name="body"]') })
+				.locator('button[type="submit"]')
+		).toBeVisible();
 
 		// Opening it is what marks it read — for this reader and this thread. The
 		// dot rather than the nav badge, which is an aggregate: on a retry it also
@@ -162,13 +178,13 @@ test.describe.serial('band booking enquiries', () => {
 			await page.goto(`/staff/inbox?view=${view}`);
 			// Waiting on the list itself, so the negative assertion cannot pass
 			// against a pane that has not rendered yet.
-			await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible({ timeout: 15000 });
+			await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 });
 			await expect(page.getByRole('listitem').filter({ hasText: ENQUIRER })).toHaveCount(0);
 		}
 
 		// And not by search, which LIKEs the preview — the enquiry's own words.
 		await page.goto(`/staff/inbox?q=${encodeURIComponent(ENQUIRER)}`);
-		await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible({ timeout: 15000 });
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 });
 		await expect(page.getByRole('listitem').filter({ hasText: ENQUIRER })).toHaveCount(0);
 	});
 
@@ -186,11 +202,11 @@ test.describe.serial('band booking enquiries', () => {
 		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/messages`);
 		// Their own rooms are there — General at least, since every group has
 		// one whether or not anybody has named a topic (#1301).
-		await expect(page.getByRole('link', { name: 'General' })).toBeVisible({ timeout: 15000 });
+		await expect(chatRoom(page)).toBeVisible({ timeout: 15000 });
 		// ...and the enquiry list is not drawn at all. `requireGroupRole` in the
 		// remote function is still the guard; this is the page not offering them
 		// a list that would refuse them.
-		await expect(page.getByText('Enquiries from your public booking form')).toHaveCount(0);
+		await expect(page.getByTestId('enquiry-list')).toHaveCount(0);
 	});
 
 	// The old single-room route. It lands on the inbox rather than on a thread,
@@ -200,6 +216,6 @@ test.describe.serial('band booking enquiries', () => {
 
 		await page.goto(`/band/${SEED_MEMBERS_BAND_SLUG}/chat`);
 		await expect(page).toHaveURL(new RegExp(`/band/${SEED_MEMBERS_BAND_SLUG}/messages$`));
-		await expect(page.getByRole('link', { name: 'General' })).toBeVisible({ timeout: 15000 });
+		await expect(chatRoom(page)).toBeVisible({ timeout: 15000 });
 	});
 });

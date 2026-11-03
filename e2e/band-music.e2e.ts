@@ -14,7 +14,8 @@ import {
 	SEED_AUDIO_DRAFT_TITLE,
 	SEED_AUDIO_DELETABLE_ID,
 	SEED_AUDIO_DELETABLE_TRACK_ID,
-	SEED_AUDIO_UNPUBLISHED_TRACK_ID
+	SEED_AUDIO_UNPUBLISHED_TRACK_ID,
+	SEED_AUDIO_TRACK_SECONDS
 } from './fixtures/seed-band-audio';
 import { readLocalDb } from './fixtures/platform-db';
 import { audioRelease, audioTrack } from '../src/lib/server/db/schema/audio';
@@ -54,7 +55,8 @@ test.describe('band music panel', () => {
 		await expect(page.getByText(SEED_AUDIO_RELEASE_TITLE)).toBeVisible({ timeout: 15000 });
 		await expect(page.getByText(SEED_AUDIO_DRAFT_TITLE)).toBeVisible();
 		// A draft has to be visibly a draft, or a band cannot tell what is public.
-		await expect(page.getByText('Draft').first()).toBeVisible();
+		// The draft badge is the card's only ghost one.
+		await expect(page.locator('.badge-ghost').first()).toBeVisible();
 	});
 
 	test('shows the tracklist and a play control on the release page', async ({ page }) => {
@@ -66,7 +68,9 @@ test.describe('band music panel', () => {
 			page.getByRole('button', { name: `Play ${SEED_AUDIO_TRACK_TITLE}` })
 		).toBeVisible();
 		// 32 seconds, from the fixture's synthesized WAV.
-		await expect(page.getByText('0:32').first()).toBeVisible();
+		const m = Math.floor(SEED_AUDIO_TRACK_SECONDS / 60);
+		const s = String(SEED_AUDIO_TRACK_SECONDS % 60).padStart(2, '0');
+		await expect(page.getByText(`${m}:${s}`).first()).toBeVisible();
 	});
 
 	test('lights the Releases row in the band sidebar', async ({ page }) => {
@@ -162,8 +166,8 @@ test.describe('publishing', () => {
 		await login(page);
 		await page.goto(`${band}/music/${SEED_AUDIO_DRAFT_ID}`);
 
-		await page.getByRole('button', { name: 'Publish' }).click();
-		await page.getByRole('button', { name: 'Publish', exact: true }).last().click();
+		await page.getByTestId('publish-release').click();
+		await page.getByRole('dialog').locator('button[type="submit"]').click();
 
 		await expect
 			.poll(
@@ -190,8 +194,8 @@ test.describe('deleting', () => {
 		await login(page);
 		await page.goto(`${band}/music/${SEED_AUDIO_DELETABLE_ID}`);
 
-		await page.getByRole('button', { name: 'Delete release' }).click();
-		await page.getByRole('button', { name: 'Delete', exact: true }).last().click();
+		await page.getByTestId('delete-release').click();
+		await page.getByRole('dialog').locator('button[type="submit"]').click();
 
 		await expect
 			.poll(
@@ -227,6 +231,6 @@ test.describe('the feature flag', () => {
 		// whole run, so this asserts the positive half only.
 		await login(page);
 		await page.goto(`${band}/music`);
-		await expect(page.getByRole('heading', { name: 'Releases' })).toBeVisible({ timeout: 15000 });
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 });
 	});
 });

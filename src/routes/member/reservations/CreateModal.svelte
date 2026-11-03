@@ -31,6 +31,7 @@
 <Action
 	action={bookAndPayReservation}
 	label="Reserve Space"
+	data-testid="book-space"
 	modalTitle="Book a Session"
 	noFooter
 	variant="primary"

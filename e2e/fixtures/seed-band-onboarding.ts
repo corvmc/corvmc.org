@@ -43,6 +43,7 @@ export const SEED_PUBLIC_BAND_OLD_SLUG = 'e2e-public-band-former';
 
 export const SEED_HIDDEN_BAND_ID = 'e2e-band-hidden';
 export const SEED_HIDDEN_BAND_SLUG = 'e2e-hidden-band';
+export const SEED_HIDDEN_BAND_NAME = 'E2E Hidden Band';
 
 export const SEED_MEMBERS_BAND_ID = 'e2e-band-members';
 export const SEED_MEMBERS_BAND_SLUG = 'e2e-members-band';
@@ -199,7 +200,7 @@ export async function seedBandOnboarding(): Promise<void> {
 			},
 			{
 				id: SEED_HIDDEN_BAND_ID,
-				name: 'E2E Hidden Band',
+				name: SEED_HIDDEN_BAND_NAME,
 				slug: SEED_HIDDEN_BAND_SLUG,
 				bio: 'This band opted out of the directory entirely.',
 				createdAt: now,
