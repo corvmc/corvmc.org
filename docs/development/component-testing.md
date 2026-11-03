@@ -83,7 +83,7 @@ import { render } from 'vitest-browser-svelte';
 
 // The vi.mock factory is hoisted above all imports — it must INLINE its return
 // value and cannot reference the fixtures helpers.
-vi.mock('$lib/remote/layout.remote', () => ({
+vi.mock('#lib/remote/layout.remote.js', () => ({
 	getMe: () =>
 		Promise.resolve({ id: 'user-1', name: 'Jane Doe', email: 'jane@example.dev', image: null })
 }));

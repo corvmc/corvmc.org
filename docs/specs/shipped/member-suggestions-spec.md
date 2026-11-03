@@ -86,7 +86,7 @@ Merging into an already-merged suggestion is **rejected rather than followed**. 
 
 `mergedIntoId` is a **plain indexed column with no FK**. No self-referencing FK exists anywhere in the schema, and `scripts/db/d1-safe-rebuild.mjs` walks a child graph on every `db:generate` that has never had to order a table against itself. This mirrors `contentFlag.entityId`, FK-less for the same reason. Nothing hard-deletes a suggestion, and the service validates the target.
 
-Elsewhere: `'suggestion'` added to `flagEntityTypes` in `schema/flag.ts` — that one word is what lets the entire shipped report pipeline carry suggestions. The vocabularies (`suggestionCategories`, `suggestionStatuses`, `suggestionVisibilities`) live in `src/lib/config.ts` and are imported by the schema, matching `volunteer.ts`; `$lib/config` is client-safe and carries no server imports.
+Elsewhere: `'suggestion'` added to `flagEntityTypes` in `schema/flag.ts` — that one word is what lets the entire shipped report pipeline carry suggestions. The vocabularies (`suggestionCategories`, `suggestionStatuses`, `suggestionVisibilities`) live in `src/lib/config.ts` and are imported by the schema, matching `volunteer.ts`; `#lib/config.js` is client-safe and carries no server imports.
 
 ## Permissions
 

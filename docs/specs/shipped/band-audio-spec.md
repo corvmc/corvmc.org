@@ -55,7 +55,7 @@ raises what people pay, and a cut you cannot refuse is a rake. The trade
 accepted knowingly is that the realised take will not be 10%; `/staff/music`
 reports it net of fees so the default can be moved on evidence.
 
-**One module, both sides.** `$lib/finance/audio-split.ts` is client-importable
+**One module, both sides.** `#lib/finance/audio-split.js` is client-importable
 because the same arithmetic renders the buyer's bar and produces Stripe's
 application fee. Two implementations would eventually show one figure and pay
 another.
@@ -124,7 +124,7 @@ SoundExchange for the recording — or a licensed streaming host in place of our
 — so it cannot go on the air at all.
 
 So opting a release in takes an attestation, **per release**, to exactly that
-(`RADIO_PRO_ATTESTATION` in `$lib/config`). Each one records who gave it, when,
+(`RADIO_PRO_ATTESTATION` in `#lib/config.js`). Each one records who gave it, when,
 and to which wording, and counts only while both hold:
 
 - **The wording is current.** Changing the text bumps `version`, and every release

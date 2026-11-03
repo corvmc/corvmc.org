@@ -31,7 +31,7 @@ normal sizes back.
 Wraps the page body with consistent vertical spacing (`space-y-6`) and optional width constraint. PageHeader always sits **outside** PageContent so it keeps full-bleed behavior.
 
 ```svelte
-import PageContent from '$lib/components/ui/PageContent.svelte';
+import PageContent from '#lib/components/ui/PageContent.svelte';
 ```
 
 Props:
@@ -240,7 +240,7 @@ an ask rather than a rake.
 
 `value` + `onchange` rather than `$bindable`, because callers hold it as a `$derived` that
 falls back to a suggestion until the user touches it — and a derived cannot be bound to.
-Domain-free by construction, so the arithmetic lives beside it in `$lib/finance/split.ts`
+Domain-free by construction, so the arithmetic lives beside it in `#lib/finance/split.js`
 and its two adapters (`audio-split.ts`, `ticket-split.ts`), which are client-importable on
 purpose: the same module has to render the preview and produce what the server records.
 
@@ -300,7 +300,7 @@ returns to this page; signed in, it is the ordinary control. A `Form` whose remo
 the same route on its own, as does an `Action` whose callback throws one, so a session that lapsed
 mid-page needs no per-action code.
 
-Build any other sign-in link with `signInHref()` from `$lib/utils/sign-in` rather than by hand: it
+Build any other sign-in link with `signInHref()` from `#lib/utils/sign-in.js` rather than by hand: it
 accepts only a same-origin return path, and `/login` re-validates whatever arrives. The return is
 where the visitor taps again — nothing is replayed and nothing writes on the way back. That covers
 server redirects too: `redirect(302, signInHref({ returnTo: here(url) }))`. #1999.
@@ -497,7 +497,7 @@ the staff and member panels should be one of them.
 | card   | `EntityCard`                              | one record as a card — a related record, or a row in a card list         |
 | detail | `PageHeader` + a meta row + `RelatedList` | see below — **not** an identity strip                                    |
 
-All of them take a single `ref: EntityRef` (`$lib/types/entity`) and nothing about presentation.
+All of them take a single `ref: EntityRef` (`#lib/types/entity.js`) and nothing about presentation.
 
 **The card tier covers list cards too** (#1035). It was documented as "a
 related record on someone else's detail page" and used on one route, while
@@ -699,8 +699,8 @@ navigates must not be announced as a button.
 
 ### Registry
 
-Per-type facts live in `entity/registry.ts` (glyph, avatar shape, subtypes) `$lib/config`
-(`entityTypes`) and `$lib/terms` (`entityLabels`, from the message catalog). Components must not branch on `ref.type`; a branch means the
+Per-type facts live in `entity/registry.ts` (glyph, avatar shape, subtypes) `#lib/config.js`
+(`entityTypes`) and `#lib/terms.js` (`entityLabels`, from the message catalog). Components must not branch on `ref.type`; a branch means the
 registry is missing a field. `registry.spec.ts` enforces coverage: every type drawn and named, no
 stale keys, identity glyphs unique across the registry, subtype glyphs unique within a type, every
 flag entity type mapped, and no success-toned status escaping `ordinaryStatuses`.
@@ -848,7 +848,7 @@ type error instead of a badge that quietly stops. Anything conditional — a fea
 belongs in the data module, where a spec can assert it; `band/[slug]/nav-items.ts` records that
 gating expressed as nested `{#if}`s was silently wrong twice.
 
-The panel switcher's tabs come from `$lib/components/layout/panel-tabs.ts`, not hand-built per
+The panel switcher's tabs come from `#lib/components/layout/panel-tabs.js`, not hand-built per
 layout.
 
 ```svelte
@@ -859,7 +859,7 @@ layout.
 
 **Active state.** `Nav.Item` matches the pathname exactly on its own, which lights no row at all on
 a detail page. Pass `active` to override it. The rule lives once, in
-`$lib/components/layout/Nav/active-nav.ts`: `activeNavKey(items, pathname)` picks the item with the
+`#lib/components/layout/Nav/active-nav.js`: `activeNavKey(items, pathname)` picks the item with the
 longest matching href, and each panel wraps it (`activeNavKey`, `activeMemberNavKey`,
 `activeBandNavKey`). Two details it encodes — match on `path === href || path.startsWith(href + '/')`,
 because a bare `startsWith` lets `/staff/members` claim `/staff/membersomething`; and skip any row whose
@@ -959,8 +959,8 @@ The label/value grid on staff detail pages. Replaces the hand-written
 that was copy-pasted into nine files.
 
 ```svelte
-import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte'; import Fact
-from '$lib/components/ui/DefinitionList/Fact.svelte';
+import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte'; import Fact
+from '#lib/components/ui/DefinitionList/Fact.svelte';
 
 <DefinitionList>
 	<Fact label="Status"><StatusBadge status={item.status} /></Fact>
@@ -1017,7 +1017,7 @@ The `others` array is optional. Each slot's `href` makes it clickable; `label` s
 ## ActivityFeed
 
 Every staff history card — a record's audit entries, and any other per-record log merged with
-them — is `ActivityFeedCard` from `$lib/components/ui/ActivityFeed`. Do not hand-build another
+them — is `ActivityFeedCard` from `#lib/components/ui/ActivityFeed/index.js`. Do not hand-build another
 "summary / actor · time" row.
 
 ```svelte
@@ -1029,7 +1029,7 @@ them — is `ActivityFeedCard` from `$lib/components/ui/ActivityFeed`. Do not ha
 />
 ```
 
-- The query returns a `FeedPage` (`$lib/types/activity`): newest first, `hasMore` exact. On the
+- The query returns a `FeedPage` (`#lib/types/activity.js`): newest first, `hasMore` exact. On the
   server, `listAuditEntriesForSubject` is the one audit read, and `mergeFeed` combines it with
   another source's rows. The first page is read with no `limit` so a write can refresh it.
 - The card loads behind its own `pending` boundary, beside the page's one load-bearing query.
@@ -1090,7 +1090,7 @@ a paginated `query()` returned.
 ### Roster
 
 A list of _people_ is a `Roster` (`$lib/components/roster/`, #1994): any query whose rows extend
-`RosterPerson` (`toRosterPerson()` in `$lib/server/roster/roster`). It owns search, paging, Clear,
+`RosterPerson` (`toRosterPerson()` in `#lib/server/roster/roster.js`). It owns search, paging, Clear,
 CSV export, "Copy emails" and the row-click side panel; the page owns its query, its filters
 (`rosterState()`, URL-backed) and its columns (`lead`, `detail`, `columns` + `cells`, `actions`,
 `panel`). The export is a guarded `+server.ts` built on `rosterCsv()`. `/staff/members/volunteers`
@@ -1302,7 +1302,7 @@ the weekday earns its space.
 <tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/members/${row.id}`)}>
 ```
 
-`rowLink` (`$lib/actions/row-link`) navigates with `goto`, ignores clicks that
+`rowLink` (`#lib/actions/row-link.js`) navigates with `goto`, ignores clicks that
 land on an interactive element, respects modifier-clicks, and doesn't hijack a
 click that ended a text selection — so cells no longer need their own
 `onclick={(e) => e.stopPropagation()}`.
@@ -1431,7 +1431,7 @@ there. A header without a `menu` never folds; its actions wrap onto their own li
 `OverflowMenu` is the same ••• dropdown on its own, for an overflow anywhere else.
 
 **Breadcrumbs are derived, not written.** Each panel layout (`staff`, `member`,
-`band/[slug]`) passes `navTrail()` from `$lib/components/layout/nav-trail.ts` into
+`band/[slug]`) passes `navTrail()` from `#lib/components/layout/nav-trail.js` into
 context, built from its own nav tree, and `PageHeader` appends the page's title as the
 last crumb (`crumb` overrides it). `/staff/members/abc` reads "People / Users / Jordan
 Martinez" without the page naming any of it. There is no back button and no `backHref`.
