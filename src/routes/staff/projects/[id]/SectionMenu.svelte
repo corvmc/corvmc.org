@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import { IconDots } from '@tabler/icons-svelte';
@@ -26,30 +27,33 @@
 </script>
 
 <details class="dropdown dropdown-end">
-	<summary class="btn btn-square btn-ghost btn-xs" aria-label="{section.name} section actions">
+	<summary
+		class="btn btn-square btn-ghost btn-xs"
+		aria-label={m.staff_projects_id_section_menu_aria_label({ name: section.name })}
+	>
 		<IconDots size={14} />
 	</summary>
 	<div class="dropdown-content dropdown-panel flex w-48 flex-col gap-1">
 		<Action
 			action={rename}
-			label="Rename section"
+			label={m.staff_projects_id_section_menu_rename_section()}
 			variant="ghost"
 			size="sm"
 			class="justify-start"
-			modalTitle="Rename {section.name}"
-			submitLabel="Rename"
-			successToast="Renamed"
+			modalTitle={m.staff_projects_id_section_menu_rename({ name: section.name })}
+			submitLabel={m.staff_projects_id_section_menu_rename_2()}
+			successToast={m.staff_projects_id_section_menu_renamed()}
 		>
 			{#snippet form()}
 				<input {...rename.fields.projectId.as('hidden', projectId)} />
 				<input {...rename.fields.sectionId.as('hidden', section.id)} />
-				<Field field={rename.fields.name} type="text" label="Name" value={section.name} />
+				<Field field={rename.fields.name} type="text" label={m.staff_name()} value={section.name} />
 			{/snippet}
 		</Action>
 		{#if up}
 			<Action
 				action={() => move(up)}
-				label="Move section up"
+				label={m.staff_projects_id_section_menu_move_section_up()}
 				variant="ghost"
 				size="sm"
 				class="justify-start"
@@ -58,7 +62,7 @@
 		{#if down}
 			<Action
 				action={() => move(down)}
-				label="Move section down"
+				label={m.staff_projects_id_section_menu_move_section_down()}
 				variant="ghost"
 				size="sm"
 				class="justify-start"
@@ -66,14 +70,14 @@
 		{/if}
 		<Action
 			action={remove}
-			label="Delete section"
+			label={m.staff_projects_id_section_menu_delete_section()}
 			variant="error"
 			outline
 			size="sm"
 			class="justify-start"
-			modalTitle="Delete {section.name}?"
-			submitLabel="Delete section"
-			successToast="Section deleted"
+			modalTitle={m.staff_delete_2({ name: section.name })}
+			submitLabel={m.staff_projects_id_section_menu_delete_section()}
+			successToast={m.staff_projects_id_section_menu_section_deleted()}
 		>
 			{#snippet form()}
 				<input {...remove.fields.projectId.as('hidden', projectId)} />

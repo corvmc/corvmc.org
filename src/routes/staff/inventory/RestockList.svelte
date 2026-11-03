@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Table from '$lib/components/ui/Table.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -53,8 +54,8 @@
 
 {#if rows.length === 0}
 	<EmptyState
-		title="Nothing to restock"
-		description="Every counted item is above its reorder point."
+		title={m.staff_inventory_restock_list_title()}
+		description={m.staff_inventory_restock_list_description()}
 	/>
 {:else}
 	{#if outCount > 0}
@@ -67,19 +68,19 @@
 		<SectionLabel label={categoryName} />
 		<Table>
 			{#snippet head()}
-				<th>Item</th>
-				<th class="cell-num">On hand</th>
-				<th class="col-support cell-num">Reorder at</th>
-				<th class="cell-num">Buy</th>
-				<th class="col-support cell-num">On order</th>
-				<th class="w-px"><span class="sr-only">Actions</span></th>
+				<th>{m.staff_item()}</th>
+				<th class="cell-num">{m.staff_hand()}</th>
+				<th class="col-support cell-num">{m.staff_reorder_at()}</th>
+				<th class="cell-num">{m.staff_inventory_restock_list_buy()}</th>
+				<th class="col-support cell-num">{m.staff_order()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 			{/snippet}
 			{#each group as row (row.id)}
 				<tr class="hover">
 					<td class="cell-primary">
 						<a class="font-medium" href={resolve(`/staff/inventory/${row.id}`)}>{row.name}</a>
 						{#if row.isOut}
-							<Badge variant="error" size="xs">Out</Badge>
+							<Badge variant="error" size="xs">{m.staff_inventory_restock_list_out()}</Badge>
 						{/if}
 						{#if row.gtin}
 							<div class="font-mono text-subtle">{row.gtin}</div>
@@ -92,12 +93,14 @@
 							{row.suggestedOrder}
 							<span class="text-subtle">{row.unitOfMeasure}</span>
 						{:else}
-							<span class="text-subtle">covered</span>
+							<span class="text-subtle">{m.staff_inventory_restock_list_covered()}</span>
 						{/if}
 					</td>
 					<td class="col-support cell-num">
 						{#if row.onOrder > 0}
-							<Badge variant="info" size="xs">{row.onOrder} coming</Badge>
+							<Badge variant="info" size="xs"
+								>{m.staff_inventory_restock_list_coming({ onOrder: row.onOrder })}</Badge
+							>
 						{:else}
 							<span class="text-subtle">—</span>
 						{/if}
@@ -108,7 +111,7 @@
 								name="pick_{row.id}"
 								type="checkbox"
 								label={undefined}
-								checkboxLabel="Order"
+								checkboxLabel={m.staff_order_2()}
 								bind:value={picked[row.id]}
 							/>
 							<!-- Receiving from here: you come back from the shop with the list open. -->
@@ -123,15 +126,22 @@
 	{#if pickedRows.length > 0}
 		<!-- Sticky: the list is long and the choice is made while scrolling it. -->
 		<StickyBar>
-			<Form remote={markOrdered} successToast="Marked as ordered" onsuccess={() => (picked = {})}>
+			<Form
+				remote={markOrdered}
+				successToast={m.staff_inventory_restock_list_success_toast()}
+				onsuccess={() => (picked = {})}
+			>
 				<input type="hidden" name="lines" value={orderLines} />
 				<div class="flex flex-wrap items-end gap-3">
-					<Field field={fields.expectedAt} type="date" label="Expected" required />
-					<Field field={fields.supplierName} type="text" label="Supplier" />
-					<Field field={fields.reference} type="text" label="Reference" />
-					<Field field={fields.notes} type="text" label="Notes" />
+					<Field field={fields.expectedAt} type="date" label={m.staff_expected()} required />
+					<Field field={fields.supplierName} type="text" label={m.staff_supplier()} />
+					<Field field={fields.reference} type="text" label={m.staff_reference()} />
+					<Field field={fields.notes} type="text" label={m.staff_notes()} />
 					<SubmitButton
-						label="Mark {pickedRows.length} {pickedRows.length === 1 ? 'item' : 'items'} as ordered"
+						label={m.staff_inventory_restock_list_mark_as_ordered({
+							length: pickedRows.length,
+							value: pickedRows.length === 1 ? 'item' : 'items'
+						})}
 					/>
 				</div>
 			</Form>

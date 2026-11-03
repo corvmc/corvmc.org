@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The volunteer coordinator's dashboard.
 	 *
@@ -47,9 +48,11 @@
 	const waiting = $derived(work.waitingCount + work.lapsing.length);
 </script>
 
-<PageHeader title="Volunteering">
+<PageHeader title={m.staff_volunteering()}>
 	<!-- Not a sidebar row: roles are set up now and then, not worked daily (#1791). -->
-	<Button variant="ghost" size="sm" href={resolve('/staff/volunteer/roles')}>Roles</Button>
+	<Button variant="ghost" size="sm" href={resolve('/staff/volunteer/roles')}
+		>{m.staff_roles()}</Button
+	>
 	<LogHoursForMemberAction />
 	<NewWorkOrderAction />
 </PageHeader>
@@ -66,15 +69,21 @@
 			hidden when empty: a card on screen has to mean somebody is waiting.
 		-->
 		<EmptyState
-			title="Nothing waiting"
-			description="All claims confirmed, all hours reviewed, no short shifts in the next two weeks."
+			title={m.staff_volunteer_nothing_waiting()}
+			description={m.staff_volunteer_description()}
 		>
-			<p class="font-semibold">Nothing waiting</p>
-			<p>All claims confirmed, all hours reviewed, no short shifts in the next two weeks.</p>
+			<p class="font-semibold">{m.staff_volunteer_nothing_waiting()}</p>
+			<p>{m.staff_volunteer_description()}</p>
 			<div class="mt-4 flex flex-wrap justify-center gap-2">
-				<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule</Button>
-				<Button href="/staff/members/volunteers" variant="ghost" size="sm">Volunteers</Button>
-				<Button href="/staff/reports/volunteering" variant="ghost" size="sm">Report</Button>
+				<Button href="/staff/volunteer/schedule" variant="ghost" size="sm"
+					>{m.staff_schedule()}</Button
+				>
+				<Button href="/staff/members/volunteers" variant="ghost" size="sm"
+					>{m.staff_volunteers()}</Button
+				>
+				<Button href="/staff/reports/volunteering" variant="ghost" size="sm"
+					>{m.staff_report()}</Button
+				>
 			</div>
 		</EmptyState>
 	{/if}

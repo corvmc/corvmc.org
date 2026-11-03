@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Scheduled repairs whose window has passed with their equipment reports still
 	 * open, because staff did not flag them "close reports on completion" (#1544).
@@ -31,15 +32,17 @@
 	}
 </script>
 
-<InfoCard title="Unverified Repairs" state={total}>
-	<p class="text-muted">Finished work orders with open problem reports.</p>
+<InfoCard title={m.staff_volunteer_confirm_fixed_card_title()} state={total}>
+	<p class="text-muted">{m.staff_volunteer_confirm_fixed_card_finished_work_orders_with()}</p>
 
 	<Table>
 		{#snippet head()}
-			<th>Work</th>
-			<th class="col-support whitespace-nowrap">Finished</th>
-			<th class="col-support cell-num whitespace-nowrap">Reports</th>
-			<th class="w-px"><span class="sr-only">Actions</span></th>
+			<th>{m.staff_work()}</th>
+			<th class="col-support whitespace-nowrap">{m.staff_finished()}</th>
+			<th class="col-support cell-num whitespace-nowrap"
+				>{m.staff_volunteer_confirm_fixed_card_reports()}</th
+			>
+			<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 		{/snippet}
 
 		{#each orders as order (order.id)}
@@ -57,12 +60,14 @@
 				<td class="w-px">
 					<Action
 						action={resolveWorkOrder.for(order.id)}
-						label="Verify"
+						label={m.staff_volunteer_confirm_fixed_card_verify()}
 						variant="primary"
 						size="xs"
-						modalTitle="Verify {subject(order)} is fixed?"
-						submitLabel="Verify"
-						successToast="Verified"
+						modalTitle={m.staff_volunteer_confirm_fixed_card_modal_title({
+							subject: subject(order)
+						})}
+						submitLabel={m.staff_volunteer_confirm_fixed_card_verify()}
+						successToast={m.staff_volunteer_confirm_fixed_card_success_toast()}
 					>
 						{#snippet form()}
 							<input type="hidden" name="id" value={order.id} />
@@ -70,7 +75,11 @@
 								Closes the work order and its {order.reports}
 								{order.reports === 1 ? 'report' : 'reports'}, and tells each reporter it was fixed.
 							</p>
-							<FormField name="notes" label="What was done" type="textarea" />
+							<FormField
+								name="notes"
+								label={m.staff_volunteer_confirm_fixed_card_what_was_done()}
+								type="textarea"
+							/>
 						{/snippet}
 					</Action>
 				</td>

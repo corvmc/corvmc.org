@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -37,9 +38,11 @@
 	const attached = $derived([
 		...data.attachments.orders.map((order) => ({
 			kind: 'purchase_order',
-			kindLabel: order.reference ? `Purchase order ${order.reference}` : 'Purchase order',
+			kindLabel: order.reference
+				? m.staff_projects_id_budget_report_purchase_order({ reference: order.reference })
+				: m.staff_projects_id_budget_report_purchase_order_2(),
 			id: order.id,
-			label: order.supplierName ?? 'Order',
+			label: order.supplierName ?? m.staff_order_2(),
 			href: resolve(`/staff/inventory/orders/${order.id}`),
 			status: order.status as string | null,
 			date: order.placedAt,
@@ -47,7 +50,7 @@
 		})),
 		...data.attachments.acquisitions.map((acq) => ({
 			kind: 'acquisition',
-			kindLabel: 'Acquisition',
+			kindLabel: m.staff_acquisition(),
 			id: acq.id,
 			label: acq.sourceName ?? acq.kind,
 			href: resolve(`/staff/inventory/acquisitions/${acq.id}`),
@@ -62,30 +65,30 @@
 	]);
 
 	const attachKinds = [
-		{ value: 'purchase_order', label: 'Purchase order' },
-		{ value: 'work_order', label: 'Work order (lands in the task list)' },
-		{ value: 'acquisition', label: 'Acquisition' },
-		{ value: 'event_listing', label: 'Event' }
+		{ value: 'purchase_order', label: m.staff_projects_id_budget_report_purchase_order_2() },
+		{ value: 'work_order', label: m.staff_projects_id_budget_report_work_order_lands_task_list() },
+		{ value: 'acquisition', label: m.staff_acquisition() },
+		{ value: 'event_listing', label: m.staff_event() }
 	];
 </script>
 
 <div class="grid gap-4 lg:grid-cols-2">
-	<InfoCard title="Cash">
+	<InfoCard title={m.staff_projects_id_budget_report_cash()}>
 		<Table>
 			{#snippet head()}
-				<th>Source</th>
-				<th class="cell-num">Amount</th>
+				<th>{m.staff_source()}</th>
+				<th class="cell-num">{m.staff_amount()}</th>
 			{/snippet}
 			<tr>
-				<td>Contractors</td>
+				<td>{m.staff_projects_id_budget_report_contractors()}</td>
 				<td class="cell-num">{formatCents(burn.cash.contractorCents)}</td>
 			</tr>
 			<tr>
-				<td>Purchase orders</td>
+				<td>{m.staff_projects_id_budget_report_purchase_orders()}</td>
 				<td class="cell-num">{formatCents(burn.cash.purchaseOrderCents)}</td>
 			</tr>
 			<tr>
-				<td>Acquisitions</td>
+				<td>{m.staff_acquisitions()}</td>
 				<td class="cell-num">{formatCents(burn.cash.acquisitionCents)}</td>
 			</tr>
 			{#if project.kind === 'production' || burn.cash.showCents > 0}
@@ -93,24 +96,24 @@
 					<td>
 						Show costs
 						<span class="block text-subtle text-xs">
-							The cost sheet and guarantee top-ups; the bands' pool passes through
+							{m.staff_projects_id_budget_report_cost_sheet_guarantee_top_ups()}
 						</span>
 					</td>
 					<td class="cell-num">{formatCents(burn.cash.showCents)}</td>
 				</tr>
 			{/if}
 			<tr class="font-medium">
-				<td>Spent</td>
+				<td>{m.staff_spent()}</td>
 				<td class="cell-num">{formatCents(burn.cash.totalCents)}</td>
 			</tr>
 			<tr>
-				<td>Budget</td>
+				<td>{m.staff_budget()}</td>
 				<td class="cell-num">
 					{project.budgetCents === null ? 'None set' : formatCents(project.budgetCents)}
 				</td>
 			</tr>
 			<tr class="font-medium">
-				<td>Remaining</td>
+				<td>{m.staff_remaining()}</td>
 				<td class="cell-num {overBudget ? 'text-error' : ''}">
 					{burn.remainingCents === null ? '—' : signedCents(burn.remainingCents)}
 				</td>
@@ -118,19 +121,20 @@
 		</Table>
 	</InfoCard>
 
-	<InfoCard title="Contributed">
+	<InfoCard title={m.staff_projects_id_budget_report_contributed()}>
 		<Table>
 			{#snippet head()}
-				<th>Source</th>
-				<th class="cell-num">Value</th>
+				<th>{m.staff_source()}</th>
+				<th class="cell-num">{m.staff_value()}</th>
 			{/snippet}
 			<tr>
 				<td>
 					Volunteer time — impact value
 					<span class="block text-subtle text-xs">
-						{hrs(volunteerHours)}, every approved hour at {formatCents(
-							burn.contributed.hourValueCents
-						)}/hr
+						{m.staff_projects_id_budget_report_every_approved_hour_at_hr({
+							hrs: hrs(volunteerHours),
+							formatCents: formatCents(burn.contributed.hourValueCents)
+						})}
 					</span>
 				</td>
 				<td class="cell-num">{formatCents(burn.contributed.volunteerValueCents)}</td>
@@ -147,41 +151,48 @@
 				<td class="cell-num">{formatCents(burn.contributed.recognizableServicesCents)}</td>
 			</tr>
 			<tr>
-				<td>Donated services</td>
+				<td>{m.staff_projects_id_budget_report_donated_services()}</td>
 				<td class="cell-num">{formatCents(burn.contributed.donatedServicesCents)}</td>
 			</tr>
 			<tr>
-				<td>Donated goods</td>
+				<td>{m.staff_projects_id_budget_report_donated_goods()}</td>
 				<td class="cell-num">{formatCents(burn.contributed.donatedGoodsCents)}</td>
 			</tr>
 		</Table>
 		<p class="mt-2 text-subtle text-sm">
 			Never added to cash: donated time and goods belong in a grant report, not against a budget.
-			The first two rows are also not added to <em>each other</em> — a donated engineer's hour is in both,
-			so they are two answers to two different questions rather than parts of one total.
+			The first two rows are also not added to <em
+				>{m.staff_projects_id_budget_report_each_other()}</em
+			> — a donated engineer's hour is in both, so they are two answers to two different questions rather
+			than parts of one total.
 		</p>
 	</InfoCard>
 </div>
 
-<InfoCard title="Orders and acquisitions">
+<InfoCard title={m.staff_projects_id_budget_report_orders_acquisitions()}>
 	{#snippet header(title)}
 		<div class="flex items-center justify-between gap-2">
 			<CardTitle level={2}>{title}</CardTitle>
 			<Action
 				action={attachToProjectForm}
-				label="Attach"
+				label={m.staff_projects_id_budget_report_attach()}
 				size="sm"
-				modalTitle="Attach to this project"
-				successToast="Attached"
+				modalTitle={m.staff_projects_id_budget_report_attach_project()}
+				successToast={m.staff_projects_id_budget_report_attached()}
 			>
 				{#snippet form()}
 					<input {...attachFields.projectId.as('hidden', project.id)} />
-					<Field field={attachFields.kind} type="select" label="What" options={attachKinds} />
+					<Field
+						field={attachFields.kind}
+						type="select"
+						label={m.staff_what()}
+						options={attachKinds}
+					/>
 					<Field
 						field={attachFields.rowId}
 						type="text"
-						label="Id"
-						description="The row's id, copied from its own page."
+						label={m.staff_projects_id_budget_report_id()}
+						description={m.staff_projects_id_budget_report_row_s_id_copied_from()}
 					/>
 				{/snippet}
 			</Action>
@@ -191,11 +202,11 @@
 	{#if attached.length > 0}
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">Status</span></th>
-				<th class="cell-primary">Item</th>
-				<th class="col-support">Date</th>
-				<th class="cell-num">Amount</th>
-				<th class="w-px"><span class="sr-only">Actions</span></th>
+				<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+				<th class="cell-primary">{m.staff_item()}</th>
+				<th class="col-support">{m.staff_date()}</th>
+				<th class="cell-num">{m.staff_amount()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 			{/snippet}
 			{#each attached as row (row.id)}
 				<tr class="hover cursor-pointer" use:rowLink={row.href}>
@@ -213,11 +224,11 @@
 					<td class="w-px">
 						<Action
 							action={detachFromProjectForm.for(row.id)}
-							label="Detach"
+							label={m.staff_projects_id_budget_report_detach()}
 							variant="ghost"
 							size="xs"
-							modalTitle="Detach {row.label}?"
-							successToast="Detached"
+							modalTitle={m.staff_projects_id_budget_report_detach_2({ label: row.label })}
+							successToast={m.staff_projects_id_budget_report_detached()}
 						>
 							{#snippet form()}
 								<input {...detachFields.projectId.as('hidden', project.id)} />
@@ -234,8 +245,8 @@
 		</Table>
 	{:else}
 		<EmptyState
-			title="Nothing attached"
-			description="Attach a purchase order or an acquisition and its cost joins this project's spend."
+			title={m.staff_projects_id_budget_report_nothing_attached()}
+			description={m.staff_projects_id_budget_report_attach_purchase_order_acquis()}
 		/>
 	{/if}
 </InfoCard>

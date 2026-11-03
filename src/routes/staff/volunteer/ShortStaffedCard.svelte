@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Upcoming shifts with places nobody has taken, and a way to fill them from here.
 	 *
@@ -40,17 +41,23 @@
 	}
 </script>
 
-<InfoCard title="Understaffed Shifts" state="{total} in the next two weeks">
+<InfoCard
+	title={m.staff_volunteer_short_staffed_card_title()}
+	state="{total} in the next two weeks"
+>
 	{#snippet action()}
-		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
+		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm"
+			>{m.staff_schedule_2()}</Button
+		>
 	{/snippet}
 
 	<Table>
 		{#snippet head()}
-			<th class="whitespace-nowrap">When</th>
-			<th>Role</th>
-			<th class="cell-num whitespace-nowrap">Still need</th>
-			<th class="w-px"><span class="sr-only">Actions</span></th>
+			<th class="whitespace-nowrap">{m.staff_when()}</th>
+			<th>{m.staff_role()}</th>
+			<th class="cell-num whitespace-nowrap">{m.staff_volunteer_short_staffed_card_still_need()}</th
+			>
+			<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 		{/snippet}
 
 		{#each shifts as shift (shift.id)}
@@ -71,7 +78,9 @@
 
 				<td class="cell-num whitespace-nowrap">
 					<Badge variant="warning" size="sm">{shift.short}</Badge>
-					<span class="ml-1 text-subtle">of {shift.capacity}</span>
+					<span class="ml-1 text-subtle"
+						>{m.staff_volunteer_short_staffed_card_text({ capacity: shift.capacity })}</span
+					>
 				</td>
 
 				<td class="w-px">
@@ -79,7 +88,7 @@
 					     The candidate column is beside the roster now, so the place to
 					     decide who to ask is the place that shows who is already on it. -->
 					<Button href={resolve(`/staff/volunteer/shifts/${shift.id}`)} variant="ghost" size="xs">
-						Assign
+						{m.staff_assign()}
 					</Button>
 				</td>
 			</tr>

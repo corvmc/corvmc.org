@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -25,35 +26,37 @@
 	} = $props();
 
 	const owners = $derived([
-		{ value: '', label: 'Staff' },
+		{ value: '', label: m.staff_staff() },
 		...committees.map((c) => ({ value: c.id, label: c.name }))
 	]);
 
 	const STATE = {
-		done: { label: 'Done', variant: 'success' },
-		overdue: { label: 'Overdue', variant: 'error' },
-		open: { label: 'Open', variant: 'ghost' },
-		cancelled: { label: 'Cancelled', variant: 'ghost' }
+		done: { label: m.staff_events_id_production_deliverables_card_done(), variant: 'success' },
+		overdue: { label: m.staff_overdue(), variant: 'error' },
+		open: { label: m.staff_open(), variant: 'ghost' },
+		cancelled: { label: m.staff_cancelled(), variant: 'ghost' }
 	} as const;
 </script>
 
 {#if items.length > 0}
-	<InfoCard title="Deliverables">
+	<InfoCard title={m.staff_events_id_production_deliverables_card_title()}>
 		<Table>
 			{#snippet head()}
-				<th>Item</th>
-				<th>Owner</th>
-				<th>Who</th>
-				<th>Due</th>
-				<th class="w-px">State</th>
-				<th class="w-px"><span class="sr-only">Actions</span></th>
+				<th>{m.staff_item()}</th>
+				<th>{m.staff_events_id_production_deliverables_card_owner()}</th>
+				<th>{m.staff_events_id_production_deliverables_card_who()}</th>
+				<th>{m.staff_due()}</th>
+				<th class="w-px">{m.staff_events_id_production_deliverables_card_state()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 			{/snippet}
 			{#each items as item (item.id)}
 				<tr>
 					<td class="cell-primary">
 						{item.title}
 						{#if item.artAwaitingUse}
-							<div class="text-muted text-sm font-normal">Art is in; waiting for it to be used</div>
+							<div class="text-muted text-sm font-normal">
+								{m.staff_events_id_production_deliverables_card_art_waiting_use()}
+							</div>
 						{/if}
 					</td>
 					<td>{item.groupName ?? 'Staff'}</td>
@@ -70,20 +73,22 @@
 						{#if item.state === 'open' || item.state === 'overdue'}
 							<Action
 								action={reassignDeliverableForm.for(item.id)}
-								label="Reassign"
-								aria-label={`Reassign ${item.title}`}
-								modalTitle="Reassign"
-								submitLabel="Reassign"
+								label={m.staff_events_id_production_deliverables_card_reassign()}
+								aria-label={m.staff_events_id_production_deliverables_card_aria_label({
+									title: item.title
+								})}
+								modalTitle={m.staff_events_id_production_deliverables_card_reassign()}
+								submitLabel={m.staff_events_id_production_deliverables_card_reassign()}
 								variant="ghost"
 								size="xs"
-								successToast="Reassigned"
+								successToast={m.staff_events_id_production_deliverables_card_success_toast()}
 							>
 								{#snippet form()}
 									<input type="hidden" name="id" value={item.id} />
 									<input type="hidden" name="eventId" value={eventId} />
 									<FormField
 										name="groupId"
-										label="Owner"
+										label={m.staff_events_id_production_deliverables_card_owner()}
 										type="select"
 										options={owners}
 										value={item.groupId ?? ''}

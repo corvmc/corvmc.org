@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { withQuery } from '$lib/utils/with-query';
@@ -16,7 +17,7 @@
 
 <WorkOrderView
 	{view}
-	subtitle="Task"
+	subtitle={m.staff_task()}
 	parent={[{ label: view.project.name, href: withQuery(projectHref, `task=${view.shift.id}`) }]}
 >
 	{#snippet context()}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -62,7 +63,7 @@
 	const addFields = addRunOfShowSlot.fields;
 
 	const actOptions = $derived([
-		{ value: '', label: 'Not on the bill (a DJ, a host)' },
+		{ value: '', label: m.staff_events_id_production_run_of_show_panel_not_bill_dj_hos() },
 		...(runOfShow?.unslotted ?? []).map((act) => ({ value: act.eventBandId, label: act.name }))
 	]);
 
@@ -75,11 +76,11 @@
 
 {#if !runOfShow}
 	<EmptyState
-		title="No production yet"
-		description="Open one on the Overview tab, and the running order lives here."
+		title={m.staff_events_id_production_run_of_show_panel_no_production_y()}
+		description={m.staff_events_id_production_run_of_show_panel_open_one_overvi()}
 	/>
 {:else}
-	<InfoCard title="The night">
+	<InfoCard title={m.staff_night()}>
 		<div class="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
 			<span>
 				First set
@@ -102,7 +103,7 @@
 			as a bug rather than as a question nobody has answered yet.
 		-->
 		<Alert type="warning">
-			Set the first set time on the Overview tab and the running order will schedule itself.
+			{m.staff_events_id_production_run_of_show_panel_set_first_set_t()}
 		</Alert>
 	{/if}
 
@@ -111,13 +112,19 @@
 	{/each}
 
 	{#if runOfShow.slots.length === 0}
-		<EmptyState title="Nothing on stage yet" description="Build the running order from the bill.">
-			<Form remote={buildRunOfShowFromLineup} successToast="Running order built">
+		<EmptyState
+			title={m.staff_events_id_production_run_of_show_panel_nothing_stage_y()}
+			description={m.staff_events_id_production_run_of_show_panel_build_running_o()}
+		>
+			<Form
+				remote={buildRunOfShowFromLineup}
+				successToast={m.staff_events_id_production_run_of_show_panel_running_order_b()}
+			>
 				<input {...buildRunOfShowFromLineup.fields.eventId.as('hidden', eventId)} />
 				<input
 					{...buildRunOfShowFromLineup.fields.productionId.as('hidden', runOfShow.productionId)}
 				/>
-				<SubmitButton label="Build from the bill" />
+				<SubmitButton label={m.staff_events_id_production_run_of_show_panel_build_from_bill()} />
 			</Form>
 		</EmptyState>
 	{:else}
@@ -147,7 +154,9 @@
 										)}{/if}
 									{#if drift !== null}
 										<span class:text-error={drift > 0} class:text-success={drift <= 0}>
-											{drift > 0 ? `+${drift}` : drift}m
+											{m.staff_events_id_production_run_of_show_panel_m({
+												value: drift > 0 ? `+${drift}` : drift
+											})}
 										</span>
 									{/if}
 								</div>
@@ -162,9 +171,14 @@
 								{/if}
 							</div>
 							<div class="text-subtle">
-								{slot.setLengthMinutes} min set · {slot.changeoverMinutes} min changeover
+								{m.staff_events_id_production_run_of_show_panel_min_set_min_cha({
+									setLengthMinutes: slot.setLengthMinutes,
+									changeoverMinutes: slot.changeoverMinutes
+								})}
 								{#if slot.soundcheckAt}
-									· soundcheck {formatTime(slot.soundcheckAt)}
+									{m.staff_events_id_production_run_of_show_panel_soundcheck({
+										formatTime: formatTime(slot.soundcheckAt)
+									})}
 								{/if}
 							</div>
 							{#if slot.eventBandId}
@@ -182,7 +196,10 @@
 							     button on every finished row is three quarters of the
 							     running order by the end of the night. Undo is the way back. -->
 							{#if !slot.actualEndAt}
-								<Form remote={clock} successToast="Noted">
+								<Form
+									remote={clock}
+									successToast={m.staff_events_id_production_run_of_show_panel_noted()}
+								>
 									<input {...clock.fields.slotId.as('hidden', slot.id)} />
 									<input {...clock.fields.eventId.as('hidden', eventId)} />
 									<input
@@ -190,19 +207,19 @@
 									/>
 									<input {...clock.fields.action.as('hidden', 'now')} />
 									<SubmitButton
-										label={slot.actualStartAt ? 'Finished' : 'Started'}
+										label={slot.actualStartAt ? m.staff_finished() : m.staff_started()}
 										variant={slot.actualStartAt ? 'default' : 'primary'}
 										size="xs"
 									/>
 								</Form>
 							{/if}
 							{#if slot.actualStartAt}
-								<Form remote={undo} successToast="Cleared">
+								<Form remote={undo} successToast={m.staff_cleared()}>
 									<input {...undo.fields.slotId.as('hidden', slot.id)} />
 									<input {...undo.fields.eventId.as('hidden', eventId)} />
 									<input {...undo.fields.edge.as('hidden', slot.actualEndAt ? 'end' : 'start')} />
 									<input {...undo.fields.action.as('hidden', 'clear')} />
-									<SubmitButton label="Undo" variant="ghost" size="xs" />
+									<SubmitButton label={m.staff_undo()} variant="ghost" size="xs" />
 								</Form>
 							{/if}
 						</div>
@@ -218,7 +235,7 @@
 								<input {...up.fields.slotId.as('hidden', slot.id)} />
 								<input {...up.fields.direction.as('hidden', 'up')} />
 								<SubmitButton
-									label="Up"
+									label={m.staff_events_id_production_run_of_show_panel_up()}
 									variant="ghost"
 									size="sm"
 									icon={upIcon}
@@ -230,7 +247,7 @@
 								<input {...down.fields.slotId.as('hidden', slot.id)} />
 								<input {...down.fields.direction.as('hidden', 'down')} />
 								<SubmitButton
-									label="Down"
+									label={m.staff_events_id_production_run_of_show_panel_down()}
 									variant="ghost"
 									size="sm"
 									icon={downIcon}
@@ -246,16 +263,16 @@
 							</Button>
 							<Action
 								action={drop}
-								label="Remove"
+								label={m.staff_remove()}
 								iconOnly
 								icon={trashIcon}
 								variant="ghost"
 								size="sm"
 								class="text-error"
-								modalTitle="Remove this set?"
-								submitLabel="Remove"
+								modalTitle={m.staff_events_id_production_run_of_show_panel_modal_title()}
+								submitLabel={m.staff_remove()}
 								submitVariant="error"
-								successToast="Set removed"
+								successToast={m.staff_events_id_production_run_of_show_panel_set_removed()}
 							>
 								{#snippet form()}
 									<input {...drop.fields.eventId.as('hidden', eventId)} />
@@ -274,7 +291,7 @@
 					{/each}
 
 					{#if openSlotId === slot.id}
-						<Form remote={edit} guard successToast="Saved" class="mt-3 space-y-4">
+						<Form remote={edit} guard successToast={m.staff_saved()} class="mt-3 space-y-4">
 							<input {...edit.fields.eventId.as('hidden', eventId)} />
 							<input {...edit.fields.slotId.as('hidden', slot.id)} />
 							<input {...edit.fields.soundcheckDate.as('hidden', showDate)} />
@@ -282,58 +299,58 @@
 								<Field
 									field={edit.fields.setLengthMinutes}
 									type="number"
-									label="Set length (minutes)"
+									label={m.staff_events_id_production_run_of_show_panel_set_length_minu()}
 									value={slot.setLengthMinutes}
 								/>
 								<Field
 									field={edit.fields.changeoverMinutes}
 									type="number"
-									label="Changeover after (minutes)"
+									label={m.staff_events_id_production_run_of_show_panel_changeover_afte()}
 									value={slot.changeoverMinutes}
 								/>
 								<Field
 									field={edit.fields.soundcheckTime}
 									type="time"
-									label="Soundcheck"
+									label={m.staff_soundcheck()}
 									value={slot.soundcheckAt ? toLocalTime(slot.soundcheckAt) : ''}
-									description="Not part of the schedule — it usually runs in reverse."
+									description={m.staff_events_id_production_run_of_show_panel_not_part_schedu()}
 								/>
 							</div>
 							<Field
 								field={edit.fields.techNotes}
 								type="textarea"
-								label="Tech notes"
+								label={m.staff_events_id_production_run_of_show_panel_tech_notes()}
 								value={slot.techNotes ?? ''}
 							/>
 							<Field
 								field={edit.fields.backlineNeeds}
 								type="textarea"
-								label="Backline"
+								label={m.staff_events_id_production_run_of_show_panel_backline()}
 								value={slot.backlineNeeds ?? ''}
 							/>
 							<Field
 								field={edit.fields.hospitalityNotes}
 								type="textarea"
-								label="Hospitality"
+								label={m.staff_hospitality()}
 								value={slot.hospitalityNotes ?? ''}
 							/>
 							<div class="grid gap-4 md:grid-cols-3">
 								<Field
 									field={edit.fields.contactName}
-									label="Contact for this show"
+									label={m.staff_events_id_production_run_of_show_panel_contact_show()}
 									value={slot.contactName ?? ''}
-									description="A tour manager, when it is not the band's usual contact."
+									description={m.staff_events_id_production_run_of_show_panel_tour_manager_wh()}
 								/>
 								<Field
 									field={edit.fields.contactEmail}
 									type="email"
-									label="Email"
+									label={m.staff_email()}
 									value={slot.contactEmail ?? ''}
 								/>
 								<Field
 									field={edit.fields.contactPhone}
 									type="tel"
-									label="Phone"
+									label={m.staff_phone()}
 									value={slot.contactPhone ?? ''}
 								/>
 							</div>
@@ -350,7 +367,7 @@
 								{:else}
 									<span></span>
 								{/if}
-								<SubmitButton label="Save" />
+								<SubmitButton label={m.staff_save()} />
 							</div>
 						</Form>
 
@@ -361,49 +378,58 @@
 								what an act is paid are different questions, edited by different
 								people, and a settlement capability would guard one of them.
 							-->
-							<Form remote={terms} guard successToast="Terms saved" class="mt-4 space-y-4">
+							<Form
+								remote={terms}
+								guard
+								successToast={m.staff_events_id_production_run_of_show_panel_terms_saved()}
+								class="mt-4 space-y-4"
+							>
 								<input {...terms.fields.eventId.as('hidden', eventId)} />
 								<input {...terms.fields.slotId.as('hidden', slot.id)} />
-								<h3 class="text-sm font-semibold">The deal</h3>
+								<h3 class="text-sm font-semibold">
+									{m.staff_events_id_production_run_of_show_panel_deal()}
+								</h3>
 								<div class="grid gap-4 md:grid-cols-2">
 									<MoneyField
 										field={terms.fields.guaranteeCents}
-										label="Guarantee"
+										label={m.staff_events_id_production_run_of_show_panel_guarantee()}
 										value={slot.terms.guaranteeCents}
-										description="Leave empty for no guarantee. Zero is a deal at zero."
+										description={m.staff_events_id_production_run_of_show_panel_leave_empty_no()}
 									/>
 									<Field
 										field={terms.fields.percentageBps}
 										type="number"
-										label="Percentage (basis points)"
+										label={m.staff_events_id_production_run_of_show_panel_percentage_basi()}
 										value={slot.terms.percentageBps ?? undefined}
-										description="7000 is 70%."
+										description={m.staff_events_id_production_run_of_show_panel_7000_70()}
 									/>
 								</div>
 								<Field
 									field={terms.fields.versus}
 									type="checkbox"
-									label="Versus"
-									checkboxLabel="Pay the guarantee or the percentage, whichever is greater"
+									label={m.staff_events_id_production_run_of_show_panel_versus()}
+									checkboxLabel={m.staff_events_id_production_run_of_show_panel_pay_guarantee_p()}
 									value={slot.terms.versus}
 								/>
 								<Field
 									field={terms.fields.againstNet}
 									type="checkbox"
-									label="Against net"
-									checkboxLabel="The percentage is of net rather than of the bands' pool"
+									label={m.staff_events_id_production_run_of_show_panel_against_net()}
+									checkboxLabel={m.staff_events_id_production_run_of_show_panel_percentage_net()}
 									value={slot.terms.againstNet}
 								/>
 								<Field
 									field={terms.fields.contributed}
 									type="checkbox"
-									label="Donated"
-									checkboxLabel="Played for free — records what the set was worth"
+									label={m.staff_events_id_production_run_of_show_panel_donated()}
+									checkboxLabel={m.staff_events_id_production_run_of_show_panel_played_free_rec()}
 									value={slot.terms.contributed}
 								/>
 								<div class="flex items-center justify-between gap-3">
 									<span class="text-subtle">{describeTerms(slot.terms)}</span>
-									<SubmitButton label="Save terms" />
+									<SubmitButton
+										label={m.staff_events_id_production_run_of_show_panel_save_terms()}
+									/>
 								</div>
 							</Form>
 						{/if}
@@ -413,33 +439,46 @@
 		</ul>
 	{/if}
 
-	<InfoCard title="Add a set">
-		<Form remote={addRunOfShowSlot} successToast="Set added" class="space-y-4">
+	<InfoCard title={m.staff_events_id_production_run_of_show_panel_add_set()}>
+		<Form
+			remote={addRunOfShowSlot}
+			successToast={m.staff_events_id_production_run_of_show_panel_set_added()}
+			class="space-y-4"
+		>
 			<input {...addFields.eventId.as('hidden', eventId)} />
 			<input {...addFields.productionId.as('hidden', runOfShow.productionId)} />
 			<div class="grid gap-4 md:grid-cols-3">
-				<Field field={addFields.eventBandId} type="select" label="Band" options={actOptions} />
+				<Field
+					field={addFields.eventBandId}
+					type="select"
+					label={m.staff_band()}
+					options={actOptions}
+				/>
 				<Field
 					field={addFields.setLengthMinutes}
 					type="number"
-					label="Set length (minutes)"
+					label={m.staff_events_id_production_run_of_show_panel_set_length_minu()}
 					value={30}
 				/>
 				<Field
 					field={addFields.changeoverMinutes}
 					type="number"
-					label="Changeover after (minutes)"
+					label={m.staff_events_id_production_run_of_show_panel_changeover_afte()}
 					value={10}
 				/>
 			</div>
-			<div class="flex justify-end"><SubmitButton label="Add" /></div>
+			<div class="flex justify-end"><SubmitButton label={m.staff_add()} /></div>
 		</Form>
 		{#if runOfShow.unslotted.length > 0}
 			<p class="mt-2 text-subtle">
-				Still off the running order: {runOfShow.unslotted.map((a) => a.name).join(', ')}
+				{m.staff_events_id_production_run_of_show_panel_still_off_runni({
+					join: runOfShow.unslotted.map((a) => a.name).join(', ')
+				})}
 			</p>
 		{:else if runOfShow.slots.length > 0}
-			<p class="mt-2 text-subtle">Every band on the bill has a set.</p>
+			<p class="mt-2 text-subtle">
+				{m.staff_events_id_production_run_of_show_panel_every_band_bill()}
+			</p>
 		{/if}
 	</InfoCard>
 {/if}

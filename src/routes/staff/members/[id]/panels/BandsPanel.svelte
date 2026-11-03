@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { getUserBands } from '$lib/remote/bands.remote';
 	import { getUserShows, getUserTicketsAndRsvps } from '$lib/remote/events.remote';
 	import { getUserListings } from '$lib/remote/community-events.remote';
@@ -20,10 +21,13 @@
 	traversable band → members, so a staff member holding a name had no way to
 	reach the bands behind it.
 -->
-<RelatedList title="Bands" result={getUserBands(id)}>
+<RelatedList title={m.staff_members_id_panels_bands_panel_bands()} result={getUserBands(id)}>
 	{#snippet children(bands)}
 		{#if bands.length === 0}
-			<EmptyState title="Not in any bands" description="No band membership or invitation." />
+			<EmptyState
+				title={m.staff_members_id_panels_bands_panel_not_any_bands()}
+				description={m.staff_members_id_panels_bands_panel_no_band_membership_invit()}
+			/>
 		{:else}
 			<ul class="flex flex-col gap-2">
 				{#each bands as b (b.id)}
@@ -33,7 +37,9 @@
 							{#snippet meta()}
 								<StatusBadge status={b.role} label />
 								{#if b.status !== 'active'}
-									<Badge variant="warning" size="sm">Invite pending</Badge>
+									<Badge variant="warning" size="sm"
+										>{m.staff_members_id_panels_bands_panel_invite_pending()}</Badge
+									>
 								{/if}
 							{/snippet}
 						</EntityIdentity>
@@ -44,22 +50,25 @@
 	{/snippet}
 </RelatedList>
 
-<RelatedList title="Shows played" result={getUserShows(id)}>
+<RelatedList title={m.staff_members_id_panels_bands_panel_shows_played()} result={getUserShows(id)}>
 	{#snippet children(shows)}
 		{#if shows.upcoming.length === 0 && shows.past.length === 0}
 			<EmptyState
-				title="No shows"
-				description="No published show credits this member's bands are confirmed on."
+				title={m.staff_members_id_panels_bands_panel_no_shows()}
+				description={m.staff_members_id_panels_bands_panel_no_published_show_credit()}
 			/>
 		{:else}
 			<p class="mb-3 text-muted">
-				{shows.upcoming.length} upcoming · {shows.pastCount} played
+				{m.staff_members_id_panels_bands_panel_upcoming_played({
+					length: shows.upcoming.length,
+					pastCount: shows.pastCount
+				})}
 			</p>
 			<Table>
 				{#snippet head()}
-					<th>Show</th>
-					<th class="col-support">With</th>
-					<th class="col-extra">Date</th>
+					<th>{m.staff_show()}</th>
+					<th class="col-support">{m.staff_members_id_panels_bands_panel_with()}</th>
+					<th class="col-extra">{m.staff_date()}</th>
 				{/snippet}
 				{#each [...shows.upcoming, ...shows.past] as show (show.id)}
 					<tr class="hover" use:rowLink={resolve(`/staff/events/${show.id}`)}>
@@ -75,21 +84,25 @@
 	{/snippet}
 </RelatedList>
 
-<RelatedList title="Community listings" result={getUserListings(id)}>
+<RelatedList title={m.staff_community_listings()} result={getUserListings(id)}>
 	{#snippet children(data)}
 		{@const all = [...data.rejected, ...data.listings]}
 		{#if all.length === 0}
 			<EmptyState
-				title="No listings"
-				description="This member has never submitted an event to the community calendar."
+				title={m.staff_members_id_panels_bands_panel_no_listings()}
+				description={m.staff_members_id_panels_bands_panel_member_has_never_submitt()}
 			/>
 		{:else}
-			<p class="mb-3 text-muted">{data.publishedCount} currently on the public calendar</p>
+			<p class="mb-3 text-muted">
+				{m.staff_members_id_panels_bands_panel_currently_public_calenda({
+					publishedCount: data.publishedCount
+				})}
+			</p>
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Listing</th>
-					<th class="col-extra">Date</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+					<th>{m.staff_listing()}</th>
+					<th class="col-extra">{m.staff_date()}</th>
 				{/snippet}
 				{#each all as e (e.id)}
 					<tr class="hover" use:rowLink={resolve(`/staff/events/${e.id}`)}>
@@ -107,20 +120,23 @@
 	{/snippet}
 </RelatedList>
 
-<RelatedList title="Tickets & RSVPs" result={getUserTicketsAndRsvps(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_bands_panel_tickets_rsvps()}
+	result={getUserTicketsAndRsvps(id)}
+>
 	{#snippet children(data)}
 		{#if data.tickets.length === 0 && data.rsvps.length === 0}
 			<EmptyState
-				title="No tickets or RSVPs"
-				description="This member has not booked onto an event as an attendee."
+				title={m.staff_members_id_panels_bands_panel_no_tickets_rsvps()}
+				description={m.staff_members_id_panels_bands_panel_member_has_not_booked_on()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Event</th>
-					<th class="col-support">Kind</th>
-					<th class="col-extra">Date</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+					<th>{m.staff_event()}</th>
+					<th class="col-support">{m.staff_kind()}</th>
+					<th class="col-extra">{m.staff_date()}</th>
 				{/snippet}
 				{#each data.tickets as t (t.id)}
 					<tr class="hover" use:rowLink={resolve(`/staff/events/${t.eventId}`)}>
@@ -130,7 +146,7 @@
 								{#snippet subtitle()}{t.code}{/snippet}
 							</EntityIdentity>
 						</td>
-						<td class="col-support">Ticket</td>
+						<td class="col-support">{m.staff_members_id_panels_bands_panel_ticket()}</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(t.eventStartsAt)}</td>
 					</tr>
 				{/each}
@@ -138,7 +154,7 @@
 					<tr class="hover" use:rowLink={resolve(`/staff/events/${r.eventId}`)}>
 						<td class="w-px"><StatusBadge status={r.eventStatus} /></td>
 						<td class="cell-primary"><EntityIdentity ref={r.ref} /></td>
-						<td class="col-support">RSVP</td>
+						<td class="col-support">{m.staff_members_id_panels_bands_panel_rsvp()}</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(r.startsAt)}</td>
 					</tr>
 				{/each}

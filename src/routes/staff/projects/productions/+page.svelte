@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -109,21 +110,26 @@
 	}
 </script>
 
-<PageHeader title="Projects">
+<PageHeader title={m.staff_projects()}>
 	<NewProductionAction />
 </PageHeader>
 <PageContent>
 	<ProjectViews active="productions" />
 	<FilterBar {activeCount} onclear={clearFilters}>
-		<Select size="sm" aria-label="Status" bind:value={status} onchange={() => (page = 1)}>
-			<option value="">Every status</option>
-			<option value="draft">Draft</option>
-			<option value="published">Published</option>
-			<option value="cancelled">Cancelled</option>
+		<Select size="sm" aria-label={m.staff_status()} bind:value={status} onchange={() => (page = 1)}>
+			<option value="">{m.staff_projects_productions_every_status()}</option>
+			<option value="draft">{m.staff_projects_productions_draft()}</option>
+			<option value="published">{m.staff_projects_productions_published()}</option>
+			<option value="cancelled">{m.staff_cancelled()}</option>
 		</Select>
 		{#await result then data}
-			<Select size="sm" aria-label="Venue" bind:value={venueId} onchange={() => (page = 1)}>
-				<option value="">Every venue</option>
+			<Select
+				size="sm"
+				aria-label={m.staff_projects_productions_venue()}
+				bind:value={venueId}
+				onchange={() => (page = 1)}
+			>
+				<option value="">{m.staff_projects_productions_every_venue()}</option>
 				{#each data.venues as v (v.id)}
 					<option value={v.id}>{v.name}</option>
 				{/each}
@@ -131,14 +137,14 @@
 		{/await}
 		<input
 			type="date"
-			aria-label="From date"
+			aria-label={m.staff_projects_productions_from_date()}
 			class="input input-sm"
 			bind:value={dateFrom}
 			onchange={() => (page = 1)}
 		/>
 		<input
 			type="date"
-			aria-label="To date"
+			aria-label={m.staff_projects_productions_date()}
 			class="input input-sm"
 			bind:value={dateTo}
 			onchange={() => (page = 1)}
@@ -150,24 +156,26 @@
 				bind:checked={needsActs}
 				onchange={() => (page = 1)}
 			/>
-			Short of bands
+			{m.staff_projects_productions_short_bands()}
 		</label>
 	</FilterBar>
 
-	<DataList {result} empty="No events yet" onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_projects_productions_empty()} onpage={(p) => (page = p)}>
 		{#snippet children(events)}
 			<!-- No zebra: the bg-base-200 day-group rows are the striping here. -->
 			<Table zebra={false}>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Listing status</span></th>
-					<th>Event</th>
+					<th class="w-px"
+						><span class="sr-only">{m.staff_projects_productions_listing_status()}</span></th
+					>
+					<th>{m.staff_event()}</th>
 					<!-- Two statuses, two columns, both labelled. The glyph on the left
 					     is the listing's — is it on the guide — and this one is the
 					     production's — how far through putting it on we are. -->
-					<th class="col-support w-px">Status</th>
-					<th class="col-support">Lineup</th>
-					<th class="col-extra">Venue</th>
-					<th class="col-extra">Tags</th>
+					<th class="col-support w-px">{m.staff_status()}</th>
+					<th class="col-support">{m.staff_projects_productions_lineup()}</th>
+					<th class="col-extra">{m.staff_projects_productions_venue()}</th>
+					<th class="col-extra">{m.staff_tags()}</th>
 				{/snippet}
 
 				{#each events as e, idx (e.id)}
@@ -200,7 +208,8 @@
 							{#if e.productionStatus}
 								<StatusBadge status={e.productionStatus} label />
 							{:else}
-								<span class="whitespace-nowrap text-base-content/50">No production</span>
+								<span class="whitespace-nowrap text-base-content/50">{m.staff_no_production()}</span
+								>
 							{/if}
 						</td>
 						<td class="col-support whitespace-nowrap">
@@ -213,7 +222,9 @@
 							     nothing to be short of, which is why an unset one shows
 							     nothing rather than "0 wanted" (#859). -->
 							{#if e.lineup.short > 0}
-								<Badge variant="warning" size="xs">needs {e.lineup.short}</Badge>
+								<Badge variant="warning" size="xs"
+									>{m.staff_projects_productions_needs({ short: e.lineup.short })}</Badge
+								>
 							{/if}
 						</td>
 						<td class="col-extra">

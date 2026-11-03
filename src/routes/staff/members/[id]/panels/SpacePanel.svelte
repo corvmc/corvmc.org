@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { getUserReservations } from '$lib/remote/users.remote';
 	import { getUserRecurringSeries } from '$lib/remote/reservations.remote';
 	import { getUserLoans } from '$lib/remote/inventory.remote';
@@ -21,30 +22,38 @@
      is coming in, and has anyone shown them where anything is? -->
 <OrientationCard {id} />
 
-<RelatedList title="Reservations" result={getUserReservations(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_space_panel_reservations()}
+	result={getUserReservations(id)}
+>
 	{#snippet children(data)}
 		{#if data.counts.upcoming === 0 && data.counts.past === 0}
 			<EmptyState
-				title="No reservations"
-				description="Nothing booked by this member, or by a band they're in."
+				title={m.staff_members_id_panels_space_panel_no_reservations()}
+				description={m.staff_members_id_panels_space_panel_nothing_booked_by_member()}
 			/>
 		{:else}
 			<p class="mb-3 text-muted">
-				{data.counts.upcoming} upcoming · {data.counts.past} past
+				{m.staff_members_id_panels_space_panel_upcoming_past({
+					upcoming: data.counts.upcoming,
+					past: data.counts.past
+				})}
 				{#if data.counts.unpaid > 0}
-					· <span class="text-warning">{data.counts.unpaid} unpaid</span>
+					· <span class="text-warning"
+						>{m.staff_members_id_panels_space_panel_unpaid({ unpaid: data.counts.unpaid })}</span
+					>
 				{/if}
 			</p>
 
-			{#each [{ label: 'Upcoming', rows: data.upcoming }, { label: 'Past', rows: data.past }] as group (group.label)}
+			{#each [{ label: m.staff_members_id_panels_space_panel_upcoming(), rows: data.upcoming }, { label: m.staff_members_id_panels_space_panel_past(), rows: data.past }] as group (group.label)}
 				{#if group.rows.length > 0}
 					<h4 class="mt-3 mb-1 text-subtle font-semibold uppercase">{group.label}</h4>
 					<Table>
 						{#snippet head()}
-							<th class="w-px"><span class="sr-only">Status</span></th>
-							<th>When</th>
-							<th class="col-support">Booked by</th>
-							<th class="col-extra cell-num">Owed</th>
+							<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+							<th>{m.staff_when()}</th>
+							<th class="col-support">{m.staff_members_id_panels_space_panel_booked_by()}</th>
+							<th class="col-extra cell-num">{m.staff_members_id_panels_space_panel_owed()}</th>
 						{/snippet}
 						{#each group.rows as r (r.id)}
 							<tr class="hover" use:rowLink={resolve(`/staff/reservations/${r.id}`)}>
@@ -89,16 +98,22 @@
 	{/snippet}
 </RelatedList>
 
-<RelatedList title="Recurring bookings" result={getUserRecurringSeries(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_space_panel_recurring_bookings()}
+	result={getUserRecurringSeries(id)}
+>
 	{#snippet children(series)}
 		{#if series.length === 0}
-			<EmptyState title="No recurring bookings" description="No standing weekly or monthly slot." />
+			<EmptyState
+				title={m.staff_members_id_panels_space_panel_no_recurring_bookings()}
+				description={m.staff_members_id_panels_space_panel_no_standing_weekly_month()}
+			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Pattern</th>
-					<th class="col-support">Time</th>
-					<th class="col-extra">Runs until</th>
+					<th>{m.staff_members_id_panels_space_panel_pattern()}</th>
+					<th class="col-support">{m.staff_members_id_panels_space_panel_time()}</th>
+					<th class="col-extra">{m.staff_members_id_panels_space_panel_runs_until()}</th>
 				{/snippet}
 				{#each series as s (s.id)}
 					<tr class="hover" use:rowLink={resolve(`/staff/recurring/${s.id}`)}>
@@ -118,17 +133,23 @@
 	{/snippet}
 </RelatedList>
 
-<RelatedList title="Equipment loans" result={getUserLoans(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_space_panel_equipment_loans()}
+	result={getUserLoans(id)}
+>
 	{#snippet children(loans)}
 		{#if loans.length === 0}
-			<EmptyState title="No loans" description="This member has never borrowed equipment." />
+			<EmptyState
+				title={m.staff_members_id_panels_space_panel_no_loans()}
+				description={m.staff_members_id_panels_space_panel_member_has_never_borrowe()}
+			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Item</th>
-					<th class="col-support">Due</th>
-					<th class="col-extra">Returned</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+					<th>{m.staff_item()}</th>
+					<th class="col-support">{m.staff_due()}</th>
+					<th class="col-extra">{m.staff_returned()}</th>
 				{/snippet}
 				{#each loans as loan (loan.id)}
 					<tr class="hover" use:rowLink={resolve(`/staff/inventory/loans/${loan.id}`)}>
@@ -145,7 +166,7 @@
 							{#if loan.dueDate}
 								{formatDateShortYear(loan.dueDate)}
 								{#if loan.isOverdue}
-									<Badge variant="error" size="sm">Overdue</Badge>
+									<Badge variant="error" size="sm">{m.staff_overdue()}</Badge>
 								{/if}
 							{:else}
 								—

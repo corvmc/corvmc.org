@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { IconUser } from '@tabler/icons-svelte';
 	import Avatar from '$lib/components/ui/Avatar.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -29,7 +30,7 @@
 		</Badge>
 	</span>
 {:else if task.people.length === 0 && task.capacity < 1}
-	<span class="text-muted">Unassigned</span>
+	<span class="text-muted">{m.staff_unassigned()}</span>
 {:else}
 	<span class="flex min-w-0 items-center gap-2">
 		<span class="flex shrink-0 -space-x-1.5" aria-hidden="true" data-assigned-stack>

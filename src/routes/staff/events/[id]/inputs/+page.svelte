@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { fullDate } from '$lib/utils/format';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
@@ -39,7 +40,7 @@
 </script>
 
 <svelte:head>
-	<title>Input list — {data.title}</title>
+	<title>{m.staff_events_id_inputs_input_list({ title: data.title })}</title>
 	<style>
 		@media print {
 			.no-print {
@@ -68,30 +69,34 @@
 <!-- Below the app topbar, not over it: this page renders inside the staff panel
      and `top-4` would cover the account menu. -->
 <div class="no-print fixed top-16 right-4 z-50 flex gap-2">
-	<Button variant="primary" size="sm" onclick={() => window.print()}>Print</Button>
-	<Button href={exportHref} variant="ghost" size="sm" data-sveltekit-reload>Download CSV</Button>
-	<Button href={backHref} variant="ghost" size="sm">&larr; Production</Button>
+	<Button variant="primary" size="sm" onclick={() => window.print()}
+		>{m.staff_events_id_inputs_print()}</Button
+	>
+	<Button href={exportHref} variant="ghost" size="sm" data-sveltekit-reload
+		>{m.staff_events_id_inputs_download_csv()}</Button
+	>
+	<Button href={backHref} variant="ghost" size="sm">{m.staff_events_id_inputs_production()}</Button>
 </div>
 
 <div class="bill-page mx-auto max-w-3xl">
 	<header class="mb-6 border-b-2 border-gray-200 pb-4">
 		<h1 class="text-3xl font-bold">{data.title}</h1>
-		<p class="text-sm text-gray-600">{dateLabel} · input list for the night</p>
+		<p class="text-sm text-gray-600">{m.staff_events_id_inputs_input_list_night({ dateLabel })}</p>
 		<dl class="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
 			<div>
-				<dt class="text-gray-500">Channels</dt>
+				<dt class="text-gray-500">{m.staff_channels()}</dt>
 				<dd class="font-semibold">{data.channelCount}</dd>
 			</div>
 			<div>
-				<dt class="text-gray-500">If repeats shared</dt>
+				<dt class="text-gray-500">{m.staff_events_id_inputs_if_repeats_shared()}</dt>
 				<dd class="font-semibold">{data.distinctCount}</dd>
 			</div>
 			<div>
-				<dt class="text-gray-500">Need +48V</dt>
+				<dt class="text-gray-500">{m.staff_events_id_inputs_need_48v()}</dt>
 				<dd class="font-semibold">{data.phantomCount}</dd>
 			</div>
 			<div>
-				<dt class="text-gray-500">Desk takes</dt>
+				<dt class="text-gray-500">{m.staff_events_id_inputs_desk_takes()}</dt>
 				<dd class="font-semibold">{data.consoleChannels || '—'}</dd>
 			</div>
 		</dl>
@@ -116,25 +121,29 @@
 
 	{#if silent.length}
 		<p class="mb-6 text-sm text-gray-600">
-			Nothing listed by {silent.map((a) => a.name).join(', ')} — this sheet cannot speak for them.
+			{m.staff_events_id_inputs_nothing_listed_by_sheet_cannot({
+				join: silent.map((a) => a.name).join(', ')
+			})}
 		</p>
 	{/if}
 
 	{#each banks as bank, i (i)}
 		<section class="bank mb-6">
 			{#if banks.length > 1}
-				<h2 class="section-label">Channels {i * 8 + 1}–{i * 8 + bank.length}</h2>
+				<h2 class="section-label">
+					{m.staff_events_id_inputs_channels({ value: i * 8 + 1, value2: i * 8 + bank.length })}
+				</h2>
 			{/if}
 			<table class="w-full text-sm">
 				<thead>
 					<tr class="head-row">
 						<th class="w-8 py-1">#</th>
-						<th class="py-1">Source</th>
-						<th class="py-1">Band</th>
-						<th class="py-1">Via</th>
-						<th class="py-1">Mic / DI</th>
-						<th class="py-1">Stand</th>
-						<th class="w-12 py-1">48V</th>
+						<th class="py-1">{m.staff_source()}</th>
+						<th class="py-1">{m.staff_band()}</th>
+						<th class="py-1">{m.staff_events_id_inputs_via()}</th>
+						<th class="py-1">{m.staff_events_id_inputs_mic_di()}</th>
+						<th class="py-1">{m.staff_events_id_inputs_stand()}</th>
+						<th class="w-12 py-1">{m.staff_events_id_inputs_48v()}</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -151,7 +160,7 @@
 								{channel.actName}
 								{#if channel.sharedWith.length}
 									<span class="block text-xs text-amber-700">
-										also {channel.sharedWith.join(', ')}
+										{m.staff_events_id_inputs_also({ join: channel.sharedWith.join(', ') })}
 									</span>
 								{/if}
 							</td>
@@ -168,8 +177,7 @@
 
 	{#if data.channels.length === 0}
 		<p class="text-sm text-gray-600">
-			No band on this bill has listed a channel yet. The Tech riders card on the production console
-			is where they get asked.
+			{m.staff_events_id_inputs_no_band_bill_has_listed()}
 		</p>
 	{/if}
 </div>

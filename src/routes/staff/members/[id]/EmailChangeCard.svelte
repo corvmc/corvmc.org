@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import {
 		getPendingEmailChange,
 		requestEmailChange,
@@ -20,7 +21,10 @@
 	member confirms from the new mailbox. Sits outside the Account Info <Form>,
 	whose field stays read-only.
 -->
-<RelatedList title="Login email" result={getPendingEmailChange(id)}>
+<RelatedList
+	title={m.staff_members_id_email_change_card_title()}
+	result={getPendingEmailChange(id)}
+>
 	{#snippet children({ canChange, pending })}
 		<p class="mb-3">
 			Signs in as <strong>{email}</strong>.
@@ -36,10 +40,10 @@
 			<div class="flex flex-wrap gap-2">
 				<Action
 					action={changeForm}
-					label="Change email"
-					modalTitle="Change login email"
-					submitLabel="Send confirmation"
-					successToast="Confirmation sent"
+					label={m.staff_members_id_email_change_card_change_email()}
+					modalTitle={m.staff_members_id_email_change_card_change_login_email()}
+					submitLabel={m.staff_members_id_email_change_card_submit_label()}
+					successToast={m.staff_members_id_email_change_card_confirmation_sent()}
 					variant="default"
 					size="sm"
 					outline
@@ -47,23 +51,22 @@
 					{#snippet form()}
 						<input {...changeForm.fields.userId.as('hidden', id)} />
 						<p class="mb-3 text-muted text-sm">
-							We email a confirmation link to the new address. Nothing changes until the member
-							clicks it; then they are signed out everywhere and the old address gets a notice.
+							{m.staff_members_id_email_change_card_we_email_confirmation_lin()}
 						</p>
 						<FormField
 							field={changeForm.fields.email}
 							type="email"
-							label="New email"
-							placeholder="member@example.com"
+							label={m.staff_members_id_email_change_card_new_email()}
+							placeholder={m.staff_members_id_email_change_card_placeholder()}
 						/>
 					{/snippet}
 				</Action>
 				{#if pending}
 					<Action
 						action={resendForm}
-						label="Resend"
-						modalTitle="Resend confirmation"
-						successToast="Confirmation resent"
+						label={m.staff_resend()}
+						modalTitle={m.staff_members_id_email_change_card_resend_confirmation()}
+						successToast={m.staff_members_id_email_change_card_confirmation_resent()}
 						variant="default"
 						size="sm"
 						outline
@@ -72,22 +75,26 @@
 							<input {...resendForm.fields.userId.as('hidden', id)} />
 							<input {...resendForm.fields.email.as('hidden', pending.email)} />
 							<p class="py-4">
-								Send a fresh link to {pending.email}? The earlier one stops working.
+								{m.staff_members_id_email_change_card_send_fresh_link_earlier_o({
+									email: pending.email
+								})}
 							</p>
 						{/snippet}
 					</Action>
 					<Action
 						action={cancelEmailChange}
-						label="Cancel request"
-						modalTitle="Cancel email change"
-						successToast="Request cancelled"
+						label={m.staff_cancel_request()}
+						modalTitle={m.staff_members_id_email_change_card_cancel_email_change()}
+						successToast={m.staff_request_cancelled()}
 						variant="ghost"
 						size="sm"
 					>
 						{#snippet form()}
 							<input {...cancelEmailChange.fields.userId.as('hidden', id)} />
 							<p class="py-4">
-								Cancel the change to {pending.email}? The link already sent stops working.
+								{m.staff_members_id_email_change_card_cancel_change_link_alread({
+									email: pending.email
+								})}
 							</p>
 						{/snippet}
 					</Action>

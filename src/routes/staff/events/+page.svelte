@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -44,7 +45,7 @@
 	}
 </script>
 
-<PageHeader title="Calendar" subtitle="Staff">
+<PageHeader title={m.staff_events_title()} subtitle={m.staff_staff()}>
 	<CreateListingAction />
 </PageHeader>
 <PageContent>
@@ -52,20 +53,20 @@
 		<CalendarTotals />
 		{#snippet failed(_error, reset)}
 			<Alert type="warning" reset={() => retryQuery(getStaffCalendarTotals(), reset)}>
-				The calendar totals didn't load. The table below is unaffected.
+				{m.staff_events_calendar_totals_didn_t_load()}
 			</Alert>
 		{/snippet}
 	</svelte:boundary>
 
-	<DataList {result} empty="No events" onpage={(p) => (filters.page = p)}>
+	<DataList {result} empty={m.staff_events_empty()} onpage={(p) => (filters.page = p)}>
 		{#snippet children(events)}
 			<!-- No zebra: the bg-base-200 day-group rows are the striping here. -->
 			<Table zebra={false}>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Event</th>
-					<th class="col-support">Posted by</th>
-					<th class="col-extra">Tags</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+					<th>{m.staff_event()}</th>
+					<th class="col-support">{m.staff_posted_by()}</th>
+					<th class="col-extra">{m.staff_tags()}</th>
 				{/snippet}
 
 				{#each events as e, idx (e.id)}
@@ -103,7 +104,7 @@
 						-->
 						<td class="col-support">
 							{#if e.source === 'cmc'}
-								<span class="text-muted">CMC</span>
+								<span class="text-muted">{m.staff_cmc()}</span>
 							{:else if e.source === 'band'}
 								<EntityChip ref={e.band} />
 							{:else}

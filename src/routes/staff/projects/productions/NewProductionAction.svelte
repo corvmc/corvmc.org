@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	import NewProductionModal from './NewProductionModal.svelte';
 	import { hasCapability } from '$lib/config';
@@ -11,6 +12,8 @@
 </script>
 
 {#if hasCapability(caps, 'production.create')}
-	<Button variant="default" size="sm" onclick={() => (open = true)}>New Production</Button>
+	<Button variant="default" size="sm" onclick={() => (open = true)}
+		>{m.staff_new_production()}</Button
+	>
 	<NewProductionModal bind:open />
 {/if}

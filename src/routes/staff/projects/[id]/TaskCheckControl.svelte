@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { resolveTaskForm, reopenTaskForm } from '$lib/remote/tasks.remote';
@@ -35,7 +36,7 @@
 		size="xs"
 		shape="square"
 		class="depth-0"
-		aria-label="What {task.title} is waiting on"
+		aria-label={m.staff_projects_id_task_check_control_what_waiting({ title: task.title })}
 		onclick={() => onopen(task.id)}
 	>
 		<TaskCheck {task} />
@@ -50,7 +51,7 @@
 			size="xs"
 			shape="square"
 			class="depth-0 bare"
-			aria-label="Mark {task.title} not done"
+			aria-label={m.staff_projects_id_task_check_control_mark_not_done({ title: task.title })}
 		>
 			<TaskCheck {task} />
 		</Button>
@@ -65,7 +66,7 @@
 			size="xs"
 			shape="square"
 			class="depth-0 bare"
-			aria-label="Mark {task.title} done"
+			aria-label={m.staff_projects_id_task_check_control_mark_done({ title: task.title })}
 		>
 			<TaskCheck {task} />
 		</Button>

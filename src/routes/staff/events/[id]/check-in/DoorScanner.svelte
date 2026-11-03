@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The door queue, at door-queue speed (#933).
 	 *
@@ -71,8 +72,10 @@
 
 <div class="flex flex-col gap-3">
 	<div class="flex flex-wrap items-center gap-2">
-		<BarcodeScanner {onscan} label="Scan tickets" />
-		<span class="text-subtle text-sm">Or find them by name below.</span>
+		<BarcodeScanner {onscan} label={m.staff_events_id_check_in_door_scanner_label()} />
+		<span class="text-subtle text-sm"
+			>{m.staff_events_id_check_in_door_scanner_find_them_by_name_belo()}</span
+		>
 	</div>
 
 	{#if last}
@@ -88,7 +91,9 @@
 					{draining ? 'Syncing…' : 'Sync now'}
 				</Button>
 			{/snippet}
-			Waiting to sync: {pending.map((p) => p.name).join(', ')}
+			{m.staff_events_id_check_in_door_scanner_waiting_sync({
+				join: pending.map((p) => p.name).join(', ')
+			})}
 		</Alert>
 	{/if}
 </div>

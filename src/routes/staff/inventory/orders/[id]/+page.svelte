@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -46,14 +47,18 @@
 	);
 </script>
 
-<PageHeader width="3xl" title={order.supplierName ?? 'Order'} subtitle="Order">
+<PageHeader
+	width="3xl"
+	title={order.supplierName ?? m.staff_order_2()}
+	subtitle={m.staff_order_2()}
+>
 	<Badge variant={orderStatusBadge[status]} size="md">{orderStatusLabels[status]}</Badge>
 	{#if late}
-		<Badge variant="error" size="md">Late</Badge>
+		<Badge variant="error" size="md">{m.staff_late()}</Badge>
 	{/if}
 	{#if status === 'placed' && outstanding.length > 0}
 		<Button href={`/staff/inventory/intake?order=${order.id}`} variant="primary" size="sm">
-			Receive
+			{m.staff_receive()}
 		</Button>
 	{/if}
 </PageHeader>
@@ -61,26 +66,27 @@
 <PageContent width="3xl">
 	{#if status === 'draft'}
 		<Alert type="info" class="mb-4">
-			A draft is still a shopping list — nothing is on the way and the restock list still counts
-			these as missing. Placing it is what changes that.
+			{m.staff_inventory_orders_id_draft_still_shopping_list_nothing()}
 		</Alert>
 	{/if}
 
 	<div class="mb-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
-		<InfoCard title="What was ordered">
+		<InfoCard title={m.staff_inventory_orders_id_what_was_ordered()}>
 			<Table>
 				{#snippet head()}
-					<th>Item</th>
-					<th class="cell-num">Ordered</th>
-					<th class="cell-num">Received</th>
-					<th class="cell-num">Each</th>
+					<th>{m.staff_item()}</th>
+					<th class="cell-num">{m.staff_inventory_orders_id_ordered()}</th>
+					<th class="cell-num">{m.staff_received()}</th>
+					<th class="cell-num">{m.staff_each()}</th>
 				{/snippet}
 				{#each order.lines as line (line.id)}
 					<tr class="hover">
 						<td class="cell-primary">
 							<a class="link" href={resolve(`/staff/inventory/${line.itemId}`)}>{line.item.name}</a>
 							{#if line.outstanding > 0 && status === 'placed'}
-								<Badge variant="warning" size="xs">{line.outstanding} still out</Badge>
+								<Badge variant="warning" size="xs"
+									>{m.staff_inventory_orders_id_still_out({ outstanding: line.outstanding })}</Badge
+								>
 							{/if}
 						</td>
 						<td class="cell-num">{line.quantityOrdered}</td>
@@ -94,17 +100,19 @@
 		</InfoCard>
 
 		<div class="space-y-6">
-			<InfoCard title="Order" class="bg-base-200 shadow-none">
+			<InfoCard title={m.staff_order_2()} class="bg-base-200 shadow-none">
 				<DefinitionList>
-					<Fact label="Reference">{order.reference ?? '—'}</Fact>
-					<Fact label="Placed">
+					<Fact label={m.staff_reference()}>{order.reference ?? '—'}</Fact>
+					<Fact label={m.staff_inventory_orders_id_placed()}>
 						{order.placedAt ? formatDateShort(order.placedAt) : 'Not yet'}
 					</Fact>
-					<Fact label="Expected" class={late ? 'text-error' : ''}>
+					<Fact label={m.staff_expected()} class={late ? 'text-error' : ''}>
 						{order.expectedAt ? formatDateShort(order.expectedAt) : '—'}
 					</Fact>
-					<Fact label="Estimated">{formatCents(order.estimatedTotalCents)}</Fact>
-					<Fact label="Raised by">{order.createdByName ?? '—'}</Fact>
+					<Fact label={m.staff_inventory_orders_id_estimated()}
+						>{formatCents(order.estimatedTotalCents)}</Fact
+					>
+					<Fact label={m.staff_inventory_orders_id_raised_by()}>{order.createdByName ?? '—'}</Fact>
 				</DefinitionList>
 				{#if order.notes}
 					<p class="mt-3 whitespace-pre-wrap">{order.notes}</p>
@@ -112,7 +120,7 @@
 			</InfoCard>
 
 			{#if order.arrivals.length > 0}
-				<InfoCard title="What arrived">
+				<InfoCard title={m.staff_what_arrived()}>
 					<!-- The receipts this order produced. An order is a promise; these
 					     are the acquisitions that made it true. -->
 					<ul class="space-y-1">
@@ -131,36 +139,37 @@
 			     a titled box around one sentence is chrome (#1078). -->
 			{#if status !== 'draft' && status !== 'placed'}
 				<div class="flex items-center justify-between gap-2">
-					<p class="text-subtle">This order is closed.</p>
+					<p class="text-subtle">{m.staff_inventory_orders_id_order_closed()}</p>
 					<ReopenAction action={reopenOrderForm} id={order.id} capability="inventory.reopen">
 						Back to {order.placedAt ? 'placed' : 'draft'}. What was received stays received.
 					</ReopenAction>
 				</div>
 			{:else}
-				<InfoCard title="Next step">
+				<InfoCard title={m.staff_inventory_orders_id_next_step()}>
 					{#if status === 'draft'}
-						<Form remote={markOrderPlaced} successToast="Order placed">
+						<Form
+							remote={markOrderPlaced}
+							successToast={m.staff_inventory_orders_id_order_placed()}
+						>
 							<input {...markOrderPlaced.fields.id.as('hidden', order.id)} />
-							<SubmitButton label="Mark as placed" />
+							<SubmitButton label={m.staff_inventory_orders_id_mark_as_placed()} />
 						</Form>
 						<div class="mt-3">
-							<Form remote={dropOrder} successToast="Order cancelled">
+							<Form remote={dropOrder} successToast={m.staff_inventory_orders_id_order_cancelled()}>
 								<input {...dropOrder.fields.id.as('hidden', order.id)} />
-								<SubmitButton label="Cancel this order" variant="ghost" />
+								<SubmitButton label={m.staff_inventory_orders_id_cancel_order()} variant="ghost" />
 							</Form>
 						</div>
 					{:else if status === 'placed'}
 						<p class="mb-3 text-subtle">
-							Receiving opens the intake page with these lines already filled in. Partial deliveries
-							are normal — the order stays open until every line is met.
+							{m.staff_inventory_orders_id_receiving_opens_intake_page_with()}
 						</p>
-						<Form remote={closeOrder} successToast="Order closed">
+						<Form remote={closeOrder} successToast={m.staff_inventory_orders_id_order_closed_2()}>
 							<input {...closeOrder.fields.id.as('hidden', order.id)} />
-							<SubmitButton label="Close it short" variant="ghost" />
+							<SubmitButton label={m.staff_inventory_orders_id_close_short()} variant="ghost" />
 						</Form>
 						<p class="mt-2 text-subtle text-sm">
-							Use that when the rest is never coming — an order left open keeps suppressing restock
-							suggestions for goods that will not arrive.
+							{m.staff_inventory_orders_id_use_when_rest_never_coming()}
 						</p>
 					{/if}
 				</InfoCard>

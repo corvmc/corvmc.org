@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { IconPencil, IconTrash } from '@tabler/icons-svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -43,14 +44,23 @@
 
 <!-- Recap photos (docs/specs/event-recaps-spec.md): shown publicly on the event
      page as soon as they are added. -->
-<InfoCard title="Recap photos" state="{photos.length} of {recap.maxPhotos}">
+<InfoCard
+	title={m.staff_events_id_recap_photos_recap_photos()}
+	state="{photos.length} of {recap.maxPhotos}"
+>
 	{#if !recap.closedReason && !full}
-		<Form remote={uploadEventPhotos} enctype="multipart/form-data" successToast="Photos added">
+		<Form
+			remote={uploadEventPhotos}
+			enctype="multipart/form-data"
+			successToast={m.staff_events_id_recap_photos_photos_added()}
+		>
 			<input {...uploadFields.eventId.as('hidden', eventId)} />
 			<FormField
 				field={uploadFields.photos}
-				label="Add photos"
-				description="JPEG, PNG or WebP, up to 10 MB each and {recap.maxPerUpload} at a time. They appear on the public event page straight away."
+				label={m.staff_events_id_recap_photos_add_photos()}
+				description={m.staff_events_id_recap_photos_jpeg_png_webp_up_10({
+					maxPerUpload: recap.maxPerUpload
+				})}
 			>
 				{#snippet input(id)}
 					<input
@@ -61,14 +71,14 @@
 					/>
 				{/snippet}
 			</FormField>
-			<SubmitButton label="Upload" />
+			<SubmitButton label={m.staff_events_id_recap_photos_upload()} />
 		</Form>
 	{/if}
 
 	{#if photos.length === 0}
 		<EmptyState
-			title="No photos yet"
-			description="Photos from the night go on the public event page."
+			title={m.staff_events_id_recap_photos_no_photos_yet()}
+			description={m.staff_events_id_recap_photos_photos_from_night_go_public()}
 		/>
 	{:else}
 		<ul class="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -79,7 +89,7 @@
 						src={shot.src}
 						srcset={shot.srcset}
 						sizes={shot.sizes}
-						alt={photo.altText ?? `Photo from ${eventTitle}`}
+						alt={photo.altText ?? m.staff_events_id_recap_photos_alt({ eventTitle })}
 						class="aspect-square w-full rounded object-cover"
 						loading="lazy"
 					/>
@@ -88,7 +98,7 @@
 					{/if}
 					<div class="flex items-center gap-1">
 						{#if !photo.altText}
-							<span class="text-muted text-xs">No alt text</span>
+							<span class="text-muted text-xs">{m.staff_events_id_recap_photos_no_alt_text()}</span>
 						{/if}
 						<span class="grow"></span>
 						<Action
@@ -96,10 +106,10 @@
 							iconOnly
 							variant="ghost"
 							size="sm"
-							label="Describe"
-							modalTitle="Describe photo"
-							submitLabel="Save"
-							successToast="Saved"
+							label={m.staff_events_id_recap_photos_describe()}
+							modalTitle={m.staff_events_id_recap_photos_describe_photo()}
+							submitLabel={m.staff_save()}
+							successToast={m.staff_saved()}
 						>
 							{#snippet icon()}<IconPencil size={16} />{/snippet}
 							{#snippet form()}
@@ -109,11 +119,15 @@
 									<input {...fields.attachmentId.as('hidden', photo.attachmentId)} />
 									<FormField
 										field={fields.altText}
-										label="Alt text"
-										description="What the photo shows, for someone who cannot see it."
+										label={m.staff_events_id_recap_photos_alt_text()}
+										description={m.staff_events_id_recap_photos_what_photo_shows_someone_who()}
 										value={photo.altText ?? ''}
 									/>
-									<FormField field={fields.caption} label="Caption" value={photo.caption ?? ''} />
+									<FormField
+										field={fields.caption}
+										label={m.staff_events_id_recap_photos_caption()}
+										value={photo.caption ?? ''}
+									/>
 								</div>
 							{/snippet}
 						</Action>
@@ -122,18 +136,18 @@
 							iconOnly
 							variant="ghost"
 							size="sm"
-							label="Remove"
-							modalTitle="Remove photo"
-							submitLabel="Remove"
+							label={m.staff_remove()}
+							modalTitle={m.staff_events_id_recap_photos_remove_photo()}
+							submitLabel={m.staff_remove()}
 							submitVariant="error"
-							successToast="Photo removed"
+							successToast={m.staff_events_id_recap_photos_photo_removed()}
 						>
 							{#snippet icon()}<IconTrash size={16} />{/snippet}
 							{#snippet form()}
 								{@const fields = removeEventPhoto.for(photo.attachmentId).fields}
 								<input {...fields.eventId.as('hidden', eventId)} />
 								<input {...fields.attachmentId.as('hidden', photo.attachmentId)} />
-								<p>Take this photo off the public event page?</p>
+								<p>{m.staff_events_id_recap_photos_take_photo_off_public_event()}</p>
 							{/snippet}
 						</Action>
 					</div>

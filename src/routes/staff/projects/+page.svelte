@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Pagination from '$lib/components/ui/Pagination.svelte';
@@ -39,31 +40,31 @@
 	}
 </script>
 
-<PageHeader title="Projects">
+<PageHeader title={m.staff_projects()}>
 	<Action
 		action={createProjectForm}
-		label="New project"
-		modalTitle="New project"
-		successToast="Project created"
+		label={m.staff_projects_new_project()}
+		modalTitle={m.staff_projects_new_project()}
+		successToast={m.staff_projects_success_toast()}
 	>
 		{#snippet form()}
 			<Field
 				field={fields.name}
 				type="text"
-				label="Name"
-				description="What the work is — “Live room refresh”, “Winter showcase”."
+				label={m.staff_name()}
+				description={m.staff_projects_what_work_live_room_refresh()}
 			/>
-			<Field field={fields.description} type="textarea" label="Description" />
+			<Field field={fields.description} type="textarea" label={m.staff_description()} />
 			<Field
 				field={fields.groupId}
 				type="select"
-				label="Owning committee"
+				label={m.staff_owning_committee()}
 				options={committeeOptions}
-				description="Only a committee can own a project. Leave blank to decide later."
+				description={m.staff_projects_only_committee_can_own_project()}
 			/>
-			<MoneyField field={fields.budgetCents} label="Budget" />
-			<Field field={fields.startsAt} type="date" label="Starts" />
-			<Field field={fields.endsAt} type="date" label="Ends" />
+			<MoneyField field={fields.budgetCents} label={m.staff_budget()} />
+			<Field field={fields.startsAt} type="date" label={m.staff_starts()} />
+			<Field field={fields.endsAt} type="date" label={m.staff_ends()} />
 		{/snippet}
 	</Action>
 </PageHeader>
@@ -73,25 +74,25 @@
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		<Select
 			size="sm"
-			aria-label="Show"
+			aria-label={m.staff_show()}
 			value={view}
 			onchange={(e: Event) => {
 				view = (e.currentTarget as HTMLSelectElement).value as ProjectView;
 			}}
 		>
-			<option value="active">Active</option>
-			<option value="archived">Archived</option>
-			<option value="all">Active and archived</option>
+			<option value="active">{m.staff_active()}</option>
+			<option value="archived">{m.staff_archived()}</option>
+			<option value="all">{m.staff_projects_active_archived()}</option>
 		</Select>
 		<Select
 			size="sm"
-			aria-label="Committee"
+			aria-label={m.staff_committee()}
 			value={committeeFilter}
 			onchange={(e: Event) => {
 				committeeFilter = (e.currentTarget as HTMLSelectElement).value;
 			}}
 		>
-			<option value="">All committees</option>
+			<option value="">{m.staff_projects_all_committees()}</option>
 			{#each data.committees as c (c.id)}
 				<option value={c.id}>{c.name}</option>
 			{/each}
@@ -100,8 +101,10 @@
 
 	{#if data.projects.length === 0}
 		<EmptyState
-			title={view === 'archived' ? 'No archived projects' : 'No projects'}
-			description="Start one when work spans more than a single job — a facility improvement, a festival, or anything with a budget to watch."
+			title={view === 'archived'
+				? m.staff_projects_no_archived_projects()
+				: m.staff_projects_no_projects()}
+			description={m.staff_projects_start_one_when_work_spans()}
 		/>
 	{:else}
 		<ProjectsTable projects={data.projects} {view} />

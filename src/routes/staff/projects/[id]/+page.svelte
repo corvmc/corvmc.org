@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -89,24 +90,26 @@
 
 <PageHeader
 	title={project.name}
-	subtitle={committeeNames || 'No committee owns this yet'}
+	subtitle={committeeNames || m.staff_projects_id_subtitle()}
 	sticky={false}
-	menuLabel="More project actions"
+	menuLabel={m.staff_projects_id_menu_label()}
 >
 	{#if data.showId}
 		<Button variant="default" href={resolve(`/staff/events/${data.showId}/production`)}>
-			Production
+			{m.staff_production()}
 		</Button>
 	{/if}
-	<Button variant="default" href={resolve(`/staff/projects/${project.id}/budget`)}>Budget</Button>
+	<Button variant="default" href={resolve(`/staff/projects/${project.id}/budget`)}
+		>{m.staff_budget()}</Button
+	>
 	{#if dutyListOptions.length > 0}
 		<Action
 			action={applyDutyListToProjectForm}
-			label="Apply template"
+			label={m.staff_apply_template()}
 			variant="default"
-			modalTitle="Apply a template to {project.name}"
-			submitLabel="Apply"
-			successToast="Tasks created"
+			modalTitle={m.staff_projects_id_apply_template({ name: project.name })}
+			submitLabel={m.staff_apply()}
+			successToast={m.staff_projects_id_tasks_created()}
 			onsuccess={toastWarnings}
 		>
 			{#snippet form()}
@@ -114,10 +117,10 @@
 				<Field
 					field={applyFields.dutyListId}
 					type="select"
-					label="Template"
+					label={m.staff_template()}
 					options={dutyListOptions}
 				/>
-				<Field field={applyFields.reason} type="text" label="Reason, if applying again" />
+				<Field field={applyFields.reason} type="text" label={m.staff_reason_if_applying_again()} />
 			{/snippet}
 		</Action>
 	{/if}
@@ -125,45 +128,49 @@
 	{#snippet primary()}
 		<Action
 			action={updateProjectForm}
-			label="Edit project"
-			modalTitle="Edit project"
-			successToast="Saved"
+			label={m.staff_projects_id_edit_project()}
+			modalTitle={m.staff_projects_id_edit_project()}
+			successToast={m.staff_saved()}
 		>
 			{#snippet form()}
 				<input {...editFields.id.as('hidden', project.id)} />
-				<Field field={editFields.name} type="text" label="Name" value={project.name} />
+				<Field field={editFields.name} type="text" label={m.staff_name()} value={project.name} />
 				<Field
 					field={editFields.description}
 					type="textarea"
-					label="Description"
+					label={m.staff_description()}
 					value={project.description ?? ''}
 				/>
 				<Field
 					field={editFields.groupId}
 					type="select"
-					label="Owning committee"
+					label={m.staff_owning_committee()}
 					options={committeeOptions}
 					value={owner?.groupId ?? ''}
 				/>
 				<Field
 					field={editFields.suggestionId}
 					type="select"
-					label="Answers the suggestion"
+					label={m.staff_projects_id_answers_suggestion()}
 					options={suggestionOptions}
 					value={project.suggestionId ?? ''}
-					description="One project per suggestion. Its status follows this one from now on."
+					description={m.staff_projects_id_one_project_per_suggestion_its()}
 				/>
-				<MoneyField field={editFields.budgetCents} label="Budget" value={project.budgetCents} />
+				<MoneyField
+					field={editFields.budgetCents}
+					label={m.staff_budget()}
+					value={project.budgetCents}
+				/>
 				<Field
 					field={editFields.startsAt}
 					type="date"
-					label="Starts"
+					label={m.staff_starts()}
 					value={asDateValue(project.startsAt)}
 				/>
 				<Field
 					field={editFields.endsAt}
 					type="date"
-					label="Ends"
+					label={m.staff_ends()}
 					value={asDateValue(project.endsAt)}
 				/>
 			{/snippet}
@@ -174,33 +181,33 @@
 		{#if isProjectArchived(project.status)}
 			<Action
 				action={setProjectStatusForm}
-				label="Unarchive"
-				modalTitle="Unarchive project"
-				successToast="Project unarchived"
+				label={m.staff_projects_id_unarchive()}
+				modalTitle={m.staff_projects_id_unarchive_project()}
+				successToast={m.staff_projects_id_project_unarchived()}
 			>
 				{#snippet form()}
 					<input {...statusFields.id.as('hidden', project.id)} />
 					<input {...statusFields.status.as('hidden', PROJECT_UNARCHIVED_STATUS)} />
-					<p class="text-sm">It returns to the active list with its tasks as they are.</p>
+					<p class="text-sm">{m.staff_projects_id_returns_active_list_with_its()}</p>
 				{/snippet}
 			</Action>
 		{:else}
 			<Action
 				action={setProjectStatusForm}
-				label="Archive"
-				modalTitle="Archive project"
-				successToast="Project archived"
+				label={m.staff_archive()}
+				modalTitle={m.staff_projects_id_archive_project()}
+				successToast={m.staff_projects_id_project_archived()}
 			>
 				{#snippet form()}
 					<input {...statusFields.id.as('hidden', project.id)} />
 					<Field
 						field={statusFields.status}
 						type="select"
-						label="Outcome"
+						label={m.staff_outcome()}
 						options={projectArchiveOutcomeOptions}
 						value="done"
 						description={project.suggestionId
-							? 'The suggestion this answers reports the same outcome.'
+							? m.staff_projects_id_suggestion_answers_reports_same_outcome()
 							: undefined}
 					/>
 				{/snippet}
@@ -217,20 +224,23 @@
 </PageHeader>
 
 <PageContent>
-	<div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm" aria-label="Project status">
+	<div
+		class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm"
+		aria-label={m.staff_projects_id_project_status()}
+	>
 		{#if isProjectArchived(project.status)}
-			<Badge variant="ghost">Archived</Badge>
+			<Badge variant="ghost">{m.staff_archived()}</Badge>
 		{/if}
 		<span class="inline-flex items-center gap-2">
 			<progress
 				class="progress w-28 progress-success"
 				value={progress.done}
 				max={Math.max(progress.total, 1)}
-				aria-label="Tasks done"
+				aria-label={m.staff_projects_id_tasks_done()}
 			></progress>
 			<span class="inline-flex items-center gap-1">
 				<strong>{progress.done}</strong> of {progress.total}
-				<IconCheck size={14} aria-label="tasks done" />
+				<IconCheck size={14} aria-label={m.staff_projects_id_tasks_done_2()} />
 			</span>
 		</span>
 		<span class="text-muted">
@@ -239,29 +249,29 @@
 					? ` – ${formatDateShort(project.endsAt)}`
 					: ' onward'}
 			{:else}
-				No dates set
+				{m.staff_projects_id_no_dates_set()}
 			{/if}
 		</span>
 	</div>
 
 	<details class="collapse-arrow collapse border border-base-300">
-		<summary class="collapse-title font-medium">About</summary>
+		<summary class="collapse-title font-medium">{m.staff_about()}</summary>
 		<div class="collapse-content space-y-4 text-sm">
 			{#if project.description}
 				<p class="whitespace-pre-wrap">{project.description}</p>
 			{:else}
-				<p class="text-muted">No description yet. Add one under Edit project.</p>
+				<p class="text-muted">{m.staff_projects_id_no_description_yet_add_one()}</p>
 			{/if}
 			<DefinitionList>
 				{#if origin.suggestion}
-					<Fact label="Suggested">
+					<Fact label={m.staff_suggested()}>
 						<a class="link" href={resolve(`/staff/suggestions/${origin.suggestion.id}`)}>
 							{origin.suggestion.title}
 						</a>
 					</Fact>
 				{/if}
 				{#if origin.ballot}
-					<Fact label="Authorised by">
+					<Fact label={m.staff_projects_id_authorised_by()}>
 						<BallotLine
 							ballot={origin.ballot}
 							href={surfaces.ballots ? resolve(`/staff/ballots/${origin.ballot.id}`) : null}
@@ -269,7 +279,7 @@
 					</Fact>
 				{/if}
 				{#each origin.decidedBy as b (b.id)}
-					<Fact label="Put to a ballot">
+					<Fact label={m.staff_projects_id_put_ballot()}>
 						<BallotLine
 							ballot={b}
 							href={surfaces.ballots ? resolve(`/staff/ballots/${b.id}`) : null}
@@ -277,10 +287,12 @@
 					</Fact>
 				{/each}
 				{#if !origin.suggestion && !origin.ballot && origin.decidedBy.length === 0}
-					<Fact label="Origin">Staff started this directly.</Fact>
+					<Fact label={m.staff_projects_id_origin()}
+						>{m.staff_projects_id_staff_started_directly()}</Fact
+					>
 				{/if}
 				{#if data.attachments.events.length > 0}
-					<Fact label="Events">
+					<Fact label={m.staff_projects_id_events()}>
 						<span class="flex flex-wrap gap-2">
 							{#each data.attachments.events as ev (ev.id)}
 								<EntityChip ref={ev.ref} />
@@ -324,9 +336,9 @@
 			</aside>
 		{:else if selectedId}
 			<Alert type="warning" class="ml-4">
-				That task is not on this project.
+				{m.staff_projects_id_task_not_project()}
 				{#snippet action()}
-					<Button size="sm" onclick={closeTask}>Close</Button>
+					<Button size="sm" onclick={closeTask}>{m.staff_projects_id_close()}</Button>
 				{/snippet}
 			</Alert>
 		{:else}

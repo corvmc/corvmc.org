@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import CategoryOptions from '$lib/components/inventory/CategoryOptions.svelte';
 	import ItemResources from '$lib/components/inventory/ItemResources.svelte';
@@ -58,11 +59,11 @@
 	let isSerialized = $derived(item.kind === 'serialized');
 </script>
 
-<Form remote={editItem} guard successToast="Item updated">
+<Form remote={editItem} guard successToast={msg.staff_inventory_id_success_toast()}>
 	<input {...fields.id.as('hidden', id)} />
-	<PageHeader subtitle="Inventory" title={item.name}>
+	<PageHeader subtitle={msg.staff_inventory()} title={item.name}>
 		{#if isDeactivated}
-			<Badge variant="error" size="md">Deactivated</Badge>
+			<Badge variant="error" size="md">{msg.staff_deactivated()}</Badge>
 		{/if}
 		<SubmitButton shortcut="mod+s">
 			{#snippet icon()}
@@ -72,27 +73,37 @@
 	</PageHeader>
 	<PageContent>
 		<div class="mb-6 grid gap-6 lg:grid-cols-2">
-			<InfoCard title="Item">
+			<InfoCard title={msg.staff_item()}>
 				<div class="grid grid-cols-1 gap-x-2">
 					<Field field={fields.name} type="text" value={item.name} />
 					<Field field={fields.description} type="textarea" value={item.description ?? ''} />
-					<Field field={fields.categoryId} type="select" value={item.categoryId} label="Category">
+					<Field
+						field={fields.categoryId}
+						type="select"
+						value={item.categoryId}
+						label={msg.staff_category()}
+					>
 						<CategoryOptions selected={item.categoryId} />
 					</Field>
 					<div class="grid grid-cols-2 gap-3">
 						<Field
 							field={fields.unitOfMeasure}
 							type="select"
-							label="Unit"
+							label={msg.staff_unit()}
 							value={item.unitOfMeasure}
 							options={unitsOfMeasure.map((u) => ({ value: u, label: u }))}
 						/>
-						<Field field={fields.gtin} type="text" label="Barcode" value={item.gtin ?? ''} />
+						<Field
+							field={fields.gtin}
+							type="text"
+							label={msg.staff_inventory_id_barcode()}
+							value={item.gtin ?? ''}
+						/>
 					</div>
 					<Field
 						field={fields.isLoanable}
 						type="checkbox"
-						label="Members can borrow this"
+						label={msg.staff_inventory_id_members_can_borrow()}
 						value={item.isLoanable}
 					/>
 					{#if !isSerialized}
@@ -100,13 +111,13 @@
 							<Field
 								field={fields.reorderPoint}
 								type="number"
-								label="Reorder at"
+								label={msg.staff_reorder_at()}
 								value={item.reorderPoint ?? undefined}
 							/>
 							<Field
 								field={fields.reorderQuantity}
 								type="number"
-								label="Reorder quantity"
+								label={msg.staff_inventory_id_reorder_quantity()}
 								value={item.reorderQuantity ?? undefined}
 							/>
 						</div>
@@ -114,44 +125,49 @@
 					<Field
 						field={fields.resourceId}
 						type="text"
-						label="Resource ID"
+						label={msg.staff_inventory_id_resource_id()}
 						value={item.resourceId ?? ''}
 					/>
 					<Field field={fields.notes} type="textarea" value={item.notes ?? ''} />
 				</div>
 			</InfoCard>
 
-			<InfoCard title="Stock" class="bg-base-200 shadow-none">
+			<InfoCard title={msg.staff_stock()} class="bg-base-200 shadow-none">
 				<DefinitionList>
-					<Fact label="ID" mono>{item.id}</Fact>
+					<Fact label={msg.staff_inventory_id_id()} mono>{item.id}</Fact>
 
-					<Fact label="Category">
+					<Fact label={msg.staff_category()}>
 						{item.category.name}
 						<Badge variant="outline" size="xs" class="ml-1">{item.category.pricingTier}</Badge>
 					</Fact>
 
-					<Fact label="Tracked as">
+					<Fact label={msg.staff_inventory_id_tracked_as()}>
 						{titleCase(item.kind)}
 						{#if item.isConsumable}
-							<Badge variant="outline" size="xs" class="ml-1">Consumable</Badge>
+							<Badge variant="outline" size="xs" class="ml-1">{msg.staff_consumable()}</Badge>
 						{/if}
 					</Fact>
 
 					<!-- On hand is the sum of the ledger below, never a stored number.
 					     That is the whole point of the rebuild. -->
-					<Fact label="On hand" class={item.isLowStock ? 'text-warning' : ''}>
+					<Fact label={msg.staff_hand()} class={item.isLowStock ? 'text-warning' : ''}>
 						{item.onHand}
 						{#if item.reorderPoint != null}
-							<span class="text-subtle">(reorder at {item.reorderPoint})</span>
+							<span class="text-subtle"
+								>{msg.staff_inventory_id_reorder_at({ reorderPoint: item.reorderPoint })}</span
+							>
 						{/if}
 					</Fact>
 
-					<Fact label="Available" class={item.availableQuantity <= 0 ? 'text-error' : ''}>
+					<Fact
+						label={msg.staff_available()}
+						class={item.availableQuantity <= 0 ? 'text-error' : ''}
+					>
 						{item.availableQuantity}
 					</Fact>
 
 					{#if onOrderTotal > 0}
-						<Fact label="On order">{onOrderTotal}</Fact>
+						<Fact label={msg.staff_order()}>{onOrderTotal}</Fact>
 					{/if}
 				</DefinitionList>
 
@@ -176,7 +192,7 @@
 						{isDeactivated}
 						deactivateAction={deactivateItem}
 						reactivateAction={reactivateItem}
-						entityLabel="Item"
+						entityLabel={msg.staff_item()}
 					/>
 				</div>
 			</InfoCard>
@@ -186,17 +202,17 @@
 
 <PageContent>
 	{#if isSerialized}
-		<InfoCard title="Units">
+		<InfoCard title={msg.staff_units()}>
 			{#if assets.length === 0}
-				<EmptyState description="No units recorded yet" />
+				<EmptyState description={msg.staff_inventory_id_no_units_recorded_yet()} />
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th class="w-px"><span class="sr-only">Status</span></th>
-						<th>Tag</th>
-						<th class="col-support">Serial</th>
-						<th class="col-support">Condition</th>
-						<th class="col-extra">Location</th>
+						<th class="w-px"><span class="sr-only">{msg.staff_status()}</span></th>
+						<th>{msg.staff_tag()}</th>
+						<th class="col-support">{msg.staff_serial()}</th>
+						<th class="col-support">{msg.staff_condition()}</th>
+						<th class="col-extra">{msg.staff_location()}</th>
 					{/snippet}
 					{#each assets as asset (asset.id)}
 						<tr
@@ -210,7 +226,7 @@
 								{:else}
 									<!-- Gear gets entered before the roll of stickers arrives, so an
 									     unbound unit is a normal state and says so. -->
-									<span class="opacity-40">Untagged</span>
+									<span class="opacity-40">{msg.staff_inventory_id_untagged()}</span>
 									<BindTagAction assetId={asset.id} />
 								{/if}
 							</td>
@@ -230,13 +246,13 @@
 
 	<!-- Current state first: these two appear only while something is open. -->
 	{#if problems && problems.length > 0}
-		<InfoCard title="Open problems" state={problems.length} class="mt-6">
+		<InfoCard title={msg.staff_inventory_id_open_problems()} state={problems.length} class="mt-6">
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Note</th>
-					<th class="col-support">Unit</th>
-					<th class="col-extra whitespace-nowrap">Reported</th>
+					<th class="w-px"><span class="sr-only">{msg.staff_status()}</span></th>
+					<th>{msg.staff_note()}</th>
+					<th class="col-support">{msg.staff_unit()}</th>
+					<th class="col-extra whitespace-nowrap">{msg.staff_reported()}</th>
 				{/snippet}
 				{#each problems as problem (problem.id)}
 					<tr
@@ -247,7 +263,7 @@
 							<div class="flex w-max items-center gap-1">
 								<StatusBadge status={problem.inWorkOrder ? 'in_progress' : 'pending'} />
 								{#if problem.blocksUse}
-									<Badge variant="error" size="xs">Out of use</Badge>
+									<Badge variant="error" size="xs">{msg.staff_inventory_id_out_use()}</Badge>
 								{/if}
 							</div>
 						</td>
@@ -263,14 +279,14 @@
 	{/if}
 
 	{#if onOrder.length > 0}
-		<InfoCard title="Open orders" state={onOrderTotal} class="mt-6">
+		<InfoCard title={msg.staff_inventory_id_open_orders()} state={onOrderTotal} class="mt-6">
 			<Table>
 				{#snippet head()}
-					<th>Supplier</th>
-					<th class="cell-num">Outstanding</th>
-					<th class="col-support whitespace-nowrap">Expected</th>
-					<th class="col-extra">Reference</th>
-					<th class="w-px"><span class="sr-only">Receive</span></th>
+					<th>{msg.staff_supplier()}</th>
+					<th class="cell-num">{msg.staff_inventory_id_outstanding()}</th>
+					<th class="col-support whitespace-nowrap">{msg.staff_expected()}</th>
+					<th class="col-extra">{msg.staff_reference()}</th>
+					<th class="w-px"><span class="sr-only">{msg.staff_receive()}</span></th>
 				{/snippet}
 				{#each onOrder as line (line.lineId)}
 					<tr
@@ -278,7 +294,12 @@
 						use:rowLink={resolve(`/staff/inventory/orders/${line.orderId}`)}
 					>
 						<td class="cell-primary">{line.supplierName ?? 'No supplier recorded'}</td>
-						<td class="cell-num">{line.outstanding} of {line.quantityOrdered}</td>
+						<td class="cell-num"
+							>{msg.staff_inventory_id_text({
+								outstanding: line.outstanding,
+								quantityOrdered: line.quantityOrdered
+							})}</td
+						>
 						<td class="col-support whitespace-nowrap">
 							{line.expectedAt ? formatDateShort(line.expectedAt) : '—'}
 						</td>
@@ -291,7 +312,7 @@
 								href={withQuery(
 									resolve('/staff/inventory/intake'),
 									new URLSearchParams({ order: line.orderId })
-								)}>Receive</Button
+								)}>{msg.staff_receive()}</Button
 							>
 						</td>
 					</tr>
@@ -304,17 +325,17 @@
 		<ItemResources {itemId} />
 	</div>
 
-	<InfoCard title="Past acquisitions" class="mt-6">
+	<InfoCard title={msg.staff_inventory_id_past_acquisitions()} class="mt-6">
 		{#if sources.length === 0}
-			<EmptyState description="No acquisition recorded" />
+			<EmptyState description={msg.staff_inventory_id_no_acquisition_recorded()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="whitespace-nowrap">When</th>
-					<th>Source</th>
-					<th class="col-support">Kind</th>
-					<th class="cell-num">Quantity</th>
-					<th class="col-support cell-num">Unit value</th>
+					<th class="whitespace-nowrap">{msg.staff_when()}</th>
+					<th>{msg.staff_source()}</th>
+					<th class="col-support">{msg.staff_kind()}</th>
+					<th class="cell-num">{msg.staff_quantity()}</th>
+					<th class="col-support cell-num">{msg.staff_unit_value()}</th>
 				{/snippet}
 				{#each sources as source (source.lineId)}
 					<tr
@@ -335,11 +356,11 @@
 	</InfoCard>
 
 	<ActivityFeedCard
-		title="Stock movements"
+		title={msg.staff_inventory_id_stock_movements()}
 		class="mt-6"
 		query={(limit) => getItemMovementFeed(limit ? { id, limit } : { id })}
 		toRow={(m) => ({ ...feedItemRow(m), quantity: m.quantity })}
-		empty={{ title: 'Nothing has moved yet' }}
+		empty={{ title: msg.staff_inventory_id_nothing_has_moved_yet() }}
 	>
 		{#snippet trailing(row)}
 			<span class:text-error={row.quantity < 0}>
@@ -349,7 +370,7 @@
 	</ActivityFeedCard>
 
 	<ActivityFeedCard
-		title="Loan history"
+		title={msg.staff_inventory_id_loan_history()}
 		class="mt-6"
 		query={(limit) => getItemLoanFeed(limit ? { id, limit } : { id })}
 		toRow={(l) => ({
@@ -357,13 +378,13 @@
 			href: resolve('/staff/inventory/loans/[id]', { id: l.loanId }),
 			loan: l
 		})}
-		empty={{ title: 'No loan history' }}
+		empty={{ title: msg.staff_inventory_id_no_loan_history() }}
 	>
 		{#snippet trailing({ loan })}
 			<div class="flex items-center justify-end gap-1">
 				<StatusBadge status={loan.status} />
 				{#if loan.isOverdue}
-					<Badge variant="error" size="xs">Overdue</Badge>
+					<Badge variant="error" size="xs">{msg.staff_overdue()}</Badge>
 				{/if}
 			</div>
 			<div class="text-muted text-xs">

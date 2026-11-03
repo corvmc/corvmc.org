@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import {
@@ -64,24 +65,28 @@
 	});
 </script>
 
-<PageHeader width="3xl" subtitle="Equipment Loan" title={loan.equipmentName ?? 'Free-form Request'}>
+<PageHeader
+	width="3xl"
+	subtitle={m.staff_inventory_loans_id_subtitle()}
+	title={loan.equipmentName ?? m.staff_inventory_loans_id_free_form_request()}
+>
 	<StatusBadge status={loan.status} />
 	{#if loan.isOverdue}
-		<Badge variant="error" size="md">Overdue</Badge>
+		<Badge variant="error" size="md">{m.staff_overdue()}</Badge>
 	{/if}
 </PageHeader>
 <PageContent width="3xl">
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
 		<!-- Loan Details -->
-		<InfoCard title="Loan Details">
+		<InfoCard title={m.staff_inventory_loans_id_loan_details()}>
 			<DefinitionList>
-				<Fact label="Loan ID" mono>{loan.id}</Fact>
+				<Fact label={m.staff_inventory_loans_id_loan_id()} mono>{loan.id}</Fact>
 
-				<Fact label="Member">
+				<Fact label={m.staff_member()}>
 					<EntityChip ref={loan.member} />
 				</Fact>
 
-				<Fact label="Equipment">
+				<Fact label={m.staff_equipment()}>
 					{#if loan.equipmentName}
 						<a href={resolve(`/staff/inventory/${loan.itemId}`)} class="link"
 							>{loan.equipmentName}</a
@@ -90,59 +95,76 @@
 							<Badge variant="outline" size="xs" class="ml-1">{loan.categoryName}</Badge>
 						{/if}
 					{:else}
-						<span class="italic opacity-60">Not yet assigned</span>
+						<span class="italic opacity-60">{m.staff_inventory_loans_id_not_yet_assigned()}</span>
 					{/if}
 				</Fact>
 
-				<Fact label="Quantity">{loan.quantity}</Fact>
+				<Fact label={m.staff_quantity()}>{loan.quantity}</Fact>
 
-				<Fact label="Requested pickup">{formatDate(loan.requestedPickupDate)}</Fact>
+				<Fact label={m.staff_inventory_loans_id_requested_pickup()}
+					>{formatDate(loan.requestedPickupDate)}</Fact
+				>
 
 				{#if loan.scheduledPickupDate}
-					<Fact label="Scheduled pickup">{formatDate(loan.scheduledPickupDate)}</Fact>
+					<Fact label={m.staff_inventory_loans_id_scheduled_pickup()}
+						>{formatDate(loan.scheduledPickupDate)}</Fact
+					>
 				{/if}
 
 				{#if loan.dueDate}
-					<Fact label="Due date" class={loan.isOverdue ? 'text-error' : ''}
-						>{formatDate(loan.dueDate)}</Fact
+					<Fact
+						label={m.staff_inventory_loans_id_due_date()}
+						class={loan.isOverdue ? 'text-error' : ''}>{formatDate(loan.dueDate)}</Fact
 					>
 				{/if}
 
 				{#if loan.checkedOutAt}
-					<Fact label="Checked out">{formatDate(loan.checkedOutAt)}</Fact>
+					<Fact label={m.staff_inventory_loans_id_checked_out()}
+						>{formatDate(loan.checkedOutAt)}</Fact
+					>
 				{/if}
 
 				{#if loan.returnedAt}
-					<Fact label="Returned">{formatDate(loan.returnedAt)}</Fact>
+					<Fact label={m.staff_returned()}>{formatDate(loan.returnedAt)}</Fact>
 				{/if}
 
 				{#if loan.dailyRateCents != null}
-					<Fact label="Daily rate">{formatCents(loan.dailyRateCents)}/day</Fact>
+					<Fact label={m.staff_inventory_loans_id_daily_rate()}
+						>{m.staff_inventory_loans_id_day({
+							formatCents: formatCents(loan.dailyRateCents)
+						})}</Fact
+					>
 				{/if}
 
 				{#if loan.totalChargeCents != null}
-					<Fact label="Total charge">{formatCents(loan.totalChargeCents)}</Fact>
+					<Fact label={m.staff_inventory_loans_id_total_charge()}
+						>{formatCents(loan.totalChargeCents)}</Fact
+					>
 				{/if}
 
 				{#if loan.creditsCents != null && loan.creditsCents > 0}
-					<Fact label="Paid via credits">{formatCents(loan.creditsCents)}</Fact>
+					<Fact label={m.staff_inventory_loans_id_paid_via_credits()}
+						>{formatCents(loan.creditsCents)}</Fact
+					>
 				{/if}
 
 				{#if loan.cashCents != null && loan.cashCents > 0}
-					<Fact label="Paid via cash/card">{formatCents(loan.cashCents)}</Fact>
+					<Fact label={m.staff_inventory_loans_id_paid_via_cash_card()}
+						>{formatCents(loan.cashCents)}</Fact
+					>
 				{/if}
 			</DefinitionList>
 
 			{#if loan.memberNotes}
 				<div class="mt-4">
-					<h4 class="mb-1 text-muted font-semibold">Member Notes</h4>
+					<h4 class="mb-1 text-muted font-semibold">{m.staff_inventory_loans_id_member_notes()}</h4>
 					<p class="rounded bg-base-200 p-2 text-sm">{loan.memberNotes}</p>
 				</div>
 			{/if}
 
 			{#if loan.staffNotes}
 				<div class="mt-4">
-					<h4 class="mb-1 text-muted font-semibold">Staff Notes</h4>
+					<h4 class="mb-1 text-muted font-semibold">{m.staff_inventory_loans_id_staff_notes()}</h4>
 					<p class="rounded bg-base-200 p-2 text-sm">{loan.staffNotes}</p>
 				</div>
 			{/if}
@@ -156,18 +178,29 @@
 				This loan is <strong>{loan.status}</strong>. No actions available.
 			</p>
 		{:else}
-			<InfoCard title="Actions">
+			<InfoCard title={m.staff_actions()}>
 				{#if loan.status === 'requested'}
-					<h4 class="mb-3 text-sm font-semibold">Schedule Pickup</h4>
-					<Form remote={schedule} successToast="Pickup scheduled" class="space-y-3">
+					<h4 class="mb-3 text-sm font-semibold">{m.staff_inventory_loans_id_schedule_pickup()}</h4>
+					<Form
+						remote={schedule}
+						successToast={m.staff_inventory_loans_id_pickup_scheduled()}
+						class="space-y-3"
+					>
 						<input {...scheduleFields.loanId.as('hidden', id)} />
 						{#if !loan.itemId}
-							<Field name="itemId" label="Assign Equipment">
+							<Field name="itemId" label={m.staff_inventory_loans_id_assign_equipment()}>
 								<Select class="w-full" name="itemId" required>
-									<option value="" disabled selected>Select equipment...</option>
+									<option value="" disabled selected
+										>{m.staff_inventory_loans_id_select_equipment()}</option
+									>
 									{#each availableItems as eq (eq.id)}
 										{#if eq.availableQuantity > 0}
-											<option value={eq.id}>{eq.name} ({eq.availableQuantity} available)</option>
+											<option value={eq.id}
+												>{m.staff_inventory_loans_id_available({
+													name: eq.name,
+													availableQuantity: eq.availableQuantity
+												})}</option
+											>
 										{/if}
 									{/each}
 								</Select>
@@ -175,12 +208,16 @@
 						{:else}
 							<input {...scheduleFields.itemId.as('hidden', loan.itemId)} />
 						{/if}
-						<Field name="scheduledPickupDate" type="date" label="Pickup Date" />
+						<Field
+							name="scheduledPickupDate"
+							type="date"
+							label={m.staff_inventory_loans_id_pickup_date()}
+						/>
 						<div class="flex gap-2">
-							<SubmitButton label="Schedule" variant="primary" size="sm" />
+							<SubmitButton label={m.staff_schedule()} variant="primary" size="sm" />
 							<CancelLoanAction
 								loanId={id}
-								label="Cancel Request"
+								label={m.staff_inventory_loans_id_cancel_request()}
 								confirm="Cancel this loan request?"
 							/>
 						</div>
@@ -189,21 +226,25 @@
 					{#if loan.itemId}
 						<Action
 							action={checkout}
-							label="Check out without scheduling"
+							label={m.staff_inventory_loans_id_check_out_without_scheduling()}
 							variant="ghost"
 							size="xs"
 							class="mt-3"
-							modalTitle="Check out without scheduling?"
-							submitLabel="Check out anyway"
-							successToast="Checked out"
+							modalTitle={m.staff_inventory_loans_id_modal_title()}
+							submitLabel={m.staff_inventory_loans_id_submit_label()}
+							successToast={m.staff_inventory_loans_id_checked_out()}
 						>
 							{#snippet form()}
 								<input {...checkoutFields.loanId.as('hidden', id)} />
-								<Field field={checkoutFields.dueDate} type="date" label="Due Date" />
+								<Field
+									field={checkoutFields.dueDate}
+									type="date"
+									label={m.staff_inventory_loans_id_due_date_2()}
+								/>
 								{#if needsAsset}
-									<Field name="assetId" label="Unit Handed Over">
+									<Field name="assetId" label={m.staff_inventory_loans_id_unit_handed_over()}>
 										<Select class="w-full" name="assetId" bind:value={chosenAssetId} required>
-											<option value="" disabled>Select the tag...</option>
+											<option value="" disabled>{m.staff_inventory_loans_id_select_tag()}</option>
 											{#each availableAssets as unit (unit.id)}
 												<option value={unit.id}>
 													{unit.assetTag ?? unit.serialNumber ?? 'Untagged unit'}
@@ -212,22 +253,32 @@
 										</Select>
 									</Field>
 								{/if}
-								<Field field={checkoutFields.reason} type="textarea" label="Why skip scheduling?" />
+								<Field
+									field={checkoutFields.reason}
+									type="textarea"
+									label={m.staff_inventory_loans_id_why_skip_scheduling()}
+								/>
 							{/snippet}
 						</Action>
 					{/if}
 				{:else if loan.status === 'scheduled'}
-					<h4 class="mb-3 text-sm font-semibold">Mark as Checked Out</h4>
-					<Form remote={checkout} successToast="Checked out" class="space-y-3">
+					<h4 class="mb-3 text-sm font-semibold">
+						{m.staff_inventory_loans_id_mark_as_checked_out()}
+					</h4>
+					<Form
+						remote={checkout}
+						successToast={m.staff_inventory_loans_id_checked_out()}
+						class="space-y-3"
+					>
 						<input {...checkoutFields.loanId.as('hidden', id)} />
-						<Field name="dueDate" type="date" label="Due Date" />
+						<Field name="dueDate" type="date" label={m.staff_inventory_loans_id_due_date_2()} />
 						<!-- A serialized loan has to name the unit that actually left, or
 					     "which amp came back broken" has no answer. Without this the
 					     service throws `AssetRequiredError` and the form goes nowhere. -->
 						{#if needsAsset}
-							<Field name="assetId" label="Unit Handed Over">
+							<Field name="assetId" label={m.staff_inventory_loans_id_unit_handed_over()}>
 								<Select class="w-full" name="assetId" bind:value={chosenAssetId} required>
-									<option value="" disabled>Scan or select the tag...</option>
+									<option value="" disabled>{m.staff_inventory_loans_id_scan_select_tag()}</option>
 									{#each availableAssets as unit (unit.id)}
 										<option value={unit.id}>
 											{unit.assetTag ?? unit.serialNumber ?? 'Untagged unit'}
@@ -236,25 +287,31 @@
 									{/each}
 								</Select>
 							</Field>
-							<BarcodeScanner onscan={handleScan} label="Scan the tag" />
+							<BarcodeScanner onscan={handleScan} label={m.staff_inventory_loans_id_scan_tag()} />
 							{#if availableAssets.length === 0}
 								<p class="text-subtle">
-									No unit of this item is in service, so there is nothing to hand over.
+									{m.staff_inventory_loans_id_no_unit_item_service_so()}
 								</p>
 							{/if}
 						{/if}
 						<div class="flex gap-2">
-							<SubmitButton label="Check Out" variant="primary" size="sm" />
+							<SubmitButton
+								label={m.staff_inventory_loans_id_check_out()}
+								variant="primary"
+								size="sm"
+							/>
 							<CancelLoanAction loanId={id} />
 						</div>
 					</Form>
 				{:else if loan.status === 'checked_out'}
-					<h4 class="mb-3 text-sm font-semibold">Mark as Returned</h4>
+					<h4 class="mb-3 text-sm font-semibold">
+						{m.staff_inventory_loans_id_mark_as_returned()}
+					</h4>
 
 					{#if chargePreview}
 						<div class="mb-3 rounded bg-base-200 p-3 text-sm">
 							<p>
-								<strong>Charge preview:</strong>
+								<strong>{m.staff_inventory_loans_id_charge_preview()}</strong>
 								{chargePreview.days} day{chargePreview.days !== 1 ? 's' : ''} × {formatCents(
 									loan.dailyRateCents ?? 0
 								)}/day = <strong>{formatCents(chargePreview.total)}</strong>
@@ -265,7 +322,12 @@
 					<MarkReturnedAction
 						loanId={id}
 						chargeMessage={chargePreview
-							? `Charge preview: ${chargePreview.days} day${chargePreview.days !== 1 ? 's' : ''} × ${formatCents(loan.dailyRateCents ?? 0)}/day = ${formatCents(chargePreview.total)}`
+							? m.staff_inventory_loans_id_charge_message({
+									days: chargePreview.days,
+									value: chargePreview.days !== 1 ? 's' : '',
+									formatCents: formatCents(loan.dailyRateCents ?? 0),
+									formatCents2: formatCents(chargePreview.total)
+								})
 							: undefined}
 					/>
 				{/if}

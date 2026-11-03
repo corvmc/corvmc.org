@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
@@ -34,15 +35,25 @@
 
 <PageHeader
 	width="3xl"
-	title="Check-in: {data.event.title}"
+	title={m.staff_events_id_check_in_check({ title: data.event.title })}
 	crumb="Check-in"
 	parent={{ label: data.event.title, href: resolve('/staff/events/[id]', { id: data.event.id }) }}
 />
 <PageContent width="3xl">
 	<!-- Stats -->
 	<div class="flex gap-6">
-		<StatCard title="Checked In" value={data.stats.checkedIn} size="sm" class="p-4" />
-		<StatCard title="Tickets Sold" value={data.stats.sold} size="sm" class="p-4" />
+		<StatCard
+			title={m.staff_events_id_check_in_checked()}
+			value={data.stats.checkedIn}
+			size="sm"
+			class="p-4"
+		/>
+		<StatCard
+			title={m.staff_events_id_check_in_tickets_sold()}
+			value={data.stats.sold}
+			size="sm"
+			class="p-4"
+		/>
 	</div>
 
 	<!-- The scanner leads, and the list below is the fallback it degrades to.
@@ -53,7 +64,7 @@
 	<input
 		type="text"
 		bind:value={search}
-		placeholder="Search by name, email, or code..."
+		placeholder={m.staff_events_id_check_in_placeholder()}
 		class="input w-full"
 	/>
 
@@ -78,13 +89,17 @@
 							     door, one-handed. daisyUI's default `btn` is 40 (#971). -->
 							<Form
 								remote={checkInTicket.for(ticket.id)}
-								successToast="Checked in"
+								successToast={m.staff_events_id_check_in_success_toast()}
 								onsuccess={() => invalidateAll()}
 								class="inline"
 							>
 								<input {...fields.ticketId.as('hidden', ticket.id)} />
 								<input {...fields.eventId.as('hidden', page.params.id!)} />
-								<SubmitButton label="Check In" variant="primary" class="min-h-11" />
+								<SubmitButton
+									label={m.staff_events_id_check_in_label()}
+									variant="primary"
+									class="min-h-11"
+								/>
 							</Form>
 							<CancelTicketAction ticketId={ticket.id} attendeeName={ticket.attendeeName} />
 						{/if}

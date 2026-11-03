@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { getUserOverview } from '$lib/remote/users.remote';
 	import type { TabKey } from '../tabs';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -135,7 +136,7 @@
 	who this is.
 -->
 {#if attention.length > 0}
-	<InfoCard title="Needs attention">
+	<InfoCard title={m.staff_members_id_panels_overview_panel_needs_attention()}>
 		<ul class="flex flex-col gap-2">
 			{#each attention as item (item.text)}
 				<li>
@@ -160,33 +161,37 @@
 	already; repeating them here as rows was the same duplication the identity
 	strip had, one card down. What stays is what the header has no room to say.
 -->
-<InfoCard title="At a glance">
+<InfoCard title={m.staff_members_id_panels_overview_panel_at_glance()}>
 	<DefinitionList>
-		<Fact label="Joined">{formatDateShortYear(member.createdAt)}</Fact>
+		<Fact label={m.staff_joined()}>{formatDateShortYear(member.createdAt)}</Fact>
 
-		<Fact label="Last sign-in">
+		<Fact label={m.staff_members_id_panels_overview_panel_last_sign()}>
 			{#if overview.lastLoginAt}
 				{formatDateTimeShort(overview.lastLoginAt)}
 			{:else}
-				<span class="opacity-60">Never, or signed out everywhere</span>
+				<span class="opacity-60"
+					>{m.staff_members_id_panels_overview_panel_never_signed_out_ever()}</span
+				>
 			{/if}
 		</Fact>
 
 		<!-- Sustaining is a header badge; the free tier has no badge, so it says so. -->
-		<Fact label="Membership">
+		<Fact label={m.staff_membership()}>
 			{#if overview.membership.sustaining}
 				{overview.membership.hoursPerReset
 					? `${overview.membership.hoursPerReset / 2} hrs a month`
 					: 'Sustaining'}
 			{:else}
-				Free tier
+				{m.staff_members_id_panels_overview_panel_free_tier()}
 			{/if}
 		</Fact>
 
-		<Fact label="Directory">
+		<Fact label={m.staff_members_id_panels_overview_panel_directory()}>
 			{overview.directory.visibility}
 			{#if !overview.directory.profileComplete}
-				<span class="opacity-60"> · profile incomplete</span>
+				<span class="opacity-60">
+					{m.staff_members_id_panels_overview_panel_profile_incomplete()}</span
+				>
 			{/if}
 		</Fact>
 	</DefinitionList>

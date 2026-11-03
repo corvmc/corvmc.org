@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Claims on upcoming shifts nobody has confirmed.
 	 *
@@ -63,18 +64,26 @@
 	});
 </script>
 
-<InfoCard title="Pending Assignments" state={total} class="border-l-4 border-warning">
+<InfoCard
+	title={m.staff_volunteer_needs_confirming_card_title()}
+	state={total}
+	class="border-l-4 border-warning"
+>
 	{#snippet action()}
-		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
+		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm"
+			>{m.staff_schedule_2()}</Button
+		>
 	{/snippet}
 
 	<!-- Zebra off: the group header rows are the banding, which striping
 	     muddies. The same choice the reservations and events tables make. -->
 	<Table zebra={false}>
 		{#snippet head()}
-			<th>Member</th>
-			<th class="col-support whitespace-nowrap">Claimed</th>
-			<th class="w-px"><span class="sr-only">Actions</span></th>
+			<th>{m.staff_member()}</th>
+			<th class="col-support whitespace-nowrap"
+				>{m.staff_volunteer_needs_confirming_card_claimed()}</th
+			>
+			<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 		{/snippet}
 
 		{#each byShift as group (group.shift.shiftId)}
@@ -100,13 +109,15 @@
 						{#if group.rows.length > 1}
 							<Action
 								action={confirmSignups.for(shift.shiftId)}
-								label="Confirm all {group.rows.length}"
+								label={m.staff_volunteer_needs_confirming_card_confirm_all({
+									length: group.rows.length
+								})}
 								variant="ghost"
 								size="xs"
 								class="text-success"
-								modalTitle="Confirm everyone on this shift?"
-								submitLabel="Confirm all"
-								successToast="Confirmed"
+								modalTitle={m.staff_confirm_everyone_shift()}
+								submitLabel={m.staff_confirm_all()}
+								successToast={m.staff_confirmed()}
 							>
 								{#snippet form()}
 									<input type="hidden" name="shiftId" value={shift.shiftId} />
@@ -114,9 +125,11 @@
 										<input type="hidden" name="signupIds" value={row.signupId} />
 									{/each}
 									<p class="text-sm">
-										{group.rows.map((r) => r.member.title).join(', ')} — all confirmed for
-										{shift.roleName} on {formatDateShort(shift.startsAt)}. Each of them gets a
-										reminder the day before.
+										{m.staff_volunteer_needs_confirming_card_all_confirmed_each_the({
+											join: group.rows.map((r) => r.member.title).join(', '),
+											roleName: shift.roleName,
+											formatDateShort: formatDateShort(shift.startsAt)
+										})}
 									</p>
 								{/snippet}
 							</Action>
@@ -134,23 +147,25 @@
 					<td class="w-px">
 						<Action
 							action={confirmSignup.for(claim.signupId)}
-							label="Confirm"
+							label={m.staff_confirm()}
 							iconOnly
 							icon={checkIcon}
 							variant="ghost"
 							size="sm"
 							class="text-success"
-							modalTitle="Confirm {claim.member.title}?"
-							submitLabel="Confirm"
-							successToast="Confirmed"
+							modalTitle={m.staff_confirm_2({ title: claim.member.title })}
+							submitLabel={m.staff_confirm()}
+							successToast={m.staff_confirmed()}
 						>
 							{#snippet form()}
 								<input type="hidden" name="signupId" value={claim.signupId} />
 								<input type="hidden" name="shiftId" value={claim.shiftId} />
 								<p class="text-sm">
-									{claim.roleName} on {formatDateShort(claim.startsAt)},
-									{timeRange(claim.startsAt, claim.endsAt)}. They'll get a reminder the day before,
-									and only a confirmed claim completes afterwards.
+									{m.staff_volunteer_needs_confirming_card_they_ll_get_reminder_d({
+										roleName: claim.roleName,
+										formatDateShort: formatDateShort(claim.startsAt),
+										timeRange: timeRange(claim.startsAt, claim.endsAt)
+									})}
 								</p>
 							{/snippet}
 						</Action>

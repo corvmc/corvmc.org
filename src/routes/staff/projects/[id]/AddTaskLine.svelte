@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import { createTaskForm } from '$lib/remote/tasks.remote';
 	import InlineAddField from './InlineAddField.svelte';
@@ -18,7 +19,7 @@
 	<input {...add.fields.sectionId.as('hidden', sectionId ?? '')} />
 	<InlineAddField
 		field={add.fields.title}
-		label="Add a task to {sectionName}"
-		placeholder="Add a task"
+		label={m.staff_projects_id_add_task_line_label({ sectionName })}
+		placeholder={m.staff_add_task()}
 	/>
 </Form>

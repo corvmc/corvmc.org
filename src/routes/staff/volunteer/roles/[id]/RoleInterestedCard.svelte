@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -25,9 +26,14 @@
 	async function copyEmails(emails: string[]) {
 		try {
 			await navigator.clipboard.writeText(emails.join(', '));
-			toast.success(`Copied ${emails.length} ${emails.length === 1 ? 'address' : 'addresses'}`);
+			toast.success(
+				msg.staff_volunteer_roles_id_role_interested_card_copied({
+					length: emails.length,
+					value: emails.length === 1 ? 'address' : 'addresses'
+				})
+			);
 		} catch {
-			toast.error("Couldn't copy — your browser blocked clipboard access");
+			toast.error(msg.staff_volunteer_roles_id_role_interested_card_couldn_t_copy());
 		}
 	}
 
@@ -38,7 +44,7 @@
 	);
 </script>
 
-<InfoCard title="Interested Members">
+<InfoCard title={msg.staff_volunteer_roles_id_role_interested_card_title()}>
 	{#snippet header(title)}
 		<div class="flex items-center justify-between gap-2">
 			{#await interested then r}
@@ -57,7 +63,10 @@
 					-->
 					{#if r.gated && r.rows.length > 0}
 						<span class="text-muted font-normal">
-							· {r.rows.filter((m) => m.missing.length === 0).length} of {r.rows.length} cleared today
+							{msg.staff_volunteer_roles_id_role_interested_card_cleared_today({
+								length: r.rows.filter((m) => m.missing.length === 0).length,
+								length2: r.rows.length
+							})}
 						</span>
 					{/if}
 				</CardTitle>
@@ -65,7 +74,7 @@
 			{#await interested then r}
 				{#if r.rows.length > 0}
 					<Button variant="ghost" size="sm" onclick={() => copyEmails(r.rows.map((m) => m.email))}>
-						Copy emails on this page
+						{msg.staff_volunteer_roles_id_role_interested_card_copy_emails_pa()}
 					</Button>
 				{/if}
 			{/await}
@@ -76,18 +85,18 @@
 		{@const gated = r.gated}
 		<DataList
 			result={interested}
-			empty="No one has picked this role yet."
+			empty={msg.staff_volunteer_roles_id_role_interested_card_empty()}
 			onpage={(p) => (pageNumber = p)}
 		>
 			{#snippet children(members)}
 				<Table>
 					{#snippet head()}
 						{#if gated}
-							<th class="w-px"><span class="sr-only">Cleared</span></th>
+							<th class="w-px"><span class="sr-only">{msg.staff_cleared()}</span></th>
 						{/if}
-						<th>Member</th>
-						<th class="col-support">When they can help</th>
-						<th class="col-extra whitespace-nowrap">Since</th>
+						<th>{msg.staff_member()}</th>
+						<th class="col-support">{msg.staff_when_they_can_help()}</th>
+						<th class="col-extra whitespace-nowrap">{msg.staff_since()}</th>
 					{/snippet}
 
 					{#each members as member (member.userId)}
@@ -102,7 +111,9 @@
 								<EntityIdentity ref={member.member} />
 								{#if gated && member.missing.length > 0}
 									<div class="text-xs text-warning">
-										needs {member.missing.map((c) => c.name).join(', ')}
+										{msg.staff_volunteer_roles_id_role_interested_card_needs({
+											join: member.missing.map((c) => c.name).join(', ')
+										})}
 									</div>
 								{/if}
 							</td>

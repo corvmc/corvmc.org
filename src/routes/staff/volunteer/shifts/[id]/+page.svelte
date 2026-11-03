@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import WorkOrderView from '$lib/components/volunteer/WorkOrderView.svelte';
@@ -13,8 +14,8 @@
 <!-- Under Volunteering by URL, but reached from the schedule, which the URL does not say. -->
 <WorkOrderView
 	{view}
-	subtitle="Shift"
-	parent={[{ label: 'Schedule', href: resolve('/staff/volunteer/schedule') }]}
+	subtitle={m.staff_shift()}
+	parent={[{ label: m.staff_schedule(), href: resolve('/staff/volunteer/schedule') }]}
 >
 	{#snippet actions()}
 		{#if view.contractors.length > 0 && !view.shift.cancelledAt && !view.shift.resolvedAt}

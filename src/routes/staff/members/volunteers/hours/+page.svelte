@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import VolunteerStatusTabs from './VolunteerStatusTabs.svelte';
 	import MemberViews from '../../MemberViews.svelte';
 	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
@@ -108,9 +109,16 @@
 	function handleBulkApproved(result?: unknown) {
 		const { approved = 0, skipped = 0 } = (result ?? {}) as { approved?: number; skipped?: number };
 		if (skipped > 0) {
-			toast.warning(`${approved} approved. ${skipped} were already reviewed.`);
+			toast.warning(
+				m.staff_members_volunteers_hours_approved_were_already_reviewe({ approved, skipped })
+			);
 		} else {
-			toast.success(`${approved} ${approved === 1 ? 'entry' : 'entries'} approved`);
+			toast.success(
+				m.staff_members_volunteers_hours_approved({
+					approved,
+					value: approved === 1 ? 'entry' : 'entries'
+				})
+			);
 		}
 		refreshQueue();
 	}
@@ -126,7 +134,7 @@
 </script>
 
 <!-- A view on Members → Volunteers (#2075), so it wears that page's frame. -->
-<PageHeader title="Members">
+<PageHeader title={m.staff_members()}>
 	<LogHoursForMemberAction />
 </PageHeader>
 
@@ -143,7 +151,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search members..."
+				placeholder={m.staff_members_volunteers_hours_placeholder()}
 				onsearch={(q) => {
 					filters.q = q;
 					filters.page = 1;
@@ -153,21 +161,21 @@
 
 		<Select
 			size="sm"
-			aria-label="Role"
+			aria-label={m.staff_role()}
 			value={filters.role}
 			onchange={(e: Event) => {
 				filters.role = (e.currentTarget as HTMLSelectElement).value;
 				filters.page = 1;
 			}}
 		>
-			<option value="">All roles</option>
+			<option value="">{m.staff_all_roles()}</option>
 			<RoleOptions />
 		</Select>
 
 		<input
 			type="date"
 			class="input input-sm"
-			aria-label="Worked on or after"
+			aria-label={m.staff_members_volunteers_hours_worked_after()}
 			value={filters.from}
 			onchange={(e) => {
 				filters.from = (e.currentTarget as HTMLInputElement).value;
@@ -177,7 +185,7 @@
 		<input
 			type="date"
 			class="input input-sm"
-			aria-label="Worked on or before"
+			aria-label={m.staff_members_volunteers_hours_worked_before()}
 			value={filters.to}
 			onchange={(e) => {
 				filters.to = (e.currentTarget as HTMLInputElement).value;
@@ -198,12 +206,12 @@
 			>
 			<Action
 				action={approveVolunteerHoursBulk}
-				label="Approve selected"
+				label={m.staff_members_volunteers_hours_approve_selected()}
 				icon={checkIcon}
 				variant="primary"
 				size="sm"
-				modalTitle="Approve these hours?"
-				submitLabel="Approve"
+				modalTitle={m.staff_approve_these_hours()}
+				submitLabel={m.staff_approve()}
 				onsuccess={handleBulkApproved}
 			>
 				{#snippet form()}
@@ -214,9 +222,9 @@
 					</p>
 					<FormField
 						name="notes"
-						label="Note (optional)"
+						label={m.staff_note_optional()}
 						type="textarea"
-						description="Shared with every member in the selection."
+						description={m.staff_members_volunteers_hours_shared_with_every_member_sele()}
 					/>
 				{/snippet}
 			</Action>
@@ -226,8 +234,8 @@
 	<DataList
 		{result}
 		empty={filters.status === 'pending'
-			? 'Nothing to review — the queue is clear.'
-			: 'No hour logs found'}
+			? m.staff_members_volunteers_hours_nothing_review_queue_clear()
+			: m.staff_members_volunteers_hours_no_hour_logs_found()}
 		onpage={(p) => (filters.page = p)}
 	>
 		{#snippet children(logs)}
@@ -238,7 +246,7 @@
 							<input
 								type="checkbox"
 								class="checkbox checkbox-sm"
-								aria-label="Select every row on this page"
+								aria-label={m.staff_members_volunteers_hours_select_every_row_page()}
 								checked={logs.length > 0 && logs.every((l) => selected.has(l.id))}
 								onchange={(e) => {
 									const on = e.currentTarget.checked;
@@ -247,12 +255,12 @@
 							/>
 						</th>
 					{/if}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Member</th>
-					<th class="col-support">Role</th>
-					<th class="col-support whitespace-nowrap">Worked</th>
-					<th class="col-support cell-num">Hours</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
+					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+					<th>{m.staff_member()}</th>
+					<th class="col-support">{m.staff_role()}</th>
+					<th class="col-support whitespace-nowrap">{m.staff_worked()}</th>
+					<th class="col-support cell-num">{m.staff_hours()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 				{/snippet}
 
 				{#each logs as log (log.id)}
@@ -262,7 +270,7 @@
 								<input
 									type="checkbox"
 									class="checkbox checkbox-sm"
-									aria-label="Select these hours"
+									aria-label={m.staff_members_volunteers_hours_select_these_hours()}
 									checked={selected.has(log.id)}
 									onchange={(e) => toggle(log.id, e.currentTarget.checked)}
 								/>
@@ -273,8 +281,12 @@
 							{#if log.shiftId}
 								<!-- Filed against a shift staff scheduled — the person was
 								     rostered, so this can be approved with less scrutiny. -->
-								<Badge variant="ghost" size="xs" class="mt-1" title="Logged from a scheduled shift"
-									>scheduled</Badge
+								<Badge
+									variant="ghost"
+									size="xs"
+									class="mt-1"
+									title={m.staff_members_volunteers_hours_logged_from_scheduled_shift()}
+									>{m.staff_members_volunteers_hours_scheduled()}</Badge
 								>
 							{/if}
 						</td>
@@ -298,7 +310,8 @@
 						</td>
 
 						<td class="col-support">
-							{log.roleName}{#if !log.roleIsActive}<span class="ml-1 text-subtle">(archived)</span
+							{log.roleName}{#if !log.roleIsActive}<span class="ml-1 text-subtle"
+									>{m.staff_members_volunteers_hours_archived()}</span
 								>{/if}
 							<HourLogExceptions exceptions={log.exceptions} />
 						</td>
@@ -313,29 +326,33 @@
 								{#if log.status === 'pending'}
 									<Action
 										action={approveVolunteerHours.for(log.id)}
-										label="Approve"
+										label={m.staff_approve()}
 										iconOnly
 										icon={checkIcon}
 										variant="ghost"
 										size="sm"
 										class="text-success"
-										modalTitle="Approve these hours?"
-										submitLabel="Approve"
-										successToast="Hours approved"
+										modalTitle={m.staff_approve_these_hours()}
+										submitLabel={m.staff_approve()}
+										successToast={m.staff_hours_approved()}
 										onsuccess={refreshQueue}
 									>
 										{#snippet form()}
 											<input type="hidden" name="id" value={log.id} />
 											<p class="text-sm">
-												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.member.title} on
-												{formatDateShort(log.workedOn)}.
+												{m.staff_by({
+													formatVolunteerHours: formatVolunteerHours(log.minutes),
+													roleName: log.roleName,
+													title: log.member.title,
+													formatDateShort: formatDateShort(log.workedOn)
+												})}
 											</p>
 											<p class="text-muted">{log.description}</p>
 											<FormField
 												name="notes"
-												label="Note (optional)"
+												label={m.staff_note_optional()}
 												type="textarea"
-												description="Shared with the member."
+												description={m.staff_shared_with_member()}
 											/>
 										{/snippet}
 									</Action>
@@ -343,27 +360,31 @@
 									<!-- Warn, record, allow (#2233): the reason goes to the audit log. -->
 									<Action
 										action={approveVolunteerHours.for(log.id)}
-										label="Approve anyway"
+										label={m.staff_members_volunteers_hours_approve_anyway()}
 										iconOnly
 										icon={checkIcon}
 										variant="ghost"
 										size="sm"
-										modalTitle="Approve returned hours?"
-										submitLabel="Approve anyway"
-										successToast="Hours approved"
+										modalTitle={m.staff_members_volunteers_hours_approve_returned_hours()}
+										submitLabel={m.staff_members_volunteers_hours_approve_anyway()}
+										successToast={m.staff_hours_approved()}
 										onsuccess={refreshQueue}
 									>
 										{#snippet form()}
 											<input type="hidden" name="id" value={log.id} />
 											<p class="text-sm">
-												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.member.title} on
-												{formatDateShort(log.workedOn)} were returned to the member.
+												{m.staff_members_volunteers_hours_by_were_returned_member({
+													formatVolunteerHours: formatVolunteerHours(log.minutes),
+													roleName: log.roleName,
+													title: log.member.title,
+													formatDateShort: formatDateShort(log.workedOn)
+												})}
 											</p>
 											<FormField
 												name="reason"
-												label="Why approve them now?"
+												label={m.staff_members_volunteers_hours_why_approve_them_now()}
 												type="textarea"
-												description="Recorded in the audit log."
+												description={m.staff_members_volunteers_hours_recorded_audit_log()}
 											/>
 										{/snippet}
 									</Action>
@@ -372,30 +393,34 @@
 								{#if log.status !== 'rejected'}
 									<Action
 										action={rejectVolunteerHours.for(log.id)}
-										label="Return"
+										label={m.staff_return()}
 										iconOnly
 										icon={returnIcon}
 										variant="ghost"
 										size="sm"
 										class="text-error"
-										modalTitle="Return these hours?"
-										submitLabel="Return"
+										modalTitle={m.staff_return_these_hours()}
+										submitLabel={m.staff_return()}
 										submitVariant="error"
-										successToast="Hours returned"
+										successToast={m.staff_hours_returned()}
 										onsuccess={refreshQueue}
 									>
 										{#snippet form()}
 											<input type="hidden" name="id" value={log.id} />
 											<p class="text-sm">
-												{formatVolunteerHours(log.minutes)} of {log.roleName} by {log.member.title} on
-												{formatDateShort(log.workedOn)}.
+												{m.staff_by({
+													formatVolunteerHours: formatVolunteerHours(log.minutes),
+													roleName: log.roleName,
+													title: log.member.title,
+													formatDateShort: formatDateShort(log.workedOn)
+												})}
 											</p>
 											<p class="text-muted">{log.description}</p>
 											<FormField
 												name="notes"
-												label="Reason"
+												label={m.staff_reason()}
 												type="textarea"
-												description="Required — the member needs this to correct and resubmit."
+												description={m.staff_required_member_needs_correct_resubmit()}
 											/>
 										{/snippet}
 									</Action>

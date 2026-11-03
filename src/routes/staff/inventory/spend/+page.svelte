@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -50,33 +51,33 @@
 	}
 </script>
 
-<PageHeader title="Spend" subtitle="Inventory" />
+<PageHeader title={m.staff_spend()} subtitle={m.staff_inventory()} />
 
 <PageContent>
 	<div class="mb-4 flex flex-wrap items-end gap-3">
-		<Field name="from" type="date" label="From" bind:value={from} />
-		<Field name="to" type="date" label="To" bind:value={to} />
-		<Button variant="default" size="sm" onclick={apply}>Apply</Button>
+		<Field name="from" type="date" label={m.staff_from()} bind:value={from} />
+		<Field name="to" type="date" label={m.staff_text()} bind:value={to} />
+		<Button variant="default" size="sm" onclick={apply}>{m.staff_apply()}</Button>
 	</div>
 
 	<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-		<StatCard title="Stock" value={formatCents(data.totalCents)} />
-		<StatCard title="Services" value={formatCents(data.servicesCents)} />
-		<StatCard title="Window" value={`${data.from} → ${data.to}`} />
+		<StatCard title={m.staff_stock()} value={formatCents(data.totalCents)} />
+		<StatCard title={m.staff_inventory_spend_services()} value={formatCents(data.servicesCents)} />
+		<StatCard title={m.staff_inventory_spend_window()} value={`${data.from} → ${data.to}`} />
 	</div>
 
 	{#if data.rows.length === 0}
 		<EmptyState
-			title="Nothing purchased in this window"
-			description="Only purchases count here — donations and grants are reported separately."
+			title={m.staff_inventory_spend_nothing_purchased_window()}
+			description={m.staff_inventory_spend_only_purchases_count_here_donations()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th>Category</th>
-				<th class="col-support cell-num">Units</th>
-				<th class="cell-num">Spend</th>
-				<th class="col-support cell-num">Share</th>
+				<th>{m.staff_category()}</th>
+				<th class="col-support cell-num">{m.staff_units()}</th>
+				<th class="cell-num">{m.staff_spend()}</th>
+				<th class="col-support cell-num">{m.staff_inventory_spend_share()}</th>
 			{/snippet}
 			{#each data.rows as row (row.categoryId)}
 				<tr class="hover">
@@ -87,7 +88,7 @@
 				</tr>
 			{/each}
 			<tr class="font-medium">
-				<td>Total</td>
+				<td>{m.staff_total()}</td>
 				<td class="col-support cell-num"></td>
 				<td class="cell-num">{formatCents(data.totalCents)}</td>
 				<td class="col-support cell-num"></td>
@@ -96,13 +97,13 @@
 	{/if}
 
 	{#if data.sources.length > 0}
-		<h2 class="mt-8 mb-3 font-medium">By supplier</h2>
+		<h2 class="mt-8 mb-3 font-medium">{m.staff_inventory_spend_by_supplier()}</h2>
 		<Table>
 			{#snippet head()}
-				<th>Supplier</th>
-				<th class="col-support cell-num">Purchases</th>
-				<th class="cell-num">Spend</th>
-				<th class="col-support cell-num">Share</th>
+				<th>{m.staff_supplier()}</th>
+				<th class="col-support cell-num">{m.staff_inventory_spend_purchases()}</th>
+				<th class="cell-num">{m.staff_spend()}</th>
+				<th class="col-support cell-num">{m.staff_inventory_spend_share()}</th>
 			{/snippet}
 			{#each data.sources as row (row.sourceName ?? '')}
 				<tr class="hover">
@@ -110,7 +111,7 @@
 						{#if row.sourceName}
 							{row.sourceName}
 						{:else}
-							<span class="text-subtle">Not recorded</span>
+							<span class="text-subtle">{m.staff_inventory_spend_not_recorded()}</span>
 						{/if}
 					</td>
 					<td class="col-support cell-num">{row.acquisitionCount}</td>
@@ -127,18 +128,18 @@
 		labor invoice is not stock arriving — it has no line, no unit count and no
 		equipment category to sit under.
 	-->
-	<h2 class="mt-8 mb-3 font-medium">Services</h2>
+	<h2 class="mt-8 mb-3 font-medium">{m.staff_inventory_spend_services()}</h2>
 	{#if data.services.length === 0}
 		<EmptyState
-			title="No contractor work in this window"
-			description="Work paid out to an instrument tech, an electrician or a service company shows here."
+			title={m.staff_inventory_spend_no_contractor_work_window()}
+			description={m.staff_inventory_spend_work_paid_out_instrument_tech()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th>Trade</th>
-				<th class="col-support cell-num">Jobs</th>
-				<th class="cell-num">Spend</th>
+				<th>{m.staff_inventory_spend_trade()}</th>
+				<th class="col-support cell-num">{m.staff_inventory_spend_jobs()}</th>
+				<th class="cell-num">{m.staff_spend()}</th>
 			{/snippet}
 			{#each data.services as row (row.trade)}
 				<tr class="hover">
@@ -152,7 +153,7 @@
 				</tr>
 			{/each}
 			<tr class="font-medium">
-				<td>Total</td>
+				<td>{m.staff_total()}</td>
 				<td class="col-support cell-num"></td>
 				<td class="cell-num">{formatCents(data.servicesCents)}</td>
 			</tr>
@@ -161,7 +162,7 @@
 
 	<p class="mt-4 text-subtle">
 		Gifts-in-kind are recorded but not reported here yet — see
-		<a class="link" href={resolve('/staff/inventory')}>the inventory spec</a> for the disclosure that
-		is still to come.
+		<a class="link" href={resolve('/staff/inventory')}>{m.staff_inventory_spend_inventory_spec()}</a
+		> for the disclosure that is still to come.
 	</p>
 </PageContent>

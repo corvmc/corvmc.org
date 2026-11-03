@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import {
 		getUserMembership,
 		getUserCredits,
@@ -42,47 +43,64 @@
 	const compHint = `Up to ${creditsToHours(creditCompCeiling.free_hours)} hrs of free hours. An admin can add more.`;
 </script>
 
-<RelatedList title="Membership" result={getUserMembership(id)}>
+<RelatedList title={msg.staff_membership()} result={getUserMembership(id)}>
 	{#snippet children(m)}
 		{#if !m.subscription}
 			<EmptyState
-				title="No membership subscription"
-				description="This member is on the free tier. Free hours only arrive with a sustaining membership."
+				title={msg.staff_members_id_panels_money_panel_no_membership_subscripti()}
+				description={msg.staff_members_id_panels_money_panel_member_free_tier_free_ho()}
 			/>
 		{:else}
 			{#if m.subscription.cancelAtPeriodEnd}
 				<Alert type="warning" class="mb-3">
-					Set to cancel on {formatDateShortYear(m.subscription.currentPeriodEnd)}. Free hours stop
-					allocating after that.
+					{msg.staff_members_id_panels_money_panel_set_cancel_free_hours_st({
+						formatDateShortYear: formatDateShortYear(m.subscription.currentPeriodEnd)
+					})}
 				</Alert>
 			{/if}
 			<DefinitionList>
-				<Fact label="Status"><Badge variant="success" size="sm">Sustaining</Badge></Fact>
+				<Fact label={msg.staff_status()}
+					><Badge variant="success" size="sm">{msg.staff_sustaining()}</Badge></Fact
+				>
 
-				<Fact label="Allocation">{creditsToHours(m.allocated)} hrs a month</Fact>
+				<Fact label={msg.staff_members_id_panels_money_panel_allocation()}
+					>{msg.staff_members_id_panels_money_panel_hrs_month({
+						creditsToHours: creditsToHours(m.allocated)
+					})}</Fact
+				>
 
-				<Fact label="Used this period">{creditsToHours(m.used)} hrs</Fact>
+				<Fact label={msg.staff_members_id_panels_money_panel_used_period()}
+					>{msg.staff_members_id_panels_money_panel_hrs({
+						creditsToHours: creditsToHours(m.used)
+					})}</Fact
+				>
 
-				<Fact label="Renews">{formatDateShortYear(m.subscription.currentPeriodEnd)}</Fact>
+				<Fact label={msg.staff_members_id_panels_money_panel_renews()}
+					>{formatDateShortYear(m.subscription.currentPeriodEnd)}</Fact
+				>
 
-				<Fact label="Covering fees">{m.coveringFees ? 'Yes' : 'No'}</Fact>
+				<Fact label={msg.staff_members_id_panels_money_panel_covering_fees()}
+					>{m.coveringFees ? 'Yes' : 'No'}</Fact
+				>
 
-				<Fact label="Subscription"><CopyableId value={m.subscription.id} /></Fact>
+				<Fact label={msg.staff_members_id_panels_money_panel_subscription()}
+					><CopyableId value={m.subscription.id} /></Fact
+				>
 			</DefinitionList>
 		{/if}
 	{/snippet}
 </RelatedList>
 
-<RelatedList title="Credits" result={getUserCredits(id)}>
+<RelatedList title={msg.staff_members_id_panels_money_panel_credits()} result={getUserCredits(id)}>
 	{#snippet children(credits)}
 		<div class="mb-3 flex gap-6">
 			<div>
 				<p class="text-2xl font-medium">{creditsToHours(credits.free_hours ?? 0)}</p>
-				<p class="text-muted">Free Hours</p>
+				<p class="text-muted">{msg.staff_members_id_panels_money_panel_free_hours()}</p>
 			</div>
 			<div>
 				<p class="text-2xl font-medium">{credits.equipment_credits ?? 0}</p>
-				<p class="text-muted">Equipment Credits</p>
+				<p class="text-muted">{msg.staff_members_id_panels_money_panel_equipment_credits()}</p>
 			</div>
 		</div>
 		{#if canAdjust || canComp}
@@ -101,7 +119,7 @@
 	page next to the number they add up to.
 -->
 <ActivityFeedCard
-	title="Credit history"
+	title={msg.staff_members_id_panels_money_panel_credit_history()}
 	query={(limit) => getUserCreditHistory(limit ? { userId: id, limit } : { userId: id })}
 	toRow={(t) => ({
 		...feedItemRow(t),
@@ -109,8 +127,8 @@
 		credit: t
 	})}
 	empty={{
-		title: 'No credit activity',
-		description: 'Nothing has been allocated, spent or adjusted yet.'
+		title: msg.staff_members_id_panels_money_panel_no_credit_activity(),
+		description: msg.staff_members_id_panels_money_panel_nothing_has_been_allocat()
 	}}
 >
 	{#snippet trailing({ credit })}
@@ -119,29 +137,37 @@
 		<span class="font-medium" class:text-error={credit.amount < 0}>
 			{credit.amount > 0 ? '+' : ''}{units(credit.amount)}
 		</span>
-		<div class="text-muted text-xs">balance {units(credit.balanceAfter)}</div>
+		<div class="text-muted text-xs">
+			{msg.staff_members_id_panels_money_panel_balance({ units: units(credit.balanceAfter) })}
+		</div>
 	{/snippet}
 </ActivityFeedCard>
 
-<RelatedList title="Payment records" result={getUserPayments(id)}>
+<RelatedList
+	title={msg.staff_members_id_panels_money_panel_payment_records()}
+	result={getUserPayments(id)}
+>
 	{#snippet children(payments)}
 		{#if payments.length === 0}
 			<!-- Rendered even when empty: without it, "no payments" and "the query
 			     failed" were indistinguishable — both showed nothing at all. -->
 			<EmptyState
-				title="No payments yet"
-				description="Payments appear here once this member pays for a reservation or membership."
+				title={msg.staff_members_id_panels_money_panel_no_payments_yet()}
+				description={msg.staff_members_id_panels_money_panel_payments_appear_here_onc()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Paid</th>
-					<th class="cell-num">Amount</th>
+					<th class="w-px"><span class="sr-only">{msg.staff_status()}</span></th>
+					<th>{msg.staff_paid()}</th>
+					<th class="cell-num">{msg.staff_amount()}</th>
 					<!-- The Stripe id is diagnostic and tiers away; the link to the
 					     reservation is the row's only action and must not (#1229). -->
-					<th class="col-extra">Record</th>
-					<th class="w-px"><span class="sr-only">Reservation</span></th>
+					<th class="col-extra">{msg.staff_record()}</th>
+					<th class="w-px"
+						><span class="sr-only">{msg.staff_members_id_panels_money_panel_reservation()}</span
+						></th
+					>
 				{/snippet}
 				{#each payments as p (p.id)}
 					<tr class="hover">
@@ -156,13 +182,13 @@
 						</td>
 						<td class="cell-num font-medium">{formatCents(p.amountCents)}</td>
 						<td class="col-extra">
-							<CopyableId value={p.id} label="Stripe" />
+							<CopyableId value={p.id} label={msg.staff_members_id_panels_money_panel_stripe()} />
 						</td>
 						<td class="w-px">
 							{#if p.reservationId}
 								<div class="flex w-max justify-end">
 									<Button href="/staff/reservations/{p.reservationId}" variant="ghost" size="xs">
-										View
+										{msg.staff_members_id_panels_money_panel_view()}
 									</Button>
 								</div>
 							{/if}

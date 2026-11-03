@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -62,30 +63,30 @@
 	}
 </script>
 
-<PageHeader title="Acquisitions" subtitle="Inventory" />
+<PageHeader title={m.staff_acquisitions()} subtitle={m.staff_inventory()} />
 
 <PageContent>
 	<div class="mb-4 flex flex-wrap items-end gap-3">
 		<Field
 			name="kind"
 			type="select"
-			label="Kind"
+			label={m.staff_kind()}
 			bind:value={kind}
 			options={[
-				{ value: '', label: 'All' },
+				{ value: '', label: m.staff_all() },
 				...acquisitionKinds.map((k) => ({ value: k, label: acquisitionKindLabels[k] }))
 			]}
 		/>
-		<Field name="from" type="date" label="From" bind:value={from} />
-		<Field name="to" type="date" label="To" bind:value={to} />
+		<Field name="from" type="date" label={m.staff_from()} bind:value={from} />
+		<Field name="to" type="date" label={m.staff_text()} bind:value={to} />
 		<Field
 			name="owed"
 			type="checkbox"
-			label="Awaiting reimbursement"
+			label={m.staff_awaiting_reimbursement()}
 			bind:value={owed}
-			checkboxLabel="Only what somebody is owed for"
+			checkboxLabel={m.staff_inventory_acquisitions_checkbox_label()}
 		/>
-		<Button variant="default" size="sm" onclick={() => apply()}>Apply</Button>
+		<Button variant="default" size="sm" onclick={() => apply()}>{m.staff_apply()}</Button>
 	</div>
 
 	{#if data.owedCount > 0 && !owed}
@@ -98,21 +99,21 @@
 
 	{#if data.rows.length === 0}
 		<EmptyState
-			title="Nothing recorded"
+			title={m.staff_inventory_acquisitions_nothing_recorded()}
 			description={owed
-				? 'Nobody is currently owed for anything the collective has taken in.'
-				: 'Receiving stock against an item is what creates an acquisition.'}
+				? m.staff_inventory_acquisitions_nobody_currently_owed_anything()
+				: m.staff_inventory_acquisitions_receiving_stock_against_item_wh()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th class="whitespace-nowrap">Date</th>
-				<th>Source</th>
-				<th class="col-support">Kind</th>
-				<th class="col-extra">Reference</th>
-				<th class="col-support cell-num">Lines</th>
-				<th class="cell-num">Value</th>
-				<th>Reimbursement</th>
+				<th class="whitespace-nowrap">{m.staff_date()}</th>
+				<th>{m.staff_source()}</th>
+				<th class="col-support">{m.staff_kind()}</th>
+				<th class="col-extra">{m.staff_reference()}</th>
+				<th class="col-support cell-num">{m.staff_inventory_acquisitions_lines()}</th>
+				<th class="cell-num">{m.staff_value()}</th>
+				<th>{m.staff_inventory_acquisitions_reimbursement()}</th>
 			{/snippet}
 			{#each data.rows as row (row.id)}
 				<tr class="hover">
@@ -124,7 +125,9 @@
 					<td class="cell-primary">
 						{row.donorName ?? '—'}
 						{#if row.kind === 'donation' && row.acknowledgedAt}
-							<Badge variant="outline" size="xs">8283 signed</Badge>
+							<Badge variant="outline" size="xs"
+								>{m.staff_inventory_acquisitions_8283_signed()}</Badge
+							>
 						{/if}
 					</td>
 					<td class="col-support">{acquisitionKindLabels[row.kind]}</td>
@@ -133,10 +136,14 @@
 					<td class="cell-num">{formatCents(row.totalCents)}</td>
 					<td>
 						{#if row.awaitingReimbursement}
-							<Badge variant="warning" size="sm">Owed to {row.paidByName}</Badge>
+							<Badge variant="warning" size="sm"
+								>{m.staff_inventory_acquisitions_owed({ paidByName: row.paidByName ?? '' })}</Badge
+							>
 						{:else if row.reimbursedAt}
 							<span class="text-subtle">
-								Repaid {formatDateShort(row.reimbursedAt)}
+								{m.staff_inventory_acquisitions_repaid({
+									formatDateShort: formatDateShort(row.reimbursedAt)
+								})}
 							</span>
 						{:else}
 							<span class="text-subtle">—</span>

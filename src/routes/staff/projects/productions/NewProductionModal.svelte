@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Modal from '$lib/components/ui/Modal.svelte';
@@ -42,38 +43,44 @@
 	}
 </script>
 
-<Modal bind:open title="New Production" maxWidth="max-w-md">
+<Modal bind:open title={m.staff_new_production()} maxWidth="max-w-md">
 	{#if listings === null}
 		<div class="flex items-center justify-center p-8">
 			<span class="loading loading-md loading-spinner"></span>
 		</div>
 	{:else if listings.length === 0}
-		<p class="text-muted">No show on the calendar is waiting for a production.</p>
+		<p class="text-muted">{m.staff_projects_productions_new_production_modal_no_show_cale()}</p>
 		<div class="modal-action">
-			<Button type="button" variant="ghost" onclick={() => (open = false)}>Cancel</Button>
-			<Button type="button" variant="primary" onclick={createListing}>Create a listing</Button>
+			<Button type="button" variant="ghost" onclick={() => (open = false)}
+				>{m.staff_cancel()}</Button
+			>
+			<Button type="button" variant="primary" onclick={createListing}
+				>{m.staff_projects_productions_new_production_modal_create_listi()}</Button
+			>
 		</div>
 	{:else}
 		<Form
 			remote={createProduction}
-			successToast="Production opened"
+			successToast={m.staff_projects_productions_new_production_modal_success_toas()}
 			onsuccess={handleSuccess}
 			class="space-y-4"
 		>
 			<Field
 				name="eventId"
 				type="select"
-				label="Listing"
+				label={m.staff_listing()}
 				bind:value={eventId}
 				options={listings.map((l) => ({
 					value: l.id,
 					label: `${l.title} · ${formatDateTimeShort(l.startsAt)}`
 				}))}
-				description="Upcoming shows on the calendar without a production."
+				description={m.staff_projects_productions_new_production_modal_description()}
 			/>
 			<div class="modal-action">
-				<Button type="button" variant="ghost" onclick={createListing}>Create a listing</Button>
-				<SubmitButton label="Open production" />
+				<Button type="button" variant="ghost" onclick={createListing}
+					>{m.staff_projects_productions_new_production_modal_create_listi()}</Button
+				>
+				<SubmitButton label={m.staff_projects_productions_new_production_modal_open_product()} />
 			</div>
 		</Form>
 	{/if}
@@ -82,6 +89,6 @@
 <CreateEventModal
 	bind:open={creating}
 	production
-	title="New Production"
-	submitLabel="Create Listing"
+	title={m.staff_new_production()}
+	submitLabel={m.staff_create_listing()}
 />

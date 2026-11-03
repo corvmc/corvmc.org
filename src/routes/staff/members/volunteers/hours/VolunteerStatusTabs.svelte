@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import { getVolunteerStatusCounts } from '$lib/remote/volunteer.remote';
 
@@ -20,10 +21,10 @@
 	class="mb-4"
 	collapse
 	tabs={[
-		{ key: 'pending', label: 'Pending', badge: c.pending },
-		{ key: 'approved', label: 'Approved', badge: c.approved },
-		{ key: 'rejected', label: 'Returned', badge: c.rejected },
-		{ key: 'all', label: 'All', badge: c.all }
+		{ key: 'pending', label: m.staff_pending(), badge: c.pending },
+		{ key: 'approved', label: m.staff_approved(), badge: c.approved },
+		{ key: 'rejected', label: m.staff_returned(), badge: c.rejected },
+		{ key: 'all', label: m.staff_all(), badge: c.all }
 	]}
 	active={view}
 	onchange={(key) => {

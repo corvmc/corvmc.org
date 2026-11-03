@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Work orders — work that needs doing with nobody booked to do it.
 	 *
@@ -60,19 +61,21 @@
 	}
 </script>
 
-<InfoCard title="Unscheduled Work Orders" state={total}>
+<InfoCard title={m.staff_volunteer_needs_scheduling_card_title()} state={total}>
 	{#snippet action()}
-		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm">Schedule →</Button>
+		<Button href="/staff/volunteer/schedule" variant="ghost" size="sm"
+			>{m.staff_schedule_2()}</Button
+		>
 	{/snippet}
 
-	<p class="text-muted">Work orders without a time window.</p>
+	<p class="text-muted">{m.staff_volunteer_needs_scheduling_card_work_orders_without_ti()}</p>
 
 	<Table>
 		{#snippet head()}
-			<th>Role</th>
-			<th class="col-support whitespace-nowrap">Due</th>
-			<th class="col-support cell-num whitespace-nowrap">On it</th>
-			<th class="w-px"><span class="sr-only">Actions</span></th>
+			<th>{m.staff_role()}</th>
+			<th class="col-support whitespace-nowrap">{m.staff_due()}</th>
+			<th class="col-support cell-num whitespace-nowrap">{m.staff_text_2()}</th>
+			<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 		{/snippet}
 
 		{#each orders as order (order.id)}
@@ -93,13 +96,16 @@
 							{formatDateShort(order.dueAt)}
 						</span>
 					{:else}
-						<span class="text-subtle">No deadline</span>
+						<span class="text-subtle">{m.staff_volunteer_needs_scheduling_card_no_deadline()}</span>
 					{/if}
 				</td>
 
 				<td class="col-support cell-num whitespace-nowrap">
 					{#if order.claimed > 0}
-						{order.claimed} of {order.capacity}
+						{m.staff_volunteer_needs_scheduling_card_text({
+							claimed: order.claimed,
+							capacity: order.capacity
+						})}
 					{:else}
 						<span class="text-subtle">—</span>
 					{/if}
@@ -109,57 +115,60 @@
 					<div class="flex w-max items-center gap-1">
 						<Action
 							action={scheduleWorkOrder.for(order.id)}
-							label="Schedule"
+							label={m.staff_schedule()}
 							variant="primary"
 							size="xs"
-							modalTitle="Find a time for {order.roleName ?? NO_ROLE_LABEL}"
-							submitLabel="Schedule"
-							successToast="Scheduled"
+							modalTitle={m.staff_volunteer_needs_scheduling_card_find_time({
+								value: order.roleName ?? NO_ROLE_LABEL
+							})}
+							submitLabel={m.staff_schedule()}
+							successToast={m.staff_scheduled()}
 						>
 							{#snippet form()}
 								<input type="hidden" name="id" value={order.id} />
 								<p class="text-sm">
-									Once it has a window it appears on the schedule and members can claim it.
+									{m.staff_volunteer_needs_scheduling_card_once_has_window_appear()}
 								</p>
 								<FormField
 									name="startsAt"
-									label="Starts"
+									label={m.staff_starts()}
 									type="datetime-local"
 									value={defaultStart(order.dueAt)}
 								/>
 								<FormField
 									name="endsAt"
-									label="Ends"
+									label={m.staff_ends()}
 									type="datetime-local"
 									value={defaultEnd(order.dueAt)}
 								/>
 								<FormField
 									name="closeReportsOnCompletion"
 									type="checkbox"
-									checkboxLabel="Close reports on completion"
-									description="When the window ends, close any equipment reports on this and tell the reporters it was fixed. Off, it waits on Today for you to confirm."
+									checkboxLabel={m.staff_volunteer_needs_scheduling_card_checkbox_label()}
+									description={m.staff_volunteer_needs_scheduling_card_description()}
 								/>
 							{/snippet}
 						</Action>
 
 						<Action
 							action={resolveWorkOrder.for(order.id)}
-							label="Close Work Order"
+							label={m.staff_volunteer_needs_scheduling_card_close_work_order()}
 							iconOnly
 							icon={doneIcon}
 							variant="ghost"
 							size="sm"
-							modalTitle="Close {order.roleName ?? NO_ROLE_LABEL}?"
-							submitLabel="Close Work Order"
-							successToast="Closed"
+							modalTitle={m.staff_volunteer_needs_scheduling_card_close({
+								value: order.roleName ?? NO_ROLE_LABEL
+							})}
+							submitLabel={m.staff_volunteer_needs_scheduling_card_close_work_order()}
+							successToast={m.staff_closed()}
 						>
 							{#snippet form()}
 								<input type="hidden" name="id" value={order.id} />
 								<p class="text-sm">
-									Says the work is finished, which is not the same as anybody having turned up.
-									Anyone on it is completed at the same time.
+									{m.staff_volunteer_needs_scheduling_card_says_work_finished_whi()}
 								</p>
-								<FormField name="notes" label="What happened" type="textarea" />
+								<FormField name="notes" label={m.staff_what_happened()} type="textarea" />
 							{/snippet}
 						</Action>
 					</div>

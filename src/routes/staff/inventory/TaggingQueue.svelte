@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -22,16 +23,17 @@
 
 {#if assets.length > 0}
 	<Button variant="ghost" size="sm" data-testid="tagging-queue" onclick={() => (open = true)}>
-		Needs tagging <Badge variant="warning" size="sm">{assets.length}</Badge>
+		{m.staff_inventory_tagging_queue_needs_tagging()}
+		<Badge variant="warning" size="sm">{assets.length}</Badge>
 	</Button>
 {/if}
 
-<Modal bind:open title="Needs tagging" maxWidth="max-w-2xl">
+<Modal bind:open title={m.staff_inventory_tagging_queue_needs_tagging()} maxWidth="max-w-2xl">
 	{#if assets.length === 0}
-		<p class="py-4 text-subtle">Everything is tagged.</p>
+		<p class="py-4 text-subtle">{m.staff_inventory_tagging_queue_everything_tagged()}</p>
 	{:else}
 		<p class="mb-3 text-subtle text-sm">
-			Oldest first. Scan or type the tag on the sticker you are about to put on the unit.
+			{m.staff_inventory_tagging_queue_oldest_first_scan_type_tag()}
 		</p>
 		<ul class="divide-y divide-base-300">
 			{#each assets as asset (asset.id)}
@@ -45,20 +47,22 @@
 							{asset.item.name}
 						</a>
 						<div class="text-subtle text-sm">
-							{#if asset.serialNumber}Serial {asset.serialNumber} ·{/if}
+							{#if asset.serialNumber}{m.staff_inventory_tagging_queue_serial({
+									serialNumber: asset.serialNumber
+								})}{/if}
 							{asset.location?.name ?? 'Unassigned'} · entered {formatDateShort(asset.createdAt)}
 						</div>
 					</div>
-					<Form remote={form} successToast="Tag bound">
+					<Form remote={form} successToast={m.staff_inventory_tagging_queue_success_toast()}>
 						<input {...form.fields.assetId.as('hidden', asset.id)} />
 						<div class="flex items-end gap-2">
 							<Field
 								field={form.fields.assetTag}
 								type="text"
-								label="Asset tag"
-								placeholder="CMC-000123"
+								label={m.staff_asset_tag()}
+								placeholder={m.staff_cmc_000123()}
 							/>
-							<SubmitButton label="Bind" />
+							<SubmitButton label={m.staff_inventory_tagging_queue_bind()} />
 						</div>
 					</Form>
 				</li>

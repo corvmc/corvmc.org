@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Everybody who signed up, as one roster (#1934). The under-18 queue is the
 	 * "Awaiting sign-off" status and "who holds this clearance" is a filter: both
@@ -82,59 +83,59 @@
 	{#if volunteer.status === 'blocked'}
 		<Action
 			action={approveVolunteerSignup.for(volunteer.userId)}
-			label="Approve"
+			label={m.staff_approve()}
 			data-testid="approve-volunteer-signup"
 			variant="ghost"
 			size="xs"
 			class="text-success"
-			modalTitle="Let {volunteer.member.title} volunteer?"
-			submitLabel="Approve"
-			successToast="{volunteer.member.title} can volunteer now"
+			modalTitle={m.staff_members_volunteers_let_volunteer({ title: volunteer.member.title })}
+			submitLabel={m.staff_approve()}
+			successToast={m.staff_members_volunteers_can_volunteer_now({ title: volunteer.member.title })}
 			onsuccess={() => void list.refresh()}
 		>
 			{#snippet form()}
 				<input type="hidden" name="userId" value={volunteer.userId} />
 				<p class="text-sm">
-					Confirms a guardian has signed off. They can claim shifts and log hours from then on, and
-					their record still says they are under 18 — which is what changes how a shift is staffed.
+					{m.staff_members_volunteers_confirms_guardian_has_signed_off()}
 				</p>
 			{/snippet}
 		</Action>
 	{:else if volunteer.claim}
 		<Action
 			action={confirmSignup.for(volunteer.claim.signupId)}
-			label="Confirm"
+			label={m.staff_confirm()}
 			variant="ghost"
 			size="xs"
 			class="text-success"
-			modalTitle="Confirm {volunteer.member.title}?"
-			submitLabel="Confirm"
-			successToast="Confirmed"
+			modalTitle={m.staff_confirm_2({ title: volunteer.member.title })}
+			submitLabel={m.staff_confirm()}
+			successToast={m.staff_confirmed()}
 		>
 			{#snippet form()}
 				<input type="hidden" name="signupId" value={volunteer.claim!.signupId} />
 				<input type="hidden" name="shiftId" value={volunteer.claim!.shiftId} />
 				<p class="text-sm">
-					{volunteer.claim!.roleName} on {formatDateShort(volunteer.claim!.startsAt)}. Confirming
-					books them: they get the reminder the day before, and the shift completes afterwards with
-					hours to log.
+					{m.staff_members_volunteers_confirming_books_them_they_get({
+						roleName: volunteer.claim!.roleName,
+						formatDateShort: formatDateShort(volunteer.claim!.startsAt)
+					})}
 				</p>
 			{/snippet}
 		</Action>
 	{:else if volunteer.lapse}
 		<Button href={recordHref(volunteer)} variant="ghost" size="xs" class="text-warning">
-			Chase
+			{m.staff_members_volunteers_chase()}
 		</Button>
 	{:else}
 		<LogHoursForMemberAction
 			presetUser={{ id: volunteer.userId, name: volunteer.member.title }}
-			label="Log Hours"
+			label={m.staff_members_volunteers_log_hours()}
 			size="xs"
 		/>
 	{/if}
 {/snippet}
 
-<PageHeader title="Members">
+<PageHeader title={m.staff_members()}>
 	<LogHoursForMemberAction />
 </PageHeader>
 
@@ -143,9 +144,9 @@
 	<Roster
 		{roster}
 		result={list}
-		empty="No one has signed up to volunteer yet."
-		searchPlaceholder="Search volunteers..."
-		personLabel="Volunteer"
+		empty={m.staff_members_volunteers_empty()}
+		searchPlaceholder={m.staff_members_volunteers_search_placeholder()}
+		personLabel={m.staff_members_volunteers_person_label()}
 		exportPath={resolve('/staff/members/volunteers/export')}
 		emails={() => getStaffVolunteerEmails(active)}
 		tone={(v) => (v.status === 'blocked' ? 'muted' : undefined)}
@@ -153,27 +154,27 @@
 		{#snippet filters()}
 			<Select
 				size="sm"
-				aria-label="Interested in role"
+				aria-label={m.staff_members_volunteers_interested_role()}
 				value={f.role}
 				onchange={(e: Event) => {
 					f.role = (e.currentTarget as HTMLSelectElement).value;
 					f.page = 1;
 				}}
 			>
-				<option value="">Any role</option>
+				<option value="">{m.staff_members_volunteers_any_role()}</option>
 				<RoleOptions />
 			</Select>
 
 			<Select
 				size="sm"
-				aria-label="Status"
+				aria-label={m.staff_status()}
 				value={f.status}
 				onchange={(e: Event) => {
 					f.status = (e.currentTarget as HTMLSelectElement).value as StatusFilter;
 					f.page = 1;
 				}}
 			>
-				<option value="">Any status</option>
+				<option value="">{m.staff_members_volunteers_any_status()}</option>
 				<!-- Labels come from the vocabulary, not from here: "blocked" reads as a
 				     punishment for answering honestly, and the enum's label already says so. -->
 				{#each volunteerProfileStatuses as s (s)}
@@ -183,14 +184,14 @@
 
 			<Select
 				size="sm"
-				aria-label="Clearance"
+				aria-label={m.staff_clearance()}
 				value={f.cert}
 				onchange={(e: Event) => {
 					f.cert = (e.currentTarget as HTMLSelectElement).value;
 					f.page = 1;
 				}}
 			>
-				<option value="">Any clearance</option>
+				<option value="">{m.staff_members_volunteers_any_clearance()}</option>
 				<CertificationOptions />
 			</Select>
 		{/snippet}
@@ -210,7 +211,7 @@
 							f.page = 1;
 						}}
 					>
-						{minorsWaiting} awaiting sign-off
+						{m.staff_members_volunteers_awaiting_sign_off({ minorsWaiting })}
 					</button>
 				{/if}
 			{/await}
@@ -227,7 +228,7 @@
 		{#snippet aside(volunteer)}
 			{#if !volunteer.isAdult}
 				<!-- Kept after a staff override: an approved minor still changes how a shift is staffed. -->
-				<Badge variant="ghost" size="xs">minor</Badge>
+				<Badge variant="ghost" size="xs">{m.staff_members_volunteers_minor()}</Badge>
 			{/if}
 		{/snippet}
 
@@ -239,8 +240,8 @@
 		{/snippet}
 
 		{#snippet columns()}
-			<th class="col-support">Followed Roles</th>
-			<th class="col-support cell-num">Hours</th>
+			<th class="col-support">{m.staff_members_volunteers_followed_roles()}</th>
+			<th class="col-support cell-num">{m.staff_hours()}</th>
 		{/snippet}
 
 		{#snippet cells(volunteer)}
@@ -250,7 +251,7 @@
 				{:else}
 					<!-- The interests step is skippable, so this is an answer, not
 					     missing data: they signed up without picking anything. -->
-					<span class="text-subtle">None picked</span>
+					<span class="text-subtle">{m.staff_members_volunteers_none_picked()}</span>
 				{/if}
 			</td>
 			<td class="col-support cell-num">

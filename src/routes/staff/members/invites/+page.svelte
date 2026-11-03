@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import DataList from '$lib/components/ui/DataList.svelte';
@@ -25,14 +26,14 @@
 	const revokeFields = revokeMemberInviteForm.fields;
 
 	const badges: Record<string, { label: string; variant: BadgeVariant }> = {
-		pending: { label: 'Pending', variant: 'info' },
-		expired: { label: 'Expired', variant: 'warning' },
-		accepted: { label: 'Joined', variant: 'success' },
-		revoked: { label: 'Revoked', variant: 'ghost' }
+		pending: { label: m.staff_pending(), variant: 'info' },
+		expired: { label: m.staff_members_invites_expired(), variant: 'warning' },
+		accepted: { label: m.staff_joined(), variant: 'success' },
+		revoked: { label: m.staff_members_invites_revoked(), variant: 'ghost' }
 	};
 </script>
 
-<PageHeader title="Members">
+<PageHeader title={m.staff_members()}>
 	<InviteMemberAction />
 </PageHeader>
 
@@ -48,29 +49,29 @@
 	>
 		<Select
 			size="sm"
-			aria-label="Status"
+			aria-label={m.staff_status()}
 			value={status}
 			onchange={(e: Event) => {
 				status = (e.currentTarget as HTMLSelectElement).value as Status;
 				page = 1;
 			}}
 		>
-			<option value="pending">Pending</option>
-			<option value="accepted">Joined</option>
-			<option value="revoked">Revoked</option>
-			<option value="">All statuses</option>
+			<option value="pending">{m.staff_pending()}</option>
+			<option value="accepted">{m.staff_joined()}</option>
+			<option value="revoked">{m.staff_members_invites_revoked()}</option>
+			<option value="">{m.staff_all_statuses()}</option>
 		</Select>
 	</FilterBar>
 
-	<DataList {result} empty="No invitations" onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_members_invites_empty()} onpage={(p) => (page = p)}>
 		{#snippet children(invites)}
 			<Table>
 				{#snippet head()}
-					<th>Invited</th>
-					<th class="col-support">Invited by</th>
-					<th class="col-support">Sent</th>
-					<th class="w-px">Status</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
+					<th>{m.staff_members_invites_invited()}</th>
+					<th class="col-support">{m.staff_members_invites_invited_by()}</th>
+					<th class="col-support">{m.staff_members_invites_sent()}</th>
+					<th class="w-px">{m.staff_status()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 				{/snippet}
 				{#each invites as inv (inv.id)}
 					{@const badge = badges[inv.expired ? 'expired' : inv.status]}
@@ -86,12 +87,12 @@
 							{#if inv.status === 'pending'}
 								<Action
 									action={resendMemberInviteForm.for(inv.id)}
-									label="Resend"
-									aria-label={`Resend the invitation to ${inv.email}`}
+									label={m.staff_resend()}
+									aria-label={m.staff_members_invites_resend_invitation({ email: inv.email })}
 									variant="ghost"
 									size="xs"
 									confirm="Send the invitation to {inv.email} again?"
-									successToast="Invitation sent"
+									successToast={m.staff_members_invites_invitation_sent()}
 									onsuccess={() => result.refresh()}
 								>
 									{#snippet form()}
@@ -100,12 +101,12 @@
 								</Action>
 								<Action
 									action={revokeMemberInviteForm.for(inv.id)}
-									label="Revoke"
-									aria-label={`Revoke the invitation to ${inv.email}`}
+									label={m.staff_revoke()}
+									aria-label={m.staff_members_invites_revoke_invitation({ email: inv.email })}
 									variant="ghost"
 									size="xs"
 									confirm="Revoke the invitation to {inv.email}?"
-									successToast="Invitation revoked"
+									successToast={m.staff_members_invites_invitation_revoked()}
 									onsuccess={() => result.refresh()}
 								>
 									{#snippet form()}

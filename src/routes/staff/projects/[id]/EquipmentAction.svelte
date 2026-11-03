@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -29,21 +30,25 @@
 	variant="ghost"
 	size="xs"
 	class="justify-start font-normal"
-	modalTitle="Equipment: {task.title}"
-	submitLabel="Save"
-	successToast="Saved"
+	modalTitle={m.staff_projects_id_equipment_modal_title({ title: task.title })}
+	submitLabel={m.staff_save()}
+	successToast={m.staff_saved()}
 >
 	{#snippet form()}
 		<input {...edit.fields.projectId.as('hidden', projectId)} />
 		<input {...edit.fields.workOrderId.as('hidden', task.id)} />
 		<input {...edit.fields.assetId.as('hidden', selected?.id ?? '')} />
-		<FormField name="assetId" label="Unit" description="The unit this work is about.">
+		<FormField
+			name="assetId"
+			label={m.staff_unit()}
+			description={m.staff_projects_id_equipment_description()}
+		>
 			<SearchSelect
 				search={(q) => searchWorkAssets(q)}
 				bind:value={selected}
 				labelKey="name"
 				descriptionKey="detail"
-				placeholder="Search by item, tag or serial..."
+				placeholder={m.staff_search_by_item_tag_serial()}
 			/>
 		</FormField>
 	{/snippet}

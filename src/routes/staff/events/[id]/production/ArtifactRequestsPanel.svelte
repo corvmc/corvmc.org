@@ -6,6 +6,7 @@
 	for the same thing again is a reminder, not a second row.
 -->
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -47,38 +48,46 @@
 	const overdue = $derived(outstanding.filter((r) => r.overdue).length);
 </script>
 
-<InfoCard title="Asked for">
+<InfoCard title={m.staff_events_id_production_artifact_requests_panel_asked()}>
 	{#snippet header(title)}
 		<div class="flex items-center justify-between gap-2">
 			<CardTitle>{title}</CardTitle>
 			<div class="flex items-center gap-1">
 				{#if overdue > 0}
-					<Badge variant="error">{overdue} overdue</Badge>
+					<Badge variant="error"
+						>{m.staff_events_id_production_artifact_requests_panel_overdue({ overdue })}</Badge
+					>
 				{:else if outstanding.length > 0}
-					<Badge variant="warning">{outstanding.length} outstanding</Badge>
+					<Badge variant="warning"
+						>{m.staff_events_id_production_artifact_requests_panel_outstandi({
+							length: outstanding.length
+						})}</Badge
+					>
 				{/if}
 				{#if acts.length > 0}
 					<Action
 						action={askForArtifact}
-						label="Ask a band"
+						label={m.staff_events_id_production_artifact_requests_panel_ask_band()}
 						variant="ghost"
 						size="sm"
-						modalTitle="Ask a band for {eventTitle}"
-						submitLabel="Ask"
-						successToast="Asked"
+						modalTitle={m.staff_events_id_production_artifact_requests_panel_ask_band_2({
+							eventTitle
+						})}
+						submitLabel={m.staff_events_id_production_artifact_requests_panel_ask()}
+						successToast={m.staff_events_id_production_artifact_requests_panel_asked_2()}
 						onsuccess={onchange}
 					>
 						{#snippet form()}
 							<input type="hidden" name="eventId" value={eventId} />
 							<FormField
 								name="entryId"
-								label="Band"
+								label={m.staff_band()}
 								type="select"
 								options={acts.map((a) => ({ value: a.entryId, label: a.name }))}
 							/>
 							<FormField
 								name="artifact"
-								label="What"
+								label={m.staff_what()}
 								type="select"
 								options={requestableArtifacts.map((a) => ({
 									value: a,
@@ -87,9 +96,9 @@
 							/>
 							<FormField
 								name="dueDate"
-								label="Due"
+								label={m.staff_due()}
 								type="date"
-								description="Optional. A request with no date is open-ended and never reads as overdue."
+								description={m.staff_events_id_production_artifact_requests_panel_optional()}
 							/>
 						{/snippet}
 					</Action>
@@ -97,12 +106,14 @@
 				<!-- An artist is never on the bill, so this searches every listing. -->
 				<Action
 					action={askForArtifact}
-					label="Commission poster art"
+					label={m.staff_events_id_production_artifact_requests_panel_commissio()}
 					variant="ghost"
 					size="sm"
-					modalTitle="Commission poster art for {eventTitle}"
-					submitLabel="Ask"
-					successToast="Asked"
+					modalTitle={m.staff_events_id_production_artifact_requests_panel_commissio_2({
+						eventTitle
+					})}
+					submitLabel={m.staff_events_id_production_artifact_requests_panel_ask()}
+					successToast={m.staff_events_id_production_artifact_requests_panel_asked_2()}
 					onsuccess={onchange}
 				>
 					{#snippet form()}
@@ -110,19 +121,18 @@
 						<input type="hidden" name="artifact" value="poster_art" />
 						<MemberPicker
 							field={artistField}
-							label="Artist"
-							placeholder="Search listings by name..."
+							label={m.staff_events_id_production_artifact_requests_panel_artist()}
+							placeholder={m.staff_events_id_production_artifact_requests_panel_placehold()}
 							search={(q) => searchAskableListings(q)}
 						/>
 						<FormField
 							name="dueDate"
-							label="Due"
+							label={m.staff_due()}
 							type="date"
-							description="When the art has to be in. Past it, the request reads overdue and the template flyer is the fallback."
+							description={m.staff_events_id_production_artifact_requests_panel_when_art()}
 						/>
 						<p class="text-subtle text-sm">
-							The artist uploads on their contact-sheet page. Send them its link from the listing if
-							they do not have it.
+							{m.staff_events_id_production_artifact_requests_panel_artist_up()}
 						</p>
 					{/snippet}
 				</Action>
@@ -132,8 +142,8 @@
 
 	{#if requests.length === 0}
 		<EmptyState
-			title="Nothing asked for"
-			description="Nobody has been asked for a rider, a press kit or poster art yet."
+			title={m.staff_events_id_production_artifact_requests_panel_nothing_a()}
+			description={m.staff_events_id_production_artifact_requests_panel_nobody_ha()}
 		/>
 	{:else}
 		<ul class="divide-y divide-base-300">
@@ -142,17 +152,21 @@
 					<span class="font-medium">{req.actName ?? 'Unknown band'}</span>
 					<span class="text-sm">{requestableArtifactLabels[req.artifact]}</span>
 					{#if req.fulfilled}
-						<Badge variant="success">In</Badge>
+						<Badge variant="success"
+							>{m.staff_events_id_production_artifact_requests_panel_text()}</Badge
+						>
 					{:else if req.overdue}
-						<Badge variant="error">Overdue</Badge>
+						<Badge variant="error">{m.staff_overdue()}</Badge>
 					{:else}
-						<Badge variant="warning">Waiting</Badge>
+						<Badge variant="warning"
+							>{m.staff_events_id_production_artifact_requests_panel_waiting()}</Badge
+						>
 					{/if}
 					<span class="text-subtle text-sm whitespace-nowrap">
 						{#if req.dueAt}
-							due {formatDateShort(req.dueAt)}
+							{m.staff_due_2({ formatDateShort: formatDateShort(req.dueAt) })}
 						{:else}
-							no deadline
+							{m.staff_no_deadline()}
 						{/if}
 					</span>
 					<div class="ml-auto flex items-center gap-1">
@@ -160,18 +174,20 @@
 							<a href={req.deliveredUrl} target="_blank" rel="external noreferrer">
 								<img
 									src={req.deliveredUrl}
-									alt="Poster art from {req.actName ?? 'the artist'}"
+									alt={m.staff_events_id_production_artifact_requests_panel_alt({
+										value: req.actName ?? 'the artist'
+									})}
 									class="h-12 w-auto rounded"
 								/>
 							</a>
 							<Action
 								action={usePosterArt}
-								label="Use as poster"
+								label={m.staff_events_id_production_artifact_requests_panel_use_as_po()}
 								variant="ghost"
 								size="sm"
-								modalTitle="Make this the poster?"
-								submitLabel="Use as poster"
-								successToast="Poster updated"
+								modalTitle={m.staff_events_id_production_artifact_requests_panel_make_post()}
+								submitLabel={m.staff_events_id_production_artifact_requests_panel_use_as_po()}
+								successToast={m.staff_events_id_production_artifact_requests_panel_poster_up()}
 								onsuccess={onchange}
 							>
 								{#snippet form()}
@@ -184,33 +200,31 @@
 							</Action>
 							<Action
 								action={usePosterArtWithFooter}
-								label="Use with a details footer"
+								label={m.staff_events_id_production_artifact_requests_panel_use_with()}
 								variant="ghost"
 								size="sm"
-								modalTitle="Add the show details under this art?"
-								submitLabel="Make the poster"
-								successToast="Poster updated"
+								modalTitle={m.staff_events_id_production_artifact_requests_panel_add_show()}
+								submitLabel={m.staff_events_id_production_artifact_requests_panel_make_post_2()}
+								successToast={m.staff_events_id_production_artifact_requests_panel_poster_up()}
 								onsuccess={onchange}
 							>
 								{#snippet form()}
 									<input type="hidden" name="requestId" value={req.id} />
 									<input type="hidden" name="eventId" value={eventId} />
 									<p class="text-sm">
-										The art sits above a footer with the date, doors, venue and price, and the
-										result replaces the current poster. It is a snapshot: after editing the event,
-										run this again.
+										{m.staff_events_id_production_artifact_requests_panel_art_sits()}
 									</p>
 								{/snippet}
 							</Action>
 						{/if}
 						<Action
 							action={dropArtifactRequest}
-							label="Cancel"
+							label={m.staff_cancel()}
 							variant="ghost"
 							size="sm"
-							modalTitle="Stop waiting on this?"
-							submitLabel="Cancel request"
-							successToast="Request cancelled"
+							modalTitle={m.staff_events_id_production_artifact_requests_panel_stop_wait()}
+							submitLabel={m.staff_cancel_request()}
+							successToast={m.staff_request_cancelled()}
 							onsuccess={onchange}
 						>
 							{#snippet form()}

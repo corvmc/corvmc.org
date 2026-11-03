@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { addDutyForm, setDutyDoneForm } from '$lib/remote/tasks.remote';
@@ -47,8 +48,8 @@
 		<input {...add.fields.workOrderId.as('hidden', task.id)} />
 		<InlineAddField
 			field={add.fields.label}
-			label="Add a duty to {task.title}"
-			placeholder="Add a duty"
+			label={m.staff_projects_id_duty_items_label({ title: task.title })}
+			placeholder={m.staff_projects_id_duty_items_placeholder()}
 		/>
 	</Form>
 {/if}

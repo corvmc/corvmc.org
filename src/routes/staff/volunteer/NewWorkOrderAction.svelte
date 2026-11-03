@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
@@ -45,18 +46,18 @@
 {#if live.length > 0}
 	<Action
 		action={createWorkOrder}
-		label="New Work Order"
+		label={m.staff_volunteer_new_work_order_label()}
 		data-testid="new-work-order"
-		modalTitle="New work order"
-		submitLabel="Create"
-		successToast="Work order created"
+		modalTitle={m.staff_volunteer_new_work_order_modal_title()}
+		submitLabel={m.staff_create()}
+		successToast={m.staff_volunteer_new_work_order_success_toast()}
 		{onsuccess}
 	>
 		{#snippet form()}
 			<FormField
 				name="timed"
 				type="checkbox"
-				checkboxLabel="It has a set time"
+				checkboxLabel={m.staff_volunteer_new_work_order_checkbox_label()}
 				bind:value={timed}
 			/>
 			<ShiftFormFields

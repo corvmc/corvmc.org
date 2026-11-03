@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -41,7 +42,7 @@
 	}
 </script>
 
-<PageHeader title="Equipment Loans">
+<PageHeader title={m.staff_inventory_loans_title()}>
 	<CreateLoanAction />
 </PageHeader>
 <PageContent>
@@ -49,7 +50,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search by member..."
+				placeholder={m.staff_inventory_loans_placeholder()}
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -58,30 +59,30 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label="Status"
+			aria-label={m.staff_status()}
 			value={statusFilter}
 			onchange={(e: Event) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">All statuses</option>
+			<option value="">{m.staff_all_statuses()}</option>
 			{#each loanStatuses as s (s)}
 				<option value={s}>{titleCase(s)}</option>
 			{/each}
 		</Select>
 	</FilterBar>
 
-	<DataList {result} empty="No loans found" onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_inventory_loans_empty()} onpage={(p) => (page = p)}>
 		{#snippet children(loans)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Loan</th>
-					<th>Member</th>
-					<th class="col-support whitespace-nowrap">Due</th>
-					<th class="col-extra whitespace-nowrap">Requested</th>
-					<th class="col-support cell-num">Charge</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+					<th>{m.staff_inventory_loans_loan()}</th>
+					<th>{m.staff_member()}</th>
+					<th class="col-support whitespace-nowrap">{m.staff_due()}</th>
+					<th class="col-extra whitespace-nowrap">{m.staff_inventory_loans_requested()}</th>
+					<th class="col-support cell-num">{m.staff_inventory_loans_charge()}</th>
 				{/snippet}
 
 				{#each loans as l (l.id)}
@@ -91,7 +92,7 @@
 							<div class="flex w-max items-center gap-1">
 								<StatusBadge status={l.status} label />
 								{#if l.isOverdue}
-									<Badge variant="error" size="xs">Overdue</Badge>
+									<Badge variant="error" size="xs">{m.staff_overdue()}</Badge>
 								{/if}
 							</div>
 						</td>

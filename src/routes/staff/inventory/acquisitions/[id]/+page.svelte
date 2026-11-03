@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { IconDeviceFloppy, IconFileText, IconUpload } from '@tabler/icons-svelte';
 	import {
@@ -93,17 +94,17 @@
 			throw new Error(detail?.message ?? 'Upload failed');
 		}
 		await getStaffAcquisitionDetail(id).refresh();
-		toast.success('Receipt attached');
+		toast.success(m.staff_inventory_acquisitions_id_toast());
 	}
 </script>
 
 <PageHeader
 	width="3xl"
-	subtitle="Acquisition"
+	subtitle={m.staff_acquisition()}
 	title={`${acquisitionKindLabels[data.kind]} — ${formatDateShort(data.occurredAt)}`}
 >
 	{#if data.awaitingReimbursement}
-		<Badge variant="warning">Awaiting reimbursement</Badge>
+		<Badge variant="warning">{m.staff_awaiting_reimbursement()}</Badge>
 	{/if}
 </PageHeader>
 
@@ -129,9 +130,13 @@
 	{/if}
 
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
-		<Form remote={editAcquisition} guard successToast="Acquisition updated">
+		<Form
+			remote={editAcquisition}
+			guard
+			successToast={m.staff_inventory_acquisitions_id_acquisition_updated()}
+		>
 			<input {...fields.id.as('hidden', id)} />
-			<InfoCard title="Details">
+			<InfoCard title={m.staff_details()}>
 				<!--
 					Kind and date are editable because both are guessed at entry, and a
 					stocktake guesses them a few hundred times. A wrong kind is the
@@ -144,14 +149,14 @@
 					<Field
 						field={fields.kind}
 						type="select"
-						label="How it arrived"
+						label={m.staff_how_arrived()}
 						bind:value={kind}
 						options={acquisitionKinds.map((k) => ({ value: k, label: acquisitionKindLabels[k] }))}
 					/>
 					<Field
 						field={fields.occurredAt}
 						type="date"
-						label="When it arrived"
+						label={m.staff_when_arrived()}
 						value={toLocalDate(data.occurredAt)}
 					/>
 				</div>
@@ -159,48 +164,48 @@
 					<Field
 						field={fields.sourceName}
 						type="text"
-						label={kind === 'purchase' ? 'Supplier' : 'Donor / grantor'}
+						label={kind === 'purchase' ? m.staff_supplier() : m.staff_donor_grantor()}
 						value={data.sourceName ?? ''}
 					/>
 				{/if}
 				<Field
 					field={fields.reference}
 					type="text"
-					label="Reference / receipt no."
+					label={m.staff_reference_receipt_no()}
 					value={data.reference ?? ''}
 				/>
 
 				<MoneyField
 					field={fields.totalCents}
-					label="Receipt total"
+					label={m.staff_receipt_total()}
 					value={data.totalCents}
-					description="What the paperwork says, including tax and postage the lines do not carry. Wins over the itemisation where the two disagree."
+					description={m.staff_inventory_acquisitions_id_what_paperwork_says_includin()}
 				/>
 
 				{#if isGift}
 					<MoneyField
 						field={fields.fairValueCents}
-						label="Total fair value"
+						label={m.staff_inventory_acquisitions_id_total_fair_value()}
 						value={data.fairValueCents}
 					/>
 					<Field
 						field={fields.fairValueBasis}
 						type="text"
-						label="How the value was determined"
-						description="Required for the gifts-in-kind disclosure — e.g. comparable sales, appraisal."
+						label={m.staff_inventory_acquisitions_id_how_value_was_determined()}
+						description={m.staff_inventory_acquisitions_id_required_gifts_kind_disclosu()}
 						value={data.fairValueBasis ?? ''}
 					/>
 					<Field
 						field={fields.intendedUse}
 						type="text"
-						label="Intended use"
+						label={m.staff_inventory_acquisitions_id_intended_use()}
 						value={data.intendedUse ?? ''}
 					/>
 					<Field
 						field={fields.monetized}
 						type="checkbox"
-						label="Sold rather than used"
-						checkboxLabel="The collective converted this gift to cash"
+						label={m.staff_inventory_acquisitions_id_sold_rather_than_used()}
+						checkboxLabel={m.staff_inventory_acquisitions_id_checkbox_label()}
 						value={data.monetized}
 					/>
 				{/if}
@@ -210,7 +215,7 @@
 						field={fields.donorUserId}
 						bind:value={donorUserId}
 						bind:name={donorName}
-						label="Donated by"
+						label={m.staff_donated_by()}
 					/>
 				</div>
 
@@ -222,11 +227,16 @@
 						field={fields.paidByUserId}
 						bind:value={paidByUserId}
 						bind:name={paidByName}
-						label="Paid by, and owed it back (leave blank for a gift or a collective card)"
+						label={m.staff_inventory_acquisitions_id_paid_by_owed_back_leave()}
 					/>
 				</div>
 
-				<Field field={fields.notes} type="textarea" label="Notes" value={data.notes ?? ''} />
+				<Field
+					field={fields.notes}
+					type="textarea"
+					label={m.staff_notes()}
+					value={data.notes ?? ''}
+				/>
 
 				<div class="mt-3">
 					<SubmitButton>
@@ -239,34 +249,40 @@
 		</Form>
 
 		<div class="space-y-6">
-			<InfoCard title="Record" class="bg-base-200 shadow-none">
+			<InfoCard title={m.staff_record()} class="bg-base-200 shadow-none">
 				<DefinitionList>
-					<Fact label="Kind">{acquisitionKindLabels[data.kind]}</Fact>
-					<Fact label="Occurred">{formatDateShort(data.occurredAt)}</Fact>
-					<Fact label="Source">{data.donorName ?? '—'}</Fact>
+					<Fact label={m.staff_kind()}>{acquisitionKindLabels[data.kind]}</Fact>
+					<Fact label={m.staff_inventory_acquisitions_id_occurred()}
+						>{formatDateShort(data.occurredAt)}</Fact
+					>
+					<Fact label={m.staff_source()}>{data.donorName ?? '—'}</Fact>
 					{#if data.fulfils}
 						<!-- What a member asked for, and where it came from. The request
 						     sat at Planned after the thing was on the shelf (#603). -->
-						<Fact label="Fulfils">
+						<Fact label={m.staff_inventory_acquisitions_id_fulfils()}>
 							<a class="link" href={resolve(`/staff/suggestions/${data.fulfils.id}`)}>
 								{data.fulfils.title}
 							</a>
 						</Fact>
 					{/if}
-					<Fact label="Lines total">
+					<Fact label={m.staff_inventory_acquisitions_id_lines_total()}>
 						{formatCents(data.linesTotalCents)}
 						{#if data.totalCents != null && data.totalCents !== data.linesTotalCents}
 							<span class="text-subtle">
-								— receipt says {formatCents(data.totalCents)}
+								{m.staff_inventory_acquisitions_id_receipt_says({
+									formatCents: formatCents(data.totalCents)
+								})}
 							</span>
 						{/if}
 					</Fact>
 					{#if data.paidByName}
-						<Fact label="Paid by">
+						<Fact label={m.staff_inventory_acquisitions_id_paid_by()}>
 							{data.paidByName}
 							{#if data.reimbursedAt}
 								<span class="text-subtle">
-									— reimbursed {formatDateShort(data.reimbursedAt)}
+									{m.staff_inventory_acquisitions_id_reimbursed({
+										formatDateShort: formatDateShort(data.reimbursedAt)
+									})}
 								</span>
 							{/if}
 						</Fact>
@@ -275,20 +291,22 @@
 			</InfoCard>
 
 			{#if data.kind === 'donation'}
-				<InfoCard title="Form 8283">
+				<InfoCard title={m.staff_inventory_acquisitions_id_form_8283()}>
 					{#if data.acknowledgedAt}
 						<DefinitionList>
-							<Fact label="Signed">{formatDateShort(data.acknowledgedAt)}</Fact>
-							<Fact label="Appraisal">{data.appraisalRef ?? '—'}</Fact>
+							<Fact label={m.staff_inventory_acquisitions_id_signed()}
+								>{formatDateShort(data.acknowledgedAt)}</Fact
+							>
+							<Fact label={m.staff_inventory_acquisitions_id_appraisal()}
+								>{data.appraisalRef ?? '—'}</Fact
+							>
 						</DefinitionList>
 					{:else}
 						<!-- Said plainly, because the consequence is silence rather than an
 						     error: with no 8283 recorded, disposing of this gift raises no
 						     Form 8282 warning at all. -->
 						<p class="text-subtle">
-							Nothing recorded. A donor claiming over $5,000 asks the collective to sign their Form
-							8283 — until that is recorded here, disposing of this gift will raise no Form 8282
-							warning.
+							{m.staff_inventory_acquisitions_id_nothing_recorded_donor_claim()}
 						</p>
 					{/if}
 					<div class="mt-3">
@@ -302,9 +320,9 @@
 				</InfoCard>
 			{/if}
 
-			<InfoCard title="Receipts">
+			<InfoCard title={m.staff_inventory_acquisitions_id_receipts()}>
 				{#if data.receipts.length === 0}
-					<EmptyState description="Nothing attached yet" />
+					<EmptyState description={m.staff_inventory_acquisitions_id_nothing_attached_yet()} />
 				{:else}
 					<ul class="space-y-2">
 						{#each data.receipts as receipt (receipt.attachmentId)}
@@ -330,23 +348,23 @@
 						variant="ghost"
 					>
 						<IconUpload size={16} />
-						Attach a receipt
+						{m.staff_inventory_acquisitions_id_attach_receipt()}
 					</FileUpload>
 				</div>
 			</InfoCard>
 		</div>
 	</div>
 
-	<InfoCard title="What arrived" class="mb-6">
+	<InfoCard title={m.staff_what_arrived()} class="mb-6">
 		{#snippet header(title)}
 			<div class="flex items-center justify-between gap-2">
 				<CardTitle>{title}</CardTitle>
 				<Action
 					action={addAcquisitionLineForm}
-					label="Add a line"
-					modalTitle="Add a line"
-					submitLabel="Add"
-					successToast="Line added"
+					label={m.staff_add_line()}
+					modalTitle={m.staff_add_line()}
+					submitLabel={m.staff_add()}
+					successToast={m.staff_inventory_acquisitions_id_line_added()}
 					variant="ghost"
 					size="xs"
 				>
@@ -356,7 +374,7 @@
 							<Field
 								field={addLineFields.itemId}
 								type="select"
-								label="What it was"
+								label={m.staff_what_was()}
 								options={itemOptions}
 								required
 							/>
@@ -364,15 +382,14 @@
 								<Field
 									field={addLineFields.quantity}
 									type="number"
-									label="How many"
+									label={m.staff_inventory_acquisitions_id_how_many()}
 									value={1}
 									required
 								/>
-								<MoneyField field={addLineFields.unitValueCents} label="Each" />
+								<MoneyField field={addLineFields.unitValueCents} label={m.staff_each()} />
 							</div>
 							<p class="text-subtle">
-								Adding a line receives the stock now — a serialized item becomes one unit per
-								quantity, anything else a receive movement.
+								{m.staff_inventory_acquisitions_id_adding_line_receives_stock_n()}
 							</p>
 						</div>
 					{/snippet}
@@ -381,16 +398,14 @@
 		{/snippet}
 
 		{#if data.lines.length === 0}
-			<EmptyState
-				description="Nothing itemised yet. The receipt above is the record; add the lines from it when someone can read them."
-			/>
+			<EmptyState description={m.staff_inventory_acquisitions_id_nothing_itemised_yet_receipt()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Item</th>
-					<th class="cell-num">Quantity</th>
-					<th class="cell-num">Unit value</th>
-					<th class="cell-num">Line total</th>
+					<th>{m.staff_item()}</th>
+					<th class="cell-num">{m.staff_quantity()}</th>
+					<th class="cell-num">{m.staff_unit_value()}</th>
+					<th class="cell-num">{m.staff_inventory_acquisitions_id_line_total()}</th>
 				{/snippet}
 				{#each data.lines as line (line.id)}
 					<tr class="hover">
@@ -409,7 +424,7 @@
 					</tr>
 				{/each}
 				<tr class="font-medium">
-					<td>Total</td>
+					<td>{m.staff_total()}</td>
 					<td class="cell-num"></td>
 					<td class="cell-num"></td>
 					<td class="cell-num">{formatCents(data.linesTotalCents)}</td>
@@ -418,18 +433,18 @@
 		{/if}
 	</InfoCard>
 
-	<InfoCard title="Stock it wrote">
+	<InfoCard title={m.staff_inventory_acquisitions_id_stock_wrote()}>
 		{#if data.movements.length === 0}
 			<!-- Worth showing rather than hiding: an acquisition whose lines wrote no
 			     movements is paperwork with no stock behind it. -->
-			<EmptyState description="No stock movements were written against this acquisition" />
+			<EmptyState description={m.staff_inventory_acquisitions_id_no_stock_movements_were_writ()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="whitespace-nowrap">When</th>
-					<th>Item</th>
-					<th>What happened</th>
-					<th class="cell-num">Quantity</th>
+					<th class="whitespace-nowrap">{m.staff_when()}</th>
+					<th>{m.staff_item()}</th>
+					<th>{m.staff_what_happened()}</th>
+					<th class="cell-num">{m.staff_quantity()}</th>
 				{/snippet}
 				{#each data.movements as movement (movement.id)}
 					<tr>
