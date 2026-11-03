@@ -146,9 +146,14 @@
 						{toNotify > 0 ? `${toNotify} to notify` : 'Everybody has been notified'}
 					</p>
 					<p class="text-sm">
-						Called off {formatDateShort(shift.cancelledAt!)}{shift.cancelledByName
-							? ` by ${shift.cancelledByName}`
-							: ''}. Claims and bookings stay on the roster — they are who you need to tell.
+						{shift.cancelledByName
+							? m.volunteer_work_order_view_called_off_by({
+									date: formatDateShort(shift.cancelledAt!),
+									name: shift.cancelledByName
+								})
+							: m.volunteer_work_order_view_called_off({
+									date: formatDateShort(shift.cancelledAt!)
+								})}
 					</p>
 				</div>
 				{#if toNotify > 0}
@@ -164,10 +169,7 @@
 						{#snippet form()}
 							<input type="hidden" name="shiftId" value={shift.id} />
 							<p class="text-sm">
-								{toNotify}
-								{toNotify === 1 ? 'person' : 'people'} still on this shift will be emailed that it is
-								off. Anybody you already marked by hand is skipped, and pressing this twice mails nobody
-								twice.
+								{m.volunteer_work_order_view_people_still_shift_will_emailed({ toNotify })}
 							</p>
 						{/snippet}
 					</Action>

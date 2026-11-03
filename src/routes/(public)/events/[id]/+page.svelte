@@ -376,7 +376,9 @@
 							</Button>
 							{#if data.remaining !== null}
 								<span class="text-muted"
-									>{data.remaining} {isFreeEvent ? 'spots' : 'tickets'} remaining</span
+									>{(isFreeEvent ? m.public_events_id_spots_remaining : m.public_tickets_remaining)(
+										{ remaining: data.remaining }
+									)}</span
 								>
 							{/if}
 						{/if}

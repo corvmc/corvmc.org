@@ -319,18 +319,21 @@
 
 		{#if profileIsHidden}
 			<p class="mt-10 text-center text-sm text-fg-3">
-				Don't see your name? Your profile is set to
-				<strong>{visibility === 'hidden' ? 'hidden' : 'members-only'}</strong>.
-				<a href={resolve('/member/directory')} class="text-cmc-teal underline"
-					>{m.public_directory_update_visibility()}</a
+				<ParaglideMessage
+					message={visibility === 'hidden'
+						? m.public_directory_don_t_see_name_profile_2
+						: m.public_directory_don_t_see_name_profile}
+					inputs={{}}
+					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+						>{/snippet}{#snippet a({ children })}<a
+							href={resolve('/member/directory')}
+							class="text-cmc-teal underline">{@render children?.()}</a
+						>{/snippet}</ParaglideMessage
 				>
-				to appear here.
 			</p>
 		{:else if profileIsIncomplete}
 			<p class="mt-10 text-center text-sm text-fg-3">
-				<ParaglideMessage
-					message={m.public_directory_don_t_see_name_profiles}
-					inputs={{ public_directory_add_profile: m.public_directory_add_profile() }}
+				<ParaglideMessage message={m.public_directory_don_t_see_name_profiles} inputs={{}}
 					>{#snippet a({ children })}<a
 							href={resolve('/member/profile')}
 							class="text-cmc-teal underline">{@render children?.()}</a

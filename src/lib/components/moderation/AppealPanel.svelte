@@ -88,9 +88,7 @@
 				<ParaglideMessage
 					message={m.moderation_appeal_panel_text}
 					inputs={{
-						moderation_appeal_panel_appeal: m.moderation_appeal_panel_appeal({
-							toLowerCase: appealVerdictLabels[view.appeal.decision.verdict].toLowerCase()
-						}),
+						toLowerCase: appealVerdictLabels[view.appeal.decision.verdict].toLowerCase(),
 						formatDate: formatDate(view.appeal.decision.decidedAt)
 					}}
 					>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span

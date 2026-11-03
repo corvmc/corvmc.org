@@ -112,8 +112,9 @@
 				<Card bordered>
 					<CardBody padding="sm" class="gap-3">
 						<p class="text-muted">
-							{t.counterpartName ?? 'This member'} would like to start a conversation with you. They cannot
-							send anything else unless you accept.
+							{m.member_messages_id_would_like_start_conversation_with({
+								counterpartName: t.counterpartName ?? m.member_messages_id_member()
+							})}
 						</p>
 						<div class="flex flex-wrap items-center gap-2">
 							<Form

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	// The money half of the ticket purchase form: how much, and where it goes.
 	// Shared by the public checkout page and the member event page. Both surfaces
 	// charge through the same remote, so the arithmetic they preview has to be the
@@ -289,10 +290,17 @@
 
 <div class="space-y-1 border-t border-base-200 pt-4">
 	<div class="flex justify-between text-muted">
-		<span
-			>{quantity} × {formatCents(split.ticketLineUnitCents)} ticket{quantity === 1 ? '' : 's'}</span
+		<ParaglideMessage
+			message={m.events_ticket_purchase_fields_tickets}
+			inputs={{
+				quantity,
+				formatCents: formatCents(split.ticketLineUnitCents),
+				formatCents2: formatCents(split.ticketLineUnitCents * quantity)
+			}}
+			>{#snippet span({ children })}<span>{@render children?.()}</span>{/snippet}{#snippet span2({
+				children
+			})}<span>{@render children?.()}</span>{/snippet}</ParaglideMessage
 		>
-		<span>{formatCents(split.ticketLineUnitCents * quantity)}</span>
 	</div>
 	{#if split.contributionCents > 0}
 		<div class="flex justify-between text-muted" data-testid="contribution-line">

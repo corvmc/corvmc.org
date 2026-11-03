@@ -252,8 +252,11 @@
 
 			{#if beforeConfirmWindow}
 				<p class="text-subtle">
-					Confirmation opens {confirmOpensLabel}. We'll hold the room until then — or pay now to
-					lock it in{pricing.remainingCents <= 0 ? ' with your free hours' : ''}.
+					{(pricing.remainingCents <= 0
+						? m.reservations_booking_confirm_step_confirmation_opens_we_ll_h_2
+						: m.reservations_booking_confirm_step_confirmation_opens_we_ll_h)({
+						confirmOpensLabel
+					})}
 				</p>
 			{/if}
 		{/if}
@@ -307,8 +310,7 @@
 				{m.reservations_booking_confirm_step_bands_don_t_have_their()}
 				{#if pricing && pricing.creditsApplicable > 0}
 					{@const freeHours = creditsToHours(pricing.creditsApplicable)}
-					{freeHours}
-					{freeHours === 1 ? 'hr' : 'hrs'} of your own free hours apply.
+					{m.reservations_booking_confirm_step_hrs_own_free_hours_apply({ freeHours })}
 				{:else}{m.reservations_booking_confirm_step_s_booked_name_have_no()}{/if}
 			</p>
 		{:else if staff}

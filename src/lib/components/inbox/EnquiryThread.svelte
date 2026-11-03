@@ -99,8 +99,10 @@
 	{:else}
 		<ThreadComposer threadId={thread.id} {replyForm} onsent={() => onchanged?.()} />
 		<p class="text-subtle text-xs">
-			Your reply goes to {thread.contactName ?? 'them'} as an email from {thread.bandName}. They
-			never see your address, and you never see theirs — their answer comes back here.
+			{m.inbox_enquiry_thread_reply_goes_as_email_from({
+				contactName: thread.contactName ?? m.inbox_enquiry_thread_them(),
+				bandName: thread.bandName
+			})}
 		</p>
 	{/if}
 </div>

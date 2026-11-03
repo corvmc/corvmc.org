@@ -130,9 +130,7 @@
 			<!-- The session is running and nothing here opens the door. Standing
 			     outside is the failure mode, so this one is loud. -->
 			<Alert type="error">
-				<ParaglideMessage
-					message={m.band_slug_reservations_id_session_s_code_hasn_t}
-					inputs={{ band_slug_reservations_id_get_touch: m.band_slug_reservations_id_get_touch() }}
+				<ParaglideMessage message={m.band_slug_reservations_id_session_s_code_hasn_t} inputs={{}}
 					>{#snippet a({ children })}<a class="link" href={resolve('/contact')}
 							>{@render children?.()}</a
 						>{/snippet}</ParaglideMessage

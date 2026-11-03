@@ -174,8 +174,7 @@
 	{:else}
 		{#if freeLetIn !== null}
 			<Alert type="success">
-				Free. {freeLetIn}
-				{freeLetIn === 1 ? 'ticket' : 'tickets'} checked in. Let them in.
+				{m.member_volunteer_door_free_tickets_checked_let_them({ freeLetIn })}
 			</Alert>
 		{/if}
 
@@ -215,20 +214,21 @@
 			<h2 class="font-semibold">{m.member_volunteer_door_card_will_not_tap()}</h2>
 			{#each door.events as event (event.id)}
 				<p class="text-muted">
-					{event.title}: suggested {formatCents(event.suggestedCents)}{event.floorCents
-						? `, floor ${formatCents(event.floorCents)}`
-						: ''}{event.remaining !== null && event.remaining >= 0
-						? `, ${event.remaining} left`
-						: ''}{event.remaining !== null && event.remaining < 0
-						? `, over capacity by ${-event.remaining}`
-						: ''}.
+					{m.member_volunteer_door_event_suggested({
+						title: event.title,
+						price: formatCents(event.suggestedCents)
+					})}{#if event.floorCents}{m.member_volunteer_door_event_floor({
+							floor: formatCents(event.floorCents)
+						})}{/if}{#if event.remaining !== null && event.remaining >= 0}{m.member_volunteer_door_event_left(
+							{ count: event.remaining }
+						)}{:else if event.remaining !== null}{m.member_volunteer_door_event_over({
+							count: -event.remaining
+						})}{/if}.
 					{#if event.onlineSales}
 						<ParaglideMessage
 							message={m.member_volunteer_door_they_can_buy_their_own}
 							inputs={{
-								member_volunteer_door_corvmc_org_events: m.member_volunteer_door_corvmc_org_events({
-									id: event.id
-								})
+								id: event.id
 							}}
 							>{#snippet a({ children })}<a class="link" href={resolve(`/events/${event.id}`)}
 									>{@render children?.()}</a

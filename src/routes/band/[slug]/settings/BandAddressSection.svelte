@@ -44,9 +44,12 @@
 
 	<InfoCard title={`${slug}.${baseDomain}`}>
 		<p class="text-sm">
-			This is your band's address. It's also your profile at
-			<code class="text-xs">/directory/bands/{slug}</code>
-			and your dashboard at <code class="text-xs">/band/{slug}</code>.
+			<ParaglideMessage
+				message={m.band_slug_settings_band_address_section_band_s_address_s_als}
+				inputs={{ slug }}
+				>{#snippet code({ children })}<code class="text-xs">{@render children?.()}</code
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 		{#if readonly}
 			<!-- Admins can see the address; only the owner can move it, because

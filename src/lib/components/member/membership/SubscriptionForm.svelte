@@ -76,7 +76,7 @@
 		</div>
 
 		<p class="mt-4 text-sm font-medium text-primary">
-			= {freeHours} free practice hour{freeHours === 1 ? '' : 's'} every month
+			{m.member_membership_subscription_form_free_practice_hours_ever({ freeHours })}
 		</p>
 	</div>
 

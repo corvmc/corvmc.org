@@ -99,9 +99,7 @@
 				{m.public_programs_cmc_maintains_gear_library_available()}
 			</p>
 			<p class="mb-4 text-base leading-relaxed text-fg-2">
-				<ParaglideMessage
-					message={m.public_programs_need_amp_gig_instrument_session}
-					inputs={{ public_programs_reach_out: m.public_programs_reach_out() }}
+				<ParaglideMessage message={m.public_programs_need_amp_gig_instrument_session} inputs={{}}
 					>{#snippet a({ children })}<a href={resolve('/contact')} class="link"
 							>{@render children?.()}</a
 						>{/snippet}</ParaglideMessage
@@ -110,9 +108,7 @@
 			<Tile fill="tint-teal" pad="sm" align="start" class="mt-4">
 				<IconGuitarPick size={20} class="mt-0.5 shrink-0 text-cmc-teal" />
 				<p class="text-muted leading-relaxed">
-					<ParaglideMessage
-						message={m.public_programs_got_gear_collecting_dust_we}
-						inputs={{ public_programs_contact_corvmc_org: m.public_programs_contact_corvmc_org() }}
+					<ParaglideMessage message={m.public_programs_got_gear_collecting_dust_we} inputs={{}}
 						>{#snippet a({ children })}<a href="mailto:contact@corvmc.org" class="link"
 								>{@render children?.()}</a
 							>{/snippet}</ParaglideMessage

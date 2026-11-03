@@ -79,7 +79,11 @@
 			<!-- A prompt rather than a button that fails. The redirect brings them
 			     back here, where the button will work. -->
 			<Alert type="info">
-				<span>Sign in to {group.joinPolicy === 'open' ? 'join' : 'apply'}.</span>
+				<span
+					>{(group.joinPolicy === 'open'
+						? m.public_groups_slug_sign_join
+						: m.public_groups_slug_sign_apply)()}</span
+				>
 				{#snippet action()}
 					<Button
 						href={signInHref({ returnTo: `/groups/${group.slug}` })}

@@ -192,10 +192,22 @@
 						{:else}
 							{#each billing.cards as card (card.id)}
 								<p class="text-sm">
-									<span class="font-medium">{card.brand.toUpperCase()} ···· {card.last4}</span>
-									<span class="text-muted">
-										expires {card.expMonth}/{card.expYear}{card.isDefault ? ' · billed' : ''}
-									</span>
+									<ParaglideMessage
+										message={card.isDefault
+											? m.band_slug_subscription_expires_billed
+											: m.band_slug_subscription_expires}
+										inputs={{
+											toUpperCase: card.brand.toUpperCase(),
+											last4: card.last4,
+											expMonth: card.expMonth,
+											expYear: card.expYear
+										}}
+										>{#snippet span({ children })}<span class="font-medium"
+												>{@render children?.()}</span
+											>{/snippet}{#snippet span2({ children })}<span class="text-muted"
+												>{@render children?.()}</span
+											>{/snippet}</ParaglideMessage
+									>
 								</p>
 							{/each}
 							<p class="mt-2 text-muted">

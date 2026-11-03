@@ -74,7 +74,11 @@
 		{/if}
 
 		<div class="mt-6 text-xs text-fg-3">
-			<p>&copy; {new Date().getFullYear()} Corvallis Music Collective. All rights reserved.</p>
+			<p>
+				{m.public_site_footer_corvallis_music_collective_all_rights({
+					getFullYear: new Date().getFullYear()
+				})}
+			</p>
 			<p class="mt-1">
 				{m.public_site_footer_501_c_3_nonprofit()}{#if addressLine}&nbsp;&middot; {addressLine}{/if}
 			</p>

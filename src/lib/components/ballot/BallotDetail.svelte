@@ -145,10 +145,10 @@
 			{#snippet form()}
 				<input {...openBallotForm.fields.ballotId.as('hidden', b.id)} />
 				<p>
-					Opening freezes the roll: {data.previewSize ?? 0}
-					{data.previewSize === 1 ? 'person' : 'people'} can vote, and nobody can be added by joining,
-					reaching the membership age or finishing orientation later. The question and choices can no
-					longer be edited, and everyone on the roll is notified.
+					{msg.ballot_ballot_detail_opening_freezes_roll_people_can({
+						value: data.previewSize ?? 0,
+						count: data.previewSize ?? 0
+					})}
 				</p>
 			{/snippet}
 		</Action>
@@ -301,9 +301,9 @@
 						{#snippet form()}
 							<input {...startFields.ballotId.as('hidden', b.id)} />
 							<p class="mb-3 text-muted">
-								The project is linked to this ballot{decides.suggestion
-									? ' and to the suggestion it decided, which moves to Planned with it'
-									: ''}.
+								{(decides.suggestion
+									? msg.ballot_ballot_detail_project_linked_ballot_suggestion_decide
+									: msg.ballot_ballot_detail_project_linked_ballot)()}
 							</p>
 							<Field
 								field={startFields.name}
@@ -337,14 +337,18 @@
 		>
 	{:else if b.status === 'certified' && b.certifiedAt}
 		<Alert type="success">
-			Certified by {b.certifier?.name ?? 'the certifier'} on {formatDateShortYear(b.certifiedAt)}.
+			{msg.ballot_ballot_detail_certified_by({
+				value: b.certifier?.name ?? msg.ballot_ballot_detail_certifier_2(),
+				formatDateShortYear: formatDateShortYear(b.certifiedAt)
+			})}
 		</Alert>
 	{:else if b.status === 'closed'}
 		<Alert type="info">
-			Voting has closed.
 			{viewer.isCertifier
-				? 'You are the certifier: check the result below and certify it.'
-				: `The result is waiting for ${b.certifier?.name ?? 'the certifier'} to certify it.`}
+				? msg.ballot_ballot_detail_closed_certify()
+				: msg.ballot_ballot_detail_closed_waiting({
+						name: b.certifier?.name ?? msg.ballot_ballot_detail_certifier_2()
+					})}
 		</Alert>
 	{/if}
 

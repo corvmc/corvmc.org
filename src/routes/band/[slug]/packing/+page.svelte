@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m as msg } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
@@ -154,9 +155,12 @@
 
 				{#if list.unassignedCount > 0}
 					<Alert type="warning" class="mb-4">
-						<strong>{list.unassignedCount}</strong>
-						{list.unassignedCount === 1 ? 'thing has' : 'things have'} nobody bringing them. That is how
-						gear gets left behind — not because nobody knew it existed.
+						<ParaglideMessage
+							message={msg.band_slug_packing_things_have_nobody_bringing_them}
+							inputs={{ unassignedCount: list.unassignedCount }}
+							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+								>{/snippet}</ParaglideMessage
+						>
 					</Alert>
 				{/if}
 

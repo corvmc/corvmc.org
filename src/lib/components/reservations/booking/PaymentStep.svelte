@@ -170,10 +170,7 @@
 				<div class="mt-2 rounded-box border border-base-300 bg-base-200 px-4 py-3 text-sm">
 					<ParaglideMessage
 						message={m.reservations_booking_payment_step_sustaining_members_get_fre}
-						inputs={{
-							reservations_booking_payment_step_learn_more:
-								m.reservations_booking_payment_step_learn_more()
-						}}
+						inputs={{}}
 						>{#snippet a({ children })}<a
 								href={resolve('/member/membership')}
 								target="_blank"

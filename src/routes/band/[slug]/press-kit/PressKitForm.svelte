@@ -64,10 +64,7 @@
 	<Alert type="info">
 		<ParaglideMessage
 			message={m.band_slug_press_kit_press_kit_form_everything_page_free_ever}
-			inputs={{
-				band_slug_press_kit_press_kit_form_tech_rider:
-					m.band_slug_press_kit_press_kit_form_tech_rider()
-			}}
+			inputs={{}}
 			>{#snippet a({ children })}<a href={riderHref} class="link">{@render children?.()}</a
 				>{/snippet}</ParaglideMessage
 		>

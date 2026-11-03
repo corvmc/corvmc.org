@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages.js';
+	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -45,10 +46,12 @@
 		</FormField>
 
 		<p class="text-subtle">
-			<code>date | venue | title | ticket link</code> — only the date is required. Start a title
-			with
-			<code>w/</code> to list the other bands. Gigs must be in the past, {GIG_IMPORT_MAX_LINES} at a time.
-			Imported gigs are published with no end time.
+			<ParaglideMessage
+				message={m.band_slug_events_import_gigs_modal_date_venue_title_ticket_l}
+				inputs={{ GIG_IMPORT_MAX_LINES }}
+				>{#snippet code({ children })}<code>{@render children?.()}</code
+					>{/snippet}</ParaglideMessage
+			>
 		</p>
 
 		{#if preview.errors.length > 0}

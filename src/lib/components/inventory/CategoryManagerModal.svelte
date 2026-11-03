@@ -88,7 +88,11 @@
 	</div>
 
 	<div class="space-y-3 border-t pt-4">
-		<h4 class="text-sm font-semibold">{editingCategory?.id ? 'Edit' : 'Add'} Category</h4>
+		<h4 class="text-sm font-semibold">
+			{(editingCategory?.id
+				? m.inventory_category_manager_modal_edit_category
+				: m.inventory_category_manager_modal_add_category)()}
+		</h4>
 		{#if !editingCategory}
 			<Button
 				type="button"

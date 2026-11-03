@@ -152,12 +152,19 @@
 		</p>
 
 		{#if sheet.rider}
+			{@const rider = sheet.rider}
 			<p class="mt-3 text-sm">
 				<!-- `rel="external"` because the object is served from R2, not routed. -->
-				We have
-				<a href={sheet.rider.url} class="link" target="_blank" rel="external noreferrer"
-					>{sheet.rider.filename ?? 'your rider'}</a
-				>. Uploading another replaces it.
+				<ParaglideMessage
+					message={m.public_act_token_we_have_uploading_another_replaces_2}
+					inputs={{ filename: rider.filename ?? m.public_act_token_rider() }}
+					>{#snippet a({ children })}<a
+							href={rider.url}
+							class="link"
+							target="_blank"
+							rel="external noreferrer">{@render children?.()}</a
+						>{/snippet}</ParaglideMessage
+				>
 			</p>
 		{/if}
 
@@ -206,7 +213,7 @@
 				<p class="mt-3 text-sm">
 					<ParaglideMessage
 						message={m.public_act_token_we_have_uploading_another_replaces}
-						inputs={{ public_act_token_art: m.public_act_token_art() }}
+						inputs={{}}
 						>{#snippet a({ children })}<a
 								href={ask.deliveredUrl}
 								class="link"

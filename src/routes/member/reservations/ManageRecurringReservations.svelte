@@ -68,7 +68,7 @@
 		<p class="text-muted">
 			<ParaglideMessage
 				message={m.member_reservations_manage_recurring_reservations_no_active}
-				inputs={{ member_reserve_space: m.member_reserve_space() }}
+				inputs={{}}
 				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 					>{/snippet}</ParaglideMessage
 			>

@@ -47,10 +47,14 @@
 	{#await pageData then data}
 		{#each data.renew as c (c.name)}
 			<p class="text-sm text-warning">
-				{c.name}
 				{c.state === 'expired'
-					? 'has lapsed'
-					: `expires ${c.expiresAt ? formatDateShort(c.expiresAt) : 'soon'}`}. Staff renew these.
+					? m.member_volunteer_profile_clearance_lapsed({ name: c.name })
+					: c.expiresAt
+						? m.member_volunteer_profile_clearance_expires({
+								name: c.name,
+								date: formatDateShort(c.expiresAt)
+							})
+						: m.member_volunteer_profile_clearance_expires_soon({ name: c.name })}
 			</p>
 		{/each}
 		<InfoCard title={m.member_volunteer_profile_contact_info()}>

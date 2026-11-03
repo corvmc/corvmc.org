@@ -89,8 +89,9 @@
 	-->
 	{#if layout.pendingRequests > 0}
 		<p class="text-muted text-sm">
-			{layout.pendingRequests}
-			{layout.pendingRequests === 1 ? 'message request is' : 'message requests are'} waiting for you.
+			{m.member_messages_conversation_list_message_requests_waiting({
+				pendingRequests: layout.pendingRequests
+			})}
 		</p>
 	{/if}
 
