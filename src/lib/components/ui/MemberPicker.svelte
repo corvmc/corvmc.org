@@ -16,8 +16,8 @@
 	 */
 	let {
 		field,
-		label = 'Member',
-		placeholder = 'Search by name or email...',
+		label = m.ui_member_picker_label(),
+		placeholder = m.ui_search_by_name_email(),
 		value = $bindable(''),
 		name = $bindable(''),
 		search: searchFn

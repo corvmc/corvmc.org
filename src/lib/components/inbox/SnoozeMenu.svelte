@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Where a snoozed thread goes, and when it comes back.
 	 *
@@ -55,7 +56,7 @@
 			align="end"
 			class="z-[1000] min-w-64 rounded-lg border border-base-300 bg-base-100 p-2 shadow-lg"
 		>
-			<p class="px-3 pt-1 pb-2 text-subtle text-xs">Snooze until</p>
+			<p class="px-3 pt-1 pb-2 text-subtle text-xs">{m.inbox_snooze_menu_snooze_until()}</p>
 
 			{#each presets as preset (preset.label)}
 				<DropdownMenu.Item class={itemClass} onSelect={() => onpick(preset.value)}>
@@ -72,11 +73,13 @@
 				closeOnSelect={false}
 				onSelect={(e) => e.preventDefault()}
 			>
-				<span class="flex items-center gap-2"><IconCalendar size={15} />Pick a date</span>
+				<span class="flex items-center gap-2"
+					><IconCalendar size={15} />{m.inbox_snooze_menu_pick_date()}</span
+				>
 				<input
 					type="date"
 					class="input w-32 input-xs"
-					aria-label="Snooze until a date"
+					aria-label={m.inbox_snooze_menu_aria_label()}
 					bind:value={custom}
 					onchange={() => custom && onpick(custom)}
 				/>
@@ -85,10 +88,12 @@
 			<div class="my-1 border-t border-base-300"></div>
 
 			<DropdownMenu.Item class={itemClass} onSelect={onwait} data-testid="snooze-until-reply">
-				<span class="flex items-center gap-2"><IconSend size={15} />When they reply</span>
+				<span class="flex items-center gap-2"
+					><IconSend size={15} />{m.inbox_snooze_menu_when_they_reply()}</span
+				>
 			</DropdownMenu.Item>
 			<p class="px-3 pt-1 pb-1 text-subtle text-xs">
-				Leaves the queue now, comes back the moment they respond.
+				{m.inbox_snooze_menu_leaves_queue_now_comes_back()}
 			</p>
 		</DropdownMenu.Content>
 	</DropdownMenu.Portal>

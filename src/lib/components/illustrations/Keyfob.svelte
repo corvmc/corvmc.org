@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	let { class: className = '' }: { class?: string } = $props();
 </script>
 
@@ -45,7 +46,7 @@
 		style="font-family: var(--font-chalk); text-transform: uppercase;"
 		transform="rotate(-1, 55, 108)"
 	>
-		<tspan x="55" dy="0">Practice Room</tspan>
+		<tspan x="55" dy="0">{m.illustrations_keyfob_practice_room()}</tspan>
 	</text>
 
 	<!-- Tri-color stripe -->
@@ -62,7 +63,8 @@
 		font-size="13"
 		letter-spacing="1"
 		fill="#c4cfde"
-		style="font-family: 'Courier New', ui-monospace, monospace;">10a — 10p</text
+		style="font-family: 'Courier New', ui-monospace, monospace;"
+		>{m.illustrations_keyfob_10a_10p()}</text
 	>
 </svg>
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { formatDistanceToNow } from 'date-fns';
 	import {
 		formatMonthDayYear,
@@ -52,32 +53,36 @@
 		     off the session date while the offer expired in 24 hours — the one
 		     deadline that mattered, contradicted by the only line that named
 		     one (#1005). -->
-		<p class="font-medium text-success">A slot opened up</p>
+		<p class="font-medium text-success">{m.reservations_reservation_summary_slot_opened_up()}</p>
 		<p class="text-muted">
-			Confirm by {formatMonthDayYear(reservation.waitlistExpiresAt!)}, {formatDistanceToNow(
-				reservation.waitlistExpiresAt!,
-				{ addSuffix: true }
-			)}, or it goes to the next person.
+			{m.reservations_reservation_summary_confirm_by_goes_next_person({
+				formatMonthDayYear: formatMonthDayYear(reservation.waitlistExpiresAt!),
+				formatDistanceToNow: formatDistanceToNow(reservation.waitlistExpiresAt!, {
+					addSuffix: true
+				})
+			})}
 		</p>
 	{:else if reservation.price === 0}
-		<p class="text-muted">Covered by credits</p>
+		<p class="text-muted">{m.reservations_reservation_summary_covered_by_credits()}</p>
 	{:else if reservation.price != null}
 		<p class="text-muted">
 			{reservation.price.toLocaleString(undefined, { style: 'currency', currency: 'USD' })} ·
-			{#if reservation.refundedAt}
-				Refunded {formatDateShortYear(reservation.refundedAt)}
-			{:else if reservation.paidAt}
-				Paid {formatDateShortYear(reservation.paidAt)}
-			{:else if reservation.status === 'cancelled'}
-				Payment Cancelled
-			{:else if reservation.status === 'completed' || reservation.status === 'no_show'}
+			{#if reservation.refundedAt}{m.reservations_reservation_summary_refunded({
+					formatDateShortYear: formatDateShortYear(reservation.refundedAt)
+				})}
+			{:else if reservation.paidAt}{m.reservations_reservation_summary_paid({
+					formatDateShortYear: formatDateShortYear(reservation.paidAt)
+				})}
+			{:else if reservation.status === 'cancelled'}{m.reservations_reservation_summary_payment_cancelled()}{:else if reservation.status === 'completed' || reservation.status === 'no_show'}
 				<!-- Session is over but the balance was never settled. -->
-				<span class="font-medium text-error">Overdue</span>
+				<span class="font-medium text-error">{m.reservations_reservation_summary_overdue()}</span>
 			{:else}
 				<!-- Stays date-fns: a distance between two instants has no timezone to
 				     get wrong, and there is no venue-time equivalent because there is
 				     nothing to equivalise. -->
-				Due {formatDistanceToNow(reservation.startsAt, { addSuffix: true })}
+				{m.reservations_reservation_summary_due({
+					formatDistanceToNow: formatDistanceToNow(reservation.startsAt, { addSuffix: true })
+				})}
 			{/if}
 		</p>
 	{/if}

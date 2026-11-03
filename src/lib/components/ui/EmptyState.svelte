@@ -1,11 +1,12 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	import type { Snippet } from 'svelte';
 
 	let {
 		title,
 		description,
-		message = 'No items found.',
+		message = m.ui_no_items_found(),
 		actionLabel,
 		actionHref,
 		class: className = '',

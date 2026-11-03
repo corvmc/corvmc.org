@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
@@ -24,21 +25,21 @@
 	let chair = $state<{ id: string; name: string; email: string } | null>(null);
 
 	const kindOptions = [
-		{ value: 'club', label: 'Club' },
-		{ value: 'committee', label: 'Committee' }
+		{ value: 'club', label: m.groups_create_group_club() },
+		{ value: 'committee', label: m.groups_create_group_committee() }
 	];
 
 	// Same wording as GroupSettingsForm, which is the other writer of both.
 	const policyOptions = [
-		{ value: 'invite_only', label: 'Invite only — someone adds you' },
-		{ value: 'open', label: 'Open — any member joins themselves' },
-		{ value: 'by_application', label: 'By application — you ask, a chair approves' }
+		{ value: 'invite_only', label: m.groups_invite_only_someone_adds() },
+		{ value: 'open', label: m.groups_open_any_member_joins_themselves() },
+		{ value: 'by_application', label: m.groups_by_application_ask_chair_approves() }
 	];
 
 	const visibilityOptions = [
-		{ value: 'public', label: 'Public — anyone can find it' },
-		{ value: 'members', label: 'Members — signed-in members only' },
-		{ value: 'hidden', label: 'Hidden — not listed anywhere' }
+		{ value: 'public', label: m.groups_public_anyone_can_find() },
+		{ value: 'members', label: m.groups_members_signed_members_only() },
+		{ value: 'hidden', label: m.groups_hidden_not_listed_anywhere() }
 	];
 
 	let selectedKind = $state(kind);
@@ -49,10 +50,18 @@
 
 <Action
 	action={createStaffGroup}
-	label={kind === 'committee' ? 'New Committee' : 'New Club'}
-	modalTitle={kind === 'committee' ? 'New Committee' : 'New Club'}
-	submitLabel={kind === 'committee' ? 'Create Committee' : 'Create Club'}
-	successToast={kind === 'committee' ? 'Committee created' : 'Club created'}
+	label={kind === 'committee'
+		? m.groups_create_group_new_committee()
+		: m.groups_create_group_new_club()}
+	modalTitle={kind === 'committee'
+		? m.groups_create_group_new_committee()
+		: m.groups_create_group_new_club()}
+	submitLabel={kind === 'committee'
+		? m.groups_create_group_create_committee()
+		: m.groups_create_group_create_club()}
+	successToast={kind === 'committee'
+		? m.groups_create_group_committee_created()
+		: m.groups_create_group_club_created()}
 	size="sm"
 	data-testid="create-group"
 	onsuccess={(result) => {
@@ -65,26 +74,26 @@
 			<FormField
 				field={fields.kind}
 				type="select"
-				label="Kind"
+				label={m.groups_create_group_kind()}
 				bind:value={selectedKind}
 				options={kindOptions}
-				description="A club is a program members drop into; a committee does the Collective's work."
+				description={m.groups_create_group_club_program_members_drop_into()}
 				required
 			/>
 
 			<FormField
 				field={fields.name}
 				type="text"
-				label="Name"
-				placeholder="Real Book Club"
+				label={m.groups_create_group_name()}
+				placeholder={m.groups_create_group_real_book_club()}
 				required
 			/>
 
 			<FormField
 				field={fields.bio}
 				type="textarea"
-				label="What this program is"
-				description="Shown on the group's public page and in the group directory."
+				label={m.groups_create_group_what_program()}
+				description={m.groups_create_group_shown_group_s_public_page()}
 			/>
 
 			<!-- Asked at creation, not left to the column defaults: those make a
@@ -92,12 +101,12 @@
 			     unjoinable until someone finds the settings form (#1106). -->
 			{#if selectedKind === 'committee'}
 				<input {...fields.joinPolicy.as('hidden', 'by_application')} />
-				<p class="text-muted">Committees take members by application; a chair approves.</p>
+				<p class="text-muted">{m.groups_create_group_committees_take_members_by_application()}</p>
 			{:else}
 				<FormField
 					field={fields.joinPolicy}
 					type="select"
-					label="Who can join"
+					label={m.groups_create_group_who_can_join()}
 					bind:value={joinPolicy}
 					options={policyOptions}
 					required
@@ -108,16 +117,16 @@
 				<FormField
 					field={fields.joinInstructions}
 					type="textarea"
-					label="How it works"
-					placeholder="Third Thursday, 7pm. Bring a horn; charts provided."
-					description="Shown beside the Join button. A chair can change it later."
+					label={m.groups_create_group_how_works()}
+					placeholder={m.groups_create_group_third_thursday_7pm_bring_horn()}
+					description={m.groups_create_group_shown_beside_join_button_chair()}
 				/>
 			{/if}
 
 			<FormField
 				field={fields.visibility}
 				type="select"
-				label="Visibility"
+				label={m.groups_visibility()}
 				value="public"
 				options={visibilityOptions}
 				required
@@ -130,14 +139,14 @@
 			     fields, and nothing highlighted (#1019). -->
 			<FormField
 				name="chairId"
-				label="Chair"
-				description="They become a chair immediately — there is nothing for them to accept. Leave it empty if nobody is appointed yet; add chairs later from the group's page."
+				label={m.groups_create_group_chair()}
+				description={m.groups_create_group_they_become_chair_immediately_there()}
 			>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={chair}
 					field={fields.chairId}
-					placeholder="Search by name or email..."
+					placeholder={m.groups_search_by_name_email()}
 				/>
 			</FormField>
 		</div>

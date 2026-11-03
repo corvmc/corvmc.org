@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -51,7 +52,9 @@
 
 {#if announcements.length === 0}
 	<EmptyState
-		description={canManage ? 'Nothing posted yet. Write the first one.' : 'Nothing posted yet.'}
+		description={canManage
+			? m.groups_announcement_list_nothing_posted_yet_write_first()
+			: m.groups_announcement_list_nothing_posted_yet()}
 	/>
 {:else}
 	<div class="grid grid-cols-1 gap-3">
@@ -62,12 +65,14 @@
 					<div class="flex flex-wrap items-center gap-2">
 						<h3 class="grow text-base font-semibold">{post.title}</h3>
 						{#if post.pinned}
-							<Badge variant="primary">Pinned</Badge>
+							<Badge variant="primary">{m.groups_announcement_list_pinned()}</Badge>
 						{/if}
 						{#if draft}
 							<!-- The one thing an author must not misread. A draft looks
 							     exactly like a post until you notice nobody replied. -->
-							<Badge variant="warning" data-testid="announcement-draft">Draft</Badge>
+							<Badge variant="warning" data-testid="announcement-draft"
+								>{m.groups_announcement_list_draft()}</Badge
+							>
 						{/if}
 					</div>
 
@@ -82,7 +87,7 @@
 						{#if post.author}
 							<EntityIdentity ref={post.author} size="sm" />
 						{:else}
-							<span>Former member</span>
+							<span>{m.groups_former_member()}</span>
 						{/if}
 						<span>
 							{draft
@@ -90,7 +95,11 @@
 								: `Posted ${formatDateShort(post.publishedAt!)}`}
 						</span>
 						{#if post.recipientCount !== null}
-							<span>· {post.recipientCount} notified</span>
+							<span
+								>{m.groups_announcement_list_notified({
+									recipientCount: post.recipientCount
+								})}</span
+							>
 						{/if}
 					</div>
 
@@ -100,11 +109,11 @@
 								<Action
 									action={publishAnnouncement.for(post.id)}
 									data-testid="publish-announcement"
-									label="Publish"
-									modalTitle="Publish announcement"
-									submitLabel="Publish"
+									label={m.groups_announcement_list_publish()}
+									modalTitle={m.groups_announcement_list_publish_announcement()}
+									submitLabel={m.groups_announcement_list_publish()}
 									confirm="Publish “{post.title}”? Everyone on the roster can read it from then on, and publishing cannot be undone."
-									successToast="Published"
+									successToast={m.groups_announcement_list_published()}
 									variant="primary"
 									size="xs"
 									onsuccess={() => invalidateAll()}
@@ -120,8 +129,12 @@
 
 							<Action
 								action={pinAnnouncement.for(post.id)}
-								label={post.pinned ? 'Unpin' : 'Pin'}
-								successToast={post.pinned ? 'Unpinned' : 'Pinned'}
+								label={post.pinned
+									? m.groups_announcement_list_unpin()
+									: m.groups_announcement_list_pin()}
+								successToast={post.pinned
+									? m.groups_announcement_list_unpinned()
+									: m.groups_announcement_list_pinned()}
 								variant="ghost"
 								size="xs"
 								onsuccess={() => invalidateAll()}
@@ -135,11 +148,11 @@
 
 							<Action
 								action={deleteAnnouncement.for(post.id)}
-								label="Delete"
-								modalTitle="Delete announcement"
-								submitLabel="Delete"
+								label={m.groups_delete()}
+								modalTitle={m.groups_announcement_list_delete_announcement()}
+								submitLabel={m.groups_delete()}
 								confirm="Delete “{post.title}”? It comes off the list for everyone."
-								successToast="Deleted"
+								successToast={m.groups_deleted()}
 								variant="error"
 								size="xs"
 								outline

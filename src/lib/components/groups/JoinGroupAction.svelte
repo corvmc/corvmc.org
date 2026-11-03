@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -43,11 +44,11 @@
 {#if policy === 'open'}
 	<Action
 		action={joinGroupForm}
-		label="Join"
-		aria-label={`Join ${groupName}`}
-		modalTitle={`Join ${groupName}`}
-		submitLabel="Join"
-		successToast="You have joined"
+		label={m.groups_join_2()}
+		aria-label={m.groups_join({ groupName })}
+		modalTitle={m.groups_join({ groupName })}
+		submitLabel={m.groups_join_2()}
+		successToast={m.groups_join_group_have_joined()}
 		variant="primary"
 		size="sm"
 		onsuccess={() => invalidateAll()}
@@ -59,7 +60,7 @@
 					<p class="text-sm">{instructions}</p>
 				{/if}
 				<p class="text-subtle">
-					You will be a member straight away — no approval, and you can leave whenever you like.
+					{m.groups_join_group_will_member_straight_away_no()}
 				</p>
 			</div>
 		{/snippet}
@@ -69,18 +70,18 @@
 		href={withQuery(resolve('/member/groups'), new URLSearchParams({ committee: slug }))}
 		variant="primary"
 		size="sm"
-		aria-label={`Apply to ${groupName}`}
+		aria-label={m.groups_join_group_apply({ groupName })}
 	>
-		Apply
+		{m.groups_join_group_apply_2()}
 	</Button>
 {:else}
 	<Action
 		action={applyForm}
-		label="Apply"
-		aria-label={`Apply to ${groupName}`}
-		modalTitle={`Apply to ${groupName}`}
-		submitLabel="Send application"
-		successToast="Application sent"
+		label={m.groups_join_group_apply_2()}
+		aria-label={m.groups_join_group_apply({ groupName })}
+		modalTitle={m.groups_join_group_apply({ groupName })}
+		submitLabel={m.groups_join_group_send_application()}
+		successToast={m.groups_join_group_application_sent()}
 		variant="primary"
 		size="sm"
 		onsuccess={() => invalidateAll()}
@@ -94,8 +95,7 @@
 				{/if}
 				<FormField field={applyForm.fields.note} type="textarea" label={notePrompt} />
 				<p class="text-subtle">
-					The group's chairs will see your application and answer it. You are not a member until
-					they invite you and you accept.
+					{m.groups_join_group_group_s_chairs_will_see()}
 				</p>
 			</div>
 		{/snippet}

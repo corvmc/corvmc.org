@@ -1,4 +1,5 @@
 <script lang="ts" generics="T extends RosterPerson">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * A roster's rows (#1994): person, email, then the page's own cells. `Roster`
 	 * wraps it with search, paging and export for a page-sized list; a short list
@@ -18,9 +19,9 @@
 
 	let {
 		rows,
-		personLabel = 'Name',
+		personLabel = m.roster_name(),
 		lead,
-		leadLabel = 'Status',
+		leadLabel = m.roster_status(),
 		leadHead,
 		detail,
 		aside,
@@ -79,7 +80,7 @@
 
 	async function copyEmail(email: string) {
 		await navigator.clipboard.writeText(email);
-		toast.success('Email copied');
+		toast.success(m.roster_roster_table_toast());
 	}
 
 	const chosen = $derived(panel ? rows.find((r) => r.personId === selectedId) : undefined);
@@ -93,9 +94,10 @@
 			</th>
 		{/if}
 		<th>{personLabel}</th>
-		<th>Email</th>
+		<th>{m.roster_roster_table_email()}</th>
 		{@render columns?.()}
-		{#if actions}<th class="w-px"><span class="sr-only">Actions</span></th>{/if}
+		{#if actions}<th class="w-px"><span class="sr-only">{m.roster_roster_table_actions()}</span></th
+			>{/if}
 	{/snippet}
 
 	{#each rows as row (row.personId)}
@@ -136,8 +138,8 @@
 							size="xs"
 							shape="square"
 							class="border-transparent"
-							aria-label="Copy email"
-							title="Copy email"
+							aria-label={m.roster_roster_table_aria_label()}
+							title={m.roster_roster_table_aria_label()}
 							onclick={() => copyEmail(email)}
 						>
 							<IconCopy size={14} />

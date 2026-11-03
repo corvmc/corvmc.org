@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { RemoteFormField } from '@sveltejs/kit';
 	/**
 	 * "What you'd help with" — the grouped role checkboxes plus the availability
@@ -61,7 +62,7 @@
 <FormField
 	field={fields.availability}
 	type="textarea"
-	label="When are you usually around?"
+	label={m.volunteer_interest_fields_label()}
 	value={availability}
-	description="Rough is fine — “weekday evenings, some weekends”. Staff read this before asking you about a particular date."
+	description={m.volunteer_interest_fields_description()}
 />

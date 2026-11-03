@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
 	import { page } from '$app/state';
 	import { here, signInHref } from '$lib/utils/sign-in';
@@ -15,9 +16,9 @@
 	<div class="id-card__header">
 		<div class="id-card__brand">
 			<img src={speakerLogo} alt="" class="id-card__logo" />
-			<span>Corvallis Music<br />Collective</span>
+			<span>{m.directory_corvallis_music()}<br />{m.directory_collective()}</span>
 		</div>
-		<div class="id-card__tag">MEMBER</div>
+		<div class="id-card__tag">{m.directory_member()}</div>
 	</div>
 	<div class="id-card__body">
 		<div class="id-card__photo">
@@ -26,13 +27,15 @@
 			</div>
 		</div>
 		<div class="id-card__info">
-			<div class="id-card__name">Your name here</div>
-			<div class="id-card__role">Join the collective</div>
-			<div class="id-card__cta-arrow">Get started &rarr;</div>
+			<div class="id-card__name">{m.directory_id_card_cta_name_here()}</div>
+			<div class="id-card__role">{m.directory_id_card_cta_join_collective()}</div>
+			<div class="id-card__cta-arrow">{m.directory_id_card_cta_get_started()}</div>
 		</div>
 	</div>
 	<div class="id-card__footer">
-		<div class="id-card__since">Member since {new Date().getFullYear()}</div>
+		<div class="id-card__since">
+			{m.directory_id_card_cta_member_since({ getFullYear: new Date().getFullYear() })}
+		</div>
 		<div class="id-card__barcode" aria-hidden="true"></div>
 	</div>
 </a>

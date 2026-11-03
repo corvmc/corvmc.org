@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The claim board.
 	 *
@@ -92,7 +93,7 @@
 	}
 </script>
 
-<InfoCard title="Open shifts">
+<InfoCard title={m.volunteer_open_shifts_open_shifts()}>
 	{#snippet header()}
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<CardTitle>
@@ -109,10 +110,12 @@
 
 	{#if filtered.length === 0}
 		<EmptyState
-			title={available.length === 0 ? 'Nothing open right now' : 'Nothing matches your roles'}
+			title={available.length === 0
+				? m.volunteer_open_shifts_nothing_open_right_now()
+				: m.volunteer_open_shifts_nothing_matches_roles()}
 			description={available.length === 0
-				? 'When staff post shifts, the ones for roles you picked show first.'
-				: 'Try every open shift, or add a role to your list.'}
+				? m.volunteer_open_shifts_when_staff_post_shifts_ones()
+				: m.volunteer_open_shifts_try_every_open_shift_add()}
 		/>
 	{:else}
 		<ul class="divide-y divide-base-300">
@@ -127,7 +130,7 @@
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="font-medium">{shiftLabel(shift)}</span>
 						{#if shift.interested}
-							<Badge variant="info" size="xs">INTERESTED</Badge>
+							<Badge variant="info" size="xs">{m.volunteer_open_shifts_interested()}</Badge>
 						{/if}
 					</div>
 
@@ -152,12 +155,12 @@
 						{:else}
 							<Action
 								action={claimShift.for(shift.id)}
-								label="I'll do it"
+								label={m.volunteer_open_shifts_label()}
 								variant="primary"
 								size="xs"
-								modalTitle="Claim this shift?"
-								submitLabel="I'll do it"
-								successToast="Claimed. Staff confirm next."
+								modalTitle={m.volunteer_open_shifts_modal_title()}
+								submitLabel={m.volunteer_open_shifts_label()}
+								successToast={m.volunteer_open_shifts_success_toast()}
 							>
 								{#snippet form()}
 									<input type="hidden" name="shiftId" value={shift.id} />
@@ -170,16 +173,15 @@
 									     the gap between them is a person deciding — which is the
 									     thing the old copy left the member to find out. -->
 									<div class="flex flex-wrap items-center gap-2 text-xs">
-										<span class="font-bold text-success">You claim it</span>
+										<span class="font-bold text-success">{m.volunteer_open_shifts_claim()}</span>
 										<span class="text-subtle">→</span>
-										<span class="text-subtle">Staff confirm</span>
+										<span class="text-subtle">{m.volunteer_open_shifts_staff_confirm()}</span>
 										<span class="text-subtle">→</span>
-										<span class="text-subtle">Booked</span>
+										<span class="text-subtle">{m.volunteer_booked()}</span>
 									</div>
 
 									<p class="text-sm">
-										You're not booked until staff confirm, usually within a day. You'll get an email
-										then, and a reminder the day before. Drop out any time.
+										{m.volunteer_open_shifts_re_not_booked_until_staff()}
 									</p>
 
 									{#if shift.notes}
@@ -195,7 +197,7 @@
 
 		{#if hidden > 0}
 			<Button size="xs" variant="ghost" class="mt-1" onclick={() => (expanded = true)}>
-				Show {hidden} more
+				{m.volunteer_open_shifts_show_more({ hidden })}
 			</Button>
 		{/if}
 	{/if}

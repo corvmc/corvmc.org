@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
 	import type { RemoteForm } from '@sveltejs/kit';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -77,7 +78,7 @@
 {#if roles}
 	<FormField
 		name="volunteerRoleId"
-		label="Role"
+		label={m.volunteer_shift_form_fields_role()}
 		type="select"
 		bind:value={roleId}
 		options={roles.map((r) => ({ value: r.id, label: r.name }))}
@@ -103,8 +104,8 @@
 	<input {...form.fields.eventId.as('hidden', selectedEvent?.id ?? '')} />
 	<FormField
 		name="eventId"
-		label="Event"
-		description="Optional — work parties and repair days aren't tied to a show."
+		label={m.volunteer_shift_form_fields_event()}
+		description={m.volunteer_shift_form_fields_optional_work_parties_repair_day()}
 	>
 		<!-- Children rather than the `input` snippet: that snippet's argument is the
 		     id of the one control the caption labels, and SearchSelect has no single
@@ -115,7 +116,7 @@
 			bind:value={selectedEvent}
 			labelKey="title"
 			descriptionKey="when"
-			placeholder="Search events by title..."
+			placeholder={m.volunteer_shift_form_fields_search_events_by_title()}
 		/>
 	</FormField>
 {/if}
@@ -124,15 +125,15 @@
 <input {...form.fields.assetId.as('hidden', selectedAsset?.id ?? '')} />
 <FormField
 	name="assetId"
-	label="Equipment"
-	description="Optional: the unit this work is about, such as the PA it checks."
+	label={m.volunteer_shift_form_fields_equipment()}
+	description={m.volunteer_shift_form_fields_optional_unit_work_about_such()}
 >
 	<SearchSelect
 		search={(q) => searchWorkAssets(q)}
 		bind:value={selectedAsset}
 		labelKey="name"
 		descriptionKey="detail"
-		placeholder="Search by item, tag or serial..."
+		placeholder={m.volunteer_shift_form_fields_search_by_item_tag_serial()}
 	/>
 </FormField>
 
@@ -144,35 +145,47 @@
 -->
 <FormField
 	name="title"
-	label="Name"
+	label={m.volunteer_shift_form_fields_name()}
 	value={title}
 	maxlength={String(VOLUNTEER_SHIFT_TITLE_MAX)}
-	description="Optional. Leave it blank to use the event's name, or the role's."
+	description={m.volunteer_shift_form_fields_optional_leave_blank_use_event()}
 />
 
 {#if timed}
-	<FormField name="startsAt" label="Starts" type="datetime-local" value={startsAt} />
-	<FormField name="endsAt" label="Ends" type="datetime-local" value={endsAt} />
+	<FormField
+		name="startsAt"
+		label={m.volunteer_shift_form_fields_starts()}
+		type="datetime-local"
+		value={startsAt}
+	/>
+	<FormField
+		name="endsAt"
+		label={m.volunteer_shift_form_fields_ends()}
+		type="datetime-local"
+		value={endsAt}
+	/>
 {:else}
 	<FormField
 		name="dueAt"
-		label="Due by"
+		label={m.volunteer_shift_form_fields_due_by()}
 		type="datetime-local"
-		description="Optional. It waits on Unscheduled Work Orders until somebody gives it a time."
+		description={m.volunteer_shift_form_fields_optional_waits_unscheduled_work()}
 	/>
 {/if}
 <FormField
 	name="capacity"
-	label="People needed"
+	label={m.volunteer_shift_form_fields_people_needed()}
 	type="number"
 	min="1"
 	value={capacity}
-	description="Claims beyond this are refused."
+	description={m.volunteer_shift_form_fields_claims_beyond_refused()}
 />
 <FormField
 	name="notes"
-	label="Anything they should know"
+	label={m.volunteer_shift_form_fields_anything_they_should_know()}
 	type="textarea"
 	value={notes}
-	description="Where to meet, what to bring — shown when they claim it. Up to {VOLUNTEER_SHIFT_NOTES_MAX} characters."
+	description={m.volunteer_shift_form_fields_where_meet_what_bring_shown({
+		VOLUNTEER_SHIFT_NOTES_MAX
+	})}
 />

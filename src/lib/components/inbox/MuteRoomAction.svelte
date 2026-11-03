@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Silence one room without silencing the group.
 	 *
@@ -26,11 +27,13 @@
 
 <Action
 	action={setRoomMute}
-	label={muted ? 'Unmute' : 'Mute'}
+	label={muted ? m.inbox_mute_room_unmute() : m.inbox_mute_room_mute()}
 	iconOnly
-	modalTitle={muted ? `Unmute ${roomName}` : `Mute ${roomName}`}
-	submitLabel={muted ? 'Unmute' : 'Mute'}
-	successToast={muted ? 'Room unmuted' : 'Room muted'}
+	modalTitle={muted
+		? m.inbox_mute_room_unmute_2({ roomName })
+		: m.inbox_mute_room_mute_2({ roomName })}
+	submitLabel={muted ? m.inbox_mute_room_unmute() : m.inbox_mute_room_mute()}
+	successToast={muted ? m.inbox_mute_room_room_unmuted() : m.inbox_mute_room_room_muted()}
 	variant="ghost"
 	size="sm"
 >

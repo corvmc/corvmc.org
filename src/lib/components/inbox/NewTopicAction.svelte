@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Open a named topic. Any active member, like posting — a room the whole
 	 * group reads is not an admin's to ration.
@@ -16,11 +17,11 @@
 
 <Action
 	{action}
-	label="New topic"
+	label={m.inbox_new_topic_new_topic()}
 	iconOnly
-	modalTitle="New topic"
-	submitLabel="Create"
-	successToast="Topic created"
+	modalTitle={m.inbox_new_topic_new_topic()}
+	submitLabel={m.inbox_new_topic_submit_label()}
+	successToast={m.inbox_new_topic_success_toast()}
 	variant="ghost"
 	size="xs"
 	onsuccess={async (result) => {
@@ -35,8 +36,8 @@
 			<input {...fields.slug.as('hidden', slug)} />
 			<FormField
 				field={fields.subject}
-				label="What is it about?"
-				description="Everyone in the group reads every topic. This just keeps one conversation out of another."
+				label={m.inbox_new_topic_what_about()}
+				description={m.inbox_new_topic_description()}
 			/>
 		</div>
 	{/snippet}

@@ -30,11 +30,11 @@
 
 	let {
 		action,
-		label = 'Run',
+		label = m.ui_action_label(),
 		icon,
 		iconOnly = false,
-		successLabel = 'Done',
-		errorLabel = 'Error',
+		successLabel = m.ui_action_success_label(),
+		errorLabel = m.ui_error(),
 		confirm,
 		modalTitle,
 		form: formSnippet,

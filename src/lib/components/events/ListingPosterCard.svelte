@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FileUpload from '$lib/components/ui/Form/FileUpload.svelte';
@@ -28,23 +29,23 @@
 		formData.append('poster', file);
 		const res = await fetch(`/api/events/${eventId}/poster`, { method: 'POST', body: formData });
 		if (!res.ok) throw new Error(await responseErrorMessage(res, 'Upload failed'));
-		toast.success('Poster updated');
+		toast.success(m.events_listing_poster_card_toast());
 		onchange();
 	}
 </script>
 
-<InfoCard title="Poster">
+<InfoCard title={m.events_listing_poster_card_title()}>
 	{#if posterUrl}
 		{@const poster = imageSrc(posterUrl, 'poster')}
 		<img
 			src={poster.src}
 			srcset={poster.srcset}
 			sizes={poster.sizes}
-			alt="Event poster"
+			alt={m.events_listing_poster_card_alt()}
 			class="max-h-64 rounded object-contain"
 		/>
 	{:else}
-		<p class="text-muted">No poster uploaded</p>
+		<p class="text-muted">{m.events_listing_poster_card_no_poster_uploaded()}</p>
 	{/if}
 
 	{#if !cancelled || uploadWhileCancelled}
@@ -54,26 +55,27 @@
 				{upload}
 				accept="image/jpeg,image/png,image/webp"
 				showPreview={false}
-				emptyLabel={posterUrl ? 'Replace poster' : 'Upload a poster'}
-				aria-label="Upload a poster"
+				emptyLabel={posterUrl
+					? m.events_listing_poster_card_replace_poster()
+					: m.events_listing_poster_card_upload_poster()}
+				aria-label={m.events_listing_poster_card_upload_poster()}
 			/>
 			{#if !cancelled}
 				<!-- The fallback when no art arrives: a real poster, so it passes the publish gate. -->
 				<Action
 					action={useTemplateFlyerAsPoster}
-					label="Use the template flyer"
+					label={m.events_listing_poster_card_label()}
 					variant="ghost"
 					size="sm"
-					modalTitle="Use the template flyer?"
-					submitLabel="Make the poster"
-					successToast="Poster updated"
+					modalTitle={m.events_listing_poster_card_modal_title()}
+					submitLabel={m.events_listing_poster_card_submit_label()}
+					successToast={m.events_listing_poster_card_toast()}
 					onsuccess={onchange}
 				>
 					{#snippet form()}
 						<input type="hidden" name="eventId" value={eventId} />
 						<p class="text-sm">
-							A flyer is drawn from the title, date, doors, venue, bill and price, and it replaces
-							the current poster. It is a snapshot: after editing the event, run this again.
+							{m.events_listing_poster_card_flyer_drawn_from_title_date()}
 						</p>
 					{/snippet}
 				</Action>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	const tiers = [
@@ -10,17 +11,18 @@
 
 <div>
 	<div class="mb-6 text-center">
-		<h2 class="text-3xl font-bold">Pick What Works for You</h2>
+		<h2 class="text-3xl font-bold">{m.member_membership_sliding_scale_pick_what_works()}</h2>
 		<p class="mt-2 opacity-70">
-			There's no wrong number here. Every dollar goes to the Collective, and every $5 earns you
-			another hour of practice time.
+			{m.member_membership_sliding_scale_there_s_no_wrong_number()}
 		</p>
 	</div>
 
 	<Card class="mx-auto max-w-3xl">
 		<CardBody>
 			<div class="mb-8 text-center">
-				<div class="mb-4 text-6xl font-bold text-primary">1 hour = $5</div>
+				<div class="mb-4 text-6xl font-bold text-primary">
+					{m.member_membership_sliding_scale_1_hour_5()}
+				</div>
 			</div>
 
 			<div class="mb-8 space-y-3">
@@ -35,16 +37,15 @@
 
 			<div class="rounded-lg bg-primary/5 p-6">
 				<div class="mb-2 text-center text-sm font-semibold tracking-wide text-primary uppercase">
-					Why sliding scale?
+					{m.member_membership_sliding_scale_why_sliding_scale()}
 				</div>
 				<p class="text-center opacity-70">
-					Music shouldn't be gated by budget. Every tier gets the same benefits — the only
-					difference is how many practice hours you walk away with. Contribute what feels right.
+					{m.member_membership_sliding_scale_music_shouldn_t_gated_by()}
 				</p>
 			</div>
 
 			<p class="mt-6 text-center text-muted">
-				Change or cancel anytime. No commitments, no awkward conversations.
+				{m.member_membership_sliding_scale_change_cancel_anytime_no_com()}
 			</p>
 		</CardBody>
 	</Card>

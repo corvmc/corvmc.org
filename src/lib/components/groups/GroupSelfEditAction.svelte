@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { updateMyGroupMembership } from '$lib/remote/groups.remote';
@@ -22,12 +23,12 @@
 
 <Action
 	action={updateMyGroupMembership}
-	label="Edit"
-	aria-label="Edit your membership"
-	modalTitle="Your membership"
+	label={m.groups_edit()}
+	aria-label={m.groups_group_self_edit_aria_label()}
+	modalTitle={m.groups_group_self_edit_modal_title()}
 	variant="ghost"
 	size="xs"
-	successToast="Saved"
+	successToast={m.groups_saved()}
 	onsuccess={onchanged}
 >
 	{#snippet form()}
@@ -36,10 +37,10 @@
 			<FormField
 				field={fields.alias}
 				type="text"
-				label="Display name"
+				label={m.groups_group_self_edit_display_name()}
 				value={alias ?? ''}
 				maxlength="100"
-				description="How you're credited on this roster. Leave blank to use your account name. A chair sets your position."
+				description={m.groups_group_self_edit_description()}
 			/>
 		</div>
 	{/snippet}

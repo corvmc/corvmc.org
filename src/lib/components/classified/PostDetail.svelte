@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import { withQuery } from '$lib/utils/with-query';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -49,19 +50,21 @@
 	<p class="whitespace-pre-wrap">{post.body}</p>
 </InfoCard>
 
-<InfoCard title="Details">
+<InfoCard title={m.classified_details()}>
 	<DefinitionList>
-		<Fact label="Status"><StatusBadge status={post.displayStatus} label /></Fact>
+		<Fact label={m.classified_post_detail_status()}
+			><StatusBadge status={post.displayStatus} label /></Fact
+		>
 		<Fact
-			label="Category"
+			label={m.classified_category()}
 			value={classifiedCategoryLabels[post.category as ClassifiedCategory] ?? post.category}
 		/>
-		<Fact label="Posted by"><EntityChip ref={post.author} /></Fact>
+		<Fact label={m.classified_post_detail_posted_by()}><EntityChip ref={post.author} /></Fact>
 		{#if post.band}
-			<Fact label="For"><EntityChip ref={post.band} /></Fact>
+			<Fact label={m.classified_post_detail_text()}><EntityChip ref={post.band} /></Fact>
 		{/if}
 		{#if post.tags.length > 0}
-			<Fact label="Tags">
+			<Fact label={m.classified_post_detail_tags()}>
 				<span class="flex flex-wrap gap-1">
 					{#each post.tags as t (`${t.kind}:${t.value}`)}
 						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- tagHref resolves the path -->
@@ -70,7 +73,7 @@
 				</span>
 			</Fact>
 		{/if}
-		<Fact label="Posted" value={formatDateTime(post.createdAt)} />
-		<Fact label="Expires" value={formatDate(post.expiresAt)} />
+		<Fact label={m.classified_post_detail_posted()} value={formatDateTime(post.createdAt)} />
+		<Fact label={m.classified_post_detail_expires()} value={formatDate(post.expiresAt)} />
 	</DefinitionList>
 </InfoCard>

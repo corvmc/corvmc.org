@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
@@ -20,20 +21,32 @@
 </script>
 
 <div class="flex flex-wrap items-center gap-2">
-	<Badge class="badge-info">Recurring · {series.frequencyLabel}</Badge>
+	<Badge class="badge-info"
+		>{m.events_recurring_series_bar_recurring({ frequencyLabel: series.frequencyLabel })}</Badge
+	>
 	{#if series.cancelledAt}
-		<span class="text-muted">Series cancelled — no new occurrences</span>
+		<span class="text-muted"
+			>{m.events_recurring_series_bar_series_cancelled_no_new_occurren()}</span
+		>
 	{:else}
 		<span class="text-muted">
-			{#if series.endsAt}
-				Repeats until {fullDate(series.endsAt)}
-			{:else}
-				New occurrences are generated automatically
-			{/if}
+			{#if series.endsAt}{m.events_recurring_series_bar_repeats_until({
+					fullDate: fullDate(series.endsAt)
+				})}
+			{:else}{m.events_recurring_series_bar_new_occurrences_generated_automa()}{/if}
 		</span>
-		<Form remote={cancelEventSeries} successToast="Series cancelled" onsuccess={onchange}>
+		<Form
+			remote={cancelEventSeries}
+			successToast={m.events_recurring_series_bar_success_toast()}
+			onsuccess={onchange}
+		>
 			<input {...cancelEventSeries.fields.eventId.as('hidden', eventId)} />
-			<SubmitButton label="Cancel series" variant="ghost" size="xs" class="text-error" />
+			<SubmitButton
+				label={m.events_recurring_series_bar_label()}
+				variant="ghost"
+				size="xs"
+				class="text-error"
+			/>
 		</Form>
 	{/if}
 </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { RemoteFormFieldValue, RemoteFormField } from '@sveltejs/kit';
 	import { Field } from '$lib/components/ui/Form';
 	import { getLocations } from '$lib/remote/inventory.remote';
@@ -27,7 +28,7 @@
 	let {
 		field,
 		value = undefined,
-		label = 'Location'
+		label = m.inventory_location_field_location()
 	}: {
 		// FormField's own `field?: RemoteFormField<any>`; narrowing it here would
 		// reject every caller's concrete field type.
@@ -68,7 +69,7 @@
 		}
 
 		return [
-			{ value: '', label: 'Unassigned' },
+			{ value: '', label: m.inventory_location_field_unassigned() },
 			...locations
 				.map((l) => ({ value: l.id, label: path(l.id) }))
 				.sort((a, b) => a.label.localeCompare(b.label))
@@ -82,7 +83,5 @@
 	{label}
 	value={value ?? ''}
 	{options}
-	description={locations.length === 0
-		? 'No locations yet — add them under Inventory → Locations and everything you enter can be filed as you go.'
-		: undefined}
+	description={locations.length === 0 ? m.inventory_location_field_description() : undefined}
 />

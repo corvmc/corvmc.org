@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	// The money half of the ticket purchase form: how much, and where it goes.
 	// Shared by the public checkout page and the member event page. Both surfaces
 	// charge through the same remote, so the arithmetic they preview has to be the
@@ -162,11 +163,16 @@
 </script>
 
 <FormField
-	label="How much are you paying?"
+	label={m.events_ticket_purchase_fields_how_much_paying()}
 	id="ticketAmount"
 	description={floorCents === 0
-		? `Suggested ${formatCents(suggestedUnitCents)} a ticket — pay what you can, from $0.`
-		: `Suggested ${formatCents(suggestedUnitCents)} a ticket, ${formatCents(floorCents)} minimum.`}
+		? m.events_ticket_purchase_fields_suggested_ticket_pay_what_can({
+				formatCents: formatCents(suggestedUnitCents)
+			})
+		: m.events_ticket_purchase_fields_suggested_ticket_minimum({
+				formatCents: formatCents(suggestedUnitCents),
+				formatCents2: formatCents(floorCents)
+			})}
 	issues={[]}
 >
 	<label class="input w-full items-center gap-1">
@@ -177,7 +183,7 @@
 		     above it (#994). -->
 		<input
 			id="ticketAmount"
-			aria-label="How much are you paying, per ticket"
+			aria-label={m.events_ticket_purchase_fields_aria_label()}
 			type="number"
 			step="0.01"
 			min="0"
@@ -186,7 +192,9 @@
 			value={amountDollars}
 			oninput={(e) => (typedAmount = e.currentTarget.value)}
 		/>
-		<span class="text-muted text-sm whitespace-nowrap">per ticket</span>
+		<span class="text-muted text-sm whitespace-nowrap"
+			>{m.events_ticket_purchase_fields_per_ticket()}</span
+		>
 	</label>
 </FormField>
 
@@ -212,18 +220,21 @@
 
 {#if belowFloor}
 	<p class="text-sm text-error" data-testid="amount-refused" data-reason="below-floor">
-		The least you can pay for this show is {formatCents(floorCents)} a ticket.
+		{m.events_ticket_purchase_fields_least_can_pay_show_ticket({
+			formatCents: formatCents(floorCents)
+		})}
 	</p>
 {:else if inDeadZone}
 	<p class="text-sm text-error" data-testid="amount-refused" data-reason="dead-zone">
-		Pay nothing, or at least {formatCents(TICKET_MIN_CHARGE_CENTS)} — below that, card fees take almost
-		all of it.
+		{m.events_ticket_purchase_fields_pay_nothing_at_least_below({
+			formatCents: formatCents(TICKET_MIN_CHARGE_CENTS)
+		})}
 	</p>
 {/if}
 
 {#if !isFree && !inDeadZone && !belowFloor}
 	<div class="space-y-3 border-t border-base-200 pt-4">
-		<p class="font-medium">Where should it go?</p>
+		<p class="font-medium">{m.events_ticket_purchase_fields_where_should_go()}</p>
 		<!-- `otherFloorCents` is the acts' **guarantee**, not the event's price
 		     floor. Passing the price floor there is the bug fixed in the music
 		     BuyPanel: it consumed the whole amount, clamped the collective's share
@@ -237,8 +248,8 @@
 			onchange={(c) => (collectiveOverride = c)}
 			otherFloorCents={actsFloorCents}
 			fixedCents={split.stripeFeeCents}
-			fixedLabel="Card processing"
-			valueLabel="The Collective"
+			fixedLabel={m.events_card_processing()}
+			valueLabel={m.events_ticket_purchase_fields_value_label()}
 			otherLabel={actsLabel}
 		/>
 
@@ -250,16 +261,16 @@
 			type="checkbox"
 			label=""
 			bind:value={coverFees}
-			checkboxLabel="Add {formatCents(
-				covered.feeCoveredCents
-			)} to cover card processing, so {actsLabel} and the Collective keep the full {formatCents(
-				totalCents
-			)}"
+			checkboxLabel={m.events_ticket_purchase_fields_checkbox_label({
+				formatCents: formatCents(covered.feeCoveredCents),
+				actsLabel,
+				formatCents2: formatCents(totalCents)
+			})}
 		/>
 
 		{#if collectiveOverride !== null}
 			<Button type="button" variant="ghost" size="sm" onclick={() => (collectiveOverride = null)}>
-				Reset to suggested
+				{m.events_ticket_purchase_fields_reset_suggested()}
 			</Button>
 		{/if}
 	</div>
@@ -285,18 +296,18 @@
 	</div>
 	{#if split.contributionCents > 0}
 		<div class="flex justify-between text-muted" data-testid="contribution-line">
-			<span>Contribution</span>
+			<span>{m.events_ticket_purchase_fields_contribution()}</span>
 			<span>{formatCents(split.contributionCents)}</span>
 		</div>
 	{/if}
 	{#if coverFees && split.feeCoveredCents > 0}
 		<div class="flex justify-between text-muted">
-			<span>Card processing</span>
+			<span>{m.events_card_processing()}</span>
 			<span>{formatCents(split.feeCoveredCents)}</span>
 		</div>
 	{/if}
 	<div class="flex justify-between text-lg font-medium" data-testid="purchase-total">
-		<span>Total</span>
+		<span>{m.events_ticket_purchase_fields_total()}</span>
 		<span>{formatCents(split.chargeCents)}</span>
 	</div>
 </div>
@@ -304,8 +315,10 @@
 {#if submit}
 	<SubmitButton
 		label={isFree
-			? `Get ${quantity === 1 ? 'ticket' : `${quantity} tickets`}`
-			: `Pay ${formatCents(split.chargeCents)}`}
+			? m.events_ticket_purchase_fields_get({
+					value: quantity === 1 ? 'ticket' : `${quantity} tickets`
+				})
+			: m.events_ticket_purchase_fields_pay({ formatCents: formatCents(split.chargeCents) })}
 		variant="primary"
 		class="w-full"
 		disabled={inDeadZone || belowFloor}

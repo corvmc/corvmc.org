@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	let { class: className = '' }: { class?: string } = $props();
 </script>
 
@@ -30,12 +31,12 @@
 		letter-spacing="1.8"
 		fill="#c63015"
 		style="font-family: ui-monospace, Menlo, monospace; text-transform: uppercase;"
-		>Corvallis Music Collective</text
+		>{m.illustrations_ticket_corvallis_music_collective()}</text
 	>
 
 	<!-- Title -->
 	<text x="14" y="42" font-size="19" fill="#1a1410" style="font-family: var(--font-chalk);"
-		>Showcase Night</text
+		>{m.illustrations_ticket_showcase_night()}</text
 	>
 
 	<!-- When -->
@@ -45,7 +46,7 @@
 		font-weight="700"
 		font-size="15"
 		fill="#1a1410"
-		style="font-family: var(--font-script);">Fri Dec 13 · 7 PM</text
+		style="font-family: var(--font-script);">{m.illustrations_ticket_fri_dec_13_7_pm()}</text
 	>
 
 	<!-- Where -->
@@ -54,7 +55,7 @@
 		y="75"
 		font-size="12"
 		fill="rgba(26,20,16,0.72)"
-		style="font-family: var(--font-script);">6775 SW Philomath Blvd</text
+		style="font-family: var(--font-script);">{m.illustrations_ticket_6775_sw_philomath_blvd()}</text
 	>
 
 	<!-- Dashed line -->
@@ -77,7 +78,7 @@
 		letter-spacing="1.1"
 		fill="#c63015"
 		style="font-family: ui-monospace, Menlo, monospace; text-transform: uppercase;"
-		>$5 NOTAFLOF</text
+		>{m.illustrations_ticket_5_notaflof()}</text
 	>
 	<text
 		x="216"
@@ -87,7 +88,8 @@
 		font-size="9"
 		letter-spacing="1.1"
 		fill="rgba(26,20,16,0.55)"
-		style="font-family: ui-monospace, Menlo, monospace; text-transform: uppercase;">Doors 6:30</text
+		style="font-family: ui-monospace, Menlo, monospace; text-transform: uppercase;"
+		>{m.illustrations_ticket_doors_6_30()}</text
 	>
 
 	<!-- Perforation -->
@@ -121,7 +123,7 @@
 			letter-spacing="2.8"
 			fill="#c63015"
 			transform="rotate(-90, 257, 55)"
-			style="text-transform: uppercase;">Admit One</text
+			style="text-transform: uppercase;">{m.illustrations_ticket_admit_one()}</text
 		>
 	</g>
 </svg>

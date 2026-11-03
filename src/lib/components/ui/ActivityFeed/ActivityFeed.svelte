@@ -16,7 +16,7 @@
 		hasMore = false,
 		onmore,
 		empty,
-		label = 'Activity',
+		label = m.ui_activity(),
 		trailing
 	}: {
 		rows: T[];

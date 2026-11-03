@@ -1,4 +1,5 @@
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
+	import { m } from '$lib/paraglide/messages.js';
 	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
 	import { formatDollars } from '$lib/utils/format';
 	import { untrack } from 'svelte';
@@ -46,7 +47,9 @@
 <Form {remote} {onsuccess} class="space-y-6">
 	<div>
 		<div class="flex items-baseline justify-between">
-			<span class="fieldset-legend font-medium">Monthly contribution</span>
+			<span class="fieldset-legend font-medium"
+				>{m.member_membership_subscription_form_monthly_contribution()}</span
+			>
 			<span class="text-3xl font-bold text-primary">${amount}</span>
 		</div>
 
@@ -59,7 +62,7 @@
 			step={STEP}
 			bind:value={amount}
 			class="range mt-3 w-full range-primary"
-			aria-label="Monthly contribution amount"
+			aria-label={m.member_membership_subscription_form_aria_label()}
 		/>
 		<div class="mt-1 flex w-full justify-between px-1 text-xs opacity-50">
 			{#each ticks as tick (tick)}
@@ -83,26 +86,30 @@
 			type="toggle"
 			label=""
 			bind:value={coverFees}
-			checkboxLabel="Cover processing fees so the Collective receives 100% of your contribution"
+			checkboxLabel={m.member_membership_subscription_form_checkbox_label()}
 		/>
 		{#if coverFees}
 			<p class="ml-12 text-muted">
-				Adds ${feeDisplay} to cover processing fees (2.9% + $0.30)
+				{m.member_membership_subscription_form_adds_cover_processing_fe({ feeDisplay })}
 			</p>
 		{/if}
 	</div>
 
 	<div class="rounded-lg bg-base-200/50 p-4">
-		<p class="text-muted">New monthly total</p>
+		<p class="text-muted">{m.member_membership_subscription_form_new_monthly_total()}</p>
 		<p class="mt-1 font-semibold text-primary">
-			${amount}.00 membership{#if coverFees}
-				+ ${feeDisplay} processing fees{/if} = ${totalDisplay} total per month
+			{m.member_membership_subscription_form_00_membership({
+				amount
+			})}{#if coverFees}{m.member_membership_subscription_form_processing_fees({ feeDisplay })}{/if}
+			{m.member_membership_subscription_form_total_per_month({ totalDisplay })}
 		</p>
 	</div>
 
 	<SubmitButton
 		variant="primary"
 		class="w-full"
-		label={mode === 'create' ? 'Become a Sustaining Member' : 'Update Contribution'}
+		label={mode === 'create'
+			? m.member_membership_subscription_form_become_sustaining_member()
+			: m.member_update_contribution()}
 	/>
 </Form>

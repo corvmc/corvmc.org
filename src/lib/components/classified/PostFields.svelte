@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -43,51 +44,60 @@
 	<FormField
 		name="kind"
 		type="select"
-		label="Wanted, offered or trade"
-		description="Trade is for gear only. An offered gear post shows as for sale."
+		label={m.classified_post_fields_wanted_offered_trade()}
+		description={m.classified_post_fields_description()}
 		value={initial?.kind ?? 'wanted'}
 		options={classifiedKindOptions}
 	/>
 	<FormField
 		name="category"
 		type="select"
-		label="Category"
+		label={m.classified_category()}
 		bind:value={category}
 		options={classifiedCategoryOptions}
 	/>
 </div>
 {#if category === 'gear'}
 	<Alert type="warning">
-		{CLASSIFIED_GEAR_DISCLAIMER} Replies come to your inbox; do not post payment details.
+		{m.classified_post_fields_replies_come_inbox_do_not({ CLASSIFIED_GEAR_DISCLAIMER })}
 	</Alert>
 {/if}
-<FormField name="title" type="text" label="Title" value={initial?.title ?? ''} />
-<FormField name="body" type="textarea" label="Details" value={initial?.body ?? ''} />
+<FormField
+	name="title"
+	type="text"
+	label={m.classified_post_fields_title()}
+	value={initial?.title ?? ''}
+/>
+<FormField name="body" type="textarea" label={m.classified_details()} value={initial?.body ?? ''} />
 {#if bands.length > 0}
 	<FormField
 		name="groupId"
 		type="select"
-		label="Post as"
+		label={m.classified_post_fields_post_as()}
 		value={initial?.groupId ?? ''}
-		options={[{ value: '', label: 'Just me' }, ...bands]}
+		options={[{ value: '', label: m.classified_post_fields_just_me() }, ...bands]}
 	/>
 {/if}
-<FormField name="instruments" label="Instruments">
+<FormField name="instruments" label={m.classified_post_fields_instruments()}>
 	<FreeformTagInput
 		bind:value={instruments}
 		suggestions={instrumentSuggestions}
 		name="instruments"
-		placeholder="e.g. drums, bass..."
+		placeholder={m.classified_post_fields_e_g_drums_bass()}
 	/>
 </FormField>
-<FormField name="genres" label="Genres">
+<FormField name="genres" label={m.classified_post_fields_genres()}>
 	<FreeformTagInput
 		bind:value={genres}
 		suggestions={genreSuggestions}
 		name="genres"
-		placeholder="e.g. surf, jazz..."
+		placeholder={m.classified_post_fields_e_g_surf_jazz()}
 	/>
 </FormField>
-<FormField name="skills" label="Skills">
-	<FreeformTagInput bind:value={skills} name="skills" placeholder="e.g. mixing, lessons..." />
+<FormField name="skills" label={m.classified_post_fields_skills()}>
+	<FreeformTagInput
+		bind:value={skills}
+		name="skills"
+		placeholder={m.classified_post_fields_e_g_mixing_lessons()}
+	/>
 </FormField>

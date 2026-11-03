@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	import logoMono from '$lib/assets/cmc-logo-mono.svg';
 	import { hashPattern } from '$lib/utils/patterns';
@@ -49,7 +50,7 @@
 					</text>
 					<text>
 						<textPath href="#arc-bot-{id}" startOffset="50%" text-anchor="middle"
-							>Corvallis Music Collective</textPath
+							>{m.directory_corvallis_music_collective()}</textPath
 						>
 					</text>
 				</svg>
@@ -73,7 +74,7 @@
 				{/if}
 			</div>
 			{#if lookingForMembers}
-				<div class="vinyl-card__gaff">seeking members</div>
+				<div class="vinyl-card__gaff">{m.directory_vinyl_card_seeking_members()}</div>
 			{/if}
 		</div>
 	</div>

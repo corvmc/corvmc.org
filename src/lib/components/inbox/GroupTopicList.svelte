@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * A group's chat topics, as rows.
 	 *
@@ -33,7 +34,7 @@
 
 <section>
 	<div class="flex items-center justify-between gap-2">
-		<SectionLabel label="Chat" count={topics.length} />
+		<SectionLabel label={m.inbox_group_topic_list_label()} count={topics.length} />
 		<NewTopicAction {slug} {hrefFor} />
 	</div>
 
@@ -47,9 +48,13 @@
 				>
 					<span class="min-w-0 truncate" class:font-medium={topic.unread}>{topic.name}</span>
 					{#if topic.unread}
-						<Badge variant="primary" size="xs">New</Badge>
+						<Badge variant="primary" size="xs">{m.inbox_group_topic_list_new()}</Badge>
 					{:else if topic.muted}
-						<IconBellOff size={14} class="shrink-0 text-base-content/50" aria-label="Muted" />
+						<IconBellOff
+							size={14}
+							class="shrink-0 text-base-content/50"
+							aria-label={m.inbox_group_topic_list_aria_label()}
+						/>
 					{/if}
 				</a>
 			</li>

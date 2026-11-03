@@ -5,6 +5,7 @@
 </script>
 
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * One topic of a group's chat, whichever panel it is mounted in.
 	 *
@@ -45,15 +46,22 @@
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		{#if chat.messages.length === 0}
 			<EmptyState
-				title="Nothing here yet"
+				title={m.inbox_group_chat_title()}
 				description={chat.isGeneral
-					? `This is ${chat.groupName}'s own thread — everyone in the group reads it. Say something.`
-					: `${chat.topicName} is empty. Everyone in ${chat.groupName} reads it.`}
+					? m.inbox_group_chat_s_own_thread_everyone_group({ groupName: chat.groupName })
+					: m.inbox_group_chat_empty_everyone_reads({
+							topicName: chat.topicName,
+							groupName: chat.groupName
+						})}
 			/>
 		{:else}
 			<ThreadTimeline messages={chat.messages} {viewerUserId} />
 		{/if}
 	</div>
 
-	<ThreadComposer threadId={chat.id} replyForm={postGroupChatMessage} sendLabel="Send" />
+	<ThreadComposer
+		threadId={chat.id}
+		replyForm={postGroupChatMessage}
+		sendLabel={m.inbox_group_chat_send_label()}
+	/>
 </div>

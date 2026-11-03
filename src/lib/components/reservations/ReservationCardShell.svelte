@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import {
 		formatWeekdayShortCased,
@@ -47,13 +48,7 @@
 	<div class="date-block">
 		{#if !terminal && isVenueThisWeek(startsAt)}
 			<span class="upcoming-tag">
-				{#if isVenueToday(startsAt)}
-					Today
-				{:else if isVenueTomorrow(startsAt)}
-					Tomorrow
-				{:else}
-					This Week
-				{/if}
+				{#if isVenueToday(startsAt)}{m.reservations_reservation_card_shell_today()}{:else if isVenueTomorrow(startsAt)}{m.reservations_reservation_card_shell_tomorrow()}{:else}{m.reservations_reservation_card_shell_week()}{/if}
 			</span>
 		{/if}
 		<span>{formatWeekdayShortCased(startsAt)}</span>

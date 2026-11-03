@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The member's own hour log, in its three variants.
 	 *
@@ -83,8 +84,8 @@
 	{variant}
 	{size}
 	modalTitle={title}
-	submitLabel={mode === 'fix' ? 'Save' : 'File it'}
-	successToast={mode === 'fix' ? 'Saved' : 'Hours logged'}
+	submitLabel={mode === 'fix' ? m.volunteer_save() : m.volunteer_log_hours_file()}
+	successToast={mode === 'fix' ? m.volunteer_log_hours_saved() : m.volunteer_hours_logged()}
 >
 	{#snippet form()}
 		{#if mode === 'fix'}
@@ -93,10 +94,10 @@
 		{:else if mode === 'shift'}
 			<input type="hidden" name="volunteerRoleId" value={shift!.volunteerRoleId} />
 			<input type="hidden" name="shiftId" value={shift!.shiftId} />
-			<p class="text-sm">Pre-filled from the shift. Adjust if it differs.</p>
+			<p class="text-sm">{m.volunteer_log_hours_pre_filled_from_shift_adjust()}</p>
 		{:else}
 			<label class="fieldset w-full">
-				<span class="fieldset-legend">What did you help with?</span>
+				<span class="fieldset-legend">{m.volunteer_log_hours_what_did_help_with()}</span>
 				<Select name="volunteerRoleId">
 					{#each roles as role (role.id)}
 						<option value={role.id}>{role.name}</option>
@@ -109,9 +110,9 @@
 			<!-- Only for somebody who is on one. Most volunteering is for CMC at
 			     large, so this stays optional and blank by default. -->
 			<label class="fieldset w-full">
-				<span class="fieldset-legend">Was this for a committee or club?</span>
+				<span class="fieldset-legend">{m.volunteer_log_hours_was_committee_club()}</span>
 				<Select name="groupId">
-					<option value="">CMC generally</option>
+					<option value="">{m.volunteer_log_hours_cmc_generally()}</option>
 					{#each programs as program (program.id)}
 						<option value={program.id}>{program.name}</option>
 					{/each}
@@ -121,28 +122,28 @@
 
 		<FormField
 			name="workedOn"
-			label="Date"
+			label={m.volunteer_date()}
 			type="date"
 			max={clubToday()}
 			value={mode === 'fix' ? log!.workedOn : mode === 'shift' ? shift!.workedOn : clubToday()}
 		/>
 		<FormField
 			name="hours"
-			label="Hours"
+			label={m.volunteer_hours()}
 			type="number"
 			step={VOLUNTEER_HOUR_STEP}
 			min="0.25"
 			max="12"
 			value={mode === 'fix' ? log!.hours : mode === 'shift' ? shift!.hours : ''}
-			description="To the nearest quarter hour. Twelve is the most one log can carry."
+			description={m.volunteer_log_hours_nearest_quarter_hour_twelve_most()}
 		/>
 		<FormField
 			name="description"
-			label="What you did"
+			label={m.volunteer_log_hours_what_did()}
 			type="textarea"
 			maxlength={VOLUNTEER_DESCRIPTION_MAX}
 			value={mode === 'fix' ? log!.description : ''}
-			description="One sentence."
+			description={m.volunteer_log_hours_one_sentence()}
 		/>
 	{/snippet}
 </Action>

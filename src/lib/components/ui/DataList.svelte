@@ -1,4 +1,5 @@
 <script lang="ts" generics="T">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	/**
 	 * The async envelope shared by every paginated list page: pending state,
@@ -17,7 +18,7 @@
 
 	let {
 		result,
-		empty = 'No items found.',
+		empty = m.ui_no_items_found(),
 		emptyTitle,
 		actionLabel,
 		actionHref,

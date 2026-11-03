@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import { formatDate, formatTime } from '$lib/utils/format';
@@ -43,7 +44,7 @@
 	}
 </script>
 
-<Modal bind:open title="Your Ticket" maxWidth="max-w-sm" onclose={handleClose}>
+<Modal bind:open title={m.events_ticket_qrmodal_title()} maxWidth="max-w-sm" onclose={handleClose}>
 	<div class="flex flex-col items-center gap-4 py-2">
 		{#if ticket.event}
 			<div class="text-center">
@@ -72,7 +73,7 @@
 					size="sm"
 					shape="circle"
 					outline
-					aria-label="Previous ticket"
+					aria-label={m.events_ticket_qrmodal_previous_ticket()}
 					onclick={() => (offset -= 1)}
 				>
 					<svg
@@ -86,14 +87,14 @@
 						style="width:16px;height:16px"><path d="M15 6l-6 6 6 6" /></svg
 					>
 				</Button>
-				<span class="text-muted">{index + 1} of {total}</span>
+				<span class="text-muted">{m.events_ticket_qrmodal_text({ value: index + 1, total })}</span>
 				<Button
 					type="button"
 					variant="default"
 					size="sm"
 					shape="circle"
 					outline
-					aria-label="Next ticket"
+					aria-label={m.events_ticket_qrmodal_next_ticket()}
 					onclick={() => (offset += 1)}
 				>
 					<svg

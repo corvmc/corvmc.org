@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import {
 		IconArrowUpRight,
 		IconPhoto,
@@ -52,7 +53,7 @@
 			{/each}
 		</div>
 	{:else if type === 'members'}
-		<h2 class="mb-4 text-2xl font-bold">Members</h2>
+		<h2 class="mb-4 text-2xl font-bold">{m.band_site_band_site_block_ghost_members()}</h2>
 		<div class="grid grid-cols-2 gap-4 md:grid-cols-3">
 			{#each [0, 1, 2] as i (i)}
 				<div class="text-center">
@@ -62,7 +63,7 @@
 			{/each}
 		</div>
 	{:else if type === 'events'}
-		<h2 class="mb-4 text-2xl font-bold">Upcoming Shows</h2>
+		<h2 class="mb-4 text-2xl font-bold">{m.band_site_band_site_block_ghost_upcoming_shows()}</h2>
 		<div class="flex flex-col gap-3">
 			{#each [0, 1] as i (i)}
 				<div class="g-surface h-[62px] rounded-lg"></div>
@@ -81,7 +82,7 @@
 			<IconPlayerPlay size={24} opacity={0.5} />
 		</div>
 	{:else if type === 'press'}
-		<h2 class="mb-4 text-2xl font-bold">Press</h2>
+		<h2 class="mb-4 text-2xl font-bold">{m.band_site_band_site_block_ghost_press()}</h2>
 		<blockquote class="g-rule pl-4">
 			<div class="flex flex-col gap-2">
 				<div class="g-bar" style="width: 100%"></div>
@@ -90,19 +91,21 @@
 			<div class="g-bar mt-3 h-2" style="width: 38%"></div>
 		</blockquote>
 	{:else if type === 'achievements'}
-		<h2 class="mb-4 text-2xl font-bold">Highlights</h2>
+		<h2 class="mb-4 text-2xl font-bold">{m.band_site_band_site_block_ghost_highlights()}</h2>
 		<div class="flex flex-col gap-3">
 			{#each [100, 72, 84] as w (w)}
 				<div class="g-bar" style="width: {w}%"></div>
 			{/each}
 		</div>
 	{:else if type === 'tech_rider'}
-		<h2 class="mb-4 text-2xl font-bold">Technical Requirements</h2>
+		<h2 class="mb-4 text-2xl font-bold">
+			{m.band_site_band_site_block_ghost_technical_requirements()}
+		</h2>
 		<div class="g-bar flex h-[110px] items-center justify-center rounded-lg">
 			<IconLayoutBoard size={22} opacity={0.5} />
 		</div>
 	{:else if type === 'merch'}
-		<h2 class="mb-4 text-2xl font-bold">Merch</h2>
+		<h2 class="mb-4 text-2xl font-bold">{m.band_site_band_site_block_ghost_merch()}</h2>
 		<div class="grid grid-cols-2 gap-4 md:grid-cols-3">
 			{#each [0, 1, 2] as i (i)}
 				<div>
@@ -115,7 +118,7 @@
 		<div
 			class="g-dashed flex h-[90px] items-center justify-center rounded-lg text-xs tracking-wide"
 		>
-			YOUR OWN HTML
+			{m.band_site_band_site_block_ghost_own_html()}
 		</div>
 	{/if}
 

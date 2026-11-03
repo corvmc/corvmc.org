@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * A ballot as one line on another page: its question, status and, once
 	 * certified, the published counts. Never a live tally.
@@ -33,5 +34,9 @@
 		— {ballot.passed === null ? 'outcome not recorded' : ballot.passed ? 'passed' : 'did not pass'}
 	</span>
 {:else if ballot.status === 'open'}
-	<span class="block text-muted">Voting closes {formatDateShortYear(ballot.closesAt)}</span>
+	<span class="block text-muted"
+		>{m.ballot_ballot_line_voting_closes({
+			formatDateShortYear: formatDateShortYear(ballot.closesAt)
+		})}</span
+	>
 {/if}

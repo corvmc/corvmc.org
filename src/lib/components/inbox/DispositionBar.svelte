@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The four ways a conversation leaves the queue: Reply, Assign, Snooze,
 	 * Resolve — same actions, same shortcuts, same order everywhere they appear.
@@ -125,7 +126,7 @@
 			{:else}
 				<IconSend size={16} />
 			{/if}
-			Reply
+			{m.inbox_reply()}
 		</Button>
 	{/if}
 
@@ -141,7 +142,7 @@
 			{:else}
 				<IconUser size={16} />
 			{/if}
-			Assign
+			{m.inbox_disposition_bar_assign()}
 		</Button>
 	{/if}
 
@@ -165,7 +166,7 @@
 					{:else}
 						<IconAlarmSnooze size={16} />
 					{/if}
-					Snooze
+					{m.inbox_disposition_bar_snooze()}
 				</Button>
 			{/snippet}
 		</SnoozeMenu>
@@ -201,7 +202,7 @@
 			{:else}
 				<IconCheck size={16} />
 			{/if}
-			Resolve
+			{m.inbox_disposition_bar_resolve()}
 		</Button>
 	{/if}
 </div>

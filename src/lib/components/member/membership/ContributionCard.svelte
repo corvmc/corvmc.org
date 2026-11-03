@@ -1,4 +1,5 @@
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { formatDollars, formatMonthDayYear } from '$lib/utils/format';
@@ -53,40 +54,53 @@
 				<IconCreditCard size={24} class="text-primary" />
 			</div>
 			<div>
-				<h3 class="text-xl font-semibold">Your Contribution</h3>
-				<p class="text-muted">Manage your monthly support</p>
+				<h3 class="text-xl font-semibold">
+					{m.member_membership_contribution_card_contribution()}
+				</h3>
+				<p class="text-muted">{m.member_membership_contribution_card_manage_monthly_support()}</p>
 			</div>
 		</div>
 
 		<div class="mt-4 flex items-center justify-between rounded-lg bg-base-200/50 p-4">
 			<div>
 				<div class="flex items-center gap-2">
-					<span class="text-3xl font-bold">${amountPerMonth}/month</span>
+					<span class="text-3xl font-bold"
+						>{m.member_membership_contribution_card_month({ amountPerMonth })}</span
+					>
 					{#if subscription.coveringFees}
-						<Badge variant="secondary">+ ${feeAmount} fees covered</Badge>
+						<Badge variant="secondary"
+							>{m.member_membership_contribution_card_fees_covered({ feeAmount })}</Badge
+						>
 					{/if}
 				</div>
-				<p class="mt-1 text-muted">Next bill {nextBilling}</p>
+				<p class="mt-1 text-muted">
+					{m.member_membership_contribution_card_next_bill({ nextBilling })}
+				</p>
 			</div>
 		</div>
 
 		<div class="mt-4 flex flex-wrap gap-2">
 			<Button variant="default" size="sm" outline onclick={() => (modalOpen = true)}
-				>Modify Amount</Button
+				>{m.member_membership_contribution_card_modify_amount()}</Button
 			>
 			<Action
 				action={cancelAction}
-				label="Cancel Membership"
-				modalTitle="Cancel Membership"
+				label={m.member_membership_contribution_card_label()}
+				modalTitle={m.member_membership_contribution_card_label()}
 				variant="error"
 				size="sm"
 				outline
-				onsuccess={() => toast.success('Membership cancelled')}
+				onsuccess={() =>
+					toast.success(m.member_membership_contribution_card_membership_cancelled())}
 			>
 				{#snippet form()}
 					<p class="py-4">
-						Your benefits — including <strong>{subscription.quantity} free practice hours</strong> —
-						stay active until <strong>{nextBilling}</strong>, and you can pick it back up any time
+						Your benefits — including <strong
+							>{m.member_membership_contribution_card_free_practice_hours({
+								quantity: subscription.quantity
+							})}</strong
+						>
+						— stay active until <strong>{nextBilling}</strong>, and you can pick it back up any time
 						before then.
 					</p>
 				{/snippet}
@@ -95,7 +109,7 @@
 	</CardBody>
 </Card>
 
-<Modal bind:open={modalOpen} title="Update Contribution">
+<Modal bind:open={modalOpen} title={m.member_update_contribution()}>
 	<SubscriptionForm
 		mode="modify"
 		currentAmount={amountPerMonth}
@@ -103,7 +117,7 @@
 		remote={updateRemote}
 		onsuccess={() => {
 			modalOpen = false;
-			toast.success('Contribution updated');
+			toast.success(m.member_membership_contribution_card_contribution_updated());
 		}}
 	/>
 </Modal>

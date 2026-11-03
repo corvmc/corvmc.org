@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { acceptGroupInvite, declineGroupInvite } from '$lib/remote/groups.remote';
 	import { invalidateAll } from '$app/navigation';
@@ -20,7 +21,7 @@
 	// state the remote reports in-band rather than throwing.
 	function onAnswered(result: { success: boolean }, done: string) {
 		if (result.success) toast.success(done);
-		else toast.error('That invitation is no longer open.');
+		else toast.error(m.groups_answer_group_invite_toast());
 		void invalidateAll();
 	}
 </script>
@@ -28,10 +29,10 @@
 <div class="flex shrink-0 gap-2">
 	<Action
 		action={acceptGroupInvite.for(groupId)}
-		label="Accept"
-		aria-label={`Accept the invitation to ${groupName}`}
-		modalTitle="Join {groupName}"
-		submitLabel="Join"
+		label={m.groups_accept()}
+		aria-label={m.groups_answer_group_invite_accept_invitation({ groupName })}
+		modalTitle={m.groups_join({ groupName })}
+		submitLabel={m.groups_join_2()}
 		variant="primary"
 		size="sm"
 		onsuccess={(result) =>
@@ -40,16 +41,16 @@
 		{#snippet form()}
 			<input {...acceptFields.groupId.as('hidden', groupId)} />
 			<p class="text-sm">
-				You'll be on the roster, see the announcements, and can leave whenever you like.
+				{m.groups_answer_group_invite_ll_roster_see_announcements_can()}
 			</p>
 		{/snippet}
 	</Action>
 	<Action
 		action={declineGroupInvite.for(groupId)}
-		label="Decline"
-		aria-label={`Decline the invitation to ${groupName}`}
-		modalTitle="Decline invitation"
-		submitLabel="Decline"
+		label={m.groups_decline()}
+		aria-label={m.groups_answer_group_invite_decline_invitation({ groupName })}
+		modalTitle={m.groups_answer_group_invite_decline_invitation_2()}
+		submitLabel={m.groups_decline()}
 		confirm={`Decline the invitation to ${groupName}? They would have to invite you again.`}
 		variant="ghost"
 		size="sm"

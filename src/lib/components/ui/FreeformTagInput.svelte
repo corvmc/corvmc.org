@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Free text in, new tags out: whatever is typed becomes a tag, lowercased.
 	 * `suggestions` only autocompletes — it never constrains, so a value not on
@@ -12,7 +13,7 @@
 	let {
 		value = $bindable<string[]>([]),
 		suggestions = [],
-		placeholder = 'Type and press Enter...',
+		placeholder = m.ui_freeform_tag_input_placeholder(),
 		name
 	}: {
 		value?: string[];

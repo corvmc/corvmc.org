@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Record hours for somebody who is not going to log them themselves.
 	 *
@@ -29,7 +30,7 @@
 		 * case.
 		 */
 		presetUser = null,
-		label = 'Log Hours',
+		label = m.volunteer_log_hours_for_member_log_hours(),
 		size = 'sm'
 	}: {
 		presetUser?: { id: string; name: string } | null;
@@ -50,9 +51,11 @@
 	icon={clockIcon}
 	variant="ghost"
 	{size}
-	modalTitle={presetUser ? `Log hours for ${presetUser.name}` : 'Log hours for a member'}
-	submitLabel="Log Hours"
-	successToast="Hours logged"
+	modalTitle={presetUser
+		? m.volunteer_log_hours_for_member_log_hours_2({ name: presetUser.name })
+		: m.volunteer_log_hours_for_member_log_hours_member()}
+	submitLabel={m.volunteer_log_hours_for_member_log_hours()}
+	successToast={m.volunteer_hours_logged()}
 	onsuccess={() => {
 		userId = '';
 		userName = '';
@@ -71,30 +74,31 @@
 			mean this component holding that query open just to pass it down.
 		-->
 		<label class="fieldset w-full">
-			<span class="fieldset-legend">What did they help with?</span>
+			<span class="fieldset-legend"
+				>{m.volunteer_log_hours_for_member_what_did_they_help_with()}</span
+			>
 			<Select name="volunteerRoleId">
 				<RoleOptions activeOnly />
 			</Select>
 		</label>
 
-		<FormField name="workedOn" label="Date" type="date" value={clubToday()} />
+		<FormField name="workedOn" label={m.volunteer_date()} type="date" value={clubToday()} />
 		<FormField
 			name="hours"
-			label="Hours"
+			label={m.volunteer_hours()}
 			type="number"
 			step={VOLUNTEER_HOUR_STEP}
 			min="0.25"
-			description="To the nearest quarter hour."
+			description={m.volunteer_log_hours_for_member_nearest_quarter_hour()}
 		/>
 		<FormField
 			name="description"
-			label="What they did"
+			label={m.volunteer_log_hours_for_member_what_they_did()}
 			type="textarea"
-			description="This is the record — it's what a funder's auditor would read."
+			description={m.volunteer_log_hours_for_member_record_s_what_funder_s()}
 		/>
 		<p class="text-muted">
-			No backdate limit. Lands approved, stamped with your name — there is no second review, because
-			you typing it in is the review.
+			{m.volunteer_log_hours_for_member_no_backdate_limit_lands_appro()}
 		</p>
 	{/snippet}
 </Action>

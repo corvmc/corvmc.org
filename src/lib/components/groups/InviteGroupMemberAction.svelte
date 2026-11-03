@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { onDestroy } from 'svelte';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -28,8 +29,8 @@
 	let debounce: ReturnType<typeof setTimeout>;
 
 	const roleOptions = [
-		{ value: 'member', label: 'Member' },
-		{ value: 'admin', label: 'Admin' }
+		{ value: 'member', label: m.groups_member() },
+		{ value: 'admin', label: m.groups_admin() }
 	];
 
 	async function search() {
@@ -61,11 +62,11 @@
 
 <Action
 	action={inviteGroupMember}
-	label="Invite"
-	aria-label={`Invite someone to ${groupName}`}
-	modalTitle="Invite to {groupName}"
-	submitLabel="Send invitation"
-	successToast="Invitation sent"
+	label={m.groups_invite_group_member_invite()}
+	aria-label={m.groups_invite_group_member_invite_someone({ groupName })}
+	modalTitle={m.groups_invite_group_member_invite_2({ groupName })}
+	submitLabel={m.groups_invite_group_member_submit_label()}
+	successToast={m.groups_invite_group_member_success_toast()}
 	variant="primary"
 	size="sm"
 	onsuccess={reset}
@@ -76,18 +77,20 @@
 			<input {...memberFields.userId.as('hidden', selected?.id ?? '')} />
 
 			<FormField
-				label="Who"
+				label={m.groups_invite_group_member_who()}
 				name="memberSearch"
 				type="text"
 				value={searchQuery}
 				oninput={onInput}
 				autocomplete="off"
-				placeholder="Search members by name or email"
-				description={selected ? `Inviting ${selected.name}` : 'Pick somebody from the results.'}
+				placeholder={m.groups_invite_group_member_search_members_by_name_email()}
+				description={selected
+					? m.groups_invite_group_member_inviting({ name: selected.name })
+					: m.groups_invite_group_member_pick_somebody_from_results()}
 			/>
 
 			{#if searching}
-				<p class="text-subtle">Searching…</p>
+				<p class="text-subtle">{m.groups_invite_group_member_searching()}</p>
 			{:else if results.length > 0}
 				<ul class="menu w-full rounded-box bg-base-200">
 					{#each results as candidate (candidate.id)}
@@ -101,23 +104,23 @@
 				</ul>
 			{:else if searchQuery.trim().length >= 2}
 				<p class="text-subtle">
-					Nobody with an account by that name. Invite them by email instead.
+					{m.groups_invite_group_member_nobody_with_account_by_name()}
 				</p>
 			{/if}
 
 			<FormField
 				field={memberFields.role}
 				type="select"
-				label="Role"
+				label={m.groups_role()}
 				value="member"
 				options={roleOptions}
 			/>
 			<FormField
 				field={memberFields.position}
 				type="text"
-				label="Position"
+				label={m.groups_position()}
 				maxlength="100"
-				placeholder="Optional"
+				placeholder={m.groups_invite_group_member_optional()}
 			/>
 		</div>
 	{/snippet}
@@ -127,11 +130,11 @@
      — this writes a `group_invite` that resolves when they sign up. -->
 <Action
 	action={inviteGroupByEmail}
-	label="Invite by email"
-	aria-label={`Invite someone to ${groupName} by email`}
-	modalTitle="Invite to {groupName} by email"
-	submitLabel="Send invitation"
-	successToast="Invitation sent"
+	label={m.groups_invite_group_member_invite_by_email()}
+	aria-label={m.groups_invite_group_member_invite_someone_by_email({ groupName })}
+	modalTitle={m.groups_invite_group_member_invite_by_email_2({ groupName })}
+	submitLabel={m.groups_invite_group_member_submit_label()}
+	successToast={m.groups_invite_group_member_success_toast()}
 	variant="default"
 	size="sm"
 	onsuccess={onchanged}
@@ -142,24 +145,24 @@
 			<FormField
 				field={emailFields.email}
 				type="email"
-				label="Email"
-				placeholder="them@example.com"
-				description="They join the roster when they sign up with this address."
+				label={m.groups_invite_group_member_email()}
+				placeholder={m.groups_invite_group_member_them_example_com()}
+				description={m.groups_invite_group_member_they_join_roster_when_they()}
 				required
 			/>
 			<FormField
 				field={emailFields.role}
 				type="select"
-				label="Role"
+				label={m.groups_role()}
 				value="member"
 				options={roleOptions}
 			/>
 			<FormField
 				field={emailFields.position}
 				type="text"
-				label="Position"
+				label={m.groups_position()}
 				maxlength="100"
-				placeholder="Optional"
+				placeholder={m.groups_invite_group_member_optional()}
 			/>
 		</div>
 	{/snippet}

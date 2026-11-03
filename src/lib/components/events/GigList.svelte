@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import { IconCheck, IconMapPin } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -97,15 +98,17 @@
 									<a {href} class="gig-row__title">{evt.title}</a>
 									{#if evt.source === 'community'}
 										<span class="sticker-badge sticker-badge--sm sticker-badge--green"
-											>Community</span
+											>{m.events_gig_list_community()}</span
 										>
 									{:else if evt.source !== 'band'}
-										<span class="sticker-badge sticker-badge--sm sticker-badge--orange">CMC</span>
+										<span class="sticker-badge sticker-badge--sm sticker-badge--orange"
+											>{m.events_cmc()}</span
+										>
 									{/if}
 									{#if isCancelled}
 										<!-- The cancellation IS the announcement, so mark it plainly
 										     rather than greying the row into something people skim. -->
-										<span class="gig-row__cancelled-tag">Cancelled</span>
+										<span class="gig-row__cancelled-tag">{m.events_gig_list_cancelled()}</span>
 									{/if}
 								</span>
 								<span class="gig-row__meta">
@@ -133,19 +136,21 @@
 											href={evt.externalTicketUrl}
 											target="_blank"
 											rel="external noopener noreferrer"
-											size="sm">Get tickets</Button
+											size="sm">{m.events_gig_list_get_tickets()}</Button
 										>
 									{:else if mode === 'platform'}
 										<Button
 											href={eventBase === '/member/events'
 												? href
 												: resolve(`/events/${evt.id}/tickets`)}
-											size="sm">Get tickets</Button
+											size="sm">{m.events_gig_list_get_tickets()}</Button
 										>
 									{:else if going.has(evt.id)}
-										<span class="gig-row__going"><IconCheck size={14} /> Going</span>
+										<span class="gig-row__going"
+											><IconCheck size={14} /> {m.events_gig_list_going()}</span
+										>
 									{:else}
-										<Button {href} size="sm">RSVP</Button>
+										<Button {href} size="sm">{m.events_gig_list_rsvp()}</Button>
 									{/if}
 								</div>
 							{/if}

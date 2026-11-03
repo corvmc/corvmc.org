@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import { riderElementKindLabels } from '$lib/config';
@@ -127,10 +128,10 @@
 	bind:this={stage}
 	class="stage"
 	role="group"
-	aria-label="Stage plot. Audience is at the bottom."
+	aria-label={m.rider_stage_plot_stage_plot_audience_at_bottom()}
 >
-	<span class="stage-edge stage-edge-back">Back of stage</span>
-	<span class="stage-edge stage-edge-front">Audience</span>
+	<span class="stage-edge stage-edge-back">{m.rider_stage_plot_back_stage()}</span>
+	<span class="stage-edge stage-edge-front">{m.rider_stage_plot_audience()}</span>
 
 	{#each onStage as item (item.id)}
 		{@const at = placed[item.id]!}
@@ -140,8 +141,12 @@
 			class:pin-static={readonly || !item.movable}
 			style="left:{at.x}%; top:{at.y}%"
 			disabled={readonly || !item.movable}
-			aria-label="{item.label}{item.ownerName ? `, ${item.ownerName}` : ''}. {at.x} percent across,
-			{at.y} percent back. Arrow keys to move."
+			aria-label={m.rider_stage_plot_percent_across_percent_back_arrow({
+				label: item.label,
+				value: item.ownerName ? `, ${item.ownerName}` : '',
+				x: at.x,
+				y: at.y
+			})}
 			onpointerdown={(e) => {
 				if (readonly || !item.movable) return;
 				e.preventDefault();
@@ -158,7 +163,7 @@
 {#if !readonly}
 	<div class="mt-3 flex flex-wrap items-center gap-2">
 		{#if unplaced.length}
-			<span class="text-xs text-base-content/60">Not on the stage yet:</span>
+			<span class="text-xs text-base-content/60">{m.rider_stage_plot_not_stage_yet()}</span>
 			{#each unplaced as item (item.id)}
 				<Button
 					type="button"
@@ -171,15 +176,16 @@
 				</Button>
 			{/each}
 		{:else}
-			<span class="text-xs text-base-content/60">Everything is on the stage.</span>
+			<span class="text-xs text-base-content/60">{m.rider_stage_plot_everything_stage()}</span>
 		{/if}
 	</div>
 
 	<details class="mt-3">
-		<summary class="cursor-pointer text-xs text-base-content/60">Place exactly</summary>
+		<summary class="cursor-pointer text-xs text-base-content/60"
+			>{m.rider_stage_plot_place_exactly()}</summary
+		>
 		<p class="mt-2 text-xs text-base-content/60">
-			Percentages across and back. The same two numbers dragging sets — this is here so the plot
-			does not need a mouse.
+			{m.rider_stage_plot_percentages_across_back_same_two()}
 		</p>
 		<div class="mt-2 space-y-2">
 			{#each onStage as item, i (item.id)}
@@ -192,7 +198,7 @@
 					<Field
 						name="{safeFieldPrefix(item.id)}_x_{i}"
 						type="number"
-						label="Across"
+						label={m.rider_stage_plot_across()}
 						value={String(at.x)}
 						disabled={!item.movable}
 						oninput={(e: Event) =>
@@ -204,7 +210,7 @@
 					<Field
 						name="{safeFieldPrefix(item.id)}_y_{i}"
 						type="number"
-						label="Back"
+						label={m.rider_stage_plot_back()}
 						value={String(at.y)}
 						disabled={!item.movable}
 						oninput={(e: Event) =>
@@ -221,7 +227,7 @@
 							disabled={!item.movable}
 							onclick={() => remove(item.id)}
 						>
-							Take off
+							{m.rider_stage_plot_take_off()}
 						</Button>
 					</div>
 				</div>

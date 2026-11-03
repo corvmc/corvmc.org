@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { IconCheck, IconShare3 } from '@tabler/icons-svelte';
 
 	/**
@@ -11,7 +12,7 @@
 	 * may not have initiated is worse than the checkmark simply not appearing.
 	 */
 	let {
-		title = 'Copy link to this page',
+		title = m.ui_share_button_title(),
 		url = null,
 		label = null,
 		class: extraClass = 'btn btn-ghost btn-sm btn-square'

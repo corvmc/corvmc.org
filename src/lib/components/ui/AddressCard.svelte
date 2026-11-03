@@ -21,8 +21,8 @@
 	 */
 	let {
 		url,
-		title = 'Your address',
-		qrLabel = 'QR code for this address',
+		title = m.ui_address_card_title(),
+		qrLabel = m.ui_address_card_qr_label(),
 		children
 	}: {
 		/** The absolute address, from `canonicalAddress`. */

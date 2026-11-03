@@ -20,7 +20,7 @@
 	 */
 	let {
 		onscan,
-		label = 'Scan',
+		label = m.ui_barcode_scanner_label(),
 		class: className = ''
 	}: {
 		/** Called with each successful decode while the camera is open. */

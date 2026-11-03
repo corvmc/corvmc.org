@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
@@ -20,10 +21,10 @@
 
 <Action
 	action={setStaffGroupRole}
-	label="Add chair"
-	modalTitle="Add chair"
-	submitLabel="Add chair"
-	successToast="Chair added"
+	label={m.groups_add_chair_add_chair()}
+	modalTitle={m.groups_add_chair_add_chair()}
+	submitLabel={m.groups_add_chair_add_chair()}
+	successToast={m.groups_add_chair_success_toast()}
 	variant="ghost"
 	size="sm"
 	onsuccess={() => invalidateAll()}
@@ -33,17 +34,17 @@
 			<input {...fields.groupId.as('hidden', groupId)} />
 			<input {...fields.role.as('hidden', 'admin')} />
 
-			<FormField name="userId" label="Member" required>
+			<FormField name="userId" label={m.groups_member()} required>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={chair}
 					field={fields.userId}
-					placeholder="Search by name or email..."
+					placeholder={m.groups_search_by_name_email()}
 				/>
 			</FormField>
 
 			<p class="text-subtle">
-				Chairs run the program: they manage its roster, positions, announcements and applications.
+				{m.groups_add_chair_chairs_run_program_they_manage()}
 			</p>
 		</div>
 	{/snippet}

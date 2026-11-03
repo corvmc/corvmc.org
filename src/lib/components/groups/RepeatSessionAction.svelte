@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { repeatGroupSession } from '$lib/remote/group-events.remote';
@@ -18,24 +19,24 @@
 	let frequency = $state('');
 
 	const frequencyOptions = [
-		{ value: 'weekly', label: 'Every week' },
-		{ value: 'biweekly', label: 'Every other week' },
-		{ value: 'monthly', label: 'Every month' }
+		{ value: 'weekly', label: m.groups_every_week() },
+		{ value: 'biweekly', label: m.groups_every_other_week() },
+		{ value: 'monthly', label: m.groups_every_month() }
 	];
 
 	const monthlyModeOptions = [
-		{ value: 'weekday', label: 'Same weekday of the month' },
-		{ value: 'monthday', label: 'Same date each month' }
+		{ value: 'weekday', label: m.groups_same_weekday_month() },
+		{ value: 'monthday', label: m.groups_same_date_each_month() }
 	];
 </script>
 
 <Action
 	action={repeatGroupSession.for(session.id)}
-	label="Repeat"
-	aria-label={`Make ${session.title} repeat`}
-	modalTitle="Repeat this session"
-	submitLabel="Repeat"
-	successToast="Session repeats"
+	label={m.groups_repeat_session_repeat()}
+	aria-label={m.groups_repeat_session_aria_label({ title: session.title })}
+	modalTitle={m.groups_repeat_session_modal_title()}
+	submitLabel={m.groups_repeat_session_repeat()}
+	successToast={m.groups_repeat_session_success_toast()}
 	variant="ghost"
 	size="xs"
 	onsuccess={onchanged}
@@ -48,7 +49,7 @@
 			<FormField
 				field={fields.recurringFrequency}
 				type="select"
-				label="How often"
+				label={m.groups_how_often()}
 				options={frequencyOptions}
 				bind:value={frequency}
 				required
@@ -58,7 +59,7 @@
 				<FormField
 					field={fields.monthlyMode}
 					type="select"
-					label="Which day"
+					label={m.groups_which_day()}
 					options={monthlyModeOptions}
 					value="weekday"
 				/>
@@ -67,13 +68,12 @@
 			<FormField
 				field={fields.recurringEndsAt}
 				type="date"
-				label="Until"
-				description="Optional. Leave empty to keep going."
+				label={m.groups_until()}
+				description={m.groups_optional_leave_empty_keep_going()}
 			/>
 
 			<p class="text-subtle">
-				The following sessions go up automatically, each one published and holding the same room. If
-				a later date is already booked, that session still goes up without the room.
+				{m.groups_repeat_session_following_sessions_go_up_automatically()}
 			</p>
 		</div>
 	{/snippet}

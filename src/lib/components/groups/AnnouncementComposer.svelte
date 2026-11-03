@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -33,11 +34,11 @@
 {#if editing && post}
 	<Action
 		action={updateAnnouncement.for(post.id)}
-		label="Edit"
+		label={m.groups_edit()}
 		iconOnly={false}
-		modalTitle="Edit announcement"
-		submitLabel="Save"
-		successToast="Saved"
+		modalTitle={m.groups_announcement_composer_edit_announcement()}
+		submitLabel={m.groups_save()}
+		successToast={m.groups_saved()}
 		variant="ghost"
 		size="xs"
 		onsuccess={() => invalidateAll()}
@@ -49,16 +50,16 @@
 				<FormField
 					field={updateFields.title}
 					type="text"
-					label="Title"
+					label={m.groups_announcement_composer_title()}
 					value={post.title}
 					required
 				/>
 				<FormField
 					field={updateFields.body}
 					type="textarea"
-					label="Body"
+					label={m.groups_announcement_composer_body()}
 					value={post.body}
-					description="Markdown. Links, lists and **bold** work."
+					description={m.groups_announcement_composer_markdown_links_lists_bold_work()}
 					required
 				/>
 			</div>
@@ -68,10 +69,10 @@
 	<Action
 		action={createAnnouncement}
 		data-testid="new-announcement"
-		label="New announcement"
-		modalTitle="New announcement"
-		submitLabel="Save draft"
-		successToast="Draft saved"
+		label={m.groups_announcement_composer_new_announcement()}
+		modalTitle={m.groups_announcement_composer_new_announcement()}
+		submitLabel={m.groups_announcement_composer_save_draft()}
+		successToast={m.groups_announcement_composer_draft_saved()}
 		variant="primary"
 		size="sm"
 		onsuccess={() => invalidateAll()}
@@ -82,15 +83,15 @@
 				<FormField
 					field={createFields.title}
 					type="text"
-					label="Title"
-					placeholder="August jam moved to the 27th"
+					label={m.groups_announcement_composer_title()}
+					placeholder={m.groups_announcement_composer_placeholder()}
 					required
 				/>
 				<FormField
 					field={createFields.body}
 					type="textarea"
-					label="Body"
-					description="Markdown. Nobody is notified until you publish."
+					label={m.groups_announcement_composer_body()}
+					description={m.groups_announcement_composer_markdown_nobody_notified_until()}
 					required
 				/>
 			</div>

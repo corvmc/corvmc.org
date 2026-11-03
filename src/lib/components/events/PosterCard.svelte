@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	import { formatDate, formatTime } from '$lib/utils/format';
 	import { priceDisplay } from '$lib/utils/event-ticketing';
@@ -200,10 +201,10 @@
 					d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"
 				/><path d="M13 6v12" /></svg
 			>
-			Ticketed
+			{m.events_poster_card_ticketed()}
 		</div>
 	{:else if isFree}
-		<div class="poster-card__price poster-card__price--free">Free</div>
+		<div class="poster-card__price poster-card__price--free">{m.events_free()}</div>
 	{:else}
 		<div class="poster-card__price {price.label === 'Free' ? 'poster-card__price--free' : ''}">
 			{price.label}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * One booking enquiry, wherever it is read from — the band's own panel or
 	 * the member's unified Messages list (#1250).
@@ -54,22 +55,28 @@
 </script>
 
 <ThreadHeader
-	title={thread.contactName ?? 'Booking enquiry'}
-	subtitle="Sent through your public booking form"
+	title={thread.contactName ?? m.inbox_enquiry_thread_title()}
+	subtitle={m.inbox_enquiry_thread_subtitle()}
 	{backHref}
 >
 	{#snippet actions()}
 		<StatusBadge status={thread.status} label />
 		<Form
 			remote={setBandConversationStatus}
-			successToast={closed ? 'Enquiry reopened' : 'Enquiry closed'}
+			successToast={closed
+				? m.inbox_enquiry_thread_enquiry_reopened()
+				: m.inbox_enquiry_thread_enquiry_closed()}
 			onsuccess={() => onchanged?.()}
 		>
 			<input {...setBandConversationStatus.fields.threadId.as('hidden', thread.id)} />
 			<input
 				{...setBandConversationStatus.fields.status.as('hidden', closed ? 'open' : 'resolved')}
 			/>
-			<SubmitButton label={closed ? 'Reopen' : 'Close'} variant="ghost" size="sm">
+			<SubmitButton
+				label={closed ? m.inbox_enquiry_thread_reopen() : m.inbox_enquiry_thread_close()}
+				variant="ghost"
+				size="sm"
+			>
 				{#snippet icon()}
 					{#if closed}<IconRotateClockwise size={16} />{:else}<IconCheck size={16} />{/if}
 				{/snippet}
@@ -87,7 +94,7 @@
 <div class="flex flex-col gap-2">
 	{#if closed}
 		<Alert type="info">
-			You closed this enquiry. Reopen it to reply — or if they write back, it reopens itself.
+			{m.inbox_enquiry_thread_closed_enquiry_reopen_reply_if()}
 		</Alert>
 	{:else}
 		<ThreadComposer threadId={thread.id} {replyForm} onsent={() => onchanged?.()} />

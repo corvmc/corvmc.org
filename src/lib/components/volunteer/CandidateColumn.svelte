@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	/**
 	 * "Who to ask": the shortlist beside the roster, judged on the shift's date.
 	 * Owns `getShiftCandidates` because it is keyed by shift *and* scope, which
@@ -35,13 +36,14 @@
 	/** A staff add goes through over a missing profile or clearance; say what it went over. */
 	function warnOver(result?: unknown) {
 		const warnings = (result as { warnings?: string[] } | undefined)?.warnings ?? [];
-		if (warnings.length > 0) toast.warning(`Added over: ${warnings.join(' ')}`);
+		if (warnings.length > 0)
+			toast.warning(msg.volunteer_candidate_column_toast({ join: warnings.join(' ') }));
 	}
 
 	const SCOPES = [
-		{ key: 'interested', label: 'Interested' },
-		{ key: 'worked', label: 'Has worked it' },
-		{ key: 'all', label: 'All' }
+		{ key: 'interested', label: msg.volunteer_candidate_column_interested() },
+		{ key: 'worked', label: msg.volunteer_candidate_column_has_worked() },
+		{ key: 'all', label: msg.volunteer_candidate_column_all() }
 	] as const;
 
 	// The desk case, kept from the picker this column replaced: somebody walks up
@@ -121,15 +123,17 @@
 	}
 </script>
 
-<InfoCard title="Who to ask">
+<InfoCard title={msg.volunteer_candidate_column_who_ask()}>
 	{#snippet header()}
 		<div class="flex flex-col gap-2">
 			{#await candidates then result}
 				{@const g = grade(result.rows)}
 				<CardTitle>
-					Who to ask · {g.askable}
+					{msg.volunteer_candidate_column_who_ask_2({ askable: g.askable })}
 					{#if g.blocked > 0}
-						<span class="text-subtle text-sm font-normal">· {g.blocked} not cleared</span>
+						<span class="text-subtle text-sm font-normal"
+							>{msg.volunteer_candidate_column_not_cleared({ blocked: g.blocked })}</span
+						>
 					{/if}
 				</CardTitle>
 			{/await}
@@ -139,7 +143,7 @@
 			<p class="text-subtle text-xs">
 				Cleared as of {startsAt ? formatDateShort(startsAt) : 'today'}.
 			</p>
-			<SearchInput bind:value={search} placeholder="Search by name or email" />
+			<SearchInput bind:value={search} placeholder={msg.volunteer_candidate_column_placeholder()} />
 			<div class="flex flex-wrap gap-1" class:opacity-50={!!search}>
 				{#each SCOPES as s (s.key)}
 					<Button
@@ -158,12 +162,12 @@
 		{@const g = grade(result.rows)}
 		{#if result.rows.length === 0}
 			<EmptyState
-				title="Nobody left in this group"
+				title={msg.volunteer_candidate_column_nobody_left_group()}
 				description={search
-					? 'Nobody matches that who is not already on the shift.'
+					? msg.volunteer_candidate_column_nobody_matches_who_not_already()
 					: scope === 'all'
-						? 'Everybody with a volunteer profile is already on this shift.'
-						: 'Try All.'}
+						? msg.volunteer_candidate_column_everybody_with_volunteer_profile()
+						: msg.volunteer_candidate_column_try_all()}
 			/>
 		{:else}
 			<ul class="flex flex-col gap-3">
@@ -183,39 +187,41 @@
 						     spoken to them means. -->
 						<Action
 							action={inviteMemberToShift.for(`${shiftId}:${row.userId}`)}
-							label="Invite"
+							label={msg.volunteer_candidate_column_invite()}
 							variant="primary"
 							size="xs"
-							modalTitle="Ask {row.member.title} to take this?"
-							submitLabel="Send the invitation"
-							successToast="Asked. They'll see it on their dashboard."
+							modalTitle={msg.volunteer_candidate_column_ask_take({ title: row.member.title })}
+							submitLabel={msg.volunteer_candidate_column_send_invitation()}
+							successToast={msg.volunteer_candidate_column_asked_they_ll_see_their()}
 						>
 							{#snippet form()}
 								<input type="hidden" name="shiftId" value={shiftId} />
 								<input type="hidden" name="userId" value={row.userId} />
 								<p class="text-sm">
-									An invitation holds no place — the shift still counts as needing somebody until {row
-										.member.title} says yes. You can ask more people than the shift has room for.
+									{msg.volunteer_candidate_column_invitation_holds_no_place_shift({
+										title: row.member.title
+									})}
 								</p>
 							{/snippet}
 						</Action>
 						<Action
 							action={assignShiftToMember.for(`${shiftId}:${row.userId}`)}
-							label="Add"
+							label={msg.volunteer_candidate_column_add()}
 							data-testid="assign-candidate"
 							variant="ghost"
 							size="xs"
-							modalTitle="Put {row.member.title} on this shift?"
-							submitLabel="Add them"
-							successToast="Added. They're booked."
+							modalTitle={msg.volunteer_candidate_column_put_shift({ title: row.member.title })}
+							submitLabel={msg.volunteer_candidate_column_add_them()}
+							successToast={msg.volunteer_candidate_column_added_they_re_booked()}
 							onsuccess={warnOver}
 						>
 							{#snippet form()}
 								<input type="hidden" name="shiftId" value={shiftId} />
 								<input type="hidden" name="userId" value={row.userId} />
 								<p class="text-sm">
-									A staff add is a booking, not a claim — {row.member.title} lands confirmed, gets the
-									reminder the day before, and the shift completes afterwards with hours to log.
+									{msg.volunteer_candidate_column_staff_add_booking_not_claim({
+										title: row.member.title
+									})}
 								</p>
 								{#if f.blocked}
 									<p class="text-sm text-error">

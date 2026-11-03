@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The duties that come with a work order (`work_task`), ticked on change
 	 * rather than behind a Save. A duty is a level below a work order and not
@@ -22,11 +23,13 @@
 	const done = $derived(tasks.filter((t) => t.done).length);
 </script>
 
-<InfoCard title="Checklist">
+<InfoCard title={m.volunteer_shift_checklist_title()}>
 	{#snippet header(title)}
 		<CardTitle>
 			{title}
-			<span class="text-muted font-normal">· {done} of {tasks.length}</span>
+			<span class="text-muted font-normal"
+				>{m.volunteer_shift_checklist_text({ done, length: tasks.length })}</span
+			>
 		</CardTitle>
 	{/snippet}
 

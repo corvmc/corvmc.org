@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The debounced search box in a `FilterBar`.
 	 *
@@ -23,7 +24,7 @@
 	 */
 	let {
 		value = $bindable(''),
-		placeholder = 'Search...',
+		placeholder = m.ui_form_search_input_placeholder(),
 		delay = 300,
 		size = 'sm',
 		onsearch,
