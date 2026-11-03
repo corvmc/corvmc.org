@@ -10,7 +10,7 @@
 	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
 	import { errorMessage } from '$lib/error-message';
 	import { updateEvent, checkRebook, checkConflicts } from '$lib/remote/events.remote';
-	import { formatDollars, toLocalDate, toLocalTime } from '$lib/utils/format';
+	import { clubInstant, formatDollars, toLocalDate, toLocalTime } from '$lib/utils/format';
 
 	/**
 	 * Every `updateEvent` field, for a listing of any source: the advertisement,
@@ -186,12 +186,12 @@
 		return addIsoDays(date, 1);
 	}
 
-	/** Rough ISO strings for the rebook check; the server parses with the real zone. */
+	/** The rebook check compares instants, so the wall clock is read in club time. */
 	function isoRange(date: string, startTime: string, endTime: string) {
-		const startsAt = new Date(`${date}T${startTime}:00`);
+		const startsAt = clubInstant(date, startTime);
 		// A show that ends past midnight ends the next day, as the server builds it.
-		const endsOnNextDay = new Date(`${date}T${endTime}:00`) < startsAt;
-		const endsAt = new Date(`${endsOnNextDay ? nextDay(date) : date}T${endTime}:00`);
+		const endsOnNextDay = clubInstant(date, endTime) < startsAt;
+		const endsAt = clubInstant(endsOnNextDay ? nextDay(date) : date, endTime);
 		return { startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() };
 	}
 

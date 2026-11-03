@@ -8,6 +8,7 @@
 	import * as Form from '$lib/components/ui/Form';
 	import Button from '$lib/components/ui/Button.svelte';
 	import {
+		clubInstant,
 		formatDate,
 		formatDollars,
 		formatScheduleLabel,
@@ -131,8 +132,8 @@
 					recurringFrequency = (fd.get('recurring') as string) || '';
 					const monthlyMode = (fd.get('monthlyMode') as 'weekday' | 'monthday') || 'weekday';
 					if (date && startTime) {
-						const startIso = new Date(`${date}T${startTime}:00`);
-						const endIso = endTime ? new Date(`${date}T${endTime}:00`) : startIso;
+						const startIso = clubInstant(date, startTime);
+						const endIso = endTime ? clubInstant(date, endTime) : startIso;
 						startsAt = startIso;
 						dateLabel = fullDate(startIso);
 						timeLabel = formatTimeRange(startIso, endIso);
@@ -149,7 +150,7 @@
 									: 'Monthly';
 						scheduleLabel = formatScheduleLabel(
 							freqLabel,
-							new Date(`${date}T${startTime}:00`),
+							clubInstant(date, startTime),
 							monthlyMode
 						);
 						recurringPreview = null;

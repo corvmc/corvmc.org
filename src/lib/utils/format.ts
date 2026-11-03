@@ -17,6 +17,7 @@
  * the rendered hour with no error.
  */
 
+import { CalendarDateTime } from '@internationalized/date';
 import { differenceInCalendarDays, isSameWeek } from 'date-fns';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
@@ -323,6 +324,18 @@ export function toLocalDate(d: Date): string {
 /** Date → local 24h time for time inputs: "14:30" */
 export function toLocalTime(d: Date): string {
 	return venue(d, { hour: '2-digit', minute: '2-digit', hour12: false }, 'en-GB');
+}
+
+/**
+ * The instant a club wall-clock date and time name: "2026-05-13" + "19:00".
+ *
+ * The inverse of `toLocalDate`/`toLocalTime`. `new Date(\`${date}T${time}\`)`
+ * reads the pair in the runtime's zone, which in the browser is the viewer's.
+ */
+export function clubInstant(date: string, time: string): Date {
+	const [year, month, day] = date.split('-').map(Number);
+	const [hour, minute] = time.split(':').map(Number);
+	return new CalendarDateTime(year, month, day, hour, minute).toDate(DEFAULT_TIMEZONE);
 }
 
 /**

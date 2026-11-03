@@ -15,7 +15,12 @@ svelteRuleTester().run('club-time-dates', rule as never, {
 		template('new Date(x).toLocaleString(undefined, { timeZone: "UTC" })'),
 		script('d.toISOString();'),
 		script('d.toISOString().slice(0, 16);'),
-		script("text.split('T')[0];")
+		script("text.split('T')[0];"),
+		script('new Date(`${date}T00:00:00Z`);'),
+		script('new Date(`${date}T12:00:00-07:00`);'),
+		script("new Date(date + 'T00:00:00Z');"),
+		script('new Date(`${a}-${b}`);'),
+		script('new Date(iso);')
 	],
 	invalid: [
 		{ ...template('new Date(x).toLocaleDateString()'), errors: [{ messageId: 'noTimeZone' }] },
@@ -31,7 +36,13 @@ svelteRuleTester().run('club-time-dates', rule as never, {
 		},
 		{ ...script('d.toISOString().slice(0, 10);'), errors: [{ messageId: 'isoSlice' }] },
 		{ ...script('d.toISOString().substring(0, 10);'), errors: [{ messageId: 'isoSlice' }] },
-		{ ...script("d.toISOString().split('T')[0];"), errors: [{ messageId: 'isoSlice' }] }
+		{ ...script("d.toISOString().split('T')[0];"), errors: [{ messageId: 'isoSlice' }] },
+		{
+			...script('new Date(`${date}T${startTime}:00`);'),
+			errors: [{ messageId: 'zonelessDateTime' }]
+		},
+		{ ...script('new Date(`${date}T${time}`);'), errors: [{ messageId: 'zonelessDateTime' }] },
+		{ ...script("new Date(date + 'T12:00:00');"), errors: [{ messageId: 'zonelessDateTime' }] }
 	]
 });
 
