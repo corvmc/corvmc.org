@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -27,9 +28,9 @@
 
 <Action
 	action={removeBandMember}
-	label="Remove"
-	modalTitle="Confirm"
-	successToast="Member removed"
+	label={m.actions_remove()}
+	modalTitle={m.actions_confirm()}
+	successToast={m.actions_remove_band_member_success_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -38,6 +39,6 @@
 >
 	{#snippet form()}
 		<input {...fields.memberId.as('hidden', memberId)} />
-		<p class="py-4">Remove {name} from this band?</p>
+		<p class="py-4">{m.actions_remove_band_member_remove_from_band({ name })}</p>
 	{/snippet}
 </Action>

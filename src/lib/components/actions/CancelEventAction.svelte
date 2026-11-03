@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -27,9 +28,9 @@
 
 <Action
 	action={cancelEvent}
-	label="Cancel Event"
-	modalTitle="Cancel Event"
-	successToast="Cancelled"
+	label={m.actions_cancel_event()}
+	modalTitle={m.actions_cancel_event()}
+	successToast={m.actions_cancelled()}
 	{variant}
 	{size}
 	{outline}
@@ -39,6 +40,6 @@
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', eventId)} />
-		<p class="py-2">Cancel this event? This cannot be undone.</p>
+		<p class="py-2">{m.actions_cancel_event_cancel_event_cannot_undone()}</p>
 	{/snippet}
 </Action>

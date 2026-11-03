@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -33,8 +34,8 @@
 
 <Action
 	action={unpublishBandEvent}
-	label="Unpublish"
-	successToast="Unpublished"
+	label={m.actions_unpublish()}
+	successToast={m.actions_band_unpublish_event_success_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -45,7 +46,7 @@
 		<input {...fields.slug.as('hidden', slug)} />
 		<input {...fields.eventId.as('hidden', eventId)} />
 		<p class="py-2">
-			Take this event back to a draft? It stops showing publicly until you publish it again.
+			{m.actions_band_unpublish_event_take_event_back_draft_stops()}
 		</p>
 	{/snippet}
 </Action>

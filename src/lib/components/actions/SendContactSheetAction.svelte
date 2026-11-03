@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
@@ -32,9 +33,11 @@
 
 <Action
 	action={sendContactSheetLink}
-	label="Send contact sheet"
-	modalTitle={actName ? `Contact sheet for ${actName}` : 'Send contact sheet'}
-	successToast="Link sent"
+	label={m.actions_send_contact_sheet_send_contact_sheet()}
+	modalTitle={actName
+		? m.actions_send_contact_sheet_contact_sheet({ actName })
+		: m.actions_send_contact_sheet_send_contact_sheet()}
+	successToast={m.actions_send_contact_sheet_success_toast()}
 	{variant}
 	{size}
 	{outline}
@@ -46,15 +49,14 @@
 		<input {...fields.entryId.as('hidden', entryId)} />
 		<div class="space-y-3">
 			<p class="text-sm text-fg-2">
-				Sends a private link where the act fills in its own details. Preferred over typing them in
-				on their behalf — what we hold is then what they chose to give us.
+				{m.actions_send_contact_sheet_sends_private_link_where_act()}
 			</p>
-			<FormField field={fields.email} label="Where should the link go?">
+			<FormField field={fields.email} label={m.actions_send_contact_sheet_where_should_link_go()}>
 				<input
 					{...fields.email.as('email')}
 					bind:value={email}
 					class="input w-full"
-					placeholder="booking@theact.com"
+					placeholder={m.actions_send_contact_sheet_placeholder()}
 				/>
 			</FormField>
 		</div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -27,9 +28,9 @@
 
 <Action
 	action={cancelRecurringSeries}
-	label="Cancel"
-	modalTitle="Confirm"
-	successToast="Series cancelled"
+	label={m.actions_cancel()}
+	modalTitle={m.actions_confirm()}
+	successToast={m.actions_cancel_series_success_toast()}
 	{variant}
 	{size}
 	{outline}
@@ -40,8 +41,7 @@
 	{#snippet form()}
 		<input {...fields.id.as('hidden', seriesId)} />
 		<p class="py-4">
-			Cancel this recurring series? Your next session is cancelled and later ones are removed. Any
-			already paid for are cancelled and refunded instead.
+			{m.actions_cancel_series_cancel_recurring_series_next_session()}
 		</p>
 	{/snippet}
 </Action>

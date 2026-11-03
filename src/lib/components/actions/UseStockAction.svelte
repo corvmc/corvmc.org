@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -27,9 +28,9 @@
 <Action
 	action={useStock}
 	data-testid="use-stock"
-	label="Use"
-	modalTitle="Use stock"
-	successToast="Recorded"
+	label={m.actions_use_stock_use()}
+	modalTitle={m.actions_use_stock_modal_title()}
+	successToast={m.actions_recorded()}
 	{variant}
 	{size}
 	class={className}
@@ -38,7 +39,7 @@
 >
 	{#snippet form()}
 		<input {...fields.itemId.as('hidden', itemId)} />
-		<Field field={fields.quantity} type="number" label="How many" value={1} />
-		<Field field={fields.notes} type="textarea" label="What for" />
+		<Field field={fields.quantity} type="number" label={m.actions_use_stock_how_many()} value={1} />
+		<Field field={fields.notes} type="textarea" label={m.actions_use_stock_what()} />
 	{/snippet}
 </Action>

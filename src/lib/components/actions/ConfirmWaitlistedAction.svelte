@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
@@ -28,11 +29,11 @@
 
 <Action
 	action={confirmWaitlisted}
-	label="Confirm Slot"
-	modalTitle="Confirm Waitlisted Reservation"
-	submitLabel="Confirm Reservation"
+	label={m.actions_confirm_waitlisted_label()}
+	modalTitle={m.actions_confirm_waitlisted_modal_title()}
+	submitLabel={m.actions_confirm_reservation()}
 	submitVariant="success"
-	successToast="Reservation confirmed"
+	successToast={m.actions_confirm_waitlisted_success_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -43,12 +44,13 @@
 		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
 		<p class="text-sm">
-			A slot has opened up for this time. Would you like to confirm this reservation?
+			{m.actions_confirm_waitlisted_slot_has_opened_up_time()}
 		</p>
 		{#if reservation.waitlistExpiresAt}
 			<p class="text-subtle">
-				You have until {formatDate(reservation.waitlistExpiresAt)} to confirm before the slot is offered
-				to someone else.
+				{m.actions_confirm_waitlisted_have_until_confirm_before_slot({
+					formatDate: formatDate(reservation.waitlistExpiresAt)
+				})}
 			</p>
 		{/if}
 	{/snippet}

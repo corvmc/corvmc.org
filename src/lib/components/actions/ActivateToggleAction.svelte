@@ -1,4 +1,5 @@
 <script lang="ts" generics="TOffOut, TOnOut">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { RemoteForm } from '@sveltejs/kit';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
@@ -9,7 +10,7 @@
 		isDeactivated,
 		deactivateAction,
 		reactivateAction,
-		entityLabel = 'item',
+		entityLabel = m.actions_activate_toggle_entity_default(),
 		deactivateWarning,
 		variant,
 		size = 'sm',
@@ -33,20 +34,28 @@
 
 	const action = $derived(isDeactivated ? reactivateAction : deactivateAction);
 	const fields = $derived(action.fields);
-	const label = $derived(isDeactivated ? 'Reactivate' : 'Deactivate');
+	const label = $derived(
+		isDeactivated
+			? m.actions_activate_toggle_reactivate_label()
+			: m.actions_activate_toggle_deactivate_label()
+	);
 	const resolvedVariant = $derived(variant ?? (isDeactivated ? 'success' : 'error'));
 	const confirmText = $derived(
-		isDeactivated ? undefined : (deactivateWarning ?? `Deactivate this ${entityLabel}?`)
+		isDeactivated
+			? undefined
+			: (deactivateWarning ?? m.actions_activate_toggle_deactivate_confirm({ entityLabel }))
 	);
 	const toast = $derived(
-		isDeactivated ? `${entityLabel} reactivated` : `${entityLabel} deactivated`
+		isDeactivated
+			? m.actions_activate_toggle_reactivated({ entityLabel })
+			: m.actions_activate_toggle_deactivated({ entityLabel })
 	);
 </script>
 
 <Action
 	{action}
 	{label}
-	modalTitle="Confirm"
+	modalTitle={m.actions_confirm()}
 	successToast={toast}
 	variant={resolvedVariant}
 	{size}
@@ -59,7 +68,7 @@
 		{#if confirmText}
 			<p class="py-4">{confirmText}</p>
 		{:else}
-			<p class="py-4">Reactivate this {entityLabel}?</p>
+			<p class="py-4">{m.actions_activate_toggle_reactivate({ entityLabel })}</p>
 		{/if}
 	{/snippet}
 </Action>

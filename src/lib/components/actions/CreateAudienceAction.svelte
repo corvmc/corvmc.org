@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { createAudience } from '$lib/remote/marketing.remote';
@@ -39,11 +40,11 @@
 
 <Action
 	action={createAudience}
-	label="New Audience"
-	modalTitle="New Audience"
-	submitLabel="Create Audience"
+	label={m.actions_create_audience_new_audience()}
+	modalTitle={m.actions_create_audience_new_audience()}
+	submitLabel={m.actions_create_audience_submit_label()}
 	canSubmit={!!name.trim()}
-	successToast="Audience created"
+	successToast={m.actions_create_audience_success_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -59,31 +60,38 @@
 	{...rest}
 >
 	{#snippet form()}
-		{#snippet slugHint()}Used in the signup URL: /subscribe/{slug || '...'}{/snippet}
-		<Field name="name" type="text" label="Name" bind:value={name} />
+		{#snippet slugHint()}{m.actions_create_audience_used_signup_url_subscribe({
+				value: slug || '...'
+			})}{/snippet}
+		<Field name="name" type="text" label={m.actions_name()} bind:value={name} />
 		<!-- Custom input to keep the monospace slug box; `Field`'s own input has a
 		     fixed class. The wrapper supplies the label association and the error
 		     slot the bare fieldset had no room for. -->
-		<Field name="slug" label="Slug" description={slugHint}>
+		<Field name="slug" label={m.actions_create_audience_slug()} description={slugHint}>
 			{#snippet input(id)}
 				<input
 					{id}
 					type="text"
 					name="slug"
 					bind:value={slug}
-					placeholder="newsletter"
+					placeholder={m.actions_create_audience_placeholder()}
 					class="input w-full font-mono text-sm"
 					oninput={() => (slugManuallyEdited = true)}
 				/>
 			{/snippet}
 		</Field>
-		<Field name="description" type="textarea" label="Description" bind:value={description} />
+		<Field
+			name="description"
+			type="textarea"
+			label={m.actions_description()}
+			bind:value={description}
+		/>
 		<Field
 			name="allowOptIn"
 			type="checkbox"
 			value={allowOptIn}
-			checkboxLabel="Allow public opt-in"
-			description="Show on public subscribe page and member account"
+			checkboxLabel={m.actions_create_audience_checkbox_label()}
+			description={m.actions_create_audience_description()}
 		/>
 	{/snippet}
 </Action>

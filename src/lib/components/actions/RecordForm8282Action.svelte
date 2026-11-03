@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -29,9 +30,9 @@
 
 <Action
 	action={recordForm8282}
-	label="Record 8282"
-	modalTitle="Record what happened"
-	successToast="Recorded"
+	label={m.actions_record_form8282_record_8282()}
+	modalTitle={m.actions_record_form8282_modal_title()}
+	successToast={m.actions_recorded()}
 	{variant}
 	{size}
 	class={className}
@@ -42,23 +43,21 @@
 		<input {...fields.id.as('hidden', assetId)} />
 		<div class="mb-3 rounded bg-base-200 p-3 text-sm">
 			<p>
-				This unit was donated and disposed of within three years, so the IRS may require Form 8282 —
-				filed within 125 days of the disposal, with a copy to the donor{#if dueBy}, by
+				{m.actions_record_form8282_unit_was_donated_disposed_within()}{#if dueBy}, by
 					<strong>{toLocalDate(dueBy)}</strong>{/if}.
 			</p>
 			<!-- The system cannot decide this. Whether it is reportable turns on
 			     whether the donor filed a Form 8283 that CMC signed, which is a fact
 			     about paperwork rather than about stock. -->
 			<p class="mt-1 opacity-70">
-				Record either that it was filed, or that no filing was needed and why. Check with whoever
-				prepares the return if you are unsure — this note is the only record.
+				{m.actions_record_form8282_record_either_was_filed_no()}
 			</p>
 		</div>
 		<Field
 			field={fields.note}
 			type="textarea"
-			label="What happened"
-			description="e.g. “Filed 2026-09-02, copy posted to the donor” or “No 8283 was ever signed, so no filing due”."
+			label={m.actions_record_form8282_what_happened()}
+			description={m.actions_record_form8282_description()}
 		/>
 	{/snippet}
 </Action>

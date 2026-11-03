@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -74,10 +75,10 @@
 
 <Action
 	action={createItem}
-	label="Add Item"
-	modalTitle="Add Item"
-	successToast="Item added"
-	addAnotherLabel="Save and add another"
+	label={m.actions_add_item_add_item()}
+	modalTitle={m.actions_add_item_add_item()}
+	successToast={m.actions_add_item_success_toast()}
+	addAnotherLabel={m.actions_add_item_add_another_label()}
 	onaddanother={nextItem}
 	{variant}
 	{size}
@@ -86,24 +87,24 @@
 	{...rest}
 >
 	{#snippet form()}
-		<Field field={fields.name} type="text" label="Name" />
+		<Field field={fields.name} type="text" label={m.actions_name()} />
 		<Field
 			field={fields.description}
 			type="textarea"
-			label="Description"
+			label={m.actions_description()}
 			bind:value={description}
 		/>
 		<div class="grid grid-cols-2 gap-3">
 			<Field
 				field={fields.categoryId}
 				type="select"
-				label="Category"
+				label={m.actions_add_item_category()}
 				options={categories.map((c) => ({ value: c.id, label: c.name }))}
 			/>
 			<Field
 				field={fields.kind}
 				type="select"
-				label="Tracked as"
+				label={m.actions_add_item_tracked_as()}
 				bind:value={kind}
 				options={itemKinds.map((k) => ({ value: k, label: kindLabels[k] }))}
 			/>
@@ -112,28 +113,32 @@
 			<Field
 				field={fields.unitOfMeasure}
 				type="select"
-				label="Unit"
+				label={m.actions_add_item_unit()}
 				value="each"
 				options={unitsOfMeasure.map((u) => ({ value: u, label: u }))}
 			/>
-			<Field field={fields.gtin} type="text" label="Barcode (UPC/EAN)" />
+			<Field field={fields.gtin} type="text" label={m.actions_add_item_barcode_upc_ean()} />
 		</div>
 		<!-- Checked by default: most of what CMC owns is there to be borrowed, and
 		     "consumable" is the exception a person opts into. -->
 		<Field
 			field={fields.isLoanable}
 			type="checkbox"
-			label="Members can borrow this"
+			label={m.actions_add_item_members_can_borrow()}
 			value={true}
-			description="Leave off for something that gets used up — that is what makes an item a consumable."
+			description={m.actions_add_item_description()}
 		/>
 		{#if kind === 'bulk'}
 			<div class="grid grid-cols-2 gap-3">
-				<Field field={fields.reorderPoint} type="number" label="Reorder at" />
-				<Field field={fields.reorderQuantity} type="number" label="Reorder quantity" />
+				<Field field={fields.reorderPoint} type="number" label={m.actions_add_item_reorder_at()} />
+				<Field
+					field={fields.reorderQuantity}
+					type="number"
+					label={m.actions_add_item_reorder_quantity()}
+				/>
 			</div>
 		{/if}
-		<Field field={fields.resourceId} type="text" label="Resource ID" />
-		<Field field={fields.notes} type="textarea" label="Notes" bind:value={notes} />
+		<Field field={fields.resourceId} type="text" label={m.actions_add_item_resource_id()} />
+		<Field field={fields.notes} type="textarea" label={m.actions_notes()} bind:value={notes} />
 	{/snippet}
 </Action>

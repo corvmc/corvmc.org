@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -33,12 +34,12 @@
      bank, and what is worth keeping is that a person dealt with it. -->
 <Action
 	action={markAcquisitionReimbursed}
-	label="Mark reimbursed"
-	modalTitle="Mark as reimbursed"
+	label={m.actions_mark_reimbursed_label()}
+	modalTitle={m.actions_mark_reimbursed_modal_title()}
 	confirm={`Record that ${paidByName ?? 'whoever paid'} has been paid back${
 		amountCents ? ` for ${formatCents(amountCents)}` : ''
 	}. This does not send any money — it records that the transfer has happened.`}
-	successToast="Marked reimbursed"
+	successToast={m.actions_mark_reimbursed_success_toast()}
 	{variant}
 	{size}
 	class={className}

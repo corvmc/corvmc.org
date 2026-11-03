@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { unscheduleCampaign } from '$lib/remote/marketing.remote';
@@ -24,9 +25,9 @@
 
 <Action
 	action={unscheduleCampaign}
-	label="Cancel Schedule"
-	modalTitle="Confirm"
-	successToast="Campaign unscheduled — returned to draft"
+	label={m.actions_unschedule_campaign_label()}
+	modalTitle={m.actions_confirm()}
+	successToast={m.actions_unschedule_campaign_success_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -35,6 +36,6 @@
 >
 	{#snippet form()}
 		<input {...fields.campaignId.as('hidden', campaignId)} />
-		<p class="py-4">Cancel the scheduled send and return this campaign to draft?</p>
+		<p class="py-4">{m.actions_unschedule_campaign_cancel_scheduled_send_return_cam()}</p>
 	{/snippet}
 </Action>

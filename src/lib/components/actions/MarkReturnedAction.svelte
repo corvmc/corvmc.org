@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -8,7 +9,7 @@
 
 	const { fields } = returnLoan;
 	const conditionOptions = [
-		{ value: '', label: 'Not checked' },
+		{ value: '', label: m.actions_mark_returned_not_checked() },
 		...equipmentConditions.map((c) => ({ value: c, label: c }))
 	];
 
@@ -34,9 +35,9 @@
 <Action
 	action={returnLoan}
 	data-testid="mark-returned"
-	label="Mark Returned"
-	modalTitle="Confirm Return"
-	successToast="Marked as returned"
+	label={m.actions_mark_returned_mark_returned()}
+	modalTitle={m.actions_mark_returned_modal_title()}
+	successToast={m.actions_mark_returned_success_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -50,15 +51,28 @@
 				<p>{chargeMessage}</p>
 			</div>
 		{/if}
-		<Field field={fields.condition} type="select" label="Condition" options={conditionOptions} />
-		<Field field={fields.flagNote} type="textarea" label="Something wrong?" />
+		<Field
+			field={fields.condition}
+			type="select"
+			label={m.actions_condition()}
+			options={conditionOptions}
+		/>
+		<Field
+			field={fields.flagNote}
+			type="textarea"
+			label={m.actions_mark_returned_something_wrong()}
+		/>
 		<Field
 			field={fields.flagBlocksUse}
 			type="checkbox"
-			label="Out of service"
+			label={m.actions_mark_returned_out_service()}
 			value={true}
-			checkboxLabel="Keep it off the shelf until fixed"
+			checkboxLabel={m.actions_mark_returned_checkbox_label()}
 		/>
-		<Field field={fields.staffNotes} type="textarea" label="Staff Notes (optional)" />
+		<Field
+			field={fields.staffNotes}
+			type="textarea"
+			label={m.actions_mark_returned_staff_notes_optional()}
+		/>
 	{/snippet}
 </Action>

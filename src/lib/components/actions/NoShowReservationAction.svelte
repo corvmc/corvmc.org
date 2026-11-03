@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
@@ -27,10 +28,10 @@
 
 <Action
 	action={noShowReservation}
-	label="No-Show"
-	modalTitle="Mark as No-Show"
+	label={m.actions_no_show_reservation_label()}
+	modalTitle={m.actions_no_show_reservation_modal_title()}
 	submitVariant="warning"
-	successToast="Marked as no-show"
+	successToast={m.actions_no_show_reservation_success_toast()}
 	{variant}
 	{size}
 	{outline}
@@ -41,6 +42,6 @@
 	{#snippet form()}
 		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
-		<p class="text-sm">Mark this reservation as a no-show?</p>
+		<p class="text-sm">{m.actions_no_show_reservation_mark_reservation_as_no_show()}</p>
 	{/snippet}
 </Action>

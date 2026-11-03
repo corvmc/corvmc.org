@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
@@ -39,11 +40,15 @@
 
 <Action
 	{action}
-	label="Refund"
-	modalTitle="Refund Payment"
-	submitLabel={cancelling ? 'Refund and cancel' : 'Refund'}
+	label={m.actions_refund_reservation_refund()}
+	modalTitle={m.actions_refund_reservation_modal_title()}
+	submitLabel={cancelling
+		? m.actions_refund_reservation_refund_cancel()
+		: m.actions_refund_reservation_refund()}
 	submitVariant="error"
-	successToast={cancelling ? 'Payment refunded and reservation cancelled' : 'Payment refunded'}
+	successToast={cancelling
+		? m.actions_refund_reservation_payment_refunded_reservation_canc()
+		: m.actions_refund_reservation_payment_refunded()}
 	{variant}
 	{size}
 	{outline}
@@ -58,14 +63,14 @@
 			<FormField
 				type="checkbox"
 				name="alsoCancel"
-				label="Cancellation"
-				checkboxLabel="Also cancel this reservation (releases the slot to the waitlist and notifies the member)"
+				label={m.actions_refund_reservation_cancellation()}
+				checkboxLabel={m.actions_refund_reservation_checkbox_label()}
 				bind:value={alsoCancel}
 			/>
 		{/if}
 		{#if !cancelling}
 			<p class="text-sm" data-testid="refund-only-note">
-				The payment is refunded and the booking is not cancelled, for a session that went ahead.
+				{m.actions_refund_reservation_payment_refunded_booking_not_canc()}
 			</p>
 		{/if}
 	{/snippet}

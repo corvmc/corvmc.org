@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -33,8 +34,8 @@
 
 <Action
 	action={publishBandEvent}
-	label="Publish"
-	successToast="Published"
+	label={m.actions_publish()}
+	successToast={m.actions_published()}
 	{variant}
 	{size}
 	class={className}
@@ -45,7 +46,7 @@
 		<input {...fields.slug.as('hidden', slug)} />
 		<input {...fields.eventId.as('hidden', eventId)} />
 		<p class="py-2">
-			Publish this event? It becomes visible on your profile and the public calendar.
+			{m.actions_band_publish_event_publish_event_becomes_visible_pro()}
 		</p>
 	{/snippet}
 </Action>

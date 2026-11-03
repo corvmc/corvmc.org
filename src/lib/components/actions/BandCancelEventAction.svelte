@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -33,8 +34,8 @@
 
 <Action
 	action={cancelBandEventForm}
-	label="Cancel Event"
-	successToast="Cancelled"
+	label={m.actions_cancel_event()}
+	successToast={m.actions_cancelled()}
 	{variant}
 	{size}
 	class={className}
@@ -45,7 +46,7 @@
 		<input {...fields.slug.as('hidden', slug)} />
 		<input {...fields.eventId.as('hidden', eventId)} />
 		<p class="py-2">
-			Cancel this event? The listing stays up marked as cancelled, and this cannot be undone.
+			{m.actions_band_cancel_event_cancel_event_listing_stays_up()}
 		</p>
 	{/snippet}
 </Action>

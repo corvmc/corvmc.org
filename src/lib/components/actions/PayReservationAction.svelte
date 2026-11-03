@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
@@ -12,7 +13,7 @@
 
 	let {
 		reservation,
-		label = 'Pay Now',
+		label = m.actions_pay_reservation_label(),
 		variant = 'primary',
 		size = 'sm',
 		class: className = '',
@@ -30,7 +31,7 @@
 <Action
 	action={payForReservation}
 	{label}
-	modalTitle="Pay for Your Session"
+	modalTitle={m.actions_pay_reservation_modal_title()}
 	noFooter
 	maxWidth="max-w-md"
 	{variant}

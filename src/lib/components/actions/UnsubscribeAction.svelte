@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -27,9 +28,9 @@
 
 <Action
 	action={unsubscribe}
-	label="Unsubscribe"
-	modalTitle="Unsubscribe"
-	successToast={`Unsubscribed from ${name}`}
+	label={m.actions_unsubscribe_label()}
+	modalTitle={m.actions_unsubscribe_label()}
+	successToast={m.actions_unsubscribe_success_toast({ name })}
 	{variant}
 	{size}
 	class={className}
@@ -38,6 +39,6 @@
 >
 	{#snippet form()}
 		<input {...fields.audienceId.as('hidden', audienceId)} />
-		<p class="py-4">Unsubscribe from {name}?</p>
+		<p class="py-4">{m.actions_unsubscribe_unsubscribe_from({ name })}</p>
 	{/snippet}
 </Action>
