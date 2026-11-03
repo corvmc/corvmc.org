@@ -1207,15 +1207,17 @@ export const addLocation = form(
 	z.object({
 		name: z.string().min(1).max(100),
 		parentId: z.string().optional(),
-		notes: z.string().max(2000).optional()
+		notes: z.string().max(2000).optional(),
+		displayOrder: z.number().int().min(0).max(9999).optional()
 	}),
 	async (raw) => {
 		await requireCapability('inventory.manageItems');
-		const data = raw as { name: string; parentId?: string; notes?: string };
+		const data = raw as { name: string; parentId?: string; notes?: string; displayOrder?: number };
 		const loc = await createLocation({
 			name: data.name,
 			parentId: data.parentId || undefined,
-			notes: data.notes
+			notes: data.notes,
+			displayOrder: data.displayOrder
 		});
 		void getLocations().refresh();
 		void getLocationsWithCounts().refresh();

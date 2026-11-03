@@ -112,6 +112,7 @@
 					]}
 				/>
 				<Field field={fields.notes} type="textarea" label="Notes" />
+				<Field field={fields.displayOrder} type="number" label="Order" value={0} min="0" />
 				<div class="mt-3">
 					<SubmitButton label="Add location" />
 				</div>
