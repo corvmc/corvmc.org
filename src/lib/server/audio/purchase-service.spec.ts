@@ -1,109 +1,92 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * The two purchase paths, and the places where money could go wrong.
- *
- * The one worth stating up front: a **free** release never touches Stripe.
- * Stripe's own charge minimum is 50¢, so a $0 checkout is not a thing that
- * exists, and a code path that tried would fail at the redirect rather than
- * here.
+ * The two purchase paths, and the places where money could go wrong, against a
+ * real SQLite. A **free** release never touches Stripe: Stripe's charge minimum
+ * is 50¢, so a $0 checkout does not exist.
  */
 
-type Row = Record<string, unknown>;
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
 
-const state = {
-	results: [] as unknown[][],
-	inserted: [] as Row[],
-	updates: [] as Row[]
-};
-
-function queue(...results: unknown[][]) {
-	state.results = results;
-}
-
-function chain(rows: unknown[]) {
-	const self: Record<string, unknown> = {};
-	for (const key of ['from', 'where', 'orderBy', 'limit', 'innerJoin', 'leftJoin']) {
-		self[key] = () => self;
-	}
-	self.then = (resolve: (v: unknown) => void) => resolve(rows);
-	return self;
-}
-
+// better-sqlite3's drizzle has no `batch`; D1's runs the statements in order, as this does.
 vi.mock('$lib/server/db', () => ({
-	db: {
-		select: () => chain(state.results.shift() ?? []),
-		insert: () => ({
-			values: (v: Row) => {
-				state.inserted.push(v);
-				return { returning: () => Promise.resolve([{ id: 'purchase-row', ...v }]) };
-			}
-		}),
-		update: () => ({
-			set: (v: Row) => ({
-				where: () => {
-					state.updates.push(v);
-					// One lazy take, so `returning()` and an await do not consume two
-					// queued results for one statement.
-					let rows: unknown[] | null = null;
-					const take = () => (rows ??= state.results.shift() ?? []);
-					return {
-						returning: () => Promise.resolve(take()),
-						then: (resolve: (x: unknown) => void) => resolve(take())
-					};
-				}
-			})
-		}),
-		delete: () => ({
-			where: () => ({ returning: () => Promise.resolve(state.results.shift() ?? []) })
-		})
-	}
+	db: Object.assign(testDb, {
+		batch: async (stmts: PromiseLike<unknown>[]) => {
+			const out = [];
+			for (const s of stmts) out.push(await s);
+			return out;
+		}
+	})
 }));
 
-vi.mock('drizzle-orm', () => ({
-	and: (...p: unknown[]) => `and(${p.join(',')})`,
-	count: () => 'count()',
-	eq: (a: unknown, b: unknown) => `eq(${String(a)},${String(b)})`,
-	lt: (a: unknown, b: unknown) => `lt(${String(a)},${String(b)})`,
-	sql: Object.assign(
-		(strings: TemplateStringsArray, ...values: unknown[]) =>
-			strings.raw.join('?') + values.map(String).join(''),
-		{ raw: (s: string) => s }
-	)
+// Stripe, reached through checkout() and the refunds API, is the outside service.
+const checkout = vi.fn(async (_opts: unknown) => ({
+	paid: false,
+	checkoutUrl: 'https://checkout.test/s'
 }));
-
-const checkout = vi.fn(async () => ({ paid: false, checkoutUrl: 'https://checkout.test/s' }));
 vi.mock('$lib/server/finance/payment-service', () => ({ checkout }));
 vi.mock('$lib/server/finance/product-config-service', () => ({
 	getStripeProductId: async (key: string) => `prod_${key}`
 }));
-
-const destinationFor = vi.fn(async () => 'acct_band' as string | null);
-vi.mock('./connect-service', () => ({ destinationFor }));
-
-const emit = vi.fn(async () => {});
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit } }));
-
-const refundsCreate = vi.fn(async () => ({ id: 're_1' }));
+const refundsCreate = vi.fn(async (_args: unknown) => ({ id: 're_1' }));
 vi.mock('$lib/server/stripe', () => ({ stripe: { refunds: { create: refundsCreate } } }));
+
+const emit = vi.fn(async (..._a: unknown[]) => {});
+vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit } }));
 
 const service = await import('./purchase-service');
 
-/** A published, $10, name-your-price release owned by a band with Stripe live. */
-function publishedRelease(overrides: Record<string, unknown> = {}) {
-	return [
-		{
-			release: {
-				id: 'rel-1',
-				priceMinCents: 1000,
-				allowPayMore: true,
-				...overrides
-			},
-			bandId: 'band-1',
-			bandName: 'Sour Cherry'
-		}
-	];
+const T0 = 1_750_000_000;
+
+function seedRelease(opts: { priceMinCents?: number; status?: string; deletedAt?: number } = {}) {
+	sqlite.exec(
+		`insert into "group" (id, kind, name, slug) values ('band-1', 'band', 'Sour Cherry', 'sour-cherry')`
+	);
+	sqlite
+		.prepare(
+			`insert into audio_release (id, group_id, title, slug, status, price_min_cents, allow_pay_more, deleted_at)
+			 values ('rel-1', 'band-1', 'Marys Peak', 'marys-peak', ?, ?, 1, ?)`
+		)
+		.run(opts.status ?? 'published', opts.priceMinCents ?? 1000, opts.deletedAt ?? null);
 }
+
+function connectBand(chargesEnabled = true) {
+	sqlite
+		.prepare(
+			`insert into band_stripe_account (group_id, stripe_account_id, charges_enabled) values ('band-1', 'acct_band', ?)`
+		)
+		.run(chargesEnabled ? 1 : 0);
+}
+
+function purchase(
+	purchaseId: string,
+	opts: { status?: string; amount?: number; pi?: string | null; createdAt?: number } = {}
+) {
+	sqlite
+		.prepare(
+			`insert into release_purchase (id, release_id, buyer_email, purchase_id, amount_paid_cents,
+			   platform_fee_cents, band_net_cents, download_token, status, stripe_payment_intent_id, created_at)
+			 values (?, 'rel-1', 'b@example.com', ?, ?, 94, 847, ?, ?, ?, ?)`
+		)
+		.run(
+			`row-${purchaseId}`,
+			purchaseId,
+			opts.amount ?? 1000,
+			`tok-${purchaseId}`,
+			opts.status ?? 'paid',
+			opts.pi === undefined ? 'pi_live' : opts.pi,
+			opts.createdAt ?? T0
+		);
+}
+
+const purchases = () =>
+	sqlite.prepare('select * from release_purchase order by purchase_id').all() as Record<
+		string,
+		unknown
+	>[];
 
 const BASE = {
 	bandSlug: 'sour-cherry',
@@ -113,244 +96,200 @@ const BASE = {
 	successUrl: 'https://cmc.test/music/download/tok_abc123def456',
 	cancelUrl: 'https://cmc.test/music/sour-cherry/marys-peak'
 };
+const PAID = { ...BASE, totalCents: 1000, platformCents: 94, coverFees: false };
+const FREE = { ...BASE, totalCents: 0, platformCents: 0, coverFees: false };
+
+type CheckoutOptions = {
+	destinationAccountId: string;
+	applicationFeeCents: number;
+	eligibleCredits: unknown[];
+	coverFees: boolean;
+	lineItems: { price_data: { unit_amount: number } }[];
+};
+const checkoutOptions = () => checkout.mock.calls[0][0] as CheckoutOptions;
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	state.results = [];
-	state.inserted = [];
-	state.updates = [];
-	destinationFor.mockResolvedValue('acct_band');
-	checkout.mockResolvedValue({ paid: false, checkoutUrl: 'https://checkout.test/s' });
+	for (const t of [
+		'financial_entry',
+		'release_purchase',
+		'band_stripe_account',
+		'audio_release',
+		'"group"'
+	])
+		sqlite.exec(`delete from ${t}`);
 });
 
 describe('beginPurchase — a free release', () => {
+	beforeEach(() => seedRelease({ priceMinCents: 0 }));
+
 	it('never calls Stripe and is paid on the spot', async () => {
-		queue(publishedRelease({ priceMinCents: 0 }));
-		const result = await service.beginPurchase({
-			...BASE,
-			totalCents: 0,
-			platformCents: 0,
-			coverFees: false
-		});
+		const result = await service.beginPurchase(FREE);
 
 		expect(checkout).not.toHaveBeenCalled();
-		expect(result.paid).toBe(true);
+		expect(result).toMatchObject({ paid: true });
 		expect(result.checkoutUrl).toBeUndefined();
-		expect(state.inserted[0]).toMatchObject({ status: 'paid', amountPaidCents: 0 });
+		expect(purchases()).toEqual([
+			expect.objectContaining({ status: 'paid', amount_paid_cents: 0, release_id: 'rel-1' })
+		]);
 	});
 
 	it('does not require the band to have Stripe at all', async () => {
-		// The path that lets a band with no bank details still put a record out and
-		// still be on the radio.
-		destinationFor.mockResolvedValue(null);
-		queue(publishedRelease({ priceMinCents: 0 }));
-
-		await expect(
-			service.beginPurchase({ ...BASE, totalCents: 0, platformCents: 0, coverFees: false })
-		).resolves.toMatchObject({ paid: true });
-		expect(destinationFor).not.toHaveBeenCalled();
+		// A band with no bank details can still put a record out.
+		await expect(service.beginPurchase(FREE)).resolves.toMatchObject({ paid: true });
 	});
 
 	it('emits the receipt, which is a guest’s only copy of the link', async () => {
-		queue(publishedRelease({ priceMinCents: 0 }), [
-			{
-				purchase: {
-					purchaseId: 'p1',
-					downloadToken: BASE.downloadToken,
-					buyerEmail: BASE.buyerEmail,
-					amountPaidCents: 0,
-					platformFeeCents: 0,
-					bandNetCents: 0
-				},
-				releaseTitle: 'Marys Peak',
-				releaseSlug: 'marys-peak',
-				bandName: 'Sour Cherry',
-				bandSlug: 'sour-cherry'
-			}
-		]);
-		await service.beginPurchase({
-			...BASE,
-			totalCents: 0,
-			platformCents: 0,
-			coverFees: false
-		});
+		await service.beginPurchase(FREE);
 		expect(emit).toHaveBeenCalledWith(
 			'audio.purchased',
-			expect.objectContaining({ downloadToken: BASE.downloadToken })
+			expect.objectContaining({
+				downloadToken: BASE.downloadToken,
+				releaseTitle: 'Marys Peak',
+				bandSlug: 'sour-cherry'
+			})
 		);
 	});
 });
 
 describe('beginPurchase — a paid release', () => {
-	it('sends Stripe whatever is left of the charge once the band is paid', async () => {
-		queue(publishedRelease());
-		await service.beginPurchase({
-			...BASE,
-			totalCents: 1000,
-			platformCents: 94,
-			coverFees: false
-		});
+	beforeEach(() => seedRelease());
 
-		const [options] = checkout.mock.calls[0] as unknown as [Record<string, unknown>];
-		expect(options.destinationAccountId).toBe('acct_band');
-		// $10 sale. Card processing comes off the top, so the buyer's 10% is 94¢
-		// of the $9.41 that is divisible; the band is transferred $8.47 and
-		// Stripe is told $1.53 — out of which it takes 59¢ and CMC keeps 94¢.
-		expect(options.applicationFeeCents).toBe(153);
+	it('sends Stripe whatever is left of the charge once the band is paid', async () => {
+		connectBand();
+		await service.beginPurchase(PAID);
+
+		// $10 sale: the band gets $8.47 and Stripe is told $1.53 — of which it
+		// takes 59¢ and CMC keeps 94¢.
+		expect(checkoutOptions()).toMatchObject({
+			destinationAccountId: 'acct_band',
+			applicationFeeCents: 153
+		});
 	});
 
 	it('never applies CMC credits to a payout-destined sale', async () => {
-		queue(publishedRelease());
-		await service.beginPurchase({
-			...BASE,
-			totalCents: 1000,
-			platformCents: 94,
-			coverFees: false
-		});
-		const [options] = checkout.mock.calls[0] as unknown as [{ eligibleCredits: unknown[] }];
-		// A CMC credit here would be the collective discounting a sale out of the
-		// band's share — the coupon comes off the charge, the app fee does not move.
-		expect(options.eligibleCredits).toEqual([]);
+		// A CMC credit would discount the sale out of the band's share.
+		connectBand();
+		await service.beginPurchase(PAID);
+		expect(checkoutOptions().eligibleCredits).toEqual([]);
 	});
 
 	it('passes coverFees as false, having already priced it in', async () => {
-		queue(publishedRelease());
-		await service.beginPurchase({
-			...BASE,
-			totalCents: 1000,
-			platformCents: 94,
-			coverFees: true
-		});
+		connectBand();
+		await service.beginPurchase({ ...PAID, coverFees: true });
 
-		const [options] = checkout.mock.calls[0] as unknown as [
-			{ coverFees: boolean; lineItems: { price_data: { unit_amount: number } }[] }
-		];
-		// `checkout()` adds its own fee line when told to. The surcharge is already
-		// in the split, so letting it would charge the buyer twice.
+		// checkout() adds its own fee line when told to, which would charge twice.
+		// Two lines instead, so the receipt reads the way the split bar did.
+		const options = checkoutOptions();
 		expect(options.coverFees).toBe(false);
-		// Two lines instead: the record, then the coverage, so the receipt reads
-		// the way the split bar did.
-		expect(options.lineItems).toHaveLength(2);
-		expect(options.lineItems[0].price_data.unit_amount).toBe(1000);
-		expect(options.lineItems[1].price_data.unit_amount).toBe(61);
+		expect(options.lineItems.map((l) => l.price_data.unit_amount)).toEqual([1000, 61]);
 	});
 
 	it('writes the row pending, before any redirect', async () => {
-		queue(publishedRelease());
-		await service.beginPurchase({
-			...BASE,
-			totalCents: 1000,
-			platformCents: 94,
-			coverFees: false
+		// The row must exist before the buyer leaves, or the webhook comes back to nothing.
+		connectBand();
+		checkout.mockImplementationOnce(async () => {
+			expect(purchases()).toEqual([
+				expect.objectContaining({ status: 'pending', band_net_cents: 847 })
+			]);
+			return { paid: false, checkoutUrl: 'https://checkout.test/s' };
 		});
-		// The row has to exist before the buyer leaves, or the webhook comes back
-		// to nothing.
-		// The band's allocation less its proportional share of the card fee.
-		expect(state.inserted[0]).toMatchObject({ status: 'pending', bandNetCents: 847 });
+		await service.beginPurchase(PAID);
+		expect(checkout).toHaveBeenCalledOnce();
 	});
 
 	it('refuses when the band cannot be paid', async () => {
-		// Checked at purchase, not only at publish: Stripe can restrict an account
-		// after a priced release went up.
-		destinationFor.mockResolvedValue(null);
-		queue(publishedRelease());
-
-		await expect(
-			service.beginPurchase({ ...BASE, totalCents: 1000, platformCents: 94, coverFees: false })
-		).rejects.toThrow(/payouts/i);
+		// Stripe can restrict an account after a priced release went up.
+		connectBand(false);
+		await expect(service.beginPurchase(PAID)).rejects.toThrow(/payouts/i);
 		expect(checkout).not.toHaveBeenCalled();
+		expect(purchases()).toHaveLength(0);
 	});
 
 	it('refuses less than the band asked for, before writing anything', async () => {
-		queue(publishedRelease());
+		connectBand();
 		await expect(
 			service.beginPurchase({ ...BASE, totalCents: 500, platformCents: 0, coverFees: false })
 		).rejects.toThrow();
-		expect(state.inserted).toHaveLength(0);
+		expect(purchases()).toHaveLength(0);
 		expect(checkout).not.toHaveBeenCalled();
 	});
+});
 
+describe('beginPurchase — what is for sale', () => {
 	it('refuses a release that is not published', async () => {
-		// The lookup itself filters on status, so a draft is simply not found —
-		// publication is checked as part of resolving it rather than after.
-		queue([]);
-		await expect(
-			service.beginPurchase({ ...BASE, totalCents: 1000, platformCents: 94, coverFees: false })
-		).rejects.toThrow(/not available/i);
+		seedRelease({ status: 'draft' });
+		connectBand();
+		await expect(service.beginPurchase(PAID)).rejects.toThrow(/not available/i);
+	});
+
+	it('refuses a deleted release', async () => {
+		seedRelease({ deletedAt: T0 });
+		connectBand();
+		await expect(service.beginPurchase(PAID)).rejects.toThrow(/not available/i);
+	});
+
+	it('refuses a release of a deleted band', async () => {
+		seedRelease();
+		connectBand();
+		sqlite.prepare(`update "group" set deleted_at = ?`).run(T0);
+		await expect(service.beginPurchase(PAID)).rejects.toThrow(/not available/i);
 	});
 });
 
 describe('fulfillPurchase', () => {
-	it('flips a pending row and emits once', async () => {
-		queue(
-			[{ id: 'purchase-row' }],
-			[
-				{
-					purchase: {
-						purchaseId: 'p1',
-						downloadToken: 't',
-						buyerEmail: 'b@example.com',
-						amountPaidCents: 1000,
-						platformFeeCents: 94,
-						bandNetCents: 847
-					},
-					releaseTitle: 'R',
-					releaseSlug: 'r',
-					bandName: 'B',
-					bandSlug: 'b'
-				}
-			]
-		);
-		expect(await service.fulfillPurchase('p1', 'pi_1', 'pi_1')).toBe(true);
+	beforeEach(() => seedRelease());
+
+	it('flips a pending row, keeps the PaymentIntent, and emits once', async () => {
+		purchase('p1', { status: 'pending', pi: null });
+
+		expect(await service.fulfillPurchase('p1', 'pi_9', 'pr_9')).toBe(true);
+
+		// Reversing a transfer is an operation on the charge, not the Payment Record.
+		expect(purchases()[0]).toMatchObject({
+			status: 'paid',
+			stripe_payment_intent_id: 'pi_9',
+			stripe_payment_record_id: 'pr_9'
+		});
 		expect(emit).toHaveBeenCalledTimes(1);
 	});
 
 	it('is idempotent — a redelivery sends no second receipt', async () => {
-		// Stripe redelivers. The status predicate in the UPDATE is what makes the
-		// second pass match nothing.
-		queue([]);
-		expect(await service.fulfillPurchase('p1', 'pi_1', 'pi_1')).toBe(false);
-		expect(emit).not.toHaveBeenCalled();
+		purchase('p1', { status: 'pending', pi: null });
+		await service.fulfillPurchase('p1', 'pi_9', 'pi_9');
+		expect(await service.fulfillPurchase('p1', 'pi_9', 'pi_9')).toBe(false);
+		expect(emit).toHaveBeenCalledTimes(1);
 	});
 
-	it('keeps the PaymentIntent id, which a Connect refund needs', async () => {
-		queue([{ id: 'purchase-row' }], []);
-		await service.fulfillPurchase('p1', 'pi_9', 'pi_9');
-		// Reversing a transfer and refunding an application fee are operations on
-		// the charge, not on the Payment Record describing it.
-		expect(state.updates[0]).toMatchObject({ stripePaymentIntentId: 'pi_9', status: 'paid' });
+	it('does not resurrect a refunded purchase', async () => {
+		purchase('p1', { status: 'refunded' });
+		expect(await service.fulfillPurchase('p1', 'pi_9', 'pi_9')).toBe(false);
+		expect(purchases()[0].status).toBe('refunded');
 	});
 });
 
 describe('sweepAbandonedPurchases', () => {
-	it('reports what it removed', async () => {
-		queue([{ id: 'a' }, { id: 'b' }]);
-		expect(await service.sweepAbandonedPurchases()).toBe(2);
+	it('removes only pending rows past the window, and reports how many', async () => {
+		seedRelease();
+		const now = new Date((T0 + 2 * 86_400) * 1000);
+		purchase('old-pending', { status: 'pending', createdAt: T0 });
+		purchase('old-paid', { status: 'paid', createdAt: T0 });
+		purchase('fresh-pending', { status: 'pending', createdAt: T0 + 2 * 86_400 - 60 });
+
+		expect(await service.sweepAbandonedPurchases(now)).toBe(1);
+		expect(purchases().map((p) => p.purchase_id)).toEqual(['fresh-pending', 'old-paid']);
 	});
 });
 
 describe('refundPurchase', () => {
-	/** A completed $10 sale: $8.47 transferred to the band, 94¢ kept. */
-	function paidSale(overrides: Row = {}) {
-		return [
-			{
-				id: 'row-1',
-				status: 'paid',
-				amountPaidCents: 1000,
-				paymentIntentId: 'pi_live',
-				...overrides
-			}
-		];
-	}
+	beforeEach(() => seedRelease());
 
 	it('reverses the transfer and the application fee, not just the charge', async () => {
-		queue(paidSale());
-
+		purchase('p1');
 		await service.refundPurchase('p1');
 
-		// The whole point. Without `reverse_transfer` the band keeps its share and
-		// the collective refunds the buyer out of its own pocket; without
-		// `refund_application_fee` CMC keeps its cut of a sale that did not happen.
+		// Without reverse_transfer the collective refunds out of its own pocket;
+		// without refund_application_fee CMC keeps its cut of a sale that did not happen.
 		expect(refundsCreate).toHaveBeenCalledWith({
 			payment_intent: 'pi_live',
 			refund_application_fee: true,
@@ -359,53 +298,42 @@ describe('refundPurchase', () => {
 	});
 
 	it('marks the row refunded, which is what kills the download', async () => {
-		queue(paidSale());
-
+		purchase('p1');
 		await service.refundPurchase('p1');
 
-		expect(state.updates[0]).toMatchObject({ status: 'refunded' });
-		expect(state.updates[0].refundedAt).toBeInstanceOf(Date);
+		expect(purchases()[0]).toMatchObject({ status: 'refunded', refunded_at: expect.any(Number) });
+		expect(await service.findPaidPurchaseByToken('tok-p1')).toBeNull();
 	});
 
 	it('is idempotent, so a double-click cannot refund twice', async () => {
-		queue([{ id: 'row-1', status: 'refunded', amountPaidCents: 1000, paymentIntentId: 'pi_live' }]);
-
+		purchase('p1');
 		await service.refundPurchase('p1');
-
-		expect(refundsCreate).not.toHaveBeenCalled();
-		expect(state.updates).toHaveLength(0);
+		await service.refundPurchase('p1');
+		expect(refundsCreate).toHaveBeenCalledOnce();
 	});
 
 	it('revokes a free download without calling Stripe', async () => {
-		// A $0 purchase never reached Stripe, so there is no charge to reverse —
-		// but revoking the link is still a thing staff need to be able to do.
-		queue(paidSale({ amountPaidCents: 0, paymentIntentId: null }));
-
+		purchase('p1', { amount: 0, pi: null });
 		await service.refundPurchase('p1');
-
 		expect(refundsCreate).not.toHaveBeenCalled();
-		expect(state.updates[0]).toMatchObject({ status: 'refunded' });
+		expect(purchases()[0].status).toBe('refunded');
 	});
 
 	it('refuses a paid row with no PaymentIntent rather than silently revoking it', async () => {
-		// This is a lost webhook, not a free download. Flipping the status would
-		// take the buyer's files away while leaving their money with Stripe.
-		queue(paidSale({ paymentIntentId: null }));
-
+		// A lost webhook, not a free download: flipping the status would take the
+		// buyer's files while leaving their money with Stripe.
+		purchase('p1', { pi: null });
 		await expect(service.refundPurchase('p1')).rejects.toThrow(/cannot be refunded automatically/);
-		expect(state.updates).toHaveLength(0);
+		expect(purchases()[0].status).toBe('paid');
 	});
 
 	it('refuses a pending purchase', async () => {
-		queue(paidSale({ status: 'pending' }));
-
+		purchase('p1', { status: 'pending' });
 		await expect(service.refundPurchase('p1')).rejects.toThrow(/completed purchase/);
 		expect(refundsCreate).not.toHaveBeenCalled();
 	});
 
 	it('refuses a purchase that does not exist', async () => {
-		queue([]);
-
 		await expect(service.refundPurchase('nope')).rejects.toThrow(/not found/i);
 	});
 });

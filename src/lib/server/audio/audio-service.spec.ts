@@ -1,416 +1,406 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { RADIO_PRO_ATTESTATION } from '$lib/config';
 
 /**
- * The parts of the service worth pinning without a database: the track
- * numbering, the publish preconditions, and the price rule.
- *
- * `(release_id, track_number)` is UNIQUE, so both the delete-and-close-the-gap
- * and the reorder are constrained sequences rather than loops — get either
- * ordering wrong and the statement fails on a conflict against a row that is
- * about to move. That is the property these assert, since a real D1 is not
- * available here and `better-sqlite3` is not built in CI.
+ * Track numbering, the publish preconditions and the price rule, against a real
+ * SQLite. `(release_id, track_number)` is UNIQUE, so a renumber or reorder done
+ * in the wrong order fails on a conflict here exactly as it would on D1.
  */
 
-type Row = Record<string, unknown>;
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
 
-/**
- * A small drizzle stand-in that records what was asked of it.
- *
- * Only the call shapes this service uses are modelled — `select().from().where()`,
- * `update().set().where()`, `delete().where()`, `insert().values().returning()`
- * and `batch()`. It returns whatever `nextResults` holds, in order.
- */
-const state = {
-	results: [] as unknown[][],
-	updates: [] as { set: Row; where: string }[],
-	deletes: [] as string[],
-	batches: [] as number[]
-};
-
-function queue(...results: unknown[][]) {
-	state.results = results;
-}
-
-function chain(rows: unknown[]) {
-	const self: Record<string, unknown> = {};
-	for (const key of ['from', 'where', 'orderBy', 'limit', 'innerJoin', 'leftJoin']) {
-		self[key] = () => self;
-	}
-	// Awaiting the builder is what runs it — the same shape drizzle has.
-	self.then = (resolve: (v: unknown) => void) => resolve(rows);
-	return self;
-}
-
+// better-sqlite3's drizzle has no `batch`; D1's runs the statements in order, as this does.
 vi.mock('$lib/server/db', () => ({
-	db: {
-		select: () => chain(state.results.shift() ?? []),
-		update: () => ({
-			set: (values: Row) => ({
-				where: (w: unknown) => {
-					state.updates.push({ set: values, where: String(w) });
-					// One shift per statement, taken lazily. An eager
-					// `Object.assign(Promise.resolve(shift()), { returning })` consumes
-					// two entries for one update — the awaited value and the
-					// `.returning()` value — and every later expectation in the file
-					// then reads somebody else's row.
-					let rows: unknown[] | null = null;
-					const take = () => (rows ??= state.results.shift() ?? []);
-					return {
-						returning: () => Promise.resolve(take()),
-						then: (resolve: (v: unknown) => void) => resolve(take())
-					};
-				}
-			})
-		}),
-		delete: () => ({
-			where: (w: unknown) => {
-				state.deletes.push(String(w));
-				return Promise.resolve([]);
-			}
-		}),
-		insert: () => ({
-			values: (v: Row) => ({ returning: () => Promise.resolve([{ id: 'new', ...v }]) })
-		}),
-		batch: (statements: unknown[]) => {
-			state.batches.push(statements.length);
-			return Promise.resolve([]);
+	db: Object.assign(testDb, {
+		batch: async (stmts: PromiseLike<unknown>[]) => {
+			const out = [];
+			for (const s of stmts) out.push(await s);
+			return out;
 		}
-	}
+	})
 }));
 
-// Every `where(...)` above stringifies its argument, so the operators have to
-// produce something readable rather than `[object Object]`.
-vi.mock('drizzle-orm', () => ({
-	and: (...parts: unknown[]) => `and(${parts.join(',')})`,
-	asc: (c: unknown) => `asc(${String(c)})`,
-	desc: (c: unknown) => `desc(${String(c)})`,
-	eq: (a: unknown, b: unknown) => `eq(${String(a)},${String(b)})`,
-	inArray: (a: unknown, b: unknown) => `inArray(${String(a)},${String(b)})`,
-	isNull: (a: unknown) => `isNull(${String(a)})`,
-	count: () => 'count()',
-	max: (c: unknown) => `max(${String(c)})`,
-	sql: Object.assign(
-		(strings: TemplateStringsArray, ...values: unknown[]) =>
-			strings.raw.join('?') + values.map(String).join(''),
-		{ raw: (s: string) => s }
-	)
-}));
-
-const deleteAudioObject = vi.fn(async () => undefined);
+// R2 and the image transform URL are the outside services.
+const deleteAudioObject = vi.fn(async (_key: string) => undefined);
 vi.mock('./audio-storage', () => ({ deleteAudioObject }));
-
-const detachSlot = vi.fn(async () => undefined);
-vi.mock('$lib/server/media/media-service', () => ({ detachSlot }));
-
 vi.mock('$lib/server/storage', () => ({ resolveImageUrl: () => null }));
 
-// Hoisted to module scope: an in-test `await import` on a cold Vite cache is
-// what a "timed out in 5000ms" failure in this project usually is.
 const service = await import('./audio-service');
+
+const T0 = 1_750_000_000;
+const DAY = 86_400;
+
+function release(
+	id: string,
+	opts: {
+		status?: string;
+		title?: string;
+		slug?: string;
+		groupId?: string;
+		publishedAt?: number | null;
+		attestationVersion?: string | null;
+		attestedAt?: number | null;
+	} = {}
+) {
+	sqlite
+		.prepare(
+			`insert into audio_release (id, group_id, title, slug, status, published_at,
+			   radio_attestation_version, radio_attested_at)
+			 values (?, ?, ?, ?, ?, ?, ?, ?)`
+		)
+		.run(
+			id,
+			opts.groupId ?? 'g',
+			opts.title ?? 'A',
+			opts.slug ?? id,
+			opts.status ?? 'draft',
+			opts.publishedAt ?? null,
+			opts.attestationVersion ?? null,
+			opts.attestedAt ?? null
+		);
+}
+
+function track(id: string, releaseId: string, n: number) {
+	sqlite
+		.prepare(
+			`insert into audio_track (id, release_id, title, track_number, duration_ms, object_key, content_type, byte_size)
+			 values (?, ?, ?, ?, 1000, ?, 'audio/wav', 10)`
+		)
+		.run(id, releaseId, id, n, `bands/audio/${id}.wav`);
+}
+
+function purchase(id: string, releaseId: string, status: string) {
+	sqlite
+		.prepare(
+			`insert into release_purchase (id, release_id, buyer_email, purchase_id, amount_paid_cents,
+			   platform_fee_cents, band_net_cents, download_token, status)
+			 values (?, ?, 'b@example.com', ?, 500, 50, 450, ?, ?)`
+		)
+		.run(id, releaseId, `p-${id}`, `tok-${id}`, status);
+}
+
+const numbers = (releaseId: string) =>
+	sqlite
+		.prepare('select id, track_number as n from audio_track where release_id = ? order by n')
+		.all(releaseId);
+const releaseRow = (id: string) =>
+	sqlite.prepare('select * from audio_release where id = ?').get(id) as
+		Record<string, unknown> | undefined;
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	state.results = [];
-	state.updates = [];
-	state.deletes = [];
-	state.batches = [];
+	for (const t of ['media_attachment', 'media', 'release_purchase', 'audio_track', 'audio_release'])
+		sqlite.exec(`delete from ${t}`);
 });
 
 describe('nextTrackNumber', () => {
 	it('starts an empty release at 1', async () => {
-		queue([{ highest: null }]);
 		expect(await service.nextTrackNumber('rel-1')).toBe(1);
 	});
 
-	it('continues after the highest existing number', async () => {
-		queue([{ highest: 4 }]);
+	it('continues after the highest number on this release only', async () => {
+		track('a', 'rel-1', 1);
+		track('b', 'rel-1', 4);
+		track('c', 'rel-2', 9);
 		expect(await service.nextTrackNumber('rel-1')).toBe(5);
 	});
 });
 
 describe('deleteTrack', () => {
 	it('deletes the object before the row', async () => {
-		queue(
-			// getTrackWithRelease
-			[{ track: { id: 't2', releaseId: 'rel-1', objectKey: 'bands/audio/t2.wav' }, release: {} }],
-			// remaining tracks, already contiguous
-			[{ id: 't1', trackNumber: 1 }]
-		);
+		release('rel-1');
+		track('t1', 'rel-1', 1);
+		track('t2', 'rel-1', 2);
+		// The row is the only record of the key; dropping it first and then failing
+		// on R2 strands a file billed forever with nothing pointing at it.
+		deleteAudioObject.mockImplementationOnce(async () => {
+			expect(sqlite.prepare("select id from audio_track where id = 't2'").get()).toBeDefined();
+		});
+
 		await service.deleteTrack('t2');
 
-		// The row is the only record of the key. Dropping it first and then
-		// failing on R2 strands a file that is billed forever with nothing left
-		// pointing at it — the ordering the media sweep uses, for the same reason.
 		expect(deleteAudioObject).toHaveBeenCalledWith('bands/audio/t2.wav');
-		expect(state.deletes.length).toBe(1);
+		expect(numbers('rel-1')).toEqual([{ id: 't1', n: 1 }]);
 	});
 
 	it('closes the gap so the next upload does not land on a used number', async () => {
-		queue(
-			[{ track: { id: 't2', releaseId: 'rel-1', objectKey: 'k' }, release: {} }],
-			// 1 and 3 survive: 3 has to become 2, or `nextTrackNumber` returns 4 and
-			// the fourth track of a three-track record is numbered 4.
-			[
-				{ id: 't1', trackNumber: 1 },
-				{ id: 't3', trackNumber: 3 }
-			]
-		);
+		release('rel-1');
+		track('t1', 'rel-1', 1);
+		track('t2', 'rel-1', 2);
+		track('t3', 'rel-1', 3);
+		track('x4', 'rel-1', 4);
+
 		await service.deleteTrack('t2');
 
-		expect(state.updates).toHaveLength(1);
-		expect(state.updates[0].set).toEqual({ trackNumber: 2 });
+		expect(numbers('rel-1')).toEqual([
+			{ id: 't1', n: 1 },
+			{ id: 't3', n: 2 },
+			{ id: 'x4', n: 3 }
+		]);
+		expect(await service.nextTrackNumber('rel-1')).toBe(4);
 	});
 
-	it('renumbers nothing when the tracks are already contiguous', async () => {
-		queue(
-			[{ track: { id: 't3', releaseId: 'rel-1', objectKey: 'k' }, release: {} }],
-			[
-				{ id: 't1', trackNumber: 1 },
-				{ id: 't2', trackNumber: 2 }
-			]
-		);
-		await service.deleteTrack('t3');
-		expect(state.updates).toHaveLength(0);
+	it('leaves other releases alone', async () => {
+		release('rel-1');
+		track('t1', 'rel-1', 1);
+		track('t2', 'rel-1', 2);
+		track('o3', 'rel-2', 3);
+
+		await service.deleteTrack('t1');
+
+		expect(numbers('rel-2')).toEqual([{ id: 'o3', n: 3 }]);
 	});
 
 	it('refuses a track that does not exist', async () => {
-		queue([]);
 		await expect(service.deleteTrack('nope')).rejects.toThrow(/not found/i);
 		expect(deleteAudioObject).not.toHaveBeenCalled();
 	});
 });
 
 describe('reorderTracks', () => {
-	it('vacates the number range before claiming it', async () => {
-		queue([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
-		await service.reorderTracks('rel-1', ['c', 'a', 'b']);
+	beforeEach(() => {
+		release('rel-1');
+		track('a', 'rel-1', 1);
+		track('b', 'rel-1', 2);
+		track('c', 'rel-1', 3);
+	});
 
-		// Two batches, not one. `(release_id, track_number)` is unique, so any
-		// permutation that swaps two rows collides partway through a single pass —
-		// moving 1→2 while 2 is still 2 fails. Parking every row at a negative
-		// number first vacates the whole range.
-		expect(state.batches).toEqual([3, 3]);
+	it('applies a permutation that swaps numbers without a unique conflict', async () => {
+		await service.reorderTracks('rel-1', ['c', 'a', 'b']);
+		expect(numbers('rel-1')).toEqual([
+			{ id: 'c', n: 1 },
+			{ id: 'a', n: 2 },
+			{ id: 'b', n: 3 }
+		]);
 	});
 
 	it('keeps a track the client did not mention instead of dropping it', async () => {
-		// A page loaded before a sibling uploaded track `d` would post three ids.
-		// Ignoring `d` would leave it outside the sequence; the service appends it.
-		queue([{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }]);
+		// A page loaded before a sibling uploaded `d` posts three ids.
+		track('d', 'rel-1', 4);
 		await service.reorderTracks('rel-1', ['c', 'a', 'b']);
-		expect(state.batches).toEqual([4, 4]);
+		expect(numbers('rel-1')).toEqual([
+			{ id: 'c', n: 1 },
+			{ id: 'a', n: 2 },
+			{ id: 'b', n: 3 },
+			{ id: 'd', n: 4 }
+		]);
 	});
 
 	it('ignores an id belonging to another release', async () => {
-		queue([{ id: 'a' }, { id: 'b' }]);
-		await service.reorderTracks('rel-1', ['a', 'b', 'someone-elses-track']);
-		expect(state.batches).toEqual([2, 2]);
+		track('theirs', 'rel-2', 1);
+		await service.reorderTracks('rel-1', ['theirs', 'b', 'a', 'c']);
+		expect(numbers('rel-2')).toEqual([{ id: 'theirs', n: 1 }]);
+		expect(numbers('rel-1').map((r) => (r as { id: string }).id)).toEqual(['b', 'a', 'c']);
 	});
 });
 
 describe('publishRelease', () => {
 	it('refuses a release with no tracks', async () => {
-		queue([{ id: 'rel-1', status: 'draft', publishedAt: null }], [{ value: 0 }]);
+		release('rel-1');
+		track('other', 'rel-2', 1);
 		await expect(service.publishRelease('rel-1')).rejects.toThrow(/at least one track/i);
+		expect(releaseRow('rel-1')?.status).toBe('draft');
 	});
 
 	it('refuses to republish a withheld release', async () => {
-		// A takedown is not a draft. Letting Publish undo it would make the
-		// moderation action advisory.
-		queue([{ id: 'rel-1', status: 'withheld', publishedAt: null }]);
+		// A takedown is not a draft; letting Publish undo it makes moderation advisory.
+		release('rel-1', { status: 'withheld' });
+		track('t1', 'rel-1', 1);
 		await expect(service.publishRelease('rel-1')).rejects.toThrow(/withheld/i);
+		expect(releaseRow('rel-1')?.status).toBe('withheld');
 	});
 
 	it('keeps the original publishedAt when a pulled release goes back up', async () => {
-		const first = new Date('2026-01-05T12:00:00Z');
-		queue(
-			[{ id: 'rel-1', status: 'draft', publishedAt: first }],
-			[{ value: 3 }],
-			[{ id: 'rel-1' }]
-		);
+		// The discography orders by this, so re-publishing must not reshuffle it.
+		release('rel-1', { publishedAt: T0 });
+		track('t1', 'rel-1', 1);
 		await service.publishRelease('rel-1');
-
-		// The discography orders by this, so re-publishing must not shuffle an old
-		// record to the top.
-		expect(state.updates[0].set).toMatchObject({ status: 'published', publishedAt: first });
+		expect(releaseRow('rel-1')).toMatchObject({ status: 'published', published_at: T0 });
 	});
 
 	it('stamps publishedAt on a first publish', async () => {
-		queue([{ id: 'rel-1', status: 'draft', publishedAt: null }], [{ value: 1 }], [{ id: 'rel-1' }]);
+		release('rel-1');
+		track('t1', 'rel-1', 1);
 		await service.publishRelease('rel-1');
-		expect(state.updates[0].set.publishedAt).toBeInstanceOf(Date);
+		expect(releaseRow('rel-1')?.published_at).toEqual(expect.any(Number));
+	});
+
+	it('does not publish a deleted release', async () => {
+		release('rel-1');
+		track('t1', 'rel-1', 1);
+		sqlite.prepare("update audio_release set deleted_at = ? where id = 'rel-1'").run(T0);
+		await expect(service.publishRelease('rel-1')).rejects.toThrow(/not found/i);
 	});
 });
 
 describe('unpublishRelease', () => {
 	it('refuses to touch a withheld release', async () => {
-		queue([{ id: 'rel-1', status: 'withheld' }]);
+		release('rel-1', { status: 'withheld' });
 		await expect(service.unpublishRelease('rel-1')).rejects.toThrow(/withheld/i);
+		expect(releaseRow('rel-1')?.status).toBe('withheld');
 	});
 });
 
 describe('updateRelease — price', () => {
+	beforeEach(() => release('rel-1'));
+
 	it('accepts free', async () => {
-		queue(
-			[{ id: 'rel-1', status: 'draft', title: 'A', slug: 'a', groupId: 'g' }],
-			[{ id: 'rel-1' }]
-		);
-		await expect(service.updateRelease('rel-1', { priceMinCents: 0 })).resolves.toBeDefined();
+		await service.updateRelease('rel-1', { priceMinCents: 0 });
+		expect(releaseRow('rel-1')?.price_min_cents).toBe(0);
 	});
 
 	it('rejects the dead zone between free and the charge floor', async () => {
-		// Stripe's own minimum is 50¢ and its fixed fee is 30¢, so these are the
-		// prices where almost nothing reaches the band.
+		// Stripe's minimum is 50¢ and its fixed fee 30¢: almost nothing reaches the band.
 		for (const cents of [1, 49, 99, 199]) {
-			queue([{ id: 'rel-1', status: 'draft', title: 'A', slug: 'a', groupId: 'g' }]);
 			await expect(service.updateRelease('rel-1', { priceMinCents: cents })).rejects.toThrow(
 				/free, or at least/i
 			);
 		}
+		expect(releaseRow('rel-1')?.price_min_cents).toBe(0);
 	});
 
 	it('accepts the floor itself', async () => {
-		queue(
-			[{ id: 'rel-1', status: 'draft', title: 'A', slug: 'a', groupId: 'g' }],
-			[{ id: 'rel-1' }]
-		);
-		await expect(service.updateRelease('rel-1', { priceMinCents: 200 })).resolves.toBeDefined();
+		await service.updateRelease('rel-1', { priceMinCents: 200 });
+		expect(releaseRow('rel-1')?.price_min_cents).toBe(200);
 	});
 });
 
 describe('updateRelease — slug', () => {
 	it('follows the title while the release is still a draft', async () => {
-		queue(
-			[{ id: 'rel-1', status: 'draft', title: 'Old', slug: 'old', groupId: 'g' }],
-			// uniqueSlug's read of taken slugs
-			[{ slug: 'old', id: 'rel-1' }],
-			[{ id: 'rel-1' }]
-		);
+		release('rel-1', { title: 'Old', slug: 'old' });
 		await service.updateRelease('rel-1', { title: 'Marys Peak' });
-		expect(state.updates[0].set.slug).toBe('marys-peak');
+		expect(releaseRow('rel-1')?.slug).toBe('marys-peak');
+	});
+
+	it('suffixes a slug another release of the same band already has', async () => {
+		release('rel-1', { title: 'Old', slug: 'old' });
+		release('rel-2', { title: 'Marys Peak', slug: 'marys-peak' });
+		release('rel-3', { title: 'Demos', slug: 'demos', groupId: 'other-band' });
+		await service.updateRelease('rel-1', { title: 'Marys Peak' });
+		await service.updateRelease('rel-3', { title: 'Marys Peak' });
+		expect(releaseRow('rel-1')?.slug).toBe('marys-peak-2');
+		expect(releaseRow('rel-3')?.slug).toBe('marys-peak');
 	});
 
 	it('freezes the slug once published, so existing links keep working', async () => {
-		queue(
-			[{ id: 'rel-1', status: 'published', title: 'Old', slug: 'old', groupId: 'g' }],
-			[{ id: 'rel-1' }]
-		);
+		release('rel-1', { status: 'published', title: 'Old', slug: 'old' });
 		await service.updateRelease('rel-1', { title: 'Marys Peak' });
-		// A published record's address is on flyers and in purchase emails.
-		expect(state.updates[0].set.slug).toBe('old');
+		expect(releaseRow('rel-1')).toMatchObject({ title: 'Marys Peak', slug: 'old' });
 	});
 });
 
 describe('deleteRelease', () => {
 	it('archives rather than deletes when somebody has bought it', async () => {
-		queue([{ id: 'rel-1', groupId: 'g' }], [{ value: 2 }], [{ id: 'rel-1' }]);
+		release('rel-1', { status: 'published' });
+		track('t1', 'rel-1', 1);
+		purchase('p1', 'rel-1', 'paid');
+
 		expect(await service.deleteRelease('rel-1')).toBe('archived');
 
 		// A band must not be able to reach into a buyer's library and empty it.
 		expect(deleteAudioObject).not.toHaveBeenCalled();
-		expect(state.deletes).toHaveLength(0);
-		expect(state.updates[0].set).toMatchObject({ status: 'draft' });
-		expect(state.updates[0].set.deletedAt).toBeInstanceOf(Date);
+		expect(releaseRow('rel-1')).toMatchObject({ status: 'draft', deleted_at: expect.any(Number) });
+		expect(numbers('rel-1')).toHaveLength(1);
 	});
 
-	it('really deletes an unsold release, objects first', async () => {
-		queue(
-			[{ id: 'rel-1', groupId: 'g' }],
-			[{ value: 0 }],
-			[{ objectKey: 'bands/audio/a.wav' }, { objectKey: 'bands/audio/b.wav' }]
+	it('really deletes a release whose only purchases never paid, objects first', async () => {
+		release('rel-1');
+		track('a', 'rel-1', 1);
+		track('b', 'rel-1', 2);
+		purchase('p1', 'rel-1', 'pending');
+		purchase('p2', 'rel-other', 'paid');
+		sqlite.exec(
+			`insert into media (id, key, content_type, byte_size) values ('m1', 'k', 'image/png', 1)`
 		);
+		sqlite.exec(
+			`insert into media_attachment (id, media_id, attachable_type, attachable_id, slot)
+			 values ('ma1', 'm1', 'audio_release', 'rel-1', 'cover')`
+		);
+
 		expect(await service.deleteRelease('rel-1')).toBe('deleted');
 
-		expect(deleteAudioObject).toHaveBeenCalledTimes(2);
-		// The cover is a shared-by-design `media` row: detached, never deleted, so
-		// the sweep decides whether the object survives.
-		expect(detachSlot).toHaveBeenCalledWith('audio_release', 'rel-1', 'cover');
-		expect(state.deletes).toHaveLength(1);
+		expect(deleteAudioObject.mock.calls.map(([k]) => k).sort()).toEqual([
+			'bands/audio/a.wav',
+			'bands/audio/b.wav'
+		]);
+		expect(releaseRow('rel-1')).toBeUndefined();
+		// The cover is a shared-by-design `media` row: detached, never deleted.
+		expect(sqlite.prepare('select count(*) as n from media_attachment').get()).toEqual({ n: 0 });
+		expect(sqlite.prepare('select count(*) as n from media').get()).toEqual({ n: 1 });
 	});
 });
 
 describe('setRadioOptIn — PRO attestation', () => {
-	const release = { id: 'rel-1', status: 'published', title: 'A', slug: 'a', groupId: 'g' };
+	const NOW = new Date(T0 * 1000);
+	const current = RADIO_PRO_ATTESTATION.version;
+
+	beforeEach(() => {
+		vi.useFakeTimers({ toFake: ['Date'] });
+		vi.setSystemTime(NOW);
+	});
+	afterEach(() => vi.useRealTimers());
 
 	it('refuses to opt in without the attestation', async () => {
-		queue([{ ...release, radioAttestationVersion: null }]);
+		release('rel-1', { status: 'published' });
 		await expect(
 			service.setRadioOptIn('rel-1', { optIn: true, attestedNotPro: false, userId: 'u-1' })
 		).rejects.toBeInstanceOf(service.RadioAttestationRequiredError);
-		expect(state.updates).toHaveLength(0);
+		expect(releaseRow('rel-1')?.radio_opt_in).toBe(0);
 	});
 
 	it('records who attested, when, and to which wording', async () => {
-		queue([{ ...release, radioAttestationVersion: null }], [{ id: 'rel-1' }]);
+		release('rel-1', { status: 'published' });
 		await service.setRadioOptIn('rel-1', { optIn: true, attestedNotPro: true, userId: 'u-1' });
-		expect(state.updates[0].set).toMatchObject({
-			radioOptIn: true,
-			radioAttestedByUserId: 'u-1',
-			radioAttestationVersion: RADIO_PRO_ATTESTATION.version
+		expect(releaseRow('rel-1')).toMatchObject({
+			radio_opt_in: 1,
+			radio_attested_by_user_id: 'u-1',
+			radio_attestation_version: current,
+			radio_attested_at: T0
 		});
-		expect(state.updates[0].set.radioAttestedAt).toBeInstanceOf(Date);
 	});
 
 	it('refuses an attestation to an older wording', async () => {
-		queue([{ ...release, radioAttestationVersion: 'superseded' }]);
+		release('rel-1', { attestationVersion: 'superseded', attestedAt: T0 - DAY });
 		await expect(
 			service.setRadioOptIn('rel-1', { optIn: true, attestedNotPro: false, userId: 'u-1' })
 		).rejects.toBeInstanceOf(service.RadioAttestationRequiredError);
 	});
 
 	it('keeps a current attestation when the band saves again without re-ticking it', async () => {
-		queue(
-			[
-				{
-					...release,
-					radioAttestationVersion: RADIO_PRO_ATTESTATION.version,
-					radioAttestedAt: new Date()
-				}
-			],
-			[{ id: 'rel-1' }]
-		);
+		release('rel-1', { attestationVersion: current, attestedAt: T0 - DAY });
+		sqlite.exec("update audio_release set radio_attested_by_user_id = 'u-1'");
 		await service.setRadioOptIn('rel-1', { optIn: true, attestedNotPro: false, userId: 'u-2' });
-		expect(state.updates[0].set).toMatchObject({ radioOptIn: true });
-		expect(state.updates[0].set).not.toHaveProperty('radioAttestedByUserId');
+		expect(releaseRow('rel-1')).toMatchObject({
+			radio_opt_in: 1,
+			radio_attested_by_user_id: 'u-1',
+			radio_attested_at: T0 - DAY
+		});
 	});
 
 	it('refuses to keep a release on the air once its attestation is a year old', async () => {
-		const lapsed = new Date(Date.now() - 366 * 86_400_000);
-		queue([
-			{
-				...release,
-				radioAttestationVersion: RADIO_PRO_ATTESTATION.version,
-				radioAttestedAt: lapsed
-			}
-		]);
+		release('rel-1', { attestationVersion: current, attestedAt: T0 - 366 * DAY });
 		await expect(
 			service.setRadioOptIn('rel-1', { optIn: true, attestedNotPro: false, userId: 'u-1' })
 		).rejects.toBeInstanceOf(service.RadioAttestationRequiredError);
 	});
 
 	it('renews a lapsed attestation when it is given again', async () => {
-		const lapsed = new Date(Date.now() - 366 * 86_400_000);
-		queue(
-			[
-				{
-					...release,
-					radioAttestationVersion: RADIO_PRO_ATTESTATION.version,
-					radioAttestedAt: lapsed
-				}
-			],
-			[{ id: 'rel-1' }]
-		);
+		release('rel-1', { attestationVersion: current, attestedAt: T0 - 366 * DAY });
 		await service.setRadioOptIn('rel-1', { optIn: true, attestedNotPro: true, userId: 'u-1' });
-		expect((state.updates[0].set.radioAttestedAt as Date).getTime()).toBeGreaterThan(
-			Date.now() - 60_000
-		);
+		expect(releaseRow('rel-1')?.radio_attested_at).toBe(T0);
 	});
 
 	it('opts out without an attestation, and keeps the record of an old one', async () => {
-		queue([{ ...release, radioAttestationVersion: null }], [{ id: 'rel-1' }]);
+		release('rel-1', { attestationVersion: 'superseded', attestedAt: T0 - 400 * DAY });
+		sqlite.exec('update audio_release set radio_opt_in = 1');
 		await service.setRadioOptIn('rel-1', { optIn: false, attestedNotPro: false, userId: 'u-1' });
-		expect(state.updates[0].set).toMatchObject({ radioOptIn: false });
-		expect(state.updates[0].set).not.toHaveProperty('radioAttestationVersion');
+		expect(releaseRow('rel-1')).toMatchObject({
+			radio_opt_in: 0,
+			radio_attestation_version: 'superseded'
+		});
 	});
 });
 
