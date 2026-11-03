@@ -62,9 +62,7 @@ jobs:
     # right there.
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
-    # A tree-wide rename makes the changed set the whole tree, and file-list ESLint
-    # outran 10 minutes on the `$lib` → `#lib` codemod (#2374).
-    timeout-minutes: 20
+    timeout-minutes: 10
     # A phase PR into an integration branch is diffed against that branch, not
     # against `main`. `github.base_ref` is the PR's base and is empty for
     # `merge_group`, whose ref is built from main — so the fallback keeps the
