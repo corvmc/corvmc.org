@@ -2566,10 +2566,11 @@ export const getRecurringReservations = query(
 		})
 		.optional(),
 	async (options) => {
+		const currentUser = requireUser();
 		const includeCancelled = options?.includeCancelled ?? false;
 
 		const filters = [
-			eq(reservation.createdByUserId, getRequestEvent().locals.user?.id),
+			eq(reservation.createdByUserId, currentUser.id),
 			eq(recurringSeries.prototypeType, 'reservation'),
 			isNull(recurringSeries.supersededBy),
 			!includeCancelled && isNull(recurringSeries.cancelledAt)
