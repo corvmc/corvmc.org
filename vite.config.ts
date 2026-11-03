@@ -118,6 +118,10 @@ export default defineConfig({
 		// Never silently move up a port: landing on the next one up is how you end
 		// up reading a sibling worktree's app and wondering where your change went.
 		strictPort: true,
+		// The local D1/KV SQLite files (and the e2e state dir) live under
+		// `.wrangler/` and change on every write. Watched, each write is an HMR
+		// event, and one a plugin maps to a module reloads the page (#1920).
+		watch: { ignored: ['**/.wrangler/**'] },
 		fs: {
 			// Worktrees under .claude/worktrees/ symlink node_modules to the main
 			// checkout. Vite's allow-list is rooted at the worktree, so requests that
