@@ -25,13 +25,15 @@
 </script>
 
 <PageHeader title={m.staff_groups()}>
-	{#if data.canManage}
-		<CreateGroupAction kind="committee" />
-	{/if}
+	<GroupViews active="committees" />
 </PageHeader>
 
 <PageContent>
-	<GroupViews active="committees" />
+	{#if data.canManage}
+		<div class="flex justify-end">
+			<CreateGroupAction kind="committee" />
+		</div>
+	{/if}
 	{#if committees.length === 0}
 		<EmptyState title={m.staff_groups_committees_no_committees()} />
 	{:else}

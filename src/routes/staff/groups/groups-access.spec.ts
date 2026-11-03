@@ -10,7 +10,8 @@ vi.mock('$lib/server/group/group-service', () => ({
 	getGroupDetail: async (id: string) => (kind ? { id, kind } : null)
 }));
 
-const groups = await import('./+page.server');
+const groups = await import('./bands/+page.server');
+const bare = await import('./+page');
 const record = await import('./[id]/+page.server');
 const oldBands = await import('../bands/+page');
 const oldClubs = await import('../clubs/+page');
@@ -30,7 +31,7 @@ beforeEach(() => {
 	kind = null;
 });
 
-describe('/staff/groups', () => {
+describe('/staff/groups/bands', () => {
 	it('shows Bands to a band.read holder', async () => {
 		held = ['band.read', 'group.read'];
 		await expect(run(groups.load)).resolves.toBeUndefined();
@@ -62,7 +63,8 @@ describe('/staff/groups/[id]', () => {
 
 describe('old addresses', () => {
 	it.each([
-		[oldBands.load, 'http://x/staff/bands?q=x', '/staff/groups?q=x'],
+		[bare.load, 'http://x/staff/groups?q=x', '/staff/groups/bands?q=x'],
+		[oldBands.load, 'http://x/staff/bands?q=x', '/staff/groups/bands?q=x'],
 		[oldClubs.load, 'http://x/staff/clubs', '/staff/groups/clubs'],
 		[oldCommittees.load, 'http://x/staff/committees', '/staff/groups/committees'],
 		[oldBand.load, 'http://x/staff/bands/g-1', '/staff/groups/g-1'],

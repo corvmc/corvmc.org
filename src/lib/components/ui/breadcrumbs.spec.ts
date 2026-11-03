@@ -43,6 +43,14 @@ describe('pageCrumbs', () => {
 		]);
 	});
 
+	it('drops a leaf that repeats the nav row it sits under, and the lone crumb left', () => {
+		const groups: NavTrail = {
+			crumbs: [{ label: 'Groups', href: p('/staff/groups') }],
+			here: false
+		};
+		expect(pageCrumbs(groups, [], 'Groups')).toEqual([]);
+	});
+
 	it('renders nothing when no crumb links anywhere', () => {
 		expect(pageCrumbs(undefined, [], 'Title')).toEqual([]);
 		expect(

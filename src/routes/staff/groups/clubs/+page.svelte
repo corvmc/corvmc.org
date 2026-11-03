@@ -54,10 +54,9 @@
 </script>
 
 <PageHeader title={m.staff_groups()}>
-	<CreateGroupAction />
+	<GroupViews active="clubs" />
 </PageHeader>
 <PageContent>
-	<GroupViews active="clubs" />
 	<svelte:boundary>
 		<ClubTotals />
 		{#snippet failed(_error, reset)}
@@ -97,6 +96,9 @@
 			<option value="deactivated">{m.staff_deactivated()}</option>
 			<option value="">{m.staff_all_statuses()}</option>
 		</Select>
+		{#snippet actions()}
+			<CreateGroupAction />
+		{/snippet}
 	</FilterBar>
 
 	<DataList {result} empty={m.staff_groups_clubs_empty()} onpage={(p) => (f.page = p)}>
