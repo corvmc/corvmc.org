@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Latest } from '$lib/latest.svelte';
+	import { isRedirect } from '@sveltejs/kit';
 	import { m } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	/**
@@ -20,15 +22,21 @@
 	import InterestFields from '$lib/components/volunteer/InterestFields.svelte';
 	import { getVolunteerInterestsPage, saveVolunteerInterests } from '$lib/remote/volunteer.remote';
 
-	// One query rather than three; the `{#await}` below now waits on a single promise.
-	const pageData = $derived(getVolunteerInterestsPage());
+	// One query rather than three. Not `{#await}`: a refresh would re-pend it and
+	// remount the form mid-edit.
+	const pageData = new Latest(() => getVolunteerInterestsPage());
+	// A gate's redirect has already navigated by the time it rejects; rethrowing
+	// it would flash the error boundary on the way out.
+	$effect(() => {
+		if (pageData.error && !isRedirect(pageData.error.e)) throw pageData.error.e;
+	});
 </script>
 
 <PageHeader width="md" title={m.member_preferred_roles()} subtitle={m.member_volunteering()} />
 
 <PageContent width="md">
-	<!-- eslint-disable-next-line custom/no-interactive-await -- #2358 -->
-	{#await pageData then { step: me, roles: roleOptions, interests: myInterests }}
+	{#if pageData.current}
+		{@const { step: me, roles: roleOptions, interests: myInterests } = pageData.current}
 		{@const onboarding = myInterests.length === 0}
 		<Card>
 			<CardBody>
@@ -73,5 +81,5 @@
 				{/if}
 			</CardBody>
 		</Card>
-	{/await}
+	{/if}
 </PageContent>

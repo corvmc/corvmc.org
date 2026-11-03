@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Latest } from '$lib/latest.svelte';
+	import { isRedirect } from '@sveltejs/kit';
 	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Step one of volunteer onboarding: who you are, and whether you're 18.
@@ -18,7 +20,13 @@
 	import ProfileFields from '$lib/components/volunteer/ProfileFields.svelte';
 	import { getVolunteerStartStep, startVolunteerOnboarding } from '$lib/remote/volunteer.remote';
 
-	let step = $derived(getVolunteerStartStep());
+	// Not `{#await}`: a refresh would re-pend it and remount the form mid-entry.
+	const step = new Latest(() => getVolunteerStartStep());
+	// A gate's redirect has already navigated by the time it rejects; rethrowing
+	// it would flash the error boundary on the way out.
+	$effect(() => {
+		if (step.error && !isRedirect(step.error.e)) throw step.error.e;
+	});
 </script>
 
 <PageHeader
@@ -29,8 +37,8 @@
 />
 
 <PageContent width="md">
-	<!-- eslint-disable-next-line custom/no-interactive-await -- #2358 -->
-	{#await step then me}
+	{#if step.current}
+		{@const me = step.current}
 		<InfoCard title={m.member_volunteer_start_about()}>
 			<p class="text-sm text-base-content/70">{m.member_volunteer_start_asked_once()}</p>
 
@@ -64,5 +72,5 @@
 				<SubmitButton label={m.member_volunteer_start_continue()} variant="primary" />
 			</Form>
 		</InfoCard>
-	{/await}
+	{/if}
 </PageContent>

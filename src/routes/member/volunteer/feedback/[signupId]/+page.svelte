@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Latest } from '$lib/latest.svelte';
+	import { isRedirect } from '@sveltejs/kit';
 	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The day-after survey. Reached from the notification/email, so it has to
@@ -23,7 +25,13 @@
 	import { getShiftFeedbackContext, submitShiftFeedback } from '$lib/remote/volunteer.remote';
 
 	let signupId = $derived(page.params.signupId!);
-	let context = $derived(getShiftFeedbackContext(signupId));
+	// Not `{#await}`: a refresh would re-pend it and remount the form mid-answer.
+	const context = new Latest(() => getShiftFeedbackContext(signupId));
+	// A gate's redirect has already navigated by the time it rejects; rethrowing
+	// it would flash the error boundary on the way out.
+	$effect(() => {
+		if (context.error && !isRedirect(context.error.e)) throw context.error.e;
+	});
 
 	let submitted = $state(false);
 	// The answer comes back from the form rather than being read off the input:
@@ -35,8 +43,8 @@
 <PageHeader width="md" title={m.member_how_did_go()} subtitle={m.member_volunteering()} />
 
 <PageContent width="md">
-	<!-- eslint-disable-next-line custom/no-interactive-await -- #2358 -->
-	{#await context then ctx}
+	{#if context.current !== undefined}
+		{@const ctx = context.current}
 		{#if !ctx}
 			<EmptyState
 				title={m.member_volunteer_feedback_signup_id_nothing_review_here()}
@@ -114,5 +122,5 @@
 				</Form>
 			</InfoCard>
 		{/if}
-	{/await}
+	{/if}
 </PageContent>

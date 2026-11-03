@@ -16,6 +16,7 @@
 	import { toast } from 'svelte-sonner';
 	import { formatDateShort } from '$lib/utils/format';
 	import { formatVolunteerHours } from '$lib/config';
+	import { Latest } from '$lib/latest.svelte';
 	import {
 		assignShiftToMember,
 		inviteMemberToShift,
@@ -51,9 +52,13 @@
 	// Searching implies "anybody", so it widens the scope on its own rather than
 	// making the coordinator press All first and then type.
 	let search = $state('');
-	const candidates = $derived(
+	// Not `{#await}`: a refresh would re-pend it and unmount an open Invite or Add.
+	const candidates = new Latest(() =>
 		getShiftCandidates({ shiftId, scope: search ? 'all' : scope, search: search || undefined })
 	);
+	$effect(() => {
+		if (candidates.error) throw candidates.error.e;
+	});
 
 	type Row = Awaited<ReturnType<typeof getShiftCandidates>>['rows'][number];
 
@@ -126,8 +131,8 @@
 <InfoCard title={msg.volunteer_candidate_column_who_ask()}>
 	{#snippet header()}
 		<div class="flex flex-col gap-2">
-			{#await candidates then result}
-				{@const g = grade(result.rows)}
+			{#if candidates.current}
+				{@const g = grade(candidates.current.rows)}
 				<CardTitle>
 					{msg.volunteer_candidate_column_who_ask_2({ askable: g.askable })}
 					{#if g.blocked > 0}
@@ -136,7 +141,7 @@
 						>
 					{/if}
 				</CardTitle>
-			{/await}
+			{/if}
 			<!-- Says which date the clearances were judged against, because "cleared"
 			     without a date is the bug this column exists to fix: a card valid
 			     today does not cover a shift the week after it lapses. -->
@@ -160,8 +165,8 @@
 		</div>
 	{/snippet}
 
-	<!-- eslint-disable-next-line custom/no-interactive-await -- #2358 -->
-	{#await candidates then result}
+	{#if candidates.current}
+		{@const result = candidates.current}
 		{@const g = grade(result.rows)}
 		{#if result.rows.length === 0}
 			<EmptyState
@@ -239,5 +244,5 @@
 				{/each}
 			</ul>
 		{/if}
-	{/await}
+	{/if}
 </InfoCard>
