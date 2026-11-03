@@ -1,8 +1,9 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import StatusBadge, { labels } from './StatusBadge.svelte';
+import StatusBadge, { labels, statusLabel } from './StatusBadge.svelte';
 import StatusBadgeHarness from './StatusBadge.test.svelte';
+import '$lib/test/locators';
 import '../../../routes/layout.css';
 
 /**
@@ -50,21 +51,24 @@ describe('StatusBadge accessibility', () => {
  * glyph has to keep a name and show its tooltip when the row holds focus.
  */
 describe('StatusBadge responsive', () => {
+	const NO_SHOW = statusLabel('no_show');
+	const glyph = () => page.getByRole('img', { name: NO_SHOW });
+	const badge = () => page.getByCss('.badge');
 	const tooltipOpacity = () => {
-		const tip = page.getByRole('img', { name: 'No show' }).element();
+		const tip = glyph().element();
 		return getComputedStyle(tip, '::before').opacity;
 	};
 
 	it('shows the labelled badge at 48rem and up', async () => {
 		await render(StatusBadgeHarness, { width: 800 });
-		await expect.element(page.getByText('No show')).toBeVisible();
-		expect(page.getByRole('img', { name: 'No show' }).elements()).toHaveLength(0);
+		await expect.element(badge()).toBeVisible();
+		expect(glyph().elements()).toHaveLength(0);
 	});
 
 	it('goes icon-only below 48rem and keeps an accessible name', async () => {
 		await render(StatusBadgeHarness, { width: 700 });
-		await expect.element(page.getByRole('img', { name: 'No show' })).toBeVisible();
-		await expect.element(page.getByText('No show', { exact: true })).not.toBeVisible();
+		await expect.element(glyph()).toBeVisible();
+		await expect.element(badge()).not.toBeVisible();
 	});
 
 	it('opens the tooltip when the row holds keyboard focus', async () => {
@@ -78,7 +82,7 @@ describe('StatusBadge responsive', () => {
 
 	it('leaves the plain labelled badge alone without the prop', async () => {
 		await render(StatusBadgeHarness, { width: 700, responsive: false });
-		await expect.element(page.getByText('No show')).toBeVisible();
-		expect(page.getByRole('img', { name: 'No show' }).elements()).toHaveLength(0);
+		await expect.element(badge()).toBeVisible();
+		expect(glyph().elements()).toHaveLength(0);
 	});
 });

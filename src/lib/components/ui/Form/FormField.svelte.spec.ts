@@ -212,9 +212,10 @@ describe('FormField', () => {
 				() => ({}),
 				['posterFile']
 			);
-			await render(FormField, { field, type: 'file', label: 'Poster', emptyLabel: 'Add a poster' });
+			const emptyLabel = 'Add a poster';
+			await render(FormField, { field, type: 'file', label: 'Poster', emptyLabel });
 
-			await expect.element(page.getByText('Add a poster')).toBeInTheDocument();
+			await expect.element(page.getByText(emptyLabel)).toBeInTheDocument();
 		});
 	});
 
@@ -234,17 +235,18 @@ describe('FormField', () => {
 				render: () => `<textarea name="bio">editable</textarea>`
 			}));
 
+			const value = 'Just looking';
 			const { container } = await render(FormField, {
 				name: 'bio',
 				label: 'Bio',
 				readonly: true,
-				value: 'Just looking',
+				value,
 				children: customInput
 			});
 
 			expect(container.querySelector('textarea')).toBeNull();
 			expect(container.querySelector('[name="bio"]')).toBeNull();
-			await expect.element(page.getByText('Just looking')).toBeInTheDocument();
+			await expect.element(page.getByText(value)).toBeInTheDocument();
 		});
 
 		it('renders no submittable input, so a read-only field cannot post', async () => {
@@ -263,16 +265,18 @@ describe('FormField', () => {
 		// what a person should be shown. `display` is how the caller supplies the
 		// formatted form without giving up the field's identity.
 		it('shows `display` instead of the raw value', async () => {
-			await render(FormField, {
+			const display = 'August 20, 2026';
+			const { container } = await render(FormField, {
 				name: 'eventDate',
 				type: 'date',
 				label: 'Date',
 				readonly: true,
 				value: '2026-08-20',
-				display: 'August 20, 2026'
+				display
 			});
 
-			await expect.element(page.getByText('August 20, 2026')).toBeInTheDocument();
+			await expect.element(page.getByText(display)).toBeInTheDocument();
+			expect(container.textContent).not.toContain('2026-08-20');
 		});
 
 		it('keeps long text on its own lines rather than in a single-line input', async () => {

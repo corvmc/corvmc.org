@@ -2,6 +2,7 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import ModalHarness from './Modal.test.svelte';
+import '$lib/test/locators';
 
 /**
  * Every action dialog in the app is a `Modal`, so what it gets wrong on open it
@@ -11,8 +12,12 @@ describe('Modal', () => {
 	it('names the close button rather than reading out its glyph', async () => {
 		await render(ModalHarness, {});
 
-		await expect.element(page.getByRole('button', { name: 'Close' })).toBeVisible();
-		expect(document.querySelector('[role="dialog"] button[aria-label="Close"]')).not.toBeNull();
+		// The close control is a glyph, so it has to carry a name of its own.
+		const close = page.getByRole('dialog').getByCss('[data-dialog-close]');
+		await expect.element(close).toBeVisible();
+		const name = close.element().getAttribute('aria-label');
+		expect(name).toBeTruthy();
+		expect(name).not.toBe(close.element().textContent?.trim());
 	});
 
 	// The dialog used to hand focus to the close button, so the first thing

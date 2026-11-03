@@ -3,6 +3,7 @@ import { render } from 'vitest-browser-svelte';
 import { page } from 'vitest/browser';
 import Harness from './EntityChipHarness.svelte';
 import { fakeRef } from '$lib/test/fixtures';
+import '$lib/test/locators';
 
 describe('EntityChip', () => {
 	it('derives its link from the viewer rather than a prop', async () => {
@@ -57,6 +58,9 @@ describe('EntityChip', () => {
 	 * second layout for that is a second thing to keep true.
 	 */
 	describe('preview', () => {
+		// Fixture values: what `fakeRef` and the spec put on the record.
+		const SUBTITLE = '4 members';
+		const chipLink = () => page.getByRole('link').first();
 		/**
 		 * `.first()` is the chip's own link. Once the preview is open it contains
 		 * two more links to the same record, and the pointer can already be over
@@ -67,22 +71,19 @@ describe('EntityChip', () => {
 		 */
 		it('opens on hover and shows the record identity', async () => {
 			await render(Harness, {
-				ref: fakeRef('band', { id: 'band-1', slug: 'vu', subtitle: '4 members' })
+				ref: fakeRef('band', { id: 'band-1', slug: 'vu', subtitle: SUBTITLE })
 			});
-			await page
-				.getByRole('link', { name: /Velvet Underground/ })
-				.first()
-				.hover();
-			await expect.element(page.getByText('4 members')).toBeVisible();
+			await chipLink().hover();
+			await expect.element(page.getByText(SUBTITLE)).toBeVisible();
 		});
 
 		it('opens on keyboard focus, so it is not mouse-only', async () => {
 			await render(Harness, {
-				ref: fakeRef('band', { id: 'band-1', slug: 'vu', subtitle: '4 members' })
+				ref: fakeRef('band', { id: 'band-1', slug: 'vu', subtitle: SUBTITLE })
 			});
-			const link = page.getByRole('link', { name: /Velvet Underground/ }).first();
+			const link = chipLink();
 			await link.element().focus();
-			await expect.element(page.getByText('4 members')).toBeVisible();
+			await expect.element(page.getByText(SUBTITLE)).toBeVisible();
 		});
 
 		/**
@@ -92,21 +93,19 @@ describe('EntityChip', () => {
 		 */
 		it('offers a way through to the record', async () => {
 			await render(Harness, { ref: fakeRef('band', { id: 'band-1', slug: 'vu' }) });
-			await page
-				.getByRole('link', { name: /Velvet Underground/ })
-				.first()
-				.hover();
-			const go = page.getByRole('link', { name: 'Open The Velvet Underground' });
+			await chipLink().hover();
+			// The icon-only Button in the preview: it needs a name of its own.
+			const go = page.getByCss('[data-link-preview-content] a.btn[href="/staff/groups/band-1"]');
 			await expect.element(go).toBeVisible();
-			expect(go.element().getAttribute('href')).toBe('/staff/groups/band-1');
+			expect(go.element().getAttribute('aria-label')).toBeTruthy();
 		});
 
 		it('can be turned off', async () => {
 			await render(Harness, {
-				ref: fakeRef('band', { id: 'band-1', slug: 'vu', subtitle: '4 members' }),
+				ref: fakeRef('band', { id: 'band-1', slug: 'vu', subtitle: SUBTITLE }),
 				preview: false
 			});
-			await page.getByRole('link', { name: /Velvet Underground/ }).hover();
+			await chipLink().hover();
 			expect(document.querySelector('[data-link-preview-content]')).toBeNull();
 		});
 	});

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import Harness from './DefinitionListHarness.svelte';
+import Harness, { PLAIN_VALUE } from './DefinitionListHarness.svelte';
 import OverflowHarness from './DefinitionListOverflowHarness.svelte';
 
 describe('DefinitionList + Fact', () => {
@@ -40,7 +40,7 @@ describe('DefinitionList + Fact', () => {
 
 	it('renders a plain value via the value prop', async () => {
 		await render(Harness);
-		await expect.element(page_dd(0)).toHaveTextContent('Bass Cabinet');
+		await expect.element(page_dd(0)).toHaveTextContent(PLAIN_VALUE);
 	});
 
 	it('applies mono styling for ids', async () => {
