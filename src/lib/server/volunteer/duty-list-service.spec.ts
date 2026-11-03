@@ -30,6 +30,7 @@ const {
 	getDutyListDetail,
 	listDutyLists,
 	updateDutyList,
+	updateDutyListItem,
 	DutyListAlreadyAppliedError
 } = await import('./duty-list-service');
 
@@ -418,5 +419,49 @@ describe('auto-apply on production.created', () => {
 		expect(
 			sqlite.prepare(`SELECT auto_apply_on AS t FROM duty_list WHERE id = 'dl-res'`).get()
 		).toEqual({ t: 'reservation.first' });
+	});
+});
+
+describe('updateDutyListItem', () => {
+	const row = () =>
+		sqlite
+			.prepare(
+				`SELECT volunteer_role_id AS role, offset_minutes AS offset, due_offset_minutes AS due,
+					duration_minutes AS duration, capacity, tasks FROM duty_list_item WHERE id = 'i1'`
+			)
+			.get();
+
+	it('changes the role, timing, capacity and tasks of a template item', async () => {
+		addItem('i1', 'offset_minutes, duration_minutes', '-15, 45');
+
+		await updateDutyListItem('i1', {
+			volunteerRoleId: 'role-2',
+			offsetMinutes: null,
+			durationMinutes: null,
+			dueOffsetMinutes: -10080,
+			capacity: 3,
+			tasks: ['Book the room']
+		});
+
+		expect(row()).toEqual({
+			role: 'role-2',
+			offset: null,
+			due: -10080,
+			duration: null,
+			capacity: 3,
+			tasks: '["Book the room"]'
+		});
+	});
+
+	it('refuses an archived role, but still edits an item already on one', async () => {
+		addItem('i1', 'offset_minutes, duration_minutes', '-15, 45');
+		sqlite.exec(`UPDATE volunteer_role SET is_active = 0 WHERE id = 'role-2'`);
+		await expect(
+			updateDutyListItem('i1', { volunteerRoleId: 'role-2', capacity: 1 })
+		).rejects.toThrow(/archived/);
+
+		sqlite.exec(`UPDATE volunteer_role SET is_active = 0 WHERE id = 'role-1'`);
+		await updateDutyListItem('i1', { volunteerRoleId: 'role-1', capacity: 4 });
+		expect(row()).toMatchObject({ role: 'role-1', capacity: 4 });
 	});
 });

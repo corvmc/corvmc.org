@@ -456,6 +456,21 @@ export interface DutyListItemInput {
 	doneWhen?: WorkDoneCondition | null;
 }
 
+async function assertListableRole(volunteerRoleId: string): Promise<void> {
+	const [role] = await db
+		.select({ id: volunteerRole.id, isActive: volunteerRole.isActive })
+		.from(volunteerRole)
+		.where(eq(volunteerRole.id, volunteerRoleId))
+		.limit(1);
+	if (!role) throw new DutyListValidationError('That role no longer exists.', 'volunteerRoleId');
+	if (!role.isActive) {
+		throw new DutyListValidationError(
+			'That role is archived — restore it before putting it on a duty list.',
+			'volunteerRoleId'
+		);
+	}
+}
+
 export async function addDutyListItem(
 	dutyListId: string,
 	input: DutyListItemInput
@@ -467,18 +482,7 @@ export async function addDutyListItem(
 		.limit(1);
 	if (!list) throw new DutyListNotFoundError();
 
-	const [role] = await db
-		.select({ id: volunteerRole.id, isActive: volunteerRole.isActive })
-		.from(volunteerRole)
-		.where(eq(volunteerRole.id, input.volunteerRoleId))
-		.limit(1);
-	if (!role) throw new DutyListValidationError('That role no longer exists.', 'volunteerRoleId');
-	if (!role.isActive) {
-		throw new DutyListValidationError(
-			'That role is archived — restore it before putting it on a duty list.',
-			'volunteerRoleId'
-		);
-	}
+	await assertListableRole(input.volunteerRoleId);
 
 	const shape = validateShape(input);
 
@@ -519,7 +523,11 @@ export async function updateDutyListItem(
 	});
 
 	const updates: Partial<typeof dutyListItem.$inferInsert> = { ...shape, updatedAt: new Date() };
-	if (input.volunteerRoleId !== undefined) updates.volunteerRoleId = input.volunteerRoleId;
+	// An item kept on a role archived since is still editable; moving one onto it is not.
+	if (input.volunteerRoleId !== undefined && input.volunteerRoleId !== existing.volunteerRoleId) {
+		await assertListableRole(input.volunteerRoleId);
+		updates.volunteerRoleId = input.volunteerRoleId;
+	}
 	if (input.capacity !== undefined) updates.capacity = validateCapacity(input.capacity);
 	if (input.notes !== undefined) updates.notes = validateNotes(input.notes);
 	if (input.sortOrder !== undefined) updates.sortOrder = input.sortOrder;

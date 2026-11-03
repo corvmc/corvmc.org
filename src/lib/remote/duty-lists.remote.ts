@@ -256,13 +256,13 @@ export const addDutyListItem = form(
 	}
 );
 
-/** Re-own an item, retitle it, or change what says it is done. Applied shows keep their copy. */
+/** Edit an item as a whole: the same fields it was added with. Applied shows keep their copy. */
 export const updateDutyListItem = form(
-	z.object({ id: z.string().min(1), dutyListId: z.string().min(1), ...ownershipShape }),
+	z.object({ id: z.string().min(1), dutyListId: z.string().min(1), ...itemShape }),
 	async (data) => {
 		await requireCapability('project.manage');
 		try {
-			await updateItemService(data.id, ownershipInput(data));
+			await updateItemService(data.id, itemInput(data));
 			await getDutyListPage(data.dutyListId).refresh();
 			return { success: true };
 		} catch (err) {
