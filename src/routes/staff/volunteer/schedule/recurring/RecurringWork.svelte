@@ -43,6 +43,7 @@
 		<Action
 			action={createRecurringWork}
 			label="New Recurring Work"
+			data-testid="new-recurring-work"
 			variant="ghost"
 			size="xs"
 			modalTitle="New recurring work"

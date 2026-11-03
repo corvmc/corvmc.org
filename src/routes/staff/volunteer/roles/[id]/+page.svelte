@@ -78,6 +78,7 @@
 		<Action
 			action={archiveVolunteerRole}
 			label="Archive"
+			data-testid="role-archive"
 			icon={archiveIcon}
 			variant="ghost"
 			size="sm"
@@ -97,6 +98,7 @@
 		<Action
 			action={restoreVolunteerRole}
 			label="Restore"
+			data-testid="role-restore"
 			icon={unarchiveIcon}
 			variant="ghost"
 			size="sm"
@@ -115,6 +117,7 @@
 		<Action
 			action={deleteVolunteerRole}
 			label="Delete"
+			data-testid="role-delete"
 			icon={trashIcon}
 			variant="ghost"
 			size="sm"

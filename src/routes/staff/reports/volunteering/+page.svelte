@@ -304,7 +304,7 @@
 					{/snippet}
 
 					{#each rollup as role (role.volunteerRoleId)}
-						<tr>
+						<tr data-feedback-role={role.volunteerRoleId}>
 							<td class="cell-primary">
 								<div class="truncate font-medium">{role.roleName}</div>
 								{#if role.latestComments.length > 0}

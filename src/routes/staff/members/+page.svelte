@@ -142,7 +142,7 @@
 
 		{#snippet bulk()}
 			{#if selected.size > 0}
-				<span class="text-sm">{selected.size} selected</span>
+				<span class="text-sm" data-testid="selected-count">{selected.size} selected</span>
 				<Action
 					action={bulkDeactivateUsers}
 					label="Deactivate"

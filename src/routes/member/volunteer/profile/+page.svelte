@@ -148,6 +148,7 @@
 									<Action
 										action={withdrawVolunteerHours.for(log.id)}
 										label="Withdraw"
+										data-testid="withdraw-hours"
 										variant="ghost"
 										size="xs"
 										class="text-error"

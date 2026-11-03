@@ -123,7 +123,7 @@
 						{formatDateShort(shift.startsAt)}
 					</li>
 				{/if}
-				<li class="py-3" class:opacity-60={blocked}>
+				<li class="py-3" class:opacity-60={blocked} data-shift-id={shift.id}>
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="font-medium">{shiftLabel(shift)}</span>
 						{#if shift.interested}
