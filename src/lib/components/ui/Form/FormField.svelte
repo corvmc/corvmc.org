@@ -242,6 +242,7 @@
 </script>
 
 {#snippet body()}
+	<!-- eslint-disable-next-line custom/no-svelte-element -- holds only text, so a re-insert has no focus to drop -->
 	<svelte:element
 		this={labelsOneControl ? 'label' : 'legend'}
 		class="fieldset-legend"
