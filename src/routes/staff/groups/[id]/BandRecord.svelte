@@ -76,9 +76,8 @@
 								<input {...rf.fields.memberId.as('hidden', m.id)} />
 								<Select
 									class="select-xs"
-									name="role"
+									{...rf.fields.role.as('select', m.role)}
 									aria-label={msg.staff_groups_id_band_record_aria_label({ title: m.member.title })}
-									value={m.role}
 									onchange={(e: Event) =>
 										(e.currentTarget as HTMLSelectElement).form?.requestSubmit()}
 								>

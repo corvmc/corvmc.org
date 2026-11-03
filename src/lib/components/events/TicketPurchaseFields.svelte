@@ -49,6 +49,7 @@
 		fields: {
 			unitPriceCents: RemoteFormField<RemoteFormFieldValue>;
 			collectiveCents: RemoteFormField<RemoteFormFieldValue>;
+			coverFees: RemoteFormField<RemoteFormFieldValue>;
 		};
 		submit?: boolean;
 		/**
@@ -256,11 +257,9 @@
 			otherLabel={actsLabel}
 		/>
 
-		<!-- `label=""` because FormField titles itself off the field name otherwise,
-		     and "CoverFees" above a sentence that already says what the box does is
-		     noise. -->
+		<!-- `label=""`: the inline sentence already says what the box does. -->
 		<Field
-			name="coverFees"
+			field={fields.coverFees}
 			type="checkbox"
 			label=""
 			bind:value={coverFees}

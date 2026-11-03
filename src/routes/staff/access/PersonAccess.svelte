@@ -93,10 +93,10 @@
 							onsuccess={refresh}
 						>
 							{#snippet form()}
-								<input type="hidden" name="userId" value={userId} />
-								<input type="hidden" name="change" value="add" />
+								<input {...setPosition.for(`add-${userId}`).fields.userId.as('hidden', userId)} />
+								<input {...setPosition.for(`add-${userId}`).fields.change.as('hidden', 'add')} />
 								<FormField
-									name="position"
+									field={setPosition.for(`add-${userId}`).fields.position}
 									label={m.staff_position()}
 									type="select"
 									options={unheld.map((p) => ({ value: p, label: positionLabels[p] }))}
@@ -140,9 +140,19 @@
 									onsuccess={refresh}
 								>
 									{#snippet form()}
-										<input type="hidden" name="userId" value={userId} />
-										<input type="hidden" name="position" value={p} />
-										<input type="hidden" name="change" value="remove" />
+										<input
+											{...setPosition
+												.for(`remove-${userId}-${p}`)
+												.fields.userId.as('hidden', userId)}
+										/>
+										<input
+											{...setPosition.for(`remove-${userId}-${p}`).fields.position.as('hidden', p)}
+										/>
+										<input
+											{...setPosition
+												.for(`remove-${userId}-${p}`)
+												.fields.change.as('hidden', 'remove')}
+										/>
 										<p class="text-sm">
 											{m.staff_access_person_access_takes_effect_their_next_request()}
 										</p>

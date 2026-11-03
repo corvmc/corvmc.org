@@ -39,7 +39,7 @@
 		<input {...edit.fields.workOrderId.as('hidden', task.id)} />
 		<input {...edit.fields.assetId.as('hidden', selected?.id ?? '')} />
 		<FormField
-			name="assetId"
+			field={edit.fields.assetId}
 			label={m.staff_unit()}
 			description={m.staff_projects_id_equipment_description()}
 		>

@@ -133,7 +133,7 @@
 				successToast={m.staff_inventory_restock_list_success_toast()}
 				onsuccess={() => (picked = {})}
 			>
-				<input type="hidden" name="lines" value={orderLines} />
+				<input {...markOrdered.fields.lines.as('hidden', orderLines)} />
 				<div class="flex flex-wrap items-end gap-3">
 					<Field field={fields.expectedAt} type="date" label={m.staff_expected()} required />
 					<Field field={fields.supplierName} type="text" label={m.staff_supplier()} />

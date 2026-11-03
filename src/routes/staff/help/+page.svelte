@@ -35,8 +35,6 @@
 
 	let categoryMap = $derived(Object.fromEntries(categories.map((c) => [c.id, c.name])));
 
-	let catNameValue = $state('');
-
 	// Bulk publish: `pnpm help:sync` imports every markdown article as a draft, so
 	// without a multi-select the help centre stays empty until someone clicks
 	// through ~60 articles one by one.
@@ -122,32 +120,32 @@
 								{#snippet form()}
 									<input {...editCat.fields.id.as('hidden', cat.id)} />
 									<div class="space-y-2">
-										<FormField name="name" label={m.staff_name()}>
+										<FormField field={editCat.fields.name} label={m.staff_name()}>
 											<input
 												{...editCat.fields.name.as('text', cat.name)}
 												class="input w-full input-sm"
 											/>
 										</FormField>
-										<FormField name="slug" label={m.staff_slug()}>
+										<FormField field={editCat.fields.slug} label={m.staff_slug()}>
 											<input
 												{...editCat.fields.slug.as('text', cat.slug)}
 												class="input w-full input-sm"
 											/>
 										</FormField>
-										<FormField name="description" label={m.staff_description()}>
+										<FormField field={editCat.fields.description} label={m.staff_description()}>
 											<input
 												{...editCat.fields.description.as('text', cat.description ?? '')}
 												class="input w-full input-sm"
 											/>
 										</FormField>
-										<FormField name="icon" label={m.staff_help_icon()}>
+										<FormField field={editCat.fields.icon} label={m.staff_help_icon()}>
 											<input
 												{...editCat.fields.icon.as('text', cat.icon ?? '')}
 												class="input w-full input-sm"
 												placeholder={m.staff_help_tabler_book()}
 											/>
 										</FormField>
-										<FormField name="minRole" label={m.staff_audience()}>
+										<FormField field={editCat.fields.minRole} label={m.staff_audience()}>
 											<Select
 												size="sm"
 												class="w-full"
@@ -158,7 +156,7 @@
 												{/each}
 											</Select>
 										</FormField>
-										<FormField name="sortOrder" label={m.staff_sort_order()}>
+										<FormField field={editCat.fields.sortOrder} label={m.staff_sort_order()}>
 											<input
 												{...editCat.fields.sortOrder.as('text', String(cat.sortOrder))}
 												class="input w-full input-sm"
@@ -194,24 +192,24 @@
 				onsuccess={refreshData}
 			>
 				<div class="mt-4 flex flex-wrap items-end gap-2">
-					<FormField name="name" label={m.staff_name()}>
+					<FormField field={createCategory.fields.name} label={m.staff_name()}>
 						<input
-							name="name"
+							{...createCategory.fields.name.as('text')}
 							type="text"
 							class="input w-40 input-sm"
 							placeholder={m.staff_help_category_name()}
-							bind:value={catNameValue}
 						/>
 					</FormField>
-					<FormField name="slug" label={m.staff_slug()}>
+					<FormField field={createCategory.fields.slug} label={m.staff_slug()}>
 						<input
-							name="slug"
+							{...createCategory.fields.slug.as('text')}
 							type="text"
 							class="input w-40 input-sm"
-							placeholder={slugFromName(catNameValue) || m.staff_help_auto()}
+							placeholder={slugFromName(createCategory.fields.name.value() ?? '') ||
+								m.staff_help_auto()}
 						/>
 					</FormField>
-					<FormField name="description" label={m.staff_description()}>
+					<FormField field={createCategory.fields.description} label={m.staff_description()}>
 						<!-- The binding, like the edit row and the hidden sortOrder beside it,
 						     rather than the raw `name=` inputs this form otherwise uses. -->
 						<input
@@ -220,16 +218,16 @@
 							placeholder={m.staff_help_what()}
 						/>
 					</FormField>
-					<FormField name="icon" label={m.staff_help_icon()}>
+					<FormField field={createCategory.fields.icon} label={m.staff_help_icon()}>
 						<input
-							name="icon"
+							{...createCategory.fields.icon.as('text')}
 							type="text"
 							class="input w-32 input-sm"
 							placeholder={m.staff_help_tabler_book()}
 						/>
 					</FormField>
-					<FormField name="minRole" label={m.staff_audience()}>
-						<Select size="sm" class="w-32" name="minRole">
+					<FormField field={createCategory.fields.minRole} label={m.staff_audience()}>
+						<Select size="sm" class="w-32" {...createCategory.fields.minRole.as('select')}>
 							{#each helpAudiences as audience (audience)}
 								<option value={audience}>{helpAudienceLabels[audience]}</option>
 							{/each}

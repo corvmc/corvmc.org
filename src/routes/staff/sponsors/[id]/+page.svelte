@@ -56,7 +56,7 @@
 		successToast={m.staff_saved()}
 	>
 		{#snippet form()}
-			<input type="hidden" name="id" value={sponsor.id} />
+			<input {...editForm.fields.id.as('hidden', sponsor.id)} />
 			<SponsorFields fields={editForm.fields} value={sponsor} />
 		{/snippet}
 	</Action>
@@ -83,7 +83,7 @@
 					noFooter
 				>
 					{#snippet form()}
-						<input type="hidden" name="id" value={sponsor.id} />
+						<input {...restoreSponsor.for(sponsor.id).fields.id.as('hidden', sponsor.id)} />
 					{/snippet}
 				</Action>
 			</div>
@@ -121,7 +121,7 @@
 				successToast={m.staff_sponsors_id_logo_saved()}
 			>
 				{#snippet form()}
-					<input type="hidden" name="sponsorId" value={sponsor.id} />
+					<input {...setSponsorLogo.fields.sponsorId.as('hidden', sponsor.id)} />
 					<Field
 						field={setSponsorLogo.fields.logo}
 						type="file"
@@ -151,7 +151,7 @@
 					successToast={m.staff_sponsors_id_logo_removed()}
 				>
 					{#snippet form()}
-						<input type="hidden" name="sponsorId" value={sponsor.id} />
+						<input {...removeSponsorLogo.fields.sponsorId.as('hidden', sponsor.id)} />
 						<p class="text-sm">{m.staff_sponsors_id_their_credits_show_name_alone()}</p>
 					{/snippet}
 				</Action>
@@ -173,7 +173,7 @@
 				successToast={m.staff_sponsors_id_sponsorship_added()}
 			>
 				{#snippet form()}
-					<input type="hidden" name="sponsorId" value={sponsor.id} />
+					<input {...createSponsorship.fields.sponsorId.as('hidden', sponsor.id)} />
 					<SponsorshipFields fields={createSponsorship.fields} />
 				{/snippet}
 			</Action>
@@ -223,8 +223,12 @@
 									successToast={m.staff_sponsors_id_placed()}
 								>
 									{#snippet form()}
-										<input type="hidden" name="sponsorId" value={sponsor.id} />
-										<input type="hidden" name="sponsorshipId" value={s.id} />
+										<input
+											{...placeSponsorship.for(s.id).fields.sponsorId.as('hidden', sponsor.id)}
+										/>
+										<input
+											{...placeSponsorship.for(s.id).fields.sponsorshipId.as('hidden', s.id)}
+										/>
 										<PlacementFields fields={placeSponsorship.for(s.id).fields} />
 									{/snippet}
 								</Action>
@@ -239,8 +243,8 @@
 								successToast={m.staff_saved()}
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={s.id} />
-									<input type="hidden" name="sponsorId" value={sponsor.id} />
+									<input {...edit.fields.id.as('hidden', s.id)} />
+									<input {...edit.fields.sponsorId.as('hidden', sponsor.id)} />
 									<SponsorshipFields fields={edit.fields} value={s} />
 								{/snippet}
 							</Action>
@@ -256,8 +260,10 @@
 								successToast={m.staff_deleted()}
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={s.id} />
-									<input type="hidden" name="sponsorId" value={sponsor.id} />
+									<input {...deleteSponsorship.for(s.id).fields.id.as('hidden', s.id)} />
+									<input
+										{...deleteSponsorship.for(s.id).fields.sponsorId.as('hidden', sponsor.id)}
+									/>
 									<p class="text-sm">
 										{m.staff_sponsors_id_row_should_never_have_existed()}
 									</p>
@@ -311,8 +317,8 @@
 								successToast={m.staff_removed()}
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={p.id} />
-									<input type="hidden" name="sponsorId" value={sponsor.id} />
+									<input {...removePlacement.for(p.id).fields.id.as('hidden', p.id)} />
+									<input {...removePlacement.for(p.id).fields.sponsorId.as('hidden', sponsor.id)} />
 									<p class="text-sm">{m.staff_sponsors_id_emails_already_sent_keep_credit()}</p>
 								{/snippet}
 							</Action>
@@ -335,7 +341,7 @@
 				successToast={m.staff_archived()}
 			>
 				{#snippet form()}
-					<input type="hidden" name="id" value={sponsor.id} />
+					<input {...archiveSponsor.for(sponsor.id).fields.id.as('hidden', sponsor.id)} />
 					<p class="text-sm">
 						{m.staff_sponsors_id_comes_off_sponsor_list_its()}
 					</p>
@@ -356,7 +362,7 @@
 				onsuccess={() => goto(resolve('/staff/sponsors'))}
 			>
 				{#snippet form()}
-					<input type="hidden" name="id" value={sponsor.id} />
+					<input {...deleteSponsor.for(sponsor.id).fields.id.as('hidden', sponsor.id)} />
 					<p class="text-sm">{m.staff_sponsors_id_row_should_never_have_existed_2()}</p>
 				{/snippet}
 			</Action>

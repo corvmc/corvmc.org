@@ -55,34 +55,45 @@
 
 			<div class="space-y-4">
 				<div class="grid gap-4 sm:grid-cols-2">
-					<FormField name="title" type="text" label={m.staff_title()} value={article.title} />
-					<FormField name="slug" type="text" label={m.staff_slug()} value={article.slug} />
+					<FormField
+						field={updateArticle.fields.title}
+						type="text"
+						label={m.staff_title()}
+						value={article.title}
+					/>
+					<FormField
+						field={updateArticle.fields.slug}
+						type="text"
+						label={m.staff_slug()}
+						value={article.slug}
+					/>
 				</div>
 
 				<div class="grid gap-4 sm:grid-cols-4">
 					<FormField
-						name="categoryId"
+						field={updateArticle.fields.categoryId}
 						type="select"
 						label={m.staff_category()}
 						value={article.categoryId}
 						options={categories.map((c) => ({ value: c.id, label: c.name }))}
 					/>
 					<FormField
-						name="minRole"
+						field={updateArticle.fields.minRole}
 						type="select"
 						label={m.staff_audience()}
 						value={article.minRole}
 						options={helpAudiences.map((a) => ({ value: a, label: helpAudienceLabels[a] }))}
 					/>
 					<FormField
-						name="published"
+						field={updateArticle.fields.published}
 						type="toggle"
 						label={m.staff_status()}
 						value={article.published}
 						checkboxLabel={m.staff_published()}
 					/>
 					<FormField
-						name="sortOrder"
+						field={updateArticle.fields.sortOrder}
+						submitAs="text"
 						type="number"
 						label={m.staff_order_2()}
 						value={article.sortOrder}
@@ -91,14 +102,14 @@
 				</div>
 
 				<FormField
-					name="summary"
+					field={updateArticle.fields.summary}
 					type="text"
 					label={m.staff_summary()}
 					value={article.summary ?? ''}
 					placeholder={m.staff_help_id_placeholder()}
 				/>
 
-				<FormField name="content" label={m.staff_content()}>
+				<FormField field={updateArticle.fields.content} label={m.staff_content()}>
 					<input {...updateFields.content.as('hidden', contentValue)} />
 					<MarkdownEditor bind:value={contentValue} />
 				</FormField>

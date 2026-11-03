@@ -101,10 +101,10 @@
 />
 
 <!-- Custom input mode: FormField's built-in textarea drops `rest`, so rows,
-     maxlength and placeholder would be lost. Issues still resolve by name.
+     maxlength and placeholder would be lost.
      `readonly` now wins over this child rather than being ignored by it. -->
 <FormField
-	name="description"
+	field={fields.description}
 	label={m.band_slug_events_event_fields_description()}
 	{readonly}
 	display={evt?.description ?? '—'}

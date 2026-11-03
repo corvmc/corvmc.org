@@ -55,7 +55,7 @@
 		successToast={m.staff_saved()}
 	>
 		{#snippet form()}
-			<input type="hidden" name="id" value={venue.id} />
+			<input {...editForm.fields.id.as('hidden', venue.id)} />
 			<Field field={fields.name} type="text" label={m.staff_name()} value={venue.name} />
 			<Field
 				field={fields.address1}
@@ -134,7 +134,7 @@
 					noFooter
 				>
 					{#snippet form()}
-						<input type="hidden" name="id" value={venue.id} />
+						<input {...restoreVenue.for(venue.id).fields.id.as('hidden', venue.id)} />
 					{/snippet}
 				</Action>
 			</div>
@@ -193,7 +193,7 @@
 				successToast={m.staff_done()}
 			>
 				{#snippet form()}
-					<input type="hidden" name="id" value={venue.id} />
+					<input {...setPrimaryVenue.for(venue.id).fields.id.as('hidden', venue.id)} />
 					<p class="text-sm">
 						{m.staff_venues_id_exactly_one_venue_ours_so()}
 					</p>
@@ -212,7 +212,7 @@
 				successToast={m.staff_archived()}
 			>
 				{#snippet form()}
-					<input type="hidden" name="id" value={venue.id} />
+					<input {...archiveVenue.for(venue.id).fields.id.as('hidden', venue.id)} />
 					<p class="text-sm">
 						{m.staff_venues_id_comes_off_picker_new_events()}
 					</p>
@@ -234,7 +234,7 @@
 				onsuccess={() => goto(resolve('/staff/venues'))}
 			>
 				{#snippet form()}
-					<input type="hidden" name="id" value={venue.id} />
+					<input {...deleteVenue.for(venue.id).fields.id.as('hidden', venue.id)} />
 					<p class="text-sm">
 						{m.staff_venues_id_row_should_never_have_existed()}
 					</p>

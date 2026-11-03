@@ -45,7 +45,7 @@
 		successToast={m.staff_saved()}
 	>
 		{#snippet form()}
-			<input type="hidden" name="id" value={r.id} />
+			<input {...editForm.fields.id.as('hidden', r.id)} />
 			<RenewalFields fields={editForm.fields} assignees={r.assignees} value={r} />
 		{/snippet}
 	</Action>
@@ -91,7 +91,7 @@
 				successToast={m.staff_renewals_id_attached()}
 			>
 				{#snippet form()}
-					<input type="hidden" name="id" value={r.id} />
+					<input {...uploadForm.fields.id.as('hidden', r.id)} />
 					<FormField
 						field={uploadForm.fields.file}
 						type="file"
@@ -127,8 +127,14 @@
 							successToast={m.staff_removed()}
 						>
 							{#snippet form()}
-								<input type="hidden" name="id" value={r.id} />
-								<input type="hidden" name="attachmentId" value={doc.attachmentId} />
+								<input
+									{...removeRenewalDocument.for(doc.attachmentId).fields.id.as('hidden', r.id)}
+								/>
+								<input
+									{...removeRenewalDocument
+										.for(doc.attachmentId)
+										.fields.attachmentId.as('hidden', doc.attachmentId)}
+								/>
 								<p class="text-sm">{m.staff_renewals_id_file_deleted_with()}</p>
 							{/snippet}
 						</Action>
@@ -152,7 +158,7 @@
 			onsuccess={() => goto(resolve('/staff/renewals'))}
 		>
 			{#snippet form()}
-				<input type="hidden" name="id" value={r.id} />
+				<input {...deleteRenewal.for(r.id).fields.id.as('hidden', r.id)} />
 				<p class="text-sm">
 					{m.staff_renewals_id_something_collective_no_longer_holds()}
 				</p>

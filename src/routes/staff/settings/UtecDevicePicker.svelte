@@ -8,7 +8,7 @@
 	// normal state of this page while the credentials are still wrong: the
 	// stored id stays editable so the form is never a dead end.
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
-	import { getUtecDevices } from '#lib/remote/settings.remote.js';
+	import { getUtecDevices, updateIntegrationSettings } from '#lib/remote/settings.remote.js';
 
 	let { deviceId }: { deviceId: string } = $props();
 
@@ -23,7 +23,7 @@
 
 {#if options.length > 0}
 	<FormField
-		name="deviceId"
+		field={updateIntegrationSettings.fields.deviceId}
 		label={m.staff_settings_utec_device_picker_device()}
 		type="select"
 		value={deviceId}
@@ -31,7 +31,7 @@
 	/>
 {:else}
 	<FormField
-		name="deviceId"
+		field={updateIntegrationSettings.fields.deviceId}
 		label={m.staff_settings_utec_device_picker_device_id()}
 		type="text"
 		value={deviceId}

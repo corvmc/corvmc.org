@@ -66,7 +66,7 @@
 			class="space-y-4"
 		>
 			<Field
-				name="eventId"
+				field={createProduction.fields.eventId}
 				type="select"
 				label={m.staff_listing()}
 				bind:value={eventId}

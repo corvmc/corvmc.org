@@ -15,7 +15,6 @@
 
 	let categories = $derived(await getStaffCategories());
 
-	let titleValue = $state('');
 	let contentValue = $state('');
 
 	// Mirrors `generateSlug` on the server: spaces and punctuation are dropped,
@@ -28,7 +27,7 @@
 			.replace(/^-|-$/g, '');
 	}
 
-	let autoSlug = $derived(slugify(titleValue));
+	let autoSlug = $derived(slugify(createArticle.fields.title.value() ?? ''));
 </script>
 
 <PageHeader width="3xl" title={m.staff_new_article()} subtitle={m.staff_help()} />
@@ -40,18 +39,17 @@
 	>
 		<div class="space-y-4">
 			<div class="grid gap-4 sm:grid-cols-2">
-				<FormField name="title" label={m.staff_title()}>
+				<FormField field={createArticle.fields.title} label={m.staff_title()}>
 					<input
-						name="title"
+						{...createArticle.fields.title.as('text')}
 						type="text"
 						class="input w-full"
 						placeholder={m.staff_help_create_article_title()}
-						bind:value={titleValue}
 					/>
 				</FormField>
-				<FormField name="slug" label={m.staff_slug()}>
+				<FormField field={createArticle.fields.slug} label={m.staff_slug()}>
 					<input
-						name="slug"
+						{...createArticle.fields.slug.as('text')}
 						type="text"
 						class="input w-full"
 						placeholder={autoSlug || m.staff_help_create_auto_generated()}
@@ -61,7 +59,7 @@
 
 			<div class="grid gap-4 sm:grid-cols-4">
 				<FormField
-					name="categoryId"
+					field={createArticle.fields.categoryId}
 					type="select"
 					label={m.staff_category()}
 					options={[
@@ -70,29 +68,36 @@
 					]}
 				/>
 				<FormField
-					name="minRole"
+					field={createArticle.fields.minRole}
 					type="select"
 					label={m.staff_audience()}
 					value="member"
 					options={helpAudiences.map((a) => ({ value: a, label: helpAudienceLabels[a] }))}
 				/>
 				<FormField
-					name="published"
+					field={createArticle.fields.published}
 					type="toggle"
 					label={m.staff_status()}
 					checkboxLabel={m.staff_published()}
 				/>
-				<FormField name="sortOrder" type="number" label={m.staff_order_2()} value={0} min="0" />
+				<FormField
+					field={createArticle.fields.sortOrder}
+					submitAs="text"
+					type="number"
+					label={m.staff_order_2()}
+					value={0}
+					min="0"
+				/>
 			</div>
 
 			<FormField
-				name="summary"
+				field={createArticle.fields.summary}
 				type="text"
 				label={m.staff_summary()}
 				placeholder={m.staff_help_create_brief_description_listings()}
 			/>
 
-			<FormField name="content" label={m.staff_content()}>
+			<FormField field={createArticle.fields.content} label={m.staff_content()}>
 				<input {...fields.content.as('hidden', contentValue)} />
 				<MarkdownEditor bind:value={contentValue} />
 			</FormField>

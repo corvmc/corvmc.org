@@ -77,8 +77,13 @@
 		<div class="mb-6 grid gap-6 lg:grid-cols-2">
 			<InfoCard title={m.staff_groups_id_staff_band_form_band_info()}>
 				<div class="grid grid-cols-1 gap-x-2">
-					<Field name="name" type="text" value={band.name} />
-					<Field name="bio" label={m.staff_groups_id_staff_band_form_bio()}>
+					<Field
+						field={updateBand.fields.name}
+						label={m.staff_name()}
+						type="text"
+						value={band.name}
+					/>
+					<Field field={updateBand.fields.bio} label={m.staff_groups_id_staff_band_form_bio()}>
 						<input {...bandFields.bio.as('hidden', bioHtml)} />
 						<RichTextEditor
 							bind:value={bioHtml}

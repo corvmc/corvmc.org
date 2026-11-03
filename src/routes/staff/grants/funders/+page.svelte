@@ -101,7 +101,7 @@
 							onsuccess={refresh}
 						>
 							{#snippet form()}
-								<input type="hidden" name="id" value={f.id} />
+								<input {...edit.fields.id.as('hidden', f.id)} />
 								<FunderFields fields={edit.fields} value={f} />
 							{/snippet}
 						</Action>
@@ -116,7 +116,7 @@
 								noFooter
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={f.id} />
+									<input {...restoreFunder.for(f.id).fields.id.as('hidden', f.id)} />
 								{/snippet}
 							</Action>
 						{:else}
@@ -131,7 +131,7 @@
 								onsuccess={refresh}
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={f.id} />
+									<input {...archiveFunder.for(f.id).fields.id.as('hidden', f.id)} />
 									<p class="text-sm">
 										{m.staff_grants_funders_comes_off_list_picker_new()}
 									</p>
@@ -152,7 +152,7 @@
 								onsuccess={refresh}
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={f.id} />
+									<input {...deleteFunder.for(f.id).fields.id.as('hidden', f.id)} />
 									<p class="text-sm">{m.staff_grants_funders_has_no_applications_so_nothing()}</p>
 								{/snippet}
 							</Action>

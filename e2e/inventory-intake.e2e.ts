@@ -34,36 +34,36 @@ test.describe('inventory intake', () => {
 		await page.locator('[data-page-header] a[href="/staff/inventory/intake"]').click();
 		await page.waitForURL(/\/staff\/inventory\/intake$/, { timeout: 15000 });
 		// A walk-in arrival, not one posted against an order.
-		await expect(page.locator('input[name="lineQty_0"]')).toBeVisible();
+		await expect(page.locator('input#lineQty_0')).toBeVisible();
 		await expect(page.locator('input[name="purchaseOrderId"]')).toHaveCount(0);
 
 		// Line 1: the serialized item, two units, one tagged and one not — the
 		// mixed case the tagging queue exists for.
 		// By id: the option label is "Category → Item", so it is not the item name
 		// on its own, and the id is what the payload carries anyway.
-		await page.locator('select[name="lineItem_0"]').selectOption(SEED_ITEM_ID);
-		await page.locator('input[name="lineQty_0"]').fill('2');
-		await page.locator('input[name="lineCost_0"]').fill('25.00');
+		await page.locator('select#lineItem_0').selectOption(SEED_ITEM_ID);
+		await page.locator('input#lineQty_0').fill('2');
+		await page.locator('input#lineCost_0').fill('25.00');
 
-		await expect(page.locator('input[name="unitTag_0_0"]')).toBeVisible();
-		await page.locator('input[name="unitTag_0_0"]').fill('E2E-INTAKE-1');
+		await expect(page.locator('input#unitTag_0_0')).toBeVisible();
+		await page.locator('input#unitTag_0_0').fill('E2E-INTAKE-1');
 		// Second unit deliberately left untagged, but given a serial — that serial
 		// is how the tagging test below finds *this* unit rather than binding
 		// whatever happens to be first in a queue it shares with the fixtures.
-		await page.locator('input[name="unitSerial_0_1"]').fill(INTAKE_SERIAL);
+		await page.locator('input#unitSerial_0_1').fill(INTAKE_SERIAL);
 
 		// Line 2: a counted item, which must not expand into units.
 		await page.getByTestId('add-intake-line').click();
 		// Its own fixture item, not a shared consumable: `inventory.e2e.ts` asserts
 		// those on-hand numbers absolutely, so receiving into one turns a
 		// neighbouring test red for a reason unrelated to what it checks.
-		await page.locator('select[name="lineItem_1"]').selectOption(SEED_INTAKE_BULK_ID);
-		await page.locator('input[name="lineQty_1"]').fill('12');
-		await expect(page.locator('input[name="unitTag_1_0"]')).toHaveCount(0);
+		await page.locator('select#lineItem_1').selectOption(SEED_INTAKE_BULK_ID);
+		await page.locator('input#lineQty_1').fill('12');
+		await expect(page.locator('input#unitTag_1_0')).toHaveCount(0);
 
 		// The serialized line's two unit rows, one left untagged; the counted line adds none.
-		await expect(page.locator('input[name^="unitTag_"]')).toHaveCount(2);
-		await expect(page.locator('input[name="unitTag_0_1"]')).toHaveValue('');
+		await expect(page.locator('input[id^="unitTag_"]')).toHaveCount(2);
+		await expect(page.locator('input#unitTag_0_1')).toHaveValue('');
 
 		await page
 			.locator('form', { has: page.locator('input[name="lines"]') })
