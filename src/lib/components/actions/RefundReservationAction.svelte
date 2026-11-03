@@ -64,7 +64,7 @@
 			/>
 		{/if}
 		{#if !cancelling}
-			<p class="text-sm">
+			<p class="text-sm" data-testid="refund-only-note">
 				The payment is refunded and the booking is not cancelled, for a session that went ahead.
 			</p>
 		{/if}

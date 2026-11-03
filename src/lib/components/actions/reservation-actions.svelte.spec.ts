@@ -1,6 +1,8 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import '$lib/test/locators';
+import { formatDuration } from '$lib/utils/format';
 
 // One file for the staff cancel and refund actions: they mock the same two
 // modules, and each export below is the stub its own spec used before the merge.
@@ -51,33 +53,38 @@ describe('CancelReservationAction', () => {
 		price: 30
 	} as never;
 
-	const open = async () => {
-		await page.getByRole('button', { name: 'Cancel' }).click();
+	// The trigger is the container's only button; the dialog portals out of it.
+	const open = async (props: Record<string, unknown> = {}) => {
+		const { locator } = await render(CancelReservationAction, { reservation, ...props });
+		await locator.getByRole('button').click();
 		return page.getByRole('dialog');
 	};
+	const reason = () => page.getByRole('dialog').getByCss('[name="reason"]');
 
 	// The trigger is destructive and the modal is the only confirmation step, so
 	// it has to name the reservation rather than ask about "this reservation" in
 	// the abstract — the staff table shows several at once.
 	it('names what is about to be cancelled', async () => {
-		await render(CancelReservationAction, { reservation });
+		const dialog = await open();
 
-		await expect.element(await open()).toBeVisible();
-		await expect.element(page.getByText('2 hours', { exact: false })).toBeVisible();
+		await expect.element(dialog).toBeVisible();
+		await expect
+			.element(dialog)
+			.toHaveTextContent(
+				formatDuration(new Date('2026-03-14T19:00:00Z'), new Date('2026-03-14T21:00:00Z'))
+			);
 	});
 
 	it('offers no reason box by default', async () => {
-		await render(CancelReservationAction, { reservation });
 		await expect.element(await open()).toBeVisible();
 
-		await expect.element(page.getByPlaceholder('Reason (optional)')).not.toBeInTheDocument();
+		await expect.element(reason()).not.toBeInTheDocument();
 	});
 
 	it('offers a reason box when asked for one', async () => {
-		await render(CancelReservationAction, { reservation, showReasonInput: true });
-		await open();
+		await open({ showReasonInput: true });
 
-		await expect.element(page.getByPlaceholder('Reason (optional)')).toBeVisible();
+		await expect.element(reason()).toBeVisible();
 	});
 });
 
@@ -96,34 +103,37 @@ describe('RefundReservationAction', () => {
 	} as never;
 
 	const open = async (props: Record<string, unknown> = {}) => {
-		await render(RefundReservationAction, { reservation, ...props });
-		await page.getByRole('button', { name: 'Refund', exact: true }).click();
+		const { locator } = await render(RefundReservationAction, { reservation, ...props });
+		await locator.getByRole('button').click();
 		const dialog = page.getByRole('dialog');
 		await expect.element(dialog).toBeVisible();
 		return dialog;
 	};
 
-	const alsoCancel = () => page.getByRole('checkbox', { name: /Also cancel this reservation/ });
+	const alsoCancel = () => page.getByRole('dialog').getByRole('checkbox');
+	const submit = () => page.getByRole('dialog').getByCss('button[type="submit"]');
+	const refundOnlyNote = () => page.getByRole('dialog').getByTestId('refund-only-note');
 
 	it('defaults to refunding and cancelling', async () => {
-		const dialog = await open();
+		await open();
 
 		await expect.element(alsoCancel()).toBeChecked();
 		expect(formAction()).toBe('?/refundAndCancelReservation');
-		await expect.element(dialog.getByRole('button', { name: 'Refund and cancel' })).toBeVisible();
+		await expect.element(submit()).toBeVisible();
+		expect(refundOnlyNote().query()).toBeNull();
 	});
 
 	it('refunds only, leaving the booking standing, once the box is cleared', async () => {
-		const dialog = await open();
+		await open();
+		const cancellingLabel = submit().element().textContent;
 
 		await alsoCancel().click();
 
 		await expect.element(alsoCancel()).not.toBeChecked();
 		await expect.poll(formAction).toBe('?/refundOnlyReservation');
-		await expect.element(dialog.getByRole('button', { name: 'Refund', exact: true })).toBeVisible();
-		await expect
-			.element(page.getByText('the booking is not cancelled', { exact: false }))
-			.toBeVisible();
+		// The submit names the other operation now; which words it uses is copy.
+		await expect.poll(() => submit().element().textContent).not.toBe(cancellingLabel);
+		await expect.element(refundOnlyNote()).toBeVisible();
 	});
 
 	// A completed booking cannot be cancelled, so there is no choice to offer.

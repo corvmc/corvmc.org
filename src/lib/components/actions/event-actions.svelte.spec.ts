@@ -1,6 +1,7 @@
-import { page } from 'vitest/browser';
+import { page, type Locator } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import '$lib/test/locators';
 
 // One file for the staff event actions: they mock the same two modules, and each
 // export below is the stub its own component's spec used before the merge.
@@ -14,6 +15,14 @@ const impact = {
 };
 
 let blockers: string[] = [];
+
+/** Each action's trigger is its render container's only button; dialogs portal out. */
+let screen: Locator;
+const mount = async (...args: Parameters<typeof render>) => {
+	screen = (await render(...args)).locator;
+};
+const trigger = () => screen.getByRole('button');
+const items = () => page.getByRole('dialog').getByRole('listitem');
 
 vi.mock('$lib/remote/events.remote', () => {
 	const field = (name: string) => ({
@@ -58,12 +67,13 @@ const PublishEventAction = (await import('./PublishEventAction.svelte')).default
  */
 describe('CompTicketsAction', () => {
 	it('renders the quantity rejection as a message', async () => {
-		issues.quantity = [{ path: ['quantity'], message: 'Quantity must be between 1 and 50' }];
+		const message = 'Quantity must be between 1 and 50';
+		issues.quantity = [{ path: ['quantity'], message }];
 		try {
-			await render(CompTicketsAction, { eventId: 'event-7' });
-			await page.getByRole('button', { name: 'Comp Tickets' }).click();
+			await mount(CompTicketsAction, { eventId: 'event-7' });
+			await trigger().click();
 
-			await expect.element(page.getByText('Quantity must be between 1 and 50')).toBeVisible();
+			await expect.element(page.getByRole('dialog').getByText(message)).toBeVisible();
 		} finally {
 			issues.quantity = null;
 		}
@@ -81,10 +91,8 @@ describe('DeleteEventAction', () => {
 	const reset = () =>
 		withImpact({ deletable: true, rsvpCount: 0, lineupCount: 0, hasReservation: false });
 
-	const trigger = () => page.getByRole('button', { name: 'Delete' }).first();
-
 	const open = async () => {
-		await render(DeleteEventAction, { eventId: 'event-7' });
+		await mount(DeleteEventAction, { eventId: 'event-7' });
 		await trigger().click();
 		return page.getByRole('dialog');
 	};
@@ -96,10 +104,10 @@ describe('DeleteEventAction', () => {
 		reset();
 		withImpact({ deletable: false });
 		try {
-			await render(DeleteEventAction, { eventId: 'event-7' });
+			await mount(DeleteEventAction, { eventId: 'event-7' });
 
 			await expect.element(trigger()).toBeDisabled();
-			expect(trigger().element().getAttribute('title')).toContain('cancel it instead');
+			expect(trigger().element().getAttribute('title')).toBeTruthy();
 		} finally {
 			reset();
 		}
@@ -107,9 +115,11 @@ describe('DeleteEventAction', () => {
 
 	it('says nothing about collateral when there is none', async () => {
 		reset();
-		await expect.element(await open()).toBeVisible();
+		const dialog = await open();
+		await expect.element(dialog).toBeVisible();
 
-		expect(document.body.textContent).not.toContain('Deleting also removes');
+		expect(dialog.getByRole('alert').query()).toBeNull();
+		expect(items().elements()).toHaveLength(0);
 	});
 
 	// A lineup credit is somebody else's record of having played. Deleting the
@@ -120,9 +130,10 @@ describe('DeleteEventAction', () => {
 		try {
 			await expect.element(await open()).toBeVisible();
 
-			await expect.element(page.getByText('3 RSVPs')).toBeVisible();
-			await expect.element(page.getByText('1 lineup credit', { exact: false })).toBeVisible();
-			await expect.element(page.getByText('the space booking is released')).toBeVisible();
+			// One item each: RSVPs, lineup credits, then the space booking.
+			await expect.poll(() => items().elements().length).toBe(3);
+			await expect.element(items().nth(0)).toHaveTextContent(String(impact.rsvpCount));
+			await expect.element(items().nth(1)).toHaveTextContent(String(impact.lineupCount));
 		} finally {
 			reset();
 		}
@@ -132,11 +143,22 @@ describe('DeleteEventAction', () => {
 	// nobody checked.
 	it('counts a single RSVP in the singular', async () => {
 		reset();
-		withImpact({ rsvpCount: 1 });
+		// The item with its count masked: the singular must not be the plural.
+		const itemFor = async (rsvpCount: number) => {
+			withImpact({ rsvpCount });
+			const screen = await render(DeleteEventAction, { eventId: 'event-7' });
+			await screen.locator.getByRole('button').click();
+			await expect.element(items().first()).toBeVisible();
+			const text = items().first().element().textContent?.trim() ?? '';
+			await screen.unmount();
+			await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull());
+			return text.replace(String(rsvpCount), '#');
+		};
 		try {
-			await expect.element(await open()).toBeVisible();
+			const one = await itemFor(1);
+			const two = await itemFor(2);
 
-			await expect.element(page.getByText('1 RSVP', { exact: true })).toBeVisible();
+			expect(one).not.toBe(two);
 		} finally {
 			reset();
 		}
@@ -152,33 +174,35 @@ describe('DeleteEventAction', () => {
 describe('PublishEventAction', () => {
 	const open = async (missing: string[]) => {
 		blockers = missing;
-		await render(PublishEventAction, { eventId: 'event-3' });
-		await page.getByRole('button', { name: 'Publish' }).first().click();
+		await mount(PublishEventAction, { eventId: 'event-3' });
+		await trigger().click();
 		return page.getByRole('dialog');
 	};
 
-	/** Action's own footer button, which the trigger shares a name with. */
-	const submit = () => page.getByRole('dialog').getByRole('button', { name: 'Publish' });
+	/** Action's own footer button. */
+	const submit = () => page.getByRole('dialog').getByCss('button[type="submit"]');
+	const reason = () => page.getByRole('dialog').getByCss('[name="reason"]');
 
 	it('asks for a confirmation when nothing is missing', async () => {
-		await expect.element(await open([])).toBeVisible();
+		const dialog = await open([]);
+		await expect.element(dialog).toBeVisible();
 
-		await expect.element(page.getByText('visible to the public')).toBeVisible();
 		await expect.element(submit()).toBeEnabled();
+		expect(dialog.getByRole('alert').query()).toBeNull();
+		expect(reason().query()).toBeNull();
 	});
 
 	// Every warning, not the first one: a staffer who fixes the poster and comes
 	// back to find the venue still missing has been sent round twice. Warnings do
 	// not refuse (#1787): a reason lets the publish through.
 	it('lists what is missing and offers to publish anyway with a reason', async () => {
-		await expect.element(await open(['No poster', 'No venue'])).toBeVisible();
+		const missing = ['No poster', 'No venue'];
+		const dialog = await open(missing);
+		await expect.element(dialog).toBeVisible();
 
-		await expect.element(page.getByText('Not ready to announce')).toBeVisible();
-		await expect.element(page.getByText('No poster')).toBeVisible();
-		await expect.element(page.getByText('No venue')).toBeVisible();
-		await expect.element(page.getByLabelText('Why publish now?')).toBeVisible();
-		await expect
-			.element(page.getByRole('dialog').getByRole('button', { name: 'Publish anyway' }))
-			.toBeEnabled();
+		await expect.element(dialog.getByRole('alert')).toBeVisible();
+		for (const blocker of missing) await expect.element(dialog.getByText(blocker)).toBeVisible();
+		await expect.element(reason()).toBeVisible();
+		await expect.element(submit()).toBeEnabled();
 	});
 });

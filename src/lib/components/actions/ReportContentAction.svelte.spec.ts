@@ -1,6 +1,7 @@
 import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import '$lib/test/locators';
 
 /**
  * A moderation report is where a rejection most needs to be readable: the
@@ -43,24 +44,25 @@ vi.mock('$app/navigation', () => ({
 const ReportContentAction = (await import('./ReportContentAction.svelte')).default;
 
 const open = async (props: Record<string, unknown> = {}) => {
-	await render(ReportContentAction, {
+	const { locator } = await render(ReportContentAction, {
 		entityType: 'band_profile',
 		entityId: 'band-9',
 		entityLabel: 'The Setlist',
 		...props
 	});
-	await page.getByRole('button', { name: 'Report' }).click();
+	await locator.getByRole('button').click();
 	return page.getByRole('dialog');
 };
 
 describe('ReportContentAction', () => {
 	// The defect this component was converted for.
 	it('renders a server issue on the reason as a message', async () => {
-		issues.reason = [{ path: ['reason'], message: 'You have already reported this.' }];
+		const message = 'You have already reported this.';
+		issues.reason = [{ path: ['reason'], message }];
 		try {
-			await open();
+			const dialog = await open();
 
-			await expect.element(page.getByText('You have already reported this.')).toBeVisible();
+			await expect.element(dialog.getByText(message)).toBeVisible();
 		} finally {
 			issues.reason = null;
 		}
@@ -69,9 +71,9 @@ describe('ReportContentAction', () => {
 	// `canSubmit` reads `reason`, so the binding has to survive the wrapper —
 	// without it the submit button never enables and nothing can be reported.
 	it('enables the submit once a reason is typed', async () => {
-		await open();
+		const dialog = await open();
 
-		const submit = page.getByRole('button', { name: 'Submit report' });
+		const submit = dialog.getByCss('button[type="submit"]');
 		await expect.element(submit).toBeDisabled();
 
 		await userEvent.fill(page.getByLabelText('Reason'), 'Impersonation');

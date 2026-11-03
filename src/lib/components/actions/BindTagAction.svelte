@@ -61,7 +61,7 @@
 		<!-- Stickers come off amps. Rebinding is ordinary: the unit keeps its id,
 		     its history and its loans, because identity is the record and not the
 		     label stuck to it. -->
-		<div class="mb-3 rounded bg-base-200 p-3 text-sm">
+		<div class="mb-3 rounded bg-base-200 p-3 text-sm" data-testid="bind-tag-context">
 			{#if currentTag}
 				<p>This unit currently wears <strong class="font-mono">{currentTag}</strong>.</p>
 				<p class="mt-1 opacity-70">
