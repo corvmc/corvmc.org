@@ -297,7 +297,10 @@ describe('resolvePendingInvites', () => {
 
 		expect(await resolvePendingInvites('user-1', 'alice@test.com')).toBe(1);
 
-		expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
+		expect(consoleSpy).toHaveBeenCalledWith(
+			// By shape: the driver's error may come from another realm.
+			expect.objectContaining({ message: 'disk on fire' })
+		);
 		expect(invites().map((i) => [i.id, i.status])).toEqual([
 			['inv-fail', 'pending'],
 			['inv-ok', 'accepted']
