@@ -31,6 +31,7 @@
 
 <Action
 	action={recordForm8283}
+	data-testid="record-8283"
 	label={signedOn ? 'Edit 8283' : 'Record 8283'}
 	modalTitle="Record the Form 8283"
 	successToast="Acknowledgment recorded"

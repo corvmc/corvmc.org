@@ -31,9 +31,11 @@ test.describe('inventory intake', () => {
 		await loginAsStaff(page);
 		// Reached from Inventory's header, which names it for what it does (#1937).
 		await page.goto('/staff/inventory');
-		await page.getByRole('link', { name: 'Receive Stock' }).click();
+		await page.locator('[data-page-header] a[href="/staff/inventory/intake"]').click();
 		await page.waitForURL(/\/staff\/inventory\/intake$/, { timeout: 15000 });
-		await expect(page.getByRole('heading', { name: 'Receive Stock' })).toBeVisible();
+		// A walk-in arrival, not one posted against an order.
+		await expect(page.locator('input[name="lineQty_0"]')).toBeVisible();
+		await expect(page.locator('input[name="purchaseOrderId"]')).toHaveCount(0);
 
 		// Line 1: the serialized item, two units, one tagged and one not — the
 		// mixed case the tagging queue exists for.
@@ -51,7 +53,7 @@ test.describe('inventory intake', () => {
 		await page.locator('input[name="unitSerial_0_1"]').fill(INTAKE_SERIAL);
 
 		// Line 2: a counted item, which must not expand into units.
-		await page.getByRole('button', { name: 'Add a line' }).click();
+		await page.getByTestId('add-intake-line').click();
 		// Its own fixture item, not a shared consumable: `inventory.e2e.ts` asserts
 		// those on-hand numbers absolutely, so receiving into one turns a
 		// neighbouring test red for a reason unrelated to what it checks.
@@ -59,9 +61,14 @@ test.describe('inventory intake', () => {
 		await page.locator('input[name="lineQty_1"]').fill('12');
 		await expect(page.locator('input[name="unitTag_1_0"]')).toHaveCount(0);
 
-		await expect(page.getByText('1 will need tagging')).toBeVisible();
+		// The serialized line's two unit rows, one left untagged; the counted line adds none.
+		await expect(page.locator('input[name^="unitTag_"]')).toHaveCount(2);
+		await expect(page.locator('input[name="unitTag_0_1"]')).toHaveValue('');
 
-		await page.getByRole('button', { name: 'Record this arrival' }).click();
+		await page
+			.locator('form', { has: page.locator('input[name="lines"]') })
+			.locator('button[type="submit"]')
+			.click();
 		await expectSuccessToast(page);
 
 		// It lands on the acquisition it just wrote.
@@ -89,8 +96,8 @@ test.describe('inventory intake', () => {
 		// whichever fixture unit sorted first, which another test needs untagged.
 		// A modal off the Inventory header now; the old page redirects to it.
 		await page.goto('/staff/inventory');
-		await page.getByRole('button', { name: /^Needs tagging/ }).click();
-		const queue = page.getByRole('dialog', { name: 'Needs tagging' });
+		await page.getByTestId('tagging-queue').click();
+		const queue = page.getByRole('dialog');
 		await expect(queue).toBeVisible();
 
 		const rows = queue.locator('input[name$="assetTag"]');
@@ -103,7 +110,7 @@ test.describe('inventory intake', () => {
 		const card = queue.locator('li').filter({ hasText: INTAKE_SERIAL });
 
 		await card.locator('input[name$="assetTag"]').fill('E2E-TAGGED-1');
-		await card.getByRole('button', { name: 'Bind' }).click();
+		await card.locator('button[type="submit"]').click();
 		await expectSuccessToast(page);
 
 		// The queue is derived from `asset_tag IS NULL`, so the row it just
@@ -115,6 +122,7 @@ test.describe('inventory intake', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff/inventory/tagging');
 		await page.waitForURL(/\/staff\/inventory\?tagging/, { timeout: 15000 });
-		await expect(page.getByRole('dialog', { name: 'Needs tagging' })).toBeVisible();
+		// `?tagging` is the only thing that opens a modal on arrival.
+		await expect(page.getByRole('dialog')).toBeVisible();
 	});
 });

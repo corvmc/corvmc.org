@@ -47,6 +47,7 @@
 
 <Action
 	action={bindTag}
+	data-testid="bind-tag"
 	label={currentTag ? 'Rebind tag' : 'Bind tag'}
 	modalTitle={currentTag ? 'Rebind the tag' : 'Bind a tag'}
 	successToast="Tag bound"

@@ -33,6 +33,7 @@
 
 <Action
 	action={returnLoan}
+	data-testid="mark-returned"
 	label="Mark Returned"
 	modalTitle="Confirm Return"
 	successToast="Marked as returned"

@@ -26,6 +26,7 @@
 
 <Action
 	action={useStock}
+	data-testid="use-stock"
 	label="Use"
 	modalTitle="Use stock"
 	successToast="Recorded"

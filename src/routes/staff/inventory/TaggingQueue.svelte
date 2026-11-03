@@ -21,7 +21,7 @@
 </script>
 
 {#if assets.length > 0}
-	<Button variant="ghost" size="sm" onclick={() => (open = true)}>
+	<Button variant="ghost" size="sm" data-testid="tagging-queue" onclick={() => (open = true)}>
 		Needs tagging <Badge variant="warning" size="sm">{assets.length}</Badge>
 	</Button>
 {/if}

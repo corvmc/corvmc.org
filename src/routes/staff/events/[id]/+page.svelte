@@ -134,7 +134,9 @@
 		{/if}
 
 		{#if (evt.status !== 'cancelled' || data.canEditCancelled) && !editing}
-			<Button variant="ghost" size="sm" onclick={startEditing}>Edit</Button>
+			<Button variant="ghost" size="sm" data-testid="edit-listing" onclick={startEditing}>
+				Edit
+			</Button>
 		{/if}
 
 		{#if evt.status === 'draft'}

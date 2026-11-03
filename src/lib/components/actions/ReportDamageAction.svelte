@@ -26,6 +26,7 @@
 
 <Action
 	action={reportAssetDamage}
+	data-testid="report-damage"
 	label="Report a problem"
 	modalTitle="Report a problem"
 	successToast="Thanks — staff have been told"

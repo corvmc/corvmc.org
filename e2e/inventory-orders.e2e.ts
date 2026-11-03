@@ -38,7 +38,9 @@ test.describe('purchase orders', () => {
 		await row.locator('input[type="checkbox"]').check();
 		await page.locator('input[name$="expectedAt"]').fill('2099-01-01');
 		await page.locator('input[name$="supplierName"]').fill(SEED_ORDER_SUPPLIER);
-		await page.getByRole('button', { name: /^Mark 1 item as ordered$/ }).click();
+		// The sticky bar's form, by the hidden payload only it carries.
+		const orderForm = page.locator('form', { has: page.locator('input[name="lines"]') });
+		await orderForm.locator('button[type="submit"]').click();
 		await expectSuccessToast(page);
 
 		// Mark as ordered writes the order already placed: there is no draft step (#2022).
@@ -59,21 +61,29 @@ test.describe('purchase orders', () => {
 
 		// Still at or below its point, so still listed — but no longer asked for.
 		await page.goto('/staff/inventory?show=restock');
-		const afterRow = page.getByRole('row').filter({ hasText: SEED_ORDER_ITEM_NAME });
-		await expect(afterRow).toContainText(`${SEED_ORDER_ITEM_REORDER_QUANTITY} coming`);
-		await expect(afterRow).toContainText('covered');
+		// Columns: item, on hand, reorder at, buy, on order.
+		const afterCells = page
+			.getByRole('row')
+			.filter({ hasText: SEED_ORDER_ITEM_NAME })
+			.getByRole('cell');
+		await expect(afterCells.nth(4)).toContainText(String(SEED_ORDER_ITEM_REORDER_QUANTITY));
+		await expect(afterCells.nth(3)).not.toContainText(String(SEED_ORDER_ITEM_REORDER_QUANTITY));
 
 		// Receive fewer than were ordered — the case a boolean cannot express.
 		await page.goto(`/staff/inventory/orders/${orderId}`);
-		await page.getByRole('link', { name: 'Receive' }).click();
+		await page.locator(`a[href="/staff/inventory/intake?order=${orderId}"]`).click();
 		await page.waitForURL(/\/staff\/inventory\/intake\?order=/, { timeout: 15000 });
-		await expect(page.getByRole('heading', { name: 'Receive an order' })).toBeVisible();
+		// Intake in order mode: the arrival is posted against this order.
+		await expect(page.locator('input[name="purchaseOrderId"]')).toHaveValue(orderId);
 
 		const qty = page.locator('input[name="lineQty_0"]');
 		await expect(qty).toHaveValue(String(SEED_ORDER_ITEM_REORDER_QUANTITY));
 		await qty.fill('5');
 
-		await page.getByRole('button', { name: 'Record this arrival' }).click();
+		await page
+			.locator('form', { has: page.locator('input[name="lines"]') })
+			.locator('button[type="submit"]')
+			.click();
 		await expectSuccessToast(page);
 
 		const readLine = async () => {
