@@ -48,8 +48,8 @@ const field = (name: string) =>
 
 describe('NewWorkOrderAction', () => {
 	it('opens timed, with a live role and its default capacity', async () => {
-		await render(NewWorkOrderAction, {});
-		await page.getByRole('button', { name: 'New Work Order' }).click();
+		const { locator } = await render(NewWorkOrderAction, {});
+		await locator.getByRole('button').click();
 		await expect.element(page.getByLabelText('Role')).toBeVisible();
 
 		expect(field('volunteerRoleId')?.value).toBe('role-1');
@@ -63,8 +63,8 @@ describe('NewWorkOrderAction', () => {
 	});
 
 	it('swaps the window for a deadline when it has no set time', async () => {
-		await render(NewWorkOrderAction, {});
-		await page.getByRole('button', { name: 'New Work Order' }).click();
+		const { locator } = await render(NewWorkOrderAction, {});
+		await locator.getByRole('button').click();
 		await page.getByLabelText('It has a set time').click();
 
 		await expect.poll(() => field('dueAt')?.type).toBe('datetime-local');

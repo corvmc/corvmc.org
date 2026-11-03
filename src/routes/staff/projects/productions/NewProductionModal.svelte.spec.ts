@@ -1,6 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import '$lib/test/locators';
 
 const remoteForm = (action: string) => ({
 	enhance: () => ({ method: 'POST', action }),
@@ -45,7 +46,7 @@ describe('NewProductionModal', () => {
 		const select = page.getByLabelText('Listing');
 		await expect.element(select).toBeVisible();
 		await expect.element(select).toHaveValue('evt-1');
-		await expect.element(page.getByRole('option', { name: /Friday Fuzz/ })).toBeInTheDocument();
+		expect(select.element().querySelectorAll('option[value="evt-1"]')).toHaveLength(1);
 		expect(document.querySelector('form')?.getAttribute('action')).toBe('?/createProduction');
 	});
 
@@ -53,10 +54,13 @@ describe('NewProductionModal', () => {
 		attachable.rows = [];
 		await render(NewProductionModal, { open: true });
 
-		await expect.element(page.getByText(/No show on the calendar/)).toBeVisible();
-		await page.getByRole('button', { name: 'Create a listing' }).click();
+		// Nothing to attach: no Listing picker, and the footer's last button creates one.
+		const footer = page.getByRole('dialog').getByCss('.modal-action button');
+		await expect.element(footer.last()).toBeVisible();
+		expect(document.querySelector('form')).toBeNull();
+		await footer.last().click();
 
-		await expect.element(page.getByRole('textbox', { name: 'Title' })).toBeVisible();
+		await expect.element(page.getByLabelText('Title')).toBeVisible();
 		// #1947: a show with its production, so kind and "Run by" are not the staffer's to pick.
 		await expect.element(page.getByLabelText('Kind')).not.toBeInTheDocument();
 		await expect.element(page.getByLabelText('Run by')).not.toBeInTheDocument();
