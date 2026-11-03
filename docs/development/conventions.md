@@ -599,13 +599,13 @@ noon proves nothing about the day boundary.
 
 ### Worked examples
 
-| Bug                                                                     | Class                                       | Guard                                    |
-| ----------------------------------------------------------------------- | ------------------------------------------- | ---------------------------------------- |
-| UTC dates shown as the club's day (#1984, #1985)                        | untimezoned date formatting                 | lint rule (#2000)                        |
-| A listing remote checked the wrong permission (#2002, #2031)            | a listing remote outside the listing guards | invariant spec                           |
-| Hold times reachable only through a rebook                              | a service option no form reaches            | service param vs Zod schema vs form diff |
-| Sibling specs broke after a service imported a new drizzle operator     | partial `drizzle-orm` mocks                 | real SQLite                              |
-| `getByRole('button', { name: 'Edit' })` broke when "Edit Hold" appeared | inexact role locators                       | lint rule                                |
+| Bug                                                                     | Class                                       | Guard                           |
+| ----------------------------------------------------------------------- | ------------------------------------------- | ------------------------------- |
+| UTC dates shown as the club's day (#1984, #1985)                        | untimezoned date formatting                 | lint rule (#2000)               |
+| A listing remote checked the wrong permission (#2002, #2031)            | a listing remote outside the listing guards | invariant spec                  |
+| Hold times reachable only through a rebook                              | a service option no form reaches            | `pnpm form-reachability` report |
+| Sibling specs broke after a service imported a new drizzle operator     | partial `drizzle-orm` mocks                 | real SQLite                     |
+| `getByRole('button', { name: 'Edit' })` broke when "Edit Hold" appeared | inexact role locators                       | lint rule                       |
 
 ## Forms: no raw elements
 
@@ -818,6 +818,7 @@ Every script in `package.json`:
 | `lint:changed`                  | Lint only files changed vs `BASE_REF` (default `origin/main`; PR CI passes the PR's base)          |
 | `lint:terms`                    | Report catalogued terms typed out as labels (`custom/prefer-term-messages`)                        |
 | `test-wording-census`           | Count tests that locate or assert by UI copy (`custom/no-wording-locators`), by directory          |
+| `form-reachability`             | Report optional service keys no `form()`/`command()` passes (#2049); a read, not a gate            |
 | `format`                        | prettier `--write` everything                                                                      |
 | `db:generate`                   | drizzle-kit: generate a migration from schema changes, then make any table rebuild D1-safe         |
 | `db:fix-migrations`             | Rewrite unsafe table rebuilds (run automatically by `db:generate`)                                 |
