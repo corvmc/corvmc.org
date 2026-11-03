@@ -256,6 +256,7 @@ export type EventEditField =
 	| 'kind'
 	| 'tags'
 	| 'location'
+	| 'address'
 	| 'externalTicketUrl'
 	| 'venue'
 	| 'times'

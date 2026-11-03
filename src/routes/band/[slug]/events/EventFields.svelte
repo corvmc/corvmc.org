@@ -39,6 +39,7 @@
 		endsAt: Date | null;
 		doorsAt: Date | null;
 		location: string | null;
+		address: string | null;
 		tags: string | null;
 		externalTicketUrl: string | null;
 		ticketPrice: number | null;
@@ -68,6 +69,7 @@
 			eventEndTime: RemoteFormField<string>;
 			doorsTime: RemoteFormField<string>;
 			location: RemoteFormField<string>;
+			address: RemoteFormField<string>;
 			tags: RemoteFormField<string>;
 			posterFile: RemoteFormField<File>;
 			externalTicketUrl: RemoteFormField<string>;
@@ -159,12 +161,22 @@
 		<FormField
 			field={fields.location}
 			type="text"
-			label="Location"
+			label="Venue"
 			value={evt?.location ?? ''}
-			placeholder="Venue name & address"
 			maxlength="500"
 			{readonly}
 			display={evt?.location ?? undefined}
+		/>
+	{/if}
+	{#if !readonly || evt?.address}
+		<FormField
+			field={fields.address}
+			type="text"
+			label="Address"
+			value={evt?.address ?? ''}
+			maxlength="500"
+			{readonly}
+			display={evt?.address ?? undefined}
 		/>
 	{/if}
 </div>

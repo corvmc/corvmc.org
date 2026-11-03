@@ -271,6 +271,7 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 			endsAt: evt.endsAt,
 			doorsAt: evt.doorsAt ?? null,
 			location: evt.location,
+			address: evt.address,
 			tags: evt.tags as string | null,
 			posterUrl: resolveImageUrl(evt.posterKey),
 			// On sale only while somebody may sell it: a band whose payouts
@@ -398,6 +399,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			endsAt: evt.endsAt,
 			doorsAt: evt.doorsAt ?? null,
 			location: evt.location,
+			address: evt.address,
 			tags: evt.tags as string | null,
 			posterUrl: resolveImageUrl(evt.posterKey),
 			// On sale only while somebody may sell it: a band whose payouts
@@ -885,6 +887,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			kind: evt.kind,
 			bandId: evt.groupId,
 			location: evt.location,
+			address: evt.address,
 			venueId: evt.venueId,
 			venueName,
 			/** True with no venue set at all: that is what an event has always meant. */
@@ -1429,6 +1432,7 @@ export const updateEvent = form(
 		// Band gigs live off these two — without them staff can see a wrong venue
 		// or a dead ticket link on the guide and have no way to fix it.
 		location: z.string().max(SHORT_TEXT_MAX).optional(),
+		address: z.string().max(SHORT_TEXT_MAX).optional(),
 		venueId: z.string().optional(),
 		externalTicketUrl: z.string().max(500).optional(),
 		ticketingEnabled: z.boolean().optional(),
@@ -1455,6 +1459,7 @@ export const updateEvent = form(
 		if (data.tags !== undefined) updateParams.tags = data.tags || null;
 		if (data.kind !== undefined) updateParams.kind = data.kind;
 		if (data.location !== undefined) updateParams.location = data.location || null;
+		if (data.address !== undefined) updateParams.address = data.address.trim() || null;
 		// An empty string detaches, an absent field leaves it alone — the same
 		// distinction `updateShift` draws for its own event link, and for the same
 		// reason: a form that omits the field must not silently clear it.

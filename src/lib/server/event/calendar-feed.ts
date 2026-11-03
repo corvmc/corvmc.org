@@ -3,6 +3,7 @@ import { Feed } from 'feed';
 import xss from 'xss';
 import { endsForExport, UID_DOMAIN } from '$lib/utils/calendar';
 import { formatDate } from '$lib/utils/format';
+import { placeLine } from '$lib/utils/place';
 
 /** The listing fields both feeds read. `CalendarEventRow` satisfies it. */
 export interface FeedEvent {
@@ -10,6 +11,9 @@ export interface FeedEvent {
 	title: string;
 	description: string | null;
 	location: string | null;
+	address?: string | null;
+	/** The structured venue's name, preferred over `location` as the gig guide does. */
+	venueName?: string | null;
 	startsAt: Date;
 	endsAt: Date | null;
 	status: string;
@@ -48,6 +52,9 @@ function toPlainText(html: string): string {
 
 const pageUrl = (origin: string, id: string) => `${origin}/events/${id}`;
 
+const where = (e: FeedEvent) =>
+	placeLine({ location: e.venueName ?? e.location, address: e.address });
+
 /**
  * A subscribable iCalendar feed. The UID matches the per-event download's, so
  * someone who added one show by hand and then subscribed sees it once.
@@ -72,7 +79,7 @@ export function buildIcsFeed(events: FeedEvent[], { origin, now }: FeedOptions):
 			end: endsForExport(e),
 			summary: e.title,
 			description: e.description ? toPlainText(e.description) : null,
-			location: e.location,
+			location: where(e),
 			url: pageUrl(origin, e.id),
 			status: e.status === 'cancelled' ? ICalEventStatus.CANCELLED : ICalEventStatus.CONFIRMED
 		});
@@ -102,7 +109,7 @@ export function buildRssFeed(events: FeedEvent[], { origin, now }: FeedOptions):
 			id: pageUrl(origin, e.id),
 			link: pageUrl(origin, e.id),
 			title: `${prefix}${e.title} — ${formatDate(e.startsAt)}`,
-			description: [e.location, e.description ? toPlainText(e.description) : null]
+			description: [where(e), e.description ? toPlainText(e.description) : null]
 				.filter(Boolean)
 				.join('\n\n'),
 			date: e.updatedAt ?? e.startsAt

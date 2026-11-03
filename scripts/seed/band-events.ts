@@ -2,12 +2,7 @@ import { eventListing, eventGroup } from '../../src/lib/server/db/schema/event';
 import { ticketSale } from '../../src/lib/server/db/schema/ticket';
 import { db } from './db';
 import { seedLineup } from './lineups';
-import {
-	BAND_EVENT_LOCATIONS,
-	BAND_EVENT_TITLES,
-	EVENT_TAGS_POOL,
-	SUPPORT_BAND_NAMES
-} from './pools';
+import { BAND_EVENT_PLACES, BAND_EVENT_TITLES, EVENT_TAGS_POOL, SUPPORT_BAND_NAMES } from './pools';
 import { type SeedUser } from './types';
 import { pick, pickN, ptDate, random, randomInt } from './util';
 
@@ -37,7 +32,7 @@ export async function seedBandEvents(bands: any[], _users: SeedUser[], alsoInclu
 					tags: pickN(EVENT_TAGS_POOL, randomInt(1, 3)).join(', '),
 					groupId: veteran.id,
 					source: 'band',
-					location: pick(BAND_EVENT_LOCATIONS),
+					...pick(BAND_EVENT_PLACES),
 					createdByUserId: veteran.ownerId
 				})
 				.returning();
@@ -84,7 +79,7 @@ export async function seedBandEvents(bands: any[], _users: SeedUser[], alsoInclu
 					tags: pickN(EVENT_TAGS_POOL, randomInt(1, 3)).join(', '),
 					groupId: b.id,
 					source: 'band',
-					location: pick(BAND_EVENT_LOCATIONS),
+					...pick(BAND_EVENT_PLACES),
 					externalTicketUrl:
 						random() > 0.5 ? `https://eventbrite.com/e/${randomInt(100000, 999999)}` : null,
 					createdByUserId: b.ownerId

@@ -28,6 +28,7 @@
 			kind: string | null;
 			source: string;
 			location: string | null;
+			address: string | null;
 			venueId: string | null;
 			externalTicketUrl: string | null;
 			startsAt: Date;
@@ -56,6 +57,7 @@
 	let editTags = $state('');
 	let editKind = $state('show');
 	let editLocation = $state('');
+	let editAddress = $state('');
 	let editVenueId = $state('');
 	let editExternalTicketUrl = $state('');
 	let editDate = $state('');
@@ -109,6 +111,7 @@
 		editTags = event.tags ?? '';
 		editKind = event.kind ?? 'show';
 		editLocation = event.location ?? '';
+		editAddress = event.address ?? '';
 		editVenueId = event.venueId ?? '';
 		editExternalTicketUrl = event.externalTicketUrl ?? '';
 		editDate = toLocalDate(event.startsAt);
@@ -338,8 +341,8 @@
 
 					<!--
 						`venueId` decides whether this listing holds the room; `location`
-						stays the free-text line the guide prints, and the only thing a
-						band listing ever had.
+						and `address` stay the free text the guide prints, and the only
+						thing a band listing ever had.
 					-->
 					{#if venues.length > 0}
 						<FormField
@@ -354,14 +357,23 @@
 						/>
 					{/if}
 
-					<FormField label="Address line" id="editLocation" issues={[]}>
+					<FormField label="Venue name" id="editLocation" issues={[]}>
 						<input
 							id="editLocation"
 							name="location"
 							type="text"
 							bind:value={editLocation}
 							class="input w-full"
-							placeholder="Venue name and address"
+						/>
+					</FormField>
+
+					<FormField label="Address" id="editAddress" issues={[]}>
+						<input
+							id="editAddress"
+							name="address"
+							type="text"
+							bind:value={editAddress}
+							class="input w-full"
 						/>
 					</FormField>
 

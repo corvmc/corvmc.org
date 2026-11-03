@@ -63,6 +63,21 @@ describe('runPartnerImports', () => {
 		expect(source().last_error).toBeNull();
 	});
 
+	it("writes the venue's name and its address as the listing's two place fields", async () => {
+		sqlite.exec(
+			`update venue set address1 = '361 SW Madison Ave', city = 'Corvallis', state = 'OR' where id = 'v-1'`
+		);
+		await runPartnerImports({ fetcher: feed(whiteside), now: NOW });
+
+		const places = sqlite.prepare('select distinct location, address from event_listing').all() as {
+			location: string;
+			address: string;
+		}[];
+		expect(places).toEqual([
+			{ location: 'The Whiteside', address: '361 SW Madison Ave, Corvallis, OR' }
+		]);
+	});
+
 	it('updates in place on a second run instead of adding rows', async () => {
 		await runPartnerImports({ fetcher: feed(whiteside), now: NOW });
 		const retitled = whiteside.replace('Paper Wolves\\, Low Tide', 'Paper Wolves');

@@ -46,7 +46,7 @@
 				field={fields.location}
 				type="text"
 				label="Venue"
-				placeholder="Venue name & address"
+				placeholder="e.g. The Whiteside Theatre"
 				maxlength="500"
 				required
 			/>

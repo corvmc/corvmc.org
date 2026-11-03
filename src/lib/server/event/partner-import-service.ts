@@ -7,6 +7,7 @@ import { containsLiteral } from '$lib/server/db/like';
 import { getPartsInTz } from '$lib/server/reservation/timezone';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 import { escapeHtml } from '$lib/utils/html';
+import { venueAddress } from '$lib/utils/place';
 import { parseFeed, type FeedShow } from './partner-feed';
 
 // ---------------------------------------------------------------------------
@@ -37,6 +38,8 @@ interface SourceRow {
 	url: string;
 	venueId: string;
 	venueName: string;
+	/** The venue row's own address, written onto the listings it imports. */
+	venueAddress: string | null;
 	createdByUserId: string;
 }
 
@@ -148,6 +151,7 @@ export async function importSource(
 				db.insert(eventListing).values({
 					...fields,
 					location: source.venueName,
+					address: source.venueAddress,
 					venueId: source.venueId,
 					source: 'community',
 					kind: 'show',
@@ -179,12 +183,16 @@ export async function runPartnerImports(
 	const fetcher = opts.fetcher ?? ((url, init) => fetch(url, init));
 	const now = opts.now ?? new Date();
 
-	const sources = await db
+	const rows = await db
 		.select({
 			id: calendarSource.id,
 			url: calendarSource.url,
 			venueId: calendarSource.venueId,
 			venueName: venue.name,
+			address1: venue.address1,
+			city: venue.city,
+			state: venue.state,
+			postalCode: venue.postalCode,
 			createdByUserId: calendarSource.createdByUserId
 		})
 		.from(calendarSource)
@@ -195,6 +203,11 @@ export async function runPartnerImports(
 				isNull(venue.deletedAt)
 			)
 		);
+
+	const sources: SourceRow[] = rows.map(({ address1, city, state, postalCode, ...r }) => ({
+		...r,
+		venueAddress: venueAddress({ address1, city, state, postalCode })
+	}));
 
 	const results: SourceRunResult[] = [];
 	for (const source of sources) {

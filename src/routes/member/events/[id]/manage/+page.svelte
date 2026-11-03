@@ -283,6 +283,14 @@
 			</div>
 
 			<FormField
+				field={fields.address}
+				type="text"
+				label="Address"
+				value={listing.address ?? ''}
+				maxlength="500"
+			/>
+
+			<FormField
 				field={fields.tags}
 				type="text"
 				label="Tags"
