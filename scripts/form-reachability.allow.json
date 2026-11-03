@@ -77,12 +77,10 @@
 		"notify": "internal: member-invite-service sends its own email and passes false"
 	},
 	"src/lib/server/help/help-service.ts#createArticle(0)": {
-		"sortOrder": "#2313: staff articles cannot be ordered within a category",
 		"source": "internal: 'static' marks rows pnpm help:sync owns; staff articles are 'dynamic'"
 	},
 	"src/lib/server/help/help-service.ts#updateArticle(1)": {
 		"createdByUserId": "internal: set once by createArticle",
-		"sortOrder": "#2313: staff articles cannot be ordered within a category",
 		"source": "internal: 'static' marks rows pnpm help:sync owns; staff articles are 'dynamic'"
 	},
 	"src/lib/server/incident/incident-service.ts#fileShowIncident(0)": {

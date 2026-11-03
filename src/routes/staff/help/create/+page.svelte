@@ -58,7 +58,7 @@
 				</FormField>
 			</div>
 
-			<div class="grid gap-4 sm:grid-cols-3">
+			<div class="grid gap-4 sm:grid-cols-4">
 				<FormField
 					name="categoryId"
 					type="select"
@@ -76,6 +76,7 @@
 					options={helpAudiences.map((a) => ({ value: a, label: helpAudienceLabels[a] }))}
 				/>
 				<FormField name="published" type="toggle" label="Status" checkboxLabel="Published" />
+				<FormField name="sortOrder" type="number" label="Order" value={0} min="0" />
 			</div>
 
 			<FormField
