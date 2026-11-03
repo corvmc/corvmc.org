@@ -4,6 +4,7 @@ import { render } from 'vitest-browser-svelte';
 import { createAttachmentKey } from 'svelte/attachments';
 import { goto } from '$app/navigation';
 import ActionHarness from './Action.test.svelte';
+import '$lib/test/locators';
 
 /**
  * The sign-in interrupt (#1999) as the two shared controls carry it: a
@@ -55,37 +56,42 @@ function refusingRemoteForm(rejectWith: unknown) {
 
 const RETURN = '/login?redirect=%2Fevents%2Fe1%3Ftab%3Dinfo';
 
+/** The trigger is the render container's only control; the modal portals out. */
+const mount = async (props: Record<string, unknown>) => {
+	const screen = await render(ActionHarness, props as never);
+	return { trigger: screen.locator.getByRole('button'), link: screen.locator.getByRole('link') };
+};
+const submitButton = () => page.getByRole('dialog').getByCss('button[type="submit"]');
+
 beforeEach(() => vi.mocked(goto).mockClear());
 
 describe('Form, on a 401 from its remote', () => {
 	it('goes to sign-in with this page as the return, instead of erroring', async () => {
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			action: refusingRemoteForm({ status: 401, body: { message: 'Not authenticated' } }),
 			label: 'RSVP',
 			modalTitle: 'RSVP',
 			fieldName: 'eventId'
 		});
 
-		await page.getByRole('button', { name: 'RSVP' }).click();
-		await page.getByRole('dialog').getByRole('button', { name: 'RSVP' }).click();
+		await trigger.click();
+		await submitButton().click();
 
 		await vi.waitFor(() => expect(goto).toHaveBeenCalledWith(RETURN));
 	});
 
 	it('leaves a 403 an error, not an interrupt', async () => {
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			action: refusingRemoteForm({ status: 403, body: { message: 'Not permitted' } }),
 			label: 'RSVP',
 			modalTitle: 'RSVP',
 			fieldName: 'eventId'
 		});
 
-		await page.getByRole('button', { name: 'RSVP' }).click();
-		await page.getByRole('dialog').getByRole('button', { name: 'RSVP' }).click();
+		await trigger.click();
+		await submitButton().click();
 
-		await expect
-			.element(page.getByRole('dialog').getByRole('button', { name: 'Error' }))
-			.toBeVisible();
+		await expect.element(submitButton()).toHaveAttribute('data-status', 'error');
 		expect(goto).not.toHaveBeenCalled();
 	});
 });
@@ -95,26 +101,25 @@ describe('Action, on a 401 from a direct callback', () => {
 		const run = vi.fn(async () => {
 			throw { status: 401, body: { message: 'Not authenticated' } };
 		});
-		await render(ActionHarness, { action: run, label: 'Save' });
+		const { trigger } = await mount({ action: run, label: 'Save' });
 
-		await page.getByRole('button', { name: 'Save' }).click();
+		await trigger.click();
 
 		await vi.waitFor(() => expect(goto).toHaveBeenCalledWith(RETURN));
-		await expect.element(page.getByRole('button', { name: 'Error' })).not.toBeInTheDocument();
+		await expect.element(trigger).not.toHaveAttribute('data-status', 'error');
 	});
 });
 
 describe('Action with requiresAuth', () => {
 	it('is the sign-in link, with the intent, when signed out', async () => {
 		const run = vi.fn(async () => undefined);
-		await render(ActionHarness, {
+		const { link } = await mount({
 			action: run,
 			label: 'RSVP',
 			requiresAuth: 'RSVP to Spring Workshop',
 			signedIn: false
 		});
 
-		const link = page.getByRole('link', { name: 'RSVP' });
 		await expect.element(link).toBeVisible();
 		const href = new URL((link.element() as HTMLAnchorElement).href);
 		expect(href.pathname).toBe('/login');
@@ -125,14 +130,14 @@ describe('Action with requiresAuth', () => {
 
 	it('is the ordinary action when signed in', async () => {
 		const run = vi.fn(async () => undefined);
-		await render(ActionHarness, {
+		const { trigger } = await mount({
 			action: run,
 			label: 'RSVP',
 			requiresAuth: true,
 			signedIn: true
 		});
 
-		await page.getByRole('button', { name: 'RSVP' }).click();
+		await trigger.click();
 		await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1));
 	});
 });

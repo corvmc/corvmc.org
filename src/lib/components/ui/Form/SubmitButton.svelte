@@ -89,6 +89,7 @@
 		class={className}
 		title={disabledReason}
 		disabled={isDisabled}
+		data-status={ctx.status}
 		onclick={isLastStep ? undefined : () => ctx.next()}
 		{...rest}
 	>
