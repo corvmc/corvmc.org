@@ -48,7 +48,7 @@ function fakeRemoteForm(fields: Record<string, unknown>) {
 	};
 
 	Object.defineProperties(instance, {
-		fields: { value: { ...fields, allIssues: () => null } },
+		fields: { value: { ...fields, allIssues: () => null, set: () => {} } },
 		result: { value: undefined, writable: true },
 		enhance: {
 			value: (cb: (instance: { submit: () => Promise<boolean> }) => unknown) => {
