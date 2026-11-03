@@ -169,6 +169,23 @@ describe('the same entries from either page', () => {
 		expect(logOf('viaShift')).toEqual(logOf('viaTask'));
 	});
 
+	// #2267: a done condition makes either door's close an override with a reason.
+	it('marks a condition-backed one done as an override, with its reason', async () => {
+		for (const id of ['viaTask', 'viaShift']) task(id, { done_when: 'tasks_ticked' });
+		await expect(shifts.resolveWorkOrder('viaShift', { resolvedByUserId: STAFF })).rejects.toThrow(
+			shifts.ShiftValidationError
+		);
+		expect(logOf('viaShift')).toEqual([]);
+
+		await tasks.resolveTask(PROJECT, 'viaTask', { resolvedByUserId: STAFF, reason: 'Done' });
+		await shifts.resolveWorkOrder('viaShift', { resolvedByUserId: STAFF, notes: 'Done' });
+
+		expect(logOf('viaShift')).toEqual([
+			{ action: 'work_order.resolved', details: { override: true, reason: 'Done' } }
+		]);
+		expect(logOf('viaShift')).toEqual(logOf('viaTask'));
+	});
+
 	it('calls it off', async () => {
 		twins();
 		await tasks.cancelTask(PROJECT, 'viaTask', STAFF);

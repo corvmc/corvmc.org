@@ -674,6 +674,13 @@ export async function scheduleWorkOrder(
 	});
 }
 
+export interface ResolveWorkOrderOptions {
+	resolvedByUserId: string;
+	notes?: string | null;
+	/** The reason when the caller's own record is it, e.g. a completed contractor job. */
+	recordReason?: string;
+}
+
 /**
  * The work is finished, which is not the same as anybody having turned up.
  *
@@ -684,8 +691,7 @@ export async function scheduleWorkOrder(
  */
 export async function resolveWorkOrder(
 	id: string,
-	/** `override`: it has a done condition and was ticked by hand regardless. */
-	opts: { resolvedByUserId: string; notes?: string | null; override?: boolean }
+	opts: ResolveWorkOrderOptions
 ): Promise<WorkOrder> {
 	const resolution = await prepareResolveWorkOrder(id, opts);
 	const [, [row]] = await db.batch(resolution.statements);
@@ -699,14 +705,21 @@ export async function resolveWorkOrder(
  * `afterCommit` — the audit row and the domains that follow a resolution — to
  * run once that batch has landed.
  */
-export async function prepareResolveWorkOrder(
-	id: string,
-	opts: { resolvedByUserId: string; notes?: string | null; override?: boolean }
-) {
+export async function prepareResolveWorkOrder(id: string, opts: ResolveWorkOrderOptions) {
 	const existing = await getShiftById(id);
 	if (!existing) throw new ShiftNotFoundError();
 	if (existing.resolvedAt) throw new ShiftValidationError('That is already closed.');
 	if (existing.cancelledAt) throw new ShiftValidationError('That was called off.');
+
+	// A done condition makes this the app's to close, so closing it by hand is an
+	// override on every path: it carries a reason and is audited as one.
+	const override = existing.doneWhen !== null;
+	const notes = opts.notes?.trim() || (override ? opts.recordReason?.trim() : null) || null;
+	if (override && !notes) {
+		throw new ShiftValidationError(
+			'This one ticks itself when its condition holds. Say why it is done regardless.'
+		);
+	}
 
 	const now = new Date();
 
@@ -725,7 +738,7 @@ export async function prepareResolveWorkOrder(
 		.set({
 			resolvedAt: now,
 			resolvedByUserId: opts.resolvedByUserId,
-			resolutionNotes: opts.notes ?? null,
+			resolutionNotes: notes,
 			updatedAt: now
 		})
 		.where(eq(workOrder.id, id))
@@ -740,13 +753,13 @@ export async function prepareResolveWorkOrder(
 		await recordAuditEntry({
 			action: 'work_order.resolved',
 			subject: { type: 'work_order', id, label: workOrderAuditLabel(existing!) },
-			details: { override: opts.override ?? false, reason: opts.notes ?? null }
+			details: { override, reason: notes }
 		});
 
 		// The equipment reports this work answered close with it. Dynamic, like the
 		// orientation import below, so the two domains do not import each other.
 		const { resolveFlagsForWorkOrder } = await import('../inventory/work-request-service');
-		await resolveFlagsForWorkOrder(id, opts.resolvedByUserId, opts.notes ?? undefined);
+		await resolveFlagsForWorkOrder(id, opts.resolvedByUserId, notes ?? undefined);
 
 		// Staff closing an orientation by hand is the other way one gets finished.
 		// The cron path emits `volunteer.shift_completed` per signup and a listener

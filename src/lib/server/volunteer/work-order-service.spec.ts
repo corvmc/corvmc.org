@@ -82,6 +82,7 @@ function shiftRow(overrides: Record<string, unknown> = {}) {
 		capacity: 2,
 		notes: null,
 		cancelledAt: null,
+		doneWhen: null,
 		...overrides
 	};
 }

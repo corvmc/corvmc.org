@@ -306,7 +306,10 @@ export async function completeJob(
 
 	const resolution =
 		!job.workOrderResolvedAt && !job.workOrderCancelledAt
-			? await prepareResolveWorkOrder(job.workOrderId, { resolvedByUserId: opts.actorId })
+			? await prepareResolveWorkOrder(job.workOrderId, {
+					resolvedByUserId: opts.actorId,
+					recordReason: `Contractor job completed: ${job.title}`
+				})
 			: null;
 
 	// Against what is already booked: a reopened job completes again (#2259).

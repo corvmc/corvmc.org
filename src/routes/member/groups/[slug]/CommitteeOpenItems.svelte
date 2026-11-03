@@ -133,12 +133,19 @@
 									aria-label={`Mark ${item.title} done`}
 									variant="ghost"
 									size="xs"
-									confirm={`Mark “${item.title}” done, whatever the show says?`}
+									modalTitle={`Mark “${item.title}” done?`}
+									submitLabel="Done anyway"
 									successToast="Marked done"
 								>
 									{#snippet form()}
 										<input type="hidden" name="id" value={item.id} />
 										<input type="hidden" name="slug" value={slug} />
+										<FormField
+											name="reason"
+											label="Why"
+											type="textarea"
+											required={item.doneWhen !== null}
+										/>
 									{/snippet}
 								</Action>
 								<Action
