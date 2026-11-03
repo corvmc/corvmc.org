@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -36,7 +37,7 @@
 	};
 </script>
 
-<PageHeader width="3xl" title={post.title} subtitle="Classifieds">
+<PageHeader width="3xl" title={post.title} subtitle={m.member_classifieds()}>
 	{#if post.isMine}
 		{#if post.status === 'open'}
 			<EditClassifiedAction {post} onsuccess={refresh} />
@@ -44,9 +45,9 @@
 		{#if post.status === 'open' && post.visibility !== 'hidden'}
 			<Action
 				action={renewClassified}
-				label="Renew"
-				modalTitle="Renew this post?"
-				successToast="Renewed"
+				label={m.member_classifieds_id_renew()}
+				modalTitle={m.member_classifieds_id_renew_post()}
+				successToast={m.member_classifieds_id_renewed()}
 				variant="ghost"
 				size="sm"
 				onsuccess={refresh}
@@ -54,14 +55,14 @@
 				{#snippet icon()}<IconRefresh size={16} />{/snippet}
 				{#snippet form()}
 					<input {...renewClassified.fields.postId.as('hidden', post.id)} />
-					<p class="py-2">It will stay up for another 30 days from today.</p>
+					<p class="py-2">{m.member_classifieds_id_will_stay_up_another_30()}</p>
 				{/snippet}
 			</Action>
 			<Action
 				action={closeClassified}
-				label="Close"
-				modalTitle="Close this post?"
-				successToast="Closed"
+				label={m.member_classifieds_id_close()}
+				modalTitle={m.member_classifieds_id_close_post()}
+				successToast={m.member_classifieds_id_closed()}
 				variant="ghost"
 				size="sm"
 				onsuccess={refresh}
@@ -70,7 +71,7 @@
 				{#snippet form()}
 					<input {...closeClassified.fields.postId.as('hidden', post.id)} />
 					<p class="py-2">
-						Filled, or no longer needed? It comes off the board and stays in your posts.
+						{m.member_classifieds_id_filled_no_longer_needed_comes()}
 					</p>
 				{/snippet}
 			</Action>
@@ -84,11 +85,11 @@
 		{/if}
 		<Action
 			action={reportClassified}
-			label="Report"
+			label={m.member_report()}
 			iconOnly
-			modalTitle="Report this post"
-			submitLabel="Send report"
-			successToast="Reported. Staff will take a look"
+			modalTitle={m.member_classifieds_id_report_post()}
+			submitLabel={m.member_send_report()}
+			successToast={m.member_classifieds_id_reported_staff_will_take_look()}
 			variant="ghost"
 			size="sm"
 			onsuccess={refresh}
@@ -97,10 +98,10 @@
 			{#snippet form()}
 				<input {...reportClassified.fields.postId.as('hidden', post.id)} />
 				<p class="mb-3 text-muted">
-					This takes the post off the board while staff look. If they disagree, it goes back up.
+					{m.member_classifieds_id_takes_post_off_board_while()}
 				</p>
-				<FormField name="reason" type="text" label="What's the problem?" />
-				<FormField name="description" type="textarea" label="Anything else? (optional)" />
+				<FormField name="reason" type="text" label={m.member_what_s_problem()} />
+				<FormField name="description" type="textarea" label={m.member_anything_else_optional()} />
 			{/snippet}
 		</Action>
 	{/if}
@@ -120,7 +121,10 @@
 
 	{#if !post.isMine && open && !post.canMessage}
 		<Alert type="info">
-			<p>To answer this, get in touch through <EntityChip ref={post.band ?? post.author} />.</p>
+			<p>
+				{m.member_classifieds_id_answer_get_touch_through()}
+				<EntityChip ref={post.band ?? post.author} />.
+			</p>
 		</Alert>
 	{/if}
 

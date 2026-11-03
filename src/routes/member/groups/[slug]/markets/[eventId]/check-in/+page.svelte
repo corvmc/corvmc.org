@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import VendorCheckIn from '$lib/components/market/VendorCheckIn.svelte';
@@ -11,7 +12,7 @@
 	{eventId}
 	parent={[
 		{
-			label: 'Vendors',
+			label: m.member_vendors(),
 			href: resolve('/member/groups/[slug]/markets/[eventId]', { slug, eventId })
 		}
 	]}

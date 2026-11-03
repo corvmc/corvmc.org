@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The member's conversations — staff threads and member threads in one list.
 	 *
@@ -72,7 +73,7 @@
 
 <div class="flex min-h-0 flex-col gap-3">
 	<div class="flex flex-wrap items-center justify-between gap-2">
-		<h1 class="text-xl font-bold">Messages</h1>
+		<h1 class="text-xl font-bold">{m.member_messages_conversation_list_messages()}</h1>
 		<div class="flex flex-wrap gap-2">
 			<ComposeAction
 				canMessageMembers={layout.features.directMessages && layout.acceptsDirectMessages}
@@ -99,12 +100,12 @@
 	{#if inboxes.length > 0}
 		<Select
 			size="sm"
-			aria-label="Inbox"
+			aria-label={m.member_messages_conversation_list_aria_label()}
 			value={inbox}
 			onchange={(e: Event) => chooseInbox((e.currentTarget as HTMLSelectElement).value)}
 		>
-			<option value="all">All inboxes</option>
-			<option value="own">Just mine</option>
+			<option value="all">{m.member_messages_conversation_list_all_inboxes()}</option>
+			<option value="own">{m.member_messages_conversation_list_just_mine()}</option>
 			{#each inboxes as box (box.slug)}
 				<option value={box.slug}>{box.name}</option>
 			{/each}
@@ -118,9 +119,9 @@
 		     something it did not offer (#907). -->
 		<DataList
 			{result}
-			emptyTitle="No messages yet"
+			emptyTitle={m.member_messages_conversation_list_empty_title()}
 			empty={emptyMessage}
-			actionLabel={dmsOff ? 'Turn direct messages on' : undefined}
+			actionLabel={dmsOff ? m.member_messages_conversation_list_action_label() : undefined}
 			actionHref={dmsOff ? '/member/account' : undefined}
 			onpage={(p) => (conversationList.page = p)}
 		>

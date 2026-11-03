@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -50,34 +51,54 @@
 	}
 </script>
 
-<InfoCard title="Recurring work">
+<InfoCard title={m.member_groups_slug_committee_recurring_work_title()}>
 	{#snippet header()}
 		<div class="flex items-center justify-between gap-2">
-			<CardTitle>Recurring work</CardTitle>
+			<CardTitle>{m.member_groups_slug_committee_recurring_work_title()}</CardTitle>
 			{#if canEdit && roles.length > 0}
 				<Action
 					action={createCommitteeRecurringWork}
-					label="Add"
-					modalTitle="Add recurring work"
-					submitLabel="Add"
-					successToast="Recurring work added"
+					label={m.member_groups_slug_committee_recurring_work_add()}
+					modalTitle={m.member_groups_slug_committee_recurring_work_add_recurring_wo()}
+					submitLabel={m.member_groups_slug_committee_recurring_work_add()}
+					successToast={m.member_groups_slug_committee_recurring_work_recurring_work_a()}
 					variant="ghost"
 					size="sm"
 				>
 					{#snippet form()}
 						<input {...fields.groupId.as('hidden', groupId)} />
-						<Field field={fields.name} type="text" label="Name" placeholder="Weekly holds review" />
-						<Field field={fields.volunteerRoleId} type="select" label="Role" options={roles} />
+						<Field
+							field={fields.name}
+							type="text"
+							label={m.member_name()}
+							placeholder={m.member_groups_slug_committee_recurring_work_placeholder()}
+						/>
+						<Field
+							field={fields.volunteerRoleId}
+							type="select"
+							label={m.member_role()}
+							options={roles}
+						/>
 						<Field
 							field={fields.intervalDays}
 							type="number"
-							label="Repeat every (days)"
+							label={m.member_groups_slug_committee_recurring_work_repeat_every_day()}
 							value="7"
-							description="Counted from when the last one closed."
+							description={m.member_groups_slug_committee_recurring_work_counted_from_whe()}
 						/>
-						<Field field={fields.firstDueOn} type="date" label="First one due" value={firstDue} />
-						<Field field={fields.capacity} type="number" label="How many people" value="1" />
-						<Field field={fields.notes} type="textarea" label="What needs doing" />
+						<Field
+							field={fields.firstDueOn}
+							type="date"
+							label={m.member_groups_slug_committee_recurring_work_first_one_due()}
+							value={firstDue}
+						/>
+						<Field
+							field={fields.capacity}
+							type="number"
+							label={m.member_groups_slug_committee_recurring_work_how_many_people()}
+							value="1"
+						/>
+						<Field field={fields.notes} type="textarea" label={m.member_what_needs_doing()} />
 					{/snippet}
 				</Action>
 			{/if}
@@ -85,17 +106,15 @@
 	{/snippet}
 
 	{#if schedules.length === 0}
-		<EmptyState
-			description="Work this committee does on a cycle. The next one appears when the last is closed."
-		/>
+		<EmptyState description={m.member_groups_slug_committee_recurring_work_work_committee_d()} />
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">Status</span></th>
-				<th>Name</th>
-				<th>Repeats</th>
-				<th>Next due</th>
-				{#if canEdit}<th><span class="sr-only">Actions</span></th>{/if}
+				<th class="w-px"><span class="sr-only">{m.member_status()}</span></th>
+				<th>{m.member_name()}</th>
+				<th>{m.member_groups_slug_committee_recurring_work_repeats()}</th>
+				<th>{m.member_groups_slug_committee_recurring_work_next_due()}</th>
+				{#if canEdit}<th><span class="sr-only">{m.member_actions()}</span></th>{/if}
 			{/snippet}
 			{#each schedules as s (s.id)}
 				<tr>
@@ -120,14 +139,16 @@
 								{@const retire = retireCommitteeRecurringWork.for(s.id)}
 								<Action
 									action={retire}
-									label="Retire"
-									aria-label={`Retire ${s.name}`}
+									label={m.member_groups_slug_committee_recurring_work_retire()}
+									aria-label={m.member_groups_slug_committee_recurring_work_aria_label({
+										name: s.name
+									})}
 									variant="ghost"
 									size="xs"
-									modalTitle="Retire recurring work"
-									submitLabel="Retire"
+									modalTitle={m.member_groups_slug_committee_recurring_work_retire_recurring()}
+									submitLabel={m.member_groups_slug_committee_recurring_work_retire()}
 									submitVariant="error"
-									successToast="Retired"
+									successToast={m.member_groups_slug_committee_recurring_work_retired()}
 								>
 									{#snippet form()}
 										<input {...retire.fields.id.as('hidden', s.id)} />

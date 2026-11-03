@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import { setCommitteeProjectStatusForm } from '$lib/remote/projects.remote';
@@ -12,11 +13,11 @@
 
 <Action
 	{action}
-	label="Status"
-	aria-label={`Change the status of ${project.name}`}
-	modalTitle="Change status"
-	submitLabel="Save"
-	successToast="Status updated"
+	label={m.member_status()}
+	aria-label={m.member_groups_slug_project_status_aria_label({ name: project.name })}
+	modalTitle={m.member_groups_slug_project_status_modal_title()}
+	submitLabel={m.member_save()}
+	successToast={m.member_groups_slug_project_status_success_toast()}
 	variant="ghost"
 	size="xs"
 >
@@ -25,7 +26,7 @@
 		<Field
 			field={action.fields.status}
 			type="select"
-			label="Status"
+			label={m.member_status()}
 			options={projectStatusOptions}
 			value={project.status}
 		/>

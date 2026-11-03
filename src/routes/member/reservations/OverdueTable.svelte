@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Table from '$lib/components/ui/Table.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
@@ -16,9 +17,9 @@
 
 <Table zebra={false}>
 	{#snippet head()}
-		<th>Date</th>
-		<th class="cell-num">Amount due</th>
-		<th class="w-px"><span class="sr-only">Actions</span></th>
+		<th>{m.member_date()}</th>
+		<th class="cell-num">{m.member_reservations_overdue_table_amount_due()}</th>
+		<th class="w-px"><span class="sr-only">{m.member_actions()}</span></th>
 	{/snippet}
 	{#each reservations as reservation (reservation.id)}
 		{@const href = resolve('/member/reservations/[id]', { id: reservation.id })}
@@ -42,7 +43,7 @@
 						size="xs"
 						outline
 					>
-						Pay online
+						{m.member_pay_online()}
 					</Button>
 				{/if}
 			</td>

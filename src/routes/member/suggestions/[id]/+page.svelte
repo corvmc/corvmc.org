@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -50,7 +51,7 @@
 	};
 </script>
 
-<PageHeader width="3xl" title={s.title} subtitle="Suggestion">
+<PageHeader width="3xl" title={s.title} subtitle={m.member_suggestions_id_subtitle()}>
 	{#if s.status !== 'open'}
 		<StatusBadge status={s.status} label />
 	{/if}
@@ -71,7 +72,7 @@
 	<!-- A certified result is every member's to read; before that the ballot's
 	     own page is its electors', so the link waits for certification. -->
 	{#if ballots.length > 0}
-		<InfoCard title={ballots.length === 1 ? 'Ballot' : 'Ballots'}>
+		<InfoCard title={ballots.length === 1 ? m.member_suggestions_id_ballot() : m.member_ballots()}>
 			<ul class="space-y-2">
 				{#each ballots as b (b.id)}
 					<li>
@@ -112,15 +113,14 @@
 		<Alert type="info">
 			<div class="flex w-full flex-wrap items-center justify-between gap-2">
 				<p>
-					Your edit is with staff. The suggestion below is still what everyone else sees until they
-					approve it.
+					{m.member_suggestions_id_edit_with_staff_suggestion_below()}
 				</p>
 				<Action
 					action={cancelSuggestionEdit}
-					label="Withdraw"
-					submitLabel="Withdraw edit"
-					modalTitle="Withdraw your edit?"
-					successToast="Edit withdrawn"
+					label={m.member_withdraw()}
+					submitLabel={m.member_suggestions_id_withdraw_edit()}
+					modalTitle={m.member_suggestions_id_withdraw_edit_2()}
+					successToast={m.member_suggestions_id_edit_withdrawn()}
 					variant="ghost"
 					size="xs"
 					onsuccess={refresh}
@@ -130,14 +130,14 @@
 						<input
 							{...cancelSuggestionEdit.fields.editId.as('hidden', editState.pendingEdit?.id ?? '')}
 						/>
-						<p class="py-2">Take this edit back? You can submit a different one afterwards.</p>
+						<p class="py-2">{m.member_suggestions_id_take_edit_back_can_submit()}</p>
 					{/snippet}
 				</Action>
 			</div>
 		</Alert>
 	{/if}
 
-	<InfoCard title="Suggestion">
+	<InfoCard title={m.member_suggestions_id_subtitle()}>
 		<div class="flex items-start gap-4">
 			<Form remote={vote} class="shrink-0" onsuccess={refresh}>
 				<input {...vote.fields.suggestionId.as('hidden', s.id)} />
@@ -148,7 +148,9 @@
 					label={String(s.voteCount)}
 					disabled={s.visibility !== 'visible' || !!s.mergedIntoId}
 					aria-pressed={!!s.hasVoted}
-					aria-label={s.hasVoted ? 'Remove your vote' : 'Vote for this suggestion'}
+					aria-label={s.hasVoted
+						? m.member_suggestions_id_remove_vote()
+						: m.member_suggestions_id_vote_suggestion()}
 					class="h-auto flex-col gap-0 py-1 btn-sm {s.hasVoted ? 'btn-primary' : 'btn-outline'}"
 				>
 					{#snippet icon()}<IconCaretUpFilled size={16} />{/snippet}
@@ -164,7 +166,7 @@
 				<div class="text-muted">
 					Suggested by {s.authorName ?? 'a former member'} · {formatDateTime(s.createdAt)}
 					{#if s.editedAt}
-						· edited {formatDateTime(s.editedAt)}
+						{m.member_suggestions_id_edited({ formatDateTime: formatDateTime(s.editedAt) })}
 					{/if}
 				</div>
 			</div>
@@ -173,11 +175,15 @@
 				<Action
 					action={editSuggestion}
 					data-testid="edit-suggestion"
-					label={editState.direct ? 'Edit' : 'Request an edit'}
+					label={editState.direct ? m.member_edit() : m.member_suggestions_id_request_edit()}
 					iconOnly
-					modalTitle={editState.direct ? 'Edit your suggestion' : 'Request an edit'}
-					submitLabel={editState.direct ? 'Save' : 'Send to staff'}
-					successToast={editState.direct ? 'Updated' : 'Sent to staff'}
+					modalTitle={editState.direct
+						? m.member_suggestions_id_edit_suggestion()
+						: m.member_suggestions_id_request_edit()}
+					submitLabel={editState.direct ? m.member_save() : m.member_send_staff()}
+					successToast={editState.direct
+						? m.member_suggestions_id_updated()
+						: m.member_sent_staff()}
 					variant="ghost"
 					size="sm"
 					class="shrink-0"
@@ -190,17 +196,25 @@
 							<!-- Say why, plainly. Being told "this needs review" without a
 							     reason reads as the site distrusting you personally. -->
 							<p class="mb-3 text-muted">
-								Other members have already voted for this, so staff check changes before they go
-								live — otherwise the words people backed could be swapped out from under them. Your
-								suggestion stays up unchanged in the meantime.
+								{m.member_suggestions_id_other_members_have_already_voted()}
 							</p>
 						{/if}
-						<FormField name="title" type="text" label="What should we do?" value={s.title} />
-						<FormField name="body" type="textarea" label="Tell us a bit more" value={s.body} />
+						<FormField
+							name="title"
+							type="text"
+							label={m.member_what_should_we_do()}
+							value={s.title}
+						/>
+						<FormField
+							name="body"
+							type="textarea"
+							label={m.member_tell_us_bit_more()}
+							value={s.body}
+						/>
 						<FormField
 							name="category"
 							type="select"
-							label="Category"
+							label={m.member_category()}
 							value={s.category}
 							options={suggestionCategories.map((c) => ({
 								value: c,
@@ -215,11 +229,11 @@
 				<Action
 					action={flag}
 					data-testid="flag-suggestion"
-					label="Flag for review"
+					label={m.member_flag_review()}
 					iconOnly
-					modalTitle="Flag for review"
-					submitLabel="Send report"
-					successToast="Reported — staff will take a look"
+					modalTitle={m.member_flag_review()}
+					submitLabel={m.member_send_report()}
+					successToast={m.member_reported_staff_will_take_look()}
 					variant="ghost"
 					size="sm"
 					class="shrink-0"
@@ -229,11 +243,14 @@
 					{#snippet form()}
 						<input {...flag.fields.suggestionId.as('hidden', s.id)} />
 						<p class="mb-3 text-muted">
-							This takes the suggestion off the board straight away while staff look at it. If they
-							don't agree with the report, it goes back up.
+							{m.member_takes_suggestion_off_board_straight()}
 						</p>
-						<FormField name="reason" type="text" label="What's the problem?" />
-						<FormField name="description" type="textarea" label="Anything else? (optional)" />
+						<FormField name="reason" type="text" label={m.member_what_s_problem()} />
+						<FormField
+							name="description"
+							type="textarea"
+							label={m.member_anything_else_optional()}
+						/>
 					{/snippet}
 				</Action>
 			{/if}
@@ -241,7 +258,7 @@
 	</InfoCard>
 
 	{#if s.responseBody}
-		<InfoCard title="Official response">
+		<InfoCard title={m.member_suggestions_id_official_response()}>
 			<p class="whitespace-pre-wrap">{s.responseBody}</p>
 			<p class="mt-2 text-muted">
 				{s.responderName ?? 'Staff'}{s.responseAt ? ` · ${formatDateTime(s.responseAt)}` : ''}

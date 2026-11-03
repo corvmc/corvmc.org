@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
@@ -45,7 +46,7 @@
 	const chargeTotal = $derived(remainingCents + feeCents);
 </script>
 
-<PageHeader width="md" title="Pay for Your Session" />
+<PageHeader width="md" title={m.member_reservations_id_pay_title()} />
 <PageContent width="md">
 	<Card>
 		<CardBody>
@@ -66,7 +67,10 @@
 		<CardBody class="space-y-2">
 			<div class="flex justify-between">
 				<span
-					>Room rental ({durationHours}hr × ${formatDollars(totalCents / durationHours)}/hr)</span
+					>{m.member_reservations_id_pay_room_rental_hr_hr({
+						durationHours,
+						formatDollars: formatDollars(totalCents / durationHours)
+					})}</span
 				>
 				<span>${formatDollars(totalCents)}</span>
 			</div>
@@ -75,9 +79,12 @@
 				<div class="flex justify-between text-success">
 					<span>
 						{#if committed}
-							Free hours applied ({creditsApplicable} hr)
+							{m.member_reservations_id_pay_free_hours_applied_hr({ creditsApplicable })}
 						{:else}
-							Free hours ({creditsApplicable} of {availableHours} available)
+							{m.member_reservations_id_pay_free_hours_available({
+								creditsApplicable,
+								availableHours
+							})}
 						{/if}
 					</span>
 					<span>−${formatDollars(creditDiscountCents)}</span>
@@ -86,7 +93,7 @@
 
 			{#if remainingCents > 0 && coverFees}
 				<div class="flex justify-between text-muted">
-					<span>Processing fee coverage</span>
+					<span>{m.member_reservations_id_pay_processing_fee_coverage()}</span>
 					<span>+${formatDollars(feeCents)}</span>
 				</div>
 			{/if}
@@ -94,10 +101,10 @@
 			<div class="divider my-1"></div>
 
 			<div class="flex justify-between font-bold">
-				<span>Total</span>
+				<span>{m.member_reservations_id_pay_total()}</span>
 				<span>
 					{#if remainingCents <= 0}
-						$0.00 (covered by free hours)
+						{m.member_reservations_id_pay_0_00_covered_by_free()}
 					{:else}
 						${formatDollars(chargeTotal)}
 					{/if}
@@ -113,7 +120,7 @@
 				type="checkbox"
 				label=""
 				bind:value={coverFees}
-				checkboxLabel="Cover processing fees so the Collective receives 100%"
+				checkboxLabel={m.member_reservations_id_pay_checkbox_label()}
 			/>
 		{/if}
 
@@ -121,9 +128,12 @@
 		<SubmitButton
 			variant="primary"
 			class="mt-4 w-full"
-			label={remainingCents <= 0 ? 'Pay with free hours' : `Pay $${formatDollars(chargeTotal)}`}
+			label={remainingCents <= 0
+				? m.member_reservations_id_pay_pay_with_free_hours()
+				: m.member_reservations_id_pay_pay({ formatDollars: formatDollars(chargeTotal) })}
 		/>
 	</Form>
 
-	<Button href={data.backPath} variant="ghost" class="w-full">Back to Reservations</Button>
+	<Button href={data.backPath} variant="ghost" class="w-full">{m.member_back_reservations()}</Button
+	>
 </PageContent>

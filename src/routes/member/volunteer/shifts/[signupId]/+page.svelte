@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The volunteer's own shift, on the night.
 	 *
@@ -39,7 +40,7 @@
 <PageHeader
 	width="2xl"
 	title={data.shift.roleName}
-	subtitle={data.shift.eventTitle ?? 'Volunteer shift'}
+	subtitle={data.shift.eventTitle ?? m.member_volunteer_shifts_signup_id_subtitle()}
 />
 <PageContent width="2xl">
 	{#if calledOff}
@@ -63,7 +64,7 @@
 		</Card>
 	{/if}
 
-	<InfoCard title="When">
+	<InfoCard title={m.member_when()}>
 		<p class="font-medium">
 			{#if data.shift.startsAt && data.shift.endsAt}
 				{formatDateLong(data.shift.startsAt)} · {formatTimeRange(
@@ -71,7 +72,7 @@
 					data.shift.endsAt
 				)}
 			{:else}
-				A time still to be arranged.
+				{m.member_volunteer_shifts_signup_id_time_still_arranged()}
 			{/if}
 		</p>
 		{#if data.shift.notes}
@@ -89,32 +90,37 @@
 	</InfoCard>
 
 	{#if data.checkIn && !calledOff}
-		<InfoCard title="On the door">
-			<p class="text-muted">Mark people arrived as they come in. The list is this show's only.</p>
+		<InfoCard title={m.member_volunteer_shifts_signup_id_door()}>
+			<p class="text-muted">{m.member_volunteer_shifts_signup_id_mark_people_arrived_as_the()}</p>
 			<div class="mt-3">
 				<Button
 					href={resolve(`/member/volunteer/shifts/${signupId}/check-in`)}
 					variant="primary"
 					size="sm"
 				>
-					Check people in
+					{m.member_volunteer_shifts_signup_id_check_people()}
 				</Button>
 			</div>
 		</InfoCard>
 	{/if}
 
-	<InfoCard title="Checklist">
+	<InfoCard title={m.member_volunteer_shifts_signup_id_checklist()}>
 		{#snippet header(title)}
 			<CardTitle>
 				{title}
 				{#if data.tasks.length > 0}
-					<span class="text-muted font-normal">· {doneCount} of {data.tasks.length}</span>
+					<span class="text-muted font-normal"
+						>{m.member_volunteer_shifts_signup_id_text({
+							doneCount,
+							length: data.tasks.length
+						})}</span
+					>
 				{/if}
 			</CardTitle>
 		{/snippet}
 
 		{#if data.tasks.length === 0}
-			<EmptyState message="Nothing on the list for this shift." />
+			<EmptyState message={m.member_volunteer_shifts_signup_id_message()} />
 		{:else}
 			<!-- Ticking submits on change: a checklist behind a Save button is a
 			     checklist people forget to save. -->
@@ -143,12 +149,15 @@
 	</InfoCard>
 
 	{#if data.incidentEventId}
-		<InfoCard title="Incidents" state={data.filedIncidents.length}>
+		<InfoCard
+			title={m.member_volunteer_shifts_signup_id_incidents()}
+			state={data.filedIncidents.length}
+		>
 			{#snippet action()}
 				<FileIncidentAction eventId={data.incidentEventId!} {signupId} />
 			{/snippet}
 			{#if data.filedIncidents.length === 0}
-				<p class="text-muted">If something goes wrong on the night, report it here for staff.</p>
+				<p class="text-muted">{m.member_volunteer_shifts_signup_id_if_something_goes_wrong_ni()}</p>
 			{:else}
 				<ul class="flex flex-col gap-3">
 					{#each data.filedIncidents as i (i.id)}
@@ -178,24 +187,23 @@
 				size="sm"
 				outline
 			>
-				How did it go?
+				{m.member_how_did_go()}
 			</Button>
 		{:else if !calledOff}
 			<Action
 				action={cancelMySignup.for(signupId)}
-				label="Drop out"
+				label={m.member_volunteer_shifts_signup_id_label()}
 				variant="ghost"
 				size="sm"
-				modalTitle="Drop out of this shift?"
-				submitLabel="Drop out"
-				successToast="Dropped. The place is back on the board."
+				modalTitle={m.member_volunteer_shifts_signup_id_modal_title()}
+				submitLabel={m.member_volunteer_shifts_signup_id_label()}
+				successToast={m.member_volunteer_shifts_signup_id_success_toast()}
 				onsuccess={() => goto(resolve('/member/volunteer'))}
 			>
 				{#snippet form()}
 					<input type="hidden" name="signupId" value={signupId} />
 					<p class="text-sm">
-						Notice isn't a no-show. The place goes back on the board for someone else, and nothing
-						is held against you for telling us.
+						{m.member_volunteer_shifts_signup_id_notice_isn_t_no_show()}
 					</p>
 				{/snippet}
 			</Action>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
@@ -122,31 +123,31 @@
 		<details class="dropdown dropdown-end">
 			<summary class="btn gap-1 btn-ghost btn-sm">
 				<IconCalendarPlus size={18} />
-				Add to calendar
+				{m.member_events_id_add_calendar()}
 			</summary>
 			<ul class="menu dropdown-content dropdown-panel w-48">
 				<li>
 					<a
 						href={googleCalendarUrl(calendarEvt)}
 						target="_blank"
-						rel="external noopener noreferrer">Google Calendar</a
+						rel="external noopener noreferrer">{m.member_events_id_google_calendar()}</a
 					>
 				</li>
 				<li>
 					<a href={icsDataUrl(calendarEvt)} rel="external" download="{evt.title}.ics"
-						>Apple / Outlook (.ics)</a
+						>{m.member_events_id_apple_outlook_ics()}</a
 					>
 				</li>
 			</ul>
 		</details>
-		<ShareButton title="Copy link to this event" />
+		<ShareButton title={m.member_events_id_title()} />
 	</div>
 </PageHeader>
 <PageContent>
 	{#if myTickets.length > 0}
 		<section>
 			<SectionLabel
-				label={myTickets.length === 1 ? 'Your ticket' : 'Your tickets'}
+				label={myTickets.length === 1 ? m.member_events_id_ticket() : m.member_events_id_tickets()}
 				count={myTickets.length}
 			/>
 			<div class="edet__stubs">
@@ -210,7 +211,7 @@
 								d="M3 9h18M8 3v4M16 3v4"
 							/></svg
 						>
-						Date
+						{m.member_date()}
 					</span>
 					<span class="edet__fact-value">{fullDate(evt.startsAt)}</span>
 				</div>
@@ -227,12 +228,14 @@
 							style="width:13px;height:13px"
 							><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg
 						>
-						Time
+						{m.member_time()}
 					</span>
 					<span class="edet__fact-value">
 						{formatEventTimeRange(evt.startsAt, evt.endsAt)}
 						{#if evt.doorsAt}
-							<br /><span style="font-size:12px;opacity:0.7">Doors {formatTime(evt.doorsAt)}</span>
+							<br /><span style="font-size:12px;opacity:0.7"
+								>{m.member_events_id_doors({ formatTime: formatTime(evt.doorsAt) })}</span
+							>
 						{/if}
 					</span>
 				</div>
@@ -254,7 +257,7 @@
 									r="2.5"
 								/></svg
 							>
-							Location
+							{m.member_events_id_location()}
 						</span>
 						<span class="edet__fact-value">
 							{evt.location ?? ''}
@@ -287,12 +290,14 @@
 								d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"
 							/><path d="M13 6v12" /></svg
 						>
-						Price
+						{m.member_events_id_price()}
 					</span>
 					<span class="edet__fact-value">
 						{price.label}
 						{#if price.suggested}
-							<span style="font-size:11px;opacity:0.5;margin-left:4px">suggested</span>
+							<span style="font-size:11px;opacity:0.5;margin-left:4px"
+								>{m.member_events_id_suggested()}</span
+							>
 						{/if}
 					</span>
 				</div>
@@ -314,7 +319,12 @@
 				{#if capacityKnown}
 					<div class="edet__capacity">
 						<div class="edet__capacity-head">
-							<span>{data.sold} of {evt.ticketQuantity} claimed</span>
+							<span
+								>{m.member_events_id_claimed({
+									sold: data.sold ?? '',
+									ticketQuantity: evt.ticketQuantity ?? ''
+								})}</span
+							>
 							{#if lowAvailability}
 								<Badge variant="warning">{isFreeEvent ? 'Almost full' : 'Selling fast'}</Badge>
 							{/if}
@@ -335,9 +345,11 @@
 						{#if isFreeEvent}
 							<Action
 								action={claimFreeTicket}
-								label="Get free ticket"
-								modalTitle="Get free ticket"
-								submitLabel="Get {quantity > 1 ? `${quantity} tickets` : 'ticket'}"
+								label={m.member_events_id_get_free_ticket()}
+								modalTitle={m.member_events_id_get_free_ticket()}
+								submitLabel={m.member_events_id_get({
+									value: quantity > 1 ? `${quantity} tickets` : 'ticket'
+								})}
 								canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
 								variant="primary"
 								size="lg"
@@ -347,18 +359,23 @@
 									<input {...rsvpFields.eventId.as('hidden', evt.id)} />
 
 									<Field
-										label="Number of spots"
+										label={m.member_events_id_number_spots()}
 										name="quantity"
 										type="select"
 										options={quantityOptions}
 										bind:value={quantity}
 									/>
 
-									<Field name="attendeeName" type="text" label="Name" bind:value={attendeeName} />
+									<Field
+										name="attendeeName"
+										type="text"
+										label={m.member_name()}
+										bind:value={attendeeName}
+									/>
 									<Field
 										name="attendeeEmail"
 										type="email"
-										label="Email"
+										label={m.member_email()}
 										bind:value={attendeeEmail}
 									/>
 								{/snippet}
@@ -366,11 +383,13 @@
 						{:else}
 							<Action
 								action={purchaseTickets}
-								label="Get Tickets"
-								modalTitle="Get Tickets"
+								label={m.member_events_id_get_tickets()}
+								modalTitle={m.member_events_id_get_tickets()}
 								submitLabel={chargeCents === 0
-									? `Get ${quantity === 1 ? 'ticket' : `${quantity} tickets`}`
-									: `Pay ${formatCents(chargeCents)}`}
+									? m.member_events_id_get({
+											value: quantity === 1 ? 'ticket' : `${quantity} tickets`
+										})
+									: m.member_events_id_pay({ formatCents: formatCents(chargeCents) })}
 								canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim() && !amountBlocked}
 								variant="primary"
 								size="lg"
@@ -381,22 +400,27 @@
 
 									<div class="flex items-baseline gap-2">
 										<span class="text-lg font-bold">{formatCents(evt.ticketPrice!)}</span>
-										<span class="text-muted">suggested, per ticket</span>
+										<span class="text-muted">{m.member_events_id_suggested_per_ticket()}</span>
 									</div>
 
 									<Field
-										label="Number of tickets"
+										label={m.member_events_id_number_tickets()}
 										name="quantity"
 										type="select"
 										options={quantityOptions}
 										bind:value={quantity}
 									/>
 
-									<Field name="attendeeName" type="text" label="Name" bind:value={attendeeName} />
+									<Field
+										name="attendeeName"
+										type="text"
+										label={m.member_name()}
+										bind:value={attendeeName}
+									/>
 									<Field
 										name="attendeeEmail"
 										type="email"
-										label="Email"
+										label={m.member_email()}
 										bind:value={attendeeEmail}
 									/>
 									<TicketPurchaseFields
@@ -433,7 +457,7 @@
 							target="_blank"
 							rel="noopener noreferrer"
 							variant="primary"
-							size="lg">Get Tickets ↗</Button
+							size="lg">{m.member_events_id_get_tickets_2()}</Button
 						>
 					{/if}
 					{#if data.myRsvp}
@@ -451,7 +475,7 @@
 								>
 							</div>
 							<div class="tixbanner__text">
-								<strong>You're going!</strong>
+								<strong>{m.member_events_id_re_going()}</strong>
 								<small>
 									{mode === 'external'
 										? 'Tickets are sold separately — grab yours above'
@@ -461,10 +485,10 @@
 						</div>
 						<Action
 							action={cancelRsvp}
-							label="Can't make it?"
+							label={m.member_events_id_can_t_make()}
 							confirm="Cancel your RSVP for this event?"
-							modalTitle="Cancel RSVP"
-							submitLabel="Yes, cancel my RSVP"
+							modalTitle={m.member_events_id_cancel_rsvp()}
+							submitLabel={m.member_events_id_yes_cancel_my_rsvp()}
 							submitVariant="error"
 							variant="ghost"
 							size="sm"
@@ -477,23 +501,40 @@
 					{:else}
 						<Action
 							action={rsvpToEvent}
-							label={mode === 'external' ? "I'm going" : 'RSVP'}
-							modalTitle={mode === 'external' ? "I'm going" : 'RSVP'}
-							submitLabel={mode === 'external' ? "I'm going" : 'RSVP'}
+							label={mode === 'external'
+								? m.member_events_id_i_m_going()
+								: m.member_events_id_rsvp()}
+							modalTitle={mode === 'external'
+								? m.member_events_id_i_m_going()
+								: m.member_events_id_rsvp()}
+							submitLabel={mode === 'external'
+								? m.member_events_id_i_m_going()
+								: m.member_events_id_rsvp()}
 							canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
 							class="btn-lg {mode === 'external' ? 'btn-outline' : 'btn-primary'}"
 							onsuccess={refreshDetail}
 						>
 							{#snippet form()}
 								<input {...rsvpToEventFields.eventId.as('hidden', evt.id)} />
-								<Field name="attendeeName" type="text" label="Name" bind:value={attendeeName} />
-								<Field name="attendeeEmail" type="email" label="Email" bind:value={attendeeEmail} />
+								<Field
+									name="attendeeName"
+									type="text"
+									label={m.member_name()}
+									bind:value={attendeeName}
+								/>
+								<Field
+									name="attendeeEmail"
+									type="email"
+									label={m.member_email()}
+									bind:value={attendeeEmail}
+								/>
 							{/snippet}
 						</Action>
 					{/if}
 
 					{#if data.rsvpCount > 0}
-						<span class="text-muted">{data.rsvpCount} going</span>
+						<span class="text-muted">{m.member_events_id_going({ rsvpCount: data.rsvpCount })}</span
+						>
 					{/if}
 				</div>
 			{/if}
@@ -502,7 +543,7 @@
 
 	{#if data.upcoming.length > 0}
 		<section class="edet__more">
-			<SectionLabel label="More shows" />
+			<SectionLabel label={m.member_events_id_more_shows()} />
 			<div class="edet__more-grid">
 				{#each data.upcoming as e (e.id)}
 					{@const eTags = parseTags(e.tags)}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The desktop right pane with nothing open, hidden below `lg`. Silent when
 	 * the list is empty: a master/detail layout has three states, and "Pick a
@@ -16,7 +17,7 @@
 {#await result then { rows }}
 	{#if rows.length > 0}
 		<div class="flex h-full items-center justify-center">
-			<EmptyState title="No conversation selected" description="Pick a conversation on the left." />
+			<EmptyState title={m.member_messages_title()} description={m.member_messages_description()} />
 		</div>
 	{/if}
 {/await}

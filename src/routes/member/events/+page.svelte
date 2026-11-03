@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -119,7 +120,7 @@
 	}
 </script>
 
-<PageHeader title="Events">
+<PageHeader title={m.member_events_title()}>
 	<AddShowAction />
 </PageHeader>
 <PageContent>
@@ -127,7 +128,7 @@
 
 	{#if activeTickets.length > 0}
 		<section>
-			<SectionLabel label="My Tickets" count={activeTickets.length} />
+			<SectionLabel label={m.member_events_my_tickets()} count={activeTickets.length} />
 			<Carousel itemCount={activeTickets.length} cardWidth={360}>
 				{#each activeTickets as ticket (ticket.id)}
 					<TicketStub
@@ -150,7 +151,7 @@
 	     listed a dozen (#1025). -->
 	{#if upcoming.length > 0}
 		<section>
-			<SectionLabel label="At the Collective" count={upcoming.length} />
+			<SectionLabel label={m.member_events_at_collective()} count={upcoming.length} />
 
 			{#if allTags.length > 1}
 				<div class="mb-4">
@@ -209,7 +210,7 @@
 	<section>
 		{#if allEvents.length === 0}
 			<div class="py-8 text-center opacity-60">
-				<p class="text-base">Nothing on the calendar yet. Check back soon!</p>
+				<p class="text-base">{m.member_events_nothing_calendar_yet_check_back()}</p>
 			</div>
 		{:else}
 			<GigList events={allEvents} eventBase="/member/events" {rsvpEventIds} />
@@ -225,12 +226,12 @@
 
 	{#if past.length > 0}
 		<section class="opacity-75">
-			<SectionLabel label="Past Events" />
+			<SectionLabel label={m.member_events_past_events()} />
 			<GigList events={pastRows} eventBase="/member/events" />
 			{#if !showAllPast && past.length > PAST_PREVIEW}
 				<div class="mt-4 text-center">
 					<Button type="button" variant="ghost" size="sm" onclick={() => (showAllPast = true)}>
-						Show more
+						{m.member_events_show_more()}
 					</Button>
 				</div>
 			{/if}

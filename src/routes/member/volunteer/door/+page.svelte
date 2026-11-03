@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { browser } from '$app/environment';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -127,17 +128,17 @@
 	<title>{pageTitle('Door sales')}</title>
 </svelte:head>
 
-<PageHeader width="2xl" title="Door sales" />
+<PageHeader width="2xl" title={m.member_volunteer_door_door_sales()} />
 <PageContent width="2xl">
 	{#if door.events.length === 0}
 		<EmptyState
-			title="No show at the door"
-			description="Collective shows starting within a day appear here. A band's own gig is sold by the band."
+			title={m.member_volunteer_door_no_show_at_door()}
+			description={m.member_volunteer_door_collective_shows_starting_within_day()}
 		/>
 	{:else if sale}
 		<Alert>
-			Charging {formatCents(sale.chargeCents)}.
-			{#if !tapped && bridge}Hand the phone over and have them tap their card.{/if}
+			{m.member_volunteer_door_charging({ formatCents: formatCents(sale.chargeCents) })}
+			{#if !tapped && bridge}{m.member_volunteer_door_hand_phone_over_have_them()}{/if}
 		</Alert>
 
 		{#if tapError}
@@ -146,7 +147,9 @@
 
 		{#if tapped}
 			<DoorSaleStatus paymentIntentId={sale.paymentIntentId} />
-			<Button variant="primary" class="min-h-11" onclick={reset}>Next sale</Button>
+			<Button variant="primary" class="min-h-11" onclick={reset}
+				>{m.member_volunteer_door_next_sale()}</Button
+			>
 		{:else}
 			<div class="flex flex-wrap gap-3">
 				{#if bridge}
@@ -155,15 +158,15 @@
 					</Button>
 				{:else if door.canSimulate}
 					<Button variant="primary" class="min-h-11" disabled={busy} onclick={simulate}>
-						Simulate a tap
+						{m.member_simulate_tap()}
 					</Button>
 				{:else}
 					<Alert type="warning">
-						No card reader here. Door sales take cards only in the door phone's app.
+						{m.member_volunteer_door_no_card_reader_here_door()}
 					</Alert>
 				{/if}
 				<Button variant="ghost" class="min-h-11" disabled={busy} onclick={cancel}
-					>Cancel sale</Button
+					>{m.member_volunteer_door_cancel_sale()}</Button
 				>
 			</div>
 		{/if}
@@ -178,7 +181,7 @@
 		<Form remote={startDoorSale} {onsuccess} class="space-y-4">
 			<FormField
 				field={fields.eventId}
-				label="Show"
+				label={m.member_show()}
 				type="select"
 				options={eventOptions}
 				bind:value={chosenEventId}
@@ -186,7 +189,7 @@
 			/>
 			<FormField
 				field={fields.quantity}
-				label="How many"
+				label={m.member_volunteer_door_how_many()}
 				type="number"
 				bind:value={quantity}
 				required
@@ -196,19 +199,19 @@
 			{/if}
 			<MoneyField
 				field={fields.unitPriceCents}
-				label="Each ticket"
+				label={m.member_volunteer_door_each_ticket()}
 				value={door.events[0].suggestedCents}
-				description="Whatever they can pay, at or above the floor. Under {formatCents(
-					TICKET_MIN_CHARGE_CENTS
-				)} in total is free."
+				description={m.member_volunteer_door_whatever_they_can_pay_at({
+					formatCents: formatCents(TICKET_MIN_CHARGE_CENTS)
+				})}
 			/>
-			<SubmitButton label="Take payment" class="min-h-11" />
+			<SubmitButton label={m.member_volunteer_door_take_payment()} class="min-h-11" />
 		</Form>
 
 		<!-- Always here, not only after a failure: a card that cannot tap, and a
 		     staffer whose screen reader blocks PIN entry, never see an error. -->
 		<section class="space-y-2">
-			<h2 class="font-semibold">Card will not tap?</h2>
+			<h2 class="font-semibold">{m.member_volunteer_door_card_will_not_tap()}</h2>
 			{#each door.events as event (event.id)}
 				<p class="text-muted">
 					{event.title}: suggested {formatCents(event.suggestedCents)}{event.floorCents
@@ -220,9 +223,11 @@
 						: ''}.
 					{#if event.onlineSales}
 						They can buy on their own phone at
-						<a class="link" href={resolve(`/events/${event.id}`)}>corvmc.org/events/{event.id}</a>.
+						<a class="link" href={resolve(`/events/${event.id}`)}
+							>{m.member_volunteer_door_corvmc_org_events({ id: event.id })}</a
+						>.
 					{:else}
-						Online sales are closed for this show.
+						{m.member_volunteer_door_online_sales_closed_show()}
 					{/if}
 				</p>
 			{/each}

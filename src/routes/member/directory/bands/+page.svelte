@@ -67,9 +67,9 @@
 	}
 </script>
 
-<PageHeader title={bandsLabel} subtitle="Community">
+<PageHeader title={bandsLabel} subtitle={m.member_community()}>
 	<Button href={resolve('/member/bands?create=1')} variant="ghost" data-sveltekit-reload>
-		New
+		{m.member_new()}
 	</Button>
 </PageHeader>
 <PageContent>
@@ -77,30 +77,30 @@
 		<div class="directory-filters__row">
 			<input
 				type="text"
-				placeholder="Search by name..."
-				aria-label="Search by name"
+				placeholder={m.member_search_by_name()}
+				aria-label={m.member_search_by_name_2()}
 				class="input flex-1"
 				bind:value={search}
 			/>
 			<FormField
 				type="select"
 				name="sort"
-				label="Sort"
+				label={m.member_sort()}
 				options={directorySortOptions}
 				bind:value={sort}
 			/>
 			<label class="directory-filters__toggle">
 				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForMembers} />
-				<span>Looking for members</span>
+				<span>{m.member_looking_members()}</span>
 			</label>
 		</div>
 		<div class="directory-filters__tags">
 			<div class="directory-filters__tag-field">
-				<p class="directory-filters__label">Genres</p>
+				<p class="directory-filters__label">{m.member_genres()}</p>
 				<FreeformTagInput
 					bind:value={filterGenres}
 					suggestions={directory.genreSuggestions}
-					placeholder="Filter by genre..."
+					placeholder={m.member_filter_by_genre()}
 				/>
 			</div>
 		</div>
@@ -109,11 +109,13 @@
 	{#if bands.length === 0}
 		{#if hasFilters}
 			<EmptyState>
-				<p>No {bandsNoun} match your filters.</p>
-				<Button variant="ghost" size="sm" class="mt-2" onclick={clearFilters}>Clear filters</Button>
+				<p>{m.member_directory_bands_no_match_filters({ bandsNoun })}</p>
+				<Button variant="ghost" size="sm" class="mt-2" onclick={clearFilters}
+					>{m.member_clear_filters()}</Button
+				>
 			</EmptyState>
 		{:else}
-			<EmptyState message="No {bandsNoun} in the directory yet." />
+			<EmptyState message={m.member_directory_bands_message({ bandsNoun })} />
 		{/if}
 	{:else}
 		<div class="grid-gallery-tight">
@@ -136,7 +138,7 @@
 	{#if remaining > 0}
 		<div class="flex justify-center">
 			<Button variant="default" size="sm" outline onclick={showMore}>
-				Show more ({remaining} left)
+				{m.member_show_more_left({ remaining })}
 			</Button>
 		</div>
 	{/if}

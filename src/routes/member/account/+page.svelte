@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import DirectMessagesSection from './DirectMessagesSection.svelte';
 	import EmailSubscriptionsSection from './EmailSubscriptionsSection.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -36,44 +37,53 @@
 	const { fields } = updateProfile;
 </script>
 
-<PageHeader width="2xl" title="Account Settings" />
+<PageHeader width="2xl" title={m.member_account_account_settings()} />
 <PageContent width="2xl">
 	<!-- Profile info -->
-	<InfoCard title="Contact Information">
-		<Form remote={updateProfile} guard onsuccess={() => toast.success('Contact info updated')}>
+	<InfoCard title={m.member_account_contact_information()}>
+		<Form
+			remote={updateProfile}
+			guard
+			onsuccess={() => toast.success(m.member_account_contact_info_updated())}
+		>
 			<div class="space-y-4">
 				<div class="grid grid-cols-2 gap-4">
-					<FormField field={fields.name} type="text" label="Name" value={data.user.name} required />
+					<FormField
+						field={fields.name}
+						type="text"
+						label={m.member_name()}
+						value={data.user.name}
+						required
+					/>
 					<FormField
 						field={fields.pronouns}
 						type="text"
-						label="Pronouns"
+						label={m.member_pronouns()}
 						value={data.user.pronouns ?? ''}
-						placeholder="e.g. they/them"
+						placeholder={m.member_account_placeholder()}
 					/>
 				</div>
 
 				<FormField
 					type="email"
-					label="Email"
+					label={m.member_email()}
 					value={data.user.email}
 					readonly
-					description="Contact staff to change your email address."
+					description={m.member_account_contact_staff_change_email_address()}
 				/>
 
 				<!-- Nothing on the site is gated on this. Confirming is what lets us
 				     attach a mailing list this address was already on (#757). -->
 				{#if !data.user.emailVerified}
 					<Alert type="info">
-						This address is not confirmed yet. Your account works either way — confirming lets us
-						link any mailing list you joined with it before.
+						{m.member_account_address_not_confirmed_yet_account()}
 						{#snippet action()}
 							<Action
 								action={resendVerificationEmail}
-								label="Resend link"
+								label={m.member_account_resend_link()}
 								size="sm"
 								variant="default"
-								successToast="Verification email sent"
+								successToast={m.member_account_success_toast()}
 							/>
 						{/snippet}
 					</Alert>
@@ -82,7 +92,7 @@
 				<FormField
 					field={fields.phone}
 					type="tel"
-					label="Phone"
+					label={m.member_phone()}
 					value={data.user.phone ?? ''}
 					placeholder="(541) 555-0123"
 				/>
@@ -94,43 +104,48 @@
 				{#if data.user.dateOfBirth}
 					<FormField
 						type="date"
-						label="Date of birth"
+						label={m.member_account_date_birth()}
 						value={toBirthDateInput(data.user.dateOfBirth)}
 						readonly
-						description="Contact staff if this is wrong."
+						description={m.member_account_contact_staff_if_wrong()}
 					/>
 				{:else}
 					<FormField
 						field={fields.dateOfBirth}
 						type="date"
-						label="Date of birth"
+						label={m.member_account_date_birth()}
 						value=""
-						description="Optional. A few things — direct messages among them — open at {ADULT_AGE_YEARS}. You can only set this once."
+						description={m.member_account_optional_few_things_direct_messages({ ADULT_AGE_YEARS })}
 					/>
 				{/if}
 
 				<div class="flex justify-end pt-2">
-					<SubmitButton label="Save" successLabel="Saved" variant="primary" shortcut="mod+s" />
+					<SubmitButton
+						label={m.member_save()}
+						successLabel={m.member_saved()}
+						variant="primary"
+						shortcut="mod+s"
+					/>
 				</div>
 			</div>
 		</Form>
 	</InfoCard>
 
 	<!-- Notification preferences -->
-	<InfoCard title="Notification Preferences">
+	<InfoCard title={m.member_account_notification_preferences()}>
 		{#if notifPrefs.length === 0}
-			<EmptyState message="No notification preferences available." />
+			<EmptyState message={m.member_account_message()} />
 		{:else}
 			<Table size="md" zebra={false}>
 				{#snippet head()}
-					<th>Notification</th>
+					<th>{m.member_account_notification()}</th>
 					<th class="w-20 text-center">
-						<span class="tooltip" data-tip="Email"><IconMail size={16} /></span>
-						<span class="sr-only">Email</span>
+						<span class="tooltip" data-tip={m.member_email()}><IconMail size={16} /></span>
+						<span class="sr-only">{m.member_email()}</span>
 					</th>
 					<th class="w-20 text-center">
-						<span class="tooltip" data-tip="In-app"><IconBell size={16} /></span>
-						<span class="sr-only">In-app</span>
+						<span class="tooltip" data-tip={m.member_account_app()}><IconBell size={16} /></span>
+						<span class="sr-only">{m.member_account_app()}</span>
 					</th>
 				{/snippet}
 				{#each notifPrefs as pref (pref.key)}
@@ -146,7 +161,7 @@
 								type="checkbox"
 								class="toggle toggle-primary toggle-sm"
 								checked={pref.email}
-								aria-label={`Email notifications for ${pref.label}`}
+								aria-label={m.member_account_email_notifications({ label: pref.label })}
 								onchange={() =>
 									setNotificationPreference({
 										notificationType: pref.key,
@@ -160,7 +175,7 @@
 								type="checkbox"
 								class="toggle toggle-primary toggle-sm"
 								checked={pref.inApp}
-								aria-label={`In-app notifications for ${pref.label}`}
+								aria-label={m.member_account_app_notifications({ label: pref.label })}
 								onchange={() =>
 									setNotificationPreference({
 										notificationType: pref.key,
@@ -181,7 +196,7 @@
 
 		{#snippet failed(_error, reset)}
 			<Alert type="warning" reset={() => retryQuery(getMyMessagingSettings(), reset)}>
-				Your direct message settings didn't load. The rest of your account is up to date.
+				{m.member_account_direct_message_settings_didn_t()}
 			</Alert>
 		{/snippet}
 	</svelte:boundary>
@@ -189,15 +204,15 @@
 	<EmailSubscriptionsSection />
 
 	<!-- Security -->
-	<InfoCard title="Security">
+	<InfoCard title={m.member_account_security()}>
 		<div class="space-y-4">
 			<div class="flex items-center justify-between">
-				<p class="text-muted">Change your account password.</p>
+				<p class="text-muted">{m.member_account_change_account_password()}</p>
 				<Action
 					action={changePassword}
-					label="Change Password"
-					modalTitle="Change Password"
-					onsuccess={() => toast.success('Password changed')}
+					label={m.member_account_change_password()}
+					modalTitle={m.member_account_change_password()}
+					onsuccess={() => toast.success(m.member_account_password_changed())}
 					variant="default"
 					size="sm"
 					outline
@@ -206,19 +221,19 @@
 						<FormField
 							name="currentPassword"
 							type="password"
-							label="Current password"
+							label={m.member_account_current_password()}
 							autocomplete="current-password"
 						/>
 						<FormField
 							name="newPassword"
 							type="password"
-							label="New password"
+							label={m.member_account_new_password()}
 							autocomplete="new-password"
 						/>
 						<FormField
 							name="confirmPassword"
 							type="password"
-							label="Confirm new password"
+							label={m.member_account_confirm_new_password()}
 							autocomplete="new-password"
 						/>
 					{/snippet}
@@ -229,32 +244,31 @@
 
 			<div class="flex items-center justify-between">
 				{#if data.isStaff}
-					<p class="text-muted">Contact an admin to delete your account.</p>
-					<span class="btn btn-disabled btn-error btn-sm">Delete Account</span>
+					<p class="text-muted">{m.member_account_contact_admin_delete_account()}</p>
+					<span class="btn btn-disabled btn-error btn-sm">{m.member_account_delete_account()}</span>
 				{:else}
-					<p class="text-muted">Permanently delete your account and all associated data.</p>
+					<p class="text-muted">{m.member_account_permanently_delete_account_all_associated()}</p>
 					<Action
 						action={deleteAccount}
-						label="Delete Account"
-						modalTitle="Delete Account"
-						submitLabel="Delete My Account"
+						label={m.member_account_delete_account()}
+						modalTitle={m.member_account_delete_account()}
+						submitLabel={m.member_account_submit_label()}
 						variant="error"
 						size="sm"
 						onsuccess={() => {
-							toast.success('Account deleted');
+							toast.success(m.member_account_account_deleted());
 							goto(resolve('/login'));
 						}}
 					>
 						{#snippet form()}
 							<Alert type="error">
-								This action is permanent. Deleting your account will cancel all of your current and
-								future reservations and end your subscription. This cannot be undone.
+								{m.member_account_action_permanent_deleting_account_will()}
 							</Alert>
 
 							<FormField
 								name="password"
 								type="password"
-								label="Enter your password to confirm"
+								label={m.member_account_enter_password_confirm()}
 								autocomplete="current-password"
 							/>
 						{/snippet}

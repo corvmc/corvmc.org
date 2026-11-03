@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import {
 		MembershipHero,
 		BenefitsGrid,
@@ -72,15 +73,16 @@
 
 {#snippet bottomCta(id?: string)}
 	<div {id} class="rounded-xl bg-primary/5 p-8 text-center">
-		<h2 class="mb-4 text-3xl font-bold">Sounds Good?</h2>
+		<h2 class="mb-4 text-3xl font-bold">{m.member_membership_sounds_good()}</h2>
 		<p class="mx-auto mb-6 max-w-2xl opacity-70">
-			{communityStats.sustainingMemberCount} members are already in. Your contribution — whatever the
-			amount — keeps the spaces open, the gear available, and the music going.
+			{m.member_membership_members_already_contribution_whatever_amou({
+				sustainingMemberCount: communityStats.sustainingMemberCount
+			})}
 		</p>
 		<Button variant="primary" size="lg" onclick={() => (subscribeModalOpen = true)}>
-			Become a Sustaining Member
+			{m.member_membership_become_sustaining_member()}
 		</Button>
-		<p class="mt-4 text-muted">Cancel anytime. Seriously.</p>
+		<p class="mt-4 text-muted">{m.member_membership_cancel_anytime_seriously()}</p>
 	</div>
 {/snippet}
 
@@ -103,13 +105,13 @@
 
 		{#snippet failed()}
 			<Alert type="warning">
-				We couldn't load your billing details just now. Everything else on this page is up to date.
+				{m.member_membership_we_couldn_t_load_billing()}
 			</Alert>
 		{/snippet}
 	</svelte:boundary>
 {/snippet}
 
-<Modal bind:open={subscribeModalOpen} title="Become a Sustaining Member">
+<Modal bind:open={subscribeModalOpen} title={m.member_membership_become_sustaining_member()}>
 	<SubscriptionForm mode="create" remote={createSubscription} />
 </Modal>
 
@@ -162,7 +164,7 @@
 		<MembershipHero variant="marketing">
 			{#snippet actions()}
 				<Button variant="default" size="lg" onclick={() => (subscribeModalOpen = true)}>
-					Become a Sustaining Member
+					{m.member_membership_become_sustaining_member()}
 				</Button>
 			{/snippet}
 		</MembershipHero>

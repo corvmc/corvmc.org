@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import { EntityCard } from '$lib/components/ui/entity';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -24,7 +25,7 @@
 	const allocatedHours = $derived(creditsToHours(data.allocatedThisMonth));
 </script>
 
-<PageHeader title="Dashboard">
+<PageHeader title={m.member_dashboard()}>
 	<InviteFriendAction />
 	<ReportBuildingProblemAction />
 </PageHeader>
@@ -39,11 +40,11 @@
 	<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
 		<!-- This week's reservations -->
 		<div class="lg:col-span-2">
-			<InfoCard title="This Week">
+			<InfoCard title={m.member_week()}>
 				{#if data.weekReservations.length === 0}
 					<EmptyState
-						message="No sessions booked this week."
-						actionLabel="Book a session"
+						message={m.member_no_sessions_booked_week()}
+						actionLabel={m.member_book_session()}
 						actionHref="/member/reservations"
 					/>
 				{:else}
@@ -79,11 +80,11 @@
 		</div>
 
 		<!-- Credit balance -->
-		<InfoCard title="Practice Credits">
+		<InfoCard title={m.member_practice_credits()}>
 			{#if isSustaining}
 				<div class="space-y-3">
 					<p class="text-3xl font-medium">
-						{freeHours}<span class="text-base opacity-60"> hrs left</span>
+						{freeHours}<span class="text-base opacity-60"> {m.member_hrs_left()}</span>
 					</p>
 					<progress
 						class="progress w-full progress-primary"
@@ -91,15 +92,17 @@
 						max={data.allocatedThisMonth || 1}
 					></progress>
 					<p class="text-subtle">
-						{usedHours} of {allocatedHours} hours used this month
+						{m.member_hours_used_month({ usedHours, allocatedHours })}
 					</p>
 				</div>
 			{:else}
 				<div class="space-y-3">
 					<p class="text-muted">
-						Become a sustaining member to get free practice hours each month.
+						{m.member_become_sustaining_member_get_free()}
 					</p>
-					<Button href="/member/membership" variant="default" size="sm">Learn More</Button>
+					<Button href="/member/membership" variant="default" size="sm"
+						>{m.member_learn_more()}</Button
+					>
 				</div>
 			{/if}
 		</InfoCard>
@@ -110,11 +113,11 @@
 	<MatchesCard matches={data.matches} />
 
 	<!-- Upcoming events -->
-	<InfoCard title="Upcoming Events">
+	<InfoCard title={m.member_upcoming_events()}>
 		{#if data.upcomingEvents.length === 0}
 			<EmptyState
-				message="No events on the horizon."
-				actionLabel="Browse events"
+				message={m.member_no_events_horizon()}
+				actionLabel={m.member_browse_events()}
 				actionHref="/member/events"
 			/>
 		{:else}

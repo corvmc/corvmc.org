@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import BadgeList from '$lib/components/ui/BadgeList.svelte';
@@ -43,21 +44,21 @@
 	);
 </script>
 
-<InfoCard title={matches.direction && !matches.hidden ? title : 'Find your people'}>
+<InfoCard title={matches.direction && !matches.hidden ? title : m.member_matches_card_title()}>
 	{#if matches.hidden}
 		<!-- Naming the setting rather than hiding the card: a member who cannot
 		     remember switching off reads an empty card as a broken one. -->
 		<EmptyState
-			message="Your profile is hidden, so we're not suggesting people to meet — and you're not being suggested to anyone either."
-			actionLabel="Change who can see you"
+			message={m.member_matches_card_profile_hidden_so_we_re()}
+			actionLabel={m.member_matches_card_change_who_can_see()}
 			actionHref="/member/profile"
 		/>
 	{:else if matches.matches.length === 0}
 		<EmptyState
 			message={missing.length > 0
-				? `Add ${missingSentence} to your profile and we’ll suggest people to meet.`
-				: 'Nothing to suggest yet. Check back once more members and bands have filled in what they’re after.'}
-			actionLabel={missing.length > 0 ? 'Update your profile' : undefined}
+				? m.member_matches_card_add_profile_we_ll_suggest({ missingSentence })
+				: m.member_matches_card_nothing_suggest_yet_check_back()}
+			actionLabel={missing.length > 0 ? m.member_matches_card_update_profile() : undefined}
 			actionHref={missing.length > 0 ? '/member/profile' : undefined}
 		/>
 	{:else}
@@ -79,7 +80,9 @@
 		{#if missing.length > 0}
 			<p class="mt-3 text-subtle">
 				Add {missingSentence} to your
-				<a href={resolve('/member/profile')} class="link link-primary">profile</a>
+				<a href={resolve('/member/profile')} class="link link-primary"
+					>{m.member_matches_card_profile()}</a
+				>
 				for closer matches.
 			</p>
 		{/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import ManageRecurringReservations from './ManageRecurringReservations.svelte';
 	import BookingPolicy from '$lib/components/reservations/BookingPolicy.svelte';
 	import FreeHoursRemaining from '$lib/components/member/membership/FreeHoursRemaining.svelte';
@@ -154,7 +155,7 @@
 	}
 </script>
 
-<PageHeader title="Reserve Practice Space">
+<PageHeader title={m.member_reservations_reserve_practice_space()}>
 	<CreateModal {isSustaining} needsPhone={contact.needsPhone} onbooked={refreshReservations} />
 	{#if isInstructor}
 		<!-- A separate button rather than a mode: teaching time has its own rate,
@@ -177,19 +178,19 @@
 	<article class="@container">
 		<Tabs.Root bind:value={activeTab}>
 			<header class="mb-4 flex w-full items-center justify-between">
-				<h2 class="title">My Reservations</h2>
+				<h2 class="title">{m.member_reservations_my_reservations()}</h2>
 				<Tabs.List class="join">
 					<Tabs.Trigger
 						value="active"
 						class={clsx('btn join-item btn-sm', {
 							'latched btn-primary': activeTab === 'active'
-						})}>Upcoming</Tabs.Trigger
+						})}>{m.member_reservations_upcoming()}</Tabs.Trigger
 					>
 					<Tabs.Trigger
 						value="all"
 						class={clsx('btn join-item btn-sm', {
 							'latched btn-primary': activeTab === 'all'
-						})}>All</Tabs.Trigger
+						})}>{m.member_all()}</Tabs.Trigger
 					>
 				</Tabs.List>
 			</header>
@@ -202,7 +203,7 @@
 					{#await overdueReservations then overdue}
 						{#if overdue.length > 0}
 							<section class="mb-6">
-								<SectionLabel label="Overdue" count={overdue.length} />
+								<SectionLabel label={m.member_overdue()} count={overdue.length} />
 								<OverdueTable reservations={overdue} />
 							</section>
 						{/if}
@@ -212,7 +213,7 @@
 							<ReservationCard {reservation} onchange={refreshReservations} />
 						{:else}
 							<EmptyState
-								message="No upcoming reservations. Use Reserve Space above to book your next practice slot."
+								message={m.member_reservations_no_upcoming_reservations_use_reserve()}
 								class="col-span-full"
 							/>
 						{/each}
@@ -226,7 +227,10 @@
 						{#if history.length > 0}
 							<p class="mb-3 text-subtle">
 								{#if shown.length < history.length}
-									Showing your {shown.length} most recent of {history.length} reservations.
+									{m.member_reservations_showing_most_recent_reservations({
+										length: shown.length,
+										length2: history.length
+									})}
 								{:else}
 									{history.length}
 									{history.length === 1 ? 'reservation' : 'reservations'}, newest first.
@@ -234,9 +238,7 @@
 							</p>
 						{/if}
 						{#if shown.length === 0}
-							<EmptyState
-								message="No reservations yet. Use Reserve Space above to book your first practice slot."
-							/>
+							<EmptyState message={m.member_reservations_no_reservations_yet_use_reserve()} />
 						{/if}
 						<!-- A month header every dozen-or-so rows. Two years of fortnightly
 						     bookings is 53 rows that look alike, and scrolling was the only
@@ -254,7 +256,7 @@
 						{#if shown.length < history.length}
 							<div class="mt-3 flex justify-center">
 								<Button variant="ghost" size="sm" onclick={() => (showAllHistory = true)}>
-									Show all {history.length}
+									{m.member_reservations_show_all({ length: history.length })}
 								</Button>
 							</div>
 						{/if}
@@ -269,20 +271,20 @@
 {#if confirmReservation}
 	<Modal
 		bind:open={confirmModalOpen}
-		title="Slot Available"
+		title={m.member_reservations_slot_available()}
 		maxWidth="max-w-md"
 		onclose={closeConfirmModal}
 	>
 		<Form
 			remote={confirmWaitlisted}
-			successToast="Reservation confirmed"
+			successToast={m.member_reservations_success_toast()}
 			onsuccess={async () => {
 				closeConfirmModal();
 				refreshReservations();
 			}}
 		>
 			<div class="space-y-4">
-				<p class="text-sm">A slot has opened up for your waitlisted reservation:</p>
+				<p class="text-sm">{m.member_reservations_slot_has_opened_up_waitlisted()}</p>
 				<div class="inset border border-base-300 px-4 py-3">
 					<p class="font-medium">{formatMonthDayYear(confirmReservation.startsAt)}</p>
 					<p class="text-muted">
@@ -291,16 +293,21 @@
 				</div>
 				{#if confirmReservation.waitlistExpiresAt}
 					<p class="text-subtle">
-						Confirm by {formatMonthDayYear(confirmReservation.waitlistExpiresAt)} or the slot will be
-						offered to someone else.
+						{m.member_reservations_confirm_by_slot_will_offered({
+							formatMonthDayYear: formatMonthDayYear(confirmReservation.waitlistExpiresAt)
+						})}
 					</p>
 				{/if}
 				<input {...fields.id.as('hidden', confirmReservation.id)} />
 				<div class="flex justify-end gap-2">
 					<Button type="button" variant="default" size="sm" outline onclick={closeConfirmModal}
-						>Dismiss</Button
+						>{m.member_reservations_dismiss()}</Button
 					>
-					<SubmitButton label="Confirm Reservation" variant="success" size="sm" />
+					<SubmitButton
+						label={m.member_reservations_confirm_reservation()}
+						variant="success"
+						size="sm"
+					/>
 				</div>
 			</div>
 		</Form>

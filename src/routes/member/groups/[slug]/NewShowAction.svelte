@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -14,10 +15,10 @@
 
 <Action
 	action={createShow}
-	label="New show"
-	modalTitle="Open a new show"
-	submitLabel="Open"
-	successToast="Show opened"
+	label={m.member_groups_slug_new_show_new_show()}
+	modalTitle={m.member_groups_slug_new_show_modal_title()}
+	submitLabel={m.member_open()}
+	successToast={m.member_groups_slug_new_show_success_toast()}
 	size="sm"
 	onsuccess={(result) => {
 		const eventId = (result as { eventId?: string } | undefined)?.eventId;
@@ -27,13 +28,17 @@
 	{#snippet form()}
 		<Field
 			field={fields.title}
-			label="Name"
-			description="A working title is fine. It stays a draft until someone publishes it."
+			label={m.member_name()}
+			description={m.member_groups_slug_new_show_description()}
 		/>
-		<Field field={fields.eventDate} type="date" label="Date" />
+		<Field field={fields.eventDate} type="date" label={m.member_date()} />
 		<div class="grid grid-cols-2 gap-3">
-			<Field field={fields.eventStartTime} type="time" label="Starts" />
-			<Field field={fields.eventEndTime} type="time" label="Ends" />
+			<Field
+				field={fields.eventStartTime}
+				type="time"
+				label={m.member_groups_slug_new_show_starts()}
+			/>
+			<Field field={fields.eventEndTime} type="time" label={m.member_groups_slug_new_show_ends()} />
 		</div>
 	{/snippet}
 </Action>

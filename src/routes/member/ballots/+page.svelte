@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/** Ballots a member can vote on or certify, drafts of committees they run, and every certified result. */
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -11,7 +12,7 @@
 	const { ballots, committees } = $derived(await getMemberBallots());
 </script>
 
-<PageHeader title="Ballots" subtitle="Member">
+<PageHeader title={m.member_ballots()} subtitle={m.member_member()}>
 	{#if committees.length > 0}
 		<CreateBallotAction kind="group" panel="member" {committees} />
 	{/if}
@@ -20,8 +21,8 @@
 <PageContent>
 	{#if ballots.length === 0}
 		<EmptyState
-			title="No ballots yet"
-			description="When you are on the roll for a vote, or a result is certified, it appears here."
+			title={m.member_ballots_no_ballots_yet()}
+			description={m.member_ballots_description()}
 		/>
 	{:else}
 		<BallotTable rows={ballots} panel="member" />

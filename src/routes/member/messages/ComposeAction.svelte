@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Starting a conversation, of either kind.
 	 *
@@ -34,10 +35,10 @@
 	<Action
 		action={directForm}
 		data-testid="message-member"
-		label="Message a Member"
-		modalTitle="Message a member"
-		submitLabel="Send request"
-		successToast="Request sent"
+		label={m.member_messages_compose_message_member()}
+		modalTitle={m.member_messages_compose_message_member_2()}
+		submitLabel={m.member_messages_compose_send_request()}
+		successToast={m.member_messages_compose_request_sent()}
 		variant="primary"
 		size="sm"
 		canSubmit={!!recipient && body.trim().length > 0}
@@ -58,7 +59,7 @@
 					<input {...directForm.fields.recipientId.as('hidden', recipient.id)} />
 				{/if}
 				<label class="fieldset w-full">
-					<span class="fieldset-legend">To</span>
+					<span class="fieldset-legend">{m.member_text()}</span>
 					<!-- The picker lists everyone the viewer can already see in the
 					     directory, and says nothing about who accepts messages. Marking
 					     the unreachable ones would leak exactly what the silent drop in
@@ -67,7 +68,7 @@
 						bind:value={recipient}
 						labelKey="name"
 						descriptionKey="tagline"
-						placeholder="Search members by name..."
+						placeholder={m.member_messages_compose_search_members_by_name()}
 						search={(q) => searchMessageRecipients({ search: q })}
 					/>
 					<!-- Picking someone commits a tick after the click, so submitting
@@ -75,24 +76,23 @@
 					     a silent no-op: the field has no FormField to hang its issue on,
 					     so nothing on screen changes. -->
 					{#each directForm.fields.recipientId.issues() ?? [] as issue (issue.message)}
-						<p class="text-sm text-error">Choose who this is going to.</p>
+						<p class="text-sm text-error">{m.member_messages_compose_choose_who_going()}</p>
 					{/each}
 				</label>
 
 				<p class="text-muted">
-					This goes as a message request. They'll see it in their Messages and can accept or decline
-					— you'll be able to write again once they accept.
+					{m.member_messages_compose_goes_as_message_request_they()}
 				</p>
 
 				<label class="fieldset w-full">
-					<span class="fieldset-legend">Message</span>
+					<span class="fieldset-legend">{m.member_messages_compose_message()}</span>
 					<textarea
 						{...directForm.fields.body.as('text')}
 						class="textarea w-full"
 						rows="5"
 						maxlength={DIRECT_MESSAGE_BODY_MAX}
 						bind:value={body}
-						placeholder="Say who you are and what you're after"></textarea>
+						placeholder={m.member_messages_compose_say_who_what_re_after()}></textarea>
 				</label>
 			</div>
 		{/snippet}
@@ -101,10 +101,10 @@
 
 <Action
 	action={startForm}
-	label="Message Staff"
-	modalTitle="Message CorvMC staff"
-	submitLabel="Send"
-	successToast="Message sent"
+	label={m.member_messages_compose_message_staff()}
+	modalTitle={m.member_messages_compose_message_corvmc_staff()}
+	submitLabel={m.member_messages_compose_send()}
+	successToast={m.member_messages_compose_message_sent()}
 	variant={canMessageMembers ? 'default' : 'primary'}
 	outline={canMessageMembers}
 	size="sm"
@@ -117,10 +117,10 @@
 	{#snippet form()}
 		<FormField
 			name="subject"
-			label="What's this about?"
+			label={m.member_messages_compose_what_s_about()}
 			type="text"
-			description="A short summary helps staff route your message."
+			description={m.member_messages_compose_description()}
 		/>
-		<FormField name="body" label="Message" type="textarea" />
+		<FormField name="body" label={m.member_messages_compose_message()} type="textarea" />
 	{/snippet}
 </Action>

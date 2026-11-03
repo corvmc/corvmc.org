@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import { getDoorSale } from '$lib/remote/door.remote';
 
@@ -30,12 +31,11 @@
 		{sale.quantity === 1 ? 'ticket' : 'tickets'} checked in. Let them in.
 	</Alert>
 {:else if sale.status === 'cancelled'}
-	<Alert type="warning">This sale was cancelled. Nothing was charged.</Alert>
+	<Alert type="warning">{m.member_volunteer_door_door_sale_status_sale_was_cancelled_no()}</Alert>
 {:else if attempts >= RETRY_LIMIT}
 	<Alert type="warning">
-		The card was accepted, but Stripe has not confirmed it yet. Let them in; the tickets will be
-		checked in when it does.
+		{m.member_volunteer_door_door_sale_status_card_was_accepted_but()}
 	</Alert>
 {:else}
-	<Alert>Card accepted. Recording the sale…</Alert>
+	<Alert>{m.member_volunteer_door_door_sale_status_card_accepted_recordi()}</Alert>
 {/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -54,7 +55,7 @@
 	}
 </script>
 
-<PageHeader title="Suggestions" subtitle="Member">
+<PageHeader title={m.member_suggestions_title()} subtitle={m.member_member()}>
 	<CreateSuggestionAction />
 </PageHeader>
 
@@ -65,7 +66,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search suggestions..."
+				placeholder={m.member_suggestions_placeholder()}
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -74,50 +75,50 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label="Category"
+			aria-label={m.member_category()}
 			value={categoryFilter}
 			onchange={(e: Event) => {
 				categoryFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">All categories</option>
+			<option value="">{m.member_all_categories()}</option>
 			{#each suggestionCategories as c (c)}
 				<option value={c}>{suggestionCategoryLabels[c]}</option>
 			{/each}
 		</Select>
 		<Select
 			size="sm"
-			aria-label="Status"
+			aria-label={m.member_status()}
 			value={statusFilter}
 			onchange={(e: Event) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">Any status</option>
+			<option value="">{m.member_suggestions_any_status()}</option>
 			{#each suggestionStatuses as s (s)}
 				<option value={s}>{suggestionStatusLabels[s]}</option>
 			{/each}
 		</Select>
 		<Select
 			size="sm"
-			aria-label="Sort"
+			aria-label={m.member_sort()}
 			value={sort}
 			onchange={(e: Event) => {
 				sort = (e.currentTarget as HTMLSelectElement).value as 'top' | 'new';
 				page = 1;
 			}}
 		>
-			<option value="top">Most votes</option>
-			<option value="new">Newest</option>
+			<option value="top">{m.member_suggestions_most_votes()}</option>
+			<option value="new">{m.member_suggestions_newest()}</option>
 		</Select>
 	</FilterBar>
 
 	<DataList
 		{result}
-		emptyTitle="No suggestions yet"
-		empty="Be the first to say what the collective should do next."
+		emptyTitle={m.member_suggestions_empty_title()}
+		empty={m.member_suggestions_empty()}
 		onpage={(p) => (page = p)}
 	>
 		{#snippet children(rows)}

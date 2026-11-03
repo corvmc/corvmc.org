@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The day-after survey. Reached from the notification/email, so it has to
 	 * stand alone: say which shift it's about, take two answers, and cope with
@@ -31,19 +32,19 @@
 	const setUp = $derived(submitShiftFeedback.result?.wasSetUp ?? null);
 </script>
 
-<PageHeader width="md" title="How did it go?" subtitle="Volunteering" />
+<PageHeader width="md" title={m.member_how_did_go()} subtitle={m.member_volunteering()} />
 
 <PageContent width="md">
 	{#await context then ctx}
 		{#if !ctx}
 			<EmptyState
-				title="Nothing to review here"
-				description="This shift isn't yours, or it hasn't finished yet."
-				actionLabel="Back to volunteering"
+				title={m.member_volunteer_feedback_signup_id_nothing_review_here()}
+				description={m.member_volunteer_feedback_signup_id_shift_isn_t_yours_hasn()}
+				actionLabel={m.member_volunteer_feedback_signup_id_action_label()}
 				actionHref="/member/volunteer"
 			/>
 		{:else if ctx.alreadySubmitted || submitted}
-			<InfoCard title="Thank you">
+			<InfoCard title={m.member_volunteer_feedback_signup_id_thank()}>
 				<!--
 					The confirmation answers what they actually said. Somebody who has
 					just told us they were not set up to succeed should not be thanked
@@ -52,15 +53,16 @@
 				-->
 				<p class="text-sm">
 					{#if !submitted}
-						You already answered for this shift.
+						{m.member_volunteer_feedback_signup_id_already_answered_shift()}
 					{:else if setUp === false}
-						Got it — and sorry we didn't set you up properly. That goes straight into the briefing
-						for this role, which is the part we can actually fix.
+						{m.member_volunteer_feedback_signup_id_got_sorry_we_didn_t()}
 					{:else}
-						Got it — thanks for helping us run the next one better.
+						{m.member_volunteer_feedback_signup_id_got_thanks_helping_us_ru()}
 					{/if}
 				</p>
-				<a href={resolve('/member/volunteer')} class="link text-sm">Back to volunteering</a>
+				<a href={resolve('/member/volunteer')} class="link text-sm"
+					>{m.member_volunteer_feedback_signup_id_action_label()}</a
+				>
 			</InfoCard>
 		{:else}
 			<InfoCard
@@ -71,7 +73,7 @@
 
 					<!-- Label-only wrapper: RatingGroup owns the real `rating` field via its
 				     hidden input, and naming the wrapper too double-registers the name. -->
-					<Field label="How did the shift go?">
+					<Field label={m.member_volunteer_feedback_signup_id_how_did_shift_go()}>
 						<!--
 							RatingGroup writes the value to a hidden input via `name`, so it
 							submits like any other field while the stars stay keyboard- and
@@ -95,19 +97,19 @@
 					<FormField
 						name="wasSetUp"
 						type="checkbox"
-						label="Were you set up to succeed?"
-						checkboxLabel="I knew what to do and had what I needed"
-						description="Used to fix the briefing, not to assess you."
+						label={m.member_volunteer_feedback_signup_id_were_set_up_succeed()}
+						checkboxLabel={m.member_volunteer_feedback_signup_id_checkbox_label()}
+						description={m.member_volunteer_feedback_signup_id_used_fix_briefing_not_as()}
 					/>
 
 					<FormField
 						name="comment"
 						type="textarea"
-						label="Anything we should fix?"
-						description="Optional. Sent to staff without your name on it."
+						label={m.member_volunteer_feedback_signup_id_anything_we_should_fix()}
+						description={m.member_volunteer_feedback_signup_id_optional_sent_staff_with()}
 					/>
 
-					<SubmitButton label="Send it" variant="primary" />
+					<SubmitButton label={m.member_volunteer_feedback_signup_id_send()} variant="primary" />
 				</Form>
 			</InfoCard>
 		{/if}

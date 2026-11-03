@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Step one of volunteer onboarding: who you are, and whether you're 18.
 	 *
@@ -22,15 +23,15 @@
 
 <PageHeader
 	width="md"
-	title="Volunteer with CMC"
-	subtitle="Volunteering"
-	documentTitle="Volunteer sign-up"
+	title={m.member_volunteer_start_volunteer_with_cmc()}
+	subtitle={m.member_volunteering()}
+	documentTitle={m.member_volunteer_sign_up()}
 />
 
 <PageContent width="md">
 	{#await step then me}
-		<InfoCard title="About you">
-			<p class="text-sm text-base-content/70">Asked once.</p>
+		<InfoCard title={m.member_volunteer_start_about()}>
+			<p class="text-sm text-base-content/70">{m.member_volunteer_start_asked_once()}</p>
 
 			<Form remote={startVolunteerOnboarding}>
 				<ProfileFields
@@ -50,16 +51,16 @@
 				<FormField
 					field={startVolunteerOnboarding.fields.isAdult}
 					type="select"
-					label="Are you 18 or older?"
-					placeholder="Select one"
+					label={m.member_volunteer_start_18_older()}
+					placeholder={m.member_volunteer_start_placeholder()}
 					options={[
-						{ value: 'yes', label: 'Yes, I am 18 or older' },
-						{ value: 'no', label: 'No, I am under 18' }
+						{ value: 'yes', label: m.member_volunteer_start_yes_i_am_18_older() },
+						{ value: 'no', label: m.member_volunteer_start_no_i_am_under_18() }
 					]}
-					description="Under 18 requires a guardian sign-off. You're welcome either way — it just takes a conversation first."
+					description={m.member_volunteer_start_description()}
 				/>
 
-				<SubmitButton label="Continue" variant="primary" />
+				<SubmitButton label={m.member_volunteer_start_continue()} variant="primary" />
 			</Form>
 		</InfoCard>
 	{/await}

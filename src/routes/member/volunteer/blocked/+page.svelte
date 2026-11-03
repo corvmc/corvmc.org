@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	/**
 	 * Where an under-18 sign-up lands.
@@ -22,25 +23,29 @@
 
 <PageHeader
 	width="md"
-	title="Almost there"
-	subtitle="Volunteering"
-	documentTitle="Volunteer sign-up"
+	title={m.member_volunteer_blocked_almost_there()}
+	subtitle={m.member_volunteering()}
+	documentTitle={m.member_volunteer_sign_up()}
 />
 
 <PageContent width="md">
 	{#await notice then me}
-		<InfoCard title="Thanks for signing up, {me.firstName} — one thing first">
+		<InfoCard
+			title={m.member_volunteer_blocked_thanks_signing_up_one_thing({ firstName: me.firstName })}
+		>
 			<p class="text-sm">
-				We'd love to have you. Because you're under 18 there's a bit of paperwork to sort out first,
-				including a guardian's sign-off, and a staff member will get in touch to walk you through
-				it.
+				{m.member_volunteer_blocked_we_d_love_have_because()}
 			</p>
 			<p class="text-sm">
-				Nothing to chase on your end. Once it's done, volunteering opens up right here.
+				{m.member_volunteer_blocked_nothing_chase_end_once_s()}
 			</p>
 			<div class="flex flex-wrap gap-2 pt-2">
-				<Button href={resolve('/contact')} variant="primary" size="sm">Contact staff</Button>
-				<Button href={resolve('/member')} variant="ghost" size="sm">Back to dashboard</Button>
+				<Button href={resolve('/contact')} variant="primary" size="sm"
+					>{m.member_volunteer_blocked_contact_staff()}</Button
+				>
+				<Button href={resolve('/member')} variant="ghost" size="sm"
+					>{m.member_volunteer_blocked_back_dashboard()}</Button
+				>
 			</div>
 		</InfoCard>
 	{/await}

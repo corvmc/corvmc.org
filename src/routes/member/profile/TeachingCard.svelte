@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -46,21 +47,24 @@
 	);
 </script>
 
-<InfoCard title="Teaching at CMC">
+<InfoCard title={m.member_profile_teaching_card_title()}>
 	{#if !instructor}
 		<p class="mb-4 text-subtle">
-			Teach here and you can book the room at the member rate without the monthly cap, and appear in
-			the teacher directory. Staff review your application, and it becomes your listing.
+			{m.member_profile_teaching_card_teach_here_can_book_room()}
 		</p>
 
 		<!-- A link to its own page, not an embedded form: new members submitted
 		     the blank form while working down their profile (#1820). -->
-		<Button href={resolve('/member/profile/teaching/apply')} size="sm">Apply to teach</Button>
+		<Button href={resolve('/member/profile/teaching/apply')} size="sm"
+			>{m.member_apply_teach()}</Button
+		>
 	{:else}
 		<div class="mb-4 flex items-center gap-2">
 			<StatusBadge status={instructor.status} />
 			{#if instructor.status === 'requested'}
-				<span class="text-subtle text-sm">Staff will take a look.</span>
+				<span class="text-subtle text-sm"
+					>{m.member_profile_teaching_card_staff_will_take_look()}</span
+				>
 			{/if}
 		</div>
 
@@ -68,9 +72,9 @@
 			<!-- Handed back, not refused. Stored rather than only emailed because
 			     they cannot fix what they cannot see. -->
 			<Alert type="warning" class="mb-4">
-				<p class="font-semibold">Staff asked for a change</p>
+				<p class="font-semibold">{m.member_profile_teaching_card_staff_asked_change()}</p>
 				<p class="whitespace-pre-line">{instructor.reviewNotes}</p>
-				<p class="mt-2 text-sm">Edit below and send it back — nothing is lost.</p>
+				<p class="mt-2 text-sm">{m.member_profile_teaching_card_edit_below_send_back_nothing()}</p>
 			</Alert>
 		{/if}
 
@@ -80,10 +84,9 @@
 			     never publish a members-only contact on their behalf. -->
 			<Alert type="warning" class="mb-4">
 				{#if hasAnyContact}
-					Your contact details are members-only, so students browsing publicly can't see them. Add a
-					teaching contact, or make your directory contact public.
+					{m.member_profile_teaching_card_contact_details_members_only_so()}
 				{:else}
-					You have no contact details, so students can't reach you. Add some to your profile.
+					{m.member_profile_teaching_card_have_no_contact_details_so()}
 				{/if}
 			</Alert>
 		{/if}
@@ -93,27 +96,31 @@
 				{@const f = isApplication ? applyFields : editFields}
 				<FormField
 					field={f.headline}
-					label="What do you teach?"
+					label={m.member_what_do_teach()}
 					value={instructor.headline}
 					required={isApplication}
 				/>
 				<FormField
 					field={f.blurb}
-					label="About your teaching"
+					label={m.member_about_teaching()}
 					type="textarea"
 					value={instructor.blurb}
 					required={isApplication}
 				/>
-				<FormField field={f.ratesNote} label="Your rates" value={instructor.ratesNote} />
+				<FormField
+					field={f.ratesNote}
+					label={m.member_profile_teaching_card_rates()}
+					value={instructor.ratesNote}
+				/>
 				<FormField
 					field={f.bookingUrl}
-					label="Where students book you"
+					label={m.member_profile_teaching_card_where_students_book()}
 					value={instructor.bookingUrl}
 				/>
 				{#if isApplication}
 					<FormField
 						field={applyFields.applicationNote}
-						label="Anything staff should know? (not published)"
+						label={m.member_anything_staff_should_know_not()}
 						type="textarea"
 						value={instructor.applicationNote}
 					/>
@@ -135,13 +142,15 @@
 
 		{#if isApplication}
 			<Form remote={withdrawApplication} class="mt-4">
-				<SubmitButton variant="ghost">Withdraw application</SubmitButton>
+				<SubmitButton variant="ghost"
+					>{m.member_profile_teaching_card_withdraw_application()}</SubmitButton
+				>
 			</Form>
 		{/if}
 
 		{#if instructor.status === 'paused' || instructor.status === 'retired'}
 			<p class="text-subtle">
-				Your teaching status is set by staff. Get in touch if you'd like to start again.
+				{m.member_profile_teaching_card_teaching_status_set_by_staff()}
 			</p>
 		{/if}
 	{/if}

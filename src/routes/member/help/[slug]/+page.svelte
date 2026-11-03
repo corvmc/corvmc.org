@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { getMemberArticlePage } from '$lib/remote/help.remote';
 	import { extractHeadings } from '$lib/utils/markdown';
@@ -19,7 +20,7 @@
 <PageHeader
 	width="3xl"
 	title={article.title}
-	subtitle="Help Center"
+	subtitle={m.member_help_center()}
 	parent={category ? [{ label: category.name }] : []}
 />
 <PageContent width="3xl">

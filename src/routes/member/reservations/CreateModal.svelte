@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { toast } from 'svelte-sonner';
 	import { bookAndPayReservation } from '$lib/remote/reservations.remote';
 	import { goToCheckout } from '$lib/utils/checkout-navigation';
@@ -30,9 +31,9 @@
 
 <Action
 	action={bookAndPayReservation}
-	label="Reserve Space"
+	label={m.member_reserve_space()}
 	data-testid="book-space"
-	modalTitle="Book a Session"
+	modalTitle={m.member_reservations_create_modal_modal_title()}
 	noFooter
 	variant="primary"
 	maxWidth="max-w-sm"
@@ -50,7 +51,7 @@
 			await goToCheckout(r.redirectUrl);
 		} else {
 			if (r?.waitlisted) {
-				toast.info('The first instance is waitlisted because the slot is currently booked.');
+				toast.info(m.member_first_instance_waitlisted_because_slot());
 			}
 			// Booked outside the window: held, with nothing priced (#2108). Saying so is the point:
 			// this outcome used to arrive as a 400 nobody rendered, over a held
@@ -59,8 +60,8 @@
 				const opens = r.confirmOpensAt ? formatDate(new Date(r.confirmOpensAt)) : null;
 				toast.info(
 					opens
-						? `Room held. Pay for it any time, or confirm it from ${opens}.`
-						: 'Room held. Pay for it any time, or confirm it closer to the date.'
+						? m.member_reservations_create_modal_room_held_pay_any_time({ opens })
+						: m.member_reservations_create_modal_room_held_pay_any_time_2()
 				);
 			}
 			onbooked?.();
@@ -70,7 +71,7 @@
 	{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
 	{#snippet form()}
 		<DateTimeStep {isSustaining} {needsPhone} {reloadToken} />
-		<ConfirmStep submitLabel="Book Session" />
+		<ConfirmStep submitLabel={m.member_reservations_create_modal_submit_label()} />
 		<PaymentStep fields={{ coverFees: fields.coverFees }} />
 		<BookingConflict result={bookAndPayReservation.result} onconflict={() => reloadToken++} />
 	{/snippet}

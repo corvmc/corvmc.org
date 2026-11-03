@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -15,29 +16,38 @@
 	const fields = applyToTeach.fields;
 </script>
 
-<PageHeader width="3xl" subtitle="Teaching" title="Apply to teach" />
+<PageHeader
+	width="3xl"
+	subtitle={m.member_profile_teaching_apply_subtitle()}
+	title={m.member_apply_teach()}
+/>
 <PageContent width="3xl">
-	<InfoCard title="Your application">
+	<InfoCard title={m.member_profile_teaching_apply_application()}>
 		<p class="mb-4 text-subtle">
-			Teachers book the room at the member rate without the monthly cap, and appear in the teacher
-			directory. Staff review what you write here, and it becomes your listing.
+			{m.member_profile_teaching_apply_teachers_book_room_at_member()}
 		</p>
 
 		<Form
 			remote={applyToTeach}
-			successToast="Application sent"
+			successToast={m.member_application_sent()}
 			onsuccess={() => goto(resolve('/member/profile'))}
 		>
-			<FormField field={fields.headline} label="What do you teach?" required />
-			<FormField field={fields.blurb} label="About your teaching" type="textarea" required />
-			<FormField field={fields.ratesNote} label="Your rates (shown as written)" />
-			<FormField field={fields.bookingUrl} label="Where students book you (optional)" />
+			<FormField field={fields.headline} label={m.member_what_do_teach()} required />
+			<FormField field={fields.blurb} label={m.member_about_teaching()} type="textarea" required />
+			<FormField
+				field={fields.ratesNote}
+				label={m.member_profile_teaching_apply_rates_shown_as_written()}
+			/>
+			<FormField
+				field={fields.bookingUrl}
+				label={m.member_profile_teaching_apply_where_students_book_optional()}
+			/>
 			<FormField
 				field={fields.applicationNote}
-				label="Anything staff should know? (not published)"
+				label={m.member_anything_staff_should_know_not()}
 				type="textarea"
 			/>
-			<SubmitButton>Send application</SubmitButton>
+			<SubmitButton>{m.member_send_application()}</SubmitButton>
 		</Form>
 	</InfoCard>
 </PageContent>
