@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -13,12 +14,12 @@
 </script>
 
 {#if markets.length > 0}
-	<InfoCard title="Market days">
+	<InfoCard title={m.member_groups_slug_committee_markets_title()}>
 		<Table>
 			{#snippet head()}
-				<th>Market</th>
-				<th>Date</th>
-				<th><span class="sr-only">Vendors</span></th>
+				<th>{m.member_groups_slug_committee_markets_market()}</th>
+				<th>{m.member_date()}</th>
+				<th><span class="sr-only">{m.member_vendors()}</span></th>
 			{/snippet}
 			{#each markets as market (market.eventId)}
 				<tr>
@@ -26,10 +27,14 @@
 					<td>{formatDateShort(market.startsAt)}</td>
 					<td class="text-right">
 						<a class="link" href={resolve(`/member/groups/${slug}/markets/${market.eventId}`)}>
-							Vendors
+							{m.member_vendors()}
 						</a>
 						{#if market.toReview > 0}
-							<Badge variant="warning" size="sm">{market.toReview} to review</Badge>
+							<Badge variant="warning" size="sm"
+								>{m.member_groups_slug_committee_markets_review({
+									toReview: market.toReview
+								})}</Badge
+							>
 						{/if}
 					</td>
 				</tr>

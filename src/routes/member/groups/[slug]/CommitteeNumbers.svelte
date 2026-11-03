@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import StatCard from '$lib/components/ui/StatCard.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -29,23 +30,35 @@
 
 {#await report then r}
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-		<StatCard title="Earned" value={formatCents(r.money.totalsByKind.earned)} />
-		<StatCard title="Spent" value={formatCents(r.money.totalsByKind.spent)} />
-		<StatCard title="Net" value={formatCents(r.money.netCents)} />
-		<StatCard title="Approved hours" value={formatVolunteerHours(r.volunteering.totalMinutes)} />
+		<StatCard
+			title={m.member_groups_slug_committee_numbers_earned()}
+			value={formatCents(r.money.totalsByKind.earned)}
+		/>
+		<StatCard
+			title={m.member_groups_slug_committee_numbers_spent()}
+			value={formatCents(r.money.totalsByKind.spent)}
+		/>
+		<StatCard
+			title={m.member_groups_slug_committee_numbers_net()}
+			value={formatCents(r.money.netCents)}
+		/>
+		<StatCard
+			title={m.member_groups_slug_committee_numbers_approved_hours()}
+			value={formatVolunteerHours(r.volunteering.totalMinutes)}
+		/>
 	</div>
 
-	<InfoCard title="Ledger lines">
+	<InfoCard title={m.member_groups_slug_committee_numbers_ledger_lines()}>
 		<p class="mb-3 text-subtle text-sm">
-			Entries recorded against this committee's projects in the range above.
+			{m.member_groups_slug_committee_numbers_entries_recorded_agains()}
 		</p>
 		{#if r.money.byKind.earned.length + r.money.byKind.spent.length === 0}
-			<EmptyState description="Nothing recorded against these projects in this range." />
+			<EmptyState description={m.member_groups_slug_committee_numbers_nothing_recorded_agains()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Line</th>
-					<th class="text-right">Amount</th>
+					<th>{m.member_groups_slug_committee_numbers_line()}</th>
+					<th class="text-right">{m.member_amount()}</th>
 				{/snippet}
 				{#each [...r.money.byKind.earned, ...r.money.byKind.spent] as line, i (i)}
 					<tr>
@@ -57,17 +70,17 @@
 		{/if}
 	</InfoCard>
 
-	<InfoCard title="Project budgets">
+	<InfoCard title={m.member_groups_slug_committee_numbers_project_budgets()}>
 		{#if r.projects.length === 0}
-			<EmptyState description="This committee has no projects yet." />
+			<EmptyState description={m.member_groups_slug_committee_numbers_committee_has_no_projec()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Project</th>
-					<th>Status</th>
-					<th class="text-right">Budget</th>
-					<th class="text-right">Committed</th>
-					<th class="text-right">Remaining</th>
+					<th>{m.member_project()}</th>
+					<th>{m.member_status()}</th>
+					<th class="text-right">{m.member_groups_slug_committee_numbers_budget()}</th>
+					<th class="text-right">{m.member_groups_slug_committee_numbers_committed()}</th>
+					<th class="text-right">{m.member_groups_slug_committee_numbers_remaining()}</th>
 				{/snippet}
 				{#each r.projects as project (project.id)}
 					<tr>
@@ -84,9 +97,7 @@
 				{/each}
 			</Table>
 			<p class="mt-3 text-subtle text-sm">
-				Committed is cash each project has taken over its whole life, whatever the range above:
-				contractors, orders and purchases. Volunteer time and donated goods are not set against a
-				budget.
+				{m.member_groups_slug_committee_numbers_committed_cash_each_pro()}
 			</p>
 		{/if}
 	</InfoCard>

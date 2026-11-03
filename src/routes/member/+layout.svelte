@@ -60,7 +60,7 @@
 				href: resolve('/member/groups/[slug]', { slug: g.slug })
 			}));
 			return navTrail(
-				[{ items: memberNavItems(navInput) }, { title: 'My Groups', items: groups }],
+				[{ items: memberNavItems(navInput) }, { title: m.member_my_groups(), items: groups }],
 				page.url.pathname
 			);
 		}
@@ -136,7 +136,7 @@
 		     every member's localStorage, so renaming it would silently re-expand the
 		     group for everyone who had collapsed it. -->
 		<Nav.Group
-			title={`My ${many(m.term_band)}`}
+			title={m.member_my({ many: many(m.term_band) })}
 			collapsible
 			persistKey="my-bands"
 			persistScope="member"
@@ -148,8 +148,8 @@
 					variant="ghost"
 					size="xs"
 					class="latched"
-					aria-label={`New ${m.term_band({ count: 1 })}`}
-					data-sveltekit-reload>New</Button
+					aria-label={m.member_aria_label({ term_band: m.term_band({ count: 1 }) })}
+					data-sveltekit-reload>{m.member_new()}</Button
 				>
 			{/snippet}
 			{#each layout.userBands as band (band.slug)}
@@ -180,7 +180,7 @@
 		     with a panel, a club is a program with a page. No New here, because
 		     members cannot create clubs or committees. -->
 		<Nav.Group
-			title="My Groups"
+			title={m.member_my_groups()}
 			collapsible
 			persistKey="my-groups"
 			persistScope="member"
@@ -199,7 +199,7 @@
 					{/snippet}
 				</Nav.Item>
 			{/each}
-			<Nav.Item href={resolve('/member/groups')} label="Browse Groups">
+			<Nav.Item href={resolve('/member/groups')} label={m.member_label()}>
 				{#snippet icon()}<IconSearch />{/snippet}
 			</Nav.Item>
 		</Nav.Group>

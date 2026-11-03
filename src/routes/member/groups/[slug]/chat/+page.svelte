@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The group's topics. One page rather than a pane: a club's panel has no
 	 * inbox shell, so picking a topic is a navigation and the topic page has a
@@ -12,7 +13,7 @@
 	const slug = $derived(page.params.slug!);
 </script>
 
-<PageHeader width="2xl" title="Chat" />
+<PageHeader width="2xl" title={m.member_chat()} />
 <PageContent width="2xl">
 	<GroupTopicList
 		{slug}

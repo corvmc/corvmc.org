@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -71,14 +72,16 @@
 	const active = $derived(data.active);
 </script>
 
-<PageHeader width="2xl" title="My Bands" subtitle="Member">
-	<Button variant="default" size="sm" onclick={() => (showCreateModal = true)}>Create Band</Button>
+<PageHeader width="2xl" title={m.member_bands_my_bands()} subtitle={m.member_member()}>
+	<Button variant="default" size="sm" onclick={() => (showCreateModal = true)}
+		>{m.member_bands_create_band()}</Button
+	>
 </PageHeader>
 <PageContent width="2xl">
 	<!-- Pending invitations -->
 	{#if pending.length > 0 || data.emailInvites.length > 0}
 		<section>
-			<h2 class="mb-3 text-lg font-semibold">Pending Invitations</h2>
+			<h2 class="mb-3 text-lg font-semibold">{m.member_bands_pending_invitations()}</h2>
 			<div class="space-y-3">
 				{#each pending as invite (invite.id)}
 					{@const accept = acceptInvite.for(invite.id)}
@@ -89,7 +92,7 @@
 								<div>
 									<p class="font-medium">{invite.name}</p>
 									<p class="text-muted">
-										Invited as {invite.role}
+										{m.member_bands_invited_as({ role: invite.role })}
 									</p>
 								</div>
 								<div class="flex gap-2">
@@ -97,17 +100,17 @@
 										remote={accept}
 										onsuccess={(result) => {
 											if (result?.success === false) {
-												toast.error('That invitation is no longer available.');
+												toast.error(m.member_bands_invitation_no_longer_available());
 											} else {
-												toast.success('Invitation accepted');
+												toast.success(m.member_bands_invitation_accepted());
 											}
 											invalidateAll();
 										}}
 									>
 										<input {...accept.fields.bandId.as('hidden', invite.id)} />
 										<SubmitButton
-											label="Accept"
-											successLabel="Accepted"
+											label={m.member_accept()}
+											successLabel={m.member_bands_accepted()}
 											variant="primary"
 											size="sm"
 										/>
@@ -116,17 +119,17 @@
 										remote={decline}
 										onsuccess={(result) => {
 											if (result?.success === false) {
-												toast.error('That invitation is no longer available.');
+												toast.error(m.member_bands_invitation_no_longer_available());
 											} else {
-												toast.success('Invitation declined');
+												toast.success(m.member_bands_invitation_declined());
 											}
 											invalidateAll();
 										}}
 									>
 										<input {...decline.fields.bandId.as('hidden', invite.id)} />
 										<SubmitButton
-											label="Decline"
-											successLabel="Declined"
+											label={m.member_decline()}
+											successLabel={m.member_bands_declined()}
 											variant="ghost"
 											size="sm"
 										/>
@@ -147,9 +150,9 @@
 	<!-- Active bands -->
 	<section>
 		{#if active.length === 0 && pending.length === 0 && data.emailInvites.length === 0}
-			<EmptyState message="You're not in any bands yet. Create one to get started." />
+			<EmptyState message={m.member_bands_re_not_any_bands_yet()} />
 		{:else if active.length === 0}
-			<EmptyState message="No active bands yet." />
+			<EmptyState message={m.member_bands_no_active_bands_yet()} />
 		{:else}
 			<div class="space-y-3">
 				{#each active as b (b.id)}
@@ -175,7 +178,11 @@
 </PageContent>
 
 <!-- Create Band Modal -->
-<Modal title="Create Band" bind:open={showCreateModal} onclose={onCreateModalClose}>
+<Modal
+	title={m.member_bands_create_band()}
+	bind:open={showCreateModal}
+	onclose={onCreateModalClose}
+>
 	<Form
 		remote={createBand}
 		onfailure={(issues) => {
@@ -183,10 +190,10 @@
 			// toast would only repeat it. Reserve the generic message for genuine
 			// server/network failures, which have no field to point at — previously
 			// both produced the same opaque "Failed to create band".
-			if (!issues?.length) toast.error('Failed to create band');
+			if (!issues?.length) toast.error(m.member_bands_failed_create_band());
 		}}
 		onsuccess={(result) => {
-			toast.success('Band created');
+			toast.success(m.member_bands_band_created());
 			showCreateModal = false;
 			if (result?.slug) goto(resolve(`/band/${result.slug}`));
 		}}
@@ -194,22 +201,26 @@
 		<div class="space-y-4">
 			<FormField
 				field={createBand.fields.name}
-				label="Band name"
+				label={m.member_bands_band_name()}
 				type="text"
-				placeholder="e.g. The Velvet Underground"
+				placeholder={m.member_bands_e_g_velvet_underground()}
 				required
 			/>
 
 			<FormField
 				field={createBand.fields.bio}
-				label="Bio"
+				label={m.member_bio()}
 				type="textarea"
 				rows={3}
-				placeholder="Tell people about your band (optional)"
+				placeholder={m.member_bands_tell_people_about_band_optional()}
 			/>
 
 			<div class="flex justify-end pt-2">
-				<SubmitButton label="Create Band" successLabel="Created" variant="primary" />
+				<SubmitButton
+					label={m.member_bands_create_band()}
+					successLabel={m.member_bands_created()}
+					variant="primary"
+				/>
 			</div>
 		</div>
 	</Form>

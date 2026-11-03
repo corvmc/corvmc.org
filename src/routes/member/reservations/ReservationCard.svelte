@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import {
@@ -52,7 +53,9 @@
 					<!-- Issued, but the lock has not confirmed it. Showing the digits
 					     here would be a promise we cannot keep; the detail page has
 					     the break-glass code once they are due in. -->
-					<span class="text-muted">Door code pending</span>
+					<span class="text-muted"
+						>{m.member_reservations_reservation_card_door_code_pending()}</span
+					>
 				{/if}
 			</p>
 		{/if}
@@ -84,10 +87,10 @@
 		{#if withCredits}
 			<Action
 				action={creditPay}
-				label="Pay with credits"
-				modalTitle="Pay with credits"
-				submitLabel="Pay with credits"
-				successToast="Paid with credits"
+				label={m.member_reservations_reservation_card_label()}
+				modalTitle={m.member_reservations_reservation_card_label()}
+				submitLabel={m.member_reservations_reservation_card_label()}
+				successToast={m.member_reservations_reservation_card_success_toast()}
 				variant="primary"
 				size="xs"
 				onsuccess={onchange}
@@ -95,7 +98,7 @@
 				{#snippet form()}
 					<input {...creditPay.fields.id.as('hidden', reservation.id)} />
 					<input {...creditPay.fields.skipPayment.as('hidden', 'on')} />
-					<p>Uses your free hours. Nothing is charged.</p>
+					<p>{m.member_reservations_reservation_card_uses_free_hours_nothing()}</p>
 				{/snippet}
 			</Action>
 		{:else if payAction}

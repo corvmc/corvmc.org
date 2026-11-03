@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The door list, for the person on the door.
 	 *
@@ -36,17 +37,33 @@
 
 <PageHeader
 	width="2xl"
-	title="Check-in"
+	title={m.member_volunteer_shifts_signup_id_check_in_check()}
 	subtitle={data.event.title}
-	parent={{ label: 'Shift', href: resolve('/member/volunteer/shifts/[signupId]', { signupId }) }}
+	parent={{
+		label: m.member_volunteer_shifts_signup_id_check_in_shift(),
+		href: resolve('/member/volunteer/shifts/[signupId]', { signupId })
+	}}
 />
 <PageContent width="2xl">
 	<div class="flex gap-4">
-		<StatCard title="Checked in" value={data.stats.checkedIn} size="sm" class="p-4" />
-		<StatCard title="Tickets sold" value={data.stats.sold} size="sm" class="p-4" />
+		<StatCard
+			title={m.member_volunteer_shifts_signup_id_check_in_checked()}
+			value={data.stats.checkedIn}
+			size="sm"
+			class="p-4"
+		/>
+		<StatCard
+			title={m.member_volunteer_shifts_signup_id_check_in_tickets_sold()}
+			value={data.stats.sold}
+			size="sm"
+			class="p-4"
+		/>
 	</div>
 
-	<SearchInput bind:value={search} placeholder="Search by name or code" />
+	<SearchInput
+		bind:value={search}
+		placeholder={m.member_volunteer_shifts_signup_id_check_in_placeholder()}
+	/>
 
 	<div class="space-y-2">
 		{#each matching as ticket (ticket.id)}
@@ -63,12 +80,16 @@
 						     at a door, one-handed. daisyUI's default `btn` is 40 (#971). -->
 						<Form
 							remote={checkInAsVolunteer.for(ticket.id)}
-							successToast="Checked in"
+							successToast={m.member_volunteer_shifts_signup_id_check_in_checked()}
 							class="inline"
 						>
 							<input type="hidden" name="ticketId" value={ticket.id} />
 							<input type="hidden" name="signupId" value={signupId} />
-							<SubmitButton label="Check in" variant="primary" class="min-h-11" />
+							<SubmitButton
+								label={m.member_volunteer_shifts_signup_id_check_in_check_2()}
+								variant="primary"
+								class="min-h-11"
+							/>
 						</Form>
 					{/if}
 				</CardBody>

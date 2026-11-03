@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -15,7 +16,9 @@
 
 <PageHeader
 	width="3xl"
-	title="Edit {group.kind === 'committee' ? 'committee' : 'club'}"
+	title={m.member_groups_slug_edit_title({
+		value: group.kind === 'committee' ? 'committee' : 'club'
+	})}
 	subtitle={group.name}
 />
 <PageContent width="3xl">

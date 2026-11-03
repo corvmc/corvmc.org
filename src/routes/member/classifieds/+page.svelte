@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page as pageState } from '$app/state';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -75,15 +76,15 @@
 	}
 </script>
 
-<PageHeader title="Classifieds" subtitle="Community">
+<PageHeader title={m.member_classifieds()} subtitle={m.member_community()}>
 	<CreateClassifiedAction />
 </PageHeader>
 
 <PageContent>
 	<TabBar
 		tabs={[
-			{ key: 'board', label: 'Board' },
-			{ key: 'mine', label: 'Your posts' }
+			{ key: 'board', label: m.member_classifieds_board() },
+			{ key: 'mine', label: m.member_classifieds_posts() }
 		]}
 		active={tab}
 		onchange={(k) => {
@@ -96,7 +97,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search posts..."
+				placeholder={m.member_classifieds_placeholder()}
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -105,34 +106,34 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label="Post type"
+			aria-label={m.member_classifieds_post_type()}
 			value={kindFilter}
 			onchange={(e: Event) => {
 				kindFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">Any type</option>
+			<option value="">{m.member_classifieds_any_type()}</option>
 			{#each classifiedKinds as k (k)}
 				<option value={k}>{classifiedKindLabels[k]}</option>
 			{/each}
 		</Select>
 		<Select
 			size="sm"
-			aria-label="Category"
+			aria-label={m.member_category()}
 			value={categoryFilter}
 			onchange={(e: Event) => {
 				categoryFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">All categories</option>
+			<option value="">{m.member_all_categories()}</option>
 			{#each classifiedCategories as c (c)}
 				<option value={c}>{classifiedCategoryLabels[c]}</option>
 			{/each}
 		</Select>
 		{#if tagValue}
-			<Badge size="sm" variant="outline">Tagged {tagValue}</Badge>
+			<Badge size="sm" variant="outline">{m.member_classifieds_tagged({ tagValue })}</Badge>
 		{/if}
 	</FilterBar>
 
@@ -142,16 +143,18 @@
 
 	<DataList
 		{result}
-		empty={tab === 'mine' ? 'You have not posted anything yet' : 'Nothing on the board right now'}
+		empty={tab === 'mine'
+			? m.member_classifieds_have_not_posted_anything_yet()
+			: m.member_classifieds_nothing_board_right_now()}
 		onpage={(p) => (page = p)}
 	>
 		{#snippet children(rows)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Post</th>
-					<th>Posted by</th>
-					<th class="col-support">Tags</th>
+					<th class="w-px"><span class="sr-only">{m.member_status()}</span></th>
+					<th>{m.member_classifieds_post()}</th>
+					<th>{m.member_classifieds_posted_by()}</th>
+					<th class="col-support">{m.member_tags()}</th>
 					<th class="col-extra whitespace-nowrap">{tab === 'mine' ? 'Expires' : 'Posted'}</th>
 				{/snippet}
 				{#each rows as r (r.id)}

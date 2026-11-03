@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import { clubToday, incidentCategories, incidentCategoryLabels } from '$lib/config';
@@ -16,10 +17,10 @@
 
 <Action
 	action={fileShowIncidentForm}
-	label="Report an incident"
-	modalTitle="Report an incident"
-	submitLabel="Send to staff"
-	successToast="Sent. Staff will review it."
+	label={m.member_volunteer_shifts_signup_id_file_incident_report_incid()}
+	modalTitle={m.member_volunteer_shifts_signup_id_file_incident_report_incid()}
+	submitLabel={m.member_send_staff()}
+	successToast={m.member_volunteer_shifts_signup_id_file_incident_success_toas()}
 	variant="default"
 	size="sm"
 	outline
@@ -28,16 +29,33 @@
 	{#snippet form()}
 		<input {...fields.eventId.as('hidden', eventId)} />
 		<div class="grid grid-cols-2 gap-3">
-			<Field field={fields.occurredOn} type="date" label="Date" value={clubToday()} />
-			<Field field={fields.occurredAt} type="time" label="Time" />
+			<Field field={fields.occurredOn} type="date" label={m.member_date()} value={clubToday()} />
+			<Field field={fields.occurredAt} type="time" label={m.member_time()} />
 		</div>
-		<Field field={fields.category} type="select" label="Kind" options={categoryOptions} />
-		<Field field={fields.summary} type="text" label="Summary" description="One line." />
-		<Field field={fields.description} type="textarea" label="What happened" />
-		<Field field={fields.location} type="text" label="Where" />
+		<Field
+			field={fields.category}
+			type="select"
+			label={m.member_volunteer_shifts_signup_id_file_incident_kind()}
+			options={categoryOptions}
+		/>
+		<Field
+			field={fields.summary}
+			type="text"
+			label={m.member_volunteer_shifts_signup_id_file_incident_summary()}
+			description={m.member_volunteer_shifts_signup_id_file_incident_description()}
+		/>
+		<Field
+			field={fields.description}
+			type="textarea"
+			label={m.member_volunteer_shifts_signup_id_file_incident_what_happene()}
+		/>
+		<Field
+			field={fields.location}
+			type="text"
+			label={m.member_volunteer_shifts_signup_id_file_incident_where()}
+		/>
 		<p class="text-muted text-wrap">
-			Staff review what you send and complete the record. You will see what you filed here, and
-			nothing else in the log.
+			{m.member_volunteer_shifts_signup_id_file_incident_staff_review()}
 		</p>
 	{/snippet}
 </Action>

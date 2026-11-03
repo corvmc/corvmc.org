@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { getMemberAsset } from '$lib/remote/inventory.remote';
 	import { ReportDamageAction } from '$lib/components/actions';
@@ -35,7 +36,7 @@
 	width="2xl"
 	subtitle={asset.categoryName}
 	title={asset.name}
-	parent={{ label: 'Equipment', href: resolve('/member/equipment') }}
+	parent={{ label: m.member_equipment_assets_id_equipment(), href: resolve('/member/equipment') }}
 >
 	<!-- The whole point of the sticker. This page had `itemId` and used it only
 	     to fetch resources, so a member who scanned a thing they wanted was told
@@ -43,20 +44,22 @@
 	     request form; `?request=` opens it on the right item. -->
 	{#if asset.isAvailable}
 		<Button href={resolve(`/member/equipment?request=${asset.itemId}`)} variant="primary" size="sm">
-			Ask to borrow this
+			{m.member_equipment_assets_id_ask_borrow()}
 		</Button>
 	{:else}
 		<Button href={resolve('/member/equipment')} variant="default" size="sm" outline>
-			See what else is free
+			{m.member_equipment_assets_id_see_what_else_free()}
 		</Button>
 	{/if}
 </PageHeader>
 
 <PageContent width="2xl">
-	<InfoCard title={asset.assetTag ?? 'This unit'}>
+	<InfoCard title={asset.assetTag ?? m.member_equipment_assets_id_unit()}>
 		{#if !asset.isAvailable}
 			<Alert type="warning" class="mb-4">
-				This one is {assetStatusLabels[asset.status].toLowerCase()} right now.
+				{m.member_equipment_assets_id_one_right_now({
+					toLowerCase: assetStatusLabels[asset.status].toLowerCase()
+				})}
 			</Alert>
 		{/if}
 
@@ -65,16 +68,16 @@
 		{/if}
 
 		<DefinitionList>
-			<Fact label="Condition">
+			<Fact label={m.member_equipment_assets_id_condition()}>
 				<Badge size="sm" class={equipmentConditionBadge[asset.condition] ?? 'badge-ghost'}>
 					{titleCase(asset.condition)}
 				</Badge>
 			</Fact>
 			{#if asset.locationName}
-				<Fact label="Kept in">{asset.locationName}</Fact>
+				<Fact label={m.member_equipment_assets_id_kept()}>{asset.locationName}</Fact>
 			{/if}
 			{#if asset.assetTag}
-				<Fact label="Tag" mono>{asset.assetTag}</Fact>
+				<Fact label={m.member_equipment_assets_id_tag()} mono>{asset.assetTag}</Fact>
 			{/if}
 		</DefinitionList>
 
@@ -88,7 +91,7 @@
 	<!-- Documentation belongs to the catalog entry, not the unit: the manual for a
 	     K12.2 is the manual for all four of them. -->
 	{#if resources.manuals.length > 0 || resources.articles.length > 0}
-		<InfoCard title="How to use it" class="mt-6">
+		<InfoCard title={m.member_equipment_assets_id_how_use()} class="mt-6">
 			{#if resources.articles.length > 0}
 				<ul class="space-y-2">
 					{#each resources.articles as article (article.id)}

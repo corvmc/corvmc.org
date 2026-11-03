@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
@@ -39,23 +40,29 @@
 	}
 </script>
 
-<Form remote={updateGroupProfileForm} guard onsuccess={() => toast.success('Saved')}>
+<Form remote={updateGroupProfileForm} guard onsuccess={() => toast.success(m.member_saved())}>
 	<input {...fields.slug.as('hidden', group.slug)} />
 
-	<InfoCard title="Basics">
+	<InfoCard title={m.member_groups_slug_edit_group_profile_form_basics()}>
 		<div class="flex flex-col gap-4 sm:flex-row sm:items-start">
 			<div class="flex-1 space-y-4">
-				<FormField field={fields.name} type="text" label="Name" value={group.name} required />
+				<FormField
+					field={fields.name}
+					type="text"
+					label={m.member_name()}
+					value={group.name}
+					required
+				/>
 
-				<FormField label="Address" readonly display={`/member/groups/${group.slug}`}>
+				<FormField label={m.member_address()} readonly display={`/member/groups/${group.slug}`}>
 					{#snippet description()}
-						Renaming the {kindLabel} doesn't move its address.
+						{m.member_groups_slug_edit_group_profile_form_renaming_doesn_t({ kindLabel })}
 					{/snippet}
 				</FormField>
 			</div>
 
 			<FormField
-				label="Photo"
+				label={m.member_groups_slug_edit_group_profile_form_photo()}
 				name="avatarKey"
 				type="file"
 				upload={uploadAvatar}
@@ -67,34 +74,41 @@
 		</div>
 
 		<div class="mt-4">
-			<FormField field={fields.bio} label="About">
+			<FormField field={fields.bio} label={m.member_about()}>
 				<input {...fields.bio.as('hidden', bioHtml)} />
-				<RichTextEditor bind:value={bioHtml} placeholder="What is this {kindLabel} for?" />
+				<RichTextEditor
+					bind:value={bioHtml}
+					placeholder={m.member_groups_slug_edit_group_profile_form_placeholder({ kindLabel })}
+				/>
 			</FormField>
 		</div>
 	</InfoCard>
 
-	<InfoCard title="Joining">
+	<InfoCard title={m.member_groups_slug_edit_group_profile_form_joining()}>
 		<!-- Read-only, and it says who to ask. The join policy decides who may
 		     walk in, and the spec's case for free room time rests on staff being
 		     the ones who settle that — so a leader sees it rather than sets it. -->
-		<FormField label="Who can join" readonly display={policyLabel[group.joinPolicy]}>
+		<FormField
+			label={m.member_groups_slug_edit_group_profile_form_who_can_join()}
+			readonly
+			display={policyLabel[group.joinPolicy]}
+		>
 			{#snippet description()}
-				Staff set this. Ask them if it needs to change.
+				{m.member_groups_slug_edit_group_profile_form_staff_set_ask_the()}
 			{/snippet}
 		</FormField>
 
 		<FormField
 			field={fields.joinInstructions}
 			type="textarea"
-			label="How it works"
+			label={m.member_how_works()}
 			value={group.joinInstructions ?? ''}
-			description="Shown beside the Join button and on the {kindLabel}'s Overview tab."
+			description={m.member_groups_slug_edit_group_profile_form_description({ kindLabel })}
 		/>
 	</InfoCard>
 
 	<div class="flex justify-end gap-2">
-		<a class="btn btn-ghost" href={resolve(`/member/groups/${group.slug}`)}>Cancel</a>
-		<SubmitButton label="Save" />
+		<a class="btn btn-ghost" href={resolve(`/member/groups/${group.slug}`)}>{m.member_cancel()}</a>
+		<SubmitButton label={m.member_save()} />
 	</div>
 </Form>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { goto } from '$app/navigation';
@@ -16,11 +17,11 @@
 -->
 <Action
 	action={createListing}
-	label="Add a show"
-	modalTitle="Add a show"
+	label={m.member_events_add_show_add_show()}
+	modalTitle={m.member_events_add_show_add_show()}
 	maxWidth="max-w-md"
-	submitLabel="Create Event"
-	successToast="Draft saved"
+	submitLabel={m.member_events_add_show_submit_label()}
+	successToast={m.member_events_add_show_success_toast()}
 	variant="primary"
 	size="sm"
 	data-testid="add-show"
@@ -34,24 +35,29 @@
 			<FormField
 				field={fields.title}
 				type="text"
-				label="Title"
-				placeholder="e.g. Paper Wolves at The Whiteside"
+				label={m.member_title()}
+				placeholder={m.member_events_add_show_e_g_paper_wolves_at()}
 				maxlength="200"
 				required
 			/>
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-				<FormField field={fields.eventDate} type="date" label="Date" required />
-				<FormField field={fields.eventStartTime} type="time" label="Start Time" required />
+				<FormField field={fields.eventDate} type="date" label={m.member_date()} required />
+				<FormField
+					field={fields.eventStartTime}
+					type="time"
+					label={m.member_start_time()}
+					required
+				/>
 			</div>
 			<FormField
 				field={fields.location}
 				type="text"
-				label="Venue"
-				placeholder="e.g. The Whiteside Theatre"
+				label={m.member_venue()}
+				placeholder={m.member_events_add_show_e_g_whiteside_theatre()}
 				maxlength="500"
 				required
 			/>
-			<p class="text-muted">Saved as a draft only you can see.</p>
+			<p class="text-muted">{m.member_events_add_show_saved_as_draft_only_can()}</p>
 		</div>
 	{/snippet}
 </Action>

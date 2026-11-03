@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { CancelSeriesAction } from '$lib/components/actions';
 	import { getLocalUser } from '$lib/remote/users.remote';
@@ -11,19 +12,22 @@
 
 {#if !(await getLocalUser()).subscription}
 	<div class="rounded-lg border border-base-300 px-4 pb-3 text-sm">
-		<h2 class="pt-4 text-lg font-semibold">Recurring Reservations</h2>
+		<h2 class="pt-4 text-lg font-semibold">
+			{m.member_reservations_manage_recurring_reservations_recurring()}
+		</h2>
 
 		<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-			<span>Sustaining members can set up recurring weekly, biweekly, or monthly reservations.</span
-			>
+			<span>{m.member_reservations_manage_recurring_reservations_sustaining()}</span>
 			<Button href="/member/membership" variant="default" size="sm" class="self-end sm:self-auto"
-				>Learn More</Button
+				>{m.member_learn_more()}</Button
 			>
 		</div>
 	</div>
 {:else}
 	<div class="flex items-center justify-between pt-4">
-		<h2 class="text-lg font-semibold">My Recurring Reservations</h2>
+		<h2 class="text-lg font-semibold">
+			{m.member_reservations_manage_recurring_reservations_my_recurri()}
+		</h2>
 	</div>
 
 	{#each await getRecurringReservations() as series (series.id)}
@@ -42,7 +46,11 @@
 					)}
 				</p>
 				{#if series.seriesEndsAt}
-					<p class="text-xs opacity-50">Ends {formatDateShortYear(series.seriesEndsAt)}</p>
+					<p class="text-xs opacity-50">
+						{m.member_reservations_manage_recurring_reservations_ends({
+							formatDateShortYear: formatDateShortYear(series.seriesEndsAt)
+						})}
+					</p>
 				{/if}
 			</div>
 			<CancelSeriesAction
@@ -57,8 +65,8 @@
 		     thing. An empty list with nothing else in it read as a feature with
 		     no way in, and a walk reached exactly that conclusion (#1001). -->
 		<p class="text-muted">
-			No active recurring reservations. Use <strong>Reserve Space</strong> at the top of this page and
-			pick a frequency on the first step to start a series.
+			No active recurring reservations. Use <strong>{m.member_reserve_space()}</strong> at the top of
+			this page and pick a frequency on the first step to start a series.
 		</p>
 	{/each}
 {/if}

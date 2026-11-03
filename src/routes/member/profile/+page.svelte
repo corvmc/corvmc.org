@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { env } from '$env/dynamic/public';
 	import { getMemberProfileEditor } from '$lib/remote/directory.remote';
 
@@ -36,11 +37,12 @@
 	);
 </script>
 
-<PageHeader width="3xl" subtitle="Profile" title="My Profile">
+<PageHeader width="3xl" subtitle={m.member_profile()} title={m.member_profile_my_profile()}>
 	<!-- This page is the form; the record it writes is read somewhere else
 	     entirely, and until now nothing connected the two (#1244). -->
 	<Button href={resolve(`/member/directory/members/${memberLayout.current.user.id}`)} size="sm">
-		<IconEye size={16} /> View as others see it
+		<IconEye size={16} />
+		{m.member_profile_view_as_others_see()}
 	</Button>
 </PageHeader>
 <PageContent width="3xl">
@@ -49,8 +51,8 @@
 	     the backfill has not reached — a card advertising nothing is worse than
 	     no card. -->
 	{#if address}
-		<AddressCard url={address} title="Your CMC address">
-			Share this anywhere — it goes to your profile, whoever opens it.
+		<AddressCard url={address} title={m.member_profile_cmc_address()}>
+			{m.member_profile_share_anywhere_goes_profile_whoever()}
 		</AddressCard>
 	{/if}
 

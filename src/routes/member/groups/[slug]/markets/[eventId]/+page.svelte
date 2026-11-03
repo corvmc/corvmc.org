@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -42,7 +43,7 @@
 			label: marketVendorStatusLabels[s],
 			badge: counts[s]
 		})),
-		{ key: 'all', label: 'All', badge: data.applications.length }
+		{ key: 'all', label: m.member_all(), badge: data.applications.length }
 	]);
 	const rows = $derived(
 		tab === 'all' ? data.applications : data.applications.filter((a) => a.status === tab)
@@ -57,13 +58,16 @@
 	}
 </script>
 
-<PageHeader title="Vendors: {data.event.title}" subtitle={when}>
+<PageHeader
+	title={m.member_groups_slug_markets_event_id_vendors({ title: data.event.title })}
+	subtitle={when}
+>
 	<Button
 		href={resolve(`/member/groups/${slug}/markets/${eventId}/check-in`)}
 		variant="ghost"
 		size="sm"
 	>
-		Market day
+		{m.member_groups_slug_markets_event_id_market_day()}
 	</Button>
 </PageHeader>
 
@@ -72,19 +76,19 @@
 
 	{#if rows.length === 0}
 		<EmptyState
-			title="No applications here"
+			title={m.member_groups_slug_markets_event_id_no_applications_here()}
 			description={tab === 'applied'
-				? 'Nothing waiting on a decision.'
-				: 'Applications arrive from the public event page.'}
+				? m.member_groups_slug_markets_event_id_nothing_waiting_decision()
+				: m.member_groups_slug_markets_event_id_applications_arrive_from()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">Status</span></th>
-				<th>Vendor</th>
-				<th class="col-support">Needs</th>
-				<th>Table</th>
-				<th class="w-px"><span class="sr-only">Actions</span></th>
+				<th class="w-px"><span class="sr-only">{m.member_status()}</span></th>
+				<th>{m.member_groups_slug_markets_event_id_vendor()}</th>
+				<th class="col-support">{m.member_groups_slug_markets_event_id_needs()}</th>
+				<th>{m.member_groups_slug_markets_event_id_table()}</th>
+				<th class="w-px"><span class="sr-only">{m.member_actions()}</span></th>
 			{/snippet}
 			{#each rows as row (row.id)}
 				<tr>
@@ -104,10 +108,12 @@
 							{#if row.status === 'applied' || row.status === 'declined'}
 								<Action
 									action={decideVendorForm.for(`accept-${row.id}`)}
-									label="Accept"
+									label={m.member_accept()}
 									iconOnly
-									modalTitle="Accept {row.businessName}"
-									successToast="Accepted — vendor told"
+									modalTitle={m.member_groups_slug_markets_event_id_accept({
+										businessName: row.businessName
+									})}
+									successToast={m.member_groups_slug_markets_event_id_accepted_vendor_told()}
 									variant="ghost"
 									size="sm"
 								>
@@ -115,12 +121,16 @@
 									{#snippet form()}
 										<input {...decideFields.vendorId.as('hidden', row.id)} />
 										<input {...decideFields.decision.as('hidden', 'accepted')} />
-										<FormField field={decideFields.tableLabel} label="Table" value="" />
+										<FormField
+											field={decideFields.tableLabel}
+											label={m.member_groups_slug_markets_event_id_table()}
+											value=""
+										/>
 										<FormField
 											field={decideFields.message}
 											type="textarea"
-											label="Message to the vendor"
-											description="Sent by email on their inbox thread."
+											label={m.member_groups_slug_markets_event_id_message_vendor()}
+											description={m.member_groups_slug_markets_event_id_sent_by_email_their_inbo()}
 											value={acceptMessage(row.businessName)}
 										/>
 									{/snippet}
@@ -129,10 +139,12 @@
 							{#if row.status === 'applied' || row.status === 'accepted'}
 								<Action
 									action={decideVendorForm.for(`decline-${row.id}`)}
-									label="Decline"
+									label={m.member_decline()}
 									iconOnly
-									modalTitle="Decline {row.businessName}"
-									successToast="Declined — vendor told"
+									modalTitle={m.member_groups_slug_markets_event_id_decline({
+										businessName: row.businessName
+									})}
+									successToast={m.member_groups_slug_markets_event_id_declined_vendor_told()}
 									variant="ghost"
 									size="sm"
 								>
@@ -143,8 +155,8 @@
 										<FormField
 											field={decideFields.message}
 											type="textarea"
-											label="Message to the vendor"
-											description="Sent by email on their inbox thread."
+											label={m.member_groups_slug_markets_event_id_message_vendor()}
+											description={m.member_groups_slug_markets_event_id_sent_by_email_their_inbo()}
 											value={declineMessage(row.businessName)}
 										/>
 									{/snippet}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/** One topic of the club or committee's chat, read and written by every member. */
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -16,9 +17,9 @@
 </script>
 
 <PageHeader
-	title="Chat"
+	title={m.member_chat()}
 	crumb={chat.topicName}
-	parent={[{ label: 'Chat', href: resolve('/member/groups/[slug]/chat', { slug }) }]}
+	parent={[{ label: m.member_chat(), href: resolve('/member/groups/[slug]/chat', { slug }) }]}
 />
 <PageContent>
 	<GroupChat {chat} viewerUserId={memberLayout.current.user.id} />

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * One receipt list for everything the collective sells.
 	 *
@@ -27,23 +28,23 @@
 	const purchases = $derived(await getMyPurchases());
 </script>
 
-<PageHeader title="Purchases" subtitle="What you've bought" />
+<PageHeader title={m.member_purchases_purchases()} subtitle={m.member_purchases_subtitle()} />
 
 <PageContent>
 	{#if purchases.length === 0}
 		<EmptyState
-			title="Nothing yet"
-			description="Records and tickets you buy from the collective show up here, with the links to get to them."
+			title={m.member_purchases_nothing_yet()}
+			description={m.member_purchases_description()}
 		/>
 	{:else}
 		<Card>
 			<CardBody>
 				<Table>
 					{#snippet head()}
-						<th>Type</th>
-						<th>Item</th>
-						<th class="col-support">When</th>
-						<th>Amount</th>
+						<th>{m.member_purchases_type()}</th>
+						<th>{m.member_item()}</th>
+						<th class="col-support">{m.member_when()}</th>
+						<th>{m.member_amount()}</th>
 						<th></th>
 					{/snippet}
 
@@ -67,7 +68,7 @@
 									<span class="text-muted">
 										— {formatDate(purchase.eventStartsAt)}
 										{#if purchase.quantity > 1}
-											· {purchase.quantity} tickets
+											{m.member_purchases_tickets({ quantity: purchase.quantity })}
 										{/if}
 									</span>
 								{/if}
@@ -81,7 +82,7 @@
 							<td class="text-right">
 								{#if purchase.kind === 'music'}
 									<Button size="sm" href={resolve(`/music/download/${purchase.downloadToken}`)}>
-										Download
+										{m.member_purchases_download()}
 									</Button>
 								{:else}
 									<Button
@@ -89,7 +90,7 @@
 										variant="ghost"
 										href={resolve(`/member/events/${purchase.eventId}`)}
 									>
-										View
+										{m.member_purchases_view()}
 									</Button>
 								{/if}
 							</td>

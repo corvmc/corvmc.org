@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	/**
 	 * Step two: what you'd like to help with.
@@ -23,7 +24,7 @@
 	const pageData = $derived(getVolunteerInterestsPage());
 </script>
 
-<PageHeader width="md" title="Preferred roles" subtitle="Volunteering" />
+<PageHeader width="md" title={m.member_preferred_roles()} subtitle={m.member_volunteering()} />
 
 <PageContent width="md">
 	{#await pageData then { step: me, roles: roleOptions, interests: myInterests }}
@@ -32,9 +33,11 @@
 			<CardBody>
 				{#if roleOptions.length === 0}
 					<p class="text-muted">
-						No volunteer roles are open right now. Get in touch and we'll find you something.
+						{m.member_volunteer_interests_no_volunteer_roles_open_right()}
 					</p>
-					<a href={resolve('/member/volunteer')} class="link text-sm">Go to volunteering</a>
+					<a href={resolve('/member/volunteer')} class="link text-sm"
+						>{m.member_volunteer_interests_go_volunteering()}</a
+					>
 				{:else}
 					<!--
 					Onboarding sends them on to the board, because that is the next step
@@ -44,7 +47,7 @@
 					<Form
 						remote={saveVolunteerInterests}
 						onsuccess={onboarding ? () => goto(resolve('/member/volunteer')) : undefined}
-						successToast="Saved. Staff see this when they're looking for people."
+						successToast={m.member_volunteer_interests_success_toast()}
 					>
 						<InterestFields
 							fields={saveVolunteerInterests.fields}
@@ -60,8 +63,8 @@
 							<!-- Disabled until something changes, and it says "Saved" after —
 						     which is what makes a page you can leave open feel settled. -->
 							<SubmitButton
-								label={onboarding ? 'Finish' : 'Save'}
-								successLabel="Saved"
+								label={onboarding ? m.member_volunteer_interests_finish() : m.member_save()}
+								successLabel={m.member_saved()}
 								variant="primary"
 							/>
 						</div>

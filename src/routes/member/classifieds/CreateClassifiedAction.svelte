@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconPlus } from '@tabler/icons-svelte';
@@ -11,10 +12,10 @@
 
 <Action
 	action={createClassified}
-	label="New post"
-	modalTitle="New post"
-	submitLabel="Post it"
-	successToast={composer.requiresReview ? 'Sent to staff for review' : 'Posted to the board'}
+	label={m.member_classifieds_create_classified_label()}
+	modalTitle={m.member_classifieds_create_classified_label()}
+	submitLabel={m.member_post()}
+	successToast={composer.requiresReview ? m.member_sent_staff_review() : m.member_posted_board()}
 	variant="primary"
 	size="sm"
 	onsuccess={(r) => {
@@ -26,7 +27,7 @@
 	{#snippet icon()}<IconPlus size={16} />{/snippet}
 	{#snippet form()}
 		{#if composer.requiresReview}
-			<p class="mb-3 text-muted">Staff will look at this before it goes on the board.</p>
+			<p class="mb-3 text-muted">{m.member_staff_will_look_at_before()}</p>
 		{/if}
 		<PostFields
 			bands={composer.bands}

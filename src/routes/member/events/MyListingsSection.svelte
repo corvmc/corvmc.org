@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import AppealPanel from '$lib/components/moderation/AppealPanel.svelte';
@@ -20,19 +21,22 @@
 </script>
 
 <section>
-	<SectionLabel label="Your listings" count={mine.listings.length + mine.rejected.length} />
+	<SectionLabel
+		label={m.member_events_my_listings_section_label()}
+		count={mine.listings.length + mine.rejected.length}
+	/>
 
 	{#if mine.standing.status !== 'none'}
 		<Alert type="info" class="mb-4">
-			<p>Staff check your listings before they go on the public calendar.</p>
+			<p>{m.member_events_my_listings_section_staff_check_listings_befor()}</p>
 			<AppealPanel target={{ kind: 'standing', scope: 'community_event' }} />
 		</Alert>
 	{/if}
 
 	{#if mine.listings.length === 0 && mine.rejected.length === 0}
 		<EmptyState
-			title="You haven't added any shows"
-			description="Know about a gig around town? Put it on the calendar so the rest of the scene finds out."
+			title={m.member_events_my_listings_section_title()}
+			description={m.member_events_my_listings_section_description()}
 		/>
 	{:else}
 		<ul class="mlist">

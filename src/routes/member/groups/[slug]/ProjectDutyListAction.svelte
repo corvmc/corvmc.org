@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import { Field } from '$lib/components/ui/Form';
 	import { applyDutyListToProjectForm } from '$lib/remote/projects.remote';
@@ -19,18 +20,27 @@
 
 <Action
 	{action}
-	label="Apply template"
-	aria-label={`Apply a template to ${project.name}`}
-	modalTitle="Apply a template to {project.name}"
-	submitLabel="Apply"
-	successToast="Work orders created"
+	label={m.member_groups_slug_project_duty_list_apply_template()}
+	aria-label={m.member_groups_slug_project_duty_list_aria_label({ name: project.name })}
+	modalTitle={m.member_groups_slug_project_duty_list_aria_label({ name: project.name })}
+	submitLabel={m.member_apply()}
+	successToast={m.member_groups_slug_project_duty_list_success_toast()}
 	onsuccess={toastWarnings}
 	variant="ghost"
 	size="xs"
 >
 	{#snippet form()}
 		<input {...action.fields.projectId.as('hidden', project.id)} />
-		<Field field={action.fields.dutyListId} type="select" label="Template" {options} />
-		<Field field={action.fields.reason} type="text" label="Reason, if applying again" />
+		<Field
+			field={action.fields.dutyListId}
+			type="select"
+			label={m.member_groups_slug_project_duty_list_template()}
+			{options}
+		/>
+		<Field
+			field={action.fields.reason}
+			type="text"
+			label={m.member_groups_slug_project_duty_list_reason_if_applying_agai()}
+		/>
 	{/snippet}
 </Action>

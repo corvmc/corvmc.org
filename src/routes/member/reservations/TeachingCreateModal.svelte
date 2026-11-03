@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { toast } from 'svelte-sonner';
 	import { IconSchool } from '@tabler/icons-svelte';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -32,8 +33,8 @@
 
 <Action
 	action={bookInstructorReservation}
-	label="Book teaching time"
-	modalTitle="Book teaching time"
+	label={m.member_reservations_teaching_create_modal_label()}
+	modalTitle={m.member_reservations_teaching_create_modal_label()}
 	data-testid="book-teaching"
 	noFooter
 	variant="ghost"
@@ -41,9 +42,9 @@
 	onsuccess={(result) => {
 		const r = result as { waitlisted?: boolean } | undefined;
 		if (r?.waitlisted) {
-			toast.info('The first instance is waitlisted because the slot is currently booked.');
+			toast.info(m.member_first_instance_waitlisted_because_slot());
 		} else {
-			toast.success('Teaching time booked');
+			toast.success(m.member_reservations_teaching_create_modal_teaching_time_book());
 		}
 		onbooked?.();
 	}}

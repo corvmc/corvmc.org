@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The volunteer profile: contact info, preferred roles and the hour history,
 	 * under a line for each clearance that is expiring or has lapsed.
@@ -40,7 +41,7 @@
 	};
 </script>
 
-<PageHeader width="3xl" title="Profile" subtitle="Volunteering" />
+<PageHeader width="3xl" title={m.member_profile()} subtitle={m.member_volunteering()} />
 
 <PageContent width="3xl">
 	{#await pageData then data}
@@ -52,8 +53,11 @@
 					: `expires ${c.expiresAt ? formatDateShort(c.expiresAt) : 'soon'}`}. Staff renew these.
 			</p>
 		{/each}
-		<InfoCard title="Contact info">
-			<Form remote={updateVolunteerProfile} successToast="Profile updated">
+		<InfoCard title={m.member_volunteer_profile_contact_info()}>
+			<Form
+				remote={updateVolunteerProfile}
+				successToast={m.member_volunteer_profile_profile_updated()}
+			>
 				<ProfileFields
 					fields={updateVolunteerProfile.fields}
 					firstName={data.access.firstName}
@@ -63,16 +67,16 @@
 					email={data.access.email}
 				/>
 				<div class="flex justify-end">
-					<SubmitButton label="Save" successLabel="Saved" variant="primary" />
+					<SubmitButton label={m.member_save()} successLabel={m.member_saved()} variant="primary" />
 				</div>
 			</Form>
 		</InfoCard>
 
-		<InfoCard title="Preferred roles">
+		<InfoCard title={m.member_preferred_roles()}>
 			{#if data.roles.length === 0}
-				<p class="text-muted">No volunteer roles are open right now.</p>
+				<p class="text-muted">{m.member_volunteer_profile_no_volunteer_roles_open_right()}</p>
 			{:else}
-				<Form remote={saveVolunteerInterests} successToast="Saved">
+				<Form remote={saveVolunteerInterests} successToast={m.member_saved()}>
 					<InterestFields
 						fields={saveVolunteerInterests.fields}
 						roleOptions={data.roles}
@@ -80,24 +84,28 @@
 						availability={data.access.availability}
 					/>
 					<div class="flex justify-end">
-						<SubmitButton label="Save" successLabel="Saved" variant="primary" />
+						<SubmitButton
+							label={m.member_save()}
+							successLabel={m.member_saved()}
+							variant="primary"
+						/>
 					</div>
 				</Form>
 			{/if}
 		</InfoCard>
 
-		<InfoCard title="Volunteer Hours">
+		<InfoCard title={m.member_volunteer_profile_volunteer_hours()}>
 			{#snippet action()}
 				<LogHoursAction
 					roles={data.roles}
 					programs={data.programs}
-					label="Log Hours"
+					label={m.member_volunteer_profile_log_hours()}
 					variant="primary"
 					size="sm"
 				/>
 			{/snippet}
 			{#if data.logs.length === 0}
-				<EmptyState title="Nothing filed yet" />
+				<EmptyState title={m.member_volunteer_profile_nothing_filed_yet()} />
 			{:else}
 				<ul class="flex flex-col gap-3">
 					{#each data.logs as log (log.id)}
@@ -136,7 +144,9 @@
 									<LogHoursAction
 										mode="fix"
 										size="xs"
-										label={log.status === 'rejected' ? 'Fix it' : 'Edit'}
+										label={log.status === 'rejected'
+											? m.member_volunteer_profile_fix()
+											: m.member_edit()}
 										log={{
 											id: log.id,
 											volunteerRoleId: log.volunteerRoleId,
@@ -147,19 +157,21 @@
 									/>
 									<Action
 										action={withdrawVolunteerHours.for(log.id)}
-										label="Withdraw"
+										label={m.member_withdraw()}
 										data-testid="withdraw-hours"
 										variant="ghost"
 										size="xs"
 										class="text-error"
-										modalTitle="Withdraw this log?"
-										submitLabel="Withdraw"
+										modalTitle={m.member_volunteer_profile_modal_title()}
+										submitLabel={m.member_withdraw()}
 										submitVariant="error"
-										successToast="Withdrawn"
+										successToast={m.member_volunteer_profile_withdrawn()}
 									>
 										{#snippet form()}
 											<input type="hidden" name="id" value={log.id} />
-											<p class="text-sm">It comes off the record. File it again any time.</p>
+											<p class="text-sm">
+												{m.member_volunteer_profile_comes_off_record_file_again()}
+											</p>
 										{/snippet}
 									</Action>
 								</div>

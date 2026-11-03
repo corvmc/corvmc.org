@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { env } from '$env/dynamic/public';
@@ -57,21 +58,29 @@
 		if (!member) return [];
 		const p: ProfilePill[] = [];
 		if (member.memberNumber != null)
-			p.push({ label: `Member · #${String(member.memberNumber).padStart(4, '0')}` });
-		if (member.lookingForBand) p.push({ label: 'Looking for a band', variant: 'warm' });
-		if (member.availableForHire) p.push({ label: 'Available for hire' });
-		if (member.teachesLessons) p.push({ label: 'Teaches privately' });
-		if (member.openToCollaboration) p.push({ label: 'Open to collaboration' });
+			p.push({
+				label: m.member_directory_members_id_member({
+					padStart: String(member.memberNumber).padStart(4, '0')
+				})
+			});
+		if (member.lookingForBand)
+			p.push({ label: m.member_directory_members_id_looking_band(), variant: 'warm' });
+		if (member.availableForHire) p.push({ label: m.member_available_hire() });
+		if (member.teachesLessons) p.push({ label: m.member_teaches_privately() });
+		if (member.openToCollaboration) p.push({ label: m.member_open_collaboration() });
 		return p;
 	});
 
 	let facts = $derived(
 		member
 			? [
-					{ label: 'Joined', value: String(new Date(member.createdAt).getFullYear()) },
-					{ label: 'Pronouns', value: member.pronouns },
-					{ label: 'Based in', value: member.hometown },
-					{ label: 'Looking for', value: member.lookingForBand ? 'A band' : null }
+					{
+						label: m.member_directory_members_id_joined(),
+						value: String(new Date(member.createdAt).getFullYear())
+					},
+					{ label: m.member_pronouns(), value: member.pronouns },
+					{ label: m.member_based(), value: member.hometown },
+					{ label: m.member_looking(), value: member.lookingForBand ? 'A band' : null }
 				]
 			: []
 	);
@@ -99,7 +108,9 @@
 {#if member}
 	<PageContent width="3xl">
 		<div class="flex items-center justify-between">
-			<a href={resolve('/member/directory')} class="link text-muted">&larr; Back to Directory</a>
+			<a href={resolve('/member/directory')} class="link text-muted"
+				>{m.member_directory_members_id_back_directory()}</a
+			>
 			<div class="flex items-center gap-2">
 				{#if canMessage}
 					<MessageMemberAction recipientId={id} recipientName={member.name} />
@@ -140,8 +151,8 @@
 			{/snippet}
 			{#snippet side()}
 				<CrossRefList label="Bands" items={bandRefs} note={`${bandRefs.length} active`} />
-				<TagCloud label="Plays · Genres" {tags} />
-				<TagCloud label="Skills" tags={member.skills ?? []} />
+				<TagCloud label={m.member_directory_members_id_plays_genres()} {tags} />
+				<TagCloud label={m.member_skills()} tags={member.skills ?? []} />
 				<LinksBox {links} />
 				<ContactBox label="Contact" {contact} />
 			{/snippet}
@@ -149,9 +160,11 @@
 	</PageContent>
 {:else}
 	<Alert type="warning">
-		Member not found or profile is hidden.
+		{m.member_directory_members_id_member_not_found_profile_hidden()}
 		{#snippet action()}
-			<Button href="/member/directory" variant="default" size="sm">Back to Directory</Button>
+			<Button href="/member/directory" variant="default" size="sm"
+				>{m.member_directory_members_id_back_directory_2()}</Button
+			>
 		{/snippet}
 	</Alert>
 {/if}

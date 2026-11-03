@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The member's volunteering dashboard: a next-action stack beside a board.
 	 *
@@ -60,8 +61,10 @@
 	);
 </script>
 
-<PageHeader width="5xl" title="Volunteering" subtitle="Member">
-	<Button href={resolve('/member/volunteer/profile')} variant="ghost" size="sm">Profile</Button>
+<PageHeader width="5xl" title={m.member_volunteering()} subtitle={m.member_member()}>
+	<Button href={resolve('/member/volunteer/profile')} variant="ghost" size="sm"
+		>{m.member_profile()}</Button
+	>
 </PageHeader>
 
 <PageContent width="5xl">
@@ -74,12 +77,12 @@
 					until they say what it was.
 				-->
 				<InfoCard
-					title="Hours to log"
+					title={m.member_volunteer_hours_log()}
 					state={pageData.unloggedShifts.length}
 					class="border-l-4 border-warning"
 				>
 					<!-- Once, not on every row: it was the same sentence under each. -->
-					<p class="text-subtle text-sm">Add what you did to file it.</p>
+					<p class="text-subtle text-sm">{m.member_volunteer_add_what_did_file()}</p>
 					<ul class="flex flex-col gap-3">
 						{#each pageData.unloggedShifts as owed (owed.signupId)}
 							<li class="flex flex-wrap items-center justify-between gap-2">
@@ -87,16 +90,19 @@
 									<div class="font-medium">{owed.roleName}</div>
 									<div class="text-subtle text-sm">
 										{#if owed.startsAt}
-											{formatDateShort(owed.startsAt)} · {shiftHours(owed.startsAt, owed.endsAt)} hrs
+											{m.member_volunteer_hrs({
+												formatDateShort: formatDateShort(owed.startsAt),
+												shiftHours: shiftHours(owed.startsAt, owed.endsAt)
+											})}
 										{:else}
-											No time was booked for this — say how long it took.
+											{m.member_volunteer_no_time_was_booked_say()}
 										{/if}
 									</div>
 								</div>
 								<LogHoursAction
 									mode="shift"
 									variant="primary"
-									label="Log these hours"
+									label={m.member_volunteer_label()}
 									shift={{
 										signupId: owed.signupId,
 										shiftId: owed.shiftId,
@@ -113,11 +119,11 @@
 				</InfoCard>
 			{/if}
 
-			<InfoCard title="Claimed shifts" state={liveShifts.length}>
+			<InfoCard title={m.member_volunteer_claimed_shifts()} state={liveShifts.length}>
 				{#if liveShifts.length === 0}
 					<EmptyState
-						title="You're not on any shifts"
-						description="Claim one from the list beside this."
+						title={m.member_volunteer_re_not_any_shifts()}
+						description={m.member_volunteer_description()}
 					/>
 				{:else}
 					<ul class="divide-y divide-base-300">

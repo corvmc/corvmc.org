@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -75,11 +76,11 @@
 	const applyId = $derived(committees.find((c) => c.slug === applySlug)?.id ?? null);
 </script>
 
-<PageHeader width="3xl" title="Groups" subtitle="Clubs and committees at the Collective" />
+<PageHeader width="3xl" title={m.member_groups_groups()} subtitle={m.member_groups_subtitle()} />
 <PageContent width="3xl">
-	<InfoCard title="Your programs">
+	<InfoCard title={m.member_groups_programs()}>
 		{#if active.length === 0 && invited.length === 0 && applied.length === 0 && data.emailInvites.length === 0}
-			<EmptyState description="You're not in any clubs or committees yet." />
+			<EmptyState description={m.member_groups_description()} />
 		{:else}
 			<div class="space-y-3">
 				{#each active as g (g.id)}
@@ -88,7 +89,12 @@
 							<div class="min-w-0">
 								<a class="link font-semibold" href={resolve(`/member/groups/${g.slug}`)}>{g.name}</a
 								>
-								<p class="text-subtle">{kindLabel(g.kind)} · {g.memberCount} members</p>
+								<p class="text-subtle">
+									{m.member_groups_members({
+										kindLabel: kindLabel(g.kind),
+										memberCount: g.memberCount
+									})}
+								</p>
 							</div>
 							<Badge variant="ghost">{g.myRole}</Badge>
 						</CardBody>
@@ -100,7 +106,9 @@
 						<CardBody row class="py-4">
 							<div class="min-w-0">
 								<span class="font-semibold">{g.name}</span>
-								<p class="text-subtle">{kindLabel(g.kind)} · invited you to join</p>
+								<p class="text-subtle">
+									{m.member_groups_invited_join({ kindLabel: kindLabel(g.kind) })}
+								</p>
 							</div>
 							<AnswerGroupInviteAction groupId={g.id} groupName={g.name} />
 						</CardBody>
@@ -134,14 +142,14 @@
 								{#if a.open}
 									<Action
 										action={withdrawGroupApplication.for(a.applicationId)}
-										label="Withdraw"
-										aria-label={`Withdraw your application to ${a.name}`}
+										label={m.member_withdraw()}
+										aria-label={m.member_groups_withdraw_application({ name: a.name })}
 										variant="ghost"
 										size="xs"
 										confirm={a.sharedWith > 0
 											? `This application also names ${a.sharedWith} other ${a.sharedWith === 1 ? 'committee' : 'committees'}, and withdrawing takes it back from all of them. Anything already decided stays decided.`
 											: 'Withdraw this application?'}
-										successToast="Application withdrawn"
+										successToast={m.member_groups_success_toast()}
 									>
 										{#snippet form()}
 											<input {...withdrawFields.applicationId.as('hidden', a.applicationId)} />
@@ -157,7 +165,7 @@
 	</InfoCard>
 
 	{#if data.open.length > 0}
-		<InfoCard title="Open to join">
+		<InfoCard title={m.member_groups_open_join()}>
 			<div class="space-y-3">
 				{#each data.open as g (g.id)}
 					<Card>
@@ -182,7 +190,7 @@
 	{/if}
 
 	{#if data.byApplication.length > 0}
-		<InfoCard title="Apply to join">
+		<InfoCard title={m.member_groups_apply_join()}>
 			<div class="space-y-3">
 				{#each data.byApplication as g (g.id)}
 					<Card>
@@ -195,8 +203,8 @@
 								<Button
 									variant="primary"
 									size="sm"
-									aria-label={`Apply to ${g.name}`}
-									onclick={() => openApply(g.slug)}>Apply</Button
+									aria-label={m.member_groups_apply({ name: g.name })}
+									onclick={() => openApply(g.slug)}>{m.member_apply()}</Button
 								>
 							{:else}
 								<JoinGroupAction
@@ -218,7 +226,7 @@
 	{#if data.inviteOnly.length > 0}
 		<!-- Listed with their instructions and no action. Seeing that a committee
 		     exists is the point; the way in is a conversation. -->
-		<InfoCard title="Invite only">
+		<InfoCard title={m.member_groups_invite_only()}>
 			<div class="space-y-3">
 				{#each data.inviteOnly as g (g.id)}
 					<Card>

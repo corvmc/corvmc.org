@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * One conversation, of four kinds since #1250: a DM, a staff thread, a
 	 * group's chat and a band's booking enquiry. The last two are panes of
@@ -86,8 +87,8 @@
 		<ThreadHeader
 			{title}
 			subtitle={t.kind === 'direct'
-				? 'Your conversation with another member'
-				: 'Your conversation with CorvMC staff'}
+				? m.member_messages_id_conversation_with_another_member()
+				: m.member_messages_id_conversation_with_corvmc_staff()}
 			backHref="/member/messages"
 		>
 			{#snippet actions()}
@@ -97,7 +98,7 @@
 
 		<div class="min-h-0 flex-1 overflow-y-auto">
 			{#if t.kind === 'direct' && t.counterpartDeleted}
-				<Alert type="info">This member's account is no longer active.</Alert>
+				<Alert type="info">{m.member_messages_id_member_s_account_no_longer()}</Alert>
 			{/if}
 
 			<ThreadTimeline messages={t.messages} viewerUserId={t.viewerUserId} />
@@ -117,11 +118,11 @@
 						<div class="flex flex-wrap items-center gap-2">
 							<Form
 								remote={acceptDirectRequest}
-								successToast="Request accepted"
+								successToast={m.member_messages_id_request_accepted()}
 								onsuccess={refreshConversations}
 							>
 								<input {...acceptDirectRequest.fields.threadId.as('hidden', t.id)} />
-								<SubmitButton label="Accept" variant="primary" size="sm">
+								<SubmitButton label={m.member_accept()} variant="primary" size="sm">
 									{#snippet icon()}<IconCheck size={16} />{/snippet}
 								</SubmitButton>
 							</Form>
@@ -131,11 +132,11 @@
 						     request, which is what makes saying no cost nothing. -->
 							<Form
 								remote={declineDirectRequest}
-								successToast="Request declined"
+								successToast={m.member_messages_id_request_declined()}
 								onsuccess={refreshConversations}
 							>
 								<input {...declineDirectRequest.fields.threadId.as('hidden', t.id)} />
-								<SubmitButton label="Decline" variant="ghost" size="sm">
+								<SubmitButton label={m.member_decline()} variant="ghost" size="sm">
 									{#snippet icon()}<IconX size={16} />{/snippet}
 								</SubmitButton>
 							</Form>
@@ -146,12 +147,12 @@
 				</Card>
 			{:else if blocked}
 				<Alert type="info">
-					This conversation is closed. You can still read it, but neither of you can write here.
+					{m.member_messages_id_conversation_closed_can_still_read()}
 				</Alert>
 			{:else if closed}
 				<Alert type="info">
-					This conversation has been closed.
-					{#if t.kind === 'staff'}Start a new message if you need anything else.{/if}
+					{m.member_messages_id_conversation_has_been_closed()}
+					{#if t.kind === 'staff'}{m.member_messages_id_start_new_message_if_need()}{/if}
 				</Alert>
 			{:else}
 				<!-- No noteForm: internal notes are staff-private, so the shared composer
@@ -169,9 +170,13 @@
 			     it if they later decide to report. -->
 				<div class="flex justify-end gap-2">
 					<ReportDirectThreadAction threadId={t.id} />
-					<Form remote={blockFromThread} successToast="Blocked" onsuccess={refreshConversations}>
+					<Form
+						remote={blockFromThread}
+						successToast={m.member_messages_id_blocked()}
+						onsuccess={refreshConversations}
+					>
 						<input {...blockFromThread.fields.threadId.as('hidden', t.id)} />
-						<SubmitButton label="Block" variant="error" size="sm" outline>
+						<SubmitButton label={m.member_messages_id_block()} variant="error" size="sm" outline>
 							{#snippet icon()}<IconBan size={16} />{/snippet}
 						</SubmitButton>
 					</Form>

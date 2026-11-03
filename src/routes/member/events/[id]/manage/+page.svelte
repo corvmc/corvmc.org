@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
@@ -71,11 +72,11 @@
 </script>
 
 {#if !listing}
-	<PageHeader width="2xl" title="Listing not found" />
+	<PageHeader width="2xl" title={m.member_events_id_manage_title()} />
 	<PageContent width="2xl">
 		<Alert type="warning">
 			This listing doesn't exist, or it isn't yours.
-			<a href={resolve('/member/events')} class="link">Back to your events</a>
+			<a href={resolve('/member/events')} class="link">{m.member_events_id_manage_back_events()}</a>
 		</Alert>
 	</PageContent>
 {:else}
@@ -88,40 +89,40 @@
 			<!-- The reason is the entire point of a rejection: a member who can't see
 			     what was wrong can't fix it, and `rejected` exists so they can. -->
 			<Alert type="warning">
-				<strong>Staff didn't publish this listing.</strong>
+				<strong>{m.member_events_id_manage_staff_didn_t_publish_listing()}</strong>
 				{#if listing.reviewNotes}
 					<p class="mt-1">"{listing.reviewNotes}"</p>
 				{/if}
-				<p class="mt-1">Fix it below and submit it again — everything you entered is still here.</p>
+				<p class="mt-1">{m.member_events_id_manage_fix_below_submit_again_everything()}</p>
 			</Alert>
 		{:else if listing.status === 'pending_review'}
 			<Alert type="info">
-				This listing is with staff for review. You'll hear back once they've looked at it.
+				{m.member_events_id_manage_listing_with_staff_review_ll()}
 			</Alert>
 		{:else if listing.status === 'draft' && listing.reviewNotes}
 			<!-- Staff pulled this off the guide. Ordered ahead of the standing
 			     explainer below: a takedown is specific news about THIS listing,
 			     and the standing note is background the member has already seen. -->
 			<Alert type="warning">
-				<strong>Staff took this listing off the calendar.</strong>
+				<strong>{m.member_events_id_manage_staff_took_listing_off_calendar()}</strong>
 				<p class="mt-1">"{listing.reviewNotes}"</p>
-				<p class="mt-1">Fix it and publish again when you're ready.</p>
+				<p class="mt-1">{m.member_events_id_manage_fix_publish_again_when_re()}</p>
 				<AppealPanel target={{ kind: 'listing', eventId: listing.id }} />
 			</Alert>
 		{:else if requiresReview && listing.status === 'draft'}
 			<Alert type="info">
 				{#if listing.standing.reason}
-					After a report was upheld against one of your listings, staff check your listings before
-					they go on the calendar. Their note: "{listing.standing.reason}"
+					{m.member_events_id_manage_after_report_was_upheld_against({
+						reason: listing.standing.reason
+					})}
 				{:else}
-					Staff check your listings before they go on the calendar.
+					{m.member_events_id_manage_staff_check_listings_before_they()}
 				{/if}
 				<AppealPanel target={{ kind: 'standing', scope: 'community_event' }} />
 			</Alert>
 		{:else if listing.status === 'cancelled'}
 			<Alert type="info">
-				You've marked this show as cancelled. It stays on the public calendar, marked, until its
-				date passes — so anyone who had the date finds out.
+				{m.member_events_id_manage_ve_marked_show_as_cancelled()}
 			</Alert>
 		{/if}
 
@@ -131,7 +132,7 @@
 					action={publishListing}
 					label={publishLabel}
 					data-testid="publish-listing"
-					successToast={requiresReview ? 'Sent to staff' : 'Published'}
+					successToast={requiresReview ? m.member_sent_staff() : m.member_published()}
 					variant="primary"
 					size="sm"
 					onsuccess={() => invalidateAll()}
@@ -140,19 +141,18 @@
 						<input {...publishFields.eventId.as('hidden', eventId)} />
 						{#if requiresReview}
 							<p class="py-2">
-								Staff will look at this before it goes on the calendar. You'll get a note either
-								way.
+								{m.member_events_id_manage_staff_will_look_at_before()}
 							</p>
 						{:else}
-							<p class="py-2">Put this show on the public calendar?</p>
+							<p class="py-2">{m.member_events_id_manage_put_show_public_calendar()}</p>
 						{/if}
 					{/snippet}
 				</Action>
 
 				<Action
 					action={deleteListing}
-					label="Delete"
-					successToast="Listing deleted"
+					label={m.member_events_id_manage_delete()}
+					successToast={m.member_events_id_manage_listing_deleted()}
 					variant="ghost"
 					size="sm"
 					onsuccess={() => goto(resolve('/member/events'))}
@@ -160,15 +160,15 @@
 					{#snippet form()}
 						<input {...deleteFields.eventId.as('hidden', eventId)} />
 						<p class="py-2">
-							Delete this listing? It was never public, so nothing is lost but this.
+							{m.member_events_id_manage_delete_listing_was_never_public()}
 						</p>
 					{/snippet}
 				</Action>
 			{:else if listing.status === 'published'}
 				<Action
 					action={unpublishListing}
-					label="Take it down"
-					successToast="Back in your drafts"
+					label={m.member_events_id_manage_take_down()}
+					successToast={m.member_events_id_manage_back_drafts()}
 					variant="ghost"
 					size="sm"
 					onsuccess={() => invalidateAll()}
@@ -176,15 +176,15 @@
 					{#snippet form()}
 						<input {...unpublishFields.eventId.as('hidden', eventId)} />
 						<p class="py-2">
-							Move this back to your drafts? It comes off the public calendar straight away.
+							{m.member_events_id_manage_move_back_drafts_comes_off()}
 						</p>
 					{/snippet}
 				</Action>
 
 				<Action
 					action={withdrawListing}
-					label="Cancel the show"
-					successToast="Marked as cancelled"
+					label={m.member_events_id_manage_cancel_show()}
+					successToast={m.member_events_id_manage_marked_as_cancelled()}
 					variant="warning"
 					size="sm"
 					onsuccess={() => invalidateAll()}
@@ -192,7 +192,9 @@
 					{#snippet form()}
 						<input {...withdrawFields.eventId.as('hidden', eventId)} />
 						<p class="py-2">
-							Is this show not happening? It stays on the calendar marked <strong>cancelled</strong>
+							Is this show not happening? It stays on the calendar marked <strong
+								>{m.member_events_id_manage_cancelled()}</strong
+							>
 							until its date passes, so anyone who had the date finds out. If you just want it gone, take
 							it down instead.
 						</p>
@@ -203,7 +205,7 @@
 
 		{#if duplicate}
 			<Alert type="warning">
-				<strong>This might already be listed.</strong>
+				<strong>{m.member_events_id_manage_might_already_listed()}</strong>
 				<p class="mt-1">
 					<a href={resolve(`/events/${duplicate.id}`)} class="link">{duplicate.title}</a>
 					is already on the calendar for {formatDateShort(duplicate.startsAt)}. Publish anyway if
@@ -214,7 +216,7 @@
 
 		<Form
 			remote={updateListing}
-			successToast="Listing saved"
+			successToast={m.member_events_id_manage_listing_saved()}
 			onsuccess={() => invalidateAll()}
 			class="space-y-4"
 		>
@@ -223,7 +225,7 @@
 			<FormField
 				field={fields.title}
 				type="text"
-				label="Title"
+				label={m.member_title()}
 				value={listing.title}
 				maxlength="200"
 				required
@@ -231,7 +233,7 @@
 
 			<!-- The `input` snippet, not children: only it is handed the id the
 			     caption points at, so children would leave the field unnamed. -->
-			<FormField name="description" label="Description">
+			<FormField name="description" label={m.member_events_id_manage_description()}>
 				{#snippet input(id)}
 					<textarea
 						{...fields.description.as('text', listing.description ?? '')}
@@ -246,23 +248,23 @@
 				<FormField
 					field={fields.eventDate}
 					type="date"
-					label="Date"
+					label={m.member_date()}
 					value={toDateValue(listing.startsAt)}
 					required
 				/>
 				<FormField
 					field={fields.eventStartTime}
 					type="time"
-					label="Start Time"
+					label={m.member_start_time()}
 					value={toTimeValue(listing.startsAt)}
 					required
 				/>
 				<FormField
 					field={fields.eventEndTime}
 					type="time"
-					label="End Time"
+					label={m.member_events_id_manage_end_time()}
 					value={toTimeValue(listing.endsAt)}
-					description="Optional — leave blank if you don't know."
+					description={m.member_events_id_manage_optional_leave_blank_if_don()}
 				/>
 			</div>
 
@@ -270,13 +272,13 @@
 				<FormField
 					field={fields.doorsTime}
 					type="time"
-					label="Doors Open"
+					label={m.member_events_id_manage_doors_open()}
 					value={toTimeValue(listing.doorsAt)}
 				/>
 				<FormField
 					field={fields.location}
 					type="text"
-					label="Venue"
+					label={m.member_venue()}
 					value={listing.location ?? ''}
 					maxlength="500"
 					required
@@ -286,7 +288,7 @@
 			<FormField
 				field={fields.address}
 				type="text"
-				label="Address"
+				label={m.member_address()}
 				value={listing.address ?? ''}
 				maxlength="500"
 			/>
@@ -294,15 +296,15 @@
 			<FormField
 				field={fields.tags}
 				type="text"
-				label="Tags"
+				label={m.member_tags()}
 				value={listing.tags ?? ''}
 				maxlength="500"
 			/>
 
 			<FormField
 				name="lineup"
-				label="Who's playing"
-				description="Naming a band that's on the site asks them to confirm — they'll appear as a plain credit until they do."
+				label={m.member_events_id_manage_who_s_playing()}
+				description={m.member_events_id_manage_naming_band_s_site_asks()}
 			>
 				<LineupEditor bind:value={lineup} search={searchBandsForListing} />
 			</FormField>
@@ -310,34 +312,34 @@
 			<FormField
 				field={fields.posterFile}
 				type="file"
-				label="Poster"
-				description="JPEG, PNG or WebP, up to 10 MB."
+				label={m.member_events_id_manage_poster()}
+				description={m.member_events_id_manage_jpeg_png_webp_up_10()}
 				accept="image/jpeg,image/png,image/webp"
 				src={listing.posterUrl ? imageSrc(listing.posterUrl, 'thumb').src : undefined}
 				previewClass="h-32 w-24"
-				emptyLabel="Add a poster"
-				replaceLabel="Replace poster"
+				emptyLabel={m.member_events_id_manage_empty_label()}
+				replaceLabel={m.member_events_id_manage_replace_label()}
 			/>
 
 			<div class="grid gap-4 md:grid-cols-2">
 				<FormField
 					field={fields.externalTicketUrl}
 					type="text"
-					label="Ticket Link"
+					label={m.member_events_id_manage_ticket_link()}
 					value={listing.externalTicketUrl ?? ''}
 				/>
 				<FormField
 					field={fields.ticketPriceDollars}
 					type="text"
-					label="Ticket price ($)"
+					label={m.member_events_id_manage_ticket_price()}
 					value={toDollars(listing.ticketPrice)}
 					inputmode="decimal"
-					description="What people pay, at the door or through the link. Leave blank if it's free."
+					description={m.member_events_id_manage_what_people_pay_at_door()}
 				/>
 			</div>
 
 			<div class="flex justify-end pt-4">
-				<SubmitButton label="Save changes" variant="primary" />
+				<SubmitButton label={m.member_events_id_manage_save_changes()} variant="primary" />
 			</div>
 		</Form>
 	</PageContent>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Form from '$lib/components/ui/Form/Form.svelte';
@@ -30,10 +31,10 @@
 		groupApplicationQuestions.committee.find((q) => q.id === id)?.prompt ?? id;
 </script>
 
-<Modal title="Apply to committees" bind:open {onclose}>
+<Modal title={m.member_groups_committee_apply_modal_title()} bind:open {onclose}>
 	<Form
 		remote={applyToGroups}
-		successToast="Application sent"
+		successToast={m.member_application_sent()}
 		onsuccess={() => (open = false)}
 		class="space-y-6"
 	>
@@ -62,10 +63,10 @@
 			maxlength={String(APPLICATION_ANSWER_MAX)}
 		/>
 
-		<Alert type="info">A chair will contact you. Your account already has your details.</Alert>
+		<Alert type="info">{m.member_groups_committee_apply_modal_chair_will_contact_accou()}</Alert>
 
 		<div class="flex justify-end">
-			<SubmitButton label="Send application" />
+			<SubmitButton label={m.member_send_application()} />
 		</div>
 	</Form>
 </Modal>

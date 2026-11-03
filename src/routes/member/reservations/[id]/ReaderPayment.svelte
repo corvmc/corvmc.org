@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { payAtReader } from '$lib/remote/reservations.remote';
@@ -58,7 +59,7 @@
 			<Alert type="warning">{failure}</Alert>
 		{/if}
 		<Button variant="primary" outline class="w-full" disabled={busy} onclick={start}>
-			Pay at the reader
+			{m.member_reservations_id_reader_payment_pay_at_reader()}
 		</Button>
 	</div>
 {/if}

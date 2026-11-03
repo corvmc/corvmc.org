@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { formatDollars } from '$lib/utils/format';
 	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
@@ -31,7 +32,7 @@
 	}
 </script>
 
-<PageHeader width="md" title="Your Reservation" />
+<PageHeader width="md" title={m.member_reservations_id_reservation()} />
 <PageContent width="md">
 	<!--
 		The detail-page shape ui-patterns names: `EntityIdentity size="lg"` over a
@@ -48,15 +49,15 @@
 		{#if data.band}
 			<!-- Whose booking this is, when it is not simply the member's own. A
 			     band booking looked identical to a personal one on this page. -->
-			<Fact label="Booked for"><EntityChip ref={data.band} /></Fact>
+			<Fact label={m.member_reservations_id_booked()}><EntityChip ref={data.band} /></Fact>
 		{/if}
 		{#if res.notes}
-			<Fact label="Notes" wrap>{res.notes}</Fact>
+			<Fact label={m.member_reservations_id_notes()} wrap>{res.notes}</Fact>
 		{/if}
 	</DefinitionList>
 
 	{#if paidAtReader && res.status === 'confirmed'}
-		<Alert type="success">Paid. Your booking is confirmed.</Alert>
+		<Alert type="success">{m.member_reservations_id_paid_booking_confirmed()}</Alert>
 	{/if}
 
 	{#if res.status === 'confirmed'}
@@ -64,21 +65,20 @@
 		     were a single paragraph inside an `InfoCard` titled "Door Code",
 		     which is a box around one sentence (#1061). -->
 		{#if res.lockCode && res.lockSyncedAt}
-			<InfoCard title="Door Code">
+			<InfoCard title={m.member_reservations_id_door_code()}>
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
 				<p class="text-muted">
-					Enter this code on the door keypad to get in. It works for the length of your reservation.
+					{m.member_reservations_id_enter_code_door_keypad_get()}
 				</p>
 			</InfoCard>
 		{:else if data.fallbackCode}
 			<!-- Their own code has not reached the lock, and they are due in now.
 			     The break-glass code was synced long ago, so it opens the door
 			     even while the lock is offline. -->
-			<InfoCard title="Door Code">
+			<InfoCard title={m.member_reservations_id_door_code()}>
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{data.fallbackCode}</p>
 				<p class="text-muted">
-					We couldn't confirm your usual code reached the door, so this one will get you in for now.
-					Staff know about it. If it doesn't work, call us rather than waiting outside.
+					{m.member_reservations_id_we_couldn_t_confirm_usual()}
 				</p>
 			</InfoCard>
 		{:else if data.inAccessWindow}
@@ -87,16 +87,16 @@
 			     mid-rotation. Standing outside is the failure mode. -->
 			<Alert type="error">
 				Your code hasn't reached the door and we don't have a backup to give you right now. Don't
-				wait outside — <a class="link" href={resolve('/contact')}>get in touch</a> and someone will let
-				you in.
+				wait outside — <a class="link" href={resolve('/contact')}
+					>{m.member_reservations_id_get_touch()}</a
+				> and someone will let you in.
 			</Alert>
 		{:else if res.lockCode}
 			<p class="text-muted">
-				Your door code is issued but the door hasn't confirmed it yet. It should be ready before
-				your session — check back here, and get in touch if it still isn't showing.
+				{m.member_reservations_id_door_code_issued_but_door()}
 			</p>
 		{:else}
-			<p class="text-muted">Your door code will appear here before your reservation.</p>
+			<p class="text-muted">{m.member_reservations_id_door_code_will_appear_here()}</p>
 		{/if}
 	{/if}
 
@@ -104,7 +104,7 @@
 		<!-- The card carries the amount, the due date and the confirmation window;
 		     without them here, opening a booking to check what is outstanding
 		     tells a member less than the list they came from (#895). -->
-		<InfoCard title="Not confirmed yet">
+		<InfoCard title={m.member_reservations_id_not_confirmed_yet()}>
 			<p>
 				<span class="font-medium">${formatDollars(data.totalCents)}</span>
 				due — cash at the door, or card online.
@@ -113,7 +113,7 @@
 		</InfoCard>
 
 		<Button href="/member/reservations/{res.id}/pay" variant="primary" class="w-full">
-			Pay for this session
+			{m.member_reservations_id_pay_session()}
 		</Button>
 	{/if}
 
@@ -146,7 +146,7 @@
 					</span>
 				{/if}
 				<Button href="/member/reservations/{res.id}/pay" variant="primary" outline>
-					Pay online
+					{m.member_pay_online()}
 				</Button>
 			{/if}
 			{#if !isPast}
@@ -155,5 +155,7 @@
 		</div>
 	{/if}
 
-	<Button href="/member/reservations" variant="ghost" class="w-full">Back to Reservations</Button>
+	<Button href="/member/reservations" variant="ghost" class="w-full"
+		>{m.member_back_reservations()}</Button
+	>
 </PageContent>

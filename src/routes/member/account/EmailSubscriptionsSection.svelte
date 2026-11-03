@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import { SubscribeAction, UnsubscribeAction } from '$lib/components/actions';
 	import { getMyEmailSubscriptions } from '$lib/remote/account.remote';
@@ -12,17 +13,19 @@
 </script>
 
 <svelte:boundary>
-	<InfoCard title="Email Subscriptions">
+	<InfoCard title={m.member_account_email_subscriptions_section_title()}>
 		{#await lists}
 			<div class="flex justify-center p-4">
 				<span class="loading loading-sm loading-spinner"></span>
 			</div>
 		{:then { subscriptions: subs, available: avail }}
 			{#if subs.length === 0 && avail.length === 0}
-				<p class="text-muted">No mailing lists available.</p>
+				<p class="text-muted">{m.member_account_email_subscriptions_section_no_mailing_lists()}</p>
 			{:else}
 				{#if subs.length > 0}
-					<p class="mb-2 text-subtle font-medium">Your subscriptions</p>
+					<p class="mb-2 text-subtle font-medium">
+						{m.member_account_email_subscriptions_section_subscriptions()}
+					</p>
 					<div class="mb-4 space-y-2">
 						{#each subs as sub (sub.audienceId)}
 							<div class="flex items-center justify-between rounded-lg border px-4 py-2">
@@ -39,7 +42,9 @@
 				{/if}
 
 				{#if avail.length > 0}
-					<p class="mb-2 text-subtle font-medium">Available lists</p>
+					<p class="mb-2 text-subtle font-medium">
+						{m.member_account_email_subscriptions_section_available_lists()}
+					</p>
 					<div class="space-y-2">
 						{#each avail as a (a.id)}
 							<div class="flex items-center justify-between rounded-lg border px-4 py-2">
@@ -56,13 +61,15 @@
 				{/if}
 			{/if}
 		{:catch}
-			<p class="text-sm text-error">Failed to load subscriptions.</p>
+			<p class="text-sm text-error">
+				{m.member_account_email_subscriptions_section_failed_load_subsc()}
+			</p>
 		{/await}
 	</InfoCard>
 
 	{#snippet failed(_error, reset)}
 		<Alert type="warning" reset={() => retryQuery(lists, reset)}>
-			Your email subscriptions didn't load. The rest of your account is up to date.
+			{m.member_account_email_subscriptions_section_email_subscriptio()}
 		</Alert>
 	{/snippet}
 </svelte:boundary>

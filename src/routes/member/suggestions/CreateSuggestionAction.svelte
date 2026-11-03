@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconPlus } from '@tabler/icons-svelte';
@@ -20,10 +21,10 @@
 
 <Action
 	action={createSuggestion}
-	label="New suggestion"
-	modalTitle="New suggestion"
-	submitLabel="Post it"
-	successToast={standing.status !== 'none' ? 'Sent to staff for review' : 'Posted to the board'}
+	label={m.member_suggestions_create_suggestion_new_suggestion()}
+	modalTitle={m.member_suggestions_create_suggestion_new_suggestion()}
+	submitLabel={m.member_post()}
+	successToast={standing.status !== 'none' ? m.member_sent_staff_review() : m.member_posted_board()}
 	variant="primary"
 	size="sm"
 	onsuccess={(r) => {
@@ -35,14 +36,14 @@
 	{#snippet icon()}<IconPlus size={16} />{/snippet}
 	{#snippet form()}
 		{#if standing.status !== 'none'}
-			<p class="mb-3 text-muted">Staff will look at this before it goes on the board.</p>
+			<p class="mb-3 text-muted">{m.member_staff_will_look_at_before()}</p>
 		{/if}
-		<FormField name="title" type="text" label="What should we do?" />
-		<FormField name="body" type="textarea" label="Tell us a bit more" />
+		<FormField name="title" type="text" label={m.member_what_should_we_do()} />
+		<FormField name="body" type="textarea" label={m.member_tell_us_bit_more()} />
 		<FormField
 			name="category"
 			type="select"
-			label="Category"
+			label={m.member_category()}
 			options={suggestionCategories.map((c) => ({
 				value: c,
 				label: suggestionCategoryLabels[c]

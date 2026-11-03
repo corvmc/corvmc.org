@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import AppealPanel from '$lib/components/moderation/AppealPanel.svelte';
 	import { getMySuggestionStanding } from '$lib/remote/suggestions.remote';
@@ -19,8 +20,7 @@
 	     reasonably conclude the site was broken, or that they'd been shadowbanned. -->
 	<Alert type="warning">
 		<p>
-			Your suggestions go to staff for a look before they appear on the board. This started after a
-			report was upheld against one of your posts.
+			{m.member_suggestions_standing_notice_suggestions_go_staff_look()}
 			{#if standing.reason}
 				Staff's note: <span class="italic">{standing.reason}</span>
 			{/if}

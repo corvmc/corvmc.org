@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { relativeDay } from '$lib/utils/format';
@@ -19,7 +20,7 @@
 </script>
 
 {#if count > 0}
-	<InfoCard title="Needs you" state={count}>
+	<InfoCard title={m.member_needs_you_card_title()} state={count}>
 		<ul class="flex flex-col divide-y divide-base-300">
 			{#each items as item (item.id)}
 				<li class="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">

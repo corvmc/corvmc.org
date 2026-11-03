@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
@@ -110,23 +111,27 @@
 	}
 </script>
 
-<PageHeader title="Equipment Catalog">
+<PageHeader title={m.member_equipment_equipment_catalog()}>
 	<div class="flex items-center gap-3">
 		<!-- Equipment credits are stored in cents, the same as every other amount
 		     the ledger holds — `checkoutLoan` spends them against a cents total.
 		     Printed raw, a $25 balance read as "2500 credits", which is either a
 		     fortune or a currency nobody could name. -->
 		{#if meta.creditBalance > 0}
-			<Badge variant="info" size="md">{formatCents(meta.creditBalance)} credit</Badge>
+			<Badge variant="info" size="md"
+				>{m.member_equipment_credit({ formatCents: formatCents(meta.creditBalance) })}</Badge
+			>
 		{/if}
-		<Button href="/member/equipment/loans" variant="ghost" size="sm">My Loans</Button>
+		<Button href="/member/equipment/loans" variant="ghost" size="sm"
+			>{m.member_equipment_my_loans()}</Button
+		>
 	</div>
 </PageHeader>
 <PageContent>
 	<div class="mb-4 flex flex-wrap items-end gap-2">
 		<SearchInput
 			bind:value={search}
-			placeholder="Search equipment..."
+			placeholder={m.member_equipment_placeholder()}
 			onsearch={(q) => {
 				searchDebounced = q;
 			}}
@@ -138,13 +143,13 @@
 				categoryId = (e.currentTarget as HTMLSelectElement).value;
 			}}
 		>
-			<option value="">All categories</option>
+			<option value="">{m.member_all_categories()}</option>
 			{#each meta.categories as cat (cat.id)}
 				<option value={cat.id}>{cat.name}</option>
 			{/each}
 		</Select>
 		{#if hasActiveFilters()}
-			<Button variant="ghost" size="sm" onclick={clearFilters}>Clear</Button>
+			<Button variant="ghost" size="sm" onclick={clearFilters}>{m.member_equipment_clear()}</Button>
 		{/if}
 	</div>
 
@@ -154,7 +159,7 @@
 		</div>
 	{:then equipment}
 		{#if equipment.length === 0}
-			<EmptyState message="No equipment available." />
+			<EmptyState message={m.member_equipment_message()} />
 		{:else}
 			{@const groups = equipment.reduce<Record<string, typeof equipment>>((acc, eq) => {
 				const key = eq.categoryName;
@@ -178,7 +183,7 @@
 										     one. Which unit you get is decided at checkout. -->
 										<Badge variant="ghost" size="xs">{priceLabel(eq.pricingTier)}</Badge>
 										<Badge variant={eq.availableQuantity <= 0 ? 'error' : 'ghost'} size="xs">
-											{eq.availableQuantity} available
+											{m.member_equipment_available({ availableQuantity: eq.availableQuantity })}
 										</Badge>
 									</div>
 									<div class="mt-2 card-actions">
@@ -188,7 +193,7 @@
 											disabled={eq.availableQuantity <= 0}
 											onclick={() => openRequest(eq.id, eq.name, eq.pricingTier)}
 										>
-											Request
+											{m.member_equipment_request()}
 										</Button>
 									</div>
 								</CardBody>
@@ -201,22 +206,24 @@
 	{/await}
 
 	<div class="border-t pt-4">
-		<p class="mb-2 text-muted">Can't find what you need?</p>
+		<p class="mb-2 text-muted">{m.member_equipment_can_t_find_what_need()}</p>
 		<Button variant="default" size="sm" outline onclick={openFreeFormRequest}
-			>Describe Your Request</Button
+			>{m.member_equipment_describe_request()}</Button
 		>
 	</div>
 </PageContent>
 
 <Modal
 	bind:open={showRequestModal}
-	title={isFreeForm ? 'Free-form Equipment Request' : `Request: ${selectedEquipmentName}`}
+	title={isFreeForm
+		? m.member_equipment_free_form_equipment_request()
+		: m.member_equipment_request_2({ selectedEquipmentName })}
 	maxWidth="max-w-md"
 >
 	<Form
 		remote={submitRequest}
 		onsuccess={() => {
-			toast.success('Request submitted! Staff will confirm your pickup.');
+			toast.success(m.member_equipment_toast());
 			showRequestModal = false;
 			goto(resolve('/member/equipment/loans'));
 		}}
@@ -229,42 +236,54 @@
 				pickupDateValue = (e.target as HTMLInputElement).value;
 			}}
 		>
-			<Field name="requestedPickupDate" type="date" label="Preferred Pickup Date" required />
+			<Field
+				name="requestedPickupDate"
+				type="date"
+				label={m.member_equipment_preferred_pickup_date()}
+				required
+			/>
 		</div>
 		<div
 			oninput={(e: Event) => {
 				returnDateValue = (e.target as HTMLInputElement).value;
 			}}
 		>
-			<Field name="estimatedReturnDate" type="date" label="Estimated Return Date" required />
+			<Field
+				name="estimatedReturnDate"
+				type="date"
+				label={m.member_equipment_estimated_return_date()}
+				required
+			/>
 		</div>
 		{#if !isFreeForm}
-			<Field name="quantity" type="number" value={1} label="Quantity" />
+			<Field name="quantity" type="number" value={1} label={m.member_equipment_quantity()} />
 		{/if}
 		{#if costEstimate != null}
 			<div class="rounded-lg bg-info/10 px-4 py-3 text-sm">
 				{#if costEstimate === 0}
-					<span class="font-medium">Free for sustaining members</span>
+					<span class="font-medium">{m.member_equipment_free_sustaining_members()}</span>
 				{:else}
 					Estimated cost: <span class="font-semibold">{formatCents(costEstimate)}</span>
 				{/if}
 			</div>
 		{:else if isFreeForm && pickupDateValue && returnDateValue}
 			<div class="rounded-lg bg-base-200 px-4 py-3 text-muted">
-				Cost will be determined when equipment is assigned
+				{m.member_equipment_cost_will_determined_when_equipment()}
 			</div>
 		{/if}
 		<Field
 			name="memberNotes"
 			type="textarea"
-			label={isFreeForm ? 'Describe what you need' : 'Notes (optional)'}
+			label={isFreeForm
+				? m.member_equipment_describe_what_need()
+				: m.member_equipment_notes_optional()}
 			required={isFreeForm}
 		/>
 		<div class="modal-action">
 			<Button type="button" variant="ghost" onclick={() => (showRequestModal = false)}
-				>Cancel</Button
+				>{m.member_cancel()}</Button
 			>
-			<SubmitButton label="Submit Request" />
+			<SubmitButton label={m.member_equipment_submit_request()} />
 		</div>
 	</Form>
 </Modal>

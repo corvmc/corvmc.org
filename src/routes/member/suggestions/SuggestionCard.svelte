@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -86,7 +87,7 @@
 				     unclamped made one row several times taller than its neighbours,
 				     and it was the only unclamped text on the board (#1046). -->
 				<p class="line-clamp-3 border-l-2 border-primary/40 pl-3 text-sm">
-					<span class="font-medium">Staff:</span>
+					<span class="font-medium">{m.member_suggestions_suggestion_card_staff()}</span>
 					{suggestion.responseBody}
 				</p>
 			{/if}
@@ -99,11 +100,11 @@
 		{#if !isMine}
 			<Action
 				action={flag}
-				label="Flag"
+				label={m.member_suggestions_suggestion_card_flag()}
 				iconOnly
-				modalTitle="Flag for review"
-				submitLabel="Send report"
-				successToast="Reported — staff will take a look"
+				modalTitle={m.member_flag_review()}
+				submitLabel={m.member_send_report()}
+				successToast={m.member_reported_staff_will_take_look()}
 				variant="ghost"
 				size="xs"
 				class="shrink-0"
@@ -113,11 +114,10 @@
 				{#snippet form()}
 					<input {...flag.fields.suggestionId.as('hidden', suggestion.id)} />
 					<p class="mb-3 text-muted">
-						This takes the suggestion off the board straight away while staff look at it. If they
-						don't agree with the report, it goes back up.
+						{m.member_takes_suggestion_off_board_straight()}
 					</p>
-					<FormField name="reason" type="text" label="What's the problem?" />
-					<FormField name="description" type="textarea" label="Anything else? (optional)" />
+					<FormField name="reason" type="text" label={m.member_what_s_problem()} />
+					<FormField name="description" type="textarea" label={m.member_anything_else_optional()} />
 				{/snippet}
 			</Action>
 		{/if}

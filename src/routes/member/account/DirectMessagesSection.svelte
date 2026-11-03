@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import AppealPanel from '$lib/components/moderation/AppealPanel.svelte';
@@ -24,7 +25,7 @@
 	const blocks = $derived(settings.blocks);
 </script>
 
-<InfoCard title="Direct Messages">
+<InfoCard title={m.member_account_direct_messages_section_title()}>
 	<!-- Three separate things, shown together on purpose. Age is a fact and
 	     lifts itself; the restriction is staff's and read-only; the switch
 	     below is the member's own and always theirs to set. Toggling the
@@ -36,8 +37,7 @@
 		     before #556 they were shown a moderation notice about their own
 		     date of birth. -->
 		<Alert type="info">
-			Direct messages are open to members {ADULT_AGE_YEARS} and over. Everything else on the site is yours
-			to use.
+			{m.member_account_direct_messages_section_direct_messages_open({ ADULT_AGE_YEARS })}
 		</Alert>
 	{:else if messaging.standing.status !== 'none'}
 		<Alert type="warning">
@@ -49,21 +49,24 @@
 			{/if}
 			<AppealPanel target={{ kind: 'standing', scope: 'messaging' }}>
 				{#snippet fallback()}
-					<span class="mt-1 block text-muted"> Contact staff if you think this is a mistake. </span>
+					<span class="mt-1 block text-muted">
+						{m.member_account_direct_messages_section_contact_staff_if_thin()}
+					</span>
 				{/snippet}
 			</AppealPanel>
 		</Alert>
 	{/if}
 	<p class="mt-3 mb-3 text-muted">
-		When this is on, other members can send you a message request from the directory. You decide
-		whether to accept each one, and you can block anyone at any time.
+		{m.member_account_direct_messages_section_when_other_members_ca()}
 	</p>
 	<Form
 		remote={setMyMessaging}
-		successToast="Saved"
+		successToast={m.member_saved()}
 		class="flex items-center justify-between gap-4"
 	>
-		<span class="font-medium">Allow direct messages</span>
+		<span class="font-medium"
+			>{m.member_account_direct_messages_section_allow_direct_messages()}</span
+		>
 		<input
 			{...setMyMessaging.fields.enabled.as(
 				'hidden',
@@ -71,7 +74,9 @@
 			)}
 		/>
 		<SubmitButton
-			label={messaging.acceptsDirectMessages ? 'Turn off' : 'Turn on'}
+			label={messaging.acceptsDirectMessages
+				? m.member_account_direct_messages_section_turn_off()
+				: m.member_account_direct_messages_section_turn()}
 			variant={messaging.acceptsDirectMessages ? 'default' : 'primary'}
 			outline={messaging.acceptsDirectMessages}
 			size="sm"
@@ -86,9 +91,9 @@
 	-->
 	{#if blocks.length > 0}
 		<div class="mt-4 border-t border-base-300 pt-4">
-			<h3 class="mb-2 font-medium">Blocked members</h3>
+			<h3 class="mb-2 font-medium">{m.member_account_direct_messages_section_blocked_members()}</h3>
 			<p class="mb-3 text-muted text-sm">
-				Neither of you can write to the other. Conversations you already had stay readable.
+				{m.member_account_direct_messages_section_neither_can_write_oth()}
 			</p>
 			<ul class="flex flex-col gap-1">
 				{#each blocks as blocked (blocked.userId)}
@@ -96,14 +101,25 @@
 						<span class="min-w-0">
 							<span class="truncate font-medium">{blocked.name}</span>
 							{#if blocked.source === 'declined_request'}
-								<span class="ml-2 text-subtle text-xs">from a declined request</span>
+								<span class="ml-2 text-subtle text-xs"
+									>{m.member_account_direct_messages_section_from_declined_request()}</span
+								>
 							{:else if blocked.source === 'reported'}
-								<span class="ml-2 text-subtle text-xs">from a report</span>
+								<span class="ml-2 text-subtle text-xs"
+									>{m.member_account_direct_messages_section_from_report()}</span
+								>
 							{/if}
 						</span>
-						<Form remote={unblockMember} successToast="Unblocked">
+						<Form
+							remote={unblockMember}
+							successToast={m.member_account_direct_messages_section_unblocked()}
+						>
 							<input {...unblockMember.fields.userId.as('hidden', blocked.userId)} />
-							<SubmitButton label="Unblock" variant="ghost" size="sm" />
+							<SubmitButton
+								label={m.member_account_direct_messages_section_unblock()}
+								variant="ghost"
+								size="sm"
+							/>
 						</Form>
 					</li>
 				{/each}
