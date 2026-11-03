@@ -216,6 +216,7 @@
 			</p>
 			<Action
 				action={reviewSuggestion}
+				data-testid="review-suggestion"
 				label="Approve or reject"
 				modalTitle="Review suggestion"
 				submitLabel="Save"
@@ -287,6 +288,7 @@
 			<div class="mt-3">
 				<Action
 					action={reviewSuggestionEdit}
+					data-testid="review-suggestion-edit"
 					label="Approve or reject"
 					modalTitle="Review the proposed edit"
 					submitLabel="Save"
@@ -425,6 +427,7 @@
 				</p>
 				<Action
 					action={mergeSuggestion}
+					data-testid="merge-suggestion"
 					label="Merge into another"
 					modalTitle="Merge suggestion"
 					submitLabel="Merge"

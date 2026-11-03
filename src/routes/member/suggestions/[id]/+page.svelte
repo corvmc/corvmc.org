@@ -172,6 +172,7 @@
 			{#if isMine && editState.canEdit && !editState.pendingEdit}
 				<Action
 					action={editSuggestion}
+					data-testid="edit-suggestion"
 					label={editState.direct ? 'Edit' : 'Request an edit'}
 					iconOnly
 					modalTitle={editState.direct ? 'Edit your suggestion' : 'Request an edit'}
@@ -213,6 +214,7 @@
 			{#if !isMine && s.visibility === 'visible'}
 				<Action
 					action={flag}
+					data-testid="flag-suggestion"
 					label="Flag for review"
 					iconOnly
 					modalTitle="Flag for review"

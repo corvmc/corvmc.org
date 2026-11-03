@@ -33,6 +33,7 @@
 {#if canMessageMembers}
 	<Action
 		action={directForm}
+		data-testid="message-member"
 		label="Message a Member"
 		modalTitle="Message a member"
 		submitLabel="Send request"

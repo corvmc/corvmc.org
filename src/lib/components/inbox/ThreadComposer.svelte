@@ -119,7 +119,7 @@
 		{/if}
 
 		{#if replyBlockedReason}
-			<p class="text-xs text-warning">{replyBlockedReason}</p>
+			<p class="text-xs text-warning" data-testid="reply-blocked">{replyBlockedReason}</p>
 		{/if}
 
 		<!-- `guard` because every other abandonable form here has one — the profile,

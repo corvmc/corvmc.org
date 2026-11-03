@@ -67,7 +67,7 @@
 						{#if draft}
 							<!-- The one thing an author must not misread. A draft looks
 							     exactly like a post until you notice nobody replied. -->
-							<Badge variant="warning">Draft</Badge>
+							<Badge variant="warning" data-testid="announcement-draft">Draft</Badge>
 						{/if}
 					</div>
 
@@ -99,6 +99,7 @@
 							{#if draft}
 								<Action
 									action={publishAnnouncement.for(post.id)}
+									data-testid="publish-announcement"
 									label="Publish"
 									modalTitle="Publish announcement"
 									submitLabel="Publish"
