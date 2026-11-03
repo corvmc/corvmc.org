@@ -436,6 +436,18 @@
 								notes={shift.notes ?? ''}
 								title={shift.title ?? ''}
 							/>
+							{#if view.reports.length > 0 || shift.closeReportsOnCompletion}
+								<FormField
+									name="closeReports"
+									type="select"
+									label="When the window ends"
+									value={shift.closeReportsOnCompletion ? 'close' : 'wait'}
+									options={[
+										{ value: 'close', label: 'Close the equipment reports' },
+										{ value: 'wait', label: 'Wait on Today for me to confirm' }
+									]}
+								/>
+							{/if}
 						{/snippet}
 					</Action>
 
