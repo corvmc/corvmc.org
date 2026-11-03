@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import { getBandHistory, getStaffBandPage, updateMemberRole } from '$lib/remote/bands.remote';
 	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
@@ -47,7 +48,7 @@
 <StaffBandForm {band} {id} {variant} {actions} />
 
 {#snippet body()}
-	<InfoCard title="Members">
+	<InfoCard title={msg.staff_members()}>
 		{#snippet header(title)}
 			<header class="flex items-center justify-between">
 				<CardTitle>{title}</CardTitle>
@@ -59,30 +60,30 @@
 			</header>
 		{/snippet}
 		{#if members.length === 0}
-			<EmptyState description="No members" />
+			<EmptyState description={msg.staff_groups_id_band_record_no_members()} />
 		{:else}
-			<RosterTable rows={members} personLabel="Member">
+			<RosterTable rows={members} personLabel={msg.staff_member()}>
 				{#snippet lead(m)}<StatusBadge status={m.status} />{/snippet}
 				{#snippet columns()}
-					<th class="w-px">Role</th>
-					<th class="col-extra whitespace-nowrap">Joined</th>
+					<th class="w-px">{msg.staff_role()}</th>
+					<th class="col-extra whitespace-nowrap">{msg.staff_joined()}</th>
 				{/snippet}
 				{#snippet cells(m)}
 					<td class="w-px">
 						{#if m.role !== 'owner' && m.status === 'active'}
 							{@const rf = updateMemberRole.for(m.id)}
-							<Form remote={rf} successToast="Role updated">
+							<Form remote={rf} successToast={msg.staff_groups_id_band_record_success_toast()}>
 								<input {...rf.fields.memberId.as('hidden', m.id)} />
 								<Select
 									class="select-xs"
 									name="role"
-									aria-label="Role for {m.member.title}"
+									aria-label={msg.staff_groups_id_band_record_aria_label({ title: m.member.title })}
 									value={m.role}
 									onchange={(e: Event) =>
 										(e.currentTarget as HTMLSelectElement).form?.requestSubmit()}
 								>
-									<option value="member">Member</option>
-									<option value="admin">Admin</option>
+									<option value="member">{msg.staff_member()}</option>
+									<option value="admin">{msg.staff_groups_id_band_record_admin()}</option>
 								</Select>
 							</Form>
 						{:else}
@@ -110,13 +111,13 @@
 
 	<!-- Email invites — sent to an address with no account behind it -->
 	{#if emailInvites.filter((i) => i.status === 'pending').length > 0}
-		<InfoCard title="Awaiting Signup">
+		<InfoCard title={msg.staff_groups_id_band_record_awaiting_signup()}>
 			<Table>
 				{#snippet head()}
-					<th>Invitee</th>
-					<th class="w-px">Role</th>
-					<th class="col-extra">Invited by</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
+					<th>{msg.staff_groups_id_band_record_invitee()}</th>
+					<th class="w-px">{msg.staff_role()}</th>
+					<th class="col-extra">{msg.staff_groups_id_band_record_invited_by()}</th>
+					<th class="w-px"><span class="sr-only">{msg.staff_actions()}</span></th>
 				{/snippet}
 				{#each emailInvites.filter((i) => i.status === 'pending') as inv (inv.id)}
 					<tr class="hover">
@@ -137,16 +138,16 @@
 		</InfoCard>
 	{/if}
 
-	<InfoCard title="Recent Reservations">
+	<InfoCard title={msg.staff_groups_id_band_record_recent_reservations()}>
 		{#if reservations.length === 0}
-			<EmptyState description="No reservations" />
+			<EmptyState description={msg.staff_groups_id_band_record_no_reservations()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Reservation</th>
-					<th class="col-support">Booked by</th>
-					<th class="col-extra">Notes</th>
+					<th class="w-px"><span class="sr-only">{msg.staff_status()}</span></th>
+					<th>{msg.staff_reservation()}</th>
+					<th class="col-support">{msg.staff_booked_by()}</th>
+					<th class="col-extra">{msg.staff_notes()}</th>
 				{/snippet}
 				{#each reservations as r (r.id)}
 					{@const href = resolve(`/staff/reservations/${r.id}`)}
@@ -170,10 +171,10 @@
 
 	{#if variant === 'page'}
 		<ActivityFeedCard
-			title="History"
+			title={msg.staff_history()}
 			query={(limit) => getBandHistory(limit ? { id, limit } : { id })}
 			toRow={feedItemRow}
-			empty={{ title: 'No recorded changes' }}
+			empty={{ title: msg.staff_no_recorded_changes() }}
 		/>
 	{/if}
 {/snippet}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -35,7 +36,7 @@
 	}));
 </script>
 
-<PageHeader title="Classifieds" subtitle="Staff" />
+<PageHeader title={m.staff_classifieds()} subtitle={m.staff_staff()} />
 
 <PageContent>
 	<TabBar
@@ -58,7 +59,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search posts..."
+				placeholder={m.staff_classifieds_placeholder()}
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -70,18 +71,18 @@
 	{#if tab === 'under_review'}
 		<p class="text-muted">
 			Reported posts are decided in
-			<a class="link" href={resolve('/staff/flags')}>Content Flags</a>.
+			<a class="link" href={resolve('/staff/flags')}>{m.staff_content_flags()}</a>.
 		</p>
 	{/if}
 
-	<DataList {result} empty="No posts here" onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_classifieds_empty()} onpage={(p) => (page = p)}>
 		{#snippet children(rows)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Post</th>
-					<th>Posted by</th>
-					<th class="col-extra whitespace-nowrap">Posted</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+					<th>{m.staff_classifieds_post()}</th>
+					<th>{m.staff_classifieds_posted_by()}</th>
+					<th class="col-extra whitespace-nowrap">{m.staff_posted()}</th>
 				{/snippet}
 				{#each rows as r (r.id)}
 					<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/classifieds/${r.id}`)}>

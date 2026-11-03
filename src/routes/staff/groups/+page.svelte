@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -50,9 +51,9 @@
 	}
 </script>
 
-<PageHeader title="Groups">
+<PageHeader title={m.staff_groups()}>
 	<!-- External acts stay beside bands: the same staff job, and one can become the other. -->
-	<Button variant="ghost" href={resolve('/staff/bands/acts')}>External acts</Button>
+	<Button variant="ghost" href={resolve('/staff/bands/acts')}>{m.staff_external_acts()}</Button>
 	<CreateBandAction />
 </PageHeader>
 <PageContent>
@@ -61,7 +62,7 @@
 		<BandTotals />
 		{#snippet failed(_error, reset)}
 			<Alert type="warning" reset={() => retryQuery(getStaffBandTotals(), reset)}>
-				The totals didn't load.
+				{m.staff_totals_didn_t_load()}
 			</Alert>
 		{/snippet}
 	</svelte:boundary>
@@ -77,7 +78,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search by name..."
+				placeholder={m.staff_search_by_name()}
 				onsearch={(q) => {
 					f.q = q;
 					f.page = 1;
@@ -86,7 +87,7 @@
 		{/snippet}
 		{#snippet menu()}
 			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">Status</span>
+				<span class="text-muted text-xs">{m.staff_status()}</span>
 				<Select
 					size="sm"
 					value={f.status}
@@ -95,13 +96,13 @@
 						f.page = 1;
 					}}
 				>
-					<option value="active">Active</option>
-					<option value="deactivated">Deactivated</option>
-					<option value="all">All statuses</option>
+					<option value="active">{m.staff_active()}</option>
+					<option value="deactivated">{m.staff_deactivated()}</option>
+					<option value="all">{m.staff_all_statuses()}</option>
 				</Select>
 			</label>
 			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">Tier</span>
+				<span class="text-muted text-xs">{m.staff_tier()}</span>
 				<Select
 					size="sm"
 					value={f.tier}
@@ -110,24 +111,24 @@
 						f.page = 1;
 					}}
 				>
-					<option value="">All tiers</option>
-					<option value="free">Free</option>
-					<option value="premium">Premium</option>
+					<option value="">{m.staff_groups_all_tiers()}</option>
+					<option value="free">{m.staff_groups_free()}</option>
+					<option value="premium">{m.staff_premium()}</option>
 				</Select>
 			</label>
 		{/snippet}
 	</FilterBar>
 
-	<DataList {result} empty="No bands found" onpage={(p) => (f.page = p)}>
+	<DataList {result} empty={m.staff_groups_empty()} onpage={(p) => (f.page = p)}>
 		{#snippet children(bands)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Band</th>
-					<th>Owner</th>
-					<th class="col-support">Tier</th>
-					<th class="col-support cell-num">Members</th>
-					<th class="col-extra whitespace-nowrap">Created</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+					<th>{m.staff_band()}</th>
+					<th>{m.staff_owner()}</th>
+					<th class="col-support">{m.staff_tier()}</th>
+					<th class="col-support cell-num">{m.staff_members()}</th>
+					<th class="col-extra whitespace-nowrap">{m.staff_created()}</th>
 				{/snippet}
 
 				{#each bands as b (b.id)}

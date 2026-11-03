@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/** One sponsor: who to call, and every term of support they have given. */
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -43,15 +44,15 @@
 	const lapsed = $derived(sponsor.sponsorships.find((s) => s.deadline?.overdue));
 </script>
 
-<PageHeader title={sponsor.name} subtitle="Sponsor">
+<PageHeader title={sponsor.name} subtitle={m.staff_sponsor()}>
 	<Action
 		action={editForm}
-		label="Edit"
+		label={m.staff_edit()}
 		variant="ghost"
 		size="sm"
-		modalTitle="Edit {sponsor.name}"
-		submitLabel="Save"
-		successToast="Saved"
+		modalTitle={m.staff_edit_2({ name: sponsor.name })}
+		submitLabel={m.staff_save()}
+		successToast={m.staff_saved()}
 	>
 		{#snippet form()}
 			<input type="hidden" name="id" value={sponsor.id} />
@@ -65,15 +66,15 @@
 		<Alert type="warning">
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<span>
-					<span class="font-medium">Archived.</span> Off the sponsor list, with every sponsorship and
-					credit kept.
+					<span class="font-medium">{m.staff_archived_2()}</span> Off the sponsor list, with every sponsorship
+					and credit kept.
 				</span>
 				<Action
 					action={restoreSponsor.for(sponsor.id)}
-					label="Restore"
+					label={m.staff_restore()}
 					variant="ghost"
 					size="xs"
-					successToast="Restored"
+					successToast={m.staff_restored()}
 					noFooter
 				>
 					{#snippet form()}
@@ -86,79 +87,85 @@
 
 	{#if lapsed}
 		<Alert type="warning">
-			{lapsed.title} ended {formatIsoDay(lapsed.endsOn)}. Renew it with a new sponsorship, or mark
-			it ended.
+			{m.staff_sponsors_id_ended_renew_with_new_sponsorship({
+				title: lapsed.title,
+				formatIsoDay: formatIsoDay(lapsed.endsOn)
+			})}
 		</Alert>
 	{/if}
 
-	<InfoCard title="Contact">
+	<InfoCard title={m.staff_contact()}>
 		<DefinitionList>
-			<Fact label="Contact" value={contact || '—'} />
-			<Fact label="Website" value={sponsor.website ?? '—'} />
+			<Fact label={m.staff_contact()} value={contact || '—'} />
+			<Fact label={m.staff_website()} value={sponsor.website ?? '—'} />
 			{#if sponsor.notes}
-				<Fact label="Notes" wrap>{sponsor.notes}</Fact>
+				<Fact label={m.staff_notes()} wrap>{sponsor.notes}</Fact>
 			{/if}
 		</DefinitionList>
 	</InfoCard>
 
-	<InfoCard title="Logo">
+	<InfoCard title={m.staff_sponsors_id_logo()}>
 		{#snippet action()}
 			<Action
 				action={setSponsorLogo}
-				label={sponsor.logoUrl ? 'Replace' : 'Upload'}
+				label={sponsor.logoUrl ? m.staff_sponsors_id_replace() : m.staff_upload()}
 				variant="ghost"
 				size="sm"
-				modalTitle="{sponsor.name} logo"
-				submitLabel="Upload"
-				successToast="Logo saved"
+				modalTitle={m.staff_sponsors_id_logo_2({ name: sponsor.name })}
+				submitLabel={m.staff_upload()}
+				successToast={m.staff_sponsors_id_logo_saved()}
 			>
 				{#snippet form()}
 					<input type="hidden" name="sponsorId" value={sponsor.id} />
 					<Field
 						field={setSponsorLogo.fields.logo}
 						type="file"
-						label="Logo"
+						label={m.staff_sponsors_id_logo()}
 						accept="image/jpeg,image/png,image/webp"
-						description="Shown beside their credit on event pages."
+						description={m.staff_sponsors_id_shown_beside_their_credit_event()}
 					/>
 				{/snippet}
 			</Action>
 		{/snippet}
 		{#if sponsor.logoUrl}
 			<div class="flex items-center gap-4">
-				<img src={sponsor.logoUrl} alt="{sponsor.name} logo" class="h-16 w-auto" />
+				<img
+					src={sponsor.logoUrl}
+					alt={m.staff_sponsors_id_logo_2({ name: sponsor.name })}
+					class="h-16 w-auto"
+				/>
 				<Action
 					action={removeSponsorLogo}
-					label="Remove"
+					label={m.staff_remove()}
 					variant="ghost"
 					size="sm"
 					class="text-error"
-					modalTitle="Remove the logo?"
-					submitLabel="Remove"
+					modalTitle={m.staff_sponsors_id_remove_logo()}
+					submitLabel={m.staff_remove()}
 					submitVariant="error"
-					successToast="Logo removed"
+					successToast={m.staff_sponsors_id_logo_removed()}
 				>
 					{#snippet form()}
 						<input type="hidden" name="sponsorId" value={sponsor.id} />
-						<p class="text-sm">Their credits show the name alone until a new one is uploaded.</p>
+						<p class="text-sm">{m.staff_sponsors_id_their_credits_show_name_alone()}</p>
 					{/snippet}
 				</Action>
 			</div>
 		{:else}
-			<p class="text-muted">No logo. Credits show the name alone.</p>
+			<p class="text-muted">{m.staff_sponsors_id_no_logo_credits_show_name()}</p>
 		{/if}
 	</InfoCard>
 
-	<InfoCard title="Sponsorships">
+	<InfoCard title={m.staff_sponsors_id_sponsorships()}>
 		{#snippet action()}
 			<Action
 				action={createSponsorship}
-				label="Add sponsorship"
+				label={m.staff_sponsors_id_add_sponsorship()}
 				variant="ghost"
 				size="sm"
-				modalTitle="New sponsorship"
-				submitLabel="Add"
-				successToast="Sponsorship added"
+				modalTitle={m.staff_sponsors_id_new_sponsorship()}
+				submitLabel={m.staff_add()}
+				successToast={m.staff_sponsors_id_sponsorship_added()}
 			>
 				{#snippet form()}
 					<input type="hidden" name="sponsorId" value={sponsor.id} />
@@ -167,15 +174,18 @@
 			</Action>
 		{/snippet}
 		{#if sponsor.sponsorships.length === 0}
-			<EmptyState title="No sponsorships yet" description="Add the term they have agreed to." />
+			<EmptyState
+				title={m.staff_sponsors_id_no_sponsorships_yet()}
+				description={m.staff_sponsors_id_add_term_they_have_agreed()}
+			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Sponsorship</th>
-					<th>Term</th>
-					<th class="col-support cell-num">Amount</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
+					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+					<th>{m.staff_sponsors_id_sponsorship()}</th>
+					<th>{m.staff_sponsors_id_term()}</th>
+					<th class="col-support cell-num">{m.staff_amount()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 				{/snippet}
 				{#each sponsor.sponsorships as s (s.id)}
 					{@const edit = updateSponsorship.for(s.id)}
@@ -200,12 +210,12 @@
 							{#if s.status !== 'declined'}
 								<Action
 									action={placeSponsorship.for(s.id)}
-									label="Place"
+									label={m.staff_sponsors_id_place()}
 									variant="ghost"
 									size="sm"
-									modalTitle="Credit {s.title} on a show"
-									submitLabel="Place"
-									successToast="Placed"
+									modalTitle={m.staff_sponsors_id_credit_show({ title: s.title })}
+									submitLabel={m.staff_sponsors_id_place()}
+									successToast={m.staff_sponsors_id_placed()}
 								>
 									{#snippet form()}
 										<input type="hidden" name="sponsorId" value={sponsor.id} />
@@ -216,12 +226,12 @@
 							{/if}
 							<Action
 								action={edit}
-								label="Edit"
+								label={m.staff_edit()}
 								variant="ghost"
 								size="sm"
-								modalTitle="Edit {s.title}"
-								submitLabel="Save"
-								successToast="Saved"
+								modalTitle={m.staff_edit_3({ title: s.title })}
+								submitLabel={m.staff_save()}
+								successToast={m.staff_saved()}
 							>
 								{#snippet form()}
 									<input type="hidden" name="id" value={s.id} />
@@ -231,20 +241,20 @@
 							</Action>
 							<Action
 								action={deleteSponsorship.for(s.id)}
-								label="Delete"
+								label={m.staff_delete()}
 								variant="ghost"
 								size="sm"
 								class="text-error"
-								modalTitle="Delete {s.title}?"
-								submitLabel="Delete"
+								modalTitle={m.staff_delete_3({ title: s.title })}
+								submitLabel={m.staff_delete()}
 								submitVariant="error"
-								successToast="Deleted"
+								successToast={m.staff_deleted()}
 							>
 								{#snippet form()}
 									<input type="hidden" name="id" value={s.id} />
 									<input type="hidden" name="sponsorId" value={sponsor.id} />
 									<p class="text-sm">
-										For a row that should never have existed. A term that ran its course is Ended.
+										{m.staff_sponsors_id_row_should_never_have_existed()}
 									</p>
 								{/snippet}
 							</Action>
@@ -255,19 +265,19 @@
 		{/if}
 	</InfoCard>
 
-	<InfoCard title="Event placements">
+	<InfoCard title={m.staff_sponsors_id_event_placements()}>
 		{#if sponsor.placements.length === 0}
 			<EmptyState
-				title="Not placed on any show"
-				description="Place a sponsorship to credit them on an event page or in its emails."
+				title={m.staff_sponsors_id_not_placed_any_show()}
+				description={m.staff_sponsors_id_place_sponsorship_credit_them_event()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Show</th>
-					<th class="col-support">Sponsorship</th>
-					<th>Credited</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
+					<th>{m.staff_show()}</th>
+					<th class="col-support">{m.staff_sponsors_id_sponsorship()}</th>
+					<th>{m.staff_sponsors_id_credited()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 				{/snippet}
 				{#each sponsor.placements as p (p.id)}
 					<tr>
@@ -279,25 +289,26 @@
 						</td>
 						<td class="col-support">{p.sponsorshipTitle}</td>
 						<td class="whitespace-nowrap">
-							{#if p.onEventPage}<Badge variant="outline" size="sm">Event page</Badge>{/if}
-							{#if p.inCampaign}<Badge variant="outline" size="sm">Email</Badge>{/if}
+							{#if p.onEventPage}<Badge variant="outline" size="sm">{m.staff_event_page()}</Badge
+								>{/if}
+							{#if p.inCampaign}<Badge variant="outline" size="sm">{m.staff_email()}</Badge>{/if}
 						</td>
 						<td class="w-px">
 							<Action
 								action={removePlacement.for(p.id)}
-								label="Remove"
+								label={m.staff_remove()}
 								variant="ghost"
 								size="sm"
 								class="text-error"
-								modalTitle="Stop crediting them on {p.eventTitle}?"
-								submitLabel="Remove"
+								modalTitle={m.staff_sponsors_id_stop_crediting_them({ eventTitle: p.eventTitle })}
+								submitLabel={m.staff_remove()}
 								submitVariant="error"
-								successToast="Removed"
+								successToast={m.staff_removed()}
 							>
 								{#snippet form()}
 									<input type="hidden" name="id" value={p.id} />
 									<input type="hidden" name="sponsorId" value={sponsor.id} />
-									<p class="text-sm">Emails already sent keep the credit they went out with.</p>
+									<p class="text-sm">{m.staff_sponsors_id_emails_already_sent_keep_credit()}</p>
 								{/snippet}
 							</Action>
 						</td>
@@ -311,18 +322,17 @@
 		{#if !sponsor.deletedAt}
 			<Action
 				action={archiveSponsor.for(sponsor.id)}
-				label="Archive sponsor"
+				label={m.staff_sponsors_id_archive_sponsor()}
 				variant="ghost"
 				size="sm"
-				modalTitle="Archive {sponsor.name}?"
-				submitLabel="Archive"
-				successToast="Archived"
+				modalTitle={m.staff_archive_2({ name: sponsor.name })}
+				submitLabel={m.staff_archive()}
+				successToast={m.staff_archived()}
 			>
 				{#snippet form()}
 					<input type="hidden" name="id" value={sponsor.id} />
 					<p class="text-sm">
-						It comes off the sponsor list. Its sponsorships and event credits stay, and it can be
-						restored.
+						{m.staff_sponsors_id_comes_off_sponsor_list_its()}
 					</p>
 				{/snippet}
 			</Action>
@@ -330,19 +340,19 @@
 		{#if sponsor.sponsorships.length === 0}
 			<Action
 				action={deleteSponsor.for(sponsor.id)}
-				label="Delete sponsor"
+				label={m.staff_sponsors_id_delete_sponsor()}
 				variant="ghost"
 				size="sm"
 				class="text-error"
-				modalTitle="Delete {sponsor.name}?"
-				submitLabel="Delete"
+				modalTitle={m.staff_delete_2({ name: sponsor.name })}
+				submitLabel={m.staff_delete()}
 				submitVariant="error"
-				successToast="Deleted"
+				successToast={m.staff_deleted()}
 				onsuccess={() => goto(resolve('/staff/sponsors'))}
 			>
 				{#snippet form()}
 					<input type="hidden" name="id" value={sponsor.id} />
-					<p class="text-sm">For a row that should never have existed. It has no sponsorships.</p>
+					<p class="text-sm">{m.staff_sponsors_id_row_should_never_have_existed_2()}</p>
 				{/snippet}
 			</Action>
 		{/if}

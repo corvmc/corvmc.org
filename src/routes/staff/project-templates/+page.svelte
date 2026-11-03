@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -16,37 +17,40 @@
 
 	const anchorOptions = dutyListAnchors.map((a) => ({ value: a, label: dutyListAnchorLabels[a] }));
 	const autoApplyOptions = [
-		{ value: '', label: 'Never' },
-		{ value: 'production.created', label: 'When a production is created' }
+		{ value: '', label: m.staff_never() },
+		{ value: 'production.created', label: m.staff_when_production_created() }
 	];
 </script>
 
-<PageHeader title="Project Templates" subtitle="Planning">
+<PageHeader
+	title={m.staff_project_templates_project_templates()}
+	subtitle={m.staff_project_templates_subtitle()}
+>
 	<Action
 		action={createDutyList}
-		label="New template"
-		modalTitle="New project template"
-		submitLabel="Create"
-		successToast="Template created"
+		label={m.staff_project_templates_new_template()}
+		modalTitle={m.staff_project_templates_modal_title()}
+		submitLabel={m.staff_project_templates_submit_label()}
+		successToast={m.staff_project_templates_success_toast()}
 	>
 		{#snippet form()}
-			<FormField name="name" label="Name" type="text" />
+			<FormField name="name" label={m.staff_name()} type="text" />
 			<FormField
 				name="description"
-				label="Description"
+				label={m.staff_description()}
 				type="textarea"
-				description="Shown when choosing a template to apply."
+				description={m.staff_project_templates_shown_when_choosing_template_apply()}
 			/>
 			<FormField
 				name="anchor"
-				label="Measure offsets from"
+				label={m.staff_measure_offsets_from()}
 				type="select"
 				options={anchorOptions}
-				description="Every item is timed from this."
+				description={m.staff_project_templates_every_item_timed_from()}
 			/>
 			<FormField
 				name="autoApplyOn"
-				label="Apply automatically"
+				label={m.staff_apply_automatically()}
 				type="select"
 				options={autoApplyOptions}
 			/>
@@ -58,17 +62,17 @@
 	{#await lists then rows}
 		{#if rows.length === 0}
 			<EmptyState
-				title="No templates yet"
-				description="A template is a set of work orders a project takes, applied in one step."
+				title={m.staff_project_templates_no_templates_yet()}
+				description={m.staff_project_templates_template_set_work_orders_project()}
 			/>
 		{:else}
-			<InfoCard title="Templates">
+			<InfoCard title={m.staff_project_templates_templates()}>
 				<Table>
 					{#snippet head()}
-						<th class="w-px"><span class="sr-only">Status</span></th>
-						<th>Name</th>
-						<th>Anchor</th>
-						<th class="cell-num">Items</th>
+						<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+						<th>{m.staff_name()}</th>
+						<th>{m.staff_project_templates_anchor()}</th>
+						<th class="cell-num">{m.staff_items()}</th>
 					{/snippet}
 
 					{#each rows as list (list.id)}

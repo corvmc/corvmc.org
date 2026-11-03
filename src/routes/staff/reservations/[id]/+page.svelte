@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { isEventHold } from '$lib/config';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
@@ -90,28 +91,33 @@
 	const paymentStatus = $derived.by((): { label: string; class: string } => {
 		switch (reservationPaymentState(r)) {
 			case 'no_show':
-				return { label: 'No-show', class: 'badge-error' };
+				return { label: m.staff_no_show(), class: 'badge-error' };
 			case 'refunded':
-				return { label: 'Refunded', class: 'badge-error' };
+				return { label: m.staff_refunded(), class: 'badge-error' };
 			case 'cancelled':
-				return { label: 'Cancelled', class: 'badge-ghost' };
+				return { label: m.staff_cancelled(), class: 'badge-ghost' };
 			case 'paid':
-				return { label: 'Paid', class: 'badge-success' };
+				return { label: m.staff_paid(), class: 'badge-success' };
 			case 'cash_due':
-				return { label: `Cash due ${formatCents(r.cashDueCents ?? 0)}`, class: 'badge-warning' };
+				return {
+					label: m.staff_reservations_id_cash_due({
+						formatCents: formatCents(r.cashDueCents ?? 0)
+					}),
+					class: 'badge-warning'
+				};
 			case 'unpaid':
-				return { label: 'Unpaid', class: 'badge-warning' };
+				return { label: m.staff_unpaid(), class: 'badge-warning' };
 			case 'credits':
-				return { label: 'Paid with credits', class: 'badge-info' };
+				return { label: m.staff_paid_with_credits(), class: 'badge-info' };
 			case 'comped':
-				return { label: 'Comped', class: 'badge-info' };
+				return { label: m.staff_comped(), class: 'badge-info' };
 		}
 	});
 </script>
 
 <!-- The booking's own workflow sits in the header, visible from anywhere on
      the page; money actions stay on the Payment card. -->
-<PageHeader width="3xl" title="Reservation">
+<PageHeader width="3xl" title={m.staff_reservation()}>
 	{#if actions.has('confirm')}
 		<ConfirmReservationAction reservation={r} staff />
 	{/if}
@@ -139,15 +145,15 @@
 							     to read this out of, and this page has the room. -->
 							<Badge variant="success">
 								<IconUserPlus size={14} />
-								First reservation
+								{m.staff_first_reservation()}
 							</Badge>
 							<!-- And the question that raises. An orientation shift with nobody
 							     on it is the state worth seeing from here; the coordinator's
 							     own queue is where it gets filled. -->
 							{#if data.orientation && data.orientation.claimed === 0}
-								<Badge variant="warning">Orientation unclaimed</Badge>
+								<Badge variant="warning">{m.staff_reservations_id_orientation_unclaimed()}</Badge>
 							{:else if data.orientation}
-								<Badge variant="info">Orientation covered</Badge>
+								<Badge variant="info">{m.staff_reservations_id_orientation_covered()}</Badge>
 							{/if}
 						{/if}
 					</p>
@@ -158,7 +164,7 @@
 				<RecordNav
 					prevHref={data.prevId ? `/staff/reservations/${data.prevId}` : undefined}
 					nextHref={data.nextId ? `/staff/reservations/${data.nextId}` : undefined}
-					endLabel="Last of the day"
+					endLabel={m.staff_reservations_id_end_label()}
 				/>
 			</header>
 
@@ -196,21 +202,25 @@
 		<!-- Member card — a band or event booking leads with it, then who booked it -->
 		<InfoCard
 			title={r.bookerType === 'group'
-				? 'Group booking'
+				? m.staff_reservations_id_group_booking()
 				: isEventHold(r.bookerType)
-					? 'Show'
-					: 'Member'}
+					? m.staff_show()
+					: m.staff_member()}
 		>
 			{#snippet header(title)}
 				<header class="flex justify-between">
 					<CardTitle>{title}</CardTitle>
 					{#if r.bookerType === 'group' && r.bandId}
-						<Button href="/staff/groups/{r.bandId}" variant="default" size="sm">View Band</Button>
+						<Button href="/staff/groups/{r.bandId}" variant="default" size="sm"
+							>{m.staff_reservations_id_view_band()}</Button
+						>
 					{:else if isEventHold(r.bookerType) && r.eventId}
-						<Button href="/staff/events/{r.eventId}" variant="default" size="sm">View Event</Button>
+						<Button href="/staff/events/{r.eventId}" variant="default" size="sm"
+							>{m.staff_reservations_id_view_event()}</Button
+						>
 					{:else if r.createdByUserId}
 						<Button href="/staff/members/{r.createdByUserId}" variant="default" size="sm"
-							>View Profile</Button
+							>{m.staff_reservations_id_view_profile()}</Button
 						>
 					{/if}
 				</header>
@@ -224,7 +234,7 @@
 						is the audit trail for it.
 					-->
 					<div class="mb-3"><EntityChip ref={r.booker} /></div>
-					<p class="mb-2 text-subtle tracking-wide uppercase">Booked by</p>
+					<p class="mb-2 text-subtle tracking-wide uppercase">{m.staff_booked_by()}</p>
 				{/if}
 				<!-- `link`, unlike a detail page's own strip: the record here is the
 				     booking, and the member is a different record with its own page. -->
@@ -243,7 +253,7 @@
 
 		<!-- Payment card (not shown for event reservations) -->
 		{#if !isEventHold(r.bookerType)}
-			<InfoCard title="Payment">
+			<InfoCard title={m.staff_payment()}>
 				{#snippet action()}
 					<!-- `refundOnly` is the wider set: completed bookings refund but
 					     cannot cancel, so the box is offered only with `refundAndCancel`. -->
@@ -255,7 +265,7 @@
 					<span class="text-2xl font-medium">{amountFormatted}</span>
 					<span class="badge {paymentStatus.class}">{paymentStatus.label}</span>
 				</div>
-				<p class="text-muted">{durationLabel} × {rateFormatted}/hr</p>
+				<p class="text-muted">{m.staff_reservations_id_hr({ durationLabel, rateFormatted })}</p>
 				{#if (r.creditsUsed ?? 0) > 0}
 					<p class="text-sm text-success">
 						Free hours applied: {r.creditsUsed}
@@ -265,7 +275,10 @@
 
 				{#if r.stripePaymentRecordId}
 					<div class="mt-3 border-t border-base-200 pt-3">
-						<CopyableId value={r.stripePaymentRecordId} label="Stripe record" />
+						<CopyableId
+							value={r.stripePaymentRecordId}
+							label={m.staff_reservations_id_stripe_record()}
+						/>
 					</div>
 				{/if}
 
@@ -297,33 +310,37 @@
 
 	<!-- Door access -->
 	{#if !isEventHold(r.bookerType)}
-		<InfoCard title="Door Access">
+		<InfoCard title={m.staff_reservations_id_door_access()}>
 			{#if r.lockCode}
 				<p class="font-mono text-2xl font-bold tracking-[0.2em]">{r.lockCode}</p>
 				{#if r.lockSyncedAt}
-					<p class="text-muted">Confirmed on the lock {fullDate(r.lockSyncedAt)}.</p>
+					<p class="text-muted">
+						{m.staff_reservations_id_confirmed_lock({ fullDate: fullDate(r.lockSyncedAt) })}
+					</p>
 				{:else}
 					<!-- U-tec acks a queued write the same as an applied one, so an
 					     issued code is not a working code until the lock says so. -->
-					<p class="text-warning">Issued but not confirmed at the door.</p>
+					<p class="text-warning">{m.staff_reservations_id_issued_but_not_confirmed_at()}</p>
 				{/if}
 			{:else}
-				<p class="text-muted">Not provisioned yet.</p>
+				<p class="text-muted">{m.staff_reservations_id_not_provisioned_yet()}</p>
 			{/if}
 
 			<!-- What the member's own page shows instead, by the same rule (#1814). -->
 			{#if data.doorFallback}
 				<p class="mt-2">
 					{#if data.doorFallback.showsFrom}
-						The member will be shown the break-glass code from
-						{fullDate(data.doorFallback.showsFrom)}, {formatTime(data.doorFallback.showsFrom)}.
+						{m.staff_reservations_id_member_will_shown_break_glass({
+							fullDate: fullDate(data.doorFallback.showsFrom),
+							formatTime: formatTime(data.doorFallback.showsFrom)
+						})}
 					{:else if data.doorFallback.code}
 						Member sees:
 						<span class="font-mono font-bold tracking-[0.2em]">{data.doorFallback.code}</span>
 						(break-glass)
 					{:else}
 						<span class="text-warning">
-							No break-glass code is confirmed on the lock right now, so the member is shown none.
+							{m.staff_reservations_id_no_break_glass_code_confirmed()}
 						</span>
 					{/if}
 				</p>
@@ -345,7 +362,10 @@
 									: `This booking: ${booking.error}`}
 							</p>
 							<p>
-								All bookings: {job.provisioned} provisioned, {job.confirmed} confirmed on the lock.
+								{m.staff_reservations_id_all_bookings_provisioned_confirmed_loc({
+									provisioned: job.provisioned,
+									confirmed: job.confirmed
+								})}
 							</p>
 							{#if job.errors.length > 0}
 								<ul class="list-disc pl-5">
@@ -362,14 +382,16 @@
 	<!-- A labelled line, not a titled box around one paragraph (#1078). -->
 	{#if r.notes}
 		<DefinitionList>
-			<Fact label="Notes" wrap>{r.notes}</Fact>
+			<Fact label={m.staff_notes()} wrap>{r.notes}</Fact>
 		</DefinitionList>
 	{/if}
 
 	<!-- Audit -->
 	{#if data.reservation.createdByStaffName}
 		<p class="text-muted">
-			Booked by staff: {data.reservation.createdByStaffName}
+			{m.staff_reservations_id_booked_by_staff({
+				createdByStaffName: data.reservation.createdByStaffName
+			})}
 		</p>
 	{/if}
 

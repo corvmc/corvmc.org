@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { getAudiences } from '$lib/remote/marketing.remote';
@@ -16,7 +17,7 @@
 	let audiences = $derived(await getAudiences());
 </script>
 
-<PageHeader title="Audiences" subtitle="Marketing">
+<PageHeader title={m.staff_audiences()} subtitle={m.staff_marketing()}>
 	<CreateAudienceAction
 		onsuccess={(result) => {
 			const r = result as { audienceId?: string };
@@ -26,14 +27,14 @@
 </PageHeader>
 <PageContent>
 	{#if audiences.length === 0}
-		<EmptyState description="No audiences yet. Create one to start building your email lists." />
+		<EmptyState description={m.staff_marketing_audiences_description()} />
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th>Audience</th>
-				<th class="col-support w-px">Opt-in</th>
-				<th class="cell-num">Subscribers</th>
-				<th class="col-extra whitespace-nowrap">Created</th>
+				<th>{m.staff_audience()}</th>
+				<th class="col-support w-px">{m.staff_opt()}</th>
+				<th class="cell-num">{m.staff_subscribers()}</th>
+				<th class="col-extra whitespace-nowrap">{m.staff_created()}</th>
 			{/snippet}
 			{#each audiences as a (a.id)}
 				{@const href = resolve(`/staff/marketing/audiences/${a.id}`)}
@@ -41,7 +42,7 @@
 					<td class="cell-primary"><EntityIdentity ref={a.ref} /></td>
 					<td class="col-support w-px">
 						{#if a.systemKey}
-							<Badge size="sm" variant="info" class="whitespace-nowrap">Built-in</Badge>
+							<Badge size="sm" variant="info" class="whitespace-nowrap">{m.staff_built()}</Badge>
 						{:else}
 							<Badge size="sm" variant={a.allowOptIn ? 'success' : 'ghost'}>
 								{a.allowOptIn ? 'Public' : 'Staff only'}

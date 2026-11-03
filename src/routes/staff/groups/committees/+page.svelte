@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -23,7 +24,7 @@
 	const committees = $derived(data.committees.filter((c) => data.canManage || !c.deletedAt));
 </script>
 
-<PageHeader title="Groups">
+<PageHeader title={m.staff_groups()}>
 	{#if data.canManage}
 		<CreateGroupAction kind="committee" />
 	{/if}
@@ -32,7 +33,7 @@
 <PageContent>
 	<GroupViews active="committees" />
 	{#if committees.length === 0}
-		<EmptyState title="No committees" />
+		<EmptyState title={m.staff_groups_committees_no_committees()} />
 	{:else}
 		<!-- Cards, not a table: there are a handful of committees, and each card is
 		     one control, so the chairs are names rather than chips of their own. -->

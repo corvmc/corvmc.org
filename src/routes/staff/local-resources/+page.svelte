@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -23,14 +24,16 @@
 	const { fields } = createLocalResourceForm;
 </script>
 
-<PageHeader title="Local Resources" subtitle="Outreach">
-	<Button href="/staff/local-resources/categories" variant="ghost" size="sm">Categories</Button>
+<PageHeader title={m.staff_local_resources()} subtitle={m.staff_outreach()}>
+	<Button href="/staff/local-resources/categories" variant="ghost" size="sm"
+		>{m.staff_categories()}</Button
+	>
 	{#if data.categories.length > 0}
 		<Action
 			action={createLocalResourceForm}
-			label="New listing"
-			modalTitle="New listing"
-			successToast="Listing published"
+			label={m.staff_local_resources_label()}
+			modalTitle={m.staff_local_resources_label()}
+			successToast={m.staff_local_resources_success_toast()}
 		>
 			{#snippet form()}
 				<ResourceFields {fields} categories={data.categories} />
@@ -45,39 +48,39 @@
 	<FilterBar activeCount={status ? 1 : 0} onclear={() => (status = '')}>
 		<Select
 			size="sm"
-			aria-label="Status"
+			aria-label={m.staff_status()}
 			value={status}
 			onchange={(e: Event) => {
 				status = (e.currentTarget as HTMLSelectElement).value as typeof status;
 			}}
 		>
-			<option value="">All listings</option>
-			<option value="pending">Pending</option>
-			<option value="published">Published</option>
-			<option value="rejected">Rejected</option>
+			<option value="">{m.staff_local_resources_all_listings()}</option>
+			<option value="pending">{m.staff_pending()}</option>
+			<option value="published">{m.staff_published()}</option>
+			<option value="rejected">{m.staff_local_resources_rejected()}</option>
 		</Select>
 	</FilterBar>
 
 	{#if data.categories.length === 0}
 		<EmptyState
-			title="No categories yet"
-			description="Add categories first — instrument shops, venues, record stores — then the listings that go in them."
-			actionLabel="Add categories"
+			title={m.staff_no_categories_yet()}
+			description={m.staff_local_resources_add_categories_first_instrument_shops()}
+			actionLabel={m.staff_local_resources_action_label()}
 			actionHref={resolve('/staff/local-resources/categories')}
 		/>
 	{:else if data.resources.length === 0}
 		<EmptyState
-			title="No listings"
-			description="Add the music businesses and services the community should know about."
+			title={m.staff_local_resources_no_listings()}
+			description={m.staff_local_resources_add_music_businesses_services_communit()}
 		/>
 	{:else}
 		<!-- A table: short fields and no row actions, so no card test passes. -->
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">Status</span></th>
-				<th class="cell-primary">Name</th>
-				<th class="col-support">Category</th>
-				<th class="col-support">Website</th>
+				<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+				<th class="cell-primary">{m.staff_name()}</th>
+				<th class="col-support">{m.staff_category()}</th>
+				<th class="col-support">{m.staff_website()}</th>
 			{/snippet}
 			{#each data.resources as r (r.id)}
 				{@const href = resolve(`/staff/local-resources/${r.id}`)}

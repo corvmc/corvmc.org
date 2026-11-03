@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import AudiencePicker from '../../AudiencePicker.svelte';
 	import EventScopePicker from '../../EventScopePicker.svelte';
 	import CampaignPreview from '../../CampaignPreview.svelte';
@@ -73,9 +74,11 @@
 				audienceIds: selectedAudienceIds,
 				eventId
 			});
-			toast.success('Draft saved');
+			toast.success(m.staff_marketing_campaigns_id_edit_draft_saved());
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to save');
+			toast.error(
+				err instanceof Error ? err.message : m.staff_marketing_campaigns_id_edit_failed_save()
+			);
 		} finally {
 			submitting = false;
 		}
@@ -112,7 +115,7 @@
 			submitting = false;
 			return;
 		}
-		toast.success('Campaign sent');
+		toast.success(m.staff_marketing_campaigns_id_edit_campaign_sent());
 		goto(resolve(`/staff/marketing/campaigns/${id}`));
 	}
 
@@ -129,10 +132,12 @@
 				eventId
 			});
 			await scheduleCampaign({ scheduledFor: new Date(scheduledFor).toISOString() });
-			toast.success('Campaign scheduled');
+			toast.success(m.staff_marketing_campaigns_id_edit_campaign_scheduled());
 			goto(resolve(`/staff/marketing/campaigns/${id}`));
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to schedule');
+			toast.error(
+				err instanceof Error ? err.message : m.staff_marketing_campaigns_id_edit_failed_schedule()
+			);
 		} finally {
 			submitting = false;
 		}
@@ -146,48 +151,57 @@
 		confirmingDelete = false;
 		try {
 			await deleteCampaign({});
-			toast.success('Campaign deleted');
+			toast.success(m.staff_marketing_campaigns_id_edit_campaign_deleted());
 			goto(resolve('/staff/marketing/campaigns'));
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to delete');
+			toast.error(
+				err instanceof Error ? err.message : m.staff_marketing_campaigns_id_edit_failed_delete()
+			);
 		}
 	}
 </script>
 
-<PageHeader title="Edit Campaign" subtitle="Marketing">
-	<Button variant="ghost" size="sm" class="text-error" onclick={handleDelete}>Delete</Button>
+<PageHeader
+	title={m.staff_marketing_campaigns_id_edit_edit_campaign()}
+	subtitle={m.staff_marketing()}
+>
+	<Button variant="ghost" size="sm" class="text-error" onclick={handleDelete}
+		>{m.staff_delete()}</Button
+	>
 </PageHeader>
 <PageContent>
 	<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 		<!-- Editor pane -->
 		<div class="space-y-4">
 			<div>
-				<label for="campaign-subject" class="label text-sm font-medium">Subject</label>
+				<label for="campaign-subject" class="label text-sm font-medium">{m.staff_subject()}</label>
 				<input
 					id="campaign-subject"
 					type="text"
 					bind:value={subject}
-					placeholder="Email subject line..."
+					placeholder={m.staff_email_subject_line()}
 					class="input w-full"
 				/>
 			</div>
 
 			<div>
-				<p class="label text-sm font-medium">Audiences</p>
+				<p class="label text-sm font-medium">{m.staff_audiences()}</p>
 				<AudiencePicker bind:selected={selectedAudienceIds} bind:total={totalSubscribers} />
 			</div>
 
 			<div>
-				<p class="label text-sm font-medium">About a show</p>
+				<p class="label text-sm font-medium">{m.staff_about_show()}</p>
 				<EventScopePicker initial={campaignData.event} onchange={(id) => (eventId = id)} />
 			</div>
 
 			<div>
-				<label for="campaign-body" class="label text-sm font-medium">Body (Markdown)</label>
+				<label for="campaign-body" class="label text-sm font-medium"
+					>{m.staff_body_markdown()}</label
+				>
 				<textarea
 					id="campaign-body"
 					bind:value={markdownBody}
-					placeholder="Write your email in markdown..."
+					placeholder={m.staff_write_email_markdown()}
 					class="textarea w-full font-mono text-sm"
 					rows="20"></textarea>
 				<p class="mt-1 text-subtle">
@@ -197,7 +211,7 @@
 
 			<div>
 				<label for="campaign-schedule" class="label text-sm font-medium">
-					Schedule for later (optional)
+					{m.staff_schedule_later_optional()}
 				</label>
 				<input
 					id="campaign-schedule"
@@ -206,7 +220,7 @@
 					class="input w-full"
 				/>
 				{#if scheduledFor && !isFutureSchedule()}
-					<p class="mt-1 text-xs text-error">Pick a time in the future.</p>
+					<p class="mt-1 text-xs text-error">{m.staff_pick_time_future()}</p>
 				{/if}
 			</div>
 
@@ -218,7 +232,7 @@
 					disabled={!isValid() || submitting}
 					onclick={handleSave}
 				>
-					Save Draft
+					{m.staff_save_draft()}
 				</Button>
 				<Button
 					variant="secondary"
@@ -226,7 +240,7 @@
 					disabled={!isValid() || !isFutureSchedule() || submitting}
 					onclick={handleSchedule}
 				>
-					Schedule
+					{m.staff_schedule()}
 				</Button>
 				<Button
 					variant="primary"
@@ -234,7 +248,7 @@
 					disabled={!isValid() || submitting}
 					onclick={handleSendNow}
 				>
-					Send Now
+					{m.staff_send_now()}
 				</Button>
 			</div>
 
@@ -248,22 +262,22 @@
 
 		<!-- Preview pane -->
 		<div>
-			<p class="label text-sm font-medium">Preview</p>
+			<p class="label text-sm font-medium">{m.staff_preview()}</p>
 			<CampaignPreview markdown={markdownBody} />
 		</div>
 	</div>
 </PageContent>
 
-<Modal bind:open={confirmingSend} title="Send this campaign now?">
+<Modal bind:open={confirmingSend} title={m.staff_send_campaign_now()}>
 	<p>
 		This goes to <strong>{totalSubscribers}</strong>
 		{totalSubscribers === 1 ? 'person' : 'people'} immediately, as
 		<em>{subject.trim() || 'an untitled campaign'}</em>.
 	</p>
-	<p class="mt-2 text-muted">There is no recall.</p>
+	<p class="mt-2 text-muted">{m.staff_marketing_campaigns_id_edit_there_no_recall()}</p>
 	<div class="modal-action">
 		<Button variant="default" size="sm" outline onclick={() => (confirmingSend = false)}>
-			Not yet
+			{m.staff_not_yet()}
 		</Button>
 		<Button variant="primary" size="sm" onclick={sendNow}>
 			Send to {totalSubscribers}
@@ -272,14 +286,16 @@
 	</div>
 </Modal>
 
-<Modal bind:open={confirmingDelete} title="Delete this draft?">
+<Modal bind:open={confirmingDelete} title={m.staff_marketing_campaigns_id_edit_delete_draft()}>
 	<p>
 		<em>{subject.trim() || 'This untitled campaign'}</em> and its audience selection go with it.
 	</p>
 	<div class="modal-action">
 		<Button variant="default" size="sm" outline onclick={() => (confirmingDelete = false)}>
-			Keep it
+			{m.staff_marketing_campaigns_id_edit_keep()}
 		</Button>
-		<Button variant="error" size="sm" onclick={deleteNow}>Delete the draft</Button>
+		<Button variant="error" size="sm" onclick={deleteNow}
+			>{m.staff_marketing_campaigns_id_edit_delete_draft_2()}</Button
+		>
 	</div>
 </Modal>

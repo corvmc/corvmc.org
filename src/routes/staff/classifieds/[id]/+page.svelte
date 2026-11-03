@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -20,13 +21,15 @@
 	}
 </script>
 
-<PageHeader width="3xl" title={post.title} subtitle="Classifieds">
+<PageHeader width="3xl" title={post.title} subtitle={m.staff_classifieds()}>
 	{#if post.visibility !== 'visible'}
 		<Action
 			action={showForm}
-			label={post.visibility === 'pending_review' ? 'Approve' : 'Restore'}
-			modalTitle="Put this post on the board?"
-			successToast="On the board"
+			label={post.visibility === 'pending_review'
+				? m.staff_classifieds_id_approve()
+				: m.staff_restore()}
+			modalTitle={m.staff_classifieds_id_put_post_board()}
+			successToast={m.staff_classifieds_id_board()}
 			size="sm"
 			onsuccess={refresh}
 		>
@@ -35,7 +38,7 @@
 				<input {...showForm.fields.postId.as('hidden', post.id)} />
 				<input {...showForm.fields.visibility.as('hidden', 'visible')} />
 				<p class="py-2">
-					Members will see it straight away, until it expires or its author closes it.
+					{m.staff_classifieds_id_members_will_see_straight_away()}
 				</p>
 			{/snippet}
 		</Action>
@@ -43,10 +46,10 @@
 	{#if post.visibility !== 'hidden'}
 		<Action
 			action={hideForm}
-			label="Hide"
-			modalTitle="Take this post down"
-			submitLabel="Hide it"
-			successToast="Hidden"
+			label={m.staff_classifieds_id_hide()}
+			modalTitle={m.staff_classifieds_id_take_post_down()}
+			submitLabel={m.staff_classifieds_id_submit_label()}
+			successToast={m.staff_hidden()}
 			variant="ghost"
 			size="sm"
 			onsuccess={refresh}
@@ -56,10 +59,13 @@
 				<input {...hideForm.fields.postId.as('hidden', post.id)} />
 				<input {...hideForm.fields.visibility.as('hidden', 'hidden')} />
 				<p class="mb-3 text-muted">
-					Nothing is deleted. The author sees your note, can edit the post, and it comes back to you
-					for review.
+					{m.staff_classifieds_id_nothing_deleted_author_sees_note()}
 				</p>
-				<FormField name="note" type="textarea" label="What should the author change?" />
+				<FormField
+					name="note"
+					type="textarea"
+					label={m.staff_classifieds_id_what_should_author_change()}
+				/>
 			{/snippet}
 		</Action>
 	{/if}
@@ -67,7 +73,9 @@
 
 <PageContent width="3xl">
 	{#if post.visibilityNote}
-		<Alert type="info"><p>Note to the author: {post.visibilityNote}</p></Alert>
+		<Alert type="info"
+			><p>{m.staff_classifieds_id_note_author({ visibilityNote: post.visibilityNote })}</p></Alert
+		>
 	{/if}
 	<PostDetail {post} />
 </PageContent>

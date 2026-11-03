@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
@@ -75,21 +76,21 @@
 	{#snippet search()}
 		<SearchInput
 			bind:value={searchText}
-			placeholder="Filter by name..."
+			placeholder={m.staff_access_permission_holders_placeholder()}
 			onsearch={(q) => (nameFilter = q)}
 		/>
 	{/snippet}
 	<Select
 		size="sm"
-		aria-label="Kind"
+		aria-label={m.staff_kind()}
 		value={kind}
 		onchange={(e: Event) => pickKind((e.currentTarget as HTMLSelectElement).value as Kind)}
 	>
-		<option value="position">Position</option>
-		<option value="capability">Capability</option>
-		<option value="clearance">Clearance</option>
+		<option value="position">{m.staff_position()}</option>
+		<option value="capability">{m.staff_access_permission_holders_capability()}</option>
+		<option value="clearance">{m.staff_clearance()}</option>
 	</Select>
-	<Select size="sm" aria-label="Which" bind:value={key}>
+	<Select size="sm" aria-label={m.staff_access_permission_holders_which()} bind:value={key}>
 		{#if kind === 'position'}
 			{#each positionOrder as p (p)}
 				<option value={p}>{positionLabels[p]}</option>
@@ -109,42 +110,58 @@
 		{/if}
 	</Select>
 	{#if kind === 'clearance'}
-		<Select size="sm" aria-label="Clearance state" bind:value={clearanceState}>
-			<option value="">Every state</option>
-			<option value="current">Current</option>
-			<option value="lapsing">Lapsing in 30 days</option>
-			<option value="expiring">Expiring</option>
-			<option value="expired">Expired</option>
-			<option value="revoked">Revoked</option>
+		<Select
+			size="sm"
+			aria-label={m.staff_access_permission_holders_clearance_state()}
+			bind:value={clearanceState}
+		>
+			<option value="">{m.staff_access_permission_holders_every_state()}</option>
+			<option value="current">{m.staff_access_permission_holders_current()}</option>
+			<option value="lapsing">{m.staff_access_permission_holders_lapsing_30_days()}</option>
+			<option value="expiring">{m.staff_access_permission_holders_expiring()}</option>
+			<option value="expired">{m.staff_access_permission_holders_expired()}</option>
+			<option value="revoked">{m.staff_access_permission_holders_revoked()}</option>
 		</Select>
 	{/if}
 </FilterBar>
 
 {#if !result}
-	<EmptyState title="Nothing to pick" description="There are no clearances in the catalog yet." />
+	<EmptyState
+		title={m.staff_access_permission_holders_nothing_pick()}
+		description={m.staff_access_permission_holders_there_no_clearances_catalog()}
+	/>
 {:else}
 	{#await result then data}
 		{#if data.kind === 'position'}
 			{@const rows = data.members.filter(matches)}
 			{@render count(rows, `${rows.length} of ${data.members.length} holding this position`)}
 			{#if rows.length === 0}
-				<EmptyState title="Nobody" description="No one holds this position." />
+				<EmptyState
+					title={m.staff_access_permission_holders_nobody()}
+					description={m.staff_access_permission_holders_no_one_holds_position()}
+				/>
 			{:else}
-				<RosterTable {rows} personLabel="Person" />
+				<RosterTable {rows} personLabel={m.staff_access_permission_holders_person_label()} />
 			{/if}
 		{:else if data.kind === 'capability'}
 			{@const rows = data.holders.filter(matches)}
 			{@render count(rows, `${rows.length} of ${data.holders.length} holding this capability`)}
 			{#if rows.length === 0}
-				<EmptyState title="Nobody" description="No position or committee seat confers this." />
+				<EmptyState
+					title={m.staff_access_permission_holders_nobody()}
+					description={m.staff_access_permission_holders_no_position_committee_seat_c()}
+				/>
 			{:else}
-				<RosterTable {rows} personLabel="Person">
-					{#snippet columns()}<th>Through</th>{/snippet}
+				<RosterTable {rows} personLabel={m.staff_access_permission_holders_person_label()}>
+					{#snippet columns()}<th>{m.staff_through()}</th>{/snippet}
 					{#snippet cells(h)}<td class="cell-text">{h.sources.join(', ')}</td>{/snippet}
 				</RosterTable>
 			{/if}
 			{#if data.committees.length > 0}
-				<InfoCard title="Committees granting it" state={data.committees.length}>
+				<InfoCard
+					title={m.staff_access_permission_holders_committees_granting()}
+					state={data.committees.length}
+				>
 					<ul class="space-y-1">
 						{#each data.committees as c (c.groupId)}
 							<li class="flex items-center justify-between gap-2">
@@ -153,7 +170,7 @@
 									groupId={c.groupId}
 									name={c.name}
 									held={c.held}
-									label="Edit grants"
+									label={m.staff_edit_grants()}
 									onsuccess={refresh}
 								/>
 							</li>
@@ -162,9 +179,12 @@
 				</InfoCard>
 			{/if}
 			{#if data.roles.length > 0}
-				<InfoCard title="Volunteer roles granting it per shift" state={data.roles.length}>
+				<InfoCard
+					title={m.staff_access_permission_holders_volunteer_roles_granting_per()}
+					state={data.roles.length}
+				>
 					<p class="text-muted">
-						Held only by a confirmed volunteer in the role, for that shift's event.
+						{m.staff_access_permission_holders_held_only_by_confirmed_volun()}
 					</p>
 					<p>{data.roles.map((r) => r.name).join(', ')}</p>
 				</InfoCard>
@@ -178,13 +198,16 @@
 			)}
 			{@render count(rows, `${rows.length} of ${data.clearances.length} on record`)}
 			{#if rows.length === 0}
-				<EmptyState title="Nobody" description="No grant of this clearance matches." />
+				<EmptyState
+					title={m.staff_access_permission_holders_nobody()}
+					description={m.staff_access_permission_holders_no_grant_clearance_matches()}
+				/>
 			{:else}
-				<RosterTable {rows} personLabel="Person">
+				<RosterTable {rows} personLabel={m.staff_access_permission_holders_person_label()}>
 					{#snippet lead(c)}<StatusBadge status={c.state} />{/snippet}
 					{#snippet columns()}
-						<th class="col-support">Granted</th>
-						<th>Expires</th>
+						<th class="col-support">{m.staff_access_permission_holders_granted()}</th>
+						<th>{m.staff_expires()}</th>
 					{/snippet}
 					{#snippet cells(c)}
 						<td class="col-support whitespace-nowrap">{formatDateShortYear(c.grantedAt)}</td>

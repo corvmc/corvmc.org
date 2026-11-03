@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import { IconCheck } from '@tabler/icons-svelte';
@@ -64,7 +65,7 @@
 <Modal bind:open>
 	{#snippet titleSnippet()}
 		<h3 class="text-lg font-bold">
-			Resolve
+			{m.staff_resolve()}
 			{#if visible.length > 0}
 				<Badge variant="warning" class="ml-1">{visible.length}</Badge>
 			{/if}
@@ -74,7 +75,7 @@
 	{#if visible.length === 0}
 		<div class="py-8 text-center">
 			<IconCheck size={48} class="mx-auto mb-2 text-success" />
-			<p class="text-lg font-medium">All caught up!</p>
+			<p class="text-lg font-medium">{m.staff_reservations_resolve_modal_all_caught_up()}</p>
 		</div>
 	{:else}
 		<div class="max-h-96 space-y-3 overflow-y-auto">

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
 	import { Field } from '$lib/components/ui/Form';
@@ -19,10 +20,10 @@
 
 <Action
 	action={recordIncidentForm}
-	label="Record incident"
-	modalTitle="Record an incident"
-	submitLabel="Record"
-	successToast="Incident recorded"
+	label={m.staff_incidents_record_incident_record_incident()}
+	modalTitle={m.staff_incidents_record_incident_modal_title()}
+	submitLabel={m.staff_record()}
+	successToast={m.staff_incidents_record_incident_success_toast()}
 	onsuccess={(result) => {
 		involvedUserId = '';
 		involvedName = '';
@@ -32,31 +33,31 @@
 >
 	{#snippet form()}
 		<div class="grid grid-cols-2 gap-3">
-			<Field field={fields.occurredOn} type="date" label="Date" value={clubToday()} />
-			<Field field={fields.occurredAt} type="time" label="Time" />
+			<Field field={fields.occurredOn} type="date" label={m.staff_date()} value={clubToday()} />
+			<Field field={fields.occurredAt} type="time" label={m.staff_time()} />
 		</div>
-		<Field field={fields.category} type="select" label="Kind" options={categoryOptions} />
+		<Field field={fields.category} type="select" label={m.staff_kind()} options={categoryOptions} />
 		<Field
 			field={fields.summary}
 			type="text"
-			label="Summary"
-			description="One line — what the log shows."
+			label={m.staff_summary()}
+			description={m.staff_incidents_record_incident_one_line_what_log_shows()}
 		/>
 		<Field
 			field={fields.description}
 			type="textarea"
-			label="What happened"
-			description="Written once. Anything learned later goes in as a note."
+			label={m.staff_what_happened()}
+			description={m.staff_incidents_record_incident_written_once_anything_learne()}
 		/>
-		<Field field={fields.location} type="text" label="Where" />
+		<Field field={fields.location} type="text" label={m.staff_where()} />
 		<MemberPicker
 			field={fields.involvedUserId}
-			label="Member involved (optional)"
+			label={m.staff_incidents_record_incident_member_involved_optional()}
 			bind:value={involvedUserId}
 			bind:name={involvedName}
 		/>
 		<p class="text-muted text-wrap">
-			Recording this changes nothing about the member's account, and they cannot see it.
+			{m.staff_incidents_record_incident_recording_changes_nothing_ab()}
 		</p>
 	{/snippet}
 </Action>

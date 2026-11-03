@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/** CMC's own permits, licenses and insurance policies, the soonest to expire first. */
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -17,13 +18,13 @@
 	const { renewals, assignees } = $derived(await getRenewals());
 </script>
 
-<PageHeader title="Renewals" subtitle="System">
+<PageHeader title={m.staff_renewals_renewals()} subtitle={m.staff_renewals_subtitle()}>
 	<Action
 		action={createRenewal}
-		label="New renewal"
-		modalTitle="New renewal"
-		submitLabel="Add renewal"
-		successToast="Renewal added"
+		label={m.staff_renewals_label()}
+		modalTitle={m.staff_renewals_label()}
+		submitLabel={m.staff_renewals_submit_label()}
+		successToast={m.staff_renewals_success_toast()}
 	>
 		{#snippet form()}
 			<RenewalFields fields={createRenewal.fields} {assignees} />
@@ -34,25 +35,25 @@
 <PageContent>
 	{#if renewals.length === 0}
 		<EmptyState
-			title="No renewals yet"
-			description="Add a permit, license or insurance policy the collective holds, with the day it expires."
+			title={m.staff_renewals_no_renewals_yet()}
+			description={m.staff_renewals_description()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">Status</span></th>
-				<th>Renewal</th>
-				<th>Expires</th>
-				<th class="col-support">Kind</th>
-				<th class="col-extra">Responsible</th>
+				<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+				<th>{m.staff_renewals_renewal()}</th>
+				<th>{m.staff_expires()}</th>
+				<th class="col-support">{m.staff_kind()}</th>
+				<th class="col-extra">{m.staff_responsible()}</th>
 			{/snippet}
 			{#each renewals as r (r.id)}
 				<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/renewals/${r.id}`)}>
 					<td class="w-px">
 						{#if r.deadline.overdue}
-							<Badge variant="error" size="sm">Lapsed</Badge>
+							<Badge variant="error" size="sm">{m.staff_renewals_lapsed()}</Badge>
 						{:else if r.daysLeft <= 60}
-							<Badge variant="warning" size="sm">Due soon</Badge>
+							<Badge variant="warning" size="sm">{m.staff_renewals_due_soon()}</Badge>
 						{/if}
 					</td>
 					<td class="cell-primary">

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import FilterBar from '$lib/components/ui/FilterBar.svelte';
 	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
@@ -39,14 +40,18 @@
 
 <FilterBar activeCount={person ? 1 : 0} onclear={() => (person = null)}>
 	{#snippet search()}
-		<SearchSelect search={searchAccessPeople} bind:value={person} placeholder="Find a person..." />
+		<SearchSelect
+			search={searchAccessPeople}
+			bind:value={person}
+			placeholder={m.staff_access_person_access_placeholder()}
+		/>
 	{/snippet}
 </FilterBar>
 
 {#if !person}
 	<EmptyState
-		title="Pick a person"
-		description="Search by name or email to see every position, committee seat and clearance they hold."
+		title={m.staff_access_person_access_pick_person()}
+		description={m.staff_access_person_access_description()}
 	/>
 {:else}
 	{@const userId = person.id}
@@ -59,18 +64,20 @@
 		)}
 		{@const held = [...new Set([...access.capabilities, ...orgSeats.map((o) => o.cap)])]}
 
-		<InfoCard title="Positions" state={access.positions.length}>
+		<InfoCard title={m.staff_access_person_access_positions()} state={access.positions.length}>
 			{#snippet header(title)}
 				<div class="flex items-center justify-between gap-2">
 					<CardTitle>{title}</CardTitle>
 					{#if unheld.length > 0}
 						<Action
 							action={setPosition.for(`add-${userId}`)}
-							label="Assign position"
+							label={m.staff_access_person_access_assign_position()}
 							size="sm"
-							modalTitle="Assign a position to {person?.name}"
-							submitLabel="Assign"
-							successToast="Position assigned"
+							modalTitle={m.staff_access_person_access_assign_position_2({
+								value: person?.name ?? ''
+							})}
+							submitLabel={m.staff_access_person_access_assign()}
+							successToast={m.staff_access_person_access_position_assigned()}
 							onsuccess={refresh}
 						>
 							{#snippet form()}
@@ -78,7 +85,7 @@
 								<input type="hidden" name="change" value="add" />
 								<FormField
 									name="position"
-									label="Position"
+									label={m.staff_position()}
 									type="select"
 									options={unheld.map((p) => ({ value: p, label: positionLabels[p] }))}
 								/>
@@ -89,14 +96,14 @@
 			{/snippet}
 			{#if access.positions.length === 0}
 				<p class="text-muted" data-testid="no-positions">
-					No position. They hold only what a member holds.
+					{m.staff_access_person_access_no_position_they_hold_only()}
 				</p>
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th>Position</th>
-						<th class="col-support cell-num">Capabilities</th>
-						<th class="w-px"><span class="sr-only">Actions</span></th>
+						<th>{m.staff_position()}</th>
+						<th class="col-support cell-num">{m.staff_access_person_access_capabilities()}</th>
+						<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 					{/snippet}
 					{#each access.positions as p (p)}
 						<tr>
@@ -107,14 +114,17 @@
 							<td class="w-px">
 								<Action
 									action={setPosition.for(`remove-${userId}-${p}`)}
-									label="Remove"
+									label={m.staff_remove()}
 									variant="ghost"
 									size="xs"
 									class="text-error"
-									modalTitle="Remove {positionLabels[p]} from {person?.name}?"
-									submitLabel="Remove"
+									modalTitle={m.staff_access_person_access_remove_from({
+										value: positionLabels[p],
+										value2: person?.name
+									})}
+									submitLabel={m.staff_remove()}
 									submitVariant="error"
-									successToast="Position removed"
+									successToast={m.staff_access_person_access_position_removed()}
 									onsuccess={refresh}
 								>
 									{#snippet form()}
@@ -122,7 +132,7 @@
 										<input type="hidden" name="position" value={p} />
 										<input type="hidden" name="change" value="remove" />
 										<p class="text-sm">
-											Takes effect on their next request. The change is recorded in the audit log.
+											{m.staff_access_person_access_takes_effect_their_next_request()}
 										</p>
 									{/snippet}
 								</Action>
@@ -133,15 +143,15 @@
 			{/if}
 		</InfoCard>
 
-		<InfoCard title="Capabilities" state={held.length}>
+		<InfoCard title={m.staff_access_person_access_capabilities()} state={held.length}>
 			{#if held.length === 0}
-				<p class="text-muted">Nothing beyond a member's own pages.</p>
+				<p class="text-muted">{m.staff_access_person_access_nothing_beyond_member_s_own()}</p>
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th>Area</th>
-						<th>May</th>
-						<th class="col-support">Through</th>
+						<th>{m.staff_access_person_access_area()}</th>
+						<th>{m.staff_access_person_access_may()}</th>
+						<th class="col-support">{m.staff_through()}</th>
 					{/snippet}
 					{#each groupByResource(held) as g (g.resource)}
 						{@const from = [
@@ -162,15 +172,15 @@
 			{/if}
 		</InfoCard>
 
-		<InfoCard title="Committee seats" state={access.seats.length}>
+		<InfoCard title={m.staff_access_person_access_committee_seats()} state={access.seats.length}>
 			{#if access.seats.length === 0}
-				<p class="text-muted">No active committee seat.</p>
+				<p class="text-muted">{m.staff_access_person_access_no_active_committee_seat()}</p>
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th>Committee</th>
-						<th>Grants its members</th>
-						<th class="w-px"><span class="sr-only">Actions</span></th>
+						<th>{m.staff_committee()}</th>
+						<th>{m.staff_access_person_access_grants_its_members()}</th>
+						<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 					{/snippet}
 					{#each access.seats as seat (seat.groupId)}
 						<tr>
@@ -183,7 +193,9 @@
 							</td>
 							<td class="cell-text whitespace-normal">
 								{#if seat.grants.length === 0}
-									<span class="text-muted">Nothing beyond the seat</span>
+									<span class="text-muted"
+										>{m.staff_access_person_access_nothing_beyond_seat()}</span
+									>
 								{:else}
 									{seat.grants
 										.map(
@@ -198,7 +210,7 @@
 									groupId={seat.groupId}
 									name={seat.name}
 									held={seat.grants}
-									label="Edit grants"
+									label={m.staff_edit_grants()}
 									onsuccess={refresh}
 								/>
 							</td>
@@ -208,7 +220,7 @@
 			{/if}
 		</InfoCard>
 
-		<InfoCard title="Clearances" state={access.clearances.length}>
+		<InfoCard title={m.staff_access_person_access_clearances()} state={access.clearances.length}>
 			{#snippet header(title)}
 				<div class="flex items-center justify-between gap-2">
 					<CardTitle>{title}</CardTitle>
@@ -216,14 +228,14 @@
 				</div>
 			{/snippet}
 			{#if access.clearances.length === 0}
-				<p class="text-muted">No clearance on record.</p>
+				<p class="text-muted">{m.staff_access_person_access_no_clearance_record()}</p>
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th class="w-px"><span class="sr-only">Status</span></th>
-						<th>Clearance</th>
-						<th class="col-support">Expires</th>
-						<th class="w-px"><span class="sr-only">Actions</span></th>
+						<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+						<th>{m.staff_clearance()}</th>
+						<th class="col-support">{m.staff_expires()}</th>
+						<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 					{/snippet}
 					{#each access.clearances as c (c.id)}
 						<tr>

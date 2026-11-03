@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * What the session did, and what is left.
 	 *
@@ -21,11 +22,11 @@
 	const c = $derived(session.counts);
 	const stats = $derived(
 		[
-			{ n: c.resolve, label: 'resolved' },
-			{ n: c.snooze, label: 'snoozed' },
-			{ n: c.wait, label: 'waiting on them' },
-			{ n: c.reopen, label: 'reopened' },
-			{ n: c.skip, label: 'skipped' }
+			{ n: c.resolve, label: m.staff_inbox_daily_session_summary_resolved() },
+			{ n: c.snooze, label: m.staff_inbox_daily_session_summary_snoozed() },
+			{ n: c.wait, label: m.staff_inbox_daily_session_summary_waiting_them() },
+			{ n: c.reopen, label: m.staff_inbox_daily_session_summary_reopened() },
+			{ n: c.skip, label: m.staff_inbox_daily_session_summary_skipped() }
 		].filter((s) => s.n > 0)
 	);
 
@@ -37,7 +38,9 @@
 
 <Card>
 	<CardBody class="gap-5">
-		<h1 class="text-2xl font-bold">Daily done — {handled} handled</h1>
+		<h1 class="text-2xl font-bold">
+			{m.staff_inbox_daily_session_summary_daily_done_handled({ handled })}
+		</h1>
 
 		<div class="flex flex-wrap gap-6">
 			{#each stats as stat (stat.label)}
@@ -64,16 +67,18 @@
 		{/await}
 
 		<div class="flex flex-wrap gap-2">
-			<Button variant="primary" onclick={onclose}>Back to inbox</Button>
+			<Button variant="primary" onclick={onclose}>{m.staff_back_inbox()}</Button>
 			<!-- The Resolved view rather than a bespoke surface: what you sent is
 			     already a list, and it is one staff can go back to tomorrow. -->
 			<Button href="{resolve('/staff/inbox')}?view=resolved" variant="default" onclick={onclose}>
-				Review what I sent
+				{m.staff_inbox_daily_session_summary_review_what_i_sent()}
 			</Button>
 			<!-- The same ten-second undo the queue offers, reachable from here
 			     because the last thing you did is the one you are most likely to
 			     have got wrong. -->
-			<Button variant="ghost" onclick={() => undoLast()}>Undo last action</Button>
+			<Button variant="ghost" onclick={() => undoLast()}
+				>{m.staff_inbox_daily_session_summary_undo_last_action()}</Button
+			>
 		</div>
 	</CardBody>
 </Card>

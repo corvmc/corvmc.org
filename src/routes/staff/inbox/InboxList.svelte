@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InboxViews from './InboxViews.svelte';
 	import InboxChannelFilter from './InboxChannelFilter.svelte';
 	/**
@@ -106,7 +107,7 @@
 		<div class="min-w-32 flex-1">
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search conversations…"
+				placeholder={m.staff_inbox_inbox_list_placeholder()}
 				onsearch={(q) => {
 					filters.search = q;
 					filters.page = 1;
@@ -126,14 +127,22 @@
 		<Button
 			variant={filterPanel.open ? 'primary' : 'default'}
 			size="sm"
-			aria-label={activeCount() ? `Filters, ${activeCount()} active` : 'Filters'}
+			aria-label={activeCount()
+				? m.staff_inbox_inbox_list_filters_active({ activeCount: activeCount() })
+				: m.staff_inbox_inbox_list_filters()}
 			onclick={() => (filterPanel.open = !filterPanel.open)}
 		>
-			<IconFilter size={16} /> <span class="hidden @md:inline">Filters</span>
+			<IconFilter size={16} />
+			<span class="hidden @md:inline">{m.staff_inbox_inbox_list_filters()}</span>
 			{#if activeCount()}<Badge class="ml-1">{activeCount()}</Badge>{/if}
 		</Button>
 		{#if activeCount()}
-			<Button variant="ghost" size="sm" onclick={reset} aria-label="Clear filters">
+			<Button
+				variant="ghost"
+				size="sm"
+				onclick={reset}
+				aria-label={m.staff_inbox_inbox_list_clear_filters()}
+			>
 				<IconX size={16} />
 			</Button>
 		{/if}
@@ -142,17 +151,17 @@
 	{#if sortedByWaiting}
 		<!-- The order is not obvious from the rows, and an unexplained order reads
 		     as an arbitrary one. -->
-		<p class="text-subtle text-xs">Sorted by longest waiting</p>
+		<p class="text-subtle text-xs">{m.staff_inbox_inbox_list_sorted_by_longest_waiting()}</p>
 	{/if}
 
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		<DataList
 			{result}
 			empty={filters.view === 'open'
-				? 'Nothing open — the queue is clear.'
+				? m.staff_inbox_inbox_list_nothing_open_queue_clear()
 				: filters.view === 'snoozed'
-					? 'Nothing is waiting on a date or a reply.'
-					: 'No conversations found'}
+					? m.staff_inbox_inbox_list_nothing_waiting_date_reply()
+					: m.staff_inbox_inbox_list_no_conversations_found()}
 			onpage={(p) => (filters.page = p)}
 		>
 			{#snippet children(threads)}

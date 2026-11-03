@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Which show this blast is about (#857). Sets `campaign.eventId`, the one
 	 * thing that makes the "This show's audience" built-in resolve to anybody
@@ -43,12 +44,14 @@
 			onselect={(v) => onchange(v?.id ?? '')}
 			labelKey="title"
 			descriptionKey="when"
-			placeholder="Search shows by name…"
+			placeholder={m.staff_search_shows_by_name()}
 			search={(q) => searchEvents(q)}
 		/>
 	</div>
 	{#if chosen}
-		<Button type="button" variant="ghost" size="sm" onclick={clear}>Clear</Button>
+		<Button type="button" variant="ghost" size="sm" onclick={clear}
+			>{m.staff_marketing_campaigns_event_scope_picker_clear()}</Button
+		>
 	{/if}
 </div>
 {#if count}
@@ -61,7 +64,6 @@
 	{/await}
 {:else}
 	<p class="mt-1 text-subtle">
-		Optional. Pick one and “This show's audience” resolves to its ticket holders and RSVPs; leave it
-		blank and that audience is empty.
+		{m.staff_marketing_campaigns_event_scope_picker_optional_pick_o()}
 	</p>
 {/if}

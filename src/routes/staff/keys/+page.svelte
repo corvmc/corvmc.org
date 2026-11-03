@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -33,40 +34,45 @@
 	const rows = $derived(await getAccessRegister(view === 'history'));
 </script>
 
-<PageHeader title="Key Holders" subtitle="Space">
+<PageHeader title={m.staff_keys_key_holders()} subtitle={m.staff_space()}>
 	<Action
 		action={issueAccessForm}
-		label="Record a key or code"
-		modalTitle="Record a key or code"
-		submitLabel="Record"
-		successToast="Recorded"
+		label={m.staff_keys_record_key_code()}
+		modalTitle={m.staff_keys_record_key_code()}
+		submitLabel={m.staff_record()}
+		successToast={m.staff_keys_recorded()}
 		onsuccess={() => {
 			holderUserId = '';
 			holderPicked = '';
 		}}
 	>
 		{#snippet form()}
-			<Field field={fields.kind} type="select" label="What" options={kindOptions} />
+			<Field field={fields.kind} type="select" label={m.staff_what()} options={kindOptions} />
 			<Field
 				field={fields.label}
 				type="text"
-				label="Which one"
-				description="How you tell it apart — “Front door key 3”, “Alarm user 12”. Never the code itself."
+				label={m.staff_keys_which_one()}
+				description={m.staff_keys_how_tell_apart_front_door()}
 			/>
 			<MemberPicker
 				field={fields.holderUserId}
-				label="Held by"
+				label={m.staff_keys_held_by()}
 				bind:value={holderUserId}
 				bind:name={holderPicked}
 			/>
 			<Field
 				field={fields.holderName}
 				type="text"
-				label="Or a name"
-				description="For somebody without an account — the landlord, a contractor."
+				label={m.staff_keys_name()}
+				description={m.staff_keys_somebody_without_account_landlord_contractor()}
 			/>
-			<Field field={fields.issuedOn} type="date" label="Issued on" value={clubToday()} />
-			<Field field={fields.notes} type="textarea" label="Notes" />
+			<Field
+				field={fields.issuedOn}
+				type="date"
+				label={m.staff_keys_issued()}
+				value={clubToday()}
+			/>
+			<Field field={fields.notes} type="textarea" label={m.staff_notes()} />
 		{/snippet}
 	</Action>
 </PageHeader>
@@ -74,8 +80,8 @@
 <PageContent>
 	<TabBar
 		tabs={[
-			{ key: 'held', label: 'Held now' },
-			{ key: 'history', label: 'History' }
+			{ key: 'held', label: m.staff_keys_held_now() },
+			{ key: 'history', label: m.staff_history() }
 		]}
 		active={view}
 		onchange={(key) => (view = key as 'held' | 'history')}
@@ -83,15 +89,15 @@
 
 	{#if rows.length === 0}
 		<EmptyState
-			title={view === 'held' ? 'Nobody is on the register' : 'Nothing recorded yet'}
-			description="Record each physical key and alarm code when it is handed over, and mark it returned when it comes back."
+			title={view === 'held' ? m.staff_keys_nobody_register() : m.staff_keys_nothing_recorded_yet()}
+			description={m.staff_keys_record_each_physical_key_alarm()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th>Held by</th>
-				<th>What</th>
-				<th>Issued</th>
+				<th>{m.staff_keys_held_by()}</th>
+				<th>{m.staff_what()}</th>
+				<th>{m.staff_keys_issued_2()}</th>
 				<th>{view === 'history' ? 'Returned' : ''}</th>
 			{/snippet}
 			{#each rows as row (row.source + row.id)}
@@ -106,7 +112,9 @@
 					</td>
 					<td>
 						{formatDateShort(row.issuedAt)}
-						{#if row.issuedByName}<div class="text-subtle">by {row.issuedByName}</div>{/if}
+						{#if row.issuedByName}<div class="text-subtle">
+								{m.staff_keys_by({ issuedByName: row.issuedByName })}
+							</div>{/if}
 					</td>
 					<td class="text-right">
 						{#if row.returnedAt}
@@ -114,7 +122,7 @@
 							{#if row.returnNotes}<div class="text-subtle">{row.returnNotes}</div>{/if}
 						{:else if row.source === 'lock'}
 							<Button href={resolve('/staff/settings')} variant="ghost" size="sm">
-								Door access
+								{m.staff_keys_door_access()}
 							</Button>
 						{:else}
 							{@const ret = returnAccessForm.for(row.id)}
@@ -122,21 +130,23 @@
 								action={ret}
 								variant="ghost"
 								size="sm"
-								label="Returned"
-								modalTitle="Mark returned"
-								submitLabel="Mark returned"
-								successToast="Marked returned"
+								label={m.staff_returned()}
+								modalTitle={m.staff_keys_mark_returned()}
+								submitLabel={m.staff_keys_mark_returned()}
+								successToast={m.staff_keys_marked_returned()}
 							>
 								{#snippet form()}
 									<input {...ret.fields.id.as('hidden', row.id)} />
-									<p>{row.holderName} handed back {row.label}.</p>
+									<p>
+										{m.staff_keys_handed_back({ holderName: row.holderName, label: row.label })}
+									</p>
 									<Field
 										field={ret.fields.returnedOn}
 										type="date"
-										label="Returned on"
+										label={m.staff_keys_returned()}
 										value={clubToday()}
 									/>
-									<Field field={ret.fields.notes} type="textarea" label="Notes" />
+									<Field field={ret.fields.notes} type="textarea" label={m.staff_notes()} />
 								{/snippet}
 							</Action>
 						{/if}

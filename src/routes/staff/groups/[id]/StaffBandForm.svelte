@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import { untrack } from 'svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
@@ -57,11 +58,15 @@
 	let bioHtml = $state(untrack(() => band.bio) ?? '');
 </script>
 
-<Form remote={updateBand} guard onsuccess={() => toast.success('Band updated')}>
-	<RecordFrame {variant} {actions} subtitle="Band" title={band.name}>
+<Form
+	remote={updateBand}
+	guard
+	onsuccess={() => toast.success(m.staff_groups_id_staff_band_form_toast())}
+>
+	<RecordFrame {variant} {actions} subtitle={m.staff_band()} title={band.name}>
 		{#snippet header()}
 			{#if isDeactivated}
-				<Badge variant="error" size="md">Deactivated</Badge>
+				<Badge variant="error" size="md">{m.staff_deactivated()}</Badge>
 			{/if}
 			<SubmitButton shortcut="mod+s" size="sm">
 				{#snippet icon()}
@@ -70,29 +75,34 @@
 			</SubmitButton>
 		{/snippet}
 		<div class="mb-6 grid gap-6 lg:grid-cols-2">
-			<InfoCard title="Band Info">
+			<InfoCard title={m.staff_groups_id_staff_band_form_band_info()}>
 				<div class="grid grid-cols-1 gap-x-2">
 					<Field name="name" type="text" value={band.name} />
-					<Field name="bio" label="Bio">
+					<Field name="bio" label={m.staff_groups_id_staff_band_form_bio()}>
 						<input {...bandFields.bio.as('hidden', bioHtml)} />
-						<RichTextEditor bind:value={bioHtml} placeholder="Tell people about this band..." />
+						<RichTextEditor
+							bind:value={bioHtml}
+							placeholder={m.staff_groups_id_staff_band_form_placeholder()}
+						/>
 					</Field>
 				</div>
 			</InfoCard>
 
-			<InfoCard title="Details" class="bg-base-200 shadow-none">
+			<InfoCard title={m.staff_details()} class="bg-base-200 shadow-none">
 				<DefinitionList>
-					<Fact label="Band ID" mono>{band.id}</Fact>
+					<Fact label={m.staff_groups_id_staff_band_form_band_id()} mono>{band.id}</Fact>
 
-					<Fact label="Slug" mono>{band.slug}</Fact>
+					<Fact label={m.staff_slug()} mono>{band.slug}</Fact>
 
-					<Fact label="Owner">
+					<Fact label={m.staff_owner()}>
 						<EntityChip ref={band.owner} />
 					</Fact>
 
-					<Fact label="Members">{band.memberCount} active</Fact>
+					<Fact label={m.staff_members()}
+						>{m.staff_groups_id_staff_band_form_active({ memberCount: band.memberCount })}</Fact
+					>
 
-					<Fact label="Tier" class="flex items-center gap-2">
+					<Fact label={m.staff_tier()} class="flex items-center gap-2">
 						<StatusBadge status={band.tier} label />
 						<span class="text-subtle">
 							{isStripeBacked ? 'billed through Stripe' : 'set by staff'}
@@ -100,33 +110,40 @@
 					</Fact>
 
 					{#if band.subscription}
-						<Fact label="Billing">
-							{band.subscription.billingInterval}, renews {formatDateShortYear(
-								new Date(band.subscription.currentPeriodEnd)
-							)}
+						<Fact label={m.staff_groups_id_staff_band_form_billing()}>
+							{m.staff_groups_id_staff_band_form_renews({
+								billingInterval: band.subscription.billingInterval,
+								formatDateShortYear: formatDateShortYear(
+									new Date(band.subscription.currentPeriodEnd)
+								)
+							})}
 							{#if band.subscription.cancelAtPeriodEnd}
-								<Badge variant="warning" size="sm">Cancels at period end</Badge>
+								<Badge variant="warning" size="sm"
+									>{m.staff_groups_id_staff_band_form_cancels_at_period_end()}</Badge
+								>
 							{/if}
 						</Fact>
 					{/if}
 
-					<Fact label="Created">{formatDateShortYear(new Date(band.createdAt))}</Fact>
+					<Fact label={m.staff_created()}>{formatDateShortYear(new Date(band.createdAt))}</Fact>
 
 					{#if band.deletedAt}
-						<Fact label="Deactivated">{formatDateShortYear(new Date(band.deletedAt))}</Fact>
+						<Fact label={m.staff_deactivated()}
+							>{formatDateShortYear(new Date(band.deletedAt))}</Fact
+						>
 					{/if}
 				</DefinitionList>
 
 				<div class="mt-4 flex flex-wrap gap-2">
 					{#if isStripeBacked}
 						<span class="text-subtle">
-							Premium is billed through Stripe — cancel there to move this band back to free.
+							{m.staff_groups_id_staff_band_form_premium_billed_through_strip()}
 						</span>
 					{:else if band.tier === 'premium'}
 						<Action
 							action={setBandTier}
-							label="Revoke premium"
-							successToast="Premium revoked"
+							label={m.staff_groups_id_staff_band_form_revoke_premium()}
+							successToast={m.staff_groups_id_staff_band_form_premium_revoked()}
 							variant="warning"
 							size="sm"
 						>
@@ -134,16 +151,15 @@
 								<input {...tierFields.id.as('hidden', id)} />
 								<input {...tierFields.tier.as('hidden', 'free')} />
 								<p class="py-4">
-									Move this band back to the free tier? Their page editor, EPK and public band site
-									stop being reachable.
+									{m.staff_groups_id_staff_band_form_move_band_back_free_tier()}
 								</p>
 							{/snippet}
 						</Action>
 					{:else}
 						<Action
 							action={setBandTier}
-							label="Comp premium"
-							successToast="Premium comped"
+							label={m.staff_groups_id_staff_band_form_comp_premium()}
+							successToast={m.staff_groups_id_staff_band_form_premium_comped()}
 							variant="secondary"
 							size="sm"
 						>
@@ -151,8 +167,7 @@
 								<input {...tierFields.id.as('hidden', id)} />
 								<input {...tierFields.tier.as('hidden', 'premium')} />
 								<p class="py-4">
-									Give this band premium at no charge? No Stripe subscription is created, and the
-									comp stays in place until staff revoke it.
+									{m.staff_groups_id_staff_band_form_give_band_premium_at_no()}
 								</p>
 							{/snippet}
 						</Action>
@@ -160,8 +175,8 @@
 					{#if isDeactivated}
 						<Action
 							action={reactivateBand}
-							label="Reactivate"
-							successToast="Band reactivated"
+							label={m.staff_groups_id_staff_band_form_reactivate()}
+							successToast={m.staff_groups_id_staff_band_form_band_reactivated()}
 							variant="success"
 							size="sm"
 							onsuccess={() => {
@@ -170,14 +185,14 @@
 						>
 							{#snippet form()}
 								<input {...reactivateFields.id.as('hidden', id)} />
-								<p class="py-4">Reactivate this band?</p>
+								<p class="py-4">{m.staff_groups_id_staff_band_form_reactivate_band()}</p>
 							{/snippet}
 						</Action>
 					{:else}
 						<Action
 							action={deactivateBand}
-							label="Deactivate"
-							successToast="Band deactivated"
+							label={m.staff_groups_id_staff_band_form_deactivate()}
+							successToast={m.staff_groups_id_staff_band_form_band_deactivated()}
 							variant="error"
 							size="sm"
 							onsuccess={() => {
@@ -186,7 +201,9 @@
 						>
 							{#snippet form()}
 								<input {...deactivateFields.id.as('hidden', id)} />
-								<p class="py-4">Deactivate this band? All future reservations will be cancelled.</p>
+								<p class="py-4">
+									{m.staff_groups_id_staff_band_form_deactivate_band_all_future_r()}
+								</p>
 							{/snippet}
 						</Action>
 					{/if}

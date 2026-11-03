@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
@@ -202,7 +203,7 @@
 <AppShell drawerId="staff-drawer" {panels} activePanel="staff" chrome={layout.chrome}>
 	{#snippet navigation()}
 		{#if navStarred.length > 0}
-			<Nav.Group title="Starred">
+			<Nav.Group title={m.staff_starred()}>
 				{#each navStarred as item (item.key)}
 					{@render flat(item)}
 				{/each}

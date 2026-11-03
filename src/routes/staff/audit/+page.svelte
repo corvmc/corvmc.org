@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import Select from '$lib/components/ui/Form/Select.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -44,13 +45,13 @@
 	}
 </script>
 
-<PageHeader title="Audit Log" />
+<PageHeader title={m.staff_audit_title()} />
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search by who acted..."
+				placeholder={m.staff_audit_placeholder()}
 				onsearch={(q) => {
 					actor = q;
 					page = 1;
@@ -59,21 +60,21 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label="Action"
+			aria-label={m.staff_audit_action()}
 			value={action}
 			onchange={(e: Event) => {
 				action = (e.currentTarget as HTMLSelectElement).value as AuditAction | '';
 				page = 1;
 			}}
 		>
-			<option value="">All actions</option>
+			<option value="">{m.staff_audit_all_actions()}</option>
 			{#each auditActions as value (value)}
 				<option {value}>{auditActionLabel(value)}</option>
 			{/each}
 		</Select>
 		<input
 			type="date"
-			aria-label="From date"
+			aria-label={m.staff_from_date()}
 			class="input input-sm"
 			bind:value={dateFrom}
 			onchange={() => {
@@ -82,7 +83,7 @@
 		/>
 		<input
 			type="date"
-			aria-label="To date"
+			aria-label={m.staff_date_2()}
 			class="input input-sm"
 			bind:value={dateTo}
 			onchange={() => {
@@ -91,13 +92,13 @@
 		/>
 	</FilterBar>
 
-	<DataList {result} empty="No audit entries found" onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_audit_empty()} onpage={(p) => (page = p)}>
 		{#snippet children(entries)}
 			<Table>
 				{#snippet head()}
-					<th>What happened</th>
-					<th>Account</th>
-					<th class="col-support">By</th>
+					<th>{m.staff_what_happened()}</th>
+					<th>{m.staff_audit_account()}</th>
+					<th class="col-support">{m.staff_by_2()}</th>
 				{/snippet}
 				{#each entries as entry (entry.id)}
 					<tr>

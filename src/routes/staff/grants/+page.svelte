@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/** Grant applications and awards, soonest deadline first. */
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -29,15 +30,17 @@
 	}
 </script>
 
-<PageHeader title="Grants" subtitle="Money">
-	<Button href={resolve('/staff/grants/funders')} variant="ghost" size="sm">Funders</Button>
+<PageHeader title={m.staff_grants()} subtitle={m.staff_money()}>
+	<Button href={resolve('/staff/grants/funders')} variant="ghost" size="sm"
+		>{m.staff_funders()}</Button
+	>
 	{#if funders.length > 0}
 		<Action
 			action={createGrant}
-			label="New application"
-			modalTitle="New grant application"
-			submitLabel="Add application"
-			successToast="Application added"
+			label={m.staff_grants_label()}
+			modalTitle={m.staff_grants_modal_title()}
+			submitLabel={m.staff_grants_submit_label()}
+			successToast={m.staff_grants_success_toast()}
 		>
 			{#snippet form()}
 				<GrantFields fields={createGrant.fields} {funders} />
@@ -55,27 +58,27 @@
 				checked={includeClosed}
 				onchange={(e) => setClosed(e.currentTarget.checked)}
 			/>
-			Show closed
+			{m.staff_grants_show_closed()}
 		</label>
 	</div>
 
 	{#if funders.length === 0}
 		<EmptyState
-			title="No funders yet"
-			description="Add the foundation or agency first under Funders, then the application to it."
+			title={m.staff_no_funders_yet()}
+			description={m.staff_grants_add_foundation_agency_first_under()}
 		/>
 	{:else if grants.length === 0}
 		<EmptyState
-			title="No open applications"
-			description="Add a grant you are applying for, with its deadline."
+			title={m.staff_grants_no_open_applications()}
+			description={m.staff_grants_add_grant_applying_with_its()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">Status</span></th>
-				<th>Application</th>
-				<th>Next deadline</th>
-				<th class="col-support cell-num">Amount</th>
+				<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+				<th>{m.staff_grants_application()}</th>
+				<th>{m.staff_grants_next_deadline()}</th>
+				<th class="col-support cell-num">{m.staff_amount()}</th>
 			{/snippet}
 			{#each grants as g (g.id)}
 				<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/grants/${g.id}`)}>
@@ -95,7 +98,7 @@
 								{formatIsoDay(g.deadline.on)}
 							</span>
 						{:else if g.status === 'applied'}
-							<span class="text-muted">Awaiting decision</span>
+							<span class="text-muted">{m.staff_grants_awaiting_decision()}</span>
 						{:else}
 							—
 						{/if}
@@ -104,7 +107,9 @@
 						{#if g.amountAwardedCents != null}
 							{formatCents(g.amountAwardedCents)}
 						{:else if g.amountRequestedCents != null}
-							<span class="text-muted">{formatCents(g.amountRequestedCents)} asked</span>
+							<span class="text-muted"
+								>{m.staff_grants_asked({ formatCents: formatCents(g.amountRequestedCents) })}</span
+							>
 						{:else}
 							—
 						{/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	// Type-0 lock users the site does not account for: standing door codes made
 	// by hand in the U-tec app, which nothing revoked when someone stopped being
 	// a member. Adopting one changes nothing on the lock — it starts tracking it
@@ -38,10 +39,9 @@
 </script>
 
 <div class="mt-2 border-t border-base-200 pt-3">
-	<p class="text-sm font-medium">Unmanaged door codes</p>
+	<p class="text-sm font-medium">{m.staff_settings_unmanaged_lock_codes_unmanaged_door_codes()}</p>
 	<p class="text-subtle">
-		Standing codes on the lock that this site does not track. Adopting one changes nothing at the
-		door — it starts tracking it, which is what makes revoking it possible at all.
+		{m.staff_settings_unmanaged_lock_codes_standing_codes_lock_site()}
 	</p>
 
 	{#if failure}
@@ -49,7 +49,9 @@
 	{/if}
 
 	{#if unmanaged.length === 0}
-		<p class="mt-2 text-subtle">Every standing code on the lock is accounted for.</p>
+		<p class="mt-2 text-subtle">
+			{m.staff_settings_unmanaged_lock_codes_every_standing_code_lock()}
+		</p>
 	{:else}
 		<ul class="mt-2 divide-y divide-base-200">
 			{#each unmanaged as u (u.lockAccessId)}
@@ -57,7 +59,8 @@
 					<div class="flex items-center gap-2">
 						<span class="font-medium">{u.label}</span>
 						{#if !u.synced}
-							<Badge variant="warning">Not on the lock yet</Badge>
+							<Badge variant="warning">{m.staff_settings_unmanaged_lock_codes_not_lock_yet()}</Badge
+							>
 						{/if}
 					</div>
 					<div class="flex shrink-0 gap-2">
@@ -69,7 +72,7 @@
 							disabled={busyId === u.lockAccessId}
 							onclick={() => adopt(u.lockAccessId, u.label)}
 						>
-							Adopt
+							{m.staff_settings_unmanaged_lock_codes_adopt()}
 						</Button>
 					</div>
 				</li>

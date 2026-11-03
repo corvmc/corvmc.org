@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * One staff conversation — the thread pane of the two-pane inbox.
 	 *
@@ -88,7 +89,7 @@
 		size="sm"
 		shape="square"
 		class="lg:hidden"
-		aria-label="Back to the inbox"
+		aria-label={m.staff_inbox_id_aria_label()}
 	>
 		<IconArrowLeft size={18} />
 	</Button>
@@ -122,11 +123,15 @@
 	     date alone. -->
 	{#if t.status === 'snoozed' && t.snoozedUntil}
 		<p class="flex items-center gap-1.5 text-muted text-sm">
-			<IconAlarmSnooze size={14} /> Returns {formatDate(new Date(t.snoozedUntil))}
+			<IconAlarmSnooze size={14} />
+			{m.staff_inbox_id_returns({ formatDate: formatDate(new Date(t.snoozedUntil)) })}
 		</p>
 	{:else if t.awaitingReplySince}
 		<p class="flex items-center gap-1.5 text-muted text-sm">
-			<IconSend size={14} /> Waiting on a reply since {formatDate(new Date(t.awaitingReplySince))}
+			<IconSend size={14} />
+			{m.staff_inbox_id_waiting_reply_since({
+				formatDate: formatDate(new Date(t.awaitingReplySince))
+			})}
 		</p>
 	{/if}
 
@@ -164,8 +169,9 @@
 		<div class="flex flex-col gap-2">
 			{#if channelDisabled}
 				<Alert type="warning" href={resolve('/staff/settings')}>
-					The {channelLabel(t.channel)} channel is disabled. Enable it in Settings → Inbox Channels to
-					send replies.
+					{m.staff_inbox_id_channel_disabled_enable_settings_inbox({
+						channelLabel: channelLabel(t.channel)
+					})}
 				</Alert>
 			{/if}
 

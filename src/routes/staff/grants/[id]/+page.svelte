@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/** One grant application: what was asked, what was awarded, and what is owed back. */
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -34,15 +35,15 @@
 	const cents = (n: number | null) => (n != null ? formatCents(n) : '—');
 </script>
 
-<PageHeader width="3xl" title={grant.funderName} subtitle="Grant">
+<PageHeader width="3xl" title={grant.funderName} subtitle={m.staff_grants_id_subtitle()}>
 	<Action
 		action={editForm}
-		label="Edit"
+		label={m.staff_edit()}
 		variant="ghost"
 		size="sm"
-		modalTitle="Edit {grant.title}"
-		submitLabel="Save"
-		successToast="Saved"
+		modalTitle={m.staff_edit_3({ title: grant.title })}
+		submitLabel={m.staff_save()}
+		successToast={m.staff_saved()}
 	>
 		{#snippet form()}
 			<input type="hidden" name="id" value={grant.id} />
@@ -54,41 +55,43 @@
 <PageContent width="3xl">
 	{#if grant.deadline?.overdue}
 		<Alert type="warning">
-			{grantDeadlineLabels[grant.deadline.kind]}
-			{formatIsoDay(grant.deadline.on)} has passed. Record it once it is dealt with.
+			{m.staff_grants_id_has_passed_record_once_dealt({
+				value: grantDeadlineLabels[grant.deadline.kind],
+				formatIsoDay: formatIsoDay(grant.deadline.on)
+			})}
 		</Alert>
 	{/if}
 
 	<InfoCard title={grant.title}>
 		<DefinitionList>
-			<Fact label="Status">
+			<Fact label={m.staff_status()}>
 				<Badge variant={grantStatusBadge[grant.status]} size="sm">
 					{grantStatusLabels[grant.status]}
 				</Badge>
 			</Fact>
-			<Fact label="Requested" value={cents(grant.amountRequestedCents)} />
-			<Fact label="Awarded" value={cents(grant.amountAwardedCents)} />
-			<Fact label="Apply by" value={formatIsoDay(grant.applyBy)} />
+			<Fact label={m.staff_requested()} value={cents(grant.amountRequestedCents)} />
+			<Fact label={m.staff_grants_id_awarded()} value={cents(grant.amountAwardedCents)} />
+			<Fact label={m.staff_grants_id_apply_by()} value={formatIsoDay(grant.applyBy)} />
 			<Fact
-				label="Award period"
+				label={m.staff_grants_id_award_period()}
 				value="{formatIsoDay(grant.startsOn)} – {formatIsoDay(grant.endsOn)}"
 			/>
 			{#if grant.notes}
-				<Fact label="Notes" wrap>{grant.notes}</Fact>
+				<Fact label={m.staff_notes()} wrap>{grant.notes}</Fact>
 			{/if}
 		</DefinitionList>
 	</InfoCard>
 
-	<InfoCard title="Reports">
+	<InfoCard title={m.staff_reports()}>
 		{#snippet action()}
 			<Action
 				action={addGrantReport}
-				label="Add report"
+				label={m.staff_grants_id_add_report()}
 				variant="ghost"
 				size="sm"
-				modalTitle="New report deadline"
-				submitLabel="Add"
-				successToast="Report added"
+				modalTitle={m.staff_grants_id_new_report_deadline()}
+				submitLabel={m.staff_add()}
+				successToast={m.staff_grants_id_report_added()}
 			>
 				{#snippet form()}
 					<input type="hidden" name="grantApplicationId" value={grant.id} />
@@ -98,16 +101,16 @@
 		{/snippet}
 		{#if grant.reports.length === 0}
 			<EmptyState
-				title="No reports owed"
-				description="Add each report the award requires, with its due date."
+				title={m.staff_grants_id_no_reports_owed()}
+				description={m.staff_grants_id_description()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Report</th>
-					<th>Due</th>
-					<th>Submitted</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
+					<th>{m.staff_report()}</th>
+					<th>{m.staff_due()}</th>
+					<th>{m.staff_submitted()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 				{/snippet}
 				{#each grant.reports as r (r.id)}
 					{@const edit = updateGrantReport.for(r.id)}
@@ -118,12 +121,12 @@
 						<td class="w-px whitespace-nowrap">
 							<Action
 								action={edit}
-								label="Edit"
+								label={m.staff_edit()}
 								variant="ghost"
 								size="sm"
-								modalTitle="Edit {r.title}"
-								submitLabel="Save"
-								successToast="Saved"
+								modalTitle={m.staff_edit_3({ title: r.title })}
+								submitLabel={m.staff_save()}
+								successToast={m.staff_saved()}
 								data-testid="edit-report"
 							>
 								{#snippet form()}
@@ -134,20 +137,20 @@
 							</Action>
 							<Action
 								action={deleteGrantReport.for(r.id)}
-								label="Delete"
+								label={m.staff_delete()}
 								variant="ghost"
 								size="sm"
 								class="text-error"
-								modalTitle="Delete {r.title}?"
-								submitLabel="Delete"
+								modalTitle={m.staff_delete_3({ title: r.title })}
+								submitLabel={m.staff_delete()}
 								submitVariant="error"
-								successToast="Deleted"
+								successToast={m.staff_deleted()}
 							>
 								{#snippet form()}
 									<input type="hidden" name="id" value={r.id} />
 									<input type="hidden" name="grantApplicationId" value={grant.id} />
 									<p class="text-sm">
-										For a report the funder does not require. A sent one gets a Submitted date.
+										{m.staff_grants_id_report_funder_does_not_require()}
 									</p>
 								{/snippet}
 							</Action>
@@ -161,21 +164,20 @@
 	<div class="flex flex-wrap gap-2">
 		<Action
 			action={deleteGrant.for(grant.id)}
-			label="Delete"
+			label={m.staff_delete()}
 			variant="ghost"
 			size="sm"
 			class="text-error"
-			modalTitle="Delete {grant.title}?"
-			submitLabel="Delete"
+			modalTitle={m.staff_delete_3({ title: grant.title })}
+			submitLabel={m.staff_delete()}
 			submitVariant="error"
-			successToast="Deleted"
+			successToast={m.staff_deleted()}
 			onsuccess={() => goto(resolve('/staff/grants'))}
 		>
 			{#snippet form()}
 				<input type="hidden" name="id" value={grant.id} />
 				<p class="text-sm">
-					For a row that should never have existed; its reports go with it. An application that was
-					turned down is Declined, and a finished award is Closed.
+					{m.staff_grants_id_row_should_never_have_existed()}
 				</p>
 			{/snippet}
 		</Action>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Name the filter combination you are looking at, and keep it as a tab.
 	 *
@@ -29,17 +30,24 @@
 	);
 </script>
 
-<Modal bind:open title="Save as view" maxWidth="max-w-sm">
+<Modal bind:open title={m.staff_save_as_view()} maxWidth="max-w-sm">
 	<Form
 		remote={saveInboxView}
-		successToast="View saved"
+		successToast={m.staff_inbox_save_view_dialog_success_toast()}
 		onsuccess={() => (open = false)}
 		class="flex flex-col gap-4"
 	>
 		<input {...saveInboxView.fields.filters.as('hidden', payload)} />
-		<FormField name="name" label="Name" placeholder="Practice space, unanswered" />
+		<FormField
+			name="name"
+			label={m.staff_name()}
+			placeholder={m.staff_inbox_save_view_dialog_placeholder()}
+		/>
 		<div class="flex justify-end">
-			<SubmitButton label="Save view" successLabel="Saved" />
+			<SubmitButton
+				label={m.staff_inbox_save_view_dialog_save_view()}
+				successLabel={m.staff_saved()}
+			/>
 		</div>
 	</Form>
 </Modal>

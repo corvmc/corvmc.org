@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	// Whether the door is actually reachable, and the break-glass code.
 	//
 	// Its own component so the settings page keeps one load-bearing query: this
@@ -51,17 +52,17 @@
 
 <div class="mt-2 border-t border-base-200 pt-3">
 	<div class="flex flex-wrap items-center gap-2">
-		<span class="text-sm font-medium">Lock</span>
+		<span class="text-sm font-medium">{m.staff_settings_lock_health_lock()}</span>
 		{#if !health.ok}
-			<Badge variant="error">Unreachable</Badge>
+			<Badge variant="error">{m.staff_settings_lock_health_unreachable()}</Badge>
 			<span class="text-subtle">{health.error}</span>
 		{:else if health.online}
-			<Badge variant="success">Online</Badge>
+			<Badge variant="success">{m.staff_settings_lock_health_online()}</Badge>
 			<span class="text-subtle">
 				{health.lockState ?? 'unknown'} · battery {health.batteryLevel ?? '?'}/5
 			</span>
 		{:else}
-			<Badge variant="warning">Offline</Badge>
+			<Badge variant="warning">{m.staff_settings_lock_health_offline()}</Badge>
 			<span class="text-subtle">
 				Door codes are queued and will not work until it reconnects. Last known:
 				{health.lockState ?? 'unknown'} · battery {health.batteryLevel ?? '?'}/5
@@ -70,7 +71,7 @@
 	</div>
 
 	<div class="mt-3 flex flex-wrap items-center gap-2">
-		<span class="text-subtle">Daily job</span>
+		<span class="text-subtle">{m.staff_settings_lock_health_daily_job()}</span>
 		{#if health.lastRun}
 			{#if health.lastRun.errors.length > 0}
 				<Badge variant="error">
@@ -78,7 +79,7 @@
 					{health.lastRun.errors.length === 1 ? 'error' : 'errors'}
 				</Badge>
 			{:else}
-				<Badge variant="success">Clean</Badge>
+				<Badge variant="success">{m.staff_settings_lock_health_clean()}</Badge>
 			{/if}
 			<span class="text-subtle">
 				{timeAgo(new Date(health.lastRun.at))} ·
@@ -87,7 +88,7 @@
 				{health.lastRun.confirmed} confirmed
 			</span>
 		{:else}
-			<span class="text-subtle">Never run, or not since this was added.</span>
+			<span class="text-subtle">{m.staff_settings_lock_health_never_run_not_since_was()}</span>
 		{/if}
 		<Button type="button" variant="ghost" size="sm" onclick={handleRun} disabled={running}>
 			{running ? 'Running…' : 'Run now'}
@@ -108,15 +109,15 @@
 
 	{#if health.ok}
 		<div class="mt-3 flex flex-wrap items-center gap-2">
-			<span class="text-subtle">Break-glass code</span>
+			<span class="text-subtle">{m.staff_settings_lock_health_break_glass_code()}</span>
 			{#if health.fallbackCode}
 				<span class="font-mono font-bold tracking-[0.2em]">{health.fallbackCode}</span>
 				<Button type="button" variant="ghost" size="sm" onclick={handleRotate} disabled={rotating}>
-					Rotate
+					{m.staff_settings_lock_health_rotate()}
 				</Button>
 			{:else}
 				<span class="text-subtle">
-					None confirmed on the lock yet — one is minted by the daily job.
+					{m.staff_settings_lock_health_none_confirmed_lock_yet_one()}
 				</span>
 			{/if}
 		</div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { formatDateShortYear } from '$lib/utils/format';
 	/**
 	 * Daily — one thread, one decision, no list scanning.
@@ -59,11 +60,11 @@
 	{#if !session.started}
 		{#if scope.threadIds.length === 0}
 			<EmptyState
-				title="Nothing to triage"
-				description="The queue is clear. Daily has nothing to walk you through."
+				title={m.staff_inbox_daily_title()}
+				description={m.staff_inbox_daily_description()}
 			/>
 			<div class="flex justify-center">
-				<Button href={resolve('/staff/inbox')} variant="default">Back to inbox</Button>
+				<Button href={resolve('/staff/inbox')} variant="default">{m.staff_back_inbox()}</Button>
 			</div>
 		{:else}
 			<DailyStartCard
@@ -83,11 +84,14 @@
 	{:else}
 		<div class="flex items-center justify-between gap-3">
 			<div class="flex items-baseline gap-3">
-				<h1 class="text-xl font-bold">Daily</h1>
-				<span class="text-muted text-sm">{session.position} of {session.total}</span>
+				<h1 class="text-xl font-bold">{m.staff_inbox_daily_daily()}</h1>
+				<span class="text-muted text-sm"
+					>{m.staff_inbox_daily_text({ position: session.position, total: session.total })}</span
+				>
 			</div>
 			<Button variant="ghost" size="sm" onclick={leave}>
-				<IconX size={16} /> Esc to exit
+				<IconX size={16} />
+				{m.staff_inbox_daily_esc_exit()}
 			</Button>
 		</div>
 
@@ -121,7 +125,9 @@
 
 						{#if t.awaitingReplySince}
 							<p class="text-subtle text-sm">
-								No response since {formatDateShortYear(new Date(t.awaitingReplySince))}
+								{m.staff_inbox_daily_no_response_since({
+									formatDateShortYear: formatDateShortYear(new Date(t.awaitingReplySince))
+								})}
 							</p>
 						{/if}
 
@@ -143,7 +149,8 @@
 
 				<div class="flex justify-center">
 					<Button variant="ghost" size="sm" onclick={() => session.skip()}>
-						<IconArrowDown size={16} /> Skip — stays open, moves to the end
+						<IconArrowDown size={16} />
+						{m.staff_inbox_daily_skip_stays_open_moves_end()}
 					</Button>
 				</div>
 			{/await}

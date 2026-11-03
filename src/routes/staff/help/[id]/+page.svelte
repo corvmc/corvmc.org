@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -29,11 +30,11 @@
 	});
 </script>
 
-<PageHeader width="3xl" title="Edit Article" subtitle="Help">
+<PageHeader width="3xl" title={m.staff_help_id_title()} subtitle={m.staff_help()}>
 	<Action
 		action={deleteArticle}
-		modalTitle="Confirm"
-		successToast="Article deleted"
+		modalTitle={m.staff_confirm()}
+		successToast={m.staff_help_id_article_deleted()}
 		onsuccess={() => goto(resolve('/staff/help'))}
 		variant="error"
 		size="sm"
@@ -41,48 +42,49 @@
 	>
 		{#snippet form()}
 			<input {...deleteFields.id.as('hidden', id)} />
-			<p class="py-4">Permanently delete "{article?.title}"?</p>
+			<p class="py-4">{m.staff_help_id_permanently_delete({ value: article?.title })}</p>
 		{/snippet}
-		<IconTrash size={16} /> Delete
+		<IconTrash size={16} />
+		{m.staff_delete()}
 	</Action>
 </PageHeader>
 <PageContent width="3xl">
 	{#if article}
-		<Form remote={updateArticle} guard successToast="Article updated">
+		<Form remote={updateArticle} guard successToast={m.staff_help_id_article_updated()}>
 			<input {...updateFields.id.as('hidden', article.id)} />
 
 			<div class="space-y-4">
 				<div class="grid gap-4 sm:grid-cols-2">
-					<FormField name="title" type="text" label="Title" value={article.title} />
-					<FormField name="slug" type="text" label="Slug" value={article.slug} />
+					<FormField name="title" type="text" label={m.staff_title()} value={article.title} />
+					<FormField name="slug" type="text" label={m.staff_slug()} value={article.slug} />
 				</div>
 
 				<div class="grid gap-4 sm:grid-cols-4">
 					<FormField
 						name="categoryId"
 						type="select"
-						label="Category"
+						label={m.staff_category()}
 						value={article.categoryId}
 						options={categories.map((c) => ({ value: c.id, label: c.name }))}
 					/>
 					<FormField
 						name="minRole"
 						type="select"
-						label="Audience"
+						label={m.staff_audience()}
 						value={article.minRole}
 						options={helpAudiences.map((a) => ({ value: a, label: helpAudienceLabels[a] }))}
 					/>
 					<FormField
 						name="published"
 						type="toggle"
-						label="Status"
+						label={m.staff_status()}
 						value={article.published}
-						checkboxLabel="Published"
+						checkboxLabel={m.staff_published()}
 					/>
 					<FormField
 						name="sortOrder"
 						type="number"
-						label="Order"
+						label={m.staff_order_2()}
 						value={article.sortOrder}
 						min="0"
 					/>
@@ -91,26 +93,25 @@
 				<FormField
 					name="summary"
 					type="text"
-					label="Summary"
+					label={m.staff_summary()}
 					value={article.summary ?? ''}
-					placeholder="Brief description"
+					placeholder={m.staff_help_id_placeholder()}
 				/>
 
-				<FormField name="content" label="Content">
+				<FormField name="content" label={m.staff_content()}>
 					<input {...updateFields.content.as('hidden', contentValue)} />
 					<MarkdownEditor bind:value={contentValue} />
 				</FormField>
 
 				{#if article.source === 'static'}
 					<Alert type="info" class="text-sm">
-						This article is synced from a markdown file. Edits here will be overwritten on the next
-						sync.
+						{m.staff_help_id_article_synced_from_markdown_file()}
 					</Alert>
 				{/if}
 
 				<div class="flex justify-end gap-2">
-					<Button href="/staff/help" variant="ghost">Cancel</Button>
-					<SubmitButton label="Save Changes" />
+					<Button href="/staff/help" variant="ghost">{m.staff_cancel()}</Button>
+					<SubmitButton label={m.staff_help_id_save_changes()} />
 				</div>
 			</div>
 		</Form>

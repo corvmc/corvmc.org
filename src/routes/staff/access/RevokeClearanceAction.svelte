@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { revokeCertification } from '$lib/remote/volunteer.remote';
@@ -14,23 +15,22 @@
 
 <Action
 	action={revokeCertification.for(id)}
-	label="Revoke"
+	label={m.staff_access_revoke_clearance_revoke()}
 	variant="ghost"
 	size="xs"
 	class="text-error"
-	modalTitle="Revoke {name}?"
-	submitLabel="Revoke"
+	modalTitle={m.staff_access_revoke_clearance_modal_title({ name })}
+	submitLabel={m.staff_access_revoke_clearance_revoke()}
 	submitVariant="error"
-	successToast="Clearance revoked"
+	successToast={m.staff_access_revoke_clearance_success_toast()}
 	{onsuccess}
 >
 	{#snippet form()}
 		<input type="hidden" name="id" value={id} />
 		<input type="hidden" name="userId" value={userId} />
 		<p class="text-sm">
-			The record stays — the period it covered is history. They lose it from today, so shifts they
-			already worked still read as cleared.
+			{m.staff_access_revoke_clearance_record_stays_period_covered_hi()}
 		</p>
-		<FormField name="reason" label="Why" type="textarea" />
+		<FormField name="reason" label={m.staff_why()} type="textarea" />
 	{/snippet}
 </Action>

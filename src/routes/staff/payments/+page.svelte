@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -54,17 +55,16 @@
 	}
 </script>
 
-<PageHeader title="Payments" />
+<PageHeader title={m.staff_payments_title()} />
 <PageContent>
 	<p class="mb-4 text-sm text-base-content/60">
-		Cash and credit-settled payments only — card payments (tickets, online reservation payments) are
-		recorded in the Stripe dashboard.
+		{m.staff_payments_cash_credit_settled_payments_only()}
 	</p>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search name or email..."
+				placeholder={m.staff_search_name_email()}
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -73,33 +73,33 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label="Method"
+			aria-label={m.staff_payments_method()}
 			value={method}
 			onchange={(e: Event) => {
 				method = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">All methods</option>
-			<option value="Cash">Cash</option>
-			<option value="Credits">Credits</option>
+			<option value="">{m.staff_payments_all_methods()}</option>
+			<option value="Cash">{m.staff_payments_cash()}</option>
+			<option value="Credits">{m.staff_payments_credits()}</option>
 		</Select>
 		<Select
 			size="sm"
-			aria-label="Status"
+			aria-label={m.staff_status()}
 			value={status}
 			onchange={(e: Event) => {
 				status = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">All statuses</option>
-			<option value="completed">Completed</option>
-			<option value="refunded">Refunded</option>
+			<option value="">{m.staff_all_statuses()}</option>
+			<option value="completed">{m.staff_payments_completed()}</option>
+			<option value="refunded">{m.staff_refunded()}</option>
 		</Select>
 		<input
 			type="date"
-			aria-label="From date"
+			aria-label={m.staff_from_date()}
 			class="input input-sm"
 			bind:value={dateFrom}
 			onchange={() => {
@@ -108,7 +108,7 @@
 		/>
 		<input
 			type="date"
-			aria-label="To date"
+			aria-label={m.staff_date_2()}
 			class="input input-sm"
 			bind:value={dateTo}
 			onchange={() => {
@@ -117,19 +117,19 @@
 		/>
 	</FilterBar>
 
-	<DataList {result} empty="No payment records found" onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_payments_empty()} onpage={(p) => (page = p)}>
 		{#snippet children(payments)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Member</th>
-					<th class="cell-num">Amount</th>
-					<th class="col-support w-px"><span class="sr-only">Method</span></th>
-					<th class="col-support whitespace-nowrap">Paid</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+					<th>{m.staff_member()}</th>
+					<th class="cell-num">{m.staff_amount()}</th>
+					<th class="col-support w-px"><span class="sr-only">{m.staff_payments_method()}</span></th>
+					<th class="col-support whitespace-nowrap">{m.staff_paid()}</th>
 					<!-- The Stripe id is diagnostic and tiers away; the link to the
 					     reservation is the row's only action and must not (#1229). -->
-					<th class="col-extra">Record</th>
-					<th class="w-px"><span class="sr-only">Reservation</span></th>
+					<th class="col-extra">{m.staff_record()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_reservation()}</span></th>
 				{/snippet}
 
 				{#each payments as p (p.id)}
@@ -146,13 +146,13 @@
 							{formatDateTimeShort(new Date(p.paidAt))}
 						</td>
 						<td class="col-extra">
-							<CopyableId value={p.id} label="Stripe" />
+							<CopyableId value={p.id} label={m.staff_payments_label()} />
 						</td>
 						<td class="w-px">
 							{#if p.reservationId}
 								<div class="flex w-max justify-end">
 									<Button href="/staff/reservations/{p.reservationId}" variant="ghost" size="xs">
-										View reservation
+										{m.staff_payments_view_reservation()}
 									</Button>
 								</div>
 							{/if}

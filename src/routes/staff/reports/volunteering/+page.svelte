@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -90,7 +91,7 @@
 	}
 </script>
 
-<PageHeader title="Volunteering" subtitle="Reports">
+<PageHeader title={msg.staff_reports_volunteering_volunteering()} subtitle={msg.staff_reports()}>
 	<!--
 		A plain anchor rather than an Action: the endpoint returns a file, not a
 		value, so it is a `+server.ts` and the browser has to navigate to it for
@@ -100,7 +101,7 @@
 	-->
 	<Button href={exportHref} size="sm" rel="external" download>
 		<IconDownload size={18} />
-		Export CSV
+		{msg.staff_export_csv()}
 	</Button>
 </PageHeader>
 
@@ -116,9 +117,12 @@
 		<!-- Approved hours only. That is the whole point of the review step: this
 		     is the number that has to hold up to a funder. -->
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-			<StatCard title="Approved hours" value={formatVolunteerHours(r.totals.totalMinutes)} />
-			<StatCard title="Volunteers" value={r.totals.volunteerCount} />
-			<StatCard title="Logs" value={r.totals.logCount} />
+			<StatCard
+				title={msg.staff_approved_hours()}
+				value={formatVolunteerHours(r.totals.totalMinutes)}
+			/>
+			<StatCard title={msg.staff_volunteers()} value={r.totals.volunteerCount} />
+			<StatCard title={msg.staff_reports_volunteering_logs()} value={r.totals.logCount} />
 			<!--
 				Not an average. Everything else on this page is approved-only by
 				design, so without this the report cannot say how much work is still
@@ -126,7 +130,7 @@
 				long" are different problems with different fixes.
 			-->
 			{#await stillInReview then pending}
-				<StatCard title="Still in review" value={pending} />
+				<StatCard title={msg.staff_reports_volunteering_still_review()} value={pending} />
 			{/await}
 		</div>
 
@@ -136,34 +140,41 @@
 			the grant reader and the accountant alike. The copy under them says so
 			rather than trusting the layout to.
 		-->
-		<InfoCard title="What that time was worth">
+		<InfoCard title={msg.staff_reports_volunteering_what_time_was_worth()}>
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 				<div>
-					<StatCard bare title="Impact value" value={formatCents(r.contributed.impactValueCents)} />
+					<StatCard
+						bare
+						title={msg.staff_impact_value()}
+						value={formatCents(r.contributed.impactValueCents)}
+					/>
 					<p class="mt-1 text-subtle text-xs">
-						Every approved hour, at {formatCents(r.contributed.rateCents)}/hr
+						{msg.staff_reports_volunteering_every_approved_hour_at_hr({
+							formatCents: formatCents(r.contributed.rateCents)
+						})}
 					</p>
 				</div>
 				<div>
 					<StatCard
 						bare
-						title="Contributed services"
+						title={msg.staff_reports_volunteering_contributed_services()}
 						value={formatCents(r.contributed.recognizableServicesCents)}
 					/>
-					<p class="mt-1 text-subtle text-xs">Specialized hours only, each at its own rate</p>
+					<p class="mt-1 text-subtle text-xs">
+						{msg.staff_reports_volunteering_specialized_hours_only_each_at()}
+					</p>
 				</div>
 			</div>
 			<p class="mt-3 text-subtle text-sm">
-				These are two answers to two different questions, not parts of one total — the specialized
-				hours are counted in both, so adding them double-counts that work. Impact value is what a
-				grant application asks for; contributed services is the narrower figure a financial
-				statement can recognise. Rate: {r.contributed.rateSource}.
+				{msg.staff_reports_volunteering_these_two_answers_two_different({
+					rateSource: r.contributed.rateSource
+				})}
 			</p>
 			{#if r.contributed.unpricedSpecializedMinutes > 0}
 				<p class="mt-2 text-sm text-warning">
-					{formatVolunteerHours(r.contributed.unpricedSpecializedMinutes)} of specialized time sits on
-					a role with no market rate set, and counts as zero above rather than as the impact rate. Set
-					one on the role to include it.
+					{msg.staff_reports_volunteering_specialized_time_sits_role_with({
+						formatVolunteerHours: formatVolunteerHours(r.contributed.unpricedSpecializedMinutes)
+					})}
 				</p>
 			{/if}
 		</InfoCard>
@@ -173,12 +184,12 @@
 				<!-- Only when something named a program. Hours given to CMC at large
 				     are the rest of this page, so a "no program" row would be a
 				     restatement of the total under a confusing label. -->
-				<InfoCard title="Hours by committee or club">
+				<InfoCard title={msg.staff_reports_volunteering_hours_by_committee_club()}>
 					<Table>
 						{#snippet head()}
-							<th>Program</th>
-							<th class="text-right">Hours</th>
-							<th class="text-right">People</th>
+							<th>{msg.staff_reports_volunteering_program()}</th>
+							<th class="text-right">{msg.staff_reports_volunteering_hours()}</th>
+							<th class="text-right">{msg.staff_people()}</th>
 						{/snippet}
 						{#each groups as g (g.groupId)}
 							<tr>
@@ -192,9 +203,9 @@
 			{/if}
 		{/await}
 
-		<InfoCard title="Hours by role">
+		<InfoCard title={msg.staff_reports_volunteering_hours_by_role()}>
 			{#if r.byRole.length === 0}
-				<EmptyState description="No approved hours in this range." />
+				<EmptyState description={msg.staff_reports_volunteering_description()} />
 			{:else}
 				<!--
 					A bar list rather than a table: the question this answers is "where
@@ -209,7 +220,7 @@
 							<div class="mb-1 flex items-baseline justify-between gap-3 text-sm">
 								<span class="truncate">
 									{row.roleName}{#if !row.roleIsActive}<span class="ml-1 text-subtle"
-											>(archived)</span
+											>{msg.staff_reports_volunteering_archived()}</span
 										>{/if}{#if row.isSpecializedSkill}<Badge
 											class="ml-2"
 											variant={row.marketRateCents === null ? 'warning' : 'outline'}
@@ -229,20 +240,22 @@
 						</li>
 					{/each}
 				</ul>
-				<p class="mt-3 text-subtle text-xs">Approved logs only.</p>
+				<p class="mt-3 text-subtle text-xs">
+					{msg.staff_reports_volunteering_approved_logs_only()}
+				</p>
 			{/if}
 		</InfoCard>
 
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-			<InfoCard title="By month">
+			<InfoCard title={msg.staff_reports_volunteering_by_month()}>
 				{#if r.byMonth.length === 0}
-					<EmptyState description="No approved hours in this range." />
+					<EmptyState description={msg.staff_reports_volunteering_description()} />
 				{:else}
 					<Table>
 						{#snippet head()}
-							<th>Month</th>
-							<th class="cell-num">Hours</th>
-							<th class="col-support cell-num">Logs</th>
+							<th>{msg.staff_reports_volunteering_month()}</th>
+							<th class="cell-num">{msg.staff_reports_volunteering_hours()}</th>
+							<th class="col-support cell-num">{msg.staff_reports_volunteering_logs()}</th>
 						{/snippet}
 						{#each r.byMonth as row (row.month)}
 							<tr>
@@ -257,19 +270,21 @@
 		</div>
 	{/await}
 
-	<InfoCard title="By member">
+	<InfoCard title={msg.staff_reports_volunteering_by_member()}>
 		<DataList
 			result={byMember}
-			empty="No approved hours in this range"
+			empty={msg.staff_reports_volunteering_empty()}
 			onpage={(p) => (pageNumber = p)}
 		>
 			{#snippet children(members)}
 				<Table>
 					{#snippet head()}
-						<th>Member</th>
-						<th class="cell-num">Hours</th>
-						<th class="col-support cell-num">Logs</th>
-						<th class="col-support whitespace-nowrap">Last worked</th>
+						<th>{msg.staff_member()}</th>
+						<th class="cell-num">{msg.staff_reports_volunteering_hours()}</th>
+						<th class="col-support cell-num">{msg.staff_reports_volunteering_logs()}</th>
+						<th class="col-support whitespace-nowrap"
+							>{msg.staff_reports_volunteering_last_worked()}</th
+						>
 					{/snippet}
 					{#each members as m (m.userId)}
 						<tr class="hover">
@@ -294,13 +309,13 @@
 	-->
 	{#await feedbackByRole then rollup}
 		{#if rollup.length > 0}
-			<InfoCard title="How shifts are going">
+			<InfoCard title={msg.staff_reports_volunteering_how_shifts_going()}>
 				<Table>
 					{#snippet head()}
-						<th>Role</th>
-						<th class="cell-num">Avg rating</th>
-						<th class="col-support cell-num">Set up to succeed</th>
-						<th class="col-support cell-num">Responses</th>
+						<th>{msg.staff_role()}</th>
+						<th class="cell-num">{msg.staff_reports_volunteering_avg_rating()}</th>
+						<th class="col-support cell-num">{msg.staff_reports_volunteering_set_up_succeed()}</th>
+						<th class="col-support cell-num">{msg.staff_reports_volunteering_responses()}</th>
 					{/snippet}
 
 					{#each rollup as role (role.volunteerRoleId)}

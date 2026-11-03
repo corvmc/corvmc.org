@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { getAudienceOptions } from '$lib/remote/marketing.remote';
 
 	/**
@@ -46,12 +47,14 @@
 			/>
 			<span class="text-sm">{a.name}</span>
 			{#if a.systemKey}
-				<span class="badge badge-xs badge-info">Built-in</span>
+				<span class="badge badge-xs badge-info">{m.staff_built()}</span>
 			{/if}
 			<span class="text-subtle">({a.subscriberCount})</span>
 		</label>
 	{/each}
 </div>
 {#if selected.length > 0}
-	<p class="mt-1 text-subtle">~{total} recipients (before deduplication)</p>
+	<p class="mt-1 text-subtle">
+		{m.staff_marketing_campaigns_audience_picker_recipients_before({ total })}
+	</p>
 {/if}

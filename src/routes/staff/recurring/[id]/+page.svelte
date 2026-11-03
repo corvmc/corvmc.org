@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { withQuery } from '$lib/utils/with-query';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -29,18 +30,18 @@
 <PageHeader
 	width="3xl"
 	title={formatScheduleLabel(series.frequencyLabel, series.prototypeStartsAt, series.monthlyMode)}
-	subtitle="Recurring series"
+	subtitle={m.staff_recurring_series()}
 	parent={{
-		label: 'Recurring series',
+		label: m.staff_recurring_series(),
 		href: withQuery(resolve('/staff/reservations'), 'recurring')
 	}}
 >
 	{#if isActive}
 		<Action
 			action={cancelDetailSeries}
-			label="Cancel Series"
-			modalTitle="Confirm"
-			successToast="Series cancelled"
+			label={m.staff_recurring_id_cancel_series()}
+			modalTitle={m.staff_confirm()}
+			successToast={m.staff_series_cancelled()}
 			variant="error"
 			size="sm"
 			outline
@@ -49,8 +50,7 @@
 			{#snippet form()}
 				<input {...cancelFields.seriesId.as('hidden', id)} />
 				<p class="py-4">
-					Cancel this recurring series? The next session is cancelled and later ones are removed.
-					Any already paid for are cancelled and refunded instead.
+					{m.staff_cancel_recurring_series_next_session()}
 				</p>
 			{/snippet}
 		</Action>
@@ -66,42 +66,42 @@
 	</div>
 
 	<!-- Current schedule -->
-	<InfoCard title="Schedule">
+	<InfoCard title={m.staff_schedule()}>
 		<DefinitionList>
 			<!-- The plain-English schedule the list row shows. The raw RRULE stays,
 			     because staff do read it when a series misbehaves — but it is no
 			     longer the only thing on offer (#1065). -->
-			<Fact label="Schedule">
+			<Fact label={m.staff_schedule()}>
 				{formatScheduleLabel(series.frequencyLabel, series.prototypeStartsAt, series.monthlyMode)}
 			</Fact>
 
-			<Fact label="RRULE" mono>{series.rrule}</Fact>
+			<Fact label={m.staff_recurring_id_rrule()} mono>{series.rrule}</Fact>
 
-			<Fact label="Prototype Time"
+			<Fact label={m.staff_recurring_id_prototype_time()}
 				>{formatTimeRange(series.prototypeStartsAt, series.prototypeEndsAt)}</Fact
 			>
 
-			<Fact label="Booker"><EntityChip ref={series.booker} /></Fact>
+			<Fact label={m.staff_booker()}><EntityChip ref={series.booker} /></Fact>
 
 			<!-- The booking the series was cut from. Its times were on this page and
 			     its id was on the record, and there was no way to open it. -->
-			<Fact label="Prototype"><EntityChip ref={series.prototype} /></Fact>
+			<Fact label={m.staff_recurring_id_prototype()}><EntityChip ref={series.prototype} /></Fact>
 
 			{#if series.prototypeNotes}
-				<Fact label="Notes" wrap>{series.prototypeNotes}</Fact>
+				<Fact label={m.staff_notes()} wrap>{series.prototypeNotes}</Fact>
 			{/if}
 
-			<Fact label="Created">{formatDate(series.createdAt)}</Fact>
+			<Fact label={m.staff_created()}>{formatDate(series.createdAt)}</Fact>
 
 			{#if series.cancelledAt}
-				<Fact label="Cancelled">{formatDate(series.cancelledAt)}</Fact>
+				<Fact label={m.staff_cancelled()}>{formatDate(series.cancelledAt)}</Fact>
 			{/if}
 		</DefinitionList>
 	</InfoCard>
 
 	<!-- History -->
 	{#if history.length > 1}
-		<InfoCard title="Supersession History">
+		<InfoCard title={m.staff_recurring_id_supersession_history()}>
 			<div class="space-y-2">
 				{#each history as h, i (h.id)}
 					<div class="flex items-center gap-3 text-sm" class:opacity-50={i > 0}>
@@ -111,7 +111,7 @@
 						{#if h.cancelledAt}
 							<StatusBadge status="cancelled" />
 						{:else if h.supersededBy}
-							<Badge variant="ghost">superseded</Badge>
+							<Badge variant="ghost">{m.staff_recurring_id_superseded()}</Badge>
 						{:else}
 							<StatusBadge status="active" />
 						{/if}

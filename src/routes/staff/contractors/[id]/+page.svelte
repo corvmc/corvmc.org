@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { workOrderHref } from '$lib/utils/work-order-href';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -68,41 +69,51 @@
 >
 	<Action
 		action={updateContractorForm}
-		label="Edit"
+		label={m.staff_edit()}
 		variant="ghost"
 		size="sm"
-		modalTitle="Edit {data.contractor.name}"
-		successToast="Saved"
+		modalTitle={m.staff_edit_2({ name: data.contractor.name })}
+		successToast={m.staff_saved()}
 	>
 		{#snippet form()}
 			<input {...fields.id.as('hidden', data.contractor.id)} />
-			<Field field={fields.name} type="text" label="Name" value={data.contractor.name} />
+			<Field field={fields.name} type="text" label={m.staff_name()} value={data.contractor.name} />
 			<Field
 				field={fields.trade}
 				type="select"
-				label="Trade"
+				label={m.staff_trade()}
 				options={tradeOptions}
 				value={data.contractor.trade}
 			/>
 			<Field
 				field={fields.contactName}
 				type="text"
-				label="Contact"
+				label={m.staff_contact()}
 				value={data.contractor.contactName ?? ''}
 			/>
-			<Field field={fields.phone} type="tel" label="Phone" value={data.contractor.phone ?? ''} />
-			<Field field={fields.email} type="email" label="Email" value={data.contractor.email ?? ''} />
+			<Field
+				field={fields.phone}
+				type="tel"
+				label={m.staff_phone()}
+				value={data.contractor.phone ?? ''}
+			/>
+			<Field
+				field={fields.email}
+				type="email"
+				label={m.staff_email()}
+				value={data.contractor.email ?? ''}
+			/>
 			<Field
 				field={fields.licenseNumber}
 				type="text"
-				label="Licence number"
+				label={m.staff_licence_number()}
 				value={data.contractor.licenseNumber ?? ''}
 			/>
 			<Field
 				field={fields.insuranceExpiresAt}
 				type="date"
-				label="Insurance expires"
-				description="Leave blank if we hold no certificate."
+				label={m.staff_insurance_expires()}
+				description={m.staff_contractors_id_leave_blank_if_we_hold()}
 				value={data.contractor.insuranceExpiresAt
 					? toLocalDate(data.contractor.insuranceExpiresAt)
 					: ''}
@@ -110,7 +121,7 @@
 			<Field
 				field={fields.notes}
 				type="textarea"
-				label="Notes"
+				label={m.staff_notes()}
 				value={data.contractor.notes ?? ''}
 			/>
 		{/snippet}
@@ -118,11 +129,13 @@
 
 	<Action
 		action={archiveContractorForm}
-		label={data.contractor.archivedAt ? 'Bring back' : 'Archive'}
+		label={data.contractor.archivedAt ? m.staff_contractors_id_bring_back() : m.staff_archive()}
 		variant="ghost"
 		size="sm"
-		modalTitle={data.contractor.archivedAt ? 'Bring back' : 'Archive'}
-		successToast="Saved"
+		modalTitle={data.contractor.archivedAt
+			? m.staff_contractors_id_bring_back()
+			: m.staff_archive()}
+		successToast={m.staff_saved()}
 	>
 		{#snippet form()}
 			<input {...archiveFields.id.as('hidden', data.contractor.id)} />
@@ -135,10 +148,9 @@
 			<input {...archiveFields.archived.as('hidden', !data.contractor.archivedAt)} />
 			<p class="text-sm">
 				{#if data.contractor.archivedAt}
-					They will show in the pickers again.
+					{m.staff_contractors_id_they_will_show_pickers_again()}
 				{:else}
-					They stay out of the pickers and no new job can be opened against them. Their history is
-					untouched.
+					{m.staff_contractors_id_they_stay_out_pickers_no()}
 				{/if}
 			</p>
 		{/snippet}
@@ -148,43 +160,43 @@
 <PageContent>
 	{#if data.contractor.archivedAt}
 		<Alert type="info">
-			<span class="font-medium">Archived</span>
+			<span class="font-medium">{m.staff_archived()}</span>
 			Archived {formatDateShort(data.contractor.archivedAt)}. The history below stays.
 		</Alert>
 	{/if}
 
 	{#if data.contractor.insuranceExpiresAt && data.contractor.insuranceExpiresAt < new Date()}
 		<Alert type="error">
-			<span class="font-medium">Insurance expired</span>
+			<span class="font-medium">{m.staff_contractors_id_insurance_expired()}</span>
 			Their certificate ran out {formatDateShort(data.contractor.insuranceExpiresAt)}.
 		</Alert>
 	{/if}
 
-	<InfoCard title="Details">
+	<InfoCard title={m.staff_details()}>
 		<dl class="grid gap-3 sm:grid-cols-2">
 			<div>
-				<dt class="text-subtle text-xs">Contact</dt>
+				<dt class="text-subtle text-xs">{m.staff_contact()}</dt>
 				<dd>{data.contractor.contactName ?? '—'}</dd>
 			</div>
 			<div>
-				<dt class="text-subtle text-xs">Phone</dt>
+				<dt class="text-subtle text-xs">{m.staff_phone()}</dt>
 				<dd>{data.contractor.phone ?? '—'}</dd>
 			</div>
 			<div>
-				<dt class="text-subtle text-xs">Email</dt>
+				<dt class="text-subtle text-xs">{m.staff_email()}</dt>
 				<dd>{data.contractor.email ?? '—'}</dd>
 			</div>
 			<div>
-				<dt class="text-subtle text-xs">Licence</dt>
+				<dt class="text-subtle text-xs">{m.staff_contractors_id_licence()}</dt>
 				<dd>{data.contractor.licenseNumber ?? '—'}</dd>
 			</div>
 			<div>
-				<dt class="text-subtle text-xs">Insurance</dt>
+				<dt class="text-subtle text-xs">{m.staff_insurance()}</dt>
 				<dd>
 					{#if data.contractor.insuranceExpiresAt}
 						{formatDateShort(data.contractor.insuranceExpiresAt)}
 					{:else}
-						<span class="text-subtle">Not on file</span>
+						<span class="text-subtle">{m.staff_not_file()}</span>
 					{/if}
 				</dd>
 			</div>
@@ -194,13 +206,16 @@
 		{/if}
 	</InfoCard>
 
-	<InfoCard title="Jobs">
+	<InfoCard title={m.staff_jobs()}>
 		<ActivityFeed
-			label="Jobs"
+			label={m.staff_jobs()}
 			rows={jobRows.slice(0, shown)}
 			hasMore={jobRows.length > shown}
 			onmore={() => (shown += FEED_PAGE)}
-			empty={{ title: 'No jobs yet', description: 'Nothing has been sent to them.' }}
+			empty={{
+				title: m.staff_contractors_id_no_jobs_yet(),
+				description: m.staff_contractors_id_nothing_has_been_sent_them()
+			}}
 		>
 			{#snippet trailing({ job })}
 				<Badge variant={contractorJobStatusBadge[job.status as ContractorJobStatus]} size="sm">

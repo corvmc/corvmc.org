@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -28,34 +29,38 @@
 	const result = $derived(open ? getStaffRecurring(filters) : null);
 </script>
 
-<Button variant="ghost" size="sm" onclick={() => (open = true)}>Recurring</Button>
+<Button variant="ghost" size="sm" onclick={() => (open = true)}>{m.staff_recurring()}</Button>
 
-<Modal bind:open title="Recurring series" maxWidth="max-w-3xl">
+<Modal bind:open title={m.staff_recurring_series()} maxWidth="max-w-3xl">
 	<div class="mb-3 w-40">
 		<Select
 			size="sm"
-			aria-label="Series status"
+			aria-label={m.staff_reservations_recurring_series_modal_aria_label()}
 			value={filter}
 			onchange={(e: Event) => {
 				filter = (e.currentTarget as HTMLSelectElement).value as typeof filter;
 				pageNo = 1;
 			}}
 		>
-			<option value="active">Active</option>
-			<option value="cancelled">Cancelled</option>
-			<option value="all">All</option>
+			<option value="active">{m.staff_active()}</option>
+			<option value="cancelled">{m.staff_cancelled()}</option>
+			<option value="all">{m.staff_all()}</option>
 		</Select>
 	</div>
 	{#if result}
-		<DataList {result} empty="No recurring series found" onpage={(p) => (pageNo = p)}>
+		<DataList
+			{result}
+			empty={m.staff_reservations_recurring_series_modal_empty()}
+			onpage={(p) => (pageNo = p)}
+		>
 			{#snippet children(series)}
 				<Table>
 					{#snippet head()}
-						<th class="w-px"><span class="sr-only">Status</span></th>
-						<th>Series</th>
-						<th>Booker</th>
-						<th class="col-support whitespace-nowrap">Starts</th>
-						<th class="w-px"><span class="sr-only">Actions</span></th>
+						<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+						<th>{m.staff_reservations_recurring_series_modal_series()}</th>
+						<th>{m.staff_booker()}</th>
+						<th class="col-support whitespace-nowrap">{m.staff_starts()}</th>
+						<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 					{/snippet}
 
 					{#each series as s (s.id)}
@@ -79,10 +84,10 @@
 								{#if !s.cancelledAt}
 									<Action
 										action={cancelStaffSeries}
-										label="Cancel series"
+										label={m.staff_reservations_recurring_series_modal_label()}
 										iconOnly
-										modalTitle="Confirm"
-										successToast="Series cancelled"
+										modalTitle={m.staff_confirm()}
+										successToast={m.staff_series_cancelled()}
 										onsuccess={() => void getStaffRecurring(filters).refresh()}
 										variant="ghost"
 										size="sm"
@@ -93,8 +98,7 @@
 										{#snippet form()}
 											<input {...cancelFields.seriesId.as('hidden', s.id)} />
 											<p class="py-4">
-												Cancel this recurring series? The next session is cancelled and later ones
-												are removed. Any already paid for are cancelled and refunded instead.
+												{m.staff_cancel_recurring_series_next_session()}
 											</p>
 										{/snippet}
 									</Action>

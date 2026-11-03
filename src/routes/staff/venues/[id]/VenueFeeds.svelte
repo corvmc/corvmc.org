@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The venue's partner calendar feeds (#1459). The daily cron copies each
 	 * unpaused feed's upcoming shows onto the gig guide; "Fetch now" runs one
@@ -24,20 +25,24 @@
 	const addForm = $derived(addVenueFeed.for(venueId));
 </script>
 
-<InfoCard title="Calendar feeds" state={feeds.length}>
+<InfoCard title={m.staff_venues_id_venue_feeds_title()} state={feeds.length}>
 	{#snippet action()}
 		<Action
 			action={addForm}
-			label="Add"
+			label={m.staff_add()}
 			variant="ghost"
 			size="sm"
-			modalTitle="Add a calendar feed"
-			submitLabel="Add"
-			successToast="Added"
+			modalTitle={m.staff_venues_id_venue_feeds_add_calendar_feed()}
+			submitLabel={m.staff_add()}
+			successToast={m.staff_added()}
 		>
 			{#snippet form()}
 				<input type="hidden" name="venueId" value={venueId} />
-				<Field field={addForm.fields.url} type="text" label="iCalendar URL" />
+				<Field
+					field={addForm.fields.url}
+					type="text"
+					label={m.staff_venues_id_venue_feeds_icalendar_url()}
+				/>
 			{/snippet}
 		</Action>
 	{/snippet}
@@ -45,16 +50,17 @@
 	{#if feeds.length > 0}
 		<Table packed={false}>
 			{#snippet head()}
-				<th>Feed</th>
-				<th class="col-support">Last fetched</th>
-				<th class="w-px"><span class="sr-only">Actions</span></th>
+				<th>{m.staff_venues_id_venue_feeds_feed()}</th>
+				<th class="col-support">{m.staff_venues_id_venue_feeds_last_fetched()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 			{/snippet}
 			{#each feeds as feed (feed.id)}
 				<tr data-testid="venue-feed">
 					<td class="max-w-0">
 						<div class="truncate" title={feed.url}>{feed.url}</div>
 						<div class="flex flex-wrap gap-1">
-							{#if feed.paused}<Badge size="sm">Paused</Badge>{/if}
+							{#if feed.paused}<Badge size="sm">{m.staff_venues_id_venue_feeds_paused()}</Badge
+								>{/if}
 							{#if feed.lastError}
 								<span class="text-sm text-error">{feed.lastError}</span>
 							{/if}
@@ -72,10 +78,10 @@
 						<div class="flex w-max justify-end gap-1">
 							<Action
 								action={fetchVenueFeed.for(feed.id)}
-								label="Fetch now"
+								label={m.staff_venues_id_venue_feeds_fetch_now()}
 								variant="ghost"
 								size="xs"
-								successToast="Fetched"
+								successToast={m.staff_venues_id_venue_feeds_fetched()}
 								noFooter
 							>
 								{#snippet form()}
@@ -84,10 +90,14 @@
 							</Action>
 							<Action
 								action={setVenueFeedPaused.for(feed.id)}
-								label={feed.paused ? 'Resume' : 'Pause'}
+								label={feed.paused
+									? m.staff_venues_id_venue_feeds_resume()
+									: m.staff_venues_id_venue_feeds_pause()}
 								variant="ghost"
 								size="xs"
-								successToast={feed.paused ? 'Resumed' : 'Paused'}
+								successToast={feed.paused
+									? m.staff_venues_id_venue_feeds_resumed()
+									: m.staff_venues_id_venue_feeds_paused()}
 								noFooter
 							>
 								{#snippet form()}
@@ -97,18 +107,20 @@
 							</Action>
 							<Action
 								action={removeVenueFeed.for(feed.id)}
-								label="Remove"
+								label={m.staff_remove()}
 								variant="ghost"
 								size="xs"
 								class="text-error"
-								modalTitle="Remove this feed?"
-								submitLabel="Remove"
+								modalTitle={m.staff_venues_id_venue_feeds_remove_feed()}
+								submitLabel={m.staff_remove()}
 								submitVariant="error"
-								successToast="Removed"
+								successToast={m.staff_removed()}
 							>
 								{#snippet form()}
 									<input type="hidden" name="id" value={feed.id} />
-									<p class="text-sm">Shows it already added stay on the guide.</p>
+									<p class="text-sm">
+										{m.staff_venues_id_venue_feeds_shows_already_added_stay_guide()}
+									</p>
 								{/snippet}
 							</Action>
 						</div>

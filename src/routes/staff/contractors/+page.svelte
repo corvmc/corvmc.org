@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -31,32 +32,32 @@
 	}));
 </script>
 
-<PageHeader title="Contractors" subtitle="Space">
+<PageHeader title={m.staff_contractors_contractors()} subtitle={m.staff_space()}>
 	<Button
 		href={withQuery(resolve('/staff/volunteer/schedule'), 'kind=contractor')}
 		variant="ghost"
-		size="sm">Jobs</Button
+		size="sm">{m.staff_jobs()}</Button
 	>
 	<Action
 		action={createContractorForm}
-		label="New contractor"
-		modalTitle="New contractor"
-		successToast="Contractor added"
+		label={m.staff_contractors_new_contractor()}
+		modalTitle={m.staff_contractors_new_contractor()}
+		successToast={m.staff_contractors_success_toast()}
 	>
 		{#snippet form()}
-			<Field field={fields.name} type="text" label="Name" />
-			<Field field={fields.trade} type="select" label="Trade" options={tradeOptions} />
-			<Field field={fields.contactName} type="text" label="Contact" />
-			<Field field={fields.phone} type="tel" label="Phone" />
-			<Field field={fields.email} type="email" label="Email" />
-			<Field field={fields.licenseNumber} type="text" label="Licence number" />
+			<Field field={fields.name} type="text" label={m.staff_name()} />
+			<Field field={fields.trade} type="select" label={m.staff_trade()} options={tradeOptions} />
+			<Field field={fields.contactName} type="text" label={m.staff_contact()} />
+			<Field field={fields.phone} type="tel" label={m.staff_phone()} />
+			<Field field={fields.email} type="email" label={m.staff_email()} />
+			<Field field={fields.licenseNumber} type="text" label={m.staff_licence_number()} />
 			<Field
 				field={fields.insuranceExpiresAt}
 				type="date"
-				label="Insurance expires"
-				description="Leave blank if we hold no certificate — that is not the same as current, and the warnings above leave it out."
+				label={m.staff_insurance_expires()}
+				description={m.staff_contractors_leave_blank_if_we_hold()}
 			/>
-			<Field field={fields.notes} type="textarea" label="Notes" />
+			<Field field={fields.notes} type="textarea" label={m.staff_notes()} />
 		{/snippet}
 	</Action>
 </PageHeader>
@@ -64,20 +65,20 @@
 <PageContent>
 	{#if data.overdue.length > 0}
 		<Alert type="warning">
-			<span class="font-medium">Overdue</span>
+			<span class="font-medium">{m.staff_contractors_overdue()}</span>
 			{data.overdue.length}
 			{data.overdue.length === 1 ? 'job is' : 'jobs are'} past the date they were promised back.
 			<a
 				class="link"
 				href={withQuery(resolve('/staff/volunteer/schedule'), 'kind=contractor&contractor=late')}
-				>Open the queue</a
+				>{m.staff_contractors_open_queue()}</a
 			>
 		</Alert>
 	{/if}
 
 	{#if data.lapsing.length > 0}
 		<Alert type="error">
-			<span class="font-medium">Insurance</span>
+			<span class="font-medium">{m.staff_insurance()}</span>
 			{#each data.lapsing as c (c.id)}
 				<div>
 					<a class="link font-medium" href={resolve(`/staff/contractors/${c.id}`)}>{c.name}</a>
@@ -92,16 +93,16 @@
 
 	{#if data.contractors.length === 0}
 		<EmptyState
-			title="No contractors yet"
-			description="Add the people you call when something needs a professional — an instrument tech, an electrician, the company that services the extinguishers."
+			title={m.staff_contractors_no_contractors_yet()}
+			description={m.staff_contractors_add_people_call_when_something()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th>Name</th>
-				<th>Trade</th>
-				<th>Contact</th>
-				<th>Insurance</th>
+				<th>{m.staff_name()}</th>
+				<th>{m.staff_trade()}</th>
+				<th>{m.staff_contact()}</th>
+				<th>{m.staff_insurance()}</th>
 			{/snippet}
 			{#each data.contractors as c (c.id)}
 				<tr class="hover">
@@ -119,10 +120,12 @@
 					<td>{c.phone ?? c.email ?? '—'}</td>
 					<td>
 						{#if !c.insuranceExpiresAt}
-							<span class="text-subtle">Not on file</span>
+							<span class="text-subtle">{m.staff_not_file()}</span>
 						{:else if c.insuranceExpiresAt < new Date()}
 							<Badge variant="error" size="sm">
-								Expired {formatDateShort(c.insuranceExpiresAt)}
+								{m.staff_contractors_expired({
+									formatDateShort: formatDateShort(c.insuranceExpiresAt)
+								})}
 							</Badge>
 						{:else}
 							{formatDateShort(c.insuranceExpiresAt)}

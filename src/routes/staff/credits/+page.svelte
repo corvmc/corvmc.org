@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -56,13 +57,13 @@
 	}
 </script>
 
-<PageHeader title="Credit Transactions" />
+<PageHeader title={m.staff_credits_title()} />
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search name or email..."
+				placeholder={m.staff_search_name_email()}
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -71,34 +72,34 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label="Credit type"
+			aria-label={m.staff_credits_credit_type()}
 			value={creditType}
 			onchange={(e: Event) => {
 				creditType = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">All types</option>
-			<option value="free_hours">Free Hours</option>
-			<option value="equipment_credits">Equipment Credits</option>
+			<option value="">{m.staff_credits_all_types()}</option>
+			<option value="free_hours">{m.staff_credits_free_hours()}</option>
+			<option value="equipment_credits">{m.staff_credits_equipment_credits()}</option>
 		</Select>
 		<Select
 			size="sm"
-			aria-label="Source"
+			aria-label={m.staff_source()}
 			value={source}
 			onchange={(e: Event) => {
 				source = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">All sources</option>
+			<option value="">{m.staff_credits_all_sources()}</option>
 			{#each Object.entries(creditSourceLabels) as [value, label] (value)}
 				<option {value}>{label}</option>
 			{/each}
 		</Select>
 		<input
 			type="date"
-			aria-label="From date"
+			aria-label={m.staff_from_date()}
 			class="input input-sm"
 			bind:value={dateFrom}
 			onchange={() => {
@@ -107,7 +108,7 @@
 		/>
 		<input
 			type="date"
-			aria-label="To date"
+			aria-label={m.staff_date_2()}
 			class="input input-sm"
 			bind:value={dateTo}
 			onchange={() => {
@@ -116,15 +117,15 @@
 		/>
 	</FilterBar>
 
-	<DataList {result} empty="No credit transactions found" onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_credits_empty()} onpage={(p) => (page = p)}>
 		{#snippet children(transactions)}
 			<Table>
 				{#snippet head()}
-					<th>Member</th>
-					<th class="col-extra whitespace-nowrap">Type</th>
-					<th class="cell-num">Amount</th>
-					<th class="col-support cell-num">Balance</th>
-					<th class="col-support">Date</th>
+					<th>{m.staff_member()}</th>
+					<th class="col-extra whitespace-nowrap">{m.staff_type()}</th>
+					<th class="cell-num">{m.staff_amount()}</th>
+					<th class="col-support cell-num">{m.staff_credits_balance()}</th>
+					<th class="col-support">{m.staff_date()}</th>
 				{/snippet}
 
 				{#each transactions as t (t.id)}

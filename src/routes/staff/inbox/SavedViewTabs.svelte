@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Filter combinations this reader keeps.
 	 *
@@ -26,7 +27,7 @@
 					<button
 						type="button"
 						class="cursor-pointer opacity-50 hover:opacity-100"
-						aria-label="Remove {v.name}"
+						aria-label={m.staff_remove_2({ name: v.name })}
 						onclick={() => removeInboxView(v.id)}
 					>
 						<IconX size={12} />
