@@ -175,7 +175,10 @@ describe('setAssetStatus', () => {
 	 * history — every loan, every repair — has to outlive the asset.
 	 */
 	it('retires by writing a movement, never by deleting', async () => {
-		selectResultQueue = [[{ id: 'as-1', itemId: 'it-1', status: 'in_service', locationId: null }]];
+		selectResultQueue = [
+			[{ id: 'as-1', itemId: 'it-1', status: 'in_service', locationId: null }],
+			[{ quantity: 1 }]
+		];
 		await setAssetStatus('as-1', 'retired', { notes: 'beyond repair' });
 
 		expect(movementStatement).toHaveBeenCalledWith(expect.objectContaining({ reason: 'retire' }));

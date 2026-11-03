@@ -249,22 +249,59 @@ export async function assetStatusChange(
 		.where(eq(inventoryAsset.id, id))
 		.returning();
 
-	const reason = movementReasonForStatus(asset.status, status);
-	const statements: [typeof statusUpdate, ...ReturnType<typeof movementStatement>[]] = reason
-		? [
-				statusUpdate,
-				movementStatement({
-					itemId: asset.itemId,
-					assetId: id,
-					quantity: 1,
-					reason,
-					locationId: asset.locationId,
-					actorId: opts.actorId ?? null,
-					notes: opts.notes ?? null
-				})
-			]
-		: [statusUpdate];
+	const terminal = status === 'retired' || status === 'lost';
+	const reason = terminal ? terminalReason(status) : movementReasonForStatus(asset.status, status);
+	const quantity = terminal ? await heldOnLedger(id) : 1;
+	const statements: [typeof statusUpdate, ...ReturnType<typeof movementStatement>[]] =
+		reason && quantity > 0
+			? [
+					statusUpdate,
+					movementStatement({
+						itemId: asset.itemId,
+						assetId: id,
+						quantity,
+						reason,
+						locationId: asset.locationId,
+						actorId: opts.actorId ?? null,
+						notes: opts.notes ?? null
+					})
+				]
+			: [statusUpdate];
 	return { asset, statements };
+}
+
+/** The unit's own ledger sum: 1 on the shelf, 0 in the shop or out on loan. */
+async function heldOnLedger(assetId: string) {
+	const moves = await db
+		.select({ quantity: stockMovement.quantity })
+		.from(stockMovement)
+		.where(eq(stockMovement.assetId, assetId));
+	return moves.reduce((total, m) => total + m.quantity, 0);
+}
+
+function terminalReason(status: 'retired' | 'lost') {
+	return status === 'retired' ? ('retire' as const) : ('loss' as const);
+}
+
+/**
+ * A retired or lost unit holds nothing on the ledger. Retiring takes off only
+ * what the unit still holds, so one retired while on loan is taken off when its
+ * `loan_return` puts it back; `returnLoan` calls this after writing that.
+ */
+export async function settleTerminalUnit(assetId: string, actorId: string | null) {
+	const asset = await getAssetRaw(assetId);
+	if (!asset || (asset.status !== 'retired' && asset.status !== 'lost')) return null;
+	const held = await heldOnLedger(assetId);
+	if (held <= 0) return null;
+	return recordMovement({
+		itemId: asset.itemId,
+		assetId,
+		quantity: held,
+		reason: terminalReason(asset.status),
+		locationId: asset.locationId,
+		actorId,
+		notes: 'Returned after it was closed'
+	});
 }
 
 /**
@@ -275,8 +312,6 @@ export async function assetStatusChange(
  * same amp twice.
  */
 function movementReasonForStatus(from: AssetStatus, to: AssetStatus) {
-	if (to === 'retired') return 'retire' as const;
-	if (to === 'lost') return 'loss' as const;
 	if (to === 'maintenance') return 'repair_out' as const;
 	if (to === 'in_service' && from === 'maintenance') return 'repair_in' as const;
 	return null;
@@ -297,11 +332,7 @@ export async function reopenAsset(id: string, reason: string, actorId: string) {
 		throw new AssetReopenError(`This unit is ${asset.status}, not retired or lost`);
 	}
 
-	const moves = await db
-		.select({ quantity: stockMovement.quantity })
-		.from(stockMovement)
-		.where(eq(stockMovement.assetId, id));
-	const delta = 1 - moves.reduce((total, m) => total + m.quantity, 0);
+	const delta = 1 - (await heldOnLedger(id));
 
 	const update = db
 		.update(inventoryAsset)
