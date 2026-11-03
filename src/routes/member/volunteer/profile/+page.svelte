@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Latest } from '$lib/latest.svelte';
+	import { isRedirect } from '@sveltejs/kit';
 	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The volunteer profile: contact info, preferred roles and the hour history,
@@ -26,9 +28,14 @@
 		withdrawVolunteerHours
 	} from '$lib/remote/volunteer.remote';
 
-	// `{#await}` rather than a top-level await: this page renders forms, and a
-	// top-level await async-gates their bindings.
-	const pageData = $derived(getMemberVolunteerProfilePage());
+	// Not a top-level await, which async-gates the forms' bindings, and not
+	// `{#await}`, which re-pends on every refresh and remounts them.
+	const pageData = new Latest(() => getMemberVolunteerProfilePage());
+	// A gate's redirect has already navigated by the time it rejects; rethrowing
+	// it would flash the error boundary on the way out.
+	$effect(() => {
+		if (pageData.error && !isRedirect(pageData.error.e)) throw pageData.error.e;
+	});
 
 	function toDateInput(date: Date): string {
 		return new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE }).format(new Date(date));
@@ -44,8 +51,8 @@
 <PageHeader width="3xl" title={m.member_profile()} subtitle={m.member_volunteering()} />
 
 <PageContent width="3xl">
-	<!-- eslint-disable-next-line custom/no-interactive-await -- #2358 -->
-	{#await pageData then data}
+	{#if pageData.current}
+		{@const data = pageData.current}
 		{#each data.renew as c (c.name)}
 			<p class="text-sm text-warning">
 				{c.state === 'expired'
@@ -186,5 +193,5 @@
 				</ul>
 			{/if}
 		</InfoCard>
-	{/await}
+	{/if}
 </PageContent>

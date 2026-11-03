@@ -15,6 +15,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { withQuery } from '$lib/utils/with-query';
+	import { Latest } from '$lib/latest.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -103,13 +104,14 @@
 		includeCancelled: true,
 		contractor: byContractor ? contractorView : undefined
 	});
-	const schedule = $derived(getSchedulePage(args));
+	// Not `{#await}`: a refresh would re-pend it and unmount an open row Action.
+	const schedule = new Latest(() => getSchedulePage(args));
+	$effect(() => {
+		if (schedule.error) throw schedule.error.e;
+	});
 
 	// Whether to offer the Contractor kind; the query says, and guards it.
-	let contractorAccess = $state(false);
-	$effect(() => {
-		void schedule.then((d) => (contractorAccess = d.contractorAccess));
-	});
+	const contractorAccess = $derived(schedule.current?.contractorAccess ?? false);
 
 	type Row = Awaited<ReturnType<typeof getSchedulePage>>['unscheduled'][number];
 
@@ -264,8 +266,8 @@
 		{/if}
 	</FilterBar>
 
-	<!-- eslint-disable-next-line custom/no-interactive-await -- #2358 -->
-	{#await schedule then data}
+	{#if schedule.current}
+		{@const data = schedule.current}
 		{@const cancelled = data.shifts.filter(
 			(s) => s.cancelledAt && matchesProject(s, projectFilter)
 		)}
@@ -432,5 +434,5 @@
 				{/each}
 			</ul>
 		{/if}
-	{/await}
+	{/if}
 </PageContent>

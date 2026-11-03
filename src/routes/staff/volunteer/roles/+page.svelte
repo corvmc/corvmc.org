@@ -18,6 +18,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { withQuery } from '$lib/utils/with-query';
+	import { Latest } from '$lib/latest.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -46,7 +47,12 @@
 	} from '$lib/remote/volunteer.remote';
 	import { IconPencil, IconArchive, IconArchiveOff, IconTrash } from '@tabler/icons-svelte';
 
-	const data = $derived(getStaffVolunteerSetupPage());
+	// Not `{#await}`: a refresh would re-pend it and unmount an open New role or
+	// New clearance dialog with what was typed in it.
+	const data = new Latest(() => getStaffVolunteerSetupPage());
+	$effect(() => {
+		if (data.error) throw data.error.e;
+	});
 
 	const groupOptions = volunteerRoleGroups.map((g) => ({
 		value: g,
@@ -102,8 +108,8 @@
 <PageHeader title={m.staff_roles()} subtitle={m.staff_volunteering()} />
 
 <PageContent>
-	<!-- eslint-disable-next-line custom/no-interactive-await -- #2358 -->
-	{#await data then { roles, certifications }}
+	{#if data.current}
+		{@const { roles, certifications } = data.current}
 		{@const groups = groupedRoles(roles)}
 		{@const live = roles.filter((r) => r.isActive).length}
 
@@ -427,7 +433,7 @@
 				</Button>
 			</div>
 		</div>
-	{/await}
+	{/if}
 </PageContent>
 
 {#snippet pencilIcon()}
