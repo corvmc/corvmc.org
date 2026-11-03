@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { IconStar, IconStarFilled } from '@tabler/icons-svelte';
 
 	let {
@@ -19,7 +20,7 @@
 <button
 	type="button"
 	class="nav-star btn btn-square btn-ghost btn-xs"
-	aria-label="Star"
+	aria-label={m.layout_nav_star()}
 	aria-describedby={describedby}
 	aria-pressed={starred}
 	onclick={ontoggle}
