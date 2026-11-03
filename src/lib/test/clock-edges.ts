@@ -130,7 +130,9 @@ export function forEachTimeZone(
 	fn: (zone: string) => unknown,
 	zones: readonly string[] = viewerTimeZones
 ): void {
-	it.each(zones)(`${title} in %s`, (zone) => withTimeZone(zone, () => fn(zone)));
+	it.each(zones)(`${title} in %s`, async (zone) => {
+		await withTimeZone(zone, () => fn(zone));
+	});
 }
 
 /** `YYYY-MM-DD` plus `days`, as calendar arithmetic with no zone involved. */
