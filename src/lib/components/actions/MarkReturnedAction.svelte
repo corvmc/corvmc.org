@@ -4,8 +4,13 @@
 	import { invalidateAll } from '$app/navigation';
 	import { returnLoan } from '$lib/remote/inventory.remote';
 	import { Field } from '../ui/Form';
+	import { equipmentConditions } from '$lib/config';
 
 	const { fields } = returnLoan;
+	const conditionOptions = [
+		{ value: '', label: 'Not checked' },
+		...equipmentConditions.map((c) => ({ value: c, label: c }))
+	];
 
 	let {
 		loanId,
@@ -44,6 +49,15 @@
 				<p>{chargeMessage}</p>
 			</div>
 		{/if}
+		<Field field={fields.condition} type="select" label="Condition" options={conditionOptions} />
+		<Field field={fields.flagNote} type="textarea" label="Something wrong?" />
+		<Field
+			field={fields.flagBlocksUse}
+			type="checkbox"
+			label="Out of service"
+			value={true}
+			checkboxLabel="Keep it off the shelf until fixed"
+		/>
 		<Field field={fields.staffNotes} type="textarea" label="Staff Notes (optional)" />
 	{/snippet}
 </Action>
