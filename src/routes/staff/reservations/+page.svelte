@@ -91,7 +91,17 @@
 	const counts = $derived(pageData.then((d) => d.counts));
 	const unresolved = $derived(pageData.then((d) => d.unresolved));
 	const hourlyRates = $derived(pageData.then((d) => d.hourlyRates));
-	const canManageClosures = $derived(pageData.then((d) => d.canManageClosures));
+	// Latched, not `{#await}`ed: every refresh hands `.then()` a fresh promise, the
+	// `{#await}` re-pends, and its subtree unmounts — an open New Closure dialog
+	// and what was typed in it with it (#2350). A notification's `invalidateAll()`
+	// is enough.
+	let canManageClosures = $state(false);
+	$effect(() => {
+		pageData.then(
+			(d) => (canManageClosures = d.canManageClosures),
+			() => {}
+		);
+	});
 
 	let resolveOpen = $state(false);
 
@@ -177,9 +187,7 @@
 			</Button>
 		{/await}
 		<RecurringSeriesModal />
-		{#await canManageClosures then canManage}
-			{#if canManage}<CreateClosureAction data-testid="new-closure" />{/if}
-		{/await}
+		{#if canManageClosures}<CreateClosureAction data-testid="new-closure" />{/if}
 		<CreateReservation />
 	</div>
 </PageHeader>
@@ -577,23 +585,21 @@
 
 <!-- Only a closure that has not started can change; the server refuses the rest. -->
 {#snippet closureActions(c: Closure, compact: boolean)}
-	{#await canManageClosures then canManage}
-		{#if canManage && c.startsAt > new Date()}
-			<div class="flex w-max items-center justify-end gap-1">
-				{#if compact}
-					<UpdateClosureAction closure={c} iconOnly shape="square">
-						{#snippet icon()}<IconPencil size={16} />{/snippet}
-					</UpdateClosureAction>
-					<DeleteClosureAction closureId={c.id} iconOnly shape="square">
-						{#snippet icon()}<IconTrash size={16} />{/snippet}
-					</DeleteClosureAction>
-				{:else}
-					<UpdateClosureAction closure={c} />
-					<DeleteClosureAction closureId={c.id} />
-				{/if}
-			</div>
-		{/if}
-	{/await}
+	{#if canManageClosures && c.startsAt > new Date()}
+		<div class="flex w-max items-center justify-end gap-1">
+			{#if compact}
+				<UpdateClosureAction closure={c} iconOnly shape="square">
+					{#snippet icon()}<IconPencil size={16} />{/snippet}
+				</UpdateClosureAction>
+				<DeleteClosureAction closureId={c.id} iconOnly shape="square">
+					{#snippet icon()}<IconTrash size={16} />{/snippet}
+				</DeleteClosureAction>
+			{:else}
+				<UpdateClosureAction closure={c} />
+				<DeleteClosureAction closureId={c.id} />
+			{/if}
+		</div>
+	{/if}
 {/snippet}
 
 {#await Promise.all([unresolved, hourlyRates]) then [unresolvedData, rates]}
