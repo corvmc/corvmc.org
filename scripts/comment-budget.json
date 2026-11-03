@@ -442,7 +442,6 @@
 	"src/lib/server/inventory/resources-service.ts",
 	"src/lib/server/inventory/stock-service.ts",
 	"src/lib/server/inventory/work-request-service.ts",
-	"src/lib/server/lock/lock-service.spec.ts",
 	"src/lib/server/lock/lock-service.ts",
 	"src/lib/server/marketing/audience-service.ts",
 	"src/lib/server/marketing/campaign-layout.ts",
