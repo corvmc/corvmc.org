@@ -1,5 +1,5 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import ThreadComposer from './ThreadComposer.test.svelte';
 
@@ -31,6 +31,21 @@ function fakeRemoteForm() {
 	} as never;
 }
 
+/**
+ * Mode by structure (#2189): only a note posts `assignToUserId`, and only a
+ * staff reply offers `disposition` submits — `wait` is the default one. The
+ * tabs are Reply then Internal note.
+ */
+const isNote = () => document.querySelector('input[name="assignToUserId"]') !== null;
+// Scoped to the composer's form: FormGuard's dialog carries a submit of its own.
+const composer = () => document.querySelector('textarea[name="body"]')?.closest('form');
+const submits = () => [
+	...(composer()?.querySelectorAll<HTMLButtonElement>('button[type="submit"]') ?? [])
+];
+const dispositions = () => submits().filter((b) => b.name === 'disposition');
+const tab = (i: number) => page.getByRole('tab').nth(i);
+const BLOCKED = 'No contact email on this conversation.';
+
 describe('ThreadComposer', () => {
 	// The whole point of merging the two boxes: deciding "actually, this is a
 	// note" mid-sentence must not cost you the sentence.
@@ -44,10 +59,11 @@ describe('ThreadComposer', () => {
 		const textarea = page.getByRole('textbox');
 		await textarea.fill('Following up on the PA question');
 
-		await page.getByRole('tab', { name: 'Internal note' }).click();
+		expect(isNote()).toBe(false);
+		await tab(1).click();
 
+		await vi.waitFor(() => expect(isNote()).toBe(true));
 		await expect.element(textarea).toHaveValue('Following up on the PA question');
-		await expect.element(page.getByRole('button', { name: 'Add note' })).toBeVisible();
 	});
 
 	// A thread change is a param change, so the component stays mounted. Without
@@ -76,7 +92,8 @@ describe('ThreadComposer', () => {
 			noteForm: fakeRemoteForm()
 		});
 
-		await expect.element(page.getByRole('button', { name: 'Send + wait for reply' })).toBeVisible();
+		await vi.waitFor(() => expect(dispositions().map((b) => b.value)).toContain('wait'));
+		expect(isNote()).toBe(false);
 	});
 
 	// A thread with no contact email has nowhere to send a reply, so the composer
@@ -86,11 +103,11 @@ describe('ThreadComposer', () => {
 			threadId: 'thread-1',
 			replyForm: fakeRemoteForm(),
 			noteForm: fakeRemoteForm(),
-			replyBlockedReason: 'No contact email on this conversation.'
+			replyBlockedReason: BLOCKED
 		});
 
-		await expect.element(page.getByRole('button', { name: 'Add note' })).toBeVisible();
-		await expect.element(page.getByText('No contact email on this conversation.')).toBeVisible();
+		await expect.element(page.getByText(BLOCKED)).toBeVisible();
+		expect(isNote()).toBe(true);
 	});
 
 	it('ignores a click on the reply tab while replying is blocked', async () => {
@@ -98,12 +115,13 @@ describe('ThreadComposer', () => {
 			threadId: 'thread-1',
 			replyForm: fakeRemoteForm(),
 			noteForm: fakeRemoteForm(),
-			replyBlockedReason: 'No contact email on this conversation.'
+			replyBlockedReason: BLOCKED
 		});
 
-		await page.getByRole('tab', { name: 'Reply' }).click();
+		await tab(0).click();
 
-		await expect.element(page.getByRole('button', { name: 'Add note' })).toBeVisible();
+		await expect.element(page.getByRole('textbox')).toBeVisible();
+		expect(isNote()).toBe(true);
 	});
 
 	// The member portal uses this same component with no note form. It must not
@@ -116,8 +134,8 @@ describe('ThreadComposer', () => {
 			replyForm: fakeRemoteForm()
 		});
 
-		await expect.element(page.getByRole('button', { name: 'Send Reply' })).toBeVisible();
-		await expect(page.getByRole('button', { name: 'Send + resolve' }).elements()).toHaveLength(0);
-		await expect(page.getByRole('button', { name: 'Send + keep open' }).elements()).toHaveLength(0);
+		await expect.element(page.getByRole('textbox')).toBeVisible();
+		expect(submits()).toHaveLength(1);
+		expect(dispositions()).toHaveLength(0);
 	});
 });

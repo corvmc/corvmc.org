@@ -58,9 +58,18 @@ describe('DispositionBar', () => {
 	// Reply is the surface's, not the bar's: a page whose composer is already on
 	// screen passes no `onreply`, and then there is no button and no shortcut.
 	it('offers Reply only when the surface handles it', async () => {
-		await render(DispositionBar, { threadId: 'thread-1', status: 'open' });
+		const bare = await render(DispositionBar, { threadId: 'thread-1', status: 'open' });
+		await expect.element(bare.locator.getByRole('button').first()).toBeVisible();
+		const without = bare.locator.getByRole('button').elements().length;
+		await bare.unmount();
 
-		await expect.element(page.getByRole('button', { name: 'Reply' })).not.toBeInTheDocument();
+		const withReply = await render(DispositionBar, {
+			threadId: 'thread-1',
+			status: 'open',
+			onreply: vi.fn()
+		});
+		await expect.element(withReply.locator.getByRole('button').first()).toBeVisible();
+		expect(withReply.locator.getByRole('button').elements()).toHaveLength(without + 1);
 	});
 
 	// The hint is only useful to someone already reaching for the modifier, which
@@ -93,6 +102,6 @@ describe('DispositionBar', () => {
 
 		await press('s', true);
 
-		await expect.element(page.getByText('Tomorrow')).toBeVisible();
+		await expect.element(page.getByRole('menuitem').first()).toBeVisible();
 	});
 });

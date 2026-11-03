@@ -55,11 +55,12 @@ function rejectingForm(rejectWith: unknown) {
 describe('SubscriptionForm failure', () => {
 	it('tells the member when the subscription could not be created', async () => {
 		vi.mocked(toast.error).mockClear();
-		await render(Harness, {
+		const { container } = await render(Harness, {
 			remote: rejectingForm({ status: 500, body: { message: 'Internal Error' } })
 		});
 
-		await page.getByRole('button', { name: 'Become a Sustaining Member' }).click();
+		await vi.waitFor(() => expect(container.querySelector('button[type="submit"]')).not.toBeNull());
+		await page.elementLocator(container.querySelector('button[type="submit"]')!).click();
 
 		// The message, not just that something fired: "Internal Error" is poor copy
 		// but it is the server's, and the member seeing it is the difference

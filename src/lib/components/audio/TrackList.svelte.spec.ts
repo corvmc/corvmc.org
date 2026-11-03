@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
+import { formatTrackLength } from '$lib/utils/audio';
 
 /**
  * The one behaviour worth a browser test: a list of tracks shares a single
@@ -52,18 +53,29 @@ const TRACKS = [
 	{ id: 'track-b', title: 'Cold Garage', trackNumber: 2, durationMs: 185_000 }
 ];
 
+// Rows by position, state by icon (#2189): the row button's label swaps
+// between play and pause, and so does its icon.
+const rowButton = (i: number) => page.getByRole('listitem').nth(i).getByRole('button');
+const showsPause = (i: number) =>
+	rowButton(i).element().querySelector('.tabler-icon-player-pause-filled') !== null;
+
 describe('TrackList', () => {
 	it('renders one row per track with its length', async () => {
 		await render(TrackList, { tracks: TRACKS });
 
-		await expect.element(page.getByText('Ferris Wheel')).toBeInTheDocument();
-		await expect.element(page.getByText('Cold Garage')).toBeInTheDocument();
-		await expect.element(page.getByText('3:42')).toBeInTheDocument();
+		await expect.element(page.getByText(TRACKS[0].title)).toBeInTheDocument();
+		await expect.element(page.getByText(TRACKS[1].title)).toBeInTheDocument();
+		expect(page.getByRole('listitem').elements()).toHaveLength(TRACKS.length);
+		await expect
+			.element(page.getByText(formatTrackLength(TRACKS[0].durationMs)))
+			.toBeInTheDocument();
 	});
 
 	it('shows the empty message instead of an empty list', async () => {
-		await render(TrackList, { tracks: [], empty: 'Nothing here yet.' });
-		await expect.element(page.getByText('Nothing here yet.')).toBeInTheDocument();
+		const empty = 'Nothing here yet.';
+		await render(TrackList, { tracks: [], empty });
+		await expect.element(page.getByText(empty)).toBeInTheDocument();
+		expect(page.getByRole('listitem').elements()).toHaveLength(0);
 	});
 
 	it('keeps exactly one audio element however many tracks there are', async () => {
@@ -76,15 +88,15 @@ describe('TrackList', () => {
 
 	it('plays a track from its own row button', async () => {
 		await render(TrackList, { tracks: TRACKS });
-		await page.getByRole('button', { name: 'Play Ferris Wheel' }).click();
+		await rowButton(0).click();
 		expect(play).toHaveBeenCalled();
 	});
 
 	it('points the shared element at the second track when the second row is played', async () => {
 		const { container } = await render(TrackList, { tracks: TRACKS });
 
-		await page.getByRole('button', { name: 'Play Ferris Wheel' }).click();
-		await page.getByRole('button', { name: 'Play Cold Garage' }).click();
+		await rowButton(0).click();
+		await rowButton(1).click();
 
 		const audio = container.querySelector('audio')!;
 		// Swapping `src` on one element is what makes "only one thing plays"
@@ -94,14 +106,11 @@ describe('TrackList', () => {
 
 	it('offers pause on the row that is playing, and play on the other', async () => {
 		await render(TrackList, { tracks: TRACKS });
-		await page.getByRole('button', { name: 'Play Ferris Wheel' }).click();
+		expect(showsPause(0)).toBe(false);
+		await rowButton(0).click();
 
-		await expect
-			.element(page.getByRole('button', { name: 'Pause Ferris Wheel' }))
-			.toBeInTheDocument();
-		await expect
-			.element(page.getByRole('button', { name: 'Play Cold Garage' }))
-			.toBeInTheDocument();
+		await expect.poll(() => showsPause(0)).toBe(true);
+		expect(showsPause(1)).toBe(false);
 	});
 
 	it('falls back to a play button when the browser refuses to start', async () => {
@@ -113,9 +122,10 @@ describe('TrackList', () => {
 		play.mockImplementationOnce(() => Promise.reject(new Error('NotAllowedError')));
 		await render(TrackList, { tracks: TRACKS });
 
-		await page.getByRole('button', { name: 'Play Ferris Wheel' }).click();
-		await expect
-			.element(page.getByRole('button', { name: 'Play Ferris Wheel' }))
-			.toBeInTheDocument();
+		await rowButton(0).click();
+		await vi.waitFor(() => expect(play).toHaveBeenCalled());
+		// A macrotask for the rejection to settle, then the row must say play.
+		await new Promise((r) => setTimeout(r, 0));
+		expect(showsPause(0)).toBe(false);
 	});
 });
