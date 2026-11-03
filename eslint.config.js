@@ -21,6 +21,7 @@ import noRawFileInput from './eslint-rules/no-raw-file-input.js';
 import noTrackedCommandInEffect from './eslint-rules/no-tracked-command-in-effect.js';
 import preferTermMessages from './eslint-rules/prefer-term-messages.js';
 import clubTimeDates from './eslint-rules/club-time-dates.js';
+import noWordingLocators from './eslint-rules/no-wording-locators.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -63,7 +64,10 @@ const customPlugin = {
 		// Registered, not enabled: the tree has ~256 hits and every lint run is
 		// `--max-warnings 0`. `pnpm lint:terms` reports them; enable it below once
 		// they are cleared (#2099). See docs/development/conventions.md#terminology.
-		'prefer-term-messages': preferTermMessages
+		'prefer-term-messages': preferTermMessages,
+		// Registered, not enabled, for the same reason: ~870 hits in specs and e2e.
+		// `pnpm test-wording-census` counts them; enable it once they are cleared (#2189).
+		'no-wording-locators': noWordingLocators
 	}
 };
 

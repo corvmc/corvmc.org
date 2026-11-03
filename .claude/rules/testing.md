@@ -71,6 +71,15 @@ test that asserts nothing fails.
   each claim nearly every core until the OOM killer took one. That surfaces as `Worker exited
 unexpectedly`, or as a bare SIGKILL, and never as anything about the tests.
 
+## Locate and assert by structure, not wording
+
+A test never matches on, or asserts, UI copy. Locate by `button[type=submit]` scoped to its dialog
+or form, then `href`, input `name`, a role with no name inside a scoped container (dialog, form,
+row), aria state, and `data-testid` last. `getByLabel` on a form field is allowed — the label is
+the accessible contract. Assert URL, value, count, visibility or a DB row. New and touched tests
+only; `pnpm test-wording-census` counts the backlog (`custom/no-wording-locators`, #2189).
+[conventions.md#locate-and-assert-by-structure](../../docs/development/conventions.md#locate-and-assert-by-structure)
+
 ## e2e
 
 - **Assertions get 15s and tests get 60s**, set once in `playwright.config.ts` — not Playwright's

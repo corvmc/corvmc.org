@@ -500,8 +500,21 @@ When a service throws a bare `Error` and there is no class to assert, add one: a
 subclass needs no registration in `errors.ts`, because `mapDomainError()` already branches on the
 base — and it upgrades a 500 into the status the case deserves.
 
-Do not add a `data-testid`. There are none in this codebase, and every case above was solved with
-markup that already existed.
+#### Locate and assert by structure
+
+A locator does not match on copy either. In order of preference:
+
+1. `button[type=submit]` scoped to its dialog or form;
+2. `href`;
+3. input `name`;
+4. a role with no name, when it is unique inside a scoped container (dialog, form, row, card);
+5. aria state (`aria-current`, `aria-expanded`, `checked`);
+6. `data-testid`, last, when nothing above is unique.
+
+`getByLabel` on a form field stays: a field's label is its accessible contract, not prose.
+Assert URL, field value, count, visibility or a DB row. `custom/no-wording-locators` flags the
+literal-name forms; it is off while the backlog drains, and `pnpm test-wording-census` counts it.
+New and touched tests follow this now; the rest migrate by directory (#2189).
 
 What is **not** copy, and stays:
 
@@ -661,6 +674,7 @@ more than one config object crashes eslint with "Cannot redefine plugin custom")
 | `custom/no-tracked-command-in-effect`      | **error** on `*.svelte` and `*.svelte.ts`                                             | A remote `command()` called inside `$effect`/`$effect.pre` outside `untrack`. Kit's client command reads and writes its own `$state` pending count on every call, so the effect re-runs itself until `effect_update_depth_exceeded` (#1956). The rule reads the imported `.remote` module to tell a command from a query; queries in effects are fine.                                                                                                                                                                                                                                                                                                                                                                               |
 | `custom/club-time-dates`                   | **error** on `*.svelte`, `*.svelte.ts` and `src/lib/remote/**/*.ts` (excluding specs) | A `toLocaleDateString`/`toLocaleTimeString` with no `timeZone`, a date `toLocaleString` (on `new Date(…)`, a `Date`-typed receiver, or with date options) with none, or `toISOString().slice(0, 10)`/`.split('T')`. Each renders in the runtime's zone — UTC during SSR, the viewer's after hydration — or gives the UTC day (#2000). Use `$lib/utils/format` for an instant, `clubToday()` for today, `addIsoDays()` for date arithmetic, `utcCalendarDate()` for a stored UTC-midnight date.                                                                                                                                                                                                                                       |
 | `custom/prefer-term-messages`              | **off**; `pnpm lint:terms` runs it on `*.svelte`                                      | A template text node, user-facing attribute or `label`/`title` property whose whole string is a form of a `term_*` message. Read it from `$lib/terms` instead. See [Terminology](#terminology).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `custom/no-wording-locators`               | **off**; `pnpm test-wording-census` runs it on `e2e/` and `*.spec.ts`                 | A literal `name:` in `getByRole`, a literal `getByText`, or a literal `toHaveTextContent`/`toContainText`/`toHaveText`. See [Locate and assert by structure](#locate-and-assert-by-structure).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 ### Money columns declare themselves
 
@@ -803,6 +817,7 @@ Every script in `package.json`:
 | `lint`                          | prettier `--check` + eslint over everything                                                        |
 | `lint:changed`                  | Lint only files changed vs `BASE_REF` (default `origin/main`; PR CI passes the PR's base)          |
 | `lint:terms`                    | Report catalogued terms typed out as labels (`custom/prefer-term-messages`)                        |
+| `test-wording-census`           | Count tests that locate or assert by UI copy (`custom/no-wording-locators`), by directory          |
 | `format`                        | prettier `--write` everything                                                                      |
 | `db:generate`                   | drizzle-kit: generate a migration from schema changes, then make any table rebuild D1-safe         |
 | `db:fix-migrations`             | Rewrite unsafe table rebuilds (run automatically by `db:generate`)                                 |
