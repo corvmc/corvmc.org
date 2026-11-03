@@ -7,6 +7,13 @@ vi.mock('$env/dynamic/private', () => ({
 	env: { DATABASE_URL: 'postgres://mock' }
 }));
 
+// The stale-state sweeps are WHERE clauses over real rows.
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
+vi.mock('$lib/server/db', () => ({ db: testDb }));
+
 // Product config — contribution product id used to match the contribution line
 vi.mock('./product-config-service', () => ({
 	getStripeProductId: vi.fn().mockImplementation((key: string) => {
@@ -20,9 +27,9 @@ vi.mock('./product-config-service', () => ({
 // walks it exactly like the auto-pager would.
 // ---------------------------------------------------------------------------
 const mockStripe = {
-	subscriptions: {
-		list: vi.fn()
-	}
+	subscriptions: { list: vi.fn() },
+	// Credit reconciliation reads the latest paid invoice; none here.
+	invoices: { list: vi.fn(async () => ({ data: [] })) }
 };
 vi.mock('$lib/server/stripe', () => ({ stripe: mockStripe }));
 
@@ -48,95 +55,6 @@ const mockSyncFromWebhook = vi.fn().mockResolvedValue(undefined);
 vi.mock('$lib/server/band/band-subscription-service', () => ({
 	syncFromWebhook: mockSyncFromWebhook
 }));
-
-// ---------------------------------------------------------------------------
-// Mock the DB. A tiny chainable builder records update() calls and serves
-// canned rows for select().
-// ---------------------------------------------------------------------------
-const dbState: {
-	userByStripeId: Record<string, { id: string; subscription: unknown } | undefined>;
-	staleUsers: { id: string }[];
-	staleBands: { id: string }[];
-	updates: Array<{ table: 'user' | 'group'; set: Record<string, unknown> }>;
-} = {
-	userByStripeId: {},
-	staleUsers: [],
-	staleBands: [],
-	updates: []
-};
-
-// Track which table a select/update chain targets via the last from()/update() arg.
-let lastTable: 'user' | 'group' | 'band_site' | 'unknown' = 'unknown';
-let pendingCustomerLookup: string | null = null;
-
-vi.mock('$lib/server/db/schema/authentication', () => ({ user: { __table: 'user' } }));
-// `bandTiers` and `customDomainStatuses` ride along because `band-site.ts`
-// imports them from here for its column enums — the vocabularies still live
-// beside the columns they describe until the phase that drops those columns.
-vi.mock('$lib/server/db/schema/group', () => ({
-	group: { __table: 'group' },
-	bandTiers: ['free', 'premium'],
-	customDomainStatuses: ['pending', 'active', 'failed']
-}));
-// Band premium moved off `group` in phase 3b; the stale-subscription sweep
-// reads the site row now.
-vi.mock('$lib/server/db/schema/band-site', () => ({
-	bandSite: {
-		__table: 'band_site',
-		id: 'band_site.id',
-		groupId: 'band_site.group_id',
-		tier: 'band_site.tier',
-		subscription: 'band_site.subscription'
-	}
-}));
-
-vi.mock('drizzle-orm', () => ({
-	eq: (col: unknown, val: unknown) => ({ op: 'eq', col, val }),
-	getTableColumns: () => ({}),
-	and: (...c: unknown[]) => ({ op: 'and', c }),
-	isNotNull: (col: unknown) => ({ op: 'isNotNull', col }),
-	notInArray: (col: unknown, vals: unknown[]) => ({ op: 'notInArray', col, vals }),
-	// Needed because the mapper pulls in the finance schema, which uses sql`` for
-	// column defaults at module load.
-	// `.mapWith` because `event-columns` decodes one fragment at import.
-	sql: (..._args: unknown[]) => ({ op: 'sql', mapWith: () => ({ op: 'sql' }) })
-}));
-
-vi.mock('$lib/server/db', () => {
-	const select = () => ({
-		from: (table: { __table: 'user' | 'group' }) => {
-			lastTable = table.__table;
-			return {
-				where: (cond: { op?: string; val?: string }) => {
-					// user-by-stripe-id lookup uses eq(user.stripeId, customerId)
-					if (lastTable === 'user' && cond?.op === 'eq') {
-						pendingCustomerLookup = String(cond.val);
-						return {
-							limit: () => {
-								const row = dbState.userByStripeId[pendingCustomerLookup!];
-								return Promise.resolve(row ? [row] : []);
-							}
-						};
-					}
-					// stale-state queries (isNotNull / and) return the canned stale lists
-					const rows = lastTable === 'user' ? dbState.staleUsers : dbState.staleBands;
-					return Promise.resolve(rows);
-				}
-			};
-		}
-	});
-
-	const update = (table: { __table: 'user' | 'group' }) => ({
-		set: (values: Record<string, unknown>) => ({
-			where: () => {
-				dbState.updates.push({ table: table.__table, set: values });
-				return Promise.resolve();
-			}
-		})
-	});
-
-	return { db: { select, update } };
-});
 
 const { syncAllSubscriptions } = await import('./subscription-sync-service');
 
@@ -186,12 +104,47 @@ function bandSub(opts: { id: string; bandId: string; status: string }) {
 	};
 }
 
+function member(id: string, stripeId: string | null, subscription: unknown = null) {
+	sqlite
+		.prepare(
+			`insert into user (id, name, email, stripe_id, subscription, credit_free_hours, credit_equipment)
+			 values (?, ?, ?, ?, ?, 3, 4)`
+		)
+		.run(
+			id,
+			id,
+			`${id}@example.com`,
+			stripeId,
+			subscription === null ? null : JSON.stringify(subscription)
+		);
+}
+
+function site(groupId: string, subscription: unknown) {
+	sqlite
+		.prepare(`insert into band_site (id, group_id, tier, subscription) values (?, ?, 'premium', ?)`)
+		.run(`site-${groupId}`, groupId, subscription === null ? null : JSON.stringify(subscription));
+}
+
+const subscriptionOf = (id: string) => {
+	const row = sqlite.prepare('select subscription from user where id = ?').get(id) as {
+		subscription: string | null;
+	};
+	return row.subscription === null ? null : JSON.parse(row.subscription);
+};
+const creditsOf = (id: string) =>
+	sqlite
+		.prepare(
+			'select credit_free_hours as free, credit_equipment as equipment from user where id = ?'
+		)
+		.get(id);
+const siteOf = (groupId: string) =>
+	sqlite.prepare('select tier, subscription from band_site where group_id = ?').get(groupId);
+
 beforeEach(() => {
 	vi.clearAllMocks();
-	dbState.userByStripeId = {};
-	dbState.staleUsers = [];
-	dbState.staleBands = [];
-	dbState.updates = [];
+	mockStripe.invoices.list.mockResolvedValue({ data: [] });
+	sqlite.exec('delete from user');
+	sqlite.exec('delete from band_site');
 });
 
 // ---------------------------------------------------------------------------
@@ -199,17 +152,24 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('syncAllSubscriptions — users', () => {
-	it('writes Subscription JSON for an active contribution sub', async () => {
-		dbState.userByStripeId['cus_1'] = { id: 'user_1', subscription: null };
+	it('writes Subscription JSON for an active contribution sub, on that member', async () => {
+		member('user_1', 'cus_1');
+		member('user_2', 'cus_2');
 		mockStripe.subscriptions.list.mockReturnValue(
-			asyncIterableOf([userSub({ id: 'sub_1', customer: 'cus_1', status: 'active', quantity: 7 })])
+			asyncIterableOf([
+				userSub({
+					id: 'sub_1',
+					customer: 'cus_1',
+					status: 'active',
+					quantity: 7
+				})
+			])
 		);
 
 		const summary = await syncAllSubscriptions();
 
 		expect(summary.usersUpdated).toBe(1);
-		const upd = dbState.updates.find((u) => u.table === 'user');
-		expect(upd?.set.subscription).toMatchObject({
+		expect(subscriptionOf('user_1')).toMatchObject({
 			stripeSubscriptionId: 'sub_1',
 			// credits = contribution quantity × 2 (each $5-unit = 1 hour = 2 credits)
 			hoursPerReset: 14,
@@ -217,35 +177,36 @@ describe('syncAllSubscriptions — users', () => {
 			coveringFees: false,
 			cancelAtPeriodEnd: false
 		});
+		expect(subscriptionOf('user_2')).toBeNull();
 	});
 
 	it('preserves existing startedAt on re-run (idempotent)', async () => {
-		dbState.userByStripeId['cus_1'] = {
-			id: 'user_1',
-			subscription: {
-				startedAt: '2020-01-01T00:00:00.000Z',
-				stripeSubscriptionId: 'sub_1',
-				hoursPerReset: 7,
-				creditsResetAt: 'x'
-			}
-		};
+		member('user_1', 'cus_1', {
+			startedAt: '2020-01-01T00:00:00.000Z',
+			stripeSubscriptionId: 'sub_1',
+			hoursPerReset: 7,
+			creditsResetAt: 'x'
+		});
 		mockStripe.subscriptions.list.mockReturnValue(
-			asyncIterableOf([userSub({ id: 'sub_1', customer: 'cus_1', status: 'active', quantity: 7 })])
+			asyncIterableOf([
+				userSub({
+					id: 'sub_1',
+					customer: 'cus_1',
+					status: 'active',
+					quantity: 7
+				})
+			])
 		);
 
 		await syncAllSubscriptions();
 
-		const upd = dbState.updates.find((u) => u.table === 'user');
-		expect((upd?.set.subscription as { startedAt: string }).startedAt).toBe(
-			'2020-01-01T00:00:00.000Z'
-		);
+		expect(subscriptionOf('user_1').startedAt).toBe('2020-01-01T00:00:00.000Z');
 	});
 
 	it('clears a user whose only sub is canceled (via step 4), without touching credits', async () => {
 		// Canceled sub is terminal → no inline handling. The user still holds local
 		// subscription state and is absent from the keep-set, so step 4 clears it.
-		dbState.userByStripeId['cus_1'] = { id: 'user_1', subscription: { startedAt: 'x' } };
-		dbState.staleUsers = [{ id: 'user_1' }];
+		member('user_1', 'cus_1', { startedAt: 'x' });
 		mockStripe.subscriptions.list.mockReturnValue(
 			asyncIterableOf([userSub({ id: 'sub_1', customer: 'cus_1', status: 'canceled' })])
 		);
@@ -254,33 +215,35 @@ describe('syncAllSubscriptions — users', () => {
 
 		expect(summary.usersUpdated).toBe(0);
 		expect(summary.usersCleared).toBe(1);
-		expect(dbState.updates).toContainEqual({ table: 'user', set: { subscription: null } });
-		// no credit columns ever appear in any update payload
-		for (const u of dbState.updates) {
-			expect(u.set).not.toHaveProperty('creditFreeHours');
-			expect(u.set).not.toHaveProperty('creditEquipment');
-		}
+		expect(subscriptionOf('user_1')).toBeNull();
+		expect(creditsOf('user_1')).toEqual({ free: 3, equipment: 4 });
 	});
 
 	it('keeps an active sub even when a stale canceled sub for the same user is also present', async () => {
 		// Order-independence: the canceled sub must not undo the active one.
-		dbState.userByStripeId['cus_1'] = { id: 'user_1', subscription: null };
+		member('user_1', 'cus_1');
 		mockStripe.subscriptions.list.mockReturnValue(
 			asyncIterableOf([
-				userSub({ id: 'sub_active', customer: 'cus_1', status: 'active', quantity: 4 }),
+				userSub({
+					id: 'sub_active',
+					customer: 'cus_1',
+					status: 'active',
+					quantity: 4
+				}),
 				userSub({ id: 'sub_old', customer: 'cus_1', status: 'canceled' })
 			])
 		);
 
 		const summary = await syncAllSubscriptions();
 
-		expect(summary.usersUpdated).toBe(1);
-		expect(summary.usersCleared).toBe(0);
-		// only the active write; no null-clear for this user
-		expect(dbState.updates).not.toContainEqual({ table: 'user', set: { subscription: null } });
+		expect(summary).toMatchObject({ usersUpdated: 1, usersCleared: 0 });
+		expect(subscriptionOf('user_1')).toMatchObject({
+			stripeSubscriptionId: 'sub_active'
+		});
 	});
 
 	it('records an error and continues when no local user matches', async () => {
+		member('user_1', 'cus_other');
 		mockStripe.subscriptions.list.mockReturnValue(
 			asyncIterableOf([userSub({ id: 'sub_1', customer: 'cus_missing', status: 'active' })])
 		);
@@ -289,20 +252,23 @@ describe('syncAllSubscriptions — users', () => {
 
 		expect(summary.usersUpdated).toBe(0);
 		expect(summary.errors).toHaveLength(1);
-		expect(summary.errors[0]).toMatchObject({ kind: 'user', ref: 'cus_missing' });
+		expect(summary.errors[0]).toMatchObject({
+			kind: 'user',
+			ref: 'cus_missing'
+		});
+		expect(subscriptionOf('user_1')).toBeNull();
 	});
 
 	it('skips trialing subs', async () => {
-		dbState.userByStripeId['cus_1'] = { id: 'user_1', subscription: null };
+		member('user_1', 'cus_1');
 		mockStripe.subscriptions.list.mockReturnValue(
 			asyncIterableOf([userSub({ id: 'sub_1', customer: 'cus_1', status: 'trialing' })])
 		);
 
 		const summary = await syncAllSubscriptions();
 
-		expect(summary.skipped).toBe(1);
-		expect(summary.usersUpdated).toBe(0);
-		expect(dbState.updates).toHaveLength(0);
+		expect(summary).toMatchObject({ skipped: 1, usersUpdated: 0 });
+		expect(subscriptionOf('user_1')).toBeNull();
 	});
 });
 
@@ -321,64 +287,68 @@ describe('syncAllSubscriptions — bands', () => {
 		expect(summary.bandsUpdated).toBe(1);
 	});
 
-	it('clears a band whose only sub is canceled via step 4 (no inline syncFromWebhook)', async () => {
-		// Terminal band sub is not handled inline; step 4 resets tier to free.
-		dbState.staleBands = [{ id: 'band_1' }];
+	it('clears a band whose only sub is canceled via step 4, keeping the site row', async () => {
+		// Terminal band sub is not handled inline; step 4 resets tier to free. An
+		// UPDATE, not a delete: `band_page_config` and `band_media` cascade from
+		// this row, so a band whose subscription lapsed keeps its microsite content.
+		site('band_1', { stripeSubscriptionId: 'sub_b' });
+		site('band_2', { stripeSubscriptionId: 'sub_live' });
 		mockStripe.subscriptions.list.mockReturnValue(
-			asyncIterableOf([bandSub({ id: 'sub_b', bandId: 'band_1', status: 'canceled' })])
+			asyncIterableOf([
+				bandSub({ id: 'sub_b', bandId: 'band_1', status: 'canceled' }),
+				bandSub({ id: 'sub_live', bandId: 'band_2', status: 'active' })
+			])
 		);
 
 		const summary = await syncAllSubscriptions();
 
-		expect(mockSyncFromWebhook).not.toHaveBeenCalled();
+		expect(mockSyncFromWebhook).toHaveBeenCalledTimes(1);
 		expect(summary.bandsCleared).toBe(1);
-		// Cleared on the site row since phase 3b — and it is an UPDATE, not a
-		// delete: `band_page_config` and `band_media` cascade from this row, so a
-		// band whose subscription lapsed keeps its microsite content.
-		expect(dbState.updates).toContainEqual({
-			table: 'band_site',
-			set: expect.objectContaining({ tier: 'free', subscription: null })
-		});
+		expect(siteOf('band_1')).toEqual({ tier: 'free', subscription: null });
+		expect(siteOf('band_2')).toMatchObject({ tier: 'premium' });
 	});
 });
 
 describe('syncAllSubscriptions — reconciliation & safety', () => {
-	it('clears stale local users not seen in the sweep', async () => {
-		dbState.userByStripeId['cus_1'] = { id: 'user_1', subscription: null };
-		dbState.staleUsers = [{ id: 'user_stale' }];
+	it('clears stale local users not seen in the sweep, and only them', async () => {
+		member('user_1', 'cus_1', { startedAt: 'x' });
+		member('user_stale', 'cus_stale', { startedAt: 'y' });
+		member('user_never', 'cus_never');
 		mockStripe.subscriptions.list.mockReturnValue(
 			asyncIterableOf([userSub({ id: 'sub_1', customer: 'cus_1', status: 'active' })])
 		);
 
 		const summary = await syncAllSubscriptions();
 
-		// 1 active update + 1 stale clear
 		expect(summary.usersCleared).toBe(1);
-		expect(dbState.updates).toContainEqual({ table: 'user', set: { subscription: null } });
+		expect(subscriptionOf('user_stale')).toBeNull();
+		expect(subscriptionOf('user_1')).not.toBeNull();
 	});
 
 	it('skips all clearing when the sweep returns zero subscriptions', async () => {
-		dbState.staleUsers = [{ id: 'user_stale' }];
-		dbState.staleBands = [{ id: 'band_stale' }];
+		member('user_stale', 'cus_stale', { startedAt: 'y' });
+		site('band_stale', { stripeSubscriptionId: 'sub_x' });
 		mockStripe.subscriptions.list.mockReturnValue(asyncIterableOf([]));
 
 		const summary = await syncAllSubscriptions();
 
-		expect(summary.usersCleared).toBe(0);
-		expect(summary.bandsCleared).toBe(0);
-		expect(dbState.updates).toHaveLength(0);
+		expect(summary).toMatchObject({ usersCleared: 0, bandsCleared: 0 });
+		expect(subscriptionOf('user_stale')).toEqual({ startedAt: 'y' });
+		expect(siteOf('band_stale')).toMatchObject({ tier: 'premium' });
 		expect(summary.errors.some((e) => e.kind === 'sweep')).toBe(true);
 	});
 
 	it('dryRun computes counts but issues no DB updates', async () => {
-		dbState.userByStripeId['cus_1'] = { id: 'user_1', subscription: null };
+		member('user_1', 'cus_1');
+		member('user_stale', 'cus_stale', { startedAt: 'y' });
 		mockStripe.subscriptions.list.mockReturnValue(
 			asyncIterableOf([userSub({ id: 'sub_1', customer: 'cus_1', status: 'active' })])
 		);
 
 		const summary = await syncAllSubscriptions({ dryRun: true });
 
-		expect(summary.usersUpdated).toBe(1);
-		expect(dbState.updates).toHaveLength(0);
+		expect(summary).toMatchObject({ usersUpdated: 1, usersCleared: 1 });
+		expect(subscriptionOf('user_1')).toBeNull();
+		expect(subscriptionOf('user_stale')).toEqual({ startedAt: 'y' });
 	});
 });

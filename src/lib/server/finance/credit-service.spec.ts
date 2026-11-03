@@ -1,83 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-// ---------------------------------------------------------------------------
-// Mock the db module. The credit service no longer uses db.transaction (D1 has
-// no interactive transactions); it reads, then writes with a compare-and-swap
-// UPDATE ... RETURNING, then inserts a ledger row. The mock exposes queues so a
-// test can script the exact sequence of select/update results — including a CAS
-// miss (empty returning) to exercise the retry path.
-// ---------------------------------------------------------------------------
+// The credit service has no db.transaction (D1 has none): it reads, writes with a
+// compare-and-swap UPDATE … RETURNING, then inserts a ledger row. Against a real
+// SQLite, so the CAS predicate and the SET keys are the real ones; contention is
+// a write slipped in between the read and the CAS.
 
-let selectResults: unknown[][] = [];
-let updateResults: unknown[][] = [];
-const insertedRows: Record<string, unknown>[] = [];
-const setPayloads: Record<string, unknown>[] = [];
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
 
-/** A thenable chain whose await pops the next result from `queue`. */
-function chain(queue: () => unknown[][]): PromiseLike<unknown[]> {
-	const proxy: PromiseLike<unknown[]> = new Proxy(() => proxy, {
-		get(_, prop) {
-			if (prop === 'then') {
-				return (resolve: (v: unknown[]) => void) => resolve(queue().shift() ?? []);
-			}
-			if (prop === 'returning') {
-				return () => chain(() => updateResults);
-			}
-			if (prop === 'set') {
-				return (payload: Record<string, unknown>) => {
-					setPayloads.push(payload);
-					return proxy;
-				};
-			}
-			return () => proxy;
-		}
-	}) as unknown as PromiseLike<unknown[]>;
-	return proxy;
-}
+vi.mock('$lib/server/db', () => ({ db: testDb }));
 
-vi.mock('$lib/server/db', () => ({
-	db: {
-		select: () => chain(() => selectResults),
-		update: () => chain(() => updateResults),
-		insert: () => ({
-			values: (row: Record<string, unknown>) => {
-				insertedRows.push(row);
-				return Promise.resolve();
-			}
-		})
-	}
-}));
-
-vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: {
-		id: 'id',
-		creditFreeHours: { name: 'credit_free_hours' },
-		creditEquipment: { name: 'credit_equipment' }
-	}
-}));
-
-vi.mock('$lib/server/db/schema/finance', () => ({
-	creditTransaction: { id: 'id' },
-	isCreditType: (v: string) => ['free_hours', 'equipment_credits'].includes(v),
-	creditTypes: ['free_hours', 'equipment_credits'] as const
-}));
-
-vi.mock('drizzle-orm', () => ({
-	eq: vi.fn(),
-	getTableColumns: () => ({}),
-	and: vi.fn(),
-	gt: vi.fn(),
-	gte: vi.fn(),
-	lte: vi.fn(),
-	desc: vi.fn(),
-	like: vi.fn(),
-	or: vi.fn(),
-	count: vi.fn(),
-	// `.mapWith` because `event-columns` decodes one fragment at import.
-	sql: vi.fn(() => ({ mapWith: vi.fn() }))
-}));
-
-// Import after mocking
 const {
 	getBalance,
 	getAllBalances,
@@ -91,60 +25,91 @@ const {
 	InsufficientCreditsError
 } = await import('./credit-service');
 
-// The real `user` schema exposes Drizzle column *properties* keyed by their TS
-// names (creditFreeHours), distinct from the DB column names (credit_free_hours)
-// returned by `column.name`. `.set()` must be keyed by the property name; passing
-// the DB name yields an empty SET clause and a SQLite syntax error in production.
-const VALID_USER_COLUMNS = ['id', 'creditFreeHours', 'creditEquipment'];
+const T0 = 1_750_000_000;
+
+function member(id: string, freeHours = 0, equipment = 0) {
+	sqlite
+		.prepare(
+			`insert into user (id, name, email, credit_free_hours, credit_equipment) values (?, ?, ?, ?, ?)`
+		)
+		.run(id, id, `${id}@example.com`, freeHours, equipment);
+}
+
+function ledgerRow(opts: {
+	userId?: string;
+	type?: string;
+	amount: number;
+	source: string;
+	sourceId?: string | null;
+	at: number;
+}) {
+	sqlite
+		.prepare(
+			`insert into credit_transaction (user_id, credit_type, amount, balance_after, source, source_id, description, created_at)
+			 values (?, ?, ?, 0, ?, ?, 'seed', ?)`
+		)
+		.run(
+			opts.userId ?? 'user-1',
+			opts.type ?? 'free_hours',
+			opts.amount,
+			opts.source,
+			opts.sourceId ?? null,
+			opts.at
+		);
+}
+
+const balances = (id: string) =>
+	sqlite
+		.prepare(
+			'select credit_free_hours as free, credit_equipment as equipment from user where id = ?'
+		)
+		.get(id);
+const ledger = () =>
+	sqlite
+		.prepare(
+			`select user_id as userId, credit_type as creditType, amount, balance_after as balanceAfter,
+			        source, source_id as sourceId, description from credit_transaction order by id`
+		)
+		.all() as Record<string, unknown>[];
+
+/** Another writer moves the balance between this service's read and its CAS. */
+function contend(times: number, bump = 2) {
+	const update = testDb.update.bind(testDb);
+	let left = times;
+	return vi.spyOn(testDb, 'update').mockImplementation(((table: Parameters<typeof update>[0]) => {
+		if (left-- > 0) {
+			sqlite.prepare('update user set credit_free_hours = credit_free_hours + ?').run(bump);
+		}
+		return update(table);
+	}) as typeof testDb.update);
+}
 
 beforeEach(() => {
-	selectResults = [];
-	updateResults = [];
-	insertedRows.length = 0;
-	setPayloads.length = 0;
+	vi.restoreAllMocks();
+	sqlite.exec('delete from credit_transaction');
+	sqlite.exec('delete from user');
+	member('user-1');
+	member('user-2', 9, 9);
 });
 
-// ---------------------------------------------------------------------------
-// Reads
-// ---------------------------------------------------------------------------
-
-describe('getBalance', () => {
-	it('returns 0 for user with no credits', async () => {
-		selectResults = [[{ free_hours: 0, equipment_credits: 0 }]];
+describe('getBalance / getAllBalances', () => {
+	it('returns 0 for a member with no credits, and for one not found', async () => {
 		expect(await getBalance('user-1', 'free_hours')).toBe(0);
-	});
-
-	it('returns 0 when user not found', async () => {
-		selectResults = [[]];
 		expect(await getBalance('missing', 'free_hours')).toBe(0);
-	});
-
-	it('returns the balance for a credit type that exists', async () => {
-		selectResults = [[{ free_hours: 5, equipment_credits: 0 }]];
-		expect(await getBalance('user-1', 'free_hours')).toBe(5);
-	});
-});
-
-describe('getAllBalances', () => {
-	it('returns empty object for user not found', async () => {
-		selectResults = [[]];
 		expect(await getAllBalances('missing')).toEqual({});
 	});
 
-	it('returns parsed credits', async () => {
-		selectResults = [[{ free_hours: 3, equipment_credits: 10 }]];
+	it('returns that member’s balances', async () => {
+		sqlite.exec(`update user set credit_free_hours = 3, credit_equipment = 10 where id = 'user-1'`);
+
+		expect(await getBalance('user-1', 'free_hours')).toBe(3);
 		expect(await getAllBalances('user-1')).toEqual({ free_hours: 3, equipment_credits: 10 });
 	});
 });
 
-// ---------------------------------------------------------------------------
-// addCredits
-// ---------------------------------------------------------------------------
-
 describe('addCredits', () => {
 	it('increases balance and creates a transaction', async () => {
-		selectResults = [[{ balance: 2 }]];
-		updateResults = [[{ balance: 5 }]]; // CAS succeeds
+		sqlite.exec(`update user set credit_free_hours = 2 where id = 'user-1'`);
 
 		const result = await addCredits(
 			'user-1',
@@ -154,60 +119,50 @@ describe('addCredits', () => {
 			undefined,
 			'Test add'
 		);
+
 		expect(result).toBe(5);
-		// Regression: CAS UPDATE must SET the schema property, not the DB column name.
-		expect(Object.keys(setPayloads[0])).toEqual(['creditFreeHours']);
-		expect(insertedRows).toHaveLength(1);
-		expect(insertedRows[0]).toMatchObject({
-			userId: 'user-1',
-			creditType: 'free_hours',
-			amount: 3,
-			balanceAfter: 5,
-			source: 'admin_adjustment',
-			description: 'Test add'
-		});
-	});
-
-	it('initializes balance when credit type does not exist yet', async () => {
-		selectResults = [[{ balance: 0 }]];
-		updateResults = [[{ balance: 4 }]];
-
-		const result = await addCredits('user-1', 'free_hours', 4, 'monthly_allocation');
-		expect(result).toBe(4);
-		expect(insertedRows[0]).toMatchObject({ amount: 4, balanceAfter: 4 });
+		// The SET must land on the right column, and on this member only.
+		expect(balances('user-1')).toEqual({ free: 5, equipment: 0 });
+		expect(balances('user-2')).toEqual({ free: 9, equipment: 9 });
+		expect(ledger()).toEqual([
+			{
+				userId: 'user-1',
+				creditType: 'free_hours',
+				amount: 3,
+				balanceAfter: 5,
+				source: 'admin_adjustment',
+				sourceId: null,
+				description: 'Test add'
+			}
+		]);
 	});
 
 	it('respects maxBalance cap from config', async () => {
-		selectResults = [[{ balance: 24990 }]];
-		updateResults = [[{ balance: 25000 }]];
+		sqlite.exec(`update user set credit_equipment = 24990 where id = 'user-1'`);
 
-		const result = await addCredits('user-1', 'equipment_credits', 20, 'monthly_allocation');
-		expect(result).toBe(25000);
-		expect(insertedRows[0]).toMatchObject({ amount: 10, balanceAfter: 25000 });
+		expect(await addCredits('user-1', 'equipment_credits', 20, 'monthly_allocation')).toBe(25000);
+		expect(ledger()[0]).toMatchObject({ amount: 10, balanceAfter: 25000 });
 	});
 
 	it('retries the CAS when the balance changes concurrently', async () => {
-		// First read sees 2 but the CAS misses (someone else wrote between read and
-		// write). Second read sees 4; CAS succeeds at 4 + 3 = 7.
-		selectResults = [[{ balance: 2 }], [{ balance: 4 }]];
-		updateResults = [[], [{ balance: 7 }]];
+		// Read sees 2, another writer makes it 4, the CAS misses; the retry reads 4
+		// and lands 4 + 3 = 7.
+		sqlite.exec(`update user set credit_free_hours = 2 where id = 'user-1'`);
+		contend(1);
 
-		const result = await addCredits('user-1', 'free_hours', 3, 'admin_adjustment');
-		expect(result).toBe(7);
+		expect(await addCredits('user-1', 'free_hours', 3, 'admin_adjustment')).toBe(7);
 		// Exactly one ledger row — the failed attempt must not write a transaction.
-		expect(insertedRows).toHaveLength(1);
-		expect(insertedRows[0]).toMatchObject({ amount: 3, balanceAfter: 7 });
+		expect(ledger()).toHaveLength(1);
+		expect(ledger()[0]).toMatchObject({ amount: 3, balanceAfter: 7 });
 	});
 
 	it('throws when contention persists past the retry limit', async () => {
-		// Supply a fresh read for every attempt but never let the CAS land.
-		selectResults = Array.from({ length: 10 }, () => [{ balance: 2 }]);
-		updateResults = Array.from({ length: 10 }, () => []);
+		contend(Infinity);
 
 		await expect(addCredits('user-1', 'free_hours', 1, 'admin_adjustment')).rejects.toThrow(
 			'due to contention'
 		);
-		expect(insertedRows).toHaveLength(0);
+		expect(ledger()).toHaveLength(0);
 	});
 
 	it('throws when amount is not positive', async () => {
@@ -220,29 +175,20 @@ describe('addCredits', () => {
 	});
 
 	it('throws when user not found', async () => {
-		selectResults = [[]];
 		await expect(addCredits('missing', 'free_hours', 1, 'admin_adjustment')).rejects.toThrow(
 			'User missing not found'
 		);
 	});
 });
 
-// ---------------------------------------------------------------------------
-// deductCredits
-// ---------------------------------------------------------------------------
-
 describe('deductCredits', () => {
 	it('decreases balance and creates a transaction', async () => {
-		updateResults = [[{ newBalance: 3 }]]; // conditional UPDATE matched
+		sqlite.exec(`update user set credit_free_hours = 5 where id = 'user-1'`);
 
-		const result = await deductCredits('user-1', 'free_hours', 2, 'checkout', 'sess-123');
-		expect(result).toBe(3);
-		// Regression: the UPDATE must SET the schema property (creditFreeHours), not
-		// the DB column name. A wrong key makes Drizzle emit `set` with no assignments.
-		expect(setPayloads).toHaveLength(1);
-		expect(Object.keys(setPayloads[0])).toEqual(['creditFreeHours']);
-		expect(Object.keys(setPayloads[0]).every((k) => VALID_USER_COLUMNS.includes(k))).toBe(true);
-		expect(insertedRows[0]).toMatchObject({
+		expect(await deductCredits('user-1', 'free_hours', 2, 'checkout', 'sess-123')).toBe(3);
+		expect(balances('user-1')).toEqual({ free: 3, equipment: 0 });
+		expect(balances('user-2')).toEqual({ free: 9, equipment: 9 });
+		expect(ledger()[0]).toMatchObject({
 			userId: 'user-1',
 			creditType: 'free_hours',
 			amount: -2,
@@ -252,15 +198,19 @@ describe('deductCredits', () => {
 		});
 	});
 
-	it('throws InsufficientCreditsError when balance is too low', async () => {
-		updateResults = [[]]; // UPDATE ... WHERE balance >= amount matched no rows
-		selectResults = [[{ free_hours: 1, equipment_credits: 0 }]]; // re-read for error detail
+	it('deducts the exact balance down to zero', async () => {
+		sqlite.exec(`update user set credit_free_hours = 2 where id = 'user-1'`);
+		expect(await deductCredits('user-1', 'free_hours', 2, 'checkout')).toBe(0);
+	});
+
+	it('throws InsufficientCreditsError when balance is too low, writing nothing', async () => {
+		sqlite.exec(`update user set credit_free_hours = 1 where id = 'user-1'`);
 
 		await expect(deductCredits('user-1', 'free_hours', 5, 'checkout')).rejects.toBeInstanceOf(
 			InsufficientCreditsError
 		);
-		// No ledger row when the deduction is rejected.
-		expect(insertedRows).toHaveLength(0);
+		expect(balances('user-1')).toEqual({ free: 1, equipment: 0 });
+		expect(ledger()).toHaveLength(0);
 	});
 
 	it('throws when amount is not positive', async () => {
@@ -270,18 +220,12 @@ describe('deductCredits', () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// setBalance
-// ---------------------------------------------------------------------------
-
 describe('setBalance', () => {
 	it('resets to exact value and records the delta', async () => {
-		selectResults = [[{ balance: 8 }]];
-		updateResults = [[{ balance: 5 }]];
+		sqlite.exec(`update user set credit_free_hours = 8 where id = 'user-1'`);
 
-		const result = await setBalance('user-1', 'free_hours', 5, 'monthly_allocation', 'sub-123');
-		expect(result).toBe(5);
-		expect(insertedRows[0]).toMatchObject({
+		expect(await setBalance('user-1', 'free_hours', 5, 'monthly_allocation', 'sub-123')).toBe(5);
+		expect(ledger()[0]).toMatchObject({
 			amount: -3,
 			balanceAfter: 5,
 			source: 'monthly_allocation',
@@ -289,24 +233,13 @@ describe('setBalance', () => {
 		});
 	});
 
-	it('sets balance from zero', async () => {
-		selectResults = [[{ balance: 0 }]];
-		updateResults = [[{ balance: 10 }]];
+	it('retries the CAS, computing the delta against the re-read balance', async () => {
+		sqlite.exec(`update user set credit_free_hours = 8 where id = 'user-1'`);
+		contend(1, -2);
 
-		const result = await setBalance('user-1', 'free_hours', 10, 'monthly_allocation');
-		expect(result).toBe(10);
-		expect(insertedRows[0]).toMatchObject({ amount: 10, balanceAfter: 10 });
-	});
-
-	it('retries the CAS when the balance changes concurrently', async () => {
-		selectResults = [[{ balance: 8 }], [{ balance: 6 }]];
-		updateResults = [[], [{ balance: 5 }]];
-
-		const result = await setBalance('user-1', 'free_hours', 5, 'monthly_allocation');
-		expect(result).toBe(5);
-		expect(insertedRows).toHaveLength(1);
-		// Delta is computed against the re-read balance (6), not the stale one.
-		expect(insertedRows[0]).toMatchObject({ amount: -1, balanceAfter: 5 });
+		expect(await setBalance('user-1', 'free_hours', 5, 'monthly_allocation')).toBe(5);
+		expect(ledger()).toHaveLength(1);
+		expect(ledger()[0]).toMatchObject({ amount: -1, balanceAfter: 5 });
 	});
 
 	it('throws for negative balance', async () => {
@@ -316,112 +249,95 @@ describe('setBalance', () => {
 	});
 
 	it('throws when user not found', async () => {
-		selectResults = [[]];
 		await expect(setBalance('missing', 'free_hours', 5, 'admin_adjustment')).rejects.toThrow(
 			'User missing not found'
 		);
 	});
 });
 
-// ---------------------------------------------------------------------------
-// hasTransaction
-// ---------------------------------------------------------------------------
-
 describe('hasTransaction', () => {
-	it('returns true when a matching transaction exists', async () => {
-		selectResults = [[{ id: 1 }]];
-		expect(await hasTransaction('monthly_allocation', 'inv_123')).toBe(true);
-	});
+	it('matches on source, source id, and credit type when given', async () => {
+		ledgerRow({ amount: 5, source: 'monthly_allocation', sourceId: 'inv_123', at: T0 });
 
-	it('returns false when no matching transaction exists', async () => {
-		selectResults = [[]];
+		expect(await hasTransaction('monthly_allocation', 'inv_123')).toBe(true);
 		expect(await hasTransaction('monthly_allocation', 'inv_999')).toBe(false);
+		expect(await hasTransaction('admin_adjustment', 'inv_123')).toBe(false);
+		expect(await hasTransaction('monthly_allocation', 'inv_123', 'equipment_credits')).toBe(false);
 	});
 });
 
-// ---------------------------------------------------------------------------
-// allocateMonthlyCredits / allocateEquipmentCredits
-// ---------------------------------------------------------------------------
-
 describe('allocateMonthlyCredits', () => {
-	it('sets free_hours balance via setBalance', async () => {
-		// Reads in order: hasTransaction (none), then setBalance's balance read.
-		selectResults = [[], [{ balance: 3 }]];
-		updateResults = [[{ balance: 5 }]];
+	it('sets the free_hours balance', async () => {
+		sqlite.exec(`update user set credit_free_hours = 3 where id = 'user-1'`);
 
-		const result = await allocateMonthlyCredits('user-1', 5, 'inv_abc');
-		expect(result).toBe(5);
-		expect(insertedRows[0]).toMatchObject({
+		expect(await allocateMonthlyCredits('user-1', 5, 'inv_abc')).toBe(5);
+		expect(ledger()[0]).toMatchObject({
 			creditType: 'free_hours',
 			source: 'monthly_allocation',
 			sourceId: 'inv_abc'
 		});
 	});
 
-	it('skips allocation when invoice was already processed', async () => {
-		// hasTransaction finds an existing row; getBalance then re-reads balances.
-		selectResults = [[{ id: 99 }], [{ free_hours: 5, equipment_credits: 0 }]];
+	it('skips allocation when the invoice was already processed', async () => {
+		await allocateMonthlyCredits('user-1', 5, 'inv_dup');
+		sqlite.exec(`update user set credit_free_hours = 2 where id = 'user-1'`);
 
-		const result = await allocateMonthlyCredits('user-1', 5, 'inv_dup');
-		expect(result).toBe(5);
-		expect(insertedRows).toHaveLength(0);
+		expect(await allocateMonthlyCredits('user-1', 5, 'inv_dup')).toBe(2);
+		expect(ledger()).toHaveLength(1);
 	});
 });
 
 describe('allocateEquipmentCredits', () => {
-	it('adds equipment credits via addCredits', async () => {
-		// hasTransaction (none), then addCredits' balance read.
-		selectResults = [[], [{ balance: 100 }]];
-		updateResults = [[{ balance: 150 }]];
+	it('adds equipment credits', async () => {
+		sqlite.exec(`update user set credit_equipment = 100 where id = 'user-1'`);
 
-		const result = await allocateEquipmentCredits('user-1', 50, 'sub-xyz');
-		expect(result).toBe(150);
-		expect(insertedRows[0]).toMatchObject({
+		expect(await allocateEquipmentCredits('user-1', 50, 'sub-xyz')).toBe(150);
+		expect(ledger()[0]).toMatchObject({
 			creditType: 'equipment_credits',
 			source: 'monthly_allocation',
 			sourceId: 'sub-xyz'
 		});
 	});
 
-	it('skips allocation when invoice was already processed', async () => {
-		// hasTransaction finds an existing equipment_credits row; getBalance re-reads.
-		selectResults = [[{ id: 99 }], [{ free_hours: 0, equipment_credits: 100 }]];
+	it('skips a redelivered invoice instead of double-granting', async () => {
+		await allocateEquipmentCredits('user-1', 50, 'inv_dup');
 
-		const result = await allocateEquipmentCredits('user-1', 50, 'inv_dup');
-		expect(result).toBe(100);
-		expect(insertedRows).toHaveLength(0);
+		expect(await allocateEquipmentCredits('user-1', 50, 'inv_dup')).toBe(50);
+		expect(ledger()).toHaveLength(1);
+	});
+
+	it('is not fooled by a free-hours row for the same invoice', async () => {
+		// The guard is per credit type: one invoice allocates both.
+		await allocateMonthlyCredits('user-1', 4, 'inv_both');
+
+		expect(await allocateEquipmentCredits('user-1', 50, 'inv_both')).toBe(50);
 	});
 });
 
 describe('getUsageSinceLastAllocation', () => {
-	beforeEach(() => {
-		selectResults = [];
-		updateResults = [];
-		insertedRows.length = 0;
-		setPayloads.length = 0;
-	});
-
 	it('returns null when the user has never had an allocation', async () => {
-		selectResults = [[]]; // no monthly_allocation row
-
-		const result = await getUsageSinceLastAllocation('user-1', 'free_hours');
-		expect(result).toBeNull();
+		ledgerRow({ amount: -2, source: 'checkout', at: T0 });
+		expect(await getUsageSinceLastAllocation('user-1', 'free_hours')).toBeNull();
 	});
 
-	it('sums net deductions after the latest allocation', async () => {
-		selectResults = [
-			[{ createdAt: new Date('2026-07-01T00:00:00Z') }], // latest allocation
-			[{ used: 4 }] // -sum(amount) after it
-		];
+	it('sums net deductions after the latest allocation only', async () => {
+		ledgerRow({ amount: 10, source: 'monthly_allocation', at: T0 });
+		ledgerRow({ amount: -7, source: 'checkout', at: T0 + 10 });
+		ledgerRow({ amount: 10, source: 'monthly_allocation', at: T0 + 100 });
+		ledgerRow({ amount: -3, source: 'checkout', at: T0 + 110 });
+		ledgerRow({ amount: -1, source: 'checkout', at: T0 + 120 });
+		// Neither another member's spend nor another credit type counts.
+		ledgerRow({ userId: 'user-2', amount: -5, source: 'checkout', at: T0 + 130 });
+		ledgerRow({ type: 'equipment_credits', amount: -5, source: 'checkout', at: T0 + 130 });
 
-		const result = await getUsageSinceLastAllocation('user-1', 'free_hours');
-		expect(result).toBe(4);
+		expect(await getUsageSinceLastAllocation('user-1', 'free_hours')).toBe(4);
 	});
 
 	it('clamps to zero when reversals outweigh deductions', async () => {
-		selectResults = [[{ createdAt: new Date('2026-07-01T00:00:00Z') }], [{ used: -2 }]];
+		ledgerRow({ amount: 10, source: 'monthly_allocation', at: T0 });
+		ledgerRow({ amount: -1, source: 'checkout', at: T0 + 10 });
+		ledgerRow({ amount: 3, source: 'admin_adjustment', at: T0 + 20 });
 
-		const result = await getUsageSinceLastAllocation('user-1', 'free_hours');
-		expect(result).toBe(0);
+		expect(await getUsageSinceLastAllocation('user-1', 'free_hours')).toBe(0);
 	});
 });

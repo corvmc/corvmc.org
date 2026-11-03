@@ -70,44 +70,30 @@ const mockCreditService = {
 vi.mock('./credit-service', () => mockCreditService);
 
 // ---------------------------------------------------------------------------
-// Mock DB
+// Real SQLite for the payment cache and the ledger reversal; credit-service is
+// mocked above because these tests are about what checkout asks it to do.
 // ---------------------------------------------------------------------------
-const mockDbInsert = vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) });
-const mockDbUpdate = vi.fn().mockReturnValue({
-	set: vi.fn().mockReturnValue({
-		where: vi.fn().mockResolvedValue(undefined)
-	})
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
 });
-// refund() reads paymentCache.status to stay idempotent. Default: no cached row.
-let paymentCacheRows: unknown[] = [];
-const mockDbSelect = vi.fn().mockImplementation(() => ({
-	from: () => ({ where: () => ({ limit: () => Promise.resolve(paymentCacheRows) }) })
-}));
+vi.mock('$lib/server/db', () => ({ db: testDb }));
 
-vi.mock('$lib/server/db', () => ({
-	db: {
-		insert: (...args: any[]) => mockDbInsert(...args),
-		update: (...args: any[]) => mockDbUpdate(...args),
-		select: (...args: any[]) => mockDbSelect(...args)
-	}
-}));
+const cacheRows = () =>
+	sqlite
+		.prepare('select id, user_id, amount_cents, payment_method, status from payment_cache')
+		.all();
+const seedCache = (id: string, status: string) =>
+	sqlite
+		.prepare(
+			`insert into payment_cache (id, user_id, amount_cents, payment_method, status, paid_at)
+			 values (?, 'user-1', 5000, 'Card', ?, 1750000000)`
+		)
+		.run(id, status);
 
-vi.mock('$lib/server/db/schema/finance', () => ({
-	paymentCache: { id: 'id' },
-	creditTypes: ['free_hours', 'equipment_credits'] as const
-}));
-
-// `refund()` reverses the sale's financial entries now, and that module reaches
-// for more of drizzle than this one does. These mocks are per-export, so a new
-// operator in a sibling breaks this spec rather than its own.
-vi.mock('drizzle-orm', () => ({
-	eq: vi.fn(),
-	and: vi.fn(),
-	gte: vi.fn(),
-	lte: vi.fn(),
-	sql: Object.assign(vi.fn(), { raw: vi.fn() }),
-	sum: vi.fn()
-}));
+beforeEach(() => {
+	sqlite.exec('delete from payment_cache');
+});
 
 // Import after mocking
 const { checkout, recordCashPayment, refund, cancel, CheckoutValidationError } =
@@ -707,7 +693,15 @@ describe('recordCashPayment', () => {
 				customer_details: { customer: 'cus_123' }
 			})
 		);
-		expect(mockDbInsert).toHaveBeenCalled();
+		expect(cacheRows()).toEqual([
+			{
+				id: 'pr_cash_1',
+				user_id: 'user-1',
+				amount_cents: 2500,
+				payment_method: 'Cash',
+				status: 'completed'
+			}
+		]);
 	});
 
 	/**
@@ -1039,11 +1033,10 @@ describe('cancel', () => {
 describe('refund idempotency', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		paymentCacheRows = [];
 	});
 
 	it('does nothing when the payment is already marked refunded', async () => {
-		paymentCacheRows = [{ status: 'refunded' }];
+		seedCache('pi_abc123', 'refunded');
 
 		await refund({ userId: 'user-1', stripePaymentRecordId: 'pi_abc123' });
 
@@ -1068,6 +1061,30 @@ describe('refund idempotency', () => {
 		await refund({ stripePaymentRecordId: 'pi_abc123' });
 
 		expect(mockStripe.refunds.create).not.toHaveBeenCalled();
+	});
+
+	it('marks the cached payment refunded, so a second call is a no-op', async () => {
+		seedCache('pi_abc123', 'completed');
+		seedCache('pi_other', 'completed');
+		mockStripe.paymentIntents.retrieve.mockResolvedValue({
+			id: 'pi_abc123',
+			amount: 5000,
+			status: 'succeeded',
+			metadata: {},
+			latest_charge: { amount_captured: 5000, amount_refunded: 0 }
+		});
+		mockStripe.refunds.create.mockResolvedValue({});
+
+		await refund({ stripePaymentRecordId: 'pi_abc123' });
+		await refund({ stripePaymentRecordId: 'pi_abc123' });
+
+		expect(mockStripe.refunds.create).toHaveBeenCalledTimes(1);
+		expect(
+			cacheRows().map((r) => [(r as { id: string }).id, (r as { status: string }).status])
+		).toEqual([
+			['pi_abc123', 'refunded'],
+			['pi_other', 'completed']
+		]);
 	});
 
 	it('still refunds when the charge has an outstanding amount', async () => {
