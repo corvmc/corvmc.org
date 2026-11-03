@@ -112,7 +112,8 @@
 			{timeRange(shift.startsAt, shift.endsAt)}
 		{:else if shift.dueAt}
 			<!-- A deadline is not a window: "done by Friday" is not "happens Friday 6-8". -->
-			due {formatDateShortYear(shift.dueAt)}
+			due
+			<time datetime={new Date(shift.dueAt).toISOString()}>{formatDateShortYear(shift.dueAt)}</time>
 		{:else}
 			a time to be arranged
 		{/if} ·

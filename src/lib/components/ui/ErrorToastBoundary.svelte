@@ -45,6 +45,12 @@
 		toast.error(errorMessage(err));
 	}
 
+	/** An HttpError's status, so a test can tell a real 404 from a crash without the copy. */
+	function errorStatus(err: unknown): number | undefined {
+		const status = (err as { status?: unknown } | null)?.status;
+		return typeof status === 'number' ? status : undefined;
+	}
+
 	setContext(ERROR_BOUNDARY_KEY, {
 		reportError: handleError
 	} satisfies ErrorBoundaryContext);
@@ -68,6 +74,8 @@
 	{@render children()}
 
 	{#snippet failed(error, reset)}
-		<Alert type="error" {reset}>Failed to load: {errorMessage(error)}</Alert>
+		<div class="contents" data-boundary-failed data-error-status={errorStatus(error)}>
+			<Alert type="error" {reset}>Failed to load: {errorMessage(error)}</Alert>
+		</div>
 	{/snippet}
 </svelte:boundary>

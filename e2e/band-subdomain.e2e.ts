@@ -106,7 +106,9 @@ test('an unknown subdomain redirects to a directory 404 rather than erroring', a
 	await page.goto(`${subdomain('no-such-band-xyz')}/`);
 
 	expect(page.url()).toContain('/directory/bands/no-such-band-xyz');
-	await expect(page.getByText(/not found/i).first()).toBeVisible({ timeout: 15000 });
+	await expect(page.locator('[data-error-status="404"] [role="alert"]')).toBeVisible({
+		timeout: 15000
+	});
 });
 
 test('the host-route lookup reports no band for an unrelated hostname', async ({ request }) => {

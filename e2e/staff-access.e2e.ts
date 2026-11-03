@@ -21,18 +21,19 @@ test.describe('staff access dashboard', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff/access');
 
-		await expect(page.getByRole('heading', { name: 'Access' })).toBeVisible();
-		await expect(page.getByText('Clearances lapsing in 30 days')).toBeVisible();
+		await expect(page).toHaveURL(/\/staff\/access$/);
+		// The four summary figures: admins, staff, positions held, lapsing clearances.
+		await expect(page.locator('main .stat')).toHaveCount(4);
 
-		await page.getByRole('tab', { name: 'By permission' }).click();
+		await page.locator('#tab-permission').click();
 		await expect(page.getByRole('table').getByText(SEED_STAFF_NAME)).toBeVisible();
 
-		await page.getByRole('tab', { name: 'By person' }).click();
+		await page.locator('#tab-person').click();
 		// `pressSequentially`: bits-ui's Combobox opens on real key events only.
 		const picker = page.locator('input[role="combobox"]');
 		await picker.click();
 		await picker.pressSequentially(SEED_TARGET_NAME);
 		await page.getByRole('option', { name: new RegExp(SEED_TARGET_NAME) }).click();
-		await expect(page.getByText('No position. They hold only what a member holds.')).toBeVisible();
+		await expect(page.getByTestId('no-positions')).toBeVisible();
 	});
 });

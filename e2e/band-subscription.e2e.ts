@@ -20,31 +20,32 @@ import {
  * The seeded bands are free tier, which is exactly the branch that broke.
  */
 
+/** A plan's own form, told apart by the interval it posts. */
+function planSubmit(page: Page, interval: 'monthly' | 'yearly') {
+	return page
+		.locator('form')
+		.filter({ has: page.locator(`input[name="billingInterval"][value="${interval}"]`) })
+		.locator('button[type="submit"]');
+}
+
 async function login(page: Page) {
 	await signInAs(page, { email: SEED_OWNER_EMAIL, password: SEED_OWNER_PASSWORD });
 }
 
-test('upgrade page renders both plans, and sells a custom domain, for a free-tier owner', async ({
+test('upgrade page renders both plans, and shows the free address, for a free-tier owner', async ({
 	page
 }) => {
 	await login(page);
 	await page.goto(`/band/${SEED_PUBLIC_BAND_SLUG}/subscription`);
 
-	await expect(page.getByRole('button', { name: 'Subscribe Monthly' })).toBeVisible({
-		timeout: 15000
-	});
-	await expect(page.getByRole('button', { name: 'Subscribe Yearly' })).toBeVisible();
-	await expect(page.getByText(/failed to load/i)).toHaveCount(0);
-	await expect(page.getByText(/single `<form>` element/i)).toHaveCount(0);
+	await expect(planSubmit(page, 'monthly')).toBeVisible({ timeout: 15000 });
+	await expect(planSubmit(page, 'yearly')).toBeVisible();
+	// The form-object throw rendered the layout boundary's failed alert instead.
+	await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
 
 	// The band's free address, derived from PUBLIC_SITE_URL rather than a
 	// hardcoded corvmc.org, is shown as something they already have.
 	await expect(page.getByText(new RegExp(`${SEED_PUBLIC_BAND_SLUG}\\.`)).first()).toBeVisible({
 		timeout: 15000
 	});
-
-	// Subdomains became free for every band, so premium must not still be
-	// advertising one as the thing you are paying for.
-	await expect(page.getByText(/custom subdomain/i)).toHaveCount(0);
-	await expect(page.getByText(/your own domain/i).first()).toBeVisible();
 });

@@ -124,6 +124,7 @@
 								modalTitle="Edit {r.title}"
 								submitLabel="Save"
 								successToast="Saved"
+								data-testid="edit-report"
 							>
 								{#snippet form()}
 									<input type="hidden" name="id" value={r.id} />

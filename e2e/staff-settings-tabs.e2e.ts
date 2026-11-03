@@ -17,15 +17,18 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
  * thin: the point is that each panel renders at all.
  */
 
-const tabPanels: [tab: string, marker: string | RegExp][] = [
-	['Pricing', /Configure the products and pricing used for checkout/],
-	['Reservations', /Configure operating hours, booking rules/],
-	['Organization', /Organization identity used in emails/],
-	['Integrations', /Manage credentials for third-party integrations/],
-	['Inbox Channels', /Enable or disable communication channels for the staff inbox/],
-	['Features', /Enable or disable feature modules/],
-	['Subscriptions', /Reconciles every member and band subscription status from Stripe/]
+const TABS = [
+	'pricing',
+	'reservations',
+	'organization',
+	'integrations',
+	'inbox',
+	'features',
+	'subscriptions'
 ];
+
+const panel = (page: Page, key: string) =>
+	page.locator(`[role="tabpanel"][aria-labelledby="tab-${key}"]`);
 
 async function loginAsStaff(page: Page) {
 	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
@@ -40,22 +43,22 @@ test.describe('staff settings tabs', () => {
 
 		// The boundary swallows the tab bar too, so this is also the check that the
 		// page rendered at all before the first click.
-		await expect(page.getByRole('tab', { name: 'Pricing' })).toBeVisible({ timeout: 15000 });
+		await expect(page.locator('#tab-pricing')).toBeVisible({ timeout: 15000 });
 
-		for (const [tab, marker] of tabPanels) {
-			await page.getByRole('tab', { name: tab }).click();
-			await expect(page.getByText(marker)).toBeVisible();
-			await expect(page.getByText(/Failed to load/)).toHaveCount(0);
+		for (const key of TABS) {
+			await page.locator(`#tab-${key}`).click();
+			await expect(panel(page, key).locator(':scope > *').first()).toBeVisible();
+			await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
 		}
 
 		// Inbox Channels lists the staff-administered channels and not member DMs.
-		await page.getByRole('tab', { name: 'Inbox Channels' }).click();
+		await page.locator('#tab-inbox').click();
 
-		for (const label of ['Email', 'SMS', 'Contact Form', 'Member Portal', 'Instagram', 'Messenger'])
-			await expect(page.getByRole('heading', { name: label, exact: true })).toBeVisible();
+		for (const channel of ['email', 'sms', 'web', 'portal', 'instagram', 'messenger'])
+			await expect(panel(page, 'inbox').locator(`[data-channel="${channel}"]`)).toBeVisible();
 
 		// `direct` is member↔member: staff never reply on it and there is nothing
 		// behind it to enable, so it is not one of this tab's rows.
-		await expect(page.getByRole('heading', { name: 'Direct Message' })).toHaveCount(0);
+		await expect(panel(page, 'inbox').locator('[data-channel="direct"]')).toHaveCount(0);
 	});
 });

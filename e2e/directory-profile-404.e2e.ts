@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 /**
  * Regression test for the public band-profile 404 message in PRODUCTION builds.
@@ -14,20 +14,26 @@ import { expect, test } from '@playwright/test';
  * were unaffected, which is why this must run against build + preview.
  */
 
-test('band profile 404 shows "Band not found", not a minified internals error', async ({
+/**
+ * The boundary's failed alert, tagged with the error's status. The internals
+ * TypeError carries none, so it can never satisfy a 404.
+ */
+function failedAs(page: Page, status: number) {
+	return page.locator(`[data-error-status="${status}"] [role="alert"]`);
+}
+
+test('band profile 404 reaches the boundary as a 404, not a minified internals error', async ({
 	page
 }) => {
 	await page.goto('/directory/bands/does-not-exist-xyz');
 
-	await expect(page.locator('body')).toContainText('Band not found');
-	await expect(page.locator('body')).not.toContainText('Cannot read properties');
+	await expect(failedAs(page, 404)).toBeVisible();
 });
 
-test('member profile 404 shows "Member not found", not a minified internals error', async ({
+test('member profile 404 reaches the boundary as a 404, not a minified internals error', async ({
 	page
 }) => {
 	await page.goto('/directory/members/does-not-exist-xyz');
 
-	await expect(page.locator('body')).toContainText('Member not found');
-	await expect(page.locator('body')).not.toContainText('Cannot read properties');
+	await expect(failedAs(page, 404)).toBeVisible();
 });

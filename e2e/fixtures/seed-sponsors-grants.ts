@@ -11,6 +11,7 @@ import { funder, grantApplication, grantReport } from '../../src/lib/server/db/s
 
 export const SEED_SPONSOR_ID = 'e2e-sponsor';
 export const SEED_SPONSOR_NAME = 'E2E Guitar Shop';
+export const SEED_LAPSED_SPONSORSHIP_TITLE = 'Season sponsor';
 
 export const SEED_FUNDER_ID = 'e2e-funder';
 export const SEED_FUNDER_NAME = 'E2E Arts Council';
@@ -37,7 +38,7 @@ export async function seedSponsorsAndGrants(): Promise<void> {
 		await db.insert(sponsor).values({ id: SEED_SPONSOR_ID, name: SEED_SPONSOR_NAME });
 		await db.insert(sponsorship).values({
 			sponsorId: SEED_SPONSOR_ID,
-			title: 'Season sponsor',
+			title: SEED_LAPSED_SPONSORSHIP_TITLE,
 			tier: 'Gold',
 			status: 'active',
 			startsOn: day(-100),

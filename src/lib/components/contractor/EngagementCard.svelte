@@ -67,6 +67,7 @@
 							size="sm"
 							modalTitle={job.status === 'booked' ? 'Reschedule' : 'Book'}
 							successToast="Booking saved"
+							data-testid="engagement-schedule"
 						>
 							{#snippet form()}
 								<input {...schedule.fields.id.as('hidden', job.id)} />
@@ -87,6 +88,7 @@
 							size="sm"
 							modalTitle="Complete"
 							successToast="Completed"
+							data-testid="engagement-complete"
 						>
 							{#snippet form()}
 								<input {...complete.fields.id.as('hidden', job.id)} />

@@ -53,8 +53,12 @@
 			<p class="mt-2 text-subtle">Only the band's owner can change this address.</p>
 		{:else}
 			<div class="mt-2 card-actions justify-end">
-				<Button variant="default" size="sm" outline onclick={() => (showChange = true)}
-					>Change address</Button
+				<Button
+					variant="default"
+					size="sm"
+					outline
+					data-testid="change-address"
+					onclick={() => (showChange = true)}>Change address</Button
 				>
 			</div>
 		{/if}

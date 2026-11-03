@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
@@ -41,19 +41,19 @@ test.describe('staff reservations payment column', () => {
 		const rows = page.getByRole('row').filter({ hasText: SEED_PAYMENTS_NAME });
 		await expect(rows).toHaveCount(PAYMENT_CASES.length);
 
-		for (const [i, c] of PAYMENT_CASES.entries()) {
-			await expect(rows.nth(i)).toContainText(c.expected);
-		}
-
-		// A booking with no credits shows no credit term...
-		await expect(rows.nth(0)).not.toContainText('cr');
-		// ...and one fully covered by credits shows no dollar figure. This is the
+		// The whole cell, not a substring: a cash-only booking carries no credit
+		// term, and one fully covered by credits no dollar figure. The latter is the
 		// regression that motivated the change: it used to read "$30.00".
-		await expect(rows.nth(3)).not.toContainText('$');
+		const payment = (row: Locator) => row.locator('td.cell-num');
+		for (const [i, c] of PAYMENT_CASES.entries()) {
+			await expect(payment(rows.nth(i))).toHaveText(c.expected);
+		}
 
 		// Comping waives the charge without hiding what the room time was worth.
 		const comped = rows.nth(COMPED_CASE_INDEX);
-		await expect(comped.locator('.line-through')).toHaveText('$30.00');
+		await expect(comped.locator('.line-through')).toHaveText(
+			PAYMENT_CASES[COMPED_CASE_INDEX].expected
+		);
 
 		// Every other row keeps its amount unstruck.
 		await expect(rows.nth(0).locator('.line-through')).toHaveCount(0);

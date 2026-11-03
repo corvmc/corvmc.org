@@ -48,7 +48,7 @@ test.describe('duty lists — the unscheduled half', () => {
 		// somebody pastes lands where it says it does.
 		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production?tab=advance`);
 
-		await expect(page.getByRole('heading', { name: 'Advance' })).toBeVisible();
+		await expect(page.locator('[role="tabpanel"][aria-labelledby="tab-advance"]')).toBeVisible();
 		await expect(
 			page.getByRole('link', { name: SEED_VOL_ADVANCE_ROLE_NAME }).first()
 		).toBeVisible();
@@ -64,7 +64,8 @@ test.describe('duty lists — the unscheduled half', () => {
 		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_ADVANCE_ID}`);
 
 		// A deadline is not a window, and the page must not print an empty range.
-		await expect(page.getByText('a time to be arranged')).toHaveCount(0);
+		// The deadline branch is the only one that renders a `<time>` there.
+		await expect(page.locator('main p.text-subtle time[datetime]')).toBeVisible();
 
 		// By its checkbox: the lazy History card also names the task (#2270).
 		await expect(page.getByLabel(SEED_VOL_ADVANCE_TASK_DONE, { exact: true })).toBeChecked();
