@@ -7,11 +7,11 @@ describe('EmptyState', () => {
 		const { container } = await render(EmptyState, {
 			title: 'No bands',
 			actionLabel: 'Create a band',
-			actionHref: '/member/bands/new'
+			actionHref: '/member/bands'
 		});
 		const links = container.querySelectorAll('a');
 		expect(links).toHaveLength(1);
-		expect(links[0].getAttribute('href')).toBe('/member/bands/new');
+		expect(links[0].getAttribute('href')).toBe('/member/bands');
 	});
 
 	it('renders no link without an action', async () => {
