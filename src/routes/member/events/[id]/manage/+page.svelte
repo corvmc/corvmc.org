@@ -45,7 +45,9 @@
 
 	// A button that silently does something other than what it says is worse
 	// than the delay itself.
-	const publishLabel = $derived(requiresReview ? 'Submit for review' : 'Publish');
+	const publishLabel = $derived(
+		requiresReview ? m.member_events_id_manage_submit_review() : m.member_publish()
+	);
 
 	let lineup = $state<LineupChip[]>([]);
 	let lineupLoaded = $state(false);

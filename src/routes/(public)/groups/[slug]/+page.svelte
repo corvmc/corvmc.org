@@ -26,7 +26,9 @@
 	const group = $derived(data.group);
 	const status = $derived(data.viewerStatus?.status ?? null);
 
-	const kindLabel = $derived(group.kind === 'committee' ? 'Committee' : 'Club');
+	const kindLabel = $derived(
+		group.kind === 'committee' ? m.public_groups_slug_committee() : m.public_groups_slug_club()
+	);
 	const joinable = $derived(group.joinPolicy === 'open' || group.joinPolicy === 'by_application');
 </script>
 
@@ -48,7 +50,7 @@
 		<p class="text-subtle">
 			<Badge variant="ghost">{kindLabel}</Badge>
 			{group.memberCount}
-			{group.memberCount === 1 ? 'member' : 'members'}
+			{group.memberCount === 1 ? m.public_member() : m.public_members_2()}
 		</p>
 
 		{#if group.joinInstructions}

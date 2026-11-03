@@ -116,7 +116,7 @@
 								size="sm"
 								outline
 								modalTitle={m.member_membership_payment_methods_card_modal_title()}
-								confirm="Remove this card from your account?"
+								confirm={m.member_membership_payment_methods_card_confirm()}
 								onsuccess={() =>
 									toast.success(m.member_membership_payment_methods_card_card_removed())}
 								onfailure={(err) => toast.error(failureMessage(err))}
@@ -129,7 +129,9 @@
 
 		<div class="mt-4">
 			<Button variant="default" size="sm" outline onclick={() => (addOpen = true)}>
-				{cards.length === 0 ? 'Add a card' : 'Add another card'}
+				{cards.length === 0
+					? m.member_membership_payment_methods_card_add_card()
+					: m.member_membership_payment_methods_card_add_another_card()}
 			</Button>
 		</div>
 	</CardBody>

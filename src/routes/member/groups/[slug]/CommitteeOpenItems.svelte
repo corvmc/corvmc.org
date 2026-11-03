@@ -113,7 +113,7 @@
 					<td>
 						{item.assignees.length > 0
 							? item.assignees.map((a) => a.name).join(', ')
-							: 'Nobody yet'}
+							: m.member_groups_slug_committee_open_items_nobody_yet()}
 					</td>
 					{#if data.canKeep}
 						<td class="w-px">

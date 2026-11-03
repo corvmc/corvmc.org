@@ -102,7 +102,9 @@
 						</td>
 						<td class="col-extra cell-num whitespace-nowrap">
 							{#if loan.estimatedCostCents != null}
-								{loan.estimatedCostCents === 0 ? 'Free' : formatCents(loan.estimatedCostCents)}
+								{loan.estimatedCostCents === 0
+									? m.member_free()
+									: formatCents(loan.estimatedCostCents)}
 							{:else if loan.dailyRateCents != null}
 								{m.member_equipment_loans_day({ formatCents: formatCents(loan.dailyRateCents) })}
 							{:else}
@@ -115,7 +117,7 @@
 									<CancelLoanAction
 										loanId={loan.id}
 										label={m.member_cancel()}
-										confirm="Cancel this loan request?"
+										confirm={m.member_equipment_loans_confirm()}
 									/>
 								</div>
 							{/if}

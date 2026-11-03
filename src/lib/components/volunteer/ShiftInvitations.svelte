@@ -54,7 +54,9 @@
 				<li class="rounded-lg border border-base-300 p-3">
 					<div class="font-medium">{invitation.eventTitle ?? invitation.roleName}</div>
 					<div class="text-subtle text-sm">
-						{invitation.startsAt ? formatDateShort(invitation.startsAt) : 'date to be set'} ·
+						{invitation.startsAt
+							? formatDateShort(invitation.startsAt)
+							: m.volunteer_shift_invitations_date_set()} ·
 						{timeRange(invitation.startsAt, invitation.endsAt)}
 						{#if invitation.eventTitle}
 							· {invitation.roleName}

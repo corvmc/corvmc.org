@@ -73,7 +73,11 @@
 	);
 
 	const title = $derived(
-		mode === 'fix' ? 'Fix these hours' : mode === 'shift' ? 'Log these hours' : 'Log Hours'
+		mode === 'fix'
+			? m.volunteer_log_hours_fix_these_hours()
+			: mode === 'shift'
+				? m.volunteer_log_hours_log_these_hours()
+				: m.volunteer_log_hours_log_hours()
 	);
 </script>
 

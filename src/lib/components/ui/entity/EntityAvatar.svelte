@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { hashPattern } from '$lib/utils/patterns';
 	import { imageSrc, type ImagePreset } from '$lib/utils/images';
 	import { imageStatus, type ImageStatus } from '../image-status';
@@ -49,7 +50,7 @@
 				srcset={img.srcset}
 				alt={name}
 				class="absolute inset-0 size-full object-cover"
-				style:display={status === 'loaded' ? undefined : 'none'}
+				style:display={status === 'loaded' ? undefined : m.ui_none_2()}
 				{@attach imageStatus((s) => (status = s))}
 			/>
 		{/key}

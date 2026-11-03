@@ -104,8 +104,7 @@
 						size="xs"
 						modalTitle={m.groups_applications_card_accept({ title: application.applicant.title })}
 						submitLabel={m.groups_applications_card_accept_invite()}
-						confirm="Accepting invites {application.applicant
-							.title} to join. They still have to accept the invitation."
+						confirm={m.groups_applications_card_confirm({ title: application.applicant.title })}
 						successToast={m.groups_applications_card_accepted_invitation_sent()}
 					>
 						{#snippet form()}

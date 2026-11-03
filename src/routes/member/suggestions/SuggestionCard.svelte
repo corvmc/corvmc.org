@@ -94,7 +94,9 @@
 			{/if}
 
 			<p class="text-muted">
-				{suggestion.authorName ?? 'A former member'} · {relativeDay(suggestion.createdAt)}
+				{suggestion.authorName ?? m.member_suggestions_suggestion_card_former_member()} · {relativeDay(
+					suggestion.createdAt
+				)}
 			</p>
 		</div>
 

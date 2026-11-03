@@ -47,7 +47,7 @@
 		const res = await fetch(`/api/bands/${bandId}/media`, { method: 'POST', body });
 		if (!res.ok) {
 			const err = (await res.json().catch(() => ({}))) as { message?: string };
-			const message = err.message || 'Upload failed';
+			const message = err.message || m.band_slug_page_editor_block_media_field_message();
 			toast.error(message);
 			// Thrown as well as toasted: `FileUpload` shows the failure on the field
 			// itself, and a toast alone leaves the picker looking like it worked.

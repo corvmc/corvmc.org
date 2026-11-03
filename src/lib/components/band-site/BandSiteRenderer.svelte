@@ -202,7 +202,11 @@
 							{#if platform}
 								<span class="opacity-70">{platform.name}</span>
 							{/if}
-							<span>{link.label || platform?.name || 'Link'}</span>
+							<span
+								>{link.label ||
+									platform?.name ||
+									msg.band_site_band_site_band_site_renderer_link()}</span
+							>
 						</Button>
 					{/each}
 				</div>
@@ -619,7 +623,7 @@
 							outline
 							class="w-full"
 						>
-							{link.label || platform?.name || 'Link'}
+							{link.label || platform?.name || msg.band_site_band_site_band_site_renderer_link()}
 						</Button>
 					{/if}
 				{/each}

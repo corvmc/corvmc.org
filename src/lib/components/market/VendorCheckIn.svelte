@@ -76,13 +76,17 @@
 						</p>
 						<p class="text-muted text-sm">
 							{vendor.tablesRequested}
-							{vendor.tablesRequested === 1 ? 'table' : 'tables'}{vendor.needsPower
-								? ', needs power'
+							{vendor.tablesRequested === 1
+								? m.market_vendor_check_in_table_2()
+								: m.market_vendor_check_in_tables()}{vendor.needsPower
+								? m.market_vendor_check_in_needs_power()
 								: ''}
 						</p>
 						{#if vendor.inviteBack !== null}
 							<p class="text-sm">
-								{vendor.inviteBack ? 'Invite back' : 'Do not invite back'}{vendor.inviteBackNote
+								{vendor.inviteBack
+									? m.market_invite_back()
+									: m.market_do_not_invite_back()}{vendor.inviteBackNote
 									? `: “${vendor.inviteBackNote}”`
 									: ''}
 							</p>

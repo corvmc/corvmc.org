@@ -35,7 +35,9 @@
 		createBallot.for(decides ? `${kind}-${decides.suggestionId ?? decides.projectId}` : kind)
 	);
 	const noun = $derived(kind === 'member' ? 'member-wide ballot' : 'committee ballot');
-	const label = $derived(decides ? `Put to a ${noun}` : `New ${noun}`);
+	const label = $derived(
+		decides ? msg.ballot_create_ballot_put({ noun }) : msg.ballot_create_ballot_new({ noun })
+	);
 
 	let certifierId = $state('');
 	let certifierName = $state('');

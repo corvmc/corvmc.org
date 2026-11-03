@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { getVolunteerRoles } from '$lib/remote/volunteer.remote';
 
 	/**
@@ -18,5 +19,7 @@
 {#each roles as r (r.id)}
 	<!-- Archived roles stay listed when the whole set is shown: their logs are still in the
 	     table they filter. The suffix is what tells them apart. -->
-	<option value={r.id}>{r.name}{activeOnly || r.isActive ? '' : ' (archived)'}</option>
+	<option value={r.id}
+		>{r.name}{activeOnly || r.isActive ? '' : m.volunteer_role_options_archived()}</option
+	>
 {/each}

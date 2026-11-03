@@ -222,7 +222,7 @@
 			{#if hasMore}
 				<div class="mt-8 text-center">
 					<Button type="button" variant="ghost" disabled={loadingMore} onclick={showMore}>
-						{loadingMore ? 'Loading…' : `Show more (${remaining} left)`}
+						{loadingMore ? m.member_events_loading() : m.member_show_more_left({ remaining })}
 					</Button>
 				</div>
 			{/if}

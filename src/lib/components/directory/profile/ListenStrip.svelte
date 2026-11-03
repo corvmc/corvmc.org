@@ -13,7 +13,10 @@
 </script>
 
 {#if services.length > 0 && active}
-	<ProfileSection title={m.directory_profile_listen_strip_title()} note="one featured at a time">
+	<ProfileSection
+		title={m.directory_profile_listen_strip_title()}
+		note={m.directory_profile_listen_strip_note()}
+	>
 		<div class="listen__tabs">
 			{#each services as service, i (service.link.url)}
 				<button

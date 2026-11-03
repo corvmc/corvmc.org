@@ -52,7 +52,9 @@
 						<tr>
 							<td>
 								<Badge variant={purchase.kind === 'music' ? 'secondary' : 'primary'}>
-									{purchase.kind === 'music' ? 'Music' : 'Ticket'}
+									{purchase.kind === 'music'
+										? m.member_purchases_music()
+										: m.member_purchases_ticket()}
 								</Badge>
 							</td>
 							<td>
@@ -78,7 +80,11 @@
 							</td>
 							<!-- Free is a real outcome here, not a missing number: a band can
 							     price a record at nothing and still want the sale recorded. -->
-							<td>{purchase.amountCents === 0 ? 'Free' : formatCents(purchase.amountCents)}</td>
+							<td
+								>{purchase.amountCents === 0
+									? m.member_free()
+									: formatCents(purchase.amountCents)}</td
+							>
 							<td class="text-right">
 								{#if purchase.kind === 'music'}
 									<Button size="sm" href={resolve(`/music/download/${purchase.downloadToken}`)}>

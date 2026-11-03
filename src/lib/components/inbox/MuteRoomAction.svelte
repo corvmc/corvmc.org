@@ -44,8 +44,8 @@
 		<input {...fields.intent.as('hidden', muted ? 'unmute' : 'mute')} />
 		<p class="py-2 text-sm">
 			{muted
-				? `Start hearing about ${roomName} again?`
-				: `Stop being notified about ${roomName}? Posts still appear here, and the room stops counting as unread.`}
+				? m.inbox_mute_room_start_hearing_about_again({ roomName })
+				: m.inbox_mute_room_stop_being_notified_about_posts({ roomName })}
 		</p>
 	{/snippet}
 </Action>

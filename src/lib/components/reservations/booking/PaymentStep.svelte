@@ -85,9 +85,9 @@
 	let payLabel = $derived(
 		pricing
 			? pricing.remainingCents <= 0
-				? 'Pay with free hours'
-				: `Pay $${formatDollars(chargeTotal)}`
-			: 'Loading...'
+				? m.reservations_booking_payment_step_pay_with_free_hours()
+				: m.reservations_booking_payment_step_pay({ formatDollars: formatDollars(chargeTotal) })
+			: m.reservations_booking_payment_step_loading()
 	);
 </script>
 

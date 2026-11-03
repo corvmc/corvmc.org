@@ -77,7 +77,7 @@
 						{/if}
 						<p class="text-subtle">
 							{g.memberCount}
-							{g.memberCount === 1 ? 'member' : 'members'}
+							{g.memberCount === 1 ? m.public_member() : m.public_members_2()}
 							{#if g.joinPolicy === 'open'}
 								{m.public_groups_open_join()}
 							{:else if g.joinPolicy === 'by_application'}

@@ -79,13 +79,19 @@
 			<div>
 				<p class="text-muted">{m.events_listing_ticketing_sold_by()}</p>
 				<p class="text-lg font-medium">
-					{event.ticketingEnabled ? 'Us' : event.externalTicketUrl ? 'Off-site' : 'At the door'}
+					{event.ticketingEnabled
+						? m.events_listing_ticketing_us()
+						: event.externalTicketUrl
+							? m.events_listing_ticketing_off_site()
+							: m.events_listing_ticketing_at_door()}
 				</p>
 			</div>
 			{#if event.ticketingEnabled}
 				<div>
 					<p class="text-muted">{m.events_capacity()}</p>
-					<p class="text-lg font-medium">{event.ticketQuantity ?? 'Unlimited'}</p>
+					<p class="text-lg font-medium">
+						{event.ticketQuantity ?? m.events_listing_ticketing_unlimited()}
+					</p>
 				</div>
 			{/if}
 			{#if ticketStats}

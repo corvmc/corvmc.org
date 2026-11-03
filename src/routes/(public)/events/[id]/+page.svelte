@@ -345,7 +345,11 @@
 								})}</span
 							>
 							{#if lowAvailability}
-								<Badge variant="warning">{isFreeEvent ? 'Almost full' : 'Selling fast'}</Badge>
+								<Badge variant="warning"
+									>{isFreeEvent
+										? m.public_events_id_almost_full()
+										: m.public_events_id_selling_fast()}</Badge
+								>
 							{/if}
 						</div>
 						<progress
@@ -368,11 +372,13 @@
 					{:else if mode === 'platform'}
 						{#if soldOut}
 							<Button variant="default" size="lg" disabled
-								>{isFreeEvent ? 'Full' : 'Sold Out'}</Button
+								>{isFreeEvent ? m.public_full() : m.public_events_id_sold_out()}</Button
 							>
 						{:else}
 							<Button href={ticketsHref} variant="primary" size="lg">
-								{isFreeEvent ? 'Get free ticket' : 'Get Tickets'}
+								{isFreeEvent
+									? m.public_events_id_get_free_ticket()
+									: m.public_events_id_get_tickets_2()}
 							</Button>
 							{#if data.remaining !== null}
 								<span class="text-muted"

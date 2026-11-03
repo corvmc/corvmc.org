@@ -168,8 +168,8 @@
 		<div class="mb-4">
 			<Alert type="info">
 				{paidAttempts >= PAID_RETRY_LIMIT
-					? "We haven't had confirmation from our payment processor yet. Your booking is below and the time is held — if it still reads unpaid in a few minutes, get in touch."
-					: 'Confirming your payment…'}
+					? m.member_reservations_we_haven_t_had_confirmation()
+					: m.member_confirming_payment()}
 			</Alert>
 		</div>
 	{/if}

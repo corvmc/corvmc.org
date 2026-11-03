@@ -139,7 +139,7 @@
 				{/if}
 				<DefinitionList class="grow">
 					<Fact label={m.band_slug_music_release_id_price()}>
-						{release.priceMinCents > 0 ? formatCents(release.priceMinCents) : 'Free'}
+						{release.priceMinCents > 0 ? formatCents(release.priceMinCents) : m.band_free()}
 					</Fact>
 					{#if release.releasedAt}
 						<Fact label={m.band_slug_music_release_id_released()}
@@ -153,9 +153,9 @@
 						{:else}
 							{release.radioOptIn
 								? release.radioAttested
-									? 'In the rotation'
-									: 'Waiting on the attestation'
-								: 'Not in the rotation'}
+									? m.band_slug_music_release_id_rotation()
+									: m.band_slug_music_release_id_waiting_attestation()
+								: m.band_slug_music_release_id_not_rotation()}
 						{/if}
 					</Fact>
 				</DefinitionList>
@@ -344,8 +344,8 @@
 					{:else if release.radioOptIn}
 						<Alert type="warning">
 							{release.radioAttestedAt
-								? 'The attestation for this release has run out or its wording has changed, so it is off the air until someone confirms the statement below.'
-								: 'This release is off the air until someone confirms the statement below.'}
+								? m.band_slug_music_release_id_attestation_release_has_run_out()
+								: m.band_slug_music_release_id_release_off_air_until_someone()}
 						</Alert>
 					{/if}
 					{#if !release.radioAttested || release.radioAttestationRenewable}

@@ -51,7 +51,7 @@
 		aria-label={m.groups_answer_group_invite_decline_invitation({ groupName })}
 		modalTitle={m.groups_answer_group_invite_decline_invitation_2()}
 		submitLabel={m.groups_decline()}
-		confirm={`Decline the invitation to ${groupName}? They would have to invite you again.`}
+		confirm={m.groups_answer_group_invite_confirm({ groupName })}
 		variant="ghost"
 		size="sm"
 		onsuccess={(result) => onAnswered(result as { success: boolean }, 'Invitation declined')}

@@ -112,7 +112,9 @@
 		<div class="flex min-h-0 flex-1 flex-col">
 			<div class="flex flex-wrap items-center justify-between gap-2 pb-1">
 				<span class="fieldset-legend text-xs font-medium">
-					{forked ? 'Your CSS' : 'What this theme does'}
+					{forked
+						? m.band_slug_page_editor_style_panel_css()
+						: m.band_slug_page_editor_style_panel_what_theme_does()}
 				</span>
 				{#if !forked}
 					<Button

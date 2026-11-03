@@ -108,7 +108,9 @@
 	const tabHref = (t: Tab) =>
 		resolve(`/member/groups/${slug}${t === defaultTab ? '' : `?tab=${t}`}`);
 
-	const kindLabel = $derived(group.kind === 'committee' ? 'Committee' : 'Club');
+	const kindLabel = $derived(
+		group.kind === 'committee' ? msg.member_groups_slug_committee() : msg.member_groups_slug_club()
+	);
 	// Staff read this page without being on the roster, so there is nothing for
 	// them to leave.
 	const isMember = $derived(data.role !== 'staff');
@@ -161,8 +163,8 @@
 			modalTitle={msg.member_groups_slug_leave_group()}
 			submitLabel={msg.member_groups_slug_leave()}
 			confirm={group.joinPolicy === 'open'
-				? `Leave ${group.name}? You can rejoin whenever you like.`
-				: `Leave ${group.name}? You'll need to be invited back.`}
+				? msg.member_groups_slug_leave_can_rejoin_whenever_like({ name: group.name })
+				: msg.member_groups_slug_leave_ll_need_invited_back({ name: group.name })}
 			successToast={msg.member_groups_slug_have_left()}
 			variant="ghost"
 			size="sm"
@@ -258,7 +260,9 @@
 								     of 6:55 PM is noise pretending to be precision. -->
 								{#if project.startsAt}
 									{formatDateShort(project.startsAt)}
-									{project.endsAt ? ` – ${formatDateShort(project.endsAt)}` : ' onward'}
+									{project.endsAt
+										? ` – ${formatDateShort(project.endsAt)}`
+										: msg.member_groups_slug_onward()}
 								{:else}
 									—
 								{/if}
@@ -397,7 +401,9 @@
 													aria-label={msg.member_groups_slug_take_off_gig_guide({ title: s.title })}
 													modalTitle={msg.member_groups_slug_take_off_guide()}
 													submitLabel={msg.member_groups_slug_unlist()}
-													confirm="Take {s.title} off the public gig guide? The room stays held and the roster still sees it."
+													confirm={msg.member_groups_slug_take_off_public_gig_guide({
+														title: s.title
+													})}
 													variant="ghost"
 													size="xs"
 													successToast={msg.member_groups_slug_taken_off_guide()}
@@ -415,7 +421,7 @@
 													aria-label={msg.member_publish_2({ title: s.title })}
 													modalTitle={msg.member_groups_slug_publish_session()}
 													submitLabel={msg.member_publish()}
-													confirm="Put {s.title} on the public gig guide?"
+													confirm={msg.member_groups_slug_put_public_gig_guide({ title: s.title })}
 													variant="ghost"
 													size="xs"
 													successToast={msg.member_published()}
@@ -434,8 +440,8 @@
 												modalTitle={msg.member_groups_slug_call_off()}
 												submitLabel={msg.member_groups_slug_cancel_session()}
 												confirm={s.reservesRoom
-													? `Cancel ${s.title}? The room it holds goes back.`
-													: `Cancel ${s.title}?`}
+													? msg.member_groups_slug_cancel_room_holds_goes_back({ title: s.title })
+													: msg.member_groups_slug_cancel_2({ title: s.title })}
 												variant="ghost"
 												size="xs"
 												successToast={msg.member_groups_slug_session_cancelled()}
@@ -534,7 +540,9 @@
 												})}
 												variant="ghost"
 												size="xs"
-												confirm="Revoke the invitation for {m.member.title}?"
+												confirm={msg.member_groups_slug_revoke_invitation_3({
+													title: m.member.title
+												})}
 												successToast={msg.member_groups_slug_invitation_revoked()}
 												onsuccess={refreshRoster}
 											>
@@ -559,7 +567,10 @@
 												aria-label={msg.member_groups_slug_remove_2({ title: m.member.title })}
 												variant="ghost"
 												size="xs"
-												confirm="Remove {m.member.title} from {group.name}?"
+												confirm={msg.member_groups_slug_remove_from({
+													title: m.member.title,
+													name: group.name
+												})}
 												successToast={msg.member_groups_slug_member_removed()}
 												onsuccess={refreshRoster}
 											>
@@ -599,7 +610,7 @@
 									aria-label={msg.member_groups_slug_revoke_invitation_2({ email: inv.email })}
 									variant="ghost"
 									size="xs"
-									confirm="Revoke the invitation to {inv.email}?"
+									confirm={msg.member_groups_slug_revoke_invitation_4({ email: inv.email })}
 									successToast={msg.member_groups_slug_invitation_revoked()}
 									onsuccess={refreshRoster}
 								>

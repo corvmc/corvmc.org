@@ -59,7 +59,9 @@
 
 						<div class="flex items-center justify-between gap-3">
 							<Button href={resolve('/member/volunteer')} variant="ghost" size="sm">
-								{onboarding ? 'Skip' : 'Back'}
+								{onboarding
+									? m.member_volunteer_interests_skip()
+									: m.member_volunteer_interests_back()}
 							</Button>
 							<!-- Disabled until something changes, and it says "Saved" after —
 						     which is what makes a page you can leave open feel settled. -->

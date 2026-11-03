@@ -49,7 +49,11 @@
 	<Card>
 		<CardBody>
 			<div class="flex items-baseline justify-between">
-				<span class="text-muted">{session.mode === 'subscription' ? 'Due today' : 'Total'}</span>
+				<span class="text-muted"
+					>{session.mode === 'subscription'
+						? m.public_checkout_id_due_today()
+						: m.public_checkout_id_total()}</span
+				>
 				<span class="text-3xl font-bold">{total}</span>
 			</div>
 			{#if session.amountSubtotal !== session.amountTotal}

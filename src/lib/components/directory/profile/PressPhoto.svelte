@@ -20,7 +20,9 @@
 {#if shown.length > 0}
 	<ProfileSection
 		title={m.directory_profile_press_photo_title()}
-		note={shown.length > 1 ? `${shown.length} available` : undefined}
+		note={shown.length > 1
+			? m.directory_profile_press_photo_note({ length: shown.length })
+			: undefined}
 	>
 		<div class="photos" class:photos--single={shown.length === 1}>
 			{#each shown as photo (photo.id)}

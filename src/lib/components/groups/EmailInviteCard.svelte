@@ -49,7 +49,7 @@
 			</p>
 		</div>
 		<Badge variant={invite.expired ? 'ghost' : 'warning'}>
-			{invite.expired ? 'Expired' : 'Invited'}
+			{invite.expired ? m.groups_email_invite_card_expired() : m.groups_email_invite_card_invited()}
 		</Badge>
 	</CardBody>
 </Card>

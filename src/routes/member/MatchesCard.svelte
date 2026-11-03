@@ -20,7 +20,9 @@
 		$props();
 
 	const title = $derived(
-		matches.direction === 'members' ? 'Members looking for a band' : 'Bands looking for members'
+		matches.direction === 'members'
+			? m.member_matches_card_members_looking_band()
+			: m.member_matches_card_bands_looking_members()
 	);
 
 	/**

@@ -60,7 +60,8 @@
 										<p class="line-clamp-1 text-sm font-medium">
 											{formatDate(res.startsAt)}
 											<span class="opacity-60"
-												>· {res.bandName ?? (res.notes?.trim() || 'Practice reservation')}</span
+												>· {res.bandName ??
+													(res.notes?.trim() || m.member_practice_reservation())}</span
 											>
 										</p>
 										<p class="text-subtle">

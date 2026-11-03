@@ -503,7 +503,11 @@
 					{#each data.overrides as o (o.userId)}
 						<tr>
 							<td class="cell-primary">{o.name}</td>
-							<td class="whitespace-nowrap">{o.include ? 'Added' : 'Removed'}</td>
+							<td class="whitespace-nowrap"
+								>{o.include
+									? msg.ballot_ballot_detail_added()
+									: msg.ballot_ballot_detail_removed()}</td
+							>
 							<td>{o.reason}</td>
 						</tr>
 					{/each}

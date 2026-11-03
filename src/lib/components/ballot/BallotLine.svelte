@@ -31,7 +31,11 @@
 {#if ballot.result}
 	<span class="block text-muted">
 		{ballot.result.options.map((o) => `${o.label} ${o.votes}`).join(' · ')}
-		— {ballot.passed === null ? 'outcome not recorded' : ballot.passed ? 'passed' : 'did not pass'}
+		— {ballot.passed === null
+			? m.ballot_ballot_line_outcome_not_recorded()
+			: ballot.passed
+				? m.ballot_ballot_line_passed()
+				: m.ballot_ballot_line_did_not_pass()}
 	</span>
 {:else if ballot.status === 'open'}
 	<span class="block text-muted"

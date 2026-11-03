@@ -119,8 +119,8 @@
 	{#if awaitingSubscription}
 		<Alert type="info">
 			{subscribeAttempts >= SUBSCRIBE_RETRY_LIMIT
-				? "We haven't had confirmation from our payment processor yet. Your card has been charged and your membership starts as soon as it lands — if this page still says otherwise in a few minutes, get in touch."
-				: 'Confirming your payment…'}
+				? m.member_membership_we_haven_t_had_confirmation()
+				: m.member_confirming_payment()}
 		</Alert>
 	{/if}
 	<!-- Active sustaining member view -->

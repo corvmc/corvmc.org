@@ -244,8 +244,17 @@
 						<!-- Free hours are spent at confirmation, so before the window opens
 						     they are a promise rather than a discount. Saying "applied" there
 						     was a number the booking would not get. -->
-						<dt>{creditsCommitNow ? 'Free hours applied' : 'Free hours will apply'}</dt>
-						<dd>−{freeHours} {freeHours === 1 ? 'hr' : 'hrs'}</dd>
+						<dt>
+							{creditsCommitNow
+								? m.reservations_booking_confirm_step_free_hours_applied()
+								: m.reservations_booking_confirm_step_free_hours_will_apply()}
+						</dt>
+						<dd>
+							−{freeHours}
+							{freeHours === 1
+								? m.reservations_booking_confirm_step_hr()
+								: m.reservations_booking_confirm_step_hrs()}
+						</dd>
 					</div>
 				{/if}
 			</dl>
@@ -342,7 +351,9 @@
 					>{m.reservations_booking_confirm_step_comp()}</Button
 				>
 				<Button type="submit" variant="primary">
-					{pricing && pricing.creditsApplicable > 0 ? 'Apply Credits' : 'Confirm'}
+					{pricing && pricing.creditsApplicable > 0
+						? m.reservations_booking_confirm_step_apply_credits()
+						: m.reservations_booking_confirm_step_confirm()}
 				</Button>
 			{:else}
 				<!-- Native submit: the button's name/value sets skipPayment only when
@@ -352,7 +363,9 @@
 				     confirmation window that is the outcome, and calling it booking
 				     would promise free hours the booking cannot spend yet. -->
 				<Button type="submit" name="skipPayment" value="on" variant="primary"
-					>{beforeConfirmWindow ? 'Hold this slot' : submitLabel}</Button
+					>{beforeConfirmWindow
+						? m.reservations_booking_confirm_step_hold_slot()
+						: submitLabel}</Button
 				>
 				{#if showPayAhead}
 					<Button type="button" variant="ghost" onclick={() => formCtx.next()}

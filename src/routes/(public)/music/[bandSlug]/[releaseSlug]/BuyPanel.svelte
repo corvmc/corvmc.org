@@ -83,7 +83,11 @@
 
 <Card>
 	<CardBody>
-		<CardTitle>{free ? 'Get it' : 'Buy it'}</CardTitle>
+		<CardTitle
+			>{free
+				? m.public_music_band_slug_release_slug_buy_panel_get()
+				: m.public_music_band_slug_release_slug_buy_panel_buy()}</CardTitle
+		>
 
 		<Form remote={buyReleaseForm} onsuccess={afterBuy}>
 			<input {...fields.bandSlug.as('hidden', bandSlug)} />
@@ -92,10 +96,16 @@
 			{#if priceMinCents > 0 || allowPayMore}
 				<label class="flex flex-col gap-1">
 					<span class="font-medium">
-						{allowPayMore ? 'Name your price' : 'Price'}
+						{allowPayMore
+							? m.public_music_band_slug_release_slug_buy_panel_name_price()
+							: m.public_music_band_slug_release_slug_buy_panel_price()}
 						{#if priceMinCents > 0}
 							<span class="text-muted">
-								— {allowPayMore ? `${dollars(priceMinCents)} or more` : dollars(priceMinCents)}
+								— {allowPayMore
+									? m.public_music_band_slug_release_slug_buy_panel_more({
+											dollars: dollars(priceMinCents)
+										})
+									: dollars(priceMinCents)}
 							</span>
 						{/if}
 					</span>

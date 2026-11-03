@@ -165,7 +165,7 @@
 								<p class="font-medium">{b.name}</p>
 								<p class="text-muted">
 									{b.memberCount}
-									{b.memberCount === 1 ? 'member' : 'members'}
+									{b.memberCount === 1 ? m.member_bands_member() : m.member_bands_members()}
 								</p>
 							</div>
 							<StatusBadge status={b.role} />

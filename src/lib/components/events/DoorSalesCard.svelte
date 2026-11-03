@@ -38,7 +38,9 @@
 				<p class="text-lg font-medium">{formatCents(takings.card.grossCents)}</p>
 				<p class="text-muted text-sm">
 					{takings.card.tickets}
-					{takings.card.tickets === 1 ? 'ticket' : 'tickets'}
+					{takings.card.tickets === 1
+						? m.events_door_sales_card_ticket()
+						: m.events_door_sales_card_tickets()}
 				</p>
 			</div>
 			<div>

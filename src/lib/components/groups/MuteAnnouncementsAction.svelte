@@ -48,8 +48,8 @@
 		<input {...fields.intent.as('hidden', muted ? 'unmute' : 'mute')} />
 		<p class="py-2 text-sm">
 			{muted
-				? `Start getting announcements from ${groupName} again?`
-				: `Stop getting emails and notifications from ${groupName}? Posts still appear on its page.`}
+				? m.groups_mute_announcements_start_getting_announcements_from_a({ groupName })
+				: m.groups_mute_announcements_stop_getting_emails_notifications({ groupName })}
 		</p>
 	{/snippet}
 </Action>

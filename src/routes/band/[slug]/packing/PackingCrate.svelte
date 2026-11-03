@@ -63,7 +63,12 @@
 		<div class="mb-3 flex flex-wrap items-center gap-2">
 			<h2 class="text-base font-semibold">{title}</h2>
 			{#if mine}<Badge variant="primary">{m.band_slug_packing_packing_crate_text()}</Badge>{/if}
-			<Badge class="ml-auto">{count} {count === 1 ? 'thing' : 'things'}</Badge>
+			<Badge class="ml-auto"
+				>{count}
+				{count === 1
+					? m.band_slug_packing_packing_crate_thing()
+					: m.band_slug_packing_packing_crate_things()}</Badge
+			>
 		</div>
 		{#if subtitle}
 			<p class="mb-3 text-xs text-base-content/60">{subtitle}</p>

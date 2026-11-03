@@ -21,7 +21,7 @@
 
 	// Built by hand rather than with `resolve()`: the code must hold an absolute
 	// URL, and a printed poster outlives any base path the app might gain.
-	const href = $derived(`${origin}/events/${eventId}`);
+	const href = $derived(m.events_listing_qr_card_href({ origin, eventId }));
 	const slug = $derived(
 		title
 			.toLowerCase()
@@ -81,7 +81,11 @@
 		<div class="min-w-0 space-y-2">
 			<p class="text-sm break-all">{href}</p>
 			<div class="flex flex-wrap gap-2">
-				<Button size="sm" onclick={copyLink}>{copied ? 'Copied' : 'Copy link'}</Button>
+				<Button size="sm" onclick={copyLink}
+					>{copied
+						? m.events_listing_qr_card_copied()
+						: m.events_listing_qr_card_copy_link()}</Button
+				>
 				<Button size="sm" href={svgHref} download="{slug}-qr.svg"
 					>{m.events_listing_qr_card_download_svg()}</Button
 				>

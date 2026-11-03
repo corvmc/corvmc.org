@@ -88,8 +88,8 @@
 		<div class="mb-4">
 			<Alert type="info">
 				{upgradeAttempts >= UPGRADE_RETRY_LIMIT
-					? "We haven't had confirmation from our payment processor yet. Your card has been charged and premium switches on as soon as it lands — if this page still says otherwise in a few minutes, get in touch."
-					: 'Confirming your payment…'}
+					? m.band_slug_subscription_we_haven_t_had_confirmation()
+					: m.band_slug_subscription_confirming_payment()}
 			</Alert>
 		</div>
 	{/if}
@@ -178,7 +178,9 @@
 								outline
 								onclick={() => (addCardOpen = true)}
 							>
-								{billing.cards.length > 0 ? 'Replace card' : 'Add a card'}
+								{billing.cards.length > 0
+									? m.band_slug_subscription_replace_card()
+									: m.band_slug_subscription_add_card()}
 							</Button>
 						</div>
 

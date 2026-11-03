@@ -197,7 +197,10 @@
 										label={msg.band_remove()}
 										variant="ghost"
 										size="xs"
-										confirm="Remove {member.member.title} from {layout.band.name}?"
+										confirm={msg.band_slug_members_remove_from({
+											title: member.member.title,
+											name: layout.band.name
+										})}
 										successToast={msg.band_slug_members_member_removed()}
 										onsuccess={refreshMembers}
 									>
@@ -245,7 +248,7 @@
 									label={msg.band_slug_members_revoke()}
 									variant="ghost"
 									size="xs"
-									confirm="Revoke the invitation for {invite.member.title}?"
+									confirm={msg.band_slug_members_revoke_invitation({ title: invite.member.title })}
 									successToast={msg.band_slug_members_invitation_revoked()}
 									onsuccess={refreshMembers}
 								>
@@ -299,7 +302,7 @@
 									label={msg.band_slug_members_revoke()}
 									variant="ghost"
 									size="xs"
-									confirm="Revoke the invitation for {invite.email}?"
+									confirm={msg.band_slug_members_revoke_invitation_2({ email: invite.email })}
 									successToast={msg.band_slug_members_invite_revoked()}
 									onsuccess={refreshInvites}
 								>
