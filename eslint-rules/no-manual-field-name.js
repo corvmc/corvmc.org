@@ -22,6 +22,19 @@ const CONTROL_COMPONENTS = new Set([
 	'VisibilityField'
 ]);
 const CONTROL_ELEMENTS = new Set(['input', 'select', 'textarea', 'button']);
+/** `ui/Form/index.ts` re-exports FormField as `Field`. */
+const ALIASES = new Map([
+	['Field', 'FormField'],
+	['Form.Field', 'FormField']
+]);
+
+/** A tag's name, with `<Form.Field>` spelled out and aliases resolved. */
+function tagName(/** @type {RuleNode} */ node) {
+	const n = node.name;
+	const raw =
+		n?.type === 'SvelteMemberExpressionName' ? `${n.object?.name}.${n.property?.name}` : n?.name;
+	return ALIASES.get(raw) ?? raw;
+}
 
 /** @param {RuleNode} node @param {string} key */
 function attr(node, key) {
@@ -43,7 +56,7 @@ function isStaticallyReadonly(/** @type {RuleNode} */ node) {
 
 /** Whether a form-ish element posts to a remote `form()`, a plain handler, or neither. */
 function formKind(/** @type {RuleNode} */ node) {
-	const tag = node.name?.name;
+	const tag = tagName(node);
 	if (tag === 'Form') return attr(node, 'remote') ? 'remote' : 'plain';
 	// `Action` renders its `form` snippet inside `<Form remote>`; a callback
 	// action has no form to render it in.
@@ -93,7 +106,7 @@ export default {
 					stack.push(kind);
 					return;
 				}
-				const tag = node.name?.name;
+				const tag = tagName(node);
 				const isControl =
 					node.kind === 'component' ? CONTROL_COMPONENTS.has(tag) : CONTROL_ELEMENTS.has(tag);
 				if (!isControl) return;

@@ -41,6 +41,11 @@ tester.run('no-manual-field-name', rule as never, {
 		},
 		{
 			filename: f,
+			code: '<Form remote={save}><Field name="title" /><Form.Field name="body" /></Form>',
+			errors: [{ messageId: 'manualName' }, { messageId: 'manualName' }]
+		},
+		{
+			filename: f,
 			code: '<Form remote={save}><button name="intent" value="a">go</button></Form>',
 			errors: [{ messageId: 'manualName' }]
 		},
