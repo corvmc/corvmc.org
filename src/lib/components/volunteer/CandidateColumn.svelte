@@ -160,6 +160,7 @@
 		</div>
 	{/snippet}
 
+	<!-- eslint-disable-next-line custom/no-interactive-await -- #2358 -->
 	{#await candidates then result}
 		{@const g = grade(result.rows)}
 		{#if result.rows.length === 0}

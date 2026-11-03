@@ -27,6 +27,7 @@
 <PageHeader width="md" title={m.member_preferred_roles()} subtitle={m.member_volunteering()} />
 
 <PageContent width="md">
+	<!-- eslint-disable-next-line custom/no-interactive-await -- #2358 -->
 	{#await pageData then { step: me, roles: roleOptions, interests: myInterests }}
 		{@const onboarding = myInterests.length === 0}
 		<Card>

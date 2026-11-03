@@ -44,6 +44,7 @@
 <PageHeader width="3xl" title={m.member_profile()} subtitle={m.member_volunteering()} />
 
 <PageContent width="3xl">
+	<!-- eslint-disable-next-line custom/no-interactive-await -- #2358 -->
 	{#await pageData then data}
 		{#each data.renew as c (c.name)}
 			<p class="text-sm text-warning">

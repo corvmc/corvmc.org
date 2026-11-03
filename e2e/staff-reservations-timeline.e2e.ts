@@ -67,6 +67,16 @@ test.describe('reservations timeline', () => {
 		// A closure row, not a booking: the error badge is the closure's marker.
 		await expect(row.locator('.badge-error')).toBeVisible();
 		await expect(row).toContainText(start.shown);
+
+		// #2352: DataList's rows, and a row action's open dialog, remounted on a refresh too.
+		await row.getByTestId('edit-closure').click();
+		const edit = page.getByRole('dialog').filter({ has: page.locator('input[name="reason"]') });
+		const edited = `${reason} edited`;
+		await edit.locator('input[name="reason"]').fill(edited);
+		const rowRefreshed = page.waitForResponse((r) => r.url().includes('/getStaffReservationsPage'));
+		await page.evaluate(() => (window as unknown as { __notify: () => void }).__notify());
+		await rowRefreshed;
+		await expect(edit.locator('input[name="reason"]')).toHaveValue(edited);
 	});
 
 	test('the old recurring address opens the series modal', async ({ page }) => {

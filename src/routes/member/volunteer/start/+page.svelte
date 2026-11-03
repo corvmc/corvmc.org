@@ -29,6 +29,7 @@
 />
 
 <PageContent width="md">
+	<!-- eslint-disable-next-line custom/no-interactive-await -- #2358 -->
 	{#await step then me}
 		<InfoCard title={m.member_volunteer_start_about()}>
 			<p class="text-sm text-base-content/70">{m.member_volunteer_start_asked_once()}</p>

@@ -24,6 +24,7 @@ import clubTimeDates from './eslint-rules/club-time-dates.js';
 import noWordingLocators from './eslint-rules/no-wording-locators.js';
 import noSvelteElement from './eslint-rules/no-svelte-element.js';
 import noLiteralUiText from './eslint-rules/no-literal-ui-text.js';
+import noInteractiveAwait from './eslint-rules/no-interactive-await.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -72,7 +73,8 @@ const customPlugin = {
 		'no-svelte-element': noSvelteElement,
 		// Registered, not enabled: ~8,750 literal strings in `.svelte`.
 		// `pnpm ui-string-census` counts them; enable it once they are cleared (#2099).
-		'no-literal-ui-text': noLiteralUiText
+		'no-literal-ui-text': noLiteralUiText,
+		'no-interactive-await': noInteractiveAwait
 	}
 };
 
@@ -203,7 +205,8 @@ export default defineConfig(
 			'custom/page-header-width-matches-content': 'error',
 			'custom/no-concurrent-remote-queries': 'error',
 			'custom/definite-action-labels': 'error',
-			'custom/no-svelte-element': 'error'
+			'custom/no-svelte-element': 'error',
+			'custom/no-interactive-await': 'error'
 		}
 	},
 	{

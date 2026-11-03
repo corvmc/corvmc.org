@@ -65,6 +65,7 @@
 	the picker from a caller who may edit the profile but not the roles: without
 	that they would submit a role set they cannot change and land on a 403.
 -->
+<!-- eslint-disable-next-line custom/no-interactive-await -- #2356 -->
 {#await getRoleCatalog() then catalog}
 	{@const roleOptions = catalog.roles.map((r) => ({ id: String(r.id), label: r.name }))}
 	{@const initialRoles = catalog.roles

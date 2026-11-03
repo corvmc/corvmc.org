@@ -114,11 +114,10 @@
 <!--
 	Clearances. Revoke rather than delete is the normal way to end one: the
 	window it covered stays answerable, which is the entire reason the table is
-	append-only. A renewal is a second Grant, not an edit.
-
-	These Actions used to sit inside the page-level profile <Form>, where their
-	triggers were type=submit and each click saved the account.
+	append-only. A renewal is a second Grant, not an edit. Keep these Actions
+	outside the profile <Form>: inside it their triggers submit the account.
 -->
+<!-- eslint-disable-next-line custom/no-interactive-await -- #2356 -->
 {#await getMemberCertifications(id) then held}
 	<InfoCard title={m.staff_members_id_panels_volunteer_panel_certifications()}>
 		{#snippet header(title: string)}

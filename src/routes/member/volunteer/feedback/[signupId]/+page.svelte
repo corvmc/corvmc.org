@@ -35,6 +35,7 @@
 <PageHeader width="md" title={m.member_how_did_go()} subtitle={m.member_volunteering()} />
 
 <PageContent width="md">
+	<!-- eslint-disable-next-line custom/no-interactive-await -- #2358 -->
 	{#await context then ctx}
 		{#if !ctx}
 			<EmptyState

@@ -131,6 +131,7 @@
 		description={m.staff_access_permission_holders_there_no_clearances_catalog()}
 	/>
 {:else}
+	<!-- eslint-disable-next-line custom/no-interactive-await -- #2359 -->
 	{#await result then data}
 		{#if data.kind === 'position'}
 			{@const rows = data.members.filter(matches)}

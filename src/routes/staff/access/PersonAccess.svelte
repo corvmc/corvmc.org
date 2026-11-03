@@ -55,6 +55,7 @@
 	/>
 {:else}
 	{@const userId = person.id}
+	<!-- eslint-disable-next-line custom/no-interactive-await -- #2359 -->
 	{#await getPersonAccessView(userId) then access}
 		{@const unheld = positionOrder.filter((p) => !access.positions.includes(p))}
 		{@const orgSeats = access.seats.flatMap((s) =>

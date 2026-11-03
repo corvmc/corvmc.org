@@ -165,6 +165,7 @@
 			exactly who cannot fix it.
 		-->
 		{#if canManageBilling}
+			<!-- eslint-disable-next-line custom/no-interactive-await -- #2359 -->
 			{#await getBandBilling(band.slug) then billing}
 				<Card>
 					<CardBody>
