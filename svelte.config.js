@@ -159,11 +159,12 @@ const config = {
 			config: (config) => ({
 				...config,
 				include: [...config.include, '../drizzle.config.ts'],
-				// Paraglide's generated request middleware. Nothing imports it (the
-				// catalog is English-only, no locale routing), and its `Request` typing
-				// disagrees with @cloudflare/workers-types. The rest of the generated
-				// output is imported, so it is still checked.
-				exclude: [...(config.exclude ?? []), '../src/lib/paraglide/server.js']
+				// Paraglide's generated output: one JSDoc-typed module per message, ~6,000
+				// of them, which as `checkJs` roots cost CI's svelte-check a quarter of
+				// its run. Imports still resolve their types; `server.js` (the request
+				// middleware) is never imported and its `Request` typing disagrees with
+				// @cloudflare/workers-types.
+				exclude: [...(config.exclude ?? []), '../src/lib/paraglide/**']
 			})
 		}
 	},

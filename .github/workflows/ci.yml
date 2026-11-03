@@ -81,7 +81,9 @@ jobs:
   check:
     name: Svelte Check
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # The message catalog (#2099) took a run from ~4.5 to 7-10 minutes, past
+    # the old 10-minute cap on a slow runner.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/install
