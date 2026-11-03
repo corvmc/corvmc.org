@@ -29,6 +29,10 @@ const TABS = [
 	{ key: 'account', label: 'Account' }
 ];
 
+/** A fixture tab's label, so a locator names the spec's data rather than copy. */
+const label = (key: string) => TABS.find((t) => t.key === key)!.label;
+const named = (key: string) => new RegExp(label(key));
+
 /** The collapsed control, distinguished from the button-group items by its role. */
 const trigger = () => page.getByRole('button', { expanded: false }).first();
 
@@ -36,14 +40,14 @@ describe('TabBar collapse', () => {
 	it('renders a menu trigger naming the active tab', async () => {
 		await render(TabBarHarness, { tabs: TABS, active: 'moderation', collapse: true });
 
-		await expect.element(trigger()).toHaveTextContent('Moderation');
+		await expect.element(trigger()).toHaveTextContent(label('moderation'));
 		await expect.element(trigger()).toHaveAttribute('aria-haspopup', 'menu');
 	});
 
 	it('carries the active tab badge on the trigger', async () => {
 		await render(TabBarHarness, { tabs: TABS, active: 'overview', collapse: true });
 
-		await expect.element(trigger()).toHaveTextContent('2');
+		await expect.element(trigger()).toHaveTextContent(String(TABS[0].badge));
 	});
 
 	it('offers every tab in the menu, not just the ones that fit', async () => {
@@ -63,7 +67,7 @@ describe('TabBar collapse', () => {
 		await render(TabBarHarness, { tabs: TABS, active: 'overview', collapse: true, onchange });
 
 		await trigger().click();
-		await page.getByRole('menuitem', { name: /Money/ }).click();
+		await page.getByRole('menuitem', { name: named('money') }).click();
 
 		expect(onchange).toHaveBeenCalledWith('money');
 	});
@@ -82,7 +86,7 @@ describe('TabBar collapse', () => {
 		await trigger().click();
 
 		await expect
-			.element(page.getByRole('menuitem', { name: /Closed/ }))
+			.element(page.getByRole('menuitem').nth(1))
 			.toHaveAttribute('href', '/staff/inbox?view=closed');
 	});
 
@@ -90,7 +94,7 @@ describe('TabBar collapse', () => {
 	it('renders no menu trigger when collapse is off', async () => {
 		await render(TabBarHarness, { tabs: TABS, active: 'overview' });
 
-		await expect.element(page.getByRole('tab', { name: /Overview/ })).toBeInTheDocument();
+		await expect.element(page.getByRole('tab', { name: named('overview') })).toBeInTheDocument();
 		expect(document.querySelector('[aria-haspopup="menu"]')).toBeNull();
 	});
 });
@@ -108,8 +112,12 @@ describe('TabBar dense', () => {
 	it('keeps the active tab’s word and drops the rest', async () => {
 		await render(TabBarHarness, { tabs: ICONED, active: 'space', dense: true });
 
-		await expect.element(page.getByRole('tab', { selected: true })).toHaveTextContent('Space');
-		expect(page.getByRole('tab', { name: 'Bands' }).element().textContent).not.toContain('Bands');
+		await expect
+			.element(page.getByRole('tab', { selected: true }))
+			.toHaveTextContent(label('space'));
+		expect(page.getByRole('tab', { name: label('bands') }).element().textContent).not.toContain(
+			label('bands')
+		);
 	});
 
 	/** The glyph carries no name, so the label moves to an attribute — with the
@@ -118,22 +126,26 @@ describe('TabBar dense', () => {
 		await render(TabBarHarness, { tabs: ICONED, active: 'space', dense: true });
 
 		await expect
-			.element(page.getByRole('tab', { name: 'Overview, 2' }))
-			.toHaveAttribute('title', 'Overview');
+			.element(page.getByRole('tab', { name: `${label('overview')}, 2` }))
+			.toHaveAttribute('title', label('overview'));
 	});
 
 	/** What `inbox-awaiting-reply.e2e.ts` reads the Open count out of. */
 	it('leaves the active tab’s accessible name to its own text', async () => {
 		await render(TabBarHarness, { tabs: ICONED, active: 'overview', dense: true });
 
-		await expect.element(page.getByRole('tab', { name: 'Overview 2' })).toBeInTheDocument();
+		await expect
+			.element(page.getByRole('tab', { name: `${label('overview')} 2` }))
+			.toBeInTheDocument();
 	});
 
 	/** A set nobody gave icons to still reads as words. */
 	it('leaves un-iconed tabs alone', async () => {
 		await render(TabBarHarness, { tabs: TABS, active: 'space', dense: true });
 
-		await expect.element(page.getByRole('tab', { name: /Bands/ })).toHaveTextContent('Bands');
+		await expect
+			.element(page.getByRole('tab', { name: named('bands') }))
+			.toHaveTextContent(label('bands'));
 	});
 });
 
@@ -148,7 +160,7 @@ describe('TabBar semantics', () => {
 
 		await expect.element(page.getByRole('tablist')).toBeInTheDocument();
 		await expect
-			.element(page.getByRole('tab', { name: /Space/ }))
+			.element(page.getByRole('tab', { name: named('space') }))
 			.toHaveAttribute('aria-selected', 'true');
 	});
 });

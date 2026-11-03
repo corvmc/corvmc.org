@@ -14,37 +14,43 @@ import ButtonHarness from './Button.test.svelte';
 
 const nested = () => document.querySelectorAll('button button, button a, a button, a a');
 
+/** The harness renders one control, so its role alone finds it inside the container. */
+const mount = async (props: Record<string, unknown>, role: 'button' | 'link' = 'button') => {
+	const screen = await render(ButtonHarness, props as never);
+	return screen.locator.getByRole(role);
+};
+
 describe('Button variants', () => {
-	/** The rendered control's classes, found by its accessible name. */
-	const classesOf = (name: string, role: 'button' | 'link' = 'button') =>
-		(page.getByRole(role, { name }).element() as HTMLElement).className.split(/\s+/);
+	/** The rendered control's classes. */
+	const classesOf = (control: { element(): Element }) =>
+		(control.element() as HTMLElement).className.split(/\s+/);
 
 	it('defaults to primary', async () => {
-		await render(ButtonHarness, { label: 'Save' });
+		const control = await mount({ label: 'Save' });
 
-		await expect.element(page.getByRole('button', { name: 'Save' })).toBeInTheDocument();
-		expect(classesOf('Save')).toContain('btn-primary');
+		await expect.element(control).toBeInTheDocument();
+		expect(classesOf(control)).toContain('btn-primary');
 	});
 
 	it('emits no colour class for the default variant', async () => {
-		await render(ButtonHarness, { label: 'Plain', variant: 'default' });
+		const control = await mount({ label: 'Plain', variant: 'default' });
 
-		await expect.element(page.getByRole('button', { name: 'Plain' })).toBeInTheDocument();
-		expect(classesOf('Plain').filter((c) => c.startsWith('btn-'))).toHaveLength(0);
+		await expect.element(control).toBeInTheDocument();
+		expect(classesOf(control).filter((c) => c.startsWith('btn-'))).toHaveLength(0);
 	});
 
 	it('stacks outline on top of a colour rather than replacing it', async () => {
-		await render(ButtonHarness, { label: 'Delete', variant: 'error', outline: true });
+		const control = await mount({ label: 'Delete', variant: 'error', outline: true });
 
-		await expect.element(page.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
-		expect(classesOf('Delete')).toEqual(expect.arrayContaining(['btn-error', 'btn-outline']));
+		await expect.element(control).toBeInTheDocument();
+		expect(classesOf(control)).toEqual(expect.arrayContaining(['btn-error', 'btn-outline']));
 	});
 
 	it('writes size and shape out in full so Tailwind can see them', async () => {
-		await render(ButtonHarness, { label: 'X', size: 'xs', shape: 'square' });
+		const control = await mount({ label: 'X', size: 'xs', shape: 'square' });
 
-		await expect.element(page.getByRole('button', { name: 'X' })).toBeInTheDocument();
-		expect(classesOf('X')).toEqual(expect.arrayContaining(['btn-xs', 'btn-square']));
+		await expect.element(control).toBeInTheDocument();
+		expect(classesOf(control)).toEqual(expect.arrayContaining(['btn-xs', 'btn-square']));
 	});
 
 	/**
@@ -53,12 +59,10 @@ describe('Button variants', () => {
 	 * supplies its own default, and `mergeProps` has to let the caller's win.
 	 */
 	it('forwards type through to the underlying button', async () => {
-		await render(ButtonHarness, { label: 'Save', type: 'submit' });
+		const control = await mount({ label: 'Save', type: 'submit' });
 
-		await expect.element(page.getByRole('button', { name: 'Save' })).toBeInTheDocument();
-		expect((page.getByRole('button', { name: 'Save' }).element() as HTMLButtonElement).type).toBe(
-			'submit'
-		);
+		await expect.element(control).toBeInTheDocument();
+		expect((control.element() as HTMLButtonElement).type).toBe('submit');
 	});
 
 	/**
@@ -68,42 +72,42 @@ describe('Button variants', () => {
 	 * and the `primary` default steps aside.
 	 */
 	it('lets a colour passed through class suppress the default', async () => {
-		await render(ButtonHarness, { label: 'Legacy', class: 'btn-ghost' });
+		const control = await mount({ label: 'Legacy', class: 'btn-ghost' });
 
-		await expect.element(page.getByRole('button', { name: 'Legacy' })).toBeInTheDocument();
-		const classes = classesOf('Legacy');
+		await expect.element(control).toBeInTheDocument();
+		const classes = classesOf(control);
 		expect(classes).toContain('btn-ghost');
 		expect(classes).not.toContain('btn-primary');
 	});
 
 	it('keeps a non-colour class alongside the default variant', async () => {
-		await render(ButtonHarness, { label: 'Spaced', class: 'mt-4' });
+		const control = await mount({ label: 'Spaced', class: 'mt-4' });
 
-		await expect.element(page.getByRole('button', { name: 'Spaced' })).toBeInTheDocument();
-		expect(classesOf('Spaced')).toEqual(expect.arrayContaining(['btn-primary', 'mt-4']));
+		await expect.element(control).toBeInTheDocument();
+		expect(classesOf(control)).toEqual(expect.arrayContaining(['btn-primary', 'mt-4']));
 	});
 });
 
 describe('Button with a tooltip', () => {
 	it('does not nest an interactive element inside another', async () => {
-		await render(ButtonHarness, { title: 'Save changes', label: 'Save' });
+		const control = await mount({ title: 'Save changes', label: 'Save' });
 
-		await expect.element(page.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+		await expect.element(control).toBeInTheDocument();
 		expect(nested()).toHaveLength(0);
 	});
 
 	it('renders an href button as a single anchor', async () => {
-		await render(ButtonHarness, { title: 'Go home', href: '/', label: 'Home' });
+		const control = await mount({ title: 'Go home', href: '/', label: 'Home' }, 'link');
 
-		await expect.element(page.getByRole('link', { name: 'Home' })).toBeInTheDocument();
+		await expect.element(control).toBeInTheDocument();
 		expect(nested()).toHaveLength(0);
 	});
 
 	it('keeps the caller onclick when the tooltip trigger adds its own', async () => {
 		const onclick = vi.fn();
-		await render(ButtonHarness, { title: 'Save changes', label: 'Save', onclick });
+		const control = await mount({ title: 'Save changes', label: 'Save', onclick });
 
-		await page.getByRole('button', { name: 'Save' }).click();
+		await control.click();
 		expect(onclick).toHaveBeenCalledOnce();
 	});
 
@@ -115,20 +119,18 @@ describe('Button with a tooltip', () => {
 	 * e2e/community-events.e2e.ts, which asserts the attribute directly.
 	 */
 	it('falls back to a native title attribute when disabled', async () => {
-		await render(ButtonHarness, {
-			title: "Events with tickets can't be deleted",
-			label: 'Delete',
-			disabled: true
-		});
+		const title = "Events with tickets can't be deleted";
+		const { locator } = await render(ButtonHarness, { title, label: 'Delete', disabled: true });
 
-		const button = page.getByRole('button', { name: 'Delete', includeHidden: true });
-		await expect.element(button).toHaveAttribute('title', "Events with tickets can't be deleted");
+		const button = locator.getByRole('button', { includeHidden: true });
+		await expect.element(button).toHaveAttribute('title', title);
 	});
 
 	it('shows the tooltip on hover', async () => {
-		await render(ButtonHarness, { title: 'Save changes', label: 'Save' });
+		const title = 'Save changes';
+		const control = await mount({ title, label: 'Save' });
 
-		await page.getByRole('button', { name: 'Save' }).hover();
-		await expect.element(page.getByText('Save changes')).toBeVisible();
+		await control.hover();
+		await expect.element(page.getByText(title)).toBeVisible();
 	});
 });

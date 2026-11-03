@@ -15,18 +15,33 @@
 </script>
 
 {#snippet editProject()}
-	<Action action={async () => undefined} label="Edit project" confirm="Edit it?" />
+	<Action
+		action={async () => undefined}
+		label="Edit project"
+		confirm="Edit it?"
+		data-testid="edit-project"
+	/>
 {/snippet}
 
 {#snippet archive()}
-	<Action action={async () => undefined} label="Archive" confirm="Archive it?" />
+	<Action
+		action={async () => undefined}
+		label="Archive"
+		confirm="Archive it?"
+		data-testid="archive"
+	/>
 {/snippet}
 
 <Tooltip.Provider delayDuration={300}>
 	{#if shape === 'inline'}
 		<PageHeader title="Folk Circle" subtitle="Events committee" {parent} documentTitle={null}>
-			<Button variant="default" href="/budget">Budget</Button>
-			<Action action={async () => undefined} label="Apply duty list" confirm="Apply it?" />
+			<Button variant="default" href="/budget" data-testid="budget">Budget</Button>
+			<Action
+				action={async () => undefined}
+				label="Apply duty list"
+				confirm="Apply it?"
+				data-testid="apply-duty-list"
+			/>
 			{@render editProject()}
 			<Button variant="ghost" shape="square" aria-label="More">•••</Button>
 		</PageHeader>
@@ -39,12 +54,13 @@
 			primary={editProject}
 			menu={archive}
 		>
-			<Button variant="default" href="/budget">Budget</Button>
+			<Button variant="default" href="/budget" data-testid="budget">Budget</Button>
 			<Action
 				action={async () => undefined}
 				label="Apply duty list"
 				variant="default"
 				confirm="Apply it?"
+				data-testid="apply-duty-list"
 			/>
 		</PageHeader>
 	{/if}
