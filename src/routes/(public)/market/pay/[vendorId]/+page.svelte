@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { pageTitle } from '$lib/config';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -32,34 +33,42 @@
 
 <div class="mx-auto max-w-xl space-y-6 px-4 py-12">
 	<div>
-		<p class="eyebrow mb-2">Market vendor</p>
+		<p class="eyebrow mb-2">{m.public_market_pay_vendor_id_market_vendor()}</p>
 		<h1 class="text-3xl font-bold">{fee.businessName}</h1>
 		<p class="text-muted">{fee.marketTitle} · {formatDateTime(fee.startsAt)}</p>
 	</div>
 
 	{#if fee.refunded}
-		<Alert>Your table fee was refunded.</Alert>
+		<Alert>{m.public_market_pay_vendor_id_table_fee_was_refunded()}</Alert>
 	{:else if fee.paidCents !== null}
 		<Alert type="success">
-			Paid {formatCents(fee.paidCents)}. Thank you — see you at the market.
+			{m.public_market_pay_vendor_id_paid_thank_see_at_market({
+				formatCents: formatCents(fee.paidCents)
+			})}
 		</Alert>
 	{:else if returned}
-		<Alert>Your payment is being confirmed. This page will show it as paid shortly.</Alert>
+		<Alert>{m.public_market_pay_vendor_id_payment_being_confirmed_page_wil()}</Alert>
 	{:else if !fee.due}
-		<Alert>There is no table fee to pay for this application.</Alert>
+		<Alert>{m.public_market_pay_vendor_id_there_no_table_fee_pay()}</Alert>
 	{:else}
 		<Form remote={payVendorFeeForm} {onsuccess} class="space-y-4">
 			<input {...fields.vendorId.as('hidden', fee.vendorId)} />
 			{#if fee.slidingScale}
 				<p>
-					This market runs a sliding scale. The table fee is {formatCents(fee.feeCents)}; pay what
-					you can, from {formatCents(fee.floorCents)} up.
+					{m.public_market_pay_vendor_id_market_runs_sliding_scale_table({
+						formatCents: formatCents(fee.feeCents),
+						formatCents2: formatCents(fee.floorCents)
+					})}
 				</p>
-				<MoneyField field={fields.amountCents} label="Amount" value={fee.feeCents} />
+				<MoneyField
+					field={fields.amountCents}
+					label={m.public_market_pay_vendor_id_amount()}
+					value={fee.feeCents}
+				/>
 			{:else}
-				<p>Your table fee is {formatCents(fee.feeCents)}.</p>
+				<p>{m.public_market_pay_vendor_id_table_fee({ formatCents: formatCents(fee.feeCents) })}</p>
 			{/if}
-			<SubmitButton label="Pay the table fee" />
+			<SubmitButton label={m.public_market_pay_vendor_id_pay_table_fee()} />
 		</Form>
 	{/if}
 </div>

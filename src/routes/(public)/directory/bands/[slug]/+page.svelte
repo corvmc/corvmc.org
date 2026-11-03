@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { env } from '$env/dynamic/public';
@@ -54,17 +55,23 @@
 
 	let pills = $derived.by<ProfilePill[]>(() => {
 		const p: ProfilePill[] = [
-			{ label: `${band.memberCount} member${band.memberCount === 1 ? '' : 's'}` }
+			{
+				label: msg.public_directory_bands_slug_member({
+					memberCount: band.memberCount,
+					value: band.memberCount === 1 ? '' : 's'
+				})
+			}
 		];
-		if (band.lookingForMembers) p.push({ label: 'Looking for members', variant: 'warm' });
+		if (band.lookingForMembers)
+			p.push({ label: msg.public_directory_bands_slug_looking_members(), variant: 'warm' });
 		return p;
 	});
 
 	let facts = $derived([
-		{ label: 'Formed', value: band.foundedYear },
-		{ label: 'Genre', value: band.genres.join(' · ') },
-		{ label: 'Based in', value: band.hometown },
-		{ label: 'Looking for', value: band.lookingForMembers ? 'Members' : null }
+		{ label: msg.public_directory_bands_slug_formed(), value: band.foundedYear },
+		{ label: msg.public_directory_bands_slug_genre(), value: band.genres.join(' · ') },
+		{ label: msg.public_based(), value: band.hometown },
+		{ label: msg.public_looking(), value: band.lookingForMembers ? 'Members' : null }
 	]);
 
 	let memberRefs = $derived<CrossRef[]>(
@@ -80,7 +87,7 @@
 </script>
 
 <svelte:head>
-	<title>{band.name} | Corvallis Music Collective</title>
+	<title>{msg.public_corvallis_music_collective_2({ name: band.name })}</title>
 	<meta name="description" content={band.tagline || `${band.name} on Corvallis Music Collective`} />
 	<meta property="og:title" content={band.name} />
 	<meta
@@ -94,8 +101,10 @@
 
 <div class="profile-page">
 	<div class="profile-page__bar no-print">
-		<a href={resolve('/directory')} class="link text-muted">&larr; Back to Directory</a>
-		<Button variant="ghost" size="sm" onclick={() => window.print()}>Print / save as PDF</Button>
+		<a href={resolve('/directory')} class="link text-muted">{msg.public_back_directory()}</a>
+		<Button variant="ghost" size="sm" onclick={() => window.print()}
+			>{msg.public_directory_bands_slug_print_save_as_pdf()}</Button
+		>
 	</div>
 
 	<ProfileHeader
@@ -104,7 +113,7 @@
 		{subtitle}
 		image={band.avatarUrl}
 		{pills}
-		primaryAction={{ label: 'Contact for booking', href: '#booking' }}
+		primaryAction={{ label: msg.public_directory_bands_slug_contact_booking(), href: '#booking' }}
 		{shareUrl}
 	/>
 
@@ -128,7 +137,7 @@
 		{/snippet}
 		{#snippet side()}
 			<CrossRefList label="Members" items={memberRefs} note={`${band.memberCount} · roles`} />
-			<TagCloud label="Genres · Influences" tags={band.genres} />
+			<TagCloud label={msg.public_directory_bands_slug_genres_influences()} tags={band.genres} />
 			<LinksBox links={band.links} />
 			<div id="booking">
 				<ContactForm slug={band.slug} bandName={band.name} />
@@ -137,7 +146,7 @@
 	</ProfileGrid>
 
 	<footer class="profile-page__footer">
-		<a href={resolve('/')}>Corvallis Music Collective</a>
+		<a href={resolve('/')}>{msg.public_corvallis_music_collective()}</a>
 	</footer>
 </div>
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { onMount } from 'svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
@@ -24,7 +25,7 @@
 </script>
 
 <svelte:head>
-	<title>CMC Radio — Corvallis Music Collective</title>
+	<title>{m.public_radio_cmc_radio_corvallis_music_collective()}</title>
 	<meta
 		name="description"
 		content="A continuous stream of music by bands at the Corvallis Music Collective."
@@ -34,19 +35,16 @@
 <div class="mx-auto max-w-3xl space-y-6 p-6">
 	<div>
 		<h1 class="flex items-center gap-2 text-3xl font-semibold">
-			<IconRadio size={28} /> CMC Radio
+			<IconRadio size={28} />
+			{m.public_radio_cmc_radio()}
 		</h1>
 		<p class="text-muted">
-			Music by bands at the collective, playing continuously. Everyone tuned in hears the same thing
-			at the same time — press play on the bar at the bottom of any page.
+			{m.public_radio_music_by_bands_at_collective()}
 		</p>
 	</div>
 
 	{#if !current}
-		<EmptyState
-			title="Off the air"
-			description="Nothing is scheduled right now. The station plays music bands have opted in to share — if yours has a release, you can add it from your band's Music page."
-		/>
+		<EmptyState title={m.public_radio_title()} description={m.public_radio_description()} />
 	{:else}
 		<Card>
 			<CardBody row class="items-center gap-4">
@@ -54,7 +52,7 @@
 					<img src={current.coverUrl} alt="" class="size-20 shrink-0 rounded object-cover" />
 				{/if}
 				<div class="min-w-0">
-					<p class="text-subtle">Now playing</p>
+					<p class="text-subtle">{m.public_radio_now_playing()}</p>
 					<p class="truncate text-xl font-medium">{current.trackTitle}</p>
 					<p class="truncate">
 						<a class="link" href={resolve(`/directory/bands/${current.bandSlug}`)}
@@ -69,7 +67,7 @@
 		{#if upNext.length > 0}
 			<Card>
 				<CardBody>
-					<CardTitle>Up next</CardTitle>
+					<CardTitle>{m.public_radio_up_next()}</CardTitle>
 					<ul class="divide-y divide-base-300">
 						{#each upNext as entry (entry.playId)}
 							<li class="flex items-center gap-2 py-2">
@@ -91,7 +89,7 @@
 	{#if recent.length > 0}
 		<Card>
 			<CardBody>
-				<CardTitle>Recently played</CardTitle>
+				<CardTitle>{m.public_radio_recently_played()}</CardTitle>
 				<ul class="divide-y divide-base-300">
 					{#each recent as entry (entry.playId)}
 						<li class="flex items-center gap-2 py-2">
@@ -112,7 +110,7 @@
 	{#if bands.length > 0}
 		<Card>
 			<CardBody>
-				<CardTitle>In rotation</CardTitle>
+				<CardTitle>{m.public_radio_rotation()}</CardTitle>
 				<p class="flex flex-wrap gap-x-3 gap-y-1">
 					{#each bands as b (b.slug)}
 						<a class="link" href={resolve(`/directory/bands/${b.slug}`)}>{b.name}</a>

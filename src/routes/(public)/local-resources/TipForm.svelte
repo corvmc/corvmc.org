@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { Turnstile } from 'svelte-turnstile';
 	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -28,8 +29,7 @@
 
 {#if submitted}
 	<Alert type="success">
-		Thanks for the suggestion! We'll take a look and email you once it is listed, or if we need
-		something changed.
+		{m.public_local_resources_tip_form_thanks_suggestion_we_ll_take()}
 	</Alert>
 {:else}
 	<Form
@@ -45,30 +45,42 @@
 		}}
 	>
 		<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-			<Field field={fields.name} type="text" label="Name of the place or service" />
+			<Field
+				field={fields.name}
+				type="text"
+				label={m.public_local_resources_tip_form_name_place_service()}
+			/>
 			<Field
 				field={fields.categoryId}
 				type="select"
-				label="Category"
-				placeholder="Pick one"
+				label={m.public_local_resources_tip_form_category()}
+				placeholder={m.public_local_resources_tip_form_placeholder()}
 				options={categories}
 			/>
 		</div>
 		<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-			<Field field={fields.website} type="text" label="Website" />
-			<Field field={fields.phone} type="tel" label="Phone" />
+			<Field
+				field={fields.website}
+				type="text"
+				label={m.public_local_resources_tip_form_website()}
+			/>
+			<Field field={fields.phone} type="tel" label={m.public_phone()} />
 		</div>
-		<Field field={fields.addressLine} type="text" label="Address or area" />
+		<Field
+			field={fields.addressLine}
+			type="text"
+			label={m.public_local_resources_tip_form_address_area()}
+		/>
 		<Field
 			field={fields.description}
 			type="textarea"
-			label="What is it, and why is it worth knowing?"
+			label={m.public_local_resources_tip_form_what_why_worth_knowing()}
 		/>
 		<Field
 			field={fields.submitterEmail}
 			type="email"
-			label="Your email"
-			description="Only used to tell you whether it was listed. Never shown on the page."
+			label={m.public_email_2()}
+			description={m.public_local_resources_tip_form_description()}
 		/>
 		<Turnstile
 			siteKey={TURNSTILE_SITE_KEY}
@@ -79,6 +91,10 @@
 		{#if failure}
 			<Alert type="error">{failure}</Alert>
 		{/if}
-		<SubmitButton label="Suggest this resource" variant="primary" class="mt-2" />
+		<SubmitButton
+			label={m.public_local_resources_tip_form_suggest_resource()}
+			variant="primary"
+			class="mt-2"
+		/>
 	</Form>
 {/if}

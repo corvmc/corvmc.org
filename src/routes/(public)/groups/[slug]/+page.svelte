@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import Hero from '$lib/components/public/Hero.svelte';
 	import Section from '$lib/components/public/Section.svelte';
@@ -30,13 +31,13 @@
 </script>
 
 <svelte:head>
-	<title>{group.name} | Corvallis Music Collective</title>
+	<title>{m.public_corvallis_music_collective_2({ name: group.name })}</title>
 	{#if group.bio}
 		<meta name="description" content={group.bio} />
 	{/if}
 </svelte:head>
 
-<Hero title={group.name}>{kindLabel} at the Corvallis Music Collective</Hero>
+<Hero title={group.name}>{m.public_groups_slug_at_corvallis_music_collective({ kindLabel })}</Hero>
 
 <Section>
 	<div class="mx-auto flex max-w-2xl flex-col gap-6">
@@ -59,21 +60,20 @@
 
 		{#if status === 'active'}
 			<Alert type="success">
-				You're already in this group.
+				{m.public_groups_slug_re_already_group()}
 				{#snippet action()}
 					<Button href={resolve(`/member/groups/${group.slug}`)} variant="ghost" size="sm">
-						Open it
+						{m.public_groups_slug_open()}
 					</Button>
 				{/snippet}
 			</Alert>
 		{:else if data.applied}
-			<Alert type="info">Your application is with this group's chairs.</Alert>
+			<Alert type="info">{m.public_groups_slug_application_with_group_s_chairs()}</Alert>
 		{:else if status === 'pending'}
-			<Alert type="info">You've been invited to this group — accept it from your groups page.</Alert
-			>
+			<Alert type="info">{m.public_groups_slug_ve_been_invited_group_accept()}</Alert>
 		{:else if !joinable}
 			<Alert type="info">
-				This group is invite only. Ask someone in it, or get in touch with the Collective.
+				{m.public_groups_slug_group_invite_only_ask_someone()}
 			</Alert>
 		{:else if !data.signedIn}
 			<!-- A prompt rather than a button that fails. The redirect brings them
@@ -86,7 +86,7 @@
 						variant="primary"
 						size="sm"
 					>
-						Sign in
+						{m.public_sign()}
 					</Button>
 				{/snippet}
 			</Alert>

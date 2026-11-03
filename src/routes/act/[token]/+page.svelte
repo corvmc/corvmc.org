@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -45,7 +46,11 @@
 				return;
 			}
 			await getContactSheet(token).refresh();
-			toast.success(method === 'POST' ? 'Rider received — thank you' : 'Rider removed');
+			toast.success(
+				method === 'POST'
+					? m.public_act_token_rider_received_thank()
+					: m.public_act_token_rider_removed()
+			);
 		} finally {
 			busy = false;
 		}
@@ -75,7 +80,7 @@
 				return;
 			}
 			await getContactSheet(token).refresh();
-			toast.success('Art received — thank you');
+			toast.success(m.public_act_token_art_received_thank());
 		} finally {
 			busy = false;
 		}
@@ -83,7 +88,7 @@
 </script>
 
 <svelte:head>
-	<title>{sheet.name} — contact sheet</title>
+	<title>{m.public_act_token_contact_sheet({ name: sheet.name })}</title>
 	<!-- Not a page of the site, and not one search engines should hold. -->
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
@@ -92,49 +97,46 @@
 	<h1 class="text-2xl font-semibold">{sheet.name}</h1>
 
 	<Alert type="info" class="text-sm">
-		This is everything the Corvallis Music Collective holds about you. Fill in what you would like
-		us to have; leave the rest blank. Your name is set by CMC because it appears on posters and in
-		our records — email us if it is wrong.
+		{m.public_act_token_everything_corvallis_music_collective_holds()}
 	</Alert>
 
-	<Form remote={saveContactSheetForm} successToast="Saved — thank you">
+	<Form remote={saveContactSheetForm} successToast={m.public_act_token_success_toast()}>
 		<input {...fields.token.as('hidden', token)} />
 
-		<InfoCard title="About you">
+		<InfoCard title={m.public_act_token_about()}>
 			<FormField
 				field={fields.bio}
 				type="textarea"
-				label="Bio"
+				label={m.public_bio()}
 				value={sheet.bio ?? ''}
-				description="Used on event pages when you play here."
+				description={m.public_act_token_used_event_pages_when_play()}
 			/>
 			<FormField
 				field={fields.hometown}
 				type="text"
-				label="Where you're from"
+				label={m.public_act_token_where_re_from()}
 				value={sheet.hometown ?? ''}
 			/>
 			<FormField
 				field={fields.url}
 				type="text"
-				label="Your site"
+				label={m.public_act_token_site()}
 				value={sheet.url ?? ''}
-				placeholder="https://…"
-				description="Where your name should link to on a bill. We don't host a page for you — this is where people go instead."
+				placeholder={m.public_act_token_placeholder()}
+				description={m.public_act_token_where_name_should_link_bill()}
 			/>
 		</InfoCard>
 
-		<InfoCard title="How we reach you">
+		<InfoCard title={m.public_act_token_how_we_reach()}>
 			<p class="text-sm">
-				Kept private. Used for booking and for sorting out anything that goes wrong — never shown
-				publicly and never added to a mailing list.
+				{m.public_act_token_kept_private_used_booking_sorting()}
 			</p>
-			<FormField field={fields.bookingName} type="text" label="Who to contact" />
-			<FormField field={fields.bookingEmail} type="email" label="Email" />
-			<FormField field={fields.bookingPhone} type="tel" label="Phone" />
+			<FormField field={fields.bookingName} type="text" label={m.public_act_token_who_contact()} />
+			<FormField field={fields.bookingEmail} type="email" label={m.public_email()} />
+			<FormField field={fields.bookingPhone} type="tel" label={m.public_phone()} />
 		</InfoCard>
 
-		<SubmitButton>Save</SubmitButton>
+		<SubmitButton>{m.public_act_token_save()}</SubmitButton>
 	</Form>
 
 	<!--
@@ -143,10 +145,9 @@
 		act that attaches a rider and then leaves without pressing Save has still
 		sent us the rider.
 	-->
-	<InfoCard title="Tech rider">
+	<InfoCard title={m.public_act_token_tech_rider()}>
 		<p class="text-sm">
-			What you need on stage — inputs, backline, anything we have to know before the day. A PDF is
-			ideal; a photo of a hand-drawn plot is fine.
+			{m.public_act_token_what_need_stage_inputs_backline()}
 		</p>
 
 		{#if sheet.rider}
@@ -169,41 +170,42 @@
 				accept="application/pdf,image/jpeg,image/png,image/webp"
 				showPreview={false}
 				disabled={busy}
-				emptyLabel={sheet.rider ? 'Replace rider' : 'Upload a rider'}
+				emptyLabel={sheet.rider
+					? m.public_act_token_replace_rider()
+					: m.public_act_token_upload_rider()}
 			/>
 			{#if sheet.rider}
 				<Button type="button" variant="ghost" size="sm" disabled={busy} onclick={remove}>
-					Remove
+					{m.public_act_token_remove()}
 				</Button>
 			{/if}
 		</div>
 	</InfoCard>
 
 	{#each sheet.posterAsks as ask (ask.id)}
-		<InfoCard title="Poster art — {ask.eventTitle}">
+		<InfoCard title={m.public_act_token_poster_art({ eventTitle: ask.eventTitle })}>
 			<DefinitionList>
-				<Fact label="When">{formatDateTime(ask.startsAt)}</Fact>
+				<Fact label={m.public_act_token_when()}>{formatDateTime(ask.startsAt)}</Fact>
 				{#if ask.venue}
-					<Fact label="Where">{ask.venue}</Fact>
+					<Fact label={m.public_act_token_where()}>{ask.venue}</Fact>
 				{/if}
 				{#if ask.bill.length > 0}
-					<Fact label="Playing">{ask.bill.join(', ')}</Fact>
+					<Fact label={m.public_act_token_playing()}>{ask.bill.join(', ')}</Fact>
 				{/if}
-				<Fact label="Art due">
+				<Fact label={m.public_act_token_art_due()}>
 					{ask.dueAt ? formatDateShort(ask.dueAt) : 'No date set — sooner is better'}
 				</Fact>
 			</DefinitionList>
 
 			<p class="mt-3 text-sm">
-				A JPEG or PNG, portrait, at least 1080 pixels wide. CMC adds the show details if the art
-				leaves them off.
+				{m.public_act_token_jpeg_png_portrait_at_least()}
 			</p>
 
 			{#if ask.deliveredUrl}
 				<p class="mt-3 text-sm">
 					We have
 					<a href={ask.deliveredUrl} class="link" target="_blank" rel="external noreferrer"
-						>your art</a
+						>{m.public_act_token_art()}</a
 					>. Uploading another replaces it.
 				</p>
 			{/if}
@@ -218,7 +220,9 @@
 					accept="image/jpeg,image/png"
 					showPreview={false}
 					disabled={busy}
-					emptyLabel={ask.deliveredUrl ? 'Replace art' : 'Upload art'}
+					emptyLabel={ask.deliveredUrl
+						? m.public_act_token_replace_art()
+						: m.public_act_token_upload_art()}
 				/>
 			</div>
 		</InfoCard>

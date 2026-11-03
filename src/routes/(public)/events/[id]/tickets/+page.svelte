@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
@@ -47,9 +48,11 @@
      phone (#970). `/events/[id]` wraps its own header the same way. -->
 <div class="mx-auto max-w-lg space-y-6 px-6">
 	<PageHeader
-		title={isFreeEvent ? 'Get free ticket' : 'Get Tickets'}
+		title={isFreeEvent
+			? m.public_events_id_tickets_get_free_ticket()
+			: m.public_events_id_tickets_get_tickets()}
 		parent={[
-			{ label: 'Events', href: resolve('/events') },
+			{ label: m.public_events(), href: resolve('/events') },
 			{ label: evt.title, href: resolve(`/events/${page.params.id!}`) }
 		]}
 	/>
@@ -60,7 +63,7 @@
 			<p class="opacity-70">
 				{fullDate(evt.startsAt)}
 				{#if evt.doorsAt}
-					· Doors {formatTime(evt.doorsAt)}
+					{m.public_events_id_tickets_doors({ formatTime: formatTime(evt.doorsAt) })}
 				{/if}
 				· {formatEventTimeRange(evt.startsAt, evt.endsAt)}
 			</p>
@@ -69,23 +72,24 @@
 				     discount off anything. -->
 				<div class="mt-2 flex items-baseline gap-2">
 					<span class="text-lg font-bold">{formatCents(unitPrice)}</span>
-					<span class="text-muted">suggested, per ticket</span>
+					<span class="text-muted">{m.public_events_id_tickets_suggested_per_ticket()}</span>
 				</div>
 			{:else}
 				<div class="mt-2">
-					<Badge variant="info">Free event</Badge>
+					<Badge variant="info">{m.public_events_id_tickets_free_event()}</Badge>
 				</div>
 			{/if}
 			{#if scaleReachesFree}
 				<!-- The scale IS the mechanism now, so the policy points at the form
 				     rather than at the door. -->
 				<p class="mt-3 text-muted text-sm">
-					No one is turned away for lack of funds. Pay what you can — including nothing.
+					{m.public_events_id_tickets_no_one_turned_away_lack()}
 				</p>
 			{:else if !isFreeEvent}
 				<p class="mt-3 text-muted text-sm">
 					No one is turned away for lack of funds. If the price is a barrier,
-					<a href={resolve('/contact')} class="link">get in touch</a> or just come to the door.
+					<a href={resolve('/contact')} class="link">{m.public_events_id_tickets_get_touch()}</a> or just
+					come to the door.
 				</p>
 			{/if}
 			{#if data.remaining !== null}
@@ -107,7 +111,7 @@
 			<input {...freeTicketFields.eventId.as('hidden', page.params.id!)} />
 			<Card>
 				<CardBody class="space-y-4">
-					<Field label="Number of spots" name="quantity">
+					<Field label={m.public_events_id_tickets_number_spots()} name="quantity">
 						<Select name="quantity" bind:value={quantity} class="w-full">
 							{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
 								<option value={n}>{n}</option>
@@ -116,13 +120,20 @@
 					</Field>
 
 					{#if !data.isAuthenticated}
-						<Field name="attendeeName" type="text" label="Name" value={attendeeName} />
+						<Field name="attendeeName" type="text" label={m.public_name()} value={attendeeName} />
 
-						<Field name="attendeeEmail" type="email" label="Email" value={attendeeEmail} />
+						<Field
+							name="attendeeEmail"
+							type="email"
+							label={m.public_email()}
+							value={attendeeEmail}
+						/>
 					{/if}
 
 					<SubmitButton
-						label="Get {quantity > 1 ? `${quantity} tickets` : 'ticket'}"
+						label={m.public_events_id_tickets_get({
+							value: quantity > 1 ? `${quantity} tickets` : 'ticket'
+						})}
 						variant="primary"
 						class="w-full"
 					/>
@@ -137,7 +148,7 @@
 					<!-- The `input` snippet, not children: only it is handed the id the
 					     caption points at, so as children this select had no accessible
 					     name at all and read as "combo box, 1" (#994). -->
-					<Field label="Number of tickets" name="quantity">
+					<Field label={m.public_events_id_tickets_number_tickets()} name="quantity">
 						{#snippet input(id)}
 							<Select {id} name="quantity" bind:value={quantity} class="w-full">
 								{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
@@ -148,15 +159,20 @@
 					</Field>
 
 					{#if !data.isAuthenticated}
-						<Field name="attendeeName" type="text" label="Name" value={attendeeName} />
+						<Field name="attendeeName" type="text" label={m.public_name()} value={attendeeName} />
 
-						<Field name="attendeeEmail" type="email" label="Email" value={attendeeEmail} />
+						<Field
+							name="attendeeEmail"
+							type="email"
+							label={m.public_email()}
+							value={attendeeEmail}
+						/>
 					{/if}
 
 					{#if data.soldByBand}
 						<!-- #1203: a band's own gig. Its share is paid to it at the sale. -->
 						<p class="text-muted text-sm">
-							The band sells this gig through the collective. Their share goes straight to them.
+							{m.public_events_id_tickets_band_sells_gig_through_collective()}
 						</p>
 					{/if}
 

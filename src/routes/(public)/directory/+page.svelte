@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	import Section from '$lib/components/public/Section.svelte';
 	import { page } from '$app/state';
@@ -155,42 +156,48 @@
 </script>
 
 <svelte:head>
-	<title>Directory | Corvallis Music Collective</title>
+	<title>{m.public_directory_directory_corvallis_music_collective()}</title>
 	<meta name="description" content="Bands and musicians in the Corvallis Music Collective." />
 </svelte:head>
 
 {#snippet empty(singular: string, plural: string, total: number)}
 	{#if total === 0}
-		<EmptyState message="No public {singular} profiles yet." />
+		<EmptyState message={m.public_directory_message({ singular })} />
 	{:else}
 		<EmptyState>
-			<p>No {plural} match your search.</p>
-			<Button variant="ghost" size="sm" class="mt-2" onclick={clearFilters}>Clear filters</Button>
+			<p>{m.public_directory_no_match_search({ plural })}</p>
+			<Button variant="ghost" size="sm" class="mt-2" onclick={clearFilters}
+				>{m.public_directory_clear_filters()}</Button
+			>
 		</EmptyState>
 	{/if}
 {/snippet}
 
 <Section>
 	<div class="mb-8 text-center">
-		<h1 class="mb-3 text-4xl font-bold tracking-tight text-cmc-navy">Directory</h1>
-		<p class="text-base text-fg-2">Bands and musicians in the Corvallis Music Collective</p>
+		<h1 class="mb-3 text-4xl font-bold tracking-tight text-cmc-navy">
+			{m.public_directory_directory()}
+		</h1>
+		<p class="text-base text-fg-2">
+			{m.public_directory_bands_musicians_corvallis_music_collective()}
+		</p>
 	</div>
 
 	{#if data.failed}
-		<Alert type="error">Couldn't load the directory right now — please refresh the page.</Alert>
+		<Alert type="error">{m.public_directory_couldn_t_load_directory_right()}</Alert>
 	{:else}
 		<div class="mb-6 flex justify-center">
 			<TabBar
 				tabs={[
 					{
 						key: 'bands',
-						label: 'Bands',
+						label: m.public_bands(),
 						badge: bandMatches.length,
 						href: directoryHref('bands', searchText, genre)
 					},
 					{
 						key: 'musicians',
-						label: 'Musicians',
+						label: m.public_musicians(),
 						badge: musicianMatches.length,
 						href: directoryHref('musicians', searchText, genre)
 					},
@@ -199,7 +206,7 @@
 						// the columns both differ. TabBar renders an <a> in URL mode, so
 						// cross-route tabs compose with no shared state.
 						key: 'instructors',
-						label: 'Teachers',
+						label: m.public_teachers(),
 						href: resolve('/directory/instructors')
 					}
 				]}
@@ -211,15 +218,17 @@
 			<FormField
 				type="text"
 				name="q"
-				label="Search"
+				label={m.public_search()}
 				class="w-full max-w-sm"
-				placeholder={tab === 'bands' ? 'Search bands by name…' : 'Search musicians by name…'}
+				placeholder={tab === 'bands'
+					? m.public_directory_search_bands_by_name()
+					: m.public_directory_search_musicians_by_name()}
 				bind:value={searchText}
 			/>
 			<FormField
 				type="select"
 				name="sort"
-				label="Sort"
+				label={m.public_directory_sort()}
 				class="w-full max-w-sm"
 				options={directorySortOptions}
 				bind:value={sort}
@@ -242,7 +251,9 @@
 			{/if}
 
 			{#if hasFilters}
-				<Button variant="ghost" size="xs" onclick={clearFilters}>Clear filters</Button>
+				<Button variant="ghost" size="xs" onclick={clearFilters}
+					>{m.public_directory_clear_filters()}</Button
+				>
 			{/if}
 		</div>
 
@@ -300,7 +311,7 @@
 		{#if remaining > 0}
 			<div class="mt-8 flex justify-center">
 				<Button variant="default" size="sm" outline onclick={showMore}>
-					Show more ({remaining} left)
+					{m.public_directory_show_more_left({ remaining })}
 				</Button>
 			</div>
 		{/if}
@@ -310,7 +321,7 @@
 				Don't see your name? Your profile is set to
 				<strong>{visibility === 'hidden' ? 'hidden' : 'members-only'}</strong>.
 				<a href={resolve('/member/directory')} class="text-cmc-teal underline"
-					>Update your visibility</a
+					>{m.public_directory_update_visibility()}</a
 				>
 				to appear here.
 			</p>
@@ -318,7 +329,9 @@
 			<p class="mt-10 text-center text-sm text-fg-3">
 				Don't see your name? Profiles appear here once they have a tagline, a bio, a photo, or one
 				instrument, genre or skill.
-				<a href={resolve('/member/profile')} class="text-cmc-teal underline">Add to your profile</a>
+				<a href={resolve('/member/profile')} class="text-cmc-teal underline"
+					>{m.public_directory_add_profile()}</a
+				>
 				to appear here.
 			</p>
 		{/if}

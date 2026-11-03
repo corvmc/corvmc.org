@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
@@ -114,7 +115,9 @@
 
 			{#if totalCents > 0}
 				<div class="mt-4 space-y-2">
-					<p class="text-muted">Where your money goes — drag to change it.</p>
+					<p class="text-muted">
+						{m.public_music_band_slug_release_slug_buy_panel_where_money_go()}
+					</p>
 					<!--
 						No `otherFloorCents`. What protects the band is the TOTAL being at
 						least its asking price — enforced server-side in `validateSplit` —
@@ -129,9 +132,9 @@
 						value={split.platformNetCents}
 						onchange={(cents) => (platformOverride = cents)}
 						fixedCents={split.stripeFeeCents}
-						fixedLabel="Card processing"
+						fixedLabel={m.public_music_band_slug_release_slug_buy_panel_fixed_label()}
 						fixedCovered={coverFees}
-						valueLabel="CMC"
+						valueLabel={m.public_music_band_slug_release_slug_buy_panel_value_label()}
 						otherLabel={bandName}
 						otherTone="blue"
 						valueTone="orange"
@@ -143,7 +146,11 @@
 							     segment gold the moment this is ticked, so the sentence
 							     explaining the consequence was saying twice what the control
 							     shows once. -->
-							<span>Add {dollars(covered.feeCoveredCents)} to cover processing</span>
+							<span
+								>{m.public_music_band_slug_release_slug_buy_panel_add_cover_proc({
+									dollars: dollars(covered.feeCoveredCents)
+								})}</span
+							>
 						</label>
 						{#if platformOverride !== null && platformOverride !== suggested}
 							<button
@@ -151,13 +158,13 @@
 								class="btn btn-ghost btn-xs"
 								onclick={() => (platformOverride = null)}
 							>
-								Reset to suggested
+								{m.public_music_band_slug_release_slug_buy_panel_reset_suggeste()}
 							</button>
 						{/if}
 					</div>
 				</div>
 			{:else if priceMinCents === 0}
-				<p class="text-muted">This one's free. Pay something if you'd like to.</p>
+				<p class="text-muted">{m.public_music_band_slug_release_slug_buy_panel_one_s_free_pay()}</p>
 			{/if}
 
 			<!--
@@ -180,19 +187,21 @@
 					<input {...fields.email.as('hidden', viewerEmail)} />
 					<p class="text-muted">
 						Buying as <span class="font-medium">{viewerEmail}</span> — it'll be in your
-						<a class="link" href={resolve('/member/purchases')}>Purchases</a> straight away.
+						<a class="link" href={resolve('/member/purchases')}
+							>{m.public_music_band_slug_release_slug_buy_panel_purchases()}</a
+						> straight away.
 					</p>
 				{:else}
 					<FormField
 						field={fields.email}
-						label="Email"
+						label={m.public_email()}
 						type="email"
-						description="Where the download link goes."
+						description={m.public_music_band_slug_release_slug_buy_panel_description()}
 						required
 					/>
 					<p class="text-muted">
 						Got an account?
-						<a class="link" href={signInHref({ returnTo: here(page.url) })}> Sign in </a>
+						<a class="link" href={signInHref({ returnTo: here(page.url) })}> {m.public_sign()} </a>
 						and it lands in your Purchases too.
 					</p>
 				{/if}
@@ -207,14 +216,19 @@
 			<input {...fields.coverFees.as('checkbox', coverFees)} type="hidden" />
 
 			<SubmitButton
-				label={free ? 'Download' : `Pay ${dollars(split.chargeCents)}`}
+				label={free
+					? m.public_music_band_slug_release_slug_buy_panel_download()
+					: m.public_music_band_slug_release_slug_buy_panel_pay({
+							dollars: dollars(split.chargeCents)
+						})}
 				disabled={totalCents > 0 && totalCents < AUDIO_MIN_PRICE_CENTS}
 			/>
 
 			{#if totalCents > 0 && totalCents < AUDIO_MIN_PRICE_CENTS}
 				<p class="text-warning">
-					Pay nothing, or at least {dollars(AUDIO_MIN_PRICE_CENTS)} — below that, card fees take almost
-					all of it.
+					{m.public_music_band_slug_release_slug_buy_panel_pay_nothing_at({
+						dollars: dollars(AUDIO_MIN_PRICE_CENTS)
+					})}
 				</p>
 			{/if}
 		</Form>

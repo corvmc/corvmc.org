@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { pageTitle, EVENT_TIP_SUBJECT, contactSubjects } from '$lib/config';
 	import { IconMail, IconMapPin } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
@@ -51,14 +52,14 @@
 </svelte:head>
 
 <div class="mx-auto max-w-4xl px-4 py-12">
-	<p class="eyebrow mb-2">Get in Touch</p>
-	<h1 class="mb-8 text-3xl font-bold">Contact Us</h1>
+	<p class="eyebrow mb-2">{m.public_contact_get_touch()}</p>
+	<h1 class="mb-8 text-3xl font-bold">{m.public_contact_contact_us()}</h1>
 
 	<div class="grid grid-cols-1 gap-8 md:grid-cols-3">
 		<!-- Form -->
 		<div class="md:col-span-2">
 			{#if submitted}
-				<Alert type="success">Thanks for reaching out! We'll get back to you soon.</Alert>
+				<Alert type="success">{m.public_contact_thanks_reaching_out_we_ll()}</Alert>
 			{:else}
 				<Form
 					remote={submitContactForm}
@@ -76,13 +77,13 @@
 					class="flex flex-col gap-4"
 				>
 					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						<FormField field={fields.name} type="text" label="Name" required />
-						<FormField field={fields.email} type="email" label="Email" required />
+						<FormField field={fields.name} type="text" label={m.public_name()} required />
+						<FormField field={fields.email} type="email" label={m.public_email()} required />
 					</div>
 
 					<FormField
 						field={fields.subject}
-						label="Subject"
+						label={m.public_contact_subject()}
 						type="select"
 						options={subjectOptions}
 						bind:value={subject}
@@ -93,22 +94,27 @@
 							<FormField
 								field={fields.tipEventName}
 								type="text"
-								label="What's the show?"
+								label={m.public_contact_what_s_show()}
 								maxlength="200"
 							/>
 							<FormField
 								field={fields.tipEventDate}
 								type="text"
-								label="When is it?"
-								placeholder="e.g. Fri 12 June, or just 'sometime in June'"
+								label={m.public_contact_when()}
+								placeholder={m.public_contact_e_g_fri_12_june()}
 								maxlength="100"
 							/>
-							<FormField field={fields.tipVenue} type="text" label="Where?" maxlength="200" />
+							<FormField
+								field={fields.tipVenue}
+								type="text"
+								label={m.public_contact_where()}
+								maxlength="200"
+							/>
 							<FormField
 								field={fields.tipLink}
 								type="text"
-								label="Link"
-								placeholder="Event page, poster, anything"
+								label={m.public_contact_link()}
+								placeholder={m.public_contact_event_page_poster_anything()}
 								maxlength="500"
 							/>
 						</div>
@@ -116,16 +122,15 @@
 
 					<!-- Custom input mode: FormField's built-in textarea drops `rest`, so rows
 					     and placeholder would be lost. Issues still resolve by name. -->
-					<FormField name="message" label="Message">
+					<FormField name="message" label={m.public_contact_message()}>
 						<textarea
 							{...fields.message.as('text')}
 							class="textarea w-full"
 							rows="5"
 							maxlength="5000"
 							required
-							placeholder={isEventTip
-								? 'Anything else worth knowing — who else is on the bill, cover charge, all-ages...'
-								: ''}></textarea>
+							placeholder={isEventTip ? m.public_contact_anything_else_worth_knowing_who() : ''}
+						></textarea>
 					</FormField>
 
 					<Turnstile
@@ -137,7 +142,7 @@
 					{#if failure}
 						<Alert type="error">{failure}</Alert>
 					{/if}
-					<SubmitButton label="Send Message" />
+					<SubmitButton label={m.public_contact_send_message()} />
 				</Form>
 			{/if}
 		</div>
@@ -152,47 +157,50 @@
 					{address.street}<br />
 					{cityStateZip}
 				</p>
-				<p class="mt-1 text-xs text-fg-3">Office available by appointment only.</p>
+				<p class="mt-1 text-xs text-fg-3">
+					{m.public_contact_office_available_by_appointment_only()}
+				</p>
 			</div>
 
 			<div>
 				<h3 class="mb-2 flex items-center gap-2 font-semibold">
 					<span class="text-cmc-teal"><IconMail size={18} /></span> Email
 				</h3>
-				<a href="mailto:info@corvmc.org" class="link text-sm">info@corvmc.org</a>
+				<a href="mailto:info@corvmc.org" class="link text-sm"
+					>{m.public_contact_info_corvmc_org()}</a
+				>
 			</div>
 
 			<div>
-				<h3 class="mb-2 font-semibold">Quick Answers</h3>
+				<h3 class="mb-2 font-semibold">{m.public_contact_quick_answers()}</h3>
 				<div class="space-y-2 text-sm">
 					<details class="collapse-arrow collapse bg-base-200">
 						<summary class="collapse-title min-h-0 py-2 font-medium"
-							>How do I become a member?</summary
+							>{m.public_contact_how_do_i_become_member()}</summary
 						>
 						<div class="collapse-content text-muted">
 							<a href={signInHref({ register: true, returnTo: '/member' })} class="link"
-								>Create an account</a
+								>{m.public_contact_create_account()}</a
 							> to get started. Free memberships are available.
 						</div>
 					</details>
 					<details class="collapse-arrow collapse bg-base-200">
 						<summary class="collapse-title min-h-0 py-2 font-medium"
-							>Can I use the practice space?</summary
+							>{m.public_contact_can_i_use_practice_space()}</summary
 						>
 						<div class="collapse-content text-muted">
-							The practice space is available to all members. Sign up for a free membership to book
-							your first session.
+							{m.public_contact_practice_space_available_all_members()}
 						</div>
 					</details>
 					<details class="collapse-arrow collapse bg-base-200">
 						<summary class="collapse-title min-h-0 py-2 font-medium"
-							>How do I submit music for a show?</summary
+							>{m.public_contact_how_do_i_submit_music()}</summary
 						>
 						<div class="collapse-content text-muted">
 							All-ages, all genres — if you make music, we want to hear from you. Use the contact
 							form with "Performance Inquiry" as the subject, or email a link to your music and any
 							dates you have in mind to <a href="mailto:booking@corvmc.org" class="link"
-								>booking@corvmc.org</a
+								>{m.public_contact_booking_corvmc_org()}</a
 							>.
 						</div>
 					</details>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
 	import { imageSrc } from '$lib/utils/images';
@@ -19,7 +20,7 @@
 </script>
 
 <section class="recaps">
-	<SectionLabel label="Recent recaps" />
+	<SectionLabel label={m.public_events_recent_recaps_label()} />
 	<ul class="recaps__grid">
 		{#each recaps as recap (recap.id)}
 			{@const cover = imageSrc(recap.coverUrl, 'gallery')}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Section from '$lib/components/public/Section.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
@@ -65,7 +66,7 @@
 </script>
 
 <svelte:head>
-	<title>Events | Corvallis Music Collective</title>
+	<title>{m.public_events_events_corvallis_music_collective()}</title>
 	<meta
 		name="description"
 		content="Shows at the Collective and gigs from our member bands around the region."
@@ -78,30 +79,30 @@
 	<link
 		rel="alternate"
 		type="application/rss+xml"
-		title="CMC Gig Guide"
+		title={m.public_events_title()}
 		href="{page.url.origin}/events/feed.xml"
 	/>
 </svelte:head>
 
 <Section>
 	<div class="mb-10 text-center">
-		<h1 class="mb-2 text-4xl font-bold tracking-tight text-cmc-navy">Events</h1>
+		<h1 class="mb-2 text-4xl font-bold tracking-tight text-cmc-navy">{m.public_events()}</h1>
 		<p class="text-base text-fg-2">
-			Shows at the Collective and gigs from our member bands around the region
+			{m.public_events_shows_at_collective_gigs_from()}
 		</p>
 	</div>
 
 	{#if showNotice}
 		<div class="mb-8 flex items-center justify-between gap-4 notice-bar" role="status">
 			<p class="text-sm font-medium">
-				No show at the Collective tonight — here's what's coming up.
+				{m.public_events_no_show_at_collective_tonight()}
 			</p>
 			<button
 				type="button"
 				class="shrink-0 text-sm font-semibold underline"
 				onclick={() => (dismissed = true)}
 			>
-				Dismiss
+				{m.public_events_dismiss()}
 			</button>
 		</div>
 	{/if}
@@ -130,17 +131,19 @@
 		<aside class="guide__side">
 			<MiniCalendar anchor={from} />
 			{#if from !== today}
-				<Button href="/events" variant="ghost" size="sm" class="mt-3">← Back to today</Button>
+				<Button href="/events" variant="ghost" size="sm" class="mt-3"
+					>{m.public_events_back_today()}</Button
+				>
 			{/if}
 			<p class="mt-6 text-sm text-fg-2">
-				<a class="link" href={webcalHref} rel="external">Subscribe in your calendar</a>
-				· <a class="link" href="/events/feed.xml" rel="external">RSS</a>
+				<a class="link" href={webcalHref} rel="external">{m.public_events_subscribe_calendar()}</a>
+				· <a class="link" href="/events/feed.xml" rel="external">{m.public_events_rss()}</a>
 			</p>
 		</aside>
 		<div class="guide__main">
 			{#if allEvents.length === 0}
 				<div class="py-12 text-center opacity-60">
-					<p class="text-base">Nothing on the calendar yet. Check back soon!</p>
+					<p class="text-base">{m.public_events_nothing_calendar_yet_check_back()}</p>
 				</div>
 			{:else}
 				<GigList events={allEvents} {rsvpEventIds} />

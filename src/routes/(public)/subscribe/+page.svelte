@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { Turnstile } from 'svelte-turnstile';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -18,12 +19,12 @@
 
 <div class="mx-auto max-w-lg space-y-6 p-6">
 	<div class="text-center">
-		<h1 class="text-2xl font-bold">Subscribe</h1>
-		<p class="mt-1 opacity-60">Join our mailing lists to stay in the loop.</p>
+		<h1 class="text-2xl font-bold">{m.public_subscribe()}</h1>
+		<p class="mt-1 opacity-60">{m.public_subscribe_join_our_mailing_lists_stay()}</p>
 	</div>
 
 	{#if success}
-		<Alert type="success">You've been subscribed! Check your inbox for future updates.</Alert>
+		<Alert type="success">{m.public_subscribe_ve_been_subscribed_check_inbox()}</Alert>
 		<Button
 			variant="ghost"
 			size="sm"
@@ -32,10 +33,12 @@
 				selectedAudienceId = '';
 			}}
 		>
-			Subscribe to another list
+			{m.public_subscribe_subscribe_another_list()}
 		</Button>
 	{:else if audiences.length === 0}
-		<p class="text-center opacity-60">No mailing lists are currently accepting signups.</p>
+		<p class="text-center opacity-60">
+			{m.public_subscribe_no_mailing_lists_currently_accepting()}
+		</p>
 	{:else}
 		<Form
 			remote={subscribeToAudience}
@@ -45,7 +48,7 @@
 			class="space-y-4"
 		>
 			<input {...fields.slug.as('hidden', selectedSlug)} />
-			<Field name="audience" label="Choose a list">
+			<Field name="audience" label={m.public_subscribe_choose_list()}>
 				<div class="space-y-2">
 					{#each audiences as a (a.id)}
 						<label
@@ -72,8 +75,18 @@
 				</div>
 			</Field>
 
-			<Field name="email" type="email" label="Email" placeholder="your@email.com" />
-			<Field name="name" type="text" label="Name (optional)" placeholder="Your name" />
+			<Field
+				name="email"
+				type="email"
+				label={m.public_email()}
+				placeholder={m.public_email_com()}
+			/>
+			<Field
+				name="name"
+				type="text"
+				label={m.public_name_optional()}
+				placeholder={m.public_name_2()}
+			/>
 
 			<Turnstile
 				siteKey={TURNSTILE_SITE_KEY}
@@ -81,7 +94,7 @@
 				theme="auto"
 			/>
 
-			<SubmitButton label="Subscribe" variant="primary" class="w-full" />
+			<SubmitButton label={m.public_subscribe()} variant="primary" class="w-full" />
 		</Form>
 	{/if}
 </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { pageTitle } from '$lib/config';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -33,22 +34,25 @@
 		<div class="w-full max-w-sm">
 			<div class="card shadow-xl surface">
 				<CardBody class="gap-4">
-					<CardTitle size="lg" level={2} class="justify-center">Confirm your email</CardTitle>
+					<CardTitle size="lg" level={2} class="justify-center"
+						>{m.public_confirm_email_token_confirm_email()}</CardTitle
+					>
 
 					{#if outcome?.status === 'changed'}
 						<Alert type="success" class="text-sm">
 							You now sign in as <strong>{outcome.email}</strong>. You were signed out everywhere,
 							so sign in again with your usual password.
 						</Alert>
-						<Button variant="primary" class="w-full" href={resolve('/login')}>Sign in</Button>
+						<Button variant="primary" class="w-full" href={resolve('/login')}
+							>{m.public_sign()}</Button
+						>
 					{:else if outcome?.status === 'taken'}
 						<Alert type="error" class="text-sm">
-							That address now belongs to another account, so nothing was changed. Contact CMC staff
-							to sort it out.
+							{m.public_confirm_email_token_address_now_belongs_another_accou()}
 						</Alert>
 					{:else if !request || outcome}
 						<Alert type="error" class="text-sm">
-							This link has expired or has already been used.
+							{m.public_link_has_expired_has_already()}
 						</Alert>
 					{:else}
 						<p class="text-center">
@@ -56,7 +60,7 @@
 						</p>
 						<Form remote={confirmEmailChange} onsuccess={(r) => (outcome = r ?? null)}>
 							<input {...fields.token.as('hidden', token)} />
-							<SubmitButton label="Confirm" variant="primary" class="w-full" />
+							<SubmitButton label={m.public_confirm()} variant="primary" class="w-full" />
 						</Form>
 					{/if}
 				</CardBody>

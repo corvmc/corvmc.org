@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -99,29 +100,29 @@
 
 <section class="px-6 py-10">
 	<div class="mx-auto max-w-4xl">
-		<PageHeader title={evt.title} parent={{ label: 'Events', href: resolve('/events') }}>
+		<PageHeader title={evt.title} parent={{ label: m.public_events(), href: resolve('/events') }}>
 			<div class="flex items-center gap-1">
 				<details class="dropdown dropdown-end">
 					<summary class="btn gap-1 btn-ghost btn-sm">
 						<IconCalendarPlus size={18} />
-						Add to calendar
+						{m.public_events_id_add_calendar()}
 					</summary>
 					<ul class="menu dropdown-content dropdown-panel w-48">
 						<li>
 							<a
 								href={googleCalendarUrl(calendarEvt)}
 								target="_blank"
-								rel="external noopener noreferrer">Google Calendar</a
+								rel="external noopener noreferrer">{m.public_events_id_google_calendar()}</a
 							>
 						</li>
 						<li>
 							<a href={icsDataUrl(calendarEvt)} rel="external" download="{evt.title}.ics"
-								>Apple / Outlook (.ics)</a
+								>{m.public_events_id_apple_outlook_ics()}</a
 							>
 						</li>
 					</ul>
 				</details>
-				<ShareButton title="Copy link to this event" />
+				<ShareButton title={m.public_events_id_title()} />
 				{#if data.canReport}
 					<ReportEventAction eventId={evt.id} eventTitle={evt.title} />
 				{/if}
@@ -162,7 +163,7 @@
 				{#if isCancelled}
 					<div class="edet__cancelled" role="status">
 						<IconAlertTriangle size={18} />
-						<span>This event has been cancelled.</span>
+						<span>{m.public_events_id_event_has_been_cancelled()}</span>
 					</div>
 				{/if}
 
@@ -195,7 +196,7 @@
 					</p>
 				{:else if isBandEvent && evt.bandName}
 					<p class="edet__byline">
-						by
+						{m.public_events_id_by()}
 						{#if bandHref}
 							<a href={bandHref} class="link">{evt.bandName}</a>
 						{:else}
@@ -220,7 +221,7 @@
 									d="M3 9h18M8 3v4M16 3v4"
 								/></svg
 							>
-							Date
+							{m.public_events_id_date()}
 						</span>
 						<span class="edet__fact-value">{fullDate(evt.startsAt)}</span>
 					</div>
@@ -237,12 +238,13 @@
 								style="width:13px;height:13px"
 								><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg
 							>
-							Time
+							{m.public_events_id_time()}
 						</span>
 						<span class="edet__fact-value">
 							{formatEventTimeRange(evt.startsAt, evt.endsAt)}
 							{#if evt.doorsAt}
-								<br /><span style="font-size:12px;opacity:0.7">Doors {formatTime(evt.doorsAt)}</span
+								<br /><span style="font-size:12px;opacity:0.7"
+									>{m.public_events_id_doors({ formatTime: formatTime(evt.doorsAt) })}</span
 								>
 							{/if}
 						</span>
@@ -265,7 +267,7 @@
 										r="2.5"
 									/></svg
 								>
-								Location
+								{m.public_events_id_location()}
 							</span>
 							<span class="edet__fact-value">
 								{evt.location ?? ''}
@@ -298,12 +300,14 @@
 									d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"
 								/><path d="M13 6v12" /></svg
 							>
-							Price
+							{m.public_events_id_price()}
 						</span>
 						<span class="edet__fact-value">
 							{price.label}
 							{#if price.suggested}
-								<span style="font-size:11px;opacity:0.5;margin-left:4px">suggested</span>
+								<span style="font-size:11px;opacity:0.5;margin-left:4px"
+									>{m.public_events_id_suggested()}</span
+								>
 							{/if}
 						</span>
 					</div>
@@ -334,7 +338,12 @@
 				{#if capacityKnown}
 					<div class="edet__capacity">
 						<div class="edet__capacity-head">
-							<span>{data.sold} of {evt.ticketQuantity} claimed</span>
+							<span
+								>{m.public_events_id_claimed({
+									sold: data.sold ?? '',
+									ticketQuantity: evt.ticketQuantity ?? ''
+								})}</span
+							>
 							{#if lowAvailability}
 								<Badge variant="warning">{isFreeEvent ? 'Almost full' : 'Selling fast'}</Badge>
 							{/if}
@@ -349,9 +358,13 @@
 
 				<div class="edet__ctas">
 					{#if isCancelled}
-						<span class="text-base font-medium text-fg-2">Tickets and RSVPs are closed.</span>
+						<span class="text-base font-medium text-fg-2"
+							>{m.public_events_id_tickets_rsvps_closed()}</span
+						>
 					{:else if data.isPast}
-						<span class="text-base font-medium text-fg-2">This event has ended.</span>
+						<span class="text-base font-medium text-fg-2"
+							>{m.public_events_id_event_has_ended()}</span
+						>
 					{:else if mode === 'platform'}
 						{#if soldOut}
 							<Button variant="default" size="lg" disabled
@@ -376,12 +389,14 @@
 								target="_blank"
 								rel="noopener noreferrer"
 								variant="primary"
-								size="lg">Get Tickets ↗</Button
+								size="lg">{m.public_events_id_get_tickets()}</Button
 							>
 						{/if}
 						<RsvpControl eventId={evt.id} eventTitle={evt.title} external={mode === 'external'} />
 						{#if data.rsvpCount > 0}
-							<span class="text-muted">{data.rsvpCount} going</span>
+							<span class="text-muted"
+								>{m.public_events_id_going({ rsvpCount: data.rsvpCount })}</span
+							>
 						{/if}
 					{/if}
 				</div>
@@ -396,7 +411,7 @@
 
 		{#if data.recapHtml}
 			<section class="edet__recap">
-				<SectionLabel label="Recap" />
+				<SectionLabel label={m.public_events_id_recap()} />
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized markdown (renderMarkdown) -->
 				<div class="edet__recap-body">{@html data.recapHtml}</div>
 			</section>
@@ -412,7 +427,7 @@
 
 		{#if data.upcoming.length > 0}
 			<section class="edet__more">
-				<SectionLabel label="More shows" />
+				<SectionLabel label={m.public_events_id_more_shows()} />
 				<div class="edet__more-grid">
 					{#each data.upcoming as e (e.id)}
 						{@const eTags = parseTags(e.tags)}
