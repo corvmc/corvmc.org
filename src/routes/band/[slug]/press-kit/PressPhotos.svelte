@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import { toast } from 'svelte-sonner';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -49,9 +50,11 @@
 				throw new Error(body.message || 'Upload failed');
 			}
 			await getPressKitEditor(band.slug).refresh();
-			toast.success('Uploaded');
+			toast.success(msg.band_uploaded());
 		} catch (e) {
-			toast.error(e instanceof Error ? e.message : 'Upload failed');
+			toast.error(
+				e instanceof Error ? e.message : msg.band_slug_press_kit_press_photos_upload_failed()
+			);
 		} finally {
 			busy = false;
 		}
@@ -65,9 +68,13 @@
 			});
 			if (!res.ok) throw new Error('Could not remove that file');
 			await getPressKitEditor(band.slug).refresh();
-			toast.success('Removed');
+			toast.success(msg.band_removed());
 		} catch (e) {
-			toast.error(e instanceof Error ? e.message : 'Could not remove that file');
+			toast.error(
+				e instanceof Error
+					? e.message
+					: msg.band_slug_press_kit_press_photos_could_not_remove_file()
+			);
 		} finally {
 			busy = false;
 		}
@@ -87,23 +94,20 @@
 	const IMAGE_TYPES = 'image/jpeg,image/png,image/webp';
 </script>
 
-<InfoCard title="Download your kit">
+<InfoCard title={msg.band_slug_press_kit_press_photos_download_kit()}>
 	<p class="text-muted">
-		A zip holding a one-page press kit, a plain-text version to paste into an email, your photos at
-		full resolution, and your stage plot and rider. It carries a QR code back to your public page,
-		so the shows list a venue sees stays current after you send it.
+		{msg.band_slug_press_kit_press_photos_zip_holding_one_page_press()}
 	</p>
 	<div>
 		<Button href="/api/bands/{band.id}/press-kit.zip" variant="primary" size="sm">
-			Download press kit (.zip)
+			{msg.band_slug_press_kit_press_photos_download_press_kit_zip()}
 		</Button>
 	</div>
 </InfoCard>
 
-<InfoCard title="Press photos">
+<InfoCard title={msg.band_slug_press_kit_press_photos_press_photos()}>
 	<p class="text-muted">
-		A high-resolution shot a venue or a listings editor can print. Shown on your public page and
-		included full-size in your downloadable kit.
+		{msg.band_slug_press_kit_press_photos_high_resolution_shot_venue()}
 	</p>
 	{#if photos.length > 0}
 		<div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -120,17 +124,25 @@
 							class="aspect-square w-full rounded object-cover"
 						/>
 					{/if}
-					<Form remote={details} successToast="Photo details saved" class="space-y-2">
+					<Form
+						remote={details}
+						successToast={msg.band_slug_press_kit_press_photos_success_toast()}
+						class="space-y-2"
+					>
 						<input {...details.fields.slug.as('hidden', band.slug)} />
 						<input {...details.fields.attachmentId.as('hidden', photo.id)} />
 						<FormField
 							field={details.fields.altText}
-							label="Alt text"
+							label={msg.band_slug_press_kit_press_photos_alt_text()}
 							value={photo.altText ?? ''}
-							description="What the photo shows, for someone who cannot see it."
+							description={msg.band_slug_press_kit_press_photos_description()}
 						/>
-						<FormField field={details.fields.caption} label="Caption" value={photo.caption ?? ''} />
-						<SubmitButton label="Save" size="sm" />
+						<FormField
+							field={details.fields.caption}
+							label={msg.band_slug_press_kit_press_photos_caption()}
+							value={photo.caption ?? ''}
+						/>
+						<SubmitButton label={msg.band_save()} size="sm" />
 					</Form>
 					<Button
 						type="button"
@@ -139,13 +151,13 @@
 						disabled={busy}
 						onclick={() => remove(photo.id)}
 					>
-						Remove
+						{msg.band_remove()}
 					</Button>
 				</figure>
 			{/each}
 		</div>
 	{:else}
-		<p class="text-muted">No press photo yet. Your band's logo is set on the profile page.</p>
+		<p class="text-muted">{msg.band_slug_press_kit_press_photos_no_press_photo_yet_band()}</p>
 	{/if}
 
 	<div class="flex flex-wrap items-center gap-3">
@@ -157,15 +169,16 @@
 			disabled={busy || atLimit}
 			onclick={() => pick()}
 		>
-			Add a photo
+			{msg.band_add_photo()}
 		</Button>
 		{#if photoLimit !== null}
 			<span class="text-muted text-sm">
-				{photos.length} of {photoLimit}
-				{#if atLimit}&middot; a band site lifts the limit{/if}
+				{msg.band_slug_press_kit_press_photos_text({ length: photos.length, photoLimit })}
+				{#if atLimit}{msg.band_slug_press_kit_press_photos_band_site_lifts_limit()}{/if}
 			</span>
 		{:else}
-			<span class="text-muted text-sm">Unlimited on your plan</span>
+			<span class="text-muted text-sm">{msg.band_slug_press_kit_press_photos_unlimited_plan()}</span
+			>
 		{/if}
 	</div>
 </InfoCard>

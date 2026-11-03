@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
@@ -37,21 +38,25 @@
 <Card>
 	<CardBody>
 		<CardTitle>
-			Sell tickets through CMC
+			{m.band_slug_events_event_id_ticket_sale_card_sell_tickets_thro()}
 			{#if sale.onSale && !sale.blocker}
-				<Badge variant="success" size="sm">On sale</Badge>
+				<Badge variant="success" size="sm"
+					>{m.band_slug_events_event_id_ticket_sale_card_sale()}</Badge
+				>
 			{:else if sale.onSale}
-				<Badge variant="warning" size="sm">Paused</Badge>
+				<Badge variant="warning" size="sm"
+					>{m.band_slug_events_event_id_ticket_sale_card_paused()}</Badge
+				>
 			{/if}
 		</CardTitle>
 
 		{#if sale.blocker === 'not_premium'}
 			<Alert type="info" href={resolve('/band/[slug]/subscription', { slug })}>
-				Selling tickets through the collective is part of the premium plan.
+				{m.band_slug_events_event_id_ticket_sale_card_selling_tickets_t()}
 			</Alert>
 		{:else if sale.blocker === 'no_payouts'}
 			<Alert type="warning" href={resolve('/band/[slug]/music/payouts', { slug })}>
-				Finish setting up payouts first. Ticket money goes straight to your own Stripe account.
+				{m.band_slug_events_event_id_ticket_sale_card_finish_setting_up()}
 			</Alert>
 		{/if}
 
@@ -63,50 +68,59 @@
 			</p>
 		{:else}
 			<p class="text-muted">
-				Buyers pay on the collective's site and the money lands in your own Stripe account. The
-				collective suggests {suggested}% for itself; buyers see the split and can move it, down to
-				nothing.
+				{m.band_slug_events_event_id_ticket_sale_card_buyers_pay_collec({ suggested })}
 			</p>
 		{/if}
 
 		{#if !sale.blocker}
-			<Form remote={openBandTicketSaleForm} successToast="Tickets saved" onsuccess={refresh}>
+			<Form
+				remote={openBandTicketSaleForm}
+				successToast={m.band_slug_events_event_id_ticket_sale_card_tickets_saved()}
+				onsuccess={refresh}
+			>
 				<input {...openFields.slug.as('hidden', slug)} />
 				<input {...openFields.eventId.as('hidden', eventId)} />
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 					<FormField
 						field={openFields.priceDollars}
-						label="Suggested price ($)"
+						label={m.band_slug_events_event_id_ticket_sale_card_suggested_price()}
 						value={dollars(sale.priceCents)}
 						placeholder="12.00"
 						required
 					/>
 					<FormField
 						field={openFields.floorDollars}
-						label="Least a buyer may pay ($)"
+						label={m.band_slug_events_event_id_ticket_sale_card_least_buyer_may_p()}
 						value={sale.onSale ? dollars(sale.priceFloorCents) || '0' : '0'}
-						description="0 lets people pay what they can."
+						description={m.band_slug_events_event_id_ticket_sale_card_0_lets_people_pay()}
 					/>
 					<FormField
 						field={openFields.quantity}
-						label="Capacity"
+						label={m.band_slug_events_event_id_ticket_sale_card_capacity()}
 						value={sale.quantity ? String(sale.quantity) : ''}
-						description="Blank for no limit."
+						description={m.band_slug_events_event_id_ticket_sale_card_blank_no_limit()}
 					/>
 				</div>
-				<SubmitButton label={sale.onSale ? 'Save ticket terms' : 'Put tickets on sale'} />
+				<SubmitButton
+					label={sale.onSale
+						? m.band_slug_events_event_id_ticket_sale_card_save_ticket_terms()
+						: m.band_slug_events_event_id_ticket_sale_card_put_tickets_sale()}
+				/>
 			</Form>
 		{/if}
 
 		{#if sale.onSale}
 			<Form
 				remote={closeBandTicketSaleForm}
-				successToast="Tickets taken off sale"
+				successToast={m.band_slug_events_event_id_ticket_sale_card_tickets_taken_off()}
 				onsuccess={refresh}
 			>
 				<input {...closeFields.slug.as('hidden', slug)} />
 				<input {...closeFields.eventId.as('hidden', eventId)} />
-				<SubmitButton variant="ghost" label="Stop selling" />
+				<SubmitButton
+					variant="ghost"
+					label={m.band_slug_events_event_id_ticket_sale_card_stop_selling()}
+				/>
 			</Form>
 		{/if}
 	</CardBody>

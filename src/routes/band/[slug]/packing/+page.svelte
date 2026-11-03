@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m as msg } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
@@ -86,23 +87,23 @@
 
 <PageHeader
 	width="3xl"
-	title="Packing list"
-	subtitle="What {layout.band.name} takes to a gig"
-	documentTitle="Packing list · {layout.band.name}"
+	title={msg.band_slug_packing_packing_list()}
+	subtitle={msg.band_slug_packing_what_takes_gig({ name: layout.band.name })}
+	documentTitle={msg.band_slug_packing_document_title({ name: layout.band.name })}
 >
 	<Button
 		href={resolve('/band/[slug]/rider', { slug: layout.band.slug })}
 		variant="ghost"
 		size="sm"
 	>
-		Tech rider
+		{msg.band_tech_rider()}
 	</Button>
 </PageHeader>
 
 <PageContent width="3xl">
 	{#if data.isStaffViewer}
 		<Alert type="info" class="mb-4">
-			You're reading this as staff. Only the band's own members can change it, or tick anything off.
+			{msg.band_slug_packing_re_reading_as_staff_only()}
 		</Alert>
 	{/if}
 
@@ -112,9 +113,9 @@
 			gear and it is actionable days out; a packed count only means something
 			during load-in.
 		-->
-		<StatCard title="Nobody has" value={list.unassignedCount} size="sm" />
-		<StatCard title="In the van" value="{list.packedCount}/{list.itemCount}" size="sm" />
-		<StatCard title="Things" value={list.itemCount} size="sm" />
+		<StatCard title={msg.band_slug_packing_nobody_has()} value={list.unassignedCount} size="sm" />
+		<StatCard title={msg.band_van()} value="{list.packedCount}/{list.itemCount}" size="sm" />
+		<StatCard title={msg.band_slug_packing_things()} value={list.itemCount} size="sm" />
 	</div>
 
 	{#if list.itemCount > 0}
@@ -122,16 +123,18 @@
 			<CardBody>
 				<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
 					<div>
-						<h2 class="text-base font-semibold">Load-in</h2>
+						<h2 class="text-base font-semibold">{msg.band_slug_packing_load()}</h2>
 						<p class="text-xs text-base-content/60">
 							{#if list.lastResetAt}
-								Cleared {dateFmt.format(list.lastResetAt)}
-								{#if list.lastResetByName}by {list.lastResetByName}{/if}
+								{msg.band_slug_packing_cleared({ format: dateFmt.format(list.lastResetAt) })}
+								{#if list.lastResetByName}{msg.band_slug_packing_by({
+										lastResetByName: list.lastResetByName
+									})}{/if}
 								{#if daysSinceReset !== null && daysSinceReset > 30}
-									— which was a while ago
+									{msg.band_slug_packing_which_was_while_ago()}
 								{/if}
 							{:else}
-								Never cleared. Ticks stay until somebody resets them.
+								{msg.band_slug_packing_never_cleared_ticks_stay_until()}
 							{/if}
 						</p>
 					</div>
@@ -140,11 +143,11 @@
 						<Form
 							remote={resetPackingList}
 							guard
-							successToast="Cleared for the next load-in"
+							successToast={msg.band_slug_packing_cleared_next_load()}
 							onsuccess={refresh}
 						>
 							<input {...resetFields.bandId.as('hidden', data.bandId)} />
-							<SubmitButton label="Clear the ticks" variant="ghost" size="sm" />
+							<SubmitButton label={msg.band_slug_packing_clear_ticks()} variant="ghost" size="sm" />
 						</Form>
 					{/if}
 				</div>
@@ -180,10 +183,9 @@
 	{/if}
 
 	<div class="space-y-6">
-		<h2 class="text-base font-semibold">What everyone brings</h2>
+		<h2 class="text-base font-semibold">{msg.band_slug_packing_what_everyone_brings()}</h2>
 		<p class="-mt-4 text-xs text-base-content/60">
-			Editing here changes what the band brings. It never unpacks a box or drops whoever agreed to
-			carry one.
+			{msg.band_slug_packing_editing_here_changes_what_band()}
 		</p>
 
 		{#key stamp}
@@ -192,8 +194,8 @@
 					bandId={data.bandId}
 					ownerUserId={data.viewerId}
 					slotKey="mine"
-					title="Your gear"
-					subtitle="What you bring. Only you and the band's admins can change this."
+					title={msg.band_gear()}
+					subtitle={msg.band_slug_packing_what_bring_only_band_s()}
 					initial={toRows(data.viewerId)}
 					mine
 					canEdit
@@ -209,9 +211,7 @@
 						ownerUserId={member.userId}
 						slotKey="m{i}"
 						title={member.name}
-						subtitle={data.canManage
-							? 'You can edit this as an admin — but they know their own gear.'
-							: undefined}
+						subtitle={data.canManage ? msg.band_slug_packing_can_edit_as_admin_but() : undefined}
 						initial={rows}
 						canEdit={data.canManage}
 						onsaved={refresh}
@@ -224,8 +224,8 @@
 					bandId={data.bandId}
 					ownerUserId={null}
 					slotKey="shared"
-					title="The band's own stuff"
-					subtitle="The merch tub, the spare stands — things nobody owns but somebody still has to carry. Admins only, because there is no member whose crate it is."
+					title={msg.band_slug_packing_band_s_own_stuff()}
+					subtitle={msg.band_slug_packing_merch_tub_spare_stands_things()}
 					initial={toRows(null)}
 					canEdit={data.canManage}
 					onsaved={refresh}
@@ -235,12 +235,12 @@
 
 		<Card>
 			<CardBody>
-				<h2 class="mb-3 text-base font-semibold">Notes for the band</h2>
+				<h2 class="mb-3 text-base font-semibold">{msg.band_slug_packing_notes_band()}</h2>
 				{#if data.canManage}
 					<Form
 						remote={savePackingNotes}
 						guard
-						successToast="Saved"
+						successToast={msg.band_saved()}
 						onsuccess={refresh}
 						class="space-y-4"
 					>
@@ -248,17 +248,17 @@
 						<Field
 							field={notesFields.notes}
 							type="textarea"
-							label="Anything the band needs reminding of"
+							label={msg.band_slug_packing_anything_band_needs_reminding()}
 							value={list.notes ?? ''}
 							maxlength={PACKING_NOTES_MAX}
-							description="Where the trailer key lives, which door to load through. Nobody outside the band reads this."
+							description={msg.band_slug_packing_description()}
 						/>
-						<div class="flex justify-end"><SubmitButton label="Save" /></div>
+						<div class="flex justify-end"><SubmitButton label={msg.band_save()} /></div>
 					</Form>
 				{:else if list.notes}
 					<p class="text-sm whitespace-pre-line">{list.notes}</p>
 				{:else}
-					<p class="text-sm text-base-content/60">Nothing noted.</p>
+					<p class="text-sm text-base-content/60">{msg.band_slug_packing_nothing_noted()}</p>
 				{/if}
 			</CardBody>
 		</Card>

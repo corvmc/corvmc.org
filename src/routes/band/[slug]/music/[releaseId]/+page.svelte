@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
@@ -85,7 +86,7 @@
 		body.append('cover', file);
 		const res = await fetch(`/api/releases/${releaseId}/cover`, { method: 'POST', body });
 		if (!res.ok) throw new Error(await responseErrorMessage(res, 'Upload failed'));
-		toast.success('Cover updated');
+		toast.success(m.band_slug_music_release_id_cover_updated());
 		void getBandRelease({ slug, releaseId }).refresh();
 		void getBandMusicPage(slug).refresh();
 	}
@@ -94,7 +95,7 @@
 		try {
 			const res = await fetch(`/api/releases/${releaseId}/cover`, { method: 'DELETE' });
 			if (!res.ok) throw new Error(await responseErrorMessage(res, 'Remove failed'));
-			toast.success('Cover removed');
+			toast.success(m.band_slug_music_release_id_cover_removed());
 			void getBandRelease({ slug, releaseId }).refresh();
 			void getBandMusicPage(slug).refresh();
 		} catch (err) {
@@ -106,21 +107,20 @@
 <PageHeader width="2xl" title={release.title} subtitle={band.name}>
 	<Badge>{releaseKindLabels[release.kind]}</Badge>
 	{#if release.status === 'draft'}
-		<Badge variant="ghost">Draft</Badge>
+		<Badge variant="ghost">{m.band_draft()}</Badge>
 	{:else if release.status === 'published'}
-		<Badge variant="success">Published</Badge>
+		<Badge variant="success">{m.band_slug_music_release_id_published()}</Badge>
 	{:else}
-		<Badge variant="error">Withheld</Badge>
+		<Badge variant="error">{m.band_withheld()}</Badge>
 	{/if}
 </PageHeader>
 
 <PageContent width="2xl">
 	{#if release.status === 'withheld'}
 		<Alert type="error">
-			CMC staff withheld this release{release.radioExcludedReason
-				? ` — ${release.radioExcludedReason}`
-				: ''}. It is not public and cannot be republished from here. Reply to the message staff sent
-			you to sort it out.
+			{m.band_slug_music_release_id_cmc_staff_withheld_release_not({
+				value: release.radioExcludedReason ? ` — ${release.radioExcludedReason}` : ''
+			})}
 		</Alert>
 	{/if}
 
@@ -137,16 +137,18 @@
 					<img src={release.coverUrl} alt="" class="size-20 shrink-0 rounded object-cover" />
 				{/if}
 				<DefinitionList class="grow">
-					<Fact label="Price">
+					<Fact label={m.band_slug_music_release_id_price()}>
 						{release.priceMinCents > 0 ? formatCents(release.priceMinCents) : 'Free'}
 					</Fact>
 					{#if release.releasedAt}
-						<Fact label="Released">{formatDate(release.releasedAt)}</Fact>
+						<Fact label={m.band_slug_music_release_id_released()}
+							>{formatDate(release.releasedAt)}</Fact
+						>
 					{/if}
-					<Fact label="Sold">{release.salesCount}</Fact>
-					<Fact label="CMC Radio">
+					<Fact label={m.band_slug_music_release_id_sold()}>{release.salesCount}</Fact>
+					<Fact label={m.band_slug_music_release_id_cmc_radio()}>
 						{#if release.radioExcluded}
-							Pulled by staff
+							{m.band_slug_music_release_id_pulled_by_staff()}
 						{:else}
 							{release.radioOptIn
 								? release.radioAttested
@@ -170,7 +172,7 @@
 		<CardBody>
 			<div class="flex flex-wrap items-start justify-between gap-4">
 				<div>
-					<CardTitle>Tracks</CardTitle>
+					<CardTitle>{m.band_slug_music_release_id_tracks()}</CardTitle>
 					<p class="text-muted">{formatTrackSummary(tracks.length, totalMs)}</p>
 				</div>
 				{#if canManage}
@@ -185,7 +187,7 @@
 				{/if}
 			</div>
 
-			<TrackList {tracks} empty="No tracks yet. Add some audio and this is where it plays.">
+			<TrackList {tracks} empty={m.band_slug_music_release_id_empty()}>
 				{#snippet rowActions(track)}
 					{#if canManage}
 						<Action
@@ -193,10 +195,10 @@
 							iconOnly
 							variant="ghost"
 							size="sm"
-							label="Rename"
-							modalTitle="Rename track"
-							submitLabel="Save"
-							successToast="Track renamed"
+							label={m.band_slug_music_release_id_rename()}
+							modalTitle={m.band_slug_music_release_id_rename_track()}
+							submitLabel={m.band_save()}
+							successToast={m.band_slug_music_release_id_track_renamed()}
 						>
 							{#snippet icon()}<IconPencil size={16} />{/snippet}
 							{#snippet form()}
@@ -205,7 +207,12 @@
 									<input {...fields.slug.as('hidden', slug)} />
 									<input {...fields.releaseId.as('hidden', releaseId)} />
 									<input {...fields.trackId.as('hidden', track.id)} />
-									<FormField field={fields.title} label="Title" value={track.title} required />
+									<FormField
+										field={fields.title}
+										label={m.band_title()}
+										value={track.title}
+										required
+									/>
 								</div>
 							{/snippet}
 						</Action>
@@ -217,11 +224,11 @@
 							iconOnly
 							variant="ghost"
 							size="sm"
-							label="Delete"
-							modalTitle="Delete track"
-							submitLabel="Delete"
+							label={m.band_slug_music_release_id_delete()}
+							modalTitle={m.band_slug_music_release_id_delete_track()}
+							submitLabel={m.band_slug_music_release_id_delete()}
 							submitVariant="error"
-							successToast="Track deleted"
+							successToast={m.band_slug_music_release_id_track_deleted()}
 						>
 							{#snippet icon()}<IconTrash size={16} />{/snippet}
 							{#snippet form()}
@@ -257,19 +264,25 @@
 					</div>
 				{/if}
 				<div class="grow">
-					<CardTitle>Cover</CardTitle>
-					<p class="text-muted">Square art, shown wherever the record appears.</p>
+					<CardTitle>{m.band_slug_music_release_id_cover()}</CardTitle>
+					<p class="text-muted">
+						{m.band_slug_music_release_id_square_art_shown_wherever_record()}
+					</p>
 					<div class="mt-2">
 						<FileUpload
 							upload={handleCoverUpload}
 							accept="image/*"
 							showPreview={false}
-							emptyLabel={release.coverUrl ? 'Replace cover' : 'Add a cover'}
+							emptyLabel={release.coverUrl
+								? m.band_slug_music_release_id_replace_cover()
+								: m.band_slug_music_release_id_add_cover()}
 						/>
 					</div>
 				</div>
 				{#if release.coverUrl}
-					<Button type="button" variant="ghost" size="sm" onclick={removeCover}>Remove</Button>
+					<Button type="button" variant="ghost" size="sm" onclick={removeCover}
+						>{m.band_remove()}</Button
+					>
 				{/if}
 			</CardBody>
 		</Card>
@@ -282,30 +295,27 @@
 		<Card>
 			<CardBody>
 				<CardTitle>
-					<IconRadio size={18} /> CMC Radio
+					<IconRadio size={18} />
+					{m.band_slug_music_release_id_cmc_radio()}
 				</CardTitle>
 				<p class="text-muted">
-					Put this record in the rotation of the station that plays across the site. Independent of
-					selling — a free release can be on the air, and no Stripe account is needed.
+					{m.band_slug_music_release_id_put_record_rotation_station_plays()}
 				</p>
 				<p class="text-muted text-sm">
-					The station pays no licence fees, so it can only play original songs written entirely by
-					band members who don’t belong to a performing-rights organisation. Covers, and songs with
-					anyone else’s material in them, would need licences from the PROs and SoundExchange, so
-					they can’t go on the air.
+					{m.band_slug_music_release_id_station_pays_no_licence_fees()}
 				</p>
 
 				{#if release.radioExcluded}
 					<Alert type="warning">
-						Staff pulled this release from the rotation{release.radioExcludedReason
-							? ` — ${release.radioExcludedReason}`
-							: ''}.
+						{m.band_slug_music_release_id_staff_pulled_release_from_rotatio({
+							value: release.radioExcludedReason ? ` — ${release.radioExcludedReason}` : ''
+						})}
 					</Alert>
 				{/if}
 
 				<Form
 					remote={setRadioOptInForm.for(releaseId)}
-					successToast="Radio setting saved"
+					successToast={m.band_slug_music_release_id_radio_setting_saved()}
 					class="mt-2"
 				>
 					{@const fields = setRadioOptInForm.for(releaseId).fields}
@@ -314,14 +324,17 @@
 					<FormField
 						field={fields.radioOptIn}
 						type="toggle"
-						label="Include in CMC Radio"
-						checkboxLabel="On the air"
+						label={m.band_slug_music_release_id_include_cmc_radio()}
+						checkboxLabel={m.band_slug_music_release_id_air()}
 						value={release.radioOptIn}
 					/>
 					{#if release.radioAttested && release.radioAttestedAt && release.radioAttestationExpiresAt}
 						<p class="text-muted text-sm">
-							Attested on {formatDate(release.radioAttestedAt)}, good until
-							{formatDate(release.radioAttestationExpiresAt)}: {RADIO_PRO_ATTESTATION.text}
+							{m.band_slug_music_release_id_attested_good_until({
+								formatDate: formatDate(release.radioAttestedAt),
+								formatDate2: formatDate(release.radioAttestationExpiresAt),
+								text: RADIO_PRO_ATTESTATION.text
+							})}
 						</p>
 					{:else if release.radioOptIn}
 						<Alert type="warning">
@@ -334,19 +347,21 @@
 						<FormField
 							field={fields.attestNotPro}
 							type="checkbox"
-							label="Performing rights"
+							label={m.band_slug_music_release_id_performing_rights()}
 							checkboxLabel={RADIO_PRO_ATTESTATION.text}
-							description="Required to go on the air, and again every year. CMC Radio holds no performing-rights licence, so it plays only original songs by writers who are not members of a performing-rights organisation."
+							description={m.band_slug_music_release_id_required_go_air_again_every()}
 						/>
 					{/if}
-					<SubmitButton>Save</SubmitButton>
+					<SubmitButton>{m.band_save()}</SubmitButton>
 				</Form>
 
 				{#if outOfRange.length > 0}
 					<Alert type="info">
-						The station plays tracks between {formatRuntime(RADIO_MIN_TRACK_MS)} and
-						{formatRuntime(RADIO_MAX_TRACK_MS)} long, so it will skip
-						{outOfRange.map((t) => t.title).join(', ')}. The rest of the record still plays.
+						{m.band_slug_music_release_id_station_plays_tracks_between_long({
+							formatRuntime: formatRuntime(RADIO_MIN_TRACK_MS),
+							formatRuntime2: formatRuntime(RADIO_MAX_TRACK_MS),
+							join: outOfRange.map((t) => t.title).join(', ')
+						})}
 					</Alert>
 				{/if}
 			</CardBody>
@@ -356,10 +371,9 @@
 	{#if canManage}
 		<Card>
 			<CardBody>
-				<CardTitle>Price</CardTitle>
+				<CardTitle>{m.band_slug_music_release_id_price()}</CardTitle>
 				<p class="text-muted">
-					Name a minimum. Free is a real answer — it needs no Stripe account, and the record can
-					still go out on CMC Radio.
+					{m.band_slug_music_release_id_name_minimum_free_real_answer()}
 				</p>
 
 				{#if release.priceMinCents > 0 && !canSell}
@@ -367,44 +381,58 @@
 					     is set but nothing can take the money. -->
 					<Alert type="warning">
 						This release has a price, but payouts are not set up yet, so nobody can buy it.
-						<a class="link" href={resolve(`/band/${band.slug}/music/payouts`)}>Set up payouts</a>
+						<a class="link" href={resolve(`/band/${band.slug}/music/payouts`)}
+							>{m.band_set_up_payouts()}</a
+						>
 						— or set the price to zero to give it away.
 					</Alert>
 				{/if}
 
-				<Form remote={updatePricingForm.for(releaseId)} successToast="Price saved">
+				<Form
+					remote={updatePricingForm.for(releaseId)}
+					successToast={m.band_slug_music_release_id_price_saved()}
+				>
 					{@const fields = updatePricingForm.for(releaseId).fields}
 					<input {...fields.slug.as('hidden', slug)} />
 					<input {...fields.releaseId.as('hidden', releaseId)} />
 					<MoneyField
 						field={fields.priceMinCents}
-						label="Minimum price"
+						label={m.band_slug_music_release_id_minimum_price()}
 						value={release.priceMinCents}
-						description="Enter 0 to give it away."
+						description={m.band_slug_music_release_id_enter_0_give_away()}
 					/>
 					<FormField
 						field={fields.allowPayMore}
 						type="toggle"
-						label="Let buyers pay more"
-						checkboxLabel="Name your price"
+						label={m.band_slug_music_release_id_let_buyers_pay_more()}
+						checkboxLabel={m.band_slug_music_release_id_name_price()}
 						value={release.allowPayMore}
 					/>
-					<SubmitButton label="Save price" />
+					<SubmitButton label={m.band_slug_music_release_id_save_price()} />
 				</Form>
 			</CardBody>
 		</Card>
 
 		<Card>
 			<CardBody>
-				<CardTitle>Details</CardTitle>
-				<Form remote={updateReleaseForm} successToast="Release saved" guard>
+				<CardTitle>{m.band_slug_music_release_id_details()}</CardTitle>
+				<Form
+					remote={updateReleaseForm}
+					successToast={m.band_slug_music_release_id_release_saved()}
+					guard
+				>
 					<input {...editFields.slug.as('hidden', slug)} />
 					<input {...editFields.releaseId.as('hidden', releaseId)} />
 
-					<FormField field={editFields.title} label="Title" value={release.title} required />
+					<FormField
+						field={editFields.title}
+						label={m.band_title()}
+						value={release.title}
+						required
+					/>
 					<FormField
 						field={editFields.kind}
-						label="Type"
+						label={m.band_type()}
 						type="select"
 						options={kindOptions}
 						value={release.kind}
@@ -412,45 +440,47 @@
 					/>
 					<FormField
 						field={editFields.releasedAt}
-						label="Release date"
+						label={m.band_release_date()}
 						type="date"
 						value={release.releasedAt ? toLocalDate(release.releasedAt) : ''}
 					/>
 					<!-- Custom-input mode: `type="textarea"` drops rows and placeholder. -->
-					<FormField field={editFields.description} label="About this release">
+					<FormField
+						field={editFields.description}
+						label={m.band_slug_music_release_id_about_release()}
+					>
 						{#snippet input(id)}
 							<textarea
 								{...editFields.description.as('text')}
 								{id}
 								class="textarea w-full"
 								rows="4"
-								placeholder="Who played on it, where it was recorded, anything you'd want a listener to know."
+								placeholder={m.band_slug_music_release_id_placeholder()}
 								>{release.description ?? ''}</textarea
 							>
 						{/snippet}
 					</FormField>
 
-					<SubmitButton label="Save details" />
+					<SubmitButton label={m.band_slug_music_release_id_save_details()} />
 				</Form>
 			</CardBody>
 		</Card>
 
 		<Card>
 			<CardBody>
-				<CardTitle>Publishing</CardTitle>
+				<CardTitle>{m.band_slug_music_release_id_publishing()}</CardTitle>
 				{#if release.status === 'published'}
 					<p class="text-muted">
-						This release is public. Unpublishing hides it from the site and takes it off the radio;
-						anyone who bought it keeps their download.
+						{m.band_slug_music_release_id_release_public_unpublishing_hides()}
 					</p>
 					<div class="flex flex-wrap gap-2">
 						<Action
 							action={unpublishReleaseForm.for(releaseId)}
-							label="Unpublish"
+							label={m.band_slug_music_release_id_unpublish()}
 							variant="ghost"
-							modalTitle="Unpublish release"
-							submitLabel="Unpublish"
-							successToast="Release unpublished"
+							modalTitle={m.band_slug_music_release_id_unpublish_release()}
+							submitLabel={m.band_slug_music_release_id_unpublish()}
+							successToast={m.band_slug_music_release_id_release_unpublished()}
 						>
 							{#snippet form()}
 								{@const fields = unpublishReleaseForm.for(releaseId).fields}
@@ -463,19 +493,19 @@
 				{:else if release.status === 'draft'}
 					<p class="text-muted">
 						{#if tracks.length === 0}
-							Add at least one track before publishing.
+							{m.band_slug_music_release_id_add_at_least_one_track()}
 						{:else}
-							Publishing puts this record on your profile and gives it a page anyone can link to.
+							{m.band_slug_music_release_id_publishing_puts_record_profile_gi()}
 						{/if}
 					</p>
 					<Action
 						action={publishReleaseForm.for(releaseId)}
-						label="Publish"
+						label={m.band_slug_music_release_id_publish()}
 						disabled={tracks.length === 0}
-						modalTitle="Publish release"
+						modalTitle={m.band_slug_music_release_id_publish_release()}
 						data-testid="publish-release"
-						submitLabel="Publish"
-						successToast="Release published"
+						submitLabel={m.band_slug_music_release_id_publish()}
+						successToast={m.band_slug_music_release_id_release_published()}
 					>
 						{#snippet form()}
 							{@const fields = publishReleaseForm.for(releaseId).fields}
@@ -492,15 +522,15 @@
 				<div class="mt-4 border-t border-base-300 pt-4">
 					<Action
 						action={deleteReleaseForm.for(releaseId)}
-						label="Delete release"
+						label={m.band_slug_music_release_id_delete_release()}
 						variant="ghost"
 						size="sm"
 						class="text-error"
-						modalTitle="Delete release"
+						modalTitle={m.band_slug_music_release_id_delete_release()}
 						data-testid="delete-release"
-						submitLabel="Delete"
+						submitLabel={m.band_slug_music_release_id_delete()}
 						submitVariant="error"
-						successToast="Release deleted"
+						successToast={m.band_slug_music_release_id_release_deleted()}
 						onsuccess={() => goto(resolve(`/band/${band.slug}/music`))}
 					>
 						{#snippet form()}
@@ -514,8 +544,7 @@
 									{tracks.length === 1 ? 'track' : 'tracks'}?
 								</p>
 								<p class="text-muted">
-									If anyone has bought this release it is archived instead of deleted, so their
-									download keeps working.
+									{m.band_slug_music_release_id_if_anyone_has_bought_release()}
 								</p>
 							</div>
 						{/snippet}

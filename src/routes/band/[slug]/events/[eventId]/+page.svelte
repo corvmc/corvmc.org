@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -70,15 +71,15 @@
 <Form
 	remote={updateBandEventForm}
 	guard
-	successToast="Event updated"
+	successToast={m.band_slug_events_event_id_success_toast()}
 	onsuccess={() => invalidateAll()}
 >
 	<PageHeader width="2xl" title={evt.title} subtitle={band.name}>
 		<StatusBadge status={evt.status} />
 		{#if canEdit}
-			<SubmitButton label="Save" shortcut="mod+s" />
+			<SubmitButton label={m.band_save()} shortcut="mod+s" />
 			<details class="dropdown dropdown-end">
-				<summary class="btn btn-ghost btn-sm">More</summary>
+				<summary class="btn btn-ghost btn-sm">{m.band_slug_events_event_id_more()}</summary>
 				<div class="dropdown-content dropdown-panel flex w-56 flex-col gap-1">
 					{#if evt.status === 'draft'}
 						<BandPublishEventAction slug={band.slug} eventId={evt.id} class="justify-start" />
@@ -101,15 +102,15 @@
 				the band that created the listing can change it.
 			</p>
 		{:else if evt.status === 'cancelled'}
-			<p class="text-muted text-sm">This event is cancelled, so it can no longer be edited.</p>
+			<p class="text-muted text-sm">{m.band_slug_events_event_id_event_cancelled_so_can_no()}</p>
 		{:else if !isAdmin}
-			<p class="text-muted text-sm">Band admins can edit this event.</p>
+			<p class="text-muted text-sm">{m.band_slug_events_event_id_band_admins_can_edit_event()}</p>
 		{/if}
 
 		<input {...updateFields.slug.as('hidden', band.slug)} />
 		<input {...updateFields.eventId.as('hidden', evt.id)} />
 
-		<InfoCard title="Event details">
+		<InfoCard title={m.band_slug_events_event_id_title()}>
 			<div class="space-y-4">
 				<EventFields
 					fields={updateFields}

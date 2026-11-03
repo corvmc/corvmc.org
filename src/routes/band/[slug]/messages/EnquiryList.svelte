@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The band's booking enquiries — the unified Messages list, scoped to this
 	 * band's inbox (#1250).
@@ -24,17 +25,17 @@
 <div class="flex min-h-0 flex-col gap-3" data-testid="enquiry-list">
 	<!-- "Enquiries", not "Messages": Messages is the page, and this is one of
 	     the two lists on it. -->
-	<SectionLabel label="Enquiries" />
+	<SectionLabel label={m.band_slug_messages_enquiry_list_label()} />
 
 	<p class="text-muted text-sm">
-		Enquiries from your public booking form. Replies go back by email; nobody sees your address.
+		{m.band_slug_messages_enquiry_list_enquiries_from_public_bookin()}
 	</p>
 
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		<DataList
 			{result}
-			emptyTitle="No enquiries yet"
-			empty="When someone uses the booking form on your profile, it lands here."
+			emptyTitle={m.band_slug_messages_enquiry_list_empty_title()}
+			empty={m.band_slug_messages_enquiry_list_empty()}
 			onpage={(p) => (enquiryList.page = p)}
 		>
 			{#snippet children(rows)}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import FileUpload from '$lib/components/ui/Form/FileUpload.svelte';
 	import { IconUpload } from '@tabler/icons-svelte';
 	import { AUDIO_MAX_UPLOAD_BYTES } from '$lib/config';
@@ -74,7 +75,11 @@
 
 			const result = (await response.json()) as { tracks: unknown[] };
 			toast.success(
-				result.tracks.length === 1 ? 'Track added' : `${result.tracks.length} tracks added`
+				result.tracks.length === 1
+					? m.band_slug_music_release_id_track_uploader_track_added()
+					: m.band_slug_music_release_id_track_uploader_tracks_added({
+							length: result.tracks.length
+						})
 			);
 			onuploaded();
 		} finally {
@@ -89,10 +94,12 @@
 		accept="audio/*,.mp3,.m4a,.flac,.wav,.ogg,.opus"
 		showPreview={false}
 		variant="primary"
-		busyLabel={progressLabel || 'Working…'}
+		busyLabel={progressLabel || m.band_slug_music_release_id_track_uploader_busy_label()}
 	>
 		<IconUpload size={16} />
-		Add tracks
+		{m.band_slug_music_release_id_track_uploader_add_tracks()}
 	</FileUpload>
-	<p class="text-subtle">MP3, M4A, FLAC, WAV, OGG or Opus, up to {maxLabel} each.</p>
+	<p class="text-subtle">
+		{m.band_slug_music_release_id_track_uploader_mp3_m4a_flac_wav_o({ maxLabel })}
+	</p>
 </div>

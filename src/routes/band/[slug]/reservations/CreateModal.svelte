@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { toast } from 'svelte-sonner';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
 	import Action from '$lib/components/ui/Action.svelte';
@@ -41,8 +42,8 @@
 
 <Action
 	action={bookBandReservation}
-	label="Book a Session"
-	modalTitle="Book a Session"
+	label={m.band_slug_reservations_create_modal_label()}
+	modalTitle={m.band_slug_reservations_create_modal_label()}
 	data-testid="book-session"
 	noFooter
 	variant="primary"
@@ -53,9 +54,9 @@
 		if (r?.redirectUrl) {
 			await goToCheckout(r.redirectUrl);
 		} else if (r?.waitlisted) {
-			toast.info('The first instance is waitlisted because the slot is currently booked.');
+			toast.info(m.band_slug_reservations_create_modal_first_instance_waitliste());
 		} else {
-			toast.success('Session booked');
+			toast.success(m.band_slug_reservations_create_modal_session_booked());
 		}
 	}}
 >

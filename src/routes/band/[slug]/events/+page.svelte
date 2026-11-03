@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -46,9 +47,11 @@
 <!-- Unclamped: the column tiers are container queries, and `2xl` is 672px —
      narrower than `col-extra`'s 768px, so a clamped page renders its widest
      tier set in the narrowest container the app allows (ui-patterns, #1216). -->
-<PageHeader title="Events" subtitle={band.name}>
+<PageHeader title={m.band_slug_events_title()} subtitle={band.name}>
 	{#if isAdmin}
-		<Button variant="ghost" size="sm" onclick={() => (importing = true)}>Import past gigs</Button>
+		<Button variant="ghost" size="sm" onclick={() => (importing = true)}
+			>{m.band_import_past_gigs()}</Button
+		>
 		<CreateEventModal bandSlug={band.slug} />
 	{/if}
 </PageHeader>
@@ -57,7 +60,7 @@
 	     the show is on the other band's listing only — never on this profile. -->
 	{#if invites.length > 0}
 		<div class="mb-6 space-y-3">
-			<h2 class="text-muted font-semibold uppercase">Invitations</h2>
+			<h2 class="text-muted font-semibold uppercase">{m.band_slug_events_invitations()}</h2>
 			{#each invites as invite (invite.eventId)}
 				<!-- One form object can only back a single <form>, so each invite gets
 				     its own instance with its own pending state. -->
@@ -79,23 +82,23 @@
 								<RequestCorrectionAction slug={band.slug} eventId={invite.eventId} />
 								<Form
 									remote={confirm}
-									successToast="Added to your profile"
+									successToast={m.band_slug_events_added_profile()}
 									onsuccess={() => invalidateAll()}
 									class="inline"
 								>
 									<input {...confirm.fields.slug.as('hidden', band.slug)} />
 									<input {...confirm.fields.eventId.as('hidden', invite.eventId)} />
-									<SubmitButton label="Confirm" variant="primary" size="sm" />
+									<SubmitButton label={m.band_slug_events_confirm()} variant="primary" size="sm" />
 								</Form>
 								<Form
 									remote={decline}
-									successToast="Declined"
+									successToast={m.band_slug_events_declined()}
 									onsuccess={() => invalidateAll()}
 									class="inline"
 								>
 									<input {...decline.fields.slug.as('hidden', band.slug)} />
 									<input {...decline.fields.eventId.as('hidden', invite.eventId)} />
-									<SubmitButton label="Decline" variant="ghost" size="sm" />
+									<SubmitButton label={m.band_slug_events_decline()} variant="ghost" size="sm" />
 								</Form>
 							</div>
 						{/if}
@@ -112,15 +115,15 @@
 	-->
 	{#if bookings.length > 0}
 		<div class="mb-6 space-y-3">
-			<h2 class="text-muted font-semibold uppercase">Bookings</h2>
+			<h2 class="text-muted font-semibold uppercase">{m.band_slug_events_bookings()}</h2>
 			<!-- A table: read-only with no actions at all, and the call times were a
 			     run-on line of up to four conditional facts (#1048). -->
 			<Table>
 				{#snippet head()}
-					<th class="cell-primary">Show</th>
-					<th class="col-support whitespace-nowrap">On at</th>
-					<th class="col-extra whitespace-nowrap">Call times</th>
-					<th class="whitespace-nowrap">Terms</th>
+					<th class="cell-primary">{m.band_slug_events_show()}</th>
+					<th class="col-support whitespace-nowrap">{m.band_slug_events_at()}</th>
+					<th class="col-extra whitespace-nowrap">{m.band_slug_events_call_times()}</th>
+					<th class="whitespace-nowrap">{m.band_slug_events_terms()}</th>
 				{/snippet}
 
 				{#each bookings as booking (booking.eventId)}
@@ -137,17 +140,21 @@
 							{:else}
 								<span class="text-subtle">—</span>
 							{/if}
-							<div class="text-subtle">{booking.setLengthMinutes} min</div>
+							<div class="text-subtle">
+								{m.band_slug_events_min({ setLengthMinutes: booking.setLengthMinutes })}
+							</div>
 						</td>
 						<td class="col-extra text-subtle">
 							{#if booking.soundcheckAt}
-								<div>soundcheck {formatTime(booking.soundcheckAt)}</div>
+								<div>
+									{m.band_slug_events_soundcheck({ formatTime: formatTime(booking.soundcheckAt) })}
+								</div>
 							{/if}
 							{#if booking.loadInAt}
-								<div>load-in {formatTime(booking.loadInAt)}</div>
+								<div>{m.band_slug_events_load({ formatTime: formatTime(booking.loadInAt) })}</div>
 							{/if}
 							{#if booking.curfewAt}
-								<div>curfew {formatTime(booking.curfewAt)}</div>
+								<div>{m.band_slug_events_curfew({ formatTime: formatTime(booking.curfewAt) })}</div>
 							{/if}
 						</td>
 						<td class="whitespace-nowrap">{describeTerms(booking.terms)}</td>
@@ -159,7 +166,7 @@
 
 	{#if events.length === 0}
 		<EmptyState>
-			<p>No events yet</p>
+			<p>{m.band_slug_events_no_events_yet()}</p>
 			{#if isAdmin}
 				<div class="mt-2">
 					<CreateEventModal bandSlug={band.slug} />
@@ -175,11 +182,11 @@
 		-->
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">Status</span></th>
-				<th class="cell-primary">Event</th>
-				<th class="col-support">Where</th>
-				<th class="col-extra">On the bill</th>
-				<th class="w-px"><span class="sr-only">Actions</span></th>
+				<th class="w-px"><span class="sr-only">{m.band_slug_events_status()}</span></th>
+				<th class="cell-primary">{m.band_slug_events_event()}</th>
+				<th class="col-support">{m.band_slug_events_where()}</th>
+				<th class="col-extra">{m.band_slug_events_bill()}</th>
+				<th class="w-px"><span class="sr-only">{m.band_slug_events_actions()}</span></th>
 			{/snippet}
 
 			{#each events as evt (evt.id)}
@@ -190,7 +197,7 @@
 					<td class="w-px whitespace-nowrap">
 						<StatusBadge status={evt.status} />
 						{#if !evt.isOwner}
-							<Badge variant="ghost" size="xs">guest</Badge>
+							<Badge variant="ghost" size="xs">{m.band_slug_events_guest()}</Badge>
 						{/if}
 					</td>
 					<td class="cell-primary">

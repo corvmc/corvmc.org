@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Form from '$lib/components/ui/Form/Form.svelte';
@@ -52,7 +53,10 @@
 	}
 </script>
 
-<Form remote={saveBandEpk} onsuccess={() => toast.success('Press kit saved')}>
+<Form
+	remote={saveBandEpk}
+	onsuccess={() => toast.success(m.band_slug_press_kit_press_kit_form_toast())}
+>
 	<input {...saveBandEpk.fields.slug.as('hidden', band.slug)} />
 	<input {...saveBandEpk.fields.epk.as('hidden', epkJson)} />
 
@@ -61,27 +65,31 @@
 		kit you download and send — they are never published on your public page, where a booker reaches
 		you through a contact form instead. What you need on stage is a separate document: your <a
 			href={riderHref}
-			class="link">tech rider</a
+			class="link">{m.band_slug_press_kit_press_kit_form_tech_rider()}</a
 		>.
 	</Alert>
 
 	<!-- Public: what a stranger reads -->
-	<InfoCard title="Press quotes">
-		<p class="text-muted">Shown on your public page.</p>
+	<InfoCard title={m.band_slug_press_kit_press_kit_form_press_quotes()}>
+		<p class="text-muted">{m.band_slug_press_kit_press_kit_form_shown_public_page()}</p>
 		{#if epk.pressQuotes.length === 0}
-			<p class="text-muted">Nothing quoted yet.</p>
+			<p class="text-muted">{m.band_slug_press_kit_press_kit_form_nothing_quoted_yet()}</p>
 		{/if}
 		<div class="space-y-4">
 			{#each epk.pressQuotes as _quote, i (i)}
 				<div class="space-y-2 inset p-3">
-					<FormField type="textarea" label="Quote" bind:value={epk.pressQuotes[i].quote} />
+					<FormField
+						type="textarea"
+						label={m.band_slug_press_kit_press_kit_form_quote()}
+						bind:value={epk.pressQuotes[i].quote}
+					/>
 					<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
 						<FormField
 							type="text"
-							label="Publication"
+							label={m.band_slug_press_kit_press_kit_form_publication()}
 							bind:value={epk.pressQuotes[i].publication}
 						/>
-						<FormField type="text" label="Date" bind:value={epk.pressQuotes[i].date} />
+						<FormField type="text" label={m.band_date()} bind:value={epk.pressQuotes[i].date} />
 					</div>
 					<Button
 						type="button"
@@ -89,28 +97,32 @@
 						size="sm"
 						onclick={() => (epk.pressQuotes = removeAt(epk.pressQuotes, i))}
 					>
-						Remove quote
+						{m.band_slug_press_kit_press_kit_form_remove_quote()}
 					</Button>
 				</div>
 			{/each}
 		</div>
 		<Button type="button" variant="default" size="sm" outline onclick={addQuote}>
-			Add a quote
+			{m.band_slug_press_kit_press_kit_form_add_quote()}
 		</Button>
 	</InfoCard>
 
-	<InfoCard title="Highlights">
+	<InfoCard title={m.band_slug_press_kit_press_kit_form_highlights()}>
 		<p class="text-muted">
-			Awards, notable supports, festivals, milestones. Shown on your public page.
+			{m.band_slug_press_kit_press_kit_form_awards_notable_supports_f()}
 		</p>
 		{#if epk.achievements.length === 0}
-			<p class="text-muted">Nothing listed yet.</p>
+			<p class="text-muted">{m.band_slug_press_kit_press_kit_form_nothing_listed_yet()}</p>
 		{/if}
 		<div class="space-y-2">
 			{#each epk.achievements as _, i (i)}
 				<div class="flex items-end gap-2">
 					<div class="flex-1">
-						<FormField type="text" label="Highlight" bind:value={epk.achievements[i]} />
+						<FormField
+							type="text"
+							label={m.band_slug_press_kit_press_kit_form_highlight()}
+							bind:value={epk.achievements[i]}
+						/>
 					</div>
 					<Button
 						type="button"
@@ -118,29 +130,37 @@
 						size="sm"
 						onclick={() => (epk.achievements = removeAt(epk.achievements, i))}
 					>
-						Remove
+						{m.band_remove()}
 					</Button>
 				</div>
 			{/each}
 		</div>
 		<Button type="button" variant="default" size="sm" outline onclick={addAchievement}>
-			Add a highlight
+			{m.band_slug_press_kit_press_kit_form_add_highlight()}
 		</Button>
 	</InfoCard>
 
 	{#if premium}
-		<InfoCard title="Video">
+		<InfoCard title={m.band_slug_press_kit_press_kit_form_video()}>
 			<p class="text-muted">
-				Live clips, on your page and in your press kit. Paste a YouTube link.
+				{m.band_slug_press_kit_press_kit_form_live_clips_page_press_kit()}
 			</p>
 			{#if epk.videos.length === 0}
-				<p class="text-muted">No video yet.</p>
+				<p class="text-muted">{m.band_slug_press_kit_press_kit_form_no_video_yet()}</p>
 			{/if}
 			<div class="space-y-4">
 				{#each epk.videos as _video, i (i)}
 					<div class="grid grid-cols-1 gap-2 inset p-3 sm:grid-cols-2">
-						<FormField type="text" label="Video URL" bind:value={epk.videos[i].url} />
-						<FormField type="text" label="Label" bind:value={epk.videos[i].label} />
+						<FormField
+							type="text"
+							label={m.band_slug_press_kit_press_kit_form_video_url()}
+							bind:value={epk.videos[i].url}
+						/>
+						<FormField
+							type="text"
+							label={m.band_slug_press_kit_press_kit_form_label()}
+							bind:value={epk.videos[i].label}
+						/>
 						<Button
 							type="button"
 							variant="ghost"
@@ -148,38 +168,38 @@
 							class="sm:col-span-2"
 							onclick={() => (epk.videos = removeAt(epk.videos, i))}
 						>
-							Remove video
+							{m.band_slug_press_kit_press_kit_form_remove_video()}
 						</Button>
 					</div>
 				{/each}
 			</div>
 			{#if epk.videos.length < MAX_VIDEOS}
 				<Button type="button" variant="default" size="sm" outline onclick={addVideo}>
-					Add a video
+					{m.band_slug_press_kit_press_kit_form_add_video()}
 				</Button>
 			{/if}
 		</InfoCard>
 	{/if}
 
 	<!-- Package only: what a venue is sent -->
-	<InfoCard title="Who to contact">
+	<InfoCard title={m.band_slug_press_kit_press_kit_form_who_contact()}>
 		<p class="text-muted">
-			Package only. Your public page offers a contact form instead, so none of this is published.
+			{m.band_slug_press_kit_press_kit_form_package_only_public_page()}
 		</p>
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-3">
 			<ContactRoleFields
-				label="Booking"
-				description="Where a booking enquiry from your public page is delivered."
+				label={m.band_slug_press_kit_press_kit_form_booking()}
+				description={m.band_slug_press_kit_press_kit_form_where_booking_enquiry_fro()}
 				bind:contact={epk.bookingContact}
 			/>
 			<ContactRoleFields
-				label="Management"
-				description="If someone else handles the business."
+				label={m.band_slug_press_kit_press_kit_form_management()}
+				description={m.band_slug_press_kit_press_kit_form_if_someone_else_handles_b()}
 				bind:contact={epk.managementContact}
 			/>
 			<ContactRoleFields
-				label="Press"
-				description="Who a journalist should ask for."
+				label={m.band_slug_press_kit_press_kit_form_press()}
+				description={m.band_slug_press_kit_press_kit_form_who_journalist_should_ask()}
 				bind:contact={epk.prContact}
 				withPhone={false}
 			/>
@@ -187,6 +207,6 @@
 	</InfoCard>
 
 	<div class="flex justify-end">
-		<SubmitButton>Save press kit</SubmitButton>
+		<SubmitButton>{m.band_slug_press_kit_press_kit_form_save_press_kit()}</SubmitButton>
 	</div>
 </Form>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import type { EpkContact } from '$lib/types/band-page';
 
@@ -40,21 +41,21 @@
 
 	<FormField
 		type="text"
-		label="Name"
+		label={m.band_name()}
 		value={contact?.name ?? ''}
 		oninput={(e: Event) => set({ name: (e.currentTarget as HTMLInputElement).value })}
 	/>
 	<FormField
 		type="email"
-		label="Email"
+		label={m.band_email()}
 		value={contact?.email ?? ''}
 		oninput={(e: Event) => set({ email: (e.currentTarget as HTMLInputElement).value })}
 	/>
 	{#if withPhone}
 		<FormField
 			type="tel"
-			label="Phone"
-			description="Package only — never shown on your public page."
+			label={m.band_phone()}
+			description={m.band_slug_press_kit_contact_role_fields_description()}
 			value={contact?.phone ?? ''}
 			oninput={(e: Event) =>
 				set({ phone: (e.currentTarget as HTMLInputElement).value || undefined })}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -31,7 +32,7 @@
 	const cashDue = $derived(res.cashDueCents ?? 0);
 </script>
 
-<PageHeader width="md" title="Session" />
+<PageHeader width="md" title={m.band_slug_reservations_id_session()} />
 <PageContent width="md">
 	<!--
 		The shape #1061 settled on the member's twin of this page: the ref the
@@ -45,19 +46,28 @@
 	     those, so the identity above already reads them out. -->
 	<DefinitionList>
 		{#if res.bookedBy.id}
-			<Fact label="Booked by"><EntityChip ref={res.bookedBy} /></Fact>
+			<Fact label={m.band_slug_reservations_id_booked_by()}><EntityChip ref={res.bookedBy} /></Fact>
 		{/if}
 		{#if res.status === 'cancelled'}
-			<Fact label="Cancelled" wrap>{res.cancellationReason ?? 'No reason was recorded.'}</Fact>
+			<Fact label={m.band_slug_reservations_id_cancelled()} wrap
+				>{res.cancellationReason ?? 'No reason was recorded.'}</Fact
+			>
 		{/if}
 		{#if res.notes}
-			<Fact label="Notes" wrap>{res.notes}</Fact>
+			<Fact label={m.band_notes()} wrap>{res.notes}</Fact>
 		{/if}
-		<Fact label="Rate">${formatDollars(res.hourlyRateCents)}/hour · {durationLabel}</Fact>
+		<Fact label={m.band_slug_reservations_id_rate()}
+			>{m.band_slug_reservations_id_hour({
+				formatDollars: formatDollars(res.hourlyRateCents),
+				durationLabel
+			})}</Fact
+		>
 		{#if res.creditsUsed}
-			<Fact label="Free hours applied">{res.creditsUsed}</Fact>
+			<Fact label={m.band_slug_reservations_id_free_hours_applied()}>{res.creditsUsed}</Fact>
 		{/if}
-		<Fact label="Total" class="font-medium">${formatDollars(res.totalCents)}</Fact>
+		<Fact label={m.band_slug_reservations_id_total()} class="font-medium"
+			>${formatDollars(res.totalCents)}</Fact
+		>
 	</DefinitionList>
 
 	<!-- Where the money stands, in a sentence. A three-row grid and one line of
@@ -65,15 +75,17 @@
 	     hand-written `<dl>` (#1077). -->
 	<p>
 		{#if res.refundedAt}
-			Refunded.
+			{m.band_slug_reservations_id_refunded()}
 		{:else if res.paidAt}
-			Paid in full.
+			{m.band_slug_reservations_id_paid_full()}
 		{:else if res.cashDueCents === 0}
-			Settled — nothing owed at the door.
+			{m.band_slug_reservations_id_settled_nothing_owed_at_door()}
 		{:else if cashDue > 0}
-			<span class="font-medium">${formatDollars(cashDue)} due at the door.</span>
+			<span class="font-medium"
+				>{m.band_slug_reservations_id_due_at_door({ formatDollars: formatDollars(cashDue) })}</span
+			>
 		{:else}
-			Not yet paid.
+			{m.band_slug_reservations_id_not_yet_paid()}
 		{/if}
 	</p>
 
@@ -82,12 +94,14 @@
 		     band booking appears in its booker's own list. Only the booker saw
 		     what was owed and no way to settle it (#1077). -->
 		<Button href="/member/reservations/{res.id}/pay" variant="primary" class="w-full">
-			Pay for this session
+			{m.band_slug_reservations_id_pay_session()}
 		</Button>
 	{:else if !res.isBooker && !res.paidAt && !res.refundedAt}
 		<!-- Whoever booked pays, from their own reservation page; the act sees
 		     what it owes without being handed someone else's checkout. -->
-		<p class="text-subtle">{res.bookedBy.title} booked this session and can settle it.</p>
+		<p class="text-subtle">
+			{m.band_slug_reservations_id_booked_session_can_settle({ title: res.bookedBy.title })}
+		</p>
 	{/if}
 
 	{#if res.status === 'confirmed'}
@@ -95,23 +109,20 @@
 		     were a single paragraph inside an `InfoCard` titled "Door Code",
 		     which is a box around one sentence (#1061, #1077). -->
 		{#if res.lockCode && res.lockSyncedAt}
-			<InfoCard title="Door Code">
+			<InfoCard title={m.band_slug_reservations_id_door_code()}>
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
 				<p class="text-muted">
-					Enter this code on the door keypad. It works for the length of the session, for whoever on
-					the band gets there first.
+					{m.band_slug_reservations_id_enter_code_door_keypad_works()}
 				</p>
 			</InfoCard>
 		{:else if res.fallbackCode}
 			<!-- The session's own code has not reached the lock. The break-glass
 			     code was synced long ago, so it opens the door even now, and it
 			     is shown rather than asked for — see #780. -->
-			<InfoCard title="Door Code">
+			<InfoCard title={m.band_slug_reservations_id_door_code()}>
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.fallbackCode}</p>
 				<p class="text-muted">
-					We couldn't confirm this session's usual code reached the door, so this one will get the
-					band in for now. Staff know about it. If it doesn't work, call us rather than waiting
-					outside.
+					{m.band_slug_reservations_id_we_couldn_t_confirm_session()}
 				</p>
 			</InfoCard>
 		{:else if res.inAccessWindow}
@@ -119,24 +130,29 @@
 			     outside is the failure mode, so this one is loud. -->
 			<Alert type="error">
 				This session's code hasn't reached the door and we don't have a backup to give you right
-				now. Don't wait outside — <a class="link" href={resolve('/contact')}>get in touch</a> and someone
-				will let the band in.
+				now. Don't wait outside — <a class="link" href={resolve('/contact')}
+					>{m.band_slug_reservations_id_get_touch()}</a
+				> and someone will let the band in.
 			</Alert>
 		{:else if res.lockCode}
 			<p class="text-muted">
-				The code is issued but the door hasn't confirmed it yet. It should be ready before the
-				session — check back here, and get in touch if it still isn't showing.
+				{m.band_slug_reservations_id_code_issued_but_door_hasn()}
 			</p>
 		{:else}
-			<p class="text-muted">The door code appears here on the day of the session.</p>
+			<p class="text-muted">{m.band_slug_reservations_id_door_code_appears_here_day()}</p>
 		{/if}
 	{/if}
 
 	{#if res.canCancel}
-		<Form remote={cancel} onsuccess={() => toast.success('Reservation cancelled')}>
+		<Form remote={cancel} onsuccess={() => toast.success(m.band_slug_reservations_id_toast())}>
 			<input {...cancelFields.slug.as('hidden', slug)} />
 			<input {...cancelFields.reservationId.as('hidden', res.id)} />
-			<SubmitButton label="Cancel this session" variant="error" outline class="w-full" />
+			<SubmitButton
+				label={m.band_slug_reservations_id_cancel_session()}
+				variant="error"
+				outline
+				class="w-full"
+			/>
 		</Form>
 	{/if}
 </PageContent>

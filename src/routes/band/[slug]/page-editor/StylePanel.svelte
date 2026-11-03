@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Theme and CSS, as one control.
 	 *
@@ -66,20 +67,22 @@
 
 <div class="flex min-h-0 flex-1 flex-col">
 	<div class="flex items-center justify-between gap-2 border-b border-base-300 px-4 py-3">
-		<h2 class="text-sm font-bold uppercase">Style</h2>
+		<h2 class="text-sm font-bold uppercase">{m.band_style()}</h2>
 		<Button type="button" variant="ghost" size="sm" shape="square" onclick={onclose}>
 			<IconX size={16} />
-			<span class="sr-only">Close the style panel</span>
+			<span class="sr-only">{m.band_slug_page_editor_style_panel_close_style_panel()}</span>
 		</Button>
 	</div>
 
 	<div class="flex min-h-0 flex-1 flex-col gap-3 p-4">
 		<label class="fieldset">
-			<span class="fieldset-legend text-xs font-medium">Theme</span>
+			<span class="fieldset-legend text-xs font-medium"
+				>{m.band_slug_page_editor_style_panel_theme()}</span
+			>
 			<Select
 				size="sm"
 				class="mt-1 w-full"
-				aria-label="Theme"
+				aria-label={m.band_slug_page_editor_style_panel_theme()}
 				value={state.theme}
 				onchange={(e: Event) =>
 					selectTheme((e.currentTarget as HTMLSelectElement).value as BandThemeValue)}
@@ -101,8 +104,7 @@
 			     identical either way: the theme's rules were folded in ahead of
 			     their overrides, which is the order that was already resolving. -->
 			<Alert type="info" class="text-xs">
-				This page's theme rules have been folded into your CSS, so you can see all of them. Nothing
-				has changed about how it looks.
+				{m.band_slug_page_editor_style_panel_page_s_theme_rules_have()}
 			</Alert>
 		{/if}
 
@@ -120,7 +122,7 @@
 						data-testid="fork-theme"
 						onclick={() => onchange(fork(state, themeSheet))}
 					>
-						Customize
+						{m.band_slug_page_editor_style_panel_customize()}
 					</Button>
 				{/if}
 			</div>
@@ -131,7 +133,9 @@
 			<textarea
 				class="textarea min-h-64 w-full flex-1 font-mono text-xs"
 				readonly={!forked}
-				aria-label={forked ? 'Your custom CSS' : 'Theme CSS (read-only)'}
+				aria-label={forked
+					? m.band_slug_page_editor_style_panel_custom_css()
+					: m.band_slug_page_editor_style_panel_theme_css_read_only()}
 				placeholder={`h1 {\n  /* your styles here */\n}`}
 				value={css}
 				oninput={(e) => onchange({ theme: 'custom', customCss: e.currentTarget.value })}></textarea>
@@ -141,8 +145,7 @@
 					Wrapped in <code>.band-site-container</code>, so a bare selector like <code>h1</code> only ever
 					affects your page. Max 50KB; external stylesheets and scripts are stripped.
 				{:else}
-					Read-only. Customize to take these rules over — the theme stops applying and this becomes
-					your whole page.
+					{m.band_slug_page_editor_style_panel_read_only_customize_take_t()}
 				{/if}
 			</p>
 		</div>

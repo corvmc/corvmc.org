@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import { getBandProfileEditor } from '$lib/remote/directory.remote';
@@ -23,7 +24,7 @@
 	);
 </script>
 
-<PageHeader width="3xl" title="Band Profile" subtitle={band.name} />
+<PageHeader width="3xl" title={m.band_slug_edit_title()} subtitle={band.name} />
 <PageContent width="3xl">
 	<BandProfileForm
 		{band}

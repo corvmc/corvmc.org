@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import BandReservationCard from '$lib/components/reservations/BandReservationCard.svelte';
@@ -33,11 +34,11 @@
 	let upcoming = $derived(getBandUpcoming(band.id));
 </script>
 
-<PageHeader title="Dashboard" subtitle={band.name} />
+<PageHeader title={m.band_slug_dashboard()} subtitle={band.name} />
 <PageContent>
 	{#if address}
-		<AddressCard url={address} title="Your band's address">
-			Put this on a flyer or in a bio — it goes to {band.name}'s page.
+		<AddressCard url={address} title={m.band_slug_band_s_address()}>
+			{m.band_slug_put_flyer_bio_goes_s({ name: band.name })}
 		</AddressCard>
 	{/if}
 
@@ -47,7 +48,7 @@
 
 			{#snippet failed(_error, reset)}
 				<Alert type="warning" reset={() => retryQuery(getPressKitProgress(band.slug), reset)}>
-					Your press kit progress didn't load. The rest of the dashboard is up to date.
+					{m.band_slug_press_kit_progress_didn_t()}
 				</Alert>
 			{/snippet}
 		</svelte:boundary>
@@ -55,8 +56,13 @@
 
 	<!-- Band overview -->
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<StatCard title="Members" value={band.memberCount} size="sm" />
-		<StatCard title="Your Role" value={layout.userRole} size="sm" valueClass="capitalize" />
+		<StatCard title={m.band_members()} value={band.memberCount} size="sm" />
+		<StatCard
+			title={m.band_slug_role()}
+			value={layout.userRole}
+			size="sm"
+			valueClass="capitalize"
+		/>
 	</div>
 
 	<!-- Upcoming reservations. The only thing on this page that waits: everything
@@ -65,7 +71,7 @@
 	<section>
 		{#await upcoming}
 			<div class="mb-3 flex items-center justify-between">
-				<h2 class="text-lg font-semibold">Upcoming sessions</h2>
+				<h2 class="text-lg font-semibold">{m.band_slug_upcoming_sessions()}</h2>
 			</div>
 			<div class="flex justify-center py-8">
 				<span class="loading loading-lg loading-spinner"></span>
@@ -73,18 +79,18 @@
 		{:then sessions}
 			<div class="mb-3 flex items-center justify-between">
 				<h2 class="text-lg font-semibold">
-					Upcoming sessions
+					{m.band_slug_upcoming_sessions()}
 					{#if sessions.length > 0}
 						<span class="font-normal text-base-content/60">({sessions.length})</span>
 					{/if}
 				</h2>
 				<a href={resolve(`/band/${band.slug}/reservations`)} class="link text-sm link-primary">
-					View all
+					{m.band_slug_view_all()}
 				</a>
 			</div>
 
 			{#if sessions.length === 0}
-				<EmptyState message="No upcoming sessions scheduled." />
+				<EmptyState message={m.band_slug_message()} />
 			{:else}
 				<div class="flex flex-col gap-2">
 					{#each sessions as res (res.id)}
@@ -98,11 +104,11 @@
 	<!-- Quick links -->
 	<div class="flex gap-3">
 		<Button href="/band/{band.slug}/members" variant="default" size="sm" outline
-			>Manage Members</Button
+			>{m.band_slug_manage_members()}</Button
 		>
 		{#if isOwnerOrAdmin}
 			<Button href="/band/{band.slug}/edit" variant="default" size="sm" outline
-				>Edit Band Profile</Button
+				>{m.band_slug_edit_band_profile()}</Button
 			>
 		{/if}
 	</div>

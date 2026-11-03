@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -41,10 +42,11 @@
 {#if candidates.length > 0}
 	<Card class="mb-6">
 		<CardBody>
-			<h2 class="text-base font-semibold">Some of this belongs on your rider</h2>
+			<h2 class="text-base font-semibold">
+				{m.band_slug_packing_promote_to_rider_some_belongs_rider()}
+			</h2>
 			<p class="mt-0.5 mb-3 text-xs text-base-content/60">
-				You bring these and they stand on a stage, but the desk has not been told. Adding one leaves
-				the rest of your rider exactly as it is.
+				{m.band_slug_packing_promote_to_rider_bring_these_they_stand_st()}
 			</p>
 
 			<ul class="divide-y divide-base-300 rounded-box border border-base-300">
@@ -61,12 +63,17 @@
 						<Form
 							remote={promoteForm}
 							guard
-							successToast="Added to your rider"
+							successToast={m.band_slug_packing_promote_to_rider_success_toast()}
 							onsuccess={onpromoted}
 						>
 							<input {...promoteForm.fields.bandId.as('hidden', bandId)} />
 							<input {...promoteForm.fields.itemIds.as('hidden', item.id)} />
-							<SubmitButton label="Add to rider" variant="secondary" size="xs" {icon} />
+							<SubmitButton
+								label={m.band_slug_packing_promote_to_rider_label()}
+								variant="secondary"
+								size="xs"
+								{icon}
+							/>
 						</Form>
 					</li>
 				{/each}

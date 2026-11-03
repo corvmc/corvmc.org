@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { updateMemberRemote } from '$lib/remote/bands.remote';
@@ -34,18 +35,18 @@
 	const { fields } = updateMemberRemote;
 
 	const roleOptions = [
-		{ value: 'member', label: 'Member' },
-		{ value: 'admin', label: 'Admin' }
+		{ value: 'member', label: m.band_role_member() },
+		{ value: 'admin', label: m.band_admin() }
 	];
 </script>
 
 <Action
 	action={update}
-	label="Edit"
-	modalTitle="Edit {memberName}"
+	label={m.band_slug_members_edit_member_edit()}
+	modalTitle={m.band_slug_members_edit_member_modal_title({ memberName })}
 	variant="ghost"
 	size="xs"
-	successToast="Member updated"
+	successToast={m.band_slug_members_edit_member_success_toast()}
 	onsuccess={onchanged}
 >
 	{#snippet form()}
@@ -55,18 +56,18 @@
 			<FormField
 				field={fields.role}
 				type="select"
-				label="Role"
+				label={m.band_role()}
 				value={role}
 				options={roleOptions}
-				description="Admins can edit the band profile, its events, and its members."
+				description={m.band_slug_members_edit_member_description()}
 			/>
 			<FormField
 				field={fields.position}
 				type="text"
-				label="Instrument / role"
+				label={m.band_instrument_role()}
 				value={position ?? ''}
 				maxlength="100"
-				placeholder="e.g. Bass"
+				placeholder={m.band_e_g_bass()}
 			/>
 		</div>
 	{/snippet}

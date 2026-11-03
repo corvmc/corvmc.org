@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -44,7 +45,7 @@
 	 */
 </script>
 
-<PageHeader width="2xl" title="Reservations" subtitle={band.name}>
+<PageHeader width="2xl" title={m.band_slug_reservations_reservations()} subtitle={band.name}>
 	<CreateModal
 		slug={band.slug}
 		hasSustainingMember={membership.hasSustainingMember}
@@ -54,10 +55,10 @@
 <PageContent width="2xl">
 	<TabBar
 		tabs={[
-			{ key: 'upcoming', label: `Upcoming (${upcoming.length})` },
+			{ key: 'upcoming', label: m.band_slug_reservations_upcoming({ length: upcoming.length }) },
 			// Counted too. One tab counted and the other did not, and the
 			// uncounted one was the truncated one (#1040).
-			{ key: 'past', label: `Past (${past.pagination.total})` }
+			{ key: 'past', label: m.band_slug_reservations_past({ total: past.pagination.total }) }
 		]}
 		active={activeTab}
 		onchange={(key) => (activeTab = key as 'upcoming' | 'past')}
@@ -66,8 +67,8 @@
 	{#if activeTab === 'upcoming'}
 		{#if upcoming.length === 0}
 			<EmptyState
-				title="No upcoming sessions"
-				description="Book the practice space and it'll show up here for the whole band."
+				title={m.band_slug_reservations_no_upcoming_sessions()}
+				description={m.band_slug_reservations_description()}
 			/>
 		{:else}
 			<div class="flex flex-col gap-2">
@@ -80,7 +81,7 @@
 
 	{#if activeTab === 'past'}
 		{#if past.rows.length === 0}
-			<EmptyState message="No past reservations." />
+			<EmptyState message={m.band_slug_reservations_message()} />
 		{:else}
 			<div class="flex flex-col gap-2">
 				{#each past.rows as res (res.id)}
