@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { pageTitle } from '$lib/config';
 	import { resolve } from '$app/paths';
 	import { requestPasswordReset } from '$lib/remote/password-reset.remote';
@@ -26,7 +27,9 @@
 		<div class="w-full max-w-sm">
 			<div class="card shadow-xl surface">
 				<CardBody class="gap-4">
-					<CardTitle size="lg" level={2} class="justify-center">Reset your password</CardTitle>
+					<CardTitle size="lg" level={2} class="justify-center"
+						>{m.public_forgot_password_reset_password()}</CardTitle
+					>
 
 					{#if submitted}
 						<!--
@@ -35,13 +38,11 @@
 							and for a throttled one.
 						-->
 						<Alert type="success" class="text-sm">
-							If that address has an account, a reset link is on its way. Check your spam folder if
-							it hasn't arrived in a few minutes.
+							{m.public_forgot_password_if_address_has_account_reset()}
 						</Alert>
 					{:else}
 						<p class="text-muted">
-							Enter the email address on your account and we'll send you a link to set a new
-							password.
+							{m.public_forgot_password_enter_email_address_account_we()}
 						</p>
 
 						<Form
@@ -49,13 +50,17 @@
 							onsuccess={() => (submitted = true)}
 							class="flex flex-col gap-3"
 						>
-							<FormField field={fields.email} type="email" label="Email" required />
-							<SubmitButton label="Send reset link" variant="primary" class="mt-1 w-full" />
+							<FormField field={fields.email} type="email" label={m.public_email()} required />
+							<SubmitButton
+								label={m.public_forgot_password_send_reset_link()}
+								variant="primary"
+								class="mt-1 w-full"
+							/>
 						</Form>
 					{/if}
 
 					<div class="text-center text-sm">
-						<a class="link" href={resolve('/login')}>Back to sign in</a>
+						<a class="link" href={resolve('/login')}>{m.public_forgot_password_back_sign()}</a>
 					</div>
 				</CardBody>
 			</div>

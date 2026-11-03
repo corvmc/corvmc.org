@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { Turnstile } from 'svelte-turnstile';
@@ -35,22 +36,26 @@
 </svelte:head>
 
 <div class="mx-auto max-w-2xl px-4 py-12">
-	<p class="eyebrow mb-2">Vendor application</p>
+	<p class="eyebrow mb-2">{m.public_events_id_vendors_apply_vendor_application()}</p>
 	<h1 class="mb-2 text-3xl font-bold">{market.title}</h1>
 	<p class="mb-8 text-muted">{fullDate(market.startsAt)}</p>
 
 	{#if submitted}
 		<Alert type="success">
-			Thanks — your application is in. We'll reply by email once it has been reviewed.
+			{m.public_events_id_vendors_apply_thanks_application_we_ll_repl()}
 		</Alert>
 	{:else if !market.accepting}
-		<Alert type="info">Applications for this market are closed.</Alert>
+		<Alert type="info">{m.public_events_id_vendors_apply_applications_market_closed()}</Alert>
 		<Button href={resolve(`/events/${market.eventId}`)} variant="ghost" class="mt-4">
-			Back to the event
+			{m.public_events_id_vendors_apply_back_event()}
 		</Button>
 	{:else}
 		{#if market.closesAt}
-			<p class="mb-4">Applications close {formatDateTime(market.closesAt)}.</p>
+			<p class="mb-4">
+				{m.public_events_id_vendors_apply_applications_close({
+					formatDateTime: formatDateTime(market.closesAt)
+				})}
+			</p>
 		{/if}
 		<Form
 			remote={submitVendorApplicationForm}
@@ -67,13 +72,22 @@
 			<input {...fields.eventId.as('hidden', market.eventId)} />
 
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-				<FormField field={fields.contactName} type="text" label="Your name" required />
-				<FormField field={fields.contactEmail} type="email" label="Email" required />
-				<FormField field={fields.contactPhone} type="tel" label="Phone (optional)" />
-				<FormField field={fields.businessName} type="text" label="Business name" required />
+				<FormField field={fields.contactName} type="text" label={m.public_name_2()} required />
+				<FormField field={fields.contactEmail} type="email" label={m.public_email()} required />
+				<FormField
+					field={fields.contactPhone}
+					type="tel"
+					label={m.public_events_id_vendors_apply_phone_optional()}
+				/>
+				<FormField
+					field={fields.businessName}
+					type="text"
+					label={m.public_events_id_vendors_apply_business_name()}
+					required
+				/>
 			</div>
 
-			<FormField name="offering" label="What do you sell?">
+			<FormField name="offering" label={m.public_events_id_vendors_apply_what_do_sell()}>
 				<textarea
 					{...fields.offering.as('text')}
 					class="textarea w-full"
@@ -85,36 +99,37 @@
 			<FormField
 				field={fields.website}
 				type="text"
-				label="Website or shop link (optional)"
-				placeholder="https://"
+				label={m.public_events_id_vendors_apply_website_shop_link_optional()}
+				placeholder={m.public_events_id_vendors_apply_placeholder()}
 			/>
 
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 				<FormField
 					field={fields.tablesRequested}
 					type="number"
-					label="Tables needed"
+					label={m.public_events_id_vendors_apply_tables_needed()}
 					value={1}
 					min="1"
 					max={MARKET_MAX_TABLES_REQUESTED}
-					description={`Up to ${MARKET_MAX_TABLES_REQUESTED}.`}
+					description={m.public_events_id_vendors_apply_description({
+						MARKET_MAX_TABLES_REQUESTED
+					})}
 				/>
 				<FormField
 					field={fields.needsPower}
 					type="checkbox"
-					label="Power"
-					checkboxLabel="I need an outlet"
+					label={m.public_events_id_vendors_apply_power()}
+					checkboxLabel={m.public_events_id_vendors_apply_checkbox_label()}
 				/>
 			</div>
 
-			<FormField name="notes" label="Anything else? (optional)">
+			<FormField name="notes" label={m.public_events_id_vendors_apply_anything_else_optional()}>
 				<textarea {...fields.notes.as('text')} class="textarea w-full" rows="3" maxlength="2000"
 				></textarea>
 			</FormField>
 
 			<p class="text-muted text-sm">
-				If you are accepted, your business name, what you sell and your website are listed on the
-				event page. Your name, email and phone are never published.
+				{m.public_events_id_vendors_apply_if_accepted_business_name_wha()}
 			</p>
 
 			<Turnstile
@@ -126,7 +141,7 @@
 			{#if failure}
 				<Alert type="error">{failure}</Alert>
 			{/if}
-			<SubmitButton label="Send application" />
+			<SubmitButton label={m.public_events_id_vendors_apply_send_application()} />
 		</Form>
 	{/if}
 </div>

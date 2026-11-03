@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -43,7 +44,7 @@
 
 <div class="mx-auto max-w-2xl space-y-6 p-6">
 	{#if download.status === 'pending'}
-		<h1 class="text-3xl font-semibold">Confirming your payment…</h1>
+		<h1 class="text-3xl font-semibold">{m.public_music_download_token_confirming_payment()}</h1>
 		<Alert type={attempts >= RETRY_LIMIT ? 'warning' : 'info'}>
 			{attempts >= RETRY_LIMIT
 				? "We haven't had confirmation from our payment processor yet. Nothing has gone wrong with your order — the download link is emailed to you as soon as it lands, and this page will work then too."
@@ -59,7 +60,7 @@
 		     the only handle they have on what they bought. The receipt email carries
 		     the same link, which is the copy that survives closing the tab. -->
 		<Alert type="info">
-			Bookmark this page — it's how you get these files again later. We've emailed you the link too.
+			{m.public_music_download_token_bookmark_page_s_how_get()}
 		</Alert>
 
 		<Card>
@@ -82,7 +83,9 @@
 								href={resolve(`/api/audio/download/${page.params.token}/${track.id}`)}
 							>
 								<IconDownload size={16} />
-								<span class="sr-only">Download {track.title}</span>
+								<span class="sr-only"
+									>{m.public_music_download_token_download({ title: track.title })}</span
+								>
 							</Button>
 						</li>
 					{/each}

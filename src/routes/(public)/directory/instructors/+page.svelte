@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
@@ -38,7 +39,7 @@
 </script>
 
 <svelte:head>
-	<title>Music teachers · Corvallis Music Collective</title>
+	<title>{m.public_directory_instructors_music_teachers_corvallis_music()}</title>
 	<meta
 		name="description"
 		content="Music teachers who give lessons at the Corvallis Music Collective."
@@ -48,15 +49,23 @@
 <!-- `px-6` supplies what `PageHeader`'s `-mx-6` bleeds into; without it the
      header overhangs and the page scrolls sideways at 375px (#970). -->
 <div class="px-6">
-	<PageHeader title="Teachers" subtitle="Music lessons at the Collective" />
+	<PageHeader title={m.public_teachers()} subtitle={m.public_directory_instructors_subtitle()} />
 
 	<PageContent>
 		<div class="mb-6 flex justify-center">
 			<TabBar
 				tabs={[
-					{ key: 'bands', label: 'Bands', href: resolve('/directory') },
-					{ key: 'musicians', label: 'Musicians', href: resolve('/directory?tab=musicians') },
-					{ key: 'instructors', label: 'Teachers', href: resolve('/directory/instructors') }
+					{ key: 'bands', label: m.public_bands(), href: resolve('/directory') },
+					{
+						key: 'musicians',
+						label: m.public_musicians(),
+						href: resolve('/directory?tab=musicians')
+					},
+					{
+						key: 'instructors',
+						label: m.public_teachers(),
+						href: resolve('/directory/instructors')
+					}
 				]}
 				active="instructors"
 			/>
@@ -66,9 +75,9 @@
 			<FormField
 				type="text"
 				name="q"
-				label="Search"
+				label={m.public_search()}
 				class="w-full max-w-sm"
-				placeholder="Search teachers by name…"
+				placeholder={m.public_directory_instructors_placeholder()}
 				bind:value={searchText}
 			/>
 		</div>
@@ -84,7 +93,7 @@
 							variant={instrument === '' ? 'primary' : 'default'}
 							onclick={() => (instrument = '')}
 						>
-							All
+							{m.public_all()}
 						</Button>
 						{#each page.instruments as inst (inst)}
 							<Button
@@ -100,8 +109,8 @@
 
 				{#if page.rows.length === 0}
 					<EmptyState
-						title="No teachers listed yet"
-						description="Nobody is currently taking students here. Check back, or get in touch."
+						title={m.public_directory_instructors_no_teachers_listed_yet()}
+						description={m.public_directory_instructors_description()}
 					/>
 				{:else}
 					<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -125,7 +134,7 @@
 
 			{#snippet failed(_error, reset)}
 				<Alert type="warning" reset={() => retryQuery(instructors, reset)}>
-					The list of teachers didn't load just now.
+					{m.public_directory_instructors_list_teachers_didn_t_load()}
 				</Alert>
 			{/snippet}
 		</svelte:boundary>

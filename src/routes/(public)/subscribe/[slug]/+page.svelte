@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Alert from '$lib/components/ui/Alert.svelte';
 	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
 	import { getPublicAudienceBySlug, subscribeToAudience } from '$lib/remote/marketing.remote';
@@ -18,13 +19,23 @@
 	</div>
 
 	{#if success}
-		<Alert type="success">You're subscribed! Look out for our next email.</Alert>
+		<Alert type="success">{m.public_subscribe_slug_re_subscribed_look_out_our()}</Alert>
 	{:else}
 		<Form remote={subscribeToAudience} onsuccess={() => (success = true)} class="space-y-4">
 			<input type="hidden" name="slug" value={data.audience.slug} />
-			<Field name="email" type="email" label="Email" placeholder="your@email.com" />
-			<Field name="name" type="text" label="Name (optional)" placeholder="Your name" />
-			<SubmitButton label="Subscribe" variant="primary" class="w-full" />
+			<Field
+				name="email"
+				type="email"
+				label={m.public_email()}
+				placeholder={m.public_email_com()}
+			/>
+			<Field
+				name="name"
+				type="text"
+				label={m.public_name_optional()}
+				placeholder={m.public_name_2()}
+			/>
+			<SubmitButton label={m.public_subscribe()} variant="primary" class="w-full" />
 		</Form>
 	{/if}
 </div>

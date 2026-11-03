@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -191,13 +192,18 @@
 
 					<Form action={handleSubmit} class="flex flex-col gap-3">
 						{#if mode === 'register'}
-							<Field name="name" type="text" label="Name" />
+							<Field name="name" type="text" label={m.public_name()} />
 						{/if}
-						<Field name="email" type="email" label="Email" value={inviteMeta?.email ?? ''} />
+						<Field
+							name="email"
+							type="email"
+							label={m.public_email()}
+							value={inviteMeta?.email ?? ''}
+						/>
 						<Field
 							name="password"
 							type={showPassword ? 'text' : 'password'}
-							label="Password"
+							label={m.public_login_password()}
 							minlength={mode === 'register' ? 8 : undefined}
 						>
 							{#snippet input(id)}
@@ -237,7 +243,7 @@
 							/>
 						{/if}
 						<SubmitButton
-							label={mode === 'login' ? 'Sign in' : 'Create account'}
+							label={mode === 'login' ? m.public_sign() : m.public_login_create_account()}
 							variant="primary"
 							class="mt-1 w-full"
 						/>
@@ -245,11 +251,13 @@
 
 					{#if mode === 'login'}
 						<div class="text-center text-sm">
-							<a class="link" href={resolve('/forgot-password')}>Forgot your password?</a>
+							<a class="link" href={resolve('/forgot-password')}
+								>{m.public_login_forgot_password()}</a
+							>
 						</div>
 					{/if}
 
-					<div class="divider my-0 text-xs">OR</div>
+					<div class="divider my-0 text-xs">{m.public_login_text()}</div>
 
 					<Button variant="ghost" size="sm" onclick={toggleMode}>
 						{mode === 'login'

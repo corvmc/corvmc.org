@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
@@ -44,9 +45,9 @@
 
 <div class="mx-auto max-w-lg space-y-6">
 	<PageHeader
-		title="Tickets Confirmed"
+		title={m.public_events_id_tickets_success_title()}
 		parent={[
-			{ label: 'Events', href: resolve('/events') },
+			{ label: m.public_events(), href: resolve('/events') },
 			{ label: evt.title, href: resolve(`/events/${page.params.id!}`) }
 		]}
 	/>
@@ -89,7 +90,7 @@
 	<!-- Ticket codes -->
 	<Card>
 		<CardBody>
-			<h3 class="mb-3 font-medium">Your Tickets</h3>
+			<h3 class="mb-3 font-medium">{m.public_events_id_tickets_success_tickets()}</h3>
 			<div class="space-y-3">
 				{#each data.tickets as ticket (ticket.id)}
 					<div class="flex items-center justify-between inset p-3">
@@ -101,7 +102,7 @@
 							<p class="font-mono text-lg font-bold tracking-wider" data-testid="ticket-code">
 								{ticket.code}
 							</p>
-							<p class="text-subtle">Ticket code</p>
+							<p class="text-subtle">{m.public_events_id_tickets_success_ticket_code()}</p>
 						</div>
 					</div>
 				{/each}
@@ -110,6 +111,8 @@
 	</Card>
 
 	<div class="text-center">
-		<Button href="/events" variant="ghost">Back to Events</Button>
+		<Button href="/events" variant="ghost"
+			>{m.public_events_id_tickets_success_back_events()}</Button
+		>
 	</div>
 </div>

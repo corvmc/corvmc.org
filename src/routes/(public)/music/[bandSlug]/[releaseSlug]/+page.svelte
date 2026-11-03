@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Card from '$lib/components/ui/Card/Card.svelte';
 	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -81,8 +82,7 @@
 		<!-- A priced release whose band has not finished Stripe. Saying so beats
 		     a Buy button that 409s. -->
 		<Alert type="info">
-			{band.name} hasn't finished setting up payouts, so this release can't be bought yet. You can still
-			listen to all of it here.
+			{m.public_music_band_slug_release_slug_hasn_t_finished_setting({ name: band.name })}
 		</Alert>
 	{/if}
 </div>

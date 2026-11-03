@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import Button from '$lib/components/ui/Button.svelte';
 	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
@@ -20,15 +21,19 @@
 
 {#if info}
 	<section class="market">
-		<SectionLabel label="Vendors" />
+		<SectionLabel label={m.public_events_id_market_vendors_label()} />
 
 		{#if info.accepting}
 			<div class="market__apply">
 				<Button href={resolve(`/events/${eventId}/vendors/apply`)} variant="primary">
-					Apply for a table
+					{m.public_events_id_market_vendors_apply_table()}
 				</Button>
 				{#if info.closesAt}
-					<span class="text-muted">Applications close {formatDateTime(info.closesAt)}</span>
+					<span class="text-muted"
+						>{m.public_events_id_market_vendors_applications_close({
+							formatDateTime: formatDateTime(info.closesAt)
+						})}</span
+					>
 				{/if}
 			</div>
 		{/if}
@@ -48,7 +53,7 @@
 								{v.businessName}
 							{/if}
 							{#if v.tableLabel}<span class="text-muted font-normal">
-									· Table {v.tableLabel}</span
+									{m.public_events_id_market_vendors_table({ tableLabel: v.tableLabel })}</span
 								>{/if}
 						</div>
 						<p class="text-muted">{v.offering}</p>
@@ -56,7 +61,7 @@
 				{/each}
 			</ul>
 		{:else}
-			<p class="text-muted">The vendor list is announced as tables are confirmed.</p>
+			<p class="text-muted">{m.public_events_id_market_vendors_vendor_list_announced_as_tab()}</p>
 		{/if}
 	</section>
 {/if}

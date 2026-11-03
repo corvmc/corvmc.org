@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/** The show's sponsors, disclosed as sponsored (#583). */
 	import { SPONSOR_CREDIT_LEAD } from '$lib/utils/sponsor-credit';
 
@@ -8,7 +9,7 @@
 </script>
 
 {#if sponsors.length > 0}
-	<aside class="sponsor-credit" aria-label="Sponsors">
+	<aside class="sponsor-credit" aria-label={m.public_events_id_sponsor_credit_aria_label()}>
 		<p class="text-muted">{SPONSOR_CREDIT_LEAD}</p>
 		<ul class="sponsor-credit__list">
 			{#each sponsors as s (s.name)}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Hero from '$lib/components/public/Hero.svelte';
 	import Section from '$lib/components/public/Section.svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
@@ -30,36 +31,36 @@
 </script>
 
 <svelte:head>
-	<title>Groups | Corvallis Music Collective</title>
+	<title>{m.public_groups_groups_corvallis_music_collective()}</title>
 	<meta
 		name="description"
 		content="Clubs and committees at the Corvallis Music Collective — jam nights, workshops, and the groups that keep the place running."
 	/>
 </svelte:head>
 
-<Hero title="Groups">Clubs and committees at the Collective — and how to join them</Hero>
+<Hero title={m.public_groups_title()}>{m.public_groups_clubs_committees_at_collective_how()}</Hero>
 
 <Section>
 	{#if groups.length === 0}
-		<EmptyState description="No groups are listed publicly right now." />
+		<EmptyState description={m.public_groups_description()} />
 	{:else}
 		<div class="mb-6 flex flex-wrap gap-2">
 			<Button variant={kind === '' ? 'primary' : 'ghost'} size="sm" onclick={() => (kind = '')}>
-				All
+				{m.public_all()}
 			</Button>
 			<Button
 				variant={kind === 'club' ? 'primary' : 'ghost'}
 				size="sm"
 				onclick={() => (kind = 'club')}
 			>
-				Clubs
+				{m.public_clubs()}
 			</Button>
 			<Button
 				variant={kind === 'committee' ? 'primary' : 'ghost'}
 				size="sm"
 				onclick={() => (kind = 'committee')}
 			>
-				Committees
+				{m.public_committees()}
 			</Button>
 		</div>
 
@@ -78,9 +79,9 @@
 							{g.memberCount}
 							{g.memberCount === 1 ? 'member' : 'members'}
 							{#if g.joinPolicy === 'open'}
-								· open to join
+								{m.public_groups_open_join()}
 							{:else if g.joinPolicy === 'by_application'}
-								· accepting applications
+								{m.public_groups_accepting_applications()}
 							{/if}
 						</p>
 					</CardBody>

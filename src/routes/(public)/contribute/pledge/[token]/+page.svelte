@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { pageTitle } from '$lib/config';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -36,26 +37,27 @@
 		<div class="w-full max-w-sm">
 			<div class="card shadow-xl surface">
 				<CardBody class="gap-4">
-					<CardTitle size="lg" level={2} class="justify-center">Confirm your pledge</CardTitle>
+					<CardTitle size="lg" level={2} class="justify-center"
+						>{m.public_contribute_pledge_token_confirm_pledge()}</CardTitle
+					>
 
 					{#if outcome?.status === 'confirmed'}
 						<Alert type="success" class="text-sm">
-							Thank you. The wishlist now shows it as taken for 30 days. Drop it off at the space
-							whenever suits you.
+							{m.public_contribute_pledge_token_thank_wishlist_now_shows_as()}
 						</Alert>
 						<Button variant="primary" class="w-full" href={resolve('/contribute')}>
-							Back to the wishlist
+							{m.public_contribute_pledge_token_back_wishlist()}
 						</Button>
 					{:else if outcome?.status === 'taken'}
 						<Alert type="info" class="text-sm">
-							Someone else confirmed first, so this one is covered. Thank you all the same.
+							{m.public_contribute_pledge_token_someone_else_confirmed_first()}
 						</Alert>
 						<Button variant="primary" class="w-full" href={resolve('/contribute')}>
-							See what else we need
+							{m.public_contribute_pledge_token_see_what_else_we_need()}
 						</Button>
 					{:else if !pending || outcome}
 						<Alert type="error" class="text-sm">
-							This link has expired or has already been used.
+							{m.public_link_has_expired_has_already()}
 						</Alert>
 					{:else}
 						<p class="text-center">
@@ -63,7 +65,7 @@
 						</p>
 						<Form remote={confirmWishlistPledge} onsuccess={(r) => (outcome = r ?? null)}>
 							<input {...fields.token.as('hidden', token)} />
-							<SubmitButton label="Confirm" variant="primary" class="w-full" />
+							<SubmitButton label={m.public_confirm()} variant="primary" class="w-full" />
 						</Form>
 					{/if}
 				</CardBody>

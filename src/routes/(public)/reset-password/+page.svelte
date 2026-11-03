@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { pageTitle } from '$lib/config';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -39,19 +40,23 @@
 		<div class="w-full max-w-sm">
 			<div class="card shadow-xl surface">
 				<CardBody class="gap-4">
-					<CardTitle size="lg" level={2} class="justify-center">Set a new password</CardTitle>
+					<CardTitle size="lg" level={2} class="justify-center"
+						>{m.public_reset_password_set_new_password()}</CardTitle
+					>
 
 					{#if done}
 						<Alert type="success" class="text-sm">
-							Your password has been changed, and any other sessions were signed out.
+							{m.public_reset_password_password_has_been_changed_any()}
 						</Alert>
-						<Button variant="primary" class="w-full" href={resolve('/login')}>Sign in</Button>
+						<Button variant="primary" class="w-full" href={resolve('/login')}
+							>{m.public_sign()}</Button
+						>
 					{:else if linkFailed}
 						<Alert type="error" class="text-sm">
-							That reset link has expired or has already been used.
+							{m.public_reset_password_reset_link_has_expired_has()}
 						</Alert>
 						<Button variant="primary" class="w-full" href={resolve('/forgot-password')}>
-							Request a new link
+							{m.public_reset_password_request_new_link()}
 						</Button>
 					{:else}
 						{#each tokenIssues as issue (issue.message)}
@@ -67,17 +72,21 @@
 							<FormField
 								field={fields.newPassword}
 								type="password"
-								label="New password"
+								label={m.public_reset_password_new_password()}
 								minlength={8}
 								required
 							/>
 							<FormField
 								field={fields.confirmPassword}
 								type="password"
-								label="Confirm new password"
+								label={m.public_reset_password_confirm_new_password()}
 								required
 							/>
-							<SubmitButton label="Set password" variant="primary" class="mt-1 w-full" />
+							<SubmitButton
+								label={m.public_reset_password_set_password()}
+								variant="primary"
+								class="mt-1 w-full"
+							/>
 						</Form>
 					{/if}
 				</CardBody>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { getPublicMemberProfilePage, getMemberPastShows } from '$lib/remote/directory.remote';
@@ -28,17 +29,19 @@
 
 	let pills = $derived.by<ProfilePill[]>(() => {
 		const p: ProfilePill[] = [];
-		if (member.lookingForBand) p.push({ label: 'Looking for a band', variant: 'warm' });
-		if (member.availableForHire) p.push({ label: 'Available for hire' });
-		if (member.teachesLessons) p.push({ label: 'Teaches privately' });
-		if (member.openToCollaboration) p.push({ label: 'Open to collaboration' });
+		if (member.lookingForBand)
+			p.push({ label: m.public_directory_members_id_looking_band(), variant: 'warm' });
+		if (member.availableForHire) p.push({ label: m.public_directory_members_id_available_hire() });
+		if (member.teachesLessons) p.push({ label: m.public_directory_members_id_teaches_privately() });
+		if (member.openToCollaboration)
+			p.push({ label: m.public_directory_members_id_open_collaboration() });
 		return p;
 	});
 
 	let facts = $derived([
-		{ label: 'Pronouns', value: member.pronouns },
-		{ label: 'Based in', value: member.hometown },
-		{ label: 'Looking for', value: member.lookingForBand ? 'A band' : null }
+		{ label: m.public_directory_members_id_pronouns(), value: member.pronouns },
+		{ label: m.public_based(), value: member.hometown },
+		{ label: m.public_looking(), value: member.lookingForBand ? 'A band' : null }
 	]);
 
 	let bandRefs = $derived<CrossRef[]>(
@@ -56,7 +59,7 @@
 </script>
 
 <svelte:head>
-	<title>{member.name} | Corvallis Music Collective</title>
+	<title>{m.public_corvallis_music_collective_2({ name: member.name })}</title>
 	<meta
 		name="description"
 		content={member.tagline || `${member.name} on Corvallis Music Collective`}
@@ -72,7 +75,7 @@
 	<!-- Carries the tab: bands are the directory's default, so a bare /directory
 	     would drop you somewhere other than where you came from. -->
 	<a href="{resolve('/directory')}?tab=musicians" class="link text-muted"
-		>&larr; Back to Directory</a
+		>{m.public_back_directory()}</a
 	>
 
 	<!-- No `shareUrl`: `toPublicMemberProfile` whitelists the columns it emits and
@@ -97,15 +100,15 @@
 		{/snippet}
 		{#snippet side()}
 			<CrossRefList label="Bands" items={bandRefs} note={`${bandRefs.length} active`} />
-			<TagCloud label="Plays · Genres" {tags} />
-			<TagCloud label="Skills" tags={member.skills ?? []} />
+			<TagCloud label={m.public_directory_members_id_plays_genres()} {tags} />
+			<TagCloud label={m.public_directory_members_id_skills()} tags={member.skills ?? []} />
 			<LinksBox links={member.links} />
 			<ContactBox label="Contact" {contact} />
 		{/snippet}
 	</ProfileGrid>
 
 	<footer class="profile-page__footer">
-		<a href={resolve('/')}>Corvallis Music Collective</a>
+		<a href={resolve('/')}>{m.public_corvallis_music_collective()}</a>
 	</footer>
 </div>
 
