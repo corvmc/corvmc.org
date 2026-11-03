@@ -130,6 +130,7 @@
 				<Action
 					action={publishListing}
 					label={publishLabel}
+					data-testid="publish-listing"
 					successToast={requiresReview ? 'Sent to staff' : 'Published'}
 					variant="primary"
 					size="sm"

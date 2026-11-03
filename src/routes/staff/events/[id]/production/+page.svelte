@@ -233,7 +233,7 @@
 			guide is not a production, and most of them never become one.
 		-->
 			{#if productionRecord}
-				<InfoCard title="Production">
+				<InfoCard title="Production" testid="production-record">
 					{#snippet header(title)}
 						<div class="flex flex-wrap items-center justify-between gap-2">
 							<CardTitle>{title}</CardTitle>
@@ -537,7 +537,7 @@
 			and the second reading is how a calendar of events reaches production with
 			nothing booked. CMC does not staff a show it isn't producing.
 		-->
-			<InfoCard title="Volunteer Shifts">
+			<InfoCard title="Volunteer Shifts" testid="volunteer-shifts">
 				{#snippet header(title)}
 					<div class="flex items-center justify-between gap-2">
 						<CardTitle>{title}</CardTitle>

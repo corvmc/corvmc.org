@@ -117,6 +117,7 @@
 						variant="default"
 						outline
 						size="xs"
+						data-testid="fork-theme"
 						onclick={() => onchange(fork(state, themeSheet))}
 					>
 						Customize

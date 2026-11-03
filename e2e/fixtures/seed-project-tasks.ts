@@ -19,6 +19,7 @@ export const SEED_TASK_EMPTY_SECTION = 'Wrap-up';
 export const SEED_TASK_UNASSIGNED = 'E2E sweep the stage';
 export const SEED_TASK_WITH_DUTIES = 'E2E restring the house guitar';
 export const SEED_TASK_DONE = 'E2E order gaffer tape';
+export const SEED_TASK_DUTY = 'Stretch the new set';
 
 const SECTION_ID = 'e2e0b7a5-0000-4000-8000-000000000011';
 const EMPTY_SECTION_ID = 'e2e0b7a5-0000-4000-8000-000000000012';
@@ -85,7 +86,7 @@ export async function seedProjectTasks() {
 				done: true,
 				doneAt: now
 			},
-			{ workOrderId: DUTIES_TASK_ID, label: 'Stretch the new set', sortOrder: 1 }
+			{ workOrderId: DUTIES_TASK_ID, label: SEED_TASK_DUTY, sortOrder: 1 }
 		]);
 	});
 }

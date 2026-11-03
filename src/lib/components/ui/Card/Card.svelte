@@ -32,16 +32,22 @@
 		tone = 'base-100',
 		bordered = false,
 		class: className = '',
+		testid,
 		children
 	}: {
 		tone?: CardTone;
 		/** Border instead of shadow, for a card nested inside another surface. */
 		bordered?: boolean;
 		class?: string;
+		/** A test handle, for a section no structure tells apart (#2189). */
+		testid?: string;
 		children: Snippet;
 	} = $props();
 </script>
 
-<div class={clsx('card', TONES[tone], bordered ? 'border border-base-300' : 'shadow', className)}>
+<div
+	class={clsx('card', TONES[tone], bordered ? 'border border-base-300' : 'shadow', className)}
+	data-testid={testid}
+>
 	{@render children()}
 </div>

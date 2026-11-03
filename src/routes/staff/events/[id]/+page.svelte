@@ -161,6 +161,7 @@
 			<Action
 				action={rejectListing}
 				label="Turn down"
+				data-testid="reject-listing"
 				successToast="Sent back to the member"
 				variant="warning"
 				size="sm"

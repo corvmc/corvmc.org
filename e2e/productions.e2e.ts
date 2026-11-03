@@ -1,5 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
+import { eq } from 'drizzle-orm';
 import { signInAs } from './fixtures/auth';
+import { readLocalDb } from './fixtures/platform-db';
+import { production } from '../src/lib/server/db/schema/production';
+import { eventListing } from '../src/lib/server/db/schema/event';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import { SEED_VENUE_OFFSITE_NAME, SEED_VENUE_ROOM_NAME } from './fixtures/seed-venues';
 import {
@@ -19,6 +23,20 @@ import {
  * shallow routing, which by definition only exists in a browser.
  */
 
+// Check quickly once, then back off: `readLocalDb` shares the preview's file.
+const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
+
+/** The status of the production on a listing's project, or undefined. */
+function productionStatusOf(eventId: string) {
+	return readLocalDb((db) =>
+		db
+			.select({ status: production.status })
+			.from(production)
+			.innerJoin(eventListing, eq(eventListing.projectId, production.projectId))
+			.where(eq(eventListing.id, eventId))
+	).then(([row]) => row?.status);
+}
+
 async function loginAsStaff(page: Page) {
 	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
 }
@@ -34,51 +52,50 @@ test.describe('productions', () => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/events/${SEED_PRODUCTION_BARE_EVENT_ID}`);
 
-		// Before: one button, and it does not claim there is something to manage.
-		const enter = page.getByRole('link', { name: 'Open a production' });
-		await expect(enter).toBeVisible({ timeout: 15000 });
-		await expect(page.getByRole('button', { name: 'Add production' })).toHaveCount(0);
-		await enter.click();
+		// Before: one entry into the console, not two.
+		const entry = page.locator(
+			`a[href="/staff/events/${SEED_PRODUCTION_BARE_EVENT_ID}/production"]`
+		);
+		await expect(entry).toHaveCount(1, { timeout: 15000 });
+		await entry.click();
 		await page.waitForURL(/\/production$/);
 
-		const open = page.getByRole('button', { name: 'Open a production' });
+		const open = page.locator('form[action$="createProduction"] button[type=submit]');
 		await expect(open).toBeVisible({ timeout: 15000 });
 		await open.click();
 
-		// The button is the whole form, so its own disappearance is the receipt.
+		// The button is the whole form, so its own disappearance is the receipt;
+		// the record that replaces it offers to take the producer's job.
 		await expect(open).toHaveCount(0, { timeout: 15000 });
-		await expect(page.getByText('Nobody yet')).toBeVisible({ timeout: 15000 });
+		const record = page.getByTestId('production-record');
+		await expect(record.locator('input[name="producer"]')).toHaveValue('me', { timeout: 15000 });
+		await expect
+			.poll(() => productionStatusOf(SEED_PRODUCTION_BARE_EVENT_ID), DB_POLL)
+			.toBe('draft');
 
 		// #976: the record is visible from the page it belongs to, which before
-		// this changed in no way at all except a button vanishing.
+		// this changed in no way at all except a button vanishing: its card adds
+		// a second way into the console.
 		await page.goto(`/staff/events/${SEED_PRODUCTION_BARE_EVENT_ID}`);
-		await expect(page.getByRole('link', { name: 'Open the console' })).toBeVisible({
-			timeout: 15000
-		});
-		await expect(page.getByRole('link', { name: 'Manage production' })).toBeVisible();
+		await expect(entry).toHaveCount(2, { timeout: 15000 });
 
 		await page.goto(`/staff/events/${SEED_PRODUCTION_BARE_EVENT_ID}/production`);
 
-		// Which moves are offered *is* the status, and it is the assertion that
-		// cannot pass against a badge whose text happens to match the listing's.
-		const offer = page.getByRole('button', { name: 'Send the offer' });
-		await expect(offer).toBeVisible();
-		await offer.click();
-		// Action's dialog repeats the label on its submit.
-		await offer.last().click();
+		// A draft's first move is the offer, rendered first in the record's header.
+		const badge = record.locator('.badge').first();
+		await expect(badge).toBeVisible({ timeout: 15000 });
+		const draftBadge = await badge.textContent();
+		await record.getByRole('button').first().click();
+		await page.getByRole('dialog').locator('button[type=submit]').click();
 
-		// `offered` walks back rather than forward, so its appearance is proof the
-		// transition landed and not just that the page re-rendered.
-		await expect(page.getByRole('button', { name: 'Pull the offer' })).toBeVisible({
-			timeout: 15000
-		});
-
-		// It has to survive a reload: a control reflecting optimistic client state
-		// would pass every assertion above and still have written nothing.
+		// It has to be written, and survive a reload: a control reflecting
+		// optimistic client state would pass in the page and have written nothing.
+		await expect
+			.poll(() => productionStatusOf(SEED_PRODUCTION_BARE_EVENT_ID), DB_POLL)
+			.toBe('offered');
 		await page.reload();
-		await expect(page.getByRole('button', { name: 'Pull the offer' })).toBeVisible({
-			timeout: 15000
-		});
+		await expect(badge).toBeVisible({ timeout: 15000 });
+		await expect(badge).not.toHaveText(draftBadge ?? '');
 	});
 
 	/**
@@ -93,7 +110,8 @@ test.describe('productions', () => {
 
 		const row = page.locator('tr').filter({ hasText: SEED_PRODUCTION_EVENT_TITLE });
 		await expect(row).toBeVisible({ timeout: 15000 });
-		await expect(row.getByText('Draft', { exact: true })).toBeVisible();
+		// The production's own status column: a badge when there is one.
+		await expect(row.locator('td').nth(2).locator('.badge')).toBeVisible();
 		await expect(row.getByText(SEED_VENUE_OFFSITE_NAME)).toBeVisible();
 		// The bill is an avatar stack, so the acts are its accessible name, not text.
 		await expect(row.getByLabel(SEED_PRODUCTION_HEADLINER)).toBeVisible();
@@ -102,7 +120,10 @@ test.describe('productions', () => {
 		// have to be told apart, which is the reason the column carries words. A
 		// row of its own, because the sibling test above opens one on the other.
 		const empty = page.locator('tr').filter({ hasText: SEED_PRODUCTION_EMPTY_EVENT_TITLE });
-		await expect(empty.getByText('No production')).toBeVisible();
+		const absent = empty.locator('td').nth(2);
+		await expect(absent).toBeVisible();
+		await expect(absent).not.toBeEmpty();
+		await expect(absent.locator('.badge')).toHaveCount(0);
 	});
 
 	test('filtering by venue narrows the index to the off-site shows', async ({ page }) => {
@@ -132,12 +153,10 @@ test.describe('productions', () => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/events/${SEED_PRODUCTION_EVENT_ID}/production?tab=advance`);
 
-		await expect(page.getByRole('heading', { name: 'Volunteer Shifts' })).toBeVisible({
-			timeout: 15000
-		});
+		await expect(page.getByTestId('volunteer-shifts')).toBeVisible({ timeout: 15000 });
 
-		await page.getByRole('tab', { name: 'Overview' }).click();
+		await page.locator('#tab-overview').click();
 		await expect(page).toHaveURL(new RegExp(`/production$`));
-		await expect(page.getByText('Producer')).toBeVisible();
+		await expect(page.locator('form[action$="setProductionProducer"]')).toBeVisible();
 	});
 });
