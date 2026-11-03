@@ -1,4 +1,5 @@
 <script>
+	import { m } from '$lib/paraglide/messages.js';
 	/** @type {string} */
 	export let title = '';
 	/** @type {string} */
@@ -6,7 +7,7 @@
 </script>
 
 <svelte:head>
-	<title>{title} — CorvMC</title>
+	<title>{m.layout_page_title({ title })}</title>
 	{#if description}
 		<meta name="description" content={description} />
 	{/if}

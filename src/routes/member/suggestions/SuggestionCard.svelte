@@ -57,8 +57,9 @@
 			<SubmitButton
 				label={String(suggestion.voteCount)}
 				aria-pressed={!!suggestion.hasVoted}
-				aria-label="{suggestion.hasVoted ? 'Remove your vote for' : 'Vote for'} {suggestion.ref
-					.title}"
+				aria-label={(suggestion.hasVoted
+					? m.member_suggestions_unvote_label
+					: m.member_suggestions_vote_label)({ title: suggestion.ref.title })}
 				class="h-auto flex-col gap-0 py-1 btn-sm {suggestion.hasVoted
 					? 'btn-primary'
 					: 'btn-outline'}"

@@ -747,6 +747,8 @@
 	"member_suggestions_suggestion_card_flag": "Flag",
 	"member_suggestions_suggestion_card_staff": "Staff:",
 	"member_suggestions_title": "Suggestions",
+	"member_suggestions_unvote_label": "Remove your vote for {title}",
+	"member_suggestions_vote_label": "Vote for {title}",
 	"member_tags": "Tags",
 	"member_takes_suggestion_off_board_straight": "This takes the suggestion off the board straight away while staff look at it. If they don't agree with the report, it goes back up.",
 	"member_teaches_privately": "Teaches privately",
