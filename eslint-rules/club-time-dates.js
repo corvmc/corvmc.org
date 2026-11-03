@@ -75,9 +75,15 @@ function isIsoDateSlice(/** @type {RuleNode} */ call) {
 	return method === 'split' && a?.type === 'Literal' && a.value === 'T';
 }
 
-/** The static text of a template literal or a `+` chain of strings, or null. */
-function staticParts(/** @type {RuleNode} */ node) {
-	if (node?.type === 'TemplateLiteral') return node.quasis.map((q) => q.value.cooked ?? '');
+/**
+ * The static text of a template literal or a `+` chain of strings, or null.
+ * @param {RuleNode} node
+ * @returns {string[] | null}
+ */
+function staticParts(node) {
+	if (node?.type === 'TemplateLiteral') {
+		return node.quasis.map((/** @type {RuleNode} */ q) => String(q.value?.cooked ?? ''));
+	}
 	if (node?.type === 'BinaryExpression' && node.operator === '+') {
 		const left = staticParts(node.left) ?? [''];
 		const right = staticParts(node.right) ?? [''];
