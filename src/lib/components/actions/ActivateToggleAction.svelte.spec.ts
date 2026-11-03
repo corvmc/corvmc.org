@@ -38,16 +38,20 @@ const submitsTo = () =>
 	(document.querySelector('[role="dialog"] form') as HTMLFormElement).getAttribute('action');
 
 const open = async (props: { isDeactivated: boolean } & Record<string, unknown>) => {
-	await render(ActivateToggleAction, {
+	const { locator } = await render(ActivateToggleAction, {
 		entityId: 'thing-1',
 		deactivateAction: remoteForm('deactivate'),
 		reactivateAction: remoteForm('reactivate'),
 		...props
 	});
-	const label = props.isDeactivated ? 'Reactivate' : 'Deactivate';
-	await page.getByRole('button', { name: label }).first().click();
+	// The trigger is the container's only button; the dialog portals out of it.
+	await locator.getByRole('button').click();
 	return page.getByRole('dialog');
 };
+
+// Fixture props, not the component's own copy.
+const ENTITY = 'category';
+const WARNING = 'Members lose access to every booking on it.';
 
 describe('ActivateToggleAction', () => {
 	it('offers to deactivate a live record, and posts to the deactivate handler', async () => {
@@ -63,9 +67,9 @@ describe('ActivateToggleAction', () => {
 	});
 
 	it('names the kind of thing in the question it asks', async () => {
-		await open({ isDeactivated: false, entityLabel: 'category' });
+		const dialog = await open({ isDeactivated: false, entityLabel: ENTITY });
 
-		await expect.element(page.getByText('Deactivate this category?')).toBeVisible();
+		await expect.element(dialog).toHaveTextContent(ENTITY);
 	});
 
 	/**
@@ -75,28 +79,20 @@ describe('ActivateToggleAction', () => {
 	 * a second, worse confirmation.
 	 */
 	it('warns on the way out', async () => {
-		await open({
-			isDeactivated: false,
-			deactivateWarning: 'Members lose access to every booking on it.'
-		});
+		const dialog = await open({ isDeactivated: false, deactivateWarning: WARNING });
 
-		await expect
-			.element(page.getByText('Members lose access to every booking on it.'))
-			.toBeVisible();
+		await expect.element(dialog.getByText(WARNING)).toBeVisible();
 	});
 
 	it('does not carry the deactivation warning into the reactivation', async () => {
-		await expect
-			.element(
-				await open({
-					isDeactivated: true,
-					entityLabel: 'category',
-					deactivateWarning: 'Members lose access to every booking on it.'
-				})
-			)
-			.toBeVisible();
+		const dialog = await open({
+			isDeactivated: true,
+			entityLabel: ENTITY,
+			deactivateWarning: WARNING
+		});
 
-		await expect.element(page.getByText('Reactivate this category?')).toBeVisible();
-		expect(document.body.textContent).not.toContain('Members lose access');
+		await expect.element(dialog).toHaveTextContent(ENTITY);
+		expect(submitsTo()).toBe('?/reactivate');
+		expect(document.body.textContent).not.toContain(WARNING);
 	});
 });

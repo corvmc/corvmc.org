@@ -1,6 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import '$lib/test/locators';
 import { createAttachmentKey } from 'svelte/attachments';
 import type { Reservation } from '$lib/server/reservation';
 
@@ -91,12 +92,12 @@ const reservation = {
 
 async function payWith(result: unknown) {
 	submitResult = result;
-	await render(PayReservationAction, { reservation });
-	await page.getByRole('button', { name: 'Pay Now' }).first().click();
+	const { locator } = await render(PayReservationAction, { reservation });
+	await locator.getByRole('button').click();
 	await expect.element(page.getByRole('dialog')).toBeVisible();
-	// PaymentStep owns the submit — the action passes `noFooter`. Its label
-	// carries the amount, so it is matched on the prefix.
-	await page.getByRole('button', { name: /^Pay \$/ }).click();
+	// PaymentStep owns the submit — the action passes `noFooter` — and it is
+	// the dialog's only one.
+	await page.getByRole('dialog').getByCss('button[type="submit"]').click();
 }
 
 describe('PayReservationAction', () => {

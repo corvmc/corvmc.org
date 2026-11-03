@@ -48,8 +48,8 @@ const named = (name: string) =>
 	document.querySelector(`[role="dialog"] [name="${name}"]`) as HTMLInputElement | null;
 
 const open = async () => {
-	await render(UpdateClosureAction, { closure });
-	await page.getByRole('button', { name: 'Edit closure' }).first().click();
+	const { locator } = await render(UpdateClosureAction, { closure });
+	await locator.getByRole('button').click();
 	await expect.element(page.getByRole('dialog')).toBeVisible();
 };
 

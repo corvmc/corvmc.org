@@ -1,6 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import '$lib/test/locators';
 
 /**
  * Issues are per-field and settable per test: the point of wrapping these
@@ -41,26 +42,28 @@ vi.mock('$app/navigation', () => ({
 const AdjustCreditsAction = (await import('./AdjustCreditsAction.svelte')).default;
 
 const open = async (props: Record<string, unknown> = {}) => {
-	await render(AdjustCreditsAction, { userId: 'user-1', ...props });
-	await page.getByRole('button', { name: 'Adjust' }).click();
+	const { locator } = await render(AdjustCreditsAction, { userId: 'user-1', ...props });
+	await locator.getByRole('button').click();
 	return page.getByRole('dialog');
 };
 
 describe('AdjustCreditsAction', () => {
 	it('tells a comp-only staffer their ceiling under the amount (#579)', async () => {
-		const dialog = await open({ amountHint: 'Up to 2 hrs of free hours. An admin can add more.' });
-		await expect.element(dialog.getByText('Up to 2 hrs of free hours')).toBeVisible();
+		const amountHint = 'Up to 2 hrs of free hours. An admin can add more.';
+		const dialog = await open({ amountHint });
+		await expect.element(dialog.getByText(amountHint)).toBeVisible();
 	});
 
 	// The regression the FormField wrapper was added for: with a bare input, a
 	// server issue set `aria-invalid` and rendered no text at all, so an
 	// over-deduction looked like a submit that simply did nothing.
 	it('renders a server issue as a message beside the field', async () => {
-		issues.amount = [{ path: ['amount'], message: 'That would take the balance below zero.' }];
+		const message = 'That would take the balance below zero.';
+		issues.amount = [{ path: ['amount'], message }];
 		try {
-			await open();
+			const dialog = await open();
 
-			await expect.element(page.getByText('That would take the balance below zero.')).toBeVisible();
+			await expect.element(dialog.getByText(message)).toBeVisible();
 		} finally {
 			issues.amount = null;
 		}
@@ -77,9 +80,8 @@ describe('AdjustCreditsAction, what it will let staff submit', () => {
 	const submit = () =>
 		document.querySelector('[role="dialog"] button[type="submit"]') as HTMLButtonElement;
 
-	const amount = (v: string) =>
-		page.getByPlaceholder('Positive to add, negative to deduct').fill(v);
-	const reason = (v: string) => page.getByPlaceholder('Why is this adjustment being made?').fill(v);
+	const amount = (v: string) => page.getByRole('dialog').getByCss('[name="amount"]').fill(v);
+	const reason = (v: string) => page.getByRole('dialog').getByCss('[name="description"]').fill(v);
 
 	// The state the modal opens in. Committing it writes a ledger row saying
 	// nothing happened, against a balance nobody changed.

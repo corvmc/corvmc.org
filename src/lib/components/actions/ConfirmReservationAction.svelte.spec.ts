@@ -1,4 +1,4 @@
-import { page } from 'vitest/browser';
+import { page, type Locator } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
@@ -49,8 +49,9 @@ const reservation = {
 	endsAt: new Date('2026-03-14T21:00:00Z')
 };
 
-const openDialog = async () => {
-	await page.getByRole('button', { name: 'Confirm' }).first().click();
+const openDialog = async (locator: Locator) => {
+	// The trigger is the container's only button; the dialog portals out of it.
+	await locator.getByRole('button').click();
 	return page.getByRole('dialog');
 };
 
@@ -64,15 +65,15 @@ describe('ConfirmReservationAction', () => {
 	it('posts the reservation id exactly once for a member', async () => {
 		// The member path mounts ConfirmStep *and* PaymentStep, and both used to
 		// be handed `fields.id`. Hidden ≠ unmounted, so the form carried two.
-		await render(ConfirmReservationAction, { reservation });
-		await openDialog();
+		const { locator } = await render(ConfirmReservationAction, { reservation });
+		await openDialog(locator);
 
 		expect(postedValues('id')).toEqual(['res-1']);
 	});
 
 	it('posts the reservation id exactly once for staff', async () => {
-		await render(ConfirmReservationAction, { reservation, staff: true });
-		await openDialog();
+		const { locator } = await render(ConfirmReservationAction, { reservation, staff: true });
+		await openDialog(locator);
 
 		expect(postedValues('id')).toEqual(['res-1']);
 	});

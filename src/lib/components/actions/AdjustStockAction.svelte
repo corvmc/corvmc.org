@@ -89,12 +89,19 @@
 			issues={fields.delta.issues() ?? null}
 		/>
 		{#if delta !== null && delta !== 0}
-			<p class="text-sm" class:text-error={delta < 0}>
+			<p
+				class="text-sm"
+				class:text-error={delta < 0}
+				data-testid="stocktake-preview"
+				data-direction={delta > 0 ? 'add' : 'remove'}
+			>
 				{delta > 0 ? 'Adding' : 'Removing'}
 				{Math.abs(delta)} — {onHand} on record, {counted} counted.
 			</p>
 		{:else if delta === 0}
-			<p class="text-subtle text-sm">Matches the record. Submitting will change nothing.</p>
+			<p class="text-subtle text-sm" data-testid="stocktake-preview" data-direction="none">
+				Matches the record. Submitting will change nothing.
+			</p>
 		{/if}
 		<!-- The service takes a delta and keeps taking one; only the question
 		     asked of the operator changed. -->
