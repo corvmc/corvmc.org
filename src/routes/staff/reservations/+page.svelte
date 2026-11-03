@@ -588,7 +588,7 @@
 	{#if canManageClosures && c.startsAt > new Date()}
 		<div class="flex w-max items-center justify-end gap-1">
 			{#if compact}
-				<UpdateClosureAction closure={c} iconOnly shape="square">
+				<UpdateClosureAction closure={c} iconOnly shape="square" data-testid="edit-closure">
 					{#snippet icon()}<IconPencil size={16} />{/snippet}
 				</UpdateClosureAction>
 				<DeleteClosureAction closureId={c.id} iconOnly shape="square">
