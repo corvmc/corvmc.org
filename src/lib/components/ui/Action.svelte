@@ -258,6 +258,9 @@
 			return;
 		}
 		dialogOpen = false;
+		// What was typed lives on the remote form instance, not in the dialog, so
+		// a field-bound input would reopen showing the last submission.
+		remoteAction.fields.set({});
 		if (typeof onsuccess === 'function') onsuccess(result);
 	}
 

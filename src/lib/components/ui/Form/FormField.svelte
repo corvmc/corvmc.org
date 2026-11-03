@@ -41,6 +41,7 @@
 		upload,
 		accept,
 		src,
+		submitAs,
 		value = $bindable(),
 		...rest
 	}: {
@@ -76,6 +77,13 @@
 		 */
 		display?: string | Snippet;
 		issues?: RemoteFormIssue[] | null;
+		/**
+		 * Register a `number` input with the field as text, for a schema that
+		 * parses the string itself. A number registration drops a cleared box from
+		 * the payload, so an update form could no longer tell "cleared" from
+		 * "untouched".
+		 */
+		submitAs?: 'text';
 		upload?: (file: File) => Promise<string>;
 		accept?: string;
 		src?: string;
@@ -140,13 +148,15 @@
 		// file input, and `.as('text')` would register the field as a string and
 		// hand the handler the filename instead. The other three are text under
 		// the hood — a textarea, a JSON blob, a date string.
-		const asType = isBooleanInput
-			? 'checkbox'
-			: type === 'file'
-				? 'file'
-				: type === 'textarea' || type === 'tags' || type === 'calendar'
-					? 'text'
-					: (type ?? 'text');
+		const asType = submitAs
+			? submitAs
+			: isBooleanInput
+				? 'checkbox'
+				: type === 'file'
+					? 'file'
+					: type === 'textarea' || type === 'tags' || type === 'calendar'
+						? 'text'
+						: (type ?? 'text');
 		// Forward the supplied value so plain inputs render pre-filled from existing
 		// data (edit forms). `.as(type, value)` controls the rendered value.
 		// A file field has no renderable value to forward — the browser owns it.
@@ -395,6 +405,7 @@
 			class:ghost={readonly}
 			{...rest}
 			{...spreadAttrs}
+			{type}
 			id={resolvedId}
 			disabled={pending || readonly}
 		/>
