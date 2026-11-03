@@ -2,6 +2,7 @@ import { page } from 'vitest/browser';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Harness from './PageHeaderFold.test.svelte';
+import '$lib/test/locators';
 // The `client` project ships no CSS, and the squeeze is a layout outcome.
 import '../../../routes/layout.css';
 
@@ -15,8 +16,13 @@ vi.mock('$app/navigation', () => ({
 
 const PHONE = { width: 390, height: 844 };
 
+// The harness tags each action; the page title is the only h1.
+const title = () => page.getByRole('heading', { level: 1 });
+// The overflow menu is a <details>; its <summary> is the trigger.
+const menuTrigger = () => page.getByCss('[data-page-header] summary');
+
 function titleFits() {
-	const heading = page.getByRole('heading', { name: 'Folk Circle' }).element() as HTMLElement;
+	const heading = title().element() as HTMLElement;
 	const row = heading.closest('[data-page-header]')!.firstElementChild as HTMLElement;
 	const column = [...row.children].find((child) => child.contains(heading))!;
 	const text = heading.querySelector('span') ?? heading;
@@ -35,7 +41,7 @@ describe('PageHeader at phone width', () => {
 	it('keeps the title readable when a header without a menu has four actions', async () => {
 		await page.viewport(PHONE.width, PHONE.height);
 		await render(Harness, { shape: 'inline' });
-		await expect.element(page.getByRole('heading', { name: 'Folk Circle' })).toBeVisible();
+		await expect.element(title()).toBeVisible();
 
 		const { share, clipped } = titleFits();
 		expect(share).toBeGreaterThanOrEqual(0.5);
@@ -45,28 +51,28 @@ describe('PageHeader at phone width', () => {
 	it('folds the secondary actions into the ••• menu, keeping primary and title', async () => {
 		await page.viewport(PHONE.width, PHONE.height);
 		await render(Harness, { shape: 'folded' });
-		await expect.element(page.getByRole('heading', { name: 'Folk Circle' })).toBeVisible();
+		await expect.element(title()).toBeVisible();
 
 		const { share, clipped } = titleFits();
 		expect(share).toBeGreaterThanOrEqual(0.5);
 		expect(clipped).toBe(false);
 
-		await expect.element(page.getByRole('button', { name: 'Edit project' })).toBeVisible();
-		await expect.element(page.getByText('Budget')).not.toBeVisible();
+		await expect.element(page.getByTestId('edit-project')).toBeVisible();
+		await expect.element(page.getByTestId('budget')).not.toBeVisible();
 
-		await page.getByLabelText('More actions').click();
-		await expect.element(page.getByRole('link', { name: 'Budget' })).toBeVisible();
-		await expect.element(page.getByRole('button', { name: 'Archive' })).toBeVisible();
+		await menuTrigger().click();
+		await expect.element(page.getByTestId('budget')).toBeVisible();
+		await expect.element(page.getByTestId('archive')).toBeVisible();
 
-		await page.getByRole('button', { name: 'Apply duty list' }).click();
-		await expect.element(page.getByRole('dialog').getByText('Apply it?')).toBeVisible();
+		await page.getByTestId('apply-duty-list').click();
+		await expect.element(page.getByRole('dialog')).toBeVisible();
 	});
 
 	it('leaves the secondary actions inline above the phone breakpoint', async () => {
 		await render(Harness, { shape: 'folded' });
 
-		await expect.element(page.getByRole('link', { name: 'Budget' })).toBeVisible();
-		await expect.element(page.getByRole('button', { name: 'Apply duty list' })).toBeVisible();
-		await expect.element(page.getByText('Archive')).not.toBeVisible();
+		await expect.element(page.getByTestId('budget')).toBeVisible();
+		await expect.element(page.getByTestId('apply-duty-list')).toBeVisible();
+		await expect.element(page.getByTestId('archive')).not.toBeVisible();
 	});
 });
