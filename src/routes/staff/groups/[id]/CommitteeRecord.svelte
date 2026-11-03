@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import RecordFrame from '$lib/components/ui/RecordFrame.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -33,9 +34,9 @@
 		{actions}
 	/>
 {:else}
-	<RecordFrame {variant} {actions} title={data.committee.name} subtitle="Committee">
+	<RecordFrame {variant} {actions} title={data.committee.name} subtitle={m.staff_committee()}>
 		{#if data.applications.length === 0}
-			<EmptyState description="No open applications." />
+			<EmptyState description={m.staff_groups_id_committee_record_description()} />
 		{:else}
 			{@render applications()}
 		{/if}

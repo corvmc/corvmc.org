@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import {
 		getStaffHelpPage,
 		createCategory,
@@ -82,16 +83,17 @@
 	}
 </script>
 
-<PageHeader title="Help Articles">
+<PageHeader title={m.staff_help_title()}>
 	<Button href="/staff/help/create" variant="default" size="sm">
-		<IconPlus size={16} /> New Article
+		<IconPlus size={16} />
+		{m.staff_new_article()}
 	</Button>
 </PageHeader>
 <PageContent>
 	<!-- Categories section -->
 	<details class="collapse-arrow collapse mb-6 collapse-panel">
 		<summary class="collapse-title text-sm font-medium"
-			>Manage Categories ({categories.length})</summary
+			>{m.staff_help_manage_categories({ length: categories.length })}</summary
 		>
 		<div class="collapse-content">
 			<div class="space-y-2">
@@ -109,43 +111,43 @@
 							     only be corrected in the database. -->
 							<Action
 								action={editCat}
-								modalTitle="Edit category"
-								successToast="Category updated"
+								modalTitle={m.staff_help_edit_category()}
+								successToast={m.staff_help_category_updated()}
 								onsuccess={refreshData}
 								variant="ghost"
 								size="xs"
 								iconOnly
-								label="Edit"
+								label={m.staff_edit()}
 							>
 								{#snippet form()}
 									<input {...editCat.fields.id.as('hidden', cat.id)} />
 									<div class="space-y-2">
-										<FormField name="name" label="Name">
+										<FormField name="name" label={m.staff_name()}>
 											<input
 												{...editCat.fields.name.as('text', cat.name)}
 												class="input w-full input-sm"
 											/>
 										</FormField>
-										<FormField name="slug" label="Slug">
+										<FormField name="slug" label={m.staff_slug()}>
 											<input
 												{...editCat.fields.slug.as('text', cat.slug)}
 												class="input w-full input-sm"
 											/>
 										</FormField>
-										<FormField name="description" label="Description">
+										<FormField name="description" label={m.staff_description()}>
 											<input
 												{...editCat.fields.description.as('text', cat.description ?? '')}
 												class="input w-full input-sm"
 											/>
 										</FormField>
-										<FormField name="icon" label="Icon">
+										<FormField name="icon" label={m.staff_help_icon()}>
 											<input
 												{...editCat.fields.icon.as('text', cat.icon ?? '')}
 												class="input w-full input-sm"
-												placeholder="tabler-book"
+												placeholder={m.staff_help_tabler_book()}
 											/>
 										</FormField>
-										<FormField name="minRole" label="Audience">
+										<FormField name="minRole" label={m.staff_audience()}>
 											<Select
 												size="sm"
 												class="w-full"
@@ -156,7 +158,7 @@
 												{/each}
 											</Select>
 										</FormField>
-										<FormField name="sortOrder" label="Sort order">
+										<FormField name="sortOrder" label={m.staff_sort_order()}>
 											<input
 												{...editCat.fields.sortOrder.as('text', String(cat.sortOrder))}
 												class="input w-full input-sm"
@@ -168,17 +170,17 @@
 							</Action>
 							<Action
 								action={deleteCategory}
-								modalTitle="Confirm"
-								successToast="Category deleted"
+								modalTitle={m.staff_confirm()}
+								successToast={m.staff_category_deleted()}
 								onsuccess={refreshData}
 								variant="ghost"
 								size="xs"
 								iconOnly
-								label="Delete"
+								label={m.staff_delete()}
 							>
 								{#snippet form()}
 									<input {...deleteFields.id.as('hidden', cat.id)} />
-									<p class="py-4">Delete "{cat.name}" and all its articles?</p>
+									<p class="py-4">{m.staff_help_delete_all_its_articles({ name: cat.name })}</p>
 								{/snippet}
 								<IconTrash size={14} />
 							</Action>
@@ -186,38 +188,47 @@
 					</div>
 				{/each}
 			</div>
-			<Form remote={createCategory} successToast="Category created" onsuccess={refreshData}>
+			<Form
+				remote={createCategory}
+				successToast={m.staff_help_category_created()}
+				onsuccess={refreshData}
+			>
 				<div class="mt-4 flex flex-wrap items-end gap-2">
-					<FormField name="name" label="Name">
+					<FormField name="name" label={m.staff_name()}>
 						<input
 							name="name"
 							type="text"
 							class="input w-40 input-sm"
-							placeholder="Category name"
+							placeholder={m.staff_help_category_name()}
 							bind:value={catNameValue}
 						/>
 					</FormField>
-					<FormField name="slug" label="Slug">
+					<FormField name="slug" label={m.staff_slug()}>
 						<input
 							name="slug"
 							type="text"
 							class="input w-40 input-sm"
-							placeholder={slugFromName(catNameValue) || 'auto'}
+							placeholder={slugFromName(catNameValue) || m.staff_help_auto()}
 						/>
 					</FormField>
-					<FormField name="description" label="Description">
+					<FormField name="description" label={m.staff_description()}>
 						<!-- The binding, like the edit row and the hidden sortOrder beside it,
 						     rather than the raw `name=` inputs this form otherwise uses. -->
 						<input
 							{...createCatFields.description.as('text', '')}
 							class="input w-56 input-sm"
-							placeholder="What it is for"
+							placeholder={m.staff_help_what()}
 						/>
 					</FormField>
-					<FormField name="icon" label="Icon">
-						<input name="icon" type="text" class="input w-32 input-sm" placeholder="tabler-book" />
+					<FormField name="icon" label={m.staff_help_icon()}>
+						<input
+							name="icon"
+							type="text"
+							class="input w-32 input-sm"
+							placeholder={m.staff_help_tabler_book()}
+						/>
 					</FormField>
-					<FormField name="minRole" label="Audience">
+					<FormField name="minRole" label={m.staff_audience()}>
 						<Select size="sm" class="w-32" name="minRole">
 							{#each helpAudiences as audience (audience)}
 								<option value={audience}>{helpAudienceLabels[audience]}</option>
@@ -225,7 +236,7 @@
 						</Select>
 					</FormField>
 					<input {...createCatFields.sortOrder.as('hidden', String(categories.length))} />
-					<SubmitButton label="Add" variant="primary" size="sm" />
+					<SubmitButton label={m.staff_add()} variant="primary" size="sm" />
 				</div>
 			</Form>
 		</div>
@@ -233,7 +244,7 @@
 
 	<!-- Articles table -->
 	{#if articles.length === 0}
-		<EmptyState message="No help articles yet. Create one to get started." />
+		<EmptyState message={m.staff_help_message()} />
 	{:else}
 		<!--
 			Bulk publish bar. `pnpm help:sync` imports the markdown manual as drafts
@@ -245,14 +256,16 @@
 				{selectedIds.length} selected · {drafts.length} draft{drafts.length === 1 ? '' : 's'}
 			</span>
 			{#if drafts.length > 0}
-				<Button variant="ghost" size="xs" onclick={selectDrafts}>Select all drafts</Button>
+				<Button variant="ghost" size="xs" onclick={selectDrafts}
+					>{m.staff_help_select_all_drafts()}</Button
+				>
 			{/if}
 			{#if selectedIds.length > 0}
 				<Action
 					action={setArticlesPublishedForm}
-					label="Publish selected"
-					modalTitle="Publish articles"
-					successToast="Articles published"
+					label={m.staff_help_publish_selected()}
+					modalTitle={m.staff_help_publish_articles()}
+					successToast={m.staff_help_articles_published()}
 					onsuccess={afterBulk}
 					variant="primary"
 					size="xs"
@@ -270,9 +283,9 @@
 				</Action>
 				<Action
 					action={unpublishSelected}
-					label="Unpublish selected"
-					modalTitle="Unpublish articles"
-					successToast="Articles unpublished"
+					label={m.staff_help_unpublish_selected()}
+					modalTitle={m.staff_help_unpublish_articles()}
+					successToast={m.staff_help_articles_unpublished()}
 					onsuccess={afterBulk}
 					variant="ghost"
 					size="xs"
@@ -296,16 +309,16 @@
 					<input
 						type="checkbox"
 						class="checkbox checkbox-sm"
-						aria-label="Select all articles"
+						aria-label={m.staff_help_select_all_articles()}
 						checked={allSelected}
 						onchange={toggleAll}
 					/>
 				</th>
-				<th class="w-px"><span class="sr-only">Status</span></th>
-				<th>Article</th>
-				<th class="col-support w-px">Source</th>
-				<th class="col-extra w-px">Role</th>
-				<th class="col-support whitespace-nowrap">Updated</th>
+				<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+				<th>{m.staff_help_article()}</th>
+				<th class="col-support w-px">{m.staff_source()}</th>
+				<th class="col-extra w-px">{m.staff_role()}</th>
+				<th class="col-support whitespace-nowrap">{m.staff_updated()}</th>
 			{/snippet}
 			{#each articles as a (a.id)}
 				{@const href = resolve(`/staff/help/${a.id}`)}
@@ -316,7 +329,7 @@
 						<input
 							type="checkbox"
 							class="checkbox checkbox-sm"
-							aria-label="Select {a.title}"
+							aria-label={m.staff_help_select({ title: a.title })}
 							checked={selectedIds.includes(a.id)}
 							onchange={() => toggleArticle(a.id)}
 						/>

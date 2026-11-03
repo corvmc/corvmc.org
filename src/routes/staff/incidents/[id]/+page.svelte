@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
@@ -42,10 +43,10 @@
 	{#if incident.status === 'reported'}
 		<Action
 			action={acceptIncidentForm}
-			label="Accept"
-			modalTitle="Accept this report"
+			label={m.staff_incidents_id_accept()}
+			modalTitle={m.staff_incidents_id_accept_report()}
 			confirm="It joins the log as an open incident. You can resolve it straight away instead."
-			successToast="Accepted"
+			successToast={m.staff_incidents_id_accepted()}
 			variant="primary"
 			size="sm"
 		>
@@ -57,52 +58,52 @@
 </PageHeader>
 <PageContent width="3xl">
 	<div class="grid gap-6">
-		<InfoCard title="Report">
+		<InfoCard title={m.staff_report()}>
 			<DefinitionList>
-				<Fact label="When">{formatDateTime(incident.occurredAt)}</Fact>
+				<Fact label={m.staff_when()}>{formatDateTime(incident.occurredAt)}</Fact>
 				{#if incident.location}
-					<Fact label="Where">{incident.location}</Fact>
+					<Fact label={m.staff_where()}>{incident.location}</Fact>
 				{/if}
-				<Fact label="What happened" wrap>{incident.description}</Fact>
+				<Fact label={m.staff_what_happened()} wrap>{incident.description}</Fact>
 				{#if incident.involvedUserId}
-					<Fact label="Member involved">
+					<Fact label={m.staff_member_involved()}>
 						<a class="link" href={resolve(`/staff/members/${incident.involvedUserId}`)}>
 							{incident.involvedName ?? 'Member'}
 						</a>
 					</Fact>
 				{/if}
 				{#if incident.eventId}
-					<Fact label="Show">
+					<Fact label={m.staff_show()}>
 						<a class="link" href={resolve(`/staff/events/${incident.eventId}`)}>
 							{incident.eventTitle ?? 'Event'}
 						</a>
 					</Fact>
 				{/if}
-				<Fact label="Recorded by">
+				<Fact label={m.staff_recorded_by()}>
 					{incident.reportedByName}, {formatDateTime(incident.createdAt)}
 				</Fact>
 			</DefinitionList>
 		</InfoCard>
 
-		<InfoCard title="Notes" state={incident.notes.length}>
+		<InfoCard title={m.staff_notes()} state={incident.notes.length}>
 			{#snippet action()}
 				{#if canRecord}
 					<Action
 						action={addIncidentNoteForm}
-						label="Add note"
-						modalTitle="Add a note"
-						successToast="Note added"
+						label={m.staff_incidents_id_add_note()}
+						modalTitle={m.staff_incidents_id_add_note_2()}
+						successToast={m.staff_incidents_id_note_added()}
 						size="sm"
 					>
 						{#snippet form()}
 							<input {...noteFields.incidentId.as('hidden', id)} />
-							<Field field={noteFields.body} type="textarea" label="Note" />
+							<Field field={noteFields.body} type="textarea" label={m.staff_incidents_id_note()} />
 						{/snippet}
 					</Action>
 				{/if}
 			{/snippet}
 			{#if incident.notes.length === 0}
-				<p class="text-muted">No follow-ups yet.</p>
+				<p class="text-muted">{m.staff_incidents_id_no_follow_ups_yet()}</p>
 			{:else}
 				<ol class="space-y-3">
 					{#each incident.notes as n (n.id)}
@@ -115,38 +116,42 @@
 			{/if}
 		</InfoCard>
 
-		<InfoCard title="Resolution" class="bg-base-200 shadow-none">
+		<InfoCard title={m.staff_resolution()} class="bg-base-200 shadow-none">
 			{#if incident.status !== 'resolved' && !canRecord}
-				<p class="text-muted">Not resolved yet.</p>
+				<p class="text-muted">{m.staff_incidents_id_not_resolved_yet()}</p>
 			{:else if incident.status !== 'resolved'}
 				<Action
 					action={resolveIncidentForm}
-					label="Resolve"
-					modalTitle="Resolve this incident"
-					successToast="Incident resolved"
+					label={m.staff_resolve()}
+					modalTitle={m.staff_incidents_id_resolve_incident()}
+					successToast={m.staff_incidents_id_incident_resolved()}
 					variant="primary"
 					size="sm"
 				>
 					{#snippet form()}
 						<input {...resolveFields.incidentId.as('hidden', id)} />
-						<Field field={resolveFields.resolution} type="textarea" label="How it was resolved" />
+						<Field
+							field={resolveFields.resolution}
+							type="textarea"
+							label={m.staff_incidents_id_how_was_resolved()}
+						/>
 					{/snippet}
 				</Action>
 			{:else}
 				<DefinitionList>
-					<Fact label="Resolution" wrap>{incident.resolution}</Fact>
+					<Fact label={m.staff_resolution()} wrap>{incident.resolution}</Fact>
 					{#if incident.resolvedAt}
-						<Fact label="Resolved">{formatDateTime(incident.resolvedAt)}</Fact>
+						<Fact label={m.staff_resolved()}>{formatDateTime(incident.resolvedAt)}</Fact>
 					{/if}
 				</DefinitionList>
 				{#if canRecord}
 					<div class="mt-3">
 						<Action
 							action={reopenIncidentForm}
-							label="Reopen"
-							modalTitle="Reopen this incident"
+							label={m.staff_reopen()}
+							modalTitle={m.staff_incidents_id_reopen_incident()}
 							confirm="The current resolution is kept in its history."
-							successToast="Incident reopened"
+							successToast={m.staff_incidents_id_incident_reopened()}
 							size="sm"
 						>
 							{#snippet form()}
@@ -158,7 +163,7 @@
 			{/if}
 		</InfoCard>
 
-		<InfoCard title="Retention" class="bg-base-200 shadow-none">
+		<InfoCard title={m.staff_incidents_id_retention()} class="bg-base-200 shadow-none">
 			<p class="text-muted text-wrap">
 				{incident.retain
 					? 'Marked retain: kept past the seven-year deletion until the hold is released.'
@@ -167,9 +172,15 @@
 			<div class="mt-3">
 				<Action
 					action={setIncidentRetainForm}
-					label={incident.retain ? 'Release hold' : 'Mark retain'}
-					modalTitle={incident.retain ? 'Release the retention hold' : 'Keep this record'}
-					successToast={incident.retain ? 'Hold released' : 'Marked retain'}
+					label={incident.retain
+						? m.staff_incidents_id_release_hold()
+						: m.staff_incidents_id_mark_retain()}
+					modalTitle={incident.retain
+						? m.staff_incidents_id_release_retention_hold()
+						: m.staff_incidents_id_keep_record()}
+					successToast={incident.retain
+						? m.staff_incidents_id_hold_released()
+						: m.staff_incidents_id_marked_retain()}
 					size="sm"
 				>
 					{#snippet form()}
@@ -178,8 +189,8 @@
 						<Field
 							field={retainFields.reason}
 							type="text"
-							label="Why"
-							description="Kept in its history, e.g. an open insurance claim."
+							label={m.staff_why()}
+							description={m.staff_incidents_id_description()}
 						/>
 					{/snippet}
 				</Action>
@@ -187,10 +198,10 @@
 		</InfoCard>
 
 		<ActivityFeedCard
-			title="History"
+			title={m.staff_history()}
 			query={(limit) => getIncidentHistory(limit ? { id, limit } : { id })}
 			toRow={feedItemRow}
-			empty={{ title: 'No recorded changes' }}
+			empty={{ title: m.staff_no_recorded_changes() }}
 		/>
 	</div>
 </PageContent>

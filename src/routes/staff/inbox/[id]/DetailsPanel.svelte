@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Who this is, what we already know about them, and where the thread stands.
 	 *
@@ -94,7 +95,9 @@
 				thread.contactName ??
 				thread.contactEmail ??
 				channelLabel(thread.channel)}
-			{#if thread.assignedToName}· assigned to {thread.assignedToName}{/if}
+			{#if thread.assignedToName}{m.staff_inbox_id_details_panel_assigned({
+					assignedToName: thread.assignedToName
+				})}{/if}
 		</span>
 	</summary>
 
@@ -102,7 +105,7 @@
 		{#if open}
 			<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				<div class="flex flex-col gap-1">
-					<SectionLabel label="Contact" />
+					<SectionLabel label={m.staff_contact()} />
 					{#if thread.contactUserId}
 						<a href={resolve(`/staff/members/${thread.contactUserId}`)} class="link link-primary">
 							{thread.contactUserName ?? thread.contactName}
@@ -119,7 +122,7 @@
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<SectionLabel label="History" />
+					<SectionLabel label={m.staff_history()} />
 					{#await getInboxThreadContext(thread.id)}
 						<span class="loading loading-xs loading-spinner"></span>
 					{:then context}
@@ -128,24 +131,36 @@
 								? 'No other conversations'
 								: `${context.priorConversations} previous conversation${context.priorConversations === 1 ? '' : 's'}`}
 						</span>
-						<span class="text-subtle">First contact {formatDate(context.firstContactAt)}</span>
-						<span class="text-subtle">Source: {channelLabel(thread.channel)}</span>
+						<span class="text-subtle"
+							>{m.staff_inbox_id_details_panel_first_contact({
+								formatDate: formatDate(context.firstContactAt)
+							})}</span
+						>
+						<span class="text-subtle"
+							>{m.staff_inbox_id_details_panel_source({
+								channelLabel: channelLabel(thread.channel)
+							})}</span
+						>
 					{/await}
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<SectionLabel label="This thread" />
+					<SectionLabel label={m.staff_inbox_id_details_panel_thread()} />
 					<span>{thread.messageCount} message{thread.messageCount === 1 ? '' : 's'}</span>
 					<span class="text-subtle">
 						{thread.lastOutboundAt
 							? `Last reply ${formatDateTime(thread.lastOutboundAt)}`
 							: 'Never answered'}
 					</span>
-					<span class="text-subtle">Opened {formatDate(thread.createdAt)}</span>
+					<span class="text-subtle"
+						>{m.staff_inbox_id_details_panel_opened({
+							formatDate: formatDate(thread.createdAt)
+						})}</span
+					>
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<SectionLabel label="Tags" />
+					<SectionLabel label={m.staff_inbox_id_details_panel_tags()} />
 					<!-- The same query as History; the remote layer dedupes it, and
 					     splitting the columns apart is what makes each one readable. -->
 					{#await getInboxThreadContext(thread.id) then context}
@@ -156,7 +171,7 @@
 									<button
 										type="button"
 										class="cursor-pointer opacity-50 hover:opacity-100"
-										aria-label="Remove tag {tag}"
+										aria-label={m.staff_inbox_id_details_panel_remove_tag({ tag })}
 										onclick={() => removeInboxThreadTag({ threadId: thread.id, tag })}
 									>
 										<IconX size={11} />
@@ -168,8 +183,8 @@
 							     validation state to show. -->
 							<input
 								class="input w-24 input-xs"
-								placeholder="add"
-								aria-label="Add a tag"
+								placeholder={m.staff_inbox_id_details_panel_placeholder()}
+								aria-label={m.staff_inbox_id_details_panel_add_tag()}
 								bind:value={newTag}
 								onkeydown={(e) => {
 									if (e.key !== 'Enter' || !newTag.trim()) return;

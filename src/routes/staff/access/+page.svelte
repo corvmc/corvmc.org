@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import StatCard from '$lib/components/ui/StatCard.svelte';
@@ -13,14 +14,14 @@
 
 	const data = $derived(await getAccessPage());
 	const stats = $derived([
-		{ title: 'Admins', value: data.summary.admins },
-		{ title: 'Staff', value: data.summary.staff },
-		{ title: 'Positions held', value: data.summary.positionsHeld },
-		{ title: 'Clearances lapsing in 30 days', value: data.summary.lapsingSoon }
+		{ title: m.staff_access_admins(), value: data.summary.admins },
+		{ title: m.staff_staff(), value: data.summary.staff },
+		{ title: m.staff_access_positions_held(), value: data.summary.positionsHeld },
+		{ title: m.staff_access_clearances_lapsing_30_days(), value: data.summary.lapsingSoon }
 	]);
 </script>
 
-<PageHeader title="Access" subtitle="Who can do what" />
+<PageHeader title={m.staff_access_access()} subtitle={m.staff_access_subtitle()} />
 <PageContent>
 	<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
 		{#each stats as stat (stat.title)}
@@ -30,8 +31,8 @@
 
 	<TabBar
 		tabs={[
-			{ key: 'person', label: 'By person' },
-			{ key: 'permission', label: 'By permission' }
+			{ key: 'person', label: m.staff_access_by_person() },
+			{ key: 'permission', label: m.staff_access_by_permission() }
 		]}
 		active={view}
 		onchange={(key) => (view = key as typeof view)}

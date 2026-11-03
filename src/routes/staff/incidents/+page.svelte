@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -49,7 +50,7 @@
 	}
 </script>
 
-<PageHeader title="Incidents" subtitle="Space">
+<PageHeader title={m.staff_incidents_title()} subtitle={m.staff_space()}>
 	{#if canRecord}
 		<RecordIncidentAction />
 	{/if}
@@ -59,7 +60,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search incidents..."
+				placeholder={m.staff_incidents_placeholder()}
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -68,29 +69,29 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label="Status"
+			aria-label={m.staff_status()}
 			value={statusFilter}
 			onchange={(e: Event) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value as typeof statusFilter;
 				page = 1;
 			}}
 		>
-			<option value="">All statuses</option>
-			<option value="unresolved">Not resolved</option>
-			<option value="reported">Awaiting review</option>
-			<option value="open">Open</option>
-			<option value="resolved">Resolved</option>
+			<option value="">{m.staff_all_statuses()}</option>
+			<option value="unresolved">{m.staff_incidents_not_resolved()}</option>
+			<option value="reported">{m.staff_incidents_awaiting_review()}</option>
+			<option value="open">{m.staff_open()}</option>
+			<option value="resolved">{m.staff_resolved()}</option>
 		</Select>
 		<Select
 			size="sm"
-			aria-label="Category"
+			aria-label={m.staff_category()}
 			value={categoryFilter}
 			onchange={(e: Event) => {
 				categoryFilter = (e.currentTarget as HTMLSelectElement).value as typeof categoryFilter;
 				page = 1;
 			}}
 		>
-			<option value="">All kinds</option>
+			<option value="">{m.staff_incidents_all_kinds()}</option>
 			{#each incidentCategories as c (c)}
 				<option value={c}>{incidentCategoryLabels[c]}</option>
 			{/each}
@@ -98,16 +99,16 @@
 	</FilterBar>
 
 	<!-- A table: the summary is capped at 200 characters and rows carry no actions. -->
-	<DataList {result} empty="No incidents found" onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_incidents_empty()} onpage={(p) => (page = p)}>
 		{#snippet children(rows)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th class="col-support">When</th>
-					<th class="col-support">Kind</th>
-					<th class="cell-primary">Summary</th>
-					<th class="col-support">Member involved</th>
-					<th class="col-support">Recorded by</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+					<th class="col-support">{m.staff_when()}</th>
+					<th class="col-support">{m.staff_kind()}</th>
+					<th class="cell-primary">{m.staff_summary()}</th>
+					<th class="col-support">{m.staff_member_involved()}</th>
+					<th class="col-support">{m.staff_recorded_by()}</th>
 				{/snippet}
 				{#each rows as r (r.id)}
 					<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/incidents/${r.id}`)}>

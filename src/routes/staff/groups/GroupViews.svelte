@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import { hasCapability, type Capability } from '$lib/config';
 	import { getStaffLayout } from '$lib/remote/layout.remote';
@@ -11,11 +12,21 @@
 
 	// Presentation only: each view's remotes keep their own guard.
 	const views: { key: GroupView; label: string; href: ResolvedPathname; cap: Capability }[] = [
-		{ key: 'bands', label: 'Bands', href: resolve('/staff/groups'), cap: 'band.read' },
-		{ key: 'clubs', label: 'Clubs', href: resolve('/staff/groups/clubs'), cap: 'group.read' },
+		{
+			key: 'bands',
+			label: m.staff_groups_group_views_bands(),
+			href: resolve('/staff/groups'),
+			cap: 'band.read'
+		},
+		{
+			key: 'clubs',
+			label: m.staff_groups_group_views_clubs(),
+			href: resolve('/staff/groups/clubs'),
+			cap: 'group.read'
+		},
 		{
 			key: 'committees',
-			label: 'Committees',
+			label: m.staff_groups_group_views_committees(),
 			href: resolve('/staff/groups/committees'),
 			cap: 'committee.reviewApplications'
 		}

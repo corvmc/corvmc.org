@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import {
@@ -120,9 +121,9 @@
 
 <Action
 	action={createReservation}
-	label="New Reservation"
-	modalTitle="New Reservation"
-	submitLabel="Create Reservation"
+	label={m.staff_reservations_create_modal_new_reservation()}
+	modalTitle={m.staff_reservations_create_modal_new_reservation()}
+	submitLabel={m.staff_reservations_create_modal_submit_label()}
 	variant="primary"
 	size="sm"
 	maxWidth="max-w-md"
@@ -144,21 +145,21 @@
 			<input {...fields.endTime.as('hidden', endTime)} />
 
 			<fieldset class="fieldset">
-				<legend class="fieldset-legend">Booking for</legend>
+				<legend class="fieldset-legend">{m.staff_reservations_create_modal_booking()}</legend>
 				<Select bind:value={bookerType} class="w-full">
-					<option value="user">A member</option>
-					<option value="group">A band</option>
+					<option value="user">{m.staff_reservations_create_modal_member()}</option>
+					<option value="group">{m.staff_reservations_create_modal_band()}</option>
 				</Select>
 			</fieldset>
 
 			{#if bookerType === 'group'}
 				<fieldset class="fieldset">
-					<legend class="fieldset-legend">Band</legend>
+					<legend class="fieldset-legend">{m.staff_band()}</legend>
 					<SearchSelect
 						search={searchBands}
 						bind:value={selectedBand}
 						descriptionKey="ownerName"
-						placeholder="Search bands by name..."
+						placeholder={m.staff_reservations_create_modal_search_bands_by_name()}
 						onselect={onBandSelected}
 					/>
 				</fieldset>
@@ -171,16 +172,16 @@
 				<SearchSelect
 					search={searchMembers}
 					bind:value={selectedMember}
-					placeholder="Search by name or email..."
+					placeholder={m.staff_search_by_name_email()}
 				/>
 			</fieldset>
 
-			<Field name="date" type="date" label="Date" bind:value={date} />
+			<Field name="date" type="date" label={m.staff_date()} bind:value={date} />
 
 			<fieldset class="fieldset">
-				<legend class="fieldset-legend">Start time</legend>
+				<legend class="fieldset-legend">{m.staff_reservations_create_modal_start_time()}</legend>
 				<Select bind:value={startTime} class="w-full" disabled={!(await startOptions)?.length}>
-					<option value="">Select start time</option>
+					<option value="">{m.staff_reservations_create_modal_select_start_time()}</option>
 					{#each await startOptions as opt (opt.value)}
 						<option value={opt.value}>
 							{opt.label}{opt.available ? '' : ' ⚠ conflict'}
@@ -190,9 +191,9 @@
 			</fieldset>
 
 			<fieldset class="fieldset">
-				<legend class="fieldset-legend">End time</legend>
+				<legend class="fieldset-legend">{m.staff_reservations_create_modal_end_time()}</legend>
 				<Select bind:value={endTime} class="w-full" disabled={!startTime}>
-					<option value="">Select end time</option>
+					<option value="">{m.staff_reservations_create_modal_select_end_time()}</option>
 					{#each await endOptions as opt (opt.value)}
 						<option value={opt.value} class:opacity-40={!opt.available}>
 							{opt.label}{opt.available ? '' : ' (unavailable)'}
@@ -209,13 +210,13 @@
 				<Field
 					field={fields.overrideConflicts}
 					type="checkbox"
-					label="Override"
-					checkboxLabel="Book it anyway — I know this double-books the space"
+					label={m.staff_reservations_create_modal_override()}
+					checkboxLabel={m.staff_reservations_create_modal_checkbox_label()}
 					bind:value={overrideConflicts}
 				/>
 			{/if}
 
-			<Field name="notes" type="textarea" label="Notes" bind:value={notes} />
+			<Field name="notes" type="textarea" label={m.staff_notes()} bind:value={notes} />
 
 			{#snippet pending()}
 				<div class="flex items-center justify-center p-8">
@@ -225,7 +226,9 @@
 
 			{#snippet failed(error, reset)}
 				<Alert type="warning" reset={() => retryQuery(slots, reset)}>
-					Could not load the booking form: {errorMessage(error)}
+					{m.staff_reservations_create_modal_could_not_load_booking_form({
+						errorMessage: errorMessage(error)
+					})}
 				</Alert>
 			{/snippet}
 		</svelte:boundary>

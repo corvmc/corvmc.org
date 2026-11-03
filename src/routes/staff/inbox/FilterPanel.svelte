@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The filters, in the main pane rather than a modal or a strip above the list.
 	 *
@@ -57,15 +58,21 @@
 
 <div class="flex h-full min-h-0 flex-col gap-5 overflow-y-auto p-1">
 	<div class="flex items-center justify-between">
-		<h2 class="text-lg font-bold">Filter conversations</h2>
-		<Button variant="ghost" size="sm" shape="square" onclick={onclose} aria-label="Close filters">
+		<h2 class="text-lg font-bold">{m.staff_inbox_filter_panel_filter_conversations()}</h2>
+		<Button
+			variant="ghost"
+			size="sm"
+			shape="square"
+			onclick={onclose}
+			aria-label={m.staff_inbox_filter_panel_close_filters()}
+		>
 			<IconX size={18} />
 		</Button>
 	</div>
-	<p class="text-muted text-sm">The list updates as you change these.</p>
+	<p class="text-muted text-sm">{m.staff_inbox_filter_panel_list_updates_as_change_these()}</p>
 
 	<div class="flex flex-col gap-2">
-		<SectionLabel label="Status" />
+		<SectionLabel label={m.staff_status()} />
 		<div class="flex flex-wrap gap-2">
 			{#each inboxViews as key (key)}
 				<button type="button" class={chip(view === key)} onclick={() => (view = key)}>
@@ -77,7 +84,7 @@
 	</div>
 
 	<div class="flex flex-col gap-2">
-		<SectionLabel label="Inquiry type" />
+		<SectionLabel label={m.staff_inbox_filter_panel_inquiry_type()} />
 		<div class="flex flex-wrap gap-2">
 			<!-- Clicking the selected chip clears it: a facet with no "any" option
 			     is a filter you can enter and not leave. -->
@@ -96,7 +103,7 @@
 	</div>
 
 	<div class="flex flex-col gap-2">
-		<SectionLabel label="Assigned to" />
+		<SectionLabel label={m.staff_assigned_2()} />
 		<!-- Its own query. The staff list is not keyed by these filters and the
 		     queue paints without it — same reason as AssignControl. -->
 		{#await getAssignableStaff()}
@@ -104,17 +111,17 @@
 		{:then staffUsers}
 			<div class="flex flex-wrap gap-2">
 				<button type="button" class={chip(assigned === '')} onclick={() => (assigned = '')}>
-					Anyone
+					{m.staff_anyone()}
 				</button>
 				<button type="button" class={chip(assigned === 'mine')} onclick={() => (assigned = 'mine')}>
-					Me
+					{m.staff_inbox_filter_panel_me()}
 				</button>
 				<button
 					type="button"
 					class={chip(assigned === 'unassigned')}
 					onclick={() => (assigned = 'unassigned')}
 				>
-					Unassigned
+					{m.staff_unassigned()}
 				</button>
 				{#each staffUsers as s (s.id)}
 					<button type="button" class={chip(assigned === s.id)} onclick={() => (assigned = s.id)}>
@@ -126,7 +133,7 @@
 	</div>
 
 	<div class="flex flex-col gap-2">
-		<SectionLabel label="Waiting longer than" />
+		<SectionLabel label={m.staff_inbox_filter_panel_waiting_longer_than()} />
 		<div class="flex items-center gap-3">
 			<input
 				type="range"
@@ -134,7 +141,7 @@
 				min="0"
 				max="14"
 				step="1"
-				aria-label="Waiting longer than, in days"
+				aria-label={m.staff_inbox_filter_panel_waiting_longer_than_days()}
 				bind:value={waitingDays}
 			/>
 			<span class="text-sm whitespace-nowrap">
@@ -146,11 +153,15 @@
 	<div
 		class="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-base-300 pt-4"
 	>
-		<Badge>{counts.matching} of {counts.total} match</Badge>
+		<Badge
+			>{m.staff_inbox_filter_panel_match({ matching: counts.matching, total: counts.total })}</Badge
+		>
 		<div class="flex gap-2">
-			<Button variant="ghost" size="sm" onclick={onreset}>Reset</Button>
-			<Button variant="default" size="sm" onclick={onsave}>Save as view</Button>
-			<Button variant="primary" size="sm" onclick={onclose}>Done</Button>
+			<Button variant="ghost" size="sm" onclick={onreset}
+				>{m.staff_inbox_filter_panel_reset()}</Button
+			>
+			<Button variant="default" size="sm" onclick={onsave}>{m.staff_save_as_view()}</Button>
+			<Button variant="primary" size="sm" onclick={onclose}>{m.staff_done()}</Button>
 		</div>
 	</div>
 </div>

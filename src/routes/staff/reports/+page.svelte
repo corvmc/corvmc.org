@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -80,7 +81,7 @@
 	};
 </script>
 
-<PageHeader title="Annual report" subtitle="Reports">
+<PageHeader title={m.staff_reports_annual_report()} subtitle={m.staff_reports()}>
 	<!--
 		A plain anchor rather than an Action: the endpoint returns a file, so it is
 		a `+server.ts` and the browser has to navigate to it for
@@ -88,7 +89,7 @@
 	-->
 	<Button href={exportHref} size="sm" rel="external" download>
 		<IconDownload size={18} />
-		Export CSV
+		{m.staff_export_csv()}
 	</Button>
 </PageHeader>
 
@@ -104,32 +105,35 @@
 				no way to tell that apart from a quiet year.
 			-->
 			<Alert type="info">
-				The financial record begins {formatDateLong(r.coverage.startsAt)}. Money the collective took
-				in before then was never recorded here, so the lines below cover only the part of this range
-				the record reaches.
+				{m.staff_reports_financial_record_begins_money_collective({
+					formatDateLong: formatDateLong(r.coverage.startsAt)
+				})}
 			</Alert>
 		{/if}
 
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-			<StatCard title="Earned" value={formatCents(r.money.totalsByKind.earned)} />
+			<StatCard title={m.staff_reports_earned()} value={formatCents(r.money.totalsByKind.earned)} />
 			<StatCard
-				title="Spent"
+				title={m.staff_reports_spent()}
 				value={formatCents(shownCents('spent', r.money.totalsByKind.spent))}
 			/>
-			<StatCard title="Net" value={formatCents(r.money.netCents)} />
-			<StatCard title="Given in kind" value={formatCents(r.money.totalsByKind.in_kind)} />
+			<StatCard title={m.staff_reports_net()} value={formatCents(r.money.netCents)} />
+			<StatCard
+				title={m.staff_reports_given_kind()}
+				value={formatCents(r.money.totalsByKind.in_kind)}
+			/>
 		</div>
 
 		{#each ['earned', 'spent', 'in_kind', 'pass_through'] as const as kind (kind)}
 			<InfoCard title={kindTitles[kind]}>
 				<p class="mb-3 text-subtle text-sm">{kindNotes[kind]}</p>
 				{#if r.money.byKind[kind].length === 0}
-					<EmptyState description="Nothing recorded in this range." />
+					<EmptyState description={m.staff_reports_description()} />
 				{:else}
 					<Table>
 						{#snippet head()}
-							<th>Line</th>
-							<th class="text-right">Amount</th>
+							<th>{m.staff_reports_line()}</th>
+							<th class="text-right">{m.staff_amount()}</th>
 						{/snippet}
 						{#each r.money.byKind[kind] as line (line.category)}
 							<tr>
@@ -140,7 +144,7 @@
 							</tr>
 						{/each}
 						<tr class="font-semibold">
-							<td>Total</td>
+							<td>{m.staff_reports_total()}</td>
 							<td class="text-right tabular-nums"
 								>{formatCents(shownCents(kind, r.money.totalsByKind[kind]))}</td
 							>
@@ -150,15 +154,15 @@
 			</InfoCard>
 		{/each}
 
-		<InfoCard title="Donated time">
+		<InfoCard title={m.staff_reports_donated_time()}>
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 				<StatCard
-					title="Approved hours"
+					title={m.staff_approved_hours()}
 					value={formatVolunteerHours(r.volunteering.totals.totalMinutes)}
 				/>
-				<StatCard title="Volunteers" value={r.volunteering.totals.volunteerCount} />
+				<StatCard title={m.staff_volunteers()} value={r.volunteering.totals.volunteerCount} />
 				<StatCard
-					title="Impact value"
+					title={m.staff_impact_value()}
 					value={formatCents(r.volunteering.contributed.impactValueCents)}
 				/>
 			</div>
@@ -178,17 +182,17 @@
 			</p>
 		</InfoCard>
 
-		<InfoCard title="Events">
+		<InfoCard title={m.staff_events()}>
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-				<StatCard title="CMC events" value={r.events.cmcTotal} />
-				<StatCard title="Band listings" value={r.events.bandListings} />
-				<StatCard title="Community listings" value={r.events.communityListings} />
-				<StatCard title="Cancelled" value={r.events.cancelled} />
+				<StatCard title={m.staff_reports_cmc_events()} value={r.events.cmcTotal} />
+				<StatCard title={m.staff_reports_band_listings()} value={r.events.bandListings} />
+				<StatCard title={m.staff_reports_community_listings()} value={r.events.communityListings} />
+				<StatCard title={m.staff_cancelled()} value={r.events.cancelled} />
 			</div>
 			<Table class="mt-4">
 				{#snippet head()}
-					<th>CMC events by kind</th>
-					<th class="text-right">Held</th>
+					<th>{m.staff_reports_cmc_events_by_kind()}</th>
+					<th class="text-right">{m.staff_reports_held()}</th>
 				{/snippet}
 				{#each Object.entries(r.events.cmcByKind) as [kind, total] (kind)}
 					<tr>
@@ -198,33 +202,39 @@
 				{/each}
 			</Table>
 			<p class="mt-3 text-subtle text-sm">
-				Counts, not attendance. Only a minority of shows are ticketed and RSVPs are optional, so any
-				head count the app could produce would be a fraction of the real one.
+				{m.staff_reports_counts_not_attendance_only_minority()}
 			</p>
 		</InfoCard>
 
-		<InfoCard title="Practice room">
+		<InfoCard title={m.staff_reports_practice_room()}>
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-				<StatCard title="Hours booked" value={r.room.hours} />
-				<StatCard title="Sessions" value={r.room.sessions} />
-				<StatCard title="Distinct bookers" value={r.room.distinctBookers} />
-				<StatCard title="No-shows" value={r.room.noShows} />
+				<StatCard title={m.staff_reports_hours_booked()} value={r.room.hours} />
+				<StatCard title={m.staff_reports_sessions()} value={r.room.sessions} />
+				<StatCard title={m.staff_reports_distinct_bookers()} value={r.room.distinctBookers} />
+				<StatCard title={m.staff_reports_no_shows()} value={r.room.noShows} />
 			</div>
 			<p class="mt-3 text-subtle text-sm">
-				Hours the room was held, including comped and credit-covered time. That is why this does not
-				track the practice-room revenue line above.
+				{m.staff_reports_hours_room_was_held_including()}
 			</p>
 		</InfoCard>
 
-		<InfoCard title="Membership">
+		<InfoCard title={m.staff_reports_membership()}>
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-				<StatCard title="Sustaining members" value={r.membership.sustainingMemberCount} />
-				<StatCard title="Practice hours funded" value={r.membership.totalFreeHoursAllocated} />
-				<StatCard title="Participation" value={`${r.membership.participationPercent}%`} />
+				<StatCard
+					title={m.staff_reports_sustaining_members()}
+					value={r.membership.sustainingMemberCount}
+				/>
+				<StatCard
+					title={m.staff_reports_practice_hours_funded()}
+					value={r.membership.totalFreeHoursAllocated}
+				/>
+				<StatCard
+					title={m.staff_reports_participation()}
+					value={`${r.membership.participationPercent}%`}
+				/>
 			</div>
 			<p class="mt-3 text-subtle text-sm">
-				As of today, not over the range — a subscription count is a snapshot, and there is no
-				history of it to look back through.
+				{m.staff_reports_as_today_not_over_range()}
 			</p>
 		</InfoCard>
 	{/await}

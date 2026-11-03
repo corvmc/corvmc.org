@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/** One permit, license or policy: when it expires, who renews it, and its certificate. */
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -36,12 +37,12 @@
 <PageHeader title={r.name} subtitle={renewalKindLabels[r.kind]}>
 	<Action
 		action={editForm}
-		label="Edit"
+		label={m.staff_edit()}
 		variant="ghost"
 		size="sm"
-		modalTitle="Edit {r.name}"
-		submitLabel="Save"
-		successToast="Saved"
+		modalTitle={m.staff_edit_2({ name: r.name })}
+		submitLabel={m.staff_save()}
+		successToast={m.staff_saved()}
 	>
 		{#snippet form()}
 			<input type="hidden" name="id" value={r.id} />
@@ -53,8 +54,9 @@
 <PageContent>
 	{#if r.deadline.overdue}
 		<Alert type="error">
-			Expired {formatIsoDay(r.expiresOn)}. Once it is renewed, edit the expiry date and attach the
-			new certificate.
+			{m.staff_renewals_id_expired_once_renewed_edit_expiry({
+				formatIsoDay: formatIsoDay(r.expiresOn)
+			})}
 		</Alert>
 	{:else if r.daysLeft <= 60}
 		<Alert type="warning">
@@ -63,46 +65,46 @@
 		</Alert>
 	{/if}
 
-	<InfoCard title="Details">
+	<InfoCard title={m.staff_details()}>
 		<DefinitionList>
-			<Fact label="Expires" value={formatIsoDay(r.expiresOn)} />
-			<Fact label="Issued by" value={r.issuer ?? '—'} />
-			<Fact label="Reference" value={r.reference ?? '—'} />
-			<Fact label="Responsible" value={r.responsibleName ?? 'Nobody named'} />
+			<Fact label={m.staff_expires()} value={formatIsoDay(r.expiresOn)} />
+			<Fact label={m.staff_renewals_id_issued_by()} value={r.issuer ?? '—'} />
+			<Fact label={m.staff_renewals_id_reference()} value={r.reference ?? '—'} />
+			<Fact label={m.staff_responsible()} value={r.responsibleName ?? 'Nobody named'} />
 			{#if r.notes}
-				<Fact label="Notes" wrap>{r.notes}</Fact>
+				<Fact label={m.staff_notes()} wrap>{r.notes}</Fact>
 			{/if}
 		</DefinitionList>
 	</InfoCard>
 
-	<InfoCard title="Documents">
+	<InfoCard title={m.staff_renewals_id_documents()}>
 		{#snippet action()}
 			<Action
 				action={uploadForm}
-				label="Attach document"
+				label={m.staff_renewals_id_attach_document()}
 				variant="ghost"
 				size="sm"
-				modalTitle="Attach a document"
-				submitLabel="Upload"
-				successToast="Attached"
+				modalTitle={m.staff_renewals_id_attach_document_2()}
+				submitLabel={m.staff_upload()}
+				successToast={m.staff_renewals_id_attached()}
 			>
 				{#snippet form()}
 					<input type="hidden" name="id" value={r.id} />
 					<FormField
 						field={uploadForm.fields.file}
 						type="file"
-						label="File"
+						label={m.staff_renewals_id_file()}
 						accept={ACCEPT}
-						emptyLabel="Choose a file"
-						replaceLabel="Choose a different file"
-						description="The certificate, permit or policy. PDF, photo or Word, up to 25MB."
+						emptyLabel={m.staff_renewals_id_empty_label()}
+						replaceLabel={m.staff_renewals_id_replace_label()}
+						description={m.staff_renewals_id_certificate_permit_policy_pdf_photo()}
 						required
 					/>
 				{/snippet}
 			</Action>
 		{/snippet}
 		{#if r.documents.length === 0}
-			<EmptyState description="No certificate attached yet" />
+			<EmptyState description={m.staff_renewals_id_no_certificate_attached_yet()} />
 		{:else}
 			<ul class="space-y-2">
 				{#each r.documents as doc (doc.attachmentId)}
@@ -111,19 +113,19 @@
 						<a class="grow link" href={doc.url} rel="external">{doc.filename ?? 'Document'}</a>
 						<Action
 							action={removeRenewalDocument.for(doc.attachmentId)}
-							label="Remove"
+							label={m.staff_remove()}
 							variant="ghost"
 							size="sm"
 							class="text-error"
-							modalTitle="Remove {doc.filename ?? 'this document'}?"
-							submitLabel="Remove"
+							modalTitle={m.staff_renewals_id_remove({ value: doc.filename ?? 'this document' })}
+							submitLabel={m.staff_remove()}
 							submitVariant="error"
-							successToast="Removed"
+							successToast={m.staff_removed()}
 						>
 							{#snippet form()}
 								<input type="hidden" name="id" value={r.id} />
 								<input type="hidden" name="attachmentId" value={doc.attachmentId} />
-								<p class="text-sm">The file is deleted with it.</p>
+								<p class="text-sm">{m.staff_renewals_id_file_deleted_with()}</p>
 							{/snippet}
 						</Action>
 					</li>
@@ -135,21 +137,20 @@
 	<div class="flex flex-wrap gap-2">
 		<Action
 			action={deleteRenewal.for(r.id)}
-			label="Delete renewal"
+			label={m.staff_renewals_id_delete_renewal()}
 			variant="ghost"
 			size="sm"
 			class="text-error"
-			modalTitle="Delete {r.name}?"
-			submitLabel="Delete"
+			modalTitle={m.staff_delete_2({ name: r.name })}
+			submitLabel={m.staff_delete()}
 			submitVariant="error"
-			successToast="Deleted"
+			successToast={m.staff_deleted()}
 			onsuccess={() => goto(resolve('/staff/renewals'))}
 		>
 			{#snippet form()}
 				<input type="hidden" name="id" value={r.id} />
 				<p class="text-sm">
-					For something the collective no longer holds. A renewed one keeps its row: edit the expiry
-					date instead.
+					{m.staff_renewals_id_something_collective_no_longer_holds()}
 				</p>
 			{/snippet}
 		</Action>

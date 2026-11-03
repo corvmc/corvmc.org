@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * One bar across both panes: the page and the way into Daily over the queue,
 	 * the open conversation's subject and actions over the thread (#1927).
@@ -24,7 +25,7 @@
 			? 'hidden lg:flex'
 			: 'flex w-full'}"
 	>
-		<h1 class="text-xl font-bold">Inbox</h1>
+		<h1 class="text-xl font-bold">{m.staff_inbox_inbox_toolbar_inbox()}</h1>
 
 		<!-- Only offered when there is something to walk through. A "Start Daily · 0"
 		     is an invitation to a session that ends on the frame it starts on. -->

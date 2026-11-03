@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Card from '$lib/components/ui/Card/Card.svelte';
@@ -49,25 +50,25 @@
 	);
 </script>
 
-<PageHeader title="Releases" subtitle="Staff" />
+<PageHeader title={m.staff_music_releases()} subtitle={m.staff_staff()} />
 
 <PageContent width="full">
 	{#if !audioEnabled}
 		<Alert type="info">
 			The music storefront is switched off, so bands cannot see or upload anything yet. This page
 			works either way — turn it on in
-			<a class="link" href={resolve('/staff/settings')}>Settings → Features</a>.
+			<a class="link" href={resolve('/staff/settings')}>{m.staff_music_settings_features()}</a>.
 		</Alert>
 	{/if}
 
 	<Card>
 		<CardBody>
-			<CardTitle><IconRadio size={18} /> CMC Radio</CardTitle>
+			<CardTitle><IconRadio size={18} /> {m.staff_music_cmc_radio()}</CardTitle>
 
 			<div class="grid gap-3 sm:grid-cols-3">
-				<StatCard title="Eligible tracks" value={String(pool.eligibleTracks)} />
-				<StatCard title="Bands in rotation" value={String(pool.bands)} />
-				<StatCard title="Opted-in releases" value={String(pool.optedInReleases)} />
+				<StatCard title={m.staff_music_eligible_tracks()} value={String(pool.eligibleTracks)} />
+				<StatCard title={m.staff_music_bands_rotation()} value={String(pool.bands)} />
+				<StatCard title={m.staff_music_opted_releases()} value={String(pool.optedInReleases)} />
 			</div>
 
 			<p class="mt-2 text-muted">{readiness}</p>
@@ -84,28 +85,30 @@
 
 			{#if radioEnabled}
 				<p>
-					<Badge variant="success">On the air</Badge>
+					<Badge variant="success">{m.staff_music_air()}</Badge>
 					{#if now.current}
 						Now playing <strong>{now.current.trackTitle}</strong> — {now.current.bandName}
 					{:else}
-						Nothing scheduled right now.
+						{m.staff_music_nothing_scheduled_right_now()}
 					{/if}
 				</p>
 			{:else}
 				<p>
-					<Badge variant="ghost">Off</Badge>
+					<Badge variant="ghost">{m.staff_music_off()}</Badge>
 					Switch the station on in
-					<a class="link" href={resolve('/staff/settings')}>Settings → Features</a> when the pool above
-					looks like a station.
+					<a class="link" href={resolve('/staff/settings')}>{m.staff_music_settings_features()}</a> when
+					the pool above looks like a station.
 				</p>
 			{/if}
 
 			{#if recent.length > 0}
 				<p class="text-subtle">
-					Recently played: {recent
-						.slice(0, 6)
-						.map((r) => `${r.trackTitle} (${r.bandName})`)
-						.join(' · ')}
+					{m.staff_music_recently_played({
+						join: recent
+							.slice(0, 6)
+							.map((r) => `${r.trackTitle} (${r.bandName})`)
+							.join(' · ')
+					})}
 				</p>
 			{/if}
 		</CardBody>
@@ -113,25 +116,26 @@
 
 	<Card>
 		<CardBody>
-			<CardTitle>Sales</CardTitle>
+			<CardTitle>{m.staff_music_sales()}</CardTitle>
 			<div class="grid gap-3 sm:grid-cols-5">
-				<StatCard title="Sales" value={String(sales.sales)} />
-				<StatCard title="Gross" value={formatCents(sales.grossCents)} />
-				<StatCard title="To bands" value={formatCents(sales.toBandsCents)} />
+				<StatCard title={m.staff_music_sales()} value={String(sales.sales)} />
+				<StatCard title={m.staff_music_gross()} value={formatCents(sales.grossCents)} />
+				<StatCard title={m.staff_music_bands()} value={formatCents(sales.toBandsCents)} />
 				<!-- Card processing comes off the top, funded by both sides in
 				     proportion, so it is shown beside them rather than folded into
 				     either figure. -->
-				<StatCard title="Card fees" value={formatCents(sales.feesCents)} />
-				<StatCard title="CMC kept" value={formatCents(sales.toCollectiveCents)} />
+				<StatCard title={m.staff_music_card_fees()} value={formatCents(sales.feesCents)} />
+				<StatCard title={m.staff_music_cmc_kept()} value={formatCents(sales.toCollectiveCents)} />
 			</div>
 			<!-- The number the refusable-cut decision has to be judged on. It will
 			     not be the suggested 10%, and which way it lands is the open
 			     question — so it is reported rather than assumed. -->
 			<p class="text-muted">
-				Realised take: {(sales.realisedTakeBps / 100).toFixed(1)}% of what buyers paid, after card
-				fees.
+				{m.staff_music_realised_take_what_buyers_paid({
+					toFixed: (sales.realisedTakeBps / 100).toFixed(1)
+				})}
 				{#if sales.freeSales > 0}
-					{sales.freeSales} of {sales.sales} were free downloads.
+					{m.staff_music_were_free_downloads({ freeSales: sales.freeSales, sales: sales.sales })}
 				{/if}
 			</p>
 		</CardBody>
@@ -139,44 +143,49 @@
 
 	<Card>
 		<CardBody>
-			<CardTitle>Releases</CardTitle>
+			<CardTitle>{m.staff_music_releases()}</CardTitle>
 			{#if releases.length === 0}
-				<EmptyState title="No releases yet" description="Bands' records will appear here." />
+				<EmptyState
+					title={m.staff_music_no_releases_yet()}
+					description={m.staff_music_bands_records_will_appear_here()}
+				/>
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th>Release</th>
-						<th>Band</th>
-						<th>Status</th>
-						<th>Radio</th>
-						<th>Sales</th>
+						<th>{m.staff_music_release()}</th>
+						<th>{m.staff_band()}</th>
+						<th>{m.staff_status()}</th>
+						<th>{m.staff_music_radio()}</th>
+						<th>{m.staff_music_sales()}</th>
 						<th></th>
 					{/snippet}
 					{#each releases as release (release.id)}
 						<tr>
 							<td>
 								{release.title}
-								<span class="text-subtle">· {release.trackCount} tracks</span>
+								<span class="text-subtle"
+									>{m.staff_music_tracks({ trackCount: release.trackCount })}</span
+								>
 							</td>
 							<td>
 								<a class="link" href={resolve(`/staff/groups`)}>{release.bandName}</a>
 							</td>
 							<td>
 								{#if release.status === 'published'}
-									<Badge size="sm" variant="success">Published</Badge>
+									<Badge size="sm" variant="success">{m.staff_published()}</Badge>
 								{:else if release.status === 'withheld'}
-									<Badge size="sm" variant="error">Withheld</Badge>
+									<Badge size="sm" variant="error">{m.staff_music_withheld()}</Badge>
 								{:else}
-									<Badge size="sm" variant="ghost">Draft</Badge>
+									<Badge size="sm" variant="ghost">{m.staff_draft()}</Badge>
 								{/if}
 							</td>
 							<td>
 								{#if release.radioExcluded}
-									<Badge size="sm" variant="warning">Pulled</Badge>
+									<Badge size="sm" variant="warning">{m.staff_music_pulled()}</Badge>
 								{:else if release.radioOptIn && release.radioAttested}
-									<Badge size="sm" variant="info">Opted in</Badge>
+									<Badge size="sm" variant="info">{m.staff_music_opted()}</Badge>
 								{:else if release.radioOptIn}
-									<Badge size="sm" variant="warning">Not attested</Badge>
+									<Badge size="sm" variant="warning">{m.staff_music_not_attested()}</Badge>
 								{:else}
 									<span class="text-subtle">—</span>
 								{/if}
@@ -187,12 +196,12 @@
 									{#if release.status === 'withheld'}
 										<Action
 											action={restoreReleaseForm.for(release.id)}
-											label="Restore"
+											label={m.staff_restore()}
 											variant="ghost"
 											size="sm"
-											modalTitle="Restore release"
-											submitLabel="Restore"
-											successToast="Restored"
+											modalTitle={m.staff_music_restore_release()}
+											submitLabel={m.staff_restore()}
+											successToast={m.staff_restored()}
 										>
 											{#snippet form()}
 												{@const fields = restoreReleaseForm.for(release.id).fields}
@@ -206,13 +215,13 @@
 									{:else}
 										<Action
 											action={withholdReleaseForm.for(release.id)}
-											label="Withhold"
+											label={m.staff_music_withhold()}
 											variant="ghost"
 											size="sm"
 											submitVariant="error"
-											modalTitle="Withhold release"
-											submitLabel="Withhold"
-											successToast="Withheld"
+											modalTitle={m.staff_music_withhold_release()}
+											submitLabel={m.staff_music_withhold()}
+											successToast={m.staff_music_withheld()}
 										>
 											{#snippet form()}
 												{@const fields = withholdReleaseForm.for(release.id).fields}
@@ -224,8 +233,8 @@
 													</p>
 													<FormField
 														field={fields.reason}
-														label="Reason"
-														description="The band sees this on their release page — a takedown they can't see the cause of is one they can't fix."
+														label={m.staff_reason()}
+														description={m.staff_music_band_sees_their_release_page()}
 														required
 													/>
 												</div>
@@ -236,12 +245,16 @@
 									{#if release.radioOptIn}
 										<Action
 											action={setRadioExclusionForm.for(release.id)}
-											label={release.radioExcluded ? 'Put back on air' : 'Pull from radio'}
+											label={release.radioExcluded
+												? m.staff_music_put_back_air()
+												: m.staff_music_pull_from_radio()}
 											variant="ghost"
 											size="sm"
-											modalTitle={release.radioExcluded ? 'Put back on air' : 'Pull from radio'}
-											submitLabel="Save"
-											successToast="Rotation updated"
+											modalTitle={release.radioExcluded
+												? m.staff_music_put_back_air()
+												: m.staff_music_pull_from_radio()}
+											submitLabel={m.staff_save()}
+											successToast={m.staff_music_rotation_updated()}
 										>
 											{#snippet form()}
 												{@const fields = setRadioExclusionForm.for(release.id).fields}
@@ -260,7 +273,10 @@
 														<p>
 															Take <strong>{release.title}</strong> off the air without unpublishing it.
 														</p>
-														<FormField field={fields.reason} label="Reason (shown to the band)" />
+														<FormField
+															field={fields.reason}
+															label={m.staff_music_reason_shown_band()}
+														/>
 													{/if}
 												</div>
 											{/snippet}
@@ -286,18 +302,21 @@
 	-->
 	<Card>
 		<CardBody>
-			<CardTitle>Recent sales</CardTitle>
+			<CardTitle>{m.staff_music_recent_sales()}</CardTitle>
 			{#if purchases.length === 0}
-				<EmptyState title="No sales yet" description="Purchases show up here as they happen." />
+				<EmptyState
+					title={m.staff_music_no_sales_yet()}
+					description={m.staff_music_purchases_show_up_here_as()}
+				/>
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th>Release</th>
-						<th class="col-support">Buyer</th>
-						<th class="col-support">When</th>
-						<th>Paid</th>
-						<th class="col-extra">To band</th>
-						<th>Status</th>
+						<th>{m.staff_music_release()}</th>
+						<th class="col-support">{m.staff_music_buyer()}</th>
+						<th class="col-support">{m.staff_when()}</th>
+						<th>{m.staff_paid()}</th>
+						<th class="col-extra">{m.staff_music_band()}</th>
+						<th>{m.staff_status()}</th>
 						<th></th>
 					{/snippet}
 
@@ -318,28 +337,30 @@
 							<td>
 								{#if purchase.status === 'refunded'}
 									<Badge variant="warning">
-										Refunded{purchase.refundedAt ? ` ${formatDate(purchase.refundedAt)}` : ''}
+										{m.staff_music_refunded({
+											value: purchase.refundedAt ? ` ${formatDate(purchase.refundedAt)}` : ''
+										})}
 									</Badge>
 								{:else if purchase.status === 'pending'}
 									<!-- Shown rather than hidden: an abandoned checkout and a lost
 									     webhook look identical from the outside, and staff
 									     answering "did my payment go through" need to see both. -->
-									<Badge variant="ghost">Pending</Badge>
+									<Badge variant="ghost">{m.staff_pending()}</Badge>
 								{:else}
-									<Badge variant="success">Paid</Badge>
+									<Badge variant="success">{m.staff_paid()}</Badge>
 								{/if}
 							</td>
 							<td class="text-right">
 								{#if canRefund && purchase.refundable}
 									<Action
 										action={refundPurchaseForm.for(purchase.purchaseId)}
-										label="Refund"
+										label={m.staff_music_refund()}
 										variant="ghost"
 										size="sm"
 										submitVariant="error"
-										modalTitle="Refund this purchase"
-										submitLabel="Refund"
-										successToast="Refunded"
+										modalTitle={m.staff_music_refund_purchase()}
+										submitLabel={m.staff_music_refund()}
+										successToast={m.staff_refunded()}
 									>
 										{#snippet form()}
 											{@const fields = refundPurchaseForm.for(purchase.purchaseId).fields}
@@ -361,12 +382,15 @@
 													     takes money back out of the band's account, not just
 													     the collective's. -->
 													<p class="text-muted">
-														{formatCents(purchase.bandNetCents)} comes back out of {purchase.bandName}'s
-														Stripe account and {formatCents(purchase.platformFeeCents)} out of the collective's.
-														If the band has already been paid out, Stripe recovers it from their next
-														sale.
+														{m.staff_music_comes_back_out_s_stripe({
+															formatCents: formatCents(purchase.bandNetCents),
+															bandName: purchase.bandName,
+															formatCents2: formatCents(purchase.platformFeeCents)
+														})}
 													</p>
-													<p class="text-muted">Their download link stops working either way.</p>
+													<p class="text-muted">
+														{m.staff_music_their_download_link_stops_working()}
+													</p>
 												{/if}
 											</div>
 										{/snippet}

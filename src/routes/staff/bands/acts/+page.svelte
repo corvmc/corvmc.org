@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import InfoCard from '$lib/components/ui/InfoCard.svelte';
@@ -38,32 +39,32 @@
 	}
 </script>
 
-<PageHeader title="External acts" subtitle="Touring and off-platform acts CMC has booked">
+<PageHeader title={m.staff_external_acts()} subtitle={m.staff_bands_acts_subtitle()}>
 	<CreateExternalActAction />
 </PageHeader>
 
 <PageContent>
 	<Alert type="info" class="text-sm">
-		These are records, not pages. An external act is never listed in the directory and has no page
-		anywhere — wherever its name appears on a public bill it links out to the act's own site, or
-		reads as plain text.
+		{m.staff_bands_acts_these_records_not_pages_external()}
 	</Alert>
 
-	<InfoCard title="Acts">
-		<SearchInput bind:value={searchText} placeholder="Search by name..." onsearch={search} />
+	<InfoCard title={m.staff_bands_acts_acts()}>
+		<SearchInput bind:value={searchText} placeholder={m.staff_search_by_name()} onsearch={search} />
 
 		{#if acts.rows.length === 0}
 			<EmptyState
-				description={searchDebounced ? 'No acts match that.' : 'No external acts recorded yet.'}
+				description={searchDebounced
+					? m.staff_bands_acts_no_acts_match()
+					: m.staff_bands_acts_no_external_acts_recorded_yet()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Name</th>
-					<th class="col-support">Hometown</th>
-					<th class="col-extra">Their site</th>
-					<th class="col-extra whitespace-nowrap">Added</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
+					<th>{m.staff_name()}</th>
+					<th class="col-support">{m.staff_hometown()}</th>
+					<th class="col-extra">{m.staff_their_site()}</th>
+					<th class="col-extra whitespace-nowrap">{m.staff_added()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 				{/snippet}
 				{#each acts.rows as act (act.id)}
 					<tr>

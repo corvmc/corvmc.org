@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { Field } from '$lib/components/ui/Form';
 	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
 
@@ -40,26 +41,33 @@
 <Field
 	field={fields.categoryId}
 	type="select"
-	label="Category"
+	label={m.staff_category()}
 	{options}
 	value={values.categoryId ?? ''}
 />
-<Field field={fields.name} type="text" label="Name" value={values.name ?? ''} />
+<Field field={fields.name} type="text" label={m.staff_name()} value={values.name ?? ''} />
 <Field
 	field={fields.description}
 	type="textarea"
-	label="Description"
-	description="A sentence or two — what they are and why they are worth knowing."
+	label={m.staff_description()}
+	description={m.staff_local_resources_resource_fields_description()}
 	value={values.description ?? ''}
 />
-<Field field={fields.website} type="text" label="Website" value={values.website ?? ''} />
-<Field field={fields.phone} type="tel" label="Phone" value={values.phone ?? ''} />
-<Field field={fields.addressLine} type="text" label="Address" value={values.addressLine ?? ''} />
+<Field field={fields.website} type="text" label={m.staff_website()} value={values.website ?? ''} />
+<Field field={fields.phone} type="tel" label={m.staff_phone()} value={values.phone ?? ''} />
+<Field
+	field={fields.addressLine}
+	type="text"
+	label={m.staff_address()}
+	value={values.addressLine ?? ''}
+/>
 <Field
 	field={fields.displayOrder}
 	type="number"
-	label="Order"
+	label={m.staff_order_2()}
 	value={values.displayOrder ?? 0}
 	min="0"
 />
-<p class="text-muted text-wrap">Everything here is shown publicly on /local-resources.</p>
+<p class="text-muted text-wrap">
+	{m.staff_local_resources_resource_fields_everything_here_shown()}
+</p>

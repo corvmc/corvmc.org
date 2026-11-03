@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	// The Device ID, picked from the account rather than typed. Its own
 	// component so the settings page keeps one load-bearing query — this one
 	// talks to U-tec over the network, and only this tab wants it.
@@ -21,13 +22,19 @@
 </script>
 
 {#if options.length > 0}
-	<FormField name="deviceId" label="Device" type="select" value={deviceId} {options} />
+	<FormField
+		name="deviceId"
+		label={m.staff_settings_utec_device_picker_device()}
+		type="select"
+		value={deviceId}
+		{options}
+	/>
 {:else}
 	<FormField
 		name="deviceId"
-		label="Device ID"
+		label={m.staff_settings_utec_device_picker_device_id()}
 		type="text"
 		value={deviceId}
-		description={result.error ?? 'No devices on this account yet.'}
+		description={result.error ?? m.staff_settings_utec_device_picker_description()}
 	/>
 {/if}

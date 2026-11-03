@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * Where shows happen.
 	 *
@@ -39,25 +40,30 @@
 	}
 </script>
 
-<PageHeader title="Venues" subtitle="Events">
-	<Action action={createVenue} label="New venue" modalTitle="New venue" successToast="Venue added">
+<PageHeader title={m.staff_venues_venues()} subtitle={m.staff_events()}>
+	<Action
+		action={createVenue}
+		label={m.staff_venues_new_venue()}
+		modalTitle={m.staff_venues_new_venue()}
+		successToast={m.staff_venues_success_toast()}
+	>
 		{#snippet form()}
-			<Field field={fields.name} type="text" label="Name" />
-			<Field field={fields.address1} type="text" label="Address" />
-			<Field field={fields.city} type="text" label="City" />
-			<Field field={fields.state} type="text" label="State" />
-			<Field field={fields.postalCode} type="text" label="ZIP" />
-			<Field field={fields.capacity} type="number" label="Capacity" min="1" />
-			<Field field={fields.contactName} type="text" label="Contact" />
-			<Field field={fields.contactEmail} type="email" label="Contact email" />
-			<Field field={fields.contactPhone} type="tel" label="Contact phone" />
+			<Field field={fields.name} type="text" label={m.staff_name()} />
+			<Field field={fields.address1} type="text" label={m.staff_address()} />
+			<Field field={fields.city} type="text" label={m.staff_city()} />
+			<Field field={fields.state} type="text" label={m.staff_state()} />
+			<Field field={fields.postalCode} type="text" label={m.staff_zip()} />
+			<Field field={fields.capacity} type="number" label={m.staff_capacity()} min="1" />
+			<Field field={fields.contactName} type="text" label={m.staff_contact()} />
+			<Field field={fields.contactEmail} type="email" label={m.staff_contact_email()} />
+			<Field field={fields.contactPhone} type="tel" label={m.staff_contact_phone()} />
 			<Field
 				field={fields.loadInNotes}
 				type="text"
-				label="Load-in"
-				description="Where the van goes, which door is unlocked, who has the key."
+				label={m.staff_load()}
+				description={m.staff_where_van_goes_which_door()}
 			/>
-			<Field field={fields.notes} type="textarea" label="Notes" />
+			<Field field={fields.notes} type="textarea" label={m.staff_notes()} />
 		{/snippet}
 	</Action>
 </PageHeader>
@@ -70,9 +76,9 @@
 			off-site — including the ones that are not.
 		-->
 		<Alert type="warning">
-			<span class="font-medium">No practice room</span>
+			<span class="font-medium">{m.staff_venues_no_practice_room()}</span>
 			Nothing is marked as ours yet, so no event can be told apart from an off-site one. Open the room's
-			row and choose <em>Make this the room</em>.
+			row and choose <em>{m.staff_make_room()}</em>.
 		</Alert>
 	{/if}
 
@@ -84,32 +90,32 @@
 				checked={includeArchived}
 				onchange={(e) => setArchived(e.currentTarget.checked)}
 			/>
-			Show archived
+			{m.staff_show_archived()}
 		</label>
 	</div>
 
 	{#if venues.length === 0}
 		<EmptyState
-			title="No venues yet"
-			description="Add the practice room first and mark it as ours, then the outside rooms we produce in."
+			title={m.staff_venues_no_venues_yet()}
+			description={m.staff_venues_add_practice_room_first_mark()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th>Name</th>
-				<th>Where</th>
-				<th class="cell-num">Capacity</th>
-				<th class="cell-num">Events</th>
+				<th>{m.staff_name()}</th>
+				<th>{m.staff_where()}</th>
+				<th class="cell-num">{m.staff_capacity()}</th>
+				<th class="cell-num">{m.staff_events()}</th>
 			{/snippet}
 			{#each venues as v (v.id)}
 				<tr class="hover" class:opacity-60={v.deletedAt}>
 					<td class="cell-primary">
 						<a class="link font-medium" href={resolve(`/staff/venues/${v.id}`)}>{v.name}</a>
 						{#if v.isPrimary}
-							<Badge variant="primary" size="sm" class="ml-2">Our room</Badge>
+							<Badge variant="primary" size="sm" class="ml-2">{m.staff_our_room()}</Badge>
 						{/if}
 						{#if v.deletedAt}
-							<Badge variant="ghost" size="sm" class="ml-2">Archived</Badge>
+							<Badge variant="ghost" size="sm" class="ml-2">{m.staff_archived()}</Badge>
 						{/if}
 					</td>
 					<td>{addressLine(v) || '—'}</td>

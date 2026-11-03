@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/** The create and edit forms share every field; `value` pre-fills the edit. */
 	import { Field } from '$lib/components/ui/Form';
 	import type { createFunder, updateFunder } from '$lib/remote/grants.remote';
@@ -20,18 +21,18 @@
 	} = $props();
 </script>
 
-<Field field={fields.name} type="text" label="Funder" value={value?.name ?? ''} />
-<Field field={fields.website} type="text" label="Website" value={value?.website ?? ''} />
+<Field field={fields.name} type="text" label={m.staff_funder()} value={value?.name ?? ''} />
+<Field field={fields.website} type="text" label={m.staff_website()} value={value?.website ?? ''} />
 <Field
 	field={fields.contactName}
 	type="text"
-	label="Program officer"
+	label={m.staff_grants_funders_funder_fields_program_officer()}
 	value={value?.contactName ?? ''}
 />
 <Field
 	field={fields.contactEmail}
 	type="email"
-	label="Contact email"
+	label={m.staff_contact_email()}
 	value={value?.contactEmail ?? ''}
 />
-<Field field={fields.notes} type="textarea" label="Notes" value={value?.notes ?? ''} />
+<Field field={fields.notes} type="textarea" label={m.staff_notes()} value={value?.notes ?? ''} />

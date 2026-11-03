@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -70,7 +71,7 @@
 	);
 </script>
 
-<PageHeader title="Dashboard" />
+<PageHeader title={m.staff_dashboard()} />
 <PageContent>
 	{#if data.room}
 		{#if doorCodes > 0}
@@ -84,7 +85,7 @@
 			<SectionLabel label={dayLabels[i]} count={day.reservations.length} />
 			{#if day.reservations.length === 0}
 				<EmptyState
-					description={i === 0 ? 'The room is free today.' : 'The room is free tomorrow.'}
+					description={i === 0 ? m.staff_room_free_today() : m.staff_room_free_tomorrow()}
 				/>
 			{:else}
 				<div class="mt-4 mb-2">
@@ -101,9 +102,9 @@
 				</div>
 				<Table>
 					{#snippet head()}
-						<th class="whitespace-nowrap">When</th>
-						<th>Booked for</th>
-						<th class="w-px">Status</th>
+						<th class="whitespace-nowrap">{m.staff_when()}</th>
+						<th>{m.staff_booked()}</th>
+						<th class="w-px">{m.staff_status()}</th>
 					{/snippet}
 					{#each day.reservations as r (r.id)}
 						<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/reservations/${r.id}`)}>
@@ -111,7 +112,7 @@
 							<td class="cell-primary">
 								<EntityIdentity ref={r.booker} />
 								{#if r.doorCodeUnconfirmed}
-									<Badge variant="warning" size="xs">Code unconfirmed</Badge>
+									<Badge variant="warning" size="xs">{m.staff_code_unconfirmed()}</Badge>
 								{/if}
 							</td>
 							<td class="w-px"><StatusBadge status={r.status} label /></td>
@@ -122,21 +123,21 @@
 		{/each}
 		<div class="mt-2">
 			<Button variant="ghost" size="sm" href={resolve('/staff/reservations')}>
-				Open reservations
+				{m.staff_open_reservations()}
 			</Button>
 		</div>
 	{/if}
 
 	{#if data.shows}
-		<SectionLabel label="Upcoming Shows" count={data.shows.length} />
+		<SectionLabel label={m.staff_upcoming_shows()} count={data.shows.length} />
 		{#if data.shows.length === 0}
-			<EmptyState description="No shows in the next seven days." />
+			<EmptyState description={m.staff_no_shows_next_seven_days()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="whitespace-nowrap">When</th>
-					<th>Show</th>
-					<th class="w-px">Status</th>
+					<th class="whitespace-nowrap">{m.staff_when()}</th>
+					<th>{m.staff_show()}</th>
+					<th class="w-px">{m.staff_status()}</th>
 				{/snippet}
 				{#each data.shows as show (show.id)}
 					<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/events/${show.id}`)}>
@@ -147,7 +148,9 @@
 						<td class="cell-primary">
 							<EntityIdentity ref={show.ref} />
 							{#if show.blockers.length > 0}
-								<div class="text-sm text-warning">Still open: {show.blockers.join('; ')}</div>
+								<div class="text-sm text-warning">
+									{m.staff_still_open({ join: show.blockers.join('; ') })}
+								</div>
 							{/if}
 						</td>
 						<td class="w-px">
@@ -158,19 +161,19 @@
 			</Table>
 		{/if}
 		<div class="mt-2">
-			<Button variant="ghost" size="sm" href={showsHref}>Open the shows list</Button>
+			<Button variant="ghost" size="sm" href={showsHref}>{m.staff_open_shows_list()}</Button>
 		</div>
 	{/if}
 
-	<SectionLabel label="Pending Queues" />
+	<SectionLabel label={m.staff_pending_queues()} />
 	{#if nothingPending}
-		<EmptyState description="Nothing is waiting on staff right now." />
+		<EmptyState description={m.staff_nothing_waiting_staff_right_now()} />
 	{/if}
 	{#if queues.length > 0}
 		<Table>
 			{#snippet head()}
-				<th>Queue</th>
-				<th class="cell-num">Waiting</th>
+				<th>{m.staff_queue()}</th>
+				<th class="cell-num">{m.staff_waiting()}</th>
 			{/snippet}
 			{#each queues as q (q.key)}
 				<tr class="hover cursor-pointer" use:rowLink={q.href}>
@@ -183,13 +186,13 @@
 
 	{#if data.shortShifts?.total}
 		<!-- A show that goes out a person short cannot be fixed next week. -->
-		<SectionLabel label="Short-Staffed Shifts" count={data.shortShifts.total} />
+		<SectionLabel label={m.staff_short_staffed_shifts()} count={data.shortShifts.total} />
 		<Table>
 			{#snippet head()}
-				<th class="whitespace-nowrap">When</th>
-				<th>Role</th>
-				<th class="col-support">Event</th>
-				<th class="cell-num whitespace-nowrap">Still need</th>
+				<th class="whitespace-nowrap">{m.staff_when()}</th>
+				<th>{m.staff_role()}</th>
+				<th class="col-support">{m.staff_event()}</th>
+				<th class="cell-num whitespace-nowrap">{m.staff_still_need()}</th>
 			{/snippet}
 			{#each data.shortShifts.rows as shift (shift.id)}
 				<tr
@@ -213,12 +216,12 @@
 	{/if}
 
 	{#if data.deadlines?.total}
-		<SectionLabel label="Upcoming Deadlines" count={data.deadlines.total} />
+		<SectionLabel label={m.staff_upcoming_deadlines()} count={data.deadlines.total} />
 		<Table>
 			{#snippet head()}
-				<th class="whitespace-nowrap">Due</th>
-				<th>What</th>
-				<th class="col-support">Funder or sponsor</th>
+				<th class="whitespace-nowrap">{m.staff_due()}</th>
+				<th>{m.staff_what()}</th>
+				<th class="col-support">{m.staff_funder_sponsor()}</th>
 			{/snippet}
 			{#each data.deadlines.rows as d (d.module + d.subjectId)}
 				<tr
@@ -238,26 +241,26 @@
 		</Table>
 		{#if data.deadlines.total > data.deadlines.rows.length}
 			<p class="mt-2 text-muted">
-				{data.deadlines.total - data.deadlines.rows.length} more in Grants and Sponsors.
+				{m.staff_more_grants_sponsors({ value: data.deadlines.total - data.deadlines.rows.length })}
 			</p>
 		{/if}
 	{/if}
 
 	{#if data.lowStock?.total}
-		<SectionLabel label="Low-Stock Items" count={data.lowStock.total} />
+		<SectionLabel label={m.staff_low_stock_items()} count={data.lowStock.total} />
 		<Table>
 			{#snippet head()}
-				<th>Item</th>
-				<th class="col-support">Category</th>
-				<th class="cell-num">On hand</th>
-				<th class="col-support cell-num">Buy</th>
+				<th>{m.staff_item()}</th>
+				<th class="col-support">{m.staff_category()}</th>
+				<th class="cell-num">{m.staff_hand()}</th>
+				<th class="col-support cell-num">{m.staff_buy()}</th>
 			{/snippet}
 			{#each data.lowStock.rows as item (item.id)}
 				<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/inventory/${item.id}`)}>
 					<td class="cell-primary">
 						{item.name}
 						{#if item.isOut}
-							<Badge variant="error" size="xs">Out</Badge>
+							<Badge variant="error" size="xs">{m.staff_out()}</Badge>
 						{/if}
 					</td>
 					<td class="col-support">{item.category.name}</td>
@@ -280,19 +283,19 @@
 	{/if}
 
 	{#if data.members}
-		<SectionLabel label="Recent Members" />
+		<SectionLabel label={m.staff_recent_members()} />
 		<p class="mb-2 text-muted">
 			{data.members.newThisMonth === 1
 				? 'One member joined this month.'
 				: `${data.members.newThisMonth} members joined this month.`}
 		</p>
 		{#if data.members.recent.length === 0}
-			<EmptyState description="No members yet" />
+			<EmptyState description={m.staff_no_members_yet()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Member</th>
-					<th class="col-support whitespace-nowrap">Joined</th>
+					<th>{m.staff_member()}</th>
+					<th class="col-support whitespace-nowrap">{m.staff_joined()}</th>
 				{/snippet}
 				{#each data.members.recent as u (u.id)}
 					<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/members/${u.id}`)}>

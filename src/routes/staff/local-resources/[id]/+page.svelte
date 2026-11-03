@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -30,15 +31,15 @@
 	const removeFields = removeLocalResourceForm.fields;
 </script>
 
-<PageHeader width="3xl" title={r.name} subtitle="Local Resource">
+<PageHeader width="3xl" title={r.name} subtitle={m.staff_local_resources_id_subtitle()}>
 	<StatusBadge status={r.status} label />
 	<Action
 		action={updateLocalResourceForm}
-		label="Edit"
+		label={m.staff_edit()}
 		variant="ghost"
 		size="sm"
-		modalTitle="Edit {r.name}"
-		successToast="Saved"
+		modalTitle={m.staff_edit_2({ name: r.name })}
+		successToast={m.staff_saved()}
 	>
 		{#snippet form()}
 			<input {...editFields.id.as('hidden', r.id)} />
@@ -47,67 +48,73 @@
 	</Action>
 	<Action
 		action={removeLocalResourceForm}
-		label="Remove"
+		label={m.staff_remove()}
 		variant="ghost"
 		size="sm"
-		modalTitle="Remove {r.name}"
-		submitLabel="Remove"
-		successToast="Listing removed"
+		modalTitle={m.staff_remove_2({ name: r.name })}
+		submitLabel={m.staff_remove()}
+		successToast={m.staff_local_resources_id_listing_removed()}
 		onsuccess={() => void goto(resolve('/staff/local-resources'))}
 	>
 		{#snippet form()}
 			<input {...removeFields.id.as('hidden', r.id)} />
-			<p>It comes off the public page. The record is kept.</p>
+			<p>{m.staff_local_resources_id_comes_off_public_page_record()}</p>
 		{/snippet}
 	</Action>
 </PageHeader>
 
 <PageContent width="3xl">
 	<div class="grid gap-6">
-		<InfoCard title="Listing">
+		<InfoCard title={m.staff_local_resources_id_listing()}>
 			<DefinitionList>
-				<Fact label="Category">{categoryName}</Fact>
-				{#if r.description}<Fact label="Description" wrap>{r.description}</Fact>{/if}
-				{#if r.website}<Fact label="Website">{r.website}</Fact>{/if}
-				{#if r.phone}<Fact label="Phone">{r.phone}</Fact>{/if}
-				{#if r.addressLine}<Fact label="Address">{r.addressLine}</Fact>{/if}
-				{#if r.submitterEmail}<Fact label="Suggested by">{r.submitterEmail}</Fact>{/if}
+				<Fact label={m.staff_category()}>{categoryName}</Fact>
+				{#if r.description}<Fact label={m.staff_description()} wrap>{r.description}</Fact>{/if}
+				{#if r.website}<Fact label={m.staff_website()}>{r.website}</Fact>{/if}
+				{#if r.phone}<Fact label={m.staff_phone()}>{r.phone}</Fact>{/if}
+				{#if r.addressLine}<Fact label={m.staff_address()}>{r.addressLine}</Fact>{/if}
+				{#if r.submitterEmail}<Fact label={m.staff_suggested_by()}>{r.submitterEmail}</Fact>{/if}
 			</DefinitionList>
 		</InfoCard>
 
-		<InfoCard title="Review" class="bg-base-200 shadow-none">
+		<InfoCard title={m.staff_review()} class="bg-base-200 shadow-none">
 			{#if r.status === 'rejected' && r.staffNote}
 				<DefinitionList>
-					<Fact label="Returned because" wrap>{r.staffNote}</Fact>
+					<Fact label={m.staff_local_resources_id_returned_because()} wrap>{r.staffNote}</Fact>
 				</DefinitionList>
 			{/if}
 			{#if r.reviewedAt}
-				<p class="mb-3 text-muted">Last reviewed {formatDateTime(r.reviewedAt)}.</p>
+				<p class="mb-3 text-muted">
+					{m.staff_local_resources_id_last_reviewed({
+						formatDateTime: formatDateTime(r.reviewedAt)
+					})}
+				</p>
 			{/if}
 			<div class="flex gap-2">
 				{#if r.status !== 'published'}
 					<Action
 						action={publishLocalResourceForm}
-						label="Publish"
-						modalTitle="Publish {r.name}"
-						submitLabel="Publish"
-						successToast="Published"
+						label={m.staff_local_resources_id_publish()}
+						modalTitle={m.staff_local_resources_id_publish_2({ name: r.name })}
+						submitLabel={m.staff_local_resources_id_publish()}
+						successToast={m.staff_published()}
 						variant="primary"
 						size="sm"
 					>
 						{#snippet form()}
 							<input {...publishFields.id.as('hidden', r.id)} />
-							<p>It appears on /local-resources straight away.</p>
+							<p>{m.staff_local_resources_id_appears_local_resources_straight_aw()}</p>
 						{/snippet}
 					</Action>
 				{/if}
 				{#if r.status !== 'rejected'}
 					<Action
 						action={rejectLocalResourceForm}
-						label={r.status === 'published' ? 'Unpublish' : 'Reject'}
-						modalTitle="Return {r.name}"
-						submitLabel="Return with note"
-						successToast="Returned"
+						label={r.status === 'published'
+							? m.staff_local_resources_id_unpublish()
+							: m.staff_local_resources_id_reject()}
+						modalTitle={m.staff_local_resources_id_return({ name: r.name })}
+						submitLabel={m.staff_local_resources_id_return_with_note()}
+						successToast={m.staff_returned()}
 						size="sm"
 					>
 						{#snippet form()}
@@ -115,8 +122,8 @@
 							<Field
 								field={rejectFields.note}
 								type="textarea"
-								label="What needs to change"
-								description="Kept with the listing; it can be edited and published later."
+								label={m.staff_local_resources_id_what_needs_change()}
+								description={m.staff_local_resources_id_description()}
 							/>
 						{/snippet}
 					</Action>

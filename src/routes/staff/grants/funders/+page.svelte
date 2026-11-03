@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/** The foundations, trusts and agencies the collective applies to. */
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -34,13 +35,13 @@
 	}
 </script>
 
-<PageHeader title="Funders" subtitle="Grants">
+<PageHeader title={m.staff_funders()} subtitle={m.staff_grants()}>
 	<Action
 		action={createFunder}
-		label="New funder"
-		modalTitle="New funder"
-		submitLabel="Add funder"
-		successToast="Funder added"
+		label={m.staff_grants_funders_new_funder()}
+		modalTitle={m.staff_grants_funders_new_funder()}
+		submitLabel={m.staff_grants_funders_add_funder()}
+		successToast={m.staff_grants_funders_funder_added()}
 		onsuccess={refresh}
 	>
 		{#snippet form()}
@@ -58,22 +59,22 @@
 				checked={includeArchived}
 				onchange={(e) => setArchived(e.currentTarget.checked)}
 			/>
-			Show archived
+			{m.staff_show_archived()}
 		</label>
 	</div>
 
 	{#if funders.length === 0}
 		<EmptyState
-			title="No funders yet"
-			description="Add a foundation, trust or agency the collective applies to."
+			title={m.staff_no_funders_yet()}
+			description={m.staff_grants_funders_description()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th>Funder</th>
-				<th class="col-support">Contact</th>
-				<th class="cell-num">Applications</th>
-				<th class="w-px"><span class="sr-only">Actions</span></th>
+				<th>{m.staff_funder()}</th>
+				<th class="col-support">{m.staff_contact()}</th>
+				<th class="cell-num">{m.staff_grants_funders_applications()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 			{/snippet}
 			{#each funders as f (f.id)}
 				{@const edit = updateFunder.for(f.id)}
@@ -81,7 +82,7 @@
 					<td class="cell-primary font-medium">
 						{f.name}
 						{#if f.deletedAt}
-							<Badge variant="ghost" size="sm" class="ml-2">Archived</Badge>
+							<Badge variant="ghost" size="sm" class="ml-2">{m.staff_archived()}</Badge>
 						{/if}
 					</td>
 					<td class="col-support">
@@ -91,12 +92,12 @@
 					<td class="w-px whitespace-nowrap">
 						<Action
 							action={edit}
-							label="Edit"
+							label={m.staff_edit()}
 							variant="ghost"
 							size="sm"
-							modalTitle="Edit {f.name}"
-							submitLabel="Save"
-							successToast="Saved"
+							modalTitle={m.staff_edit_2({ name: f.name })}
+							submitLabel={m.staff_save()}
+							successToast={m.staff_saved()}
 							onsuccess={refresh}
 						>
 							{#snippet form()}
@@ -107,10 +108,10 @@
 						{#if f.deletedAt}
 							<Action
 								action={restoreFunder.for(f.id)}
-								label="Restore"
+								label={m.staff_restore()}
 								variant="ghost"
 								size="sm"
-								successToast="Restored"
+								successToast={m.staff_restored()}
 								onsuccess={refresh}
 								noFooter
 							>
@@ -121,19 +122,18 @@
 						{:else}
 							<Action
 								action={archiveFunder.for(f.id)}
-								label="Archive"
+								label={m.staff_archive()}
 								variant="ghost"
 								size="sm"
-								modalTitle="Archive {f.name}?"
-								submitLabel="Archive"
-								successToast="Archived"
+								modalTitle={m.staff_archive_2({ name: f.name })}
+								submitLabel={m.staff_archive()}
+								successToast={m.staff_archived()}
 								onsuccess={refresh}
 							>
 								{#snippet form()}
 									<input type="hidden" name="id" value={f.id} />
 									<p class="text-sm">
-										It comes off this list and the picker for new applications. Its applications and
-										reports stay, and it can be restored.
+										{m.staff_grants_funders_comes_off_list_picker_new()}
 									</p>
 								{/snippet}
 							</Action>
@@ -141,19 +141,19 @@
 						{#if f.applications === 0}
 							<Action
 								action={deleteFunder.for(f.id)}
-								label="Delete"
+								label={m.staff_delete()}
 								variant="ghost"
 								size="sm"
 								class="text-error"
-								modalTitle="Delete {f.name}?"
-								submitLabel="Delete"
+								modalTitle={m.staff_delete_2({ name: f.name })}
+								submitLabel={m.staff_delete()}
 								submitVariant="error"
-								successToast="Deleted"
+								successToast={m.staff_deleted()}
 								onsuccess={refresh}
 							>
 								{#snippet form()}
 									<input type="hidden" name="id" value={f.id} />
-									<p class="text-sm">It has no applications, so nothing else changes.</p>
+									<p class="text-sm">{m.staff_grants_funders_has_no_applications_so_nothing()}</p>
 								{/snippet}
 							</Action>
 						{/if}

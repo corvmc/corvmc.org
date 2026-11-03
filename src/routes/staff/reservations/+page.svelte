@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { isEventHold } from '$lib/config';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -101,21 +102,21 @@
 	} {
 		switch (state) {
 			case 'no_show':
-				return { label: 'No-show', color: 'text-error', icon: IconUserX };
+				return { label: m.staff_no_show(), color: 'text-error', icon: IconUserX };
 			case 'refunded':
-				return { label: 'Refunded', color: 'text-error', icon: IconArrowBackUp };
+				return { label: m.staff_refunded(), color: 'text-error', icon: IconArrowBackUp };
 			case 'cancelled':
-				return { label: 'Cancelled', color: 'text-base-content', icon: IconCircleX };
+				return { label: m.staff_cancelled(), color: 'text-base-content', icon: IconCircleX };
 			case 'paid':
-				return { label: 'Paid', color: 'text-success', icon: IconCheck };
+				return { label: m.staff_paid(), color: 'text-success', icon: IconCheck };
 			case 'cash_due':
-				return { label: 'Cash due', color: 'text-warning', icon: IconClock };
+				return { label: m.staff_reservations_cash_due(), color: 'text-warning', icon: IconClock };
 			case 'unpaid':
-				return { label: 'Unpaid', color: 'text-warning', icon: IconClock };
+				return { label: m.staff_unpaid(), color: 'text-warning', icon: IconClock };
 			case 'credits':
-				return { label: 'Paid with credits', color: 'text-info', icon: IconCoin };
+				return { label: m.staff_paid_with_credits(), color: 'text-info', icon: IconCoin };
 			case 'comped':
-				return { label: 'Comped', color: 'text-info', icon: IconGift };
+				return { label: m.staff_comped(), color: 'text-info', icon: IconGift };
 		}
 	}
 
@@ -157,17 +158,19 @@
 	}
 </script>
 
-<PageHeader title="Reservations">
+<PageHeader title={m.staff_reservations_title()}>
 	<div class="flex gap-2">
 		{#await Promise.all([unresolved, counts])}
-			<Button variant="ghost" size="sm" onclick={() => (resolveOpen = true)}>Resolve</Button>
+			<Button variant="ghost" size="sm" onclick={() => (resolveOpen = true)}
+				>{m.staff_resolve()}</Button
+			>
 		{:then [unresolvedData]}
 			<Button
 				variant={unresolvedData.length > 0 ? 'warning' : 'ghost'}
 				size="sm"
 				onclick={() => (resolveOpen = true)}
 			>
-				Resolve
+				{m.staff_resolve()}
 				{#if unresolvedData.length > 0}
 					<Badge>{unresolvedData.length}</Badge>
 				{/if}
@@ -184,8 +187,8 @@
 	{#await counts}
 		<TabBar
 			tabs={[
-				{ key: 'upcoming', label: 'Upcoming' },
-				{ key: 'all', label: 'All' }
+				{ key: 'upcoming', label: m.staff_reservations_upcoming() },
+				{ key: 'all', label: m.staff_all() }
 			]}
 			active={tab}
 			onchange={(key) => {
@@ -196,8 +199,8 @@
 	{:then c}
 		<TabBar
 			tabs={[
-				{ key: 'upcoming', label: 'Upcoming', badge: c.upcoming },
-				{ key: 'all', label: 'All', badge: c.all }
+				{ key: 'upcoming', label: m.staff_reservations_upcoming(), badge: c.upcoming },
+				{ key: 'all', label: m.staff_all(), badge: c.all }
 			]}
 			active={tab}
 			onchange={(key) => {
@@ -211,7 +214,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search member, band, or event..."
+				placeholder={m.staff_reservations_placeholder()}
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -220,7 +223,7 @@
 		{/snippet}
 		{#snippet menu()}
 			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">From date</span>
+				<span class="text-muted text-xs">{m.staff_from_date()}</span>
 				<input
 					type="date"
 					class="input input-sm"
@@ -231,7 +234,7 @@
 				/>
 			</label>
 			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">To date</span>
+				<span class="text-muted text-xs">{m.staff_date_2()}</span>
 				<input
 					type="date"
 					class="input input-sm"
@@ -242,7 +245,7 @@
 				/>
 			</label>
 			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">Booked by</span>
+				<span class="text-muted text-xs">{m.staff_booked_by()}</span>
 				<Select
 					size="sm"
 					value={bookerType}
@@ -251,18 +254,18 @@
 						page = 1;
 					}}
 				>
-					<option value="">Anyone</option>
-					<option value="user">Members</option>
+					<option value="">{m.staff_anyone()}</option>
+					<option value="user">{m.staff_members()}</option>
 					<!-- A programme's session books as its group too, so this is no longer
 					     bands alone; a production's hold is only ever a show. -->
-					<option value="group">Bands &amp; programs</option>
-					<option value="production">Shows</option>
+					<option value="group">{m.staff_reservations_bands_programs()}</option>
+					<option value="production">{m.staff_reservations_shows()}</option>
 					<!-- A listing with no production holds the room in its own name. -->
-					<option value="event_listing">Listings</option>
+					<option value="event_listing">{m.staff_listings()}</option>
 				</Select>
 			</label>
 			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">Show</span>
+				<span class="text-muted text-xs">{m.staff_show()}</span>
 				<Select
 					size="sm"
 					value={show}
@@ -271,9 +274,9 @@
 						page = 1;
 					}}
 				>
-					<option value="everything">Reservations and closures</option>
-					<option value="reservations">Reservations</option>
-					<option value="closures">Closures</option>
+					<option value="everything">{m.staff_reservations_reservations_closures()}</option>
+					<option value="reservations">{m.staff_reservations_title()}</option>
+					<option value="closures">{m.staff_reservations_closures()}</option>
 				</Select>
 			</label>
 		{/snippet}
@@ -281,7 +284,9 @@
 
 	<DataList
 		{result}
-		empty={show === 'closures' ? 'No closures found' : 'No reservations found'}
+		empty={show === 'closures'
+			? m.staff_reservations_no_closures_found()
+			: m.staff_reservations_no_reservations_found()}
 		onpage={(p) => (page = p)}
 	>
 		{#snippet children(reservations)}
@@ -289,11 +294,11 @@
 			     `wide-only` hides it below 32rem, where the cards below take over. -->
 			<Table zebra={false} class="wide-only">
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">Status</span></th>
-					<th>Booker</th>
-					<th>Time</th>
-					<th class="col-support cell-num">Payment</th>
-					<th class="w-px"><span class="sr-only">Actions</span></th>
+					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+					<th>{m.staff_booker()}</th>
+					<th>{m.staff_time()}</th>
+					<th class="col-support cell-num">{m.staff_payment()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 				{/snippet}
 
 				{#each reservations as r, idx (`${r.kind}:${r.id}`)}
@@ -308,7 +313,9 @@
 					{/if}
 					{#if r.kind === 'closure'}
 						<tr>
-							<td class="w-px"><Badge size="sm" variant="error">Closed</Badge></td>
+							<td class="w-px"
+								><Badge size="sm" variant="error">{m.staff_reservations_closed()}</Badge></td
+							>
 							<td class="min-w-0 font-medium">{r.reason}</td>
 							<td class="cell-primary whitespace-nowrap">{closureRange(r)}</td>
 							<td class="col-support cell-num"><span class="opacity-40">—</span></td>
@@ -350,7 +357,7 @@
 										{formatTimeRange(r.startsAt, r.endsAt)}
 									</a>
 									{#if r.recurringSeriesId}
-										<span class="tooltip" data-tip="Recurring">
+										<span class="tooltip" data-tip={m.staff_recurring()}>
 											<IconRepeat size={14} class="text-base-content" />
 										</span>
 									{/if}
@@ -362,7 +369,7 @@
 										member — the capacity is not the party — so without this the
 										row could not say it is teaching rather than rehearsal.
 									-->
-										<span class="tooltip" data-tip="Teaching">
+										<span class="tooltip" data-tip={m.staff_reservations_teaching()}>
 											<BookerTypeIcon type={r.bookerType} size={14} />
 										</span>
 									{/if}
@@ -374,9 +381,9 @@
 									-->
 										<span
 											class="tooltip"
-											data-tip="First reservation"
+											data-tip={m.staff_first_reservation()}
 											role="img"
-											aria-label="First reservation"
+											aria-label={m.staff_first_reservation()}
 										>
 											<IconUserPlus size={14} class="text-success" />
 										</span>
@@ -387,9 +394,9 @@
 									     thing StatusBadge does. -->
 										<span
 											class="tooltip"
-											data-tip="Member left a note"
+											data-tip={m.staff_reservations_member_left_note()}
 											role="img"
-											aria-label="Member left a note"
+											aria-label={m.staff_reservations_member_left_note()}
 										>
 											<IconNote size={14} class="text-info" />
 										</span>
@@ -476,7 +483,7 @@
 								<p>{r.reason}</p>
 							</div>
 							<div class="flex shrink-0 flex-col items-end gap-2">
-								<Badge size="sm" variant="error">Closed</Badge>
+								<Badge size="sm" variant="error">{m.staff_reservations_closed()}</Badge>
 								{@render closureActions(r, false)}
 							</div>
 						</li>
@@ -500,21 +507,32 @@
 									{#if r.recurringSeriesId || r.bookerType === 'instructor' || r.isFirstReservation || r.notes}
 										<ul class="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted text-sm">
 											{#if r.recurringSeriesId}
-												<li class="flex items-center gap-1"><IconRepeat size={14} />Recurring</li>
+												<li class="flex items-center gap-1">
+													<IconRepeat size={14} />{m.staff_recurring()}
+												</li>
 											{/if}
 											{#if r.bookerType === 'instructor'}
 												<li class="flex items-center gap-1">
-													<BookerTypeIcon type={r.bookerType} size={14} />Teaching
+													<BookerTypeIcon
+														type={r.bookerType}
+														size={14}
+													/>{m.staff_reservations_teaching()}
 												</li>
 											{/if}
 											{#if r.isFirstReservation}
 												<li class="flex items-center gap-1">
-													<IconUserPlus size={14} class="text-success" />First reservation
+													<IconUserPlus
+														size={14}
+														class="text-success"
+													/>{m.staff_first_reservation()}
 												</li>
 											{/if}
 											{#if r.notes}
 												<li class="flex items-center gap-1">
-													<IconNote size={14} class="text-info" />Member left a note
+													<IconNote
+														size={14}
+														class="text-info"
+													/>{m.staff_reservations_member_left_note()}
 												</li>
 											{/if}
 										</ul>

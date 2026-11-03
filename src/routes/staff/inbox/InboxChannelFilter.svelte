@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The channel filter, owning its own query.
 	 *
@@ -37,8 +38,8 @@
 	     and none of the answer. -->
 	<DropdownMenu.Trigger
 		class="depth-2 btn gap-1 btn-sm"
-		aria-label="Channel: {label}"
-		title="Channel: {label}"
+		aria-label={m.staff_inbox_inbox_channel_filter_aria_label({ label })}
+		title={m.staff_inbox_inbox_channel_filter_aria_label({ label })}
 	>
 		<Current size={16} />
 		<span class="hidden @md:inline">{label}</span>
@@ -52,7 +53,7 @@
 		>
 			<DropdownMenu.Item class={itemClass} onSelect={() => onselect('')}>
 				<IconInbox size={15} />
-				All channels
+				{m.staff_inbox_inbox_channel_filter_all_channels()}
 				{#if !value}<IconCheck size={15} class="ml-auto" />{/if}
 			</DropdownMenu.Item>
 

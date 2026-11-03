@@ -1,12 +1,13 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import StatCard from '$lib/components/ui/StatCard.svelte';
 	import { getStaffBandTotals } from '$lib/remote/bands.remote';
 
 	const totals = await getStaffBandTotals();
 	const stats = $derived([
-		{ title: 'Active bands', value: totals.active },
-		{ title: 'Premium', value: totals.premium },
-		{ title: 'New in 30 days', value: totals.newBands }
+		{ title: m.staff_groups_band_totals_active_bands(), value: totals.active },
+		{ title: m.staff_premium(), value: totals.premium },
+		{ title: m.staff_groups_band_totals_new_30_days(), value: totals.newBands }
 	]);
 </script>
 

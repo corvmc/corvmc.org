@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -39,29 +40,35 @@
 	let allowOptIn = $derived(audienceData.allowOptIn);
 </script>
 
-<PageHeader subtitle="Audience" title={audienceData.name}>
+<PageHeader subtitle={m.staff_audience()} title={audienceData.name}>
 	<!-- Not gated on `isBuiltIn`: `updateAudience` refuses a built-in's *slug*
 	     and its opt-in, and says in its own comment that "name and description
 	     are staff-editable copy". Before this there was no way to change either
 	     on any audience, built-in or not (#1074). -->
 	<Action
 		action={updateAudience}
-		label="Rename"
-		modalTitle="Rename this audience"
-		submitLabel="Save"
-		successToast="Audience updated"
+		label={m.staff_marketing_audiences_id_rename()}
+		modalTitle={m.staff_marketing_audiences_id_modal_title()}
+		submitLabel={m.staff_save()}
+		successToast={m.staff_marketing_audiences_id_audience_updated()}
 		variant="ghost"
 		size="sm"
 	>
 		{#snippet form()}
 			<input {...fields.id.as('hidden', id)} />
-			<FormField field={fields.name} type="text" label="Name" value={audienceData.name} required />
+			<FormField
+				field={fields.name}
+				type="text"
+				label={m.staff_name()}
+				value={audienceData.name}
+				required
+			/>
 			<FormField
 				field={fields.description}
 				type="textarea"
-				label="Description"
+				label={m.staff_description()}
 				value={audienceData.description ?? ''}
-				description="What this list is for. Staff-only — subscribers never see it."
+				description={m.staff_marketing_audiences_id_what_list_staff_only_subscriber()}
 			/>
 		{/snippet}
 	</Action>
@@ -74,24 +81,26 @@
 </PageHeader>
 <PageContent>
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
-		<InfoCard title="Details">
+		<InfoCard title={m.staff_details()}>
 			<DefinitionList>
-				<Fact label="Slug" mono>{audienceData.slug}</Fact>
+				<Fact label={m.staff_slug()} mono>{audienceData.slug}</Fact>
 
-				<Fact label="Subscribers">
+				<Fact label={m.staff_subscribers()}>
 					{audienceData.subscriberCount}
 					{isBuiltIn ? 'matching members' : 'active'}
 				</Fact>
 
-				<Fact label="Opt-in">
+				<Fact label={m.staff_opt()}>
 					{#if isBuiltIn}
-						<Badge variant="info" size="xs">Built-in</Badge>
+						<Badge variant="info" size="xs">{m.staff_built()}</Badge>
 					{:else}
 						{audienceData.allowOptIn ? 'Public' : 'Staff only'}
 					{/if}
 				</Fact>
 
-				<Fact label="Created">{formatDateShortYear(new Date(audienceData.createdAt))}</Fact>
+				<Fact label={m.staff_created()}
+					>{formatDateShortYear(new Date(audienceData.createdAt))}</Fact
+				>
 			</DefinitionList>
 
 			{#if audienceData.description}
@@ -100,26 +109,27 @@
 
 			{#if isBuiltIn}
 				<p class="mt-3 text-muted">
-					Membership is worked out from member attributes each time you send, so this list is always
-					current — there is nothing to refresh. Subscribers without a member account, such as
-					public newsletter signups, are never included.
+					{m.staff_marketing_audiences_id_membership_worked_out_from_memb()}
 				</p>
 			{/if}
 
 			{#if audienceData.allowOptIn}
 				<div class="mt-3 rounded bg-base-200 p-2 text-xs">
-					<span class="opacity-60">Signup URL:</span>
+					<span class="opacity-60">{m.staff_marketing_audiences_id_signup_url()}</span>
 					<code class="ml-1">/subscribe/{audienceData.slug}</code>
 				</div>
 			{/if}
 		</InfoCard>
 
 		{#if !isBuiltIn}
-			<InfoCard title="Actions">
+			<InfoCard title={m.staff_actions()}>
 				<div class="space-y-3">
 					<BulkAddMembersAction audienceId={id} />
 
-					<Form remote={updateAudience} successToast="Opt-in setting updated">
+					<Form
+						remote={updateAudience}
+						successToast={m.staff_marketing_audiences_id_opt_setting_updated()}
+					>
 						<input {...fields.id.as('hidden', id)} />
 						<input {...fields.allowOptIn.as('hidden', allowOptIn)} />
 						<label class="label cursor-pointer justify-start gap-3">
@@ -131,7 +141,7 @@
 									(e.target as HTMLInputElement).form?.requestSubmit();
 								}}
 							/>
-							<span class="text-sm">Allow public opt-in</span>
+							<span class="text-sm">{m.staff_marketing_audiences_id_allow_public_opt()}</span>
 						</label>
 					</Form>
 				</div>
@@ -147,23 +157,32 @@
 	<!-- Subscriber List -->
 	<InfoCard
 		title={isBuiltIn
-			? `Matching members (showing ${subscribers.length} of ${audienceData.subscriberCount})`
-			: `Subscribers (${audienceData.subscriberCount})`}
+			? m.staff_marketing_audiences_id_matching_members_showing({
+					length: subscribers.length,
+					subscriberCount: audienceData.subscriberCount
+				})
+			: m.staff_marketing_audiences_id_subscribers({
+					subscriberCount: audienceData.subscriberCount
+				})}
 	>
 		{#if subscribers.length === 0}
-			<EmptyState description={isBuiltIn ? 'No members currently match' : 'No subscribers yet'} />
+			<EmptyState
+				description={isBuiltIn
+					? m.staff_marketing_audiences_id_no_members_currently_match()
+					: m.staff_marketing_audiences_id_no_subscribers_yet()}
+			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>Subscriber</th>
+					<th>{m.staff_marketing_audiences_id_subscriber()}</th>
 					<!-- A built-in's preview already excludes opt-outs, so every row
 					     would read "Active". -->
 					{#if !isBuiltIn}
-						<th class="col-support w-px">Status</th>
+						<th class="col-support w-px">{m.staff_status()}</th>
 					{/if}
 					<th class="col-extra whitespace-nowrap">{isBuiltIn ? 'Member since' : 'Joined'}</th>
 					{#if !isBuiltIn}
-						<th class="w-px"><span class="sr-only">Actions</span></th>
+						<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
 					{/if}
 				{/snippet}
 				<!-- Keyed by email: a built-in's preview rows come from `user`, where a

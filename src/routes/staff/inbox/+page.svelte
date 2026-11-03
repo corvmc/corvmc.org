@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The right pane with nothing open, hidden below `lg`. Silent when the queue
 	 * is empty: "pick a conversation from the queue" beside a queue saying there
@@ -16,10 +17,7 @@
 {#await result then { rows }}
 	{#if rows.length > 0}
 		<div class="flex h-full items-center justify-center">
-			<EmptyState
-				title="No conversation selected"
-				description="Pick a conversation from the queue to read and reply."
-			/>
+			<EmptyState title={m.staff_inbox_title()} description={m.staff_inbox_description()} />
 		</div>
 	{/if}
 {/await}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/** Businesses that sponsor the collective, the one whose term ends soonest first. */
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -28,13 +29,13 @@
 	}
 </script>
 
-<PageHeader title="Sponsors" subtitle="Money">
+<PageHeader title={m.staff_sponsors_sponsors()} subtitle={m.staff_money()}>
 	<Action
 		action={createSponsor}
-		label="New sponsor"
-		modalTitle="New sponsor"
-		submitLabel="Add sponsor"
-		successToast="Sponsor added"
+		label={m.staff_sponsors_label()}
+		modalTitle={m.staff_sponsors_label()}
+		submitLabel={m.staff_sponsors_submit_label()}
+		successToast={m.staff_sponsors_success_toast()}
 		data-testid="new-sponsor"
 	>
 		{#snippet form()}
@@ -52,23 +53,23 @@
 				checked={includeArchived}
 				onchange={(e) => setArchived(e.currentTarget.checked)}
 			/>
-			Show archived
+			{m.staff_show_archived()}
 		</label>
 	</div>
 
 	{#if sponsors.length === 0}
 		<EmptyState
-			title="No sponsors yet"
-			description="Add a business that sponsors the collective, or one you are about to ask."
+			title={m.staff_sponsors_no_sponsors_yet()}
+			description={m.staff_sponsors_description()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">Status</span></th>
-				<th>Sponsor</th>
-				<th>Ends</th>
-				<th class="col-support cell-num">Amount</th>
-				<th class="col-extra">Tier</th>
+				<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+				<th>{m.staff_sponsor()}</th>
+				<th>{m.staff_ends()}</th>
+				<th class="col-support cell-num">{m.staff_amount()}</th>
+				<th class="col-extra">{m.staff_tier()}</th>
 			{/snippet}
 			{#each sponsors as s (s.id)}
 				<tr
@@ -86,7 +87,7 @@
 					<td class="cell-primary">
 						<a class="link font-medium" href={resolve(`/staff/sponsors/${s.id}`)}>{s.name}</a>
 						{#if s.deletedAt}
-							<Badge variant="ghost" size="sm" class="ml-2">Archived</Badge>
+							<Badge variant="ghost" size="sm" class="ml-2">{m.staff_archived()}</Badge>
 						{/if}
 						<div class="truncate text-muted">
 							{s.current?.title ?? (s.sponsorships ? 'No current sponsorship' : 'Never sponsored')}

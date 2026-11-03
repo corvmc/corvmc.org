@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import TabBar from '$lib/components/ui/TabBar.svelte';
 	import { resolve } from '$app/paths';
 
@@ -9,10 +10,10 @@
 <div class="mb-4">
 	<TabBar
 		tabs={[
-			{ key: 'listings', label: 'Listings', href: resolve('/staff/local-resources') },
+			{ key: 'listings', label: m.staff_listings(), href: resolve('/staff/local-resources') },
 			{
 				key: 'tips',
-				label: 'Tips',
+				label: m.staff_local_resources_resource_tabs_tips(),
 				href: resolve('/staff/local-resources/tips'),
 				...(tipCount > 0 ? { badge: tipCount } : {})
 			}

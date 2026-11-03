@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import Table from '$lib/components/ui/Table.svelte';
@@ -12,24 +13,24 @@
 	const data = $derived(await getLocalResourceTips());
 </script>
 
-<PageHeader title="Local Resources" subtitle="Outreach" />
+<PageHeader title={m.staff_local_resources()} subtitle={m.staff_outreach()} />
 
 <PageContent>
 	<ResourceTabs active="tips" tipCount={data.tips.length} />
 
 	{#if data.tips.length === 0}
 		<EmptyState
-			title="No tips waiting"
-			description="Tips sent from the public directory land here until you publish or return them."
+			title={m.staff_local_resources_tips_no_tips_waiting()}
+			description={m.staff_local_resources_tips_description()}
 		/>
 	{:else}
 		<!-- A table: short fields, and the decision lives on the listing's own page. -->
 		<Table>
 			{#snippet head()}
-				<th class="cell-primary">Name</th>
-				<th class="col-support">Category</th>
-				<th class="col-support">From</th>
-				<th class="whitespace-nowrap">Sent</th>
+				<th class="cell-primary">{m.staff_name()}</th>
+				<th class="col-support">{m.staff_category()}</th>
+				<th class="col-support">{m.staff_from()}</th>
+				<th class="whitespace-nowrap">{m.staff_sent()}</th>
 			{/snippet}
 			{#each data.tips as tip (tip.id)}
 				{@const href = resolve(`/staff/local-resources/${tip.id}`)}

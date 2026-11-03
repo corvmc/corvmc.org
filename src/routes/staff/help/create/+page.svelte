@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { getStaffCategories, createArticle } from '$lib/remote/help.remote';
@@ -30,7 +31,7 @@
 	let autoSlug = $derived(slugify(titleValue));
 </script>
 
-<PageHeader width="3xl" title="New Article" subtitle="Help" />
+<PageHeader width="3xl" title={m.staff_new_article()} subtitle={m.staff_help()} />
 <PageContent width="3xl">
 	<Form
 		remote={createArticle}
@@ -39,21 +40,21 @@
 	>
 		<div class="space-y-4">
 			<div class="grid gap-4 sm:grid-cols-2">
-				<FormField name="title" label="Title">
+				<FormField name="title" label={m.staff_title()}>
 					<input
 						name="title"
 						type="text"
 						class="input w-full"
-						placeholder="Article title"
+						placeholder={m.staff_help_create_article_title()}
 						bind:value={titleValue}
 					/>
 				</FormField>
-				<FormField name="slug" label="Slug">
+				<FormField name="slug" label={m.staff_slug()}>
 					<input
 						name="slug"
 						type="text"
 						class="input w-full"
-						placeholder={autoSlug || 'auto-generated'}
+						placeholder={autoSlug || m.staff_help_create_auto_generated()}
 					/>
 				</FormField>
 			</div>
@@ -62,38 +63,43 @@
 				<FormField
 					name="categoryId"
 					type="select"
-					label="Category"
+					label={m.staff_category()}
 					options={[
-						{ value: '', label: 'Select category...' },
+						{ value: '', label: m.staff_help_create_select_category() },
 						...categories.map((c) => ({ value: c.id, label: c.name }))
 					]}
 				/>
 				<FormField
 					name="minRole"
 					type="select"
-					label="Audience"
+					label={m.staff_audience()}
 					value="member"
 					options={helpAudiences.map((a) => ({ value: a, label: helpAudienceLabels[a] }))}
 				/>
-				<FormField name="published" type="toggle" label="Status" checkboxLabel="Published" />
-				<FormField name="sortOrder" type="number" label="Order" value={0} min="0" />
+				<FormField
+					name="published"
+					type="toggle"
+					label={m.staff_status()}
+					checkboxLabel={m.staff_published()}
+				/>
+				<FormField name="sortOrder" type="number" label={m.staff_order_2()} value={0} min="0" />
 			</div>
 
 			<FormField
 				name="summary"
 				type="text"
-				label="Summary"
-				placeholder="Brief description for listings"
+				label={m.staff_summary()}
+				placeholder={m.staff_help_create_brief_description_listings()}
 			/>
 
-			<FormField name="content" label="Content">
+			<FormField name="content" label={m.staff_content()}>
 				<input {...fields.content.as('hidden', contentValue)} />
 				<MarkdownEditor bind:value={contentValue} />
 			</FormField>
 
 			<div class="flex justify-end gap-2">
-				<Button href="/staff/help" variant="ghost">Cancel</Button>
-				<SubmitButton label="Create Article" />
+				<Button href="/staff/help" variant="ghost">{m.staff_cancel()}</Button>
+				<SubmitButton label={m.staff_help_create_create_article()} />
 			</div>
 		</div>
 	</Form>

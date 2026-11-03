@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Alert from '$lib/components/ui/Alert.svelte';
@@ -29,7 +30,9 @@
 	<svelte:boundary>
 		<GroupRecord {kind} {id} variant="panel">
 			{#snippet actions()}
-				<Button href={resolve(`/staff/groups/${id}`)} variant="ghost" size="sm">Open record</Button>
+				<Button href={resolve(`/staff/groups/${id}`)} variant="ghost" size="sm"
+					>{m.staff_groups_id_group_record_panel_open_record()}</Button
+				>
 			{/snippet}
 		</GroupRecord>
 
@@ -38,7 +41,7 @@
 		{/snippet}
 		{#snippet failed(_error, reset)}
 			<Alert type="warning" reset={() => retryQuery(recordQuery(), reset)}
-				>The record didn't load.</Alert
+				>{m.staff_groups_id_group_record_panel_record_didn_t_load()}</Alert
 			>
 		{/snippet}
 	</svelte:boundary>

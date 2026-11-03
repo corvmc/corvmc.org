@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/** Every ballot, newest first, with the two ways to start one. */
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -11,7 +12,7 @@
 	const { ballots, committees } = $derived(await getStaffBallots());
 </script>
 
-<PageHeader title="Ballots" subtitle="People">
+<PageHeader title={m.staff_ballots()} subtitle={m.staff_people()}>
 	{#if committees.length > 0}
 		<CreateBallotAction kind="group" panel="staff" {committees} />
 	{/if}
@@ -21,8 +22,8 @@
 <PageContent>
 	{#if ballots.length === 0}
 		<EmptyState
-			title="No ballots yet"
-			description="Start a member-wide ballot, or a committee ballot on behalf of a committee."
+			title={m.staff_ballots_no_ballots_yet()}
+			description={m.staff_ballots_description()}
 		/>
 	{:else}
 		<BallotTable rows={ballots} panel="staff" />

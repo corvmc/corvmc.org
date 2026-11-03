@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
@@ -23,10 +24,10 @@
 
 <Action
 	action={claimStaffExternalAct.for(entryId)}
-	label="Claim"
-	modalTitle="Claim {actName}"
-	submitLabel="Create the band"
-	successToast="Band created"
+	label={m.staff_bands_acts_claim_external_act_claim()}
+	modalTitle={m.staff_bands_acts_claim_external_act_modal_title({ actName })}
+	submitLabel={m.staff_bands_acts_claim_external_act_submit_label()}
+	successToast={m.staff_bands_acts_claim_external_act_success_toast()}
 	variant="ghost"
 	size="xs"
 	onsuccess={(result) => {
@@ -38,20 +39,19 @@
 		<div class="space-y-4">
 			<input {...fields.entryId.as('hidden', entryId)} />
 			<p class="text-sm">
-				{actName} becomes a CMC band with a slug and a page. Everything already on its record — bio, links,
-				and every event it played — comes with it.
+				{m.staff_bands_acts_claim_external_act_becomes_cmc_band_with_sl({ actName })}
 			</p>
-			<FormField name="ownerId" label="Owner" required>
+			<FormField name="ownerId" label={m.staff_owner()} required>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={owner}
 					field={fields.ownerId}
-					placeholder="Search by name or email..."
+					placeholder={m.staff_search_by_name_email()}
 				/>
 			</FormField>
 			<fieldset class="fieldset">
 				<p class="text-subtle">
-					The member from the act who joined. They become the owner immediately.
+					{m.staff_bands_acts_claim_external_act_member_from_act_who_join()}
 				</p>
 			</fieldset>
 		</div>

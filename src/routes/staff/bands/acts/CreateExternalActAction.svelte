@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import Action from '$lib/components/ui/Action.svelte';
 	import FormField from '$lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -15,30 +16,41 @@
 
 <Action
 	action={createStaffExternalAct}
-	label="Add act"
-	modalTitle="Add an external act"
-	submitLabel="Add act"
-	successToast="Act recorded"
+	label={m.staff_bands_acts_create_external_act_add_act()}
+	modalTitle={m.staff_bands_acts_create_external_act_modal_title()}
+	submitLabel={m.staff_bands_acts_create_external_act_add_act()}
+	successToast={m.staff_bands_acts_create_external_act_success_toast()}
 	variant="primary"
 	size="sm"
 	onsuccess={() => invalidateAll()}
 >
 	{#snippet form()}
 		<div class="space-y-4">
-			<FormField field={fields.name} type="text" label="Name" placeholder="Touring Act" required />
-			<FormField field={fields.hometown} type="text" label="Hometown" placeholder="Portland, OR" />
+			<FormField
+				field={fields.name}
+				type="text"
+				label={m.staff_name()}
+				placeholder={m.staff_bands_acts_create_external_act_touring_act()}
+				required
+			/>
+			<FormField
+				field={fields.hometown}
+				type="text"
+				label={m.staff_hometown()}
+				placeholder={m.staff_bands_acts_create_external_act_portland()}
+			/>
 			<FormField
 				field={fields.url}
 				type="text"
-				label="Their site"
-				placeholder="https://…"
-				description="Where their name should point on a public bill. CMC hosts no page for them, so without this their name renders as plain text."
+				label={m.staff_their_site()}
+				placeholder={m.staff_bands_acts_create_external_act_https()}
+				description={m.staff_bands_acts_create_external_act_where_their_name_should()}
 			/>
 			<FormField
 				field={fields.bio}
 				type="textarea"
-				label="Notes for the record"
-				description="Marketing material for when they come back. Not shown publicly."
+				label={m.staff_bands_acts_create_external_act_notes_record()}
+				description={m.staff_bands_acts_create_external_act_marketing_material_when()}
 			/>
 		</div>
 	{/snippet}

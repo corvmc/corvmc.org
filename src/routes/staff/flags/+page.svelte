@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
@@ -44,13 +45,13 @@
 	}
 </script>
 
-<PageHeader title="Content Flags" />
+<PageHeader title={m.staff_content_flags()} />
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search reason..."
+				placeholder={m.staff_flags_placeholder()}
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -59,27 +60,27 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label="Status"
+			aria-label={m.staff_status()}
 			value={statusFilter}
 			onchange={(e: Event) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value as typeof statusFilter;
 				page = 1;
 			}}
 		>
-			<option value="">All statuses</option>
+			<option value="">{m.staff_all_statuses()}</option>
 			{#each flagStatuses as s (s)}
 				<option value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
 			{/each}
-			<option value="appealed">Appeal waiting</option>
+			<option value="appealed">{m.staff_flags_appeal_waiting()}</option>
 		</Select>
 	</FilterBar>
 
-	<DataList {result} empty="No flags found" onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_flags_empty()} onpage={(p) => (page = p)}>
 		{#snippet children(flags)}
 			<!-- `ref.type` is `flag` for every row, so what was flagged is the
 			     type column, read from `target.type`. -->
 			<TriageTable
-				subjectLabel="Flagged"
+				subjectLabel={m.staff_flags_subject_label()}
 				rows={flags.map((f) => ({
 					id: f.id,
 					href: resolve(`/staff/flags/${f.id}`),

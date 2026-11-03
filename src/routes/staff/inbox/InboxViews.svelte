@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages.js';
 	/**
 	 * The four view tabs, and whatever the reader has saved.
 	 *
@@ -34,10 +35,15 @@
 		class="w-max"
 		dense
 		tabs={[
-			{ key: 'open', label: 'Open', badge: counts.open, icon: IconInbox },
-			{ key: 'snoozed', label: 'Snoozed', badge: counts.snoozed, icon: IconAlarmSnooze },
-			{ key: 'resolved', label: 'Resolved', badge: counts.resolved, icon: IconInboxOff },
-			{ key: 'all', label: 'All', badge: counts.all, icon: IconLayoutList }
+			{ key: 'open', label: m.staff_open(), badge: counts.open, icon: IconInbox },
+			{
+				key: 'snoozed',
+				label: m.staff_inbox_inbox_views_snoozed(),
+				badge: counts.snoozed,
+				icon: IconAlarmSnooze
+			},
+			{ key: 'resolved', label: m.staff_resolved(), badge: counts.resolved, icon: IconInboxOff },
+			{ key: 'all', label: m.staff_all(), badge: counts.all, icon: IconLayoutList }
 		]}
 		active={view}
 		onchange={(key) => {
