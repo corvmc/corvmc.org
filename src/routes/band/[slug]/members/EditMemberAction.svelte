@@ -35,7 +35,7 @@
 	const { fields } = updateMemberRemote;
 
 	const roleOptions = [
-		{ value: 'member', label: m.band_member() },
+		{ value: 'member', label: m.band_role_member() },
 		{ value: 'admin', label: m.band_admin() }
 	];
 </script>

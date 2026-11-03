@@ -107,7 +107,7 @@
 	}
 
 	const roleOptions = [
-		{ value: 'member', label: msg.band_member() },
+		{ value: 'member', label: msg.band_role_member() },
 		{ value: 'admin', label: msg.band_admin() }
 	];
 
