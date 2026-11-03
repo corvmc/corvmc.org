@@ -210,8 +210,5 @@
 	},
 	"src/lib/server/volunteer/work-order-service.ts#resolveWorkOrder(1)": {
 		"recordReason": "internal: completeJob passes its own record as the reason"
-	},
-	"src/lib/server/volunteer/work-order-service.ts#updateShift(1)": {
-		"closeReportsOnCompletion": "#2318: cannot be changed after the work order is scheduled"
 	}
 }

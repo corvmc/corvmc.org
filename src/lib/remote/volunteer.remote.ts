@@ -1666,7 +1666,11 @@ export const createShift = form(shiftFormSchema, async (data) => {
 });
 
 export const updateShift = form(
-	shiftFormSchema.partial().extend({ id: z.string().min(1) }),
+	shiftFormSchema.partial().extend({
+		id: z.string().min(1),
+		// A select, not a checkbox: an unticked box sends nothing, which reads as "unchanged".
+		closeReports: z.enum(['close', 'wait']).optional()
+	}),
 	async (data) => {
 		await requireCapability('volunteer.manageShifts');
 
@@ -1679,7 +1683,8 @@ export const updateShift = form(
 				startsAt: data.startsAt,
 				endsAt: data.endsAt,
 				capacity: data.capacity ? parseInt(data.capacity, 10) : undefined,
-				notes: data.notes
+				notes: data.notes,
+				closeReportsOnCompletion: data.closeReports ? data.closeReports === 'close' : undefined
 			});
 		} catch (err) {
 			mapDomainError(err);
