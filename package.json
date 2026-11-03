@@ -44,6 +44,7 @@
 		"docs:routes": "node scripts/docs/route-inventory.mjs --write",
 		"docs:check": "node scripts/docs/check-docs-drift.mjs",
 		"class-census": "node scripts/class-census.mjs",
+		"field-name-census": "node scripts/field-name-census.mjs",
 		"test-wording-census": "node scripts/test-wording-census.mjs",
 		"ui-string-census": "node scripts/ui-string-census.mjs",
 		"form-reachability": "tsx scripts/form-reachability.ts",
