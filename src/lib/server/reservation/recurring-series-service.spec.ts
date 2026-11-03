@@ -1,563 +1,269 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// ---------------------------------------------------------------------------
-// Mock dependencies before importing the module under test
-// ---------------------------------------------------------------------------
+// Series creation and the read paths, against a real SQLite. cancel() and
+// cancelAllForUser() have their own real-SQLite specs (recurring-series-cancel,
+// recurring-series-lapse).
 
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	return migratedSqlite();
+});
+
+// better-sqlite3's drizzle has no `batch`; D1's runs the statements in order, as this does.
 vi.mock('$lib/server/db', () => ({
-	getRowCount: (result: unknown) => {
-		const r = result as { meta?: { changes?: number } };
-		return r?.meta?.changes ?? 0;
-	},
-	db: {
-		select: vi.fn(),
-		insert: vi.fn(),
-		update: vi.fn(() => ({
-			set: vi.fn(() => ({
-				where: vi.fn(() => Promise.resolve({ meta: { changes: 1 } }))
-			}))
-		})),
-		batch: vi.fn()
-	}
+	db: Object.assign(testDb, {
+		batch: async (stmts: PromiseLike<unknown>[]) => {
+			const out = [];
+			for (const s of stmts) out.push(await s);
+			return out;
+		}
+	}),
+	getRowCount: (r: unknown) => Number((r as { changes?: number })?.changes ?? 0)
 }));
-
-vi.mock('$lib/server/db/schema/recurring', () => ({
-	recurringSeries: { id: 'recurringSeries.id' }
-}));
-
-vi.mock('$lib/server/db/schema/reservation', () => ({
-	reservation: { id: 'reservation.id' }
-}));
-
-vi.mock('$lib/server/db/schema/event', () => ({
-	eventListing: { id: 'event.id' }
-}));
-
-vi.mock('$lib/server/db/schema/authentication', () => ({
-	user: { id: 'user.id' }
-}));
-
-vi.mock('drizzle-orm', () => ({
-	eq: vi.fn((col, val) => ({ eq: [col, val] })),
-	and: vi.fn((...args) => ({ and: args })),
-	or: vi.fn((...args) => ({ or: args })),
-	isNull: vi.fn((col) => ({ isNull: col })),
-	inArray: vi.fn((col, vals) => ({ inArray: [col, vals] })),
-	sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({ sql: true, strings, values }),
-	count: vi.fn(() => 'count()')
-}));
-
-// Stands in for the correlated subqueries the real projection builds; those
-// are pinned by `entity/refs.spec.ts` against rendered SQL instead.
-vi.mock('$lib/server/entity/refs', () => ({
-	memberRefColumns: vi.fn(() => ({ id: 'user.id', name: 'user.name' })),
-	bandRefColumns: vi.fn(() => ({ id: 'band.id', name: 'band.name' })),
-	eventRefColumns: vi.fn(() => ({ id: 'event.id', title: 'event.title' })),
-	toBookerRef: vi.fn((row: { bookerType: string; member?: { id?: string; name?: string } }) => ({
-		type: row.bookerType === 'group' ? 'band' : 'member',
-		id: row.member?.id ?? null,
-		title: row.member?.name ?? 'Unknown member'
-	})),
-	// `get()` reads this so the series page can open the booking it was cut
-	// from. This mock replaces the module export by export, so one it does not
-	// name is a hard failure at the call rather than a missing spy.
-	toReservationRef: vi.fn((row: { id: string | null }) => ({
-		type: 'reservation',
-		id: row.id,
-		title: 'A booking'
-	}))
-}));
-
-vi.mock('./rrule-helpers', () => ({
-	buildRRule: vi.fn(() => 'FREQ=WEEKLY;BYDAY=MO'),
-	describeFrequency: vi.fn(() => 'Weekly'),
-	monthlyModeOf: vi.fn(() => null)
-}));
-
-vi.mock('./config', () => ({}));
-
-// ---------------------------------------------------------------------------
-// Import module under test and mocked dependencies
-// ---------------------------------------------------------------------------
-
-import { db } from '$lib/server/db';
-import { buildRRule, describeFrequency } from './rrule-helpers';
 
 const svc = await import('./recurring-series-service');
+const { buildRRule } = await import('./rrule-helpers');
 
-// ---------------------------------------------------------------------------
-// Shared fixtures
-// ---------------------------------------------------------------------------
+const T0 = 1_780_000_000; // seconds
+const WEEKLY = buildRRule(new Date(T0 * 1000), 'weekly');
 
-const SERIES_ROW = {
-	id: 'series-new',
-	prototypeType: 'reservation',
-	prototypeId: 'res-1',
-	rrule: 'FREQ=WEEKLY;BYDAY=MO',
-	createdAt: new Date('2026-01-01'),
-	cancelledAt: null,
-	supersededBy: null
-};
-
-// ---------------------------------------------------------------------------
-// Batch helper — sets up db.batch, db.insert, db.select mocks
-// ---------------------------------------------------------------------------
-
-const lastInsert = { valuesSpy: null as ReturnType<typeof vi.fn> | null };
-
-function setupBatchMock({
-	selectReturning = [SERIES_ROW]
-}: {
-	selectReturning?: unknown[];
-} = {}) {
-	vi.mocked(db.batch).mockResolvedValue([] as any);
-
-	const valuesSpy = vi.fn().mockReturnValue(undefined);
-	lastInsert.valuesSpy = valuesSpy;
-	vi.mocked(db.insert).mockReturnValue({ values: valuesSpy } as any);
-
-	vi.mocked(db.update).mockReturnValue({
-		set: vi.fn().mockReturnValue({
-			where: vi.fn().mockResolvedValue({ meta: { changes: 1 } })
-		})
-	} as any);
-
-	vi.mocked(db.select).mockImplementation((() => ({
-		from: vi.fn().mockReturnValue({
-			where: vi.fn().mockReturnValue({
-				limit: vi.fn().mockResolvedValue(selectReturning),
-				then: (resolve: (v: unknown) => unknown) => resolve(selectReturning)
-			})
-		})
-	})) as any);
-
-	return { valuesSpy };
+function user(id: string, name: string) {
+	sqlite
+		.prepare(`insert into user (id, name, email) values (?, ?, ?)`)
+		.run(id, name, `${id}@example.com`);
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+function booking(id: string, createdBy: string, seriesId: string | null = null, at = T0) {
+	sqlite
+		.prepare(
+			`insert into reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at, recurring_series_id)
+			 values (?, 'user', ?, ?, 'confirmed', ?, ?, ?)`
+		)
+		.run(id, createdBy, createdBy, at, at + 7200, seriesId);
+}
 
-describe('recurring-series-service', () => {
+function series(
+	id: string,
+	opts: {
+		prototypeId: string;
+		type?: string;
+		createdBy?: string;
+		supersededBy?: string | null;
+		cancelledAt?: number | null;
+		rrule?: string;
+	}
+) {
+	sqlite
+		.prepare(
+			`insert into recurring_series (id, prototype_type, prototype_id, rrule, created_by, superseded_by, cancelled_at, created_at)
+			 values (?, ?, ?, ?, ?, ?, ?, ?)`
+		)
+		.run(
+			id,
+			opts.type ?? 'reservation',
+			opts.prototypeId,
+			opts.rrule ?? WEEKLY,
+			opts.createdBy ?? 'user-1',
+			opts.supersededBy ?? null,
+			opts.cancelledAt ?? null,
+			T0
+		);
+}
+
+function event(id: string, recurringSeriesId: string | null = null) {
+	sqlite
+		.prepare(
+			`insert into event_listing (id, title, starts_at, ends_at, created_by_user_id, recurring_series_id)
+			 values (?, 'Jam', ?, ?, 'user-1', ?)`
+		)
+		.run(id, T0, T0 + 7200, recurringSeriesId);
+}
+
+beforeEach(() => {
+	for (const t of ['recurring_series', 'reservation', 'event_listing', 'user']) {
+		sqlite.exec(`delete from "${t}"`);
+	}
+	user('user-1', 'Alice');
+	user('user-2', 'Bob');
+});
+
+describe('create()', () => {
+	const params = {
+		prototypeReservationId: 'res-1',
+		frequency: 'weekly' as const,
+		prototypeStartsAt: new Date('2026-06-01T17:00:00Z')
+	};
+
+	it('inserts the series, owned by the prototype’s creator, and back-links the prototype', async () => {
+		booking('res-1', 'user-2');
+		booking('res-other', 'user-1');
+
+		const result = await svc.create(params);
+
+		expect(result).toMatchObject({
+			prototypeType: 'reservation',
+			prototypeId: 'res-1'
+		});
+		expect(JSON.parse(result.rrule)).toMatchObject({ freq: 'weekly', interval: 1 });
+		expect(sqlite.prepare('select created_by from recurring_series').get()).toEqual({
+			created_by: 'user-2'
+		});
+		expect(
+			sqlite.prepare('select id, recurring_series_id as s from reservation order by id').all()
+		).toEqual([
+			{ id: 'res-1', s: result.id },
+			{ id: 'res-other', s: null }
+		]);
+	});
+
+	it('refuses a prototype that does not exist', async () => {
+		await expect(svc.create(params)).rejects.toThrow(svc.RecurringSeriesError);
+		expect(sqlite.prepare('select count(*) as n from recurring_series').get()).toEqual({ n: 0 });
+	});
+});
+
+describe('createEventSeries()', () => {
+	const params = {
+		prototypeEventId: 'evt-1',
+		frequency: 'weekly' as const,
+		prototypeStartsAt: new Date('2026-06-01T19:00:00Z')
+	};
+
+	it('inserts a series with prototypeType "event_listing" and back-links the event', async () => {
+		event('evt-1');
+
+		const result = await svc.createEventSeries(params);
+
+		expect(result).toMatchObject({ prototypeType: 'event_listing', prototypeId: 'evt-1' });
+		expect(sqlite.prepare('select recurring_series_id as s from event_listing').get()).toEqual({
+			s: result.id
+		});
+	});
+
+	it('refuses an event that already belongs to a series', async () => {
+		event('evt-1', 's-0');
+
+		await expect(svc.createEventSeries(params)).rejects.toThrow(svc.RecurringSeriesError);
+		expect(sqlite.prepare('select count(*) as n from recurring_series').get()).toEqual({ n: 0 });
+	});
+});
+
+describe('get()', () => {
+	it('returns null when the series does not exist', async () => {
+		expect(await svc.get('series-missing')).toBeNull();
+	});
+
+	it('returns the series with prototype details when found', async () => {
+		booking('res-1', 'user-1');
+		series('series-1', { prototypeId: 'res-1' });
+
+		const result = await svc.get('series-1');
+
+		expect(result).toMatchObject({
+			id: 'series-1',
+			prototypeName: 'Alice',
+			prototypeBookerType: 'user',
+			prototypeStartsAt: new Date(T0 * 1000),
+			booker: { type: 'member', id: 'user-1' },
+			prototype: { type: 'reservation', id: 'res-1' },
+			frequencyLabel: expect.any(String)
+		});
+	});
+});
+
+describe('listActive()', () => {
 	beforeEach(() => {
-		vi.resetAllMocks();
+		booking('res-a', 'user-1');
+		booking('res-b', 'user-2');
+		booking('res-c', 'user-1');
+		booking('res-d', 'user-1');
+		series('live-a', { prototypeId: 'res-a', createdBy: 'user-1' });
+		series('live-b', { prototypeId: 'res-b', createdBy: 'user-2' });
+		series('cancelled', { prototypeId: 'res-c', cancelledAt: T0 });
+		series('superseded', { prototypeId: 'res-d', supersededBy: 'live-a' });
+		event('evt-1');
+		series('event-series', { prototypeId: 'evt-1', type: 'event_listing' });
 	});
 
-	// -------------------------------------------------------------------------
-	// create()
-	// -------------------------------------------------------------------------
+	it('lists live reservation series only, with a frequency label', async () => {
+		const result = await svc.listActive();
 
-	describe('create()', () => {
-		const params = {
-			prototypeReservationId: 'res-1',
-			frequency: 'weekly' as const,
-			prototypeStartsAt: new Date('2026-06-01T10:00:00Z')
-		};
-
-		it('calls buildRRule with the prototype startsAt and frequency', async () => {
-			setupBatchMock();
-
-			await svc.create(params);
-
-			expect(buildRRule).toHaveBeenCalledWith(
-				params.prototypeStartsAt,
-				params.frequency,
-				'weekday'
-			);
-		});
-
-		it('inserts a recurringSeries row via batch with rrule, type, and prototypeId', async () => {
-			setupBatchMock();
-
-			await svc.create(params);
-
-			expect(lastInsert.valuesSpy).toHaveBeenCalledWith(
-				expect.objectContaining({
-					prototypeType: 'reservation',
-					prototypeId: 'res-1',
-					rrule: 'FREQ=WEEKLY;BYDAY=MO'
-				})
-			);
-		});
-
-		it('calls db.batch with the queries', async () => {
-			setupBatchMock();
-
-			await svc.create(params);
-
-			expect(db.batch).toHaveBeenCalled();
-		});
-
-		it('returns the inserted series row', async () => {
-			setupBatchMock();
-
-			const result = await svc.create(params);
-
-			expect(result).toMatchObject({ id: 'series-new', prototypeId: 'res-1' });
-		});
+		expect(result.map((r) => r.id).sort()).toEqual(['live-a', 'live-b']);
+		expect(result[0].frequencyLabel).toEqual(expect.any(String));
 	});
 
-	// -------------------------------------------------------------------------
-	// createEventSeries()
-	// -------------------------------------------------------------------------
+	it('narrows to the given user', async () => {
+		const result = await svc.listActive({ forUser: 'user-2' });
 
-	describe('createEventSeries()', () => {
-		const params = {
-			prototypeEventId: 'evt-1',
-			frequency: 'weekly' as const,
-			prototypeStartsAt: new Date('2026-06-01T19:00:00Z')
-		};
+		expect(result.map((r) => [r.id, r.booker.title])).toEqual([['live-b', 'Bob']]);
+	});
+});
 
-		it('builds the rule and inserts a series with prototypeType "event_listing"', async () => {
-			setupBatchMock();
-
-			await svc.createEventSeries(params);
-
-			expect(buildRRule).toHaveBeenCalledWith(
-				params.prototypeStartsAt,
-				params.frequency,
-				'weekday'
-			);
-			expect(lastInsert.valuesSpy).toHaveBeenCalledWith(
-				expect.objectContaining({
-					prototypeType: 'event_listing',
-					prototypeId: 'evt-1',
-					rrule: 'FREQ=WEEKLY;BYDAY=MO'
-				})
-			);
-		});
-
-		it('back-links the prototype event and returns the series row', async () => {
-			setupBatchMock();
-
-			const result = await svc.createEventSeries(params);
-
-			expect(db.batch).toHaveBeenCalled();
-			expect(db.update).toHaveBeenCalled();
-			expect(result).toMatchObject({ id: 'series-new' });
-		});
-
-		it('refuses an event that already belongs to a series', async () => {
-			setupBatchMock({ selectReturning: [{ createdByUserId: 'u-1', recurringSeriesId: 's-0' }] });
-
-			await expect(svc.createEventSeries(params)).rejects.toThrow(svc.RecurringSeriesError);
-			expect(db.batch).not.toHaveBeenCalled();
-		});
+describe('getByReservation()', () => {
+	it('returns null when the reservation has no series', async () => {
+		booking('res-orphan', 'user-1');
+		expect(await svc.getByReservation('res-orphan')).toBeNull();
 	});
 
-	// cancel() and cancelAllForUser() choose rows with a WHERE, so they run on real
-	// SQLite in recurring-series-cancel.spec.ts and recurring-series-lapse.spec.ts.
+	it('returns the series a reservation was cut from', async () => {
+		series('series-1', { prototypeId: 'res-1' });
+		booking('res-1', 'user-1', 'series-1');
+		booking('res-2', 'user-1', 'series-1', T0 + 604_800);
 
-	// -------------------------------------------------------------------------
-	// get()
-	// -------------------------------------------------------------------------
-
-	describe('get()', () => {
-		function setupGetSelect(rows: unknown[]) {
-			const limit = vi.fn().mockResolvedValue(rows);
-			const where = vi.fn().mockReturnValue({ limit });
-			// Self-returning `leftJoin`, so the stub survives however many the
-			// booker projection adds without pinning their count here.
-			const joined: Record<string, unknown> = { where };
-			joined.leftJoin = vi.fn().mockReturnValue(joined);
-			const innerJoin2 = vi.fn().mockReturnValue(joined);
-			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
-			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
-			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
-		}
-
-		it('returns null when the series does not exist', async () => {
-			setupGetSelect([]);
-
-			const result = await svc.get('series-missing');
-
-			expect(result).toBeNull();
-		});
-
-		it('returns the series with prototype details when found', async () => {
-			const row = {
-				...SERIES_ROW,
-				prototypeName: 'Alice',
-				prototypeBookerType: 'user',
-				prototypeBookerId: 'user-1',
-				prototypeCreatedByUserId: 'user-1',
-				prototypeStartsAt: new Date('2026-06-01T10:00:00Z'),
-				prototypeEndsAt: new Date('2026-06-01T12:00:00Z'),
-				prototypeNotes: null
-			};
-			setupGetSelect([row]);
-
-			const result = await svc.get('series-new');
-
-			expect(result).toMatchObject({ id: 'series-new', prototypeName: 'Alice' });
+		expect(await svc.getByReservation('res-2')).toMatchObject({
+			id: 'series-1',
+			prototypeId: 'res-1'
 		});
 	});
+});
 
-	// -------------------------------------------------------------------------
-	// listActive()
-	// -------------------------------------------------------------------------
-
-	describe('listActive()', () => {
-		function setupListSelect(rows: unknown[]) {
-			const where = vi.fn().mockResolvedValue(rows);
-			// Self-returning `leftJoin`, so the stub survives however many the
-			// booker projection adds without pinning their count here.
-			const joined: Record<string, unknown> = { where };
-			joined.leftJoin = vi.fn().mockReturnValue(joined);
-			const innerJoin2 = vi.fn().mockReturnValue(joined);
-			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
-			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
-			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
-		}
-
-		it('returns an empty array when there are no active series', async () => {
-			setupListSelect([]);
-
-			const result = await svc.listActive();
-
-			expect(result).toEqual([]);
-		});
-
-		it('maps results with a frequencyLabel from describeFrequency', async () => {
-			const row = {
-				id: 'series-1',
-				rrule: 'FREQ=WEEKLY;BYDAY=MO',
-				createdAt: new Date('2026-01-01'),
-				cancelledAt: null,
-				member: { id: 'user-1', name: 'Alice' },
-				bookerType: 'user',
-				bookerId: 'user-1',
-				startsAt: new Date('2026-06-01T10:00:00Z'),
-				endsAt: new Date('2026-06-01T12:00:00Z')
-			};
-			setupListSelect([row]);
-
-			const result = await svc.listActive();
-
-			expect(describeFrequency).toHaveBeenCalledWith(row.rrule);
-			expect(result[0]).toMatchObject({ id: 'series-1', frequencyLabel: 'Weekly' });
-		});
+describe('listAll()', () => {
+	it('returns empty rows when there are no series', async () => {
+		expect((await svc.listAll()).rows).toEqual([]);
 	});
 
-	// -------------------------------------------------------------------------
-	// getByReservation()
-	// -------------------------------------------------------------------------
+	it('includes cancelled series but not superseded ones', async () => {
+		booking('res-a', 'user-1');
+		booking('res-b', 'user-2');
+		series('cancelled', { prototypeId: 'res-b', cancelledAt: T0 + 10 });
+		series('superseded', { prototypeId: 'res-a', supersededBy: 'cancelled' });
 
-	describe('getByReservation()', () => {
-		function setupGetByReservationSelect(rows: unknown[]) {
-			const limit = vi.fn().mockResolvedValue(rows);
-			const where = vi.fn().mockReturnValue({ limit });
-			const innerJoin = vi.fn().mockReturnValue({ where });
-			const from = vi.fn().mockReturnValue({ innerJoin });
-			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
-		}
+		const result = await svc.listAll();
 
-		it('returns null when the reservation has no series', async () => {
-			setupGetByReservationSelect([]);
-
-			const result = await svc.getByReservation('res-orphan');
-
-			expect(result).toBeNull();
-		});
-
-		it('returns the series row when found', async () => {
-			setupGetByReservationSelect([SERIES_ROW]);
-
-			const result = await svc.getByReservation('res-1');
-
-			expect(result).toMatchObject({ id: 'series-new', prototypeId: 'res-1' });
+		expect(result.rows).toHaveLength(1);
+		expect(result.rows[0]).toMatchObject({
+			id: 'cancelled',
+			cancelledAt: new Date((T0 + 10) * 1000),
+			frequencyLabel: expect.any(String)
 		});
 	});
+});
 
-	// -------------------------------------------------------------------------
-	// listAll()
-	// -------------------------------------------------------------------------
-
-	describe('listAll()', () => {
-		function setupListAllSelect(rows: unknown[]) {
-			const offset = vi.fn().mockResolvedValue(rows);
-			const limit = vi.fn().mockReturnValue({ offset });
-			const $dynamic = vi.fn().mockReturnValue({ limit });
-			const where = vi.fn().mockReturnValue({ $dynamic });
-			// Self-returning `leftJoin`, so the stub survives however many the
-			// booker projection adds without pinning their count here.
-			const joined: Record<string, unknown> = { where };
-			joined.leftJoin = vi.fn().mockReturnValue(joined);
-			const innerJoin2 = vi.fn().mockReturnValue(joined);
-			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
-			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
-			// First call: data query, second call: count query
-			const countWhere = vi.fn().mockResolvedValue([{ count: rows.length }]);
-			const countInnerJoin = vi.fn().mockReturnValue({ where: countWhere });
-			const countFrom = vi.fn().mockReturnValue({ innerJoin: countInnerJoin });
-			vi.mocked(db.select)
-				.mockReturnValueOnce({ from } as unknown as ReturnType<typeof db.select>)
-				.mockReturnValueOnce({ from: countFrom } as unknown as ReturnType<typeof db.select>);
-		}
-
-		it('returns empty rows when there are no series', async () => {
-			setupListAllSelect([]);
-
-			const result = await svc.listAll();
-
-			expect(result.rows).toEqual([]);
-		});
-
-		it('includes cancelled series in the results', async () => {
-			const cancelledRow = {
-				id: 'series-cancelled',
-				rrule: 'FREQ=WEEKLY;BYDAY=TU',
-				createdAt: new Date('2026-01-01'),
-				cancelledAt: new Date('2026-02-01'),
-				member: { id: 'user-2', name: 'Bob' },
-				bookerType: 'user',
-				bookerId: 'user-2',
-				startsAt: new Date('2026-06-01T14:00:00Z'),
-				endsAt: new Date('2026-06-01T16:00:00Z')
-			};
-			setupListAllSelect([cancelledRow]);
-
-			const result = await svc.listAll();
-
-			expect(result.rows).toHaveLength(1);
-			expect(result.rows[0]).toMatchObject({
-				id: 'series-cancelled',
-				cancelledAt: cancelledRow.cancelledAt,
-				frequencyLabel: 'Weekly'
-			});
-			expect(describeFrequency).toHaveBeenCalledWith(cancelledRow.rrule);
-		});
+describe('getHistory()', () => {
+	beforeEach(() => {
+		booking('res-1', 'user-1');
+		series('series-a', { prototypeId: 'res-1', supersededBy: 'series-b' });
+		series('series-b', { prototypeId: 'res-1', supersededBy: 'series-c' });
+		series('series-c', { prototypeId: 'res-1' });
+		series('series-solo', { prototypeId: 'res-1' });
 	});
 
-	// -------------------------------------------------------------------------
-	// listActive({ forUser })
-	// -------------------------------------------------------------------------
-
-	describe('listActive({ forUser })', () => {
-		function setupListActiveSelect(rows: unknown[]) {
-			const where = vi.fn().mockResolvedValue(rows);
-			// Self-returning `leftJoin`, so the stub survives however many the
-			// booker projection adds without pinning their count here.
-			const joined: Record<string, unknown> = { where };
-			joined.leftJoin = vi.fn().mockReturnValue(joined);
-			const innerJoin2 = vi.fn().mockReturnValue(joined);
-			const innerJoin1 = vi.fn().mockReturnValue({ innerJoin: innerJoin2 });
-			const from = vi.fn().mockReturnValue({ innerJoin: innerJoin1 });
-			vi.mocked(db.select).mockReturnValue({ from } as unknown as ReturnType<typeof db.select>);
-		}
-
-		it('returns an empty array when the user has no active series', async () => {
-			setupListActiveSelect([]);
-
-			const result = await svc.listActive({ forUser: 'user-1' });
-
-			expect(result).toEqual([]);
-		});
-
-		it('returns series for the given user with frequencyLabel', async () => {
-			const row = {
-				id: 'series-user',
-				rrule: 'FREQ=WEEKLY;BYDAY=WE',
-				createdAt: new Date('2026-03-01'),
-				cancelledAt: null,
-				member: { id: 'user-3', name: 'Charlie' },
-				bookerType: 'user',
-				bookerId: 'user-3',
-				startsAt: new Date('2026-06-05T09:00:00Z'),
-				endsAt: new Date('2026-06-05T11:00:00Z')
-			};
-			setupListActiveSelect([row]);
-
-			const result = await svc.listActive({ forUser: 'user-3' });
-
-			expect(result).toHaveLength(1);
-			expect(result[0]).toMatchObject({
-				id: 'series-user',
-				booker: { title: 'Charlie' },
-				frequencyLabel: 'Weekly'
-			});
-		});
+	it('returns an empty array when the series does not exist', async () => {
+		expect(await svc.getHistory('series-missing')).toEqual([]);
 	});
 
-	// -------------------------------------------------------------------------
-	// getHistory()
-	// -------------------------------------------------------------------------
+	it('returns only the current series when there are no predecessors or successors', async () => {
+		expect((await svc.getHistory('series-solo')).map((s) => s.id)).toEqual(['series-solo']);
+	});
 
-	describe('getHistory()', () => {
-		function setupHistorySelects(calls: unknown[][]) {
-			let callIndex = 0;
-			vi.mocked(db.select).mockImplementation(() => {
-				const rows = calls[callIndex] ?? [];
-				callIndex++;
-				const limit = vi.fn().mockResolvedValue(rows);
-				const where = vi.fn().mockReturnValue({ limit });
-				const from = vi.fn().mockReturnValue({ where });
-				return { from } as unknown as ReturnType<typeof db.select>;
-			});
-		}
-
-		it('returns an empty array when the series does not exist', async () => {
-			setupHistorySelects([[]]);
-
-			const result = await svc.getHistory('series-missing');
-
-			expect(result).toEqual([]);
-		});
-
-		it('returns only the current series when there are no predecessors or successors', async () => {
-			const current = { ...SERIES_ROW, id: 'series-solo', supersededBy: null };
-			setupHistorySelects([
-				[current], // first call: get current
-				[] // second call: look for predecessor — none
-				// no forward walk since supersededBy is null
+	it.each(['series-a', 'series-b', 'series-c'])(
+		'walks both ways from %s to the whole chain, oldest first',
+		async (start) => {
+			expect((await svc.getHistory(start)).map((s) => s.id)).toEqual([
+				'series-a',
+				'series-b',
+				'series-c'
 			]);
-
-			const result = await svc.getHistory('series-solo');
-
-			expect(result).toHaveLength(1);
-			expect(result[0]).toMatchObject({ id: 'series-solo' });
-		});
-
-		it('walks backward to find predecessors', async () => {
-			const current = { ...SERIES_ROW, id: 'series-c', supersededBy: null };
-			const predB = { ...SERIES_ROW, id: 'series-b', supersededBy: 'series-c' };
-			const predA = { ...SERIES_ROW, id: 'series-a', supersededBy: 'series-b' };
-
-			setupHistorySelects([
-				[current], // get current
-				[predB], // first backward step: find predecessor of series-c
-				[predA], // second backward step: find predecessor of series-b
-				[] // third backward step: no more predecessors
-				// no forward walk since supersededBy is null
-			]);
-
-			const result = await svc.getHistory('series-c');
-
-			expect(result).toHaveLength(3);
-			expect(result[0]).toMatchObject({ id: 'series-a' });
-			expect(result[1]).toMatchObject({ id: 'series-b' });
-			expect(result[2]).toMatchObject({ id: 'series-c' });
-		});
-
-		it('walks forward to find successors', async () => {
-			const current = { ...SERIES_ROW, id: 'series-a', supersededBy: 'series-b' };
-			const succB = { ...SERIES_ROW, id: 'series-b', supersededBy: 'series-c' };
-			const succC = { ...SERIES_ROW, id: 'series-c', supersededBy: null };
-
-			setupHistorySelects([
-				[current], // get current
-				[], // backward walk: no predecessors
-				[succB], // forward step 1: get series-b
-				[succC] // forward step 2: get series-c
-				// forward stops because succC.supersededBy is null
-			]);
-
-			const result = await svc.getHistory('series-a');
-
-			expect(result).toHaveLength(3);
-			expect(result[0]).toMatchObject({ id: 'series-a' });
-			expect(result[1]).toMatchObject({ id: 'series-b' });
-			expect(result[2]).toMatchObject({ id: 'series-c' });
-		});
-	});
+		}
+	);
 });
