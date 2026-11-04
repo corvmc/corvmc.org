@@ -60,8 +60,12 @@
 	// pinned to the index path it would `goto` straight back to the list the
 	// moment you opened anything. Carrying the query onto the thread URL is also
 	// what makes back return to the same filtered view.
+	//
+	// `$state.eager`: while hydration's batch is open, the seed above is undone for
+	// an effect running in a later batch, and a field the seed created reads
+	// undefined. The goto that normalises `?view=awaiting` is such a run.
 	$effect(() => {
-		const search = toSearch();
+		const search = $state.eager(toSearch());
 		const href = `${page.url.pathname}${search ? `?${search}` : ''}`;
 		if (page.url.pathname + page.url.search !== href) {
 			// Already a real pathname off `page.url`, so there is nothing to resolve.
