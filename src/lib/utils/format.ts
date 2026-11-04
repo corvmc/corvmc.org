@@ -316,6 +316,13 @@ export function formatTimeRange(startsAt: Date, endsAt: Date): string {
 	return `${formatTime(startsAt)} – ${formatTime(endsAt)}`;
 }
 
+/** A time range, with dates when it runs across days, which a bare range would hide. */
+export function formatSpan(startsAt: Date, endsAt: Date): string {
+	return toLocalDate(startsAt) === toLocalDate(endsAt)
+		? formatTimeRange(startsAt, endsAt)
+		: `${formatDateTimeShort(startsAt)} – ${formatDateTimeShort(endsAt)}`;
+}
+
 /** Date → local date string for date inputs: "2026-05-13" */
 export function toLocalDate(d: Date): string {
 	return venue(d, { year: 'numeric', month: '2-digit', day: '2-digit' }, 'en-CA');
