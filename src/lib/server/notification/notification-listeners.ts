@@ -21,6 +21,7 @@ import { listUsersWithCapability } from '$lib/server/authorization';
 import { applicationNotice } from '$lib/server/group/application-reviewers';
 import { buildReplyToAddress } from '$lib/server/inbox/reply-address';
 import { env } from '$env/dynamic/private';
+import { env as publicEnv } from '$env/dynamic/public';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, inArray } from 'drizzle-orm';
@@ -155,7 +156,7 @@ function whenDetails(date: string, startTime: string, endTime: string): Notifica
 }
 
 export function registerAllNotificationListeners(): void {
-	const siteUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
+	const siteUrl = publicEnv.PUBLIC_SITE_URL ?? 'https://corvmc.org';
 
 	// --- Direct messages (member↔member) ---
 	//
@@ -258,9 +259,8 @@ export function registerAllNotificationListeners(): void {
 
 	// --- Music purchase: the download link, and for a guest the only copy of it ---
 	domainEvents.on('audio.purchased', async ({ data: event }) => {
-		const base = env.PUBLIC_SITE_URL ?? '';
-		const downloadUrl = `${base}/music/download/${event.downloadToken}`;
-		const releaseUrl = `${base}/music/${event.bandSlug}/${event.releaseSlug}`;
+		const downloadUrl = `${siteUrl}/music/download/${event.downloadToken}`;
+		const releaseUrl = `${siteUrl}/music/${event.bandSlug}/${event.releaseSlug}`;
 
 		const paid = event.amountPaidCents > 0;
 		const paragraphs: { text: string }[] = [
@@ -1218,7 +1218,7 @@ export function registerAllNotificationListeners(): void {
 				// per line, and the marker has to survive into the staffer's reply
 				// as a quote rather than as literal fence text.
 				message: quoteForPlainText(event.message),
-				threadUrl: `${env.PUBLIC_SITE_URL}/staff/inbox/${event.threadId}`
+				threadUrl: `${siteUrl}/staff/inbox/${event.threadId}`
 			}
 		});
 	});

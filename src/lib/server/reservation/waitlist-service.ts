@@ -4,7 +4,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { and, eq, lt, gt, isNull, notInArray, asc } from 'drizzle-orm';
 import { domainEvents } from '$lib/server/event-bus/event-bus';
 import { formatDateInTz, formatTimeInTz } from './timezone';
-import { env } from '$env/dynamic/private';
+import { env } from '$env/dynamic/public';
 import { DEFAULT_TIMEZONE } from '$lib/config';
 
 const TZ = DEFAULT_TIMEZONE;
