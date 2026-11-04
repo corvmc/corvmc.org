@@ -268,7 +268,7 @@ export default defineConfig(
 	{
 		// Kit 3 removes `#lib` and requires an extension on every `#lib` import (#2199).
 		// The block below repeats these patterns, because its own options replace them.
-		files: ['src/**/*.{ts,svelte}', 'scripts/**/*.ts', 'e2e/**/*.ts', '.storybook/**/*.ts'],
+		files: ['src/**/*.{ts,svelte}', 'scripts/**/*.ts', 'e2e/**/*.ts'],
 		rules: { 'no-restricted-imports': ['error', { patterns: LIB_IMPORT_PATTERNS }] }
 	},
 	{
