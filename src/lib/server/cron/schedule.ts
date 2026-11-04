@@ -151,7 +151,12 @@ export async function runScheduledJobs(
 			const response = await fetcher(
 				new Request(`${env.ORIGIN}${path}`, {
 					method: 'POST',
-					headers: { authorization: `Bearer ${env.CRON_SECRET ?? ''}` },
+					// The content type is not for the handler, which reads no body. Kit 3
+					// refuses a POST with no Origin and no content type as cross-site.
+					headers: {
+						authorization: `Bearer ${env.CRON_SECRET ?? ''}`,
+						'content-type': 'application/json'
+					},
 					// The jobs share one 15-minute wall clock. Unbounded, a single
 					// hung job starves every job after it AND their check-ins, which
 					// then time out as phantom outages.

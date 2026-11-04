@@ -422,6 +422,7 @@ full endpoint table. Requirements:
 ```
 POST https://corvmc.org/api/cron/<name>
 Authorization: Bearer <CRON_SECRET>
+Content-Type: application/json
 ```
 
 **The schedule lives in this repo, on native Cloudflare cron triggers.** The `[triggers]`
@@ -452,11 +453,13 @@ Manual invocation (safe — every job is idempotent and returns a JSON summary):
 
 ```bash
 curl -s -X POST https://corvmc.org/api/cron/cancel-unconfirmed \
-  -H "Authorization: Bearer $CRON_SECRET"
+  -H "Authorization: Bearer $CRON_SECRET" \
+  -H "Content-Type: application/json"
 ```
 
 A `401` means the secret doesn't match; a `500 CRON_SECRET not configured` means the
-Worker secret is missing. If reservations pile up unresolved, reminders stop, or recurring
+Worker secret is missing; a `403 Cross-site POST form submissions are forbidden` means the
+content type is missing, which Kit refuses before the endpoint runs. If reservations pile up unresolved, reminders stop, or recurring
 series stop generating: check **Sentry → Insights → Crons** first (see below), then the
 Worker's cron events in the Cloudflare dashboard (Workers & Pages → corvmc → Settings →
 Triggers shows the schedules; the logs show `[cron]`-prefixed per-job lines) and confirm
