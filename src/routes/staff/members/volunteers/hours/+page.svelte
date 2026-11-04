@@ -135,11 +135,10 @@
 
 <!-- A view on Members → Volunteers (#2075), so it wears that page's frame. -->
 <PageHeader title={m.staff_members()}>
-	<LogHoursForMemberAction />
+	<MemberViews active="volunteers" />
 </PageHeader>
 
 <PageContent>
-	<MemberViews active="volunteers" />
 	<VolunteerStatusTabs
 		bind:view={filters.status}
 		onchange={() => {
@@ -192,6 +191,10 @@
 				filters.page = 1;
 			}}
 		/>
+
+		{#snippet actions()}
+			<LogHoursForMemberAction />
+		{/snippet}
 	</FilterBar>
 
 	{#if selected.size > 0}

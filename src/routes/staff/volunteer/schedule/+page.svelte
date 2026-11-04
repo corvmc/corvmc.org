@@ -166,17 +166,10 @@
 </script>
 
 <PageHeader title={m.staff_schedule()} subtitle={m.staff_planning()}>
-	<!-- Not a sidebar row: roles are set up now and then, not worked daily (#1791). -->
-	<Button variant="ghost" size="sm" href={resolve('/staff/volunteer/roles')}
-		>{m.staff_roles()}</Button
-	>
-	<LogHoursForMemberAction />
-	<NewWorkOrderAction onsuccess={refresh} />
+	<ScheduleViews active="orders" />
 </PageHeader>
 
 <PageContent>
-	<ScheduleViews active="orders" />
-
 	<FilterBar
 		activeCount={(projectFilter ? 1 : 0) +
 			(byContractor
@@ -268,6 +261,13 @@
 				<RoleOptions />
 			</Select>
 		{/if}
+
+		{#snippet actions()}
+			<!-- Not a sidebar row: roles are set up now and then, not worked daily (#1791). -->
+			<Button variant="ghost" href={resolve('/staff/volunteer/roles')}>{m.staff_roles()}</Button>
+			<LogHoursForMemberAction />
+			<NewWorkOrderAction onsuccess={refresh} />
+		{/snippet}
 	</FilterBar>
 
 	{#if schedule.current}

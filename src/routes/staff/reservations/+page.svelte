@@ -165,23 +165,6 @@
 </script>
 
 <PageHeader title={m.staff_reservations_title()}>
-	<div class="flex gap-2">
-		<Button
-			variant={unresolvedCount > 0 ? 'warning' : 'ghost'}
-			size="sm"
-			onclick={() => (resolveOpen = true)}
-		>
-			{m.staff_resolve()}
-			{#if unresolvedCount > 0}
-				<Badge>{unresolvedCount}</Badge>
-			{/if}
-		</Button>
-		<RecurringSeriesModal />
-		{#if canManageClosures}<CreateClosureAction data-testid="new-closure" />{/if}
-		<CreateReservation />
-	</div>
-</PageHeader>
-<PageContent>
 	{#await counts}
 		<TabBar
 			tabs={[
@@ -207,7 +190,23 @@
 			}}
 		/>
 	{/await}
-
+	<div class="flex gap-2">
+		<Button
+			variant={unresolvedCount > 0 ? 'warning' : 'ghost'}
+			size="sm"
+			onclick={() => (resolveOpen = true)}
+		>
+			{m.staff_resolve()}
+			{#if unresolvedCount > 0}
+				<Badge>{unresolvedCount}</Badge>
+			{/if}
+		</Button>
+		<RecurringSeriesModal />
+		{#if canManageClosures}<CreateClosureAction data-testid="new-closure" />{/if}
+		<CreateReservation />
+	</div>
+</PageHeader>
+<PageContent>
 	<FilterBar activeCount={activeFilterCount} menuCount={menuFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput
