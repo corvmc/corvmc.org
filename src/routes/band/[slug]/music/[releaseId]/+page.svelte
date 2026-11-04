@@ -390,7 +390,7 @@
 							inputs={{}}
 							>{#snippet a({ children })}<a
 									class="link"
-									href={resolve(`/band/${band.slug}/music/payouts`)}>{@render children?.()}</a
+									href={resolve(`band/${band.slug}/music/payouts`)}>{@render children?.()}</a
 								>{/snippet}</ParaglideMessage
 						>
 					</Alert>
@@ -550,7 +550,7 @@
 						submitLabel={m.band_slug_music_release_id_delete()}
 						submitVariant="error"
 						successToast={m.band_slug_music_release_id_release_deleted()}
-						onsuccess={() => goto(resolve(`/band/${band.slug}/music`))}
+						onsuccess={() => goto(resolve(`band/${band.slug}/music`))}
 					>
 						{#snippet form()}
 							{@const fields = deleteReleaseForm.for(releaseId).fields}

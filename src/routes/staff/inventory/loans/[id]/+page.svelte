@@ -86,8 +86,7 @@
 
 				<Fact label={m.staff_equipment()}>
 					{#if loan.equipmentName}
-						<a href={resolve(`/staff/inventory/${loan.itemId}`)} class="link"
-							>{loan.equipmentName}</a
+						<a href={resolve(`staff/inventory/${loan.itemId}`)} class="link">{loan.equipmentName}</a
 						>
 						{#if loan.categoryName}
 							<Badge variant="outline" size="xs" class="ml-1">{loan.categoryName}</Badge>

@@ -132,7 +132,7 @@
 		resetForm();
 		const r = result as { reservationId?: string };
 		await invalidateAll();
-		if (r?.reservationId) goto(resolve(`/staff/reservations/${r.reservationId}`));
+		if (r?.reservationId) goto(resolve(`staff/reservations/${r.reservationId}`));
 	}}
 >
 	{#snippet form()}

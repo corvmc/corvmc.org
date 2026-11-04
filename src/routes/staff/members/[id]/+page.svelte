@@ -17,7 +17,7 @@
 	// form turned every tab click into an "unsaved changes" dialog. `tab` is read
 	// back out of the URL only on mount, so a reload or a copied link lands right.
 	$effect(() => {
-		const href = withQuery(resolve(`/staff/members/${id}`), tab === 'overview' ? '' : `tab=${tab}`);
+		const href = withQuery(resolve(`staff/members/${id}`), tab === 'overview' ? '' : `tab=${tab}`);
 		if (location.pathname + location.search !== href) {
 			replaceState(href, {});
 		}

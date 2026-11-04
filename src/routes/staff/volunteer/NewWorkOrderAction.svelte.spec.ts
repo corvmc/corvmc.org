@@ -53,7 +53,9 @@ vi.mock('$app/navigation', () => ({
 const NewWorkOrderAction = (await import('./NewWorkOrderActionHarness.svelte')).default;
 
 const field = (name: string) =>
-	document.querySelector(`[role="dialog"] [name="${name}"]`) as HTMLInputElement | null;
+	document.querySelector(
+		`[role="dialog"] :is([name="${name}"], [name^="${name}/"])`
+	) as HTMLInputElement | null;
 
 describe('NewWorkOrderAction', () => {
 	it('opens timed, with a live role and its default capacity', async () => {

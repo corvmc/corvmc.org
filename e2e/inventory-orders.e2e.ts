@@ -36,10 +36,14 @@ test.describe('purchase orders', () => {
 		await expect(row).toContainText(String(SEED_ORDER_ITEM_REORDER_QUANTITY));
 
 		await row.locator('input[type="checkbox"]').check();
-		await page.locator('input[name$="expectedAt"]').fill('2099-01-01');
-		await page.locator('input[name$="supplierName"]').fill(SEED_ORDER_SUPPLIER);
+		await page.locator('input:is([name$="expectedAt"], [name*="expectedAt/"])').fill('2099-01-01');
+		await page
+			.locator('input:is([name$="supplierName"], [name*="supplierName/"])')
+			.fill(SEED_ORDER_SUPPLIER);
 		// The sticky bar's form, by the hidden payload only it carries.
-		const orderForm = page.locator('form', { has: page.locator('input[name="lines"]') });
+		const orderForm = page.locator('form', {
+			has: page.locator('input:is([name="lines"], [name^="lines/"])')
+		});
 		await orderForm.locator('button[type="submit"]').click();
 		await expectSuccessToast(page);
 
@@ -74,14 +78,16 @@ test.describe('purchase orders', () => {
 		await page.locator(`a[href="/staff/inventory/intake?order=${orderId}"]`).click();
 		await page.waitForURL(/\/staff\/inventory\/intake\?order=/, { timeout: 15000 });
 		// Intake in order mode: the arrival is posted against this order.
-		await expect(page.locator('input[name="purchaseOrderId"]')).toHaveValue(orderId);
+		await expect(
+			page.locator('input:is([name="purchaseOrderId"], [name^="purchaseOrderId/"])')
+		).toHaveValue(orderId);
 
 		const qty = page.locator('input#lineQty_0');
 		await expect(qty).toHaveValue(String(SEED_ORDER_ITEM_REORDER_QUANTITY));
 		await qty.fill('5');
 
 		await page
-			.locator('form', { has: page.locator('input[name="lines"]') })
+			.locator('form', { has: page.locator('input:is([name="lines"], [name^="lines/"])') })
 			.locator('button[type="submit"]')
 			.click();
 		await expectSuccessToast(page);

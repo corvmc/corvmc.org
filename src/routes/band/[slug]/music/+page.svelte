@@ -34,7 +34,7 @@
 	{:else}
 		<div class="space-y-3">
 			{#each releases as release (release.id)}
-				<ReleaseCard {release} href={resolve(`/band/${band.slug}/music/${release.id}`)} />
+				<ReleaseCard {release} href={resolve(`band/${band.slug}/music/${release.id}`)} />
 			{/each}
 		</div>
 	{/if}

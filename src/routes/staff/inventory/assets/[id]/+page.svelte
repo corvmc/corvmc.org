@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { workOrderHref } from '#lib/utils/work-order-href.js';
+	import { workOrderPathname } from '#lib/utils/work-order-href.js';
 	import { page } from '$app/state';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {
@@ -51,7 +51,7 @@
 		return {
 			...row,
 			href: withHash(
-				resolve(workOrderHref({ id: item.job.workOrderId, projectId: item.job.projectId })),
+				resolve(workOrderPathname({ id: item.job.workOrderId, projectId: item.job.projectId })),
 				`engagement-${item.job.id}`
 			),
 			context: {

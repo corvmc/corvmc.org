@@ -48,7 +48,7 @@
 									>{/snippet}</ParaglideMessage
 							>
 						</Alert>
-						<Button variant="primary" class="w-full" href={resolve('/login')}
+						<Button variant="primary" class="w-full" href={resolve('login')}
 							>{m.public_sign()}</Button
 						>
 					{:else if outcome?.status === 'taken'}

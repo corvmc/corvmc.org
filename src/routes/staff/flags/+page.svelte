@@ -83,7 +83,7 @@
 				subjectLabel={m.staff_flags_subject_label()}
 				rows={flags.map((f) => ({
 					id: f.id,
-					href: resolve(`/staff/flags/${f.id}`),
+					href: resolve(`staff/flags/${f.id}`),
 					status: f.status,
 					kind: entityLabels[f.target.type].one,
 					subject: f.ref,

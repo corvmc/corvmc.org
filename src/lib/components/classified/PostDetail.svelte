@@ -38,7 +38,7 @@
 
 	function tagHref(t: { kind: ClassifiedTagKind; value: string }) {
 		const q = new URLSearchParams({ tagKind: t.kind, tagValue: t.value });
-		return withQuery(resolve('/member/classifieds'), q);
+		return withQuery(resolve('member/classifieds'), q);
 	}
 </script>
 

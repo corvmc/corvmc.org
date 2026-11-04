@@ -28,7 +28,7 @@
 	let { rows, panel }: { rows: Row[]; panel: 'member' | 'staff' } = $props();
 
 	function href(id: string) {
-		return panel === 'staff' ? resolve(`/staff/ballots/${id}`) : resolve(`/member/ballots/${id}`);
+		return panel === 'staff' ? resolve(`staff/ballots/${id}`) : resolve(`member/ballots/${id}`);
 	}
 
 	/** What the list owes this member, if anything. */

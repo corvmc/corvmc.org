@@ -78,17 +78,17 @@ export interface MemberNavInput {
 /** The rows above the "My Bands" group. */
 export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 	const items: MemberNavItem[] = [
-		{ key: 'dashboard', label: 'Dashboard', href: resolve('/member'), exact: true },
-		{ key: 'reservations', label: 'Reservations', href: resolve('/member/reservations') },
+		{ key: 'dashboard', label: 'Dashboard', href: resolve('member'), exact: true },
+		{ key: 'reservations', label: 'Reservations', href: resolve('member/reservations') },
 		{
 			key: 'events',
 			label: 'Events',
-			href: resolve('/member/events')
+			href: resolve('member/events')
 		},
-		{ key: 'directory', label: 'Directory', href: resolve('/member/directory') }
+		{ key: 'directory', label: 'Directory', href: resolve('member/directory') }
 	];
 	if (surfaces.classifieds) {
-		items.push({ key: 'classifieds', label: 'Classifieds', href: resolve('/member/classifieds') });
+		items.push({ key: 'classifieds', label: 'Classifieds', href: resolve('member/classifieds') });
 	}
 
 	// Between Directory and Volunteering: it belongs with the things you do in
@@ -97,9 +97,9 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 		items.push({
 			key: 'equipment',
 			label: 'Equipment',
-			href: resolve('/member/equipment'),
+			href: resolve('member/equipment'),
 			children: [
-				{ key: 'equipment-loans', label: 'My Loans', href: resolve('/member/equipment/loans') }
+				{ key: 'equipment-loans', label: 'My Loans', href: resolve('member/equipment/loans') }
 			]
 		});
 	}
@@ -107,7 +107,7 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 	// Was gated on a `volunteering` flag. The flag is retired and the feature was
 	// on in production, so the row is simply always here. Committee applications
 	// moved to Groups (#2113): a committee is a group, not volunteering.
-	items.push({ key: 'volunteer', label: 'Volunteering', href: resolve('/member/volunteer') });
+	items.push({ key: 'volunteer', label: 'Volunteering', href: resolve('member/volunteer') });
 
 	return items;
 }
@@ -126,11 +126,11 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 // across every caller.
 export function memberNavFooter(_input: MemberNavInput): MemberNavItem[] {
 	return [
-		{ key: 'suggestions', label: 'Suggestions', href: resolve('/member/suggestions') },
+		{ key: 'suggestions', label: 'Suggestions', href: resolve('member/suggestions') },
 		...(surfaces.ballots
-			? [{ key: 'ballots' as const, label: 'Ballots', href: resolve('/member/ballots') }]
+			? [{ key: 'ballots' as const, label: 'Ballots', href: resolve('member/ballots') }]
 			: []),
-		{ key: 'help', label: 'Help', href: resolve('/member/help') }
+		{ key: 'help', label: 'Help', href: resolve('member/help') }
 	];
 }
 
@@ -154,7 +154,7 @@ export function memberNavGroupRows(): MemberNavItem[] {
 		{
 			key: 'bands-browse',
 			label: `Browse ${many(m.term_band)}`,
-			href: resolve('/member/directory/bands')
+			href: resolve('member/directory/bands')
 		}
 	];
 }

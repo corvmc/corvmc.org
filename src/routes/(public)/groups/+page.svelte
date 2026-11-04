@@ -69,7 +69,7 @@
 				<Card>
 					<CardBody>
 						<div class="flex items-start justify-between gap-3">
-							<a class="link text-lg font-bold" href={resolve(`/groups/${g.slug}`)}>{g.name}</a>
+							<a class="link text-lg font-bold" href={resolve(`groups/${g.slug}`)}>{g.name}</a>
 							<Badge variant="ghost">{kindLabel(g.kind)}</Badge>
 						</div>
 						{#if g.bio}

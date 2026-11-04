@@ -45,7 +45,9 @@ const closure = {
 };
 
 const named = (name: string) =>
-	document.querySelector(`[role="dialog"] [name="${name}"]`) as HTMLInputElement | null;
+	document.querySelector(
+		`[role="dialog"] :is([name="${name}"], [name^="${name}/"])`
+	) as HTMLInputElement | null;
 
 const open = async () => {
 	const { locator } = await render(UpdateClosureAction, { closure });

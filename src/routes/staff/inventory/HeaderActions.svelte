@@ -17,7 +17,7 @@
 <!-- Not Add Item: this records an arrival against items that already exist —
      source, cost, quantities, each unit's tag — as one acquisition (#1838). -->
 {#if hasCapability(caps, 'inventory.manageStock')}
-	<Button variant="ghost" size="sm" href={resolve('/staff/inventory/intake')}
+	<Button variant="ghost" size="sm" href={resolve('staff/inventory/intake')}
 		>{m.staff_receive_stock()}</Button
 	>
 {/if}

@@ -12,7 +12,7 @@
 		TURNSTILE_RESPONSE_FIELD,
 		turnstileFailureMessage
 	} from '#lib/turnstile.js';
-	import type { RemoteFormIssue } from '@sveltejs/kit';
+	import type { RemoteFormIssue } from '$app/server';
 
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';

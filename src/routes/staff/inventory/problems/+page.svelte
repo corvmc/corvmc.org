@@ -77,7 +77,7 @@
 				subjectLabel={m.staff_inventory_problems_subject_label()}
 				rows={reports.map((r) => ({
 					id: r.id,
-					href: resolve(`/staff/inventory/problems/${r.id}`),
+					href: resolve(`staff/inventory/problems/${r.id}`),
 					// Sent to a work order is still `pending` in the table; say what it means.
 					status: r.stage === 'in_work_order' ? 'in_progress' : r.status,
 					kind: r.blocksUse ? 'Out of use' : r.asset ? entityLabels.asset.one : 'Building',

@@ -85,7 +85,7 @@
 		remote={deleteBandForm}
 		onsuccess={() => {
 			toast.success(m.band_slug_settings_toast());
-			goto(resolve('/member/bands'));
+			goto(resolve('member/bands'));
 		}}
 	>
 		<div class="space-y-4">

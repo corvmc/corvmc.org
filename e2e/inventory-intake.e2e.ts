@@ -35,7 +35,9 @@ test.describe('inventory intake', () => {
 		await page.waitForURL(/\/staff\/inventory\/intake$/, { timeout: 15000 });
 		// A walk-in arrival, not one posted against an order.
 		await expect(page.locator('input#lineQty_0')).toBeVisible();
-		await expect(page.locator('input[name="purchaseOrderId"]')).toHaveCount(0);
+		await expect(
+			page.locator('input:is([name="purchaseOrderId"], [name^="purchaseOrderId/"])')
+		).toHaveCount(0);
 
 		// Line 1: the serialized item, two units, one tagged and one not — the
 		// mixed case the tagging queue exists for.
@@ -66,7 +68,7 @@ test.describe('inventory intake', () => {
 		await expect(page.locator('input#unitTag_0_1')).toHaveValue('');
 
 		await page
-			.locator('form', { has: page.locator('input[name="lines"]') })
+			.locator('form', { has: page.locator('input:is([name="lines"], [name^="lines/"])') })
 			.locator('button[type="submit"]')
 			.click();
 		await expectSuccessToast(page);
@@ -100,7 +102,7 @@ test.describe('inventory intake', () => {
 		const queue = page.getByRole('dialog');
 		await expect(queue).toBeVisible();
 
-		const rows = queue.locator('input[name$="assetTag"]');
+		const rows = queue.locator('input:is([name$="assetTag"], [name*="assetTag/"])');
 		const before = await rows.count();
 		expect(before).toBeGreaterThan(0);
 
@@ -109,7 +111,7 @@ test.describe('inventory intake', () => {
 		// first, which another test needs untagged.
 		const card = queue.locator('li').filter({ hasText: INTAKE_SERIAL });
 
-		await card.locator('input[name$="assetTag"]').fill('E2E-TAGGED-1');
+		await card.locator('input:is([name$="assetTag"], [name*="assetTag/"])').fill('E2E-TAGGED-1');
 		await card.locator('button[type="submit"]').click();
 		await expectSuccessToast(page);
 

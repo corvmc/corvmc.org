@@ -50,12 +50,12 @@
 
 	/** View state lives in the URL, written with `goto`: `replaceState()` would not update `page.url`. */
 	function setParams(changes: Record<string, string | null>, push = false) {
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		for (const [k, v] of Object.entries(changes)) {
 			if (v === null) url.searchParams.delete(k);
 			else url.searchParams.set(k, v);
 		}
-		void goto(url, { replaceState: !push, noScroll: true, keepFocus: true });
+		void goto(url, { replace: !push, reset: false });
 	}
 
 	const openTask = (id: string) => setParams({ task: id }, true);
@@ -96,11 +96,11 @@
 	menuLabel={m.staff_projects_id_menu_label()}
 >
 	{#if data.showId}
-		<Button variant="default" href={resolve(`/staff/events/${data.showId}/production`)}>
+		<Button variant="default" href={resolve(`staff/events/${data.showId}/production`)}>
 			{m.staff_production()}
 		</Button>
 	{/if}
-	<Button variant="default" href={resolve(`/staff/projects/${project.id}/budget`)}
+	<Button variant="default" href={resolve(`staff/projects/${project.id}/budget`)}
 		>{m.staff_budget()}</Button
 	>
 	{#if dutyListOptions.length > 0}
@@ -271,7 +271,7 @@
 			<DefinitionList>
 				{#if origin.suggestion}
 					<Fact label={m.staff_suggested()}>
-						<a class="link" href={resolve(`/staff/suggestions/${origin.suggestion.id}`)}>
+						<a class="link" href={resolve(`staff/suggestions/${origin.suggestion.id}`)}>
 							{origin.suggestion.title}
 						</a>
 					</Fact>
@@ -280,7 +280,7 @@
 					<Fact label={m.staff_projects_id_authorised_by()}>
 						<BallotLine
 							ballot={origin.ballot}
-							href={surfaces.ballots ? resolve(`/staff/ballots/${origin.ballot.id}`) : null}
+							href={surfaces.ballots ? resolve(`staff/ballots/${origin.ballot.id}`) : null}
 						/>
 					</Fact>
 				{/if}
@@ -288,7 +288,7 @@
 					<Fact label={m.staff_projects_id_put_ballot()}>
 						<BallotLine
 							ballot={b}
-							href={surfaces.ballots ? resolve(`/staff/ballots/${b.id}`) : null}
+							href={surfaces.ballots ? resolve(`staff/ballots/${b.id}`) : null}
 						/>
 					</Fact>
 				{/each}

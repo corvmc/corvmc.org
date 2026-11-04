@@ -30,7 +30,7 @@
 		<Form
 			remote={applyToTeach}
 			successToast={m.member_application_sent()}
-			onsuccess={() => goto(resolve('/member/profile'))}
+			onsuccess={() => goto(resolve('member/profile'))}
 		>
 			<FormField field={fields.headline} label={m.member_what_do_teach()} required />
 			<FormField field={fields.blurb} label={m.member_about_teaching()} type="textarea" required />

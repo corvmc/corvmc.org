@@ -155,7 +155,7 @@
 			submitLabel={m.staff_delete()}
 			submitVariant="error"
 			successToast={m.staff_deleted()}
-			onsuccess={() => goto(resolve('/staff/renewals'))}
+			onsuccess={() => goto(resolve('staff/renewals'))}
 		>
 			{#snippet form()}
 				<input {...deleteRenewal.for(r.id).fields.id.as('hidden', r.id)} />

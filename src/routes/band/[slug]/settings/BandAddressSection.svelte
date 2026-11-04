@@ -87,7 +87,7 @@
 			// page is still keyed on the old slug, so re-running them here would
 			// bounce through the old-address redirect. Changing page.params.slug
 			// re-keys them instead.
-			goto(resolve(`/band/${result.slug}/settings`));
+			goto(resolve(`band/${result.slug}/settings`));
 		}}
 	>
 		<div class="space-y-4">

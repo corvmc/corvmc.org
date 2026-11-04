@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import type { RemoteFormFieldValue, RemoteFormField } from '@sveltejs/kit';
+	import type { RemoteFormFieldValue, RemoteFormField } from '$app/server';
 	import FormField from './FormField.svelte';
 
 	let {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { RemoteFormField } from '@sveltejs/kit';
+	import type { RemoteFormField } from '$app/server';
 	import { m } from '#lib/paraglide/messages.js';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	/**
@@ -22,7 +22,7 @@
 	 * keeps the draft handling, the `mod+enter` shortcut and the
 	 * disabled-until-non-empty rule in one place.
 	 */
-	import type { RemoteForm } from '@sveltejs/kit';
+	import type { RemoteForm } from '$app/server';
 	import { IconNote, IconSend } from '@tabler/icons-svelte';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';

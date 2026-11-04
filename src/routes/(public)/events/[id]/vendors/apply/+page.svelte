@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { Turnstile } from 'svelte-turnstile';
-	import type { RemoteFormIssue } from '@sveltejs/kit';
+	import type { RemoteFormIssue } from '$app/server';
 	import { MARKET_MAX_TABLES_REQUESTED, pageTitle } from '#lib/config.js';
 	import {
 		TURNSTILE_SITE_KEY,
@@ -46,7 +46,7 @@
 		</Alert>
 	{:else if !market.accepting}
 		<Alert type="info">{m.public_events_id_vendors_apply_applications_market_closed()}</Alert>
-		<Button href={resolve(`/events/${market.eventId}`)} variant="ghost" class="mt-4">
+		<Button href={resolve(`events/${market.eventId}`)} variant="ghost" class="mt-4">
 			{m.public_events_id_vendors_apply_back_event()}
 		</Button>
 	{:else}

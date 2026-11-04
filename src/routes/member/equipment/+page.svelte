@@ -226,7 +226,7 @@
 		onsuccess={() => {
 			toast.success(m.member_equipment_toast());
 			showRequestModal = false;
-			goto(resolve('/member/equipment/loans'));
+			goto(resolve('member/equipment/loans'));
 		}}
 	>
 		{#if !isFreeForm}

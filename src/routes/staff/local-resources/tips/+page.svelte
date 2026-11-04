@@ -33,7 +33,7 @@
 				<th class="whitespace-nowrap">{m.staff_sent()}</th>
 			{/snippet}
 			{#each data.tips as tip (tip.id)}
-				{@const href = resolve(`/staff/local-resources/${tip.id}`)}
+				{@const href = resolve(`staff/local-resources/${tip.id}`)}
 				<tr class="hover cursor-pointer" use:rowLink={href}>
 					<td class="cell-primary"><a class="font-medium link-hover" {href}>{tip.name}</a></td>
 					<td class="col-support whitespace-nowrap">{tip.categoryName}</td>

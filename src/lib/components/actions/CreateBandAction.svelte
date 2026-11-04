@@ -47,7 +47,7 @@
 		(async (result) => {
 			const r = result as { bandId?: string };
 			await invalidateAll();
-			if (r?.bandId) goto(resolve(`/staff/groups/${r.bandId}`));
+			if (r?.bandId) goto(resolve(`staff/groups/${r.bandId}`));
 		})}
 	{...rest}
 >

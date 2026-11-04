@@ -58,7 +58,9 @@ vi.mock('#lib/remote/settings.remote.js', () => ({
 		Promise.resolve({ street: '123 Main St', city: 'Corvallis', state: 'OR', zip: '97333' })
 }));
 
-vi.mock('$app/paths', () => ({ resolve: (p: string) => p }));
+vi.mock('$app/paths', () => ({
+	resolve: (p: string) => (p.startsWith('/') ? p : `/${p}`)
+}));
 vi.mock('svelte-turnstile', () => ({ Turnstile: () => {} }));
 
 // Hoisted: an in-test `await import()` pays the module-graph cost inside the

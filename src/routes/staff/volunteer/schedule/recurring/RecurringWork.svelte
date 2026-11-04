@@ -27,7 +27,7 @@
 	const assetField = createRecurringWork.fields.assetId;
 	let asset = $state<{ id: string; name: string; detail: string | null } | null>(null);
 	const defaultFirstDue = addIsoDays(clubToday(), 7);
-	const url = urlState(resolve('/staff/volunteer/schedule/recurring'), { id: text() });
+	const url = urlState(resolve('staff/volunteer/schedule/recurring'), { id: text() });
 
 	const data = $derived(await getRecurringWorkPage());
 	const roleOptions = $derived(data.roles.map((r) => ({ value: r.id, label: r.name })));

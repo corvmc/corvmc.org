@@ -212,7 +212,7 @@
 		</Fact>
 		<Fact label={msg.groups_staff_group_detail_public_page()}>
 			{#if group.visibility === 'public'}
-				<a class="link link-primary" href={resolve(`/groups/${group.slug}`)}
+				<a class="link link-primary" href={resolve(`groups/${group.slug}`)}
 					>{msg.groups_staff_group_detail_groups({ slug: group.slug })}</a
 				>
 			{:else}

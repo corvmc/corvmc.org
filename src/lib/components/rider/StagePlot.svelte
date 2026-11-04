@@ -4,7 +4,7 @@
 	import { Field } from '#lib/components/ui/Form/index.js';
 	import { riderElementKindLabels } from '#lib/config.js';
 	import { safeFieldPrefix } from './field-names';
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 
 	/**
 	 * Where everything stands, drawn on the stage.

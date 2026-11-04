@@ -55,7 +55,7 @@
 					<p class="text-subtle">{m.public_radio_now_playing()}</p>
 					<p class="truncate text-xl font-medium">{current.trackTitle}</p>
 					<p class="truncate">
-						<a class="link" href={resolve(`/directory/bands/${current.bandSlug}`)}
+						<a class="link" href={resolve(`directory/bands/${current.bandSlug}`)}
 							>{current.bandName}</a
 						>
 						<span class="text-muted">· {current.releaseTitle}</span>
@@ -96,7 +96,7 @@
 							<span class="min-w-0 flex-1 truncate">
 								{entry.trackTitle}
 								<span class="text-muted">— </span>
-								<a class="link" href={resolve(`/directory/bands/${entry.bandSlug}`)}
+								<a class="link" href={resolve(`directory/bands/${entry.bandSlug}`)}
 									>{entry.bandName}</a
 								>
 							</span>
@@ -113,7 +113,7 @@
 				<CardTitle>{m.public_radio_rotation()}</CardTitle>
 				<p class="flex flex-wrap gap-x-3 gap-y-1">
 					{#each bands as b (b.slug)}
-						<a class="link" href={resolve(`/directory/bands/${b.slug}`)}>{b.name}</a>
+						<a class="link" href={resolve(`directory/bands/${b.slug}`)}>{b.name}</a>
 					{/each}
 				</p>
 			</CardBody>

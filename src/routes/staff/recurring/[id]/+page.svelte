@@ -33,7 +33,7 @@
 	subtitle={m.staff_recurring_series()}
 	parent={{
 		label: m.staff_recurring_series(),
-		href: withQuery(resolve('/staff/reservations'), 'recurring')
+		href: withQuery(resolve('staff/reservations'), 'recurring')
 	}}
 >
 	{#if isActive}

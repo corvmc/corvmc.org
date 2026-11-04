@@ -69,7 +69,7 @@
 						{m.member_volunteer_feedback_signup_id_got_thanks_helping_us_ru()}
 					{/if}
 				</p>
-				<a href={resolve('/member/volunteer')} class="link text-sm"
+				<a href={resolve('member/volunteer')} class="link text-sm"
 					>{m.member_volunteer_feedback_signup_id_action_label()}</a
 				>
 			</InfoCard>

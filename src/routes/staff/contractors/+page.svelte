@@ -35,7 +35,7 @@
 
 <PageHeader title={m.staff_contractors_contractors()} subtitle={m.staff_space()}>
 	<Button
-		href={withQuery(resolve('/staff/volunteer/schedule'), 'kind=contractor')}
+		href={withQuery(resolve('staff/volunteer/schedule'), 'kind=contractor')}
 		variant="ghost"
 		size="sm">{m.staff_jobs()}</Button
 	>
@@ -76,10 +76,8 @@
 				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
 					>{/snippet}{#snippet a({ children })}<a
 						class="link"
-						href={withQuery(
-							resolve('/staff/volunteer/schedule'),
-							'kind=contractor&contractor=late'
-						)}>{@render children?.()}</a
+						href={withQuery(resolve('staff/volunteer/schedule'), 'kind=contractor&contractor=late')}
+						>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
 			>
 		</Alert>
@@ -90,7 +88,7 @@
 			<span class="font-medium">{m.staff_insurance()}</span>
 			{#each data.lapsing as c (c.id)}
 				<div>
-					<a class="link font-medium" href={resolve(`/staff/contractors/${c.id}`)}>{c.name}</a>
+					<a class="link font-medium" href={resolve(`staff/contractors/${c.id}`)}>{c.name}</a>
 					{#if c.insuranceExpiresAt}
 						— {c.insuranceExpiresAt < new Date()
 							? m.staff_contractors_expired_2()
@@ -118,7 +116,7 @@
 			{#each data.contractors as c (c.id)}
 				<tr class="hover">
 					<td class="cell-primary">
-						<a class="link font-medium" href={resolve(`/staff/contractors/${c.id}`)}>{c.name}</a>
+						<a class="link font-medium" href={resolve(`staff/contractors/${c.id}`)}>{c.name}</a>
 						{#if c.contactName}
 							<div class="text-subtle">{c.contactName}</div>
 						{/if}

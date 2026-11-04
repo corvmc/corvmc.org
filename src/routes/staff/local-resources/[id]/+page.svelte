@@ -54,7 +54,7 @@
 		modalTitle={m.staff_remove_2({ name: r.name })}
 		submitLabel={m.staff_remove()}
 		successToast={m.staff_local_resources_id_listing_removed()}
-		onsuccess={() => void goto(resolve('/staff/local-resources'))}
+		onsuccess={() => void goto(resolve('staff/local-resources'))}
 	>
 		{#snippet form()}
 			<input {...removeFields.id.as('hidden', r.id)} />

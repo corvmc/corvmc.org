@@ -35,7 +35,7 @@
 	<Form
 		remote={createArticle}
 		guard
-		onsuccess={(result) => goto(resolve(`/staff/help/${result?.id}`))}
+		onsuccess={(result) => goto(resolve(`staff/help/${result?.id}`))}
 	>
 		<div class="space-y-4">
 			<div class="grid gap-4 sm:grid-cols-2">

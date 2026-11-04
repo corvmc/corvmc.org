@@ -15,7 +15,7 @@
 	<ul class="flex flex-col gap-2">
 		{#each reports as report (report.id)}
 			<li class="flex flex-wrap items-center gap-2 text-sm">
-				<a class="link" href={resolve(`/staff/inventory/problems/${report.id}`)}>
+				<a class="link" href={resolve(`staff/inventory/problems/${report.id}`)}>
 					{report.note.length > 80 ? `${report.note.slice(0, 80)}…` : report.note}
 				</a>
 				{#if report.blocksUse}

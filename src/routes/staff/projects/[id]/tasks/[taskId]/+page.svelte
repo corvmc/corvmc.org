@@ -12,7 +12,7 @@
 	const view = $derived(
 		await getProjectTaskPage({ projectId: page.params.id!, workOrderId: page.params.taskId! })
 	);
-	const projectHref = $derived(resolve(`/staff/projects/${view.project.id}`));
+	const projectHref = $derived(resolve(`staff/projects/${view.project.id}`));
 </script>
 
 <WorkOrderView

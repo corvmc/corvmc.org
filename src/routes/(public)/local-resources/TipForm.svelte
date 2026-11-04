@@ -12,7 +12,7 @@
 		TURNSTILE_RESPONSE_FIELD,
 		turnstileFailureMessage
 	} from '#lib/turnstile.js';
-	import type { RemoteFormIssue } from '@sveltejs/kit';
+	import type { RemoteFormIssue } from '$app/server';
 
 	/**
 	 * The structured tip (#1498): it becomes a pending listing staff publish or

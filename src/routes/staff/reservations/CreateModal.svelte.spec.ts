@@ -65,7 +65,9 @@ describe('CreateModal', () => {
 
 		const dialog = page.getByRole('dialog');
 		const submit = dialog.getByCss('button[type="submit"]');
-		const override = dialog.getByCss('input[type="checkbox"][name$="overrideConflicts"]');
+		const override = dialog.getByCss(
+			'input[type="checkbox"]:is([name$="overrideConflicts"], [name*="overrideConflicts/"])'
+		);
 		await expect.element(override).toBeVisible();
 		await expect.element(submit).toBeDisabled();
 

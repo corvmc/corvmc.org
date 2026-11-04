@@ -50,12 +50,12 @@ test('switching tabs writes the URL and survives a reload', async ({ page }) => 
 test('search is mirrored into ?q= and survives a reload', async ({ page }) => {
 	await page.goto('/directory');
 
-	await page.locator('input[name="q"]').fill('sprockets');
+	await page.locator('input:is([name="q"], [name^="q/"])').fill('sprockets');
 	// The mirror is debounced at 300ms so a typed word costs one history rewrite.
 	await expect(page).toHaveURL(/[?&]q=sprockets/);
 
 	await page.reload();
-	await expect(page.locator('input[name="q"]')).toHaveValue('sprockets');
+	await expect(page.locator('input:is([name="q"], [name^="q/"])')).toHaveValue('sprockets');
 });
 
 /**
@@ -72,11 +72,11 @@ test('a search typed before hydration still reaches ?q=', async ({ page }) => {
 	});
 
 	await page.goto('/directory');
-	await page.locator('input[name="q"]').fill('sprockets');
+	await page.locator('input:is([name="q"], [name^="q/"])').fill('sprockets');
 	await expect(page).toHaveURL(/[?&]q=sprockets/);
 
 	expect(held, 'the entry chunk was never intercepted, so nothing was delayed').toBeGreaterThan(0);
-	await expect(page.locator('input[name="q"]')).toHaveValue('sprockets');
+	await expect(page.locator('input:is([name="q"], [name^="q/"])')).toHaveValue('sprockets');
 });
 
 /**
@@ -94,7 +94,7 @@ test('focus given before hydration survives it', async ({ page }) => {
 	});
 
 	await page.goto('/directory', { waitUntil: 'commit' });
-	const search = page.locator('input[name="q"]');
+	const search = page.locator('input:is([name="q"], [name^="q/"])');
 	await search.focus();
 	await expect(search).not.toHaveAttribute('value');
 	expect(held, 'the entry chunk was never intercepted, so nothing was delayed').toBeGreaterThan(0);
@@ -108,12 +108,12 @@ test('focus given before hydration survives it', async ({ page }) => {
 test('the search survives a tab switch', async ({ page }) => {
 	await page.goto('/directory');
 
-	await page.locator('input[name="q"]').fill('sprockets');
+	await page.locator('input:is([name="q"], [name^="q/"])').fill('sprockets');
 	await expect(page).toHaveURL(/[?&]q=sprockets/);
 
 	await musiciansTab(page).click();
 	await expect(page).toHaveURL(/[?&]tab=musicians/);
-	await expect(page.locator('input[name="q"]')).toHaveValue('sprockets');
+	await expect(page.locator('input:is([name="q"], [name^="q/"])')).toHaveValue('sprockets');
 });
 
 test('back after a tab switch returns to bands and stays there', async ({ page }) => {

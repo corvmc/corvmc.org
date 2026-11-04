@@ -59,7 +59,7 @@
 			<ParaglideMessage
 				message={m.staff_music_music_storefront_switched_off_so}
 				inputs={{ staff_music_settings_features: m.staff_music_settings_features() }}
-				>{#snippet a({ children })}<a class="link" href={resolve('/staff/settings')}
+				>{#snippet a({ children })}<a class="link" href={resolve('staff/settings')}
 						>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
 			>
@@ -108,7 +108,7 @@
 					<ParaglideMessage
 						message={m.staff_music_switch_station_when_pool_above}
 						inputs={{ staff_music_settings_features: m.staff_music_settings_features() }}
-						>{#snippet a({ children })}<a class="link" href={resolve('/staff/settings')}
+						>{#snippet a({ children })}<a class="link" href={resolve('staff/settings')}
 								>{@render children?.()}</a
 							>{/snippet}</ParaglideMessage
 					>
@@ -182,7 +182,7 @@
 								>
 							</td>
 							<td>
-								<a class="link" href={resolve('/staff/groups/bands')}>{release.bandName}</a>
+								<a class="link" href={resolve('staff/groups/bands')}>{release.bandName}</a>
 							</td>
 							<td>
 								{#if release.status === 'published'}

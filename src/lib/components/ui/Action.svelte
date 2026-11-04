@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
-	import type { RemoteForm } from '@sveltejs/kit';
+	import type { RemoteForm } from '$app/server';
 	import { toast } from 'svelte-sonner';
 	import Modal from './Modal.svelte';
 	import Button from './Button.svelte';

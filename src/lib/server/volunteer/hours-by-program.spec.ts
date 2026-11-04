@@ -26,7 +26,6 @@ vi.mock('#lib/server/db/index.js', () => ({
 vi.mock('#lib/server/volunteer/volunteer-profile-service.js', () => ({
 	requireActiveVolunteer: vi.fn(async () => undefined)
 }));
-vi.mock('$lib/server/events', () => ({ domainEvents: { emit: vi.fn(async () => undefined) } }));
 vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const { submitHours } = await import('./hour-log-service');

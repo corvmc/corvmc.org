@@ -25,7 +25,7 @@
 	let tab = $state<TabKey>(initialTab);
 
 	const href = $derived(
-		withQuery(resolve(`/staff/members/${id}`), tab === 'overview' ? '' : `tab=${tab}`)
+		withQuery(resolve(`staff/members/${id}`), tab === 'overview' ? '' : `tab=${tab}`)
 	);
 </script>
 

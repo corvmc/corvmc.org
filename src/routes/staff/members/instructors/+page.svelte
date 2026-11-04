@@ -33,7 +33,7 @@
 	type Status = keyof typeof statusLabels;
 	const statuses = Object.keys(statusLabels) as Status[];
 
-	const roster = rosterState(resolve('/staff/members/instructors'), {
+	const roster = rosterState(resolve('staff/members/instructors'), {
 		status: oneOf<Status>(statuses, 'active')
 	});
 	const f = roster.values;
@@ -55,7 +55,7 @@
 		empty={m.staff_members_instructors_empty()}
 		searchPlaceholder={m.staff_members_instructors_search_placeholder()}
 		personLabel={m.staff_members_instructors_person_label()}
-		exportPath={resolve('/staff/members/instructors/export')}
+		exportPath={resolve('staff/members/instructors/export')}
 		emails={() => getStaffInstructorEmails({ q: f.q || undefined, status: f.status })}
 	>
 		{#snippet filters()}

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
-	import type { RemoteForm } from '@sveltejs/kit';
+	import type { RemoteForm } from '$app/server';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
 	import { searchEvents } from '#lib/remote/events.remote.js';

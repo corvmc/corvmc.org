@@ -181,7 +181,7 @@ describe('PublishEventAction', () => {
 
 	/** Action's own footer button. */
 	const submit = () => page.getByRole('dialog').getByCss('button[type="submit"]');
-	const reason = () => page.getByRole('dialog').getByCss('[name="reason"]');
+	const reason = () => page.getByRole('dialog').getByCss(':is([name="reason"], [name^="reason/"])');
 
 	it('asks for a confirmation when nothing is missing', async () => {
 		const dialog = await open([]);

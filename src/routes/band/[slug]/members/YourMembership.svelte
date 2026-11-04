@@ -128,7 +128,7 @@
 						submitLabel={m.band_slug_members_your_membership_leave_band()}
 						confirm={m.band_slug_members_your_membership_confirm({ bandName })}
 						successToast={m.band_slug_members_your_membership_have_left_band()}
-						onsuccess={() => goto(resolve('/member/bands'))}
+						onsuccess={() => goto(resolve('member/bands'))}
 					>
 						{#snippet form()}
 							<input {...leaveFields.bandId.as('hidden', bandId)} />

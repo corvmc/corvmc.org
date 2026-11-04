@@ -133,7 +133,9 @@ test.describe('member sidebar browse rows', () => {
 
 		await page.goto('/member/directory/instructors');
 		await expect(page).toHaveURL(/\/member\/directory\?teaches=collective$/);
-		await expect(page.locator('input[name="teachesAtCollective"]')).toBeChecked();
+		await expect(
+			page.locator('input:is([name="teachesAtCollective"], [name^="teachesAtCollective/"])')
+		).toBeChecked();
 	});
 });
 

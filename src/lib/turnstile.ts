@@ -1,4 +1,4 @@
-import type { RemoteFormIssue } from '@sveltejs/kit';
+import type { RemoteFormIssue } from '$app/server';
 import { env } from '$env/dynamic/public';
 
 // Cloudflare's documented "always passes" test site key. Used when no real key

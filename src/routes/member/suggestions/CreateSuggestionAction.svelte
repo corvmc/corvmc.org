@@ -29,7 +29,7 @@
 	size="sm"
 	onsuccess={(r) => {
 		if (r && typeof r === 'object' && 'id' in r) {
-			void goto(resolve(`/member/suggestions/${r.id as string}`));
+			void goto(resolve(`member/suggestions/${r.id as string}`));
 		}
 	}}
 >

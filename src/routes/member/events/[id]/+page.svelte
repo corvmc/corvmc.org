@@ -173,7 +173,7 @@
 	<div class="edet">
 		<div class="edet__poster">
 			<PosterCard
-				href={resolve(`/member/events/${evt.id}`)}
+				href={resolve(`member/events/${evt.id}`)}
 				title={evt.title}
 				posterUrl={evt.posterUrl}
 				startsAt={evt.startsAt}
@@ -561,7 +561,7 @@
 				{#each data.upcoming as e (e.id)}
 					{@const eTags = parseTags(e.tags)}
 					<PosterCard
-						href={resolve(`/member/events/${e.id}`)}
+						href={resolve(`member/events/${e.id}`)}
 						title={e.title}
 						posterUrl={e.posterUrl}
 						startsAt={e.startsAt}

@@ -41,9 +41,9 @@
 		if (toDate) pairs.push(['to', toDate]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = withQuery(resolve('/staff/reports'), search);
+		const href = withQuery(resolve('staff/reports'), search);
 		if (location.pathname + location.search !== href) {
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 

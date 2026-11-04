@@ -231,7 +231,7 @@
 				submitLabel={m.staff_delete()}
 				submitVariant="error"
 				successToast={m.staff_deleted()}
-				onsuccess={() => goto(resolve('/staff/venues'))}
+				onsuccess={() => goto(resolve('staff/venues'))}
 			>
 				{#snippet form()}
 					<input {...deleteVenue.for(venue.id).fields.id.as('hidden', venue.id)} />

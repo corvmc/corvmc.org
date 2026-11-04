@@ -11,3 +11,13 @@ export function workOrderHref(wo: { id: string; projectId: string | null }): Wor
 		? `/staff/projects/${wo.projectId}/tasks/${wo.id}`
 		: `/staff/volunteer/shifts/${wo.id}`;
 }
+
+type Unslashed<T> = T extends `/${infer P}` ? P : never;
+
+/** `workOrderHref` as a pathname for `resolve()`, which reads a leading `/` as a route ID. */
+export function workOrderPathname(wo: {
+	id: string;
+	projectId: string | null;
+}): Unslashed<WorkOrderPath> {
+	return workOrderHref(wo).slice(1) as Unslashed<WorkOrderPath>;
+}

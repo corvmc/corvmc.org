@@ -1,7 +1,7 @@
 <script lang="ts" generics="T extends FeedItem, R extends ActivityRow">
 	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
-	import type { RemoteQuery } from '@sveltejs/kit';
+	import type { RemoteQuery } from '$app/server';
 	import InfoCard from '../InfoCard.svelte';
 	import Alert from '../Alert.svelte';
 	import { errorMessage } from '#lib/error-message.js';

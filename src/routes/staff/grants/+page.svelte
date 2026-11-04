@@ -23,15 +23,15 @@
 	const { grants, funders } = $derived(await getGrants({ includeClosed }));
 
 	function setClosed(on: boolean) {
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		if (on) url.searchParams.set('closed', '1');
 		else url.searchParams.delete('closed');
-		goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+		goto(url, { replace: true, reset: false });
 	}
 </script>
 
 <PageHeader title={m.staff_grants()} subtitle={m.staff_money()}>
-	<Button href={resolve('/staff/grants/funders')} variant="ghost" size="sm"
+	<Button href={resolve('staff/grants/funders')} variant="ghost" size="sm"
 		>{m.staff_funders()}</Button
 	>
 	{#if funders.length > 0}
@@ -81,14 +81,14 @@
 				<th class="col-support cell-num">{m.staff_amount()}</th>
 			{/snippet}
 			{#each grants as g (g.id)}
-				<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/grants/${g.id}`)}>
+				<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/grants/${g.id}`)}>
 					<td class="w-px">
 						<Badge variant={grantStatusBadge[g.status]} size="sm">
 							{grantStatusLabels[g.status]}
 						</Badge>
 					</td>
 					<td class="cell-primary">
-						<a class="link font-medium" href={resolve(`/staff/grants/${g.id}`)}>{g.funderName}</a>
+						<a class="link font-medium" href={resolve(`staff/grants/${g.id}`)}>{g.funderName}</a>
 						<div class="truncate text-muted">{g.title}</div>
 					</td>
 					<td class="whitespace-nowrap">

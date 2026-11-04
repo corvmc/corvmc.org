@@ -15,19 +15,19 @@
 		{
 			key: 'bands',
 			label: m.staff_groups_group_views_bands(),
-			href: resolve('/staff/groups/bands'),
+			href: resolve('staff/groups/bands'),
 			cap: 'band.read'
 		},
 		{
 			key: 'clubs',
 			label: m.staff_groups_group_views_clubs(),
-			href: resolve('/staff/groups/clubs'),
+			href: resolve('staff/groups/clubs'),
 			cap: 'group.read'
 		},
 		{
 			key: 'committees',
 			label: m.staff_groups_group_views_committees(),
-			href: resolve('/staff/groups/committees'),
+			href: resolve('staff/groups/committees'),
 			cap: 'committee.reviewApplications'
 		}
 	];

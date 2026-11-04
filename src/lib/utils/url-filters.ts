@@ -67,7 +67,7 @@ export type UrlFields<S> = { [K in keyof S]: UrlField<S[K]> };
 /** Seed every field from a query string. */
 export function parseFields<S extends Record<string, unknown>>(
 	fields: UrlFields<S>,
-	params: URLSearchParams
+	params: Pick<URLSearchParams, 'get'>
 ): S {
 	const out = {} as S;
 	for (const key of Object.keys(fields) as (keyof S)[]) {

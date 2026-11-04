@@ -16,7 +16,7 @@
 	documentTitle={m.staff_projects_id_budget_document_title({ name: data.project.name })}
 	parent={{
 		label: data.project.name,
-		href: resolve(`/staff/projects/${data.project.id}`)
+		href: resolve(`staff/projects/${data.project.id}`)
 	}}
 />
 

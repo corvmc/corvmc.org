@@ -118,7 +118,7 @@
 				{@const key = date.toString()}
 				{@const dot = dayDots[key]}
 				<a
-					href="{resolve('/events')}?from={key}"
+					href="{resolve('events')}?from={key}"
 					class="mini-cal__day"
 					class:mini-cal__day--out={date.month !== monthNumber}
 					class:mini-cal__day--today={key === todayStr}

@@ -36,18 +36,18 @@
 	width="2xl"
 	subtitle={asset.categoryName}
 	title={asset.name}
-	parent={{ label: m.member_equipment_assets_id_equipment(), href: resolve('/member/equipment') }}
+	parent={{ label: m.member_equipment_assets_id_equipment(), href: resolve('member/equipment') }}
 >
 	<!-- The whole point of the sticker. This page had `itemId` and used it only
 	     to fetch resources, so a member who scanned a thing they wanted was told
 	     its condition and left with nowhere to go (#1073). The catalog owns the
 	     request form; `?request=` opens it on the right item. -->
 	{#if asset.isAvailable}
-		<Button href={resolve(`/member/equipment?request=${asset.itemId}`)} variant="primary" size="sm">
+		<Button href={resolve(`member/equipment?request=${asset.itemId}`)} variant="primary" size="sm">
 			{m.member_equipment_assets_id_ask_borrow()}
 		</Button>
 	{:else}
-		<Button href={resolve('/member/equipment')} variant="default" size="sm" outline>
+		<Button href={resolve('member/equipment')} variant="default" size="sm" outline>
 			{m.member_equipment_assets_id_see_what_else_free()}
 		</Button>
 	{/if}
@@ -97,7 +97,7 @@
 					{#each resources.articles as article (article.id)}
 						<li class="flex items-start gap-2">
 							<IconBook size={18} class="mt-0.5 shrink-0 opacity-60" />
-							<a class="link" href={resolve(`/member/help/${article.slug}`)}>
+							<a class="link" href={resolve(`member/help/${article.slug}`)}>
 								{article.title}
 								{#if article.summary}
 									<span class="block text-subtle">{article.summary}</span>

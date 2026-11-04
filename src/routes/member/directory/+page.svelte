@@ -89,18 +89,18 @@
 	<!-- The other half of the link on the profile editor: the entry you are
 	     looking at is the shape yours takes, and Profile left the sidebar for
 	     the account menu (#1244). -->
-	<Button href={resolve('/member/profile')} variant="ghost" size="sm">
+	<Button href={resolve('member/profile')} variant="ghost" size="sm">
 		<IconPencil size={16} />
 		{m.member_directory_edit_profile()}
 	</Button>
 </PageHeader>
 <PageContent>
 	{#if directory.viewerHiddenBecause === 'incomplete'}
-		<Alert type="info" href={resolve('/member/profile')}>
+		<Alert type="info" href={resolve('member/profile')}>
 			{m.member_directory_re_not_listed_here_yet()}
 		</Alert>
 	{:else if directory.viewerHiddenBecause === 'hidden'}
-		<Alert type="info" href={resolve('/member/profile')}>
+		<Alert type="info" href={resolve('member/profile')}>
 			{m.member_directory_profile_hidden_so_re_not()}
 		</Alert>
 	{/if}

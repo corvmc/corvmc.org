@@ -1,6 +1,6 @@
 <script lang="ts" module>
 	import { getContext, hasContext, setContext } from 'svelte';
-	import type { RemoteForm, RemoteFormInput, RemoteFormIssue } from '@sveltejs/kit';
+	import type { RemoteForm, RemoteFormInput, RemoteFormIssue } from '$app/server';
 
 	export type FormStatus = 'idle' | 'dirty' | 'pending' | 'success' | 'error';
 

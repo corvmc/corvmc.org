@@ -62,7 +62,7 @@
 	// Drop the param on close so the nav link re-triggers and refresh stays clean.
 	function onCreateModalClose() {
 		if (page.url.searchParams.has('create')) {
-			replaceState(resolve('/member/bands'), {});
+			replaceState(resolve('member/bands'), {});
 		}
 	}
 
@@ -157,7 +157,7 @@
 			<div class="space-y-3">
 				{#each active as b (b.id)}
 					<a
-						href={resolve(`/band/${b.slug}`)}
+						href={resolve(`band/${b.slug}`)}
 						class="card bg-base-100 shadow transition-shadow hover:shadow-md"
 					>
 						<CardBody row class="py-4">
@@ -195,7 +195,7 @@
 		onsuccess={(result) => {
 			toast.success(m.member_bands_band_created());
 			showCreateModal = false;
-			if (result?.slug) goto(resolve(`/band/${result.slug}`));
+			if (result?.slug) goto(resolve(`band/${result.slug}`));
 		}}
 	>
 		<div class="space-y-4">

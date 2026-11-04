@@ -65,7 +65,7 @@
 			{#each data.rows as row (row.id)}
 				<tr class="hover">
 					<td class="cell-primary">
-						<a class="font-medium" href={resolve(`/staff/inventory/assets/${row.id}`)}>
+						<a class="font-medium" href={resolve(`staff/inventory/assets/${row.id}`)}>
 							{row.itemName}
 						</a>
 						{#if row.assetTag}

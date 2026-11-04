@@ -23,7 +23,7 @@
 
 	const total = $derived(takings.card.tickets + takings.free.tickets);
 	const tillHref = $derived(
-		withQuery(resolve('/member/volunteer/door'), new URLSearchParams({ event: eventId }))
+		withQuery(resolve('member/volunteer/door'), new URLSearchParams({ event: eventId }))
 	);
 </script>
 

@@ -48,7 +48,7 @@
 
 	function leave() {
 		session.end();
-		void goto(resolve('/staff/inbox'));
+		void goto(resolve('staff/inbox'));
 	}
 
 	function finish() {
@@ -64,7 +64,7 @@
 				description={m.staff_inbox_daily_description()}
 			/>
 			<div class="flex justify-center">
-				<Button href={resolve('/staff/inbox')} variant="default">{m.staff_back_inbox()}</Button>
+				<Button href={resolve('staff/inbox')} variant="default">{m.staff_back_inbox()}</Button>
 			</div>
 		{:else}
 			<DailyStartCard
@@ -143,8 +143,8 @@
 							status={t.status}
 							awaiting={!!t.awaitingReplySince}
 							variant="focus"
-							onreply={() => goto(resolve(`/staff/inbox/${t.id}`))}
-							onassign={() => goto(resolve(`/staff/inbox/${t.id}`))}
+							onreply={() => goto(resolve(`staff/inbox/${t.id}`))}
+							onassign={() => goto(resolve(`staff/inbox/${t.id}`))}
 							ondisposed={(action) => session.dispose(action)}
 						/>
 					</CardBody>

@@ -9,7 +9,7 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import { errorMessage } from '#lib/error-message.js';
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 
 	let {
 		search,

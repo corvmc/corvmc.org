@@ -32,7 +32,7 @@
 		{#await getInboxThreadCounts() then counts}
 			{#if counts.open > 0}
 				<Button
-					href={resolve('/staff/inbox/daily')}
+					href={resolve('staff/inbox/daily')}
 					variant={doneToday() ? 'default' : 'primary'}
 					size="sm"
 					class="shrink-0"

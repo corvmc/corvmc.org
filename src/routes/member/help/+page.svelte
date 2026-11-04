@@ -51,7 +51,7 @@
 	};
 
 	function handleSelect(slug: string) {
-		goto(resolve(`/member/help/${slug}`));
+		goto(resolve(`member/help/${slug}`));
 	}
 
 	/** Enough to show what a category covers without the tallest card setting the row. */
@@ -94,7 +94,7 @@
 								{#each category.articles.slice(0, ARTICLES_SHOWN) as article (article.slug)}
 									<li>
 										<a
-											href={resolve(`/member/help/${article.slug}`)}
+											href={resolve(`member/help/${article.slug}`)}
 											class="text-sm transition-colors hover:text-primary"
 										>
 											{article.title}

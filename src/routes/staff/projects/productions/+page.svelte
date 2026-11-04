@@ -57,9 +57,9 @@
 		if (page > 1) pairs.push(['page', String(page)]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = withQuery(resolve('/staff/projects/productions'), search);
+		const href = withQuery(resolve('staff/projects/productions'), search);
 		if (location.pathname + location.search !== href) {
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 
@@ -194,7 +194,7 @@
 							</td>
 						</tr>
 					{/if}
-					{@const href = resolve(`/staff/events/${e.id}`)}
+					{@const href = resolve(`staff/events/${e.id}`)}
 					<tr class="hover cursor-pointer" use:rowLink={href}>
 						<td class="w-px">
 							<StatusBadge status={e.status} />

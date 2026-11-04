@@ -94,9 +94,9 @@
 		if (byContractor && contractorView !== 'open') pairs.push(['contractor', contractorView]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = withQuery(resolve('/staff/volunteer/schedule'), search);
+		const href = withQuery(resolve('staff/volunteer/schedule'), search);
 		if (location.pathname + location.search !== href) {
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 
@@ -167,7 +167,7 @@
 
 <PageHeader title={m.staff_schedule()} subtitle={m.staff_planning()}>
 	<!-- Not a sidebar row: roles are set up now and then, not worked daily (#1791). -->
-	<Button variant="ghost" size="sm" href={resolve('/staff/volunteer/roles')}
+	<Button variant="ghost" size="sm" href={resolve('staff/volunteer/roles')}
 		>{m.staff_roles()}</Button
 	>
 	<LogHoursForMemberAction />
@@ -304,7 +304,7 @@
 				{/each}
 			{/if}
 			{#if data.waiting.pendingHours > 0}
-				<Button size="sm" variant="ghost" href={resolve('/staff/members/volunteers/hours')}>
+				<Button size="sm" variant="ghost" href={resolve('staff/members/volunteers/hours')}>
 					{m.staff_volunteer_hours_to_review_card_title()}
 					<Badge size="sm">{data.waiting.pendingHours}</Badge>
 				</Button>
@@ -313,7 +313,7 @@
 				<Button
 					size="sm"
 					variant="ghost"
-					href={withQuery(resolve('/staff/members/volunteers'), 'lapsing=1')}
+					href={withQuery(resolve('staff/members/volunteers'), 'lapsing=1')}
 				>
 					{m.staff_volunteer_lapsing_card_title()}
 					<Badge size="sm">{data.waiting.lapsingPeople}</Badge>
@@ -371,7 +371,7 @@
 								</div>
 							{:else if w.eventTitle}
 								<div class="truncate text-xs">
-									<a href={resolve(`/staff/events/${w.eventId}`)} class="link text-info">
+									<a href={resolve(`staff/events/${w.eventId}`)} class="link text-info">
 										{w.eventTitle}
 									</a>
 								</div>
@@ -382,7 +382,7 @@
 								<a
 									class="link text-xs"
 									href={withQuery(
-										resolve('/staff/volunteer/schedule/recurring'),
+										resolve('staff/volunteer/schedule/recurring'),
 										`id=${w.maintenanceScheduleId}`
 									)}>{m.staff_recurring()}</a
 								>

@@ -30,7 +30,7 @@
 	type YesNo = '' | 'yes' | 'no';
 	const yesNo = () => oneOf<YesNo>(['', 'yes', 'no'], '');
 
-	const roster = rosterState(resolve('/staff/members'), {
+	const roster = rosterState(resolve('staff/members'), {
 		status: oneOf(['active', 'deactivated', 'all'] as const, 'active'),
 		sustaining: yesNo(),
 		inBand: yesNo(),
@@ -101,7 +101,7 @@
 		result={list}
 		empty={m.staff_members_empty()}
 		searchPlaceholder={m.staff_search_by_name_email()}
-		exportPath={resolve('/staff/members/export')}
+		exportPath={resolve('staff/members/export')}
 		emails={() => getStaffUserEmails({ ...f, q: f.q || undefined })}
 	>
 		{#snippet filters()}

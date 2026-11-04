@@ -64,7 +64,7 @@ test('an instructor can book teaching time; a member without a grant cannot', as
 	const dialog = page.getByRole('dialog');
 	await expect(dialog).toBeVisible({ timeout: 15000 });
 
-	const startTime = dialog.locator('select[name="startTime"]');
+	const startTime = dialog.locator('select:is([name="startTime"], [name^="startTime/"])');
 	await expect(startTime).toBeEnabled({ timeout: 15000 });
 	// The earliest *bookable* start, found by value: the list carries the taken
 	// hours too now (#874), so a fixed index can land on a disabled option and
@@ -75,7 +75,7 @@ test('an instructor can book teaching time; a member without a grant cannot', as
 		.getAttribute('value');
 	await startTime.selectOption(firstFree ?? '');
 
-	const endTime = dialog.locator('select[name="endTime"]');
+	const endTime = dialog.locator('select:is([name="endTime"], [name^="endTime/"])');
 	await expect(endTime).toBeEnabled({ timeout: 15000 });
 	// Index 1, not 0: the Select renders a placeholder at 0, and choosing it
 	// leaves `endTime` empty so `step1Valid` never clears and Continue stays
@@ -86,7 +86,7 @@ test('an instructor can book teaching time; a member without a grant cannot', as
 	const shortest = await endTime.locator('option').nth(1).getAttribute('value');
 	await endTime.selectOption({ index: 1 });
 
-	const phone = dialog.locator('input[name="phone"]');
+	const phone = dialog.locator('input:is([name="phone"], [name^="phone/"])');
 	if (await phone.count()) await phone.fill('541-555-0199');
 
 	// 16:00 + 30 minutes. If the picker ever reverts to the member floor this is

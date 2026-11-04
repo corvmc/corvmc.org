@@ -64,7 +64,7 @@
 					eventId
 				}),
 			'Draft saved',
-			(id) => resolve(`/staff/marketing/campaigns/${id}/edit`)
+			(id) => resolve(`staff/marketing/campaigns/${id}/edit`)
 		);
 	}
 
@@ -90,7 +90,7 @@
 					eventId
 				}),
 			'Campaign sent',
-			(id) => resolve(`/staff/marketing/campaigns/${id}`)
+			(id) => resolve(`staff/marketing/campaigns/${id}`)
 		);
 	}
 
@@ -106,7 +106,7 @@
 					scheduledFor: new Date(scheduledFor).toISOString()
 				}),
 			'Campaign scheduled',
-			(id) => resolve(`/staff/marketing/campaigns/${id}`)
+			(id) => resolve(`staff/marketing/campaigns/${id}`)
 		);
 	}
 

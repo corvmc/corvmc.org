@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/install
       # Prettier only. `eslint --cache` is not usable here: caching makes ESLint
-      # serialize its config, and svelte.config.js sets `compilerOptions.runes` to a
+      # serialize its config, and kit.config.js sets `compilerOptions.runes` to a
       # function (it exempts node_modules, .md/.svx and src/lib/layouts/prose.svelte
       # from runes mode), which ESLint refuses to serialize. ESLint is ~200s of this
       # job's ~250s, so this only caches the small half.

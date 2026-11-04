@@ -65,7 +65,7 @@
 		const href = `${page.url.pathname}${search ? `?${search}` : ''}`;
 		if (page.url.pathname + page.url.search !== href) {
 			// Already a real pathname off `page.url`, so there is nothing to resolve.
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 
@@ -167,7 +167,7 @@
 			{#snippet children(threads)}
 				<ul class="flex flex-col divide-y divide-base-300">
 					{#each threads as t (t.id)}
-						{@const href = resolve(`/staff/inbox/${t.id}`)}
+						{@const href = resolve(`staff/inbox/${t.id}`)}
 						{@const Icon = channelIcon(t.channel)}
 						{@const active = t.id === openId}
 						{@const who = t.contactName ?? t.contactEmail ?? t.contactPhone ?? null}

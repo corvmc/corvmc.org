@@ -88,7 +88,7 @@
 	subtitle={m.staff_inventory()}
 	parent={orderId
 		? [
-				{ label: m.staff_order(), href: withQuery(resolve('/staff/inventory'), 'show=on-order') },
+				{ label: m.staff_order(), href: withQuery(resolve('staff/inventory'), 'show=on-order') },
 				{ label: m.staff_order_2(), href: resolve('/staff/inventory/orders/[id]', { id: orderId }) }
 			]
 		: []}

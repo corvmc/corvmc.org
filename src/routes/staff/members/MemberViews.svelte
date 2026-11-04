@@ -12,23 +12,23 @@
 
 	// Presentation only: each view's remotes guard on the same capability.
 	const views: { key: MemberView; label: string; href: ResolvedPathname; cap: Capability }[] = [
-		{ key: 'all', label: m.staff_all(), href: resolve('/staff/members'), cap: 'user.list' },
+		{ key: 'all', label: m.staff_all(), href: resolve('staff/members'), cap: 'user.list' },
 		{
 			key: 'volunteers',
 			label: m.staff_volunteers(),
-			href: resolve('/staff/members/volunteers'),
+			href: resolve('staff/members/volunteers'),
 			cap: 'volunteer.read'
 		},
 		{
 			key: 'instructors',
 			label: m.staff_members_member_views_instructors(),
-			href: resolve('/staff/members/instructors'),
+			href: resolve('staff/members/instructors'),
 			cap: 'instructor.read'
 		},
 		{
 			key: 'invites',
 			label: m.staff_members_member_views_invites(),
-			href: resolve('/staff/members/invites'),
+			href: resolve('staff/members/invites'),
 			cap: 'user.invite'
 		}
 	];

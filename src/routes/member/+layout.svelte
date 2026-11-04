@@ -148,7 +148,7 @@
 		>
 			{#snippet action()}
 				<Button
-					href={resolve('/member/bands?create=1')}
+					href={resolve('member/bands?create=1')}
 					variant="ghost"
 					size="xs"
 					class="latched"
@@ -203,7 +203,7 @@
 					{/snippet}
 				</Nav.Item>
 			{/each}
-			<Nav.Item href={resolve('/member/groups')} label={m.member_label()}>
+			<Nav.Item href={resolve('member/groups')} label={m.member_label()}>
 				{#snippet icon()}<IconSearch />{/snippet}
 			</Nav.Item>
 		</Nav.Group>

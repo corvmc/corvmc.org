@@ -78,7 +78,7 @@ async function switchUser(page: Page, email: string, password: string) {
 async function reportSuggestion(page: Page, suggestionId: string, reason: string) {
 	await page.goto(`/member/suggestions/${suggestionId}`);
 	await page.getByTestId('flag-suggestion').click();
-	await page.locator('input[name="reason"]').fill(reason);
+	await page.locator('input:is([name="reason"], [name^="reason/"])').fill(reason);
 	await dialogSubmit(page).click();
 }
 
@@ -93,7 +93,9 @@ async function decideReport(page: Page, entityTitle: string, decision: 'resolved
 	await page.getByRole('link', { name: entityTitle }).first().click();
 	await page.waitForURL(/\/staff\/flags\/[^/]+$/);
 	await page.getByTestId('resolve-flag').click();
-	await page.locator('select[name="resolution"]').selectOption(decision);
+	await page
+		.locator('select:is([name="resolution"], [name^="resolution/"])')
+		.selectOption(decision);
 	// By the decision's own name, not "Save": the submit says what it will record,
 	// which is the whole of #981. Clicking it by label is also the only assertion
 	// that the dialog and the picked outcome agree.
@@ -144,7 +146,9 @@ test.describe('suggestion board', () => {
 		await page.goto(`/staff/suggestions/${SEED_SG_MERGE_SOURCE_ID}`);
 
 		await page.getByTestId('merge-suggestion').click();
-		await page.locator('select[name="targetId"]').selectOption(SEED_SG_MERGE_TARGET_ID);
+		await page
+			.locator('select:is([name="targetId"], [name^="targetId/"])')
+			.selectOption(SEED_SG_MERGE_TARGET_ID);
 		await dialogSubmit(page).click();
 
 		// 3 voters on the target + 2 on the source, one of whom voted for both.
@@ -239,8 +243,10 @@ test.describe('reporting a suggestion', () => {
 		await expect(page.getByRole('alert')).toBeVisible();
 
 		await page.locator('[data-page-header] button').click();
-		await page.locator('input[name="title"]').fill(REVIEW_POST_TITLE);
-		await page.locator('textarea[name="body"]').fill('Should wait for staff before appearing.');
+		await page.locator('input:is([name="title"], [name^="title/"])').fill(REVIEW_POST_TITLE);
+		await page
+			.locator('textarea:is([name="body"], [name^="body/"])')
+			.fill('Should wait for staff before appearing.');
 		await dialogSubmit(page).click();
 		await page.waitForURL(/\/member\/suggestions\/[^/]+$/, DB_POLL);
 		await expect(page.getByRole('alert')).toBeVisible();
@@ -257,7 +263,7 @@ test.describe('reporting a suggestion', () => {
 		await page.getByRole('link', { name: REVIEW_POST_TITLE }).first().click();
 		await page.waitForURL(/\/staff\/suggestions\/[^/]+$/);
 		await page.getByTestId('review-suggestion').click();
-		await page.locator('select[name="decision"]').selectOption('approve');
+		await page.locator('select:is([name="decision"], [name^="decision/"])').selectOption('approve');
 		await dialogSubmit(page).click();
 		await expect(page.getByRole('dialog')).toBeHidden({ timeout: 15000 });
 
@@ -286,8 +292,8 @@ test.describe('editing a suggestion', () => {
 	async function submitEdit(page: Page, suggestionId: string, title: string, body: string) {
 		await page.goto(`/member/suggestions/${suggestionId}`);
 		await page.getByTestId('edit-suggestion').click();
-		await page.locator('input[name="title"]').fill(title);
-		await page.locator('textarea[name="body"]').fill(body);
+		await page.locator('input:is([name="title"], [name^="title/"])').fill(title);
+		await page.locator('textarea:is([name="body"], [name^="body/"])').fill(body);
 		await dialogSubmit(page).click();
 		await expect(page.getByRole('dialog')).toBeHidden({ timeout: 15000 });
 	}
@@ -350,7 +356,7 @@ test.describe('editing a suggestion', () => {
 		await expect(compare.getByText(SEED_SG_EDIT_PROPOSED_TITLE, { exact: true })).toBeVisible();
 
 		await page.getByTestId('review-suggestion-edit').click();
-		await page.locator('select[name="decision"]').selectOption('approve');
+		await page.locator('select:is([name="decision"], [name^="decision/"])').selectOption('approve');
 		await dialogSubmit(page).click();
 		await expect(page.getByRole('dialog')).toBeHidden({ timeout: 15000 });
 

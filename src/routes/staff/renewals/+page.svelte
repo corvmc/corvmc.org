@@ -48,7 +48,7 @@
 				<th class="col-extra">{m.staff_responsible()}</th>
 			{/snippet}
 			{#each renewals as r (r.id)}
-				<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/renewals/${r.id}`)}>
+				<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/renewals/${r.id}`)}>
 					<td class="w-px">
 						{#if r.deadline.overdue}
 							<Badge variant="error" size="sm">{m.staff_renewals_lapsed()}</Badge>
@@ -57,7 +57,7 @@
 						{/if}
 					</td>
 					<td class="cell-primary">
-						<a class="link font-medium" href={resolve(`/staff/renewals/${r.id}`)}>{r.name}</a>
+						<a class="link font-medium" href={resolve(`staff/renewals/${r.id}`)}>{r.name}</a>
 						<div class="truncate text-muted">{r.issuer ?? '—'}</div>
 					</td>
 					<td class="whitespace-nowrap">

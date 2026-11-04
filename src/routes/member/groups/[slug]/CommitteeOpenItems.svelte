@@ -91,7 +91,7 @@
 					</td>
 					<td>
 						{#if item.eventId}
-							<a class="link" href={resolve(`/events/${item.eventId}`)}>{item.eventTitle}</a>
+							<a class="link" href={resolve(`events/${item.eventId}`)}>{item.eventTitle}</a>
 							{#if item.eventStartsAt}
 								<div class="text-muted text-sm">{formatDateShort(item.eventStartsAt)}</div>
 							{/if}

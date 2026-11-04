@@ -84,7 +84,7 @@
 						<span class="font-normal text-base-content/60">({sessions.length})</span>
 					{/if}
 				</h2>
-				<a href={resolve(`/band/${band.slug}/reservations`)} class="link text-sm link-primary">
+				<a href={resolve(`band/${band.slug}/reservations`)} class="link text-sm link-primary">
 					{m.band_slug_view_all()}
 				</a>
 			</div>

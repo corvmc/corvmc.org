@@ -54,7 +54,7 @@
 		<h2 id="task-panel-title" class="text-lg font-semibold">{task.title}</h2>
 		<p class="text-muted">
 			{section?.name ?? m.staff_no_section()} ·
-			<a class="link" href={resolve(`/staff/projects/${projectId}/tasks/${task.id}`)}
+			<a class="link" href={resolve(`staff/projects/${projectId}/tasks/${task.id}`)}
 				>{m.staff_details()}</a
 			>
 		</p>
@@ -296,11 +296,11 @@
 					})}
 				</p>
 			{/if}
-			<a class="link" href="{resolve(`/staff/events/${o.eventId}/production`)}?tab=advance">
+			<a class="link" href="{resolve(`staff/events/${o.eventId}/production`)}?tab=advance">
 				{m.staff_projects_id_task_panel_artifact_requests()}
 			</a>
 		{:else if o.kind === 'listing' || o.kind === 'production'}
-			<a class="link" href={resolve(`/staff/events/${o.eventId}/production`)}
+			<a class="link" href={resolve(`staff/events/${o.eventId}/production`)}
 				>{m.staff_projects_id_task_panel_open_show()}</a
 			>
 		{:else if o.kind === 'crew'}

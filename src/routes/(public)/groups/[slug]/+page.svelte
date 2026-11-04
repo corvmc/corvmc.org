@@ -64,7 +64,7 @@
 			<Alert type="success">
 				{m.public_groups_slug_re_already_group()}
 				{#snippet action()}
-					<Button href={resolve(`/member/groups/${group.slug}`)} variant="ghost" size="sm">
+					<Button href={resolve(`member/groups/${group.slug}`)} variant="ghost" size="sm">
 						{m.public_groups_slug_open()}
 					</Button>
 				{/snippet}

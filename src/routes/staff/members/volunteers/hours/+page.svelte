@@ -37,7 +37,7 @@
 
 	// Seeded from the query string and mirrored back into it, so a reload lands
 	// on the same view.
-	const filters = urlState(resolve('/staff/members/volunteers/hours'), {
+	const filters = urlState(resolve('staff/members/volunteers/hours'), {
 		status: oneOf(statusViews, 'pending' as StatusView),
 		role: text(),
 		from: text(),

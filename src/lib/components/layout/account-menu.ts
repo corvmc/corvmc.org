@@ -24,16 +24,16 @@ export interface AccountMenuItem extends NavNode<AccountMenuKey> {
 }
 
 export const ACCOUNT_MENU: AccountMenuItem[] = [
-	{ key: 'profile', label: 'Profile', href: resolve('/member/profile') },
-	{ key: 'account', label: 'Account', href: resolve('/member/account') },
+	{ key: 'profile', label: 'Profile', href: resolve('member/profile') },
+	{ key: 'account', label: 'Account', href: resolve('member/account') },
 	// A receipt list is billing history and belongs beside Membership, not among
 	// the things you do in the space.
-	{ key: 'purchases', label: 'Purchases', href: resolve('/member/purchases') },
-	{ key: 'membership', label: 'Membership', href: resolve('/member/membership') }
+	{ key: 'purchases', label: 'Purchases', href: resolve('member/purchases') },
+	{ key: 'membership', label: 'Membership', href: resolve('member/membership') }
 ];
 
 /** Messages, the one chrome destination that is a place rather than a setting. */
-export const MESSAGES_HREF = resolve('/member/messages');
+export const MESSAGES_HREF = resolve('member/messages');
 
 export function activeAccountMenuKey(pathname: string): AccountMenuKey | null {
 	return activeNavKey(ACCOUNT_MENU, pathname);

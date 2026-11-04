@@ -146,7 +146,7 @@
 		{#if event.status === 'published' && event.ticketingEnabled}
 			<div class="mt-3">
 				<a
-					href={resolve(`/events/${event.id}/tickets`)}
+					href={resolve(`events/${event.id}/tickets`)}
 					class="link text-sm link-primary"
 					target="_blank"
 				>

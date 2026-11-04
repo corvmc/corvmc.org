@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import type { RemoteForm } from '@sveltejs/kit';
+	import type { RemoteForm } from '$app/server';
 	import { getAssignableStaff } from '#lib/remote/inbox.remote.js';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';

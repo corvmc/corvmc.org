@@ -257,7 +257,7 @@
 						size="sm"
 						onsuccess={() => {
 							toast.success(m.member_account_account_deleted());
-							goto(resolve('/login'));
+							goto(resolve('login'));
 						}}
 					>
 						{#snippet form()}

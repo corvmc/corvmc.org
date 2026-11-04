@@ -88,7 +88,7 @@ test.describe('staff user management', () => {
 
 		// TagSelect serialises the selection into a hidden input — this is the exact
 		// value updateUser rewrites model_has_roles from.
-		const rolesInput = page.locator('input[name="roles"]');
+		const rolesInput = page.locator('input:is([name="roles"], [name^="roles/"])');
 		await expect(rolesInput).toHaveCount(1);
 
 		const rolesBefore = await rolesInput.inputValue();
@@ -97,7 +97,7 @@ test.describe('staff user management', () => {
 
 		// Edit an unrelated field and save.
 		const phone = `555${Date.now().toString().slice(-7)}`;
-		const phoneInput = page.locator('input[name="phone"]');
+		const phoneInput = page.locator('input:is([name="phone"], [name^="phone/"])');
 		await phoneInput.fill(phone);
 		const save = page.locator('form').filter({ has: phoneInput }).locator('button[type="submit"]');
 		await save.click();
@@ -108,9 +108,11 @@ test.describe('staff user management', () => {
 		// Re-read from the server: the edit stuck AND the roles survived it.
 		// `?tab=account` also pins the URL contract the TabBar writes.
 		await page.goto(`/staff/members/${SEED_TARGET_ID}?tab=account`);
-		await expect(page.locator('input[name="phone"]')).toHaveValue(phone);
+		await expect(page.locator('input:is([name="phone"], [name^="phone/"])')).toHaveValue(phone);
 
-		const rolesAfter = await page.locator('input[name="roles"]').inputValue();
+		const rolesAfter = await page
+			.locator('input:is([name="roles"], [name^="roles/"])')
+			.inputValue();
 		expect(JSON.parse(rolesAfter)).toEqual(JSON.parse(rolesBefore));
 	});
 
@@ -170,7 +172,7 @@ test.describe('staff user management', () => {
 		// tab change. Form's `guard` only blocks navigation, and a tab switch is
 		// not one — so unmounting here would discard a half-typed edit silently.
 		const draft = `555${Date.now().toString().slice(-7)}`;
-		await page.locator('input[name="phone"]').fill(draft);
+		await page.locator('input:is([name="phone"], [name^="phone/"])').fill(draft);
 
 		// Pin the draft before leaving the tab. The field is populated from the
 		// server after the panel mounts, so a fill that lands first is silently
@@ -179,13 +181,13 @@ test.describe('staff user management', () => {
 		// with looks exactly like a draft. Asserting here fails on the fill
 		// rather than three steps later on a value that reads as the right shape
 		// and the wrong digits.
-		await expect(page.locator('input[name="phone"]')).toHaveValue(draft);
+		await expect(page.locator('input:is([name="phone"], [name^="phone/"])')).toHaveValue(draft);
 
 		await tab(page, 'money').click();
 		await expect(panel(page, 'money')).toBeVisible();
 
 		await tab(page, 'account').click();
-		await expect(page.locator('input[name="phone"]')).toHaveValue(draft);
+		await expect(page.locator('input:is([name="phone"], [name^="phone/"])')).toHaveValue(draft);
 	});
 
 	/**
@@ -211,6 +213,6 @@ test.describe('staff user management', () => {
 		await page.getByRole('menuitem').nth(TAB_KEYS.indexOf('account')).click();
 
 		await expect(page).toHaveURL(/[?&]tab=account/);
-		await expect(page.locator('input[name="phone"]')).toBeVisible();
+		await expect(page.locator('input:is([name="phone"], [name^="phone/"])')).toBeVisible();
 	});
 });

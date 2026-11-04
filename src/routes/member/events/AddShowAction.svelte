@@ -27,7 +27,7 @@
 	data-testid="add-show"
 	onsuccess={(result) => {
 		const eventId = (result as { eventId?: string } | undefined)?.eventId;
-		if (eventId) goto(resolve(`/member/events/${eventId}/manage`));
+		if (eventId) goto(resolve(`member/events/${eventId}/manage`));
 	}}
 >
 	{#snippet form()}

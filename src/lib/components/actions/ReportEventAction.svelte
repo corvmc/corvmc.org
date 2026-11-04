@@ -12,7 +12,7 @@
 		turnstileFailureMessage
 	} from '#lib/turnstile.js';
 	import Alert from '../ui/Alert.svelte';
-	import type { RemoteFormIssue } from '@sveltejs/kit';
+	import type { RemoteFormIssue } from '$app/server';
 
 	let {
 		eventId,

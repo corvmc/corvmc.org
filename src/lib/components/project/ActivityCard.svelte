@@ -6,7 +6,7 @@
 
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import type { RemoteQuery } from '@sveltejs/kit';
+	import type { RemoteQuery } from '$app/server';
 	import { resolve } from '$app/paths';
 	import { ActivityFeedCard, type ActivityRow } from '#lib/components/ui/ActivityFeed/index.js';
 	import { surfaces } from '#lib/config.js';

@@ -39,7 +39,6 @@ const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
 vi.mock('#lib/server/authorization.js', () => ({ requireUser: () => testUser }));
 vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
-vi.mock('$lib/server/db/schema/band', () => ({ band: {} }));
 vi.mock('#lib/server/band/band-host-service.js', () => ({ forgetCustomDomain: vi.fn() }));
 vi.mock('#lib/server/band/custom-domain-service.js', () => ({
 	CustomDomainError: class extends Error {},

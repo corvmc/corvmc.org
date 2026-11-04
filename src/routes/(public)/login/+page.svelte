@@ -38,7 +38,7 @@
 	// What the visitor was doing when the interrupt sent them here.
 	const intent = $derived(page.url.searchParams.get('intent')?.trim().slice(0, 120) || null);
 	$effect(() => {
-		if (me.current && !navigatingAfterSignIn) goto(returnTo ?? resolve('/member'));
+		if (me.current && !navigatingAfterSignIn) goto(returnTo ?? resolve('member'));
 	});
 
 	let inviteToken = $derived(page.url.searchParams.get('invite'));
@@ -63,20 +63,19 @@
 
 	/** Same-page href for the other mode, preserving `redirect` and `invite`. */
 	function modeHref(target: 'login' | 'register') {
-		const params = new SvelteURLSearchParams(page.url.searchParams);
+		const params = new SvelteURLSearchParams(page.url.search);
 		params.delete('register');
 		const rest = params.toString();
 		const query =
 			target === 'register' ? (rest ? `?register&${rest}` : '?register') : rest ? `?${rest}` : '';
-		return withQuery(resolve('/login'), query);
+		return withQuery(resolve('login'), query);
 	}
 
 	function toggleMode() {
 		error = '';
 		goto(modeHref(mode === 'login' ? 'register' : 'login'), {
-			replaceState: true,
-			keepFocus: true,
-			noScroll: true
+			replace: true,
+			reset: false
 		});
 	}
 
@@ -260,7 +259,7 @@
 
 					{#if mode === 'login'}
 						<div class="text-center text-sm">
-							<a class="link" href={resolve('/forgot-password')}
+							<a class="link" href={resolve('forgot-password')}
 								>{m.public_login_forgot_password()}</a
 							>
 						</div>

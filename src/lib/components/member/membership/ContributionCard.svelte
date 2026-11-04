@@ -16,7 +16,7 @@
 	import type { SubscriptionInfo } from '#lib/server/db/schema/finance.js';
 	import SubscriptionForm from './SubscriptionForm.svelte';
 	import type { RemoteForm } from '#lib/components/ui/Form/Form.svelte';
-	import type { RemoteFormInput } from '@sveltejs/kit';
+	import type { RemoteFormInput } from '$app/server';
 	import type { ComponentProps } from 'svelte';
 
 	let {

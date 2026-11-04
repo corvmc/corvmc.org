@@ -46,14 +46,14 @@
 						<Alert type="success" class="text-sm">
 							{m.public_contribute_pledge_token_thank_wishlist_now_shows_as()}
 						</Alert>
-						<Button variant="primary" class="w-full" href={resolve('/contribute')}>
+						<Button variant="primary" class="w-full" href={resolve('contribute')}>
 							{m.public_contribute_pledge_token_back_wishlist()}
 						</Button>
 					{:else if outcome?.status === 'taken'}
 						<Alert type="info" class="text-sm">
 							{m.public_contribute_pledge_token_someone_else_confirmed_first()}
 						</Alert>
-						<Button variant="primary" class="w-full" href={resolve('/contribute')}>
+						<Button variant="primary" class="w-full" href={resolve('contribute')}>
 							{m.public_contribute_pledge_token_see_what_else_we_need()}
 						</Button>
 					{:else if !pending || outcome}

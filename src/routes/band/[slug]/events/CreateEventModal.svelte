@@ -32,7 +32,7 @@
 		// `Action` types its success payload as unknown; the remote returns
 		// `{ eventId }` on create.
 		const eventId = (result as { eventId?: string } | undefined)?.eventId;
-		if (eventId) goto(resolve(`/band/${bandSlug}/events/${eventId}`));
+		if (eventId) goto(resolve(`band/${bandSlug}/events/${eventId}`));
 	}}
 >
 	{#snippet form()}

@@ -30,10 +30,10 @@
 	const hasPrimary = $derived(venues.some((v) => v.isPrimary && !v.deletedAt));
 
 	function setArchived(on: boolean) {
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		if (on) url.searchParams.set('archived', '1');
 		else url.searchParams.delete('archived');
-		goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+		goto(url, { replace: true, reset: false });
 	}
 
 	function addressLine(v: { city: string | null; state: string | null }): string {
@@ -118,7 +118,7 @@
 			{#each venues as v (v.id)}
 				<tr class="hover" class:opacity-60={v.deletedAt}>
 					<td class="cell-primary">
-						<a class="link font-medium" href={resolve(`/staff/venues/${v.id}`)}>{v.name}</a>
+						<a class="link font-medium" href={resolve(`staff/venues/${v.id}`)}>{v.name}</a>
 						{#if v.isPrimary}
 							<Badge variant="primary" size="sm" class="ml-2">{m.staff_our_room()}</Badge>
 						{/if}

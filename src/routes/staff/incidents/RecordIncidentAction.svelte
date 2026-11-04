@@ -28,7 +28,7 @@
 		involvedUserId = '';
 		involvedName = '';
 		const id = (result as { id?: string } | undefined)?.id;
-		if (id) void goto(resolve(`/staff/incidents/${id}`));
+		if (id) void goto(resolve(`staff/incidents/${id}`));
 	}}
 >
 	{#snippet form()}

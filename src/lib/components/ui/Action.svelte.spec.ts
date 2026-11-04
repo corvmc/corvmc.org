@@ -544,7 +544,7 @@ describe('Action, canSubmit', () => {
  */
 describe('Action, unsaved changes', () => {
 	const closeButton = () => modal().getByCss('[data-dialog-close]');
-	const note = () => modal().getByCss('input[name="notes"]');
+	const note = () => modal().getByCss('input:is([name="notes"], [name^="notes/"])');
 	const prompt = () => page.getByTestId('discard-prompt');
 
 	it('closes an untouched dialog without asking', async () => {

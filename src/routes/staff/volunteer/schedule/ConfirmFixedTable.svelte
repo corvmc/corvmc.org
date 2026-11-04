@@ -44,7 +44,7 @@
 	{#each orders as order (order.id)}
 		<tr class="hover">
 			<td class="cell-primary">
-				<a href={resolve(`/staff/volunteer/shifts/${order.id}`)} class="link font-medium">
+				<a href={resolve(`staff/volunteer/shifts/${order.id}`)} class="link font-medium">
 					{subject(order)}
 				</a>
 				<div class="truncate text-subtle">{order.roleName ?? NO_ROLE_LABEL}</div>

@@ -47,10 +47,10 @@
 		await invalidateAll();
 		if (!result?.eventId) return;
 		if (production) {
-			goto(resolve(`/staff/events/${result.eventId}/production`));
+			goto(resolve(`staff/events/${result.eventId}/production`));
 		} else {
 			// `edit` opens the page's edit card, so the next field is one click closer.
-			goto(withQuery(resolve(`/staff/events/${result.eventId}`), 'edit=1'));
+			goto(withQuery(resolve(`staff/events/${result.eventId}`), 'edit=1'));
 		}
 	}
 

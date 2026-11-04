@@ -67,14 +67,14 @@
 				<Fact label={m.staff_what_happened()} wrap>{incident.description}</Fact>
 				{#if incident.involvedUserId}
 					<Fact label={m.staff_member_involved()}>
-						<a class="link" href={resolve(`/staff/members/${incident.involvedUserId}`)}>
+						<a class="link" href={resolve(`staff/members/${incident.involvedUserId}`)}>
 							{incident.involvedName ?? m.staff_member()}
 						</a>
 					</Fact>
 				{/if}
 				{#if incident.eventId}
 					<Fact label={m.staff_show()}>
-						<a class="link" href={resolve(`/staff/events/${incident.eventId}`)}>
+						<a class="link" href={resolve(`staff/events/${incident.eventId}`)}>
 							{incident.eventTitle ?? m.staff_event()}
 						</a>
 					</Fact>

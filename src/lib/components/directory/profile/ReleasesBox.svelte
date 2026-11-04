@@ -46,7 +46,7 @@
 				<li>
 					<a
 						class="flex items-center gap-3 rounded p-2 transition-colors hover:bg-base-200"
-						href={resolve(`/music/${bandSlug}/${release.slug}`)}
+						href={resolve(`music/${bandSlug}/${release.slug}`)}
 					>
 						{#if release.coverUrl}
 							<img src={release.coverUrl} alt="" class="size-14 shrink-0 rounded object-cover" />

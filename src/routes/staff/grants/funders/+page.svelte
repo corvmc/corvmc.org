@@ -28,10 +28,10 @@
 	}
 
 	function setArchived(on: boolean) {
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		if (on) url.searchParams.set('archived', '1');
 		else url.searchParams.delete('archived');
-		goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+		goto(url, { replace: true, reset: false });
 	}
 </script>
 

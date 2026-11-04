@@ -79,7 +79,7 @@
 	<PageContent width="2xl">
 		<Alert type="warning">
 			<ParaglideMessage message={m.member_events_id_manage_listing_doesn_t_exist_isn} inputs={{}}
-				>{#snippet a({ children })}<a href={resolve('/member/events')} class="link"
+				>{#snippet a({ children })}<a href={resolve('member/events')} class="link"
 						>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
 			>
@@ -161,7 +161,7 @@
 					successToast={m.member_events_id_manage_listing_deleted()}
 					variant="ghost"
 					size="sm"
-					onsuccess={() => goto(resolve('/member/events'))}
+					onsuccess={() => goto(resolve('member/events'))}
 				>
 					{#snippet form()}
 						<input {...deleteFields.eventId.as('hidden', eventId)} />
@@ -220,7 +220,7 @@
 							title: duplicate.title,
 							formatDateShort: formatDateShort(duplicate.startsAt)
 						}}
-						>{#snippet a({ children })}<a href={resolve(`/events/${duplicate.id}`)} class="link"
+						>{#snippet a({ children })}<a href={resolve(`events/${duplicate.id}`)} class="link"
 								>{@render children?.()}</a
 							>{/snippet}</ParaglideMessage
 					>

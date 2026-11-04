@@ -15,7 +15,7 @@
 		RIDER_MAX_INPUTS_PER_ELEMENT
 	} from '#lib/config.js';
 	import type { RiderElementRowState } from '#lib/types/rider.js';
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 	import { safeFieldPrefix } from './field-names';
 	import { IconPlus, IconTrash, IconChevronUp, IconChevronDown } from '@tabler/icons-svelte';
 	import type { Snippet } from 'svelte';

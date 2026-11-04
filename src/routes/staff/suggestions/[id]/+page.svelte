@@ -72,7 +72,7 @@
 
 <PageContent width="3xl">
 	{#if isMerged}
-		<Alert type="info" href={resolve(`/staff/suggestions/${s.mergedIntoId}`)}>
+		<Alert type="info" href={resolve(`staff/suggestions/${s.mergedIntoId}`)}>
 			<ParaglideMessage
 				message={m.staff_suggestions_id_merged_into_its_votes_moved}
 				inputs={{
@@ -85,7 +85,7 @@
 	{:else if s.visibility === 'under_review'}
 		<!-- One report, one place to decide. Resolving here as well as in the flag
 		     queue would let two staff reach opposite conclusions on one report. -->
-		<Alert type="warning" href={resolve('/staff/flags')}>
+		<Alert type="warning" href={resolve('staff/flags')}>
 			{m.staff_suggestions_id_member_reported_so_came_off()}
 		</Alert>
 	{:else if s.visibility === 'hidden'}
@@ -100,7 +100,7 @@
 	     at Planned after the amp was on the shelf, because the acquisition and
 	     the suggestion had no relationship at all (#603). -->
 	{#if fulfilledBy}
-		<Alert type="success" href={resolve(`/staff/inventory/acquisitions/${fulfilledBy.id}`)}>
+		<Alert type="success" href={resolve(`staff/inventory/acquisitions/${fulfilledBy.id}`)}>
 			{fulfilledBy.sourceName
 				? m.staff_suggestions_id_arrived_from({
 						date: formatDateTime(fulfilledBy.occurredAt),
@@ -115,7 +115,7 @@
 			     `ResolvedPathname` and a query string is not one. -->
 			{#snippet action()}
 				<Button
-					href="{resolve('/staff/inventory/intake')}?suggestion={s.id}"
+					href="{resolve('staff/inventory/intake')}?suggestion={s.id}"
 					variant="ghost"
 					size="sm"
 				>
@@ -133,7 +133,7 @@
 		project here is that link, and the votes above are its mandate.
 	-->
 	{#if project}
-		<Alert type="success" href={resolve(`/staff/projects/${project.id}`)}>
+		<Alert type="success" href={resolve(`staff/projects/${project.id}`)}>
 			<ParaglideMessage
 				message={m.staff_suggestions_id_answered_by_its_status_drives}
 				inputs={{ name: project.name }}
@@ -147,7 +147,7 @@
 		<InfoCard title={ballots.length === 1 ? m.staff_suggestions_id_ballot() : m.staff_ballots()}>
 			<ul class="space-y-2">
 				{#each ballots as b (b.id)}
-					<li><BallotLine ballot={b} href={resolve(`/staff/ballots/${b.id}`)} /></li>
+					<li><BallotLine ballot={b} href={resolve(`staff/ballots/${b.id}`)} /></li>
 				{/each}
 			</ul>
 		</InfoCard>
@@ -468,7 +468,7 @@
 					outline
 					onsuccess={(r) => {
 						if (r && typeof r === 'object' && 'targetId' in r) {
-							void goto(resolve(`/staff/suggestions/${r.targetId as string}`));
+							void goto(resolve(`staff/suggestions/${r.targetId as string}`));
 						}
 					}}
 				>

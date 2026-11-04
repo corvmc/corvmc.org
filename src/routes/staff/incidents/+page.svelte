@@ -111,7 +111,7 @@
 					<th class="col-support">{m.staff_recorded_by()}</th>
 				{/snippet}
 				{#each rows as r (r.id)}
-					<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/incidents/${r.id}`)}>
+					<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/incidents/${r.id}`)}>
 						<td class="w-px"><StatusBadge status={r.status} label /></td>
 						<td class="col-support whitespace-nowrap">{formatDateShort(r.occurredAt)}</td>
 						<td class="col-support whitespace-nowrap">{incidentCategoryLabels[r.category]}</td>

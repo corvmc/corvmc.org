@@ -10,12 +10,12 @@
 		{
 			key: 'orders',
 			label: m.staff_volunteer_schedule_schedule_views_work_orders(),
-			href: resolve('/staff/volunteer/schedule')
+			href: resolve('staff/volunteer/schedule')
 		},
 		{
 			key: 'recurring',
 			label: m.staff_recurring(),
-			href: resolve('/staff/volunteer/schedule/recurring')
+			href: resolve('staff/volunteer/schedule/recurring')
 		}
 	];
 </script>

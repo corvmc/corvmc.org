@@ -29,6 +29,21 @@ const { create_field_proxy } = await import(
 	/* @vite-ignore */ `${new URL('../../../../../node_modules/@sveltejs/kit/src/runtime/form-utils.js', import.meta.url).href}`
 );
 
+/** A real kit field proxy for one top-level field; kit 3 suffixes its name with `/spec`. */
+const kitField = (name: string) =>
+	create_field_proxy(
+		{
+			form_id: 'spec',
+			get: () => ({}),
+			set: () => {},
+			get_issues: () => ({}),
+			get_touched: () => ({}),
+			get_dirty: () => ({})
+		},
+		{},
+		[name]
+	);
+
 describe('FormField', () => {
 	it('pre-fills a field-based text input from the value prop', async () => {
 		// Regression: when both `field` and `value` were provided, the value prop was
@@ -108,13 +123,7 @@ describe('FormField', () => {
 	// own field proxy rather than the local `fakeField`, so it stays honest if kit
 	// changes the prefix. The parse half is covered in equipment-number-fields.remote.spec.ts.
 	it('n:-prefixes a field-based number input so the value is a number', async () => {
-		const field = create_field_proxy(
-			{},
-			() => ({}),
-			() => {},
-			() => ({}),
-			['totalQuantity']
-		);
+		const field = kitField('totalQuantity');
 
 		const { container } = await render(FormField, {
 			field,
@@ -124,19 +133,13 @@ describe('FormField', () => {
 		});
 
 		const input = container.querySelector('input[type="number"]') as HTMLInputElement;
-		expect(input.name).toBe('n:totalQuantity');
+		expect(input.name).toBe('n:totalQuantity/spec');
 	});
 
 	// A page that derives from the value (a date picking its slots) binds it; the
 	// field owns the input, so the binding has to be kept current by hand.
 	it('keeps bind:value current on a field-based input', async () => {
-		const field = create_field_proxy(
-			{},
-			() => ({}),
-			() => {},
-			() => ({}),
-			['date']
-		);
+		const field = kitField('date');
 		const { container } = await render(FormFieldBind, { field });
 		const input = container.querySelector('input[type="date"]') as HTMLInputElement;
 
@@ -148,13 +151,7 @@ describe('FormField', () => {
 	// A schema that parses the string itself keeps "cleared" (`''`) apart from
 	// "untouched"; a number registration drops a cleared box instead.
 	it('registers a number input as text under submitAs, keeping the number control', async () => {
-		const field = create_field_proxy(
-			{},
-			() => ({}),
-			() => {},
-			() => ({}),
-			['validityMonths']
-		);
+		const field = kitField('validityMonths');
 
 		const { container } = await render(FormField, {
 			field,
@@ -165,7 +162,7 @@ describe('FormField', () => {
 		});
 
 		const input = container.querySelector('input[type="number"]') as HTMLInputElement;
-		expect(input.name).toBe('validityMonths');
+		expect(input.name).toBe('validityMonths/spec');
 		expect(input.value).toBe('12');
 	});
 
@@ -188,7 +185,9 @@ describe('FormField', () => {
 			value: ['2', '3']
 		});
 
-		const hidden = container.querySelector('input[name="roles"]') as HTMLInputElement;
+		const hidden = container.querySelector(
+			'input:is([name="roles"], [name^="roles/"])'
+		) as HTMLInputElement;
 		expect(JSON.parse(hidden.value)).toEqual(['2', '3']);
 	});
 
@@ -202,7 +201,9 @@ describe('FormField', () => {
 			value: []
 		});
 
-		const hidden = container.querySelector('input[name="roles"]') as HTMLInputElement;
+		const hidden = container.querySelector(
+			'input:is([name="roles"], [name^="roles/"])'
+		) as HTMLInputElement;
 		expect(JSON.parse(hidden.value)).toEqual([]);
 	});
 
@@ -218,43 +219,27 @@ describe('FormField', () => {
 
 	describe('file (deferred upload)', () => {
 		it('renders a real file input carrying the field name, so the File submits', async () => {
-			const field = create_field_proxy(
-				{},
-				() => ({}),
-				() => {},
-				() => ({}),
-				['posterFile']
-			);
+			const field = kitField('posterFile');
 			const { container } = await render(FormField, { field, type: 'file', label: 'Poster' });
 
 			const input = container.querySelector('input[type="file"]') as HTMLInputElement;
 			expect(input).not.toBeNull();
-			expect(input.name).toBe('posterFile');
+			expect(input.name).toBe('posterFile/spec');
 		});
 
 		// A same-named hidden input alongside the file input would be submitted
 		// too and clobber the File with an empty string.
 		it('renders no second input under the same name', async () => {
-			const field = create_field_proxy(
-				{},
-				() => ({}),
-				() => {},
-				() => ({}),
-				['posterFile']
-			);
+			const field = kitField('posterFile');
 			const { container } = await render(FormField, { field, type: 'file', label: 'Poster' });
 
-			expect(container.querySelectorAll('[name="posterFile"]')).toHaveLength(1);
+			expect(
+				container.querySelectorAll(':is([name="posterFile/spec"], [name^="posterFile/spec/"])')
+			).toHaveLength(1);
 		});
 
 		it('offers a labelled control rather than a bare file picker', async () => {
-			const field = create_field_proxy(
-				{},
-				() => ({}),
-				() => {},
-				() => ({}),
-				['posterFile']
-			);
+			const field = kitField('posterFile');
 			const emptyLabel = 'Add a poster';
 			await render(FormField, { field, type: 'file', label: 'Poster', emptyLabel });
 
@@ -288,7 +273,7 @@ describe('FormField', () => {
 			});
 
 			expect(container.querySelector('textarea')).toBeNull();
-			expect(container.querySelector('[name="bio"]')).toBeNull();
+			expect(container.querySelector(':is([name="bio"], [name^="bio/"])')).toBeNull();
 			await expect.element(page.getByText(value)).toBeInTheDocument();
 		});
 
@@ -301,7 +286,7 @@ describe('FormField', () => {
 				value: 'Fixed'
 			});
 
-			expect(container.querySelector('[name="title"]')).toBeNull();
+			expect(container.querySelector(':is([name="title"], [name^="title/"])')).toBeNull();
 		});
 
 		// A date field stores `2026-08-20` and a price stores `10.00`; neither is
@@ -534,13 +519,7 @@ describe('FormField', () => {
 		}
 
 		it('keeps a fieldset and legend for a file field', async () => {
-			const field = create_field_proxy(
-				{},
-				() => ({}),
-				() => {},
-				() => ({}),
-				['posterFile']
-			);
+			const field = kitField('posterFile');
 			const { container } = await render(FormField, { field, type: 'file', label: 'Poster' });
 
 			expect(container.querySelector('legend.fieldset-legend')).not.toBeNull();

@@ -24,7 +24,11 @@ import {
 function planSubmit(page: Page, interval: 'monthly' | 'yearly') {
 	return page
 		.locator('form')
-		.filter({ has: page.locator(`input[name="billingInterval"][value="${interval}"]`) })
+		.filter({
+			has: page.locator(
+				`input:is([name="billingInterval"], [name^="billingInterval/"])[value="${interval}"]`
+			)
+		})
 		.locator('button[type="submit"]');
 }
 

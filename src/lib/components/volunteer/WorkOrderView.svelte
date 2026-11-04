@@ -124,13 +124,13 @@
 			>
 		{:else}{m.volunteer_work_order_view_time_arranged()}{/if} ·
 		{#if shift.eventId && shift.eventTitle}
-			<a href={resolve(`/staff/events/${shift.eventId}`)} class="link link-primary">
+			<a href={resolve(`staff/events/${shift.eventId}`)} class="link link-primary">
 				{shift.eventTitle}
 			</a>
 		{:else}{m.volunteer_work_order_view_not_tied_event()}{/if}
 		{#if shift.assetId && shift.assetName}
 			·
-			<a href={resolve(`/staff/inventory/assets/${shift.assetId}`)} class="link link-primary">
+			<a href={resolve(`staff/inventory/assets/${shift.assetId}`)} class="link link-primary">
 				{shift.assetName}
 			</a>
 		{/if}
@@ -530,7 +530,7 @@
 							onsuccess={(r) => {
 								const copyId = (r as { id?: string } | undefined)?.id;
 								// The shift URL sends a project's copy on to its task page.
-								if (copyId) goto(resolve(`/staff/volunteer/shifts/${copyId}`));
+								if (copyId) goto(resolve(`staff/volunteer/shifts/${copyId}`));
 							}}
 						>
 							{#snippet form()}

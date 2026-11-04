@@ -29,7 +29,7 @@
 	{#if campaign.status === 'scheduled'}
 		<UnscheduleCampaignAction
 			campaignId={id}
-			onsuccess={() => goto(resolve(`/staff/marketing/campaigns/${id}/edit`))}
+			onsuccess={() => goto(resolve(`staff/marketing/campaigns/${id}/edit`))}
 		/>
 	{/if}
 </PageHeader>

@@ -32,7 +32,7 @@
 	size="xs"
 	onsuccess={(result) => {
 		const slug = (result as { slug?: string } | undefined)?.slug;
-		if (slug) goto(resolve(`/band/${slug}`));
+		if (slug) goto(resolve(`band/${slug}`));
 	}}
 >
 	{#snippet form()}

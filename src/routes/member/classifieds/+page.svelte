@@ -160,7 +160,7 @@
 					>
 				{/snippet}
 				{#each rows as r (r.id)}
-					<tr class="hover cursor-pointer" use:rowLink={resolve(`/member/classifieds/${r.id}`)}>
+					<tr class="hover cursor-pointer" use:rowLink={resolve(`member/classifieds/${r.id}`)}>
 						<td class="w-px"><StatusBadge status={r.displayStatus} /></td>
 						<td class="cell-primary">
 							<EntityIdentity ref={r.ref}>

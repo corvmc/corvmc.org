@@ -29,23 +29,27 @@ server build. There is no separate API server, no queue worker, no VM.
   (POST /api/cron/*)└──────────────────────────────────────────────┘    (bcrypt verify only)
 ```
 
-The bindings (`DB`, `R2_BUCKET`, `KV`, `ASSETS`) are declared in `wrangler.toml` and arrive
-on every request as `event.platform.env.*`. The first thing the server hook does is hand
-them to the module-level singletons:
+The bindings (`DB`, `R2_BUCKET`, `KV`, `ASSETS`) are declared in `wrangler.toml` and read from
+`env` in `cloudflare:workers` (typed by `Cloudflare.Env` in `src/app.d.ts`; kit 3 has no
+`event.platform`). The first thing the server hook does is hand them to the module-level
+singletons:
 
 ```ts
 // src/hooks.server.ts
+import { env as bindings, waitUntil } from 'cloudflare:workers';
+
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
-	if (event.platform?.env?.DB) {
-		initDb(event.platform.env.DB);
-	}
-	if (event.platform?.env?.R2_BUCKET) {
-		initStorage(event.platform.env.R2_BUCKET);
-	}
-	if (event.platform?.env?.KV) {
-		initKv(event.platform.env.KV);
-	}
+	if (bindings.DB) initDb(bindings.DB);
+	if (bindings.R2_BUCKET) initStorage(bindings.R2_BUCKET);
+	if (bindings.R2_PRIVATE) initPrivateStorage(bindings.R2_PRIVATE);
+	if (bindings.KV) initKv(bindings.KV);
+	registerWaitUntil(waitUntil);
 ```
+
+Only the Worker may import `cloudflare:workers`: services reach `waitUntil` through
+`registerWaitUntil` in `src/lib/server/after-response.ts`, because seeds and scripts load them
+under tsx. Environment variables read through `$env/dynamic/*` must be declared in
+`src/env.ts`, which kit 3 treats as the full list.
 
 Everywhere else in server code, `db`, storage, and KV are imported directly (e.g.
 `import { db } from '#lib/server/db/index.js'`). Those imports are lazy proxies — if you use them

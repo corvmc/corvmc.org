@@ -64,7 +64,7 @@
 					{/snippet}
 
 					{#each series as s (s.id)}
-						{@const href = resolve(`/staff/recurring/${s.id}`)}
+						{@const href = resolve(`staff/recurring/${s.id}`)}
 						<tr>
 							<td class="w-px">
 								<StatusBadge status={s.cancelledAt ? 'cancelled' : 'active'} />

@@ -271,7 +271,7 @@ async function main() {
 	const { getPlatformProxy } = await import('wrangler');
 	// `src/app.d.ts` is where this project's bindings are named; without the
 	// type argument `env` is `unknown` and `env.DB` is unchecked.
-	const { env, dispose } = await getPlatformProxy<NonNullable<App.Platform['env']>>();
+	const { env, dispose } = await getPlatformProxy<Cloudflare.Env>();
 	try {
 		await syncHelpArticles(drizzle(env.DB), articles);
 	} finally {

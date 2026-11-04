@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import type { RemoteFormField } from '@sveltejs/kit';
+	import type { RemoteFormField } from '$app/server';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
 	import { searchBandsForLineup } from '#lib/remote/band-events.remote.js';

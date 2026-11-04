@@ -268,7 +268,7 @@
 						<!-- What a member asked for, and where it came from. The request
 						     sat at Planned after the thing was on the shelf (#603). -->
 						<Fact label={m.staff_inventory_acquisitions_id_fulfils()}>
-							<a class="link" href={resolve(`/staff/suggestions/${data.fulfils.id}`)}>
+							<a class="link" href={resolve(`staff/suggestions/${data.fulfils.id}`)}>
 								{data.fulfils.title}
 							</a>
 						</Fact>
@@ -418,7 +418,7 @@
 				{#each data.lines as line (line.id)}
 					<tr class="hover">
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/inventory/${line.itemId}`)}>
+							<a class="font-medium" href={resolve(`staff/inventory/${line.itemId}`)}>
 								{line.item.name}
 							</a>
 						</td>

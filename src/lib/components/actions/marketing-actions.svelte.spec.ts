@@ -83,7 +83,10 @@ describe('AddSubscriberAction', () => {
 		const submit = dialog.getByCss('button[type="submit"]');
 		await expect.element(submit).toBeDisabled();
 
-		await userEvent.fill(dialog.getByCss('input[name="email"]'), 'nina@example.dev');
+		await userEvent.fill(
+			dialog.getByCss('input:is([name="email"], [name^="email/"])'),
+			'nina@example.dev'
+		);
 
 		await expect.element(submit).toBeEnabled();
 	});
@@ -101,7 +104,9 @@ describe('CreateAudienceAction', () => {
 	const signupPath = (slug: string) => `/subscribe/${slug}`;
 
 	const slug = () =>
-		document.querySelector('[role="dialog"] input[name="slug"]') as unknown as HTMLInputElement;
+		document.querySelector(
+			'[role="dialog"] input:is([name="slug"], [name^="slug/"])'
+		) as unknown as HTMLInputElement;
 
 	const open = async () => {
 		const { locator } = await render(CreateAudienceAction, {});

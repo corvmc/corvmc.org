@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { workOrderHref } from '#lib/utils/work-order-href.js';
+	import { workOrderPathname } from '#lib/utils/work-order-href.js';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import { ActivityFeed } from '#lib/components/ui/ActivityFeed/index.js';
@@ -49,7 +49,7 @@
 				at: job.completedAt ?? job.scheduledFor ?? job.createdAt,
 				summary: job.title,
 				href: withHash(
-					resolve(workOrderHref({ id: job.workOrderId, projectId: job.projectId })),
+					resolve(workOrderPathname({ id: job.workOrderId, projectId: job.projectId })),
 					`engagement-${job.id}`
 				),
 				context: itemName ? { label: assetTag ? `${itemName} · ${assetTag}` : itemName } : null,

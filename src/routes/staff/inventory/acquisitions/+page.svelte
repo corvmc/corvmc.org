@@ -55,10 +55,9 @@
 		if (owed) parts.push('owed=1');
 		if (pageNo > 1) parts.push(`page=${pageNo}`);
 		const qs = parts.length > 0 ? `?${parts.join('&')}` : '';
-		goto(withQuery(resolve('/staff/inventory/acquisitions'), qs), {
-			replaceState: true,
-			keepFocus: true,
-			noScroll: true
+		goto(withQuery(resolve('staff/inventory/acquisitions'), qs), {
+			replace: true,
+			reset: false
 		});
 	}
 </script>
@@ -120,7 +119,7 @@
 			{#each data.rows as row (row.id)}
 				<tr class="hover">
 					<td class="whitespace-nowrap">
-						<a class="font-medium" href={resolve(`/staff/inventory/acquisitions/${row.id}`)}>
+						<a class="font-medium" href={resolve(`staff/inventory/acquisitions/${row.id}`)}>
 							{formatDateShort(row.occurredAt)}
 						</a>
 					</td>

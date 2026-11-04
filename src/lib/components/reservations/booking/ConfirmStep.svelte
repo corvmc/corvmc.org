@@ -19,7 +19,7 @@
 		toLocalTime
 	} from '#lib/utils/format.js';
 	import { confirmWindowOpensAt, creditsToHours, withinConfirmationWindow } from '#lib/config.js';
-	import type { RemoteFormField } from '@sveltejs/kit';
+	import type { RemoteFormField } from '$app/server';
 
 	let {
 		reservation,

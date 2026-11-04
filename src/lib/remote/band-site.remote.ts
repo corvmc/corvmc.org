@@ -42,7 +42,7 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 		// the domain they paid for.
 		const moved = await resolveBandSlug(slug);
 		if (moved?.kind === 'moved' && moved.slug !== slug) {
-			redirect(302, bandSiteUrl(moved.slug, publicEnv.PUBLIC_SITE_URL));
+			redirect(302, bandSiteUrl(moved.slug, publicEnv.PUBLIC_SITE_URL), { external: true });
 		}
 		throw error(404, 'Band not found');
 	}

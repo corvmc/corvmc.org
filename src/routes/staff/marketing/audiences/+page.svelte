@@ -21,7 +21,7 @@
 	<CreateAudienceAction
 		onsuccess={(result) => {
 			const r = result as { audienceId?: string };
-			if (r?.audienceId) goto(resolve(`/staff/marketing/audiences/${r.audienceId}`));
+			if (r?.audienceId) goto(resolve(`staff/marketing/audiences/${r.audienceId}`));
 		}}
 	/>
 </PageHeader>
@@ -37,7 +37,7 @@
 				<th class="col-extra whitespace-nowrap">{m.staff_created()}</th>
 			{/snippet}
 			{#each audiences as a (a.id)}
-				{@const href = resolve(`/staff/marketing/audiences/${a.id}`)}
+				{@const href = resolve(`staff/marketing/audiences/${a.id}`)}
 				<tr class="hover cursor-pointer" use:rowLink={href}>
 					<td class="cell-primary"><EntityIdentity ref={a.ref} /></td>
 					<td class="col-support w-px">

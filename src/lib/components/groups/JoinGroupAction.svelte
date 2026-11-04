@@ -67,7 +67,7 @@
 	</Action>
 {:else if kind === 'committee'}
 	<Button
-		href={withQuery(resolve('/member/groups'), new URLSearchParams({ committee: slug }))}
+		href={withQuery(resolve('member/groups'), new URLSearchParams({ committee: slug }))}
 		variant="primary"
 		size="sm"
 		aria-label={m.groups_join_group_apply({ groupName })}

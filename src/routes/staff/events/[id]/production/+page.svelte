@@ -108,7 +108,7 @@
 	 * `/staff/events/[id]` rather than rendering an empty shell.
 	 */
 	$effect(() => {
-		if (evt.source !== 'cmc') void goto(resolve(`/staff/events/${id}`), { replaceState: true });
+		if (evt.source !== 'cmc') void goto(resolve(`staff/events/${id}`), { replaceState: true });
 	});
 
 	/**
@@ -162,7 +162,7 @@
 	// all mirroring local state wants.
 	$effect(() => {
 		const href = withQuery(
-			resolve(`/staff/events/${id}/production`),
+			resolve(`staff/events/${id}/production`),
 			tab === 'overview' ? '' : `tab=${tab}`
 		);
 		if (location.pathname + location.search !== href) {
@@ -325,7 +325,7 @@
 								<span class="font-medium">{m.staff_events_id_production_shift_open_nobody()}</span>
 								<a
 									class="link text-sm"
-									href={resolve(`/staff/volunteer/shifts/${hostShift.workOrderId}`)}
+									href={resolve(`staff/volunteer/shifts/${hostShift.workOrderId}`)}
 								>
 									{m.staff_events_id_production_find_somebody()}
 								</a>
@@ -677,7 +677,7 @@
 						<ul class="flex flex-col gap-1 text-sm">
 							{#each advance as order (order.id)}
 								<li class="flex flex-wrap items-baseline justify-between gap-2">
-									<a href={resolve(`/staff/volunteer/shifts/${order.id}`)} class="link font-medium">
+									<a href={resolve(`staff/volunteer/shifts/${order.id}`)} class="link font-medium">
 										{order.roleName}
 									</a>
 									<span class="text-subtle whitespace-nowrap">
@@ -709,7 +709,7 @@
 						{#each shifts as shift (shift.id)}
 							<tr class="hover">
 								<td class="cell-primary">
-									<a href={resolve(`/staff/volunteer/shifts/${shift.id}`)} class="link font-medium"
+									<a href={resolve(`staff/volunteer/shifts/${shift.id}`)} class="link font-medium"
 										>{shift.roleName}</a
 									>
 								</td>

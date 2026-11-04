@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import type { RemoteFormField } from '@sveltejs/kit';
+	import type { RemoteFormField } from '$app/server';
 	/**
 	 * "What you'd help with" — the grouped role checkboxes plus the availability
 	 * note. Shared by the onboarding interests step and the Interests modal on

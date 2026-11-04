@@ -16,7 +16,7 @@ import { assertRows } from './validate';
 
 // `src/app.d.ts` is where this project's bindings are named; without the type
 // argument `env` is `unknown` and `env.DB` is unchecked.
-const proxy = await getPlatformProxy<NonNullable<App.Platform['env']>>();
+const proxy = await getPlatformProxy<Cloudflare.Env>();
 export const env = proxy.env;
 export const dispose = proxy.dispose;
 export const db = drizzle(env.DB);

@@ -33,24 +33,15 @@ declare global {
 		// interface Error {}
 		// interface PageData {}
 		// interface PageState {}
+	}
 
-		interface Platform {
-			env?: {
-				DB: D1Database;
-				R2_BUCKET: R2Bucket;
-				R2_PRIVATE: R2Bucket;
-				KV: KVNamespace;
-			};
-			/**
-			 * The Worker's execution context, for `waitUntil`.
-			 *
-			 * Declared here rather than inherited from adapter-cloudflare's
-			 * `ambient.d.ts`: that file is only pulled in by importing the adapter's
-			 * types, which this project does not do — `svelte.config.js` is plain JS.
-			 * Optional because it is genuinely absent under `vitest` and anywhere the
-			 * request did not come through the Workers runtime.
-			 */
-			ctx?: ExecutionContext;
+	/** The bindings `env` from `cloudflare:workers` carries (wrangler.toml). */
+	namespace Cloudflare {
+		interface Env {
+			DB: D1Database;
+			R2_BUCKET: R2Bucket;
+			R2_PRIVATE: R2Bucket;
+			KV: KVNamespace;
 		}
 	}
 }

@@ -63,7 +63,7 @@
 	subtitle={when}
 >
 	<Button
-		href={resolve(`/member/groups/${slug}/markets/${eventId}/check-in`)}
+		href={resolve(`member/groups/${slug}/markets/${eventId}/check-in`)}
 		variant="ghost"
 		size="sm"
 	>

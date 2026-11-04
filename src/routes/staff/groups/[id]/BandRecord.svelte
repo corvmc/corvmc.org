@@ -149,7 +149,7 @@
 					<th class="col-extra">{msg.staff_notes()}</th>
 				{/snippet}
 				{#each reservations as r (r.id)}
-					{@const href = resolve(`/staff/reservations/${r.id}`)}
+					{@const href = resolve(`staff/reservations/${r.id}`)}
 					<tr class="hover cursor-pointer" use:rowLink={href}>
 						<td class="w-px"><StatusBadge status={r.status} /></td>
 						<td class="cell-primary">

@@ -42,7 +42,7 @@
 					<div class="min-w-0">
 						<a
 							class="font-medium hover:underline"
-							href={resolve(`/staff/inventory/assets/${asset.id}`)}
+							href={resolve(`staff/inventory/assets/${asset.id}`)}
 						>
 							{asset.item.name}
 						</a>

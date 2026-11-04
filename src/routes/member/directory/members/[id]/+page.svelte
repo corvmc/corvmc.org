@@ -108,7 +108,7 @@
 {#if member}
 	<PageContent width="3xl">
 		<div class="flex items-center justify-between">
-			<a href={resolve('/member/directory')} class="link text-muted"
+			<a href={resolve('member/directory')} class="link text-muted"
 				>{m.member_directory_members_id_back_directory()}</a
 			>
 			<div class="flex items-center gap-2">

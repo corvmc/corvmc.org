@@ -8,7 +8,7 @@
 	import * as Form from '#lib/components/ui/Form/index.js';
 	import { formatDollars, toLocalDate, toLocalTime } from '#lib/utils/format.js';
 	import { creditsToHours } from '#lib/config.js';
-	import type { RemoteFormField } from '@sveltejs/kit';
+	import type { RemoteFormField } from '$app/server';
 
 	let {
 		reservation,
@@ -172,7 +172,7 @@
 						message={m.reservations_booking_payment_step_sustaining_members_get_fre}
 						inputs={{}}
 						>{#snippet a({ children })}<a
-								href={resolve('/member/membership')}
+								href={resolve('member/membership')}
 								target="_blank"
 								class="link link-primary">{@render children?.()}</a
 							>{/snippet}</ParaglideMessage

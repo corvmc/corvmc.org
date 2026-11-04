@@ -82,7 +82,7 @@
 				{#each order.lines as line (line.id)}
 					<tr class="hover">
 						<td class="cell-primary">
-							<a class="link" href={resolve(`/staff/inventory/${line.itemId}`)}>{line.item.name}</a>
+							<a class="link" href={resolve(`staff/inventory/${line.itemId}`)}>{line.item.name}</a>
 							{#if line.outstanding > 0 && status === 'placed'}
 								<Badge variant="warning" size="xs"
 									>{m.staff_inventory_orders_id_still_out({ outstanding: line.outstanding })}</Badge
@@ -126,7 +126,7 @@
 					<ul class="space-y-1">
 						{#each order.arrivals as arrival (arrival.id)}
 							<li>
-								<a class="link" href={resolve(`/staff/inventory/acquisitions/${arrival.id}`)}>
+								<a class="link" href={resolve(`staff/inventory/acquisitions/${arrival.id}`)}>
 									{formatDateShort(arrival.occurredAt)}
 								</a>
 							</li>

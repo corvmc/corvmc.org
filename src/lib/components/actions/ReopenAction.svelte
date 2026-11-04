@@ -7,7 +7,7 @@
 	 * `children` says what reopening does and does not undo.
 	 */
 	import type { Snippet } from 'svelte';
-	import type { RemoteForm } from '@sveltejs/kit';
+	import type { RemoteForm } from '$app/server';
 	import Action from '../ui/Action.svelte';
 	import { Field } from '../ui/Form';
 	import { getStaffLayout } from '#lib/remote/layout.remote.js';

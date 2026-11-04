@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import type { RemoteFormField } from '@sveltejs/kit';
+	import type { RemoteFormField } from '$app/server';
 	/**
 	 * The "about you" half of volunteer onboarding, shared by the start step and
 	 * the Contact info section of /member/volunteer/profile. The step adds the
@@ -92,7 +92,7 @@
 
 {#snippet emailHint()}
 	<ParaglideMessage message={m.volunteer_profile_fields_change} inputs={{}}
-		>{#snippet a({ children })}<a href={resolve('/member/account')} class="link link-primary"
+		>{#snippet a({ children })}<a href={resolve('member/account')} class="link link-primary"
 				>{@render children?.()}</a
 			>{/snippet}</ParaglideMessage
 	>

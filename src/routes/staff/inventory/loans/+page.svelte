@@ -86,7 +86,7 @@
 				{/snippet}
 
 				{#each loans as l (l.id)}
-					{@const href = resolve(`/staff/inventory/loans/${l.id}`)}
+					{@const href = resolve(`staff/inventory/loans/${l.id}`)}
 					<tr class="hover cursor-pointer" use:rowLink={href}>
 						<td class="w-px">
 							<div class="flex w-max items-center gap-1">

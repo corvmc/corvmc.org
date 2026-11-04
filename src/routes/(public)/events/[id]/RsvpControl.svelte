@@ -60,7 +60,7 @@
 		{/snippet}
 	</Action>
 {:else if status.reason === 'ticketed'}
-	<Button href={resolve(`/events/${eventId}/tickets`)} size="lg"
+	<Button href={resolve(`events/${eventId}/tickets`)} size="lg"
 		>{m.public_events_id_rsvp_control_get_tickets()}</Button
 	>
 {:else}

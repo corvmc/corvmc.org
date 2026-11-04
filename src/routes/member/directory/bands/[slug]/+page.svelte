@@ -86,7 +86,7 @@
 
 <PageContent width="3xl">
 	<div class="flex items-center justify-between">
-		<a href={resolve('/member/directory/bands')} class="link text-muted"
+		<a href={resolve('member/directory/bands')} class="link text-muted"
 			>&larr; {many(m.term_band)}</a
 		>
 		{#if canReport}

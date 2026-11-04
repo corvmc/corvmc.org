@@ -82,7 +82,7 @@
 							<Button
 								variant="ghost"
 								size="sm"
-								href={resolve(`/api/audio/download/${page.params.token}/${track.id}`)}
+								href={resolve(`api/audio/download/${page.params.token}/${track.id}`)}
 							>
 								<IconDownload size={16} />
 								<span class="sr-only"

@@ -47,8 +47,8 @@
 	<PageHeader
 		title={m.public_events_id_tickets_success_title()}
 		parent={[
-			{ label: m.public_events(), href: resolve('/events') },
-			{ label: evt.title, href: resolve(`/events/${page.params.id!}`) }
+			{ label: m.public_events(), href: resolve('events') },
+			{ label: evt.title, href: resolve(`events/${page.params.id!}`) }
 		]}
 	/>
 

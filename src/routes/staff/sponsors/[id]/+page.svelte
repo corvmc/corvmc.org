@@ -293,7 +293,7 @@
 				{#each sponsor.placements as p (p.id)}
 					<tr>
 						<td class="cell-primary">
-							<a class="link font-medium" href={resolve(`/staff/events/${p.eventId}`)}>
+							<a class="link font-medium" href={resolve(`staff/events/${p.eventId}`)}>
 								{p.eventTitle}
 							</a>
 							<div class="text-muted">{formatDateShortYear(p.startsAt)}</div>
@@ -359,7 +359,7 @@
 				submitLabel={m.staff_delete()}
 				submitVariant="error"
 				successToast={m.staff_deleted()}
-				onsuccess={() => goto(resolve('/staff/sponsors'))}
+				onsuccess={() => goto(resolve('staff/sponsors'))}
 			>
 				{#snippet form()}
 					<input {...deleteSponsor.for(sponsor.id).fields.id.as('hidden', sponsor.id)} />

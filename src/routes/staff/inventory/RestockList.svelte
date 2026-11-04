@@ -80,7 +80,7 @@
 			{#each group as row (row.id)}
 				<tr class="hover">
 					<td class="cell-primary">
-						<a class="font-medium" href={resolve(`/staff/inventory/${row.id}`)}>{row.name}</a>
+						<a class="font-medium" href={resolve(`staff/inventory/${row.id}`)}>{row.name}</a>
 						{#if row.isOut}
 							<Badge variant="error" size="xs">{m.staff_inventory_restock_list_out()}</Badge>
 						{/if}
