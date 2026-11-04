@@ -64,7 +64,8 @@
 		const n = Number(raw);
 		return (WINDOWS as readonly (number | string)[]).includes(n) ? (n as Range) : DEFAULT_WINDOW;
 	}
-	const parseKind = (raw: string | null): Kind => (raw && raw in KINDS ? (raw as Kind) : '');
+	const parseKind = (raw: string | null): Kind =>
+		raw && Object.hasOwn(KINDS, raw) ? (raw as Kind) : '';
 	const parseView = (raw: string | null): ContractorJobView =>
 		contractorJobViews.includes(raw as never) ? (raw as ContractorJobView) : 'open';
 
