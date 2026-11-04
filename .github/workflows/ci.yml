@@ -91,7 +91,7 @@ jobs:
       - uses: ./.github/actions/install
       # Two svelte-check passes: `src`, which the generated tsconfig includes, and
       # then everything else through `tsconfig.tooling.json` — `scripts/`, `e2e/`,
-      # `eslint-rules/`, `.storybook/` and the root configs, none of which the
+      # `eslint-rules/` and the root configs, none of which the
       # generated one has ever covered. `pnpm check` chains both.
       - run: pnpm check
 
@@ -105,7 +105,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/install
-      # The `client` and `storybook` vitest projects run in real chromium.
+      # The `client` vitest project runs in real chromium.
       - name: Resolve Playwright version
         id: pw
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"

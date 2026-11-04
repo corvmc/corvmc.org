@@ -36,7 +36,6 @@ const IGNORED = [
 	'dist/**',
 	'.wrangler/**',
 	'coverage/**',
-	'storybook-static/**',
 	// Vitest browser mode names a failure screenshot's directory after the spec
 	// that failed, so this tree is full of directories called `*.spec.ts`.
 	'test-results/**',

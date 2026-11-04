@@ -12,8 +12,7 @@ import { execSync } from 'node:child_process';
 import { availableParallelism } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
-import { browserPort, devPort, previewPort, storybookPort } from './scripts/lib/checkout-ports';
+import { browserPort, devPort, previewPort } from './scripts/lib/checkout-ports';
 const dirname =
 	typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
@@ -53,7 +52,6 @@ const ssrExternalsForBrowserTests = {
 	}
 };
 
-// More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
 	plugins: [
 		// Not in the e2e build. `playwright.config.ts` puts SENTRY_ENVIRONMENT=ci in
@@ -220,37 +218,6 @@ export default defineConfig({
 						deps: {
 							inline: ['bits-ui']
 						}
-					}
-				}
-			},
-			{
-				extends: true,
-				plugins: [
-					// The plugin will run tests for the stories defined in your Storybook config
-					// See options at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon#storybooktest
-					storybookTest({
-						configDir: path.join(dirname, '.storybook')
-					}),
-					ssrExternalsForBrowserTests
-				],
-				test: {
-					name: 'storybook',
-					// Its own port. Without one this project takes vitest's default,
-					// which is the number `client` already binds — two browser servers
-					// starting together in the same run, racing for one port.
-					api: { port: storybookPort(dirname), strictPort: true },
-					browser: {
-						enabled: true,
-						locators: { exact: false },
-						headless: true,
-						// Same reasoning as `client` above: out of the trees the gates grep.
-						screenshotDirectory: 'test-results/screenshots',
-						provider: playwright({}),
-						instances: [
-							{
-								browser: 'chromium'
-							}
-						]
 					}
 				}
 			}

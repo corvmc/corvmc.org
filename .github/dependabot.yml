@@ -34,19 +34,6 @@ updates:
           - svelte-*
           - vite
           - '@vitejs/*'
-      # Named in full for the same reason as `testing` below: in #1763/#1767 the
-      # glob missed and the addons moved to 10.6.1 in minor-and-patch while core
-      # moved alone here, a skew that fails Unit tests on a missing export.
-      storybook:
-        patterns:
-          - storybook
-          - '@storybook/*'
-          - '@storybook/addon-a11y'
-          - '@storybook/addon-docs'
-          - '@storybook/addon-svelte-csf'
-          - '@storybook/addon-vitest'
-          - '@storybook/sveltekit'
-          - eslint-plugin-storybook
       cloudflare:
         patterns:
           - wrangler
@@ -58,7 +45,7 @@ updates:
       # collection with "did not expect test() to be called here" and reads like
       # a flake. Why the globs missed is not established (#1166); the explicit
       # names do not depend on the answer. Keep both lists in step when adding a
-      # package. `@storybook/addon-vitest` belongs to the storybook group above.
+      # package.
       testing:
         patterns:
           - vitest

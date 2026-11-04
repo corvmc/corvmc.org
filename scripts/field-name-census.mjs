@@ -23,7 +23,7 @@ const eslint = new ESLint({
 	cwd: ROOT,
 	overrideConfigFile: true,
 	overrideConfig: [
-		{ ignores: ['**/*.stories.svelte', '**/*.test.svelte', '**/*Harness.svelte'] },
+		{ ignores: ['**/*.test.svelte', '**/*Harness.svelte'] },
 		{
 			files: ['**/*.svelte'],
 			languageOptions: { parser: svelteParser, parserOptions: { parser: ts.parser } },

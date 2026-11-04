@@ -35,14 +35,6 @@ const MAIN_DEV_PORT = 5173;
 const MAIN_PREVIEW_PORT = 4173;
 /** vitest's own `defaultBrowserPort`. */
 const MAIN_BROWSER_PORT = 63315;
-/**
- * The storybook project runs a **second** browser server, and it defaulted to
- * `defaultBrowserPort` too — the same number `client` already binds. Whichever
- * lost the race reported `Port 63315 is already in use`, which surfaces as
- * "Unit tests" red with the client project's files simply absent and **zero
- * failed tests**, so it reads as flake rather than as a collision.
- */
-const MAIN_STORYBOOK_PORT = 63316;
 
 /**
  * Where worktree ports live: high enough to clear the common dev-server numbers,
@@ -51,19 +43,16 @@ const MAIN_STORYBOOK_PORT = 63316;
  * carries are vanishingly unlikely.
  */
 const WORKTREE_PORT_BASE = 41000;
-const WORKTREE_PORT_SPAN = 4000;
+const WORKTREE_PORT_SPAN = 3000;
 /**
- * Dev, preview, the vitest browser API, and storybook's browser API. Each slot
- * is `SPAN / SLOTS` wide.
+ * Dev, preview and the vitest browser API. Each slot is `SPAN / SLOTS` wide.
  *
- * Every widening keeps the earlier slots exactly where they were: two slots
- * across 2000, then three across 3000, now four across 4000 — the slot is 1000
- * wide throughout, so `BASE + slot * 1000 + digest % 1000` is unchanged for
- * every slot that already existed. A worktree's bookmarked URL and Playwright's
- * `reuseExistingServer` both depend on that stability, which is why the span
- * grows with the slot count rather than being divided further.
+ * The slot is 1000 wide however many there are, so `BASE + slot * 1000 +
+ * digest % 1000` never moves for a slot that stays. A worktree's bookmarked
+ * URL and Playwright's `reuseExistingServer` both depend on that stability,
+ * which is why the span follows the slot count rather than being divided.
  */
-const WORKTREE_PORT_SLOTS = 4;
+const WORKTREE_PORT_SLOTS = 3;
 
 /** Worktrees live here — see CLAUDE.md. */
 const WORKTREE_MARKER = `${'.claude'}/worktrees/`;
@@ -93,7 +82,7 @@ export function isWorktree(root: string): boolean {
  * increment would let one worktree's preview port equal the next worktree's dev
  * port.
  */
-function offsetFor(root: string, slot: 0 | 1 | 2 | 3): number {
+function offsetFor(root: string, slot: 0 | 1 | 2): number {
 	const digest = createHash('sha256').update(normalize(root)).digest('hex').slice(0, 8);
 	const span = WORKTREE_PORT_SPAN / WORKTREE_PORT_SLOTS;
 	return WORKTREE_PORT_BASE + slot * span + (parseInt(digest, 16) % span);
@@ -137,20 +126,6 @@ export function browserPort(root: string, env: NodeJS.ProcessEnv = process.env):
 	return (
 		fromEnv('VITEST_BROWSER_PORT', env) ??
 		(isWorktree(root) ? offsetFor(root, 2) : MAIN_BROWSER_PORT)
-	);
-}
-
-/**
- * The port the **storybook** project's browser server binds.
- *
- * Separate from `browserPort` because they are two servers that start at the
- * same time in one `pnpm test:unit`. Sharing a number is not a worktree problem
- * — it collides on a bare CI runner with nothing else on it.
- */
-export function storybookPort(root: string, env: NodeJS.ProcessEnv = process.env): number {
-	return (
-		fromEnv('VITEST_STORYBOOK_PORT', env) ??
-		(isWorktree(root) ? offsetFor(root, 3) : MAIN_STORYBOOK_PORT)
 	);
 }
 
