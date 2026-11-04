@@ -1,6 +1,6 @@
 <script lang="ts">
-	import PressKitProgress from '$lib/components/band/PressKitProgress.svelte';
-	import { getPressKitProgress } from '$lib/remote/press-kit.remote';
+	import PressKitProgress from '#lib/components/band/PressKitProgress.svelte';
+	import { getPressKitProgress } from '#lib/remote/press-kit.remote.js';
 
 	/**
 	 * The dashboard's progress card, owning its own query.

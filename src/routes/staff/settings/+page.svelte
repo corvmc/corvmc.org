@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
 	import {
 		getStaffSettingsPage,
 		updateProduct,
@@ -20,31 +20,31 @@
 		updateFeatureFlag,
 		syncSubscriptions,
 		refreshCommunityStats
-	} from '$lib/remote/settings.remote';
+	} from '#lib/remote/settings.remote.js';
 	import LockHealth from './LockHealth.svelte';
 	import UnmanagedLockCodes from './UnmanagedLockCodes.svelte';
 	import UtecDevicePicker from './UtecDevicePicker.svelte';
-	import { getLockHealth, getUnmanagedLockUsers } from '$lib/remote/lock.remote';
-	import { updateInboxChannelConfig, testMetaConnection } from '$lib/remote/inbox.remote';
-	import { isAlwaysEnabledChannel } from '$lib/config';
-	import { channelLabel, channelIcon } from '$lib/components/inbox/channels';
+	import { getLockHealth, getUnmanagedLockUsers } from '#lib/remote/lock.remote.js';
+	import { updateInboxChannelConfig, testMetaConnection } from '#lib/remote/inbox.remote.js';
+	import { isAlwaysEnabledChannel } from '#lib/config.js';
+	import { channelLabel, channelIcon } from '#lib/components/inbox/channels.js';
 	import { inboxChannelMeta } from './inbox-channel-meta';
 	import { featureMeta } from './feature-meta';
-	import type { FeatureFlag } from '$lib/server/feature-flags';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { errorMessage } from '$lib/error-message';
-	import { retryQuery } from '$lib/utils/retry-query';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import type { SubscriptionSyncSummary } from '$lib/types/subscription-sync';
-	import type { CommunityStats } from '$lib/server/db/schema/finance';
-	import { formatDollars } from '$lib/utils/format';
+	import type { FeatureFlag } from '#lib/server/feature-flags.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
+	import { retryQuery } from '#lib/utils/retry-query.js';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import type { SubscriptionSyncSummary } from '#lib/types/subscription-sync.js';
+	import type { CommunityStats } from '#lib/server/db/schema/finance.js';
+	import { formatDollars } from '#lib/utils/format.js';
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/state';
 	import { replaceState } from '$app/navigation';

@@ -17,20 +17,20 @@ vi.mock('$app/server', () => ({
 const listPublicCalendarEvents = vi.fn(async (..._args: unknown[]) => [] as unknown[]);
 const listPublicUpcomingEvents = vi.fn(async (..._args: unknown[]) => [] as unknown[]);
 const countPublicUpcomingEvents = vi.fn(async (..._args: unknown[]) => 0);
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	listPublicCalendarEvents: (...args: unknown[]) => listPublicCalendarEvents(...(args as [])),
 	listPublicUpcomingEvents: (...args: unknown[]) => listPublicUpcomingEvents(...(args as [])),
 	countPublicUpcomingEvents: (...args: unknown[]) => countPublicUpcomingEvents(...(args as []))
 }));
 
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	resolveImageUrl: (key: string | null) => key
 }));
 
 import { getPublicCalendar, getPublicGigGuide } from './calendar.remote';
-import { monthSchema, gigGuideSchema, GIG_GUIDE_PAGE_SIZE } from '$lib/types/calendar';
-import { formatDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { monthSchema, gigGuideSchema, GIG_GUIDE_PAGE_SIZE } from '#lib/types/calendar.js';
+import { formatDateInTz } from '#lib/server/reservation/timezone.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 function fakeRow(id: string) {
 	return {

@@ -4,11 +4,11 @@ import type Stripe from 'stripe';
 /** Paying for a booking at the smart reader, against a real SQLite and the fake gateway. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
 
 const announceConfirmed = vi.fn(async () => undefined);
@@ -17,18 +17,18 @@ vi.mock('./reservation-service', () => ({
 }));
 
 const recordReservationCardPresent = vi.fn(async () => undefined);
-vi.mock('$lib/server/finance/reservation-entries', () => ({
+vi.mock('#lib/server/finance/reservation-entries.js', () => ({
 	recordReservationCardPresent: (...a: unknown[]) => recordReservationCardPresent(...(a as []))
 }));
 
 const captureException = vi.fn();
-vi.mock('$lib/server/sentry', () => ({
+vi.mock('#lib/server/sentry.js', () => ({
 	captureException: (...a: unknown[]) => captureException(...a)
 }));
 
-const { initStripe, stripe } = await import('$lib/server/stripe');
+const { initStripe, stripe } = await import('#lib/server/stripe.js');
 const { createFakeGateway, resetFakeGateway, FAKE_TERMINAL_READER_ID } =
-	await import('$lib/server/finance/gateway/fake-gateway');
+	await import('#lib/server/finance/gateway/fake-gateway.js');
 const {
 	readerPayable,
 	startReaderPayment,

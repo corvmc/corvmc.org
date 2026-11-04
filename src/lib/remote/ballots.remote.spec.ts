@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { surfaces } from '$lib/config';
+import { surfaces } from '#lib/config.js';
 
 // Each export is only as guarded as its own first lines. These pin who may do
 // what, and that a refused caller never reaches the service.
 
 const ME = { id: 'usr-me', name: 'Me', email: 'me@example.com' };
 let held = new Set<string>();
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => ME,
 	can: async (cap: string) => held.has(cap),
 	requireCapability: async (cap: string) => {
@@ -20,7 +20,7 @@ const requireGroupRole = vi.fn(async (ref: { id: string }, _min: string) => {
 	if (!adminOf.has(ref.id)) throw Object.assign(new Error('403 group'), { status: 403 });
 	return { user: ME, group: { id: ref.id }, role: 'admin' };
 });
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: (ref: { id: string }, min: string) => requireGroupRole(ref, min)
 }));
 
@@ -47,11 +47,13 @@ const svc = {
 	certifyBallot: vi.fn(async () => undefined),
 	setElectorOverride: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/ballot/ballot-service', () => svc);
-vi.mock('$lib/server/project/decision-chain', () => ({
+vi.mock('#lib/server/ballot/ballot-service.js', () => svc);
+vi.mock('#lib/server/project/decision-chain.js', () => ({
 	getBallotChain: vi.fn(async () => ({ suggestion: null, project: null, authorised: null }))
 }));
-vi.mock('$lib/server/project/project-service', () => ({ listCommittees: vi.fn(async () => []) }));
+vi.mock('#lib/server/project/project-service.js', () => ({
+	listCommittees: vi.fn(async () => [])
+}));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: ME } }),

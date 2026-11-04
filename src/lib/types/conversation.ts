@@ -1,4 +1,4 @@
-import type { inboxChannels, inboxThreadStatuses } from '$lib/config';
+import type { inboxChannels, inboxThreadStatuses } from '#lib/config.js';
 
 /**
  * One row of the unified conversation list.

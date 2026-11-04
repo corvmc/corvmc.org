@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import StaffGroupDetail from '$lib/components/groups/StaffGroupDetail.svelte';
-	import ApplicationsCard from '$lib/components/groups/ApplicationsCard.svelte';
-	import { getStaffGroupPage } from '$lib/remote/groups.remote';
+	import StaffGroupDetail from '#lib/components/groups/StaffGroupDetail.svelte';
+	import ApplicationsCard from '#lib/components/groups/ApplicationsCard.svelte';
+	import { getStaffGroupPage } from '#lib/remote/groups.remote.js';
 
 	let {
 		id,

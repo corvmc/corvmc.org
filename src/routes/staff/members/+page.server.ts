@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { can } from '$lib/server/authorization';
+import { can } from '#lib/server/authorization.js';
 import type { PageServerLoad } from './$types';
 
 /**

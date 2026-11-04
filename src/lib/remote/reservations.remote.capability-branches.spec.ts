@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
-import { positionOrder, type Capability, type Position } from '$lib/config';
+import { mockUser } from '#lib/server/db/test-factory.js';
+import { positionOrder, type Capability, type Position } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // The member-facing handlers in reservations.remote.ts that branch on who the
@@ -22,7 +22,7 @@ function chain(): Record<string, unknown> {
 	};
 	return c;
 }
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chain(),
 		update: () => ({ set: () => ({ where: () => Promise.resolve() }) }),
@@ -31,8 +31,8 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 let heldPositions: Position[] = [];
-vi.mock('$lib/server/authorization', async () => {
-	const config = await import('$lib/config');
+vi.mock('#lib/server/authorization.js', async () => {
+	const config = await import('#lib/config.js');
 	return {
 		can: vi.fn(async (cap: Capability) =>
 			heldPositions.some((p) => config.grantsCapability(config.positions[p], cap))
@@ -44,19 +44,21 @@ vi.mock('$lib/server/authorization', async () => {
 	};
 });
 
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 
 // A big balance, but the rows below carry no subscription, so no reset date and
 // no free hours apply (#2060): the window alone decides a no-charge confirm.
-vi.mock('$lib/server/finance/credit-service', () => ({ getBalance: vi.fn(async () => 100) }));
-vi.mock('$lib/server/user/user-service', () => ({ ensureContactPhone: vi.fn(async () => true) }));
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/finance/credit-service.js', () => ({ getBalance: vi.fn(async () => 100) }));
+vi.mock('#lib/server/user/user-service.js', () => ({
+	ensureContactPhone: vi.fn(async () => true)
+}));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 
 const cancel = vi.fn(async (..._a: unknown[]) => undefined);
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	create: vi.fn(async () => ({ id: 'res-new' })),
 	createWaitlisted: vi.fn(),
 	confirm: vi.fn(),
@@ -94,7 +96,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const remote = (await import('$lib/remote/reservations.remote')) as any;
+const remote = (await import('#lib/remote/reservations.remote.js')) as any;
 
 // Every combination of the six positions, including none.
 const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>

@@ -3,8 +3,8 @@ import { listClaimants, listInvitationsForShift } from './volunteer-signup-servi
 import { listFeedbackForShift } from './volunteer-feedback-service';
 import { listWorkTasks } from './duty-list-service';
 import { listHourLogs } from './hour-log-service';
-import { listJobs } from '$lib/server/contractor/contractor-job-service';
-import { listFlagsForWorkOrder } from '$lib/server/inventory/work-request-service';
+import { listJobs } from '#lib/server/contractor/contractor-job-service.js';
+import { listFlagsForWorkOrder } from '#lib/server/inventory/work-request-service.js';
 
 /**
  * Everything one work order's page shows, read through services. Unguarded:

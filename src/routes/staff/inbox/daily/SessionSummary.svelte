@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * What the session did, and what is left.
 	 *
@@ -10,11 +10,11 @@
 	 * you deferred it.
 	 */
 	import { resolve } from '$app/paths';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { getInboxThreadCounts } from '$lib/remote/inbox.remote';
-	import { undoLast } from '$lib/components/inbox/undo.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import { getInboxThreadCounts } from '#lib/remote/inbox.remote.js';
+	import { undoLast } from '#lib/components/inbox/undo.svelte.js';
 	import { session } from './session.svelte';
 
 	let { onclose }: { onclose: () => void } = $props();

@@ -1,11 +1,11 @@
 import type { RequestHandler } from './$types';
-import { requireCapability } from '$lib/server/authorization';
+import { requireCapability } from '#lib/server/authorization.js';
 import {
 	instructorRosterCsv,
 	instructorRosterFilters,
 	listAllInstructors
-} from '$lib/server/instructor/instructor-roster';
-import { csvResponse } from '$lib/server/report/csv';
+} from '#lib/server/instructor/instructor-roster.js';
+import { csvResponse } from '#lib/server/report/csv.js';
 
 /** The Instructors view as CSV, filtered as the page is; guarded as its remote is. */
 export const GET: RequestHandler = async ({ url }) => {

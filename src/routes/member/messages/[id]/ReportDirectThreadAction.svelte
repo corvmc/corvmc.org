@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
 	import { IconFlag } from '@tabler/icons-svelte';
-	import { reportDirectThread } from '$lib/remote/direct-messages.remote';
+	import { reportDirectThread } from '#lib/remote/direct-messages.remote.js';
 
 	// A sibling of ReportContentAction rather than a use of it. The shared one
 	// posts to submitFlag, which takes its entity type and id from the browser

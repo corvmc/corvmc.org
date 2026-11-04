@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import PostDetail from '$lib/components/classified/PostDetail.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import PostDetail from '#lib/components/classified/PostDetail.svelte';
 	import { IconEye, IconEyeOff } from '@tabler/icons-svelte';
-	import { getStaffClassifiedDetail, moderateClassified } from '$lib/remote/classifieds.remote';
+	import { getStaffClassifiedDetail, moderateClassified } from '#lib/remote/classifieds.remote.js';
 
 	const id = $derived(page.params.id!);
 	const post = $derived(await getStaffClassifiedDetail(id));

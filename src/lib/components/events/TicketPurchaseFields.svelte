@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	// The money half of the ticket purchase form: how much, and where it goes.
 	// Shared by the public checkout page and the member event page. Both surfaces
 	// charge through the same remote, so the arithmetic they preview has to be the
 	// same arithmetic — kept in one component rather than written twice and
 	// drifting, and computed by the same module the server re-derives with.
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import SplitBar from '$lib/components/ui/SplitBar.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { formatCents } from '$lib/utils/format';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import SplitBar from '#lib/components/ui/SplitBar.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { formatCents } from '#lib/utils/format.js';
 	import {
 		actsAnchoredCollectiveCents,
 		actsMinCents,
 		computeTicketSplit
-	} from '$lib/finance/ticket-split';
-	import { TICKET_MIN_CHARGE_CENTS } from '$lib/config';
+	} from '#lib/finance/ticket-split.js';
+	import { TICKET_MIN_CHARGE_CENTS } from '#lib/config.js';
 	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
 
 	let {

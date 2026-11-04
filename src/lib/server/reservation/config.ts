@@ -1,5 +1,5 @@
-import { getConfigsByPrefix } from '$lib/server/site-config/site-config-service';
-import type { BookerType } from '$lib/config';
+import { getConfigsByPrefix } from '#lib/server/site-config/site-config-service.js';
+import type { BookerType } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Defaults — kept as named exports for tests and static references

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import Logo from '$lib/components/ui/Logo.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { here, signInHref } from '$lib/utils/sign-in';
+	import Logo from '#lib/components/ui/Logo.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { here, signInHref } from '#lib/utils/sign-in.js';
 
 	let { user }: { user: { name: string } | null } = $props();
 

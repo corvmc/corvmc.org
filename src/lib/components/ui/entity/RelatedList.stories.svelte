@@ -5,7 +5,7 @@
 	import EmptyState from '../EmptyState.svelte';
 	import Button from '../Button.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
-	import { fakeRef } from '$lib/test/fixtures';
+	import { fakeRef } from '#lib/test/fixtures.js';
 
 	const bands = [
 		fakeRef('band', { id: 'b1', subtitle: '4 active members' }),

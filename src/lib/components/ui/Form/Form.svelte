@@ -45,15 +45,15 @@
 </script>
 
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { reportError } from '$lib/report-error';
-	import { errorMessage } from '$lib/error-message';
-	import { recoverFromStaleDeploy } from '$lib/stale-deploy-recovery';
+	import { reportError } from '#lib/report-error.js';
+	import { errorMessage } from '#lib/error-message.js';
+	import { recoverFromStaleDeploy } from '#lib/stale-deploy-recovery.js';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { signInInterruptFor } from '$lib/utils/sign-in';
+	import { signInInterruptFor } from '#lib/utils/sign-in.js';
 	import { getErrorBoundary } from '../ErrorToastBoundary.svelte';
 	import FormGuard from './FormGuard.svelte';
 

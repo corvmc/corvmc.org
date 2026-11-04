@@ -1,11 +1,11 @@
 import type { RequestHandler } from './$types';
-import { requireCapability } from '$lib/server/authorization';
+import { requireCapability } from '#lib/server/authorization.js';
 import {
 	listAllVolunteers,
 	volunteerRosterCsv,
 	volunteerRosterFilters
-} from '$lib/server/volunteer/volunteer-roster';
-import { csvResponse } from '$lib/server/report/csv';
+} from '#lib/server/volunteer/volunteer-roster.js';
+import { csvResponse } from '#lib/server/report/csv.js';
 
 /**
  * The volunteers roster as CSV, filtered as the page is. A `+server.ts` because a

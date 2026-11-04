@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Hero from '$lib/components/public/Hero.svelte';
-	import Tile from '$lib/components/public/Tile.svelte';
-	import Section from '$lib/components/public/Section.svelte';
-	import SectionHeading from '$lib/components/public/SectionHeading.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Hero from '#lib/components/public/Hero.svelte';
+	import Tile from '#lib/components/public/Tile.svelte';
+	import Section from '#lib/components/public/Section.svelte';
+	import SectionHeading from '#lib/components/public/SectionHeading.svelte';
 	import {
 		IconBuildingCommunity,
 		IconCoin,
@@ -13,9 +13,9 @@
 		IconTicket
 	} from '@tabler/icons-svelte';
 	import type { Icon } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { signInHref } from '$lib/utils/sign-in';
-	import { getPublicCommittees } from '$lib/remote/committees.remote';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { signInHref } from '#lib/utils/sign-in.js';
+	import { getPublicCommittees } from '#lib/remote/committees.remote.js';
 	import WishlistSection from './WishlistSection.svelte';
 
 	type VolunteerGroup = {

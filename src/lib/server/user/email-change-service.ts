@@ -1,18 +1,18 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { env } from '$env/dynamic/private';
-import { db } from '$lib/server/db';
-import { session, user, verification } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { session, user, verification } from '#lib/server/db/schema/authentication.js';
 import { and, eq, gt } from 'drizzle-orm';
 import { DomainError } from '../domain-error';
-import { allowRateLimited } from '$lib/server/rate-limit';
-import { dispatchEmailOnly } from '$lib/server/notification/dispatcher';
+import { allowRateLimited } from '#lib/server/rate-limit.js';
+import { dispatchEmailOnly } from '#lib/server/notification/dispatcher.js';
 import {
 	linkExistingSubscriberToUser,
 	moveLinkedSubscriberEmail
-} from '$lib/server/marketing/subscriber-service';
-import { captureException } from '$lib/server/sentry';
-import { stripe } from '$lib/server/stripe';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
+} from '#lib/server/marketing/subscriber-service.js';
+import { captureException } from '#lib/server/sentry.js';
+import { stripe } from '#lib/server/stripe.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 
 // ---------------------------------------------------------------------------
 // Staff-proposed, mailbox-confirmed email change (docs/specs/staff-email-change-spec.md)

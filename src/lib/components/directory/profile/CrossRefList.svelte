@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	import ProfileSection from './ProfileSection.svelte';
-	import EntityAvatar from '$lib/components/ui/entity/EntityAvatar.svelte';
+	import EntityAvatar from '#lib/components/ui/entity/EntityAvatar.svelte';
 	import { IconArrowRight, IconLock } from '@tabler/icons-svelte';
 
 	export type CrossRef = {

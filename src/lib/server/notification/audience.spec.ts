@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { NOTIFICATION_TYPES, preferenceTypesFor } from '$lib/server/db/schema/notification';
+import { NOTIFICATION_TYPES, preferenceTypesFor } from '#lib/server/db/schema/notification.js';
 
 /**
  * Who a notification type is *for* is a field, not a suffix on its label.

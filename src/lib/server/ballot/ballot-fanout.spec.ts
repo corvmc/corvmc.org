@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { surfaces } from '$lib/config';
+import { surfaces } from '#lib/config.js';
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			const out = [];
@@ -17,16 +17,17 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const sendTemplateBatch = vi.fn(async () => undefined);
-vi.mock('$lib/server/notification/email', () => ({
+vi.mock('#lib/server/notification/email/index.js', () => ({
 	sendTemplateBatch: (...a: unknown[]) => sendTemplateBatch(...(a as []))
 }));
-vi.mock('$lib/server/notification/sse', () => ({ pushToUser: vi.fn() }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/notification/sse.js', () => ({ pushToUser: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const { fanOutBallotNotice } = await import('./ballot-fanout');
-const { user } = await import('$lib/server/db/schema/authentication');
-const { notification, notificationPreference } = await import('$lib/server/db/schema/notification');
-const { ballot, ballotElector } = await import('$lib/server/db/schema/ballot');
+const { user } = await import('#lib/server/db/schema/authentication.js');
+const { notification, notificationPreference } =
+	await import('#lib/server/db/schema/notification.js');
+const { ballot, ballotElector } = await import('#lib/server/db/schema/ballot.js');
 
 const BALLOT = 'bal-1';
 const event = { ballotId: BALLOT, title: 'Adopt the bylaws' };

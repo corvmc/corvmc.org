@@ -1,9 +1,9 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { resolveContactSheetToken } from '$lib/server/directory/contact-sheet-service';
-import { detachSlot, listFor, replaceSlot } from '$lib/server/media/media-service';
-import { uploadFile, resolveImageUrl } from '$lib/server/storage';
-import { mediaKey } from '$lib/server/storage-keys';
+import { resolveContactSheetToken } from '#lib/server/directory/contact-sheet-service.js';
+import { detachSlot, listFor, replaceSlot } from '#lib/server/media/media-service.js';
+import { uploadFile, resolveImageUrl } from '#lib/server/storage.js';
+import { mediaKey } from '#lib/server/storage-keys.js';
 
 /**
  * An external act's tech rider, as a file.

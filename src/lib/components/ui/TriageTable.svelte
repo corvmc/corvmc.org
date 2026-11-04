@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { EntityRef } from '$lib/types/entity';
+	import type { EntityRef } from '#lib/types/entity.js';
 	import type { ResolvedPathname } from '$app/types';
 
 	/** One report in a triage queue, whichever source it came from (#552). */
@@ -21,13 +21,13 @@
 </script>
 
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import { rowLink } from '$lib/actions/row-link';
-	import { relativeDay } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { relativeDay } from '#lib/utils/format.js';
 
 	let { rows, subjectLabel }: { rows: TriageRow[]; subjectLabel: string } = $props();
 </script>

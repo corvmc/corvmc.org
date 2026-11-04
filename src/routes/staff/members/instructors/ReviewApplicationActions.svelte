@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { approveInstructor, sendBackInstructor } from '$lib/remote/instructors.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { approveInstructor, sendBackInstructor } from '#lib/remote/instructors.remote.js';
 	import { invalidateAll } from '$app/navigation';
 
 	/**

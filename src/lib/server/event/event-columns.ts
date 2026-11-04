@@ -1,5 +1,5 @@
 import { sql, getTableColumns } from 'drizzle-orm';
-import { eventListing } from '$lib/server/db/schema/event';
+import { eventListing } from '#lib/server/db/schema/event.js';
 
 /**
  * The event's poster key, from its `media_attachment` (#808).

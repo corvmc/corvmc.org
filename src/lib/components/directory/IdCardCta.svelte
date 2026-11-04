@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
+	import { m } from '#lib/paraglide/messages.js';
+	import speakerLogo from '#lib/assets/cmc-speaker-icon.svg';
 	import { page } from '$app/state';
-	import { here, signInHref } from '$lib/utils/sign-in';
+	import { here, signInHref } from '#lib/utils/sign-in.js';
 
 	interface Props {
 		href?: string;

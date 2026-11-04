@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import type { GroupKind } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import type { GroupKind } from '#lib/config.js';
 	import { resolve } from '$app/paths';
-	import { retryQuery } from '$lib/utils/retry-query';
-	import { getStaffBandPage } from '$lib/remote/bands.remote';
-	import { getStaffGroupPage, getStaffCommitteePage } from '$lib/remote/groups.remote';
+	import { retryQuery } from '#lib/utils/retry-query.js';
+	import { getStaffBandPage } from '#lib/remote/bands.remote.js';
+	import { getStaffGroupPage, getStaffCommitteePage } from '#lib/remote/groups.remote.js';
 	import GroupRecord from './GroupRecord.svelte';
 
 	/** A group's record beside a Groups view, with a link on to its own page. */

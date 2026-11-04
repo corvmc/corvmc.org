@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
 	import SetupElement from './SetupElement.svelte';
-	import { payFakeSetupIntent, startAddCard } from '$lib/remote/billing.remote';
+	import { payFakeSetupIntent, startAddCard } from '#lib/remote/billing.remote.js';
 
 	let {
 		open = $bindable(false),

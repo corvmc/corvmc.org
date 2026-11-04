@@ -1,33 +1,33 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { env } from '$env/dynamic/public';
-	import { canonicalAddress } from '$lib/utils/canonical-address';
+	import { canonicalAddress } from '#lib/utils/canonical-address.js';
 	import {
 		getPublicBandProfile,
 		getBandShows,
 		getBandPastShows
-	} from '$lib/remote/directory.remote';
+	} from '#lib/remote/directory.remote.js';
 	import ProfileHeader, {
 		type ProfilePill
-	} from '$lib/components/directory/profile/ProfileHeader.svelte';
-	import QuickFacts from '$lib/components/directory/profile/QuickFacts.svelte';
-	import ProseBlock from '$lib/components/directory/profile/ProseBlock.svelte';
-	import ListenStrip from '$lib/components/directory/profile/ListenStrip.svelte';
-	import ReleasesBox from '$lib/components/directory/profile/ReleasesBox.svelte';
-	import ShowsBox from '$lib/components/directory/profile/ShowsBox.svelte';
+	} from '#lib/components/directory/profile/ProfileHeader.svelte';
+	import QuickFacts from '#lib/components/directory/profile/QuickFacts.svelte';
+	import ProseBlock from '#lib/components/directory/profile/ProseBlock.svelte';
+	import ListenStrip from '#lib/components/directory/profile/ListenStrip.svelte';
+	import ReleasesBox from '#lib/components/directory/profile/ReleasesBox.svelte';
+	import ShowsBox from '#lib/components/directory/profile/ShowsBox.svelte';
 	import CrossRefList, {
 		type CrossRef
-	} from '$lib/components/directory/profile/CrossRefList.svelte';
-	import TagCloud from '$lib/components/directory/profile/TagCloud.svelte';
-	import LinksBox from '$lib/components/directory/profile/LinksBox.svelte';
-	import ProfileGrid from '$lib/components/directory/profile/ProfileGrid.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import PressBox from '$lib/components/directory/profile/PressBox.svelte';
-	import PressPhoto from '$lib/components/directory/profile/PressPhoto.svelte';
-	import VideoBox from '$lib/components/directory/profile/VideoBox.svelte';
-	import ContactForm from '$lib/components/directory/profile/ContactForm.svelte';
+	} from '#lib/components/directory/profile/CrossRefList.svelte';
+	import TagCloud from '#lib/components/directory/profile/TagCloud.svelte';
+	import LinksBox from '#lib/components/directory/profile/LinksBox.svelte';
+	import ProfileGrid from '#lib/components/directory/profile/ProfileGrid.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import PressBox from '#lib/components/directory/profile/PressBox.svelte';
+	import PressPhoto from '#lib/components/directory/profile/PressPhoto.svelte';
+	import VideoBox from '#lib/components/directory/profile/VideoBox.svelte';
+	import ContactForm from '#lib/components/directory/profile/ContactForm.svelte';
 
 	const MEMBERS_BASE = '/directory/members';
 

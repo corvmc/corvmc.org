@@ -24,10 +24,10 @@ const auth = vi.hoisted(() => ({
 	requireCapability: vi.fn(async () => ({ id: 'user-1' })),
 	can: vi.fn(async (_cap: string) => false)
 }));
-vi.mock('$lib/server/authorization', () => auth);
+vi.mock('#lib/server/authorization.js', () => auth);
 
 const guard = vi.hoisted(() => ({ requireApplicationReviewer: vi.fn() }));
-vi.mock('$lib/server/group/group-context', () => guard);
+vi.mock('#lib/server/group/group-context.js', () => guard);
 
 const svc = vi.hoisted(() => ({
 	acceptApplication: vi.fn(async () => undefined),
@@ -36,10 +36,10 @@ const svc = vi.hoisted(() => ({
 	submitApplication: vi.fn(async () => 'app-1'),
 	withdrawApplication: vi.fn(async () => undefined)
 }));
-vi.mock('$lib/server/group/application-service', () => svc);
+vi.mock('#lib/server/group/application-service.js', () => svc);
 
 const refreshed = vi.hoisted(() => ({ member: vi.fn(), staff: vi.fn(), groups: vi.fn() }));
-vi.mock('$lib/remote/groups.remote', () => ({
+vi.mock('#lib/remote/groups.remote.js', () => ({
 	getMemberGroup: () => ({ refresh: refreshed.member }),
 	getStaffGroupPage: () => ({ refresh: refreshed.staff }),
 	getStaffCommittees: () => ({ refresh: refreshed.staff }),

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import { formatCents } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import { formatCents } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
-	import type { ProjectBurn } from '$lib/server/project/project-service';
+	import type { ProjectBurn } from '#lib/server/project/project-service.js';
 
 	/**
 	 * The show's budget against what it has spent, from its project's burn.

@@ -9,7 +9,7 @@ import { render } from 'vitest-browser-svelte';
  * outright with `Form cannot contain duplicated keys`, which reached a member
  * as a 500 on the one button that confirms a booking (#1299).
  */
-vi.mock('$lib/remote/reservations.remote', () => {
+vi.mock('#lib/remote/reservations.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => null
@@ -43,7 +43,7 @@ vi.mock('$app/navigation', () => ({
 	beforeNavigate: vi.fn()
 }));
 
-vi.mock('$lib/utils/checkout-navigation', () => ({ goToCheckout: vi.fn() }));
+vi.mock('#lib/utils/checkout-navigation.js', () => ({ goToCheckout: vi.fn() }));
 
 const ConfirmReservationAction = (await import('./ConfirmReservationAction.svelte')).default;
 

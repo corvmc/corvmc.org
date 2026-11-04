@@ -1,13 +1,13 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	volunteerCertification,
 	memberCertification,
 	volunteerRoleCertification
-} from '$lib/server/db/schema/volunteer';
+} from '#lib/server/db/schema/volunteer.js';
 import { and, asc, count, eq, inArray } from 'drizzle-orm';
-import { DomainError } from '$lib/server/errors';
-import { CERT_DESCRIPTION_MAX, CERT_NAME_MAX } from '$lib/config';
-import type { VolunteerCertification } from '$lib/server/db/schema/volunteer';
+import { DomainError } from '#lib/server/errors.js';
+import { CERT_DESCRIPTION_MAX, CERT_NAME_MAX } from '#lib/config.js';
+import type { VolunteerCertification } from '#lib/server/db/schema/volunteer.js';
 
 // ---------------------------------------------------------------------------
 // The certification catalog

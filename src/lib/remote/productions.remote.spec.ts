@@ -52,7 +52,7 @@ const requireCapability = vi.fn(async (cap: string) => {
 	if (!holds(persona, cap)) throw denied();
 	return { id: `${persona}-1` };
 });
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap),
 	// The listing guard asks these before it falls to the committee.
 	can: async (cap: string) => holds(persona, cap),
@@ -72,7 +72,7 @@ const requireProjectCommittee = vi.fn(async (projectId: string | null, cap: stri
 	}
 	throw denied();
 });
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireProjectCommittee: (projectId: string | null, cap: string) =>
 		requireProjectCommittee(projectId, cap)
 }));
@@ -86,7 +86,7 @@ const scope = vi.hoisted(() => ({
 	projectOfArtifactRequest: vi.fn(async () => 'proj-show'),
 	currentProduction: vi.fn(async () => currentRow)
 }));
-vi.mock('$lib/server/production/production-scope', () => scope);
+vi.mock('#lib/server/production/production-scope.js', () => scope);
 
 const service = {
 	createProduction: vi.fn(),
@@ -96,7 +96,7 @@ const service = {
 };
 /** The stored row `updateProduction` compares a submission against. */
 let currentRow: Record<string, unknown> = {};
-vi.mock('$lib/server/production/production-service', () => ({
+vi.mock('#lib/server/production/production-service.js', () => ({
 	createProduction: (...a: unknown[]) => service.createProduction(...a),
 	updateProductionDetails: (...a: unknown[]) => service.updateProductionDetails(...a),
 	transitionProduction: (...a: unknown[]) => service.transitionProduction(...(a as [])),
@@ -104,12 +104,12 @@ vi.mock('$lib/server/production/production-service', () => ({
 }));
 
 const listings = { create: vi.fn() };
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	create: (...a: unknown[]) => listings.create(...a)
 }));
 
 const attachable = { listAttachableListings: vi.fn(async () => [] as unknown[]) };
-vi.mock('$lib/server/production/attachable-listings', () => ({
+vi.mock('#lib/server/production/attachable-listings.js', () => ({
 	listAttachableListings: () => attachable.listAttachableListings()
 }));
 
@@ -122,10 +122,10 @@ const runOfShow = {
 	setSlotTerms: vi.fn(),
 	buildSlotsFromLineup: vi.fn()
 };
-vi.mock('$lib/server/production/host-service', () => ({
+vi.mock('#lib/server/production/host-service.js', () => ({
 	openHostShift: vi.fn()
 }));
-vi.mock('$lib/server/production/run-of-show-service', () => ({
+vi.mock('#lib/server/production/run-of-show-service.js', () => ({
 	addSlot: (...a: unknown[]) => runOfShow.addSlot(...a),
 	updateSlot: (...a: unknown[]) => runOfShow.updateSlot(...a),
 	markSlotTiming: (...a: unknown[]) => runOfShow.markSlotTiming(...a),
@@ -136,13 +136,13 @@ vi.mock('$lib/server/production/run-of-show-service', () => ({
 }));
 
 const settlement = { recordSlotPayout: vi.fn(), undoSlotPayout: vi.fn() };
-vi.mock('$lib/server/production/settlement-service', () => ({
+vi.mock('#lib/server/production/settlement-service.js', () => ({
 	recordSlotPayout: (...a: unknown[]) => settlement.recordSlotPayout(...(a as [])),
 	undoSlotPayout: (...a: unknown[]) => settlement.undoSlotPayout(...(a as []))
 }));
 
 const expenses = { addExpense: vi.fn(), removeExpense: vi.fn() };
-vi.mock('$lib/server/production/expense-service', () => ({
+vi.mock('#lib/server/production/expense-service.js', () => ({
 	addExpense: (...a: unknown[]) => expenses.addExpense(...a),
 	removeExpense: (...a: unknown[]) => expenses.removeExpense(...a)
 }));
@@ -152,14 +152,14 @@ const artifacts = {
 	cancelArtifactRequest: vi.fn(),
 	promotePosterArt: vi.fn()
 };
-vi.mock('$lib/server/production/artifact-request-service', () => ({
+vi.mock('#lib/server/production/artifact-request-service.js', () => ({
 	requestArtifact: (...a: unknown[]) => artifacts.requestArtifact(...a),
 	cancelArtifactRequest: (...a: unknown[]) => artifacts.cancelArtifactRequest(...a),
 	promotePosterArt: (...a: unknown[]) => artifacts.promotePosterArt(...a)
 }));
 
 const flyers = { useTemplateFlyer: vi.fn(), useArtWithFooter: vi.fn() };
-vi.mock('$lib/server/poster/flyer-service', () => ({
+vi.mock('#lib/server/poster/flyer-service.js', () => ({
 	useTemplateFlyer: (...a: unknown[]) => flyers.useTemplateFlyer(...a),
 	useArtWithFooter: (...a: unknown[]) => flyers.useArtWithFooter(...a)
 }));

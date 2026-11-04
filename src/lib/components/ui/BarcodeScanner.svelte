@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { browser } from '$app/environment';
 	import Button from './Button.svelte';
 	import { IconCamera, IconCameraOff } from '@tabler/icons-svelte';
@@ -16,7 +16,7 @@
 	 *
 	 * Domain-free by the folder's rule: it emits a decoded string and imports
 	 * nothing from `$lib/remote` or `$lib/server`. Deciding what the string *means*
-	 * is `parseScan` in `$lib/utils/scan`.
+	 * is `parseScan` in `#lib/utils/scan.js`.
 	 */
 	let {
 		onscan,

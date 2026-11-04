@@ -1,8 +1,8 @@
-import type { StaffInboxChannel } from '$lib/config';
+import type { StaffInboxChannel } from '#lib/config.js';
 
 /**
  * What the Inbox Channels tab says about each channel, beyond its name and icon
- * — those come from `$lib/components/inbox/channels`, which the inbox pages
+ * — those come from `#lib/components/inbox/channels.js`, which the inbox pages
  * share.
  *
  * Keyed by `StaffInboxChannel` so a channel added to that list without a row

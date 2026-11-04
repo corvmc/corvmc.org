@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { getContractorsPage, createContractorForm } from '$lib/remote/contractors.remote';
-	import { contractorTradeLabels, contractorTrades, type ContractorTrade } from '$lib/config';
-	import { formatDateShort } from '$lib/utils/format';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { getContractorsPage, createContractorForm } from '#lib/remote/contractors.remote.js';
+	import { contractorTradeLabels, contractorTrades, type ContractorTrade } from '#lib/config.js';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
+	import { withQuery } from '#lib/utils/with-query.js';
 
 	/**
 	 * Who we call, and the two things about them that need chasing.

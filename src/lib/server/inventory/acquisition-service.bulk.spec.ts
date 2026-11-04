@@ -34,7 +34,7 @@ function tableNameOf(t: unknown): string {
 	return 'unknown';
 }
 
-vi.mock('$lib/server/db', () => {
+vi.mock('#lib/server/db/index.js', () => {
 	const selectChain = () => {
 		const proxy: unknown = new Proxy(() => proxy, {
 			get(_, prop) {
@@ -79,8 +79,8 @@ vi.mock('./asset-service', () => ({
 	AssetTagTakenError: class AssetTagTakenError extends Error {}
 }));
 
-vi.mock('$lib/server/media/media-service', () => ({ listFor: vi.fn() }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: vi.fn() }));
+vi.mock('#lib/server/media/media-service.js', () => ({ listFor: vi.fn() }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: vi.fn() }));
 
 const { recordAcquisitionBulk, DuplicateAssetTagError, UnknownItemError, InvalidAcquisitionError } =
 	await import('./acquisition-service');

@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import PackingCrate from './PackingCrate.svelte';
 	import LoadInList from './LoadInList.svelte';
 	import PromoteToRider from './PromoteToRider.svelte';
@@ -18,10 +18,10 @@
 		getBandPackingPage,
 		savePackingNotes,
 		resetPackingList
-	} from '$lib/remote/packing.remote';
+	} from '#lib/remote/packing.remote.js';
 	import { resolve } from '$app/paths';
-	import { PACKING_NOTES_MAX } from '$lib/config';
-	import type { PackingItemRowState } from '$lib/types/packing';
+	import { PACKING_NOTES_MAX } from '#lib/config.js';
+	import type { PackingItemRowState } from '#lib/types/packing.js';
 	import { getBandLayoutContext } from '../layout-context';
 
 	/**

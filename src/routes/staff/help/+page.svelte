@@ -1,33 +1,33 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import {
 		getStaffHelpPage,
 		createCategory,
 		updateCategory,
 		deleteCategory,
 		setArticlesPublishedForm
-	} from '$lib/remote/help.remote';
+	} from '#lib/remote/help.remote.js';
 	const { fields: deleteFields } = deleteCategory;
 	const { fields: createCatFields } = createCategory;
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Action from '$lib/components/ui/Action.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { IconPlus, IconTrash, IconPencil } from '@tabler/icons-svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShort } from '$lib/utils/format';
-	import { helpAudiences, helpAudienceLabels } from '$lib/config';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { helpAudiences, helpAudienceLabels } from '#lib/config.js';
 
 	const data = $derived(await getStaffHelpPage());
 	const articles = $derived(data.articles);

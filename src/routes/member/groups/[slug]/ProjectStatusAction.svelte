@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { setCommitteeProjectStatusForm } from '$lib/remote/projects.remote';
-	import { projectStatusOptions, type ProjectStatus } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { setCommitteeProjectStatusForm } from '#lib/remote/projects.remote.js';
+	import { projectStatusOptions, type ProjectStatus } from '#lib/config.js';
 
 	/** Move one of the committee's own projects along. Budget and burn stay on the staff page. */
 	let { project }: { project: { id: string; name: string; status: ProjectStatus } } = $props();

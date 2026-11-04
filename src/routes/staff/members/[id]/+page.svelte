@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { replaceState } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import { parseTab, type TabKey } from './tabs';
 	import MemberRecord from './MemberRecord.svelte';
 

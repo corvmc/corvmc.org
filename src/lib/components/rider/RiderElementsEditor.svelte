@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import {
 		riderElementKindLabels,
 		riderElementKindOptions,
@@ -13,8 +13,8 @@
 		riderStandTypeOptions,
 		RIDER_MAX_ELEMENTS,
 		RIDER_MAX_INPUTS_PER_ELEMENT
-	} from '$lib/config';
-	import type { RiderElementRowState } from '$lib/types/rider';
+	} from '#lib/config.js';
+	import type { RiderElementRowState } from '#lib/types/rider.js';
 	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
 	import { safeFieldPrefix } from './field-names';
 	import { IconPlus, IconTrash, IconChevronUp, IconChevronDown } from '@tabler/icons-svelte';

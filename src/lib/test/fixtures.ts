@@ -5,10 +5,10 @@
 // coupled component with no DB, auth, or server involved. Each factory takes an
 // `overrides` partial so a test can pin only the fields it asserts on.
 
-import type { EntityType } from '$lib/config';
-import type { EntityRef } from '$lib/types/entity';
+import type { EntityType } from '#lib/config.js';
+import type { EntityRef } from '#lib/types/entity.js';
 
-/** Matches the shape returned by `getMe` in `$lib/remote/layout.remote`. */
+/** Matches the shape returned by `getMe` in `#lib/remote/layout.remote.js`. */
 export function fakeUser(overrides: Partial<FakeUser> = {}): FakeUser {
 	return {
 		id: 'user-1',

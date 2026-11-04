@@ -10,7 +10,7 @@
  * unmounts and whatever was typed into it is lost (#2350, #2352). Read-only
  * markup losing its DOM for a round trip is harmless; interactive markup is not.
  *
- * Render from `new Latest(() => p).current` (`$lib/latest.svelte`) instead,
+ * Render from `new Latest(() => p).current` (`#lib/latest.svelte.js`) instead,
  * which keeps the last value while the next is in flight, as `DataList` does.
  *
  * It sees elements written in the block, not inside child components, so it is

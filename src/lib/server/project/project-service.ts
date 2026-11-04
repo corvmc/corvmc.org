@@ -1,14 +1,14 @@
-import { db } from '$lib/server/db';
-import { project, projectCommittee } from '$lib/server/db/schema/project';
-import { group } from '$lib/server/db/schema/group';
-import { suggestion } from '$lib/server/db/schema/suggestion';
-import { workOrder, volunteerHourLog, volunteerRole } from '$lib/server/db/schema/volunteer';
-import { contractorJob } from '$lib/server/db/schema/contractor';
-import { acquisition, purchaseOrder, purchaseOrderLine } from '$lib/server/db/schema/inventory';
-import { eventListing } from '$lib/server/db/schema/event';
-import { financialEntry } from '$lib/server/db/schema/financial';
-import { production, productionExpense } from '$lib/server/db/schema/production';
-import { eventListingColumns } from '$lib/server/event/event-columns';
+import { db } from '#lib/server/db/index.js';
+import { project, projectCommittee } from '#lib/server/db/schema/project.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { suggestion } from '#lib/server/db/schema/suggestion.js';
+import { workOrder, volunteerHourLog, volunteerRole } from '#lib/server/db/schema/volunteer.js';
+import { contractorJob } from '#lib/server/db/schema/contractor.js';
+import { acquisition, purchaseOrder, purchaseOrderLine } from '#lib/server/db/schema/inventory.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { financialEntry } from '#lib/server/db/schema/financial.js';
+import { production, productionExpense } from '#lib/server/db/schema/production.js';
+import { eventListingColumns } from '#lib/server/event/event-columns.js';
 import {
 	and,
 	asc,
@@ -22,13 +22,13 @@ import {
 	notInArray,
 	sql
 } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import {
 	assertListingKeepsShow,
 	assertProjectTakesListing
-} from '$lib/server/production/production-scope';
-import { placePendingWorkOrders } from '$lib/server/volunteer/retime-work-orders';
-import { placeWorkAwaitingEvent } from '$lib/server/volunteer/duty-list-service';
+} from '#lib/server/production/production-scope.js';
+import { placePendingWorkOrders } from '#lib/server/volunteer/retime-work-orders.js';
+import { placeWorkAwaitingEvent } from '#lib/server/volunteer/duty-list-service.js';
 import {
 	contractorJobStatusesWithoutSpend,
 	DEFAULT_TIMEZONE,
@@ -37,12 +37,12 @@ import {
 	type ProjectCommitteeRole,
 	type ProjectKind,
 	type ProjectStatus
-} from '$lib/config';
-import { getHourValueCents } from '$lib/server/volunteer/hour-value';
-import { claimedSql } from '$lib/server/volunteer/work-order-service';
-import { toEventRef } from '$lib/server/entity/refs';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import type { ProjectField } from '$lib/types/audit';
+} from '#lib/config.js';
+import { getHourValueCents } from '#lib/server/volunteer/hour-value.js';
+import { claimedSql } from '#lib/server/volunteer/work-order-service.js';
+import { toEventRef } from '#lib/server/entity/refs.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import type { ProjectField } from '#lib/types/audit.js';
 
 /**
  * A body of work with a budget and an owner — docs/specs/project-spec.md.

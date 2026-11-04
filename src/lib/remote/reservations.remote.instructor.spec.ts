@@ -15,16 +15,16 @@ const requireInstructor = vi.fn(async () => ({
 	userId: 'user-1',
 	status: 'active'
 }));
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser,
 	requireCapability: vi.fn(async () => ({ id: 'staff-1' })),
 	can: vi.fn(async () => false)
 }));
-vi.mock('$lib/server/instructor/instructor-context', () => ({ requireInstructor }));
+vi.mock('#lib/server/instructor/instructor-context.js', () => ({ requireInstructor }));
 
 const create = vi.fn(async () => ({ id: 'res-1' }));
 const createWaitlisted = vi.fn(async () => ({ id: 'res-2' }));
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	create,
 	createWaitlisted,
 	confirm: vi.fn(),
@@ -34,7 +34,7 @@ vi.mock('$lib/server/reservation/reservation-service', () => ({
 // The service exports `create`; the remote imports it aliased as `createSeries`.
 // The mock has to match the module, not the alias.
 const createSeries = vi.fn(async () => ({ id: 'ser-1' }));
-vi.mock('$lib/server/reservation/recurring-series-service', () => ({
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => ({
 	create: createSeries,
 	cancelAllForUser: vi.fn(),
 	getByReservation: vi.fn(async () => null)
@@ -43,7 +43,7 @@ vi.mock('$lib/server/reservation/recurring-series-service', () => ({
 // The contact-phone gate lives on `user-service`, and is mocked at that boundary
 // so these tests stay about handler wiring rather than a DB read.
 const ensureContactPhone = vi.fn(async () => true);
-vi.mock('$lib/server/user/user-service', () => ({ ensureContactPhone }));
+vi.mock('#lib/server/user/user-service.js', () => ({ ensureContactPhone }));
 
 // Nothing here should reach the database; a chainable stub makes that failure
 // loud (an unexpected read returns an empty array) rather than a thrown
@@ -57,7 +57,7 @@ function chainable(): unknown {
 	});
 	return proxy;
 }
-vi.mock('$lib/server/db', () => ({ db: { select: () => chainable() } }));
+vi.mock('#lib/server/db/index.js', () => ({ db: { select: () => chainable() } }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: { id: 'user-1' } } }),
@@ -86,7 +86,7 @@ const { bookInstructorReservation } = (await import('./reservations.remote')) as
 // The real class, deliberately unmocked: `mapDomainError` short-circuits on a
 // `DomainError` before it touches any of the other error classes it imports,
 // several of which come from modules this file replaces wholesale.
-const { InstructorNotActiveError } = await import('$lib/server/instructor/instructor-service');
+const { InstructorNotActiveError } = await import('#lib/server/instructor/instructor-service.js');
 
 const booking = {
 	date: '2026-09-15',

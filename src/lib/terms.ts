@@ -1,5 +1,5 @@
-import { m } from '$lib/paraglide/messages.js';
-import type { EntityType, GroupKind } from '$lib/config';
+import { m } from '#lib/paraglide/messages.js';
+import type { EntityType, GroupKind } from '#lib/config.js';
 
 /**
  * The interface's nouns, from `messages/en.json`: a relabel is an edit there

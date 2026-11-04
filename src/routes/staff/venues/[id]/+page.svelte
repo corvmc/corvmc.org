@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * One venue.
@@ -8,13 +8,13 @@
 	 * branches on. Everything below it is what a producer looks up on the day:
 	 * the address, who to ring, and where the van goes.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import VenueFeeds from './VenueFeeds.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -26,7 +26,7 @@
 		archiveVenue,
 		restoreVenue,
 		deleteVenue
-	} from '$lib/remote/venues.remote';
+	} from '#lib/remote/venues.remote.js';
 
 	const id = $derived(page.params.id!);
 	const venue = $derived(await getVenueDetail(id));

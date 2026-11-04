@@ -1,10 +1,10 @@
 import { error } from '@sveltejs/kit';
-import { requireUser, isElevated, can } from '$lib/server/authorization';
-import type { GroupRole } from '$lib/server/db/schema/group';
-import { grantRuleFor, type Capability } from '$lib/config';
-import { projectCommitteeGrantsFor } from '$lib/server/capability/capability-grants';
-import { allowlisted, committeeAllows } from '$lib/server/capability/grant-rules';
-import { getBySlug, getByIdActive, getUserRole } from '$lib/server/band/band-service';
+import { requireUser, isElevated, can } from '#lib/server/authorization.js';
+import type { GroupRole } from '#lib/server/db/schema/group.js';
+import { grantRuleFor, type Capability } from '#lib/config.js';
+import { projectCommitteeGrantsFor } from '#lib/server/capability/capability-grants.js';
+import { allowlisted, committeeAllows } from '#lib/server/capability/grant-rules.js';
+import { getBySlug, getByIdActive, getUserRole } from '#lib/server/band/band-service.js';
 
 /**
  * How a caller names the group it is acting on.

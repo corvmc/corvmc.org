@@ -1,13 +1,13 @@
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
-	import { m } from '$lib/paraglide/messages.js';
-	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
-	import { formatDollars } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { calculateTotalWithFeeCoverage } from '#lib/finance/fees.js';
+	import { formatDollars } from '#lib/utils/format.js';
 	import { untrack } from 'svelte';
-	import { DOLLARS_PER_UNIT } from '$lib/config';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import Field from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import type { RemoteForm } from '$lib/components/ui/Form/Form.svelte';
+	import { DOLLARS_PER_UNIT } from '#lib/config.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import Field from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import type { RemoteForm } from '#lib/components/ui/Form/Form.svelte';
 	import type { RemoteFormInput } from '@sveltejs/kit';
 
 	const STEP = DOLLARS_PER_UNIT;

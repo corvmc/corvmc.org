@@ -38,15 +38,15 @@ function selectChain() {
 	return chain;
 }
 
-import { bandSite } from '$lib/server/db/schema/band-site';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: { select: vi.fn(() => selectChain()) }
 }));
 
 const uploadFile = vi.fn(async (_buffer: ArrayBuffer, key: string) => key);
 const deleteObject = vi.fn(async (_key: string) => undefined);
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	uploadFile: (buffer: ArrayBuffer, key: string) => uploadFile(buffer, key),
 	deleteObject: (key: string) => deleteObject(key),
 	// POST returns the public URL beside the key so the page editor can draw an
@@ -65,7 +65,7 @@ type AttachArgs = { mediaId: string; attachableId: string; slot: string; sortOrd
 const record = vi.fn(async (_input: RecordArgs) => ({ id: 'media-1' }));
 const attach = vi.fn(async (_input: AttachArgs) => ({ id: 'attachment-1' }));
 const detach = vi.fn(async (_attachmentId: string) => undefined);
-vi.mock('$lib/server/media/media-service', () => ({
+vi.mock('#lib/server/media/media-service.js', () => ({
 	record: (input: RecordArgs) => record(input),
 	attach: (input: AttachArgs) => attach(input),
 	detach: (id: string) => detach(id)
@@ -82,11 +82,11 @@ const requireGroupRole = vi.fn(async (_ref: unknown, _minRole: unknown) => ({
 	group: { id: '11111111-1111-1111-1111-111111111111' },
 	role: 'owner' as const
 }));
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: (ref: unknown, minRole: unknown) => requireGroupRole(ref, minRole)
 }));
 
-vi.mock('$lib/server/storage-keys', () => ({
+vi.mock('#lib/server/storage-keys.js', () => ({
 	extensionForType: () => 'jpg'
 }));
 

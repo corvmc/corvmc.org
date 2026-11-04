@@ -20,7 +20,7 @@ const requireUser = vi.fn(() => {
 	if (!signedIn) throw new Error('401');
 	return { id: canUploadRecap ? 'staff-1' : 'member-1' };
 });
-vi.mock('$lib/server/authorization', () => ({ requireCapability, can, requireUser }));
+vi.mock('#lib/server/authorization.js', () => ({ requireCapability, can, requireUser }));
 
 vi.mock('@sveltejs/kit', () => ({
 	error: (status: number, message: string) => {
@@ -34,11 +34,11 @@ const svc = {
 	describeEventPhoto: vi.fn(async () => undefined),
 	setEventRecapText: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/event/event-photo-service', () => svc);
+vi.mock('#lib/server/event/event-photo-service.js', () => svc);
 
 const refresh = vi.fn();
 const refreshPublic = vi.fn();
-vi.mock('$lib/remote/events.remote', () => ({
+vi.mock('#lib/remote/events.remote.js', () => ({
 	getStaffEventPage: () => ({ refresh }),
 	getPublicEventDetail: () => ({ refresh: refreshPublic })
 }));

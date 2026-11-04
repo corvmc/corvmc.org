@@ -1,8 +1,8 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { findPaidPurchaseByToken } from '$lib/server/audio/purchase-service';
-import { listTracks } from '$lib/server/audio/audio-service';
-import { requireFeature } from '$lib/server/feature-flags';
+import { findPaidPurchaseByToken } from '#lib/server/audio/purchase-service.js';
+import { listTracks } from '#lib/server/audio/audio-service.js';
+import { requireFeature } from '#lib/server/feature-flags.js';
 
 /**
  * What a download token entitles its holder to.

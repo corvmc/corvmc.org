@@ -1,19 +1,19 @@
-import { captureException } from '$lib/server/sentry';
+import { captureException } from '#lib/server/sentry.js';
 import { reverseEntriesForPaymentRecord } from './financial-entry-service';
 import type Stripe from 'stripe';
-import { stripe } from '$lib/server/stripe';
-import { db } from '$lib/server/db';
-import { paymentCache } from '$lib/server/db/schema/finance';
+import { stripe } from '#lib/server/stripe.js';
+import { db } from '#lib/server/db/index.js';
+import { paymentCache } from '#lib/server/db/schema/finance.js';
 import { eq } from 'drizzle-orm';
 import * as creditService from './credit-service';
 import {
 	type CreditType,
 	type TransactionSource,
 	creditTypes
-} from '$lib/server/db/schema/finance';
-import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
+} from '#lib/server/db/schema/finance.js';
+import { calculateTotalWithFeeCoverage } from '#lib/finance/fees.js';
 import { getStripeProductId } from './product-config-service';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 
 /** The cart or its options do not describe a chargeable checkout. */
 export class CheckoutValidationError extends DomainError {
@@ -90,7 +90,7 @@ export interface CheckoutOptions {
 	/**
 	 * What the platform keeps, in cents. **Must already include Stripe's
 	 * processing fee**, because with destination charges Stripe bills the
-	 * platform — see `computeSplit` in `$lib/finance/audio-split`, which is the
+	 * platform — see `computeSplit` in `#lib/finance/audio-split.js`, which is the
 	 * only thing that should be producing this number.
 	 */
 	applicationFeeCents?: number;

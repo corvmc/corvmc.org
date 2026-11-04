@@ -20,19 +20,19 @@
  * dressed as a projection.
  */
 import type { BuildAliasTable } from 'drizzle-orm/sqlite-core';
-import type { BookerType } from '$lib/config';
-import { user } from '$lib/server/db/schema/authentication';
-import { group } from '$lib/server/db/schema/group';
-import { eventListing } from '$lib/server/db/schema/event';
-import { eventPosterKeySql } from '$lib/server/event/event-columns';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { topPositionFor } from '$lib/server/authorization';
-import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
-import { resolveImageUrl } from '$lib/server/storage';
-import { memberSubtype } from '$lib/utils/entity-ref';
-import { flagEntityTypeToEntity } from '$lib/config';
-import { entityLabels } from '$lib/terms';
-import { formatDate, formatDuration, formatTimeRange } from '$lib/utils/format';
+import type { BookerType } from '#lib/config.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { eventPosterKeySql } from '#lib/server/event/event-columns.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { topPositionFor } from '#lib/server/authorization.js';
+import { isSustainingMemberSql } from '#lib/server/finance/subscription-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { memberSubtype } from '#lib/utils/entity-ref.js';
+import { flagEntityTypeToEntity } from '#lib/config.js';
+import { entityLabels } from '#lib/terms.js';
+import { formatDate, formatDuration, formatTimeRange } from '#lib/utils/format.js';
 import type {
 	BandRef,
 	EntityRef,
@@ -40,7 +40,7 @@ import type {
 	GenericRef,
 	MemberRef,
 	ReservationRef
-} from '$lib/types/entity';
+} from '#lib/types/entity.js';
 
 /**
  * The `user` table, or any `alias()` of it — the alias arm is what lets a query
@@ -261,7 +261,7 @@ export interface ReservationRefRow {
  * A booking as a record: the slot it holds, and who can reach it.
  *
  * The title is formatted here rather than at the call site, which is safe
- * because `$lib/utils/format` pins `DEFAULT_TIMEZONE` on every formatter it
+ * because `#lib/utils/format.js` pins `DEFAULT_TIMEZONE` on every formatter it
  * builds — venue time, not the reader's and not the server's. A booking is a
  * room at an hour, so the club's clock is the only one that means anything;
  * formatting it on the server changes the string not at all.

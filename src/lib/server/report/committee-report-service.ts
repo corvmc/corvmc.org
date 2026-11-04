@@ -1,12 +1,12 @@
 import type { ReportRange } from './range';
 import { ledgerWindow, toMoneySection, type MoneySection } from './money';
-import { totalsByKindAndCategory } from '$lib/server/finance/financial-entry-service';
+import { totalsByKindAndCategory } from '#lib/server/finance/financial-entry-service.js';
 import {
 	getVolunteerTotals,
 	type VolunteerTotals
-} from '$lib/server/volunteer/volunteer-report-service';
-import { getProjectBurn, listProjects } from '$lib/server/project/project-service';
-import type { ProjectStatus } from '$lib/config';
+} from '#lib/server/volunteer/volunteer-report-service.js';
+import { getProjectBurn, listProjects } from '#lib/server/project/project-service.js';
+import type { ProjectStatus } from '#lib/config.js';
 
 /**
  * One committee's cut of the annual rollup: the same module services, narrowed

@@ -1,11 +1,11 @@
-import { db, getRowCount } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
+import { db, getRowCount } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, eq, lt, gt, isNull, notInArray, asc } from 'drizzle-orm';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { env } from '$env/dynamic/private';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 const TZ = DEFAULT_TIMEZONE;
 const WAITLIST_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours

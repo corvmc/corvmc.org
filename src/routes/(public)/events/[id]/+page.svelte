@@ -1,23 +1,27 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { IconCalendarPlus, IconAlertTriangle } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import PosterCard from '$lib/components/events/PosterCard.svelte';
-	import ReportEventAction from '$lib/components/actions/ReportEventAction.svelte';
-	import { fullDate, formatTime } from '$lib/utils/format';
-	import { ticketingMode, isFreeEvent as isFree, priceDisplay } from '$lib/utils/event-ticketing';
-	import { sanitizeHtml } from '$lib/utils/markdown';
-	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
-	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
-	import { mapUrl, placeLine } from '$lib/utils/place';
-	import { getPublicEventDetail } from '$lib/remote/events.remote';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import ShareButton from '$lib/components/ui/ShareButton.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import PosterCard from '#lib/components/events/PosterCard.svelte';
+	import ReportEventAction from '#lib/components/actions/ReportEventAction.svelte';
+	import { fullDate, formatTime } from '#lib/utils/format.js';
+	import {
+		ticketingMode,
+		isFreeEvent as isFree,
+		priceDisplay
+	} from '#lib/utils/event-ticketing.js';
+	import { sanitizeHtml } from '#lib/utils/markdown.js';
+	import { tagToTapeVariant, tagToStickerColor } from '#lib/utils/tag-colors.js';
+	import { googleCalendarUrl, icsDataUrl } from '#lib/utils/calendar.js';
+	import { mapUrl, placeLine } from '#lib/utils/place.js';
+	import { getPublicEventDetail } from '#lib/remote/events.remote.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import ShareButton from '#lib/components/ui/ShareButton.svelte';
 	import EventPhotos from './EventPhotos.svelte';
 	import RecapUpload from './RecapUpload.svelte';
 	import MarketVendors from './MarketVendors.svelte';

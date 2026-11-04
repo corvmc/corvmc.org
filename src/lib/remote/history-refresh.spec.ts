@@ -30,41 +30,41 @@ vi.mock('$app/server', () => {
 	};
 });
 
-vi.mock('$lib/server/db', () => ({ db: {}, getRowCount: () => 0 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {}, getRowCount: () => 0 }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const staff = { id: 'staff-1', name: 'Pat', email: 'pat@example.com' };
-vi.mock('$lib/server/authorization', async (orig) => ({
+vi.mock('#lib/server/authorization.js', async (orig) => ({
 	...(await orig<object>()),
 	requireUser: async () => staff,
 	requireCapability: async () => staff,
 	can: async () => true
 }));
-vi.mock('$lib/server/event/listing-guard', async (orig) => ({
+vi.mock('#lib/server/event/listing-guard.js', async (orig) => ({
 	...(await orig<object>()),
 	requireListingWriter: async () => staff,
 	requireListingReader: async () => staff
 }));
 
-vi.mock('$lib/server/capability/capability-grant-service', async (orig) => ({
+vi.mock('#lib/server/capability/capability-grant-service.js', async (orig) => ({
 	...(await orig<object>()),
 	setRoleCapabilityGrants: vi.fn(),
 	setCommitteeCapabilityGrants: vi.fn()
 }));
-vi.mock('$lib/server/band/band-service', async (orig) => ({
+vi.mock('#lib/server/band/band-service.js', async (orig) => ({
 	...(await orig<object>()),
 	deactivate: vi.fn(),
 	reactivate: vi.fn()
 }));
-vi.mock('$lib/server/group/group-service', async (orig) => ({
+vi.mock('#lib/server/group/group-service.js', async (orig) => ({
 	...(await orig<object>()),
 	setChairRole: vi.fn()
 }));
-vi.mock('$lib/server/group/roster-import-service', async (orig) => ({
+vi.mock('#lib/server/group/roster-import-service.js', async (orig) => ({
 	...(await orig<object>()),
 	importRoster: vi.fn(async () => ({}))
 }));
-vi.mock('$lib/server/event/event-service', async (orig) => ({
+vi.mock('#lib/server/event/event-service.js', async (orig) => ({
 	...(await orig<object>()),
 	publish: vi.fn(async () => ({ published: true, warnings: [] })),
 	update: vi.fn()

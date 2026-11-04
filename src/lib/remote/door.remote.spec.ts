@@ -18,14 +18,14 @@ let crewFor: string | null = null;
 const can = vi.fn(async (_cap: string, scope?: { eventId?: string }) =>
 	scope?.eventId ? everywhere || scope.eventId === crewFor : everywhere
 );
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (...a: unknown[]) => requireCapability(...a),
 	requireUser: () => requireUser(),
 	can: (...a: [string, { eventId?: string }?]) => can(...a)
 }));
 
 const mintConnectionToken = vi.fn();
-vi.mock('$lib/server/finance/terminal-service', () => ({
+vi.mock('#lib/server/finance/terminal-service.js', () => ({
 	mintConnectionToken: () => mintConnectionToken()
 }));
 
@@ -37,13 +37,13 @@ const door = {
 	cancelDoorSale: vi.fn(),
 	fulfillDoorSale: vi.fn()
 };
-vi.mock('$lib/server/ticket/door-sale', () => door);
+vi.mock('#lib/server/ticket/door-sale.js', () => door);
 
 let driver = 'fake';
-vi.mock('$lib/server/stripe', () => ({ paymentDriver: () => driver }));
+vi.mock('#lib/server/stripe.js', () => ({ paymentDriver: () => driver }));
 
 const completeFakeTerminalPayment = vi.fn((id: string) => ({ id, status: 'succeeded' }));
-vi.mock('$lib/server/finance/gateway/fake-gateway', () => ({
+vi.mock('#lib/server/finance/gateway/fake-gateway.js', () => ({
 	completeFakeTerminalPayment: (id: string) => completeFakeTerminalPayment(id)
 }));
 

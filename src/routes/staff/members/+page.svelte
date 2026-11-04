@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import Roster from '$lib/components/roster/Roster.svelte';
-	import { rosterState } from '$lib/components/roster/roster-state.svelte';
-	import { oneOf } from '$lib/urlState.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import Roster from '#lib/components/roster/Roster.svelte';
+	import { rosterState } from '#lib/components/roster/roster-state.svelte.js';
+	import { oneOf } from '#lib/urlState.svelte.js';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { toast } from 'svelte-sonner';
 	import { resolve } from '$app/paths';
@@ -19,9 +19,9 @@
 		getStaffUserEmails,
 		getStaffUserTotals,
 		bulkDeactivateUsers
-	} from '$lib/remote/users.remote';
-	import { formatDateShortYear } from '$lib/utils/format';
-	import { retryQuery } from '$lib/utils/retry-query';
+	} from '#lib/remote/users.remote.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
+	import { retryQuery } from '#lib/utils/retry-query.js';
 	import UserTotals from './UserTotals.svelte';
 	import InviteMemberAction from './InviteMemberAction.svelte';
 	import MemberViews from './MemberViews.svelte';

@@ -28,7 +28,7 @@ let updateSetCalls: { table: unknown; values: Record<string, unknown> }[] = [];
 /** Every `db.batch([...])` in call order, so a test can prove what landed together. */
 let batchCalls: { kind: string }[][] = [];
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({
@@ -58,13 +58,13 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: {
 		emit: vi.fn().mockResolvedValue(undefined)
 	}
 }));
 
-vi.mock('$lib/server/finance/credit-service', () => ({
+vi.mock('#lib/server/finance/credit-service.js', () => ({
 	getBalance: vi.fn().mockResolvedValue(0),
 	deductCredits: vi.fn().mockResolvedValue(undefined),
 	addCredits: vi.fn().mockResolvedValue(0),
@@ -76,15 +76,15 @@ vi.mock('$lib/server/finance/credit-service', () => ({
 	}
 }));
 
-vi.mock('$lib/server/finance/payment-service', () => ({
+vi.mock('#lib/server/finance/payment-service.js', () => ({
 	recordCashPayment: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('$lib/server/finance/stripe-customer-service', () => ({
+vi.mock('#lib/server/finance/stripe-customer-service.js', () => ({
 	ensureStripeCustomer: vi.fn()
 }));
 
-vi.mock('$lib/server/finance/subscription-service', () => ({
+vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	getSubscription: vi.fn().mockResolvedValue(null),
 	isSustainingMember: vi.fn().mockResolvedValue(false)
 }));
@@ -101,7 +101,7 @@ vi.mock('./asset-service', () => ({
 }));
 
 const recordAuditEntry = vi.fn(async (..._args: unknown[]) => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...args: unknown[]) => recordAuditEntry(...args)
 }));
 
@@ -129,9 +129,9 @@ import {
 	deductCredits,
 	addCredits,
 	InsufficientCreditsError
-} from '$lib/server/finance/credit-service';
-import { recordCashPayment } from '$lib/server/finance/payment-service';
-import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
+} from '#lib/server/finance/credit-service.js';
+import { recordCashPayment } from '#lib/server/finance/payment-service.js';
+import { ensureStripeCustomer } from '#lib/server/finance/stripe-customer-service.js';
 import { setAssetStatus, settleTerminalUnit } from './asset-service';
 import { hasBlockingFlag, raiseFlag } from './work-request-service';
 

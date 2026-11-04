@@ -1,5 +1,5 @@
 import { recordEntry } from './financial-entry-service';
-import type { AcquisitionKind } from '$lib/config';
+import type { AcquisitionKind } from '#lib/config.js';
 
 /**
  * A donated acquisition's value, as a financial entry.

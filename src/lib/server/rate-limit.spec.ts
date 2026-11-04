@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const kvStore = new Map<string, string>();
 
-vi.mock('$lib/server/kv', () => ({
+vi.mock('#lib/server/kv.js', () => ({
 	getJson: vi.fn(async (key: string) => {
 		const raw = kvStore.get(key);
 		return raw !== undefined ? JSON.parse(raw) : null;

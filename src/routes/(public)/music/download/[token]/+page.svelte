@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { getDownload } from '$lib/remote/music.remote';
-	import { formatTrackLength } from '$lib/utils/audio';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { getDownload } from '#lib/remote/music.remote.js';
+	import { formatTrackLength } from '#lib/utils/audio.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { IconDownload } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';

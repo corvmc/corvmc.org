@@ -1,28 +1,28 @@
-import { db, getRowCount } from '$lib/server/db';
-import { recurringSeries } from '$lib/server/db/schema/recurring';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { eventListing } from '$lib/server/db/schema/event';
-import { user } from '$lib/server/db/schema/authentication';
-import { group } from '$lib/server/db/schema/group';
+import { db, getRowCount } from '#lib/server/db/index.js';
+import { recurringSeries } from '#lib/server/db/schema/recurring.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group } from '#lib/server/db/schema/group.js';
 
 import { bandBookerJoin, eventBookerJoin } from './event-hold';
 import { eq, and, isNull, sql, count, gt, inArray, asc } from 'drizzle-orm';
-import { workOrder, memberOrientation } from '$lib/server/db/schema/volunteer';
-import { paymentCache } from '$lib/server/db/schema/finance';
+import { workOrder, memberOrientation } from '#lib/server/db/schema/volunteer.js';
+import { paymentCache } from '#lib/server/db/schema/finance.js';
 import { cancel as cancelReservation } from './reservation-service';
 import { promoteNextWaitlisted } from './waitlist-service';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import {
 	bandRefColumns,
 	eventRefColumns,
 	memberRefColumns,
 	toBookerRef,
 	toReservationRef
-} from '$lib/server/entity/refs';
-import type { EntityRef, ReservationRef } from '$lib/types/entity';
+} from '#lib/server/entity/refs.js';
+import type { EntityRef, ReservationRef } from '#lib/types/entity.js';
 import { buildRRule, describeFrequency, monthlyModeOf, type MonthlyMode } from './rrule-helpers';
-import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
-import { DomainError } from '$lib/server/domain-error';
+import type { RecurringFrequency } from '#lib/server/db/schema/recurring.js';
+import { DomainError } from '#lib/server/domain-error.js';
 
 // ---------------------------------------------------------------------------
 // RecurringSeriesService — create, cancel, and query recurring series

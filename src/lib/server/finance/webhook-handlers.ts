@@ -1,21 +1,21 @@
 import type Stripe from 'stripe';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { paymentCache } from '$lib/server/db/schema/finance';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { paymentCache } from '#lib/server/db/schema/finance.js';
 import { eq } from 'drizzle-orm';
 import * as creditService from './credit-service';
-import { DOLLARS_PER_UNIT } from '$lib/config';
-import { cancelAllForUser } from '$lib/server/reservation/recurring-series-service';
+import { DOLLARS_PER_UNIT } from '#lib/config.js';
+import { cancelAllForUser } from '#lib/server/reservation/recurring-series-service.js';
 import { buildMemberSubscriptionState } from './subscription-service';
 import { syncCardFromSubscription } from './billing-service';
-import { syncFromWebhook } from '$lib/server/band/band-subscription-service';
+import { syncFromWebhook } from '#lib/server/band/band-subscription-service.js';
 import { recordBandPremiumInvoice } from './band-premium-entries';
-import { fulfillDoorSale } from '$lib/server/ticket/door-sale';
-import { settleReservationAtReader } from '$lib/server/reservation/reader-payment';
+import { fulfillDoorSale } from '#lib/server/ticket/door-sale.js';
+import { settleReservationAtReader } from '#lib/server/reservation/reader-payment.js';
 import { registeredEvents, type RegisteredEvent } from './webhook-events';
 import { getStripeProductId } from './product-config-service';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import type { Subscription } from '$lib/server/db/schema/authentication';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import type { Subscription } from '#lib/server/db/schema/authentication.js';
 
 // Re-export so downstream consumers can import from one place
 export { registeredEvents };

@@ -1,8 +1,8 @@
 import { error, redirect } from '@sveltejs/kit';
-import { getUserByMemberNumber } from '$lib/server/user/member-number-service';
-import { capabilitySet, positionsFor } from '$lib/server/authorization';
-import { entityHref } from '$lib/utils/entity-href';
-import type { Panel } from '$lib/types/entity';
+import { getUserByMemberNumber } from '#lib/server/user/member-number-service.js';
+import { capabilitySet, positionsFor } from '#lib/server/authorization.js';
+import { entityHref } from '#lib/utils/entity-href.js';
+import type { Panel } from '#lib/types/entity.js';
 import type { PageServerLoad } from './$types';
 
 /**

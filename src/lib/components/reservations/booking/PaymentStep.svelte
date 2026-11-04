@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
+	import { calculateTotalWithFeeCoverage } from '#lib/finance/fees.js';
 	import { resolve } from '$app/paths';
-	import { getReservationPricing } from '$lib/remote/reservations.remote';
-	import { getFormContext } from '$lib/components/ui/Form/Form.svelte';
-	import * as Form from '$lib/components/ui/Form';
-	import { formatDollars, toLocalDate, toLocalTime } from '$lib/utils/format';
-	import { creditsToHours } from '$lib/config';
+	import { getReservationPricing } from '#lib/remote/reservations.remote.js';
+	import { getFormContext } from '#lib/components/ui/Form/Form.svelte';
+	import * as Form from '#lib/components/ui/Form/index.js';
+	import { formatDollars, toLocalDate, toLocalTime } from '#lib/utils/format.js';
+	import { creditsToHours } from '#lib/config.js';
 	import type { RemoteFormField } from '@sveltejs/kit';
 
 	let {

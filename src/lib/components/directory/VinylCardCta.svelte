@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
-	import { here, signInHref } from '$lib/utils/sign-in';
+	import { here, signInHref } from '#lib/utils/sign-in.js';
 	import type { ResolvedPathname } from '$app/types';
-	import logoMono from '$lib/assets/cmc-logo-mono.svg';
+	import logoMono from '#lib/assets/cmc-logo-mono.svg';
 
 	interface Props {
 		href?: ResolvedPathname;

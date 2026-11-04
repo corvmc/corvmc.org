@@ -14,7 +14,7 @@ import type { ZodType } from 'zod';
 const requestPasswordResetApi = vi.fn(async () => ({ status: true }));
 const resetPasswordApi = vi.fn(async () => ({ status: true }));
 
-vi.mock('$lib/server/auth', () => ({
+vi.mock('#lib/server/auth.js', () => ({
 	auth: {
 		api: {
 			requestPasswordReset: (...args: unknown[]) => requestPasswordResetApi(...(args as [])),
@@ -24,7 +24,7 @@ vi.mock('$lib/server/auth', () => ({
 }));
 
 const allowRateLimited = vi.fn(async (_key: unknown) => true);
-vi.mock('$lib/server/rate-limit', () => ({
+vi.mock('#lib/server/rate-limit.js', () => ({
 	allowRateLimited: (...args: unknown[]) => allowRateLimited(args[0])
 }));
 

@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockGenerateRecurring = vi.fn();
 
-vi.mock('$lib/server/reservation/generation-job', () => ({
+vi.mock('#lib/server/reservation/generation-job.js', () => ({
 	generateRecurring: (...args: unknown[]) => mockGenerateRecurring(...args)
 }));
 

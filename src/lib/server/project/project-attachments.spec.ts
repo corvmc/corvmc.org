@@ -3,12 +3,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 /** A work order's title is resolved in SQL, so it is checked against a real SQLite. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
-vi.mock('$lib/server/volunteer/hour-value', () => ({ getHourValueCents: vi.fn(async () => 0) }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+vi.mock('#lib/server/volunteer/hour-value.js', () => ({ getHourValueCents: vi.fn(async () => 0) }));
 
 const { listProjectAttachments } = await import('./project-service');
 

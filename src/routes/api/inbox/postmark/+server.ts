@@ -4,7 +4,7 @@ import { env } from '$env/dynamic/private';
 import {
 	handlePostmarkInbound,
 	type PostmarkInboundPayload
-} from '$lib/server/inbox/inbound-handlers';
+} from '#lib/server/inbox/inbound-handlers.js';
 
 /**
  * Postmark's inbound hook is a bare `InboundHookUrl` — unlike modular

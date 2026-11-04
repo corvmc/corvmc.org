@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import AppealPanel from '$lib/components/moderation/AppealPanel.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import LineupEditor, { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import AppealPanel from '#lib/components/moderation/AppealPanel.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -22,9 +22,9 @@
 		unpublishListing,
 		withdrawListing,
 		deleteListing
-	} from '$lib/remote/community-events.remote';
-	import { formatDateShort, formatDollars } from '$lib/utils/format';
-	import { imageSrc } from '$lib/utils/images';
+	} from '#lib/remote/community-events.remote.js';
+	import { formatDateShort, formatDollars } from '#lib/utils/format.js';
+	import { imageSrc } from '#lib/utils/images.js';
 
 	// Declared before the awaited query: a declaration after one is async-gated,
 	// which would compile every `fields.X.as()` into an async derived.

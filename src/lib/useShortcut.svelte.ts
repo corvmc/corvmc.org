@@ -1,4 +1,4 @@
-import { parseShortcut, matchesShortcut, isModifierKey, shortcutLabel } from '$lib/shortcuts';
+import { parseShortcut, matchesShortcut, isModifierKey, shortcutLabel } from '#lib/shortcuts.js';
 
 export function useShortcut(getShortcut: () => string | undefined, onTrigger: () => void) {
 	let modHeld = $state(false);

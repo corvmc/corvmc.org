@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Open a named topic. Any active member, like posting — a room the whole
 	 * group reads is not an admin's to ration.
 	 */
 	import { goto } from '$app/navigation';
 	import { IconPlus } from '@tabler/icons-svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { createGroupChatTopic } from '$lib/remote/group-chat.remote';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { createGroupChatTopic } from '#lib/remote/group-chat.remote.js';
 
 	let { slug, hrefFor }: { slug: string; hrefFor?: (threadId: string) => string } = $props();
 

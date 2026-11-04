@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** The foundations, trusts and agencies the collective applies to. */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
 	import FunderFields from './FunderFields.svelte';
 	import {
 		getFunders,
@@ -16,7 +16,7 @@
 		archiveFunder,
 		restoreFunder,
 		deleteFunder
-	} from '$lib/remote/grants.remote';
+	} from '#lib/remote/grants.remote.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 

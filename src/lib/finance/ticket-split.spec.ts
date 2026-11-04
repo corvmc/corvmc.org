@@ -7,7 +7,7 @@ import {
 	validateTicketSplit
 } from './ticket-split';
 import { calculateCardPresentFee, calculateTotalWithFeeCoverage } from './fees';
-import { TICKET_MIN_CHARGE_CENTS } from '$lib/config';
+import { TICKET_MIN_CHARGE_CENTS } from '#lib/config.js';
 
 /**
  * The commercial model of a ticket, to the cent. What the buyer is shown, what

@@ -11,7 +11,7 @@ const requireUser = vi.fn(() => ({ id: 'user-1' }));
 const isElevated = vi.fn(async () => false);
 const hasAnyRole = vi.fn(async () => false);
 const can = vi.fn(async (_cap?: unknown) => false);
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => requireUser(),
 	isElevated: (...a: unknown[]) => isElevated(...(a as [])),
 	hasAnyRole: (...a: unknown[]) => hasAnyRole(...(a as [])),
@@ -23,7 +23,7 @@ vi.mock('$lib/server/authorization', () => ({
 const getBySlug = vi.fn(async (_slug: unknown) => null as unknown);
 const getByIdActive = vi.fn(async (_id: unknown) => null as unknown);
 const getUserRole = vi.fn(async () => null as unknown);
-vi.mock('$lib/server/band/band-service', () => ({
+vi.mock('#lib/server/band/band-service.js', () => ({
 	getBySlug: (slug: unknown) => getBySlug(slug),
 	getByIdActive: (id: unknown) => getByIdActive(id),
 	getUserRole: (...a: unknown[]) => getUserRole(...(a as []))

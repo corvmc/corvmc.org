@@ -32,7 +32,7 @@ function chain(queue: () => unknown[]): unknown {
 
 const next = () => (selectResults.length > 0 ? selectResults.shift()! : []);
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain(next)),
 		insert: vi.fn(() => ({
@@ -59,19 +59,19 @@ const resolveWorkOrder = vi.fn(async (..._a: unknown[]) => ({
 	statements: [],
 	afterCommit: async () => undefined
 }));
-vi.mock('$lib/server/volunteer/work-order-service', () => ({
+vi.mock('#lib/server/volunteer/work-order-service.js', () => ({
 	prepareResolveWorkOrder: (...args: unknown[]) => resolveWorkOrder(...args)
 }));
 
 // Either writer of a unit's status: scheduling runs it, completion batches it.
 const setAssetStatus = vi.fn(async (..._a: unknown[]) => ({ statements: [] }));
-vi.mock('$lib/server/inventory/asset-service', () => ({
+vi.mock('#lib/server/inventory/asset-service.js', () => ({
 	setAssetStatus: (...args: unknown[]) => setAssetStatus(...args),
 	assetStatusChange: (...args: unknown[]) => setAssetStatus(...args)
 }));
 
 const recordAuditEntry = vi.fn(async (..._a: unknown[]) => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...a)
 }));
 

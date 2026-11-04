@@ -1,9 +1,9 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import { announcedBy } from './production-service';
-import { production, productionSlot } from '$lib/server/db/schema/production';
-import { eventBand, eventListing } from '$lib/server/db/schema/event';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { group } from '$lib/server/db/schema/group';
+import { production, productionSlot } from '#lib/server/db/schema/production.js';
+import { eventBand, eventListing } from '#lib/server/db/schema/event.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { and, asc, eq, inArray, isNotNull, notInArray } from 'drizzle-orm';
 import { assertNotTerminal } from './production-scope';
 import {
@@ -14,22 +14,22 @@ import {
 	runOfShowWarnings
 } from './run-of-show';
 
-import { DomainError } from '$lib/server/domain-error';
-import type { EventBandStatus } from '$lib/server/db/schema/event';
-import type { ActTerms } from '$lib/production/terms';
+import { DomainError } from '#lib/server/domain-error.js';
+import type { EventBandStatus } from '#lib/server/db/schema/event.js';
+import type { ActTerms } from '#lib/production/terms.js';
 import type {
 	PublicSetTime,
 	RunOfShow,
 	RunOfShowActStatus,
 	RunOfShowSlot
-} from '$lib/types/run-of-show';
+} from '#lib/types/run-of-show.js';
 
 /**
  * The DTO's status union is spelled out in `$lib/types`, which cannot import a
  * schema. This is what stops the two drifting: adding a value to
  * `eventBandStatuses` fails here until the DTO carries it too.
  */
-import type { ProductionStatus } from '$lib/server/db/schema/production';
+import type { ProductionStatus } from '#lib/server/db/schema/production.js';
 
 type _StatusesAgree = EventBandStatus extends RunOfShowActStatus ? true : never;
 const _statusesAgree: _StatusesAgree = true;

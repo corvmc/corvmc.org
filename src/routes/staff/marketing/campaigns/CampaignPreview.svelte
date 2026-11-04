@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { getPreview } from '$lib/remote/marketing.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getPreview } from '#lib/remote/marketing.remote.js';
 
 	/**
 	 * The live campaign preview, owning the query that renders it.

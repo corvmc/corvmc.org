@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { formatDayNumber, formatShortMonth, formatDate, formatTime } from '$lib/utils/format';
-	import { tagToColor } from '$lib/utils/tag-colors';
+	import { formatDayNumber, formatShortMonth, formatDate, formatTime } from '#lib/utils/format.js';
+	import { tagToColor } from '#lib/utils/tag-colors.js';
 
 	interface TicketData {
 		code: string;

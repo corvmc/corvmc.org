@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import type { CommunityStats } from '$lib/server/db/schema/finance';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { CommunityStats } from '#lib/server/db/schema/finance.js';
 
 	let { stats }: { stats: CommunityStats } = $props();
 </script>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import {
 		IconGripVertical,
 		IconChevronUp,
@@ -10,9 +10,9 @@
 		IconArrowUpRight
 	} from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
-	import { BLOCK_LABELS } from '$lib/utils/band-site-preset';
+	import { BLOCK_LABELS } from '#lib/utils/band-site-preset.js';
 	import { BLOCK_SOURCES } from './block-editing';
-	import type { Block } from '$lib/types/band-page';
+	import type { Block } from '#lib/types/band-page.js';
 
 	/**
 	 * The control strip a block carries in the editor.

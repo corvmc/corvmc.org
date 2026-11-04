@@ -1,5 +1,5 @@
 import { untrack } from 'svelte';
-import { inboxChannels, inboxViews, type InboxView } from '$lib/config';
+import { inboxChannels, inboxViews, type InboxView } from '#lib/config.js';
 
 type InboxChannel = (typeof inboxChannels)[number];
 

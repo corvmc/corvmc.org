@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 import { sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -28,7 +28,7 @@ const bandServiceMock = {
 	])
 };
 
-vi.mock('$lib/server/band/band-service', () => bandServiceMock);
+vi.mock('#lib/server/band/band-service.js', () => bandServiceMock);
 
 const conflictServiceMock = {
 	getAvailableSlots: vi.fn(async () => [
@@ -38,7 +38,7 @@ const conflictServiceMock = {
 	])
 };
 
-vi.mock('$lib/server/reservation/conflict-service', () => conflictServiceMock);
+vi.mock('#lib/server/reservation/conflict-service.js', () => conflictServiceMock);
 
 const reservationServiceMock = {
 	create: vi.fn(async () => ({
@@ -59,17 +59,17 @@ const reservationServiceMock = {
 	)
 };
 
-vi.mock('$lib/server/reservation/reservation-service', () => reservationServiceMock);
+vi.mock('#lib/server/reservation/reservation-service.js', () => reservationServiceMock);
 
-vi.mock('$lib/server/reservation/timezone', () => ({
+vi.mock('#lib/server/reservation/timezone.js', () => ({
 	buildDateInTz: vi.fn((date: string, time: string) => new Date(`${date}T${time}:00`))
 }));
 
 // `termsFor` and `getBookingTerms` come through real: they are pure, and a
 // stubbed rate resolver would let this spec pass while the resolver it is
 // standing in for returned something else. Only the config *read* is faked.
-vi.mock('$lib/server/reservation/config', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/server/reservation/config')>();
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/server/reservation/config.js')>();
 	const cfg = {
 		timeSlotMinutes: 30,
 		minDurationHours: 1,
@@ -93,11 +93,11 @@ vi.mock('$lib/server/reservation/config', async (importOriginal) => {
 	};
 });
 
-vi.mock('$lib/server/db/schema/recurring', () => ({
+vi.mock('#lib/server/db/schema/recurring.js', () => ({
 	RECURRING_FREQUENCIES: ['weekly', 'biweekly', 'monthly']
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: vi.fn(() => ({ id: 'user-owner', name: 'Test Owner' })),
 	hasAnyRole: vi.fn(async () => false),
 	// `requireGroupRole`'s `allowStaff` branch asks this one. Absent from the
@@ -108,7 +108,7 @@ vi.mock('$lib/server/authorization', () => ({
 	topPositionFor: vi.fn(() => sql`null`)
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	requireFeature: vi.fn(async () => undefined)
 }));
 
@@ -118,13 +118,13 @@ const subscriptionServiceMock = {
 	isSustainingMemberSql: vi.fn(() => sql`0`)
 };
 
-vi.mock('$lib/server/finance/subscription-service', () => subscriptionServiceMock);
+vi.mock('#lib/server/finance/subscription-service.js', () => subscriptionServiceMock);
 
 const recurringSeriesServiceMock = {
 	create: vi.fn(async () => ({ id: 'series-1' }))
 };
 
-vi.mock('$lib/server/reservation/recurring-series-service', () => recurringSeriesServiceMock);
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => recurringSeriesServiceMock);
 
 // The break-glass ladder, mocked at the service boundary: the real one reads
 // `lock_fallback_code` and stamps the reservation, and the db mock below only
@@ -135,7 +135,7 @@ const fallbackCodeServiceMock = {
 	fallbackShownFor: vi.fn(async () => null)
 };
 
-vi.mock('$lib/server/lock/fallback-code-service', () => fallbackCodeServiceMock);
+vi.mock('#lib/server/lock/fallback-code-service.js', () => fallbackCodeServiceMock);
 
 // Mock DB for page load
 let selectResult: unknown[] = [];
@@ -152,7 +152,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainable()
 	}
@@ -160,7 +160,7 @@ vi.mock('$lib/server/db', () => ({
 
 // Contact-phone gate. Mocked at the service boundary, like reservation-service.
 const ensureContactPhone = vi.fn(async () => true);
-vi.mock('$lib/server/user/user-service', () => ({ ensureContactPhone }));
+vi.mock('#lib/server/user/user-service.js', () => ({ ensureContactPhone }));
 
 /** Stands in for the `issue` helper SvelteKit hands the form handler. */
 const issueProxy = new Proxy(
@@ -219,9 +219,9 @@ const {
 	getBandMembershipStatus,
 	getBandReservations,
 	getBandReservationDetail
-} = (await import('$lib/remote/reservations.remote')) as any;
+} = (await import('#lib/remote/reservations.remote.js')) as any;
 
-const { hasAnyRole, isElevated } = (await import('$lib/server/authorization')) as unknown as {
+const { hasAnyRole, isElevated } = (await import('#lib/server/authorization.js')) as unknown as {
 	hasAnyRole: ReturnType<typeof vi.fn>;
 	isElevated: ReturnType<typeof vi.fn>;
 };
@@ -637,7 +637,7 @@ describe('getBandReservationDetail', () => {
 	// the page the member already loaded, so there is no reveal form to call and
 	// no question of which bandmate is allowed to press it.
 	it('takes no gesture to fall back', async () => {
-		const mod = await import('$lib/remote/reservations.remote');
+		const mod = await import('#lib/remote/reservations.remote.js');
 		expect(Object.keys(mod).filter((k) => /reveal|fallback/i.test(k))).toEqual([]);
 	});
 

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { IconUser, IconCalendarEvent, IconCalendarStar, IconMusic } from '@tabler/icons-svelte';
-	import type { BookerType } from '$lib/config';
+	import type { BookerType } from '#lib/config.js';
 
 	let {
 		type,

@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { isEventHold } from '$lib/config';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import BookerTypeIcon from '$lib/components/reservations/BookerTypeIcon.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import { isEventHold } from '#lib/config.js';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import BookerTypeIcon from '#lib/components/reservations/BookerTypeIcon.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
 	import {
 		ConfirmReservationAction,
@@ -19,13 +19,13 @@
 		CreateClosureAction,
 		UpdateClosureAction,
 		DeleteClosureAction
-	} from '$lib/components/actions';
+	} from '#lib/components/actions/index.js';
 	import ResolveModal from './ResolveModal.svelte';
 	import CreateReservation from './CreateModal.svelte';
 	import RecurringSeriesModal from './RecurringSeriesModal.svelte';
 	import { page as appPage } from '$app/state';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
 	import {
 		IconCheck,
 		IconCircleCheck,
@@ -47,12 +47,12 @@
 		formatTimeRange,
 		formatPaymentBreakdown,
 		toLocalDate
-	} from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
-	import { visibleActions, reservationPaymentState } from '$lib/utils/reservation-actions';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { getStaffReservationsPage } from '$lib/remote/reservations.remote';
-	import { Latest } from '$lib/latest.svelte';
+	} from '#lib/utils/format.js';
+	import { DEFAULT_TIMEZONE } from '#lib/config.js';
+	import { visibleActions, reservationPaymentState } from '#lib/utils/reservation-actions.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { getStaffReservationsPage } from '#lib/remote/reservations.remote.js';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	type Row = Awaited<ReturnType<typeof getStaffReservationsPage>>['list']['rows'][number];
 	type Closure = Extract<Row, { kind: 'closure' }>;

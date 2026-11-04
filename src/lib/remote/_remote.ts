@@ -1,6 +1,6 @@
 import { form as kitForm, command as kitCommand } from '$app/server';
-import { DomainError } from '$lib/server/domain-error';
-import { mapDomainError } from '$lib/server/errors';
+import { DomainError } from '#lib/server/domain-error.js';
+import { mapDomainError } from '#lib/server/errors.js';
 
 /**
  * `form` and `command`, with domain-error mapping already applied.

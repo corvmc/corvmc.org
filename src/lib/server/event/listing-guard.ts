@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
-import { can, requireUser } from '$lib/server/authorization';
-import { requireProjectCommittee } from '$lib/server/group/group-context';
-import { projectOfEvent } from '$lib/server/production/production-scope';
+import { can, requireUser } from '#lib/server/authorization.js';
+import { requireProjectCommittee } from '#lib/server/group/group-context.js';
+import { projectOfEvent } from '#lib/server/production/production-scope.js';
 
 /**
  * A write to a listing: `event.manage`, or a seat with `production.book` on a

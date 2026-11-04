@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockProcessDueCampaigns = vi.fn();
 
-vi.mock('$lib/server/marketing/campaign-service', () => ({
+vi.mock('#lib/server/marketing/campaign-service.js', () => ({
 	processDueCampaigns: (...args: unknown[]) => mockProcessDueCampaigns(...args)
 }));
 
@@ -14,7 +14,7 @@ vi.mock('$lib/server/marketing/campaign-service', () => ({
 // Mock the feature-flags layer so the handler runs past the feature gate.
 const mockIsFeatureEnabled = vi.fn(async () => true);
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	isFeatureEnabled: (..._args: unknown[]) => mockIsFeatureEnabled()
 }));
 

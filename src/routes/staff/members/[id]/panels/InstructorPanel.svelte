@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { getUserInstructor } from '$lib/remote/instructors.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatDateShortYear } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getUserInstructor } from '#lib/remote/instructors.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatDateShortYear } from '#lib/utils/format.js';
 	import ReviewApplicationActions from '../../instructors/ReviewApplicationActions.svelte';
 
 	/**

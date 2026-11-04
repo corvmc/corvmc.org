@@ -7,11 +7,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite({ foreignKeys: true });
 });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			const out = [];
@@ -22,27 +22,27 @@ vi.mock('$lib/server/db', () => ({
 	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
 }));
 
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	config: vi.fn(async () => 60)
 }));
 
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: vi.fn(async () => undefined), on: vi.fn() }
 }));
 
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: vi.fn(async () => undefined)
 }));
 
-const ballots = await import('$lib/server/ballot/ballot-service');
-const { domainEvents } = await import('$lib/server/event-bus/event-bus');
+const ballots = await import('#lib/server/ballot/ballot-service.js');
+const { domainEvents } = await import('#lib/server/event-bus/event-bus.js');
 const chain = await import('./decision-chain');
 const { startProjectFromSuggestion } = await import('./project-service');
-const { user } = await import('$lib/server/db/schema/authentication');
-const { memberOrientation } = await import('$lib/server/db/schema/volunteer');
-const { suggestion } = await import('$lib/server/db/schema/suggestion');
-const { project, projectCommittee } = await import('$lib/server/db/schema/project');
-const { group } = await import('$lib/server/db/schema/group');
+const { user } = await import('#lib/server/db/schema/authentication.js');
+const { memberOrientation } = await import('#lib/server/db/schema/volunteer.js');
+const { suggestion } = await import('#lib/server/db/schema/suggestion.js');
+const { project, projectCommittee } = await import('#lib/server/db/schema/project.js');
+const { group } = await import('#lib/server/db/schema/group.js');
 const { eq } = await import('drizzle-orm');
 
 const DAY = 86_400_000;

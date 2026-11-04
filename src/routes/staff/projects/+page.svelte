@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { Field, MoneyField } from '$lib/components/ui/Form';
-	import { getProjectsPage, createProjectForm } from '$lib/remote/projects.remote';
-	import type { ProjectView } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { Field, MoneyField } from '#lib/components/ui/Form/index.js';
+	import { getProjectsPage, createProjectForm } from '#lib/remote/projects.remote.js';
+	import type { ProjectView } from '#lib/config.js';
 	import ProjectsTable from './ProjectsTable.svelte';
 	import ProjectViews from './ProjectViews.svelte';
 

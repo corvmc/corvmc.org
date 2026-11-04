@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import SendContactSheetAction from '$lib/components/actions/SendContactSheetAction.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import Field from '$lib/components/ui/Form/FormField.svelte';
-	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { formatTime, toLocalTime } from '$lib/utils/format';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import SendContactSheetAction from '#lib/components/actions/SendContactSheetAction.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import Field from '#lib/components/ui/Form/FormField.svelte';
+	import MoneyField from '#lib/components/ui/Form/MoneyField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { formatTime, toLocalTime } from '#lib/utils/format.js';
 	import { IconArrowUp, IconArrowDown, IconTrash } from '@tabler/icons-svelte';
 	import {
 		addRunOfShowSlot,
@@ -22,9 +22,9 @@
 		setRunOfShowTerms,
 		buildRunOfShowFromLineup,
 		markSlotTiming
-	} from '$lib/remote/productions.remote';
-	import { describeTerms } from '$lib/production/terms';
-	import type { RunOfShow } from '$lib/types/run-of-show';
+	} from '#lib/remote/productions.remote.js';
+	import { describeTerms } from '#lib/production/terms.js';
+	import type { RunOfShow } from '#lib/types/run-of-show.js';
 
 	/**
 	 * How late this set actually started, in whole minutes. Positive is behind.

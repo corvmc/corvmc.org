@@ -2,16 +2,16 @@ import { json, error } from '@sveltejs/kit';
 // Typed params from `./$types` rather than the generic kit `RequestHandler`,
 // which types `params.id` as possibly-undefined and forced a `!` at every use.
 import type { RequestHandler } from './$types';
-import { db } from '$lib/server/db';
-import { mediaAttachment } from '$lib/server/db/schema/media';
-import type { MediaSlot } from '$lib/server/db/schema/media';
+import { db } from '#lib/server/db/index.js';
+import { mediaAttachment } from '#lib/server/db/schema/media.js';
+import type { MediaSlot } from '#lib/server/db/schema/media.js';
 import { eq, and, max, count } from 'drizzle-orm';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { uploadFile, resolveImageUrl } from '$lib/server/storage';
-import { extensionForType } from '$lib/server/storage-keys';
-import { attach, detach, record } from '$lib/server/media/media-service';
-import { photoLimitForTier } from '$lib/server/band/press-kit-limits';
-import { bandSite } from '$lib/server/db/schema/band-site';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { uploadFile, resolveImageUrl } from '#lib/server/storage.js';
+import { extensionForType } from '#lib/server/storage-keys.js';
+import { attach, detach, record } from '#lib/server/media/media-service.js';
+import { photoLimitForTier } from '#lib/server/band/press-kit-limits.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

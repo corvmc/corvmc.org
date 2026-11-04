@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNotNull, isNull, sql, type SQL } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { workOrder } from '$lib/server/db/schema/volunteer';
-import type { DutyListAnchor } from '$lib/config';
+import { db } from '#lib/server/db/index.js';
+import { workOrder } from '#lib/server/db/schema/volunteer.js';
+import type { DutyListAnchor } from '#lib/config.js';
 
 /**
  * Move a show's duty-list shifts with the time they were measured from.

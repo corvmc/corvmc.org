@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { payAtReader } from '$lib/remote/reservations.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { payAtReader } from '#lib/remote/reservations.remote.js';
 	import ReaderPaymentStatus from './ReaderPaymentStatus.svelte';
 
 	/**

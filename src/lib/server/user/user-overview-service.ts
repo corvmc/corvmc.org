@@ -1,27 +1,30 @@
-import { db } from '$lib/server/db';
-import { notAProgramHold } from '$lib/server/reservation/program-hold';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { groupMember } from '$lib/server/db/schema/group';
-import { group } from '$lib/server/db/schema/group';
-import { inventoryLoan } from '$lib/server/db/schema/inventory';
-import { volunteerHourLog } from '$lib/server/db/schema/volunteer';
-import { contentFlag } from '$lib/server/db/schema/flag';
-import { paymentCache } from '$lib/server/db/schema/finance';
+import { db } from '#lib/server/db/index.js';
+import { notAProgramHold } from '#lib/server/reservation/program-hold.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { inventoryLoan } from '#lib/server/db/schema/inventory.js';
+import { volunteerHourLog } from '#lib/server/db/schema/volunteer.js';
+import { contentFlag } from '#lib/server/db/schema/flag.js';
+import { paymentCache } from '#lib/server/db/schema/finance.js';
 import { and, count, eq, gt, gte, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
 
-import { getAllBalances } from '$lib/server/finance/credit-service';
-import { getMemberSubscription, mapDbSubscription } from '$lib/server/finance/subscription-service';
-import { getStandings, type Standing } from '$lib/server/moderation/standing-service';
-import type { StandingScope } from '$lib/config';
-import { getUserHourSummary } from '$lib/server/volunteer/hour-log-service';
-import { listForUser as listCertificationsForUser } from '$lib/server/volunteer/member-certification-service';
-import { getVolunteerProfile, stageOf } from '$lib/server/volunteer/volunteer-profile-service';
-import { isProfileComplete } from '$lib/server/directory/directory-service';
-import { findByUserId as findSubscriberByUserId } from '$lib/server/marketing/subscriber-service';
-import { countPortalUnread } from '$lib/server/inbox/portal-service';
+import { getAllBalances } from '#lib/server/finance/credit-service.js';
+import {
+	getMemberSubscription,
+	mapDbSubscription
+} from '#lib/server/finance/subscription-service.js';
+import { getStandings, type Standing } from '#lib/server/moderation/standing-service.js';
+import type { StandingScope } from '#lib/config.js';
+import { getUserHourSummary } from '#lib/server/volunteer/hour-log-service.js';
+import { listForUser as listCertificationsForUser } from '#lib/server/volunteer/member-certification-service.js';
+import { getVolunteerProfile, stageOf } from '#lib/server/volunteer/volunteer-profile-service.js';
+import { isProfileComplete } from '#lib/server/directory/directory-service.js';
+import { findByUserId as findSubscriberByUserId } from '#lib/server/marketing/subscriber-service.js';
+import { countPortalUnread } from '#lib/server/inbox/portal-service.js';
 import { getLastLoginAt } from './user-service';
-import type { OnboardingStage } from '$lib/server/volunteer/volunteer-profile-service';
+import type { OnboardingStage } from '#lib/server/volunteer/volunteer-profile-service.js';
 
 // ---------------------------------------------------------------------------
 // User overview — one query behind the whole staff user record

@@ -2,14 +2,14 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { can, requireCapability } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import { dutyListAnchors, workDoneConditions } from '$lib/config';
+import { can, requireCapability } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { dutyListAnchors, workDoneConditions } from '#lib/config.js';
 
 /** The trigger a project template can claim; `''` is never. */
 const autoApplyShape = z.enum(['', 'production.created']).optional();
-import { listCommittees } from '$lib/server/project/project-service';
-import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
+import { listCommittees } from '#lib/server/project/project-service.js';
+import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
 import {
 	addDutyListItem as addItemService,
 	applyDutyList as applyService,
@@ -22,11 +22,11 @@ import {
 	setWorkTaskDone as setTaskService,
 	updateDutyList as updateService,
 	updateDutyListItem as updateItemService
-} from '$lib/server/volunteer/duty-list-service';
+} from '#lib/server/volunteer/duty-list-service.js';
 import { getStaffShiftPage, getVolunteerWorklist, getWorkOrderActivity } from './volunteer.remote';
 import { getProjectTaskPage } from './tasks.remote';
 import { getProjectActivity } from './projects.remote';
-import { workOrderProjectId } from '$lib/server/volunteer/work-order-service';
+import { workOrderProjectId } from '#lib/server/volunteer/work-order-service.js';
 
 /**
  * Project templates (the `duty_list` tables). Staff-only: read under

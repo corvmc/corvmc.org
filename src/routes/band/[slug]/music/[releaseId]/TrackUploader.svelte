@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import FileUpload from '$lib/components/ui/Form/FileUpload.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import FileUpload from '#lib/components/ui/Form/FileUpload.svelte';
 	import { IconUpload } from '@tabler/icons-svelte';
-	import { AUDIO_MAX_UPLOAD_BYTES } from '$lib/config';
+	import { AUDIO_MAX_UPLOAD_BYTES } from '#lib/config.js';
 	import { toast } from 'svelte-sonner';
 
 	let {

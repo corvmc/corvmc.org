@@ -21,7 +21,7 @@ function chainableSelect() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainableSelect(),
 		insert: vi.fn(() => ({
@@ -36,18 +36,18 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const emitMock = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...args: unknown[]) => emitMock(...args) }
 }));
 
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 // The unpublish-and-notify behaviour itself lives in the event service (shared
 // with the staff event page) and is covered by `event-service.spec.ts`; here we
 // only assert the flag queue delegates to it.
 const unpublishMock = vi.fn().mockResolvedValue(undefined);
 const getByIdMock = vi.fn().mockResolvedValue(null);
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	unpublishWithNotice: (...args: unknown[]) => unpublishMock(...args),
 	getById: (...args: unknown[]) => getByIdMock(...args)
 }));
@@ -60,8 +60,8 @@ vi.mock('$lib/server/event/event-service', () => ({
 // stubbing it would leave the "an event report only costs standing when the
 // event is a community listing" rule asserted against a fake.
 const restrictStandingMock = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/moderation/standing-service', async () => ({
-	...(await vi.importActual('$lib/server/moderation/standing-service')),
+vi.mock('#lib/server/moderation/standing-service.js', async () => ({
+	...(await vi.importActual('#lib/server/moderation/standing-service.js')),
 	restrictStanding: (...args: unknown[]) => restrictStandingMock(...args)
 }));
 
@@ -72,7 +72,7 @@ vi.mock('$lib/server/moderation/standing-service', async () => ({
 const withholdMock = vi.fn().mockResolvedValue(undefined);
 const setVisibilityMock = vi.fn().mockResolvedValue(undefined);
 const getSuggestionForModerationMock = vi.fn().mockResolvedValue(null);
-vi.mock('$lib/server/suggestion/suggestion-service', () => ({
+vi.mock('#lib/server/suggestion/suggestion-service.js', () => ({
 	withholdForReview: (...args: unknown[]) => withholdMock(...args),
 	setVisibility: (...args: unknown[]) => setVisibilityMock(...args),
 	getSuggestionForModeration: (...args: unknown[]) => getSuggestionForModerationMock(...args)
@@ -81,13 +81,13 @@ vi.mock('$lib/server/suggestion/suggestion-service', () => ({
 const classifiedWithholdMock = vi.fn().mockResolvedValue(undefined);
 const classifiedSetVisibilityMock = vi.fn().mockResolvedValue(undefined);
 const getPostForModerationMock = vi.fn().mockResolvedValue(null);
-vi.mock('$lib/server/classified/classified-service', () => ({
+vi.mock('#lib/server/classified/classified-service.js', () => ({
 	withholdForReview: (...args: unknown[]) => classifiedWithholdMock(...args),
 	setVisibility: (...args: unknown[]) => classifiedSetVisibilityMock(...args),
 	getPostForModeration: (...args: unknown[]) => getPostForModerationMock(...args)
 }));
 
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	createFlag,
 	fileStaffAction,

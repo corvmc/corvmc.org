@@ -41,15 +41,15 @@ vi.mock('$app/server', () => ({
 	},
 	getRequestEvent: () => ({ locals: {} })
 }));
-vi.mock('$lib/server/db', () => ({ db: { select: dbSelect, query: {} } }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (k: string | null) => k }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/db/index.js', () => ({ db: { select: dbSelect, query: {} } }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: (k: string | null) => k }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => ({ id: 'u1' }),
 	requireStaff: vi.fn()
 }));
-vi.mock('$lib/server/group/group-context', () => ({ requireGroupRole: vi.fn() }));
-vi.mock('$lib/server/media/media-service', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({ requireGroupRole: vi.fn() }));
+vi.mock('#lib/server/media/media-service.js', () => ({
 	listFor: vi.fn(async () => [
 		{ attachmentId: 'att-1', key: 'bands/b1/media/image/x.jpg', altText: 'The act', caption: null }
 	])
@@ -59,8 +59,8 @@ vi.mock('$lib/server/media/media-service', () => ({
 // reads site config out of KV — which no unit test has. Off is the right
 // default here: this spec is about what the press kit does and does not
 // publish, and a discography would only be noise in it.
-vi.mock('$lib/server/feature-flags', () => ({ isFeatureEnabled: vi.fn(async () => false) }));
-vi.mock('$lib/server/audio/audio-service', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({ isFeatureEnabled: vi.fn(async () => false) }));
+vi.mock('#lib/server/audio/audio-service.js', () => ({
 	listPublishedReleasesForBand: vi.fn(async () => [])
 }));
 

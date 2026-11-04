@@ -1,13 +1,13 @@
-import { db } from '$lib/server/db';
-import { volunteerHourLog, volunteerRole } from '$lib/server/db/schema/volunteer';
-import { user } from '$lib/server/db/schema/authentication';
-import { group } from '$lib/server/db/schema/group';
+import { db } from '#lib/server/db/index.js';
+import { volunteerHourLog, volunteerRole } from '#lib/server/db/schema/volunteer.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { eq, and, asc, desc, count, sql, type SQL } from 'drizzle-orm';
-import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import type { MemberRef } from '$lib/types/entity';
-import { rangeCondition, type ReportRange } from '$lib/server/report/range';
-import { monthBucket } from '$lib/server/report/bucket';
+import { paginate, type PaginationInput, type PaginatedResult } from '#lib/server/db/paginate.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import type { MemberRef } from '#lib/types/entity.js';
+import { rangeCondition, type ReportRange } from '#lib/server/report/range.js';
+import { monthBucket } from '#lib/server/report/bucket.js';
 import { toContributedValue, type ContributedValue } from './hour-value';
 
 // Re-exported because this module was the only definition of it before the kit
@@ -18,7 +18,7 @@ export type { ReportRange };
  * Every rollup here filters to approved hours only. That is the purpose of the
  * review step: a member can claim anything, and this report has to be
  * defensible to a funder. Club-time date handling lives in
- * `$lib/server/report/range` — a naive `new Date('2026-07-01')` is the previous
+ * `#lib/server/report/range.js` — a naive `new Date('2026-07-01')` is the previous
  * evening here, and moves a day's work across the boundary of every report that
  * reimplements it.
  */

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	/**
 	 * Where an under-18 sign-up lands.
 	 *
@@ -13,10 +13,10 @@
 	 * wait; nothing here should read as a rejection.
 	 */
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { getVolunteerBlockedNotice } from '$lib/remote/volunteer.remote';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { getVolunteerBlockedNotice } from '#lib/remote/volunteer.remote.js';
 
 	let notice = $derived(getVolunteerBlockedNotice());
 </script>

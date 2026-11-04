@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	getConfigsByPrefix: vi.fn(async () => ({
 		operatingHoursStart: '09:00',
 		operatingHoursEnd: '22:00',
@@ -20,7 +20,7 @@ import {
 	describeFrequency,
 	monthlyModeOf
 } from './rrule-helpers';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 describe('buildRRule', () => {
 	it('encodes a weekly rule for a Tuesday', () => {

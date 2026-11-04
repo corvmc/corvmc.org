@@ -70,7 +70,7 @@
 	import clsx from 'clsx';
 	import { page } from '$app/state';
 	import { signedIn } from './signed-in';
-	import { here, signInHref } from '$lib/utils/sign-in';
+	import { here, signInHref } from '#lib/utils/sign-in.js';
 
 	/**
 	 * The app's button. Variant, size and shape are props, not class strings —

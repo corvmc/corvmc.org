@@ -1,4 +1,4 @@
-import type { DomainEvents } from '$lib/server/event-bus/event-bus';
+import type { DomainEvents } from '#lib/server/event-bus/event-bus.js';
 
 /** One thing to remind somebody about, and what to say. */
 export interface ReminderDue<K extends keyof DomainEvents> {

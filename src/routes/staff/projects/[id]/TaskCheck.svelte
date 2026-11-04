@@ -5,7 +5,7 @@
 		IconCircleDot,
 		IconCircleX
 	} from '@tabler/icons-svelte';
-	import { workDoneConditionLabels } from '$lib/config';
+	import { workDoneConditionLabels } from '#lib/config.js';
 	import { checkState, type Task } from './task-view';
 
 	/** A thin ring with a check, filled once done. App-ticked states draw in info, not success. */

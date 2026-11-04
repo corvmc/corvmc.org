@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import RoleRequirementsCard from './RoleRequirementsCard.svelte';
 	import RoleShiftsCard from './RoleShiftsCard.svelte';
@@ -8,17 +8,17 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
-	import { volunteerRoleGroups, volunteerRoleGroupLabels } from '$lib/config';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import FreeformTagInput from '#lib/components/ui/FreeformTagInput.svelte';
+	import { volunteerRoleGroups, volunteerRoleGroupLabels } from '#lib/config.js';
 	import { IconArchive, IconArchiveOff, IconTrash, IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {
 		getStaffVolunteerRolePage,
@@ -27,8 +27,8 @@
 		restoreVolunteerRole,
 		deleteVolunteerRole,
 		getVolunteerRoleHistory
-	} from '$lib/remote/volunteer.remote';
-	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
+	} from '#lib/remote/volunteer.remote.js';
+	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
 
 	const { fields } = updateVolunteerRole;
 

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { searchMembers } from '$lib/remote/reservations.remote';
-	import { createStaffGroup } from '$lib/remote/groups.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { searchMembers } from '#lib/remote/reservations.remote.js';
+	import { createStaffGroup } from '#lib/remote/groups.remote.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 

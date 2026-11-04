@@ -1,24 +1,28 @@
-import { db } from '$lib/server/db';
-import { media, mediaAttachment } from '$lib/server/db/schema/media';
-import { attachableTypes, type AttachableType } from '$lib/config';
-import { eventListing } from '$lib/server/db/schema/event';
+import { db } from '#lib/server/db/index.js';
+import { media, mediaAttachment } from '#lib/server/db/schema/media.js';
+import { attachableTypes, type AttachableType } from '#lib/config.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
 import {
 	acquisition,
 	workRequest,
 	inventoryAsset,
 	inventoryItem
-} from '$lib/server/db/schema/inventory';
-import { group } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
-import { audioRelease } from '$lib/server/db/schema/audio';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { artifactRequest } from '$lib/server/db/schema/artifact-request';
-import { sponsor } from '$lib/server/db/schema/sponsor';
-import { renewal } from '$lib/server/db/schema/renewal';
-import { deleteObject, objectExists } from '$lib/server/storage';
-import { deletePrivateObject, privateObjectExists } from '$lib/server/private-storage';
-import { isReceiptKey, isRenewalDocumentKey, isWithheldPosterKey } from '$lib/server/storage-keys';
-import { MEDIA_SWEEP_GRACE_MS } from '$lib/config';
+} from '#lib/server/db/schema/inventory.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { audioRelease } from '#lib/server/db/schema/audio.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { artifactRequest } from '#lib/server/db/schema/artifact-request.js';
+import { sponsor } from '#lib/server/db/schema/sponsor.js';
+import { renewal } from '#lib/server/db/schema/renewal.js';
+import { deleteObject, objectExists } from '#lib/server/storage.js';
+import { deletePrivateObject, privateObjectExists } from '#lib/server/private-storage.js';
+import {
+	isReceiptKey,
+	isRenewalDocumentKey,
+	isWithheldPosterKey
+} from '#lib/server/storage-keys.js';
+import { MEDIA_SWEEP_GRACE_MS } from '#lib/config.js';
 import { and, eq, lt, sql, notExists, inArray, type SQLWrapper } from 'drizzle-orm';
 
 /**

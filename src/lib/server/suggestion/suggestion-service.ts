@@ -1,5 +1,5 @@
-import { db } from '$lib/server/db';
-import { memberRefColumns } from '$lib/server/entity/refs';
+import { db } from '#lib/server/db/index.js';
+import { memberRefColumns } from '#lib/server/entity/refs.js';
 import {
 	suggestion,
 	suggestionVote,
@@ -8,23 +8,23 @@ import {
 	type SuggestionCategory,
 	type SuggestionStatus,
 	type SuggestionVisibility
-} from '$lib/server/db/schema/suggestion';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/suggestion.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, or, asc, desc, count, inArray, isNull, sql } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
+import { containsLiteral } from '#lib/server/db/like.js';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { DomainError } from '$lib/server/errors';
-import { domainEvents, type DomainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
-import { getStanding } from '$lib/server/moderation/standing-service';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { DomainError } from '#lib/server/errors.js';
+import { domainEvents, type DomainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
+import { getStanding } from '#lib/server/moderation/standing-service.js';
 import {
 	SUGGESTION_TITLE_MAX,
 	SUGGESTION_BODY_MAX,
 	SUGGESTION_RESPONSE_MAX,
 	SUGGESTION_NOTE_MAX,
 	suggestionStatusLabels
-} from '$lib/config';
+} from '#lib/config.js';
 import { ne } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -374,7 +374,7 @@ export async function setVisibility(
 		params.visibility === 'hidden' &&
 		existing.authorUserId
 	) {
-		const { fileStaffAction } = await import('$lib/server/flag/flag-service');
+		const { fileStaffAction } = await import('#lib/server/flag/flag-service.js');
 		await fileStaffAction({
 			entityType: 'suggestion',
 			entityId: suggestionId,

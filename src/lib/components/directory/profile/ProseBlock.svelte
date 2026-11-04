@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { sanitizeBio } from '$lib/utils/markdown';
+	import { m } from '#lib/paraglide/messages.js';
+	import { sanitizeBio } from '#lib/utils/markdown.js';
 	import ProfileSection from './ProfileSection.svelte';
 
 	let {

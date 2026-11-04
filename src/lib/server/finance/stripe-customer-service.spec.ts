@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const mockStripe = { customers: { create: vi.fn() } };
-vi.mock('$lib/server/stripe', () => ({ stripe: mockStripe }));
+vi.mock('#lib/server/stripe.js', () => ({ stripe: mockStripe }));
 
 const { ensureStripeCustomer } = await import('./stripe-customer-service');
 

@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { mapDomainError } from '$lib/server/errors';
-import { getMembers } from '$lib/server/band/band-service';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { getMembers } from '#lib/server/band/band-service.js';
 import {
 	getPackingList,
 	saveOwnItems,
@@ -16,9 +16,9 @@ import {
 	resetPacked,
 	promoteOwnItems,
 	PackingAlreadyClaimedError
-} from '$lib/server/band/packing-service';
-import { packingItemsDraftSchema } from '$lib/types/packing';
-import { PACKING_NOTES_MAX } from '$lib/config';
+} from '#lib/server/band/packing-service.js';
+import { packingItemsDraftSchema } from '#lib/types/packing.js';
+import { PACKING_NOTES_MAX } from '#lib/config.js';
 
 /**
  * The band packing list — see `/band/[slug]/packing`.

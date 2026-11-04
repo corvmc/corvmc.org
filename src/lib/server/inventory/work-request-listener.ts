@@ -1,4 +1,4 @@
-import { domainEvents } from '$lib/server/event-bus/event-bus';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { resolveFlagsOnCompletion } from './work-request-service';
 
 /** What a report closed by the clock says, where staff would have written a note. */

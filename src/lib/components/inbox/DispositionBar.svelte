@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The four ways a conversation leaves the queue: Reply, Assign, Snooze,
 	 * Resolve — same actions, same shortcuts, same order everywhere they appear.
@@ -15,9 +15,9 @@
 	 * The bar itself never writes without leaving that way back.
 	 */
 	import { IconAlarmSnooze, IconCheck, IconRotate, IconSend, IconUser } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { disposeThread } from '$lib/remote/inbox.remote';
-	import { useShortcut, shortcutLabel } from '$lib/useShortcut.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { disposeThread } from '#lib/remote/inbox.remote.js';
+	import { useShortcut, shortcutLabel } from '#lib/useShortcut.svelte.js';
 	import { dispositionToast, undoLast } from './undo.svelte';
 	import { invalidateQueue } from './queue.svelte';
 	import SnoozeMenu from './SnoozeMenu.svelte';

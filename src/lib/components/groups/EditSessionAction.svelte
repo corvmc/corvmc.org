@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { updateGroupSession } from '$lib/remote/group-events.remote';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { updateGroupSession } from '#lib/remote/group-events.remote.js';
+	import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 	/**
 	 * Move, rename, or change what a session does with the room.

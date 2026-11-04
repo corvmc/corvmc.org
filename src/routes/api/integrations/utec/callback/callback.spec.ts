@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { positionOrder, type Capability, type Position } from '$lib/config';
+import { positionOrder, type Capability, type Position } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Mocks (the authorize module is imported transitively for STATE_COOKIE, so
@@ -10,9 +10,9 @@ import { positionOrder, type Capability, type Position } from '$lib/config';
 // positions actually grant.
 let heldPositions: Position[] = ['staff'];
 const requested: string[] = [];
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
-	const config = await import('$lib/config');
+	const config = await import('#lib/config.js');
 	const holds = (cap: Capability) =>
 		heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
 	return {
@@ -26,14 +26,14 @@ vi.mock('$lib/server/authorization', async () => {
 });
 
 const mockExchange = vi.fn();
-vi.mock('$lib/server/lock/ultraloc-client', () => ({
+vi.mock('#lib/server/lock/ultraloc-client.js', () => ({
 	exchangeAuthorizationCode: (...args: unknown[]) => mockExchange(...args),
 	buildAuthorizeUrl: vi.fn(() => 'https://oauth.u-tec.com/authorize'),
 	getUtecClientId: vi.fn().mockResolvedValue('cid')
 }));
 
 const mockUpdateSiteConfig = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	updateSiteConfig: (...args: unknown[]) => mockUpdateSiteConfig(...args)
 }));
 

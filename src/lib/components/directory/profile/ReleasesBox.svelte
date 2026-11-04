@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import ProfileSection from './ProfileSection.svelte';
-	import { releaseKindLabels, type ReleaseKind } from '$lib/config';
-	import { formatTrackSummary } from '$lib/utils/audio';
-	import { formatDateYear, formatCents } from '$lib/utils/format';
+	import { releaseKindLabels, type ReleaseKind } from '#lib/config.js';
+	import { formatTrackSummary } from '#lib/utils/audio.js';
+	import { formatDateYear, formatCents } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 	import { IconDisc } from '@tabler/icons-svelte';
 

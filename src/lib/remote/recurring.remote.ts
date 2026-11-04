@@ -2,14 +2,14 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { requireCapability, requireCapabilityOrOwner } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
+import { requireCapability, requireCapabilityOrOwner } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import {
 	get,
 	getHistory,
 	cancel,
 	listAll as listAllSeries
-} from '$lib/server/reservation/recurring-series-service';
+} from '#lib/server/reservation/recurring-series-service.js';
 
 // ---------------------------------------------------------------------------
 // Queries

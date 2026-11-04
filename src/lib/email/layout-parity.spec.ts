@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { EMAIL_LOGO_URL } from './brand';
-import { CAMPAIGN_LAYOUT } from '$lib/server/marketing/campaign-layout';
+import { CAMPAIGN_LAYOUT } from '#lib/server/marketing/campaign-layout.js';
 
 // ---------------------------------------------------------------------------
 // Email layout parity

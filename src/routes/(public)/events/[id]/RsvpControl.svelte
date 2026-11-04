@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Form, { SubmitButton } from '$lib/components/ui/Form';
-	import { getRsvpStatus, confirmRsvp, withdrawRsvp } from '$lib/remote/event-rsvp.remote';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Form, { SubmitButton } from '#lib/components/ui/Form/index.js';
+	import { getRsvpStatus, confirmRsvp, withdrawRsvp } from '#lib/remote/event-rsvp.remote.js';
 
 	/**
 	 * The event page's RSVP (#1995), the first consumer of the sign-in interrupt

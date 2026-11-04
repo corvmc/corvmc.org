@@ -1,8 +1,11 @@
 import { asc, eq } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { calendarSource } from '$lib/server/db/schema/calendar-source';
-import { DomainError } from '$lib/server/domain-error';
-import { runPartnerImports, type SourceRunResult } from '$lib/server/event/partner-import-service';
+import { db } from '#lib/server/db/index.js';
+import { calendarSource } from '#lib/server/db/schema/calendar-source.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import {
+	runPartnerImports,
+	type SourceRunResult
+} from '#lib/server/event/partner-import-service.js';
 
 /**
  * A venue's partner feeds: add, pause, remove, fetch now. Removing one keeps

@@ -16,13 +16,13 @@ let featureOn = true;
 /** The band the caller passed a slug for. */
 const BAND = { id: 'band-1', slug: 'sour-cherry', name: 'Sour Cherry' };
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	requireFeature: async () => {
 		if (!featureOn) throw new Error('404: Not found');
 	}
 }));
 
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: async (
 		ref: { slug?: string },
 		minRole: 'owner' | 'admin' | 'member',
@@ -65,7 +65,7 @@ const svc = {
 	coverUrlsFor: vi.fn(async () => new Map<string, string>()),
 	salesCountFor: vi.fn(async () => 0)
 };
-vi.mock('$lib/server/audio/audio-service', () => svc);
+vi.mock('#lib/server/audio/audio-service.js', () => svc);
 
 // Connect is money setup, so its endpoints get the same treatment: a call on a
 // rejected request is itself the failure.
@@ -81,7 +81,7 @@ const connect = {
 	createOnboardingLink: vi.fn(async () => 'https://connect.stripe.test/onboard'),
 	createDashboardLink: vi.fn(async () => 'https://connect.stripe.test/dashboard')
 };
-vi.mock('$lib/server/audio/connect-service', () => connect);
+vi.mock('#lib/server/audio/connect-service.js', () => connect);
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({

@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import { browser } from '$app/environment';
 	import { IconCheck, IconX } from '@tabler/icons-svelte';
 	import { getFormContext } from './Form.svelte';
-	import { useShortcut, shortcutLabel } from '$lib/useShortcut.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import type { ButtonSize, ButtonVariant } from '$lib/components/ui/Button.svelte';
+	import { useShortcut, shortcutLabel } from '#lib/useShortcut.svelte.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import type { ButtonSize, ButtonVariant } from '#lib/components/ui/Button.svelte';
 
 	let {
 		shortcut,

@@ -1,25 +1,25 @@
-import { db } from '$lib/server/db';
-import { recurringSeries } from '$lib/server/db/schema/recurring';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { closure } from '$lib/server/db/schema/reservation';
-import { eventListing, eventBand } from '$lib/server/db/schema/event';
-import { eventListingColumns } from '$lib/server/event/event-columns';
-import { saveTicketSale } from '$lib/server/ticket/ticket-sale';
-import { group } from '$lib/server/db/schema/group';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { linkManagingGroup } from '$lib/server/event/event-service';
-import { requireProgramGroup } from '$lib/server/group/group-kind';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { recurringSeries } from '#lib/server/db/schema/recurring.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { closure } from '#lib/server/db/schema/reservation.js';
+import { eventListing, eventBand } from '#lib/server/db/schema/event.js';
+import { eventListingColumns } from '#lib/server/event/event-columns.js';
+import { saveTicketSale } from '#lib/server/ticket/ticket-sale.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { linkManagingGroup } from '#lib/server/event/event-service.js';
+import { requireProgramGroup } from '#lib/server/group/group-kind.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, eq, isNull, lt, gt, gte, lte, ne, notInArray, or, sql } from 'drizzle-orm';
 import { getOccurrences, generationWindowEnd } from './rrule-helpers';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { staffCreate } from './reservation-service';
 import { hasConflict } from './conflict-service';
 import { listingHoldBooker } from './event-hold';
-import { attachExisting } from '$lib/server/media/media-service';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { attachExisting } from '#lib/server/media/media-service.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Generation job — expand active recurring series into concrete reservations

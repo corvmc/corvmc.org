@@ -2,20 +2,20 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { can, requireCapability, requireUser } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import { requireSurface } from '$lib/surfaces';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
-import { getStanding } from '$lib/server/moderation/standing-service';
-import { listForUser } from '$lib/server/band/band-service';
-import { suggestGenres, suggestInstruments } from '$lib/server/directory/directory-service';
-import { toBandRef, toGenericRef, toMemberRef } from '$lib/server/entity/refs';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { requireSurface } from '#lib/surfaces.js';
+import { isFeatureEnabled } from '#lib/server/feature-flags.js';
+import { getStanding } from '#lib/server/moderation/standing-service.js';
+import { listForUser } from '#lib/server/band/band-service.js';
+import { suggestGenres, suggestInstruments } from '#lib/server/directory/directory-service.js';
+import { toBandRef, toGenericRef, toMemberRef } from '#lib/server/entity/refs.js';
 import {
 	createFlag,
 	countUnresolvedReportsBy,
 	FLAG_DESCRIPTION_MAX,
 	FLAG_REASON_MAX
-} from '$lib/server/flag/flag-service';
+} from '#lib/server/flag/flag-service.js';
 import {
 	canView,
 	closePost,
@@ -26,8 +26,8 @@ import {
 	setVisibility,
 	updatePost,
 	type ClassifiedTagInput
-} from '$lib/server/classified/classified-service';
-import { jsonArrayField } from '$lib/utils/zod-json';
+} from '#lib/server/classified/classified-service.js';
+import { jsonArrayField } from '#lib/utils/zod-json.js';
 import {
 	classifiedCategories,
 	classifiedKinds,
@@ -37,7 +37,7 @@ import {
 	CLASSIFIED_NOTE_MAX,
 	CLASSIFIED_TITLE_MAX,
 	MAX_UNRESOLVED_REPORTS
-} from '$lib/config';
+} from '#lib/config.js';
 
 const PAGE_SIZE = 25;
 

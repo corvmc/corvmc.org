@@ -31,14 +31,14 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: { select: vi.fn(() => chainable()) }
 }));
 
 // The impact rate is site config. Pinned so the arithmetic below stays legible
 // and independent of whatever Independent Sector publishes next April.
 const HOUR_VALUE_CENTS = 3766;
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	config: vi.fn(async (key: string) =>
 		key === 'volunteer.hourValueCents' ? HOUR_VALUE_CENTS : 'Independent Sector, Oregon, 2025'
 	)

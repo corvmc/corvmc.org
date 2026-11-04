@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_TIMEZONE } from '$lib/config';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import {
 	addCalendarDays,
 	clockEdgeNames,

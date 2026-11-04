@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import StickyBar from '$lib/components/ui/StickyBar.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import StickyBar from '#lib/components/ui/StickyBar.svelte';
 	// Not `MoneyField`: that one owns a remote form field and posts cents through
 	// a hidden sibling, and these rows are local state serialized into one JSON
 	// field. The dollars-in/cents-out conversion happens in `centsOf` below.
-	import { Field } from '$lib/components/ui/Form';
-	import { recordIntake } from '$lib/remote/inventory.remote';
-	import { formatCents } from '$lib/utils/format';
-	import { equipmentConditions } from '$lib/config';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { recordIntake } from '#lib/remote/inventory.remote.js';
+	import { formatCents } from '#lib/utils/format.js';
+	import { equipmentConditions } from '#lib/config.js';
 	import { IconPlus, IconTrash } from '@tabler/icons-svelte';
 
 	/**

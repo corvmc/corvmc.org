@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { createAudience } from '$lib/remote/marketing.remote';
+	import { createAudience } from '#lib/remote/marketing.remote.js';
 	import { Field } from '../ui/Form';
 
 	let {

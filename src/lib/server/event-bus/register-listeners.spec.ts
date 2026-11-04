@@ -16,22 +16,22 @@ vi.mock('./event-bus', () => ({
 }));
 
 const mockHandleReservationCheckout = vi.fn();
-vi.mock('$lib/server/reservation/checkout-listener', () => ({
+vi.mock('#lib/server/reservation/checkout-listener.js', () => ({
 	handleReservationCheckout: (...args: unknown[]) => mockHandleReservationCheckout(...args)
 }));
 
 const mockHandleTicketCheckout = vi.fn();
-vi.mock('$lib/server/ticket/checkout-listener', () => ({
+vi.mock('#lib/server/ticket/checkout-listener.js', () => ({
 	handleTicketCheckout: (...args: unknown[]) => mockHandleTicketCheckout(...args)
 }));
 
 const mockHandleBandPremiumCheckout = vi.fn();
-vi.mock('$lib/server/band/band-checkout-listener', () => ({
+vi.mock('#lib/server/band/band-checkout-listener.js', () => ({
 	handleBandPremiumCheckout: (...args: unknown[]) => mockHandleBandPremiumCheckout(...args)
 }));
 
 const mockRegisterAllNotificationListeners = vi.fn();
-vi.mock('$lib/server/notification/notification-listeners', () => ({
+vi.mock('#lib/server/notification/notification-listeners.js', () => ({
 	registerAllNotificationListeners: (...args: unknown[]) =>
 		mockRegisterAllNotificationListeners(...args)
 }));
@@ -40,31 +40,31 @@ vi.mock('$lib/server/notification/notification-listeners', () => ({
 // registration. Mock them so registration settles without loading the real
 // (heavy, db-backed) implementations.
 const mockDispatch = vi.fn();
-vi.mock('$lib/server/notification/dispatcher', () => ({
+vi.mock('#lib/server/notification/dispatcher.js', () => ({
 	dispatch: (...args: unknown[]) => mockDispatch(...args)
 }));
 
 const mockListStaffUsers = vi.fn().mockResolvedValue([]);
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	listUsersWithCapability: (...args: unknown[]) => mockListStaffUsers(...args)
 }));
 
 const mockPromoteNextWaitlisted = vi.fn();
-vi.mock('$lib/server/reservation/waitlist-service', () => ({
+vi.mock('#lib/server/reservation/waitlist-service.js', () => ({
 	promoteNextWaitlisted: (...args: unknown[]) => mockPromoteNextWaitlisted(...args)
 }));
 
 // Best-effort by contract: it never throws, so the listener needs no guard.
 const mockProvisionOnConfirm = vi.fn().mockResolvedValue(true);
 const mockRevokeAccessFor = vi.fn().mockResolvedValue(true);
-vi.mock('$lib/server/lock/lock-service', () => ({
+vi.mock('#lib/server/lock/lock-service.js', () => ({
 	provisionOnConfirm: (...args: unknown[]) => mockProvisionOnConfirm(...args),
 	revokeAccessFor: (...args: unknown[]) => mockRevokeAccessFor(...args)
 }));
 
 // Tested in its own spec; mocked so the waitlist handler stays the only one.
 const mockRegisterAuditListeners = vi.fn();
-vi.mock('$lib/server/audit/audit-listeners', () => ({
+vi.mock('#lib/server/audit/audit-listeners.js', () => ({
 	registerAuditListeners: () => mockRegisterAuditListeners()
 }));
 
@@ -74,14 +74,14 @@ const cancelledRow = {
 	startsAt: new Date('2026-05-21T17:00:00Z'),
 	endsAt: new Date('2026-05-21T18:00:00Z')
 };
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => ({
 			from: () => ({ where: () => ({ limit: () => Promise.resolve([cancelledRow]) }) })
 		})
 	}
 }));
-vi.mock('$lib/server/db/schema/reservation', () => ({ reservation: {} }));
+vi.mock('#lib/server/db/schema/reservation.js', () => ({ reservation: {} }));
 
 beforeEach(() => {
 	vi.clearAllMocks();

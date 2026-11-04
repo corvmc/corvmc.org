@@ -1,5 +1,5 @@
 <script lang="ts" generics="T extends RosterPerson, S extends Record<string, unknown>">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * A list of people (#1994): any query returning `RosterPerson` rows. The roster
 	 * owns search, paging, Clear, export, "copy emails" and the side panel; the page
@@ -8,13 +8,13 @@
 	 */
 	import { untrack, type Snippet } from 'svelte';
 	import { IconDownload } from '@tabler/icons-svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { withQuery } from '$lib/utils/with-query';
-	import type { Pagination } from '$lib/types/pagination';
-	import type { RosterPerson } from '$lib/types/roster';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import type { Pagination } from '#lib/types/pagination.js';
+	import type { RosterPerson } from '#lib/types/roster.js';
 	import type { RosterState } from './roster-state.svelte';
 	import RosterTable from './RosterTable.svelte';
 	import CopyEmailsButton from './CopyEmailsButton.svelte';

@@ -2,7 +2,7 @@ import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import SponsorCredit from './SponsorCredit.svelte';
-import { SPONSOR_CREDIT_LEAD } from '$lib/utils/sponsor-credit';
+import { SPONSOR_CREDIT_LEAD } from '#lib/utils/sponsor-credit.js';
 
 // Fixture sponsors; the disclosure is the shared constant, not retyped copy.
 const LINKED = 'Troubadour Music';

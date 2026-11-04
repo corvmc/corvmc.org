@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { MembershipPaymentEvent } from '$lib/server/event-bus/event-bus';
+import type { MembershipPaymentEvent } from '#lib/server/event-bus/event-bus.js';
 
 /**
  * What a paid contribution invoice writes.

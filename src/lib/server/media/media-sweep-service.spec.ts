@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { attachableTypes } from '$lib/config';
+import { attachableTypes } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
 //
-// Only `$lib/server/db` and `$lib/server/storage` are mocked, so the drizzle
+// Only `#lib/server/db/index.js` and `#lib/server/storage.js` are mocked, so the drizzle
 // operators are real and the order of R2 deletes versus row deletes — the part
 // that is load-bearing — is directly observable.
 // ---------------------------------------------------------------------------
@@ -39,7 +39,7 @@ function selectChain(result: unknown[]) {
 	return chain;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => selectChain(mediaCandidates)),
 		delete: vi.fn((table: unknown) => ({
@@ -71,7 +71,7 @@ let privateKeys: Set<string> | null = null;
 const objectExistsMock = vi.fn(async (key: string) => publicKeys?.has(key) ?? true);
 const privateObjectExistsMock = vi.fn(async (key: string) => privateKeys?.has(key) ?? true);
 
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	deleteObject: (key: string) => deleteObjectMock(key),
 	objectExists: (key: string) => objectExistsMock(key)
 }));
@@ -80,13 +80,13 @@ const deletePrivateObjectMock = vi.fn(async (key: string) => {
 	journal.push(`r2-private:${key}`);
 });
 
-vi.mock('$lib/server/private-storage', () => ({
+vi.mock('#lib/server/private-storage.js', () => ({
 	deletePrivateObject: (key: string) => deletePrivateObjectMock(key),
 	privateObjectExists: (key: string) => privateObjectExistsMock(key)
 }));
 
 const { sweepMedia } = await import('./media-sweep-service');
-const { MEDIA_SWEEP_GRACE_MS } = await import('$lib/config');
+const { MEDIA_SWEEP_GRACE_MS } = await import('#lib/config.js');
 
 const NOW = new Date('2026-08-28T00:00:00Z');
 

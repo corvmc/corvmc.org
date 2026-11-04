@@ -1,8 +1,8 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { sweepMedia } from '$lib/server/media/media-sweep-service';
-import { sweepGroupFiles } from '$lib/server/group/file-sweep';
+import { sweepMedia } from '#lib/server/media/media-sweep-service.js';
+import { sweepGroupFiles } from '#lib/server/group/file-sweep.js';
 
 /**
  * Cron endpoint for reclaiming R2 objects nothing points at any more.

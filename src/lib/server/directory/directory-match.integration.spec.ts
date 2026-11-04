@@ -20,8 +20,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { join } from 'node:path';
 import { drizzle } from 'drizzle-orm/node-sqlite';
 import { migrate } from 'drizzle-orm/node-sqlite/migrator';
-import * as schema from '$lib/server/db/schema';
-import { relations } from '$lib/server/db/schema/relations';
+import * as schema from '#lib/server/db/schema.js';
+import { relations } from '#lib/server/db/schema/relations.js';
 
 const MIGRATIONS_FOLDER = join(import.meta.dirname, '..', '..', '..', '..', 'migrations');
 
@@ -30,12 +30,12 @@ let sqlite: DatabaseSync;
 // The real drizzle instance, over a real database, in place of the D1 binding.
 // Everything else the service touches is either pure or stubbed below.
 const { dbRef } = vi.hoisted(() => ({ dbRef: { current: null as unknown } }));
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	get db() {
 		return dbRef.current;
 	}
 }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (k: string | null) => k }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: (k: string | null) => k }));
 
 const { findMatchesFor } = await import('./directory-service');
 

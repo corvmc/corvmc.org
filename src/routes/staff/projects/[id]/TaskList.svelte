@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import { m } from '#lib/paraglide/messages.js';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import {
 		IconCaretDownFilled,
 		IconCaretRightFilled,
@@ -19,13 +19,13 @@
 	} from '@tabler/icons-svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import {
 		createSectionForm,
 		createTaskForm,
 		moveTaskCommand,
 		reorderSectionsCommand
-	} from '$lib/remote/tasks.remote';
+	} from '#lib/remote/tasks.remote.js';
 	import AddTaskLine from './AddTaskLine.svelte';
 	import AssignPicker from './AssignPicker.svelte';
 	import DutyItems from './DutyItems.svelte';

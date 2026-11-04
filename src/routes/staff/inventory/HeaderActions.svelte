@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { hasCapability } from '$lib/config';
-	import { getStaffLayout } from '$lib/remote/layout.remote';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { hasCapability } from '#lib/config.js';
+	import { getStaffLayout } from '#lib/remote/layout.remote.js';
 	import TaggingQueue from './TaggingQueue.svelte';
 
 	// Its own component so the page keeps one query of its own. The staff layout

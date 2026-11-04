@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * An upload, in the settings of the block that shows the file.
 	 *
@@ -12,7 +12,7 @@
 	 * vocabulary its own mapping comment describes (`image` is the gallery slot).
 	 */
 	import { toast } from 'svelte-sonner';
-	import FileUpload from '$lib/components/ui/Form/FileUpload.svelte';
+	import FileUpload from '#lib/components/ui/Form/FileUpload.svelte';
 
 	let {
 		bandId,

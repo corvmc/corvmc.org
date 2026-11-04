@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import type { EpkContact } from '$lib/types/band-page';
+	import { m } from '#lib/paraglide/messages.js';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import type { EpkContact } from '#lib/types/band-page.js';
 
 	/**
 	 * One named person a venue can reach.

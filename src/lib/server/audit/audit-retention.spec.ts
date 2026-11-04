@@ -31,7 +31,7 @@ function chain(queue: () => unknown[], wheres: unknown[]): unknown {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		// The incident-orphan delete's subquery; its predicate is pinned against SQLite elsewhere.
 		select: vi.fn(() => chain(() => [], [])),

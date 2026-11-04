@@ -1,25 +1,25 @@
 import { z } from 'zod';
 import { historyArgs } from './_history';
-import { listAuditFeed } from '$lib/server/audit/audit-feed';
-import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupKinds } from '$lib/config';
-import { mapDomainError } from '$lib/server/errors';
+import { listAuditFeed } from '#lib/server/audit/audit-feed.js';
+import { LONG_TEXT_MAX, SHORT_TEXT_MAX, groupKinds } from '#lib/config.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, desc, gte } from 'drizzle-orm';
-import { requireCapability, requireUser } from '$lib/server/authorization';
-import { listAll, listForUser, partitionByStatus } from '$lib/server/band/band-service';
-import { getBandTotals } from '$lib/server/band/band-totals-service';
+import { requireCapability, requireUser } from '#lib/server/authorization.js';
+import { listAll, listForUser, partitionByStatus } from '#lib/server/band/band-service.js';
+import { getBandTotals } from '#lib/server/band/band-totals-service.js';
 import {
 	memberRefColumns,
 	reservationRefColumns,
 	toBandRef,
 	toMemberRef,
 	toReservationRef
-} from '$lib/server/entity/refs';
+} from '#lib/server/entity/refs.js';
 import {
 	getByIdWithDetails,
 	getMembers,
@@ -41,15 +41,15 @@ import {
 	reactivate,
 	setTier,
 	BandMemberExistsError
-} from '$lib/server/band/band-service';
-import { bandTiers } from '$lib/server/db/schema/band-site';
+} from '#lib/server/band/band-service.js';
+import { bandTiers } from '#lib/server/db/schema/band-site.js';
 import {
 	createInvite as createEmailInviteService,
 	listForGroup as listEmailInvitesForGroup,
 	listInvitesForEmail,
 	revoke as revokeEmailInviteService
-} from '$lib/server/group/group-invite-service';
-import { requireGroupRole } from '$lib/server/group/group-context';
+} from '#lib/server/group/group-invite-service.js';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
 
 // ===========================================================================
 // Queries — Staff (list)

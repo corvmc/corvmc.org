@@ -1,11 +1,11 @@
-import { db } from '$lib/server/db';
-import { ticket, ticketSale, type TicketStatus } from '$lib/server/db/schema/ticket';
-import { eventListing } from '$lib/server/db/schema/event';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { ticket, ticketSale, type TicketStatus } from '#lib/server/db/schema/ticket.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, inArray, lt, sql, asc, desc } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import { emitTicketPurchased } from './purchased-event';
-import { captureException } from '$lib/server/sentry';
+import { captureException } from '#lib/server/sentry.js';
 
 // ---------------------------------------------------------------------------
 // Errors

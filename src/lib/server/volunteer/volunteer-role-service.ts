@@ -1,13 +1,13 @@
-import { db } from '$lib/server/db';
-import { volunteerRole, volunteerHourLog } from '$lib/server/db/schema/volunteer';
+import { db } from '#lib/server/db/index.js';
+import { volunteerRole, volunteerHourLog } from '#lib/server/db/schema/volunteer.js';
 import { eq, and, asc, count, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/errors';
+import { DomainError } from '#lib/server/errors.js';
 import {
 	VOLUNTEER_ROLE_DESCRIPTION_MAX,
 	VOLUNTEER_ROLE_NAME_MAX,
 	VOLUNTEER_SHIFT_MAX_CAPACITY
-} from '$lib/config';
-import type { VolunteerRole, VolunteerRoleGroup } from '$lib/server/db/schema/volunteer';
+} from '#lib/config.js';
+import type { VolunteerRole, VolunteerRoleGroup } from '#lib/server/db/schema/volunteer.js';
 
 // ---------------------------------------------------------------------------
 // Errors

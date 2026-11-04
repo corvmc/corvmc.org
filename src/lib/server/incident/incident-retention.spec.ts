@@ -30,7 +30,7 @@ function chain(queue: () => unknown[]): unknown {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		delete: vi.fn(() => chain(() => deleteResults.shift() ?? [])),
 		update: vi.fn(() => ({
@@ -49,7 +49,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const recordAuditEntry = vi.fn();
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...args: unknown[]) => recordAuditEntry(...args)
 }));
 

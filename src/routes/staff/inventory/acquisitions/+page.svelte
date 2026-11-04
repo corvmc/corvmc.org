@@ -1,20 +1,20 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { getAcquisitions } from '$lib/remote/inventory.remote';
-	import { acquisitionKinds, acquisitionKindLabels } from '$lib/config';
-	import { formatCents, formatDateShort } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { getAcquisitions } from '#lib/remote/inventory.remote.js';
+	import { acquisitionKinds, acquisitionKindLabels } from '#lib/config.js';
+	import { formatCents, formatDateShort } from '#lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
+	import { withQuery } from '#lib/utils/with-query.js';
 
 	/**
 	 * Everything the collective has taken in, and what it cost.

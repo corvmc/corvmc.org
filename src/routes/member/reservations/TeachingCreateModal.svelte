@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { toast } from 'svelte-sonner';
 	import { IconSchool } from '@tabler/icons-svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import DateTimeStep from '$lib/components/reservations/booking/DateTimeStep.svelte';
-	import ConfirmStep from '$lib/components/reservations/booking/ConfirmStep.svelte';
-	import { bookInstructorReservation } from '$lib/remote/reservations.remote';
+	import Action from '#lib/components/ui/Action.svelte';
+	import DateTimeStep from '#lib/components/reservations/booking/DateTimeStep.svelte';
+	import ConfirmStep from '#lib/components/reservations/booking/ConfirmStep.svelte';
+	import { bookInstructorReservation } from '#lib/remote/reservations.remote.js';
 
 	/**
 	 * Booking the room to teach.

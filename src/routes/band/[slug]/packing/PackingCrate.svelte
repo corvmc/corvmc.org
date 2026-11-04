@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import PackingItemsEditor from './PackingItemsEditor.svelte';
-	import { savePackingItems, savePackingItemsFor } from '$lib/remote/packing.remote';
-	import type { PackingItemRowState } from '$lib/types/packing';
+	import { savePackingItems, savePackingItemsFor } from '#lib/remote/packing.remote.js';
+	import type { PackingItemRowState } from '#lib/types/packing.js';
 
 	/**
 	 * One person's crate — or the band's shared kit, which a null owner means.

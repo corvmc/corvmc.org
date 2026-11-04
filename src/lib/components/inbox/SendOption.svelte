@@ -13,8 +13,8 @@
 	 * round trip cannot send twice — an email reply is a real wait, and the
 	 * primary button being visibly busy is no help if the ones beside it are not.
 	 */
-	import { getFormContext } from '$lib/components/ui/Form/Form.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { getFormContext } from '#lib/components/ui/Form/Form.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 
 	let {
 		value,

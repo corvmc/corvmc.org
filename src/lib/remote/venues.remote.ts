@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
+import { requireCapability } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import {
 	createVenue as createService,
 	updateVenue as updateService,
@@ -13,14 +13,14 @@ import {
 	deleteVenue as deleteService,
 	getVenue as getService,
 	listVenues
-} from '$lib/server/venue/venue-service';
+} from '#lib/server/venue/venue-service.js';
 import {
 	addSource as addSourceService,
 	fetchSourceNow,
 	listSourcesForVenue,
 	removeSource,
 	setSourcePaused
-} from '$lib/server/venue/calendar-source-service';
+} from '#lib/server/venue/calendar-source-service.js';
 
 /**
  * Venues are guarded as events, not on a `venue.*` set of their own.

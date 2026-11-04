@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BAND_TICKET_PLATFORM_FEE_BPS, TICKET_COLLECTIVE_SHARE_BPS } from '$lib/config';
+import { BAND_TICKET_PLATFORM_FEE_BPS, TICKET_COLLECTIVE_SHARE_BPS } from '#lib/config.js';
 
 // Each `db.select()` resolves to the next queued result, whatever the chain.
 let selectQueue: unknown[][] = [];
@@ -15,7 +15,7 @@ function chain(result: () => unknown[]) {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chain(() => selectQueue.shift() ?? []),
 		update: () => ({
@@ -28,17 +28,17 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const destinationFor = vi.fn();
-vi.mock('$lib/server/audio/connect-service', () => ({
+vi.mock('#lib/server/audio/connect-service.js', () => ({
 	destinationFor: (...a: unknown[]) => destinationFor(...(a as []))
 }));
 
 const recordBandTicketRefund = vi.fn();
-vi.mock('$lib/server/finance/ticket-entries', () => ({
+vi.mock('#lib/server/finance/ticket-entries.js', () => ({
 	recordBandTicketRefund: (...a: unknown[]) => recordBandTicketRefund(...(a as []))
 }));
 
 const refundsCreate = vi.fn();
-vi.mock('$lib/server/stripe', () => ({
+vi.mock('#lib/server/stripe.js', () => ({
 	stripe: { refunds: { create: (...a: unknown[]) => refundsCreate(...(a as [])) } }
 }));
 

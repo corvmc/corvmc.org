@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
-	import { getUser, updateUser } from '$lib/remote/users.remote';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { toBirthDateInput } from '$lib/utils/age';
+	import { getUser, updateUser } from '#lib/remote/users.remote.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { toBirthDateInput } from '#lib/utils/age.js';
 
 	// Everything arrives as a resolved prop. Keeping this component's script
 	// fully synchronous is the point of extracting it: a top-level `await` marks

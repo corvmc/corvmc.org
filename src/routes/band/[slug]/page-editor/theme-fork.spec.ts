@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { foldLegacy, fork, needsConfirm, paneCss, pickTheme, themeLabel } from './theme-fork';
-import { themeClass } from '$lib/utils/theme-starter';
+import { themeClass } from '#lib/utils/theme-starter.js';
 
 /**
  * Read from disk rather than through `?raw`: vite's css plugin claims that

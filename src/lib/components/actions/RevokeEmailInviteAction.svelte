@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { revokeStaffEmailInvite } from '$lib/remote/bands.remote';
+	import { revokeStaffEmailInvite } from '#lib/remote/bands.remote.js';
 
 	const { fields } = revokeStaffEmailInvite;
 

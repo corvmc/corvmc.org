@@ -8,7 +8,7 @@
  * `path` is the band-site-relative path ('' for home, '/events', '/epk').
  */
 import type { ResolvedPathname } from '$app/types';
-import { isReservedSlug } from '$lib/reserved-slugs';
+import { isReservedSlug } from '#lib/reserved-slugs.js';
 
 /**
  * The domain band subdomains hang off ({slug}.<domain>), derived from

@@ -14,7 +14,7 @@ const { entryFindMany, entryFindFirst, captureException, selectRows } = vi.hoist
 // Members and bands both read `directory_entry` since phase 3a — one table, one
 // mock, and the halves differ only in whether the entry is attached to a user or
 // a group. The `where` assertions below are what tell them apart.
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		query: {
 			directoryEntry: { findMany: entryFindMany, findFirst: entryFindFirst }
@@ -32,8 +32,8 @@ vi.mock('$lib/server/db', () => ({
 		}
 	}
 }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (k: string | null) => k }));
-vi.mock('$lib/server/sentry', () => ({ captureException }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: (k: string | null) => k }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException }));
 
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import { sql, type SQL } from 'drizzle-orm';

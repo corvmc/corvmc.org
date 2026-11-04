@@ -1,7 +1,7 @@
 import * as z from 'zod';
 import { query } from '$app/server';
 import { command, form } from './_remote';
-import { requireGroupRole } from '$lib/server/group/group-context';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
 import {
 	getGroupChat,
 	postToGroupChat,
@@ -10,10 +10,10 @@ import {
 	listGroupTopics,
 	createGroupTopic,
 	setRoomMute as setRoomMuteState
-} from '$lib/server/inbox/group-chat-service';
+} from '#lib/server/inbox/group-chat-service.js';
 import { error } from '@sveltejs/kit';
-import { DIRECT_MESSAGE_BODY_MAX } from '$lib/config';
-import { mapDomainError } from '$lib/server/errors';
+import { DIRECT_MESSAGE_BODY_MAX } from '#lib/config.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import { getMyMessageThread } from './direct-messages.remote';
 
 /**

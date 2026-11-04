@@ -1,4 +1,4 @@
-import { BRAND, EMAIL_LOGO_URL } from '$lib/email/brand';
+import { BRAND, EMAIL_LOGO_URL } from '#lib/email/brand.js';
 
 // ---------------------------------------------------------------------------
 // Marketing campaign email layout

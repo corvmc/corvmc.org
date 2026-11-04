@@ -1,11 +1,11 @@
 import { and, asc, count, desc, eq, gt, isNotNull, isNull, or, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { inboxThread, inboxMessage, inboxGroupRead } from '$lib/server/db/schema/inbox';
-import { user } from '$lib/server/db/schema/authentication';
-import { group } from '$lib/server/db/schema/group';
+import { db } from '#lib/server/db/index.js';
+import { inboxThread, inboxMessage, inboxGroupRead } from '#lib/server/db/schema/inbox.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { touchThread } from './message-service';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import type { ThreadNotifyPolicy, ThreadPostPolicy } from '$lib/config';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import type { ThreadNotifyPolicy, ThreadPostPolicy } from '#lib/config.js';
 
 /**
  * The threads a group's members share (#1252), several per group since #1301.
@@ -389,7 +389,7 @@ export async function groupOfChatThread(
 
 /** Who is in the room, for the header. */
 export async function listGroupChatReaders(groupId: string, threadId?: string) {
-	const { groupMember } = await import('$lib/server/db/schema/group');
+	const { groupMember } = await import('#lib/server/db/schema/group.js');
 	const query = db
 		.select({ id: user.id, name: user.name })
 		.from(groupMember)

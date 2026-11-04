@@ -4,7 +4,7 @@ const getRequestEvent = vi.fn();
 const captureException = vi.fn();
 
 vi.mock('$app/server', () => ({ getRequestEvent }));
-vi.mock('$lib/server/sentry', () => ({ captureException }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException }));
 
 // Module scope, not per-`beforeEach`: on a cold Vite cache the first import pays
 // the transform of this module graph inside the hook timeout, and reports as a

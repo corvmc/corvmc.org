@@ -10,20 +10,20 @@ import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
 import { eq, and, count, isNotNull } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { bandSite } from '$lib/server/db/schema/band-site';
-import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
-import { groupMember } from '$lib/server/db/schema/group';
-import { listBandEventsUpcoming } from '$lib/server/event/event-service';
-import { epkProgress } from '$lib/server/band/epk-completeness';
-import type { ProfileLink } from '$lib/server/db/schema/authentication';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { getOrCreateBandSiteId } from '$lib/server/band/band-site-service';
-import { fullPressKit } from '$lib/server/band/press-kit';
-import { listFor as listMediaFor, setDescription } from '$lib/server/media/media-service';
-import { resolveImageUrl } from '$lib/server/storage';
-import { jsonObjectField } from '$lib/utils/zod-json';
-import { photoLimitForTier } from '$lib/server/band/press-kit-limits';
+import { db } from '#lib/server/db/index.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
+import { directoryEntry, directoryTag } from '#lib/server/db/schema/directory.js';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { listBandEventsUpcoming } from '#lib/server/event/event-service.js';
+import { epkProgress } from '#lib/server/band/epk-completeness.js';
+import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { getOrCreateBandSiteId } from '#lib/server/band/band-site-service.js';
+import { fullPressKit } from '#lib/server/band/press-kit.js';
+import { listFor as listMediaFor, setDescription } from '#lib/server/media/media-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { jsonObjectField } from '#lib/utils/zod-json.js';
+import { photoLimitForTier } from '#lib/server/band/press-kit-limits.js';
 
 // ---------------------------------------------------------------------------
 // The ladder

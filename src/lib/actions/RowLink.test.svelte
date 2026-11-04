@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { IconDots } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { rowLink } from './row-link';
 
 	let { to = '/row' }: { to?: string | (() => void) } = $props();

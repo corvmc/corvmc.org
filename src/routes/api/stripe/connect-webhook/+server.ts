@@ -1,9 +1,9 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { stripeWebhooks, webhookCryptoProvider } from '$lib/server/stripe';
-import { syncAccountFromStripe } from '$lib/server/audio/connect-service';
-import { captureException } from '$lib/server/sentry';
+import { stripeWebhooks, webhookCryptoProvider } from '#lib/server/stripe.js';
+import { syncAccountFromStripe } from '#lib/server/audio/connect-service.js';
+import { captureException } from '#lib/server/sentry.js';
 
 /**
  * Stripe **Connect** events — a second endpoint, not a second handler on the

@@ -181,7 +181,7 @@ on every `member_standing` write is exactly the pressure that surfaces it, and
 the eviction is the point rather than a cost.
 
 **The replacement has since landed (#556).** `user.date_of_birth` is nullable and
-means "not known to be a minor" when absent, `isMinor` in `$lib/utils/age`
+means "not known to be a minor" when absent, `isMinor` in `#lib/utils/age.js`
 derives eligibility from it, and `getMessagingState` returns `ageRestricted`
 alongside the standing so `/member/account` can say messaging opens at 18 without
 showing a staff note, an appeal, or the words "switched off by staff". The gate

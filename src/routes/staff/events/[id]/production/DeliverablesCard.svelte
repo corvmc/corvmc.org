@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { formatDateShort } from '$lib/utils/format';
-	import { reassignDeliverableForm } from '$lib/remote/deliverables.remote';
-	import type { getStaffEventProduction } from '$lib/remote/events.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { reassignDeliverableForm } from '#lib/remote/deliverables.remote.js';
+	import type { getStaffEventProduction } from '#lib/remote/events.remote.js';
 
 	type Loaded = Awaited<ReturnType<typeof getStaffEventProduction>>;
 

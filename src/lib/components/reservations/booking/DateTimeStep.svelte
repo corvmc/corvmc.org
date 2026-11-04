@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import type { BookerType } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { BookerType } from '#lib/config.js';
 	import { untrack } from 'svelte';
 	import {
 		getAvailableDates,
 		getReservationStartTimes,
 		getReservationEndTimes
-	} from '$lib/remote/reservations.remote';
-	import * as Form from '$lib/components/ui/Form';
-	import { getFormContext } from '$lib/components/ui/Form/Form.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	} from '#lib/remote/reservations.remote.js';
+	import * as Form from '#lib/components/ui/Form/index.js';
+	import { getFormContext } from '#lib/components/ui/Form/Form.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import { today, getLocalTimeZone, parseDate, type DateValue } from '@internationalized/date';
-	import { isValidPhone } from '$lib/utils/phone';
+	import { isValidPhone } from '#lib/utils/phone.js';
 
 	let {
 		isSustaining = false,

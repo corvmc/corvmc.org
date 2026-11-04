@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
 	import { resolve } from '$app/paths';
 
 	// Presentation only: each view's remotes carry its guard.

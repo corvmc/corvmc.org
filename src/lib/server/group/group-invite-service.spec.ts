@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const emitted: [string, Record<string, unknown>][] = [];
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: {
 		emit: (name: string, payload: Record<string, unknown>) => {
 			emitted.push([name, payload]);
@@ -28,8 +28,8 @@ const {
 	GroupInviteNotFoundError,
 	GroupInviteNotPendingError
 } = await import('./group-invite-service');
-const { BandMemberExistsError } = await import('$lib/server/band/band-service');
-const { INVITE_EXPIRY_DAYS } = await import('$lib/config');
+const { BandMemberExistsError } = await import('#lib/server/band/band-service.js');
+const { INVITE_EXPIRY_DAYS } = await import('#lib/config.js');
 
 const T0 = 1_750_000_000;
 const DAY = 86_400;

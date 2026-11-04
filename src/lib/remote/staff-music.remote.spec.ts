@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { positionOrder, type Capability, type Position } from '$lib/config';
+import { positionOrder, type Capability, type Position } from '#lib/config.js';
 
 /**
  * Staff music tools are a moderation surface over every band's records, so the
@@ -18,8 +18,8 @@ const requested: string[] = [];
 
 // Simulated against the real matrix, so the table below shows what the
 // positions actually grant.
-vi.mock('$lib/server/authorization', async () => {
-	const config = await import('$lib/config');
+vi.mock('#lib/server/authorization.js', async () => {
+	const config = await import('#lib/config.js');
 	const holds = (cap: Capability) =>
 		heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
 	return {
@@ -36,7 +36,7 @@ vi.mock('$lib/server/authorization', async () => {
 // Every flag reads true here, so a spec that passes cannot be passing *because*
 // something was switched off.
 const isFeatureEnabled = vi.fn(async () => true);
-vi.mock('$lib/server/feature-flags', () => ({ isFeatureEnabled }));
+vi.mock('#lib/server/feature-flags.js', () => ({ isFeatureEnabled }));
 
 const svc = {
 	listAllReleases: vi.fn(async () => []),
@@ -59,16 +59,16 @@ const svc = {
 	setRadioExclusion: vi.fn(async () => ({ id: 'rel-1' })),
 	recentSales: vi.fn(async () => [])
 };
-vi.mock('$lib/server/audio/staff-audio-service', () => svc);
+vi.mock('#lib/server/audio/staff-audio-service.js', () => svc);
 
 const radio = {
 	getRadioNow: vi.fn(async () => ({ serverNow: new Date(), current: null, upNext: [] })),
 	getRecentlyPlayed: vi.fn(async () => [])
 };
-vi.mock('$lib/server/audio/radio-service', () => radio);
+vi.mock('#lib/server/audio/radio-service.js', () => radio);
 
 const purchases = { refundPurchase: vi.fn(async () => undefined) };
-vi.mock('$lib/server/audio/purchase-service', () => purchases);
+vi.mock('#lib/server/audio/purchase-service.js', () => purchases);
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: currentUser }, params: {}, url: new URL('http://x/') }),

@@ -5,7 +5,7 @@
 	import Table from '../Table.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
 	import Button from '../Button.svelte';
-	import { fakeRef } from '$lib/test/fixtures';
+	import { fakeRef } from '#lib/test/fixtures.js';
 
 	const { Story } = defineMeta({
 		title: 'Shared/Entity/EntityIdentity',

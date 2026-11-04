@@ -3,12 +3,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 /** A unit's own ledger sum, against a real SQLite: 1 in service, 0 once retired or lost. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
 // better-sqlite3's drizzle has no `batch`; D1's runs the statements in order, as this does.
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			const out = [];
@@ -17,7 +17,7 @@ vi.mock('$lib/server/db', () => ({
 		}
 	})
 }));
-vi.mock('$lib/server/audit/audit-service', () => ({ recordAuditEntry: vi.fn() }));
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry: vi.fn() }));
 
 const { setAssetStatus, settleTerminalUnit, reopenAsset } = await import('./asset-service');
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import {
 		MembershipHero,
 		BenefitsGrid,
@@ -12,11 +12,11 @@
 		CancelledBanner,
 		PaymentMethodsCard,
 		InvoiceHistoryCard
-	} from '$lib/components/member/membership';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { pageTitle } from '$lib/config';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
+	} from '#lib/components/member/membership/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { pageTitle } from '#lib/config.js';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
 	import { page } from '$app/state';
 	import {
 		createSubscription,
@@ -24,8 +24,8 @@
 		resumeSubscription,
 		cancelSubscription,
 		getMemberMembership
-	} from '$lib/remote/membership.remote';
-	import { getBilling } from '$lib/remote/billing.remote';
+	} from '#lib/remote/membership.remote.js';
+	import { getBilling } from '#lib/remote/billing.remote.js';
 
 	let data = $derived(await getMemberMembership());
 

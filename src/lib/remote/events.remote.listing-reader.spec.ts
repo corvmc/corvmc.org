@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // The show's committee reads what it may write (#2002): the listing page, and
@@ -19,7 +19,7 @@ const held: Record<Persona, string[]> = {
 	outsider: []
 };
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: vi.fn(async (cap: string) => held[persona].includes(cap)),
 	requireCapability: vi.fn(async (cap: string) => {
 		if (!held[persona].includes(cap)) throw denied();
@@ -34,13 +34,13 @@ const requireProjectCommittee = vi.fn(async (projectId: string | null, cap: stri
 	}
 	throw denied('Not on a committee taking part in this project');
 });
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireProjectCommittee: (projectId: string | null, cap: string) =>
 		requireProjectCommittee(projectId, cap)
 }));
 
 /** `evt-show` announces a production; `evt-gig` is a listing with none. */
-vi.mock('$lib/server/production/production-scope', () => ({
+vi.mock('#lib/server/production/production-scope.js', () => ({
 	projectOfEvent: vi.fn(async (id: string) =>
 		id === 'evt-show'
 			? { projectId: 'proj-show', productionId: 'prod-1' }
@@ -56,7 +56,7 @@ const checkRebookNeeded = vi.fn(async () => ({
 	reason: null,
 	currentReservation: null
 }));
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	getById: () => getById(),
 	checkRebookNeeded: () => checkRebookNeeded(),
 	update: vi.fn(),
@@ -73,7 +73,7 @@ vi.mock('$lib/server/event/event-service', () => ({
 }));
 
 const getByEvent = vi.fn(async () => null);
-vi.mock('$lib/server/reservation/recurring-series-service', () => ({
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => ({
 	createEventSeries: vi.fn(),
 	getByEvent: () => getByEvent(),
 	getEventSeries: vi.fn(async () => null),
@@ -89,7 +89,7 @@ const listRsvpRoster = vi.fn(async () => [
 		rsvpedAt: new Date(0)
 	}
 ]);
-vi.mock('$lib/server/event/rsvp-service', () => ({
+vi.mock('#lib/server/event/rsvp-service.js', () => ({
 	listRsvpRoster: () => listRsvpRoster(),
 	cancelRsvp: vi.fn(),
 	createRsvp: vi.fn(),
@@ -106,12 +106,12 @@ const getConflictDetails = vi.fn(async () => [
 	},
 	{ type: 'closure', startsAt: new Date(0), endsAt: new Date(1), label: 'HVAC' }
 ]);
-vi.mock('$lib/server/reservation/conflict-service', () => ({
+vi.mock('#lib/server/reservation/conflict-service.js', () => ({
 	getConflictDetails: () => getConflictDetails(),
 	getValidationWarnings: vi.fn(async () => [])
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	isFeatureEnabled: vi.fn(async () => true),
 	requireFeature: vi.fn(async () => undefined)
 }));
@@ -139,7 +139,7 @@ vi.mock('$app/server', () => {
 });
 
 const listEventHistory = vi.fn(async () => ({ items: [], hasMore: false }));
-vi.mock('$lib/server/event/event-history', () => ({
+vi.mock('#lib/server/event/event-history.js', () => ({
 	listEventHistory: (...a: unknown[]) => listEventHistory(...(a as []))
 }));
 
@@ -150,8 +150,8 @@ const {
 	getEventRecurringSeries,
 	checkRebook,
 	checkConflicts
-} = (await import('$lib/remote/events.remote')) as any;
-const { getEventRsvpRoster } = (await import('$lib/remote/event-rsvp.remote')) as any;
+} = (await import('#lib/remote/events.remote.js')) as any;
+const { getEventRsvpRoster } = (await import('#lib/remote/event-rsvp.remote.js')) as any;
 const { GET: rsvpCsv } = await import('../../routes/staff/events/[id]/rsvps.csv/+server');
 
 const csv = (id: string) => rsvpCsv({ params: { id } } as never) as Promise<Response>;

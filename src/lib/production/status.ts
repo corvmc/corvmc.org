@@ -1,4 +1,4 @@
-import type { ProductionStatus } from '$lib/server/db/schema/production';
+import type { ProductionStatus } from '#lib/server/db/schema/production.js';
 
 /**
  * A show's status, as warnings rather than a table of legal edges.

@@ -8,10 +8,10 @@ import type { z } from 'zod';
  * work in one they do not. Real services, real SQLite; only the guard is faked.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			const out = [];
@@ -44,7 +44,7 @@ vi.mock('$app/server', () => {
 	};
 });
 
-vi.mock('$lib/server/authorization', async (original) => ({
+vi.mock('#lib/server/authorization.js', async (original) => ({
 	...(await original<object>()),
 	requireUser: () => ({ id: 'usr-staff' }),
 	can: async () => true,
@@ -53,8 +53,8 @@ vi.mock('$lib/server/authorization', async (original) => ({
 const requireProjectCommittee = vi.hoisted(() =>
 	vi.fn(async () => ({ user: { id: 'usr-staff' }, groups: [], via: 'staff' }))
 );
-vi.mock('$lib/server/group/group-context', () => ({ requireProjectCommittee }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/group/group-context.js', () => ({ requireProjectCommittee }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const remotes = (await import('./tasks.remote')) as unknown as Record<
 	string,

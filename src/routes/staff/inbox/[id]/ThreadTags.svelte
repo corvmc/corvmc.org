@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { IconX } from '@tabler/icons-svelte';
-	import { Latest } from '$lib/latest.svelte';
+	import { Latest } from '#lib/latest.svelte.js';
 	import {
 		getInboxThreadContext,
 		addInboxThreadTag,
 		removeInboxThreadTag
-	} from '$lib/remote/inbox.remote';
+	} from '#lib/remote/inbox.remote.js';
 
 	/**
 	 * The details strip's tag editor. Through `Latest` rather than `{#await}`:

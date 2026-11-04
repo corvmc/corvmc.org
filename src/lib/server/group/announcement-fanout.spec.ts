@@ -34,7 +34,7 @@ vi.mock('./announcement-service', () => ({
 /** Every `db.insert(...).values(rows)` the batch was handed. */
 let insertedBatches: unknown[][] = [];
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		insert: () => ({
 			values: (rows: unknown[]) => {
@@ -47,17 +47,17 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const mockSendBatch = vi.fn(async () => {});
-vi.mock('$lib/server/notification/email', () => ({
+vi.mock('#lib/server/notification/email/index.js', () => ({
 	sendTemplateBatch: (...a: unknown[]) => mockSendBatch(...(a as [])),
 	type: {}
 }));
 
 const mockPush = vi.fn();
-vi.mock('$lib/server/notification/sse', () => ({
+vi.mock('#lib/server/notification/sse.js', () => ({
 	pushToUser: (...a: unknown[]) => mockPush(...(a as []))
 }));
 
-vi.mock('$lib/server/db/schema/notification', () => ({
+vi.mock('#lib/server/db/schema/notification.js', () => ({
 	notification: { id: 'id' },
 	getNotificationType: () => ({ defaults: { email: true, inApp: true, sms: false } })
 }));

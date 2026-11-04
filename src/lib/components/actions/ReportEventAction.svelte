@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { IconFlag } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { submitEventReport } from '$lib/remote/flags.remote';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { submitEventReport } from '#lib/remote/flags.remote.js';
 	import {
 		TURNSTILE_SITE_KEY,
 		TURNSTILE_RESPONSE_FIELD,
 		turnstileFailureMessage
-	} from '$lib/turnstile';
+	} from '#lib/turnstile.js';
 	import Alert from '../ui/Alert.svelte';
 	import type { RemoteFormIssue } from '@sveltejs/kit';
 

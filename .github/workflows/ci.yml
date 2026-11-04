@@ -62,7 +62,9 @@ jobs:
     # right there.
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Typed ESLint costs ~1s a file here, so a tree-wide PR (#2374: 1,684 files) needs
+    # far more than 10 minutes; a normal PR is unaffected. See #2399.
+    timeout-minutes: 45
     # A phase PR into an integration branch is diffed against that branch, not
     # against `main`. `github.base_ref` is the PR's base and is empty for
     # `merge_group`, whose ref is built from main — so the fallback keeps the

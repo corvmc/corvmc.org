@@ -36,7 +36,7 @@ const kv = vi.hoisted(() => {
 
 const { kvStore, counters, getJson, putJson, listKeys } = kv;
 
-vi.mock('$lib/server/kv', () => ({
+vi.mock('#lib/server/kv.js', () => ({
 	getJson: kv.getJson,
 	putJson: kv.putJson,
 	listKeys: kv.listKeys

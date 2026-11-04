@@ -4,7 +4,7 @@ import { render } from 'vitest-browser-svelte';
 import { createAttachmentKey } from 'svelte/attachments';
 import { toast } from 'svelte-sonner';
 import ActionHarness from './Action.test.svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 
 /**
  * `Action` is the engine behind all 56 `actions/*` components, so what it gets

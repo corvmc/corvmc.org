@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
-import { listUsersWithCapability } from '$lib/server/authorization';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { listUsersWithCapability } from '#lib/server/authorization.js';
 
 export interface ApplicationReviewer {
 	id: string;

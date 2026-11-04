@@ -1,10 +1,10 @@
-import { db } from '$lib/server/db';
-import { eventRsvp, type EventRsvp } from '$lib/server/db/schema/event-rsvp';
-import { eventListing } from '$lib/server/db/schema/event';
-import { user } from '$lib/server/db/schema/authentication';
-import { memberRefColumns, type MemberRefRow } from '$lib/server/entity/refs';
-import { toRosterPerson } from '$lib/server/roster/roster';
-import type { RosterPerson } from '$lib/types/roster';
+import { db } from '#lib/server/db/index.js';
+import { eventRsvp, type EventRsvp } from '#lib/server/db/schema/event-rsvp.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { memberRefColumns, type MemberRefRow } from '#lib/server/entity/refs.js';
+import { toRosterPerson } from '#lib/server/roster/roster.js';
+import type { RosterPerson } from '#lib/types/roster.js';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------

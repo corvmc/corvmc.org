@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { formatDate } from '$lib/utils/format';
-	import { creditsToHours } from '$lib/config';
-	import { getMembershipStatus } from '$lib/remote/reservations.remote';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { formatDate } from '#lib/utils/format.js';
+	import { creditsToHours } from '#lib/config.js';
+	import { getMembershipStatus } from '#lib/remote/reservations.remote.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { IconClock } from '@tabler/icons-svelte';
 </script>
 

@@ -1,11 +1,11 @@
-import { db } from '$lib/server/db';
-import { media, mediaAttachment } from '$lib/server/db/schema/media';
-import type { Media } from '$lib/server/db/schema/media';
-import type { MediaSlot } from '$lib/server/db/schema/media';
-import type { AttachableType } from '$lib/config';
-import { eventListing } from '$lib/server/db/schema/event';
-import { group } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { media, mediaAttachment } from '#lib/server/db/schema/media.js';
+import type { Media } from '#lib/server/db/schema/media.js';
+import type { MediaSlot } from '#lib/server/db/schema/media.js';
+import type { AttachableType } from '#lib/config.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------

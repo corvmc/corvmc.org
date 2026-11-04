@@ -1,12 +1,12 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
-import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
-import { production } from '$lib/server/db/schema/production';
-import { project, projectCommittee } from '$lib/server/db/schema/project';
-import { showCommitteeSlugs, type ProjectCommitteeRole } from '$lib/config';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
+import { db } from '#lib/server/db/index.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { production } from '#lib/server/db/schema/production.js';
+import { project, projectCommittee } from '#lib/server/db/schema/project.js';
+import { showCommitteeSlugs, type ProjectCommitteeRole } from '#lib/config.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
 
 /**
  * Every production is a project, specialised — docs/specs/production-projects-spec.md.

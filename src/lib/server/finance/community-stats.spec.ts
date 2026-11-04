@@ -4,14 +4,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // they run against a real SQLite. KV is the outside service.
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 let kvStore: Record<string, string> = {};
-vi.mock('$lib/server/kv', () => ({
+vi.mock('#lib/server/kv.js', () => ({
 	getJson: vi.fn(async (key: string) => {
 		const val = kvStore[key];
 		return val ? JSON.parse(val) : null;

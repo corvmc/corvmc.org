@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
 import { form } from './_remote';
-import { mapDomainError } from '$lib/server/errors';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { DOCUMENT_DESCRIPTION_MAX } from '$lib/config';
-import { validatePrivateUpload } from '$lib/server/private-storage';
-import { remove, upload } from '$lib/server/group/file-service';
+import { mapDomainError } from '#lib/server/errors.js';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { DOCUMENT_DESCRIPTION_MAX } from '#lib/config.js';
+import { validatePrivateUpload } from '#lib/server/private-storage.js';
+import { remove, upload } from '#lib/server/group/file-service.js';
 
 /**
  * Group documents — the two writes.

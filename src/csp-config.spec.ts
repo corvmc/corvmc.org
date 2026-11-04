@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { SENTRY_DSN } from '$lib/sentry-dsn';
+import { SENTRY_DSN } from '#lib/sentry-dsn.js';
 
 // Importing the real config would pull in adapter-cloudflare, and through it
 // miniflare's raw TypeScript sources, which this runner cannot parse. The
@@ -9,7 +9,7 @@ vi.mock('@sveltejs/adapter-cloudflare', () => ({ default: () => ({ name: 'stub' 
 const { default: config } = await import('../svelte.config.js');
 
 // `svelte.config.js` is plain JS loaded by Node before any alias map exists, so
-// it cannot import `$lib/sentry-dsn` and the report endpoint is written out
+// it cannot import `#lib/sentry-dsn.js` and the report endpoint is written out
 // longhand. These assertions are what keeps the two in step.
 
 const csp = config.kit?.csp;

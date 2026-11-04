@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import ProfileSection from './ProfileSection.svelte';
-	import { detectPlatform } from '$lib/utils/link-platform';
+	import { detectPlatform } from '#lib/utils/link-platform.js';
 	import {
 		IconBrandYoutube,
 		IconBrandSoundcloud,
@@ -19,8 +19,8 @@
 		IconLink,
 		IconExternalLink
 	} from '@tabler/icons-svelte';
-	import { partitionLinks } from '$lib/utils/directory-display';
-	import type { ProfileLink } from '$lib/server/db/schema/authentication';
+	import { partitionLinks } from '#lib/utils/directory-display.js';
+	import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
 
 	let { links }: { links: ProfileLink[] } = $props();
 

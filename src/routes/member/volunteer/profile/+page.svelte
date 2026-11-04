@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Latest } from '$lib/latest.svelte';
+	import { Latest } from '#lib/latest.svelte.js';
 	import { isRedirect } from '@sveltejs/kit';
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The volunteer profile: contact info, preferred roles and the hour history,
 	 * under a line for each clearance that is expiring or has lapsed.
@@ -9,24 +9,28 @@
 	 * "Returned", never "rejected": it is a request for a correction, not a
 	 * judgement, and the stored value differs from the label on purpose.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Form, { SubmitButton } from '$lib/components/ui/Form';
-	import ProfileFields from '$lib/components/volunteer/ProfileFields.svelte';
-	import InterestFields from '$lib/components/volunteer/InterestFields.svelte';
-	import LogHoursAction from '$lib/components/volunteer/LogHoursAction.svelte';
-	import { formatDateShort } from '$lib/utils/format';
-	import { formatVolunteerHours, volunteerHourStatusLabels, DEFAULT_TIMEZONE } from '$lib/config';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Form, { SubmitButton } from '#lib/components/ui/Form/index.js';
+	import ProfileFields from '#lib/components/volunteer/ProfileFields.svelte';
+	import InterestFields from '#lib/components/volunteer/InterestFields.svelte';
+	import LogHoursAction from '#lib/components/volunteer/LogHoursAction.svelte';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import {
+		formatVolunteerHours,
+		volunteerHourStatusLabels,
+		DEFAULT_TIMEZONE
+	} from '#lib/config.js';
 	import {
 		getMemberVolunteerProfilePage,
 		saveVolunteerInterests,
 		updateVolunteerProfile,
 		withdrawVolunteerHours
-	} from '$lib/remote/volunteer.remote';
+	} from '#lib/remote/volunteer.remote.js';
 
 	// Not a top-level await, which async-gates the forms' bindings, and not
 	// `{#await}`, which re-pends on every refresh and remounts them.

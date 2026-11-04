@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import { getPressKitEditor } from '$lib/remote/press-kit.remote';
-	import PressKitProgress from '$lib/components/band/PressKitProgress.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import { getPressKitEditor } from '#lib/remote/press-kit.remote.js';
+	import PressKitProgress from '#lib/components/band/PressKitProgress.svelte';
 	import { getBandLayoutContext } from '../layout-context';
 	import PressKitForm from './PressKitForm.svelte';
 	import PressPhotos from './PressPhotos.svelte';

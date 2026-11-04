@@ -1,13 +1,13 @@
 import { and, eq, gte, inArray, isNull, lt, or } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { calendarSource } from '$lib/server/db/schema/calendar-source';
-import { eventListing, publicEventStatuses } from '$lib/server/db/schema/event';
-import { venue } from '$lib/server/db/schema/venue';
-import { containsLiteral } from '$lib/server/db/like';
-import { getPartsInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
-import { escapeHtml } from '$lib/utils/html';
-import { venueAddress } from '$lib/utils/place';
+import { db } from '#lib/server/db/index.js';
+import { calendarSource } from '#lib/server/db/schema/calendar-source.js';
+import { eventListing, publicEventStatuses } from '#lib/server/db/schema/event.js';
+import { venue } from '#lib/server/db/schema/venue.js';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { getPartsInTz } from '#lib/server/reservation/timezone.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import { escapeHtml } from '#lib/utils/html.js';
+import { venueAddress } from '#lib/utils/place.js';
 import { parseFeed, type FeedShow } from './partner-feed';
 
 // ---------------------------------------------------------------------------

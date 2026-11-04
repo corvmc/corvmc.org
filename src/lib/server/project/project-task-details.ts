@@ -1,20 +1,20 @@
 import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { contractor, contractorJob } from '$lib/server/db/schema/contractor';
-import { artifactRequest } from '$lib/server/db/schema/artifact-request';
-import { volunteerSignup, workTask } from '$lib/server/db/schema/volunteer';
-import { resolveImageUrl } from '$lib/server/storage';
-import { chunk } from '$lib/server/utils/chunk';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { contractor, contractorJob } from '#lib/server/db/schema/contractor.js';
+import { artifactRequest } from '#lib/server/db/schema/artifact-request.js';
+import { volunteerSignup, workTask } from '#lib/server/db/schema/volunteer.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { chunk } from '#lib/server/utils/chunk.js';
 import {
 	contractorJobStatusesWithoutSpend,
 	type ContractorJobStatus,
 	type WorkDoneCondition
-} from '$lib/config';
+} from '#lib/config.js';
 import {
 	listRequests,
 	requestableActsByEvent
-} from '$lib/server/production/artifact-request-service';
+} from '#lib/server/production/artifact-request-service.js';
 
 /**
  * What the task list draws beside each row: the people on it, the contractor

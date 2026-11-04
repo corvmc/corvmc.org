@@ -1,4 +1,4 @@
-import { toLocalDate } from '$lib/utils/format';
+import { toLocalDate } from '#lib/utils/format.js';
 
 /**
  * A date input wants `YYYY-MM-DD` in venue time, because the save path reads it

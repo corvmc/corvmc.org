@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import FormField from '../ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { unpublishEvent } from '$lib/remote/events.remote';
+	import { unpublishEvent } from '#lib/remote/events.remote.js';
 
 	const { fields } = unpublishEvent;
 

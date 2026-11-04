@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { adjustCredits } from '$lib/remote/users.remote';
+	import { adjustCredits } from '#lib/remote/users.remote.js';
 
 	let {
 		userId,

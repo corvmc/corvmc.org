@@ -10,7 +10,7 @@ type TicketArgs = Record<string, unknown>;
 const createTickets = vi.fn(async (_opts: TicketArgs) => [{ id: 'ticket-1' }]);
 const issueFreeTickets = vi.fn(async (_opts: TicketArgs) => [{ id: 'ticket-1' }]);
 const countTicketsForEmail = vi.fn(async (_e: string, _m: string) => 0);
-vi.mock('$lib/server/ticket/ticket-service', () => ({
+vi.mock('#lib/server/ticket/ticket-service.js', () => ({
 	getTicketsRemaining: vi.fn(async () => null),
 	getTicketsSold: vi.fn(),
 	getEventTickets: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock('$lib/server/ticket/ticket-service', () => ({
 	cancelTicket: vi.fn()
 }));
 
-vi.mock('$lib/server/event/rsvp-service', () => ({
+vi.mock('#lib/server/event/rsvp-service.js', () => ({
 	createRsvp: vi.fn(),
 	cancelRsvp: vi.fn(),
 	getUserRsvp: vi.fn(),
@@ -41,8 +41,8 @@ const checkout = vi.fn(async (_opts: CheckoutArgs) => ({
 	checkoutUrl: 'https://stripe.test/session'
 }));
 class InsufficientCreditsError extends Error {}
-vi.mock('$lib/server/finance/credit-service', () => ({ InsufficientCreditsError }));
-vi.mock('$lib/server/finance/payment-service', () => ({
+vi.mock('#lib/server/finance/credit-service.js', () => ({ InsufficientCreditsError }));
+vi.mock('#lib/server/finance/payment-service.js', () => ({
 	checkout: (opts: CheckoutArgs) => checkout(opts)
 }));
 
@@ -52,7 +52,7 @@ const buildLineItem = vi.fn(async (key: string, unitAmountCents: number, quantit
 	unitAmountCents,
 	quantity
 }));
-vi.mock('$lib/server/finance/product-config-service', () => ({
+vi.mock('#lib/server/finance/product-config-service.js', () => ({
 	buildLineItem: (...a: unknown[]) =>
 		buildLineItem(...(a as [key: string, unitAmountCents: number, quantity: number]))
 }));
@@ -68,13 +68,13 @@ const getById = vi.fn(async (id: string) => ({
 }));
 
 const isSustainingMember = vi.fn(async () => false);
-vi.mock('$lib/server/finance/subscription-service', () => ({
+vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	isSustainingMember: (...a: unknown[]) => isSustainingMember(...(a as []))
 }));
 
 // A published CMC show suggesting $15, with the scale running to free. Tests
 // that need a floor override `getById` for themselves.
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	create: vi.fn(),
 	update: vi.fn(),
 	checkRebookNeeded: vi.fn(),
@@ -87,32 +87,32 @@ vi.mock('$lib/server/event/event-service', () => ({
 	listPast: vi.fn()
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: vi.fn(async () => ({ id: 'staff-1' })),
 	requireUser: vi.fn(async () => ({ id: 'user-1' }))
 }));
-vi.mock('$lib/server/reservation/conflict-service', () => ({
+vi.mock('#lib/server/reservation/conflict-service.js', () => ({
 	getConflictDetails: vi.fn(),
 	getValidationWarnings: vi.fn()
 }));
-vi.mock('$lib/server/reservation/recurring-series-service', () => ({
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => ({
 	createEventSeries: vi.fn(),
 	getByEvent: vi.fn(),
 	getEventSeries: vi.fn(),
 	cancel: vi.fn()
 }));
-vi.mock('$lib/server/reservation/rrule-helpers', () => ({
+vi.mock('#lib/server/reservation/rrule-helpers.js', () => ({
 	buildRRule: vi.fn(),
 	getOccurrences: vi.fn()
 }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: vi.fn() }));
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: vi.fn() }));
+vi.mock('#lib/server/feature-flags.js', () => ({
 	isFeatureEnabled: vi.fn(async () => true),
 	requireFeature: vi.fn(async () => undefined)
 }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 // Who sells is `ticket-seller`'s question; these specs are about a CMC show.
-vi.mock('$lib/server/ticket/ticket-seller', () => ({
+vi.mock('#lib/server/ticket/ticket-seller.js', () => ({
 	sellerFor: vi.fn(async (e: { source: string; ticketingEnabled: boolean }) =>
 		e.ticketingEnabled && e.source === 'cmc' ? { kind: 'collective', shareBps: 3000 } : null
 	)
@@ -141,7 +141,7 @@ const events = (await import('./events.remote')) as unknown as Record<
 	(data: unknown, issue: unknown) => Promise<unknown>
 >;
 
-const { sellerFor } = await import('$lib/server/ticket/ticket-seller');
+const { sellerFor } = await import('#lib/server/ticket/ticket-seller.js');
 
 function makeIssue() {
 	return new Proxy(

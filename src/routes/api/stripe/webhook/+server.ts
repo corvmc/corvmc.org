@@ -1,9 +1,9 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { stripeWebhooks, webhookCryptoProvider } from '$lib/server/stripe';
-import { webhookHandlerMap } from '$lib/server/finance/webhook-handlers';
-import { captureException } from '$lib/server/sentry';
+import { stripeWebhooks, webhookCryptoProvider } from '#lib/server/stripe.js';
+import { webhookHandlerMap } from '#lib/server/finance/webhook-handlers.js';
+import { captureException } from '#lib/server/sentry.js';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const webhookSecret = env.STRIPE_WEBHOOK_SECRET;

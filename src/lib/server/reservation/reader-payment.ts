@@ -1,13 +1,13 @@
 import type Stripe from 'stripe';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { paymentCache } from '$lib/server/db/schema/finance';
-import { stripe, paymentDriver } from '$lib/server/stripe';
-import { DomainError } from '$lib/server/domain-error';
-import { captureException } from '$lib/server/sentry';
-import { terminalReaderId } from '$lib/server/finance/terminal-service';
-import { recordReservationCardPresent } from '$lib/server/finance/reservation-entries';
+import { db } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { paymentCache } from '#lib/server/db/schema/finance.js';
+import { stripe, paymentDriver } from '#lib/server/stripe.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { captureException } from '#lib/server/sentry.js';
+import { terminalReaderId } from '#lib/server/finance/terminal-service.js';
+import { recordReservationCardPresent } from '#lib/server/finance/reservation-entries.js';
 import { announceConfirmed } from './reservation-service';
 
 /** `metadata.type` on the intent, which is what the webhook dispatches on. */

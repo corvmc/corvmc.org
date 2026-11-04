@@ -1,24 +1,24 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import type { Crumb } from '$lib/components/ui/breadcrumbs';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { formatDateTime, formatTime } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import type { Crumb } from '#lib/components/ui/breadcrumbs.js';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { formatDateTime, formatTime } from '#lib/utils/format.js';
 	import {
 		checkInVendorForm,
 		getMarketDayCheckIn,
 		inviteBackForm,
 		markNoShowForm
-	} from '$lib/remote/market.remote';
+	} from '#lib/remote/market.remote.js';
 
 	/**
 	 * A market day at the door (#1505): mark each booked vendor arrived or a

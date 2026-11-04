@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import Button from '$lib/components/ui/Button.svelte';
-	import CreateEventModal from '$lib/components/events/CreateEventModal.svelte';
-	import { createProduction, getAttachableListings } from '$lib/remote/productions.remote';
-	import { formatDateTimeShort } from '$lib/utils/format';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import CreateEventModal from '#lib/components/events/CreateEventModal.svelte';
+	import { createProduction, getAttachableListings } from '#lib/remote/productions.remote.js';
+	import { formatDateTimeShort } from '#lib/utils/format.js';
 
 	/**
 	 * A production is the back-of-house of a show already on the calendar, so

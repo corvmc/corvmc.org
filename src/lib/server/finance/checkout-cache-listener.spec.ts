@@ -4,9 +4,11 @@ const inserted: unknown[] = [];
 let insertThrows: Error | null = null;
 const mockCapture = vi.fn();
 
-vi.mock('$lib/server/sentry', () => ({ captureException: (...a: unknown[]) => mockCapture(...a) }));
+vi.mock('#lib/server/sentry.js', () => ({
+	captureException: (...a: unknown[]) => mockCapture(...a)
+}));
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		insert: () => ({
 			values: async (row: unknown) => {
@@ -17,7 +19,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/db/schema/finance', () => ({ paymentCache: {} }));
+vi.mock('#lib/server/db/schema/finance.js', () => ({ paymentCache: {} }));
 
 const { handleCheckoutCache } = await import('./checkout-cache-listener');
 

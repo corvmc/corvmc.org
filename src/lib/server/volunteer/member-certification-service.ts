@@ -1,4 +1,4 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	memberCertification,
 	volunteerCertification,
@@ -6,18 +6,18 @@ import {
 	volunteerRoleCertification,
 	workOrder,
 	volunteerSignup
-} from '$lib/server/db/schema/volunteer';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/volunteer.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/errors';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import type { MemberRef } from '$lib/types/entity';
-import type { RosterPerson } from '$lib/types/roster';
-import { toRosterPerson } from '$lib/server/roster/roster';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { DomainError } from '#lib/server/errors.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import type { MemberRef } from '#lib/types/entity.js';
+import type { RosterPerson } from '#lib/types/roster.js';
+import { toRosterPerson } from '#lib/server/roster/roster.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import { getRequirementsForRoles } from './volunteer-certification-service';
-import { clubToday, CERT_EXPIRY_WARNING_DAYS, DEFAULT_TIMEZONE } from '$lib/config';
-import type { MemberCertification } from '$lib/server/db/schema/volunteer';
+import { clubToday, CERT_EXPIRY_WARNING_DAYS, DEFAULT_TIMEZONE } from '#lib/config.js';
+import type { MemberCertification } from '#lib/server/db/schema/volunteer.js';
 
 // ---------------------------------------------------------------------------
 // Held certifications

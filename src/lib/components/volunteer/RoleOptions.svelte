@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { getVolunteerRoles } from '$lib/remote/volunteer.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getVolunteerRoles } from '#lib/remote/volunteer.remote.js';
 
 	/**
 	 * Volunteer role `<option>`s, owning the query behind them.

@@ -180,7 +180,7 @@ along with `messagingStatuses` and `messagingStandingSources`.
 The vocabularies (`standingScopes`, `standingStatuses`, `standingScopeConfig`,
 `STANDING_REASON_MAX`) live in `src/lib/config.ts` so client code can label a
 scope without importing the schema, and the schema imports them **by relative
-path** — `$lib/config` breaks `pnpm db:generate`, because jiti has no alias map.
+path** — `#lib/config.js` breaks `pnpm db:generate`, because jiti has no alias map.
 
 ## Migrating the data
 

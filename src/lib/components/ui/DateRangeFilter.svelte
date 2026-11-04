@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * A from/to date range in a `FilterBar`, with the periods a report is
 	 * actually asked for as one click.

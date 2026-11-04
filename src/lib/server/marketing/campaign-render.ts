@@ -1,7 +1,7 @@
 import { marked } from 'marked';
 import { CAMPAIGN_LAYOUT } from './campaign-layout';
-import { emailButton } from '$lib/email/button';
-import { escapeHtml, unescapeHtml } from '$lib/utils/html';
+import { emailButton } from '#lib/email/button.js';
+import { escapeHtml, unescapeHtml } from '#lib/utils/html.js';
 
 // ---------------------------------------------------------------------------
 // Campaign email rendering

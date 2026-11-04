@@ -10,20 +10,20 @@ import { DatabaseSync } from 'node:sqlite';
 import { join } from 'node:path';
 import { drizzle } from 'drizzle-orm/node-sqlite';
 import { migrate } from 'drizzle-orm/node-sqlite/migrator';
-import * as schema from '$lib/server/db/schema';
-import { relations } from '$lib/server/db/schema/relations';
+import * as schema from '#lib/server/db/schema.js';
+import { relations } from '#lib/server/db/schema/relations.js';
 
 const MIGRATIONS_FOLDER = join(import.meta.dirname, '..', '..', '..', '..', 'migrations');
 
 let sqlite: DatabaseSync;
 
 const { dbRef } = vi.hoisted(() => ({ dbRef: { current: null as unknown } }));
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	get db() {
 		return dbRef.current;
 	}
 }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (k: string | null) => k }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: (k: string | null) => k }));
 
 const {
 	listMembers,

@@ -23,14 +23,14 @@ vi.mock('$app/server', () => {
 	};
 });
 
-vi.mock('$lib/server/db', () => ({ db: {}, getRowCount: () => 0 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {}, getRowCount: () => 0 }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 let permitted = true;
 // What `can()` answers yes to; `requireCapability` still reads `permitted`.
 let granted = new Set(['volunteer.read', 'contractor.read', 'contractor.manage']);
 const requested: string[] = [];
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
 	return {
 		requireUser: () => ({ id: 'usr-1' }),
@@ -44,9 +44,9 @@ vi.mock('$lib/server/authorization', async () => {
 });
 
 const loadWorkOrderView = vi.hoisted(() => vi.fn());
-vi.mock('$lib/server/volunteer/work-order-view', () => ({ loadWorkOrderView }));
+vi.mock('#lib/server/volunteer/work-order-view.js', () => ({ loadWorkOrderView }));
 const listContractors = vi.hoisted(() => vi.fn());
-vi.mock('$lib/server/contractor/contractor-service', () => ({ listContractors }));
+vi.mock('#lib/server/contractor/contractor-service.js', () => ({ listContractors }));
 
 const { getStaffShiftPage } = (await import('./volunteer.remote')) as unknown as {
 	getStaffShiftPage: (id: string) => Promise<unknown>;

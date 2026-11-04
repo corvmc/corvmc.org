@@ -20,7 +20,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => chainable()),
@@ -30,10 +30,10 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const listFor = vi.fn(async () => [] as unknown[]);
-vi.mock('$lib/server/media/media-service', () => ({ listFor }));
+vi.mock('#lib/server/media/media-service.js', () => ({ listFor }));
 
 const putPrivateObject = vi.fn(async (key: string) => key);
-vi.mock('$lib/server/private-storage', async (actual) => ({
+vi.mock('#lib/server/private-storage.js', async (actual) => ({
 	...(await actual<object>()),
 	putPrivateObject: (key: string) => putPrivateObject(key)
 }));

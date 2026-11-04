@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { canonicalAddress, groupPublicPath } from './canonical-address';
-import { groupKinds } from '$lib/config';
+import { groupKinds } from '#lib/config.js';
 
 const SITE = 'https://corvmc.org';
 

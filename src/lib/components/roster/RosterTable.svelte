@@ -1,5 +1,5 @@
 <script lang="ts" generics="T extends RosterPerson">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * A roster's rows (#1994): person, email, then the page's own cells. `Roster`
 	 * wraps it with search, paging and export for a page-sized list; a short list
@@ -9,13 +9,13 @@
 	import type { Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { IconCopy } from '@tabler/icons-svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import { getEntityViewer } from '$lib/components/ui/entity/context';
-	import { entityHref } from '$lib/utils/entity-href';
-	import { rowLink } from '$lib/actions/row-link';
-	import type { RosterPerson } from '$lib/types/roster';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { getEntityViewer } from '#lib/components/ui/entity/context.js';
+	import { entityHref } from '#lib/utils/entity-href.js';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import type { RosterPerson } from '#lib/types/roster.js';
 
 	let {
 		rows,

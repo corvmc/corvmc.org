@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { toast } from 'svelte-sonner';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { getPressKitEditor, savePhotoDetails } from '$lib/remote/press-kit.remote';
-	import { imageSrc } from '$lib/utils/images';
-	import type { getBandLayout } from '$lib/remote/layout.remote';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { getPressKitEditor, savePhotoDetails } from '#lib/remote/press-kit.remote.js';
+	import { imageSrc } from '#lib/utils/images.js';
+	import type { getBandLayout } from '#lib/remote/layout.remote.js';
 
 	type Item = {
 		id: string;

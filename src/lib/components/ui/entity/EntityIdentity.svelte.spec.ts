@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Harness from './EntityIdentityHarness.svelte';
-import { fakeRef } from '$lib/test/fixtures';
+import { fakeRef } from '#lib/test/fixtures.js';
 
 describe('EntityIdentity', () => {
 	/**

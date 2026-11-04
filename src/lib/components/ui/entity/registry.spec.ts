@@ -15,10 +15,10 @@ import {
 	eventSources,
 	bookerTypes,
 	type EntityType
-} from '$lib/config';
-import { entityLabels } from '$lib/terms';
-import { flagEntityTypes } from '$lib/server/db/schema/flag';
-import { fakeRef } from '$lib/test/fixtures';
+} from '#lib/config.js';
+import { entityLabels } from '#lib/terms.js';
+import { flagEntityTypes } from '#lib/server/db/schema/flag.js';
+import { fakeRef } from '#lib/test/fixtures.js';
 import { variants, badgeClass } from '../StatusBadge.svelte';
 
 /**

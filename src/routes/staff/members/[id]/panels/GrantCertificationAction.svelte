@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { getActiveCertifications, grantCertification } from '$lib/remote/volunteer.remote';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { clubToday } from '$lib/config';
-	import { Latest } from '$lib/latest.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getActiveCertifications, grantCertification } from '#lib/remote/volunteer.remote.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { clubToday } from '#lib/config.js';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	/**
 	 * The "Grant" button, with the catalogue it needs.

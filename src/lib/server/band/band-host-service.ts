@@ -10,11 +10,11 @@
  *    hostname (see custom-domain-service.ts).
  */
 import { eq, and, isNull } from 'drizzle-orm';
-import type { GroupKind } from '$lib/config';
-import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
-import { bandSite } from '$lib/server/db/schema/band-site';
-import { getJson, putJson } from '$lib/server/kv';
+import type { GroupKind } from '#lib/config.js';
+import { db } from '#lib/server/db/index.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
+import { getJson, putJson } from '#lib/server/kv.js';
 
 /** Custom-domain lookups are cached this long. Short: a band that just verified shouldn't wait. */
 const HOST_CACHE_TTL_SECONDS = 300;

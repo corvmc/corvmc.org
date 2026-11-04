@@ -1,30 +1,30 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import { formatCents } from '$lib/utils/format';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import { formatCents } from '#lib/utils/format.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import MoneyField from '#lib/components/ui/Form/MoneyField.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import {
 		recordActPayout,
 		undoActPayout,
 		recordDoorTake,
 		addProductionExpense,
 		removeProductionExpense
-	} from '$lib/remote/productions.remote';
-	import { productionExpenseCategoryLabels, productionExpenseCategories } from '$lib/config';
+	} from '#lib/remote/productions.remote.js';
+	import { productionExpenseCategoryLabels, productionExpenseCategories } from '#lib/config.js';
 	import { IconTrash } from '@tabler/icons-svelte';
-	import type { Settlement } from '$lib/server/production/settlement-service';
-	import { isTerminalProduction } from '$lib/production/status';
-	import type { ProductionStatus } from '$lib/server/db/schema/production';
+	import type { Settlement } from '#lib/server/production/settlement-service.js';
+	import { isTerminalProduction } from '#lib/production/status.js';
+	import type { ProductionStatus } from '#lib/server/db/schema/production.js';
 
 	let { settlement, eventId }: { settlement: Settlement | null; eventId: string } = $props();
 

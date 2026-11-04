@@ -1,19 +1,22 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	import Button from '../ui/Button.svelte';
 	import { IconBell } from '@tabler/icons-svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 	import { invalidateAll } from '$app/navigation';
-	import { markNotificationRead, markAllNotificationsRead } from '$lib/remote/notifications.remote';
-	import { timeAgo } from '$lib/utils/format';
+	import {
+		markNotificationRead,
+		markAllNotificationsRead
+	} from '#lib/remote/notifications.remote.js';
+	import { timeAgo } from '#lib/utils/format.js';
 	import type { ChromeNotification } from './chrome';
 
 	// Props, not a query of its own. This component is mounted by `AppTopbar` on
 	// every authenticated page, so a `getNotifications()` here was a third remote
 	// query racing the layout's and the page's (#569). Each panel's layout query
-	// assembles it now — see `appChrome` in `$lib/remote/layout.remote`.
+	// assembles it now — see `appChrome` in `#lib/remote/layout.remote.js`.
 	let { notifications, unreadCount }: { notifications: ChromeNotification[]; unreadCount: number } =
 		$props();
 

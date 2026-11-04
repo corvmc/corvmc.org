@@ -22,15 +22,15 @@
  */
 
 import { resolve } from '$app/paths';
-import { surfaces } from '$lib/config';
-import { m } from '$lib/paraglide/messages.js';
-import { many } from '$lib/terms';
-import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-nav';
+import { surfaces } from '#lib/config.js';
+import { m } from '#lib/paraglide/messages.js';
+import { many } from '#lib/terms.js';
+import { activeNavKey, type NavNode } from '#lib/components/layout/Nav/active-nav.js';
 import {
 	ACCOUNT_MENU,
 	MESSAGES_HREF,
 	type AccountMenuKey
-} from '$lib/components/layout/account-menu';
+} from '#lib/components/layout/account-menu.js';
 
 export type MemberNavKey =
 	| 'dashboard'

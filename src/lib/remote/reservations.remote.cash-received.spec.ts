@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
-import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
-import { recordCashPayment } from '$lib/server/finance/payment-service';
+import { mockUser } from '#lib/server/db/test-factory.js';
+import { ensureStripeCustomer } from '#lib/server/finance/stripe-customer-service.js';
+import { recordCashPayment } from '#lib/server/finance/payment-service.js';
 
 /**
  * Cash taken at the counter is recorded whether or not the member has ever
@@ -23,14 +23,14 @@ function chain() {
 	return c;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chain(),
 		update: () => ({ set: () => ({ where: () => Promise.resolve() }) })
 	}
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => member,
 	requireCapability: vi.fn(async () => undefined),
 	can: vi.fn(async () => false),
@@ -38,18 +38,18 @@ vi.mock('$lib/server/authorization', () => ({
 	topPositionFor: vi.fn()
 }));
 
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 })),
 	getBookingTerms: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 
-vi.mock('$lib/server/finance/credit-service', () => ({ getBalance: vi.fn(async () => 0) }));
+vi.mock('#lib/server/finance/credit-service.js', () => ({ getBalance: vi.fn(async () => 0) }));
 
 const commitReservationCredits = vi.fn();
-vi.mock('$lib/server/reservation/reservation-credit-service', async (importOriginal) => {
+vi.mock('#lib/server/reservation/reservation-credit-service.js', async (importOriginal) => {
 	const actual =
-		await importOriginal<typeof import('$lib/server/reservation/reservation-credit-service')>();
+		await importOriginal<typeof import('#lib/server/reservation/reservation-credit-service.js')>();
 	return {
 		computeReservationCredit: actual.computeReservationCredit,
 		commitReservationCredits: (...a: unknown[]) => commitReservationCredits(...a),
@@ -57,20 +57,20 @@ vi.mock('$lib/server/reservation/reservation-credit-service', async (importOrigi
 	};
 });
 
-vi.mock('$lib/server/finance/reservation-entries', () => ({
+vi.mock('#lib/server/finance/reservation-entries.js', () => ({
 	recordReservationCredit: vi.fn(),
 	recordReservationCash: vi.fn()
 }));
-vi.mock('$lib/server/finance/stripe-customer-service', () => ({
+vi.mock('#lib/server/finance/stripe-customer-service.js', () => ({
 	ensureStripeCustomer: vi.fn(async () => 'cus_1')
 }));
-vi.mock('$lib/server/finance/payment-service', () => ({
+vi.mock('#lib/server/finance/payment-service.js', () => ({
 	checkout: vi.fn(),
 	recordCashPayment: vi.fn(async () => ({ paymentRecordId: 'pr_0' })),
 	refund: vi.fn()
 }));
 
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	create: vi.fn(),
 	createWaitlisted: vi.fn(),
 	confirm: vi.fn(),
@@ -86,8 +86,8 @@ vi.mock('$lib/server/reservation/reservation-service', () => ({
 const startReaderPayment = vi.fn(async () => ({ paymentIntentId: 'pi_reader' }));
 const cancelReaderPayment = vi.fn(async () => undefined);
 const simulateReaderTap = vi.fn(async () => undefined);
-vi.mock('$lib/server/reservation/reader-payment', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/reader-payment')>()),
+vi.mock('#lib/server/reservation/reader-payment.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/reader-payment.js')>()),
 	startReaderPayment: (...a: unknown[]) => startReaderPayment(...(a as [])),
 	cancelReaderPayment: (...a: unknown[]) => cancelReaderPayment(...(a as [])),
 	simulateReaderTap: (...a: unknown[]) => simulateReaderTap(...(a as []))
@@ -95,12 +95,12 @@ vi.mock('$lib/server/reservation/reader-payment', async (importOriginal) => ({
 
 const terminalReaderId = vi.fn<() => string | null>(() => 'tmr_fake');
 const readerTapCanBeSimulated = vi.fn(() => true);
-vi.mock('$lib/server/finance/terminal-service', () => ({
+vi.mock('#lib/server/finance/terminal-service.js', () => ({
 	terminalReaderId: () => terminalReaderId(),
 	readerTapCanBeSimulated: () => readerTapCanBeSimulated()
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 
 vi.mock('$app/server', () => {
 	// The raw handler, marked the way kit's export check looks for.
@@ -124,7 +124,7 @@ vi.mock('$app/server', () => {
 	};
 });
 
-const { cashReceivedReservation } = (await import('$lib/remote/reservations.remote')) as any;
+const { cashReceivedReservation } = (await import('#lib/remote/reservations.remote.js')) as any;
 
 beforeEach(() => {
 	selectResults.length = 0;

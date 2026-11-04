@@ -14,12 +14,12 @@
 </script>
 
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import { setContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { reportError } from '$lib/report-error';
-	import { errorMessage } from '$lib/error-message';
+	import { reportError } from '#lib/report-error.js';
+	import { errorMessage } from '#lib/error-message.js';
 	import Alert from './Alert.svelte';
 
 	let {

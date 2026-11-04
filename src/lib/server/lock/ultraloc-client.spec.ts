@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { formatDateInTz, formatTimeInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { formatDateInTz, formatTimeInTz } from '#lib/server/reservation/timezone.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Mocks — credentials + a cached token so no token refresh fetch is needed.
@@ -16,12 +16,12 @@ const STORED_SECRET = 'kv-client-secret-stored';
 
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
 
-vi.mock('$lib/server/kv', () => ({
+vi.mock('#lib/server/kv.js', () => ({
 	getJson: vi.fn().mockResolvedValue({ accessToken: 'tok', expiresAt: Date.now() + 1_000_000 }),
 	putJson: vi.fn()
 }));
 
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	getConfigsByPrefix: vi.fn().mockResolvedValue({
 		clientId: 'cid',
 		deviceId: 'DEV-1',
@@ -31,7 +31,7 @@ vi.mock('$lib/server/site-config/site-config-service', () => ({
 }));
 
 const { env } = await import('$env/dynamic/private');
-const { getConfigsByPrefix } = await import('$lib/server/site-config/site-config-service');
+const { getConfigsByPrefix } = await import('#lib/server/site-config/site-config-service.js');
 
 const {
 	credentialStatus,

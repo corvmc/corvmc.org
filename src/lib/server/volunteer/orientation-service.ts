@@ -1,16 +1,16 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
-import { config } from '$lib/server/site-config/site-config-service';
+import { config } from '#lib/server/site-config/site-config-service.js';
 import {
 	memberOrientation,
 	volunteerRole,
 	workOrder,
 	workTask
-} from '$lib/server/db/schema/volunteer';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
-import type { MemberOrientation } from '$lib/server/db/schema/volunteer';
-import type { MemberOrientationState } from '$lib/config';
+} from '#lib/server/db/schema/volunteer.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import type { MemberOrientation } from '#lib/server/db/schema/volunteer.js';
+import type { MemberOrientationState } from '#lib/config.js';
 import { cancelShift, countActiveSignups } from './work-order-service';
 
 /**
@@ -19,7 +19,7 @@ import { cancelShift, countActiveSignups } from './work-order-service';
  * One row per member, reused rather than appended to: this is one fact about
  * them, unlike `member_certification` where each renewal is its own grant with
  * its own expiry. The state is **derived** — see `memberOrientationStates` in
- * `$lib/config`; a stored status would sit at `scheduled` for ever unclaimed.
+ * `#lib/config.js`; a stored status would sit at `scheduled` for ever unclaimed.
  */
 
 export interface MemberOrientationView extends MemberOrientation {

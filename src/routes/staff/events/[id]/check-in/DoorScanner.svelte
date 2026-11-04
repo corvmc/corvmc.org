@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The door queue, at door-queue speed (#933).
 	 *
@@ -8,11 +8,11 @@
 	 * a scan matches against the tickets the page already has and queues if
 	 * the request fails.
 	 */
-	import BarcodeScanner from '$lib/components/ui/BarcodeScanner.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { formatTime } from '$lib/utils/format';
-	import { scanTicketIn } from '$lib/remote/events.remote';
+	import BarcodeScanner from '#lib/components/ui/BarcodeScanner.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { formatTime } from '#lib/utils/format.js';
+	import { scanTicketIn } from '#lib/remote/events.remote.js';
 
 	let {
 		tickets,

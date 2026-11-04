@@ -40,15 +40,17 @@ const dbSelect = vi.fn(() => {
 	return b;
 });
 
-vi.mock('$lib/server/db', () => ({ db: { select: (...a: unknown[]) => dbSelect(...(a as [])) } }));
+vi.mock('#lib/server/db/index.js', () => ({
+	db: { select: (...a: unknown[]) => dbSelect(...(a as [])) }
+}));
 
 const getAllBalances = vi.fn(async () => ({ free_hours: 12, equipment_credits: 2 }));
-vi.mock('$lib/server/finance/credit-service', () => ({
+vi.mock('#lib/server/finance/credit-service.js', () => ({
 	getAllBalances: (...a: unknown[]) => getAllBalances(...(a as []))
 }));
 
 let subscription: Record<string, unknown> | null = null;
-vi.mock('$lib/server/finance/subscription-service', () => ({
+vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	getMemberSubscription: vi.fn(async () => subscription),
 	mapDbSubscription: vi.fn((sub: Record<string, unknown> | null) =>
 		sub ? { id: 'sub_1', currentPeriodEnd: new Date('2026-09-01') } : null
@@ -68,11 +70,11 @@ let standings = {
 	suggestion: standing('none'),
 	messaging: standing('none')
 };
-vi.mock('$lib/server/moderation/standing-service', () => ({
+vi.mock('#lib/server/moderation/standing-service.js', () => ({
 	getStandings: vi.fn(async () => standings)
 }));
 
-vi.mock('$lib/server/volunteer/hour-log-service', () => ({
+vi.mock('#lib/server/volunteer/hour-log-service.js', () => ({
 	getUserHourSummary: vi.fn(async () => ({
 		approvedMinutes: 600,
 		pendingMinutes: 60,
@@ -82,27 +84,27 @@ vi.mock('$lib/server/volunteer/hour-log-service', () => ({
 }));
 
 let certifications: Array<{ state: string; revokedAt: Date | null }> = [];
-vi.mock('$lib/server/volunteer/member-certification-service', () => ({
+vi.mock('#lib/server/volunteer/member-certification-service.js', () => ({
 	listForUser: vi.fn(async () => certifications)
 }));
 
 let volunteerProfile: { status: string } | null = null;
-vi.mock('$lib/server/volunteer/volunteer-profile-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-profile-service.js', () => ({
 	getVolunteerProfile: vi.fn(async () => volunteerProfile),
 	stageOf: (p: { status: string } | null) =>
 		!p ? 'none' : p.status === 'blocked' ? 'blocked' : 'active'
 }));
 
-vi.mock('$lib/server/directory/directory-service', () => ({
+vi.mock('#lib/server/directory/directory-service.js', () => ({
 	isProfileComplete: vi.fn(async () => false)
 }));
 
 let subscriber: Record<string, unknown> | null = null;
-vi.mock('$lib/server/marketing/subscriber-service', () => ({
+vi.mock('#lib/server/marketing/subscriber-service.js', () => ({
 	findByUserId: vi.fn(async () => subscriber)
 }));
 
-vi.mock('$lib/server/inbox/portal-service', () => ({
+vi.mock('#lib/server/inbox/portal-service.js', () => ({
 	countPortalUnread: vi.fn(async () => 1)
 }));
 

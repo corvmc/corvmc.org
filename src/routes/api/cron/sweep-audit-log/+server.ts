@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { sweepAuditLog } from '$lib/server/audit/audit-retention';
+import { sweepAuditLog } from '#lib/server/audit/audit-retention.js';
 
 /**
  * Delete audit rows past the 24-month window and strip name and email from

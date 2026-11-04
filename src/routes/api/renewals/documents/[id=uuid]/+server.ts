@@ -1,8 +1,8 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
-import { requireCapability } from '$lib/server/authorization';
-import { getRenewalDocument } from '$lib/server/renewal/renewal-service';
-import { getPrivateObject } from '$lib/server/private-storage';
-import { contentDispositionAttachment } from '$lib/server/storage-keys';
+import { requireCapability } from '#lib/server/authorization.js';
+import { getRenewalDocument } from '#lib/server/renewal/renewal-service.js';
+import { getPrivateObject } from '#lib/server/private-storage.js';
+import { contentDispositionAttachment } from '#lib/server/storage-keys.js';
 
 /**
  * Read a renewal's certificate back out of the private bucket. Keyed on the

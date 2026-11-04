@@ -15,13 +15,13 @@ const mockHandleMetaEcho = vi.fn(async () => ({
 	message: { id: 'm2' },
 	duplicate: false as const
 }));
-vi.mock('$lib/server/inbox/inbound-handlers', () => ({
+vi.mock('#lib/server/inbox/inbound-handlers.js', () => ({
 	handleMetaInbound: (...args: unknown[]) => mockHandleMetaInbound(...(args as [])),
 	handleMetaEcho: (...args: unknown[]) => mockHandleMetaEcho(...(args as []))
 }));
 
 const mockIsChannelEnabled = vi.fn(async () => true);
-vi.mock('$lib/server/inbox/channel-config-service', () => ({
+vi.mock('#lib/server/inbox/channel-config-service.js', () => ({
 	isChannelEnabled: (...args: unknown[]) => mockIsChannelEnabled(...(args as []))
 }));
 

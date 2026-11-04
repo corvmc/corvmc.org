@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeedRRule } from './seed-rrule';
-import { buildRRule, parseRRule, getOccurrences } from '$lib/server/reservation/rrule-helpers';
+import { buildRRule, parseRRule, getOccurrences } from '#lib/server/reservation/rrule-helpers.js';
 
 // The seed can't import the app's buildRRule (tsx can't resolve $lib), so it
 // reproduces the JSON shape inline. These tests pin the two implementations

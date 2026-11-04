@@ -2,9 +2,9 @@ import { z } from 'zod';
 import { form } from './_remote';
 import { getRequestEvent, query } from '$app/server';
 import { error } from '@sveltejs/kit';
-import { requireCapability } from '$lib/server/authorization';
-import { requireProjectCommittee } from '$lib/server/group/group-context';
-import { requireListingWriter } from '$lib/server/event/listing-guard';
+import { requireCapability } from '#lib/server/authorization.js';
+import { requireProjectCommittee } from '#lib/server/group/group-context.js';
+import { requireListingWriter } from '#lib/server/event/listing-guard.js';
 import {
 	currentProduction,
 	projectOfArtifactRequest,
@@ -12,17 +12,17 @@ import {
 	projectOfExpense,
 	projectOfProduction,
 	projectOfSlot
-} from '$lib/server/production/production-scope';
-import { mapDomainError } from '$lib/server/errors';
-import { recordSlotPayout, undoSlotPayout } from '$lib/server/production/settlement-service';
-import { addExpense, removeExpense } from '$lib/server/production/expense-service';
-import { productionStatuses, type ProductionStatus } from '$lib/server/db/schema/production';
+} from '#lib/server/production/production-scope.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { recordSlotPayout, undoSlotPayout } from '#lib/server/production/settlement-service.js';
+import { addExpense, removeExpense } from '#lib/server/production/expense-service.js';
+import { productionStatuses, type ProductionStatus } from '#lib/server/db/schema/production.js';
 import {
 	createProduction as createService,
 	updateProductionDetails as updateService,
 	transitionProduction as transitionService,
 	reopenProduction as reopenService
-} from '$lib/server/production/production-service';
+} from '#lib/server/production/production-service.js';
 import {
 	addSlot,
 	updateSlot,
@@ -31,20 +31,24 @@ import {
 	removeSlot,
 	setSlotTerms,
 	buildSlotsFromLineup
-} from '$lib/server/production/run-of-show-service';
-import { openHostShift as openHost } from '$lib/server/production/host-service';
+} from '#lib/server/production/run-of-show-service.js';
+import { openHostShift as openHost } from '#lib/server/production/host-service.js';
 import {
 	requestArtifact,
 	cancelArtifactRequest,
 	promotePosterArt
-} from '$lib/server/production/artifact-request-service';
-import { useArtWithFooter, useTemplateFlyer } from '$lib/server/poster/flyer-service';
-import { PERCENTAGE_BPS_MAX } from '$lib/production/terms';
+} from '#lib/server/production/artifact-request-service.js';
+import { useArtWithFooter, useTemplateFlyer } from '#lib/server/poster/flyer-service.js';
+import { PERCENTAGE_BPS_MAX } from '#lib/production/terms.js';
 import { getStaffEventPage, getStaffEventProduction, getStaffEvents } from './events.remote';
-import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
-import { create as createEventListing } from '$lib/server/event/event-service';
-import { listAttachableListings } from '$lib/server/production/attachable-listings';
-import { DEFAULT_TIMEZONE, productionExpenseCategories, requestableArtifacts } from '$lib/config';
+import { buildDateInTz, buildTimeRangeInTz } from '#lib/server/reservation/timezone.js';
+import { create as createEventListing } from '#lib/server/event/event-service.js';
+import { listAttachableListings } from '#lib/server/production/attachable-listings.js';
+import {
+	DEFAULT_TIMEZONE,
+	productionExpenseCategories,
+	requestableArtifacts
+} from '#lib/config.js';
 
 /**
  * Productions are guarded on the two halves of a show

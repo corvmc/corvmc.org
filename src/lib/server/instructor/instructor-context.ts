@@ -1,6 +1,6 @@
 import { getByUserId } from './instructor-service';
 import { InstructorNotFoundError, InstructorNotActiveError } from './instructor-service';
-import type { Instructor } from '$lib/server/db/schema/instructor';
+import type { Instructor } from '#lib/server/db/schema/instructor.js';
 
 /**
  * Assert the member may book teaching time, and hand back the record so the

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Clearances that run out before a shift the holder is already on.
 	 *
@@ -12,17 +12,17 @@
 	 *
 	 * Waiting on a member rather than on staff, which is why it sits below everything else.
 	 */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShort, formatDateShortYear } from '$lib/utils/format';
-	import { clubToday, CERT_REFERENCE_MAX } from '$lib/config';
-	import { grantCertification } from '$lib/remote/volunteer.remote';
-	import type { MemberRef } from '$lib/types/entity';
+	import { formatDateShort, formatDateShortYear } from '#lib/utils/format.js';
+	import { clubToday, CERT_REFERENCE_MAX } from '#lib/config.js';
+	import { grantCertification } from '#lib/remote/volunteer.remote.js';
+	import type { MemberRef } from '#lib/types/entity.js';
 
 	type Row = {
 		userId: string;

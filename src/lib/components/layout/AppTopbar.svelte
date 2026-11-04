@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	import Button from '../ui/Button.svelte';
 	import { IconMenu2, IconMusic, IconChevronDown, IconMessages } from '@tabler/icons-svelte';
 	import { page } from '$app/state';
 	import NotificationBell from './NotificationBell.svelte';
 	import AccountDropdown from './AccountDropdown.svelte';
-	import logo from '$lib/assets/cmc-compact-logo.svg';
+	import logo from '#lib/assets/cmc-compact-logo.svg';
 	import ButtonGroup from '../ui/ButtonGroup.svelte';
 	import type { AppChrome } from './chrome';
 	import { MESSAGES_HREF } from './account-menu';
-	import { entityLabels } from '$lib/terms';
+	import { entityLabels } from '#lib/terms.js';
 
 	export interface PanelTab {
 		key: string;

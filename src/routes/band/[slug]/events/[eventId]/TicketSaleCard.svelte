@@ -1,20 +1,20 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import {
 		getBandTicketSale,
 		openBandTicketSaleForm,
 		closeBandTicketSaleForm
-	} from '$lib/remote/band-ticket-sale.remote';
-	import { BAND_TICKET_PLATFORM_FEE_BPS } from '$lib/config';
-	import { formatCents } from '$lib/utils/format';
+	} from '#lib/remote/band-ticket-sale.remote.js';
+	import { BAND_TICKET_PLATFORM_FEE_BPS } from '#lib/config.js';
+	import { formatCents } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 
 	let { slug, eventId }: { slug: string; eventId: string } = $props();

@@ -42,7 +42,7 @@ function selectChain(record: { where?: unknown }) {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => {
 			const record: { op: 'select'; where?: unknown } = { op: 'select' };

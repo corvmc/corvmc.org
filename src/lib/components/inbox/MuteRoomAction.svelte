@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Silence one room without silencing the group.
 	 *
@@ -9,8 +9,8 @@
 	 * (#1309).
 	 */
 	import { IconBell, IconBellOff } from '@tabler/icons-svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { setRoomMute } from '$lib/remote/group-chat.remote';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { setRoomMute } from '#lib/remote/group-chat.remote.js';
 
 	let {
 		threadId,

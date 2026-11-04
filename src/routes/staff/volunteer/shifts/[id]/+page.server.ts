@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
-import { workOrderProjectId } from '$lib/server/volunteer/work-order-service';
-import { workOrderHref } from '$lib/utils/work-order-href';
+import { workOrderProjectId } from '#lib/server/volunteer/work-order-service.js';
+import { workOrderHref } from '#lib/utils/work-order-href.js';
 import type { PageServerLoad } from './$types';
 
 /**

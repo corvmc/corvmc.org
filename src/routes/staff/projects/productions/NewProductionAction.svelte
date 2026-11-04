@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import NewProductionModal from './NewProductionModal.svelte';
-	import { hasCapability } from '$lib/config';
-	import { getStaffLayout } from '$lib/remote/layout.remote';
+	import { hasCapability } from '#lib/config.js';
+	import { getStaffLayout } from '#lib/remote/layout.remote.js';
 
 	// Its own component so the page keeps one query of its own, as on the
 	// Calendar's Create Listing. The staff layout has already fetched this.

@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** Every ballot, newest first, with the two ways to start one. */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import BallotTable from '$lib/components/ballot/BallotTable.svelte';
-	import CreateBallotAction from '$lib/components/ballot/CreateBallotAction.svelte';
-	import { getStaffBallots } from '$lib/remote/ballots.remote';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import BallotTable from '#lib/components/ballot/BallotTable.svelte';
+	import CreateBallotAction from '#lib/components/ballot/CreateBallotAction.svelte';
+	import { getStaffBallots } from '#lib/remote/ballots.remote.js';
 
 	const { ballots, committees } = $derived(await getStaffBallots());
 </script>

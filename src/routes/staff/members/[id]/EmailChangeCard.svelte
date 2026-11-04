@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import {
 		getPendingEmailChange,
 		requestEmailChange,
 		cancelEmailChange
-	} from '$lib/remote/email-change.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { formatDateTimeShort } from '$lib/utils/format';
+	} from '#lib/remote/email-change.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { formatDateTimeShort } from '#lib/utils/format.js';
 
 	let { id, email }: { id: string; email: string } = $props();
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Shifts a coordinator has asked this member to take.
 	 *
@@ -7,11 +7,11 @@
 	 * the board is addressed to everybody. Accepting lands `claimed`, not
 	 * `confirmed` — saying yes is the member's act and booking is staff's.
 	 */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { formatDateShort } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
-	import { acceptShiftInvitation, declineShiftInvitation } from '$lib/remote/volunteer.remote';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { DEFAULT_TIMEZONE } from '#lib/config.js';
+	import { acceptShiftInvitation, declineShiftInvitation } from '#lib/remote/volunteer.remote.js';
 
 	let {
 		invitations,

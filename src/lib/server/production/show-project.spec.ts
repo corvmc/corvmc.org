@@ -6,12 +6,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * shifts that follow the show's clock, and the show's money in project burn.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
 // better-sqlite3's drizzle has no `batch`; D1's runs the statements in order, as this does.
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			const out = [];
@@ -21,15 +21,15 @@ vi.mock('$lib/server/db', () => ({
 	}),
 	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
 }));
-vi.mock('$lib/server/volunteer/hour-value', () => ({ getHourValueCents: async () => 3000 }));
+vi.mock('#lib/server/volunteer/hour-value.js', () => ({ getHourValueCents: async () => 3000 }));
 vi.mock('./run-of-show-service', () => ({ recomputeSetTimes: async () => undefined }));
-vi.mock('$lib/server/finance/production-expense-entries', () => ({
+vi.mock('#lib/server/finance/production-expense-entries.js', () => ({
 	postProductionExpenses: async () => undefined
 }));
 
-const { projectCommitteeGrantsFor } = await import('$lib/server/capability/capability-grants');
+const { projectCommitteeGrantsFor } = await import('#lib/server/capability/capability-grants.js');
 const { updateProductionDetails, transitionProduction } = await import('./production-service');
-const { getProjectBurn } = await import('$lib/server/project/project-service');
+const { getProjectBurn } = await import('#lib/server/project/project-service.js');
 
 const SHOW = 'proj-show';
 const OTHER = 'proj-other';

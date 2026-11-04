@@ -6,7 +6,7 @@ import type { ErrorEvent, initCloudflareSentryHandle as InitHandle } from '@sent
 import type { RequestEvent } from '@sveltejs/kit';
 
 // The real SDK, unmocked: the client `initCloudflareSentryHandle` registers must
-// be the one `$lib/server/sentry` reads, or server captures fall to console.
+// be the one `#lib/server/sentry.js` reads, or server captures fall to console.
 // Node resolves `@sentry/sveltekit` to a stub handle, so the worker build the
 // adapter bundles is loaded by path ('workerd' also needs `cloudflare:workers`).
 const pkg = createRequire(import.meta.url).resolve('@sentry/sveltekit/package.json');

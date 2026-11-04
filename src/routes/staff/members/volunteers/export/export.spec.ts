@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { positionOrder, type Capability, type Position } from '$lib/config';
+import { positionOrder, type Capability, type Position } from '#lib/config.js';
 
 /**
  * The volunteers roster CSV. A `+server.ts`, so its guard is not a remote
@@ -8,9 +8,9 @@ import { positionOrder, type Capability, type Position } from '$lib/config';
 
 // Simulated against the real matrix, so the table exercises what positions grant.
 let heldPositions: Position[] = ['staff'];
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
-	const config = await import('$lib/config');
+	const config = await import('#lib/config.js');
 	const holds = (cap: Capability) =>
 		heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
 	return {
@@ -22,7 +22,7 @@ vi.mock('$lib/server/authorization', async () => {
 });
 
 const listAllVolunteers = vi.fn(async (..._a: unknown[]) => [] as unknown[]);
-vi.mock('$lib/server/volunteer/volunteer-roster', async () => {
+vi.mock('#lib/server/volunteer/volunteer-roster.js', async () => {
 	const { z } = await import('zod');
 	return {
 		volunteerRosterFilters: z.object({
@@ -55,7 +55,7 @@ describe('the volunteers roster export', () => {
 		'answers %s exactly as volunteer.read does',
 		async (_, positions) => {
 			heldPositions = [...positions];
-			const { grantsCapability, positions: matrix } = await import('$lib/config');
+			const { grantsCapability, positions: matrix } = await import('#lib/config.js');
 			const allowed = positions.some((p) => grantsCapability(matrix[p], 'volunteer.read'));
 
 			if (allowed) {

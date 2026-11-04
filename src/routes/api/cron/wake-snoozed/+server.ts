@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { wakeSnoozedThreads, nudgeStaleAwaiting } from '$lib/server/inbox/thread-service';
+import { wakeSnoozedThreads, nudgeStaleAwaiting } from '#lib/server/inbox/thread-service.js';
 
 /**
  * Cron endpoint for returning inbox threads to the open queue once whatever took

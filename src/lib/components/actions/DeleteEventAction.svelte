@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Button from '../ui/Button.svelte';
 	import Action from '../ui/Action.svelte';
@@ -7,7 +7,7 @@
 	import Alert from '../ui/Alert.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { deleteEvent, getEventDeletionImpact } from '$lib/remote/events.remote';
+	import { deleteEvent, getEventDeletionImpact } from '#lib/remote/events.remote.js';
 
 	const { fields } = deleteEvent;
 

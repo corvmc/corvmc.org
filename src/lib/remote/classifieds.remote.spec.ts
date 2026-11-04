@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { surfaces } from '$lib/config';
+import { surfaces } from '#lib/config.js';
 
 // These remotes are the whole access-control story for classifieds: SvelteKit
 // dispatches a remote call before any route load runs.
@@ -7,7 +7,7 @@ import { surfaces } from '$lib/config';
 let currentUser: { id: string; name: string; email: string } | null = null;
 let isStaff = false;
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: async () => isStaff,
 	requireCapability: async () => {
 		if (!currentUser) throw new Error('401: Not authenticated');
@@ -44,32 +44,32 @@ const svc = {
 	closePost: vi.fn(async () => undefined),
 	setVisibility: vi.fn(async () => undefined),
 	canView: (
-		await vi.importActual<typeof import('$lib/server/classified/classified-service')>(
-			'$lib/server/classified/classified-service'
+		await vi.importActual<typeof import('#lib/server/classified/classified-service.js')>(
+			'#lib/server/classified/classified-service.js'
 		)
 	).canView
 };
-vi.mock('$lib/server/classified/classified-service', () => svc);
+vi.mock('#lib/server/classified/classified-service.js', () => svc);
 
 const createFlag = vi.fn(async () => ({ id: 'f1' }));
 let unresolvedReports = 0;
-vi.mock('$lib/server/flag/flag-service', () => ({
+vi.mock('#lib/server/flag/flag-service.js', () => ({
 	createFlag: (...a: unknown[]) => createFlag(...(a as [])),
 	countUnresolvedReportsBy: async () => unresolvedReports,
 	FLAG_REASON_MAX: 100,
 	FLAG_DESCRIPTION_MAX: 1000
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({ isFeatureEnabled: async () => true }));
-vi.mock('$lib/server/moderation/standing-service', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({ isFeatureEnabled: async () => true }));
+vi.mock('#lib/server/moderation/standing-service.js', () => ({
 	getStanding: async () => ({ status: 'none' })
 }));
-vi.mock('$lib/server/band/band-service', () => ({ listForUser: async () => [] }));
-vi.mock('$lib/server/directory/directory-service', () => ({
+vi.mock('#lib/server/band/band-service.js', () => ({ listForUser: async () => [] }));
+vi.mock('#lib/server/directory/directory-service.js', () => ({
 	suggestInstruments: async () => [],
 	suggestGenres: async () => []
 }));
-vi.mock('$lib/server/errors', () => ({
+vi.mock('#lib/server/errors.js', () => ({
 	mapDomainError: (e: unknown) => {
 		throw e;
 	}

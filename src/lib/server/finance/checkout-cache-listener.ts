@@ -1,6 +1,6 @@
-import { db } from '$lib/server/db';
-import { paymentCache } from '$lib/server/db/schema/finance';
-import { captureException } from '$lib/server/sentry';
+import { db } from '#lib/server/db/index.js';
+import { paymentCache } from '#lib/server/db/schema/finance.js';
+import { captureException } from '#lib/server/sentry.js';
 import type Stripe from 'stripe';
 
 /**

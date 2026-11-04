@@ -22,13 +22,13 @@
  */
 
 import { resolve } from '$app/paths';
-import { hasCapability, surfaces, type Capability, type Surface } from '$lib/config';
+import { hasCapability, surfaces, type Capability, type Surface } from '#lib/config.js';
 import {
 	activeNavKey as resolveActiveNavKey,
 	childHrefsFor as resolveChildHrefs,
 	flattenNav,
 	type NavNode
-} from '$lib/components/layout/Nav/active-nav';
+} from '#lib/components/layout/Nav/active-nav.js';
 
 export type StaffNavKey =
 	| 'dashboard'

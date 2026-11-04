@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 // Only the pure truncatePreview() is exercised; the db is never reached.
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 const { truncatePreview } = await import('./thread-service');
 

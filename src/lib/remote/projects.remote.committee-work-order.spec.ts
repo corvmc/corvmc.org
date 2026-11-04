@@ -25,7 +25,7 @@ vi.mock('$app/server', () => ({
 }));
 
 let signedIn = true;
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
 	return {
 		requireUser: () => {
@@ -42,18 +42,18 @@ const mocks = vi.hoisted(() => ({
 	createWorkOrder: vi.fn(),
 	refreshMemberGroup: vi.fn()
 }));
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireProjectCommittee: mocks.requireProjectCommittee
 }));
-vi.mock('$lib/server/project/project-service', () => ({ getProjectById: mocks.getProjectById }));
-vi.mock('$lib/server/volunteer/work-order-service', () => ({
+vi.mock('#lib/server/project/project-service.js', () => ({ getProjectById: mocks.getProjectById }));
+vi.mock('#lib/server/volunteer/work-order-service.js', () => ({
 	createWorkOrder: mocks.createWorkOrder
 }));
-vi.mock('$lib/server/volunteer/duty-list-service', () => ({}));
-vi.mock('$lib/remote/groups.remote', () => ({
+vi.mock('#lib/server/volunteer/duty-list-service.js', () => ({}));
+vi.mock('#lib/remote/groups.remote.js', () => ({
 	getMemberGroup: () => ({ refresh: mocks.refreshMemberGroup })
 }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 const { createCommitteeProjectWorkOrderForm: submit } =
 	(await import('./projects.remote')) as unknown as Record<

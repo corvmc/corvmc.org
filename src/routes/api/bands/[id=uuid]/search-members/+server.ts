@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { requireCapability } from '$lib/server/authorization';
-import { searchMembers } from '$lib/server/band/band-service';
+import { requireCapability } from '#lib/server/authorization.js';
+import { searchMembers } from '#lib/server/band/band-service.js';
 
 export const GET: RequestHandler = async ({ params, url }) => {
 	await requireCapability('band.manageMembers');

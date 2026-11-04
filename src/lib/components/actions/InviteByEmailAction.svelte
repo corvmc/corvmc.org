@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { inviteByEmailApi } from '$lib/remote/bands.remote';
+	import { inviteByEmailApi } from '#lib/remote/bands.remote.js';
 
 	const { fields } = inviteByEmailApi;
 

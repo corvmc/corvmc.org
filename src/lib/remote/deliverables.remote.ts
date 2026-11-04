@@ -2,25 +2,25 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { mapDomainError } from '$lib/server/errors';
+import { mapDomainError } from '#lib/server/errors.js';
 import {
 	committeeCarries,
 	requireCommitteeMember,
 	requireGroupRole,
 	requireProjectCommittee
-} from '$lib/server/group/group-context';
-import { can } from '$lib/server/authorization';
-import { listCommittees } from '$lib/server/project/project-service';
+} from '#lib/server/group/group-context.js';
+import { can } from '#lib/server/authorization.js';
+import { listCommittees } from '#lib/server/project/project-service.js';
 import {
 	getDeliverableOwner,
 	getTaskWorkOrderId,
 	listCommitteeOpenItems,
 	reassignDeliverable,
 	DeliverableNotFoundError
-} from '$lib/server/volunteer/deliverables-service';
-import { claimShift } from '$lib/server/volunteer/volunteer-signup-service';
-import { resolveWorkOrder } from '$lib/server/volunteer/work-order-service';
-import { setWorkTaskDone } from '$lib/server/volunteer/duty-list-service';
+} from '#lib/server/volunteer/deliverables-service.js';
+import { claimShift } from '#lib/server/volunteer/volunteer-signup-service.js';
+import { resolveWorkOrder } from '#lib/server/volunteer/work-order-service.js';
+import { setWorkTaskDone } from '#lib/server/volunteer/duty-list-service.js';
 import { getStaffEventProduction } from './events.remote';
 
 /**

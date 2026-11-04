@@ -1,19 +1,19 @@
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { directoryEntry, directoryTag, type LookingFor } from '$lib/server/db/schema/directory';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { directoryEntry, directoryTag, type LookingFor } from '#lib/server/db/schema/directory.js';
 import { getOrCreateGroupEntryId, getOrCreateUserEntryId, replaceTags } from './entry-service';
-import { groupMember } from '$lib/server/db/schema/group';
+import { groupMember } from '#lib/server/db/schema/group.js';
 import { eq, and } from 'drizzle-orm';
-import { uploadFile } from '$lib/server/storage';
-import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
-import { mediaKey } from '$lib/server/storage-keys';
-import { sanitizeBio } from '$lib/utils/markdown';
+import { uploadFile } from '#lib/server/storage.js';
+import { detachSlot, replaceSlot } from '#lib/server/media/media-service.js';
+import { mediaKey } from '#lib/server/storage-keys.js';
+import { sanitizeBio } from '#lib/utils/markdown.js';
 import type { BatchItem } from 'drizzle-orm/batch';
 import type {
 	DirectoryContact,
 	DirectoryVisibility,
 	ProfileLink
-} from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/authentication.js';
 
 // ---------------------------------------------------------------------------
 // Validation

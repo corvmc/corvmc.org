@@ -1,12 +1,12 @@
 import { and, asc, count, desc, eq, gt, gte, inArray, lt, lte, ne, not, sql } from 'drizzle-orm';
-import { clubToday, DEFAULT_TIMEZONE } from '$lib/config';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { eventListing } from '$lib/server/db/schema/event';
-import { production } from '$lib/server/db/schema/production';
-import { group } from '$lib/server/db/schema/group';
-import { venue } from '$lib/server/db/schema/venue';
+import { clubToday, DEFAULT_TIMEZONE } from '#lib/config.js';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { production } from '#lib/server/db/schema/production.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { venue } from '#lib/server/db/schema/venue.js';
 import {
 	bandRefColumns,
 	eventRefColumns,
@@ -14,12 +14,12 @@ import {
 	toBookerRef,
 	toMemberRef,
 	toEventRef
-} from '$lib/server/entity/refs';
-import { bandBookerJoin, eventBookerJoin } from '$lib/server/reservation/event-hold';
-import { buildDateInTz, nextDay } from '$lib/server/reservation/timezone';
-import { isInAccessWindow } from '$lib/server/lock/fallback-code-service';
-import { eventPosterKeySql } from '$lib/server/event/event-columns';
-import { showBlockers } from '$lib/server/event/show-readiness';
+} from '#lib/server/entity/refs.js';
+import { bandBookerJoin, eventBookerJoin } from '#lib/server/reservation/event-hold.js';
+import { buildDateInTz, nextDay } from '#lib/server/reservation/timezone.js';
+import { isInAccessWindow } from '#lib/server/lock/fallback-code-service.js';
+import { eventPosterKeySql } from '#lib/server/event/event-columns.js';
+import { showBlockers } from '#lib/server/event/show-readiness.js';
 
 /** How far ahead the dashboard's show list reads. */
 export const DASHBOARD_SHOW_HORIZON_DAYS = 7;

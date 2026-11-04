@@ -1,7 +1,7 @@
 import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 
 /**
  * A moderation report is where a rejection most needs to be readable: the
@@ -12,7 +12,7 @@ import '$lib/test/locators';
  */
 const issues: Record<string, { path: string[]; message: string }[] | null> = {};
 
-vi.mock('$lib/remote/flags.remote', () => {
+vi.mock('#lib/remote/flags.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => issues[name] ?? null

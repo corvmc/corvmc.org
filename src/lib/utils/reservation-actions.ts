@@ -1,4 +1,4 @@
-import { withinConfirmationWindow } from '$lib/config';
+import { withinConfirmationWindow } from '#lib/config.js';
 
 export type ReservationActionKey =
 	| 'confirm'

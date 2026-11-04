@@ -1,16 +1,16 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { mapDomainError } from '$lib/server/errors';
-import { requireCapability } from '$lib/server/authorization';
-import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
+import { mapDomainError } from '#lib/server/errors.js';
+import { requireCapability } from '#lib/server/authorization.js';
+import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '#lib/config.js';
 import {
 	claimExternalAct,
 	createExternalAct,
 	listExternalActs
-} from '$lib/server/directory/entry-service';
-import { listCreditInDirectory } from '$lib/server/event/event-service';
-import { searchAskableEntries } from '$lib/server/production/artifact-request-service';
+} from '#lib/server/directory/entry-service.js';
+import { listCreditInDirectory } from '#lib/server/event/event-service.js';
+import { searchAskableEntries } from '#lib/server/production/artifact-request-service.js';
 
 /**
  * Any listing by name, including hidden external ones, for commissioning an

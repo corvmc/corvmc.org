@@ -1,18 +1,18 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	volunteerShiftFeedback,
 	volunteerSignup,
 	workOrder,
 	volunteerRole
-} from '$lib/server/db/schema/volunteer';
+} from '#lib/server/db/schema/volunteer.js';
 import { and, avg, count, desc, eq, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/errors';
+import { DomainError } from '#lib/server/errors.js';
 import {
 	SHIFT_FEEDBACK_COMMENT_MAX,
 	SHIFT_FEEDBACK_MAX_RATING,
 	SHIFT_FEEDBACK_MIN_RATING
-} from '$lib/config';
-import type { VolunteerShiftFeedback } from '$lib/server/db/schema/volunteer';
+} from '#lib/config.js';
+import type { VolunteerShiftFeedback } from '#lib/server/db/schema/volunteer.js';
 
 // ---------------------------------------------------------------------------
 // Post-shift feedback

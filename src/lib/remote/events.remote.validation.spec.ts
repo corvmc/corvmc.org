@@ -16,7 +16,7 @@ const getTicketsRemaining = vi.fn(async () => null);
 const checkIn = vi.fn();
 const cancelTicket = vi.fn();
 
-vi.mock('$lib/server/ticket/ticket-service', () => ({
+vi.mock('#lib/server/ticket/ticket-service.js', () => ({
 	getTicketsRemaining: (...a: unknown[]) => getTicketsRemaining(...(a as [])),
 	getTicketsSold: vi.fn(),
 	getEventTickets: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock('$lib/server/ticket/ticket-service', () => ({
 }));
 
 const createRsvp = vi.fn(async () => ({ id: 'rsvp-1' }));
-vi.mock('$lib/server/event/rsvp-service', () => ({
+vi.mock('#lib/server/event/rsvp-service.js', () => ({
 	createRsvp: (...a: unknown[]) => createRsvp(...(a as [])),
 	cancelRsvp: vi.fn(),
 	getUserRsvp: vi.fn(),
@@ -55,8 +55,8 @@ const cmcShow = () =>
 // Must be the same class the handler's `instanceof` compares against, so the
 // module is mocked rather than the real error imported alongside it.
 class InsufficientCreditsError extends Error {}
-vi.mock('$lib/server/finance/credit-service', () => ({ InsufficientCreditsError }));
-vi.mock('$lib/server/finance/payment-service', () => ({
+vi.mock('#lib/server/finance/credit-service.js', () => ({ InsufficientCreditsError }));
+vi.mock('#lib/server/finance/payment-service.js', () => ({
 	checkout: (...a: unknown[]) => checkout(...(a as []))
 }));
 
@@ -81,7 +81,7 @@ const getById = vi.fn(
 	})
 );
 
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	create: vi.fn(),
 	update: vi.fn(),
 	checkRebookNeeded: vi.fn(),
@@ -94,43 +94,43 @@ vi.mock('$lib/server/event/event-service', () => ({
 	listPast: vi.fn()
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: vi.fn(async () => true),
 	requireCapability: vi.fn(async () => ({ id: 'staff-1' })),
 	requireUser: vi.fn(async () => ({ id: 'user-1' }))
 }));
 
-vi.mock('$lib/server/event/listing-guard', () => ({
+vi.mock('#lib/server/event/listing-guard.js', () => ({
 	requireListingReader: vi.fn(async () => ({ id: 'staff-1' })),
 	requireListingWriter: vi.fn(async () => ({ id: 'staff-1' }))
 }));
 
-vi.mock('$lib/server/reservation/conflict-service', () => ({
+vi.mock('#lib/server/reservation/conflict-service.js', () => ({
 	getConflictDetails: vi.fn(),
 	getValidationWarnings: vi.fn()
 }));
-vi.mock('$lib/server/reservation/recurring-series-service', () => ({
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => ({
 	createEventSeries: vi.fn(),
 	getByEvent: vi.fn(),
 	getEventSeries: vi.fn(),
 	cancel: vi.fn()
 }));
-vi.mock('$lib/server/reservation/rrule-helpers', () => ({
+vi.mock('#lib/server/reservation/rrule-helpers.js', () => ({
 	buildRRule: vi.fn(),
 	getOccurrences: vi.fn()
 }));
-vi.mock('$lib/server/finance/subscription-service', () => ({
+vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	isSustainingMember: vi.fn(async () => false)
 }));
-vi.mock('$lib/server/finance/product-config-service', () => ({ buildLineItem: vi.fn() }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: vi.fn() }));
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/finance/product-config-service.js', () => ({ buildLineItem: vi.fn() }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: vi.fn() }));
+vi.mock('#lib/server/feature-flags.js', () => ({
 	isFeatureEnabled: vi.fn(async () => true),
 	requireFeature: vi.fn(async () => undefined)
 }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 // Who sells is `ticket-seller`'s question; these specs are about a CMC show.
-vi.mock('$lib/server/ticket/ticket-seller', () => ({
+vi.mock('#lib/server/ticket/ticket-seller.js', () => ({
 	sellerFor: vi.fn(async (e: { source: string; ticketingEnabled: boolean }) =>
 		e.ticketingEnabled && e.source === 'cmc' ? { kind: 'collective', shareBps: 3000 } : null
 	)
@@ -162,10 +162,11 @@ const events = (await import('./events.remote')) as unknown as Record<
 	(data: unknown, issue: unknown) => Promise<unknown>
 >;
 
-const conflictService = (await import('$lib/server/reservation/conflict-service')) as unknown as {
-	getConflictDetails: ReturnType<typeof vi.fn>;
-	getValidationWarnings: ReturnType<typeof vi.fn>;
-};
+const conflictService =
+	(await import('#lib/server/reservation/conflict-service.js')) as unknown as {
+		getConflictDetails: ReturnType<typeof vi.fn>;
+		getValidationWarnings: ReturnType<typeof vi.fn>;
+	};
 
 // Mirrors SvelteKit's `issue` helper: `issue.field(msg)` builds an issue object
 // carrying the field path. It does not throw on its own — that is the whole point.

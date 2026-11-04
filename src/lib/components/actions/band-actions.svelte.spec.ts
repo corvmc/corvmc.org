@@ -1,14 +1,14 @@
 import { page, userEvent } from 'vitest/browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 
 // One file for the staff band actions: they mock the same two modules, and each
 // export below is the stub its own component's spec used before the merge.
 // Issues are per-field and settable per test.
 const issues: Record<string, { path: string[]; message: string }[] | null> = {};
 
-vi.mock('$lib/remote/bands.remote', () => {
+vi.mock('#lib/remote/bands.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => issues[name] ?? null

@@ -7,16 +7,16 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit: vi.fn() } }));
 
 const sent = vi.fn(async (_params: { threadId: string; body: string }) => ({ id: 'msg' }));
-vi.mock('$lib/server/inbox/message-service', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/inbox/message-service')>()),
+vi.mock('#lib/server/inbox/message-service.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/inbox/message-service.js')>()),
 	addOutboundMessage: (params: { threadId: string; body: string }) => sent(params)
 }));
 
@@ -25,11 +25,11 @@ const checkout = vi.fn(async (_o: unknown) => ({
 	checkoutUrl: '/checkout/cs_1'
 }));
 const refund = vi.fn(async (_o: unknown) => undefined);
-vi.mock('$lib/server/finance/payment-service', () => ({
+vi.mock('#lib/server/finance/payment-service.js', () => ({
 	checkout: (o: unknown) => checkout(o),
 	refund: (o: unknown) => refund(o)
 }));
-vi.mock('$lib/server/finance/product-config-service', () => ({
+vi.mock('#lib/server/finance/product-config-service.js', () => ({
 	buildLineItem: vi.fn(async (_key: string, unit: number, quantity: number) => ({
 		price_data: { currency: 'usd', product: 'prod_market', unit_amount: unit },
 		quantity
@@ -39,7 +39,7 @@ vi.mock('$lib/server/finance/product-config-service', () => ({
 const { openMarketDay, getMarketDay, submitApplication, decideApplication } =
 	await import('./market-service');
 const fees = await import('./vendor-fee-service');
-const { marketVendor } = await import('$lib/server/db/schema/market');
+const { marketVendor } = await import('#lib/server/db/schema/market.js');
 const { eq } = await import('drizzle-orm');
 
 const EVENT = 'evt-market';

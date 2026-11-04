@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
-	import { rowLink } from '$lib/actions/row-link';
-	import { formatCents, formatDateShortYear, formatTimeRange } from '$lib/utils/format';
-	import { memberPayAction } from '$lib/utils/reservation-actions';
-	import type { Reservation } from '$lib/server/db/schema';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { formatCents, formatDateShortYear, formatTimeRange } from '#lib/utils/format.js';
+	import { memberPayAction } from '#lib/utils/reservation-actions.js';
+	import type { Reservation } from '#lib/server/db/schema.js';
 
 	/**
 	 * Past sessions still owed (#2117). The time range stacks under the date so

@@ -1,12 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
-	import { EntityViewer } from '$lib/components/ui/entity';
-	import AppShell from '$lib/components/layout/AppShell.svelte';
-	import Nav from '$lib/components/layout/Nav';
-	import { readStarred, resolveStarred, toggleStarred } from '$lib/components/layout/Nav/nav-stars';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
+	import { EntityViewer } from '#lib/components/ui/entity/index.js';
+	import AppShell from '#lib/components/layout/AppShell.svelte';
+	import Nav from '#lib/components/layout/Nav/index.js';
+	import {
+		readStarred,
+		resolveStarred,
+		toggleStarred
+	} from '#lib/components/layout/Nav/nav-stars.js';
 	import {
 		IconDisc,
 		IconCheckbox,
@@ -46,10 +50,10 @@
 		IconContract,
 		IconCertificate
 	} from '@tabler/icons-svelte';
-	import { getStaffLayout, requireLayoutSession } from '$lib/remote/layout.remote';
-	import { panelTabs } from '$lib/components/layout/panel-tabs';
-	import { navTrail } from '$lib/components/layout/nav-trail';
-	import { setBreadcrumbTrail } from '$lib/components/ui/breadcrumbs';
+	import { getStaffLayout, requireLayoutSession } from '#lib/remote/layout.remote.js';
+	import { panelTabs } from '#lib/components/layout/panel-tabs.js';
+	import { navTrail } from '#lib/components/layout/nav-trail.js';
+	import { setBreadcrumbTrail } from '#lib/components/ui/breadcrumbs.js';
 	import {
 		activeNavKey,
 		childHrefsFor,

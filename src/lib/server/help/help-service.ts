@@ -1,10 +1,10 @@
-import { db } from '$lib/server/db';
-import { helpCategory, helpArticle } from '$lib/server/db/schema/help';
+import { db } from '#lib/server/db/index.js';
+import { helpCategory, helpArticle } from '#lib/server/db/schema/help.js';
 import { eq, and, or, sql, inArray, asc, exists, type SQL } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { SEARCH_LIMIT, helpAudiences, type HelpAudience } from '$lib/config';
-import { committeeCapabilitiesFor, getUserRoles } from '$lib/server/authorization';
-import { isSustainingMember } from '$lib/server/finance/subscription-service';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { SEARCH_LIMIT, helpAudiences, type HelpAudience } from '#lib/config.js';
+import { committeeCapabilitiesFor, getUserRoles } from '#lib/server/authorization.js';
+import { isSustainingMember } from '#lib/server/finance/subscription-service.js';
 
 /**
  * Role names that are *not* an elevated position.

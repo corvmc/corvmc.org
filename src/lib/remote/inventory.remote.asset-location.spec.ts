@@ -20,7 +20,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const updateAsset = vi.fn(async () => undefined);
 
-vi.mock('$lib/server/inventory/item-service', () => ({
+vi.mock('#lib/server/inventory/item-service.js', () => ({
 	createItem: vi.fn(),
 	updateItem: vi.fn(),
 	getItemById: vi.fn(),
@@ -36,7 +36,7 @@ vi.mock('$lib/server/inventory/item-service', () => ({
 	restoreItem: vi.fn()
 }));
 
-vi.mock('$lib/server/inventory/asset-service', () => ({
+vi.mock('#lib/server/inventory/asset-service.js', () => ({
 	bindAssetTag: vi.fn(),
 	createAsset: vi.fn(),
 	getAssetById: vi.fn(),
@@ -49,12 +49,12 @@ vi.mock('$lib/server/inventory/asset-service', () => ({
 	updateAsset
 }));
 
-vi.mock('$lib/server/inventory/stock-service', () => ({
+vi.mock('#lib/server/inventory/stock-service.js', () => ({
 	listLowStock: vi.fn(),
 	listMovements: vi.fn()
 }));
 
-vi.mock('$lib/server/inventory/acquisition-service', () => ({
+vi.mock('#lib/server/inventory/acquisition-service.js', () => ({
 	acknowledgeForm8283: vi.fn(),
 	adjustStock: vi.fn(),
 	consumeStock: vi.fn(),
@@ -68,9 +68,9 @@ vi.mock('$lib/server/inventory/acquisition-service', () => ({
 	updateAcquisition: vi.fn()
 }));
 
-vi.mock('$lib/server/inventory/form-8282', () => ({ form8282Status: vi.fn() }));
+vi.mock('#lib/server/inventory/form-8282.js', () => ({ form8282Status: vi.fn() }));
 
-vi.mock('$lib/server/inventory/resources-service', () => ({
+vi.mock('#lib/server/inventory/resources-service.js', () => ({
 	linkArticle: vi.fn(),
 	listItemResources: vi.fn(),
 	listLinkableArticles: vi.fn(),
@@ -79,7 +79,7 @@ vi.mock('$lib/server/inventory/resources-service', () => ({
 	unlinkArticle: vi.fn()
 }));
 
-vi.mock('$lib/server/inventory/loan-service', () => ({
+vi.mock('#lib/server/inventory/loan-service.js', () => ({
 	getLoanById: vi.fn(),
 	getLoanHistory: vi.fn(),
 	scheduleLoan: vi.fn(),
@@ -91,14 +91,14 @@ vi.mock('$lib/server/inventory/loan-service', () => ({
 	listUserLoans: vi.fn()
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: vi.fn(async () => ({ id: 'staff-1' })),
 	requireUser: vi.fn(() => ({ id: 'user-1' })),
 	requireCapabilityOrOwner: vi.fn(async () => 'staff'),
 	isStaff: vi.fn(async () => true)
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({

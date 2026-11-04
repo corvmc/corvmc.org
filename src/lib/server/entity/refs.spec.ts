@@ -2,20 +2,20 @@ import { describe, it, expect, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { user } from '$lib/server/db/schema/authentication';
+import { user } from '#lib/server/db/schema/authentication.js';
 
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	resolveImageUrl: vi.fn((key: string | null | undefined) =>
 		key ? `https://media.test/${key}` : null
 	)
 }));
 // The correlated helpers reach the whole finance/auth graph on import. None of
 // it runs here — only the SQL these columns render is under test.
-vi.mock('$lib/server/db', () => ({ db: {} }));
-vi.mock('$lib/server/stripe', () => ({ stripe: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
+vi.mock('#lib/server/stripe.js', () => ({ stripe: {} }));
 vi.mock('$app/server', () => ({ getRequestEvent: vi.fn() }));
-vi.mock('$lib/server/finance/payment-service', () => ({ checkout: vi.fn() }));
-vi.mock('$lib/server/finance/product-config-service', () => ({
+vi.mock('#lib/server/finance/payment-service.js', () => ({ checkout: vi.fn() }));
+vi.mock('#lib/server/finance/product-config-service.js', () => ({
 	getProductConfig: vi.fn(),
 	getStripeProductId: vi.fn(),
 	buildSubscriptionLineItem: vi.fn()

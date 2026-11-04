@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { cancelUnconfirmedReservations } from '$lib/server/reservation/reservation-service';
+import { cancelUnconfirmedReservations } from '#lib/server/reservation/reservation-service.js';
 
 /**
  * Cron endpoint for releasing reservations never confirmed by their start time.

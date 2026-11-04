@@ -2,9 +2,9 @@
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import RosterTable from './RosterTable.svelte';
 	import CopyEmailsButton from './CopyEmailsButton.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import type { RosterPerson } from '$lib/types/roster';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import type { RosterPerson } from '#lib/types/roster.js';
 
 	const { Story } = defineMeta({
 		title: 'Roster/RosterTable',

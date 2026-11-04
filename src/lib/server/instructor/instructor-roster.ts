@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { instructorStatuses } from '$lib/config';
-import { allRosterRows, rosterCsv } from '$lib/server/roster/roster';
+import { instructorStatuses } from '#lib/config.js';
+import { allRosterRows, rosterCsv } from '#lib/server/roster/roster.js';
 import { listInstructorRoster, type StaffInstructorRow } from './instructor-service';
 
 /**

@@ -1,9 +1,9 @@
 import { CalendarDate, endOfMonth } from '@internationalized/date';
-import type { RecurringFrequency } from '$lib/server/db/schema/recurring';
-import type { BookerType } from '$lib/config';
+import type { RecurringFrequency } from '#lib/server/db/schema/recurring.js';
+import type { BookerType } from '#lib/config.js';
 import { getReservationConfig, termsFor } from './config';
 import { buildDateTimeInTz, getPartsInTz } from './timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Recurrence helpers — build, parse, and generate occurrence dates

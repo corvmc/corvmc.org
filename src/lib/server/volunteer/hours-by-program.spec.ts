@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { clubToday } from '$lib/config';
+import { clubToday } from '#lib/config.js';
 
 /**
  * Hours attributed to a program, against a real SQLite.
@@ -14,23 +14,23 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	// `await import`, not `require`: the helper is TypeScript, which Node's
 	// require cannot load. An async hoisted factory still resolves before the
 	// mock below is asked for a database.
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: testDb,
 	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
 }));
 
-vi.mock('$lib/server/volunteer/volunteer-profile-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-profile-service.js', () => ({
 	requireActiveVolunteer: vi.fn(async () => undefined)
 }));
 vi.mock('$lib/server/events', () => ({ domainEvents: { emit: vi.fn(async () => undefined) } }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const { submitHours } = await import('./hour-log-service');
-const { VOLUNTEER_REVIEW_MINUTES_OVER } = await import('$lib/config');
+const { VOLUNTEER_REVIEW_MINUTES_OVER } = await import('#lib/config.js');
 const { getHoursByGroup } = await import('./volunteer-report-service');
 
 const MEMBER = 'usr-member';
@@ -41,9 +41,9 @@ const CLUB = 'grp-club';
 const BAND = 'grp-band';
 
 async function seed() {
-	const { user } = await import('$lib/server/db/schema/authentication');
-	const { group, groupMember } = await import('$lib/server/db/schema/group');
-	const { volunteerRole } = await import('$lib/server/db/schema/volunteer');
+	const { user } = await import('#lib/server/db/schema/authentication.js');
+	const { group, groupMember } = await import('#lib/server/db/schema/group.js');
+	const { volunteerRole } = await import('#lib/server/db/schema/volunteer.js');
 
 	await testDb.insert(user).values([
 		{ id: MEMBER, name: 'Ada', email: 'ada@example.com', emailVerified: false },
@@ -123,7 +123,7 @@ describe('naming a program on a log', () => {
 
 describe('getHoursByGroup', () => {
 	async function approved(groupId: string | null, minutes: number, userId = MEMBER) {
-		const { volunteerHourLog } = await import('$lib/server/db/schema/volunteer');
+		const { volunteerHourLog } = await import('#lib/server/db/schema/volunteer.js');
 		const row = await submitHours(userId, log({ groupId: groupId ?? undefined, minutes }));
 		await testDb
 			.update(volunteerHourLog)

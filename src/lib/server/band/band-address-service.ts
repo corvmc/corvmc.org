@@ -12,15 +12,15 @@
  * `band.slug` always shadows history, and claiming a slug deletes its history row.
  */
 import { and, eq, isNull, ne } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { groupSlugHistory } from '$lib/server/db/schema/group';
-import { group } from '$lib/server/db/schema/group';
-import { bandSite } from '$lib/server/db/schema/band-site';
-import { generateSlug } from '$lib/server/utils/slug';
-import { isReservedSlug } from '$lib/reserved-slugs';
-import { forgetCustomDomain } from '$lib/server/band/band-host-service';
-import { BandNotFoundError } from '$lib/server/band/band-service';
-import { DomainError } from '$lib/server/domain-error';
+import { db } from '#lib/server/db/index.js';
+import { groupSlugHistory } from '#lib/server/db/schema/group.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
+import { generateSlug } from '#lib/server/utils/slug.js';
+import { isReservedSlug } from '#lib/reserved-slugs.js';
+import { forgetCustomDomain } from '#lib/server/band/band-host-service.js';
+import { BandNotFoundError } from '#lib/server/band/band-service.js';
+import { DomainError } from '#lib/server/domain-error.js';
 
 /** A DNS label cannot exceed 63 characters — a longer subdomain would not resolve. */
 export const MAX_BAND_SLUG_LENGTH = 63;

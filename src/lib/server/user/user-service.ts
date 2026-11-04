@@ -1,20 +1,20 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import { DomainError } from '../domain-error';
-import { user, session } from '$lib/server/db/schema/authentication';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { lockMemberCode, reservation } from '$lib/server/db/schema/reservation';
+import { user, session } from '#lib/server/db/schema/authentication.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { lockMemberCode, reservation } from '#lib/server/db/schema/reservation.js';
 import { and, count, desc, eq, gt, isNotNull, isNull, ne, or } from 'drizzle-orm';
-import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
+import { cancel as cancelReservation } from '#lib/server/reservation/reservation-service.js';
 import {
 	cancel as cancelSubscription,
 	getSubscription,
 	resume as resumeSubscription
-} from '$lib/server/finance/subscription-service';
-import { revokeMemberCode } from '$lib/server/lock/member-code-service';
-import { captureException } from '$lib/server/sentry';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { sendAccountRestoredEmail, sendAccountSuspendedEmail } from '$lib/server/auth-emails';
-import { isValidPhone, normalizePhone } from '$lib/utils/phone';
+} from '#lib/server/finance/subscription-service.js';
+import { revokeMemberCode } from '#lib/server/lock/member-code-service.js';
+import { captureException } from '#lib/server/sentry.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { sendAccountRestoredEmail, sendAccountSuspendedEmail } from '#lib/server/auth-emails.js';
+import { isValidPhone, normalizePhone } from '#lib/utils/phone.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -391,7 +391,7 @@ export async function purgeUser(userId: string) {
 	// happen after someone leaves the Collective, and other people's plans are
 	// attached to them — so a staffer has to deal with the listings on purpose
 	// rather than discovering later that the calendar lost a week of gigs.
-	const { countPublishedListingsBy } = await import('$lib/server/event/community-event-service');
+	const { countPublishedListingsBy } = await import('#lib/server/event/community-event-service.js');
 	if ((await countPublishedListingsBy(userId)) > 0) {
 		throw new UserHasPublishedListingsError();
 	}

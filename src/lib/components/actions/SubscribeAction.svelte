@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { subscribe } from '$lib/remote/account.remote';
+	import { subscribe } from '#lib/remote/account.remote.js';
 
 	const { fields } = subscribe;
 

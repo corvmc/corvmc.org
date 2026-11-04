@@ -1,25 +1,25 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import DateRangeFilter from '$lib/components/ui/DateRangeFilter.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { formatDateShortYear, formatCents } from '$lib/utils/format';
-	import { formatVolunteerHours } from '$lib/config';
-	import { getVolunteerReportPage } from '$lib/remote/volunteer.remote';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import DateRangeFilter from '#lib/components/ui/DateRangeFilter.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { formatDateShortYear, formatCents } from '#lib/utils/format.js';
+	import { formatVolunteerHours } from '#lib/config.js';
+	import { getVolunteerReportPage } from '#lib/remote/volunteer.remote.js';
 	import { IconDownload } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
 
 	// Calendar year to date is what a board packet asks for, so it's the default
 	// rather than "all time" — which would keep drifting as the org ages.

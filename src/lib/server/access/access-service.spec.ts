@@ -6,11 +6,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 vi.mock('$app/server', () => ({ getRequestEvent: () => ({ locals: {} }) }));
 
 const {
@@ -20,11 +20,11 @@ const {
 	listClearanceHolders,
 	isLapsing
 } = await import('./access-service');
-const { role, modelHasRole } = await import('$lib/server/db/schema/authorization');
-const { user } = await import('$lib/server/db/schema/authentication');
-const { group, groupMember, groupCapability } = await import('$lib/server/db/schema/group');
+const { role, modelHasRole } = await import('#lib/server/db/schema/authorization.js');
+const { user } = await import('#lib/server/db/schema/authentication.js');
+const { group, groupMember, groupCapability } = await import('#lib/server/db/schema/group.js');
 const { volunteerCertification, memberCertification } =
-	await import('$lib/server/db/schema/volunteer');
+	await import('#lib/server/db/schema/volunteer.js');
 
 const DAY = 86_400_000;
 const now = new Date();

@@ -1,13 +1,13 @@
-import { db } from '$lib/server/db';
-import { financialEntry, type FinancialEntry } from '$lib/server/db/schema/financial';
+import { db } from '#lib/server/db/index.js';
+import { financialEntry, type FinancialEntry } from '#lib/server/db/schema/financial.js';
 import { and, asc, eq, gte, inArray, lte, sql, sum } from 'drizzle-orm';
-import { captureException } from '$lib/server/sentry';
+import { captureException } from '#lib/server/sentry.js';
 import type {
 	FinancialCategory,
 	FinancialEntryKind,
 	FinancialSettlement,
 	FinancialSubject
-} from '$lib/config';
+} from '#lib/config.js';
 
 /**
  * Writing and reading the financial record.

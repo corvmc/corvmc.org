@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { confirmWaitlisted } from '$lib/remote/reservations.remote';
-	import { formatDate } from '$lib/utils/format';
-	import type { Reservation } from '$lib/server/reservation';
+	import { confirmWaitlisted } from '#lib/remote/reservations.remote.js';
+	import { formatDate } from '#lib/utils/format.js';
+	import type { Reservation } from '#lib/server/reservation/index.js';
 
 	let {
 		reservation,

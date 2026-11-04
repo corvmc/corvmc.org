@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { getBandTotals } = await import('./band-totals-service');
-const { group } = await import('$lib/server/db/schema/group');
-const { bandSite } = await import('$lib/server/db/schema/band-site');
+const { group } = await import('#lib/server/db/schema/group.js');
+const { bandSite } = await import('#lib/server/db/schema/band-site.js');
 
 const NOW = new Date('2026-10-15T12:00:00Z');
 const daysAgo = (n: number) => new Date(NOW.getTime() - n * 24 * 60 * 60 * 1000);

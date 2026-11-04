@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import {
 		packingCategoryOptions,
 		riderElementKindOptions,
@@ -10,8 +10,8 @@
 		PACKING_MAX_ITEMS,
 		PACKING_MAX_QUANTITY,
 		PACKING_ITEM_NOTES_MAX
-	} from '$lib/config';
-	import type { PackingItemRowState } from '$lib/types/packing';
+	} from '#lib/config.js';
+	import type { PackingItemRowState } from '#lib/types/packing.js';
 	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
 	import { IconPlus, IconTrash, IconChevronUp, IconChevronDown } from '@tabler/icons-svelte';
 	import type { Snippet } from 'svelte';

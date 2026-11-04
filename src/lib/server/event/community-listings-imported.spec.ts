@@ -3,11 +3,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 /** "My listings" against a real SQLite: the exclusion is a WHERE clause. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { listCommunityEventsForUser, listRejectedForUser } =
 	await import('./community-event-service');

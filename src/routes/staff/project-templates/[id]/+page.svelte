@@ -1,24 +1,24 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import {
 		dutyListAnchors,
 		dutyListAnchorLabels,
 		workDoneConditions,
 		workDoneConditionLabels
-	} from '$lib/config';
+	} from '#lib/config.js';
 	import {
 		getDutyListPage,
 		addDutyListItem,
@@ -26,9 +26,9 @@
 		updateDutyListItem,
 		removeDutyListItem,
 		deleteDutyList
-	} from '$lib/remote/duty-lists.remote';
+	} from '#lib/remote/duty-lists.remote.js';
 	import { describeDuration, describeOffset, splitOffset } from '../offsets';
-	import { Latest } from '$lib/latest.svelte';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	const id = $derived(page.params.id!);
 	// Not `{#await}`: a refresh would re-pend it and unmount an open item dialog.

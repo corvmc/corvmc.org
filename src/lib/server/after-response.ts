@@ -1,5 +1,5 @@
 import { getRequestEvent } from '$app/server';
-import { captureException } from '$lib/server/sentry';
+import { captureException } from '#lib/server/sentry.js';
 
 /**
  * Run work that the caller's response does not depend on.

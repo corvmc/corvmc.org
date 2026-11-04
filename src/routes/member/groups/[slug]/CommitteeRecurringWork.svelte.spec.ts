@@ -1,7 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { addCalendarDays, forEachClockEdge } from '$lib/test/clock-edges';
+import { addCalendarDays, forEachClockEdge } from '#lib/test/clock-edges.js';
 
 // Every field the form spreads: `as()` for the hidden inputs, `issues()` for the rest.
 const fields = new Proxy(
@@ -14,7 +14,7 @@ const fields = new Proxy(
 	}
 );
 
-vi.mock('$lib/remote/maintenance-schedules.remote', () => ({
+vi.mock('#lib/remote/maintenance-schedules.remote.js', () => ({
 	createCommitteeRecurringWork: {
 		enhance: () => ({ method: 'POST', action: '?/createCommitteeRecurringWork' }),
 		fields,

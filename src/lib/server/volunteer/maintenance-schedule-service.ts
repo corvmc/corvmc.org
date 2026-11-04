@@ -1,16 +1,16 @@
-import { db } from '$lib/server/db';
-import { maintenanceSchedule, volunteerRole, workOrder } from '$lib/server/db/schema/volunteer';
-import { project } from '$lib/server/db/schema/project';
-import { group } from '$lib/server/db/schema/group';
+import { db } from '#lib/server/db/index.js';
+import { maintenanceSchedule, volunteerRole, workOrder } from '#lib/server/db/schema/volunteer.js';
+import { project } from '#lib/server/db/schema/project.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/errors';
+import { DomainError } from '#lib/server/errors.js';
 import {
 	MAINTENANCE_INTERVAL_MAX_DAYS,
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
 	VOLUNTEER_SHIFT_NOTES_MAX,
 	VOLUNTEER_SHIFT_TITLE_MAX
-} from '$lib/config';
-import type { MaintenanceSchedule } from '$lib/server/db/schema/volunteer';
+} from '#lib/config.js';
+import type { MaintenanceSchedule } from '#lib/server/db/schema/volunteer.js';
 
 // Generate-on-close recurring work. Nothing here runs on a clock: the next
 // occurrence is written in the same batch that closes the current one, so the

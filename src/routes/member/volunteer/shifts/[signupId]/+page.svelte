@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The volunteer's own shift, on the night.
 	 *
@@ -7,28 +7,28 @@
 	 * signup rather than a capability: being rostered on the work is the right
 	 * predicate for recording that the work is done.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Action from '$lib/components/ui/Action.svelte';
-	import ShiftProgress from '$lib/components/volunteer/ShiftProgress.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import ShiftProgress from '#lib/components/volunteer/ShiftProgress.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import FileIncidentAction from './FileIncidentAction.svelte';
 	import { goto } from '$app/navigation';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { formatDateLong, formatDateTime, formatTimeRange } from '$lib/utils/format';
-	import { incidentCategoryLabels } from '$lib/config';
-	import { getMyShift, setMyWorkTaskDone, cancelMySignup } from '$lib/remote/volunteer.remote';
+	import { formatDateLong, formatDateTime, formatTimeRange } from '#lib/utils/format.js';
+	import { incidentCategoryLabels } from '#lib/config.js';
+	import { getMyShift, setMyWorkTaskDone, cancelMySignup } from '#lib/remote/volunteer.remote.js';
 
 	const signupId = $derived(page.params.signupId!);
 	const data = $derived(await getMyShift(signupId));

@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
-import { reminderSent } from '$lib/server/db/schema/reminder';
+import { db } from '#lib/server/db/index.js';
+import { reminderSent } from '#lib/server/db/schema/reminder.js';
 import { and, eq, inArray } from 'drizzle-orm';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
 import { reminders } from './registry';
 import type { ReminderDefinition } from './types';
 

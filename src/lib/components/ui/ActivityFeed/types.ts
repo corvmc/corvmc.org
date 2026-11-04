@@ -1,7 +1,7 @@
 import type { ResolvedPathname } from '$app/types';
-import type { FeedItem } from '$lib/types/activity';
+import type { FeedItem } from '#lib/types/activity.js';
 
-export type { FeedItem, FeedPage } from '$lib/types/activity';
+export type { FeedItem, FeedPage } from '#lib/types/activity.js';
 
 /** One rendered row: "summary" over "actor · time · context". */
 export interface ActivityRow {

@@ -2,35 +2,35 @@ import {
 	domainEvents,
 	type GroupInviteCreatedEvent,
 	type MemberInviteCreatedEvent
-} from '$lib/server/event-bus/event-bus';
+} from '#lib/server/event-bus/event-bus.js';
 import {
 	INVITE_EXPIRY_DAYS,
 	UNCONFIRMED_RELEASE_NOTICE,
 	hourLogExceptionLabels,
 	renewalKindLabels
-} from '$lib/config';
-import { formatCents } from '$lib/utils/format';
-import { groupKindLabels } from '$lib/terms';
-import { fanOutAnnouncement, fanOutGroupRoom } from '$lib/server/group/announcement-fanout';
-import { fanOutBallotNotice } from '$lib/server/ballot/ballot-fanout';
+} from '#lib/config.js';
+import { formatCents } from '#lib/utils/format.js';
+import { groupKindLabels } from '#lib/terms.js';
+import { fanOutAnnouncement, fanOutGroupRoom } from '#lib/server/group/announcement-fanout.js';
+import { fanOutBallotNotice } from '#lib/server/ballot/ballot-fanout.js';
 import { dispatch, dispatchBatch, dispatchEmailOnly, dispatchEmailOnlyBatch } from './dispatcher';
-import { membersAddedNotice } from '$lib/server/group/roster-import-service';
+import { membersAddedNotice } from '#lib/server/group/roster-import-service.js';
 import { quoteForPlainText } from './email/normalize-model';
-import { captureException } from '$lib/server/sentry';
-import { listUsersWithCapability } from '$lib/server/authorization';
-import { applicationNotice } from '$lib/server/group/application-reviewers';
-import { buildReplyToAddress } from '$lib/server/inbox/reply-address';
+import { captureException } from '#lib/server/sentry.js';
+import { listUsersWithCapability } from '#lib/server/authorization.js';
+import { applicationNotice } from '#lib/server/group/application-reviewers.js';
+import { buildReplyToAddress } from '#lib/server/inbox/reply-address.js';
 import { env } from '$env/dynamic/private';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, inArray } from 'drizzle-orm';
-import { shiftLabel } from '$lib/utils/shift-label';
-import { formatIsoDay } from '$lib/utils/deadline';
+import { shiftLabel } from '#lib/utils/shift-label.js';
+import { formatIsoDay } from '#lib/utils/deadline.js';
 import type {
 	NotificationEmailCtaSpec,
 	NotificationEmailDetail,
 	StandaloneEmailContent
-} from '$lib/types/notification-email';
+} from '#lib/types/notification-email.js';
 
 // ---------------------------------------------------------------------------
 // Notification listeners
@@ -1590,7 +1590,7 @@ export function registerAllNotificationListeners(): void {
 	// Deliberately not sent when the shift is created: "we hope somebody will
 	// meet you" is not information.
 	domainEvents.on('volunteer.signup_confirmed', async ({ data: event }) => {
-		const { orientationOwnerOf } = await import('$lib/server/volunteer/orientation-service');
+		const { orientationOwnerOf } = await import('#lib/server/volunteer/orientation-service.js');
 		const member = await orientationOwnerOf(event.shiftId);
 		if (!member) return;
 

@@ -1,24 +1,24 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import type { MemberRef } from '$lib/types/entity';
-	import { formatDate } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import type { MemberRef } from '#lib/types/entity.js';
+	import { formatDate } from '#lib/utils/format.js';
 	import {
 		groupApplicationQuestions,
 		groupApplicationStatusLabels,
 		APPLICATION_ANSWER_MAX,
 		type ApplicationGroupKind,
 		type GroupApplicationStatus
-	} from '$lib/config';
+	} from '#lib/config.js';
 	import {
 		acceptGroupApplication,
 		declineGroupApplication,
 		markApplicantContacted
-	} from '$lib/remote/group-applications.remote';
+	} from '#lib/remote/group-applications.remote.js';
 
 	/**
 	 * A reviewer working through one group's applications, whatever its kind.

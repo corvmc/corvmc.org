@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockSuppressByEmail = vi.fn(async () => true);
 
-vi.mock('$lib/server/marketing/subscriber-service', () => ({
+vi.mock('#lib/server/marketing/subscriber-service.js', () => ({
 	suppressByEmail: (...args: unknown[]) => mockSuppressByEmail(...(args as [])),
 	__esModule: true
 }));

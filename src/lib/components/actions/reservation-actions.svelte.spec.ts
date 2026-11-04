@@ -1,13 +1,13 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import '$lib/test/locators';
-import { formatDuration } from '$lib/utils/format';
+import '#lib/test/locators.js';
+import { formatDuration } from '#lib/utils/format.js';
 
 // One file for the staff cancel and refund actions: they mock the same two
 // modules, and each export below is the stub its own spec used before the merge.
 // Prefix fidelity (`b:`, `n:`) is pinned in `ui/Form/FormField.svelte.spec.ts`.
-vi.mock('$lib/remote/reservations.remote', () => {
+vi.mock('#lib/remote/reservations.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => null

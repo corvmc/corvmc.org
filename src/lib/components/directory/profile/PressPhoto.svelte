@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import ProfileSection from './ProfileSection.svelte';
-	import { imageSrc } from '$lib/utils/images';
+	import { imageSrc } from '#lib/utils/images.js';
 
 	type Photo = { id: string; url: string | null; altText: string | null; caption: string | null };
 

@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
-import { verifyUnsubscribeToken } from '$lib/server/marketing/unsubscribe';
-import { unsubscribe } from '$lib/server/marketing/audience-service';
+import { verifyUnsubscribeToken } from '#lib/server/marketing/unsubscribe.js';
+import { unsubscribe } from '#lib/server/marketing/audience-service.js';
 
 // One-click unsubscribe (RFC 8058). Mail clients honoring the
 // `List-Unsubscribe-Post: List-Unsubscribe=One-Click` header POST to this

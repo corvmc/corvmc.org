@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
-	import { getMemberArticlePage } from '$lib/remote/help.remote';
-	import { extractHeadings } from '$lib/utils/markdown';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import MarkdownPreview from '$lib/components/help/MarkdownPreview.svelte';
-	import TableOfContents from '$lib/components/help/TableOfContents.svelte';
+	import { getMemberArticlePage } from '#lib/remote/help.remote.js';
+	import { extractHeadings } from '#lib/utils/markdown.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import MarkdownPreview from '#lib/components/help/MarkdownPreview.svelte';
+	import TableOfContents from '#lib/components/help/TableOfContents.svelte';
 
 	let slug = $derived(page.params.slug!);
 	const data = $derived(await getMemberArticlePage(slug));

@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShort } from '$lib/utils/format';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import {
 		incidentCategories,
 		incidentCategoryLabels,
 		type IncidentCategory,
 		type IncidentStatusFilter
-	} from '$lib/config';
-	import { getIncidentLog } from '$lib/remote/incidents.remote';
+	} from '#lib/config.js';
+	import { getIncidentLog } from '#lib/remote/incidents.remote.js';
 	import RecordIncidentAction from './RecordIncidentAction.svelte';
 
 	let searchText = $state('');

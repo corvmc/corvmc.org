@@ -4,8 +4,8 @@ const listGrantDeadlinesBetween = vi.fn(async (_from: string, _to: string) => []
 const listSponsorshipDeadlinesBetween = vi.fn(
 	async (_from: string, _to: string) => [] as unknown[]
 );
-vi.mock('$lib/server/grant/grant-service', () => ({ listGrantDeadlinesBetween }));
-vi.mock('$lib/server/sponsor/sponsor-service', () => ({ listSponsorshipDeadlinesBetween }));
+vi.mock('#lib/server/grant/grant-service.js', () => ({ listGrantDeadlinesBetween }));
+vi.mock('#lib/server/sponsor/sponsor-service.js', () => ({ listSponsorshipDeadlinesBetween }));
 
 const { listDevelopmentDeadlinesBetween } = await import('./deadline-service');
 

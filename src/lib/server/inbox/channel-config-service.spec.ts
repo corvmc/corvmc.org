@@ -8,11 +8,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // replies on either of them.
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { getAllChannelConfigs, getChannelConfig, isChannelEnabled, updateChannelConfig } =
 	await import('./channel-config-service');

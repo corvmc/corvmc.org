@@ -9,7 +9,7 @@ const requireCapability = vi.fn(async (cap: string) => {
 	if (!held.has(cap)) throw new Error(`403: ${cap}`);
 	return { id: 'acting-staff' };
 });
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap)
 }));
 
@@ -23,7 +23,7 @@ const grants = {
 	updateGrantReport: vi.fn(async () => undefined),
 	deleteGrantReport: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/grant/grant-service', () => grants);
+vi.mock('#lib/server/grant/grant-service.js', () => grants);
 
 const funders = {
 	listFunders: vi.fn(async () => []),
@@ -31,7 +31,7 @@ const funders = {
 	updateFunder: vi.fn(async () => undefined),
 	deleteFunder: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/grant/funder-service', () => funders);
+vi.mock('#lib/server/grant/funder-service.js', () => funders);
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: {} }),

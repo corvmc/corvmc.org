@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { mapDomainError } from '$lib/server/errors';
+import { mapDomainError } from '#lib/server/errors.js';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
 import { eq } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { bandSite } from '$lib/server/db/schema/band-site';
-import { requireGroupRole } from '$lib/server/group/group-context';
+import { db } from '#lib/server/db/index.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
 import {
 	assertDomainUnclaimed,
 	cnameTarget,
@@ -15,8 +15,8 @@ import {
 	isCustomDomainConfigured,
 	normalizeCustomDomain,
 	readCustomHostname
-} from '$lib/server/band/custom-domain-service';
-import { forgetCustomDomain } from '$lib/server/band/band-host-service';
+} from '#lib/server/band/custom-domain-service.js';
+import { forgetCustomDomain } from '#lib/server/band/band-host-service.js';
 
 /**
  * Custom domains are the paid half of band addressing — every band gets

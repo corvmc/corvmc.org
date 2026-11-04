@@ -20,23 +20,23 @@ import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { zipSync, strToU8 } from 'fflate';
 import { eq } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { bandSite } from '$lib/server/db/schema/band-site';
-import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
+import { db } from '#lib/server/db/index.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
+import { directoryEntry, directoryTag } from '#lib/server/db/schema/directory.js';
 import { and } from 'drizzle-orm';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { listFor as listMediaFor } from '$lib/server/media/media-service';
-import { getObject } from '$lib/server/storage';
-import { getMembers } from '$lib/server/band/band-service';
-import { listBandEventsUpcoming } from '$lib/server/event/event-service';
-import { fullPressKit } from '$lib/server/band/press-kit';
-import { renderPressKitHtml, renderPressKitText } from '$lib/server/band/press-kit-html';
-import type { PressKitDocument } from '$lib/server/band/press-kit-html';
-import { sanitizeBio } from '$lib/utils/markdown';
-import { canonicalAddress } from '$lib/utils/canonical-address';
-import { extensionForType } from '$lib/server/storage-keys';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { listFor as listMediaFor } from '#lib/server/media/media-service.js';
+import { getObject } from '#lib/server/storage.js';
+import { getMembers } from '#lib/server/band/band-service.js';
+import { listBandEventsUpcoming } from '#lib/server/event/event-service.js';
+import { fullPressKit } from '#lib/server/band/press-kit.js';
+import { renderPressKitHtml, renderPressKitText } from '#lib/server/band/press-kit-html.js';
+import type { PressKitDocument } from '#lib/server/band/press-kit-html.js';
+import { sanitizeBio } from '#lib/utils/markdown.js';
+import { canonicalAddress } from '#lib/utils/canonical-address.js';
+import { extensionForType } from '#lib/server/storage-keys.js';
 import { env as publicEnv } from '$env/dynamic/public';
-import type { ProfileLink } from '$lib/server/db/schema/authentication';
+import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
 
 /**
  * Everything held in memory at once, so this is a real ceiling rather than a

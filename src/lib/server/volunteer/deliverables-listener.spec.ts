@@ -7,11 +7,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * carry the `Show deliverables` list.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			const out = [];
@@ -21,9 +21,9 @@ vi.mock('$lib/server/db', () => ({
 	})
 }));
 const capture = vi.fn();
-vi.mock('$lib/server/sentry', () => ({ captureException: capture }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: capture }));
 
-const { domainEvents } = await import('$lib/server/event-bus/event-bus');
+const { domainEvents } = await import('#lib/server/event-bus/event-bus.js');
 const { registerDeliverablesListeners, applyShowDeliverables } =
 	await import('./deliverables-listener');
 registerDeliverablesListeners();

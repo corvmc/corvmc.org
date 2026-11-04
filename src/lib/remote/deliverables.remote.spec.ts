@@ -9,10 +9,10 @@ import type { z } from 'zod';
  * not; staff may. The owner is read off the work order, never the request.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
-vi.mock('$lib/server/db', () => ({ db: testDb, getRowCount: () => 0 }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb, getRowCount: () => 0 }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: null }, url: new URL('http://x/') }),
@@ -34,7 +34,7 @@ vi.mock('$app/server', () => ({
 }));
 
 const who = vi.hoisted(() => ({ userId: null as string | null, staff: false }));
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
 	return {
 		requireUser: () => {
@@ -53,18 +53,18 @@ const writes = vi.hoisted(() => ({
 	setWorkTaskDone: vi.fn(async () => ({})),
 	reassign: vi.fn(async () => undefined)
 }));
-vi.mock('$lib/server/volunteer/volunteer-signup-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-signup-service.js', () => ({
 	claimShift: writes.claimShift
 }));
-vi.mock('$lib/server/volunteer/work-order-service', () => ({
+vi.mock('#lib/server/volunteer/work-order-service.js', () => ({
 	resolveWorkOrder: writes.resolveWorkOrder
 }));
-vi.mock('$lib/server/volunteer/duty-list-service', () => ({
+vi.mock('#lib/server/volunteer/duty-list-service.js', () => ({
 	setWorkTaskDone: writes.setWorkTaskDone,
 	assertOwningCommittee: async (id: string | null) => id
 }));
-vi.mock('$lib/server/volunteer/deliverables-service', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/volunteer/deliverables-service')>()),
+vi.mock('#lib/server/volunteer/deliverables-service.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/volunteer/deliverables-service.js')>()),
 	reassignDeliverable: writes.reassign
 }));
 vi.mock('./events.remote', () => ({

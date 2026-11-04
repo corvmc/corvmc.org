@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { getFlagDetail, resolveFlag } from '$lib/remote/flags.remote';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatDateTime } from '$lib/utils/format';
-	import { entityLabels } from '$lib/terms';
-	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
+	import { getFlagDetail, resolveFlag } from '#lib/remote/flags.remote.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatDateTime } from '#lib/utils/format.js';
+	import { entityLabels } from '#lib/terms.js';
+	import ThreadTimeline from '#lib/components/inbox/ThreadTimeline.svelte';
 	import AppealCard from './AppealCard.svelte';
 
 	let id = $derived(page.params.id!);

@@ -2,16 +2,16 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { command } from './_remote';
-import { requireCapability, isElevated } from '$lib/server/authorization';
+import { requireCapability, isElevated } from '#lib/server/authorization.js';
 import {
 	getForUser,
 	getUnreadCount,
 	markRead,
 	markAllRead
-} from '$lib/server/notification/in-app-service';
-import { getAllPreferences, setPreference } from '$lib/server/notification/preference-service';
+} from '#lib/server/notification/in-app-service.js';
+import { getAllPreferences, setPreference } from '#lib/server/notification/preference-service.js';
 import { getMemberAccount } from './account.remote';
-import { getNotificationType, preferenceTypesFor } from '$lib/server/db/schema/notification';
+import { getNotificationType, preferenceTypesFor } from '#lib/server/db/schema/notification.js';
 
 function requireUser() {
 	const { locals } = getRequestEvent();

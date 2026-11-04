@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconPlus } from '@tabler/icons-svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import PostFields from '$lib/components/classified/PostFields.svelte';
-	import { createClassified, getClassifiedComposer } from '$lib/remote/classifieds.remote';
+	import Action from '#lib/components/ui/Action.svelte';
+	import PostFields from '#lib/components/classified/PostFields.svelte';
+	import { createClassified, getClassifiedComposer } from '#lib/remote/classifieds.remote.js';
 
 	const composer = $derived(await getClassifiedComposer());
 </script>

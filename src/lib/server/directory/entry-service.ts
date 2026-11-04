@@ -1,24 +1,24 @@
-import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
-import { db } from '$lib/server/db';
+import type { DirectoryVisibility } from '#lib/server/db/schema/authentication.js';
+import { db } from '#lib/server/db/index.js';
 import {
 	directoryEntry,
 	directoryTag,
 	type DirectoryTagKind
-} from '$lib/server/db/schema/directory';
-import { group } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/directory.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, count, desc, eq, isNull } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import type { BatchItem } from 'drizzle-orm/batch';
-import { groupMember, groupSlugHistory } from '$lib/server/db/schema/group';
-import { bandSiteInsert } from '$lib/server/band/band-site-service';
-import { ensureUniqueSlug, generateSlug } from '$lib/server/utils/slug';
-import { isReservedSlug } from '$lib/reserved-slugs';
-import { sanitizeBio } from '$lib/utils/markdown';
-import { DomainError } from '$lib/server/domain-error';
+import { groupMember, groupSlugHistory } from '#lib/server/db/schema/group.js';
+import { bandSiteInsert } from '#lib/server/band/band-site-service.js';
+import { ensureUniqueSlug, generateSlug } from '#lib/server/utils/slug.js';
+import { isReservedSlug } from '#lib/reserved-slugs.js';
+import { sanitizeBio } from '#lib/utils/markdown.js';
+import { DomainError } from '#lib/server/domain-error.js';
 import { archiveContactForClaim } from './contact-service';
-import type { ProfileLink } from '$lib/server/db/schema/authentication';
+import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
 
 /**
  * The `directory_entry` a subject owns — created with it, and the one row every

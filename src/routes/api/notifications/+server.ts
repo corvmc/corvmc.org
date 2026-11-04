@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
-import { getForUser, getUnreadCount } from '$lib/server/notification/in-app-service';
+import { getForUser, getUnreadCount } from '#lib/server/notification/in-app-service.js';
 
 // ---------------------------------------------------------------------------
 // GET /api/notifications — list notifications for the current user

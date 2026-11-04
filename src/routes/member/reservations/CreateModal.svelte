@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { toast } from 'svelte-sonner';
-	import { bookAndPayReservation } from '$lib/remote/reservations.remote';
-	import { goToCheckout } from '$lib/utils/checkout-navigation';
-	import Action from '$lib/components/ui/Action.svelte';
+	import { bookAndPayReservation } from '#lib/remote/reservations.remote.js';
+	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
+	import Action from '#lib/components/ui/Action.svelte';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
-	import DateTimeStep from '$lib/components/reservations/booking/DateTimeStep.svelte';
-	import ConfirmStep from '$lib/components/reservations/booking/ConfirmStep.svelte';
-	import PaymentStep from '$lib/components/reservations/booking/PaymentStep.svelte';
-	import BookingConflict from '$lib/components/reservations/booking/BookingConflict.svelte';
-	import { formatDate } from '$lib/utils/format';
+	import DateTimeStep from '#lib/components/reservations/booking/DateTimeStep.svelte';
+	import ConfirmStep from '#lib/components/reservations/booking/ConfirmStep.svelte';
+	import PaymentStep from '#lib/components/reservations/booking/PaymentStep.svelte';
+	import BookingConflict from '#lib/components/reservations/booking/BookingConflict.svelte';
+	import { formatDate } from '#lib/utils/format.js';
 
 	const { fields } = bookAndPayReservation;
 

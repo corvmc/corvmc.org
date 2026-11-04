@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Who this is, what we already know about them, and where the thread stands.
 	 *
@@ -15,12 +15,12 @@
 	 */
 	import { resolve } from '$app/paths';
 	import type { RemoteForm } from '@sveltejs/kit';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
 	import AssignControl from './AssignControl.svelte';
 	import ThreadTags from './ThreadTags.svelte';
-	import { channelLabel } from '$lib/components/inbox/channels';
-	import { formatDate, formatDateTime } from '$lib/utils/format';
-	import { getInboxThreadContext } from '$lib/remote/inbox.remote';
+	import { channelLabel } from '#lib/components/inbox/channels.js';
+	import { formatDate, formatDateTime } from '#lib/utils/format.js';
+	import { getInboxThreadContext } from '#lib/remote/inbox.remote.js';
 
 	type Thread = {
 		id: string;

@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import type { ResolvedPathname } from '$app/types';
-	import Section from '$lib/components/public/Section.svelte';
+	import Section from '#lib/components/public/Section.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import IdCard from '$lib/components/directory/IdCard.svelte';
-	import IdCardCta from '$lib/components/directory/IdCardCta.svelte';
-	import VinylCard from '$lib/components/directory/VinylCard.svelte';
-	import VinylCardCta from '$lib/components/directory/VinylCardCta.svelte';
-	import { getPublicDirectoryPage } from '$lib/remote/directory.remote';
-	import { hashIndex } from '$lib/utils/patterns';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import IdCard from '#lib/components/directory/IdCard.svelte';
+	import IdCardCta from '#lib/components/directory/IdCardCta.svelte';
+	import VinylCard from '#lib/components/directory/VinylCard.svelte';
+	import VinylCardCta from '#lib/components/directory/VinylCardCta.svelte';
+	import { getPublicDirectoryPage } from '#lib/remote/directory.remote.js';
+	import { hashIndex } from '#lib/utils/patterns.js';
 	import {
 		BAND_COLORS,
 		genreFacets,
@@ -26,7 +26,7 @@
 		sortRows,
 		directorySortOptions,
 		type DirectorySort
-	} from '$lib/utils/directory-browse';
+	} from '#lib/utils/directory-browse.js';
 
 	type Tab = 'bands' | 'musicians';
 

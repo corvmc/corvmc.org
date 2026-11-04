@@ -2,7 +2,7 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { TAB_KEYS, TAB_LABELS } from './tabs';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 
 /**
  * The console is back-of-house only (#1950): every public-facing listing
@@ -38,7 +38,7 @@ const stubs = vi.hoisted(
 			>
 );
 
-vi.mock('$lib/remote/events.remote', () =>
+vi.mock('#lib/remote/events.remote.js', () =>
 	stubs(
 		'cancelEvent cancelEventSeries cancelTicket checkConflicts checkRebook compTickets ' +
 			'createEvent deleteEvent getEventDeletionImpact getEventPublishBlockers getProgramGroups ' +
@@ -47,7 +47,7 @@ vi.mock('$lib/remote/events.remote', () =>
 		{ getStaffEventProduction: remote(() => fixture.loaded) }
 	)
 );
-vi.mock('$lib/remote/productions.remote', () =>
+vi.mock('#lib/remote/productions.remote.js', () =>
 	stubs(
 		'addProductionExpense addRunOfShowSlot advanceProduction askForArtifact ' +
 			'buildRunOfShowFromLineup createProduction createShow dropArtifactRequest markSlotTiming ' +
@@ -57,10 +57,10 @@ vi.mock('$lib/remote/productions.remote', () =>
 			'usePosterArtWithFooter useTemplateFlyerAsPoster'
 	)
 );
-vi.mock('$lib/remote/layout.remote', () =>
+vi.mock('#lib/remote/layout.remote.js', () =>
 	stubs('getStaffLayout', { getStaffLayout: remote(() => ({ capabilities: [] })) })
 );
-vi.mock('$lib/remote/volunteer.remote', () =>
+vi.mock('#lib/remote/volunteer.remote.js', () =>
 	stubs(
 		'acceptShiftInvitation approveVolunteerHours assignShiftToMember cancelMySignup ' +
 			'cancelShift claimShift confirmSignup confirmSignups createShift declineShiftInvitation ' +
@@ -69,11 +69,11 @@ vi.mock('$lib/remote/volunteer.remote', () =>
 			'markSignupNotified notifyCancelledShift releaseSignup submitVolunteerHours updateShift'
 	)
 );
-vi.mock('$lib/remote/duty-lists.remote', () => stubs('applyDutyList setWorkTaskDone'));
-vi.mock('$lib/remote/external-acts.remote', () =>
+vi.mock('#lib/remote/duty-lists.remote.js', () => stubs('applyDutyList setWorkTaskDone'));
+vi.mock('#lib/remote/external-acts.remote.js', () =>
 	stubs('listActInDirectory searchAskableListings')
 );
-vi.mock('$lib/remote/deliverables.remote', () => stubs('reassignDeliverableForm'));
+vi.mock('#lib/remote/deliverables.remote.js', () => stubs('reassignDeliverableForm'));
 vi.mock('$app/state', async (original) => ({
 	...(await original<Record<string, unknown>>()),
 	page: {

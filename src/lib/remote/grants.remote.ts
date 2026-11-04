@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import * as grants from '$lib/server/grant/grant-service';
-import * as funders from '$lib/server/grant/funder-service';
-import { clubToday, grantStatuses, LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
+import { requireCapability } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import * as grants from '#lib/server/grant/grant-service.js';
+import * as funders from '#lib/server/grant/funder-service.js';
+import { clubToday, grantStatuses, LONG_TEXT_MAX, SHORT_TEXT_MAX } from '#lib/config.js';
 
 /** An `<input type="date">` value, or blank for "no date". */
 const isoDay = z

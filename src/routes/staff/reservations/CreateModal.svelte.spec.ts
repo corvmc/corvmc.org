@@ -1,10 +1,10 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { forEachClockEdge } from '$lib/test/clock-edges';
-import '$lib/test/locators';
+import { forEachClockEdge } from '#lib/test/clock-edges.js';
+import '#lib/test/locators.js';
 
-vi.mock('$lib/remote/reservations.remote', () => {
+vi.mock('#lib/remote/reservations.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => null

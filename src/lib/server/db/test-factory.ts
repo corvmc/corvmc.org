@@ -2,7 +2,7 @@
  * Test data factory using zod4-mock.
  *
  * Usage:
- *   import { factory } from '$lib/server/db/test-factory';
+ *   import { factory } from '#lib/server/db/test-factory.js';
  *   const users = factory.generate(z.array(UserSchema).min(3));
  *   const roles = factory.generate(z.array(RoleSchema).min(2));
  */

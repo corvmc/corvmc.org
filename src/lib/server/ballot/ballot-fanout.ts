@@ -1,18 +1,18 @@
 import { and, eq, isNull } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { ballot, ballotElector } from '$lib/server/db/schema/ballot';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { ballot, ballotElector } from '#lib/server/db/schema/ballot.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import {
 	getNotificationType,
 	notification,
 	notificationPreference
-} from '$lib/server/db/schema/notification';
-import { normalizeNotificationModel } from '$lib/server/notification/email/normalize-model';
-import { sendTemplateBatch } from '$lib/server/notification/email';
-import { pushToUser } from '$lib/server/notification/sse';
-import { captureException } from '$lib/server/sentry';
-import type { BallotEvent } from '$lib/server/event-bus/event-bus';
-import { surfaces } from '$lib/config';
+} from '#lib/server/db/schema/notification.js';
+import { normalizeNotificationModel } from '#lib/server/notification/email/normalize-model.js';
+import { sendTemplateBatch } from '#lib/server/notification/email/index.js';
+import { pushToUser } from '#lib/server/notification/sse.js';
+import { captureException } from '#lib/server/sentry.js';
+import type { BallotEvent } from '#lib/server/event-bus/event-bus.js';
+import { surfaces } from '#lib/config.js';
 
 /**
  * The two ballot notices. Opening reaches the electors; certification reaches

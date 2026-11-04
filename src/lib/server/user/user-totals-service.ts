@@ -1,10 +1,10 @@
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { role, modelHasRole } from '$lib/server/db/schema/authorization';
-import { instructor } from '$lib/server/db/schema/instructor';
-import { containsLiteral } from '$lib/server/db/like';
-import { positionOrder } from '$lib/config';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
+import { instructor } from '#lib/server/db/schema/instructor.js';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { positionOrder } from '#lib/config.js';
 import {
 	and,
 	count,

@@ -11,11 +11,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 const totalsByKindAndCategory = vi.fn();
 const ledgerStartsAt = vi.fn();
 
-vi.mock('$lib/server/finance/financial-entry-service', () => ({
+vi.mock('#lib/server/finance/financial-entry-service.js', () => ({
 	totalsByKindAndCategory,
 	ledgerStartsAt
 }));
-vi.mock('$lib/server/volunteer/volunteer-report-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-report-service.js', () => ({
 	getVolunteerTotals: vi.fn(async () => ({ totalMinutes: 600, volunteerCount: 4, logCount: 9 })),
 	getContributedValue: vi.fn(async () => ({
 		impactValueCents: 5000,
@@ -25,14 +25,14 @@ vi.mock('$lib/server/volunteer/volunteer-report-service', () => ({
 		rateSource: 'test'
 	}))
 }));
-vi.mock('$lib/server/finance/community-stats', () => ({
+vi.mock('#lib/server/finance/community-stats.js', () => ({
 	getCommunityStats: vi.fn(async () => ({
 		sustainingMemberCount: 12,
 		totalFreeHoursAllocated: 48,
 		participationPercent: 30
 	}))
 }));
-vi.mock('$lib/server/event/event-report-service', () => ({
+vi.mock('#lib/server/event/event-report-service.js', () => ({
 	getEventTotals: vi.fn(async () => ({
 		cmcByKind: { show: 3, work_party: 1, meeting: 0, class: 0, market: 0 },
 		cmcTotal: 4,
@@ -41,7 +41,7 @@ vi.mock('$lib/server/event/event-report-service', () => ({
 		cancelled: 0
 	}))
 }));
-vi.mock('$lib/server/reservation/reservation-report-service', () => ({
+vi.mock('#lib/server/reservation/reservation-report-service.js', () => ({
 	getRoomUseTotals: vi.fn(async () => ({
 		sessions: 20,
 		hours: 44,

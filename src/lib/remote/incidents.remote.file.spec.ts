@@ -14,10 +14,10 @@ const requireCapability = vi.fn(async (cap: string, scope?: { eventId?: string }
 	}
 	return { id: 'vol-1', name: 'Vee' };
 });
-vi.mock('$lib/server/authorization', () => ({ requireCapability, can: vi.fn() }));
+vi.mock('#lib/server/authorization.js', () => ({ requireCapability, can: vi.fn() }));
 
 const fileShowIncident = vi.fn(async () => undefined);
-vi.mock('$lib/server/incident/incident-service', () => ({
+vi.mock('#lib/server/incident/incident-service.js', () => ({
 	fileShowIncident,
 	acceptIncident: vi.fn(),
 	addIncidentNote: vi.fn(),
@@ -31,8 +31,8 @@ vi.mock('$lib/server/incident/incident-service', () => ({
 	INCIDENT_NOTE_MAX: 2000,
 	INCIDENT_SUMMARY_MAX: 200
 }));
-vi.mock('$lib/server/incident/incident-retention', () => ({ setIncidentRetain: vi.fn() }));
-vi.mock('$lib/server/errors', () => ({
+vi.mock('#lib/server/incident/incident-retention.js', () => ({ setIncidentRetain: vi.fn() }));
+vi.mock('#lib/server/errors.js', () => ({
 	mapDomainError: (err: unknown) => {
 		throw err;
 	}

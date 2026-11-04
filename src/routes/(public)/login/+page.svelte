@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import { page } from '$app/state';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
-	import { pageTitle } from '$lib/config';
+	import { pageTitle } from '#lib/config.js';
 	import { IconEye, IconEyeOff } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
-	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
-	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
-	import { getMe } from '$lib/remote/layout.remote';
-	import { TURNSTILE_SITE_KEY } from '$lib/turnstile';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { safeReturnPath, verificationCallbackURL } from '$lib/utils/sign-in';
+	import Form, { Field, SubmitButton } from '#lib/components/ui/Form/index.js';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
+	import { getMe } from '#lib/remote/layout.remote.js';
+	import { TURNSTILE_SITE_KEY } from '#lib/turnstile.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { safeReturnPath, verificationCallbackURL } from '#lib/utils/sign-in.js';
 
 	// Deliberately NOT `await getMe()`. A top-level await puts the whole template
 	// behind an async boundary, and on a direct load of ?register that stops the

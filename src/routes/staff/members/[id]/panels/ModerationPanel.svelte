@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { getMemberStandings, restoreMemberStanding } from '$lib/remote/standing.remote';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { getFlagsAgainstUser, getFlagsByUser } from '$lib/remote/flags.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getMemberStandings, restoreMemberStanding } from '#lib/remote/standing.remote.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { getFlagsAgainstUser, getFlagsByUser } from '#lib/remote/flags.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShortYear } from '$lib/utils/format';
-	import { Latest } from '$lib/latest.svelte';
+	import { formatDateShortYear } from '#lib/utils/format.js';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	let { id }: { id: string } = $props();
 

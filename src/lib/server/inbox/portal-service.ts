@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
-import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
+import { db } from '#lib/server/db/index.js';
+import { inboxThread, inboxMessage, inboxParticipant } from '#lib/server/db/schema/inbox.js';
 import { and, count, desc, eq, gt, inArray, isNull, or, sql, asc } from 'drizzle-orm';
-import type { PaginationInput } from '$lib/server/db/paginate';
-import { paginate } from '$lib/server/db/paginate';
+import type { PaginationInput } from '#lib/server/db/paginate.js';
+import { paginate } from '#lib/server/db/paginate.js';
 import { findOrCreateThread, reopenThread } from './thread-service';
 import { addInboundMessage } from './message-service';
 

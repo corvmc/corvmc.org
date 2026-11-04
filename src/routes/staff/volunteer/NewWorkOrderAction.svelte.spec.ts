@@ -31,7 +31,7 @@ const fields = new Proxy(
 	}
 );
 
-vi.mock('$lib/remote/volunteer.remote', () => ({
+vi.mock('#lib/remote/volunteer.remote.js', () => ({
 	getVolunteerRoles: async () => roles,
 	createWorkOrder: {
 		enhance: () => ({ method: 'POST', action: '?/createWorkOrder' }),
@@ -39,8 +39,10 @@ vi.mock('$lib/remote/volunteer.remote', () => ({
 		result: undefined
 	}
 }));
-vi.mock('$lib/remote/events.remote', () => ({ searchEvents: async () => [] }));
-vi.mock('$lib/remote/maintenance-schedules.remote', () => ({ searchWorkAssets: async () => [] }));
+vi.mock('#lib/remote/events.remote.js', () => ({ searchEvents: async () => [] }));
+vi.mock('#lib/remote/maintenance-schedules.remote.js', () => ({
+	searchWorkAssets: async () => []
+}));
 
 vi.mock('$app/navigation', () => ({
 	invalidateAll: vi.fn(),

@@ -1,9 +1,9 @@
 import { sql, type SQL } from 'drizzle-orm';
-import { groupMember } from '$lib/server/db/schema/group';
-import { group } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
-import { eventRsvp } from '$lib/server/db/schema/event-rsvp';
-import { ticket } from '$lib/server/db/schema/ticket';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { eventRsvp } from '#lib/server/db/schema/event-rsvp.js';
+import { ticket } from '#lib/server/db/schema/ticket.js';
 
 // ---------------------------------------------------------------------------
 // Built-in ("system") audience definitions
@@ -25,7 +25,7 @@ import { ticket } from '$lib/server/db/schema/ticket';
 //   - This is a closed, code-defined set. It is deliberately not a
 //     user-authored rules engine.
 //
-// This module is kept free of `$lib` imports so scripts/seed-dev.ts — which
+// This module is kept free of `#lib` imports so scripts/seed-dev.ts — which
 // runs under tsx, where SvelteKit aliases don't resolve — can provision the
 // same audiences. Query and mutation helpers live in system-audiences.ts.
 // ---------------------------------------------------------------------------

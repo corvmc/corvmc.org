@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatDate, formatDateShort } from '$lib/utils/format';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatDate, formatDateShort } from '#lib/utils/format.js';
 	import {
 		retireRecurringWork,
 		updateRecurringWork,
 		type getRecurringWorkPage
-	} from '$lib/remote/maintenance-schedules.remote';
+	} from '#lib/remote/maintenance-schedules.remote.js';
 	import { every } from './every';
 
 	type Page = Awaited<ReturnType<typeof getRecurringWorkPage>>;

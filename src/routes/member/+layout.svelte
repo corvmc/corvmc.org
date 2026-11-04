@@ -15,20 +15,20 @@
 		IconSpeakerphone,
 		IconCheckbox
 	} from '@tabler/icons-svelte';
-	import AppShell from '$lib/components/layout/AppShell.svelte';
-	import Nav from '$lib/components/layout/Nav';
-	import { childHrefsFor } from '$lib/components/layout/Nav/active-nav';
-	import Avatar from '$lib/components/ui/Avatar.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
-	import { EntityViewer } from '$lib/components/ui/entity';
-	import { getMemberLayout, requireLayoutSession } from '$lib/remote/layout.remote';
+	import AppShell from '#lib/components/layout/AppShell.svelte';
+	import Nav from '#lib/components/layout/Nav/index.js';
+	import { childHrefsFor } from '#lib/components/layout/Nav/active-nav.js';
+	import Avatar from '#lib/components/ui/Avatar.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
+	import { EntityViewer } from '#lib/components/ui/entity/index.js';
+	import { getMemberLayout, requireLayoutSession } from '#lib/remote/layout.remote.js';
 	import { setMemberLayoutContext } from './layout-context';
-	import { panelTabs } from '$lib/components/layout/panel-tabs';
-	import { navTrail } from '$lib/components/layout/nav-trail';
-	import { setBreadcrumbTrail } from '$lib/components/ui/breadcrumbs';
-	import { m } from '$lib/paraglide/messages.js';
-	import { many } from '$lib/terms';
+	import { panelTabs } from '#lib/components/layout/panel-tabs.js';
+	import { navTrail } from '#lib/components/layout/nav-trail.js';
+	import { setBreadcrumbTrail } from '#lib/components/ui/breadcrumbs.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import { many } from '#lib/terms.js';
 	import {
 		activeMemberNavKey,
 		memberNavFooter,

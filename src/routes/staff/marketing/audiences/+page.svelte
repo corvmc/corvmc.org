@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { getAudiences } from '$lib/remote/marketing.remote';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import { CreateAudienceAction } from '$lib/components/actions';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { rowLink } from '$lib/actions/row-link';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import { formatDateShortYear } from '$lib/utils/format';
+	import { getAudiences } from '#lib/remote/marketing.remote.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import { CreateAudienceAction } from '#lib/components/actions/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
 
 	let audiences = $derived(await getAudiences());
 </script>

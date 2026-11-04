@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { revokeCertification } from '$lib/remote/volunteer.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { revokeCertification } from '#lib/remote/volunteer.remote.js';
 
 	/** Revoke one clearance grant, through the volunteer domain's own remote. */
 	let {

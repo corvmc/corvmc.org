@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * An invitation addressed to an email rather than to an account.
 	 *
@@ -8,10 +8,10 @@
 	 * member can learn the invitation happened at all — before it lapsed there was
 	 * no surface anywhere that said so, expired or not (#906).
 	 */
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { formatDate } from '$lib/utils/format';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { formatDate } from '#lib/utils/format.js';
 
 	let {
 		invite,

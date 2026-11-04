@@ -19,7 +19,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => chainable()),
@@ -246,7 +246,8 @@ describe('listMaintenanceSchedules', () => {
 	it('counts only places still held, and only on the open occurrence', async () => {
 		selectQueue = [[]];
 		await listMaintenanceSchedules();
-		const select = vi.mocked((await import('$lib/server/db')).db.select).mock.calls[0][0] as any;
+		const select = vi.mocked((await import('#lib/server/db/index.js')).db.select).mock
+			.calls[0][0] as any;
 		const rendered = new SQLiteSyncDialect().sqlToQuery(select.assignees as SQL).sql;
 		expect(rendered).toContain('"volunteer_signup"');
 		expect(rendered).toContain("'claimed', 'confirmed', 'completed'");

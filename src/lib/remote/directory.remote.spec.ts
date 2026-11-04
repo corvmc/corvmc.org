@@ -18,14 +18,14 @@ import type { z } from 'zod';
 const updateMemberProfile = vi.fn(async () => undefined);
 const updateBandProfile = vi.fn(async () => ({ slug: 'the-regressions' }));
 
-vi.mock('$lib/server/directory/profile-service', () => ({
+vi.mock('#lib/server/directory/profile-service.js', () => ({
 	getMemberProfileForEdit: vi.fn(async () => null),
 	updateMemberProfile: (...args: unknown[]) => updateMemberProfile(...(args as [])),
 	getBandProfileForEdit: vi.fn(async () => null),
 	updateBandProfile: (...args: unknown[]) => updateBandProfile(...(args as []))
 }));
 
-vi.mock('$lib/server/directory/directory-service', () => ({
+vi.mock('#lib/server/directory/directory-service.js', () => ({
 	listMembers: vi.fn(),
 	listBands: vi.fn(),
 	getPublicDirectory: vi.fn(),
@@ -36,7 +36,7 @@ vi.mock('$lib/server/directory/directory-service', () => ({
 	suggestSkills: vi.fn()
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => ({ id: 'user-1', name: 'Member', email: 'member@example.com' })
 }));
 
@@ -65,12 +65,12 @@ const resolveBand = vi.fn(async (ref: { slug?: string }) => {
 	};
 });
 
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: (...a: unknown[]) => resolveBand(...(a as [{ slug?: string }])),
 	requireBandRole: (...a: unknown[]) => resolveBand(...(a as [{ slug?: string }]))
 }));
 
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	listBandEventsUpcoming: vi.fn(),
 	listBandEventsPast: vi.fn(),
 	countBandPastEvents: vi.fn(),
@@ -85,11 +85,11 @@ const updateBandBasics = vi.fn(async (_bandId: string, _data: { name?: string })
 	return { slug: storedBandSlug };
 });
 
-vi.mock('$lib/server/band/band-service', () => ({
+vi.mock('#lib/server/band/band-service.js', () => ({
 	update: (...args: unknown[]) => updateBandBasics(...(args as [string, { name?: string }]))
 }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (v: unknown) => v }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: (v: unknown) => v }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 // `db` is a bare object because this suite is about validation and slug
 // behaviour, not reads. It carries a chainable `select` only so that
 // `getMemberProfileEditor` — which now assembles the teaching card server-side —
@@ -105,7 +105,7 @@ function emptySelect(): unknown {
 	});
 	return proxy;
 }
-vi.mock('$lib/server/db', () => ({ db: { select: () => emptySelect() } }));
+vi.mock('#lib/server/db/index.js', () => ({ db: { select: () => emptySelect() } }));
 
 /**
  * A faithful-enough `form()`: the real one runs the Zod schema before the
@@ -346,7 +346,7 @@ describe('saveBandProfile', () => {
 });
 
 describe('getMemberDirectory', () => {
-	const service = async () => vi.mocked(await import('$lib/server/directory/directory-service'));
+	const service = async () => vi.mocked(await import('#lib/server/directory/directory-service.js'));
 
 	it('lists members only, and narrows to instructors when asked (#2115)', async () => {
 		const svc = await service();

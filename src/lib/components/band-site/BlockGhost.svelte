@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import {
 		IconArrowUpRight,
 		IconPhoto,
@@ -8,7 +8,7 @@
 	} from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
 	import { BLOCK_SOURCES } from './block-editing';
-	import type { Block } from '$lib/types/band-page';
+	import type { Block } from '#lib/types/band-page.js';
 
 	/**
 	 * What a block looks like before it has anything in it.

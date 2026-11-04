@@ -6,8 +6,8 @@
 	 * group now, and General is simply the one with no name (#1301).
 	 */
 	import { page } from '$app/state';
-	import GroupChat from '$lib/components/inbox/GroupChat.svelte';
-	import { getGroupChatTopic } from '$lib/remote/group-chat.remote';
+	import GroupChat from '#lib/components/inbox/GroupChat.svelte';
+	import { getGroupChatTopic } from '#lib/remote/group-chat.remote.js';
 	import { getBandLayoutContext } from '../../../layout-context';
 
 	const bandLayout = getBandLayoutContext();

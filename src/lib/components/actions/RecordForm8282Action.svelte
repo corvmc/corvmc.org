@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { recordForm8282 } from '$lib/remote/inventory.remote';
+	import { recordForm8282 } from '#lib/remote/inventory.remote.js';
 	import { Field } from '../ui/Form';
-	import { toLocalDate } from '$lib/utils/format';
+	import { toLocalDate } from '#lib/utils/format.js';
 
 	const { fields } = recordForm8282;
 

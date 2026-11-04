@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import CheckboxGroup from '$lib/components/ui/Form/CheckboxGroup.svelte';
-	import { setRoleCertifications, getActiveCertifications } from '$lib/remote/volunteer.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import CheckboxGroup from '#lib/components/ui/Form/CheckboxGroup.svelte';
+	import { setRoleCertifications, getActiveCertifications } from '#lib/remote/volunteer.remote.js';
 
 	/**
 	 * What a role requires before someone can claim a shift for it.

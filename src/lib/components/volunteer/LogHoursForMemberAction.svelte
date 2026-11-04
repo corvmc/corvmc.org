@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Record hours for somebody who is not going to log them themselves.
 	 *
@@ -12,14 +12,14 @@
 	 * the log that fell outside the member's 90-day window, and the service still refuses a
 	 * date in the future for everybody.
 	 */
-	import Action from '$lib/components/ui/Action.svelte';
-	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
 	import { IconClockPlus } from '@tabler/icons-svelte';
-	import { clubToday, VOLUNTEER_HOUR_STEP } from '$lib/config';
-	import { logHoursForMember } from '$lib/remote/volunteer.remote';
+	import { clubToday, VOLUNTEER_HOUR_STEP } from '#lib/config.js';
+	import { logHoursForMember } from '#lib/remote/volunteer.remote.js';
 
 	let {
 		/**

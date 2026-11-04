@@ -49,19 +49,19 @@ function chain(): unknown {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: { select: () => chain() },
 	getRowCount: () => 0
 }));
 
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	staffCreate: vi.fn(),
 	cancel: vi.fn(),
 	ReservationConflictError: class extends Error {}
 }));
-vi.mock('$lib/server/reservation/conflict-service', () => ({ hasConflict: vi.fn() }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
-vi.mock('$lib/server/storage', () => ({ uploadFile: vi.fn(), deleteObject: vi.fn() }));
+vi.mock('#lib/server/reservation/conflict-service.js', () => ({ hasConflict: vi.fn() }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit: vi.fn() } }));
+vi.mock('#lib/server/storage.js', () => ({ uploadFile: vi.fn(), deleteObject: vi.fn() }));
 
 import {
 	listEventsNear,

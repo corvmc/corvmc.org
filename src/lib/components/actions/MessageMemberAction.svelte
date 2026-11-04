@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
 	import { IconMessage } from '@tabler/icons-svelte';
-	import { startDirectConversation } from '$lib/remote/direct-messages.remote';
-	import { DIRECT_MESSAGE_BODY_MAX } from '$lib/config';
+	import { startDirectConversation } from '#lib/remote/direct-messages.remote.js';
+	import { DIRECT_MESSAGE_BODY_MAX } from '#lib/config.js';
 
 	let { recipientId, recipientName }: { recipientId: string; recipientName: string } = $props();
 

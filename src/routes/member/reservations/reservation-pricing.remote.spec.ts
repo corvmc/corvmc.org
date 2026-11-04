@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -26,32 +26,34 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: { select: () => chainable() }
 }));
 
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	config: vi.fn(async () => 1500) // reservation.hourlyRateCents → $15/hr
 }));
 
 // `termsFor` and `getBookingTerms` come through real: they are pure, and a
 // stubbed rate resolver would let this spec pass while the resolver it is
 // standing in for returned something else. Only the config *read* is faked.
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 
 let freeHoursBalance = 0;
-vi.mock('$lib/server/finance/credit-service', () => ({
+vi.mock('#lib/server/finance/credit-service.js', () => ({
 	getBalance: vi.fn(async () => freeHoursBalance)
 }));
 
 // The wallet's subscription read goes through `db`, which this spec answers
 // with reservation rows, so only that read is replaced; the pricing is real.
 let resetAt: Date | null = new Date('2099-01-01T00:00:00Z');
-vi.mock('$lib/server/reservation/reservation-credit-service', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/reservation-credit-service')>()),
+vi.mock('#lib/server/reservation/reservation-credit-service.js', async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import('#lib/server/reservation/reservation-credit-service.js')
+	>()),
 	getFreeHoursWallet: vi.fn(async () => ({ balance: freeHoursBalance, resetAt }))
 }));
 
@@ -81,7 +83,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getReservations } = (await import('$lib/remote/reservations.remote')) as any;
+const { getReservations } = (await import('#lib/remote/reservations.remote.js')) as any;
 
 // An 8-hour booking: 8 × $15 = $120 gross.
 function eightHourRow(overrides: Record<string, unknown> = {}) {

@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { formatDate, formatCents } from '$lib/utils/format';
-	import { CancelLoanAction } from '$lib/components/actions';
-	import Button from '$lib/components/ui/Button.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import { getMemberEquipmentLoans } from '$lib/remote/inventory.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { formatDate, formatCents } from '#lib/utils/format.js';
+	import { CancelLoanAction } from '#lib/components/actions/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import { getMemberEquipmentLoans } from '#lib/remote/inventory.remote.js';
 
 	let pastPage = $state(1);
 	// The active set comes back whole; history pages, because history is the

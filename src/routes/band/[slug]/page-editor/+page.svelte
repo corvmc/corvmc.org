@@ -1,31 +1,31 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	// The canvas *is* the public page, so it needs the same stylesheet the public
 	// layout loads. Without this the `.theme-x` class resolved to nothing here and
 	// the theme picker changed the preview not at all — which was survivable while
 	// the theme was a swatch, and is not now that the pane's whole claim is that
 	// it shows what applies. The rules only ever match inside a `.theme-x`
 	// container, so importing them into the app leaks nothing.
-	import '$lib/themes/band-site/index.css';
-	import BandSiteFonts from '$lib/components/band-site/BandSiteFonts.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
+	import '#lib/themes/band-site/index.css';
+	import BandSiteFonts from '#lib/components/band-site/BandSiteFonts.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
 	import { IconAdjustments } from '@tabler/icons-svelte';
-	import BandSiteRenderer from '$lib/components/band-site/BandSiteRenderer.svelte';
-	import { blocksForPreview } from '$lib/components/band-site/block-editing';
+	import BandSiteRenderer from '#lib/components/band-site/BandSiteRenderer.svelte';
+	import { blocksForPreview } from '#lib/components/band-site/block-editing.js';
 	import { env } from '$env/dynamic/public';
-	import { bandSiteUrl } from '$lib/utils/band-site-url';
-	import { themeClass } from '$lib/utils/theme-starter';
+	import { bandSiteUrl } from '#lib/utils/band-site-url.js';
+	import { themeClass } from '#lib/utils/theme-starter.js';
 	import { getBandLayoutContext } from '../layout-context';
-	import { getBandPageEditor, saveBandPageConfig } from '$lib/remote/band-page-editor.remote';
-	import { type BandThemeValue, type Block } from '$lib/types/band-page';
-	import themeSheet from '$lib/themes/band-site/index.css?raw';
+	import { getBandPageEditor, saveBandPageConfig } from '#lib/remote/band-page-editor.remote.js';
+	import { type BandThemeValue, type Block } from '#lib/types/band-page.js';
+	import themeSheet from '#lib/themes/band-site/index.css?raw';
 	import { page } from '$app/state';
 	import { invalidateAll } from '$app/navigation';
 	import EditorShell from './EditorShell.svelte';
@@ -101,7 +101,7 @@
 
 	/**
 	 * The page arrives with every block already on it — `reconcileBlocks` in
-	 * `$lib/utils/band-site-preset` sees to that — so this editor arranges a page
+	 * `#lib/utils/band-site-preset.js` sees to that — so this editor arranges a page
 	 * rather than building one. There is no add and no delete: a block a band does
 	 * not want is one they stop publishing.
 	 */

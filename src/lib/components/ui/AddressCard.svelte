@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import QRCode from 'qrcode-svg';
 	import type { Snippet } from 'svelte';
 	import Card from './Card/Card.svelte';

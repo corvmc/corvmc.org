@@ -3,8 +3,8 @@
 	import type { Snippet } from 'svelte';
 	import { Tabs, DropdownMenu } from 'bits-ui';
 	import { IconChevronDown } from '@tabler/icons-svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import ButtonGroup from '$lib/components/ui/ButtonGroup.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import ButtonGroup from '#lib/components/ui/ButtonGroup.svelte';
 
 	/** Every tabler icon shares one props shape; borrow it from a concrete icon
 	   rather than reaching into the package's un-exported `dist/types`. */

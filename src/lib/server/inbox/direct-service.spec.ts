@@ -9,14 +9,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 //   4. Nothing here reads inbox_note.
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const emitted: [string, Record<string, unknown>][] = [];
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: {
 		emit: (name: string, payload: Record<string, unknown>) => {
 			emitted.push([name, payload]);
@@ -28,7 +28,7 @@ vi.mock('$lib/server/event-bus/event-bus', () => ({
 
 // KV is the outside service here.
 const allowRateLimited = vi.fn(async () => true);
-vi.mock('$lib/server/rate-limit', () => ({
+vi.mock('#lib/server/rate-limit.js', () => ({
 	allowRateLimited: (...a: unknown[]) => allowRateLimited(...(a as []))
 }));
 
@@ -41,7 +41,7 @@ const {
 	countDirectUnread,
 	listDirectThreads
 } = await import('./direct-service');
-const { MAX_PENDING_SENT_REQUESTS } = await import('$lib/config');
+const { MAX_PENDING_SENT_REQUESTS } = await import('#lib/config.js');
 
 const T0 = 1_750_000_000;
 

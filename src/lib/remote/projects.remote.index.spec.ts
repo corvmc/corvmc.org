@@ -11,15 +11,15 @@ vi.mock('$app/server', () => ({
 	form: () => Object.assign(async () => undefined, { __: { type: 'form' } })
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => ({ id: 'user-1' }),
 	can: async () => true,
 	requireCapability: async () => ({ id: 'user-1' })
 }));
-vi.mock('$lib/server/group/group-context', () => ({ requireProjectCommittee: vi.fn() }));
+vi.mock('#lib/server/group/group-context.js', () => ({ requireProjectCommittee: vi.fn() }));
 
 const listProjects = vi.hoisted(() => vi.fn(async (_opts: unknown) => [] as unknown[]));
-vi.mock('$lib/server/project/project-service', async (importOriginal) => ({
+vi.mock('#lib/server/project/project-service.js', async (importOriginal) => ({
 	...(await importOriginal<Record<string, unknown>>()),
 	listProjects,
 	listCommittees: vi.fn(async () => []),

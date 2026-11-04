@@ -1,27 +1,27 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import EmailInviteCard from '$lib/components/groups/EmailInviteCard.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import EmailInviteCard from '#lib/components/groups/EmailInviteCard.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import { goto, invalidateAll, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import {
 		createBand,
 		acceptInvite,
 		declineInvite,
 		getMemberBands
-	} from '$lib/remote/bands.remote';
+	} from '#lib/remote/bands.remote.js';
 
 	// The sidebar "Create Band" links point here with ?create=1 — open the modal.
 	//

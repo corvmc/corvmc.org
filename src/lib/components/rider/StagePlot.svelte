@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { riderElementKindLabels } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { riderElementKindLabels } from '#lib/config.js';
 	import { safeFieldPrefix } from './field-names';
 	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
 

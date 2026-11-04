@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
 	import { resolve } from '$app/paths';
 
 	/** Listings and the tips waiting to become one sit side by side (#1566). */

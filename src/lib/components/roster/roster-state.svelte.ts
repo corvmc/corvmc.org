@@ -1,5 +1,11 @@
-import { urlState, text, positiveInt, type UrlField, type UrlFields } from '$lib/urlState.svelte';
-import { toHref } from '$lib/utils/url-filters';
+import {
+	urlState,
+	text,
+	positiveInt,
+	type UrlField,
+	type UrlFields
+} from '#lib/urlState.svelte.js';
+import { toHref } from '#lib/utils/url-filters.js';
 
 /** The two filters every roster has: its search box and its page. */
 export interface RosterFilters {

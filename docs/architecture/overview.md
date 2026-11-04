@@ -48,7 +48,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 ```
 
 Everywhere else in server code, `db`, storage, and KV are imported directly (e.g.
-`import { db } from '$lib/server/db'`). Those imports are lazy proxies — if you use them
+`import { db } from '#lib/server/db/index.js'`). Those imports are lazy proxies — if you use them
 before `hooks.server.ts` ran (say, in a standalone script), you get an explicit error from
 `src/lib/server/db/index.ts`: `Database not initialized — call initDb(d1) in hooks.server.ts first`.
 
@@ -93,7 +93,7 @@ directly in `$derived`:
 
 ```ts
 // src/routes/member/reservations/[id]/pay/+page.svelte (inside <script lang="ts">)
-import { payReservation, getReservationPayment } from '$lib/remote/reservations.remote';
+import { payReservation, getReservationPayment } from '#lib/remote/reservations.remote.js';
 import { page } from '$app/state';
 
 let data = $derived(await getReservationPayment(page.params.id!));
@@ -433,9 +433,9 @@ const DEFAULTS: Record<string, string | number | boolean> = {
 `config('reservation.hourlyRateCents')` returns the KV value if staff have set one,
 otherwise the default. **A key belongs here only if something reads it** — the org's name,
 short name, contact email and timezone lived here for a long time while the app read
-`SITE_NAME` and `DEFAULT_TIMEZONE` from `$lib/config`, so staff had four settings fields
+`SITE_NAME` and `DEFAULT_TIMEZONE` from `#lib/config.js`, so staff had four settings fields
 that saved into a void. `site-config-consumers.spec.ts` now fails on a key with no declared
-reader; settings that never change without someone editing text belong in `$lib/config`. **Feature flags** are just `feature.*` config keys, wrapped by
+reader; settings that never change without someone editing text belong in `#lib/config.js`. **Feature flags** are just `feature.*` config keys, wrapped by
 `src/lib/server/feature-flags.ts` (`isFeatureEnabled`, `getAllFeatureFlags`,
 `requireFeature` — the latter 404s so a disabled feature is indistinguishable from a
 missing page). Current flags: `directMessages`, `bandAudio` and `cmcRadio` — and the whole mechanism is being

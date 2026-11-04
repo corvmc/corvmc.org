@@ -16,7 +16,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		update: vi.fn(() => ({
@@ -43,8 +43,8 @@ vi.mock('./work-request-service', () => ({
 	raiseFlag: vi.fn().mockResolvedValue({ id: 'flag-1', assetId: 'as-1' })
 }));
 
-vi.mock('$lib/server/media/media-service', () => ({ listFor: vi.fn().mockResolvedValue([]) }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: (k: string) => `https://cdn/${k}` }));
+vi.mock('#lib/server/media/media-service.js', () => ({ listFor: vi.fn().mockResolvedValue([]) }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: (k: string) => `https://cdn/${k}` }));
 
 import { reportDamage } from './resources-service';
 import { recordMovement } from './stock-service';

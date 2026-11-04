@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { getFormContext } from './Form.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 
 	let confirmModal: HTMLDialogElement | undefined = $state();
 	let pendingNavigation: (() => void) | null = $state(null);

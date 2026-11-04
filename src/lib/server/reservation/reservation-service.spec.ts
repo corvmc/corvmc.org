@@ -10,10 +10,10 @@ const { txSelect, txInsert, emit } = vi.hoisted(() => ({
 	emit: vi.fn()
 }));
 
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit, on: vi.fn() } }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit, on: vi.fn() } }));
 
-vi.mock('$lib/server/db', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/server/db')>();
+vi.mock('#lib/server/db/index.js', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/server/db/index.js')>();
 	return {
 		...actual,
 		db: {
@@ -31,7 +31,7 @@ vi.mock('./conflict-service', () => ({
 	hasConflict: vi.fn()
 }));
 
-vi.mock('$lib/server/finance/payment-service', () => ({
+vi.mock('#lib/server/finance/payment-service.js', () => ({
 	refund: vi.fn()
 }));
 
@@ -56,8 +56,8 @@ import {
 	ReservationAuthorizationError
 } from './reservation-service';
 import { validateBooking, hasConflict } from './conflict-service';
-import { refund } from '$lib/server/finance/payment-service';
-import { db } from '$lib/server/db';
+import { refund } from '#lib/server/finance/payment-service.js';
+import { db } from '#lib/server/db/index.js';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 

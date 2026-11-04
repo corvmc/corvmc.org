@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 type Handler = (e: { data: unknown }) => Promise<void>;
 const handlers: Record<string, Handler[]> = {};
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: {
 		on: (name: string, fn: Handler) => (handlers[name] ??= []).push(fn)
 	}
@@ -14,7 +14,7 @@ vi.mock('./vendor-fee-service', () => ({
 }));
 
 const captureException = vi.fn();
-vi.mock('$lib/server/sentry', () => ({ captureException: (e: unknown) => captureException(e) }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: (e: unknown) => captureException(e) }));
 
 const { registerMarketListeners } = await import('./market-listeners');
 registerMarketListeners();

@@ -18,15 +18,15 @@ import { user } from './db/schema/authentication';
 // columns qualified and were never affected.
 // ---------------------------------------------------------------------------
 
-vi.mock('$lib/server/db', () => ({ db: {}, getRowCount: () => 0 }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {}, getRowCount: () => 0 }));
 vi.mock('./reservation/conflict-service', () => ({
 	validateBooking: vi.fn(),
 	hasConflict: vi.fn()
 }));
-vi.mock('$lib/server/stripe', () => ({ stripe: {} }));
+vi.mock('#lib/server/stripe.js', () => ({ stripe: {} }));
 vi.mock('$app/server', () => ({ getRequestEvent: vi.fn() }));
-vi.mock('$lib/server/finance/payment-service', () => ({ checkout: vi.fn() }));
-vi.mock('$lib/server/finance/product-config-service', () => ({
+vi.mock('#lib/server/finance/payment-service.js', () => ({ checkout: vi.fn() }));
+vi.mock('#lib/server/finance/product-config-service.js', () => ({
 	getProductConfig: vi.fn(),
 	getStripeProductId: vi.fn(),
 	buildSubscriptionLineItem: vi.fn()
@@ -81,7 +81,7 @@ describe('topPositionFor', () => {
 	});
 
 	it('generates its display ladder from positionOrder', async () => {
-		const { positionOrder } = await import('$lib/config');
+		const { positionOrder } = await import('#lib/config.js');
 		const { sql: rendered } = db
 			.select({ id: user.id, role: topPositionFor(user.id) })
 			.from(user)

@@ -7,11 +7,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 const workOrderProjectId = vi.hoisted(() => vi.fn());
-vi.mock('$lib/server/volunteer/work-order-service', () => ({ workOrderProjectId }));
+vi.mock('#lib/server/volunteer/work-order-service.js', () => ({ workOrderProjectId }));
 const getJobById = vi.hoisted(() => vi.fn());
-vi.mock('$lib/server/contractor/contractor-job-service', () => ({ getJobById }));
+vi.mock('#lib/server/contractor/contractor-job-service.js', () => ({ getJobById }));
 let permitted = true;
-vi.mock('$lib/server/authorization', () => ({ can: async () => permitted }));
+vi.mock('#lib/server/authorization.js', () => ({ can: async () => permitted }));
 
 const shift = await import('./volunteer/shifts/[id]/+page.server');
 const job = await import('./contractors/jobs/[id]/+page.server');

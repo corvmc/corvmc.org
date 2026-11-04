@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { Turnstile } from 'svelte-turnstile';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { submitBandContactForm } from '$lib/remote/band-contact.remote';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { submitBandContactForm } from '#lib/remote/band-contact.remote.js';
 	import {
 		TURNSTILE_SITE_KEY,
 		TURNSTILE_RESPONSE_FIELD,
 		turnstileFailureMessage
-	} from '$lib/turnstile';
+	} from '#lib/turnstile.js';
 
 	let { slug, bandName }: { slug: string; bandName: string } = $props();
 

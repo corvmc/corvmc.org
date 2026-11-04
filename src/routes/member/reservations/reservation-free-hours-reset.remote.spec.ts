@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
+import { mockUser } from '#lib/server/db/test-factory.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 
 // #2060: free hours settle a fully covered booking at any time when its session
 // starts before the member's next reset, and pay for nothing at or after it.
@@ -29,7 +29,7 @@ function chain(): Record<string, unknown> {
 	return c;
 }
 const updates: Record<string, unknown>[] = [];
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chain(),
 		update: () => ({
@@ -38,38 +38,38 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: vi.fn(async () => false),
 	requireUser: () => testUser,
 	requireCapability: vi.fn(),
 	requireCapabilityOrOwner: vi.fn(),
 	topPositionFor: vi.fn()
 }));
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 // Ample: every booking below is fully covered wherever free hours apply at all.
 const deductCredits = vi.fn();
-vi.mock('$lib/server/finance/credit-service', () => ({
+vi.mock('#lib/server/finance/credit-service.js', () => ({
 	getBalance: vi.fn(async () => 100),
 	deductCredits: (...a: unknown[]) => deductCredits(...a)
 }));
-vi.mock('$lib/server/finance/reservation-entries', () => ({
+vi.mock('#lib/server/finance/reservation-entries.js', () => ({
 	recordReservationCash: vi.fn(),
 	recordReservationCredit: vi.fn()
 }));
 const checkout = vi.fn(async (..._a: unknown[]) => ({ checkoutUrl: 'https://pay.test/x' }));
-vi.mock('$lib/server/finance/payment-service', () => ({
+vi.mock('#lib/server/finance/payment-service.js', () => ({
 	checkout: (...a: unknown[]) => checkout(...a),
 	recordCashPayment: vi.fn(async () => ({ paymentRecordId: 'pr-0' })),
 	refund: vi.fn()
 }));
-vi.mock('$lib/server/finance/stripe-customer-service', () => ({
+vi.mock('#lib/server/finance/stripe-customer-service.js', () => ({
 	ensureStripeCustomer: vi.fn(async () => 'cus_test')
 }));
 const confirm = vi.fn();
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	confirm: (...a: unknown[]) => confirm(...a),
 	announceConfirmed: vi.fn(),
 	ReservationConflictError: class extends Error {},
@@ -95,7 +95,7 @@ vi.mock('$app/server', () => ({
 }));
 
 const { payForReservation, payReservation } =
-	(await import('$lib/remote/reservations.remote')) as any;
+	(await import('#lib/remote/reservations.remote.js')) as any;
 
 /** A one-hour booking ten days out: well before its confirmation window opens. */
 function bookTenDaysOut(resetOffsetMs: number) {

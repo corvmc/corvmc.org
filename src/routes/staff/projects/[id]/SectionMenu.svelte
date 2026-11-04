@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import { IconDots } from '@tabler/icons-svelte';
 	import {
 		deleteSectionForm,
 		renameSectionForm,
 		reorderSectionsCommand
-	} from '$lib/remote/tasks.remote';
+	} from '#lib/remote/tasks.remote.js';
 	import { stepSection } from './task-order';
 	import type { Section } from './task-view';
 

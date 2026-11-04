@@ -51,7 +51,7 @@ const mockStripe = {
 	}
 };
 
-vi.mock('$lib/server/stripe', () => ({
+vi.mock('#lib/server/stripe.js', () => ({
 	stripe: mockStripe
 }));
 

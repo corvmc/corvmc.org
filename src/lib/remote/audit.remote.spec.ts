@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { type Capability, type Position } from '$lib/config';
+import { type Capability, type Position } from '#lib/config.js';
 
 /** The global log shows every staff action on every account, so its guard is the whole story. */
 
 let currentUser: { id: string } | null = { id: 'u-staff' };
 let heldPositions: Position[] = ['staff'];
 
-vi.mock('$lib/server/authorization', async () => {
-	const config = await import('$lib/config');
+vi.mock('#lib/server/authorization.js', async () => {
+	const config = await import('#lib/config.js');
 	const holds = (cap: Capability) =>
 		heldPositions.some((p) => config.grantsCapability(config.positions[p], cap));
 	return {
@@ -23,7 +23,7 @@ const listAuditEntries = vi.fn(async (..._args: unknown[]) => ({
 	rows: [],
 	pagination: { page: 1, pageSize: 50, total: 0, totalPages: 0 }
 }));
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	listAuditEntries: (...args: unknown[]) => listAuditEntries(...args)
 }));
 

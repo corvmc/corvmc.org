@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import GrantCertificationAction from './GrantCertificationAction.svelte';
 	import {
 		getUserVolunteerProfile,
@@ -8,24 +8,24 @@
 		getUserHourLogs,
 		getMemberCertifications,
 		revokeCertification
-	} from '$lib/remote/volunteer.remote';
-	import { getUserPage } from '$lib/remote/users.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	} from '#lib/remote/volunteer.remote.js';
+	import { getUserPage } from '#lib/remote/users.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatVolunteerHours } from '$lib/config';
-	import { formatDateShortYear } from '$lib/utils/format';
-	import { Latest } from '$lib/latest.svelte';
+	import { formatVolunteerHours } from '#lib/config.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	let { id }: { id: string } = $props();
 

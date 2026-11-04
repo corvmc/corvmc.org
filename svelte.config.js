@@ -20,6 +20,11 @@ const config = {
 		}
 	},
 	kit: {
+		// `#lib` resolves through package.json `imports` for Node, tsx and Vite. This gives
+		// TypeScript the same mapping as `paths` too: resolved only through `imports`,
+		// typed ESLint (projectService) slowed superlinearly — 190 files took 299s, not
+		// ~160s, and the whole tree outran CI's lint cap (#2374).
+		alias: { '#lib': 'src/lib/index.ts', '#lib/*': 'src/lib/*' },
 		experimental: {
 			remoteFunctions: true
 		},

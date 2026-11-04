@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { hashPattern } from '$lib/utils/patterns';
-	import { imageSrc, type ImagePreset } from '$lib/utils/images';
+	import { m } from '#lib/paraglide/messages.js';
+	import { hashPattern } from '#lib/utils/patterns.js';
+	import { imageSrc, type ImagePreset } from '#lib/utils/images.js';
 	import { imageStatus, type ImageStatus } from '../image-status';
 
 	let {

@@ -1,22 +1,22 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	volunteerProfile,
 	volunteerRole,
 	volunteerRoleInterest
-} from '$lib/server/db/schema/volunteer';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/volunteer.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, count, eq, isNull, or, sql } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { DomainError } from '$lib/server/errors';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { DomainError } from '#lib/server/errors.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import { paginate, type PaginationInput, type PaginatedResult } from '#lib/server/db/paginate.js';
 import { ROLE_NAME_SEPARATOR } from './volunteer-interest-service';
 import { holdsCertificationSql } from './member-certification-service';
-import { toRosterPerson } from '$lib/server/roster/roster';
-import type { RosterPerson } from '$lib/types/roster';
-import type { MemberRef } from '$lib/types/entity';
-import { VOLUNTEER_AVAILABILITY_MAX, VOLUNTEER_NAME_MAX } from '$lib/config';
-import type { VolunteerProfile, VolunteerProfileStatus } from '$lib/server/db/schema/volunteer';
+import { toRosterPerson } from '#lib/server/roster/roster.js';
+import type { RosterPerson } from '#lib/types/roster.js';
+import type { MemberRef } from '#lib/types/entity.js';
+import { VOLUNTEER_AVAILABILITY_MAX, VOLUNTEER_NAME_MAX } from '#lib/config.js';
+import type { VolunteerProfile, VolunteerProfileStatus } from '#lib/server/db/schema/volunteer.js';
 
 // ---------------------------------------------------------------------------
 // Volunteer profiles

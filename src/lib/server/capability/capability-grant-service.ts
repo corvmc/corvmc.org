@@ -1,11 +1,11 @@
 import { eq } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { group, groupCapability } from '$lib/server/db/schema/group';
-import { volunteerRole, volunteerRoleCapability } from '$lib/server/db/schema/volunteer';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { DomainError } from '$lib/server/domain-error';
-import { positionsGrant } from '$lib/server/authorization';
-import { grantRuleFor, type Capability, type GrantCarrier } from '$lib/config';
+import { db } from '#lib/server/db/index.js';
+import { group, groupCapability } from '#lib/server/db/schema/group.js';
+import { volunteerRole, volunteerRoleCapability } from '#lib/server/db/schema/volunteer.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { positionsGrant } from '#lib/server/authorization.js';
+import { grantRuleFor, type Capability, type GrantCarrier } from '#lib/config.js';
 
 export class UngrantableCapabilityError extends DomainError {
 	readonly httpStatus = 400;

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -7,21 +7,21 @@
 		getStaffLoanDetail,
 		scheduleLoanForm as schedule,
 		checkoutLoanForm as checkout
-	} from '$lib/remote/inventory.remote';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { CancelLoanAction, MarkReturnedAction } from '$lib/components/actions';
-	import Form, { Field, SubmitButton, Select } from '$lib/components/ui/Form';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatDate, formatCents } from '$lib/utils/format';
-	import BarcodeScanner from '$lib/components/ui/BarcodeScanner.svelte';
-	import { parseScan } from '$lib/utils/scan';
+	} from '#lib/remote/inventory.remote.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { CancelLoanAction, MarkReturnedAction } from '#lib/components/actions/index.js';
+	import Form, { Field, SubmitButton, Select } from '#lib/components/ui/Form/index.js';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatDate, formatCents } from '#lib/utils/format.js';
+	import BarcodeScanner from '#lib/components/ui/BarcodeScanner.svelte';
+	import { parseScan } from '#lib/utils/scan.js';
 
 	const { fields: scheduleFields } = schedule;
 	const { fields: checkoutFields } = checkout;

@@ -4,7 +4,7 @@ import { render } from 'vitest-browser-svelte';
 import { createAttachmentKey } from 'svelte/attachments';
 import { goto } from '$app/navigation';
 import ActionHarness from './Action.test.svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 
 /**
  * The sign-in interrupt (#1999) as the two shared controls carry it: a

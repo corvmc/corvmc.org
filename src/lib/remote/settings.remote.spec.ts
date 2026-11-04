@@ -15,7 +15,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const requireCapability = vi.fn<(cap: string) => Promise<unknown>>(async () => {
 	throw new Error('403: Staff access required');
 });
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (...args: unknown[]) => requireCapability(...(args as [string]))
 }));
 
@@ -46,13 +46,13 @@ const getConfigsByPrefix = vi.fn(async (prefix: string) => {
 type ConfigWrite = { key: string; value: unknown };
 const updateSiteConfigs = vi.fn(async (_writes: ConfigWrite[]) => undefined);
 const updateSiteConfig = vi.fn(async () => undefined);
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	getConfigsByPrefix: (...args: unknown[]) => getConfigsByPrefix(...(args as [string])),
 	updateSiteConfigs: (...args: unknown[]) => updateSiteConfigs(...(args as [ConfigWrite[]])),
 	updateSiteConfig: (...args: unknown[]) => updateSiteConfig(...(args as []))
 }));
 
-vi.mock('$lib/server/volunteer/orientation-service', () => ({
+vi.mock('#lib/server/volunteer/orientation-service.js', () => ({
 	getOrientationSetting: async () => ({ roleId: '', minutes: 30, leadMinutes: 10, tasks: [] }),
 	parseOrientationTasks: (text: string) =>
 		text
@@ -60,13 +60,13 @@ vi.mock('$lib/server/volunteer/orientation-service', () => ({
 			.map((t) => t.trim())
 			.filter(Boolean)
 }));
-vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-role-service.js', () => ({
 	listVolunteerRoles: async () => []
 }));
 
 const getAllProductConfigs = vi.fn(async () => []);
 const updateProductConfig = vi.fn(async () => undefined);
-vi.mock('$lib/server/finance/product-config-service', () => ({
+vi.mock('#lib/server/finance/product-config-service.js', () => ({
 	getAllProductConfigs: () => getAllProductConfigs(),
 	updateProductConfig: (...args: unknown[]) => updateProductConfig(...(args as []))
 }));
@@ -76,7 +76,7 @@ const credentialStatus = vi.fn(async (_field: string) => ({
 	configured: true,
 	source: 'kv' as 'kv' | 'env'
 }));
-vi.mock('$lib/server/lock/ultraloc-client', () => ({
+vi.mock('#lib/server/lock/ultraloc-client.js', () => ({
 	testConnection: () => testConnection(),
 	credentialStatus: (...args: unknown[]) => credentialStatus(...(args as [string]))
 }));
@@ -85,7 +85,7 @@ vi.mock('./inbox.remote', () => ({
 	getInboxChannelConfigs: vi.fn(async () => [])
 }));
 
-vi.mock('$lib/server/lock/lock-service', () => ({
+vi.mock('#lib/server/lock/lock-service.js', () => ({
 	issueLockSelfTest: vi.fn(async () => ({ code: '1234' })),
 	revokeLockSelfTest: vi.fn(async () => undefined)
 }));
@@ -93,16 +93,16 @@ vi.mock('$lib/server/lock/lock-service', () => ({
 // `ALL_FLAGS` is the real list on purpose: `VALID_FLAGS` in settings.remote is
 // an alias of it, so mocking it out would stop this suite from catching a flag
 // that the settings page can toggle but the handler rejects.
-vi.mock('$lib/server/feature-flags', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/feature-flags')>()),
+vi.mock('#lib/server/feature-flags.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/feature-flags.js')>()),
 	getAllFeatureFlags: vi.fn(async () => ({}))
 }));
 
-vi.mock('$lib/server/finance/subscription-sync-service', () => ({
+vi.mock('#lib/server/finance/subscription-sync-service.js', () => ({
 	syncAllSubscriptions: vi.fn(async () => ({ synced: 0 }))
 }));
 
-vi.mock('$lib/server/finance/community-stats', () => ({
+vi.mock('#lib/server/finance/community-stats.js', () => ({
 	refreshCommunityStats: vi.fn(async () => undefined)
 }));
 

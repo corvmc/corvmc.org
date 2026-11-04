@@ -10,10 +10,10 @@ import { join } from 'node:path';
 
 const CLIENT_ROOT = 'src';
 
-/** `import('x')`, but not `import('./x')` or `import('$lib/x')`. */
-const LAZY = /\bimport\(\s*['"]([^.$'"][^'"]*)['"]\s*\)/g;
+/** `import('x')`, but not `import('./x')` or `import('#lib/x.js')`. */
+const LAZY = /\bimport\(\s*['"]([^.$#'"][^'"]*)['"]\s*\)/g;
 /** `from 'x'` — the same specifier reached statically anywhere is already scanned. */
-const STATIC = /\bfrom\s*['"]([^.$'"][^'"]*)['"]/g;
+const STATIC = /\bfrom\s*['"]([^.$#'"][^'"]*)['"]/g;
 
 function clientSources(): string[] {
 	return readdirSync(CLIENT_ROOT, { recursive: true, encoding: 'utf8' })

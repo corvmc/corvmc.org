@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import WorkOrderView from '$lib/components/volunteer/WorkOrderView.svelte';
-	import { getStaffShiftPage, getWorkOrderActivity } from '$lib/remote/volunteer.remote';
-	import ActivityCard from '$lib/components/project/ActivityCard.svelte';
+	import WorkOrderView from '#lib/components/volunteer/WorkOrderView.svelte';
+	import { getStaffShiftPage, getWorkOrderActivity } from '#lib/remote/volunteer.remote.js';
+	import ActivityCard from '#lib/components/project/ActivityCard.svelte';
 	import EngageContractorAction from './EngageContractorAction.svelte';
 
 	/** Work on no project; a project's work order is redirected to its task page. */

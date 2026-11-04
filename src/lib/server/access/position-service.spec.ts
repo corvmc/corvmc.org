@@ -6,22 +6,22 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 vi.mock('$app/server', () => ({ getRequestEvent: () => ({ locals: {} }) }));
 const recordAuditEntry = vi.fn(async (_entry: unknown) => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (entry: unknown) => recordAuditEntry(entry)
 }));
 
 const { setPosition, positionChangeRefusal, PositionChangeRefusedError } =
 	await import('./position-service');
-const { role, modelHasRole } = await import('$lib/server/db/schema/authorization');
-const { user } = await import('$lib/server/db/schema/authentication');
-const { getUserRoles } = await import('$lib/server/authorization');
+const { role, modelHasRole } = await import('#lib/server/db/schema/authorization.js');
+const { user } = await import('#lib/server/db/schema/authentication.js');
+const { getUserRoles } = await import('#lib/server/authorization.js');
 
 beforeEach(async () => {
 	for (const t of ['model_has_roles', 'roles', 'user']) sqlite.exec(`delete from ${t}`);

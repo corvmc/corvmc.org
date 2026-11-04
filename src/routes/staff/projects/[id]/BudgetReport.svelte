@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { attachToProjectForm, detachFromProjectForm } from '$lib/remote/projects.remote';
-	import { formatCents, formatDateShort } from '$lib/utils/format';
-	import { rowLink } from '$lib/actions/row-link';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { attachToProjectForm, detachFromProjectForm } from '#lib/remote/projects.remote.js';
+	import { formatCents, formatDateShort } from '#lib/utils/format.js';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
 	import type { ProjectDetail } from './task-view';
 

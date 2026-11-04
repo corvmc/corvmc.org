@@ -26,7 +26,7 @@ function chain(queue: () => unknown[]): unknown {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain(() => selectQueue.shift() ?? [])),
 		update: vi.fn(() => ({
@@ -43,7 +43,7 @@ vi.mock('./asset-service', () => ({
 	AssetNotFoundError: class extends Error {}
 }));
 
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: vi.fn().mockResolvedValue(undefined) }
 }));
 

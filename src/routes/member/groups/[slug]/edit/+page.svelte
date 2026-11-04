@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import { getGroupEditor } from '$lib/remote/groups.remote';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import { getGroupEditor } from '#lib/remote/groups.remote.js';
 	import GroupProfileForm from './GroupProfileForm.svelte';
 
 	// Resolved here and handed to the form as plain props. A top-level await

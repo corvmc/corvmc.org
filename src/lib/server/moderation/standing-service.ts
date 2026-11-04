@@ -1,6 +1,6 @@
-import { db } from '$lib/server/db';
-import { memberStanding } from '$lib/server/db/schema/standing';
-import type { FlagEntityType } from '$lib/server/db/schema/flag';
+import { db } from '#lib/server/db/index.js';
+import { memberStanding } from '#lib/server/db/schema/standing.js';
+import type { FlagEntityType } from '#lib/server/db/schema/flag.js';
 import { eq, and } from 'drizzle-orm';
 import {
 	standingScopes,
@@ -8,8 +8,8 @@ import {
 	STANDING_REASON_MAX,
 	type StandingScope,
 	type StandingStatus
-} from '$lib/config';
-import { DomainError } from '$lib/server/domain-error';
+} from '#lib/config.js';
+import { DomainError } from '#lib/server/domain-error.js';
 
 // ---------------------------------------------------------------------------
 // Errors

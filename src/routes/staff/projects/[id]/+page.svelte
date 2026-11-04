@@ -1,42 +1,42 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field, MoneyField } from '$lib/components/ui/Form';
-	import BallotLine from '$lib/components/ballot/BallotLine.svelte';
-	import CreateBallotAction from '$lib/components/ballot/CreateBallotAction.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field, MoneyField } from '#lib/components/ui/Form/index.js';
+	import BallotLine from '#lib/components/ballot/BallotLine.svelte';
+	import CreateBallotAction from '#lib/components/ballot/CreateBallotAction.svelte';
 	import {
 		getProjectDetail,
 		updateProjectForm,
 		setProjectStatusForm,
 		applyDutyListToProjectForm,
 		getProjectActivity
-	} from '$lib/remote/projects.remote';
+	} from '#lib/remote/projects.remote.js';
 	import {
 		isProjectArchived,
 		projectArchiveOutcomeOptions,
 		PROJECT_UNARCHIVED_STATUS,
 		surfaces
-	} from '$lib/config';
-	import { formatDateShort } from '$lib/utils/format';
+	} from '#lib/config.js';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconCheck } from '@tabler/icons-svelte';
-	import ActivityCard from '$lib/components/project/ActivityCard.svelte';
+	import ActivityCard from '#lib/components/project/ActivityCard.svelte';
 	import TaskList from './TaskList.svelte';
 	import TaskPanel from './TaskPanel.svelte';
 	import { parseFilter, type TaskFilter } from './task-view';
 	import { asDateValue } from './date-value';
-	import { toastWarnings } from '$lib/utils/toast-warnings';
+	import { toastWarnings } from '#lib/utils/toast-warnings.js';
 
 	/**
 	 * One project, run as a checklist: its work orders are the tasks, grouped in

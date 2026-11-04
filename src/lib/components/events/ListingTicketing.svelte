@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import CompTicketsAction from '$lib/components/actions/CompTicketsAction.svelte';
-	import { formatCents } from '$lib/utils/format';
-	import { priceDisplay } from '$lib/utils/event-ticketing';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import CompTicketsAction from '#lib/components/actions/CompTicketsAction.svelte';
+	import { formatCents } from '#lib/utils/format.js';
+	import { priceDisplay } from '#lib/utils/event-ticketing.js';
 
 	/**
 	 * A listing's sale as staff monitor it: price, capacity, sold and remaining,

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getEquipmentCategories } from '$lib/remote/inventory.remote';
+	import { getEquipmentCategories } from '#lib/remote/inventory.remote.js';
 
 	/**
 	 * The equipment category `<option>` list, loading its own data.

@@ -20,16 +20,16 @@ vi.mock('$app/server', () => {
 	};
 });
 
-vi.mock('$lib/server/db', () => ({ db: {}, getRowCount: () => 0 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/db/index.js', () => ({ db: {}, getRowCount: () => 0 }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => ({ id: 'usr-1' }),
 	can: async () => true,
 	requireCapability: async () => ({ id: 'staff-1' })
 }));
 
 const svc = vi.hoisted(() => ({ createShift: vi.fn(), createWorkOrder: vi.fn() }));
-vi.mock('$lib/server/volunteer/work-order-service', async (orig) => ({
+vi.mock('#lib/server/volunteer/work-order-service.js', async (orig) => ({
 	...(await orig<object>()),
 	createShift: svc.createShift,
 	createWorkOrder: svc.createWorkOrder

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import { imageSrc } from '$lib/utils/images';
-	import { fullDate } from '$lib/utils/format';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import { imageSrc } from '#lib/utils/images.js';
+	import { fullDate } from '#lib/utils/format.js';
 
 	let {
 		recaps

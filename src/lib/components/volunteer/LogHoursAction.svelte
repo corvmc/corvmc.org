@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The member's own hour log, in its three variants.
 	 *
@@ -14,11 +14,11 @@
 	 * - **fix** — a log the member is correcting. Same fields, filled in; the
 	 *   service classifies it again, as if it were new.
 	 */
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { clubToday, VOLUNTEER_HOUR_STEP, VOLUNTEER_DESCRIPTION_MAX } from '$lib/config';
-	import { submitVolunteerHours, editVolunteerHours } from '$lib/remote/volunteer.remote';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { clubToday, VOLUNTEER_HOUR_STEP, VOLUNTEER_DESCRIPTION_MAX } from '#lib/config.js';
+	import { submitVolunteerHours, editVolunteerHours } from '#lib/remote/volunteer.remote.js';
 
 	type Role = { id: string; name: string };
 	type Program = { id: string; name: string };

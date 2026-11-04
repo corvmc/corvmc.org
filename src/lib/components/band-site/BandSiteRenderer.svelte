@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
-	import type { Block, BandEpk } from '$lib/server/db/schema/band-page';
-	import { getEmbedUrl, detectPlatform } from '$lib/utils/link-platform';
-	import { formatDate, formatTime, formatCents } from '$lib/utils/format';
-	import { sanitizeBio } from '$lib/utils/markdown';
-	import { bandSiteHref } from '$lib/utils/band-site-url';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import type { Block, BandEpk } from '#lib/server/db/schema/band-page.js';
+	import { getEmbedUrl, detectPlatform } from '#lib/utils/link-platform.js';
+	import { formatDate, formatTime, formatCents } from '#lib/utils/format.js';
+	import { sanitizeBio } from '#lib/utils/markdown.js';
+	import { bandSiteHref } from '#lib/utils/band-site-url.js';
 	// NOTE: `block.imageKey` / `item.imageKey` already hold *resolved URLs* by the
 	// time they reach this component — `band-site-blocks.ts` overwrites the field
 	// in place. The name is a leftover from the DB column.
-	import { imageSrc } from '$lib/utils/images';
+	import { imageSrc } from '#lib/utils/images.js';
 	import BandContactForm from './BandContactForm.svelte';
 	import BlockChrome from './BlockChrome.svelte';
 	import BlockGhost from './BlockGhost.svelte';
@@ -101,7 +101,7 @@
 	const hasBlocks = $derived(blocks.length > 0);
 
 	// Every premium band now carries the whole block catalogue (see
-	// `$lib/utils/band-site-preset`), so a block with nothing to say must render
+	// `#lib/utils/band-site-preset.js`), so a block with nothing to say must render
 	// nothing at all rather than a bare heading over an empty grid. The hero and
 	// bio blocks fall back to the band's own name and bio instead, which is why
 	// the preset can be a constant that holds no band content.

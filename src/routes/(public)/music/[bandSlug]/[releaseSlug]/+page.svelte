@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import TrackList from '$lib/components/audio/TrackList.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import TrackList from '#lib/components/audio/TrackList.svelte';
 	import BuyPanel from './BuyPanel.svelte';
-	import { getPublicRelease } from '$lib/remote/music.remote';
-	import { releaseKindLabels } from '$lib/config';
-	import { formatTrackSummary } from '$lib/utils/audio';
-	import { formatDateYear } from '$lib/utils/format';
+	import { getPublicRelease } from '#lib/remote/music.remote.js';
+	import { releaseKindLabels } from '#lib/config.js';
+	import { formatTrackSummary } from '#lib/utils/audio.js';
+	import { formatDateYear } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { IconDisc } from '@tabler/icons-svelte';

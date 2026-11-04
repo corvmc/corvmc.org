@@ -4,13 +4,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // checkout migration. These mocks are deliberately this file's own rather than
 // shared: a spec's mock set is a fixture, and unioning it with a sibling's
 // quietly widens what each one was actually testing.
-vi.mock('$lib/server/db', () => ({ db: {} }));
-vi.mock('$lib/server/stripe', () => ({ stripe: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
+vi.mock('#lib/server/stripe.js', () => ({ stripe: {} }));
 
 const mockCheckout = vi.hoisted(() => vi.fn());
-vi.mock('$lib/server/finance/payment-service', () => ({ checkout: mockCheckout }));
+vi.mock('#lib/server/finance/payment-service.js', () => ({ checkout: mockCheckout }));
 
-vi.mock('$lib/server/finance/product-config-service', () => ({
+vi.mock('#lib/server/finance/product-config-service.js', () => ({
 	getProductConfig: vi.fn(async () => ({ unitAmountCents: 500 })),
 	buildSubscriptionLineItem: vi.fn(async (_key, unitAmount, quantity, interval) => ({
 		price_data: {

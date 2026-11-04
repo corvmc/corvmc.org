@@ -1,11 +1,11 @@
 <script lang="ts">
-	import '$lib/themes/band-site/index.css';
-	import BandSiteFonts from '$lib/components/band-site/BandSiteFonts.svelte';
-	import { getBandSiteData } from '$lib/remote/band-site.remote';
-	import { bandSitePath, bandSiteUrl } from '$lib/utils/band-site-url';
+	import '#lib/themes/band-site/index.css';
+	import BandSiteFonts from '#lib/components/band-site/BandSiteFonts.svelte';
+	import { getBandSiteData } from '#lib/remote/band-site.remote.js';
+	import { bandSitePath, bandSiteUrl } from '#lib/utils/band-site-url.js';
 	import { env } from '$env/dynamic/public';
 	import { page } from '$app/state';
-	import { themeClass } from '$lib/utils/theme-starter';
+	import { themeClass } from '#lib/utils/theme-starter.js';
 
 	let { children } = $props();
 	let data = $derived(await getBandSiteData(page.params.slug!));

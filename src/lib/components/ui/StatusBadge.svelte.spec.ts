@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import StatusBadge, { labels, statusLabel } from './StatusBadge.svelte';
 import StatusBadgeHarness from './StatusBadge.test.svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 import '../../../routes/layout.css';
 
 /**

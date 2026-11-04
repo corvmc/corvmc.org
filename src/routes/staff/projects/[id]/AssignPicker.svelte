@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { Popover } from 'bits-ui';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { errorMessage } from '$lib/error-message';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 	import AssignedSummary from './AssignedSummary.svelte';
 	import AssignPickerBody from './AssignPickerBody.svelte';
 	import type { Task } from './task-view';

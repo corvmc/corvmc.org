@@ -37,7 +37,7 @@
  * the body passes through rather than of documents.
  */
 
-import { getBucket } from '$lib/server/storage';
+import { getBucket } from '#lib/server/storage.js';
 
 let _bucket: R2Bucket;
 

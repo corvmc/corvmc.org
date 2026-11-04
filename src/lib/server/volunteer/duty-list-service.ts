@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
-import { toGenericRef } from '$lib/server/entity/refs';
+import { db } from '#lib/server/db/index.js';
+import { toGenericRef } from '#lib/server/entity/refs.js';
 import { and, asc, count, eq, inArray, isNull, ne, notInArray, sql, type SQL } from 'drizzle-orm';
 import { placePendingWorkOrders } from './retime-work-orders';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import {
 	dutyList,
 	dutyListItem,
@@ -10,11 +10,11 @@ import {
 	volunteerSignup,
 	workOrder,
 	workTask
-} from '$lib/server/db/schema/volunteer';
-import { eventListing } from '$lib/server/db/schema/event';
-import { production } from '$lib/server/db/schema/production';
-import { project } from '$lib/server/db/schema/project';
-import { group } from '$lib/server/db/schema/group';
+} from '#lib/server/db/schema/volunteer.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { production } from '#lib/server/db/schema/production.js';
+import { project } from '#lib/server/db/schema/project.js';
+import { group } from '#lib/server/db/schema/group.js';
 import {
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
 	VOLUNTEER_SHIFT_MAX_MINUTES,
@@ -22,17 +22,17 @@ import {
 	VOLUNTEER_SHIFT_TITLE_MAX,
 	dutyListAnchorLabels,
 	eventDutyListAnchors
-} from '$lib/config';
-import type { DutyListAnchor, DutyListAutoApplyTrigger, WorkDoneCondition } from '$lib/config';
-import type { DutyList, DutyListItem } from '$lib/server/db/schema/volunteer';
-import { chunk, chunkSize } from '$lib/server/utils/chunk';
+} from '#lib/config.js';
+import type { DutyListAnchor, DutyListAutoApplyTrigger, WorkDoneCondition } from '#lib/config.js';
+import type { DutyList, DutyListItem } from '#lib/server/db/schema/volunteer.js';
+import { chunk, chunkSize } from '#lib/server/utils/chunk.js';
 import {
 	ensureSections,
 	nextTaskOrders,
 	sectionNameKey,
 	projectSubject
-} from '$lib/server/project/project-section-service';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
+} from '#lib/server/project/project-section-service.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 
 /**
  * Project templates (the `duty_list` tables): a named set of work orders,
@@ -285,7 +285,7 @@ export interface DutyListItemRow extends DutyListItem {
 	/** The owning committee's name, or null for staff's. */
 	groupName: string | null;
 	/** The role as a record, so the item can link to it. */
-	role: import('$lib/types/entity').GenericRef;
+	role: import('#lib/types/entity.js').GenericRef;
 }
 
 export interface DutyListDetail {
@@ -560,7 +560,7 @@ export async function removeDutyListItem(id: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
- * Column count for `chunkSize` — see `$lib/server/utils/chunk`. A six-item list
+ * Column count for `chunkSize` — see `#lib/server/utils/chunk.js`. A six-item list
  * with eight tasks each clears D1's parameter ceiling on the task insert alone,
  * so the chunking is not optional.
  */

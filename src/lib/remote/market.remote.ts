@@ -2,16 +2,19 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { verifyTurnstile } from '$lib/server/turnstile';
-import { requireCapability } from '$lib/server/authorization';
-import { requireCommitteeMember, requireProjectCommittee } from '$lib/server/group/group-context';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { verifyTurnstile } from '#lib/server/turnstile.js';
+import { requireCapability } from '#lib/server/authorization.js';
+import {
+	requireCommitteeMember,
+	requireProjectCommittee
+} from '#lib/server/group/group-context.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import {
 	DEFAULT_TIMEZONE,
 	LONG_TEXT_MAX,
 	MARKET_MAX_TABLES_REQUESTED,
 	SHORT_TEXT_MAX
-} from '$lib/config';
+} from '#lib/config.js';
 import {
 	decideApplication,
 	getApplicationWindow,
@@ -30,13 +33,13 @@ import {
 	setTableLabel,
 	submitApplication,
 	withdrawApplication
-} from '$lib/server/market/market-service';
+} from '#lib/server/market/market-service.js';
 import {
 	getVendorFee,
 	startVendorFeeCheckout,
 	VendorFeeAmountError
-} from '$lib/server/market/vendor-fee-service';
-import { mapDomainError } from '$lib/server/errors';
+} from '#lib/server/market/vendor-fee-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
 
 /**
  * Market vendor applications. docs/specs/shipped/market-vendors-spec.md.

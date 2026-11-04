@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { Turnstile } from 'svelte-turnstile';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
-	import { getPublicAudiences, subscribeToAudience } from '$lib/remote/marketing.remote';
-	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form, { Field, SubmitButton } from '#lib/components/ui/Form/index.js';
+	import { getPublicAudiences, subscribeToAudience } from '#lib/remote/marketing.remote.js';
+	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '#lib/turnstile.js';
 
 	const { fields } = subscribeToAudience;
 

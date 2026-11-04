@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { isValidationError } from '@sveltejs/kit';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 // Regression: `createClosure` called `issue.endsAt(...)` without throwing it.
 // Constructing an issue is inert — only `invalid()` throws — so an inverted date
@@ -12,8 +12,8 @@ import { DEFAULT_TIMEZONE } from '$lib/config';
 const insertValues = vi.fn(async () => undefined);
 const db = { insert: vi.fn(() => ({ values: insertValues })), select: vi.fn() };
 
-vi.mock('$lib/server/db', () => ({ db }));
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/db/index.js', () => ({ db }));
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: vi.fn(async () => ({ id: 's-1' }))
 }));
 

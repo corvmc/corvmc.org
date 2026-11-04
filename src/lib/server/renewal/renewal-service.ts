@@ -1,14 +1,14 @@
-import { db } from '$lib/server/db';
-import { renewal, type NewRenewal, type Renewal } from '$lib/server/db/schema/renewal';
-import { user } from '$lib/server/db/schema/authentication';
-import { media, mediaAttachment } from '$lib/server/db/schema/media';
+import { db } from '#lib/server/db/index.js';
+import { renewal, type NewRenewal, type Renewal } from '#lib/server/db/schema/renewal.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { media, mediaAttachment } from '#lib/server/db/schema/media.js';
 import { and, eq, gte, lte } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import { listFor } from '$lib/server/media/media-service';
-import { putPrivateObject, validatePrivateUpload } from '$lib/server/private-storage';
-import { renewalDocumentKey, sanitizeFilename } from '$lib/server/storage-keys';
-import type { RenewalKind } from '$lib/config';
-import { byDeadline, due, type Deadline } from '$lib/utils/deadline';
+import { DomainError } from '#lib/server/domain-error.js';
+import { listFor } from '#lib/server/media/media-service.js';
+import { putPrivateObject, validatePrivateUpload } from '#lib/server/private-storage.js';
+import { renewalDocumentKey, sanitizeFilename } from '#lib/server/storage-keys.js';
+import type { RenewalKind } from '#lib/config.js';
+import { byDeadline, due, type Deadline } from '#lib/utils/deadline.js';
 
 export class RenewalNotFoundError extends DomainError {
 	readonly httpStatus = 404;

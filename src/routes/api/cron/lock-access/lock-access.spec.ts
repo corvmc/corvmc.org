@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockRunDailyLockJob = vi.fn();
 
-vi.mock('$lib/server/lock/lock-service', () => ({
+vi.mock('#lib/server/lock/lock-service.js', () => ({
 	runDailyLockJob: (...args: unknown[]) => mockRunDailyLockJob(...args)
 }));
 

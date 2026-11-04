@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { toast } from 'svelte-sonner';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import DateTimeStep from '$lib/components/reservations/booking/DateTimeStep.svelte';
-	import ConfirmStep from '$lib/components/reservations/booking/ConfirmStep.svelte';
-	import PaymentStep from '$lib/components/reservations/booking/PaymentStep.svelte';
-	import { bookBandReservation } from '$lib/remote/reservations.remote';
-	import { goToCheckout } from '$lib/utils/checkout-navigation';
+	import Action from '#lib/components/ui/Action.svelte';
+	import DateTimeStep from '#lib/components/reservations/booking/DateTimeStep.svelte';
+	import ConfirmStep from '#lib/components/reservations/booking/ConfirmStep.svelte';
+	import PaymentStep from '#lib/components/reservations/booking/PaymentStep.svelte';
+	import { bookBandReservation } from '#lib/remote/reservations.remote.js';
+	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
 
 	/**
 	 * Booking the practice space for a band.

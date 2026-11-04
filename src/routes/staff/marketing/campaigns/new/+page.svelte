@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import AudiencePicker from '../AudiencePicker.svelte';
 	import EventScopePicker from '../EventScopePicker.svelte';
 	import CampaignPreview from '../CampaignPreview.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import { errorMessage } from '$lib/error-message';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import { createDraft, createAndSend, createAndSchedule } from '$lib/remote/marketing.remote';
+	import { errorMessage } from '#lib/error-message.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import { createDraft, createAndSend, createAndSchedule } from '#lib/remote/marketing.remote.js';
 
 	let subject = $state('');
 	let markdownBody = $state('');

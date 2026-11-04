@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge, { type BadgeVariant } from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { formatDateShortYear } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge, { type BadgeVariant } from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { formatDateShortYear } from '#lib/utils/format.js';
 	import {
 		getMemberInvites,
 		resendMemberInviteForm,
 		revokeMemberInviteForm
-	} from '$lib/remote/users.remote';
+	} from '#lib/remote/users.remote.js';
 	import InviteMemberAction from '../InviteMemberAction.svelte';
 	import MemberViews from '../MemberViews.svelte';
 

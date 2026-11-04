@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 const resolveContactSheetToken = vi.fn();
-vi.mock('$lib/server/directory/contact-sheet-service', () => ({
+vi.mock('#lib/server/directory/contact-sheet-service.js', () => ({
 	resolveContactSheetToken: (t: string) => resolveContactSheetToken(t)
 }));
 
@@ -14,7 +14,7 @@ const deliverPosterArt = vi.fn();
 class PosterRequestNotFoundError extends Error {
 	readonly httpStatus = 404;
 }
-vi.mock('$lib/server/production/artifact-request-service', () => ({
+vi.mock('#lib/server/production/artifact-request-service.js', () => ({
 	deliverPosterArt: (input: unknown) => deliverPosterArt(input),
 	PosterRequestNotFoundError
 }));

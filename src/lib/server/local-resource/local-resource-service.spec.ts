@@ -36,7 +36,7 @@ const nextSelect = () => (selectResults.length > 0 ? selectResults.shift()! : []
 const dialect = new SQLiteSyncDialect();
 const renderWhere = (index: number) => dialect.sqlToQuery(whereArgs[index] as SQL);
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain(nextSelect)),
 		insert: vi.fn(() => ({
@@ -59,7 +59,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const emit = vi.fn(async (..._args: unknown[]) => undefined);
-vi.mock('$lib/server/event-bus', () => ({ domainEvents: { emit } }));
+vi.mock('#lib/server/event-bus/index.js', () => ({ domainEvents: { emit } }));
 
 const svc = await import('./local-resource-service');
 

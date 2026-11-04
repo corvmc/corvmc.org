@@ -16,15 +16,15 @@
 		IconPlug,
 		IconPackage
 	} from '@tabler/icons-svelte';
-	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
-	import { EntityViewer } from '$lib/components/ui/entity';
-	import AppShell from '$lib/components/layout/AppShell.svelte';
-	import Nav from '$lib/components/layout/Nav';
-	import { panelTabs } from '$lib/components/layout/panel-tabs';
-	import { navTrail } from '$lib/components/layout/nav-trail';
-	import { setBreadcrumbTrail } from '$lib/components/ui/breadcrumbs';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
+	import { EntityViewer } from '#lib/components/ui/entity/index.js';
+	import AppShell from '#lib/components/layout/AppShell.svelte';
+	import Nav from '#lib/components/layout/Nav/index.js';
+	import { panelTabs } from '#lib/components/layout/panel-tabs.js';
+	import { navTrail } from '#lib/components/layout/nav-trail.js';
+	import { setBreadcrumbTrail } from '#lib/components/ui/breadcrumbs.js';
 	import { page } from '$app/state';
-	import { getBandLayout, requireBandLayoutSession } from '$lib/remote/layout.remote';
+	import { getBandLayout, requireBandLayoutSession } from '#lib/remote/layout.remote.js';
 	import { setBandLayoutContext } from './layout-context';
 	import {
 		activeBandNavKey,

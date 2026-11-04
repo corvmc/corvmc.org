@@ -16,7 +16,7 @@
  * were sitting at the end of a sixteen-row list where the useful ones are.
  */
 import { resolve } from '$app/paths';
-import { activeNavKey, type NavNode } from '$lib/components/layout/Nav/active-nav';
+import { activeNavKey, type NavNode } from '#lib/components/layout/Nav/active-nav.js';
 
 export type BandNavKey =
 	| 'dashboard'

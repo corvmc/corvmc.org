@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import {
 		CancelReservationAction,
 		ConfirmReservationAction,
 		ConfirmWaitlistedAction
-	} from '$lib/components/actions';
-	import ReservationCardShell from '$lib/components/reservations/ReservationCardShell.svelte';
-	import ReservationSummary from '$lib/components/reservations/ReservationSummary.svelte';
-	import type { Reservation } from '$lib/server/db/schema';
+	} from '#lib/components/actions/index.js';
+	import ReservationCardShell from '#lib/components/reservations/ReservationCardShell.svelte';
+	import ReservationSummary from '#lib/components/reservations/ReservationSummary.svelte';
+	import type { Reservation } from '#lib/server/db/schema.js';
 	import { resolve } from '$app/paths';
-	import UnconfirmedNotice from '$lib/components/reservations/UnconfirmedNotice.svelte';
-	import { withinConfirmationWindow } from '$lib/config';
-	import { memberPayAction } from '$lib/utils/reservation-actions';
-	import { payForReservation } from '$lib/remote/reservations.remote';
+	import UnconfirmedNotice from '#lib/components/reservations/UnconfirmedNotice.svelte';
+	import { withinConfirmationWindow } from '#lib/config.js';
+	import { memberPayAction } from '#lib/utils/reservation-actions.js';
+	import { payForReservation } from '#lib/remote/reservations.remote.js';
 
 	let {
 		reservation,

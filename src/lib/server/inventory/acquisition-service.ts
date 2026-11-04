@@ -1,28 +1,28 @@
 import {
 	syncAcquisitionInKind,
 	syncAcquisitionSpend
-} from '$lib/server/finance/in-kind-acquisition';
-import { db } from '$lib/server/db';
+} from '#lib/server/finance/in-kind-acquisition.js';
+import { db } from '#lib/server/db/index.js';
 import {
 	acquisition,
 	acquisitionLine,
 	equipmentCategory,
 	inventoryItem,
 	stockMovement
-} from '$lib/server/db/schema/inventory';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/inventory.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { listFor } from '$lib/server/media/media-service';
-import { isReceiptKey } from '$lib/server/storage-keys';
+import { listFor } from '#lib/server/media/media-service.js';
+import { isReceiptKey } from '#lib/server/storage-keys.js';
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
 import { recordMovement, signedQuantity } from './stock-service';
 import { createAsset, AssetTagTakenError } from './asset-service';
-import { inventoryAsset } from '$lib/server/db/schema/inventory';
-import { DomainError } from '$lib/server/domain-error';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { type AcquisitionKind } from '$lib/config';
-import type { EquipmentCondition } from '$lib/config';
-import { chunk, chunkSize } from '$lib/server/utils/chunk';
+import { inventoryAsset } from '#lib/server/db/schema/inventory.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { type AcquisitionKind } from '#lib/config.js';
+import type { EquipmentCondition } from '#lib/config.js';
+import { chunk, chunkSize } from '#lib/server/utils/chunk.js';
 
 /**
  * How stock arrives — purchase, donation or grant.
@@ -268,7 +268,7 @@ export class UnknownItemError extends DomainError {
 }
 
 /**
- * Column counts for `chunkSize` — see `$lib/server/utils/chunk`. Three numbers
+ * Column counts for `chunkSize` — see `#lib/server/utils/chunk.js`. Three numbers
  * rather than one because the row budget falls as the row gets wider.
  */
 const LINE_COLUMNS = 5;

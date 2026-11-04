@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import CheckboxGroup from '$lib/components/ui/Form/CheckboxGroup.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { applyToGroups } from '$lib/remote/group-applications.remote';
-	import { groupApplicationQuestions, APPLICATION_ANSWER_MAX } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import CheckboxGroup from '#lib/components/ui/Form/CheckboxGroup.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { applyToGroups } from '#lib/remote/group-applications.remote.js';
+	import { groupApplicationQuestions, APPLICATION_ANSWER_MAX } from '#lib/config.js';
 
 	/**
 	 * One application can name several committees, so this is one dialog for

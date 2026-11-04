@@ -3,11 +3,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 /** Day boundaries and listing filters are SQL, so this runs against a real SQLite. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { listMemberSummary, listRoomDays, listUpcomingShows } =
 	await import('./staff-dashboard-service');

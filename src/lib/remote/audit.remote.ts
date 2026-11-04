@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { query } from '$app/server';
-import { requireCapability } from '$lib/server/authorization';
-import { listAuditEntries } from '$lib/server/audit/audit-service';
-import { auditActions } from '$lib/types/audit';
+import { requireCapability } from '#lib/server/authorization.js';
+import { listAuditEntries } from '#lib/server/audit/audit-service.js';
+import { auditActions } from '#lib/types/audit.js';
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { addDutyForm, setDutyDoneForm } from '$lib/remote/tasks.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { addDutyForm, setDutyDoneForm } from '#lib/remote/tasks.remote.js';
 	import InlineAddField from './InlineAddField.svelte';
 	import type { Task } from './task-view';
 

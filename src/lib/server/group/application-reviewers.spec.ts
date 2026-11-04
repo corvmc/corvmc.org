@@ -6,16 +6,16 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const holders = vi.fn(async (_cap: string) => [
 	{ id: 'usr-coord', name: 'Coordinator', email: 'coord@example.com' }
 ]);
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	listUsersWithCapability: (cap: string) => holders(cap)
 }));
 
@@ -25,15 +25,15 @@ const CLUB = 'grp-club';
 const COMMITTEE = 'grp-committee';
 
 async function member(id: string, groupId: string, userId: string, role: string, status: string) {
-	const { groupMember } = await import('$lib/server/db/schema/group');
+	const { groupMember } = await import('#lib/server/db/schema/group.js');
 	await testDb.insert(groupMember).values({ id, groupId, userId, role, status } as never);
 }
 
 beforeEach(async () => {
 	holders.mockClear();
 	for (const t of ['group_member', '"group"', 'user']) sqlite.exec(`delete from ${t}`);
-	const { user } = await import('$lib/server/db/schema/authentication');
-	const { group } = await import('$lib/server/db/schema/group');
+	const { user } = await import('#lib/server/db/schema/authentication.js');
+	const { group } = await import('#lib/server/db/schema/group.js');
 	await testDb.insert(user).values(
 		['applicant', 'owner', 'admin', 'plain', 'invited'].map((n) => ({
 			id: `usr-${n}`,

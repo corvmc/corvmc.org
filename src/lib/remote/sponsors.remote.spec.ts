@@ -9,7 +9,7 @@ const requireCapability = vi.fn(async (cap: string) => {
 	if (!held.has(cap)) throw new Error(`403: ${cap}`);
 	return { id: 'acting-staff' };
 });
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap)
 }));
 
@@ -23,7 +23,7 @@ const service = {
 	updateSponsorship: vi.fn(async () => undefined),
 	deleteSponsorship: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/sponsor/sponsor-service', () => service);
+vi.mock('#lib/server/sponsor/sponsor-service.js', () => service);
 
 const credits = {
 	listPlacementsForSponsor: vi.fn(async () => []),
@@ -33,8 +33,8 @@ const credits = {
 	setSponsorLogo: vi.fn(async () => undefined),
 	removeSponsorLogo: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/sponsor/credit-service', () => credits);
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/sponsor/credit-service.js', () => credits);
+vi.mock('#lib/server/storage.js', () => ({
 	validateUpload: () => null,
 	resolveImageUrl: (k: string | null) => (k ? `https://img/${k}` : null)
 }));

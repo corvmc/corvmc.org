@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Starting a conversation, of either kind.
 	 *
@@ -12,13 +12,13 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconPlus, IconUsers } from '@tabler/icons-svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { startConversation } from '$lib/remote/inbox.remote';
-	import { startDirectConversation } from '$lib/remote/direct-messages.remote';
-	import { searchMessageRecipients } from '$lib/remote/directory.remote';
-	import { DIRECT_MESSAGE_BODY_MAX } from '$lib/config';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { startConversation } from '#lib/remote/inbox.remote.js';
+	import { startDirectConversation } from '#lib/remote/direct-messages.remote.js';
+	import { searchMessageRecipients } from '#lib/remote/directory.remote.js';
+	import { DIRECT_MESSAGE_BODY_MAX } from '#lib/config.js';
 	import { refreshConversations } from './list-state.svelte';
 
 	let { canMessageMembers = false }: { canMessageMembers?: boolean } = $props();

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getByToken } from '$lib/server/group/group-invite-service';
+import { getByToken } from '#lib/server/group/group-invite-service.js';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const result = await getByToken(params.token);

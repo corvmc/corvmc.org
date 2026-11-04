@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { getSpendReport } from '$lib/remote/inventory.remote';
-	import { formatCents } from '$lib/utils/format';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { contractorTradeLabels, type ContractorTrade } from '$lib/config';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { getSpendReport } from '#lib/remote/inventory.remote.js';
+	import { formatCents } from '#lib/utils/format.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { contractorTradeLabels, type ContractorTrade } from '#lib/config.js';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
+	import { withQuery } from '#lib/utils/with-query.js';
 
 	/**
 	 * What the collective spent on stock, per category, over a window.

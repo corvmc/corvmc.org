@@ -5,21 +5,21 @@
  * here takes ids the caller has already been authorized for — the guard lives in
  * `audio.remote.ts`, and nothing in this module checks who is asking.
  */
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	audioRelease,
 	audioTrack,
 	releasePurchase,
 	type ReleaseStatus
-} from '$lib/server/db/schema/audio';
-import { group } from '$lib/server/db/schema/group';
-import { mediaAttachment, media } from '$lib/server/db/schema/media';
+} from '#lib/server/db/schema/audio.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { mediaAttachment, media } from '#lib/server/db/schema/media.js';
 import { and, asc, count, desc, eq, inArray, isNull, max, sql } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import { deleteAudioObject } from './audio-storage';
-import { detachSlot } from '$lib/server/media/media-service';
-import { resolveImageUrl } from '$lib/server/storage';
-import { AUDIO_MIN_PRICE_CENTS, RADIO_PRO_ATTESTATION, type ReleaseKind } from '$lib/config';
+import { detachSlot } from '#lib/server/media/media-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { AUDIO_MIN_PRICE_CENTS, RADIO_PRO_ATTESTATION, type ReleaseKind } from '#lib/config.js';
 import { radioAttested } from './radio-attestation';
 
 export { radioAttested, radioAttestationExpiresAt } from './radio-attestation';

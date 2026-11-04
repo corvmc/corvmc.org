@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Work orders — work that needs doing with nobody booked to do it.
 	 *
@@ -17,16 +17,16 @@
 	 * itself, because the completion cron keys on `ends_at` and can never reach a
 	 * row that never had one.
 	 */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { IconCheck } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
-	import { formatDateShort, toLocalDateTime } from '$lib/utils/format';
-	import { scheduleWorkOrder, resolveWorkOrder } from '$lib/remote/volunteer.remote';
-	import { NO_ROLE_LABEL } from '$lib/utils/shift-label';
+	import { formatDateShort, toLocalDateTime } from '#lib/utils/format.js';
+	import { scheduleWorkOrder, resolveWorkOrder } from '#lib/remote/volunteer.remote.js';
+	import { NO_ROLE_LABEL } from '#lib/utils/shift-label.js';
 
 	type WorkOrder = {
 		id: string;

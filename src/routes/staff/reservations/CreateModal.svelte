@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import {
@@ -8,16 +8,16 @@
 		getStaffSlots,
 		checkConflicts,
 		createReservation
-	} from '$lib/remote/reservations.remote';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field, Select } from '$lib/components/ui/Form';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { errorMessage } from '$lib/error-message';
-	import { retryQuery } from '$lib/utils/retry-query';
-	import { formatSlotTime } from '$lib/utils/format';
-	import { clubToday } from '$lib/config';
+	} from '#lib/remote/reservations.remote.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field, Select } from '#lib/components/ui/Form/index.js';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import ConflictWarnings from '#lib/components/reservations/ConflictWarnings.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
+	import { retryQuery } from '#lib/utils/retry-query.js';
+	import { formatSlotTime } from '#lib/utils/format.js';
+	import { clubToday } from '#lib/config.js';
 
 	const { fields } = createReservation;
 

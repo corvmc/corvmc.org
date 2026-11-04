@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import { decideAppeal, reopenAppeal } from '$lib/remote/appeals.remote';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatDateTime } from '$lib/utils/format';
-	import { appealVerdictLabels, type AppealOutcome } from '$lib/config';
+	import { decideAppeal, reopenAppeal } from '#lib/remote/appeals.remote.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatDateTime } from '#lib/utils/format.js';
+	import { appealVerdictLabels, type AppealOutcome } from '#lib/config.js';
 
 	interface Appeal {
 		body: string;

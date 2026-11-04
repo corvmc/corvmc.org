@@ -14,14 +14,14 @@ const refreshable = (name: string) => (arg: unknown) => ({
 vi.mock('./direct-messages.remote', () => ({
 	getMyMessageThread: refreshable('getMyMessageThread')
 }));
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: vi.fn(async () => ({
 		user: { id: 'member-1', name: 'Robin' },
 		group: { id: 'group-1', name: 'Real Book Club' },
 		role: 'member'
 	}))
 }));
-vi.mock('$lib/server/inbox/group-chat-service', () => ({
+vi.mock('#lib/server/inbox/group-chat-service.js', () => ({
 	getGroupChat: vi.fn(),
 	postToGroupChat: vi.fn(async () => undefined),
 	markGroupChatRead: vi.fn(),

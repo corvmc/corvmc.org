@@ -8,11 +8,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 //   3. Restoring is an UPDATE. Absence of a row means good standing, so
 //      restoring someone who was never restricted must not insert one.
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const {
 	getStanding,

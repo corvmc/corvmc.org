@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { entityLabels } from '$lib/terms';
+	import { m } from '#lib/paraglide/messages.js';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { entityLabels } from '#lib/terms.js';
 	import { resolve } from '$app/paths';
-	import { getEquipmentReportQueue } from '$lib/remote/work-requests.remote';
-	import TriageTable from '$lib/components/ui/TriageTable.svelte';
+	import { getEquipmentReportQueue } from '#lib/remote/work-requests.remote.js';
+	import TriageTable from '#lib/components/ui/TriageTable.svelte';
 
 	const stages = [
 		{ value: 'untriaged', label: m.staff_inventory_problems_needs_triage() },

@@ -1,12 +1,12 @@
-import { db } from '$lib/server/db';
-import { rider, riderElement, riderInput } from '$lib/server/db/schema/rider';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { eventBand } from '$lib/server/db/schema/event';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { rider, riderElement, riderInput } from '#lib/server/db/schema/rider.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { eventBand } from '#lib/server/db/schema/event.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { compareElements, type RiderElementView } from './rider-service';
-import type { RiderInputSource, RiderStandType } from '$lib/config';
+import type { RiderInputSource, RiderStandType } from '#lib/config.js';
 
 /**
  * The night's input list, not each act's: the desk has one channel count and it

@@ -1,17 +1,17 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { role, modelHasRole } from '$lib/server/db/schema/authorization';
-import { user } from '$lib/server/db/schema/authentication';
-import { group, groupCapability, groupMember } from '$lib/server/db/schema/group';
-import { volunteerRole, volunteerRoleCapability } from '$lib/server/db/schema/volunteer';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import { capabilitySet } from '$lib/server/authorization';
+import { db } from '#lib/server/db/index.js';
+import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group, groupCapability, groupMember } from '#lib/server/db/schema/group.js';
+import { volunteerRole, volunteerRoleCapability } from '#lib/server/db/schema/volunteer.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import { capabilitySet } from '#lib/server/authorization.js';
 import {
 	listClearances,
 	listForUser,
 	type ClearanceRow,
 	type HeldCertification
-} from '$lib/server/volunteer/member-certification-service';
+} from '#lib/server/volunteer/member-certification-service.js';
 import {
 	grantRuleFor,
 	positionLabels,
@@ -19,10 +19,10 @@ import {
 	positionsGranting,
 	type Capability,
 	type Position
-} from '$lib/config';
-import type { MemberRef } from '$lib/types/entity';
-import type { RosterPerson } from '$lib/types/roster';
-import { toRosterPerson } from '$lib/server/roster/roster';
+} from '#lib/config.js';
+import type { MemberRef } from '#lib/types/entity.js';
+import type { RosterPerson } from '#lib/types/roster.js';
+import { toRosterPerson } from '#lib/server/roster/roster.js';
 
 /** How far ahead "lapsing" looks on this page. Not `CERT_EXPIRY_WARNING_DAYS`, which is 60. */
 export const ACCESS_LAPSING_DAYS = 30;

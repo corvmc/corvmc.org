@@ -2,20 +2,20 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { can, requireCapability, requireUser } from '$lib/server/authorization';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { mapDomainError } from '$lib/server/errors';
-import { requireSurface } from '$lib/surfaces';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { requireSurface } from '#lib/surfaces.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import {
 	ballotKinds,
 	BALLOT_DESCRIPTION_MAX,
 	BALLOT_REASON_MAX,
 	BALLOT_TITLE_MAX,
 	DEFAULT_TIMEZONE
-} from '$lib/config';
-import { getBallotChain } from '$lib/server/project/decision-chain';
-import { listCommittees } from '$lib/server/project/project-service';
+} from '#lib/config.js';
+import { getBallotChain } from '#lib/server/project/decision-chain.js';
+import { listCommittees } from '#lib/server/project/project-service.js';
 import {
 	ballotStatusOf,
 	cancelBallot,
@@ -37,7 +37,7 @@ import {
 	setElectorOverride,
 	updateDraft,
 	type BallotDetail
-} from '$lib/server/ballot/ballot-service';
+} from '#lib/server/ballot/ballot-service.js';
 
 /**
  * Ballots. See docs/specs/shipped/formal-balloting-spec.md for who may do what.

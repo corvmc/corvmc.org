@@ -10,19 +10,19 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	// `await import`, not `require`: the helper is TypeScript, which Node's
 	// require cannot load. An async hoisted factory still resolves before the
 	// mock below is asked for a database.
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const riderSummaries = vi.fn(async () => [] as { name: string; empty: boolean }[]);
-vi.mock('$lib/server/band/rider-service', () => ({
+vi.mock('#lib/server/band/rider-service.js', () => ({
 	getEventRiderSummaries: () => riderSummaries()
 }));
 
 const uploaded = vi.fn(async (_buf: ArrayBuffer, key: string) => key);
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	uploadFile: (buf: ArrayBuffer, key: string) => uploaded(buf, key),
 	resolveImageUrl: (key: string | null) => (key ? `https://media.test/${key}` : null)
 }));

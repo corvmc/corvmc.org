@@ -7,11 +7,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			const out = [];
@@ -26,20 +26,20 @@ vi.mock('$app/server', () => ({
 		throw new Error('outside a request');
 	}
 }));
-vi.mock('$lib/server/volunteer/volunteer-profile-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-profile-service.js', () => ({
 	requireActiveVolunteer: vi.fn(async () => undefined)
 }));
 const emit = vi.hoisted(() => vi.fn(async (..._a: unknown[]) => undefined));
 vi.mock('$lib/server/events', () => ({ domainEvents: { emit } }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit } }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
-vi.mock('$lib/server/volunteer/member-certification-service', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit } }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/volunteer/member-certification-service.js', () => ({
 	missingRequirements: vi.fn(async () => [])
 }));
 
 const tasks = await import('./project-task-service');
-const shifts = await import('$lib/server/volunteer/work-order-service');
-const signups = await import('$lib/server/volunteer/volunteer-signup-service');
+const shifts = await import('#lib/server/volunteer/work-order-service.js');
+const signups = await import('#lib/server/volunteer/volunteer-signup-service.js');
 
 const PROJECT = 'proj-1';
 const OTHER = 'proj-2';

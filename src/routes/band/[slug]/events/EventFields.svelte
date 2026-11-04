@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { RemoteFormField } from '@sveltejs/kit';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import LineupEditor, { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
-	import { searchBandsForLineup } from '$lib/remote/band-events.remote';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
+	import { searchBandsForLineup } from '#lib/remote/band-events.remote.js';
 	import {
 		formatDate,
 		formatDollars,
 		formatTime,
 		toLocalDate,
 		toLocalTime
-	} from '$lib/utils/format';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import { priceDisplay } from '$lib/utils/event-ticketing';
-	import { imageSrc } from '$lib/utils/images';
+	} from '#lib/utils/format.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import { priceDisplay } from '#lib/utils/event-ticketing.js';
+	import { imageSrc } from '#lib/utils/images.js';
 
 	/**
 	 * Every field of a band event, in one place.

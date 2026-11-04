@@ -1,44 +1,44 @@
-import { captureException } from '$lib/server/sentry';
-import { recordFreeTicketSale } from '$lib/server/finance/ticket-entries';
-import { sellerFor } from '$lib/server/ticket/ticket-seller';
+import { captureException } from '#lib/server/sentry.js';
+import { recordFreeTicketSale } from '#lib/server/finance/ticket-entries.js';
+import { sellerFor } from '#lib/server/ticket/ticket-seller.js';
 import { z } from 'zod';
 import { historyArgs } from './_history';
-import { listEventHistory } from '$lib/server/event/event-history';
-import { creditsForEvent } from '$lib/server/sponsor/credit-service';
+import { listEventHistory } from '#lib/server/event/event-history.js';
+import { creditsForEvent } from '#lib/server/sponsor/credit-service.js';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form, command } from './_remote';
-import { getEventRiderSummaries } from '$lib/server/band/rider-service';
-import { getBillInputList } from '$lib/server/band/bill-input-list-service';
-import { config } from '$lib/server/site-config/site-config-service';
-import { can, requireCapability, requireUser } from '$lib/server/authorization';
-import { requireListingReader, requireListingWriter } from '$lib/server/event/listing-guard';
-import { projectOfEvent } from '$lib/server/production/production-scope';
-import { getProjectBurn, listCommittees } from '$lib/server/project/project-service';
-import { listShowDeliverables } from '$lib/server/volunteer/deliverables-service';
-import { mapDomainError } from '$lib/server/errors';
-import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
-import { rsvpClosedReason } from '$lib/server/event/rsvp-availability';
-import { listDutyLists } from '$lib/server/volunteer/duty-list-service';
-import { holdsSpace, listVenues as listLiveVenues } from '$lib/server/venue/venue-service';
-import { getProductionByEvent } from '$lib/server/production/production-service';
+import { getEventRiderSummaries } from '#lib/server/band/rider-service.js';
+import { getBillInputList } from '#lib/server/band/bill-input-list-service.js';
+import { config } from '#lib/server/site-config/site-config-service.js';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
+import { requireListingReader, requireListingWriter } from '#lib/server/event/listing-guard.js';
+import { projectOfEvent } from '#lib/server/production/production-scope.js';
+import { getProjectBurn, listCommittees } from '#lib/server/project/project-service.js';
+import { listShowDeliverables } from '#lib/server/volunteer/deliverables-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { listRsvpsForUser } from '#lib/server/event/rsvp-service.js';
+import { rsvpClosedReason } from '#lib/server/event/rsvp-availability.js';
+import { listDutyLists } from '#lib/server/volunteer/duty-list-service.js';
+import { holdsSpace, listVenues as listLiveVenues } from '#lib/server/venue/venue-service.js';
+import { getProductionByEvent } from '#lib/server/production/production-service.js';
 import {
 	listEventPhotos,
 	listRecentRecaps,
 	recapClosedReason,
 	MAX_PHOTOS_PER_EVENT,
 	MAX_PHOTOS_PER_UPLOAD
-} from '$lib/server/event/event-photo-service';
-import { recapUploadAccess } from '$lib/server/event/recap-access';
-import { getPublicSetTimes, getRunOfShow } from '$lib/server/production/run-of-show-service';
-import { getSettlement } from '$lib/server/production/settlement-service';
-import { getHostShift } from '$lib/server/production/host-service';
-import { listProgramGroupOptions } from '$lib/server/group/group-service';
+} from '#lib/server/event/event-photo-service.js';
+import { recapUploadAccess } from '#lib/server/event/recap-access.js';
+import { getPublicSetTimes, getRunOfShow } from '#lib/server/production/run-of-show-service.js';
+import { getSettlement } from '#lib/server/production/settlement-service.js';
+import { getHostShift } from '#lib/server/production/host-service.js';
+import { listProgramGroupOptions } from '#lib/server/group/group-service.js';
 import {
 	listRequests as listArtifactRequests,
 	requestableActs as listRequestableActs
-} from '$lib/server/production/artifact-request-service';
-import { listWorkOrders as listOpenWorkOrders } from '$lib/server/volunteer/work-order-service';
+} from '#lib/server/production/artifact-request-service.js';
+import { listWorkOrders as listOpenWorkOrders } from '#lib/server/volunteer/work-order-service.js';
 import {
 	bandRefColumns,
 	memberRefColumns,
@@ -47,8 +47,8 @@ import {
 	toEventRef,
 	toMemberRef,
 	toReservationRef
-} from '$lib/server/entity/refs';
-import type { ReservationRef } from '$lib/types/entity';
+} from '#lib/server/entity/refs.js';
+import type { ReservationRef } from '#lib/types/entity.js';
 import {
 	create,
 	update,
@@ -72,24 +72,24 @@ import {
 	listMemberPastShows,
 	type MemberShowRow,
 	countMemberPastShows
-} from '$lib/server/event/event-service';
+} from '#lib/server/event/event-service.js';
 import {
 	getConflictDetails,
 	getValidationWarnings
-} from '$lib/server/reservation/conflict-service';
+} from '#lib/server/reservation/conflict-service.js';
 import {
 	buildDateInTz,
 	buildTimeRangeInTz,
 	formatDateInTz
-} from '$lib/server/reservation/timezone';
+} from '#lib/server/reservation/timezone.js';
 import {
 	createEventSeries,
 	getByEvent,
 	getEventSeries,
 	cancel as cancelSeries
-} from '$lib/server/reservation/recurring-series-service';
-import { buildRRule, getOccurrences } from '$lib/server/reservation/rrule-helpers';
-import { RECURRING_FREQUENCIES } from '$lib/server/db/schema/recurring';
+} from '#lib/server/reservation/recurring-series-service.js';
+import { buildRRule, getOccurrences } from '#lib/server/reservation/rrule-helpers.js';
+import { RECURRING_FREQUENCIES } from '#lib/server/db/schema/recurring.js';
 import {
 	getTicketsRemaining,
 	getTicketsSold,
@@ -103,42 +103,46 @@ import {
 	countTicketsForEmail,
 	checkIn,
 	cancelTicket as cancelTicketService
-} from '$lib/server/ticket/ticket-service';
-import { getEventDoorTakings, isOnTheDoor, type DoorTakings } from '$lib/server/ticket/door-sale';
+} from '#lib/server/ticket/ticket-service.js';
+import {
+	getEventDoorTakings,
+	isOnTheDoor,
+	type DoorTakings
+} from '#lib/server/ticket/door-sale.js';
 import {
 	createRsvp,
 	cancelRsvp as cancelRsvpService,
 	getUserRsvp,
 	countRsvps
-} from '$lib/server/event/rsvp-service';
-import { publicEventStatuses, eventStatuses } from '$lib/server/db/schema/event';
-import { getStanding } from '$lib/server/moderation/standing-service';
-import { isSustainingMember as checkSustainingMember } from '$lib/server/finance/subscription-service';
-import { checkout } from '$lib/server/finance/payment-service';
-import { buildLineItem } from '$lib/server/finance/product-config-service';
-import { validateTicketSplit } from '$lib/finance/ticket-split';
-import { FREE_TICKETS_PER_EMAIL, TICKET_COLLECTIVE_SHARE_BPS } from '$lib/config';
-import { resolveImageUrl } from '$lib/server/storage';
-import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { venue } from '$lib/server/db/schema/venue';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/event/rsvp-service.js';
+import { publicEventStatuses, eventStatuses } from '#lib/server/db/schema/event.js';
+import { getStanding } from '#lib/server/moderation/standing-service.js';
+import { isSustainingMember as checkSustainingMember } from '#lib/server/finance/subscription-service.js';
+import { checkout } from '#lib/server/finance/payment-service.js';
+import { buildLineItem } from '#lib/server/finance/product-config-service.js';
+import { validateTicketSplit } from '#lib/finance/ticket-split.js';
+import { FREE_TICKETS_PER_EMAIL, TICKET_COLLECTIVE_SHARE_BPS } from '#lib/config.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { db } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { venue } from '#lib/server/db/schema/venue.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, not, inArray, notInArray, sql } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
+import { containsLiteral } from '#lib/server/db/like.js';
 import {
 	eventListing,
 	createEventSchema,
 	eventKinds,
 	lineupSchema
-} from '$lib/server/db/schema/event';
-import { group } from '$lib/server/db/schema/group';
-import { eventSources } from '$lib/config';
+} from '#lib/server/db/schema/event.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { eventSources } from '#lib/config.js';
 import { randomUUID } from 'crypto';
-import { hasEventEnded } from '$lib/utils/event-time';
-import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '$lib/config';
-import { getCalendarTotals } from '$lib/server/event/calendar-totals-service';
-import { formatDateShortYear } from '$lib/utils/format';
-import { renderMarkdown } from '$lib/utils/markdown';
+import { hasEventEnded } from '#lib/utils/event-time.js';
+import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '#lib/config.js';
+import { getCalendarTotals } from '#lib/server/event/calendar-totals-service.js';
+import { formatDateShortYear } from '#lib/utils/format.js';
+import { renderMarkdown } from '#lib/utils/markdown.js';
 import { getShifts, getVolunteerRoles } from './volunteer.remote';
 import { getPublicGigGuide } from './calendar.remote';
 

@@ -12,16 +12,16 @@ const listSponsorshipDeadlinesBetween = vi.fn(
 	async (_from: string, _to: string) => [] as unknown[]
 );
 
-vi.mock('$lib/server/grant/grant-service', () => ({ listGrantDeadlinesBetween }));
-vi.mock('$lib/server/sponsor/sponsor-service', () => ({ listSponsorshipDeadlinesBetween }));
-vi.mock('$lib/server/inventory/loan-service', () => ({
+vi.mock('#lib/server/grant/grant-service.js', () => ({ listGrantDeadlinesBetween }));
+vi.mock('#lib/server/sponsor/sponsor-service.js', () => ({ listSponsorshipDeadlinesBetween }));
+vi.mock('#lib/server/inventory/loan-service.js', () => ({
 	listLoansDueBetween: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/volunteer/volunteer-signup-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-signup-service.js', () => ({
 	listSignupsStartingBetween: vi.fn(async () => []),
 	listCompletionsAwaitingFeedback: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 const { reminders } = await import('./registry');
 

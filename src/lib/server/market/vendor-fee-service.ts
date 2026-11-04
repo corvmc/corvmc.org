@@ -1,11 +1,11 @@
 import type Stripe from 'stripe';
 import { and, eq, isNotNull, isNull } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { eventListing } from '$lib/server/db/schema/event';
-import { marketVendor } from '$lib/server/db/schema/market';
-import { DomainError } from '$lib/server/domain-error';
-import { checkout, refund } from '$lib/server/finance/payment-service';
-import { buildLineItem } from '$lib/server/finance/product-config-service';
+import { db } from '#lib/server/db/index.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { marketVendor } from '#lib/server/db/schema/market.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { checkout, refund } from '#lib/server/finance/payment-service.js';
+import { buildLineItem } from '#lib/server/finance/product-config-service.js';
 
 /**
  * Market vendor table fees (#1502). The fee is fixed on the vendor row at

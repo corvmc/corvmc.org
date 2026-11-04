@@ -17,7 +17,7 @@ vi.mock('postmark', () => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({ env: mockEnv }));
-vi.mock('$lib/server/sentry', () => ({ captureException: captureExceptionMock }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: captureExceptionMock }));
 
 import { sendEmailWithTemplate, sendInboxReply, sendBroadcastBatch } from './postmark-client';
 

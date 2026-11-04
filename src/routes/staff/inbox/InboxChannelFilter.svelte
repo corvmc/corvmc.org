@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The channel filter, owning its own query.
 	 *
@@ -13,8 +13,8 @@
 	 */
 	import { DropdownMenu } from 'bits-ui';
 	import { IconCheck, IconChevronDown, IconInbox } from '@tabler/icons-svelte';
-	import { getInboxEnabledChannels } from '$lib/remote/inbox.remote';
-	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
+	import { getInboxEnabledChannels } from '#lib/remote/inbox.remote.js';
+	import { channelIcon, channelLabel } from '#lib/components/inbox/channels.js';
 
 	let { value = '', onselect }: { value?: string; onselect: (channel: string) => void } = $props();
 

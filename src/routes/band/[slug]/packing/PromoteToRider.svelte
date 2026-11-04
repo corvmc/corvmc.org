@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { promotePackingItems } from '$lib/remote/packing.remote';
-	import { riderElementKindLabels } from '$lib/config';
-	import type { PackingListView } from '$lib/server/band/packing-service';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { promotePackingItems } from '#lib/remote/packing.remote.js';
+	import { riderElementKindLabels } from '#lib/config.js';
+	import type { PackingListView } from '#lib/server/band/packing-service.js';
 	import { IconArrowUpRight } from '@tabler/icons-svelte';
 
 	/**

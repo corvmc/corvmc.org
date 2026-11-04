@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { EntityRef } from '$lib/types/entity';
+	import type { EntityRef } from '#lib/types/entity.js';
 	import EntityAvatar from './EntityAvatar.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
 	import {
@@ -12,7 +12,7 @@
 		toneFor
 	} from './registry';
 	import { getEntityViewer } from './context';
-	import { entityHref } from '$lib/utils/entity-href';
+	import { entityHref } from '#lib/utils/entity-href.js';
 
 	/**
 	 * One record's identity: its glyph or avatar, its name, the qualifiers that

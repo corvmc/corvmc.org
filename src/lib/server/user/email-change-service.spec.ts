@@ -5,12 +5,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * `WHERE` over `verification`, which a mocked `db` would agree with either way.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
 // better-sqlite3 has no `batch`; sequential is enough to exercise the writes.
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: new Proxy(testDb, {
 		get: (target, prop, receiver) =>
 			prop === 'batch'
@@ -24,36 +24,36 @@ vi.mock('$lib/server/db', () => ({
 vi.mock('$env/dynamic/private', () => ({ env: { BETTER_AUTH_SECRET: 'test-secret' } }));
 
 const allowRateLimited = vi.fn(async () => true);
-vi.mock('$lib/server/rate-limit', () => ({
+vi.mock('#lib/server/rate-limit.js', () => ({
 	allowRateLimited: (...a: unknown[]) => allowRateLimited(...(a as []))
 }));
 
 const dispatchEmailOnly = vi.fn(async () => undefined);
-vi.mock('$lib/server/notification/dispatcher', () => ({
+vi.mock('#lib/server/notification/dispatcher.js', () => ({
 	dispatchEmailOnly: (...a: unknown[]) => dispatchEmailOnly(...(a as []))
 }));
 
 const linkExistingSubscriberToUser = vi.fn(async () => null);
 const moveLinkedSubscriberEmail = vi.fn(async () => 'none');
-vi.mock('$lib/server/marketing/subscriber-service', () => ({
+vi.mock('#lib/server/marketing/subscriber-service.js', () => ({
 	linkExistingSubscriberToUser: (...a: unknown[]) => linkExistingSubscriberToUser(...(a as [])),
 	moveLinkedSubscriberEmail: (...a: unknown[]) => moveLinkedSubscriberEmail(...(a as []))
 }));
 
 const updateCustomer = vi.fn(async () => ({}));
-vi.mock('$lib/server/stripe', () => ({
+vi.mock('#lib/server/stripe.js', () => ({
 	stripe: { customers: { update: (...a: unknown[]) => updateCustomer(...(a as [])) } }
 }));
 
 const recordAuditEntry = vi.fn(async () => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...(a as []))
 }));
 
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const svc = await import('./email-change-service');
-const { user, session } = await import('$lib/server/db/schema/authentication');
+const { user, session } = await import('#lib/server/db/schema/authentication.js');
 const { eq } = await import('drizzle-orm');
 
 const MEMBER = 'usr-member';

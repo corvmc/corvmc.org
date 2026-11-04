@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Projects shows each staffer the views their capabilities allow (#2101).
 let held: string[] = [];
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: async (cap: string) => held.includes(cap)
 }));
 

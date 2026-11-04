@@ -1,53 +1,53 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { invalidateAll } from '$app/navigation';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
-	import LineupEditor, { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
-	import ListingEditForm from '$lib/components/events/ListingEditForm.svelte';
-	import ListingPosterCard from '$lib/components/events/ListingPosterCard.svelte';
-	import ListingQrCard from '$lib/components/events/ListingQrCard.svelte';
-	import RecurringSeriesBar from '$lib/components/events/RecurringSeriesBar.svelte';
-	import RepeatEventAction from '$lib/components/events/RepeatEventAction.svelte';
-	import SpaceHoldCard from '$lib/components/events/SpaceHoldCard.svelte';
-	import ListingTicketing from '$lib/components/events/ListingTicketing.svelte';
-	import DoorSalesCard from '$lib/components/events/DoorSalesCard.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
+	import ListingEditForm from '#lib/components/events/ListingEditForm.svelte';
+	import ListingPosterCard from '#lib/components/events/ListingPosterCard.svelte';
+	import ListingQrCard from '#lib/components/events/ListingQrCard.svelte';
+	import RecurringSeriesBar from '#lib/components/events/RecurringSeriesBar.svelte';
+	import RepeatEventAction from '#lib/components/events/RepeatEventAction.svelte';
+	import SpaceHoldCard from '#lib/components/events/SpaceHoldCard.svelte';
+	import ListingTicketing from '#lib/components/events/ListingTicketing.svelte';
+	import DoorSalesCard from '#lib/components/events/DoorSalesCard.svelte';
 	import {
 		PublishEventAction,
 		UnpublishEventAction,
 		CancelEventAction,
 		DeleteEventAction
-	} from '$lib/components/actions';
+	} from '#lib/components/actions/index.js';
 	import {
 		getEventHistory,
 		getStaffEventPage,
 		setStaffEventLineup
-	} from '$lib/remote/events.remote';
-	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
+	} from '#lib/remote/events.remote.js';
+	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
 	import {
 		approveListing,
 		rejectListing,
 		searchBandsForListing
-	} from '$lib/remote/community-events.remote';
-	import { rowLink } from '$lib/actions/row-link';
+	} from '#lib/remote/community-events.remote.js';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import RecapPhotos from './RecapPhotos.svelte';
 	import RecapText from './RecapText.svelte';
 	import EventRsvps from './EventRsvps.svelte';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import { formatTime, fullDate } from '$lib/utils/format';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import { formatTime, fullDate } from '#lib/utils/format.js';
 
 	/**
 	 * The listing — every source, any staffer — and where `entity-href` sends

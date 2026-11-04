@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { FORM_8282_DUE_DAYS, form8282Status, isWithinLookback, needsAttention } from './form-8282';
-import { toLocalDate } from '$lib/utils/format';
+import { toLocalDate } from '#lib/utils/format.js';
 
 /**
  * The date arithmetic is the whole risk in this rule: an off-by-one on either
