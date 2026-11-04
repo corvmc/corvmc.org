@@ -20,6 +20,9 @@ overrides:
   socket.io-parser@>=4.0.0 <4.2.7: ^4.2.7
 
 patchedDependencies:
+  '@sveltejs/kit@3.1.1':
+    hash: my6qbfjciq2fkhm5yd7aouuzqm
+    path: patches/@sveltejs__kit@3.1.1.patch
   svelte@5.57.3:
     hash: xgf3bsngbnzdiqefwf2xhrgage
     path: patches/svelte@5.57.3.patch
@@ -39,7 +42,7 @@ importers:
         version: 3.12.4
       '@sentry/sveltekit':
         specifier: ^11.10.0
-        version: 11.10.0(@cloudflare/workers-types@5.20261006.1)(@sveltejs/kit@3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))(wrangler@4.148.0(@cloudflare/workers-types@5.20261006.1)(@types/node@26.6.5))
+        version: 11.10.0(@cloudflare/workers-types@5.20261006.1)(@sveltejs/kit@3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))(wrangler@4.148.0(@cloudflare/workers-types@5.20261006.1)(@types/node@26.6.5))
       '@stripe/stripe-js':
         specifier: ^9.17.0
         version: 9.17.0
@@ -63,7 +66,7 @@ importers:
         version: 9.0.2
       bits-ui:
         specifier: ^2.19.5
-        version: 2.19.5(@internationalized/date@3.12.4)(@sveltejs/kit@3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))
+        version: 2.19.5(@internationalized/date@3.12.4)(@sveltejs/kit@3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -145,10 +148,10 @@ importers:
         version: 1.63.0
       '@sveltejs/adapter-cloudflare':
         specifier: ^8.0.2
-        version: 8.0.2(@sveltejs/kit@3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(wrangler@4.148.0(@cloudflare/workers-types@5.20261006.1)(@types/node@26.6.5))
+        version: 8.0.2(@sveltejs/kit@3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(wrangler@4.148.0(@cloudflare/workers-types@5.20261006.1)(@types/node@26.6.5))
       '@sveltejs/kit':
         specifier: ^3.1.1
-        version: 3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+        version: 3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
       '@sveltejs/load-config':
         specifier: ^0.2.2
         version: 0.2.3
@@ -178,7 +181,7 @@ importers:
         version: 5.1.0(@vitest/browser@5.1.0)(vitest@5.1.0)
       better-auth:
         specifier: ~1.7.16
-        version: 1.7.16(@opentelemetry/api@1.9.1)(@prisma/client@5.22.0)(@sveltejs/kit@3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(drizzle-kit@1.0.0-rc.3)(drizzle-orm@1.0.0-rc.3(@cloudflare/workers-types@5.20261006.1)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.20.0)(better-sqlite3@13.0.3)(pg@8.21.0)(postgres@3.4.9)(valibot@1.5.0(typescript@6.0.3))(zod@4.6.5))(pg@8.21.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vitest@5.1.0)
+        version: 1.7.16(@opentelemetry/api@1.9.1)(@prisma/client@5.22.0)(@sveltejs/kit@3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(drizzle-kit@1.0.0-rc.3)(drizzle-orm@1.0.0-rc.3(@cloudflare/workers-types@5.20261006.1)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.20.0)(better-sqlite3@13.0.3)(pg@8.21.0)(postgres@3.4.9)(valibot@1.5.0(typescript@6.0.3))(zod@4.6.5))(pg@8.21.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vitest@5.1.0)
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -6828,7 +6831,7 @@ snapshots:
       magic-string: 0.30.21
       svelte: 5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1)
 
-  '@sentry/sveltekit@11.10.0(@cloudflare/workers-types@5.20261006.1)(@sveltejs/kit@3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))(wrangler@4.148.0(@cloudflare/workers-types@5.20261006.1)(@types/node@26.6.5))':
+  '@sentry/sveltekit@11.10.0(@cloudflare/workers-types@5.20261006.1)(@sveltejs/kit@3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))(wrangler@4.148.0(@cloudflare/workers-types@5.20261006.1)(@types/node@26.6.5))':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@sentry/bundler-plugins': 11.10.0
@@ -6840,7 +6843,7 @@ snapshots:
       '@sentry/server-utils': 11.10.0
       '@sentry/svelte': 11.10.0(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))
       '@sveltejs/acorn-typescript': 1.0.13(acorn@8.19.0)
-      '@sveltejs/kit': 3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+      '@sveltejs/kit': 3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
       acorn: 8.19.0
       magic-string: 0.30.21
       sorcery: 1.0.0
@@ -6874,14 +6877,14 @@ snapshots:
     dependencies:
       acorn: 8.19.0
 
-  '@sveltejs/adapter-cloudflare@8.0.2(@sveltejs/kit@3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(wrangler@4.148.0(@cloudflare/workers-types@5.20261006.1)(@types/node@26.6.5))':
+  '@sveltejs/adapter-cloudflare@8.0.2(@sveltejs/kit@3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(wrangler@4.148.0(@cloudflare/workers-types@5.20261006.1)(@types/node@26.6.5))':
     dependencies:
       '@cloudflare/workers-types': 5.20261006.1
       '@rolldown/pluginutils': 1.0.1
-      '@sveltejs/kit': 3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+      '@sveltejs/kit': 3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
       wrangler: 4.148.0(@cloudflare/workers-types@5.20261006.1)(@types/node@26.6.5)
 
-  '@sveltejs/kit@3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))':
+  '@sveltejs/kit@3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
       '@standard-schema/spec': 1.1.0
@@ -7501,7 +7504,7 @@ snapshots:
 
   bcrypt-ts@9.0.2: {}
 
-  better-auth@1.7.16(@opentelemetry/api@1.9.1)(@prisma/client@5.22.0)(@sveltejs/kit@3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(drizzle-kit@1.0.0-rc.3)(drizzle-orm@1.0.0-rc.3(@cloudflare/workers-types@5.20261006.1)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.20.0)(better-sqlite3@13.0.3)(pg@8.21.0)(postgres@3.4.9)(valibot@1.5.0(typescript@6.0.3))(zod@4.6.5))(pg@8.21.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vitest@5.1.0):
+  better-auth@1.7.16(@opentelemetry/api@1.9.1)(@prisma/client@5.22.0)(@sveltejs/kit@3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(drizzle-kit@1.0.0-rc.3)(drizzle-orm@1.0.0-rc.3(@cloudflare/workers-types@5.20261006.1)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.20.0)(better-sqlite3@13.0.3)(pg@8.21.0)(postgres@3.4.9)(valibot@1.5.0(typescript@6.0.3))(zod@4.6.5))(pg@8.21.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vitest@5.1.0):
     dependencies:
       '@better-auth/core': 1.7.16(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(@opentelemetry/api@1.9.1)(better-call@1.4.5(zod@4.6.5))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.5)
       '@better-auth/drizzle-adapter': 1.7.16(@better-auth/core@1.7.16(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(@opentelemetry/api@1.9.1)(better-call@1.4.5(zod@4.6.5))(jose@6.2.12)(kysely@0.29.6)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(drizzle-orm@1.0.0-rc.3(@cloudflare/workers-types@5.20261006.1)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.20.0)(better-sqlite3@13.0.3)(pg@8.21.0)(postgres@3.4.9)(valibot@1.5.0(typescript@6.0.3))(zod@4.6.5))
@@ -7522,7 +7525,7 @@ snapshots:
       zod: 4.6.5
     optionalDependencies:
       '@prisma/client': 5.22.0
-      '@sveltejs/kit': 3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+      '@sveltejs/kit': 3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
       drizzle-kit: 1.0.0-rc.3
       drizzle-orm: 1.0.0-rc.3(@cloudflare/workers-types@5.20261006.1)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.20.0)(better-sqlite3@13.0.3)(pg@8.21.0)(postgres@3.4.9)(valibot@1.5.0(typescript@6.0.3))(zod@4.6.5)
       pg: 8.21.0
@@ -7553,15 +7556,15 @@ snapshots:
 
   binaryen@130.0.0: {}
 
-  bits-ui@2.19.5(@internationalized/date@3.12.4)(@sveltejs/kit@3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1)):
+  bits-ui@2.19.5(@internationalized/date@3.12.4)(@sveltejs/kit@3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1)):
     dependencies:
       '@floating-ui/core': 1.8.0
       '@floating-ui/dom': 1.8.0
       '@internationalized/date': 3.12.4
       esm-env: 1.2.2
-      runed: 0.35.1(@sveltejs/kit@3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))
+      runed: 0.35.1(@sveltejs/kit@3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))
       svelte: 5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1)
-      svelte-toolbelt: 0.10.6(@sveltejs/kit@3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))
+      svelte-toolbelt: 0.10.6(@sveltejs/kit@3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))
       tabbable: 6.5.0
     transitivePeerDependencies:
       - '@sveltejs/kit'
@@ -9637,14 +9640,14 @@ snapshots:
       esm-env: 1.2.2
       svelte: 5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1)
 
-  runed@0.35.1(@sveltejs/kit@3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1)):
+  runed@0.35.1(@sveltejs/kit@3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1)):
     dependencies:
       dequal: 2.0.3
       esm-env: 1.2.2
       lz-string: 1.5.0
       svelte: 5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1)
     optionalDependencies:
-      '@sveltejs/kit': 3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+      '@sveltejs/kit': 3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
 
   sade@1.8.1:
     dependencies:
@@ -9998,10 +10001,10 @@ snapshots:
       runed: 0.28.0(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))
       svelte: 5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1)
 
-  svelte-toolbelt@0.10.6(@sveltejs/kit@3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1)):
+  svelte-toolbelt@0.10.6(@sveltejs/kit@3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1)):
     dependencies:
       clsx: 2.1.1
-      runed: 0.35.1(@sveltejs/kit@3.1.1(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))
+      runed: 0.35.1(@sveltejs/kit@3.1.1(patch_hash=my6qbfjciq2fkhm5yd7aouuzqm)(@opentelemetry/api@1.9.1)(@sveltejs/vite-plugin-svelte@7.3.1(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(svelte@5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1))
       style-to-object: 1.0.14
       svelte: 5.57.3(patch_hash=xgf3bsngbnzdiqefwf2xhrgage)(@typescript-eslint/types@8.71.1)
     transitivePeerDependencies:

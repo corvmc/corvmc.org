@@ -913,9 +913,16 @@ if it's broadly useful.
 
 ### Patched dependencies
 
-`pnpm.patchedDependencies` in `package.json`, sources in `patches/`. Two of them:
+`pnpm.patchedDependencies` in `package.json`, sources in `patches/`. Three of them:
 
 - **`yargs@17.7.2`** — drops `"type": "module"` so its CJS entry resolves.
+- **`@sveltejs/kit@3.1.1`** — `flushSync` around the first `apply_navigation_result` in
+  `initialize` (`src/runtime/client/client.js`). Kit writes the render tree into `$state` and mounts
+  in the same tick, so under `experimental.async` the write's batch is still open when Root first
+  renders. A boundary's contents rendered in a later batch then read the tree's `child` as
+  undefined, and the page dies with "Cannot read properties of undefined (reading 'child')". A page
+  that starts a non-awaited remote query on hydration hits it every time (`/staff/reservations`,
+  `/staff/reports/volunteering`). Drop the patch once upstream commits the tree before mounting.
 - **`svelte@5.57.3`** — a two-line fix in `Boundary#resolve`
   (`src/internal/client/dom/blocks/boundary.js`). Under `experimental.async`, a
   `<svelte:boundary>` with a `pending` snippet parks `$effect`s created while it is pending, then

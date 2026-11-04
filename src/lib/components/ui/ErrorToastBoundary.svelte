@@ -15,6 +15,7 @@
 
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
+	import { browser } from '$app/environment';
 	import type { Snippet } from 'svelte';
 	import { setContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -62,15 +63,21 @@
 	`undefined`: Svelte only substitutes the pending UI for the boundary's contents when
 	the attribute resolves to something, and otherwise awaits and renders the real content.
 -->
+{#snippet failedAlert(error: unknown, reset: () => void)}
+	<div class="contents" data-boundary-failed>
+		<Alert type="error" {reset}>{m.ui_load_failed({ error: errorMessage(error) })}</Alert>
+	</div>
+{/snippet}
+
+<!--
+	`failed` is client-only: on the server, a boundary with one keeps the error, and
+	a missing band would render this alert inside the layout. Without one the error
+	reaches SvelteKit's own boundary, so the document is +error.svelte with its status.
+-->
 <svelte:boundary
 	onerror={handleError}
 	pending={showPending ? (pendingSnippet ?? defaultPending) : undefined}
+	failed={browser ? failedAlert : undefined}
 >
 	{@render children()}
-
-	{#snippet failed(error, reset)}
-		<div class="contents" data-boundary-failed>
-			<Alert type="error" {reset}>{m.ui_load_failed({ error: errorMessage(error) })}</Alert>
-		</div>
-	{/snippet}
 </svelte:boundary>

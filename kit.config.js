@@ -32,6 +32,13 @@ const config = {
 	experimental: {
 		remoteFunctions: true
 	},
+	// Absolute, because services build hrefs with resolve() and hand them to the
+	// browser or the database. Relative ones are computed from the URL of the
+	// request, which for a remote function is /_app/remote/..., and a query is
+	// refused that URL outright (remote_request_property).
+	paths: {
+		relative: false
+	},
 	// The adapter reads wrangler.adapter.toml (not wrangler.toml) because it
 	// rimrafs + overwrites whatever `main` points at in the config it reads,
 	// and wrangler.toml's `main` is the hand-written worker.js wrapper that

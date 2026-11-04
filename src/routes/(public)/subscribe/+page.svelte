@@ -5,7 +5,7 @@
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import Form, { Field, SubmitButton } from '#lib/components/ui/Form/index.js';
 	import { getPublicAudiences, subscribeToAudience } from '#lib/remote/marketing.remote.js';
-	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '#lib/turnstile.js';
+	import { TURNSTILE_SITE_KEY } from '#lib/turnstile.js';
 
 	const { fields } = subscribeToAudience;
 
@@ -85,7 +85,7 @@
 
 			<Turnstile
 				siteKey={TURNSTILE_SITE_KEY}
-				responseFieldName={TURNSTILE_RESPONSE_FIELD}
+				responseFieldName={fields.turnstileToken.as('hidden', '').name}
 				theme="auto"
 			/>
 

@@ -14,6 +14,15 @@ const { default: config } = await import('../kit.config.js');
 
 const csp = config.csp;
 
+describe('kit.paths', () => {
+	// A query that calls resolve() would otherwise read the request URL, which
+	// kit refuses, and every other remote function would get a href relative to
+	// /_app/remote/... that means nothing to the page it reaches.
+	it('resolves absolute paths', () => {
+		expect(config.paths?.relative).toBe(false);
+	});
+});
+
 describe('kit.csp', () => {
 	it('points report-uri at the Sentry project in SENTRY_DSN', () => {
 		const dsn = new URL(SENTRY_DSN);

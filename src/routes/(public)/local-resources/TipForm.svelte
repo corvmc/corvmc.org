@@ -7,11 +7,7 @@
 		getLocalResourceTipCategories,
 		submitLocalResourceTip
 	} from '#lib/remote/local-resources.remote.js';
-	import {
-		TURNSTILE_SITE_KEY,
-		TURNSTILE_RESPONSE_FIELD,
-		turnstileFailureMessage
-	} from '#lib/turnstile.js';
+	import { TURNSTILE_SITE_KEY, turnstileFailureMessage } from '#lib/turnstile.js';
 	import type { RemoteFormIssue } from '$app/server';
 
 	/**
@@ -84,7 +80,7 @@
 		/>
 		<Turnstile
 			siteKey={TURNSTILE_SITE_KEY}
-			responseFieldName={TURNSTILE_RESPONSE_FIELD}
+			responseFieldName={fields.turnstileToken.as('hidden', '').name}
 			theme="auto"
 			bind:reset={resetTurnstile}
 		/>

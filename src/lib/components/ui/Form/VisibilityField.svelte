@@ -36,7 +36,7 @@
 			<label class="label cursor-pointer justify-start gap-3">
 				<input
 					type="radio"
-					{name}
+					name={field ? field.as('radio', option.value).name : name}
 					value={option.value}
 					class="radio"
 					checked={value === option.value}
