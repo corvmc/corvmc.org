@@ -18,8 +18,15 @@
 	}: { eventId: string; eventTitle: string; external?: boolean } = $props();
 
 	const status = $derived(await getRsvpStatus(eventId));
+	const name = $derived(status.attendee?.name);
 	const label = $derived(
-		external ? m.public_events_id_rsvp_control_i_m_going() : m.public_events_id_rsvp_control_rsvp()
+		external
+			? name
+				? m.public_events_id_rsvp_control_i_m_going_as({ name })
+				: m.public_events_id_rsvp_control_i_m_going()
+			: name
+				? m.public_events_id_rsvp_control_rsvp_as({ name })
+				: m.public_events_id_rsvp_control_rsvp()
 	);
 	const variant = $derived(external ? 'ghost' : 'primary');
 </script>
@@ -34,13 +41,9 @@
 			successLabel={m.public_events_id_rsvp_control_success_label()}
 			{variant}
 			size="lg"
+			class="h-auto! min-w-0 shrink! py-2 wrap-anywhere whitespace-normal!"
 		/>
 	</Form>
-	{#if status.attendee}
-		<span class="text-muted"
-			>{m.public_events_id_rsvp_control_as({ name: status.attendee.name })}</span
-		>
-	{/if}
 {:else if status.state === 'going'}
 	<span class="text-base font-semibold" data-testid="rsvp-going"
 		>{m.public_events_id_rsvp_control_re_going()}</span
