@@ -200,6 +200,7 @@
 						field={projectFields.groupId}
 						type="select"
 						label={m.staff_suggestions_id_owning_committee()}
+						placeholder={m.ui_none()}
 						options={committeeOptions}
 						description={m.staff_suggestions_id_description()}
 					/>

@@ -59,6 +59,7 @@
 				field={fields.groupId}
 				type="select"
 				label={m.staff_owning_committee()}
+				placeholder={m.ui_none()}
 				options={committeeOptions}
 				description={m.staff_projects_only_committee_can_own_project()}
 			/>
