@@ -64,16 +64,8 @@ if [ -n "$CODE" ]; then
 	# is generated and ignored there. Passing an ignored file explicitly makes
 	# eslint warn rather than skip it, and `--max-warnings 0` turns that warning
 	# into a failed PR for a file it was told not to lint.
-	# Past a few hundred files a file list costs more than the whole tree: #2366's 92
-	# files took ~4.5 minutes, where `eslint .` is ~200s on CI. A tree-wide change
-	# (#2374, 1,684 files) lints the tree instead, which checks a superset.
-	if [ "$(echo "$CODE" | wc -l)" -gt 300 ]; then
-		echo "More than 300 changed files: linting the whole tree instead"
-		eslint --max-warnings 0 .
-	else
-		# shellcheck disable=SC2086
-		eslint --max-warnings 0 --no-warn-ignored $CODE
-	fi
+	# shellcheck disable=SC2086
+	eslint --max-warnings 0 --no-warn-ignored $CODE
 fi
 
 if [ -n "$FORMATTABLE" ]; then
