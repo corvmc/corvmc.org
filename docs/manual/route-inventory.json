@@ -432,10 +432,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/credits",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/events",
 		"panel": "staff"
 	},
@@ -656,11 +652,15 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/music",
+		"route": "/staff/money/credits",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/payments",
+		"route": "/staff/money/payments",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/music",
 		"panel": "staff"
 	},
 	{

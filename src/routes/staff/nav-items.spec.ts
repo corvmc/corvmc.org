@@ -102,6 +102,9 @@ describe('activeNavKey', () => {
 		['/staff/members/volunteers/hours', 'users'],
 		['/staff/members/instructors', 'users'],
 		['/staff/members/invites', 'users'],
+		['/staff/money', 'payments'],
+		['/staff/money/payments', 'payments'],
+		['/staff/money/credits', 'payments'],
 		['/staff/help', 'help'],
 		['/staff/marketing', 'outreach'],
 		['/staff/marketing/campaigns', 'outreach'],
@@ -282,6 +285,9 @@ describe('route coverage', () => {
 		// Outreach views, reached from its tab bar (#2394).
 		'/staff/marketing/campaigns',
 		'/staff/marketing/audiences',
+		// Payments views, reached from its tab bar (#2395).
+		'/staff/money/payments',
+		'/staff/money/credits',
 		// Groups views, reached from its tab bar (#2086).
 		'/staff/groups/bands',
 		'/staff/groups/clubs',

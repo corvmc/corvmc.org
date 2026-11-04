@@ -59,7 +59,6 @@ export type StaffNavKey =
 	| 'local-resources'
 	| 'resource-tips'
 	| 'payments'
-	| 'credits'
 	| 'sponsors'
 	| 'grants'
 	| 'renewals'
@@ -375,11 +374,13 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'money',
 		title: 'Money',
 		items: [
+			// Payments and Credits are its views, each with its own gate (#2395).
 			{
 				key: 'payments',
 				capability: 'finance.read',
+				alsoFor: ['credit.read'],
 				label: 'Payments',
-				href: resolve('/staff/payments')
+				href: resolve('/staff/money')
 			},
 			// Money rather than Moderation: the page's first job is answering
 			// whether there is enough music to switch the station on, and its
@@ -393,12 +394,6 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'music.read',
 				label: 'Releases',
 				href: resolve('/staff/music')
-			},
-			{
-				key: 'credits',
-				capability: 'credit.read',
-				label: 'Credits',
-				href: resolve('/staff/credits')
 			},
 			{
 				key: 'grants',
