@@ -315,8 +315,10 @@ export async function listBallotsForMember(
 		.select({
 			ballot,
 			groupName: group.name,
-			isElector: sql<number>`exists (${elector})`,
-			hasVoted: sql<number>`(exists (${participated}) or exists (${recorded}))`
+			// `exists()`, not `exists (${subquery})`: drizzle parenthesises an embedded
+			// query, and SQLite refuses `exists ((select …))`.
+			isElector: sql<number>`${exists(elector)}`,
+			hasVoted: sql<number>`${or(exists(participated), exists(recorded))}`
 		})
 		.from(ballot)
 		.leftJoin(group, eq(group.id, ballot.groupId))
