@@ -92,8 +92,12 @@ describe('activeNavKey', () => {
 		['/staff/inventory/problems/abc', 'equipment-reports'],
 		['/staff/contractors', 'contractors'],
 		['/staff/contractors/abc', 'contractors'],
-		['/staff/incidents', 'incidents'],
-		['/staff/incidents/abc', 'incidents'],
+		// Records keep their addresses under the row they moved to (#2393).
+		['/staff/moderation', 'moderation'],
+		['/staff/moderation/flags', 'moderation'],
+		['/staff/moderation/incidents', 'moderation'],
+		['/staff/flags/abc', 'moderation'],
+		['/staff/incidents/abc', 'moderation'],
 		['/staff/reports/volunteering', 'volunteer-report'],
 		['/staff/members/volunteers/hours', 'users'],
 		['/staff/members/instructors', 'users'],
@@ -222,7 +226,7 @@ describe('the nav tree', () => {
 			'keys'
 		]);
 		expect(keys('partners')).toEqual(['sponsors', 'venues', 'local-resources', 'contractors']);
-		expect(keys('moderation')).toEqual(['flags', 'classifieds', 'incidents']);
+		expect(keys('moderation')).toEqual(['moderation', 'classifieds']);
 		expect(keys('outreach')).toEqual(['campaigns', 'audiences']);
 		expect(keys('money')).toContain('grants');
 		expect(keys('reports')).toEqual([
@@ -276,6 +280,9 @@ describe('route coverage', () => {
 		'/staff/grants/funders', // reached from Grants' header; its breadcrumb runs through it
 		// Reached from the Bands view's header: the same staff job as a band.
 		'/staff/bands/acts',
+		// Moderation views, reached from its tab bar (#2393).
+		'/staff/moderation/flags',
+		'/staff/moderation/incidents',
 		// Groups views, reached from its tab bar (#2086).
 		'/staff/groups/bands',
 		'/staff/groups/clubs',
