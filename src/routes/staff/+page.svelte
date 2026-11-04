@@ -22,7 +22,12 @@
 	import { resolve } from '$app/paths';
 	import { withQuery } from '$lib/utils/with-query';
 	import { hasCapability } from '$lib/config';
-	import { formatDateShort, formatDateShortYear, formatTimeRange } from '$lib/utils/format';
+	import {
+		formatDateShort,
+		formatDateShortYear,
+		formatSpan,
+		formatTimeRange
+	} from '$lib/utils/format';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import { formatIsoDay } from '$lib/utils/deadline';
 
@@ -35,7 +40,7 @@
 		appealsPending: 'Pending Appeals',
 		resourceTipsPending: 'Pending Resource Tips'
 	};
-	const dayLabels = ["Today's Reservations", "Tomorrow's Reservations"];
+	const dayLabels = [m.staff_room_today(), m.staff_room_tomorrow()];
 
 	let data = $derived(await getStaffDashboard());
 
@@ -82,14 +87,15 @@
 			</Alert>
 		{/if}
 		{#each data.room as day, i (day.date)}
-			<SectionLabel label={dayLabels[i]} count={day.reservations.length} />
-			{#if day.reservations.length === 0}
+			<SectionLabel label={dayLabels[i]} count={day.uses.length} />
+			{#if day.uses.length === 0}
 				<EmptyState
 					description={i === 0 ? m.staff_room_free_today() : m.staff_room_free_tomorrow()}
 				/>
 			{:else}
 				<div class="mt-4 mb-2">
 					<DayTimeline
+						closures={day.closures}
 						others={day.reservations.map((r) => ({
 							id: r.id,
 							startsAt: r.startsAt,
@@ -103,20 +109,30 @@
 				<Table>
 					{#snippet head()}
 						<th class="whitespace-nowrap">{m.staff_when()}</th>
-						<th>{m.staff_booked()}</th>
+						<th>{m.staff_room_use()}</th>
 						<th class="w-px">{m.staff_status()}</th>
 					{/snippet}
-					{#each day.reservations as r (r.id)}
-						<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/reservations/${r.id}`)}>
-							<td class="whitespace-nowrap">{formatTimeRange(r.startsAt, r.endsAt)}</td>
-							<td class="cell-primary">
-								<EntityIdentity ref={r.booker} />
-								{#if r.doorCodeUnconfirmed}
-									<Badge variant="warning" size="xs">{m.staff_code_unconfirmed()}</Badge>
-								{/if}
-							</td>
-							<td class="w-px"><StatusBadge status={r.status} label /></td>
-						</tr>
+					{#each day.uses as r (r.id)}
+						{#if r.kind === 'closure'}
+							<tr>
+								<td class="whitespace-nowrap">{formatSpan(r.startsAt, r.endsAt)}</td>
+								<td class="cell-primary">{r.reason}</td>
+								<td class="w-px"
+									><Badge size="sm" variant="error">{m.staff_reservations_closed()}</Badge></td
+								>
+							</tr>
+						{:else}
+							<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/reservations/${r.id}`)}>
+								<td class="whitespace-nowrap">{formatTimeRange(r.startsAt, r.endsAt)}</td>
+								<td class="cell-primary">
+									<EntityIdentity ref={r.booker} />
+									{#if r.doorCodeUnconfirmed}
+										<Badge variant="warning" size="xs">{m.staff_code_unconfirmed()}</Badge>
+									{/if}
+								</td>
+								<td class="w-px"><StatusBadge status={r.status} label /></td>
+							</tr>
+						{/if}
 					{/each}
 				</Table>
 			{/if}

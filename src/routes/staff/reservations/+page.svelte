@@ -43,10 +43,9 @@
 	} from '@tabler/icons-svelte';
 	import {
 		formatDate,
-		formatDateTimeShort,
 		formatTimeRange,
 		formatPaymentBreakdown,
-		toLocalDate
+		formatSpan
 	} from '$lib/utils/format';
 	import { DEFAULT_TIMEZONE } from '$lib/config';
 	import { visibleActions, reservationPaymentState } from '$lib/utils/reservation-actions';
@@ -124,13 +123,6 @@
 			case 'comped':
 				return { label: m.staff_comped(), color: 'text-info', icon: IconGift };
 		}
-	}
-
-	/** A closure can run for days, which a bare time range would hide. */
-	function closureRange(c: Closure): string {
-		return toLocalDate(c.startsAt) === toLocalDate(c.endsAt)
-			? formatTimeRange(c.startsAt, c.endsAt)
-			: `${formatDateTimeShort(c.startsAt)} – ${formatDateTimeShort(c.endsAt)}`;
 	}
 
 	function dayLabel(r: { startsAt: Date }): string {
@@ -315,7 +307,7 @@
 								><Badge size="sm" variant="error">{m.staff_reservations_closed()}</Badge></td
 							>
 							<td class="min-w-0 font-medium">{r.reason}</td>
-							<td class="cell-primary whitespace-nowrap">{closureRange(r)}</td>
+							<td class="cell-primary whitespace-nowrap">{formatSpan(r.startsAt, r.endsAt)}</td>
 							<td class="col-support cell-num"><span class="opacity-40">—</span></td>
 							<td class="w-px">
 								{@render closureActions(r, true)}
@@ -477,7 +469,7 @@
 					{#if r.kind === 'closure'}
 						<li class="flex items-start justify-between gap-3 border-b border-base-300 py-3">
 							<div class="min-w-0 space-y-1">
-								<p class="text-lg font-medium">{closureRange(r)}</p>
+								<p class="text-lg font-medium">{formatSpan(r.startsAt, r.endsAt)}</p>
 								<p>{r.reason}</p>
 							</div>
 							<div class="flex shrink-0 flex-col items-end gap-2">
