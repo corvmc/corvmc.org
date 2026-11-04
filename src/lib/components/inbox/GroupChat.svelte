@@ -18,12 +18,23 @@
 	import MuteRoomAction from './MuteRoomAction.svelte';
 	import ThreadComposer from './ThreadComposer.svelte';
 	import { untrack } from 'svelte';
+	import { IconArrowLeft } from '@tabler/icons-svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import { markGroupChatSeen, postGroupChatMessage } from '$lib/remote/group-chat.remote';
 
 	// Handed in, never awaited here: on Messages the page's own query already
 	// carries the topic.
-	let { chat, viewerUserId }: { chat: GroupChatTopic; viewerUserId: string } = $props();
+	let {
+		chat,
+		viewerUserId,
+		backHref
+	}: {
+		chat: GroupChatTopic;
+		viewerUserId: string;
+		/** In an `InboxShell` the list pane is hidden below `lg`: this is the way out. */
+		backHref?: string;
+	} = $props();
 
 	// The id alone, so a refreshed topic (a new object) does not re-mark it.
 	const threadId = $derived(chat.id);
@@ -40,6 +51,18 @@
 
 <div class="flex h-full min-h-0 flex-col gap-4">
 	<div class="flex items-center justify-end">
+		{#if backHref}
+			<Button
+				href={backHref}
+				variant="ghost"
+				size="sm"
+				shape="square"
+				class="mr-auto lg:hidden"
+				aria-label={m.ui_back()}
+			>
+				<IconArrowLeft size={18} />
+			</Button>
+		{/if}
 		<MuteRoomAction threadId={chat.id} roomName={chat.topicName} muted={chat.muted} />
 	</div>
 

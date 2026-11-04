@@ -69,6 +69,14 @@ describe('GroupChat', () => {
 		expect(getGroupChatTopic).not.toHaveBeenCalled();
 	});
 
+	it('links back only when a list pane stands behind it', async () => {
+		const { container, rerender } = await render(GroupChat, { chat, viewerUserId: 'member-1' });
+		expect(container.querySelector('a[href="/inbox"]')).toBeNull();
+
+		await rerender({ chat, viewerUserId: 'member-1', backHref: '/inbox' });
+		await expect.poll(() => container.querySelector('a[href="/inbox"]')).not.toBeNull();
+	});
+
 	it('marks the topic it was given as seen, once', async () => {
 		await render(GroupChat, { chat, viewerUserId: 'member-1' });
 
