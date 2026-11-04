@@ -17,7 +17,10 @@ import { getProjectActivity } from './projects.remote';
 import { ACTIVITY_MAX, listActivity } from '#lib/server/project/project-activity.js';
 import { loadWorkOrderView } from '#lib/server/volunteer/work-order-view.js';
 import { getVolunteerProfile } from '#lib/server/volunteer/volunteer-profile-service.js';
-import { listAllVolunteers, volunteerRosterFilters } from '#lib/server/volunteer/volunteer-roster.js';
+import {
+	listAllVolunteers,
+	volunteerRosterFilters
+} from '#lib/server/volunteer/volunteer-roster.js';
 import { rosterEmails } from '#lib/server/roster/roster.js';
 import { listInterestsForUser } from '#lib/server/volunteer/volunteer-interest-service.js';
 import {
@@ -88,7 +91,10 @@ import {
 	getRequirementsForRoles,
 	setRoleRequirements
 } from '#lib/server/volunteer/volunteer-certification-service.js';
-import { listWorkTasks, setWorkTaskDoneAsAssignee } from '#lib/server/volunteer/duty-list-service.js';
+import {
+	listWorkTasks,
+	setWorkTaskDoneAsAssignee
+} from '#lib/server/volunteer/duty-list-service.js';
 import { listFinishedWorkToConfirm } from '#lib/server/inventory/work-request-service.js';
 import { getById } from '#lib/server/event/event-service.js';
 import {
