@@ -254,7 +254,7 @@
 				outline
 				confirm={m.staff_project_templates_id_delete({ name: d.list.name })}
 				successToast={m.staff_project_templates_id_template_deleted()}
-				onsuccess={() => goto(resolve('/staff/project-templates'))}
+				onsuccess={() => goto(resolve('/staff/projects/templates'))}
 			>
 				{#snippet form()}
 					<input type="hidden" name="id" value={d.list.id} />

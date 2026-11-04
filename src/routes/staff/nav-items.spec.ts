@@ -171,11 +171,9 @@ describe('the nav tree', () => {
 		expect(filterNavItems([groups], ['event.read'])).toHaveLength(0);
 	});
 
-	it('puts Project Templates under Planning, beside Projects (#2034)', () => {
-		const planning = staffNavSections.find((s) => s.key === 'planning')!;
-		const keys = planning.items.map((i) => i.key);
-		expect(keys.indexOf('project-templates')).toBe(keys.indexOf('projects') + 1);
-		expect(activeNavKey('/staff/project-templates/abc')).toBe('project-templates');
+	it('reaches Project Templates through Projects (#2385)', () => {
+		expect(activeNavKey('/staff/projects/templates')).toBe('projects');
+		expect(activeNavKey('/staff/projects/templates/abc')).toBe('projects');
 	});
 
 	it('keeps Inbox out of every section, so its badge survives a collapsed group', () => {
@@ -205,13 +203,7 @@ describe('the nav tree', () => {
 		const section = (key: string) => staffNavSections.find((s) => s.key === key)!;
 		const keys = (key: string) => section(key).items.map((i) => i.key);
 		expect(keys('people')).toEqual(['users', 'groups']);
-		expect(keys('planning')).toEqual([
-			'suggestions',
-			'ballots',
-			'projects',
-			'project-templates',
-			'volunteer-schedule'
-		]);
+		expect(keys('planning')).toEqual(['suggestions', 'ballots', 'projects', 'volunteer-schedule']);
 		// Recurring work is a Schedule view (#2087).
 		expect(activeNavKey('/staff/volunteer/schedule/recurring')).toBe('volunteer-schedule');
 		expect(keys('space')).toEqual([
@@ -267,6 +259,7 @@ describe('route coverage', () => {
 		'/staff/members/instructors',
 		'/staff/members/invites',
 		'/staff/projects/productions', // a Projects view (#2101)
+		'/staff/projects/templates', // a Projects view (#2385)
 		'/staff/volunteer/schedule/recurring', // a Schedule view (#2087)
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns

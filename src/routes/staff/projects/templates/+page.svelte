@@ -12,6 +12,7 @@
 	import { rowLink } from '$lib/actions/row-link';
 	import { getDutyLists, createDutyList } from '$lib/remote/duty-lists.remote';
 	import { dutyListAnchors, dutyListAnchorLabels } from '$lib/config';
+	import ProjectViews from '../ProjectViews.svelte';
 
 	let lists = $derived(getDutyLists());
 
@@ -59,6 +60,7 @@
 </PageHeader>
 
 <PageContent>
+	<ProjectViews active="templates" />
 	{#await lists then rows}
 		{#if rows.length === 0}
 			<EmptyState
@@ -76,7 +78,7 @@
 					{/snippet}
 
 					{#each rows as list (list.id)}
-						<tr use:rowLink={`/staff/project-templates/${list.id}`}>
+						<tr use:rowLink={`/staff/projects/templates/${list.id}`}>
 							<td>
 								<StatusBadge status={list.isActive ? 'active' : 'archived'} label />
 							</td>

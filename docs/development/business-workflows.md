@@ -1114,7 +1114,7 @@ So:
 
 ### Duty lists (Project Templates)
 
-> **Since #2034** these are **Project Templates** (`/staff/project-templates`, under Planning,
+> **Since #2034** these are **Project Templates** (`/staff/projects/templates`, under Projects,
 > edited with `project.manage`). The tables keep the `duty_list` names. A template is stamped
 > into a **project**, and the `event` and `reservation` subjects are retired. `doors`, `start`
 > and `end` read the project's earliest live event, or the show it is applied from, and the
