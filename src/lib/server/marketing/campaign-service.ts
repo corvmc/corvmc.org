@@ -13,7 +13,7 @@ import { creditsForEvent } from '$lib/server/sponsor/credit-service';
 import { withSponsorCredit } from '$lib/utils/sponsor-credit';
 import { signUnsubscribeToken } from './unsubscribe';
 import { sendBroadcastBatch, type BroadcastMessage } from '$lib/server/notification/email';
-import { env } from '$env/dynamic/private';
+import { env } from '$env/dynamic/public';
 import { DomainError } from '$lib/server/domain-error';
 import { eventListing } from '$lib/server/db/schema/event';
 import { formatDateShortYear } from '$lib/utils/format';

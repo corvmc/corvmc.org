@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('$env/dynamic/private', () => ({ env: { PUBLIC_SITE_URL: 'https://test.corvmc.com' } }));
+vi.mock('$env/dynamic/public', () => ({ env: { PUBLIC_SITE_URL: 'https://test.corvmc.com' } }));
 
 const { buildNotificationEmail } = await import('./build-model');
 
