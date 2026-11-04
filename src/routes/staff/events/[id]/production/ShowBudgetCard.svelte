@@ -26,7 +26,7 @@
 
 <InfoCard title={m.staff_budget()} {state}>
 	{#snippet action()}
-		<a class="link text-sm" href={resolve(`/staff/projects/${projectId}`)}>
+		<a class="link text-sm" href={resolve(`staff/projects/${projectId}`)}>
 			{burn.budgetCents === null
 				? m.staff_events_id_production_show_budget_card_set_budget()
 				: m.staff_events_id_production_show_budget_card_open_project()}

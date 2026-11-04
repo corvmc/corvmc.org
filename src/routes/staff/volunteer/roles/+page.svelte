@@ -69,9 +69,9 @@
 	// `goto(..., { replaceState })`, not `replaceState()`: the latter only rewrites
 	// the address bar and the router overwrites that entry on the next navigation.
 	$effect(() => {
-		const href = withQuery(resolve('/staff/volunteer/roles'), showRetired ? 'retired=1' : '');
+		const href = withQuery(resolve('staff/volunteer/roles'), showRetired ? 'retired=1' : '');
 		if (location.pathname + location.search !== href) {
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 
@@ -181,7 +181,7 @@
 								{#each group.roles as role (role.id)}
 									<li>
 										<a
-											href={resolve(`/staff/volunteer/roles/${role.id}`)}
+											href={resolve(`staff/volunteer/roles/${role.id}`)}
 											class="{CARD} block hover:border-primary"
 										>
 											<div class="flex flex-wrap items-center gap-2">
@@ -429,7 +429,7 @@
 										<!-- The one thing on this screen that is a person rather
 										     than a definition, so it links to the people. -->
 										<a
-											href={withQuery(resolve('/staff/members/volunteers'), 'lapsing=1')}
+											href={withQuery(resolve('staff/members/volunteers'), 'lapsing=1')}
 											class="mt-1 inline-block link text-xs text-warning"
 										>
 											{m.staff_volunteer_roles_lapse_before_booked_shift({
@@ -446,7 +446,7 @@
 					{/if}
 				</InfoCard>
 
-				<Button href={resolve('/staff/members/volunteers')} variant="ghost" size="sm">
+				<Button href={resolve('staff/members/volunteers')} variant="ghost" size="sm">
 					{m.staff_volunteer_roles_see_who_s_cleared()}
 				</Button>
 			</div>

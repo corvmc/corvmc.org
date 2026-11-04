@@ -115,7 +115,7 @@
 >
 	{#if data.market}
 		<Button
-			href={resolve(`/staff/events/${data.event.id}/vendors/check-in`)}
+			href={resolve(`staff/events/${data.event.id}/vendors/check-in`)}
 			variant="ghost"
 			size="sm"
 		>
@@ -262,7 +262,7 @@
 						</td>
 						<td class="col-support">
 							{#if row.threadId}
-								<a class="link" href={resolve(`/staff/inbox/${row.threadId}`)}>
+								<a class="link" href={resolve(`staff/inbox/${row.threadId}`)}>
 									{row.contactName ?? row.contactEmail}
 								</a>
 							{:else}

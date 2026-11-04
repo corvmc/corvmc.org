@@ -74,7 +74,7 @@
 			<ParaglideMessage
 				message={m.staff_classifieds_reported_posts_decided}
 				inputs={{ staff_content_flags: m.staff_content_flags() }}
-				>{#snippet a({ children })}<a class="link" href={resolve('/staff/flags')}
+				>{#snippet a({ children })}<a class="link" href={resolve('staff/flags')}
 						>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
 			>
@@ -91,7 +91,7 @@
 					<th class="col-extra whitespace-nowrap">{m.staff_posted()}</th>
 				{/snippet}
 				{#each rows as r (r.id)}
-					<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/classifieds/${r.id}`)}>
+					<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/classifieds/${r.id}`)}>
 						<td class="w-px"><StatusBadge status={r.displayStatus} /></td>
 						<td class="cell-primary">
 							<EntityIdentity ref={r.ref}>

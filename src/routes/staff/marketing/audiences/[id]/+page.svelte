@@ -75,7 +75,7 @@
 	{#if !isBuiltIn}
 		<DeleteAudienceAction
 			audienceId={id}
-			onsuccess={() => goto(resolve('/staff/marketing/audiences'))}
+			onsuccess={() => goto(resolve('staff/marketing/audiences'))}
 		/>
 	{/if}
 </PageHeader>

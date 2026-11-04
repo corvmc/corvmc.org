@@ -107,7 +107,7 @@
 					class="flex flex-wrap gap-1"
 				>
 					{#each data.interests as i (i.roleId)}
-						<a href={resolve(`/staff/volunteer/roles/${i.roleId}`)}>
+						<a href={resolve(`staff/volunteer/roles/${i.roleId}`)}>
 							<Badge size="sm">{i.roleName}</Badge>
 						</a>
 					{:else}
@@ -226,10 +226,10 @@
 					<th class="col-extra">{m.staff_date()}</th>
 				{/snippet}
 				{#each shifts as s (s.signupId)}
-					<tr class="hover" use:rowLink={resolve(`/staff/volunteer/shifts/${s.shiftId}`)}>
+					<tr class="hover" use:rowLink={resolve(`staff/volunteer/shifts/${s.shiftId}`)}>
 						<td class="w-px"><StatusBadge status={s.status} /></td>
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/volunteer/shifts/${s.shiftId}`)}>
+							<a class="font-medium" href={resolve(`staff/volunteer/shifts/${s.shiftId}`)}>
 								{s.roleName}
 							</a>
 							{#if s.shiftCancelledAt}

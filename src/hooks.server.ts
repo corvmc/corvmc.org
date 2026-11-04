@@ -1,6 +1,6 @@
 import { sequence } from '@sveltejs/kit/hooks';
 import * as Sentry from '@sentry/sveltekit';
-import type { Handle, HandleServerError } from '@sveltejs/kit';
+import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
 import { building, dev } from '$app/environment';
 import { auth } from '#lib/server/auth.js';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
@@ -9,6 +9,8 @@ import { initDb } from '#lib/server/db/index.js';
 import { initStorage } from '#lib/server/storage.js';
 import { initPrivateStorage } from '#lib/server/private-storage.js';
 import { initKv } from '#lib/server/kv.js';
+import { registerWaitUntil } from '#lib/server/after-response.js';
+import { env as bindings, waitUntil } from 'cloudflare:workers';
 import { resolvePendingInvites } from '#lib/server/group/group-invite-service.js';
 import { resolveMemberInvite } from '#lib/server/user/member-invite-service.js';
 import { captureException } from '#lib/server/sentry.js';
@@ -45,35 +47,28 @@ function markSessionResolved(sessionId: string): boolean {
 	return true;
 }
 
-function validateEnv(platform: App.Platform | undefined) {
+function validateEnv() {
 	const missing: string[] = [];
-	if (!platform?.env?.DB) missing.push('DB');
-	if (!platform?.env?.R2_BUCKET) missing.push('R2_BUCKET');
-	if (!platform?.env?.R2_PRIVATE) missing.push('R2_PRIVATE');
-	if (!platform?.env?.KV) missing.push('KV');
+	if (!bindings.DB) missing.push('DB');
+	if (!bindings.R2_BUCKET) missing.push('R2_BUCKET');
+	if (!bindings.R2_PRIVATE) missing.push('R2_PRIVATE');
+	if (!bindings.KV) missing.push('KV');
 	if (missing.length > 0) {
 		console.warn(`Missing platform bindings: ${missing.join(', ')}`);
 	}
 }
 
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
-	if (event.platform?.env?.DB) {
-		initDb(event.platform.env.DB);
-	}
-	if (event.platform?.env?.R2_BUCKET) {
-		initStorage(event.platform.env.R2_BUCKET);
-	}
-	if (event.platform?.env?.R2_PRIVATE) {
-		initPrivateStorage(event.platform.env.R2_PRIVATE);
-	}
-	if (event.platform?.env?.KV) {
-		initKv(event.platform.env.KV);
-	}
+	if (bindings.DB) initDb(bindings.DB);
+	if (bindings.R2_BUCKET) initStorage(bindings.R2_BUCKET);
+	if (bindings.R2_PRIVATE) initPrivateStorage(bindings.R2_PRIVATE);
+	if (bindings.KV) initKv(bindings.KV);
+	registerWaitUntil(waitUntil);
 
 	// Register domain event listeners once (inside request handler so
 	// $env/dynamic/private is available on Cloudflare)
 	if (!building) {
-		validateEnv(event.platform);
+		validateEnv();
 		registerListeners();
 	}
 	const session = await auth.api.getSession({ headers: event.request.headers });
@@ -178,7 +173,7 @@ const handleBandSubdomain: Handle = async ({ event, resolve }) => {
  * hand — those never call `resolve`, so a handler placed below it would let
  * them out bare.
  *
- * The CSP is deliberately not here. It lives in `kit.csp` (svelte.config.js),
+ * The CSP is deliberately not here. It lives in `csp` (kit.config.js),
  * because Kit has to nonce the inline hydration script it injects into every
  * rendered page and only the renderer can do that. Static assets are answered
  * by the assets binding before this worker runs and are covered by `_headers`.
@@ -270,11 +265,11 @@ export const handle: Handle = sequence(
 );
 
 export const handleError: HandleServerError = Sentry.handleErrorWithSentry(
-	async ({ error, event, status, message }) => {
+	async ({ kind, error, event }) => {
+		const status = kind === 'unknown' ? 500 : error.status;
 		console.error(`[${status}] ${event.request.method} ${event.url.pathname}`, error);
 		// 4xx are client errors, not our bugs — mostly bot/proxy probes for paths we
 		// don't serve (e.g. /.well-known/traffic-advice). Only report genuine 5xx.
 		if (status >= 500) captureException(error);
-		return { message };
 	}
 );

@@ -62,8 +62,8 @@
 				{#each rows as evt (evt.id)}
 					{@const href =
 						eventBase === '/member/events'
-							? resolve(`/member/events/${evt.id}`)
-							: resolve(`/events/${evt.id}`)}
+							? resolve(`member/events/${evt.id}`)
+							: resolve(`events/${evt.id}`)}
 					{@const isCancelled = evt.status === 'cancelled'}
 					{@const isOpen = evt.startsAt >= now && !isCancelled}
 					{@const mode = ticketingMode(evt)}
@@ -142,7 +142,7 @@
 										<Button
 											href={eventBase === '/member/events'
 												? href
-												: resolve(`/events/${evt.id}/tickets`)}
+												: resolve(`events/${evt.id}/tickets`)}
 											size="sm">{m.events_gig_list_get_tickets()}</Button
 										>
 									{:else if going.has(evt.id)}

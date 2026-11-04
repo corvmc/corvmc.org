@@ -121,7 +121,7 @@
 							{formatDateShort(row.returnedAt)}
 							{#if row.returnNotes}<div class="text-subtle">{row.returnNotes}</div>{/if}
 						{:else if row.source === 'lock'}
-							<Button href={resolve('/staff/settings')} variant="ghost" size="sm">
+							<Button href={resolve('staff/settings')} variant="ghost" size="sm">
 								{m.staff_keys_door_access()}
 							</Button>
 						{:else}

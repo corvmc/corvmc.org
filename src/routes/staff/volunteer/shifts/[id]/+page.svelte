@@ -15,7 +15,7 @@
 <WorkOrderView
 	{view}
 	subtitle={m.staff_shift()}
-	parent={[{ label: m.staff_schedule(), href: resolve('/staff/volunteer/schedule') }]}
+	parent={[{ label: m.staff_schedule(), href: resolve('staff/volunteer/schedule') }]}
 >
 	{#snippet actions()}
 		{#if view.contractors.length > 0 && !view.shift.cancelledAt && !view.shift.resolvedAt}

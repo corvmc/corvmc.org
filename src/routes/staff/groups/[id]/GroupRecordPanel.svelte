@@ -30,7 +30,7 @@
 	<svelte:boundary>
 		<GroupRecord {kind} {id} variant="panel">
 			{#snippet actions()}
-				<Button href={resolve(`/staff/groups/${id}`)} variant="ghost" size="sm"
+				<Button href={resolve(`staff/groups/${id}`)} variant="ghost" size="sm"
 					>{m.staff_groups_id_group_record_panel_open_record()}</Button
 				>
 			{/snippet}

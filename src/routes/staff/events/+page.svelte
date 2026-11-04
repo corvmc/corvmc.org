@@ -23,7 +23,7 @@
 	 * filters. Listings waiting on staff are pinned above the dates with a
 	 * labelled badge; the totals above count them. The Productions view on Projects runs the shows CMC produces.
 	 */
-	const filters = urlState(resolve('/staff/events'), { page: positiveInt(1) });
+	const filters = urlState(resolve('staff/events'), { page: positiveInt(1) });
 
 	// A promise rather than an await: `DataList` consumes it with `{#await}`, so
 	// paging does not suspend the page into the staff layout's pending snippet.
@@ -79,7 +79,7 @@
 							</td>
 						</tr>
 					{/if}
-					{@const href = resolve(`/staff/events/${e.id}`)}
+					{@const href = resolve(`staff/events/${e.id}`)}
 					<tr class="hover cursor-pointer" use:rowLink={href}>
 						<td class="w-px">
 							<StatusBadge status={e.status} label={e.status === 'pending_review'} />

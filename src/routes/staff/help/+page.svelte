@@ -318,7 +318,7 @@
 				<th class="col-support whitespace-nowrap">{m.staff_updated()}</th>
 			{/snippet}
 			{#each articles as a (a.id)}
-				{@const href = resolve(`/staff/help/${a.id}`)}
+				{@const href = resolve(`staff/help/${a.id}`)}
 				<!-- `rowLink` ignores clicks inside inputs and labels, so the select
 				     checkbox and the row-click affordance coexist. -->
 				<tr class="hover cursor-pointer" use:rowLink={href}>

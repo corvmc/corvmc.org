@@ -206,7 +206,7 @@ test.describe('Meta reply window', () => {
 		// The composer falls back to a note: staff-only, and never dispatched.
 		await expect(page.locator('#tab-note')).toHaveAttribute('aria-selected', 'true');
 		await expect(page.locator('#tab-reply')).toHaveAttribute('aria-selected', 'false');
-		await expect(page.locator('textarea[name="body"]')).toBeVisible();
+		await expect(page.locator('textarea:is([name="body"], [name^="body/"])')).toBeVisible();
 
 		// A thread inside the window must still offer a reply — otherwise a block
 		// that fired on every Meta thread would pass the half above.

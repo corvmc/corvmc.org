@@ -74,7 +74,7 @@
 <div class="profile-page">
 	<!-- Carries the tab: bands are the directory's default, so a bare /directory
 	     would drop you somewhere other than where you came from. -->
-	<a href="{resolve('/directory')}?tab=musicians" class="link text-muted"
+	<a href="{resolve('directory')}?tab=musicians" class="link text-muted"
 		>{m.public_back_directory()}</a
 	>
 
@@ -112,7 +112,7 @@
 	</ProfileGrid>
 
 	<footer class="profile-page__footer">
-		<a href={resolve('/')}>{m.public_corvallis_music_collective()}</a>
+		<a href={resolve('')}>{m.public_corvallis_music_collective()}</a>
 	</footer>
 </div>
 

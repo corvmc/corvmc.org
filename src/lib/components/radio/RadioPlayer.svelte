@@ -239,7 +239,7 @@
 						<span class="text-muted">{m.radio_radio_player_by()}</span>
 						<!-- The whole reason the widget exists: whoever is playing is one
 						     click from their profile. -->
-						<a class="link" href={resolve(`/directory/bands/${current.bandSlug}`)}
+						<a class="link" href={resolve(`directory/bands/${current.bandSlug}`)}
 							>{current.bandName}</a
 						>
 					</p>

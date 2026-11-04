@@ -14,7 +14,7 @@
 	 * should not wait on.
 	 */
 	import { resolve } from '$app/paths';
-	import type { RemoteForm } from '@sveltejs/kit';
+	import type { RemoteForm } from '$app/server';
 	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
 	import AssignControl from './AssignControl.svelte';
 	import ThreadTags from './ThreadTags.svelte';
@@ -101,7 +101,7 @@
 				<div class="flex flex-col gap-1">
 					<SectionLabel label={m.staff_contact()} />
 					{#if thread.contactUserId}
-						<a href={resolve(`/staff/members/${thread.contactUserId}`)} class="link link-primary">
+						<a href={resolve(`staff/members/${thread.contactUserId}`)} class="link link-primary">
 							{thread.contactUserName ?? thread.contactName}
 						</a>
 					{:else if thread.contactName}

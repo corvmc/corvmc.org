@@ -111,7 +111,7 @@
 	</InfoCard>
 
 	<div class="flex justify-end gap-2">
-		<a class="btn btn-ghost" href={resolve(`/member/groups/${group.slug}`)}>{m.member_cancel()}</a>
+		<a class="btn btn-ghost" href={resolve(`member/groups/${group.slug}`)}>{m.member_cancel()}</a>
 		<SubmitButton label={m.member_save()} />
 	</div>
 </Form>

@@ -30,10 +30,12 @@ import { SEED_MEMBER_EMAIL, SEED_MEMBER_PASSWORD } from './fixtures/seed-pay-res
 
 async function login(page: Page) {
 	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_MEMBER_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_MEMBER_PASSWORD);
+	await page.locator('input:is([name="email"], [name^="email/"])').fill(SEED_MEMBER_EMAIL);
+	await page.locator('input:is([name="password"], [name^="password/"])').fill(SEED_MEMBER_PASSWORD);
 	// The sign-in form is the one with a password field.
-	await page.locator('form:has(input[name="password"]) button[type="submit"]').click();
+	await page
+		.locator('form:has(input:is([name="password"], [name^="password/"])) button[type="submit"]')
+		.click();
 	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
 }
 
@@ -61,7 +63,9 @@ test('create-band modal opens after an immediate client-side navigation', async 
 	// The page header's one action opens the create-band modal.
 	await page.locator('[data-page-header] button').click();
 	await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
-	await expect(page.getByRole('dialog').locator('input[name="name"]')).toBeVisible();
+	await expect(
+		page.getByRole('dialog').locator('input:is([name="name"], [name^="name/"])')
+	).toBeVisible();
 
 	// The same turbulent window used to crash NotificationBell's window click
 	// handler ("reading 'f'") — any page error here is a regression.

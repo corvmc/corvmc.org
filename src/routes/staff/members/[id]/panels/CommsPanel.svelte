@@ -53,10 +53,10 @@
 							<th class="col-extra">{m.staff_members_id_panels_comms_panel_last_message()}</th>
 						{/snippet}
 						{#each group.rows as t (t.id)}
-							<tr class="hover" use:rowLink={resolve(`/staff/inbox/${t.id}`)}>
+							<tr class="hover" use:rowLink={resolve(`staff/inbox/${t.id}`)}>
 								<td class="w-px"><StatusBadge status={t.status} /></td>
 								<td class="cell-primary">
-									<a class="font-medium" href={resolve(`/staff/inbox/${t.id}`)}>
+									<a class="font-medium" href={resolve(`staff/inbox/${t.id}`)}>
 										{t.subject ?? m.staff_members_id_panels_comms_panel_no_subject()}
 									</a>
 									<div class="text-muted">{t.preview ?? ''}</div>
@@ -150,7 +150,7 @@
 			{/if}
 			<div class="flex flex-wrap gap-1">
 				{#each data.audiences as a (a.audienceId)}
-					<a href={resolve(`/staff/marketing/audiences/${a.audienceId}`)}>
+					<a href={resolve(`staff/marketing/audiences/${a.audienceId}`)}>
 						<Badge size="sm">{a.audienceName}</Badge>
 					</a>
 				{:else}

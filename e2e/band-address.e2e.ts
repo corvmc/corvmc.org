@@ -28,7 +28,7 @@ test('an owner can move their band to a new address', async ({ page, request }) 
 	await page.goto(`/band/${SEED_RENAME_BAND_SLUG}/settings`);
 
 	await page.getByTestId('change-address').click();
-	const newSlug = page.locator('input[name="newSlug"]');
+	const newSlug = page.locator('input:is([name="newSlug"], [name^="newSlug/"])');
 	await newSlug.fill(NEW_SLUG);
 	await page.locator('form').filter({ has: newSlug }).locator('button[type="submit"]').click();
 

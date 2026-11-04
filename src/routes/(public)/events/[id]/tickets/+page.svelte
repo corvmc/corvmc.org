@@ -57,8 +57,8 @@
 			? m.public_events_id_tickets_get_free_ticket()
 			: m.public_events_id_tickets_get_tickets()}
 		parent={[
-			{ label: m.public_events(), href: resolve('/events') },
-			{ label: evt.title, href: resolve(`/events/${page.params.id!}`) }
+			{ label: m.public_events(), href: resolve('events') },
+			{ label: evt.title, href: resolve(`events/${page.params.id!}`) }
 		]}
 	/>
 
@@ -95,7 +95,7 @@
 					<ParaglideMessage
 						message={m.public_events_id_tickets_no_one_turned_away_lack_2}
 						inputs={{}}
-						>{#snippet a({ children })}<a href={resolve('/contact')} class="link"
+						>{#snippet a({ children })}<a href={resolve('contact')} class="link"
 								>{@render children?.()}</a
 							>{/snippet}</ParaglideMessage
 					>

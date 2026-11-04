@@ -73,7 +73,7 @@
 			<Button variant="primary" onclick={onclose}>{m.staff_back_inbox()}</Button>
 			<!-- The Resolved view rather than a bespoke surface: what you sent is
 			     already a list, and it is one staff can go back to tomorrow. -->
-			<Button href="{resolve('/staff/inbox')}?view=resolved" variant="default" onclick={onclose}>
+			<Button href="{resolve('staff/inbox')}?view=resolved" variant="default" onclick={onclose}>
 				{m.staff_inbox_daily_session_summary_review_what_i_sent()}
 			</Button>
 			<!-- The same ten-second undo the queue offers, reachable from here

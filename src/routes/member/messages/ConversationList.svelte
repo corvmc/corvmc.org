@@ -32,10 +32,10 @@
 	function chooseInbox(next: string) {
 		inbox = next;
 		conversationList.page = 1;
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		if (next === 'all') url.searchParams.delete('inbox');
 		else url.searchParams.set('inbox', next);
-		void goto(url, { replaceState: true, noScroll: true, keepFocus: true });
+		void goto(url, { replace: true, reset: false });
 	}
 
 	const result = $derived(getMyMessages({ page: conversationList.page, inbox }));

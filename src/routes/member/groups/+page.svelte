@@ -43,7 +43,7 @@
 	}
 
 	function onApplyClose() {
-		if (page.url.searchParams.has('committee')) replaceState(resolve('/member/groups'), {});
+		if (page.url.searchParams.has('committee')) replaceState(resolve('member/groups'), {});
 	}
 
 	/**
@@ -87,8 +87,7 @@
 					<Card>
 						<CardBody row class="py-4">
 							<div class="min-w-0">
-								<a class="link font-semibold" href={resolve(`/member/groups/${g.slug}`)}>{g.name}</a
-								>
+								<a class="link font-semibold" href={resolve(`member/groups/${g.slug}`)}>{g.name}</a>
 								<p class="text-subtle">
 									{m.member_groups_members({
 										kindLabel: kindLabel(g.kind),

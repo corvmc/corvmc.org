@@ -138,7 +138,7 @@
 			<ParaglideMessage
 				message={m.staff_suggestions_nothing_here_visible_members_reported}
 				inputs={{ staff_content_flags: m.staff_content_flags() }}
-				>{#snippet a({ children })}<a class="link" href={resolve('/staff/flags')}
+				>{#snippet a({ children })}<a class="link" href={resolve('staff/flags')}
 						>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
 			>
@@ -163,7 +163,7 @@
 					<th class="col-extra whitespace-nowrap">{m.staff_posted()}</th>
 				{/snippet}
 				{#each rows as s (s.id)}
-					{@const href = resolve(`/staff/suggestions/${s.id}`)}
+					{@const href = resolve(`staff/suggestions/${s.id}`)}
 					<tr class="hover cursor-pointer" use:rowLink={href}>
 						<td class="w-px">
 							<StatusBadge status={s.mergedIntoId ? 'merged' : s.status} />
@@ -199,7 +199,7 @@
 						<th class="col-extra whitespace-nowrap">{m.staff_requested()}</th>
 					{/snippet}
 					{#each pendingEdits as e (e.id)}
-						{@const href = resolve(`/staff/suggestions/${e.suggestionId}`)}
+						{@const href = resolve(`staff/suggestions/${e.suggestionId}`)}
 						<tr class="hover cursor-pointer" use:rowLink={href}>
 							<td class="w-px"><StatusBadge status="pending_review" /></td>
 							<td class="cell-primary">
@@ -231,7 +231,7 @@
 						<th class="col-extra whitespace-nowrap">{m.staff_posted()}</th>
 					{/snippet}
 					{#each rows as s (s.id)}
-						{@const href = resolve(`/staff/suggestions/${s.id}`)}
+						{@const href = resolve(`staff/suggestions/${s.id}`)}
 						<tr class="hover cursor-pointer" use:rowLink={href}>
 							<td class="w-px"><StatusBadge status="under_review" /></td>
 							<td class="cell-primary"><EntityIdentity ref={s.ref} /></td>

@@ -217,7 +217,7 @@
 					{#each assets as asset (asset.id)}
 						<tr
 							class="hover cursor-pointer"
-							use:rowLink={resolve(`/staff/inventory/assets/${asset.id}`)}
+							use:rowLink={resolve(`staff/inventory/assets/${asset.id}`)}
 						>
 							<td class="w-px"><StatusBadge status={asset.status} /></td>
 							<td class="cell-primary">
@@ -257,7 +257,7 @@
 				{#each problems as problem (problem.id)}
 					<tr
 						class="hover cursor-pointer"
-						use:rowLink={resolve(`/staff/inventory/problems/${problem.id}`)}
+						use:rowLink={resolve(`staff/inventory/problems/${problem.id}`)}
 					>
 						<td class="w-px">
 							<div class="flex w-max items-center gap-1">
@@ -291,7 +291,7 @@
 				{#each onOrder as line (line.lineId)}
 					<tr
 						class="hover cursor-pointer"
-						use:rowLink={resolve(`/staff/inventory/orders/${line.orderId}`)}
+						use:rowLink={resolve(`staff/inventory/orders/${line.orderId}`)}
 					>
 						<td class="cell-primary"
 							>{line.supplierName ?? msg.staff_inventory_id_no_supplier_recorded()}</td
@@ -312,7 +312,7 @@
 								variant="ghost"
 								size="sm"
 								href={withQuery(
-									resolve('/staff/inventory/intake'),
+									resolve('staff/inventory/intake'),
 									new URLSearchParams({ order: line.orderId })
 								)}>{msg.staff_receive()}</Button
 							>
@@ -342,7 +342,7 @@
 				{#each sources as source (source.lineId)}
 					<tr
 						class="hover cursor-pointer"
-						use:rowLink={resolve(`/staff/inventory/acquisitions/${source.acquisitionId}`)}
+						use:rowLink={resolve(`staff/inventory/acquisitions/${source.acquisitionId}`)}
 					>
 						<td class="whitespace-nowrap">{formatDateShort(source.occurredAt)}</td>
 						<td class="cell-primary">{source.source ?? '—'}</td>

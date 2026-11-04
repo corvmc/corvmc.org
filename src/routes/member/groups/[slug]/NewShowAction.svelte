@@ -22,7 +22,7 @@
 	size="sm"
 	onsuccess={(result) => {
 		const eventId = (result as { eventId?: string } | undefined)?.eventId;
-		if (eventId) goto(resolve(`/staff/events/${eventId}/production`));
+		if (eventId) goto(resolve(`staff/events/${eventId}/production`));
 	}}
 >
 	{#snippet form()}

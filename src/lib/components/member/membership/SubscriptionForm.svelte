@@ -8,7 +8,7 @@
 	import Field from '#lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import type { RemoteForm } from '#lib/components/ui/Form/Form.svelte';
-	import type { RemoteFormInput } from '@sveltejs/kit';
+	import type { RemoteFormInput } from '$app/server';
 
 	const STEP = DOLLARS_PER_UNIT;
 	const MIN_AMOUNT = DOLLARS_PER_UNIT * 2; // $10 → 2 free hours

@@ -63,7 +63,9 @@ async function goToListing(page: Page, title: string) {
 /** The edit form's submit, by the field only that form carries (not the bill's). */
 function saveButton(page: Page) {
 	return page
-		.locator('form', { has: page.locator('input[name="eventStartTime"]') })
+		.locator('form', {
+			has: page.locator('input:is([name="eventStartTime"], [name^="eventStartTime/"])')
+		})
 		.locator('button[type="submit"]');
 }
 
@@ -95,10 +97,10 @@ async function createEvent(
 ) {
 	await page.goto('/staff/events');
 	await page.locator('[data-page-header]').getByRole('button').click();
-	await page.locator('input[name="title"]').fill(title);
-	await page.locator('input[name="eventDate"]').fill(date);
-	await page.locator('input[name="eventStartTime"]').fill(start);
-	await page.locator('input[name="eventEndTime"]').fill(end);
+	await page.locator('input:is([name="title"], [name^="title/"])').fill(title);
+	await page.locator('input:is([name="eventDate"], [name^="eventDate/"])').fill(date);
+	await page.locator('input:is([name="eventStartTime"], [name^="eventStartTime/"])').fill(start);
+	await page.locator('input:is([name="eventEndTime"], [name^="eventEndTime/"])').fill(end);
 	await page.getByRole('dialog').locator('button[type="submit"]').click();
 	await goToListing(page, title);
 }
@@ -120,8 +122,12 @@ test.describe('staff event creation — minimal modal', () => {
 		await page.locator('[data-page-header]').getByRole('button').click();
 
 		const dialog = page.getByRole('dialog');
-		await expect(dialog.locator('input[name="title"]')).toBeVisible({ timeout: 15000 });
-		await expect(dialog.locator('input[name="eventEndTime"]')).toBeVisible();
+		await expect(dialog.locator('input:is([name="title"], [name^="title/"])')).toBeVisible({
+			timeout: 15000
+		});
+		await expect(
+			dialog.locator('input:is([name="eventEndTime"], [name^="eventEndTime/"])')
+		).toBeVisible();
 		// No room hold and no ticketing: neither control nor the fields behind them.
 		await expect(dialog.locator('input[type="checkbox"]')).toHaveCount(0);
 		await expect(dialog.locator('input[name^="reservation"]')).toHaveCount(0);
@@ -136,18 +142,32 @@ test.describe('staff event creation — minimal modal', () => {
 
 		await page.getByTestId('edit-listing').click();
 		await page.getByTestId('reserve-space').check();
-		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue(EVENT_START);
-		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue(EVENT_END);
+		await expect(
+			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
+		).toHaveValue(EVENT_START);
+		await expect(
+			page.locator('input:is([name="reservationEndTime"], [name^="reservationEndTime/"])')
+		).toHaveValue(EVENT_END);
 
 		// An hour either side of the 19:00–22:00 show for load-in and load-out.
-		await page.locator('input[name="reservationStartTime"]').fill('18:00');
-		await page.locator('input[name="reservationEndTime"]').fill('23:00');
+		await page
+			.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
+			.fill('18:00');
+		await page
+			.locator('input:is([name="reservationEndTime"], [name^="reservationEndTime/"])')
+			.fill('23:00');
 
 		// The show moves two hours earlier, and the padding moves with it.
-		await page.locator('input[name="eventStartTime"]').fill('17:00');
-		await page.locator('input[name="eventEndTime"]').fill('20:00');
-		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue('16:00');
-		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue('21:00');
+		await page
+			.locator('input:is([name="eventStartTime"], [name^="eventStartTime/"])')
+			.fill('17:00');
+		await page.locator('input:is([name="eventEndTime"], [name^="eventEndTime/"])').fill('20:00');
+		await expect(
+			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
+		).toHaveValue('16:00');
+		await expect(
+			page.locator('input:is([name="reservationEndTime"], [name^="reservationEndTime/"])')
+		).toHaveValue('21:00');
 	});
 
 	test('the reservation list links an event hold to its event, not to the booker', async ({
@@ -252,8 +272,12 @@ test.describe('staff event edit — reserve space', () => {
 
 		// Pre-filled from the event's own window: the times are a setup/teardown
 		// override, not a precondition.
-		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue(EVENT_START);
-		await expect(page.locator('input[name="reservationEndTime"]')).toHaveValue(EVENT_END);
+		await expect(
+			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
+		).toHaveValue(EVENT_START);
+		await expect(
+			page.locator('input:is([name="reservationEndTime"], [name^="reservationEndTime/"])')
+		).toHaveValue(EVENT_END);
 
 		// The listing form's submit, not the bill's, which renders beside it.
 		await saveButton(page).click();
@@ -279,10 +303,14 @@ test.describe('staff event edit — reserve space', () => {
 		// later on purpose: 17:00–22:00 stays inside the 09:00–22:00 operating
 		// hours, so no out-of-hours warning muddies the picture.
 		await page.getByTestId('edit-listing').click();
-		await page.locator('input[name="eventStartTime"]').fill('17:00');
+		await page
+			.locator('input:is([name="eventStartTime"], [name^="eventStartTime/"])')
+			.fill('17:00');
 		await page.getByTestId('confirm-rebook').check();
 
-		await expect(page.locator('input[name="reservationStartTime"]')).toHaveValue('17:00');
+		await expect(
+			page.locator('input:is([name="reservationStartTime"], [name^="reservationStartTime/"])')
+		).toHaveValue('17:00');
 
 		// The seeded dates are years out, so ConflictWarnings always reports the
 		// advance-booking advisory here. Asserting it first proves the component

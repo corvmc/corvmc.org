@@ -53,5 +53,5 @@ test('a ready listing gets the plain question and a live submit', async ({ page 
 	await expect(dialog.locator('button[type="submit"]')).toBeEnabled({ timeout: 15000 });
 	// Nothing to warn about, so no list of blockers and no reason to give.
 	await expect(dialog.getByRole('alert')).toHaveCount(0);
-	await expect(dialog.locator('textarea[name="reason"]')).toHaveCount(0);
+	await expect(dialog.locator('textarea:is([name="reason"], [name^="reason/"])')).toHaveCount(0);
 });

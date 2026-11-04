@@ -12,7 +12,7 @@
 		PACKING_ITEM_NOTES_MAX
 	} from '#lib/config.js';
 	import type { PackingItemRowState } from '#lib/types/packing.js';
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 	import { IconPlus, IconTrash, IconChevronUp, IconChevronDown } from '@tabler/icons-svelte';
 	import type { Snippet } from 'svelte';
 

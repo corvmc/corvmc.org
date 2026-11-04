@@ -55,7 +55,7 @@
 
 		<!-- A link to its own page, not an embedded form: new members submitted
 		     the blank form while working down their profile (#1820). -->
-		<Button href={resolve('/member/profile/teaching/apply')} size="sm"
+		<Button href={resolve('member/profile/teaching/apply')} size="sm"
 			>{m.member_apply_teach()}</Button
 		>
 	{:else}

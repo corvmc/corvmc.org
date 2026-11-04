@@ -13,7 +13,7 @@ import { CDN_MARKER, transformOptions } from '#lib/utils/images.js';
  */
 
 const base = {
-	href: resolve('/events/1'),
+	href: resolve('events/1'),
 	title: 'Cascade Fest',
 	startsAt: new Date('2026-08-20T19:00:00Z')
 };

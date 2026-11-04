@@ -40,10 +40,10 @@
 				{m.member_volunteer_blocked_nothing_chase_end_once_s()}
 			</p>
 			<div class="flex flex-wrap gap-2 pt-2">
-				<Button href={resolve('/contact')} variant="primary" size="sm"
+				<Button href={resolve('contact')} variant="primary" size="sm"
 					>{m.member_volunteer_blocked_contact_staff()}</Button
 				>
-				<Button href={resolve('/member')} variant="ghost" size="sm"
+				<Button href={resolve('member')} variant="ghost" size="sm"
 					>{m.member_volunteer_blocked_back_dashboard()}</Button
 				>
 			</div>

@@ -6,7 +6,7 @@ import { analyse, type Report } from './form-reachability';
 /**
  * The form-reachability report over this app (#2049), shared by
  * `pnpm form-reachability` and the gate in `scripts/form-reachability.spec.ts`.
- * Needs `.svelte-kit/tsconfig.json`, which `svelte-kit sync` writes.
+ * Needs `node_modules/$app/tsconfig.json`, which `svelte-kit sync` writes.
  */
 export function appReport(root = process.cwd()): Report {
 	const rel = (f: string) => relative(root, f).replaceAll('\\', '/');

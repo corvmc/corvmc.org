@@ -77,7 +77,7 @@
 		// Paid: off to pay, wherever `checkout()` decided that is. Free: already
 		// fulfilled, straight to the download.
 		if (r?.checkoutUrl) await goToCheckout(r.checkoutUrl);
-		else if (r?.downloadToken) await goto(resolve(`/music/download/${r.downloadToken}`));
+		else if (r?.downloadToken) await goto(resolve(`music/download/${r.downloadToken}`));
 	}
 </script>
 
@@ -205,7 +205,7 @@
 							>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
 								>{/snippet}{#snippet a({ children })}<a
 									class="link"
-									href={resolve('/member/purchases')}>{@render children?.()}</a
+									href={resolve('member/purchases')}>{@render children?.()}</a
 								>{/snippet}</ParaglideMessage
 						>
 					</p>

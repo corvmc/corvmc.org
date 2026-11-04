@@ -115,7 +115,7 @@
 		{/if}
 		<!-- The service takes a delta and keeps taking one; only the question
 		     asked of the operator changed. -->
-		<input {...fields.delta.as('number', delta === null ? '' : String(delta))} type="hidden" />
+		<input {...fields.delta.as('number', delta ?? undefined)} type="hidden" />
 		<Field field={fields.notes} type="textarea" label={m.actions_adjust_stock_why()} />
 	{/snippet}
 </Action>

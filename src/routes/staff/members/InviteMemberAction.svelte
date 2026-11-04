@@ -26,7 +26,7 @@
 				action: { label: m.staff_open(), onClick: () => goto(href) }
 			});
 		} else if (r?.kind === 'pending') {
-			const href = resolve('/staff/members/invites');
+			const href = resolve('staff/members/invites');
 			toast.info(m.staff_members_invite_member_already_has_pending_invitation({ email: r.email }), {
 				action: { label: m.staff_open(), onClick: () => goto(href) }
 			});

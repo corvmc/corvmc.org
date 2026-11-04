@@ -4,7 +4,7 @@
 	import Action from '#lib/components/ui/Action.svelte';
 	import { Field } from '#lib/components/ui/Form/index.js';
 	import { pledgeWishlistAsGuest } from '#lib/remote/inventory.remote.js';
-	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '#lib/turnstile.js';
+	import { TURNSTILE_SITE_KEY } from '#lib/turnstile.js';
 	import type { WishlistPledgeSubject } from '#lib/config.js';
 
 	/**
@@ -43,7 +43,7 @@
 		<Field field={action.fields.email} type="email" label={m.public_email_2()} />
 		<Turnstile
 			siteKey={TURNSTILE_SITE_KEY}
-			responseFieldName={TURNSTILE_RESPONSE_FIELD}
+			responseFieldName={action.fields.turnstileToken.as('hidden', '').name}
 			theme="auto"
 			bind:reset={resetTurnstile}
 		/>

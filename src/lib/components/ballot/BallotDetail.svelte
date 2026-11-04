@@ -71,12 +71,12 @@
 	const suggestionHref = $derived(
 		decides.suggestion
 			? panel === 'staff' && viewer.canReadSuggestions
-				? resolve(`/staff/suggestions/${decides.suggestion.id}`)
-				: resolve(`/member/suggestions/${decides.suggestion.id}`)
+				? resolve(`staff/suggestions/${decides.suggestion.id}`)
+				: resolve(`member/suggestions/${decides.suggestion.id}`)
 			: null
 	);
 	const projectHref = (id: string) =>
-		viewer.canReadProjects ? resolve(`/staff/projects/${id}`) : null;
+		viewer.canReadProjects ? resolve(`staff/projects/${id}`) : null;
 
 	function share(votes: number, turnout: number) {
 		return turnout === 0 ? '—' : `${Math.round((votes / turnout) * 100)}%`;
@@ -294,7 +294,7 @@
 						size="sm"
 						onsuccess={(r) => {
 							if (r && typeof r === 'object' && 'id' in r) {
-								void goto(resolve(`/staff/projects/${r.id as string}`));
+								void goto(resolve(`staff/projects/${r.id as string}`));
 							}
 						}}
 					>

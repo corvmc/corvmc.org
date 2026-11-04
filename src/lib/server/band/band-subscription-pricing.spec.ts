@@ -12,7 +12,6 @@ vi.mock('#lib/server/finance/product-config-service.js', () => ({
 	getStripeProductId: vi.fn()
 }));
 
-vi.mock('$lib/server/finance/stripe-checkout', () => ({ checkout: vi.fn() }));
 vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 import { getBandPremiumPricing } from './band-subscription-service';

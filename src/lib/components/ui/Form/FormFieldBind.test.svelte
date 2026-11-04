@@ -3,7 +3,7 @@
 	cannot observe through `render` props alone.
 -->
 <script lang="ts">
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 	import FormField from './FormField.svelte';
 
 	let { field }: { field: RemoteFormField<RemoteFormFieldValue> } = $props();

@@ -46,8 +46,8 @@
 			{#each campaigns as c (c.id)}
 				{@const href =
 					c.status === 'draft'
-						? resolve(`/staff/marketing/campaigns/${c.id}/edit`)
-						: resolve(`/staff/marketing/campaigns/${c.id}`)}
+						? resolve(`staff/marketing/campaigns/${c.id}/edit`)
+						: resolve(`staff/marketing/campaigns/${c.id}`)}
 				<tr class="hover cursor-pointer" use:rowLink={href}>
 					<td class="w-px"><StatusBadge status={c.status} /></td>
 					<!-- Audiences was its own column; it qualifies the campaign, so the

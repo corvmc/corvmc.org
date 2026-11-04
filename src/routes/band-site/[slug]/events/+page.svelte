@@ -122,5 +122,5 @@
 
 <!-- Minimal footer -->
 <footer class="py-6 text-center text-xs opacity-40">
-	<a href={resolve('/')} class="hover:opacity-70">{m.public_corvallis_music_collective()}</a>
+	<a href={resolve('')} class="hover:opacity-70">{m.public_corvallis_music_collective()}</a>
 </footer>

@@ -22,10 +22,10 @@
 	const sponsors = $derived(await getSponsors({ includeArchived }));
 
 	function setArchived(on: boolean) {
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		if (on) url.searchParams.set('archived', '1');
 		else url.searchParams.delete('archived');
-		goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+		goto(url, { replace: true, reset: false });
 	}
 </script>
 
@@ -75,7 +75,7 @@
 				<tr
 					class="hover cursor-pointer"
 					class:opacity-60={s.deletedAt}
-					use:rowLink={resolve(`/staff/sponsors/${s.id}`)}
+					use:rowLink={resolve(`staff/sponsors/${s.id}`)}
 				>
 					<td class="w-px">
 						{#if s.current}
@@ -85,7 +85,7 @@
 						{/if}
 					</td>
 					<td class="cell-primary">
-						<a class="link font-medium" href={resolve(`/staff/sponsors/${s.id}`)}>{s.name}</a>
+						<a class="link font-medium" href={resolve(`staff/sponsors/${s.id}`)}>{s.name}</a>
 						{#if s.deletedAt}
 							<Badge variant="ghost" size="sm" class="ml-2">{m.staff_archived()}</Badge>
 						{/if}

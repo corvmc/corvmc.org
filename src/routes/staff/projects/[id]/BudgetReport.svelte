@@ -44,7 +44,7 @@
 				: m.staff_projects_id_budget_report_purchase_order_2(),
 			id: order.id,
 			label: order.supplierName ?? m.staff_order_2(),
-			href: resolve(`/staff/inventory/orders/${order.id}`),
+			href: resolve(`staff/inventory/orders/${order.id}`),
 			status: order.status as string | null,
 			date: order.placedAt,
 			amount: '—'
@@ -54,7 +54,7 @@
 			kindLabel: m.staff_acquisition(),
 			id: acq.id,
 			label: acq.sourceName ?? acq.kind,
-			href: resolve(`/staff/inventory/acquisitions/${acq.id}`),
+			href: resolve(`staff/inventory/acquisitions/${acq.id}`),
 			status: null,
 			date: acq.occurredAt as Date | null,
 			amount: acq.totalCents

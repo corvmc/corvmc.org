@@ -61,9 +61,11 @@ const openDialog = async (locator: Locator) => {
 
 /** Every hidden input the form would actually post under `name`. */
 const postedValues = (name: string) =>
-	[...document.querySelectorAll<HTMLInputElement>(`[role="dialog"] input[name="${name}"]`)].map(
-		(el) => el.value
-	);
+	[
+		...document.querySelectorAll<HTMLInputElement>(
+			`[role="dialog"] input:is([name="${name}"], [name^="${name}/"])`
+		)
+	].map((el) => el.value);
 
 describe('ConfirmReservationAction', () => {
 	it('posts the reservation id exactly once for a member', async () => {

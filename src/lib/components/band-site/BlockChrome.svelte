@@ -51,7 +51,7 @@
 	const source = $derived(BLOCK_SOURCES[block.type]);
 	const label = $derived(BLOCK_LABELS[block.type].label);
 	const hidden = $derived(block.hidden === true);
-	const ownerHref = $derived(source.owner ? resolve(`/band/${slug}/${source.owner}`) : null);
+	const ownerHref = $derived(source.owner ? resolve(`band/${slug}/${source.owner}`) : null);
 </script>
 
 <div

@@ -60,7 +60,7 @@
 					{/if}
 
 					<div class="text-center text-sm">
-						<a class="link" href={resolve('/login')}>{m.public_forgot_password_back_sign()}</a>
+						<a class="link" href={resolve('login')}>{m.public_forgot_password_back_sign()}</a>
 					</div>
 				</CardBody>
 			</div>

@@ -1,6 +1,6 @@
 // Everything outside `src`, typechecked.
 //
-// `pnpm check` runs svelte-check against the generated `.svelte-kit/tsconfig.json`,
+// `pnpm check` runs svelte-check against `tsconfig.json`,
 // whose `include` covers `src` and nothing else. Seeds, e2e fixtures, the db
 // scripts and the Playwright config are all real code
 // against the real schema, and until #536 none of it was compiled by anything: a
@@ -25,7 +25,7 @@
 // `scripts/coverage.spec.ts` fails if any source file outside `src` stops being
 // matched here.
 {
-	"extends": "./.svelte-kit/tsconfig.json",
+	"extends": "$app/tsconfig",
 	"compilerOptions": {
 		"noEmit": true,
 		"strict": true,
@@ -50,7 +50,7 @@
 		"eslint-rules/**/*.js",
 		"eslint-rules/**/*.ts",
 		"eslint.config.js",
-		"svelte.config.js",
+		"kit.config.js",
 		"drizzle.config.ts",
 		"vite.config.ts",
 		"project.inlang/paraglide.config.ts",

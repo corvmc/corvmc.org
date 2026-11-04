@@ -102,7 +102,7 @@
 				<DefinitionList>
 					<Fact label={m.staff_flags_id_between()} class="flex flex-wrap gap-2">
 						{#each flag.threadContext.participants as p (p.userId)}
-							<a class="link" href={resolve(`/staff/members/${p.userId}`)}>
+							<a class="link" href={resolve(`staff/members/${p.userId}`)}>
 								{p.name}{#if p.isReporter}<span class="ml-1 opacity-60"
 										>{m.staff_flags_id_reported_2()}</span
 									>{/if}

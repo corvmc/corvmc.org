@@ -328,7 +328,7 @@
 			</tr>
 			{#if expanded}
 				{#each g.tasks as t (t.id)}
-					{@const href = withQuery(resolve(`/staff/projects/${projectId}`), `task=${t.id}`)}
+					{@const href = withQuery(resolve(`staff/projects/${projectId}`), `task=${t.id}`)}
 					<tr
 						class="task-row group cursor-pointer {selectedId === t.id
 							? 'bg-base-200'
@@ -391,7 +391,7 @@
 												</Button>
 											{/if}
 											{#if t.mode === 'contractor' && t.engagement && list.contractorMoney}
-												<a class="link" href={resolve(`/staff/contractors/jobs/${t.engagement.id}`)}
+												<a class="link" href={resolve(`staff/contractors/jobs/${t.engagement.id}`)}
 													>{t.engagement.invoiceRef
 														? m.staff_projects_id_task_list_invoice({
 																invoiceRef: t.engagement.invoiceRef

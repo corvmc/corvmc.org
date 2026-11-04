@@ -39,7 +39,7 @@
 	function handleSuccess() {
 		const id = eventId;
 		open = false;
-		if (id) goto(resolve(`/staff/events/${id}/production`));
+		if (id) goto(resolve(`staff/events/${id}/production`));
 	}
 </script>
 

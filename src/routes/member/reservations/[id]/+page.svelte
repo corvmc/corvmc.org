@@ -91,7 +91,7 @@
 			     mid-rotation. Standing outside is the failure mode. -->
 			<Alert type="error">
 				<ParaglideMessage message={m.member_reservations_id_code_hasn_t_reached_door} inputs={{}}
-					>{#snippet a({ children })}<a class="link" href={resolve('/contact')}
+					>{#snippet a({ children })}<a class="link" href={resolve('contact')}
 							>{@render children?.()}</a
 						>{/snippet}</ParaglideMessage
 				>

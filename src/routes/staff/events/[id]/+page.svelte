@@ -119,7 +119,7 @@
 			     they came from. Opening one now lives in that console's empty
 			     state, which is the page that explains what a production is
 			     (#976). -->
-			<Button href={resolve(`/staff/events/${id}/production`)} variant="default" size="sm" outline>
+			<Button href={resolve(`staff/events/${id}/production`)} variant="default" size="sm" outline>
 				{data.production
 					? m.staff_events_id_manage_production()
 					: m.staff_events_id_open_production()}
@@ -133,7 +133,7 @@
 		{/if}
 
 		{#if evt.kind === 'market'}
-			<Button href={resolve(`/staff/events/${id}/vendors`)} variant="ghost" size="sm"
+			<Button href={resolve(`staff/events/${id}/vendors`)} variant="ghost" size="sm"
 				>{m.staff_vendors()}</Button
 			>
 		{/if}
@@ -291,7 +291,7 @@
 			{/if}
 
 			<Button
-				href={resolve(`/staff/events/${id}/production`)}
+				href={resolve(`staff/events/${id}/production`)}
 				variant="default"
 				size="sm"
 				outline
@@ -475,7 +475,7 @@
 					<th>{m.staff_posted_by()}</th>
 				{/snippet}
 				{#each data.nearby as n (n.id)}
-					{@const href = resolve(`/staff/events/${n.id}`)}
+					{@const href = resolve(`staff/events/${n.id}`)}
 					<tr class="hover cursor-pointer" use:rowLink={href}>
 						<td class="w-px"><StatusBadge status={n.status} /></td>
 						<td class="cell-primary">

@@ -110,7 +110,7 @@
 		})}
 		{#snippet action()}
 			<Button
-				href="{resolve(`/staff/projects/${projectId}/tasks/${task.id}`)}#engagement-{engaged.id}"
+				href="{resolve(`staff/projects/${projectId}/tasks/${task.id}`)}#engagement-{engaged.id}"
 				size="xs"
 				variant="default"
 			>
@@ -264,7 +264,7 @@
 			})}
 			{#snippet action()}
 				<Button
-					href="{resolve(`/staff/projects/${projectId}/tasks/${task.id}`)}#engagement-{live.id}"
+					href="{resolve(`staff/projects/${projectId}/tasks/${task.id}`)}#engagement-{live.id}"
 					size="xs"
 					variant="default"
 				>

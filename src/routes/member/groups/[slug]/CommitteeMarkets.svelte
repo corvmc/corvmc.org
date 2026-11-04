@@ -26,7 +26,7 @@
 					<td class="cell-primary">{market.title}</td>
 					<td>{formatDateShort(market.startsAt)}</td>
 					<td class="text-right">
-						<a class="link" href={resolve(`/member/groups/${slug}/markets/${market.eventId}`)}>
+						<a class="link" href={resolve(`member/groups/${slug}/markets/${market.eventId}`)}>
 							{m.member_vendors()}
 						</a>
 						{#if market.toReview > 0}

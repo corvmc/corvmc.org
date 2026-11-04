@@ -25,7 +25,7 @@
 
 		{#if info.accepting}
 			<div class="market__apply">
-				<Button href={resolve(`/events/${eventId}/vendors/apply`)} variant="primary">
+				<Button href={resolve(`events/${eventId}/vendors/apply`)} variant="primary">
 					{m.public_events_id_market_vendors_apply_table()}
 				</Button>
 				{#if info.closesAt}

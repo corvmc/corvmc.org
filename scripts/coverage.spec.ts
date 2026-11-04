@@ -2,8 +2,8 @@
  * Every source file in the repo is compiled by something.
  *
  * This is the guard that would have caught the hole #536 closed. `pnpm check`
- * runs svelte-check against the generated `.svelte-kit/tsconfig.json`, whose
- * `include` is `src`, `test`, `tests` and two config files — so `scripts/` and
+ * runs svelte-check against `tsconfig.json`, whose `include` is `src` and two
+ * config files — so `scripts/` and
  * `e2e/` (14,583 lines, against the real schema) were compiled by nothing at
  * all, and had been for as long as they had existed. Nobody removed them from a
  * gate; they were simply never added to one, and no gate can notice its own
@@ -85,8 +85,8 @@ function readJsonc(path: string, root: URL): { include?: string[]; exclude?: str
 
 /**
  * A tsconfig `include` entry as a matcher, resolved relative to the directory
- * holding the config. The generated config lives in `.svelte-kit/`, so its
- * globs read `../src/**` and have to be normalised against the repo root.
+ * holding the config. A config outside the root reads `../src/**`, which is
+ * normalised against the repo root.
  */
 function globsOf(configPath: string, root: URL = ROOT): string[] {
 	const dir = configPath.includes('/') ? configPath.slice(0, configPath.lastIndexOf('/') + 1) : '';
@@ -97,7 +97,7 @@ function globsOf(configPath: string, root: URL = ROOT): string[] {
 	});
 }
 
-const PROJECTS = ['tsconfig.tooling.json', '.svelte-kit/tsconfig.json'];
+const PROJECTS = ['tsconfig.tooling.json', 'tsconfig.json'];
 
 function sourceFiles(root: URL = ROOT): string[] {
 	return filesMatching(SOURCE_GLOB, root);
@@ -114,10 +114,9 @@ function coveredFiles(root: URL = ROOT): Set<string> {
 }
 
 describe('typecheck coverage', () => {
-	it('has a generated tsconfig to read', () => {
-		// `svelte-kit sync` writes it; `pnpm install` runs that through `prepare`.
+	it('has an app tsconfig with globs to read', () => {
 		// Without this the whole suite below would pass vacuously.
-		expect(globsOf('.svelte-kit/tsconfig.json').length).toBeGreaterThan(0);
+		expect(globsOf('tsconfig.json').length).toBeGreaterThan(0);
 	});
 
 	it('compiles every source file in some project', () => {
@@ -184,7 +183,7 @@ describe('the glob everything above runs on', () => {
 		};
 
 		write('tsconfig.tooling.json', JSON.stringify({ include: ['covered/**/*.ts'] }));
-		write('.svelte-kit/tsconfig.json', JSON.stringify({ include: ['../src/**/*.ts'] }));
+		write('tsconfig.json', JSON.stringify({ include: ['src/**/*.ts'] }));
 		write('covered/a.ts', 'export {};');
 		write('src/b.ts', 'export {};');
 		write('stray/c.ts', 'export {};');

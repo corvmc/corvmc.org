@@ -117,7 +117,7 @@ vi.mock('#lib/server/finance/reservation-entries.js', () => ({
 // Stripe is never reached for real.
 const checkout = vi.fn(async (_o: Record<string, unknown>) => ({
 	paid: false,
-	checkoutUrl: 'https://checkout.test/session'
+	checkoutUrl: 'https://checkout.stripe.com/c/pay/cs_test_session'
 }));
 vi.mock('#lib/server/finance/payment-service.js', () => ({
 	checkout: (o: Record<string, unknown>) => checkout(o),
@@ -222,7 +222,7 @@ describe('a band booking, paid by someone who did not book it', () => {
 
 	it("admits a bandmate: the booker's free hours settle first, the payer is charged the rest", async () => {
 		const r = await settle(payReservation({ coverFees: false }));
-		expect(isRedirect(r) && r.location).toBe('https://checkout.test/session');
+		expect(isRedirect(r) && r.location).toBe('https://checkout.stripe.com/c/pay/cs_test_session');
 
 		expect(commitReservationCredits).toHaveBeenCalledTimes(1);
 		expect(commitReservationCredits).toHaveBeenCalledWith(
@@ -261,7 +261,7 @@ describe('bookBandReservation with a pay step', () => {
 		const r = await bookBandReservation(booking);
 		expect(r).toMatchObject({
 			reservationId: 'res-1',
-			redirectUrl: 'https://checkout.test/session'
+			redirectUrl: 'https://checkout.stripe.com/c/pay/cs_test_session'
 		});
 		expect(commitReservationCredits).toHaveBeenCalledWith(
 			expect.objectContaining({ userId: booker.id })

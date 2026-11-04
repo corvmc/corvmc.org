@@ -125,7 +125,7 @@
 		const entry = messages[result];
 		if (entry) toast[entry[0]](entry[1]);
 
-		replaceState(resolve('/staff/settings'), {});
+		replaceState(resolve('staff/settings'), {});
 	});
 
 	const tabs = [
@@ -279,7 +279,9 @@
 													const dollars = parseFloat(input.value);
 													const hidden = input
 														.closest('form')
-														?.querySelector<HTMLInputElement>('[name="unitAmountCents"]');
+														?.querySelector<HTMLInputElement>(
+															`[name="${instance.fields.unitAmountCents.as('hidden', '').name}"]`
+														);
 													if (hidden && !isNaN(dollars))
 														hidden.value = String(Math.round(dollars * 100));
 												}}
@@ -344,7 +346,9 @@
 											const dollars = parseFloat(input.value);
 											const hidden = input
 												.closest('form')
-												?.querySelector<HTMLInputElement>('[name="hourlyRateCents"]');
+												?.querySelector<HTMLInputElement>(
+													`[name="${reservationFields.hourlyRateCents.as('hidden', '').name}"]`
+												);
 											if (hidden && !isNaN(dollars))
 												hidden.value = String(Math.round(dollars * 100));
 										}}
@@ -730,7 +734,7 @@
 										{m.staff_settings_test_connection()}
 									</Button>
 									<Button
-										href={resolve('/api/integrations/utec/authorize')}
+										href={resolve('api/integrations/utec/authorize')}
 										variant="ghost"
 										size="sm"
 										data-sveltekit-reload
@@ -739,7 +743,7 @@
 									</Button>
 								{:else}
 									<Button
-										href={resolve('/api/integrations/utec/authorize')}
+										href={resolve('api/integrations/utec/authorize')}
 										variant="primary"
 										size="sm"
 										class={utecCanConnect ? '' : 'btn-disabled'}

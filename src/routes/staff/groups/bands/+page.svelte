@@ -24,7 +24,7 @@
 	import GroupRecordPanel from '../[id]/GroupRecordPanel.svelte';
 
 	// Deactivated bands are hidden until the filter asks for them.
-	const view = rosterState(resolve('/staff/groups/bands'), {
+	const view = rosterState(resolve('staff/groups/bands'), {
 		status: oneOf(['active', 'deactivated', 'all'] as const, 'active'),
 		tier: oneOf(['', 'free', 'premium'] as const, '')
 	});
@@ -116,7 +116,7 @@
 		{/snippet}
 		{#snippet actions()}
 			<!-- External acts stay beside bands: the same staff job, and one can become the other. -->
-			<Button variant="ghost" size="sm" href={resolve('/staff/bands/acts')}
+			<Button variant="ghost" size="sm" href={resolve('staff/bands/acts')}
 				>{m.staff_external_acts()}</Button
 			>
 			<CreateBandAction />

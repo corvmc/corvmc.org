@@ -66,7 +66,7 @@
 			title={m.staff_no_categories_yet()}
 			description={m.staff_local_resources_add_categories_first_instrument_shops()}
 			actionLabel={m.staff_local_resources_action_label()}
-			actionHref={resolve('/staff/local-resources/categories')}
+			actionHref={resolve('staff/local-resources/categories')}
 		/>
 	{:else if data.resources.length === 0}
 		<EmptyState
@@ -83,7 +83,7 @@
 				<th class="col-support">{m.staff_website()}</th>
 			{/snippet}
 			{#each data.resources as r (r.id)}
-				{@const href = resolve(`/staff/local-resources/${r.id}`)}
+				{@const href = resolve(`staff/local-resources/${r.id}`)}
 				<tr class="hover cursor-pointer" use:rowLink={href}>
 					<td class="w-px"><StatusBadge status={r.status} label /></td>
 					<td class="cell-primary"><a class="font-medium link-hover" {href}>{r.name}</a></td>

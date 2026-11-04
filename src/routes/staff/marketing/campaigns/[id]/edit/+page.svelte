@@ -48,7 +48,7 @@
 	// Redirect if not a draft
 	$effect(() => {
 		if (campaignData && campaignData.status !== 'draft') {
-			goto(resolve(`/staff/marketing/campaigns/${id}`));
+			goto(resolve(`staff/marketing/campaigns/${id}`));
 		}
 	});
 
@@ -117,7 +117,7 @@
 			return;
 		}
 		toast.success(m.staff_marketing_campaigns_id_edit_campaign_sent());
-		goto(resolve(`/staff/marketing/campaigns/${id}`));
+		goto(resolve(`staff/marketing/campaigns/${id}`));
 	}
 
 	async function handleSchedule() {
@@ -134,7 +134,7 @@
 			});
 			await scheduleCampaign({ scheduledFor: new Date(scheduledFor).toISOString() });
 			toast.success(m.staff_marketing_campaigns_id_edit_campaign_scheduled());
-			goto(resolve(`/staff/marketing/campaigns/${id}`));
+			goto(resolve(`staff/marketing/campaigns/${id}`));
 		} catch (err) {
 			toast.error(
 				err instanceof Error ? err.message : m.staff_marketing_campaigns_id_edit_failed_schedule()
@@ -153,7 +153,7 @@
 		try {
 			await deleteCampaign({});
 			toast.success(m.staff_marketing_campaigns_id_edit_campaign_deleted());
-			goto(resolve('/staff/marketing/campaigns'));
+			goto(resolve('staff/marketing/campaigns'));
 		} catch (err) {
 			toast.error(
 				err instanceof Error ? err.message : m.staff_marketing_campaigns_id_edit_failed_delete()

@@ -66,7 +66,7 @@
 	data-testid="create-group"
 	onsuccess={(result) => {
 		const made = result as { id?: string } | undefined;
-		if (made?.id) goto(resolve(`/staff/groups/${made.id}`));
+		if (made?.id) goto(resolve(`staff/groups/${made.id}`));
 	}}
 >
 	{#snippet form()}

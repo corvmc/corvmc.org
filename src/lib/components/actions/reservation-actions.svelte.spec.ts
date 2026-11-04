@@ -59,7 +59,7 @@ describe('CancelReservationAction', () => {
 		await locator.getByRole('button').click();
 		return page.getByRole('dialog');
 	};
-	const reason = () => page.getByRole('dialog').getByCss('[name="reason"]');
+	const reason = () => page.getByRole('dialog').getByCss(':is([name="reason"], [name^="reason/"])');
 
 	// The trigger is destructive and the modal is the only confirmation step, so
 	// it has to name the reservation rather than ask about "this reservation" in
@@ -150,7 +150,9 @@ describe('RefundReservationAction', () => {
 		await open();
 
 		const hidden = () =>
-			document.querySelectorAll<HTMLInputElement>('[role="dialog"] input[name="id"]');
+			document.querySelectorAll<HTMLInputElement>(
+				'[role="dialog"] input:is([name="id"], [name^="id/"])'
+			);
 		expect([...hidden()].map((i) => [i.type, i.value])).toEqual([['hidden', 'res-5']]);
 
 		await alsoCancel().click();

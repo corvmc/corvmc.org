@@ -80,8 +80,10 @@ describe('AdjustCreditsAction, what it will let staff submit', () => {
 	const submit = () =>
 		document.querySelector('[role="dialog"] button[type="submit"]') as HTMLButtonElement;
 
-	const amount = (v: string) => page.getByRole('dialog').getByCss('[name="amount"]').fill(v);
-	const reason = (v: string) => page.getByRole('dialog').getByCss('[name="description"]').fill(v);
+	const amount = (v: string) =>
+		page.getByRole('dialog').getByCss(':is([name="amount"], [name^="amount/"])').fill(v);
+	const reason = (v: string) =>
+		page.getByRole('dialog').getByCss(':is([name="description"], [name^="description/"])').fill(v);
 
 	// The state the modal opens in. Committing it writes a ledger row saying
 	// nothing happened, against a balance nobody changed.

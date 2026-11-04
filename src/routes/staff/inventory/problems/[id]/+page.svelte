@@ -75,7 +75,7 @@
 					<ul class="space-y-2">
 						{#each report.otherPending as o (o.id)}
 							<li>
-								<a class="link" href={resolve(`/staff/inventory/problems/${o.id}`)}>{o.note}</a>
+								<a class="link" href={resolve(`staff/inventory/problems/${o.id}`)}>{o.note}</a>
 								<div class="text-subtle">
 									{o.reporterName ?? m.staff_inventory_problems_id_deleted_account()} · {formatDateShort(
 										o.createdAt
@@ -181,7 +181,7 @@
 						}}
 						>{#snippet a({ children })}<a
 								class="link"
-								href={resolve(`/staff/volunteer/shifts/${report.workOrderId}`)}
+								href={resolve(`staff/volunteer/shifts/${report.workOrderId}`)}
 								>{@render children?.()}</a
 							>{/snippet}</ParaglideMessage
 					>

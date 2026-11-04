@@ -49,7 +49,7 @@
 	// not a reason for their row to be four lines tall.
 	const VISIBLE_ROLES = 2;
 
-	const roster = rosterState(resolve('/staff/members/volunteers'), {
+	const roster = rosterState(resolve('staff/members/volunteers'), {
 		role: text(),
 		status: oneOf<StatusFilter>(['', ...volunteerProfileStatuses], ''),
 		cert: text(),
@@ -78,7 +78,7 @@
 	);
 
 	const recordHref = (row: RosterRow) =>
-		withQuery(resolve(`/staff/members/${row.userId}`), 'tab=volunteer');
+		withQuery(resolve(`staff/members/${row.userId}`), 'tab=volunteer');
 </script>
 
 {#snippet rowAction(volunteer: RosterRow)}
@@ -163,7 +163,7 @@
 		empty={m.staff_members_volunteers_empty()}
 		searchPlaceholder={m.staff_members_volunteers_search_placeholder()}
 		personLabel={m.staff_members_volunteers_person_label()}
-		exportPath={resolve('/staff/members/volunteers/export')}
+		exportPath={resolve('staff/members/volunteers/export')}
 		emails={() => getStaffVolunteerEmails(active)}
 		tone={(v) => (v.status === 'blocked' ? 'muted' : undefined)}
 	>
@@ -254,7 +254,7 @@
 						inputs={{ pending }}
 						>{#snippet a({ children })}<a
 								class="link"
-								href={resolve('/staff/members/volunteers/hours')}>{@render children?.()}</a
+								href={resolve('staff/members/volunteers/hours')}>{@render children?.()}</a
 							>{/snippet}</ParaglideMessage
 					>
 				{/if}

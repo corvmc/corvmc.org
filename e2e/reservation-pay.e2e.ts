@@ -73,7 +73,7 @@ test('a member covers the processing fee and the reservation settles', async ({ 
 
 	// The boolean field rendered with SvelteKit's `b:` prefix — the exact
 	// mechanism the original bug lived in.
-	const checkbox = page.locator('input[name="b:coverFees"]');
+	const checkbox = page.locator('input:is([name="b:coverFees"], [name^="b:coverFees/"])');
 	await expect(checkbox).toBeVisible();
 	await checkbox.check();
 	await expect(checkbox).toBeChecked();
@@ -94,7 +94,7 @@ test('a member covers the processing fee and the reservation settles', async ({ 
 	// only while the button had yet to render its label — a race, not a pass.
 	await expect(page.getByText(dollars(WITH_FEES_CENTS), { exact: true })).toBeVisible();
 
-	const card = page.locator('input[name$="cardNumber"]');
+	const card = page.locator('input:is([name$="cardNumber"], [name*="cardNumber/"])');
 	await card.fill('4242424242424242');
 	await page.locator('form').filter({ has: card }).locator('button[type="submit"]').click();
 

@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { formatMonthDayYear } from '#lib/utils/format.js';
-	import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit';
+	import type { RemoteForm, RemoteFormInput } from '$app/server';
 	import { IconAlertTriangle } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
 	import type { SubscriptionInfo } from '#lib/server/db/schema/finance.js';

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, type Snippet } from 'svelte';
-	import type { RemoteFormFieldValue, RemoteFormField, RemoteFormIssue } from '@sveltejs/kit';
+	import type { RemoteFormFieldValue, RemoteFormField, RemoteFormIssue } from '$app/server';
 	import TagSelect from './TagSelect.svelte';
 	import CalendarSelect from './CalendarSelect.svelte';
 	import Select from './Select.svelte';

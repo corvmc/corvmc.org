@@ -44,10 +44,9 @@
 		if (from) parts.push(`from=${encodeURIComponent(from)}`);
 		if (to) parts.push(`to=${encodeURIComponent(to)}`);
 		const qs = parts.length > 0 ? `?${parts.join('&')}` : '';
-		goto(withQuery(resolve('/staff/inventory/spend'), qs), {
-			replaceState: true,
-			keepFocus: true,
-			noScroll: true
+		goto(withQuery(resolve('staff/inventory/spend'), qs), {
+			replace: true,
+			reset: false
 		});
 	}
 </script>
@@ -165,7 +164,7 @@
 		<ParaglideMessage
 			message={m.staff_inventory_spend_gifts_kind_recorded_but_not}
 			inputs={{ staff_inventory_spend_inventory_spec: m.staff_inventory_spend_inventory_spec() }}
-			>{#snippet a({ children })}<a class="link" href={resolve('/staff/inventory')}
+			>{#snippet a({ children })}<a class="link" href={resolve('staff/inventory')}
 					>{@render children?.()}</a
 				>{/snippet}</ParaglideMessage
 		>

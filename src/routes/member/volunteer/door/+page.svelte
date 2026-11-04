@@ -230,7 +230,7 @@
 							inputs={{
 								id: event.id
 							}}
-							>{#snippet a({ children })}<a class="link" href={resolve(`/events/${event.id}`)}
+							>{#snippet a({ children })}<a class="link" href={resolve(`events/${event.id}`)}
 									>{@render children?.()}</a
 								>{/snippet}</ParaglideMessage
 						>

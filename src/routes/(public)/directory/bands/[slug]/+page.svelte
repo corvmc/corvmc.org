@@ -101,7 +101,7 @@
 
 <div class="profile-page">
 	<div class="profile-page__bar no-print">
-		<a href={resolve('/directory')} class="link text-muted">{msg.public_back_directory()}</a>
+		<a href={resolve('directory')} class="link text-muted">{msg.public_back_directory()}</a>
 		<Button variant="ghost" size="sm" onclick={() => window.print()}
 			>{msg.public_directory_bands_slug_print_save_as_pdf()}</Button
 		>
@@ -150,7 +150,7 @@
 	</ProfileGrid>
 
 	<footer class="profile-page__footer">
-		<a href={resolve('/')}>{msg.public_corvallis_music_collective()}</a>
+		<a href={resolve('')}>{msg.public_corvallis_music_collective()}</a>
 	</footer>
 </div>
 

@@ -69,7 +69,7 @@
 			{/if}
 			{#if standing.triggeringFlagId}
 				<p class="mt-1 text-sm">
-					<a class="link" href={resolve(`/staff/flags/${standing.triggeringFlagId}`)}>
+					<a class="link" href={resolve(`staff/flags/${standing.triggeringFlagId}`)}>
 						{m.staff_members_id_panels_moderation_panel_see_report()}
 					</a>
 				</p>
@@ -112,10 +112,10 @@
 					<th class="col-extra">{m.staff_members_id_panels_moderation_panel_filed()}</th>
 				{/snippet}
 				{#each flags as f (f.id)}
-					<tr class="hover" use:rowLink={resolve(`/staff/flags/${f.id}`)}>
+					<tr class="hover" use:rowLink={resolve(`staff/flags/${f.id}`)}>
 						<td class="w-px"><StatusBadge status={f.status} /></td>
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/flags/${f.id}`)}>{f.reason}</a>
+							<a class="font-medium" href={resolve(`staff/flags/${f.id}`)}>{f.reason}</a>
 							<div class="text-muted">
 								{m.staff_members_id_panels_moderation_panel_by({
 									reportedByName:
@@ -149,10 +149,10 @@
 					<th class="col-extra">{m.staff_members_id_panels_moderation_panel_filed()}</th>
 				{/snippet}
 				{#each flags as f (f.id)}
-					<tr class="hover" use:rowLink={resolve(`/staff/flags/${f.id}`)}>
+					<tr class="hover" use:rowLink={resolve(`staff/flags/${f.id}`)}>
 						<td class="w-px"><StatusBadge status={f.status} /></td>
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/flags/${f.id}`)}>{f.entityLabel}</a>
+							<a class="font-medium" href={resolve(`staff/flags/${f.id}`)}>{f.entityLabel}</a>
 							<div class="text-muted">{f.reason}</div>
 						</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(f.createdAt)}</td>

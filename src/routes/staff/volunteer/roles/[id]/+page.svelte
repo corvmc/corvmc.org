@@ -67,7 +67,7 @@
 	width="3xl"
 	title={role.name}
 	subtitle={m.staff_volunteer_roles_id_subtitle()}
-	parent={{ label: m.staff_roles(), href: resolve('/staff/volunteer/roles') }}
+	parent={{ label: m.staff_roles(), href: resolve('staff/volunteer/roles') }}
 >
 	<StatusBadge status={role.isActive ? 'active' : 'retired'} label />
 
@@ -127,7 +127,7 @@
 			submitLabel={m.staff_delete()}
 			submitVariant="error"
 			successToast={m.staff_volunteer_roles_id_role_deleted()}
-			onsuccess={() => goto(resolve('/staff/volunteer/roles'))}
+			onsuccess={() => goto(resolve('staff/volunteer/roles'))}
 		>
 			{#snippet form()}
 				<input {...deleteVolunteerRole.fields.id.as('hidden', role.id)} />

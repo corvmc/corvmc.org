@@ -110,7 +110,7 @@
 				>
 					{#snippet description()}
 						{m.band_slug_edit_band_profile_form_renaming_band_doesn_t_move()}{#if isOwner}
-							<a href={resolve(`/band/${band.slug}/settings`)} class="ml-1 link link-primary">
+							<a href={resolve(`band/${band.slug}/settings`)} class="ml-1 link link-primary">
 								{m.band_slug_edit_band_profile_form_change_settings()}
 							</a>
 						{/if}

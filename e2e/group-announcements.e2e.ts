@@ -91,8 +91,10 @@ test.describe('writing announcements', () => {
 
 		await page.getByTestId('new-announcement').click();
 		const dialog = page.getByRole('dialog');
-		await dialog.locator('input[name="title"]').fill(COMPOSED_TITLE);
-		await dialog.locator('textarea[name="body"]').fill('Written by the composer test.');
+		await dialog.locator('input:is([name="title"], [name^="title/"])').fill(COMPOSED_TITLE);
+		await dialog
+			.locator('textarea:is([name="body"], [name^="body/"])')
+			.fill('Written by the composer test.');
 		await dialog.locator('button[type="submit"]').click();
 
 		// Saved as a draft, and the card says so.
@@ -191,12 +193,14 @@ test.describe('group sessions', () => {
 
 		await page.getByTestId('new-session').click();
 		const dialog = page.getByRole('dialog');
-		await dialog.locator('input[name="title"]').fill(SESSION_TITLE);
-		await dialog.locator('input[name="sessionDate"]').fill('2027-03-18');
-		await dialog.locator('input[name="startTime"]').fill('19:00');
-		await dialog.locator('input[name="endTime"]').fill('21:00');
+		await dialog.locator('input:is([name="title"], [name^="title/"])').fill(SESSION_TITLE);
+		await dialog
+			.locator('input:is([name="sessionDate"], [name^="sessionDate/"])')
+			.fill('2027-03-18');
+		await dialog.locator('input:is([name="startTime"], [name^="startTime/"])').fill('19:00');
+		await dialog.locator('input:is([name="endTime"], [name^="endTime/"])').fill('21:00');
 		// The checkbox registers with a `b:` prefix so kit coerces it to a boolean.
-		await dialog.locator('input[name="b:reserveRoom"]').check();
+		await dialog.locator('input:is([name="b:reserveRoom"], [name^="b:reserveRoom/"])').check();
 		await dialog.locator('button[type="submit"]').click();
 
 		const row = page.getByRole('row').filter({ hasText: SESSION_TITLE });

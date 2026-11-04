@@ -35,7 +35,7 @@
 		action={deleteArticle}
 		modalTitle={m.staff_confirm()}
 		successToast={m.staff_help_id_article_deleted()}
-		onsuccess={() => goto(resolve('/staff/help'))}
+		onsuccess={() => goto(resolve('staff/help'))}
 		variant="error"
 		size="sm"
 		outline

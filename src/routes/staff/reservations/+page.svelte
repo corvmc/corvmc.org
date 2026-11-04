@@ -328,7 +328,7 @@
 							r.endsAt,
 							r.stripePaymentRecordId
 						)}
-						{@const href = resolve(`/staff/reservations/${r.id}`)}
+						{@const href = resolve(`staff/reservations/${r.id}`)}
 						<tr class="group/row hover cursor-pointer" use:rowLink={href}>
 							<!-- Labelled from 48rem, the glyph below it (#1834). A hover-only
 						     tooltip left keyboard users nothing (#896), so `group/row` opens
@@ -495,7 +495,7 @@
 						<li class="flex items-start justify-between gap-3 border-b border-base-300 py-3">
 							<div class="min-w-0 space-y-2">
 								<a
-									href={resolve(`/staff/reservations/${r.id}`)}
+									href={resolve(`staff/reservations/${r.id}`)}
 									class="text-lg font-medium hover:underline"
 								>
 									{formatTimeRange(r.startsAt, r.endsAt)}

@@ -55,7 +55,7 @@
 					<p class="text-muted">
 						{m.member_volunteer_interests_no_volunteer_roles_open_right()}
 					</p>
-					<a href={resolve('/member/volunteer')} class="link text-sm"
+					<a href={resolve('member/volunteer')} class="link text-sm"
 						>{m.member_volunteer_interests_go_volunteering()}</a
 					>
 				{:else}
@@ -66,7 +66,7 @@
 				-->
 					<Form
 						remote={saveVolunteerInterests}
-						onsuccess={onboarding ? () => goto(resolve('/member/volunteer')) : undefined}
+						onsuccess={onboarding ? () => goto(resolve('member/volunteer')) : undefined}
 						successToast={m.member_volunteer_interests_success_toast()}
 					>
 						<InterestFields
@@ -77,7 +77,7 @@
 						/>
 
 						<div class="flex items-center justify-between gap-3">
-							<Button href={resolve('/member/volunteer')} variant="ghost" size="sm">
+							<Button href={resolve('member/volunteer')} variant="ghost" size="sm">
 								{onboarding
 									? m.member_volunteer_interests_skip()
 									: m.member_volunteer_interests_back()}

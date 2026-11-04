@@ -92,7 +92,7 @@
 
 {#snippet conversationBar()}
 	<Button
-		href={resolve('/staff/inbox')}
+		href={resolve('staff/inbox')}
 		variant="ghost"
 		size="sm"
 		shape="square"
@@ -177,7 +177,7 @@
 						: undefined}
 		<div class="flex flex-col gap-2">
 			{#if channelDisabled}
-				<Alert type="warning" href={resolve('/staff/settings')}>
+				<Alert type="warning" href={resolve('staff/settings')}>
 					{m.staff_inbox_id_channel_disabled_enable_settings_inbox({
 						channelLabel: channelLabel(t.channel)
 					})}

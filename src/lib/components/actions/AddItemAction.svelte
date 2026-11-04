@@ -64,7 +64,11 @@
 		fields.set({});
 		description = '';
 		notes = '';
-		document.querySelector<HTMLInputElement>('[role="dialog"] input[name="name"]')?.focus();
+		document
+			.querySelector<HTMLInputElement>(
+				`[role="dialog"] input[name="${fields.name.as('text').name}"]`
+			)
+			?.focus();
 	}
 
 	const kindLabels: Record<(typeof itemKinds)[number], string> = {

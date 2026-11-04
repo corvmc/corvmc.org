@@ -49,7 +49,7 @@
 		{#snippet header()}
 			<div class="flex flex-wrap items-center justify-between gap-2">
 				<CardTitle>
-					<a class="link" href={resolve(`/staff/contractors/${row.contractor.id}`)}>
+					<a class="link" href={resolve(`staff/contractors/${row.contractor.id}`)}>
 						{row.contractor.name}
 					</a>
 					<Badge variant={contractorJobStatusBadge[job.status]} size="sm" class="ml-1">

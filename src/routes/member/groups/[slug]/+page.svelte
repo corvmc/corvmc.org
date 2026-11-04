@@ -106,7 +106,7 @@
 		return defaultTab;
 	});
 	const tabHref = (t: Tab) =>
-		resolve(`/member/groups/${slug}${t === defaultTab ? '' : `?tab=${t}`}`);
+		resolve(`member/groups/${slug}${t === defaultTab ? '' : `?tab=${t}`}`);
 
 	const kindLabel = $derived(
 		group.kind === 'committee' ? msg.member_groups_slug_committee() : msg.member_groups_slug_club()
@@ -143,7 +143,7 @@
 		<Badge variant="ghost">{data.role}</Badge>
 	{/if}
 	{#if data.canManage}
-		<Button href={resolve(`/member/groups/${slug}/edit`)} variant="ghost" size="sm"
+		<Button href={resolve(`member/groups/${slug}/edit`)} variant="ghost" size="sm"
 			>{msg.member_edit()}</Button
 		>
 	{/if}
@@ -168,7 +168,7 @@
 			successToast={msg.member_groups_slug_have_left()}
 			variant="ghost"
 			size="sm"
-			onsuccess={() => goto(resolve('/member/groups'))}
+			onsuccess={() => goto(resolve('member/groups'))}
 		>
 			{#snippet form()}
 				<input {...leaveFields.groupId.as('hidden', group.id)} />
@@ -300,7 +300,7 @@
 							<td class="cell-primary">
 								<!-- A show's console reads either half of it through the project. -->
 								{#if event.productionId && (may('production.book') || may('production.run'))}
-									<a class="link" href={resolve(`/staff/events/${event.id}/production`)}
+									<a class="link" href={resolve(`staff/events/${event.id}/production`)}
 										>{event.title}</a
 									>
 								{:else}
@@ -370,7 +370,7 @@
 						<tr>
 							<td class="whitespace-nowrap">{formatDateTimeShort(s.startsAt)}</td>
 							<td class="cell-primary">
-								<a class="link" href={resolve(`/events/${s.id}`)}>{s.title}</a>
+								<a class="link" href={resolve(`events/${s.id}`)}>{s.title}</a>
 							</td>
 							<td class="w-px">
 								<!-- The fact that separates a program's session from a listing
@@ -472,7 +472,7 @@
 						: msg.member_groups_slug_nothing_written_about_program_yet_2()}
 				>
 					{#if data.canManage}
-						<Button href={resolve(`/member/groups/${slug}/edit`)} variant="primary" size="sm">
+						<Button href={resolve(`member/groups/${slug}/edit`)} variant="primary" size="sm">
 							{msg.member_groups_slug_write()}
 						</Button>
 					{/if}

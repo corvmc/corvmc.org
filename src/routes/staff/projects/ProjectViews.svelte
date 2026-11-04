@@ -15,13 +15,13 @@
 		{
 			key: 'projects',
 			label: m.staff_projects(),
-			href: resolve('/staff/projects'),
+			href: resolve('staff/projects'),
 			cap: 'project.read'
 		},
 		{
 			key: 'productions',
 			label: m.staff_projects_project_views_productions(),
-			href: resolve('/staff/projects/productions'),
+			href: resolve('staff/projects/productions'),
 			cap: 'event.manage'
 		}
 	];

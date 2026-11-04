@@ -86,18 +86,18 @@ async function fillOnboarding(
 	page: Page,
 	{ first, last, age }: { first: string; last: string; age: 'yes' | 'no' }
 ) {
-	await page.locator('input[name="firstName"]').fill(first);
-	await page.locator('input[name="lastName"]').fill(last);
+	await page.locator('input:is([name="firstName"], [name^="firstName/"])').fill(first);
+	await page.locator('input:is([name="lastName"], [name^="lastName/"])').fill(last);
 	// Required at sign-up, optional on the edit form: shift-day contact is the
 	// reason the field exists, so signing up without one leaves a coordinator
 	// with no way to reach somebody who is on tonight.
-	await page.locator('input[name="phone"]').fill('(541) 555-0100');
+	await page.locator('input:is([name="phone"], [name^="phone/"])').fill('(541) 555-0100');
 	// A select, not a checkbox — an unticked box would be indistinguishable from
 	// an unanswered question, which is the one mistake this field cannot make.
-	await page.locator('select[name="isAdult"]').selectOption(age);
+	await page.locator('select:is([name="isAdult"], [name^="isAdult/"])').selectOption(age);
 	await page
 		.locator('form')
-		.filter({ has: page.locator('input[name="firstName"]') })
+		.filter({ has: page.locator('input:is([name="firstName"], [name^="firstName/"])') })
 		.locator('button[type="submit"]')
 		.click();
 }
@@ -174,7 +174,9 @@ test.describe('volunteering — staff review queue', () => {
 
 		// Refused in place: the dialog stays, and the Reason field carries the issue.
 		const dialog = page.getByRole('dialog');
-		const issue = dialog.locator('.fieldset:has(textarea[name="notes"]) p.text-error');
+		const issue = dialog.locator(
+			'.fieldset:has(textarea:is([name="notes"], [name^="notes/"])) p.text-error'
+		);
 		await expect(issue).toBeVisible({ timeout: 15000 });
 		await expect(dialog).toBeVisible();
 		// The schema's own message, not zod's generated one. This is library output
@@ -189,7 +191,7 @@ test.describe('volunteering — staff review queue', () => {
 		const reason = 'E2E: hours look doubled for this shift.';
 		const row = rowFor(page, SEED_VOL_LOG_REJECT_DESC);
 		await rowAction(row, 'Return').click();
-		await page.locator('textarea[name="notes"]').fill(reason);
+		await page.locator('textarea:is([name="notes"], [name^="notes/"])').fill(reason);
 		await modalSubmit(page).click();
 		await expect(row).toHaveCount(0, { timeout: 15000 });
 
@@ -215,7 +217,7 @@ test.describe('volunteering — roles', () => {
 	function roleSave(page: Page) {
 		return page
 			.locator('form')
-			.filter({ has: page.locator('input[name$="displayOrder"]') })
+			.filter({ has: page.locator('input:is([name$="displayOrder"], [name*="displayOrder/"])') })
 			.locator('button[type="submit"]');
 	}
 
@@ -298,18 +300,20 @@ test.describe('volunteering — roles', () => {
 
 		// The edit form moved off the list into this page, so the round trip is
 		// worth asserting rather than assuming.
-		const order = page.locator('input[name$="displayOrder"]');
+		const order = page.locator('input:is([name$="displayOrder"], [name*="displayOrder/"])');
 		await order.fill('4');
 		await roleSave(page).click();
 		await expectSuccessToast(page, 15000);
 
 		await page.reload();
-		await expect(page.locator('input[name$="displayOrder"]')).toHaveValue('4');
+		await expect(
+			page.locator('input:is([name$="displayOrder"], [name*="displayOrder/"])')
+		).toHaveValue('4');
 
 		// The shift defaults must survive an edit that never touched them.
-		await expect(page.locator('input[name$="defaultCapacity"]')).toHaveValue(
-			String(SEED_VOL_ROLE_DEFAULT_CAPACITY)
-		);
+		await expect(
+			page.locator('input:is([name$="defaultCapacity"], [name*="defaultCapacity/"])')
+		).toHaveValue(String(SEED_VOL_ROLE_DEFAULT_CAPACITY));
 	});
 
 	// Blank means "no default", which is a different answer from zero and has to
@@ -319,22 +323,26 @@ test.describe('volunteering — roles', () => {
 		await page.goto('/staff/volunteer/roles');
 		await openRole(page, SEED_VOL_ROLE_NAME);
 
-		await page.locator('input[name$="defaultCapacity"]').fill('');
+		await page.locator('input:is([name$="defaultCapacity"], [name*="defaultCapacity/"])').fill('');
 		await roleSave(page).click();
 		await expectSuccessToast(page, 15000);
 
 		await page.reload();
-		await expect(page.locator('input[name$="defaultCapacity"]')).toHaveValue('');
+		await expect(
+			page.locator('input:is([name$="defaultCapacity"], [name*="defaultCapacity/"])')
+		).toHaveValue('');
 
 		// And the New Shift form falls back rather than carrying a stale number.
 		await page.getByTestId('new-role-shift').click();
-		await expect(page.getByRole('dialog').locator('input[name="capacity"]')).toHaveValue('1');
+		await expect(
+			page.getByRole('dialog').locator('input:is([name="capacity"], [name^="capacity/"])')
+		).toHaveValue('1');
 		await page.keyboard.press('Escape');
 
 		// Put it back: the fixture seeds once per run, and the prefill tests below
 		// read this same role.
 		await page
-			.locator('input[name$="defaultCapacity"]')
+			.locator('input:is([name$="defaultCapacity"], [name*="defaultCapacity/"])')
 			.fill(String(SEED_VOL_ROLE_DEFAULT_CAPACITY));
 		await roleSave(page).click();
 		await expectSuccessToast(page, 15000);
@@ -349,7 +357,7 @@ test.describe('volunteering — roles', () => {
 
 		await page.getByTestId('new-role-shift').click();
 		const dialog = page.getByRole('dialog');
-		await expect(dialog.locator('input[name="capacity"]')).toHaveValue(
+		await expect(dialog.locator('input:is([name="capacity"], [name^="capacity/"])')).toHaveValue(
 			String(SEED_VOL_ROLE_DEFAULT_CAPACITY)
 		);
 	});
@@ -363,18 +371,20 @@ test.describe('volunteering — roles', () => {
 
 		await page.getByTestId('new-work-order').click();
 		const dialog = page.getByRole('dialog');
-		const roleSelect = dialog.locator('select[name="volunteerRoleId"]');
+		const roleSelect = dialog.locator(
+			'select:is([name="volunteerRoleId"], [name^="volunteerRoleId/"])'
+		);
 
 		// Never left on nothing — that is the failure mode this guards.
 		await expect(roleSelect).not.toHaveValue('');
 
 		await roleSelect.selectOption({ label: SEED_VOL_ROLE_NAME });
-		await expect(dialog.locator('input[name="capacity"]')).toHaveValue(
+		await expect(dialog.locator('input:is([name="capacity"], [name^="capacity/"])')).toHaveValue(
 			String(SEED_VOL_ROLE_DEFAULT_CAPACITY)
 		);
 
 		await roleSelect.selectOption({ label: SEED_VOL_GATED_ROLE_NAME });
-		await expect(dialog.locator('input[name="capacity"]')).toHaveValue(
+		await expect(dialog.locator('input:is([name="capacity"], [name^="capacity/"])')).toHaveValue(
 			String(SEED_VOL_GATED_DEFAULT_CAPACITY)
 		);
 	});
@@ -509,10 +519,12 @@ test.describe('volunteering — member', () => {
 		await page.getByTestId('log-hours-free').click();
 
 		await page
-			.locator('select[name="volunteerRoleId"]')
+			.locator('select:is([name="volunteerRoleId"], [name^="volunteerRoleId/"])')
 			.selectOption({ label: SEED_VOL_ROLE_NAME });
-		await page.locator('input[name="hours"]').fill('1.5');
-		await page.locator('textarea[name="description"]').fill(description);
+		await page.locator('input:is([name="hours"], [name^="hours/"])').fill('1.5');
+		await page
+			.locator('textarea:is([name="description"], [name^="description/"])')
+			.fill(description);
 		await modalSubmit(page).click();
 
 		const row = page.locator('li').filter({ hasText: description });
@@ -559,7 +571,7 @@ test.describe('volunteering — onboarding', () => {
 		await page.goto('/member/volunteer');
 
 		await page.waitForURL(/\/member\/volunteer\/start/, { timeout: 15000 });
-		await expect(page.locator('input[name="firstName"]')).toBeVisible();
+		await expect(page.locator('input:is([name="firstName"], [name^="firstName/"])')).toBeVisible();
 	});
 
 	test('the adult path runs start → interests → the shift board', async ({ page }) => {
@@ -573,10 +585,12 @@ test.describe('volunteering — onboarding', () => {
 		// Tick a role and leave a note, so the round trip through the JSON-free
 		// checkbox array and the profile's availability column is exercised.
 		await page.getByRole('checkbox', { name: SEED_VOL_ROLE_NAME }).check();
-		await page.locator('textarea[name="availability"]').fill('E2E weekday evenings');
+		await page
+			.locator('textarea:is([name="availability"], [name^="availability/"])')
+			.fill('E2E weekday evenings');
 		await page
 			.locator('form')
-			.filter({ has: page.locator('textarea[name="availability"]') })
+			.filter({ has: page.locator('textarea:is([name="availability"], [name^="availability/"])') })
 			.locator('button[type="submit"]')
 			.click();
 
@@ -584,13 +598,17 @@ test.describe('volunteering — onboarding', () => {
 
 		// The body is shifts now — the picker must not be sitting open in it.
 		await expect(page.locator('li[data-shift-id]').first()).toBeVisible();
-		await expect(page.locator('textarea[name="availability"]')).toHaveCount(0);
+		await expect(
+			page.locator('textarea:is([name="availability"], [name^="availability/"])')
+		).toHaveCount(0);
 
 		// The profile shows the selection survived the replace-all write.
 		await page.locator('main a[href="/member/volunteer/profile"]').click();
 		await page.waitForURL(/\/member\/volunteer\/profile/, { timeout: 15000 });
 		await expect(page.getByRole('checkbox', { name: SEED_VOL_ROLE_NAME })).toBeChecked();
-		await expect(page.locator('textarea[name="availability"]')).toHaveValue('E2E weekday evenings');
+		await expect(
+			page.locator('textarea:is([name="availability"], [name^="availability/"])')
+		).toHaveValue('E2E weekday evenings');
 	});
 
 	/**
@@ -648,15 +666,19 @@ test.describe('volunteering — onboarding', () => {
 		await page.goto('/member/volunteer/profile');
 
 		const phone = `(541) 555-${String(Date.now()).slice(-4)}`;
-		const contact = page.locator('form').filter({ has: page.locator('input[name="phone"]') });
-		await contact.locator('input[name="phone"]').fill(phone);
+		const contact = page
+			.locator('form')
+			.filter({ has: page.locator('input:is([name="phone"], [name^="phone/"])') });
+		await contact.locator('input:is([name="phone"], [name^="phone/"])').fill(phone);
 		await contact.locator('button[type="submit"]').click();
 		await expectSuccessToast(page);
 
 		// Written to `user`, not duplicated onto the profile — so it shows up on
 		// the account page, which is the other editor of the same column.
 		await page.goto('/member/account');
-		await expect(page.locator('input[name="phone"]')).toHaveValue(phone, { timeout: 15000 });
+		await expect(page.locator('input:is([name="phone"], [name^="phone/"])')).toHaveValue(phone, {
+			timeout: 15000
+		});
 	});
 });
 
@@ -784,9 +806,11 @@ test.describe('volunteering — shifts and events', () => {
 		// The event is already known here, so it is locked rather than offered —
 		// there is no picker to fill in.
 		await expect(dialog.getByPlaceholder('Search events by title...')).toHaveCount(0);
-		await dialog.locator('select[name="volunteerRoleId"]').selectOption({
-			label: SEED_VOL_ROLE_NAME
-		});
+		await dialog
+			.locator('select:is([name="volunteerRoleId"], [name^="volunteerRoleId/"])')
+			.selectOption({
+				label: SEED_VOL_ROLE_NAME
+			});
 		await modalSubmit(page).click();
 
 		// Two rows now: the fixture's and the one just made.
@@ -855,9 +879,11 @@ test.describe('volunteering — post-shift feedback', () => {
 
 		// Four stars. RatingGroup items are the interactive stars in order.
 		await page.locator('[data-rating-group-item]').nth(3).click();
-		await page.locator('input[name="b:wasSetUp"]').check();
-		const survey = page.locator('form').filter({ has: page.locator('textarea[name="comment"]') });
-		await page.locator('textarea[name="comment"]').fill(FEEDBACK_COMMENT);
+		await page.locator('input:is([name="b:wasSetUp"], [name^="b:wasSetUp/"])').check();
+		const survey = page
+			.locator('form')
+			.filter({ has: page.locator('textarea:is([name="comment"], [name^="comment/"])') });
+		await page.locator('textarea:is([name="comment"], [name^="comment/"])').fill(FEEDBACK_COMMENT);
 		await survey.locator('button[type="submit"]').click();
 
 		// The form is withdrawn once the answer lands — that, not the thank-you
@@ -872,7 +898,7 @@ test.describe('volunteering — post-shift feedback', () => {
 		await expect(page.locator('main a[href="/member/volunteer"]:not(nav a)')).toBeVisible({
 			timeout: 15000
 		});
-		await expect(page.locator('textarea[name="comment"]')).toHaveCount(0);
+		await expect(page.locator('textarea:is([name="comment"], [name^="comment/"])')).toHaveCount(0);
 	});
 
 	test('staff see the response on the shift and in the per-role rollup', async ({ page }) => {
@@ -947,18 +973,22 @@ test.describe('volunteering — staff acting on somebody else', () => {
 
 		await dialog.getByPlaceholder(/search by name or email/i).fill(SEED_VOL_NEW_MEMBER_NAME);
 		await dialog.getByRole('button', { name: new RegExp(SEED_VOL_NEW_MEMBER_NAME) }).click();
-		await dialog.locator('select[name="volunteerRoleId"]').selectOption({
-			label: SEED_VOL_ROLE_NAME
-		});
+		await dialog
+			.locator('select:is([name="volunteerRoleId"], [name^="volunteerRoleId/"])')
+			.selectOption({
+				label: SEED_VOL_ROLE_NAME
+			});
 
 		// Well past the 90 days a member gets. The help article and this service's own
 		// error both say "ask staff to add anything older"; this is that.
 		const old = new Date();
 		old.setDate(old.getDate() - 200);
-		await dialog.locator('input[name="workedOn"]').fill(old.toISOString().slice(0, 10));
-		await dialog.locator('input[name="hours"]').fill('2');
 		await dialog
-			.locator('textarea[name="description"]')
+			.locator('input:is([name="workedOn"], [name^="workedOn/"])')
+			.fill(old.toISOString().slice(0, 10));
+		await dialog.locator('input:is([name="hours"], [name^="hours/"])').fill('2');
+		await dialog
+			.locator('textarea:is([name="description"], [name^="description/"])')
 			.fill('E2E: taken off the paper sign-in sheet.');
 		await modalSubmit(page).click();
 

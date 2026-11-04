@@ -62,7 +62,7 @@
 </script>
 
 <PageHeader width="5xl" title={m.member_volunteering()} subtitle={m.member_member()}>
-	<Button href={resolve('/member/volunteer/profile')} variant="ghost" size="sm"
+	<Button href={resolve('member/volunteer/profile')} variant="ghost" size="sm"
 		>{m.member_profile()}</Button
 	>
 </PageHeader>

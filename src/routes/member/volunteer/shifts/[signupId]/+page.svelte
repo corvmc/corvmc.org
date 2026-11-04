@@ -94,7 +94,7 @@
 			<p class="text-muted">{m.member_volunteer_shifts_signup_id_mark_people_arrived_as_the()}</p>
 			<div class="mt-3">
 				<Button
-					href={resolve(`/member/volunteer/shifts/${signupId}/check-in`)}
+					href={resolve(`member/volunteer/shifts/${signupId}/check-in`)}
 					variant="primary"
 					size="sm"
 				>
@@ -182,7 +182,7 @@
 	<div class="flex flex-wrap gap-2">
 		{#if data.shift.status === 'completed'}
 			<Button
-				href={resolve(`/member/volunteer/feedback/${signupId}`)}
+				href={resolve(`member/volunteer/feedback/${signupId}`)}
 				variant="default"
 				size="sm"
 				outline
@@ -198,7 +198,7 @@
 				modalTitle={m.member_volunteer_shifts_signup_id_modal_title()}
 				submitLabel={m.member_volunteer_shifts_signup_id_label()}
 				successToast={m.member_volunteer_shifts_signup_id_success_toast()}
-				onsuccess={() => goto(resolve('/member/volunteer'))}
+				onsuccess={() => goto(resolve('member/volunteer'))}
 			>
 				{#snippet form()}
 					<input {...cancelMySignup.for(signupId).fields.signupId.as('hidden', signupId)} />

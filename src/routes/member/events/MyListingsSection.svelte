@@ -43,7 +43,7 @@
 			<!-- Returned listings lead: they're the ones waiting on the member. -->
 			{#each [...mine.rejected, ...mine.listings] as row (row.id)}
 				<li>
-					<a href={resolve(`/member/events/${row.id}/manage`)} class="mlist__row">
+					<a href={resolve(`member/events/${row.id}/manage`)} class="mlist__row">
 						<StatusBadge status={row.status} />
 						<span class="mlist__title">{row.title}</span>
 						<span class="mlist__meta">

@@ -44,7 +44,7 @@
 		{variant}
 		{size}
 		class={className}
-		onsuccess={onsuccess ?? (() => goto(resolve('/staff/events')))}
+		onsuccess={onsuccess ?? (() => goto(resolve('staff/events')))}
 		data-testid="delete-event"
 		{...rest}
 	>

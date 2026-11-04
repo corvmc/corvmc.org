@@ -84,7 +84,7 @@ describe('ReportEventAction', () => {
 
 		await locator.getByRole('button').click();
 		const dialog = page.getByRole('dialog');
-		await dialog.getByCss('[name="reason"]').fill('Spam');
+		await dialog.getByCss(':is([name="reason"], [name^="reason/"])').fill('Spam');
 		await dialog.getByCss('button[type="submit"]').click();
 
 		await expect.element(page.getByRole('alert')).toBeVisible();

@@ -30,7 +30,6 @@ vi.mock('#lib/server/volunteer/volunteer-profile-service.js', () => ({
 	requireActiveVolunteer: vi.fn(async () => undefined)
 }));
 const emit = vi.hoisted(() => vi.fn(async (..._a: unknown[]) => undefined));
-vi.mock('$lib/server/events', () => ({ domainEvents: { emit } }));
 vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit } }));
 vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 vi.mock('#lib/server/volunteer/member-certification-service.js', () => ({

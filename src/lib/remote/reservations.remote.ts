@@ -2135,7 +2135,9 @@ export const payReservation = form(
 			cancelUrl: `${url.origin}/member/reservations/${row.id}/pay`
 		});
 
-		redirect(303, 'paid' in result ? backPath : result.checkoutUrl);
+		redirect(303, 'paid' in result ? backPath : result.checkoutUrl, {
+			external: ['https://checkout.stripe.com']
+		});
 	}
 );
 

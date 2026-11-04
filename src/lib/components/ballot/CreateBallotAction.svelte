@@ -60,7 +60,7 @@
 		if (r && typeof r === 'object' && 'id' in r) {
 			const id = r.id as string;
 			void goto(
-				panel === 'staff' ? resolve(`/staff/ballots/${id}`) : resolve(`/member/ballots/${id}`)
+				panel === 'staff' ? resolve(`staff/ballots/${id}`) : resolve(`member/ballots/${id}`)
 			);
 		}
 	}}

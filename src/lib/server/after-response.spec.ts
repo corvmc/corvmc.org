@@ -9,7 +9,7 @@ vi.mock('#lib/server/sentry.js', () => ({ captureException }));
 // Module scope, not per-`beforeEach`: on a cold Vite cache the first import pays
 // the transform of this module graph inside the hook timeout, and reports as a
 // timeout rather than a slow build.
-const { afterResponse } = await import('./after-response');
+const { afterResponse, registerWaitUntil } = await import('./after-response');
 
 /** A promise plus the handles to settle it from the test. */
 function deferred<T = void>() {
@@ -22,15 +22,17 @@ function deferred<T = void>() {
 	return { promise, resolve, reject };
 }
 
-/** Stand in for a request whose platform carries a Workers execution context. */
+/** Stand in for a request on a Worker, whose runtime registered `waitUntil`. */
 function withExecutionContext() {
 	const waitUntil = vi.fn();
-	getRequestEvent.mockReturnValue({ platform: { ctx: { waitUntil } } });
+	registerWaitUntil(waitUntil);
+	getRequestEvent.mockReturnValue({});
 	return waitUntil;
 }
 
 beforeEach(() => {
 	vi.resetAllMocks();
+	registerWaitUntil(null);
 });
 
 describe('afterResponse on Workers', () => {
@@ -79,6 +81,7 @@ describe('afterResponse without an execution context', () => {
 	// would silently drop the work, so the fallback is to await it — which keeps
 	// the function's contract ("dealt with by the time I resolve") true.
 	it('awaits the work when getRequestEvent throws', async () => {
+		registerWaitUntil(vi.fn());
 		getRequestEvent.mockImplementation(() => {
 			throw new Error('Called outside a request');
 		});
@@ -89,8 +92,8 @@ describe('afterResponse without an execution context', () => {
 		expect(run).toHaveBeenCalledOnce();
 	});
 
-	it('awaits the work when the platform has no ctx', async () => {
-		getRequestEvent.mockReturnValue({ platform: {} });
+	it('awaits the work when no waitUntil is registered', async () => {
+		getRequestEvent.mockReturnValue({});
 		const order: string[] = [];
 
 		await afterResponse(async () => {
@@ -102,7 +105,7 @@ describe('afterResponse without an execution context', () => {
 	});
 
 	it('still captures a rejection rather than throwing at the caller', async () => {
-		getRequestEvent.mockReturnValue({ platform: undefined });
+		getRequestEvent.mockReturnValue({});
 		const boom = new Error('nope');
 
 		await expect(

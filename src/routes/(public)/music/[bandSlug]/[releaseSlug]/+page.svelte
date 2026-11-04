@@ -45,7 +45,7 @@
 		<div class="min-w-0 flex-1">
 			<h1 class="text-3xl font-semibold">{release.title}</h1>
 			<p class="text-lg">
-				<a class="link" href={resolve(`/directory/bands/${band.slug}`)}>{band.name}</a>
+				<a class="link" href={resolve(`directory/bands/${band.slug}`)}>{band.name}</a>
 			</p>
 			<p class="text-muted">
 				<Badge size="sm">{releaseKindLabels[release.kind]}</Badge>

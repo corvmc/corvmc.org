@@ -79,7 +79,9 @@ test.describe('staff groups', () => {
 		await expect(page.getByText(answer)).toBeVisible();
 
 		// Every committee takes applications, so the policy is stated, not offered.
-		await expect(page.locator('select[name="joinPolicy"]')).toHaveCount(0);
+		await expect(page.locator('select:is([name="joinPolicy"], [name^="joinPolicy/"])')).toHaveCount(
+			0
+		);
 
 		// And a committee's old address lands on its record.
 		await page.goto(`/staff/committees/${SEED_COMMITTEE_ID}`);
@@ -94,7 +96,7 @@ test.describe('staff groups', () => {
 		await page.getByTestId('create-group').click();
 
 		const name = `E2E Songwriter Circle ${Date.now()}`;
-		await page.locator('input[name="name"]').fill(name);
+		await page.locator('input:is([name="name"], [name^="name/"])').fill(name);
 
 		// The chair picker is a typeahead over every member, not a select.
 		// `pressSequentially`, not `fill`: bits-ui's Combobox opens on real key

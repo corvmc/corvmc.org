@@ -194,7 +194,7 @@
 			{#each events as evt (evt.id)}
 				<tr
 					class="hover cursor-pointer"
-					use:rowLink={resolve(`/band/${band.slug}/events/${evt.id}`)}
+					use:rowLink={resolve(`band/${band.slug}/events/${evt.id}`)}
 				>
 					<td class="w-px whitespace-nowrap">
 						<StatusBadge status={evt.status} />

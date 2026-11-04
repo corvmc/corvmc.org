@@ -47,11 +47,11 @@
 	});
 
 	function setView(v: InventoryListView | '') {
-		const url = new URL(pageState.url);
+		const url = new URL(pageState.url.href);
 		if (v) url.searchParams.set('show', v);
 		else url.searchParams.delete('show');
 		page = 1;
-		goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+		goto(url, { replace: true, reset: false });
 	}
 
 	/**
@@ -97,7 +97,7 @@
 
 <PageHeader title={m.staff_inventory()}>
 	<div class="flex gap-2">
-		<Button variant="ghost" size="sm" href={resolve('/staff/inventory/locations')}
+		<Button variant="ghost" size="sm" href={resolve('staff/inventory/locations')}
 			>{m.staff_locations()}</Button
 		>
 		<Button variant="ghost" size="sm" onclick={() => (showCategoryModal = true)}
@@ -192,7 +192,7 @@
 					{/snippet}
 
 					{#each equipment as e (e.id)}
-						{@const href = resolve(`/staff/inventory/${e.id}`)}
+						{@const href = resolve(`staff/inventory/${e.id}`)}
 						<tr class="hover cursor-pointer" class:opacity-50={e.deletedAt} use:rowLink={href}>
 							<td class="w-px">
 								<StatusBadge status={e.deletedAt ? 'deactivated' : 'active'} />

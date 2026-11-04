@@ -36,7 +36,7 @@
 	size="sm"
 	onsuccess={(result) => {
 		const releaseId = (result as { releaseId?: string } | undefined)?.releaseId;
-		if (releaseId) goto(resolve(`/band/${bandSlug}/music/${releaseId}`));
+		if (releaseId) goto(resolve(`band/${bandSlug}/music/${releaseId}`));
 	}}
 >
 	{#snippet form()}

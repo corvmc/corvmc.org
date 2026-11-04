@@ -110,7 +110,7 @@
 	size="sm"
 	onsuccess={(result) => {
 		const { threadId } = (result ?? {}) as { threadId?: string };
-		if (threadId) goto(resolve(`/member/messages/${threadId}`));
+		if (threadId) goto(resolve(`member/messages/${threadId}`));
 	}}
 >
 	{#snippet icon()}<IconPlus size={16} />{/snippet}

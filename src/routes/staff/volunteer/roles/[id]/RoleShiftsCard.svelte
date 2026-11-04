@@ -98,7 +98,7 @@
 				{/snippet}
 
 				{#each rows as shift (shift.id)}
-					{@const href = resolve(`/staff/volunteer/shifts/${shift.id}`)}
+					{@const href = resolve(`staff/volunteer/shifts/${shift.id}`)}
 					{@const short = shift.claimed < shift.capacity}
 					{@const unconfirmed = shift.claimed - shift.confirmed}
 					<tr class="hover cursor-pointer" use:rowLink={href}>

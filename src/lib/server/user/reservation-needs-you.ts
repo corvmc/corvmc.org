@@ -40,7 +40,7 @@ export function reservationNeedsYouItems(rows: ReservationNeedingYou[], now: Dat
 				detail: detail(
 					`the room is released if it is not ${confirm ? 'confirmed' : 'paid for'} by the start`
 				),
-				href: confirm ? resolve('/member/reservations') : pay,
+				href: confirm ? resolve('member/reservations') : pay,
 				label: confirm ? 'Confirm' : 'Pay',
 				dueAt: r.startsAt,
 				rank: 0

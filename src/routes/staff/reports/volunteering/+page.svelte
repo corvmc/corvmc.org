@@ -38,9 +38,9 @@
 		if (pageNumber > 1) pairs.push(['page', String(pageNumber)]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = withQuery(resolve('/staff/reports/volunteering'), search);
+		const href = withQuery(resolve('staff/reports/volunteering'), search);
 		if (location.pathname + location.search !== href) {
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 

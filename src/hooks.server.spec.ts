@@ -76,6 +76,9 @@ vi.mock('#lib/server/kv.js', () => ({
 	initKv: vi.fn()
 }));
 
+// No bindings: these specs exercise the request chain, not binding setup.
+vi.mock('cloudflare:workers', () => ({ env: {}, waitUntil: vi.fn() }));
+
 const mockResolvePendingInvites = vi.fn();
 vi.mock('#lib/server/group/group-invite-service.js', () => ({
 	resolvePendingInvites: (...args: unknown[]) => mockResolvePendingInvites(...args)
@@ -126,7 +129,6 @@ function makeEvent(overrides?: Record<string, unknown>) {
 		// chain reads its hostname to decide whether the request is a band address.
 		url: new URL('http://localhost/'),
 		locals: {} as Record<string, unknown>,
-		platform: {},
 		...overrides
 	};
 }
@@ -308,10 +310,20 @@ describe('hooks.server isLocalOriginEvent', () => {
 describe('hooks.server handleError', () => {
 	it('does not report 4xx client errors (e.g. bot /.well-known probes)', async () => {
 		await handleError({
-			error: new Error('Not found: /.well-known/traffic-advice'),
-			event: makeEvent({ url: new URL('http://localhost/.well-known/traffic-advice') }) as any,
-			status: 404,
-			message: 'Not Found'
+			kind: 'framework',
+			error: { status: 404, message: 'Not Found' },
+			event: makeEvent({ url: new URL('http://localhost/.well-known/traffic-advice') }) as any
+		});
+
+		expect(mockCaptureException).not.toHaveBeenCalled();
+	});
+
+	// Kit 3 hands `error(4xx)` from app code to this hook too; kit 2 never did.
+	it('does not report an expected 4xx thrown by app code', async () => {
+		await handleError({
+			kind: 'app',
+			error: { status: 403, message: 'Forbidden' },
+			event: makeEvent({ url: new URL('http://localhost/staff') }) as any
 		});
 
 		expect(mockCaptureException).not.toHaveBeenCalled();
@@ -321,10 +333,9 @@ describe('hooks.server handleError', () => {
 		const error = new Error('boom');
 
 		await handleError({
+			kind: 'unknown',
 			error,
-			event: makeEvent({ url: new URL('http://localhost/member') }) as any,
-			status: 500,
-			message: 'Internal Error'
+			event: makeEvent({ url: new URL('http://localhost/member') }) as any
 		});
 
 		expect(mockCaptureException).toHaveBeenCalledWith(error);

@@ -201,7 +201,7 @@
 	</div>
 	<p class="mt-8 text-center text-sm text-fg-3">
 		<ParaglideMessage message={m.public_membership_not_looking_join_monthly_there} inputs={{}}
-			>{#snippet a({ children })}<a href={resolve('/contribute')} class="text-cmc-teal underline"
+			>{#snippet a({ children })}<a href={resolve('contribute')} class="text-cmc-teal underline"
 					>{@render children?.()}</a
 				>{/snippet}</ParaglideMessage
 		>

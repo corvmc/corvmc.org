@@ -25,7 +25,7 @@
 
 	// A club is the opposite of a band: staff create it and appoint its chairs.
 	// Active by default, so the table shows the clubs the counts above count.
-	const view = rosterState(resolve('/staff/groups/clubs'), {
+	const view = rosterState(resolve('staff/groups/clubs'), {
 		status: oneOf(['active', 'deactivated', ''] as const, 'active')
 	});
 	const f = view.values;

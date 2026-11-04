@@ -36,7 +36,7 @@
 	}: { type: Block['type']; slug: string; onsettings?: () => void } = $props();
 
 	const source = $derived(BLOCK_SOURCES[type]);
-	const ownerHref = $derived(source.owner ? resolve(`/band/${slug}/${source.owner}`) : null);
+	const ownerHref = $derived(source.owner ? resolve(`band/${slug}/${source.owner}`) : null);
 </script>
 
 <div class="mx-auto max-w-3xl px-6 py-8">

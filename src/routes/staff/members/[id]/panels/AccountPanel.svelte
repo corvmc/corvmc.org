@@ -163,7 +163,7 @@
 				</Fact>
 			</DefinitionList>
 			<div class="mt-3">
-				<Button href={resolve(`/member/directory/members/${id}`)} variant="ghost" size="sm">
+				<Button href={resolve(`member/directory/members/${id}`)} variant="ghost" size="sm">
 					{m.staff_members_id_panels_account_panel_view_public_profile()}
 				</Button>
 			</div>
@@ -353,7 +353,7 @@
 				successToast={m.staff_members_id_panels_account_panel_account_deleted()}
 				variant="error"
 				size="sm"
-				onsuccess={() => goto(resolve('/staff/members'))}
+				onsuccess={() => goto(resolve('staff/members'))}
 			>
 				{#snippet form()}
 					<input {...purgeFields.id.as('hidden', id)} />

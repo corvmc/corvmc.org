@@ -118,7 +118,7 @@ export const createSubscription = form(amountSchema, async (data) => {
 
 	// Relative now — `elements` returns the in-app `/checkout/<session>`, so this
 	// is a client-side navigation rather than a document load off to Stripe.
-	redirect(303, checkoutUrl);
+	redirect(303, checkoutUrl, { external: ['https://checkout.stripe.com'] });
 });
 
 export const updateAmount = form(amountSchema, async (data) => {

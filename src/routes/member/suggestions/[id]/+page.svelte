@@ -85,9 +85,9 @@
 						<BallotLine
 							ballot={b}
 							href={b.status === 'certified'
-								? resolve(`/member/ballots/${b.id}`)
+								? resolve(`member/ballots/${b.id}`)
 								: b.status === 'open'
-									? resolve('/member/ballots')
+									? resolve('member/ballots')
 									: null}
 						/>
 					</li>
@@ -97,7 +97,7 @@
 	{/if}
 
 	{#if s.mergedIntoId}
-		<Alert type="info" href={resolve(`/member/suggestions/${s.mergedIntoId}`)}>
+		<Alert type="info" href={resolve(`member/suggestions/${s.mergedIntoId}`)}>
 			<ParaglideMessage
 				message={m.member_suggestions_id_merged_into_votes_moved_across}
 				inputs={{

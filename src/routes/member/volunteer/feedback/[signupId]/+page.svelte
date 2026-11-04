@@ -69,7 +69,7 @@
 						{m.member_volunteer_feedback_signup_id_got_thanks_helping_us_ru()}
 					{/if}
 				</p>
-				<a href={resolve('/member/volunteer')} class="link text-sm"
+				<a href={resolve('member/volunteer')} class="link text-sm"
 					>{m.member_volunteer_feedback_signup_id_action_label()}</a
 				>
 			</InfoCard>
@@ -88,7 +88,12 @@
 							submits like any other field while the stars stay keyboard- and
 							screen-reader-accessible.
 						-->
-						<RatingGroup.Root name="rating" min={1} max={5} class="flex gap-1">
+						<RatingGroup.Root
+							name={submitShiftFeedback.fields.rating.as('hidden', '').name}
+							min={1}
+							max={5}
+							class="flex gap-1"
+						>
 							{#snippet children({ items })}
 								{#each items as item (item.index)}
 									<RatingGroup.Item index={item.index} class="cursor-pointer text-warning">

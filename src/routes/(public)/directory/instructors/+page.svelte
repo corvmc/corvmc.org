@@ -55,16 +55,16 @@
 		<div class="mb-6 flex justify-center">
 			<TabBar
 				tabs={[
-					{ key: 'bands', label: m.public_bands(), href: resolve('/directory') },
+					{ key: 'bands', label: m.public_bands(), href: resolve('directory') },
 					{
 						key: 'musicians',
 						label: m.public_musicians(),
-						href: resolve('/directory?tab=musicians')
+						href: resolve('directory?tab=musicians')
 					},
 					{
 						key: 'instructors',
 						label: m.public_teachers(),
-						href: resolve('/directory/instructors')
+						href: resolve('directory/instructors')
 					}
 				]}
 				active="instructors"

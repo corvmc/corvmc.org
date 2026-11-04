@@ -100,7 +100,7 @@
 			</p>
 			<p class="mb-4 text-base leading-relaxed text-fg-2">
 				<ParaglideMessage message={m.public_programs_need_amp_gig_instrument_session} inputs={{}}
-					>{#snippet a({ children })}<a href={resolve('/contact')} class="link"
+					>{#snippet a({ children })}<a href={resolve('contact')} class="link"
 							>{@render children?.()}</a
 						>{/snippet}</ParaglideMessage
 				>
@@ -218,7 +218,7 @@
 					{m.public_programs_come_chat_with_just_listen()}
 				</p>
 				<a
-					href={resolve('/events')}
+					href={resolve('events')}
 					class="program-block__cta sticker-badge sticker-badge--orange sticker-badge--sm"
 					>{m.public_programs_last_thursday_6_8_30()}</a
 				>
@@ -227,7 +227,7 @@
 	</div>
 	{#if publicGroups.length > 0}
 		<div class="mt-10 text-center">
-			<Button href={resolve('/groups')} variant="primary"
+			<Button href={resolve('groups')} variant="primary"
 				>{m.public_programs_see_all_clubs_committees()}</Button
 			>
 		</div>

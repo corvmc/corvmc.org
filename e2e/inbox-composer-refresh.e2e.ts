@@ -14,7 +14,7 @@ test('a notification does not wipe a half-written reply', async ({ page }) => {
 	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
 	await page.goto(`/staff/inbox/${SEED_NEEDS_REPLY_THREAD_ID}`);
 
-	const body = page.locator('textarea[name="body"]');
+	const body = page.locator('textarea:is([name="body"], [name^="body/"])');
 	await body.fill('half-written reply');
 
 	const refreshed = page.waitForResponse((r) => r.url().includes('/getInboxEnabledChannels'));

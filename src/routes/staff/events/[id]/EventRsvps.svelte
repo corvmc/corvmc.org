@@ -22,7 +22,7 @@
 				<div class="flex gap-1">
 					<CopyEmailsButton emails={roster.rows.map((r) => r.email)} />
 					<Button
-						href={resolve(`/staff/events/${eventId}/rsvps.csv`)}
+						href={resolve(`staff/events/${eventId}/rsvps.csv`)}
 						rel="external"
 						download
 						variant="ghost"

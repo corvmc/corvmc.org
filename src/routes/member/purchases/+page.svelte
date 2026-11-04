@@ -61,7 +61,7 @@
 								{#if purchase.kind === 'music'}
 									<span class="font-medium">{purchase.releaseTitle}</span>
 									<span class="text-muted">
-										— <a class="link" href={resolve(`/directory/bands/${purchase.bandSlug}`)}>
+										— <a class="link" href={resolve(`directory/bands/${purchase.bandSlug}`)}>
 											{purchase.bandName}
 										</a>
 									</span>
@@ -87,14 +87,14 @@
 							>
 							<td class="text-right">
 								{#if purchase.kind === 'music'}
-									<Button size="sm" href={resolve(`/music/download/${purchase.downloadToken}`)}>
+									<Button size="sm" href={resolve(`music/download/${purchase.downloadToken}`)}>
 										{m.member_purchases_download()}
 									</Button>
 								{:else}
 									<Button
 										size="sm"
 										variant="ghost"
-										href={resolve(`/member/events/${purchase.eventId}`)}
+										href={resolve(`member/events/${purchase.eventId}`)}
 									>
 										{m.member_purchases_view()}
 									</Button>

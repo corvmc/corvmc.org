@@ -18,7 +18,7 @@
 		computeTicketSplit
 	} from '#lib/finance/ticket-split.js';
 	import { TICKET_MIN_CHARGE_CENTS } from '#lib/config.js';
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 
 	let {
 		/** The event's suggested price in cents — where the scale opens. */

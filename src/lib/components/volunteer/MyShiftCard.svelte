@@ -95,7 +95,7 @@
 				<!-- The checklist and, on a ticketed show, the door list. Both were
 				     staff-only until #934 and #931. -->
 				<Button
-					href={resolve(`/member/volunteer/shifts/${shift.signupId}`)}
+					href={resolve(`member/volunteer/shifts/${shift.signupId}`)}
 					variant="ghost"
 					size="xs"
 				>
@@ -104,7 +104,7 @@
 			{/if}
 			{#if worked}
 				<Button
-					href={resolve(`/member/volunteer/feedback/${shift.signupId}`)}
+					href={resolve(`member/volunteer/feedback/${shift.signupId}`)}
 					variant="ghost"
 					size="xs"
 				>

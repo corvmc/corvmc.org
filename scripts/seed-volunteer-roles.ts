@@ -93,7 +93,7 @@ async function main() {
 	const write = process.argv.includes('--write');
 	// `src/app.d.ts` is where this project's bindings are named; without the
 	// type argument `env` is `unknown` and `env.DB` is unchecked.
-	const { env, dispose } = await getPlatformProxy<NonNullable<App.Platform['env']>>();
+	const { env, dispose } = await getPlatformProxy<Cloudflare.Env>();
 	const db = drizzle(env.DB);
 
 	const existing = await db

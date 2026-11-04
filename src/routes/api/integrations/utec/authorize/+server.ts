@@ -25,5 +25,5 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	});
 
 	const redirectUri = `${url.origin}/api/integrations/utec/callback`;
-	redirect(302, buildAuthorizeUrl(clientId, redirectUri, state));
+	redirect(302, buildAuthorizeUrl(clientId, redirectUri, state), { external: true });
 };

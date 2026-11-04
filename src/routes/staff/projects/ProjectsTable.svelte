@@ -33,7 +33,7 @@
 		<th class="cell-num">{m.staff_spent()}</th>
 	{/snippet}
 	{#each projects as row (row.project.id)}
-		<tr class="hover" use:rowLink={resolve(`/staff/projects/${row.project.id}`)}>
+		<tr class="hover" use:rowLink={resolve(`staff/projects/${row.project.id}`)}>
 			<td class="w-px">
 				{#if row.progress.total === 0}
 					<span class="text-fg-3" title={m.staff_no_tasks_yet()}>—</span>
@@ -59,7 +59,7 @@
 				{/if}
 			</td>
 			<td class="cell-primary">
-				<a class="link font-medium" href={resolve(`/staff/projects/${row.project.id}`)}>
+				<a class="link font-medium" href={resolve(`staff/projects/${row.project.id}`)}>
 					{row.project.name}
 				</a>
 				{#if view === 'all' && isProjectArchived(row.project.status)}

@@ -74,7 +74,7 @@
 				class="col-span-4 @md:col-span-2 @lg:col-span-1"
 			/>
 			<Field
-				name="email"
+				id="email"
 				readonly={true}
 				type="email"
 				value={member.email}
