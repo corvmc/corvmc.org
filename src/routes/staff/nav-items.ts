@@ -54,8 +54,7 @@ export type StaffNavKey =
 	| 'moderation'
 	| 'suggestions'
 	| 'classifieds'
-	| 'campaigns'
-	| 'audiences'
+	| 'outreach'
 	| 'help'
 	| 'local-resources'
 	| 'resource-tips'
@@ -362,17 +361,13 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'outreach',
 		title: 'Outreach',
 		items: [
+			// Campaigns and Audiences are its views, each with its own gate (#2394).
 			{
-				key: 'campaigns',
+				key: 'outreach',
 				capability: 'marketing.read',
-				label: 'Campaigns',
-				href: resolve('/staff/marketing/campaigns')
-			},
-			{
-				key: 'audiences',
-				capability: 'marketing.manageAudiences',
-				label: 'Audiences',
-				href: resolve('/staff/marketing/audiences')
+				alsoFor: ['marketing.manageAudiences'],
+				label: 'Outreach',
+				href: resolve('/staff/marketing')
 			}
 		]
 	},
