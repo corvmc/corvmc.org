@@ -35,18 +35,19 @@ const config = {
 	// The adapter reads wrangler.adapter.toml (not wrangler.toml) because it
 	// rimrafs + overwrites whatever `main` points at in the config it reads,
 	// and wrangler.toml's `main` is the hand-written worker.js wrapper that
-	// adds the cron `scheduled` handler. Dev-time platform emulation is
-	// unaffected — getPlatformProxy still discovers wrangler.toml.
-	// MINIFLARE_PERSIST_PATH points `vite dev`/`vite preview` at a state
-	// directory other than wrangler's default `.wrangler/state`. Only the e2e
-	// run sets it (playwright.config.ts), so that its preview server is the one
-	// process holding those SQLite files; unset, the platform emulation is
-	// exactly as wrangler leaves it.
+	// adds the cron `scheduled` handler. Adapter 8 hands that same file to the
+	// dev/preview platform proxy, which then has no bindings, so the proxy is
+	// pointed back at wrangler.toml. MINIFLARE_PERSIST_PATH (set only by the
+	// e2e run, playwright.config.ts) moves its state out of `.wrangler/state`
+	// so the preview server is the one process holding those SQLite files.
 	adapter: adapter({
 		config: 'wrangler.adapter.toml',
-		platformProxy: process.env.MINIFLARE_PERSIST_PATH
-			? { persist: { path: process.env.MINIFLARE_PERSIST_PATH } }
-			: undefined
+		platformProxy: {
+			configPath: 'wrangler.toml',
+			...(process.env.MINIFLARE_PERSIST_PATH
+				? { persist: { path: process.env.MINIFLARE_PERSIST_PATH } }
+				: {})
+		}
 	}),
 
 	// Content Security Policy. Kit owns this rather than the Cloudflare edge

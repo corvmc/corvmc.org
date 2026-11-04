@@ -14,6 +14,7 @@ import { availableParallelism } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { browserPort, devPort, previewPort } from './scripts/lib/checkout-ports';
+import { previewCloudflareWorkers } from './scripts/lib/preview-cloudflare-workers';
 const dirname =
 	typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
@@ -84,6 +85,7 @@ export default defineConfig({
 		// project.inlang/paraglide.config.ts, shared with `pnpm messages:compile`.
 		paraglideVitePlugin({ project: './project.inlang' }),
 		sveltekit(kitConfig),
+		previewCloudflareWorkers(),
 		/**
 		 * No `vite preview` in this repo may serve the app with a Stripe credential
 		 * that can move real money (#667).
