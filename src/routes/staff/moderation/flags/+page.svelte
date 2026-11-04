@@ -10,6 +10,8 @@
 	import { resolve } from '$app/paths';
 	import { getFlagsQueue } from '$lib/remote/flags.remote';
 	import TriageTable from '$lib/components/ui/TriageTable.svelte';
+	import StaffViews from '../../StaffViews.svelte';
+	import { moderationViews } from '../views';
 
 	const flagStatuses = ['pending', 'resolved', 'dismissed'] as const;
 
@@ -45,7 +47,9 @@
 	}
 </script>
 
-<PageHeader title={m.staff_content_flags()} />
+<PageHeader title={m.staff_moderation()} documentTitle={m.staff_content_flags()}>
+	<StaffViews views={moderationViews} active="flags" />
+</PageHeader>
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}

@@ -170,7 +170,7 @@ auto-creates any missing).
 - [x] `[H]` Reconcile payments & credits (`/staff/payments`, `/staff/credits`)
 - [x] `[H]` Track sponsors (`/staff/sponsors`) and grants (`/staff/grants`)
 - [x] `[H]` Author help articles (`/staff/help`, static-vs-dynamic, sync caveat)
-- [x] `[H]` Work the moderation queues (`/staff/flags`, `/staff/suggestions`) — upholding vs
+- [x] `[H]` Work the moderation queues (`/staff/moderation/flags`, `/staff/suggestions`) — upholding vs
       dismissing, scoping a restriction, running the idea board
 - [x] `[P]` System settings reference (`/staff/settings` — products, reservations, org, integrations, inbox channels)
 

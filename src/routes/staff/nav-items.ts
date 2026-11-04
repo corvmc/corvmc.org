@@ -47,12 +47,11 @@ export type StaffNavKey =
 	| 'inventory-spend'
 	| 'inventory-compliance'
 	| 'contractors'
-	| 'incidents'
 	| 'keys'
 	| 'projects'
 	| 'venues'
 	| 'calendar'
-	| 'flags'
+	| 'moderation'
 	| 'suggestions'
 	| 'classifieds'
 	| 'campaigns'
@@ -339,11 +338,15 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'moderation',
 		title: 'Moderation',
 		items: [
+			// Content Flags and Incidents are its views, each with its own gate (#2393).
+			// Their records keep their addresses, which notifications link to.
 			{
-				key: 'flags',
+				key: 'moderation',
 				capability: 'moderation.reviewFlags',
-				label: 'Content Flags',
-				href: resolve('/staff/flags'),
+				alsoFor: ['incident.read'],
+				label: 'Moderation',
+				href: resolve('/staff/moderation'),
+				also: [resolve('/staff/flags'), resolve('/staff/incidents')],
 				badgeKey: 'appealsPending'
 			},
 			{
@@ -352,12 +355,6 @@ export const staffNavSections: StaffNavSection[] = [
 				surface: 'classifieds',
 				label: 'Classifieds',
 				href: resolve('/staff/classifieds')
-			},
-			{
-				key: 'incidents',
-				capability: 'incident.read',
-				label: 'Incidents',
-				href: resolve('/staff/incidents')
 			}
 		]
 	},

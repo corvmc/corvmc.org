@@ -74,7 +74,7 @@
 			<ParaglideMessage
 				message={m.staff_classifieds_reported_posts_decided}
 				inputs={{ staff_content_flags: m.staff_content_flags() }}
-				>{#snippet a({ children })}<a class="link" href={resolve('/staff/flags')}
+				>{#snippet a({ children })}<a class="link" href={resolve('/staff/moderation/flags')}
 						>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
 			>

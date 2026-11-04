@@ -464,10 +464,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/flags",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/flags/[id]",
 		"panel": "staff"
 	},
@@ -521,10 +517,6 @@
 	},
 	{
 		"route": "/staff/inbox/daily",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/incidents",
 		"panel": "staff"
 	},
 	{
@@ -653,6 +645,14 @@
 	},
 	{
 		"route": "/staff/members/volunteers/hours",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/moderation/flags",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/moderation/incidents",
 		"panel": "staff"
 	},
 	{

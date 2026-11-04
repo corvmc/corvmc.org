@@ -83,7 +83,7 @@ function entityHref(entityType: FlagEntityType, entityId: string, flagId?: strin
 		// A private conversation has no staff page of its own — by design, see
 		// getThread(). The report *is* the only way in, so link to the report.
 		case 'inbox_thread':
-			return flagId ? `/staff/flags/${flagId}` : '/staff/flags';
+			return flagId ? `/staff/flags/${flagId}` : '/staff/moderation/flags';
 		// Events have no staff record page for band events; the public listing is
 		// the canonical URL for both sources.
 		case 'event':
@@ -91,7 +91,8 @@ function entityHref(entityType: FlagEntityType, entityId: string, flagId?: strin
 		case 'suggestion':
 			return `/staff/suggestions/${entityId}`;
 		case 'classified_post':
-			if (!surfaces.classifieds) return flagId ? `/staff/flags/${flagId}` : '/staff/flags';
+			if (!surfaces.classifieds)
+				return flagId ? `/staff/flags/${flagId}` : '/staff/moderation/flags';
 			return `/staff/classifieds/${entityId}`;
 		default:
 			return `/staff/members/${entityId}`;
