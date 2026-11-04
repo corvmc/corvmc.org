@@ -17,6 +17,8 @@
 	import { formatDateShortYear, formatCents } from '$lib/utils/format';
 	import { formatVolunteerHours } from '$lib/config';
 	import { getVolunteerReportPage } from '$lib/remote/volunteer.remote';
+	import StaffViews from '../../StaffViews.svelte';
+	import { reportViews } from '../views';
 	import { IconDownload } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -91,18 +93,11 @@
 	}
 </script>
 
-<PageHeader title={msg.staff_reports_volunteering_volunteering()} subtitle={msg.staff_reports()}>
-	<!--
-		A plain anchor rather than an Action: the endpoint returns a file, not a
-		value, so it is a `+server.ts` and the browser has to navigate to it for
-		`Content-Disposition` to mean anything. `rel="external"` keeps the router
-		out of it for the same reason — and is what the navigation lint rule wants
-		for an href it cannot statically resolve.
-	-->
-	<Button href={exportHref} size="sm" rel="external" download>
-		<IconDownload size={18} />
-		{msg.staff_export_csv()}
-	</Button>
+<PageHeader
+	title={msg.staff_reports()}
+	documentTitle={msg.staff_reports_volunteering_volunteering()}
+>
+	<StaffViews views={reportViews} active="volunteering" collapse />
 </PageHeader>
 
 <PageContent>
@@ -111,7 +106,21 @@
 		bind:to={toDate}
 		defaultFrom={yearStart}
 		onchange={() => (pageNumber = 1)}
-	/>
+	>
+		{#snippet actions()}
+			<!--
+				A plain anchor rather than an Action: the endpoint returns a file, not a
+				value, so it is a `+server.ts` and the browser has to navigate to it for
+				`Content-Disposition` to mean anything. `rel="external"` keeps the router
+				out of it for the same reason — and is what the navigation lint rule wants
+				for an href it cannot statically resolve.
+			-->
+			<Button href={exportHref} rel="external" download>
+				<IconDownload size={18} />
+				{msg.staff_export_csv()}
+			</Button>
+		{/snippet}
+	</DateRangeFilter>
 
 	{#await report then r}
 		<!-- Approved hours only. That is the whole point of the review step: this

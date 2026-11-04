@@ -22,7 +22,9 @@
 		type FinancialEntryKind
 	} from '$lib/config';
 	import { getAnnualReportPage } from '$lib/remote/reports.remote';
-	import { shownCents } from './display';
+	import { shownCents } from '../display';
+	import StaffViews from '../../StaffViews.svelte';
+	import { reportViews } from '../views';
 	import { IconDownload } from '@tabler/icons-svelte';
 
 	// The calendar year, because that is the period a board packet and a Form 990
@@ -41,7 +43,7 @@
 		if (toDate) pairs.push(['to', toDate]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = withQuery(resolve('/staff/reports'), search);
+		const href = withQuery(resolve('/staff/reports/annual'), search);
 		if (location.pathname + location.search !== href) {
 			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
 		}
@@ -82,20 +84,24 @@
 	};
 </script>
 
-<PageHeader title={m.staff_reports_annual_report()} subtitle={m.staff_reports()}>
-	<!--
-		A plain anchor rather than an Action: the endpoint returns a file, so it is
-		a `+server.ts` and the browser has to navigate to it for
-		`Content-Disposition` to mean anything.
-	-->
-	<Button href={exportHref} size="sm" rel="external" download>
-		<IconDownload size={18} />
-		{m.staff_export_csv()}
-	</Button>
+<PageHeader title={m.staff_reports()} documentTitle={m.staff_reports_annual_report()}>
+	<StaffViews views={reportViews} active="annual" collapse />
 </PageHeader>
 
 <PageContent>
-	<DateRangeFilter bind:from={fromDate} bind:to={toDate} defaultFrom={yearStart} />
+	<DateRangeFilter bind:from={fromDate} bind:to={toDate} defaultFrom={yearStart}>
+		{#snippet actions()}
+			<!--
+				A plain anchor rather than an Action: the endpoint returns a file, so it is
+				a `+server.ts` and the browser has to navigate to it for
+				`Content-Disposition` to mean anything.
+			-->
+			<Button href={exportHref} rel="external" download>
+				<IconDownload size={18} />
+				{m.staff_export_csv()}
+			</Button>
+		{/snippet}
+	</DateRangeFilter>
 
 	{#await report then r}
 		{#if r.coverage.startsAt && !r.coverage.complete}

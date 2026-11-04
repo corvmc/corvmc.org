@@ -528,10 +528,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/inventory/acquisitions",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/inventory/acquisitions/[id]",
 		"panel": "staff"
 	},
@@ -569,10 +565,6 @@
 	},
 	{
 		"route": "/staff/inventory/problems/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/inventory/spend",
 		"panel": "staff"
 	},
 	{
@@ -704,7 +696,15 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/reports",
+		"route": "/staff/reports/acquisitions",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/reports/annual",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/reports/inventory-spend",
 		"panel": "staff"
 	},
 	{

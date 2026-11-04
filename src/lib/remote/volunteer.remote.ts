@@ -2405,6 +2405,8 @@ export const getStaffVolunteerSetupPage = query(async () => {
 export const getVolunteerReportPage = query(
 	z.object({ from: z.string().optional(), to: z.string().optional(), page: z.number().optional() }),
 	async ({ from, to, page }) => {
+		await requireCapability('volunteer.report');
+
 		const [report, feedbackByRole, byMember, statusCounts, byGroup] = await Promise.all([
 			getVolunteerReport({ from, to }),
 			getFeedbackByRole(),

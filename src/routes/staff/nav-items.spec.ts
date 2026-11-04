@@ -81,7 +81,8 @@ describe('activeNavKey', () => {
 		['/staff/inventory/intake', 'equipment'],
 		// Restock and Orders are views of the list now (#2021, #2022); an order's page stays.
 		['/staff/inventory/orders/abc', 'equipment'],
-		['/staff/inventory/spend', 'inventory-spend'],
+		['/staff/inventory/spend', 'reports'],
+		['/staff/inventory/acquisitions/abc', 'reports'],
 		['/staff/inventory/compliance', 'inventory-compliance'],
 		// Loans left Inventory's children for a row of its own; its URL did not move.
 		['/staff/inventory/loans', 'equipment-loans'],
@@ -98,7 +99,11 @@ describe('activeNavKey', () => {
 		['/staff/moderation/incidents', 'moderation'],
 		['/staff/flags/abc', 'moderation'],
 		['/staff/incidents/abc', 'moderation'],
-		['/staff/reports/volunteering', 'volunteer-report'],
+		['/staff/reports', 'reports'],
+		['/staff/reports/annual', 'reports'],
+		['/staff/reports/volunteering', 'reports'],
+		['/staff/reports/inventory-spend', 'reports'],
+		['/staff/reports/acquisitions', 'reports'],
 		['/staff/members/volunteers/hours', 'users'],
 		['/staff/members/instructors', 'users'],
 		['/staff/members/invites', 'users'],
@@ -227,13 +232,7 @@ describe('the nav tree', () => {
 		expect(keys('moderation')).toEqual(['moderation', 'classifieds']);
 		expect(keys('outreach')).toEqual(['outreach']);
 		expect(keys('money')).toContain('grants');
-		expect(keys('reports')).toEqual([
-			'reports',
-			'volunteer-report',
-			'inventory-spend',
-			// A record of when stock arrived; each item's page shows its own (#1841).
-			'inventory-acquisitions'
-		]);
+		expect(keys('reports')).toEqual(['reports']);
 		expect(keys('system')).toContain('help');
 		expect(keys('events')).toEqual(['calendar']);
 	});
@@ -288,6 +287,11 @@ describe('route coverage', () => {
 		// Payments views, reached from its tab bar (#2395).
 		'/staff/money/payments',
 		'/staff/money/credits',
+		// Reports views, reached from its tab bar (#2396).
+		'/staff/reports/annual',
+		'/staff/reports/volunteering',
+		'/staff/reports/inventory-spend',
+		'/staff/reports/acquisitions',
 		// Groups views, reached from its tab bar (#2086).
 		'/staff/groups/bands',
 		'/staff/groups/clubs',
