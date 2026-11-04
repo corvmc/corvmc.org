@@ -182,7 +182,7 @@
 								>
 							</td>
 							<td>
-								<a class="link" href={resolve(`/staff/groups`)}>{release.bandName}</a>
+								<a class="link" href={resolve('/staff/groups/bands')}>{release.bandName}</a>
 							</td>
 							<td>
 								{#if release.status === 'published'}

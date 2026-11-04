@@ -16,7 +16,6 @@ import {
 	updateMaintenanceSchedule as updateService
 } from '#lib/server/volunteer/maintenance-schedule-service.js';
 import { searchAssetOptions } from '#lib/server/inventory/asset-service.js';
-import { getVolunteerWorklist } from './volunteer.remote';
 import { getMemberGroup } from './groups.remote';
 
 /**
@@ -84,7 +83,7 @@ export const createRecurringWork = form(
 		} catch (err) {
 			mapDomainError(err);
 		}
-		await Promise.all([getRecurringWorkPage().refresh(), getVolunteerWorklist().refresh()]);
+		await getRecurringWorkPage().refresh();
 		return { success: true };
 	}
 );

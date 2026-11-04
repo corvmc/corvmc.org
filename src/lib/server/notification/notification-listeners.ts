@@ -1421,7 +1421,7 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title: `${event.userName} logged ${formatHours(event.hours)} to review`,
 					body: `${event.roleName} — ${event.reasons.map((r) => hourLogExceptionLabels[r]).join(', ')}`,
-					href: '/staff/volunteer'
+					href: '/staff/members/volunteers/hours'
 				});
 			} catch (err) {
 				captureException(err, {
@@ -1546,7 +1546,7 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title: `${event.userName} claimed ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — needs confirming`,
-					href: '/staff/volunteer'
+					href: '/staff/volunteer/schedule?needs=claims'
 				});
 			} catch (err) {
 				captureException(err, {
@@ -1631,7 +1631,7 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title: `${event.userName} dropped ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — a place is open again`,
-					href: '/staff/volunteer'
+					href: '/staff/volunteer/schedule?needs=short'
 				});
 			} catch (err) {
 				captureException(err, {

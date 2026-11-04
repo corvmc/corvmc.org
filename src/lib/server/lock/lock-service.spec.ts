@@ -45,7 +45,16 @@ const mockGetLockUser = vi.fn();
 const mockQueryDeviceHealth = vi.fn();
 const mockGenerateLockCode = vi.fn();
 
+const { UtecRateLimitedError } = vi.hoisted(() => ({
+	UtecRateLimitedError: class extends Error {
+		constructor(readonly until: Date) {
+			super('rate limited');
+		}
+	}
+}));
+
 vi.mock('./ultraloc-client', () => ({
+	UtecRateLimitedError,
 	createTemporaryUser: (...args: unknown[]) => mockCreateTemporaryUser(...args),
 	addLockUser: (...args: unknown[]) => mockAddLockUser(...args),
 	removeTemporaryUser: (...args: unknown[]) => mockRemoveTemporaryUser(...args),
@@ -67,8 +76,7 @@ const {
 	syncAccessWindow,
 	provisionOnConfirm,
 	revokeAccessFor,
-	reconcileUpcomingSync,
-	UPCOMING_SYNC_CAP
+	reconcileUpcomingSync
 } = await import('./lock-service');
 const { maintainFallbackCode } = await import('./fallback-code-service');
 const { hasActiveMemberCode, reconcileMemberCodeSync } = await import('./member-code-service');
@@ -556,15 +564,18 @@ describe('lock health', () => {
 	});
 });
 
+/** What `list` returns: every user on the lock, with its `sync_status`. */
+const listed = (synced: number[], queued: number[] = []) =>
+	mockListLockUsers.mockResolvedValue([
+		...synced.map((id) => ({ id, name: `u${id}`, type: 2, syncStatus: 1 })),
+		...queued.map((id) => ({ id, name: `u${id}`, type: 2, syncStatus: 0 }))
+	]);
+
 describe('sync reconciliation', () => {
 	it('promotes a code to known-good only once the lock reports sync_status 1', async () => {
 		booking('res-synced', { lockCode: '1', lockAccessId: '111' });
 		booking('res-queued', { lockCode: '2', lockAccessId: '222' });
-		mockGetLockUser.mockImplementation(async (id: number) => ({
-			id,
-			type: 2,
-			syncStatus: id === 111 ? 1 : 0
-		}));
+		listed([111], [222]);
 
 		const result = await runDailyLockJob();
 
@@ -577,15 +588,18 @@ describe('sync reconciliation', () => {
 		booking('res-cancelled', { status: 'cancelled', lockAccessId: '1' });
 		booking('res-no-id', { lockCode: '2' });
 		booking('res-done', { lockCode: '3', lockAccessId: '3', lockSyncedAt: T0 - 100 });
+		listed([1, 3]);
 
-		await runDailyLockJob();
+		const result = await runDailyLockJob();
 
-		expect(mockGetLockUser).not.toHaveBeenCalled();
+		expect(result.confirmed).toBe(0);
+		expect(lockCols('res-cancelled').lock_synced_at).toBeNull();
 		expect(lockCols('res-done').lock_synced_at).toBe(T0 - 100);
 	});
 
 	it('leaves the code unconfirmed when the lock user has gone missing', async () => {
 		booking('res-1', { lockCode: '1', lockAccessId: '999' });
+		listed([111]);
 
 		const result = await runDailyLockJob();
 
@@ -597,22 +611,19 @@ describe('sync reconciliation', () => {
 
 // The daily pass is too slow for a booking confirmed after it ran (#1495).
 describe('reconcileUpcomingSync', () => {
-	it('promotes codes the lock reports synced, and nothing else', async () => {
+	it('confirms the listed-synced rows with one list call and no per-user reads', async () => {
 		booking('res-synced', { lockCode: '1', lockAccessId: '111' });
 		booking('res-queued', { lockCode: '2', lockAccessId: '222' });
-		mockGetLockUser.mockImplementation(async (id: number) => ({
-			id,
-			type: 2,
-			syncStatus: id === 111 ? 1 : 0
-		}));
+		listed([111], [222]);
 
 		const result = await reconcileUpcomingSync();
 
 		expect(result).toEqual({ confirmed: 1, errors: [] });
 		expect(lockCols('res-synced').lock_synced_at).toBe(T0);
 		expect(lockCols('res-queued').lock_synced_at).toBeNull();
-		expect(mockQueryDeviceHealth).not.toHaveBeenCalled();
-		expect(mockListLockUsers).not.toHaveBeenCalled();
+		expect(mockQueryDeviceHealth).toHaveBeenCalledTimes(1);
+		expect(mockListLockUsers).toHaveBeenCalledTimes(1);
+		expect(mockGetLockUser).not.toHaveBeenCalled();
 		expect(maintainFallbackCode).not.toHaveBeenCalled();
 		expect(reconcileMemberCodeSync).not.toHaveBeenCalled();
 	});
@@ -632,48 +643,63 @@ describe('reconcileUpcomingSync', () => {
 		});
 		booking('res-later', { startsAt: TODAY + 2 * DAY, lockCode: '3', lockAccessId: '3' });
 		booking('res-beyond', { startsAt: TODAY + 5 * DAY, lockCode: '4', lockAccessId: '4' });
-		mockGetLockUser.mockImplementation(async (id: number) => ({ id, type: 2, syncStatus: 1 }));
+		listed([1, 2, 3, 4]);
 
 		expect(await reconcileUpcomingSync()).toEqual({ confirmed: 2, errors: [] });
-		expect(mockGetLockUser.mock.calls.map((c) => c[0])).toEqual([2, 3]);
+		expect(lockCols('res-ended').lock_synced_at).toBeNull();
+		expect(lockCols('res-live').lock_synced_at).toBe(T0);
+		expect(lockCols('res-later').lock_synced_at).toBe(T0);
+		expect(lockCols('res-beyond').lock_synced_at).toBeNull();
 	});
 
-	it('takes the soonest bookings first, up to the cap', async () => {
-		// Inserted latest-first, so insertion order is not the soonest.
-		for (let i = UPCOMING_SYNC_CAP + 2; i >= 1; i--) {
+	it('makes one U-tec read however many bookings are outstanding', async () => {
+		const ids = Array.from({ length: 40 }, (_, i) => i + 1);
+		for (const i of ids) {
 			booking(`res-${i}`, { startsAt: T0 + i * 60, lockCode: String(i), lockAccessId: String(i) });
 		}
-		mockGetLockUser.mockImplementation(async (id: number) => ({ id, type: 2, syncStatus: 1 }));
+		listed(ids);
 
-		expect((await reconcileUpcomingSync()).confirmed).toBe(UPCOMING_SYNC_CAP);
-		expect(mockGetLockUser.mock.calls.map((c) => c[0])).toEqual(
-			Array.from({ length: UPCOMING_SYNC_CAP }, (_, i) => i + 1)
-		);
-		expect(UPCOMING_SYNC_CAP).toBeLessThanOrEqual(50);
+		expect((await reconcileUpcomingSync()).confirmed).toBe(40);
+		expect(mockListLockUsers).toHaveBeenCalledTimes(1);
+	});
+
+	it('makes no lock-user reads while the lock is offline, and does not fail', async () => {
+		booking('res-1', { lockCode: '1', lockAccessId: '111' });
+		listed([111]);
+		mockQueryDeviceHealth.mockResolvedValue({ online: false, lockState: null, batteryLevel: 3 });
+
+		const result = await reconcileUpcomingSync();
+
+		expect(result).toEqual({ confirmed: 0, errors: [], skipped: 'lock-offline' });
+		expect(mockListLockUsers).not.toHaveBeenCalled();
+		expect(mockGetLockUser).not.toHaveBeenCalled();
+		expect(lockCols('res-1').lock_synced_at).toBeNull();
+	});
+
+	it('skips quietly during a U-tec cooldown', async () => {
+		booking('res-1', { lockCode: '1', lockAccessId: '111' });
+		mockQueryDeviceHealth.mockRejectedValue(new UtecRateLimitedError(at(T0 + 900)));
+
+		const result = await reconcileUpcomingSync();
+
+		expect(result).toEqual({ confirmed: 0, errors: [], skipped: 'rate-limited' });
+		expect(mockListLockUsers).not.toHaveBeenCalled();
 	});
 
 	it('reports a failed read instead of throwing', async () => {
 		booking('res-1', { lockCode: '1', lockAccessId: '111' });
-		mockGetLockUser.mockRejectedValue(new Error('rate limited'));
+		mockListLockUsers.mockRejectedValue(new Error('Ultraloc API error: 500'));
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 		const result = await reconcileUpcomingSync();
 
-		expect(result).toEqual({ confirmed: 0, errors: [expect.stringContaining('rate limited')] });
+		expect(result).toEqual({ confirmed: 0, errors: [expect.stringContaining('500')] });
 		consoleSpy.mockRestore();
 	});
 
-	it('leaves the daily backstop unbounded', async () => {
-		for (let i = 1; i <= UPCOMING_SYNC_CAP + 2; i++) {
-			booking(`res-${i}`, {
-				startsAt: TODAY + 10 * DAY + i * 60,
-				lockCode: String(i),
-				lockAccessId: String(i)
-			});
-		}
-		mockGetLockUser.mockImplementation(async (id: number) => ({ id, type: 2, syncStatus: 1 }));
-
-		expect((await runDailyLockJob()).confirmed).toBe(UPCOMING_SYNC_CAP + 2);
+	it('makes no list call when nothing is outstanding', async () => {
+		expect(await reconcileUpcomingSync()).toEqual({ confirmed: 0, errors: [] });
+		expect(mockListLockUsers).not.toHaveBeenCalled();
 	});
 });
 

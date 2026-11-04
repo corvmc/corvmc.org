@@ -27,8 +27,12 @@
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import { isOverdue } from '#lib/utils/work-order-due.js';
 	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
+	import LogHoursForMemberAction from '#lib/components/volunteer/LogHoursForMemberAction.svelte';
 	import NewWorkOrderAction from '../NewWorkOrderAction.svelte';
 	import ScheduleViews from './ScheduleViews.svelte';
+	import ConfirmFixedTable from './ConfirmFixedTable.svelte';
+	import UnscheduledActions from './UnscheduledActions.svelte';
+	import { NEEDS, parseNeeds, type Needs } from './needs-filter';
 	import { PROJECT_FILTERS, matchesProject, parseProjectFilter } from './project-filter';
 	import { formatDateShort, relativeDay } from '#lib/utils/format.js';
 	import {
@@ -69,7 +73,10 @@
 	let range = $state(parseRange(initial.get('days')));
 	let roleFilter = $state(initial.get('role') ?? '');
 	let kind = $state<Kind>(parseKind(initial.get('kind')));
-	let shortOnly = $state(initial.get('short') === '1');
+	// `short=1` was the checkbox this replaced; old links keep working.
+	let needs = $state<Needs>(
+		initial.get('short') === '1' ? 'short' : parseNeeds(initial.get('needs'))
+	);
 	let projectFilter = $state(parseProjectFilter(initial.get('project')));
 	let contractorView = $state(parseView(initial.get('contractor')));
 	// Contractor work is not staffed by the window, role or headcount.
@@ -82,7 +89,7 @@
 		if (range !== DEFAULT_WINDOW) pairs.push(['days', String(range)]);
 		if (roleFilter) pairs.push(['role', roleFilter]);
 		if (kind) pairs.push(['kind', kind]);
-		if (shortOnly) pairs.push(['short', '1']);
+		if (needs) pairs.push(['needs', needs]);
 		if (projectFilter) pairs.push(['project', projectFilter]);
 		if (byContractor && contractorView !== 'open') pairs.push(['contractor', contractorView]);
 
@@ -136,6 +143,7 @@
 	}
 
 	const isShort = (w: Row) => w.confirmed < w.capacity;
+	const hasClaims = (w: Row) => w.startsAt !== null && w.claimed > w.confirmed;
 
 	function matchesKind(w: Row): boolean {
 		if (kind === 'timed') return w.startsAt !== null;
@@ -145,19 +153,25 @@
 	}
 	const matchesFilters = (w: Row) => matchesKind(w) && matchesProject(w, projectFilter);
 
-	/** "3 work orders · 2 short-staffed · 4 claims to confirm", minus the zeroes. */
-	function summarize(rows: Row[], staffed: Row[]): string {
-		const short = staffed.filter(isShort).length;
-		const claims = staffed.reduce((n, w) => n + (w.claimed - w.confirmed), 0);
-		const parts = [`${rows.length} ${rows.length === 1 ? 'work order' : 'work orders'}`];
-		if (short > 0) parts.push(`${short} short-staffed`);
-		if (claims > 0) parts.push(`${claims} ${claims === 1 ? 'claim' : 'claims'} to confirm`);
-		return parts.join(' · ');
+	/** The rows each Needs chip narrows to; staffing ones skip contractor work. */
+	function byNeed(live: Row[], staffed: Row[]): Record<Exclude<Needs, '' | 'confirm'>, Row[]> {
+		return {
+			claims: staffed.filter(hasClaims),
+			short: staffed.filter(isShort),
+			unscheduled: live.filter((w) => w.startsAt === null)
+		};
 	}
+
+	const refresh = () => void getSchedulePage(args).refresh();
 </script>
 
 <PageHeader title={m.staff_schedule()} subtitle={m.staff_planning()}>
-	<NewWorkOrderAction onsuccess={() => void getSchedulePage(args).refresh()} />
+	<!-- Not a sidebar row: roles are set up now and then, not worked daily (#1791). -->
+	<Button variant="ghost" size="sm" href={resolve('/staff/volunteer/roles')}
+		>{m.staff_roles()}</Button
+	>
+	<LogHoursForMemberAction />
+	<NewWorkOrderAction onsuccess={refresh} />
 </PageHeader>
 
 <PageContent>
@@ -170,12 +184,12 @@
 				: (roleFilter ? 1 : 0) +
 					(range !== DEFAULT_WINDOW ? 1 : 0) +
 					(kind ? 1 : 0) +
-					(shortOnly ? 1 : 0))}
+					(needs ? 1 : 0))}
 		onclear={() => {
 			roleFilter = '';
 			range = DEFAULT_WINDOW;
 			kind = '';
-			shortOnly = false;
+			needs = '';
 			contractorView = 'open';
 			projectFilter = '';
 		}}
@@ -204,7 +218,7 @@
 				if (kind === 'contractor') {
 					range = DEFAULT_WINDOW;
 					roleFilter = '';
-					shortOnly = false;
+					needs = '';
 				}
 			}}
 		>
@@ -253,16 +267,6 @@
 				<option value="">{m.staff_all_roles()}</option>
 				<RoleOptions />
 			</Select>
-
-			<label class="label cursor-pointer gap-2 text-sm">
-				<input
-					type="checkbox"
-					class="checkbox checkbox-sm"
-					checked={shortOnly}
-					onchange={(e) => (shortOnly = e.currentTarget.checked)}
-				/>
-				{m.staff_volunteer_schedule_short_staffed_only()}
-			</label>
 		{/if}
 	</FilterBar>
 
@@ -275,13 +279,51 @@
 			matchesFilters
 		)}
 		{@const staffed = live.filter((w) => !data.contractors[w.id]?.length)}
-		{@const shown = shortOnly ? staffed.filter(isShort) : live}
+		{@const need = byNeed(live, staffed)}
+		{@const counts = { ...need, confirm: data.waiting.toConfirm }}
+		{@const shown = needs && needs !== 'confirm' ? need[needs] : live}
 
-		{#if live.length > 0}
-			<p class="text-subtle text-sm">{summarize(live, staffed)}</p>
-		{/if}
+		<!-- What the dashboard's cards counted (#2379): four narrow this table, and the
+		     two about people link to the queue that holds them. Hidden at zero. -->
+		<div class="flex flex-wrap gap-2" data-testid="schedule-needs">
+			{#if !byContractor}
+				{#each Object.entries(NEEDS) as [key, label] (key)}
+					{@const n = counts[key as Exclude<Needs, ''>].length}
+					{#if n > 0 || needs === key}
+						<Button
+							size="sm"
+							variant={needs === key ? 'primary' : 'ghost'}
+							aria-pressed={needs === key}
+							data-needs={key}
+							onclick={() => (needs = needs === key ? '' : (key as Needs))}
+						>
+							{label()}
+							<Badge size="sm">{n}</Badge>
+						</Button>
+					{/if}
+				{/each}
+			{/if}
+			{#if data.waiting.pendingHours > 0}
+				<Button size="sm" variant="ghost" href={resolve('/staff/members/volunteers/hours')}>
+					{m.staff_volunteer_hours_to_review_card_title()}
+					<Badge size="sm">{data.waiting.pendingHours}</Badge>
+				</Button>
+			{/if}
+			{#if data.waiting.lapsingPeople > 0}
+				<Button
+					size="sm"
+					variant="ghost"
+					href={withQuery(resolve('/staff/members/volunteers'), 'lapsing=1')}
+				>
+					{m.staff_volunteer_lapsing_card_title()}
+					<Badge size="sm">{data.waiting.lapsingPeople}</Badge>
+				</Button>
+			{/if}
+		</div>
 
-		{#if shown.length === 0}
+		{#if needs === 'confirm'}
+			<ConfirmFixedTable orders={data.waiting.toConfirm} onsuccess={refresh} />
+		{:else if shown.length === 0}
 			<EmptyState
 				title={m.staff_volunteer_schedule_no_work_orders_match()}
 				description={m.staff_volunteer_schedule_description()}
@@ -388,9 +430,10 @@
 										modalTitle={m.staff_confirm_everyone_shift()}
 										submitLabel={m.staff_confirm_all()}
 										successToast={m.staff_volunteer_schedule_success_toast()}
+										onsuccess={refresh}
 									>
 										{#snippet form()}
-											<input {...confirmShiftClaims.for(w.id).fields.shiftId.as('hidden', w.id)} />
+											<input type="hidden" name="shiftId" value={w.id} />
 											<p class="text-sm">
 												{m.staff_volunteer_schedule_people_have_put_hand_up({
 													unconfirmed,
@@ -400,6 +443,9 @@
 											</p>
 										{/snippet}
 									</Action>
+								{/if}
+								{#if !w.startsAt && !byContractor}
+									<UnscheduledActions order={w} label={shiftLabel(w)} onsuccess={refresh} />
 								{/if}
 								{#if byVolunteers && !full}
 									<!-- Opens the work order, whose candidate column is the picker
@@ -415,7 +461,7 @@
 			</Table>
 		{/if}
 
-		{#if cancelled.length > 0 && kind !== 'untimed'}
+		{#if cancelled.length > 0 && kind !== 'untimed' && !needs}
 			<!-- Below the divider: a called-off shift is people to ring, not work to staff. -->
 			<div class="divider"></div>
 			<ul class="space-y-1 text-sm">

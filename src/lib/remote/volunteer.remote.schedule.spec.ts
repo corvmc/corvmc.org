@@ -55,12 +55,30 @@ vi.mock('#lib/server/volunteer/work-order-service.js', () => ({
 }));
 vi.mock('#lib/server/contractor/contractor-job-service.js', () => ({ listJobs: svc.listJobs }));
 
+const waiting = vi.hoisted(() => ({
+	toConfirm: [] as { id: string }[],
+	pending: 0,
+	lapsing: [] as { userId: string }[]
+}));
+vi.mock('#lib/server/inventory/work-request-service.js', () => ({
+	listFinishedWorkToConfirm: async () => waiting.toConfirm
+}));
+vi.mock('#lib/server/volunteer/hour-log-service.js', async (orig) => ({
+	...(await orig<object>()),
+	getStatusCounts: async () => ({ pending: waiting.pending })
+}));
+vi.mock('#lib/server/volunteer/member-certification-service.js', async (orig) => ({
+	...(await orig<object>()),
+	listLapsingBeforeRosteredShift: async () => waiting.lapsing
+}));
+
 const { getSchedulePage } = (await import('./volunteer.remote')) as unknown as {
 	getSchedulePage: (args: object) => Promise<{
 		shifts: { id: string }[];
 		unscheduled: { id: string }[];
 		contractors: Record<string, { name: string; late: boolean; awaitingInvoice: boolean }[]>;
 		contractorAccess: boolean;
+		waiting: { toConfirm: { id: string }[]; pendingHours: number; lapsingPeople: number };
 	}>;
 };
 
@@ -87,6 +105,27 @@ beforeEach(() => {
 	svc.listWorkOrders.mockResolvedValue([]);
 	svc.listJobs.mockResolvedValue([]);
 	svc.listWorkOrdersByIds.mockResolvedValue([]);
+	waiting.toConfirm = [];
+	waiting.pending = 0;
+	waiting.lapsing = [];
+});
+
+// The dashboard's counts that are not rows in the range (#2379).
+describe('getSchedulePage, waiting', () => {
+	it('carries repairs to verify, hours to review and people lapsing, one each', async () => {
+		waiting.toConfirm = [{ id: 'wo-done' }];
+		waiting.pending = 3;
+		// One person on two shifts is one person to chase.
+		waiting.lapsing = [{ userId: 'usr-a' }, { userId: 'usr-a' }, { userId: 'usr-b' }];
+
+		const page = await getSchedulePage({});
+
+		expect(page.waiting).toEqual({
+			toConfirm: [{ id: 'wo-done' }],
+			pendingHours: 3,
+			lapsingPeople: 2
+		});
+	});
 });
 
 describe('getSchedulePage, contractor filter', () => {

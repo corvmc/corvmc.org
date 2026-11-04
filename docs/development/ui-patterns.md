@@ -752,6 +752,10 @@ Tab navigation supporting both URL-driven (links) and client-state (buttons) mod
 
 Tabs with `href` render as `<a>` tags; without, they render as `<button>` tags and call `onchange`.
 
+Tabs that choose what the whole page shows go in the `PageHeader`'s action slot, above anything
+that depends on the chosen tab; that tab's own actions go down with its content, in `FilterBar`'s
+`actions` (`/staff/groups/*`).
+
 Two ways to survive a bar that outgrows its space. `collapse` folds the set into a dropdown below
 `md` — for bars that outrun a phone. `dense` shrinks every tab but the active one to its `icon`,
 keeping the counts visible — for bars in a narrow _pane_, where the viewport is wide and `collapse`
@@ -806,13 +810,15 @@ section's work is spread across several tables, because then no page holds it: t
 coordinator's version of "what needs me" lives one row in each of five places, and finding
 it means already knowing where to look.
 
-Two sections do it the other way and should be copied rather than re-derived:
+One section does it the other way and should be copied rather than re-derived:
 
 - **`/staff/instructors`** — one query, three cards, and Applications first, with the
   reason in the source: _"the only rows on this page waiting on staff. Everything below is
   either settled or waiting on the member."_
-- **`/staff/volunteer`** — the fuller version, and the one
-  [the volunteering friction log](../reports/volunteer-workflow-findings.md) argues for.
+
+Volunteering had one too, until #2379 folded it into the Schedule: when every card's rows are
+already rows of one table, the cards become that table's filters, each with a count, and the
+cards about people become counts that link to the page holding them.
 
 The rules, so the next one does not have to re-invent them:
 
@@ -1177,6 +1183,8 @@ visible at every width. Primary filters go in `children` and sit inline; seconda
 ones go in a `menu` snippet, behind a "Filters" popover whose badge is `menuCount`.
 A bar with no `menu` collapses its `children` behind a "Filters" disclosure below
 the `@lg` container breakpoint instead.
+`actions` sits at the row's end, for what belongs to the current view rather than
+the page — a tabbed page's per-tab create button (`/staff/groups/*`).
 
 ```svelte
 <FilterBar activeCount={activeFilterCount} onclear={clearFilters}>

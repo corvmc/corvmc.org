@@ -144,11 +144,73 @@ async function getAccessToken(): Promise<string> {
 	return data.access_token;
 }
 
+/**
+ * KV key holding when lock calls may resume after U-tec throttled us. Every
+ * call is account-wide, so one throttle pauses them all, staff actions included.
+ */
+const COOLDOWN_KEY = 'ultraloc:cooldownUntil';
+
+/** One lock-sync window: the next 15-minute tick is the first to try again. */
+const DEFAULT_COOLDOWN_SECONDS = 15 * 60;
+
+/**
+ * U-tec documents no rate limit and no throttle response, so this is the
+ * conventional 429 plus any error code that names one. Bare `LIMIT` is left
+ * out: a full lock-user table is a limit too, and must not pause the lock.
+ */
+const RATE_LIMIT_CODE = /RATE_?LIMIT|THROTTL|TOO_MANY|FREQUEN/i;
+
+/** U-tec throttled us, or we are still inside the cooldown it caused. */
+export class UtecRateLimitedError extends Error {
+	constructor(readonly until: Date) {
+		super(`U-tec rate limit: lock calls paused until ${until.toISOString()}`);
+		this.name = 'UtecRateLimitedError';
+	}
+}
+
+/** A non-200, or an error body at the top level or on the device. */
+export class UtecApiError extends Error {
+	constructor(
+		message: string,
+		readonly status: number,
+		readonly code: string | null
+	) {
+		super(message);
+		this.name = 'UtecApiError';
+	}
+}
+
+type ApiError = { code: string; message: string };
+type ApiBody = {
+	payload?: { error?: ApiError; devices?: Array<{ error?: ApiError }> } & Record<string, unknown>;
+};
+
+/** The pause in force, or null. A malformed or missing record is no pause. */
+async function activeCooldown(): Promise<Date | null> {
+	const stored = await getJson<{ until?: unknown }>(COOLDOWN_KEY);
+	const until = typeof stored?.until === 'number' ? stored.until : 0;
+	return until > Date.now() ? new Date(until) : null;
+}
+
+/** Start the pause and log it, once: calls during it never reach U-tec. */
+async function startCooldown(retryAfter: string | null, detail: string): Promise<never> {
+	const seconds = Number(retryAfter);
+	const ttl =
+		Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : DEFAULT_COOLDOWN_SECONDS;
+	const until = new Date(Date.now() + ttl * 1000);
+	await putJson(COOLDOWN_KEY, { until: until.getTime() }, Math.max(ttl, 60));
+	console.error(`U-tec rate limited us (${detail}); pausing lock calls for ${ttl}s`);
+	throw new UtecRateLimitedError(until);
+}
+
 async function apiCall(
 	namespace: string,
 	name: string,
 	payload: Record<string, unknown>
 ): Promise<unknown> {
+	const paused = await activeCooldown();
+	if (paused) throw new UtecRateLimitedError(paused);
+
 	const token = await getAccessToken();
 
 	const res = await fetch(API_URL, {
@@ -168,20 +230,44 @@ async function apiCall(
 		})
 	});
 
+	if (res.status === 429) {
+		return startCooldown(res.headers?.get('Retry-After') ?? null, 'HTTP 429');
+	}
 	if (!res.ok) {
-		throw new Error(`Ultraloc API error: ${res.status} ${await res.text()}`);
+		throw new UtecApiError(
+			`Ultraloc API error: ${res.status} ${await res.text()}`,
+			res.status,
+			null
+		);
 	}
 
-	const body: { payload: { error?: { code: string; message: string } } & Record<string, unknown> } =
-		await res.json();
+	const body: ApiBody = await res.json();
+	const errors = [body.payload?.error, ...(body.payload?.devices ?? []).map((d) => d?.error)];
+	const throttled = errors.find((e) => e?.code && RATE_LIMIT_CODE.test(e.code));
+	if (throttled) return startCooldown(null, throttled.code);
 
-	if (body.payload?.error) {
-		throw new Error(
-			`Ultraloc API error: ${body.payload.error.code} — ${body.payload.error.message}`
+	const error = body.payload?.error;
+	if (error) {
+		throw new UtecApiError(
+			`Ultraloc API error: ${error.code} — ${error.message}`,
+			res.status,
+			error.code
 		);
 	}
 
 	return body.payload;
+}
+
+/**
+ * A list whose device answered with an error has no users in it, and reading it
+ * as an empty lock would let every diff against it act on nothing. Writes are
+ * not checked: U-tec queues them for an offline lock, and that queue is the point.
+ */
+function deviceReadError(result: unknown): void {
+	const error = (result as ApiBody['payload'])?.devices?.[0]?.error;
+	if (error) {
+		throw new UtecApiError(`Ultraloc API error: ${error.code} — ${error.message}`, 200, error.code);
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -358,6 +444,7 @@ export async function updateLockUser(
 export async function listLockUsers(): Promise<LockUser[]> {
 	const result = (await lockUserCommand('list')) as
 		{ devices?: Array<{ users?: Array<Record<string, unknown>> }> } | undefined;
+	deviceReadError(result);
 	return (result?.devices?.[0]?.users ?? []).map((u) => toLockUser<LockUser>(u));
 }
 

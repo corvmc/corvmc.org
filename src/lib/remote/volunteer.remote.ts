@@ -17,10 +17,7 @@ import { getProjectActivity } from './projects.remote';
 import { ACTIVITY_MAX, listActivity } from '#lib/server/project/project-activity.js';
 import { loadWorkOrderView } from '#lib/server/volunteer/work-order-view.js';
 import { getVolunteerProfile } from '#lib/server/volunteer/volunteer-profile-service.js';
-import {
-	listAllVolunteers,
-	volunteerRosterFilters
-} from '#lib/server/volunteer/volunteer-roster.js';
+import { listAllVolunteers, volunteerRosterFilters } from '#lib/server/volunteer/volunteer-roster.js';
 import { rosterEmails } from '#lib/server/roster/roster.js';
 import { listInterestsForUser } from '#lib/server/volunteer/volunteer-interest-service.js';
 import {
@@ -91,10 +88,7 @@ import {
 	getRequirementsForRoles,
 	setRoleRequirements
 } from '#lib/server/volunteer/volunteer-certification-service.js';
-import {
-	listWorkTasks,
-	setWorkTaskDoneAsAssignee
-} from '#lib/server/volunteer/duty-list-service.js';
+import { listWorkTasks, setWorkTaskDoneAsAssignee } from '#lib/server/volunteer/duty-list-service.js';
 import { listFinishedWorkToConfirm } from '#lib/server/inventory/work-request-service.js';
 import { getById } from '#lib/server/event/event-service.js';
 import {
@@ -118,8 +112,7 @@ import {
 	resolveWorkOrder as resolveWorkOrderService,
 	listWorkOrders,
 	listWorkOrdersByIds,
-	isScheduled,
-	isRoledShift
+	isScheduled
 } from '#lib/server/volunteer/work-order-service.js';
 import { listJobs } from '#lib/server/contractor/contractor-job-service.js';
 import { listContractors } from '#lib/server/contractor/contractor-service.js';
@@ -141,7 +134,6 @@ import {
 	listClaimants,
 	listOutstandingClaims,
 	listUnloggedCompletions,
-	countVolunteerWorkWaiting,
 	SignupNotFoundError
 } from '#lib/server/volunteer/volunteer-signup-service.js';
 import {
@@ -471,6 +463,8 @@ const volunteerListFilters = z.object({
 	volunteerRoleId: z.string().optional(),
 	status: z.enum(volunteerProfileStatuses).optional(),
 	certificationId: z.string().optional(),
+	/** Only people whose clearance lapses before a shift they are on. */
+	lapsing: z.boolean().optional(),
 	page: z.number().optional()
 });
 
@@ -494,18 +488,20 @@ export const getStaffVolunteers = query(volunteerListFilters, async (f) => {
 	//
 	// One action per row, not three: a row offering Confirm, Chase and Log Hours
 	// at once is a row that has not decided what it is for.
-	const [roster, claims, lapsing, minors] = await Promise.all([
+	// Read first when it narrows the roster; it is one query either way.
+	const lapsing = await listLapsingBeforeRosteredShift();
+	const [roster, claims, minors] = await Promise.all([
 		listVolunteers(
 			{
 				roleId: f.volunteerRoleId || undefined,
 				search: f.search || undefined,
 				status: f.status,
-				certificationId: f.certificationId || undefined
+				certificationId: f.certificationId || undefined,
+				userIds: f.lapsing ? [...new Set(lapsing.map((l) => l.userId))] : undefined
 			},
 			{ page: f.page ?? 1, pageSize: 50 }
 		),
 		listOutstandingClaims(),
-		listLapsingBeforeRosteredShift(),
 		// The "N awaiting sign-off" count, which has to read whatever the filters
 		// say; a second query beside this one is the fan-out the lint rule refuses.
 		listBlockedVolunteers()
@@ -517,6 +513,7 @@ export const getStaffVolunteers = query(volunteerListFilters, async (f) => {
 	return {
 		...roster,
 		minorsWaiting: minors.length,
+		lapsingPeople: new Set(lapsing.map((l) => l.userId)).size,
 		rows: roster.rows.map((r) => ({
 			...r,
 			claim: claimByUser.get(r.userId) ?? null,
@@ -537,9 +534,9 @@ export const approveVolunteerSignup = form(
 			mapDomainError(err);
 		}
 
-		// The dashboard renders the row and the sidebar badge counts it. The roster is
-		// arg-keyed, so the people page refreshes its own.
-		await Promise.all([getVolunteerWorklist().refresh(), getStaffLayout().refresh()]);
+		// The sidebar badge counts it. The roster is arg-keyed, so the people page
+		// refreshes its own.
+		await getStaffLayout().refresh();
 		return { success: true };
 	}
 );
@@ -1196,23 +1193,15 @@ async function refreshMemberViews() {
  * argument, so `getStaffVolunteerLogs({})` refreshes the empty-filter instance
  * — never the `{ status: 'pending', page: 1 }` one the queue page actually
  * subscribes to. Arg-keyed queries are refreshed by the page, which is the only
- * place that knows its own filters; see the `onsuccess` handlers on
- * /staff/volunteer and the mount refresh on /staff/reports/volunteering.
+ * place that knows its own filters; see the mount refresh on
+ * /staff/reports/volunteering.
  */
 async function refreshStaffQueue() {
-	// The dashboard renders the top of this queue with the same approve and return
-	// actions, so a review from there has to drop the row it just cleared — the exact
-	// failure `e2e/volunteering.e2e.ts` pins on the full queue, one page along.
-	//
 	// The sidebar badge counts everything waiting on a coordinator now, so a review
 	// moves it too — and a badge that only settles on the next full navigation is the
 	// kind of stale number people learn to stop trusting. Same call `inbox.remote.ts`
 	// and `community-events.remote.ts` make after their own queue writes.
-	await Promise.all([
-		getVolunteerStatusCounts().refresh(),
-		getVolunteerWorklist().refresh(),
-		getStaffLayout().refresh()
-	]);
+	await Promise.all([getVolunteerStatusCounts().refresh(), getStaffLayout().refresh()]);
 }
 
 // Role edits change the member picker, the staff table (log counts included),
@@ -1479,18 +1468,14 @@ async function refreshCertificationViews() {
 // ---------------------------------------------------------------------------
 
 /**
- * Everything argless that a change to one shift's roster invalidates.
- *
- * The dashboard is in here because its whole point is that a claim waiting to be confirmed
- * is visible somewhere; a confirm that left the card showing the row it had just cleared
- * would be the same bug the hours queue documents, one page along.
+ * Everything argless that a change to one shift's roster invalidates. The Schedule
+ * is arg-keyed, so it refreshes its own from the row's `onsuccess`.
  *
  * The shift detail page is arg-keyed but the id is known here, so it comes too — the same
  * opt-in `refreshRoleViews` makes.
  */
 async function refreshShiftViews(shiftId?: string) {
 	await Promise.all([
-		getVolunteerWorklist().refresh(),
 		getStaffLayout().refresh(),
 		getMemberVolunteerPage().refresh(),
 		...(shiftId ? [refreshWorkOrderPage(shiftId)] : [])
@@ -1541,31 +1526,50 @@ export const getShifts = query(shiftFilters, async (f) => {
 /**
  * Schedule's one load-bearing query: every work order a coordinator staffs, the
  * windowed ones inside the range and the ones with no time yet, which have no
- * date for a range to bound.
+ * date for a range to bound. `waiting` is what the folded-in dashboard counted
+ * (#2379) that is not a row in the range: finished repairs to verify, and two
+ * people queues the page links out to.
  */
 export const getSchedulePage = query(
 	shiftFilters.extend({ contractor: z.enum(contractorJobViews).optional() }),
 	async (f) => {
 		await requireCapability('volunteer.read');
-		if (f.contractor) return contractorSchedule(f.contractor);
-		const [shifts, unscheduled] = await Promise.all([
-			listShifts({
-				volunteerRoleId: f.volunteerRoleId || undefined,
-				from: f.from ? new Date(f.from) : undefined,
-				to: f.to ? new Date(f.to) : undefined,
-				includeCancelled: f.includeCancelled
-			}),
-			listWorkOrders({ volunteerRoleId: f.volunteerRoleId || undefined })
+		const now = new Date();
+		const [page, toConfirm, counts, lapsing] = await Promise.all([
+			f.contractor ? contractorSchedule(f.contractor) : staffedSchedule(f),
+			listFinishedWorkToConfirm(now),
+			getStatusCounts(),
+			listLapsingBeforeRosteredShift(now)
 		]);
-		// Re-sorted here, not in `listWorkOrders`: that is an oldest-first queue for its
-		// other callers, but on a schedule the next deadline is what reads first (#1966).
-		unscheduled.sort(byDueAt);
-		const ids = [...shifts, ...unscheduled].map((w) => w.id);
-		const contractorAccess = await can('contractor.read');
-		const jobs = contractorAccess ? await listJobs({ workOrderIds: ids }) : [];
-		return { shifts, unscheduled, contractors: contractorMarks(jobs), contractorAccess };
+		return {
+			...page,
+			waiting: {
+				toConfirm,
+				pendingHours: counts.pending,
+				lapsingPeople: new Set(lapsing.map((l) => l.userId)).size
+			}
+		};
 	}
 );
+
+async function staffedSchedule(f: z.infer<typeof shiftFilters>) {
+	const [shifts, unscheduled] = await Promise.all([
+		listShifts({
+			volunteerRoleId: f.volunteerRoleId || undefined,
+			from: f.from ? new Date(f.from) : undefined,
+			to: f.to ? new Date(f.to) : undefined,
+			includeCancelled: f.includeCancelled
+		}),
+		listWorkOrders({ volunteerRoleId: f.volunteerRoleId || undefined })
+	]);
+	// Re-sorted here, not in `listWorkOrders`: that is an oldest-first queue for its
+	// other callers, but on a schedule the next deadline is what reads first (#1966).
+	unscheduled.sort(byDueAt);
+	const ids = [...shifts, ...unscheduled].map((w) => w.id);
+	const contractorAccess = await can('contractor.read');
+	const jobs = contractorAccess ? await listJobs({ workOrderIds: ids }) : [];
+	return { shifts, unscheduled, contractors: contractorMarks(jobs), contractorAccess };
+}
 
 type ScheduleJob = Awaited<ReturnType<typeof listJobs>>[number];
 
@@ -2417,113 +2421,6 @@ export const getVolunteerReportPage = query(
 		return { report, feedbackByRole, byMember, byGroup, stillInReview: statusCounts.pending };
 	}
 );
-
-// ---------------------------------------------------------------------------
-// The coordinator's dashboard
-// ---------------------------------------------------------------------------
-
-/** How far ahead the dashboard looks. Two weeks is far enough to still fill a shift. */
-const WORKLIST_HORIZON_DAYS = 14;
-/** Pending hours shown inline before the card sends you to the full queue. */
-const WORKLIST_HOURS_PREVIEW = 5;
-
-/**
- * How many rows a worklist card shows. Only the hours queue was capped, so six
- * of seven cards rendered every row they had — a dashboard is a summary and
- * each card links to the table that holds the rest (#1054).
- */
-const WORKLIST_PREVIEW = 8;
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/**
- * Everything waiting on a coordinator, in one query.
- *
- * `/staff/volunteer` used to open on a filtered table of hour logs, which is one of the
- * five things below and the only one that had a surface at all. The rest were spread over
- * pages you had to already know to visit — see
- * docs/reports/volunteer-workflow-findings.md#d1.
- *
- * One query rather than five, per `custom/no-concurrent-remote-queries`, and unparameterized
- * so every mutation that changes it can refresh it by name. The horizons are constants and
- * not arguments for the same reason: an argument would make the key move with the clock and
- * `refresh()` would miss.
- *
- * Note what is NOT here. The dashboard shows the top few pending hour logs and links to the
- * queue; it does not paginate, filter, or replace it. A dashboard that grows a filter bar
- * has become the table it was meant to summarise.
- */
-export const getVolunteerWorklist = query(async () => {
-	await requireCapability('volunteer.read');
-
-	const now = new Date();
-	const horizon = new Date(now.getTime() + WORKLIST_HORIZON_DAYS * DAY_MS);
-
-	const [claims, upcoming, hours, counts, lapsing, unscheduled, toConfirm, waitingCount] =
-		await Promise.all([
-			listOutstandingClaims({}, now),
-			listShifts({ from: now, to: horizon }),
-			listHourLogs({ status: 'pending' }, { page: 1, pageSize: WORKLIST_HOURS_PREVIEW }).then(
-				// Flagged the same way the full queue flags them, so the reason does not
-				// appear only on the page somebody was already going to visit.
-				(result) => withExceptions(result.rows)
-			),
-			getStatusCounts(),
-			listLapsingBeforeRosteredShift(now),
-			// Work with no time on it — the advance half of a duty list, and anything
-			// a coordinator raised without a window. Every other query on this layer
-			// filters `starts_at >= now`, and `NULL >= x` is NULL, so before this card
-			// these rows were created and then invisible in the whole product.
-			listWorkOrders(),
-			// Finished work orders staff did not flag to close their reports (#1544).
-			listFinishedWorkToConfirm(now),
-			// The same call the sidebar badge makes. It shares its predicates with the
-			// lists above (`unscheduledWorkWhere`), so it counts only what a card lists.
-			countVolunteerWorkWaiting(now)
-		]);
-
-	// Computed here rather than asked of the database: `listShifts` already returns both
-	// counts per row, so "which of these is short" is a filter over rows we already hold
-	// rather than another round trip.
-	// Work with no role is nobody's to fill, so it is never short of people.
-	const shortStaffed = upcoming
-		.filter(isRoledShift)
-		.filter((shift) => shift.claimed < shift.capacity)
-		.map((shift) => ({
-			id: shift.id,
-			roleName: shift.roleName,
-			volunteerRoleId: shift.volunteerRoleId,
-			eventTitle: shift.eventTitle,
-			startsAt: shift.startsAt,
-			endsAt: shift.endsAt,
-			capacity: shift.capacity,
-			claimed: shift.claimed,
-			confirmed: shift.confirmed,
-			short: shift.capacity - shift.claimed
-		}));
-
-	// Each card gets at most `WORKLIST_PREVIEW` rows and the true total beside
-	// them, which is the rule a list follows whether it is cards or a table.
-	return {
-		/** Claims on upcoming shifts nobody has confirmed. The reason the badge moved. */
-		needsConfirming: claims.slice(0, WORKLIST_PREVIEW),
-		needsConfirmingTotal: claims.length,
-		shortStaffed: shortStaffed.slice(0, WORKLIST_PREVIEW),
-		shortStaffedTotal: shortStaffed.length,
-		pendingHours: hours,
-		pendingHoursTotal: counts.pending,
-		lapsing: lapsing.slice(0, WORKLIST_PREVIEW),
-		lapsingTotal: lapsing.length,
-		/** Work orders waiting for a window, oldest first. */
-		unscheduled: unscheduled.slice(0, WORKLIST_PREVIEW),
-		unscheduledTotal: unscheduled.length,
-		/** Finished work with reports still open: "confirm fixed?", oldest finish first. */
-		toConfirm: toConfirm.slice(0, WORKLIST_PREVIEW),
-		toConfirmTotal: toConfirm.length,
-		/** What the sidebar badge counts — the same call, so the two always agree. */
-		waitingCount
-	};
-});
 
 /**
  * Shifts inside an explicit window — the Schedule page's one query.

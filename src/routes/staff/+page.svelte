@@ -207,7 +207,11 @@
 			{/each}
 		</Table>
 		<div class="mt-2">
-			<Button variant="ghost" size="sm" href={resolve('/staff/volunteer')}>
+			<Button
+				variant="ghost"
+				size="sm"
+				href={withQuery(resolve('/staff/volunteer/schedule'), 'needs=short')}
+			>
 				{data.shortShifts.total > data.shortShifts.rows.length
 					? m.staff_see_all_short_shifts({ total: data.shortShifts.total })
 					: m.staff_open_volunteering_worklist()}

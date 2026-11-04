@@ -484,11 +484,11 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/groups",
+		"route": "/staff/groups/[id]",
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/groups/[id]",
+		"route": "/staff/groups/bands",
 		"panel": "staff"
 	},
 	{
@@ -745,10 +745,6 @@
 	},
 	{
 		"route": "/staff/venues/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/volunteer",
 		"panel": "staff"
 	},
 	{

@@ -52,7 +52,8 @@
 	const roster = rosterState(resolve('/staff/members/volunteers'), {
 		role: text(),
 		status: oneOf<StatusFilter>(['', ...volunteerProfileStatuses], ''),
-		cert: text()
+		cert: text(),
+		lapsing: oneOf(['', '1'] as const, '')
 	});
 	const f = roster.values;
 
@@ -61,7 +62,8 @@
 		q: f.q || undefined,
 		role: f.role || undefined,
 		status: f.status || undefined,
-		cert: f.cert || undefined
+		cert: f.cert || undefined,
+		lapsing: f.lapsing || undefined
 	});
 
 	const list = $derived(
@@ -70,6 +72,7 @@
 			volunteerRoleId: active.role,
 			status: active.status,
 			certificationId: active.cert,
+			lapsing: active.lapsing === '1',
 			page: f.page
 		})
 	);
@@ -215,7 +218,7 @@
 			{total === 1
 				? m.staff_members_volunteers_volunteer()
 				: m.staff_members_volunteers_volunteers()}
-			{#await list then { minorsWaiting }}
+			{#await list then { minorsWaiting, lapsingPeople }}
 				{#if minorsWaiting > 0 && f.status !== 'blocked'}
 					·
 					<button
@@ -227,6 +230,20 @@
 						}}
 					>
 						{m.staff_members_volunteers_awaiting_sign_off({ minorsWaiting })}
+					</button>
+				{/if}
+				{#if lapsingPeople > 0 && !f.lapsing}
+					·
+					<button
+						type="button"
+						class="link text-warning"
+						data-testid="lapsing-filter"
+						onclick={() => {
+							f.lapsing = '1';
+							f.page = 1;
+						}}
+					>
+						{m.staff_members_volunteers_lapsing({ lapsingPeople })}
 					</button>
 				{/if}
 			{/await}

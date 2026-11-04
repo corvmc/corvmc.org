@@ -7,7 +7,7 @@
 	 * Deliberately terminal: no form, no retry, no way to re-answer the age
 	 * question. Volunteering with minors involves paperwork and a conversation
 	 * that doesn't belong in a web form, so this hands off to a person — and
-	 * staff clear them from /staff/volunteer, which is the only route back.
+	 * staff clear them from Members → Volunteers, which is the only route back.
 	 *
 	 * The tone matters. They answered honestly and the app is telling them to
 	 * wait; nothing here should read as a rejection.

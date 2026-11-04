@@ -23,7 +23,7 @@ import {
 	updateDutyList as updateService,
 	updateDutyListItem as updateItemService
 } from '#lib/server/volunteer/duty-list-service.js';
-import { getStaffShiftPage, getVolunteerWorklist, getWorkOrderActivity } from './volunteer.remote';
+import { getStaffShiftPage, getWorkOrderActivity } from './volunteer.remote';
 import { getProjectTaskPage } from './tasks.remote';
 import { getProjectActivity } from './projects.remote';
 import { workOrderProjectId } from '#lib/server/volunteer/work-order-service.js';
@@ -307,10 +307,6 @@ export const applyDutyList = form(
 				staff.id,
 				{ reason: data.reason }
 			);
-			// The advance items land unscheduled, which is the coordinator's queue on
-			// Today. Without this the card the apply just filled stays empty until
-			// somebody navigates.
-			await getVolunteerWorklist().refresh();
 			return {
 				workOrders: result.workOrderIds.length,
 				tasks: result.taskCount,
