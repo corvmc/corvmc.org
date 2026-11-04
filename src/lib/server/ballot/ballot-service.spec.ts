@@ -185,7 +185,7 @@ describe('status', () => {
 describe('the member list', () => {
 	it('flags the rolls a member is on and the votes they cast', async () => {
 		const id = await groupBallot();
-		await svc.openBallot(id, { actorId: CHAIR, now: NOW });
+		await svc.openBallot(id, { now: NOW });
 
 		const before = await svc.listBallotsForMember(VETERAN, { now: NOW });
 		expect(before).toMatchObject([{ id, isElector: true, hasVoted: false }]);
@@ -201,7 +201,7 @@ describe('the member list', () => {
 
 	it('leaves out a ballot the member has no part in', async () => {
 		const id = await groupBallot();
-		await svc.openBallot(id, { actorId: CHAIR, now: NOW });
+		await svc.openBallot(id, { now: NOW });
 
 		expect(await svc.listBallotsForMember(UNORIENTED, { now: NOW })).toEqual([]);
 		expect(
