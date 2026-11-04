@@ -17,10 +17,6 @@
 	let lists = $derived(getDutyLists());
 
 	const anchorOptions = dutyListAnchors.map((a) => ({ value: a, label: dutyListAnchorLabels[a] }));
-	const autoApplyOptions = [
-		{ value: '', label: m.staff_never() },
-		{ value: 'production.created', label: m.staff_when_production_created() }
-	];
 </script>
 
 <PageHeader
@@ -50,10 +46,10 @@
 				description={m.staff_project_templates_every_item_timed_from()}
 			/>
 			<FormField
-				name="autoApplyOn"
-				label={m.staff_apply_automatically()}
-				type="select"
-				options={autoApplyOptions}
+				field={createDutyList.fields.startsProduction}
+				type="checkbox"
+				label={m.staff_production()}
+				checkboxLabel={m.staff_project_templates_starts_production()}
 			/>
 		{/snippet}
 	</Action>

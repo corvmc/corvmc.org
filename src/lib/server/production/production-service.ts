@@ -22,9 +22,9 @@ import { DomainError } from '$lib/server/domain-error';
 import type { Production, ProductionStatus } from '$lib/server/db/schema/production';
 import { recomputeSetTimes } from './run-of-show-service';
 import {
-	announceProductionCreated,
 	createShowProject,
-	deleteShowProject
+	deleteShowProject,
+	stampProductionTemplate
 } from './production-project';
 import { announceShowsCancelled, openDeliverablesOnProductions } from './cancellation-notice';
 import type { OpenOwnedItem } from '$lib/server/volunteer/deliverables-service';
@@ -267,7 +267,7 @@ export async function createProduction(
 	}
 
 	const [row] = await db.select().from(production).where(eq(production.id, productionId));
-	await announceProductionCreated(productionId, eventId, opts?.createdByUserId ?? null);
+	await stampProductionTemplate(projectId, eventId, opts?.createdByUserId ?? null);
 	return row;
 }
 

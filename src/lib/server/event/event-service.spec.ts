@@ -239,7 +239,7 @@ const mockDeleteShowProject = vi.fn(async (_id: string) => undefined);
 vi.mock('$lib/server/production/production-project', () => ({
 	createShowProject: (input: unknown) => mockCreateShowProject(input),
 	deleteShowProject: (id: string) => mockDeleteShowProject(id),
-	announceProductionCreated: async () => undefined
+	stampProductionTemplate: async () => undefined
 }));
 const mockAssertProjectTakesListing = vi.fn(async (_projectId: string, _eventId: string) => {});
 vi.mock('$lib/server/production/production-scope', () => ({

@@ -28,7 +28,13 @@ import {
 	assertProjectTakesListing
 } from '$lib/server/production/production-scope';
 import { placePendingWorkOrders } from '$lib/server/volunteer/retime-work-orders';
-import { placeWorkAwaitingEvent } from '$lib/server/volunteer/duty-list-service';
+import {
+	applyDutyList,
+	getStartableTemplate,
+	placeWorkAwaitingEvent
+} from '$lib/server/volunteer/duty-list-service';
+import { createShowProject } from '$lib/server/production/production-project';
+import { captureException } from '$lib/server/sentry';
 import {
 	contractorJobStatusesWithoutSpend,
 	DEFAULT_TIMEZONE,
@@ -150,6 +156,49 @@ export async function createProject(data: CreateProjectInput) {
 		await insert;
 	}
 	return getProjectById(id);
+}
+
+/**
+ * Create a project from a template, in one action. The Production template also
+ * makes it a show (#2387); its listing attaches when it exists, and items timed
+ * from an event wait for that (#2136). The template is read before anything is
+ * written, and a failed apply leaves the project, which can be applied to by hand.
+ */
+export async function startProject(
+	data: Omit<CreateProjectInput, 'status'>,
+	templateId?: string | null
+) {
+	if (!templateId) return createProject(data);
+	const template = await getStartableTemplate(templateId);
+
+	let row: typeof project.$inferSelect;
+	if (template.projectKind === 'production') {
+		if (data.groupId) await assertCommittee(data.groupId);
+		if (data.suggestionId) await assertClaimableSuggestion(data.suggestionId);
+		const projectId = crypto.randomUUID();
+		await createShowProject({
+			productionId: crypto.randomUUID(),
+			projectId,
+			name: data.name,
+			description: data.description,
+			budgetCents: data.budgetCents,
+			suggestionId: data.suggestionId,
+			ownerGroupId: data.groupId,
+			startsAt: data.startsAt ?? null,
+			endsAt: data.endsAt ?? null,
+			createdByUserId: data.createdByUserId ?? null
+		});
+		row = await getProjectById(projectId);
+	} else {
+		row = await createProject(data);
+	}
+
+	try {
+		await applyDutyList(template.id, { kind: 'project', id: row.id }, data.createdByUserId ?? null);
+	} catch (err) {
+		captureException(err, { event: 'project.template', projectId: row.id, templateId });
+	}
+	return row;
 }
 
 /** A project's owning committee, as its `owner` row. */
@@ -351,6 +400,8 @@ export async function listProjects(
 		groupId?: string;
 		unowned?: boolean;
 		kind?: ProjectKind;
+		/** Leave out shows with a listing: the Productions view lists those. */
+		exceptListedShows?: boolean;
 	} = {}
 ) {
 	const archived = [...projectArchivedStatuses];
@@ -363,6 +414,14 @@ export async function listProjects(
 				opts.archived === true ? inArray(project.status, archived) : undefined,
 				opts.archived === false ? notInArray(project.status, archived) : undefined,
 				opts.kind ? eq(project.kind, opts.kind) : undefined,
+				opts.exceptListedShows
+					? notExists(
+							db
+								.select({ one: sql`1` })
+								.from(eventListing)
+								.where(and(eq(eventListing.projectId, project.id), eq(project.kind, 'production')))
+						)
+					: undefined,
 				opts.groupId ? takesPart(opts.groupId) : undefined,
 				opts.unowned
 					? notExists(

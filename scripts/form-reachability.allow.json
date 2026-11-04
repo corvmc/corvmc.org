@@ -143,9 +143,6 @@
 		"endsAt": "elsewhere: updateProjectForm writes it once the project exists",
 		"startsAt": "elsewhere: updateProjectForm writes it once the project exists"
 	},
-	"src/lib/server/project/project-service.ts#createProject(0)": {
-		"status": "elsewhere: the lifecycle transition moves it; a new project starts at the default"
-	},
 	"src/lib/server/project/project-service.ts#startProjectFromSuggestion(1)": {
 		"description": "elsewhere: updateProjectForm writes it once the project exists",
 		"endsAt": "elsewhere: updateProjectForm writes it once the project exists",

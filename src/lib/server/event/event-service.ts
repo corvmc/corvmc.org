@@ -66,9 +66,9 @@ import type { EventStatus } from '$lib/server/db/schema/event';
 import { staffCreate, adjustWindow } from '$lib/server/reservation/reservation-service';
 import { getProductionByEvent } from '$lib/server/production/production-service';
 import {
-	announceProductionCreated,
 	createShowProject,
-	deleteShowProject
+	deleteShowProject,
+	stampProductionTemplate
 } from '$lib/server/production/production-project';
 import {
 	placePendingWorkOrders,
@@ -469,7 +469,7 @@ export async function create(params: CreateEventParams): Promise<EventRow> {
 		row.ticketQuantity = saleTerms.quantity ?? null;
 	}
 
-	if (productionId) await announceProductionCreated(productionId, row.id, createdByUserId);
+	if (showProjectId) await stampProductionTemplate(showProjectId, row.id, createdByUserId);
 
 	// The invariant `linkManagingGroup` documents: a write that sets
 	// `event.groupId` owes the managing group its own `event_group` row, so read
