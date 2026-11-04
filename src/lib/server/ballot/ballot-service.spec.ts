@@ -182,6 +182,34 @@ describe('status', () => {
 	});
 });
 
+describe('the member list', () => {
+	it('flags the rolls a member is on and the votes they cast', async () => {
+		const id = await groupBallot();
+		await svc.openBallot(id, { now: NOW });
+
+		const before = await svc.listBallotsForMember(VETERAN, { now: NOW });
+		expect(before).toMatchObject([{ id, isElector: true, hasVoted: false }]);
+
+		const option = sqlite.prepare('select id from ballot_option where ballot_id = ?').get(id) as {
+			id: string;
+		};
+		await svc.castVote(id, VETERAN, option.id, { now: NOW });
+
+		const after = await svc.listBallotsForMember(VETERAN, { now: NOW });
+		expect(after).toMatchObject([{ id, isElector: true, hasVoted: true }]);
+	});
+
+	it('leaves out a ballot the member has no part in', async () => {
+		const id = await groupBallot();
+		await svc.openBallot(id, { now: NOW });
+
+		expect(await svc.listBallotsForMember(UNORIENTED, { now: NOW })).toEqual([]);
+		expect(
+			await svc.listBallotsForMember(UNORIENTED, { now: NOW, managedGroupIds: [COMMITTEE] })
+		).toMatchObject([{ id, isElector: false }]);
+	});
+});
+
 describe('creating', () => {
 	it('refuses a group ballot on a band', async () => {
 		await expect(
