@@ -86,7 +86,7 @@ export const getActiveDutyLists = query(async () => {
 	return lists.filter((l) => l.itemCount > 0);
 });
 
-/** One load-bearing query for `/staff/project-templates/[id]`. */
+/** One load-bearing query for `/staff/projects/templates/[id]`. */
 export const getDutyListPage = query(z.string(), async (id) => {
 	await requireCapability('project.read');
 

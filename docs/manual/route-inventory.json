@@ -664,14 +664,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/project-templates",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/project-templates/[id]",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/projects",
 		"panel": "staff"
 	},
@@ -689,6 +681,14 @@
 	},
 	{
 		"route": "/staff/projects/productions",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/projects/templates",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/projects/templates/[id]",
 		"panel": "staff"
 	},
 	{

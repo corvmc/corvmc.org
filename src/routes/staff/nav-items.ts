@@ -38,7 +38,6 @@ export type StaffNavKey =
 	| 'music'
 	| 'ballots'
 	| 'volunteer-schedule'
-	| 'project-templates'
 	| 'volunteer-report'
 	| 'reservations'
 	| 'equipment'
@@ -189,13 +188,6 @@ export const staffNavSections: StaffNavSection[] = [
 				alsoFor: ['event.manage'],
 				label: 'Projects',
 				href: resolve('/staff/projects')
-			},
-			// Gated like Projects: a template is edited under `project.manage`.
-			{
-				key: 'project-templates',
-				capability: 'project.read',
-				label: 'Project Templates',
-				href: resolve('/staff/project-templates')
 			},
 			// Every work order, in a project or not (#2034), and the recurring
 			// work that writes them (#2087). The Volunteering dashboard folded in
