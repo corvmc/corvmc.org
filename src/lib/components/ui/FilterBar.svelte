@@ -21,7 +21,7 @@
 	import type { Snippet } from 'svelte';
 	import { Popover } from 'bits-ui';
 	import { IconFilter } from '@tabler/icons-svelte';
-	import Button from './Button.svelte';
+	import Button, { setDefaultButtonSize } from './Button.svelte';
 
 	let {
 		search,
@@ -52,6 +52,9 @@
 		menuCount?: number;
 		onclear?: () => void;
 	} = $props();
+
+	// A view's actions sit in the row at the size of its controls, as they did in the header.
+	setDefaultButtonSize('sm');
 
 	const uid = $props.id();
 	const showClear = $derived(activeCount > 0 && !!onclear);

@@ -29,6 +29,7 @@
 		menu,
 		summary,
 		bulk,
+		toolbar,
 		exportPath,
 		emails,
 		lead,
@@ -57,6 +58,8 @@
 		summary?: Snippet<[number]>;
 		/** Page-supplied bulk actions, beside export. */
 		bulk?: Snippet;
+		/** The view's own actions, such as its create button, at the end of the filter row. */
+		toolbar?: Snippet;
 		/** A resolved `+server.ts` path; the current filters are appended. */
 		exportPath?: string;
 		/** Every matching address, not just this page's. */
@@ -93,7 +96,7 @@
 	const exportHref = $derived(exportPath ? withQuery(exportPath, roster.query) : null);
 </script>
 
-<FilterBar activeCount={roster.activeCount} onclear={clear} {menu}>
+<FilterBar activeCount={roster.activeCount} onclear={clear} {menu} actions={toolbar}>
 	{#snippet search()}
 		<SearchInput
 			bind:value={searchText}
