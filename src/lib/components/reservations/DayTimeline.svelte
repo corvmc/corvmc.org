@@ -4,7 +4,7 @@
 	import type { ResolvedPathname } from '$app/types';
 	import BookerTypeIcon from './BookerTypeIcon.svelte';
 	import { IconLock } from '@tabler/icons-svelte';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
+	import { clubToday, DEFAULT_TIMEZONE } from '$lib/config';
 
 	type TimeSlot = {
 		id: string;
@@ -18,10 +18,13 @@
 	type Closure = { id: string; startsAt: Date; endsAt: Date; reason: string };
 
 	let {
+		day,
 		current,
 		others = [],
 		closures = []
 	}: {
+		/** The club date being drawn. Defaults to the date `current` starts on. */
+		day?: string;
 		/** Omitted for a whole-day overview, where no slot is the one being looked at. */
 		current?: TimeSlot;
 		others?: TimeSlot[];
@@ -34,7 +37,13 @@
 	const END_HOUR = 22;
 	const RANGE = END_HOUR - START_HOUR;
 
+	const shownDay = $derived(day ?? (current && clubToday(current.startsAt)));
+
 	function percent(d: Date): number {
+		// A span crossing midnight has an end whose time of day says nothing on its own.
+		const date = clubToday(d);
+		if (shownDay && date < shownDay) return 0;
+		if (shownDay && date > shownDay) return 100;
 		const h = Number(
 			d.toLocaleTimeString('en-GB', {
 				timeZone: DEFAULT_TIMEZONE,
@@ -56,6 +65,11 @@
 	function width(slot: { startsAt: Date; endsAt: Date }): string {
 		return `${percent(slot.endsAt) - percent(slot.startsAt)}%`;
 	}
+
+	// A span wholly outside 9am to 10pm has no width, and its padding would still draw.
+	function onTimeline(slot: { startsAt: Date; endsAt: Date }): boolean {
+		return percent(slot.endsAt) > percent(slot.startsAt);
+	}
 </script>
 
 <div class="relative h-6 rounded bg-base-200">
@@ -72,7 +86,7 @@
 
 	<!-- Closures (furthest back). A closure from the day before starts off the
 	     left edge, so it is clamped to 9am like any other span. -->
-	{#each closures as c (c.id)}
+	{#each closures.filter(onTimeline) as c (c.id)}
 		<div
 			data-closure
 			class="absolute flex h-full items-center rounded bg-neutral px-1 text-neutral-content"
@@ -84,7 +98,7 @@
 	{/each}
 
 	<!-- Other reservations (background) -->
-	{#each others as other (other.id)}
+	{#each others.filter(onTimeline) as other (other.id)}
 		{#if other.href}
 			<a
 				href={other.href}
