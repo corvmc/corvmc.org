@@ -76,6 +76,7 @@
 <Modal title={m.band_slug_settings_band_address_section_title()} bind:open={showChange}>
 	<Form
 		remote={changeBandAddress}
+		refreshQueries={false}
 		onsuccess={(result) => {
 			showChange = false;
 			if (!result?.changed) {
@@ -83,10 +84,9 @@
 				return;
 			}
 			toast.success(m.band_slug_settings_band_address_section_address_updated());
-			// Straight to the new URL — no invalidateAll() first. Every query on this
-			// page is still keyed on the old slug, so re-running them here would
-			// bounce through the old-address redirect. Changing page.params.slug
-			// re-keys them instead.
+			// Every query on this page is keyed on the old slug, and `getBandLayout`
+			// answers that with a forward to the bare address, which `refreshQueries`
+			// above keeps from racing this. Changing page.params.slug re-keys them.
 			goto(resolve(`band/${result.slug}/settings`));
 		}}
 	>

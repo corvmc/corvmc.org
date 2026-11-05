@@ -66,6 +66,7 @@
 		onsuccess,
 		onfailure,
 		ondirtychange,
+		refreshQueries = true,
 		children,
 		class: className,
 		...rest
@@ -90,6 +91,13 @@
 		 * dialog needs it to know whether closing throws work away.
 		 */
 		ondirtychange?: (dirty: boolean) => void;
+		/**
+		 * Kit refreshes every query on the page after a successful submit. Turn that
+		 * off only for a mutation that invalidates the page's own query keys and
+		 * navigates in `onsuccess`: a refresh of a dead key can redirect after that
+		 * navigation and override it.
+		 */
+		refreshQueries?: boolean;
 		children: Snippet;
 		class?: string;
 		[key: string]: unknown;
@@ -267,7 +275,9 @@
 			const start = performance.now();
 
 			try {
-				if (await submit()) {
+				// `.updates()` has to be called in the same tick as `submit()`.
+				const submission = submit();
+				if (await (refreshQueries ? submission : submission.updates())) {
 					await delay(150 - (performance.now() - start));
 					await onsuccess?.(remote!.result);
 					if (successToast) toast.success(successToast);

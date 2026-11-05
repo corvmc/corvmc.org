@@ -64,10 +64,9 @@ export const changeBandAddress = form(
 
 		try {
 			const result = await changeBandSlug(band.id, next);
-			// Refresh nothing. Every band-scoped query is keyed on the OLD slug (the
-			// route param comes from the `x-sveltekit-pathname` header the client
-			// sent), so refreshing here would 404 and drop the page that just saved
-			// into an error state. The client navigates to the new address instead.
+			// Refresh nothing. Every band-scoped query is keyed on the OLD slug, so
+			// refreshing one here would forward or 404. The client opts out of kit's
+			// own refresh too (`refreshQueries`) and navigates to the new address.
 			return { success: true, slug: result.slug, changed: result.status === 'changed' };
 		} catch (err) {
 			if (err instanceof SlugUnavailableError) invalid(issue.newSlug(err.message));
