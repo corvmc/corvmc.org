@@ -751,8 +751,8 @@ and re-labelling it `email` would let unrelated mail from the same address merge
 - **Inbound email:** Postmark inbound webhook → `src/routes/api/inbox/postmark/+server.ts`
   (authenticated with `POSTMARK_INBOUND_TOKEN`) → `handlePostmarkInbound()` in
   `src/lib/server/inbox/inbound-handlers.ts`.
-- **Inbound SMS:** Twilio webhook → `src/routes/api/inbox/twilio/+server.ts` →
-  `handleTwilioInbound()`.
+- **Inbound SMS:** Twilio webhook → `worker.js` (`admitTwilioInbound`, past Kit's CSRF check) →
+  `src/routes/api/inbox/twilio/+server.ts` (verifies the signature) → `handleTwilioInbound()`.
 - **Contact form:** the public `/contact` page also funnels in via `handleContactForm()`,
   which additionally emits `contact.form_submitted` → an alert email to `STAFF_CONTACT_EMAIL`.
 - All three thread the message via `thread-service.ts` / `message-service.ts` (match on
@@ -772,7 +772,8 @@ and re-labelling it `email` would let unrelated mail from the same address merge
 ### Where it breaks
 
 - **Inbound mail not appearing** → check the Postmark server's inbound webhook URL and
-  token, then Sentry. Same for Twilio's messaging webhook config.
+  token, then Sentry. Same for Twilio's messaging webhook config. With no `TWILIO_AUTH_TOKEN`
+  set, a signed Twilio post is refused with a 403, the same answer as a wrong signature.
 - **Staff not notified** → the notification dispatcher respects per-user preferences
   (`notification/preference-service.ts`); check the staff user's settings before suspecting
   the listener.

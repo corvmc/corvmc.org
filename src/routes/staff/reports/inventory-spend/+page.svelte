@@ -67,7 +67,12 @@
 	<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
 		<StatCard title={m.staff_stock()} value={formatCents(data.totalCents)} />
 		<StatCard title={m.staff_inventory_spend_services()} value={formatCents(data.servicesCents)} />
-		<StatCard title={m.staff_inventory_spend_window()} value={`${data.from} → ${data.to}`} />
+		<StatCard
+			title={m.staff_inventory_spend_window()}
+			value={`${data.from} → ${data.to}`}
+			size="sm"
+			valueClass="whitespace-normal"
+		/>
 	</div>
 
 	{#if data.rows.length === 0}

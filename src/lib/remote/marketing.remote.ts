@@ -300,7 +300,7 @@ export const createAudience = form(
 			mapDomainError(err);
 		}
 
-		void getAudiences().refresh();
+		void getAudienceList().refresh();
 		return { audienceId: created.id };
 	}
 );
@@ -348,7 +348,7 @@ export const deleteAudience = form(
 	async (data) => {
 		await requireCapability('marketing.manageAudiences');
 		await deleteAudienceService(data.id as string);
-		void getAudiences().refresh();
+		void getAudienceList().refresh();
 		return { success: true };
 	}
 );

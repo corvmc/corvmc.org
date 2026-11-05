@@ -49,10 +49,6 @@
 		}
 	});
 
-	const report = $derived(
-		getAnnualReportPage({ from: fromDate || undefined, to: toDate || undefined })
-	);
-
 	const exportHref = $derived(
 		[fromDate ? `from=${fromDate}` : '', toDate ? `to=${toDate}` : '']
 			.filter(Boolean)
@@ -82,6 +78,12 @@
 		pass_through:
 			"Money held on someone else's behalf — a band's share of the door. Never the collective's income."
 	};
+
+	// Last, and a top-level await rather than `{#await}`: a refusal has to reach the
+	// panel's boundary, which an `{#await}` with no `{:catch}` renders as nothing.
+	const r = $derived(
+		await getAnnualReportPage({ from: fromDate || undefined, to: toDate || undefined })
+	);
 </script>
 
 <PageHeader title={m.staff_reports()} documentTitle={m.staff_reports_annual_report()}>
@@ -103,149 +105,147 @@
 		{/snippet}
 	</DateRangeFilter>
 
-	{#await report then r}
-		{#if r.coverage.startsAt && !r.coverage.complete}
-			<!--
-				Said plainly rather than shown as a warning colour. Nothing is broken:
-				the app's financial record simply begins where its payment history
-				does, and a range reaching further back returns a smaller number with
-				no way to tell that apart from a quiet year.
-			-->
-			<Alert type="info">
-				{m.staff_reports_financial_record_begins_money_collective({
-					formatDateLong: formatDateLong(r.coverage.startsAt)
-				})}
-			</Alert>
-		{/if}
+	{#if r.coverage.startsAt && !r.coverage.complete}
+		<!--
+			Said plainly rather than shown as a warning colour. Nothing is broken:
+			the app's financial record simply begins where its payment history
+			does, and a range reaching further back returns a smaller number with
+			no way to tell that apart from a quiet year.
+		-->
+		<Alert type="info">
+			{m.staff_reports_financial_record_begins_money_collective({
+				formatDateLong: formatDateLong(r.coverage.startsAt)
+			})}
+		</Alert>
+	{/if}
 
-		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-			<StatCard title={m.staff_reports_earned()} value={formatCents(r.money.totalsByKind.earned)} />
-			<StatCard
-				title={m.staff_reports_spent()}
-				value={formatCents(shownCents('spent', r.money.totalsByKind.spent))}
-			/>
-			<StatCard title={m.staff_reports_net()} value={formatCents(r.money.netCents)} />
-			<StatCard
-				title={m.staff_reports_given_kind()}
-				value={formatCents(r.money.totalsByKind.in_kind)}
-			/>
-		</div>
+	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+		<StatCard title={m.staff_reports_earned()} value={formatCents(r.money.totalsByKind.earned)} />
+		<StatCard
+			title={m.staff_reports_spent()}
+			value={formatCents(shownCents('spent', r.money.totalsByKind.spent))}
+		/>
+		<StatCard title={m.staff_reports_net()} value={formatCents(r.money.netCents)} />
+		<StatCard
+			title={m.staff_reports_given_kind()}
+			value={formatCents(r.money.totalsByKind.in_kind)}
+		/>
+	</div>
 
-		{#each ['earned', 'spent', 'in_kind', 'pass_through'] as const as kind (kind)}
-			<InfoCard title={kindTitles[kind]}>
-				<p class="mb-3 text-subtle text-sm">{kindNotes[kind]}</p>
-				{#if r.money.byKind[kind].length === 0}
-					<EmptyState description={m.staff_reports_description()} />
-				{:else}
-					<Table>
-						{#snippet head()}
-							<th>{m.staff_reports_line()}</th>
-							<th class="text-right">{m.staff_amount()}</th>
-						{/snippet}
-						{#each r.money.byKind[kind] as line (line.category)}
-							<tr>
-								<td>{financialCategoryLabels[line.category]}</td>
-								<td class="text-right tabular-nums"
-									>{formatCents(shownCents(kind, line.totalCents))}</td
-								>
-							</tr>
-						{/each}
-						<tr class="font-semibold">
-							<td>{m.staff_reports_total()}</td>
+	{#each ['earned', 'spent', 'in_kind', 'pass_through'] as const as kind (kind)}
+		<InfoCard title={kindTitles[kind]}>
+			<p class="mb-3 text-subtle text-sm">{kindNotes[kind]}</p>
+			{#if r.money.byKind[kind].length === 0}
+				<EmptyState description={m.staff_reports_description()} />
+			{:else}
+				<Table>
+					{#snippet head()}
+						<th>{m.staff_reports_line()}</th>
+						<th class="text-right">{m.staff_amount()}</th>
+					{/snippet}
+					{#each r.money.byKind[kind] as line (line.category)}
+						<tr>
+							<td>{financialCategoryLabels[line.category]}</td>
 							<td class="text-right tabular-nums"
-								>{formatCents(shownCents(kind, r.money.totalsByKind[kind]))}</td
+								>{formatCents(shownCents(kind, line.totalCents))}</td
 							>
 						</tr>
-					</Table>
-				{/if}
-			</InfoCard>
-		{/each}
-
-		<InfoCard title={m.staff_reports_donated_time()}>
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-				<StatCard
-					title={m.staff_approved_hours()}
-					value={formatVolunteerHours(r.volunteering.totals.totalMinutes)}
-				/>
-				<StatCard title={m.staff_volunteers()} value={r.volunteering.totals.volunteerCount} />
-				<StatCard
-					title={m.staff_impact_value()}
-					value={formatCents(r.volunteering.contributed.impactValueCents)}
-				/>
-			</div>
-			<!--
-				Two valuations that must never be added: a donated engineer's hour is
-				in both. The contributed-services figure is the narrower one a
-				financial statement can recognise, and it is the only one that appears
-				in the in-kind table above.
-			-->
-			<p class="mt-3 text-subtle text-sm">
-				<ParaglideMessage
-					message={m.staff_reports_impact_value_prices_every_approved}
-					inputs={{
-						formatCents: formatCents(r.volunteering.contributed.rateCents),
-						formatCents2: formatCents(r.volunteering.contributed.recognizableServicesCents)
-					}}
-					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
-						>{/snippet}</ParaglideMessage
-				>
-			</p>
-		</InfoCard>
-
-		<InfoCard title={m.staff_events()}>
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-				<StatCard title={m.staff_reports_cmc_events()} value={r.events.cmcTotal} />
-				<StatCard title={m.staff_reports_band_listings()} value={r.events.bandListings} />
-				<StatCard title={m.staff_reports_community_listings()} value={r.events.communityListings} />
-				<StatCard title={m.staff_cancelled()} value={r.events.cancelled} />
-			</div>
-			<Table class="mt-4">
-				{#snippet head()}
-					<th>{m.staff_reports_cmc_events_by_kind()}</th>
-					<th class="text-right">{m.staff_reports_held()}</th>
-				{/snippet}
-				{#each Object.entries(r.events.cmcByKind) as [kind, total] (kind)}
-					<tr>
-						<td>{eventKindLabels[kind as keyof typeof eventKindLabels]}</td>
-						<td class="text-right tabular-nums">{total}</td>
+					{/each}
+					<tr class="font-semibold">
+						<td>{m.staff_reports_total()}</td>
+						<td class="text-right tabular-nums"
+							>{formatCents(shownCents(kind, r.money.totalsByKind[kind]))}</td
+						>
 					</tr>
-				{/each}
-			</Table>
-			<p class="mt-3 text-subtle text-sm">
-				{m.staff_reports_counts_not_attendance_only_minority()}
-			</p>
+				</Table>
+			{/if}
 		</InfoCard>
+	{/each}
 
-		<InfoCard title={m.staff_reports_practice_room()}>
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-				<StatCard title={m.staff_reports_hours_booked()} value={r.room.hours} />
-				<StatCard title={m.staff_reports_sessions()} value={r.room.sessions} />
-				<StatCard title={m.staff_reports_distinct_bookers()} value={r.room.distinctBookers} />
-				<StatCard title={m.staff_reports_no_shows()} value={r.room.noShows} />
-			</div>
-			<p class="mt-3 text-subtle text-sm">
-				{m.staff_reports_hours_room_was_held_including()}
-			</p>
-		</InfoCard>
+	<InfoCard title={m.staff_reports_donated_time()}>
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+			<StatCard
+				title={m.staff_approved_hours()}
+				value={formatVolunteerHours(r.volunteering.totals.totalMinutes)}
+			/>
+			<StatCard title={m.staff_volunteers()} value={r.volunteering.totals.volunteerCount} />
+			<StatCard
+				title={m.staff_impact_value()}
+				value={formatCents(r.volunteering.contributed.impactValueCents)}
+			/>
+		</div>
+		<!--
+			Two valuations that must never be added: a donated engineer's hour is
+			in both. The contributed-services figure is the narrower one a
+			financial statement can recognise, and it is the only one that appears
+			in the in-kind table above.
+		-->
+		<p class="mt-3 text-subtle text-sm">
+			<ParaglideMessage
+				message={m.staff_reports_impact_value_prices_every_approved}
+				inputs={{
+					formatCents: formatCents(r.volunteering.contributed.rateCents),
+					formatCents2: formatCents(r.volunteering.contributed.recognizableServicesCents)
+				}}
+				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+					>{/snippet}</ParaglideMessage
+			>
+		</p>
+	</InfoCard>
 
-		<InfoCard title={m.staff_reports_membership()}>
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-				<StatCard
-					title={m.staff_reports_sustaining_members()}
-					value={r.membership.sustainingMemberCount}
-				/>
-				<StatCard
-					title={m.staff_reports_practice_hours_funded()}
-					value={r.membership.totalFreeHoursAllocated}
-				/>
-				<StatCard
-					title={m.staff_reports_participation()}
-					value={`${r.membership.participationPercent}%`}
-				/>
-			</div>
-			<p class="mt-3 text-subtle text-sm">
-				{m.staff_reports_as_today_not_over_range()}
-			</p>
-		</InfoCard>
-	{/await}
+	<InfoCard title={m.staff_events()}>
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+			<StatCard title={m.staff_reports_cmc_events()} value={r.events.cmcTotal} />
+			<StatCard title={m.staff_reports_band_listings()} value={r.events.bandListings} />
+			<StatCard title={m.staff_reports_community_listings()} value={r.events.communityListings} />
+			<StatCard title={m.staff_cancelled()} value={r.events.cancelled} />
+		</div>
+		<Table class="mt-4">
+			{#snippet head()}
+				<th>{m.staff_reports_cmc_events_by_kind()}</th>
+				<th class="text-right">{m.staff_reports_held()}</th>
+			{/snippet}
+			{#each Object.entries(r.events.cmcByKind) as [kind, total] (kind)}
+				<tr>
+					<td>{eventKindLabels[kind as keyof typeof eventKindLabels]}</td>
+					<td class="text-right tabular-nums">{total}</td>
+				</tr>
+			{/each}
+		</Table>
+		<p class="mt-3 text-subtle text-sm">
+			{m.staff_reports_counts_not_attendance_only_minority()}
+		</p>
+	</InfoCard>
+
+	<InfoCard title={m.staff_reports_practice_room()}>
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+			<StatCard title={m.staff_reports_hours_booked()} value={r.room.hours} />
+			<StatCard title={m.staff_reports_sessions()} value={r.room.sessions} />
+			<StatCard title={m.staff_reports_distinct_bookers()} value={r.room.distinctBookers} />
+			<StatCard title={m.staff_reports_no_shows()} value={r.room.noShows} />
+		</div>
+		<p class="mt-3 text-subtle text-sm">
+			{m.staff_reports_hours_room_was_held_including()}
+		</p>
+	</InfoCard>
+
+	<InfoCard title={m.staff_reports_membership()}>
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+			<StatCard
+				title={m.staff_reports_sustaining_members()}
+				value={r.membership.sustainingMemberCount}
+			/>
+			<StatCard
+				title={m.staff_reports_practice_hours_funded()}
+				value={r.membership.totalFreeHoursAllocated}
+			/>
+			<StatCard
+				title={m.staff_reports_participation()}
+				value={`${r.membership.participationPercent}%`}
+			/>
+		</div>
+		<p class="mt-3 text-subtle text-sm">
+			{m.staff_reports_as_today_not_over_range()}
+		</p>
+	</InfoCard>
 </PageContent>

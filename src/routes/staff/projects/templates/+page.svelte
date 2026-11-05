@@ -82,7 +82,7 @@
 							<td>
 								<StatusBadge status={list.isActive ? 'active' : 'archived'} label />
 							</td>
-							<td>
+							<td class="cell-primary">
 								<div class="font-medium">{list.name}</div>
 								{#if list.description}
 									<div class="line-clamp-1 text-sm text-base-content/60">{list.description}</div>

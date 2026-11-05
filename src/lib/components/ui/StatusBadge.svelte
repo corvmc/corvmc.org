@@ -391,7 +391,8 @@
 	     other out of the accessibility tree, so the name is never doubled. -->
 	<span
 		data-status={status}
-		class="badge gap-1 badge-sm @max-3xl:hidden {badgeClass[status] ?? 'badge-ghost'} {className}"
+		class="badge gap-1 badge-sm whitespace-nowrap @max-3xl:hidden {badgeClass[status] ??
+			'badge-ghost'} {className}"
 	>
 		<variant.icon size={14} />
 		{label}
@@ -404,7 +405,7 @@
 {:else if showLabel}
 	<span
 		data-status={status}
-		class="badge gap-1 badge-sm {badgeClass[status] ?? 'badge-ghost'} {className}"
+		class="badge gap-1 badge-sm whitespace-nowrap {badgeClass[status] ?? 'badge-ghost'} {className}"
 	>
 		<variant.icon size={14} />
 		{label}

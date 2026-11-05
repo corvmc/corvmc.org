@@ -5,10 +5,6 @@
 	/**
 	 * The audience checkboxes and their recipient total, owning the query behind them.
 	 *
-	 * `getAudienceOptions` is an alias for `getAudiences`, which the audience mutations refresh by
-	 * name. A campaign-keyed page query could not be refreshed from there, so this is a push-down
-	 * rather than a compose — the same call as `CategoryOptions` in the equipment tranche.
-	 *
 	 * `total` is bindable because the page needs the number outside this markup: the send handler
 	 * puts it in a confirm dialog.
 	 */

@@ -16,12 +16,6 @@ function getClient() {
 	return client;
 }
 
-export function getTwilioAuthToken(): string {
-	const token = env.TWILIO_AUTH_TOKEN;
-	if (!token) throw new Error('TWILIO_AUTH_TOKEN is not configured');
-	return token;
-}
-
 export function getTwilioPhoneNumber(): string {
 	const number = env.TWILIO_PHONE_NUMBER;
 	if (!number) throw new Error('TWILIO_PHONE_NUMBER is not configured');
@@ -49,6 +43,8 @@ export function validateTwilioSignature(
 	params: Record<string, string>,
 	signature: string
 ): boolean {
-	const authToken = getTwilioAuthToken();
+	// Nothing can verify against an unset token, which is a failed check, not a crash.
+	const authToken = env.TWILIO_AUTH_TOKEN;
+	if (!authToken) return false;
 	return twilio.validateRequest(authToken, signature, url, params);
 }
