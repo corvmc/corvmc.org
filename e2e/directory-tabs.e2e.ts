@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 
 /**
  * The public directory's tab and filters live in the query string so a refresh,

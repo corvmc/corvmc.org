@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 import { eq } from 'drizzle-orm';
 import { account } from '../src/lib/server/db/schema/authentication';
 import { readLocalDb } from './fixtures/platform-db';

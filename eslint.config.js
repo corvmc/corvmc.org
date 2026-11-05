@@ -272,6 +272,26 @@ export default defineConfig(
 		rules: { 'no-restricted-imports': ['error', { patterns: LIB_IMPORT_PATTERNS }] }
 	},
 	{
+		// A spec on Playwright's own `test` records nothing of what the browser
+		// reported, so its flake leaves no error behind (#2433).
+		files: ['e2e/**/*.e2e.ts'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					patterns: LIB_IMPORT_PATTERNS,
+					paths: [
+						{
+							name: '@playwright/test',
+							importNames: ['test'],
+							message: "Import test from './fixtures/test'."
+						}
+					]
+				}
+			]
+		}
+	},
+	{
 		// "Holds any position" and "has this role name" are not guards: a guard
 		// names a capability, and the matrix in `#lib/config.js` says who holds it.
 		// These helpers are deleted; this stops one coming back under its old name.

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/test';
 import {
 	SEED_TP_EVENT_ID,
 	SEED_TP_EVENT_TITLE,

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 import { and, eq } from 'drizzle-orm';
 import { eventRsvp } from '../src/lib/server/db/schema/event-rsvp';
 import { readLocalDb } from './fixtures/platform-db';

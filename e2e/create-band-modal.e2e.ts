@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 import { SEED_MEMBER_EMAIL, SEED_MEMBER_PASSWORD } from './fixtures/seed-pay-reservation';
 
 /**

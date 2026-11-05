@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 
 /**
  * Regression test for the public band-profile 404 message in PRODUCTION builds.
