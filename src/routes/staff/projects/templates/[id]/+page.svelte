@@ -38,10 +38,6 @@
 	});
 
 	const anchorOptions = dutyListAnchors.map((a) => ({ value: a, label: dutyListAnchorLabels[a] }));
-	const autoApplyOptions = [
-		{ value: '', label: m.staff_never() },
-		{ value: 'production.created', label: m.staff_when_production_created() }
-	];
 
 	const kindOptions = [
 		{ value: 'scheduled', label: m.staff_project_templates_id_scheduled_shift_with_start_end() },
@@ -104,11 +100,11 @@
 					value={d.list.anchor}
 				/>
 				<FormField
-					name="autoApplyOn"
-					label={m.staff_apply_automatically()}
-					type="select"
-					options={autoApplyOptions}
-					value={d.list.autoApplyOn ?? ''}
+					field={updateDutyList.fields.startsProduction}
+					type="checkbox"
+					label={m.staff_production()}
+					checkboxLabel={m.staff_project_templates_starts_production()}
+					value={d.list.projectKind === 'production'}
 				/>
 				<FormField
 					name="isActive"

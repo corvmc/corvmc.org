@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
 
-// The Projects view is general projects only (productions are their own
-// view, #2101), active by default, with archived projects a filter away (#1935).
+// The Projects view leaves a show with a listing to Productions (#2101, #2387),
+// active by default, with archived projects a filter away (#1935).
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: { id: 'user-1' } }, url: new URL('http://x/') }),
@@ -26,6 +26,12 @@ vi.mock('$lib/server/project/project-service', async (importOriginal) => ({
 	getProjectBurn: vi.fn(async () => ({}))
 }));
 
+const listDutyLists = vi.hoisted(() => vi.fn(async () => [] as unknown[]));
+vi.mock('$lib/server/volunteer/duty-list-service', async (importOriginal) => ({
+	...(await importOriginal<Record<string, unknown>>()),
+	listDutyLists
+}));
+
 const { getProjectsPage } = await import('./projects.remote');
 const load = (filters: unknown) =>
 	(getProjectsPage as unknown as (f: unknown) => Promise<unknown>)(filters);
@@ -33,9 +39,17 @@ const load = (filters: unknown) =>
 beforeEach(() => listProjects.mockClear());
 
 describe('the Projects index', () => {
-	it('never lists productions, whatever the client asks for', async () => {
+	it('leaves shows with a listing to Productions, whatever the client asks for', async () => {
 		await load({ kind: 'production' });
-		expect(listProjects).toHaveBeenCalledWith(expect.objectContaining({ kind: 'general' }));
+		expect(listProjects).toHaveBeenCalledWith(expect.objectContaining({ exceptListedShows: true }));
+	});
+
+	it('offers only the templates that have something to stamp', async () => {
+		listDutyLists.mockResolvedValueOnce([
+			{ id: 'full', name: 'Full', itemCount: 2 },
+			{ id: 'empty', name: 'Empty', itemCount: 0 }
+		]);
+		expect(await load({})).toMatchObject({ templates: [{ id: 'full', name: 'Full' }] });
 	});
 
 	it('shows only active projects by default', async () => {

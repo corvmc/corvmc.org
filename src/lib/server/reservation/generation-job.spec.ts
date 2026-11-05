@@ -41,7 +41,7 @@ vi.mock('./rrule-helpers', () => ({
 const mockCreateShowProject = vi.fn().mockResolvedValue(undefined);
 vi.mock('$lib/server/production/production-project', () => ({
 	createShowProject: (...args: unknown[]) => mockCreateShowProject(...args),
-	announceProductionCreated: vi.fn().mockResolvedValue(undefined)
+	stampProductionTemplate: vi.fn().mockResolvedValue(undefined)
 }));
 
 const mockEmit = vi.fn().mockResolvedValue(undefined);

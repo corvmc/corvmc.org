@@ -26,7 +26,9 @@ function migrated(committees: string): DatabaseSync {
 	const file = join(mkdtempSync(join(tmpdir(), 'corvmc-deliverables-')), 'd1.sqlite');
 	applyMigrations(file);
 	const db = new DatabaseSync(file);
-	db.exec(`DELETE FROM duty_list_item; ${committees}`);
+	// The trigger this migration finds its list by, which a later one clears (#2387).
+	db.exec(`UPDATE duty_list SET auto_apply_on = 'production.created';
+		DELETE FROM duty_list_item; ${committees}`);
 	return db;
 }
 

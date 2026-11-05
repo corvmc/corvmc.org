@@ -616,14 +616,6 @@ export interface EventLineupInvitedEvent {
 	}>;
 }
 
-/** A show was opened: its production, project and listing are all written (#1701). */
-export interface ProductionCreatedEvent {
-	productionId: string;
-	eventId: string;
-	/** Null when nobody pressed a button, as for a recurring series' occurrence. */
-	createdByUserId: string | null;
-}
-
 /** A show was cancelled, for the Production committee taking part in it (#1675). */
 export interface ProductionCancelledEvent {
 	productionId: string;
@@ -957,7 +949,6 @@ export type DomainEvents = {
 	'group.application_submitted': GroupApplicationSubmittedEvent;
 	'community_event.unpublished': CommunityEventUnpublishedEvent;
 	'event.lineup_invited': EventLineupInvitedEvent;
-	'production.created': ProductionCreatedEvent;
 	'production.cancelled': ProductionCancelledEvent;
 	'volunteer.deliverable_due': DeliverableDueEvent;
 	'volunteer.hours_submitted': VolunteerHoursSubmittedEvent;
