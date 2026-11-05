@@ -302,7 +302,7 @@ test.describe('inventory', () => {
 			page
 		}) => {
 			await loginAsStaff(page);
-			await page.goto('/staff/inventory/spend');
+			await page.goto('/staff/reports/inventory-spend');
 
 			await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 			// The fixture's one purchase covers the E2E category, so it has to show.
@@ -316,7 +316,7 @@ test.describe('inventory', () => {
 			).toBeVisible();
 
 			// A window with no purchases reports nothing rather than erroring.
-			await page.goto('/staff/inventory/spend?from=1990-01-01&to=1990-12-31');
+			await page.goto('/staff/reports/inventory-spend?from=1990-01-01&to=1990-12-31');
 			await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 			await expect(page.getByRole('cell', { name: SEED_CATEGORY_NAME })).toHaveCount(0);
 		});
@@ -540,7 +540,7 @@ test.describe('inventory', () => {
 	test.describe('acquisitions', () => {
 		test('lists what the collective has taken in', async ({ page }) => {
 			await loginAsStaff(page);
-			await visit(page, '/staff/inventory/acquisitions');
+			await visit(page, '/staff/reports/acquisitions');
 
 			await expect(page.getByRole('row').filter({ hasText: SEED_SIGN_DONOR })).toBeVisible();
 			await expect(page.getByRole('row').filter({ hasText: SEED_OWED_SUPPLIER })).toBeVisible();
@@ -586,7 +586,7 @@ test.describe('inventory', () => {
 		test('marking a fronted purchase reimbursed clears it from the owed list', async ({ page }) => {
 			await loginAsStaff(page);
 
-			await visit(page, '/staff/inventory/acquisitions?owed=1');
+			await visit(page, '/staff/reports/acquisitions?owed=1');
 			await expect(page.getByRole('row').filter({ hasText: SEED_OWED_SUPPLIER })).toBeVisible();
 
 			await page.goto(`/staff/inventory/acquisitions/${SEED_OWED_ACQUISITION_ID}`);
@@ -598,7 +598,7 @@ test.describe('inventory', () => {
 			await expect
 				.poll(
 					async () => {
-						await visit(page, '/staff/inventory/acquisitions?owed=1');
+						await visit(page, '/staff/reports/acquisitions?owed=1');
 						return page.getByRole('row').filter({ hasText: SEED_OWED_SUPPLIER }).isVisible();
 					},
 					{ timeout: 15000 }

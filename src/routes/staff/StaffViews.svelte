@@ -3,7 +3,16 @@
 	import { getStaffLayout } from '$lib/remote/layout.remote';
 	import { visibleViews, type StaffView } from './views';
 
-	let { views, active }: { views: readonly StaffView[]; active: string } = $props();
+	let {
+		views,
+		active,
+		collapse = false
+	}: {
+		views: readonly StaffView[];
+		active: string;
+		/** For a bar long enough to outrun a phone; see `TabBar`. */
+		collapse?: boolean;
+	} = $props();
 
 	// The staff layout already fetched this; the call dedupes to it.
 	const caps = $derived((await getStaffLayout()).capabilities);
@@ -13,5 +22,5 @@
 </script>
 
 {#if tabs.length > 1}
-	<TabBar {active} {tabs} />
+	<TabBar {collapse} {active} {tabs} />
 {/if}

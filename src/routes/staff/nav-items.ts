@@ -38,13 +38,10 @@ export type StaffNavKey =
 	| 'music'
 	| 'ballots'
 	| 'volunteer-schedule'
-	| 'volunteer-report'
 	| 'reservations'
 	| 'equipment'
 	| 'equipment-loans'
 	| 'equipment-reports'
-	| 'inventory-acquisitions'
-	| 'inventory-spend'
 	| 'inventory-compliance'
 	| 'contractors'
 	| 'keys'
@@ -408,32 +405,15 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'reports',
 		title: 'Reports',
 		items: [
-			// `finance.read` rather than a report capability of its own: the money
-			// lines are what decides who may open it.
+			// Each view has its own gate (#2396). An acquisition's record stays under
+			// inventory, where its receipt and its items are, and lights this row.
 			{
 				key: 'reports',
 				capability: 'finance.read',
-				label: 'Annual Report',
-				href: resolve('/staff/reports')
-			},
-			{
-				key: 'volunteer-report',
-				capability: 'volunteer.report',
-				label: 'Volunteering',
-				href: resolve('/staff/reports/volunteering')
-			},
-			{
-				key: 'inventory-spend',
-				capability: 'inventory.report',
-				label: 'Inventory Spend',
-				href: resolve('/staff/inventory/spend')
-			},
-			// When stock arrived and from whom; each item's page lists its own (#1841).
-			{
-				key: 'inventory-acquisitions',
-				capability: 'inventory.manageAcquisitions',
-				label: 'Acquisitions',
-				href: resolve('/staff/inventory/acquisitions')
+				alsoFor: ['volunteer.report', 'inventory.report', 'inventory.manageAcquisitions'],
+				label: 'Reports',
+				href: resolve('/staff/reports'),
+				also: [resolve('/staff/inventory/spend'), resolve('/staff/inventory/acquisitions')]
 			}
 		]
 	},
