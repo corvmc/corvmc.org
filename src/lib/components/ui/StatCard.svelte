@@ -28,6 +28,6 @@
 </script>
 
 <div class="stat {bare ? 'px-0' : 'rounded-box border border-base-300 bg-base-100'} {extraClass}">
-	<div class="stat-title">{title}</div>
+	<div class="stat-title whitespace-normal">{title}</div>
 	<div class="stat-value {size === 'sm' ? 'text-2xl' : ''} {valueClass}">{value}</div>
 </div>

@@ -182,7 +182,7 @@
 			}}
 		/>
 	{/await}
-	<div class="flex gap-2">
+	<div class="flex flex-wrap justify-end gap-2">
 		<Button
 			variant={unresolvedCount > 0 ? 'warning' : 'ghost'}
 			size="sm"
