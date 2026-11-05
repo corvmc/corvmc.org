@@ -9,9 +9,18 @@
 import worker from './.svelte-kit/cloudflare/_worker.js';
 import { runScheduledJobs } from './src/lib/server/cron/schedule.ts';
 import { createSentryCheckIn } from './src/lib/server/cron/sentry-check-in.ts';
+import { admitTwilioInbound } from './src/lib/server/inbox/twilio-inbound-request.ts';
 
 export default {
 	...worker,
+	/**
+	 * @param {Request} request
+	 * @param {unknown} env
+	 * @param {ExecutionContext} ctx
+	 */
+	fetch(request, env, ctx) {
+		return worker.fetch(admitTwilioInbound(request), env, ctx);
+	},
 	/**
 	 * @param {ScheduledController} controller
 	 * @param {unknown} env
