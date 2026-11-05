@@ -68,8 +68,9 @@
 	"src/lib/remote/reservations.remote.ts#getReservationPricing": "Public quote; reads an existing reservation's owner only for the owner or can() check.",
 	"src/lib/remote/reservations.remote.ts#getReservationStartTimes": "Public room availability; no booker details.",
 	"src/lib/remote/reservations.remote.ts#previewRecurringInstances": "Date arithmetic; reads nothing.",
+	"src/lib/remote/settings.remote.ts#getContactDetails": "Public org address and contact email.",
+	"src/lib/remote/settings.remote.ts#getContactEmail": "Public contact email.",
 	"src/lib/remote/settings.remote.ts#getFooterInfo": "Public footer contact details.",
-	"src/lib/remote/settings.remote.ts#getOrgAddress": "Public org address.",
 	"src/lib/remote/settings.remote.ts#getSocialLinks": "Public social links.",
 	"src/lib/remote/users.remote.ts#getLocalUser": "Returns locals.user: the caller's own session, or null."
 }

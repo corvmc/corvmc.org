@@ -54,8 +54,11 @@ vi.mock('#lib/remote/inbox.remote.js', () => ({
 }));
 
 vi.mock('#lib/remote/settings.remote.js', () => ({
-	getOrgAddress: () =>
-		Promise.resolve({ street: '123 Main St', city: 'Corvallis', state: 'OR', zip: '97333' })
+	getContactDetails: () =>
+		Promise.resolve({
+			address: { street: '123 Main St', city: 'Corvallis', state: 'OR', zip: '97333' },
+			email: 'desk@example.org'
+		})
 }));
 
 vi.mock('$app/paths', () => ({
@@ -79,5 +82,11 @@ describe('/contact server rendering', () => {
 
 		expect(body).toContain('General Inquiry');
 		expect(body).toContain('Practice Space');
+	});
+
+	it('server-renders the contact email from the setting', async () => {
+		const { body } = await render(Page);
+
+		expect(body).toContain('href="mailto:desk@example.org"');
 	});
 });

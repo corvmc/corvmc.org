@@ -1,5 +1,6 @@
 import { dispatchEmailOnly } from '#lib/server/notification/dispatcher.js';
 import { captureException } from '#lib/server/sentry.js';
+import { contactEmail } from '#lib/server/site-config/site-config-service.js';
 import type { NotificationEmailModel } from '#lib/types/notification-email.js';
 
 // ---------------------------------------------------------------------------
@@ -81,6 +82,7 @@ export function buildResetPasswordModel(params: {
 /** The model for the password-changed notice, on the generic `notification` alias. */
 export function buildPasswordChangedModel(params: {
 	name?: string | null;
+	contactEmail: string;
 }): NotificationEmailModel & { transactional_only: true } {
 	return {
 		subject: 'Your CorvMC password was changed',
@@ -95,8 +97,7 @@ export function buildPasswordChangedModel(params: {
 				text: 'The password on your Corvallis Music Collective account was just reset, and any other sessions you had open were signed out.'
 			}
 		],
-		footnote:
-			'If you did not do this, reset your password again straight away and email contact@corvmc.org so we can help.',
+		footnote: `If you did not do this, reset your password again straight away and email ${params.contactEmail} so we can help.`,
 		transactional_only: true
 	};
 }
@@ -199,7 +200,10 @@ export async function sendPasswordChangedEmail(params: {
 			type: 'password_changed',
 			toEmail: params.toEmail,
 			templateAlias: 'notification',
-			model: buildPasswordChangedModel(params) as unknown as Record<string, unknown>
+			model: buildPasswordChangedModel({
+				name: params.name,
+				contactEmail: await contactEmail()
+			}) as unknown as Record<string, unknown>
 		});
 	} catch (err) {
 		captureException(err, { event: 'auth.password_changed', stage: 'send' });

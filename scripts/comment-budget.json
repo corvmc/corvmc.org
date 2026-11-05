@@ -285,7 +285,6 @@
 	"src/lib/remote/reservations.remote.ts",
 	"src/lib/remote/rider.remote.ts",
 	"src/lib/remote/settings.remote.spec.ts",
-	"src/lib/remote/settings.remote.ts",
 	"src/lib/remote/staff-music.remote.spec.ts",
 	"src/lib/remote/staff-music.remote.ts",
 	"src/lib/remote/staff-user-context.remote.spec.ts",

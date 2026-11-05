@@ -521,6 +521,23 @@
 
 				<Card>
 					<CardBody>
+						<CardTitle size="base">{m.staff_settings_contact_email()}</CardTitle>
+						<p class="text-subtle">{m.staff_settings_contact_email_shown()}</p>
+
+						<div class="mt-2 grid gap-4 sm:grid-cols-2">
+							<FormField
+								field={updateOrgSettings.fields.contactEmail}
+								label={m.staff_settings_contact_email()}
+								type="email"
+								value={String(orgSettings.contactEmail ?? '')}
+								required
+							/>
+						</div>
+					</CardBody>
+				</Card>
+
+				<Card>
+					<CardBody>
 						<CardTitle size="base">{m.staff_settings_social_links()}</CardTitle>
 						<p class="text-subtle">{m.staff_settings_shown_site_footer_leave_blank()}</p>
 

@@ -48,6 +48,7 @@ import {
 	updateSiteConfig,
 	updateSiteConfigs,
 	clearSiteConfigMemo,
+	contactEmail,
 	DEFAULTS,
 	UnknownSiteConfigKeyError
 } from './site-config-service';
@@ -122,21 +123,31 @@ describe('getConfigsByPrefix', () => {
 		expect(result.addressStreet).toBe('6775 SW Philomath Blvd');
 		expect(result.addressCity).toBe('Corvallis');
 		expect(result.socialFacebook).toBe('');
+		expect(result.contactEmail).toBe('contact@corvmc.org');
 	});
 
-	// The org prefix is the footer's and /contact's read, nothing more. Name,
-	// short name, contact email and timezone were removed as unread; a
-	// reintroduction shows up here rather than as a staff field that saves
-	// into a void.
-	it('carries no org keys beyond the address and social blocks', async () => {
+	// The org prefix is the public pages' read, nothing more. A key added without a
+	// reader shows up here rather than as a staff field that saves into a void.
+	it('carries no org keys beyond the address, contact email and social blocks', async () => {
 		expect(Object.keys(await getConfigsByPrefix('org')).sort()).toEqual([
 			'addressCity',
 			'addressState',
 			'addressStreet',
 			'addressZip',
+			'contactEmail',
 			'socialFacebook',
 			'socialInstagram'
 		]);
+	});
+
+	it('contactEmail follows a stored value and survives a KV fault', async () => {
+		expect(await contactEmail()).toBe('contact@corvmc.org');
+		await updateSiteConfig('org.contactEmail', 'desk@example.org');
+		expect(await contactEmail()).toBe('desk@example.org');
+
+		clearSiteConfigMemo();
+		getJson.mockRejectedValueOnce(new Error('KV down'));
+		expect(await contactEmail()).toBe('contact@corvmc.org');
 	});
 
 	// The client secret is absent by design — env only, per #745 — so the exact

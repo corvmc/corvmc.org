@@ -6,6 +6,10 @@ vi.mock('#lib/server/notification/dispatcher.js', () => ({
 	dispatch: vi.fn()
 }));
 
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
+	contactEmail: async () => 'desk@example.org'
+}));
+
 const captureException = vi.fn();
 vi.mock('#lib/server/sentry.js', () => ({
 	captureException: (...args: unknown[]) => captureException(...(args as []))
@@ -85,17 +89,22 @@ describe('buildResetPasswordModel', () => {
 
 describe('buildPasswordChangedModel', () => {
 	it('tells the member their other sessions were ended', () => {
-		const model = buildPasswordChangedModel({ name: 'Maya' });
+		const model = buildPasswordChangedModel({ name: 'Maya', contactEmail: 'desk@example.org' });
 
 		expect(model.paragraphs?.[0]?.text).toContain('signed out');
 	});
 
 	it('gives them somewhere to go if it was not them', () => {
-		expect(buildPasswordChangedModel({ name: 'Maya' }).footnote).toContain('contact@corvmc.org');
+		expect(
+			buildPasswordChangedModel({ name: 'Maya', contactEmail: 'desk@example.org' }).footnote
+		).toContain('desk@example.org');
 	});
 
 	it('is also not preference-governed', () => {
-		expect(buildPasswordChangedModel({ name: 'Maya' }).transactional_only).toBe(true);
+		expect(
+			buildPasswordChangedModel({ name: 'Maya', contactEmail: 'desk@example.org' })
+				.transactional_only
+		).toBe(true);
 	});
 });
 
@@ -120,7 +129,11 @@ describe('sending', () => {
 		await sendPasswordChangedEmail({ toEmail: 'maya@example.com', name: 'Maya' });
 
 		expect(dispatchEmailOnly).toHaveBeenCalledWith(
-			expect.objectContaining({ templateAlias: 'notification', type: 'password_changed' })
+			expect.objectContaining({
+				templateAlias: 'notification',
+				type: 'password_changed',
+				model: expect.objectContaining({ footnote: expect.stringContaining('desk@example.org') })
+			})
 		);
 	});
 
