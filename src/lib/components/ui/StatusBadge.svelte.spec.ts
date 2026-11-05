@@ -44,6 +44,26 @@ describe('StatusBadge accessibility', () => {
 	});
 });
 
+// A table column squeezes the badge; a pill of fixed height cannot hold two lines.
+describe('StatusBadge labelled', () => {
+	const widthIn = async (width: number) => {
+		const host = document.createElement('div');
+		host.style.width = `${width}px`;
+		document.body.append(host);
+		await render(StatusBadge, {
+			target: host,
+			props: { status: 'no_show', label: true, text: 'Several words of label' }
+		});
+		const rendered = host.querySelector('.badge')!.getBoundingClientRect().width;
+		host.remove();
+		return rendered;
+	};
+
+	it('stays on one line in a column narrower than its label', async () => {
+		expect(await widthIn(60)).toBe(await widthIn(600));
+	});
+});
+
 /**
  * `responsive` keeps the word at desk widths and drops to the glyph below the
  * col-extra tier (48rem container), where the reservations table runs out of
