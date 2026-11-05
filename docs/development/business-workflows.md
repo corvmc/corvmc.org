@@ -751,8 +751,8 @@ and re-labelling it `email` would let unrelated mail from the same address merge
 - **Inbound email:** Postmark inbound webhook → `src/routes/api/inbox/postmark/+server.ts`
   (authenticated with `POSTMARK_INBOUND_TOKEN`) → `handlePostmarkInbound()` in
   `src/lib/server/inbox/inbound-handlers.ts`.
-- **Inbound SMS:** Twilio webhook → `src/routes/api/inbox/twilio/+server.ts` →
-  `handleTwilioInbound()`.
+- **Inbound SMS:** Twilio webhook → `worker.js` (`admitTwilioInbound`, past Kit's CSRF check) →
+  `src/routes/api/inbox/twilio/+server.ts` (verifies the signature) → `handleTwilioInbound()`.
 - **Contact form:** the public `/contact` page also funnels in via `handleContactForm()`,
   which additionally emits `contact.form_submitted` → an alert email to `STAFF_CONTACT_EMAIL`.
 - All three thread the message via `thread-service.ts` / `message-service.ts` (match on
