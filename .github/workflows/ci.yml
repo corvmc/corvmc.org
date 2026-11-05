@@ -35,14 +35,14 @@ jobs:
     name: Lint (full)
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/install
       # Prettier only. `eslint --cache` is not usable here: caching makes ESLint
       # serialize its config, and svelte.config.js sets `compilerOptions.runes` to a
       # function (it exempts node_modules, .md/.svx and src/lib/layouts/prose.svelte
-      # from runes mode), which ESLint refuses to serialize. ESLint is ~14m of this
+      # from runes mode), which ESLint refuses to serialize. ESLint is ~28m of this
       # job (2026-11), so this only caches the small half.
       - uses: actions/cache@v6
         with:
