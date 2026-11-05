@@ -1,11 +1,11 @@
 import { page, userEvent } from 'vitest/browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 
 // One file for every inventory action: they mock the same two modules, and each
 // export below is the stub its own component's spec used before the merge.
-vi.mock('$lib/remote/inventory.remote', () => {
+vi.mock('#lib/remote/inventory.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => null
@@ -91,7 +91,8 @@ const ReceiveStockAction = (await import('./ReceiveStockAction.svelte')).default
 const RecordForm8282Action = (await import('./RecordForm8282Action.svelte')).default;
 const RecordForm8283Action = (await import('./RecordForm8283Action.svelte')).default;
 
-const named = (name: string) => document.querySelector(`[role="dialog"] [name="${name}"]`);
+const named = (name: string) =>
+	document.querySelector(`[role="dialog"] :is([name="${name}"], [name^="${name}/"])`);
 
 /** Each action's trigger is its render container's only button; dialogs portal out. */
 const openWith = async (...args: Parameters<typeof render>) => {
@@ -173,7 +174,8 @@ describe('AddItemAction', () => {
  * say so, because the box the operator typed in is not the field that submits.
  */
 describe('AdjustStockAction', () => {
-	const delta = () => document.querySelector('input[name="delta"]') as HTMLInputElement;
+	const delta = () =>
+		document.querySelector('input:is([name="delta"], [name^="delta/"])') as HTMLInputElement;
 
 	const open = async (props: Record<string, unknown> = {}) => {
 		await openWith(AdjustStockAction, { itemId: 'item-1', onHand: 8, ...props });
@@ -192,7 +194,7 @@ describe('AdjustStockAction', () => {
 	it('opens with an empty box and nothing to submit', async () => {
 		await expect.element(await open()).toBeVisible();
 
-		const counted = document.querySelector('input[name="counted"]') as HTMLInputElement;
+		const counted = document.querySelector('[data-testid="stocktake-counted"]') as HTMLInputElement;
 		expect(counted.value).toBe('');
 		expect(delta().value).toBe('');
 	});
@@ -298,7 +300,9 @@ describe('BindTagAction', () => {
  */
 describe('CreateLoanAction', () => {
 	const equipment = () =>
-		document.querySelector('[role="dialog"] select[name="itemId"]') as unknown as HTMLSelectElement;
+		document.querySelector(
+			'[role="dialog"] select:is([name="itemId"], [name^="itemId/"])'
+		) as unknown as HTMLSelectElement;
 
 	const open = async () => {
 		await openWith(CreateLoanAction, {});
@@ -502,7 +506,9 @@ describe('RecordForm8283Action', () => {
 	};
 
 	const input = (name: string) =>
-		document.querySelector(`[role="dialog"] input[name="${name}"]`) as HTMLInputElement;
+		document.querySelector(
+			`[role="dialog"] input:is([name="${name}"], [name^="${name}/"])`
+		) as HTMLInputElement;
 
 	// The trigger sits in a row of acquisitions. Which of the two it says is the
 	// only signal that this gift's acknowledgment is already on file.

@@ -7,14 +7,14 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { listActivity, activitySubjects } = await import('./project-activity');
-const { auditSubjectQuery } = await import('$lib/server/audit/audit-service');
+const { auditSubjectQuery } = await import('#lib/server/audit/audit-service.js');
 
 const PROJECT = 'proj-1';
 const OTHER = 'proj-2';

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { adjustListingHold } from '$lib/remote/events.remote';
-	import { toLocalTime } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { adjustListingHold } from '#lib/remote/events.remote.js';
+	import { toLocalTime } from '#lib/utils/format.js';
 
 	// The hold's window apart from the show's own times: setup and teardown.
 	let { eventId, startsAt, endsAt }: { eventId: string; startsAt: Date; endsAt: Date } = $props();

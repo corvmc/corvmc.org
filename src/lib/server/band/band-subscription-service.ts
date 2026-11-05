@@ -1,13 +1,13 @@
-import { db } from '$lib/server/db';
-import { bandSite } from '$lib/server/db/schema/band-site';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { bandSubscriptionSchema, type BandSubscription } from '$lib/server/db/schema/band-site';
-import { stripe } from '$lib/server/stripe';
-import { checkout } from '$lib/server/finance/payment-service';
+import { db } from '#lib/server/db/index.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { bandSubscriptionSchema, type BandSubscription } from '#lib/server/db/schema/band-site.js';
+import { stripe } from '#lib/server/stripe.js';
+import { checkout } from '#lib/server/finance/payment-service.js';
 import {
 	buildSubscriptionLineItem,
 	getProductConfig
-} from '$lib/server/finance/product-config-service';
+} from '#lib/server/finance/product-config-service.js';
 import { eq } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------

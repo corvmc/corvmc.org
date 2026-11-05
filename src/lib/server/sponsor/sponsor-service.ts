@@ -1,4 +1,4 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	sponsor,
 	sponsorship,
@@ -6,10 +6,10 @@ import {
 	type NewSponsorship,
 	type Sponsor,
 	type Sponsorship
-} from '$lib/server/db/schema/sponsor';
+} from '#lib/server/db/schema/sponsor.js';
 import { and, count, eq, gte, isNull, lte } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import { byDeadline, due, type Deadline } from '$lib/utils/deadline';
+import { DomainError } from '#lib/server/domain-error.js';
+import { byDeadline, due, type Deadline } from '#lib/utils/deadline.js';
 
 export class SponsorNotFoundError extends DomainError {
 	readonly httpStatus = 404;

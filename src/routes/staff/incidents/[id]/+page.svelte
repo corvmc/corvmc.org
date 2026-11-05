@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { formatDateTime } from '$lib/utils/format';
-	import { incidentCategoryLabels } from '$lib/config';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { formatDateTime } from '#lib/utils/format.js';
+	import { incidentCategoryLabels } from '#lib/config.js';
 	import {
 		getIncidentDetail,
 		getIncidentHistory,
@@ -20,8 +20,8 @@
 		resolveIncidentForm,
 		reopenIncidentForm,
 		setIncidentRetainForm
-	} from '$lib/remote/incidents.remote';
-	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
+	} from '#lib/remote/incidents.remote.js';
+	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
 
 	let id = $derived(page.params.id!);
 	let incident = $derived(await getIncidentDetail(id));
@@ -67,14 +67,14 @@
 				<Fact label={m.staff_what_happened()} wrap>{incident.description}</Fact>
 				{#if incident.involvedUserId}
 					<Fact label={m.staff_member_involved()}>
-						<a class="link" href={resolve(`/staff/members/${incident.involvedUserId}`)}>
+						<a class="link" href={resolve(`staff/members/${incident.involvedUserId}`)}>
 							{incident.involvedName ?? m.staff_member()}
 						</a>
 					</Fact>
 				{/if}
 				{#if incident.eventId}
 					<Fact label={m.staff_show()}>
-						<a class="link" href={resolve(`/staff/events/${incident.eventId}`)}>
+						<a class="link" href={resolve(`staff/events/${incident.eventId}`)}>
 							{incident.eventTitle ?? m.staff_event()}
 						</a>
 					</Fact>

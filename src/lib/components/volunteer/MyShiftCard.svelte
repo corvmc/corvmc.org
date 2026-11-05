@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * One shift the member is on, with the two-step rail that is the whole point.
 	 *
@@ -9,14 +9,14 @@
 	 * that from a booking. Claimed → Booked, with only the reached step lit,
 	 * says it without needing a sentence.
 	 */
-	import Action from '$lib/components/ui/Action.svelte';
-	import { shiftLabel, shiftRoleSuffix } from '$lib/utils/shift-label';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { shiftLabel, shiftRoleSuffix } from '#lib/utils/shift-label.js';
 	import ShiftProgress from './ShiftProgress.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
-	import { formatDateShort } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
-	import { cancelMySignup } from '$lib/remote/volunteer.remote';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { DEFAULT_TIMEZONE } from '#lib/config.js';
+	import { cancelMySignup } from '#lib/remote/volunteer.remote.js';
 
 	let {
 		shift
@@ -95,7 +95,7 @@
 				<!-- The checklist and, on a ticketed show, the door list. Both were
 				     staff-only until #934 and #931. -->
 				<Button
-					href={resolve(`/member/volunteer/shifts/${shift.signupId}`)}
+					href={resolve(`member/volunteer/shifts/${shift.signupId}`)}
 					variant="ghost"
 					size="xs"
 				>
@@ -104,7 +104,7 @@
 			{/if}
 			{#if worked}
 				<Button
-					href={resolve(`/member/volunteer/feedback/${shift.signupId}`)}
+					href={resolve(`member/volunteer/feedback/${shift.signupId}`)}
 					variant="ghost"
 					size="xs"
 				>
@@ -121,7 +121,9 @@
 					successToast={m.volunteer_my_shift_card_success_toast()}
 				>
 					{#snippet form()}
-						<input type="hidden" name="signupId" value={shift.signupId} />
+						<input
+							{...cancelMySignup.for(shift.signupId).fields.signupId.as('hidden', shift.signupId)}
+						/>
 						<p class="text-sm">
 							{shift.roleName}{shift.startsAt
 								? m.volunteer_my_shift_card_text({

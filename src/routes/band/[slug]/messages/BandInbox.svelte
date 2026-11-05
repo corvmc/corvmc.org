@@ -7,7 +7,7 @@
 	 */
 	import { page } from '$app/state';
 	import EnquiryList from './EnquiryList.svelte';
-	import GroupTopicList from '$lib/components/inbox/GroupTopicList.svelte';
+	import GroupTopicList from '#lib/components/inbox/GroupTopicList.svelte';
 
 	let { canReadEnquiries }: { canReadEnquiries: boolean } = $props();
 

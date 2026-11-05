@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Every work order a coordinator staffs, in one table by date (#1933). A shift
 	 * is a work order with a window, so the ones still waiting for a time are the
@@ -11,37 +11,37 @@
 	 * Cancelled shifts are a notify list under the divider, not rows to staff.
 	 */
 	import { page } from '$app/state';
-	import { NO_ROLE_LABEL, shiftLabel } from '$lib/utils/shift-label';
+	import { NO_ROLE_LABEL, shiftLabel } from '#lib/utils/shift-label.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import { Latest } from '$lib/latest.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { isOverdue } from '$lib/utils/work-order-due';
-	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
-	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import { Latest } from '#lib/latest.svelte.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { isOverdue } from '#lib/utils/work-order-due.js';
+	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
+	import LogHoursForMemberAction from '#lib/components/volunteer/LogHoursForMemberAction.svelte';
 	import NewWorkOrderAction from '../NewWorkOrderAction.svelte';
 	import ScheduleViews from './ScheduleViews.svelte';
 	import ConfirmFixedTable from './ConfirmFixedTable.svelte';
 	import UnscheduledActions from './UnscheduledActions.svelte';
 	import { NEEDS, parseNeeds, type Needs } from './needs-filter';
 	import { PROJECT_FILTERS, matchesProject, parseProjectFilter } from './project-filter';
-	import { formatDateShort, relativeDay } from '$lib/utils/format';
+	import { formatDateShort, relativeDay } from '#lib/utils/format.js';
 	import {
 		DEFAULT_TIMEZONE,
 		contractorJobViews,
 		contractorJobViewLabels,
 		type ContractorJobView
-	} from '$lib/config';
-	import { getSchedulePage, confirmShiftClaims } from '$lib/remote/volunteer.remote';
+	} from '#lib/config.js';
+	import { getSchedulePage, confirmShiftClaims } from '#lib/remote/volunteer.remote.js';
 
 	/** `'all'` drops both bounds rather than passing a wide one, so it is really everything. */
 	const WINDOWS = [7, 14, 30, 'all'] as const;
@@ -95,9 +95,9 @@
 		if (byContractor && contractorView !== 'open') pairs.push(['contractor', contractorView]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = withQuery(resolve('/staff/volunteer/schedule'), search);
+		const href = withQuery(resolve('staff/volunteer/schedule'), search);
 		if (location.pathname + location.search !== href) {
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 
@@ -265,7 +265,7 @@
 
 		{#snippet actions()}
 			<!-- Not a sidebar row: roles are set up now and then, not worked daily (#1791). -->
-			<Button variant="ghost" href={resolve('/staff/volunteer/roles')}>{m.staff_roles()}</Button>
+			<Button variant="ghost" href={resolve('staff/volunteer/roles')}>{m.staff_roles()}</Button>
 			<LogHoursForMemberAction />
 			<NewWorkOrderAction onsuccess={refresh} />
 		{/snippet}
@@ -305,7 +305,7 @@
 				{/each}
 			{/if}
 			{#if data.waiting.pendingHours > 0}
-				<Button size="sm" variant="ghost" href={resolve('/staff/members/volunteers/hours')}>
+				<Button size="sm" variant="ghost" href={resolve('staff/members/volunteers/hours')}>
 					{m.staff_volunteer_hours_to_review_card_title()}
 					<Badge size="sm">{data.waiting.pendingHours}</Badge>
 				</Button>
@@ -314,7 +314,7 @@
 				<Button
 					size="sm"
 					variant="ghost"
-					href={withQuery(resolve('/staff/members/volunteers'), 'lapsing=1')}
+					href={withQuery(resolve('staff/members/volunteers'), 'lapsing=1')}
 				>
 					{m.staff_volunteer_lapsing_card_title()}
 					<Badge size="sm">{data.waiting.lapsingPeople}</Badge>
@@ -372,7 +372,7 @@
 								</div>
 							{:else if w.eventTitle}
 								<div class="truncate text-xs">
-									<a href={resolve(`/staff/events/${w.eventId}`)} class="link text-info">
+									<a href={resolve(`staff/events/${w.eventId}`)} class="link text-info">
 										{w.eventTitle}
 									</a>
 								</div>
@@ -383,7 +383,7 @@
 								<a
 									class="link text-xs"
 									href={withQuery(
-										resolve('/staff/volunteer/schedule/recurring'),
+										resolve('staff/volunteer/schedule/recurring'),
 										`id=${w.maintenanceScheduleId}`
 									)}>{m.staff_recurring()}</a
 								>
@@ -434,7 +434,7 @@
 										onsuccess={refresh}
 									>
 										{#snippet form()}
-											<input type="hidden" name="shiftId" value={w.id} />
+											<input {...confirmShiftClaims.for(w.id).fields.shiftId.as('hidden', w.id)} />
 											<p class="text-sm">
 												{m.staff_volunteer_schedule_people_have_put_hand_up({
 													unconfirmed,

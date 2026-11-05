@@ -1,11 +1,11 @@
 import { and, count, eq, ne } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { role, modelHasRole } from '$lib/server/db/schema/authorization';
-import { user } from '$lib/server/db/schema/authentication';
-import { DomainError } from '$lib/server/domain-error';
-import { getUserRoles, isPosition } from '$lib/server/authorization';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import type { Position } from '$lib/config';
+import { db } from '#lib/server/db/index.js';
+import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { getUserRoles, isPosition } from '#lib/server/authorization.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import type { Position } from '#lib/config.js';
 
 /** A position change that would lock people out of the panel. */
 export class PositionChangeRefusedError extends DomainError {

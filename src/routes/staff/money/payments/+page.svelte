@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import PaymentMethodIcon from '$lib/components/ui/PaymentMethodIcon.svelte';
-	import CopyableId from '$lib/components/ui/CopyableId.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { getStaffPayments } from '$lib/remote/users.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import PaymentMethodIcon from '#lib/components/ui/PaymentMethodIcon.svelte';
+	import CopyableId from '#lib/components/ui/CopyableId.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { getStaffPayments } from '#lib/remote/users.remote.js';
 	import StaffViews from '../../StaffViews.svelte';
 	import { moneyViews } from '../views';
-	import { formatDateTimeShort, formatCents } from '$lib/utils/format';
+	import { formatDateTimeShort, formatCents } from '#lib/utils/format.js';
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.

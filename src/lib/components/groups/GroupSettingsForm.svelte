@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { updateStaffGroup } from '$lib/remote/groups.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { updateStaffGroup } from '#lib/remote/groups.remote.js';
 	import { invalidateAll } from '$app/navigation';
 
 	/**

@@ -1,21 +1,21 @@
-import { bandBookerJoin, eventBookerJoin } from '$lib/server/reservation/event-hold';
+import { bandBookerJoin, eventBookerJoin } from '#lib/server/reservation/event-hold.js';
 import {
 	recordReservationCash,
 	recordReservationCredit
-} from '$lib/server/finance/reservation-entries';
+} from '#lib/server/finance/reservation-entries.js';
 import { z } from 'zod';
 import { error, redirect, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { command, form } from './_remote';
-import { db } from '$lib/server/db';
-import { user, type Subscription } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { user, type Subscription } from '#lib/server/db/schema/authentication.js';
 import {
 	reservation,
 	type Reservation,
 	reservationStatuses,
 	type ReservationStatus
-} from '$lib/server/db/schema/reservation';
-import { createReservationSchema } from '$lib/server/db/schema/reservation';
+} from '#lib/server/db/schema/reservation.js';
+import { createReservationSchema } from '#lib/server/db/schema/reservation.js';
 import {
 	or,
 	eq,
@@ -34,16 +34,16 @@ import {
 	count,
 	type SQL
 } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { getById as getBandById } from '$lib/server/band/band-service';
-import { group, groupMember } from '$lib/server/db/schema/group';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { getById as getBandById } from '#lib/server/band/band-service.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { alias } from 'drizzle-orm/sqlite-core';
 
 /** The roster row that defines ownership — see `band-service.ts`. */
 const ownerMember = alias(groupMember, 'owner_member');
-import { eventListing } from '$lib/server/db/schema/event';
-import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
-import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { formatDateInTz, buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { describeFrequency, monthlyModeOf } from '#lib/server/reservation/rrule-helpers.js';
 import {
 	closuresInWindow,
 	closuresOverlapping,
@@ -52,14 +52,14 @@ import {
 	interleave,
 	type ClosureFilters,
 	type ClosureRow
-} from '$lib/server/reservation/closure-timeline';
-import type { Pagination } from '$lib/types/pagination';
+} from '#lib/server/reservation/closure-timeline.js';
+import type { Pagination } from '#lib/types/pagination.js';
 import {
 	can,
 	requireCapability,
 	requireCapabilityOrOwner,
 	requireUser
-} from '$lib/server/authorization';
+} from '#lib/server/authorization.js';
 import {
 	bandRefColumns,
 	eventRefColumns,
@@ -69,13 +69,13 @@ import {
 	toBookerRef,
 	toMemberRef,
 	toReservationRef
-} from '$lib/server/entity/refs';
+} from '#lib/server/entity/refs.js';
 import {
 	getAvailableSlots,
 	getAvailableSlotsForDates,
 	getConflictDetails,
 	getValidationWarnings
-} from '$lib/server/reservation/conflict-service';
+} from '#lib/server/reservation/conflict-service.js';
 import {
 	staffCreate,
 	create,
@@ -92,27 +92,27 @@ import {
 	announceConfirmed,
 	ReservationConflictError,
 	ReservationValidationError
-} from '$lib/server/reservation/reservation-service';
-import { orientationForReservation } from '$lib/server/volunteer/orientation-service';
-import { mapDomainError } from '$lib/server/errors';
-import { isAwaitingPayment, isOverdue, isTerminalStatus } from '$lib/utils/reservation-actions';
-import { bookerTypes, type BookerType } from '$lib/config';
-import { getReservationConfig, getBookingTerms, termsFor } from '$lib/server/reservation/config';
-import { requireInstructor } from '$lib/server/instructor/instructor-context';
-import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
+} from '#lib/server/reservation/reservation-service.js';
+import { orientationForReservation } from '#lib/server/volunteer/orientation-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { isAwaitingPayment, isOverdue, isTerminalStatus } from '#lib/utils/reservation-actions.js';
+import { bookerTypes, type BookerType } from '#lib/config.js';
+import { getReservationConfig, getBookingTerms, termsFor } from '#lib/server/reservation/config.js';
+import { requireInstructor } from '#lib/server/instructor/instructor-context.js';
+import { getByUserId as getInstructorByUserId } from '#lib/server/instructor/instructor-service.js';
 import {
 	fallbackShownFor,
 	isInAccessWindow,
 	revealFallbackCodeFor
-} from '$lib/server/lock/fallback-code-service';
-import type { CheckoutLineItem } from '$lib/server/finance/payment-service';
+} from '#lib/server/lock/fallback-code-service.js';
+import type { CheckoutLineItem } from '#lib/server/finance/payment-service.js';
 import {
 	checkout,
 	recordCashPayment,
 	refund as refundPayment
-} from '$lib/server/finance/payment-service';
-import { getBalance } from '$lib/server/finance/credit-service';
-import { notAProgramHold } from '$lib/server/reservation/program-hold';
+} from '#lib/server/finance/payment-service.js';
+import { getBalance } from '#lib/server/finance/credit-service.js';
+import { notAProgramHold } from '#lib/server/reservation/program-hold.js';
 import {
 	commitReservationCredits,
 	computeReservationCredit,
@@ -120,29 +120,29 @@ import {
 	getFreeHoursWallet,
 	reverseReservationCredits,
 	usableFreeHours
-} from '$lib/server/reservation/reservation-credit-service';
-import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
-import { readerTapCanBeSimulated, terminalReaderId } from '$lib/server/finance/terminal-service';
+} from '#lib/server/reservation/reservation-credit-service.js';
+import { ensureStripeCustomer } from '#lib/server/finance/stripe-customer-service.js';
+import { readerTapCanBeSimulated, terminalReaderId } from '#lib/server/finance/terminal-service.js';
 import {
 	cancelReaderPayment,
 	readerPayable,
 	readerPaymentStatus,
 	simulateReaderTap,
 	startReaderPayment
-} from '$lib/server/reservation/reader-payment';
-import { recurringSeries, type RecurringFrequency } from '$lib/server/db/schema/recurring';
-import { formatSlotTime } from '$lib/utils/format';
-import { buildRRule, getOccurrences } from '$lib/server/reservation/rrule-helpers';
+} from '#lib/server/reservation/reader-payment.js';
+import { recurringSeries, type RecurringFrequency } from '#lib/server/db/schema/recurring.js';
+import { formatSlotTime } from '#lib/utils/format.js';
+import { buildRRule, getOccurrences } from '#lib/server/reservation/rrule-helpers.js';
 import {
 	create as createSeries,
 	listActive as listActiveSeries
-} from '$lib/server/reservation/recurring-series-service';
-import { getMembers } from '$lib/server/band/band-service';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { paginate } from '$lib/server/db/paginate';
-import { ensureContactPhone } from '$lib/server/user/user-service';
-import { PHONE_REQUIRED_MESSAGE, isValidPhone } from '$lib/utils/phone';
-import { recurringSeriesEnd, UNTIL_BEFORE_START } from '$lib/server/reservation/series-until';
+} from '#lib/server/reservation/recurring-series-service.js';
+import { getMembers } from '#lib/server/band/band-service.js';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { paginate } from '#lib/server/db/paginate.js';
+import { ensureContactPhone } from '#lib/server/user/user-service.js';
+import { PHONE_REQUIRED_MESSAGE, isValidPhone } from '#lib/utils/phone.js';
+import { recurringSeriesEnd, UNTIL_BEFORE_START } from '#lib/server/reservation/series-until.js';
 import {
 	DEFAULT_TIMEZONE,
 	SEARCH_LIMIT,
@@ -150,7 +150,7 @@ import {
 	CONFIRMATION_WINDOW_DAYS,
 	confirmWindowOpensAt,
 	withinConfirmationWindow
-} from '$lib/config';
+} from '#lib/config.js';
 
 // ===========================================================================
 // Queries
@@ -2135,7 +2135,9 @@ export const payReservation = form(
 			cancelUrl: `${url.origin}/member/reservations/${row.id}/pay`
 		});
 
-		redirect(303, 'paid' in result ? backPath : result.checkoutUrl);
+		redirect(303, 'paid' in result ? backPath : result.checkoutUrl, {
+			external: ['https://checkout.stripe.com']
+		});
 	}
 );
 

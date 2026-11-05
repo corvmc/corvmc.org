@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Section from '$lib/components/public/Section.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Section from '#lib/components/public/Section.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
-	import PosterCard from '$lib/components/events/PosterCard.svelte';
-	import MiniCalendar from '$lib/components/public/calendar/MiniCalendar.svelte';
-	import GigList from '$lib/components/events/GigList.svelte';
+	import PosterCard from '#lib/components/events/PosterCard.svelte';
+	import MiniCalendar from '#lib/components/public/calendar/MiniCalendar.svelte';
+	import GigList from '#lib/components/events/GigList.svelte';
 	import RecentRecaps from './RecentRecaps.svelte';
-	import { getPublicEventsPage } from '$lib/remote/events.remote';
+	import { getPublicEventsPage } from '#lib/remote/events.remote.js';
 	// Still needed on its own for the lazy "show more" pager below, which is not a fan-out.
-	import { getPublicGigGuide } from '$lib/remote/calendar.remote';
-	import { toLocalDate } from '$lib/utils/format';
-	import type { CalendarEntry } from '$lib/types/calendar';
+	import { getPublicGigGuide } from '#lib/remote/calendar.remote.js';
+	import { toLocalDate } from '#lib/utils/format.js';
+	import type { CalendarEntry } from '#lib/types/calendar.js';
 
 	const FROM_RE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 	const today = toLocalDate(new Date());

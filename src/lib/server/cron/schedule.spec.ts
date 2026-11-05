@@ -259,6 +259,18 @@ describe('runScheduledJobs', () => {
 		expect(results.every((r) => r.ok)).toBe(true);
 	});
 
+	// Kit 3 answers a POST with no Origin and no content type 403, before hooks or
+	// the route run. Only a production build applies the rule, so nothing else sees it.
+	it('sends a content type, or kit refuses the job as a cross-site form post', async () => {
+		const fetcher = okFetcher();
+
+		await runScheduledJobs('*/15 * * * *', env, fetcher);
+
+		for (const [request] of fetcher.mock.calls as [Request][]) {
+			expect(request.headers.get('content-type')).toBe('application/json');
+		}
+	});
+
 	it('awaits jobs sequentially, not in parallel', async () => {
 		let inFlight = 0;
 		let maxInFlight = 0;

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** The create and edit forms share every field; `value` pre-fills the edit. */
-	import { Field } from '$lib/components/ui/Form';
-	import type { createRenewal } from '$lib/remote/renewals.remote';
-	import { renewalKinds, renewalKindLabels, type RenewalKind } from '$lib/config';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import type { createRenewal } from '#lib/remote/renewals.remote.js';
+	import { renewalKinds, renewalKindLabels, type RenewalKind } from '#lib/config.js';
 
 	interface Value {
 		name: string;

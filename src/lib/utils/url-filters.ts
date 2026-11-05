@@ -5,7 +5,7 @@
  * Kept free of `$app` and of runes so the policy can be unit-tested as a plain
  * table, the way `entity-href` and `canonical-address` are. The reactive half
  * — seeding state at mount and mirroring it back into the address bar — is
- * `$lib/urlState.svelte.ts`.
+ * `#lib/urlState.svelte.js`.
  */
 
 /** How one query parameter is read and written. */
@@ -67,7 +67,7 @@ export type UrlFields<S> = { [K in keyof S]: UrlField<S[K]> };
 /** Seed every field from a query string. */
 export function parseFields<S extends Record<string, unknown>>(
 	fields: UrlFields<S>,
-	params: URLSearchParams
+	params: Pick<URLSearchParams, 'get'>
 ): S {
 	const out = {} as S;
 	for (const key of Object.keys(fields) as (keyof S)[]) {

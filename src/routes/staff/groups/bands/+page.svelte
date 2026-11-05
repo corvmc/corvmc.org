@@ -1,30 +1,30 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { CreateBandAction } from '$lib/components/actions';
-	import { getStaffBands, getStaffBandTotals } from '$lib/remote/bands.remote';
-	import { rosterState } from '$lib/components/roster/roster-state.svelte';
-	import { oneOf } from '$lib/urlState.svelte';
-	import { formatDateShortYear } from '$lib/utils/format';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { retryQuery } from '$lib/utils/retry-query';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { CreateBandAction } from '#lib/components/actions/index.js';
+	import { getStaffBands, getStaffBandTotals } from '#lib/remote/bands.remote.js';
+	import { rosterState } from '#lib/components/roster/roster-state.svelte.js';
+	import { oneOf } from '#lib/urlState.svelte.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { retryQuery } from '#lib/utils/retry-query.js';
 	import BandTotals from './BandTotals.svelte';
 	import GroupViews from '../GroupViews.svelte';
 	import GroupRecordPanel from '../[id]/GroupRecordPanel.svelte';
 
 	// Deactivated bands are hidden until the filter asks for them.
-	const view = rosterState(resolve('/staff/groups/bands'), {
+	const view = rosterState(resolve('staff/groups/bands'), {
 		status: oneOf(['active', 'deactivated', 'all'] as const, 'active'),
 		tier: oneOf(['', 'free', 'premium'] as const, '')
 	});
@@ -116,7 +116,7 @@
 		{/snippet}
 		{#snippet actions()}
 			<!-- External acts stay beside bands: the same staff job, and one can become the other. -->
-			<Button variant="ghost" size="sm" href={resolve('/staff/bands/acts')}
+			<Button variant="ghost" size="sm" href={resolve('staff/bands/acts')}
 				>{m.staff_external_acts()}</Button
 			>
 			<CreateBandAction />

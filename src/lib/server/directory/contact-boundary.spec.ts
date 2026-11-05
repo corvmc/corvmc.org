@@ -26,7 +26,7 @@ const ALLOWED = new Set([
 	// The barrel: drizzle-kit reads it to see the table at all, so a migration
 	// cannot be generated without this line. That is exactly why the lint rule
 	// matches the imported *symbol* rather than only the module path — banning
-	// the path alone would leave `from '$lib/server/db/schema'` wide open.
+	// the path alone would leave `from '#lib/server/db/schema.js'` wide open.
 	'src/lib/server/db/schema/index.ts',
 	'src/lib/server/directory/contact-service.spec.ts',
 	'src/lib/server/directory/contact-boundary.spec.ts'

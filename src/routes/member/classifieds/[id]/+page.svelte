@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import PostDetail from '$lib/components/classified/PostDetail.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import PostDetail from '#lib/components/classified/PostDetail.svelte';
 	import EditClassifiedAction from './EditClassifiedAction.svelte';
-	import MessageMemberAction from '$lib/components/actions/MessageMemberAction.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
+	import MessageMemberAction from '#lib/components/actions/MessageMemberAction.svelte';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
 	import { IconFlag, IconRefresh, IconCircleCheck } from '@tabler/icons-svelte';
 	import {
 		getClassifiedDetail,
 		renewClassified,
 		closeClassified,
 		reportClassified
-	} from '$lib/remote/classifieds.remote';
+	} from '#lib/remote/classifieds.remote.js';
 
 	const id = $derived(page.params.id!);
 	const post = $derived(await getClassifiedDetail(id));
@@ -101,8 +101,16 @@
 				<p class="mb-3 text-muted">
 					{m.member_classifieds_id_takes_post_off_board_while()}
 				</p>
-				<FormField name="reason" type="text" label={m.member_what_s_problem()} />
-				<FormField name="description" type="textarea" label={m.member_anything_else_optional()} />
+				<FormField
+					field={reportClassified.fields.reason}
+					type="text"
+					label={m.member_what_s_problem()}
+				/>
+				<FormField
+					field={reportClassified.fields.description}
+					type="textarea"
+					label={m.member_anything_else_optional()}
+				/>
 			{/snippet}
 		</Action>
 	{/if}

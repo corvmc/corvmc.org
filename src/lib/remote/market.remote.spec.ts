@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
 import { isHttpError } from '@sveltejs/kit';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 
 /**
  * The market remotes' two boundaries: the public form checks Turnstile before
@@ -42,11 +42,11 @@ vi.mock('@sveltejs/kit', async (importOriginal) => ({
 }));
 
 const turnstileOk = vi.fn(async () => true);
-vi.mock('$lib/server/turnstile', () => ({ verifyTurnstile: () => turnstileOk() }));
+vi.mock('#lib/server/turnstile.js', () => ({ verifyTurnstile: () => turnstileOk() }));
 
 let signedIn = false;
 const requested: string[] = [];
-vi.mock('$lib/server/authorization', async () => {
+vi.mock('#lib/server/authorization.js', async () => {
 	const { error } = await import('@sveltejs/kit');
 	return {
 		requireCapability: async (cap: string) => {
@@ -61,7 +61,7 @@ vi.mock('$lib/server/authorization', async () => {
 // `committeeOf` pass, anyone else falls through to the staff cover.
 let committeeOf: string[] = [];
 const guardedOn: [string | null, string][] = [];
-vi.mock('$lib/server/group/group-context', async () => {
+vi.mock('#lib/server/group/group-context.js', async () => {
 	const { error } = await import('@sveltejs/kit');
 	return {
 		requireCommitteeMember: async (groupId: string | null, cover: string) => {
@@ -108,13 +108,13 @@ const svc = vi.hoisted(() => ({
 	markVendorNoShow: vi.fn(async () => ({ eventId: 'evt-1' })),
 	recordInviteBack: vi.fn(async () => ({ eventId: 'evt-1' }))
 }));
-vi.mock('$lib/server/market/market-service', () => svc);
+vi.mock('#lib/server/market/market-service.js', () => svc);
 
 const fees = vi.hoisted(() => ({
 	getVendorFee: vi.fn(async (): Promise<unknown> => null),
 	startVendorFeeCheckout: vi.fn(async () => ({ checkoutUrl: '/checkout/cs_1' }))
 }));
-vi.mock('$lib/server/market/vendor-fee-service', () => fees);
+vi.mock('#lib/server/market/vendor-fee-service.js', () => fees);
 
 const remote = await import('./market.remote');
 

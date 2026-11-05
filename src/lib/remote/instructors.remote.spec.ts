@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const requireCapability = vi.fn(async () => ({ id: 'staff-1' }));
 const requireCapabilityOrOwner = vi.fn(async () => 'staff' as const);
-vi.mock('$lib/server/authorization', () => ({ requireCapability, requireCapabilityOrOwner }));
+vi.mock('#lib/server/authorization.js', () => ({ requireCapability, requireCapabilityOrOwner }));
 
 const svc = {
 	listInstructorRoster: vi.fn(async () => ({ rows: [], pagination: {}, pending: 0 })),
@@ -25,7 +25,7 @@ const svc = {
 	pause: vi.fn(async () => undefined),
 	retire: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/instructor/instructor-service', () => svc);
+vi.mock('#lib/server/instructor/instructor-service.js', () => svc);
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: { id: 'staff-1' } } }),

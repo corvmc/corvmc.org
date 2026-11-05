@@ -41,7 +41,7 @@ const REMOTE_KINDS = new Set(['query', 'form', 'command', 'prerender']);
 
 function resolveSpecifier(spec: string, from: string): string | null {
 	let base: string;
-	if (spec.startsWith('$lib/')) base = `src/lib/${spec.slice(5)}`;
+	if (/^[$#]lib\//.test(spec)) base = `src/lib/${spec.slice(5)}`;
 	else if (spec.startsWith('.')) base = posix.join(posix.dirname(from), spec);
 	else return null;
 	for (const c of [base, `${base}.ts`, `${base}/index.ts`, base.replace(/\.js$/, '.ts')]) {

@@ -1,13 +1,13 @@
 import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 
 // One file for the marketing actions: they mock the same two modules, and each
 // export below is the stub its own component's spec used before the merge.
 const issues: Record<string, { path: string[]; message: string }[] | null> = {};
 
-vi.mock('$lib/remote/marketing.remote', () => {
+vi.mock('#lib/remote/marketing.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => issues[name] ?? null
@@ -25,7 +25,13 @@ vi.mock('$lib/remote/marketing.remote', () => {
 		},
 		createAudience: {
 			enhance: () => ({ method: 'POST', action: '?/createAudience' }),
-			fields: { allIssues: () => null },
+			fields: {
+				name: field('name'),
+				slug: field('slug'),
+				description: field('description'),
+				allowOptIn: field('allowOptIn'),
+				allIssues: () => null
+			},
 			result: undefined
 		}
 	};
@@ -77,7 +83,10 @@ describe('AddSubscriberAction', () => {
 		const submit = dialog.getByCss('button[type="submit"]');
 		await expect.element(submit).toBeDisabled();
 
-		await userEvent.fill(dialog.getByCss('input[name="email"]'), 'nina@example.dev');
+		await userEvent.fill(
+			dialog.getByCss('input:is([name="email"], [name^="email/"])'),
+			'nina@example.dev'
+		);
 
 		await expect.element(submit).toBeEnabled();
 	});
@@ -95,7 +104,9 @@ describe('CreateAudienceAction', () => {
 	const signupPath = (slug: string) => `/subscribe/${slug}`;
 
 	const slug = () =>
-		document.querySelector('[role="dialog"] input[name="slug"]') as unknown as HTMLInputElement;
+		document.querySelector(
+			'[role="dialog"] input:is([name="slug"], [name^="slug/"])'
+		) as unknown as HTMLInputElement;
 
 	const open = async () => {
 		const { locator } = await render(CreateAudienceAction, {});

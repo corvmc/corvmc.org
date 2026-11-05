@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 import { like } from 'drizzle-orm';
 import { verification } from '../src/lib/server/db/schema/authentication';
 import { readLocalDb } from './fixtures/platform-db';
@@ -28,20 +28,24 @@ const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
 async function login(page: Page, email: string, password: string) {
 	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(email);
-	await page.locator('input[name="password"]').fill(password);
+	await page.locator('input:is([name="email"], [name^="email/"])').fill(email);
+	await page.locator('input:is([name="password"], [name^="password/"])').fill(password);
 	// The sign-in form is the one with a password field.
-	await page.locator('form:has(input[name="password"]) button[type="submit"]').click();
+	await page
+		.locator('form:has(input:is([name="password"], [name^="password/"])) button[type="submit"]')
+		.click();
 }
 
 async function requestLink(page: Page) {
-	await page.locator('form:has(input[name="email"]) button[type="submit"]').click();
+	await page
+		.locator('form:has(input:is([name="email"], [name^="email/"])) button[type="submit"]')
+		.click();
 }
 
 /** Requested: the form gives way to the success alert, whoever the address is. */
 async function expectLinkRequested(page: Page) {
 	await expect(page.locator('.card .alert-success')).toBeVisible();
-	await expect(page.locator('input[name="email"]')).toHaveCount(0);
+	await expect(page.locator('input:is([name="email"], [name^="email/"])')).toHaveCount(0);
 }
 
 /** A dead link: the error alert, and the way on is to ask for a new link. */
@@ -70,7 +74,7 @@ test('a member who has forgotten their password can set a new one and sign in', 
 	await page.locator('a[href="/forgot-password"]').click();
 	await page.waitForURL(/\/forgot-password/);
 
-	await page.locator('input[name="email"]').fill(SEED_RESET_EMAIL);
+	await page.locator('input:is([name="email"], [name^="email/"])').fill(SEED_RESET_EMAIL);
 	await requestLink(page);
 
 	// Says nothing about whether the address exists — the same answer an
@@ -88,14 +92,24 @@ test('a member who has forgotten their password can set a new one and sign in', 
 	await page.goto(`/api/auth/reset-password/${token}?callbackURL=%2Freset-password`);
 	await page.waitForURL(/\/reset-password\?token=/);
 
-	await page.locator('input[name="newPassword"]').fill(SEED_RESET_NEW_PASSWORD);
-	await page.locator('input[name="confirmPassword"]').fill(SEED_RESET_NEW_PASSWORD);
-	await page.locator('form:has(input[name="newPassword"]) button[type="submit"]').click();
+	await page
+		.locator('input:is([name="newPassword"], [name^="newPassword/"])')
+		.fill(SEED_RESET_NEW_PASSWORD);
+	await page
+		.locator('input:is([name="confirmPassword"], [name^="confirmPassword/"])')
+		.fill(SEED_RESET_NEW_PASSWORD);
+	await page
+		.locator(
+			'form:has(input:is([name="newPassword"], [name^="newPassword/"])) button[type="submit"]'
+		)
+		.click();
 
 	// Done: the form gives way to the success alert and a way back to sign in.
 	await expect(page.locator('.card .alert-success')).toBeVisible();
 	await expect(page.locator('.card a.btn[href="/login"]')).toBeVisible();
-	await expect(page.locator('input[name="newPassword"]')).toHaveCount(0);
+	await expect(page.locator('input:is([name="newPassword"], [name^="newPassword/"])')).toHaveCount(
+		0
+	);
 
 	// The point of the whole exercise.
 	await login(page, SEED_RESET_EMAIL, SEED_RESET_NEW_PASSWORD);
@@ -115,7 +129,9 @@ test('a member who has forgotten their password can set a new one and sign in', 
 
 test('an unknown address gets the same answer as a real one', async ({ page }) => {
 	await page.goto('/forgot-password');
-	await page.locator('input[name="email"]').fill('nobody.at.all@example.com');
+	await page
+		.locator('input:is([name="email"], [name^="email/"])')
+		.fill('nobody.at.all@example.com');
 	await requestLink(page);
 
 	await expectLinkRequested(page);
@@ -125,5 +141,7 @@ test('a reset link with no token is a dead end, not an empty form', async ({ pag
 	await page.goto('/reset-password?error=INVALID_TOKEN');
 
 	await expectDeadLink(page);
-	await expect(page.locator('input[name="newPassword"]')).toHaveCount(0);
+	await expect(page.locator('input:is([name="newPassword"], [name^="newPassword/"])')).toHaveCount(
+		0
+	);
 });

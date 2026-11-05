@@ -1,31 +1,31 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { rosterState } from '$lib/components/roster/roster-state.svelte';
-	import { oneOf } from '$lib/urlState.svelte';
-	import CreateGroupAction from '$lib/components/groups/CreateGroupAction.svelte';
-	import { getStaffGroups, getStaffClubTotals } from '$lib/remote/groups.remote';
-	import { formatDateShortYear } from '$lib/utils/format';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { retryQuery } from '$lib/utils/retry-query';
+	import { rosterState } from '#lib/components/roster/roster-state.svelte.js';
+	import { oneOf } from '#lib/urlState.svelte.js';
+	import CreateGroupAction from '#lib/components/groups/CreateGroupAction.svelte';
+	import { getStaffGroups, getStaffClubTotals } from '#lib/remote/groups.remote.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { retryQuery } from '#lib/utils/retry-query.js';
 	import ClubTotals from './ClubTotals.svelte';
 	import GroupViews from '../GroupViews.svelte';
 	import GroupRecordPanel from '../[id]/GroupRecordPanel.svelte';
 
 	// A club is the opposite of a band: staff create it and appoint its chairs.
 	// Active by default, so the table shows the clubs the counts above count.
-	const view = rosterState(resolve('/staff/groups/clubs'), {
+	const view = rosterState(resolve('staff/groups/clubs'), {
 		status: oneOf(['active', 'deactivated', ''] as const, 'active')
 	});
 	const f = view.values;

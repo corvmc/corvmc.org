@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
-	import { getMemberAsset } from '$lib/remote/inventory.remote';
-	import { ReportDamageAction } from '$lib/components/actions';
+	import { getMemberAsset } from '#lib/remote/inventory.remote.js';
+	import { ReportDamageAction } from '#lib/components/actions/index.js';
 	import { IconFileText, IconBook } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { equipmentConditionBadge, assetStatusLabels } from '$lib/config';
-	import { titleCase } from '$lib/utils/format';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { equipmentConditionBadge, assetStatusLabels } from '#lib/config.js';
+	import { titleCase } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 
 	/**
@@ -36,18 +36,18 @@
 	width="2xl"
 	subtitle={asset.categoryName}
 	title={asset.name}
-	parent={{ label: m.member_equipment_assets_id_equipment(), href: resolve('/member/equipment') }}
+	parent={{ label: m.member_equipment_assets_id_equipment(), href: resolve('member/equipment') }}
 >
 	<!-- The whole point of the sticker. This page had `itemId` and used it only
 	     to fetch resources, so a member who scanned a thing they wanted was told
 	     its condition and left with nowhere to go (#1073). The catalog owns the
 	     request form; `?request=` opens it on the right item. -->
 	{#if asset.isAvailable}
-		<Button href={resolve(`/member/equipment?request=${asset.itemId}`)} variant="primary" size="sm">
+		<Button href={resolve(`member/equipment?request=${asset.itemId}`)} variant="primary" size="sm">
 			{m.member_equipment_assets_id_ask_borrow()}
 		</Button>
 	{:else}
-		<Button href={resolve('/member/equipment')} variant="default" size="sm" outline>
+		<Button href={resolve('member/equipment')} variant="default" size="sm" outline>
 			{m.member_equipment_assets_id_see_what_else_free()}
 		</Button>
 	{/if}
@@ -97,7 +97,7 @@
 					{#each resources.articles as article (article.id)}
 						<li class="flex items-start gap-2">
 							<IconBook size={18} class="mt-0.5 shrink-0 opacity-60" />
-							<a class="link" href={resolve(`/member/help/${article.slug}`)}>
+							<a class="link" href={resolve(`member/help/${article.slug}`)}>
 								{article.title}
 								{#if article.summary}
 									<span class="block text-subtle">{article.summary}</span>

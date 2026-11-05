@@ -1,16 +1,16 @@
 import { and, asc, count, eq, inArray, or } from 'drizzle-orm';
-import { db, getRowCount } from '$lib/server/db';
-import { instructor, type Instructor } from '$lib/server/db/schema/instructor';
-import { user } from '$lib/server/db/schema/authentication';
-import { memberRefColumns } from '$lib/server/entity/refs';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
-import { toRosterPerson } from '$lib/server/roster/roster';
-import type { RosterPerson } from '$lib/types/roster';
-import { DomainError } from '$lib/server/domain-error';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
-import type { InstructorStatus } from '$lib/config';
+import { db, getRowCount } from '#lib/server/db/index.js';
+import { instructor, type Instructor } from '#lib/server/db/schema/instructor.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { memberRefColumns } from '#lib/server/entity/refs.js';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput, type PaginatedResult } from '#lib/server/db/paginate.js';
+import { toRosterPerson } from '#lib/server/roster/roster.js';
+import type { RosterPerson } from '#lib/types/roster.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
+import type { InstructorStatus } from '#lib/config.js';
 
 /**
  * Instructors — people CMC has granted the right to rent the practice room on

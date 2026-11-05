@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import type { Snippet } from 'svelte';
-	import { fileAppeal, getMyAppeal } from '$lib/remote/appeals.remote';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { APPEAL_BODY_MAX, appealVerdictLabels, type StandingScope } from '$lib/config';
-	import { formatDate } from '$lib/utils/format';
+	import { fileAppeal, getMyAppeal } from '#lib/remote/appeals.remote.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { APPEAL_BODY_MAX, appealVerdictLabels, type StandingScope } from '#lib/config.js';
+	import { formatDate } from '#lib/utils/format.js';
 
 	type Target =
 		| { kind: 'suggestion'; suggestionId: string }

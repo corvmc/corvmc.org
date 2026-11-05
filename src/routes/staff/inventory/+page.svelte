@@ -1,30 +1,30 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { Select } from '$lib/components/ui/Form';
-	import { getStaffItemList } from '$lib/remote/inventory.remote';
-	import CategoryOptions from '$lib/components/inventory/CategoryOptions.svelte';
-	import CategoryManagerModal from '$lib/components/inventory/CategoryManagerModal.svelte';
-	import { itemKinds } from '$lib/config';
-	import { AddItemAction } from '$lib/components/actions';
+	import { Select } from '#lib/components/ui/Form/index.js';
+	import { getStaffItemList } from '#lib/remote/inventory.remote.js';
+	import CategoryOptions from '#lib/components/inventory/CategoryOptions.svelte';
+	import CategoryManagerModal from '#lib/components/inventory/CategoryManagerModal.svelte';
+	import { itemKinds } from '#lib/config.js';
+	import { AddItemAction } from '#lib/components/actions/index.js';
 	import HeaderActions from './HeaderActions.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { titleCase } from '$lib/utils/format';
-	import BarcodeScanner from '$lib/components/ui/BarcodeScanner.svelte';
-	import { parseScan } from '$lib/utils/scan';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { titleCase } from '#lib/utils/format.js';
+	import BarcodeScanner from '#lib/components/ui/BarcodeScanner.svelte';
+	import { parseScan } from '#lib/utils/scan.js';
 	import { page as pageState } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { inventoryListViews, type InventoryListView } from '$lib/config';
+	import { inventoryListViews, type InventoryListView } from '#lib/config.js';
 	import ViewSelect from './ViewSelect.svelte';
 	import RestockList from './RestockList.svelte';
 
@@ -47,11 +47,11 @@
 	});
 
 	function setView(v: InventoryListView | '') {
-		const url = new URL(pageState.url);
+		const url = new URL(pageState.url.href);
 		if (v) url.searchParams.set('show', v);
 		else url.searchParams.delete('show');
 		page = 1;
-		goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+		goto(url, { replace: true, reset: false });
 	}
 
 	/**
@@ -97,7 +97,7 @@
 
 <PageHeader title={m.staff_inventory()}>
 	<div class="flex gap-2">
-		<Button variant="ghost" size="sm" href={resolve('/staff/inventory/locations')}
+		<Button variant="ghost" size="sm" href={resolve('staff/inventory/locations')}
 			>{m.staff_locations()}</Button
 		>
 		<Button variant="ghost" size="sm" onclick={() => (showCategoryModal = true)}
@@ -192,7 +192,7 @@
 					{/snippet}
 
 					{#each equipment as e (e.id)}
-						{@const href = resolve(`/staff/inventory/${e.id}`)}
+						{@const href = resolve(`staff/inventory/${e.id}`)}
 						<tr class="hover cursor-pointer" class:opacity-50={e.deletedAt} use:rowLink={href}>
 							<td class="w-px">
 								<StatusBadge status={e.deletedAt ? 'deactivated' : 'active'} />

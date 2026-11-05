@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { applyDutyListToProjectForm } from '$lib/remote/projects.remote';
-	import { toastWarnings } from '$lib/utils/toast-warnings';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { applyDutyListToProjectForm } from '#lib/remote/projects.remote.js';
+	import { toastWarnings } from '#lib/utils/toast-warnings.js';
 
 	/** Stamp one of the project templates into the committee's own project. */
 	let {

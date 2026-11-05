@@ -8,18 +8,18 @@ const requireCapability = vi.fn(async (cap: string) => {
 	if (!held.has(cap)) throw Object.assign(new Error(`403: ${cap}`), { status: 403 });
 	return { id: 'staff-1' };
 });
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap)
 }));
 
 const getRenewalDocument = vi.fn(async (_id: string) => null as unknown);
-vi.mock('$lib/server/renewal/renewal-service', () => ({
+vi.mock('#lib/server/renewal/renewal-service.js', () => ({
 	getRenewalDocument: (id: string) => getRenewalDocument(id)
 }));
 
 const body = new ReadableStream();
 const getPrivateObject = vi.fn(async (_key: string) => ({ body }) as unknown);
-vi.mock('$lib/server/private-storage', () => ({
+vi.mock('#lib/server/private-storage.js', () => ({
 	getPrivateObject: (key: string) => getPrivateObject(key)
 }));
 

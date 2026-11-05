@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * One staff conversation — the thread pane of the two-pane inbox.
 	 *
@@ -11,24 +11,24 @@
 	import { onDestroy } from 'svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import ThreadPane from '$lib/components/inbox/ThreadPane.svelte';
-	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
-	import ThreadComposer from '$lib/components/inbox/ThreadComposer.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import ThreadPane from '#lib/components/inbox/ThreadPane.svelte';
+	import ThreadTimeline from '#lib/components/inbox/ThreadTimeline.svelte';
+	import ThreadComposer from '#lib/components/inbox/ThreadComposer.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { useInboxToolbar } from '../toolbar.svelte';
 	import DetailsPanel from './DetailsPanel.svelte';
-	import DispositionBar from '$lib/components/inbox/DispositionBar.svelte';
+	import DispositionBar from '#lib/components/inbox/DispositionBar.svelte';
 	import {
 		channelIcon,
 		channelLabel,
 		isMetaReplyWindowClosed
-	} from '$lib/components/inbox/channels';
-	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
-	import { isAlwaysEnabledChannel, isStaffInboxChannel } from '$lib/config';
-	import { formatDate } from '$lib/utils/format';
-	import { Latest } from '$lib/latest.svelte';
+	} from '#lib/components/inbox/channels.js';
+	import { threadDisplayStatus } from '#lib/components/inbox/thread-status.js';
+	import { isAlwaysEnabledChannel, isStaffInboxChannel } from '#lib/config.js';
+	import { formatDate } from '#lib/utils/format.js';
+	import { Latest } from '#lib/latest.svelte.js';
 	import { IconAlarmSnooze, IconArrowLeft, IconSend } from '@tabler/icons-svelte';
 	import {
 		getInboxThread,
@@ -37,7 +37,7 @@
 		addThreadNote,
 		assignThread,
 		getAssignableStaff
-	} from '$lib/remote/inbox.remote';
+	} from '#lib/remote/inbox.remote.js';
 
 	const threadId = $derived(page.params.id!);
 
@@ -92,7 +92,7 @@
 
 {#snippet conversationBar()}
 	<Button
-		href={resolve('/staff/inbox')}
+		href={resolve('staff/inbox')}
 		variant="ghost"
 		size="sm"
 		shape="square"
@@ -177,7 +177,7 @@
 						: undefined}
 		<div class="flex flex-col gap-2">
 			{#if channelDisabled}
-				<Alert type="warning" href={resolve('/staff/settings')}>
+				<Alert type="warning" href={resolve('staff/settings')}>
 					{m.staff_inbox_id_channel_disabled_enable_settings_inbox({
 						channelLabel: channelLabel(t.channel)
 					})}

@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** The foundations, trusts and agencies the collective applies to. */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
 	import FunderFields from './FunderFields.svelte';
 	import {
 		getFunders,
@@ -16,7 +16,7 @@
 		archiveFunder,
 		restoreFunder,
 		deleteFunder
-	} from '$lib/remote/grants.remote';
+	} from '#lib/remote/grants.remote.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 
@@ -28,10 +28,10 @@
 	}
 
 	function setArchived(on: boolean) {
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		if (on) url.searchParams.set('archived', '1');
 		else url.searchParams.delete('archived');
-		goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+		goto(url, { replace: true, reset: false });
 	}
 </script>
 
@@ -101,7 +101,7 @@
 							onsuccess={refresh}
 						>
 							{#snippet form()}
-								<input type="hidden" name="id" value={f.id} />
+								<input {...edit.fields.id.as('hidden', f.id)} />
 								<FunderFields fields={edit.fields} value={f} />
 							{/snippet}
 						</Action>
@@ -116,7 +116,7 @@
 								noFooter
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={f.id} />
+									<input {...restoreFunder.for(f.id).fields.id.as('hidden', f.id)} />
 								{/snippet}
 							</Action>
 						{:else}
@@ -131,7 +131,7 @@
 								onsuccess={refresh}
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={f.id} />
+									<input {...archiveFunder.for(f.id).fields.id.as('hidden', f.id)} />
 									<p class="text-sm">
 										{m.staff_grants_funders_comes_off_list_picker_new()}
 									</p>
@@ -152,7 +152,7 @@
 								onsuccess={refresh}
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={f.id} />
+									<input {...deleteFunder.for(f.id).fields.id.as('hidden', f.id)} />
 									<p class="text-sm">{m.staff_grants_funders_has_no_applications_so_nothing()}</p>
 								{/snippet}
 							</Action>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import InboxShell from '$lib/components/inbox/InboxShell.svelte';
+	import InboxShell from '#lib/components/inbox/InboxShell.svelte';
 	import InboxList from './InboxList.svelte';
 	import FilterPanel from './FilterPanel.svelte';
 	import SaveViewDialog from './SaveViewDialog.svelte';

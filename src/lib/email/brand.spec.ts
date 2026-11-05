@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { BRAND } from './brand';
-import { CAMPAIGN_LAYOUT } from '$lib/server/marketing/campaign-layout';
+import { CAMPAIGN_LAYOUT } from '#lib/server/marketing/campaign-layout.js';
 
 // ---------------------------------------------------------------------------
 // Email palette guard

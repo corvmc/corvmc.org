@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { IconPlayerPlayFilled, IconPlayerPauseFilled } from '@tabler/icons-svelte';
-	import { formatTrackLength } from '$lib/utils/audio';
+	import { formatTrackLength } from '#lib/utils/audio.js';
 
 	export type PlayableTrack = {
 		id: string;

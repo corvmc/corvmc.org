@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { formatCents } from '$lib/utils/format';
+import { formatCents } from '#lib/utils/format.js';
 
 const DoorSalesCard = (await import('./DoorSalesCard.svelte')).default;
 

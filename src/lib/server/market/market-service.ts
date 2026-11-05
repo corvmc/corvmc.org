@@ -1,14 +1,14 @@
 import { env } from '$env/dynamic/public';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from 'drizzle-orm';
-import { eventListing, publicEventStatuses } from '$lib/server/db/schema/event';
-import { inboxThread } from '$lib/server/db/schema/inbox';
-import { projectCommittee } from '$lib/server/db/schema/project';
-import { marketDay, marketVendor, type MarketVendor } from '$lib/server/db/schema/market';
-import { findOrCreateThread } from '$lib/server/inbox/thread-service';
-import { addInboundMessage, addOutboundMessage } from '$lib/server/inbox/message-service';
-import { DomainError } from '$lib/server/domain-error';
-import { marketVendorStatuses, type MarketVendorStatus } from '$lib/config';
+import { eventListing, publicEventStatuses } from '#lib/server/db/schema/event.js';
+import { inboxThread } from '#lib/server/db/schema/inbox.js';
+import { projectCommittee } from '#lib/server/db/schema/project.js';
+import { marketDay, marketVendor, type MarketVendor } from '#lib/server/db/schema/market.js';
+import { findOrCreateThread } from '#lib/server/inbox/thread-service.js';
+import { addInboundMessage, addOutboundMessage } from '#lib/server/inbox/message-service.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { marketVendorStatuses, type MarketVendorStatus } from '#lib/config.js';
 import { refundVendorFee, vendorPayPath } from './vendor-fee-service';
 
 /**

@@ -12,20 +12,20 @@ import {
 	sql,
 	type SQL
 } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { artifactRequest } from '$lib/server/db/schema/artifact-request';
-import { eventListing } from '$lib/server/db/schema/event';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { mediaAttachment } from '$lib/server/db/schema/media';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { artifactRequest } from '#lib/server/db/schema/artifact-request.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { mediaAttachment } from '#lib/server/db/schema/media.js';
 import {
 	volunteerRole,
 	volunteerSignup,
 	workOrder,
 	workTask
-} from '$lib/server/db/schema/volunteer';
-import { DomainError } from '$lib/server/domain-error';
-import type { WorkDoneCondition } from '$lib/config';
+} from '#lib/server/db/schema/volunteer.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import type { WorkDoneCondition } from '#lib/config.js';
 import { evaluateDone, type DeliverableState } from './done-conditions';
 import { assertOwningCommittee } from './duty-list-service';
 

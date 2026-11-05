@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** Which show a sponsorship is credited on, and where. */
-	import { Field } from '$lib/components/ui/Form';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { searchEventsForPlacement } from '$lib/remote/events.remote';
-	import type { placeSponsorship } from '$lib/remote/sponsors.remote';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { searchEventsForPlacement } from '#lib/remote/events.remote.js';
+	import type { placeSponsorship } from '#lib/remote/sponsors.remote.js';
 
 	type EventOption = { id: string; title: string; when: string };
 

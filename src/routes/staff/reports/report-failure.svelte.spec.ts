@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import type { Component } from 'svelte';
-import OuterBoundary from '$lib/components/ui/OuterBoundary.test.svelte';
+import OuterBoundary from '#lib/components/ui/OuterBoundary.test.svelte';
 import Annual from './annual/+page.svelte';
 import Volunteering from './volunteering/+page.svelte';
 import InventorySpend from './inventory-spend/+page.svelte';
@@ -14,13 +14,13 @@ const refused = vi.hoisted(() => () => {
 	return Object.assign(rejection, { refresh: () => Promise.resolve() });
 });
 
-vi.mock('$lib/remote/reports.remote', () => ({ getAnnualReportPage: refused }));
-vi.mock('$lib/remote/volunteer.remote', () => ({ getVolunteerReportPage: refused }));
-vi.mock('$lib/remote/inventory.remote', () => ({
+vi.mock('#lib/remote/reports.remote.js', () => ({ getAnnualReportPage: refused }));
+vi.mock('#lib/remote/volunteer.remote.js', () => ({ getVolunteerReportPage: refused }));
+vi.mock('#lib/remote/inventory.remote.js', () => ({
 	getSpendReport: refused,
 	getAcquisitions: refused
 }));
-vi.mock('$lib/remote/layout.remote', () => ({
+vi.mock('#lib/remote/layout.remote.js', () => ({
 	getStaffLayout: () => Promise.resolve({ capabilities: [] })
 }));
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));

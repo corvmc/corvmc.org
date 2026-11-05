@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { IconCalendarPlus, IconAlertTriangle } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import PosterCard from '$lib/components/events/PosterCard.svelte';
-	import EventFacts from '$lib/components/events/EventFacts.svelte';
-	import ReportEventAction from '$lib/components/actions/ReportEventAction.svelte';
-	import { formatTime } from '$lib/utils/format';
-	import { ticketingMode, isFreeEvent as isFree } from '$lib/utils/event-ticketing';
-	import { sanitizeHtml } from '$lib/utils/markdown';
-	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
-	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
-	import { placeLine } from '$lib/utils/place';
-	import { getPublicEventDetail } from '$lib/remote/events.remote';
-	import ShareButton from '$lib/components/ui/ShareButton.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import PosterCard from '#lib/components/events/PosterCard.svelte';
+	import EventFacts from '#lib/components/events/EventFacts.svelte';
+	import ReportEventAction from '#lib/components/actions/ReportEventAction.svelte';
+	import { formatTime } from '#lib/utils/format.js';
+	import { ticketingMode, isFreeEvent as isFree } from '#lib/utils/event-ticketing.js';
+	import { sanitizeHtml } from '#lib/utils/markdown.js';
+	import { tagToTapeVariant, tagToStickerColor } from '#lib/utils/tag-colors.js';
+	import { googleCalendarUrl, icsDataUrl } from '#lib/utils/calendar.js';
+	import { placeLine } from '#lib/utils/place.js';
+	import { getPublicEventDetail } from '#lib/remote/events.remote.js';
+	import ShareButton from '#lib/components/ui/ShareButton.svelte';
 	import EventPhotos from './EventPhotos.svelte';
 	import RecapUpload from './RecapUpload.svelte';
 	import MarketVendors from './MarketVendors.svelte';
@@ -71,7 +71,7 @@
 	const isCancelled = $derived(evt.status === 'cancelled');
 
 	const isBandEvent = $derived(evt.source === 'band');
-	const bandHref = $derived(evt.bandSlug ? resolve(`/directory/bands/${evt.bandSlug}`) : null);
+	const bandHref = $derived(evt.bandSlug ? resolve(`directory/bands/${evt.bandSlug}`) : null);
 
 	// /tickets only exists for events we sell — it 404s otherwise, so anything
 	// else follows the off-site seller (or the band, or the listing).
@@ -83,7 +83,7 @@
 		evt.ticketingEnabled ? undefined : (evt.externalTicketUrl ?? undefined)
 	);
 	const ticketsHref = $derived(
-		evt.ticketingEnabled ? resolve(`/events/${evt.id}/tickets`) : (bandHref ?? resolve('/events'))
+		evt.ticketingEnabled ? resolve(`events/${evt.id}/tickets`) : (bandHref ?? resolve('events'))
 	);
 </script>
 
@@ -100,7 +100,7 @@
 
 <section class="px-6 py-10">
 	<div class="mx-auto max-w-4xl">
-		<PageHeader title={evt.title} parent={{ label: m.public_events(), href: resolve('/events') }}>
+		<PageHeader title={evt.title} parent={{ label: m.public_events(), href: resolve('events') }}>
 			<div class="flex items-center gap-1">
 				<details class="dropdown dropdown-end">
 					<summary class="btn gap-1 btn-ghost btn-sm">
@@ -174,7 +174,7 @@
 						{#each evt.lineup as act, i (act.id)}
 							{#if i > 0}<span aria-hidden="true"> · </span>{/if}
 							{#if act.slug}
-								<a href={resolve(`/directory/bands/${act.slug}`)} class="link">{act.name}</a>
+								<a href={resolve(`directory/bands/${act.slug}`)} class="link">{act.name}</a>
 							{:else if act.externalUrl}
 								<!-- An external act: no CMC page exists for it, so its name
 								     points at the presence it chose. `rel` because this leaves

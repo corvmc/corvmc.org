@@ -1,21 +1,21 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { getMemberBandDirectory } from '$lib/remote/directory.remote';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
-	import VinylCard from '$lib/components/directory/VinylCard.svelte';
-	import { hashIndex } from '$lib/utils/patterns';
+	import { getMemberBandDirectory } from '#lib/remote/directory.remote.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import FreeformTagInput from '#lib/components/ui/FreeformTagInput.svelte';
+	import VinylCard from '#lib/components/directory/VinylCard.svelte';
+	import { hashIndex } from '#lib/utils/patterns.js';
 	import {
 		BAND_COLORS,
 		directorySortOptions,
 		type DirectorySort
-	} from '$lib/utils/directory-browse';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { m } from '$lib/paraglide/messages.js';
-	import { many } from '$lib/terms';
+	} from '#lib/utils/directory-browse.js';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import { many } from '#lib/terms.js';
 
 	/** Cards rendered before "Show more" appears. */
 	const PAGE_SIZE = 24;
@@ -68,7 +68,7 @@
 </script>
 
 <PageHeader title={bandsLabel} subtitle={m.member_community()}>
-	<Button href={resolve('/member/bands?create=1')} variant="ghost" data-sveltekit-reload>
+	<Button href={resolve('member/bands?create=1')} variant="ghost" data-sveltekit-reload>
 		{m.member_new()}
 	</Button>
 </PageHeader>

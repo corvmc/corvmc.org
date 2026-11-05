@@ -1,15 +1,15 @@
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { form } from './_remote';
-import { mapDomainError } from '$lib/server/errors';
-import { requireProgramRole } from '$lib/server/group/group-context';
-import { DEFAULT_TIMEZONE, LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
-import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
-import { createEventSeries, getByEvent } from '$lib/server/reservation/recurring-series-service';
-import { RECURRING_FREQUENCIES } from '$lib/server/db/schema/recurring';
-import { readPosterFile, toPosterParam } from '$lib/server/event/poster-file';
-import { validateUpload } from '$lib/server/storage';
-import { dollarsToCents } from '$lib/utils/event-ticketing';
+import { mapDomainError } from '#lib/server/errors.js';
+import { requireProgramRole } from '#lib/server/group/group-context.js';
+import { DEFAULT_TIMEZONE, LONG_TEXT_MAX, SHORT_TEXT_MAX } from '#lib/config.js';
+import { buildDateInTz, buildTimeRangeInTz } from '#lib/server/reservation/timezone.js';
+import { createEventSeries, getByEvent } from '#lib/server/reservation/recurring-series-service.js';
+import { RECURRING_FREQUENCIES } from '#lib/server/db/schema/recurring.js';
+import { readPosterFile, toPosterParam } from '#lib/server/event/poster-file.js';
+import { validateUpload } from '#lib/server/storage.js';
+import { dollarsToCents } from '#lib/utils/event-ticketing.js';
 import {
 	cancelGroupSession as cancelSession,
 	createGroupEvent,
@@ -17,7 +17,7 @@ import {
 	publish,
 	unpublish,
 	updateGroupSession as updateSession
-} from '$lib/server/event/event-service';
+} from '#lib/server/event/event-service.js';
 
 /**
  * A club's or committee's sessions — the writes.

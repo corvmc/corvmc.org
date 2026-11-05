@@ -6,11 +6,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * replayed from the migrations, which carry the `Show deliverables` template.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			const out = [];
@@ -20,11 +20,11 @@ vi.mock('$lib/server/db', () => ({
 	})
 }));
 const capture = vi.fn();
-vi.mock('$lib/server/sentry', () => ({ captureException: capture }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: capture }));
 
 const { stampProductionTemplate } = await import('./production-project');
 const { startProject, attachToProject, listProjects } =
-	await import('$lib/server/project/project-service');
+	await import('#lib/server/project/project-service.js');
 const onProjectsView = async () =>
 	(await listProjects({ exceptListedShows: true })).map((p) => p.id);
 

@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
 	import ContactRoleFields from './ContactRoleFields.svelte';
 	import { resolve } from '$app/paths';
-	import { saveBandEpk } from '$lib/remote/press-kit.remote';
-	import type { getBandLayout } from '$lib/remote/layout.remote';
-	import type { FullPressKit } from '$lib/types/band-page';
+	import { saveBandEpk } from '#lib/remote/press-kit.remote.js';
+	import type { getBandLayout } from '#lib/remote/layout.remote.js';
+	import type { FullPressKit } from '#lib/types/band-page.js';
 
 	let {
 		band,

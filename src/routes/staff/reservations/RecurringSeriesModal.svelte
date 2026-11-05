@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { Select } from '$lib/components/ui/Form';
-	import { EntityChip } from '$lib/components/ui/entity';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { Select } from '#lib/components/ui/Form/index.js';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
 	import { IconRepeat, IconX } from '@tabler/icons-svelte';
-	import { formatTimeRange, formatScheduleLabel, formatDateShortYear } from '$lib/utils/format';
-	import { cancelStaffSeries, getStaffRecurring } from '$lib/remote/recurring.remote';
+	import { formatTimeRange, formatScheduleLabel, formatDateShortYear } from '#lib/utils/format.js';
+	import { cancelStaffSeries, getStaffRecurring } from '#lib/remote/recurring.remote.js';
 
 	/**
 	 * The recurring series behind the bookings, off the Reservations header
@@ -64,7 +64,7 @@
 					{/snippet}
 
 					{#each series as s (s.id)}
-						{@const href = resolve(`/staff/recurring/${s.id}`)}
+						{@const href = resolve(`staff/recurring/${s.id}`)}
 						<tr>
 							<td class="w-px">
 								<StatusBadge status={s.cancelledAt ? 'cancelled' : 'active'} />

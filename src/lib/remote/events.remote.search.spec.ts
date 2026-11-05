@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // `searchEvents` backs the event picker on the volunteer shift forms. It is a
@@ -29,10 +29,10 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({ db: { select: () => chainable() } }));
+vi.mock('#lib/server/db/index.js', () => ({ db: { select: () => chainable() } }));
 
 let held: string[] | null = null;
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: vi.fn(async (cap: string) => {
 		if (held && !held.includes(cap)) throw Object.assign(new Error('403'), { status: 403 });
 		return mockUser({ id: 'staff-1' });
@@ -40,7 +40,7 @@ vi.mock('$lib/server/authorization', () => ({
 	requireUser: vi.fn(() => mockUser({ id: 'staff-1' }))
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	isFeatureEnabled: vi.fn(async () => true),
 	requireFeature: vi.fn(async () => undefined)
 }));
@@ -72,7 +72,7 @@ import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 
 const { searchEvents, searchEventsForPlacement } =
-	(await import('$lib/remote/events.remote')) as any;
+	(await import('#lib/remote/events.remote.js')) as any;
 
 function rendered() {
 	const where = chainCalls.find((c) => c.method === 'where');

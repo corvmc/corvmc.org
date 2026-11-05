@@ -8,7 +8,7 @@ import { sourceFiles } from './lib/source-files';
  * guards on `status >= 500`, and a `DomainError` is not an `HttpError`. Every
  * call into a service that throws one has to be mapped: by a `try` whose
  * `catch` calls `mapDomainError`, or by a `form`/`command` from
- * `$lib/remote/_remote`. A `query` gets no wrapper and still needs its own.
+ * `#lib/remote/_remote.js`. A `query` gets no wrapper and still needs its own.
  */
 const SERVER_GLOBS = ['src/lib/server/**/*.ts'];
 const REMOTE_GLOB = ['src/lib/remote/*.remote.ts'];
@@ -94,10 +94,10 @@ function throwingExports(sources: Map<string, string>): Map<string, Set<string>>
 function importsOf(source: string, from: string): Map<string, { file: string; name: string }> {
 	const out = new Map<string, { file: string; name: string }>();
 	for (const m of source.matchAll(
-		/import\s*\{([^}]*)\}\s*from\s*'(\$lib\/server\/[^']+|\.\/[^']+)'/gs
+		/import\s*\{([^}]*)\}\s*from\s*'([$#]lib\/server\/[^']+|\.\/[^']+)'/gs
 	)) {
-		const file = m[2].startsWith('$lib')
-			? `${m[2].replace('$lib/server', 'src/lib/server')}.ts`
+		const file = /^[$#]lib/.test(m[2])
+			? `${m[2].replace(/^[$#]lib\/server/, 'src/lib/server').replace(/\.js$/, '')}.ts`
 			: `${from.slice(0, from.lastIndexOf('/'))}/${m[2].slice(2)}.ts`;
 		for (const raw of m[1].split(',')) {
 			const spec = raw.trim();

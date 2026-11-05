@@ -7,7 +7,7 @@ import {
 	stockMovement
 } from '../src/lib/server/db/schema/inventory';
 import { readLocalDb } from './fixtures/platform-db';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
@@ -110,7 +110,7 @@ function modalSubmit(page: Page) {
 /** The submit of the page form that carries `field`. */
 function formSubmit(page: Page, field: string) {
 	return page
-		.locator('form', { has: page.locator(`[name="${field}"]`) })
+		.locator('form', { has: page.locator(`:is([name="${field}"], [name^="${field}/"])`) })
 		.locator('button[type="submit"]');
 }
 
@@ -154,7 +154,10 @@ test.describe('inventory', () => {
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 		await expect(page.getByRole('table')).toBeVisible();
 
-		await page.locator('input[type="search"], input[name="search"]').first().fill('E2E Test');
+		await page
+			.locator('input[type="search"], input:is([name="search"], [name^="search/"])')
+			.first()
+			.fill('E2E Test');
 		await expect(page.getByText(SEED_ITEM_NAME)).toBeVisible({ timeout: 10000 });
 		await expect(page.getByText(SEED_CONSUMABLE_NAME)).toBeVisible();
 
@@ -182,7 +185,10 @@ test.describe('inventory', () => {
 
 		// Use three packs.
 		await page.getByTestId('use-stock').click();
-		await page.getByRole('dialog').locator('input[name$="quantity"]').fill('3');
+		await page
+			.getByRole('dialog')
+			.locator('input:is([name$="quantity"], [name*="quantity/"])')
+			.fill('3');
 		await modalSubmit(page).click();
 		await expectSuccessToast(page, 10000);
 
@@ -193,7 +199,7 @@ test.describe('inventory', () => {
 		// The modal asks for the counted total now, not the difference; the delta
 		// it derives is what still reaches the ledger.
 		await page.getByTestId('stocktake').click();
-		await page.getByRole('dialog').locator('input[name="counted"]').fill(String(before));
+		await page.getByRole('dialog').getByTestId('stocktake-counted').fill(String(before));
 		await modalSubmit(page).click();
 		await expectSuccessToast(page, 10000);
 
@@ -213,7 +219,10 @@ test.describe('inventory', () => {
 		await expect(page.getByRole('heading', { level: 1, name: NEW_TAG })).toHaveCount(0);
 
 		await page.getByTestId('bind-tag').click();
-		await page.getByRole('dialog').locator('input[name$="assetTag"]').fill(NEW_TAG);
+		await page
+			.getByRole('dialog')
+			.locator('input:is([name$="assetTag"], [name*="assetTag/"])')
+			.fill(NEW_TAG);
 		await modalSubmit(page).click();
 		await expectSuccessToast(page, 10000);
 
@@ -397,14 +406,20 @@ test.describe('inventory', () => {
 			await loginAsStaff(page);
 			await page.goto(`/staff/inventory/loans/${SEED_SCHEDULE_LOAN_ID}`);
 
-			await expect(page.locator('input[name="scheduledPickupDate"]')).toBeVisible();
-			await page.locator('input[name="scheduledPickupDate"]').fill('2026-09-10');
+			await expect(
+				page.locator('input:is([name="scheduledPickupDate"], [name^="scheduledPickupDate/"])')
+			).toBeVisible();
+			await page
+				.locator('input:is([name="scheduledPickupDate"], [name^="scheduledPickupDate/"])')
+				.fill('2026-09-10');
 			await formSubmit(page, 'scheduledPickupDate').click();
 			await expectSuccessToast(page, 10000);
 
 			// The state moved on, so the next step's control is the one on offer.
-			await expect(page.locator('input[name="dueDate"]')).toBeVisible();
-			await expect(page.locator('input[name="scheduledPickupDate"]')).toHaveCount(0);
+			await expect(page.locator('input:is([name="dueDate"], [name^="dueDate/"])')).toBeVisible();
+			await expect(
+				page.locator('input:is([name="scheduledPickupDate"], [name^="scheduledPickupDate/"])')
+			).toHaveCount(0);
 		});
 
 		/**
@@ -420,12 +435,12 @@ test.describe('inventory', () => {
 			await loginAsStaff(page);
 			await page.goto(`/staff/inventory/loans/${SEED_CHECKOUT_LOAN_ID}`);
 
-			await expect(page.locator('input[name="dueDate"]')).toBeVisible();
-			await page.locator('input[name="dueDate"]').fill('2026-09-20');
+			await expect(page.locator('input:is([name="dueDate"], [name^="dueDate/"])')).toBeVisible();
+			await page.locator('input:is([name="dueDate"], [name^="dueDate/"])').fill('2026-09-20');
 
 			// The picker offers units by the tag printed on them, which is what a
 			// staffer is reading off the sticker in their hand.
-			const unitPicker = page.locator('select[name="assetId"]');
+			const unitPicker = page.locator('select:is([name="assetId"], [name^="assetId/"])');
 			await expect(unitPicker.locator('option', { hasText: SEED_CHECKOUT_ASSET_TAG })).toHaveCount(
 				1
 			);
@@ -470,7 +485,7 @@ test.describe('inventory', () => {
 			// Returned is terminal: neither the return nor the checkout is offered.
 			await visit(page, `/staff/inventory/loans/${SEED_RETURN_LOAN_ID}`);
 			await expect(page.getByTestId('mark-returned')).toHaveCount(0);
-			await expect(page.locator('input[name="dueDate"]')).toHaveCount(0);
+			await expect(page.locator('input:is([name="dueDate"], [name^="dueDate/"])')).toHaveCount(0);
 		});
 
 		test('a member requests a loan from the catalog', async ({ page }) => {
@@ -481,8 +496,12 @@ test.describe('inventory', () => {
 			// one out on repair renders its Request button disabled.
 			await page.locator('.card', { hasText: SEED_ITEM_NAME }).getByRole('button').click();
 			const dialog = page.getByRole('dialog');
-			await dialog.locator('input[name="requestedPickupDate"]').fill('2026-09-15');
-			await dialog.locator('input[name="estimatedReturnDate"]').fill('2026-09-18');
+			await dialog
+				.locator('input:is([name="requestedPickupDate"], [name^="requestedPickupDate/"])')
+				.fill('2026-09-15');
+			await dialog
+				.locator('input:is([name="estimatedReturnDate"], [name^="estimatedReturnDate/"])')
+				.fill('2026-09-18');
 			await dialog.locator('button[type="submit"]').click();
 
 			await page.goto('/member/equipment/loans');
@@ -561,10 +580,13 @@ test.describe('inventory', () => {
 
 			await page.goto(`/staff/inventory/acquisitions/${SEED_SIGN_DONATION_ID}`);
 			await page.getByTestId('record-8283').click();
-			await page.getByRole('dialog').locator('input[name$="signedOn"]').fill('2026-03-04');
 			await page
 				.getByRole('dialog')
-				.locator('input[name$="appraisalRef"]')
+				.locator('input:is([name$="signedOn"], [name*="signedOn/"])')
+				.fill('2026-03-04');
+			await page
+				.getByRole('dialog')
+				.locator('input:is([name$="appraisalRef"], [name*="appraisalRef/"])')
 				.fill('Appraisal 2026-03');
 			await modalSubmit(page).click();
 			await expectSuccessToast(page, 10000);
@@ -704,8 +726,10 @@ test.describe('inventory', () => {
 				}
 			);
 
-			await page.locator('input[name="email"]').fill(SEED_STAFF_EMAIL);
-			await page.locator('input[name="password"]').fill(SEED_STAFF_PASSWORD);
+			await page.locator('input:is([name="email"], [name^="email/"])').fill(SEED_STAFF_EMAIL);
+			await page
+				.locator('input:is([name="password"], [name^="password/"])')
+				.fill(SEED_STAFF_PASSWORD);
 			await formSubmit(page, 'password').click();
 
 			// Back through `/a/[tag]`, which now resolves the scan for a signed-in

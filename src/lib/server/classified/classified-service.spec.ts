@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { ClassifiedKind, ClassifiedCategory } from '$lib/config';
+import type { ClassifiedKind, ClassifiedCategory } from '#lib/config.js';
 
 /**
  * Classifieds, against a real SQLite. The rules worth pinning are `WHERE`
@@ -8,12 +8,12 @@ import type { ClassifiedKind, ClassifiedCategory } from '$lib/config';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
 // better-sqlite3's drizzle has no `batch`; D1's runs the statements in order, as this does.
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			const out = [];
@@ -25,9 +25,9 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const svc = await import('./classified-service');
-const { classifiedPost, classifiedPostTag } = await import('$lib/server/db/schema/classified');
-const { memberStanding } = await import('$lib/server/db/schema/standing');
-const { MAX_OPEN_CLASSIFIEDS, CLASSIFIED_LIFETIME_DAYS } = await import('$lib/config');
+const { classifiedPost, classifiedPostTag } = await import('#lib/server/db/schema/classified.js');
+const { memberStanding } = await import('#lib/server/db/schema/standing.js');
+const { MAX_OPEN_CLASSIFIEDS, CLASSIFIED_LIFETIME_DAYS } = await import('#lib/config.js');
 const { eq } = await import('drizzle-orm');
 
 const AUTHOR = 'usr-author';
@@ -39,8 +39,8 @@ const DAY = 86_400_000;
 const NOW = new Date('2026-09-23T12:00:00Z');
 
 async function seed() {
-	const { user } = await import('$lib/server/db/schema/authentication');
-	const { group, groupMember } = await import('$lib/server/db/schema/group');
+	const { user } = await import('#lib/server/db/schema/authentication.js');
+	const { group, groupMember } = await import('#lib/server/db/schema/group.js');
 	await testDb.insert(user).values([
 		{ id: AUTHOR, name: 'Ada', email: 'ada@example.com', emailVerified: false },
 		{ id: OTHER, name: 'Bo', email: 'bo@example.com', emailVerified: false },

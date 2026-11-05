@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import { resolve } from '$app/paths';
-	import { formatDateTimeShort, formatDateShort } from '$lib/utils/format';
+	import { formatDateTimeShort, formatDateShort } from '#lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import {
 		getMemberGroup,
@@ -21,22 +21,22 @@
 		removeGroupMember,
 		revokeGroupInvitation,
 		revokeGroupEmailInvite
-	} from '$lib/remote/groups.remote';
+	} from '#lib/remote/groups.remote.js';
 	import {
 		cancelGroupSession,
 		publishGroupSession,
 		unpublishGroupSession
-	} from '$lib/remote/group-events.remote';
-	import AnnouncementList from '$lib/components/groups/AnnouncementList.svelte';
-	import DocumentList from '$lib/components/groups/DocumentList.svelte';
-	import MuteAnnouncementsAction from '$lib/components/groups/MuteAnnouncementsAction.svelte';
-	import CreateSessionAction from '$lib/components/groups/CreateSessionAction.svelte';
-	import InviteGroupMemberAction from '$lib/components/groups/InviteGroupMemberAction.svelte';
-	import GroupMemberEditAction from '$lib/components/groups/GroupMemberEditAction.svelte';
-	import GroupSelfEditAction from '$lib/components/groups/GroupSelfEditAction.svelte';
-	import ApplicationsCard from '$lib/components/groups/ApplicationsCard.svelte';
-	import EditSessionAction from '$lib/components/groups/EditSessionAction.svelte';
-	import RepeatSessionAction from '$lib/components/groups/RepeatSessionAction.svelte';
+	} from '#lib/remote/group-events.remote.js';
+	import AnnouncementList from '#lib/components/groups/AnnouncementList.svelte';
+	import DocumentList from '#lib/components/groups/DocumentList.svelte';
+	import MuteAnnouncementsAction from '#lib/components/groups/MuteAnnouncementsAction.svelte';
+	import CreateSessionAction from '#lib/components/groups/CreateSessionAction.svelte';
+	import InviteGroupMemberAction from '#lib/components/groups/InviteGroupMemberAction.svelte';
+	import GroupMemberEditAction from '#lib/components/groups/GroupMemberEditAction.svelte';
+	import GroupSelfEditAction from '#lib/components/groups/GroupSelfEditAction.svelte';
+	import ApplicationsCard from '#lib/components/groups/ApplicationsCard.svelte';
+	import EditSessionAction from '#lib/components/groups/EditSessionAction.svelte';
+	import RepeatSessionAction from '#lib/components/groups/RepeatSessionAction.svelte';
 	import ProjectStatusAction from './ProjectStatusAction.svelte';
 	import ProjectDutyListAction from './ProjectDutyListAction.svelte';
 	import CommitteeNumbers from './CommitteeNumbers.svelte';
@@ -106,7 +106,7 @@
 		return defaultTab;
 	});
 	const tabHref = (t: Tab) =>
-		resolve(`/member/groups/${slug}${t === defaultTab ? '' : `?tab=${t}`}`);
+		resolve(`member/groups/${slug}${t === defaultTab ? '' : `?tab=${t}`}`);
 
 	const kindLabel = $derived(
 		group.kind === 'committee' ? msg.member_groups_slug_committee() : msg.member_groups_slug_club()
@@ -143,7 +143,7 @@
 		<Badge variant="ghost">{data.role}</Badge>
 	{/if}
 	{#if data.canManage}
-		<Button href={resolve(`/member/groups/${slug}/edit`)} variant="ghost" size="sm"
+		<Button href={resolve(`member/groups/${slug}/edit`)} variant="ghost" size="sm"
 			>{msg.member_edit()}</Button
 		>
 	{/if}
@@ -168,7 +168,7 @@
 			successToast={msg.member_groups_slug_have_left()}
 			variant="ghost"
 			size="sm"
-			onsuccess={() => goto(resolve('/member/groups'))}
+			onsuccess={() => goto(resolve('member/groups'))}
 		>
 			{#snippet form()}
 				<input {...leaveFields.groupId.as('hidden', group.id)} />
@@ -300,7 +300,7 @@
 							<td class="cell-primary">
 								<!-- A show's console reads either half of it through the project. -->
 								{#if event.productionId && (may('production.book') || may('production.run'))}
-									<a class="link" href={resolve(`/staff/events/${event.id}/production`)}
+									<a class="link" href={resolve(`staff/events/${event.id}/production`)}
 										>{event.title}</a
 									>
 								{:else}
@@ -370,7 +370,7 @@
 						<tr>
 							<td class="whitespace-nowrap">{formatDateTimeShort(s.startsAt)}</td>
 							<td class="cell-primary">
-								<a class="link" href={resolve(`/events/${s.id}`)}>{s.title}</a>
+								<a class="link" href={resolve(`events/${s.id}`)}>{s.title}</a>
 							</td>
 							<td class="w-px">
 								<!-- The fact that separates a program's session from a listing
@@ -472,7 +472,7 @@
 						: msg.member_groups_slug_nothing_written_about_program_yet_2()}
 				>
 					{#if data.canManage}
-						<Button href={resolve(`/member/groups/${slug}/edit`)} variant="primary" size="sm">
+						<Button href={resolve(`member/groups/${slug}/edit`)} variant="primary" size="sm">
 							{msg.member_groups_slug_write()}
 						</Button>
 					{/if}

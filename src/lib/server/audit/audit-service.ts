@@ -13,27 +13,32 @@ import {
 } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { getRequestEvent } from '$app/server';
-import { db } from '$lib/server/db';
-import { auditLog } from '$lib/server/db/schema/audit';
-import { user } from '$lib/server/db/schema/authentication';
-import { group } from '$lib/server/db/schema/group';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput, type PaginatedResult } from '$lib/server/db/paginate';
-import { bandRefColumns, memberRefColumns, toBandRef, toMemberRef } from '$lib/server/entity/refs';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { captureException } from '$lib/server/sentry';
-import { DEFAULT_TIMEZONE } from '$lib/config';
-import type { EntityRef, MemberRef } from '$lib/types/entity';
-import { feedLimit } from '$lib/types/activity';
+import { db } from '#lib/server/db/index.js';
+import { auditLog } from '#lib/server/db/schema/audit.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput, type PaginatedResult } from '#lib/server/db/paginate.js';
+import {
+	bandRefColumns,
+	memberRefColumns,
+	toBandRef,
+	toMemberRef
+} from '#lib/server/entity/refs.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { captureException } from '#lib/server/sentry.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import type { EntityRef, MemberRef } from '#lib/types/entity.js';
+import { feedLimit } from '#lib/types/activity.js';
 import type {
 	AuditAction,
 	AuditActor,
 	AuditEntry,
 	AuditEntryInput,
 	AuditSubjectType
-} from '$lib/types/audit';
+} from '#lib/types/audit.js';
 
-export type { AuditActor, AuditEntryInput } from '$lib/types/audit';
+export type { AuditActor, AuditEntryInput } from '#lib/types/audit.js';
 
 const MAX_DETAILS_BYTES = 4096;
 const MAX_LABEL_LENGTH = 200;

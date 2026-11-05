@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // `getRecurringReservations` lists the caller's own series. A signed-out call is
 // refused before any read, rather than binding an absent id into the filter (#2255).
@@ -19,9 +19,9 @@ const select = vi.fn(() => {
 	};
 	return c;
 });
-vi.mock('$lib/server/db', () => ({ db: { select: () => select() } }));
+vi.mock('#lib/server/db/index.js', () => ({ db: { select: () => select() } }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: vi.fn(async () => false),
 	requireCapability: vi.fn(),
 	requireCapabilityOrOwner: vi.fn(),
@@ -31,7 +31,7 @@ vi.mock('$lib/server/authorization', () => ({
 	})
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 
 // Kit refuses a remote module whose exports lack the `__` marker.
 const mark = (handler: any, type: string) => Object.assign(handler, { __: { type } });
@@ -47,7 +47,7 @@ vi.mock('$app/server', () => ({
 	query: (...args: unknown[]) => mark(typeof args[0] === 'function' ? args[0] : args[1], 'query')
 }));
 
-const { getRecurringReservations } = (await import('$lib/remote/reservations.remote')) as any;
+const { getRecurringReservations } = (await import('#lib/remote/reservations.remote.js')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

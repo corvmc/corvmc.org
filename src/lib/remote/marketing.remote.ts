@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { toGenericRef } from '$lib/server/entity/refs';
-import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '$lib/config';
+import { toGenericRef } from '#lib/server/entity/refs.js';
+import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '#lib/config.js';
 import { error, invalid } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form, command } from './_remote';
-import { verifyTurnstile } from '$lib/server/turnstile';
-import { requireCapability } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
+import { verifyTurnstile } from '#lib/server/turnstile.js';
+import { requireCapability } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import {
 	listAudiences,
 	getAudience,
@@ -22,7 +22,7 @@ import {
 	listSubscribers,
 	getSubscriptionsForUser,
 	countEventAudience
-} from '$lib/server/marketing/audience-service';
+} from '#lib/server/marketing/audience-service.js';
 import {
 	listCampaigns,
 	getCampaign,
@@ -34,17 +34,17 @@ import {
 	unscheduleCampaign as unscheduleCampaignService,
 	renderCampaignPreview,
 	type CampaignStatus
-} from '$lib/server/marketing/campaign-service';
+} from '#lib/server/marketing/campaign-service.js';
 import {
 	findOrCreateByEmail,
 	linkSubscriberToExistingUser,
 	findByUserId as findSubscriberByUserId,
 	suppressSelfService,
 	clearSelfServiceSuppression
-} from '$lib/server/marketing/subscriber-service';
-import { verifyUnsubscribeToken } from '$lib/server/marketing/unsubscribe';
-import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
-import { audience } from '$lib/server/db/schema/marketing';
+} from '#lib/server/marketing/subscriber-service.js';
+import { verifyUnsubscribeToken } from '#lib/server/marketing/unsubscribe.js';
+import { generateSlug, ensureUniqueSlug } from '#lib/server/utils/slug.js';
+import { audience } from '#lib/server/db/schema/marketing.js';
 
 // ---------------------------------------------------------------------------
 // Public queries

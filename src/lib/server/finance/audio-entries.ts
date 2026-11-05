@@ -4,7 +4,7 @@ import {
 	reverseEntriesForSubject,
 	type RecordEntryInput
 } from './financial-entry-service';
-import type { AudioPurchasedEvent } from '$lib/server/event-bus/event-bus';
+import type { AudioPurchasedEvent } from '#lib/server/event-bus/event-bus.js';
 
 /**
  * A music sale, in the ledger's terms (#1175).

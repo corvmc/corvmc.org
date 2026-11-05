@@ -14,7 +14,7 @@
 		"check:tooling": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.tooling.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "tsx scripts/run-unit-tests.ts",
-		"test:components": "vitest --run --project=client --project=storybook",
+		"test:components": "vitest --run --project=client",
 		"test:server": "vitest --run --project=server",
 		"test:changed": "vitest --run --changed",
 		"test": "pnpm run test:unit -- --run && playwright install chromium && pnpm run test:e2e",
@@ -34,8 +34,6 @@
 		"db:migrate": "drizzle-kit migrate",
 		"ci:migrate": "node scripts/ci-migrate.mjs",
 		"db:studio": "drizzle-kit studio",
-		"storybook": "storybook dev -p 6006",
-		"build-storybook": "storybook build",
 		"stripe:sync-webhooks": "tsx scripts/sync-webhooks.ts",
 		"db:seed": "tsx scripts/seed-dev.ts",
 		"help:sync": "tsx scripts/sync-help-articles.ts",
@@ -44,6 +42,7 @@
 		"docs:routes": "node scripts/docs/route-inventory.mjs --write",
 		"docs:check": "node scripts/docs/check-docs-drift.mjs",
 		"class-census": "node scripts/class-census.mjs",
+		"field-name-census": "node scripts/field-name-census.mjs",
 		"test-wording-census": "node scripts/test-wording-census.mjs",
 		"ui-string-census": "node scripts/ui-string-census.mjs",
 		"form-reachability": "tsx scripts/form-reachability.ts",
@@ -56,10 +55,11 @@
 		"db:migrate:local": "tsx scripts/db/migrate-local.ts"
 	},
 	"imports": {
-		"#/*": "./src/*"
+		"#/*": "./src/*",
+		"#lib": "./src/lib/index.ts",
+		"#lib/*": "./src/lib/*"
 	},
 	"devDependencies": {
-		"@chromatic-com/storybook": "^5.4.0",
 		"@cloudflare/workers-types": "^5.20261006.1",
 		"@eslint/compat": "^2.1.1",
 		"@eslint/js": "^10.0.1",
@@ -67,14 +67,9 @@
 		"@inlang/paraglide-js-svelte": "^1.0.5",
 		"@inlang/plugin-message-format": "^4.5.0",
 		"@playwright/test": "^1.63.0",
-		"@storybook/addon-a11y": "^10.6.1",
-		"@storybook/addon-docs": "^10.6.1",
-		"@storybook/addon-svelte-csf": "^5.1.5",
-		"@storybook/addon-vitest": "^10.6.1",
-		"@storybook/sveltekit": "^10.6.1",
-		"@sveltejs/adapter-auto": "^7.0.1",
-		"@sveltejs/adapter-cloudflare": "^7.2.9",
-		"@sveltejs/kit": "^2.70.3",
+		"@sveltejs/adapter-cloudflare": "^8.0.2",
+		"@sveltejs/kit": "^3.1.1",
+		"@sveltejs/load-config": "^0.2.2",
 		"@sveltejs/vite-plugin-svelte": "^7.3.1",
 		"@tailwindcss/forms": "^0.5.11",
 		"@tailwindcss/typography": "^0.5.20",
@@ -83,7 +78,7 @@
 		"@types/node": "^26.6.4",
 		"@vitest/browser-playwright": "^5.1.0",
 		"@vitest/coverage-v8": "^5.1.0",
-		"better-auth": "~1.7.7",
+		"better-auth": "~1.7.16",
 		"better-sqlite3": "^13.0.3",
 		"dotenv": "^17.4.2",
 		"drizzle-kit": "1.0.0-rc.3",
@@ -91,7 +86,6 @@
 		"drizzle-zod": "1.0.0-beta.14-56703c9",
 		"eslint": "^10.12.0",
 		"eslint-config-prettier": "^10.1.8",
-		"eslint-plugin-storybook": "^10.6.1",
 		"eslint-plugin-svelte": "^3.23.0",
 		"globals": "^17.13.0",
 		"handlebars": "^4.7.10",
@@ -102,8 +96,7 @@
 		"prettier": "^3.9.9",
 		"prettier-plugin-svelte": "^4.1.1",
 		"prettier-plugin-tailwindcss": "^0.8.1",
-		"storybook": "^10.6.1",
-		"svelte": "^5.57.0",
+		"svelte": "^5.57.3",
 		"svelte-check": "^4.7.6",
 		"tailwindcss": "^4.3.3",
 		"tsx": "^4.23.15",
@@ -119,7 +112,7 @@
 	"dependencies": {
 		"@cf-wasm/og": "0.5.0",
 		"@internationalized/date": "^3.12.4",
-		"@sentry/sveltekit": "^10",
+		"@sentry/sveltekit": "^11.10.0",
 		"@stripe/stripe-js": "^9.17.0",
 		"@tabler/icons-svelte": "^3.49.0",
 		"@tiptap/core": "^3.31.4",
@@ -171,7 +164,8 @@
 		},
 		"patchedDependencies": {
 			"yargs@17.7.2": "patches/yargs@17.7.2.patch",
-			"svelte@5.57.0": "patches/svelte@5.57.0.patch"
+			"svelte@5.57.3": "patches/svelte@5.57.3.patch",
+			"@sveltejs/kit@3.1.1": "patches/@sveltejs__kit@3.1.1.patch"
 		}
 	}
 }

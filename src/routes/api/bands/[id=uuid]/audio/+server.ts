@@ -2,16 +2,16 @@ import { json, error } from '@sveltejs/kit';
 // Typed params from `./$types`, matching the sibling media endpoint — the
 // generic kit `RequestHandler` types `params.id` as possibly-undefined.
 import type { RequestHandler } from './$types';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { requireFeature } from '$lib/server/feature-flags';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { requireFeature } from '#lib/server/feature-flags.js';
 import {
 	audioKey,
 	putAudioObject,
 	deleteAudioObject,
 	validateAudioUpload
-} from '$lib/server/audio/audio-storage';
-import { addTrack, getReleaseById, nextTrackNumber } from '$lib/server/audio/audio-service';
-import { RADIO_MIN_TRACK_MS, TRACK_TITLE_MAX } from '$lib/config';
+} from '#lib/server/audio/audio-storage.js';
+import { addTrack, getReleaseById, nextTrackNumber } from '#lib/server/audio/audio-service.js';
+import { RADIO_MIN_TRACK_MS, TRACK_TITLE_MAX } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // POST — upload one or more tracks onto a release

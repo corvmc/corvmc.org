@@ -1,27 +1,27 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import DateRangeFilter from '$lib/components/ui/DateRangeFilter.svelte';
-	import { formatCents, formatDateLong } from '$lib/utils/format';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import DateRangeFilter from '#lib/components/ui/DateRangeFilter.svelte';
+	import { formatCents, formatDateLong } from '#lib/utils/format.js';
 	import {
 		formatVolunteerHours,
 		financialCategoryLabels,
 		eventKindLabels,
 		type FinancialEntryKind
-	} from '$lib/config';
-	import { getAnnualReportPage } from '$lib/remote/reports.remote';
+	} from '#lib/config.js';
+	import { getAnnualReportPage } from '#lib/remote/reports.remote.js';
 	import { shownCents } from '../display';
 	import StaffViews from '../../StaffViews.svelte';
 	import { reportViews } from '../views';
@@ -43,9 +43,9 @@
 		if (toDate) pairs.push(['to', toDate]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = withQuery(resolve('/staff/reports/annual'), search);
+		const href = withQuery(resolve('staff/reports/annual'), search);
 		if (location.pathname + location.search !== href) {
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 

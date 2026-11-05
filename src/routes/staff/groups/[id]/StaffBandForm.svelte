@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { formatDateShortYear } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
 	import { untrack } from 'svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
@@ -10,20 +10,20 @@
 		deactivateBand,
 		reactivateBand,
 		setBandTier
-	} from '$lib/remote/bands.remote';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import RichTextEditor from '$lib/components/ui/Form/RichTextEditor.svelte';
-	import RecordFrame from '$lib/components/ui/RecordFrame.svelte';
+	} from '#lib/remote/bands.remote.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import RichTextEditor from '#lib/components/ui/Form/RichTextEditor.svelte';
+	import RecordFrame from '#lib/components/ui/RecordFrame.svelte';
 	import type { Snippet } from 'svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import Action from '$lib/components/ui/Action.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 
 	// The band arrives as a plain resolved prop, NOT an awaited remote query.
 	// Keeping this component's script fully synchronous matters: a top-level
@@ -77,8 +77,13 @@
 		<div class="mb-6 grid gap-6 lg:grid-cols-2">
 			<InfoCard title={m.staff_groups_id_staff_band_form_band_info()}>
 				<div class="grid grid-cols-1 gap-x-2">
-					<Field name="name" type="text" value={band.name} />
-					<Field name="bio" label={m.staff_groups_id_staff_band_form_bio()}>
+					<Field
+						field={updateBand.fields.name}
+						label={m.staff_name()}
+						type="text"
+						value={band.name}
+					/>
+					<Field field={updateBand.fields.bio} label={m.staff_groups_id_staff_band_form_bio()}>
 						<input {...bandFields.bio.as('hidden', bioHtml)} />
 						<RichTextEditor
 							bind:value={bioHtml}

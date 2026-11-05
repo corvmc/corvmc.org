@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
 import { eq } from 'drizzle-orm';
 import { signInAs } from './fixtures/auth';
 import { readLocalDb } from './fixtures/platform-db';
@@ -68,7 +68,10 @@ test.describe('productions', () => {
 		// the record that replaces it offers to take the producer's job.
 		await expect(open).toHaveCount(0, { timeout: 15000 });
 		const record = page.getByTestId('production-record');
-		await expect(record.locator('input[name="producer"]')).toHaveValue('me', { timeout: 15000 });
+		await expect(record.locator('input:is([name="producer"], [name^="producer/"])')).toHaveValue(
+			'me',
+			{ timeout: 15000 }
+		);
 		await expect
 			.poll(() => productionStatusOf(SEED_PRODUCTION_BARE_EVENT_ID), DB_POLL)
 			.toBe('draft');

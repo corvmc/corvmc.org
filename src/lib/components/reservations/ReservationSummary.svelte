@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { formatDistanceToNow } from 'date-fns';
 	import {
 		formatMonthDayYear,
 		formatTimeRange,
 		formatDateShortYear,
 		formatDuration
-	} from '$lib/utils/format';
+	} from '#lib/utils/format.js';
 
 	let {
 		reservation,

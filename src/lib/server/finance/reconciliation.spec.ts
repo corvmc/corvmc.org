@@ -15,12 +15,12 @@ vi.mock('./financial-entry-service', () => ({
 }));
 
 const captureException = vi.fn();
-vi.mock('$lib/server/sentry', () => ({
+vi.mock('#lib/server/sentry.js', () => ({
 	captureException: (...a: unknown[]) => captureException(...a)
 }));
 
 let transactions: { type: string; net: number }[] = [];
-vi.mock('$lib/server/stripe', () => ({
+vi.mock('#lib/server/stripe.js', () => ({
 	stripe: {
 		balanceTransactions: {
 			list: () => ({

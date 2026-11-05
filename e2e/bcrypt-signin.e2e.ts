@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 import { eq } from 'drizzle-orm';
 import { account } from '../src/lib/server/db/schema/authentication';
 import { readLocalDb } from './fixtures/platform-db';
@@ -21,10 +21,12 @@ const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
 async function login(page: Page, email: string, password: string) {
 	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(email);
-	await page.locator('input[name="password"]').fill(password);
+	await page.locator('input:is([name="email"], [name^="email/"])').fill(email);
+	await page.locator('input:is([name="password"], [name^="password/"])').fill(password);
 	// The sign-in form is the one with a password field.
-	await page.locator('form:has(input[name="password"]) button[type="submit"]').click();
+	await page
+		.locator('form:has(input:is([name="password"], [name^="password/"])) button[type="submit"]')
+		.click();
 }
 
 async function storedHash(): Promise<string | null> {

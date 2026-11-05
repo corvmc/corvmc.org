@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
@@ -206,7 +206,7 @@ test.describe('Meta reply window', () => {
 		// The composer falls back to a note: staff-only, and never dispatched.
 		await expect(page.locator('#tab-note')).toHaveAttribute('aria-selected', 'true');
 		await expect(page.locator('#tab-reply')).toHaveAttribute('aria-selected', 'false');
-		await expect(page.locator('textarea[name="body"]')).toBeVisible();
+		await expect(page.locator('textarea:is([name="body"], [name^="body/"])')).toBeVisible();
 
 		// A thread inside the window must still offer a reply — otherwise a block
 		// that fired on every Meta thread would pass the half above.

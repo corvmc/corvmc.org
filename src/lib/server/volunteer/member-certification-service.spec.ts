@@ -23,7 +23,7 @@ vi.mock('./volunteer-certification-service', () => ({
 	getRequirementsForRoles: vi.fn()
 }));
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		insert: vi.fn(() => ({
@@ -48,8 +48,8 @@ import {
 	missingFrom,
 	listHeldForGateMany
 } from './member-certification-service';
-import { CERT_EXPIRY_WARNING_DAYS, DEFAULT_TIMEZONE } from '$lib/config';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { CERT_EXPIRY_WARNING_DAYS, DEFAULT_TIMEZONE } from '#lib/config.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 
 const noon = (d: string) => buildDateInTz(d, '12:00', DEFAULT_TIMEZONE);
 
@@ -259,7 +259,7 @@ describe('grantCertification', () => {
 			grantedByUserId: 'staff'
 		});
 
-		const { db } = await import('$lib/server/db');
+		const { db } = await import('#lib/server/db/index.js');
 		expect(vi.mocked(db.insert)).toHaveBeenCalled();
 		expect(vi.mocked(db.update)).not.toHaveBeenCalled();
 	});
@@ -358,7 +358,7 @@ describe('listHeldForGateMany', () => {
 	});
 
 	it('does not query at all for an empty list', async () => {
-		const { db } = await import('$lib/server/db');
+		const { db } = await import('#lib/server/db/index.js');
 
 		const held = await listHeldForGateMany([]);
 
@@ -369,7 +369,7 @@ describe('listHeldForGateMany', () => {
 	// D1 caps a statement at 100 bound parameters, so a list longer than the chunk
 	// has to arrive as several queries rather than one oversized IN.
 	it('chunks a list past the parameter ceiling', async () => {
-		const { db } = await import('$lib/server/db');
+		const { db } = await import('#lib/server/db/index.js');
 		const ids = Array.from({ length: 200 }, (_, i) => `u${i}`);
 		selectResultQueue = [[], [], []];
 

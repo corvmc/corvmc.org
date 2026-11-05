@@ -1,17 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { getClubTotals } = await import('./group-totals-service');
-const { user } = await import('$lib/server/db/schema/authentication');
-const { group, groupMember } = await import('$lib/server/db/schema/group');
+const { user } = await import('#lib/server/db/schema/authentication.js');
+const { group, groupMember } = await import('#lib/server/db/schema/group.js');
 const { groupApplication, groupApplicationChoice } =
-	await import('$lib/server/db/schema/group-application');
+	await import('#lib/server/db/schema/group-application.js');
 
 const GONE = new Date('2026-09-01T00:00:00Z');
 

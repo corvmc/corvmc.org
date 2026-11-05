@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { createItem, getEquipmentCategories } from '$lib/remote/inventory.remote';
+	import { createItem, getEquipmentCategories } from '#lib/remote/inventory.remote.js';
 	import { Field } from '../ui/Form';
-	import { itemKinds, unitsOfMeasure } from '$lib/config';
+	import { itemKinds, unitsOfMeasure } from '#lib/config.js';
 
 	const { fields } = createItem;
 
@@ -64,7 +64,11 @@
 		fields.set({});
 		description = '';
 		notes = '';
-		document.querySelector<HTMLInputElement>('[role="dialog"] input[name="name"]')?.focus();
+		document
+			.querySelector<HTMLInputElement>(
+				`[role="dialog"] input[name="${fields.name.as('text').name}"]`
+			)
+			?.focus();
 	}
 
 	const kindLabels: Record<(typeof itemKinds)[number], string> = {

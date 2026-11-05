@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { grantRuleFor } from '$lib/config';
+	import { grantRuleFor } from '#lib/config.js';
 
 	/** Where a committee grant reaches, in a sentence. */
 	export function committeeReach(cap: string): string {
@@ -10,11 +10,11 @@
 </script>
 
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import CheckboxGroup from '$lib/components/ui/Form/CheckboxGroup.svelte';
-	import { grantableBy } from '$lib/config';
-	import { setCommitteeGrants } from '$lib/remote/groups.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import CheckboxGroup from '#lib/components/ui/Form/CheckboxGroup.svelte';
+	import { grantableBy } from '#lib/config.js';
+	import { setCommitteeGrants } from '#lib/remote/groups.remote.js';
 
 	/** The control that edits what a committee's active members may do. */
 	let {
@@ -49,7 +49,7 @@
 	{onsuccess}
 >
 	{#snippet form()}
-		<input type="hidden" name="groupId" value={groupId} />
+		<input {...instance.fields.groupId.as('hidden', groupId)} />
 		<p class="text-muted">
 			{m.groups_committee_grants_every_active_member_committee_holds()}
 		</p>

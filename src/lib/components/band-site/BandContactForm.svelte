@@ -1,15 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { Turnstile } from 'svelte-turnstile';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { submitBandContactForm } from '$lib/remote/band-contact.remote';
-	import {
-		TURNSTILE_SITE_KEY,
-		TURNSTILE_RESPONSE_FIELD,
-		turnstileFailureMessage
-	} from '$lib/turnstile';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { submitBandContactForm } from '#lib/remote/band-contact.remote.js';
+	import { TURNSTILE_SITE_KEY, turnstileFailureMessage } from '#lib/turnstile.js';
 
 	let { slug, bandName }: { slug: string; bandName: string } = $props();
 
@@ -62,7 +58,7 @@
 		/>
 		<Turnstile
 			siteKey={TURNSTILE_SITE_KEY}
-			responseFieldName={TURNSTILE_RESPONSE_FIELD}
+			responseFieldName={fields.turnstileToken.as('hidden', '').name}
 			theme="auto"
 			bind:reset={resetTurnstile}
 		/>

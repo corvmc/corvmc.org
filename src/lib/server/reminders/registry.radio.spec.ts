@@ -10,15 +10,15 @@ const listRadioAttestationsExpiringBetween = vi.fn(
 	async (_from: Date, _to: Date) => [] as unknown[]
 );
 
-vi.mock('$lib/server/audio/radio-attestation', () => ({ listRadioAttestationsExpiringBetween }));
-vi.mock('$lib/server/inventory/loan-service', () => ({
+vi.mock('#lib/server/audio/radio-attestation.js', () => ({ listRadioAttestationsExpiringBetween }));
+vi.mock('#lib/server/inventory/loan-service.js', () => ({
 	listLoansDueBetween: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/volunteer/volunteer-signup-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-signup-service.js', () => ({
 	listSignupsStartingBetween: vi.fn(async () => []),
 	listCompletionsAwaitingFeedback: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 const { reminders } = await import('./registry');
 

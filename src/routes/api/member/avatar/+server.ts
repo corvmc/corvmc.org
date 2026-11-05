@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { setUserAvatar, clearUserAvatar } from '$lib/server/directory/profile-service';
-import { validateUpload } from '$lib/server/storage';
+import { setUserAvatar, clearUserAvatar } from '#lib/server/directory/profile-service.js';
+import { validateUpload } from '#lib/server/storage.js';
 
 // ---------------------------------------------------------------------------
 // POST — upload the current user's avatar

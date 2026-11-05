@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { publishCommitteeProjectEventForm } from '$lib/remote/projects.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { publishCommitteeProjectEventForm } from '#lib/remote/projects.remote.js';
 
 	/** Put one of the committee's own project events on the calendar. */
 	let { event }: { event: { id: string; title: string } } = $props();

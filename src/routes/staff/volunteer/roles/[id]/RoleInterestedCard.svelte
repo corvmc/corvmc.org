@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import BadgeList from '$lib/components/ui/BadgeList.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import BadgeList from '#lib/components/ui/BadgeList.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { toast } from 'svelte-sonner';
-	import { formatDateShort } from '$lib/utils/format';
-	import { getInterestedVolunteers } from '$lib/remote/volunteer.remote';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { getInterestedVolunteers } from '#lib/remote/volunteer.remote.js';
 
 	/**
 	 * The members who said they would help with this role, owning the query behind them.

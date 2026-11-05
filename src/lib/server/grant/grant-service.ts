@@ -1,4 +1,4 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	funder,
 	grantApplication,
@@ -7,16 +7,16 @@ import {
 	type GrantReport,
 	type NewGrantApplication,
 	type NewGrantReport
-} from '$lib/server/db/schema/grant';
+} from '#lib/server/db/schema/grant.js';
 import { asc, eq, inArray, isNull } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import {
 	grantDeadlineLabels,
 	openGrantStatuses,
 	type GrantDeadlineKind,
 	type GrantStatus
-} from '$lib/config';
-import { byDeadline, due, earliest, type Deadline } from '$lib/utils/deadline';
+} from '#lib/config.js';
+import { byDeadline, due, earliest, type Deadline } from '#lib/utils/deadline.js';
 
 export class GrantNotFoundError extends DomainError {
 	readonly httpStatus = 404;

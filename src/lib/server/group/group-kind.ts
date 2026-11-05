@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
-import { DomainError } from '$lib/server/domain-error';
+import { db } from '#lib/server/db/index.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { DomainError } from '#lib/server/domain-error.js';
 
 /**
  * A band reached a path that belongs to a club or committee.

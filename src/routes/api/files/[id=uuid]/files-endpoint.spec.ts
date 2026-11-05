@@ -21,7 +21,7 @@ type DownloadRow = {
 let downloadRow: DownloadRow | null = null;
 
 const getForDownload = vi.fn(async (_id: string) => downloadRow);
-vi.mock('$lib/server/group/file-service', () => ({
+vi.mock('#lib/server/group/file-service.js', () => ({
 	getForDownload: (id: string) => getForDownload(id)
 }));
 
@@ -29,7 +29,7 @@ type GroupRef = { id: string } | { slug: string };
 const requireGroupRole = vi.fn(
 	async (_ref: GroupRef, _minRole: string, _opts?: { allowStaff?: boolean }) => ({})
 );
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireGroupRole: (ref: GroupRef, minRole: string, opts?: { allowStaff?: boolean }) =>
 		requireGroupRole(ref, minRole, opts)
 }));
@@ -40,7 +40,7 @@ const arrayBuffer = vi.fn(async () => new ArrayBuffer(0));
 let storedObject: unknown = { body, size: 2048, arrayBuffer };
 
 const getPrivateObject = vi.fn(async (_key: string) => storedObject);
-vi.mock('$lib/server/private-storage', () => ({
+vi.mock('#lib/server/private-storage.js', () => ({
 	getPrivateObject: (key: string) => getPrivateObject(key)
 }));
 

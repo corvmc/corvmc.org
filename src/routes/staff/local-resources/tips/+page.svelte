@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShort } from '$lib/utils/format';
-	import { getLocalResourceTips } from '$lib/remote/local-resources.remote';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { getLocalResourceTips } from '#lib/remote/local-resources.remote.js';
 	import ResourceTabs from '../ResourceTabs.svelte';
 
 	const data = $derived(await getLocalResourceTips());
@@ -33,7 +33,7 @@
 				<th class="whitespace-nowrap">{m.staff_sent()}</th>
 			{/snippet}
 			{#each data.tips as tip (tip.id)}
-				{@const href = resolve(`/staff/local-resources/${tip.id}`)}
+				{@const href = resolve(`staff/local-resources/${tip.id}`)}
 				<tr class="hover cursor-pointer" use:rowLink={href}>
 					<td class="cell-primary"><a class="font-medium link-hover" {href}>{tip.name}</a></td>
 					<td class="col-support whitespace-nowrap">{tip.categoryName}</td>

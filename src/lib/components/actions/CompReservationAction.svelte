@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { compReservation } from '$lib/remote/reservations.remote';
+	import { compReservation } from '#lib/remote/reservations.remote.js';
 	const { fields } = compReservation;
 
 	let {

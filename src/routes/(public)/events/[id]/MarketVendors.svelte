@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import Button from '$lib/components/ui/Button.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import { formatDateTime } from '$lib/utils/format';
-	import { getPublicMarket } from '$lib/remote/market.remote';
+	import Button from '#lib/components/ui/Button.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import { formatDateTime } from '#lib/utils/format.js';
+	import { getPublicMarket } from '#lib/remote/market.remote.js';
 
 	/**
 	 * A market day's vendors, and the way in for new ones.
@@ -25,7 +25,7 @@
 
 		{#if info.accepting}
 			<div class="market__apply">
-				<Button href={resolve(`/events/${eventId}/vendors/apply`)} variant="primary">
+				<Button href={resolve(`events/${eventId}/vendors/apply`)} variant="primary">
 					{m.public_events_id_market_vendors_apply_table()}
 				</Button>
 				{#if info.closesAt}

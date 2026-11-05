@@ -3,14 +3,14 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 /** The item and unit history feeds against a real SQLite: the actor is a join, the page is limit + 1. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const jobsForAsset = vi.fn(async (_assetId: string) => [] as unknown[]);
-vi.mock('$lib/server/contractor/contractor-job-service', () => ({
+vi.mock('#lib/server/contractor/contractor-job-service.js', () => ({
 	jobsForAsset: (id: string) => jobsForAsset(id)
 }));
 

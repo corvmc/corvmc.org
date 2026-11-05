@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { getMemberDirectory } from '$lib/remote/directory.remote';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { getMemberDirectory } from '#lib/remote/directory.remote.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { IconPencil } from '@tabler/icons-svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
-	import IdCard from '$lib/components/directory/IdCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { directorySortOptions, type DirectorySort } from '$lib/utils/directory-browse';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import FreeformTagInput from '#lib/components/ui/FreeformTagInput.svelte';
+	import IdCard from '#lib/components/directory/IdCard.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { directorySortOptions, type DirectorySort } from '#lib/utils/directory-browse.js';
 
 	/** Cards rendered before "Show more" appears. */
 	const PAGE_SIZE = 24;
@@ -89,18 +89,18 @@
 	<!-- The other half of the link on the profile editor: the entry you are
 	     looking at is the shape yours takes, and Profile left the sidebar for
 	     the account menu (#1244). -->
-	<Button href={resolve('/member/profile')} variant="ghost" size="sm">
+	<Button href={resolve('member/profile')} variant="ghost" size="sm">
 		<IconPencil size={16} />
 		{m.member_directory_edit_profile()}
 	</Button>
 </PageHeader>
 <PageContent>
 	{#if directory.viewerHiddenBecause === 'incomplete'}
-		<Alert type="info" href={resolve('/member/profile')}>
+		<Alert type="info" href={resolve('member/profile')}>
 			{m.member_directory_re_not_listed_here_yet()}
 		</Alert>
 	{:else if directory.viewerHiddenBecause === 'hidden'}
-		<Alert type="info" href={resolve('/member/profile')}>
+		<Alert type="info" href={resolve('member/profile')}>
 			{m.member_directory_profile_hidden_so_re_not()}
 		</Alert>
 	{/if}

@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { pageTitle } from '$lib/config';
+	import { pageTitle } from '#lib/config.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import {
 		getWishlistPledgeConfirmation,
 		confirmWishlistPledge
-	} from '$lib/remote/inventory.remote';
+	} from '#lib/remote/inventory.remote.js';
 
-	import Button from '$lib/components/ui/Button.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
 
 	type Outcome = NonNullable<typeof confirmWishlistPledge.result>;
 
@@ -46,14 +46,14 @@
 						<Alert type="success" class="text-sm">
 							{m.public_contribute_pledge_token_thank_wishlist_now_shows_as()}
 						</Alert>
-						<Button variant="primary" class="w-full" href={resolve('/contribute')}>
+						<Button variant="primary" class="w-full" href={resolve('contribute')}>
 							{m.public_contribute_pledge_token_back_wishlist()}
 						</Button>
 					{:else if outcome?.status === 'taken'}
 						<Alert type="info" class="text-sm">
 							{m.public_contribute_pledge_token_someone_else_confirmed_first()}
 						</Alert>
-						<Button variant="primary" class="w-full" href={resolve('/contribute')}>
+						<Button variant="primary" class="w-full" href={resolve('contribute')}>
 							{m.public_contribute_pledge_token_see_what_else_we_need()}
 						</Button>
 					{:else if !pending || outcome}

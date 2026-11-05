@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
+	import { calculateTotalWithFeeCoverage } from '#lib/finance/fees.js';
 	import { resolve } from '$app/paths';
-	import { getReservationPricing } from '$lib/remote/reservations.remote';
-	import { getFormContext } from '$lib/components/ui/Form/Form.svelte';
-	import * as Form from '$lib/components/ui/Form';
-	import { formatDollars, toLocalDate, toLocalTime } from '$lib/utils/format';
-	import { creditsToHours } from '$lib/config';
-	import type { RemoteFormField } from '@sveltejs/kit';
+	import { getReservationPricing } from '#lib/remote/reservations.remote.js';
+	import { getFormContext } from '#lib/components/ui/Form/Form.svelte';
+	import * as Form from '#lib/components/ui/Form/index.js';
+	import { formatDollars, toLocalDate, toLocalTime } from '#lib/utils/format.js';
+	import { creditsToHours } from '#lib/config.js';
+	import type { RemoteFormField } from '$app/server';
 
 	let {
 		reservation,
@@ -172,7 +172,7 @@
 						message={m.reservations_booking_payment_step_sustaining_members_get_fre}
 						inputs={{}}
 						>{#snippet a({ children })}<a
-								href={resolve('/member/membership')}
+								href={resolve('member/membership')}
 								target="_blank"
 								class="link link-primary">{@render children?.()}</a
 							>{/snippet}</ParaglideMessage

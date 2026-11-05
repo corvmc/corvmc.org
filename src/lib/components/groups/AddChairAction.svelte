@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { searchMembers } from '$lib/remote/reservations.remote';
-	import { setStaffGroupRole } from '$lib/remote/groups.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { searchMembers } from '#lib/remote/reservations.remote.js';
+	import { setStaffGroupRole } from '#lib/remote/groups.remote.js';
 	import { invalidateAll } from '$app/navigation';
 
 	/**
@@ -34,7 +34,7 @@
 			<input {...fields.groupId.as('hidden', groupId)} />
 			<input {...fields.role.as('hidden', 'admin')} />
 
-			<FormField name="userId" label={m.groups_member()} required>
+			<FormField field={setStaffGroupRole.fields.userId} label={m.groups_member()} required>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={chair}

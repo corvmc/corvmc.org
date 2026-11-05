@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
-import { productionExpense } from '$lib/server/db/schema/production';
+import { db } from '#lib/server/db/index.js';
+import { productionExpense } from '#lib/server/db/schema/production.js';
 import { and, asc, eq, sum } from 'drizzle-orm';
-import type { ProductionExpenseCategory } from '$lib/config';
-import { reverseProductionExpense } from '$lib/server/finance/production-expense-entries';
+import type { ProductionExpenseCategory } from '#lib/config.js';
+import { reverseProductionExpense } from '#lib/server/finance/production-expense-entries.js';
 import { assertNotTerminal } from './production-scope';
 
 /**

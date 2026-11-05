@@ -1,4 +1,4 @@
-import { capabilities, type Capability, type Resource } from '$lib/config';
+import { capabilities, type Capability, type Resource } from '#lib/config.js';
 
 /** `manageShifts` → "Manage shifts"; `localResource` → "Local resource". */
 function words(camel: string): string {

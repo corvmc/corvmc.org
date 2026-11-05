@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { toast } from 'svelte-sonner';
-	import { getFormContext } from '$lib/components/ui/Form/Form.svelte';
+	import { getFormContext } from '#lib/components/ui/Form/Form.svelte';
 
 	let {
 		result,

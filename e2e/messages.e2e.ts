@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import {
 	SEED_MSG_PASSWORD,
@@ -65,7 +65,7 @@ const remoteSubmit = (page: Page, exportName: string) =>
 
 /** The thread composer's send: the one form with a message body. */
 const sendReply = (page: Page) =>
-	page.locator('form:has(textarea[name="body"]) button[type="submit"]');
+	page.locator('form:has(textarea:is([name="body"], [name^="body/"])) button[type="submit"]');
 
 /** Open a conversation from the list pane by the name on its row. */
 async function openConversation(page: Page, name: string) {
@@ -133,7 +133,7 @@ test.describe('member messaging', () => {
 		// SearchSelect swaps the input for a badge once the pick commits; waiting for
 		// that is how the test knows the choice reached the form before submitting.
 		await expect(picker).toHaveCount(0, WAIT);
-		await page.locator('textarea[name="body"]').fill(body);
+		await page.locator('textarea:is([name="body"], [name^="body/"])').fill(body);
 		await page.getByRole('dialog').locator('button[type="submit"]').click();
 
 		await expect(page.getByRole('link', { name: new RegExp(SEED_MSG_RECIPIENT_NAME) })).toBeVisible(
@@ -161,20 +161,20 @@ test.describe('member messaging', () => {
 		// box would be, and there is no message box.
 		await expect(remoteSubmit(page, 'acceptDirectRequest')).toBeVisible();
 		await expect(remoteSubmit(page, 'declineDirectRequest')).toBeVisible();
-		await expect(page.locator('textarea[name="body"]')).toHaveCount(0);
+		await expect(page.locator('textarea:is([name="body"], [name^="body/"])')).toHaveCount(0);
 
 		// --- accepting opens it ---
 		await remoteSubmit(page, 'acceptDirectRequest').click();
-		await expect(page.locator('textarea[name="body"]')).toBeVisible(WAIT);
+		await expect(page.locator('textarea:is([name="body"], [name^="body/"])')).toBeVisible(WAIT);
 
 		const reply = `E2E reply ${Date.now()}`;
-		await page.locator('textarea[name="body"]').fill(reply);
+		await page.locator('textarea:is([name="body"], [name^="body/"])').fill(reply);
 		await sendReply(page).click();
 		await expect(bubble(page, reply)).toBeVisible(WAIT);
 
 		// --- blocking closes it but keeps the history ---
 		await remoteSubmit(page, 'blockFromThread').click();
-		await expect(page.locator('textarea[name="body"]')).toHaveCount(0, WAIT);
+		await expect(page.locator('textarea:is([name="body"], [name^="body/"])')).toHaveCount(0, WAIT);
 		// Both messages still readable. Deleting them would take away the evidence
 		// the blocker needs in order to report.
 		await expect(bubble(page, body)).toBeVisible();

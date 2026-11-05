@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The band's booking enquiries — the unified Messages list, scoped to this
 	 * band's inbox (#1250).
@@ -10,10 +10,10 @@
 	 * second list that had drifted from the first.
 	 */
 	import { page } from '$app/state';
-	import ConversationRows from '$lib/components/inbox/ConversationRows.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import { getMyMessages } from '$lib/remote/direct-messages.remote';
+	import ConversationRows from '#lib/components/inbox/ConversationRows.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import { getMyMessages } from '#lib/remote/direct-messages.remote.js';
 	import { enquiryList } from './list-state.svelte';
 
 	const slug = $derived(page.params.slug!);

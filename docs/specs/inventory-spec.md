@@ -234,7 +234,7 @@ Reading rules:
 
 New file `src/lib/server/db/schema/inventory.ts`, replacing `equipment.ts`.
 Vocabularies live in `src/lib/config.ts` and are imported by **relative path**
-(`../../../config`) — `$lib/config` breaks `pnpm db:generate`, which has no alias
+(`../../../config`) — `#lib/config.js` breaks `pnpm db:generate`, which has no alias
 map.
 
 ### Vocabularies

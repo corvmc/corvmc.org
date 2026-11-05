@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { addBandMember } from '$lib/remote/bands.remote';
-	import Button from '$lib/components/ui/Button.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { addBandMember } from '#lib/remote/bands.remote.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 
 	const { fields } = addBandMember;
 
@@ -86,7 +86,10 @@
 				     posts from the hidden field above, but an issue on it belongs
 				     beside the box where the member is picked, which is the only
 				     thing on screen when `userId` is still empty. -->
-				<FormField name="userId" label={m.actions_invite_member_search_members()}>
+				<FormField
+					field={addBandMember.fields.userId}
+					label={m.actions_invite_member_search_members()}
+				>
 					{#snippet input(id)}
 						<input
 							{id}

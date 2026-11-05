@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Free text in, new tags out: whatever is typed becomes a tag, lowercased.
 	 * `suggestions` only autocompletes — it never constrains, so a value not on
@@ -8,18 +8,21 @@
 	 * refuse to.
 	 */
 	import { IconX } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 
 	let {
 		value = $bindable<string[]>([]),
 		suggestions = [],
 		placeholder = m.ui_freeform_tag_input_placeholder(),
-		name
+		name,
+		field
 	}: {
 		value?: string[];
 		suggestions?: string[];
 		placeholder?: string;
 		name?: string;
+		/** The remote form field the JSON list submits as, in place of `name`. */
+		field?: { as: (type: 'hidden', value: string) => Record<string, unknown> };
 	} = $props();
 
 	let input = $state('');
@@ -58,7 +61,9 @@
 	}
 </script>
 
-{#if name}
+{#if field}
+	<input {...field.as('hidden', JSON.stringify(value))} />
+{:else if name}
 	<input type="hidden" {name} value={JSON.stringify(value)} />
 {/if}
 

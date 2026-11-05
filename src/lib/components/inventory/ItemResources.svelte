@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { FileUpload, Select } from '$lib/components/ui/Form';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { FileUpload, Select } from '#lib/components/ui/Form/index.js';
 	import {
 		getItemResources,
 		linkItemArticle,
 		unlinkItemArticle
-	} from '$lib/remote/inventory.remote';
+	} from '#lib/remote/inventory.remote.js';
 	import { IconFileText, IconBook, IconTrash, IconUpload } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -25,7 +25,7 @@
 
 	const data = $derived(await getItemResources(itemId));
 
-	let chosenArticle = $state('');
+	const chosenArticle = $derived(linkItemArticle.fields.articleId.value() ?? '');
 
 	async function upload(file: File) {
 		const body = new FormData();
@@ -108,15 +108,14 @@
 				class="flex items-center gap-2"
 				{...linkItemArticle.enhance(async ({ submit }) => {
 					await submit();
-					chosenArticle = '';
+					linkItemArticle.fields.articleId.set('');
 				})}
 			>
 				<input {...linkItemArticle.fields.itemId.as('hidden', itemId)} />
 				<Select
 					size="sm"
 					aria-label={m.inventory_item_resources_help_article()}
-					bind:value={chosenArticle}
-					name="articleId"
+					{...linkItemArticle.fields.articleId.as('select')}
 				>
 					<option value="">{m.inventory_item_resources_link_how()}</option>
 					{#each data.linkable as article (article.id)}

@@ -1,14 +1,14 @@
 import { page, userEvent } from 'vitest/browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 
 // One file for the staff band actions: they mock the same two modules, and each
 // export below is the stub its own component's spec used before the merge.
 // Issues are per-field and settable per test.
 const issues: Record<string, { path: string[]; message: string }[] | null> = {};
 
-vi.mock('$lib/remote/bands.remote', () => {
+vi.mock('#lib/remote/bands.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => issues[name] ?? null
@@ -84,7 +84,7 @@ describe('CreateBandAction', () => {
 	it('posts no owner before one is chosen', async () => {
 		await open();
 
-		expect(document.querySelector('input[name="ownerId"]')).toBeNull();
+		expect(document.querySelector('input:is([name="ownerId"], [name^="ownerId/"])')).toBeNull();
 		await expect.element(page.getByRole('combobox')).toBeVisible();
 	});
 
@@ -93,7 +93,9 @@ describe('CreateBandAction', () => {
 
 		await pick('Janet Ruiz');
 
-		const hidden = document.querySelector('input[name="ownerId"]') as HTMLInputElement;
+		const hidden = document.querySelector(
+			'input:is([name="ownerId"], [name^="ownerId/"])'
+		) as HTMLInputElement;
 		expect(hidden).not.toBeNull();
 		expect(hidden.value).toBe('user-8');
 	});
@@ -107,7 +109,7 @@ describe('CreateBandAction', () => {
 		await clearPick('Janet Ruiz').click();
 
 		await vi.waitFor(() => {
-			expect(document.querySelector('input[name="ownerId"]')).toBeNull();
+			expect(document.querySelector('input:is([name="ownerId"], [name^="ownerId/"])')).toBeNull();
 		});
 	});
 
@@ -164,7 +166,7 @@ describe('InviteMemberAction', () => {
 
 	const hidden = (name: string) =>
 		document.querySelector(
-			`[role="dialog"] input[name="${name}"][type="hidden"]`
+			`[role="dialog"] input:is([name="${name}"], [name^="${name}/"])[type="hidden"]`
 		) as unknown as HTMLInputElement;
 
 	const open = async () => {

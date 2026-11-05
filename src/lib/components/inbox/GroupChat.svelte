@@ -1,11 +1,11 @@
 <script lang="ts" module>
-	import type { getGroupChatTopic as topicQuery } from '$lib/remote/group-chat.remote';
+	import type { getGroupChatTopic as topicQuery } from '#lib/remote/group-chat.remote.js';
 
 	export type GroupChatTopic = Awaited<ReturnType<typeof topicQuery>>;
 </script>
 
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * One topic of a group's chat, whichever panel it is mounted in.
 	 *
@@ -19,9 +19,9 @@
 	import ThreadComposer from './ThreadComposer.svelte';
 	import { untrack } from 'svelte';
 	import { IconArrowLeft } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { markGroupChatSeen, postGroupChatMessage } from '$lib/remote/group-chat.remote';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { markGroupChatSeen, postGroupChatMessage } from '#lib/remote/group-chat.remote.js';
 
 	// Handed in, never awaited here: on Messages the page's own query already
 	// carries the topic.

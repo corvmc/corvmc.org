@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { createBandEventForm } from '$lib/remote/band-events.remote';
+	import { createBandEventForm } from '#lib/remote/band-events.remote.js';
 
 	const fields = createBandEventForm.fields;
 
@@ -32,7 +32,7 @@
 		// `Action` types its success payload as unknown; the remote returns
 		// `{ eventId }` on create.
 		const eventId = (result as { eventId?: string } | undefined)?.eventId;
-		if (eventId) goto(resolve(`/band/${bandSlug}/events/${eventId}`));
+		if (eventId) goto(resolve(`band/${bandSlug}/events/${eventId}`));
 	}}
 >
 	{#snippet form()}

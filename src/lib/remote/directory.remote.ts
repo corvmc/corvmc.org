@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import { LONG_TEXT_MAX } from '$lib/config';
+import { LONG_TEXT_MAX } from '#lib/config.js';
 import { error, redirect } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { requireCapability, requireUser } from '$lib/server/authorization';
-import { requireFeature, getAllFeatureFlags } from '$lib/server/feature-flags';
-import { requireBandRole } from '$lib/server/group/group-context';
+import { requireCapability, requireUser } from '#lib/server/authorization.js';
+import { requireFeature, getAllFeatureFlags } from '#lib/server/feature-flags.js';
+import { requireBandRole } from '#lib/server/group/group-context.js';
 import {
 	listMembers,
 	searchDirectoryMembers,
@@ -16,13 +16,13 @@ import {
 	suggestGenres,
 	suggestSkills,
 	isProfileComplete
-} from '$lib/server/directory/directory-service';
+} from '#lib/server/directory/directory-service.js';
 import {
 	getMemberProfileForEdit,
 	updateMemberProfile,
 	getBandProfileForEdit,
 	updateBandProfile
-} from '$lib/server/directory/profile-service';
+} from '#lib/server/directory/profile-service.js';
 import {
 	listBandEventsUpcoming,
 	listBandEventsPast,
@@ -30,37 +30,37 @@ import {
 	listMemberUpcomingShows,
 	listMemberPastShows,
 	countMemberPastShows
-} from '$lib/server/event/event-service';
-import { toCalendarEntry } from '$lib/server/event/calendar-entry';
-import { PAST_SHOWS_PAGE_SIZE } from '$lib/types/calendar';
-import { update as updateBandBasics } from '$lib/server/band/band-service';
-import { resolveBandSlug } from '$lib/server/band/band-address-service';
-import { resolveImageUrl } from '$lib/server/storage';
-import { listInstructors } from '$lib/server/instructor/instructor-directory-service';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
-import { listPublishedReleasesForBand } from '$lib/server/audio/audio-service';
-import { bandSite } from '$lib/server/db/schema/band-site';
-import { listFor as listMediaFor } from '$lib/server/media/media-service';
-import { publicPressKit } from '$lib/server/band/press-kit';
-import { captureException } from '$lib/server/sentry';
+} from '#lib/server/event/event-service.js';
+import { toCalendarEntry } from '#lib/server/event/calendar-entry.js';
+import { PAST_SHOWS_PAGE_SIZE } from '#lib/types/calendar.js';
+import { update as updateBandBasics } from '#lib/server/band/band-service.js';
+import { resolveBandSlug } from '#lib/server/band/band-address-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
+import { listInstructors } from '#lib/server/instructor/instructor-directory-service.js';
+import { isFeatureEnabled } from '#lib/server/feature-flags.js';
+import { listPublishedReleasesForBand } from '#lib/server/audio/audio-service.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
+import { listFor as listMediaFor } from '#lib/server/media/media-service.js';
+import { publicPressKit } from '#lib/server/band/press-kit.js';
+import { captureException } from '#lib/server/sentry.js';
 import { getMe } from './layout.remote';
 import {
 	isMemberRowPrivate,
 	isBandProfileHidden,
 	toPublicMemberProfile
-} from '$lib/utils/directory-display';
-import { db } from '$lib/server/db';
-import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
-import { groupMember } from '$lib/server/db/schema/group';
-import { group } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/utils/directory-display.js';
+import { db } from '#lib/server/db/index.js';
+import { directoryEntry, directoryTag } from '#lib/server/db/schema/directory.js';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, sql, isNull } from 'drizzle-orm';
-import { profileLinkSchema } from '$lib/server/db/schema/authentication';
-import type { ProfileLink } from '$lib/server/db/schema/authentication';
-import { jsonArrayField } from '$lib/utils/zod-json';
-import { directorySorts } from '$lib/utils/directory-browse';
-import { getByUserId as getInstructorByUserId } from '$lib/server/instructor/instructor-service';
-import { publicContactStatus } from '$lib/server/instructor/instructor-directory-service';
+import { profileLinkSchema } from '#lib/server/db/schema/authentication.js';
+import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
+import { jsonArrayField } from '#lib/utils/zod-json.js';
+import { directorySorts } from '#lib/utils/directory-browse.js';
+import { getByUserId as getInstructorByUserId } from '#lib/server/instructor/instructor-service.js';
+import { publicContactStatus } from '#lib/server/instructor/instructor-directory-service.js';
 
 // ---------------------------------------------------------------------------
 // JSON-encoded form/filter fields

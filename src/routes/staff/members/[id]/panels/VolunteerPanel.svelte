@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import GrantCertificationAction from './GrantCertificationAction.svelte';
 	import {
 		getUserVolunteerProfile,
@@ -8,24 +8,24 @@
 		getUserHourLogs,
 		getMemberCertifications,
 		revokeCertification
-	} from '$lib/remote/volunteer.remote';
-	import { getUserPage } from '$lib/remote/users.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	} from '#lib/remote/volunteer.remote.js';
+	import { getUserPage } from '#lib/remote/users.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatVolunteerHours } from '$lib/config';
-	import { formatDateShortYear } from '$lib/utils/format';
-	import { Latest } from '$lib/latest.svelte';
+	import { formatVolunteerHours } from '#lib/config.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	let { id }: { id: string } = $props();
 
@@ -107,7 +107,7 @@
 					class="flex flex-wrap gap-1"
 				>
 					{#each data.interests as i (i.roleId)}
-						<a href={resolve(`/staff/volunteer/roles/${i.roleId}`)}>
+						<a href={resolve(`staff/volunteer/roles/${i.roleId}`)}>
 							<Badge size="sm">{i.roleName}</Badge>
 						</a>
 					{:else}
@@ -188,13 +188,15 @@
 								onsuccess={refreshCertifications}
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={record.id} />
-									<input type="hidden" name="userId" value={id} />
+									<input
+										{...revokeCertification.for(record.id).fields.id.as('hidden', record.id)}
+									/>
+									<input {...revokeCertification.for(record.id).fields.userId.as('hidden', id)} />
 									<p class="text-sm">
 										{m.staff_members_id_panels_volunteer_panel_record_stays_period()}
 									</p>
 									<FormField
-										name="reason"
+										field={revokeCertification.for(record.id).fields.reason}
 										label={m.staff_why()}
 										type="textarea"
 										description={m.staff_members_id_panels_volunteer_panel_shown_staff_page_mos()}
@@ -224,10 +226,10 @@
 					<th class="col-extra">{m.staff_date()}</th>
 				{/snippet}
 				{#each shifts as s (s.signupId)}
-					<tr class="hover" use:rowLink={resolve(`/staff/volunteer/shifts/${s.shiftId}`)}>
+					<tr class="hover" use:rowLink={resolve(`staff/volunteer/shifts/${s.shiftId}`)}>
 						<td class="w-px"><StatusBadge status={s.status} /></td>
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/volunteer/shifts/${s.shiftId}`)}>
+							<a class="font-medium" href={resolve(`staff/volunteer/shifts/${s.shiftId}`)}>
 								{s.roleName}
 							</a>
 							{#if s.shiftCancelledAt}

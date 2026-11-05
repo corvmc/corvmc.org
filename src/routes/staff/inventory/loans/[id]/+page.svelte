@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -7,21 +7,21 @@
 		getStaffLoanDetail,
 		scheduleLoanForm as schedule,
 		checkoutLoanForm as checkout
-	} from '$lib/remote/inventory.remote';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { CancelLoanAction, MarkReturnedAction } from '$lib/components/actions';
-	import Form, { Field, SubmitButton, Select } from '$lib/components/ui/Form';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatDate, formatCents } from '$lib/utils/format';
-	import BarcodeScanner from '$lib/components/ui/BarcodeScanner.svelte';
-	import { parseScan } from '$lib/utils/scan';
+	} from '#lib/remote/inventory.remote.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { CancelLoanAction, MarkReturnedAction } from '#lib/components/actions/index.js';
+	import Form, { Field, SubmitButton, Select } from '#lib/components/ui/Form/index.js';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatDate, formatCents } from '#lib/utils/format.js';
+	import BarcodeScanner from '#lib/components/ui/BarcodeScanner.svelte';
+	import { parseScan } from '#lib/utils/scan.js';
 
 	const { fields: scheduleFields } = schedule;
 	const { fields: checkoutFields } = checkout;
@@ -39,9 +39,6 @@
 	const availableAssets = $derived(data.availableAssets);
 	const needsAsset = $derived(loan.itemKind === 'serialized' && !loan.assetId);
 
-	/** The unit chosen for checkout, so a scan can set it as well as the select. */
-	let chosenAssetId = $state('');
-
 	/**
 	 * Scanning the tag on the amp being handed over picks that unit.
 	 *
@@ -54,7 +51,7 @@
 		const scan = parseScan(raw);
 		if (scan.kind !== 'tag') return;
 		const match = availableAssets.find((a) => a.assetTag === scan.value);
-		if (match) chosenAssetId = match.id;
+		if (match) checkoutFields.assetId.set(match.id);
 	}
 
 	let chargePreview = $derived.by(() => {
@@ -89,8 +86,7 @@
 
 				<Fact label={m.staff_equipment()}>
 					{#if loan.equipmentName}
-						<a href={resolve(`/staff/inventory/${loan.itemId}`)} class="link"
-							>{loan.equipmentName}</a
+						<a href={resolve(`staff/inventory/${loan.itemId}`)} class="link">{loan.equipmentName}</a
 						>
 						{#if loan.categoryName}
 							<Badge variant="outline" size="xs" class="ml-1">{loan.categoryName}</Badge>
@@ -194,8 +190,11 @@
 					>
 						<input {...scheduleFields.loanId.as('hidden', id)} />
 						{#if !loan.itemId}
-							<Field name="itemId" label={m.staff_inventory_loans_id_assign_equipment()}>
-								<Select class="w-full" name="itemId" required>
+							<Field
+								field={schedule.fields.itemId}
+								label={m.staff_inventory_loans_id_assign_equipment()}
+							>
+								<Select class="w-full" {...schedule.fields.itemId.as('select')} required>
 									<option value="" disabled selected
 										>{m.staff_inventory_loans_id_select_equipment()}</option
 									>
@@ -215,7 +214,7 @@
 							<input {...scheduleFields.itemId.as('hidden', loan.itemId)} />
 						{/if}
 						<Field
-							name="scheduledPickupDate"
+							field={schedule.fields.scheduledPickupDate}
 							type="date"
 							label={m.staff_inventory_loans_id_pickup_date()}
 						/>
@@ -248,8 +247,11 @@
 									label={m.staff_inventory_loans_id_due_date_2()}
 								/>
 								{#if needsAsset}
-									<Field name="assetId" label={m.staff_inventory_loans_id_unit_handed_over()}>
-										<Select class="w-full" name="assetId" bind:value={chosenAssetId} required>
+									<Field
+										field={checkout.fields.assetId}
+										label={m.staff_inventory_loans_id_unit_handed_over()}
+									>
+										<Select class="w-full" {...checkoutFields.assetId.as('select')} required>
 											<option value="" disabled>{m.staff_inventory_loans_id_select_tag()}</option>
 											{#each availableAssets as unit (unit.id)}
 												<option value={unit.id}>
@@ -279,13 +281,20 @@
 						class="space-y-3"
 					>
 						<input {...checkoutFields.loanId.as('hidden', id)} />
-						<Field name="dueDate" type="date" label={m.staff_inventory_loans_id_due_date_2()} />
+						<Field
+							field={checkout.fields.dueDate}
+							type="date"
+							label={m.staff_inventory_loans_id_due_date_2()}
+						/>
 						<!-- A serialized loan has to name the unit that actually left, or
 					     "which amp came back broken" has no answer. Without this the
 					     service throws `AssetRequiredError` and the form goes nowhere. -->
 						{#if needsAsset}
-							<Field name="assetId" label={m.staff_inventory_loans_id_unit_handed_over()}>
-								<Select class="w-full" name="assetId" bind:value={chosenAssetId} required>
+							<Field
+								field={checkout.fields.assetId}
+								label={m.staff_inventory_loans_id_unit_handed_over()}
+							>
+								<Select class="w-full" {...checkoutFields.assetId.as('select')} required>
 									<option value="" disabled>{m.staff_inventory_loans_id_scan_select_tag()}</option>
 									{#each availableAssets as unit (unit.id)}
 										<option value={unit.id}>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -24,11 +24,11 @@ const bandServiceMock = {
 	deleteBand: vi.fn(async () => undefined)
 };
 
-vi.mock('$lib/server/band/band-service', () => bandServiceMock);
+vi.mock('#lib/server/band/band-service.js', () => bandServiceMock);
 
 const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => testUser
 }));
 
@@ -64,7 +64,7 @@ beforeEach(() => {
 // sits at module scope so the cold Vite transform of the whole module graph is
 // paid once, during file evaluation — not inside a test or hook, where it would
 // race the 5s test / 10s hook timeout on a cold `node_modules/.vite`.
-const { deleteBand } = (await import('$lib/remote/bands.remote')) as any;
+const { deleteBand } = (await import('#lib/remote/bands.remote.js')) as any;
 
 // ---------------------------------------------------------------------------
 // Remote handlers

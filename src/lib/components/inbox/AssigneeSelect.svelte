@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { Latest } from '$lib/latest.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	/**
 	 * The note composer's hand-over select, with its own data. Its own component

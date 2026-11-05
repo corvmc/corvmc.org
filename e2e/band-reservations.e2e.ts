@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import {
 	SEED_OWNER_EMAIL,
@@ -35,7 +35,7 @@ test('a band books a session, and only the booker is offered Cancel', async ({ p
 	await expect(dialog).toBeVisible({ timeout: 15000 });
 
 	// DateTimeStep preselects the first bookable day and loads its start times.
-	const startTime = dialog.locator('select[name="startTime"]');
+	const startTime = dialog.locator('select:is([name="startTime"], [name^="startTime/"])');
 	await expect(startTime).toBeEnabled({ timeout: 15000 });
 	// The earliest *bookable* start, found by value: the list carries the taken
 	// hours too now (#874), so a fixed index can land on a disabled option and
@@ -46,14 +46,14 @@ test('a band books a session, and only the booker is offered Cancel', async ({ p
 		.getAttribute('value');
 	await startTime.selectOption(firstFree ?? '');
 
-	const endTime = dialog.locator('select[name="endTime"]');
+	const endTime = dialog.locator('select:is([name="endTime"], [name^="endTime/"])');
 	await expect(endTime).toBeEnabled({ timeout: 15000 });
 	await endTime.selectOption({ index: 1 });
 
 	// The band books but a person is on the hook, so staff need a number to call.
 	// The seeded owner has none, which gates the step — same rule as a solo
 	// booking, and the reason `step1Valid` won't clear without it.
-	const phone = dialog.locator('input[name="phone"]');
+	const phone = dialog.locator('input:is([name="phone"], [name^="phone/"])');
 	if (await phone.count()) {
 		await phone.fill('541-555-0123');
 	}

@@ -1,25 +1,25 @@
-import { db, getRowCount } from '$lib/server/db';
+import { db, getRowCount } from '#lib/server/db/index.js';
 import {
 	postProductionExpenses,
 	reverseProductionExpense
-} from '$lib/server/finance/production-expense-entries';
+} from '#lib/server/finance/production-expense-entries.js';
 import { expenseLines } from './expense-service';
 import {
 	assertNotTerminal,
 	assertProjectTakesListing,
 	ProductionTerminalError
 } from './production-scope';
-import { isTerminalProduction, transitionWarnings } from '$lib/production/status';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import { production } from '$lib/server/db/schema/production';
+import { isTerminalProduction, transitionWarnings } from '#lib/production/status.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import { production } from '#lib/server/db/schema/production.js';
 import { and, eq, getTableColumns, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { user } from '$lib/server/db/schema/authentication';
-import { eventListing } from '$lib/server/db/schema/event';
-import { workOrder, workTask } from '$lib/server/db/schema/volunteer';
-import { DomainError } from '$lib/server/domain-error';
-import type { Production, ProductionStatus } from '$lib/server/db/schema/production';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { workOrder, workTask } from '#lib/server/db/schema/volunteer.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import type { Production, ProductionStatus } from '#lib/server/db/schema/production.js';
 import { recomputeSetTimes } from './run-of-show-service';
 import {
 	createShowProject,
@@ -27,16 +27,16 @@ import {
 	stampProductionTemplate
 } from './production-project';
 import { announceShowsCancelled, openDeliverablesOnProductions } from './cancellation-notice';
-import type { OpenOwnedItem } from '$lib/server/volunteer/deliverables-service';
+import type { OpenOwnedItem } from '#lib/server/volunteer/deliverables-service.js';
 import {
 	placePendingWorkOrders,
 	shiftAnchoredWorkOrders
-} from '$lib/server/volunteer/retime-work-orders';
+} from '#lib/server/volunteer/retime-work-orders.js';
 import type { BatchItem } from 'drizzle-orm/batch';
-import type { DutyListAnchor, ProjectStatus } from '$lib/config';
-import { project } from '$lib/server/db/schema/project';
-import { cancelShiftsForProduction } from '$lib/server/volunteer/show-cancellation';
-import { captureException } from '$lib/server/sentry';
+import type { DutyListAnchor, ProjectStatus } from '#lib/config.js';
+import { project } from '#lib/server/db/schema/project.js';
+import { cancelShiftsForProduction } from '#lib/server/volunteer/show-cancellation.js';
+import { captureException } from '#lib/server/sentry.js';
 
 /**
  * The ops half of a show.
@@ -155,7 +155,7 @@ export async function getProduction(id: string): Promise<Production> {
 
 export interface ProductionWithProducer extends Production {
 	/** The producer as a record, so the console can link to them. */
-	producer: import('$lib/types/entity').MemberRef | null;
+	producer: import('#lib/types/entity.js').MemberRef | null;
 	/** Null when nobody has taken it, or when the account behind it was purged. */
 	producerName: string | null;
 	/** Null until close-out is signed off, or once that account is purged. */

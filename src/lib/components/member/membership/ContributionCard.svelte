@@ -1,22 +1,22 @@
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { formatDollars, formatMonthDayYear } from '$lib/utils/format';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import { formatDollars, formatMonthDayYear } from '#lib/utils/format.js';
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { IconCreditCard } from '@tabler/icons-svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { DOLLARS_PER_UNIT } from '$lib/config';
-	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
-	import type { SubscriptionInfo } from '$lib/server/db/schema/finance';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { DOLLARS_PER_UNIT } from '#lib/config.js';
+	import { calculateTotalWithFeeCoverage } from '#lib/finance/fees.js';
+	import type { SubscriptionInfo } from '#lib/server/db/schema/finance.js';
 	import SubscriptionForm from './SubscriptionForm.svelte';
-	import type { RemoteForm } from '$lib/components/ui/Form/Form.svelte';
-	import type { RemoteFormInput } from '@sveltejs/kit';
+	import type { RemoteForm } from '#lib/components/ui/Form/Form.svelte';
+	import type { RemoteFormInput } from '$app/server';
 	import type { ComponentProps } from 'svelte';
 
 	let {

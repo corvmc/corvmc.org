@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 
 	/**
 	 * A one-line add that reads as the next row of the list rather than a form

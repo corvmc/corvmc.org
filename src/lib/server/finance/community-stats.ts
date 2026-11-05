@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, isNull, isNotNull, count, sql } from 'drizzle-orm';
-import { getJson, putJson, deleteKey } from '$lib/server/kv';
-import { creditsToHours } from '$lib/config';
+import { getJson, putJson, deleteKey } from '#lib/server/kv.js';
+import { creditsToHours } from '#lib/config.js';
 
 export interface CommunityStats {
 	sustainingMemberCount: number;

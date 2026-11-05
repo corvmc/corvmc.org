@@ -9,7 +9,7 @@ import { render } from 'vitest-browser-svelte';
  * outright with `Form cannot contain duplicated keys`, which reached a member
  * as a 500 on the one button that confirms a booking (#1299).
  */
-vi.mock('$lib/remote/reservations.remote', () => {
+vi.mock('#lib/remote/reservations.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => null
@@ -20,8 +20,12 @@ vi.mock('$lib/remote/reservations.remote', () => {
 		result: undefined
 	});
 	return {
-		payForReservation: form({ id: field('id'), coverFees: field('coverFees') }),
-		confirmReservation: form({ id: field('id') }),
+		payForReservation: form({
+			id: field('id'),
+			coverFees: field('coverFees'),
+			skipPayment: field('skipPayment')
+		}),
+		confirmReservation: form({ id: field('id'), comp: field('comp') }),
 		getReservationPricing: vi.fn(async () => ({
 			durationHours: 2,
 			hourlyRateCents: 1500,
@@ -39,7 +43,7 @@ vi.mock('$app/navigation', () => ({
 	beforeNavigate: vi.fn()
 }));
 
-vi.mock('$lib/utils/checkout-navigation', () => ({ goToCheckout: vi.fn() }));
+vi.mock('#lib/utils/checkout-navigation.js', () => ({ goToCheckout: vi.fn() }));
 
 const ConfirmReservationAction = (await import('./ConfirmReservationAction.svelte')).default;
 
@@ -57,9 +61,11 @@ const openDialog = async (locator: Locator) => {
 
 /** Every hidden input the form would actually post under `name`. */
 const postedValues = (name: string) =>
-	[...document.querySelectorAll<HTMLInputElement>(`[role="dialog"] input[name="${name}"]`)].map(
-		(el) => el.value
-	);
+	[
+		...document.querySelectorAll<HTMLInputElement>(
+			`[role="dialog"] input:is([name="${name}"], [name^="${name}/"])`
+		)
+	].map((el) => el.value);
 
 describe('ConfirmReservationAction', () => {
 	it('posts the reservation id exactly once for a member', async () => {

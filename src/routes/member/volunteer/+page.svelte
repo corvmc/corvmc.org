@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The member's volunteering dashboard: a next-action stack beside a board.
 	 *
@@ -11,19 +11,19 @@
 	 * /start, a blocked one to /blocked — happens ahead of the rest rather than
 	 * racing it. The page needs no client-side check of its own.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import OpenShifts from '$lib/components/volunteer/OpenShifts.svelte';
-	import ShiftInvitations from '$lib/components/volunteer/ShiftInvitations.svelte';
-	import MyShiftCard from '$lib/components/volunteer/MyShiftCard.svelte';
-	import LogHoursAction from '$lib/components/volunteer/LogHoursAction.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import OpenShifts from '#lib/components/volunteer/OpenShifts.svelte';
+	import ShiftInvitations from '#lib/components/volunteer/ShiftInvitations.svelte';
+	import MyShiftCard from '#lib/components/volunteer/MyShiftCard.svelte';
+	import LogHoursAction from '#lib/components/volunteer/LogHoursAction.svelte';
 	import { resolve } from '$app/paths';
-	import { formatDateShort } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
-	import { getMemberVolunteerPage } from '$lib/remote/volunteer.remote';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { DEFAULT_TIMEZONE } from '#lib/config.js';
+	import { getMemberVolunteerPage } from '#lib/remote/volunteer.remote.js';
 
 	const pageData = $derived(await getMemberVolunteerPage());
 
@@ -62,7 +62,7 @@
 </script>
 
 <PageHeader width="5xl" title={m.member_volunteering()} subtitle={m.member_member()}>
-	<Button href={resolve('/member/volunteer/profile')} variant="ghost" size="sm"
+	<Button href={resolve('member/volunteer/profile')} variant="ghost" size="sm"
 		>{m.member_profile()}</Button
 	>
 </PageHeader>

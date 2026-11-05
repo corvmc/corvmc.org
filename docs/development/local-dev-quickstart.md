@@ -126,7 +126,7 @@ the `workflow-evaluation` skill. It pairs a workflow from
 **What a seed cannot carry.** Device, viewport, input method, assistive technology and
 reading pace are runtime properties, so there is no persona for them and adding one would
 be a lie. Those belong to Playwright (`page.setViewportSize`, as `staff-users.e2e.ts` does
-at 375px) and to Storybook. What the seed holds is the _residue_ a style leaves in the
+at 375px) and to the `client` browser specs. What the seed holds is the _residue_ a style leaves in the
 database, which is what the four above are.
 
 Every other seeded user has no credential account — they are the lived-in background. To
@@ -163,7 +163,6 @@ Turn them on at `/staff/settings` as the admin user, or leave them off; see
 Other useful processes:
 
 ```bash
-pnpm storybook    # component workshop on :6006
 pnpm check:watch  # svelte-check in watch mode
 pnpm db:studio    # drizzle-kit studio (needs CLOUDFLARE_* vars → points at REMOTE D1; be careful)
 ```
@@ -173,7 +172,7 @@ pnpm db:studio    # drizzle-kit studio (needs CLOUDFLARE_* vars → points at RE
 | Command                | What runs                                                                                                                                                                                  |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `pnpm test:unit`       | Vitest, watch mode — `server` project (node, `src/**/*.{test,spec}.ts` + `scripts/**` + `e2e/**` helpers) and `client` project (real Chromium browser, `src/**/*.svelte.{test,spec}.ts`)   |
-| `pnpm test:components` | One-shot client + storybook story tests                                                                                                                                                    |
+| `pnpm test:components` | One-shot `client` browser specs                                                                                                                                                            |
 | `pnpm test:e2e`        | Playwright — builds, runs `vite preview` on :4173 (a worktree gets its own port), migrates + seeds its own D1 via `e2e/prepare.ts`, runs `e2e/**/*.e2e.ts`, then clears the database again |
 | `pnpm test`            | Everything (unit one-shot + e2e) — what CI runs                                                                                                                                            |
 
@@ -226,7 +225,7 @@ step, and confirm-without-payment flows are fully testable.
 | Commit mangled / files reformatted on commit               | That's lefthook's prettier `--write` pre-commit hook doing its job                                                                                |
 | Email layout changes not showing                           | The MJML layout compiles at `prepare`/`build` — run `pnpm tsx scripts/compile-email-layouts.ts` or restart after `pnpm install`                   |
 | Port 5173 busy                                             | Another dev server is in the _same_ checkout (worktrees get their own port). Stop it, or `PORT=5174 pnpm dev` (update `ORIGIN` to match)          |
-| Storybook stories fail in vitest                           | The `storybook` vitest project needs the Chromium install: `pnpm exec playwright install chromium`                                                |
+| Browser specs fail in vitest                               | The `client` vitest project needs the Chromium install : `pnpm exec playwright install chromium`                                                  |
 
 ## Where to next
 

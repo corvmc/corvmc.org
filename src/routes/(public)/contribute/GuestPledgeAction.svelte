@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { Turnstile } from 'svelte-turnstile';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { pledgeWishlistAsGuest } from '$lib/remote/inventory.remote';
-	import { TURNSTILE_SITE_KEY, TURNSTILE_RESPONSE_FIELD } from '$lib/turnstile';
-	import type { WishlistPledgeSubject } from '$lib/config';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { pledgeWishlistAsGuest } from '#lib/remote/inventory.remote.js';
+	import { TURNSTILE_SITE_KEY } from '#lib/turnstile.js';
+	import type { WishlistPledgeSubject } from '#lib/config.js';
 
 	/**
 	 * A non-member's pledge (#1565). Nothing is held until the email link is
@@ -43,7 +43,7 @@
 		<Field field={action.fields.email} type="email" label={m.public_email_2()} />
 		<Turnstile
 			siteKey={TURNSTILE_SITE_KEY}
-			responseFieldName={TURNSTILE_RESPONSE_FIELD}
+			responseFieldName={action.fields.turnstileToken.as('hidden', '').name}
 			theme="auto"
 			bind:reset={resetTurnstile}
 		/>

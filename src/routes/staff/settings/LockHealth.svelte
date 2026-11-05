@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	// Whether the door is actually reachable, and the break-glass code.
 	//
 	// Its own component so the settings page keeps one load-bearing query: this
@@ -8,10 +8,10 @@
 	//
 	// The page's "Connected" badge means only that a refresh token is stored;
 	// this says whether a door code will actually work.
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { getLockHealth, rotateFallbackCode, runLockJobNow } from '$lib/remote/lock.remote';
-	import { timeAgo } from '$lib/utils/format';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { getLockHealth, rotateFallbackCode, runLockJobNow } from '#lib/remote/lock.remote.js';
+	import { timeAgo } from '#lib/utils/format.js';
 
 	const health = $derived(await getLockHealth());
 

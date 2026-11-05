@@ -1,12 +1,12 @@
 import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
-import { db } from '$lib/server/db';
-import { closure } from '$lib/server/db/schema/reservation';
+import { requireCapability } from '#lib/server/authorization.js';
+import { db } from '#lib/server/db/index.js';
+import { closure } from '#lib/server/db/schema/reservation.js';
 import { eq } from 'drizzle-orm';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 // The list is the staff reservations page (#1833); its actions invalidate it.
 

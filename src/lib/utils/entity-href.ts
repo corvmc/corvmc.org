@@ -29,8 +29,8 @@
  * unit-tested as a plain table, the way `directory-display.ts` is.
  */
 import { resolve } from '$app/paths';
-import { surfaces } from '$lib/config';
-import type { EntityRef, Panel, Viewer } from '$lib/types/entity';
+import { surfaces } from '#lib/config.js';
+import type { EntityRef, Panel, Viewer } from '#lib/types/entity.js';
 
 type Candidate = { panel: Panel; href: string };
 
@@ -56,77 +56,77 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 
 	switch (ref.type) {
 		case 'member': {
-			if (can('user.read')) out.push({ panel: 'staff', href: resolve(`/staff/members/${id}`) });
+			if (can('user.read')) out.push({ panel: 'staff', href: resolve(`staff/members/${id}`) });
 			if (signedIn) {
 				out.push(
 					id === viewer.userId
-						? { panel: 'member', href: resolve('/member/profile') }
-						: { panel: 'member', href: resolve(`/member/directory/members/${id}`) }
+						? { panel: 'member', href: resolve('member/profile') }
+						: { panel: 'member', href: resolve(`member/directory/members/${id}`) }
 				);
 			}
-			out.push({ panel: 'public', href: resolve(`/directory/members/${id}`) });
+			out.push({ panel: 'public', href: resolve(`directory/members/${id}`) });
 			break;
 		}
 
 		case 'band': {
-			if (can('band.read')) out.push({ panel: 'staff', href: resolve(`/staff/groups/${id}`) });
+			if (can('band.read')) out.push({ panel: 'staff', href: resolve(`staff/groups/${id}`) });
 			// Every band route below the staff panel is keyed by slug.
 			if (ref.slug) {
-				if (inBand(id)) out.push({ panel: 'band', href: resolve(`/band/${ref.slug}`) });
+				if (inBand(id)) out.push({ panel: 'band', href: resolve(`band/${ref.slug}`) });
 				if (signedIn)
-					out.push({ panel: 'member', href: resolve(`/member/directory/bands/${ref.slug}`) });
-				out.push({ panel: 'public', href: resolve(`/directory/bands/${ref.slug}`) });
+					out.push({ panel: 'member', href: resolve(`member/directory/bands/${ref.slug}`) });
+				out.push({ panel: 'public', href: resolve(`directory/bands/${ref.slug}`) });
 			}
 			break;
 		}
 
 		case 'event': {
-			if (can('event.read')) out.push({ panel: 'staff', href: resolve(`/staff/events/${id}`) });
+			if (can('event.read')) out.push({ panel: 'staff', href: resolve(`staff/events/${id}`) });
 			if (ref.bandSlug && inBand(ref.bandId))
-				out.push({ panel: 'band', href: resolve(`/band/${ref.bandSlug}/events/${id}`) });
-			if (signedIn) out.push({ panel: 'member', href: resolve(`/member/events/${id}`) });
-			out.push({ panel: 'public', href: resolve(`/events/${id}`) });
+				out.push({ panel: 'band', href: resolve(`band/${ref.bandSlug}/events/${id}`) });
+			if (signedIn) out.push({ panel: 'member', href: resolve(`member/events/${id}`) });
+			out.push({ panel: 'public', href: resolve(`events/${id}`) });
 			break;
 		}
 
 		case 'reservation': {
 			if (can('reservation.read'))
-				out.push({ panel: 'staff', href: resolve(`/staff/reservations/${id}`) });
+				out.push({ panel: 'staff', href: resolve(`staff/reservations/${id}`) });
 			// A band booking has its own page in the band panel now (#565); it shows
 			// the act what the act is entitled to, which is less than the booker's.
 			if (ref.bandSlug && inBand(ref.bandId))
-				out.push({ panel: 'band', href: resolve(`/band/${ref.bandSlug}/reservations/${id}`) });
+				out.push({ panel: 'band', href: resolve(`band/${ref.bandSlug}/reservations/${id}`) });
 			if (viewer.userId && ref.ownerUserId === viewer.userId)
-				out.push({ panel: 'member', href: resolve(`/member/reservations/${id}`) });
+				out.push({ panel: 'member', href: resolve(`member/reservations/${id}`) });
 			break;
 		}
 
 		case 'suggestion': {
 			if (can('suggestion.read'))
-				out.push({ panel: 'staff', href: resolve(`/staff/suggestions/${id}`) });
-			if (signedIn) out.push({ panel: 'member', href: resolve(`/member/suggestions/${id}`) });
+				out.push({ panel: 'staff', href: resolve(`staff/suggestions/${id}`) });
+			if (signedIn) out.push({ panel: 'member', href: resolve(`member/suggestions/${id}`) });
 			break;
 		}
 
 		case 'classified': {
 			if (!surfaces.classifieds) break;
 			if (can('listing.review'))
-				out.push({ panel: 'staff', href: resolve(`/staff/classifieds/${id}`) });
-			if (signedIn) out.push({ panel: 'member', href: resolve(`/member/classifieds/${id}`) });
+				out.push({ panel: 'staff', href: resolve(`staff/classifieds/${id}`) });
+			if (signedIn) out.push({ panel: 'member', href: resolve(`member/classifieds/${id}`) });
 			break;
 		}
 
 		case 'thread': {
-			if (can('inbox.read')) out.push({ panel: 'staff', href: resolve(`/staff/inbox/${id}`) });
-			if (signedIn) out.push({ panel: 'member', href: resolve(`/member/messages/${id}`) });
+			if (can('inbox.read')) out.push({ panel: 'staff', href: resolve(`staff/inbox/${id}`) });
+			if (signedIn) out.push({ panel: 'member', href: resolve(`member/messages/${id}`) });
 			break;
 		}
 
 		case 'help': {
-			if (can('help.read')) out.push({ panel: 'staff', href: resolve(`/staff/help/${id}`) });
+			if (can('help.read')) out.push({ panel: 'staff', href: resolve(`staff/help/${id}`) });
 			// The member-facing article is addressed by slug, the staff editor by id.
 			if (signedIn && ref.slug)
-				out.push({ panel: 'member', href: resolve(`/member/help/${ref.slug}`) });
+				out.push({ panel: 'member', href: resolve(`member/help/${ref.slug}`) });
 			break;
 		}
 
@@ -135,15 +135,15 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 		// is standing next to it.
 		case 'equipment': {
 			if (can('inventory.read'))
-				out.push({ panel: 'staff', href: resolve(`/staff/inventory/${id}`) });
-			if (signedIn) out.push({ panel: 'member', href: resolve(`/member/equipment/${id}`) });
+				out.push({ panel: 'staff', href: resolve(`staff/inventory/${id}`) });
+			if (signedIn) out.push({ panel: 'member', href: resolve(`member/equipment/${id}`) });
 			break;
 		}
 
 		case 'asset': {
 			if (can('inventory.read'))
-				out.push({ panel: 'staff', href: resolve(`/staff/inventory/assets/${id}`) });
-			if (signedIn) out.push({ panel: 'member', href: resolve(`/member/equipment/assets/${id}`) });
+				out.push({ panel: 'staff', href: resolve(`staff/inventory/assets/${id}`) });
+			if (signedIn) out.push({ panel: 'member', href: resolve(`member/equipment/assets/${id}`) });
 			// Deliberately no public arm: the gear catalog is not public, so a
 			// signed-out scan gets `null` here and `/a/[tag]` turns that into a
 			// login redirect rather than a 404.
@@ -152,10 +152,10 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 
 		case 'loan': {
 			if (can('inventory.manageLoans'))
-				out.push({ panel: 'staff', href: resolve(`/staff/inventory/loans/${id}`) });
+				out.push({ panel: 'staff', href: resolve(`staff/inventory/loans/${id}`) });
 			// The member panel has no per-loan page, only the list — the same
 			// shape reservations already use for the band panel.
-			if (signedIn) out.push({ panel: 'member', href: resolve('/member/equipment/loans') });
+			if (signedIn) out.push({ panel: 'member', href: resolve('member/equipment/loans') });
 			break;
 		}
 
@@ -163,34 +163,34 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 		// `null` has to be a first-class answer rather than a fallback to "/".
 		case 'flag':
 			if (can('moderation.reviewFlags'))
-				out.push({ panel: 'staff', href: resolve(`/staff/flags/${id}`) });
+				out.push({ panel: 'staff', href: resolve(`staff/flags/${id}`) });
 			break;
 		case 'campaign':
 			if (can('marketing.read'))
-				out.push({ panel: 'staff', href: resolve(`/staff/marketing/campaigns/${id}`) });
+				out.push({ panel: 'staff', href: resolve(`staff/marketing/campaigns/${id}`) });
 			break;
 		case 'audience':
 			if (can('marketing.manageAudiences'))
-				out.push({ panel: 'staff', href: resolve(`/staff/marketing/audiences/${id}`) });
+				out.push({ panel: 'staff', href: resolve(`staff/marketing/audiences/${id}`) });
 			break;
 		case 'shift':
 			if (can('volunteer.read'))
-				out.push({ panel: 'staff', href: resolve(`/staff/volunteer/shifts/${id}`) });
+				out.push({ panel: 'staff', href: resolve(`staff/volunteer/shifts/${id}`) });
 			break;
 		case 'role':
 			if (can('volunteer.read'))
-				out.push({ panel: 'staff', href: resolve(`/staff/volunteer/roles/${id}`) });
+				out.push({ panel: 'staff', href: resolve(`staff/volunteer/roles/${id}`) });
 			break;
 		case 'recurring':
 			if (can('reservation.read'))
-				out.push({ panel: 'staff', href: resolve(`/staff/recurring/${id}`) });
+				out.push({ panel: 'staff', href: resolve(`staff/recurring/${id}`) });
 			break;
 		case 'project':
-			if (can('project.read')) out.push({ panel: 'staff', href: resolve(`/staff/projects/${id}`) });
+			if (can('project.read')) out.push({ panel: 'staff', href: resolve(`staff/projects/${id}`) });
 			break;
 		case 'incident':
 			if (can('incident.read'))
-				out.push({ panel: 'staff', href: resolve(`/staff/incidents/${id}`) });
+				out.push({ panel: 'staff', href: resolve(`staff/incidents/${id}`) });
 			break;
 	}
 

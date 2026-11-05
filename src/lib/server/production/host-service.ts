@@ -1,9 +1,9 @@
 import { and, eq, inArray } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { volunteerRole, workOrder, volunteerSignup } from '$lib/server/db/schema/volunteer';
-import { user } from '$lib/server/db/schema/authentication';
-import { HOST_VOLUNTEER_ROLE } from '$lib/config';
-import { production } from '$lib/server/db/schema/production';
+import { db } from '#lib/server/db/index.js';
+import { volunteerRole, workOrder, volunteerSignup } from '#lib/server/db/schema/volunteer.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { HOST_VOLUNTEER_ROLE } from '#lib/config.js';
+import { production } from '#lib/server/db/schema/production.js';
 import { announcedBy } from './production-service';
 import { assertNotTerminal } from './production-scope';
 

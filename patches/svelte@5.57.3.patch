@@ -1,0 +1,20 @@
+diff --git a/src/internal/client/dom/blocks/boundary.js b/src/internal/client/dom/blocks/boundary.js
+index ffcf2d4fd14d50c8f0f056f3873888193fd424e5..677d67c5fc00c17951ffed9c2956101d7d04f505 100644
+--- a/src/internal/client/dom/blocks/boundary.js
++++ b/src/internal/client/dom/blocks/boundary.js
+@@ -353,6 +353,15 @@ export class Boundary {
+ 	#resolve(batch) {
+ 		this.is_pending = false;
+ 
++		// The batch was captured by `increment_pending` when the pending work
++		// started, and may since have been merged into another batch and
++		// discarded — `Batch#decrement` refuses to flush an unlinked batch, so
++		// effects handed to one here would never run again. Transfer them to a
++		// live batch instead.
++		if (!batch.linked) {
++			batch = Batch.ensure();
++		}
++
+ 		// any effects that were previously deferred should be transferred
+ 		// to the batch, which will flush in the next microtask
+ 		batch.transfer_reactions(this.#dirty_reactions);

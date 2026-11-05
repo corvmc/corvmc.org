@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import CheckboxGroup from '$lib/components/ui/Form/CheckboxGroup.svelte';
-	import { Field, MoneyField } from '$lib/components/ui/Form';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import CheckboxGroup from '#lib/components/ui/Form/CheckboxGroup.svelte';
+	import { Field, MoneyField } from '#lib/components/ui/Form/index.js';
 	import { resolve } from '$app/paths';
 	import { untrack } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -18,8 +18,8 @@
 		openTaskForm,
 		unassignMemberForm,
 		unassignTaskForm
-	} from '$lib/remote/tasks.remote';
-	import { contractorJobStatusLabels, type ContractorJobStatus } from '$lib/config';
+	} from '#lib/remote/tasks.remote.js';
+	import { contractorJobStatusLabels, type ContractorJobStatus } from '#lib/config.js';
 	import { engagementLabel, type Task } from './task-view';
 
 	/**
@@ -110,7 +110,7 @@
 		})}
 		{#snippet action()}
 			<Button
-				href="{resolve(`/staff/projects/${projectId}/tasks/${task.id}`)}#engagement-{engaged.id}"
+				href="{resolve(`staff/projects/${projectId}/tasks/${task.id}`)}#engagement-{engaged.id}"
 				size="xs"
 				variant="default"
 			>
@@ -264,7 +264,7 @@
 			})}
 			{#snippet action()}
 				<Button
-					href="{resolve(`/staff/projects/${projectId}/tasks/${task.id}`)}#engagement-{live.id}"
+					href="{resolve(`staff/projects/${projectId}/tasks/${task.id}`)}#engagement-{live.id}"
 					size="xs"
 					variant="default"
 				>

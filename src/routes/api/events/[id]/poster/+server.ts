@@ -1,14 +1,14 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireListingWriter } from '$lib/server/event/listing-guard';
-import { can } from '$lib/server/authorization';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { uploadFile, validateUpload } from '$lib/server/storage';
-import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
-import { mediaKey } from '$lib/server/storage-keys';
-import { getById } from '$lib/server/event/event-service';
-import { db } from '$lib/server/db';
-import { eventListing } from '$lib/server/db/schema/event';
+import { requireListingWriter } from '#lib/server/event/listing-guard.js';
+import { can } from '#lib/server/authorization.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { uploadFile, validateUpload } from '#lib/server/storage.js';
+import { detachSlot, replaceSlot } from '#lib/server/media/media-service.js';
+import { mediaKey } from '#lib/server/storage-keys.js';
+import { getById } from '#lib/server/event/event-service.js';
+import { db } from '#lib/server/db/index.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
 import { eq } from 'drizzle-orm';
 
 /** Upload or replace an event poster image. A listing write, so the show's committee may too. */

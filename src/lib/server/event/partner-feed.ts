@@ -1,6 +1,6 @@
 import ICAL from 'ical.js';
-import { DEFAULT_TIMEZONE } from '$lib/config';
-import { buildDateTimeInTz } from '$lib/server/reservation/timezone';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import { buildDateTimeInTz } from '#lib/server/reservation/timezone.js';
 
 /** One show as a partner's feed describes it, before it touches the database. */
 export interface FeedShow {

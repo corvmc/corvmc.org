@@ -1,5 +1,5 @@
 import type { ResolvedPathname } from '$app/types';
-import { hasCapability, type Capability } from '$lib/config';
+import { hasCapability, type Capability } from '#lib/config.js';
 
 /** One tab of a staff row's page. The label is a function: a catalog read needs a request. */
 export interface StaffView<K extends string = string> {

@@ -1,6 +1,6 @@
 <script lang="ts" module>
 	import { getContext, hasContext, setContext } from 'svelte';
-	import type { RemoteForm, RemoteFormInput, RemoteFormIssue } from '@sveltejs/kit';
+	import type { RemoteForm, RemoteFormInput, RemoteFormIssue } from '$app/server';
 
 	export type FormStatus = 'idle' | 'dirty' | 'pending' | 'success' | 'error';
 
@@ -9,6 +9,12 @@
 		readonly issues: RemoteFormIssue[] | null;
 		issuesFor(fieldName: string): RemoteFormIssue[] | null;
 		readonly values?: Record<string, unknown>;
+		/**
+		 * The remote form's fields, for a field set shared by several forms (a
+		 * wizard step) to take its names from. Untyped: each form's differ.
+		 */
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		readonly fields?: any;
 		submit(): void;
 		reset(): void;
 		changed(): void;
@@ -39,15 +45,15 @@
 </script>
 
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { reportError } from '$lib/report-error';
-	import { errorMessage } from '$lib/error-message';
-	import { recoverFromStaleDeploy } from '$lib/stale-deploy-recovery';
+	import { reportError } from '#lib/report-error.js';
+	import { errorMessage } from '#lib/error-message.js';
+	import { recoverFromStaleDeploy } from '#lib/stale-deploy-recovery.js';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { signInInterruptFor } from '$lib/utils/sign-in';
+	import { signInInterruptFor } from '#lib/utils/sign-in.js';
 	import { getErrorBoundary } from '../ErrorToastBoundary.svelte';
 	import FormGuard from './FormGuard.svelte';
 
@@ -60,6 +66,7 @@
 		onsuccess,
 		onfailure,
 		ondirtychange,
+		refreshQueries = true,
 		children,
 		class: className,
 		...rest
@@ -84,6 +91,13 @@
 		 * dialog needs it to know whether closing throws work away.
 		 */
 		ondirtychange?: (dirty: boolean) => void;
+		/**
+		 * Kit refreshes every query on the page after a successful submit. Turn that
+		 * off only for a mutation that invalidates the page's own query keys and
+		 * navigates in `onsuccess`: a refresh of a dead key can redirect after that
+		 * navigation and override it.
+		 */
+		refreshQueries?: boolean;
 		children: Snippet;
 		class?: string;
 		[key: string]: unknown;
@@ -139,6 +153,9 @@
 		get issues() {
 			if (remote) return remote.fields.allIssues?.() ?? null;
 			return actionIssues;
+		},
+		get fields() {
+			return remote?.fields;
 		},
 		issuesFor(fieldName: string) {
 			if (remote) return remote.fields[fieldName]?.issues() ?? null;
@@ -258,7 +275,9 @@
 			const start = performance.now();
 
 			try {
-				if (await submit()) {
+				// `.updates()` has to be called in the same tick as `submit()`.
+				const submission = submit();
+				if (await (refreshQueries ? submission : submission.updates())) {
 					await delay(150 - (performance.now() - start));
 					await onsuccess?.(remote!.result);
 					if (successToast) toast.success(successToast);

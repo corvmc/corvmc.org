@@ -19,7 +19,7 @@
 
 import { CalendarDateTime } from '@internationalized/date';
 import { differenceInCalendarDays, isSameWeek } from 'date-fns';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Venue-time primitives

@@ -1,17 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { RemoveCategoryAction } from '$lib/components/actions';
-	import { addCategory, editCategory, getEquipmentCategories } from '$lib/remote/inventory.remote';
-	import { pricingTiers } from '$lib/config';
-	import type { PricingTier } from '$lib/server/db/schema/inventory';
+	import { m } from '#lib/paraglide/messages.js';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { RemoveCategoryAction } from '#lib/components/actions/index.js';
+	import {
+		addCategory,
+		editCategory,
+		getEquipmentCategories
+	} from '#lib/remote/inventory.remote.js';
+	import { pricingTiers } from '#lib/config.js';
+	import type { PricingTier } from '#lib/server/db/schema/inventory.js';
 
 	/**
 	 * Managing equipment categories — the table, the add/edit form, and the query behind both.
@@ -123,21 +127,22 @@
 				{/if}
 				<div class="grid grid-cols-3 gap-3">
 					<Field
-						name="name"
+						field={categoryForm.fields.name}
 						type="text"
 						label={m.inventory_category_manager_modal_name()}
 						class="col-span-2"
 						value={editingCategory.name}
 					/>
 					<Field
-						name="displayOrder"
+						field={categoryForm.fields.displayOrder}
+						submitAs="text"
 						type="number"
 						label={m.inventory_category_manager_modal_order()}
 						value={editingCategory.displayOrder}
 					/>
 				</div>
 				<Field
-					name="pricingTier"
+					field={categoryForm.fields.pricingTier}
 					type="select"
 					label={m.inventory_category_manager_modal_pricing_tier_2()}
 					value={editingCategory.pricingTier}

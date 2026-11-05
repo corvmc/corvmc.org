@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import type { ResolvedPathname } from '$app/types';
-	import Section from '$lib/components/public/Section.svelte';
+	import Section from '#lib/components/public/Section.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import IdCard from '$lib/components/directory/IdCard.svelte';
-	import IdCardCta from '$lib/components/directory/IdCardCta.svelte';
-	import VinylCard from '$lib/components/directory/VinylCard.svelte';
-	import VinylCardCta from '$lib/components/directory/VinylCardCta.svelte';
-	import { getPublicDirectoryPage } from '$lib/remote/directory.remote';
-	import { hashIndex } from '$lib/utils/patterns';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import IdCard from '#lib/components/directory/IdCard.svelte';
+	import IdCardCta from '#lib/components/directory/IdCardCta.svelte';
+	import VinylCard from '#lib/components/directory/VinylCard.svelte';
+	import VinylCardCta from '#lib/components/directory/VinylCardCta.svelte';
+	import { getPublicDirectoryPage } from '#lib/remote/directory.remote.js';
+	import { hashIndex } from '#lib/utils/patterns.js';
 	import {
 		BAND_COLORS,
 		genreFacets,
@@ -26,7 +26,7 @@
 		sortRows,
 		directorySortOptions,
 		type DirectorySort
-	} from '$lib/utils/directory-browse';
+	} from '#lib/utils/directory-browse.js';
 
 	type Tab = 'bands' | 'musicians';
 
@@ -64,14 +64,14 @@
 		if (g) pairs.push(['genre', g]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		return withQuery(resolve('/directory'), search);
+		return withQuery(resolve('directory'), search);
 	}
 
 	// Writes the URL, never state — `searchText` and `genre` stay the source of
 	// truth. `goto(..., { replaceState })` rather than `replaceState()`: the
 	// latter only rewrites the address bar, and the router then overwrites that
 	// entry with its own record on the next navigation. Debounced so typing a
-	// word costs one rewrite rather than one per character, and `keepFocus` so
+	// word costs one rewrite rather than one per character, and `reset: false` so
 	// the rewrite doesn't yank the caret out of the search box mid-word.
 	$effect(() => {
 		// `tab` is read from the URL here, deliberately. Mirroring a state copy of
@@ -79,7 +79,7 @@
 		const href = directoryHref(tab, searchText, genre);
 		const timer = setTimeout(() => {
 			if (location.pathname + location.search !== href) {
-				void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+				void goto(href, { replace: true, reset: false });
 			}
 		}, 300);
 		return () => clearTimeout(timer);
@@ -208,7 +208,7 @@
 						// cross-route tabs compose with no shared state.
 						key: 'instructors',
 						label: m.public_teachers(),
-						href: resolve('/directory/instructors')
+						href: resolve('directory/instructors')
 					}
 				]}
 				active={tab}
@@ -326,7 +326,7 @@
 					inputs={{}}
 					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 						>{/snippet}{#snippet a({ children })}<a
-							href={resolve('/member/directory')}
+							href={resolve('member/directory')}
 							class="text-cmc-teal underline">{@render children?.()}</a
 						>{/snippet}</ParaglideMessage
 				>
@@ -335,7 +335,7 @@
 			<p class="mt-10 text-center text-sm text-fg-3">
 				<ParaglideMessage message={m.public_directory_don_t_see_name_profiles} inputs={{}}
 					>{#snippet a({ children })}<a
-							href={resolve('/member/profile')}
+							href={resolve('member/profile')}
 							class="text-cmc-teal underline">{@render children?.()}</a
 						>{/snippet}</ParaglideMessage
 				>

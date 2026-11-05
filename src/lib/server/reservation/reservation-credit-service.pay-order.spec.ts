@@ -8,17 +8,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { commitReservationCredits, coveredByFreeHours, getFreeHoursWallet } =
 	await import('./reservation-credit-service');
-const { user } = await import('$lib/server/db/schema/authentication');
-const { reservation } = await import('$lib/server/db/schema/reservation');
-const { db } = await import('$lib/server/db');
+const { user } = await import('#lib/server/db/schema/authentication.js');
+const { reservation } = await import('#lib/server/db/schema/reservation.js');
+const { db } = await import('#lib/server/db/index.js');
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;

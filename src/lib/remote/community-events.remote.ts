@@ -11,9 +11,9 @@ import { z } from 'zod';
 import { invalid } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability, requireUser } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import { getStanding } from '$lib/server/moderation/standing-service';
+import { requireCapability, requireUser } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { getStanding } from '#lib/server/moderation/standing-service.js';
 import {
 	listCommunityEventsForUser,
 	listRejectedForUser,
@@ -29,16 +29,16 @@ import {
 	deleteCommunityEventDraft,
 	approveSubmission,
 	rejectSubmission
-} from '$lib/server/event/community-event-service';
-import { getById, getEventLineup } from '$lib/server/event/event-service';
-import { toEventRef } from '$lib/server/entity/refs';
-import { searchBandsByName } from '$lib/server/band/band-service';
-import { communityEventSchema, lineupSchema } from '$lib/server/db/schema/event';
-import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
-import { dollarsToCents } from '$lib/utils/event-ticketing';
-import { resolveImageUrl, validateUpload } from '$lib/server/storage';
-import { readPosterFile, toPosterParam } from '$lib/server/event/poster-file';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+} from '#lib/server/event/community-event-service.js';
+import { getById, getEventLineup } from '#lib/server/event/event-service.js';
+import { toEventRef } from '#lib/server/entity/refs.js';
+import { searchBandsByName } from '#lib/server/band/band-service.js';
+import { communityEventSchema, lineupSchema } from '#lib/server/db/schema/event.js';
+import { buildDateInTz, buildTimeRangeInTz } from '#lib/server/reservation/timezone.js';
+import { dollarsToCents } from '#lib/utils/event-ticketing.js';
+import { resolveImageUrl, validateUpload } from '#lib/server/storage.js';
+import { readPosterFile, toPosterParam } from '#lib/server/event/poster-file.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import { getStaffLayout } from './layout.remote';
 
 // ---------------------------------------------------------------------------

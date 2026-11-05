@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { getUserReservations } from '$lib/remote/users.remote';
-	import { getUserRecurringSeries } from '$lib/remote/reservations.remote';
-	import { getUserLoans } from '$lib/remote/inventory.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import Table from '$lib/components/ui/Table.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import BookerTypeIcon from '$lib/components/reservations/BookerTypeIcon.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getUserReservations } from '#lib/remote/users.remote.js';
+	import { getUserRecurringSeries } from '#lib/remote/reservations.remote.js';
+	import { getUserLoans } from '#lib/remote/inventory.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import Table from '#lib/components/ui/Table.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import BookerTypeIcon from '#lib/components/reservations/BookerTypeIcon.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateTimeShort, formatDateShortYear, formatTimeRange } from '$lib/utils/format';
+	import { formatDateTimeShort, formatDateShortYear, formatTimeRange } from '#lib/utils/format.js';
 
 	import OrientationCard from './OrientationCard.svelte';
 
@@ -56,12 +56,12 @@
 							<th class="col-extra cell-num">{m.staff_members_id_panels_space_panel_owed()}</th>
 						{/snippet}
 						{#each group.rows as r (r.id)}
-							<tr class="hover" use:rowLink={resolve(`/staff/reservations/${r.id}`)}>
+							<tr class="hover" use:rowLink={resolve(`staff/reservations/${r.id}`)}>
 								<td class="w-px"><StatusBadge status={r.status} /></td>
 								<td class="cell-primary">
 									<a
 										class="font-medium whitespace-nowrap"
-										href={resolve(`/staff/reservations/${r.id}`)}
+										href={resolve(`staff/reservations/${r.id}`)}
 									>
 										{formatDateTimeShort(r.startsAt)}
 									</a>
@@ -117,9 +117,9 @@
 					<th class="col-extra">{m.staff_members_id_panels_space_panel_runs_until()}</th>
 				{/snippet}
 				{#each series as s (s.id)}
-					<tr class="hover" use:rowLink={resolve(`/staff/recurring/${s.id}`)}>
+					<tr class="hover" use:rowLink={resolve(`staff/recurring/${s.id}`)}>
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/recurring/${s.id}`)}>
+							<a class="font-medium" href={resolve(`staff/recurring/${s.id}`)}>
 								{s.frequencyLabel}
 							</a>
 						</td>
@@ -155,10 +155,10 @@
 					<th class="col-extra">{m.staff_returned()}</th>
 				{/snippet}
 				{#each loans as loan (loan.id)}
-					<tr class="hover" use:rowLink={resolve(`/staff/inventory/loans/${loan.id}`)}>
+					<tr class="hover" use:rowLink={resolve(`staff/inventory/loans/${loan.id}`)}>
 						<td class="w-px"><StatusBadge status={loan.status} /></td>
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/inventory/loans/${loan.id}`)}>
+							<a class="font-medium" href={resolve(`staff/inventory/loans/${loan.id}`)}>
 								{loan.equipmentName ?? m.staff_members_id_panels_space_panel_removed_item()}
 							</a>
 							{#if loan.quantity > 1}

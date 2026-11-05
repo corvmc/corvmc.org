@@ -48,7 +48,7 @@
 		volunteerHourStatusLabels,
 		volunteerProfileStatusLabels,
 		suggestionStatusLabels
-	} from '$lib/config';
+	} from '#lib/config.js';
 
 	/** Every tabler icon shares one props shape; borrow it from a concrete icon
 	   rather than reaching into the package's un-exported `dist/types`. */

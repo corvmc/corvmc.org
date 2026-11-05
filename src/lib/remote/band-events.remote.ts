@@ -2,9 +2,9 @@ import { z } from 'zod';
 import { error, invalid } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { mapDomainError } from '$lib/server/errors';
-import { listBandSlotTerms } from '$lib/server/production/run-of-show-service';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { listBandSlotTerms } from '#lib/server/production/run-of-show-service.js';
 import {
 	createBandEvent,
 	updateBandEvent,
@@ -22,17 +22,17 @@ import {
 	publish,
 	unpublish,
 	getById
-} from '$lib/server/event/event-service';
-import { lineupSchema } from '$lib/server/db/schema/event';
-import { startPortalConversation } from '$lib/server/inbox/portal-service';
-import { formatDate } from '$lib/utils/format';
-import { searchBandsByName } from '$lib/server/band/band-service';
-import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
-import { dollarsToCents } from '$lib/utils/event-ticketing';
-import { parseGigImport, GIG_IMPORT_DEFAULT_START } from '$lib/utils/gig-import';
-import { resolveImageUrl, validateUpload } from '$lib/server/storage';
-import { readPosterFile, toPosterParam } from '$lib/server/event/poster-file';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+} from '#lib/server/event/event-service.js';
+import { lineupSchema } from '#lib/server/db/schema/event.js';
+import { startPortalConversation } from '#lib/server/inbox/portal-service.js';
+import { formatDate } from '#lib/utils/format.js';
+import { searchBandsByName } from '#lib/server/band/band-service.js';
+import { buildDateInTz, buildTimeRangeInTz } from '#lib/server/reservation/timezone.js';
+import { dollarsToCents } from '#lib/utils/event-ticketing.js';
+import { parseGigImport, GIG_IMPORT_DEFAULT_START } from '#lib/utils/gig-import.js';
+import { resolveImageUrl, validateUpload } from '#lib/server/storage.js';
+import { readPosterFile, toPosterParam } from '#lib/server/event/poster-file.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Queries

@@ -1,29 +1,29 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatCents, formatDate } from '$lib/utils/format';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import FileUpload from '$lib/components/ui/Form/FileUpload.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import TrackList from '$lib/components/audio/TrackList.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatCents, formatDate } from '#lib/utils/format.js';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import FileUpload from '#lib/components/ui/Form/FileUpload.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import TrackList from '#lib/components/audio/TrackList.svelte';
 	import TrackUploader from './TrackUploader.svelte';
-	import MoneyField from '$lib/components/ui/Form/MoneyField.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import MoneyField from '#lib/components/ui/Form/MoneyField.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { IconDisc } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
-	import { responseErrorMessage } from '$lib/api';
-	import { errorMessage } from '$lib/error-message';
+	import { responseErrorMessage } from '#lib/api.js';
+	import { errorMessage } from '#lib/error-message.js';
 	import {
 		getBandRelease,
 		getBandMusicPage,
@@ -35,7 +35,7 @@
 		deleteReleaseForm,
 		renameTrackForm,
 		deleteTrackForm
-	} from '$lib/remote/audio.remote';
+	} from '#lib/remote/audio.remote.js';
 	import { getBandLayoutContext } from '../../layout-context';
 	import {
 		releaseKinds,
@@ -43,9 +43,9 @@
 		RADIO_MIN_TRACK_MS,
 		RADIO_MAX_TRACK_MS,
 		RADIO_PRO_ATTESTATION
-	} from '$lib/config';
-	import { formatTrackSummary, formatRuntime } from '$lib/utils/audio';
-	import { toLocalDate } from '$lib/utils/format';
+	} from '#lib/config.js';
+	import { formatTrackSummary, formatRuntime } from '#lib/utils/audio.js';
+	import { toLocalDate } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -390,7 +390,7 @@
 							inputs={{}}
 							>{#snippet a({ children })}<a
 									class="link"
-									href={resolve(`/band/${band.slug}/music/payouts`)}>{@render children?.()}</a
+									href={resolve(`band/${band.slug}/music/payouts`)}>{@render children?.()}</a
 								>{/snippet}</ParaglideMessage
 						>
 					</Alert>
@@ -550,7 +550,7 @@
 						submitLabel={m.band_slug_music_release_id_delete()}
 						submitVariant="error"
 						successToast={m.band_slug_music_release_id_release_deleted()}
-						onsuccess={() => goto(resolve(`/band/${band.slug}/music`))}
+						onsuccess={() => goto(resolve(`band/${band.slug}/music`))}
 					>
 						{#snippet form()}
 							{@const fields = deleteReleaseForm.for(releaseId).fields}

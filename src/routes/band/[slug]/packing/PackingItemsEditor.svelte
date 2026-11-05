@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import {
 		packingCategoryOptions,
 		riderElementKindOptions,
@@ -10,9 +10,9 @@
 		PACKING_MAX_ITEMS,
 		PACKING_MAX_QUANTITY,
 		PACKING_ITEM_NOTES_MAX
-	} from '$lib/config';
-	import type { PackingItemRowState } from '$lib/types/packing';
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	} from '#lib/config.js';
+	import type { PackingItemRowState } from '#lib/types/packing.js';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 	import { IconPlus, IconTrash, IconChevronUp, IconChevronDown } from '@tabler/icons-svelte';
 	import type { Snippet } from 'svelte';
 
@@ -118,14 +118,14 @@
 		<div class="rounded-box border border-base-300 p-3">
 			<div class="grid gap-3 md:grid-cols-[1fr_8rem_1fr]">
 				<Field
-					name="{idPrefix}_{i}_label"
+					id="{idPrefix}_{i}_label"
 					label={m.band_slug_packing_packing_items_editor_what()}
 					bind:value={items[i].label}
 					{readonly}
 					placeholder={m.band_slug_packing_packing_items_editor_bass_rig()}
 				/>
 				<Field
-					name="{idPrefix}_{i}_qty"
+					id="{idPrefix}_{i}_qty"
 					type="number"
 					label={m.band_slug_packing_packing_items_editor_how_many()}
 					bind:value={items[i].quantity}
@@ -134,7 +134,7 @@
 					{readonly}
 				/>
 				<Field
-					name="{idPrefix}_{i}_cat"
+					id="{idPrefix}_{i}_cat"
 					type="select"
 					label={m.band_slug_packing_packing_items_editor_where_lives()}
 					options={packingCategoryOptions}
@@ -146,7 +146,7 @@
 
 			<div class="mt-3 grid gap-3 md:grid-cols-2">
 				<Field
-					name="{idPrefix}_{i}_kind"
+					id="{idPrefix}_{i}_kind"
 					type="select"
 					label={m.band_slug_packing_packing_items_editor_stage_plot_as()}
 					options={kindOptions}
@@ -158,7 +158,7 @@
 					description={m.band_slug_packing_packing_items_editor_description()}
 				/>
 				<Field
-					name="{idPrefix}_{i}_notes"
+					id="{idPrefix}_{i}_notes"
 					label={m.band_notes()}
 					bind:value={items[i].notes}
 					maxlength={PACKING_ITEM_NOTES_MAX}

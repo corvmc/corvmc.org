@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import { getStaffCalendarTotals } from '$lib/remote/events.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import { getStaffCalendarTotals } from '#lib/remote/events.remote.js';
 
 	const totals = await getStaffCalendarTotals();
 	const stats = $derived([

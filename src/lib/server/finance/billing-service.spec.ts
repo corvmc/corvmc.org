@@ -8,10 +8,10 @@ const mockStripe = vi.hoisted(() => ({
 	subscriptions: { list: vi.fn(), update: vi.fn() },
 	invoices: { list: vi.fn() }
 }));
-vi.mock('$lib/server/stripe', () => ({ stripe: mockStripe }));
+vi.mock('#lib/server/stripe.js', () => ({ stripe: mockStripe }));
 
 const dbUpdate = vi.hoisted(() => vi.fn());
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		update: () => ({ set: (values: unknown) => ({ where: () => dbUpdate(values) }) })
 	}

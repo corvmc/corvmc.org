@@ -4,7 +4,7 @@ import { render } from 'vitest-browser-svelte';
 import { createAttachmentKey } from 'svelte/attachments';
 import { toast } from 'svelte-sonner';
 import ActionHarness from './Action.test.svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 
 /**
  * `Action` is the engine behind all 56 `actions/*` components, so what it gets
@@ -32,8 +32,14 @@ vi.mock('$app/navigation', () => ({
 function fakeRemoteForm({
 	result,
 	ok = true,
-	rejectWith
-}: { result?: unknown; ok?: boolean; rejectWith?: unknown } = {}) {
+	rejectWith,
+	setFields = () => {}
+}: {
+	result?: unknown;
+	ok?: boolean;
+	rejectWith?: unknown;
+	setFields?: (input: unknown) => void;
+} = {}) {
 	let callback: ((instance: { submit: () => Promise<boolean> }) => unknown) | null = null;
 	const instance: Record<string | symbol, unknown> = { method: 'POST', action: '?/thing' };
 
@@ -53,7 +59,7 @@ function fakeRemoteForm({
 	};
 
 	Object.defineProperties(instance, {
-		fields: { value: { allIssues: () => null } },
+		fields: { value: { allIssues: () => null, set: setFields } },
 		result: { value: undefined, writable: true },
 		enhance: {
 			value: (cb: (instance: { submit: () => Promise<boolean> }) => unknown) => {
@@ -427,6 +433,27 @@ describe('Action, save and add another', () => {
 		expect(dialog()).not.toBeNull();
 	});
 
+	// Field-bound inputs read the instance's values, which outlive the dialog.
+	it('clears the typed values when it closes, and only then', async () => {
+		const setFields = vi.fn();
+		const { trigger } = await mount({
+			action: fakeRemoteForm({ result: { id: 'item-1' }, setFields }),
+			label: 'Add Item',
+			modalTitle: 'Add Item',
+			fieldName: 'name',
+			addAnotherLabel: 'Save and add another'
+		});
+
+		await trigger.click();
+		await addAnotherButton().click();
+		await vi.waitFor(() => expect(addAnotherButton()).toBeEnabled());
+		expect(setFields).not.toHaveBeenCalled();
+
+		await submitButton().click();
+		await vi.waitFor(() => expect(dialog()).toBeNull());
+		expect(setFields).toHaveBeenCalledWith({});
+	});
+
 	it('still closes on the plain submit', async () => {
 		const onaddanother = vi.fn();
 		const { trigger } = await mount({
@@ -517,7 +544,7 @@ describe('Action, canSubmit', () => {
  */
 describe('Action, unsaved changes', () => {
 	const closeButton = () => modal().getByCss('[data-dialog-close]');
-	const note = () => modal().getByCss('input[name="notes"]');
+	const note = () => modal().getByCss('input:is([name="notes"], [name^="notes/"])');
 	const prompt = () => page.getByTestId('discard-prompt');
 
 	it('closes an untouched dialog without asking', async () => {

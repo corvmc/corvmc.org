@@ -16,12 +16,12 @@
  * One function, because the page gets one load-bearing query and a component
  * that fans several out is a lint error and, past kit 2.64, a render loop.
  */
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { ticket } from '$lib/server/db/schema/ticket';
-import { eventListing } from '$lib/server/db/schema/event';
-import { isFeatureEnabled } from '$lib/server/feature-flags';
-import { listPurchasesForUser as listReleasePurchases } from '$lib/server/audio/purchase-service';
+import { ticket } from '#lib/server/db/schema/ticket.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { isFeatureEnabled } from '#lib/server/feature-flags.js';
+import { listPurchasesForUser as listReleasePurchases } from '#lib/server/audio/purchase-service.js';
 
 /** A record bought from a band. */
 export type MusicPurchase = {

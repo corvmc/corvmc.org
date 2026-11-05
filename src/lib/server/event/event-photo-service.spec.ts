@@ -5,15 +5,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * are all SQL predicates, which a mocked `db` would agree with unconditionally.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const uploadFile = vi.fn(async (_b: ArrayBuffer, key: string) => key);
-vi.mock('$lib/server/storage', async (orig) => ({
-	...(await orig<typeof import('$lib/server/storage')>()),
+vi.mock('#lib/server/storage.js', async (orig) => ({
+	...(await orig<typeof import('#lib/server/storage.js')>()),
 	uploadFile: (...a: Parameters<typeof uploadFile>) => uploadFile(...a),
 	resolveImageUrl: (key: string | null | undefined) => (key ? `https://img/${key}` : null)
 }));
@@ -31,7 +31,7 @@ const {
 	RecapEventNotFoundError,
 	setEventRecapText
 } = await import('./event-photo-service');
-const { eventListing } = await import('$lib/server/db/schema/event');
+const { eventListing } = await import('#lib/server/db/schema/event.js');
 
 const NOW = new Date('2026-09-20T12:00:00Z');
 const HOUR = 3600_000;

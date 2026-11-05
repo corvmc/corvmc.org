@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { Field } from '$lib/components/ui/Form';
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	import { m } from '#lib/paraglide/messages.js';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 
 	/**
 	 * The listing fields, shared by create and edit so the two forms cannot drift.

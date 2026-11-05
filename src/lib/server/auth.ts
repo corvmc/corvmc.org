@@ -5,17 +5,17 @@ import { createAuthMiddleware, APIError } from 'better-auth/api';
 import { scrypt, randomBytes, timingSafeEqual } from 'node:crypto';
 import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
-import { db } from '$lib/server/db';
-import * as schema from '$lib/server/db/schema';
-import { account } from '$lib/server/db/schema/authentication';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import * as schema from '#lib/server/db/schema.js';
+import { account } from '#lib/server/db/schema/authentication.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and } from 'drizzle-orm';
 import { userAdditionalFields } from './auth-fields';
-import { captureException } from '$lib/server/sentry';
-import { ensureUserEntry } from '$lib/server/directory/entry-service';
-import { assignMemberNumber } from '$lib/server/user/member-number-service';
-import { linkExistingSubscriberToUser } from '$lib/server/marketing/subscriber-service';
-import { verifyTurnstile } from '$lib/server/turnstile';
+import { captureException } from '#lib/server/sentry.js';
+import { ensureUserEntry } from '#lib/server/directory/entry-service.js';
+import { assignMemberNumber } from '#lib/server/user/member-number-service.js';
+import { linkExistingSubscriberToUser } from '#lib/server/marketing/subscriber-service.js';
+import { verifyTurnstile } from '#lib/server/turnstile.js';
 import {
 	ACCOUNT_SUSPENDED_MESSAGE,
 	RESET_PASSWORD_TOKEN_TTL_SECONDS,
@@ -23,9 +23,9 @@ import {
 	sendPasswordChangedEmail,
 	sendPasswordResetEmail,
 	sendVerifyEmail
-} from '$lib/server/auth-emails';
+} from '#lib/server/auth-emails.js';
 import { compare as bcryptCompare } from 'bcrypt-ts';
-import { isLocalOrigin } from '$lib/sentry-local-origin';
+import { isLocalOrigin } from '#lib/sentry-local-origin.js';
 // ---------------------------------------------------------------------------
 // PBKDF2 password hashing via Web Crypto API
 // ---------------------------------------------------------------------------

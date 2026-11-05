@@ -9,8 +9,8 @@
 // product tagged with `metadata.corvmc_key` before creating a new one. That keeps
 // IDs stable across an empty-KV cutover without a data-port step.
 import type Stripe from 'stripe';
-import { getJson, putJson } from '$lib/server/kv';
-import { stripe } from '$lib/server/stripe';
+import { getJson, putJson } from '#lib/server/kv.js';
+import { stripe } from '#lib/server/stripe.js';
 import type { CheckoutLineItem } from './payment-service';
 
 const KV_PREFIX = 'product-config:';

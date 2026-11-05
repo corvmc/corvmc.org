@@ -18,14 +18,14 @@ export interface PanelTabsInput {
 
 export function panelTabs(input: PanelTabsInput): PanelTab[] {
 	return [
-		{ key: 'member', label: 'Member', href: resolve('/member'), type: 'member' },
+		{ key: 'member', label: 'Member', href: resolve('member'), type: 'member' },
 		...(input.isStaff
-			? [{ key: 'staff', label: 'Staff', href: resolve('/staff'), type: 'staff' as const }]
+			? [{ key: 'staff', label: 'Staff', href: resolve('staff'), type: 'staff' as const }]
 			: []),
 		...input.userBands.map((b) => ({
 			key: b.slug,
 			label: b.name,
-			href: resolve(`/band/${b.slug}`),
+			href: resolve(`band/${b.slug}`),
 			type: 'band' as const
 		}))
 	];

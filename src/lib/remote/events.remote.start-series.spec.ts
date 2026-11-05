@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const getById = vi.fn();
 const createEventSeries = vi.fn(async () => ({ id: 'series-1' }));
 
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	create: vi.fn(),
 	update: vi.fn(),
 	checkRebookNeeded: vi.fn(),
@@ -32,43 +32,43 @@ vi.mock('$lib/server/event/event-service', () => ({
 	listMemberPastShows: vi.fn(),
 	countMemberPastShows: vi.fn()
 }));
-vi.mock('$lib/server/errors', () => ({
+vi.mock('#lib/server/errors.js', () => ({
 	DomainError: Error,
 	mapDomainError: (err: unknown): never => {
 		throw err;
 	}
 }));
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: vi.fn(async () => ({ id: 'staff-1' })),
 	// `requireListingWriter` asks this first; the caller here is staff.
 	can: vi.fn(async () => true),
 	requireUser: vi.fn(() => ({ id: 'staff-1' }))
 }));
-vi.mock('$lib/server/reservation/conflict-service', () => ({
+vi.mock('#lib/server/reservation/conflict-service.js', () => ({
 	getConflictDetails: vi.fn(),
 	getValidationWarnings: vi.fn()
 }));
-vi.mock('$lib/server/reservation/recurring-series-service', () => ({
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => ({
 	createEventSeries: (...a: unknown[]) => createEventSeries(...(a as [])),
 	getByEvent: vi.fn(),
 	getEventSeries: vi.fn(),
 	cancel: vi.fn()
 }));
-vi.mock('$lib/server/reservation/rrule-helpers', () => ({
+vi.mock('#lib/server/reservation/rrule-helpers.js', () => ({
 	buildRRule: vi.fn(),
 	getOccurrences: vi.fn()
 }));
-vi.mock('$lib/server/finance/subscription-service', () => ({
+vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	isSustainingMember: vi.fn(async () => false)
 }));
-vi.mock('$lib/server/finance/product-config-service', () => ({ buildLineItem: vi.fn() }));
-vi.mock('$lib/server/finance/payment-service', () => ({ checkout: vi.fn() }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: vi.fn() }));
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/finance/product-config-service.js', () => ({ buildLineItem: vi.fn() }));
+vi.mock('#lib/server/finance/payment-service.js', () => ({ checkout: vi.fn() }));
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: vi.fn() }));
+vi.mock('#lib/server/feature-flags.js', () => ({
 	isFeatureEnabled: vi.fn(async () => true),
 	requireFeature: vi.fn(async () => undefined)
 }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({

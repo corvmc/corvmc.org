@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** One permit, license or policy: when it expires, who renews it, and its certificate. */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import RenewalFields from '$lib/components/renewal/RenewalFields.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import RenewalFields from '#lib/components/renewal/RenewalFields.svelte';
 	import { IconFileText } from '@tabler/icons-svelte';
 	import {
 		getRenewalDetail,
@@ -18,9 +18,9 @@
 		deleteRenewal,
 		uploadRenewalDocument,
 		removeRenewalDocument
-	} from '$lib/remote/renewals.remote';
-	import { renewalKindLabels } from '$lib/config';
-	import { formatIsoDay } from '$lib/utils/deadline';
+	} from '#lib/remote/renewals.remote.js';
+	import { renewalKindLabels } from '#lib/config.js';
+	import { formatIsoDay } from '#lib/utils/deadline.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -45,7 +45,7 @@
 		successToast={m.staff_saved()}
 	>
 		{#snippet form()}
-			<input type="hidden" name="id" value={r.id} />
+			<input {...editForm.fields.id.as('hidden', r.id)} />
 			<RenewalFields fields={editForm.fields} assignees={r.assignees} value={r} />
 		{/snippet}
 	</Action>
@@ -91,7 +91,7 @@
 				successToast={m.staff_renewals_id_attached()}
 			>
 				{#snippet form()}
-					<input type="hidden" name="id" value={r.id} />
+					<input {...uploadForm.fields.id.as('hidden', r.id)} />
 					<FormField
 						field={uploadForm.fields.file}
 						type="file"
@@ -127,8 +127,14 @@
 							successToast={m.staff_removed()}
 						>
 							{#snippet form()}
-								<input type="hidden" name="id" value={r.id} />
-								<input type="hidden" name="attachmentId" value={doc.attachmentId} />
+								<input
+									{...removeRenewalDocument.for(doc.attachmentId).fields.id.as('hidden', r.id)}
+								/>
+								<input
+									{...removeRenewalDocument
+										.for(doc.attachmentId)
+										.fields.attachmentId.as('hidden', doc.attachmentId)}
+								/>
 								<p class="text-sm">{m.staff_renewals_id_file_deleted_with()}</p>
 							{/snippet}
 						</Action>
@@ -149,10 +155,10 @@
 			submitLabel={m.staff_delete()}
 			submitVariant="error"
 			successToast={m.staff_deleted()}
-			onsuccess={() => goto(resolve('/staff/renewals'))}
+			onsuccess={() => goto(resolve('staff/renewals'))}
 		>
 			{#snippet form()}
-				<input type="hidden" name="id" value={r.id} />
+				<input {...deleteRenewal.for(r.id).fields.id.as('hidden', r.id)} />
 				<p class="text-sm">
 					{m.staff_renewals_id_something_collective_no_longer_holds()}
 				</p>

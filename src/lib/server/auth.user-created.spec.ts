@@ -2,17 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // auth.ts pulls in db + sentry at import time; the rest are the side effects
 // the hook is supposed to fire, stubbed so we can watch it fire them.
-vi.mock('$lib/server/db', () => ({ db: {} }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
-vi.mock('$lib/server/directory/entry-service', () => ({ ensureUserEntry: vi.fn() }));
-vi.mock('$lib/server/user/member-number-service', () => ({ assignMemberNumber: vi.fn() }));
-vi.mock('$lib/server/marketing/subscriber-service', () => ({
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/directory/entry-service.js', () => ({ ensureUserEntry: vi.fn() }));
+vi.mock('#lib/server/user/member-number-service.js', () => ({ assignMemberNumber: vi.fn() }));
+vi.mock('#lib/server/marketing/subscriber-service.js', () => ({
 	linkExistingSubscriberToUser: vi.fn()
 }));
 
-import { ensureUserEntry } from '$lib/server/directory/entry-service';
-import { assignMemberNumber } from '$lib/server/user/member-number-service';
-import { linkExistingSubscriberToUser } from '$lib/server/marketing/subscriber-service';
+import { ensureUserEntry } from '#lib/server/directory/entry-service.js';
+import { assignMemberNumber } from '#lib/server/user/member-number-service.js';
+import { linkExistingSubscriberToUser } from '#lib/server/marketing/subscriber-service.js';
 import { onUserCreated } from './auth';
 
 const created = { id: 'user-1', name: 'Alice', email: 'alice@example.com' };

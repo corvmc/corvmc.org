@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { createListing } from '$lib/remote/community-events.remote';
+	import { createListing } from '#lib/remote/community-events.remote.js';
 
 	const fields = createListing.fields;
 </script>
@@ -27,7 +27,7 @@
 	data-testid="add-show"
 	onsuccess={(result) => {
 		const eventId = (result as { eventId?: string } | undefined)?.eventId;
-		if (eventId) goto(resolve(`/member/events/${eventId}/manage`));
+		if (eventId) goto(resolve(`member/events/${eventId}/manage`));
 	}}
 >
 	{#snippet form()}

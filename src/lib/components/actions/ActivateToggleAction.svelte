@@ -1,6 +1,6 @@
 <script lang="ts" generics="TOffOut, TOnOut">
-	import { m } from '$lib/paraglide/messages.js';
-	import type { RemoteForm } from '@sveltejs/kit';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { RemoteForm } from '$app/server';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';

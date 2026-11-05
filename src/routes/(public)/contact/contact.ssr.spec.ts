@@ -45,7 +45,7 @@ const fields = new Proxy({ allIssues: () => null } as Record<string, unknown>, {
 	}
 });
 
-vi.mock('$lib/remote/inbox.remote', () => ({
+vi.mock('#lib/remote/inbox.remote.js', () => ({
 	submitContactForm: {
 		fields,
 		result: undefined,
@@ -53,12 +53,14 @@ vi.mock('$lib/remote/inbox.remote', () => ({
 	}
 }));
 
-vi.mock('$lib/remote/settings.remote', () => ({
+vi.mock('#lib/remote/settings.remote.js', () => ({
 	getOrgAddress: () =>
 		Promise.resolve({ street: '123 Main St', city: 'Corvallis', state: 'OR', zip: '97333' })
 }));
 
-vi.mock('$app/paths', () => ({ resolve: (p: string) => p }));
+vi.mock('$app/paths', () => ({
+	resolve: (p: string) => (p.startsWith('/') ? p : `/${p}`)
+}));
 vi.mock('svelte-turnstile', () => ({ Turnstile: () => {} }));
 
 // Hoisted: an in-test `await import()` pays the module-graph cost inside the

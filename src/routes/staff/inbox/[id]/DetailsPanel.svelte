@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Who this is, what we already know about them, and where the thread stands.
 	 *
@@ -14,13 +14,13 @@
 	 * should not wait on.
 	 */
 	import { resolve } from '$app/paths';
-	import type { RemoteForm } from '@sveltejs/kit';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
+	import type { RemoteForm } from '$app/server';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
 	import AssignControl from './AssignControl.svelte';
 	import ThreadTags from './ThreadTags.svelte';
-	import { channelLabel } from '$lib/components/inbox/channels';
-	import { formatDate, formatDateTime } from '$lib/utils/format';
-	import { getInboxThreadContext } from '$lib/remote/inbox.remote';
+	import { channelLabel } from '#lib/components/inbox/channels.js';
+	import { formatDate, formatDateTime } from '#lib/utils/format.js';
+	import { getInboxThreadContext } from '#lib/remote/inbox.remote.js';
 
 	type Thread = {
 		id: string;
@@ -101,7 +101,7 @@
 				<div class="flex flex-col gap-1">
 					<SectionLabel label={m.staff_contact()} />
 					{#if thread.contactUserId}
-						<a href={resolve(`/staff/members/${thread.contactUserId}`)} class="link link-primary">
+						<a href={resolve(`staff/members/${thread.contactUserId}`)} class="link link-primary">
 							{thread.contactUserName ?? thread.contactName}
 						</a>
 					{:else if thread.contactName}

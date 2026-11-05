@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import type { RemoteFormFieldValue, RemoteFormField } from '@sveltejs/kit';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { RemoteFormFieldValue, RemoteFormField } from '$app/server';
 	import { IconPlus, IconTrash } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import type { ProfileLink } from '$lib/server/db/schema/authentication';
+	import Button from '#lib/components/ui/Button.svelte';
+	import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
 
 	let {
 		value = $bindable<ProfileLink[]>([]),

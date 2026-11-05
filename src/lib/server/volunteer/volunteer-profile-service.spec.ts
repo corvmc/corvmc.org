@@ -43,7 +43,7 @@ function chainableSelect() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn((selection?: Record<string, unknown>) => {
 			selections.push(selection);
@@ -75,7 +75,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/authorization', () => ({ topPositionFor: vi.fn(() => null) }));
+vi.mock('#lib/server/authorization.js', () => ({ topPositionFor: vi.fn(() => null) }));
 
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
@@ -93,7 +93,7 @@ import {
 	VolunteerProfileValidationError,
 	VolunteerAlreadyApprovedError
 } from './volunteer-profile-service';
-import { VOLUNTEER_AVAILABILITY_MAX, VOLUNTEER_NAME_MAX } from '$lib/config';
+import { VOLUNTEER_AVAILABILITY_MAX, VOLUNTEER_NAME_MAX } from '#lib/config.js';
 
 function profile(over: Record<string, unknown> = {}) {
 	return {

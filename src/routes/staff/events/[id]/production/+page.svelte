@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { getStaffEventProduction } from '$lib/remote/events.remote';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { getStaffEventProduction } from '#lib/remote/events.remote.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
 	import {
 		formatDateShort,
 		formatDateTime,
@@ -21,29 +21,29 @@
 		fullDate,
 		toLocalDate,
 		toLocalDateTime
-	} from '$lib/utils/format';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
+	} from '#lib/utils/format.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
 	import { goto } from '$app/navigation';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
-	import { createShift } from '$lib/remote/volunteer.remote';
-	import { listActInDirectory } from '$lib/remote/external-acts.remote';
-	import { applyDutyList } from '$lib/remote/duty-lists.remote';
-	import { toastWarnings } from '$lib/utils/toast-warnings';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import ShiftFormFields from '#lib/components/volunteer/ShiftFormFields.svelte';
+	import { createShift } from '#lib/remote/volunteer.remote.js';
+	import { listActInDirectory } from '#lib/remote/external-acts.remote.js';
+	import { applyDutyList } from '#lib/remote/duty-lists.remote.js';
+	import { toastWarnings } from '#lib/utils/toast-warnings.js';
 	import {
 		createProduction,
 		updateProduction,
 		setProductionProducer,
 		openHostShift
-	} from '$lib/remote/productions.remote';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
+	} from '#lib/remote/productions.remote.js';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
 	import ProductionStatusAction from './ProductionStatusAction.svelte';
-	import { isTerminalProduction } from '$lib/production/status';
+	import { isTerminalProduction } from '#lib/production/status.js';
 	import RunOfShowPanel from './RunOfShowPanel.svelte';
 	import SettlementPanel from './SettlementPanel.svelte';
 	import ShowBudgetCard from './ShowBudgetCard.svelte';
@@ -108,7 +108,7 @@
 	 * `/staff/events/[id]` rather than rendering an empty shell.
 	 */
 	$effect(() => {
-		if (evt.source !== 'cmc') void goto(resolve(`/staff/events/${id}`), { replaceState: true });
+		if (evt.source !== 'cmc') void goto(resolve(`staff/events/${id}`), { replaceState: true });
 	});
 
 	/**
@@ -162,7 +162,7 @@
 	// all mirroring local state wants.
 	$effect(() => {
 		const href = withQuery(
-			resolve(`/staff/events/${id}/production`),
+			resolve(`staff/events/${id}/production`),
 			tab === 'overview' ? '' : `tab=${tab}`
 		);
 		if (location.pathname + location.search !== href) {
@@ -325,7 +325,7 @@
 								<span class="font-medium">{m.staff_events_id_production_shift_open_nobody()}</span>
 								<a
 									class="link text-sm"
-									href={resolve(`/staff/volunteer/shifts/${hostShift.workOrderId}`)}
+									href={resolve(`staff/volunteer/shifts/${hostShift.workOrderId}`)}
 								>
 									{m.staff_events_id_production_find_somebody()}
 								</a>
@@ -623,15 +623,15 @@
 									}}
 								>
 									{#snippet form()}
-										<input type="hidden" name="eventId" value={evt.id} />
+										<input {...applyDutyList.fields.eventId.as('hidden', evt.id)} />
 										<FormField
-											name="dutyListId"
+											field={applyDutyList.fields.dutyListId}
 											label={m.staff_template()}
 											type="select"
 											options={dutyLists.map((l) => ({ value: l.id, label: l.name }))}
 										/>
 										<FormField
-											name="reason"
+											field={applyDutyList.fields.reason}
 											label={m.staff_reason_if_applying_again()}
 											type="text"
 										/>
@@ -677,7 +677,7 @@
 						<ul class="flex flex-col gap-1 text-sm">
 							{#each advance as order (order.id)}
 								<li class="flex flex-wrap items-baseline justify-between gap-2">
-									<a href={resolve(`/staff/volunteer/shifts/${order.id}`)} class="link font-medium">
+									<a href={resolve(`staff/volunteer/shifts/${order.id}`)} class="link font-medium">
 										{order.roleName}
 									</a>
 									<span class="text-subtle whitespace-nowrap">
@@ -709,7 +709,7 @@
 						{#each shifts as shift (shift.id)}
 							<tr class="hover">
 								<td class="cell-primary">
-									<a href={resolve(`/staff/volunteer/shifts/${shift.id}`)} class="link font-medium"
+									<a href={resolve(`staff/volunteer/shifts/${shift.id}`)} class="link font-medium"
 										>{shift.roleName}</a
 									>
 								</td>

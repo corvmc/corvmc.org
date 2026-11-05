@@ -6,7 +6,7 @@ import {
 	getAudienceSubscribers,
 	getCampaigns,
 	getStaffAudienceDetail
-} from '$lib/remote/marketing.remote';
+} from '#lib/remote/marketing.remote.js';
 import { filterNavSections, staffNavSections } from '../nav-items';
 import { visibleViews } from '../views';
 import { outreachViews } from './views';
@@ -14,12 +14,12 @@ import { load as bare } from './+page.server';
 
 // Each tab keeps its page's capability: the tab hides, and the remote refuses.
 const { auth } = vi.hoisted(() => ({ auth: { held: [] as string[] } }));
-vi.mock('$lib/server/authorization', async (original) => ({
-	...(await original<typeof import('$lib/server/authorization')>()),
-	...(await import('$lib/server/testing/mock-remote-guards')).guardsFor(() => auth.held)
+vi.mock('#lib/server/authorization.js', async (original) => ({
+	...(await original<typeof import('#lib/server/authorization.js')>()),
+	...(await import('#lib/server/testing/mock-remote-guards.js')).guardsFor(() => auth.held)
 }));
 vi.mock('$app/server', async () =>
-	(await import('$lib/server/testing/mock-remote-guards')).appServerMock()
+	(await import('#lib/server/testing/mock-remote-guards.js')).appServerMock()
 );
 
 const service = vi.hoisted(() => ({
@@ -27,8 +27,8 @@ const service = vi.hoisted(() => ({
 	getAudience: vi.fn(),
 	listSubscribers: vi.fn()
 }));
-vi.mock('$lib/server/marketing/audience-service', async (original) => ({
-	...(await original<typeof import('$lib/server/marketing/audience-service')>()),
+vi.mock('#lib/server/marketing/audience-service.js', async (original) => ({
+	...(await original<typeof import('#lib/server/marketing/audience-service.js')>()),
 	...service
 }));
 

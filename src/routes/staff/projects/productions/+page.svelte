@@ -1,27 +1,27 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
+	import { withQuery } from '#lib/utils/with-query.js';
 	import { goto } from '$app/navigation';
 	import { page as pageState } from '$app/state';
 	import NewProductionAction from './NewProductionAction.svelte';
 	import StaffViews from '../../StaffViews.svelte';
 	import { projectViews } from '../views';
-	import { formatDate } from '$lib/utils/format';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import AvatarStack from '$lib/components/ui/AvatarStack.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { getStaffEvents } from '$lib/remote/events.remote';
-	import { Latest } from '$lib/latest.svelte';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
+	import { formatDate } from '#lib/utils/format.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import AvatarStack from '#lib/components/ui/AvatarStack.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { getStaffEvents } from '#lib/remote/events.remote.js';
+	import { Latest } from '#lib/latest.svelte.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
 
 	/**
 	 * The Productions view: the shows CMC puts on, at every status including
@@ -58,9 +58,9 @@
 		if (page > 1) pairs.push(['page', String(page)]);
 
 		const search = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = withQuery(resolve('/staff/projects/productions'), search);
+		const href = withQuery(resolve('staff/projects/productions'), search);
 		if (location.pathname + location.search !== href) {
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 
@@ -197,7 +197,7 @@
 							</td>
 						</tr>
 					{/if}
-					{@const href = resolve(`/staff/events/${e.id}`)}
+					{@const href = resolve(`staff/events/${e.id}`)}
 					<tr class="hover cursor-pointer" use:rowLink={href}>
 						<td class="w-px">
 							<StatusBadge status={e.status} />

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * A group's chat topics, as rows.
 	 *
@@ -9,10 +9,10 @@
 	 * before topics existed (#1301).
 	 */
 	import { IconBellOff } from '@tabler/icons-svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
 	import NewTopicAction from './NewTopicAction.svelte';
-	import { getGroupChatTopics } from '$lib/remote/group-chat.remote';
+	import { getGroupChatTopics } from '#lib/remote/group-chat.remote.js';
 	// The cast `ConversationRows` already uses: this component serves two
 	// panels, so the caller is the one that can name a route.
 	import type { ResolvedPathname } from '$app/types';

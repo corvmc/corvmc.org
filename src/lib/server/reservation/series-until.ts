@@ -1,4 +1,4 @@
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import { buildDateInTz } from './timezone';
 
 export const UNTIL_BEFORE_START = 'Pick a day after the first session.';

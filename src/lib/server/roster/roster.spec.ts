@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { RosterPerson } from '$lib/types/roster';
+import type { RosterPerson } from '#lib/types/roster.js';
 
 // The real mapping reaches the finance/auth graph on import; only the roster's
 // own decisions are under test here.
-vi.mock('$lib/server/entity/refs', () => ({
+vi.mock('#lib/server/entity/refs.js', () => ({
 	toMemberRef: (row: { id: string; name: string; email?: string | null }) => ({
 		type: 'member',
 		id: row.id,

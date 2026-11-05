@@ -4,7 +4,7 @@ import { error } from '@sveltejs/kit';
 /** The feed remotes guard on `event.manage` before they touch the service. */
 
 const requireCapability = vi.fn(async (_cap: string) => ({ id: 'staff-1' }));
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap)
 }));
 
@@ -18,8 +18,8 @@ const service = {
 	})),
 	listSourcesForVenue: vi.fn(async () => [])
 };
-vi.mock('$lib/server/venue/calendar-source-service', () => service);
-vi.mock('$lib/server/venue/venue-service', () => ({}));
+vi.mock('#lib/server/venue/calendar-source-service.js', () => service);
+vi.mock('#lib/server/venue/venue-service.js', () => ({}));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: { user: null }, request: { headers: new Headers() } }),

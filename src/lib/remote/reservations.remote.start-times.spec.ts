@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // The start-time list used to contain only the free slots, so a member who
@@ -8,13 +8,13 @@ import { mockUser } from '$lib/server/db/test-factory';
 // 9 AM – 10 PM. #874.
 // ---------------------------------------------------------------------------
 
-vi.mock('$lib/server/reservation/timezone', () => ({
+vi.mock('#lib/server/reservation/timezone.js', () => ({
 	formatDateInTz: vi.fn((d: Date) => d.toISOString().slice(0, 10)),
 	buildDateInTz: vi.fn((date: string, time: string) => new Date(`${date}T${time}:00Z`))
 }));
 
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({
 		maxAdvanceDaysOneoff: 14,
 		minDurationHours: 1,
@@ -26,7 +26,7 @@ vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
 
 // 10:00–11:00 is taken. 09:30 and 12:00 are free but have too little room after
 // them to fit the one-hour minimum — a different thing from being booked.
-vi.mock('$lib/server/reservation/conflict-service', () => ({
+vi.mock('#lib/server/reservation/conflict-service.js', () => ({
 	getAvailableSlots: vi.fn(async () => [
 		{ startTime: '09:00', available: true },
 		{ startTime: '09:30', available: true },
@@ -66,7 +66,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getReservationStartTimes } = (await import('$lib/remote/reservations.remote')) as any;
+const { getReservationStartTimes } = (await import('#lib/remote/reservations.remote.js')) as any;
 
 type Option = { value: string; label: string; disabled?: boolean };
 

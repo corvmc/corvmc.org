@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
-	import { creditsToHours } from '$lib/config';
-	import { formatDateLong, formatDollars, formatTime } from '$lib/utils/format';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import Field from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { payReservation, getReservationPayment } from '$lib/remote/reservations.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import { calculateTotalWithFeeCoverage } from '#lib/finance/fees.js';
+	import { creditsToHours } from '#lib/config.js';
+	import { formatDateLong, formatDollars, formatTime } from '#lib/utils/format.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import Field from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { payReservation, getReservationPayment } from '#lib/remote/reservations.remote.js';
 	import { page } from '$app/state';
 
 	let data = $derived(await getReservationPayment(page.params.id!));
@@ -117,7 +117,7 @@
 	<Form remote={payReservation}>
 		{#if remainingCents > 0}
 			<Field
-				name="coverFees"
+				field={payReservation.fields.coverFees}
 				type="checkbox"
 				label=""
 				bind:value={coverFees}

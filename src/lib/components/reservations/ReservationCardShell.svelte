@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import {
 		formatWeekdayShortCased,
@@ -8,9 +8,9 @@
 		isVenueToday,
 		isVenueTomorrow,
 		isVenueThisWeek
-	} from '$lib/utils/format';
-	import { isTerminalStatus } from '$lib/utils/reservation-actions';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	} from '#lib/utils/format.js';
+	import { isTerminalStatus } from '#lib/utils/reservation-actions.js';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 
 	/**
 	 * A booking as a card: a date block tinted by status, the status, and a body

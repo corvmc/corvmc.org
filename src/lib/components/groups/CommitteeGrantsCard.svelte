@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import CommitteeGrantsAction, { committeeReach } from './CommitteeGrantsAction.svelte';
-	import { grantRuleFor } from '$lib/config';
+	import { grantRuleFor } from '#lib/config.js';
 
 	/** What this committee's active members may do. */
 	let { groupId, name, held }: { groupId: string; name: string; held: string[] } = $props();

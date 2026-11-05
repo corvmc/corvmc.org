@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import ShiftFormFields from '#lib/components/volunteer/ShiftFormFields.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShort, toLocalDateTime } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
-	import { createShift, getShifts } from '$lib/remote/volunteer.remote';
+	import { formatDateShort, toLocalDateTime } from '#lib/utils/format.js';
+	import { DEFAULT_TIMEZONE } from '#lib/config.js';
+	import { createShift, getShifts } from '#lib/remote/volunteer.remote.js';
 
 	/**
 	 * A role's upcoming shifts, owning the query behind them.
@@ -98,7 +98,7 @@
 				{/snippet}
 
 				{#each rows as shift (shift.id)}
-					{@const href = resolve(`/staff/volunteer/shifts/${shift.id}`)}
+					{@const href = resolve(`staff/volunteer/shifts/${shift.id}`)}
 					{@const short = shift.claimed < shift.capacity}
 					{@const unconfirmed = shift.claimed - shift.confirmed}
 					<tr class="hover cursor-pointer" use:rowLink={href}>

@@ -1,5 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import { getShowTonight } from '$lib/server/event/event-service';
+import { getShowTonight } from '#lib/server/event/event-service.js';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {

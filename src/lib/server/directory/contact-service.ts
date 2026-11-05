@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
-import { contact, type ContactSource } from '$lib/server/db/schema/contact';
-import { subscriber } from '$lib/server/db/schema/marketing';
+import { db } from '#lib/server/db/index.js';
+import { contact, type ContactSource } from '#lib/server/db/schema/contact.js';
+import { subscriber } from '#lib/server/db/schema/marketing.js';
 import { and, eq, isNull, lte } from 'drizzle-orm';
-import { requireCapability } from '$lib/server/authorization';
+import { requireCapability } from '#lib/server/authorization.js';
 
 /**
  * The **only** module permitted to touch the `contact` table.

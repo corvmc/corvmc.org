@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { returnLoan } from '$lib/remote/inventory.remote';
+	import { returnLoan } from '#lib/remote/inventory.remote.js';
 	import { Field } from '../ui/Form';
-	import { equipmentConditions } from '$lib/config';
+	import { equipmentConditions } from '#lib/config.js';
 
 	const { fields } = returnLoan;
 	const conditionOptions = [

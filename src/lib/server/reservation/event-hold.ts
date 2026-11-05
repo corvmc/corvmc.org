@@ -1,8 +1,8 @@
 import { and, eq, or, sql } from 'drizzle-orm';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { eventListing } from '$lib/server/db/schema/event';
-import { group } from '$lib/server/db/schema/group';
-import { production } from '$lib/server/db/schema/production';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { production } from '#lib/server/db/schema/production.js';
 
 /**
  * `bookerId` points at a band only when `bookerType` says so, so the type check

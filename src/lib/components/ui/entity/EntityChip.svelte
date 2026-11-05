@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import clsx from 'clsx';
 	import { LinkPreview } from 'bits-ui';
 	import { browser } from '$app/environment';
 	import EntityIdentity from './EntityIdentity.svelte';
 	import Button from '../Button.svelte';
 	import { IconArrowRight } from '@tabler/icons-svelte';
-	import type { EntityRef } from '$lib/types/entity';
+	import type { EntityRef } from '#lib/types/entity.js';
 	import StatusMark from './StatusMark.svelte';
 	import { entityIcon, isNoteworthyStatus, toneFor } from './registry';
 	import { getEntityViewer } from './context';
-	import { entityHref } from '$lib/utils/entity-href';
+	import { entityHref } from '#lib/utils/entity-href.js';
 
 	/**
 	 * An inline reference to another record: type glyph + its distinctive name,
@@ -26,7 +26,7 @@
 	 * you can open", and the glyph says which kind — which is the entire job of
 	 * this tier.
 	 *
-	 * Takes no `href`: see `$lib/utils/entity-href`.
+	 * Takes no `href`: see `#lib/utils/entity-href.js`.
 	 */
 	let {
 		ref,

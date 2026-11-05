@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
-	import type { RemoteForm } from '@sveltejs/kit';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { searchEvents } from '$lib/remote/events.remote';
-	import { searchWorkAssets } from '$lib/remote/maintenance-schedules.remote';
-	import { VOLUNTEER_SHIFT_TITLE_MAX, VOLUNTEER_SHIFT_NOTES_MAX } from '$lib/config';
+	import type { RemoteForm } from '$app/server';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { searchEvents } from '#lib/remote/events.remote.js';
+	import { searchWorkAssets } from '#lib/remote/maintenance-schedules.remote.js';
+	import { VOLUNTEER_SHIFT_TITLE_MAX, VOLUNTEER_SHIFT_NOTES_MAX } from '#lib/config.js';
 
 	/** The shape SearchSelect hands back, and the shape an edit form seeds it with. */
 	type ShiftEvent = { id: string; title: string; when?: string };
@@ -77,14 +77,14 @@
 
 {#if roles}
 	<FormField
-		name="volunteerRoleId"
+		field={form.fields.volunteerRoleId}
 		label={m.volunteer_shift_form_fields_role()}
 		type="select"
 		bind:value={roleId}
 		options={roles.map((r) => ({ value: r.id, label: r.name }))}
 	/>
 {:else}
-	<input type="hidden" name="volunteerRoleId" value={roleId} />
+	<input {...form.fields.volunteerRoleId.as('hidden', roleId)} />
 {/if}
 
 {#if lockedEvent}
@@ -103,7 +103,7 @@
 	-->
 	<input {...form.fields.eventId.as('hidden', selectedEvent?.id ?? '')} />
 	<FormField
-		name="eventId"
+		field={form.fields.eventId}
 		label={m.volunteer_shift_form_fields_event()}
 		description={m.volunteer_shift_form_fields_optional_work_parties_repair_day()}
 	>
@@ -124,7 +124,7 @@
 <!-- Always rendered, like the event's: an empty value is how a link is removed. -->
 <input {...form.fields.assetId.as('hidden', selectedAsset?.id ?? '')} />
 <FormField
-	name="assetId"
+	field={form.fields.assetId}
 	label={m.volunteer_shift_form_fields_equipment()}
 	description={m.volunteer_shift_form_fields_optional_unit_work_about_such()}
 >
@@ -144,7 +144,7 @@
 	identically on the board.
 -->
 <FormField
-	name="title"
+	field={form.fields.title}
 	label={m.volunteer_shift_form_fields_name()}
 	value={title}
 	maxlength={String(VOLUNTEER_SHIFT_TITLE_MAX)}
@@ -153,27 +153,28 @@
 
 {#if timed}
 	<FormField
-		name="startsAt"
+		field={form.fields.startsAt}
 		label={m.volunteer_shift_form_fields_starts()}
 		type="datetime-local"
 		value={startsAt}
 	/>
 	<FormField
-		name="endsAt"
+		field={form.fields.endsAt}
 		label={m.volunteer_shift_form_fields_ends()}
 		type="datetime-local"
 		value={endsAt}
 	/>
 {:else}
 	<FormField
-		name="dueAt"
+		field={form.fields.dueAt}
 		label={m.volunteer_shift_form_fields_due_by()}
 		type="datetime-local"
 		description={m.volunteer_shift_form_fields_optional_waits_unscheduled_work()}
 	/>
 {/if}
 <FormField
-	name="capacity"
+	field={form.fields.capacity}
+	submitAs="text"
 	label={m.volunteer_shift_form_fields_people_needed()}
 	type="number"
 	min="1"
@@ -181,7 +182,7 @@
 	description={m.volunteer_shift_form_fields_claims_beyond_refused()}
 />
 <FormField
-	name="notes"
+	field={form.fields.notes}
 	label={m.volunteer_shift_form_fields_anything_they_should_know()}
 	type="textarea"
 	value={notes}

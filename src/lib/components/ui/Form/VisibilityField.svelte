@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import type { RemoteFormFieldValue, RemoteFormField } from '@sveltejs/kit';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { RemoteFormFieldValue, RemoteFormField } from '$app/server';
 	import FormField from './FormField.svelte';
 
 	let {
@@ -36,7 +36,7 @@
 			<label class="label cursor-pointer justify-start gap-3">
 				<input
 					type="radio"
-					{name}
+					name={field ? field.as('radio', option.value).name : name}
 					value={option.value}
 					class="radio"
 					checked={value === option.value}

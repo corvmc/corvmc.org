@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import twilio from 'twilio';
 
 const mockHandleTwilioInbound = vi.fn(async () => ({}));
-vi.mock('$lib/server/inbox/inbound-handlers', () => ({
+vi.mock('#lib/server/inbox/inbound-handlers.js', () => ({
 	handleTwilioInbound: (...args: unknown[]) => mockHandleTwilioInbound(...(args as []))
 }));
-vi.mock('$lib/server/inbox/channel-config-service', () => ({
+vi.mock('#lib/server/inbox/channel-config-service.js', () => ({
 	isChannelEnabled: async () => true
 }));
 

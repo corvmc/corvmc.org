@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { formatDateShort } from '$lib/utils/format';
-	import { reassignDeliverableForm } from '$lib/remote/deliverables.remote';
-	import type { getStaffEventProduction } from '$lib/remote/events.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { reassignDeliverableForm } from '#lib/remote/deliverables.remote.js';
+	import type { getStaffEventProduction } from '#lib/remote/events.remote.js';
 
 	type Loaded = Awaited<ReturnType<typeof getStaffEventProduction>>;
 
@@ -84,10 +84,14 @@
 								successToast={m.staff_events_id_production_deliverables_card_success_toast()}
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={item.id} />
-									<input type="hidden" name="eventId" value={eventId} />
+									<input
+										{...reassignDeliverableForm.for(item.id).fields.id.as('hidden', item.id)}
+									/>
+									<input
+										{...reassignDeliverableForm.for(item.id).fields.eventId.as('hidden', eventId)}
+									/>
 									<FormField
-										name="groupId"
+										field={reassignDeliverableForm.for(item.id).fields.groupId}
 										label={m.staff_events_id_production_deliverables_card_owner()}
 										type="select"
 										options={owners}

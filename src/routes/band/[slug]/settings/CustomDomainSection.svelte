@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import {
 		setCustomDomain,
 		refreshCustomDomain,
 		removeCustomDomain
-	} from '$lib/remote/band-custom-domain.remote';
-	import type { getCustomDomain } from '$lib/remote/band-custom-domain.remote';
-	import type { CustomDomainStatus } from '$lib/server/db/schema/band-site';
-	import { bandSiteUrl } from '$lib/utils/band-site-url';
+	} from '#lib/remote/band-custom-domain.remote.js';
+	import type { getCustomDomain } from '#lib/remote/band-custom-domain.remote.js';
+	import type { CustomDomainStatus } from '#lib/server/db/schema/band-site.js';
+	import { bandSiteUrl } from '#lib/utils/band-site-url.js';
 	import { env } from '$env/dynamic/public';
 
 	// Resolved prop, not an awaited query — a top-level await here would mark the

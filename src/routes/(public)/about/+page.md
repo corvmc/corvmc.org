@@ -4,7 +4,7 @@ description: Building and connecting music communities around Corvallis since 20
 ---
 
 <script>
-	import CommitteeList from '$lib/components/public/CommitteeList.svelte';
+	import CommitteeList from '#lib/components/public/CommitteeList.svelte';
 </script>
 
 # About CMC

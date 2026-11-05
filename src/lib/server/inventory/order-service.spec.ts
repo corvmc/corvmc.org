@@ -28,7 +28,7 @@ function chain(): unknown {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain()),
 		insert: vi.fn(() => ({ values: (v: unknown) => ({ __insert: v }) })),
@@ -49,7 +49,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const recordAuditEntry = vi.fn(async (..._a: unknown[]) => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...a)
 }));
 

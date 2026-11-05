@@ -2,10 +2,10 @@ import { error } from '@sveltejs/kit';
 // Typed params from `./$types` rather than the generic kit `RequestHandler`,
 // which types `params.id` as possibly-undefined.
 import type { RequestHandler } from './$types';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { getForDownload } from '$lib/server/group/file-service';
-import { getPrivateObject } from '$lib/server/private-storage';
-import { contentDispositionAttachment } from '$lib/server/storage-keys';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { getForDownload } from '#lib/server/group/file-service.js';
+import { getPrivateObject } from '#lib/server/private-storage.js';
+import { contentDispositionAttachment } from '#lib/server/storage-keys.js';
 
 /**
  * The one way a private object reaches a person.
@@ -17,7 +17,7 @@ import { contentDispositionAttachment } from '$lib/server/storage-keys';
  *
  * An API route rather than a remote function because it returns a stream, not
  * JSON — which is also why the upload and the delete are *not* here. Those are
- * remote forms in `$lib/remote/files.remote.ts`; the spec's routes table listed
+ * remote forms in `#lib/remote/files.remote.js`; the spec's routes table listed
  * a `DELETE` verb only because this `GET` was already in it.
  */
 export const GET: RequestHandler = async ({ params }) => {

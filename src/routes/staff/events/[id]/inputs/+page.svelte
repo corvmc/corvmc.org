@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { fullDate } from '$lib/utils/format';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { fullDate } from '#lib/utils/format.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { getEventInputList } from '$lib/remote/events.remote';
-	import { riderInputSourceLabels, riderStandTypeLabels } from '$lib/config';
+	import { getEventInputList } from '#lib/remote/events.remote.js';
+	import { riderInputSourceLabels, riderStandTypeLabels } from '#lib/config.js';
 
 	/**
 	 * A print page, following `/band/[slug]/rider/list`, whose shape this copies:

@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { pageTitle } from '$lib/config';
+	import { pageTitle } from '#lib/config.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { getEmailChangeRequest, confirmEmailChange } from '$lib/remote/email-change.remote';
+	import { getEmailChangeRequest, confirmEmailChange } from '#lib/remote/email-change.remote.js';
 
-	import Button from '$lib/components/ui/Button.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
 
 	type Outcome = NonNullable<typeof confirmEmailChange.result>;
 
@@ -48,7 +48,7 @@
 									>{/snippet}</ParaglideMessage
 							>
 						</Alert>
-						<Button variant="primary" class="w-full" href={resolve('/login')}
+						<Button variant="primary" class="w-full" href={resolve('login')}
 							>{m.public_sign()}</Button
 						>
 					{:else if outcome?.status === 'taken'}

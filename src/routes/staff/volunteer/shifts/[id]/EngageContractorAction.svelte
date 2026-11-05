@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field, MoneyField } from '$lib/components/ui/Form';
-	import { createJobForm } from '$lib/remote/contractors.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field, MoneyField } from '#lib/components/ui/Form/index.js';
+	import { createJobForm } from '#lib/remote/contractors.remote.js';
 
 	/** Engages a contractor on this work order; a project's task has its own picker. */
 	let {
@@ -24,7 +24,7 @@
 	data-testid="engage-contractor"
 >
 	{#snippet form()}
-		<input type="hidden" name="workOrderId" value={workOrderId} />
+		<input {...createJobForm.fields.workOrderId.as('hidden', workOrderId)} />
 		<Field field={fields.contractorId} type="select" label={m.staff_contractor()} {options} />
 		<Field
 			field={fields.scheduledFor}

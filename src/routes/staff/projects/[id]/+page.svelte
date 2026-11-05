@@ -1,42 +1,42 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field, MoneyField } from '$lib/components/ui/Form';
-	import BallotLine from '$lib/components/ballot/BallotLine.svelte';
-	import CreateBallotAction from '$lib/components/ballot/CreateBallotAction.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field, MoneyField } from '#lib/components/ui/Form/index.js';
+	import BallotLine from '#lib/components/ballot/BallotLine.svelte';
+	import CreateBallotAction from '#lib/components/ballot/CreateBallotAction.svelte';
 	import {
 		getProjectDetail,
 		updateProjectForm,
 		setProjectStatusForm,
 		applyDutyListToProjectForm,
 		getProjectActivity
-	} from '$lib/remote/projects.remote';
+	} from '#lib/remote/projects.remote.js';
 	import {
 		isProjectArchived,
 		projectArchiveOutcomeOptions,
 		PROJECT_UNARCHIVED_STATUS,
 		surfaces
-	} from '$lib/config';
-	import { formatDateShort } from '$lib/utils/format';
+	} from '#lib/config.js';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconCheck } from '@tabler/icons-svelte';
-	import ActivityCard from '$lib/components/project/ActivityCard.svelte';
+	import ActivityCard from '#lib/components/project/ActivityCard.svelte';
 	import TaskList from './TaskList.svelte';
 	import TaskPanel from './TaskPanel.svelte';
 	import { parseFilter, type TaskFilter } from './task-view';
 	import { asDateValue } from './date-value';
-	import { toastWarnings } from '$lib/utils/toast-warnings';
+	import { toastWarnings } from '#lib/utils/toast-warnings.js';
 
 	/**
 	 * One project, run as a checklist: its work orders are the tasks, grouped in
@@ -50,12 +50,12 @@
 
 	/** View state lives in the URL, written with `goto`: `replaceState()` would not update `page.url`. */
 	function setParams(changes: Record<string, string | null>, push = false) {
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		for (const [k, v] of Object.entries(changes)) {
 			if (v === null) url.searchParams.delete(k);
 			else url.searchParams.set(k, v);
 		}
-		void goto(url, { replaceState: !push, noScroll: true, keepFocus: true });
+		void goto(url, { replace: !push, reset: false });
 	}
 
 	const openTask = (id: string) => setParams({ task: id }, true);
@@ -96,11 +96,11 @@
 	menuLabel={m.staff_projects_id_menu_label()}
 >
 	{#if data.showId}
-		<Button variant="default" href={resolve(`/staff/events/${data.showId}/production`)}>
+		<Button variant="default" href={resolve(`staff/events/${data.showId}/production`)}>
 			{m.staff_production()}
 		</Button>
 	{/if}
-	<Button variant="default" href={resolve(`/staff/projects/${project.id}/budget`)}
+	<Button variant="default" href={resolve(`staff/projects/${project.id}/budget`)}
 		>{m.staff_budget()}</Button
 	>
 	{#if dutyListOptions.length > 0}
@@ -273,7 +273,7 @@
 			<DefinitionList>
 				{#if origin.suggestion}
 					<Fact label={m.staff_suggested()}>
-						<a class="link" href={resolve(`/staff/suggestions/${origin.suggestion.id}`)}>
+						<a class="link" href={resolve(`staff/suggestions/${origin.suggestion.id}`)}>
 							{origin.suggestion.title}
 						</a>
 					</Fact>
@@ -282,7 +282,7 @@
 					<Fact label={m.staff_projects_id_authorised_by()}>
 						<BallotLine
 							ballot={origin.ballot}
-							href={surfaces.ballots ? resolve(`/staff/ballots/${origin.ballot.id}`) : null}
+							href={surfaces.ballots ? resolve(`staff/ballots/${origin.ballot.id}`) : null}
 						/>
 					</Fact>
 				{/if}
@@ -290,7 +290,7 @@
 					<Fact label={m.staff_projects_id_put_ballot()}>
 						<BallotLine
 							ballot={b}
-							href={surfaces.ballots ? resolve(`/staff/ballots/${b.id}`) : null}
+							href={surfaces.ballots ? resolve(`staff/ballots/${b.id}`) : null}
 						/>
 					</Fact>
 				{/each}

@@ -4,9 +4,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // limit second, and only then a pending pledge that the service emails about.
 
 const turnstileOk = vi.hoisted(() => ({ value: true }));
-vi.mock('$lib/server/turnstile', () => ({ verifyTurnstile: vi.fn(async () => turnstileOk.value) }));
+vi.mock('#lib/server/turnstile.js', () => ({
+	verifyTurnstile: vi.fn(async () => turnstileOk.value)
+}));
 const rateOk = vi.hoisted(() => ({ value: true }));
-vi.mock('$lib/server/rate-limit', () => ({
+vi.mock('#lib/server/rate-limit.js', () => ({
 	allowRateLimited: vi.fn(async () => rateOk.value)
 }));
 const pledges = vi.hoisted(() => ({
@@ -18,13 +20,13 @@ const pledges = vi.hoisted(() => ({
 	pledgeEntry: vi.fn(),
 	releasePledge: vi.fn()
 }));
-vi.mock('$lib/server/inventory/pledge-service', () => pledges);
-vi.mock('$lib/server/inventory/wishlist-service', () => ({
+vi.mock('#lib/server/inventory/pledge-service.js', () => pledges);
+vi.mock('#lib/server/inventory/wishlist-service.js', () => ({
 	getDonationWishlist: vi.fn(),
 	isOnWishlist: vi.fn(async () => true)
 }));
 
-vi.mock('$lib/server/inventory/item-service', () => ({
+vi.mock('#lib/server/inventory/item-service.js', () => ({
 	createItem: vi.fn(),
 	updateItem: vi.fn(),
 	getItemById: vi.fn(),
@@ -39,7 +41,7 @@ vi.mock('$lib/server/inventory/item-service', () => ({
 	restoreItem: vi.fn()
 }));
 
-vi.mock('$lib/server/inventory/asset-service', () => ({
+vi.mock('#lib/server/inventory/asset-service.js', () => ({
 	bindAssetTag: vi.fn(),
 	createAsset: vi.fn(),
 	getAssetById: vi.fn(),
@@ -50,18 +52,18 @@ vi.mock('$lib/server/inventory/asset-service', () => ({
 	updateAsset: vi.fn()
 }));
 
-vi.mock('$lib/server/inventory/stock-service', () => ({
+vi.mock('#lib/server/inventory/stock-service.js', () => ({
 	listLowStock: vi.fn(),
 	listMovements: vi.fn()
 }));
 
-vi.mock('$lib/server/inventory/acquisition-service', () => ({
+vi.mock('#lib/server/inventory/acquisition-service.js', () => ({
 	recordAcquisition: vi.fn(),
 	consumeStock: vi.fn(),
 	adjustStock: vi.fn()
 }));
 
-vi.mock('$lib/server/inventory/loan-service', () => ({
+vi.mock('#lib/server/inventory/loan-service.js', () => ({
 	getLoanById: vi.fn(),
 	getLoanHistory: vi.fn(),
 	scheduleLoan: vi.fn(),
@@ -73,14 +75,14 @@ vi.mock('$lib/server/inventory/loan-service', () => ({
 	listUserLoans: vi.fn()
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: vi.fn(async () => ({ id: 'staff-1' })),
 	requireUser: vi.fn(() => ({ id: 'user-1' })),
 	requireCapabilityOrOwner: vi.fn(async () => 'staff'),
 	isStaff: vi.fn(async () => true)
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({

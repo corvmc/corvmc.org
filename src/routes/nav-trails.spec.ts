@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { flattenNav } from '$lib/components/layout/Nav/active-nav';
-import { navTrail, type NavTrailGroup } from '$lib/components/layout/nav-trail';
+import { flattenNav } from '#lib/components/layout/Nav/active-nav.js';
+import { navTrail, type NavTrailGroup } from '#lib/components/layout/nav-trail.js';
 import { staffNavSections, staffNavTop } from './staff/nav-items';
 import { memberNavItems } from './member/nav-items';
 import { bandNavItems } from './band/[slug]/nav-items';

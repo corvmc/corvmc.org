@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { getMemberStandings, restoreMemberStanding } from '$lib/remote/standing.remote';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { getFlagsAgainstUser, getFlagsByUser } from '$lib/remote/flags.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getMemberStandings, restoreMemberStanding } from '#lib/remote/standing.remote.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { getFlagsAgainstUser, getFlagsByUser } from '#lib/remote/flags.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShortYear } from '$lib/utils/format';
-	import { Latest } from '$lib/latest.svelte';
+	import { formatDateShortYear } from '#lib/utils/format.js';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	let { id }: { id: string } = $props();
 
@@ -69,7 +69,7 @@
 			{/if}
 			{#if standing.triggeringFlagId}
 				<p class="mt-1 text-sm">
-					<a class="link" href={resolve(`/staff/flags/${standing.triggeringFlagId}`)}>
+					<a class="link" href={resolve(`staff/flags/${standing.triggeringFlagId}`)}>
 						{m.staff_members_id_panels_moderation_panel_see_report()}
 					</a>
 				</p>
@@ -112,10 +112,10 @@
 					<th class="col-extra">{m.staff_members_id_panels_moderation_panel_filed()}</th>
 				{/snippet}
 				{#each flags as f (f.id)}
-					<tr class="hover" use:rowLink={resolve(`/staff/flags/${f.id}`)}>
+					<tr class="hover" use:rowLink={resolve(`staff/flags/${f.id}`)}>
 						<td class="w-px"><StatusBadge status={f.status} /></td>
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/flags/${f.id}`)}>{f.reason}</a>
+							<a class="font-medium" href={resolve(`staff/flags/${f.id}`)}>{f.reason}</a>
 							<div class="text-muted">
 								{m.staff_members_id_panels_moderation_panel_by({
 									reportedByName:
@@ -149,10 +149,10 @@
 					<th class="col-extra">{m.staff_members_id_panels_moderation_panel_filed()}</th>
 				{/snippet}
 				{#each flags as f (f.id)}
-					<tr class="hover" use:rowLink={resolve(`/staff/flags/${f.id}`)}>
+					<tr class="hover" use:rowLink={resolve(`staff/flags/${f.id}`)}>
 						<td class="w-px"><StatusBadge status={f.status} /></td>
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/flags/${f.id}`)}>{f.entityLabel}</a>
+							<a class="font-medium" href={resolve(`staff/flags/${f.id}`)}>{f.entityLabel}</a>
 							<div class="text-muted">{f.reason}</div>
 						</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(f.createdAt)}</td>

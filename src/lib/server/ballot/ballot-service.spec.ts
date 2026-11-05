@@ -8,13 +8,13 @@ import type { BallotInput } from './ballot-service';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite({ foreignKeys: true });
 });
 
 // better-sqlite3's drizzle has no `batch`; D1's runs the statements in order and
 // stops at the first failure, as this does.
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			const out = [];
@@ -25,26 +25,26 @@ vi.mock('$lib/server/db', () => ({
 	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
 }));
 
-vi.mock('$lib/server/site-config/site-config-service', () => ({
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	config: vi.fn(async () => 60)
 }));
 
 const emit = vi.fn(async () => undefined);
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...a: unknown[]) => emit(...(a as [])), on: vi.fn() }
 }));
 
 const recordAuditEntry = vi.fn(async () => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...(a as []))
 }));
 
 const svc = await import('./ballot-service');
-const { user } = await import('$lib/server/db/schema/authentication');
-const { group, groupMember } = await import('$lib/server/db/schema/group');
-const { memberOrientation } = await import('$lib/server/db/schema/volunteer');
+const { user } = await import('#lib/server/db/schema/authentication.js');
+const { group, groupMember } = await import('#lib/server/db/schema/group.js');
+const { memberOrientation } = await import('#lib/server/db/schema/volunteer.js');
 const { ballot, ballotElector, ballotChoice, ballotParticipation, ballotRecordedVote } =
-	await import('$lib/server/db/schema/ballot');
+	await import('#lib/server/db/schema/ballot.js');
 const { eq } = await import('drizzle-orm');
 
 const DAY = 86_400_000;

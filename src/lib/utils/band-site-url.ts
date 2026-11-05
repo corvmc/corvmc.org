@@ -8,7 +8,7 @@
  * `path` is the band-site-relative path ('' for home, '/events', '/epk').
  */
 import type { ResolvedPathname } from '$app/types';
-import { isReservedSlug } from '$lib/reserved-slugs';
+import { isReservedSlug } from '#lib/reserved-slugs.js';
 
 /**
  * The domain band subdomains hang off ({slug}.<domain>), derived from
@@ -90,7 +90,7 @@ export function bandSiteUrl(
 }
 
 /** The band-site-relative path ('/', '/events', …) of the current URL. */
-export function bandSitePath(slug: string, currentUrl: URL): string {
+export function bandSitePath(slug: string, currentUrl: Pick<URL, 'pathname'>): string {
 	const prefix = `/band-site/${slug}`;
 	if (currentUrl.pathname.startsWith(prefix)) {
 		return currentUrl.pathname.slice(prefix.length) || '/';
@@ -111,7 +111,11 @@ export function bandSitePath(slug: string, currentUrl: URL): string {
  * itself, which is why asserting it here is safe in a way that widening the
  * callers' `href` props to `string` would not be.
  */
-export function bandSiteHref(slug: string, path: string, currentUrl: URL): ResolvedPathname {
+export function bandSiteHref(
+	slug: string,
+	path: string,
+	currentUrl: { pathname: string; searchParams: Pick<URLSearchParams, 'get'> }
+): ResolvedPathname {
 	const devOverride = currentUrl.searchParams.get('__band_subdomain');
 	if (devOverride) {
 		return `${path || '/'}?__band_subdomain=${encodeURIComponent(devOverride)}` as ResolvedPathname;

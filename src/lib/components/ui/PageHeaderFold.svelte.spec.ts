@@ -2,7 +2,7 @@ import { page } from 'vitest/browser';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Harness from './PageHeaderFold.test.svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 // The `client` project ships no CSS, and the squeeze is a layout outcome.
 import '../../../routes/layout.css';
 

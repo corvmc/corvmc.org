@@ -1,12 +1,12 @@
-import { db } from '$lib/server/db';
-import { classifiedPost, classifiedPostTag } from '$lib/server/db/schema/classified';
-import { user } from '$lib/server/db/schema/authentication';
-import { group, groupMember } from '$lib/server/db/schema/group';
+import { db } from '#lib/server/db/index.js';
+import { classifiedPost, classifiedPostTag } from '#lib/server/db/schema/classified.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { and, count, desc, eq, gt, inArray, or, type SQL } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { DomainError } from '../domain-error';
-import { getStanding } from '$lib/server/moderation/standing-service';
+import { getStanding } from '#lib/server/moderation/standing-service.js';
 import {
 	CLASSIFIED_BODY_MAX,
 	CLASSIFIED_LIFETIME_DAYS,
@@ -19,7 +19,7 @@ import {
 	type ClassifiedKind,
 	type ClassifiedTagKind,
 	type ClassifiedVisibility
-} from '$lib/config';
+} from '#lib/config.js';
 
 const DAY_MS = 86_400_000;
 

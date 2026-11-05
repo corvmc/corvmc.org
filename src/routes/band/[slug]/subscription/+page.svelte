@@ -1,31 +1,31 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
 	import BandBillingCard from './BandBillingCard.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { goToCheckout } from '$lib/utils/checkout-navigation';
-	import { formatDate, formatCents } from '$lib/utils/format';
+	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
+	import { formatDate, formatCents } from '#lib/utils/format.js';
 	import {
 		getBandSubscriptionInfo,
 		upgradeToPremium,
 		cancelPremium,
 		resumePremium
-	} from '$lib/remote/band-subscription.remote';
+	} from '#lib/remote/band-subscription.remote.js';
 	import { getBandLayoutContext } from '../layout-context';
 	import { env } from '$env/dynamic/public';
-	import { bandSiteUrl, baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
+	import { bandSiteUrl, baseDomainFromSiteUrl } from '#lib/utils/band-site-url.js';
 	import { page } from '$app/state';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.

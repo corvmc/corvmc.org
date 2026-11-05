@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { createAsset } from '$lib/remote/inventory.remote';
-	import LocationField from '$lib/components/inventory/LocationField.svelte';
+	import { createAsset } from '#lib/remote/inventory.remote.js';
+	import LocationField from '#lib/components/inventory/LocationField.svelte';
 	import { Field } from '../ui/Form';
-	import { equipmentConditions } from '$lib/config';
+	import { equipmentConditions } from '#lib/config.js';
 
 	const { fields } = createAsset;
 

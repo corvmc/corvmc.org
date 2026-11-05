@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import { expectSuccessToast } from './toast';
 import {
@@ -23,7 +23,9 @@ test.skip(!surfaces.ballots, 'Ballots is switched off in src/lib/config.ts (#211
 const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
 const voteForm = (page: Page) =>
-	page.locator('form').filter({ has: page.locator('select[name="optionId"]') });
+	page
+		.locator('form')
+		.filter({ has: page.locator('select:is([name="optionId"], [name^="optionId/"])') });
 
 async function login(page: Page) {
 	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
@@ -34,7 +36,7 @@ test('a secret vote is counted once and cannot be cast again', async ({ page }) 
 	await page.goto(`/member/ballots/${SEED_BALLOT_OPEN_ID}`);
 
 	await voteForm(page)
-		.locator('select[name="optionId"]')
+		.locator('select:is([name="optionId"], [name^="optionId/"])')
 		.selectOption(`${SEED_BALLOT_OPEN_ID}-yes`);
 	await voteForm(page).locator('button[type="submit"]').click();
 	await expectSuccessToast(page);

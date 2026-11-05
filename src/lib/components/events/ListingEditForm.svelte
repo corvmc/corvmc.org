@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { addIsoDays } from '$lib/utils/deadline';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import ConflictWarnings from '$lib/components/reservations/ConflictWarnings.svelte';
-	import { errorMessage } from '$lib/error-message';
-	import { updateEvent, checkRebook, checkConflicts } from '$lib/remote/events.remote';
-	import { clubInstant, formatDollars, toLocalDate, toLocalTime } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { addIsoDays } from '#lib/utils/deadline.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import ConflictWarnings from '#lib/components/reservations/ConflictWarnings.svelte';
+	import { errorMessage } from '#lib/error-message.js';
+	import { updateEvent, checkRebook, checkConflicts } from '#lib/remote/events.remote.js';
+	import { clubInstant, formatDollars, toLocalDate, toLocalTime } from '#lib/utils/format.js';
 
 	/**
 	 * Every `updateEvent` field, for a listing of any source: the advertisement,
@@ -254,7 +254,7 @@
 					<FormField label={m.events_title()} id="editTitle" issues={[]}>
 						<input
 							id="editTitle"
-							name="title"
+							{...updateEvent.fields.title.as('text')}
 							type="text"
 							bind:value={editTitle}
 							class="input w-full"
@@ -265,7 +265,7 @@
 					<FormField label={m.events_listing_edit_form_description()} id="editDesc" issues={[]}>
 						<textarea
 							id="editDesc"
-							name="description"
+							{...updateEvent.fields.description.as('text')}
 							bind:value={editDescription}
 							class="textarea w-full"
 							rows="4"></textarea>
@@ -274,7 +274,7 @@
 					<FormField label={m.events_date()} id="editDate" issues={[]}>
 						<input
 							id="editDate"
-							name="eventDate"
+							{...updateEvent.fields.eventDate.as('text')}
 							type="date"
 							bind:value={editDate}
 							class="input w-full"
@@ -287,7 +287,7 @@
 						<FormField label={m.events_start_time()} id="editStartTime" issues={[]}>
 							<input
 								id="editStartTime"
-								name="eventStartTime"
+								{...updateEvent.fields.eventStartTime.as('text')}
 								type="time"
 								bind:value={editStartTime}
 								class="input w-full"
@@ -299,7 +299,7 @@
 						<FormField label={m.events_end_time()} id="editEndTime" issues={[]}>
 							<input
 								id="editEndTime"
-								name="eventEndTime"
+								{...updateEvent.fields.eventEndTime.as('text')}
 								type="time"
 								bind:value={editEndTime}
 								class="input w-full"
@@ -312,7 +312,7 @@
 					<FormField label={m.events_listing_edit_form_doors_time()} id="editDoorsTime" issues={[]}>
 						<input
 							id="editDoorsTime"
-							name="doorsTime"
+							{...updateEvent.fields.doorsTime.as('text')}
 							type="time"
 							bind:value={editDoorsTime}
 							class="input w-full"
@@ -337,7 +337,7 @@
 					<FormField label={m.events_listing_edit_form_tags()} id="editTags" issues={[]}>
 						<input
 							id="editTags"
-							name="tags"
+							{...updateEvent.fields.tags.as('text')}
 							type="text"
 							bind:value={editTags}
 							class="input w-full"
@@ -366,7 +366,7 @@
 					<FormField label={m.events_listing_edit_form_venue_name()} id="editLocation" issues={[]}>
 						<input
 							id="editLocation"
-							name="location"
+							{...updateEvent.fields.location.as('text')}
 							type="text"
 							bind:value={editLocation}
 							class="input w-full"
@@ -376,7 +376,7 @@
 					<FormField label={m.events_listing_edit_form_address()} id="editAddress" issues={[]}>
 						<input
 							id="editAddress"
-							name="address"
+							{...updateEvent.fields.address.as('text')}
 							type="text"
 							bind:value={editAddress}
 							class="input w-full"
@@ -390,7 +390,7 @@
 					>
 						<input
 							id="editTicketUrl"
-							name="externalTicketUrl"
+							{...updateEvent.fields.externalTicketUrl.as('text')}
 							type="url"
 							bind:value={editExternalTicketUrl}
 							class="input w-full"
@@ -455,7 +455,7 @@
 									<FormField label={m.events_capacity()} id="editTicketQuantity" issues={[]}>
 										<input
 											id="editTicketQuantity"
-											name="ticketQuantity"
+											{...updateEvent.fields.ticketQuantity.as('text')}
 											type="number"
 											bind:value={editTicketQuantity}
 											min="1"
@@ -501,7 +501,7 @@
 										>
 											<input
 												id="editResStart"
-												name="reservationStartTime"
+												{...updateEvent.fields.reservationStartTime.as('text')}
 												type="time"
 												bind:value={editReservationStartTime}
 												class="input w-full"
@@ -514,7 +514,7 @@
 										>
 											<input
 												id="editResEnd"
-												name="reservationEndTime"
+												{...updateEvent.fields.reservationEndTime.as('text')}
 												type="time"
 												bind:value={editReservationEndTime}
 												class="input w-full"
@@ -581,7 +581,7 @@
 										>
 											<input
 												id="editReserveStart"
-												name="reservationStartTime"
+												{...updateEvent.fields.reservationStartTime.as('text')}
 												type="time"
 												bind:value={editReservationStartTime}
 												class="input w-full"
@@ -594,7 +594,7 @@
 										>
 											<input
 												id="editReserveEnd"
-												name="reservationEndTime"
+												{...updateEvent.fields.reservationEndTime.as('text')}
 												type="time"
 												bind:value={editReservationEndTime}
 												class="input w-full"

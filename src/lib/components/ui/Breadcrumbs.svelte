@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Crumb } from './breadcrumbs';
 
 	let { crumbs, class: className = '' }: { crumbs: Crumb[]; class?: string } = $props();

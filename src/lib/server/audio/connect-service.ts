@@ -13,11 +13,11 @@
  * `audio.remote.ts`.
  */
 import type Stripe from 'stripe';
-import { stripe } from '$lib/server/stripe';
-import { db } from '$lib/server/db';
-import { bandStripeAccount } from '$lib/server/db/schema/audio';
+import { stripe } from '#lib/server/stripe.js';
+import { db } from '#lib/server/db/index.js';
+import { bandStripeAccount } from '#lib/server/db/schema/audio.js';
 import { eq } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 
 export class ConnectNotConfiguredError extends DomainError {
 	readonly httpStatus = 400;

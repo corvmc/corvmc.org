@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { INVITE_EXPIRY_DAYS, UNCONFIRMED_RELEASE_NOTICE } from '$lib/config';
+import { INVITE_EXPIRY_DAYS, UNCONFIRMED_RELEASE_NOTICE } from '#lib/config.js';
 import { buildNotificationEmail } from './email/build-model';
 import { normalizeNotificationModel } from './email/normalize-model';
 
@@ -19,20 +19,20 @@ vi.mock('./dispatcher', () => ({
 	dispatchBatch: (...args: unknown[]) => mockDispatchBatch(...args)
 }));
 
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const mockStaffUsers = vi.fn(async (_cap?: string) => [
 	{ id: 'staff-1', name: 'Ada', email: 'ada@test.com' },
 	{ id: 'staff-2', name: 'Bo', email: 'bo@test.com' }
 ]);
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	listUsersWithCapability: (cap: string) => mockStaffUsers(cap)
 }));
 
 // Returns null when INBOX_REPLY_ADDRESS is unconfigured, which is a supported
 // production state — both branches are exercised below.
 const mockBuildReplyToAddress = vi.fn((threadId: string) => `reply+${threadId}.sig@replies.test`);
-vi.mock('$lib/server/inbox/reply-address', () => ({
+vi.mock('#lib/server/inbox/reply-address.js', () => ({
 	buildReplyToAddress: (threadId: string) => mockBuildReplyToAddress(threadId)
 }));
 
@@ -49,7 +49,7 @@ vi.mock('$env/dynamic/public', () => ({ env: { PUBLIC_SITE_URL: 'https://test.co
 // are meeting. A single slot would silently keep only whichever registered last
 // and quietly test the wrong one.
 const handlers: Record<string, ((...args: any[]) => any)[]> = {};
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: {
 		on: (event: string, handler: (...args: any[]) => any) => {
 			(handlers[event] ??= []).push(handler);
@@ -64,7 +64,7 @@ vi.mock('$lib/server/event-bus/event-bus', () => ({
 const mockOrientationOwnerOf = vi.fn(
 	async (_shiftId: string): Promise<{ userId: string; name: string; email: string } | null> => null
 );
-vi.mock('$lib/server/volunteer/orientation-service', () => ({
+vi.mock('#lib/server/volunteer/orientation-service.js', () => ({
 	orientationOwnerOf: (id: string) => mockOrientationOwnerOf(id)
 }));
 
@@ -76,7 +76,7 @@ const mockApplicationNotice = vi.fn(async (_groupId: string, _applicantUserId: s
 		{ id: 'chair-2', name: 'Di', email: 'di@test.com', href: '/member/groups/booking' }
 	]
 }));
-vi.mock('$lib/server/group/application-reviewers', () => ({
+vi.mock('#lib/server/group/application-reviewers.js', () => ({
 	applicationNotice: (g: string, u: string) => mockApplicationNotice(g, u)
 }));
 
@@ -86,7 +86,7 @@ const mockMembersAddedNotice = vi.fn(async (_groupId: string, _addedById: string
 	groupKind: 'club' as const,
 	addedByName: 'Sam'
 }));
-vi.mock('$lib/server/group/roster-import-service', () => ({
+vi.mock('#lib/server/group/roster-import-service.js', () => ({
 	membersAddedNotice: (g: string, a: string) => mockMembersAddedNotice(g, a)
 }));
 

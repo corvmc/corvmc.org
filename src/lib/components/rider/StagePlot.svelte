@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { riderElementKindLabels } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { riderElementKindLabels } from '#lib/config.js';
 	import { safeFieldPrefix } from './field-names';
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 
 	/**
 	 * Where everything stands, drawn on the stage.
@@ -196,7 +196,7 @@
 						<span class="text-base-content/50">· {riderElementKindLabels[item.kind]}</span>
 					</span>
 					<Field
-						name="{safeFieldPrefix(item.id)}_x_{i}"
+						id="{safeFieldPrefix(item.id)}_x_{i}"
 						type="number"
 						label={m.rider_stage_plot_across()}
 						value={String(at.x)}
@@ -208,7 +208,7 @@
 							})}
 					/>
 					<Field
-						name="{safeFieldPrefix(item.id)}_y_{i}"
+						id="{safeFieldPrefix(item.id)}_y_{i}"
 						type="number"
 						label={m.rider_stage_plot_back()}
 						value={String(at.y)}

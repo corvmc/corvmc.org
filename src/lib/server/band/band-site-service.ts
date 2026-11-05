@@ -1,6 +1,6 @@
-import { db } from '$lib/server/db';
-import { bandSite } from '$lib/server/db/schema/band-site';
-import { group } from '$lib/server/db/schema/group';
+import { db } from '#lib/server/db/index.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { eq } from 'drizzle-orm';
 
 /**

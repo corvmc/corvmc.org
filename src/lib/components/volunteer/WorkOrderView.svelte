@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * One work order: who is on it, who to ask, its engagements, hours, reports
@@ -8,26 +8,26 @@
 	 * list of people still to be told, and the candidate column withdraws.
 	 */
 	import type { Snippet } from 'svelte';
-	import { shiftLabel } from '$lib/utils/shift-label';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import type { Crumb } from '$lib/components/ui/breadcrumbs';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { shiftLabel } from '#lib/utils/shift-label.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import type { Crumb } from '#lib/components/ui/breadcrumbs.js';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import ShiftRoleFields from './ShiftRoleFields.svelte';
 	import ShiftChecklist from './ShiftChecklist.svelte';
 	import CandidateColumn from './CandidateColumn.svelte';
 	import WorkOrderHours from './WorkOrderHours.svelte';
 	import WorkOrderReports from './WorkOrderReports.svelte';
-	import EngagementCard from '$lib/components/contractor/EngagementCard.svelte';
-	import { formatDateShort, formatDateShortYear, toLocalDateTime } from '$lib/utils/format';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
+	import EngagementCard from '#lib/components/contractor/EngagementCard.svelte';
+	import { formatDateShort, formatDateShortYear, toLocalDateTime } from '#lib/utils/format.js';
+	import { DEFAULT_TIMEZONE } from '#lib/config.js';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { IconCheck, IconUserX, IconUserMinus, IconPencil } from '@tabler/icons-svelte';
@@ -42,7 +42,7 @@
 		duplicateShift,
 		updateShift,
 		type getStaffShiftPage
-	} from '$lib/remote/volunteer.remote';
+	} from '#lib/remote/volunteer.remote.js';
 
 	type View = Omit<Awaited<ReturnType<typeof getStaffShiftPage>>, 'contractors'>;
 	let {
@@ -124,13 +124,13 @@
 			>
 		{:else}{m.volunteer_work_order_view_time_arranged()}{/if} ·
 		{#if shift.eventId && shift.eventTitle}
-			<a href={resolve(`/staff/events/${shift.eventId}`)} class="link link-primary">
+			<a href={resolve(`staff/events/${shift.eventId}`)} class="link link-primary">
 				{shift.eventTitle}
 			</a>
 		{:else}{m.volunteer_work_order_view_not_tied_event()}{/if}
 		{#if shift.assetId && shift.assetName}
 			·
-			<a href={resolve(`/staff/inventory/assets/${shift.assetId}`)} class="link link-primary">
+			<a href={resolve(`staff/inventory/assets/${shift.assetId}`)} class="link link-primary">
 				{shift.assetName}
 			</a>
 		{/if}
@@ -169,7 +169,9 @@
 						successToast={m.volunteer_work_order_view_sent_they_know()}
 					>
 						{#snippet form()}
-							<input type="hidden" name="shiftId" value={shift.id} />
+							<input
+								{...notifyCancelledShift.for(shift.id).fields.shiftId.as('hidden', shift.id)}
+							/>
 							<p class="text-sm">
 								{m.volunteer_work_order_view_people_still_shift_will_emailed({ toNotify })}
 							</p>
@@ -218,9 +220,11 @@
 								successToast={m.volunteer_work_order_view_confirmed()}
 							>
 								{#snippet form()}
-									<input type="hidden" name="shiftId" value={shift.id} />
-									{#each unconfirmed as c (c.signupId)}
-										<input type="hidden" name="signupIds" value={c.signupId} />
+									<input {...confirmSignups.for(shift.id).fields.shiftId.as('hidden', shift.id)} />
+									{#each unconfirmed as c, i (c.signupId)}
+										<input
+											{...confirmSignups.for(shift.id).fields.signupIds[i].as('hidden', c.signupId)}
+										/>
 									{/each}
 									<p class="text-sm">
 										{m.volunteer_work_order_view_all_confirmed_shift_each_them({
@@ -288,8 +292,16 @@
 													successToast={m.volunteer_work_order_view_marked()}
 												>
 													{#snippet form()}
-														<input type="hidden" name="signupId" value={claimant.signupId} />
-														<input type="hidden" name="shiftId" value={shift.id} />
+														<input
+															{...markSignupNotified
+																.for(claimant.signupId)
+																.fields.signupId.as('hidden', claimant.signupId)}
+														/>
+														<input
+															{...markSignupNotified
+																.for(claimant.signupId)
+																.fields.shiftId.as('hidden', shift.id)}
+														/>
 														<p class="text-sm">
 															{m.volunteer_work_order_view_use_when_reached_them_another()}
 														</p>
@@ -313,8 +325,16 @@
 													successToast={m.volunteer_work_order_view_confirmed()}
 												>
 													{#snippet form()}
-														<input type="hidden" name="signupId" value={claimant.signupId} />
-														<input type="hidden" name="shiftId" value={shift.id} />
+														<input
+															{...confirmSignup
+																.for(claimant.signupId)
+																.fields.signupId.as('hidden', claimant.signupId)}
+														/>
+														<input
+															{...confirmSignup
+																.for(claimant.signupId)
+																.fields.shiftId.as('hidden', shift.id)}
+														/>
 														<p class="text-sm">
 															{m.volunteer_work_order_view_they_ll_get_reminder_day()}
 														</p>
@@ -339,8 +359,16 @@
 													successToast={m.volunteer_work_order_view_taken_off_place_open_again()}
 												>
 													{#snippet form()}
-														<input type="hidden" name="signupId" value={claimant.signupId} />
-														<input type="hidden" name="shiftId" value={shift.id} />
+														<input
+															{...releaseSignup
+																.for(claimant.signupId)
+																.fields.signupId.as('hidden', claimant.signupId)}
+														/>
+														<input
+															{...releaseSignup
+																.for(claimant.signupId)
+																.fields.shiftId.as('hidden', shift.id)}
+														/>
 														<p class="text-sm">
 															{m.volunteer_work_order_view_their_place_opens_up_straight()}
 														</p>
@@ -366,8 +394,16 @@
 													successToast={m.volunteer_work_order_view_marked_as_no_show()}
 												>
 													{#snippet form()}
-														<input type="hidden" name="signupId" value={claimant.signupId} />
-														<input type="hidden" name="shiftId" value={shift.id} />
+														<input
+															{...markSignupNoShow
+																.for(claimant.signupId)
+																.fields.signupId.as('hidden', claimant.signupId)}
+														/>
+														<input
+															{...markSignupNoShow
+																.for(claimant.signupId)
+																.fields.shiftId.as('hidden', shift.id)}
+														/>
 														<p class="text-sm">
 															{m.volunteer_work_order_view_different_from_removing_them_remov()}
 														</p>
@@ -444,7 +480,7 @@
 					>
 						{#snippet icon()}<IconPencil size={16} />{/snippet}
 						{#snippet form()}
-							<input type="hidden" name="id" value={shift.id} />
+							<input {...editForm.fields.id.as('hidden', shift.id)} />
 							<!-- An archived role stays in the list when this shift is on it, or
 							     the select would post an empty role and quietly reassign it. -->
 							<ShiftRoleFields
@@ -465,7 +501,7 @@
 							/>
 							{#if view.reports.length > 0 || shift.closeReportsOnCompletion}
 								<FormField
-									name="closeReports"
+									field={editForm.fields.closeReports}
 									type="select"
 									label={m.volunteer_work_order_view_when_window_ends()}
 									value={shift.closeReportsOnCompletion ? 'close' : 'wait'}
@@ -494,7 +530,7 @@
 							onsuccess={(r) => {
 								const copyId = (r as { id?: string } | undefined)?.id;
 								// The shift URL sends a project's copy on to its task page.
-								if (copyId) goto(resolve(`/staff/volunteer/shifts/${copyId}`));
+								if (copyId) goto(resolve(`staff/volunteer/shifts/${copyId}`));
 							}}
 						>
 							{#snippet form()}
@@ -523,7 +559,7 @@
 							successToast={m.volunteer_work_order_view_called_off_tell_people()}
 						>
 							{#snippet form()}
-								<input type="hidden" name="id" value={shift.id} />
+								<input {...cancelShift.for(shift.id).fields.id.as('hidden', shift.id)} />
 								<p class="text-sm">
 									{m.volunteer_work_order_view_claims_bookings_stay_place_they()}
 								</p>

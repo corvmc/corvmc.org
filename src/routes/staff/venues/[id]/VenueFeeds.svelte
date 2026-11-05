@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The venue's partner calendar feeds (#1459). The daily cron copies each
 	 * unpaused feed's upcoming shows onto the gig guide; "Fetch now" runs one
 	 * immediately, paused or not.
 	 */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { formatDateTimeShort } from '$lib/utils/format';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { formatDateTimeShort } from '#lib/utils/format.js';
 	import {
 		getVenueFeeds,
 		addVenueFeed,
 		setVenueFeedPaused,
 		removeVenueFeed,
 		fetchVenueFeed
-	} from '$lib/remote/venues.remote';
+	} from '#lib/remote/venues.remote.js';
 
 	let { venueId }: { venueId: string } = $props();
 
@@ -37,7 +37,7 @@
 			successToast={m.staff_added()}
 		>
 			{#snippet form()}
-				<input type="hidden" name="venueId" value={venueId} />
+				<input {...addForm.fields.venueId.as('hidden', venueId)} />
 				<Field
 					field={addForm.fields.url}
 					type="text"
@@ -85,7 +85,7 @@
 								noFooter
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={feed.id} />
+									<input {...fetchVenueFeed.for(feed.id).fields.id.as('hidden', feed.id)} />
 								{/snippet}
 							</Action>
 							<Action
@@ -101,8 +101,12 @@
 								noFooter
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={feed.id} />
-									<input type="hidden" name="paused" value={feed.paused ? 'false' : 'true'} />
+									<input {...setVenueFeedPaused.for(feed.id).fields.id.as('hidden', feed.id)} />
+									<input
+										{...setVenueFeedPaused
+											.for(feed.id)
+											.fields.paused.as('hidden', feed.paused ? 'false' : 'true')}
+									/>
 								{/snippet}
 							</Action>
 							<Action
@@ -117,7 +121,7 @@
 								successToast={m.staff_removed()}
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={feed.id} />
+									<input {...removeVenueFeed.for(feed.id).fields.id.as('hidden', feed.id)} />
 									<p class="text-sm">
 										{m.staff_venues_id_venue_feeds_shows_already_added_stay_guide()}
 									</p>

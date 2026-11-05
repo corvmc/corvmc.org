@@ -23,7 +23,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({ db: { select: vi.fn(() => chainable()) } }));
+vi.mock('#lib/server/db/index.js', () => ({ db: { select: vi.fn(() => chainable()) } }));
 
 const {
 	committeeAllows,

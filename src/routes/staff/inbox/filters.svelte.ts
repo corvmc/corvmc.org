@@ -1,5 +1,5 @@
 import { untrack } from 'svelte';
-import { inboxChannels, inboxViews, type InboxView } from '$lib/config';
+import { inboxChannels, inboxViews, type InboxView } from '#lib/config.js';
 
 type InboxChannel = (typeof inboxChannels)[number];
 
@@ -68,7 +68,7 @@ const parseView = (raw: string | null): InboxView => {
 };
 
 /** Read the query string into the filters. Safe to call on every navigation. */
-export function seedFromUrl(params: URLSearchParams): void {
+export function seedFromUrl(params: Pick<URLSearchParams, 'get'>): void {
 	Object.assign(filters, {
 		view: parseView(params.get('view')),
 		channel: params.get('channel') ?? '',

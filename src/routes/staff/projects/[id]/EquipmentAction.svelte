@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { setTaskEquipmentForm } from '$lib/remote/tasks.remote';
-	import { searchWorkAssets } from '$lib/remote/maintenance-schedules.remote';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { setTaskEquipmentForm } from '#lib/remote/tasks.remote.js';
+	import { searchWorkAssets } from '#lib/remote/maintenance-schedules.remote.js';
 	import type { Task } from './task-view';
 
 	/** The unit the task is about. Clearing the picker takes it off. */
@@ -39,7 +39,7 @@
 		<input {...edit.fields.workOrderId.as('hidden', task.id)} />
 		<input {...edit.fields.assetId.as('hidden', selected?.id ?? '')} />
 		<FormField
-			name="assetId"
+			field={edit.fields.assetId}
 			label={m.staff_unit()}
 			description={m.staff_projects_id_equipment_description()}
 		>

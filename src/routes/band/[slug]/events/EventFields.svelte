@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import type { RemoteFormField } from '@sveltejs/kit';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import LineupEditor, { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
-	import { searchBandsForLineup } from '$lib/remote/band-events.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { RemoteFormField } from '$app/server';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
+	import { searchBandsForLineup } from '#lib/remote/band-events.remote.js';
 	import {
 		formatDate,
 		formatDollars,
 		formatTime,
 		toLocalDate,
 		toLocalTime
-	} from '$lib/utils/format';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import { priceDisplay } from '$lib/utils/event-ticketing';
-	import { imageSrc } from '$lib/utils/images';
+	} from '#lib/utils/format.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import { priceDisplay } from '#lib/utils/event-ticketing.js';
+	import { imageSrc } from '#lib/utils/images.js';
 
 	/**
 	 * Every field of a band event, in one place.
@@ -75,6 +75,7 @@
 			posterFile: RemoteFormField<File>;
 			externalTicketUrl: RemoteFormField<string>;
 			ticketPriceDollars: RemoteFormField<string>;
+			lineup: RemoteFormField<string>;
 		};
 		/** The saved event. Absent when creating. */
 		evt?: EventForDisplay;
@@ -100,10 +101,10 @@
 />
 
 <!-- Custom input mode: FormField's built-in textarea drops `rest`, so rows,
-     maxlength and placeholder would be lost. Issues still resolve by name.
+     maxlength and placeholder would be lost.
      `readonly` now wins over this child rather than being ignored by it. -->
 <FormField
-	name="description"
+	field={fields.description}
 	label={m.band_slug_events_event_fields_description()}
 	{readonly}
 	display={evt?.description ?? '—'}
@@ -203,8 +204,9 @@
 	/>
 {/if}
 
-<FormField name="lineup" label={m.band_slug_events_event_fields_who_s_playing()}>
+<FormField field={fields.lineup} label={m.band_slug_events_event_fields_who_s_playing()}>
 	<LineupEditor
+		field={fields.lineup}
 		bind:value={lineup}
 		ownerBandId={bandId}
 		{readonly}

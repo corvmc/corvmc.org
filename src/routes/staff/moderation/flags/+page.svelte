@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { entityLabels } from '$lib/terms';
+	import { m } from '#lib/paraglide/messages.js';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { entityLabels } from '#lib/terms.js';
 	import { resolve } from '$app/paths';
-	import { getFlagsQueue } from '$lib/remote/flags.remote';
-	import TriageTable from '$lib/components/ui/TriageTable.svelte';
+	import { getFlagsQueue } from '#lib/remote/flags.remote.js';
+	import TriageTable from '#lib/components/ui/TriageTable.svelte';
 	import StaffViews from '../../StaffViews.svelte';
 	import { moderationViews } from '../views';
 
@@ -87,7 +87,7 @@
 				subjectLabel={m.staff_flags_subject_label()}
 				rows={flags.map((f) => ({
 					id: f.id,
-					href: resolve(`/staff/flags/${f.id}`),
+					href: resolve(`staff/flags/${f.id}`),
 					status: f.status,
 					kind: entityLabels[f.target.type].one,
 					subject: f.ref,

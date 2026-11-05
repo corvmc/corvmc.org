@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import {
 		IconArrowUpRight,
 		IconPhoto,
@@ -8,7 +8,7 @@
 	} from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
 	import { BLOCK_SOURCES } from './block-editing';
-	import type { Block } from '$lib/types/band-page';
+	import type { Block } from '#lib/types/band-page.js';
 
 	/**
 	 * What a block looks like before it has anything in it.
@@ -36,7 +36,7 @@
 	}: { type: Block['type']; slug: string; onsettings?: () => void } = $props();
 
 	const source = $derived(BLOCK_SOURCES[type]);
-	const ownerHref = $derived(source.owner ? resolve(`/band/${slug}/${source.owner}`) : null);
+	const ownerHref = $derived(source.owner ? resolve(`band/${slug}/${source.owner}`) : null);
 </script>
 
 <div class="mx-auto max-w-3xl px-6 py-8">

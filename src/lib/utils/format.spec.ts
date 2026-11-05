@@ -6,8 +6,8 @@
 process.env.TZ = 'UTC';
 
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_TIMEZONE } from '$lib/config';
-import { addCalendarDays, forEachClockEdge, viewerTimeZones } from '$lib/test/clock-edges';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import { addCalendarDays, forEachClockEdge, viewerTimeZones } from '#lib/test/clock-edges.js';
 import {
 	formatCents,
 	formatDate,

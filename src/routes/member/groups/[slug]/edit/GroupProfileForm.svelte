@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import RichTextEditor from '$lib/components/ui/Form/RichTextEditor.svelte';
-	import { getGroupEditor, updateGroupProfileForm } from '$lib/remote/groups.remote';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import RichTextEditor from '#lib/components/ui/Form/RichTextEditor.svelte';
+	import { getGroupEditor, updateGroupProfileForm } from '#lib/remote/groups.remote.js';
 
 	// Plain resolved props, never an awaited query — see the page's comment.
 	let { group }: { group: Awaited<ReturnType<typeof getGroupEditor>> } = $props();
@@ -67,7 +67,6 @@
 
 			<FormField
 				label={m.member_groups_slug_edit_group_profile_form_photo()}
-				name="avatarKey"
 				type="file"
 				upload={uploadAvatar}
 				accept="image/jpeg,image/png,image/webp"
@@ -112,7 +111,7 @@
 	</InfoCard>
 
 	<div class="flex justify-end gap-2">
-		<a class="btn btn-ghost" href={resolve(`/member/groups/${group.slug}`)}>{m.member_cancel()}</a>
+		<a class="btn btn-ghost" href={resolve(`member/groups/${group.slug}`)}>{m.member_cancel()}</a>
 		<SubmitButton label={m.member_save()} />
 	</div>
 </Form>

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
 	import {
 		getStaffSettingsPage,
 		updateProduct,
@@ -20,31 +20,31 @@
 		updateFeatureFlag,
 		syncSubscriptions,
 		refreshCommunityStats
-	} from '$lib/remote/settings.remote';
+	} from '#lib/remote/settings.remote.js';
 	import LockHealth from './LockHealth.svelte';
 	import UnmanagedLockCodes from './UnmanagedLockCodes.svelte';
 	import UtecDevicePicker from './UtecDevicePicker.svelte';
-	import { getLockHealth, getUnmanagedLockUsers } from '$lib/remote/lock.remote';
-	import { updateInboxChannelConfig, testMetaConnection } from '$lib/remote/inbox.remote';
-	import { isAlwaysEnabledChannel } from '$lib/config';
-	import { channelLabel, channelIcon } from '$lib/components/inbox/channels';
+	import { getLockHealth, getUnmanagedLockUsers } from '#lib/remote/lock.remote.js';
+	import { updateInboxChannelConfig, testMetaConnection } from '#lib/remote/inbox.remote.js';
+	import { isAlwaysEnabledChannel } from '#lib/config.js';
+	import { channelLabel, channelIcon } from '#lib/components/inbox/channels.js';
 	import { inboxChannelMeta } from './inbox-channel-meta';
 	import { featureMeta } from './feature-meta';
-	import type { FeatureFlag } from '$lib/server/feature-flags';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { errorMessage } from '$lib/error-message';
-	import { retryQuery } from '$lib/utils/retry-query';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import type { SubscriptionSyncSummary } from '$lib/types/subscription-sync';
-	import type { CommunityStats } from '$lib/server/db/schema/finance';
-	import { formatDollars } from '$lib/utils/format';
+	import type { FeatureFlag } from '#lib/server/feature-flags.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
+	import { retryQuery } from '#lib/utils/retry-query.js';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import type { SubscriptionSyncSummary } from '#lib/types/subscription-sync.js';
+	import type { CommunityStats } from '#lib/server/db/schema/finance.js';
+	import { formatDollars } from '#lib/utils/format.js';
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/state';
 	import { replaceState } from '$app/navigation';
@@ -125,7 +125,7 @@
 		const entry = messages[result];
 		if (entry) toast[entry[0]](entry[1]);
 
-		replaceState(resolve('/staff/settings'), {});
+		replaceState(resolve('staff/settings'), {});
 	});
 
 	const tabs = [
@@ -244,9 +244,8 @@
 									{/each}
 									<input
 										id="name-{product.key}"
-										name="name"
+										{...instance.fields.name.as('text', product.name)}
 										type="text"
-										value={product.name}
 										class="input input-sm"
 									/>
 								</div>
@@ -276,7 +275,9 @@
 													const dollars = parseFloat(input.value);
 													const hidden = input
 														.closest('form')
-														?.querySelector<HTMLInputElement>('[name="unitAmountCents"]');
+														?.querySelector<HTMLInputElement>(
+															`[name="${instance.fields.unitAmountCents.as('hidden', '').name}"]`
+														);
 													if (hidden && !isNaN(dollars))
 														hidden.value = String(Math.round(dollars * 100));
 												}}
@@ -301,8 +302,7 @@
 								</label>
 								<textarea
 									id="desc-{product.key}"
-									name="description"
-									value={product.description ?? ''}
+									{...instance.fields.description.as('text', product.description ?? '')}
 									class="textarea textarea-sm"
 									rows="2"></textarea>
 							</div>
@@ -342,7 +342,9 @@
 											const dollars = parseFloat(input.value);
 											const hidden = input
 												.closest('form')
-												?.querySelector<HTMLInputElement>('[name="hourlyRateCents"]');
+												?.querySelector<HTMLInputElement>(
+													`[name="${reservationFields.hourlyRateCents.as('hidden', '').name}"]`
+												);
 											if (hidden && !isNaN(dollars))
 												hidden.value = String(Math.round(dollars * 100));
 										}}
@@ -368,13 +370,13 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="operatingHoursStart"
+								field={updateReservationSettings.fields.operatingHoursStart}
 								label={m.staff_settings_opens_at()}
 								type="time"
 								value={String(reservationSettings.operatingHoursStart ?? '09:00')}
 							/>
 							<FormField
-								name="operatingHoursEnd"
+								field={updateReservationSettings.fields.operatingHoursEnd}
 								label={m.staff_settings_closes_at()}
 								type="time"
 								value={String(reservationSettings.operatingHoursEnd ?? '22:00')}
@@ -389,7 +391,7 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="timeSlotMinutes"
+								field={updateReservationSettings.fields.timeSlotMinutes}
 								label={m.staff_settings_time_slot_granularity()}
 								type="select"
 								value={String(reservationSettings.timeSlotMinutes ?? 30)}
@@ -400,7 +402,8 @@
 								]}
 							/>
 							<FormField
-								name="bufferMinutes"
+								field={updateReservationSettings.fields.bufferMinutes}
+								submitAs="text"
 								label={m.staff_settings_buffer_between_reservations_min()}
 								type="number"
 								value={String(reservationSettings.bufferMinutes ?? 0)}
@@ -408,7 +411,8 @@
 								step="5"
 							/>
 							<FormField
-								name="minAdvanceMinutes"
+								field={updateReservationSettings.fields.minAdvanceMinutes}
+								submitAs="text"
 								label={m.staff_settings_min_advance_booking_minutes()}
 								type="number"
 								value={String(reservationSettings.minAdvanceMinutes ?? 60)}
@@ -416,7 +420,8 @@
 								step="15"
 							/>
 							<FormField
-								name="minDurationHours"
+								field={updateReservationSettings.fields.minDurationHours}
+								submitAs="text"
 								label={m.staff_settings_minimum_duration_hours()}
 								type="number"
 								value={String(reservationSettings.minDurationHours ?? 1)}
@@ -424,7 +429,8 @@
 								step="0.5"
 							/>
 							<FormField
-								name="maxDurationHours"
+								field={updateReservationSettings.fields.maxDurationHours}
+								submitAs="text"
 								label={m.staff_settings_maximum_duration_hours()}
 								type="number"
 								value={String(reservationSettings.maxDurationHours ?? 8)}
@@ -432,14 +438,16 @@
 								step="1"
 							/>
 							<FormField
-								name="maxAdvanceDaysOneoff"
+								field={updateReservationSettings.fields.maxAdvanceDaysOneoff}
+								submitAs="text"
 								label={m.staff_settings_max_advance_booking_one_off()}
 								type="number"
 								value={String(reservationSettings.maxAdvanceDaysOneoff ?? 14)}
 								min="1"
 							/>
 							<FormField
-								name="maxAdvanceDaysRecurring"
+								field={updateReservationSettings.fields.maxAdvanceDaysRecurring}
+								submitAs="text"
 								label={m.staff_settings_max_advance_booking_recurring_days()}
 								type="number"
 								value={String(reservationSettings.maxAdvanceDaysRecurring ?? 17.5)}
@@ -480,28 +488,28 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="addressStreet"
+								field={updateOrgSettings.fields.addressStreet}
 								label={m.staff_settings_street_address()}
 								type="text"
 								value={String(orgSettings.addressStreet ?? '')}
 								placeholder={m.staff_settings_6775_sw_philomath_blvd()}
 							/>
 							<FormField
-								name="addressCity"
+								field={updateOrgSettings.fields.addressCity}
 								label={m.staff_settings_city()}
 								type="text"
 								value={String(orgSettings.addressCity ?? '')}
 								placeholder={m.staff_settings_corvallis()}
 							/>
 							<FormField
-								name="addressState"
+								field={updateOrgSettings.fields.addressState}
 								label={m.staff_settings_state()}
 								type="text"
 								value={String(orgSettings.addressState ?? '')}
 								placeholder={m.staff_settings_text()}
 							/>
 							<FormField
-								name="addressZip"
+								field={updateOrgSettings.fields.addressZip}
 								label={m.staff_settings_zip()}
 								type="text"
 								value={String(orgSettings.addressZip ?? '')}
@@ -518,14 +526,14 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="socialFacebook"
+								field={updateOrgSettings.fields.socialFacebook}
 								label={m.staff_settings_facebook_url()}
 								type="text"
 								value={String(orgSettings.socialFacebook ?? '')}
 								placeholder={m.staff_settings_https_facebook_com()}
 							/>
 							<FormField
-								name="socialInstagram"
+								field={updateOrgSettings.fields.socialInstagram}
 								label={m.staff_settings_instagram_url()}
 								type="text"
 								value={String(orgSettings.socialInstagram ?? '')}
@@ -572,14 +580,15 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="hourValueCents"
+								field={updateVolunteerValueSettings.fields.hourValueCents}
+								submitAs="text"
 								label={m.staff_settings_hourly_value_cents()}
 								type="number"
 								value={String(volunteerValue.hourValueCents)}
 								placeholder="3766"
 							/>
 							<FormField
-								name="hourValueSource"
+								field={updateVolunteerValueSettings.fields.hourValueSource}
 								label={m.staff_settings_source()}
 								type="text"
 								value={volunteerValue.hourValueSource}
@@ -613,7 +622,7 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="roleId"
+								field={updateOrientationSettings.fields.roleId}
 								label={m.staff_settings_role()}
 								type="select"
 								value={orientation.roleId}
@@ -623,20 +632,22 @@
 								]}
 							/>
 							<FormField
-								name="minutes"
+								field={updateOrientationSettings.fields.minutes}
+								submitAs="text"
 								label={m.staff_settings_length_minutes()}
 								type="number"
 								value={String(orientation.minutes)}
 							/>
 							<FormField
-								name="leadMinutes"
+								field={updateOrientationSettings.fields.leadMinutes}
+								submitAs="text"
 								label={m.staff_settings_starts_before_booking_minutes()}
 								type="number"
 								value={String(orientation.leadMinutes)}
 							/>
 						</div>
 						<FormField
-							name="tasks"
+							field={updateOrientationSettings.fields.tasks}
 							label={m.staff_settings_checklist()}
 							type="textarea"
 							description={m.staff_settings_one_task_per_line()}
@@ -669,7 +680,8 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="consoleChannels"
+								field={updateVenueSettings.fields.consoleChannels}
+								submitAs="text"
 								label={m.staff_settings_console_channels()}
 								type="number"
 								value={String(venue.consoleChannels)}
@@ -718,7 +730,7 @@
 										{m.staff_settings_test_connection()}
 									</Button>
 									<Button
-										href={resolve('/api/integrations/utec/authorize')}
+										href={resolve('api/integrations/utec/authorize')}
 										variant="ghost"
 										size="sm"
 										data-sveltekit-reload
@@ -727,7 +739,7 @@
 									</Button>
 								{:else}
 									<Button
-										href={resolve('/api/integrations/utec/authorize')}
+										href={resolve('api/integrations/utec/authorize')}
 										variant="primary"
 										size="sm"
 										class={utecCanConnect ? '' : 'btn-disabled'}
@@ -858,13 +870,13 @@
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
-								name="clientId"
+								field={updateIntegrationSettings.fields.clientId}
 								label={m.staff_settings_client_id()}
 								type="text"
 								value={integrationSettings.clientId}
 							/>
 							<FormField
-								name="clientSecret"
+								field={updateIntegrationSettings.fields.clientSecret}
 								label={m.staff_settings_client_secret()}
 								type="password"
 								value=""
@@ -875,7 +887,7 @@
 
 								{#snippet failed()}
 									<FormField
-										name="deviceId"
+										field={updateIntegrationSettings.fields.deviceId}
 										label={m.staff_settings_device_id()}
 										type="text"
 										value={integrationSettings.deviceId}

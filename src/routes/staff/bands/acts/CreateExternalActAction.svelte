@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { createStaffExternalAct } from '$lib/remote/external-acts.remote';
+	import { createStaffExternalAct } from '#lib/remote/external-acts.remote.js';
 
 	/**
 	 * Stub an act when booking it.

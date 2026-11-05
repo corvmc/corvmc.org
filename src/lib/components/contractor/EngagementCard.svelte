@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * One contractor's engagement on a work order: its money and its actions.
 	 * The actions are gated on status, because two of them move an asset —
 	 * booking takes a unit out of service and completing brings it back.
 	 */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { Field, MoneyField } from '$lib/components/ui/Form';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { Field, MoneyField } from '#lib/components/ui/Form/index.js';
 	import {
 		scheduleJobForm,
 		completeJobForm,
@@ -20,12 +20,12 @@
 		noShowJobForm,
 		recordInvoiceForm,
 		reopenJobForm
-	} from '$lib/remote/contractors.remote';
-	import ReopenAction from '$lib/components/actions/ReopenAction.svelte';
-	import { contractorJobStatusBadge, contractorJobStatusLabels } from '$lib/config';
-	import { formatCents, formatDateShort } from '$lib/utils/format';
+	} from '#lib/remote/contractors.remote.js';
+	import ReopenAction from '#lib/components/actions/ReopenAction.svelte';
+	import { contractorJobStatusBadge, contractorJobStatusLabels } from '#lib/config.js';
+	import { formatCents, formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
-	import type { getStaffShiftPage } from '$lib/remote/volunteer.remote';
+	import type { getStaffShiftPage } from '#lib/remote/volunteer.remote.js';
 
 	type Row = Awaited<ReturnType<typeof getStaffShiftPage>>['engagements'][number];
 	let { row }: { row: Row } = $props();
@@ -49,7 +49,7 @@
 		{#snippet header()}
 			<div class="flex flex-wrap items-center justify-between gap-2">
 				<CardTitle>
-					<a class="link" href={resolve(`/staff/contractors/${row.contractor.id}`)}>
+					<a class="link" href={resolve(`staff/contractors/${row.contractor.id}`)}>
 						{row.contractor.name}
 					</a>
 					<Badge variant={contractorJobStatusBadge[job.status]} size="sm" class="ml-1">

@@ -1,6 +1,6 @@
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
-import { parseFields, toHref, type UrlFields } from '$lib/utils/url-filters';
+import { parseFields, toHref, type UrlFields } from '#lib/utils/url-filters.js';
 
 /**
  * Filter state that lives in the URL, so a reload — or a link a staffer pastes
@@ -16,11 +16,11 @@ import { parseFields, toHref, type UrlFields } from '$lib/utils/url-filters';
  *   updates neither `page.url` nor the router's own state, so backing out of a
  *   detail page returned to the wrong filter.
  *
- * `path` is a resolved href — pass `resolve('/staff/events')`. The returned
+ * `path` is a resolved href — pass `resolve('staff/events')`. The returned
  * object is plain reactive state: read it in a `$derived`, assign to it from a
  * handler, `bind:` to it from a control.
  *
- *     const filters = urlState(resolve('/staff/events'), {
+ *     const filters = urlState(resolve('staff/events'), {
  *         view: oneOf(views, 'review'),
  *         source: text<Source>(),
  *         page: positiveInt(1)
@@ -36,11 +36,11 @@ export function urlState<S extends Record<string, unknown>>(path: string, fields
 	$effect(() => {
 		const target = toHref(path, fields, values);
 		if (location.pathname + location.search !== target) {
-			void goto(target, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(target, { replace: true, reset: false });
 		}
 	});
 
 	return values;
 }
 
-export { oneOf, positiveInt, text, type UrlField, type UrlFields } from '$lib/utils/url-filters';
+export { oneOf, positiveInt, text, type UrlField, type UrlFields } from '#lib/utils/url-filters.js';

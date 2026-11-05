@@ -1,24 +1,24 @@
-import { db } from '$lib/server/db';
-import { eventListing, type LineupEntry } from '$lib/server/db/schema/event';
+import { db } from '#lib/server/db/index.js';
+import { eventListing, type LineupEntry } from '#lib/server/db/schema/event.js';
 import {
 	eventListingColumns,
 	eventPosterKeySql,
 	noSaleTerms,
 	ticketSaleColumns
 } from './event-columns';
-import { saveTicketSale } from '$lib/server/ticket/ticket-sale';
-import { user } from '$lib/server/db/schema/authentication';
+import { saveTicketSale } from '#lib/server/ticket/ticket-sale.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, asc, count, eq, getTableColumns, gte, inArray, isNull, ne } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { uploadFile } from '$lib/server/storage';
-import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
-import { mediaKey } from '$lib/server/storage-keys';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
-import { allowRateLimited } from '$lib/server/rate-limit';
-import { getStanding } from '$lib/server/moderation/standing-service';
-import { DomainError } from '$lib/server/errors';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { uploadFile } from '#lib/server/storage.js';
+import { detachSlot, replaceSlot } from '#lib/server/media/media-service.js';
+import { mediaKey } from '#lib/server/storage-keys.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
+import { allowRateLimited } from '#lib/server/rate-limit.js';
+import { getStanding } from '#lib/server/moderation/standing-service.js';
+import { DomainError } from '#lib/server/errors.js';
 import {
 	getById,
 	publish as publishEvent,

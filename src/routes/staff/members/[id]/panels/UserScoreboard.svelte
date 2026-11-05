@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import type { getUserOverview } from '$lib/remote/users.remote';
-	import { creditsToHours, formatVolunteerHours } from '$lib/config';
-	import { formatCents } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { getUserOverview } from '#lib/remote/users.remote.js';
+	import { creditsToHours, formatVolunteerHours } from '#lib/config.js';
+	import { formatCents } from '#lib/utils/format.js';
 
 	let { overview }: { overview: Awaited<ReturnType<typeof getUserOverview>> } = $props();
 

@@ -1,8 +1,8 @@
 import { error, text } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { handleTwilioInbound } from '$lib/server/inbox/inbound-handlers';
-import { validateTwilioSignature } from '$lib/server/inbox/twilio-client';
-import { isChannelEnabled } from '$lib/server/inbox/channel-config-service';
+import { handleTwilioInbound } from '#lib/server/inbox/inbound-handlers.js';
+import { validateTwilioSignature } from '#lib/server/inbox/twilio-client.js';
+import { isChannelEnabled } from '#lib/server/inbox/channel-config-service.js';
 
 const EMPTY_TWIML = '<Response></Response>';
 

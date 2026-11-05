@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonShape, ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { updateClosure } from '$lib/remote/closures.remote';
+	import { updateClosure } from '#lib/remote/closures.remote.js';
 	import { Field } from '../ui/Form';
-	import { toLocalDateTime } from '$lib/utils/format';
+	import { toLocalDateTime } from '#lib/utils/format.js';
 
 	/** Edits a closure in a modal, prefilled. The list row is all it needs. */
 	let {

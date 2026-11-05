@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { getAccessRegister, issueAccessForm, returnAccessForm } from '$lib/remote/lock.remote';
-	import { accessHoldingKindLabels, accessHoldingKinds, clubToday } from '$lib/config';
-	import { formatDateShort } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { getAccessRegister, issueAccessForm, returnAccessForm } from '#lib/remote/lock.remote.js';
+	import { accessHoldingKindLabels, accessHoldingKinds, clubToday } from '#lib/config.js';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 
 	/**
@@ -120,7 +120,7 @@
 							{formatDateShort(row.returnedAt)}
 							{#if row.returnNotes}<div class="text-subtle">{row.returnNotes}</div>{/if}
 						{:else if row.source === 'lock'}
-							<Button href={resolve('/staff/settings')} variant="ghost" size="sm">
+							<Button href={resolve('staff/settings')} variant="ghost" size="sm">
 								{m.staff_keys_door_access()}
 							</Button>
 						{:else}

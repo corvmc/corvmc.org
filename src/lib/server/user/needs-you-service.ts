@@ -1,13 +1,13 @@
 import { resolve } from '$app/paths';
-import { sortNeedsYou, type NeedsYouItem } from '$lib/types/needs-you';
-import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '$lib/config';
+import { sortNeedsYou, type NeedsYouItem } from '#lib/types/needs-you.js';
+import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '#lib/config.js';
 import {
 	listUnloggedCompletions,
 	listSignupsForUser
-} from '$lib/server/volunteer/volunteer-signup-service';
-import { listUserLoans } from '$lib/server/inventory/loan-service';
-import { countPendingRequests } from '$lib/server/inbox/direct-service';
-import { getMemberSubscription } from '$lib/server/finance/subscription-service';
+} from '#lib/server/volunteer/volunteer-signup-service.js';
+import { listUserLoans } from '#lib/server/inventory/loan-service.js';
+import { countPendingRequests } from '#lib/server/inbox/direct-service.js';
+import { getMemberSubscription } from '#lib/server/finance/subscription-service.js';
 import { reservationNeedsYouItems, type ReservationNeedingYou } from './reservation-needs-you';
 
 /**
@@ -59,7 +59,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 			kind: 'volunteer-shift-soon',
 			title: `You are on ${s.roleName}`,
 			detail: s.eventTitle ?? undefined,
-			href: resolve(`/member/volunteer/shifts/${s.signupId}`),
+			href: resolve(`member/volunteer/shifts/${s.signupId}`),
 			label: 'Open',
 			dueAt: s.startsAt,
 			rank: 1
@@ -74,7 +74,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 			id: `volunteer-hours-unlogged:${c.signupId}`,
 			kind: 'volunteer-hours-unlogged',
 			title: `Log your hours for ${c.roleName}`,
-			href: resolve('/member/volunteer/profile'),
+			href: resolve('member/volunteer/profile'),
 			label: 'Log Hours',
 			dueAt: new Date(c.endsAt.getTime() + VOLUNTEER_BACKDATE_LIMIT_DAYS * 86_400_000),
 			rank: 2
@@ -87,7 +87,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 			id: `loan-due:${loan.id}`,
 			kind: 'loan-due',
 			title: `Return ${loan.equipmentName ?? 'the gear you borrowed'}`,
-			href: resolve('/member/equipment/loans'),
+			href: resolve('member/equipment/loans'),
 			label: 'See the loan',
 			dueAt: loan.dueDate,
 			rank: 3
@@ -100,7 +100,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 			kind: 'membership-ending',
 			title: 'Your sustaining membership ends',
 			detail: 'Practice hours stop resetting after that date',
-			href: resolve('/member/membership'),
+			href: resolve('member/membership'),
 			label: 'Membership',
 			dueAt: new Date(subscription.creditsResetAt),
 			rank: 4
@@ -118,7 +118,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 				input.pendingInviteCount === 1
 					? 'A band has invited you'
 					: `${input.pendingInviteCount} bands have invited you`,
-			href: resolve('/member/bands'),
+			href: resolve('member/bands'),
 			label: 'Answer',
 			dueAt: null,
 			rank: 10
@@ -133,7 +133,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 				messageRequests === 1
 					? 'Somebody asked to message you'
 					: `${messageRequests} people asked to message you`,
-			href: resolve('/member/messages'),
+			href: resolve('member/messages'),
 			label: 'Read',
 			dueAt: null,
 			rank: 11
@@ -146,7 +146,7 @@ export async function listNeedsYou(input: NeedsYouInput): Promise<NeedsYouItem[]
 			kind: 'profile-incomplete',
 			title: 'Add your instruments or a short bio',
 			detail: "You're not listed in the directory until you do",
-			href: resolve('/member/profile'),
+			href: resolve('member/profile'),
 			label: 'Edit profile',
 			dueAt: null,
 			rank: 12

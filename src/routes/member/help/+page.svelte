@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { getMemberCategories } from '$lib/remote/help.remote';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import HelpSearch from '$lib/components/help/HelpSearch.svelte';
+	import { getMemberCategories } from '#lib/remote/help.remote.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import HelpSearch from '#lib/components/help/HelpSearch.svelte';
 	import {
 		IconBook,
 		IconSettings,
@@ -51,7 +51,7 @@
 	};
 
 	function handleSelect(slug: string) {
-		goto(resolve(`/member/help/${slug}`));
+		goto(resolve(`member/help/${slug}`));
 	}
 
 	/** Enough to show what a category covers without the tallest card setting the row. */
@@ -94,7 +94,7 @@
 								{#each category.articles.slice(0, ARTICLES_SHOWN) as article (article.slug)}
 									<li>
 										<a
-											href={resolve(`/member/help/${article.slug}`)}
+											href={resolve(`member/help/${article.slug}`)}
 											class="text-sm transition-colors hover:text-primary"
 										>
 											{article.title}

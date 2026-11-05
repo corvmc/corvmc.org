@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, eq, isNull, isNotNull, gt, gte, lt, or } from 'drizzle-orm';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import {
 	createTemporaryUser,
 	removeTemporaryUser,
@@ -18,10 +18,10 @@ import {
 } from './ultraloc-client';
 import { maintainFallbackCode } from './fallback-code-service';
 import { hasActiveMemberCode, reconcileMemberCodeSync } from './member-code-service';
-import { getJson, putJson } from '$lib/server/kv';
-import { dispatchEmailOnly } from '$lib/server/notification';
+import { getJson, putJson } from '#lib/server/kv.js';
+import { dispatchEmailOnly } from '#lib/server/notification/index.js';
 import { env } from '$env/dynamic/private';
-import { DEFAULT_TIMEZONE, CONFIRMATION_WINDOW_DAYS } from '$lib/config';
+import { DEFAULT_TIMEZONE, CONFIRMATION_WINDOW_DAYS } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // LockService — provision and clean up Ultraloc temporary users

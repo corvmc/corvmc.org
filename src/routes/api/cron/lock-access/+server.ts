@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { runDailyLockJob } from '$lib/server/lock/lock-service';
+import { runDailyLockJob } from '#lib/server/lock/lock-service.js';
 
 /**
  * Cron endpoint for daily lock access provisioning and cleanup.

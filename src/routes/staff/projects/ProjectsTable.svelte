@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import type { getProjectsPage } from '$lib/remote/projects.remote';
-	import { isProjectArchived, type ProjectView } from '$lib/config';
-	import { formatCents, formatDateShort } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import type { getProjectsPage } from '#lib/remote/projects.remote.js';
+	import { isProjectArchived, type ProjectView } from '#lib/config.js';
+	import { formatCents, formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
-	import { rowLink } from '$lib/actions/row-link';
+	import { rowLink } from '#lib/actions/row-link.js';
 
 	type ProjectRow = Awaited<ReturnType<typeof getProjectsPage>>['projects'][number];
 
@@ -33,7 +33,7 @@
 		<th class="cell-num">{m.staff_spent()}</th>
 	{/snippet}
 	{#each projects as row (row.project.id)}
-		<tr class="hover" use:rowLink={resolve(`/staff/projects/${row.project.id}`)}>
+		<tr class="hover" use:rowLink={resolve(`staff/projects/${row.project.id}`)}>
 			<td class="w-px">
 				{#if row.progress.total === 0}
 					<span class="text-fg-3" title={m.staff_no_tasks_yet()}>—</span>
@@ -59,7 +59,7 @@
 				{/if}
 			</td>
 			<td class="cell-primary">
-				<a class="link font-medium" href={resolve(`/staff/projects/${row.project.id}`)}>
+				<a class="link font-medium" href={resolve(`staff/projects/${row.project.id}`)}>
 					{row.project.name}
 				</a>
 				{#if view === 'all' && isProjectArchived(row.project.status)}

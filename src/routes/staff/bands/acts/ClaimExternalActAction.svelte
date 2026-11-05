@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { searchMembers } from '$lib/remote/reservations.remote';
-	import { claimStaffExternalAct } from '$lib/remote/external-acts.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { searchMembers } from '#lib/remote/reservations.remote.js';
+	import { claimStaffExternalAct } from '#lib/remote/external-acts.remote.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
@@ -32,7 +32,7 @@
 	size="xs"
 	onsuccess={(result) => {
 		const slug = (result as { slug?: string } | undefined)?.slug;
-		if (slug) goto(resolve(`/band/${slug}`));
+		if (slug) goto(resolve(`band/${slug}`));
 	}}
 >
 	{#snippet form()}
@@ -41,7 +41,11 @@
 			<p class="text-sm">
 				{m.staff_bands_acts_claim_external_act_becomes_cmc_band_with_sl({ actName })}
 			</p>
-			<FormField name="ownerId" label={m.staff_owner()} required>
+			<FormField
+				field={claimStaffExternalAct.for(entryId).fields.ownerId}
+				label={m.staff_owner()}
+				required
+			>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={owner}

@@ -1,10 +1,11 @@
-import { sentrySvelteKit } from '@sentry/sveltekit';
+import { sentrySvelteKit } from '@sentry/sveltekit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
 // `loadEnv` from vite itself: `vitest/config` does not re-export it.
 import { loadEnv } from 'vite';
 import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
+import kitConfig from './kit.config.js';
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { assertNoTransactableStripeCredentials } from './e2e/stripe-guard';
 import fs from 'node:fs';
@@ -12,8 +13,8 @@ import { execSync } from 'node:child_process';
 import { availableParallelism } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
-import { browserPort, devPort, previewPort, storybookPort } from './scripts/lib/checkout-ports';
+import { browserPort, devPort, previewPort } from './scripts/lib/checkout-ports';
+import { previewCloudflareWorkers } from './scripts/lib/preview-cloudflare-workers';
 const dirname =
 	typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
@@ -53,7 +54,6 @@ const ssrExternalsForBrowserTests = {
 	}
 };
 
-// More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
 	plugins: [
 		// Not in the e2e build. `playwright.config.ts` puts SENTRY_ENVIRONMENT=ci in
@@ -84,7 +84,8 @@ export default defineConfig({
 		// The message catalog (messages/en.json). Its options live in
 		// project.inlang/paraglide.config.ts, shared with `pnpm messages:compile`.
 		paraglideVitePlugin({ project: './project.inlang' }),
-		sveltekit(),
+		sveltekit(kitConfig),
+		previewCloudflareWorkers(),
 		/**
 		 * No `vite preview` in this repo may serve the app with a Stripe credential
 		 * that can move real money (#667).
@@ -195,6 +196,14 @@ export default defineConfig({
 			},
 			{
 				extends: './vite.config.ts',
+				resolve: {
+					alias: {
+						'cloudflare:workers': path.resolve(
+							dirname,
+							'src/lib/server/testing/cloudflare-workers.ts'
+						)
+					}
+				},
 				test: {
 					name: 'server',
 					environment: 'node',
@@ -220,37 +229,6 @@ export default defineConfig({
 						deps: {
 							inline: ['bits-ui']
 						}
-					}
-				}
-			},
-			{
-				extends: true,
-				plugins: [
-					// The plugin will run tests for the stories defined in your Storybook config
-					// See options at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon#storybooktest
-					storybookTest({
-						configDir: path.join(dirname, '.storybook')
-					}),
-					ssrExternalsForBrowserTests
-				],
-				test: {
-					name: 'storybook',
-					// Its own port. Without one this project takes vitest's default,
-					// which is the number `client` already binds — two browser servers
-					// starting together in the same run, racing for one port.
-					api: { port: storybookPort(dirname), strictPort: true },
-					browser: {
-						enabled: true,
-						locators: { exact: false },
-						headless: true,
-						// Same reasoning as `client` above: out of the trees the gates grep.
-						screenshotDirectory: 'test-results/screenshots',
-						provider: playwright({}),
-						instances: [
-							{
-								browser: 'chromium'
-							}
-						]
 					}
 				}
 			}

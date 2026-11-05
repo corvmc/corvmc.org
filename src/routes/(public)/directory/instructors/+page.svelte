@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { retryQuery } from '$lib/utils/retry-query';
-	import Button from '$lib/components/ui/Button.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import InstructorCard from '$lib/components/directory/InstructorCard.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { retryQuery } from '#lib/utils/retry-query.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import InstructorCard from '#lib/components/directory/InstructorCard.svelte';
 	import { resolve } from '$app/paths';
-	import { getPublicInstructors } from '$lib/remote/instructors.remote';
+	import { getPublicInstructors } from '#lib/remote/instructors.remote.js';
 
 	/**
 	 * Who teaches at the Collective — the public half of "be found as a teacher".
@@ -55,16 +55,16 @@
 		<div class="mb-6 flex justify-center">
 			<TabBar
 				tabs={[
-					{ key: 'bands', label: m.public_bands(), href: resolve('/directory') },
+					{ key: 'bands', label: m.public_bands(), href: resolve('directory') },
 					{
 						key: 'musicians',
 						label: m.public_musicians(),
-						href: resolve('/directory?tab=musicians')
+						href: resolve('directory?tab=musicians')
 					},
 					{
 						key: 'instructors',
 						label: m.public_teachers(),
-						href: resolve('/directory/instructors')
+						href: resolve('directory/instructors')
 					}
 				]}
 				active="instructors"

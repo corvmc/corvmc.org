@@ -1,32 +1,32 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import EmailInviteCard from '$lib/components/groups/EmailInviteCard.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import EmailInviteCard from '#lib/components/groups/EmailInviteCard.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import { goto, invalidateAll, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import {
 		createBand,
 		acceptInvite,
 		declineInvite,
 		getMemberBands
-	} from '$lib/remote/bands.remote';
+	} from '#lib/remote/bands.remote.js';
 
 	// The sidebar "Create Band" links point here with ?create=1 — open the modal.
 	//
 	// Two constraints, both svelte experimental-async related (still present in
-	// 5.57.0; covered by e2e/create-band-modal.e2e.ts):
+	// 5.57.3; covered by e2e/create-band-modal.e2e.ts):
 	// - This declaration must sit BEFORE the top-level await. Declarations after
 	//   it compile as "blocked" and the modal wiring goes dead.
 	// - A client-side navigation landing while the member layout's async queries
@@ -34,7 +34,7 @@
 	//   one bits-ui's `Dialog.Portal` uses to mount itself, so no dialog ever
 	//   entered the DOM and the button was dead for the life of the page. That
 	//   is a svelte scheduler bug, not a shape this page can avoid, and it is
-	//   fixed in `patches/svelte@5.57.0.patch` — see the note there. The sidebar
+	//   fixed in `patches/svelte@5.57.3.patch` — see the note there. The sidebar
 	//   links still carry data-sveltekit-reload; that is now belt-and-braces
 	//   rather than the mitigation it was.
 	// Deliberately an $effect over $state, NOT a writable $derived. A derived on
@@ -62,7 +62,7 @@
 	// Drop the param on close so the nav link re-triggers and refresh stays clean.
 	function onCreateModalClose() {
 		if (page.url.searchParams.has('create')) {
-			replaceState(resolve('/member/bands'), {});
+			replaceState(resolve('member/bands'), {});
 		}
 	}
 
@@ -157,7 +157,7 @@
 			<div class="space-y-3">
 				{#each active as b (b.id)}
 					<a
-						href={resolve(`/band/${b.slug}`)}
+						href={resolve(`band/${b.slug}`)}
 						class="card bg-base-100 shadow transition-shadow hover:shadow-md"
 					>
 						<CardBody row class="py-4">
@@ -195,7 +195,7 @@
 		onsuccess={(result) => {
 			toast.success(m.member_bands_band_created());
 			showCreateModal = false;
-			if (result?.slug) goto(resolve(`/band/${result.slug}`));
+			if (result?.slug) goto(resolve(`band/${result.slug}`));
 		}}
 	>
 		<div class="space-y-4">

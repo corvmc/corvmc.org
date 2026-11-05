@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/test';
 import {
 	SEED_TP_EVENT_ID,
 	SEED_TP_EVENT_TITLE,
@@ -77,7 +77,9 @@ async function payPerTicket(page: import('@playwright/test').Page, dollars: stri
 	await expect(async () => {
 		await amount.fill('');
 		await amount.fill(dollars);
-		await expect(page.locator('input[name$="unitPriceCents"]')).toHaveValue(
+		await expect(
+			page.locator('input:is([name$="unitPriceCents"], [name*="unitPriceCents/"])')
+		).toHaveValue(
 			String(Math.round(Number(dollars) * 100)),
 			// Deliberately far below the enclosing `toPass` budget: this is one
 			// attempt, not the deadline. Hydration lands in well under a second once
@@ -111,7 +113,9 @@ test('the split bar opens with the collective at its suggested share', async ({ 
 	const bar = page.getByRole('slider');
 	await expect(bar).toHaveAttribute('aria-valuenow', '512');
 	await expect(bar).toHaveAttribute('aria-valuetext', /\$5\.12.*\$14\.00/);
-	await expect(page.locator('input[name$="collectiveCents"]')).toHaveValue('512');
+	await expect(
+		page.locator('input:is([name$="collectiveCents"], [name*="collectiveCents/"])')
+	).toHaveValue('512');
 });
 
 test('moving the bar moves what the acts get, and what is posted', async ({ page }) => {
@@ -133,7 +137,9 @@ test('moving the bar moves what the acts get, and what is posted', async ({ page
 		if (Number(await bar.getAttribute('aria-valuenow')) > 462) await bar.press('ArrowLeft');
 		expect(await bar.getAttribute('aria-valuenow')).toBe('462');
 	}).toPass({ timeout: 15000 });
-	await expect(page.locator('input[name$="collectiveCents"]')).toHaveValue('462');
+	await expect(
+		page.locator('input:is([name$="collectiveCents"], [name*="collectiveCents/"])')
+	).toHaveValue('462');
 });
 
 test("paying over the suggestion leaves the surplus the buyer's to direct", async ({ page }) => {
@@ -153,7 +159,9 @@ test("paying over the suggestion leaves the surplus the buyer's to direct", asyn
 	await bar.focus();
 	await bar.press('ArrowRight');
 	await expect(bar).toHaveAttribute('aria-valuenow', '1214');
-	await expect(page.locator('input[name$="collectiveCents"]')).toHaveValue('1214');
+	await expect(
+		page.locator('input:is([name$="collectiveCents"], [name*="collectiveCents/"])')
+	).toHaveValue('1214');
 
 	// All the way over: the acts keep their guarantee and not a cent less.
 	await bar.press('End');
@@ -169,7 +177,9 @@ test('the fee-coverage offer is priced on everything the card is charged', async
 	// Scoped to the checkbox by `name` rather than matched on its sentence: the
 	// grossed-up amount is the contract, the wording around it is not.
 	// `name$=`: a remote form prefixes a boolean field's name (`b:coverFees`).
-	const coverFees = page.locator('input[name$="coverFees"]').locator('..');
+	const coverFees = page
+		.locator('input:is([name$="coverFees"], [name*="coverFees/"])')
+		.locator('..');
 	await expect(coverFees).toContainText(usd(91));
 
 	await payPerTicket(page, '45');
@@ -211,7 +221,9 @@ test('the dead zone below the charge minimum is refused on the page', async ({ p
 test('a guest is never offered a member discount, because there is not one', async ({ page }) => {
 	await openPurchasePage(page);
 
-	await expect(page.locator('input[name$="waiveDiscount"]')).toHaveCount(0);
+	await expect(
+		page.locator('input:is([name$="waiveDiscount"], [name*="waiveDiscount/"])')
+	).toHaveCount(0);
 });
 
 test('a show with a floor says so, and refuses less', async ({ page }) => {
@@ -236,15 +248,21 @@ test('a show with a floor says so, and refuses less', async ({ page }) => {
 async function payOnFakeCheckout(page: import('@playwright/test').Page, cardNumber: string) {
 	await expect(page).toHaveURL(/\/checkout\//);
 	// The fake driver's card form, rather than a Payment Element.
-	const card = page.locator('input[name$="cardNumber"]');
+	const card = page.locator('input:is([name$="cardNumber"], [name*="cardNumber/"])');
 	await expect(card).toBeVisible();
 	await card.fill(cardNumber);
-	await page.locator('form:has(input[name$="cardNumber"]) button[type="submit"]').click();
+	await page
+		.locator(
+			'form:has(input:is([name$="cardNumber"], [name*="cardNumber/"])) button[type="submit"]'
+		)
+		.click();
 }
 
 async function fillGuestDetails(page: import('@playwright/test').Page) {
-	await page.locator('input[name$="attendeeName"]').fill('E2E Guest');
-	await page.locator('input[name$="attendeeEmail"]').fill(GUEST_EMAIL);
+	await page.locator('input:is([name$="attendeeName"], [name*="attendeeName/"])').fill('E2E Guest');
+	await page
+		.locator('input:is([name$="attendeeEmail"], [name*="attendeeEmail/"])')
+		.fill(GUEST_EMAIL);
 }
 
 /**

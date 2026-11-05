@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { createShow } from '$lib/remote/productions.remote';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { createShow } from '#lib/remote/productions.remote.js';
 
 	/**
 	 * Open a show, then land on its console. Creating it attaches this committee
@@ -22,7 +22,7 @@
 	size="sm"
 	onsuccess={(result) => {
 		const eventId = (result as { eventId?: string } | undefined)?.eventId;
-		if (eventId) goto(resolve(`/staff/events/${eventId}/production`));
+		if (eventId) goto(resolve(`staff/events/${eventId}/production`));
 	}}
 >
 	{#snippet form()}

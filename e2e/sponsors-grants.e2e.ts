@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
@@ -34,7 +34,7 @@ test.describe('sponsors', () => {
 		await page.getByTestId('new-sponsor').click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible({ timeout: 15000 });
-		await dialog.locator('input[name="name"]').fill(name);
+		await dialog.locator('input:is([name="name"], [name^="name/"])').fill(name);
 		await dialog.locator('button[type="submit"]').click();
 		await expectSuccessToast(page);
 		await expect(page.locator('tbody tr').filter({ hasText: name })).toBeVisible();
@@ -67,7 +67,9 @@ test.describe('grants', () => {
 		await row.getByTestId('edit-report').click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible();
-		await dialog.locator('input[name="submittedOn"]').fill('2026-01-01');
+		await dialog
+			.locator('input:is([name="submittedOn"], [name^="submittedOn/"])')
+			.fill('2026-01-01');
 		await dialog.locator('button[type="submit"]').click();
 		await expectSuccessToast(page);
 		await expect(page.getByRole('alert').filter({ hasText: 'has passed' })).toHaveCount(0);

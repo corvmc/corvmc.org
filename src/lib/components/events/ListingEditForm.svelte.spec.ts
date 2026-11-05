@@ -2,7 +2,7 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
-vi.mock('$lib/remote/events.remote', () => {
+vi.mock('#lib/remote/events.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => null
@@ -68,8 +68,12 @@ describe('ListingEditForm ticketing', () => {
 		const { container, locator } = await render(ListingEditForm, props('band', true));
 
 		await expect.element(locator.getByRole('textbox').first()).toBeVisible();
-		expect(container.querySelector('input[name="ticketingEnabled"]')).toBeNull();
-		expect(container.querySelector('input[name="ticketQuantity"]')).toBeNull();
+		expect(
+			container.querySelector('input:is([name="ticketingEnabled"], [name^="ticketingEnabled/"])')
+		).toBeNull();
+		expect(
+			container.querySelector('input:is([name="ticketQuantity"], [name^="ticketQuantity/"])')
+		).toBeNull();
 		await expect
 			.element(page.getByLabelText('Sell tickets through the site'))
 			.not.toBeInTheDocument();
@@ -79,7 +83,9 @@ describe('ListingEditForm ticketing', () => {
 		const { container } = await render(ListingEditForm, props('cmc', true));
 
 		await expect.element(page.getByLabelText('Sell tickets through the site')).toBeVisible();
-		const flag = container.querySelector<HTMLInputElement>('input[name="ticketingEnabled"]');
+		const flag = container.querySelector<HTMLInputElement>(
+			'input:is([name="ticketingEnabled"], [name^="ticketingEnabled/"])'
+		);
 		expect(flag).not.toBeNull();
 		expect(container.querySelector<HTMLInputElement>('#editTicketQuantity')?.value).toBe('80');
 	});
@@ -96,7 +102,9 @@ describe('ListingEditForm on a cancelled listing', () => {
 		await expect.element(locator.getByRole('textbox').first()).toBeVisible();
 		expect(container.querySelector('#editTitle')).not.toBeNull();
 		expect(container.querySelector('#editTicketPrice')).toBeNull();
-		expect(container.querySelector('input[name="ticketQuantity"]')).toBeNull();
+		expect(
+			container.querySelector('input:is([name="ticketQuantity"], [name^="ticketQuantity/"])')
+		).toBeNull();
 		await expect
 			.element(page.getByLabelText('Sell tickets through the site'))
 			.not.toBeInTheDocument();
@@ -115,7 +123,8 @@ describe('ListingEditForm place fields', () => {
 
 		await expect.element(locator.getByRole('textbox').first()).toBeVisible();
 		const value = (name: string) =>
-			container.querySelector<HTMLInputElement>(`input[name="${name}"]`)?.value;
+			container.querySelector<HTMLInputElement>(`input:is([name="${name}"], [name^="${name}/"])`)
+				?.value;
 		expect(value('location')).toBe('Bombs Away Cafe');
 		expect(value('address')).toBe('2527 NW Monroe Ave');
 	});

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import {
 		riderElementKindLabels,
 		riderElementKindOptions,
@@ -13,9 +13,9 @@
 		riderStandTypeOptions,
 		RIDER_MAX_ELEMENTS,
 		RIDER_MAX_INPUTS_PER_ELEMENT
-	} from '$lib/config';
-	import type { RiderElementRowState } from '$lib/types/rider';
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	} from '#lib/config.js';
+	import type { RiderElementRowState } from '#lib/types/rider.js';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 	import { safeFieldPrefix } from './field-names';
 	import { IconPlus, IconTrash, IconChevronUp, IconChevronDown } from '@tabler/icons-svelte';
 	import type { Snippet } from 'svelte';
@@ -58,20 +58,19 @@
 		 * Taken from the form rather than emitted as `name="elements"`: a remote
 		 * form encodes its field names, so a child component's plain `name` never
 		 * reaches it and the field arrives as `undefined` with nothing on screen
-		 * to show for it. The editor-state inputs below keep plain names because
-		 * they are *meant* not to arrive — Zod strips them as unknown.
+		 * to show for it. The editor-state inputs below carry ids, not names: they
+		 * are meant not to arrive.
 		 */
 		field?: RemoteFormField<RemoteFormFieldValue>;
 		/**
-		 * Distinguishes the editor-state field names when two editors share a page.
-		 * Sanitised below — callers pass a user id, which is not a legal field name.
+		 * Distinguishes the editor-state ids when two editors share a page.
+		 * Sanitised below — callers pass a user id.
 		 */
 		idPrefix?: string;
 		readonly?: boolean;
 	} = $props();
 
-	// Callers pass a user id, which is never a legal field name. `field-names.ts`
-	// says why, and its spec is what keeps the answer right.
+	// Callers pass a user id; `field-names.ts` makes it a safe id prefix.
 	const safePrefix = $derived(safeFieldPrefix(idPrefix));
 
 	const monitorOptions = $derived([
@@ -171,11 +170,7 @@
 
 <!--
 	Editor state, not form fields — only the hidden field below posts. The rows
-	still carry names because a `Field` label is bound to its input by name, and
-	the names are underscored rather than hyphenated for a hard reason: SvelteKit
-	parses every submitted name into a schema path against
-	`/^[a-zA-Z_$]\w*(\.[a-zA-Z_$]\w*|\[\d+\])*$/`, and a hyphen fails it — the
-	submit dies with `Invalid path` as a 500 before Zod ever runs.
+	carry ids, not names: a remote form rejects a name its fields did not hand out.
 -->
 {#if field && !readonly}
 	<input {...field.as('hidden', serialized)} />
@@ -186,7 +181,7 @@
 		<div class="rounded-box border border-base-300 p-4">
 			<div class="grid gap-3 md:grid-cols-[1fr_2fr_1fr_auto]">
 				<Field
-					name="{safePrefix}_kind_{index}"
+					id="{safePrefix}_kind_{index}"
 					type="select"
 					label={msg.rider_rider_elements_editor_what()}
 					options={riderElementKindOptions}
@@ -195,7 +190,7 @@
 					display={riderElementKindLabels[element.kind]}
 				/>
 				<Field
-					name="{safePrefix}_label_{index}"
+					id="{safePrefix}_label_{index}"
 					type="text"
 					label={msg.rider_rider_elements_editor_name()}
 					placeholder={msg.rider_rider_elements_editor_e_g_fender_twin()}
@@ -203,7 +198,7 @@
 					{readonly}
 				/>
 				<Field
-					name="{safePrefix}_provided_{index}"
+					id="{safePrefix}_provided_{index}"
 					type="select"
 					label={msg.rider_rider_elements_editor_who_brings()}
 					options={riderProvidedByOptions}
@@ -256,7 +251,7 @@
 			</div>
 
 			<Field
-				name="{safePrefix}_notes_{index}"
+				id="{safePrefix}_notes_{index}"
 				type="text"
 				label={msg.rider_rider_elements_editor_anything_engineer_should_know()}
 				placeholder={msg.rider_rider_elements_editor_optional()}
@@ -297,7 +292,7 @@
 					{#each element.inputs as input, j (input.rowId)}
 						<div class="mb-2 grid gap-2 md:grid-cols-[2fr_1fr_2fr_1fr_1fr_auto]">
 							<Field
-								name="{safePrefix}_inlabel_{index}_{j}"
+								id="{safePrefix}_inlabel_{index}_{j}"
 								type="text"
 								label={msg.rider_rider_elements_editor_input()}
 								placeholder={msg.rider_rider_elements_editor_e_g_kick()}
@@ -305,7 +300,7 @@
 								{readonly}
 							/>
 							<Field
-								name="{safePrefix}_insource_{index}_{j}"
+								id="{safePrefix}_insource_{index}_{j}"
 								type="select"
 								label={msg.rider_rider_elements_editor_via()}
 								options={riderInputSourceOptions}
@@ -314,7 +309,7 @@
 								display={riderInputSourceLabels[input.source]}
 							/>
 							<Field
-								name="{safePrefix}_inmic_{index}_{j}"
+								id="{safePrefix}_inmic_{index}_{j}"
 								type="text"
 								label={msg.rider_rider_elements_editor_preferred_mic_di()}
 								placeholder={msg.rider_rider_elements_editor_optional_house_may_have_better()}
@@ -323,7 +318,7 @@
 								display={text(input.micPref) || '—'}
 							/>
 							<Field
-								name="{safePrefix}_instand_{index}_{j}"
+								id="{safePrefix}_instand_{index}_{j}"
 								type="select"
 								label={msg.rider_rider_elements_editor_stand()}
 								options={riderStandTypeOptions}
@@ -332,7 +327,7 @@
 								display={riderStandTypeLabels[input.stand ?? 'none']}
 							/>
 							<Field
-								name="{safePrefix}_inmix_{index}_{j}"
+								id="{safePrefix}_inmix_{index}_{j}"
 								type="select"
 								label={msg.rider_rider_elements_editor_monitor()}
 								options={monitorOptions}
@@ -343,12 +338,10 @@
 							<div class="flex items-end gap-1 pb-1">
 								<!--
 									`label` is explicit because `FormField` falls back to a
-									capitalised `name` — and these names are editor-state ids, so
-									the fallback rendered "Seed-rider-member_inphantom_0_0" above
-									the box.
+									capitalised id, which here is an editor-state id.
 								-->
 								<Field
-									name="{safePrefix}_inphantom_{index}_{j}"
+									id="{safePrefix}_inphantom_{index}_{j}"
 									type="checkbox"
 									label={msg.rider_rider_elements_editor_power()}
 									checkboxLabel={msg.rider_rider_elements_editor_checkbox_label()}

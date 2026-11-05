@@ -7,12 +7,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
 // D1 runs a batch as one transaction; better-sqlite3's drizzle has no `batch`, so this is it.
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			sqlite.exec('begin');
@@ -30,11 +30,11 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const { completeJob, recordInvoice } = await import('./contractor-job-service');
-const { resolveWorkOrder } = await import('$lib/server/volunteer/work-order-service');
+const { resolveWorkOrder } = await import('#lib/server/volunteer/work-order-service.js');
 // `resolveWorkOrder` imports these lazily; loading them here keeps that cost
 // out of the first test's 5s budget on a cold cache.
-await import('$lib/server/inventory/work-request-service');
-await import('$lib/server/volunteer/orientation-service');
+await import('#lib/server/inventory/work-request-service.js');
+await import('#lib/server/volunteer/orientation-service.js');
 
 const row = (sql: string) => sqlite.prepare(sql).get() as Record<string, unknown>;
 

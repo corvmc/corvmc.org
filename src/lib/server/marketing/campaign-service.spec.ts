@@ -4,25 +4,27 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // blast is a set of joins. Postmark, the token signer and sponsor credits stay
 // mocked; the renderer is spied on for the markdown it is handed.
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 vi.mock('./campaign-render', () => ({
 	renderCampaignPreview: vi.fn(() => '<html>preview</html>'),
 	renderCampaignForSend: vi.fn(() => '<html>send</html>')
 }));
-vi.mock('$lib/server/sponsor/credit-service', () => ({ creditsForEvent: vi.fn(async () => []) }));
+vi.mock('#lib/server/sponsor/credit-service.js', () => ({
+	creditsForEvent: vi.fn(async () => [])
+}));
 vi.mock('./unsubscribe', () => ({ signUnsubscribeToken: vi.fn(() => 'unsub-token') }));
-vi.mock('$lib/server/notification/email', () => ({
+vi.mock('#lib/server/notification/email/index.js', () => ({
 	sendBroadcastBatch: vi.fn().mockResolvedValue(undefined)
 }));
 vi.mock('$env/dynamic/public', () => ({ env: { PUBLIC_SITE_URL: 'https://test.com' } }));
 
-const { sendBroadcastBatch } = await import('$lib/server/notification/email');
-const { creditsForEvent } = await import('$lib/server/sponsor/credit-service');
+const { sendBroadcastBatch } = await import('#lib/server/notification/email/index.js');
+const { creditsForEvent } = await import('#lib/server/sponsor/credit-service.js');
 const { renderCampaignForSend, renderCampaignPreview } = await import('./campaign-render');
 const { signUnsubscribeToken } = await import('./unsubscribe');
 const {

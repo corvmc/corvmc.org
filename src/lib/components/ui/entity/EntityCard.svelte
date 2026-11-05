@@ -1,11 +1,11 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { EntityRef } from '$lib/types/entity';
+	import type { EntityRef } from '#lib/types/entity.js';
 	import Card from '../Card/Card.svelte';
 	import CardBody from '../Card/CardBody.svelte';
 	import EntityIdentity from './EntityIdentity.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
-	import { imageSrc } from '$lib/utils/images';
+	import { imageSrc } from '#lib/utils/images.js';
 	import { entityKinds, entityIcon, toneFor, isNoteworthyStatus } from './registry';
 
 	/**

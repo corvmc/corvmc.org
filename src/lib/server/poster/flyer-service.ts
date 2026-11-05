@@ -1,16 +1,16 @@
-import { db } from '$lib/server/db';
-import { eventBand, eventListing } from '$lib/server/db/schema/event';
-import { venue } from '$lib/server/db/schema/venue';
-import { ticketSaleColumns } from '$lib/server/event/event-columns';
+import { db } from '#lib/server/db/index.js';
+import { eventBand, eventListing } from '#lib/server/db/schema/event.js';
+import { venue } from '#lib/server/db/schema/venue.js';
+import { ticketSaleColumns } from '#lib/server/event/event-columns.js';
 import { asc, eq } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import { getObject, uploadFile } from '$lib/server/storage';
-import { mediaKey } from '$lib/server/storage-keys';
-import { replaceSlot } from '$lib/server/media/media-service';
+import { DomainError } from '#lib/server/domain-error.js';
+import { getObject, uploadFile } from '#lib/server/storage.js';
+import { mediaKey } from '#lib/server/storage-keys.js';
+import { replaceSlot } from '#lib/server/media/media-service.js';
 import {
 	deliveredPosterArt,
 	PosterRequestNotFoundError
-} from '$lib/server/production/artifact-request-service';
+} from '#lib/server/production/artifact-request-service.js';
 import { flyerLines, renderFlyer, type FlyerSource } from './flyer';
 
 /**

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * What volunteering is made of: the roles members pick from, and the
 	 * clearances some of those roles require.
@@ -17,25 +17,25 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import { Latest } from '$lib/latest.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import { Latest } from '#lib/latest.svelte.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import {
 		VOLUNTEER_ROLE_DESCRIPTION_MAX,
 		CERT_DESCRIPTION_MAX,
 		CERT_NAME_MAX,
 		volunteerRoleGroups,
 		volunteerRoleGroupLabels
-	} from '$lib/config';
+	} from '#lib/config.js';
 	import {
 		getStaffVolunteerSetupPage,
 		createVolunteerRole,
@@ -44,7 +44,7 @@
 		archiveCertification,
 		restoreCertification,
 		deleteCertification
-	} from '$lib/remote/volunteer.remote';
+	} from '#lib/remote/volunteer.remote.js';
 	import { IconPencil, IconArchive, IconArchiveOff, IconTrash } from '@tabler/icons-svelte';
 
 	// Not `{#await}`: a refresh would re-pend it and unmount an open New role or
@@ -69,9 +69,9 @@
 	// `goto(..., { replaceState })`, not `replaceState()`: the latter only rewrites
 	// the address bar and the router overwrites that entry on the next navigation.
 	$effect(() => {
-		const href = withQuery(resolve('/staff/volunteer/roles'), showRetired ? 'retired=1' : '');
+		const href = withQuery(resolve('staff/volunteer/roles'), showRetired ? 'retired=1' : '');
 		if (location.pathname + location.search !== href) {
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 
@@ -137,22 +137,27 @@
 									successToast={m.staff_volunteer_roles_role_created()}
 								>
 									{#snippet form()}
-										<FormField name="name" label={m.staff_name()} type="text" />
 										<FormField
-											name="description"
+											field={createVolunteerRole.fields.name}
+											label={m.staff_name()}
+											type="text"
+										/>
+										<FormField
+											field={createVolunteerRole.fields.description}
 											label={m.staff_job_description()}
 											type="textarea"
 											description={descriptionHelp}
 											maxlength={VOLUNTEER_ROLE_DESCRIPTION_MAX}
 										/>
 										<FormField
-											name="group"
+											field={createVolunteerRole.fields.group}
 											label={m.staff_group()}
 											type="select"
 											options={groupOptions}
 										/>
 										<FormField
-											name="displayOrder"
+											field={createVolunteerRole.fields.displayOrder}
+											submitAs="text"
 											label={m.staff_display_order()}
 											type="number"
 											value="0"
@@ -176,7 +181,7 @@
 								{#each group.roles as role (role.id)}
 									<li>
 										<a
-											href={resolve(`/staff/volunteer/roles/${role.id}`)}
+											href={resolve(`staff/volunteer/roles/${role.id}`)}
 											class="{CARD} block hover:border-primary"
 										>
 											<div class="flex flex-wrap items-center gap-2">
@@ -236,25 +241,26 @@
 							>
 								{#snippet form()}
 									<FormField
-										name="name"
+										field={createCertification.fields.name}
 										label={m.staff_name()}
 										type="text"
 										maxlength={CERT_NAME_MAX}
 									/>
 									<FormField
-										name="description"
+										field={createCertification.fields.description}
 										label={m.staff_volunteer_roles_what_covers()}
 										type="textarea"
 										maxlength={CERT_DESCRIPTION_MAX}
 									/>
 									<FormField
-										name="issuedBy"
+										field={createCertification.fields.issuedBy}
 										label={m.staff_volunteer_roles_issued_by()}
 										type="text"
 										description={m.staff_volunteer_roles_leave_blank_something_cmc_signs()}
 									/>
 									<FormField
-										name="validityMonths"
+										field={createCertification.fields.validityMonths}
+										submitAs="text"
 										label={m.staff_volunteer_roles_valid_months()}
 										type="number"
 										description={m.staff_volunteer_roles_blank_means_never_lapses_changing()}
@@ -300,29 +306,32 @@
 											successToast={m.staff_volunteer_roles_clearance_updated()}
 										>
 											{#snippet form()}
-												<input type="hidden" name="id" value={cert.id} />
+												<input
+													{...updateCertification.for(cert.id).fields.id.as('hidden', cert.id)}
+												/>
 												<FormField
-													name="name"
+													field={updateCertification.for(cert.id).fields.name}
 													label={m.staff_name()}
 													type="text"
 													value={cert.name}
 												/>
 												<FormField
-													name="description"
+													field={updateCertification.for(cert.id).fields.description}
 													label={m.staff_volunteer_roles_what_covers()}
 													type="textarea"
 													value={cert.description ?? ''}
 													maxlength={CERT_DESCRIPTION_MAX}
 												/>
 												<FormField
-													name="issuedBy"
+													field={updateCertification.for(cert.id).fields.issuedBy}
 													label={m.staff_volunteer_roles_issued_by()}
 													type="text"
 													value={cert.issuedBy ?? ''}
 													description={m.staff_volunteer_roles_leave_blank_something_cmc_signs()}
 												/>
 												<FormField
-													name="validityMonths"
+													field={updateCertification.for(cert.id).fields.validityMonths}
+													submitAs="text"
 													label={m.staff_volunteer_roles_valid_months()}
 													type="number"
 													min="1"
@@ -332,7 +341,8 @@
 													})}
 												/>
 												<FormField
-													name="displayOrder"
+													field={updateCertification.for(cert.id).fields.displayOrder}
+													submitAs="text"
 													label={m.staff_display_order()}
 													type="number"
 													value={String(cert.displayOrder)}
@@ -353,7 +363,9 @@
 												successToast={m.staff_volunteer_roles_clearance_archived()}
 											>
 												{#snippet form()}
-													<input type="hidden" name="id" value={cert.id} />
+													<input
+														{...archiveCertification.for(cert.id).fields.id.as('hidden', cert.id)}
+													/>
 													<p class="text-sm">
 														{m.staff_volunteer_roles_disappears_from_grant_form_everyone()}
 													</p>
@@ -372,7 +384,9 @@
 												successToast={m.staff_volunteer_roles_clearance_restored()}
 											>
 												{#snippet form()}
-													<input type="hidden" name="id" value={cert.id} />
+													<input
+														{...restoreCertification.for(cert.id).fields.id.as('hidden', cert.id)}
+													/>
 													<p class="text-sm">
 														{m.staff_volunteer_roles_staff_will_able_grant_again()}
 													</p>
@@ -400,7 +414,9 @@
 												successToast={m.staff_volunteer_roles_clearance_deleted()}
 											>
 												{#snippet form()}
-													<input type="hidden" name="id" value={cert.id} />
+													<input
+														{...deleteCertification.for(cert.id).fields.id.as('hidden', cert.id)}
+													/>
 													<p class="text-sm">
 														{m.staff_volunteer_roles_nobody_holds_so_can_removed()}
 													</p>
@@ -413,7 +429,7 @@
 										<!-- The one thing on this screen that is a person rather
 										     than a definition, so it links to the people. -->
 										<a
-											href={withQuery(resolve('/staff/members/volunteers'), 'lapsing=1')}
+											href={withQuery(resolve('staff/members/volunteers'), 'lapsing=1')}
 											class="mt-1 inline-block link text-xs text-warning"
 										>
 											{m.staff_volunteer_roles_lapse_before_booked_shift({
@@ -430,7 +446,7 @@
 					{/if}
 				</InfoCard>
 
-				<Button href={resolve('/staff/members/volunteers')} variant="ghost" size="sm">
+				<Button href={resolve('staff/members/volunteers')} variant="ghost" size="sm">
 					{m.staff_volunteer_roles_see_who_s_cleared()}
 				</Button>
 			</div>

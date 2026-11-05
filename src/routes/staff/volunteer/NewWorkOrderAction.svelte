@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import ShiftFormFields from '$lib/components/volunteer/ShiftFormFields.svelte';
-	import { toLocalDateTime } from '$lib/utils/format';
-	import { createWorkOrder, getVolunteerRoles } from '$lib/remote/volunteer.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import ShiftFormFields from '#lib/components/volunteer/ShiftFormFields.svelte';
+	import { toLocalDateTime } from '#lib/utils/format.js';
+	import { createWorkOrder, getVolunteerRoles } from '#lib/remote/volunteer.remote.js';
 
 	/**
 	 * The one "New Work Order". A shift is a work order with a window (#1933), so
@@ -55,7 +55,7 @@
 	>
 		{#snippet form()}
 			<FormField
-				name="timed"
+				field={createWorkOrder.fields.timed}
 				type="checkbox"
 				checkboxLabel={m.staff_volunteer_new_work_order_checkbox_label()}
 				bind:value={timed}

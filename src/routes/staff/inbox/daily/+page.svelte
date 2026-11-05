@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { formatDateShortYear } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
 	/**
 	 * Daily — one thread, one decision, no list scanning.
 	 *
@@ -17,17 +17,17 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconArrowDown, IconX } from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
-	import DispositionBar from '$lib/components/inbox/DispositionBar.svelte';
-	import { getInboxDailyScope, getInboxThread } from '$lib/remote/inbox.remote';
-	import { useShortcut } from '$lib/useShortcut.svelte';
-	import { waitingDays } from '$lib/components/inbox/thread-status';
-	import { channelLabel } from '$lib/components/inbox/channels';
+	import Button from '#lib/components/ui/Button.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import ThreadTimeline from '#lib/components/inbox/ThreadTimeline.svelte';
+	import DispositionBar from '#lib/components/inbox/DispositionBar.svelte';
+	import { getInboxDailyScope, getInboxThread } from '#lib/remote/inbox.remote.js';
+	import { useShortcut } from '#lib/useShortcut.svelte.js';
+	import { waitingDays } from '#lib/components/inbox/thread-status.js';
+	import { channelLabel } from '#lib/components/inbox/channels.js';
 	import { session, doneToday, markDoneToday } from './session.svelte';
 	import DailyStartCard from './DailyStartCard.svelte';
 	import SessionSummary from './SessionSummary.svelte';
@@ -48,7 +48,7 @@
 
 	function leave() {
 		session.end();
-		void goto(resolve('/staff/inbox'));
+		void goto(resolve('staff/inbox'));
 	}
 
 	function finish() {
@@ -64,7 +64,7 @@
 				description={m.staff_inbox_daily_description()}
 			/>
 			<div class="flex justify-center">
-				<Button href={resolve('/staff/inbox')} variant="default">{m.staff_back_inbox()}</Button>
+				<Button href={resolve('staff/inbox')} variant="default">{m.staff_back_inbox()}</Button>
 			</div>
 		{:else}
 			<DailyStartCard
@@ -143,8 +143,8 @@
 							status={t.status}
 							awaiting={!!t.awaitingReplySince}
 							variant="focus"
-							onreply={() => goto(resolve(`/staff/inbox/${t.id}`))}
-							onassign={() => goto(resolve(`/staff/inbox/${t.id}`))}
+							onreply={() => goto(resolve(`staff/inbox/${t.id}`))}
+							onassign={() => goto(resolve(`staff/inbox/${t.id}`))}
 							ondisposed={(action) => session.dispose(action)}
 						/>
 					</CardBody>

@@ -26,11 +26,11 @@ function chain(): any {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({ db: { select: () => chain() } }));
-vi.mock('$lib/server/inventory/loan-service', () => ({
+vi.mock('#lib/server/db/index.js', () => ({ db: { select: () => chain() } }));
+vi.mock('#lib/server/inventory/loan-service.js', () => ({
 	listLoansDueBetween: vi.fn(async () => [])
 }));
-vi.mock('$lib/server/volunteer/volunteer-signup-service', () => ({
+vi.mock('#lib/server/volunteer/volunteer-signup-service.js', () => ({
 	listSignupsStartingBetween: vi.fn(async () => []),
 	listCompletionsAwaitingFeedback: vi.fn(async () => [])
 }));

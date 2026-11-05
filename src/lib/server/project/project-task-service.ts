@@ -1,17 +1,17 @@
 import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { isUniqueConstraintError } from '$lib/server/db/constraint-errors';
+import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import {
 	contractorJobStatusesWithoutSpend,
 	positions,
 	type ContractorJobStatus
-} from '$lib/config';
-import { user } from '$lib/server/db/schema/authentication';
-import { role, modelHasRole } from '$lib/server/db/schema/authorization';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { inventoryAsset, inventoryItem } from '$lib/server/db/schema/inventory';
-import { contractor, contractorJob } from '$lib/server/db/schema/contractor';
-import { projectCommittee } from '$lib/server/db/schema/project';
+} from '#lib/config.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { inventoryAsset, inventoryItem } from '#lib/server/db/schema/inventory.js';
+import { contractor, contractorJob } from '#lib/server/db/schema/contractor.js';
+import { projectCommittee } from '#lib/server/db/schema/project.js';
 import {
 	volunteerRole,
 	volunteerSignup,
@@ -19,11 +19,11 @@ import {
 	workOrder,
 	workTask,
 	type WorkOrder
-} from '$lib/server/db/schema/volunteer';
-import { eventListing } from '$lib/server/db/schema/event';
-import { DomainError } from '$lib/server/domain-error';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { evaluateDone, type DeliverableState } from '$lib/server/volunteer/done-conditions';
+} from '#lib/server/db/schema/volunteer.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { evaluateDone, type DeliverableState } from '#lib/server/volunteer/done-conditions.js';
 import {
 	auditWorkOrderChange,
 	cancelShift,
@@ -37,21 +37,21 @@ import {
 	validateTimes,
 	workOrderModes,
 	type WorkOrderMode
-} from '$lib/server/volunteer/work-order-service';
-import { claimShift, releaseSignup } from '$lib/server/volunteer/volunteer-signup-service';
-import { setWorkTaskDone } from '$lib/server/volunteer/duty-list-service';
-import { cancelJob, createJob } from '$lib/server/contractor/contractor-job-service';
+} from '#lib/server/volunteer/work-order-service.js';
+import { claimShift, releaseSignup } from '#lib/server/volunteer/volunteer-signup-service.js';
+import { setWorkTaskDone } from '#lib/server/volunteer/duty-list-service.js';
+import { cancelJob, createJob } from '#lib/server/contractor/contractor-job-service.js';
 import {
 	listSections,
 	nextTaskOrders,
 	requireSection
-} from '$lib/server/project/project-section-service';
+} from '#lib/server/project/project-section-service.js';
 import {
 	dutiesOn,
 	engagementsOn,
 	outstandingFor,
 	peopleOn
-} from '$lib/server/project/project-task-details';
+} from '#lib/server/project/project-task-details.js';
 
 // ---------------------------------------------------------------------------
 // A project's task list: the work orders on it, as a checklist. Every function

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import ConflictWarnings from './ConflictWarnings.svelte';
-import OuterBoundary from '$lib/components/ui/OuterBoundary.test.svelte';
+import OuterBoundary from '#lib/components/ui/OuterBoundary.test.svelte';
 
 /**
  * The distinction this component exists to draw.

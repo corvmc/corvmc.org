@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { getUserThreads } from '$lib/remote/inbox.remote';
-	import { getUserNotifications } from '$lib/remote/notifications.remote';
-	import { getUserMarketing } from '$lib/remote/marketing.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getUserThreads } from '#lib/remote/inbox.remote.js';
+	import { getUserNotifications } from '#lib/remote/notifications.remote.js';
+	import { getUserMarketing } from '#lib/remote/marketing.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShortYear, relativeDay } from '$lib/utils/format';
+	import { formatDateShortYear, relativeDay } from '#lib/utils/format.js';
 
 	let { id, email }: { id: string; email: string } = $props();
 </script>
@@ -53,10 +53,10 @@
 							<th class="col-extra">{m.staff_members_id_panels_comms_panel_last_message()}</th>
 						{/snippet}
 						{#each group.rows as t (t.id)}
-							<tr class="hover" use:rowLink={resolve(`/staff/inbox/${t.id}`)}>
+							<tr class="hover" use:rowLink={resolve(`staff/inbox/${t.id}`)}>
 								<td class="w-px"><StatusBadge status={t.status} /></td>
 								<td class="cell-primary">
-									<a class="font-medium" href={resolve(`/staff/inbox/${t.id}`)}>
+									<a class="font-medium" href={resolve(`staff/inbox/${t.id}`)}>
 										{t.subject ?? m.staff_members_id_panels_comms_panel_no_subject()}
 									</a>
 									<div class="text-muted">{t.preview ?? ''}</div>
@@ -150,7 +150,7 @@
 			{/if}
 			<div class="flex flex-wrap gap-1">
 				{#each data.audiences as a (a.audienceId)}
-					<a href={resolve(`/staff/marketing/audiences/${a.audienceId}`)}>
+					<a href={resolve(`staff/marketing/audiences/${a.audienceId}`)}>
 						<Badge size="sm">{a.audienceName}</Badge>
 					</a>
 				{:else}

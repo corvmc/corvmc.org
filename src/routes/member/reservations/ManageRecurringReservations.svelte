@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { CancelSeriesAction } from '$lib/components/actions';
-	import { getLocalUser } from '$lib/remote/users.remote';
-	import { getRecurringReservations } from '$lib/remote/reservations.remote';
-	import { formatScheduleLabel, formatTimeRange, formatDateShortYear } from '$lib/utils/format';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { CancelSeriesAction } from '#lib/components/actions/index.js';
+	import { getLocalUser } from '#lib/remote/users.remote.js';
+	import { getRecurringReservations } from '#lib/remote/reservations.remote.js';
+	import { formatScheduleLabel, formatTimeRange, formatDateShortYear } from '#lib/utils/format.js';
 	// A strict distance between two instants has no timezone to get wrong, so
 	// this one stays date-fns; the formatting around it does not.
 	import { formatDistanceStrict } from 'date-fns';

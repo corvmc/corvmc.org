@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 
 	export type LineupChip = {
 		name: string;
@@ -13,9 +13,12 @@
 		value = $bindable<LineupChip[]>([]),
 		ownerBandId,
 		readonly = false,
-		search
+		search,
+		field
 	}: {
 		value?: LineupChip[];
+		/** The remote form field the serialized bill posts as. Absent, nothing posts. */
+		field?: { as: (type: 'hidden', value: string) => Record<string, unknown> };
 		/**
 		 * Show the bill without the means to change it. Drops the reorder and
 		 * remove buttons, the typeahead, and — the part that matters — the hidden
@@ -100,8 +103,8 @@
 	);
 </script>
 
-{#if !readonly}
-	<input type="hidden" name="lineup" value={serialized} />
+{#if field && !readonly}
+	<input {...field.as('hidden', serialized)} />
 {/if}
 
 <div class="space-y-2">

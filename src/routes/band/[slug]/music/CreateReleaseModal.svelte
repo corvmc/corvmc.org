@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { createReleaseForm } from '$lib/remote/audio.remote';
-	import { releaseKinds, releaseKindLabels } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { createReleaseForm } from '#lib/remote/audio.remote.js';
+	import { releaseKinds, releaseKindLabels } from '#lib/config.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
@@ -36,7 +36,7 @@
 	size="sm"
 	onsuccess={(result) => {
 		const releaseId = (result as { releaseId?: string } | undefined)?.releaseId;
-		if (releaseId) goto(resolve(`/band/${bandSlug}/music/${releaseId}`));
+		if (releaseId) goto(resolve(`band/${bandSlug}/music/${releaseId}`));
 	}}
 >
 	{#snippet form()}

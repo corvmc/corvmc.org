@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // Regression: an event created without a hold could never acquire one.
@@ -30,9 +30,9 @@ const eventServiceMock = {
 	listPast: vi.fn(async () => [])
 };
 
-vi.mock('$lib/server/event/event-service', () => eventServiceMock);
+vi.mock('#lib/server/event/event-service.js', () => eventServiceMock);
 
-vi.mock('$lib/server/reservation/recurring-series-service', () => ({
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => ({
 	createEventSeries: vi.fn(async () => ({ id: 'series-1' })),
 	getByEvent: vi.fn(async () => null),
 	getEventSeries: vi.fn(async () => null),
@@ -40,12 +40,12 @@ vi.mock('$lib/server/reservation/recurring-series-service', () => ({
 }));
 
 // Off-site venues hold no room; 'venue-offsite' is the one that does not.
-vi.mock('$lib/server/venue/venue-service', () => ({
+vi.mock('#lib/server/venue/venue-service.js', () => ({
 	holdsSpace: vi.fn(async (id: string | null | undefined) => id !== 'venue-offsite'),
 	listVenues: vi.fn(async () => [])
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	isFeatureEnabled: vi.fn(async () => true),
 	requireFeature: vi.fn(async () => undefined)
 }));
@@ -65,7 +65,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: { select: () => chainable() }
 }));
 
@@ -95,7 +95,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { updateEvent } = (await import('$lib/remote/events.remote')) as any;
+const { updateEvent } = (await import('#lib/remote/events.remote.js')) as any;
 
 /** Read a built instant back as "YYYY-MM-DD HH:mm" in club time. */
 function inClubTime(d: Date): string {

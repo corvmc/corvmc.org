@@ -1,20 +1,20 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
 	import {
 		applyToTeach,
 		updateInstructorListing,
 		withdrawApplication,
 		setAcceptingStudents
-	} from '$lib/remote/instructors.remote';
-	import type { Instructor } from '$lib/server/db/schema/instructor';
+	} from '#lib/remote/instructors.remote.js';
+	import type { Instructor } from '#lib/server/db/schema/instructor.js';
 
 	/**
 	 * Teaching, on the member's own profile — one card with five states. Only the
@@ -55,7 +55,7 @@
 
 		<!-- A link to its own page, not an embedded form: new members submitted
 		     the blank form while working down their profile (#1820). -->
-		<Button href={resolve('/member/profile/teaching/apply')} size="sm"
+		<Button href={resolve('member/profile/teaching/apply')} size="sm"
 			>{m.member_apply_teach()}</Button
 		>
 	{:else}

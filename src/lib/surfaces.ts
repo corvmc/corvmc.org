@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { surfaces, type Surface } from '$lib/config';
+import { surfaces, type Surface } from '#lib/config.js';
 
 /**
  * 404 while a surface is switched off in `surfaces` (#2116). Universal, so a

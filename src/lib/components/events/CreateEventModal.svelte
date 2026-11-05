@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { errorMessage } from '$lib/error-message';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { createEvent, getProgramGroups } from '$lib/remote/events.remote';
-	import { createShow } from '$lib/remote/productions.remote';
-	import { clubToday } from '$lib/config';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { createEvent, getProgramGroups } from '#lib/remote/events.remote.js';
+	import { createShow } from '#lib/remote/productions.remote.js';
+	import { clubToday } from '#lib/config.js';
 
 	/**
 	 * Only what the row cannot exist without (#1822's rule); the listing page
@@ -47,10 +47,10 @@
 		await invalidateAll();
 		if (!result?.eventId) return;
 		if (production) {
-			goto(resolve(`/staff/events/${result.eventId}/production`));
+			goto(resolve(`staff/events/${result.eventId}/production`));
 		} else {
 			// `edit` opens the page's edit card, so the next field is one click closer.
-			goto(withQuery(resolve(`/staff/events/${result.eventId}`), 'edit=1'));
+			goto(withQuery(resolve(`staff/events/${result.eventId}`), 'edit=1'));
 		}
 	}
 
@@ -74,10 +74,15 @@
 			onsuccess={handleSuccess}
 			class="space-y-4"
 		>
-			<Field name="title" type="text" label={m.events_title()} bind:value={title} />
+			<Field
+				field={(production ? createShow : createEvent).fields.title}
+				type="text"
+				label={m.events_title()}
+				bind:value={title}
+			/>
 			{#if !production}
 				<Field
-					name="kind"
+					field={createEvent.fields.kind}
 					type="select"
 					label={m.events_kind()}
 					bind:value={kind}
@@ -92,7 +97,7 @@
 				/>
 				{#if programs.length > 0}
 					<Field
-						name="groupId"
+						field={createEvent.fields.groupId}
 						type="select"
 						label={m.events_create_event_modal_run_by()}
 						bind:value={groupId}
@@ -104,17 +109,22 @@
 					/>
 				{/if}
 			{/if}
-			<Field name="eventDate" type="date" label={m.events_date()} bind:value={eventDate} />
+			<Field
+				field={(production ? createShow : createEvent).fields.eventDate}
+				type="date"
+				label={m.events_date()}
+				bind:value={eventDate}
+			/>
 
 			<div class="grid grid-cols-2 gap-4">
 				<Field
-					name="eventStartTime"
+					field={(production ? createShow : createEvent).fields.eventStartTime}
 					type="time"
 					label={m.events_start_time()}
 					bind:value={eventStartTime}
 				/>
 				<Field
-					name="eventEndTime"
+					field={(production ? createShow : createEvent).fields.eventEndTime}
 					type="time"
 					label={m.events_end_time()}
 					bind:value={eventEndTime}

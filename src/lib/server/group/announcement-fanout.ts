@@ -1,18 +1,18 @@
-import { db } from '$lib/server/db';
-import { notification } from '$lib/server/db/schema/notification';
-import { normalizeNotificationModel } from '$lib/server/notification/email/normalize-model';
-import { sendTemplateBatch } from '$lib/server/notification/email';
-import { pushToUser } from '$lib/server/notification/sse';
-import { captureException } from '$lib/server/sentry';
-import { markdownExcerpt } from '$lib/utils/markdown';
-import type { NotificationEmailModel } from '$lib/types/notification-email';
+import { db } from '#lib/server/db/index.js';
+import { notification } from '#lib/server/db/schema/notification.js';
+import { normalizeNotificationModel } from '#lib/server/notification/email/normalize-model.js';
+import { sendTemplateBatch } from '#lib/server/notification/email/index.js';
+import { pushToUser } from '#lib/server/notification/sse.js';
+import { captureException } from '#lib/server/sentry.js';
+import { markdownExcerpt } from '#lib/utils/markdown.js';
+import type { NotificationEmailModel } from '#lib/types/notification-email.js';
 import { and, eq, isNull } from 'drizzle-orm';
-import { inboxMessage, inboxThread } from '$lib/server/db/schema/inbox';
-import { group } from '$lib/server/db/schema/group';
+import { inboxMessage, inboxThread } from '#lib/server/db/schema/inbox.js';
+import { group } from '#lib/server/db/schema/group.js';
 import type {
 	AnnouncementPublishedEvent,
 	InboxGroupMessageEvent
-} from '$lib/server/event-bus/event-bus';
+} from '#lib/server/event-bus/event-bus.js';
 import {
 	claimForNotification,
 	listRecipients,

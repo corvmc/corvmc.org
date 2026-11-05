@@ -6,24 +6,24 @@ import {
 	getAllProductConfigs,
 	updateProductConfig,
 	type ProductKey
-} from '$lib/server/finance/product-config-service';
+} from '#lib/server/finance/product-config-service.js';
 import {
 	getConfigsByPrefix,
 	updateSiteConfigs,
 	updateSiteConfig
-} from '$lib/server/site-config/site-config-service';
-import { testConnection, credentialStatus, listDevices } from '$lib/server/lock/ultraloc-client';
-import { issueLockSelfTest, revokeLockSelfTest } from '$lib/server/lock/lock-service';
-import { requireCapability } from '$lib/server/authorization';
+} from '#lib/server/site-config/site-config-service.js';
+import { testConnection, credentialStatus, listDevices } from '#lib/server/lock/ultraloc-client.js';
+import { issueLockSelfTest, revokeLockSelfTest } from '#lib/server/lock/lock-service.js';
+import { requireCapability } from '#lib/server/authorization.js';
 import {
 	getOrientationSetting,
 	parseOrientationTasks
-} from '$lib/server/volunteer/orientation-service';
-import { listVolunteerRoles } from '$lib/server/volunteer/volunteer-role-service';
-import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '$lib/server/feature-flags';
+} from '#lib/server/volunteer/orientation-service.js';
+import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
+import { getAllFeatureFlags, ALL_FLAGS, type FeatureFlag } from '#lib/server/feature-flags.js';
 import { getInboxChannelConfigs } from './inbox.remote';
-import { syncAllSubscriptions } from '$lib/server/finance/subscription-sync-service';
-import { refreshCommunityStats as refreshStats } from '$lib/server/finance/community-stats';
+import { syncAllSubscriptions } from '#lib/server/finance/subscription-sync-service.js';
+import { refreshCommunityStats as refreshStats } from '#lib/server/finance/community-stats.js';
 
 // ---------------------------------------------------------------------------
 // Public queries (no auth)

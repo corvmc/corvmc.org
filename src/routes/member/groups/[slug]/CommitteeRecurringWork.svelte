@@ -1,20 +1,20 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { formatDateShort } from '$lib/utils/format';
-	import { clubToday } from '$lib/config';
-	import { addIsoDays } from '$lib/utils/deadline';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { clubToday } from '#lib/config.js';
+	import { addIsoDays } from '#lib/utils/deadline.js';
 	import {
 		createCommitteeRecurringWork,
 		retireCommitteeRecurringWork
-	} from '$lib/remote/maintenance-schedules.remote';
+	} from '#lib/remote/maintenance-schedules.remote.js';
 
 	/**
 	 * A committee's standing checklist: Booking's weekly holds, Facilities' monthly

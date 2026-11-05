@@ -2,18 +2,18 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { requireUser } from '$lib/server/authorization';
-import { getById } from '$lib/server/event/event-service';
+import { requireUser } from '#lib/server/authorization.js';
+import { getById } from '#lib/server/event/event-service.js';
 import {
 	cancelRsvp,
 	createRsvp,
 	getUserRsvp,
 	listRsvpRoster,
 	type RsvpRosterRow
-} from '$lib/server/event/rsvp-service';
-import { rsvpClosedReason, type RsvpClosedReason } from '$lib/server/event/rsvp-availability';
-import { requireListingWriter } from '$lib/server/event/listing-guard';
-import { getPublicEventDetail } from '$lib/remote/events.remote';
+} from '#lib/server/event/rsvp-service.js';
+import { rsvpClosedReason, type RsvpClosedReason } from '#lib/server/event/rsvp-availability.js';
+import { requireListingWriter } from '#lib/server/event/listing-guard.js';
+import { getPublicEventDetail } from '#lib/remote/events.remote.js';
 
 /**
  * The viewer's RSVP, for the public event page's control (#1995). It answers

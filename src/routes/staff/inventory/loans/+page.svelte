@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShort, formatCents, titleCase } from '$lib/utils/format';
-	import { loanStatuses } from '$lib/config';
-	import { CreateLoanAction } from '$lib/components/actions';
-	import { getStaffLoans } from '$lib/remote/inventory.remote';
+	import { formatDateShort, formatCents, titleCase } from '#lib/utils/format.js';
+	import { loanStatuses } from '#lib/config.js';
+	import { CreateLoanAction } from '#lib/components/actions/index.js';
+	import { getStaffLoans } from '#lib/remote/inventory.remote.js';
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
@@ -86,7 +86,7 @@
 				{/snippet}
 
 				{#each loans as l (l.id)}
-					{@const href = resolve(`/staff/inventory/loans/${l.id}`)}
+					{@const href = resolve(`staff/inventory/loans/${l.id}`)}
 					<tr class="hover cursor-pointer" use:rowLink={href}>
 						<td class="w-px">
 							<div class="flex w-max items-center gap-1">

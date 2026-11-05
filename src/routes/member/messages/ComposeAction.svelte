@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Starting a conversation, of either kind.
 	 *
@@ -12,13 +12,13 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconPlus, IconUsers } from '@tabler/icons-svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { startConversation } from '$lib/remote/inbox.remote';
-	import { startDirectConversation } from '$lib/remote/direct-messages.remote';
-	import { searchMessageRecipients } from '$lib/remote/directory.remote';
-	import { DIRECT_MESSAGE_BODY_MAX } from '$lib/config';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { startConversation } from '#lib/remote/inbox.remote.js';
+	import { startDirectConversation } from '#lib/remote/direct-messages.remote.js';
+	import { searchMessageRecipients } from '#lib/remote/directory.remote.js';
+	import { DIRECT_MESSAGE_BODY_MAX } from '#lib/config.js';
 	import { refreshConversations } from './list-state.svelte';
 
 	let { canMessageMembers = false }: { canMessageMembers?: boolean } = $props();
@@ -110,17 +110,21 @@
 	size="sm"
 	onsuccess={(result) => {
 		const { threadId } = (result ?? {}) as { threadId?: string };
-		if (threadId) goto(resolve(`/member/messages/${threadId}`));
+		if (threadId) goto(resolve(`member/messages/${threadId}`));
 	}}
 >
 	{#snippet icon()}<IconPlus size={16} />{/snippet}
 	{#snippet form()}
 		<FormField
-			name="subject"
+			field={startForm.fields.subject}
 			label={m.member_messages_compose_what_s_about()}
 			type="text"
 			description={m.member_messages_compose_description()}
 		/>
-		<FormField name="body" label={m.member_messages_compose_message()} type="textarea" />
+		<FormField
+			field={startForm.fields.body}
+			label={m.member_messages_compose_message()}
+			type="textarea"
+		/>
 	{/snippet}
 </Action>

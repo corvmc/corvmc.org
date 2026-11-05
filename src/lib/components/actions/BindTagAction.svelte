@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { bindTag } from '$lib/remote/inventory.remote';
+	import { bindTag } from '#lib/remote/inventory.remote.js';
 	import { Field } from '../ui/Form';
 	import BarcodeScanner from '../ui/BarcodeScanner.svelte';
-	import { parseScan } from '$lib/utils/scan';
+	import { parseScan } from '#lib/utils/scan.js';
 
 	const { fields } = bindTag;
 

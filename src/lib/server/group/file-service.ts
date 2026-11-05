@@ -1,16 +1,16 @@
 import { and, count, desc, eq, isNull, isNotNull, lt, sum, inArray } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { file } from '$lib/server/db/schema/file';
-import { user } from '$lib/server/db/schema/authentication';
-import { group } from '$lib/server/db/schema/group';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import { DomainError } from '$lib/server/domain-error';
+import { db } from '#lib/server/db/index.js';
+import { file } from '#lib/server/db/schema/file.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import { DomainError } from '#lib/server/domain-error.js';
 import {
 	putPrivateObject,
 	validatePrivateUpload,
 	MAX_DOCUMENT_BYTES
-} from '$lib/server/private-storage';
-import { documentKey, sanitizeFilename } from '$lib/server/storage-keys';
+} from '#lib/server/private-storage.js';
+import { documentKey, sanitizeFilename } from '#lib/server/storage-keys.js';
 
 /**
  * Group documents — a file store, not a document tool. Phase 8 of

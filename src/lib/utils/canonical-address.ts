@@ -14,7 +14,7 @@
  * Kept free of DB and Svelte dependencies so the policy can be unit-tested as a
  * plain table, the way `entityHref` and `directory-display` are.
  */
-import type { GroupKind } from '$lib/config';
+import type { GroupKind } from '#lib/config.js';
 import { baseDomainFromSiteUrl } from './band-site-url';
 
 /**

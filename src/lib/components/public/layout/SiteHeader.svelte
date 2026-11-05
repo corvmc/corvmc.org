@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import Logo from '$lib/components/ui/Logo.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { here, signInHref } from '$lib/utils/sign-in';
+	import Logo from '#lib/components/ui/Logo.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { here, signInHref } from '#lib/utils/sign-in.js';
 
 	let { user }: { user: { name: string } | null } = $props();
 
@@ -16,11 +16,11 @@
 	);
 
 	const links = [
-		{ href: resolve('/events'), label: m.public_events() },
-		{ href: resolve('/directory'), label: m.public_directory() },
-		{ href: resolve('/programs'), label: m.public_programs() },
-		{ href: resolve('/membership'), label: m.public_site_header_membership() },
-		{ href: resolve('/about'), label: m.public_about() }
+		{ href: resolve('events'), label: m.public_events() },
+		{ href: resolve('directory'), label: m.public_directory() },
+		{ href: resolve('programs'), label: m.public_programs() },
+		{ href: resolve('membership'), label: m.public_site_header_membership() },
+		{ href: resolve('about'), label: m.public_about() }
 	];
 
 	function isActive(href: string): boolean {
@@ -38,7 +38,7 @@
 			style="grid-template-columns: auto 1fr auto; grid-template-rows: auto auto"
 		>
 			<!-- Logo -->
-			<a href={resolve('/')} class="row-span-2 flex items-center" style="height: 72px">
+			<a href={resolve('')} class="row-span-2 flex items-center" style="height: 72px">
 				<Logo soundLines={false} class="h-full w-auto" />
 			</a>
 
@@ -97,7 +97,7 @@
 					</a>
 				{/each}
 				<Button
-					href={resolve('/contribute')}
+					href={resolve('contribute')}
 					variant="default"
 					size="sm"
 					outline
@@ -116,7 +116,7 @@
 			style="border-bottom: 1px solid var(--surface-border); background: var(--bg-page)"
 		>
 			<ul class="menu menu-sm p-2">
-				{#each [...links, { href: resolve('/contribute'), label: m.public_contribute() }, { href: resolve('/contact'), label: m.public_contact() }] as link (link.href)}
+				{#each [...links, { href: resolve('contribute'), label: m.public_contribute() }, { href: resolve('contact'), label: m.public_contact() }] as link (link.href)}
 					<li>
 						<a
 							href={link.href}

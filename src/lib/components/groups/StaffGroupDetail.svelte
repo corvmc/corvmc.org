@@ -1,36 +1,36 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import type { Snippet } from 'svelte';
-	import RecordFrame from '$lib/components/ui/RecordFrame.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatDateShortYear } from '$lib/utils/format';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
+	import RecordFrame from '#lib/components/ui/RecordFrame.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatDateShortYear } from '#lib/utils/format.js';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { formatDateShort } from '$lib/utils/format';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import {
 		deactivateGroup,
 		reactivateGroup,
 		setStaffGroupRole,
 		getGroupHistory,
 		type getStaffGroupPage
-	} from '$lib/remote/groups.remote';
-	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
+	} from '#lib/remote/groups.remote.js';
+	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
 	import GroupSettingsForm from './GroupSettingsForm.svelte';
 	import AddChairAction from './AddChairAction.svelte';
 	import CommitteeGrantsCard from './CommitteeGrantsCard.svelte';
 	import RosterImportAction from './RosterImportAction.svelte';
-	import RosterTable from '$lib/components/roster/RosterTable.svelte';
-	import CopyEmailsButton from '$lib/components/roster/CopyEmailsButton.svelte';
+	import RosterTable from '#lib/components/roster/RosterTable.svelte';
+	import CopyEmailsButton from '#lib/components/roster/CopyEmailsButton.svelte';
 	import RosterImportSummary from './RosterImportSummary.svelte';
-	import type { RosterImportResult } from '$lib/types/roster-import';
+	import type { RosterImportResult } from '#lib/types/roster-import.js';
 
 	type StaffGroupPage = Awaited<ReturnType<typeof getStaffGroupPage>>;
 
@@ -212,7 +212,7 @@
 		</Fact>
 		<Fact label={msg.groups_staff_group_detail_public_page()}>
 			{#if group.visibility === 'public'}
-				<a class="link link-primary" href={resolve(`/groups/${group.slug}`)}
+				<a class="link link-primary" href={resolve(`groups/${group.slug}`)}
 					>{msg.groups_staff_group_detail_groups({ slug: group.slug })}</a
 				>
 			{:else}

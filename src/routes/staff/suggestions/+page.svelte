@@ -1,27 +1,27 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { relativeDay } from '$lib/utils/format';
+	import { relativeDay } from '#lib/utils/format.js';
 	import {
 		suggestionCategories,
 		suggestionStatuses,
 		suggestionCategoryLabels,
 		suggestionStatusLabels
-	} from '$lib/config';
-	import { getStaffSuggestionsQueues } from '$lib/remote/suggestions.remote';
+	} from '#lib/config.js';
+	import { getStaffSuggestionsQueues } from '#lib/remote/suggestions.remote.js';
 
 	// One tab per reason a suggestion is or isn't on the board. "Needs review" is
 	// the time-sensitive one: everything in it is invisible to members until
@@ -138,7 +138,7 @@
 			<ParaglideMessage
 				message={m.staff_suggestions_nothing_here_visible_members_reported}
 				inputs={{ staff_content_flags: m.staff_content_flags() }}
-				>{#snippet a({ children })}<a class="link" href={resolve('/staff/moderation/flags')}
+				>{#snippet a({ children })}<a class="link" href={resolve('staff/moderation/flags')}
 						>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
 			>
@@ -163,7 +163,7 @@
 					<th class="col-extra whitespace-nowrap">{m.staff_posted()}</th>
 				{/snippet}
 				{#each rows as s (s.id)}
-					{@const href = resolve(`/staff/suggestions/${s.id}`)}
+					{@const href = resolve(`staff/suggestions/${s.id}`)}
 					<tr class="hover cursor-pointer" use:rowLink={href}>
 						<td class="w-px">
 							<StatusBadge status={s.mergedIntoId ? 'merged' : s.status} />
@@ -199,7 +199,7 @@
 						<th class="col-extra whitespace-nowrap">{m.staff_requested()}</th>
 					{/snippet}
 					{#each pendingEdits as e (e.id)}
-						{@const href = resolve(`/staff/suggestions/${e.suggestionId}`)}
+						{@const href = resolve(`staff/suggestions/${e.suggestionId}`)}
 						<tr class="hover cursor-pointer" use:rowLink={href}>
 							<td class="w-px"><StatusBadge status="pending_review" /></td>
 							<td class="cell-primary">
@@ -231,7 +231,7 @@
 						<th class="col-extra whitespace-nowrap">{m.staff_posted()}</th>
 					{/snippet}
 					{#each rows as s (s.id)}
-						{@const href = resolve(`/staff/suggestions/${s.id}`)}
+						{@const href = resolve(`staff/suggestions/${s.id}`)}
 						<tr class="hover cursor-pointer" use:rowLink={href}>
 							<td class="w-px"><StatusBadge status="under_review" /></td>
 							<td class="cell-primary"><EntityIdentity ref={s.ref} /></td>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import InboxViews from './InboxViews.svelte';
 	import InboxChannelFilter from './InboxChannelFilter.svelte';
 	/**
@@ -14,24 +14,24 @@
 	 * siblings rather than parent and child.
 	 */
 	import { untrack } from 'svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
 	import { IconFilter, IconX } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
-	import { formatDateShort, formatDateTime } from '$lib/utils/format';
-	import { getInboxThreads } from '$lib/remote/inbox.remote';
-	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
+	import { formatDateShort, formatDateTime } from '#lib/utils/format.js';
+	import { getInboxThreads } from '#lib/remote/inbox.remote.js';
+	import { channelIcon, channelLabel } from '#lib/components/inbox/channels.js';
 	import {
 		openReason,
 		threadDisplayStatus,
 		waitingDays
-	} from '$lib/components/inbox/thread-status';
-	import { queueVersion } from '$lib/components/inbox/queue.svelte';
+	} from '#lib/components/inbox/thread-status.js';
+	import { queueVersion } from '#lib/components/inbox/queue.svelte.js';
 	import {
 		filters,
 		filterPanel,
@@ -60,12 +60,16 @@
 	// pinned to the index path it would `goto` straight back to the list the
 	// moment you opened anything. Carrying the query onto the thread URL is also
 	// what makes back return to the same filtered view.
+	//
+	// `$state.eager`: while hydration's batch is open, the seed above is undone for
+	// an effect running in a later batch, and a field the seed created reads
+	// undefined. The goto that normalises `?view=awaiting` is such a run.
 	$effect(() => {
-		const search = toSearch();
+		const search = $state.eager(toSearch());
 		const href = `${page.url.pathname}${search ? `?${search}` : ''}`;
 		if (page.url.pathname + page.url.search !== href) {
 			// Already a real pathname off `page.url`, so there is nothing to resolve.
-			void goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 
@@ -167,7 +171,7 @@
 			{#snippet children(threads)}
 				<ul class="flex flex-col divide-y divide-base-300">
 					{#each threads as t (t.id)}
-						{@const href = resolve(`/staff/inbox/${t.id}`)}
+						{@const href = resolve(`staff/inbox/${t.id}`)}
 						{@const Icon = channelIcon(t.channel)}
 						{@const active = t.id === openId}
 						{@const who = t.contactName ?? t.contactEmail ?? t.contactPhone ?? null}

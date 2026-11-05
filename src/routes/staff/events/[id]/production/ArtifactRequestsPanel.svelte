@@ -6,24 +6,24 @@
 	for the same thing again is a reminder, not a second row.
 -->
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
-	import { formatDateShort } from '$lib/utils/format';
-	import { requestableArtifacts, requestableArtifactLabels } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { requestableArtifacts, requestableArtifactLabels } from '#lib/config.js';
 	import {
 		askForArtifact,
 		dropArtifactRequest,
 		usePosterArt,
 		usePosterArtWithFooter
-	} from '$lib/remote/productions.remote';
-	import { searchAskableListings } from '$lib/remote/external-acts.remote';
-	import type { OutstandingRequest } from '$lib/types/artifact-request';
+	} from '#lib/remote/productions.remote.js';
+	import { searchAskableListings } from '#lib/remote/external-acts.remote.js';
+	import type { OutstandingRequest } from '#lib/types/artifact-request.js';
 
 	// The picker writes a plain hidden input; the Action's form is not a `<Form>`.
 	const artistField = {
@@ -78,15 +78,15 @@
 						onsuccess={onchange}
 					>
 						{#snippet form()}
-							<input type="hidden" name="eventId" value={eventId} />
+							<input {...askForArtifact.fields.eventId.as('hidden', eventId)} />
 							<FormField
-								name="entryId"
+								field={askForArtifact.fields.entryId}
 								label={m.staff_band()}
 								type="select"
 								options={acts.map((a) => ({ value: a.entryId, label: a.name }))}
 							/>
 							<FormField
-								name="artifact"
+								field={askForArtifact.fields.artifact}
 								label={m.staff_what()}
 								type="select"
 								options={requestableArtifacts.map((a) => ({
@@ -95,7 +95,7 @@
 								}))}
 							/>
 							<FormField
-								name="dueDate"
+								field={askForArtifact.fields.dueDate}
 								label={m.staff_due()}
 								type="date"
 								description={m.staff_events_id_production_artifact_requests_panel_optional()}
@@ -117,8 +117,8 @@
 					onsuccess={onchange}
 				>
 					{#snippet form()}
-						<input type="hidden" name="eventId" value={eventId} />
-						<input type="hidden" name="artifact" value="poster_art" />
+						<input {...askForArtifact.fields.eventId.as('hidden', eventId)} />
+						<input {...askForArtifact.fields.artifact.as('hidden', 'poster_art')} />
 						<MemberPicker
 							field={artistField}
 							label={m.staff_events_id_production_artifact_requests_panel_artist()}
@@ -126,7 +126,7 @@
 							search={(q) => searchAskableListings(q)}
 						/>
 						<FormField
-							name="dueDate"
+							field={askForArtifact.fields.dueDate}
 							label={m.staff_due()}
 							type="date"
 							description={m.staff_events_id_production_artifact_requests_panel_when_art()}
@@ -193,8 +193,8 @@
 								onsuccess={onchange}
 							>
 								{#snippet form()}
-									<input type="hidden" name="requestId" value={req.id} />
-									<input type="hidden" name="eventId" value={eventId} />
+									<input {...usePosterArt.fields.requestId.as('hidden', req.id)} />
+									<input {...usePosterArt.fields.eventId.as('hidden', eventId)} />
 									<p class="text-sm">
 										{m.staff_events_id_production_artifact_requests_panel_art_from({
 											actName:
@@ -215,8 +215,8 @@
 								onsuccess={onchange}
 							>
 								{#snippet form()}
-									<input type="hidden" name="requestId" value={req.id} />
-									<input type="hidden" name="eventId" value={eventId} />
+									<input {...usePosterArtWithFooter.fields.requestId.as('hidden', req.id)} />
+									<input {...usePosterArtWithFooter.fields.eventId.as('hidden', eventId)} />
 									<p class="text-sm">
 										{m.staff_events_id_production_artifact_requests_panel_art_sits()}
 									</p>
@@ -234,8 +234,8 @@
 							onsuccess={onchange}
 						>
 							{#snippet form()}
-								<input type="hidden" name="id" value={req.id} />
-								<input type="hidden" name="eventId" value={eventId} />
+								<input {...dropArtifactRequest.fields.id.as('hidden', req.id)} />
+								<input {...dropArtifactRequest.fields.eventId.as('hidden', eventId)} />
 								<p class="text-sm">
 									{m.staff_events_id_production_artifact_requests_panel_from_stop({
 										value: requestableArtifactLabels[req.artifact],

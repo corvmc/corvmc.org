@@ -18,8 +18,8 @@ import {
 	DEFAULT_TEACHING_MAX_ADVANCE_DAYS_ONEOFF,
 	DEFAULT_TEACHING_MAX_ADVANCE_DAYS_RECURRING
 } from './config';
-import { bookerTypes } from '$lib/config';
-import { MINUTES_PER_CREDIT, creditValueCents } from '$lib/config';
+import { bookerTypes } from '#lib/config.js';
+import { MINUTES_PER_CREDIT, creditValueCents } from '#lib/config.js';
 
 const cfg: ReservationConfig = {
 	timeSlotMinutes: 30,

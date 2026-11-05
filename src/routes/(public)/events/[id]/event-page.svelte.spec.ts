@@ -25,17 +25,17 @@ const remote = vi.hoisted(() => (value: () => unknown = () => undefined) => {
 });
 
 vi.mock('$env/dynamic/public', () => ({ env: {} }));
-vi.mock('$lib/remote/events.remote', () => ({
+vi.mock('#lib/remote/events.remote.js', () => ({
 	getPublicEventDetail: remote(() => fixture.detail)
 }));
-vi.mock('$lib/remote/event-rsvp.remote', () => ({
+vi.mock('#lib/remote/event-rsvp.remote.js', () => ({
 	getRsvpStatus: remote(() => fixture.rsvp),
 	confirmRsvp: remote(),
 	withdrawRsvp: remote()
 }));
-vi.mock('$lib/remote/flags.remote', () => ({ submitEventReport: remote() }));
-vi.mock('$lib/remote/event-photos.remote', () => ({ uploadEventPhotos: remote() }));
-vi.mock('$lib/remote/market.remote', () => ({ getPublicMarket: remote() }));
+vi.mock('#lib/remote/flags.remote.js', () => ({ submitEventReport: remote() }));
+vi.mock('#lib/remote/event-photos.remote.js', () => ({ uploadEventPhotos: remote() }));
+vi.mock('#lib/remote/market.remote.js', () => ({ getPublicMarket: remote() }));
 vi.mock('$app/state', async (original) => ({
 	...(await original<Record<string, unknown>>()),
 	page: { params: { id: 'evt-1' }, url: new URL('http://localhost/events/evt-1') }

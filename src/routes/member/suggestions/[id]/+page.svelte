@@ -1,30 +1,30 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import AppealPanel from '$lib/components/moderation/AppealPanel.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import BallotLine from '$lib/components/ballot/BallotLine.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import AppealPanel from '#lib/components/moderation/AppealPanel.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import BallotLine from '#lib/components/ballot/BallotLine.svelte';
 	import { IconFlag, IconCaretUpFilled, IconPencil } from '@tabler/icons-svelte';
-	import { formatDateTime } from '$lib/utils/format';
-	import { suggestionCategories, suggestionCategoryLabels } from '$lib/config';
+	import { formatDateTime } from '#lib/utils/format.js';
+	import { suggestionCategories, suggestionCategoryLabels } from '#lib/config.js';
 	import {
 		getMemberSuggestionDetailPage,
 		toggleSuggestionVote,
 		flagSuggestion,
 		editSuggestion,
 		cancelSuggestionEdit
-	} from '$lib/remote/suggestions.remote';
+	} from '#lib/remote/suggestions.remote.js';
 
 	let id = $derived(page.params.id!);
 	const data = $derived(await getMemberSuggestionDetailPage(id));
@@ -85,9 +85,9 @@
 						<BallotLine
 							ballot={b}
 							href={b.status === 'certified'
-								? resolve(`/member/ballots/${b.id}`)
+								? resolve(`member/ballots/${b.id}`)
 								: b.status === 'open'
-									? resolve('/member/ballots')
+									? resolve('member/ballots')
 									: null}
 						/>
 					</li>
@@ -97,7 +97,7 @@
 	{/if}
 
 	{#if s.mergedIntoId}
-		<Alert type="info" href={resolve(`/member/suggestions/${s.mergedIntoId}`)}>
+		<Alert type="info" href={resolve(`member/suggestions/${s.mergedIntoId}`)}>
 			<ParaglideMessage
 				message={m.member_suggestions_id_merged_into_votes_moved_across}
 				inputs={{
@@ -220,19 +220,19 @@
 							</p>
 						{/if}
 						<FormField
-							name="title"
+							field={editSuggestion.fields.title}
 							type="text"
 							label={m.member_what_should_we_do()}
 							value={s.title}
 						/>
 						<FormField
-							name="body"
+							field={editSuggestion.fields.body}
 							type="textarea"
 							label={m.member_tell_us_bit_more()}
 							value={s.body}
 						/>
 						<FormField
-							name="category"
+							field={editSuggestion.fields.category}
 							type="select"
 							label={m.member_category()}
 							value={s.category}
@@ -265,9 +265,9 @@
 						<p class="mb-3 text-muted">
 							{m.member_takes_suggestion_off_board_straight()}
 						</p>
-						<FormField name="reason" type="text" label={m.member_what_s_problem()} />
+						<FormField field={flag.fields.reason} type="text" label={m.member_what_s_problem()} />
 						<FormField
-							name="description"
+							field={flag.fields.description}
 							type="textarea"
 							label={m.member_anything_else_optional()}
 						/>

@@ -1,12 +1,12 @@
 import { and, asc, desc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { inboxGroupRead, inboxMessage, inboxThread } from '$lib/server/db/schema/inbox';
-import { user } from '$lib/server/db/schema/authentication';
-import { groupMember } from '$lib/server/db/schema/group';
-import { getNotificationType, notificationPreference } from '$lib/server/db/schema/notification';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import { DomainError } from '$lib/server/domain-error';
-import { renderMarkdown } from '$lib/utils/markdown';
+import { db } from '#lib/server/db/index.js';
+import { inboxGroupRead, inboxMessage, inboxThread } from '#lib/server/db/schema/inbox.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { getNotificationType, notificationPreference } from '#lib/server/db/schema/notification.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { renderMarkdown } from '#lib/utils/markdown.js';
 
 /**
  * Announcements — a group talking to its own roster. Phase 7 of

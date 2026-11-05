@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // getAvailableDates must not offer a date the validator will reject.
@@ -17,7 +17,7 @@ const MAX_ADVANCE_DAYS = 14;
 let maxAdvanceDaysOneoff = MAX_ADVANCE_DAYS;
 
 // Deterministic, UTC-based tz helpers so day-stepping is exact in the test.
-vi.mock('$lib/server/reservation/timezone', () => ({
+vi.mock('#lib/server/reservation/timezone.js', () => ({
 	formatDateInTz: vi.fn((d: Date) => d.toISOString().slice(0, 10)),
 	buildDateInTz: vi.fn((date: string, time: string) => new Date(`${date}T${time}:00Z`))
 }));
@@ -25,8 +25,8 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 // `termsFor` and `getBookingTerms` come through real: they are pure, and a
 // stubbed rate resolver would let this spec pass while the resolver it is
 // standing in for returned something else. Only the config *read* is faked.
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({
 		maxAdvanceDaysOneoff,
 		minDurationHours: 1,
@@ -42,7 +42,7 @@ const openDay = [
 	{ startTime: '10:00', available: true },
 	{ startTime: '10:30', available: true }
 ];
-vi.mock('$lib/server/reservation/conflict-service', () => ({
+vi.mock('#lib/server/reservation/conflict-service.js', () => ({
 	getAvailableSlots: vi.fn(async () => openDay),
 	getAvailableSlotsForDates: vi.fn(
 		async (dates: string[]) => new Map(dates.map((d) => [d, openDay]))
@@ -77,7 +77,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getAvailableDates } = (await import('$lib/remote/reservations.remote')) as any;
+const { getAvailableDates } = (await import('#lib/remote/reservations.remote.js')) as any;
 
 describe('getAvailableDates window', () => {
 	it('offers exactly maxAdvanceDaysOneoff days starting today, and no farther', async () => {

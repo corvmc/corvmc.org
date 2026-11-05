@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import FormField from '../ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { unpublishEvent } from '$lib/remote/events.remote';
+	import { unpublishEvent } from '#lib/remote/events.remote.js';
 
 	const { fields } = unpublishEvent;
 
@@ -43,7 +43,7 @@
 		<input {...fields.id.as('hidden', eventId)} />
 		<p class="py-2">{m.actions_unpublish_event_revert_event_draft_will_no()}</p>
 		<FormField
-			name="notes"
+			field={unpublishEvent.fields.notes}
 			type="textarea"
 			label={m.actions_reason()}
 			description={m.actions_unpublish_event_description()}

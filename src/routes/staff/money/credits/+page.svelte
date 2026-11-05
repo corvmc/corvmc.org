@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import { getStaffCredits } from '$lib/remote/users.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { getStaffCredits } from '#lib/remote/users.remote.js';
 	import StaffViews from '../../StaffViews.svelte';
 	import { moneyViews } from '../views';
-	import { formatDateTimeShort, titleCase } from '$lib/utils/format';
-	import { creditSourceLabels } from '$lib/config';
+	import { formatDateTimeShort, titleCase } from '#lib/utils/format.js';
+	import { creditSourceLabels } from '#lib/config.js';
 
 	function sourceLabel(source: string): string {
 		return creditSourceLabels[source] ?? titleCase(source);

@@ -1,9 +1,9 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 import { createAttachmentKey } from 'svelte/attachments';
-import type { Reservation } from '$lib/server/reservation';
+import type { Reservation } from '#lib/server/reservation/index.js';
 
 /**
  * Where the member goes after paying. `payForReservation` answers one of two
@@ -48,7 +48,7 @@ function fakeRemoteForm(fields: Record<string, unknown>) {
 	};
 
 	Object.defineProperties(instance, {
-		fields: { value: { ...fields, allIssues: () => null } },
+		fields: { value: { ...fields, allIssues: () => null, set: () => {} } },
 		result: { value: undefined, writable: true },
 		enhance: {
 			value: (cb: (instance: { submit: () => Promise<boolean> }) => unknown) => {
@@ -61,7 +61,7 @@ function fakeRemoteForm(fields: Record<string, unknown>) {
 	return instance;
 }
 
-vi.mock('$lib/remote/reservations.remote', () => ({
+vi.mock('#lib/remote/reservations.remote.js', () => ({
 	payForReservation: fakeRemoteForm({ id: field('id'), coverFees: field('coverFees') }),
 	getReservationPricing: vi.fn(async () => ({
 		durationHours: 2,
@@ -78,7 +78,7 @@ vi.mock('$app/navigation', () => ({
 	beforeNavigate: vi.fn()
 }));
 
-vi.mock('$lib/utils/checkout-navigation', () => ({ goToCheckout }));
+vi.mock('#lib/utils/checkout-navigation.js', () => ({ goToCheckout }));
 
 const PayReservationAction = (await import('./PayReservationAction.svelte')).default;
 

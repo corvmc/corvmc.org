@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { entityHref } from './entity-href';
-import { ANONYMOUS, type Panel, type Viewer } from '$lib/types/entity';
-import { capabilities as CAPS, entityTypes } from '$lib/config';
-import { fakeRef } from '$lib/test/fixtures';
+import { ANONYMOUS, type Panel, type Viewer } from '#lib/types/entity.js';
+import { capabilities as CAPS, entityTypes } from '#lib/config.js';
+import { fakeRef } from '#lib/test/fixtures.js';
 
 /**
  * Every capability, which is what somebody holding `staff` actually has — the

@@ -1,4 +1,4 @@
-import { positionOrder } from '$lib/config';
+import { positionOrder } from '#lib/config.js';
 
 /**
  * Deriving the display fields of an `EntityRef` from domain values.

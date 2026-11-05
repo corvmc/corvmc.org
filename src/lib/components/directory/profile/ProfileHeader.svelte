@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EntityAvatar from '$lib/components/ui/entity/EntityAvatar.svelte';
-	import ShareButton from '$lib/components/ui/ShareButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EntityAvatar from '#lib/components/ui/entity/EntityAvatar.svelte';
+	import ShareButton from '#lib/components/ui/ShareButton.svelte';
 
 	export type ProfilePill = { label: string; variant?: 'solid' | 'warm' };
 

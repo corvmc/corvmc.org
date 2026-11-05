@@ -5,15 +5,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * a real SQLite replayed from the migrations.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
-vi.mock('$lib/server/db', () => ({ db: testDb, getRowCount: () => 0 }));
-vi.mock('$lib/server/production/run-of-show-service', () => ({ recomputeSetTimes: vi.fn() }));
-vi.mock('$lib/server/finance/production-expense-entries', () => ({
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb, getRowCount: () => 0 }));
+vi.mock('#lib/server/production/run-of-show-service.js', () => ({ recomputeSetTimes: vi.fn() }));
+vi.mock('#lib/server/finance/production-expense-entries.js', () => ({
 	postProductionExpenses: vi.fn()
 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const svc = await import('./deliverables-service');
 

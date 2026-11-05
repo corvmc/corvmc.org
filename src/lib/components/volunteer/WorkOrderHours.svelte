@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * Hours logged against this work order, approved from here as from the queue.
 	 * Returning a log stays on the queue, where the note to the member is written.
 	 */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import { approveVolunteerHours, type getStaffShiftPage } from '$lib/remote/volunteer.remote';
-	import { formatVolunteerHours, volunteerHourStatusLabels } from '$lib/config';
-	import { formatDateShort } from '$lib/utils/format';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { approveVolunteerHours, type getStaffShiftPage } from '#lib/remote/volunteer.remote.js';
+	import { formatVolunteerHours, volunteerHourStatusLabels } from '#lib/config.js';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 
 	type Log = Awaited<ReturnType<typeof getStaffShiftPage>>['hours'][number];
@@ -47,8 +47,8 @@
 						successToast={m.volunteer_work_order_hours_success_toast()}
 					>
 						{#snippet form()}
-							<input type="hidden" name="id" value={log.id} />
-							<input type="hidden" name="shiftId" value={shiftId} />
+							<input {...approve.fields.id.as('hidden', log.id)} />
+							<input {...approve.fields.shiftId.as('hidden', shiftId)} />
 							<p class="text-sm">
 								{m.volunteer_work_order_hours_by({
 									formatVolunteerHours: formatVolunteerHours(log.minutes),
@@ -59,7 +59,7 @@
 							</p>
 							<p class="text-muted">{log.description}</p>
 							<FormField
-								name="notes"
+								field={approve.fields.notes}
 								label={m.volunteer_work_order_hours_note_optional()}
 								type="textarea"
 								description={m.volunteer_work_order_hours_description()}
@@ -72,7 +72,7 @@
 	</ul>
 	<p class="mt-2 text-subtle text-xs">
 		<ParaglideMessage message={m.volunteer_work_order_hours_return_log_correction_use} inputs={{}}
-			>{#snippet a({ children })}<a class="link" href={resolve('/staff/members/volunteers/hours')}
+			>{#snippet a({ children })}<a class="link" href={resolve('staff/members/volunteers/hours')}
 					>{@render children?.()}</a
 				>{/snippet}</ParaglideMessage
 		>

@@ -1,23 +1,19 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { pageTitle, EVENT_TIP_SUBJECT, contactSubjects } from '$lib/config';
+	import { pageTitle, EVENT_TIP_SUBJECT, contactSubjects } from '#lib/config.js';
 	import { IconMail, IconMapPin } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
-	import { signInHref } from '$lib/utils/sign-in';
-	import { submitContactForm } from '$lib/remote/inbox.remote';
-	import { getOrgAddress } from '$lib/remote/settings.remote';
-	import {
-		TURNSTILE_SITE_KEY,
-		TURNSTILE_RESPONSE_FIELD,
-		turnstileFailureMessage
-	} from '$lib/turnstile';
-	import type { RemoteFormIssue } from '@sveltejs/kit';
+	import { signInHref } from '#lib/utils/sign-in.js';
+	import { submitContactForm } from '#lib/remote/inbox.remote.js';
+	import { getOrgAddress } from '#lib/remote/settings.remote.js';
+	import { TURNSTILE_SITE_KEY, turnstileFailureMessage } from '#lib/turnstile.js';
+	import type { RemoteFormIssue } from '$app/server';
 
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
 
 	// Declared before the awaited query below — a declaration that follows a
 	// top-level await is async-gated.
@@ -34,7 +30,7 @@
 	let failure = $state<string | null>(null);
 	let resetTurnstile = $state<() => void>();
 
-	// The list lives in `$lib/config` because the staff inbox filters on it: what
+	// The list lives in `#lib/config.js` because the staff inbox filters on it: what
 	// someone picks here is written to `inbox_thread.subject`, and that column is
 	// the queue's inquiry-type facet.
 	const subjectOptions = contactSubjects.map((s) => ({ value: s, label: s }));
@@ -123,7 +119,7 @@
 
 					<!-- Custom input mode: FormField's built-in textarea drops `rest`, so rows
 					     and placeholder would be lost. Issues still resolve by name. -->
-					<FormField name="message" label={m.public_contact_message()}>
+					<FormField field={submitContactForm.fields.message} label={m.public_contact_message()}>
 						<textarea
 							{...fields.message.as('text')}
 							class="textarea w-full"
@@ -136,7 +132,7 @@
 
 					<Turnstile
 						siteKey={TURNSTILE_SITE_KEY}
-						responseFieldName={TURNSTILE_RESPONSE_FIELD}
+						responseFieldName={fields.turnstileToken.as('hidden', '').name}
 						theme="auto"
 						bind:reset={resetTurnstile}
 					/>

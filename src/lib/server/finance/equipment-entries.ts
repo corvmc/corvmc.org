@@ -1,5 +1,5 @@
 import { listForSubject, recordEntries, type RecordEntryInput } from './financial-entry-service';
-import type { EquipmentReturnedEvent } from '$lib/server/event-bus/event-bus';
+import type { EquipmentReturnedEvent } from '#lib/server/event-bus/event-bus.js';
 
 /**
  * What a loan earned, split by how the member settled it (#1174).

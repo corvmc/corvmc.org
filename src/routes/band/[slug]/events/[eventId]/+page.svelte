@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import {
 		BandPublishEventAction,
 		BandUnpublishEventAction,
 		BandCancelEventAction,
 		RemoveEventPosterAction
-	} from '$lib/components/actions';
+	} from '#lib/components/actions/index.js';
 	import EventFields from '../EventFields.svelte';
 	import TicketSaleCard from './TicketSaleCard.svelte';
 	import DoorListCard from './DoorListCard.svelte';
-	import { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
+	import { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { getBandEventDetail, updateBandEventForm } from '$lib/remote/band-events.remote';
+	import { getBandEventDetail, updateBandEventForm } from '#lib/remote/band-events.remote.js';
 	import { getBandLayoutContext } from '../../layout-context';
 	import { page } from '$app/state';
 

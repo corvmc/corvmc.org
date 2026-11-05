@@ -27,7 +27,7 @@ function makeChainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => makeChainable(),
 		insert: () => ({

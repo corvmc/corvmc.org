@@ -1,13 +1,13 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireCapability } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
+import { requireCapability } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import { invalid } from '@sveltejs/kit';
-import * as service from '$lib/server/sponsor/sponsor-service';
-import * as credits from '$lib/server/sponsor/credit-service';
-import { resolveImageUrl, validateUpload } from '$lib/server/storage';
-import { clubToday, LONG_TEXT_MAX, SHORT_TEXT_MAX, sponsorshipStatuses } from '$lib/config';
+import * as service from '#lib/server/sponsor/sponsor-service.js';
+import * as credits from '#lib/server/sponsor/credit-service.js';
+import { resolveImageUrl, validateUpload } from '#lib/server/storage.js';
+import { clubToday, LONG_TEXT_MAX, SHORT_TEXT_MAX, sponsorshipStatuses } from '#lib/config.js';
 
 /** An `<input type="date">` value, or blank for "no date". */
 const isoDay = z

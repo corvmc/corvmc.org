@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
@@ -8,7 +8,7 @@
 	import {
 		refundAndCancelReservation,
 		refundOnlyReservation
-	} from '$lib/remote/reservations.remote';
+	} from '#lib/remote/reservations.remote.js';
 
 	let {
 		reservation,
@@ -62,7 +62,6 @@
 		{#if canCancel}
 			<FormField
 				type="checkbox"
-				name="alsoCancel"
 				label={m.actions_refund_reservation_cancellation()}
 				checkboxLabel={m.actions_refund_reservation_checkbox_label()}
 				bind:value={alsoCancel}

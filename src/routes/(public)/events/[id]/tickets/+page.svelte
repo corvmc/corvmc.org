@@ -1,22 +1,26 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { goToCheckout } from '$lib/utils/checkout-navigation';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field, Select } from '$lib/components/ui/Form';
-	import { formatCents, fullDate, formatTime } from '$lib/utils/format';
-	import TicketPurchaseFields from '$lib/components/events/TicketPurchaseFields.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { purchaseTickets, claimFreeTicket, getPublicTicketPage } from '$lib/remote/events.remote';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import Alert from '$lib/components/ui/Alert.svelte';
+	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field, Select } from '#lib/components/ui/Form/index.js';
+	import { formatCents, fullDate, formatTime } from '#lib/utils/format.js';
+	import TicketPurchaseFields from '#lib/components/events/TicketPurchaseFields.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import {
+		purchaseTickets,
+		claimFreeTicket,
+		getPublicTicketPage
+	} from '#lib/remote/events.remote.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
 
 	const purchaseFields = purchaseTickets.fields;
 	const freeTicketFields = claimFreeTicket.fields;
@@ -53,8 +57,8 @@
 			? m.public_events_id_tickets_get_free_ticket()
 			: m.public_events_id_tickets_get_tickets()}
 		parent={[
-			{ label: m.public_events(), href: resolve('/events') },
-			{ label: evt.title, href: resolve(`/events/${page.params.id!}`) }
+			{ label: m.public_events(), href: resolve('events') },
+			{ label: evt.title, href: resolve(`events/${page.params.id!}`) }
 		]}
 	/>
 
@@ -91,7 +95,7 @@
 					<ParaglideMessage
 						message={m.public_events_id_tickets_no_one_turned_away_lack_2}
 						inputs={{}}
-						>{#snippet a({ children })}<a href={resolve('/contact')} class="link"
+						>{#snippet a({ children })}<a href={resolve('contact')} class="link"
 								>{@render children?.()}</a
 							>{/snippet}</ParaglideMessage
 					>
@@ -124,8 +128,16 @@
 			<input {...freeTicketFields.eventId.as('hidden', page.params.id!)} />
 			<Card>
 				<CardBody class="space-y-4">
-					<Field label={m.public_events_id_tickets_number_spots()} name="quantity">
-						<Select name="quantity" bind:value={quantity} class="w-full">
+					<Field
+						label={m.public_events_id_tickets_number_spots()}
+						field={claimFreeTicket.fields.quantity}
+					>
+						<Select
+							{...claimFreeTicket.fields.quantity.as('select')}
+							onchange={(e: Event) =>
+								(quantity = Number((e.currentTarget as HTMLSelectElement).value))}
+							class="w-full"
+						>
 							{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
 								<option value={n}>{n}</option>
 							{/each}
@@ -133,10 +145,15 @@
 					</Field>
 
 					{#if !data.isAuthenticated}
-						<Field name="attendeeName" type="text" label={m.public_name()} value={attendeeName} />
+						<Field
+							field={claimFreeTicket.fields.attendeeName}
+							type="text"
+							label={m.public_name()}
+							value={attendeeName}
+						/>
 
 						<Field
-							name="attendeeEmail"
+							field={claimFreeTicket.fields.attendeeEmail}
 							type="email"
 							label={m.public_email()}
 							value={attendeeEmail}
@@ -161,9 +178,18 @@
 					<!-- The `input` snippet, not children: only it is handed the id the
 					     caption points at, so as children this select had no accessible
 					     name at all and read as "combo box, 1" (#994). -->
-					<Field label={m.public_events_id_tickets_number_tickets()} name="quantity">
+					<Field
+						label={m.public_events_id_tickets_number_tickets()}
+						field={purchaseTickets.fields.quantity}
+					>
 						{#snippet input(id)}
-							<Select {id} name="quantity" bind:value={quantity} class="w-full">
+							<Select
+								{id}
+								{...purchaseTickets.fields.quantity.as('select')}
+								onchange={(e: Event) =>
+									(quantity = Number((e.currentTarget as HTMLSelectElement).value))}
+								class="w-full"
+							>
 								{#each Array.from({ length: maxQuantity }, (_, i) => i + 1) as n (n)}
 									<option value={n}>{n}</option>
 								{/each}
@@ -172,10 +198,15 @@
 					</Field>
 
 					{#if !data.isAuthenticated}
-						<Field name="attendeeName" type="text" label={m.public_name()} value={attendeeName} />
+						<Field
+							field={purchaseTickets.fields.attendeeName}
+							type="text"
+							label={m.public_name()}
+							value={attendeeName}
+						/>
 
 						<Field
-							name="attendeeEmail"
+							field={purchaseTickets.fields.attendeeEmail}
 							type="email"
 							label={m.public_email()}
 							value={attendeeEmail}

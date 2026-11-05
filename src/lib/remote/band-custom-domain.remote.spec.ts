@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 /**
  * Guard tests for the band custom-domain remote functions.
@@ -33,15 +33,14 @@ const bandServiceMock = {
 	getBySlug: vi.fn(async () => mockBand),
 	getUserRole: vi.fn(async () => 'owner' as string | null)
 };
-vi.mock('$lib/server/band/band-service', () => bandServiceMock);
+vi.mock('#lib/server/band/band-service.js', () => bandServiceMock);
 
 const testUser = mockUser({ id: 'user-owner', name: 'Test Owner' });
-vi.mock('$lib/server/authorization', () => ({ requireUser: () => testUser }));
-vi.mock('$lib/server/feature-flags', () => ({ requireFeature: vi.fn(async () => undefined) }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
-vi.mock('$lib/server/db/schema/band', () => ({ band: {} }));
-vi.mock('$lib/server/band/band-host-service', () => ({ forgetCustomDomain: vi.fn() }));
-vi.mock('$lib/server/band/custom-domain-service', () => ({
+vi.mock('#lib/server/authorization.js', () => ({ requireUser: () => testUser }));
+vi.mock('#lib/server/feature-flags.js', () => ({ requireFeature: vi.fn(async () => undefined) }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
+vi.mock('#lib/server/band/band-host-service.js', () => ({ forgetCustomDomain: vi.fn() }));
+vi.mock('#lib/server/band/custom-domain-service.js', () => ({
 	CustomDomainError: class extends Error {},
 	assertDomainUnclaimed: vi.fn(),
 	cnameTarget: () => 'domains.corvmc.org',

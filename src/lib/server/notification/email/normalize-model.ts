@@ -1,7 +1,7 @@
-import { escapeHtmlWithBreaks } from '$lib/utils/html';
-import { renderMarkdown } from '$lib/utils/markdown';
-import type { NotificationEmailPayload } from '$lib/types/notification-email';
-import type { NotificationCategory } from '$lib/email/notification-category';
+import { escapeHtmlWithBreaks } from '#lib/utils/html.js';
+import { renderMarkdown } from '#lib/utils/markdown.js';
+import type { NotificationEmailPayload } from '#lib/types/notification-email.js';
+import type { NotificationCategory } from '#lib/email/notification-category.js';
 
 // ---------------------------------------------------------------------------
 // Notification model normalization

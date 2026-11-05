@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import ProfileSection from './ProfileSection.svelte';
-	import { releaseKindLabels, type ReleaseKind } from '$lib/config';
-	import { formatTrackSummary } from '$lib/utils/audio';
-	import { formatDateYear, formatCents } from '$lib/utils/format';
+	import { releaseKindLabels, type ReleaseKind } from '#lib/config.js';
+	import { formatTrackSummary } from '#lib/utils/audio.js';
+	import { formatDateYear, formatCents } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 	import { IconDisc } from '@tabler/icons-svelte';
 
@@ -46,7 +46,7 @@
 				<li>
 					<a
 						class="flex items-center gap-3 rounded p-2 transition-colors hover:bg-base-200"
-						href={resolve(`/music/${bandSlug}/${release.slug}`)}
+						href={resolve(`music/${bandSlug}/${release.slug}`)}
 					>
 						{#if release.coverUrl}
 							<img src={release.coverUrl} alt="" class="size-14 shrink-0 rounded object-cover" />

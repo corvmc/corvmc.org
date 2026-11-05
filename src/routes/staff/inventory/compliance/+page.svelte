@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { RecordForm8282Action } from '$lib/components/actions';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { RecordForm8282Action } from '#lib/components/actions/index.js';
 	import { resolve } from '$app/paths';
-	import { getForm8282Obligations } from '$lib/remote/inventory.remote';
-	import { formatCents, formatDateShort } from '$lib/utils/format';
+	import { getForm8282Obligations } from '#lib/remote/inventory.remote.js';
+	import { formatCents, formatDateShort } from '#lib/utils/format.js';
 
 	/**
 	 * Donated units disposed of within three years, where nobody has recorded what
@@ -65,7 +65,7 @@
 			{#each data.rows as row (row.id)}
 				<tr class="hover">
 					<td class="cell-primary">
-						<a class="font-medium" href={resolve(`/staff/inventory/assets/${row.id}`)}>
+						<a class="font-medium" href={resolve(`staff/inventory/assets/${row.id}`)}>
 							{row.itemName}
 						</a>
 						{#if row.assetTag}

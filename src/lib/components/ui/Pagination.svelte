@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { PAGE_GAP, pageRange, pageWindow } from '$lib/utils/pagination';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { PAGE_GAP, pageRange, pageWindow } from '#lib/utils/pagination.js';
 
 	let {
 		page = 1,

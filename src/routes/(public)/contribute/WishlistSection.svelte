@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Tile from '$lib/components/public/Tile.svelte';
-	import Section from '$lib/components/public/Section.svelte';
-	import SectionHeading from '$lib/components/public/SectionHeading.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { getPublicWishlist } from '$lib/remote/inventory.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Tile from '#lib/components/public/Tile.svelte';
+	import Section from '#lib/components/public/Section.svelte';
+	import SectionHeading from '#lib/components/public/SectionHeading.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { getPublicWishlist } from '#lib/remote/inventory.remote.js';
 	import WishlistPledge from './WishlistPledge.svelte';
 
 	/**

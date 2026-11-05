@@ -1,26 +1,26 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import VolunteerStatusTabs from './VolunteerStatusTabs.svelte';
 	import MemberViews from '../../MemberViews.svelte';
-	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
+	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
 	import { resolve } from '$app/paths';
-	import { urlState, oneOf, text, positiveInt } from '$lib/urlState.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { formatDateShort, relativeDay } from '$lib/utils/format';
-	import { formatVolunteerHours, volunteerHourStatuses } from '$lib/config';
-	import HourLogExceptions from '$lib/components/volunteer/HourLogExceptions.svelte';
+	import { urlState, oneOf, text, positiveInt } from '#lib/urlState.svelte.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import LogHoursForMemberAction from '#lib/components/volunteer/LogHoursForMemberAction.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { formatDateShort, relativeDay } from '#lib/utils/format.js';
+	import { formatVolunteerHours, volunteerHourStatuses } from '#lib/config.js';
+	import HourLogExceptions from '#lib/components/volunteer/HourLogExceptions.svelte';
 	import { IconCheck, IconArrowBackUp } from '@tabler/icons-svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { toast } from 'svelte-sonner';
@@ -30,14 +30,14 @@
 		approveVolunteerHours,
 		approveVolunteerHoursBulk,
 		rejectVolunteerHours
-	} from '$lib/remote/volunteer.remote';
+	} from '#lib/remote/volunteer.remote.js';
 
 	type StatusView = (typeof volunteerHourStatuses)[number] | 'all';
 	const statusViews: StatusView[] = [...volunteerHourStatuses, 'all'];
 
 	// Seeded from the query string and mirrored back into it, so a reload lands
 	// on the same view.
-	const filters = urlState(resolve('/staff/members/volunteers/hours'), {
+	const filters = urlState(resolve('staff/members/volunteers/hours'), {
 		status: oneOf(statusViews, 'pending' as StatusView),
 		role: text(),
 		from: text(),
@@ -217,7 +217,9 @@
 				onsuccess={handleBulkApproved}
 			>
 				{#snippet form()}
-					<input type="hidden" name="ids" value={JSON.stringify([...selected])} />
+					<input
+						{...approveVolunteerHoursBulk.fields.ids.as('hidden', JSON.stringify([...selected]))}
+					/>
 					<p class="text-sm">
 						{m.staff_members_volunteers_hours_entries_total({
 							size: selected.size,
@@ -225,7 +227,7 @@
 						})}
 					</p>
 					<FormField
-						name="notes"
+						field={approveVolunteerHoursBulk.fields.notes}
 						label={m.staff_note_optional()}
 						type="textarea"
 						description={m.staff_members_volunteers_hours_shared_with_every_member_sele()}
@@ -342,7 +344,9 @@
 										onsuccess={refreshQueue}
 									>
 										{#snippet form()}
-											<input type="hidden" name="id" value={log.id} />
+											<input
+												{...approveVolunteerHours.for(log.id).fields.id.as('hidden', log.id)}
+											/>
 											<p class="text-sm">
 												{m.staff_by({
 													formatVolunteerHours: formatVolunteerHours(log.minutes),
@@ -353,7 +357,7 @@
 											</p>
 											<p class="text-muted">{log.description}</p>
 											<FormField
-												name="notes"
+												field={approveVolunteerHours.for(log.id).fields.notes}
 												label={m.staff_note_optional()}
 												type="textarea"
 												description={m.staff_shared_with_member()}
@@ -375,7 +379,9 @@
 										onsuccess={refreshQueue}
 									>
 										{#snippet form()}
-											<input type="hidden" name="id" value={log.id} />
+											<input
+												{...approveVolunteerHours.for(log.id).fields.id.as('hidden', log.id)}
+											/>
 											<p class="text-sm">
 												{m.staff_members_volunteers_hours_by_were_returned_member({
 													formatVolunteerHours: formatVolunteerHours(log.minutes),
@@ -385,7 +391,7 @@
 												})}
 											</p>
 											<FormField
-												name="reason"
+												field={approveVolunteerHours.for(log.id).fields.reason}
 												label={m.staff_members_volunteers_hours_why_approve_them_now()}
 												type="textarea"
 												description={m.staff_members_volunteers_hours_recorded_audit_log()}
@@ -410,7 +416,7 @@
 										onsuccess={refreshQueue}
 									>
 										{#snippet form()}
-											<input type="hidden" name="id" value={log.id} />
+											<input {...rejectVolunteerHours.for(log.id).fields.id.as('hidden', log.id)} />
 											<p class="text-sm">
 												{m.staff_by({
 													formatVolunteerHours: formatVolunteerHours(log.minutes),
@@ -421,7 +427,7 @@
 											</p>
 											<p class="text-muted">{log.description}</p>
 											<FormField
-												name="notes"
+												field={rejectVolunteerHours.for(log.id).fields.notes}
 												label={m.staff_reason()}
 												type="textarea"
 												description={m.staff_required_member_needs_correct_resubmit()}

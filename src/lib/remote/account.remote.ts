@@ -2,26 +2,26 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
-import { auth } from '$lib/server/auth';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { auth } from '#lib/server/auth.js';
 import { eq } from 'drizzle-orm';
-import { parseBirthDateInput } from '$lib/utils/age';
-import { requireUser, isElevated } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
-import { deactivateUser } from '$lib/server/user/user-service';
+import { parseBirthDateInput } from '#lib/utils/age.js';
+import { requireUser, isElevated } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { deactivateUser } from '#lib/server/user/user-service.js';
 import {
 	getSubscriptionsForUser,
 	getOptInAudiencesForUser
-} from '$lib/server/marketing/audience-service';
+} from '#lib/server/marketing/audience-service.js';
 import {
 	addSubscriber,
 	unsubscribe as unsubscribeFromAudience
-} from '$lib/server/marketing/audience-service';
+} from '#lib/server/marketing/audience-service.js';
 import {
 	findOrCreateForUser,
 	clearSelfServiceSuppression
-} from '$lib/server/marketing/subscriber-service';
+} from '#lib/server/marketing/subscriber-service.js';
 
 // ---------------------------------------------------------------------------
 // Queries

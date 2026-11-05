@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import SplitBar from '$lib/components/ui/SplitBar.svelte';
-	import { buyReleaseForm } from '$lib/remote/music.remote';
-	import { computeAudioSplit, suggestedPlatformCents } from '$lib/finance/audio-split';
-	import { AUDIO_MIN_PRICE_CENTS } from '$lib/config';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import SplitBar from '#lib/components/ui/SplitBar.svelte';
+	import { buyReleaseForm } from '#lib/remote/music.remote.js';
+	import { computeAudioSplit, suggestedPlatformCents } from '#lib/finance/audio-split.js';
+	import { AUDIO_MIN_PRICE_CENTS } from '#lib/config.js';
 	import { goto } from '$app/navigation';
-	import { goToCheckout } from '$lib/utils/checkout-navigation';
+	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { here, signInHref } from '$lib/utils/sign-in';
+	import { here, signInHref } from '#lib/utils/sign-in.js';
 
 	let {
 		bandSlug,
@@ -77,7 +77,7 @@
 		// Paid: off to pay, wherever `checkout()` decided that is. Free: already
 		// fulfilled, straight to the download.
 		if (r?.checkoutUrl) await goToCheckout(r.checkoutUrl);
-		else if (r?.downloadToken) await goto(resolve(`/music/download/${r.downloadToken}`));
+		else if (r?.downloadToken) await goto(resolve(`music/download/${r.downloadToken}`));
 	}
 </script>
 
@@ -205,7 +205,7 @@
 							>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
 								>{/snippet}{#snippet a({ children })}<a
 									class="link"
-									href={resolve('/member/purchases')}>{@render children?.()}</a
+									href={resolve('member/purchases')}>{@render children?.()}</a
 								>{/snippet}</ParaglideMessage
 						>
 					</p>

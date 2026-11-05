@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { formatDate, formatDateTime } from '$lib/utils/format';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { formatDate, formatDateTime } from '#lib/utils/format.js';
 	import {
 		classifiedKindLabel,
 		classifiedCategoryLabels,
 		CLASSIFIED_GEAR_DISCLAIMER,
 		type ClassifiedCategory,
 		type ClassifiedTagKind
-	} from '$lib/config';
-	import type { EntityRef } from '$lib/types/entity';
+	} from '#lib/config.js';
+	import type { EntityRef } from '#lib/types/entity.js';
 
 	/** A post's body and facts, shared by the member and staff detail pages. */
 	let {
@@ -38,7 +38,7 @@
 
 	function tagHref(t: { kind: ClassifiedTagKind; value: string }) {
 		const q = new URLSearchParams({ tagKind: t.kind, tagValue: t.value });
-		return withQuery(resolve('/member/classifieds'), q);
+		return withQuery(resolve('member/classifieds'), q);
 	}
 </script>
 

@@ -1,5 +1,5 @@
 import { resolve } from '$app/paths';
-import { m } from '$lib/paraglide/messages.js';
+import { m } from '#lib/paraglide/messages.js';
 import type { StaffView } from '../views';
 
 type ReportView = 'annual' | 'volunteering' | 'inventory-spend' | 'acquisitions';
@@ -10,25 +10,25 @@ export const reportViews: readonly StaffView<ReportView>[] = [
 	{
 		key: 'annual',
 		label: () => m.staff_reports_annual(),
-		href: resolve('/staff/reports/annual'),
+		href: resolve('staff/reports/annual'),
 		cap: 'finance.read'
 	},
 	{
 		key: 'volunteering',
 		label: () => m.staff_reports_volunteering_volunteering(),
-		href: resolve('/staff/reports/volunteering'),
+		href: resolve('staff/reports/volunteering'),
 		cap: 'volunteer.report'
 	},
 	{
 		key: 'inventory-spend',
 		label: () => m.staff_reports_inventory_spend(),
-		href: resolve('/staff/reports/inventory-spend'),
+		href: resolve('staff/reports/inventory-spend'),
 		cap: 'inventory.report'
 	},
 	{
 		key: 'acquisitions',
 		label: () => m.staff_acquisitions(),
-		href: resolve('/staff/reports/acquisitions'),
+		href: resolve('staff/reports/acquisitions'),
 		cap: 'inventory.manageAcquisitions'
 	}
 ];

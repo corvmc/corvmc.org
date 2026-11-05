@@ -1,22 +1,22 @@
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
-import { clubToday, type Capability } from '$lib/config';
+import { clubToday, type Capability } from '#lib/config.js';
 import {
 	capabilitySet,
 	committeeCapabilitiesFor,
 	positionsFor,
 	requireUser
-} from '$lib/server/authorization';
-import { listLowStock } from '$lib/server/inventory/stock-service';
-import { listShortStaffedShifts } from '$lib/server/volunteer/work-order-service';
-import { listDevelopmentDeadlinesBetween } from '$lib/server/development/deadline-service';
+} from '#lib/server/authorization.js';
+import { listLowStock } from '#lib/server/inventory/stock-service.js';
+import { listShortStaffedShifts } from '#lib/server/volunteer/work-order-service.js';
+import { listDevelopmentDeadlinesBetween } from '#lib/server/development/deadline-service.js';
 import {
 	listMemberSummary,
 	listRoomDays,
 	listUpcomingShows
-} from '$lib/server/user/staff-dashboard-service';
-import { countStaffQueues } from '$lib/server/user/staff-queue-counts';
-import { addIsoDays } from '$lib/utils/deadline';
+} from '#lib/server/user/staff-dashboard-service.js';
+import { countStaffQueues } from '#lib/server/user/staff-queue-counts.js';
+import { addIsoDays } from '#lib/utils/deadline.js';
 
 /** A glance at this week's short shifts; the two-week view is the Schedule. */
 const SHIFT_HORIZON_DAYS = 7;

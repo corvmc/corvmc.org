@@ -1,14 +1,14 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { can, requireCapability } from '$lib/server/authorization';
-import { mapDomainError } from '$lib/server/errors';
+import { can, requireCapability } from '#lib/server/authorization.js';
+import { mapDomainError } from '#lib/server/errors.js';
 import { getAssetHistory, getStaffAssetDetail } from './inventory.remote';
 import { getStaffShiftPage, getWorkOrderActivity } from './volunteer.remote';
 import { getProjectTaskPage } from './tasks.remote';
 import { getProjectActivity } from './projects.remote';
-import { contractorTrades, contractorJobStatuses, DEFAULT_TIMEZONE } from '$lib/config';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
+import { contractorTrades, contractorJobStatuses, DEFAULT_TIMEZONE } from '#lib/config.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import {
 	archiveContractor,
 	createContractor,
@@ -16,7 +16,7 @@ import {
 	listContractors,
 	listLapsingInsurance,
 	updateContractor
-} from '$lib/server/contractor/contractor-service';
+} from '#lib/server/contractor/contractor-service.js';
 import {
 	cancelJob,
 	completeJob,
@@ -29,7 +29,7 @@ import {
 	reopenJob,
 	scheduleJob,
 	type Engagement
-} from '$lib/server/contractor/contractor-job-service';
+} from '#lib/server/contractor/contractor-job-service.js';
 
 /**
  * Contractor work — every surface staff-only.

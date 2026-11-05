@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import {
 	SEED_CE_PASSWORD,
@@ -132,7 +132,7 @@ test.describe('community listings', () => {
 		await page.goto(`/staff/events/${SEED_CE_PENDING_ID}`);
 		await page.getByTestId('reject-listing').click();
 		const dialog = page.getByRole('dialog');
-		await dialog.locator('textarea[name="notes"]').fill(REASON);
+		await dialog.locator('textarea:is([name="notes"], [name^="notes/"])').fill(REASON);
 		await dialog.locator('button[type=submit]').click();
 
 		await expect

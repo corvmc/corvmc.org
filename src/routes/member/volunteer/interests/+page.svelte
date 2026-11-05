@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Latest } from '$lib/latest.svelte';
+	import { Latest } from '#lib/latest.svelte.js';
 	import { isRedirect } from '@sveltejs/kit';
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	/**
 	 * Step two: what you'd like to help with.
 	 *
@@ -14,13 +14,16 @@
 	 */
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Form, { SubmitButton } from '$lib/components/ui/Form';
-	import InterestFields from '$lib/components/volunteer/InterestFields.svelte';
-	import { getVolunteerInterestsPage, saveVolunteerInterests } from '$lib/remote/volunteer.remote';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Form, { SubmitButton } from '#lib/components/ui/Form/index.js';
+	import InterestFields from '#lib/components/volunteer/InterestFields.svelte';
+	import {
+		getVolunteerInterestsPage,
+		saveVolunteerInterests
+	} from '#lib/remote/volunteer.remote.js';
 
 	// One query rather than three. Not `{#await}`: a refresh would re-pend it and
 	// remount the form mid-edit.
@@ -52,7 +55,7 @@
 					<p class="text-muted">
 						{m.member_volunteer_interests_no_volunteer_roles_open_right()}
 					</p>
-					<a href={resolve('/member/volunteer')} class="link text-sm"
+					<a href={resolve('member/volunteer')} class="link text-sm"
 						>{m.member_volunteer_interests_go_volunteering()}</a
 					>
 				{:else}
@@ -63,7 +66,7 @@
 				-->
 					<Form
 						remote={saveVolunteerInterests}
-						onsuccess={onboarding ? () => goto(resolve('/member/volunteer')) : undefined}
+						onsuccess={onboarding ? () => goto(resolve('member/volunteer')) : undefined}
 						successToast={m.member_volunteer_interests_success_toast()}
 					>
 						<InterestFields
@@ -74,7 +77,7 @@
 						/>
 
 						<div class="flex items-center justify-between gap-3">
-							<Button href={resolve('/member/volunteer')} variant="ghost" size="sm">
+							<Button href={resolve('member/volunteer')} variant="ghost" size="sm">
 								{onboarding
 									? m.member_volunteer_interests_skip()
 									: m.member_volunteer_interests_back()}

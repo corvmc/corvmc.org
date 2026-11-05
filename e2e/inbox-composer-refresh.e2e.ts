@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import { SEED_NEEDS_REPLY_THREAD_ID } from './fixtures/seed-inbox-awaiting';
@@ -14,7 +14,7 @@ test('a notification does not wipe a half-written reply', async ({ page }) => {
 	await signInAs(page, { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD });
 	await page.goto(`/staff/inbox/${SEED_NEEDS_REPLY_THREAD_ID}`);
 
-	const body = page.locator('textarea[name="body"]');
+	const body = page.locator('textarea:is([name="body"], [name^="body/"])');
 	await body.fill('half-written reply');
 
 	const refreshed = page.waitForResponse((r) => r.url().includes('/getInboxEnabledChannels'));

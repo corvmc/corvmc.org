@@ -14,9 +14,9 @@ import {
 import { fetchMetaProfile, type MetaAttachment, type MetaMessage } from './meta-client';
 import { parseReplyMailboxHash } from './reply-address';
 import { isChannelEnabled } from './channel-config-service';
-import { findStaffUserByEmail } from '$lib/server/authorization';
-import { captureException } from '$lib/server/sentry';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
+import { findStaffUserByEmail } from '#lib/server/authorization.js';
+import { captureException } from '#lib/server/sentry.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 
 export interface ContactFormParams {
 	name: string;

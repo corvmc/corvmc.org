@@ -1,22 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { Turnstile } from 'svelte-turnstile';
-	import type { RemoteFormIssue } from '@sveltejs/kit';
-	import { MARKET_MAX_TABLES_REQUESTED, pageTitle } from '$lib/config';
-	import {
-		TURNSTILE_SITE_KEY,
-		TURNSTILE_RESPONSE_FIELD,
-		turnstileFailureMessage
-	} from '$lib/turnstile';
-	import { formatDateTime, fullDate } from '$lib/utils/format';
-	import { getVendorApplyPage, submitVendorApplicationForm } from '$lib/remote/market.remote';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import type { RemoteFormIssue } from '$app/server';
+	import { MARKET_MAX_TABLES_REQUESTED, pageTitle } from '#lib/config.js';
+	import { TURNSTILE_SITE_KEY, turnstileFailureMessage } from '#lib/turnstile.js';
+	import { formatDateTime, fullDate } from '#lib/utils/format.js';
+	import { getVendorApplyPage, submitVendorApplicationForm } from '#lib/remote/market.remote.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 
 	/**
 	 * A vendor's application for a table at a market day. No account needed:
@@ -46,7 +42,7 @@
 		</Alert>
 	{:else if !market.accepting}
 		<Alert type="info">{m.public_events_id_vendors_apply_applications_market_closed()}</Alert>
-		<Button href={resolve(`/events/${market.eventId}`)} variant="ghost" class="mt-4">
+		<Button href={resolve(`events/${market.eventId}`)} variant="ghost" class="mt-4">
 			{m.public_events_id_vendors_apply_back_event()}
 		</Button>
 	{:else}
@@ -87,7 +83,10 @@
 				/>
 			</div>
 
-			<FormField name="offering" label={m.public_events_id_vendors_apply_what_do_sell()}>
+			<FormField
+				field={submitVendorApplicationForm.fields.offering}
+				label={m.public_events_id_vendors_apply_what_do_sell()}
+			>
 				<textarea
 					{...fields.offering.as('text')}
 					class="textarea w-full"
@@ -123,7 +122,10 @@
 				/>
 			</div>
 
-			<FormField name="notes" label={m.public_events_id_vendors_apply_anything_else_optional()}>
+			<FormField
+				field={submitVendorApplicationForm.fields.notes}
+				label={m.public_events_id_vendors_apply_anything_else_optional()}
+			>
 				<textarea {...fields.notes.as('text')} class="textarea w-full" rows="3" maxlength="2000"
 				></textarea>
 			</FormField>
@@ -134,7 +136,7 @@
 
 			<Turnstile
 				siteKey={TURNSTILE_SITE_KEY}
-				responseFieldName={TURNSTILE_RESPONSE_FIELD}
+				responseFieldName={fields.turnstileToken.as('hidden', '').name}
 				theme="auto"
 				bind:reset={resetTurnstile}
 			/>

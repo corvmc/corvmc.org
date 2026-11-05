@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Who teaches in the practice room. CMC's relationship is with the teacher, not
 	 * the student, so there is nothing here about lessons or money between them.
 	 * Applications are the Pending filter; they are the only rows waiting on staff.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Roster from '$lib/components/roster/Roster.svelte';
-	import { rosterState } from '$lib/components/roster/roster-state.svelte';
-	import { oneOf } from '$lib/urlState.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Roster from '#lib/components/roster/Roster.svelte';
+	import { rosterState } from '#lib/components/roster/roster-state.svelte.js';
+	import { oneOf } from '#lib/urlState.svelte.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShortYear } from '$lib/utils/format';
-	import { getStaffInstructors, getStaffInstructorEmails } from '$lib/remote/instructors.remote';
+	import { formatDateShortYear } from '#lib/utils/format.js';
+	import { getStaffInstructors, getStaffInstructorEmails } from '#lib/remote/instructors.remote.js';
 	import MemberViews from '../MemberViews.svelte';
 	import GrantInstructorAction from './GrantInstructorAction.svelte';
 	import ReviewApplicationActions from './ReviewApplicationActions.svelte';
@@ -33,7 +33,7 @@
 	type Status = keyof typeof statusLabels;
 	const statuses = Object.keys(statusLabels) as Status[];
 
-	const roster = rosterState(resolve('/staff/members/instructors'), {
+	const roster = rosterState(resolve('staff/members/instructors'), {
 		status: oneOf<Status>(statuses, 'active')
 	});
 	const f = roster.values;
@@ -54,7 +54,7 @@
 		empty={m.staff_members_instructors_empty()}
 		searchPlaceholder={m.staff_members_instructors_search_placeholder()}
 		personLabel={m.staff_members_instructors_person_label()}
-		exportPath={resolve('/staff/members/instructors/export')}
+		exportPath={resolve('staff/members/instructors/export')}
 		emails={() => getStaffInstructorEmails({ q: f.q || undefined, status: f.status })}
 	>
 		{#snippet toolbar()}

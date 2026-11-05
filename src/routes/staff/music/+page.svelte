@@ -1,26 +1,26 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import {
 		getStaffMusicPage,
 		withholdReleaseForm,
 		restoreReleaseForm,
 		setRadioExclusionForm,
 		refundPurchaseForm
-	} from '$lib/remote/staff-music.remote';
-	import { formatCents, formatDate } from '$lib/utils/format';
+	} from '#lib/remote/staff-music.remote.js';
+	import { formatCents, formatDate } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 	import { IconRadio } from '@tabler/icons-svelte';
 
@@ -59,7 +59,7 @@
 			<ParaglideMessage
 				message={m.staff_music_music_storefront_switched_off_so}
 				inputs={{ staff_music_settings_features: m.staff_music_settings_features() }}
-				>{#snippet a({ children })}<a class="link" href={resolve('/staff/settings')}
+				>{#snippet a({ children })}<a class="link" href={resolve('staff/settings')}
 						>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
 			>
@@ -108,7 +108,7 @@
 					<ParaglideMessage
 						message={m.staff_music_switch_station_when_pool_above}
 						inputs={{ staff_music_settings_features: m.staff_music_settings_features() }}
-						>{#snippet a({ children })}<a class="link" href={resolve('/staff/settings')}
+						>{#snippet a({ children })}<a class="link" href={resolve('staff/settings')}
 								>{@render children?.()}</a
 							>{/snippet}</ParaglideMessage
 					>
@@ -182,7 +182,7 @@
 								>
 							</td>
 							<td>
-								<a class="link" href={resolve('/staff/groups/bands')}>{release.bandName}</a>
+								<a class="link" href={resolve('staff/groups/bands')}>{release.bandName}</a>
 							</td>
 							<td>
 								{#if release.status === 'published'}

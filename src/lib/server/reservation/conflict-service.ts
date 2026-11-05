@@ -1,12 +1,12 @@
-import { db } from '$lib/server/db';
-import { reservation, closure } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { reservation, closure } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, ne, eq, lt, gt, notInArray } from 'drizzle-orm';
-import type { BookerType } from '$lib/config';
+import type { BookerType } from '#lib/config.js';
 import { getReservationConfig, termsFor } from './config';
 import { buildDateInTz, formatTimeInTz } from './timezone';
-import type { TimeSlot } from '$lib/server/db/schema/reservation';
-import { DEFAULT_TIMEZONE } from '$lib/config';
+import type { TimeSlot } from '#lib/server/db/schema/reservation.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // ConflictService — availability checks and slot generation

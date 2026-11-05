@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 let currentUser: { id: string; name: string; email: string } | null = null;
 let isStaff = false;
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: async () => {
 		if (!currentUser) throw new Error('401: Not authenticated');
 		if (!isStaff) throw new Error('403: Staff access required');
@@ -42,7 +42,7 @@ const svc = {
 	approveSubmission: vi.fn(async () => undefined),
 	rejectSubmission: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/event/community-event-service', () => svc);
+vi.mock('#lib/server/event/community-event-service.js', () => svc);
 
 // Standing moved out of the domain services into one shared one. It stays a
 // spy here for the same reason the others are: a guard that runs late would
@@ -55,37 +55,37 @@ const standingSvc = {
 		updatedAt: null
 	}))
 };
-vi.mock('$lib/server/moderation/standing-service', () => standingSvc);
+vi.mock('#lib/server/moderation/standing-service.js', () => standingSvc);
 
 const getById = vi.fn(async () => null as unknown);
 const getEventLineup = vi.fn(async () => []);
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	getById: (...a: unknown[]) => getById(...(a as [])),
 	getEventLineup: (...a: unknown[]) => getEventLineup(...(a as []))
 }));
 
 const searchBandsByName = vi.fn(async () => []);
-vi.mock('$lib/server/band/band-service', () => ({
+vi.mock('#lib/server/band/band-service.js', () => ({
 	searchBandsByName: (...a: unknown[]) => searchBandsByName(...(a as []))
 }));
 
-vi.mock('$lib/server/errors', () => ({
+vi.mock('#lib/server/errors.js', () => ({
 	mapDomainError: (e: unknown) => {
 		throw e;
 	}
 }));
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	resolveImageUrl: () => null,
 	validateUpload: () => null
 }));
-vi.mock('$lib/server/reservation/timezone', () => ({
+vi.mock('#lib/server/reservation/timezone.js', () => ({
 	buildDateInTz: () => new Date('2026-09-01T20:00:00Z'),
 	buildTimeRangeInTz: () => ({
 		startsAt: new Date('2026-09-01T20:00:00Z'),
 		endsAt: new Date('2026-09-01T23:00:00Z')
 	})
 }));
-vi.mock('$lib/remote/layout.remote', () => ({
+vi.mock('#lib/remote/layout.remote.js', () => ({
 	getStaffLayout: () => ({ refresh: () => undefined })
 }));
 

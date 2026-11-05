@@ -43,8 +43,8 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/server/db')>();
+vi.mock('#lib/server/db/index.js', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/server/db/index.js')>();
 	return {
 		...actual,
 		db: {
@@ -70,13 +70,13 @@ vi.mock('$lib/server/db', async (importOriginal) => {
 	};
 });
 
-vi.mock('$lib/server/storage', () => ({ uploadImage: vi.fn(), deleteObject: vi.fn() }));
-vi.mock('$lib/server/media/media-service', () => ({
+vi.mock('#lib/server/storage.js', () => ({ uploadImage: vi.fn(), deleteObject: vi.fn() }));
+vi.mock('#lib/server/media/media-service.js', () => ({
 	attachToSlot: vi.fn(),
 	detachSlot: vi.fn()
 }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit: vi.fn() } }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const { createBandEvent, importBandEvents } = await import('./event-service');
 

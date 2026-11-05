@@ -1,24 +1,24 @@
-import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq, and, gt, gte, lt, isNotNull, notInArray } from 'drizzle-orm';
-import { formatDateFull, formatTimeSimple } from '$lib/server/reservation/timezone';
+import { formatDateFull, formatTimeSimple } from '#lib/server/reservation/timezone.js';
 import {
 	CONFIRMATION_WINDOW_DAYS,
 	DEFAULT_TIMEZONE,
 	clubToday,
 	eventHoldBookers
-} from '$lib/config';
-import { addIsoDays } from '$lib/utils/deadline';
-import { listDevelopmentDeadlinesBetween } from '$lib/server/development/deadline-service';
+} from '#lib/config.js';
+import { addIsoDays } from '#lib/utils/deadline.js';
+import { listDevelopmentDeadlinesBetween } from '#lib/server/development/deadline-service.js';
 import {
 	listSignupsStartingBetween,
 	listCompletionsAwaitingFeedback
-} from '$lib/server/volunteer/volunteer-signup-service';
-import { listLoansDueBetween } from '$lib/server/inventory/loan-service';
-import { listRenewalsExpiringBetween } from '$lib/server/renewal/renewal-service';
-import { listRadioAttestationsExpiringBetween } from '$lib/server/audio/radio-attestation';
-import { listDeliverablesDueBetween } from '$lib/server/volunteer/deliverables-service';
+} from '#lib/server/volunteer/volunteer-signup-service.js';
+import { listLoansDueBetween } from '#lib/server/inventory/loan-service.js';
+import { listRenewalsExpiringBetween } from '#lib/server/renewal/renewal-service.js';
+import { listRadioAttestationsExpiringBetween } from '#lib/server/audio/radio-attestation.js';
+import { listDeliverablesDueBetween } from '#lib/server/volunteer/deliverables-service.js';
 import { defineReminder, type ReminderDefinition } from './types';
 
 const TZ = DEFAULT_TIMEZONE;

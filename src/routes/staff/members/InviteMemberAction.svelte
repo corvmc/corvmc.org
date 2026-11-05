@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import CheckboxGroup from '$lib/components/ui/Form/CheckboxGroup.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import CheckboxGroup from '#lib/components/ui/Form/CheckboxGroup.svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { groupKindLabels } from '$lib/terms';
-	import { getMemberInviteGroups, inviteMemberForm } from '$lib/remote/users.remote';
+	import { groupKindLabels } from '#lib/terms.js';
+	import { getMemberInviteGroups, inviteMemberForm } from '#lib/remote/users.remote.js';
 
 	const { fields } = inviteMemberForm;
 
@@ -26,7 +26,7 @@
 				action: { label: m.staff_open(), onClick: () => goto(href) }
 			});
 		} else if (r?.kind === 'pending') {
-			const href = resolve('/staff/members/invites');
+			const href = resolve('staff/members/invites');
 			toast.info(m.staff_members_invite_member_already_has_pending_invitation({ email: r.email }), {
 				action: { label: m.staff_open(), onClick: () => goto(href) }
 			});

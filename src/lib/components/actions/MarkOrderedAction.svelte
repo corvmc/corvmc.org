@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { markItemOrdered } from '$lib/remote/inventory.remote';
+	import { markItemOrdered } from '#lib/remote/inventory.remote.js';
 	import { Field, MoneyField } from '../ui/Form';
 
 	const { fields } = markItemOrdered;

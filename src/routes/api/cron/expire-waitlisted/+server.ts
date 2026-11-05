@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { expireWaitlisted } from '$lib/server/reservation/waitlist-service';
+import { expireWaitlisted } from '#lib/server/reservation/waitlist-service.js';
 
 /**
  * Cron endpoint for expiring waitlisted reservations past their 24h window.

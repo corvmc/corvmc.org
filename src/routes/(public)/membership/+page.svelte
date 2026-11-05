@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import Hero from '$lib/components/public/Hero.svelte';
-	import Tile from '$lib/components/public/Tile.svelte';
-	import Section from '$lib/components/public/Section.svelte';
-	import SectionHeading from '$lib/components/public/SectionHeading.svelte';
+	import Hero from '#lib/components/public/Hero.svelte';
+	import Tile from '#lib/components/public/Tile.svelte';
+	import Section from '#lib/components/public/Section.svelte';
+	import SectionHeading from '#lib/components/public/SectionHeading.svelte';
 	import {
 		IconClock,
 		IconCalendarRepeat,
 		IconTicket,
 		IconDeviceSpeaker
 	} from '@tabler/icons-svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
-	import { signInHref } from '$lib/utils/sign-in';
+	import { signInHref } from '#lib/utils/sign-in.js';
 
 	// Sustaining membership is a sliding scale: every $5/month earns one free hour
 	// of practice time (up to 12), and every tier gets the same benefits. Kept in
@@ -201,7 +201,7 @@
 	</div>
 	<p class="mt-8 text-center text-sm text-fg-3">
 		<ParaglideMessage message={m.public_membership_not_looking_join_monthly_there} inputs={{}}
-			>{#snippet a({ children })}<a href={resolve('/contribute')} class="text-cmc-teal underline"
+			>{#snippet a({ children })}<a href={resolve('contribute')} class="text-cmc-teal underline"
 					>{@render children?.()}</a
 				>{/snippet}</ParaglideMessage
 		>

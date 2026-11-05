@@ -1,7 +1,7 @@
-import { db } from '$lib/server/db';
-import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
-import { user } from '$lib/server/db/schema/authentication';
-import { directoryEntry } from '$lib/server/db/schema/directory';
+import { db } from '#lib/server/db/index.js';
+import { inboxThread, inboxMessage, inboxParticipant } from '#lib/server/db/schema/inbox.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
 import {
 	and,
 	count,
@@ -18,8 +18,8 @@ import {
 } from 'drizzle-orm';
 import type { AnyColumn, SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
-import type { PaginationInput } from '$lib/server/db/paginate';
-import { paginate } from '$lib/server/db/paginate';
+import type { PaginationInput } from '#lib/server/db/paginate.js';
+import { paginate } from '#lib/server/db/paginate.js';
 import { addPeerMessage } from './message-service';
 import { markPortalThreadRead } from './portal-service';
 import { updateStatus } from './thread-service';
@@ -29,11 +29,11 @@ import {
 	messagingIsDisabled,
 	acceptsDirectMessages,
 	isMessagingAgeRestricted
-} from '$lib/server/moderation/moderation-service';
-import { getStanding } from '$lib/server/moderation/standing-service';
-import { allowRateLimited } from '$lib/server/rate-limit';
-import { adultBirthDateCutoff, isMinor } from '$lib/utils/age';
-import { MAX_PENDING_SENT_REQUESTS, DIRECT_MESSAGE_BODY_MAX } from '$lib/config';
+} from '#lib/server/moderation/moderation-service.js';
+import { getStanding } from '#lib/server/moderation/standing-service.js';
+import { allowRateLimited } from '#lib/server/rate-limit.js';
+import { adultBirthDateCutoff, isMinor } from '#lib/utils/age.js';
+import { MAX_PENDING_SENT_REQUESTS, DIRECT_MESSAGE_BODY_MAX } from '#lib/config.js';
 
 /**
  * Everything a signed-in member may do with a conversation between them and

@@ -1,16 +1,16 @@
 import { and, desc, eq, isNotNull, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	listAuditEntriesForSubject,
 	type AuditSubjectFilter
-} from '$lib/server/audit/audit-service';
-import { user } from '$lib/server/db/schema/authentication';
-import { project } from '$lib/server/db/schema/project';
-import { suggestion } from '$lib/server/db/schema/suggestion';
-import { ballot } from '$lib/server/db/schema/ballot';
-import { volunteerRole, workOrder, workTask } from '$lib/server/db/schema/volunteer';
-import { auditFeedItem } from '$lib/utils/audit-display';
+} from '#lib/server/audit/audit-service.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { project } from '#lib/server/db/schema/project.js';
+import { suggestion } from '#lib/server/db/schema/suggestion.js';
+import { ballot } from '#lib/server/db/schema/ballot.js';
+import { volunteerRole, workOrder, workTask } from '#lib/server/db/schema/volunteer.js';
+import { auditFeedItem } from '#lib/utils/audit-display.js';
 import {
 	FEED_MAX,
 	FEED_PAGE,
@@ -18,7 +18,7 @@ import {
 	mergeFeed,
 	type FeedItem,
 	type FeedPage
-} from '$lib/types/activity';
+} from '#lib/types/activity.js';
 
 /**
  * A project's history, or one work order's: audit entries on the project and on

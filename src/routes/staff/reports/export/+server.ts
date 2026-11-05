@@ -1,14 +1,14 @@
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
-import { requireCapability } from '$lib/server/authorization';
-import { getAnnualReport, type AnnualReport } from '$lib/server/report/annual-report-service';
-import { toCsv, csvResponse } from '$lib/server/report/csv';
+import { requireCapability } from '#lib/server/authorization.js';
+import { getAnnualReport, type AnnualReport } from '#lib/server/report/annual-report-service.js';
+import { toCsv, csvResponse } from '#lib/server/report/csv.js';
 import {
 	financialCategoryLabels,
 	financialEntryKindLabels,
 	eventKindLabels,
 	financialEntryKinds
-} from '$lib/config';
+} from '#lib/config.js';
 
 const DATE = z
 	.string()

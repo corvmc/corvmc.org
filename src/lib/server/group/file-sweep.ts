@@ -1,7 +1,7 @@
-import { deletePrivateObject, listPrivateObjects } from '$lib/server/private-storage';
+import { deletePrivateObject, listPrivateObjects } from '#lib/server/private-storage.js';
 import { deleteRows, listExistingKeys, listSweepCandidates } from './file-service';
-import { DOCUMENT_KEY_PREFIX, isDocumentKey } from '$lib/server/storage-keys';
-import { DOCUMENT_SWEEP_GRACE_MS } from '$lib/config';
+import { DOCUMENT_KEY_PREFIX, isDocumentKey } from '#lib/server/storage-keys.js';
+import { DOCUMENT_SWEEP_GRACE_MS } from '#lib/config.js';
 
 /**
  * The reaper for group documents, behind the same rule `media-sweep-service.ts`

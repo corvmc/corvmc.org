@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { memberStatusLabels } from '$lib/types/roster';
+import { memberStatusLabels } from '#lib/types/roster.js';
 
 // The RSVP CSV is a `+server.ts`, so its guard is not the remote boundary: it
 // must refuse before reading a single row.
 
 let allowed = true;
-vi.mock('$lib/server/event/listing-guard', async () => {
+vi.mock('#lib/server/event/listing-guard.js', async () => {
 	const { error } = await import('@sveltejs/kit');
 	return {
 		requireListingWriter: vi.fn(async () => {
@@ -15,7 +15,7 @@ vi.mock('$lib/server/event/listing-guard', async () => {
 	};
 });
 let evt: { id: string; title: string } | null = { id: 'e1', title: 'Spring Mixing Workshop!' };
-vi.mock('$lib/server/event/event-service', () => ({ getById: vi.fn(async () => evt) }));
+vi.mock('#lib/server/event/event-service.js', () => ({ getById: vi.fn(async () => evt) }));
 const person = (id: string, name: string, email: string, rsvpedAt: Date) => ({
 	personId: id,
 	member: { type: 'member' as const, id, title: name, subtitle: email },
@@ -27,7 +27,7 @@ const listRsvpRoster = vi.fn(async () => [
 	person('u1', 'Ada', 'ada@example.com', new Date('2026-11-01T18:30:00Z')),
 	person('u2', '=HYPERLINK()', 'x@example.com', new Date(0))
 ]);
-vi.mock('$lib/server/event/rsvp-service', () => ({
+vi.mock('#lib/server/event/rsvp-service.js', () => ({
 	listRsvpRoster: (...a: unknown[]) => listRsvpRoster(...(a as []))
 }));
 

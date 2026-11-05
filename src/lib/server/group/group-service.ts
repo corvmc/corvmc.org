@@ -1,22 +1,22 @@
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
+import { containsLiteral } from '#lib/server/db/like.js';
 import { alias } from 'drizzle-orm/sqlite-core';
-import { db } from '$lib/server/db';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import type { MemberRef } from '$lib/types/entity';
-import { create as createGroupRow, deactivate, reactivate } from '$lib/server/band/band-service';
-import { sanitizeBio } from '$lib/utils/markdown';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { DomainError } from '$lib/server/domain-error';
-import { groupGrantsColumn } from '$lib/server/capability/grant-columns';
-import { openApplicationCount } from '$lib/server/group/application-service';
-import { activeGroup, deactivatedGroup } from '$lib/server/group/group-totals-service';
-import type { GroupKind, GroupJoinPolicy } from '$lib/config';
-import type { DirectoryVisibility } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import type { MemberRef } from '#lib/types/entity.js';
+import { create as createGroupRow, deactivate, reactivate } from '#lib/server/band/band-service.js';
+import { sanitizeBio } from '#lib/utils/markdown.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { groupGrantsColumn } from '#lib/server/capability/grant-columns.js';
+import { openApplicationCount } from '#lib/server/group/application-service.js';
+import { activeGroup, deactivatedGroup } from '#lib/server/group/group-totals-service.js';
+import type { GroupKind, GroupJoinPolicy } from '#lib/config.js';
+import type { DirectoryVisibility } from '#lib/server/db/schema/authentication.js';
 
 /**
  * Clubs and committees — the staff-run half of the groups module.

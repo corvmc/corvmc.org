@@ -1,5 +1,11 @@
-import { urlState, text, positiveInt, type UrlField, type UrlFields } from '$lib/urlState.svelte';
-import { toHref } from '$lib/utils/url-filters';
+import {
+	urlState,
+	text,
+	positiveInt,
+	type UrlField,
+	type UrlFields
+} from '#lib/urlState.svelte.js';
+import { toHref } from '#lib/utils/url-filters.js';
 
 /** The two filters every roster has: its search box and its page. */
 export interface RosterFilters {
@@ -20,7 +26,7 @@ export interface RosterState<S> {
 /**
  * A roster's filter state. `q` and `page` are added; `fields` are the page's own.
  *
- *     const roster = rosterState(resolve('/staff/members/volunteers'), { role: text() });
+ *     const roster = rosterState(resolve('staff/members/volunteers'), { role: text() });
  */
 export function rosterState<S extends Record<string, unknown>>(
 	path: string,

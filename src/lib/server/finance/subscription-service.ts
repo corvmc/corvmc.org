@@ -1,12 +1,12 @@
 import type Stripe from 'stripe';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import { eq, getColumnTable, getTableName, sql, type AnyColumn } from 'drizzle-orm';
-import { stripe } from '$lib/server/stripe';
-import { db } from '$lib/server/db';
-import { user, type Subscription } from '$lib/server/db/schema/authentication';
-import { DOLLARS_PER_UNIT } from '$lib/config';
+import { stripe } from '#lib/server/stripe.js';
+import { db } from '#lib/server/db/index.js';
+import { user, type Subscription } from '#lib/server/db/schema/authentication.js';
+import { DOLLARS_PER_UNIT } from '#lib/config.js';
 import { checkout } from './payment-service';
-import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
+import { calculateTotalWithFeeCoverage } from '#lib/finance/fees.js';
 import {
 	getProductConfig,
 	getStripeProductId,

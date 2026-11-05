@@ -12,7 +12,7 @@ const requireCapability = vi.fn(async (cap: string) => {
 const listUsersWithCapability = vi.fn(async (_cap: string) => [
 	{ id: 'u1', name: 'Ada', email: 'ada@example.com' }
 ]);
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap),
 	listUsersWithCapability: (cap: string) => listUsersWithCapability(cap)
 }));
@@ -26,7 +26,7 @@ const service = {
 	removeRenewalDocument: vi.fn(async () => undefined),
 	uploadRenewalDocument: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/renewal/renewal-service', () => service);
+vi.mock('#lib/server/renewal/renewal-service.js', () => service);
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: {} }),

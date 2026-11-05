@@ -1,8 +1,8 @@
-import { toMemberRef, type MemberRefRow } from '$lib/server/entity/refs';
-import { toCsv } from '$lib/server/report/csv';
-import type { PaginationInput, PaginatedResult } from '$lib/server/db/paginate';
-import { uniqueEmails } from '$lib/utils/unique-emails';
-import { memberStatusLabels, type RosterPerson } from '$lib/types/roster';
+import { toMemberRef, type MemberRefRow } from '#lib/server/entity/refs.js';
+import { toCsv } from '#lib/server/report/csv.js';
+import type { PaginationInput, PaginatedResult } from '#lib/server/db/paginate.js';
+import { uniqueEmails } from '#lib/utils/unique-emails.js';
+import { memberStatusLabels, type RosterPerson } from '#lib/types/roster.js';
 
 /**
  * The row contract every roster shares, from a `memberRefColumns()` projection.

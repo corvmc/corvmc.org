@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { addSubscriber } from '$lib/remote/marketing.remote';
+	import { addSubscriber } from '#lib/remote/marketing.remote.js';
 
 	const { fields } = addSubscriber;
 
@@ -50,7 +50,7 @@
 		     both read these values, and the field spread has no two-way binding.
 		     `FormField` resolves the issues by name through the form context. -->
 		<FormField
-			name="email"
+			field={addSubscriber.fields.email}
 			type="email"
 			label={m.actions_email()}
 			bind:value={email}
@@ -58,7 +58,7 @@
 			required
 		/>
 		<FormField
-			name="name"
+			field={addSubscriber.fields.name}
 			label={m.actions_name_optional()}
 			bind:value={name}
 			placeholder={m.actions_name()}

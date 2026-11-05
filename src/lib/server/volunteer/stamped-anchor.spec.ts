@@ -8,11 +8,11 @@ import { sql } from 'drizzle-orm';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			sqlite.exec('begin');
@@ -31,7 +31,7 @@ vi.mock('$lib/server/db', () => ({
 
 const { applyDutyList } = await import('./duty-list-service');
 const { shiftAnchoredWorkOrders } = await import('./retime-work-orders');
-const { outstandingCloseOutTasks } = await import('$lib/server/production/production-service');
+const { outstandingCloseOutTasks } = await import('#lib/server/production/production-service.js');
 const { orientationOwnerOf, orientationForReservation } = await import('./orientation-service');
 
 const all = (q: string) => sqlite.prepare(q).all() as Record<string, unknown>[];

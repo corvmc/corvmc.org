@@ -27,8 +27,8 @@ function chain(): unknown {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({ db: { select: vi.fn(() => chain()) } }));
-vi.mock('$lib/server/authorization', () => ({ topPositionFor: vi.fn(() => null) }));
+vi.mock('#lib/server/db/index.js', () => ({ db: { select: vi.fn(() => chain()) } }));
+vi.mock('#lib/server/authorization.js', () => ({ topPositionFor: vi.fn(() => null) }));
 
 const { listShiftCandidates } = await import('./volunteer-signup-service');
 

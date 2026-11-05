@@ -1,10 +1,10 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { forEachClockEdge } from '$lib/test/clock-edges';
-import '$lib/test/locators';
+import { forEachClockEdge } from '#lib/test/clock-edges.js';
+import '#lib/test/locators.js';
 
-vi.mock('$lib/remote/reservations.remote', () => {
+vi.mock('#lib/remote/reservations.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => null
@@ -65,7 +65,9 @@ describe('CreateModal', () => {
 
 		const dialog = page.getByRole('dialog');
 		const submit = dialog.getByCss('button[type="submit"]');
-		const override = dialog.getByCss('input[type="checkbox"][name$="overrideConflicts"]');
+		const override = dialog.getByCss(
+			'input[type="checkbox"]:is([name$="overrideConflicts"], [name*="overrideConflicts/"])'
+		);
 		await expect.element(override).toBeVisible();
 		await expect.element(submit).toBeDisabled();
 

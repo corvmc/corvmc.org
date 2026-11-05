@@ -1,22 +1,22 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	campaign,
 	campaignAudience,
 	audience,
 	audienceMember,
 	subscriber
-} from '$lib/server/db/schema/marketing';
+} from '#lib/server/db/schema/marketing.js';
 import { eq, and, sql, isNull, lte, inArray } from 'drizzle-orm';
 import { isSystemAudienceKey, resolveSystemAudienceRecipients } from './system-audiences';
 import { renderCampaignPreview, renderCampaignForSend } from './campaign-render';
-import { creditsForEvent } from '$lib/server/sponsor/credit-service';
-import { withSponsorCredit } from '$lib/utils/sponsor-credit';
+import { creditsForEvent } from '#lib/server/sponsor/credit-service.js';
+import { withSponsorCredit } from '#lib/utils/sponsor-credit.js';
 import { signUnsubscribeToken } from './unsubscribe';
-import { sendBroadcastBatch, type BroadcastMessage } from '$lib/server/notification/email';
+import { sendBroadcastBatch, type BroadcastMessage } from '#lib/server/notification/email/index.js';
 import { env } from '$env/dynamic/public';
-import { DomainError } from '$lib/server/domain-error';
-import { eventListing } from '$lib/server/db/schema/event';
-import { formatDateShortYear } from '$lib/utils/format';
+import { DomainError } from '#lib/server/domain-error.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { formatDateShortYear } from '#lib/utils/format.js';
 
 // ---------------------------------------------------------------------------
 // Errors

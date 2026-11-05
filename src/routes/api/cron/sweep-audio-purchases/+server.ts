@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { sweepAbandonedPurchases } from '$lib/server/audio/purchase-service';
+import { sweepAbandonedPurchases } from '#lib/server/audio/purchase-service.js';
 
 /**
  * Clear music purchases nobody completed.

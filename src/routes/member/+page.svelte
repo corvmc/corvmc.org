@@ -1,19 +1,22 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { EntityCard } from '$lib/components/ui/entity';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import BookerTypeIcon from '$lib/components/reservations/BookerTypeIcon.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { formatDate, formatTimeRange, formatDuration } from '$lib/utils/format';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import { getMemberDashboard } from '$lib/remote/users.remote';
-	import { InviteFriendAction, ReportBuildingProblemAction } from '$lib/components/actions';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { EntityCard } from '#lib/components/ui/entity/index.js';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import BookerTypeIcon from '#lib/components/reservations/BookerTypeIcon.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { formatDate, formatTimeRange, formatDuration } from '#lib/utils/format.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import { getMemberDashboard } from '#lib/remote/users.remote.js';
+	import {
+		InviteFriendAction,
+		ReportBuildingProblemAction
+	} from '#lib/components/actions/index.js';
 	import MatchesCard from './MatchesCard.svelte';
 	import NeedsYouCard from './NeedsYouCard.svelte';
-	import { creditsToHours } from '$lib/config';
+	import { creditsToHours } from '#lib/config.js';
 	import { resolve } from '$app/paths';
 
 	let data = $derived(await getMemberDashboard());
@@ -129,7 +132,7 @@
 			     other poster rather than letterboxing to h-32. -->
 			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 				{#each data.upcomingEvents as evt (evt.id)}
-					<a href={resolve(`/member/events/${evt.id}`)} class="block">
+					<a href={resolve(`member/events/${evt.id}`)} class="block">
 						<EntityCard ref={evt.ref} class="h-full transition-shadow hover:shadow-md">
 							<p class="text-subtle">{formatDate(evt.startsAt)}</p>
 						</EntityCard>

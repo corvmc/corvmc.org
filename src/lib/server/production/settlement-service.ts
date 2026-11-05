@@ -1,16 +1,16 @@
-import { db, getRowCount } from '$lib/server/db';
+import { db, getRowCount } from '#lib/server/db/index.js';
 import { announcedBy } from './production-service';
-import { financialEntry } from '$lib/server/db/schema/financial';
-import { production, productionSlot } from '$lib/server/db/schema/production';
-import { eventBand, eventListing } from '$lib/server/db/schema/event';
+import { financialEntry } from '#lib/server/db/schema/financial.js';
+import { production, productionSlot } from '#lib/server/db/schema/production.js';
+import { eventBand, eventListing } from '#lib/server/db/schema/event.js';
 import { and, asc, eq, isNotNull, isNull, sum } from 'drizzle-orm';
-import { DOOR_SPLIT_ACTS_PERCENT } from '$lib/config';
+import { DOOR_SPLIT_ACTS_PERCENT } from '#lib/config.js';
 import { expenseLines, type ProductionExpenseLine } from './expense-service';
-import { recordActPayout, reverseActPayout } from '$lib/server/finance/payout-entries';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { isTerminalProduction } from '$lib/production/status';
+import { recordActPayout, reverseActPayout } from '#lib/server/finance/payout-entries.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import { isTerminalProduction } from '#lib/production/status.js';
 import { ProductionTerminalError } from './production-scope';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 
 /**
  * What a show took, what it cost, and what each act is owed.

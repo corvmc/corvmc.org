@@ -17,10 +17,10 @@ function chain() {
 	};
 	return c;
 }
-vi.mock('$lib/server/db', () => ({ db: { select: () => chain() } }));
+vi.mock('#lib/server/db/index.js', () => ({ db: { select: () => chain() } }));
 
 const requireCapability = vi.fn(async (_cap: string) => ({ id: 'staff-1', name: 'Staff Person' }));
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability,
 	requireUser: vi.fn()
 }));
@@ -41,7 +41,7 @@ const runDailyLockJob = vi.fn(async (_by: string | null) => {
 		errors: []
 	};
 });
-vi.mock('$lib/server/lock/lock-service', () => ({
+vi.mock('#lib/server/lock/lock-service.js', () => ({
 	getLastLockJobRun: vi.fn(),
 	reprovisionAccessFor,
 	runDailyLockJob

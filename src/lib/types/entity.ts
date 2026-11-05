@@ -1,4 +1,4 @@
-import type { EntityType } from '$lib/config';
+import type { EntityType } from '#lib/config.js';
 
 /**
  * A reference to one record, shaped for display.
@@ -9,7 +9,7 @@ import type { EntityType } from '$lib/config';
  *
  * There is deliberately **no `href`**. A record's canonical page depends on who
  * is looking and which panel they are in, so it is derived by
- * `entityHref(ref, viewer)` in `$lib/utils/entity-href` rather than decided at
+ * `entityHref(ref, viewer)` in `#lib/utils/entity-href.js` rather than decided at
  * whichever call site happens to render the link. Passing one in was how the
  * tree ended up with band links pointing at two different routes.
  */

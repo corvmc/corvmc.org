@@ -1,11 +1,11 @@
 import { and, asc, eq, isNull, inArray, sql } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { db } from '$lib/server/db';
-import { instructor } from '$lib/server/db/schema/instructor';
-import { user } from '$lib/server/db/schema/authentication';
-import { directoryEntry, directoryTag } from '$lib/server/db/schema/directory';
-import { contactForView } from '$lib/utils/directory-display';
-import type { DirectoryContact } from '$lib/server/db/schema/authentication';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { db } from '#lib/server/db/index.js';
+import { instructor } from '#lib/server/db/schema/instructor.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { directoryEntry, directoryTag } from '#lib/server/db/schema/directory.js';
+import { contactForView } from '#lib/utils/directory-display.js';
+import type { DirectoryContact } from '#lib/server/db/schema/authentication.js';
 
 /**
  * The public-facing half of the instructor module: who teaches here, and how to

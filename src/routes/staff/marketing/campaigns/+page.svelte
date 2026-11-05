@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { getCampaigns } from '$lib/remote/marketing.remote';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { rowLink } from '$lib/actions/row-link';
-	import { EntityIdentity } from '$lib/components/ui/entity';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getCampaigns } from '#lib/remote/marketing.remote.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShort } from '$lib/utils/format';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import StaffViews from '../../StaffViews.svelte';
 	import { outreachViews } from '../views';
 
@@ -49,8 +49,8 @@
 			{#each campaigns as c (c.id)}
 				{@const href =
 					c.status === 'draft'
-						? resolve(`/staff/marketing/campaigns/${c.id}/edit`)
-						: resolve(`/staff/marketing/campaigns/${c.id}`)}
+						? resolve(`staff/marketing/campaigns/${c.id}/edit`)
+						: resolve(`staff/marketing/campaigns/${c.id}`)}
 				<tr class="hover cursor-pointer" use:rowLink={href}>
 					<td class="w-px"><StatusBadge status={c.status} /></td>
 					<!-- Audiences was its own column; it qualifies the campaign, so the

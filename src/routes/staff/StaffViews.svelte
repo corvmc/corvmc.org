@@ -1,6 +1,6 @@
 <script lang="ts">
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import { getStaffLayout } from '$lib/remote/layout.remote';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import { getStaffLayout } from '#lib/remote/layout.remote.js';
 	import { visibleViews, type StaffView } from './views';
 
 	let {

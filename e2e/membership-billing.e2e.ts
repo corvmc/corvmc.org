@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import { eq } from 'drizzle-orm';
 import { readLocalDb } from './fixtures/platform-db';
@@ -33,8 +33,10 @@ async function addCard(page: Page, cardNumber: string) {
 	// The SetupIntent is minted when the modal opens, so the form is not there
 	// until that round trip lands.
 	const dialog = page.getByRole('dialog');
-	await expect(dialog.locator('input[name$="cardNumber"]')).toBeVisible({ timeout: 15000 });
-	await dialog.locator('input[name$="cardNumber"]').fill(cardNumber);
+	await expect(dialog.locator('input:is([name$="cardNumber"], [name*="cardNumber/"])')).toBeVisible(
+		{ timeout: 15000 }
+	);
+	await dialog.locator('input:is([name$="cardNumber"], [name*="cardNumber/"])').fill(cardNumber);
 	await dialog.locator('button[type=submit]').click();
 }
 

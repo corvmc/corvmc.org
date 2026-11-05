@@ -15,20 +15,20 @@
 		IconSpeakerphone,
 		IconCheckbox
 	} from '@tabler/icons-svelte';
-	import AppShell from '$lib/components/layout/AppShell.svelte';
-	import Nav from '$lib/components/layout/Nav';
-	import { childHrefsFor } from '$lib/components/layout/Nav/active-nav';
-	import Avatar from '$lib/components/ui/Avatar.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
-	import { EntityViewer } from '$lib/components/ui/entity';
-	import { getMemberLayout } from '$lib/remote/layout.remote';
+	import AppShell from '#lib/components/layout/AppShell.svelte';
+	import Nav from '#lib/components/layout/Nav/index.js';
+	import { childHrefsFor } from '#lib/components/layout/Nav/active-nav.js';
+	import Avatar from '#lib/components/ui/Avatar.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
+	import { EntityViewer } from '#lib/components/ui/entity/index.js';
+	import { getMemberLayout, requireLayoutSession } from '#lib/remote/layout.remote.js';
 	import { setMemberLayoutContext } from './layout-context';
-	import { panelTabs } from '$lib/components/layout/panel-tabs';
-	import { navTrail } from '$lib/components/layout/nav-trail';
-	import { setBreadcrumbTrail } from '$lib/components/ui/breadcrumbs';
-	import { m } from '$lib/paraglide/messages.js';
-	import { many } from '$lib/terms';
+	import { panelTabs } from '#lib/components/layout/panel-tabs.js';
+	import { navTrail } from '#lib/components/layout/nav-trail.js';
+	import { setBreadcrumbTrail } from '#lib/components/ui/breadcrumbs.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import { many } from '#lib/terms.js';
 	import {
 		activeMemberNavKey,
 		memberNavFooter,
@@ -66,6 +66,10 @@
 		}
 	});
 
+	// The sign-in gate first, then the data (#2197): kit 3 gives a query no page, so the gate takes it
+	// as an argument, and the data query stays unkeyed so a mutation's `.refresh()` finds it.
+	// Serial, not beside it — two queries in flight at once is the kit ≥2.65 render loop.
+	await requireLayoutSession(page.url.pathname + page.url.search);
 	let layout = $derived(await getMemberLayout());
 
 	const panels = $derived(panelTabs(layout));
@@ -144,7 +148,7 @@
 		>
 			{#snippet action()}
 				<Button
-					href={resolve('/member/bands?create=1')}
+					href={resolve('member/bands?create=1')}
 					variant="ghost"
 					size="xs"
 					class="latched"
@@ -199,7 +203,7 @@
 					{/snippet}
 				</Nav.Item>
 			{/each}
-			<Nav.Item href={resolve('/member/groups')} label={m.member_label()}>
+			<Nav.Item href={resolve('member/groups')} label={m.member_label()}>
 				{#snippet icon()}<IconSearch />{/snippet}
 			</Nav.Item>
 		</Nav.Group>

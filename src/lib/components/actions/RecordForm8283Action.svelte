@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { utcCalendarDate } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { utcCalendarDate } from '#lib/utils/format.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { recordForm8283 } from '$lib/remote/inventory.remote';
+	import { recordForm8283 } from '#lib/remote/inventory.remote.js';
 	import { Field } from '../ui/Form';
 
 	const { fields } = recordForm8283;

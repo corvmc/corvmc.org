@@ -6,7 +6,7 @@ import type {
 	RenewalKind,
 	ReservationCanceller,
 	ThreadNotifyPolicy
-} from '$lib/config';
+} from '#lib/config.js';
 
 export interface VolunteerShiftEvent {
 	signupId: string;

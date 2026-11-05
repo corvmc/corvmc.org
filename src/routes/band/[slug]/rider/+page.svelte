@@ -1,28 +1,28 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import RiderCorner from '$lib/components/rider/RiderCorner.svelte';
-	import RiderUploads from '$lib/components/rider/RiderUploads.svelte';
-	import StagePlot from '$lib/components/rider/StagePlot.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import RiderCorner from '#lib/components/rider/RiderCorner.svelte';
+	import RiderUploads from '#lib/components/rider/RiderUploads.svelte';
+	import StagePlot from '#lib/components/rider/StagePlot.svelte';
 	import {
 		getBandRiderPage,
 		saveRiderDetails,
 		saveRiderPlacements
-	} from '$lib/remote/rider.remote';
-	import Button from '$lib/components/ui/Button.svelte';
+	} from '#lib/remote/rider.remote.js';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
-	import { riderMonitorFormatOptions, RIDER_NOTES_MAX } from '$lib/config';
-	import type { RiderElementRowState } from '$lib/types/rider';
+	import { riderMonitorFormatOptions, RIDER_NOTES_MAX } from '#lib/config.js';
+	import type { RiderElementRowState } from '#lib/types/rider.js';
 	import { getBandLayoutContext } from '../layout-context';
 
 	/**

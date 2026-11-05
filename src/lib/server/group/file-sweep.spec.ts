@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DOCUMENT_SWEEP_GRACE_MS } from '$lib/config';
+import { DOCUMENT_SWEEP_GRACE_MS } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -26,7 +26,7 @@ const deletePrivateObject = vi.fn(async (key: string) => {
 	journal.push(`deleteObject:${key}`);
 });
 
-vi.mock('$lib/server/private-storage', () => ({
+vi.mock('#lib/server/private-storage.js', () => ({
 	deletePrivateObject: (key: string) => deletePrivateObject(key),
 	listPrivateObjects: async (prefix: string) => {
 		listedPrefixes.push(prefix);

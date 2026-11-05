@@ -1,28 +1,28 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { formatDateTime } from '$lib/utils/format';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { formatDateTime } from '#lib/utils/format.js';
 	import {
 		suggestionCategoryLabels,
 		suggestionStatuses,
 		suggestionStatusLabels,
 		surfaces
-	} from '$lib/config';
+	} from '#lib/config.js';
 	import {
 		getStaffSuggestionDetailPage,
 		respondToSuggestion,
@@ -30,12 +30,12 @@
 		setSuggestionVisibility,
 		mergeSuggestion,
 		reviewSuggestionEdit
-	} from '$lib/remote/suggestions.remote';
+	} from '#lib/remote/suggestions.remote.js';
 	import MergeCandidateOptions from './MergeCandidateOptions.svelte';
-	import { startProjectFromSuggestionForm } from '$lib/remote/projects.remote';
-	import { Field, MoneyField } from '$lib/components/ui/Form';
-	import BallotLine from '$lib/components/ballot/BallotLine.svelte';
-	import CreateBallotAction from '$lib/components/ballot/CreateBallotAction.svelte';
+	import { startProjectFromSuggestionForm } from '#lib/remote/projects.remote.js';
+	import { Field, MoneyField } from '#lib/components/ui/Form/index.js';
+	import BallotLine from '#lib/components/ballot/BallotLine.svelte';
+	import CreateBallotAction from '#lib/components/ballot/CreateBallotAction.svelte';
 
 	let id = $derived(page.params.id!);
 
@@ -72,7 +72,7 @@
 
 <PageContent width="3xl">
 	{#if isMerged}
-		<Alert type="info" href={resolve(`/staff/suggestions/${s.mergedIntoId}`)}>
+		<Alert type="info" href={resolve(`staff/suggestions/${s.mergedIntoId}`)}>
 			<ParaglideMessage
 				message={m.staff_suggestions_id_merged_into_its_votes_moved}
 				inputs={{
@@ -85,7 +85,7 @@
 	{:else if s.visibility === 'under_review'}
 		<!-- One report, one place to decide. Resolving here as well as in the flag
 		     queue would let two staff reach opposite conclusions on one report. -->
-		<Alert type="warning" href={resolve('/staff/moderation/flags')}>
+		<Alert type="warning" href={resolve('staff/moderation/flags')}>
 			{m.staff_suggestions_id_member_reported_so_came_off()}
 		</Alert>
 	{:else if s.visibility === 'hidden'}
@@ -100,7 +100,7 @@
 	     at Planned after the amp was on the shelf, because the acquisition and
 	     the suggestion had no relationship at all (#603). -->
 	{#if fulfilledBy}
-		<Alert type="success" href={resolve(`/staff/inventory/acquisitions/${fulfilledBy.id}`)}>
+		<Alert type="success" href={resolve(`staff/inventory/acquisitions/${fulfilledBy.id}`)}>
 			{fulfilledBy.sourceName
 				? m.staff_suggestions_id_arrived_from({
 						date: formatDateTime(fulfilledBy.occurredAt),
@@ -115,7 +115,7 @@
 			     `ResolvedPathname` and a query string is not one. -->
 			{#snippet action()}
 				<Button
-					href="{resolve('/staff/inventory/intake')}?suggestion={s.id}"
+					href="{resolve('staff/inventory/intake')}?suggestion={s.id}"
 					variant="ghost"
 					size="sm"
 				>
@@ -133,7 +133,7 @@
 		project here is that link, and the votes above are its mandate.
 	-->
 	{#if project}
-		<Alert type="success" href={resolve(`/staff/projects/${project.id}`)}>
+		<Alert type="success" href={resolve(`staff/projects/${project.id}`)}>
 			<ParaglideMessage
 				message={m.staff_suggestions_id_answered_by_its_status_drives}
 				inputs={{ name: project.name }}
@@ -147,7 +147,7 @@
 		<InfoCard title={ballots.length === 1 ? m.staff_suggestions_id_ballot() : m.staff_ballots()}>
 			<ul class="space-y-2">
 				{#each ballots as b (b.id)}
-					<li><BallotLine ballot={b} href={resolve(`/staff/ballots/${b.id}`)} /></li>
+					<li><BallotLine ballot={b} href={resolve(`staff/ballots/${b.id}`)} /></li>
 				{/each}
 			</ul>
 		</InfoCard>
@@ -469,7 +469,7 @@
 					outline
 					onsuccess={(r) => {
 						if (r && typeof r === 'object' && 'targetId' in r) {
-							void goto(resolve(`/staff/suggestions/${r.targetId as string}`));
+							void goto(resolve(`staff/suggestions/${r.targetId as string}`));
 						}
 					}}
 				>

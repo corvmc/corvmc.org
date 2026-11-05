@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The member's conversations — staff threads and member threads in one list.
 	 *
@@ -10,11 +10,11 @@
 	 * whether it is waiting on you.
 	 */
 	import { page } from '$app/state';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import ConversationRows from '$lib/components/inbox/ConversationRows.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import ConversationRows from '#lib/components/inbox/ConversationRows.svelte';
 	import ComposeAction from './ComposeAction.svelte';
-	import { getMyMessages } from '$lib/remote/direct-messages.remote';
-	import Select from '$lib/components/ui/Form/Select.svelte';
+	import { getMyMessages } from '#lib/remote/direct-messages.remote.js';
+	import Select from '#lib/components/ui/Form/Select.svelte';
 	import { goto } from '$app/navigation';
 	import { getMemberLayoutContext } from '../layout-context';
 	import { conversationList } from './list-state.svelte';
@@ -32,10 +32,10 @@
 	function chooseInbox(next: string) {
 		inbox = next;
 		conversationList.page = 1;
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		if (next === 'all') url.searchParams.delete('inbox');
 		else url.searchParams.set('inbox', next);
-		void goto(url, { replaceState: true, noScroll: true, keepFocus: true });
+		void goto(url, { replace: true, reset: false });
 	}
 
 	const result = $derived(getMyMessages({ page: conversationList.page, inbox }));

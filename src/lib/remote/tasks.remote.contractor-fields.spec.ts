@@ -19,27 +19,27 @@ vi.mock('$app/server', () => {
 			mark(async (raw: unknown) => handler(schema.parse(raw)), 'command')
 	};
 });
-vi.mock('$lib/server/db', () => ({ db: {}, getRowCount: () => 0 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {}, getRowCount: () => 0 }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 vi.mock('./projects.remote', () => ({ getProjectActivity: vi.fn(), getProjectDetail: vi.fn() }));
 
 let granted = new Set<string>();
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => ({ id: 'usr-1' }),
 	can: async (cap: string) => granted.has(cap),
 	requireCapability: async () => ({ id: 'usr-1' })
 }));
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireProjectCommittee: async () => ({ user: { id: 'usr-1' }, groups: [], via: 'committee' })
 }));
-vi.mock('$lib/server/project/project-service', () => ({
+vi.mock('#lib/server/project/project-service.js', () => ({
 	getProjectById: async (id: string) => ({ id, name: 'Rewire the hall' })
 }));
 
 const loadWorkOrderView = vi.hoisted(() => vi.fn());
-vi.mock('$lib/server/volunteer/work-order-view', () => ({ loadWorkOrderView }));
+vi.mock('#lib/server/volunteer/work-order-view.js', () => ({ loadWorkOrderView }));
 const listProjectTasks = vi.hoisted(() => vi.fn());
-vi.mock('$lib/server/project/project-task-service', async (original) => ({
+vi.mock('#lib/server/project/project-task-service.js', async (original) => ({
 	...(await original<object>()),
 	listProjectTasks,
 	requireTaskInProject: async () => {}

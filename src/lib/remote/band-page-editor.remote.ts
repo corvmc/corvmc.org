@@ -1,16 +1,16 @@
 import { z } from 'zod';
-import { jsonArrayField } from '$lib/utils/zod-json';
+import { jsonArrayField } from '#lib/utils/zod-json.js';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { sanitizeCss } from '$lib/server/band/css-sanitizer';
-import { sanitizeBio, sanitizeHtml } from '$lib/utils/markdown';
-import { db } from '$lib/server/db';
-import { blockSchema, BAND_THEME_VALUES, type Block } from '$lib/server/db/schema/band-page';
-import { bandSite } from '$lib/server/db/schema/band-site';
-import { reconcileBlocks } from '$lib/utils/band-site-preset';
-import { loadBandSiteContent, blockImageUrls } from '$lib/server/band/band-site-content';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { sanitizeCss } from '#lib/server/band/css-sanitizer.js';
+import { sanitizeBio, sanitizeHtml } from '#lib/utils/markdown.js';
+import { db } from '#lib/server/db/index.js';
+import { blockSchema, BAND_THEME_VALUES, type Block } from '#lib/server/db/schema/band-page.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
+import { reconcileBlocks } from '#lib/utils/band-site-preset.js';
+import { loadBandSiteContent, blockImageUrls } from '#lib/server/band/band-site-content.js';
 import { eq } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ export const getBandPageEditor = query(z.string(), async (slug) => {
 
 	// The editor opens on the full catalogue rather than an empty canvas. The
 	// preset is projected here rather than written at upgrade time — see
-	// `$lib/utils/band-site-preset` for why — so the column only gains it when
+	// `#lib/utils/band-site-preset.js` for why — so the column only gains it when
 	// the band saves.
 	const blocks = reconcileBlocks((config?.blocks ?? []) as Block[]);
 

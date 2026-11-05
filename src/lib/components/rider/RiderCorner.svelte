@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import RiderElementsEditor from './RiderElementsEditor.svelte';
-	import { saveMyRiderElements, saveMemberRiderElements } from '$lib/remote/rider.remote';
-	import type { RiderElementRowState } from '$lib/types/rider';
+	import { saveMyRiderElements, saveMemberRiderElements } from '#lib/remote/rider.remote.js';
+	import type { RiderElementRowState } from '#lib/types/rider.js';
 
 	/**
 	 * One person's corner of the rider — or the band's shared items, which is

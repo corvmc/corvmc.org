@@ -12,8 +12,8 @@ import {
 	or,
 	sql
 } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { DomainError } from '$lib/server/domain-error';
+import { db } from '#lib/server/db/index.js';
+import { DomainError } from '#lib/server/domain-error.js';
 import {
 	ballot,
 	ballotChoice,
@@ -24,16 +24,19 @@ import {
 	ballotRecordedVote,
 	type Ballot,
 	type BallotCertifiedResult
-} from '$lib/server/db/schema/ballot';
-import { user } from '$lib/server/db/schema/authentication';
-import { suggestion } from '$lib/server/db/schema/suggestion';
-import { project } from '$lib/server/db/schema/project';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { memberOrientation } from '$lib/server/db/schema/volunteer';
-import { config } from '$lib/server/site-config/site-config-service';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
-import { getSuggestionBrief, respondToSuggestion } from '$lib/server/suggestion/suggestion-service';
+} from '#lib/server/db/schema/ballot.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { suggestion } from '#lib/server/db/schema/suggestion.js';
+import { project } from '#lib/server/db/schema/project.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { memberOrientation } from '#lib/server/db/schema/volunteer.js';
+import { config } from '#lib/server/site-config/site-config-service.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
+import {
+	getSuggestionBrief,
+	respondToSuggestion
+} from '#lib/server/suggestion/suggestion-service.js';
 import {
 	BALLOT_DESCRIPTION_MAX,
 	BALLOT_OPTION_LABEL_MAX,
@@ -43,7 +46,7 @@ import {
 	BALLOT_TITLE_MAX,
 	type BallotKind,
 	type BallotStatus
-} from '$lib/config';
+} from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Errors

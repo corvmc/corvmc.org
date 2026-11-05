@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import {
 	SEED_OWNER_EMAIL,
@@ -77,19 +77,23 @@ test('what a visitor types before the form hydrates survives it', async ({ page 
 	});
 
 	await page.goto(`/directory/bands/${SEED_PUBLIC_BAND_SLUG}`, { waitUntil: 'domcontentloaded' });
-	const name = page.locator('input[name="name"]');
-	const email = page.locator('input[name="email"]');
-	const message = page.locator('textarea[name="message"]');
+	const name = page.locator('input:is([name="name"], [name^="name/"])');
+	const email = page.locator('input:is([name="email"], [name^="email/"])');
+	const message = page.locator('textarea:is([name="message"], [name^="message/"])');
 	await name.fill('Early Typist');
 	await email.fill(ENQUIRER_EMAIL);
 	await message.fill(MESSAGE);
 	// svelte-turnstile renders nothing until onMount, so an absent token input
 	// proves the fills landed before hydration and the test cannot pass vacuously.
-	await expect(page.locator('input[name="turnstileToken"]')).toHaveCount(0);
+	await expect(
+		page.locator('input:is([name="turnstileToken"], [name^="turnstileToken/"])')
+	).toHaveCount(0);
 	release();
 
 	// The token input appears only once the client has mounted.
-	await expect(page.locator('input[name="turnstileToken"]')).not.toHaveValue('', {
+	await expect(
+		page.locator('input:is([name="turnstileToken"], [name^="turnstileToken/"])')
+	).not.toHaveValue('', {
 		timeout: 30000
 	});
 	expect(held, 'the entry chunk was never intercepted, so nothing was delayed').toBeGreaterThan(0);
@@ -116,17 +120,19 @@ test.describe.serial('band booking enquiries', () => {
 		// The name is `TURNSTILE_RESPONSE_FIELD` from `src/lib/turnstile.ts`, spelled
 		// out because that module reads `$env/dynamic/public`, which does not
 		// resolve outside the SvelteKit build.
-		await expect(page.locator('input[name="turnstileToken"]')).not.toHaveValue('', {
+		await expect(
+			page.locator('input:is([name="turnstileToken"], [name^="turnstileToken/"])')
+		).not.toHaveValue('', {
 			timeout: 30000
 		});
 
-		await page.locator('input[name="name"]').fill(enquirer);
-		await page.locator('input[name="email"]').fill(ENQUIRER_EMAIL);
-		await page.locator('textarea[name="message"]').fill(MESSAGE);
+		await page.locator('input:is([name="name"], [name^="name/"])').fill(enquirer);
+		await page.locator('input:is([name="email"], [name^="email/"])').fill(ENQUIRER_EMAIL);
+		await page.locator('textarea:is([name="message"], [name^="message/"])').fill(MESSAGE);
 
 		await page
 			.locator('form')
-			.filter({ has: page.locator('textarea[name="message"]') })
+			.filter({ has: page.locator('textarea:is([name="message"], [name^="message/"])') })
 			.locator('button[type="submit"]')
 			.click();
 
@@ -166,7 +172,7 @@ test.describe.serial('band booking enquiries', () => {
 		await expect(
 			page
 				.locator('form')
-				.filter({ has: page.locator('textarea[name="body"]') })
+				.filter({ has: page.locator('textarea:is([name="body"], [name^="body/"])') })
 				.locator('button[type="submit"]')
 		).toBeVisible();
 
@@ -223,7 +229,7 @@ test.describe.serial('band booking enquiries', () => {
 		await chatRoom(page).click();
 		await expect(page).toHaveURL(new RegExp(`${inbox}/chat/`));
 
-		await expect(page.locator('form textarea[name="body"]')).toBeVisible();
+		await expect(page.locator('form textarea:is([name="body"], [name^="body/"])')).toBeVisible();
 		await expect(chatRoom(page)).toBeHidden();
 
 		await page.locator(`main a[href="${inbox}"]`).click();

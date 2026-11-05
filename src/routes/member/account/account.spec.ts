@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -23,7 +23,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainable(),
 		update: vi.fn(() => ({
@@ -37,7 +37,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-vi.mock('$lib/server/auth', () => ({
+vi.mock('#lib/server/auth.js', () => ({
 	auth: {
 		api: {
 			changePassword: vi.fn().mockResolvedValue({ token: null, user: {} }),
@@ -47,21 +47,21 @@ vi.mock('$lib/server/auth', () => ({
 	}
 }));
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: vi.fn(() => ({ id: 'user-1', name: 'Test User' })),
 	isElevated: vi.fn().mockResolvedValue(false),
 	getUserRoles: vi.fn().mockResolvedValue([])
 }));
 
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	cancel: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('$lib/server/finance/subscription-service', () => ({
+vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	cancel: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('$lib/server/user/user-service', () => ({
+vi.mock('#lib/server/user/user-service.js', () => ({
 	deactivateUser: vi.fn().mockResolvedValue(undefined)
 }));
 
@@ -69,14 +69,14 @@ vi.mock('$lib/server/user/user-service', () => ({
 const mockLocals = { user: mockUser({ id: 'user-1', name: 'Test User' }) };
 const mockHeaders = new Headers({ cookie: 'session=abc' });
 
-vi.mock('$lib/server/marketing/audience-service', () => ({
+vi.mock('#lib/server/marketing/audience-service.js', () => ({
 	getSubscriptionsForUser: vi.fn().mockResolvedValue([]),
 	getOptInAudiencesForUser: vi.fn().mockResolvedValue([]),
 	addSubscriber: vi.fn().mockResolvedValue(undefined),
 	unsubscribe: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('$lib/server/marketing/subscriber-service', () => ({
+vi.mock('#lib/server/marketing/subscriber-service.js', () => ({
 	findOrCreateForUser: vi.fn().mockResolvedValue({ id: 'sub-1' }),
 	clearSelfServiceSuppression: vi.fn()
 }));
@@ -110,19 +110,19 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-import { auth } from '$lib/server/auth';
-import { requireUser, isElevated } from '$lib/server/authorization';
-import { deactivateUser } from '$lib/server/user/user-service';
+import { auth } from '#lib/server/auth.js';
+import { requireUser, isElevated } from '#lib/server/authorization.js';
+import { deactivateUser } from '#lib/server/user/user-service.js';
 import {
 	getSubscriptionsForUser,
 	getOptInAudiencesForUser,
 	addSubscriber,
 	unsubscribe as unsubscribeService
-} from '$lib/server/marketing/audience-service';
+} from '#lib/server/marketing/audience-service.js';
 import {
 	findOrCreateForUser,
 	clearSelfServiceSuppression
-} from '$lib/server/marketing/subscriber-service';
+} from '#lib/server/marketing/subscriber-service.js';
 
 const {
 	updateProfile,
@@ -132,7 +132,7 @@ const {
 	subscribe,
 	unsubscribe: unsubscribeFromList,
 	deleteAccount
-} = (await import('$lib/remote/account.remote')) as any;
+} = (await import('#lib/remote/account.remote.js')) as any;
 
 beforeEach(() => {
 	vi.clearAllMocks();

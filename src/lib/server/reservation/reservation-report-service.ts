@@ -1,7 +1,7 @@
-import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
+import { db } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
 import { and, count, eq, notInArray, sql } from 'drizzle-orm';
-import { rangeCondition, type ReportRange } from '$lib/server/report/range';
+import { rangeCondition, type ReportRange } from '#lib/server/report/range.js';
 
 /**
  * How much the practice room was used over a window.

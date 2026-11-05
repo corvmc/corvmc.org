@@ -1,12 +1,12 @@
 <script lang="ts" generics="TInput extends RemoteFormInput, TOutput">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { formatMonthDayYear } from '$lib/utils/format';
-	import type { RemoteForm, RemoteFormInput } from '@sveltejs/kit';
+	import { formatMonthDayYear } from '#lib/utils/format.js';
+	import type { RemoteForm, RemoteFormInput } from '$app/server';
 	import { IconAlertTriangle } from '@tabler/icons-svelte';
 	import { toast } from 'svelte-sonner';
-	import type { SubscriptionInfo } from '$lib/server/db/schema/finance';
-	import Action from '$lib/components/ui/Action.svelte';
+	import type { SubscriptionInfo } from '#lib/server/db/schema/finance.js';
+	import Action from '#lib/components/ui/Action.svelte';
 
 	let {
 		subscription,

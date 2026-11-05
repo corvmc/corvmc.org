@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The desktop right pane with nothing open. On a phone this route renders only
 	 * the list — `InboxShell` hides this pane below `lg` — so it is never the whole
@@ -8,7 +8,7 @@
 	 * Worded for whichever lists the reader actually has: a plain member has one
 	 * and would not know what an enquiry was.
 	 */
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import { getBandLayoutContext } from '../layout-context';
 
 	const bandLayout = getBandLayoutContext();

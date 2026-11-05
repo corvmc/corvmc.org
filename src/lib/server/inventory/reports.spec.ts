@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * aggregate SQL that wants a database rather than the mocked `db` their
  * neighbours use.
  *
- * Every other spec in this folder mocks `$lib/server/db`, which is right for
+ * Every other spec in this folder mocks `#lib/server/db/index.js`, which is right for
  * lifecycle logic — it isolates the rules from the storage. It is **wrong for
  * these**: they are four-table joins with `GROUP BY` and `SUM`, and a mocked
  * `db` returns whatever the test told it to, so it agrees with any `WHERE`
@@ -31,11 +31,11 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	// `await import`, not `require`: the helper is TypeScript, which Node's
 	// require cannot load. An async hoisted factory still resolves before the
 	// mock below is asked for a database.
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const { spendByCategory, spendBySource, inKindContributions } =
 	await import('./acquisition-service');

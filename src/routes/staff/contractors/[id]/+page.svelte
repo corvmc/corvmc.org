@@ -1,22 +1,22 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { workOrderHref } from '$lib/utils/work-order-href';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import { ActivityFeed } from '$lib/components/ui/ActivityFeed';
-	import { FEED_PAGE } from '$lib/types/activity';
-	import { withHash } from '$lib/utils/with-query';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
+	import { workOrderPathname } from '#lib/utils/work-order-href.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import { ActivityFeed } from '#lib/components/ui/ActivityFeed/index.js';
+	import { FEED_PAGE } from '#lib/types/activity.js';
+	import { withHash } from '#lib/utils/with-query.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
 	import {
 		getContractorDetail,
 		updateContractorForm,
 		archiveContractorForm
-	} from '$lib/remote/contractors.remote';
+	} from '#lib/remote/contractors.remote.js';
 	import {
 		contractorTradeLabels,
 		contractorTrades,
@@ -24,8 +24,8 @@
 		contractorJobStatusLabels,
 		type ContractorTrade,
 		type ContractorJobStatus
-	} from '$lib/config';
-	import { formatCents, formatDateShort, toLocalDate } from '$lib/utils/format';
+	} from '#lib/config.js';
+	import { formatCents, formatDateShort, toLocalDate } from '#lib/utils/format.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 
@@ -49,7 +49,7 @@
 				at: job.completedAt ?? job.scheduledFor ?? job.createdAt,
 				summary: job.title,
 				href: withHash(
-					resolve(workOrderHref({ id: job.workOrderId, projectId: job.projectId })),
+					resolve(workOrderPathname({ id: job.workOrderId, projectId: job.projectId })),
 					`engagement-${job.id}`
 				),
 				context: itemName ? { label: assetTag ? `${itemName} · ${assetTag}` : itemName } : null,

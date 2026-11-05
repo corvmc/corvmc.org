@@ -1,18 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { Turnstile } from 'svelte-turnstile';
-	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
-	import Alert from '$lib/components/ui/Alert.svelte';
+	import Form, { Field, SubmitButton } from '#lib/components/ui/Form/index.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
 	import {
 		getLocalResourceTipCategories,
 		submitLocalResourceTip
-	} from '$lib/remote/local-resources.remote';
-	import {
-		TURNSTILE_SITE_KEY,
-		TURNSTILE_RESPONSE_FIELD,
-		turnstileFailureMessage
-	} from '$lib/turnstile';
-	import type { RemoteFormIssue } from '@sveltejs/kit';
+	} from '#lib/remote/local-resources.remote.js';
+	import { TURNSTILE_SITE_KEY, turnstileFailureMessage } from '#lib/turnstile.js';
+	import type { RemoteFormIssue } from '$app/server';
 
 	/**
 	 * The structured tip (#1498): it becomes a pending listing staff publish or
@@ -84,7 +80,7 @@
 		/>
 		<Turnstile
 			siteKey={TURNSTILE_SITE_KEY}
-			responseFieldName={TURNSTILE_RESPONSE_FIELD}
+			responseFieldName={fields.turnstileToken.as('hidden', '').name}
 			theme="auto"
 			bind:reset={resetTurnstile}
 		/>

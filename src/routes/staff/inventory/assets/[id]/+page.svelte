@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { workOrderHref } from '$lib/utils/work-order-href';
+	import { workOrderPathname } from '#lib/utils/work-order-href.js';
 	import { page } from '$app/state';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {
@@ -10,29 +10,33 @@
 		editAsset,
 		changeAssetStatus,
 		reopenAssetForm
-	} from '$lib/remote/inventory.remote';
-	import { withHash } from '$lib/utils/with-query';
-	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { BindTagAction, RecordForm8282Action, ReopenAction } from '$lib/components/actions';
-	import LocationField from '$lib/components/inventory/LocationField.svelte';
+	} from '#lib/remote/inventory.remote.js';
+	import { withHash } from '#lib/utils/with-query.js';
+	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import {
+		BindTagAction,
+		RecordForm8282Action,
+		ReopenAction
+	} from '#lib/components/actions/index.js';
+	import LocationField from '#lib/components/inventory/LocationField.svelte';
 	import { resolve } from '$app/paths';
-	import { formatDateShort, formatCents, toLocalDate } from '$lib/utils/format';
+	import { formatDateShort, formatCents, toLocalDate } from '#lib/utils/format.js';
 	import {
 		equipmentConditions,
 		contractorJobStatusBadge,
 		contractorJobStatusLabels
-	} from '$lib/config';
+	} from '#lib/config.js';
 
 	const { fields } = editAsset;
 	const statusFields = changeAssetStatus.fields;
@@ -47,7 +51,7 @@
 		return {
 			...row,
 			href: withHash(
-				resolve(workOrderHref({ id: item.job.workOrderId, projectId: item.job.projectId })),
+				resolve(workOrderPathname({ id: item.job.workOrderId, projectId: item.job.projectId })),
 				`engagement-${item.job.id}`
 			),
 			context: {

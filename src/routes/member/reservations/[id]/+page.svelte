@@ -1,22 +1,25 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { formatDollars } from '$lib/utils/format';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { getReservationDetail } from '$lib/remote/reservations.remote';
+	import { formatDollars } from '#lib/utils/format.js';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { getReservationDetail } from '#lib/remote/reservations.remote.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import UnconfirmedNotice from '$lib/components/reservations/UnconfirmedNotice.svelte';
-	import { EntityIdentity, EntityChip } from '$lib/components/ui/entity';
-	import { CancelReservationAction, ConfirmWaitlistedAction } from '$lib/components/actions';
+	import UnconfirmedNotice from '#lib/components/reservations/UnconfirmedNotice.svelte';
+	import { EntityIdentity, EntityChip } from '#lib/components/ui/entity/index.js';
+	import {
+		CancelReservationAction,
+		ConfirmWaitlistedAction
+	} from '#lib/components/actions/index.js';
 	import ReaderPayment from './ReaderPayment.svelte';
-	import { memberPayAction } from '$lib/utils/reservation-actions';
+	import { memberPayAction } from '#lib/utils/reservation-actions.js';
 
 	let paidAtReader = $state(false);
 	let data = $derived(await getReservationDetail(page.params.id!));
@@ -88,7 +91,7 @@
 			     mid-rotation. Standing outside is the failure mode. -->
 			<Alert type="error">
 				<ParaglideMessage message={m.member_reservations_id_code_hasn_t_reached_door} inputs={{}}
-					>{#snippet a({ children })}<a class="link" href={resolve('/contact')}
+					>{#snippet a({ children })}<a class="link" href={resolve('contact')}
 							>{@render children?.()}</a
 						>{/snippet}</ParaglideMessage
 				>

@@ -1,20 +1,20 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import RosterTable from '$lib/components/roster/RosterTable.svelte';
-	import CopyEmailsButton from '$lib/components/roster/CopyEmailsButton.svelte';
-	import CommitteeGrantsAction from '$lib/components/groups/CommitteeGrantsAction.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import RosterTable from '#lib/components/roster/RosterTable.svelte';
+	import CopyEmailsButton from '#lib/components/roster/CopyEmailsButton.svelte';
+	import CommitteeGrantsAction from '#lib/components/groups/CommitteeGrantsAction.svelte';
 	import RevokeClearanceAction from './RevokeClearanceAction.svelte';
-	import { getAccessPage, getAccessHolders } from '$lib/remote/access.remote';
-	import { Latest } from '$lib/latest.svelte';
-	import { positionLabels, positionOrder, type Capability, type Position } from '$lib/config';
-	import type { RosterPerson } from '$lib/types/roster';
-	import { formatDateShortYear } from '$lib/utils/format';
+	import { getAccessPage, getAccessHolders } from '#lib/remote/access.remote.js';
+	import { Latest } from '#lib/latest.svelte.js';
+	import { positionLabels, positionOrder, type Capability, type Position } from '#lib/config.js';
+	import type { RosterPerson } from '#lib/types/roster.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
 	import { capabilityLabel, everyCapability } from './capability-label';
 
 	type Kind = 'capability' | 'position' | 'clearance';

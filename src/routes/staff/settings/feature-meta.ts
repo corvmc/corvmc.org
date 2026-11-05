@@ -1,4 +1,4 @@
-import type { FeatureFlag } from '$lib/server/feature-flags';
+import type { FeatureFlag } from '#lib/server/feature-flags.js';
 
 /**
  * What the Features tab says about each flag.

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 import { E2E_PREVIEW_PORT } from './state-dir';
 import { SEED_PUBLIC_BAND_SLUG } from './fixtures/seed-band-onboarding';
 

@@ -1,25 +1,25 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { IconCheck, IconX } from '@tabler/icons-svelte';
-	import { formatDateTime } from '$lib/utils/format';
+	import { formatDateTime } from '#lib/utils/format.js';
 	import {
 		marketVendorStatuses,
 		marketVendorStatusLabels,
 		type MarketVendorStatus
-	} from '$lib/config';
-	import PreviousMarketNote from '$lib/components/market/PreviousMarketNote.svelte';
-	import { decideVendorForm, getCommitteeMarketVendors } from '$lib/remote/market.remote';
+	} from '#lib/config.js';
+	import PreviousMarketNote from '#lib/components/market/PreviousMarketNote.svelte';
+	import { decideVendorForm, getCommitteeMarketVendors } from '#lib/remote/market.remote.js';
 
 	/**
 	 * The owning committee's half of a market day: accept or decline (#1503).
@@ -63,7 +63,7 @@
 	subtitle={when}
 >
 	<Button
-		href={resolve(`/member/groups/${slug}/markets/${eventId}/check-in`)}
+		href={resolve(`member/groups/${slug}/markets/${eventId}/check-in`)}
 		variant="ghost"
 		size="sm"
 	>

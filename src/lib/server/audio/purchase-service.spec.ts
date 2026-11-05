@@ -7,12 +7,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
 // better-sqlite3's drizzle has no `batch`; D1's runs the statements in order, as this does.
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			const out = [];
@@ -27,15 +27,15 @@ const checkout = vi.fn(async (_opts: unknown) => ({
 	paid: false,
 	checkoutUrl: 'https://checkout.test/s'
 }));
-vi.mock('$lib/server/finance/payment-service', () => ({ checkout }));
-vi.mock('$lib/server/finance/product-config-service', () => ({
+vi.mock('#lib/server/finance/payment-service.js', () => ({ checkout }));
+vi.mock('#lib/server/finance/product-config-service.js', () => ({
 	getStripeProductId: async (key: string) => `prod_${key}`
 }));
 const refundsCreate = vi.fn(async (_args: unknown) => ({ id: 're_1' }));
-vi.mock('$lib/server/stripe', () => ({ stripe: { refunds: { create: refundsCreate } } }));
+vi.mock('#lib/server/stripe.js', () => ({ stripe: { refunds: { create: refundsCreate } } }));
 
 const emit = vi.fn(async (..._a: unknown[]) => {});
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit } }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit } }));
 
 const service = await import('./purchase-service');
 

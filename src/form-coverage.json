@@ -1,7 +1,5 @@
 [
 	"createContractorForm.website",
-	"createLocalResourceForm.description",
-	"createLocalResourceForm.phone",
 	"createSubscription.amount",
 	"createSubscription.coverFees",
 	"createVolunteerRole.defaultCapacity",
@@ -10,7 +8,6 @@
 	"createVolunteerRole.marketRate",
 	"refundAndCancelReservation.reason",
 	"reopenAssetForm.reason",
-	"reopenJobForm.reason",
 	"reopenOrderForm.reason",
 	"replyToThread.disposition",
 	"saveMemberProfile.hometown",

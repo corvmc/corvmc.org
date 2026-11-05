@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { BRAND } from './brand';
 import { NOTIFICATION_CATEGORIES, CATEGORY_BAR_STROKE } from './notification-category';
-import { NOTIFICATION_TYPES } from '$lib/server/db/schema/notification';
+import { NOTIFICATION_TYPES } from '#lib/server/db/schema/notification.js';
 
 // ---------------------------------------------------------------------------
 // Category bar

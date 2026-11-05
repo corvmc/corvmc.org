@@ -1,9 +1,9 @@
-import { db } from '$lib/server/db';
-import { inventoryItemArticle } from '$lib/server/db/schema/inventory';
-import { helpArticle } from '$lib/server/db/schema/help';
+import { db } from '#lib/server/db/index.js';
+import { inventoryItemArticle } from '#lib/server/db/schema/inventory.js';
+import { helpArticle } from '#lib/server/db/schema/help.js';
 import { asc, eq } from 'drizzle-orm';
-import { listFor } from '$lib/server/media/media-service';
-import { resolveImageUrl } from '$lib/server/storage';
+import { listFor } from '#lib/server/media/media-service.js';
+import { resolveImageUrl } from '#lib/server/storage.js';
 import { raiseFlag } from './work-request-service';
 
 /**

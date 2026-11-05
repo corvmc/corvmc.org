@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getStaffCredits, getStaffPayments } from '$lib/remote/users.remote';
+import { getStaffCredits, getStaffPayments } from '#lib/remote/users.remote.js';
 import { filterNavSections, staffNavSections } from '../nav-items';
 import { visibleViews } from '../views';
 import { moneyViews } from './views';
@@ -9,12 +9,12 @@ import { load as oldCredits } from '../credits/+page';
 
 // Each tab keeps its page's capability: the tab hides, and the remote refuses.
 const { auth } = vi.hoisted(() => ({ auth: { held: [] as string[] } }));
-vi.mock('$lib/server/authorization', async (original) => ({
-	...(await original<typeof import('$lib/server/authorization')>()),
-	...(await import('$lib/server/testing/mock-remote-guards')).guardsFor(() => auth.held)
+vi.mock('#lib/server/authorization.js', async (original) => ({
+	...(await original<typeof import('#lib/server/authorization.js')>()),
+	...(await import('#lib/server/testing/mock-remote-guards.js')).guardsFor(() => auth.held)
 }));
 vi.mock('$app/server', async () =>
-	(await import('$lib/server/testing/mock-remote-guards')).appServerMock()
+	(await import('#lib/server/testing/mock-remote-guards.js')).appServerMock()
 );
 
 const FINANCE = 'finance.read';

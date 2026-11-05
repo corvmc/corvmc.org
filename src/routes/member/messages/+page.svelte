@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The desktop right pane with nothing open, hidden below `lg`. Silent when
 	 * the list is empty: a master/detail layout has three states, and "Pick a
@@ -7,8 +7,8 @@
 	 * as the second (#1233). The list's own query at the same page — queries are
 	 * cached per argument, so this is its entry, not a second read.
 	 */
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { getMyMessages } from '$lib/remote/direct-messages.remote';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { getMyMessages } from '#lib/remote/direct-messages.remote.js';
 	import { conversationList } from './list-state.svelte';
 
 	const result = $derived(getMyMessages({ page: conversationList.page }));

@@ -39,7 +39,7 @@ const ENTRY = {
 };
 
 let radioState: Record<string, unknown> = {};
-vi.mock('$lib/remote/radio.remote', () => ({
+vi.mock('#lib/remote/radio.remote.js', () => ({
 	getRadioState: () => Promise.resolve(radioState)
 }));
 

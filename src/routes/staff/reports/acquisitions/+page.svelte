@@ -1,22 +1,22 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { getAcquisitions } from '$lib/remote/inventory.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { getAcquisitions } from '#lib/remote/inventory.remote.js';
 	import StaffViews from '../../StaffViews.svelte';
 	import { reportViews } from '../views';
-	import { acquisitionKinds, acquisitionKindLabels } from '$lib/config';
-	import { formatCents, formatDateShort } from '$lib/utils/format';
+	import { acquisitionKinds, acquisitionKindLabels } from '#lib/config.js';
+	import { formatCents, formatDateShort } from '#lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
+	import { withQuery } from '#lib/utils/with-query.js';
 
 	/**
 	 * Everything the collective has taken in, and what it cost.
@@ -57,10 +57,9 @@
 		if (owed) parts.push('owed=1');
 		if (pageNo > 1) parts.push(`page=${pageNo}`);
 		const qs = parts.length > 0 ? `?${parts.join('&')}` : '';
-		goto(withQuery(resolve('/staff/reports/acquisitions'), qs), {
-			replaceState: true,
-			keepFocus: true,
-			noScroll: true
+		goto(withQuery(resolve('staff/reports/acquisitions'), qs), {
+			replace: true,
+			reset: false
 		});
 	}
 </script>
@@ -124,7 +123,7 @@
 			{#each data.rows as row (row.id)}
 				<tr class="hover">
 					<td class="whitespace-nowrap">
-						<a class="font-medium" href={resolve(`/staff/inventory/acquisitions/${row.id}`)}>
+						<a class="font-medium" href={resolve(`staff/inventory/acquisitions/${row.id}`)}>
 							{formatDateShort(row.occurredAt)}
 						</a>
 					</td>

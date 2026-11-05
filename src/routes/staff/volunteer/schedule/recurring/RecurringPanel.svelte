@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatDate, formatDateShort } from '$lib/utils/format';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatDate, formatDateShort } from '#lib/utils/format.js';
 	import {
 		retireRecurringWork,
 		updateRecurringWork,
 		type getRecurringWorkPage
-	} from '$lib/remote/maintenance-schedules.remote';
+	} from '#lib/remote/maintenance-schedules.remote.js';
 	import { every } from './every';
 
 	type Page = Awaited<ReturnType<typeof getRecurringWorkPage>>;
@@ -51,27 +51,39 @@
 					{#snippet form()}
 						{@const fields = updateRecurringWork.for(s.id).fields}
 						<input {...fields.id.as('hidden', s.id)} />
-						<FormField name="name" label={m.staff_name()} type="text" value={s.name} />
 						<FormField
-							name="intervalDays"
+							field={updateRecurringWork.for(s.id).fields.name}
+							label={m.staff_name()}
+							type="text"
+							value={s.name}
+						/>
+						<FormField
+							field={updateRecurringWork.for(s.id).fields.intervalDays}
+							submitAs="text"
 							label={m.staff_repeat_every_days()}
 							type="number"
 							value={String(s.intervalDays)}
 						/>
 						<FormField
-							name="capacity"
+							field={updateRecurringWork.for(s.id).fields.capacity}
+							submitAs="text"
 							label={m.staff_how_many_people()}
 							type="number"
 							value={String(s.capacity)}
 						/>
 						<FormField
-							name="projectId"
+							field={updateRecurringWork.for(s.id).fields.projectId}
 							label={m.staff_project()}
 							type="select"
 							options={projectOptions}
 							value={s.projectId ?? ''}
 						/>
-						<FormField name="notes" label={m.staff_notes()} type="textarea" value={s.notes ?? ''} />
+						<FormField
+							field={updateRecurringWork.for(s.id).fields.notes}
+							label={m.staff_notes()}
+							type="textarea"
+							value={s.notes ?? ''}
+						/>
 					{/snippet}
 				</Action>
 				<Action

@@ -13,18 +13,25 @@ let roles = [
 	{ id: 'role-2', name: 'Retired Role', isActive: false }
 ];
 
-// Every field the form spreads: `as()` for the hidden inputs, `issues()` for the rest.
+// Every field the form spreads, prefixed as kit prefixes a boolean checkbox.
 const fields = new Proxy(
 	{ allIssues: () => null },
 	{
 		get: (target, name: string) =>
 			name in target
 				? target[name as keyof typeof target]
-				: { as: (type: string, value = '') => ({ type, name, value }), issues: () => null }
+				: {
+						as: (type: string, value = '') => ({
+							type,
+							name: type === 'checkbox' ? `b:${name}` : name,
+							value
+						}),
+						issues: () => null
+					}
 	}
 );
 
-vi.mock('$lib/remote/volunteer.remote', () => ({
+vi.mock('#lib/remote/volunteer.remote.js', () => ({
 	getVolunteerRoles: async () => roles,
 	createWorkOrder: {
 		enhance: () => ({ method: 'POST', action: '?/createWorkOrder' }),
@@ -32,8 +39,10 @@ vi.mock('$lib/remote/volunteer.remote', () => ({
 		result: undefined
 	}
 }));
-vi.mock('$lib/remote/events.remote', () => ({ searchEvents: async () => [] }));
-vi.mock('$lib/remote/maintenance-schedules.remote', () => ({ searchWorkAssets: async () => [] }));
+vi.mock('#lib/remote/events.remote.js', () => ({ searchEvents: async () => [] }));
+vi.mock('#lib/remote/maintenance-schedules.remote.js', () => ({
+	searchWorkAssets: async () => []
+}));
 
 vi.mock('$app/navigation', () => ({
 	invalidateAll: vi.fn(),
@@ -44,7 +53,9 @@ vi.mock('$app/navigation', () => ({
 const NewWorkOrderAction = (await import('./NewWorkOrderActionHarness.svelte')).default;
 
 const field = (name: string) =>
-	document.querySelector(`[role="dialog"] [name="${name}"]`) as HTMLInputElement | null;
+	document.querySelector(
+		`[role="dialog"] :is([name="${name}"], [name^="${name}/"])`
+	) as HTMLInputElement | null;
 
 describe('NewWorkOrderAction', () => {
 	it('opens timed, with a live role and its default capacity', async () => {

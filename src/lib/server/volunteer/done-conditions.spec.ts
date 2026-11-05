@@ -5,20 +5,20 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * the fact holds, the fact goes away, and the tasks still have to be ticked.
  */
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb, getRowCount: () => 0 }));
-vi.mock('$lib/server/production/run-of-show-service', () => ({ recomputeSetTimes: vi.fn() }));
-vi.mock('$lib/server/finance/production-expense-entries', () => ({
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb, getRowCount: () => 0 }));
+vi.mock('#lib/server/production/run-of-show-service.js', () => ({ recomputeSetTimes: vi.fn() }));
+vi.mock('#lib/server/finance/production-expense-entries.js', () => ({
 	postProductionExpenses: vi.fn()
 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const { evaluateDone } = await import('./done-conditions');
 import type { DoneInput } from './done-conditions';
-import type { WorkDoneCondition } from '$lib/config';
+import type { WorkDoneCondition } from '#lib/config.js';
 
 const T0 = 1_790_000_000;
 const exec = (sql: string) => sqlite.exec(sql);

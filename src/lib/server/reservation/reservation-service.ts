@@ -1,5 +1,5 @@
-import { db, getRowCount } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
+import { db, getRowCount } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
 import {
 	eq,
 	ne,
@@ -20,18 +20,18 @@ import {
 } from 'drizzle-orm';
 import { validateBooking, hasConflict } from './conflict-service';
 import { notAProgramHold } from './program-hold';
-import { refund } from '$lib/server/finance/payment-service';
+import { refund } from '#lib/server/finance/payment-service.js';
 import { reverseReservationCredits } from './reservation-credit-service';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { user } from '$lib/server/db/schema/authentication';
-import { groupMember } from '$lib/server/db/schema/group';
-import { group } from '$lib/server/db/schema/group';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { groupMember } from '#lib/server/db/schema/group.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { formatDateInTz, formatTimeInTz } from './timezone';
-import { DEFAULT_TIMEZONE, withinConfirmationWindow } from '$lib/config';
-import type { ReservationStatus } from '$lib/server/db/schema/reservation';
-import type { BookerType, ReservationCanceller } from '$lib/config';
-import { captureException } from '$lib/server/sentry';
-import { DomainError } from '$lib/server/domain-error';
+import { DEFAULT_TIMEZONE, withinConfirmationWindow } from '#lib/config.js';
+import type { ReservationStatus } from '#lib/server/db/schema/reservation.js';
+import type { BookerType, ReservationCanceller } from '#lib/config.js';
+import { captureException } from '#lib/server/sentry.js';
+import { DomainError } from '#lib/server/domain-error.js';
 
 // ---------------------------------------------------------------------------
 // ReservationService — create and cancel reservations

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { createBandApi } from '$lib/remote/bands.remote';
+	import { createBandApi } from '#lib/remote/bands.remote.js';
 	import { Field } from '../ui/Form';
 	import SearchSelect from '../ui/Form/SearchSelect.svelte';
 
@@ -47,7 +47,7 @@
 		(async (result) => {
 			const r = result as { bandId?: string };
 			await invalidateAll();
-			if (r?.bandId) goto(resolve(`/staff/groups/${r.bandId}`));
+			if (r?.bandId) goto(resolve(`staff/groups/${r.bandId}`));
 		})}
 	{...rest}
 >
@@ -55,8 +55,8 @@
 		{#if selectedOwner}
 			<input {...fields.ownerId.as('hidden', selectedOwner.id)} />
 		{/if}
-		<Field name="name" type="text" label={m.actions_name()} />
-		<Field name="bio" type="textarea" label={m.actions_create_band_bio()} />
+		<Field field={createBandApi.fields.name} type="text" label={m.actions_name()} />
+		<Field field={createBandApi.fields.bio} type="textarea" label={m.actions_create_band_bio()} />
 		<fieldset class="fieldset">
 			<legend class="fieldset-legend">{m.actions_create_band_owner()}</legend>
 			<SearchSelect

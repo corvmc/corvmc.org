@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import ProfileSection from './ProfileSection.svelte';
-	import { detectPlatform } from '$lib/utils/link-platform';
-	import type { BandVideo } from '$lib/types/band-page';
+	import { detectPlatform } from '#lib/utils/link-platform.js';
+	import type { BandVideo } from '#lib/types/band-page.js';
 
 	/**
 	 * Live clips, on a band-site act's public page.

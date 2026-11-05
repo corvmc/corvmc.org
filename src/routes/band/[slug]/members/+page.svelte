@@ -1,22 +1,22 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import Form, { Field } from '$lib/components/ui/Form';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import Form, { Field } from '#lib/components/ui/Form/index.js';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
 	import YourMembership from './YourMembership.svelte';
 	import EditMemberAction from './EditMemberAction.svelte';
 	import { onDestroy } from 'svelte';
@@ -30,7 +30,7 @@
 		transferOwner,
 		inviteByEmail,
 		revokeEmailInvite
-	} from '$lib/remote/bands.remote';
+	} from '#lib/remote/bands.remote.js';
 	import { getBandLayoutContext } from '../layout-context';
 
 	// Above the awaited queries: a declaration after a top-level await is
@@ -386,14 +386,14 @@
 				<div class="grid grid-cols-2 gap-4">
 					<Field
 						label={msg.band_role()}
-						name="role"
+						field={inviteMember.fields.role}
 						type="select"
 						value="member"
 						options={roleOptions}
 					/>
 					<Field
 						label={msg.band_slug_members_position()}
-						name="position"
+						field={inviteMember.fields.position}
 						type="text"
 						placeholder={msg.band_slug_members_e_g_guitar()}
 					/>
@@ -426,7 +426,7 @@
 					{msg.band_slug_members_invite_someone_who_doesn_t()}
 				</p>
 				<Field
-					name="email"
+					field={inviteByEmail.fields.email}
 					type="email"
 					label={msg.band_slug_members_email_address()}
 					value={looksLikeEmail ? searchQuery : ''}
@@ -434,14 +434,14 @@
 				<div class="grid grid-cols-2 gap-4">
 					<Field
 						label={msg.band_role()}
-						name="role"
+						field={inviteByEmail.fields.role}
 						type="select"
 						value="member"
 						options={roleOptions}
 					/>
 					<Field
 						label={msg.band_slug_members_position()}
-						name="position"
+						field={inviteByEmail.fields.position}
 						type="text"
 						placeholder={msg.band_slug_members_e_g_guitar()}
 					/>

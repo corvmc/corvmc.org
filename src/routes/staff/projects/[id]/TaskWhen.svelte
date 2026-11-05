@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { IconCalendar, IconFlag } from '@tabler/icons-svelte';
-	import { formatDateShort } from '$lib/utils/format';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import { isOverdue, whenOf, type Task } from './task-view';
 
 	/** The row's When: plain date text, red once past; a dashed calendar circle when unset. */

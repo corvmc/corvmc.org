@@ -1,5 +1,5 @@
 <script lang="ts" generics="T">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
 	/**
 	 * The async envelope shared by every paginated list page: pending state,
@@ -12,10 +12,10 @@
 	 * down with it.
 	 */
 	import type { Snippet } from 'svelte';
-	import type { Pagination as PaginationInfo } from '$lib/types/pagination';
+	import type { Pagination as PaginationInfo } from '#lib/types/pagination.js';
 	import EmptyState from './EmptyState.svelte';
 	import Pagination from './Pagination.svelte';
-	import { Latest } from '$lib/latest.svelte';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	let {
 		result,

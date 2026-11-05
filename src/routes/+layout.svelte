@@ -3,12 +3,12 @@
 	import './retro-buttons.css';
 	// After layout.css: its `panel` sublayer only outranks daisyUI's when declared later.
 	import './panel-theme.css';
-	import favicon from '$lib/assets/favicon.svg';
+	import favicon from '#lib/assets/favicon.svg';
 	import { Tooltip } from 'bits-ui';
 	import { onMount } from 'svelte';
 	import { beforeNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
-	import RadioPlayer from '$lib/components/radio/RadioPlayer.svelte';
+	import RadioPlayer from '#lib/components/radio/RadioPlayer.svelte';
 
 	let { children } = $props();
 

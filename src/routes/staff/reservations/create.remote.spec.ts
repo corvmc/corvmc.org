@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { isValidationError } from '@sveltejs/kit';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // Mocks — mirrors src/routes/member/reservations/booking.remote.spec.ts
@@ -60,7 +60,7 @@ const reservationServiceMock = {
 	ReservationAuthorizationError
 };
 
-vi.mock('$lib/server/reservation/reservation-service', () => reservationServiceMock);
+vi.mock('#lib/server/reservation/reservation-service.js', () => reservationServiceMock);
 
 const creditServiceMock = {
 	commitReservationCredits: vi.fn(async () => ({
@@ -77,9 +77,9 @@ const creditServiceMock = {
 	reverseReservationCredits: vi.fn()
 };
 
-vi.mock('$lib/server/reservation/reservation-credit-service', () => creditServiceMock);
+vi.mock('#lib/server/reservation/reservation-credit-service.js', () => creditServiceMock);
 
-vi.mock('$lib/server/reservation/timezone', () => ({
+vi.mock('#lib/server/reservation/timezone.js', () => ({
 	formatDateInTz: vi.fn(() => ''),
 	buildDateInTz: vi.fn((date: string, time: string) => new Date(`${date}T${time}:00`))
 }));
@@ -87,8 +87,8 @@ vi.mock('$lib/server/reservation/timezone', () => ({
 // `termsFor` and `getBookingTerms` come through real: they are pure, and a
 // stubbed rate resolver would let this spec pass while the resolver it is
 // standing in for returned something else. Only the config *read* is faked.
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({ hourlyRateCents: 1500 }))
 }));
 
@@ -97,16 +97,16 @@ vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
 const { getConflictDetails } = vi.hoisted(() => ({
 	getConflictDetails: vi.fn(async (): Promise<unknown[]> => [])
 }));
-vi.mock('$lib/server/reservation/conflict-service', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/conflict-service')>()),
+vi.mock('#lib/server/reservation/conflict-service.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/conflict-service.js')>()),
 	getConflictDetails
 }));
 
-vi.mock('$lib/server/reservation/recurring-series-service', () => ({
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => ({
 	create: vi.fn(async () => ({ id: 'series-1' }))
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	requireFeature: vi.fn(async () => undefined)
 }));
 
@@ -125,7 +125,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: { select: () => chainable() }
 }));
 
@@ -170,7 +170,7 @@ const { refreshed } = vi.hoisted(() => ({
 }));
 
 const { createReservation, getStaffReservationDetail } =
-	(await import('$lib/remote/reservations.remote')) as any;
+	(await import('#lib/remote/reservations.remote.js')) as any;
 
 // Mirrors SvelteKit's `issue` helper: it only builds the issue; `invalid()` throws.
 const issue: any = new Proxy(

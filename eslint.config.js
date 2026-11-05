@@ -1,5 +1,3 @@
-// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
-import storybook from 'eslint-plugin-storybook';
 import noRawFormElements from './eslint-rules/no-raw-form-elements.js';
 import noUtilitySoup from './eslint-rules/no-utility-soup.js';
 import noClampedTieredTable from './eslint-rules/no-clamped-tiered-table.js';
@@ -24,6 +22,7 @@ import clubTimeDates from './eslint-rules/club-time-dates.js';
 import noWordingLocators from './eslint-rules/no-wording-locators.js';
 import noSvelteElement from './eslint-rules/no-svelte-element.js';
 import noLiteralUiText from './eslint-rules/no-literal-ui-text.js';
+import noManualFieldName from './eslint-rules/no-manual-field-name.js';
 import noInteractiveAwait from './eslint-rules/no-interactive-await.js';
 
 import prettier from 'eslint-config-prettier';
@@ -34,7 +33,7 @@ import svelte from 'eslint-plugin-svelte';
 import { defineConfig } from 'eslint/config';
 import globals from 'globals';
 import ts from 'typescript-eslint';
-import svelteConfig from './svelte.config.js';
+import svelteConfig from './kit.config.js';
 
 const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 
@@ -73,9 +72,22 @@ const customPlugin = {
 		'no-svelte-element': noSvelteElement,
 		// Enabled below for shipped `.svelte` (#2099).
 		'no-literal-ui-text': noLiteralUiText,
+		'no-manual-field-name': noManualFieldName,
 		'no-interactive-await': noInteractiveAwait
 	}
 };
+
+/** `#lib` is gone in kit 3, and `#lib` resolves only with the file's extension. */
+const LIB_IMPORT_PATTERNS = [
+	{
+		regex: '^\\$lib(/|$)',
+		message: 'Import through #lib with the extension: #lib/foo.js, #lib/Foo.svelte.'
+	},
+	{
+		regex: '^#lib/(?!.*\\.(js|svelte|json|css|svg|png|jpg|webp|txt)(\\?.*)?$)',
+		message: 'A #lib import needs its extension: .js for a .ts file, /index.js for a folder.'
+	}
+];
 
 export default defineConfig(
 	includeIgnoreFile(gitignorePath),
@@ -84,11 +96,6 @@ export default defineConfig(
 	js.configs.recommended,
 	ts.configs.recommended,
 	svelte.configs.recommended,
-	// @ts-expect-error -- eslint-plugin-storybook still ships ESLint 9 `RuleModule`
-	// types, which ESLint 10's `Plugin` no longer structurally accepts (its
-	// `RuleContext` dropped `parserOptions`, `getAncestors` and friends). Runtime is
-	// unaffected; drop this line when the plugin publishes ESLint 10 types.
-	storybook.configs['flat/recommended'],
 	prettier,
 	svelte.configs.prettier,
 	{
@@ -143,11 +150,7 @@ export default defineConfig(
 		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 		languageOptions: {
 			parserOptions: {
-				// `.storybook/` sits outside SvelteKit's generated tsconfig `include`, so
-				// its components have no project and the type-aware parser refuses them.
-				// They are Storybook wiring, not app code, and typed-linting them buys
-				// nothing.
-				projectService: { allowDefaultProject: ['.storybook/*.svelte'] },
+				projectService: true,
 				extraFileExtensions: ['.svelte'],
 				parser: ts.parser,
 				svelteConfig
@@ -209,13 +212,20 @@ export default defineConfig(
 		}
 	},
 	{
-		// Interface copy is read from messages/en/<area>.json (#2099). Stories, test
+		// Interface copy is read from messages/en/<area>.json (#2099). Test
 		// harnesses and fixtures are not interface. `allow` is CSS shown as an example.
 		files: ['src/**/*.svelte'],
-		ignores: ['**/*.stories.svelte', '**/*.test.svelte', '**/*Harness.svelte'],
+		ignores: ['**/*.test.svelte', '**/*Harness.svelte'],
 		rules: {
 			'custom/no-literal-ui-text': ['error', { allow: ['h1 { /* your styles here */ }'] }]
 		}
+	},
+	{
+		// Kit 3 rejects a hand-written name in a remote form (#2196). Test
+		// harnesses mount a control without a real form around it.
+		files: ['src/**/*.svelte'],
+		ignores: ['**/*.test.svelte'],
+		rules: { 'custom/no-manual-field-name': 'error' }
 	},
 	{
 		// FileUpload is the one place the native picker lives.
@@ -250,14 +260,40 @@ export default defineConfig(
 	},
 	{
 		// components/ui/ is the design system — primitives only, no domain knowledge.
-		// Stories and specs are allowed to reach for fixtures the primitive itself cannot.
+		// Specs are allowed to reach for fixtures the primitive itself cannot.
 		files: ['src/lib/components/ui/**/*.{ts,svelte}'],
-		ignores: ['**/*.spec.ts', '**/*.stories.svelte'],
+		ignores: ['**/*.spec.ts'],
 		rules: { 'custom/no-domain-imports-in-ui': 'error' }
 	},
 	{
+		// Kit 3 removes `#lib` and requires an extension on every `#lib` import (#2199).
+		// The block below repeats these patterns, because its own options replace them.
+		files: ['src/**/*.{ts,svelte}', 'scripts/**/*.ts', 'e2e/**/*.ts'],
+		rules: { 'no-restricted-imports': ['error', { patterns: LIB_IMPORT_PATTERNS }] }
+	},
+	{
+		// A spec on Playwright's own `test` records nothing of what the browser
+		// reported, so its flake leaves no error behind (#2433).
+		files: ['e2e/**/*.e2e.ts'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					patterns: LIB_IMPORT_PATTERNS,
+					paths: [
+						{
+							name: '@playwright/test',
+							importNames: ['test'],
+							message: "Import test from './fixtures/test'."
+						}
+					]
+				}
+			]
+		}
+	},
+	{
 		// "Holds any position" and "has this role name" are not guards: a guard
-		// names a capability, and the matrix in `$lib/config` says who holds it.
+		// names a capability, and the matrix in `#lib/config.js` says who holds it.
 		// These helpers are deleted; this stops one coming back under its old name.
 		files: ['src/**/*.{ts,svelte}'],
 		ignores: ['**/*.spec.ts'],
@@ -265,9 +301,10 @@ export default defineConfig(
 			'no-restricted-imports': [
 				'error',
 				{
+					patterns: LIB_IMPORT_PATTERNS,
 					paths: [
 						{
-							name: '$lib/server/authorization',
+							name: '#lib/server/authorization.js',
 							importNames: ['requireStaff', 'isStaff', 'hasRole', 'hasAnyRole'],
 							message:
 								'Guard on a capability: requireCapability(cap), or can(cap) for a branch. See docs/specs/shipped/admin-vs-staff-spec.md.'
@@ -296,10 +333,10 @@ export default defineConfig(
 				{
 					patterns: [
 						{
-							group: ['better-auth', 'better-auth/*', '$lib/server', '$lib/server/*'],
+							group: ['better-auth', 'better-auth/*', '#lib/server', '#lib/server/*'],
 							allowTypeImports: true,
 							message:
-								'config.ts is client-bundled. Build server-only things (the access controller, db access) in $lib/server instead.'
+								'config.ts is client-bundled. Build server-only things (the access controller, db access) in #lib/server instead.'
 						}
 					]
 				}

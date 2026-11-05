@@ -1,13 +1,13 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import '$lib/test/locators';
-import { formatDuration } from '$lib/utils/format';
+import '#lib/test/locators.js';
+import { formatDuration } from '#lib/utils/format.js';
 
 // One file for the staff cancel and refund actions: they mock the same two
 // modules, and each export below is the stub its own spec used before the merge.
 // Prefix fidelity (`b:`, `n:`) is pinned in `ui/Form/FormField.svelte.spec.ts`.
-vi.mock('$lib/remote/reservations.remote', () => {
+vi.mock('#lib/remote/reservations.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => null
@@ -59,7 +59,7 @@ describe('CancelReservationAction', () => {
 		await locator.getByRole('button').click();
 		return page.getByRole('dialog');
 	};
-	const reason = () => page.getByRole('dialog').getByCss('[name="reason"]');
+	const reason = () => page.getByRole('dialog').getByCss(':is([name="reason"], [name^="reason/"])');
 
 	// The trigger is destructive and the modal is the only confirmation step, so
 	// it has to name the reservation rather than ask about "this reservation" in
@@ -150,7 +150,9 @@ describe('RefundReservationAction', () => {
 		await open();
 
 		const hidden = () =>
-			document.querySelectorAll<HTMLInputElement>('[role="dialog"] input[name="id"]');
+			document.querySelectorAll<HTMLInputElement>(
+				'[role="dialog"] input:is([name="id"], [name^="id/"])'
+			);
 		expect([...hidden()].map((i) => [i.type, i.value])).toEqual([['hidden', 'res-5']]);
 
 		await alsoCancel().click();

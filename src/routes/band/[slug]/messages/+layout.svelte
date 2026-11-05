@@ -10,7 +10,7 @@
 	 * same value the nav uses, so the two cannot disagree.
 	 */
 	import { page } from '$app/state';
-	import InboxShell from '$lib/components/inbox/InboxShell.svelte';
+	import InboxShell from '#lib/components/inbox/InboxShell.svelte';
 	import BandInbox from './BandInbox.svelte';
 	import { getBandLayoutContext } from '../layout-context';
 

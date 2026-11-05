@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The four view tabs, and whatever the reader has saved.
 	 *
@@ -8,8 +8,8 @@
 	 * InboxChannelFilter. The toolbar's Start Daily reads the same cached entry.
 	 */
 	import { IconAlarmSnooze, IconInbox, IconInboxOff, IconLayoutList } from '@tabler/icons-svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import { getInboxThreadCounts } from '$lib/remote/inbox.remote';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import { getInboxThreadCounts } from '#lib/remote/inbox.remote.js';
 	import SavedViewTabs from './SavedViewTabs.svelte';
 
 	let { view = $bindable('open'), onchange }: { view?: string; onchange?: (key: string) => void } =

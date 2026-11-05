@@ -1,7 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 
 /**
  * Issues are per-field and settable per test: the point of wrapping these
@@ -10,7 +10,7 @@ import '$lib/test/locators';
  */
 const issues: Record<string, { path: string[]; message: string }[] | null> = {};
 
-vi.mock('$lib/remote/users.remote', () => {
+vi.mock('#lib/remote/users.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => issues[name] ?? null
@@ -80,8 +80,10 @@ describe('AdjustCreditsAction, what it will let staff submit', () => {
 	const submit = () =>
 		document.querySelector('[role="dialog"] button[type="submit"]') as HTMLButtonElement;
 
-	const amount = (v: string) => page.getByRole('dialog').getByCss('[name="amount"]').fill(v);
-	const reason = (v: string) => page.getByRole('dialog').getByCss('[name="description"]').fill(v);
+	const amount = (v: string) =>
+		page.getByRole('dialog').getByCss(':is([name="amount"], [name^="amount/"])').fill(v);
+	const reason = (v: string) =>
+		page.getByRole('dialog').getByCss(':is([name="description"], [name^="description/"])').fill(v);
 
 	// The state the modal opens in. Committing it writes a ledger row saying
 	// nothing happened, against a balance nobody changed.

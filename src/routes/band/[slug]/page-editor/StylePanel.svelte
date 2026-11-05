@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * Theme and CSS, as one control.
@@ -16,11 +16,11 @@
 	 * `theme-fork.ts` for the state rules, which are pinned by a spec.
 	 */
 	import { IconX } from '@tabler/icons-svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { BAND_THEMES, type BandThemeValue } from '$lib/types/band-page';
-	import themeSheet from '$lib/themes/band-site/index.css?raw';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { BAND_THEMES, type BandThemeValue } from '#lib/types/band-page.js';
+	import themeSheet from '#lib/themes/band-site/index.css?raw';
 	import {
 		fork,
 		needsConfirm,

@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import DayTimeline from '$lib/components/reservations/DayTimeline.svelte';
-	import { rowLink } from '$lib/actions/row-link';
-	import { getStaffDashboard } from '$lib/remote/staff-dashboard.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import DayTimeline from '#lib/components/reservations/DayTimeline.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { getStaffDashboard } from '#lib/remote/staff-dashboard.remote.js';
 	import {
 		allStaffNavItems,
 		filterNavItems,
@@ -20,16 +20,16 @@
 		type StaffNavItem
 	} from './nav-items';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
-	import { hasCapability } from '$lib/config';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import { hasCapability } from '#lib/config.js';
 	import {
 		formatDateShort,
 		formatDateShortYear,
 		formatSpan,
 		formatTimeRange
-	} from '$lib/utils/format';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import { formatIsoDay } from '$lib/utils/deadline';
+	} from '#lib/utils/format.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import { formatIsoDay } from '#lib/utils/deadline.js';
 
 	// Typed by the badge keys, so a new sidebar count cannot reach this page unnamed.
 	const queueLabels: Record<StaffNavBadgeKey, string> = {
@@ -71,8 +71,8 @@
 	);
 	let showsHref = $derived(
 		hasCapability(data.capabilities, 'event.manage')
-			? resolve('/staff/projects/productions')
-			: resolve('/staff/events')
+			? resolve('staff/projects/productions')
+			: resolve('staff/events')
 	);
 </script>
 
@@ -103,7 +103,7 @@
 							endsAt: r.endsAt,
 							bookerType: r.bookerType,
 							label: r.booker.title,
-							href: resolve(`/staff/reservations/${r.id}`)
+							href: resolve(`staff/reservations/${r.id}`)
 						}))}
 					/>
 				</div>
@@ -123,7 +123,7 @@
 								>
 							</tr>
 						{:else}
-							<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/reservations/${r.id}`)}>
+							<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/reservations/${r.id}`)}>
 								<td class="whitespace-nowrap">{formatTimeRange(r.startsAt, r.endsAt)}</td>
 								<td class="cell-primary">
 									<EntityIdentity ref={r.booker} />
@@ -139,7 +139,7 @@
 			{/if}
 		{/each}
 		<div class="mt-2">
-			<Button variant="ghost" size="sm" href={resolve('/staff/reservations')}>
+			<Button variant="ghost" size="sm" href={resolve('staff/reservations')}>
 				{m.staff_open_reservations()}
 			</Button>
 		</div>
@@ -157,7 +157,7 @@
 					<th class="w-px">{m.staff_status()}</th>
 				{/snippet}
 				{#each data.shows as show (show.id)}
-					<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/events/${show.id}`)}>
+					<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/events/${show.id}`)}>
 						<td class="whitespace-nowrap">
 							{formatDateShort(show.startsAt)}
 							<div class="text-muted">{formatEventTimeRange(show.startsAt, show.endsAt)}</div>
@@ -214,7 +214,7 @@
 			{#each data.shortShifts.rows as shift (shift.id)}
 				<tr
 					class="hover cursor-pointer"
-					use:rowLink={resolve(`/staff/volunteer/shifts/${shift.id}`)}
+					use:rowLink={resolve(`staff/volunteer/shifts/${shift.id}`)}
 				>
 					<td class="whitespace-nowrap">{formatDateShort(shift.startsAt)}</td>
 					<td class="cell-primary">{shift.roleName}</td>
@@ -227,7 +227,7 @@
 			<Button
 				variant="ghost"
 				size="sm"
-				href={withQuery(resolve('/staff/volunteer/schedule'), 'needs=short')}
+				href={withQuery(resolve('staff/volunteer/schedule'), 'needs=short')}
 			>
 				{data.shortShifts.total > data.shortShifts.rows.length
 					? m.staff_see_all_short_shifts({ total: data.shortShifts.total })
@@ -248,8 +248,8 @@
 				<tr
 					class="hover cursor-pointer"
 					use:rowLink={d.module === 'grant'
-						? resolve(`/staff/grants/${d.parentId}`)
-						: resolve(`/staff/sponsors/${d.parentId}`)}
+						? resolve(`staff/grants/${d.parentId}`)
+						: resolve(`staff/sponsors/${d.parentId}`)}
 				>
 					<td class="whitespace-nowrap" class:text-error={d.overdue}>{formatIsoDay(d.on)}</td>
 					<td class="cell-primary">
@@ -277,7 +277,7 @@
 				<th class="col-support cell-num">{m.staff_buy()}</th>
 			{/snippet}
 			{#each data.lowStock.rows as item (item.id)}
-				<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/inventory/${item.id}`)}>
+				<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/inventory/${item.id}`)}>
 					<td class="cell-primary">
 						{item.name}
 						{#if item.isOut}
@@ -294,7 +294,7 @@
 			<Button
 				variant="ghost"
 				size="sm"
-				href={withQuery(resolve('/staff/inventory'), 'show=restock')}
+				href={withQuery(resolve('staff/inventory'), 'show=restock')}
 			>
 				{data.lowStock.total > data.lowStock.rows.length
 					? m.staff_see_all_restock({ total: data.lowStock.total })
@@ -319,7 +319,7 @@
 					<th class="col-support whitespace-nowrap">{m.staff_joined()}</th>
 				{/snippet}
 				{#each data.members.recent as u (u.id)}
-					<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/members/${u.id}`)}>
+					<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/members/${u.id}`)}>
 						<td class="cell-primary"><EntityIdentity ref={u.ref} /></td>
 						<td class="col-support whitespace-nowrap">{formatDateShortYear(u.createdAt)}</td>
 					</tr>

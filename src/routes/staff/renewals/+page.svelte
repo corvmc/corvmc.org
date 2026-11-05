@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** CMC's own permits, licenses and insurance policies, the soonest to expire first. */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import RenewalFields from '$lib/components/renewal/RenewalFields.svelte';
-	import { getRenewals, createRenewal } from '$lib/remote/renewals.remote';
-	import { renewalKindLabels } from '$lib/config';
-	import { formatIsoDay } from '$lib/utils/deadline';
-	import { rowLink } from '$lib/actions/row-link';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import RenewalFields from '#lib/components/renewal/RenewalFields.svelte';
+	import { getRenewals, createRenewal } from '#lib/remote/renewals.remote.js';
+	import { renewalKindLabels } from '#lib/config.js';
+	import { formatIsoDay } from '#lib/utils/deadline.js';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
 
 	const { renewals, assignees } = $derived(await getRenewals());
@@ -48,7 +48,7 @@
 				<th class="col-extra">{m.staff_responsible()}</th>
 			{/snippet}
 			{#each renewals as r (r.id)}
-				<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/renewals/${r.id}`)}>
+				<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/renewals/${r.id}`)}>
 					<td class="w-px">
 						{#if r.deadline.overdue}
 							<Badge variant="error" size="sm">{m.staff_renewals_lapsed()}</Badge>
@@ -57,7 +57,7 @@
 						{/if}
 					</td>
 					<td class="cell-primary">
-						<a class="link font-medium" href={resolve(`/staff/renewals/${r.id}`)}>{r.name}</a>
+						<a class="link font-medium" href={resolve(`staff/renewals/${r.id}`)}>{r.name}</a>
 						<div class="truncate text-muted">{r.issuer ?? '—'}</div>
 					</td>
 					<td class="whitespace-nowrap">

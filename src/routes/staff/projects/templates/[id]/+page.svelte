@@ -1,24 +1,24 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import {
 		dutyListAnchors,
 		dutyListAnchorLabels,
 		workDoneConditions,
 		workDoneConditionLabels
-	} from '$lib/config';
+	} from '#lib/config.js';
 	import {
 		getDutyListPage,
 		addDutyListItem,
@@ -26,9 +26,9 @@
 		updateDutyListItem,
 		removeDutyListItem,
 		deleteDutyList
-	} from '$lib/remote/duty-lists.remote';
+	} from '#lib/remote/duty-lists.remote.js';
 	import { describeDuration, describeOffset, splitOffset } from '../offsets';
-	import { Latest } from '$lib/latest.svelte';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	const id = $derived(page.params.id!);
 	// Not `{#await}`: a refresh would re-pend it and unmount an open item dialog.
@@ -84,16 +84,21 @@
 			successToast={m.staff_saved()}
 		>
 			{#snippet form()}
-				<input type="hidden" name="id" value={d.list.id} />
-				<FormField name="name" label={m.staff_name()} type="text" value={d.list.name} />
+				<input {...updateDutyList.fields.id.as('hidden', d.list.id)} />
 				<FormField
-					name="description"
+					field={updateDutyList.fields.name}
+					label={m.staff_name()}
+					type="text"
+					value={d.list.name}
+				/>
+				<FormField
+					field={updateDutyList.fields.description}
 					label={m.staff_description()}
 					type="textarea"
 					value={d.list.description ?? ''}
 				/>
 				<FormField
-					name="anchor"
+					field={updateDutyList.fields.anchor}
 					label={m.staff_measure_offsets_from()}
 					type="select"
 					options={anchorOptions}
@@ -107,7 +112,7 @@
 					value={d.list.projectKind === 'production'}
 				/>
 				<FormField
-					name="isActive"
+					field={updateDutyList.fields.isActive}
 					type="checkbox"
 					label={m.staff_active()}
 					checkboxLabel={m.staff_project_templates_id_checkbox_label()}
@@ -124,8 +129,8 @@
 			successToast={m.staff_project_templates_id_item_added()}
 		>
 			{#snippet form()}
-				<input type="hidden" name="dutyListId" value={d.list.id} />
-				{@render itemFields(roleOptions, ownerOptions)}
+				<input {...addDutyListItem.fields.dutyListId.as('hidden', d.list.id)} />
+				{@render itemFields(addDutyListItem.fields, roleOptions, ownerOptions)}
 			{/snippet}
 		</Action>
 	</PageHeader>
@@ -213,9 +218,18 @@
 										successToast={m.staff_saved()}
 									>
 										{#snippet form()}
-											<input type="hidden" name="id" value={item.id} />
-											<input type="hidden" name="dutyListId" value={d.list.id} />
-											{@render itemFields(roleOptions, ownerOptions, item)}
+											<input {...updateDutyListItem.for(item.id).fields.id.as('hidden', item.id)} />
+											<input
+												{...updateDutyListItem
+													.for(item.id)
+													.fields.dutyListId.as('hidden', d.list.id)}
+											/>
+											{@render itemFields(
+												updateDutyListItem.for(item.id).fields,
+												roleOptions,
+												ownerOptions,
+												item
+											)}
 										{/snippet}
 									</Action>
 									<Action
@@ -227,8 +241,8 @@
 										successToast={m.staff_project_templates_id_item_removed()}
 									>
 										{#snippet form()}
-											<input type="hidden" name="id" value={item.id} />
-											<input type="hidden" name="dutyListId" value={d.list.id} />
+											<input {...removeDutyListItem.fields.id.as('hidden', item.id)} />
+											<input {...removeDutyListItem.fields.dutyListId.as('hidden', d.list.id)} />
 										{/snippet}
 									</Action>
 								</div>
@@ -250,10 +264,10 @@
 				outline
 				confirm={m.staff_project_templates_id_delete({ name: d.list.name })}
 				successToast={m.staff_project_templates_id_template_deleted()}
-				onsuccess={() => goto(resolve('/staff/projects/templates'))}
+				onsuccess={() => goto(resolve('staff/projects/templates'))}
 			>
 				{#snippet form()}
-					<input type="hidden" name="id" value={d.list.id} />
+					<input {...deleteDutyList.fields.id.as('hidden', d.list.id)} />
 				{/snippet}
 			</Action>
 		</InfoCard>
@@ -261,6 +275,7 @@
 {/if}
 
 {#snippet itemFields(
+	fields: typeof addDutyListItem.fields,
 	roleOptions: { value: string; label: string }[],
 	ownerOptions: { value: string; label: string }[],
 	item?: Item
@@ -268,28 +283,28 @@
 	{@const due = item ? item.offsetMinutes === null && item.dueOffsetMinutes !== null : false}
 	{@const offset = splitOffset(item ? (item.offsetMinutes ?? item.dueOffsetMinutes ?? 0) : -180)}
 	<FormField
-		name="volunteerRoleId"
+		field={fields.volunteerRoleId}
 		label={m.staff_role()}
 		type="select"
 		options={roleOptions}
 		value={item?.volunteerRoleId}
 	/>
 	<FormField
-		name="title"
+		field={fields.title}
 		label={m.staff_title()}
 		type="text"
 		value={item?.title ?? ''}
 		description={m.staff_project_templates_id_what_work_order_called_blank()}
 	/>
 	<FormField
-		name="groupId"
+		field={fields.groupId}
 		label={m.staff_owner()}
 		type="select"
 		options={ownerOptions}
 		value={item?.groupId ?? ''}
 	/>
 	<FormField
-		name="doneWhen"
+		field={fields.doneWhen}
 		label={m.staff_project_templates_id_done_when()}
 		type="select"
 		options={doneWhenOptions}
@@ -297,7 +312,7 @@
 		description={m.staff_project_templates_id_fact_about_show_its_tasks()}
 	/>
 	<FormField
-		name="kind"
+		field={fields.kind}
 		label={m.staff_kind()}
 		type="select"
 		options={kindOptions}
@@ -306,20 +321,21 @@
 	/>
 	<div class="grid gap-4 sm:grid-cols-3">
 		<FormField
-			name="offsetAmount"
+			field={fields.offsetAmount}
+			submitAs="text"
 			label={m.staff_project_templates_id_offset()}
 			type="number"
 			value={String(offset.amount)}
 		/>
 		<FormField
-			name="offsetUnit"
+			field={fields.offsetUnit}
 			label={m.staff_project_templates_id_unit()}
 			type="select"
 			options={unitOptions}
 			value={offset.unit}
 		/>
 		<FormField
-			name="offsetDirection"
+			field={fields.offsetDirection}
 			label={m.staff_project_templates_id_direction()}
 			type="select"
 			options={directionOptions}
@@ -327,27 +343,35 @@
 		/>
 	</div>
 	<FormField
-		name="durationMinutes"
+		field={fields.durationMinutes}
+		submitAs="text"
 		label={m.staff_project_templates_id_duration_minutes()}
 		type="number"
 		value={String(item ? (item.durationMinutes ?? '') : 120)}
 		description={m.staff_project_templates_id_scheduled_items_only_ignored_dead()}
 	/>
 	<FormField
-		name="capacity"
+		field={fields.capacity}
+		submitAs="text"
 		label={m.staff_project_templates_id_how_many_people()}
 		type="number"
 		value={String(item?.capacity ?? 1)}
 	/>
 	<FormField
-		name="sortOrder"
+		field={fields.sortOrder}
+		submitAs="text"
 		label={m.staff_sort_order()}
 		type="number"
 		value={String(item?.sortOrder ?? 0)}
 	/>
-	<FormField name="notes" label={m.staff_notes()} type="textarea" value={item?.notes ?? ''} />
 	<FormField
-		name="tasks"
+		field={fields.notes}
+		label={m.staff_notes()}
+		type="textarea"
+		value={item?.notes ?? ''}
+	/>
+	<FormField
+		field={fields.tasks}
 		label={m.staff_project_templates_id_tasks()}
 		type="textarea"
 		value={item?.tasks.join('\n') ?? ''}

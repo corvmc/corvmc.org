@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/install
       # Prettier only. `eslint --cache` is not usable here: caching makes ESLint
-      # serialize its config, and svelte.config.js sets `compilerOptions.runes` to a
+      # serialize its config, and kit.config.js sets `compilerOptions.runes` to a
       # function (it exempts node_modules, .md/.svx and src/lib/layouts/prose.svelte
       # from runes mode), which ESLint refuses to serialize. ESLint is ~28m of this
       # job (2026-11), so this only caches the small half.
@@ -62,7 +62,9 @@ jobs:
     # right there.
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Typed ESLint costs ~1s a file here, so a tree-wide PR (#2374: 1,684 files) needs
+    # far more than 10 minutes; a normal PR is unaffected. See #2399.
+    timeout-minutes: 45
     # A phase PR into an integration branch is diffed against that branch, not
     # against `main`. `github.base_ref` is the PR's base and is empty for
     # `merge_group`, whose ref is built from main — so the fallback keeps the
@@ -89,7 +91,7 @@ jobs:
       - uses: ./.github/actions/install
       # Two svelte-check passes: `src`, which the generated tsconfig includes, and
       # then everything else through `tsconfig.tooling.json` — `scripts/`, `e2e/`,
-      # `eslint-rules/`, `.storybook/` and the root configs, none of which the
+      # `eslint-rules/` and the root configs, none of which the
       # generated one has ever covered. `pnpm check` chains both.
       - run: pnpm check
 
@@ -103,7 +105,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/install
-      # The `client` and `storybook` vitest projects run in real chromium.
+      # The `client` vitest project runs in real chromium.
       - name: Resolve Playwright version
         id: pw
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"

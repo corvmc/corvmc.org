@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { IconCheck, IconCircle, IconLock } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
-	import type { EpkSection } from '$lib/server/band/epk-completeness';
+	import type { EpkSection } from '#lib/server/band/epk-completeness.js';
 
 	/**
 	 * The ladder, as a named destination rather than a percentage.

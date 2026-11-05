@@ -8,13 +8,13 @@
  * This keeps reservation-specific credit rules out of the generic credit- and
  * payment-services.
  */
-import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { creditTransaction } from '$lib/server/db/schema/finance';
-import { user, type Subscription } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { creditTransaction } from '#lib/server/db/schema/finance.js';
+import { user, type Subscription } from '#lib/server/db/schema/authentication.js';
 import { and, eq, sql } from 'drizzle-orm';
-import * as creditService from '$lib/server/finance/credit-service';
-import { creditValueCents, creditsToHours, hoursToCredits, type BookerType } from '$lib/config';
+import * as creditService from '#lib/server/finance/credit-service.js';
+import { creditValueCents, creditsToHours, hoursToCredits, type BookerType } from '#lib/config.js';
 import { termsFor, type ReservationConfig } from './config';
 
 export interface ReservationCreditResult {

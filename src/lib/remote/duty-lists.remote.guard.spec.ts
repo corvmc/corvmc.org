@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { grantsCapability, positions, type Capability } from '$lib/config';
+import { grantsCapability, positions, type Capability } from '#lib/config.js';
 
 /**
  * Project templates are read under `project.read` and edited under
@@ -10,7 +10,7 @@ import { grantsCapability, positions, type Capability } from '$lib/config';
 const requireCapability = vi.fn<(cap: string) => Promise<unknown>>(async () => {
 	throw new Error('403');
 });
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (cap: string) => requireCapability(cap),
 	can: async () => false
 }));
@@ -28,10 +28,10 @@ const service = vi.hoisted(() => ({
 	updateDutyList: vi.fn(),
 	updateDutyListItem: vi.fn()
 }));
-vi.mock('$lib/server/volunteer/duty-list-service', () => service);
-vi.mock('$lib/server/project/project-service', () => ({ listCommittees: vi.fn() }));
-vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({ listVolunteerRoles: vi.fn() }));
-vi.mock('$lib/server/volunteer/work-order-service', () => ({ workOrderProjectId: vi.fn() }));
+vi.mock('#lib/server/volunteer/duty-list-service.js', () => service);
+vi.mock('#lib/server/project/project-service.js', () => ({ listCommittees: vi.fn() }));
+vi.mock('#lib/server/volunteer/volunteer-role-service.js', () => ({ listVolunteerRoles: vi.fn() }));
+vi.mock('#lib/server/volunteer/work-order-service.js', () => ({ workOrderProjectId: vi.fn() }));
 vi.mock('./volunteer.remote', () => ({
 	getStaffShiftPage: vi.fn(),
 	getWorkOrderActivity: vi.fn()

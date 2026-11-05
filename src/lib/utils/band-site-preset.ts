@@ -1,4 +1,4 @@
-import type { Block } from '$lib/types/band-page';
+import type { Block } from '#lib/types/band-page.js';
 
 /**
  * The block layout every premium band starts with.

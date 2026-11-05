@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { Dialog } from 'bits-ui';
 	import type { Snippet } from 'svelte';
 	import { setButtonsAsMenuItems, setDefaultButtonSize } from './Button.svelte';

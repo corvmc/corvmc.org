@@ -1,4 +1,4 @@
-import { domainEvents } from '$lib/server/event-bus/event-bus';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { recordAuditEntry } from './audit-service';
 
 /**

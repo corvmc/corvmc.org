@@ -1,7 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 
 const remote = vi.hoisted(() => (value: () => unknown = () => undefined) => {
 	const fields = new Proxy({ allIssues: () => null } as Record<string, unknown>, {
@@ -19,7 +19,7 @@ const remote = vi.hoisted(() => (value: () => unknown = () => undefined) => {
 	return Object.assign(fn, { for: () => fn });
 });
 
-vi.mock('$lib/remote/projects.remote', () => ({
+vi.mock('#lib/remote/projects.remote.js', () => ({
 	getProjectsPage: remote(() => ({
 		committees: [{ id: 'c1', name: 'Facilities' }],
 		templates: [{ id: 't1', name: 'Show deliverables' }],
@@ -32,7 +32,7 @@ vi.mock('$lib/remote/projects.remote', () => ({
 	}
 }));
 const held = vi.hoisted(() => ({ capabilities: [] as string[] }));
-vi.mock('$lib/remote/layout.remote', () => ({
+vi.mock('#lib/remote/layout.remote.js', () => ({
 	getStaffLayout: remote(() => ({ capabilities: held.capabilities }))
 }));
 vi.mock('$app/navigation', () => ({

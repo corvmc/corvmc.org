@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { getBandSiteData } from '$lib/remote/band-site.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { getBandSiteData } from '#lib/remote/band-site.remote.js';
 	import { resolve } from '$app/paths';
 	import {
 		formatDate,
 		formatTime,
 		formatDayNumber,
 		formatMonthShortCased
-	} from '$lib/utils/format';
-	import { priceDisplay } from '$lib/utils/event-ticketing';
-	import { bandSiteHref } from '$lib/utils/band-site-url';
+	} from '#lib/utils/format.js';
+	import { priceDisplay } from '#lib/utils/event-ticketing.js';
+	import { bandSiteHref } from '#lib/utils/band-site-url.js';
 	import { page } from '$app/state';
-	import { imageSrc } from '$lib/utils/images';
+	import { imageSrc } from '#lib/utils/images.js';
 
 	let data = $derived(await getBandSiteData(page.params.slug!));
 	const events = $derived(data.events);
@@ -122,5 +122,5 @@
 
 <!-- Minimal footer -->
 <footer class="py-6 text-center text-xs opacity-40">
-	<a href={resolve('/')} class="hover:opacity-70">{m.public_corvallis_music_collective()}</a>
+	<a href={resolve('')} class="hover:opacity-70">{m.public_corvallis_music_collective()}</a>
 </footer>

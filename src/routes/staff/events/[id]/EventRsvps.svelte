@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import RosterTable from '$lib/components/roster/RosterTable.svelte';
-	import CopyEmailsButton from '$lib/components/roster/CopyEmailsButton.svelte';
-	import { getEventRsvpRoster } from '$lib/remote/event-rsvp.remote';
-	import { formatDateTimeShort } from '$lib/utils/format';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import RosterTable from '#lib/components/roster/RosterTable.svelte';
+	import CopyEmailsButton from '#lib/components/roster/CopyEmailsButton.svelte';
+	import { getEventRsvpRoster } from '#lib/remote/event-rsvp.remote.js';
+	import { formatDateTimeShort } from '#lib/utils/format.js';
 
 	let { eventId }: { eventId: string } = $props();
 
@@ -22,7 +22,7 @@
 				<div class="flex gap-1">
 					<CopyEmailsButton emails={roster.rows.map((r) => r.email)} />
 					<Button
-						href={resolve(`/staff/events/${eventId}/rsvps.csv`)}
+						href={resolve(`staff/events/${eventId}/rsvps.csv`)}
 						rel="external"
 						download
 						variant="ghost"

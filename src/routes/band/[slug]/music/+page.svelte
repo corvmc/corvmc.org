@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import CreateReleaseModal from './CreateReleaseModal.svelte';
 	import ReleaseCard from './ReleaseCard.svelte';
-	import { getBandMusicPage } from '$lib/remote/audio.remote';
+	import { getBandMusicPage } from '#lib/remote/audio.remote.js';
 	import { getBandLayoutContext } from '../layout-context';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -34,7 +34,7 @@
 	{:else}
 		<div class="space-y-3">
 			{#each releases as release (release.id)}
-				<ReleaseCard {release} href={resolve(`/band/${band.slug}/music/${release.id}`)} />
+				<ReleaseCard {release} href={resolve(`band/${band.slug}/music/${release.id}`)} />
 			{/each}
 		</div>
 	{/if}

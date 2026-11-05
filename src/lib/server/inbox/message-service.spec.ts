@@ -17,7 +17,7 @@ const calls = {
 /** FIFO of rows handed to each awaited select, in the order the code runs them. */
 let selectQueue: unknown[][] = [];
 
-vi.mock('$lib/server/db', () => {
+vi.mock('#lib/server/db/index.js', () => {
 	const chain = () => {
 		const self: Record<string, unknown> = {};
 		for (const method of ['from', 'where', 'orderBy', 'limit']) self[method] = () => self;
@@ -46,9 +46,9 @@ vi.mock('$lib/server/db', () => {
 		}
 	};
 });
-vi.mock('$lib/server/db/paginate', () => ({ paginate: vi.fn() }));
+vi.mock('#lib/server/db/paginate.js', () => ({ paginate: vi.fn() }));
 const mockEmit = vi.fn();
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...args: unknown[]) => mockEmit(...(args as [])) }
 }));
 vi.mock('./channel-dispatcher', () => ({

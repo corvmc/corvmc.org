@@ -14,7 +14,7 @@
  * already-sanitized markdown HTML from `sanitizeBio`.
  */
 import QRCode from 'qrcode-svg';
-import type { FullPressKit } from '$lib/types/band-page';
+import type { FullPressKit } from '#lib/types/band-page.js';
 
 export interface PressKitDocument {
 	name: string;

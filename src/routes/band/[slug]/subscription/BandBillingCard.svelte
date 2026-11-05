@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import AddCardModal from '$lib/components/member/membership/AddCardModal.svelte';
-	import { getBandBilling, startBandAddCard } from '$lib/remote/billing.remote';
-	import { Latest } from '$lib/latest.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import AddCardModal from '#lib/components/member/membership/AddCardModal.svelte';
+	import { getBandBilling, startBandAddCard } from '#lib/remote/billing.remote.js';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	/**
 	 * The band's card on file. Its own component so the billing query only runs

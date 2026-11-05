@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import type { RemoteFormFieldValue, RemoteFormField } from '@sveltejs/kit';
-	import { Field } from '$lib/components/ui/Form';
-	import { getLocations } from '$lib/remote/inventory.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { RemoteFormFieldValue, RemoteFormField } from '$app/server';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { getLocations } from '#lib/remote/inventory.remote.js';
 
 	/**
 	 * The "where is it" select, loading its own data.

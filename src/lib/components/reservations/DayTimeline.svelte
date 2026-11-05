@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
-	import type { BookerType } from '$lib/config';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import type { BookerType } from '#lib/config.js';
 	import type { ResolvedPathname } from '$app/types';
 	import BookerTypeIcon from './BookerTypeIcon.svelte';
 	import { IconLock } from '@tabler/icons-svelte';
-	import { clubToday, DEFAULT_TIMEZONE } from '$lib/config';
+	import { clubToday, DEFAULT_TIMEZONE } from '#lib/config.js';
 
 	type TimeSlot = {
 		id: string;

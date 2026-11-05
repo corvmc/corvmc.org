@@ -1,11 +1,11 @@
 import { json, error, type RequestHandler } from '@sveltejs/kit';
 import { randomUUID } from 'node:crypto';
-import { uploadFile } from '$lib/server/storage';
-import { putPrivateObject } from '$lib/server/private-storage';
-import { mediaKey, RECEIPT_KEY_PREFIX } from '$lib/server/storage-keys';
-import { attach, record } from '$lib/server/media/media-service';
-import { can } from '$lib/server/authorization';
-import type { MediaSlot } from '$lib/server/db/schema/media';
+import { uploadFile } from '#lib/server/storage.js';
+import { putPrivateObject } from '#lib/server/private-storage.js';
+import { mediaKey, RECEIPT_KEY_PREFIX } from '#lib/server/storage-keys.js';
+import { attach, record } from '#lib/server/media/media-service.js';
+import { can } from '#lib/server/authorization.js';
+import type { MediaSlot } from '#lib/server/db/schema/media.js';
 
 /**
  * Uploading a file for an inventory item, unit, or acquisition.

@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FileUpload from '$lib/components/ui/Form/FileUpload.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FileUpload from '#lib/components/ui/Form/FileUpload.svelte';
 	import { toast } from 'svelte-sonner';
-	import { responseErrorMessage } from '$lib/api';
-	import { imageSrc } from '$lib/utils/images';
-	import { useTemplateFlyerAsPoster } from '$lib/remote/productions.remote';
+	import { responseErrorMessage } from '#lib/api.js';
+	import { imageSrc } from '#lib/utils/images.js';
+	import { useTemplateFlyerAsPoster } from '#lib/remote/productions.remote.js';
 
 	/**
 	 * A listing's poster: upload one, or draw the template flyer as one. Both are
@@ -73,7 +73,7 @@
 					onsuccess={onchange}
 				>
 					{#snippet form()}
-						<input type="hidden" name="eventId" value={eventId} />
+						<input {...useTemplateFlyerAsPoster.fields.eventId.as('hidden', eventId)} />
 						<p class="text-sm">
 							{m.events_listing_poster_card_flyer_drawn_from_title_date()}
 						</p>

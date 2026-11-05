@@ -7,7 +7,7 @@ import { render } from 'vitest-browser-svelte';
 // server at runtime, and `$app/state`, which the menu reads to latch the row
 // you are on (#1244).
 vi.mock('$app/paths', () => ({
-	resolve: (path: string) => path
+	resolve: (path: string) => (path.startsWith('/') ? path : `/${path}`)
 }));
 
 vi.mock('$app/state', () => ({

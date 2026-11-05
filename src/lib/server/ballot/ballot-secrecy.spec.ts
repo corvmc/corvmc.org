@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { getTableConfig, type SQLiteTable } from 'drizzle-orm/sqlite-core';
 import { getTableName } from 'drizzle-orm';
-import * as schema from '$lib/server/db/schema';
-import { ballotChoice, ballotParticipation } from '$lib/server/db/schema/ballot';
+import * as schema from '#lib/server/db/schema.js';
+import { ballotChoice, ballotParticipation } from '#lib/server/db/schema/ballot.js';
 
 /**
  * The storage half of "secret but auditable": nothing in the schema lets a

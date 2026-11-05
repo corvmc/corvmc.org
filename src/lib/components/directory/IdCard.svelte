@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { ResolvedPathname } from '$app/types';
-	import speakerLogo from '$lib/assets/cmc-speaker-icon.svg';
-	import { hashPattern } from '$lib/utils/patterns';
-	import { imageSrc } from '$lib/utils/images';
+	import speakerLogo from '#lib/assets/cmc-speaker-icon.svg';
+	import { hashPattern } from '#lib/utils/patterns.js';
+	import { imageSrc } from '#lib/utils/images.js';
 	import { IconUserSearch, IconBriefcase, IconSchool, IconUsersPlus } from '@tabler/icons-svelte';
-	import { initials } from '$lib/utils/format';
+	import { initials } from '#lib/utils/format.js';
 
 	interface Props {
 		href: ResolvedPathname;

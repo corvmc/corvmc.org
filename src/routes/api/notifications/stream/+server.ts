@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
-import { addConnection, removeConnection, type SSEWriter } from '$lib/server/notification/sse';
-import { getUnreadCount } from '$lib/server/notification/in-app-service';
+import { addConnection, removeConnection, type SSEWriter } from '#lib/server/notification/sse.js';
+import { getUnreadCount } from '#lib/server/notification/in-app-service.js';
 
 // ---------------------------------------------------------------------------
 // SSE endpoint for real-time notification delivery

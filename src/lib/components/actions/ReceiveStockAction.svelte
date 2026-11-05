@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { receiveStock } from '$lib/remote/inventory.remote';
-	import LocationField from '$lib/components/inventory/LocationField.svelte';
+	import { receiveStock } from '#lib/remote/inventory.remote.js';
+	import LocationField from '#lib/components/inventory/LocationField.svelte';
 	import { Field, MoneyField } from '../ui/Form';
 	import MemberPicker from '../ui/MemberPicker.svelte';
-	import { acquisitionKinds, acquisitionKindLabels, clubToday } from '$lib/config';
+	import { acquisitionKinds, acquisitionKindLabels, clubToday } from '#lib/config.js';
 
 	const { fields } = receiveStock;
 

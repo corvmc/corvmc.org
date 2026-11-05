@@ -1,5 +1,9 @@
 import { rangeInstants, type ReportRange } from './range';
-import { financialEntryKinds, type FinancialCategory, type FinancialEntryKind } from '$lib/config';
+import {
+	financialEntryKinds,
+	type FinancialCategory,
+	type FinancialEntryKind
+} from '#lib/config.js';
 
 export interface CategoryLine {
 	category: FinancialCategory;

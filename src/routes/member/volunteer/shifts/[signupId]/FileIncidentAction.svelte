@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { clubToday, incidentCategories, incidentCategoryLabels } from '$lib/config';
-	import { fileShowIncidentForm } from '$lib/remote/incidents.remote';
-	import { getMyShift } from '$lib/remote/volunteer.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { clubToday, incidentCategories, incidentCategoryLabels } from '#lib/config.js';
+	import { fileShowIncidentForm } from '#lib/remote/incidents.remote.js';
+	import { getMyShift } from '#lib/remote/volunteer.remote.js';
 
 	let { eventId, signupId }: { eventId: string; signupId: string } = $props();
 

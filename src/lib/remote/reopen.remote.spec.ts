@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { z } from 'zod';
-import { grantsCapability, positions, type Capability, type Position } from '$lib/config';
+import { grantsCapability, positions, type Capability, type Position } from '#lib/config.js';
 
 /**
  * Leaving a terminal state is an admin's act (#2259): each reopen form names its
@@ -22,12 +22,12 @@ vi.mock('$app/server', () => {
 			mark(async (raw: unknown) => handler(schema.parse(raw)), 'command')
 	};
 });
-vi.mock('$lib/server/db', () => ({ db: {}, getRowCount: () => 0 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {}, getRowCount: () => 0 }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 let position: Position = 'staff';
 const requireCapability = vi.hoisted(() => vi.fn());
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => ({ id: 'usr-1' }),
 	can: async () => true,
 	requireCapabilityOrOwner: async () => 'staff',
@@ -39,15 +39,15 @@ const services = vi.hoisted(() => ({
 	reopenOrder: vi.fn(async () => ({})),
 	reopenAsset: vi.fn(async () => ({}))
 }));
-vi.mock('$lib/server/contractor/contractor-job-service', async (original) => ({
+vi.mock('#lib/server/contractor/contractor-job-service.js', async (original) => ({
 	...(await original<object>()),
 	reopenJob: services.reopenJob
 }));
-vi.mock('$lib/server/inventory/order-service', async (original) => ({
+vi.mock('#lib/server/inventory/order-service.js', async (original) => ({
 	...(await original<object>()),
 	reopenOrder: services.reopenOrder
 }));
-vi.mock('$lib/server/inventory/asset-service', async (original) => ({
+vi.mock('#lib/server/inventory/asset-service.js', async (original) => ({
 	...(await original<object>()),
 	reopenAsset: services.reopenAsset
 }));

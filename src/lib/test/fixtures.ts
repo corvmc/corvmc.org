@@ -1,14 +1,14 @@
-// Shared fixtures for isolated component tests and stories.
+// Shared fixtures for isolated component tests.
 //
 // These return plain objects matching the shapes that remote queries hand to
-// components — they let a `.svelte.spec.ts` or `.stories.svelte` render a
+// components — they let a `.svelte.spec.ts` render a
 // coupled component with no DB, auth, or server involved. Each factory takes an
 // `overrides` partial so a test can pin only the fields it asserts on.
 
-import type { EntityType } from '$lib/config';
-import type { EntityRef } from '$lib/types/entity';
+import type { EntityType } from '#lib/config.js';
+import type { EntityRef } from '#lib/types/entity.js';
 
-/** Matches the shape returned by `getMe` in `$lib/remote/layout.remote`. */
+/** Matches the shape returned by `getMe` in `#lib/remote/layout.remote.js`. */
 export function fakeUser(overrides: Partial<FakeUser> = {}): FakeUser {
 	return {
 		id: 'user-1',
@@ -48,7 +48,7 @@ export type FakeBand = {
 
 /**
  * A display reference for any entity type, with a plausible title per type so
- * a gallery story reads as real content rather than "member / band / event".
+ * a rendered card reads as real content rather than "member / band / event".
  *
  * `overrides` is loosely typed because `EntityRef` is a discriminated union —
  * the caller already picked the arm by passing `type`, and narrowing the

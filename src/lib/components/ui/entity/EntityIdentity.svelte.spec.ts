@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import Harness from './EntityIdentityHarness.svelte';
-import { fakeRef } from '$lib/test/fixtures';
+import { fakeRef } from '#lib/test/fixtures.js';
 
 describe('EntityIdentity', () => {
 	/**
@@ -131,8 +131,7 @@ describe('EntityIdentity', () => {
  * an inherited value does lose to a direct declaration.
  *
  * Asserted structurally rather than via `getComputedStyle`: this project loads
- * no app stylesheet, so `.truncate` resolves to nothing here regardless. The
- * visual proof lives in the Storybook stories, which do import `layout.css`.
+ * no app stylesheet, so `.truncate` resolves to nothing here regardless.
  */
 describe('EntityIdentity truncation elements', () => {
 	it('never puts truncate directly on a heading or a paragraph', async () => {

@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The duties that come with a work order (`work_task`), ticked on change
 	 * rather than behind a Save. A duty is a level below a work order and not
 	 * another one: `doneByUserId` is attribution, never credit, and nothing here
 	 * touches hours.
 	 */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { setWorkTaskDone } from '$lib/remote/duty-lists.remote';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { setWorkTaskDone } from '#lib/remote/duty-lists.remote.js';
 
 	type Task = {
 		id: string;
@@ -40,10 +40,10 @@
 					remote={setWorkTaskDone.for(task.id)}
 					onchange={(e: Event) => (e.currentTarget as HTMLFormElement).requestSubmit()}
 				>
-					<input type="hidden" name="id" value={task.id} />
-					<input type="hidden" name="shiftId" value={shiftId} />
+					<input {...setWorkTaskDone.for(task.id).fields.id.as('hidden', task.id)} />
+					<input {...setWorkTaskDone.for(task.id).fields.shiftId.as('hidden', shiftId)} />
 					<FormField
-						name="done"
+						field={setWorkTaskDone.for(task.id).fields.done}
 						type="checkbox"
 						checkboxLabel={task.label}
 						value={task.done}

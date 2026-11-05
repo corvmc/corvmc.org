@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { IconDeviceFloppy, IconFileText, IconUpload } from '@tabler/icons-svelte';
@@ -7,31 +7,31 @@
 		addAcquisitionLineForm,
 		getStaffAcquisitionDetail,
 		editAcquisition
-	} from '$lib/remote/inventory.remote';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field, FileUpload, MoneyField } from '$lib/components/ui/Form';
-	import Action from '$lib/components/ui/Action.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
-	import { RecordForm8283Action, MarkReimbursedAction } from '$lib/components/actions';
+	} from '#lib/remote/inventory.remote.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field, FileUpload, MoneyField } from '#lib/components/ui/Form/index.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
+	import { RecordForm8283Action, MarkReimbursedAction } from '#lib/components/actions/index.js';
 	import { resolve } from '$app/paths';
-	import { formatCents, formatDateShort, toLocalDate } from '$lib/utils/format';
+	import { formatCents, formatDateShort, toLocalDate } from '#lib/utils/format.js';
 	import {
 		acquisitionKinds,
 		acquisitionKindLabels,
 		stockReasonLabels,
 		type AcquisitionKind
-	} from '$lib/config';
+	} from '#lib/config.js';
 	import { toast } from 'svelte-sonner';
 
 	/**
@@ -268,7 +268,7 @@
 						<!-- What a member asked for, and where it came from. The request
 						     sat at Planned after the thing was on the shelf (#603). -->
 						<Fact label={m.staff_inventory_acquisitions_id_fulfils()}>
-							<a class="link" href={resolve(`/staff/suggestions/${data.fulfils.id}`)}>
+							<a class="link" href={resolve(`staff/suggestions/${data.fulfils.id}`)}>
 								{data.fulfils.title}
 							</a>
 						</Fact>
@@ -418,7 +418,7 @@
 				{#each data.lines as line (line.id)}
 					<tr class="hover">
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/inventory/${line.itemId}`)}>
+							<a class="font-medium" href={resolve(`staff/inventory/${line.itemId}`)}>
 								{line.item.name}
 							</a>
 						</td>

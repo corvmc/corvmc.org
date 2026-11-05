@@ -1,7 +1,12 @@
-import { db } from '$lib/server/db';
-import { funder, grantApplication, type Funder, type NewFunder } from '$lib/server/db/schema/grant';
+import { db } from '#lib/server/db/index.js';
+import {
+	funder,
+	grantApplication,
+	type Funder,
+	type NewFunder
+} from '#lib/server/db/schema/grant.js';
 import { asc, count, eq, isNull } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 
 export class FunderNotFoundError extends DomainError {
 	readonly httpStatus = 404;

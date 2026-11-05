@@ -1,12 +1,12 @@
 import { env } from '$env/dynamic/private';
-import { sendInboxReply } from '$lib/server/notification/email/postmark-client';
+import { sendInboxReply } from '#lib/server/notification/email/postmark-client.js';
 import { sendSms } from './twilio-client';
 import { sendMetaMessage } from './meta-client';
 import { isChannelEnabled } from './channel-config-service';
 import { buildReplyToAddress } from './reply-address';
-import type { InboxChannel } from '$lib/server/db/schema/inbox';
-import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
+import type { InboxChannel } from '#lib/server/db/schema/inbox.js';
+import { db } from '#lib/server/db/index.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { eq } from 'drizzle-orm';
 
 export interface DispatchReplyParams {

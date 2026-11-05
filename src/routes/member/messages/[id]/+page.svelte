@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * One conversation, of four kinds since #1250: a DM, a staff thread, a
 	 * group's chat and a band's booking enquiry. The last two are panes of
@@ -9,30 +9,30 @@
 	 * Report *instead of* a box, which keeps a request to one message.
 	 */
 	import { untrack } from 'svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import { page } from '$app/state';
 	import { IconCheck, IconX, IconBan } from '@tabler/icons-svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
-	import ThreadComposer from '$lib/components/inbox/ThreadComposer.svelte';
-	import ThreadHeader from '$lib/components/inbox/ThreadHeader.svelte';
-	import ThreadPane from '$lib/components/inbox/ThreadPane.svelte';
-	import GroupChat from '$lib/components/inbox/GroupChat.svelte';
-	import EnquiryThread from '$lib/components/inbox/EnquiryThread.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import ThreadTimeline from '#lib/components/inbox/ThreadTimeline.svelte';
+	import ThreadComposer from '#lib/components/inbox/ThreadComposer.svelte';
+	import ThreadHeader from '#lib/components/inbox/ThreadHeader.svelte';
+	import ThreadPane from '#lib/components/inbox/ThreadPane.svelte';
+	import GroupChat from '#lib/components/inbox/GroupChat.svelte';
+	import EnquiryThread from '#lib/components/inbox/EnquiryThread.svelte';
 	import ReportDirectThreadAction from './ReportDirectThreadAction.svelte';
 	import { refreshConversations } from '../list-state.svelte';
-	import { sendConversationMessage, markConversationRead } from '$lib/remote/inbox.remote';
+	import { sendConversationMessage, markConversationRead } from '#lib/remote/inbox.remote.js';
 	import {
 		getMyMessageThread,
 		sendDirectMessage,
 		acceptDirectRequest,
 		declineDirectRequest,
 		blockFromThread
-	} from '$lib/remote/direct-messages.remote';
+	} from '#lib/remote/direct-messages.remote.js';
 
 	const threadId = $derived(page.params.id!);
 

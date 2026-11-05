@@ -1,9 +1,9 @@
 import { env } from '$env/dynamic/private';
 import { randomInt, randomUUID } from 'crypto';
-import { getJson, putJson } from '$lib/server/kv';
-import { getConfigsByPrefix } from '$lib/server/site-config/site-config-service';
-import { DEFAULT_TIMEZONE } from '$lib/config';
-import { formatDateInTz, formatTimeInTz } from '$lib/server/reservation/timezone';
+import { getJson, putJson } from '#lib/server/kv.js';
+import { getConfigsByPrefix } from '#lib/server/site-config/site-config-service.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import { formatDateInTz, formatTimeInTz } from '#lib/server/reservation/timezone.js';
 
 // ---------------------------------------------------------------------------
 // Ultraloc API client

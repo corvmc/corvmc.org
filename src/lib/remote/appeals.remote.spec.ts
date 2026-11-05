@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 let currentUser: { id: string; name: string; email: string } | null = null;
 let isStaff = false;
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: async () => {
 		if (!currentUser) throw new Error('401: Not authenticated');
 		if (!isStaff) throw new Error('403: Staff access required');
@@ -20,7 +20,7 @@ vi.mock('$lib/server/authorization', () => ({
 	}
 }));
 
-vi.mock('$lib/server/rate-limit', () => ({ allowRateLimited: async () => true }));
+vi.mock('#lib/server/rate-limit.js', () => ({ allowRateLimited: async () => true }));
 
 const svc = {
 	getMemberAppeal: vi.fn(async () => null),
@@ -28,7 +28,7 @@ const svc = {
 	decideAppeal: vi.fn(async () => ({})),
 	reopenAppeal: vi.fn(async () => undefined)
 };
-vi.mock('$lib/server/moderation/appeal-service', () => svc);
+vi.mock('#lib/server/moderation/appeal-service.js', () => svc);
 vi.mock('./flags.remote', () => ({ getFlagDetail: () => ({ refresh: () => undefined }) }));
 
 vi.mock('$app/server', () => ({

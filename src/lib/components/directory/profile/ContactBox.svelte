@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import ProfileSection from './ProfileSection.svelte';
 	import { IconMail, IconPhone, IconAt } from '@tabler/icons-svelte';
-	import type { DirectoryContact } from '$lib/server/db/schema/authentication';
+	import type { DirectoryContact } from '#lib/server/db/schema/authentication.js';
 
 	let {
 		kind,

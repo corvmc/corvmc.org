@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { formatHistoryTime, formatDateShortYear } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { formatHistoryTime, formatDateShortYear } from '#lib/utils/format.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { UnscheduleCampaignAction } from '$lib/components/actions';
-	import Button from '$lib/components/ui/Button.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { getCampaignDetail } from '$lib/remote/marketing.remote';
-	import { sanitizeHtml } from '$lib/utils/markdown';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { UnscheduleCampaignAction } from '#lib/components/actions/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { getCampaignDetail } from '#lib/remote/marketing.remote.js';
+	import { sanitizeHtml } from '#lib/utils/markdown.js';
 
 	let id = $derived(page.params.id!);
 	let campaign = $derived(await getCampaignDetail(id));
@@ -29,7 +29,7 @@
 	{#if campaign.status === 'scheduled'}
 		<UnscheduleCampaignAction
 			campaignId={id}
-			onsuccess={() => goto(resolve(`/staff/marketing/campaigns/${id}/edit`))}
+			onsuccess={() => goto(resolve(`staff/marketing/campaigns/${id}/edit`))}
 		/>
 	{/if}
 </PageHeader>

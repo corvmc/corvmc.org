@@ -23,7 +23,7 @@ function chainable(op?: string) {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chainable()),
 		update: vi.fn(() => chainable('update')),
@@ -42,9 +42,9 @@ vi.mock('$lib/server/db', () => ({
 const inserted = () => writes.find((w) => w.op === 'insert')?.value;
 
 const recordAuditEntry = vi.fn();
-vi.mock('$lib/server/audit/audit-service', () => ({ recordAuditEntry }));
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry }));
 let editorHolds = true;
-vi.mock('$lib/server/authorization', () => ({ positionsGrant: vi.fn(async () => editorHolds) }));
+vi.mock('#lib/server/authorization.js', () => ({ positionsGrant: vi.fn(async () => editorHolds) }));
 const editor = { editorId: 'staff-1' };
 
 const {

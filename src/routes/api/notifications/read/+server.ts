@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
-import { markRead, markAllRead } from '$lib/server/notification/in-app-service';
+import { markRead, markAllRead } from '#lib/server/notification/in-app-service.js';
 
 // ---------------------------------------------------------------------------
 // POST /api/notifications/read — mark notifications as read

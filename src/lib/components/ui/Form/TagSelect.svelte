@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Option list in, ids out: the value can only ever be ids drawn from
 	 * `options`, so this cannot create a tag that did not already exist. Reached
@@ -8,7 +8,7 @@
 	 */
 	import { IconX } from '@tabler/icons-svelte';
 	import { Combobox } from 'bits-ui';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 
 	let {
 		options,

@@ -47,7 +47,7 @@ function chainable() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainable(),
 		$count: vi.fn(() => 0),
@@ -82,19 +82,19 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const emit = vi.fn(async (..._a: unknown[]) => undefined);
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...a: unknown[]) => emit(...a) }
 }));
 
 const bandServiceCreate = vi.fn(async () => ({ id: 'group-1', slug: 'real-book-club' }));
-vi.mock('$lib/server/band/band-service', () => ({
+vi.mock('#lib/server/band/band-service.js', () => ({
 	create: (...a: unknown[]) => bandServiceCreate(...(a as [])),
 	deactivate: vi.fn(),
 	reactivate: vi.fn()
 }));
 
 const recordAuditEntry = vi.fn(async (..._a: unknown[]) => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...a: unknown[]) => recordAuditEntry(...a)
 }));
 

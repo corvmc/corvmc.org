@@ -25,7 +25,7 @@ vi.mock('./financial-entry-service', () => ({
 }));
 
 let lines: Record<string, unknown>[] = [];
-vi.mock('$lib/server/production/expense-service', () => ({
+vi.mock('#lib/server/production/expense-service.js', () => ({
 	expenseLines: async () => lines
 }));
 

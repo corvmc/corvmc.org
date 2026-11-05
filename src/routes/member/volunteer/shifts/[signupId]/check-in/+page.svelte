@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The door list, for the person on the door.
 	 *
@@ -8,18 +8,18 @@
 	 * and cancelling a ticket stays with staff. The show is decided by the
 	 * signup, so this page cannot be pointed at another night.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { checkInAsVolunteer, getMyShiftCheckIn } from '$lib/remote/volunteer.remote';
+	import { checkInAsVolunteer, getMyShiftCheckIn } from '#lib/remote/volunteer.remote.js';
 
 	const signupId = $derived(page.params.signupId!);
 	const data = $derived(await getMyShiftCheckIn(signupId));
@@ -83,8 +83,12 @@
 							successToast={m.member_volunteer_shifts_signup_id_check_in_checked()}
 							class="inline"
 						>
-							<input type="hidden" name="ticketId" value={ticket.id} />
-							<input type="hidden" name="signupId" value={signupId} />
+							<input
+								{...checkInAsVolunteer.for(ticket.id).fields.ticketId.as('hidden', ticket.id)}
+							/>
+							<input
+								{...checkInAsVolunteer.for(ticket.id).fields.signupId.as('hidden', signupId)}
+							/>
 							<SubmitButton
 								label={m.member_volunteer_shifts_signup_id_check_in_check_2()}
 								variant="primary"

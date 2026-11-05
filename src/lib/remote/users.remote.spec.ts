@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 import { isValidationError } from '@sveltejs/kit';
 
 // Mirrors SvelteKit's `issue` helper: `issue.field(msg)` only *builds* an issue
@@ -60,7 +60,7 @@ const POSITIONS = [
 	'site_moderator',
 	'treasurer'
 ];
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (...args: unknown[]) => requireCapability(...(args as [string])),
 	can: (...args: unknown[]) => can(...(args as [string])),
 	isPosition: (n: string) => POSITIONS.includes(n),
@@ -116,7 +116,7 @@ const dbUpdate = vi.fn(writeBuilder);
 const dbDelete = vi.fn(writeBuilder);
 const dbInsert = vi.fn(writeBuilder);
 const dbBatch = vi.fn(async () => []);
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: (...a: unknown[]) => dbSelect(...(a as [])),
 		update: (...a: unknown[]) => dbUpdate(...(a as [])),
@@ -127,7 +127,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const listByUser = vi.fn(async () => [{ id: 'pay_1', amountCents: 1500 }]);
-vi.mock('$lib/server/finance/payment-cache-service', () => ({
+vi.mock('#lib/server/finance/payment-cache-service.js', () => ({
 	listByUser: (...a: unknown[]) => listByUser(...(a as [])),
 	list: vi.fn(async () => [])
 }));
@@ -138,7 +138,7 @@ const addCredits = vi.fn(async () => undefined);
 const deductCredits = vi.fn(async () => undefined);
 const listTransactions = vi.fn(async () => ({ rows: [], pagination: { page: 1, total: 0 } }));
 class InsufficientCreditsError extends Error {}
-vi.mock('$lib/server/finance/credit-service', () => ({
+vi.mock('#lib/server/finance/credit-service.js', () => ({
 	getAllBalances: (...a: unknown[]) => getAllBalances(...(a as [])),
 	getBalance: (...a: unknown[]) => getBalance(...(a as [])),
 	getUsageSinceLastAllocation: vi.fn(async () => 0),
@@ -148,7 +148,7 @@ vi.mock('$lib/server/finance/credit-service', () => ({
 	InsufficientCreditsError
 }));
 
-vi.mock('$lib/server/finance/subscription-service', () => ({
+vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	isSustainingMemberSql: vi.fn(() => null),
 	getMemberSubscription: vi.fn(async () => null),
 	mapDbSubscription: vi.fn(() => null)
@@ -179,7 +179,7 @@ class UserHasPublishedListingsError extends DomainError {
 	readonly httpStatus = 409;
 }
 
-vi.mock('$lib/server/user/user-service', () => ({
+vi.mock('#lib/server/user/user-service.js', () => ({
 	listActiveSessions: (...a: unknown[]) => listActiveSessions(...(a as [])),
 	getLastLoginAt: (...a: unknown[]) => getLastLoginAt(...(a as [])),
 	deactivateUser: vi.fn(async () => undefined),
@@ -200,16 +200,16 @@ const listAuditEntriesForSubject = vi.fn(async (..._a: unknown[]) => ({
 	entries: [],
 	hasMore: false
 }));
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (entry: unknown) => recordAuditEntry(entry),
 	listAuditEntriesForSubject: (...a: unknown[]) => listAuditEntriesForSubject(...a)
 }));
 
-vi.mock('$lib/server/event/event-service', () => ({ listUpcoming: vi.fn(async () => []) }));
+vi.mock('#lib/server/event/event-service.js', () => ({ listUpcoming: vi.fn(async () => []) }));
 
 const inviteMember = vi.fn(async (..._a: unknown[]) => ({ kind: 'invited', email: 'n@x.org' }));
 const listInviteGroups = vi.fn(async () => []);
-vi.mock('$lib/server/user/member-invite-service', () => ({
+vi.mock('#lib/server/user/member-invite-service.js', () => ({
 	inviteMember: (...a: unknown[]) => inviteMember(...a),
 	listInviteGroups: () => listInviteGroups(),
 	listMemberInvites: vi.fn(async () => ({ rows: [], pagination: {} })),
@@ -224,18 +224,18 @@ const revokeMemberInvite = vi.fn(async (..._a: unknown[]) => undefined);
 // "argument, not params.id, identifies the target" test can read the userId
 // each one actually received.
 const getUserOverviewService = vi.fn(async () => ({ counts: {} }));
-vi.mock('$lib/server/user/user-overview-service', () => ({
+vi.mock('#lib/server/user/user-overview-service.js', () => ({
 	getUserOverview: (...a: unknown[]) => getUserOverviewService(...(a as []))
 }));
 
 const listForMember = vi.fn(async () => ({ upcoming: [], past: [], counts: {} }));
 const listActiveSessions = vi.fn(async () => []);
 const getLastLoginAt = vi.fn(async () => null);
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	listForMember: (...a: unknown[]) => listForMember(...(a as []))
 }));
-vi.mock('$lib/server/storage', () => ({ resolveImageUrl: vi.fn(() => null) }));
-vi.mock('$lib/server/db/paginate', () => ({
+vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: vi.fn(() => null) }));
+vi.mock('#lib/server/db/paginate.js', () => ({
 	paginate: vi.fn(async () => ({ rows: [], pagination: { page: 1, total: 0, totalPages: 0 } }))
 }));
 

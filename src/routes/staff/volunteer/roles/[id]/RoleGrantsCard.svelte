@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import CheckboxGroup from '$lib/components/ui/Form/CheckboxGroup.svelte';
-	import { grantableBy, grantRuleFor } from '$lib/config';
-	import { setVolunteerRoleGrants } from '$lib/remote/volunteer.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import CheckboxGroup from '#lib/components/ui/Form/CheckboxGroup.svelte';
+	import { grantableBy, grantRuleFor } from '#lib/config.js';
+	import { setVolunteerRoleGrants } from '#lib/remote/volunteer.remote.js';
 
 	/** What a confirmed signup in this role may do for its shift's event. */
 	let { role, held }: { role: { id: string; name: string }; held: string[] } = $props();
@@ -37,7 +37,7 @@
 				successToast={m.staff_volunteer_roles_id_role_grants_card_success_toast()}
 			>
 				{#snippet form()}
-					<input type="hidden" name="roleId" value={role.id} />
+					<input {...setVolunteerRoleGrants.fields.roleId.as('hidden', role.id)} />
 					<p class="text-muted">
 						{m.staff_volunteer_roles_id_role_grants_card_volunteer_confirme()}
 					</p>

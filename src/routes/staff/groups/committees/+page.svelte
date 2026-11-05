@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CreateGroupAction from '$lib/components/groups/CreateGroupAction.svelte';
-	import { getStaffCommittees } from '$lib/remote/groups.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CreateGroupAction from '#lib/components/groups/CreateGroupAction.svelte';
+	import { getStaffCommittees } from '#lib/remote/groups.remote.js';
 	import GroupViews from '../GroupViews.svelte';
 	import GroupRecordPanel from '../[id]/GroupRecordPanel.svelte';
 

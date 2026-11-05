@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import {
 	SEED_STAFF_EMAIL,
@@ -100,6 +100,6 @@ test('a member appears in the member directory, and not in the public one', asyn
 	// The public page names its search input `q` and mirrors it to the URL; the
 	// member page keeps the term in local state. Different controls, so the two
 	// halves of this test drive them differently.
-	await page.locator('input[name="q"]').fill(SEED_TARGET_NAME);
+	await page.locator('input:is([name="q"], [name^="q/"])').fill(SEED_TARGET_NAME);
 	await expect(page.getByRole('link', { name: new RegExp(SEED_TARGET_NAME) })).toHaveCount(0);
 });

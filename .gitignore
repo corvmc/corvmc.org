@@ -48,8 +48,6 @@ __screenshots__/
 # Attachments the browser reporter writes beside a failure screenshot.
 .vitest-attachments/
 
-*storybook.log
-storybook-static
 test-results.json
 
 # Migration

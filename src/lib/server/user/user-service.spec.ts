@@ -27,7 +27,7 @@ const updateSet = vi.fn(() => ({
 	}))
 }));
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainableSelect(),
 		update: vi.fn(() => ({ set: updateSet })),
@@ -36,38 +36,38 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const cancelMock = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/reservation/reservation-service', () => ({
+vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	cancel: (...args: unknown[]) => cancelMock(...args)
 }));
 
 const subCancelMock = vi.fn().mockResolvedValue(undefined);
 const countPublishedListingsBy = vi.fn(async () => 0);
-vi.mock('$lib/server/event/community-event-service', () => ({
+vi.mock('#lib/server/event/community-event-service.js', () => ({
 	countPublishedListingsBy: (...a: unknown[]) => countPublishedListingsBy(...(a as []))
 }));
 
 const subResumeMock = vi.fn().mockResolvedValue(undefined);
 const getSubscriptionMock = vi.fn(async () => null as { cancelAtPeriodEnd: boolean } | null);
-vi.mock('$lib/server/finance/subscription-service', () => ({
+vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	cancel: (...args: unknown[]) => subCancelMock(...args),
 	resume: (...args: unknown[]) => subResumeMock(...args),
 	getSubscription: (...args: unknown[]) => getSubscriptionMock(...(args as []))
 }));
 
 const revokeMemberCodeMock = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/lock/member-code-service', () => ({
+vi.mock('#lib/server/lock/member-code-service.js', () => ({
 	revokeMemberCode: (...args: unknown[]) => revokeMemberCodeMock(...args)
 }));
 
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const recordAuditEntry = vi.fn(async (_entry: unknown) => undefined);
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (entry: unknown) => recordAuditEntry(entry)
 }));
 const sendSuspendedMock = vi.fn().mockResolvedValue(undefined);
 const sendRestoredMock = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/auth-emails', () => ({
+vi.mock('#lib/server/auth-emails.js', () => ({
 	sendAccountSuspendedEmail: (...args: unknown[]) => sendSuspendedMock(...args),
 	sendAccountRestoredEmail: (...args: unknown[]) => sendRestoredMock(...args)
 }));

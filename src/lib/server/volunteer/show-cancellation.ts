@@ -1,7 +1,7 @@
-import { db } from '$lib/server/db';
-import { workOrder } from '$lib/server/db/schema/volunteer';
-import { eventListing } from '$lib/server/db/schema/event';
-import { production } from '$lib/server/db/schema/production';
+import { db } from '#lib/server/db/index.js';
+import { workOrder } from '#lib/server/db/schema/volunteer.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { production } from '#lib/server/db/schema/production.js';
 import { and, eq, gt, inArray, isNotNull, isNull, or, type SQL } from 'drizzle-orm';
 import { cancelShift } from './work-order-service';
 import { notifySignupsOfCancellation } from './volunteer-signup-service';

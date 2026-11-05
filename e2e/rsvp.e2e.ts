@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test';
 import { and, eq } from 'drizzle-orm';
 import { eventRsvp } from '../src/lib/server/db/schema/event-rsvp';
 import { readLocalDb } from './fixtures/platform-db';
@@ -47,14 +47,20 @@ test('a signed-out visitor signs in from the RSVP button and lands one tap from 
 	expect(url.searchParams.get('intent')).toContain(SEED_RSVP_EVENT_TITLE);
 	await expect(page.locator('.alert-info')).toBeVisible();
 
-	await page.locator('input[name="email"]').fill(SEED_RSVP_MEMBER_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_RSVP_MEMBER_PASSWORD);
+	await page.locator('input:is([name="email"], [name^="email/"])').fill(SEED_RSVP_MEMBER_EMAIL);
+	await page
+		.locator('input:is([name="password"], [name^="password/"])')
+		.fill(SEED_RSVP_MEMBER_PASSWORD);
 	// The sign-in form is the one with a password field.
-	await page.locator('form:has(input[name="password"]) button[type="submit"]').click();
+	await page
+		.locator('form:has(input:is([name="password"], [name^="password/"])) button[type="submit"]')
+		.click();
 
 	// Back on the event, signed in, and nothing written yet.
 	await expect(page).toHaveURL(new RegExp(`${eventPath}$`));
-	const confirm = page.locator('form:has(input[name="eventId"]) button[type="submit"]');
+	const confirm = page.locator(
+		'form:has(input:is([name="eventId"], [name^="eventId/"])) button[type="submit"]'
+	);
 	await expect(confirm).toBeEnabled();
 	expect(await rsvpCount()).toBe(0);
 

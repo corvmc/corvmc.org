@@ -1,9 +1,9 @@
 <script lang="ts" generics="T extends ActivityRow">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import Button from '../Button.svelte';
 	import EmptyState from '../EmptyState.svelte';
-	import { formatHistoryTime } from '$lib/utils/format';
+	import { formatHistoryTime } from '#lib/utils/format.js';
 	import type { ActivityRow } from './types';
 
 	/**

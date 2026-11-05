@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The claim board.
 	 *
@@ -14,16 +14,16 @@
 	 * just makes the board look empty. Rendering order is the calendar, grouped
 	 * by day; interest is the badge and the filter, not the sort (#1044).
 	 */
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { formatDateShort } from '$lib/utils/format';
-	import { shiftLabel, shiftRoleSuffix } from '$lib/utils/shift-label';
-	import { DEFAULT_TIMEZONE } from '$lib/config';
-	import { claimShift } from '$lib/remote/volunteer.remote';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { shiftLabel, shiftRoleSuffix } from '#lib/utils/shift-label.js';
+	import { DEFAULT_TIMEZONE } from '#lib/config.js';
+	import { claimShift } from '#lib/remote/volunteer.remote.js';
 
 	type Shift = {
 		id: string;
@@ -170,7 +170,7 @@
 								successToast={m.volunteer_open_shifts_success_toast()}
 							>
 								{#snippet form()}
-									<input type="hidden" name="shiftId" value={shift.id} />
+									<input {...claimShift.for(shift.id).fields.shiftId.as('hidden', shift.id)} />
 									<p class="text-sm">
 										{shiftLabel(shift)}, {formatDateShort(shift.startsAt)},
 										{timeRange(shift.startsAt, shift.endsAt)}.

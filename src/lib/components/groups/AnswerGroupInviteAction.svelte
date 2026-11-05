@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { acceptGroupInvite, declineGroupInvite } from '$lib/remote/groups.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { acceptGroupInvite, declineGroupInvite } from '#lib/remote/groups.remote.js';
 	import { invalidateAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 

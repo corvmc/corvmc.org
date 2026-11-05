@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * Where shows happen.
@@ -9,16 +9,16 @@
 	 * hold the practice space? Everything else on the row — address, capacity,
 	 * how many shows we have put on there — is reference.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { getVenues, createVenue } from '$lib/remote/venues.remote';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { getVenues, createVenue } from '#lib/remote/venues.remote.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -30,10 +30,10 @@
 	const hasPrimary = $derived(venues.some((v) => v.isPrimary && !v.deletedAt));
 
 	function setArchived(on: boolean) {
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		if (on) url.searchParams.set('archived', '1');
 		else url.searchParams.delete('archived');
-		goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+		goto(url, { replace: true, reset: false });
 	}
 
 	function addressLine(v: { city: string | null; state: string | null }): string {
@@ -118,7 +118,7 @@
 			{#each venues as v (v.id)}
 				<tr class="hover" class:opacity-60={v.deletedAt}>
 					<td class="cell-primary">
-						<a class="link font-medium" href={resolve(`/staff/venues/${v.id}`)}>{v.name}</a>
+						<a class="link font-medium" href={resolve(`staff/venues/${v.id}`)}>{v.name}</a>
 						{#if v.isPrimary}
 							<Badge variant="primary" size="sm" class="ml-2">{m.staff_our_room()}</Badge>
 						{/if}

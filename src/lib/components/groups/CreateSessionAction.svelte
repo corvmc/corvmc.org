@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { createGroupSession } from '$lib/remote/group-events.remote';
+	import { createGroupSession } from '#lib/remote/group-events.remote.js';
 
 	/**
 	 * Put a session on the calendar — once, or on a repeat.

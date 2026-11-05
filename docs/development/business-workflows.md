@@ -502,7 +502,7 @@ requestLoan()  member asks; emits equipment.loan_requested (staff notified)
 ```
 
 Pricing helpers `calculateDailyRate()` / `calculateLoanCharge()` are pure
-functions; rates come from `$lib/config.ts` (`DAILY_RATE_MAJOR`,
+functions; rates come from `#lib/config.js` (`DAILY_RATE_MAJOR`,
 `DAILY_RATE_ACCESSORY`). Invalid transitions throw `InvalidLoanTransitionError`;
 checking out a serialized item without naming a unit throws
 `AssetRequiredError` — the checkout form asks which unit is being handed over,

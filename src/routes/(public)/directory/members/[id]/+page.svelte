@@ -1,22 +1,22 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { getPublicMemberProfilePage, getMemberPastShows } from '$lib/remote/directory.remote';
+	import { getPublicMemberProfilePage, getMemberPastShows } from '#lib/remote/directory.remote.js';
 	import ProfileHeader, {
 		type ProfilePill
-	} from '$lib/components/directory/profile/ProfileHeader.svelte';
-	import QuickFacts from '$lib/components/directory/profile/QuickFacts.svelte';
-	import ProseBlock from '$lib/components/directory/profile/ProseBlock.svelte';
-	import ListenStrip from '$lib/components/directory/profile/ListenStrip.svelte';
-	import ShowsBox from '$lib/components/directory/profile/ShowsBox.svelte';
+	} from '#lib/components/directory/profile/ProfileHeader.svelte';
+	import QuickFacts from '#lib/components/directory/profile/QuickFacts.svelte';
+	import ProseBlock from '#lib/components/directory/profile/ProseBlock.svelte';
+	import ListenStrip from '#lib/components/directory/profile/ListenStrip.svelte';
+	import ShowsBox from '#lib/components/directory/profile/ShowsBox.svelte';
 	import CrossRefList, {
 		type CrossRef
-	} from '$lib/components/directory/profile/CrossRefList.svelte';
-	import TagCloud from '$lib/components/directory/profile/TagCloud.svelte';
-	import LinksBox from '$lib/components/directory/profile/LinksBox.svelte';
-	import ContactBox from '$lib/components/directory/profile/ContactBox.svelte';
-	import ProfileGrid from '$lib/components/directory/profile/ProfileGrid.svelte';
+	} from '#lib/components/directory/profile/CrossRefList.svelte';
+	import TagCloud from '#lib/components/directory/profile/TagCloud.svelte';
+	import LinksBox from '#lib/components/directory/profile/LinksBox.svelte';
+	import ContactBox from '#lib/components/directory/profile/ContactBox.svelte';
+	import ProfileGrid from '#lib/components/directory/profile/ProfileGrid.svelte';
 
 	const BANDS_BASE = '/directory/bands';
 
@@ -74,7 +74,7 @@
 <div class="profile-page">
 	<!-- Carries the tab: bands are the directory's default, so a bare /directory
 	     would drop you somewhere other than where you came from. -->
-	<a href="{resolve('/directory')}?tab=musicians" class="link text-muted"
+	<a href="{resolve('directory')}?tab=musicians" class="link text-muted"
 		>{m.public_back_directory()}</a
 	>
 
@@ -112,7 +112,7 @@
 	</ProfileGrid>
 
 	<footer class="profile-page__footer">
-		<a href={resolve('/')}>{m.public_corvallis_music_collective()}</a>
+		<a href={resolve('')}>{m.public_corvallis_music_collective()}</a>
 	</footer>
 </div>
 

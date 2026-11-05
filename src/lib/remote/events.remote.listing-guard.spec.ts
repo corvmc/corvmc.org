@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // ---------------------------------------------------------------------------
 // Listing writes take `event.manage` or the show's committee (#1948), through
@@ -13,7 +13,7 @@ let persona: Persona = 'staff';
 
 const denied = (msg = 'Not permitted') => Object.assign(new Error(`403: ${msg}`), { status: 403 });
 
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	can: vi.fn(async (cap: string) => persona === 'staff' && cap === 'event.manage'),
 	requireCapability: vi.fn(async () => {
 		if (persona !== 'staff') throw denied();
@@ -28,13 +28,13 @@ const requireProjectCommittee = vi.fn(async (projectId: string | null, cap: stri
 	}
 	throw denied('Not on a committee taking part in this project');
 });
-vi.mock('$lib/server/group/group-context', () => ({
+vi.mock('#lib/server/group/group-context.js', () => ({
 	requireProjectCommittee: (projectId: string | null, cap: string) =>
 		requireProjectCommittee(projectId, cap)
 }));
 
 /** `evt-show` announces a production; `evt-gig` is a listing with none. */
-vi.mock('$lib/server/production/production-scope', () => ({
+vi.mock('#lib/server/production/production-scope.js', () => ({
 	projectOfEvent: vi.fn(async (id: string) =>
 		id === 'evt-show'
 			? { projectId: 'proj-show', productionId: 'prod-1' }
@@ -44,7 +44,7 @@ vi.mock('$lib/server/production/production-scope', () => ({
 
 const update = vi.fn(async () => ({ id: 'evt' }));
 const setEventLineup = vi.fn(async () => undefined);
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	update: (...a: unknown[]) => update(...(a as [])),
 	getById: vi.fn(async (id: string) => ({
 		id,
@@ -67,14 +67,14 @@ vi.mock('$lib/server/event/event-service', () => ({
 const cancelSeries = vi.fn(async () => undefined);
 const createEventSeries = vi.fn(async () => ({ id: 'series-new' }));
 let seriesOfEvent: { id: string } | null = { id: 'series-1' };
-vi.mock('$lib/server/reservation/recurring-series-service', () => ({
+vi.mock('#lib/server/reservation/recurring-series-service.js', () => ({
 	createEventSeries: (...a: unknown[]) => createEventSeries(...(a as [])),
 	getByEvent: vi.fn(async () => seriesOfEvent),
 	getEventSeries: vi.fn(async () => null),
 	cancel: (...a: unknown[]) => cancelSeries(...(a as []))
 }));
 
-vi.mock('$lib/server/feature-flags', () => ({
+vi.mock('#lib/server/feature-flags.js', () => ({
 	isFeatureEnabled: vi.fn(async () => true),
 	requireFeature: vi.fn(async () => undefined)
 }));
@@ -104,7 +104,7 @@ vi.mock('$app/server', () => ({
 }));
 
 const { updateEvent, cancelEventSeries, startEventSeries, setStaffEventLineup, adjustListingHold } =
-	(await import('$lib/remote/events.remote')) as any;
+	(await import('#lib/remote/events.remote.js')) as any;
 
 const EDIT = { title: 'Retitled', rebookReservation: false, overrideConflicts: false };
 

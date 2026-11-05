@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 # worker and adds the `scheduled` handler for the [triggers] below. The adapter
 # writes its output to .svelte-kit/cloudflare/_worker.js per wrangler.adapter.toml
 # (it rimrafs whatever `main` points at in the config it reads, so it must not
-# read this file — see svelte.config.js).
+# read this file — see kit.config.js).
 main = "worker.js"
 
 [assets]

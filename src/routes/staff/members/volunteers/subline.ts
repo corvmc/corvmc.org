@@ -1,5 +1,5 @@
-import { formatDateShort } from '$lib/utils/format';
-import type { getStaffVolunteers } from '$lib/remote/volunteer.remote';
+import { formatDateShort } from '#lib/utils/format.js';
+import type { getStaffVolunteers } from '#lib/remote/volunteer.remote.js';
 
 export type RosterRow = Awaited<ReturnType<typeof getStaffVolunteers>>['rows'][number];
 

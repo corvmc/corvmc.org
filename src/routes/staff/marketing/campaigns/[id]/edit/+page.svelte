@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import AudiencePicker from '../../AudiencePicker.svelte';
 	import EventScopePicker from '../../EventScopePicker.svelte';
@@ -8,18 +8,18 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import { errorMessage } from '$lib/error-message';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 	import {
 		getCampaignDetail,
 		saveDraft,
 		sendCampaignNow,
 		scheduleCampaign,
 		deleteCampaign
-	} from '$lib/remote/marketing.remote';
+	} from '#lib/remote/marketing.remote.js';
 
 	let id = $derived(page.params.id!);
 	let campaignData = $derived(await getCampaignDetail(id));
@@ -48,7 +48,7 @@
 	// Redirect if not a draft
 	$effect(() => {
 		if (campaignData && campaignData.status !== 'draft') {
-			goto(resolve(`/staff/marketing/campaigns/${id}`));
+			goto(resolve(`staff/marketing/campaigns/${id}`));
 		}
 	});
 
@@ -117,7 +117,7 @@
 			return;
 		}
 		toast.success(m.staff_marketing_campaigns_id_edit_campaign_sent());
-		goto(resolve(`/staff/marketing/campaigns/${id}`));
+		goto(resolve(`staff/marketing/campaigns/${id}`));
 	}
 
 	async function handleSchedule() {
@@ -134,7 +134,7 @@
 			});
 			await scheduleCampaign({ scheduledFor: new Date(scheduledFor).toISOString() });
 			toast.success(m.staff_marketing_campaigns_id_edit_campaign_scheduled());
-			goto(resolve(`/staff/marketing/campaigns/${id}`));
+			goto(resolve(`staff/marketing/campaigns/${id}`));
 		} catch (err) {
 			toast.error(
 				err instanceof Error ? err.message : m.staff_marketing_campaigns_id_edit_failed_schedule()
@@ -153,7 +153,7 @@
 		try {
 			await deleteCampaign({});
 			toast.success(m.staff_marketing_campaigns_id_edit_campaign_deleted());
-			goto(resolve('/staff/marketing/campaigns'));
+			goto(resolve('staff/marketing/campaigns'));
 		} catch (err) {
 			toast.error(
 				err instanceof Error ? err.message : m.staff_marketing_campaigns_id_edit_failed_delete()

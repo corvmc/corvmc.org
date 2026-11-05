@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import { IconBrandFacebook, IconBrandInstagram } from '@tabler/icons-svelte';
-	import { getFooterInfo } from '$lib/remote/settings.remote';
+	import { getFooterInfo } from '#lib/remote/settings.remote.js';
 
 	// One query, not two. Two remote queries in flight in one component crashes past kit 2.64
 	// (JAVASCRIPT-SVELTEKIT-2H), and this footer renders on every public route.
@@ -15,14 +15,14 @@
 	);
 
 	const footerLinks = [
-		{ href: resolve('/about'), label: m.public_about() },
-		{ href: resolve('/programs'), label: m.public_programs() },
-		{ href: resolve('/events'), label: m.public_events() },
-		{ href: resolve('/directory'), label: m.public_directory() },
+		{ href: resolve('about'), label: m.public_about() },
+		{ href: resolve('programs'), label: m.public_programs() },
+		{ href: resolve('events'), label: m.public_events() },
+		{ href: resolve('directory'), label: m.public_directory() },
 		// Static, like every row here. The list cannot ask whether any group is
 		// published — a second remote query in this component crashes past kit
 		// 2.64 — so /groups carries its own empty state instead.
-		{ href: resolve('/groups'), label: m.public_site_footer_groups() },
+		{ href: resolve('groups'), label: m.public_site_footer_groups() },
 		// CMC Radio had a row here and it 404'd for every visitor: `getRadioPage`
 		// calls `requireFeature('cmcRadio')`, the flag is off, and production has
 		// no plays to put on the air. /groups could carry an empty state because
@@ -31,11 +31,11 @@
 		// The row was also the way back from a dismissed radio bar. Nothing is
 		// lost: the bar only renders while the flag is on, so with it off there is
 		// nothing to have dismissed. Launching the station puts this row back.
-		{ href: resolve('/local-resources'), label: m.public_site_footer_local_resources() },
-		{ href: resolve('/contribute'), label: m.public_contribute() },
-		{ href: resolve('/about/bylaws'), label: m.public_site_footer_bylaws() },
-		{ href: resolve('/about/privacy'), label: m.public_site_footer_privacy() },
-		{ href: resolve('/contact'), label: m.public_contact() }
+		{ href: resolve('local-resources'), label: m.public_site_footer_local_resources() },
+		{ href: resolve('contribute'), label: m.public_contribute() },
+		{ href: resolve('about/bylaws'), label: m.public_site_footer_bylaws() },
+		{ href: resolve('about/privacy'), label: m.public_site_footer_privacy() },
+		{ href: resolve('contact'), label: m.public_contact() }
 	];
 
 	const socials = $derived(

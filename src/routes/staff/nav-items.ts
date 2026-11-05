@@ -22,13 +22,13 @@
  */
 
 import { resolve } from '$app/paths';
-import { hasCapability, surfaces, type Capability, type Surface } from '$lib/config';
+import { hasCapability, surfaces, type Capability, type Surface } from '#lib/config.js';
 import {
 	activeNavKey as resolveActiveNavKey,
 	childHrefsFor as resolveChildHrefs,
 	flattenNav,
 	type NavNode
-} from '$lib/components/layout/Nav/active-nav';
+} from '#lib/components/layout/Nav/active-nav.js';
 
 export type StaffNavKey =
 	| 'dashboard'
@@ -120,12 +120,12 @@ export const staffNavTop: StaffNavItem[] = [
 	// which is the #1237 bug. The band panel keeps its fallback because a row
 	// there can be hidden by role and the root is the honest answer; no staff
 	// spec asserts that, and none of the eight paths #1237 sampled needed it.
-	{ key: 'dashboard', label: 'Dashboard', href: resolve('/staff'), exact: true },
+	{ key: 'dashboard', label: 'Dashboard', href: resolve('staff'), exact: true },
 	{
 		key: 'inbox',
 		capability: 'inbox.read',
 		label: 'Inbox',
-		href: resolve('/staff/inbox'),
+		href: resolve('staff/inbox'),
 		badgeKey: 'inboxUnread'
 	}
 ];
@@ -141,7 +141,7 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'user.list',
 				alsoFor: ['volunteer.read', 'instructor.read'],
 				label: 'Members',
-				href: resolve('/staff/members')
+				href: resolve('staff/members')
 			},
 			// Bands, Clubs and Committees are its views, each with its own gate (#2086).
 			// External acts stay at their address, linked from the Bands view.
@@ -150,8 +150,8 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'band.read',
 				alsoFor: ['group.read', 'committee.reviewApplications'],
 				label: 'Groups',
-				href: resolve('/staff/groups'),
-				also: [resolve('/staff/bands/acts')]
+				href: resolve('staff/groups'),
+				also: [resolve('staff/bands/acts')]
 			}
 		]
 	},
@@ -165,7 +165,7 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'suggestions',
 				capability: 'suggestion.read',
 				label: 'Suggestions',
-				href: resolve('/staff/suggestions'),
+				href: resolve('staff/suggestions'),
 				badgeKey: 'suggestionsAwaiting'
 			},
 			{
@@ -173,7 +173,7 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'ballot.manage',
 				surface: 'ballots',
 				label: 'Ballots',
-				href: resolve('/staff/ballots')
+				href: resolve('staff/ballots')
 			},
 			// Productions is a view on it (#2101), gated as the row it replaced.
 			{
@@ -181,7 +181,7 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'project.read',
 				alsoFor: ['event.manage'],
 				label: 'Projects',
-				href: resolve('/staff/projects')
+				href: resolve('staff/projects')
 			},
 			// Every work order, in a project or not (#2034), and the recurring
 			// work that writes them (#2087). The Volunteering dashboard folded in
@@ -190,8 +190,8 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'volunteer-schedule',
 				capability: 'volunteer.read',
 				label: 'Schedule',
-				href: resolve('/staff/volunteer/schedule'),
-				also: [resolve('/staff/volunteer')],
+				href: resolve('staff/volunteer/schedule'),
+				also: [resolve('staff/volunteer')],
 				badgeKey: 'volunteerPending'
 			}
 		]
@@ -206,8 +206,8 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'reservations',
 				capability: 'reservation.read',
 				label: 'Reservations',
-				href: resolve('/staff/reservations'),
-				also: [resolve('/staff/recurring')]
+				href: resolve('staff/reservations'),
+				also: [resolve('staff/recurring')]
 			},
 			{
 				// Equipment used to hang the other way up: the parent row landed on
@@ -220,7 +220,7 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'equipment',
 				capability: 'inventory.read',
 				label: 'Inventory',
-				href: resolve('/staff/inventory'),
+				href: resolve('staff/inventory'),
 				children: [
 					{
 						// Gear and building problems members report: a repair queue, not
@@ -228,13 +228,13 @@ export const staffNavSections: StaffNavSection[] = [
 						key: 'equipment-reports',
 						capability: 'inventory.manageAssets',
 						label: 'Reported Problems',
-						href: resolve('/staff/inventory/problems')
+						href: resolve('staff/inventory/problems')
 					},
 					{
 						key: 'inventory-compliance',
 						capability: 'inventory.manageAcquisitions',
 						label: 'Compliance',
-						href: resolve('/staff/inventory/compliance')
+						href: resolve('staff/inventory/compliance')
 					}
 				]
 			},
@@ -244,14 +244,14 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'equipment-loans',
 				capability: 'inventory.manageLoans',
 				label: 'Loans',
-				href: resolve('/staff/inventory/loans')
+				href: resolve('staff/inventory/loans')
 			},
 			// Permit, license and insurance renewals: compliance for the building.
 			{
 				key: 'renewals',
 				capability: 'renewal.read',
 				label: 'Renewals',
-				href: resolve('/staff/renewals')
+				href: resolve('staff/renewals')
 			},
 			{
 				// Standing access to the building. Door codes are managed in Settings;
@@ -259,7 +259,7 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'keys',
 				capability: 'lock.manage',
 				label: 'Key Holders',
-				href: resolve('/staff/keys')
+				href: resolve('staff/keys')
 			}
 		]
 	},
@@ -278,7 +278,7 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'calendar',
 				capability: 'event.read',
 				label: 'Calendar',
-				href: resolve('/staff/events'),
+				href: resolve('staff/events'),
 				badgeKey: 'listingsPending'
 			}
 		]
@@ -293,20 +293,20 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'sponsors',
 				capability: 'sponsor.read',
 				label: 'Sponsors',
-				href: resolve('/staff/sponsors')
+				href: resolve('staff/sponsors')
 			},
 			// Guarded as an event because that is what a venue is a fact about.
 			{
 				key: 'venues',
 				capability: 'event.read',
 				label: 'Venues',
-				href: resolve('/staff/venues')
+				href: resolve('staff/venues')
 			},
 			{
 				key: 'local-resources',
 				capability: 'localResource.manage',
 				label: 'Local Resources',
-				href: resolve('/staff/local-resources'),
+				href: resolve('staff/local-resources'),
 				// The count sits on the parent too, so it shows while collapsed.
 				badgeKey: 'resourceTipsPending',
 				children: [
@@ -314,7 +314,7 @@ export const staffNavSections: StaffNavSection[] = [
 						key: 'resource-tips',
 						capability: 'localResource.manage',
 						label: 'Tips',
-						href: resolve('/staff/local-resources/tips'),
+						href: resolve('staff/local-resources/tips'),
 						badgeKey: 'resourceTipsPending'
 					}
 				]
@@ -323,7 +323,7 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'contractors',
 				capability: 'contractor.read',
 				label: 'Contractors',
-				href: resolve('/staff/contractors')
+				href: resolve('staff/contractors')
 			}
 		]
 	},
@@ -340,8 +340,8 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'moderation.reviewFlags',
 				alsoFor: ['incident.read'],
 				label: 'Moderation',
-				href: resolve('/staff/moderation'),
-				also: [resolve('/staff/flags'), resolve('/staff/incidents')],
+				href: resolve('staff/moderation'),
+				also: [resolve('staff/flags'), resolve('staff/incidents')],
 				badgeKey: 'appealsPending'
 			},
 			{
@@ -349,7 +349,7 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'listing.review',
 				surface: 'classifieds',
 				label: 'Classifieds',
-				href: resolve('/staff/classifieds')
+				href: resolve('staff/classifieds')
 			}
 		]
 	},
@@ -363,7 +363,7 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'marketing.read',
 				alsoFor: ['marketing.manageAudiences'],
 				label: 'Outreach',
-				href: resolve('/staff/marketing')
+				href: resolve('staff/marketing')
 			}
 		]
 	},
@@ -377,7 +377,7 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'finance.read',
 				alsoFor: ['credit.read'],
 				label: 'Payments',
-				href: resolve('/staff/money')
+				href: resolve('staff/money')
 			},
 			// Money rather than Moderation: the page's first job is answering
 			// whether there is enough music to switch the station on, and its
@@ -390,13 +390,13 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'music',
 				capability: 'music.read',
 				label: 'Releases',
-				href: resolve('/staff/music')
+				href: resolve('staff/music')
 			},
 			{
 				key: 'grants',
 				capability: 'grant.read',
 				label: 'Grants',
-				href: resolve('/staff/grants')
+				href: resolve('staff/grants')
 			}
 		]
 	},
@@ -412,8 +412,8 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'finance.read',
 				alsoFor: ['volunteer.report', 'inventory.report', 'inventory.manageAcquisitions'],
 				label: 'Reports',
-				href: resolve('/staff/reports'),
-				also: [resolve('/staff/inventory/spend'), resolve('/staff/inventory/acquisitions')]
+				href: resolve('staff/reports'),
+				also: [resolve('staff/inventory/spend'), resolve('staff/inventory/acquisitions')]
 			}
 		]
 	},
@@ -425,23 +425,23 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'settings',
 				capability: 'settings.read',
 				label: 'Settings',
-				href: resolve('/staff/settings')
+				href: resolve('staff/settings')
 			},
 			// The app's own documentation for members and staff.
 			{
 				key: 'help',
 				capability: 'help.read',
 				label: 'Help Articles',
-				href: resolve('/staff/help')
+				href: resolve('staff/help')
 			},
 			// Who holds which position, committee grant and clearance (#1942).
 			{
 				key: 'access',
 				capability: 'user.setRole',
 				label: 'Access',
-				href: resolve('/staff/access')
+				href: resolve('staff/access')
 			},
-			{ key: 'audit', capability: 'audit.read', label: 'Audit Log', href: resolve('/staff/audit') }
+			{ key: 'audit', capability: 'audit.read', label: 'Audit Log', href: resolve('staff/audit') }
 		]
 	}
 ];

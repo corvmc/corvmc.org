@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
-	import { getUser, updateUser } from '$lib/remote/users.remote';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import { toBirthDateInput } from '$lib/utils/age';
+	import { getUser, updateUser } from '#lib/remote/users.remote.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import { toBirthDateInput } from '#lib/utils/age.js';
 
 	// Everything arrives as a resolved prop. Keeping this component's script
 	// fully synchronous is the point of extracting it: a top-level `await` marks
@@ -60,26 +60,29 @@
 		<input {...updateFields.id.as('hidden', id)} />
 		<div class="@container grid grid-cols-4 gap-x-2">
 			<Field
-				name="name"
+				field={updateUser.fields.name}
+				label={m.staff_name()}
 				type="text"
 				value={member.name}
 				class="col-span-4 @md:col-span-2 @lg:col-span-3"
 			/>
 			<Field
-				name="pronouns"
+				field={updateUser.fields.pronouns}
+				label={m.staff_pronouns()}
 				type="text"
 				value={member.pronouns ?? ''}
 				class="col-span-4 @md:col-span-2 @lg:col-span-1"
 			/>
 			<Field
-				name="email"
+				id="email"
 				readonly={true}
 				type="email"
 				value={member.email}
 				class="col-span-4 @md:col-span-2 @lg:col-span-2"
 			/>
 			<Field
-				name="phone"
+				field={updateUser.fields.phone}
+				label={m.staff_phone()}
 				type="tel"
 				value={member.phone ?? ''}
 				class="col-span-4 @md:col-span-2 @lg:col-span-2"
@@ -90,7 +93,7 @@
 			     and does so as an eligibility fact rather than a moderation row —
 			     nothing here appears on the standing card. -->
 			<Field
-				name="dateOfBirth"
+				field={updateUser.fields.dateOfBirth}
 				type="date"
 				label={m.staff_members_id_staff_user_form_label()}
 				value={toBirthDateInput(member.dateOfBirth)}
@@ -106,7 +109,8 @@
 			{#if canSetRole}
 				<Field
 					class="col-span-4"
-					name="roles"
+					field={updateUser.fields.roles}
+					label={m.staff_roles()}
 					type="tags"
 					options={roleOptions}
 					multiple={true}

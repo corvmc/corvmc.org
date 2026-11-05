@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import {
 	SEED_OWNER_EMAIL,
@@ -24,7 +24,11 @@ import {
 function planSubmit(page: Page, interval: 'monthly' | 'yearly') {
 	return page
 		.locator('form')
-		.filter({ has: page.locator(`input[name="billingInterval"][value="${interval}"]`) })
+		.filter({
+			has: page.locator(
+				`input:is([name="billingInterval"], [name^="billingInterval/"])[value="${interval}"]`
+			)
+		})
 		.locator('button[type="submit"]');
 }
 

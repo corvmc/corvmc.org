@@ -4,12 +4,12 @@
  * view, the rotation and the staff readiness panel all read it from here, so an
  * attestation cannot lapse in one of them and not the others.
  */
-import { db } from '$lib/server/db';
-import { audioRelease } from '$lib/server/db/schema/audio';
-import { group, groupMember } from '$lib/server/db/schema/group';
-import { user } from '$lib/server/db/schema/authentication';
+import { db } from '#lib/server/db/index.js';
+import { audioRelease } from '#lib/server/db/schema/audio.js';
+import { group, groupMember } from '#lib/server/db/schema/group.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, eq, gt, gte, inArray, isNull, lt, type SQL } from 'drizzle-orm';
-import { RADIO_PRO_ATTESTATION } from '$lib/config';
+import { RADIO_PRO_ATTESTATION } from '#lib/config.js';
 
 function addMonths(d: Date, months: number): Date {
 	const out = new Date(d);

@@ -1,19 +1,22 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
-	import Form from '$lib/components/ui/Form';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import Form from '#lib/components/ui/Form/index.js';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
-	import { formatDollars } from '$lib/utils/format';
-	import { cancelBandReservation, getBandReservationDetail } from '$lib/remote/reservations.remote';
+	import { formatDollars } from '#lib/utils/format.js';
+	import {
+		cancelBandReservation,
+		getBandReservationDetail
+	} from '#lib/remote/reservations.remote.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 
@@ -133,7 +136,7 @@
 			     outside is the failure mode, so this one is loud. -->
 			<Alert type="error">
 				<ParaglideMessage message={m.band_slug_reservations_id_session_s_code_hasn_t} inputs={{}}
-					>{#snippet a({ children })}<a class="link" href={resolve('/contact')}
+					>{#snippet a({ children })}<a class="link" href={resolve('contact')}
 							>{@render children?.()}</a
 						>{/snippet}</ParaglideMessage
 				>

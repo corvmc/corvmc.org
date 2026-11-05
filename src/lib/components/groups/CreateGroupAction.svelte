@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { searchMembers } from '$lib/remote/reservations.remote';
-	import { createStaffGroup } from '$lib/remote/groups.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { searchMembers } from '#lib/remote/reservations.remote.js';
+	import { createStaffGroup } from '#lib/remote/groups.remote.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
@@ -66,7 +66,7 @@
 	data-testid="create-group"
 	onsuccess={(result) => {
 		const made = result as { id?: string } | undefined;
-		if (made?.id) goto(resolve(`/staff/groups/${made.id}`));
+		if (made?.id) goto(resolve(`staff/groups/${made.id}`));
 	}}
 >
 	{#snippet form()}
@@ -138,7 +138,7 @@
 			     control to render the issue against — a toast about highlighted
 			     fields, and nothing highlighted (#1019). -->
 			<FormField
-				name="chairId"
+				field={createStaffGroup.fields.chairId}
 				label={m.groups_create_group_chair()}
 				description={m.groups_create_group_they_become_chair_immediately_there()}
 			>

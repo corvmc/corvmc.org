@@ -2,36 +2,36 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { command, form } from './_remote';
-import { requireCapability, requireUser } from '$lib/server/authorization';
-import { db } from '$lib/server/db';
-import { reservation } from '$lib/server/db/schema/reservation';
-import { user } from '$lib/server/db/schema/authentication';
+import { requireCapability, requireUser } from '#lib/server/authorization.js';
+import { db } from '#lib/server/db/index.js';
+import { reservation } from '#lib/server/db/schema/reservation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq } from 'drizzle-orm';
-import { queryDeviceHealth } from '$lib/server/lock/ultraloc-client';
+import { queryDeviceHealth } from '#lib/server/lock/ultraloc-client.js';
 import {
 	getLastLockJobRun,
 	reprovisionAccessFor,
 	runDailyLockJob
-} from '$lib/server/lock/lock-service';
+} from '#lib/server/lock/lock-service.js';
 import {
 	getActiveFallbackCode,
 	rotateFallbackCodeNow
-} from '$lib/server/lock/fallback-code-service';
+} from '#lib/server/lock/fallback-code-service.js';
 import {
 	listUnmanagedLockUsers,
 	adoptLockUser,
 	grantMemberCode,
 	revokeMemberCode,
 	listMemberCodes
-} from '$lib/server/lock/member-code-service';
+} from '#lib/server/lock/member-code-service.js';
 import {
 	issueHolding,
 	listAccessRegister,
 	returnHolding
-} from '$lib/server/lock/access-register-service';
-import { mapDomainError } from '$lib/server/errors';
-import { buildDateInTz } from '$lib/server/reservation/timezone';
-import { accessHoldingKinds, clubToday, DEFAULT_TIMEZONE } from '$lib/config';
+} from '#lib/server/lock/access-register-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { accessHoldingKinds, clubToday, DEFAULT_TIMEZONE } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Door access

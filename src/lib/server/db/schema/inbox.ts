@@ -140,7 +140,7 @@ export const inboxThread = sqliteTable(
 		/**
 		 * Who may post, and how a post reaches its readers. Defaulted so every
 		 * row that already exists is a chat topic and nothing changes behaviour
-		 * until a caller sets them. See `$lib/config`.
+		 * until a caller sets them. See `#lib/config.js`.
 		 */
 		postPolicy: text('post_policy', { enum: threadPostPolicies }).notNull().default('members'),
 		notifyPolicy: text('notify_policy', { enum: threadNotifyPolicies }).notNull().default('in_app'),

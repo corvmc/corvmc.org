@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Latest } from '$lib/latest.svelte';
+	import { Latest } from '#lib/latest.svelte.js';
 	import { isRedirect } from '@sveltejs/kit';
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The day-after survey. Reached from the notification/email, so it has to
 	 * stand alone: say which shift it's about, take two answers, and cope with
@@ -15,14 +15,14 @@
 	import { resolve } from '$app/paths';
 	import { RatingGroup } from 'bits-ui';
 	import { IconStar, IconStarFilled } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Form, { Field, SubmitButton } from '$lib/components/ui/Form';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { formatDateShort } from '$lib/utils/format';
-	import { getShiftFeedbackContext, submitShiftFeedback } from '$lib/remote/volunteer.remote';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Form, { Field, SubmitButton } from '#lib/components/ui/Form/index.js';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { getShiftFeedbackContext, submitShiftFeedback } from '#lib/remote/volunteer.remote.js';
 
 	let signupId = $derived(page.params.signupId!);
 	// Not `{#await}`: a refresh would re-pend it and remount the form mid-answer.
@@ -69,7 +69,7 @@
 						{m.member_volunteer_feedback_signup_id_got_thanks_helping_us_ru()}
 					{/if}
 				</p>
-				<a href={resolve('/member/volunteer')} class="link text-sm"
+				<a href={resolve('member/volunteer')} class="link text-sm"
 					>{m.member_volunteer_feedback_signup_id_action_label()}</a
 				>
 			</InfoCard>
@@ -78,7 +78,7 @@
 				title={ctx.startsAt ? `${ctx.roleName} — ${formatDateShort(ctx.startsAt)}` : ctx.roleName}
 			>
 				<Form remote={submitShiftFeedback} onsuccess={() => (submitted = true)}>
-					<input type="hidden" name="signupId" value={ctx.signupId} />
+					<input {...submitShiftFeedback.fields.signupId.as('hidden', ctx.signupId)} />
 
 					<!-- Label-only wrapper: RatingGroup owns the real `rating` field via its
 				     hidden input, and naming the wrapper too double-registers the name. -->
@@ -88,7 +88,12 @@
 							submits like any other field while the stars stay keyboard- and
 							screen-reader-accessible.
 						-->
-						<RatingGroup.Root name="rating" min={1} max={5} class="flex gap-1">
+						<RatingGroup.Root
+							name={submitShiftFeedback.fields.rating.as('hidden', '').name}
+							min={1}
+							max={5}
+							class="flex gap-1"
+						>
 							{#snippet children({ items })}
 								{#each items as item (item.index)}
 									<RatingGroup.Item index={item.index} class="cursor-pointer text-warning">
@@ -104,7 +109,7 @@
 					</Field>
 
 					<FormField
-						name="wasSetUp"
+						field={submitShiftFeedback.fields.wasSetUp}
 						type="checkbox"
 						label={m.member_volunteer_feedback_signup_id_were_set_up_succeed()}
 						checkboxLabel={m.member_volunteer_feedback_signup_id_checkbox_label()}
@@ -112,7 +117,7 @@
 					/>
 
 					<FormField
-						name="comment"
+						field={submitShiftFeedback.fields.comment}
 						type="textarea"
 						label={m.member_volunteer_feedback_signup_id_anything_we_should_fix()}
 						description={m.member_volunteer_feedback_signup_id_optional_sent_staff_with()}

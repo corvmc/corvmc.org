@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import {
 		getUser,
@@ -12,26 +12,30 @@
 		purgeUser,
 		banUser,
 		unbanUser
-	} from '$lib/remote/users.remote';
-	import { getUserDirectoryProfile } from '$lib/remote/directory.remote';
+	} from '#lib/remote/users.remote.js';
+	import { getUserDirectoryProfile } from '#lib/remote/directory.remote.js';
 	import StaffUserForm from '../StaffUserForm.svelte';
 	import EmailChangeCard from '../EmailChangeCard.svelte';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { formatDateTimeShort, formatDateShortYear, formatHistoryTime } from '$lib/utils/format';
-	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
+	import {
+		formatDateTimeShort,
+		formatDateShortYear,
+		formatHistoryTime
+	} from '#lib/utils/format.js';
+	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
 	import { toast } from 'svelte-sonner';
-	import { Latest } from '$lib/latest.svelte';
+	import { Latest } from '#lib/latest.svelte.js';
 
 	let { id, member }: { id: string; member: Awaited<ReturnType<typeof getUser>> } = $props();
 
@@ -159,7 +163,7 @@
 				</Fact>
 			</DefinitionList>
 			<div class="mt-3">
-				<Button href={resolve(`/member/directory/members/${id}`)} variant="ghost" size="sm">
+				<Button href={resolve(`member/directory/members/${id}`)} variant="ghost" size="sm">
 					{m.staff_members_id_panels_account_panel_view_public_profile()}
 				</Button>
 			</div>
@@ -349,7 +353,7 @@
 				successToast={m.staff_members_id_panels_account_panel_account_deleted()}
 				variant="error"
 				size="sm"
-				onsuccess={() => goto(resolve('/staff/members'))}
+				onsuccess={() => goto(resolve('staff/members'))}
 			>
 				{#snippet form()}
 					<input {...purgeFields.id.as('hidden', id)} />

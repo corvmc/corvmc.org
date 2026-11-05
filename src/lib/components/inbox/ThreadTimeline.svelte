@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Messages and internal notes on one chronological spine.
 	 *
@@ -9,7 +9,7 @@
 	 * margin scribble on the conversation, not a turn in it.
 	 */
 	import { IconNote } from '@tabler/icons-svelte';
-	import { formatDateTime } from '$lib/utils/format';
+	import { formatDateTime } from '#lib/utils/format.js';
 
 	type Message = {
 		id: string;

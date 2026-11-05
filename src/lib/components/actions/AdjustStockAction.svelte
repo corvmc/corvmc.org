@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import { correctStock } from '$lib/remote/inventory.remote';
+	import { correctStock } from '#lib/remote/inventory.remote.js';
 	import { Field } from '../ui/Form';
 
 	const { fields } = correctStock;
@@ -84,13 +84,11 @@
 			</p>
 		</div>
 		<!--
-			Named even though it is not a form field. `correctStock` never sees
-			`counted` — Zod strips the unknown key and the ledger takes the derived
-			delta below — but without a name the input renders `name=""`, which
-			`e2e/inventory.e2e.ts` selects on.
+			Not a form field: the ledger takes the derived delta below, so this
+			input posts nothing. A name would be one kit 3 rejects.
 		-->
 		<Field
-			name="counted"
+			data-testid="stocktake-counted"
 			type="number"
 			label={m.actions_adjust_stock_counted_shelf()}
 			bind:value={counted}
@@ -117,7 +115,7 @@
 		{/if}
 		<!-- The service takes a delta and keeps taking one; only the question
 		     asked of the operator changed. -->
-		<input {...fields.delta.as('number', delta === null ? '' : String(delta))} type="hidden" />
+		<input {...fields.delta.as('number', delta ?? undefined)} type="hidden" />
 		<Field field={fields.notes} type="textarea" label={m.actions_adjust_stock_why()} />
 	{/snippet}
 </Action>

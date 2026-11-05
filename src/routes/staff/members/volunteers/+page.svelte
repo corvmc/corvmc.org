@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * Everybody who signed up, as one roster (#1934). The under-18 queue is the
@@ -10,37 +10,37 @@
 	 * Each row carries exactly one action, resolved by what is outstanding — a row
 	 * offering Confirm, Chase and Log Hours at once has not decided what it is for.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import BadgeList from '$lib/components/ui/BadgeList.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Roster from '$lib/components/roster/Roster.svelte';
-	import { rosterState } from '$lib/components/roster/roster-state.svelte';
-	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
-	import LogHoursForMemberAction from '$lib/components/volunteer/LogHoursForMemberAction.svelte';
-	import CertificationOptions from '$lib/components/volunteer/CertificationOptions.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import BadgeList from '#lib/components/ui/BadgeList.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Roster from '#lib/components/roster/Roster.svelte';
+	import { rosterState } from '#lib/components/roster/roster-state.svelte.js';
+	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
+	import LogHoursForMemberAction from '#lib/components/volunteer/LogHoursForMemberAction.svelte';
+	import CertificationOptions from '#lib/components/volunteer/CertificationOptions.svelte';
 	import MemberRecordPanel from '../[id]/MemberRecordPanel.svelte';
 	import MemberViews from '../MemberViews.svelte';
 	import { subline, type RosterRow } from './subline';
 	import { resolve } from '$app/paths';
-	import { oneOf, text } from '$lib/urlState.svelte';
-	import { withQuery } from '$lib/utils/with-query';
-	import { formatDateShort } from '$lib/utils/format';
+	import { oneOf, text } from '#lib/urlState.svelte.js';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import {
 		formatVolunteerHours,
 		volunteerProfileStatuses,
 		volunteerProfileStatusLabels
-	} from '$lib/config';
+	} from '#lib/config.js';
 	import {
 		getStaffVolunteers,
 		getStaffVolunteerEmails,
 		getVolunteerStatusCounts,
 		confirmSignup,
 		approveVolunteerSignup
-	} from '$lib/remote/volunteer.remote';
+	} from '#lib/remote/volunteer.remote.js';
 
 	type StatusFilter = (typeof volunteerProfileStatuses)[number] | '';
 
@@ -49,7 +49,7 @@
 	// not a reason for their row to be four lines tall.
 	const VISIBLE_ROLES = 2;
 
-	const roster = rosterState(resolve('/staff/members/volunteers'), {
+	const roster = rosterState(resolve('staff/members/volunteers'), {
 		role: text(),
 		status: oneOf<StatusFilter>(['', ...volunteerProfileStatuses], ''),
 		cert: text(),
@@ -78,7 +78,7 @@
 	);
 
 	const recordHref = (row: RosterRow) =>
-		withQuery(resolve(`/staff/members/${row.userId}`), 'tab=volunteer');
+		withQuery(resolve(`staff/members/${row.userId}`), 'tab=volunteer');
 </script>
 
 {#snippet rowAction(volunteer: RosterRow)}
@@ -98,7 +98,11 @@
 			onsuccess={() => void list.refresh()}
 		>
 			{#snippet form()}
-				<input type="hidden" name="userId" value={volunteer.userId} />
+				<input
+					{...approveVolunteerSignup
+						.for(volunteer.userId)
+						.fields.userId.as('hidden', volunteer.userId)}
+				/>
 				<p class="text-sm">
 					{m.staff_members_volunteers_confirms_guardian_has_signed_off()}
 				</p>
@@ -116,8 +120,16 @@
 			successToast={m.staff_confirmed()}
 		>
 			{#snippet form()}
-				<input type="hidden" name="signupId" value={volunteer.claim!.signupId} />
-				<input type="hidden" name="shiftId" value={volunteer.claim!.shiftId} />
+				<input
+					{...confirmSignup
+						.for(volunteer.claim!.signupId)
+						.fields.signupId.as('hidden', volunteer.claim!.signupId)}
+				/>
+				<input
+					{...confirmSignup
+						.for(volunteer.claim!.signupId)
+						.fields.shiftId.as('hidden', volunteer.claim!.shiftId)}
+				/>
 				<p class="text-sm">
 					{m.staff_members_volunteers_confirming_books_them_they_get({
 						roleName: volunteer.claim!.roleName,
@@ -150,7 +162,7 @@
 		empty={m.staff_members_volunteers_empty()}
 		searchPlaceholder={m.staff_members_volunteers_search_placeholder()}
 		personLabel={m.staff_members_volunteers_person_label()}
-		exportPath={resolve('/staff/members/volunteers/export')}
+		exportPath={resolve('staff/members/volunteers/export')}
 		emails={() => getStaffVolunteerEmails(active)}
 		tone={(v) => (v.status === 'blocked' ? 'muted' : undefined)}
 	>
@@ -245,7 +257,7 @@
 						inputs={{ pending }}
 						>{#snippet a({ children })}<a
 								class="link"
-								href={resolve('/staff/members/volunteers/hours')}>{@render children?.()}</a
+								href={resolve('staff/members/volunteers/hours')}>{@render children?.()}</a
 							>{/snippet}</ParaglideMessage
 					>
 				{/if}

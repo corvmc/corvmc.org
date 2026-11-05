@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/private';
-import { DEFAULT_WIDTH, transformOptions } from '$lib/utils/images';
-import { isWithheldPosterKey } from '$lib/server/storage-keys';
+import { DEFAULT_WIDTH, transformOptions } from '#lib/utils/images.js';
+import { isWithheldPosterKey } from '#lib/server/storage-keys.js';
 
 export const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB

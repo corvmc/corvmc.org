@@ -1,15 +1,15 @@
 <script lang="ts" generics="T extends { id: string }">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** The keys of `T` whose value is a string — the only ones that can label an option. */
 	type StringKey<O> = {
 		[K in keyof O]: O[K] extends string | null | undefined ? K : never;
 	}[keyof O] &
 		string;
 	import { Combobox } from 'bits-ui';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { errorMessage } from '$lib/error-message';
-	import type { RemoteFormField, RemoteFormFieldValue } from '@sveltejs/kit';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
+	import type { RemoteFormField, RemoteFormFieldValue } from '$app/server';
 
 	let {
 		search,

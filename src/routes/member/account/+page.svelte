@@ -1,34 +1,34 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import DirectMessagesSection from './DirectMessagesSection.svelte';
 	import EmailSubscriptionsSection from './EmailSubscriptionsSection.svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { retryQuery } from '$lib/utils/retry-query';
-	import { getMyMessagingSettings } from '$lib/remote/direct-messages.remote';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { retryQuery } from '#lib/utils/retry-query.js';
+	import { getMyMessagingSettings } from '#lib/remote/direct-messages.remote.js';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
-	import Action from '$lib/components/ui/Action.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
 	import { IconMail, IconBell } from '@tabler/icons-svelte';
 	import {
 		updateProfile,
 		changePassword,
 		deleteAccount,
 		resendVerificationEmail
-	} from '$lib/remote/account.remote';
-	import { ADULT_AGE_YEARS, toBirthDateInput } from '$lib/utils/age';
+	} from '#lib/remote/account.remote.js';
+	import { ADULT_AGE_YEARS, toBirthDateInput } from '#lib/utils/age.js';
 	import {
 		getMemberAccountPage,
 		setNotificationPreference
-	} from '$lib/remote/notifications.remote';
+	} from '#lib/remote/notifications.remote.js';
 
 	const pageData = $derived(await getMemberAccountPage());
 	const data = $derived(pageData.account);
@@ -219,19 +219,19 @@
 				>
 					{#snippet form()}
 						<FormField
-							name="currentPassword"
+							field={changePassword.fields.currentPassword}
 							type="password"
 							label={m.member_account_current_password()}
 							autocomplete="current-password"
 						/>
 						<FormField
-							name="newPassword"
+							field={changePassword.fields.newPassword}
 							type="password"
 							label={m.member_account_new_password()}
 							autocomplete="new-password"
 						/>
 						<FormField
-							name="confirmPassword"
+							field={changePassword.fields.confirmPassword}
 							type="password"
 							label={m.member_account_confirm_new_password()}
 							autocomplete="new-password"
@@ -257,7 +257,7 @@
 						size="sm"
 						onsuccess={() => {
 							toast.success(m.member_account_account_deleted());
-							goto(resolve('/login'));
+							goto(resolve('login'));
 						}}
 					>
 						{#snippet form()}
@@ -266,7 +266,7 @@
 							</Alert>
 
 							<FormField
-								name="password"
+								field={deleteAccount.fields.password}
 								type="password"
 								label={m.member_account_enter_password_confirm()}
 								autocomplete="current-password"

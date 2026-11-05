@@ -1,22 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 // KV, Postmark and the U-tec lock are the outside services here.
 const mockGetJson = vi.fn();
 const mockPutJson = vi.fn();
-vi.mock('$lib/server/kv', () => ({
+vi.mock('#lib/server/kv.js', () => ({
 	getJson: (...args: unknown[]) => mockGetJson(...args),
 	putJson: (...args: unknown[]) => mockPutJson(...args)
 }));
 
 const mockDispatchEmailOnly = vi.fn();
-vi.mock('$lib/server/notification', () => ({
+vi.mock('#lib/server/notification/index.js', () => ({
 	dispatchEmailOnly: (...args: unknown[]) => mockDispatchEmailOnly(...args)
 }));
 

@@ -2,17 +2,17 @@ import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
 import { env as publicEnv } from '$env/dynamic/public';
 import { query } from '$app/server';
-import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
-import { directoryEntry } from '$lib/server/db/schema/directory';
-import { bandSite } from '$lib/server/db/schema/band-site';
+import { db } from '#lib/server/db/index.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
 import { eq, and, isNull } from 'drizzle-orm';
-import { loadBandSiteContent } from '$lib/server/band/band-site-content';
-import { prepareBlocksForRender } from '$lib/server/band/band-site-blocks';
-import { resolveBandSlug } from '$lib/server/band/band-address-service';
-import { bandSiteUrl } from '$lib/utils/band-site-url';
-import { reconcileBlocks } from '$lib/utils/band-site-preset';
-import type { Block } from '$lib/server/db/schema/band-page';
+import { loadBandSiteContent } from '#lib/server/band/band-site-content.js';
+import { prepareBlocksForRender } from '#lib/server/band/band-site-blocks.js';
+import { resolveBandSlug } from '#lib/server/band/band-address-service.js';
+import { bandSiteUrl } from '#lib/utils/band-site-url.js';
+import { reconcileBlocks } from '#lib/utils/band-site-preset.js';
+import type { Block } from '#lib/server/db/schema/band-page.js';
 
 // ---------------------------------------------------------------------------
 // Band Site Data — loads everything needed to render a premium band page
@@ -42,7 +42,7 @@ export const getBandSiteData = query(z.string(), async (slug) => {
 		// the domain they paid for.
 		const moved = await resolveBandSlug(slug);
 		if (moved?.kind === 'moved' && moved.slug !== slug) {
-			redirect(302, bandSiteUrl(moved.slug, publicEnv.PUBLIC_SITE_URL));
+			redirect(302, bandSiteUrl(moved.slug, publicEnv.PUBLIC_SITE_URL), { external: true });
 		}
 		throw error(404, 'Band not found');
 	}

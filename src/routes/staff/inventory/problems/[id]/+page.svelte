@@ -1,35 +1,33 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Select from '$lib/components/ui/Form/Select.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { EntityChip } from '$lib/components/ui/entity';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import RoleOptions from '$lib/components/volunteer/RoleOptions.svelte';
-	import { formatDateShort, formatDateTime } from '$lib/utils/format';
-	import { NO_ROLE_LABEL } from '$lib/utils/shift-label';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { EntityChip } from '#lib/components/ui/entity/index.js';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
+	import { formatDateShort, formatDateTime } from '#lib/utils/format.js';
+	import { NO_ROLE_LABEL } from '#lib/utils/shift-label.js';
 	import {
 		getEquipmentReport,
 		dismissEquipmentReport,
 		sendEquipmentReportToWorkOrder
-	} from '$lib/remote/work-requests.remote';
+	} from '#lib/remote/work-requests.remote.js';
 
 	let id = $derived(page.params.id!);
 	let report = $derived(await getEquipmentReport(id));
 
 	const dismissFields = dismissEquipmentReport.fields;
+	// An empty workOrderId means "raise a new one"; the role picker only matters then.
 	const sendFields = sendEquipmentReportToWorkOrder.fields;
-
-	// Empty means "raise a new one"; the role picker only matters then.
-	let workOrderId = $state('');
 </script>
 
 <PageHeader
@@ -77,7 +75,7 @@
 					<ul class="space-y-2">
 						{#each report.otherPending as o (o.id)}
 							<li>
-								<a class="link" href={resolve(`/staff/inventory/problems/${o.id}`)}>{o.note}</a>
+								<a class="link" href={resolve(`staff/inventory/problems/${o.id}`)}>{o.note}</a>
 								<div class="text-subtle">
 									{o.reporterName ?? m.staff_inventory_problems_id_deleted_account()} · {formatDateShort(
 										o.createdAt
@@ -109,7 +107,7 @@
 							<input {...sendFields.id.as('hidden', id)} />
 							<label class="fieldset w-full">
 								<span class="fieldset-legend">{m.staff_inventory_problems_id_work_order()}</span>
-								<Select class="w-full" name="workOrderId" bind:value={workOrderId}>
+								<Select class="w-full" {...sendFields.workOrderId.as('select')}>
 									<option value="">{m.staff_inventory_problems_id_raise_new_work_order()}</option>
 									{#each report.openWorkOrders as w (w.id)}
 										<option value={w.id}
@@ -119,12 +117,12 @@
 									{/each}
 								</Select>
 							</label>
-							{#if !workOrderId}
+							{#if !sendFields.workOrderId.value()}
 								<label class="fieldset w-full">
 									<span class="fieldset-legend"
 										>{m.staff_inventory_problems_id_who_does_work()}</span
 									>
-									<Select class="w-full" name="volunteerRoleId">
+									<Select class="w-full" {...sendFields.volunteerRoleId.as('select')}>
 										<option value="" disabled selected
 											>{m.staff_inventory_problems_id_choose_role()}</option
 										>
@@ -183,7 +181,7 @@
 						}}
 						>{#snippet a({ children })}<a
 								class="link"
-								href={resolve(`/staff/volunteer/shifts/${report.workOrderId}`)}
+								href={resolve(`staff/volunteer/shifts/${report.workOrderId}`)}
 								>{@render children?.()}</a
 							>{/snippet}</ParaglideMessage
 					>

@@ -29,7 +29,7 @@ function chainableSelect() {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: () => chainableSelect(),
 		insert: vi.fn(() => ({
@@ -53,22 +53,22 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const emitMock = vi.fn().mockResolvedValue(undefined);
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: { emit: (...args: unknown[]) => emitMock(...args) }
 }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const restoreStandingMock = vi.fn(async () => {
 	calls.push('restoreStanding');
 });
-vi.mock('$lib/server/moderation/standing-service', () => ({
+vi.mock('#lib/server/moderation/standing-service.js', () => ({
 	restoreStanding: (...args: unknown[]) => restoreStandingMock(...(args as []))
 }));
 
 const setVisibilityMock = vi.fn(async () => {
 	calls.push('setVisibility');
 });
-vi.mock('$lib/server/suggestion/suggestion-service', () => ({
+vi.mock('#lib/server/suggestion/suggestion-service.js', () => ({
 	setVisibility: (...args: unknown[]) => setVisibilityMock(...(args as []))
 }));
 
@@ -78,7 +78,7 @@ const publishMock = vi.fn(async () => {
 	calls.push('publish');
 });
 const submitMock = vi.fn();
-vi.mock('$lib/server/event/event-service', () => ({
+vi.mock('#lib/server/event/event-service.js', () => ({
 	publish: (...args: unknown[]) => publishMock(...(args as [])),
 	submitCommunityEvent: submitMock
 }));

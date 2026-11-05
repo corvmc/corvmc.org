@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import InboxShell from '$lib/components/inbox/InboxShell.svelte';
+	import InboxShell from '#lib/components/inbox/InboxShell.svelte';
 	import ConversationList from './ConversationList.svelte';
 
 	let { children } = $props();

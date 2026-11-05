@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** Ballots as a list, for the member and staff index pages. */
 	import { resolve } from '$app/paths';
-	import Table from '$lib/components/ui/Table.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { rowLink } from '$lib/actions/row-link';
+	import Table from '#lib/components/ui/Table.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import {
 		ballotKindLabels,
 		ballotStatusLabels,
 		type BallotKind,
 		type BallotStatus
-	} from '$lib/config';
-	import { formatDateShortYear } from '$lib/utils/format';
+	} from '#lib/config.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
 
 	type Row = {
 		id: string;
@@ -28,7 +28,7 @@
 	let { rows, panel }: { rows: Row[]; panel: 'member' | 'staff' } = $props();
 
 	function href(id: string) {
-		return panel === 'staff' ? resolve(`/staff/ballots/${id}`) : resolve(`/member/ballots/${id}`);
+		return panel === 'staff' ? resolve(`staff/ballots/${id}`) : resolve(`member/ballots/${id}`);
 	}
 
 	/** What the list owes this member, if anything. */

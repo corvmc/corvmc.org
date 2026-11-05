@@ -1,31 +1,31 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
+	import { m as msg } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	/**
 	 * One ballot, for everyone who can see it: the vote for an elector, the
 	 * result once it may be read, and the draft controls for its managers.
 	 * Mounted by `/member/ballots/[id]` and `/staff/ballots/[id]`.
 	 */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import MemberPicker from '$lib/components/ui/MemberPicker.svelte';
-	import { Field, MoneyField } from '$lib/components/ui/Form';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
+	import { Field, MoneyField } from '#lib/components/ui/Form/index.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { startProjectFromBallotForm } from '$lib/remote/projects.remote';
-	import { ballotKindLabels, ballotStatusLabels, DEFAULT_TIMEZONE } from '$lib/config';
-	import { formatDateTime, formatDateShortYear } from '$lib/utils/format';
+	import { startProjectFromBallotForm } from '#lib/remote/projects.remote.js';
+	import { ballotKindLabels, ballotStatusLabels, DEFAULT_TIMEZONE } from '#lib/config.js';
+	import { formatDateTime, formatDateShortYear } from '#lib/utils/format.js';
 	import {
 		cancelBallotForm,
 		castBallotVote,
@@ -35,7 +35,7 @@
 		setElectorOverrideForm,
 		updateBallotDraft,
 		type getBallotPage
-	} from '$lib/remote/ballots.remote';
+	} from '#lib/remote/ballots.remote.js';
 
 	type Page = Awaited<ReturnType<typeof getBallotPage>>;
 
@@ -71,12 +71,12 @@
 	const suggestionHref = $derived(
 		decides.suggestion
 			? panel === 'staff' && viewer.canReadSuggestions
-				? resolve(`/staff/suggestions/${decides.suggestion.id}`)
-				: resolve(`/member/suggestions/${decides.suggestion.id}`)
+				? resolve(`staff/suggestions/${decides.suggestion.id}`)
+				: resolve(`member/suggestions/${decides.suggestion.id}`)
 			: null
 	);
 	const projectHref = (id: string) =>
-		viewer.canReadProjects ? resolve(`/staff/projects/${id}`) : null;
+		viewer.canReadProjects ? resolve(`staff/projects/${id}`) : null;
 
 	function share(votes: number, turnout: number) {
 		return turnout === 0 ? '—' : `${Math.round((votes / turnout) * 100)}%`;
@@ -294,7 +294,7 @@
 						size="sm"
 						onsuccess={(r) => {
 							if (r && typeof r === 'object' && 'id' in r) {
-								void goto(resolve(`/staff/projects/${r.id as string}`));
+								void goto(resolve(`staff/projects/${r.id as string}`));
 							}
 						}}
 					>

@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
-import { reconcileUpcomingSync } from '$lib/server/lock/lock-service';
+import { reconcileUpcomingSync } from '#lib/server/lock/lock-service.js';
 
 /**
  * Confirm which upcoming door codes have reached the lock, every 15 minutes,

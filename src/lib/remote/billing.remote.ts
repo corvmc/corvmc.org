@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { command, form } from './_remote';
-import { requireMember } from '$lib/server/authorization';
-import { paymentDriver, stripe } from '$lib/server/stripe';
+import { requireMember } from '#lib/server/authorization.js';
+import { paymentDriver, stripe } from '#lib/server/stripe.js';
 import {
 	createSetupIntent,
 	listCards,
@@ -11,13 +11,13 @@ import {
 	removeCard,
 	rememberCard,
 	setDefaultCard
-} from '$lib/server/finance/billing-service';
-import { completeFakeSetupIntent } from '$lib/server/finance/gateway/fake-gateway';
-import { mapDomainError } from '$lib/server/errors';
-import { captureException } from '$lib/server/sentry';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { db } from '$lib/server/db';
-import { bandSite } from '$lib/server/db/schema/band-site';
+} from '#lib/server/finance/billing-service.js';
+import { completeFakeSetupIntent } from '#lib/server/finance/gateway/fake-gateway.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { captureException } from '#lib/server/sentry.js';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { db } from '#lib/server/db/index.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
 import { eq } from 'drizzle-orm';
 
 /**

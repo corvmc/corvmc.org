@@ -25,6 +25,10 @@ function fakeRemoteForm() {
 				as: (type: string, value?: unknown) => ({ type, name: 'assignToUserId', value }),
 				issues: () => null
 			},
+			disposition: {
+				as: (type: string, value?: unknown) => ({ type, name: 'disposition', value }),
+				issues: () => null
+			},
 			allIssues: () => null
 		},
 		result: undefined
@@ -36,9 +40,11 @@ function fakeRemoteForm() {
  * staff reply offers `disposition` submits — `wait` is the default one. The
  * tabs are Reply then Internal note.
  */
-const isNote = () => document.querySelector('input[name="assignToUserId"]') !== null;
+const isNote = () =>
+	document.querySelector('input:is([name="assignToUserId"], [name^="assignToUserId/"])') !== null;
 // Scoped to the composer's form: FormGuard's dialog carries a submit of its own.
-const composer = () => document.querySelector('textarea[name="body"]')?.closest('form');
+const composer = () =>
+	document.querySelector('textarea:is([name="body"], [name^="body/"])')?.closest('form');
 const submits = () => [
 	...(composer()?.querySelectorAll<HTMLButtonElement>('button[type="submit"]') ?? [])
 ];

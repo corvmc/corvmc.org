@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { IconCheck, IconShare3 } from '@tabler/icons-svelte';
 
 	/**

@@ -1,20 +1,20 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** Grant applications and awards, soonest deadline first. */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import GrantFields from '$lib/components/grant/GrantFields.svelte';
-	import { getGrants, createGrant } from '$lib/remote/grants.remote';
-	import { grantStatusLabels, grantStatusBadge, grantDeadlineLabels } from '$lib/config';
-	import { formatCents } from '$lib/utils/format';
-	import { formatIsoDay } from '$lib/utils/deadline';
-	import { rowLink } from '$lib/actions/row-link';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import GrantFields from '#lib/components/grant/GrantFields.svelte';
+	import { getGrants, createGrant } from '#lib/remote/grants.remote.js';
+	import { grantStatusLabels, grantStatusBadge, grantDeadlineLabels } from '#lib/config.js';
+	import { formatCents } from '#lib/utils/format.js';
+	import { formatIsoDay } from '#lib/utils/deadline.js';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -23,15 +23,15 @@
 	const { grants, funders } = $derived(await getGrants({ includeClosed }));
 
 	function setClosed(on: boolean) {
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		if (on) url.searchParams.set('closed', '1');
 		else url.searchParams.delete('closed');
-		goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+		goto(url, { replace: true, reset: false });
 	}
 </script>
 
 <PageHeader title={m.staff_grants()} subtitle={m.staff_money()}>
-	<Button href={resolve('/staff/grants/funders')} variant="ghost" size="sm"
+	<Button href={resolve('staff/grants/funders')} variant="ghost" size="sm"
 		>{m.staff_funders()}</Button
 	>
 	{#if funders.length > 0}
@@ -81,14 +81,14 @@
 				<th class="col-support cell-num">{m.staff_amount()}</th>
 			{/snippet}
 			{#each grants as g (g.id)}
-				<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/grants/${g.id}`)}>
+				<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/grants/${g.id}`)}>
 					<td class="w-px">
 						<Badge variant={grantStatusBadge[g.status]} size="sm">
 							{grantStatusLabels[g.status]}
 						</Badge>
 					</td>
 					<td class="cell-primary">
-						<a class="link font-medium" href={resolve(`/staff/grants/${g.id}`)}>{g.funderName}</a>
+						<a class="link font-medium" href={resolve(`staff/grants/${g.id}`)}>{g.funderName}</a>
 						<div class="truncate text-muted">{g.title}</div>
 					</td>
 					<td class="whitespace-nowrap">

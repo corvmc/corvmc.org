@@ -3,14 +3,14 @@ import { readFileSync } from 'node:fs';
 
 // auth.ts pulls in db + sentry at import time; the rest are the side effects
 // the verification wiring is supposed to fire, stubbed so we can watch it.
-vi.mock('$lib/server/db', () => ({ db: {} }));
-vi.mock('$lib/server/sentry', () => ({ captureException: vi.fn() }));
-vi.mock('$lib/server/directory/entry-service', () => ({ ensureUserEntry: vi.fn() }));
-vi.mock('$lib/server/user/member-number-service', () => ({ assignMemberNumber: vi.fn() }));
-vi.mock('$lib/server/marketing/subscriber-service', () => ({
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
+vi.mock('#lib/server/directory/entry-service.js', () => ({ ensureUserEntry: vi.fn() }));
+vi.mock('#lib/server/user/member-number-service.js', () => ({ assignMemberNumber: vi.fn() }));
+vi.mock('#lib/server/marketing/subscriber-service.js', () => ({
 	linkExistingSubscriberToUser: vi.fn()
 }));
-vi.mock('$lib/server/auth-emails', async (importOriginal) => ({
+vi.mock('#lib/server/auth-emails.js', async (importOriginal) => ({
 	...(await importOriginal<typeof import('./auth-emails')>()),
 	sendVerifyEmail: vi.fn(),
 	sendPasswordResetEmail: vi.fn(),
@@ -18,7 +18,7 @@ vi.mock('$lib/server/auth-emails', async (importOriginal) => ({
 }));
 
 import { sendVerifyEmail, VERIFY_EMAIL_TOKEN_TTL_SECONDS } from './auth-emails';
-import { linkExistingSubscriberToUser } from '$lib/server/marketing/subscriber-service';
+import { linkExistingSubscriberToUser } from '#lib/server/marketing/subscriber-service.js';
 import { emailVerificationConfig, onEmailVerified } from './auth';
 
 const verified = { id: 'user-1', email: 'alice@example.com' };

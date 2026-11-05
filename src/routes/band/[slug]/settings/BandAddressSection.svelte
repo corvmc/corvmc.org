@@ -1,20 +1,20 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { env } from '$env/dynamic/public';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import { changeBandAddress } from '$lib/remote/band-address.remote';
-	import { baseDomainFromSiteUrl } from '$lib/utils/band-site-url';
-	import { isReservedSlug } from '$lib/reserved-slugs';
-	import Alert from '$lib/components/ui/Alert.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import { changeBandAddress } from '#lib/remote/band-address.remote.js';
+	import { baseDomainFromSiteUrl } from '#lib/utils/band-site-url.js';
+	import { isReservedSlug } from '#lib/reserved-slugs.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
 
 	// A resolved prop, not an awaited query: a top-level await here would compile
 	// the fields.X.as() expressions below into async deriveds (see BandProfileForm).
@@ -76,6 +76,7 @@
 <Modal title={m.band_slug_settings_band_address_section_title()} bind:open={showChange}>
 	<Form
 		remote={changeBandAddress}
+		refreshQueries={false}
 		onsuccess={(result) => {
 			showChange = false;
 			if (!result?.changed) {
@@ -83,11 +84,10 @@
 				return;
 			}
 			toast.success(m.band_slug_settings_band_address_section_address_updated());
-			// Straight to the new URL — no invalidateAll() first. Every query on this
-			// page is still keyed on the old slug, so re-running them here would
-			// bounce through the old-address redirect. Changing page.params.slug
-			// re-keys them instead.
-			goto(resolve(`/band/${result.slug}/settings`));
+			// Every query on this page is keyed on the old slug, and `getBandLayout`
+			// answers that with a forward to the bare address, which `refreshQueries`
+			// above keeps from racing this. Changing page.params.slug re-keys them.
+			goto(resolve(`band/${result.slug}/settings`));
 		}}
 	>
 		<div class="space-y-4">

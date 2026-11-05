@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { getUntaggedAssets, bindTag } from '$lib/remote/inventory.remote';
-	import { formatDateShort } from '$lib/utils/format';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { getUntaggedAssets, bindTag } from '#lib/remote/inventory.remote.js';
+	import { formatDateShort } from '#lib/utils/format.js';
 
 	/**
 	 * Units waiting for a sticker, worked through in a modal off the Inventory
@@ -42,7 +42,7 @@
 					<div class="min-w-0">
 						<a
 							class="font-medium hover:underline"
-							href={resolve(`/staff/inventory/assets/${asset.id}`)}
+							href={resolve(`staff/inventory/assets/${asset.id}`)}
 						>
 							{asset.item.name}
 						</a>

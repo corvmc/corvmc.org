@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Hero from '$lib/components/public/Hero.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Hero from '#lib/components/public/Hero.svelte';
 	import ResourceDirectory from './ResourceDirectory.svelte';
 	import TipForm from './TipForm.svelte';
 </script>

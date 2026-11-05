@@ -1,32 +1,32 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { page } from '$app/state';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '$lib/components/ui/Card/CardTitle.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
 	import {
 		submitLoanRequest as submitRequest,
 		getMemberEquipmentPage
-	} from '$lib/remote/inventory.remote';
+	} from '#lib/remote/inventory.remote.js';
 
 	const { fields } = submitRequest;
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import { Field, Select } from '$lib/components/ui/Form';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import { Field, Select } from '#lib/components/ui/Form/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { toast } from 'svelte-sonner';
-	import { estimateLoanCost } from '$lib/config';
-	import type { PricingTier } from '$lib/server/db/schema/inventory';
-	import { formatCents } from '$lib/utils/format';
+	import { estimateLoanCost } from '#lib/config.js';
+	import type { PricingTier } from '#lib/server/db/schema/inventory.js';
+	import { formatCents } from '#lib/utils/format.js';
 
 	let search = $state('');
 	let categoryId = $state('');
@@ -226,7 +226,7 @@
 		onsuccess={() => {
 			toast.success(m.member_equipment_toast());
 			showRequestModal = false;
-			goto(resolve('/member/equipment/loans'));
+			goto(resolve('member/equipment/loans'));
 		}}
 	>
 		{#if !isFreeForm}
@@ -238,7 +238,7 @@
 			}}
 		>
 			<Field
-				name="requestedPickupDate"
+				field={submitRequest.fields.requestedPickupDate}
 				type="date"
 				label={m.member_equipment_preferred_pickup_date()}
 				required
@@ -250,14 +250,20 @@
 			}}
 		>
 			<Field
-				name="estimatedReturnDate"
+				field={submitRequest.fields.estimatedReturnDate}
 				type="date"
 				label={m.member_equipment_estimated_return_date()}
 				required
 			/>
 		</div>
 		{#if !isFreeForm}
-			<Field name="quantity" type="number" value={1} label={m.member_equipment_quantity()} />
+			<Field
+				field={submitRequest.fields.quantity}
+				submitAs="text"
+				type="number"
+				value={1}
+				label={m.member_equipment_quantity()}
+			/>
 		{/if}
 		{#if costEstimate != null}
 			<div class="rounded-lg bg-info/10 px-4 py-3 text-sm">
@@ -278,7 +284,7 @@
 			</div>
 		{/if}
 		<Field
-			name="memberNotes"
+			field={submitRequest.fields.memberNotes}
 			type="textarea"
 			label={isFreeForm
 				? m.member_equipment_describe_what_need()

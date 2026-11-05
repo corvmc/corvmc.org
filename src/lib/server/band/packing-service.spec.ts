@@ -30,7 +30,7 @@ function chain(queue: () => unknown[]): unknown {
 const next = () => (selectResults.length > 0 ? selectResults.shift()! : []);
 const nextUpdate = () => (updateResults.length > 0 ? updateResults.shift()! : []);
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain(next)),
 		insert: vi.fn((table: unknown) => ({
@@ -58,8 +58,8 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-const { packingItem } = await import('$lib/server/db/schema/packing');
-const { riderElement, riderInput } = await import('$lib/server/db/schema/rider');
+const { packingItem } = await import('#lib/server/db/schema/packing.js');
+const { riderElement, riderInput } = await import('#lib/server/db/schema/rider.js');
 const {
 	compareItems,
 	getPackingList,
@@ -76,7 +76,7 @@ const {
 	PackingAlreadyClaimedError,
 	PackingNotPromotableError
 } = await import('./packing-service');
-const { PACKING_MAX_ITEMS, PACKING_MAX_QUANTITY } = await import('$lib/config');
+const { PACKING_MAX_ITEMS, PACKING_MAX_QUANTITY } = await import('#lib/config.js');
 
 const HEAD = {
 	id: 'list-1',

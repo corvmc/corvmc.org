@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import { SEED_PREMIUM_BAND_SLUG } from './fixtures/seed-band-onboarding';
@@ -133,7 +133,9 @@ test.describe('member sidebar browse rows', () => {
 
 		await page.goto('/member/directory/instructors');
 		await expect(page).toHaveURL(/\/member\/directory\?teaches=collective$/);
-		await expect(page.locator('input[name="teachesAtCollective"]')).toBeChecked();
+		await expect(
+			page.locator('input:is([name="teachesAtCollective"], [name^="teachesAtCollective/"])')
+		).toBeChecked();
 	});
 });
 

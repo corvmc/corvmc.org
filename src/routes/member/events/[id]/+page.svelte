@@ -1,36 +1,36 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { page } from '$app/state';
-	import { goToCheckout } from '$lib/utils/checkout-navigation';
+	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
 	import { resolve } from '$app/paths';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import PosterCard from '$lib/components/events/PosterCard.svelte';
-	import EventFacts from '$lib/components/events/EventFacts.svelte';
-	import TicketStub from '$lib/components/events/TicketStub.svelte';
-	import TicketQRModal from '$lib/components/events/TicketQRModal.svelte';
-	import TicketPurchaseFields from '$lib/components/events/TicketPurchaseFields.svelte';
-	import { formatCents } from '$lib/utils/format';
-	import { ticketingMode, isFreeEvent as isFree } from '$lib/utils/event-ticketing';
-	import { sanitizeHtml } from '$lib/utils/markdown';
-	import { tagToTapeVariant, tagToStickerColor } from '$lib/utils/tag-colors';
-	import { googleCalendarUrl, icsDataUrl } from '$lib/utils/calendar';
-	import { placeLine } from '$lib/utils/place';
-	import ShareButton from '$lib/components/ui/ShareButton.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import PosterCard from '#lib/components/events/PosterCard.svelte';
+	import EventFacts from '#lib/components/events/EventFacts.svelte';
+	import TicketStub from '#lib/components/events/TicketStub.svelte';
+	import TicketQRModal from '#lib/components/events/TicketQRModal.svelte';
+	import TicketPurchaseFields from '#lib/components/events/TicketPurchaseFields.svelte';
+	import { formatCents } from '#lib/utils/format.js';
+	import { ticketingMode, isFreeEvent as isFree } from '#lib/utils/event-ticketing.js';
+	import { sanitizeHtml } from '#lib/utils/markdown.js';
+	import { tagToTapeVariant, tagToStickerColor } from '#lib/utils/tag-colors.js';
+	import { googleCalendarUrl, icsDataUrl } from '#lib/utils/calendar.js';
+	import { placeLine } from '#lib/utils/place.js';
+	import ShareButton from '#lib/components/ui/ShareButton.svelte';
 	import {
 		purchaseTickets,
 		claimFreeTicket,
 		rsvpToEvent,
 		cancelRsvp,
 		getMemberEventDetailPage
-	} from '$lib/remote/events.remote';
+	} from '#lib/remote/events.remote.js';
 
 	const { fields } = purchaseTickets;
 	const rsvpFields = claimFreeTicket.fields;
@@ -169,7 +169,7 @@
 	<div class="edet">
 		<div class="edet__poster">
 			<PosterCard
-				href={resolve(`/member/events/${evt.id}`)}
+				href={resolve(`member/events/${evt.id}`)}
 				title={evt.title}
 				posterUrl={evt.posterUrl}
 				startsAt={evt.startsAt}
@@ -261,20 +261,20 @@
 
 									<Field
 										label={m.member_events_id_number_spots()}
-										name="quantity"
+										field={claimFreeTicket.fields.quantity}
 										type="select"
 										options={quantityOptions}
 										bind:value={quantity}
 									/>
 
 									<Field
-										name="attendeeName"
+										field={claimFreeTicket.fields.attendeeName}
 										type="text"
 										label={m.member_name()}
 										bind:value={attendeeName}
 									/>
 									<Field
-										name="attendeeEmail"
+										field={claimFreeTicket.fields.attendeeEmail}
 										type="email"
 										label={m.member_email()}
 										bind:value={attendeeEmail}
@@ -306,20 +306,20 @@
 
 									<Field
 										label={m.member_events_id_number_tickets()}
-										name="quantity"
+										field={purchaseTickets.fields.quantity}
 										type="select"
 										options={quantityOptions}
 										bind:value={quantity}
 									/>
 
 									<Field
-										name="attendeeName"
+										field={purchaseTickets.fields.attendeeName}
 										type="text"
 										label={m.member_name()}
 										bind:value={attendeeName}
 									/>
 									<Field
-										name="attendeeEmail"
+										field={purchaseTickets.fields.attendeeEmail}
 										type="email"
 										label={m.member_email()}
 										bind:value={attendeeEmail}
@@ -420,13 +420,13 @@
 							{#snippet form()}
 								<input {...rsvpToEventFields.eventId.as('hidden', evt.id)} />
 								<Field
-									name="attendeeName"
+									field={rsvpToEvent.fields.attendeeName}
 									type="text"
 									label={m.member_name()}
 									bind:value={attendeeName}
 								/>
 								<Field
-									name="attendeeEmail"
+									field={rsvpToEvent.fields.attendeeEmail}
 									type="email"
 									label={m.member_email()}
 									bind:value={attendeeEmail}
@@ -451,7 +451,7 @@
 				{#each data.upcoming as e (e.id)}
 					{@const eTags = parseTags(e.tags)}
 					<PosterCard
-						href={resolve(`/member/events/${e.id}`)}
+						href={resolve(`member/events/${e.id}`)}
 						title={e.title}
 						posterUrl={e.posterUrl}
 						startsAt={e.startsAt}

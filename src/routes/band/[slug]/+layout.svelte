@@ -16,15 +16,15 @@
 		IconPlug,
 		IconPackage
 	} from '@tabler/icons-svelte';
-	import ErrorToastBoundary from '$lib/components/ui/ErrorToastBoundary.svelte';
-	import { EntityViewer } from '$lib/components/ui/entity';
-	import AppShell from '$lib/components/layout/AppShell.svelte';
-	import Nav from '$lib/components/layout/Nav';
-	import { panelTabs } from '$lib/components/layout/panel-tabs';
-	import { navTrail } from '$lib/components/layout/nav-trail';
-	import { setBreadcrumbTrail } from '$lib/components/ui/breadcrumbs';
+	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
+	import { EntityViewer } from '#lib/components/ui/entity/index.js';
+	import AppShell from '#lib/components/layout/AppShell.svelte';
+	import Nav from '#lib/components/layout/Nav/index.js';
+	import { panelTabs } from '#lib/components/layout/panel-tabs.js';
+	import { navTrail } from '#lib/components/layout/nav-trail.js';
+	import { setBreadcrumbTrail } from '#lib/components/ui/breadcrumbs.js';
 	import { page } from '$app/state';
-	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { getBandLayout, requireBandLayoutSession } from '#lib/remote/layout.remote.js';
 	import { setBandLayoutContext } from './layout-context';
 	import {
 		activeBandNavKey,
@@ -52,6 +52,15 @@
 		}
 	});
 
+	// The sign-in gate first, then the data (#2197): kit 3 gives a query no page, so the gate takes it
+	// as an argument, and the data query stays unkeyed so a mutation's `.refresh()` finds it.
+	// Serial, not beside it — two queries in flight at once is the kit ≥2.65 render loop.
+	// Runs once per mount: a slug change inside the panel falls back to `getBandLayout`'s own
+	// forward, which drops the subpage.
+	await requireBandLayoutSession({
+		slug: page.params.slug!,
+		path: page.url.pathname + page.url.search
+	});
 	let layout = $derived(await getBandLayout(page.params.slug!));
 
 	// The gating itself lives in `nav-items.ts` as data, so it can be asserted

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * What the session did, and what is left.
 	 *
@@ -10,11 +10,11 @@
 	 * you deferred it.
 	 */
 	import { resolve } from '$app/paths';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Card from '$lib/components/ui/Card/Card.svelte';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import { getInboxThreadCounts } from '$lib/remote/inbox.remote';
-	import { undoLast } from '$lib/components/inbox/undo.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Card from '#lib/components/ui/Card/Card.svelte';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import { getInboxThreadCounts } from '#lib/remote/inbox.remote.js';
+	import { undoLast } from '#lib/components/inbox/undo.svelte.js';
 	import { session } from './session.svelte';
 
 	let { onclose }: { onclose: () => void } = $props();
@@ -73,7 +73,7 @@
 			<Button variant="primary" onclick={onclose}>{m.staff_back_inbox()}</Button>
 			<!-- The Resolved view rather than a bespoke surface: what you sent is
 			     already a list, and it is one staff can go back to tomorrow. -->
-			<Button href="{resolve('/staff/inbox')}?view=resolved" variant="default" onclick={onclose}>
+			<Button href="{resolve('staff/inbox')}?view=resolved" variant="default" onclick={onclose}>
 				{m.staff_inbox_daily_session_summary_review_what_i_sent()}
 			</Button>
 			<!-- The same ten-second undo the queue offers, reachable from here

@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, globSync } from 'node:fs';
 import { is, getTableColumns, getTableName } from 'drizzle-orm';
 import { SQLiteTable } from 'drizzle-orm/sqlite-core';
-import * as schema from '$lib/server/db/schema';
-import { financialCategories } from '$lib/config';
+import * as schema from '#lib/server/db/schema.js';
+import { financialCategories } from '#lib/config.js';
 import {
 	moneyColumns,
 	manualOnlyCategories,

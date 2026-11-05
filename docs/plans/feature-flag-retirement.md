@@ -183,7 +183,7 @@ guards interleave in `groups.remote.ts`.
 Per flag: delete its `requireFeature`/`isFeatureEnabled` calls and fold the derived booleans
 (`canReport`, `canMessage`, `announcementsEnabled`, `sessionsEnabled`) to their true value; drop the
 entry from `FeatureFlag`, `ALL_FLAGS`, `DEFAULTS` and `featureMeta`; drop it from `ENABLED_FLAGS` in
-`e2e/fixtures/seed-feature-flags.ts`; strip the `vi.mock('$lib/server/feature-flags', …)` stub from
+`e2e/fixtures/seed-feature-flags.ts`; strip the `vi.mock('#lib/server/feature-flags.js', …)` stub from
 specs that mocked it only for that module.
 
 Then one final PR deletes the machinery: `src/lib/server/feature-flags.ts` and its spec,

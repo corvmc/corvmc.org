@@ -1,10 +1,10 @@
 import type Stripe from 'stripe';
-import { stripe } from '$lib/server/stripe';
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema/authentication';
+import { stripe } from '#lib/server/stripe.js';
+import { db } from '#lib/server/db/index.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { eq } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import { captureException } from '$lib/server/sentry';
+import { DomainError } from '#lib/server/domain-error.js';
+import { captureException } from '#lib/server/sentry.js';
 
 // ---------------------------------------------------------------------------
 // BillingService — the half of the Stripe billing portal not already in the app.

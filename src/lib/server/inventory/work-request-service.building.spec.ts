@@ -22,7 +22,7 @@ function chain(queue: () => unknown[]): unknown {
 
 const nextSelect = () => (selectResults.length > 0 ? selectResults.shift()! : []);
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain(nextSelect)),
 		selectDistinct: vi.fn(() => chain(nextSelect)),

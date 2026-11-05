@@ -1,4 +1,4 @@
-import { m } from '$lib/paraglide/messages.js';
+import { m } from '#lib/paraglide/messages.js';
 
 /**
  * The Schedule's work-order queues, once the dashboard's cards (#2379). Each

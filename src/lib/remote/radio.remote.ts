@@ -1,6 +1,10 @@
 import { query } from '$app/server';
-import { requireFeature, isFeatureEnabled } from '$lib/server/feature-flags';
-import { getRadioNow, getRecentlyPlayed, listStationBands } from '$lib/server/audio/radio-service';
+import { requireFeature, isFeatureEnabled } from '#lib/server/feature-flags.js';
+import {
+	getRadioNow,
+	getRecentlyPlayed,
+	listStationBands
+} from '#lib/server/audio/radio-service.js';
 
 // ---------------------------------------------------------------------------
 // Queries

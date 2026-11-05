@@ -2,7 +2,7 @@
  * Cloudflare Image Transformations URL helpers.
  *
  * The server mints exactly one canonical transform URL per R2 key (see
- * `getPublicUrl` in `$lib/server/storage`). Because `/cdn-cgi/image/<options>/<source>`
+ * `getPublicUrl` in `#lib/server/storage.js`). Because `/cdn-cgi/image/<options>/<source>`
  * is a self-describing shape, the options segment can be rewritten by a *pure*
  * string function — no bucket, no bindings, no `$env`. That lets each component
  * ask for the size it actually draws, at the point of render, on both the server

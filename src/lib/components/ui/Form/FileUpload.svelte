@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import { IconPhoto } from '@tabler/icons-svelte';
 
@@ -9,6 +9,7 @@
 
 	let {
 		name,
+		field,
 		upload,
 		inputProps,
 		accept,
@@ -30,6 +31,11 @@
 		children
 	}: {
 		name?: string;
+		/**
+		 * The remote form field the uploaded key submits as, in place of `name`.
+		 * A remote form takes every control's name from its field.
+		 */
+		field?: { as: (type: 'hidden', value: string) => Record<string, unknown> };
 		/**
 		 * Persist the file immediately and return its key. Used where the record
 		 * already exists — a band's avatar POSTs to `/api/bands/[id]/avatar`.
@@ -148,7 +154,9 @@
 
 <!-- Deferred mode posts through the file input itself, so a same-named hidden
      input here would submit alongside it and clobber the file. -->
-{#if !deferred && name}
+{#if !deferred && field}
+	<input {...field.as('hidden', value)} bind:this={hiddenInput} />
+{:else if !deferred && name}
 	<input type="hidden" {name} bind:value bind:this={hiddenInput} />
 {/if}
 
@@ -205,9 +213,9 @@
 
 		{#if uploadStatus === 'error'}
 			<p class="text-sm text-error">{uploadError}</p>
-		{:else if uploadStatus === 'success' && !isImage && name}
+		{:else if uploadStatus === 'success' && !isImage && (name || field)}
 			<p class="text-sm text-success">{m.ui_upload_done()}</p>
-		{:else if !deferred && selectedFile && !isImage && (name || uploadStatus === 'uploading')}
+		{:else if !deferred && selectedFile && !isImage && (name || field || uploadStatus === 'uploading')}
 			<!-- Immediate mode only. Deferred mode names the file above, beside the
 			     picker, and without this guard both branches match a non-image
 			     deferred pick and it is listed twice — invisible while every

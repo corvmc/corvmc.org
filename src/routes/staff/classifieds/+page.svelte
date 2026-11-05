@@ -1,25 +1,25 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import DataList from '$lib/components/ui/DataList.svelte';
-	import FilterBar from '$lib/components/ui/FilterBar.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import SearchInput from '$lib/components/ui/Form/SearchInput.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
-	import { rowLink } from '$lib/actions/row-link';
-	import { relativeDay } from '$lib/utils/format';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import DataList from '#lib/components/ui/DataList.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { relativeDay } from '#lib/utils/format.js';
 	import {
 		classifiedKindLabel,
 		classifiedCategoryLabels,
 		classifiedVisibilityLabels,
 		type ClassifiedVisibility
-	} from '$lib/config';
-	import { getStaffClassifieds } from '$lib/remote/classifieds.remote';
+	} from '#lib/config.js';
+	import { getStaffClassifieds } from '#lib/remote/classifieds.remote.js';
 
 	// Opens on what is waiting for staff: nothing in it is visible to members.
 	let tab = $state<ClassifiedVisibility>('pending_review');
@@ -75,7 +75,7 @@
 			<ParaglideMessage
 				message={m.staff_classifieds_reported_posts_decided}
 				inputs={{ staff_content_flags: m.staff_content_flags() }}
-				>{#snippet a({ children })}<a class="link" href={resolve('/staff/moderation/flags')}
+				>{#snippet a({ children })}<a class="link" href={resolve('staff/moderation/flags')}
 						>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
 			>
@@ -92,7 +92,7 @@
 					<th class="col-extra whitespace-nowrap">{m.staff_posted()}</th>
 				{/snippet}
 				{#each rows as r (r.id)}
-					<tr class="hover cursor-pointer" use:rowLink={resolve(`/staff/classifieds/${r.id}`)}>
+					<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/classifieds/${r.id}`)}>
 						<td class="w-px"><StatusBadge status={r.displayStatus} /></td>
 						<td class="cell-primary">
 							<EntityIdentity ref={r.ref}>

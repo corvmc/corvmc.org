@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 	import { IconFlag, IconX } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
 	import {
@@ -11,11 +11,11 @@
 		requestableArtifactLabels,
 		workDoneConditionLabels,
 		type RequestableArtifact
-	} from '$lib/config';
-	import { formatCents, formatDateShort, formatDateShortYear } from '$lib/utils/format';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { cancelTaskForm, resolveTaskForm } from '$lib/remote/tasks.remote';
+	} from '#lib/config.js';
+	import { formatCents, formatDateShort, formatDateShortYear } from '#lib/utils/format.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { cancelTaskForm, resolveTaskForm } from '#lib/remote/tasks.remote.js';
 	import AssignPicker from './AssignPicker.svelte';
 	import DutyItems from './DutyItems.svelte';
 	import EquipmentAction from './EquipmentAction.svelte';
@@ -54,7 +54,7 @@
 		<h2 id="task-panel-title" class="text-lg font-semibold">{task.title}</h2>
 		<p class="text-muted">
 			{section?.name ?? m.staff_no_section()} ·
-			<a class="link" href={resolve(`/staff/projects/${projectId}/tasks/${task.id}`)}
+			<a class="link" href={resolve(`staff/projects/${projectId}/tasks/${task.id}`)}
 				>{m.staff_details()}</a
 			>
 		</p>
@@ -296,11 +296,11 @@
 					})}
 				</p>
 			{/if}
-			<a class="link" href="{resolve(`/staff/events/${o.eventId}/production`)}?tab=advance">
+			<a class="link" href="{resolve(`staff/events/${o.eventId}/production`)}?tab=advance">
 				{m.staff_projects_id_task_panel_artifact_requests()}
 			</a>
 		{:else if o.kind === 'listing' || o.kind === 'production'}
-			<a class="link" href={resolve(`/staff/events/${o.eventId}/production`)}
+			<a class="link" href={resolve(`staff/events/${o.eventId}/production`)}
 				>{m.staff_projects_id_task_panel_open_show()}</a
 			>
 		{:else if o.kind === 'crew'}

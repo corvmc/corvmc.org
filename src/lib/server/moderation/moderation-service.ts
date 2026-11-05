@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
-import { userBlock, type UserBlockSource } from '$lib/server/db/schema/moderation';
-import { user } from '$lib/server/db/schema/authentication';
-import { getStanding } from '$lib/server/moderation/standing-service';
-import { isMinor } from '$lib/utils/age';
+import { db } from '#lib/server/db/index.js';
+import { userBlock, type UserBlockSource } from '#lib/server/db/schema/moderation.js';
+import { user } from '#lib/server/db/schema/authentication.js';
+import { getStanding } from '#lib/server/moderation/standing-service.js';
+import { isMinor } from '#lib/utils/age.js';
 import { eq, and, or, desc, sql } from 'drizzle-orm';
 import type { SQL, SQLWrapper } from 'drizzle-orm';
 

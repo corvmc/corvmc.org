@@ -1,25 +1,25 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The recurring-work definitions. Each writes work orders, one open at a time,
 	 * and those occurrences are rows of the Schedule's other view. A row opens its
 	 * record in the side panel; `?id` is that panel's address.
 	 */
 	import { resolve } from '$app/paths';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { formatDate } from '$lib/utils/format';
-	import { clubToday } from '$lib/config';
-	import { addIsoDays } from '$lib/utils/deadline';
-	import { urlState, text } from '$lib/urlState.svelte';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { formatDate } from '#lib/utils/format.js';
+	import { clubToday } from '#lib/config.js';
+	import { addIsoDays } from '#lib/utils/deadline.js';
+	import { urlState, text } from '#lib/urlState.svelte.js';
 	import {
 		getRecurringWorkPage,
 		createRecurringWork,
 		searchWorkAssets
-	} from '$lib/remote/maintenance-schedules.remote';
+	} from '#lib/remote/maintenance-schedules.remote.js';
 	import RecurringPanel from './RecurringPanel.svelte';
 	import { every } from './every';
 
@@ -27,7 +27,7 @@
 	const assetField = createRecurringWork.fields.assetId;
 	let asset = $state<{ id: string; name: string; detail: string | null } | null>(null);
 	const defaultFirstDue = addIsoDays(clubToday(), 7);
-	const url = urlState(resolve('/staff/volunteer/schedule/recurring'), { id: text() });
+	const url = urlState(resolve('staff/volunteer/schedule/recurring'), { id: text() });
 
 	const data = $derived(await getRecurringWorkPage());
 	const roleOptions = $derived(data.roles.map((r) => ({ value: r.id, label: r.name })));
@@ -56,39 +56,46 @@
 		>
 			{#snippet form()}
 				<FormField
-					name="name"
+					field={createRecurringWork.fields.name}
 					label={m.staff_name()}
 					type="text"
 					placeholder={m.staff_volunteer_schedule_recurring_recurring_work_monthly_de()}
 				/>
 				<FormField
-					name="volunteerRoleId"
+					field={createRecurringWork.fields.volunteerRoleId}
 					label={m.staff_role()}
 					type="select"
 					options={roleOptions}
 					value={roleOptions[0]?.value}
 				/>
 				<FormField
-					name="intervalDays"
+					field={createRecurringWork.fields.intervalDays}
+					submitAs="text"
 					label={m.staff_repeat_every_days()}
 					type="number"
 					value="30"
 					description={m.staff_volunteer_schedule_recurring_recurring_work_descriptio()}
 				/>
 				<FormField
-					name="firstDueOn"
+					field={createRecurringWork.fields.firstDueOn}
 					label={m.staff_volunteer_schedule_recurring_recurring_work_first_one()}
 					type="date"
 					value={defaultFirstDue}
 				/>
-				<FormField name="capacity" label={m.staff_how_many_people()} type="number" value="1" />
 				<FormField
-					name="projectId"
+					field={createRecurringWork.fields.capacity}
+					submitAs="text"
+					label={m.staff_how_many_people()}
+					type="number"
+					value="1"
+				/>
+				<FormField
+					field={createRecurringWork.fields.projectId}
 					label={m.staff_project()}
 					type="select"
 					options={projectOptions}
 				/>
-				<FormField name="assetId" label={m.staff_equipment()}>
+				<FormField field={createRecurringWork.fields.assetId} label={m.staff_equipment()}>
 					<SearchSelect
 						search={(q) => searchWorkAssets(q)}
 						bind:value={asset}
@@ -98,7 +105,11 @@
 						placeholder={m.staff_search_by_item_tag_serial()}
 					/>
 				</FormField>
-				<FormField name="notes" label={m.staff_notes()} type="textarea" />
+				<FormField
+					field={createRecurringWork.fields.notes}
+					label={m.staff_notes()}
+					type="textarea"
+				/>
 			{/snippet}
 		</Action>
 	{/if}

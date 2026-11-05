@@ -15,7 +15,7 @@ import { drizzle as drizzleProxy } from 'drizzle-orm/sqlite-proxy';
  * the statements are the ones that ship, built from the schema rather than
  * retyped here.
  */
-vi.mock('$lib/server/db', () => ({ db: drizzleProxy(async () => ({ rows: [] })) }));
+vi.mock('#lib/server/db/index.js', () => ({ db: drizzleProxy(async () => ({ rows: [] })) }));
 
 import { replaceTags } from './entry-service';
 

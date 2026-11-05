@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { env } from '$env/dynamic/public';
-	import { getMemberProfileEditor } from '$lib/remote/directory.remote';
+	import { getMemberProfileEditor } from '#lib/remote/directory.remote.js';
 
 	// Read above the awaited query below: a declaration after a top-level await
 	// is async-gated, and the header renders before it resolves.
 	const memberLayout = getMemberLayoutContext();
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import { resolve } from '$app/paths';
 	import { IconEye } from '@tabler/icons-svelte';
 	import { getMemberLayoutContext } from '../layout-context';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import AddressCard from '$lib/components/ui/AddressCard.svelte';
-	import { canonicalAddress } from '$lib/utils/canonical-address';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import AddressCard from '#lib/components/ui/AddressCard.svelte';
+	import { canonicalAddress } from '#lib/utils/canonical-address.js';
 	import ProfileForm from './ProfileForm.svelte';
 	import TeachingCard from './TeachingCard.svelte';
 
@@ -40,7 +40,7 @@
 <PageHeader width="3xl" subtitle={m.member_profile()} title={m.member_profile_my_profile()}>
 	<!-- This page is the form; the record it writes is read somewhere else
 	     entirely, and until now nothing connected the two (#1244). -->
-	<Button href={resolve(`/member/directory/members/${memberLayout.current.user.id}`)} size="sm">
+	<Button href={resolve(`member/directory/members/${memberLayout.current.user.id}`)} size="sm">
 		<IconEye size={16} />
 		{m.member_profile_view_as_others_see()}
 	</Button>

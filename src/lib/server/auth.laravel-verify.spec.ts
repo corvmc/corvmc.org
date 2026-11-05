@@ -3,11 +3,11 @@ import { afterEach, describe, it, expect, vi } from 'vitest';
 const captureException = vi.hoisted(() => vi.fn());
 const update = vi.hoisted(() => vi.fn());
 
-vi.mock('$lib/server/sentry', () => ({ captureException }));
+vi.mock('#lib/server/sentry.js', () => ({ captureException }));
 vi.mock('$env/dynamic/private', () => ({
 	env: { LARAVEL_URL: 'https://laravel.test', MIGRATION_SECRET: 'secret' }
 }));
-vi.mock('$lib/server/db', () => {
+vi.mock('#lib/server/db/index.js', () => {
 	// The account row, then its user, for each call.
 	const rows = [[{ userId: 'u1' }], [{ email: 'a@example.com' }]];
 	let i = 0;

@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { formatDateShort } from '$lib/utils/format';
-	import { getCommitteeMarkets } from '$lib/remote/market.remote';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { formatDateShort } from '#lib/utils/format.js';
+	import { getCommitteeMarkets } from '#lib/remote/market.remote.js';
 
 	/** Market days the committee's projects own. Its members decide their vendors (#1503). */
 	let { groupId, slug }: { groupId: string; slug: string } = $props();
@@ -26,7 +26,7 @@
 					<td class="cell-primary">{market.title}</td>
 					<td>{formatDateShort(market.startsAt)}</td>
 					<td class="text-right">
-						<a class="link" href={resolve(`/member/groups/${slug}/markets/${market.eventId}`)}>
+						<a class="link" href={resolve(`member/groups/${slug}/markets/${market.eventId}`)}>
 							{m.member_vendors()}
 						</a>
 						{#if market.toReview > 0}

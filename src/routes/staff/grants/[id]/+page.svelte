@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** One grant application: what was asked, what was awarded, and what is owed back. */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import GrantFields from '$lib/components/grant/GrantFields.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import GrantFields from '#lib/components/grant/GrantFields.svelte';
 	import GrantReportFields from './GrantReportFields.svelte';
 	import {
 		getGrantDetail,
@@ -20,10 +20,10 @@
 		addGrantReport,
 		updateGrantReport,
 		deleteGrantReport
-	} from '$lib/remote/grants.remote';
-	import { grantStatusLabels, grantStatusBadge, grantDeadlineLabels } from '$lib/config';
-	import { formatCents } from '$lib/utils/format';
-	import { formatIsoDay } from '$lib/utils/deadline';
+	} from '#lib/remote/grants.remote.js';
+	import { grantStatusLabels, grantStatusBadge, grantDeadlineLabels } from '#lib/config.js';
+	import { formatCents } from '#lib/utils/format.js';
+	import { formatIsoDay } from '#lib/utils/deadline.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -46,7 +46,7 @@
 		successToast={m.staff_saved()}
 	>
 		{#snippet form()}
-			<input type="hidden" name="id" value={grant.id} />
+			<input {...editForm.fields.id.as('hidden', grant.id)} />
 			<GrantFields fields={editForm.fields} funders={grant.funders} value={grant} />
 		{/snippet}
 	</Action>
@@ -94,7 +94,7 @@
 				successToast={m.staff_grants_id_report_added()}
 			>
 				{#snippet form()}
-					<input type="hidden" name="grantApplicationId" value={grant.id} />
+					<input {...addGrantReport.fields.grantApplicationId.as('hidden', grant.id)} />
 					<GrantReportFields fields={addGrantReport.fields} />
 				{/snippet}
 			</Action>
@@ -130,8 +130,8 @@
 								data-testid="edit-report"
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={r.id} />
-									<input type="hidden" name="grantApplicationId" value={grant.id} />
+									<input {...edit.fields.id.as('hidden', r.id)} />
+									<input {...edit.fields.grantApplicationId.as('hidden', grant.id)} />
 									<GrantReportFields fields={edit.fields} value={r} />
 								{/snippet}
 							</Action>
@@ -147,8 +147,12 @@
 								successToast={m.staff_deleted()}
 							>
 								{#snippet form()}
-									<input type="hidden" name="id" value={r.id} />
-									<input type="hidden" name="grantApplicationId" value={grant.id} />
+									<input {...deleteGrantReport.for(r.id).fields.id.as('hidden', r.id)} />
+									<input
+										{...deleteGrantReport
+											.for(r.id)
+											.fields.grantApplicationId.as('hidden', grant.id)}
+									/>
 									<p class="text-sm">
 										{m.staff_grants_id_report_funder_does_not_require()}
 									</p>
@@ -172,10 +176,10 @@
 			submitLabel={m.staff_delete()}
 			submitVariant="error"
 			successToast={m.staff_deleted()}
-			onsuccess={() => goto(resolve('/staff/grants'))}
+			onsuccess={() => goto(resolve('staff/grants'))}
 		>
 			{#snippet form()}
-				<input type="hidden" name="id" value={grant.id} />
+				<input {...deleteGrant.for(grant.id).fields.id.as('hidden', grant.id)} />
 				<p class="text-sm">
 					{m.staff_grants_id_row_should_never_have_existed()}
 				</p>

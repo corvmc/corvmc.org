@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { formatDateShort } from '$lib/utils/format';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import { toast } from 'svelte-sonner';
 	import {
 		getCommitteeOpenItems,
@@ -16,7 +16,7 @@
 		resolveDeliverable,
 		tickDeliverableTask,
 		reassignDeliverableForm
-	} from '$lib/remote/deliverables.remote';
+	} from '#lib/remote/deliverables.remote.js';
 
 	/**
 	 * What this committee owes, on every show, soonest first (#1701). Anyone on the
@@ -67,10 +67,14 @@
 												onchange={(e: Event) =>
 													(e.currentTarget as HTMLFormElement).requestSubmit()}
 											>
-												<input type="hidden" name="taskId" value={task.id} />
-												<input type="hidden" name="slug" value={slug} />
+												<input
+													{...tickDeliverableTask.for(task.id).fields.taskId.as('hidden', task.id)}
+												/>
+												<input
+													{...tickDeliverableTask.for(task.id).fields.slug.as('hidden', slug)}
+												/>
 												<FormField
-													name="done"
+													field={tickDeliverableTask.for(task.id).fields.done}
 													type="checkbox"
 													checkboxLabel={task.label}
 													value={task.done}
@@ -87,7 +91,7 @@
 					</td>
 					<td>
 						{#if item.eventId}
-							<a class="link" href={resolve(`/events/${item.eventId}`)}>{item.eventTitle}</a>
+							<a class="link" href={resolve(`events/${item.eventId}`)}>{item.eventTitle}</a>
 							{#if item.eventStartsAt}
 								<div class="text-muted text-sm">{formatDateShort(item.eventStartsAt)}</div>
 							{/if}
@@ -131,8 +135,8 @@
 										onsuccess={warnOver}
 									>
 										{#snippet form()}
-											<input type="hidden" name="id" value={item.id} />
-											<input type="hidden" name="slug" value={slug} />
+											<input {...takeDeliverable.for(item.id).fields.id.as('hidden', item.id)} />
+											<input {...takeDeliverable.for(item.id).fields.slug.as('hidden', slug)} />
 										{/snippet}
 									</Action>
 								{/if}
@@ -151,10 +155,10 @@
 									successToast={m.member_groups_slug_committee_open_items_marked_done()}
 								>
 									{#snippet form()}
-										<input type="hidden" name="id" value={item.id} />
-										<input type="hidden" name="slug" value={slug} />
+										<input {...resolveDeliverable.for(item.id).fields.id.as('hidden', item.id)} />
+										<input {...resolveDeliverable.for(item.id).fields.slug.as('hidden', slug)} />
 										<FormField
-											name="reason"
+											field={resolveDeliverable.for(item.id).fields.reason}
 											label={m.member_groups_slug_committee_open_items_why()}
 											type="textarea"
 											required={item.doneWhen !== null}
@@ -174,10 +178,14 @@
 									successToast={m.member_groups_slug_committee_open_items_handed()}
 								>
 									{#snippet form()}
-										<input type="hidden" name="id" value={item.id} />
-										<input type="hidden" name="slug" value={slug} />
+										<input
+											{...reassignDeliverableForm.for(item.id).fields.id.as('hidden', item.id)}
+										/>
+										<input
+											{...reassignDeliverableForm.for(item.id).fields.slug.as('hidden', slug)}
+										/>
 										<FormField
-											name="groupId"
+											field={reassignDeliverableForm.for(item.id).fields.groupId}
 											label={m.member_text()}
 											type="select"
 											options={handTo}

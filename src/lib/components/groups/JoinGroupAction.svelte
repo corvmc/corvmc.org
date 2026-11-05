@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { joinGroupForm } from '$lib/remote/groups.remote';
-	import { applyToGroups } from '$lib/remote/group-applications.remote';
-	import { groupApplicationQuestions } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { joinGroupForm } from '#lib/remote/groups.remote.js';
+	import { applyToGroups } from '#lib/remote/group-applications.remote.js';
+	import { groupApplicationQuestions } from '#lib/config.js';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
+	import { withQuery } from '#lib/utils/with-query.js';
 
 	/**
 	 * One control for both self-service doors, mounted on the member index and
@@ -67,7 +67,7 @@
 	</Action>
 {:else if kind === 'committee'}
 	<Button
-		href={withQuery(resolve('/member/groups'), new URLSearchParams({ committee: slug }))}
+		href={withQuery(resolve('member/groups'), new URLSearchParams({ committee: slug }))}
 		variant="primary"
 		size="sm"
 		aria-label={m.groups_join_group_apply({ groupName })}

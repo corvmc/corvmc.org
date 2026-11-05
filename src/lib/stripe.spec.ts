@@ -9,7 +9,7 @@ const { env, loadStripe, reportError } = vi.hoisted(() => ({
 
 vi.mock('$env/dynamic/public', () => ({ env }));
 vi.mock('@stripe/stripe-js', () => ({ loadStripe }));
-vi.mock('$lib/report-error', () => ({ reportError }));
+vi.mock('#lib/report-error.js', () => ({ reportError }));
 
 async function load() {
 	vi.resetModules();

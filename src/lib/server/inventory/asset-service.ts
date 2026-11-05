@@ -1,4 +1,4 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	acquisition,
 	equipmentCategory,
@@ -6,15 +6,15 @@ import {
 	inventoryItem,
 	inventoryLocation,
 	stockMovement
-} from '$lib/server/db/schema/inventory';
-import { recordAuditEntry } from '$lib/server/audit/audit-service';
+} from '#lib/server/db/schema/inventory.js';
+import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { and, asc, eq, isNotNull, isNull, notInArray, or } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { user } from '$lib/server/db/schema/authentication';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { form8282Status, needsAttention } from './form-8282';
 import { movementStatement, recordMovement } from './stock-service';
-import type { AssetStatus, EquipmentCondition } from '$lib/config';
-import { DomainError } from '$lib/server/domain-error';
+import type { AssetStatus, EquipmentCondition } from '#lib/config.js';
+import { DomainError } from '#lib/server/domain-error.js';
 
 /**
  * One physical unit of a `serialized` item.

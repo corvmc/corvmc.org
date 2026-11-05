@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { redirect, error } from '@sveltejs/kit';
 import { getRequestEvent, query } from '$app/server';
 import { form } from './_remote';
-import { requireMember } from '$lib/server/authorization';
+import { requireMember } from '#lib/server/authorization.js';
 import {
 	createCheckoutSession,
 	getMemberSubscription,
@@ -11,14 +11,14 @@ import {
 	updateQuantity,
 	resume,
 	cancel
-} from '$lib/server/finance/subscription-service';
-import { getAllBalances, getUsageSinceLastAllocation } from '$lib/server/finance/credit-service';
-import { getCommunityStats } from '$lib/server/finance/community-stats';
-import { calculateTotalWithFeeCoverage } from '$lib/finance/fees';
-import { getProductConfig } from '$lib/server/finance/product-config-service';
-import { ensureStripeCustomer } from '$lib/server/finance/stripe-customer-service';
-import { mapDomainError } from '$lib/server/errors';
-import { DOLLARS_PER_UNIT } from '$lib/config';
+} from '#lib/server/finance/subscription-service.js';
+import { getAllBalances, getUsageSinceLastAllocation } from '#lib/server/finance/credit-service.js';
+import { getCommunityStats } from '#lib/server/finance/community-stats.js';
+import { calculateTotalWithFeeCoverage } from '#lib/finance/fees.js';
+import { getProductConfig } from '#lib/server/finance/product-config-service.js';
+import { ensureStripeCustomer } from '#lib/server/finance/stripe-customer-service.js';
+import { mapDomainError } from '#lib/server/errors.js';
+import { DOLLARS_PER_UNIT } from '#lib/config.js';
 
 export const getMemberMembership = query(async () => {
 	const user = await requireMember();
@@ -118,7 +118,7 @@ export const createSubscription = form(amountSchema, async (data) => {
 
 	// Relative now — `elements` returns the in-app `/checkout/<session>`, so this
 	// is a client-side navigation rather than a document load off to Stripe.
-	redirect(303, checkoutUrl);
+	redirect(303, checkoutUrl, { external: ['https://checkout.stripe.com'] });
 });
 
 export const updateAmount = form(amountSchema, async (data) => {

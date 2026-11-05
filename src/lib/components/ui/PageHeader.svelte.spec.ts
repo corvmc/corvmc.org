@@ -2,7 +2,7 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import PageHeaderHarness from './PageHeader.test.svelte';
-import '$lib/test/locators';
+import '#lib/test/locators.js';
 
 // Header actions are one size whatever the caller passes or omits; an unsized
 // Action used to fall back to md beside sm siblings (#1831).

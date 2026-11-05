@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import AppealPanel from '$lib/components/moderation/AppealPanel.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import LineupEditor, { type LineupChip } from '$lib/components/events/LineupEditor.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import AppealPanel from '#lib/components/moderation/AppealPanel.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -22,9 +22,9 @@
 		unpublishListing,
 		withdrawListing,
 		deleteListing
-	} from '$lib/remote/community-events.remote';
-	import { formatDateShort, formatDollars } from '$lib/utils/format';
-	import { imageSrc } from '$lib/utils/images';
+	} from '#lib/remote/community-events.remote.js';
+	import { formatDateShort, formatDollars } from '#lib/utils/format.js';
+	import { imageSrc } from '#lib/utils/images.js';
 
 	// Declared before the awaited query: a declaration after one is async-gated,
 	// which would compile every `fields.X.as()` into an async derived.
@@ -79,7 +79,7 @@
 	<PageContent width="2xl">
 		<Alert type="warning">
 			<ParaglideMessage message={m.member_events_id_manage_listing_doesn_t_exist_isn} inputs={{}}
-				>{#snippet a({ children })}<a href={resolve('/member/events')} class="link"
+				>{#snippet a({ children })}<a href={resolve('member/events')} class="link"
 						>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
 			>
@@ -161,7 +161,7 @@
 					successToast={m.member_events_id_manage_listing_deleted()}
 					variant="ghost"
 					size="sm"
-					onsuccess={() => goto(resolve('/member/events'))}
+					onsuccess={() => goto(resolve('member/events'))}
 				>
 					{#snippet form()}
 						<input {...deleteFields.eventId.as('hidden', eventId)} />
@@ -220,7 +220,7 @@
 							title: duplicate.title,
 							formatDateShort: formatDateShort(duplicate.startsAt)
 						}}
-						>{#snippet a({ children })}<a href={resolve(`/events/${duplicate.id}`)} class="link"
+						>{#snippet a({ children })}<a href={resolve(`events/${duplicate.id}`)} class="link"
 								>{@render children?.()}</a
 							>{/snippet}</ParaglideMessage
 					>
@@ -247,7 +247,10 @@
 
 			<!-- The `input` snippet, not children: only it is handed the id the
 			     caption points at, so children would leave the field unnamed. -->
-			<FormField name="description" label={m.member_events_id_manage_description()}>
+			<FormField
+				field={updateListing.fields.description}
+				label={m.member_events_id_manage_description()}
+			>
 				{#snippet input(id)}
 					<textarea
 						{...fields.description.as('text', listing.description ?? '')}
@@ -316,11 +319,15 @@
 			/>
 
 			<FormField
-				name="lineup"
+				field={updateListing.fields.lineup}
 				label={m.member_events_id_manage_who_s_playing()}
 				description={m.member_events_id_manage_naming_band_s_site_asks()}
 			>
-				<LineupEditor bind:value={lineup} search={searchBandsForListing} />
+				<LineupEditor
+					field={updateListing.fields.lineup}
+					bind:value={lineup}
+					search={searchBandsForListing}
+				/>
 			</FormField>
 
 			<FormField

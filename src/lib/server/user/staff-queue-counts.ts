@@ -1,13 +1,13 @@
-import { getUnresolvedCount } from '$lib/server/inbox/thread-service';
-import { countVolunteerWorkWaiting } from '$lib/server/volunteer/volunteer-signup-service';
-import { countPendingSubmissions } from '$lib/server/event/community-event-service';
-import { countPendingTips } from '$lib/server/local-resource/local-resource-service';
-import { countPendingAppeals } from '$lib/server/moderation/appeal-service';
+import { getUnresolvedCount } from '#lib/server/inbox/thread-service.js';
+import { countVolunteerWorkWaiting } from '#lib/server/volunteer/volunteer-signup-service.js';
+import { countPendingSubmissions } from '#lib/server/event/community-event-service.js';
+import { countPendingTips } from '#lib/server/local-resource/local-resource-service.js';
+import { countPendingAppeals } from '#lib/server/moderation/appeal-service.js';
 import {
 	countAwaitingModeration,
 	countAwaitingResponse,
 	countPendingEdits
-} from '$lib/server/suggestion/suggestion-service';
+} from '#lib/server/suggestion/suggestion-service.js';
 
 /**
  * The staff panel's queue counts: the sidebar badges and the dashboard's Pending

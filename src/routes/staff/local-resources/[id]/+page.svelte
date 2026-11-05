@@ -1,24 +1,24 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { formatDateTime } from '$lib/utils/format';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { formatDateTime } from '#lib/utils/format.js';
 	import {
 		getStaffLocalResource,
 		updateLocalResourceForm,
 		publishLocalResourceForm,
 		rejectLocalResourceForm,
 		removeLocalResourceForm
-	} from '$lib/remote/local-resources.remote';
+	} from '#lib/remote/local-resources.remote.js';
 	import ResourceFields from '../ResourceFields.svelte';
 
 	const data = $derived(await getStaffLocalResource(page.params.id!));
@@ -54,7 +54,7 @@
 		modalTitle={m.staff_remove_2({ name: r.name })}
 		submitLabel={m.staff_remove()}
 		successToast={m.staff_local_resources_id_listing_removed()}
-		onsuccess={() => void goto(resolve('/staff/local-resources'))}
+		onsuccess={() => void goto(resolve('staff/local-resources'))}
 	>
 		{#snippet form()}
 			<input {...removeFields.id.as('hidden', r.id)} />

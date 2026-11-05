@@ -1,28 +1,28 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import {
 		getOrder,
 		markOrderPlaced,
 		dropOrder,
 		closeOrder,
 		reopenOrderForm
-	} from '$lib/remote/inventory.remote';
-	import { ReopenAction } from '$lib/components/actions';
-	import { orderStatusLabels, orderStatusBadge, type OrderStatus } from '$lib/config';
-	import { formatCents, formatDateShort } from '$lib/utils/format';
-	import { isOrderLate } from '$lib/utils/order-late';
+	} from '#lib/remote/inventory.remote.js';
+	import { ReopenAction } from '#lib/components/actions/index.js';
+	import { orderStatusLabels, orderStatusBadge, type OrderStatus } from '#lib/config.js';
+	import { formatCents, formatDateShort } from '#lib/utils/format.js';
+	import { isOrderLate } from '#lib/utils/order-late.js';
 	import { resolve } from '$app/paths';
 
 	/**
@@ -82,7 +82,7 @@
 				{#each order.lines as line (line.id)}
 					<tr class="hover">
 						<td class="cell-primary">
-							<a class="link" href={resolve(`/staff/inventory/${line.itemId}`)}>{line.item.name}</a>
+							<a class="link" href={resolve(`staff/inventory/${line.itemId}`)}>{line.item.name}</a>
 							{#if line.outstanding > 0 && status === 'placed'}
 								<Badge variant="warning" size="xs"
 									>{m.staff_inventory_orders_id_still_out({ outstanding: line.outstanding })}</Badge
@@ -126,7 +126,7 @@
 					<ul class="space-y-1">
 						{#each order.arrivals as arrival (arrival.id)}
 							<li>
-								<a class="link" href={resolve(`/staff/inventory/acquisitions/${arrival.id}`)}>
+								<a class="link" href={resolve(`staff/inventory/acquisitions/${arrival.id}`)}>
 									{formatDateShort(arrival.occurredAt)}
 								</a>
 							</li>

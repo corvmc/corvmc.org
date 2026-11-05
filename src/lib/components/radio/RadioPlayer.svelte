@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { onMount } from 'svelte';
 	import {
 		IconPlayerPlayFilled,
@@ -8,9 +8,9 @@
 		IconX,
 		IconChevronUp
 	} from '@tabler/icons-svelte';
-	import { getRadioState } from '$lib/remote/radio.remote';
+	import { getRadioState } from '#lib/remote/radio.remote.js';
 	import { readWidgetState, writeWidgetState, type RadioWidgetState } from './radio-dismiss';
-	import { formatTrackLength } from '$lib/utils/audio';
+	import { formatTrackLength } from '#lib/utils/audio.js';
 	import { resolve } from '$app/paths';
 
 	type Entry = {
@@ -239,7 +239,7 @@
 						<span class="text-muted">{m.radio_radio_player_by()}</span>
 						<!-- The whole reason the widget exists: whoever is playing is one
 						     click from their profile. -->
-						<a class="link" href={resolve(`/directory/bands/${current.bandSlug}`)}
+						<a class="link" href={resolve(`directory/bands/${current.bandSlug}`)}
 							>{current.bandName}</a
 						>
 					</p>

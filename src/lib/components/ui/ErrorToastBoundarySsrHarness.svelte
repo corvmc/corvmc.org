@@ -6,10 +6,11 @@
 <script lang="ts">
 	import ErrorToastBoundary from './ErrorToastBoundary.svelte';
 
-	let { showPending = true }: { showPending?: boolean } = $props();
+	let { showPending = true, fails = false }: { showPending?: boolean; fails?: boolean } = $props();
 
 	async function slowContent() {
 		await Promise.resolve();
+		if (fails) throw new Error('not found');
 		return 'resolved content';
 	}
 </script>

@@ -1,18 +1,14 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { IconFlag } from '@tabler/icons-svelte';
 	import { Turnstile } from 'svelte-turnstile';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { submitEventReport } from '$lib/remote/flags.remote';
-	import {
-		TURNSTILE_SITE_KEY,
-		TURNSTILE_RESPONSE_FIELD,
-		turnstileFailureMessage
-	} from '$lib/turnstile';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { submitEventReport } from '#lib/remote/flags.remote.js';
+	import { TURNSTILE_SITE_KEY, turnstileFailureMessage } from '#lib/turnstile.js';
 	import Alert from '../ui/Alert.svelte';
-	import type { RemoteFormIssue } from '@sveltejs/kit';
+	import type { RemoteFormIssue } from '$app/server';
 
 	let {
 		eventId,
@@ -103,7 +99,7 @@
 			</FormField>
 			<Turnstile
 				siteKey={TURNSTILE_SITE_KEY}
-				responseFieldName={TURNSTILE_RESPONSE_FIELD}
+				responseFieldName={fields.turnstileToken.as('hidden', '').name}
 				theme="auto"
 				bind:reset={resetTurnstile}
 			/>

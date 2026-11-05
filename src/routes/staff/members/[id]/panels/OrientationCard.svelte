@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { getMemberOrientation, waiveMemberOrientation } from '$lib/remote/orientation.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { formatDateTimeShort } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getMemberOrientation, waiveMemberOrientation } from '#lib/remote/orientation.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { formatDateTimeShort } from '#lib/utils/format.js';
 
 	/**
 	 * Whether this member has been shown around, and the one thing staff can do
@@ -54,9 +54,9 @@
 					successToast={m.staff_members_id_panels_orientation_card_success_toast()}
 				>
 					{#snippet form()}
-						<input type="hidden" name="userId" value={id} />
+						<input {...waiveMemberOrientation.fields.userId.as('hidden', id)} />
 						<FormField
-							name="reason"
+							field={waiveMemberOrientation.fields.reason}
 							label={m.staff_members_id_panels_orientation_card_why_not_needed()}
 							type="textarea"
 							description={m.staff_members_id_panels_orientation_card_description()}

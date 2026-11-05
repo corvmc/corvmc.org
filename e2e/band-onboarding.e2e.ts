@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import { expectSuccessToast } from './toast';
 import {
@@ -48,7 +48,7 @@ function quickFact(page: import('@playwright/test').Page, label: string) {
 async function saveProfile(page: Page) {
 	await page
 		.locator('form')
-		.filter({ has: page.locator('input[name="tagline"]') })
+		.filter({ has: page.locator('input:is([name="tagline"], [name^="tagline/"])') })
 		.locator('button[type="submit"]')
 		.click();
 }
@@ -60,8 +60,8 @@ async function login(page: Page) {
 /** Through the form, for the test about the window right after signing in. */
 async function loginThroughForm(page: Page) {
 	await page.goto('/login');
-	await page.locator('input[name="email"]').fill(SEED_OWNER_EMAIL);
-	await page.locator('input[name="password"]').fill(SEED_OWNER_PASSWORD);
+	await page.locator('input:is([name="email"], [name^="email/"])').fill(SEED_OWNER_EMAIL);
+	await page.locator('input:is([name="password"], [name^="password/"])').fill(SEED_OWNER_PASSWORD);
 	await page.locator('form button[type="submit"]').click();
 	await page.waitForURL(/\/member(\/|$|\?)/, { timeout: 15000 });
 }
@@ -74,16 +74,22 @@ test('the edit form renders for an owner, and saving preserves hometown and foun
 
 	// The regression rendered a "Failed to load: effect_update_depth_exceeded"
 	// banner instead of the form.
-	await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 15000 });
+	await expect(page.locator('input:is([name="name"], [name^="name/"])')).toBeVisible({
+		timeout: 15000
+	});
 	await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
 
 	// The profile fields the public page displays are all editable — hometown
 	// and foundedYear were missing entirely, which wiped them on save.
-	await expect(page.locator('input[name="hometown"]')).toHaveValue(SEED_PUBLIC_BAND_HOMETOWN);
-	await expect(page.locator('input[name="foundedYear"]')).toHaveValue(SEED_PUBLIC_BAND_FOUNDED);
+	await expect(page.locator('input:is([name="hometown"], [name^="hometown/"])')).toHaveValue(
+		SEED_PUBLIC_BAND_HOMETOWN
+	);
+	await expect(page.locator('input:is([name="foundedYear"], [name^="foundedYear/"])')).toHaveValue(
+		SEED_PUBLIC_BAND_FOUNDED
+	);
 
 	// Dirty the form so the submit is a real save, then save.
-	await page.locator('input[name="tagline"]').fill('E2E save round-trip');
+	await page.locator('input:is([name="tagline"], [name^="tagline/"])').fill('E2E save round-trip');
 	await saveProfile(page);
 	await expectSuccessToast(page, 15000);
 
@@ -174,9 +180,11 @@ test('renaming a band saves cleanly and leaves its address alone', async ({ page
 
 	await login(page);
 	await page.goto(`/band/${SEED_RETITLE_BAND_SLUG}/edit`);
-	await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 15000 });
+	await expect(page.locator('input:is([name="name"], [name^="name/"])')).toBeVisible({
+		timeout: 15000
+	});
 
-	await page.locator('input[name="name"]').fill(NEW_NAME);
+	await page.locator('input:is([name="name"], [name^="name/"])').fill(NEW_NAME);
 	await saveProfile(page);
 
 	await expectSuccessToast(page, 15000);
@@ -193,7 +201,9 @@ test('renaming a band saves cleanly and leaves its address alone', async ({ page
 	// the extra load: a save that toasts without landing is exactly what made the
 	// old restore step unreliable.
 	await page.reload();
-	await expect(page.locator('input[name="name"]')).toHaveValue(NEW_NAME, { timeout: 15000 });
+	await expect(page.locator('input:is([name="name"], [name^="name/"])')).toHaveValue(NEW_NAME, {
+		timeout: 15000
+	});
 });
 
 test('the sidebar New link opens the create-band modal', async ({ page }) => {
@@ -213,5 +223,7 @@ test('the sidebar New link opens the create-band modal', async ({ page }) => {
 	await createLink.click();
 	await page.waitForURL(/\/member\/bands\?create=1/, { timeout: 15000 });
 	await expect(page.getByRole('dialog')).toBeVisible({ timeout: 15000 });
-	await expect(page.getByRole('dialog').locator('input[name="name"]')).toBeVisible();
+	await expect(
+		page.getByRole('dialog').locator('input:is([name="name"], [name^="name/"])')
+	).toBeVisible();
 });

@@ -1,12 +1,12 @@
 import type Stripe from 'stripe';
 import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { eventListing } from '$lib/server/db/schema/event';
-import { ticket, ticketSale } from '$lib/server/db/schema/ticket';
-import { stripe } from '$lib/server/stripe';
-import { DomainError } from '$lib/server/domain-error';
-import { doorTicketSplit } from '$lib/finance/ticket-split';
-import { recordDoorTicketSale, recordFreeTicketSale } from '$lib/server/finance/ticket-entries';
+import { db } from '#lib/server/db/index.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { ticket, ticketSale } from '#lib/server/db/schema/ticket.js';
+import { stripe } from '#lib/server/stripe.js';
+import { DomainError } from '#lib/server/domain-error.js';
+import { doorTicketSplit } from '#lib/finance/ticket-split.js';
+import { recordDoorTicketSale, recordFreeTicketSale } from '#lib/server/finance/ticket-entries.js';
 import {
 	cancelPurchase,
 	createTickets,

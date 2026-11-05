@@ -9,11 +9,11 @@ const requireCapability = vi.fn(async (cap: string) => {
 	if (!allowed) throw new Error(`403: ${cap}`);
 	return { id: 'staff-1' };
 });
-vi.mock('$lib/server/authorization', () => ({ requireCapability }));
+vi.mock('#lib/server/authorization.js', () => ({ requireCapability }));
 
 const createService = vi.fn(async () => ({ id: 'ms-1' }));
 const updateService = vi.fn(async () => undefined);
-vi.mock('$lib/server/volunteer/maintenance-schedule-service', () => ({
+vi.mock('#lib/server/volunteer/maintenance-schedule-service.js', () => ({
 	createMaintenanceSchedule: createService,
 	listMaintenanceSchedules: vi.fn(async () => []),
 	retireMaintenanceSchedule: vi.fn(),
@@ -21,10 +21,10 @@ vi.mock('$lib/server/volunteer/maintenance-schedule-service', () => ({
 }));
 
 const searchAssetOptions = vi.fn(async () => [{ id: 'as-1', name: 'PA speaker', detail: null }]);
-vi.mock('$lib/server/inventory/asset-service', () => ({ searchAssetOptions }));
+vi.mock('#lib/server/inventory/asset-service.js', () => ({ searchAssetOptions }));
 
-vi.mock('$lib/server/volunteer/volunteer-role-service', () => ({ listVolunteerRoles: vi.fn() }));
-vi.mock('$lib/server/project/project-service', () => ({ listProjects: vi.fn() }));
+vi.mock('#lib/server/volunteer/volunteer-role-service.js', () => ({ listVolunteerRoles: vi.fn() }));
+vi.mock('#lib/server/project/project-service.js', () => ({ listProjects: vi.fn() }));
 vi.mock('$app/server', () => {
 	// The last argument is the handler, called directly; `__` is what SvelteKit
 	// checks to accept the export as a remote function.

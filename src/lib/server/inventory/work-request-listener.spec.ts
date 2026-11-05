@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 const handlers: Record<string, ((arg: { data: unknown }) => Promise<void>)[]> = {};
-vi.mock('$lib/server/event-bus/event-bus', () => ({
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 	domainEvents: {
 		on: (name: string, handler: (arg: { data: unknown }) => Promise<void>) => {
 			(handlers[name] ??= []).push(handler);

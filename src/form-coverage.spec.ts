@@ -49,7 +49,7 @@ const GRANDFATHERED: string[] = JSON.parse(readFileSync('src/form-coverage.json'
 /** The `.svelte` files a component imports, as repo-relative paths. */
 function svelteImports(file: string, source: string): string[] {
 	return [...source.matchAll(/from\s+['"]([^'"]+\.svelte)['"]/g)].map(([, spec]) =>
-		spec.startsWith('$lib/')
+		/^[$#]lib\//.test(spec)
 			? posix.join('src/lib', spec.slice(5))
 			: posix.join(posix.dirname(file), spec)
 	);
@@ -109,6 +109,9 @@ async function uncoveredFields() {
 			// field objects get aliased, passed as snippet parameters and spread into
 			// child sets, and chasing every binding shape costs more than it catches.
 			if (new RegExp(`\\.${k}\\b`).test(scoped)) continue;
+			// A shared step a host imports, reading `fields.${k}` off a prop or the
+			// form context.
+			if (new RegExp(`fields\\??\\.${k}\\b`).test(renderScope(hosts, files))) continue;
 			// A field set declaring `${k}: RemoteFormField<…>` renders it.
 			if (declaresFieldSet(k, hosts, files)) continue;
 			out.push(`${name}.${k}`);

@@ -8,11 +8,11 @@ const { auth, refreshes } = vi.hoisted(() => ({
 	refreshes: [] as { query: unknown; outcome: Promise<unknown> }[]
 }));
 
-vi.mock('$lib/server/authorization', async () =>
-	(await import('$lib/server/testing/mock-remote-guards')).guardsFor(() => auth.held)
+vi.mock('#lib/server/authorization.js', async () =>
+	(await import('#lib/server/testing/mock-remote-guards.js')).guardsFor(() => auth.held)
 );
 vi.mock('$app/server', async () => {
-	const { appServerMock } = await import('$lib/server/testing/mock-remote-guards');
+	const { appServerMock } = await import('#lib/server/testing/mock-remote-guards.js');
 	const query = (...args: unknown[]) => {
 		const handler = args.at(-1) as (...a: unknown[]) => Promise<unknown>;
 		const remote = (...a: unknown[]) => ({
@@ -26,20 +26,20 @@ vi.mock('$app/server', async () => {
 	};
 	return { ...appServerMock(), query };
 });
-vi.mock('$lib/server/marketing/audience-service', () => ({
+vi.mock('#lib/server/marketing/audience-service.js', () => ({
 	listAudiences: vi.fn(async () => []),
 	createAudience: vi.fn(async () => ({ id: 'aud-1' })),
 	deleteAudience: vi.fn(async () => undefined)
 }));
-vi.mock('$lib/server/marketing/campaign-service', () => ({}));
-vi.mock('$lib/server/marketing/unsubscribe', () => ({}));
-vi.mock('$lib/server/marketing/subscriber-service', () => ({}));
-vi.mock('$lib/server/turnstile', () => ({}));
-vi.mock('$lib/server/utils/slug', () => ({
+vi.mock('#lib/server/marketing/campaign-service.js', () => ({}));
+vi.mock('#lib/server/marketing/unsubscribe.js', () => ({}));
+vi.mock('#lib/server/marketing/subscriber-service.js', () => ({}));
+vi.mock('#lib/server/turnstile.js', () => ({}));
+vi.mock('#lib/server/utils/slug.js', () => ({
 	generateSlug: () => 'slug',
 	ensureUniqueSlug: async () => 'slug'
 }));
-vi.mock('$lib/server/db', () => ({ db: {} }));
+vi.mock('#lib/server/db/index.js', () => ({ db: {} }));
 
 const writes: [string, () => unknown][] = [
 	[

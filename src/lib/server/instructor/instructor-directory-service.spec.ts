@@ -10,7 +10,7 @@
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 
-vi.mock('$lib/server/db', async () => {
+vi.mock('#lib/server/db/index.js', async () => {
 	const { DatabaseSync } = await import('node:sqlite');
 	const { drizzle } = await import('drizzle-orm/node-sqlite');
 	const { migrate } = await import('drizzle-orm/node-sqlite/migrator');
@@ -23,7 +23,7 @@ vi.mock('$lib/server/db', async () => {
 	return { db: orm, client, getRowCount: () => 0 };
 });
 
-const { client } = (await import('$lib/server/db')) as unknown as {
+const { client } = (await import('#lib/server/db/index.js')) as unknown as {
 	client: import('node:sqlite').DatabaseSync;
 };
 const { listInstructors } = await import('./instructor-directory-service');

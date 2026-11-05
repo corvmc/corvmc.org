@@ -7,17 +7,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
-vi.mock('$lib/server/event-bus/event-bus', () => ({ domainEvents: { emit: vi.fn() } }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit: vi.fn() } }));
 
 // Delivery is the inbox's job; what matters here is that the vendor is told.
 const sent = vi.fn(async (_params: { threadId: string; body: string }) => ({ id: 'msg' }));
-vi.mock('$lib/server/inbox/message-service', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/inbox/message-service')>()),
+vi.mock('#lib/server/inbox/message-service.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/inbox/message-service.js')>()),
 	addOutboundMessage: (params: { threadId: string; body: string }) => sent(params)
 }));
 

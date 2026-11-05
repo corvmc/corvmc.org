@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import type { getUserOverview } from '$lib/remote/users.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { getUserOverview } from '#lib/remote/users.remote.js';
 	import type { TabKey } from '../tabs';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import DefinitionList from '$lib/components/ui/DefinitionList/DefinitionList.svelte';
-	import Fact from '$lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatDateShortYear, formatDateTimeShort } from '$lib/utils/format';
-	import { standingScopeConfig } from '$lib/config';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
+	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { formatDateShortYear, formatDateTimeShort } from '#lib/utils/format.js';
+	import { standingScopeConfig } from '#lib/config.js';
 
 	let {
 		overview,

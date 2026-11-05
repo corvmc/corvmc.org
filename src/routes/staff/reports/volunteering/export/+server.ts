@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import type { RequestHandler } from './$types';
-import { requireCapability } from '$lib/server/authorization';
-import { listApprovedHoursForExport } from '$lib/server/volunteer/volunteer-report-service';
-import { getHourValueCents, getHourValueSource } from '$lib/server/volunteer/hour-value';
-import { toCsv, csvResponse } from '$lib/server/report/csv';
-import { valueOfMinutesCents } from '$lib/config';
+import { requireCapability } from '#lib/server/authorization.js';
+import { listApprovedHoursForExport } from '#lib/server/volunteer/volunteer-report-service.js';
+import { getHourValueCents, getHourValueSource } from '#lib/server/volunteer/hour-value.js';
+import { toCsv, csvResponse } from '#lib/server/report/csv.js';
+import { valueOfMinutesCents } from '#lib/config.js';
 
 const DATE = z
 	.string()

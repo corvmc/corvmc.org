@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** The create and edit forms share every field; `value` pre-fills the edit. */
-	import { Field, MoneyField } from '$lib/components/ui/Form';
-	import type { createSponsorship } from '$lib/remote/sponsors.remote';
+	import { Field, MoneyField } from '#lib/components/ui/Form/index.js';
+	import type { createSponsorship } from '#lib/remote/sponsors.remote.js';
 	import {
 		sponsorshipStatuses,
 		sponsorshipStatusLabels,
 		type SponsorshipStatus
-	} from '$lib/config';
+	} from '#lib/config.js';
 
 	interface Value {
 		title: string;

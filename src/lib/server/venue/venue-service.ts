@@ -1,10 +1,10 @@
-import { db } from '$lib/server/db';
-import { venue } from '$lib/server/db/schema/venue';
-import { eventListing } from '$lib/server/db/schema/event';
+import { db } from '#lib/server/db/index.js';
+import { venue } from '#lib/server/db/schema/venue.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
 import { asc, count, eq, isNull } from 'drizzle-orm';
-import { DomainError } from '$lib/server/domain-error';
-import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
-import type { Venue } from '$lib/server/db/schema/venue';
+import { DomainError } from '#lib/server/domain-error.js';
+import { generateSlug, ensureUniqueSlug } from '#lib/server/utils/slug.js';
+import type { Venue } from '#lib/server/db/schema/venue.js';
 
 /**
  * Where a show is.

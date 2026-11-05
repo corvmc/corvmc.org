@@ -1,10 +1,10 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { uploadFile, validateUpload } from '$lib/server/storage';
-import { detachSlot, replaceSlot } from '$lib/server/media/media-service';
-import { mediaKey } from '$lib/server/storage-keys';
-import { getReleaseById } from '$lib/server/audio/audio-service';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { uploadFile, validateUpload } from '#lib/server/storage.js';
+import { detachSlot, replaceSlot } from '#lib/server/media/media-service.js';
+import { mediaKey } from '#lib/server/storage-keys.js';
+import { getReleaseById } from '#lib/server/audio/audio-service.js';
 
 /**
  * The writer the `audio_release`/`cover` slot never had — three readers and a

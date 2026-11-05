@@ -9,7 +9,7 @@ import type { SQL } from 'drizzle-orm';
 // be about the predicate rather than about whatever a stub was told to return —
 // the status machine's whole correctness is in its `IN (…)` lists. drizzle and
 // the schema stay real so those predicates render to actual SQL;
-// `better-sqlite3` is not built in CI, so only `$lib/server/db` is mocked.
+// `better-sqlite3` is not built in CI, so only `#lib/server/db/index.js` is mocked.
 // ---------------------------------------------------------------------------
 
 let selectQueue: unknown[][] = [];
@@ -48,8 +48,8 @@ function chainable(op: string) {
 	return proxy;
 }
 
-vi.mock('$lib/server/db', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/server/db')>();
+vi.mock('#lib/server/db/index.js', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/server/db/index.js')>();
 	return {
 		...actual,
 		db: {
@@ -92,7 +92,7 @@ vi.mock('./cancellation-notice', () => ({
 	announceShowsCancelled: async () => undefined,
 	openDeliverablesOnProductions: async () => []
 }));
-vi.mock('$lib/server/volunteer/show-cancellation', () => ({
+vi.mock('#lib/server/volunteer/show-cancellation.js', () => ({
 	cancelShiftsForProduction: (...args: unknown[]) => cancelShiftsForProduction(...args)
 }));
 const captureException = vi.fn();
@@ -102,8 +102,8 @@ vi.mock('./production-scope', () => ({
 	assertProjectTakesListing: async () => undefined,
 	ProductionTerminalError: class extends Error {}
 }));
-vi.mock('$lib/server/audit/audit-service', () => ({ recordAuditEntry: async () => undefined }));
-vi.mock('$lib/server/sentry', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry: async () => undefined }));
+vi.mock('#lib/server/sentry.js', () => ({
 	captureException: (...args: unknown[]) => captureException(...args)
 }));
 
@@ -119,7 +119,7 @@ import {
 	NotACmcListingError,
 	ListingNotFoundError
 } from './production-service';
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 
 const dialect = new SQLiteSyncDialect();
 

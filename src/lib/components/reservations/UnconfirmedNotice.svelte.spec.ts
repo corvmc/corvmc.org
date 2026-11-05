@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { CONFIRMATION_WINDOW_DAYS, UNCONFIRMED_RELEASE_NOTICE } from '$lib/config';
+import { CONFIRMATION_WINDOW_DAYS, UNCONFIRMED_RELEASE_NOTICE } from '#lib/config.js';
 import UnconfirmedNotice from './UnconfirmedNotice.svelte';
 
 /**

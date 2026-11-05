@@ -1,11 +1,11 @@
 import { and, eq, inArray } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { ticket, ticketSale } from '$lib/server/db/schema/ticket';
-import { bandSite } from '$lib/server/db/schema/band-site';
-import { destinationFor } from '$lib/server/audio/connect-service';
-import { stripe } from '$lib/server/stripe';
-import { recordBandTicketRefund } from '$lib/server/finance/ticket-entries';
-import { BAND_TICKET_PLATFORM_FEE_BPS, TICKET_COLLECTIVE_SHARE_BPS } from '$lib/config';
+import { db } from '#lib/server/db/index.js';
+import { ticket, ticketSale } from '#lib/server/db/schema/ticket.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
+import { destinationFor } from '#lib/server/audio/connect-service.js';
+import { stripe } from '#lib/server/stripe.js';
+import { recordBandTicketRefund } from '#lib/server/finance/ticket-entries.js';
+import { BAND_TICKET_PLATFORM_FEE_BPS, TICKET_COLLECTIVE_SHARE_BPS } from '#lib/config.js';
 
 /**
  * Who a listing's tickets are sold for, and so where the money goes (#1203).

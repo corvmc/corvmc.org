@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { rowLink } from '$lib/actions/row-link';
-	import { getDutyLists, createDutyList } from '$lib/remote/duty-lists.remote';
-	import { dutyListAnchors, dutyListAnchorLabels } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { rowLink } from '#lib/actions/row-link.js';
+	import { getDutyLists, createDutyList } from '#lib/remote/duty-lists.remote.js';
+	import { dutyListAnchors, dutyListAnchorLabels } from '#lib/config.js';
 	import StaffViews from '../../StaffViews.svelte';
 	import { projectViews } from '../views';
 
@@ -38,15 +38,15 @@
 			successToast={m.staff_project_templates_success_toast()}
 		>
 			{#snippet form()}
-				<FormField name="name" label={m.staff_name()} type="text" />
+				<FormField field={createDutyList.fields.name} label={m.staff_name()} type="text" />
 				<FormField
-					name="description"
+					field={createDutyList.fields.description}
 					label={m.staff_description()}
 					type="textarea"
 					description={m.staff_project_templates_shown_when_choosing_template_apply()}
 				/>
 				<FormField
-					name="anchor"
+					field={createDutyList.fields.anchor}
 					label={m.staff_measure_offsets_from()}
 					type="select"
 					options={anchorOptions}

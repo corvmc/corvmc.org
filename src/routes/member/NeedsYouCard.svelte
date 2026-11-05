@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { relativeDay } from '$lib/utils/format';
-	import type { NeedsYouItem } from '$lib/types/needs-you';
+	import { m } from '#lib/paraglide/messages.js';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { relativeDay } from '#lib/utils/format.js';
+	import type { NeedsYouItem } from '#lib/types/needs-you.js';
 
 	/**
 	 * What the member has to act on, soonest deadline first.

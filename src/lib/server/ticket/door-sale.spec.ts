@@ -3,23 +3,23 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 /** Door sales against a real SQLite, and the fake gateway standing in for Stripe. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
 
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 vi.mock('$env/dynamic/private', () => ({ env: {} }));
 
 const recordDoorTicketSale = vi.fn(async () => undefined);
 const recordFreeTicketSale = vi.fn(async () => undefined);
-vi.mock('$lib/server/finance/ticket-entries', () => ({
+vi.mock('#lib/server/finance/ticket-entries.js', () => ({
 	recordDoorTicketSale: (...a: unknown[]) => recordDoorTicketSale(...(a as [])),
 	recordFreeTicketSale: (...a: unknown[]) => recordFreeTicketSale(...(a as []))
 }));
 
-const { initStripe, stripe } = await import('$lib/server/stripe');
+const { initStripe, stripe } = await import('#lib/server/stripe.js');
 const { createFakeGateway, resetFakeGateway, completeFakeTerminalPayment } =
-	await import('$lib/server/finance/gateway/fake-gateway');
+	await import('#lib/server/finance/gateway/fake-gateway.js');
 const {
 	listDoorEvents,
 	startDoorSale,

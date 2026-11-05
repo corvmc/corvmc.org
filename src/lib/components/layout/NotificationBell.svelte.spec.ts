@@ -8,7 +8,7 @@ import type { ChromeNotification } from './chrome';
 // The notifications arrive as props now (#569); what still needs a live server
 // is the mark-read commands and the EventSource stream, so the remote module is
 // mocked for those two and EventSource is stubbed below.
-vi.mock('$lib/remote/notifications.remote', () => ({
+vi.mock('#lib/remote/notifications.remote.js', () => ({
 	markNotificationRead: vi.fn(),
 	markAllNotificationsRead: vi.fn()
 }));

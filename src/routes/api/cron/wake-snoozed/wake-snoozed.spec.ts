@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockWake = vi.fn();
 const mockNudge = vi.fn();
-vi.mock('$lib/server/inbox/thread-service', () => ({
+vi.mock('#lib/server/inbox/thread-service.js', () => ({
 	wakeSnoozedThreads: (...args: unknown[]) => mockWake(...args),
 	nudgeStaleAwaiting: (...args: unknown[]) => mockNudge(...args)
 }));

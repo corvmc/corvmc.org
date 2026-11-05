@@ -15,15 +15,6 @@
 				"export PATH=$HOME/.local/share/nvm/v26.1.0/bin:$PATH && pnpm run preview"
 			],
 			"port": 4173
-		},
-		{
-			"name": "storybook",
-			"runtimeExecutable": "/bin/sh",
-			"runtimeArgs": [
-				"-c",
-				"export PATH=$HOME/.local/share/nvm/v26.1.0/bin:$PATH && pnpm storybook --ci"
-			],
-			"port": 6006
 		}
 	]
 }

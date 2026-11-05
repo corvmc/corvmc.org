@@ -1,9 +1,9 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { forEachClockEdge } from '$lib/test/clock-edges';
+import { forEachClockEdge } from '#lib/test/clock-edges.js';
 
-vi.mock('$lib/remote/events.remote', () => {
+vi.mock('#lib/remote/events.remote.js', () => {
 	const field = (name: string) => ({
 		as: (type: string, value?: unknown) => ({ type, name, value }),
 		issues: () => null
@@ -21,7 +21,7 @@ vi.mock('$lib/remote/events.remote', () => {
 	};
 });
 
-vi.mock('$lib/remote/productions.remote', () => ({
+vi.mock('#lib/remote/productions.remote.js', () => ({
 	createShow: {
 		enhance: () => ({ method: 'POST', action: '?/createShow' }),
 		fields: new Proxy({ allIssues: () => null } as Record<string, unknown>, {

@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/** Businesses that sponsor the collective, the one whose term ends soonest first. */
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import SponsorFields from '$lib/components/sponsor/SponsorFields.svelte';
-	import { getSponsors, createSponsor } from '$lib/remote/sponsors.remote';
-	import { sponsorshipStatusLabels, sponsorshipStatusBadge } from '$lib/config';
-	import { formatCents } from '$lib/utils/format';
-	import { formatIsoDay } from '$lib/utils/deadline';
-	import { rowLink } from '$lib/actions/row-link';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import SponsorFields from '#lib/components/sponsor/SponsorFields.svelte';
+	import { getSponsors, createSponsor } from '#lib/remote/sponsors.remote.js';
+	import { sponsorshipStatusLabels, sponsorshipStatusBadge } from '#lib/config.js';
+	import { formatCents } from '#lib/utils/format.js';
+	import { formatIsoDay } from '#lib/utils/deadline.js';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -22,10 +22,10 @@
 	const sponsors = $derived(await getSponsors({ includeArchived }));
 
 	function setArchived(on: boolean) {
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		if (on) url.searchParams.set('archived', '1');
 		else url.searchParams.delete('archived');
-		goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+		goto(url, { replace: true, reset: false });
 	}
 </script>
 
@@ -75,7 +75,7 @@
 				<tr
 					class="hover cursor-pointer"
 					class:opacity-60={s.deletedAt}
-					use:rowLink={resolve(`/staff/sponsors/${s.id}`)}
+					use:rowLink={resolve(`staff/sponsors/${s.id}`)}
 				>
 					<td class="w-px">
 						{#if s.current}
@@ -85,7 +85,7 @@
 						{/if}
 					</td>
 					<td class="cell-primary">
-						<a class="link font-medium" href={resolve(`/staff/sponsors/${s.id}`)}>{s.name}</a>
+						<a class="link font-medium" href={resolve(`staff/sponsors/${s.id}`)}>{s.name}</a>
 						{#if s.deletedAt}
 							<Badge variant="ghost" size="sm" class="ml-2">{m.staff_archived()}</Badge>
 						{/if}

@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
 	import PersonAccess from './PersonAccess.svelte';
 	import PermissionHolders from './PermissionHolders.svelte';
-	import { getAccessPage } from '$lib/remote/access.remote';
+	import { getAccessPage } from '#lib/remote/access.remote.js';
 
 	// Two collections: one person's grants, and one grant's holders.
 	let view = $state<'person' | 'permission'>('person');

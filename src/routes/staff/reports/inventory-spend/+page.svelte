@@ -1,23 +1,23 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { getSpendReport } from '$lib/remote/inventory.remote';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { getSpendReport } from '#lib/remote/inventory.remote.js';
 	import StaffViews from '../../StaffViews.svelte';
 	import { reportViews } from '../views';
-	import { formatCents } from '$lib/utils/format';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { contractorTradeLabels, type ContractorTrade } from '$lib/config';
+	import { formatCents } from '#lib/utils/format.js';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { contractorTradeLabels, type ContractorTrade } from '#lib/config.js';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
+	import { withQuery } from '#lib/utils/with-query.js';
 
 	/**
 	 * What the collective spent on stock, per category, over a window.
@@ -46,10 +46,9 @@
 		if (from) parts.push(`from=${encodeURIComponent(from)}`);
 		if (to) parts.push(`to=${encodeURIComponent(to)}`);
 		const qs = parts.length > 0 ? `?${parts.join('&')}` : '';
-		goto(withQuery(resolve('/staff/reports/inventory-spend'), qs), {
-			replaceState: true,
-			keepFocus: true,
-			noScroll: true
+		goto(withQuery(resolve('staff/reports/inventory-spend'), qs), {
+			replace: true,
+			reset: false
 		});
 	}
 </script>
@@ -174,7 +173,7 @@
 		<ParaglideMessage
 			message={m.staff_inventory_spend_gifts_kind_recorded_but_not}
 			inputs={{ staff_inventory_spend_inventory_spec: m.staff_inventory_spend_inventory_spec() }}
-			>{#snippet a({ children })}<a class="link" href={resolve('/staff/inventory')}
+			>{#snippet a({ children })}<a class="link" href={resolve('staff/inventory')}
 					>{@render children?.()}</a
 				>{/snippet}</ParaglideMessage
 		>

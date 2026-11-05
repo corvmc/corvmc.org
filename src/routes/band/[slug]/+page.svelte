@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import BandReservationCard from '$lib/components/reservations/BandReservationCard.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import { getBandUpcoming } from '$lib/remote/bands.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import BandReservationCard from '#lib/components/reservations/BandReservationCard.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import { getBandUpcoming } from '#lib/remote/bands.remote.js';
 	import { getBandLayoutContext } from './layout-context';
 	import { resolve } from '$app/paths';
 	import { env } from '$env/dynamic/public';
-	import StatCard from '$lib/components/ui/StatCard.svelte';
-	import AddressCard from '$lib/components/ui/AddressCard.svelte';
-	import { canonicalAddress } from '$lib/utils/canonical-address';
+	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import AddressCard from '#lib/components/ui/AddressCard.svelte';
+	import { canonicalAddress } from '#lib/utils/canonical-address.js';
 	import PressKitCard from './PressKitCard.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { getPressKitProgress } from '$lib/remote/press-kit.remote';
-	import { retryQuery } from '$lib/utils/retry-query';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { getPressKitProgress } from '#lib/remote/press-kit.remote.js';
+	import { retryQuery } from '#lib/utils/retry-query.js';
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.
@@ -84,7 +84,7 @@
 						<span class="font-normal text-base-content/60">({sessions.length})</span>
 					{/if}
 				</h2>
-				<a href={resolve(`/band/${band.slug}/reservations`)} class="link text-sm link-primary">
+				<a href={resolve(`band/${band.slug}/reservations`)} class="link text-sm link-primary">
 					{m.band_slug_view_all()}
 				</a>
 			</div>

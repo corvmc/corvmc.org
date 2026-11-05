@@ -6,7 +6,7 @@ import type Stripe from 'stripe';
  * Every member is `Pick`ed off Stripe's own resource types, so the compiler is
  * the contract: a fake cannot drift into a shape the live API would reject.
  * `webhooks` is absent on purpose — verifying a signature needs no API call, so
- * it stays on the real SDK whichever driver is live (`$lib/server/stripe`).
+ * it stays on the real SDK whichever driver is live (`#lib/server/stripe.js`).
  */
 export interface PaymentGateway {
 	/**

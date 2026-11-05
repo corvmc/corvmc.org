@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { formatDate } from '$lib/utils/format';
+	import { m } from '#lib/paraglide/messages.js';
+	import { formatDate } from '#lib/utils/format.js';
 
 	/** The invite-back record from this vendor's last market, matched by email (#1505). */
 	let {

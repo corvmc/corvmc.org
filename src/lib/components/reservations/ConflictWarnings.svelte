@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { formatSlotTime, toLocalTime } from '$lib/utils/format';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import { errorMessage } from '$lib/error-message';
+	import { m } from '#lib/paraglide/messages.js';
+	import { formatSlotTime, toLocalTime } from '#lib/utils/format.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 
 	type Conflict = {
 		type: 'reservation' | 'closure';

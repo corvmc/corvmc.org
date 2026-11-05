@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import { getUserBands } from '$lib/remote/bands.remote';
-	import { getUserShows, getUserTicketsAndRsvps } from '$lib/remote/events.remote';
-	import { getUserListings } from '$lib/remote/community-events.remote';
-	import { RelatedList } from '$lib/components/ui/entity';
-	import Table from '$lib/components/ui/Table.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/ui/entity';
-	import { rowLink } from '$lib/actions/row-link';
+	import { m } from '#lib/paraglide/messages.js';
+	import { getUserBands } from '#lib/remote/bands.remote.js';
+	import { getUserShows, getUserTicketsAndRsvps } from '#lib/remote/events.remote.js';
+	import { getUserListings } from '#lib/remote/community-events.remote.js';
+	import { RelatedList } from '#lib/components/ui/entity/index.js';
+	import Table from '#lib/components/ui/Table.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import { EntityChip, EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { formatDateShortYear } from '$lib/utils/format';
+	import { formatDateShortYear } from '#lib/utils/format.js';
 
 	let { id }: { id: string } = $props();
 </script>
@@ -71,7 +71,7 @@
 					<th class="col-extra">{m.staff_date()}</th>
 				{/snippet}
 				{#each [...shows.upcoming, ...shows.past] as show (show.id)}
-					<tr class="hover" use:rowLink={resolve(`/staff/events/${show.id}`)}>
+					<tr class="hover" use:rowLink={resolve(`staff/events/${show.id}`)}>
 						<td class="cell-primary"><EntityIdentity ref={show.ref} /></td>
 						<!-- The credited band is a record of its own, so it keeps its
 						     column and reaches its own page. -->
@@ -105,7 +105,7 @@
 					<th class="col-extra">{m.staff_date()}</th>
 				{/snippet}
 				{#each all as e (e.id)}
-					<tr class="hover" use:rowLink={resolve(`/staff/events/${e.id}`)}>
+					<tr class="hover" use:rowLink={resolve(`staff/events/${e.id}`)}>
 						<td class="w-px"><StatusBadge status={e.status} /></td>
 						<td class="cell-primary">
 							<EntityIdentity ref={e.ref}>
@@ -139,7 +139,7 @@
 					<th class="col-extra">{m.staff_date()}</th>
 				{/snippet}
 				{#each data.tickets as t (t.id)}
-					<tr class="hover" use:rowLink={resolve(`/staff/events/${t.eventId}`)}>
+					<tr class="hover" use:rowLink={resolve(`staff/events/${t.eventId}`)}>
 						<td class="w-px"><StatusBadge status={t.status} /></td>
 						<td class="cell-primary">
 							<EntityIdentity ref={t.ref}>
@@ -151,7 +151,7 @@
 					</tr>
 				{/each}
 				{#each data.rsvps as r (r.id)}
-					<tr class="hover" use:rowLink={resolve(`/staff/events/${r.eventId}`)}>
+					<tr class="hover" use:rowLink={resolve(`staff/events/${r.eventId}`)}>
 						<td class="w-px"><StatusBadge status={r.eventStatus} /></td>
 						<td class="cell-primary"><EntityIdentity ref={r.ref} /></td>
 						<td class="col-support">{m.staff_members_id_panels_bands_panel_rsvp()}</td>

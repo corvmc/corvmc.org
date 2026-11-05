@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { IconCalendar, IconClock, IconMapPin, IconTicket } from '@tabler/icons-svelte';
-	import { fullDate, formatTime } from '$lib/utils/format';
-	import { formatEventTimeRange } from '$lib/utils/event-time';
-	import { priceDisplay } from '$lib/utils/event-ticketing';
-	import { mapUrl } from '$lib/utils/place';
+	import { fullDate, formatTime } from '#lib/utils/format.js';
+	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import { priceDisplay } from '#lib/utils/event-ticketing.js';
+	import { mapUrl } from '#lib/utils/place.js';
 
 	let {
 		evt

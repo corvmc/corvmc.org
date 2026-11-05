@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * A ballot as one line on another page: its question, status and, once
 	 * certified, the published counts. Never a live tally.
 	 */
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { ballotStatusLabels, type BallotStatus } from '$lib/config';
-	import { formatDateShortYear } from '$lib/utils/format';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { ballotStatusLabels, type BallotStatus } from '#lib/config.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
 
 	type Line = {
 		title: string;

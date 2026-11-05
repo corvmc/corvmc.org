@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Filter combinations this reader keeps.
 	 *
@@ -8,7 +8,7 @@
 	 * than in the page so the tabs above it paint first.
 	 */
 	import { IconX } from '@tabler/icons-svelte';
-	import { getInboxSavedViews, removeInboxView } from '$lib/remote/inbox.remote';
+	import { getInboxSavedViews, removeInboxView } from '#lib/remote/inbox.remote.js';
 	import { applySaved } from './filters.svelte';
 </script>
 

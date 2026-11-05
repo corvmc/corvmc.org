@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import CardBody from '$lib/components/ui/Card/CardBody.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { EntityIdentity } from '$lib/components/ui/entity';
-	import type { EntityRef } from '$lib/types/entity';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
+	import type { EntityRef } from '#lib/types/entity.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { IconFlag, IconCaretUpFilled } from '@tabler/icons-svelte';
-	import { relativeDay } from '$lib/utils/format';
-	import { suggestionCategoryLabels } from '$lib/config';
-	import { toggleSuggestionVote, flagSuggestion } from '$lib/remote/suggestions.remote';
+	import { relativeDay } from '#lib/utils/format.js';
+	import { suggestionCategoryLabels } from '#lib/config.js';
+	import { toggleSuggestionVote, flagSuggestion } from '#lib/remote/suggestions.remote.js';
 
 	// No `mergedIntoId`: merged suggestions are filtered out of the board query,
 	// so a card never renders one.
@@ -119,8 +119,12 @@
 					<p class="mb-3 text-muted">
 						{m.member_takes_suggestion_off_board_straight()}
 					</p>
-					<FormField name="reason" type="text" label={m.member_what_s_problem()} />
-					<FormField name="description" type="textarea" label={m.member_anything_else_optional()} />
+					<FormField field={flag.fields.reason} type="text" label={m.member_what_s_problem()} />
+					<FormField
+						field={flag.fields.description}
+						type="textarea"
+						label={m.member_anything_else_optional()}
+					/>
 				{/snippet}
 			</Action>
 		{/if}

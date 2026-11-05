@@ -10,7 +10,7 @@ import { describe, it, expect, vi } from 'vitest';
  */
 
 const requireCapability = vi.fn(async () => undefined);
-vi.mock('$lib/server/authorization', () => ({
+vi.mock('#lib/server/authorization.js', () => ({
 	requireCapability: (...a: unknown[]) => requireCapability(...(a as []))
 }));
 
@@ -52,7 +52,7 @@ const report = {
 };
 
 const getAnnualReport = vi.fn(async () => report);
-vi.mock('$lib/server/report/annual-report-service', () => ({
+vi.mock('#lib/server/report/annual-report-service.js', () => ({
 	getAnnualReport: (...a: unknown[]) => getAnnualReport(...(a as []))
 }));
 

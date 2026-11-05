@@ -1,15 +1,15 @@
 import { z } from 'zod';
 import { error } from '@sveltejs/kit';
 import { form } from './_remote';
-import { requireCapability, requireUser } from '$lib/server/authorization';
+import { requireCapability, requireUser } from '#lib/server/authorization.js';
 import {
 	addEventPhotos,
 	describeEventPhoto as describePhoto,
 	removeEventPhoto as removePhoto,
 	setEventRecapText
-} from '$lib/server/event/event-photo-service';
-import { recapUploadAccess } from '$lib/server/event/recap-access';
-import { getPublicEventDetail, getStaffEventPage } from '$lib/remote/events.remote';
+} from '#lib/server/event/event-photo-service.js';
+import { recapUploadAccess } from '#lib/server/event/recap-access.js';
+import { getPublicEventDetail, getStaffEventPage } from '#lib/remote/events.remote.js';
 
 /**
  * Recap photo writes (docs/specs/event-recaps-spec.md). The event id comes from

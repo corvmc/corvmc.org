@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { mockUser } from '$lib/server/db/test-factory';
+import { mockUser } from '#lib/server/db/test-factory.js';
 
 // getAvailableDates reads the whole booking window in a constant number of
 // queries — one per source (reservations, closures) — not one per day (#1775).
@@ -17,13 +17,13 @@ function chainable(): any {
 
 const select = vi.fn(() => chainable());
 
-vi.mock('$lib/server/db', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/db')>()),
+vi.mock('#lib/server/db/index.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/db/index.js')>()),
 	db: { select }
 }));
 
-vi.mock('$lib/server/reservation/config', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/reservation/config')>()),
+vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/reservation/config.js')>()),
 	getReservationConfig: vi.fn(async () => ({
 		operatingHoursStart: '09:00',
 		operatingHoursEnd: '22:00',
@@ -61,7 +61,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { getAvailableDates } = (await import('$lib/remote/reservations.remote')) as any;
+const { getAvailableDates } = (await import('#lib/remote/reservations.remote.js')) as any;
 
 describe('getAvailableDates query count', () => {
 	it('reads reservations and closures once for the whole window, not once per day', async () => {

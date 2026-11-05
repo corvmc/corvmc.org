@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import RoleRequirementsCard from './RoleRequirementsCard.svelte';
 	import RoleShiftsCard from './RoleShiftsCard.svelte';
@@ -8,17 +8,17 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import InfoCard from '$lib/components/ui/InfoCard.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import FreeformTagInput from '$lib/components/ui/FreeformTagInput.svelte';
-	import { volunteerRoleGroups, volunteerRoleGroupLabels } from '$lib/config';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
+	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import FreeformTagInput from '#lib/components/ui/FreeformTagInput.svelte';
+	import { volunteerRoleGroups, volunteerRoleGroupLabels } from '#lib/config.js';
 	import { IconArchive, IconArchiveOff, IconTrash, IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {
 		getStaffVolunteerRolePage,
@@ -27,8 +27,8 @@
 		restoreVolunteerRole,
 		deleteVolunteerRole,
 		getVolunteerRoleHistory
-	} from '$lib/remote/volunteer.remote';
-	import { ActivityFeedCard, feedItemRow } from '$lib/components/ui/ActivityFeed';
+	} from '#lib/remote/volunteer.remote.js';
+	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
 
 	const { fields } = updateVolunteerRole;
 
@@ -67,7 +67,7 @@
 	width="3xl"
 	title={role.name}
 	subtitle={m.staff_volunteer_roles_id_subtitle()}
-	parent={{ label: m.staff_roles(), href: resolve('/staff/volunteer/roles') }}
+	parent={{ label: m.staff_roles(), href: resolve('staff/volunteer/roles') }}
 >
 	<StatusBadge status={role.isActive ? 'active' : 'retired'} label />
 
@@ -89,7 +89,7 @@
 			successToast={m.staff_volunteer_roles_id_role_archived()}
 		>
 			{#snippet form()}
-				<input type="hidden" name="id" value={role.id} />
+				<input {...archiveVolunteerRole.fields.id.as('hidden', role.id)} />
 				<p class="text-sm">
 					{m.staff_volunteer_roles_id_members_won_t_able_log()}
 				</p>
@@ -108,7 +108,7 @@
 			successToast={m.staff_volunteer_roles_id_role_restored()}
 		>
 			{#snippet form()}
-				<input type="hidden" name="id" value={role.id} />
+				<input {...restoreVolunteerRole.fields.id.as('hidden', role.id)} />
 				<p class="text-sm">{m.staff_volunteer_roles_id_members_will_able_log_hours()}</p>
 			{/snippet}
 		</Action>
@@ -127,10 +127,10 @@
 			submitLabel={m.staff_delete()}
 			submitVariant="error"
 			successToast={m.staff_volunteer_roles_id_role_deleted()}
-			onsuccess={() => goto(resolve('/staff/volunteer/roles'))}
+			onsuccess={() => goto(resolve('staff/volunteer/roles'))}
 		>
 			{#snippet form()}
-				<input type="hidden" name="id" value={role.id} />
+				<input {...deleteVolunteerRole.fields.id.as('hidden', role.id)} />
 				<p class="text-sm">
 					{m.staff_volunteer_roles_id_nothing_has_been_logged_against()}
 				</p>
@@ -187,7 +187,8 @@
 					-->
 					<div class="grid gap-3 sm:grid-cols-2">
 						<FormField
-							name="defaultDurationMinutes"
+							field={updateVolunteerRole.fields.defaultDurationMinutes}
+							submitAs="text"
 							type="number"
 							min="1"
 							label={m.staff_volunteer_roles_id_usual_length_minutes()}
@@ -196,7 +197,8 @@
 								: String(role.defaultDurationMinutes)}
 						/>
 						<FormField
-							name="defaultCapacity"
+							field={updateVolunteerRole.fields.defaultCapacity}
+							submitAs="text"
 							type="number"
 							min="1"
 							label={m.staff_volunteer_roles_id_people_needed()}
@@ -240,7 +242,8 @@
 							"untouched" — and blank is a real answer here.
 						-->
 						<FormField
-							name="marketRate"
+							field={updateVolunteerRole.fields.marketRate}
+							submitAs="text"
 							type="number"
 							min="0"
 							step="0.01"

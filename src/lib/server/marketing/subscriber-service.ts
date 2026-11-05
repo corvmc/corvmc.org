@@ -1,10 +1,10 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	subscriber,
 	audienceMember,
 	type SuppressionReason
-} from '$lib/server/db/schema/marketing';
-import { user } from '$lib/server/db/schema/authentication';
+} from '#lib/server/db/schema/marketing.js';
+import { user } from '#lib/server/db/schema/authentication.js';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------

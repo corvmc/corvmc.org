@@ -38,7 +38,7 @@ const nextUpdate = () => (updateResults.length > 0 ? updateResults.shift()! : []
 const dialect = new SQLiteSyncDialect();
 const renderWhere = (index: number) => dialect.sqlToQuery(whereArgs[index] as SQL);
 
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
 	db: {
 		select: vi.fn(() => chain(nextSelect)),
 		insert: vi.fn(() => ({
@@ -57,7 +57,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 const recordAuditEntry = vi.fn();
-vi.mock('$lib/server/audit/audit-service', () => ({
+vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (...args: unknown[]) => recordAuditEntry(...args)
 }));
 

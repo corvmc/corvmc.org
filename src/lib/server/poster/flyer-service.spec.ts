@@ -6,14 +6,14 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('$lib/server/testing/migrated-sqlite');
+	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
 	return migratedSqlite();
 });
-vi.mock('$lib/server/db', () => ({ db: testDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 const uploads: { key: string; type: string }[] = [];
 const objects = new Map<string, Uint8Array>();
-vi.mock('$lib/server/storage', () => ({
+vi.mock('#lib/server/storage.js', () => ({
 	uploadFile: async (_b: ArrayBuffer, key: string, type: string) => {
 		uploads.push({ key, type });
 		return key;
@@ -35,7 +35,7 @@ vi.mock('./flyer', async (orig) => ({
 const { useTemplateFlyer, useArtWithFooter, FlyerEventNotFoundError } =
 	await import('./flyer-service');
 const { PosterRequestNotFoundError } =
-	await import('$lib/server/production/artifact-request-service');
+	await import('#lib/server/production/artifact-request-service.js');
 
 const EVENT = 'evt-1';
 const ARTIST = 'entry-artist';

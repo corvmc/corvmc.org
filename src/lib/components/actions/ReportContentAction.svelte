@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { IconFlag } from '@tabler/icons-svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import { submitFlag } from '$lib/remote/flags.remote';
-	import type { MemberReportableEntityType } from '$lib/server/db/schema/flag';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import { submitFlag } from '#lib/remote/flags.remote.js';
+	import type { MemberReportableEntityType } from '#lib/server/db/schema/flag.js';
 
 	let {
 		entityType,

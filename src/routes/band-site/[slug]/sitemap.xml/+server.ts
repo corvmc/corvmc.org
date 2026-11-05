@@ -1,9 +1,9 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
-import { bandSiteUrl } from '$lib/utils/band-site-url';
-import { db } from '$lib/server/db';
-import { group } from '$lib/server/db/schema/group';
-import { bandSite } from '$lib/server/db/schema/band-site';
+import { bandSiteUrl } from '#lib/utils/band-site-url.js';
+import { db } from '#lib/server/db/index.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { bandSite } from '#lib/server/db/schema/band-site.js';
 
 import { eq, and, isNull } from 'drizzle-orm';
 

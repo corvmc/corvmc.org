@@ -1,17 +1,17 @@
-import { db } from '$lib/server/db';
+import { db } from '#lib/server/db/index.js';
 import {
 	equipmentCategory,
 	inventoryAsset,
 	inventoryItem,
 	inventoryLocation
-} from '$lib/server/db/schema/inventory';
+} from '#lib/server/db/schema/inventory.js';
 import { and, count, eq, inArray, isNull, or, sql } from 'drizzle-orm';
-import { containsLiteral } from '$lib/server/db/like';
-import { paginate, type PaginationInput } from '$lib/server/db/paginate';
+import { containsLiteral } from '#lib/server/db/like.js';
+import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { getAvailableQuantity, getOnHandMany } from './stock-service';
-import type { InventoryListView, ItemKind, PricingTier, UnitOfMeasure } from '$lib/config';
+import type { InventoryListView, ItemKind, PricingTier, UnitOfMeasure } from '#lib/config.js';
 import { itemIdsInView } from './list-views';
-import { DomainError } from '$lib/server/domain-error';
+import { DomainError } from '#lib/server/domain-error.js';
 
 // ---------------------------------------------------------------------------
 // Errors

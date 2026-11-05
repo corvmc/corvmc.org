@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
@@ -65,10 +65,12 @@ test.describe('venues', () => {
 		// The fixture sweeps this prefix, and the event is never given a hold.
 		const title = `${SEED_EVENT_TITLE_PREFIX} venue ${Date.now()}`;
 		await page.getByTestId('create-listing').click();
-		await page.locator('input[name="title"]').fill(title);
-		await page.locator('input[name="eventDate"]').fill(SEED_EVENT_DATE);
-		await page.locator('input[name="eventStartTime"]').fill('19:00');
-		await page.locator('input[name="eventEndTime"]').fill('22:00');
+		await page.locator('input:is([name="title"], [name^="title/"])').fill(title);
+		await page.locator('input:is([name="eventDate"], [name^="eventDate/"])').fill(SEED_EVENT_DATE);
+		await page
+			.locator('input:is([name="eventStartTime"], [name^="eventStartTime/"])')
+			.fill('19:00');
+		await page.locator('input:is([name="eventEndTime"], [name^="eventEndTime/"])').fill('22:00');
 		await page.getByRole('dialog').locator('button[type="submit"]').click();
 		await page.waitForURL(/\/staff\/events\/[^/]+$/, { timeout: 15000 });
 		await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
@@ -81,14 +83,18 @@ test.describe('venues', () => {
 			timeout: 15000
 		});
 
-		await page.locator('select[name="venueId"]').selectOption({ label: SEED_VENUE_OFFSITE_NAME });
+		await page
+			.locator('select:is([name="venueId"], [name^="venueId/"])')
+			.selectOption({ label: SEED_VENUE_OFFSITE_NAME });
 
 		await expect(page.getByTestId('reserve-space')).toHaveCount(0);
 		await expect(page.getByTestId('offsite-note')).toBeVisible();
 
 		// And back: choosing the room again offers it, so this is a branch rather
 		// than a one-way door.
-		await page.locator('select[name="venueId"]').selectOption({ label: 'The practice room' });
+		await page
+			.locator('select:is([name="venueId"], [name^="venueId/"])')
+			.selectOption({ label: 'The practice room' });
 		await expect(page.getByTestId('reserve-space')).toBeVisible();
 	});
 });

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Modal from '$lib/components/ui/Modal.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
 	import SearchSelect from './SearchSelect.svelte';
 
 	let {

@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import SectionLabel from '$lib/components/ui/SectionLabel.svelte';
-	import { imageSrc } from '$lib/utils/images';
-	import { fullDate } from '$lib/utils/format';
+	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
+	import { imageSrc } from '#lib/utils/images.js';
+	import { fullDate } from '#lib/utils/format.js';
 
 	let {
 		recaps
@@ -25,7 +25,7 @@
 		{#each recaps as recap (recap.id)}
 			{@const cover = imageSrc(recap.coverUrl, 'gallery')}
 			<li>
-				<a href="{resolve(`/events/${recap.id}`)}#photos" class="recaps__card">
+				<a href="{resolve(`events/${recap.id}`)}#photos" class="recaps__card">
 					<img src={cover.src} srcset={cover.srcset} sizes={cover.sizes} alt="" loading="lazy" />
 					<span class="recaps__title">{recap.title}</span>
 					<span class="recaps__meta">

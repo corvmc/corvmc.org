@@ -2,10 +2,10 @@ import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { z } from 'zod';
 import { command, form } from './_remote';
-import { can, requireCapability, requireUser } from '$lib/server/authorization';
-import { mintConnectionToken } from '$lib/server/finance/terminal-service';
-import { paymentDriver } from '$lib/server/stripe';
-import { completeFakeTerminalPayment } from '$lib/server/finance/gateway/fake-gateway';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
+import { mintConnectionToken } from '#lib/server/finance/terminal-service.js';
+import { paymentDriver } from '#lib/server/stripe.js';
+import { completeFakeTerminalPayment } from '#lib/server/finance/gateway/fake-gateway.js';
 import {
 	cancelDoorSale as cancelDoorSaleService,
 	doorSaleEventId,
@@ -13,7 +13,7 @@ import {
 	getDoorSale as getDoorSaleService,
 	listDoorEvents,
 	startDoorSale as startDoorSaleService
-} from '$lib/server/ticket/door-sale';
+} from '#lib/server/ticket/door-sale.js';
 
 /**
  * Every door remote names the show it acts on. Staff hold `finance.collect`

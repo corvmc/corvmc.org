@@ -1,8 +1,8 @@
-import { db } from '$lib/server/db';
-import { inboxChannelConfig } from '$lib/server/db/schema/inbox';
+import { db } from '#lib/server/db/index.js';
+import { inboxChannelConfig } from '#lib/server/db/schema/inbox.js';
 import { eq } from 'drizzle-orm';
-import { staffInboxChannels, isAlwaysEnabledChannel, type StaffInboxChannel } from '$lib/config';
-import type { InboxChannel } from '$lib/server/db/schema/inbox';
+import { staffInboxChannels, isAlwaysEnabledChannel, type StaffInboxChannel } from '#lib/config.js';
+import type { InboxChannel } from '#lib/server/db/schema/inbox.js';
 
 export interface ChannelConfigRow {
 	channel: StaffInboxChannel;

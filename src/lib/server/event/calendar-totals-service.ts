@@ -1,9 +1,9 @@
-import { db } from '$lib/server/db';
-import { eventListing, publicEventStatuses } from '$lib/server/db/schema/event';
+import { db } from '#lib/server/db/index.js';
+import { eventListing, publicEventStatuses } from '#lib/server/db/schema/event.js';
 import { and, count, eq, gte, inArray, lt, not, or, sql, type SQL } from 'drizzle-orm';
-import { buildDateInTz, formatDateInTz } from '$lib/server/reservation/timezone';
-import { DEFAULT_TIMEZONE } from '$lib/config';
-import { addIsoDays } from '$lib/utils/deadline';
+import { buildDateInTz, formatDateInTz } from '#lib/server/reservation/timezone.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import { addIsoDays } from '#lib/utils/deadline.js';
 
 /** Midnight tonight in venue time — the staff calendar's and the gig guide's floor. */
 export const calendarFloor = (now = new Date()): Date =>

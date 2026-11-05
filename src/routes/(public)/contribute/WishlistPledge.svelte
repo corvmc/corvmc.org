@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Form from '$lib/components/ui/Form/Form.svelte';
-	import SubmitButton from '$lib/components/ui/Form/SubmitButton.svelte';
-	import { pledgeWishlistItem, releaseWishlistPledge } from '$lib/remote/inventory.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Form from '#lib/components/ui/Form/Form.svelte';
+	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import { pledgeWishlistItem, releaseWishlistPledge } from '#lib/remote/inventory.remote.js';
 	import GuestPledgeAction from './GuestPledgeAction.svelte';
-	import type { WishlistPledgeSubject } from '$lib/config';
+	import type { WishlistPledgeSubject } from '#lib/config.js';
 
 	/**
 	 * One entry's pledge control (#1492). Another donor's pledge shows only as

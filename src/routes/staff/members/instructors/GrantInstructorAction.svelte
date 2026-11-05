@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import Action from '$lib/components/ui/Action.svelte';
-	import FormField from '$lib/components/ui/Form/FormField.svelte';
-	import SearchSelect from '$lib/components/ui/Form/SearchSelect.svelte';
-	import { searchMembers } from '$lib/remote/reservations.remote';
-	import { grantInstructor } from '$lib/remote/instructors.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import Action from '#lib/components/ui/Action.svelte';
+	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
+	import { searchMembers } from '#lib/remote/reservations.remote.js';
+	import { grantInstructor } from '#lib/remote/instructors.remote.js';
 	import { invalidateAll } from '$app/navigation';
 
 	/**
@@ -29,7 +29,7 @@
 >
 	{#snippet form()}
 		<div class="space-y-4">
-			<FormField name="userId" label={m.staff_member()} required>
+			<FormField field={grantInstructor.fields.userId} label={m.staff_member()} required>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={member}

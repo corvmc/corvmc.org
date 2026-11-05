@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import PageHeader from '$lib/components/ui/PageHeader.svelte';
-	import PageContent from '$lib/components/ui/PageContent.svelte';
-	import Table from '$lib/components/ui/Table.svelte';
-	import Pagination from '$lib/components/ui/Pagination.svelte';
-	import Badge from '$lib/components/ui/Badge.svelte';
-	import Alert from '$lib/components/ui/Alert.svelte';
-	import EmptyState from '$lib/components/ui/EmptyState.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Action from '$lib/components/ui/Action.svelte';
-	import { Field } from '$lib/components/ui/Form';
-	import { getContractorsPage, createContractorForm } from '$lib/remote/contractors.remote';
-	import { contractorTradeLabels, contractorTrades, type ContractorTrade } from '$lib/config';
-	import { formatDateShort } from '$lib/utils/format';
+	import PageHeader from '#lib/components/ui/PageHeader.svelte';
+	import PageContent from '#lib/components/ui/PageContent.svelte';
+	import Table from '#lib/components/ui/Table.svelte';
+	import Pagination from '#lib/components/ui/Pagination.svelte';
+	import Badge from '#lib/components/ui/Badge.svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import { getContractorsPage, createContractorForm } from '#lib/remote/contractors.remote.js';
+	import { contractorTradeLabels, contractorTrades, type ContractorTrade } from '#lib/config.js';
+	import { formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
-	import { withQuery } from '$lib/utils/with-query';
+	import { withQuery } from '#lib/utils/with-query.js';
 
 	/**
 	 * Who we call, and the two things about them that need chasing.
@@ -35,7 +35,7 @@
 
 <PageHeader title={m.staff_contractors_contractors()} subtitle={m.staff_space()}>
 	<Button
-		href={withQuery(resolve('/staff/volunteer/schedule'), 'kind=contractor')}
+		href={withQuery(resolve('staff/volunteer/schedule'), 'kind=contractor')}
 		variant="ghost"
 		size="sm">{m.staff_jobs()}</Button
 	>
@@ -76,10 +76,8 @@
 				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
 					>{/snippet}{#snippet a({ children })}<a
 						class="link"
-						href={withQuery(
-							resolve('/staff/volunteer/schedule'),
-							'kind=contractor&contractor=late'
-						)}>{@render children?.()}</a
+						href={withQuery(resolve('staff/volunteer/schedule'), 'kind=contractor&contractor=late')}
+						>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
 			>
 		</Alert>
@@ -90,7 +88,7 @@
 			<span class="font-medium">{m.staff_insurance()}</span>
 			{#each data.lapsing as c (c.id)}
 				<div>
-					<a class="link font-medium" href={resolve(`/staff/contractors/${c.id}`)}>{c.name}</a>
+					<a class="link font-medium" href={resolve(`staff/contractors/${c.id}`)}>{c.name}</a>
 					{#if c.insuranceExpiresAt}
 						— {c.insuranceExpiresAt < new Date()
 							? m.staff_contractors_expired_2()
@@ -118,7 +116,7 @@
 			{#each data.contractors as c (c.id)}
 				<tr class="hover">
 					<td class="cell-primary">
-						<a class="link font-medium" href={resolve(`/staff/contractors/${c.id}`)}>{c.name}</a>
+						<a class="link font-medium" href={resolve(`staff/contractors/${c.id}`)}>{c.name}</a>
 						{#if c.contactName}
 							<div class="text-subtle">{c.contactName}</div>
 						{/if}

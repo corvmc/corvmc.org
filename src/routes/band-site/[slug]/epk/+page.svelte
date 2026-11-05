@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { m as msg } from '$lib/paraglide/messages.js';
-	import Button from '$lib/components/ui/Button.svelte';
-	import { getBandSiteData } from '$lib/remote/band-site.remote';
-	import { sanitizeBio } from '$lib/utils/markdown';
+	import { m as msg } from '#lib/paraglide/messages.js';
+	import Button from '#lib/components/ui/Button.svelte';
+	import { getBandSiteData } from '#lib/remote/band-site.remote.js';
+	import { sanitizeBio } from '#lib/utils/markdown.js';
 	import { page } from '$app/state';
-	import { bandSiteHref } from '$lib/utils/band-site-url';
-	import { imageSrc } from '$lib/utils/images';
+	import { bandSiteHref } from '#lib/utils/band-site-url.js';
+	import { imageSrc } from '#lib/utils/images.js';
 
 	let data = $derived(await getBandSiteData(page.params.slug!));
 	const band = $derived(data.band);

@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { query } from '$app/server';
 import { form } from './_remote';
-import { mapDomainError } from '$lib/server/errors';
-import { requireGroupRole } from '$lib/server/group/group-context';
-import { domainEvents } from '$lib/server/event-bus/event-bus';
-import { captureException } from '$lib/server/sentry';
-import { ANNOUNCEMENT_BODY_MAX, ANNOUNCEMENT_TITLE_MAX } from '$lib/config';
+import { mapDomainError } from '#lib/server/errors.js';
+import { requireGroupRole } from '#lib/server/group/group-context.js';
+import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
+import { ANNOUNCEMENT_BODY_MAX, ANNOUNCEMENT_TITLE_MAX } from '#lib/config.js';
 import {
 	create,
 	getMuteState,
@@ -15,7 +15,7 @@ import {
 	remove,
 	setMuteState,
 	update
-} from '$lib/server/group/announcement-service';
+} from '#lib/server/group/announcement-service.js';
 
 /**
  * Announcements, for both places they are mounted.

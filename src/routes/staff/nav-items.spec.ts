@@ -12,7 +12,7 @@ import {
 	type StaffNavItem,
 	type StaffNavKey
 } from './nav-items';
-import { capabilities, positions, positionOrder, grantsCapability, surfaces } from '$lib/config';
+import { capabilities, positions, positionOrder, grantsCapability, surfaces } from '#lib/config.js';
 
 /**
  * The staff sidebar's two long-standing defects were both invisible in the

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages.js';
-	import TabBar from '$lib/components/ui/TabBar.svelte';
-	import { hasCapability, type Capability } from '$lib/config';
-	import { getStaffLayout } from '$lib/remote/layout.remote';
+	import { m } from '#lib/paraglide/messages.js';
+	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import { hasCapability, type Capability } from '#lib/config.js';
+	import { getStaffLayout } from '#lib/remote/layout.remote.js';
 	import { resolve } from '$app/paths';
 	import type { ResolvedPathname } from '$app/types';
 
@@ -15,19 +15,19 @@
 		{
 			key: 'bands',
 			label: m.staff_groups_group_views_bands(),
-			href: resolve('/staff/groups/bands'),
+			href: resolve('staff/groups/bands'),
 			cap: 'band.read'
 		},
 		{
 			key: 'clubs',
 			label: m.staff_groups_group_views_clubs(),
-			href: resolve('/staff/groups/clubs'),
+			href: resolve('staff/groups/clubs'),
 			cap: 'group.read'
 		},
 		{
 			key: 'committees',
 			label: m.staff_groups_group_views_committees(),
-			href: resolve('/staff/groups/committees'),
+			href: resolve('staff/groups/committees'),
 			cap: 'committee.reviewApplications'
 		}
 	];
