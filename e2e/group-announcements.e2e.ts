@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures/test';
 import { and, eq } from 'drizzle-orm';
 import { groupMember } from '../src/lib/server/db/schema/group';
 import { signInAs } from './fixtures/auth';

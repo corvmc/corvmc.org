@@ -6,7 +6,8 @@
  * A shared session is only safe for a test that leaves it valid. One that signs
  * out, changes the password or bans the user takes `freshSignIn`.
  */
-import { test as base, expect, request, type Page } from '@playwright/test';
+import { request, type Page } from '@playwright/test';
+import { test as base, expect, recordPageErrors } from './test';
 
 export { expect };
 
@@ -90,16 +91,19 @@ export const test = base.extend<{
 	storageState: async ({ persona, storageState }, use) => {
 		await use(persona ? await cachedSession(persona) : storageState);
 	},
-	authedPage: async ({ browser }, use) => {
+	authedPage: async ({ browser }, use, testInfo) => {
 		const opened: Array<{ close(): Promise<void> }> = [];
+		const reports: Array<() => Promise<void>> = [];
 		await use(async (persona) => {
 			const context = await browser.newContext({
 				baseURL: baseURL(),
 				storageState: await cachedSession(persona)
 			});
+			reports.push(recordPageErrors(context, testInfo));
 			opened.push(context);
 			return context.newPage();
 		});
+		await Promise.all(reports.map((report) => report()));
 		await Promise.all(opened.map((c) => c.close()));
 	}
 });
