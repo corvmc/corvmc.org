@@ -49,7 +49,7 @@ describe('StatusBadge labelled', () => {
 	const widthIn = async (width: number) => {
 		const host = document.createElement('div');
 		host.style.width = `${width}px`;
-		document.body.append(host);
+		document.body.appendChild(host);
 		await render(StatusBadge, {
 			target: host,
 			props: { status: 'no_show', label: true, text: 'Several words of label' }

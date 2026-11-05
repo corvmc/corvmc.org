@@ -8,7 +8,7 @@ describe('StatCard', () => {
 	it('keeps a long title inside a card narrower than the title', async () => {
 		const host = document.createElement('div');
 		host.style.width = '160px';
-		document.body.append(host);
+		document.body.appendChild(host);
 
 		await render(StatCard, {
 			target: host,
