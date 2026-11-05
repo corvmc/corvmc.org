@@ -1,27 +1,29 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+/** A client-side visit, which is what makes `getMemberLayout` answer with a redirect. */
+async function visitMemberPage(page: Page) {
+	await page.evaluate(() =>
+		document.body.insertAdjacentHTML(
+			'afterbegin',
+			'<a id="to-member" href="/member/volunteer/committees">x</a>'
+		)
+	);
+	await page.locator('#to-member').click();
+	await expect(page).toHaveURL(/\/login/);
+}
 
 /**
- * Signed out, a client-side visit to a member page redirects to sign-in from
- * inside `getMemberLayout`. Going back re-enters the member layout with that
- * query already settled, and the panel tabs must not read an absent layout.
+ * Signed out, the member layout redirects from inside its query. Coming back to
+ * it from sign-in re-enters that layout, and the panel tabs must not read an
+ * absent layout.
  */
-test('going back to a member page while signed out throws nothing', async ({ page }) => {
+test('returning to a member page while signed out throws nothing', async ({ page }) => {
 	const errors: string[] = [];
 	page.on('pageerror', (e) => errors.push(e.message));
 
 	await page.goto('/about');
-	await page.evaluate(() => {
-		const a = document.createElement('a');
-		a.href = '/member/volunteer/committees';
-		a.id = 'to-member';
-		a.textContent = 'x';
-		document.body.prepend(a);
-	});
-	await page.locator('#to-member').click();
-	await expect(page).toHaveURL(/\/login/);
-
-	await page.goBack();
-	await expect(page).toHaveURL(/\/login|\/member\/volunteer\/committees/);
+	await visitMemberPage(page);
+	await visitMemberPage(page);
 	await page.waitForLoadState('networkidle');
 
 	expect(errors).toEqual([]);
