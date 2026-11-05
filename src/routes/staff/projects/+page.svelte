@@ -13,7 +13,8 @@
 	import { resolve } from '$app/paths';
 	import type { ProjectView } from '$lib/config';
 	import ProjectsTable from './ProjectsTable.svelte';
-	import ProjectViews from './ProjectViews.svelte';
+	import StaffViews from '../StaffViews.svelte';
+	import { projectViews } from './views';
 
 	/**
 	 * Every body of work with a budget and an owner. Budget and burn share a
@@ -44,49 +45,10 @@
 </script>
 
 <PageHeader title={m.staff_projects()}>
-	<Action
-		action={createProjectForm}
-		label={m.staff_projects_new_project()}
-		modalTitle={m.staff_projects_new_project()}
-		successToast={m.staff_projects_success_toast()}
-		onsuccess={(result) => {
-			// A show leaves this list once it has a listing, so land on the project.
-			const id = (result as { id?: string } | undefined)?.id;
-			if (id) void goto(resolve(`/staff/projects/${id}`));
-		}}
-	>
-		{#snippet form()}
-			<Field
-				field={fields.name}
-				type="text"
-				label={m.staff_name()}
-				description={m.staff_projects_what_work_live_room_refresh()}
-			/>
-			<Field field={fields.description} type="textarea" label={m.staff_description()} />
-			<Field
-				field={fields.templateId}
-				type="select"
-				label={m.staff_template()}
-				placeholder={m.ui_none()}
-				options={templateOptions}
-			/>
-			<Field
-				field={fields.groupId}
-				type="select"
-				label={m.staff_owning_committee()}
-				placeholder={m.ui_none()}
-				options={committeeOptions}
-				description={m.staff_projects_only_committee_can_own_project()}
-			/>
-			<MoneyField field={fields.budgetCents} label={m.staff_budget()} />
-			<Field field={fields.startsAt} type="date" label={m.staff_starts()} />
-			<Field field={fields.endsAt} type="date" label={m.staff_ends()} />
-		{/snippet}
-	</Action>
+	<StaffViews views={projectViews} active="projects" />
 </PageHeader>
 
 <PageContent>
-	<ProjectViews active="projects" />
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		<Select
 			size="sm"
@@ -113,6 +75,47 @@
 				<option value={c.id}>{c.name}</option>
 			{/each}
 		</Select>
+		{#snippet actions()}
+			<Action
+				action={createProjectForm}
+				label={m.staff_projects_new_project()}
+				modalTitle={m.staff_projects_new_project()}
+				successToast={m.staff_projects_success_toast()}
+				onsuccess={(result) => {
+					// A show leaves this list once it has a listing, so land on the project.
+					const id = (result as { id?: string } | undefined)?.id;
+					if (id) void goto(resolve(`/staff/projects/${id}`));
+				}}
+			>
+				{#snippet form()}
+					<Field
+						field={fields.name}
+						type="text"
+						label={m.staff_name()}
+						description={m.staff_projects_what_work_live_room_refresh()}
+					/>
+					<Field field={fields.description} type="textarea" label={m.staff_description()} />
+					<Field
+						field={fields.templateId}
+						type="select"
+						label={m.staff_template()}
+						placeholder={m.ui_none()}
+						options={templateOptions}
+					/>
+					<Field
+						field={fields.groupId}
+						type="select"
+						label={m.staff_owning_committee()}
+						placeholder={m.ui_none()}
+						options={committeeOptions}
+						description={m.staff_projects_only_committee_can_own_project()}
+					/>
+					<MoneyField field={fields.budgetCents} label={m.staff_budget()} />
+					<Field field={fields.startsAt} type="date" label={m.staff_starts()} />
+					<Field field={fields.endsAt} type="date" label={m.staff_ends()} />
+				{/snippet}
+			</Action>
+		{/snippet}
 	</FilterBar>
 
 	{#if data.projects.length === 0}

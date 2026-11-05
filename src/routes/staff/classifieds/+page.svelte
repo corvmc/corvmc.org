@@ -37,10 +37,9 @@
 	}));
 </script>
 
-<PageHeader title={m.staff_classifieds()} subtitle={m.staff_staff()} />
-
-<PageContent>
+<PageHeader title={m.staff_classifieds()} subtitle={m.staff_staff()}>
 	<TabBar
+		collapse
 		{tabs}
 		active={tab}
 		onchange={(k) => {
@@ -48,7 +47,9 @@
 			page = 1;
 		}}
 	/>
+</PageHeader>
 
+<PageContent>
 	<FilterBar
 		activeCount={searchDebounced ? 1 : 0}
 		onclear={() => {

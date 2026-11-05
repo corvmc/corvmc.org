@@ -198,16 +198,12 @@
 	}
 </script>
 
-<PageHeader
-	width="2xl"
-	title={m.staff_settings_settings()}
-	subtitle={m.staff_settings_subtitle()}
-/>
+<PageHeader width="2xl" title={m.staff_settings_settings()} subtitle={m.staff_settings_subtitle()}>
+	<TabBar collapse {tabs} active={activeTab} onchange={(key) => (activeTab = key)} />
+</PageHeader>
 
 <PageContent width="2xl">
-	<TabBar {tabs} active={activeTab} onchange={(key) => (activeTab = key)} />
-
-	<div class="mt-6 space-y-4" role="tabpanel" aria-labelledby="tab-{activeTab}">
+	<div class="space-y-4" role="tabpanel" aria-labelledby="tab-{activeTab}">
 		{#if activeTab === 'pricing'}
 			<p class="text-muted">
 				{m.staff_settings_configure_products_pricing_used_checkout()}
