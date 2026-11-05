@@ -52,6 +52,10 @@ vi.mock('#lib/server/audit/audit-service.js', () => ({
 
 vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
+	contactEmail: async () => 'desk@example.org'
+}));
+
 const svc = await import('./email-change-service');
 const { user, session } = await import('#lib/server/db/schema/authentication.js');
 const { eq } = await import('drizzle-orm');
@@ -168,7 +172,7 @@ describe('confirmEmailChange', () => {
 		][];
 		const url = new URL(notice.email.cta!.url);
 		expect(url.protocol).toBe('mailto:');
-		expect(url.pathname).toBe('contact@corvmc.org');
+		expect(url.pathname).toBe('desk@example.org');
 		expect(url.searchParams.get('subject')).toMatch(/reverse/i);
 		expect(notice.email.cta!.label).toMatch(/reverse/i);
 		expect(notice.email.paragraphs.map((p) => p.text).join(' ')).toMatch(/change it back/i);

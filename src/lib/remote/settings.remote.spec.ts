@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { z } from 'zod';
 
 // Regression: the staff settings remote functions are directly addressable
 // endpoints (there is no +layout.server.ts backstop), and several of them —
@@ -131,6 +132,7 @@ vi.mock('$app/server', () => ({
 		const fn = handler as unknown as Record<string, unknown>;
 		fn.__ = { type: 'form' };
 		fn.for = () => fn;
+		fn.schema = _schema;
 		return handler;
 	},
 	command: (handler: (...a: unknown[]) => unknown) => {
@@ -200,7 +202,14 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 	{
 		name: 'updateOrgSettings',
 		cap: 'settings.update',
-		args: [{ addressStreet: '1 Main St', addressCity: 'Corvallis', addressState: 'OR' }]
+		args: [
+			{
+				addressStreet: '1 Main St',
+				addressCity: 'Corvallis',
+				addressState: 'OR',
+				contactEmail: 'desk@example.org'
+			}
+		]
 	},
 	// Guarded all along, but unlisted here until the completeness check below
 	// went looking — so the form that flips any feature flag had no test
@@ -224,10 +233,54 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 ];
 
 /**
- * The three deliberately public queries. Everything the footer and `/contact`
+ * The deliberately public queries. Everything the footer and the public pages
  * render for a logged-out visitor, and nothing else.
  */
-const PUBLIC = ['getSocialLinks', 'getOrgAddress', 'getFooterInfo'];
+const PUBLIC = ['getSocialLinks', 'getContactDetails', 'getContactEmail', 'getFooterInfo'];
+
+describe('updateOrgSettings contact email', () => {
+	const schema = (settings.updateOrgSettings as unknown as { schema: z.ZodType }).schema;
+
+	it.each([
+		['not an address', 'not-an-email'],
+		['blank', ''],
+		['missing', undefined]
+	])('the schema refuses a contact email that is %s', (_name, contactEmail) => {
+		expect(schema.safeParse({ contactEmail }).success).toBe(false);
+	});
+
+	it('the schema trims a valid one', () => {
+		expect(schema.parse({ contactEmail: ' desk@example.org ' })).toMatchObject({
+			contactEmail: 'desk@example.org'
+		});
+	});
+
+	it('a viewer without the capability writes nothing', async () => {
+		await expect(
+			settings.updateOrgSettings({ contactEmail: 'desk@example.org' })
+		).rejects.toThrow();
+		expect(requireCapability).toHaveBeenCalledWith('settings.update');
+		expect(updateSiteConfigs).not.toHaveBeenCalled();
+	});
+
+	it('a staff save writes it', async () => {
+		requireCapability.mockResolvedValue(undefined);
+		await settings.updateOrgSettings({ contactEmail: 'desk@example.org' });
+		expect(updateSiteConfigs.mock.calls[0][0]).toContainEqual({
+			key: 'org.contactEmail',
+			value: 'desk@example.org'
+		});
+	});
+
+	it('the public queries return the stored address to a logged-out visitor', async () => {
+		const stored = { contactEmail: 'desk@example.org' } as never;
+		getConfigsByPrefix.mockResolvedValueOnce(stored).mockResolvedValueOnce(stored);
+
+		expect(await settings.getContactEmail()).toBe('desk@example.org');
+		expect(await settings.getContactDetails()).toMatchObject({ email: 'desk@example.org' });
+		expect(requireCapability).not.toHaveBeenCalled();
+	});
+});
 
 describe('updateOrientationSettings', () => {
 	it('saves the lead time and the checklist, one trimmed task per line', async () => {
@@ -362,7 +415,8 @@ describe('settings.remote staff guards', () => {
 
 	it('the footer and contact queries remain public (rendered for logged-out visitors)', async () => {
 		await settings.getSocialLinks();
-		await settings.getOrgAddress();
+		await settings.getContactDetails();
+		await settings.getContactEmail();
 		await settings.getFooterInfo();
 		expect(requireCapability).not.toHaveBeenCalled();
 	});
@@ -370,7 +424,7 @@ describe('settings.remote staff guards', () => {
 	it('getFooterInfo reads the org config once and shapes both halves', async () => {
 		expect(await settings.getFooterInfo()).toEqual({
 			social: await settings.getSocialLinks(),
-			address: await settings.getOrgAddress()
+			address: ((await settings.getContactDetails()) as { address: unknown }).address
 		});
 	});
 

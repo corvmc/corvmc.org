@@ -82,15 +82,15 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// being won by accounts registered the week it opened.
 	'ballot.memberOfRecordDays': 60,
 
-	// Only keys something reads live here. The org's name, short name, contact
-	// email and timezone were staff-editable and read by nothing: `#lib/config.js`
-	// holds SITE_NAME and DEFAULT_TIMEZONE, and the staff contact address is the
-	// STAFF_CONTACT_EMAIL binding. `site-config-consumers.spec.ts` fails on a key
-	// added here with no reader, which is how those four survived for so long.
+	// Only keys something reads live here: `site-config-consumers.spec.ts` fails on
+	// a key with no reader. `#lib/config.js` holds SITE_NAME and DEFAULT_TIMEZONE.
+	// `org.contactEmail` is the address the public is told to write to; the
+	// STAFF_CONTACT_EMAIL binding is where staff mail is routed, a separate thing.
 	'org.addressStreet': '6775 SW Philomath Blvd',
 	'org.addressCity': 'Corvallis',
 	'org.addressState': 'OR',
 	'org.addressZip': '97333',
+	'org.contactEmail': 'contact@corvmc.org',
 
 	'org.socialFacebook': '',
 	'org.socialInstagram': '',
@@ -193,6 +193,14 @@ export async function config<T extends string | number | boolean = string | numb
 
 /** @deprecated Use config() instead */
 export const getSiteConfig = config;
+
+/**
+ * The public contact address, for mail that quotes it. The fallback is what keeps a KV
+ * fault from costing a member a security notice over a detail in its footnote.
+ */
+export function contactEmail(): Promise<string> {
+	return config<string>('org.contactEmail').catch(() => String(DEFAULTS['org.contactEmail']));
+}
 
 /**
  * Every key under a prefix, defaults overlaid with whatever KV holds.

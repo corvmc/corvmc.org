@@ -6,7 +6,7 @@
 	import { Turnstile } from 'svelte-turnstile';
 	import { signInHref } from '#lib/utils/sign-in.js';
 	import { submitContactForm } from '#lib/remote/inbox.remote.js';
-	import { getOrgAddress } from '#lib/remote/settings.remote.js';
+	import { getContactDetails } from '#lib/remote/settings.remote.js';
 	import { TURNSTILE_SITE_KEY, turnstileFailureMessage } from '#lib/turnstile.js';
 	import type { RemoteFormIssue } from '$app/server';
 
@@ -19,7 +19,7 @@
 	// top-level await is async-gated.
 	const fields = submitContactForm.fields;
 
-	const address = $derived(await getOrgAddress());
+	const { address, email } = $derived(await getContactDetails());
 	const cityStateZip = $derived(
 		[[address.city, address.state].filter(Boolean).join(', '), address.zip]
 			.filter(Boolean)
@@ -165,9 +165,7 @@
 					<span class="text-cmc-teal"><IconMail size={18} /></span>
 					{m.public_contact_email_heading()}
 				</h3>
-				<a href="mailto:info@corvmc.org" class="link text-sm"
-					>{m.public_contact_info_corvmc_org()}</a
-				>
+				<a href="mailto:{email}" class="link text-sm">{email}</a>
 			</div>
 
 			<div>

@@ -2770,6 +2770,8 @@
 	"staff_settings_shown_site_footer_leave_blank": "Shown in the site footer. Leave blank to hide.",
 	"staff_settings_skipped": "Skipped",
 	"staff_settings_social_links": "Social Links",
+	"staff_settings_contact_email": "Contact email",
+	"staff_settings_contact_email_shown": "Shown on public pages and in account emails.",
 	"staff_settings_source": "Source",
 	"staff_settings_starts_before_booking_minutes": "Starts before the booking (minutes)",
 	"staff_settings_state": "State",

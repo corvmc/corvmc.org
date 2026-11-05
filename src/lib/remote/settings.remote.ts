@@ -49,19 +49,23 @@ function addressFrom(settings: OrgConfigs) {
 
 export const getSocialLinks = query(async () => socialFrom(await getConfigsByPrefix('org')));
 
-export const getOrgAddress = query(async () => addressFrom(await getConfigsByPrefix('org')));
+/** `/contact`'s one query: it shows both, and a component holds one query in flight. */
+export const getContactDetails = query(async () => {
+	const settings = await getConfigsByPrefix('org');
+	return { address: addressFrom(settings), email: String(settings.contactEmail) };
+});
+
+/** For the pages that name the address and nothing else: `ContactEmailLink` and `/programs`. */
+export const getContactEmail = query(async () =>
+	String((await getConfigsByPrefix('org')).contactEmail)
+);
 
 /**
  * The site footer's one load-bearing query.
  *
- * It used to await `getSocialLinks()` and `getOrgAddress()` side by side, which is two
- * requests for one `org` config read and — past kit 2.64 — a crash: a component holding two
- * remote queries in flight blows up in Svelte's reactivity rather than rendering
- * (JAVASCRIPT-SVELTEKIT-2H, on a page whose footer sits in every public route). One query,
- * one config read.
- *
- * `getOrgAddress` stays exported because `/contact` reads it on its own, and a page with a
- * single query is not the shape that breaks.
+ * One query, one config read: a component holding two remote queries in flight blows up in
+ * Svelte's reactivity rather than rendering (JAVASCRIPT-SVELTEKIT-2H), and this footer sits
+ * on every public route.
  */
 export const getFooterInfo = query(async () => {
 	const settings = await getConfigsByPrefix('org');
@@ -293,6 +297,7 @@ const orgSettingsSchema = z.object({
 	addressCity: z.string().trim().max(100).optional().default(''),
 	addressState: z.string().trim().max(50).optional().default(''),
 	addressZip: z.string().trim().max(20).optional().default(''),
+	contactEmail: z.string().trim().email().max(254),
 	socialFacebook: z.string().trim().max(500).optional().default(''),
 	socialInstagram: z.string().trim().max(500).optional().default('')
 });
@@ -306,14 +311,16 @@ export const updateOrgSettings = form(orgSettingsSchema, async (raw) => {
 		{ key: 'org.addressCity', value: data.addressCity ?? '' },
 		{ key: 'org.addressState', value: data.addressState ?? '' },
 		{ key: 'org.addressZip', value: data.addressZip ?? '' },
+		{ key: 'org.contactEmail', value: data.contactEmail },
 		{ key: 'org.socialFacebook', value: data.socialFacebook ?? '' },
 		{ key: 'org.socialInstagram', value: data.socialInstagram ?? '' }
 	]);
 
 	void getStaffSettingsPage().refresh();
-	// Both, not either: `/contact` reads `getOrgAddress` directly, the footer reads it only
-	// through `getFooterInfo`, and refreshing one repaints nothing for the other.
-	void getOrgAddress().refresh();
+	// All three: each public reader has its own query, and refreshing one repaints nothing
+	// for the others.
+	void getContactDetails().refresh();
+	void getContactEmail().refresh();
 	void getFooterInfo().refresh();
 
 	return { success: true };

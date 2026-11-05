@@ -43,11 +43,12 @@ const READERS: Record<string, string> = {
 
 	'ballot.memberOfRecordDays': 'src/lib/server/ballot/ballot-service.ts',
 
-	// The footer and /contact, via `getConfigsByPrefix('org')`.
+	// The footer and the public pages, via `getConfigsByPrefix('org')`.
 	'org.addressStreet': 'src/lib/remote/settings.remote.ts',
 	'org.addressCity': 'src/lib/remote/settings.remote.ts',
 	'org.addressState': 'src/lib/remote/settings.remote.ts',
 	'org.addressZip': 'src/lib/remote/settings.remote.ts',
+	'org.contactEmail': 'src/lib/remote/settings.remote.ts',
 	'org.socialFacebook': 'src/lib/remote/settings.remote.ts',
 	'org.socialInstagram': 'src/lib/remote/settings.remote.ts',
 

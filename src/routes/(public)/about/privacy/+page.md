@@ -3,6 +3,10 @@ title: Privacy Policy
 description: How the Corvallis Music Collective handles your personal information.
 ---
 
+<script>
+	import ContactEmailLink from '#lib/components/public/ContactEmailLink.svelte';
+</script>
+
 # Privacy Policy
 
 _Last updated: May 2026_
@@ -44,7 +48,7 @@ We use only essential cookies required for authentication and session management
 
 ## Your Rights
 
-You may request access to, correction of, or deletion of your personal data at any time by contacting us at [info@corvmc.org](mailto:info@corvmc.org) or through our [contact form](/contact).
+You may request access to, correction of, or deletion of your personal data at any time by contacting us at <ContactEmailLink /> or through our [contact form](/contact).
 
 ## Changes
 
@@ -52,4 +56,4 @@ We may update this policy from time to time. Significant changes will be communi
 
 ## Contact
 
-Questions about this policy? Reach us at [info@corvmc.org](mailto:info@corvmc.org).
+Questions about this policy? Reach us at <ContactEmailLink />.

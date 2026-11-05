@@ -19,6 +19,7 @@
 	import { resolve } from '$app/paths';
 	import { signInHref } from '#lib/utils/sign-in.js';
 	import { getPublicGroups } from '#lib/remote/groups.remote.js';
+	import GearDonationNote from './GearDonationNote.svelte';
 
 	/**
 	 * The cards below are hand-written copy; `/groups` is the live list. The link
@@ -107,13 +108,7 @@
 			</p>
 			<Tile fill="tint-teal" pad="sm" align="start" class="mt-4">
 				<IconGuitarPick size={20} class="mt-0.5 shrink-0 text-cmc-teal" />
-				<p class="text-muted leading-relaxed">
-					<ParaglideMessage message={m.public_programs_got_gear_collecting_dust_we} inputs={{}}
-						>{#snippet a({ children })}<a href="mailto:contact@corvmc.org" class="link"
-								>{@render children?.()}</a
-							>{/snippet}</ParaglideMessage
-					>
-				</p>
+				<GearDonationNote />
 			</Tile>
 		</div>
 		<div class="grid grid-cols-1 gap-6 self-center sm:grid-cols-2">
