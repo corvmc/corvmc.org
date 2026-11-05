@@ -95,6 +95,7 @@
 			{:else}
 				<div class="mt-4 mb-2">
 					<DayTimeline
+						day={day.date}
 						closures={day.closures}
 						others={day.reservations.map((r) => ({
 							id: r.id,
