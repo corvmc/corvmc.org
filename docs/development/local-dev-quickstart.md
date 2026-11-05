@@ -93,7 +93,7 @@ not a state — it is a spread across features — so no state fixture could rea
 | `frontperson@` | owns the premium band Saltmarsh Radio — releases, payouts, gigs, no staff role |
 | `bandmate@`    | plays in it without owning it, so an owner-only gate has something that fails  |
 | `restricted@`  | messaging restricted by an upheld report                                       |
-| `treasurer@`   | treasurer — reaches `/staff/payments` and not `/staff/settings`                |
+| `treasurer@`   | treasurer — reaches `/staff/money/payments` and not `/staff/settings`          |
 | `techcoord@`   | technology coordinator — settings and locks, not the flag queue                |
 | `moderator@`   | site moderator — flags and standing, not the money                             |
 | `shiftlead@`   | volunteer coordinator — the hour queue, not the role picker                    |
