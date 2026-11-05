@@ -167,10 +167,19 @@ async function listAudienceRows() {
 	}));
 }
 
-/** Every audience, as options for a campaign. */
+/**
+ * Every audience, as options for a campaign: names and counts only. Who is in
+ * an audience takes `marketing.manageAudiences` (#2436).
+ */
 export const getAudiences = query(z.void(), async () => {
 	await requireCapability('marketing.read');
-	return listAudienceRows();
+	const rows = await listAudiences();
+	return rows.map(({ id, name, systemKey, subscriberCount }) => ({
+		id,
+		name,
+		systemKey,
+		subscriberCount
+	}));
 });
 
 /**
@@ -192,7 +201,7 @@ export const getPublicAudiences = query(z.void(), async () => {
 
 /** Single audience detail (staff). */
 export const getAudienceDetail = query(z.string(), async (id) => {
-	await requireCapability('marketing.read');
+	await requireCapability('marketing.manageAudiences');
 	const audience = await getAudience(id);
 	// Same as `getCampaignDetail`: its page had the same blank-document shape.
 	if (!audience) throw error(404, 'Audience not found');
@@ -201,7 +210,7 @@ export const getAudienceDetail = query(z.string(), async (id) => {
 
 /** List subscribers for an audience. */
 export const getAudienceSubscribers = query(z.string(), async (audienceId) => {
-	await requireCapability('marketing.read');
+	await requireCapability('marketing.manageAudiences');
 	return listSubscribers(audienceId);
 });
 
@@ -582,6 +591,7 @@ export const getUserMarketing = query(z.string(), async (userId) => {
  * in scope, so this composes cleanly.
  */
 export const getStaffAudienceDetail = query(z.string(), async (id) => {
+	await requireCapability('marketing.manageAudiences');
 	const [audience, subscribers] = await Promise.all([
 		getAudienceDetail(id),
 		getAudienceSubscribers(id)
