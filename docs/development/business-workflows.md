@@ -772,7 +772,8 @@ and re-labelling it `email` would let unrelated mail from the same address merge
 ### Where it breaks
 
 - **Inbound mail not appearing** → check the Postmark server's inbound webhook URL and
-  token, then Sentry. Same for Twilio's messaging webhook config.
+  token, then Sentry. Same for Twilio's messaging webhook config. With no `TWILIO_AUTH_TOKEN`
+  set, a signed Twilio post is refused with a 403, the same answer as a wrong signature.
 - **Staff not notified** → the notification dispatcher respects per-user preferences
   (`notification/preference-service.ts`); check the staff user's settings before suspecting
   the listener.
