@@ -22,6 +22,8 @@
 	import { IconDownload } from '@tabler/icons-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import Alert from '$lib/components/ui/Alert.svelte';
+	import { errorMessage } from '$lib/error-message';
 
 	// Calendar year to date is what a board packet asks for, so it's the default
 	// rather than "all time" — which would keep drifting as the org ages.
@@ -279,6 +281,8 @@
 				{/if}
 			</InfoCard>
 		</div>
+	{:catch error}
+		<Alert type="error">{msg.ui_load_failed({ error: errorMessage(error) })}</Alert>
 	{/await}
 
 	<InfoCard title={msg.staff_reports_volunteering_by_member()}>
@@ -351,5 +355,7 @@
 				</Table>
 			</InfoCard>
 		{/if}
+	{:catch error}
+		<Alert type="error">{msg.ui_load_failed({ error: errorMessage(error) })}</Alert>
 	{/await}
 </PageContent>
