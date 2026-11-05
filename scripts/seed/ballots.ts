@@ -18,6 +18,8 @@ import type { SeedUser } from './types';
 
 const DAY = 86_400_000;
 
+export const BACK_ROOM_PA_PROJECT_ID = '6f1d2c84-3b7a-4e59-9c10-7ad4e2b85f36';
+
 /**
  * The seeded rolls: active accounts old enough at open. The orientation half of
  * the rule is left out because the seed orients only a handful of members, and
@@ -272,7 +274,7 @@ export async function seedBallots(
 	}
 
 	await db.insert(project).values({
-		id: 'seed-project-back-room-pa',
+		id: BACK_ROOM_PA_PROJECT_ID,
 		name: 'Back room PA',
 		description: 'Authorised by the members; see Why this exists.',
 		status: 'planned',

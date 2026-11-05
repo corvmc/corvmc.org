@@ -247,7 +247,11 @@ export async function seedClosures() {
 			startsAt: ptDate(21, 8),
 			endsAt: ptDate(22, 18)
 		},
-		{ reason: pick(CLOSURE_REASONS), startsAt: ptDate(35, 0), endsAt: ptDate(35, 23, 59) }
+		{ reason: pick(CLOSURE_REASONS), startsAt: ptDate(35, 0), endsAt: ptDate(35, 23, 59) },
+		// The staff dashboard's day cards. Overnight, so it leaves the bookable day
+		// open, and offset 0 because `ptDate` lands on the UTC date, which in the
+		// Pacific evening is already the club's tomorrow.
+		{ reason: 'Overnight floor refinishing', startsAt: ptDate(0, 22), endsAt: ptDate(1, 6) }
 	]);
 }
 
