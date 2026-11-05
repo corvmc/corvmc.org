@@ -31,8 +31,9 @@ vi.mock('#lib/remote/projects.remote.js', () => ({
 		result: undefined
 	}
 }));
+const held = vi.hoisted(() => ({ capabilities: [] as string[] }));
 vi.mock('#lib/remote/layout.remote.js', () => ({
-	getStaffLayout: remote(() => ({ capabilities: [] }))
+	getStaffLayout: remote(() => ({ capabilities: held.capabilities }))
 }));
 vi.mock('$app/navigation', () => ({
 	invalidateAll: vi.fn(),
@@ -41,6 +42,21 @@ vi.mock('$app/navigation', () => ({
 }));
 
 const ProjectsPage = (await import('./+page.svelte')).default;
+
+describe('the Projects row (#2411)', () => {
+	it('puts the view tabs in the header and the create action with the list', async () => {
+		held.capabilities = ['project.read', 'event.manage'];
+		const { container } = await render(ProjectsPage);
+
+		await vi.waitFor(() =>
+			expect(
+				container.querySelector('[data-page-header] a[href="/staff/projects/productions"]')
+			).not.toBeNull()
+		);
+		expect(container.querySelector('[data-page-header] button')).toBeNull();
+		expect(container.querySelector('button')).not.toBeNull();
+	});
+});
 
 describe('the New Project modal', () => {
 	// #2388: with no empty option the browser submits the first committee.

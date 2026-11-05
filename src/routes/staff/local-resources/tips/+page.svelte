@@ -13,11 +13,11 @@
 	const data = $derived(await getLocalResourceTips());
 </script>
 
-<PageHeader title={m.staff_local_resources()} subtitle={m.staff_outreach()} />
+<PageHeader title={m.staff_local_resources()} subtitle={m.staff_outreach()}>
+	<ResourceTabs active="tips" tipCount={data.tips.length} />
+</PageHeader>
 
 <PageContent>
-	<ResourceTabs active="tips" tipCount={data.tips.length} />
-
 	{#if data.tips.length === 0}
 		<EmptyState
 			title={m.staff_local_resources_tips_no_tips_waiting()}

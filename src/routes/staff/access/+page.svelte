@@ -21,14 +21,7 @@
 	]);
 </script>
 
-<PageHeader title={m.staff_access_access()} subtitle={m.staff_access_subtitle()} />
-<PageContent>
-	<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-		{#each stats as stat (stat.title)}
-			<StatCard title={stat.title} value={stat.value.toLocaleString()} size="sm" />
-		{/each}
-	</div>
-
+<PageHeader title={m.staff_access_access()} subtitle={m.staff_access_subtitle()}>
 	<TabBar
 		tabs={[
 			{ key: 'person', label: m.staff_access_by_person() },
@@ -37,6 +30,13 @@
 		active={view}
 		onchange={(key) => (view = key as typeof view)}
 	/>
+</PageHeader>
+<PageContent>
+	<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+		{#each stats as stat (stat.title)}
+			<StatCard title={stat.title} value={stat.value.toLocaleString()} size="sm" />
+		{/each}
+	</div>
 
 	{#if view === 'person'}
 		<PersonAccess bind:person />

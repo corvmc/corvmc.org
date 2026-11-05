@@ -80,9 +80,7 @@
 	]);
 </script>
 
-<PageHeader title={m.staff_suggestions_title()} subtitle={m.staff_staff()} />
-
-<PageContent width="full">
+<PageHeader title={m.staff_suggestions_title()} subtitle={m.staff_staff()}>
 	<TabBar
 		{tabs}
 		active={tab}
@@ -91,7 +89,9 @@
 			page = 1;
 		}}
 	/>
+</PageHeader>
 
+<PageContent width="full">
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput

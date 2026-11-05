@@ -8,6 +8,8 @@ vi.mock('#lib/server/authorization.js', () => ({
 
 const projects = await import('./+page.server');
 const productions = await import('../productions/+page');
+const { visibleViews } = await import('../views');
+const { projectViews } = await import('./views');
 
 type Load = (e: unknown) => unknown;
 const run = async (load: unknown, locals: object = { user: { id: 'usr-1' } }, url = 'http://x/') =>
@@ -35,6 +37,19 @@ describe('/staff/projects', () => {
 			status: 307,
 			location: '/staff/projects/productions'
 		});
+	});
+});
+
+describe('tabs', () => {
+	it.each([
+		[
+			['project.read', 'event.manage'],
+			['projects', 'productions', 'templates']
+		],
+		[['project.read'], ['projects', 'templates']],
+		[['event.manage'], ['productions']]
+	])('holding %j shows %j', (caps, keys) => {
+		expect(visibleViews(projectViews, caps).map((v) => v.key)).toEqual(keys);
 	});
 });
 

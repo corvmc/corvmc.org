@@ -2144,7 +2144,6 @@
 	"staff_project_templates_shown_when_choosing_template_apply": "Shown when choosing a template to apply.",
 	"staff_project_templates_submit_label": "Create",
 	"staff_project_templates_starts_production": "Picking this template starts a production",
-	"staff_project_templates_subtitle": "Planning",
 	"staff_project_templates_success_toast": "Template created",
 	"staff_project_templates_template_set_work_orders_project": "A template is a set of work orders a project takes, applied in one step.",
 	"staff_project_templates_templates": "Templates",

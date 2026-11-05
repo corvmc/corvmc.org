@@ -12,7 +12,8 @@
 	import { goto } from '$app/navigation';
 	import { page as pageState } from '$app/state';
 	import NewProductionAction from './NewProductionAction.svelte';
-	import ProjectViews from '../ProjectViews.svelte';
+	import StaffViews from '../../StaffViews.svelte';
+	import { projectViews } from '../views';
 	import { formatDate } from '#lib/utils/format.js';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import AvatarStack from '#lib/components/ui/AvatarStack.svelte';
@@ -116,10 +117,9 @@
 </script>
 
 <PageHeader title={m.staff_projects()}>
-	<NewProductionAction />
+	<StaffViews views={projectViews} active="productions" />
 </PageHeader>
 <PageContent>
-	<ProjectViews active="productions" />
 	<FilterBar {activeCount} onclear={clearFilters}>
 		<Select size="sm" aria-label={m.staff_status()} bind:value={status} onchange={() => (page = 1)}>
 			<option value="">{m.staff_projects_productions_every_status()}</option>
@@ -164,6 +164,9 @@
 			/>
 			{m.staff_projects_productions_short_bands()}
 		</label>
+		{#snippet actions()}
+			<NewProductionAction />
+		{/snippet}
 	</FilterBar>
 
 	<DataList {result} empty={m.staff_projects_productions_empty()} onpage={(p) => (page = p)}>

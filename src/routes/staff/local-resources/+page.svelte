@@ -25,26 +25,10 @@
 </script>
 
 <PageHeader title={m.staff_local_resources()} subtitle={m.staff_outreach()}>
-	<Button href="/staff/local-resources/categories" variant="ghost" size="sm"
-		>{m.staff_categories()}</Button
-	>
-	{#if data.categories.length > 0}
-		<Action
-			action={createLocalResourceForm}
-			label={m.staff_local_resources_label()}
-			modalTitle={m.staff_local_resources_label()}
-			successToast={m.staff_local_resources_success_toast()}
-		>
-			{#snippet form()}
-				<ResourceFields {fields} categories={data.categories} />
-			{/snippet}
-		</Action>
-	{/if}
+	<ResourceTabs active="listings" tipCount={data.tipCount} />
 </PageHeader>
 
 <PageContent>
-	<ResourceTabs active="listings" tipCount={data.tipCount} />
-
 	<FilterBar activeCount={status ? 1 : 0} onclear={() => (status = '')}>
 		<Select
 			size="sm"
@@ -59,6 +43,23 @@
 			<option value="published">{m.staff_published()}</option>
 			<option value="rejected">{m.staff_local_resources_rejected()}</option>
 		</Select>
+		{#snippet actions()}
+			<Button href="/staff/local-resources/categories" variant="ghost" size="sm"
+				>{m.staff_categories()}</Button
+			>
+			{#if data.categories.length > 0}
+				<Action
+					action={createLocalResourceForm}
+					label={m.staff_local_resources_label()}
+					modalTitle={m.staff_local_resources_label()}
+					successToast={m.staff_local_resources_success_toast()}
+				>
+					{#snippet form()}
+						<ResourceFields {fields} categories={data.categories} />
+					{/snippet}
+				</Action>
+			{/if}
+		{/snippet}
 	</FilterBar>
 
 	{#if data.categories.length === 0}

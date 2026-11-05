@@ -170,7 +170,7 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 				out.push({ panel: 'staff', href: resolve(`staff/marketing/campaigns/${id}`) });
 			break;
 		case 'audience':
-			if (can('marketing.read'))
+			if (can('marketing.manageAudiences'))
 				out.push({ panel: 'staff', href: resolve(`staff/marketing/audiences/${id}`) });
 			break;
 		case 'shift':

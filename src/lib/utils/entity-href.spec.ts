@@ -89,6 +89,16 @@ describe('entityHref', () => {
 			}
 		});
 
+		// The record's remotes refuse marketing.read alone, so the link would land on a 403 (#2436).
+		it('links an audience only for someone who can open its record', () => {
+			const panel = 'staff';
+			const held = (...caps: string[]) => viewer({ panel, capabilities: new Set(caps) });
+			expect(entityHref(fakeRef('audience'), held('marketing.read'))).toBeNull();
+			expect(entityHref(fakeRef('audience'), held('marketing.manageAudiences'))).toBe(
+				'/staff/marketing/audiences/audience-1'
+			);
+		});
+
 		it('returns null for a staff-only record when the viewer is not staff', () => {
 			for (const type of ['flag', 'campaign', 'audience'] as const) {
 				expect(entityHref(fakeRef(type), viewer())).toBeNull();

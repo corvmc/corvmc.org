@@ -12,7 +12,8 @@
 	import { rowLink } from '#lib/actions/row-link.js';
 	import { getDutyLists, createDutyList } from '#lib/remote/duty-lists.remote.js';
 	import { dutyListAnchors, dutyListAnchorLabels } from '#lib/config.js';
-	import ProjectViews from '../ProjectViews.svelte';
+	import StaffViews from '../../StaffViews.svelte';
+	import { projectViews } from '../views';
 
 	let lists = $derived(getDutyLists());
 
@@ -20,43 +21,46 @@
 </script>
 
 <PageHeader
-	title={m.staff_project_templates_project_templates()}
-	subtitle={m.staff_project_templates_subtitle()}
+	title={m.staff_projects()}
+	documentTitle={m.staff_project_templates_project_templates()}
 >
-	<Action
-		action={createDutyList}
-		label={m.staff_project_templates_new_template()}
-		modalTitle={m.staff_project_templates_modal_title()}
-		submitLabel={m.staff_project_templates_submit_label()}
-		successToast={m.staff_project_templates_success_toast()}
-	>
-		{#snippet form()}
-			<FormField field={createDutyList.fields.name} label={m.staff_name()} type="text" />
-			<FormField
-				field={createDutyList.fields.description}
-				label={m.staff_description()}
-				type="textarea"
-				description={m.staff_project_templates_shown_when_choosing_template_apply()}
-			/>
-			<FormField
-				field={createDutyList.fields.anchor}
-				label={m.staff_measure_offsets_from()}
-				type="select"
-				options={anchorOptions}
-				description={m.staff_project_templates_every_item_timed_from()}
-			/>
-			<FormField
-				field={createDutyList.fields.startsProduction}
-				type="checkbox"
-				label={m.staff_production()}
-				checkboxLabel={m.staff_project_templates_starts_production()}
-			/>
-		{/snippet}
-	</Action>
+	<StaffViews views={projectViews} active="templates" />
 </PageHeader>
 
 <PageContent>
-	<ProjectViews active="templates" />
+	<div class="flex justify-end">
+		<Action
+			size="sm"
+			action={createDutyList}
+			label={m.staff_project_templates_new_template()}
+			modalTitle={m.staff_project_templates_modal_title()}
+			submitLabel={m.staff_project_templates_submit_label()}
+			successToast={m.staff_project_templates_success_toast()}
+		>
+			{#snippet form()}
+				<FormField field={createDutyList.fields.name} label={m.staff_name()} type="text" />
+				<FormField
+					field={createDutyList.fields.description}
+					label={m.staff_description()}
+					type="textarea"
+					description={m.staff_project_templates_shown_when_choosing_template_apply()}
+				/>
+				<FormField
+					field={createDutyList.fields.anchor}
+					label={m.staff_measure_offsets_from()}
+					type="select"
+					options={anchorOptions}
+					description={m.staff_project_templates_every_item_timed_from()}
+				/>
+				<FormField
+					field={createDutyList.fields.startsProduction}
+					type="checkbox"
+					label={m.staff_production()}
+					checkboxLabel={m.staff_project_templates_starts_production()}
+				/>
+			{/snippet}
+		</Action>
+	</div>
 	{#await lists then rows}
 		{#if rows.length === 0}
 			<EmptyState
