@@ -629,7 +629,6 @@
 	"src/routes/staff/inventory/locations/+page.svelte",
 	"src/routes/staff/inventory/restock/+page.svelte",
 	"src/routes/staff/reports/inventory-spend/+page.svelte",
-	"src/routes/staff/marketing/campaigns/AudiencePicker.svelte",
 	"src/routes/staff/music/+page.svelte",
 	"src/routes/staff/nav-items.ts",
 	"src/routes/staff/settings/feature-meta.ts",
