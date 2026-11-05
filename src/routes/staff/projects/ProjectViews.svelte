@@ -6,7 +6,7 @@
 	import { resolve } from '$app/paths';
 	import type { ResolvedPathname } from '$app/types';
 
-	type ProjectsView = 'projects' | 'productions';
+	type ProjectsView = 'projects' | 'productions' | 'templates';
 
 	let { active }: { active: ProjectsView } = $props();
 
@@ -23,6 +23,12 @@
 			label: m.staff_projects_project_views_productions(),
 			href: resolve('staff/projects/productions'),
 			cap: 'event.manage'
+		},
+		{
+			key: 'templates',
+			label: m.staff_project_templates_templates(),
+			href: resolve('staff/projects/templates'),
+			cap: 'project.read'
 		}
 	];
 

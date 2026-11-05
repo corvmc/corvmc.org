@@ -9,6 +9,8 @@
 	import { Field } from '#lib/components/ui/Form/index.js';
 	import Button from '#lib/components/ui/Button.svelte';
 	import { getAcquisitions } from '#lib/remote/inventory.remote.js';
+	import StaffViews from '../../StaffViews.svelte';
+	import { reportViews } from '../views';
 	import { acquisitionKinds, acquisitionKindLabels } from '#lib/config.js';
 	import { formatCents, formatDateShort } from '#lib/utils/format.js';
 	import { goto } from '$app/navigation';
@@ -55,14 +57,16 @@
 		if (owed) parts.push('owed=1');
 		if (pageNo > 1) parts.push(`page=${pageNo}`);
 		const qs = parts.length > 0 ? `?${parts.join('&')}` : '';
-		goto(withQuery(resolve('staff/inventory/acquisitions'), qs), {
+		goto(withQuery(resolve('staff/reports/acquisitions'), qs), {
 			replace: true,
 			reset: false
 		});
 	}
 </script>
 
-<PageHeader title={m.staff_acquisitions()} subtitle={m.staff_inventory()} />
+<PageHeader title={m.staff_reports()} documentTitle={m.staff_acquisitions()}>
+	<StaffViews views={reportViews} active="acquisitions" collapse />
+</PageHeader>
 
 <PageContent>
 	<div class="mb-4 flex flex-wrap items-end gap-3">

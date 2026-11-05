@@ -44,11 +44,10 @@
 </script>
 
 <PageHeader title={m.staff_members()}>
-	<GrantInstructorAction />
+	<MemberViews active="instructors" />
 </PageHeader>
 
 <PageContent>
-	<MemberViews active="instructors" />
 	<Roster
 		{roster}
 		result={list}
@@ -58,6 +57,10 @@
 		exportPath={resolve('staff/members/instructors/export')}
 		emails={() => getStaffInstructorEmails({ q: f.q || undefined, status: f.status })}
 	>
+		{#snippet toolbar()}
+			<GrantInstructorAction />
+		{/snippet}
+
 		{#snippet filters()}
 			<Select
 				size="sm"

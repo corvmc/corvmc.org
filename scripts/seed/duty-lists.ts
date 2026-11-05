@@ -226,10 +226,10 @@ async function seedShowDeliverables(byName: Map<string, any>, groups: any[], sho
 			id: 'seed-duty-show-deliverables',
 			name: 'Show deliverables',
 			description:
-				'What each committee owes a show, and when. Stamped onto every new show; each item is done when the fact it names is true and its tasks are ticked.',
+				'What each committee owes a show, and when. Pick it on New Project to start a show; each item is done when the fact it names is true and its tasks are ticked.',
 			anchor: 'start' as const,
 			subject: 'project' as const,
-			autoApplyOn: 'production.created' as const,
+			projectKind: 'production' as const,
 			createdByUserId: 'seed-vol-coordinator'
 		}
 	]);

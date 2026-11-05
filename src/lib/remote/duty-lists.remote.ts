@@ -6,8 +6,6 @@ import { can, requireCapability } from '#lib/server/authorization.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import { dutyListAnchors, workDoneConditions } from '#lib/config.js';
 
-/** The trigger a project template can claim; `''` is never. */
-const autoApplyShape = z.enum(['', 'production.created']).optional();
 import { listCommittees } from '#lib/server/project/project-service.js';
 import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
 import {
@@ -86,7 +84,7 @@ export const getActiveDutyLists = query(async () => {
 	return lists.filter((l) => l.itemCount > 0);
 });
 
-/** One load-bearing query for `/staff/project-templates/[id]`. */
+/** One load-bearing query for `/staff/projects/templates/[id]`. */
 export const getDutyListPage = query(z.string(), async (id) => {
 	await requireCapability('project.read');
 
@@ -112,7 +110,7 @@ export const createDutyList = form(
 		name: z.string().min(1, 'Name is required'),
 		description: z.string().optional(),
 		anchor: z.enum(dutyListAnchors).default('doors'),
-		autoApplyOn: autoApplyShape
+		startsProduction: z.boolean().optional().default(false)
 	}),
 	async (data) => {
 		const staff = await requireCapability('project.manage');
@@ -121,7 +119,7 @@ export const createDutyList = form(
 				name: data.name,
 				description: data.description,
 				anchor: data.anchor,
-				autoApplyOn: data.autoApplyOn || null,
+				projectKind: data.startsProduction ? 'production' : 'general',
 				createdByUserId: staff.id
 			});
 			await getDutyLists().refresh();
@@ -142,7 +140,7 @@ export const updateDutyList = form(
 		// box is not submitted at all, and kit reports the absence as the boolean's
 		// own validation failure.
 		isActive: z.boolean().optional().default(false),
-		autoApplyOn: autoApplyShape
+		startsProduction: z.boolean().optional().default(false)
 	}),
 	async (data) => {
 		await requireCapability('project.manage');
@@ -151,7 +149,7 @@ export const updateDutyList = form(
 				name: data.name,
 				description: data.description,
 				anchor: data.anchor,
-				autoApplyOn: data.autoApplyOn === undefined ? undefined : data.autoApplyOn || null,
+				projectKind: data.startsProduction ? 'production' : 'general',
 				isActive: data.isActive
 			});
 			await Promise.all([getDutyLists().refresh(), getDutyListPage(data.id).refresh()]);

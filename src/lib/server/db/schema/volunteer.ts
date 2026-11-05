@@ -44,6 +44,7 @@ import {
 	ORIENTATION_WAIVED_REASON_MAX,
 	dutyListAnchors,
 	dutyListAutoApplyTriggers,
+	projectKinds,
 	dutyListStoredSubjects,
 	workDoneConditions
 } from '../../../config';
@@ -1072,6 +1073,11 @@ export const dutyList = sqliteTable(
 		// null` is a syntax error nobody would find until CI.
 		autoApplyOn: text('auto_apply_on', { enum: dutyListAutoApplyTriggers }),
 
+		// `production`: picking this template starts a show, and it is the checklist
+		// every other way of opening a show stamps (#2387). Those have nobody to ask,
+		// so the index below holds it to one template.
+		projectKind: text('project_kind', { enum: projectKinds }).notNull().default('general'),
+
 		isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
 		createdByUserId: text('created_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
@@ -1090,7 +1096,10 @@ export const dutyList = sqliteTable(
 		// would otherwise collide with every other.
 		uniqueIndex('uq_duty_list_auto_apply')
 			.on(t.autoApplyOn)
-			.where(sql`auto_apply_on is not null`)
+			.where(sql`auto_apply_on is not null`),
+		uniqueIndex('uq_duty_list_production')
+			.on(t.projectKind)
+			.where(sql`project_kind = 'production'`)
 	]
 );
 

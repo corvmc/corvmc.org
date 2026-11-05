@@ -1114,7 +1114,7 @@ So:
 
 ### Duty lists (Project Templates)
 
-> **Since #2034** these are **Project Templates** (`/staff/project-templates`, under Planning,
+> **Since #2034** these are **Project Templates** (`/staff/projects/templates`, under Projects,
 > edited with `project.manage`). The tables keep the `duty_list` names. A template is stamped
 > into a **project**, and the `event` and `reservation` subjects are retired. `doors`, `start`
 > and `end` read the project's earliest live event, or the show it is applied from, and the
@@ -1125,6 +1125,27 @@ So:
 > once per show (#2152): a second night in the same project gets it by a reasoned re-apply from
 > that show's console, timed from that show. The rest of this section is the history and the
 > item model, which is unchanged.
+
+**Starting from a template (#2387).** New Project on `/staff/projects` has a Template select over
+active templates with items. `startProject` reads the template first, creates the project, then
+applies it through `applyDutyList`, so the once-per-project rule and the audit entry are the usual
+ones.
+
+One template may carry `duty_list.project_kind = 'production'`, a checkbox on its edit form, and
+marking another moves it. Picking that one starts a show in one action: `createShowProject` writes
+the project (`kind = 'production'`), the `production` row (`draft`) and the show's committees in one
+`db.batch`, then the checklist is applied. The listing attaches when it exists, and event-timed
+items are placed then (`placeWorkAwaitingEvent`). Until it has a listing, the show is on the Projects
+view, since the Productions view lists listings. Turning an existing general project into a show
+is not offered.
+
+The other ways of opening a show have nobody to ask, so they stamp that same template with
+`stampProductionTemplate` once the listing names the project: the New Production modal and the
+event console (`createProduction`), and `event-service.create`, which a recurring series also goes
+through. No active template means no checklist, and the show still opens.
+
+This replaced the `production.created` auto-apply and its listener. The direction for what
+remains of `auto_apply_on` is a rules system (#2389), not new trigger values.
 
 A duty list is a named set of work orders stamped onto a **subject** — an event, or a member's
 rehearsal booking. Staffing a show is six of them, and every one used to be entered by hand on

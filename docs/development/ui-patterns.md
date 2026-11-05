@@ -754,7 +754,8 @@ Tabs with `href` render as `<a>` tags; without, they render as `<button>` tags a
 
 Tabs that choose what the whole page shows go in the `PageHeader`'s action slot, above anything
 that depends on the chosen tab; that tab's own actions go down with its content, in `FilterBar`'s
-`actions` (`/staff/groups/*`).
+`actions` (`/staff/groups/*`), or `Roster`'s `toolbar`, which passes through to it (`/staff/members/*`).
+An action that is the same on every tab stays in the header (`/staff/keys`, `/staff/reservations`).
 
 Two ways to survive a bar that outgrows its space. `collapse` folds the set into a dropdown below
 `md` — for bars that outrun a phone. `dense` shrinks every tab but the active one to its `icon`,

@@ -20,4 +20,4 @@
 	];
 </script>
 
-<TabBar class="mb-4" {active} {tabs} />
+<TabBar {active} {tabs} />

@@ -23,7 +23,7 @@
 	// right pane exactly as an enquiry is.
 	const threadOpen = $derived(
 		page.route.id === '/band/[slug]/messages/[id]' ||
-			(page.route.id as string | null) === '/band/[slug]/messages/chat'
+			page.route.id === '/band/[slug]/messages/chat/[threadId]'
 	);
 </script>
 

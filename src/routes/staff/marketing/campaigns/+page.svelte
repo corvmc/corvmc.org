@@ -13,15 +13,15 @@
 	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '#lib/utils/format.js';
+	import StaffViews from '../../StaffViews.svelte';
+	import { outreachViews } from '../views';
 
 	let statusFilter = $state('');
 	let campaigns = $derived(await getCampaigns({ status: statusFilter || undefined }));
 </script>
 
-<PageHeader title={m.staff_marketing_campaigns_title()} subtitle={m.staff_marketing()}>
-	<Button href="/staff/marketing/campaigns/new" variant="default" size="sm"
-		>{m.staff_new_campaign()}</Button
-	>
+<PageHeader title={m.staff_outreach()} documentTitle={m.staff_marketing_campaigns_title()}>
+	<StaffViews views={outreachViews} active="campaigns" />
 </PageHeader>
 <PageContent>
 	<div class="mb-4 flex gap-2">
@@ -31,6 +31,9 @@
 			<option value="scheduled">{m.staff_marketing_campaigns_scheduled()}</option>
 			<option value="sent">{m.staff_sent()}</option>
 		</Select>
+		<Button class="ml-auto" href="/staff/marketing/campaigns/new" variant="default" size="sm"
+			>{m.staff_new_campaign()}</Button
+		>
 	</div>
 
 	{#if campaigns.length === 0}

@@ -35,6 +35,14 @@
 </script>
 
 <PageHeader title={m.staff_keys_key_holders()} subtitle={m.staff_space()}>
+	<TabBar
+		tabs={[
+			{ key: 'held', label: m.staff_keys_held_now() },
+			{ key: 'history', label: m.staff_history() }
+		]}
+		active={view}
+		onchange={(key) => (view = key as 'held' | 'history')}
+	/>
 	<Action
 		action={issueAccessForm}
 		label={m.staff_keys_record_key_code()}
@@ -78,15 +86,6 @@
 </PageHeader>
 
 <PageContent>
-	<TabBar
-		tabs={[
-			{ key: 'held', label: m.staff_keys_held_now() },
-			{ key: 'history', label: m.staff_history() }
-		]}
-		active={view}
-		onchange={(key) => (view = key as 'held' | 'history')}
-	/>
-
 	{#if rows.length === 0}
 		<EmptyState
 			title={view === 'held' ? m.staff_keys_nobody_register() : m.staff_keys_nothing_recorded_yet()}

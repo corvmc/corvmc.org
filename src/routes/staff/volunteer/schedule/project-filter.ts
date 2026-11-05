@@ -7,7 +7,7 @@ export const PROJECT_FILTERS = {
 export type ProjectFilter = keyof typeof PROJECT_FILTERS;
 
 export const parseProjectFilter = (raw: string | null): ProjectFilter =>
-	raw && raw in PROJECT_FILTERS ? (raw as ProjectFilter) : '';
+	raw && Object.hasOwn(PROJECT_FILTERS, raw) ? (raw as ProjectFilter) : '';
 
 export function matchesProject(w: { projectId: string | null }, filter: ProjectFilter): boolean {
 	if (filter === 'project') return w.projectId !== null;

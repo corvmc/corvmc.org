@@ -389,33 +389,33 @@ describe('createDutyList', () => {
 	});
 });
 
-// #2265: the listener stamps one template, so only one may hold the trigger.
-describe('auto-apply on production.created', () => {
+// #2387: every show opened without a picker stamps one template, so only one may start a production.
+describe('the Production template', () => {
 	const holders = () =>
 		(
-			sqlite
-				.prepare(`SELECT id FROM duty_list WHERE auto_apply_on = 'production.created'`)
-				.all() as { id: string }[]
+			sqlite.prepare(`SELECT id FROM duty_list WHERE project_kind = 'production'`).all() as {
+				id: string;
+			}[]
 		).map((r) => r.id);
 
-	it('moves to whichever template claimed it last', async () => {
+	it('moves to whichever template was marked last', async () => {
 		const made = await createDutyList({
 			name: 'Festival',
 			anchor: 'doors',
-			autoApplyOn: 'production.created',
+			projectKind: 'production',
 			createdByUserId: 'u1'
 		});
 		expect(holders()).toEqual([made.id]);
 
-		await updateDutyList('dl-1', { autoApplyOn: 'production.created' });
+		await updateDutyList('dl-1', { projectKind: 'production' });
 		expect(holders()).toEqual(['dl-1']);
 
-		await updateDutyList('dl-1', { autoApplyOn: null });
+		await updateDutyList('dl-1', { projectKind: 'general' });
 		expect(holders()).toEqual([]);
 	});
 
 	it('leaves the orientation trigger alone', async () => {
-		await updateDutyList('dl-1', { autoApplyOn: 'production.created' });
+		await updateDutyList('dl-1', { projectKind: 'production' });
 		expect(
 			sqlite.prepare(`SELECT auto_apply_on AS t FROM duty_list WHERE id = 'dl-res'`).get()
 		).toEqual({ t: 'reservation.first' });

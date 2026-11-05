@@ -37,8 +37,9 @@ vi.mock('#lib/server/inbox/reply-address.js', () => ({
 }));
 
 vi.mock('$env/dynamic/private', () => ({
-	env: { PUBLIC_SITE_URL: 'https://test.corvmc.com', STAFF_CONTACT_EMAIL: 'staff@test.com' }
+	env: { STAFF_CONTACT_EMAIL: 'staff@test.com' }
 }));
+vi.mock('$env/dynamic/public', () => ({ env: { PUBLIC_SITE_URL: 'https://test.corvmc.com' } }));
 
 // Capture event handlers.
 //
@@ -615,6 +616,25 @@ describe('collapsed listeners use the generic template', () => {
 		mockMembersAddedNotice.mockResolvedValueOnce(null as never);
 		await emit('group.members_added', { groupId: 'x', userIds: ['u-1'], addedById: 's' });
 		expect(mockDispatchBatch).not.toHaveBeenCalled();
+	});
+
+	it('audio.purchased → absolute download and release links', async () => {
+		await emit('audio.purchased', {
+			purchaseId: 'p-1',
+			downloadToken: 'tok-1',
+			buyerEmail: 'buyer@test.com',
+			releaseTitle: 'Album',
+			releaseSlug: 'album',
+			bandName: 'Band',
+			bandSlug: 'band',
+			amountPaidCents: 0,
+			platformFeeCents: 0,
+			bandNetCents: 0
+		});
+
+		const { email } = mockDispatchEmailOnly.mock.calls[0][0];
+		expect(email.cta.url).toBe('https://test.corvmc.com/music/download/tok-1');
+		expect(email.footnote).toContain('https://test.corvmc.com/music/band/album');
 	});
 
 	const contactFormEvent = {

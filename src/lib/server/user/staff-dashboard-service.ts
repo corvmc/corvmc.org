@@ -16,6 +16,7 @@ import {
 	toEventRef
 } from '#lib/server/entity/refs.js';
 import { bandBookerJoin, eventBookerJoin } from '#lib/server/reservation/event-hold.js';
+import { closuresOverlapping, interleave } from '#lib/server/reservation/closure-timeline.js';
 import { buildDateInTz, nextDay } from '#lib/server/reservation/timezone.js';
 import { isInAccessWindow } from '#lib/server/lock/fallback-code-service.js';
 import { eventPosterKeySql } from '#lib/server/event/event-columns.js';
@@ -27,8 +28,8 @@ export const DASHBOARD_SHOW_HORIZON_DAYS = 7;
 const startOfClubDay = (date: string) => buildDateInTz(date, '00:00', DEFAULT_TIMEZONE);
 
 /**
- * Every booking and hold touching today or tomorrow in club time, grouped by
- * day. A booking that crosses midnight appears on both days.
+ * Every booking, hold and closure touching today or tomorrow in club time,
+ * grouped by day. One that crosses midnight appears on both days.
  */
 export async function listRoomDays(now = new Date()) {
 	const today = clubToday(now);
@@ -38,6 +39,8 @@ export async function listRoomDays(now = new Date()) {
 		from: startOfClubDay(date),
 		to: startOfClubDay(nextDay(date))
 	}));
+
+	const closures = await closuresOverlapping(days[0].from, days[1].to);
 
 	const rows = await db
 		.select({
@@ -67,16 +70,19 @@ export async function listRoomDays(now = new Date()) {
 
 	const items = rows.map(({ member, band, event, lockCode, lockSyncedAt, ...r }) => ({
 		...r,
+		kind: 'reservation' as const,
 		booker: toBookerRef({ bookerType: r.bookerType, member, band, event }),
 		// A code the lock has not reported back opens nothing (#780); the digits stay off this page.
 		doorCodeUnconfirmed:
 			r.status === 'confirmed' && !!lockCode && !lockSyncedAt && isInAccessWindow(r, now)
 	}));
 
-	return days.map(({ date, from, to }) => ({
-		date,
-		reservations: items.filter((r) => r.startsAt < to && r.endsAt > from)
-	}));
+	return days.map(({ date, from, to }) => {
+		const overlaps = (r: { startsAt: Date; endsAt: Date }) => r.startsAt < to && r.endsAt > from;
+		const reservations = items.filter(overlaps);
+		const closed = closures.filter(overlaps);
+		return { date, reservations, closures: closed, uses: interleave(reservations, closed, 'asc') };
+	});
 }
 
 /** Who joined this club-time month, and the latest few to join at all. */

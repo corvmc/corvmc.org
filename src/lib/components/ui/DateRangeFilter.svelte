@@ -10,6 +10,7 @@
 	 */
 	// Native `<input type="date">` rather than a calendar widget: it is what
 	// every other filter bar here uses, and the picker is the platform's.
+	import type { Snippet } from 'svelte';
 	import FilterBar from './FilterBar.svelte';
 	import Button from './Button.svelte';
 
@@ -18,7 +19,8 @@
 		to = $bindable(),
 		defaultFrom = '',
 		defaultTo = '',
-		onchange
+		onchange,
+		actions
 	}: {
 		/** `YYYY-MM-DD`, inclusive. Empty string means unbounded. */
 		from: string;
@@ -28,6 +30,8 @@
 		defaultTo?: string;
 		/** Fired after any change, for a page that has to reset pagination. */
 		onchange?: () => void;
+		/** The current view's own actions, at the row's end. */
+		actions?: Snippet;
 	} = $props();
 
 	const uid = $props.id();
@@ -59,6 +63,7 @@
 	activeCount={activeFilterCount}
 	onclear={() => apply(defaultFrom, defaultTo)}
 	searchWidth="content"
+	{actions}
 >
 	{#snippet search()}
 		<div class="flex flex-wrap items-center gap-2">

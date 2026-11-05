@@ -5,7 +5,11 @@ import { group } from '#lib/server/db/schema/group.js';
 import { production } from '#lib/server/db/schema/production.js';
 import { project, projectCommittee } from '#lib/server/db/schema/project.js';
 import { showCommitteeSlugs, type ProjectCommitteeRole } from '#lib/config.js';
-import { domainEvents } from '#lib/server/event-bus/event-bus.js';
+import { dutyList } from '#lib/server/db/schema/volunteer.js';
+import {
+	applyDutyList,
+	DutyListAlreadyAppliedError
+} from '#lib/server/volunteer/duty-list-service.js';
 import { captureException } from '#lib/server/sentry.js';
 
 /**
@@ -28,6 +32,11 @@ export interface ShowProjectInput {
 	startsAt: Date | null;
 	endsAt: Date | null;
 	createdByUserId: string | null;
+	description?: string | null;
+	budgetCents?: number | null;
+	suggestionId?: string | null;
+	/** The owning committee, when somebody chose one. */
+	ownerGroupId?: string | null;
 }
 
 /** Booking and Production, where each exists and is live. A missing one is skipped. */
@@ -69,6 +78,9 @@ export function showProjectWrites(
 			id: input.projectId,
 			name: input.name,
 			kind: 'production',
+			description: input.description ?? null,
+			budgetCents: input.budgetCents ?? null,
+			suggestionId: input.suggestionId ?? null,
 			...projectWindow(input.startsAt, input.endsAt),
 			createdByUserId: input.createdByUserId
 		}),
@@ -77,7 +89,11 @@ export function showProjectWrites(
 			projectId: input.projectId,
 			createdByUserId: input.createdByUserId
 		}),
-		...committees.map((c) =>
+		// First: the owner keeps its role if it is also a show committee.
+		...(input.ownerGroupId
+			? [{ groupId: input.ownerGroupId, role: 'owner' as const }, ...committees]
+			: committees
+		).map((c) =>
 			db
 				.insert(projectCommittee)
 				.values({ projectId: input.projectId, groupId: c.groupId, role: c.role })
@@ -110,17 +126,31 @@ export async function deleteShowProject(productionId: string): Promise<void> {
 }
 
 /**
- * Say a show exists, once its listing names the production. Listeners stamp
- * the show's default deliverables; a failure there must not undo the show.
+ * Stamp the Production template into a show opened without anyone picking it:
+ * from a listing, or by a series. Found by its kind rather than by name, so staff
+ * can rename it; none active, no checklist. A failure must not undo the show.
  */
-export async function announceProductionCreated(
-	productionId: string,
+export async function stampProductionTemplate(
+	projectId: string,
 	eventId: string,
 	createdByUserId: string | null
 ): Promise<void> {
 	try {
-		await domainEvents.emit('production.created', { productionId, eventId, createdByUserId });
+		const [template] = await db
+			.select({ id: dutyList.id })
+			.from(dutyList)
+			.where(
+				and(
+					eq(dutyList.projectKind, 'production'),
+					eq(dutyList.subject, 'project'),
+					eq(dutyList.isActive, true)
+				)
+			)
+			.limit(1);
+		if (!template) return;
+		await applyDutyList(template.id, { kind: 'project', id: projectId, eventId }, createdByUserId);
 	} catch (err) {
-		captureException(err, { event: 'production.created', productionId, eventId });
+		if (err instanceof DutyListAlreadyAppliedError) return;
+		captureException(err, { event: 'production.template', projectId, eventId });
 	}
 }

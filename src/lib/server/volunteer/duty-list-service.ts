@@ -23,7 +23,7 @@ import {
 	dutyListAnchorLabels,
 	eventDutyListAnchors
 } from '#lib/config.js';
-import type { DutyListAnchor, DutyListAutoApplyTrigger, WorkDoneCondition } from '#lib/config.js';
+import type { DutyListAnchor, ProjectKind, WorkDoneCondition } from '#lib/config.js';
 import type { DutyList, DutyListItem } from '#lib/server/db/schema/volunteer.js';
 import { chunk, chunkSize } from '#lib/server/utils/chunk.js';
 import {
@@ -280,6 +280,18 @@ export async function listDutyLists(opts: { includeInactive?: boolean } = {}) {
 	})) satisfies DutyListRow[];
 }
 
+/** A template a new project can start from: live, a project's, with items on it. */
+export async function getStartableTemplate(id: string): Promise<DutyList> {
+	const detail = await getDutyListDetail(id);
+	if (!detail || !detail.list.isActive || detail.list.subject !== 'project') {
+		throw new DutyListNotFoundError();
+	}
+	if (detail.items.length === 0) {
+		throw new DutyListValidationError('That template has no items on it yet.', 'templateId');
+	}
+	return detail.list;
+}
+
 export interface DutyListItemRow extends DutyListItem {
 	roleName: string;
 	/** The owning committee's name, or null for staff's. */
@@ -331,7 +343,7 @@ export async function createDutyList(data: {
 	name: string;
 	description?: string | null;
 	anchor: DutyListAnchor;
-	autoApplyOn?: DutyListAutoApplyTrigger | null;
+	projectKind?: ProjectKind;
 	createdByUserId: string;
 }): Promise<DutyList> {
 	const name = data.name.trim();
@@ -351,30 +363,26 @@ export async function createDutyList(data: {
 			description: data.description?.trim() || null,
 			anchor: data.anchor,
 			subject: 'project',
-			autoApplyOn: data.autoApplyOn ?? null,
+			projectKind: data.projectKind ?? 'general',
 			createdByUserId: data.createdByUserId
 		})
 		.returning();
 
-	if (!data.autoApplyOn) return (await insert)[0];
-	const [, [row]] = await db.batch([releaseTrigger(data.autoApplyOn), insert]);
+	if (data.projectKind !== 'production') return (await insert)[0];
+	const [, [row]] = await db.batch([releaseProductionTemplate(), insert]);
 	return row;
 }
 
 /**
- * A trigger stamps one template, so claiming it takes it off whichever project
- * template held it. Runs first in the claiming write's batch.
+ * One template starts a production, so marking one takes it off whichever held
+ * it. Runs first in the marking write's batch.
  */
-function releaseTrigger(trigger: DutyListAutoApplyTrigger, exceptId?: string) {
+function releaseProductionTemplate(exceptId?: string) {
 	return db
 		.update(dutyList)
-		.set({ autoApplyOn: null, updatedAt: new Date() })
+		.set({ projectKind: 'general', updatedAt: new Date() })
 		.where(
-			and(
-				isTemplate,
-				eq(dutyList.autoApplyOn, trigger),
-				exceptId ? ne(dutyList.id, exceptId) : undefined
-			)
+			and(eq(dutyList.projectKind, 'production'), exceptId ? ne(dutyList.id, exceptId) : undefined)
 		);
 }
 
@@ -384,7 +392,7 @@ export async function updateDutyList(
 		name?: string;
 		description?: string | null;
 		anchor?: DutyListAnchor;
-		autoApplyOn?: DutyListAutoApplyTrigger | null;
+		projectKind?: ProjectKind;
 		isActive?: boolean;
 	}
 ): Promise<DutyList> {
@@ -412,12 +420,12 @@ export async function updateDutyList(
 	}
 	if (data.description !== undefined) updates.description = data.description?.trim() || null;
 	if (data.anchor !== undefined) updates.anchor = data.anchor;
-	if (data.autoApplyOn !== undefined) updates.autoApplyOn = data.autoApplyOn;
+	if (data.projectKind !== undefined) updates.projectKind = data.projectKind;
 	if (data.isActive !== undefined) updates.isActive = data.isActive;
 
 	const update = db.update(dutyList).set(updates).where(eq(dutyList.id, id)).returning();
-	if (!data.autoApplyOn) return (await update)[0];
-	const [, [row]] = await db.batch([releaseTrigger(data.autoApplyOn, id), update]);
+	if (data.projectKind !== 'production') return (await update)[0];
+	const [, [row]] = await db.batch([releaseProductionTemplate(id), update]);
 	return row;
 }
 

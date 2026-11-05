@@ -38,10 +38,6 @@
 	});
 
 	const anchorOptions = dutyListAnchors.map((a) => ({ value: a, label: dutyListAnchorLabels[a] }));
-	const autoApplyOptions = [
-		{ value: '', label: m.staff_never() },
-		{ value: 'production.created', label: m.staff_when_production_created() }
-	];
 
 	const kindOptions = [
 		{ value: 'scheduled', label: m.staff_project_templates_id_scheduled_shift_with_start_end() },
@@ -109,11 +105,11 @@
 					value={d.list.anchor}
 				/>
 				<FormField
-					field={updateDutyList.fields.autoApplyOn}
-					label={m.staff_apply_automatically()}
-					type="select"
-					options={autoApplyOptions}
-					value={d.list.autoApplyOn ?? ''}
+					field={updateDutyList.fields.startsProduction}
+					type="checkbox"
+					label={m.staff_production()}
+					checkboxLabel={m.staff_project_templates_starts_production()}
+					value={d.list.projectKind === 'production'}
 				/>
 				<FormField
 					field={updateDutyList.fields.isActive}
@@ -268,7 +264,7 @@
 				outline
 				confirm={m.staff_project_templates_id_delete({ name: d.list.name })}
 				successToast={m.staff_project_templates_id_template_deleted()}
-				onsuccess={() => goto(resolve('staff/project-templates'))}
+				onsuccess={() => goto(resolve('staff/projects/templates'))}
 			>
 				{#snippet form()}
 					<input {...deleteDutyList.fields.id.as('hidden', d.list.id)} />

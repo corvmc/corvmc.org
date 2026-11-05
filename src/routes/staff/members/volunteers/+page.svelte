@@ -152,11 +152,10 @@
 {/snippet}
 
 <PageHeader title={m.staff_members()}>
-	<LogHoursForMemberAction />
+	<MemberViews active="volunteers" />
 </PageHeader>
 
 <PageContent>
-	<MemberViews active="volunteers" />
 	<Roster
 		{roster}
 		result={list}
@@ -167,6 +166,10 @@
 		emails={() => getStaffVolunteerEmails(active)}
 		tone={(v) => (v.status === 'blocked' ? 'muted' : undefined)}
 	>
+		{#snippet toolbar()}
+			<LogHoursForMemberAction />
+		{/snippet}
+
 		{#snippet filters()}
 			<Select
 				size="sm"

@@ -16,4 +16,8 @@
 	const chat = $derived(await getGroupChatTopic(threadId));
 </script>
 
-<GroupChat {chat} viewerUserId={bandLayout.current.user.id} />
+<GroupChat
+	{chat}
+	viewerUserId={bandLayout.current.user.id}
+	backHref="/band/{page.params.slug}/messages"
+/>

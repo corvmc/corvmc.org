@@ -159,14 +159,27 @@ export const confirmUnsubscribeAll = form(
 // Staff queries
 // ---------------------------------------------------------------------------
 
-/** List all audiences (staff). Used on audiences index and as audience options. */
-export const getAudiences = query(z.void(), async () => {
-	await requireCapability('marketing.read');
+async function listAudienceRows() {
 	const rows = await listAudiences();
 	return rows.map((a) => ({
 		...a,
 		ref: toGenericRef('audience', { id: a.id, title: a.name, subtitle: a.description })
 	}));
+}
+
+/** Every audience, as options for a campaign. */
+export const getAudiences = query(z.void(), async () => {
+	await requireCapability('marketing.read');
+	return listAudienceRows();
+});
+
+/**
+ * The Audiences tab. Stricter than `getAudiences`, which campaign pickers read
+ * under `marketing.read`: this one refuses whoever the tab is hidden from.
+ */
+export const getAudienceList = query(z.void(), async () => {
+	await requireCapability('marketing.manageAudiences');
+	return listAudienceRows();
 });
 
 /** Alias for getAudiences, used in campaign editor audience pickers. */

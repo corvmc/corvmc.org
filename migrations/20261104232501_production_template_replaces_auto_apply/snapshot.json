@@ -1,10 +1,10 @@
 {
+  "id": "e2381c9a-f9b1-4db5-a929-0544aa0bffe0",
+  "prevIds": [
+    "537209e9-e387-499b-9c01-a9edb233c039"
+  ],
   "version": "7",
   "dialect": "sqlite",
-  "id": "41bdfc36-62e0-4593-97b0-399816c3df70",
-  "prevIds": [
-    "cb2520a9-d33a-4ba1-b4e4-417f228a8c50"
-  ],
   "ddl": [
     {
       "name": "account",
@@ -8807,6 +8807,16 @@
       "default": null,
       "generated": null,
       "name": "auto_apply_on",
+      "entityType": "columns",
+      "table": "duty_list"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'general'",
+      "generated": null,
+      "name": "project_kind",
       "entityType": "columns",
       "table": "duty_list"
     },
@@ -23002,6 +23012,20 @@
       "where": "auto_apply_on is not null",
       "origin": "manual",
       "name": "uq_duty_list_auto_apply",
+      "entityType": "indexes",
+      "table": "duty_list"
+    },
+    {
+      "columns": [
+        {
+          "value": "project_kind",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "project_kind = 'production'",
+      "origin": "manual",
+      "name": "uq_duty_list_production",
       "entityType": "indexes",
       "table": "duty_list"
     },

@@ -39,5 +39,5 @@
 </script>
 
 {#if tabs.length > 1}
-	<TabBar class="mb-4" {active} {tabs} />
+	<TabBar collapse {active} {tabs} />
 {/if}

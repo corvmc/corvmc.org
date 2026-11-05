@@ -34,12 +34,10 @@
 </script>
 
 <PageHeader title={m.staff_members()}>
-	<InviteMemberAction />
+	<MemberViews active="invites" />
 </PageHeader>
 
 <PageContent>
-	<MemberViews active="invites" />
-
 	<FilterBar
 		activeCount={status === 'pending' ? 0 : 1}
 		onclear={() => {
@@ -61,6 +59,9 @@
 			<option value="revoked">{m.staff_members_invites_revoked()}</option>
 			<option value="">{m.staff_all_statuses()}</option>
 		</Select>
+		{#snippet actions()}
+			<InviteMemberAction />
+		{/snippet}
 	</FilterBar>
 
 	<DataList {result} empty={m.staff_members_invites_empty()} onpage={(p) => (page = p)}>

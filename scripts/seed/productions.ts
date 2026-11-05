@@ -1,5 +1,6 @@
 import { production, productionExpense } from '../../src/lib/server/db/schema/production';
 import { eventListing } from '../../src/lib/server/db/schema/event';
+import { project } from '../../src/lib/server/db/schema/project';
 import { batchInsert, db } from './db';
 import { insertShowProductions, syncShowProjects } from './show-project';
 import { eq, inArray } from 'drizzle-orm';
@@ -147,6 +148,13 @@ export async function seedProductions(events: SeedEvent[], users: SeedUser[]) {
 		}
 	}
 	await syncShowProjects();
+
+	// A show started from the Production template, before its listing exists (#2387).
+	const [unlisted] = await insertShowProductions([{ status: 'draft', createdByUserId: producer }]);
+	await db
+		.update(project)
+		.set({ name: 'Winter benefit' })
+		.where(eq(project.id, unlisted.projectId!));
 
 	/** What the downstream seeds ask for: the row plus the listing it announces. */
 	const withEvent = inserted.map((row, i) => ({ ...row, eventId: eventIds[i] }));

@@ -1386,11 +1386,12 @@ export const dutyListAnchorLabels: Record<DutyListAnchor, string> = {
 export const dutyListStoredSubjects = ['event', 'reservation', 'project'] as const;
 
 /**
- * The domain event that stamps a template out with nobody pressing a button,
- * found by this column rather than by name. `reservation.first` is retired with
- * the reservation subject; nothing reads it.
+ * The domain event that stamps a template out with nobody pressing a button.
+ * `reservation.first` is retired with the reservation subject; nothing reads it.
+ * A show's template is picked instead (#2387). Rules replace this column (#2389),
+ * so it takes no new values.
  */
-export const dutyListAutoApplyTriggers = ['reservation.first', 'production.created'] as const;
+export const dutyListAutoApplyTriggers = ['reservation.first'] as const;
 export type DutyListAutoApplyTrigger = (typeof dutyListAutoApplyTriggers)[number];
 
 /**

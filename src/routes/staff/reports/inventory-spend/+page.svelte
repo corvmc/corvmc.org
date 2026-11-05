@@ -9,6 +9,8 @@
 	import { Field } from '#lib/components/ui/Form/index.js';
 	import Button from '#lib/components/ui/Button.svelte';
 	import { getSpendReport } from '#lib/remote/inventory.remote.js';
+	import StaffViews from '../../StaffViews.svelte';
+	import { reportViews } from '../views';
 	import { formatCents } from '#lib/utils/format.js';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import { contractorTradeLabels, type ContractorTrade } from '#lib/config.js';
@@ -44,14 +46,16 @@
 		if (from) parts.push(`from=${encodeURIComponent(from)}`);
 		if (to) parts.push(`to=${encodeURIComponent(to)}`);
 		const qs = parts.length > 0 ? `?${parts.join('&')}` : '';
-		goto(withQuery(resolve('staff/inventory/spend'), qs), {
+		goto(withQuery(resolve('staff/reports/inventory-spend'), qs), {
 			replace: true,
 			reset: false
 		});
 	}
 </script>
 
-<PageHeader title={m.staff_spend()} subtitle={m.staff_inventory()} />
+<PageHeader title={m.staff_reports()} documentTitle={m.staff_reports_inventory_spend()}>
+	<StaffViews views={reportViews} active="inventory-spend" collapse />
+</PageHeader>
 
 <PageContent>
 	<div class="mb-4 flex flex-wrap items-end gap-3">

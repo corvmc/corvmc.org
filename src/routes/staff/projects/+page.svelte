@@ -9,6 +9,8 @@
 	import Select from '#lib/components/ui/Form/Select.svelte';
 	import { Field, MoneyField } from '#lib/components/ui/Form/index.js';
 	import { getProjectsPage, createProjectForm } from '#lib/remote/projects.remote.js';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import type { ProjectView } from '#lib/config.js';
 	import ProjectsTable from './ProjectsTable.svelte';
 	import ProjectViews from './ProjectViews.svelte';
@@ -32,6 +34,7 @@
 	const { fields } = createProjectForm;
 
 	const committeeOptions = $derived(data.committees.map((c) => ({ value: c.id, label: c.name })));
+	const templateOptions = $derived(data.templates.map((t) => ({ value: t.id, label: t.name })));
 	const activeFilterCount = $derived((view !== 'active' ? 1 : 0) + (committeeFilter ? 1 : 0));
 
 	function clearFilters() {
@@ -46,6 +49,11 @@
 		label={m.staff_projects_new_project()}
 		modalTitle={m.staff_projects_new_project()}
 		successToast={m.staff_projects_success_toast()}
+		onsuccess={(result) => {
+			// A show leaves this list once it has a listing, so land on the project.
+			const id = (result as { id?: string } | undefined)?.id;
+			if (id) void goto(resolve(`staff/projects/${id}`));
+		}}
 	>
 		{#snippet form()}
 			<Field
@@ -56,9 +64,17 @@
 			/>
 			<Field field={fields.description} type="textarea" label={m.staff_description()} />
 			<Field
+				field={fields.templateId}
+				type="select"
+				label={m.staff_template()}
+				placeholder={m.ui_none()}
+				options={templateOptions}
+			/>
+			<Field
 				field={fields.groupId}
 				type="select"
 				label={m.staff_owning_committee()}
+				placeholder={m.ui_none()}
 				options={committeeOptions}
 				description={m.staff_projects_only_committee_can_own_project()}
 			/>

@@ -146,6 +146,7 @@
 					field={editFields.groupId}
 					type="select"
 					label={m.staff_owning_committee()}
+					placeholder={m.ui_none()}
 					options={committeeOptions}
 					value={owner?.groupId ?? ''}
 				/>
@@ -153,6 +154,7 @@
 					field={editFields.suggestionId}
 					type="select"
 					label={m.staff_projects_id_answers_suggestion()}
+					placeholder={m.ui_none()}
 					options={suggestionOptions}
 					value={project.suggestionId ?? ''}
 					description={m.staff_projects_id_one_project_per_suggestion_its()}

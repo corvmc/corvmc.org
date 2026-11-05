@@ -10,6 +10,8 @@
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import { getStaffCredits } from '#lib/remote/users.remote.js';
+	import StaffViews from '../../StaffViews.svelte';
+	import { moneyViews } from '../views';
 	import { formatDateTimeShort, titleCase } from '#lib/utils/format.js';
 	import { creditSourceLabels } from '#lib/config.js';
 
@@ -57,7 +59,9 @@
 	}
 </script>
 
-<PageHeader title={m.staff_credits_title()} />
+<PageHeader title={m.staff_payments_title()} documentTitle={m.staff_credits_title()}>
+	<StaffViews views={moneyViews} active="credits" />
+</PageHeader>
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}

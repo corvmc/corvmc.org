@@ -13,6 +13,8 @@
 	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import Button from '#lib/components/ui/Button.svelte';
 	import { getStaffPayments } from '#lib/remote/users.remote.js';
+	import StaffViews from '../../StaffViews.svelte';
+	import { moneyViews } from '../views';
 	import { formatDateTimeShort, formatCents } from '#lib/utils/format.js';
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
@@ -55,7 +57,9 @@
 	}
 </script>
 
-<PageHeader title={m.staff_payments_title()} />
+<PageHeader title={m.staff_payments_title()}>
+	<StaffViews views={moneyViews} active="payments" />
+</PageHeader>
 <PageContent>
 	<p class="mb-4 text-sm text-base-content/60">
 		{m.staff_payments_cash_credit_settled_payments_only()}

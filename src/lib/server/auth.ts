@@ -189,7 +189,7 @@ export async function verifyBcryptInWorker(hash: string, password: string): Prom
 	return true;
 }
 
-async function verifyBcryptViaLaravel(hash: string, password: string): Promise<boolean> {
+export async function verifyBcryptViaLaravel(hash: string, password: string): Promise<boolean> {
 	const laravelUrl = env.LARAVEL_URL;
 	const migrationSecret = env.MIGRATION_SECRET;
 
@@ -276,20 +276,9 @@ async function verifyBcryptViaLaravel(hash: string, password: string): Promise<b
 			const newHash = await scryptHash(password);
 
 			await db.update(account).set({ password: newHash }).where(eq(account.password, hash));
-		} else {
-			// Laravel reached and authoritative, but rejected the credentials. This is
-			// the one bcrypt path that previously failed silently — surface it so a
-			// migration that rejects a known-good password is visible.
-			captureException(
-				new Error('bcrypt migration: Laravel verify-password rejected the credentials'),
-				{
-					event: 'auth.bcrypt_migration',
-					stage: 'invalid_credentials',
-					email: userRow.email
-				}
-			);
 		}
 
+		// Not valid: both verifiers refused it, which is simply a wrong password.
 		return valid;
 	} catch (err) {
 		captureException(err, {

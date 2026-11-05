@@ -22,6 +22,7 @@ describe('the project filter', () => {
 		expect(parseProjectFilter('none')).toBe('none');
 		expect(parseProjectFilter('project')).toBe('project');
 		expect(parseProjectFilter('bogus')).toBe('');
+		expect(parseProjectFilter('toString')).toBe('');
 		expect(parseProjectFilter(null)).toBe('');
 		expect(Object.keys(PROJECT_FILTERS)).toEqual(['', 'project', 'none']);
 	});

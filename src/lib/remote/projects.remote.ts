@@ -20,7 +20,6 @@ import { suggestion } from '#lib/server/db/schema/suggestion.js';
 import { asc, eq } from 'drizzle-orm';
 import {
 	attachToProject,
-	createProject,
 	detachFromProject,
 	getEventProject,
 	getProjectBurn,
@@ -31,6 +30,7 @@ import {
 	listProjectCommittees,
 	listProjects,
 	setProjectStatus,
+	startProject,
 	startProjectFromSuggestion,
 	updateProject
 } from '#lib/server/project/project-service.js';
@@ -133,14 +133,15 @@ export const getProjectsPage = query(projectFilters, async (filters) => {
 	await requireCapability('project.read');
 
 	const view = filters?.view ?? 'active';
-	// Productions are the Productions view, which lists the shows themselves.
-	const [projects, committees] = await Promise.all([
+	// A show with a listing is on the Productions view, which lists listings.
+	const [projects, committees, templates] = await Promise.all([
 		listProjects({
 			groupId: filters?.groupId,
-			kind: 'general',
+			exceptListedShows: true,
 			archived: view === 'all' ? undefined : view === 'archived'
 		}),
-		listCommittees()
+		listCommittees(),
+		listDutyLists()
 	]);
 
 	const ids = projects.map((p) => p.id);
@@ -152,6 +153,7 @@ export const getProjectsPage = query(projectFilters, async (filters) => {
 
 	return {
 		committees,
+		templates: templates.filter((t) => t.itemCount > 0).map((t) => ({ id: t.id, name: t.name })),
 		projects: projects.map((project, i) => ({
 			project,
 			burn: burns[i],
@@ -253,20 +255,27 @@ function refreshDetail(id: string) {
 // Mutations
 // ---------------------------------------------------------------------------
 
-export const createProjectForm = form(z.object(projectFields), async (raw) => {
-	// `requireCapability` returns the caller, so the guard and the author are one call.
-	const user = await requireCapability('project.manage');
-	try {
-		const row = await createProject({
-			...toServiceInput(raw as ProjectFields),
-			createdByUserId: user.id
-		});
-		void getProjectsPage().refresh();
-		return { success: true, id: row.id };
-	} catch (err) {
-		mapDomainError(err);
+/** A template's id is whatever the migration that made it wrote, not always a uuid. */
+const optionalTemplateId = z.union([z.literal(''), z.string().min(1)]).optional();
+
+export const createProjectForm = form(
+	z.object({ ...projectFields, templateId: optionalTemplateId }),
+	async (raw) => {
+		// `requireCapability` returns the caller, so the guard and the author are one call.
+		const user = await requireCapability('project.manage');
+		const { templateId, ...fields } = raw as ProjectFields & { templateId?: string };
+		try {
+			const row = await startProject(
+				{ ...toServiceInput(fields), createdByUserId: user.id },
+				templateId || null
+			);
+			void getProjectsPage().refresh();
+			return { success: true, id: row.id };
+		} catch (err) {
+			mapDomainError(err);
+		}
 	}
-});
+);
 
 export const updateProjectForm = form(z.object({ id: z.uuid(), ...projectFields }), async (raw) => {
 	await requireCapability('project.manage');

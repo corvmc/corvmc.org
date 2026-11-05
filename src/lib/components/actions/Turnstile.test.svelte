@@ -16,7 +16,7 @@
 		reset?: () => void;
 	} = $props();
 
-	// eslint-disable-next-line no-useless-assignment
+	// eslint-disable-next-line no-useless-assignment, @typescript-eslint/no-unused-vars
 	reset = () => {};
 </script>
 

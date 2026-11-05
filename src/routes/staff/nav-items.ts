@@ -38,31 +38,24 @@ export type StaffNavKey =
 	| 'music'
 	| 'ballots'
 	| 'volunteer-schedule'
-	| 'project-templates'
-	| 'volunteer-report'
 	| 'reservations'
 	| 'equipment'
 	| 'equipment-loans'
 	| 'equipment-reports'
-	| 'inventory-acquisitions'
-	| 'inventory-spend'
 	| 'inventory-compliance'
 	| 'contractors'
-	| 'incidents'
 	| 'keys'
 	| 'projects'
 	| 'venues'
 	| 'calendar'
-	| 'flags'
+	| 'moderation'
 	| 'suggestions'
 	| 'classifieds'
-	| 'campaigns'
-	| 'audiences'
+	| 'outreach'
 	| 'help'
 	| 'local-resources'
 	| 'resource-tips'
 	| 'payments'
-	| 'credits'
 	| 'sponsors'
 	| 'grants'
 	| 'renewals'
@@ -189,13 +182,6 @@ export const staffNavSections: StaffNavSection[] = [
 				alsoFor: ['event.manage'],
 				label: 'Projects',
 				href: resolve('staff/projects')
-			},
-			// Gated like Projects: a template is edited under `project.manage`.
-			{
-				key: 'project-templates',
-				capability: 'project.read',
-				label: 'Project Templates',
-				href: resolve('staff/project-templates')
 			},
 			// Every work order, in a project or not (#2034), and the recurring
 			// work that writes them (#2087). The Volunteering dashboard folded in
@@ -347,11 +333,15 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'moderation',
 		title: 'Moderation',
 		items: [
+			// Content Flags and Incidents are its views, each with its own gate (#2393).
+			// Their records keep their addresses, which notifications link to.
 			{
-				key: 'flags',
+				key: 'moderation',
 				capability: 'moderation.reviewFlags',
-				label: 'Content Flags',
-				href: resolve('staff/flags'),
+				alsoFor: ['incident.read'],
+				label: 'Moderation',
+				href: resolve('staff/moderation'),
+				also: [resolve('staff/flags'), resolve('staff/incidents')],
 				badgeKey: 'appealsPending'
 			},
 			{
@@ -360,12 +350,6 @@ export const staffNavSections: StaffNavSection[] = [
 				surface: 'classifieds',
 				label: 'Classifieds',
 				href: resolve('staff/classifieds')
-			},
-			{
-				key: 'incidents',
-				capability: 'incident.read',
-				label: 'Incidents',
-				href: resolve('staff/incidents')
 			}
 		]
 	},
@@ -373,17 +357,13 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'outreach',
 		title: 'Outreach',
 		items: [
+			// Campaigns and Audiences are its views, each with its own gate (#2394).
 			{
-				key: 'campaigns',
+				key: 'outreach',
 				capability: 'marketing.read',
-				label: 'Campaigns',
-				href: resolve('staff/marketing/campaigns')
-			},
-			{
-				key: 'audiences',
-				capability: 'marketing.manageAudiences',
-				label: 'Audiences',
-				href: resolve('staff/marketing/audiences')
+				alsoFor: ['marketing.manageAudiences'],
+				label: 'Outreach',
+				href: resolve('staff/marketing')
 			}
 		]
 	},
@@ -391,11 +371,13 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'money',
 		title: 'Money',
 		items: [
+			// Payments and Credits are its views, each with its own gate (#2395).
 			{
 				key: 'payments',
 				capability: 'finance.read',
+				alsoFor: ['credit.read'],
 				label: 'Payments',
-				href: resolve('staff/payments')
+				href: resolve('staff/money')
 			},
 			// Money rather than Moderation: the page's first job is answering
 			// whether there is enough music to switch the station on, and its
@@ -411,12 +393,6 @@ export const staffNavSections: StaffNavSection[] = [
 				href: resolve('staff/music')
 			},
 			{
-				key: 'credits',
-				capability: 'credit.read',
-				label: 'Credits',
-				href: resolve('staff/credits')
-			},
-			{
 				key: 'grants',
 				capability: 'grant.read',
 				label: 'Grants',
@@ -429,32 +405,15 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'reports',
 		title: 'Reports',
 		items: [
-			// `finance.read` rather than a report capability of its own: the money
-			// lines are what decides who may open it.
+			// Each view has its own gate (#2396). An acquisition's record stays under
+			// inventory, where its receipt and its items are, and lights this row.
 			{
 				key: 'reports',
 				capability: 'finance.read',
-				label: 'Annual Report',
-				href: resolve('staff/reports')
-			},
-			{
-				key: 'volunteer-report',
-				capability: 'volunteer.report',
-				label: 'Volunteering',
-				href: resolve('staff/reports/volunteering')
-			},
-			{
-				key: 'inventory-spend',
-				capability: 'inventory.report',
-				label: 'Inventory Spend',
-				href: resolve('staff/inventory/spend')
-			},
-			// When stock arrived and from whom; each item's page lists its own (#1841).
-			{
-				key: 'inventory-acquisitions',
-				capability: 'inventory.manageAcquisitions',
-				label: 'Acquisitions',
-				href: resolve('staff/inventory/acquisitions')
+				alsoFor: ['volunteer.report', 'inventory.report', 'inventory.manageAcquisitions'],
+				label: 'Reports',
+				href: resolve('staff/reports'),
+				also: [resolve('staff/inventory/spend'), resolve('staff/inventory/acquisitions')]
 			}
 		]
 	},

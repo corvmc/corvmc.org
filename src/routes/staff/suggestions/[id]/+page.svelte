@@ -85,7 +85,7 @@
 	{:else if s.visibility === 'under_review'}
 		<!-- One report, one place to decide. Resolving here as well as in the flag
 		     queue would let two staff reach opposite conclusions on one report. -->
-		<Alert type="warning" href={resolve('staff/flags')}>
+		<Alert type="warning" href={resolve('staff/moderation/flags')}>
 			{m.staff_suggestions_id_member_reported_so_came_off()}
 		</Alert>
 	{:else if s.visibility === 'hidden'}
@@ -200,6 +200,7 @@
 						field={projectFields.groupId}
 						type="select"
 						label={m.staff_suggestions_id_owning_committee()}
+						placeholder={m.ui_none()}
 						options={committeeOptions}
 						description={m.staff_suggestions_id_description()}
 					/>

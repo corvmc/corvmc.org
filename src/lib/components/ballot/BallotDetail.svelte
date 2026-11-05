@@ -315,6 +315,7 @@
 								field={startFields.groupId}
 								type="select"
 								label={msg.ballot_ballot_detail_owning_committee()}
+								placeholder={msg.ui_none()}
 								options={start.committees.map((c) => ({ value: c.id, label: c.name }))}
 								description={msg.ballot_ballot_detail_only_committee_can_own_project()}
 							/>

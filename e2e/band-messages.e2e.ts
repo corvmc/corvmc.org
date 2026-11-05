@@ -220,6 +220,23 @@ test.describe.serial('band booking enquiries', () => {
 		await expect(page.getByTestId('enquiry-list')).toHaveCount(0);
 	});
 
+	test('on a phone a chat room replaces the list, and back returns to it', async ({ page }) => {
+		await page.setViewportSize({ width: 390, height: 844 });
+		await login(page, SEED_BANDMATE_EMAIL, SEED_BANDMATE_PASSWORD);
+
+		const inbox = `/band/${SEED_MEMBERS_BAND_SLUG}/messages`;
+		await page.goto(inbox);
+		await chatRoom(page).click();
+		await expect(page).toHaveURL(new RegExp(`${inbox}/chat/`));
+
+		await expect(page.locator('form textarea:is([name="body"], [name^="body/"])')).toBeVisible();
+		await expect(chatRoom(page)).toBeHidden();
+
+		await page.locator(`main a[href="${inbox}"]`).click();
+		await expect(page).toHaveURL(new RegExp(`${inbox}$`));
+		await expect(chatRoom(page)).toBeVisible();
+	});
+
 	// The old single-room route. It lands on the inbox rather than on a thread,
 	// because with topics there is no one room to send a bookmark to (#1301).
 	test('the retired chat route still lands on the inbox', async ({ page }) => {

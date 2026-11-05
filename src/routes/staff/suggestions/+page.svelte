@@ -138,7 +138,7 @@
 			<ParaglideMessage
 				message={m.staff_suggestions_nothing_here_visible_members_reported}
 				inputs={{ staff_content_flags: m.staff_content_flags() }}
-				>{#snippet a({ children })}<a class="link" href={resolve('staff/flags')}
+				>{#snippet a({ children })}<a class="link" href={resolve('staff/moderation/flags')}
 						>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
 			>

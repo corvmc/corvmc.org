@@ -82,11 +82,10 @@
 </script>
 
 <PageHeader title={m.staff_members()}>
-	<InviteMemberAction />
+	<MemberViews active="all" />
 </PageHeader>
 
 <PageContent>
-	<MemberViews active="all" />
 	<svelte:boundary>
 		<UserTotals />
 		{#snippet failed(_error, reset)}
@@ -104,6 +103,10 @@
 		exportPath={resolve('staff/members/export')}
 		emails={() => getStaffUserEmails({ ...f, q: f.q || undefined })}
 	>
+		{#snippet toolbar()}
+			<InviteMemberAction />
+		{/snippet}
+
 		{#snippet filters()}
 			<Select
 				size="sm"

@@ -43,10 +43,9 @@
 	} from '@tabler/icons-svelte';
 	import {
 		formatDate,
-		formatDateTimeShort,
 		formatTimeRange,
 		formatPaymentBreakdown,
-		toLocalDate
+		formatSpan
 	} from '#lib/utils/format.js';
 	import { DEFAULT_TIMEZONE } from '#lib/config.js';
 	import { visibleActions, reservationPaymentState } from '#lib/utils/reservation-actions.js';
@@ -126,13 +125,6 @@
 		}
 	}
 
-	/** A closure can run for days, which a bare time range would hide. */
-	function closureRange(c: Closure): string {
-		return toLocalDate(c.startsAt) === toLocalDate(c.endsAt)
-			? formatTimeRange(c.startsAt, c.endsAt)
-			: `${formatDateTimeShort(c.startsAt)} – ${formatDateTimeShort(c.endsAt)}`;
-	}
-
 	function dayLabel(r: { startsAt: Date }): string {
 		const localDate = new Date(r.startsAt).toLocaleDateString('en-CA', {
 			timeZone: DEFAULT_TIMEZONE
@@ -165,23 +157,6 @@
 </script>
 
 <PageHeader title={m.staff_reservations_title()}>
-	<div class="flex gap-2">
-		<Button
-			variant={unresolvedCount > 0 ? 'warning' : 'ghost'}
-			size="sm"
-			onclick={() => (resolveOpen = true)}
-		>
-			{m.staff_resolve()}
-			{#if unresolvedCount > 0}
-				<Badge>{unresolvedCount}</Badge>
-			{/if}
-		</Button>
-		<RecurringSeriesModal />
-		{#if canManageClosures}<CreateClosureAction data-testid="new-closure" />{/if}
-		<CreateReservation />
-	</div>
-</PageHeader>
-<PageContent>
 	{#await counts}
 		<TabBar
 			tabs={[
@@ -207,7 +182,23 @@
 			}}
 		/>
 	{/await}
-
+	<div class="flex gap-2">
+		<Button
+			variant={unresolvedCount > 0 ? 'warning' : 'ghost'}
+			size="sm"
+			onclick={() => (resolveOpen = true)}
+		>
+			{m.staff_resolve()}
+			{#if unresolvedCount > 0}
+				<Badge>{unresolvedCount}</Badge>
+			{/if}
+		</Button>
+		<RecurringSeriesModal />
+		{#if canManageClosures}<CreateClosureAction data-testid="new-closure" />{/if}
+		<CreateReservation />
+	</div>
+</PageHeader>
+<PageContent>
 	<FilterBar activeCount={activeFilterCount} menuCount={menuFilterCount} onclear={clearFilters}>
 		{#snippet search()}
 			<SearchInput
@@ -315,7 +306,7 @@
 								><Badge size="sm" variant="error">{m.staff_reservations_closed()}</Badge></td
 							>
 							<td class="min-w-0 font-medium">{r.reason}</td>
-							<td class="cell-primary whitespace-nowrap">{closureRange(r)}</td>
+							<td class="cell-primary whitespace-nowrap">{formatSpan(r.startsAt, r.endsAt)}</td>
 							<td class="col-support cell-num"><span class="opacity-40">—</span></td>
 							<td class="w-px">
 								{@render closureActions(r, true)}
@@ -477,7 +468,7 @@
 					{#if r.kind === 'closure'}
 						<li class="flex items-start justify-between gap-3 border-b border-base-300 py-3">
 							<div class="min-w-0 space-y-1">
-								<p class="text-lg font-medium">{closureRange(r)}</p>
+								<p class="text-lg font-medium">{formatSpan(r.startsAt, r.endsAt)}</p>
 								<p>{r.reason}</p>
 							</div>
 							<div class="flex shrink-0 flex-col items-end gap-2">

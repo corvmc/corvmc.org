@@ -332,7 +332,7 @@ export const unblockMember = form(z.object({ userId: z.string().min(1) }), async
 /**
  * Report a conversation to staff.
  *
- * Uses the existing content-flag system — same table, same `/staff/flags`
+ * Uses the existing content-flag system — same table, same `/staff/moderation/flags`
  * queue, same resolve flow. It is a separate remote from `submitFlag` only
  * because a conversation report has two requirements the shared path must not
  * inherit: the reporter has to be in the conversation, and reporting has to

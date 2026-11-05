@@ -6,9 +6,10 @@
 	import RecurringWork from './RecurringWork.svelte';
 </script>
 
-<PageHeader title={m.staff_schedule()} subtitle={m.staff_planning()} />
+<PageHeader title={m.staff_schedule()} subtitle={m.staff_planning()}>
+	<ScheduleViews active="recurring" />
+</PageHeader>
 
 <PageContent>
-	<ScheduleViews active="recurring" />
 	<RecurringWork />
 </PageContent>

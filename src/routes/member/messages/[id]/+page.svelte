@@ -78,7 +78,7 @@
 		<!-- The group's own room. Its own pane because a reply here goes in-app
 		     as you, not out as the group. `t` is the topic itself, so the pane
 		     runs no query of its own (#1776). -->
-		<GroupChat chat={t} viewerUserId={t.viewerUserId} />
+		<GroupChat chat={t} viewerUserId={t.viewerUserId} backHref="/member/messages" />
 	{:else if t.kind === 'enquiry'}
 		<!-- A booking enquiry, the same pane the band panel renders — reply as
 		     the band, by email, with the address hidden either way. -->

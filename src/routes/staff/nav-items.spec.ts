@@ -81,7 +81,8 @@ describe('activeNavKey', () => {
 		['/staff/inventory/intake', 'equipment'],
 		// Restock and Orders are views of the list now (#2021, #2022); an order's page stays.
 		['/staff/inventory/orders/abc', 'equipment'],
-		['/staff/inventory/spend', 'inventory-spend'],
+		['/staff/inventory/spend', 'reports'],
+		['/staff/inventory/acquisitions/abc', 'reports'],
 		['/staff/inventory/compliance', 'inventory-compliance'],
 		// Loans left Inventory's children for a row of its own; its URL did not move.
 		['/staff/inventory/loans', 'equipment-loans'],
@@ -92,15 +93,29 @@ describe('activeNavKey', () => {
 		['/staff/inventory/problems/abc', 'equipment-reports'],
 		['/staff/contractors', 'contractors'],
 		['/staff/contractors/abc', 'contractors'],
-		['/staff/incidents', 'incidents'],
-		['/staff/incidents/abc', 'incidents'],
-		['/staff/reports/volunteering', 'volunteer-report'],
+		// Records keep their addresses under the row they moved to (#2393).
+		['/staff/moderation', 'moderation'],
+		['/staff/moderation/flags', 'moderation'],
+		['/staff/moderation/incidents', 'moderation'],
+		['/staff/flags/abc', 'moderation'],
+		['/staff/incidents/abc', 'moderation'],
+		['/staff/reports', 'reports'],
+		['/staff/reports/annual', 'reports'],
+		['/staff/reports/volunteering', 'reports'],
+		['/staff/reports/inventory-spend', 'reports'],
+		['/staff/reports/acquisitions', 'reports'],
 		['/staff/members/volunteers/hours', 'users'],
 		['/staff/members/instructors', 'users'],
 		['/staff/members/invites', 'users'],
+		['/staff/money', 'payments'],
+		['/staff/money/payments', 'payments'],
+		['/staff/money/credits', 'payments'],
 		['/staff/help', 'help'],
-		['/staff/marketing/campaigns/new', 'campaigns'],
-		['/staff/marketing/campaigns/abc/edit', 'campaigns'],
+		['/staff/marketing', 'outreach'],
+		['/staff/marketing/campaigns', 'outreach'],
+		['/staff/marketing/audiences/abc', 'outreach'],
+		['/staff/marketing/campaigns/new', 'outreach'],
+		['/staff/marketing/campaigns/abc/edit', 'outreach'],
 		['/staff/help/create', 'help'],
 		['/staff/local-resources', 'local-resources'],
 		['/staff/local-resources/categories', 'local-resources'],
@@ -171,11 +186,9 @@ describe('the nav tree', () => {
 		expect(filterNavItems([groups], ['event.read'])).toHaveLength(0);
 	});
 
-	it('puts Project Templates under Planning, beside Projects (#2034)', () => {
-		const planning = staffNavSections.find((s) => s.key === 'planning')!;
-		const keys = planning.items.map((i) => i.key);
-		expect(keys.indexOf('project-templates')).toBe(keys.indexOf('projects') + 1);
-		expect(activeNavKey('/staff/project-templates/abc')).toBe('project-templates');
+	it('reaches Project Templates through Projects (#2385)', () => {
+		expect(activeNavKey('/staff/projects/templates')).toBe('projects');
+		expect(activeNavKey('/staff/projects/templates/abc')).toBe('projects');
 	});
 
 	it('keeps Inbox out of every section, so its badge survives a collapsed group', () => {
@@ -205,13 +218,7 @@ describe('the nav tree', () => {
 		const section = (key: string) => staffNavSections.find((s) => s.key === key)!;
 		const keys = (key: string) => section(key).items.map((i) => i.key);
 		expect(keys('people')).toEqual(['users', 'groups']);
-		expect(keys('planning')).toEqual([
-			'suggestions',
-			'ballots',
-			'projects',
-			'project-templates',
-			'volunteer-schedule'
-		]);
+		expect(keys('planning')).toEqual(['suggestions', 'ballots', 'projects', 'volunteer-schedule']);
 		// Recurring work is a Schedule view (#2087).
 		expect(activeNavKey('/staff/volunteer/schedule/recurring')).toBe('volunteer-schedule');
 		expect(keys('space')).toEqual([
@@ -222,16 +229,10 @@ describe('the nav tree', () => {
 			'keys'
 		]);
 		expect(keys('partners')).toEqual(['sponsors', 'venues', 'local-resources', 'contractors']);
-		expect(keys('moderation')).toEqual(['flags', 'classifieds', 'incidents']);
-		expect(keys('outreach')).toEqual(['campaigns', 'audiences']);
+		expect(keys('moderation')).toEqual(['moderation', 'classifieds']);
+		expect(keys('outreach')).toEqual(['outreach']);
 		expect(keys('money')).toContain('grants');
-		expect(keys('reports')).toEqual([
-			'reports',
-			'volunteer-report',
-			'inventory-spend',
-			// A record of when stock arrived; each item's page shows its own (#1841).
-			'inventory-acquisitions'
-		]);
+		expect(keys('reports')).toEqual(['reports']);
 		expect(keys('system')).toContain('help');
 		expect(keys('events')).toEqual(['calendar']);
 	});
@@ -267,6 +268,7 @@ describe('route coverage', () => {
 		'/staff/members/instructors',
 		'/staff/members/invites',
 		'/staff/projects/productions', // a Projects view (#2101)
+		'/staff/projects/templates', // a Projects view (#2385)
 		'/staff/volunteer/schedule/recurring', // a Schedule view (#2087)
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
@@ -276,6 +278,20 @@ describe('route coverage', () => {
 		'/staff/grants/funders', // reached from Grants' header; its breadcrumb runs through it
 		// Reached from the Bands view's header: the same staff job as a band.
 		'/staff/bands/acts',
+		// Moderation views, reached from its tab bar (#2393).
+		'/staff/moderation/flags',
+		'/staff/moderation/incidents',
+		// Outreach views, reached from its tab bar (#2394).
+		'/staff/marketing/campaigns',
+		'/staff/marketing/audiences',
+		// Payments views, reached from its tab bar (#2395).
+		'/staff/money/payments',
+		'/staff/money/credits',
+		// Reports views, reached from its tab bar (#2396).
+		'/staff/reports/annual',
+		'/staff/reports/volunteering',
+		'/staff/reports/inventory-spend',
+		'/staff/reports/acquisitions',
 		// Groups views, reached from its tab bar (#2086).
 		'/staff/groups/bands',
 		'/staff/groups/clubs',

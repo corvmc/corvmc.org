@@ -432,10 +432,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/credits",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/events",
 		"panel": "staff"
 	},
@@ -461,10 +457,6 @@
 	},
 	{
 		"route": "/staff/events/[id]/vendors/check-in",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/flags",
 		"panel": "staff"
 	},
 	{
@@ -524,10 +516,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/incidents",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/incidents/[id]",
 		"panel": "staff"
 	},
@@ -537,10 +525,6 @@
 	},
 	{
 		"route": "/staff/inventory/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/inventory/acquisitions",
 		"panel": "staff"
 	},
 	{
@@ -581,10 +565,6 @@
 	},
 	{
 		"route": "/staff/inventory/problems/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/inventory/spend",
 		"panel": "staff"
 	},
 	{
@@ -656,19 +636,23 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/moderation/flags",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/moderation/incidents",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/money/credits",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/money/payments",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/music",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/payments",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/project-templates",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/project-templates/[id]",
 		"panel": "staff"
 	},
 	{
@@ -692,6 +676,14 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/projects/templates",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/projects/templates/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/recurring/[id]",
 		"panel": "staff"
 	},
@@ -704,7 +696,15 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/reports",
+		"route": "/staff/reports/acquisitions",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/reports/annual",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/reports/inventory-spend",
 		"panel": "staff"
 	},
 	{

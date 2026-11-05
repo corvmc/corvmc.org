@@ -1,0 +1,2 @@
+ALTER TABLE `duty_list` ADD `project_kind` text DEFAULT 'general' NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX `uq_duty_list_production` ON `duty_list` (`project_kind`) WHERE project_kind = 'production';

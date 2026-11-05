@@ -89,7 +89,7 @@ const SUBMIT_LABEL = {
 } as const;
 
 async function decideReport(page: Page, entityTitle: string, decision: 'resolved' | 'dismissed') {
-	await page.goto('/staff/flags');
+	await page.goto('/staff/moderation/flags');
 	await page.getByRole('link', { name: entityTitle }).first().click();
 	await page.waitForURL(/\/staff\/flags\/[^/]+$/);
 	await page.getByTestId('resolve-flag').click();

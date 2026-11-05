@@ -12,14 +12,11 @@
 	import { rowLink } from '#lib/actions/row-link.js';
 	import { getDutyLists, createDutyList } from '#lib/remote/duty-lists.remote.js';
 	import { dutyListAnchors, dutyListAnchorLabels } from '#lib/config.js';
+	import ProjectViews from '../ProjectViews.svelte';
 
 	let lists = $derived(getDutyLists());
 
 	const anchorOptions = dutyListAnchors.map((a) => ({ value: a, label: dutyListAnchorLabels[a] }));
-	const autoApplyOptions = [
-		{ value: '', label: m.staff_never() },
-		{ value: 'production.created', label: m.staff_when_production_created() }
-	];
 </script>
 
 <PageHeader
@@ -49,16 +46,17 @@
 				description={m.staff_project_templates_every_item_timed_from()}
 			/>
 			<FormField
-				field={createDutyList.fields.autoApplyOn}
-				label={m.staff_apply_automatically()}
-				type="select"
-				options={autoApplyOptions}
+				field={createDutyList.fields.startsProduction}
+				type="checkbox"
+				label={m.staff_production()}
+				checkboxLabel={m.staff_project_templates_starts_production()}
 			/>
 		{/snippet}
 	</Action>
 </PageHeader>
 
 <PageContent>
+	<ProjectViews active="templates" />
 	{#await lists then rows}
 		{#if rows.length === 0}
 			<EmptyState
@@ -76,7 +74,7 @@
 					{/snippet}
 
 					{#each rows as list (list.id)}
-						<tr use:rowLink={`/staff/project-templates/${list.id}`}>
+						<tr use:rowLink={`/staff/projects/templates/${list.id}`}>
 							<td>
 								<StatusBadge status={list.isActive ? 'active' : 'archived'} label />
 							</td>

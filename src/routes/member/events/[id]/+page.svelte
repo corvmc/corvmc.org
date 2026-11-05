@@ -13,20 +13,16 @@
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
 	import PosterCard from '#lib/components/events/PosterCard.svelte';
+	import EventFacts from '#lib/components/events/EventFacts.svelte';
 	import TicketStub from '#lib/components/events/TicketStub.svelte';
 	import TicketQRModal from '#lib/components/events/TicketQRModal.svelte';
 	import TicketPurchaseFields from '#lib/components/events/TicketPurchaseFields.svelte';
-	import { fullDate, formatTime, formatCents } from '#lib/utils/format.js';
-	import {
-		ticketingMode,
-		isFreeEvent as isFree,
-		priceDisplay
-	} from '#lib/utils/event-ticketing.js';
+	import { formatCents } from '#lib/utils/format.js';
+	import { ticketingMode, isFreeEvent as isFree } from '#lib/utils/event-ticketing.js';
 	import { sanitizeHtml } from '#lib/utils/markdown.js';
 	import { tagToTapeVariant, tagToStickerColor } from '#lib/utils/tag-colors.js';
 	import { googleCalendarUrl, icsDataUrl } from '#lib/utils/calendar.js';
-	import { mapUrl, placeLine } from '#lib/utils/place.js';
-	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import { placeLine } from '#lib/utils/place.js';
 	import ShareButton from '#lib/components/ui/ShareButton.svelte';
 	import {
 		purchaseTickets,
@@ -58,8 +54,6 @@
 	const isFreeEvent = $derived(isFree(evt));
 	const soldOut = $derived(data.remaining === 0);
 	const maxQuantity = $derived(data.remaining !== null ? Math.min(data.remaining, 10) : 10);
-
-	const price = $derived(priceDisplay(evt));
 
 	// Read back out of TicketPurchaseFields: only it knows what the card will be
 	// charged, and the Action modal's own button needs both the number and
@@ -110,6 +104,8 @@
 
 	const tagList = $derived(parseTags(evt.tags));
 	const primaryTag = $derived(tagList[0] ?? null);
+	// The poster's tape already shows the primary tag.
+	const stickerTags = $derived(tagList.filter((tag) => tag !== primaryTag));
 
 	function refreshDetail() {
 		// The wrapper this page reads, not the two it is assembled from.
@@ -189,9 +185,9 @@
 		</div>
 
 		<div class="edet__main">
-			{#if tagList.length > 0}
+			{#if stickerTags.length > 0}
 				<div class="edet__tags">
-					{#each tagList as tag (tag)}
+					{#each stickerTags as tag (tag)}
 						<span class="sticker {tagToStickerColor(tag)}">{tag}</span>
 					{/each}
 				</div>
@@ -199,113 +195,7 @@
 
 			<p class="edet__title">{evt.title}</p>
 
-			<div class="edet__facts">
-				<div class="edet__fact">
-					<span class="edet__fact-label">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.8"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							style="width:13px;height:13px"
-							><rect x="3" y="5" width="18" height="16" rx="2" /><path
-								d="M3 9h18M8 3v4M16 3v4"
-							/></svg
-						>
-						{m.member_date()}
-					</span>
-					<span class="edet__fact-value">{fullDate(evt.startsAt)}</span>
-				</div>
-				<div class="edet__fact">
-					<span class="edet__fact-label">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.8"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							style="width:13px;height:13px"
-							><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg
-						>
-						{m.member_time()}
-					</span>
-					<span class="edet__fact-value">
-						{formatEventTimeRange(evt.startsAt, evt.endsAt)}
-						{#if evt.doorsAt}
-							<br /><span style="font-size:12px;opacity:0.7"
-								>{m.member_events_id_doors({ formatTime: formatTime(evt.doorsAt) })}</span
-							>
-						{/if}
-					</span>
-				</div>
-				{#if evt.location || evt.address}
-					<div class="edet__fact">
-						<span class="edet__fact-label">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.8"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								style="width:13px;height:13px"
-								><path d="M12 21s-7-5.686-7-11a7 7 0 0 1 14 0c0 5.314-7 11-7 11Z" /><circle
-									cx="12"
-									cy="10"
-									r="2.5"
-								/></svg
-							>
-							{m.member_events_id_location()}
-						</span>
-						<span class="edet__fact-value">
-							{evt.location ?? ''}
-							{#if evt.address}
-								{#if evt.location}<br />{/if}
-								<!-- eslint-disable svelte/no-navigation-without-resolve -- an external map, not an internal route -->
-								<a
-									href={mapUrl(evt)}
-									target="_blank"
-									rel="noopener noreferrer external"
-									class="link">{evt.address}</a
-								>
-								<!-- eslint-enable svelte/no-navigation-without-resolve -->
-							{/if}
-						</span>
-					</div>
-				{/if}
-				<div class="edet__fact">
-					<span class="edet__fact-label">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.8"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							style="width:13px;height:13px"
-							><path
-								d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"
-							/><path d="M13 6v12" /></svg
-						>
-						{m.member_events_id_price()}
-					</span>
-					<span class="edet__fact-value">
-						{price.label}
-						{#if price.suggested}
-							<span style="font-size:11px;opacity:0.5;margin-left:4px"
-								>{m.member_events_id_suggested()}</span
-							>
-						{/if}
-					</span>
-				</div>
-			</div>
+			<EventFacts {evt} />
 
 			{#if descriptionHtml}
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized rich text (sanitizeHtml) -->

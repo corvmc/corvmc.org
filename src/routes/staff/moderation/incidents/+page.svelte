@@ -19,6 +19,8 @@
 	} from '#lib/config.js';
 	import { getIncidentLog } from '#lib/remote/incidents.remote.js';
 	import RecordIncidentAction from './RecordIncidentAction.svelte';
+	import StaffViews from '../../StaffViews.svelte';
+	import { moderationViews } from '../views';
 
 	let searchText = $state('');
 	let searchDebounced = $state('');
@@ -50,10 +52,8 @@
 	}
 </script>
 
-<PageHeader title={m.staff_incidents_title()} subtitle={m.staff_space()}>
-	{#if canRecord}
-		<RecordIncidentAction />
-	{/if}
+<PageHeader title={m.staff_moderation()} documentTitle={m.staff_incidents_title()}>
+	<StaffViews views={moderationViews} active="incidents" />
 </PageHeader>
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
@@ -96,6 +96,12 @@
 				<option value={c}>{incidentCategoryLabels[c]}</option>
 			{/each}
 		</Select>
+
+		{#snippet actions()}
+			{#if canRecord}
+				<RecordIncidentAction />
+			{/if}
+		{/snippet}
 	</FilterBar>
 
 	<!-- A table: the summary is capped at 200 characters and rows carry no actions. -->
