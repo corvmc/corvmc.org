@@ -103,8 +103,11 @@ describe('activeNavKey', () => {
 		['/staff/members/instructors', 'users'],
 		['/staff/members/invites', 'users'],
 		['/staff/help', 'help'],
-		['/staff/marketing/campaigns/new', 'campaigns'],
-		['/staff/marketing/campaigns/abc/edit', 'campaigns'],
+		['/staff/marketing', 'outreach'],
+		['/staff/marketing/campaigns', 'outreach'],
+		['/staff/marketing/audiences/abc', 'outreach'],
+		['/staff/marketing/campaigns/new', 'outreach'],
+		['/staff/marketing/campaigns/abc/edit', 'outreach'],
 		['/staff/help/create', 'help'],
 		['/staff/local-resources', 'local-resources'],
 		['/staff/local-resources/categories', 'local-resources'],
@@ -219,7 +222,7 @@ describe('the nav tree', () => {
 		]);
 		expect(keys('partners')).toEqual(['sponsors', 'venues', 'local-resources', 'contractors']);
 		expect(keys('moderation')).toEqual(['moderation', 'classifieds']);
-		expect(keys('outreach')).toEqual(['campaigns', 'audiences']);
+		expect(keys('outreach')).toEqual(['outreach']);
 		expect(keys('money')).toContain('grants');
 		expect(keys('reports')).toEqual([
 			'reports',
@@ -276,6 +279,9 @@ describe('route coverage', () => {
 		// Moderation views, reached from its tab bar (#2393).
 		'/staff/moderation/flags',
 		'/staff/moderation/incidents',
+		// Outreach views, reached from its tab bar (#2394).
+		'/staff/marketing/campaigns',
+		'/staff/marketing/audiences',
 		// Groups views, reached from its tab bar (#2086).
 		'/staff/groups/bands',
 		'/staff/groups/clubs',

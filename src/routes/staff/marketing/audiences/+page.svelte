@@ -2,7 +2,7 @@
 	import { m } from '$lib/paraglide/messages.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { getAudiences } from '$lib/remote/marketing.remote';
+	import { getAudienceList } from '$lib/remote/marketing.remote';
 	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import PageContent from '$lib/components/ui/PageContent.svelte';
 	import { CreateAudienceAction } from '$lib/components/actions';
@@ -13,19 +13,25 @@
 	import { rowLink } from '$lib/actions/row-link';
 	import { EntityIdentity } from '$lib/components/ui/entity';
 	import { formatDateShortYear } from '$lib/utils/format';
+	import StaffViews from '../../StaffViews.svelte';
+	import { outreachViews } from '../views';
 
-	let audiences = $derived(await getAudiences());
+	let audiences = $derived(await getAudienceList());
 </script>
 
-<PageHeader title={m.staff_audiences()} subtitle={m.staff_marketing()}>
-	<CreateAudienceAction
-		onsuccess={(result) => {
-			const r = result as { audienceId?: string };
-			if (r?.audienceId) goto(resolve(`/staff/marketing/audiences/${r.audienceId}`));
-		}}
-	/>
+<PageHeader title={m.staff_outreach()} documentTitle={m.staff_audiences()}>
+	<StaffViews views={outreachViews} active="audiences" />
 </PageHeader>
 <PageContent>
+	<div class="flex justify-end">
+		<CreateAudienceAction
+			size="sm"
+			onsuccess={(result) => {
+				const r = result as { audienceId?: string };
+				if (r?.audienceId) goto(resolve(`/staff/marketing/audiences/${r.audienceId}`));
+			}}
+		/>
+	</div>
 	{#if audiences.length === 0}
 		<EmptyState description={m.staff_marketing_audiences_description()} />
 	{:else}
