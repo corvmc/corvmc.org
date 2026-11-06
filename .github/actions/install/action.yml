@@ -1,30 +1,57 @@
 name: Install dependencies
-description: pnpm + Node 22 + `pnpm install --frozen-lockfile`, with a store cache only main writes.
+description: pnpm + Node 22 + `pnpm install --frozen-lockfile`, behind a node_modules cache and a store cache that only main writes.
 
-# Every ref may read the store cache; only main writes it. A PR or merge-queue
+# Every ref may read these caches; only main writes them. A PR or merge-queue
 # run saving its own ~260 MB copy pushed the repo past GitHub's 10 GB cache cap,
 # and queue refs are deleted minutes later, so those copies were never read
 # again while the eviction they caused could drop main's own entries.
+#
+# node_modules is restored on an exact key only — no prefix fallback — so a hit
+# is always the tree this lockfile installs. A miss falls through to the store
+# and a real install. Node's version is in the key because native addons
+# (better-sqlite3, esbuild, oxide) are built against it.
 runs:
   using: composite
   steps:
     - uses: pnpm/action-setup@v6
-    - uses: actions/setup-node@v7
+    - id: node
+      uses: actions/setup-node@v7
       with:
         node-version: 22
-    - id: store
+    - id: modules
+      uses: actions/cache/restore@v6
+      with:
+        path: node_modules
+        key: node-modules-${{ runner.os }}-node${{ steps.node.outputs.node-version }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml', '.npmrc', 'patches/**') }}
+    - if: steps.modules.outputs.cache-hit != 'true'
+      id: store
       shell: bash
       run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-    - id: restore
+    - if: steps.modules.outputs.cache-hit != 'true'
+      id: restore
       uses: actions/cache/restore@v6
       with:
         path: ${{ steps.store.outputs.path }}
         key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
         restore-keys: pnpm-store-${{ runner.os }}-
-    - shell: bash
+    - if: steps.modules.outputs.cache-hit != 'true'
+      shell: bash
       run: pnpm install --frozen-lockfile
-    - if: github.ref == 'refs/heads/main' && steps.restore.outputs.cache-hit != 'true'
+    # A cached tree skips the `prepare` lifecycle. Its `lefthook install` is
+    # meaningless on a runner; its `svelte-kit sync` writes `.svelte-kit/`, which
+    # is outside node_modules and which svelte-check and the tsconfigs read.
+    - if: steps.modules.outputs.cache-hit == 'true'
+      shell: bash
+      run: pnpm exec svelte-kit sync
+    - if: github.ref == 'refs/heads/main' && steps.modules.outputs.cache-hit != 'true' && steps.restore.outputs.cache-hit != 'true'
       uses: actions/cache/save@v6
       with:
         path: ${{ steps.store.outputs.path }}
         key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+    # Saved straight after the install, before any job writes its own caches
+    # (prettier, vitest) under node_modules/.
+    - if: (github.ref == 'refs/heads/main' || github.head_ref == 'ci/speed-caches-shards') && steps.modules.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: node_modules
+        key: ${{ steps.modules.outputs.cache-primary-key }}
