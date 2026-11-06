@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import {
@@ -63,5 +63,5 @@ export const POST: RequestHandler = async ({ request }) => {
 		if (import.meta.env.DEV) throw err;
 	}
 
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

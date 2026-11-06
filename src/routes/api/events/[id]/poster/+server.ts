@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireListingWriter } from '#lib/server/event/listing-guard.js';
 import { can } from '#lib/server/authorization.js';
@@ -63,7 +63,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			details: { fields: ['poster'] }
 		});
 	}
-	return json({ posterKey: key });
+	return Response.json({ posterKey: key });
 };
 
 /** Delete an event poster. */
@@ -81,5 +81,5 @@ export const DELETE: RequestHandler = async ({ params }) => {
 			.where(eq(eventListing.id, params.id));
 	}
 
-	return json({ success: true });
+	return Response.json({ success: true });
 };

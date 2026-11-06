@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getById } from '#lib/server/event/event-service.js';
 import { publicEventStatuses } from '#lib/server/db/schema/event.js';
@@ -28,7 +28,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		isSustainingMember = sub !== null;
 	}
 
-	return json({
+	return Response.json({
 		event: {
 			id: evt.id,
 			title: evt.title,

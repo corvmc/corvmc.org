@@ -1,4 +1,4 @@
-import { json, error, type RequestHandler } from '@sveltejs/kit';
+import { error, type RequestHandler } from '@sveltejs/kit';
 import { randomUUID } from 'node:crypto';
 import { uploadFile } from '#lib/server/storage.js';
 import { putPrivateObject } from '#lib/server/private-storage.js';
@@ -89,5 +89,5 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	await attach({ mediaId: row.id, attachableType, attachableId, slot });
 
-	return json({ id: row.id, key });
+	return Response.json({ id: row.id, key });
 };

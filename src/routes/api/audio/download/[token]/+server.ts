@@ -1,4 +1,4 @@
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { findPaidPurchaseByToken } from '#lib/server/audio/purchase-service.js';
 import { listTracks } from '#lib/server/audio/audio-service.js';
@@ -26,7 +26,7 @@ export const GET: RequestHandler = async ({ params }) => {
 
 	const tracks = await listTracks(purchase.releaseId);
 
-	return json({
+	return Response.json({
 		releaseTitle: purchase.releaseTitle,
 		bandName: purchase.bandName,
 		tracks: tracks.map((t) => ({

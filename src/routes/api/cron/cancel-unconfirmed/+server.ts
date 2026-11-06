@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { cancelUnconfirmedReservations } from '#lib/server/reservation/reservation-service.js';
@@ -25,5 +25,5 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const result = await cancelUnconfirmedReservations();
 
-	return json(result);
+	return Response.json(result);
 };

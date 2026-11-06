@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { resolveContactSheetToken } from '#lib/server/directory/contact-sheet-service.js';
 import {
@@ -37,5 +37,5 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		if (err instanceof PosterRequestNotFoundError) throw error(404, err.message);
 		throw err;
 	}
-	return json({ success: true });
+	return Response.json({ success: true });
 };

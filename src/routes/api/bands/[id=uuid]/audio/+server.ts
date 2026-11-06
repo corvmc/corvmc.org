@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 // Typed params from `./$types`, matching the sibling media endpoint — the
 // generic kit `RequestHandler` types `params.id` as possibly-undefined.
 import type { RequestHandler } from './$types';
@@ -150,7 +150,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		}
 	}
 
-	return json({
+	return Response.json({
 		success: true,
 		tracks: created,
 		// So the caller can tell the band why a 40-minute live set will not be on

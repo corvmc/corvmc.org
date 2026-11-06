@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { reconcileUpcomingSync } from '#lib/server/lock/lock-service.js';
@@ -21,5 +21,5 @@ export const POST: RequestHandler = async ({ request }) => {
 	const result = await reconcileUpcomingSync();
 
 	// The Sentry check-in reads response.ok alone.
-	return json(result, { status: result.errors.length > 0 ? 500 : 200 });
+	return Response.json(result, { status: result.errors.length > 0 ? 500 : 200 });
 };

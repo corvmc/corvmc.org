@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { getAllPreferences, setPreference } from '#lib/server/notification/preference-service.js';
 import { NOTIFICATION_TYPES } from '#lib/server/db/schema/notification.js';
 
@@ -22,7 +22,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 		sms: prefs[t.key]?.sms ?? t.defaults.sms
 	}));
 
-	return json(result);
+	return Response.json(result);
 };
 
 // ---------------------------------------------------------------------------
@@ -59,5 +59,5 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 		sms: Boolean(sms)
 	});
 
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

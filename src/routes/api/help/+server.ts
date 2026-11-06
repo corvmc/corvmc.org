@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {
 	listNonEmptyCategories,
@@ -20,5 +20,5 @@ export const GET: RequestHandler = async ({ locals }) => {
 		}))
 	);
 
-	return json({ categories: categoriesWithArticles });
+	return Response.json({ categories: categoriesWithArticles });
 };

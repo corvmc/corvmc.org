@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireGroupRole } from '#lib/server/group/group-context.js';
 import { uploadFile, validateUpload } from '#lib/server/storage.js';
@@ -52,11 +52,11 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		uploadedByUserId: locals.user!.id
 	});
 
-	return json({ key });
+	return Response.json({ key });
 };
 
 export const DELETE: RequestHandler = async ({ params, locals }) => {
 	await ownedRelease(params.id, locals.user?.id);
 	await detachSlot('audio_release', params.id, 'cover');
-	return json({ success: true });
+	return Response.json({ success: true });
 };

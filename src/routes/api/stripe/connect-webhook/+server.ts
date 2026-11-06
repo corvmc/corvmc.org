@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { stripeWebhooks, webhookCryptoProvider } from '#lib/server/stripe.js';
@@ -46,13 +46,13 @@ export const POST: RequestHandler = async ({ request }) => {
 		error(400, 'Invalid signature');
 	}
 
-	if (event.type !== 'account.updated') return json({ received: true, handled: false });
+	if (event.type !== 'account.updated') return Response.json({ received: true, handled: false });
 
 	try {
 		const known = await syncAccountFromStripe(event.data.object);
 		// An account the platform holds but this feature did not create is not an
 		// error — returning one would make Stripe retry it forever.
-		return json({ received: true, handled: known });
+		return Response.json({ received: true, handled: known });
 	} catch (err) {
 		captureException(err, {
 			stage: 'connect_handler',
