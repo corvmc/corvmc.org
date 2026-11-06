@@ -5,7 +5,14 @@
 		"esModuleInterop": true,
 		"sourceMap": true,
 		"strict": true,
-		"types": ["$app/types", "@cloudflare/workers-types"]
+		"types": ["$app/types", "@cloudflare/workers-types"],
+		// `#lib` already resolves through package.json `imports`. Stating it here as
+		// well is for typed ESLint: resolved only through `imports`, projectService
+		// slows superlinearly, and the whole tree outran CI's lint cap (#2374).
+		"paths": {
+			"#lib": ["./src/lib/index.ts"],
+			"#lib/*": ["./src/lib/*"]
+		}
 	},
 	// Globs rather than "src": scripts/coverage.spec.ts reads them to prove every
 	// source file is compiled by some project.
