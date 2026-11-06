@@ -1,4 +1,4 @@
-import { json, type RequestHandler } from '@sveltejs/kit';
+import { type RequestHandler } from '@sveltejs/kit';
 import { resolveCustomDomain } from '#lib/server/band/band-host-service.js';
 
 /**
@@ -12,12 +12,12 @@ import { resolveCustomDomain } from '#lib/server/band/band-host-service.js';
  */
 export const GET: RequestHandler = async ({ url, setHeaders }) => {
 	const host = url.searchParams.get('host');
-	if (!host) return json({ slug: null });
+	if (!host) return Response.json({ slug: null });
 
 	const resolved = await resolveCustomDomain(host);
 
 	// Matches the KV cache behind it; keeps repeat client navigations off the
 	// origin entirely.
 	setHeaders({ 'cache-control': 'public, max-age=300' });
-	return json({ slug: resolved?.slug ?? null });
+	return Response.json({ slug: resolved?.slug ?? null });
 };

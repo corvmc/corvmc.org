@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { getForUser, getUnreadCount } from '#lib/server/notification/in-app-service.js';
 
 // ---------------------------------------------------------------------------
@@ -18,5 +18,5 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		getUnreadCount(user.id)
 	]);
 
-	return json({ notifications, unreadCount });
+	return Response.json({ notifications, unreadCount });
 };

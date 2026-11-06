@@ -1,4 +1,4 @@
-import { json, error, text } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { handleMetaInbound, handleMetaEcho } from '#lib/server/inbox/inbound-handlers.js';
@@ -17,7 +17,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const verifyToken = env.META_VERIFY_TOKEN;
 
 	if (mode === 'subscribe' && verifyToken && token === verifyToken && challenge) {
-		return text(challenge);
+		return new Response(challenge);
 	}
 
 	error(403, 'Verification failed');
@@ -45,7 +45,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const enabled = await isChannelEnabled(channel);
 	if (!enabled) {
-		return json({ ok: true, skipped: 'channel disabled' });
+		return Response.json({ ok: true, skipped: 'channel disabled' });
 	}
 
 	for (const entry of payload.entry ?? []) {
@@ -92,5 +92,5 @@ export const POST: RequestHandler = async ({ request }) => {
 	// Always 200. Meta retries a failed delivery for 36 hours and unsubscribes an
 	// app that keeps failing, and a message we could not file is not a message a
 	// retry will fix.
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

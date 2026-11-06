@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
@@ -51,5 +51,5 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 	}
 
-	return json({ completed: completed.length, emitted });
+	return Response.json({ completed: completed.length, emitted });
 };

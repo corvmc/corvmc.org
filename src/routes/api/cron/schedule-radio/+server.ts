@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { scheduleRadio } from '#lib/server/audio/radio-service.js';
@@ -30,8 +30,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	if (!(await isFeatureEnabled('cmcRadio'))) {
-		return json({ skipped: 'cmcRadio is off', scheduled: 0, pruned: 0 });
+		return Response.json({ skipped: 'cmcRadio is off', scheduled: 0, pruned: 0 });
 	}
 
-	return json(await scheduleRadio());
+	return Response.json(await scheduleRadio());
 };

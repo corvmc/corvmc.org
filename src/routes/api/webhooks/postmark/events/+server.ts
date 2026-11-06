@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { suppressByEmail } from '#lib/server/marketing/subscriber-service.js';
@@ -46,7 +46,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const email = payload.Email?.trim();
 	if (!email) {
-		return json({ ok: true, skipped: 'no email' });
+		return Response.json({ ok: true, skipped: 'no email' });
 	}
 
 	let reason: 'bounce' | 'complaint' | null = null;
@@ -60,16 +60,16 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	if (!reason) {
-		return json({ ok: true, skipped: 'transient', recordType: payload.RecordType });
+		return Response.json({ ok: true, skipped: 'transient', recordType: payload.RecordType });
 	}
 
 	try {
 		const suppressed = await suppressByEmail(email, reason);
-		return json({ ok: true, reason, suppressed });
+		return Response.json({ ok: true, reason, suppressed });
 	} catch (err) {
 		console.error('[webhooks/postmark/events] suppression failed:', err);
 		if (import.meta.env.DEV) throw err;
 		// Return 200 so Postmark doesn't retry a non-recoverable failure forever.
-		return json({ ok: false });
+		return Response.json({ ok: false });
 	}
 };

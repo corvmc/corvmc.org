@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { runDailyLockJob } from '#lib/server/lock/lock-service.js';
@@ -37,8 +37,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	// run — including the lock being unreachable, which is exactly the state
 	// nobody was finding out about.
 	if (result.errors.length > 0) {
-		return json(body, { status: 500 });
+		return Response.json(body, { status: 500 });
 	}
 
-	return json(body);
+	return Response.json(body);
 };

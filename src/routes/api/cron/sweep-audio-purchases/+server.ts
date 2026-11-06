@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { sweepAbandonedPurchases } from '#lib/server/audio/purchase-service.js';
@@ -22,5 +22,5 @@ export const POST: RequestHandler = async ({ request }) => {
 	const auth = request.headers.get('Authorization');
 	if (auth !== `Bearer ${secret}`) throw error(401, 'Unauthorized');
 
-	return json({ removed: await sweepAbandonedPurchases() });
+	return Response.json({ removed: await sweepAbandonedPurchases() });
 };

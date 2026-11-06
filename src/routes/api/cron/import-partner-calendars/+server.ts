@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { runPartnerImports } from '#lib/server/event/partner-import-service.js';
@@ -16,5 +16,5 @@ export const POST: RequestHandler = async ({ request }) => {
 	const auth = request.headers.get('Authorization');
 	if (auth !== `Bearer ${secret}`) throw error(401, 'Unauthorized');
 
-	return json({ sources: await runPartnerImports() });
+	return Response.json({ sources: await runPartnerImports() });
 };

@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { autoCompleteExpired } from '#lib/server/reservation/reservation-service.js';
@@ -23,5 +23,5 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const completed = await autoCompleteExpired();
 
-	return json({ completed });
+	return Response.json({ completed });
 };

@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { setUserAvatar, clearUserAvatar } from '#lib/server/directory/profile-service.js';
 import { validateUpload } from '#lib/server/storage.js';
@@ -26,7 +26,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	const key = await setUserAvatar(locals.user.id, await file.arrayBuffer(), file.type);
 
-	return json({ success: true, avatarKey: key });
+	return Response.json({ success: true, avatarKey: key });
 };
 
 // ---------------------------------------------------------------------------
@@ -38,5 +38,5 @@ export const DELETE: RequestHandler = async ({ locals }) => {
 
 	await clearUserAvatar(locals.user.id);
 
-	return json({ success: true });
+	return Response.json({ success: true });
 };

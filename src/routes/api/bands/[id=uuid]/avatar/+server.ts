@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '#lib/server/db/index.js';
 import { group } from '#lib/server/db/schema/group.js';
@@ -50,7 +50,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
 	await db.update(group).set({ avatarKey: key, updatedAt: new Date() }).where(eq(group.id, bandId));
 
-	return json({ success: true, avatarKey: key });
+	return Response.json({ success: true, avatarKey: key });
 };
 
 // ---------------------------------------------------------------------------
@@ -68,5 +68,5 @@ export const DELETE: RequestHandler = async ({ params }) => {
 		.set({ avatarKey: null, updatedAt: new Date() })
 		.where(eq(group.id, bandId));
 
-	return json({ success: true });
+	return Response.json({ success: true });
 };

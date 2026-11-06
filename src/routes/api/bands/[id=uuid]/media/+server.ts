@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 // Typed params from `./$types` rather than the generic kit `RequestHandler`,
 // which types `params.id` as possibly-undefined and forced a `!` at every use.
 import type { RequestHandler } from './$types';
@@ -192,7 +192,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		uploaded.push({ id: attachment.id, key, url: resolveImageUrl(key), sortOrder: sortOrder - 1 });
 	}
 
-	return json({ success: true, media: uploaded });
+	return Response.json({ success: true, media: uploaded });
 };
 
 // ---------------------------------------------------------------------------
@@ -229,5 +229,5 @@ export const DELETE: RequestHandler = async ({ params, url }) => {
 	// whole reference graph. See docs/specs/shipped/media-spec.md.
 	await detach(row.id);
 
-	return json({ success: true });
+	return Response.json({ success: true });
 };

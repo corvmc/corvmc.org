@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { stripeWebhooks, webhookCryptoProvider } from '#lib/server/stripe.js';
@@ -63,5 +63,5 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 	}
 
-	return json({ received: true });
+	return Response.json({ received: true });
 };

@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { lastClosedWeek, reconcileStripeWindow } from '#lib/server/finance/reconciliation.js';
@@ -23,7 +23,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const threshold = Number(env.LEDGER_RECONCILE_THRESHOLD_CENTS) || DEFAULT_THRESHOLD_CENTS;
 	const range = lastClosedWeek();
 
-	return json({
+	return Response.json({
 		from: range.from.toISOString(),
 		to: range.to.toISOString(),
 		...(await reconcileStripeWindow(range, threshold))

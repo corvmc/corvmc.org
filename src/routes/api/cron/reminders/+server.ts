@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { drainReminders } from '#lib/server/reminders/drain.js';
@@ -20,5 +20,5 @@ export const POST: RequestHandler = async ({ request }) => {
 		throw error(401, 'Unauthorized');
 	}
 
-	return json(await drainReminders());
+	return Response.json(await drainReminders());
 };

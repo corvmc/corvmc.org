@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { cancelStalePendingTickets } from '#lib/server/ticket/ticket-service.js';
@@ -25,5 +25,5 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const cancelled = await cancelStalePendingTickets();
 
-	return json({ cancelled });
+	return Response.json({ cancelled });
 };

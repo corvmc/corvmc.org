@@ -1,4 +1,4 @@
-import { json, error } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import { sweepMedia } from '#lib/server/media/media-sweep-service.js';
@@ -31,5 +31,5 @@ export const POST: RequestHandler = async ({ request }) => {
 	// `cron/schedule.ts` and the docs snapshot all name it.
 	const [media, files] = await Promise.all([sweepMedia(), sweepGroupFiles()]);
 
-	return json({ ...media, ...files });
+	return Response.json({ ...media, ...files });
 };
