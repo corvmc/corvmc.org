@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { error, redirect } from '@sveltejs/kit';
-import { env as publicEnv } from '$env/dynamic/public';
+import * as publicEnv from '$app/env/public';
 import { query } from '$app/server';
 import { db } from '#lib/server/db/index.js';
 import { group } from '#lib/server/db/schema/group.js';

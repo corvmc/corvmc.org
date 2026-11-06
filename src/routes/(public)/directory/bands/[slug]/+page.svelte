@@ -2,7 +2,7 @@
 	import { m as msg } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { env } from '$env/dynamic/public';
+	import * as env from '$app/env/public';
 	import { canonicalAddress } from '#lib/utils/canonical-address.js';
 	import {
 		getPublicBandProfile,

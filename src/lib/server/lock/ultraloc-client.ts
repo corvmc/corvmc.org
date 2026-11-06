@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { randomInt, randomUUID } from 'crypto';
 import { getJson, putJson } from '#lib/server/kv.js';
 import { getConfigsByPrefix } from '#lib/server/site-config/site-config-service.js';

@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { db } from '#lib/server/db/index.js';
 import { session, user, verification } from '#lib/server/db/schema/authentication.js';
 import { and, eq, gt } from 'drizzle-orm';

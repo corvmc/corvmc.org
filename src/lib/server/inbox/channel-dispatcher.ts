@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { sendInboxReply } from '#lib/server/notification/email/postmark-client.js';
 import { sendSms } from './twilio-client';
 import { sendMetaMessage } from './meta-client';

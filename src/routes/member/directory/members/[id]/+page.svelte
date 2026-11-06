@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { env } from '$env/dynamic/public';
+	import * as env from '$app/env/public';
 	import { canonicalAddress } from '#lib/utils/canonical-address.js';
 	import { getDirectoryMember, getMemberPastShows } from '#lib/remote/directory.remote.js';
 	import { ReportContentAction } from '#lib/components/actions/index.js';

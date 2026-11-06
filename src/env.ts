@@ -1,9 +1,9 @@
 import { defineEnvVars } from '@sveltejs/kit/env';
 
 /**
- * Every variable the app reads through `$env/dynamic/*`. Kit 3 exposes only the
- * variables declared here — an undeclared name reads `undefined` — and every
- * one is optional, as it was under kit 2. Add a name here when code reads it.
+ * Every variable the app reads through `$app/env/*`. Kit exposes only the
+ * variables declared here, and types those modules from this list, so reading an
+ * undeclared name fails `pnpm check`. Every one is optional.
  */
 const optional = { schema: (value: string | undefined) => value };
 const optionalPublic = { ...optional, public: true };

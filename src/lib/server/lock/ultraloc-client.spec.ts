@@ -14,7 +14,7 @@ const ENV_CREDENTIALS = {
 };
 const STORED_SECRET = 'kv-client-secret-stored';
 
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
+vi.mock('$app/env/private', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 
 vi.mock('#lib/server/kv.js', () => ({
 	getJson: vi.fn().mockResolvedValue({ accessToken: 'tok', expiresAt: Date.now() + 1_000_000 }),
@@ -30,7 +30,7 @@ vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	})
 }));
 
-const { env } = await import('$env/dynamic/private');
+const env = (await import('$app/env/private')) as unknown as Record<string, string | undefined>;
 const { getConfigsByPrefix } = await import('#lib/server/site-config/site-config-service.js');
 
 const {

@@ -3,12 +3,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 // Mock environment
 // ---------------------------------------------------------------------------
-vi.mock('$env/dynamic/private', () => ({
-	env: {
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({
 		STRIPE_FEE_PRODUCT_ID: 'prod_fee',
 		DATABASE_URL: 'postgres://mock'
-	}
-}));
+	})
+);
 
 // Mock product-config-service to prevent db import chain
 vi.mock('./product-config-service', () => ({

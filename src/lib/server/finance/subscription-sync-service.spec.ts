@@ -3,9 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 // Mock environment
 // ---------------------------------------------------------------------------
-vi.mock('$env/dynamic/private', () => ({
-	env: { DATABASE_URL: 'postgres://mock' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ DATABASE_URL: 'postgres://mock' })
+);
 
 // The stale-state sweeps are WHERE clauses over real rows.
 const { sqlite, testDb } = await vi.hoisted(async () => {

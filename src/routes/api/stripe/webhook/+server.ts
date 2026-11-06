@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { stripeWebhooks, webhookCryptoProvider } from '#lib/server/stripe.js';
 import { webhookHandlerMap } from '#lib/server/finance/webhook-handlers.js';
 import { captureException } from '#lib/server/sentry.js';

@@ -16,7 +16,7 @@
 	import type { getCustomDomain } from '#lib/remote/band-custom-domain.remote.js';
 	import type { CustomDomainStatus } from '#lib/server/db/schema/band-site.js';
 	import { bandSiteUrl } from '#lib/utils/band-site-url.js';
-	import { env } from '$env/dynamic/public';
+	import * as env from '$app/env/public';
 
 	// Resolved prop, not an awaited query — a top-level await here would mark the
 	// fields.X.as() expressions below as async deriveds (see BandProfileForm).

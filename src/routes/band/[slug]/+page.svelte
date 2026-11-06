@@ -8,7 +8,7 @@
 	import { getBandUpcoming } from '#lib/remote/bands.remote.js';
 	import { getBandLayoutContext } from './layout-context';
 	import { resolve } from '$app/paths';
-	import { env } from '$env/dynamic/public';
+	import * as env from '$app/env/public';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
 	import AddressCard from '#lib/components/ui/AddressCard.svelte';
 	import { canonicalAddress } from '#lib/utils/canonical-address.js';

@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { isLocalOrigin } from '#lib/sentry-local-origin.js';
 import { captureException } from '#lib/server/sentry.js';
 

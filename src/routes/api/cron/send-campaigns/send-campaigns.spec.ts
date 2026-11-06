@@ -18,9 +18,9 @@ vi.mock('#lib/server/feature-flags.js', () => ({
 	isFeatureEnabled: (..._args: unknown[]) => mockIsFeatureEnabled()
 }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { CRON_SECRET: 'test-secret' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ CRON_SECRET: 'test-secret' })
+);
 
 beforeEach(() => {
 	vi.clearAllMocks();

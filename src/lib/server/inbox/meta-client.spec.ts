@@ -10,7 +10,9 @@ const metaEnv: Record<string, string | undefined> = {
 	META_PAGE_ACCESS_TOKEN: 'page-token'
 };
 
-vi.mock('$env/dynamic/private', () => ({ env: metaEnv }));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock(metaEnv)
+);
 
 beforeEach(() => {
 	metaEnv.META_APP_SECRET = 'app-secret';

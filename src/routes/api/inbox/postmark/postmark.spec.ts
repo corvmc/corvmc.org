@@ -12,12 +12,12 @@ vi.mock('#lib/server/inbox/inbound-handlers.js', () => ({
 	handlePostmarkInbound: (...args: unknown[]) => mockHandlePostmarkInbound(...(args as []))
 }));
 
-const mockEnv: Record<string, string | undefined> = { POSTMARK_INBOUND_TOKEN: 'inbound-secret' };
-vi.mock('$env/dynamic/private', () => ({
-	get env() {
-		return mockEnv;
-	}
+const mockEnv = vi.hoisted((): Record<string, string | undefined> => ({
+	POSTMARK_INBOUND_TOKEN: 'inbound-secret'
 }));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock(mockEnv)
+);
 
 beforeEach(() => {
 	vi.clearAllMocks();

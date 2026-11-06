@@ -48,7 +48,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 
 Only the Worker may import `cloudflare:workers`: services reach `waitUntil` through
 `registerWaitUntil` in `src/lib/server/after-response.ts`, because seeds and scripts load them
-under tsx. Environment variables read through `$env/dynamic/*` must be declared in
+under tsx. Environment variables read through `$app/env/*` must be declared in
 `src/env.ts`, which kit 3 treats as the full list.
 
 Everywhere else in server code, `db`, storage, and KV are imported directly (e.g.
@@ -272,7 +272,7 @@ export const domainEvents = new Emittery<DomainEvents>();
 Listeners are registered once per Worker isolate by `registerListeners()` in
 `src/lib/server/event-bus/register-listeners.ts`, which is called from `hooks.server.ts`
 inside the request handler (it must run there, not at module load, because
-`$env/dynamic/private` isn't available earlier on Cloudflare). The registrations:
+`$app/env/private` isn't available earlier on Cloudflare). The registrations:
 
 | Event                    | Listener(s)                                                                                         | Effect                                                                                     |
 | ------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
@@ -416,7 +416,7 @@ the race costs nothing.
 2. **Worker secrets** — everything sensitive (Stripe keys, Postmark tokens, `CRON_SECRET`,
    `BETTER_AUTH_SECRET`, ...). Managed with `wrangler secret`; the full inventory is
    `secrets.template.json` and the table in the [operations manual](operations-manual.md).
-   Read in code via `$env/dynamic/private`.
+   Read in code via `$app/env/private`.
 3. **Runtime site config in KV** — settings staff can change without a deploy, via
    `src/lib/server/site-config/site-config-service.ts`. Keys are namespaced strings with
    code-side defaults:

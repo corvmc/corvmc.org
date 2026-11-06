@@ -1,5 +1,5 @@
 import twilio from 'twilio';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 
 let client: ReturnType<typeof twilio> | null = null;
 

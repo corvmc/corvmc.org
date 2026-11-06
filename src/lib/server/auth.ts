@@ -3,7 +3,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { createAuthMiddleware, APIError } from 'better-auth/api';
 import { scrypt, randomBytes, timingSafeEqual } from 'node:crypto';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { getRequestEvent } from '$app/server';
 import { db } from '#lib/server/db/index.js';
 import * as schema from '#lib/server/db/schema.js';

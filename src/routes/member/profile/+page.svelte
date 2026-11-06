@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { env } from '$env/dynamic/public';
+	import * as env from '$app/env/public';
 	import { getMemberProfileEditor } from '#lib/remote/directory.remote.js';
 
 	// Read above the awaited query below: a declaration after a top-level await

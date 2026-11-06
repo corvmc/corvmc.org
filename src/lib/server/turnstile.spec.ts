@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// turnstile.ts reads $env/dynamic/private and reports to sentry. `mockEnv` is
+// turnstile.ts reads $app/env/private and reports to sentry. `mockEnv` is
 // mutable so each test can set the ORIGIN the secret choice now depends on.
 const { mockEnv, captureExceptionMock } = vi.hoisted(() => ({
 	mockEnv: {} as Record<string, string | undefined>,
 	captureExceptionMock: vi.fn()
 }));
 
-vi.mock('$env/dynamic/private', () => ({ env: mockEnv }));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock(mockEnv)
+);
 vi.mock('#lib/server/sentry.js', () => ({ captureException: captureExceptionMock }));
 
 import { verifyTurnstile, turnstileSecret, TURNSTILE_TEST_SECRET } from './turnstile';

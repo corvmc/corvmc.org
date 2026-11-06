@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/public';
+import * as env from '$app/env/public';
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
 import { reportError } from '#lib/report-error.js';
 

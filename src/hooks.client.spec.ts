@@ -8,8 +8,8 @@ vi.mock('@sentry/sveltekit', () => ({
 	replayIntegration: vi.fn(() => ({})),
 	handleErrorWithSentry: <T>(handler: T) => handler
 }));
-vi.mock('$app/environment', () => ({ dev: false }));
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
+vi.mock('$app/env', () => ({ dev: false }));
+vi.mock('$app/env/public', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 
 import {
 	isStaleChunkError,

@@ -4,7 +4,7 @@ import { render } from 'vitest-browser-svelte';
 import '#lib/test/locators.js';
 import { createAttachmentKey } from 'svelte/attachments';
 
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
+vi.mock('$app/env/public', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 
 vi.mock('$app/navigation', () => ({
 	invalidateAll: vi.fn(),

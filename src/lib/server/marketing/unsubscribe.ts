@@ -1,5 +1,5 @@
 import { createHmac } from 'crypto';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 
 // ---------------------------------------------------------------------------
 // Unsubscribe token signing + verification

@@ -15,7 +15,7 @@
 
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	import type { Snippet } from 'svelte';
 	import { setContext } from 'svelte';
 	import { toast } from 'svelte-sonner';

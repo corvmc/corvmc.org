@@ -10,9 +10,9 @@ vi.mock('#lib/server/group/file-sweep.js', () => ({
 	sweepGroupFiles: (...args: unknown[]) => mockSweepFiles(...args)
 }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { CRON_SECRET: 'test-secret' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ CRON_SECRET: 'test-secret' })
+);
 
 function post(auth?: string) {
 	return new Request('http://localhost/api/cron/sweep-media', {

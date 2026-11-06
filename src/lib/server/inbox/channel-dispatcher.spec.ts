@@ -30,9 +30,9 @@ vi.mock('./reply-address', () => ({
 	buildReplyToAddress: (...args: unknown[]) => mockBuildReplyToAddress(...(args as []))
 }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { STAFF_CONTACT_EMAIL: 'contact@test.com' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ STAFF_CONTACT_EMAIL: 'contact@test.com' })
+);
 
 // The band branch resolves the act's name, which is the whole reason it is a
 // separate branch: it is what signs the message.

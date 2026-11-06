@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { DEFAULT_WIDTH, transformOptions } from '#lib/utils/images.js';
 import { isWithheldPosterKey } from '#lib/server/storage-keys.js';
 

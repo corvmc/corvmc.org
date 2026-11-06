@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { paymentDriver, stripe } from '#lib/server/stripe.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { FAKE_TERMINAL_LOCATION_ID, FAKE_TERMINAL_READER_ID } from './gateway/fake-gateway';

@@ -21,7 +21,9 @@ vi.mock('./unsubscribe', () => ({ signUnsubscribeToken: vi.fn(() => 'unsub-token
 vi.mock('#lib/server/notification/email/index.js', () => ({
 	sendBroadcastBatch: vi.fn().mockResolvedValue(undefined)
 }));
-vi.mock('$env/dynamic/public', () => ({ env: { PUBLIC_SITE_URL: 'https://test.com' } }));
+vi.mock('$app/env/public', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ PUBLIC_SITE_URL: 'https://test.com' })
+);
 
 const { sendBroadcastBatch } = await import('#lib/server/notification/email/index.js');
 const { creditsForEvent } = await import('#lib/server/sponsor/credit-service.js');

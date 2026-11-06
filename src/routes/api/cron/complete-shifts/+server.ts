@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { completeFinishedShifts } from '#lib/server/volunteer/volunteer-signup-service.js';
 

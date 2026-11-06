@@ -24,7 +24,7 @@ const remote = vi.hoisted(() => (value: () => unknown = () => undefined) => {
 	return Object.assign(fn, { for: () => fn });
 });
 
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
+vi.mock('$app/env/public', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 vi.mock('#lib/remote/events.remote.js', () => ({
 	getPublicEventDetail: remote(() => fixture.detail)
 }));

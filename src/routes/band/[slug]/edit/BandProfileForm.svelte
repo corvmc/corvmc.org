@@ -9,7 +9,7 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import { baseDomainFromSiteUrl } from '#lib/utils/band-site-url.js';
-	import { env } from '$env/dynamic/public';
+	import * as env from '$app/env/public';
 	import { resolve } from '$app/paths';
 	import RichTextEditor from '#lib/components/ui/Form/RichTextEditor.svelte';
 	import LinkListEditor from '#lib/components/directory/LinkListEditor.svelte';

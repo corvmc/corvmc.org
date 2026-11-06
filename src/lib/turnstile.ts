@@ -1,5 +1,5 @@
 import type { RemoteFormIssue } from '$app/server';
-import { env } from '$env/dynamic/public';
+import * as env from '$app/env/public';
 
 // Cloudflare's documented "always passes" test site key. Used when no real key
 // is configured (local dev, CI, tests) so the widget renders and auto-solves.

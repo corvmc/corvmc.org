@@ -11,9 +11,9 @@
  * gets a certificate issued *before* cutting DNS over, so there is never a
  * window where their live site is down waiting on us.
  */
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { DomainError } from '../domain-error';
-import { env as publicEnv } from '$env/dynamic/public';
+import * as publicEnv from '$app/env/public';
 import { eq, and, isNull, ne } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { group } from '#lib/server/db/schema/group.js';

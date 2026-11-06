@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('$env/dynamic/public', () => ({
-	env: { PUBLIC_SITE_URL: 'https://corvmc.org' }
-}));
+vi.mock('$app/env/public', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ PUBLIC_SITE_URL: 'https://corvmc.org' })
+);
 
 import { reroute } from './hooks';
 

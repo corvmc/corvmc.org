@@ -23,7 +23,7 @@ import { withPlatformDb } from './platform-db';
 
 // Inlined copy of the app's scrypt password hashing (src/lib/server/auth.ts).
 // Re-implemented here rather than imported because auth.ts pulls in SvelteKit
-// virtual modules ($env/dynamic/private, $app/server) that don't resolve under
+// virtual modules ($app/env/private, $app/server) that don't resolve under
 // the plain tsx runtime this seed runs in. The format must match exactly so the
 // app's scryptVerify accepts it: "scrypt:N:r:p:salt_hex:key_hex".
 const SCRYPT_PARAMS = { N: 16384, r: 16, p: 1, keylen: 64, maxmem: 128 * 16384 * 16 * 2 };

@@ -1,5 +1,5 @@
 import { error, type RequestHandler } from '@sveltejs/kit';
-import { env } from '$env/dynamic/public';
+import * as env from '$app/env/public';
 import { bandSiteUrl } from '#lib/utils/band-site-url.js';
 import { db } from '#lib/server/db/index.js';
 import { group } from '#lib/server/db/schema/group.js';

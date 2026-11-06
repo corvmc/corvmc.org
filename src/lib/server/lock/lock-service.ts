@@ -20,7 +20,7 @@ import { maintainFallbackCode } from './fallback-code-service';
 import { hasActiveMemberCode, reconcileMemberCodeSync } from './member-code-service';
 import { getJson, putJson } from '#lib/server/kv.js';
 import { dispatchEmailOnly } from '#lib/server/notification/index.js';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { DEFAULT_TIMEZONE, CONFIRMATION_WINDOW_DAYS } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
