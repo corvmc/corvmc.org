@@ -15,7 +15,10 @@
 	// When a new version has been deployed, force a full-page navigation so the
 	// browser fetches fresh chunks instead of failing to import stale ones
 	// ("error loading dynamically imported module").
-	beforeNavigate(({ willUnload, to }) => {
+	beforeNavigate(({ willUnload, to, shallow }) => {
+		// A shallow goto is a tab change on the same page, where a reload would
+		// discard whatever the member has typed.
+		if (shallow) return;
 		if (updated.current && !willUnload && to?.url) {
 			location.href = to.url.href;
 		}

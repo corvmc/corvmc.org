@@ -66,7 +66,7 @@
 	// month is reading the live list, and last year's roles only pad it.
 	let showRetired = $state(page.url.searchParams.get('retired') === '1');
 
-	// `goto(..., { replaceState })`, not `replaceState()`: the latter only rewrites
+	// `goto(..., { replace: true })`, not a shallow `goto`: the latter only rewrites
 	// the address bar and the router overwrites that entry on the next navigation.
 	$effect(() => {
 		const href = withQuery(resolve('staff/volunteer/roles'), showRetired ? 'retired=1' : '');

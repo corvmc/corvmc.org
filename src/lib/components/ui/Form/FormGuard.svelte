@@ -10,7 +10,9 @@
 
 	const form = getFormContext()!;
 
-	beforeNavigate(({ cancel, to, willUnload }) => {
+	beforeNavigate(({ cancel, to, willUnload, shallow }) => {
+		// A shallow goto only rewrites the address bar, and the form stays mounted.
+		if (shallow) return;
 		if (bypassing) {
 			bypassing = false;
 			return;

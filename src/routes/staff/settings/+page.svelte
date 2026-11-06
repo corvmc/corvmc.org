@@ -47,7 +47,7 @@
 	import { formatDollars } from '#lib/utils/format.js';
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/state';
-	import { replaceState } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import {
 		IconPlugConnected,
@@ -125,7 +125,7 @@
 		const entry = messages[result];
 		if (entry) toast[entry[0]](entry[1]);
 
-		replaceState(resolve('staff/settings'), {});
+		void goto(resolve('staff/settings'), { shallow: true, replace: true });
 	});
 
 	const tabs = [

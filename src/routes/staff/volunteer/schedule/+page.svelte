@@ -83,8 +83,8 @@
 	// Contractor work is not staffed by the window, role or headcount.
 	const byContractor = $derived(kind === 'contractor');
 
-	// Writes the URL, never state — `goto(..., { replaceState })` rather than
-	// `replaceState()`, which updates neither `page.url` nor the router's own entry.
+	// Writes the URL, never state — `goto(..., { replace: true })` rather than
+	// a shallow `goto`, which updates neither `page.url` nor the router's own entry.
 	$effect(() => {
 		const pairs: [string, string][] = [];
 		if (range !== DEFAULT_WINDOW) pairs.push(['days', String(range)]);

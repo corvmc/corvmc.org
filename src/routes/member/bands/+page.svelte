@@ -11,7 +11,7 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
-	import { goto, refreshAll, replaceState } from '$app/navigation';
+	import { goto, refreshAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
@@ -62,7 +62,7 @@
 	// Drop the param on close so the nav link re-triggers and refresh stays clean.
 	function onCreateModalClose() {
 		if (page.url.searchParams.has('create')) {
-			replaceState(resolve('member/bands'), {});
+			void goto(resolve('member/bands'), { shallow: true, replace: true });
 		}
 	}
 

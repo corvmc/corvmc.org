@@ -51,7 +51,6 @@
 	import ArtifactRequestsPanel from './ArtifactRequestsPanel.svelte';
 	import { TAB_KEYS, TAB_LABELS, parseTab, type TabKey } from './tabs';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { replaceState } from '$app/navigation';
 
 	let id = $derived(page.params.id!);
 
@@ -108,7 +107,7 @@
 	 * `/staff/events/[id]` rather than rendering an empty shell.
 	 */
 	$effect(() => {
-		if (evt.source !== 'cmc') void goto(resolve(`staff/events/${id}`), { replaceState: true });
+		if (evt.source !== 'cmc') void goto(resolve(`staff/events/${id}`), { replace: true });
 	});
 
 	/**
@@ -153,20 +152,17 @@
 		visited.add(tab);
 	});
 
-	// `replaceState` (shallow routing) rather than `goto(..., { replaceState })`,
-	// which is what the filter bars use. A tab change is not a navigation, but
-	// `goto` is one, and `FormGuard` hooks `beforeNavigate`: with the production form
-	// dirty, every tab click would cancel the navigation and pop "You have
-	// unsaved changes", whose <dialog> then swallows pointer events for the whole
-	// page. Shallow routing rewrites the address bar and nothing else, which is
-	// all mirroring local state wants.
+	// Shallow, unlike the filter bars. A tab change is not a navigation, and
+	// `FormGuard` hooks `beforeNavigate`: with the production form dirty, a real
+	// navigation would be cancelled and pop "You have unsaved changes", whose
+	// <dialog> then swallows pointer events for the whole page.
 	$effect(() => {
 		const href = withQuery(
 			resolve(`staff/events/${id}/production`),
 			tab === 'overview' ? '' : `tab=${tab}`
 		);
 		if (location.pathname + location.search !== href) {
-			replaceState(href, {});
+			void goto(href, { shallow: true, replace: true });
 		}
 	});
 

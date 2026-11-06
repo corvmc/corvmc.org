@@ -48,7 +48,7 @@
 	let showDone = $state(page.url.searchParams.get('done') !== 'hide');
 	const selectedId = $derived(page.url.searchParams.get('task'));
 
-	/** View state lives in the URL, written with `goto`: `replaceState()` would not update `page.url`. */
+	/** View state lives in the URL, written with `goto`: a shallow `goto` would not update `page.url`. */
 	function setParams(changes: Record<string, string | null>, push = false) {
 		const url = new URL(page.url.href);
 		for (const [k, v] of Object.entries(changes)) {

@@ -28,7 +28,7 @@
 	 * and it counts **purchases only** — a donation is not spend, and folding
 	 * gifts in would overstate the budget by exactly what was given.
 	 *
-	 * Range lives in the URL rather than in `replaceState`, which updates neither
+	 * Range lives in the URL rather than in a shallow `goto`, which updates neither
 	 * `page.url` nor the router.
 	 */
 	let from = $state(page.url.searchParams.get('from') ?? '');

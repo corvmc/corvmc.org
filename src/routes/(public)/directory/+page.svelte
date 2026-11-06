@@ -68,7 +68,7 @@
 	}
 
 	// Writes the URL, never state — `searchText` and `genre` stay the source of
-	// truth. `goto(..., { replaceState })` rather than `replaceState()`: the
+	// truth. `goto(..., { replace: true })` rather than a shallow `goto`: the
 	// latter only rewrites the address bar, and the router then overwrites that
 	// entry with its own record on the next navigation. Debounced so typing a
 	// word costs one rewrite rather than one per character, and `reset: false` so

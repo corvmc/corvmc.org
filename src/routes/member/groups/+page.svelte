@@ -10,7 +10,7 @@
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { replaceState } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import Button from '#lib/components/ui/Button.svelte';
 	import CommitteeApplyModal from './CommitteeApplyModal.svelte';
 	import JoinGroupAction from '#lib/components/groups/JoinGroupAction.svelte';
@@ -43,7 +43,8 @@
 	}
 
 	function onApplyClose() {
-		if (page.url.searchParams.has('committee')) replaceState(resolve('member/groups'), {});
+		if (page.url.searchParams.has('committee'))
+			void goto(resolve('member/groups'), { shallow: true, replace: true });
 	}
 
 	/**
