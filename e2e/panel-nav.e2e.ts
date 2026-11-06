@@ -81,7 +81,14 @@ test.describe('member sidebar', () => {
 		await expect(page.locator('a[aria-label^="Messages"]')).toBeVisible();
 
 		const accountMenu = page.locator('.account-dropdown-wrapper');
-		await accountMenu.locator('button').first().click();
+		// The first click can be lost right after a page load, as in `collapseGroup` in
+		// staff-nav.e2e.ts. The button toggles, so the state is re-read before each attempt,
+		// and the inner timeout is one attempt rather than the whole budget.
+		const firstLink = accountMenu.locator(`a[href="${ACCOUNT_HREFS[0]}"]`);
+		await expect(async () => {
+			if (!(await firstLink.isVisible())) await accountMenu.locator('button').first().click();
+			await expect(firstLink).toBeVisible({ timeout: 1000 });
+		}).toPass({ timeout: 15000 });
 		for (const href of ACCOUNT_HREFS) {
 			await expect(accountMenu.locator(`a[href="${href}"]`)).toBeVisible();
 		}
