@@ -20,4 +20,6 @@
 			<EmptyState title={m.member_messages_title()} description={m.member_messages_description()} />
 		</div>
 	{/if}
+{:catch}
+	<!-- The list beside this pane reports its own failure. -->
 {/await}

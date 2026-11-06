@@ -181,6 +181,8 @@
 				page = 1;
 			}}
 		/>
+	{:catch}
+		<!-- DataList takes this rejection to the boundary. -->
 	{/await}
 	<div class="flex flex-wrap justify-end gap-2">
 		<Button
@@ -418,6 +420,8 @@
 											</span>
 										</span>
 									{/if}
+								{:catch}
+									<!-- DataList takes this rejection to the boundary. -->
 								{/await}
 							</td>
 
@@ -547,6 +551,8 @@
 												)}
 											</span>
 										</p>
+									{:catch}
+										<!-- DataList takes this rejection to the boundary. -->
 									{/await}
 								{/if}
 								{#if actions.has('confirm')}

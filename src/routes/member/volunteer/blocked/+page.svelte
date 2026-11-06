@@ -18,7 +18,7 @@
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import { getVolunteerBlockedNotice } from '#lib/remote/volunteer.remote.js';
 
-	let notice = $derived(getVolunteerBlockedNotice());
+	const me = $derived(await getVolunteerBlockedNotice());
 </script>
 
 <PageHeader
@@ -29,24 +29,22 @@
 />
 
 <PageContent width="md">
-	{#await notice then me}
-		<InfoCard
-			title={m.member_volunteer_blocked_thanks_signing_up_one_thing({ firstName: me.firstName })}
-		>
-			<p class="text-sm">
-				{m.member_volunteer_blocked_we_d_love_have_because()}
-			</p>
-			<p class="text-sm">
-				{m.member_volunteer_blocked_nothing_chase_end_once_s()}
-			</p>
-			<div class="flex flex-wrap gap-2 pt-2">
-				<Button href={resolve('contact')} variant="primary" size="sm"
-					>{m.member_volunteer_blocked_contact_staff()}</Button
-				>
-				<Button href={resolve('member')} variant="ghost" size="sm"
-					>{m.member_volunteer_blocked_back_dashboard()}</Button
-				>
-			</div>
-		</InfoCard>
-	{/await}
+	<InfoCard
+		title={m.member_volunteer_blocked_thanks_signing_up_one_thing({ firstName: me.firstName })}
+	>
+		<p class="text-sm">
+			{m.member_volunteer_blocked_we_d_love_have_because()}
+		</p>
+		<p class="text-sm">
+			{m.member_volunteer_blocked_nothing_chase_end_once_s()}
+		</p>
+		<div class="flex flex-wrap gap-2 pt-2">
+			<Button href={resolve('contact')} variant="primary" size="sm"
+				>{m.member_volunteer_blocked_contact_staff()}</Button
+			>
+			<Button href={resolve('member')} variant="ghost" size="sm"
+				>{m.member_volunteer_blocked_back_dashboard()}</Button
+			>
+		</div>
+	</InfoCard>
 </PageContent>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
+	import { errorMessage } from '#lib/error-message.js';
 	/**
 	 * What the session did, and what is left.
 	 *
@@ -67,6 +68,8 @@
 					{m.staff_inbox_daily_session_summary_snoozed_count({ count: counts.snoozed })}
 				{/if}
 			</p>
+		{:catch error}
+			<p class="text-muted">{m.ui_load_failed({ error: errorMessage(error) })}</p>
 		{/await}
 
 		<div class="flex flex-wrap gap-2">

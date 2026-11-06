@@ -96,6 +96,8 @@
 						{m.staff_members_instructors_pending({ pending })}
 					</button>
 				{/if}
+			{:catch}
+				<!-- Roster's DataList takes this rejection to the boundary. -->
 			{/await}
 		{/snippet}
 

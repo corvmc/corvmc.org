@@ -106,30 +106,32 @@
 		<SectionLabel label={m.staff_assigned_2()} />
 		<!-- Its own query. The staff list is not keyed by these filters and the
 		     queue paints without it — same reason as AssignControl. -->
-		{#await getAssignableStaff()}
-			<span class="loading loading-xs loading-spinner"></span>
-		{:then staffUsers}
-			<div class="flex flex-wrap gap-2">
-				<button type="button" class={chip(assigned === '')} onclick={() => (assigned = '')}>
-					{m.staff_anyone()}
-				</button>
-				<button type="button" class={chip(assigned === 'mine')} onclick={() => (assigned = 'mine')}>
-					{m.staff_inbox_filter_panel_me()}
-				</button>
-				<button
-					type="button"
-					class={chip(assigned === 'unassigned')}
-					onclick={() => (assigned = 'unassigned')}
-				>
-					{m.staff_unassigned()}
-				</button>
+		<div class="flex flex-wrap items-center gap-2">
+			<button type="button" class={chip(assigned === '')} onclick={() => (assigned = '')}>
+				{m.staff_anyone()}
+			</button>
+			<button type="button" class={chip(assigned === 'mine')} onclick={() => (assigned = 'mine')}>
+				{m.staff_inbox_filter_panel_me()}
+			</button>
+			<button
+				type="button"
+				class={chip(assigned === 'unassigned')}
+				onclick={() => (assigned = 'unassigned')}
+			>
+				{m.staff_unassigned()}
+			</button>
+			{#await getAssignableStaff()}
+				<span class="loading loading-xs loading-spinner"></span>
+			{:then staffUsers}
 				{#each staffUsers as s (s.id)}
 					<button type="button" class={chip(assigned === s.id)} onclick={() => (assigned = s.id)}>
 						{s.name}
 					</button>
 				{/each}
-			</div>
-		{/await}
+			{:catch}
+				<!-- The chips above still filter. -->
+			{/await}
+		</div>
 	</div>
 
 	<div class="flex flex-col gap-2">

@@ -25,6 +25,7 @@ import noAssertedRouteParam from './eslint-rules/no-asserted-route-param.js';
 import noLiteralUiText from './eslint-rules/no-literal-ui-text.js';
 import noManualFieldName from './eslint-rules/no-manual-field-name.js';
 import noInteractiveAwait from './eslint-rules/no-interactive-await.js';
+import requireAwaitCatch from './eslint-rules/require-await-catch.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -75,7 +76,8 @@ const customPlugin = {
 		// Enabled below for shipped `.svelte` (#2099).
 		'no-literal-ui-text': noLiteralUiText,
 		'no-manual-field-name': noManualFieldName,
-		'no-interactive-await': noInteractiveAwait
+		'no-interactive-await': noInteractiveAwait,
+		'require-await-catch': requireAwaitCatch
 	}
 };
 
@@ -239,7 +241,8 @@ export default defineConfig(
 			'custom/definite-action-labels': 'error',
 			'custom/no-svelte-element': 'error',
 			'custom/no-asserted-route-param': 'error',
-			'custom/no-interactive-await': 'error'
+			'custom/no-interactive-await': 'error',
+			'custom/require-await-catch': 'error'
 		}
 	},
 	{

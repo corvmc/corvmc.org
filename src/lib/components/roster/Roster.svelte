@@ -118,6 +118,8 @@
 			{:else}
 				{pagination.total}
 			{/if}
+		{:catch}
+			<!-- DataList takes this rejection to the boundary. -->
 		{/await}
 	</div>
 	<div class="flex flex-wrap items-center gap-1">

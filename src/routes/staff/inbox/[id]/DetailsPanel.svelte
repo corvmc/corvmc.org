@@ -20,6 +20,7 @@
 	import ThreadTags from './ThreadTags.svelte';
 	import { channelLabel } from '#lib/components/inbox/channels.js';
 	import { formatDate, formatDateTime } from '#lib/utils/format.js';
+	import { errorMessage } from '#lib/error-message.js';
 	import { getInboxThreadContext } from '#lib/remote/inbox.remote.js';
 
 	type Thread = {
@@ -137,6 +138,8 @@
 								channelLabel: channelLabel(thread.channel)
 							})}</span
 						>
+					{:catch error}
+						<span class="text-subtle">{m.ui_load_failed({ error: errorMessage(error) })}</span>
 					{/await}
 				</div>
 

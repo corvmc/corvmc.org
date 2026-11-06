@@ -17,7 +17,9 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { IconArrowDown, IconX } from '@tabler/icons-svelte';
+	import Alert from '#lib/components/ui/Alert.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import Card from '#lib/components/ui/Card/Card.svelte';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
@@ -149,14 +151,16 @@
 						/>
 					</CardBody>
 				</Card>
-
-				<div class="flex justify-center">
-					<Button variant="ghost" size="sm" onclick={() => session.skip()}>
-						<IconArrowDown size={16} />
-						{m.staff_inbox_daily_skip_stays_open_moves_end()}
-					</Button>
-				</div>
+			{:catch error}
+				<Alert type="error">{m.ui_load_failed({ error: errorMessage(error) })}</Alert>
 			{/await}
+
+			<div class="flex justify-center">
+				<Button variant="ghost" size="sm" onclick={() => session.skip()}>
+					<IconArrowDown size={16} />
+					{m.staff_inbox_daily_skip_stays_open_moves_end()}
+				</Button>
+			</div>
 		{/key}
 	{/if}
 </PageContent>

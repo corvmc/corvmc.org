@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
+	import { errorMessage } from '#lib/error-message.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { formatDate } from '#lib/utils/format.js';
 	import { creditsToHours } from '#lib/config.js';
@@ -52,5 +53,7 @@
 				>{m.member_membership_free_hours_remaining_learn_more()}</Button
 			>
 		{/if}
+	{:catch error}
+		<span class="text-subtle">{m.ui_load_failed({ error: errorMessage(error) })}</span>
 	{/await}
 </div>

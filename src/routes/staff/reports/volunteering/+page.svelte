@@ -142,6 +142,8 @@
 			-->
 			{#await stillInReview then pending}
 				<StatCard title={msg.staff_reports_volunteering_still_review()} value={pending} />
+			{:catch}
+				<!-- The `report` block around this says the page's query failed. -->
 			{/await}
 		</div>
 
@@ -212,6 +214,8 @@
 					</Table>
 				</InfoCard>
 			{/if}
+		{:catch}
+			<!-- The `report` block around this says the page's query failed. -->
 		{/await}
 
 		<InfoCard title={msg.staff_reports_volunteering_hours_by_role()}>

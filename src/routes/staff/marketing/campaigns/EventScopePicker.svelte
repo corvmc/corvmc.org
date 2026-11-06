@@ -59,6 +59,8 @@
 		<p class="mt-1 text-subtle">
 			{m.staff_marketing_campaigns_event_scope_picker_show_s_audience({ n })}
 		</p>
+	{:catch}
+		<!-- The count is a preview; choosing the show still works. -->
 	{/await}
 {:else}
 	<p class="mt-1 text-subtle">

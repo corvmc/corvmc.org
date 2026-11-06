@@ -38,9 +38,9 @@
 	});
 
 	// One query for the list and the page's own facts (credit balance, sustaining status, the
-	// category filter). `equipmentResult` stays a promise for the {#await} below.
+	// category filter).
 	const pageData = $derived(await getMemberEquipmentPage(filters));
-	const equipmentResult = $derived(pageData.equipment);
+	const equipment = $derived(pageData.equipment);
 	const meta = $derived(pageData.meta);
 
 	let showRequestModal = $state(false);
@@ -80,12 +80,10 @@
 	$effect(() => {
 		const wanted = page.url.searchParams.get('request');
 		if (!wanted || opened) return;
-		void Promise.resolve(equipmentResult).then((rows) => {
-			const match = rows.find((r) => r.id === wanted);
-			if (!match) return;
-			opened = true;
-			openRequest(match.id, match.name, match.pricingTier);
-		});
+		const match = equipment.find((r) => r.id === wanted);
+		if (!match) return;
+		opened = true;
+		openRequest(match.id, match.name, match.pricingTier);
 	});
 
 	function openFreeFormRequest() {
@@ -154,57 +152,51 @@
 		{/if}
 	</div>
 
-	{#await equipmentResult}
-		<div class="flex justify-center py-12">
-			<span class="loading loading-lg loading-spinner"></span>
-		</div>
-	{:then equipment}
-		{#if equipment.length === 0}
-			<EmptyState message={m.member_equipment_message()} />
-		{:else}
-			{@const groups = equipment.reduce<Record<string, typeof equipment>>((acc, eq) => {
-				const key = eq.categoryName;
-				(acc[key] ??= []).push(eq);
-				return acc;
-			}, {})}
-			{#each Object.entries(groups) as [groupName, items] (groupName)}
-				<div class="mb-6">
-					<h3 class="mb-2 text-muted font-semibold">{groupName}</h3>
-					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-						{#each items as eq (eq.id)}
-							<Card class="border">
-								<CardBody padding="sm">
-									<CardTitle size="sm">{eq.name}</CardTitle>
-									{#if eq.description}
-										<p class="line-clamp-2 text-subtle">{eq.description}</p>
-									{/if}
-									<div class="mt-1 flex flex-wrap items-center gap-1">
-										<!-- Condition moved to the individual unit: four Twin Reverbs are
-										     one catalog row and four records, and one of them is the beat-up
-										     one. Which unit you get is decided at checkout. -->
-										<Badge variant="ghost" size="xs">{priceLabel(eq.pricingTier)}</Badge>
-										<Badge variant={eq.availableQuantity <= 0 ? 'error' : 'ghost'} size="xs">
-											{m.member_equipment_available({ availableQuantity: eq.availableQuantity })}
-										</Badge>
-									</div>
-									<div class="mt-2 card-actions">
-										<Button
-											variant="default"
-											size="xs"
-											disabled={eq.availableQuantity <= 0}
-											onclick={() => openRequest(eq.id, eq.name, eq.pricingTier)}
-										>
-											{m.member_equipment_request()}
-										</Button>
-									</div>
-								</CardBody>
-							</Card>
-						{/each}
-					</div>
+	{#if equipment.length === 0}
+		<EmptyState message={m.member_equipment_message()} />
+	{:else}
+		{@const groups = equipment.reduce<Record<string, typeof equipment>>((acc, eq) => {
+			const key = eq.categoryName;
+			(acc[key] ??= []).push(eq);
+			return acc;
+		}, {})}
+		{#each Object.entries(groups) as [groupName, items] (groupName)}
+			<div class="mb-6">
+				<h3 class="mb-2 text-muted font-semibold">{groupName}</h3>
+				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+					{#each items as eq (eq.id)}
+						<Card class="border">
+							<CardBody padding="sm">
+								<CardTitle size="sm">{eq.name}</CardTitle>
+								{#if eq.description}
+									<p class="line-clamp-2 text-subtle">{eq.description}</p>
+								{/if}
+								<div class="mt-1 flex flex-wrap items-center gap-1">
+									<!-- Condition moved to the individual unit: four Twin Reverbs are
+									     one catalog row and four records, and one of them is the beat-up
+									     one. Which unit you get is decided at checkout. -->
+									<Badge variant="ghost" size="xs">{priceLabel(eq.pricingTier)}</Badge>
+									<Badge variant={eq.availableQuantity <= 0 ? 'error' : 'ghost'} size="xs">
+										{m.member_equipment_available({ availableQuantity: eq.availableQuantity })}
+									</Badge>
+								</div>
+								<div class="mt-2 card-actions">
+									<Button
+										variant="default"
+										size="xs"
+										disabled={eq.availableQuantity <= 0}
+										onclick={() => openRequest(eq.id, eq.name, eq.pricingTier)}
+									>
+										{m.member_equipment_request()}
+									</Button>
+								</div>
+							</CardBody>
+						</Card>
+					{/each}
 				</div>
-			{/each}
-		{/if}
-	{/await}
+			</div>
+		{/each}
+	{/if}
 
 	<div class="border-t pt-4">
 		<p class="mb-2 text-muted">{m.member_equipment_can_t_find_what_need()}</p>

@@ -215,6 +215,8 @@
 					{/each}
 				</Table>
 			{/if}
+		{:catch}
+			<!-- DataList takes this rejection to the boundary. -->
 		{/await}
 	{/if}
 

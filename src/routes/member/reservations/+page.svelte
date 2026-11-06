@@ -207,6 +207,8 @@
 								<OverdueTable reservations={overdue} />
 							</section>
 						{/if}
+					{:catch}
+						<!-- `creditData` takes this rejection to the boundary. -->
 					{/await}
 					<div class="card-grid">
 						{#each await activeReservations as reservation (reservation.id)}
@@ -259,6 +261,8 @@
 								</Button>
 							</div>
 						{/if}
+					{:catch}
+						<!-- `creditData` takes this rejection to the boundary. -->
 					{/await}
 				{/if}
 			</Tabs.Content>
