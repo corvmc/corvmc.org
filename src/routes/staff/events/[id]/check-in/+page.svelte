@@ -8,7 +8,7 @@
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { CancelTicketAction } from '#lib/components/actions/index.js';
 	import { checkInTicket, getStaffCheckIn } from '#lib/remote/events.remote.js';
 	import { page } from '$app/state';
@@ -90,7 +90,7 @@
 							<Form
 								remote={checkInTicket.for(ticket.id)}
 								successToast={m.staff_events_id_check_in_success_toast()}
-								onsuccess={() => invalidateAll()}
+								onsuccess={() => refreshAll()}
 								class="inline"
 							>
 								<input {...fields.ticketId.as('hidden', ticket.id)} />

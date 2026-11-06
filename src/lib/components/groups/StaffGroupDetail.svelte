@@ -12,7 +12,7 @@
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { formatDateShort } from '#lib/utils/format.js';
 	import {
@@ -103,7 +103,7 @@
 				successToast={msg.groups_staff_group_detail_reactivated()}
 				variant="primary"
 				size="sm"
-				onsuccess={() => invalidateAll()}
+				onsuccess={() => refreshAll()}
 			>
 				{#snippet form()}
 					<input {...reactivateFields.groupId.as('hidden', id)} />
@@ -168,7 +168,7 @@
 								: msg.groups_staff_group_detail_chair_removed()}
 							variant="ghost"
 							size="xs"
-							onsuccess={() => invalidateAll()}
+							onsuccess={() => refreshAll()}
 						>
 							{#snippet form()}
 								<input {...roleFields.groupId.as('hidden', id)} />
@@ -254,7 +254,7 @@
 				variant="error"
 				size="sm"
 				outline
-				onsuccess={() => invalidateAll()}
+				onsuccess={() => refreshAll()}
 			>
 				{#snippet form()}
 					<input {...deactivateFields.groupId.as('hidden', id)} />

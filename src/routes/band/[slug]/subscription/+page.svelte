@@ -11,7 +11,7 @@
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import BandBillingCard from './BandBillingCard.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
 	import { formatDate, formatCents } from '#lib/utils/format.js';
 	import {
@@ -124,7 +124,7 @@
 						<Form
 							remote={resumePremium}
 							successToast={m.band_slug_subscription_subscription_resumed()}
-							onsuccess={() => invalidateAll()}
+							onsuccess={() => refreshAll()}
 						>
 							<input {...resumePremium.fields.slug.as('hidden', band.slug)} />
 							<SubmitButton
@@ -139,7 +139,7 @@
 					<Form
 						remote={cancelPremium}
 						successToast={m.band_slug_subscription_subscription_will_cancel_at_end()}
-						onsuccess={() => invalidateAll()}
+						onsuccess={() => refreshAll()}
 					>
 						<input {...cancelPremium.fields.slug.as('hidden', band.slug)} />
 						<SubmitButton

@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { ROSTER_IMPORT_MAX } from '#lib/config.js';
 	import { importStaffGroupRoster } from '#lib/remote/groups.remote.js';
 	import type { RosterImportResult } from '#lib/types/roster-import.js';
@@ -30,7 +30,7 @@
 	onsuccess={(result) => {
 		const { success: _, ...outcome } = result as RosterImportResult & { success: true };
 		onresult(outcome);
-		invalidateAll();
+		refreshAll();
 	}}
 >
 	{#snippet form()}

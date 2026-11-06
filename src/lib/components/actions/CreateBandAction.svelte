@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { createBandApi } from '#lib/remote/bands.remote.js';
 	import { Field } from '../ui/Form';
@@ -46,7 +46,7 @@
 	onsuccess={onsuccess ??
 		(async (result) => {
 			const r = result as { bandId?: string };
-			await invalidateAll();
+			await refreshAll();
 			if (r?.bandId) goto(resolve(`staff/groups/${r.bandId}`));
 		})}
 	{...rest}

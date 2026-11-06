@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonShape, ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { updateClosure } from '#lib/remote/closures.remote.js';
 	import { Field } from '../ui/Form';
 	import { toLocalDateTime } from '#lib/utils/format.js';
@@ -40,7 +40,7 @@
 	{size}
 	{shape}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}

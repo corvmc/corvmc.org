@@ -6,7 +6,7 @@ import { fakeNotificationStream, notify } from './fixtures/notification-stream';
 
 /**
  * A notification arriving while a reply is half-written. The bell's
- * `invalidateAll()` refreshes every query on the page, and the composer has to
+ * `refreshAll()` refreshes every query on the page, and the composer has to
  * come through that with the draft intact (#2357).
  */
 test('a notification does not wipe a half-written reply', async ({ page }) => {

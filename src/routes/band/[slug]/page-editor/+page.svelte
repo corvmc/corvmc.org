@@ -27,7 +27,7 @@
 	import { type BandThemeValue, type Block } from '#lib/types/band-page.js';
 	import themeSheet from '#lib/themes/band-site/index.css?raw';
 	import { page } from '$app/state';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import EditorShell from './EditorShell.svelte';
 	import StylePanel from './StylePanel.svelte';
 	import BlockMediaField from './BlockMediaField.svelte';
@@ -142,7 +142,7 @@
 <Form
 	remote={saveBandPageConfig}
 	successToast={msg.band_slug_page_editor_success_toast()}
-	onsuccess={() => invalidateAll()}
+	onsuccess={() => refreshAll()}
 	class="flex h-full min-h-0 flex-col"
 >
 	<PageHeader
@@ -369,7 +369,7 @@
 				bandId={band.id}
 				type="image"
 				label={msg.band_add_photo()}
-				onuploaded={() => invalidateAll()}
+				onuploaded={() => refreshAll()}
 			/>
 			{#if mediaIn('gallery').length}
 				<div class="flex flex-wrap gap-2">
@@ -454,7 +454,7 @@
 				label={msg.band_stage_plot()}
 				accept="image/*,.pdf"
 				src={mediaIn('stage_plot')[0]?.url ?? undefined}
-				onuploaded={() => invalidateAll()}
+				onuploaded={() => refreshAll()}
 			/>
 			<BlockMediaField
 				bandId={band.id}
@@ -462,7 +462,7 @@
 				label={msg.band_slug_page_editor_tech_rider_pdf_image()}
 				accept="image/*,.pdf"
 				src={mediaIn('rider')[0]?.url ?? undefined}
-				onuploaded={() => invalidateAll()}
+				onuploaded={() => refreshAll()}
 			/>
 		{:else if block.type === 'contact'}
 			<label class="flex items-center gap-2">

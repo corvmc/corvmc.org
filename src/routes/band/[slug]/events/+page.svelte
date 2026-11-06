@@ -24,7 +24,7 @@
 	} from '#lib/remote/band-events.remote.js';
 	import RequestCorrectionAction from './RequestCorrectionAction.svelte';
 	import { getBandLayoutContext } from '../layout-context';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
@@ -85,7 +85,7 @@
 								<Form
 									remote={confirm}
 									successToast={m.band_slug_events_added_profile()}
-									onsuccess={() => invalidateAll()}
+									onsuccess={() => refreshAll()}
 									class="inline"
 								>
 									<input {...confirm.fields.slug.as('hidden', band.slug)} />
@@ -95,7 +95,7 @@
 								<Form
 									remote={decline}
 									successToast={m.band_slug_events_declined()}
-									onsuccess={() => invalidateAll()}
+									onsuccess={() => refreshAll()}
 									class="inline"
 								>
 									<input {...decline.fields.slug.as('hidden', band.slug)} />

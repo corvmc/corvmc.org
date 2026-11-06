@@ -14,7 +14,7 @@ vi.mock('#lib/remote/notifications.remote.js', () => ({
 }));
 
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn()
+	refreshAll: vi.fn()
 }));
 
 class FakeEventSource {

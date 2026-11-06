@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { payForReservation, confirmReservation } from '#lib/remote/reservations.remote.js';
 	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
 	import ConfirmStep from '../reservations/booking/ConfirmStep.svelte';
@@ -47,7 +47,7 @@
 			await goToCheckout(r.redirectUrl);
 		} else {
 			if (onsuccess) onsuccess();
-			else await invalidateAll();
+			else await refreshAll();
 		}
 	}}
 	{...rest}

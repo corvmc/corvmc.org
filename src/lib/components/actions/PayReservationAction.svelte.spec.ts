@@ -9,12 +9,12 @@ import type { Reservation } from '#lib/server/reservation/index.js';
  * Where the member goes after paying. `payForReservation` answers one of two
  * ways — a Stripe URL to leave for, or a booking already settled from credits
  * — and this component is the only thing that tells them apart. Sending a
- * paying member to `invalidateAll` leaves them on an unpaid booking with no
+ * paying member to `refreshAll` leaves them on an unpaid booking with no
  * error, which is the failure nothing else here can catch.
  */
 
 const goToCheckout = vi.fn();
-const invalidateAll = vi.fn();
+const refreshAll = vi.fn();
 
 let submitResult: unknown;
 
@@ -73,7 +73,7 @@ vi.mock('#lib/remote/reservations.remote.js', () => ({
 }));
 
 vi.mock('$app/navigation', () => ({
-	invalidateAll,
+	refreshAll,
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));
@@ -103,14 +103,14 @@ async function payWith(result: unknown) {
 describe('PayReservationAction', () => {
 	beforeEach(() => {
 		goToCheckout.mockClear();
-		invalidateAll.mockClear();
+		refreshAll.mockClear();
 	});
 
 	it('goes to checkout when the server hands back a checkout URL', async () => {
 		await payWith({ redirectUrl: '/checkout/cs_test_1' });
 
 		await vi.waitFor(() => expect(goToCheckout).toHaveBeenCalledWith('/checkout/cs_test_1'));
-		expect(invalidateAll).not.toHaveBeenCalled();
+		expect(refreshAll).not.toHaveBeenCalled();
 	});
 
 	// Credits covered it, so there is nothing to pay and nowhere to go — the
@@ -118,7 +118,7 @@ describe('PayReservationAction', () => {
 	it('refreshes in place when the booking was settled without a charge', async () => {
 		await payWith({ paid: true });
 
-		await vi.waitFor(() => expect(invalidateAll).toHaveBeenCalled());
+		await vi.waitFor(() => expect(refreshAll).toHaveBeenCalled());
 		expect(goToCheckout).not.toHaveBeenCalled();
 	});
 });

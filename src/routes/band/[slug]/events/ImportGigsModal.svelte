@@ -7,7 +7,7 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { importGigsForm } from '#lib/remote/band-events.remote.js';
 	import { parseGigImport, GIG_IMPORT_MAX_LINES } from '#lib/utils/gig-import.js';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 
 	// The `slug` is back to being read. It used to ride the form and be ignored,
 	// because the guard resolved the band from the route instead; now it is the
@@ -30,7 +30,7 @@
 		onsuccess={() => {
 			open = false;
 			text = '';
-			invalidateAll();
+			refreshAll();
 		}}
 		class="space-y-4"
 	>

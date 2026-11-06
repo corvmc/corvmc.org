@@ -36,7 +36,7 @@ vi.mock('#lib/remote/layout.remote.js', () => ({
 	getStaffLayout: remote(() => ({ capabilities: held.capabilities }))
 }));
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));

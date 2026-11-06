@@ -7,7 +7,7 @@ import { createAttachmentKey } from 'svelte/attachments';
 vi.mock('$app/env/public', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));

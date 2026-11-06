@@ -3,7 +3,7 @@
 	import { withQuery } from '#lib/utils/with-query.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
@@ -45,7 +45,7 @@
 			variant="error"
 			size="sm"
 			outline
-			onsuccess={() => invalidateAll()}
+			onsuccess={() => refreshAll()}
 		>
 			{#snippet form()}
 				<input {...cancelFields.seriesId.as('hidden', id)} />

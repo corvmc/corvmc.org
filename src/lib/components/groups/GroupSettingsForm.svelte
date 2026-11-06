@@ -5,7 +5,7 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import { updateStaffGroup } from '#lib/remote/groups.remote.js';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 
 	/**
 	 * How this program is found and joined. Two settings, one form, because they
@@ -51,7 +51,7 @@
 		remote={updateStaffGroup}
 		guard
 		successToast={m.groups_saved()}
-		onsuccess={() => invalidateAll()}
+		onsuccess={() => refreshAll()}
 	>
 		<input {...fields.groupId.as('hidden', groupId)} />
 

@@ -16,7 +16,7 @@ vi.mock('svelte-sonner', () => ({
 }));
 
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));

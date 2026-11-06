@@ -4,7 +4,7 @@
 	import Alert from '../ui/Alert.svelte';
 	import { Field } from '../ui/Form';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { publishEvent, getEventPublishBlockers } from '#lib/remote/events.remote.js';
 
 	const { fields } = publishEvent;
@@ -39,7 +39,7 @@
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}

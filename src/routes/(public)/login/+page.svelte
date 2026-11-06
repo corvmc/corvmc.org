@@ -27,7 +27,7 @@
 	const me = getMe();
 
 	// `handleSubmit` owns the navigation for a sign-in performed *here*. Without
-	// this flag its `invalidateAll` refreshes `getMe()`, `me.current` flips, and
+	// this flag its `refreshAll` refreshes `getMe()`, `me.current` flips, and
 	// this effect fires a SECOND `goto` a few hundred ms behind the first one.
 	// SvelteKit treats the later navigation as superseding, so it aborts whatever
 	// navigation is in flight at that moment — including the first link the member
@@ -133,7 +133,7 @@
 
 		const redirectTo = returnTo ?? '/member';
 		navigatingAfterSignIn = true;
-		await goto(redirectTo, { invalidateAll: true });
+		await goto(redirectTo, { refreshAll: true });
 	}
 </script>
 

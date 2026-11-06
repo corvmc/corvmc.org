@@ -11,7 +11,7 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
-	import { goto, invalidateAll, replaceState } from '$app/navigation';
+	import { goto, refreshAll, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
@@ -104,7 +104,7 @@
 											} else {
 												toast.success(m.member_bands_invitation_accepted());
 											}
-											invalidateAll();
+											refreshAll();
 										}}
 									>
 										<input {...accept.fields.bandId.as('hidden', invite.id)} />
@@ -123,7 +123,7 @@
 											} else {
 												toast.success(m.member_bands_invitation_declined());
 											}
-											invalidateAll();
+											refreshAll();
 										}}
 									>
 										<input {...decline.fields.bandId.as('hidden', invite.id)} />

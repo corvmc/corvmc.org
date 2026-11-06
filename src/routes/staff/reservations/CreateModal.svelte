@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import {
 		searchMembers,
@@ -131,7 +131,7 @@
 	onsuccess={async (result) => {
 		resetForm();
 		const r = result as { reservationId?: string };
-		await invalidateAll();
+		await refreshAll();
 		if (r?.reservationId) goto(resolve(`staff/reservations/${r.reservationId}`));
 	}}
 >

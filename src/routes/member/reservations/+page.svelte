@@ -91,7 +91,7 @@
 	// undone.
 	const isInstructor = $derived(await pageData.then((d) => d.isInstructor));
 
-	// Remote queries aren't refreshed by invalidateAll() — only by their own
+	// Remote queries aren't refreshed by refreshAll() — only by their own
 	// refresh() method. Mutations (book/cancel/confirm) must call this so the
 	// lists (and free-hours balance) update without a manual page reload.
 	function refreshReservations() {

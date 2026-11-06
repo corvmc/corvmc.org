@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
@@ -79,7 +79,7 @@
 		toast.success(m.band_slug_edit_band_profile_form_toast());
 		// No slug branch: renaming the band no longer moves its address, so the
 		// page always stays where it is. Band settings is where an owner changes it.
-		invalidateAll();
+		refreshAll();
 	}}
 >
 	<input {...profileFields.slug.as('hidden', band.slug)} />

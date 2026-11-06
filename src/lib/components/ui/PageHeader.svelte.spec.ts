@@ -8,7 +8,7 @@ import '#lib/test/locators.js';
 // Action used to fall back to md beside sm siblings (#1831).
 
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));
