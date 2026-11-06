@@ -79,8 +79,11 @@ const customPlugin = {
 	}
 };
 
-/** `#lib` is gone in kit 3, and `#lib` resolves only with the file's extension. */
-const LIB_IMPORT_PATTERNS = [
+/**
+ * `$lib` is gone in kit 3, and `#lib` resolves only with the file's extension.
+ * The rest is what kit 3 deprecates in favour of something this tree already uses.
+ */
+const IMPORT_PATTERNS = [
 	{
 		regex: '^\\$lib(/|$)',
 		message: 'Import through #lib with the extension: #lib/foo.js, #lib/Foo.svelte.'
@@ -88,6 +91,29 @@ const LIB_IMPORT_PATTERNS = [
 	{
 		regex: '^#lib/(?!.*\\.(js|svelte|json|css|svg|png|jpg|webp|txt)(\\?.*)?$)',
 		message: 'A #lib import needs its extension: .js for a .ts file, /index.js for a folder.'
+	},
+	{
+		regex: '^\\$env/',
+		message: 'Deprecated in kit 3. Read variables from $app/env/private or $app/env/public.'
+	},
+	{
+		regex: '^\\$app/environment$',
+		message: 'Deprecated in kit 3. Import from $app/env.'
+	},
+	{
+		regex: '^\\$app/navigation$',
+		importNames: ['invalidateAll'],
+		message: 'Deprecated in kit 3. Use refreshAll.'
+	},
+	{
+		regex: '^\\$app/navigation$',
+		importNames: ['pushState', 'replaceState'],
+		message: 'Deprecated in kit 3. Use goto(url, { shallow: true }), with replace: true to replace.'
+	},
+	{
+		regex: '^@sveltejs/kit$',
+		importNames: ['json', 'text'],
+		message: 'Deprecated in kit 3. Use Response.json(...) or new Response(...).'
 	}
 ];
 
@@ -126,16 +152,13 @@ export default defineConfig(
 			// literal. (`Pathname` does not work — the rule tests assignability in
 			// both directions and `Pathname` is a strict subtype.)
 			//
-			// `ignoreGoto` / `ignoreReplaceState` are the genuine exemptions. Links get
-			// `allowAbsolute`, `allowFragment` and `allowNullish`, but `goto()` and
-			// `replaceState()` get no allowances at all, and this app's list pages
+			// `ignoreGoto` is the genuine exemption. Links get
+			// `allowAbsolute`, `allowFragment` and `allowNullish`, but `goto()`
+			// gets no allowances at all, and this app's list pages
 			// navigate by rebuilding `page.url` with new search params — a resolved
 			// route with a query string appended, which has no route id to resolve as
 			// a whole. See docs/development/template-audit.md.
-			'svelte/no-navigation-without-resolve': [
-				'error',
-				{ ignoreGoto: true, ignoreReplaceState: true }
-			],
+			'svelte/no-navigation-without-resolve': ['error', { ignoreGoto: true }],
 			// A template literal over `resolve()` makes TypeScript expand the whole
 			// typed-route union, which sits at its complexity limit (#1610).
 			'no-restricted-syntax': [
@@ -144,6 +167,11 @@ export default defineConfig(
 					selector: "TemplateLiteral > CallExpression[callee.name='resolve']",
 					message:
 						'Append a query with withQuery() from $lib/utils/with-query, not a template literal over resolve().'
+				},
+				{
+					selector:
+						"CallExpression[callee.name='goto'] > ObjectExpression > Property[key.name=/^(replaceState|invalidateAll)$/]",
+					message: 'Deprecated in kit 3. goto takes replace and refreshAll.'
 				}
 			]
 		}
@@ -272,7 +300,7 @@ export default defineConfig(
 		// Kit 3 removes `#lib` and requires an extension on every `#lib` import (#2199).
 		// The block below repeats these patterns, because its own options replace them.
 		files: ['src/**/*.{ts,svelte}', 'scripts/**/*.ts', 'e2e/**/*.ts'],
-		rules: { 'no-restricted-imports': ['error', { patterns: LIB_IMPORT_PATTERNS }] }
+		rules: { 'no-restricted-imports': ['error', { patterns: IMPORT_PATTERNS }] }
 	},
 	{
 		// A spec on Playwright's own `test` records nothing of what the browser
@@ -282,7 +310,7 @@ export default defineConfig(
 			'no-restricted-imports': [
 				'error',
 				{
-					patterns: LIB_IMPORT_PATTERNS,
+					patterns: IMPORT_PATTERNS,
 					paths: [
 						{
 							name: '@playwright/test',
@@ -304,7 +332,7 @@ export default defineConfig(
 			'no-restricted-imports': [
 				'error',
 				{
-					patterns: LIB_IMPORT_PATTERNS,
+					patterns: IMPORT_PATTERNS,
 					paths: [
 						{
 							name: '#lib/server/authorization.js',
