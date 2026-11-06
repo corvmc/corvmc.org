@@ -9,7 +9,7 @@ import '../../../routes/layout.css';
 // At phone width a header with four actions squeezed its title to "Fo…" (#1910).
 
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));

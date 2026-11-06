@@ -12,7 +12,7 @@ function deferred<T>() {
 const macrotask = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 /**
- * Regression for #2433: a notification's `invalidateAll()` during a member record
+ * Regression for #2433: a notification's `refreshAll()` during a member record
  * load ended in `effect_update_depth_exceeded` and the staff layout's failed
  * boundary. New tab objects with unchanged keys must not re-register the triggers:
  * that write merges into the open refresh, which derives the tabs again.

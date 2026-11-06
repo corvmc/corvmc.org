@@ -5,7 +5,7 @@
 	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
 	import { searchMembers } from '#lib/remote/reservations.remote.js';
 	import { setStaffGroupRole } from '#lib/remote/groups.remote.js';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 
 	/**
 	 * Staff add a chair to a club or committee: any member, on the roster or not.
@@ -27,7 +27,7 @@
 	successToast={m.groups_add_chair_success_toast()}
 	variant="ghost"
 	size="sm"
-	onsuccess={() => invalidateAll()}
+	onsuccess={() => refreshAll()}
 >
 	{#snippet form()}
 		<div class="space-y-4">

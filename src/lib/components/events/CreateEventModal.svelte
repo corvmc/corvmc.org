@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { withQuery } from '#lib/utils/with-query.js';
 	import Modal from '#lib/components/ui/Modal.svelte';
@@ -44,7 +44,7 @@
 	async function handleSuccess(result?: { eventId?: string }) {
 		open = false;
 		resetForm();
-		await invalidateAll();
+		await refreshAll();
 		if (!result?.eventId) return;
 		if (production) {
 			goto(resolve(`staff/events/${result.eventId}/production`));

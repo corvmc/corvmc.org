@@ -6,7 +6,7 @@
 	import { joinGroupForm } from '#lib/remote/groups.remote.js';
 	import { applyToGroups } from '#lib/remote/group-applications.remote.js';
 	import { groupApplicationQuestions } from '#lib/config.js';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { withQuery } from '#lib/utils/with-query.js';
 
@@ -51,7 +51,7 @@
 		successToast={m.groups_join_group_have_joined()}
 		variant="primary"
 		size="sm"
-		onsuccess={() => invalidateAll()}
+		onsuccess={() => refreshAll()}
 	>
 		{#snippet form()}
 			<div class="space-y-3">
@@ -84,7 +84,7 @@
 		successToast={m.groups_join_group_application_sent()}
 		variant="primary"
 		size="sm"
-		onsuccess={() => invalidateAll()}
+		onsuccess={() => refreshAll()}
 	>
 		{#snippet form()}
 			<div class="space-y-3">

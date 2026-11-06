@@ -3,7 +3,7 @@
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { pauseInstructor, retireInstructor } from '#lib/remote/instructors.remote.js';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 
 	/**
 	 * Pause and retire both block booking and differ only in intent — which is the
@@ -29,7 +29,7 @@
 		successToast={m.staff_members_instructors_end_grant_actions_paused()}
 		variant="ghost"
 		size="sm"
-		onsuccess={() => invalidateAll()}
+		onsuccess={() => refreshAll()}
 	>
 		{#snippet form()}
 			<div class="space-y-4">
@@ -55,7 +55,7 @@
 		successToast={m.staff_retired()}
 		variant="ghost"
 		size="sm"
-		onsuccess={() => invalidateAll()}
+		onsuccess={() => refreshAll()}
 	>
 		{#snippet form()}
 			<div class="space-y-4">

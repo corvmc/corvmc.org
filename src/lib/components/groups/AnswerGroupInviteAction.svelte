@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import Action from '#lib/components/ui/Action.svelte';
 	import { acceptGroupInvite, declineGroupInvite } from '#lib/remote/groups.remote.js';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
 	/**
@@ -22,7 +22,7 @@
 	function onAnswered(result: { success: boolean }, done: string) {
 		if (result.success) toast.success(done);
 		else toast.error(m.groups_answer_group_invite_toast());
-		void invalidateAll();
+		void refreshAll();
 	}
 </script>
 

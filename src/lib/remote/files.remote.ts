@@ -21,7 +21,7 @@ import { remove, upload } from '#lib/server/group/file-service.js';
  * already awaits `getMemberGroup`, which returns its documents with everything
  * else in one round trip, and a component fetching its own list is exactly the
  * fan-out `custom/no-concurrent-remote-queries` exists to stop. `DocumentList`
- * takes its files as a prop and refreshes through `invalidateAll()`.
+ * takes its files as a prop and refreshes through `refreshAll()`.
  *
  * Both guards take an explicit `{ id }` ref. A remote function's `params`
  * describe the *calling page* and are client-manipulable, so nothing here reads

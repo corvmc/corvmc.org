@@ -9,7 +9,7 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
  */
 
 // The bell's stream, held in the test's hand: a `message` makes the bell call
-// `invalidateAll()`, which is when a notification lands under an open dialog.
+// `refreshAll()`, which is when a notification lands under an open dialog.
 async function fakeNotificationStream(page: Page) {
 	await page.addInitScript(() => {
 		const open: EventTarget[] = [];

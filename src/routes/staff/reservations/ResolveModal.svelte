@@ -5,7 +5,7 @@
 	import { IconCheck } from '@tabler/icons-svelte';
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import { CashReceivedAction, NoShowReservationAction } from '#lib/components/actions/index.js';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import type { MemberRef } from '#lib/types/entity.js';
 	import type { BookerType } from '#lib/config.js';
@@ -52,7 +52,7 @@
 
 	function markResolved(id: string) {
 		resolved = new Set([...resolved, id]);
-		invalidateAll();
+		refreshAll();
 		if (visible.length <= 1) {
 			setTimeout(() => {
 				open = false;

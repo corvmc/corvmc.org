@@ -3,7 +3,7 @@
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { confirmWaitlisted } from '#lib/remote/reservations.remote.js';
 	import { formatDate } from '#lib/utils/format.js';
 	import type { Reservation } from '#lib/server/reservation/index.js';
@@ -37,7 +37,7 @@
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}

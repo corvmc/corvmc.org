@@ -28,7 +28,7 @@ vi.mock('#lib/remote/maintenance-schedules.remote.js', () => ({
 }));
 
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));

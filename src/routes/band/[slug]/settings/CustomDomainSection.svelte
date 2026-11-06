@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
@@ -130,7 +130,7 @@
 						remote={refreshCustomDomain}
 						onsuccess={() => {
 							toast.success(m.band_slug_settings_custom_domain_section_status_updated());
-							invalidateAll();
+							refreshAll();
 						}}
 					>
 						<input {...refreshFields.slug.as('hidden', slug)} />
@@ -147,7 +147,7 @@
 					remote={removeCustomDomain}
 					onsuccess={() => {
 						toast.success(m.band_slug_settings_custom_domain_section_custom_domain_remov());
-						invalidateAll();
+						refreshAll();
 					}}
 				>
 					<input {...removeFields.slug.as('hidden', slug)} />
@@ -175,7 +175,7 @@
 				remote={setCustomDomain}
 				onsuccess={() => {
 					toast.success(m.band_slug_settings_custom_domain_section_domain_added_add_dn());
-					invalidateAll();
+					refreshAll();
 				}}
 			>
 				<input {...setFields.slug.as('hidden', slug)} />

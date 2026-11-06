@@ -4,7 +4,7 @@
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
 	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { formatBytes, formatDateShort } from '#lib/utils/format.js';
 	import { deleteDocument } from '#lib/remote/files.remote.js';
@@ -114,7 +114,7 @@
 							variant="error"
 							size="xs"
 							outline
-							onsuccess={() => invalidateAll()}
+							onsuccess={() => refreshAll()}
 						>
 							{#snippet form()}
 								<input {...deleteFields.groupId.as('hidden', groupId)} />

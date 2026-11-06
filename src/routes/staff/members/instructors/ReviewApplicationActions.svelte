@@ -3,7 +3,7 @@
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { approveInstructor, sendBackInstructor } from '#lib/remote/instructors.remote.js';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 
 	/**
 	 * The two ways an application leaves the queue.
@@ -27,7 +27,7 @@
 		successToast={m.staff_rejected()}
 		variant="ghost"
 		size="sm"
-		onsuccess={() => invalidateAll()}
+		onsuccess={() => refreshAll()}
 	>
 		{#snippet form()}
 			<div class="space-y-4">
@@ -54,7 +54,7 @@
 		successToast={m.staff_approved()}
 		variant="primary"
 		size="sm"
-		onsuccess={() => invalidateAll()}
+		onsuccess={() => refreshAll()}
 	>
 		{#snippet form()}
 			<div class="space-y-4">

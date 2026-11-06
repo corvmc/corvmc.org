@@ -20,7 +20,7 @@ vi.mock('svelte-sonner', () => ({
 	toast: Object.assign(vi.fn(), { success: vi.fn(), info: vi.fn(), error: vi.fn() })
 }));
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(async () => undefined),
 	beforeNavigate: vi.fn()
 }));

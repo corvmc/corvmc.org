@@ -3,7 +3,7 @@
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import ReservationSummary from '../reservations/ReservationSummary.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { payForReservation } from '#lib/remote/reservations.remote.js';
 	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
 	import PaymentStep from '../reservations/booking/PaymentStep.svelte';
@@ -42,7 +42,7 @@
 		if (r?.redirectUrl) {
 			await goToCheckout(r.redirectUrl);
 		} else {
-			await invalidateAll();
+			await refreshAll();
 		}
 	}}
 	{...rest}

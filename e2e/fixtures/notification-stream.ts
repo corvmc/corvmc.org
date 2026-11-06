@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 
 /**
  * The bell's stream, held in the test's hand: a `message` makes the bell call
- * `invalidateAll()`, which is when a notification lands under an open dialog
+ * `refreshAll()`, which is when a notification lands under an open dialog
  * or a half-typed draft. Call before the first navigation.
  */
 export async function fakeNotificationStream(page: Page) {

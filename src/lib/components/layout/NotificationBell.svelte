@@ -5,7 +5,7 @@
 	import { IconBell } from '@tabler/icons-svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/env';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import {
 		markNotificationRead,
 		markAllNotificationsRead
@@ -50,7 +50,7 @@
 		});
 
 		eventSource.addEventListener('message', () => {
-			invalidateAll();
+			refreshAll();
 		});
 
 		eventSource.onerror = () => {
@@ -85,12 +85,12 @@
 
 	async function markRead(id: string) {
 		await markNotificationRead({ id });
-		invalidateAll();
+		refreshAll();
 	}
 
 	async function markAllRead() {
 		await markAllNotificationsRead();
-		invalidateAll();
+		refreshAll();
 	}
 
 	function handleClickOutside(e: MouseEvent) {

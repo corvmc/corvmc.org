@@ -5,7 +5,7 @@
 	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
 	import { searchMembers } from '#lib/remote/reservations.remote.js';
 	import { grantInstructor } from '#lib/remote/instructors.remote.js';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 
 	/**
 	 * Grant teaching status to a member who never applied — the staffer already
@@ -25,7 +25,7 @@
 	successToast={m.staff_members_instructors_grant_instructor_success_toast()}
 	variant="primary"
 	size="sm"
-	onsuccess={() => invalidateAll()}
+	onsuccess={() => refreshAll()}
 >
 	{#snippet form()}
 		<div class="space-y-4">

@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { createStaffExternalAct } from '#lib/remote/external-acts.remote.js';
 
 	/**
@@ -22,7 +22,7 @@
 	successToast={m.staff_bands_acts_create_external_act_success_toast()}
 	variant="primary"
 	size="sm"
-	onsuccess={() => invalidateAll()}
+	onsuccess={() => refreshAll()}
 >
 	{#snippet form()}
 		<div class="space-y-4">

@@ -3,7 +3,7 @@
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { bindTag } from '#lib/remote/inventory.remote.js';
 	import { Field } from '../ui/Form';
 	import BarcodeScanner from '../ui/BarcodeScanner.svelte';
@@ -56,7 +56,7 @@
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}

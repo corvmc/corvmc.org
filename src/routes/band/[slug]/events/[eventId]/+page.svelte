@@ -16,7 +16,7 @@
 	import TicketSaleCard from './TicketSaleCard.svelte';
 	import DoorListCard from './DoorListCard.svelte';
 	import { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { getBandEventDetail, updateBandEventForm } from '#lib/remote/band-events.remote.js';
 	import { getBandLayoutContext } from '../../layout-context';
 	import { page } from '$app/state';
@@ -72,7 +72,7 @@
 	remote={updateBandEventForm}
 	guard
 	successToast={m.band_slug_events_event_id_success_toast()}
-	onsuccess={() => invalidateAll()}
+	onsuccess={() => refreshAll()}
 >
 	<PageHeader width="2xl" title={evt.title} subtitle={band.name}>
 		<StatusBadge status={evt.status} />

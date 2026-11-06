@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import Action from '#lib/components/ui/Action.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { setAnnouncementMute } from '#lib/remote/announcements.remote.js';
 
 	/**
@@ -41,7 +41,7 @@
 		: m.groups_mute_announcements_announcements_muted()}
 	variant="ghost"
 	size="sm"
-	onsuccess={() => invalidateAll()}
+	onsuccess={() => refreshAll()}
 >
 	{#snippet form()}
 		<input {...fields.groupId.as('hidden', groupId)} />

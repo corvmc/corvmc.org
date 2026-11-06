@@ -225,7 +225,7 @@ describe('createReservation (staff)', () => {
 	});
 
 	// #1669. With no explicit refresh, Kit answers a form submit with
-	// invalidateAll(), which re-runs the modal's still-mounted conflict check
+	// refreshAll(), which re-runs the modal's still-mounted conflict check
 	// for the window just booked. It finds the new row and shows a
 	// double-booking warning for a slot that was free.
 	it('refreshes the booking it created, so the client does not invalidate the page', async () => {

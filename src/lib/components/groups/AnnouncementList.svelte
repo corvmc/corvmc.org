@@ -6,7 +6,7 @@
 	import Card from '#lib/components/ui/Card/Card.svelte';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { formatDateShort } from '#lib/utils/format.js';
 	import {
 		deleteAnnouncement,
@@ -122,7 +122,7 @@
 									successToast={m.groups_announcement_list_published()}
 									variant="primary"
 									size="xs"
-									onsuccess={() => invalidateAll()}
+									onsuccess={() => refreshAll()}
 								>
 									{#snippet form()}
 										<input {...publishFields.groupId.as('hidden', groupId)} />
@@ -143,7 +143,7 @@
 									: m.groups_announcement_list_pinned()}
 								variant="ghost"
 								size="xs"
-								onsuccess={() => invalidateAll()}
+								onsuccess={() => refreshAll()}
 							>
 								{#snippet form()}
 									<input {...pinFields.groupId.as('hidden', groupId)} />
@@ -164,7 +164,7 @@
 								variant="error"
 								size="xs"
 								outline
-								onsuccess={() => invalidateAll()}
+								onsuccess={() => refreshAll()}
 							>
 								{#snippet form()}
 									<input {...deleteFields.groupId.as('hidden', groupId)} />

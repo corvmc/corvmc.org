@@ -3,7 +3,7 @@
 	import { utcCalendarDate } from '#lib/utils/format.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { recordForm8283 } from '#lib/remote/inventory.remote.js';
 	import { Field } from '../ui/Form';
 
@@ -39,7 +39,7 @@
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}

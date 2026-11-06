@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { createAnnouncement, updateAnnouncement } from '#lib/remote/announcements.remote.js';
 
 	/**
@@ -41,7 +41,7 @@
 		successToast={m.groups_saved()}
 		variant="ghost"
 		size="xs"
-		onsuccess={() => invalidateAll()}
+		onsuccess={() => refreshAll()}
 	>
 		{#snippet form()}
 			<div class="space-y-4">
@@ -75,7 +75,7 @@
 		successToast={m.groups_announcement_composer_draft_saved()}
 		variant="primary"
 		size="sm"
-		onsuccess={() => invalidateAll()}
+		onsuccess={() => refreshAll()}
 	>
 		{#snippet form()}
 			<div class="space-y-4">

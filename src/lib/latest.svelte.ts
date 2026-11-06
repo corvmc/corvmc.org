@@ -1,7 +1,7 @@
 /**
  * The last value a promise-returning getter resolved to, kept while the next is
  * in flight. `{#await p}` re-pends on every new `p` — and a remote query hands
- * out a new one on each `refresh()`/`invalidateAll()` — destroying everything
+ * out a new one on each `refresh()`/`refreshAll()` — destroying everything
  * inside it, open dialogs included (#2352). Render from `current` instead.
  *
  * Construct it during component init: it owns an `$effect`.

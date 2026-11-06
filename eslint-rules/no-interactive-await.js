@@ -5,7 +5,7 @@
  *
  * `{#await p}` re-pends whenever `p` is a new promise, destroying its `then`
  * subtree and building it again when the promise settles. A remote query hands
- * out a new promise on every `refresh()` and `invalidateAll()` — `NotificationBell`
+ * out a new promise on every `refresh()` and `refreshAll()` — `NotificationBell`
  * calls the latter on each notification — so an open dialog in that subtree
  * unmounts and whatever was typed into it is lost (#2350, #2352). Read-only
  * markup losing its DOM for a round trip is harmless; interactive markup is not.

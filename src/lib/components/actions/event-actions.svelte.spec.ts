@@ -50,7 +50,7 @@ vi.mock('#lib/remote/events.remote.js', () => {
 // partial mock of this module is a missing-export error at import time rather
 // than at the call.
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));

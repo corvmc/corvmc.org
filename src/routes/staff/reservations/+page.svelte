@@ -93,7 +93,7 @@
 	const hourlyRates = $derived(pageData.then((d) => d.hourlyRates));
 	// Latched, not `{#await}`ed: every refresh hands `.then()` a fresh promise, the
 	// `{#await}` re-pends, and its subtree unmounts — an open dialog and what was
-	// typed in it with it (#2350, #2352). A notification's `invalidateAll()` is enough.
+	// typed in it with it (#2350, #2352). A notification's `refreshAll()` is enough.
 	const settled = $derived(latestPage.current);
 	const canManageClosures = $derived(settled?.canManageClosures ?? false);
 	const unresolvedCount = $derived(settled?.unresolved.length ?? 0);

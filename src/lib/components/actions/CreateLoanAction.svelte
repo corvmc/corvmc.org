@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { createLoan, getAvailableItems } from '#lib/remote/inventory.remote.js';
 	import { Field } from '../ui/Form';
 	import MemberPicker from '#lib/components/ui/MemberPicker.svelte';
@@ -38,7 +38,7 @@
 	{variant}
 	{size}
 	class={className}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}

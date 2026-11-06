@@ -30,7 +30,7 @@ vi.mock('#lib/remote/closures.remote.js', () => {
 
 // `FormGuard`, which `<Form>` always imports, reaches for `beforeNavigate`.
 vi.mock('$app/navigation', () => ({
-	invalidateAll: vi.fn(),
+	refreshAll: vi.fn(),
 	goto: vi.fn(),
 	beforeNavigate: vi.fn()
 }));

@@ -4,7 +4,7 @@
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import Select from '#lib/components/ui/Form/Select.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { adjustCredits } from '#lib/remote/users.remote.js';
 
 	let {
@@ -45,7 +45,7 @@
 	{outline}
 	class={className}
 	canSubmit={amount !== 0 && description.trim().length > 0}
-	onsuccess={onsuccess ?? (() => invalidateAll())}
+	onsuccess={onsuccess ?? (() => refreshAll())}
 	{...rest}
 >
 	{#snippet form()}

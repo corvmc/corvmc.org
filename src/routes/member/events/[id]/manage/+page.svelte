@@ -11,7 +11,7 @@
 	import AppealPanel from '#lib/components/moderation/AppealPanel.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import {
@@ -141,7 +141,7 @@
 					successToast={requiresReview ? m.member_sent_staff() : m.member_published()}
 					variant="primary"
 					size="sm"
-					onsuccess={() => invalidateAll()}
+					onsuccess={() => refreshAll()}
 				>
 					{#snippet form()}
 						<input {...publishFields.eventId.as('hidden', eventId)} />
@@ -177,7 +177,7 @@
 					successToast={m.member_events_id_manage_back_drafts()}
 					variant="ghost"
 					size="sm"
-					onsuccess={() => invalidateAll()}
+					onsuccess={() => refreshAll()}
 				>
 					{#snippet form()}
 						<input {...unpublishFields.eventId.as('hidden', eventId)} />
@@ -193,7 +193,7 @@
 					successToast={m.member_events_id_manage_marked_as_cancelled()}
 					variant="warning"
 					size="sm"
-					onsuccess={() => invalidateAll()}
+					onsuccess={() => refreshAll()}
 				>
 					{#snippet form()}
 						<input {...withdrawFields.eventId.as('hidden', eventId)} />
@@ -231,7 +231,7 @@
 		<Form
 			remote={updateListing}
 			successToast={m.member_events_id_manage_listing_saved()}
-			onsuccess={() => invalidateAll()}
+			onsuccess={() => refreshAll()}
 			class="space-y-4"
 		>
 			<input {...fields.eventId.as('hidden', eventId)} />

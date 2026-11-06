@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { invalidateAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
@@ -158,7 +158,7 @@
 				successToast={m.staff_events_id_approved_published()}
 				variant="success"
 				size="sm"
-				onsuccess={() => invalidateAll()}
+				onsuccess={() => refreshAll()}
 			>
 				{#snippet form()}
 					<input {...approveListing.fields.eventId.as('hidden', evt.id)} />
@@ -172,7 +172,7 @@
 				successToast={m.staff_events_id_sent_back_member()}
 				variant="warning"
 				size="sm"
-				onsuccess={() => invalidateAll()}
+				onsuccess={() => refreshAll()}
 			>
 				{#snippet form()}
 					<input {...rejectFields.eventId.as('hidden', evt.id)} />

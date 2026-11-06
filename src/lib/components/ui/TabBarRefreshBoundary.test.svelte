@@ -1,6 +1,6 @@
 <!--
 	Test harness: two boundaries still on their first load, each with its own read,
-	which `refresh` replaces together as `invalidateAll()` does. Work in a boundary
+	which `refresh` replaces together as `refreshAll()` does. Work in a boundary
 	that has not rendered does not block a batch, so the refresh can run its effects
 	and stay open while `other` is out.
 -->
