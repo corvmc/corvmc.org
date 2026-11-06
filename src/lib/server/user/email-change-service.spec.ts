@@ -21,7 +21,9 @@ vi.mock('#lib/server/db/index.js', () => ({
 	})
 }));
 
-vi.mock('$env/dynamic/private', () => ({ env: { BETTER_AUTH_SECRET: 'test-secret' } }));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ BETTER_AUTH_SECRET: 'test-secret' })
+);
 
 const allowRateLimited = vi.fn(async () => true);
 vi.mock('#lib/server/rate-limit.js', () => ({

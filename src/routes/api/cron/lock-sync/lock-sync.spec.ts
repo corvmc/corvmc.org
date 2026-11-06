@@ -6,9 +6,9 @@ vi.mock('#lib/server/lock/lock-service.js', () => ({
 	reconcileUpcomingSync: (...args: unknown[]) => mockReconcileUpcomingSync(...args)
 }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { CRON_SECRET: 'test-secret' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ CRON_SECRET: 'test-secret' })
+);
 
 beforeEach(() => {
 	vi.clearAllMocks();

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
+vi.mock('$app/env/public', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 
 const { turnstileFailureMessage, TURNSTILE_RESPONSE_FIELD } = await import('./turnstile');
 

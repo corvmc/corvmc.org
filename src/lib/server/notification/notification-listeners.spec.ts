@@ -36,10 +36,12 @@ vi.mock('#lib/server/inbox/reply-address.js', () => ({
 	buildReplyToAddress: (threadId: string) => mockBuildReplyToAddress(threadId)
 }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { STAFF_CONTACT_EMAIL: 'staff@test.com' }
-}));
-vi.mock('$env/dynamic/public', () => ({ env: { PUBLIC_SITE_URL: 'https://test.corvmc.com' } }));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ STAFF_CONTACT_EMAIL: 'staff@test.com' })
+);
+vi.mock('$app/env/public', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ PUBLIC_SITE_URL: 'https://test.corvmc.com' })
+);
 
 // Capture event handlers.
 //

@@ -10,9 +10,9 @@ vi.mock('#lib/server/reservation/generation-job.js', () => ({
 	generateRecurring: (...args: unknown[]) => mockGenerateRecurring(...args)
 }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { CRON_SECRET: 'test-secret' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ CRON_SECRET: 'test-secret' })
+);
 
 beforeEach(() => {
 	vi.clearAllMocks();

@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { lastClosedWeek, reconcileStripeWindow } from '#lib/server/finance/reconciliation.js';
 
 /**

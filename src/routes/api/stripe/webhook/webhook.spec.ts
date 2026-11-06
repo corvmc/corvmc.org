@@ -20,9 +20,9 @@ vi.mock('#lib/server/finance/webhook-handlers.js', () => ({
 	} as Record<string, (...args: unknown[]) => Promise<void>>
 }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { STRIPE_WEBHOOK_SECRET: 'whsec_test' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ STRIPE_WEBHOOK_SECRET: 'whsec_test' })
+);
 
 const mockCaptureException = vi.fn();
 vi.mock('#lib/server/sentry.js', () => ({

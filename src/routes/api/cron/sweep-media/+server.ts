@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { sweepMedia } from '#lib/server/media/media-sweep-service.js';
 import { sweepGroupFiles } from '#lib/server/group/file-sweep.js';
 

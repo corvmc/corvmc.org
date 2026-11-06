@@ -3,7 +3,7 @@
 	import BandSiteFonts from '#lib/components/band-site/BandSiteFonts.svelte';
 	import { getBandSiteData } from '#lib/remote/band-site.remote.js';
 	import { bandSitePath, bandSiteUrl } from '#lib/utils/band-site-url.js';
-	import { env } from '$env/dynamic/public';
+	import * as env from '$app/env/public';
 	import { page } from '$app/state';
 	import { themeClass } from '#lib/utils/theme-starter.js';
 

@@ -7,9 +7,9 @@ vi.mock('#lib/server/inbox/thread-service.js', () => ({
 	nudgeStaleAwaiting: (...args: unknown[]) => mockNudge(...args)
 }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { CRON_SECRET: 'test-secret' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ CRON_SECRET: 'test-secret' })
+);
 
 function post(auth?: string) {
 	return new Request('http://localhost/api/cron/wake-snoozed', {

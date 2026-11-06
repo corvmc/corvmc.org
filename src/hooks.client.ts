@@ -1,7 +1,7 @@
 import { handleErrorWithSentry, replayIntegration } from '@sentry/sveltekit';
 import * as Sentry from '@sentry/sveltekit';
-import { dev } from '$app/environment';
-import { env } from '$env/dynamic/public';
+import { dev } from '$app/env';
+import * as env from '$app/env/public';
 import { SENTRY_DSN } from '#lib/sentry-dsn.js';
 import { isLocalOrigin } from '#lib/sentry-local-origin.js';
 import { isStaleRemoteResponse } from '#lib/stale-remote-response.js';

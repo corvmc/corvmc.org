@@ -20,7 +20,7 @@ vi.mock('#lib/server/notification/index.js', () => ({
 	dispatchEmailOnly: (...args: unknown[]) => mockDispatchEmailOnly(...args)
 }));
 
-vi.mock('$env/dynamic/private', () => ({ env: {} }));
+vi.mock('$app/env/private', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 
 // The real sibling services, wrapped so a test can see them called or make one throw.
 vi.mock('./fallback-code-service', async (importOriginal) => {

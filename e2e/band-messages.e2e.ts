@@ -118,7 +118,7 @@ test.describe.serial('band booking enquiries', () => {
 		// name and email inputs, and Send then stops on the empty `required` fields.
 		//
 		// The name is `TURNSTILE_RESPONSE_FIELD` from `src/lib/turnstile.ts`, spelled
-		// out because that module reads `$env/dynamic/public`, which does not
+		// out because that module reads `$app/env/public`, which does not
 		// resolve outside the SvelteKit build.
 		await expect(
 			page.locator('input:is([name="turnstileToken"], [name^="turnstileToken/"])')

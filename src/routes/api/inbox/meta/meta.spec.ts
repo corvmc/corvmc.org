@@ -25,15 +25,13 @@ vi.mock('#lib/server/inbox/channel-config-service.js', () => ({
 	isChannelEnabled: (...args: unknown[]) => mockIsChannelEnabled(...(args as []))
 }));
 
-const mockEnv: Record<string, string | undefined> = {
+const mockEnv = vi.hoisted((): Record<string, string | undefined> => ({
 	META_APP_SECRET: 'app-secret',
 	META_VERIFY_TOKEN: 'verify-token'
-};
-vi.mock('$env/dynamic/private', () => ({
-	get env() {
-		return mockEnv;
-	}
 }));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock(mockEnv)
+);
 
 beforeEach(() => {
 	vi.clearAllMocks();

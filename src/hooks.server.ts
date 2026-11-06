@@ -1,7 +1,7 @@
 import { sequence } from '@sveltejs/kit/hooks';
 import * as Sentry from '@sentry/sveltekit';
 import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
-import { building, dev } from '$app/environment';
+import { building, dev } from '$app/env';
 import { auth } from '#lib/server/auth.js';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { registerListeners } from '#lib/server/event-bus/register-listeners.js';
@@ -16,7 +16,7 @@ import { resolveMemberInvite } from '#lib/server/user/member-invite-service.js';
 import { captureException } from '#lib/server/sentry.js';
 import { SENTRY_DSN } from '#lib/sentry-dsn.js';
 import { isLocalOrigin } from '#lib/sentry-local-origin.js';
-import { env as publicEnv } from '$env/dynamic/public';
+import * as publicEnv from '$app/env/public';
 import { bandSiteUrl, bandSlugFromHost, isAppDomain } from '#lib/utils/band-site-url.js';
 import { groupPublicPath } from '#lib/utils/canonical-address.js';
 import { resolveBandSubdomain } from '#lib/server/band/band-host-service.js';
@@ -66,7 +66,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 	registerWaitUntil(waitUntil);
 
 	// Register domain event listeners once (inside request handler so
-	// $env/dynamic/private is available on Cloudflare)
+	// $app/env/private is available on Cloudflare)
 	if (!building) {
 		validateEnv();
 		registerListeners();

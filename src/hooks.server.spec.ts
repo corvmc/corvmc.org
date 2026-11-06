@@ -45,7 +45,7 @@ vi.mock('#lib/server/event-bus/register-listeners.js', () => ({
 	registerListeners: (...args: unknown[]) => mockRegisterListeners(...args)
 }));
 
-vi.mock('$app/environment', () => ({
+vi.mock('$app/env', () => ({
 	building: false,
 	dev: false
 }));
@@ -95,9 +95,9 @@ vi.mock('#lib/server/sentry.js', () => ({
 
 // Pinned so the host-scoped headers are tested against a known base domain
 // rather than whatever PUBLIC_SITE_URL the checkout's .env happens to carry.
-vi.mock('$env/dynamic/public', () => ({
-	env: { PUBLIC_SITE_URL: 'https://corvmc.org' }
-}));
+vi.mock('$app/env/public', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ PUBLIC_SITE_URL: 'https://corvmc.org' })
+);
 
 const mockResolveBandSubdomain = vi.fn();
 vi.mock('#lib/server/band/band-host-service.js', () => ({

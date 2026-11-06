@@ -7,7 +7,7 @@ const { env, loadStripe, reportError } = vi.hoisted(() => ({
 	reportError: vi.fn()
 }));
 
-vi.mock('$env/dynamic/public', () => ({ env }));
+vi.mock('$app/env/public', async () => (await import('#lib/testing/env-mock.js')).envMock(env));
 vi.mock('@stripe/stripe-js', () => ({ loadStripe }));
 vi.mock('#lib/report-error.js', () => ({ reportError }));
 

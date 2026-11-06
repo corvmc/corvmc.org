@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/public';
+import * as env from '$app/env/public';
 import { db } from '#lib/server/db/index.js';
 import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from 'drizzle-orm';
 import { eventListing, publicEventStatuses } from '#lib/server/db/schema/event.js';

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	import { IconCheck, IconX } from '@tabler/icons-svelte';
 	import { getFormContext } from './Form.svelte';
 	import { useShortcut, shortcutLabel } from '#lib/useShortcut.svelte.js';

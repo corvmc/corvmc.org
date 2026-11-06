@@ -35,7 +35,7 @@ import type { PressKitDocument } from '#lib/server/band/press-kit-html.js';
 import { sanitizeBio } from '#lib/utils/markdown.js';
 import { canonicalAddress } from '#lib/utils/canonical-address.js';
 import { extensionForType } from '#lib/server/storage-keys.js';
-import { env as publicEnv } from '$env/dynamic/public';
+import * as publicEnv from '$app/env/public';
 import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
 
 /**

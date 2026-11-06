@@ -31,7 +31,7 @@ The `prepare` script runs automatically and does three things: `svelte-kit sync`
 cp .env.example .env
 ```
 
-`.env` is read by the Vite dev server (for `$env/dynamic/private`) and by Node scripts
+`.env` is read by the Vite dev server (for `$app/env/private`) and by Node scripts
 (drizzle-kit, seeds). What each variable needs locally:
 
 | Variable                                             | Local value                                                                                                                                                    |

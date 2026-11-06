@@ -19,7 +19,7 @@
 	import { IconAdjustments } from '@tabler/icons-svelte';
 	import BandSiteRenderer from '#lib/components/band-site/BandSiteRenderer.svelte';
 	import { blocksForPreview } from '#lib/components/band-site/block-editing.js';
-	import { env } from '$env/dynamic/public';
+	import * as env from '$app/env/public';
 	import { bandSiteUrl } from '#lib/utils/band-site-url.js';
 	import { themeClass } from '#lib/utils/theme-starter.js';
 	import { getBandLayoutContext } from '../layout-context';

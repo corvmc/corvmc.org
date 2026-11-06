@@ -1,6 +1,6 @@
 import { json, error, text } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { handleMetaInbound, handleMetaEcho } from '#lib/server/inbox/inbound-handlers.js';
 import { isChannelEnabled } from '#lib/server/inbox/channel-config-service.js';
 import {

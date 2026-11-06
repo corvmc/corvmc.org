@@ -16,7 +16,7 @@
  * - Base64-encoded scripts in url()
  */
 
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 
 const MAX_CSS_LENGTH = 51200; // 50KB
 

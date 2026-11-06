@@ -11,9 +11,9 @@ vi.mock('#lib/server/marketing/subscriber-service.js', () => ({
 	__esModule: true
 }));
 
-vi.mock('$env/dynamic/private', () => ({
-	env: { POSTMARK_WEBHOOK_TOKEN: 'hook-secret' }
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ POSTMARK_WEBHOOK_TOKEN: 'hook-secret' })
+);
 
 beforeEach(() => {
 	vi.clearAllMocks();

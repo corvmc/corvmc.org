@@ -10,11 +10,9 @@ vi.mock('#lib/server/inbox/channel-config-service.js', () => ({
 }));
 
 const mockEnv: Record<string, string | undefined> = {};
-vi.mock('$env/dynamic/private', () => ({
-	get env() {
-		return mockEnv;
-	}
-}));
+vi.mock('$app/env/private', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock(mockEnv)
+);
 
 const { POST } = await import('./+server');
 

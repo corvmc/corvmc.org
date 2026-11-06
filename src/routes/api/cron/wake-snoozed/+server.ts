@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 import { wakeSnoozedThreads, nudgeStaleAwaiting } from '#lib/server/inbox/thread-service.js';
 
 /**

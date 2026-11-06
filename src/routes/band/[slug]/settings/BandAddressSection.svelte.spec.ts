@@ -13,7 +13,9 @@ import '#lib/test/locators.js';
 
 const { refreshedAll } = vi.hoisted(() => ({ refreshedAll: vi.fn() }));
 
-vi.mock('$env/dynamic/public', () => ({ env: { PUBLIC_SITE_URL: 'http://localhost' } }));
+vi.mock('$app/env/public', async () =>
+	(await import('#lib/testing/env-mock.js')).envMock({ PUBLIC_SITE_URL: 'http://localhost' })
+);
 vi.mock('svelte-sonner', () => ({
 	toast: Object.assign(vi.fn(), { success: vi.fn(), info: vi.fn(), error: vi.fn() })
 }));

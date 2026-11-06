@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import clsx from 'clsx';
 	import { LinkPreview } from 'bits-ui';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	import EntityIdentity from './EntityIdentity.svelte';
 	import Button from '../Button.svelte';
 	import { IconArrowRight } from '@tabler/icons-svelte';

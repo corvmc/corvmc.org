@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	import Button from './Button.svelte';
 	import { IconCamera, IconCameraOff } from '@tabler/icons-svelte';
 

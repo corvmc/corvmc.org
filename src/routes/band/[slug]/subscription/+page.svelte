@@ -21,7 +21,7 @@
 		resumePremium
 	} from '#lib/remote/band-subscription.remote.js';
 	import { getBandLayoutContext } from '../layout-context';
-	import { env } from '$env/dynamic/public';
+	import * as env from '$app/env/public';
 	import { bandSiteUrl, baseDomainFromSiteUrl } from '#lib/utils/band-site-url.js';
 	import { page } from '$app/state';
 	import Alert from '#lib/components/ui/Alert.svelte';
