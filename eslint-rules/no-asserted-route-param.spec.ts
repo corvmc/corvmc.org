@@ -1,7 +1,19 @@
+import { RuleTester } from 'eslint';
+import * as svelteParser from 'svelte-eslint-parser';
+import tseslint from 'typescript-eslint';
 import rule from './no-asserted-route-param.js';
-import { svelteRuleTester } from './rule-tester.js';
+// For its side effect: wires `RuleTester` to vitest.
+import './rule-tester.js';
 
-const tester = svelteRuleTester();
+// The assertion is TypeScript syntax, so the script block needs the TS parser.
+const tester = new RuleTester({
+	languageOptions: {
+		parser: svelteParser,
+		parserOptions: { parser: tseslint.parser },
+		ecmaVersion: 2022,
+		sourceType: 'module'
+	}
+});
 const script = (body: string) => `<script lang="ts">\n${body}\n</script>`;
 
 tester.run('no-asserted-route-param', rule as never, {

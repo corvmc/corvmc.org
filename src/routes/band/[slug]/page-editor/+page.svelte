@@ -26,7 +26,6 @@
 	import { getBandPageEditor, saveBandPageConfig } from '#lib/remote/band-page-editor.remote.js';
 	import { type BandThemeValue, type Block } from '#lib/types/band-page.js';
 	import themeSheet from '#lib/themes/band-site/index.css?raw';
-	import { page } from '$app/state';
 	import { refreshAll } from '$app/navigation';
 	import EditorShell from './EditorShell.svelte';
 	import StylePanel from './StylePanel.svelte';

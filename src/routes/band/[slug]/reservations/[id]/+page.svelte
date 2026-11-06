@@ -17,7 +17,6 @@
 		cancelBandReservation,
 		getBandReservationDetail
 	} from '#lib/remote/reservations.remote.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { routeParams } from '#lib/route-params.svelte.js';
 

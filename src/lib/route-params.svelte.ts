@@ -11,14 +11,12 @@ function declaredUnder(routeId: string | null | undefined, name: string): string
 }
 
 /**
- * The route params this component was mounted under, for use in place of
- * `page.params.x!`. Call it during component init.
+ * The route params this component was mounted under. Call it during component init.
  *
  * `page.params` is global, so it changes while the outgoing page is still mounted,
- * and that page's queries can re-run with the next route's params: `undefined`, or
- * a same-named value that means something else. Each value here follows the param
- * only while the route still declares it at the same place, so a layout or a
- * same-route navigation stays live and an outgoing page keeps what it had.
+ * and that page's queries can re-run with `undefined` or a same-named value from the
+ * next route. Each value here follows the param only while the route still declares
+ * it at the same place, so a layout or same-route navigation stays live.
  */
 export function routeParams<const Name extends string>(...names: Name[]): Record<Name, string> {
 	const params = {} as Record<Name, string>;

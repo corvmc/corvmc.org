@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { getFlagDetail, resolveFlag } from '#lib/remote/flags.remote.js';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';

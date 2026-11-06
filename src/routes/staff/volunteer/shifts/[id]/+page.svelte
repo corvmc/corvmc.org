@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import WorkOrderView from '#lib/components/volunteer/WorkOrderView.svelte';
 	import { getStaffShiftPage, getWorkOrderActivity } from '#lib/remote/volunteer.remote.js';

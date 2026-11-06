@@ -42,7 +42,6 @@
 	import { getStaffReservationDetail } from '#lib/remote/reservations.remote.js';
 	import { describeCancellation } from '#lib/utils/reservation-cancellation.js';
 	import { retryDoorCodes } from '#lib/remote/lock.remote.js';
-	import { page } from '$app/state';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
 	const params = routeParams('id');
