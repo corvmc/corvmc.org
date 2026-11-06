@@ -83,7 +83,6 @@ vi.mock('$app/state', async (original) => ({
 }));
 vi.mock('$app/navigation', () => ({
 	goto: vi.fn(),
-	replaceState: vi.fn(),
 	refreshAll: vi.fn(),
 	beforeNavigate: vi.fn()
 }));

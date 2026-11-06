@@ -179,7 +179,7 @@
 
 <PageContent width="3xl">
 	<!-- URL-driven, so the tabs are real links and the router owns the state.
-	     Not `replaceState()`, which updates neither `page.url` nor the router's
+	     Not a shallow `goto`, which updates neither `page.url` nor the router's
 	     own state. -->
 	<TabBar
 		tabs={[

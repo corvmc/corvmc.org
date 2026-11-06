@@ -12,7 +12,7 @@ import { parseFields, toHref, type UrlFields } from '#lib/utils/url-filters.js';
  * - **Local state is the source of truth, and the URL is written from it.**
  *   Reading `page.url` back out means a filter change re-renders only once the
  *   navigation that mirrors it has landed.
- * - **`goto(..., { replaceState })`, never `replaceState()`.** The latter
+ * - **`goto(..., { replace: true })`, never a shallow `goto`.** The latter
  *   updates neither `page.url` nor the router's own state, so backing out of a
  *   detail page returned to the wrong filter.
  *

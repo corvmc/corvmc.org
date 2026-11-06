@@ -24,7 +24,7 @@
 	// actually showing. See list-state.svelte.ts.
 	/**
 	 * The inbox in the URL, mirrored into local state rather than read back.
-	 * `replaceState` updates neither `page.url` nor the router, so a filter read
+	 * A shallow `goto` updates neither `page.url` nor the router, so a filter read
 	 * straight off the URL lags the control by a navigation.
 	 */
 	let inbox = $state(page.url.searchParams.get('inbox') ?? 'all');

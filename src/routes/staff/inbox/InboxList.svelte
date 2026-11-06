@@ -50,7 +50,7 @@
 	let searchText = $state(filters.search);
 
 	// Writes the URL, never state — the filters stay the source of truth.
-	// `goto(..., { replaceState })` rather than `replaceState()`: the latter only
+	// `goto(..., { replace: true })` rather than a shallow `goto`: the latter only
 	// rewrites the address bar, and the router then overwrites that entry with
 	// its own record on the next navigation, so back from a thread landed on the
 	// unfiltered list.

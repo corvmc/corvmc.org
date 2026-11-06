@@ -26,7 +26,7 @@
 	 * Form 8283 is signed weeks after a gift arrives, and there was no acquisition
 	 * to return to.
 	 *
-	 * Filters live in the URL rather than in `replaceState`, which updates neither
+	 * Filters live in the URL rather than in a shallow `goto`, which updates neither
 	 * `page.url` nor the router.
 	 */
 	let kind = $state(page.url.searchParams.get('kind') ?? '');

@@ -151,7 +151,7 @@
 	function closeConfirmModal() {
 		confirmModalOpen = false;
 		confirmReservation = null;
-		goto(resolve('member/reservations'), { replaceState: true });
+		goto(resolve('member/reservations'), { replace: true });
 	}
 </script>
 

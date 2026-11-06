@@ -45,7 +45,7 @@
 	let needsActs = $state(initial.get('needs') === '1');
 
 	// Writes the URL, never state — the filters above stay the source of truth.
-	// `goto(..., { replaceState })` rather than `replaceState()`: the latter only
+	// `goto(..., { replace: true })` rather than a shallow `goto`: the latter only
 	// rewrites the address bar, and the router overwrites that entry on the next
 	// navigation, so back from an event landed on the wrong filter.
 	$effect(() => {
