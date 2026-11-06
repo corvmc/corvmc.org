@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
@@ -21,8 +20,11 @@
 		dismissEquipmentReport,
 		sendEquipmentReportToWorkOrder
 	} from '#lib/remote/work-requests.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 	let report = $derived(await getEquipmentReport(id));
 
 	const dismissFields = dismissEquipmentReport.fields;

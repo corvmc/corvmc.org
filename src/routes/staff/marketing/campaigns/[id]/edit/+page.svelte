@@ -4,7 +4,6 @@
 	import AudiencePicker from '../../AudiencePicker.svelte';
 	import EventScopePicker from '../../EventScopePicker.svelte';
 	import CampaignPreview from '../../CampaignPreview.svelte';
-	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
@@ -20,8 +19,11 @@
 		scheduleCampaign,
 		deleteCampaign
 	} from '#lib/remote/marketing.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 	let campaignData = $derived(await getCampaignDetail(id));
 
 	// Initialize editable state from loaded campaign

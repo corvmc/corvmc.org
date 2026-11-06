@@ -51,8 +51,11 @@
 	import ArtifactRequestsPanel from './ArtifactRequestsPanel.svelte';
 	import { TAB_KEYS, TAB_LABELS, parseTab, type TabKey } from './tabs';
 	import { SvelteSet } from 'svelte/reactivity';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 
 	/**
 	 * Everything the page needs, in one round trip rather than four.

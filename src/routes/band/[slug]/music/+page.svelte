@@ -8,7 +8,9 @@
 	import { getBandMusicPage } from '#lib/remote/audio.remote.js';
 	import { getBandLayoutContext } from '../layout-context';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	// The layout above already holds the band; re-awaiting it here would be a
 	// second remote query in flight. See `layout-context.ts`.
@@ -16,7 +18,7 @@
 	const layout = $derived(bandLayout.current);
 	const band = $derived(layout.band);
 
-	const { releases, canManage } = $derived(await getBandMusicPage(page.params.slug!));
+	const { releases, canManage } = $derived(await getBandMusicPage(params.slug));
 </script>
 
 <PageHeader width="2xl" title={m.band_slug_music_releases()} subtitle={band.name}>

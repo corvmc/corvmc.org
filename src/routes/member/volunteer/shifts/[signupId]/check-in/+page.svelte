@@ -17,11 +17,13 @@
 	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { checkInAsVolunteer, getMyShiftCheckIn } from '#lib/remote/volunteer.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const signupId = $derived(page.params.signupId!);
+	const params = routeParams('signupId');
+
+	const signupId = $derived(params.signupId);
 	const data = $derived(await getMyShiftCheckIn(signupId));
 
 	let search = $state('');

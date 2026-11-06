@@ -4,7 +4,6 @@
 	import Card from '#lib/components/ui/Card/Card.svelte';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
 	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
@@ -21,11 +20,14 @@
 	} from '#lib/remote/events.remote.js';
 	import { formatEventTimeRange } from '#lib/utils/event-time.js';
 	import Alert from '#lib/components/ui/Alert.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	const purchaseFields = purchaseTickets.fields;
 	const freeTicketFields = claimFreeTicket.fields;
 
-	let data = $derived(await getPublicTicketPage(page.params.id!));
+	let data = $derived(await getPublicTicketPage(params.id));
 
 	let quantity = $state(1);
 	let attendeeName = $state('');
@@ -58,7 +60,7 @@
 			: m.public_events_id_tickets_get_tickets()}
 		parent={[
 			{ label: m.public_events(), href: resolve('events') },
-			{ label: evt.title, href: resolve(`events/${page.params.id!}`) }
+			{ label: evt.title, href: resolve(`events/${params.id}`) }
 		]}
 	/>
 
@@ -125,7 +127,7 @@
 		>
 	{:else if isFreeEvent}
 		<Form remote={claimFreeTicket} onsuccess={handleSuccess}>
-			<input {...freeTicketFields.eventId.as('hidden', page.params.id!)} />
+			<input {...freeTicketFields.eventId.as('hidden', params.id)} />
 			<Card>
 				<CardBody class="space-y-4">
 					<Field
@@ -172,7 +174,7 @@
 		</Form>
 	{:else}
 		<Form remote={purchaseTickets} onsuccess={handleSuccess}>
-			<input {...purchaseFields.eventId.as('hidden', page.params.id!)} />
+			<input {...purchaseFields.eventId.as('hidden', params.id)} />
 			<Card>
 				<CardBody class="space-y-4">
 					<!-- The `input` snippet, not children: only it is handed the id the

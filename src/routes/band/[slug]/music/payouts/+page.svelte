@@ -17,11 +17,13 @@
 	} from '#lib/remote/audio.remote.js';
 	import { getBandLayoutContext } from '../../layout-context';
 	import { AUDIO_PLATFORM_FEE_BPS } from '#lib/config.js';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	const bandLayout = getBandLayoutContext();
 	const band = $derived(bandLayout.current.band);
-	const slug = $derived(page.params.slug!);
+	const slug = $derived(params.slug);
 
 	const payouts = $derived(await getBandPayouts(slug));
 

@@ -2,7 +2,6 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { untrack } from 'svelte';
 	import Button from '#lib/components/ui/Button.svelte';
-	import { page } from '$app/state';
 	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
 	import { resolve } from '$app/paths';
 	import { IconCalendarPlus } from '@tabler/icons-svelte';
@@ -31,17 +30,20 @@
 		cancelRsvp,
 		getMemberEventDetailPage
 	} from '#lib/remote/events.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	const { fields } = purchaseTickets;
 	const rsvpFields = claimFreeTicket.fields;
 	const rsvpToEventFields = rsvpToEvent.fields;
 	const cancelRsvpFields = cancelRsvp.fields;
 
-	const detail = $derived(await getMemberEventDetailPage(page.params.id!));
+	const detail = $derived(await getMemberEventDetailPage(params.id));
 	const eventData = $derived(detail.event);
 	const allTickets = $derived(detail.tickets);
 	let myTickets = $derived(
-		allTickets.filter((t) => t.eventId === page.params.id && t.status !== 'cancelled')
+		allTickets.filter((t) => t.eventId === params.id && t.status !== 'cancelled')
 	);
 	let myTicket = $derived(myTickets[0] ?? null);
 	let data = $derived({ ...eventData, myTicket });
@@ -109,7 +111,7 @@
 
 	function refreshDetail() {
 		// The wrapper this page reads, not the two it is assembled from.
-		void getMemberEventDetailPage(page.params.id!).refresh();
+		void getMemberEventDetailPage(params.id).refresh();
 	}
 
 	async function handlePurchaseSuccess(result?: unknown) {

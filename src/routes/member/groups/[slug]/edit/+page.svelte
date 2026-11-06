@@ -1,16 +1,18 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import { getGroupEditor } from '#lib/remote/groups.remote.js';
 	import GroupProfileForm from './GroupProfileForm.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	// Resolved here and handed to the form as plain props. A top-level await
 	// marks every later declaration async-gated, which would compile each
 	// `fields.X.as()` in the form's template into an async derived — the churn
 	// behind JAVASCRIPT-SVELTEKIT-W. Pinned by `src/async-effect-shape.spec.ts`.
-	const slug = page.params.slug!;
+	const slug = params.slug;
 	const group = await getGroupEditor(slug);
 </script>
 

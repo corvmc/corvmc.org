@@ -3,12 +3,14 @@
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import { getProjectDetail } from '#lib/remote/projects.remote.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import BudgetReport from '../BudgetReport.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	// A report on the project, apart from the task list where its work is run.
-	const data = $derived(await getProjectDetail(page.params.id!));
+	const data = $derived(await getProjectDetail(params.id));
 </script>
 
 <PageHeader

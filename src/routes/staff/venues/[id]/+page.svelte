@@ -16,7 +16,6 @@
 	import Action from '#lib/components/ui/Action.svelte';
 	import { Field } from '#lib/components/ui/Form/index.js';
 	import VenueFeeds from './VenueFeeds.svelte';
-	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import {
@@ -27,8 +26,11 @@
 		restoreVenue,
 		deleteVenue
 	} from '#lib/remote/venues.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	const id = $derived(params.id);
 	const venue = $derived(await getVenueDetail(id));
 
 	const editForm = $derived(updateVenue.for(id));

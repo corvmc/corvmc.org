@@ -8,9 +8,11 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import { IconDownload } from '@tabler/icons-svelte';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const download = $derived(await getDownload(page.params.token!));
+	const params = routeParams('token');
+
+	const download = $derived(await getDownload(params.token));
 
 	// The purchase is flipped to `paid` by `checkout.session.completed`, not by
 	// the payment itself, and the buyer now pays on our own page — so they can
@@ -27,7 +29,7 @@
 
 		const timer = setTimeout(() => {
 			attempts += 1;
-			void getDownload(page.params.token!).refresh();
+			void getDownload(params.token).refresh();
 		}, RETRY_MS);
 
 		return () => clearTimeout(timer);
@@ -82,7 +84,7 @@
 							<Button
 								variant="ghost"
 								size="sm"
-								href={resolve(`api/audio/download/${page.params.token}/${track.id}`)}
+								href={resolve(`api/audio/download/${params.token}/${track.id}`)}
 							>
 								<IconDownload size={16} />
 								<span class="sr-only"

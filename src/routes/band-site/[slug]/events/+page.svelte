@@ -13,8 +13,11 @@
 	import { bandSiteHref } from '#lib/utils/band-site-url.js';
 	import { page } from '$app/state';
 	import { imageSrc } from '#lib/utils/images.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let data = $derived(await getBandSiteData(page.params.slug!));
+	const params = routeParams('slug');
+
+	let data = $derived(await getBandSiteData(params.slug));
 	const events = $derived(data.events);
 	const pastEvents = $derived(data.pastEvents);
 </script>
@@ -24,7 +27,7 @@
 </svelte:head>
 
 <div class="mx-auto max-w-3xl px-6 py-12">
-	<a href={bandSiteHref(page.params.slug!, '', page.url)} class="mb-6 block link text-muted">
+	<a href={bandSiteHref(params.slug, '', page.url)} class="mb-6 block link text-muted">
 		{m.public_band_site_slug_events_back({ name: data.band.name })}
 	</a>
 

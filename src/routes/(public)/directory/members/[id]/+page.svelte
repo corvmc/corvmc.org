@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
 	import { getPublicMemberProfilePage, getMemberPastShows } from '#lib/remote/directory.remote.js';
 	import ProfileHeader, {
 		type ProfilePill
@@ -17,10 +16,13 @@
 	import LinksBox from '#lib/components/directory/profile/LinksBox.svelte';
 	import ContactBox from '#lib/components/directory/profile/ContactBox.svelte';
 	import ProfileGrid from '#lib/components/directory/profile/ProfileGrid.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	const BANDS_BASE = '/directory/bands';
 
-	let id = $derived(page.params.id!);
+	let id = $derived(params.id);
 	const data = $derived(await getPublicMemberProfilePage(id));
 	const shows = $derived(data.shows);
 	const member = $derived(data.member);

@@ -9,7 +9,9 @@
 	import { getBandReservationsPage } from '#lib/remote/reservations.remote.js';
 	import CreateModal from './CreateModal.svelte';
 	import { getBandLayoutContext } from '../layout-context';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.
@@ -18,7 +20,7 @@
 	// One query. Membership and contact are still resolved before render and handed down, so
 	// the step components stay synchronous — they just arrive on the same request now.
 	let pastPage = $state(1);
-	const page_ = $derived(await getBandReservationsPage({ slug: page.params.slug!, pastPage }));
+	const page_ = $derived(await getBandReservationsPage({ slug: params.slug, pastPage }));
 	const data = $derived(page_.reservations);
 	const membership = $derived(page_.membership);
 	const contact = $derived(page_.contact);

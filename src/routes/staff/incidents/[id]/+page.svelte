@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
@@ -22,8 +21,11 @@
 		setIncidentRetainForm
 	} from '#lib/remote/incidents.remote.js';
 	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 	let incident = $derived(await getIncidentDetail(id));
 	const canRecord = $derived(incident.canRecord);
 

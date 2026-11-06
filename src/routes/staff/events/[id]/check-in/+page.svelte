@@ -11,12 +11,14 @@
 	import { refreshAll } from '$app/navigation';
 	import { CancelTicketAction } from '#lib/components/actions/index.js';
 	import { checkInTicket, getStaffCheckIn } from '#lib/remote/events.remote.js';
-	import { page } from '$app/state';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
 	import DoorScanner from './DoorScanner.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 	const { fields } = checkInTicket;
 
-	let data = $derived(await getStaffCheckIn(page.params.id!));
+	let data = $derived(await getStaffCheckIn(params.id));
 
 	let search = $state('');
 
@@ -94,7 +96,7 @@
 								class="inline"
 							>
 								<input {...fields.ticketId.as('hidden', ticket.id)} />
-								<input {...fields.eventId.as('hidden', page.params.id!)} />
+								<input {...fields.eventId.as('hidden', params.id)} />
 								<SubmitButton
 									label={m.staff_events_id_check_in_label()}
 									variant="primary"

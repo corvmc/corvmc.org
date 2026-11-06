@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
@@ -32,6 +31,9 @@
 		setTableLabelForm,
 		withdrawVendorForm
 	} from '#lib/remote/market.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	/**
 	 * A market day's vendor applications. docs/specs/shipped/market-vendors-spec.md.
@@ -45,7 +47,7 @@
 	const tableFields = setTableLabelForm.fields;
 	const withdrawFields = withdrawVendorForm.fields;
 
-	const eventId = $derived(page.params.id!);
+	const eventId = $derived(params.id);
 	const data = $derived(await getStaffMarketVendors(eventId));
 
 	type Tab = 'all' | MarketVendorStatus;

@@ -21,11 +21,13 @@
 	} from '#lib/remote/renewals.remote.js';
 	import { renewalKindLabels } from '#lib/config.js';
 	import { formatIsoDay } from '#lib/utils/deadline.js';
-	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	const id = $derived(params.id);
 	const r = $derived(await getRenewalDetail(id));
 	const editForm = $derived(updateRenewal.for(id));
 	const uploadForm = $derived(uploadRenewalDocument.for(id));

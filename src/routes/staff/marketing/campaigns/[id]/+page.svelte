@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { formatHistoryTime, formatDateShortYear } from '#lib/utils/format.js';
-	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
@@ -14,8 +13,11 @@
 	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 	import { getCampaignDetail } from '#lib/remote/marketing.remote.js';
 	import { sanitizeHtml } from '#lib/utils/markdown.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 	let campaign = $derived(await getCampaignDetail(id));
 </script>
 

@@ -19,15 +19,18 @@
 	} from '#lib/remote/reservations.remote.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug', 'id');
 
 	// Declared above the awaited query: a declaration after a top-level await is
 	// async-gated, which would compile every `fields.X.as()` into an async derived.
 	const { fields: cancelFields } = cancelBandReservation;
 
-	const slug = $derived(page.params.slug!);
+	const slug = $derived(params.slug);
 	// One query for the page. The band comes from the layout context above, so
 	// nothing here fans a second remote call out of a child component.
-	const res = $derived(await getBandReservationDetail({ slug, reservationId: page.params.id! }));
+	const res = $derived(await getBandReservationDetail({ slug, reservationId: params.id }));
 
 	const cancel = $derived(cancelBandReservation.for(res.id));
 	const durationLabel = $derived(

@@ -10,7 +10,6 @@
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import { getReservationDetail } from '#lib/remote/reservations.remote.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import UnconfirmedNotice from '#lib/components/reservations/UnconfirmedNotice.svelte';
 	import { EntityIdentity, EntityChip } from '#lib/components/ui/entity/index.js';
@@ -20,15 +19,18 @@
 	} from '#lib/components/actions/index.js';
 	import ReaderPayment from './ReaderPayment.svelte';
 	import { memberPayAction } from '#lib/utils/reservation-actions.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	let paidAtReader = $state(false);
-	let data = $derived(await getReservationDetail(page.params.id!));
+	let data = $derived(await getReservationDetail(params.id));
 
 	const res = $derived(data.reservation);
 	const isPast = $derived(res.startsAt.getTime() <= Date.now());
 	const owesBalance = $derived(memberPayAction(res) === 'balance');
 
-	const refresh = () => getReservationDetail(page.params.id!).refresh();
+	const refresh = () => getReservationDetail(params.id).refresh();
 
 	function readerPaid() {
 		paidAtReader = true;

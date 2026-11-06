@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import VendorCheckIn from '#lib/components/market/VendorCheckIn.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const eventId = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	const eventId = $derived(params.id);
 </script>
 
 <VendorCheckIn

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
@@ -22,10 +21,13 @@
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	const { fields } = updateAudience;
 
-	let id = $derived(page.params.id!);
+	let id = $derived(params.id);
 	const data = $derived(await getStaffAudienceDetail(id));
 	const audienceData = $derived(data.audience);
 	const subscribers = $derived(data.subscribers);

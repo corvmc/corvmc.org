@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
@@ -20,6 +19,9 @@
 	} from '#lib/config.js';
 	import PreviousMarketNote from '#lib/components/market/PreviousMarketNote.svelte';
 	import { decideVendorForm, getCommitteeMarketVendors } from '#lib/remote/market.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug', 'eventId');
 
 	/**
 	 * The owning committee's half of a market day: accept or decline (#1503).
@@ -29,8 +31,8 @@
 	 */
 	const decideFields = decideVendorForm.fields;
 
-	const slug = $derived(page.params.slug!);
-	const eventId = $derived(page.params.eventId!);
+	const slug = $derived(params.slug);
+	const eventId = $derived(params.eventId);
 	const data = $derived(await getCommitteeMarketVendors(eventId));
 
 	type Tab = 'all' | MarketVendorStatus;

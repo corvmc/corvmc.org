@@ -32,12 +32,15 @@
 	import StylePanel from './StylePanel.svelte';
 	import BlockMediaField from './BlockMediaField.svelte';
 	import { foldLegacy, type ThemeState } from './theme-fork';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	// The layout above already holds this; re-awaiting it here was a second remote
 	// query in flight in this component. See `layout-context.ts`.
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
-	let pageData = $derived(await getBandPageEditor(page.params.slug!));
+	let pageData = $derived(await getBandPageEditor(params.slug));
 	const band = $derived(layout.band);
 
 	// Gate: premium only

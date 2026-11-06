@@ -2,7 +2,6 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { pageTitle } from '#lib/config.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { getEmailChangeRequest, confirmEmailChange } from '#lib/remote/email-change.remote.js';
 
@@ -13,13 +12,16 @@
 	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('token');
 
 	type Outcome = NonNullable<typeof confirmEmailChange.result>;
 
 	const fields = confirmEmailChange.fields;
 	let outcome = $state<Outcome | null>(null);
 
-	const token = $derived(page.params.token!);
+	const token = $derived(params.token);
 	// Reading the link changes nothing, so a mail client prefetching it is
 	// harmless; the change applies on the POST below.
 	const request = $derived(await getEmailChangeRequest(token));

@@ -11,7 +11,6 @@
 	 * server-side against the session, and a signup that isn't yours (or isn't
 	 * completed) renders the not-yours state rather than leaking whose it is.
 	 */
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { RatingGroup } from 'bits-ui';
 	import { IconStar, IconStarFilled } from '@tabler/icons-svelte';
@@ -23,8 +22,11 @@
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { formatDateShort } from '#lib/utils/format.js';
 	import { getShiftFeedbackContext, submitShiftFeedback } from '#lib/remote/volunteer.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let signupId = $derived(page.params.signupId!);
+	const params = routeParams('signupId');
+
+	let signupId = $derived(params.signupId);
 	// Not `{#await}`: a refresh would re-pend it and remount the form mid-answer.
 	const context = new Latest(() => getShiftFeedbackContext(signupId));
 	// A gate's redirect has already navigated by the time it rejects; rethrowing

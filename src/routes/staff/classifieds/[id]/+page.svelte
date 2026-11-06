@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
@@ -9,8 +8,11 @@
 	import PostDetail from '#lib/components/classified/PostDetail.svelte';
 	import { IconEye, IconEyeOff } from '@tabler/icons-svelte';
 	import { getStaffClassifiedDetail, moderateClassified } from '#lib/remote/classifieds.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	const id = $derived(params.id);
 	const post = $derived(await getStaffClassifiedDetail(id));
 
 	const showForm = $derived(moderateClassified.for(`${id}:show`));

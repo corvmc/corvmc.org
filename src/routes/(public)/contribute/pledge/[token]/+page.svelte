@@ -2,7 +2,6 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { pageTitle } from '#lib/config.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import {
 		getWishlistPledgeConfirmation,
@@ -16,13 +15,16 @@
 	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import ErrorToastBoundary from '#lib/components/ui/ErrorToastBoundary.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('token');
 
 	type Outcome = NonNullable<typeof confirmWishlistPledge.result>;
 
 	const fields = confirmWishlistPledge.fields;
 	let outcome = $state<Outcome | null>(null);
 
-	const token = $derived(page.params.token!);
+	const token = $derived(params.token);
 	// Reading the link changes nothing, so a mail client prefetching it is
 	// harmless; the pledge opens on the POST below.
 	const pending = $derived(await getWishlistPledgeConfirmation(token));

@@ -1,17 +1,19 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	/** One topic of the club or committee's chat, read and written by every member. */
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import GroupChat from '#lib/components/inbox/GroupChat.svelte';
 	import { getGroupChatTopic } from '#lib/remote/group-chat.remote.js';
 	import { getMemberLayoutContext } from '../../../../layout-context';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug', 'threadId');
 
 	const memberLayout = getMemberLayoutContext();
-	const slug = $derived(page.params.slug!);
-	const threadId = $derived(page.params.threadId!);
+	const slug = $derived(params.slug);
+	const threadId = $derived(params.threadId);
 
 	const chat = $derived(await getGroupChatTopic(threadId));
 </script>

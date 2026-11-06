@@ -3,10 +3,12 @@
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import { fullDate } from '#lib/utils/format.js';
 	import Button from '#lib/components/ui/Button.svelte';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { getEventInputList } from '#lib/remote/events.remote.js';
 	import { riderInputSourceLabels, riderStandTypeLabels } from '#lib/config.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	/**
 	 * A print page, following `/band/[slug]/rider/list`, whose shape this copies:
@@ -16,7 +18,7 @@
 	 * Repeats are marked, not merged: whether three kicks are one kick is the
 	 * house engineer's call.
 	 */
-	const eventId = $derived(page.params.id!);
+	const eventId = $derived(params.id);
 	const data = $derived(await getEventInputList(eventId));
 
 	const banks = $derived(

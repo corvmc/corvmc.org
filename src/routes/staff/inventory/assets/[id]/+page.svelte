@@ -37,11 +37,14 @@
 		contractorJobStatusBadge,
 		contractorJobStatusLabels
 	} from '#lib/config.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	const { fields } = editAsset;
 	const statusFields = changeAssetStatus.fields;
 
-	let id = $derived(page.params.id!);
+	let id = $derived(params.id);
 	const data = $derived(await getStaffAssetDetail(id));
 	const asset = $derived(data.asset);
 	type HistoryItem = NonNullable<Awaited<ReturnType<typeof getAssetHistory>>>['items'][number];

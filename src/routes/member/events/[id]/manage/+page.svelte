@@ -13,7 +13,6 @@
 	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
 	import { goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
 	import {
 		getMyListingPage,
 		searchBandsForListing,
@@ -25,6 +24,9 @@
 	} from '#lib/remote/community-events.remote.js';
 	import { formatDateShort, formatDollars } from '#lib/utils/format.js';
 	import { imageSrc } from '#lib/utils/images.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	// Declared before the awaited query: a declaration after one is async-gated,
 	// which would compile every `fields.X.as()` into an async derived.
@@ -34,7 +36,7 @@
 	const withdrawFields = withdrawListing.fields;
 	const deleteFields = deleteListing.fields;
 
-	const eventId = $derived(page.params.id!);
+	const eventId = $derived(params.id);
 	// One query. The duplicate check is advisory copy next to Publish and only means anything for
 	// a draft, so that condition moved server-side with it.
 	const pageData = $derived(await getMyListingPage(eventId));

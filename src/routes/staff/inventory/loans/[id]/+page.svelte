@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import {
 		getStaffLoanDetail,
@@ -22,11 +21,14 @@
 	import { formatDate, formatCents } from '#lib/utils/format.js';
 	import BarcodeScanner from '#lib/components/ui/BarcodeScanner.svelte';
 	import { parseScan } from '#lib/utils/scan.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	const { fields: scheduleFields } = schedule;
 	const { fields: checkoutFields } = checkout;
 
-	let id = $derived(page.params.id!);
+	let id = $derived(params.id);
 	const data = $derived(await getStaffLoanDetail(id));
 	const loan = $derived(data.loan);
 	const availableItems = $derived(data.availableItems);

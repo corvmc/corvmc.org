@@ -9,7 +9,6 @@
 	 * draws: this page hands it `conversationBar` (#1927).
 	 */
 	import { onDestroy } from 'svelte';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
@@ -38,8 +37,11 @@
 		assignThread,
 		getAssignableStaff
 	} from '#lib/remote/inbox.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const threadId = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	const threadId = $derived(params.id);
 
 	// Above the await: a cleanup registered after it would be async-gated.
 	const toolbar = useInboxToolbar();

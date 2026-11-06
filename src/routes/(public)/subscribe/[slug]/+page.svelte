@@ -3,9 +3,11 @@
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import Form, { Field, SubmitButton } from '#lib/components/ui/Form/index.js';
 	import { getPublicAudienceBySlug, subscribeToAudience } from '#lib/remote/marketing.remote.js';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let data = $derived(await getPublicAudienceBySlug(page.params.slug!));
+	const params = routeParams('slug');
+
+	let data = $derived(await getPublicAudienceBySlug(params.slug));
 
 	let success = $state(false);
 </script>

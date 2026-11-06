@@ -12,9 +12,11 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import { payReservation, getReservationPayment } from '#lib/remote/reservations.remote.js';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let data = $derived(await getReservationPayment(page.params.id!));
+	const params = routeParams('id');
+
+	let data = $derived(await getReservationPayment(params.id));
 
 	const res = $derived(data.reservation);
 	const totalCents = $derived(data.totalCents);

@@ -18,6 +18,9 @@
 	import { flip } from 'svelte/animate';
 	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	interface BandData {
 		name: string;
@@ -429,7 +432,7 @@
 					</div>
 				{/if}
 				{#if showForm}
-					<BandContactForm slug={page.params.slug!} bandName={band.name} />
+					<BandContactForm slug={params.slug} bandName={band.name} />
 				{/if}
 			</div>
 		{/if}
@@ -636,14 +639,14 @@
 <nav class="mx-auto flex max-w-3xl justify-center gap-4 px-6 py-6 text-muted">
 	{#if events.length > 0}
 		<a
-			href={bandSiteHref(page.params.slug!, '/events', page.url)}
+			href={bandSiteHref(params.slug, '/events', page.url)}
 			class="transition-opacity hover:opacity-100"
 			>{msg.band_site_band_site_band_site_renderer_all_events()}</a
 		>
 	{/if}
 	{#if epk}
 		<a
-			href={bandSiteHref(page.params.slug!, '/epk', page.url)}
+			href={bandSiteHref(params.slug, '/epk', page.url)}
 			class="transition-opacity hover:opacity-100"
 			>{msg.band_site_band_site_band_site_renderer_press_kit()}</a
 		>

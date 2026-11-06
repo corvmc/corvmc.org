@@ -43,6 +43,11 @@ Compose the existing shared primitives rather than inventing new ones.
   _above_ the awaited derived, leaving only genuinely derived values below.
   `src/async-gated-listener.spec.ts` fails the build on this shape.
 
+- **`page.params` is global, so it changes while the outgoing page is still mounted.** A query
+  re-run from that page goes out with `undefined`, or with the next route's same-named value. Read
+  params through `routeParams()` from `#lib/route-params.svelte.js`;
+  `custom/no-asserted-route-param` rejects `page.params.x!`.
+
 ## Filter state in the URL
 
 `replaceState()` from `$app/navigation` updates neither `page.url` nor the router's own state. Back

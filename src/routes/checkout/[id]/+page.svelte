@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import Card from '#lib/components/ui/Card/Card.svelte';
@@ -13,12 +13,14 @@
 	import PaymentElement from './PaymentElement.svelte';
 	import { getCheckoutSession, payFakeCheckout } from '#lib/remote/checkout.remote.js';
 
+	const params = routeParams('id');
+
 	// Declared above the top-level await below: a declaration that follows one is
 	// async-gated, which would compile `fields.sessionId.as()` into an async
 	// derived. Pinned by `src/async-effect-shape.spec.ts`.
 	const fields = payFakeCheckout.fields;
 
-	const sessionId = $derived(page.params.id ?? '');
+	const sessionId = $derived(params.id);
 	const session = $derived(await getCheckoutSession(sessionId));
 
 	const money = (cents: number, currency: string) =>

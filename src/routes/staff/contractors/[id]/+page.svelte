@@ -26,8 +26,10 @@
 		type ContractorJobStatus
 	} from '#lib/config.js';
 	import { formatCents, formatDateShort, toLocalDate } from '#lib/utils/format.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	/**
 	 * One contractor, and everything they have ever done for us.
@@ -36,7 +38,7 @@
 	 * last in" is unanswerable from a free-text name — so it is the body of the
 	 * page rather than a panel on it.
 	 */
-	const data = $derived(await getContractorDetail(page.params.id!));
+	const data = $derived(await getContractorDetail(params.id));
 	const { fields } = updateContractorForm;
 	const archiveFields = archiveContractorForm.fields;
 

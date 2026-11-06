@@ -37,6 +37,9 @@
 	import { parseFilter, type TaskFilter } from './task-view';
 	import { asDateValue } from './date-value';
 	import { toastWarnings } from '#lib/utils/toast-warnings.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	/**
 	 * One project, run as a checklist: its work orders are the tasks, grouped in
@@ -68,7 +71,7 @@
 		closeTask();
 	}
 
-	const data = $derived(await getProjectDetail(page.params.id!));
+	const data = $derived(await getProjectDetail(params.id));
 	const project = $derived(data.project);
 	const origin = $derived(data.origin);
 	const list = $derived(data.taskList);

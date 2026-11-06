@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { m as msg } from '#lib/paraglide/messages.js';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
 	import * as env from '$app/env/public';
 	import { canonicalAddress } from '#lib/utils/canonical-address.js';
 	import {
@@ -28,6 +27,9 @@
 	import PressPhoto from '#lib/components/directory/profile/PressPhoto.svelte';
 	import VideoBox from '#lib/components/directory/profile/VideoBox.svelte';
 	import ContactForm from '#lib/components/directory/profile/ContactForm.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	const MEMBERS_BASE = '/directory/members';
 
@@ -37,7 +39,7 @@
 	// Svelte-internals TypeError to the boundary instead of the 404 message
 	// (e2e/directory-profile-404.e2e.ts).
 	let { data, shows } = $derived(
-		await getPublicBandProfile(page.params.slug!).then(async (profile) => ({
+		await getPublicBandProfile(params.slug).then(async (profile) => ({
 			data: profile,
 			shows: await getBandShows(profile.band.id)
 		}))

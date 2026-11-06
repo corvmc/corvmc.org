@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import Hero from '#lib/components/public/Hero.svelte';
 	import Section from '#lib/components/public/Section.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
@@ -10,6 +9,9 @@
 	import { signInHref } from '#lib/utils/sign-in.js';
 	import JoinGroupAction from '#lib/components/groups/JoinGroupAction.svelte';
 	import { getPublicGroupPage } from '#lib/remote/groups.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	/**
 	 * A program's public page — name, what it is, and the way in.
@@ -22,7 +24,7 @@
 	 * viewer's roster row, and `applied` says they already have an open
 	 * application, which must not be offered a second time.
 	 */
-	const data = $derived(await getPublicGroupPage(page.params.slug!));
+	const data = $derived(await getPublicGroupPage(params.slug));
 	const group = $derived(data.group);
 	const status = $derived(data.viewerStatus?.status ?? null);
 

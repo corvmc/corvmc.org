@@ -21,6 +21,7 @@ import preferTermMessages from './eslint-rules/prefer-term-messages.js';
 import clubTimeDates from './eslint-rules/club-time-dates.js';
 import noWordingLocators from './eslint-rules/no-wording-locators.js';
 import noSvelteElement from './eslint-rules/no-svelte-element.js';
+import noAssertedRouteParam from './eslint-rules/no-asserted-route-param.js';
 import noLiteralUiText from './eslint-rules/no-literal-ui-text.js';
 import noManualFieldName from './eslint-rules/no-manual-field-name.js';
 import noInteractiveAwait from './eslint-rules/no-interactive-await.js';
@@ -70,6 +71,7 @@ const customPlugin = {
 		// Enabled below for specs and e2e (#2189).
 		'no-wording-locators': noWordingLocators,
 		'no-svelte-element': noSvelteElement,
+		'no-asserted-route-param': noAssertedRouteParam,
 		// Enabled below for shipped `.svelte` (#2099).
 		'no-literal-ui-text': noLiteralUiText,
 		'no-manual-field-name': noManualFieldName,
@@ -208,6 +210,7 @@ export default defineConfig(
 			'custom/no-concurrent-remote-queries': 'error',
 			'custom/definite-action-labels': 'error',
 			'custom/no-svelte-element': 'error',
+			'custom/no-asserted-route-param': 'error',
 			'custom/no-interactive-await': 'error'
 		}
 	},

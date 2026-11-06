@@ -9,14 +9,16 @@
 	 * it. What changed is that it is now one view of one list rather than a
 	 * second list that had drifted from the first.
 	 */
-	import { page } from '$app/state';
 	import ConversationRows from '#lib/components/inbox/ConversationRows.svelte';
 	import DataList from '#lib/components/ui/DataList.svelte';
 	import SectionLabel from '#lib/components/ui/SectionLabel.svelte';
 	import { getMyMessages } from '#lib/remote/direct-messages.remote.js';
 	import { enquiryList } from './list-state.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const slug = $derived(page.params.slug!);
+	const params = routeParams('slug');
+
+	const slug = $derived(params.slug);
 	// `channel: 'band'` — enquiries only. The band's own chat is the Chat row
 	// next door, and this list showing both would double every group.
 	const result = $derived(getMyMessages({ inbox: slug, channel: 'band', page: enquiryList.page }));
