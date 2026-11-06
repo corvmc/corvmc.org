@@ -7,16 +7,14 @@ import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import kitConfig from './kit.config.js';
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
-import { assertNoTransactableStripeCredentials } from './e2e/stripe-guard';
+import { assertNoTransactableStripeCredentials } from './e2e/stripe-guard.ts';
 import fs from 'node:fs';
 import { execSync } from 'node:child_process';
 import { availableParallelism } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { browserPort, devPort, previewPort } from './scripts/lib/checkout-ports';
-import { previewCloudflareWorkers } from './scripts/lib/preview-cloudflare-workers';
-const dirname =
-	typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+import { browserPort, devPort, previewPort } from './scripts/lib/checkout-ports.ts';
+import { previewCloudflareWorkers } from './scripts/lib/preview-cloudflare-workers.ts';
+const dirname = import.meta.dirname;
 
 // The Sentry vite plugin names its release after the checked-out commit and
 // injects that string into the browser bundle, which is why browser events
