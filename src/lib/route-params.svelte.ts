@@ -23,11 +23,12 @@ export function routeParams<const Name extends string>(...names: Name[]): Record
 
 	for (const name of names) {
 		const owner = declaredUnder(page.route?.id, name);
-		let last = page.params[name] as string;
+		const read = () => (page.params as Record<string, string | undefined>)[name];
+		let last = read() as string;
 
 		const value = $derived.by(() => {
 			if (owner === null || declaredUnder(page.route?.id, name) === owner) {
-				last = page.params[name] ?? last;
+				last = read() ?? last;
 			}
 			return last;
 		});

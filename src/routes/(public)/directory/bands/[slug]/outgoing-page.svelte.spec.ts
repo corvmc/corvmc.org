@@ -16,7 +16,7 @@ const fakePage = $state({
 	url: new URL('http://localhost/directory/bands/plumfoot')
 });
 
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
+vi.mock('$app/env/public', async () => (await import('#lib/testing/env-mock.js')).envMock({}));
 vi.mock('#lib/remote/directory.remote.js', () => remote);
 vi.mock('$app/state', async (original) => ({
 	...(await original<Record<string, unknown>>()),
