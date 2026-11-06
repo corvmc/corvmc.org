@@ -2037,11 +2037,7 @@ export const purchaseTickets = form(
 				ticket_collective_cents: String(split.collectiveCents)
 			},
 			successUrl: `${url.origin}/events/${evt.id}/tickets/success?purchase_id=${purchaseId}`,
-			cancelUrl: `${url.origin}/events/${evt.id}/tickets`,
-			// The buyer pays on our own page rather than checkout.stripe.com. The
-			// two URLs above are unchanged — `checkout()` maps them onto the
-			// `return_url` / metadata pair that `elements` mode takes instead.
-			uiMode: 'elements'
+			cancelUrl: `${url.origin}/events/${evt.id}/tickets`
 		});
 
 		// Tickets never spend credits — no CreditType applies to them — so this

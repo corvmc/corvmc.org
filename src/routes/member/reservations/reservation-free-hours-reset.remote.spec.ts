@@ -60,7 +60,7 @@ vi.mock('#lib/server/finance/reservation-entries.js', () => ({
 	recordReservationCredit: vi.fn()
 }));
 const checkout = vi.fn(async (..._a: unknown[]) => ({
-	checkoutUrl: 'https://checkout.stripe.com/c/pay/cs_test_x'
+	checkoutUrl: '/checkout/cs_test_x'
 }));
 vi.mock('#lib/server/finance/payment-service.js', () => ({
 	checkout: (...a: unknown[]) => checkout(...a),
@@ -163,7 +163,7 @@ describe('payReservation (the pay page), outside the confirmation window', () =>
 		bookTenDaysOut(0);
 		await expect(run()).rejects.toMatchObject({
 			status: 303,
-			location: 'https://checkout.stripe.com/c/pay/cs_test_x'
+			location: '/checkout/cs_test_x'
 		});
 		expect(deductCredits).not.toHaveBeenCalled();
 		const [opts] = checkout.mock.calls[0] as [

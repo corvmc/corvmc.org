@@ -226,13 +226,7 @@ export async function beginPurchase(input: BeginPurchaseInput): Promise<BeginPur
 			row_id: row.id
 		},
 		successUrl: input.successUrl,
-		cancelUrl: input.cancelUrl,
-		// Paid on our own page. `elements` places no restriction on
-		// `payment_intent_data`, so the destination charge that pays the band —
-		// `transfer_data` plus `application_fee_amount` — carries across unchanged;
-		// only `success_url`, `cancel_url` and `branding_settings` are disallowed,
-		// and `checkout()` already maps the first two.
-		uiMode: 'elements'
+		cancelUrl: input.cancelUrl
 	});
 
 	return {

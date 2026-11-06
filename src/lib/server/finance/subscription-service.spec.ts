@@ -86,7 +86,7 @@ describe('createCheckoutSession', () => {
 	it('delegates to shared checkout with subscription mode', async () => {
 		mockCheckout.mockResolvedValue({
 			paid: false,
-			checkoutUrl: 'https://checkout.stripe.com/sub_sess'
+			checkoutUrl: '/checkout/sub_sess'
 		});
 
 		const url = await createCheckoutSession({
@@ -98,7 +98,7 @@ describe('createCheckoutSession', () => {
 			cancelUrl: 'https://example.com/cancel'
 		});
 
-		expect(url).toBe('https://checkout.stripe.com/sub_sess');
+		expect(url).toBe('/checkout/sub_sess');
 		expect(mockCheckout).toHaveBeenCalledWith(
 			expect.objectContaining({
 				userId: 'user-1',
@@ -124,34 +124,10 @@ describe('createCheckoutSession', () => {
 		);
 	});
 
-	it('asks for the in-app payment page, not checkout.stripe.com', async () => {
-		mockCheckout.mockResolvedValue({
-			paid: false,
-			checkoutUrl: '/checkout/cs_sub',
-			clientSecret: 'cs_sub_secret'
-		});
-
-		const url = await createCheckoutSession({
-			userId: 'user-1',
-			stripeCustomerId: 'cus_123',
-			quantity: 5,
-			coverFees: false,
-			successUrl: 'https://example.com/success',
-			cancelUrl: 'https://example.com/cancel'
-		});
-
-		// `mode: 'subscription'` is supported under `elements`, and the caller
-		// still gets one URL to redirect to — it is just a route in this app now.
-		expect(mockCheckout).toHaveBeenCalledWith(
-			expect.objectContaining({ uiMode: 'elements', mode: 'subscription' })
-		);
-		expect(url).toBe('/checkout/cs_sub');
-	});
-
 	it('passes coverFees through to shared checkout', async () => {
 		mockCheckout.mockResolvedValue({
 			paid: false,
-			checkoutUrl: 'https://checkout.stripe.com/sub_fee'
+			checkoutUrl: '/checkout/sub_fee'
 		});
 
 		await createCheckoutSession({

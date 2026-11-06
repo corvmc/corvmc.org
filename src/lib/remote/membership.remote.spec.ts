@@ -15,7 +15,7 @@ vi.mock('#lib/server/authorization.js', () => ({
 }));
 
 const getMemberSubscription = vi.fn(async (): Promise<unknown> => null);
-const createCheckoutSession = vi.fn(async () => 'https://checkout.stripe.com/cs_test');
+const createCheckoutSession = vi.fn(async () => '/checkout/cs_test');
 vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	getMemberSubscription: (...args: unknown[]) => getMemberSubscription(...(args as [])),
 	createCheckoutSession: (...args: unknown[]) => createCheckoutSession(...(args as [])),
@@ -106,7 +106,7 @@ describe('createSubscription', () => {
 		// redirect(303, url) throws a Redirect — that's the success path.
 		await expect(
 			membership.createSubscription({ amount: 25, coverFees: false })
-		).rejects.toMatchObject({ status: 303, location: 'https://checkout.stripe.com/cs_test' });
+		).rejects.toMatchObject({ status: 303, location: '/checkout/cs_test' });
 
 		expect(createCheckoutSession).toHaveBeenCalledWith(
 			expect.objectContaining({ userId: 'user-1', quantity: 5, coverFees: false })

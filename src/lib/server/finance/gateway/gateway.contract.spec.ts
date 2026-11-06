@@ -184,7 +184,7 @@ describe('fake gateway behaviour', () => {
 	});
 
 	it('mints a client secret for an elements session, keyed to that session', async () => {
-		// `ui_mode: 'elements'` is what `checkout({ uiMode: 'elements' })` sends,
+		// `ui_mode: 'elements'` is what `checkout()` sends,
 		// and the client secret is the only thing the Payment Element can be
 		// initialised from. A fake that returned a constant here would let a page
 		// mount against the wrong session and never notice.
