@@ -37,7 +37,12 @@
 		"resolveJsonModule": true,
 		// `vite/client` for `import.meta.env`; the rest is Node scripts and the
 		// workers bindings the seeds open D1 through.
-		"types": ["node", "vite/client", "@cloudflare/workers-types"]
+		"types": ["node", "vite/client", "@cloudflare/workers-types"],
+		// See tsconfig.json: this keeps typed ESLint fast (#2374).
+		"paths": {
+			"#lib": ["./src/lib/index.ts"],
+			"#lib/*": ["./src/lib/*"]
+		}
 	},
 	"include": [
 		"scripts/**/*.ts",
