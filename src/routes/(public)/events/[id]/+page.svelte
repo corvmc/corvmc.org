@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import Button from '#lib/components/ui/Button.svelte';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { IconCalendarPlus, IconAlertTriangle } from '@tabler/icons-svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
@@ -23,8 +22,11 @@
 	import MarketVendors from './MarketVendors.svelte';
 	import SponsorCredit from './SponsorCredit.svelte';
 	import RsvpControl from './RsvpControl.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let data = $derived(await getPublicEventDetail(page.params.id!));
+	const params = routeParams('id');
+
+	let data = $derived(await getPublicEventDetail(params.id));
 
 	const evt = $derived(data.event);
 	// Descriptions are rich text (legacy rows contain HTML), so sanitize before

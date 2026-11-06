@@ -42,9 +42,11 @@
 	import { getStaffReservationDetail } from '#lib/remote/reservations.remote.js';
 	import { describeCancellation } from '#lib/utils/reservation-cancellation.js';
 	import { retryDoorCodes } from '#lib/remote/lock.remote.js';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let data = $derived(await getStaffReservationDetail(page.params.id!));
+	const params = routeParams('id');
+
+	let data = $derived(await getStaffReservationDetail(params.id));
 
 	const r = $derived(data.reservation);
 	const status = $derived(r.status);

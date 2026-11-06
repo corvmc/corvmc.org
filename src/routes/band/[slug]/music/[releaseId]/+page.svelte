@@ -48,15 +48,17 @@
 	import { toLocalDate } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/state';
 	import { IconPencil, IconRadio, IconTrash } from '@tabler/icons-svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug', 'releaseId');
 
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
 	const band = $derived(layout.band);
 
-	const slug = $derived(page.params.slug!);
-	const releaseId = $derived(page.params.releaseId!);
+	const slug = $derived(params.slug);
+	const releaseId = $derived(params.releaseId);
 
 	const { release, tracks, canManage, canSell } = $derived(
 		await getBandRelease({ slug, releaseId })

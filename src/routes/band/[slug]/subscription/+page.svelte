@@ -26,12 +26,15 @@
 	import { page } from '$app/state';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import Form from '#lib/components/ui/Form/Form.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
-	let info = $derived(await getBandSubscriptionInfo(page.params.slug!));
+	let info = $derived(await getBandSubscriptionInfo(params.slug));
 	const band = $derived(layout.band);
 	const isOwner = $derived(layout.userRole === 'owner');
 	// An owner who has left the act is precisely the person who cannot fix the
@@ -72,7 +75,7 @@
 
 		const timer = setTimeout(() => {
 			upgradeAttempts += 1;
-			void getBandSubscriptionInfo(page.params.slug!).refresh();
+			void getBandSubscriptionInfo(params.slug).refresh();
 		}, UPGRADE_RETRY_MS);
 
 		return () => clearTimeout(timer);

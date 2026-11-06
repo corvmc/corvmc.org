@@ -11,9 +11,12 @@
 	import { getTicketPurchaseSuccess } from '#lib/remote/events.remote.js';
 	import { page } from '$app/state';
 	import { formatEventTimeRange } from '#lib/utils/event-time.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	const purchaseId = page.url.searchParams.get('purchase_id') ?? '';
-	let data = $derived(await getTicketPurchaseSuccess({ eventId: page.params.id!, purchaseId }));
+	let data = $derived(await getTicketPurchaseSuccess({ eventId: params.id, purchaseId }));
 
 	const evt = $derived(data.event);
 	// Free claims keep the historic `rsvp-` purchase prefix; they're still tickets.
@@ -36,7 +39,7 @@
 
 		const timer = setTimeout(() => {
 			attempts += 1;
-			getTicketPurchaseSuccess({ eventId: page.params.id!, purchaseId }).refresh();
+			getTicketPurchaseSuccess({ eventId: params.id, purchaseId }).refresh();
 		}, RETRY_MS);
 
 		return () => clearTimeout(timer);
@@ -48,7 +51,7 @@
 		title={m.public_events_id_tickets_success_title()}
 		parent={[
 			{ label: m.public_events(), href: resolve('events') },
-			{ label: evt.title, href: resolve(`events/${page.params.id!}`) }
+			{ label: evt.title, href: resolve(`events/${params.id}`) }
 		]}
 	/>
 

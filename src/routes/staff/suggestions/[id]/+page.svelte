@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
@@ -36,8 +35,11 @@
 	import { Field, MoneyField } from '#lib/components/ui/Form/index.js';
 	import BallotLine from '#lib/components/ballot/BallotLine.svelte';
 	import CreateBallotAction from '#lib/components/ballot/CreateBallotAction.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 
 	// The merge candidates used to live here, declared above the awaits so they would not be
 	// compiled as "blocked" — the JAVASCRIPT-SVELTEKIT-25 shape. They load in

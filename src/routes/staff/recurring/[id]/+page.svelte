@@ -2,7 +2,6 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { withQuery } from '#lib/utils/with-query.js';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
 	import { refreshAll } from '$app/navigation';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
@@ -15,9 +14,12 @@
 	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 	import { getStaffSeriesDetail, cancelDetailSeries } from '#lib/remote/recurring.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 	const { fields: cancelFields } = cancelDetailSeries;
 
-	let id = $derived(page.params.id!);
+	let id = $derived(params.id);
 	const data = $derived(await getStaffSeriesDetail(id));
 	const series = $derived(data.series);
 	const history = $derived(data.history);

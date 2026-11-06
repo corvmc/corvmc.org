@@ -24,13 +24,15 @@
 	import { goto } from '$app/navigation';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { formatDateLong, formatDateTime, formatTimeRange } from '#lib/utils/format.js';
 	import { incidentCategoryLabels } from '#lib/config.js';
 	import { getMyShift, setMyWorkTaskDone, cancelMySignup } from '#lib/remote/volunteer.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const signupId = $derived(page.params.signupId!);
+	const params = routeParams('signupId');
+
+	const signupId = $derived(params.signupId);
 	const data = $derived(await getMyShift(signupId));
 
 	const doneCount = $derived(data.tasks.filter((t) => t.done).length);

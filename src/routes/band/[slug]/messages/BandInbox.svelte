@@ -8,10 +8,13 @@
 	import { page } from '$app/state';
 	import EnquiryList from './EnquiryList.svelte';
 	import GroupTopicList from '#lib/components/inbox/GroupTopicList.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	let { canReadEnquiries }: { canReadEnquiries: boolean } = $props();
 
-	const slug = $derived(page.params.slug!);
+	const slug = $derived(params.slug);
 </script>
 
 <div class="flex min-h-0 flex-col gap-6">

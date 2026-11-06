@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m as msg } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import CategoryOptions from '#lib/components/inventory/CategoryOptions.svelte';
 	import ItemResources from '#lib/components/inventory/ItemResources.svelte';
 	import { IconDeviceFloppy } from '@tabler/icons-svelte';
@@ -40,10 +39,13 @@
 	import { withQuery } from '#lib/utils/with-query.js';
 	import { formatDateShort, formatCents, titleCase } from '#lib/utils/format.js';
 	import { acquisitionKindLabels, equipmentConditionBadge, unitsOfMeasure } from '#lib/config.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	const { fields } = editItem;
 
-	let id = $derived(page.params.id!);
+	let id = $derived(params.id);
 	let itemId = $derived(id);
 	// One query. The category list is not in it — see CategoryOptions for why it cannot be.
 	const data = $derived(await getStaffItemDetail(id));

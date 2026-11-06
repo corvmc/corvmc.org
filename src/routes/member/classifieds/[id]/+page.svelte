@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { page } from '$app/state';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
@@ -18,8 +17,11 @@
 		closeClassified,
 		reportClassified
 	} from '#lib/remote/classifieds.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	const id = $derived(params.id);
 	const post = $derived(await getClassifiedDetail(id));
 	const open = $derived(post.displayStatus === 'open');
 

@@ -6,8 +6,11 @@
 	import { page } from '$app/state';
 	import { bandSiteHref } from '#lib/utils/band-site-url.js';
 	import { imageSrc } from '#lib/utils/images.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let data = $derived(await getBandSiteData(page.params.slug!));
+	const params = routeParams('slug');
+
+	let data = $derived(await getBandSiteData(params.slug));
 	const band = $derived(data.band);
 	const epk = $derived(data.config?.epk);
 	const members = $derived(data.members);

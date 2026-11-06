@@ -1,9 +1,11 @@
 <script lang="ts">
 	import BandSiteRenderer from '#lib/components/band-site/BandSiteRenderer.svelte';
 	import { getBandSiteData } from '#lib/remote/band-site.remote.js';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let data = $derived(await getBandSiteData(page.params.slug!));
+	const params = routeParams('slug');
+
+	let data = $derived(await getBandSiteData(params.slug));
 </script>
 
 <BandSiteRenderer

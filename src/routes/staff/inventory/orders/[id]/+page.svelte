@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
@@ -24,6 +23,9 @@
 	import { formatCents, formatDateShort } from '#lib/utils/format.js';
 	import { isOrderLate } from '#lib/utils/order-late.js';
 	import { resolve } from '$app/paths';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	/**
 	 * One order: what was promised, what has turned up, what is still coming.
@@ -33,7 +35,7 @@
 	 * same path every other arrival uses, so the ledger cannot fork on whether
 	 * something happened to be ordered first.
 	 */
-	const id = $derived(page.params.id!);
+	const id = $derived(params.id);
 	const order = $derived(await getOrder(id));
 
 	const status = $derived(order.status as OrderStatus);

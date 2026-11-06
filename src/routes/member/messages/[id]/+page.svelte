@@ -11,7 +11,6 @@
 	import { untrack } from 'svelte';
 	import Card from '#lib/components/ui/Card/Card.svelte';
 	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
-	import { page } from '$app/state';
 	import { IconCheck, IconX, IconBan } from '@tabler/icons-svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
@@ -33,8 +32,11 @@
 		declineDirectRequest,
 		blockFromThread
 	} from '#lib/remote/direct-messages.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const threadId = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	const threadId = $derived(params.id);
 
 	// Deliberately the only query this page awaits. It carries viewerUserId, so
 	// there is no second await for the reader's identity — and in particular not

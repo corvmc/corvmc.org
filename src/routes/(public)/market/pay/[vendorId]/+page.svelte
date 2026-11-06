@@ -9,6 +9,9 @@
 	import { formatCents, formatDateTime } from '#lib/utils/format.js';
 	import { goToCheckout } from '#lib/utils/checkout-navigation.js';
 	import { getVendorFeePage, payVendorFeeForm } from '#lib/remote/market.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('vendorId');
 
 	/**
 	 * Where an accepted market vendor pays their table fee (#1502). Linked from
@@ -17,7 +20,7 @@
 	 */
 	const fields = payVendorFeeForm.fields;
 
-	const vendorId = $derived(page.params.vendorId!);
+	const vendorId = $derived(params.vendorId);
 	const returned = $derived(page.url.searchParams.get('paid') === '1');
 	const fee = $derived(await getVendorFeePage(vendorId));
 

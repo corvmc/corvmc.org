@@ -48,6 +48,9 @@
 	import EventRsvps from './EventRsvps.svelte';
 	import { formatEventTimeRange } from '#lib/utils/event-time.js';
 	import { formatTime, fullDate } from '#lib/utils/format.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	/**
 	 * The listing — every source, any staffer — and where `entity-href` sends
@@ -56,7 +59,7 @@
 	 * `[id]/production` is back-of-house only. Writes take `event.manage` or the
 	 * show's committee; the guard is `requireListingWriter`, on the remotes.
 	 */
-	const id = $derived(page.params.id!);
+	const id = $derived(params.id);
 	const data = $derived(await getStaffEventPage(id));
 	const evt = $derived(data.detail.event);
 	const detail = $derived(data.detail);

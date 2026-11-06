@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { getMemberAsset } from '#lib/remote/inventory.remote.js';
 	import { ReportDamageAction } from '#lib/components/actions/index.js';
 	import { IconFileText, IconBook } from '@tabler/icons-svelte';
@@ -15,6 +14,9 @@
 	import { equipmentConditionBadge, assetStatusLabels } from '#lib/config.js';
 	import { titleCase } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	/**
 	 * Where a member lands after scanning the sticker on a piece of gear.
@@ -27,7 +29,7 @@
 	 * report-damage button are the next phase, and this page exists from the
 	 * start so the URL printed on the tag never has to change to get them.
 	 */
-	let id = $derived(page.params.id!);
+	let id = $derived(params.id);
 	const asset = $derived(await getMemberAsset(id));
 	const resources = $derived(asset.resources);
 </script>

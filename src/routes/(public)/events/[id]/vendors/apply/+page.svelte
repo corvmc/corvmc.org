@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { Turnstile } from 'svelte-turnstile';
 	import type { RemoteFormIssue } from '$app/server';
@@ -13,6 +12,9 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	/**
 	 * A vendor's application for a table at a market day. No account needed:
@@ -24,7 +26,7 @@
 	let failure = $state<string | null>(null);
 	let resetTurnstile = $state<() => void>();
 
-	const market = $derived(await getVendorApplyPage(page.params.id!));
+	const market = $derived(await getVendorApplyPage(params.id));
 </script>
 
 <svelte:head>

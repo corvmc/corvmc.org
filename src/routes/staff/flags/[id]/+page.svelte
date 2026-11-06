@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { getFlagDetail, resolveFlag } from '#lib/remote/flags.remote.js';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
@@ -17,8 +16,11 @@
 	import { entityLabels } from '#lib/terms.js';
 	import ThreadTimeline from '#lib/components/inbox/ThreadTimeline.svelte';
 	import AppealCard from './AppealCard.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 	let flag = $derived(await getFlagDetail(id));
 
 	// `flag.entityHref` is the server's own answer, which this page used to

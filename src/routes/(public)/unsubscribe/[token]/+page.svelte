@@ -9,9 +9,11 @@
 		confirmUnsubscribe,
 		confirmUnsubscribeAll
 	} from '#lib/remote/marketing.remote.js';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let token = $derived(page.params.token!);
+	const params = routeParams('token');
+
+	let token = $derived(params.token);
 	let data = $derived(await getUnsubscribeInfo(token));
 
 	const { fields } = confirmUnsubscribe;

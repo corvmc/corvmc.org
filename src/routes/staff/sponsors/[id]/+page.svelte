@@ -33,11 +33,13 @@
 	import { sponsorshipStatusLabels, sponsorshipStatusBadge } from '#lib/config.js';
 	import { formatCents, formatDateShortYear } from '#lib/utils/format.js';
 	import { formatIsoDay } from '#lib/utils/deadline.js';
-	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	const id = $derived(params.id);
 	const sponsor = $derived(await getSponsorDetail(id));
 	const editForm = $derived(updateSponsor.for(id));
 

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m as msg } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import * as env from '$app/env/public';
 	import { canonicalAddress } from '#lib/utils/canonical-address.js';
@@ -27,13 +26,16 @@
 	import VideoBox from '#lib/components/directory/profile/VideoBox.svelte';
 	import ContactForm from '#lib/components/directory/profile/ContactForm.svelte';
 	import ProfileGrid from '#lib/components/directory/profile/ProfileGrid.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	const MEMBERS_BASE = '/member/directory/members';
 
 	// One query. Three concurrent ones is what -1V was: past kit 2.64 the component blows up in
 	// Svelte's reactivity instead of rendering. `getBandPastShows` below is still its own call,
 	// but it fires from the pager's callback, long after first paint.
-	let data = $derived(await getDirectoryBand(page.params.slug!));
+	let data = $derived(await getDirectoryBand(params.slug));
 
 	const band = $derived(data.band);
 	const shows = $derived(data.shows);

@@ -24,11 +24,13 @@
 	import { grantStatusLabels, grantStatusBadge, grantDeadlineLabels } from '#lib/config.js';
 	import { formatCents } from '#lib/utils/format.js';
 	import { formatIsoDay } from '#lib/utils/deadline.js';
-	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	const id = $derived(params.id);
 	const grant = $derived(await getGrantDetail(id));
 	const editForm = $derived(updateGrant.for(id));
 

@@ -34,6 +34,9 @@
 		type BandNavKey,
 		type BandNavItem
 	} from './nav-items';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	let { children } = $props();
 
@@ -58,10 +61,10 @@
 	// Runs once per mount: a slug change inside the panel falls back to `getBandLayout`'s own
 	// forward, which drops the subpage.
 	await requireBandLayoutSession({
-		slug: page.params.slug!,
+		slug: params.slug,
 		path: page.url.pathname + page.url.search
 	});
-	let layout = $derived(await getBandLayout(page.params.slug!));
+	let layout = $derived(await getBandLayout(params.slug));
 
 	// The gating itself lives in `nav-items.ts` as data, so it can be asserted
 	// against for every role and flag combination — this file has had the role

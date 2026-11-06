@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import * as env from '$app/env/public';
 	import { canonicalAddress } from '#lib/utils/canonical-address.js';
@@ -26,10 +25,13 @@
 	import ContactBox from '#lib/components/directory/profile/ContactBox.svelte';
 	import ProfileGrid from '#lib/components/directory/profile/ProfileGrid.svelte';
 	import type { ProfileLink, DirectoryContact } from '#lib/server/db/schema/authentication.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	const BANDS_BASE = '/member/directory/bands';
 
-	let id = $derived(page.params.id!);
+	let id = $derived(params.id);
 	// One query — see the note on `getDirectoryMember`. The two permission flags are decided
 	// server-side now; the "message yourself" reasoning moved there with them.
 	let data = $derived(await getDirectoryMember(id));

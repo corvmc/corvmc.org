@@ -5,8 +5,11 @@
 	import { withQuery } from '#lib/utils/with-query.js';
 	import { parseTab, type TabKey } from './tabs';
 	import MemberRecord from './MemberRecord.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 
 	// Seeded from the query string and mirrored back into it, so a staff member
 	// can hand someone a link to the tab they are talking about.

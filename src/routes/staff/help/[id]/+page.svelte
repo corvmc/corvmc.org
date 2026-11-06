@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { getStaffArticlePage, updateArticle, deleteArticle } from '#lib/remote/help.remote.js';
@@ -17,8 +16,11 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import { IconTrash } from '@tabler/icons-svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	let id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	let id = $derived(params.id);
 	const data = $derived(await getStaffArticlePage(id));
 	const article = $derived(data.article);
 	const categories = $derived(data.categories);

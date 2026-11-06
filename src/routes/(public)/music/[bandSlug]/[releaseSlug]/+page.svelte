@@ -11,13 +11,15 @@
 	import { formatTrackSummary } from '#lib/utils/audio.js';
 	import { formatDateYear } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
 	import { IconDisc } from '@tabler/icons-svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('bandSlug', 'releaseSlug');
 
 	const { release, band, tracks, purchasable, viewerEmail } = $derived(
 		await getPublicRelease({
-			bandSlug: page.params.bandSlug!,
-			releaseSlug: page.params.releaseSlug!
+			bandSlug: params.bandSlug,
+			releaseSlug: params.releaseSlug
 		})
 	);
 

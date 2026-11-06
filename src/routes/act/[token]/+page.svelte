@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { page } from '$app/state';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
@@ -15,6 +14,9 @@
 	import { formatDateShort, formatDateTime } from '#lib/utils/format.js';
 	import { toast } from 'svelte-sonner';
 	import { getContactSheet, saveContactSheetForm } from '#lib/remote/contact-sheet.remote.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('token');
 
 	/**
 	 * An act's own contact sheet.
@@ -30,7 +32,7 @@
 	 */
 	const fields = saveContactSheetForm.fields;
 
-	let token = $derived(page.params.token!);
+	let token = $derived(params.token);
 	const sheet = $derived(await getContactSheet(token));
 
 	let busy = $state(false);

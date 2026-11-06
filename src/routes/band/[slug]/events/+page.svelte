@@ -26,13 +26,15 @@
 	import { getBandLayoutContext } from '../layout-context';
 	import { refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	// The layout above already holds this; re-awaiting it here was a second remote query
 	// in flight in this component. See `layout-context.ts`.
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
-	const { events, invites, bookings } = $derived(await getBandEventsPage(page.params.slug!));
+	const { events, invites, bookings } = $derived(await getBandEventsPage(params.slug));
 	const band = $derived(layout.band);
 	const isAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
 

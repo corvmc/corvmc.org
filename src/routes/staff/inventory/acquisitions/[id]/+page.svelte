@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { page } from '$app/state';
 	import { IconDeviceFloppy, IconFileText, IconUpload } from '@tabler/icons-svelte';
 	import {
 		addAcquisitionLineForm,
@@ -33,6 +32,9 @@
 		type AcquisitionKind
 	} from '#lib/config.js';
 	import { toast } from 'svelte-sonner';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	/**
 	 * One acquisition: what arrived, from whom, for how much, and the paperwork.
@@ -49,7 +51,7 @@
 	 */
 	const { fields } = editAcquisition;
 
-	let id = $derived(page.params.id!);
+	let id = $derived(params.id);
 	const data = $derived(await getStaffAcquisitionDetail(id));
 
 	/**

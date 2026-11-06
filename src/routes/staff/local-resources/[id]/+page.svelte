@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
@@ -20,8 +19,11 @@
 		removeLocalResourceForm
 	} from '#lib/remote/local-resources.remote.js';
 	import ResourceFields from '../ResourceFields.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const data = $derived(await getStaffLocalResource(page.params.id!));
+	const params = routeParams('id');
+
+	const data = $derived(await getStaffLocalResource(params.id));
 	const r = $derived(data.resource);
 	const categoryName = $derived(data.categories.find((c) => c.id === r.categoryId)?.name ?? '—');
 

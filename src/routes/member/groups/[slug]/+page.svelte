@@ -46,6 +46,9 @@
 	import CommitteeMarkets from './CommitteeMarkets.svelte';
 	import CommitteeRecurringWork from './CommitteeRecurringWork.svelte';
 	import CommitteeOpenItems from './CommitteeOpenItems.svelte';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug');
 
 	/**
 	 * A club gets a page, not a panel.
@@ -81,7 +84,7 @@
 		| 'sessions'
 		| 'roster';
 
-	let slug = $derived(page.params.slug!);
+	let slug = $derived(params.slug);
 	const data = $derived(await getMemberGroup(slug));
 	const group = $derived(data.group);
 	const members = $derived(data.members);

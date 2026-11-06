@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
@@ -29,8 +28,11 @@
 	} from '#lib/remote/duty-lists.remote.js';
 	import { describeDuration, describeOffset, splitOffset } from '../offsets';
 	import { Latest } from '#lib/latest.svelte.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
 
-	const id = $derived(page.params.id!);
+	const params = routeParams('id');
+
+	const id = $derived(params.id);
 	// Not `{#await}`: a refresh would re-pend it and unmount an open item dialog.
 	const data = new Latest(() => getDutyListPage(id));
 	$effect(() => {

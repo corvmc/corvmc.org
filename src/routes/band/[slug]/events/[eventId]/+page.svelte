@@ -19,7 +19,9 @@
 	import { refreshAll } from '$app/navigation';
 	import { getBandEventDetail, updateBandEventForm } from '#lib/remote/band-events.remote.js';
 	import { getBandLayoutContext } from '../../layout-context';
-	import { page } from '$app/state';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('slug', 'eventId');
 
 	// Declared before the awaited queries below: a declaration that follows a
 	// top-level await is async-gated, which would compile every `fields.X.as()`
@@ -31,9 +33,7 @@
 	// in flight in this component. See `layout-context.ts`.
 	const bandLayout = getBandLayoutContext();
 	const layout = $derived(bandLayout.current);
-	let evt = $derived(
-		await getBandEventDetail({ slug: page.params.slug!, eventId: page.params.eventId! })
-	);
+	let evt = $derived(await getBandEventDetail({ slug: params.slug, eventId: params.eventId }));
 	const band = $derived(layout.band);
 	const isAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
 

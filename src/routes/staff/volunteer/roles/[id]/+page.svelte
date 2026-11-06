@@ -5,7 +5,6 @@
 	import RoleShiftsCard from './RoleShiftsCard.svelte';
 	import RoleInterestedCard from './RoleInterestedCard.svelte';
 	import RoleGrantsCard from './RoleGrantsCard.svelte';
-	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
@@ -29,10 +28,13 @@
 		getVolunteerRoleHistory
 	} from '#lib/remote/volunteer.remote.js';
 	import { ActivityFeedCard, feedItemRow } from '#lib/components/ui/ActivityFeed/index.js';
+	import { routeParams } from '#lib/route-params.svelte.js';
+
+	const params = routeParams('id');
 
 	const { fields } = updateVolunteerRole;
 
-	let id = $derived(page.params.id!);
+	let id = $derived(params.id);
 	// One query, keyed by the role id alone. That is deliberate: `setRoleCertifications` refreshes
 	// the requirements with `data.roleId` and `refreshRoleViews` refreshes the detail with a bare
 	// `roleId`, so a wrapper keyed by the page number or the shift window could not be named from
