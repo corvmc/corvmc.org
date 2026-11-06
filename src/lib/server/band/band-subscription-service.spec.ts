@@ -54,12 +54,10 @@ describe('createBandPremiumCheckout', () => {
 		cancelUrl: 'https://example.com/band/x/subscription'
 	};
 
-	it('asks for the in-app payment page, not checkout.stripe.com', async () => {
+	it('starts a subscription checkout and returns where to pay', async () => {
 		const url = await createBandPremiumCheckout(options);
 
-		expect(mockCheckout).toHaveBeenCalledWith(
-			expect.objectContaining({ uiMode: 'elements', mode: 'subscription' })
-		);
+		expect(mockCheckout).toHaveBeenCalledWith(expect.objectContaining({ mode: 'subscription' }));
 		expect(url).toBe('/checkout/cs_band');
 	});
 

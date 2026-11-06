@@ -141,10 +141,7 @@ export async function createBandPremiumCheckout(options: BandCheckoutOptions): P
 			band_id: bandId
 		},
 		successUrl,
-		cancelUrl,
-		// Paid on our own page, like every other product. See the note in
-		// `finance/subscription-service.ts` for why this is not an option.
-		uiMode: 'elements'
+		cancelUrl
 	});
 
 	if (!result.checkoutUrl) {

@@ -108,8 +108,7 @@ export async function startVendorFeeCheckout(
 		lineItems: [await buildLineItem('market_table', amountCents, 1)],
 		metadata: { type: VENDOR_FEE_CHECKOUT_TYPE, vendor_id: row.id, event_id: row.eventId },
 		successUrl: `${origin}${vendorPayPath(row.id)}?paid=1`,
-		cancelUrl: `${origin}${vendorPayPath(row.id)}`,
-		uiMode: 'elements'
+		cancelUrl: `${origin}${vendorPayPath(row.id)}`
 	});
 	if (!result.checkoutUrl) throw new Error('Checkout could not be started');
 	return { checkoutUrl: result.checkoutUrl };

@@ -1554,11 +1554,7 @@ async function payReservationRemainder(opts: {
 		coverFees: opts.coverFees,
 		metadata: { reservation_id: opts.row.id },
 		successUrl: opts.successUrl,
-		cancelUrl: opts.cancelUrl,
-		// Paid on our own page rather than checkout.stripe.com. The two URLs
-		// above are unchanged — `checkout()` maps them onto the `return_url` /
-		// metadata pair that `elements` mode takes instead.
-		uiMode: 'elements'
+		cancelUrl: opts.cancelUrl
 	});
 
 	if (result.paid) {
@@ -1756,8 +1752,7 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 		coverFees: data.coverFees,
 		metadata: { reservation_id: res.id },
 		successUrl: `${url.origin}/member/reservations?paid=${res.id}`,
-		cancelUrl: `${url.origin}/member/reservations`,
-		uiMode: 'elements'
+		cancelUrl: `${url.origin}/member/reservations`
 	});
 
 	if (result.paid) {
@@ -2135,9 +2130,7 @@ export const payReservation = form(
 			cancelUrl: `${url.origin}/member/reservations/${row.id}/pay`
 		});
 
-		redirect(303, 'paid' in result ? backPath : result.checkoutUrl, {
-			external: ['https://checkout.stripe.com']
-		});
+		redirect(303, 'paid' in result ? backPath : result.checkoutUrl);
 	}
 );
 

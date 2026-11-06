@@ -81,9 +81,7 @@ test('a member covers the processing fee and the reservation settles', async ({ 
 	await page.locator('form').filter({ has: checkbox }).locator('button[type="submit"]').click();
 
 	// The in-app checkout page, reached by the same 303 the live integration
-	// issues. Reservations create an `elements` session now, so `checkout()`
-	// returns this route directly rather than the fake standing in for a
-	// checkout.stripe.com URL — the page is the same either way.
+	// issues.
 	await expect(page).toHaveURL(/\/checkout\//);
 	// $15.00 grossed up for 2.9% + 30¢ — `calculateTotalWithFeeCoverage(1500)` is
 	// `{ totalCents: 1576, feeCents: 76 }`. Asserting the total here is what proves

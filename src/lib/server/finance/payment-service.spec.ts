@@ -119,12 +119,17 @@ describe('checkout', () => {
 	it('creates Checkout Session with no credits applied when none eligible', async () => {
 		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 1000 });
 		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sess_123'
+			id: 'sess_123',
+			client_secret: 'sess_123_secret'
 		});
 
 		const result = await checkout(baseOptions);
 
-		expect(result).toEqual({ paid: false, checkoutUrl: 'https://checkout.stripe.com/sess_123' });
+		expect(result).toEqual({
+			paid: false,
+			checkoutUrl: '/checkout/sess_123',
+			clientSecret: 'sess_123_secret'
+		});
 		expect(mockCreditService.deductCredits).not.toHaveBeenCalled();
 		expect(mockStripe.coupons.create).not.toHaveBeenCalled();
 		expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(
@@ -147,7 +152,8 @@ describe('checkout', () => {
 		mockCreditService.deductCredits.mockResolvedValue(0);
 		mockStripe.coupons.create.mockResolvedValue({ id: 'coupon_abc' });
 		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sess_456'
+			id: 'sess_456',
+			client_secret: 'sess_456_secret'
 		});
 
 		const result = await checkout({
@@ -155,7 +161,11 @@ describe('checkout', () => {
 			eligibleCredits: [{ type: 'free_hours', unitValueCents: 1000 }]
 		});
 
-		expect(result).toEqual({ paid: false, checkoutUrl: 'https://checkout.stripe.com/sess_456' });
+		expect(result).toEqual({
+			paid: false,
+			checkoutUrl: '/checkout/sess_456',
+			clientSecret: 'sess_456_secret'
+		});
 		expect(mockCreditService.deductCredits).toHaveBeenCalledWith(
 			'user-1',
 			'free_hours',
@@ -204,7 +214,8 @@ describe('checkout', () => {
 
 	it('skips credit application for anonymous purchases', async () => {
 		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sess_anon'
+			id: 'sess_anon',
+			client_secret: 'sess_anon_secret'
 		});
 
 		const result = await checkout({
@@ -217,14 +228,19 @@ describe('checkout', () => {
 			cancelUrl: 'https://example.com/cancel'
 		});
 
-		expect(result).toEqual({ paid: false, checkoutUrl: 'https://checkout.stripe.com/sess_anon' });
+		expect(result).toEqual({
+			paid: false,
+			checkoutUrl: '/checkout/sess_anon',
+			clientSecret: 'sess_anon_secret'
+		});
 		expect(mockCreditService.getBalance).not.toHaveBeenCalled();
 		expect(mockCreditService.deductCredits).not.toHaveBeenCalled();
 	});
 
 	it('resolves cart total from price_data inline amounts', async () => {
 		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sess_pd'
+			id: 'sess_pd',
+			client_secret: 'sess_pd_secret'
 		});
 
 		await checkout({
@@ -244,7 +260,8 @@ describe('checkout', () => {
 	it('resolves cart total from Stripe price references', async () => {
 		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 750 });
 		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sess_ref'
+			id: 'sess_ref',
+			client_secret: 'sess_ref_secret'
 		});
 
 		await checkout({
@@ -258,7 +275,8 @@ describe('checkout', () => {
 	it('adds fee coverage line item when coverFees is true', async () => {
 		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 1000 });
 		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sess_fee'
+			id: 'sess_fee',
+			client_secret: 'sess_fee_secret'
 		});
 
 		await checkout({
@@ -278,7 +296,8 @@ describe('checkout', () => {
 	it('adds recurring interval to fee line item for subscriptions', async () => {
 		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 500 });
 		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sess_sub_fee'
+			id: 'sess_sub_fee',
+			client_secret: 'sess_sub_fee_secret'
 		});
 
 		await checkout({
@@ -295,7 +314,8 @@ describe('checkout', () => {
 	it('does not add fee item when coverFees is false', async () => {
 		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 1000 });
 		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sess_nofee'
+			id: 'sess_nofee',
+			client_secret: 'sess_nofee_secret'
 		});
 
 		await checkout({
@@ -310,7 +330,8 @@ describe('checkout', () => {
 	it('passes metadata through to Stripe session', async () => {
 		mockStripe.prices.retrieve.mockResolvedValue({ unit_amount: 1000 });
 		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sess_meta'
+			id: 'sess_meta',
+			client_secret: 'sess_meta_secret'
 		});
 
 		await checkout({
@@ -416,7 +437,8 @@ describe('checkout', () => {
 		// a 500¢ discount.
 		mockCreditService.getBalance.mockResolvedValue(3);
 		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sess_small'
+			id: 'sess_small',
+			client_secret: 'sess_small_secret'
 		});
 
 		const result = await checkout({
@@ -434,7 +456,8 @@ describe('checkout', () => {
 
 	it('skips the fee-coverage line for sub-$1 remainders', async () => {
 		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sess_tiny'
+			id: 'sess_tiny',
+			client_secret: 'sess_tiny_secret'
 		});
 
 		await checkout({
@@ -451,7 +474,8 @@ describe('checkout', () => {
 
 	it('adds the fee-coverage line at $1 and above', async () => {
 		mockStripe.checkout.sessions.create.mockResolvedValue({
-			url: 'https://checkout.stripe.com/sess_fee'
+			id: 'sess_fee',
+			client_secret: 'sess_fee_secret'
 		});
 
 		await checkout({
@@ -484,9 +508,7 @@ describe('checkout', () => {
 // checkout() — ui_mode
 // ---------------------------------------------------------------------------
 // Stripe rejects success_url/cancel_url outright in `elements` mode and demands
-// return_url instead, so the two shapes are mutually exclusive rather than
-// additive. Both are asserted here because a caller migrating one flow must not
-// be able to change what the other one sends.
+// return_url instead.
 // ---------------------------------------------------------------------------
 describe('checkout ui_mode', () => {
 	const baseOptions = {
@@ -504,35 +526,16 @@ describe('checkout ui_mode', () => {
 		vi.clearAllMocks();
 	});
 
-	it('defaults to the hosted page, with success and cancel URLs and no ui_mode', async () => {
-		mockStripe.checkout.sessions.create.mockResolvedValue({
-			id: 'cs_hosted',
-			url: 'https://checkout.stripe.com/sess_hosted'
-		});
-
-		const result = await checkout(baseOptions);
-
-		expect(result).toEqual({ paid: false, checkoutUrl: 'https://checkout.stripe.com/sess_hosted' });
-
-		const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
-		expect(params.ui_mode).toBeUndefined();
-		expect(params.success_url).toBe('https://example.com/success');
-		expect(params.cancel_url).toBe('https://example.com/cancel');
-		expect(params.return_url).toBeUndefined();
-		expect(params.metadata.cancel_url).toBeUndefined();
-	});
-
 	it('sends return_url and no success/cancel URL in elements mode', async () => {
 		mockStripe.checkout.sessions.create.mockResolvedValue({
 			id: 'cs_elements',
 			client_secret: 'cs_elements_secret_abc'
 		});
 
-		const result = await checkout({ ...baseOptions, uiMode: 'elements' });
+		const result = await checkout(baseOptions);
 
-		// The in-app page, not checkout.stripe.com — an elements session has no
-		// `url` at all, so a caller that still redirects on `checkoutUrl` keeps
-		// working without knowing which mode it asked for.
+		// An elements session has no `url` at all; the in-app page is the only place
+		// to send the buyer.
 		expect(result).toEqual({
 			paid: false,
 			checkoutUrl: '/checkout/cs_elements',
@@ -552,7 +555,7 @@ describe('checkout ui_mode', () => {
 			client_secret: 'cs_elements_secret_abc'
 		});
 
-		await checkout({ ...baseOptions, uiMode: 'elements' });
+		await checkout(baseOptions);
 
 		const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
 		expect(params.metadata.cancel_url).toBe('https://example.com/cancel');
@@ -566,7 +569,6 @@ describe('checkout ui_mode', () => {
 
 		await checkout({
 			...baseOptions,
-			uiMode: 'elements',
 			destinationAccountId: 'acct_band',
 			applicationFeeCents: 150
 		});
@@ -574,7 +576,7 @@ describe('checkout ui_mode', () => {
 		// `elements` restricts exactly three params — `success_url`, `cancel_url`
 		// and `branding_settings` — and `payment_intent_data` is not among them.
 		// Record sales pay the band through a destination charge, so this asserts
-		// the split survives the migration rather than being quietly dropped.
+		// the split is sent.
 		const params = mockStripe.checkout.sessions.create.mock.calls[0][0];
 		expect(params.ui_mode).toBe('elements');
 		expect(params.payment_intent_data.transfer_data).toEqual({ destination: 'acct_band' });
@@ -587,7 +589,7 @@ describe('checkout ui_mode', () => {
 			client_secret: 'cs_elements_secret_abc'
 		});
 
-		await checkout({ ...baseOptions, uiMode: 'elements', stripeCustomerId: 'cus_member' });
+		await checkout({ ...baseOptions, stripeCustomerId: 'cus_member' });
 
 		// Stripe shows a saved card only when `allow_redisplay` is `always`, which
 		// no card attached before this was, so all three values are filtered back
@@ -610,7 +612,6 @@ describe('checkout ui_mode', () => {
 		await checkout({
 			...baseOptions,
 			mode: 'subscription',
-			uiMode: 'elements',
 			stripeCustomerId: 'cus_member'
 		});
 
@@ -627,7 +628,6 @@ describe('checkout ui_mode', () => {
 
 		await checkout({
 			...baseOptions,
-			uiMode: 'elements',
 			stripeCustomerId: undefined,
 			customerEmail: 'guest@example.test'
 		});
@@ -640,7 +640,7 @@ describe('checkout ui_mode', () => {
 	it('throws when an elements session comes back without a client secret', async () => {
 		mockStripe.checkout.sessions.create.mockResolvedValue({ id: 'cs_elements' });
 
-		await expect(checkout({ ...baseOptions, uiMode: 'elements' })).rejects.toThrow(
+		await expect(checkout(baseOptions)).rejects.toThrow(
 			'Stripe did not return a checkout client secret'
 		);
 	});
@@ -654,7 +654,6 @@ describe('checkout ui_mode', () => {
 		await expect(
 			checkout({
 				...baseOptions,
-				uiMode: 'elements',
 				eligibleCredits: [{ type: 'free_hours', unitValueCents: 1000 }]
 			})
 		).rejects.toThrow('stripe down');

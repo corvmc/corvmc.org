@@ -106,12 +106,10 @@ describe('PayReservationAction', () => {
 		invalidateAll.mockClear();
 	});
 
-	it('leaves for Stripe when the server hands back a checkout URL', async () => {
-		await payWith({ redirectUrl: 'https://checkout.stripe.com/c/pay/cs_test_1' });
+	it('goes to checkout when the server hands back a checkout URL', async () => {
+		await payWith({ redirectUrl: '/checkout/cs_test_1' });
 
-		await vi.waitFor(() =>
-			expect(goToCheckout).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/cs_test_1')
-		);
+		await vi.waitFor(() => expect(goToCheckout).toHaveBeenCalledWith('/checkout/cs_test_1'));
 		expect(invalidateAll).not.toHaveBeenCalled();
 	});
 
