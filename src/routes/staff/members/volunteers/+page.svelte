@@ -249,6 +249,8 @@
 						{m.staff_members_volunteers_lapsing({ lapsingPeople })}
 					</button>
 				{/if}
+			{:catch}
+				<!-- Roster's DataList takes this rejection to the boundary. -->
 			{/await}
 			{#await getVolunteerStatusCounts() then { pending }}
 				{#if pending > 0}
@@ -261,6 +263,8 @@
 							>{/snippet}</ParaglideMessage
 					>
 				{/if}
+			{:catch}
+				<!-- Only a shortcut to the hours queue. -->
 			{/await}
 		{/snippet}
 

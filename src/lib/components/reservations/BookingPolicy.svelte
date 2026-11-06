@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { m as msg } from '#lib/paraglide/messages.js';
 	import { getReservationPolicy } from '#lib/remote/reservations.remote.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 
 	/** "09:00" → "9 AM", "21:30" → "9:30 PM" */
 	function fmtHour(hhmm: string): string {
@@ -75,6 +77,8 @@
 				<span class="block text-lg font-bold">{fmtNotice(policy.minAdvanceMinutes)}</span>
 			</div>
 		</div>
+	{:catch error}
+		<Alert type="error">{msg.ui_load_failed({ error: errorMessage(error) })}</Alert>
 	{/await}
 	<details class="border-t-[2.5px] border-base-300">
 		<summary

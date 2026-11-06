@@ -89,6 +89,8 @@
 				{:else}
 					<p class="text-muted">{m.events_repeat_event_no_upcoming_occurrences_next_60()}</p>
 				{/if}
+			{:catch}
+				<!-- A courtesy preview: the form still submits without it. -->
 			{/await}
 		</div>
 	{/snippet}

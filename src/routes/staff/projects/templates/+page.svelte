@@ -15,9 +15,9 @@
 	import StaffViews from '../../StaffViews.svelte';
 	import { projectViews } from '../views';
 
-	let lists = $derived(getDutyLists());
-
 	const anchorOptions = dutyListAnchors.map((a) => ({ value: a, label: dutyListAnchorLabels[a] }));
+
+	const rows = $derived(await getDutyLists());
 </script>
 
 <PageHeader
@@ -61,42 +61,40 @@
 			{/snippet}
 		</Action>
 	</div>
-	{#await lists then rows}
-		{#if rows.length === 0}
-			<EmptyState
-				title={m.staff_project_templates_no_templates_yet()}
-				description={m.staff_project_templates_template_set_work_orders_project()}
-			/>
-		{:else}
-			<InfoCard title={m.staff_project_templates_templates()}>
-				<Table>
-					{#snippet head()}
-						<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-						<th>{m.staff_name()}</th>
-						<th>{m.staff_project_templates_anchor()}</th>
-						<th class="cell-num">{m.staff_items()}</th>
-					{/snippet}
+	{#if rows.length === 0}
+		<EmptyState
+			title={m.staff_project_templates_no_templates_yet()}
+			description={m.staff_project_templates_template_set_work_orders_project()}
+		/>
+	{:else}
+		<InfoCard title={m.staff_project_templates_templates()}>
+			<Table>
+				{#snippet head()}
+					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
+					<th>{m.staff_name()}</th>
+					<th>{m.staff_project_templates_anchor()}</th>
+					<th class="cell-num">{m.staff_items()}</th>
+				{/snippet}
 
-					{#each rows as list (list.id)}
-						<tr use:rowLink={`/staff/projects/templates/${list.id}`}>
-							<td>
-								<StatusBadge status={list.isActive ? 'active' : 'archived'} label />
-							</td>
-							<td class="cell-primary">
-								<div class="font-medium">{list.name}</div>
-								{#if list.description}
-									<div class="line-clamp-1 text-sm text-base-content/60">{list.description}</div>
-								{/if}
-							</td>
-							<td class="whitespace-nowrap">
-								{dutyListAnchorLabels[list.anchor]}
-							</td>
-							<td class="cell-num">{list.itemCount}</td>
-						</tr>
-					{/each}
-				</Table>
-				<Pagination total={rows.length} unit="templates" />
-			</InfoCard>
-		{/if}
-	{/await}
+				{#each rows as list (list.id)}
+					<tr use:rowLink={`/staff/projects/templates/${list.id}`}>
+						<td>
+							<StatusBadge status={list.isActive ? 'active' : 'archived'} label />
+						</td>
+						<td class="cell-primary">
+							<div class="font-medium">{list.name}</div>
+							{#if list.description}
+								<div class="line-clamp-1 text-sm text-base-content/60">{list.description}</div>
+							{/if}
+						</td>
+						<td class="whitespace-nowrap">
+							{dutyListAnchorLabels[list.anchor]}
+						</td>
+						<td class="cell-num">{list.itemCount}</td>
+					</tr>
+				{/each}
+			</Table>
+			<Pagination total={rows.length} unit="templates" />
+		</InfoCard>
+	{/if}
 </PageContent>

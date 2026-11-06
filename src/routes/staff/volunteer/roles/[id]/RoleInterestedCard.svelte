@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m as msg } from '#lib/paraglide/messages.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
@@ -9,6 +10,7 @@
 	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import Button from '#lib/components/ui/Button.svelte';
 	import { toast } from 'svelte-sonner';
+	import { errorMessage } from '#lib/error-message.js';
 	import { formatDateShort } from '#lib/utils/format.js';
 	import { getInterestedVolunteers } from '#lib/remote/volunteer.remote.js';
 
@@ -47,20 +49,20 @@
 <InfoCard title={msg.staff_volunteer_roles_id_role_interested_card_title()}>
 	{#snippet header(title)}
 		<div class="flex items-center justify-between gap-2">
-			{#await interested then r}
-				<CardTitle>
-					{title}
-					<!--
-						The count that matters when the role is gated is how many could actually
-						take a shift, not how many said yes.
+			<CardTitle>
+				{title}
+				<!--
+					The count that matters when the role is gated is how many could actually
+					take a shift, not how many said yes.
 
-						"today" is load-bearing. This page has no one shift in mind, so the gate
-						can only be evaluated against now — while the gate that actually refuses a
-						claim is evaluated as of the shift's date, and a card expiring next week
-						does not cover a shift the week after
-						(docs/reports/volunteer-workflow-findings.md#a7). The shift-scoped version
-						of this list lives in AddVolunteerAction, which passes the date.
-					-->
+					"today" is load-bearing. This page has no one shift in mind, so the gate
+					can only be evaluated against now — while the gate that actually refuses a
+					claim is evaluated as of the shift's date, and a card expiring next week
+					does not cover a shift the week after
+					(docs/reports/volunteer-workflow-findings.md#a7). The shift-scoped version
+					of this list lives in AddVolunteerAction, which passes the date.
+				-->
+				{#await interested then r}
 					{#if r.gated && r.rows.length > 0}
 						<span class="text-muted font-normal">
 							{msg.staff_volunteer_roles_id_role_interested_card_cleared_today({
@@ -69,14 +71,18 @@
 							})}
 						</span>
 					{/if}
-				</CardTitle>
-			{/await}
+				{:catch}
+					<!-- The card body says the query failed. -->
+				{/await}
+			</CardTitle>
 			{#await interested then r}
 				{#if r.rows.length > 0}
 					<Button variant="ghost" size="sm" onclick={() => copyEmails(r.rows.map((m) => m.email))}>
 						{msg.staff_volunteer_roles_id_role_interested_card_copy_emails_pa()}
 					</Button>
 				{/if}
+			{:catch}
+				<!-- The card body says the query failed. -->
 			{/await}
 		</div>
 	{/snippet}
@@ -134,5 +140,7 @@
 				</Table>
 			{/snippet}
 		</DataList>
+	{:catch error}
+		<Alert type="error">{msg.ui_load_failed({ error: errorMessage(error) })}</Alert>
 	{/await}
 </InfoCard>

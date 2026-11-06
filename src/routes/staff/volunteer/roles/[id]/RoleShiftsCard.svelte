@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
@@ -7,6 +8,7 @@
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
 	import ShiftFormFields from '#lib/components/volunteer/ShiftFormFields.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
 	import { formatDateShort, toLocalDateTime } from '#lib/utils/format.js';
@@ -132,5 +134,7 @@
 				{/each}
 			</Table>
 		{/if}
+	{:catch error}
+		<Alert type="error">{m.ui_load_failed({ error: errorMessage(error) })}</Alert>
 	{/await}
 </InfoCard>

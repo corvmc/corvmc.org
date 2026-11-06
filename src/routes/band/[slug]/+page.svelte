@@ -14,6 +14,7 @@
 	import { canonicalAddress } from '#lib/utils/canonical-address.js';
 	import PressKitCard from './PressKitCard.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 	import { getPressKitProgress } from '#lib/remote/press-kit.remote.js';
 	import { retryQuery } from '#lib/utils/retry-query.js';
 
@@ -98,6 +99,9 @@
 					{/each}
 				</div>
 			{/if}
+		{:catch error}
+			<h2 class="mb-3 text-lg font-semibold">{m.band_slug_upcoming_sessions()}</h2>
+			<Alert type="error">{m.ui_load_failed({ error: errorMessage(error) })}</Alert>
 		{/await}
 	</section>
 

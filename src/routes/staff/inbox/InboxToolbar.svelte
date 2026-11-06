@@ -43,6 +43,8 @@
 						: m.staff_inbox_inbox_toolbar_start_daily()} · {counts.open}
 				</Button>
 			{/if}
+		{:catch}
+			<!-- Only a shortcut into Daily. -->
 		{/await}
 	</div>
 

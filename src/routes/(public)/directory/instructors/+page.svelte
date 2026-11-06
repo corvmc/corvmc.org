@@ -83,54 +83,53 @@
 		</div>
 
 		<svelte:boundary>
-			{#await instructors then page}
-				<!-- Built, tested and unwired until now: `filterSchema` has accepted
-				     `instrument` and the SQL has implemented it all along (#1057). -->
-				{#if page.instruments.length > 1}
-					<div class="mb-6 flex flex-wrap justify-center gap-2">
+			{@const page = await instructors}
+			<!-- Built, tested and unwired until now: `filterSchema` has accepted
+			     `instrument` and the SQL has implemented it all along (#1057). -->
+			{#if page.instruments.length > 1}
+				<div class="mb-6 flex flex-wrap justify-center gap-2">
+					<Button
+						size="sm"
+						variant={instrument === '' ? 'primary' : 'default'}
+						onclick={() => (instrument = '')}
+					>
+						{m.public_all()}
+					</Button>
+					{#each page.instruments as inst (inst)}
 						<Button
 							size="sm"
-							variant={instrument === '' ? 'primary' : 'default'}
-							onclick={() => (instrument = '')}
+							variant={instrument === inst ? 'primary' : 'default'}
+							onclick={() => (instrument = instrument === inst ? '' : inst)}
 						>
-							{m.public_all()}
+							{inst}
 						</Button>
-						{#each page.instruments as inst (inst)}
-							<Button
-								size="sm"
-								variant={instrument === inst ? 'primary' : 'default'}
-								onclick={() => (instrument = instrument === inst ? '' : inst)}
-							>
-								{inst}
-							</Button>
-						{/each}
-					</div>
-				{/if}
+					{/each}
+				</div>
+			{/if}
 
-				{#if page.rows.length === 0}
-					<EmptyState
-						title={m.public_directory_instructors_no_teachers_listed_yet()}
-						description={m.public_directory_instructors_description()}
-					/>
-				{:else}
-					<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-						{#each page.rows as row (row.userId)}
-							<InstructorCard
-								href="/directory/members/{row.userId}"
-								name={row.name}
-								image={row.image}
-								pronouns={row.pronouns}
-								headline={row.headline}
-								blurb={row.blurb}
-								ratesNote={row.ratesNote}
-								bookingUrl={row.bookingUrl}
-								instruments={row.instruments}
-								contact={row.contact}
-							/>
-						{/each}
-					</div>
-				{/if}
-			{/await}
+			{#if page.rows.length === 0}
+				<EmptyState
+					title={m.public_directory_instructors_no_teachers_listed_yet()}
+					description={m.public_directory_instructors_description()}
+				/>
+			{:else}
+				<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+					{#each page.rows as row (row.userId)}
+						<InstructorCard
+							href="/directory/members/{row.userId}"
+							name={row.name}
+							image={row.image}
+							pronouns={row.pronouns}
+							headline={row.headline}
+							blurb={row.blurb}
+							ratesNote={row.ratesNote}
+							bookingUrl={row.bookingUrl}
+							instruments={row.instruments}
+							contact={row.contact}
+						/>
+					{/each}
+				</div>
+			{/if}
 
 			{#snippet failed(_error, reset)}
 				<Alert type="warning" reset={() => retryQuery(instructors, reset)}>

@@ -36,4 +36,6 @@
 			{/each}
 		</div>
 	{/if}
+{:catch}
+	<!-- A shortcut over the filters, which still work. -->
 {/await}

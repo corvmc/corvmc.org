@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
+	import Alert from '#lib/components/ui/Alert.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import DateRangeFilter from '#lib/components/ui/DateRangeFilter.svelte';
+	import { errorMessage } from '#lib/error-message.js';
 	import { formatCents } from '#lib/utils/format.js';
 	import { formatVolunteerHours, financialCategoryLabels } from '#lib/config.js';
 	import { getCommitteeNumbers } from '#lib/remote/reports.remote.js';
@@ -101,4 +103,6 @@
 			</p>
 		{/if}
 	</InfoCard>
+{:catch error}
+	<Alert type="error">{m.ui_load_failed({ error: errorMessage(error) })}</Alert>
 {/await}
