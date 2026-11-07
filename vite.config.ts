@@ -79,9 +79,16 @@ export default defineConfig({
 					})
 				]),
 		tailwindcss(),
-		// The message catalog (messages/en.json). Its options live in
+		// The message catalog (messages/en.json). Its other options live in
 		// project.inlang/paraglide.config.ts, shared with `pnpm messages:compile`.
-		paraglideVitePlugin({ project: './project.inlang' }),
+		// The layout is set here because Paraglide's own default, `virtual-modules`,
+		// leaves a `messages.js` only this plugin can resolve, which breaks anything
+		// `tsx` runs outside Vite. One module per message tree-shakes the build;
+		// dev and vitest would otherwise load all ~6,800 of them.
+		paraglideVitePlugin({
+			project: './project.inlang',
+			outputStructure: process.env.NODE_ENV === 'production' ? 'message-modules' : 'locale-modules'
+		}),
 		sveltekit(kitConfig),
 		previewCloudflareWorkers(),
 		/**
