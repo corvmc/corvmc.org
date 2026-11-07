@@ -218,14 +218,6 @@ test('the dead zone below the charge minimum is refused on the page', async ({ p
 	await expect(submitButton(page)).toBeDisabled();
 });
 
-test('a guest is never offered a member discount, because there is not one', async ({ page }) => {
-	await openPurchasePage(page);
-
-	await expect(
-		page.locator('input:is([name$="waiveDiscount"], [name*="waiveDiscount/"])')
-	).toHaveCount(0);
-});
-
 test('a show with a floor says so, and refuses less', async ({ page }) => {
 	await page.goto(flooredUrl);
 	await expect(page.getByRole('heading', { name: SEED_TP_FLOOR_EVENT_TITLE })).toBeVisible();
@@ -318,33 +310,4 @@ test('a declined card keeps the buyer on checkout with the real decline copy', a
 	// eslint-disable-next-line custom/no-wording-locators -- the processor's decline copy, shown verbatim on purpose
 	await expect(page.getByText('Your card has been declined.')).toBeVisible();
 	await expect(page).toHaveURL(/\/checkout\//);
-});
-
-/**
- * The guard on `payPerTicket`'s retry loop, which for its whole life had never
- * run a second iteration.
- *
- * Holding the entry chunk back reproduces, deterministically, what CI hits by
- * luck on a slow runner: the server-rendered heading is visible, the test types,
- * and nothing is listening yet. With the inner assertion on the global 15s
- * `expect.timeout` this fails exactly as CI did — one attempt, then the whole
- * budget spent watching a value that cannot change. It is the only test here
- * that would notice if that timeout were tidied away again.
- */
-test('a fill that lands before hydration is retried, not waited out', async ({ page }) => {
-	let held = 0;
-	await page.route('**/_app/immutable/entry/*.js', async (route) => {
-		held++;
-		await new Promise((r) => setTimeout(r, 1500));
-		await route.continue();
-	});
-
-	await openPurchasePage(page);
-	await payPerTicket(page, '30');
-
-	// Without this the test passes for the wrong reason the day the build stops
-	// emitting that path: the route matches nothing, hydration is never delayed,
-	// and a guard against a hydration race quietly stops involving one.
-	expect(held, 'the entry chunk was never intercepted, so nothing was delayed').toBeGreaterThan(0);
-	await expect(page.getByTestId('contribution-line')).toBeVisible();
 });

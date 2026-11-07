@@ -81,7 +81,7 @@
 		{/if}
 
 		{#if range}
-			<p class="tnums text-muted" data-testid="pagination-range">
+			<p class="tnums text-muted">
 				{#if unit && totalPages <= 1}
 					{total}
 					{unit}

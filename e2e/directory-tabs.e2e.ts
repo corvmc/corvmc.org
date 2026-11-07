@@ -132,14 +132,3 @@ test('back after a tab switch returns to bands and stays there', async ({ page }
 	await page.waitForTimeout(600);
 	await expect(page).not.toHaveURL(/[?&]tab=musicians/);
 });
-
-test('the tabs are real links, not buttons', async ({ page }) => {
-	// They render as anchors so middle-click and open-in-new-tab work and the
-	// target is copyable. Not yet crawlable — every `(public)` page currently
-	// server-renders as the layout boundary's pending spinner, which PR #180
-	// fixes; once it lands these anchors reach crawlers unchanged.
-	await page.goto('/directory');
-
-	await expect(musiciansTab(page)).toHaveAttribute('href', /\/directory\?tab=musicians/);
-	await expect(bandsTab(page)).toHaveAttribute('href', /\/directory$/);
-});

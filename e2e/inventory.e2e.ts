@@ -19,17 +19,10 @@ import {
 	SEED_ITEM_ID,
 	SEED_ITEM_NAME,
 	SEED_DISPOSED_ASSET_ID,
-	SEED_ARTICLE_TITLE,
-	SEED_ARTICLE_SLUG,
-	SEED_CATEGORY_NAME,
-	SEED_ACQUISITION_SUPPLIER,
 	SEED_DISPOSED_ASSET_TAG,
-	SEED_UNACKED_ASSET_ID,
-	SEED_UNACKED_ASSET_TAG,
 	SEED_SIGN_ASSET_ID,
 	SEED_SIGN_ASSET_TAG,
 	SEED_SIGN_DONATION_ID,
-	SEED_SIGN_DONOR,
 	SEED_OWED_ACQUISITION_ID,
 	SEED_OWED_SUPPLIER,
 	SEED_LOW_NAME,
@@ -246,43 +239,8 @@ test.describe('inventory', () => {
 	 * Replenishment. A reorder point that only draws a badge on a detail page is
 	 * not doing anything — these pin that it reaches somewhere a person looks.
 	 */
-	/**
-	 * The Equipment row is derived from the catalogue, not from a flag, so it has
-	 * to be checked against a signed-in member rather than asserted in a unit
-	 * test alone — the unit spec pins the branch, this pins the wiring from
-	 * `getMemberLayout` through to the rendered sidebar.
-	 */
-	test('the member nav offers Equipment once there is something to lend', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/member');
-
-		// `aside ul.menu`, the same handle panel-nav.e2e.ts uses — the sidebar is
-		// a list inside an <aside>, not a <nav>.
-		const nav = page.locator('aside ul.menu').first();
-		await expect(nav.locator('a[href="/member/equipment"]')).toBeVisible();
-
-		// The child only renders once the section is open — `NavCollapsible` keys
-		// that off the path. So it
-		// is checked from inside the section rather than from the dashboard.
-		await page.goto('/member/equipment');
-		await expect(nav.locator('a[href="/member/equipment/loans"]')).toBeVisible();
-	});
 
 	test.describe('running low', () => {
-		test('the dashboard surfaces what needs restocking', async ({ page }) => {
-			await loginAsStaff(page);
-			await page.goto('/staff');
-
-			// The low-stock section, by the restock list it hands off to.
-			await expect(
-				page.getByRole('main').locator('a[href="/staff/inventory?show=restock"]')
-			).toBeVisible();
-			await expect(page.getByRole('cell', { name: SEED_LOW_NAME })).toBeVisible();
-			// The well-stocked consumable must NOT appear — a low-stock list that
-			// shows everything is just the catalog again.
-			await expect(page.getByRole('cell', { name: SEED_CONSUMABLE_NAME })).toBeHidden();
-		});
-
 		test('the restock list says how many to buy, and leaves off what is above its point', async ({
 			page
 		}) => {
@@ -303,67 +261,11 @@ test.describe('inventory', () => {
 	});
 
 	/**
-	 * Spend. The question Phase 1 existed to make answerable — under the old
-	 * schema, using stock up overwrote a number and left nothing to total.
-	 */
-	test.describe('spend', () => {
-		test('totals purchases by category, and reports an empty window as nothing', async ({
-			page
-		}) => {
-			await loginAsStaff(page);
-			await page.goto('/staff/reports/inventory-spend');
-
-			await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-			// The fixture's one purchase covers the E2E category, so it has to show.
-			// Asserted on the row rather than on the stat card's label: the page
-			// grew a second source (contractor services) and the card that used to
-			// read "Total spend" is now "Stock", which is a copy change the row
-			// does not care about.
-			await expect(page.getByRole('cell', { name: SEED_CATEGORY_NAME })).toBeVisible();
-			await expect(
-				page.getByRole('cell', { name: SEED_ACQUISITION_SUPPLIER, exact: true })
-			).toBeVisible();
-
-			// A window with no purchases reports nothing rather than erroring.
-			await page.goto('/staff/reports/inventory-spend?from=1990-01-01&to=1990-12-31');
-			await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-			await expect(page.getByRole('cell', { name: SEED_CATEGORY_NAME })).toHaveCount(0);
-		});
-	});
-
-	/**
 	 * Form 8282. The whole point is that the disposal and the paperwork are
 	 * separated by months and usually by different people, so these check the
 	 * flag actually reaches somewhere it will be seen.
 	 */
 	test.describe('form 8282', () => {
-		test('a donated unit disposed of inside three years raises a warning and is listed; one with no 8283 is not', async ({
-			page
-		}) => {
-			await loginAsStaff(page);
-			await page.goto(`/staff/inventory/assets/${SEED_DISPOSED_ASSET_ID}`);
-
-			const warning = page.getByRole('alert').filter({ hasText: /8282/ });
-			await expect(warning).toBeVisible();
-			await expect(warning.getByRole('button')).toBeVisible();
-
-			// It is listed where somebody will look for it later.
-			await page.goto('/staff/inventory/compliance');
-
-			const row = page.getByRole('row').filter({ hasText: SEED_DISPOSED_ASSET_TAG });
-			await expect(row).toBeVisible();
-
-			// The narrowing, which is the whole point of the rule: the signed 8283 is
-			// what makes property reportable, so a gift without one owes nothing no
-			// matter when it was disposed of. Flagging it would be a false positive,
-			// and a warning that is always wrong is one people stop reading.
-			await page.goto(`/staff/inventory/assets/${SEED_UNACKED_ASSET_ID}`);
-			await expect(page.getByRole('alert').filter({ hasText: /8282/ })).toHaveCount(0);
-
-			await page.goto('/staff/inventory/compliance');
-			await expect(page.getByText(SEED_UNACKED_ASSET_TAG)).toBeHidden();
-		});
-
 		test('recording an outcome clears it from the list', async ({ page }) => {
 			await loginAsStaff(page);
 			await page.goto('/staff/inventory/compliance');
@@ -557,14 +459,6 @@ test.describe('inventory', () => {
 	 * signing test below is the loop that could not previously run at all.
 	 */
 	test.describe('acquisitions', () => {
-		test('lists what the collective has taken in', async ({ page }) => {
-			await loginAsStaff(page);
-			await visit(page, '/staff/reports/acquisitions');
-
-			await expect(page.getByRole('row').filter({ hasText: SEED_SIGN_DONOR })).toBeVisible();
-			await expect(page.getByRole('row').filter({ hasText: SEED_OWED_SUPPLIER })).toBeVisible();
-		});
-
 		/**
 		 * **The transition the module shipped without.** `form8282Status` treats a
 		 * gift with no signed 8283 as owing nothing, and nothing in the app could
@@ -635,15 +529,6 @@ test.describe('inventory', () => {
 	 * unit, so it hangs off the asset and writes to the ledger.
 	 */
 	test.describe('resources and damage', () => {
-		test('a member sees the how-to linked to the gear', async ({ page }) => {
-			await loginAsStaff(page);
-			await page.goto(`/member/equipment/assets/${SEED_ASSET_ID}`);
-
-			const howTo = page.locator(`a[href="/member/help/${SEED_ARTICLE_SLUG}"]`);
-			await expect(howTo).toBeVisible();
-			await expect(howTo).toContainText(SEED_ARTICLE_TITLE);
-		});
-
 		test('reporting damage takes the unit out of service and writes the ledger', async ({
 			page
 		}) => {

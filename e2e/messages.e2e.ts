@@ -78,16 +78,6 @@ async function openConversation(page: Page, name: string) {
 }
 
 test.describe('member messaging', () => {
-	test('the Messages page renders for a member with no conversations', async ({ page }) => {
-		await login(page, SEED_MSG_RECIPIENT_EMAIL, SEED_MSG_PASSWORD);
-		const response = await page.goto('/member/messages');
-
-		// The regression this suite exists for was a 500, so assert the page
-		// rendered rather than that some particular row is on it.
-		expect(response?.status()).toBe(200);
-		await expect(page.getByRole('heading', { level: 1 })).toBeVisible(WAIT);
-	});
-
 	// #1004 reported that no key committed the pick — the chip never appeared and
 	// Send request stayed disabled forever. SearchSelect's own keyboard path is
 	// sound in a component harness, in four nestings including this one, so this

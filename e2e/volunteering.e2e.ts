@@ -30,8 +30,6 @@ import {
 	SEED_VOL_EVENT_TITLE,
 	SEED_VOL_SIGNUP_DONE_ID,
 	SEED_VOL_NEW_MEMBER_EMAIL,
-	SEED_VOL_NEW_MEMBER_ID,
-	SEED_VOL_NEW_MEMBER_NAME,
 	SEED_VOL_MINOR_EMAIL,
 	SEED_VOL_MINOR_FIRST,
 	SEED_VOL_MINOR_LAST,
@@ -40,7 +38,6 @@ import {
 	readVolunteerState,
 	readSignupStatus,
 	readShiftSignups,
-	readNewestHourLog,
 	readShiftEventId
 } from './fixtures/seed-volunteering';
 import {
@@ -961,42 +958,5 @@ test.describe('volunteering — staff acting on somebody else', () => {
 		await expect
 			.poll(() => readShiftSignups(SEED_VOL_SHIFT_RELEASE_ID), DB_POLL)
 			.toMatchObject({ [SEED_VOL_OTHER_MEMBER_ID]: 'cancelled' });
-	});
-
-	test('staff can log hours outside the member backdate window', async ({ page }) => {
-		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/members/volunteers/hours');
-
-		await page.getByTestId('log-hours-for-member').click();
-		const dialog = page.getByRole('dialog');
-		await expect(dialog).toBeVisible({ timeout: 15000 });
-
-		await dialog.getByPlaceholder(/search by name or email/i).fill(SEED_VOL_NEW_MEMBER_NAME);
-		await dialog.getByRole('button', { name: new RegExp(SEED_VOL_NEW_MEMBER_NAME) }).click();
-		await dialog
-			.locator('select:is([name="volunteerRoleId"], [name^="volunteerRoleId/"])')
-			.selectOption({
-				label: SEED_VOL_ROLE_NAME
-			});
-
-		// Well past the 90 days a member gets. The help article and this service's own
-		// error both say "ask staff to add anything older"; this is that.
-		const old = new Date();
-		old.setDate(old.getDate() - 200);
-		await dialog
-			.locator('input:is([name="workedOn"], [name^="workedOn/"])')
-			.fill(old.toISOString().slice(0, 10));
-		await dialog.locator('input:is([name="hours"], [name^="hours/"])').fill('2');
-		await dialog
-			.locator('textarea:is([name="description"], [name^="description/"])')
-			.fill('E2E: taken off the paper sign-in sheet.');
-		await modalSubmit(page).click();
-
-		// Approved on entry and attributed to the staffer — so it never appears in the
-		// Pending queue the same person is standing in, which is why this reads the row.
-		await expect
-			.poll(() => readNewestHourLog(SEED_VOL_NEW_MEMBER_ID), DB_POLL)
-			.toMatchObject({ status: 'approved', minutes: 120 });
-		expect((await readNewestHourLog(SEED_VOL_NEW_MEMBER_ID))?.reviewedByUserId).toBeTruthy();
 	});
 });

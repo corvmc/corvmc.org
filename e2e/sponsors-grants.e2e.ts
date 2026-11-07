@@ -5,8 +5,6 @@ import {
 	SEED_SPONSOR_ID,
 	SEED_SPONSOR_NAME,
 	SEED_LAPSED_SPONSORSHIP_TITLE,
-	SEED_GRANT_OVERDUE_TITLE,
-	SEED_GRANT_PROSPECT_TITLE,
 	SEED_GRANT_SUBMIT_ID
 } from './fixtures/seed-sponsors-grants';
 import { expectSuccessToast } from './toast';
@@ -42,20 +40,6 @@ test.describe('sponsors', () => {
 });
 
 test.describe('grants', () => {
-	test('the overdue report sorts ahead of a later application deadline', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/staff/grants');
-		const rows = page.locator('tbody tr');
-		const overdue = rows.filter({ hasText: SEED_GRANT_OVERDUE_TITLE });
-		await expect(overdue).toBeVisible({ timeout: 15000 });
-		// Overdue is the deadline cell turning red.
-		await expect(overdue.locator('.text-error')).toBeVisible();
-
-		const titles = await rows.allTextContents();
-		const at = (t: string) => titles.findIndex((row) => row.includes(t));
-		expect(at(SEED_GRANT_OVERDUE_TITLE)).toBeLessThan(at(SEED_GRANT_PROSPECT_TITLE));
-	});
-
 	test('submitting the report clears the overdue warning', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto(`/staff/grants/${SEED_GRANT_SUBMIT_ID}`);

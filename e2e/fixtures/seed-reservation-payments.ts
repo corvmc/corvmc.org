@@ -29,9 +29,6 @@ export const SEED_PAYMENTS_EMAIL = 'e2e.payment.breakdown@example.com';
 /** Distinctive enough that the list's search box isolates exactly these rows. */
 export const SEED_PAYMENTS_NAME = 'Zeta Paymentbreakdown';
 
-/** The `reservation.hourlyRateCents` site-config default the preview server runs with. */
-const HOURLY_RATE_CENTS = 1500;
-
 const HOUR = 60 * 60 * 1000;
 
 /**
@@ -125,10 +122,4 @@ export async function seedReservationPayments(): Promise<void> {
 			});
 		}
 	});
-}
-
-/** Sanity-check the fixture's own arithmetic against the rate it assumes. */
-export function expectedCashCents(hours: number, creditsUsed: number | null): number {
-	const total = Math.round(hours * HOURLY_RATE_CENTS);
-	return total - Math.min(Math.round((creditsUsed ?? 0) * HOURLY_RATE_CENTS), total);
 }

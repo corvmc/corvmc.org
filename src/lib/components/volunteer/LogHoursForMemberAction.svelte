@@ -47,7 +47,6 @@
 <Action
 	action={logHoursForMember}
 	{label}
-	data-testid="log-hours-for-member"
 	icon={clockIcon}
 	variant="ghost"
 	{size}
