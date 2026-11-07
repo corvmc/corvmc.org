@@ -1,3 +1,4 @@
+import { contactEmail } from '#lib/server/site-config/site-config-service.js';
 import { z } from 'zod';
 import { toGenericRef } from '#lib/server/entity/refs.js';
 import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '#lib/config.js';
@@ -261,7 +262,7 @@ export const getCampaignDetail = query(z.string(), async (id) => {
 export const getPreview = query(z.string(), async (markdown) => {
 	await requireCapability('marketing.read');
 	if (!markdown.trim()) return '';
-	return renderCampaignPreview(markdown);
+	return renderCampaignPreview(markdown, await contactEmail());
 });
 
 // ---------------------------------------------------------------------------

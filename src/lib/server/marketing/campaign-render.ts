@@ -68,8 +68,15 @@ function derivePreviewText(html: string): string {
 	return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
 
-function renderWithLayout(htmlContent: string, previewText: string, footerHtml: string): string {
-	const withContent = splice(CAMPAIGN_LAYOUT, '{{CONTENT}}', htmlContent);
+function renderWithLayout(
+	htmlContent: string,
+	previewText: string,
+	footerHtml: string,
+	contactEmail: string
+): string {
+	// First, so a campaign body that spells the placeholder keeps it as text.
+	const withContact = splice(CAMPAIGN_LAYOUT, '{{CONTACT_EMAIL}}', escapeHtml(contactEmail));
+	const withContent = splice(withContact, '{{CONTENT}}', htmlContent);
 	const withPreview = splice(withContent, '{{PREVIEW_TEXT}}', escapeHtml(previewText));
 	return splice(withPreview, '{{FOOTER}}', footerHtml);
 }
@@ -78,7 +85,7 @@ function renderWithLayout(htmlContent: string, previewText: string, footerHtml: 
  * Render a campaign for live preview in the editor.
  * Uses placeholder values for template variables.
  */
-export function renderCampaignPreview(markdown: string): string {
+export function renderCampaignPreview(markdown: string, contactEmail: string): string {
 	let html = markdownToHtml(markdown);
 
 	// Replace template variables with preview placeholders
@@ -88,7 +95,7 @@ export function renderCampaignPreview(markdown: string): string {
 	const previewText = derivePreviewText(html);
 	const footerHtml = '<a href="#">Unsubscribe from this list</a>';
 
-	return renderWithLayout(html, previewText, footerHtml);
+	return renderWithLayout(html, previewText, footerHtml, contactEmail);
 }
 
 /**
@@ -97,7 +104,8 @@ export function renderCampaignPreview(markdown: string): string {
 export function renderCampaignForSend(
 	markdown: string,
 	subscriberName: string | null,
-	unsubscribeUrl: string
+	unsubscribeUrl: string,
+	contactEmail: string
 ): string {
 	let html = markdownToHtml(markdown);
 
@@ -108,5 +116,5 @@ export function renderCampaignForSend(
 	const previewText = derivePreviewText(html);
 	const footerHtml = `<a href="${escapeHtml(unsubscribeUrl)}">Unsubscribe from this list</a>`;
 
-	return renderWithLayout(html, previewText, footerHtml);
+	return renderWithLayout(html, previewText, footerHtml, contactEmail);
 }
