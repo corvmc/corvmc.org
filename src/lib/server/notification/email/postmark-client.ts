@@ -1,6 +1,7 @@
 import { ServerClient } from 'postmark';
 import * as env from '$app/env/private';
 import { captureException } from '#lib/server/sentry.js';
+import { contactEmail } from '#lib/server/site-config/site-config-service.js';
 
 // ---------------------------------------------------------------------------
 // Postmark email client
@@ -101,6 +102,7 @@ export async function sendBroadcastBatch(messages: BroadcastMessage[]): Promise<
 // Transactional notifications render from templates stored in Postmark (source
 // of truth in postmark/templates, pushed via `pnpm email:push`). Most use the
 // generic `notification` template, whose subject + body come from the model.
+// Every template send adds `contact_email`, which the shared layout's footer reads.
 
 export interface SendTemplateParams {
 	to: string;
@@ -122,6 +124,7 @@ export async function sendEmailWithTemplate(params: SendTemplateParams): Promise
 	const fromAddress = env.EMAIL_FROM_ADDRESS ?? 'noreply@corvmc.org';
 	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
 	const messageStream = getTransactionalStream();
+	const contact_email = await contactEmail();
 
 	try {
 		await getClient().sendEmailWithTemplate({
@@ -129,7 +132,7 @@ export async function sendEmailWithTemplate(params: SendTemplateParams): Promise
 			To: params.to,
 			ReplyTo: params.replyTo ?? undefined,
 			TemplateAlias: params.templateAlias,
-			TemplateModel: params.model,
+			TemplateModel: { ...params.model, contact_email },
 			Tag: params.tag,
 			Metadata: params.metadata,
 			MessageStream: messageStream
@@ -188,6 +191,7 @@ export async function sendTemplateBatch(
 	const fromName = env.EMAIL_FROM_NAME ?? 'CorvMC';
 	const from = `${fromName} <${fromAddress}>`;
 	const messageStream = getTransactionalStream();
+	const contact_email = await contactEmail();
 
 	for (let i = 0; i < messages.length; i += BATCH_SIZE) {
 		const chunk = messages.slice(i, i + BATCH_SIZE);
@@ -198,7 +202,7 @@ export async function sendTemplateBatch(
 					From: from,
 					To: msg.to,
 					TemplateAlias: templateAlias,
-					TemplateModel: msg.model,
+					TemplateModel: { ...msg.model, contact_email },
 					Tag: opts.tag,
 					MessageStream: messageStream
 				}))
@@ -258,13 +262,15 @@ export async function sendInboxReply(params: SendInboxReplyTemplateParams): Prom
 		headers.push({ Name: 'References', Value: params.references });
 	}
 
+	const contact_email = await contactEmail();
+
 	try {
 		const result = await getClient().sendEmailWithTemplate({
 			From: `${fromName} <${fromAddress}>`,
 			To: params.to,
 			ReplyTo: params.replyTo ?? undefined,
 			TemplateAlias: params.templateAlias ?? 'inbox-reply',
-			TemplateModel: params.model,
+			TemplateModel: { ...params.model, contact_email },
 			Tag: params.templateAlias ?? 'inbox-reply',
 			Metadata: params.metadata,
 			Headers: headers.length > 0 ? headers : undefined,

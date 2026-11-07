@@ -97,7 +97,7 @@ for (const alias of layoutAliases) {
 	const dir = join(root, '_layouts', alias);
 	// The layout renders `{{{@content}}}`, which only resolves when Postmark
 	// composes it with a template — substitute a marker so it validates alone.
-	const model = { preview_text: 'Preview text sample' };
+	const model = { preview_text: 'Preview text sample', contact_email: 'contact@corvmc.org' };
 	await validate(
 		`layout: ${alias}`,
 		{

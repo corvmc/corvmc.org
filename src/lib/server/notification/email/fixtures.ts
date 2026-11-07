@@ -16,7 +16,7 @@ export interface Fixture {
 	model: Record<string, unknown>;
 }
 
-export const FIXTURES: Fixture[] = [
+const SHAPES: Fixture[] = [
 	{
 		name: 'notification-minimal',
 		alias: 'notification',
@@ -322,3 +322,9 @@ export const FIXTURES: Fixture[] = [
 		}
 	}
 ];
+
+/** Each with the `contact_email` that `postmark-client.ts` adds to every template send. */
+export const FIXTURES: Fixture[] = SHAPES.map((fixture) => ({
+	...fixture,
+	model: { contact_email: 'contact@corvmc.org', ...fixture.model }
+}));

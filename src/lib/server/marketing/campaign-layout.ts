@@ -20,7 +20,7 @@ import { BRAND, EMAIL_LOGO_URL } from '#lib/email/brand.js';
 // `pnpm email:pull`. src/lib/email/brand.spec.ts guards the palette instead.
 //
 // Placeholders (substituted by campaign-render.ts): {{PREVIEW_TEXT}},
-// {{CONTENT}}, {{FOOTER}}.
+// {{CONTENT}}, {{FOOTER}}, {{CONTACT_EMAIL}}.
 // ---------------------------------------------------------------------------
 
 const FONT = `'Lexend','Trebuchet MS','Helvetica Neue',Helvetica,Arial,sans-serif`;
@@ -141,7 +141,7 @@ export const CAMPAIGN_LAYOUT = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Tra
           <div class="footer-fine" style="font-family:${FONT}; font-size:12px; line-height:1.6; color:${BRAND.brown};">
             Corvallis Music Collective &middot; 501(c)(3) nonprofit<br>
             6775 SW Philomath Blvd, Corvallis, OR 97333<br>
-            <a href="mailto:contact@corvmc.org" style="color:${BRAND.brown}; text-decoration:underline;">contact@corvmc.org</a>
+            <a href="mailto:{{CONTACT_EMAIL}}" style="color:${BRAND.brown}; text-decoration:underline;">{{CONTACT_EMAIL}}</a>
           </div>
           <div style="margin-top:14px; font-family:${FONT}; font-size:12px; line-height:1.6; color:${BRAND.brown};">
             {{FOOTER}}

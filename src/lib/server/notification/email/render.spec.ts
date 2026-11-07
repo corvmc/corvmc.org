@@ -340,3 +340,16 @@ describe.each(PLAINTEXT_FIXTURES)('$name plain-text conventions', (fixture) => {
 		expect(text).not.toMatch(/^[A-Za-z][A-Za-z ]*: {2,}/m);
 	});
 });
+
+describe('the layout footer', () => {
+	it('shows the address in the model, in both parts', () => {
+		const { html, text } = renderTemplate('notification', {
+			heading: 'Hi',
+			contact_email: 'hello@example.org'
+		});
+
+		expect(html).toContain('href="mailto:hello@example.org"');
+		expect(text).toContain('hello@example.org');
+		expect(html + text).not.toContain('contact@corvmc.org');
+	});
+});

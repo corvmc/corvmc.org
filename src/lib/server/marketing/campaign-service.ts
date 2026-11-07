@@ -9,6 +9,7 @@ import {
 import { eq, and, sql, isNull, lte, inArray } from 'drizzle-orm';
 import { isSystemAudienceKey, resolveSystemAudienceRecipients } from './system-audiences';
 import { renderCampaignPreview, renderCampaignForSend } from './campaign-render';
+import { contactEmail } from '#lib/server/site-config/site-config-service.js';
 import { creditsForEvent } from '#lib/server/sponsor/credit-service.js';
 import { withSponsorCredit } from '#lib/utils/sponsor-credit.js';
 import { signUnsubscribeToken } from './unsubscribe';
@@ -96,7 +97,10 @@ export async function createCampaign(data: {
 	if (data.audienceIds.length > 20)
 		throw new CampaignValidationError('Too many audiences (max 20)');
 
-	const htmlBody = renderCampaignPreview(await credited(data.markdownBody, data.eventId));
+	const htmlBody = renderCampaignPreview(
+		await credited(data.markdownBody, data.eventId),
+		await contactEmail()
+	);
 
 	const [created] = await db
 		.insert(campaign)
@@ -154,7 +158,8 @@ export async function updateCampaign(
 			await credited(
 				data.markdownBody ?? existing.markdownBody,
 				data.eventId !== undefined ? data.eventId : existing.eventId
-			)
+			),
+			await contactEmail()
 		);
 	}
 
@@ -416,10 +421,11 @@ export async function executeSend(campaignId: string): Promise<number> {
 	// sending the mail, or a staging send hands recipients production links.
 	const baseUrl = env.PUBLIC_SITE_URL ?? 'https://corvmc.org';
 	const markdown = await credited(row.markdownBody, row.eventId);
+	const contact = await contactEmail();
 
 	const messages: BroadcastMessage[] = recipients.map((r) => {
 		const unsubscribeUrl = `${baseUrl}/unsubscribe/${signUnsubscribeToken(r.subscriberId, r.audienceId)}`;
-		const htmlBody = renderCampaignForSend(markdown, r.name, unsubscribeUrl);
+		const htmlBody = renderCampaignForSend(markdown, r.name, unsubscribeUrl, contact);
 		return {
 			to: r.email,
 			subject: row.subject,

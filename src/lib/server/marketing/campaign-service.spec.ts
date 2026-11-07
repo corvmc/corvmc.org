@@ -8,6 +8,9 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	return migratedSqlite();
 });
 
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
+	contactEmail: async () => 'hello@example.org'
+}));
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 vi.mock('./campaign-render', () => ({
@@ -502,7 +505,8 @@ describe('executeSend', () => {
 		expect(renderCampaignForSend).toHaveBeenCalledWith(
 			'# Hello',
 			'Name sub-1',
-			'https://test.com/unsubscribe/unsub-token'
+			'https://test.com/unsubscribe/unsub-token',
+			'hello@example.org'
 		);
 	});
 });

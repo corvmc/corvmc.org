@@ -1,18 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockEnv, sendEmailWithTemplateMock, sendEmailBatchMock, captureExceptionMock } = vi.hoisted(
-	() => ({
-		mockEnv: {} as Record<string, string | undefined>,
-		sendEmailWithTemplateMock: vi.fn(),
-		sendEmailBatchMock: vi.fn(),
-		captureExceptionMock: vi.fn()
-	})
-);
+const {
+	mockEnv,
+	sendEmailWithTemplateMock,
+	sendEmailBatchMock,
+	sendEmailBatchWithTemplatesMock,
+	captureExceptionMock
+} = vi.hoisted(() => ({
+	mockEnv: {} as Record<string, string | undefined>,
+	sendEmailWithTemplateMock: vi.fn(),
+	sendEmailBatchMock: vi.fn(),
+	sendEmailBatchWithTemplatesMock: vi.fn(),
+	captureExceptionMock: vi.fn()
+}));
 
 vi.mock('postmark', () => ({
 	ServerClient: class {
 		sendEmailWithTemplate = sendEmailWithTemplateMock;
 		sendEmailBatch = sendEmailBatchMock;
+		sendEmailBatchWithTemplates = sendEmailBatchWithTemplatesMock;
 	}
 }));
 
@@ -20,8 +26,16 @@ vi.mock('$app/env/private', async () =>
 	(await import('#lib/testing/env-mock.js')).envMock(mockEnv)
 );
 vi.mock('#lib/server/sentry.js', () => ({ captureException: captureExceptionMock }));
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
+	contactEmail: async () => 'hello@example.org'
+}));
 
-import { sendEmailWithTemplate, sendInboxReply, sendBroadcastBatch } from './postmark-client';
+import {
+	sendEmailWithTemplate,
+	sendInboxReply,
+	sendBroadcastBatch,
+	sendTemplateBatch
+} from './postmark-client';
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -31,6 +45,42 @@ beforeEach(() => {
 	mockEnv.POSTMARK_BROADCAST_STREAM = 'test-broadcast';
 	sendEmailWithTemplateMock.mockResolvedValue({ MessageID: 'msg-1' });
 	sendEmailBatchMock.mockResolvedValue([]);
+});
+
+describe('the contact email in the template model', () => {
+	it('reaches a single template send', async () => {
+		await sendEmailWithTemplate({
+			to: 'a@example.com',
+			templateAlias: 'notification',
+			model: { heading: 'Hi' }
+		});
+
+		expect(sendEmailWithTemplateMock.mock.calls[0][0].TemplateModel).toEqual({
+			heading: 'Hi',
+			contact_email: 'hello@example.org'
+		});
+	});
+
+	it('reaches an inbox reply', async () => {
+		await sendInboxReply({ to: 'a@example.com', model: {} });
+
+		expect(sendEmailWithTemplateMock.mock.calls[0][0].TemplateModel.contact_email).toBe(
+			'hello@example.org'
+		);
+	});
+
+	it('reaches every message of a batch', async () => {
+		await sendTemplateBatch('notification', [
+			{ to: 'a@example.com', model: {} },
+			{ to: 'b@example.com', model: {} }
+		]);
+
+		const [batch] = sendEmailBatchWithTemplatesMock.mock.calls[0];
+		expect(batch.map((m: { TemplateModel: object }) => m.TemplateModel)).toEqual([
+			{ contact_email: 'hello@example.org' },
+			{ contact_email: 'hello@example.org' }
+		]);
+	});
 });
 
 describe('message stream configuration', () => {
