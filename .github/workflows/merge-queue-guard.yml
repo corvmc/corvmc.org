@@ -29,14 +29,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      # Only for `scripts/queue-guard-failures.mjs`, which renders the "What failed" block far
-      # below — a file rather than more shell because CI YAML cannot be exercised by pushing.
+      # Only for the two `scripts/queue-guard-*.mjs`, which pick the run and render the "What
+      # failed" block below — files rather than more shell because CI YAML cannot be exercised by
+      # pushing.
       # `pull_request` already resolves this workflow from the PR's merge ref, so taking the
-      # script from that same ref extends no trust the workflow file did not already extend.
-      # No `setup-node`: the script is dependency-free ESM and the runner ships a node.
+      # scripts from that same ref extends no trust the workflow file did not already extend.
+      # No `setup-node`: they are dependency-free ESM and the runner ships a node.
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: scripts/queue-guard-failures.mjs
+          sparse-checkout: |
+            scripts/queue-guard-failures.mjs
+            scripts/queue-guard-run.mjs
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
@@ -61,12 +64,11 @@ jobs:
           # dequeued, so there is nothing left to look up by ref — and nothing to re-run either.
           # The run outlives the ref and is found by the branch name it recorded.
           #
-          # `cancelled` is in the filter because that is what a job hitting its own
-          # `timeout-minutes` produces — a run with no failing job that is still a build problem.
-          # A run cancelled because its ref went away is cancelled too; they are told apart below.
+          # Selected by branch alone: the queue dequeues on the first failed job, so the run can
+          # still be going, with no overall conclusion. Its jobs decide, below.
           run=$(gh run list --event merge_group --limit 50 \
-            --json databaseId,headBranch,conclusion,url \
-            --jq "[.[] | select((.conclusion == \"failure\" or .conclusion == \"cancelled\" or .conclusion == \"timed_out\") and (.headBranch | contains(\"/pr-${PR}-\")))] | first")
+            --json databaseId,headBranch,conclusion,url |
+            node scripts/queue-guard-run.mjs select "$PR")
 
           # How many times the queue has thrown this PR out. `.claude/agents/qc.md` treats
           # three or more as a real ordering bug rather than bad luck, so the number decides
@@ -77,7 +79,7 @@ jobs:
           ejections=$(gh api "repos/${GH_REPO}/issues/${PR}/timeline" --paginate \
             --jq '.[] | select(.event == "removed_from_merge_queue") | .event' | wc -l | tr -d ' ')
 
-          if [ -z "$run" ] || [ "$run" = 'null' ]; then
+          if [ -z "$run" ]; then
             kind=none
           else
             id=$(jq -r '.databaseId' <<<"$run")
@@ -114,16 +116,11 @@ jobs:
               }
             )
 
-            if [ -n "$failed" ]; then
-              kind=failed
-            elif [ -n "$timedout" ]; then
-              kind=timeout
-            elif [ "$conclusion" = 'cancelled' ]; then
-              # Cancelled, nothing failed, nobody's clock ran out: the ref went away under a
-              # still-running build — the queue reordered, or an earlier PR in the group failed
-              # out. A supersede is not a verdict on this PR, so it stays in the quiet branch.
-              kind=superseded
-            else
+            # `superseded`: cancelled, nothing failed, nobody's clock ran out. The ref went away
+            # under a running build, because the queue reordered or an earlier PR in the group
+            # failed out. That is not a verdict on this PR, so it stays in the quiet branch.
+            kind=$(node scripts/queue-guard-run.mjs kind "$conclusion" "$failed" "$timedout")
+            if [ "$kind" = 'run-failed' ]; then
               # A `failure`/`timed_out` run whose jobs all passed: the workflow itself, not a job.
               kind=failed
               failed='(no job reported a failure — the run itself did)'
@@ -135,9 +132,19 @@ jobs:
               cat > comment.md <<'EOF'
           ### Removed from the merge queue
 
-          No `merge_group` CI run for this PR failed, timed out or was cancelled, so this was a
-          manual removal, a merge conflict, or the queue's one-hour check timeout — not a failed
-          build.
+          No `merge_group` CI run was found for this PR, so this was a manual removal, a merge
+          conflict, or the queue's one-hour check timeout — not a failed build.
+          EOF
+              ;;
+            no-failure)
+              cat > comment.md <<EOF
+          ### Removed from the merge queue
+
+          No job in this PR's \`merge_group\` run had failed when it was removed. That points to a
+          manual removal, a merge conflict, or the queue's one-hour check timeout. If the run was
+          still going, check how it finished before ruling out a failed build:
+
+          ${url}
           EOF
               ;;
             superseded)
