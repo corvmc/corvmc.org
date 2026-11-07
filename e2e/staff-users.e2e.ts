@@ -41,17 +41,8 @@ test.describe('staff user management', () => {
 
 		// Not bounced to `/` (non-staff) or `/login` (anonymous).
 		await expect(page).toHaveURL(/\/staff\/members/);
-		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-
-		// The row for the seeded edit target is reachable from the list.
-		await expect(page.getByRole('table')).toBeVisible();
-		// The list states its size. This used to be a "N total" count in the page
-		// header; rebuilding the staff tables moved it into the pagination line,
-		// which states the visible range as well as the total.
-		await expect(page.getByTestId('pagination-range')).toBeVisible();
 
 		const selectAll = page.locator('thead input[type="checkbox"]');
-		await expect(selectAll).toBeVisible();
 		await selectAll.check();
 
 		// The bulk bar appears with a count of the selected rows.

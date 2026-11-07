@@ -225,7 +225,6 @@
 				? msg.ballot_ballot_detail_outcome_recorded()
 				: msg.ballot_ballot_detail_result_certified_published()}
 			size="sm"
-			data-testid="certify-ballot"
 		>
 			{#snippet form()}
 				<input {...certifyBallotForm.fields.ballotId.as('hidden', b.id)} />

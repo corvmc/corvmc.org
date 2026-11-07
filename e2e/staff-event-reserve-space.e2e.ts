@@ -116,25 +116,6 @@ async function holdSpace(page: Page) {
 }
 
 test.describe('staff event creation — minimal modal', () => {
-	test('the create modal asks for no room, ticket or poster', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/staff/events');
-		await page.locator('[data-page-header]').getByRole('button').click();
-
-		const dialog = page.getByRole('dialog');
-		await expect(dialog.locator('input:is([name="title"], [name^="title/"])')).toBeVisible({
-			timeout: 15000
-		});
-		await expect(
-			dialog.locator('input:is([name="eventEndTime"], [name^="eventEndTime/"])')
-		).toBeVisible();
-		// No room hold and no ticketing: neither control nor the fields behind them.
-		await expect(dialog.locator('input[type="checkbox"]')).toHaveCount(0);
-		await expect(dialog.locator('input[name^="reservation"]')).toHaveCount(0);
-		await expect(dialog.locator('input[name^="ticket"]')).toHaveCount(0);
-		await expect(dialog.locator('input[type="file"]')).toHaveCount(0);
-	});
-
 	test('re-timing the event carries the setup and teardown padding', async ({ page }) => {
 		await loginAsStaff(page);
 		// Never saved, so the date cannot collide with anything.

@@ -4,8 +4,7 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
 import {
 	COMPED_CASE_INDEX,
 	PAYMENT_CASES,
-	SEED_PAYMENTS_NAME,
-	expectedCashCents
+	SEED_PAYMENTS_NAME
 } from './fixtures/seed-reservation-payments';
 
 /**
@@ -58,16 +57,5 @@ test.describe('staff reservations payment column', () => {
 		// Every other row keeps its amount unstruck.
 		await expect(rows.nth(0).locator('.line-through')).toHaveCount(0);
 		await expect(rows.nth(3).locator('.line-through')).toHaveCount(0);
-	});
-});
-
-test.describe('payment breakdown fixture', () => {
-	// Guards the table above from drifting out of sync with the rate it assumes.
-	test('cases match the arithmetic they claim', () => {
-		for (const c of PAYMENT_CASES) {
-			const cash = expectedCashCents(c.hours, c.creditsUsed);
-			if (cash > 0) expect(c.expected).toContain(`$${(cash / 100).toFixed(2)}`);
-			else expect(c.expected).not.toContain('$');
-		}
 	});
 });

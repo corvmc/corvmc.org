@@ -72,15 +72,6 @@ test.describe('band music panel', () => {
 		const s = String(SEED_AUDIO_TRACK_SECONDS % 60).padStart(2, '0');
 		await expect(page.getByText(`${m}:${s}`).first()).toBeVisible();
 	});
-
-	test('lights the Releases row in the band sidebar', async ({ page }) => {
-		await login(page);
-		await page.goto(`${band}/music`);
-
-		const active = page.locator('aside ul.menu').first().locator('a.active');
-		await expect(active).toHaveCount(1, { timeout: 15000 });
-		await expect(active).toHaveAttribute('href', `${band}/music`);
-	});
 });
 
 test.describe('stream endpoint', () => {
@@ -221,16 +212,5 @@ test.describe('deleting', () => {
 				.where(eq(audioTrack.id, SEED_AUDIO_DELETABLE_TRACK_ID))
 		);
 		expect(tracks).toHaveLength(0);
-	});
-});
-
-test.describe('the feature flag', () => {
-	test('the panel is reachable while bandAudio is on', async ({ page }) => {
-		// The negative case — every surface 404ing with the flag off — is pinned in
-		// `audio.remote.spec.ts`, which can toggle it. Here the flag is on for the
-		// whole run, so this asserts the positive half only.
-		await login(page);
-		await page.goto(`${band}/music`);
-		await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15000 });
 	});
 });

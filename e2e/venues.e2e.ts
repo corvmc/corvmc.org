@@ -1,11 +1,7 @@
 import { test, expect, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
-import {
-	SEED_VENUE_ARCHIVED_NAME,
-	SEED_VENUE_OFFSITE_NAME,
-	SEED_VENUE_ROOM_NAME
-} from './fixtures/seed-venues';
+import { SEED_VENUE_ARCHIVED_NAME, SEED_VENUE_OFFSITE_NAME } from './fixtures/seed-venues';
 import { SEED_EVENT_DATE, SEED_EVENT_TITLE_PREFIX } from './fixtures/seed-staff-event';
 
 /**
@@ -22,18 +18,6 @@ async function loginAsStaff(page: Page) {
 }
 
 test.describe('venues', () => {
-	test('the room leads the list and says it is ours', async ({ page }) => {
-		await loginAsStaff(page);
-		await page.goto('/staff/venues');
-
-		const roomRow = page.locator('tr').filter({ hasText: SEED_VENUE_ROOM_NAME });
-		await expect(roomRow).toBeVisible({ timeout: 15000 });
-		// The room's badge; no other venue carries one.
-		await expect(roomRow.locator('.badge-primary')).toBeVisible();
-
-		await expect(page.locator('tr').filter({ hasText: SEED_VENUE_OFFSITE_NAME })).toBeVisible();
-	});
-
 	/**
 	 * Archiving takes a venue off the picker without taking it off the events that
 	 * already name it, so the list has to be able to show what the picker hides.

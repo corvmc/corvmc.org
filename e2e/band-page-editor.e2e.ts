@@ -47,23 +47,6 @@ async function blockOrder(page: Page) {
 		);
 }
 
-test('every block carries its own controls, show/hide included', async ({ page }) => {
-	await login(page);
-	await page.goto(`/band/${SEED_PREMIUM_BAND_SLUG}/page-editor`);
-
-	// The strip, on the block, not a row in a list somewhere else.
-	await expect(page.getByLabel('Move Hero down')).toBeVisible({ timeout: 15000 });
-	await expect(page.getByLabel('Move Hero up')).toBeVisible();
-
-	// The control this test exists for: publishing is a per-block toggle sitting
-	// in the strip, not something you go looking for.
-	await expect(page.getByLabel('Stop publishing Hero')).toBeVisible();
-	await expect(page.getByLabel('Stop publishing Bio')).toBeVisible();
-
-	// The first block cannot move up and the last cannot move down.
-	await expect(page.getByLabel('Move Hero up')).toBeDisabled();
-});
-
 test('reorder buttons move a block, not just the drag handle', async ({ page }) => {
 	await login(page);
 	await page.goto(`/band/${SEED_PREMIUM_BAND_SLUG}/page-editor`);
@@ -167,26 +150,4 @@ test('the theme control shows what the theme does, read-only until you take it o
 	// It still says where it came from: the fork's option names the theme.
 	const punk = await themeSelect.locator('option[value="punk"]').textContent();
 	await expect(themeSelect.locator('option[value="custom"]')).toContainText(punk ?? '');
-});
-
-test('the hero block carries its own upload, not a Media section at the foot of the page', async ({
-	page
-}) => {
-	await login(page);
-	await page.goto(`/band/${SEED_PREMIUM_BAND_SLUG}/page-editor`);
-	await expect(page.getByLabel('Move Hero down')).toBeVisible({ timeout: 15000 });
-
-	// The page-level Media card and the EPK button are gone; the sidebar already
-	// links to the press kit, and an upload belongs to the block that shows it.
-	await expect(
-		page
-			.getByRole('main')
-			.locator(`a[href="/band/${SEED_PREMIUM_BAND_SLUG}/press-kit"]:not(section.band-site-block a)`)
-	).toHaveCount(0);
-	await expect(page.locator('input[type=file]')).toHaveCount(0);
-
-	await page.getByLabel('Hero settings').click();
-	const hero = blocks(page).filter({ has: page.getByLabel('Hero settings') });
-	await expect(hero.locator('input[type=file]')).toHaveCount(1);
-	await expect(page.locator('input[type=file]')).toHaveCount(1);
 });

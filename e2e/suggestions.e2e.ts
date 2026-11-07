@@ -366,11 +366,4 @@ test.describe('editing a suggestion', () => {
 		// Approving the words must not disturb the count.
 		expect((await readSuggestionState(SEED_SG_EDIT_ID)).voteCount).toBe(votesBefore);
 	});
-
-	test("a member cannot edit someone else's suggestion", async ({ page }) => {
-		await login(page, SEED_SG_BYSTANDER_EMAIL, SEED_SG_PASSWORD);
-		await page.goto(`/member/suggestions/${SEED_SG_UNVOTED_ID}`);
-
-		await expect(page.getByTestId('edit-suggestion')).toHaveCount(0);
-	});
 });

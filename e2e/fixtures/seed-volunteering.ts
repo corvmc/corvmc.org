@@ -16,7 +16,7 @@
  *
  * Mirrors the D1 access pattern in seed-staff-user.ts.
  */
-import { desc, eq, inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { readLocalDb, withPlatformEnv } from './platform-db';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../../src/lib/server/db/schema/authorization';
@@ -740,35 +740,6 @@ export async function readShiftSignups(shiftId: string): Promise<Record<string, 
 			.from(volunteerSignup)
 			.where(eq(volunteerSignup.shiftId, shiftId));
 		return Object.fromEntries(rows.map((r) => [r.userId, r.status]));
-	});
-}
-
-/**
- * The newest hour log for a member.
- *
- * The staff-entered log is invisible in the Pending queue by design — it lands approved —
- * so the only way to assert it landed at all, on the date asked for and attributed to the
- * staffer, is to read it back.
- */
-export async function readNewestHourLog(userId: string): Promise<{
-	status: string;
-	reviewedByUserId: string | null;
-	workedOn: Date;
-	minutes: number;
-} | null> {
-	return readLocalDb(async (db) => {
-		const [row] = await db
-			.select({
-				status: volunteerHourLog.status,
-				reviewedByUserId: volunteerHourLog.reviewedByUserId,
-				workedOn: volunteerHourLog.workedOn,
-				minutes: volunteerHourLog.minutes
-			})
-			.from(volunteerHourLog)
-			.where(eq(volunteerHourLog.userId, userId))
-			.orderBy(desc(volunteerHourLog.createdAt))
-			.limit(1);
-		return row ?? null;
 	});
 }
 

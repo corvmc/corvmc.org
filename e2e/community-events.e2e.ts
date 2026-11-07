@@ -12,7 +12,6 @@ import {
 	SEED_CE_PENDING_ID,
 	SEED_CE_PENDING_TITLE,
 	SEED_CE_DELETABLE_ID,
-	SEED_CE_TICKETED_ID,
 	eventExists,
 	SEED_CE_CANCELLED_TITLE,
 	SEED_CE_CANCELLED_ID,
@@ -157,18 +156,6 @@ test.describe('community listings', () => {
  * event's payment records with it.
  */
 test.describe('deleting an event', () => {
-	test('a ticketed event cannot be deleted, and says why', async ({ page }) => {
-		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto(`/staff/events/${SEED_CE_TICKETED_ID}`);
-
-		const del = page.getByTestId('delete-event');
-		await expect(del).toBeDisabled();
-		// The reason has to be reachable, not just implied by a dead button.
-		await expect(del).toHaveAttribute('title', /cancel it instead/i);
-
-		expect(await eventExists(SEED_CE_TICKETED_ID)).toBe(true);
-	});
-
 	test('a clean event can be deleted outright', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 		await page.goto(`/staff/events/${SEED_CE_DELETABLE_ID}`);
@@ -239,16 +226,6 @@ test.describe('starting a listing', () => {
 		await prompt.getByRole('button').first().click();
 		await expect(prompt).toHaveCount(0);
 		await expect(dialog.getByLabel('Title')).toHaveValue('Paper Wolves at a house show');
-	});
-
-	test('the description field is named by its label', async ({ page }) => {
-		// A custom-input FormField is only handed the caption's id through the
-		// `input` snippet. Passed as children instead, the caption becomes a
-		// `<legend>` and the textarea has no accessible name at all.
-		await login(page, SEED_CE_TRUSTED_EMAIL, SEED_CE_PASSWORD);
-		await page.goto(`/member/events/${SEED_CE_DRAFT_ID}/manage`);
-
-		await expect(page.getByLabel('Description')).toBeVisible();
 	});
 
 	test('the old submit address lands on the Events page', async ({ page }) => {

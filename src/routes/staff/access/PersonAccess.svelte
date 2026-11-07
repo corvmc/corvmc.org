@@ -107,7 +107,7 @@
 				</div>
 			{/snippet}
 			{#if access.positions.length === 0}
-				<p class="text-muted" data-testid="no-positions">
+				<p class="text-muted">
 					{m.staff_access_person_access_no_position_they_hold_only()}
 				</p>
 			{:else}
