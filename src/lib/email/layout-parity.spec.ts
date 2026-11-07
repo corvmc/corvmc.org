@@ -58,7 +58,7 @@ const FRAME: { part: string; must: RegExp }[] = [
 	{ part: 'fine-print hook', must: /class="footer-fine"/ },
 	{ part: 'nonprofit line', must: /Corvallis Music Collective &middot; 501\(c\)\(3\) nonprofit/ },
 	{ part: 'address line', must: /6775 SW Philomath Blvd, Corvallis, OR 97333/ },
-	{ part: 'contact address', must: /mailto:contact@corvmc\.org/ },
+	{ part: 'contact address', must: /mailto:\{\{contact_email\}\}/i },
 	{ part: 'mobile breakpoint', must: /@media screen and \(max-width:600px\)/ },
 	{ part: 'mobile container', must: /\.container \{ width:100% !important; \}/ },
 	{
