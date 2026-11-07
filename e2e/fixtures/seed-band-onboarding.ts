@@ -71,7 +71,7 @@ export const SEED_RENAME_BAND_NAME = 'E2E Rename Band';
  * rename: the profile-edit test writes a new *name* and leaves it there, so it
  * must not be a band another spec asserts a name on. It used to borrow the
  * public band and put the name back afterwards, and any run where that restore
- * did not land took three `band-subdomain.e2e.ts` assertions with it — a
+ * did not land took three `j-band-addresses.e2e.ts` assertions with it — a
  * failure with nothing in that file to explain it.
  */
 export const SEED_RETITLE_BAND_ID = 'e2e-band-retitle';
@@ -288,7 +288,7 @@ export async function seedBandOnboarding(): Promise<void> {
 		// The site record. `tier` lives here since phase 3b, so the premium band's
 		// subdomain only serves its microsite if this row says premium — writing
 		// `tier` to `group` alone (as this fixture used to) leaves
-		// `band-subdomain.e2e.ts` asserting against a band the resolver thinks is
+		// `j-band-addresses.e2e.ts` asserting against a band the resolver thinks is
 		// free.
 		await db.insert(bandSite).values(
 			BANDS.map((b) => ({

@@ -5,13 +5,8 @@ import {
 	SEED_OWNER_EMAIL,
 	SEED_OWNER_PASSWORD,
 	SEED_PUBLIC_BAND_SLUG,
-	SEED_PUBLIC_BAND_NAME,
 	SEED_PUBLIC_BAND_HOMETOWN,
 	SEED_PUBLIC_BAND_FOUNDED,
-	SEED_HIDDEN_BAND_SLUG,
-	SEED_HIDDEN_BAND_NAME,
-	SEED_MEMBERS_BAND_SLUG,
-	SEED_MEMBERS_BAND_NAME,
 	SEED_RETITLE_BAND_SLUG
 } from './fixtures/seed-band-onboarding';
 
@@ -99,54 +94,6 @@ test('the edit form renders for an owner, and saving preserves hometown and foun
 	await expect(quickFact(page, 'Formed')).toHaveText(SEED_PUBLIC_BAND_FOUNDED);
 });
 
-// Public pages server-render their remote queries (the (public) layout's
-// boundary has no pending snippet), so the visibility gate is a real HTTP 404
-// carrying SvelteKit's +error.svelte — not a 200 shell that resolves the gate
-// client-side. Either way no profile content is rendered.
-/**
- * The band directory LIST, as opposed to a band detail page.
- *
- * Nothing covered this before phase 3a, and the gap was load-bearing: the list
- * moved from `group` to `directory_entry`, and a band with no entry silently
- * drops out of it. Every existing directory e2e keys off tab controls and URLs
- * rather than cards — deliberately, since the card count depends on other
- * suites' fixtures — so an empty list passed all of them. This asserts one named
- * band is present, which does not depend on how many others are.
- */
-test('a public band appears in the public directory list', async ({ page }) => {
-	await page.goto('/directory');
-
-	await expect(page.getByRole('link', { name: new RegExp(SEED_PUBLIC_BAND_NAME) })).toBeVisible({
-		timeout: 15000
-	});
-	// The visibility gate still applies to the list, not just the detail page.
-	await expect(page.getByRole('link', { name: new RegExp(SEED_HIDDEN_BAND_NAME) })).toHaveCount(0);
-	await expect(page.getByRole('link', { name: new RegExp(SEED_MEMBERS_BAND_NAME) })).toHaveCount(0);
-});
-
-test('hidden band detail page is not publicly readable', async ({ page }) => {
-	await page.goto(`/directory/bands/${SEED_HIDDEN_BAND_SLUG}`);
-	// The band's own name is the thing that must not leak; the 404's wording is
-	// free to change, so the status is what this asserts.
-	await expect(page.getByText(SEED_HIDDEN_BAND_NAME)).toHaveCount(0);
-});
-
-test('members-only band is withheld publicly but renders in the member directory', async ({
-	page
-}) => {
-	const response = await page.goto(`/directory/bands/${SEED_MEMBERS_BAND_SLUG}`);
-	// A real 404, rendered by +error.svelte with the status it answered with.
-	expect(response?.status()).toBe(404);
-	await expect(page.getByRole('heading', { level: 1 })).toHaveText(`${response?.status()}`, {
-		timeout: 15000
-	});
-	await expect(page.getByText(SEED_MEMBERS_BAND_NAME)).toHaveCount(0);
-
-	await login(page);
-	await page.goto(`/member/directory/bands/${SEED_MEMBERS_BAND_SLUG}`);
-	await expect(page.getByText(SEED_MEMBERS_BAND_NAME).first()).toBeVisible({ timeout: 15000 });
-});
-
 // Regression (JAVASCRIPT-SVELTEKIT-24): renaming a band used to rotate its slug,
 // but saveBandProfile then refreshed getBandProfile, which re-resolves the band
 // from `params.slug` — still the pre-rename value, because for a remote request
@@ -167,7 +114,7 @@ test('members-only band is withheld publicly but renders in the member directory
 // restore was confirmed by a `Profile saved` toast that was often still the
 // *first* save's, so the assertion passed instantly and the test could finish
 // with the restore in flight. Playwright then closed the page, the request was
-// cut off, the band stayed renamed, and three `band-subdomain.e2e.ts` tests
+// cut off, the band stayed renamed, and three `j-band-addresses.e2e.ts` tests
 // failed several files later for a reason nothing in them could explain. The
 // fixture recreates its bands every run, so there is nothing to put back.
 test('renaming a band saves cleanly and leaves its address alone', async ({ page }) => {

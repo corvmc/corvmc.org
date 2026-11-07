@@ -37,7 +37,7 @@
 	// sibling `$derived(await getBandShows(data.band.id))`: in prod builds, a
 	// sibling derived reading a rejected async derived surfaces a minified
 	// Svelte-internals TypeError to the boundary instead of the 404 message
-	// (e2e/directory-profile-404.e2e.ts).
+	// (e2e/j-public-visibility.e2e.ts).
 	let { data, shows } = $derived(
 		await getPublicBandProfile(params.slug).then(async (profile) => ({
 			data: profile,

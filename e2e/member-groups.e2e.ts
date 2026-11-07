@@ -14,7 +14,6 @@ import {
 	SEED_APPLY_SLUG,
 	SEED_CLUB_SLUG,
 	SEED_JOINABLE_INSTRUCTIONS,
-	SEED_HIDDEN_SLUG,
 	SEED_JOINABLE_NAME,
 	SEED_JOINABLE_SLUG,
 	readApplication,
@@ -165,43 +164,5 @@ test.describe('the club page', () => {
 
 		await page.waitForURL('**/member/groups', { timeout: 15000 });
 		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-	});
-});
-
-test.describe('the public group directory', () => {
-	/**
-	 * `visibility = 'public'` is the whole of the decision about what appears
-	 * here, and it is the same column a band's listing uses — which is the point
-	 * of a club having a directory entry rather than a listing shape of its own.
-	 */
-	test('lists public programs to a signed-out visitor', async ({ page }) => {
-		await page.goto('/groups');
-
-		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-		await expect(page.getByRole('link', { name: SEED_JOINABLE_NAME })).toBeVisible();
-	});
-
-	/**
-	 * The Join button is the only write on a public page, and it needs a session.
-	 * A prompt that brings them back beats a button that fails.
-	 */
-	test('offers a signed-out visitor a way in, not a button that fails', async ({ page }) => {
-		await page.goto(`/groups/${SEED_JOINABLE_SLUG}`);
-
-		await expect(page.getByRole('heading', { name: SEED_JOINABLE_NAME })).toBeVisible();
-		await expect(page.getByText(SEED_JOINABLE_INSTRUCTIONS)).toBeVisible();
-
-		// Scoped to `main`: the public header carries its own sign-in link. The
-		// address is the point: it brings them back to this group.
-		const signIn = page
-			.getByRole('main')
-			.locator(`a[href="/login?redirect=${encodeURIComponent(`/groups/${SEED_JOINABLE_SLUG}`)}"]`);
-		await expect(signIn).toBeVisible();
-	});
-
-	/** A members-only or hidden program has no public page at all. */
-	test('404s a group that is not public', async ({ page }) => {
-		const res = await page.goto(`/groups/${SEED_HIDDEN_SLUG}`);
-		expect(res?.status()).toBe(404);
 	});
 });

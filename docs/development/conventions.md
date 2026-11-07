@@ -540,7 +540,7 @@ What is **not** copy, and stays:
   API, not like prose.
 - **Framework crash guards** — `not.toContainText('effect_update_depth_exceeded')` and friends.
 
-`e2e/directory-tabs.e2e.ts`, `e2e/panel-nav.e2e.ts`, `e2e/staff-nav.e2e.ts` and
+`e2e/j-directory-url-state.e2e.ts`, `e2e/panel-nav.e2e.ts`, `e2e/staff-nav.e2e.ts` and
 `e2e/create-band-modal.e2e.ts` are the model e2e specs; `src/lib/server/errors.spec.ts` and
 `src/lib/enum-labels.spec.ts` are the model unit specs.
 

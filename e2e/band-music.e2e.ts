@@ -8,7 +8,6 @@ import {
 import {
 	SEED_AUDIO_RELEASE_ID,
 	SEED_AUDIO_RELEASE_TITLE,
-	SEED_AUDIO_TRACK_ID,
 	SEED_AUDIO_TRACK_TITLE,
 	SEED_AUDIO_DRAFT_ID,
 	SEED_AUDIO_DRAFT_TITLE,
@@ -75,64 +74,6 @@ test.describe('band music panel', () => {
 });
 
 test.describe('stream endpoint', () => {
-	test('answers a bare request with the whole object and advertises ranges', async ({
-		request
-	}) => {
-		const response = await request.get(streamUrl(SEED_AUDIO_TRACK_ID));
-
-		expect(response.status()).toBe(200);
-		// Without this header a browser will not attempt to seek at all.
-		expect(response.headers()['accept-ranges']).toBe('bytes');
-		expect(response.headers()['content-type']).toContain('audio/wav');
-		expect(Number(response.headers()['content-length'])).toBeGreaterThan(0);
-	});
-
-	test('answers Safari’s opening probe with a 206 and a content-range', async ({ request }) => {
-		// `bytes=0-1` is the two-byte request Safari opens every media element
-		// with. A 200 here means the file never plays in Safari, and plays fine
-		// everywhere else — which is how this ships broken.
-		const response = await request.get(streamUrl(SEED_AUDIO_TRACK_ID), {
-			headers: { Range: 'bytes=0-1' }
-		});
-
-		expect(response.status()).toBe(206);
-		expect(response.headers()['content-range']).toMatch(/^bytes 0-1\/\d+$/);
-		expect(response.headers()['content-length']).toBe('2');
-		expect((await response.body()).byteLength).toBe(2);
-	});
-
-	test('serves a mid-file range as the bytes actually asked for', async ({ request }) => {
-		const response = await request.get(streamUrl(SEED_AUDIO_TRACK_ID), {
-			headers: { Range: 'bytes=1000-1099' }
-		});
-
-		expect(response.status()).toBe(206);
-		// Inclusive at both ends: 1000..1099 is 100 bytes, not 99 and not 101.
-		expect((await response.body()).byteLength).toBe(100);
-		expect(response.headers()['content-range']).toMatch(/^bytes 1000-1099\/\d+$/);
-	});
-
-	test('serves a suffix range as the trailing bytes', async ({ request }) => {
-		const full = await request.get(streamUrl(SEED_AUDIO_TRACK_ID));
-		const size = Number(full.headers()['content-length']);
-
-		const response = await request.get(streamUrl(SEED_AUDIO_TRACK_ID), {
-			headers: { Range: 'bytes=-500' }
-		});
-
-		expect(response.status()).toBe(206);
-		expect((await response.body()).byteLength).toBe(500);
-		// The form everyone gets wrong — the LAST 500 bytes, not "from 500".
-		expect(response.headers()['content-range']).toBe(`bytes ${size - 500}-${size - 1}/${size}`);
-	});
-
-	test('refuses a range that starts past the end', async ({ request }) => {
-		const response = await request.get(streamUrl(SEED_AUDIO_TRACK_ID), {
-			headers: { Range: 'bytes=99999999-' }
-		});
-		expect(response.status()).toBe(416);
-	});
-
 	test('will not stream a track from an unpublished release, signed in or not', async ({
 		request
 	}) => {
@@ -141,11 +82,6 @@ test.describe('stream endpoint', () => {
 		// hold for the band's own owner too. A draft has never been shown to
 		// anybody.
 		const response = await request.get(streamUrl(SEED_AUDIO_UNPUBLISHED_TRACK_ID));
-		expect(response.status()).toBe(404);
-	});
-
-	test('404s a track that does not exist', async ({ request }) => {
-		const response = await request.get(streamUrl('not-a-real-track'));
 		expect(response.status()).toBe(404);
 	});
 });

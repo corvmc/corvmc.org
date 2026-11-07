@@ -3,8 +3,7 @@ import { signInAs } from './fixtures/auth';
 import {
 	SEED_OWNER_EMAIL,
 	SEED_OWNER_PASSWORD,
-	SEED_PREMIUM_BAND_SLUG,
-	SEED_PREMIUM_BAND_NAME
+	SEED_PREMIUM_BAND_SLUG
 } from './fixtures/seed-band-onboarding';
 
 /**
@@ -101,21 +100,6 @@ test('an empty block shows what it will look like and where to fill it', async (
 	await expect(
 		members.locator(`a[href="/band/${SEED_PREMIUM_BAND_SLUG}/members"]:not(.strip a)`)
 	).toHaveCount(0);
-});
-
-test('the public band site renders with none of the editor chrome', async ({ page }) => {
-	// No login: this is what a stranger gets.
-	await page.goto(`/band-site/${SEED_PREMIUM_BAND_SLUG}`);
-
-	await expect(page.getByText(SEED_PREMIUM_BAND_NAME).first()).toBeVisible({ timeout: 15000 });
-
-	// One component draws both surfaces, so these are the leak detectors.
-	await expect(page.getByLabel(/^Move /)).toHaveCount(0);
-	await expect(page.getByLabel(/^Stop publishing /)).toHaveCount(0);
-	await expect(page.locator('.editor-chrome')).toHaveCount(0);
-	// An empty block stays empty in public — the ghost is editor-only, so Preview
-	// and the live site agree about what actually publishes.
-	await expect(page.locator(`a[href="/band/${SEED_PREMIUM_BAND_SLUG}/events"]`)).toHaveCount(0);
 });
 
 test('the theme control shows what the theme does, read-only until you take it over', async ({
