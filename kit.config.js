@@ -105,7 +105,14 @@ const config = {
 				'https://fonts.googleapis.com',
 				'https://fonts.bunny.net'
 			],
-			'font-src': ['self', 'https://fonts.gstatic.com', 'https://fonts.bunny.net'],
+			// Some Bunny Fonts edges answer the Lexend stylesheet with Fontsource URLs
+			// on cdn.jsdelivr.net rather than its own host.
+			'font-src': [
+				'self',
+				'https://fonts.gstatic.com',
+				'https://fonts.bunny.net',
+				'https://cdn.jsdelivr.net'
+			],
 			// Knowingly narrower than reality: js-xss's default whitelist lets
 			// user-authored content reference an <img> on any origin. Enforcing this
 			// breaks such an image rather than reporting it; no violation in the
