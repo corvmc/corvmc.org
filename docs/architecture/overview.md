@@ -78,7 +78,7 @@ export const getReservationPayment = query(z.string(), async (id) => {
 
 	if (!row) throw error(404, 'Reservation not found');
 	if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
-	if (row.status !== 'scheduled') throw error(400, 'This reservation is not awaiting payment');
+	if (!isAwaitingPayment(row)) throw error(400, 'This reservation is not awaiting payment');
 
 	const hourlyRateCents = await config<number>('reservation.hourlyRateCents');
 	// ... compute duration, total, credit balance ...
@@ -354,7 +354,6 @@ an hour with DST). The schedule spec pins this table to `CRON_SCHEDULE`:
 | `/api/cron/send-campaigns`                  | Send email campaigns whose `scheduledFor` has arrived                                  | `*/5 * * * *`  |
 | `/api/cron/auto-complete`                   | Mark paid reservations past their end time as `completed`                              | `*/15 * * * *` |
 | `/api/cron/complete-shifts`                 | Complete confirmed volunteer signups for shifts that have ended                        | `*/15 * * * *` |
-| `/api/cron/cancel-unconfirmed`              | Cancel `scheduled` (never confirmed) reservations at their start time; frees the slot  | `*/15 * * * *` |
 | `/api/cron/expire-waitlisted`               | Expire waitlist offers past their 24h window; promotes the next in line                | `*/15 * * * *` |
 | `/api/cron/wake-snoozed`                    | Return snoozed and long-awaiting-reply inbox threads to the open queue                 | `*/15 * * * *` |
 | `/api/cron/lock-sync`                       | Confirm pending door codes reached the lock, soonest booking first, 25 reads per run   | `*/15 * * * *` |
@@ -469,7 +468,7 @@ All payments run through Stripe; the app never touches card data. The moving par
   `invoice.paid` (allocates monthly credits), `customer.subscription.updated/deleted`
   (syncs subscription state).
 
-The full money flows, including the reservation confirmation window and credit settlement,
+The full money flows, including reservation pricing and credit settlement,
 are traced step-by-step in [business-workflows.md](../development/business-workflows.md).
 
 ## Observability

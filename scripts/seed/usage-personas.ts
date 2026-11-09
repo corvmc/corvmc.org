@@ -356,7 +356,7 @@ export async function seedUsagePersonaLife(
 				bookerType: 'user' as const,
 				bookerId: regular.id,
 				createdByUserId: regular.id,
-				status: 'scheduled' as const,
+				status: 'confirmed' as const,
 				...tuesday[7],
 				notes: 'Drum practice',
 				creditsUsed: null,

@@ -14,7 +14,6 @@
 	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
 	import {
-		ConfirmReservationAction,
 		CompleteReservationAction,
 		CreateClosureAction,
 		UpdateClosureAction,
@@ -427,19 +426,6 @@
 
 							<td class="w-px">
 								<div class="flex w-max items-center justify-end gap-1">
-									{#if actions.has('confirm')}
-										<ConfirmReservationAction
-											reservation={r}
-											staff
-											iconOnly
-											variant="ghost"
-											size="sm"
-											shape="square"
-											class="latched"
-										>
-											{#snippet icon()}<IconCheck size={16} />{/snippet}
-										</ConfirmReservationAction>
-									{/if}
 									{#if actions.has('complete')}
 										<CompleteReservationAction
 											reservation={r}
@@ -554,9 +540,6 @@
 									{:catch}
 										<!-- DataList takes this rejection to the boundary. -->
 									{/await}
-								{/if}
-								{#if actions.has('confirm')}
-									<ConfirmReservationAction reservation={r} staff size="sm" />
 								{/if}
 								{#if actions.has('complete')}
 									<CompleteReservationAction reservation={r} size="sm" />

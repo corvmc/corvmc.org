@@ -118,7 +118,10 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 			hour += duration + 0.5;
 			if (hour > 21) break;
 
-			const status = day === 0 ? 'confirmed' : pick(['scheduled', 'confirmed']);
+			// A booking is confirmed when it exists (#2502). The draw stays so every
+			// value seeded after it is unchanged.
+			if (day !== 0) pick([0, 1]);
+			const status = 'confirmed';
 			const slot = bookRoom(ptDate(day, hour - duration - 0.5), duration, status);
 			if (!slot) continue;
 			const { startsAt, endsAt } = slot;
@@ -128,7 +131,7 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 			// mirroring the daily lock job. Both sync states must be reachable
 			// locally: `lockSyncedAt` set is the code the member sees, null is the
 			// one queued in U-tec's cloud that shows as pending, with the break-glass
-			// code standing in. Today's first booking is left unconfirmed so that
+			// code standing in. Today's first booking is left unsynced so that
 			// path is not visible only in production.
 			const withinWindow = day >= 0 && day <= 2 && status === 'confirmed';
 			const lockCode = withinWindow ? String(randomInt(1000, 9999)) : null;
@@ -190,7 +193,7 @@ export async function seedReservations(users: SeedUser[]): Promise<SeedReservati
 			bookerType: 'user',
 			bookerId: newcomer.id,
 			createdByUserId: newcomer.id,
-			status: 'scheduled',
+			status: 'confirmed',
 			...newcomerSlot,
 			notes: 'First time here — is there somewhere to park a van?'
 		})

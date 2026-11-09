@@ -153,13 +153,6 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		mandatory: true
 	},
 	{
-		key: 'confirmation_reminder',
-		category: 'practice-space',
-		label: 'Confirmation reminder',
-		description: 'Reminder to confirm unconfirmed reservations',
-		defaults: { email: true, inApp: true, sms: false }
-	},
-	{
 		key: 'band_invitation',
 		category: 'people',
 		label: 'Band invitation',

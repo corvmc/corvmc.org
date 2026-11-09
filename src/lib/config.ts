@@ -129,23 +129,11 @@ export const creditCompCeiling: Record<CreditType, number> = {
 // ---------------------------------------------------------------------------
 
 /**
- * How many days before its start a member may confirm a reservation *without* a
- * Stripe prepayment. Outside this window only a real Stripe charge (or staff)
- * can confirm. Bounds how far ahead reservations sit confirmed (the single lock
- * has finite user slots) and cuts no-shows.
+ * How far ahead a confirmed booking is issued its door code, and how far ahead
+ * the member dashboard asks for a balance owed. The lock has finite user slots,
+ * so codes are not minted for the whole calendar at once.
  */
-export const CONFIRMATION_WINDOW_DAYS = 3;
-
-/**
- * What every member surface says about a booking nobody confirmed.
- *
- * `cancelUnconfirmedReservations()` cancels anything still `scheduled` at its
- * start time, so the card, the detail page and the confirmation reminder are
- * all describing one sweep. Stated once because three wordings of the same
- * policy is how two of them end up wrong.
- */
-export const UNCONFIRMED_RELEASE_NOTICE =
-	'We hold the room until your session starts. A booking that is not confirmed by then is released.';
+export const BOOKING_LEAD_DAYS = 3;
 
 /**
  * How long an unreferenced `media` row is left alone before the sweep reaps it
@@ -179,19 +167,9 @@ export const DOCUMENT_SWEEP_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 /** The longest note that may ride a group document. */
 export const DOCUMENT_DESCRIPTION_MAX = 500;
 
-/** The earliest instant a member may confirm a reservation starting at `startsAt`. */
-export function confirmWindowOpensAt(startsAt: Date): Date {
-	return new Date(startsAt.getTime() - CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-}
-
-/** The latest start whose confirmation window is open at `now`. */
-export function confirmationHorizon(now: Date = new Date()): Date {
-	return new Date(now.getTime() + CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-}
-
-/** Whether `now` is inside the member confirmation window for `startsAt`. */
-export function withinConfirmationWindow(startsAt: Date, now: Date = new Date()): boolean {
-	return now.getTime() >= confirmWindowOpensAt(startsAt).getTime();
+/** The latest start that is inside `BOOKING_LEAD_DAYS` at `now`. */
+export function bookingLeadHorizon(now: Date = new Date()): Date {
+	return new Date(now.getTime() + BOOKING_LEAD_DAYS * 24 * 60 * 60 * 1000);
 }
 
 // ---------------------------------------------------------------------------

@@ -104,26 +104,15 @@ const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>
 );
 const holdsAny = (held: Position[], who: Position[]) => held.some((p) => who.includes(p));
 
-// Years out, so always outside the confirmation window.
 const farStart = new Date('2031-06-15T17:00:00Z');
 const ownBooking = {
 	id: 'res-1',
 	createdByUserId: actingUser.id,
-	status: 'scheduled',
+	status: 'confirmed',
 	bookerType: 'user',
 	startsAt: farStart,
 	endsAt: new Date(farStart.getTime() + 3600_000)
 };
-
-/** Did the confirmation window stop this call? Anything past it counts as "no". */
-async function stoppedByWindow(run: () => Promise<unknown>) {
-	try {
-		const result = (await run()) as { scheduled?: boolean } | undefined;
-		return result?.scheduled === true;
-	} catch (e) {
-		return /Confirmation opens/.test((e as { body?: { message?: string } }).body?.message ?? '');
-	}
-}
 
 beforeEach(() => {
 	heldPositions = [];
@@ -183,41 +172,6 @@ describe('cancelReservation', () => {
 			expect(cancel.mock.calls[0][3], held.join('+') || '(none)').toEqual({
 				staffOverride: holdsAny(held, ['admin', 'staff'])
 			});
-		}
-	});
-});
-
-// Before: any position committed their own booking outside the window without a
-// charge. After: `reservation.comp` (admin, staff, treasurer); see #1434.
-// `payReservation` has no window gate since #2060: it settles or charges.
-describe.each([
-	['payForReservation', () => remote.payForReservation({ id: 'res-1', skipPayment: 'on' })],
-	[
-		'bookAndPayReservation',
-		() =>
-			remote.bookAndPayReservation(
-				{
-					date: '2031-06-15',
-					startTime: '17:00',
-					endTime: '18:00',
-					phone: '5415550100',
-					skipPayment: 'on'
-				},
-				{}
-			)
-	]
-])('%s outside the confirmation window', (_name, run) => {
-	it('holds a site moderator to the window', async () => {
-		heldPositions = ['site_moderator'];
-		expect(await stoppedByWindow(run)).toBe(true);
-	});
-
-	it('waives it for exactly the reservation.comp holders', async () => {
-		for (const held of subsets) {
-			heldPositions = held;
-			expect(await stoppedByWindow(run), held.join('+') || '(none)').toBe(
-				!holdsAny(held, ['admin', 'staff', 'treasurer'])
-			);
 		}
 	});
 });

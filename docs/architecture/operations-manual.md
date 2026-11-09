@@ -439,7 +439,7 @@ them 1 = Sunday, while the Sentry monitor that receives the same string numbers 
 | Cron (UTC)     | Endpoints, in order                                                                                                                                                                                                                                                | Pacific                     |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------- |
 | `*/5 * * * *`  | `/api/cron/send-campaigns`                                                                                                                                                                                                                                         | every 5 min                 |
-| `*/15 * * * *` | `/api/cron/auto-complete`, `/api/cron/complete-shifts`, `/api/cron/cancel-unconfirmed`, `/api/cron/expire-waitlisted`, `/api/cron/wake-snoozed`, `/api/cron/lock-sync`, `/api/cron/reminders`, `/api/cron/schedule-radio`                                          | every 15 min                |
+| `*/15 * * * *` | `/api/cron/auto-complete`, `/api/cron/complete-shifts`, `/api/cron/expire-waitlisted`, `/api/cron/wake-snoozed`, `/api/cron/lock-sync`, `/api/cron/reminders`, `/api/cron/schedule-radio`                                                                          | every 15 min                |
 | `0 16 * * *`   | `/api/cron/generate-recurring-reservations`, `/api/cron/lock-access`, `/api/cron/cancel-stale-tickets`, `/api/cron/sweep-audio-purchases`, `/api/cron/sweep-incidents`, `/api/cron/sweep-audit-log`, `/api/cron/import-partner-calendars`, `/api/cron/sweep-media` | daily, 8am PST / 9am PDT    |
 | `0 17 * * MON` | `/api/cron/reconcile-ledger`                                                                                                                                                                                                                                       | Mondays, 9am PST / 10am PDT |
 
@@ -452,7 +452,7 @@ schedule spec pins both `wrangler.toml [triggers]` and this table against it.
 Manual invocation (safe — every job is idempotent and returns a JSON summary):
 
 ```bash
-curl -s -X POST https://corvmc.org/api/cron/cancel-unconfirmed \
+curl -s -X POST https://corvmc.org/api/cron/expire-waitlisted \
   -H "Authorization: Bearer $CRON_SECRET" \
   -H "Content-Type: application/json"
 ```

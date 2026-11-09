@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { paymentCache } from '#lib/server/db/schema/finance.js';
@@ -8,7 +8,6 @@ import { DomainError } from '#lib/server/domain-error.js';
 import { captureException } from '#lib/server/sentry.js';
 import { terminalReaderId } from '#lib/server/finance/terminal-service.js';
 import { recordReservationCardPresent } from '#lib/server/finance/reservation-entries.js';
-import { announceConfirmed } from './reservation-service';
 
 /** `metadata.type` on the intent, which is what the webhook dispatches on. */
 export const READER_PAYMENT_TYPE = 'reader_reservation';
@@ -55,15 +54,13 @@ interface PayableRow {
 }
 
 /**
- * Owed and on the day: `scheduled`, or `confirmed` with money still due, from
- * two hours before the start until the end. `cashDueCents: 0` without `paidAt`
+ * Owed and on the day: `confirmed` with money still due, from two hours
+ * before the start until the end. `cashDueCents: 0` without `paidAt`
  * is credit-settled, which owes nothing.
  */
 export function readerPayable(row: PayableRow, now = new Date()): boolean {
 	if (row.paidAt) return false;
-	const owed =
-		row.status === 'scheduled' ||
-		(row.status === 'confirmed' && (row.cashDueCents == null || row.cashDueCents > 0));
+	const owed = row.status === 'confirmed' && (row.cashDueCents == null || row.cashDueCents > 0);
 	if (!owed) return false;
 	const t = now.getTime();
 	return t >= row.startsAt.getTime() - OPENS_BEFORE_START_MS && t < row.endsAt.getTime();
@@ -267,7 +264,6 @@ export async function settleReservationAtReader(intent: Stripe.PaymentIntent): P
 	const flipped = await db
 		.update(reservation)
 		.set({
-			status: 'confirmed',
 			paidAt,
 			cashDueCents: 0,
 			stripePaymentRecordId: intent.id,
@@ -276,7 +272,7 @@ export async function settleReservationAtReader(intent: Stripe.PaymentIntent): P
 		.where(
 			and(
 				eq(reservation.id, reservationId),
-				inArray(reservation.status, ['scheduled', 'confirmed']),
+				eq(reservation.status, 'confirmed'),
 				isNull(reservation.paidAt)
 			)
 		)
@@ -308,7 +304,6 @@ export async function settleReservationAtReader(intent: Stripe.PaymentIntent): P
 		occurredAt: paidAt
 	});
 	await cacheReaderPayment(intent, userId, paidAt);
-	await announceConfirmed(reservationId);
 }
 
 /**

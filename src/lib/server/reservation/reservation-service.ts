@@ -27,7 +27,7 @@ import { user } from '#lib/server/db/schema/authentication.js';
 import { groupMember } from '#lib/server/db/schema/group.js';
 import { group } from '#lib/server/db/schema/group.js';
 import { formatDateInTz, formatTimeInTz } from './timezone';
-import { DEFAULT_TIMEZONE, withinConfirmationWindow } from '#lib/config.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import type { ReservationStatus } from '#lib/server/db/schema/reservation.js';
 import type { BookerType, ReservationCanceller } from '#lib/config.js';
 import { captureException } from '#lib/server/sentry.js';
@@ -136,13 +136,10 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 		throw new ReservationConflictError();
 	}
 
-	// A booking made inside the confirmation window is its own confirmation:
-	// nobody is asked to re-assert an intent they expressed minutes ago. It also
-	// closes #1123 at the source — the reminder cron's bands only see rows that
-	// existed when it ran, so a `scheduled` row born inside the window was never
-	// reminded and was released at its start. `cash_due_cents` is untouched, so a
-	// costed one settles at the desk rather than prepay-or-lose-it.
-	const status = withinConfirmationWindow(startsAt) ? 'confirmed' : 'scheduled';
+	// Booking is the confirmation: there is no later step that asks the member
+	// to re-assert it (#2502). `cash_due_cents` stays null until priced, so any
+	// cash owed settles at the desk or by paying ahead.
+	const status = 'confirmed';
 
 	const [row] = await db
 		.insert(reservation)
@@ -255,7 +252,7 @@ export async function createWaitlisted(params: CreateReservationParams): Promise
 /**
  * A queued booking has just become a real one — announce it.
  *
- * The `waitlisted -> scheduled` transition is the moment a queue position turns
+ * The `waitlisted -> confirmed` transition is the moment a queue position turns
  * into somebody turning up, so it is the moment `reservation.created` is owed:
  * a member whose very first booking went through the waitlist gets the same
  * orientation shift as one who booked a free slot outright.
@@ -285,16 +282,16 @@ export async function announceWaitlistConfirmed(reservationId: string): Promise<
 	if (!row) return;
 
 	await emitCreated(row);
+	await announceConfirmed(row.id);
 }
 
 /**
  * Tell the bus a booking is confirmed.
  *
- * Here rather than in the remotes because a reservation reaches `confirmed` six
- * ways — staff-created, credit-settled, paid online, paid by webhook, confirmed
- * inside the window, and paid ahead — and a seventh would be forgotten. It
- * re-reads under the status it is announcing, so a confirm that a later write
- * rolled back announces nothing.
+ * Call it only where a row *becomes* confirmed — insert, staff insert,
+ * recurring generation, waitlist promotion — never where a confirmed row is
+ * paid or settled, or the member is told twice (#2502). It re-reads under the
+ * status it announces, so a write rolled back afterwards announces nothing.
  */
 export async function announceConfirmed(reservationId: string): Promise<void> {
 	const [row] = await db
@@ -387,18 +384,8 @@ export async function staffCreate(params: StaffCreateReservationParams): Promise
 	return row;
 }
 
-// ---------------------------------------------------------------------------
-// confirm() — staff confirmation without payment
-// ---------------------------------------------------------------------------
-
-export async function confirm(reservationId: string): Promise<void> {
-	await updateStatus(reservationId, ['scheduled'], 'confirmed');
-	await announceConfirmed(reservationId);
-}
-
 /**
- * Waive what a live booking owes. A scheduled one is confirmed first; a
- * confirmed one keeps its status. `cashDueCents = 0` is also what retires the
+ * Waive what a confirmed booking owes; its status is unchanged. `cashDueCents = 0` is also what retires the
  * member's "Pay online" link, which `getReservationPayment` gates on.
  */
 export async function comp(reservationId: string): Promise<void> {
@@ -408,8 +395,7 @@ export async function comp(reservationId: string): Promise<void> {
 		.where(eq(reservation.id, reservationId))
 		.limit(1);
 	if (!row) throw new ReservationNotFoundError();
-	if (row.status === 'scheduled') await confirm(reservationId);
-	else if (row.status !== 'confirmed')
+	if (row.status !== 'confirmed')
 		throw new ReservationStateError(`Cannot comp a reservation with status "${row.status}"`);
 
 	await db
@@ -648,51 +634,6 @@ export async function cancel(
 	// Cancellation is complete and consistent; the refund is not. Surface it so
 	// staff can follow up rather than silently keeping the member's money.
 	if (refundError) throw refundError;
-}
-
-// ---------------------------------------------------------------------------
-// cancelUnconfirmedReservations — release slots never confirmed by their start
-// ---------------------------------------------------------------------------
-
-/**
- * Cancel every `scheduled` reservation whose start time has passed without being
- * confirmed, freeing the slot. Members must confirm within the confirmation
- * window (or prepay via Stripe); anything still `scheduled` at start was never
- * committed. Space booked for an event is excluded: it is staff-held, has no
- * member confirm/pay flow, and releasing it at showtime handed a live event's
- * room to the waitlist. Delegates to `cancel()` with `staffOverride` so the already-started
- * guard is bypassed and any refund/credit reversal runs idempotently (a still-
- * scheduled reservation has neither, so they are no-ops), and with
- * `actor: 'system'` because no person acted. The emitted
- * `reservation.cancelled` event cascades waitlist promotion for the freed slot.
- */
-export async function cancelUnconfirmedReservations(
-	now: Date = new Date()
-): Promise<{ cancelled: number; errors: string[] }> {
-	const errors: string[] = [];
-	const rows = await db
-		.select({ id: reservation.id })
-		.from(reservation)
-		.where(
-			and(eq(reservation.status, 'scheduled'), lt(reservation.startsAt, now), notAProgramHold())
-		);
-
-	let cancelled = 0;
-	for (const row of rows) {
-		try {
-			await cancel(row.id, '', 'Not confirmed before start', {
-				staffOverride: true,
-				actor: 'system'
-			});
-			cancelled++;
-		} catch (err) {
-			const msg = `Failed to auto-cancel unconfirmed reservation ${row.id}: ${(err as Error).message}`;
-			console.error(msg);
-			errors.push(msg);
-		}
-	}
-
-	return { cancelled, errors };
 }
 
 // ---------------------------------------------------------------------------

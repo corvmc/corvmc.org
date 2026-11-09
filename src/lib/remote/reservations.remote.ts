@@ -54,12 +54,7 @@ import {
 	type ClosureRow
 } from '#lib/server/reservation/closure-timeline.js';
 import type { Pagination } from '#lib/types/pagination.js';
-import {
-	can,
-	requireCapability,
-	requireCapabilityOrOwner,
-	requireUser
-} from '#lib/server/authorization.js';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import {
 	bandRefColumns,
 	eventRefColumns,
@@ -81,7 +76,6 @@ import {
 	create,
 	createWaitlisted,
 	cancel,
-	confirm,
 	comp,
 	markComplete,
 	markNoShow,
@@ -89,7 +83,6 @@ import {
 	isFirstReservationSql,
 	priorBookingCount,
 	announceWaitlistConfirmed,
-	announceConfirmed,
 	ReservationConflictError,
 	ReservationValidationError
 } from '#lib/server/reservation/reservation-service.js';
@@ -143,14 +136,7 @@ import { paginate } from '#lib/server/db/paginate.js';
 import { ensureContactPhone } from '#lib/server/user/user-service.js';
 import { PHONE_REQUIRED_MESSAGE, isValidPhone } from '#lib/utils/phone.js';
 import { recurringSeriesEnd, UNTIL_BEFORE_START } from '#lib/server/reservation/series-until.js';
-import {
-	DEFAULT_TIMEZONE,
-	SEARCH_LIMIT,
-	LIST_LIMIT,
-	CONFIRMATION_WINDOW_DAYS,
-	confirmWindowOpensAt,
-	withinConfirmationWindow
-} from '#lib/config.js';
+import { DEFAULT_TIMEZONE, SEARCH_LIMIT, LIST_LIMIT } from '#lib/config.js';
 
 // ===========================================================================
 // Queries
@@ -391,10 +377,7 @@ export const getBandReservations = query(
 		);
 
 		// Any member may pay what the band owes (#2095); staff take payment elsewhere.
-		// A scheduled session that has started is past paying online, as on the
-		// member's own card (`memberPayAction`).
-		const canPayRow = (r: (typeof upcoming)[number]) =>
-			role !== 'staff' && isAwaitingPayment(r) && (r.status === 'confirmed' || r.startsAt > now);
+		const canPayRow = (r: (typeof upcoming)[number]) => role !== 'staff' && isAwaitingPayment(r);
 		const withBooker = (r: (typeof upcoming)[number], cancellable: boolean) => ({
 			...r,
 			ref: toReservationRef(r.ref, band),
@@ -1384,7 +1367,7 @@ export const createReservation = form(staffCreateSchema, async (data, issue) => 
 	return { reservationId: res.id };
 });
 
-const CONFIRM_WINDOW_MSG = `Confirmation opens ${CONFIRMATION_WINDOW_DAYS} days before your reservation — pay now to lock it in earlier.`;
+const NOT_COVERED_MSG = 'Your free hours do not cover this booking. Pay online instead.';
 
 /**
  * Whether free hours fully cover the reservation (nothing to charge). Never for
@@ -1470,12 +1453,11 @@ async function commitCreditsAndSettleIfCovered(opts: {
 		console.error('[reservation] $0 credit settlement record failed (settling anyway):', err);
 	}
 
-	// Guarded by status so a cancelled/completed/no_show row can never be
-	// flipped back to confirmed by a late or repeated settle call.
+	// Payment fields only, and only on a live row: a cancelled one keeps its
+	// reversed credits. The row was announced when it was confirmed (#2502).
 	await db
 		.update(reservation)
 		.set({
-			status: 'confirmed',
 			// paidAt intentionally left null — credit-settled, not cash-paid. The
 			// $0 stripePaymentRecordId is the best-effort receipt; creditsUsed is
 			// what marks this as "Paid with credits" vs. a true comp.
@@ -1484,14 +1466,7 @@ async function commitCreditsAndSettleIfCovered(opts: {
 			creditsUsed: opts.durationHours,
 			updatedAt: new Date()
 		})
-		.where(
-			and(
-				eq(reservation.id, opts.reservationId),
-				inArray(reservation.status, ['scheduled', 'confirmed'])
-			)
-		);
-
-	await announceConfirmed(opts.reservationId);
+		.where(and(eq(reservation.id, opts.reservationId), eq(reservation.status, 'confirmed')));
 
 	return { remainingCents: 0, settled: true };
 }
@@ -1561,14 +1536,12 @@ async function payReservationRemainder(opts: {
 		await db
 			.update(reservation)
 			.set({
-				status: 'confirmed',
 				stripePaymentRecordId: result.stripePaymentRecordId ?? null,
 				paidAt: new Date(),
 				cashDueCents: 0,
 				updatedAt: new Date()
 			})
 			.where(eq(reservation.id, opts.row.id));
-		await announceConfirmed(opts.row.id);
 		return { paid: true };
 	}
 
@@ -1675,23 +1648,9 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 	const durationHours = (endsAt.getTime() - startsAt.getTime()) / (1000 * 60 * 60);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
-	// Outside the window, booking is a hold: nothing is priced or committed,
-	// even when free hours would cover it (#2108). Paying ahead, below, is the
-	// only way to confirm early. The hold is the answer, not a 400.
-	const waivesWindow = await can('reservation.comp');
-	const outsideWindow = !waivesWindow && !withinConfirmationWindow(startsAt);
-	if (outsideWindow && data.skipPayment === 'on') {
-		return {
-			reservationId: res.id,
-			scheduled: true as const,
-			confirmOpensAt: confirmWindowOpensAt(startsAt).toISOString()
-		};
-	}
-
 	if (data.skipPayment === 'on') {
-		// Confirm inside the window: price it now from free hours, and any
-		// remainder is cash at the door (owner decision on #2108).
-		const { settled } = await commitCreditsAndSettleIfCovered({
+		// Price it now from free hours; any remainder is cash at the door (#2108).
+		await commitCreditsAndSettleIfCovered({
 			reservationId: res.id,
 			userId: locals.user.id,
 			email: locals.user.email,
@@ -1700,15 +1659,6 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 			totalCents,
 			hourlyRateCents
 		});
-		if (!settled) {
-			await db
-				.update(reservation)
-				.set({ status: 'confirmed', updatedAt: new Date() })
-				.where(eq(reservation.id, res.id));
-			// The settled branch announced it from inside
-			// `commitCreditsAndSettleIfCovered`; this is the other half.
-			await announceConfirmed(res.id);
-		}
 		return { reservationId: res.id, confirmed: true as const };
 	}
 
@@ -1759,15 +1709,12 @@ export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) 
 		await db
 			.update(reservation)
 			.set({
-				status: 'confirmed',
 				stripePaymentRecordId: result.stripePaymentRecordId ?? null,
 				paidAt: new Date(),
 				cashDueCents: 0,
 				updatedAt: new Date()
 			})
 			.where(eq(reservation.id, res.id));
-
-		await announceConfirmed(res.id);
 
 		return { reservationId: res.id, paid: true as const };
 	}
@@ -2046,23 +1993,18 @@ export const payForReservation = form(
 
 		if (!row) throw error(404, 'Reservation not found');
 		const { isBooker, backPath } = await requireReservationPayer(row);
-		if (row.status !== 'scheduled' && row.status !== 'confirmed')
-			throw error(400, 'Not eligible for payment');
-		// Confirming without paying is the booker's call; a bandmate only pays.
+		if (row.status !== 'confirmed') throw error(400, 'Not eligible for payment');
+		// Spending free hours is the booker's call; a bandmate only pays.
 		if (data.skipPayment === 'on' && !isBooker) throw error(403, 'Not your reservation');
 
-		const waivesWindow = await can('reservation.comp');
 		const reservationConfig = await getReservationConfig();
 		const hourlyRateCents = termsFor(row.bookerType, reservationConfig).hourlyRateCents;
 		const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
 		const totalCents = Math.round(durationHours * hourlyRateCents);
-		const outsideWindow = !waivesWindow && !withinConfirmationWindow(row.startsAt);
 
 		if (data.skipPayment === 'on') {
-			// Confirm: commit free hours; settle if fully covered, else cash at door.
-			// Outside the window only a full free-hours settle confirms (#2060).
+			// Settle from free hours alone; a partial cover is a payment, not this.
 			if (
-				outsideWindow &&
 				!(await isFullyCreditCovered(
 					currentUser.id,
 					row.startsAt,
@@ -2071,8 +2013,8 @@ export const payForReservation = form(
 					hourlyRateCents
 				))
 			)
-				throw error(400, CONFIRM_WINDOW_MSG);
-			const { settled } = await commitCreditsAndSettleIfCovered({
+				throw error(400, NOT_COVERED_MSG);
+			await commitCreditsAndSettleIfCovered({
 				reservationId: row.id,
 				userId: currentUser.id,
 				email: currentUser.email,
@@ -2081,7 +2023,6 @@ export const payForReservation = form(
 				totalCents,
 				hourlyRateCents
 			});
-			if (!settled && row.status === 'scheduled') await confirm(row.id);
 			return { confirmed: true };
 		}
 
@@ -2116,8 +2057,7 @@ export const payReservation = form(
 
 		if (!row) throw error(404, 'Reservation not found');
 		const { backPath } = await requireReservationPayer(row);
-		if (row.status !== 'scheduled' && row.status !== 'confirmed')
-			throw error(400, 'Not eligible for payment');
+		if (row.status !== 'confirmed') throw error(400, 'Not eligible for payment');
 
 		// No window gate: free hours settle a covered session before the next
 		// reset at any time, and anything else is a real charge (#2060).
@@ -2137,82 +2077,6 @@ export const payReservation = form(
 // ===========================================================================
 // Forms — staff actions (converted from API routes)
 // ===========================================================================
-
-/**
- * Staff/owner: confirm a reservation. Staff may submit with comp=on to waive
- * payment entirely instead of committing the owner's credits.
- */
-export const confirmReservation = form(
-	z.object({ id: z.string(), comp: z.enum(['', 'on']).optional() }),
-	async (data, _issue) => {
-		// No `requireUser()` here: `requireCapabilityOrOwner` below reads the
-		// acting user from the request event itself and 401s without one.
-		const [row] = await db
-			.select({
-				id: reservation.id,
-				createdByUserId: reservation.createdByUserId,
-				startsAt: reservation.startsAt,
-				endsAt: reservation.endsAt,
-				status: reservation.status,
-				// Selected so the rate can be resolved for who booked it. Every
-				// pricing site needs this now; most did not select it before.
-				bookerType: reservation.bookerType
-			})
-			.from(reservation)
-			.where(eq(reservation.id, data.id))
-			.limit(1);
-		if (!row) throw error(404, 'Reservation not found');
-
-		// Returns which of the two the caller is, which the confirmation-window and
-		// comp rules below both branch on.
-		const staff =
-			(await requireCapabilityOrOwner('reservation.manage', row.createdByUserId)) === 'staff';
-
-		// Only live reservations can be confirmed. Without this, a cancelled
-		// reservation (credits already reversed, cashDueCents possibly 0) would be
-		// resurrected to confirmed for free by the settle path below.
-		if (row.status !== 'scheduled' && row.status !== 'confirmed')
-			throw error(400, 'Not eligible for confirmation');
-
-		// Members may only confirm (without a Stripe charge) within the window; staff
-		// override anytime.
-		if (!staff && !withinConfirmationWindow(row.startsAt)) throw error(400, CONFIRM_WINDOW_MSG);
-
-		if (data.comp === 'on') {
-			// Comp is a staff-only choice: fully free, no credits committed.
-			if (!staff) throw error(403, 'Not authorized');
-			if (row.status === 'scheduled') await confirm(row.id);
-			await db
-				.update(reservation)
-				.set({ cashDueCents: 0, updatedAt: new Date() })
-				.where(eq(reservation.id, row.id));
-			return { success: true };
-		}
-
-		// Commit the owner's free hours; settle if fully covered, else confirm with
-		// the cash remainder owed at the door.
-		const [owner] = await db
-			.select({ email: user.email, name: user.name })
-			.from(user)
-			.where(eq(user.id, row.createdByUserId))
-			.limit(1);
-		const reservationConfig = await getReservationConfig();
-		const hourlyRateCents = termsFor(row.bookerType, reservationConfig).hourlyRateCents;
-		const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
-		const totalCents = Math.round(durationHours * hourlyRateCents);
-		const { settled } = await commitCreditsAndSettleIfCovered({
-			reservationId: row.id,
-			userId: row.createdByUserId,
-			email: owner?.email ?? '',
-			name: owner?.name ?? null,
-			durationHours,
-			totalCents,
-			hourlyRateCents
-		});
-		if (!settled && row.status === 'scheduled') await confirm(row.id);
-		return { success: true };
-	}
-);
 
 /** Cancel a reservation (staff can override). */
 export const cancelReservation = form(
@@ -2442,7 +2306,7 @@ export const confirmWaitlisted = form(z.object({ id: z.string() }), async (data,
 	await db
 		.update(reservation)
 		.set({
-			status: 'scheduled',
+			status: 'confirmed',
 			waitlistNotifiedAt: null,
 			waitlistExpiresAt: null,
 			updatedAt: new Date()

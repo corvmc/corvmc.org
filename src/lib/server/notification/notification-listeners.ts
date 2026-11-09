@@ -3,12 +3,7 @@ import {
 	type GroupInviteCreatedEvent,
 	type MemberInviteCreatedEvent
 } from '#lib/server/event-bus/event-bus.js';
-import {
-	INVITE_EXPIRY_DAYS,
-	UNCONFIRMED_RELEASE_NOTICE,
-	hourLogExceptionLabels,
-	renewalKindLabels
-} from '#lib/config.js';
+import { INVITE_EXPIRY_DAYS, hourLogExceptionLabels, renewalKindLabels } from '#lib/config.js';
 import { formatCents } from '#lib/utils/format.js';
 import { groupKindLabels } from '#lib/terms.js';
 import { fanOutAnnouncement, fanOutGroupRoom } from '#lib/server/group/announcement-fanout.js';
@@ -435,41 +430,6 @@ export function registerAllNotificationListeners(): void {
 				],
 				footnote: 'It works from your start time until shortly after your booking ends.',
 				cta: { label: 'View my reservations' }
-			}
-		});
-	});
-
-	// --- Confirmation reminder ---
-	domainEvents.on('reservation.confirmation_reminder_due', async ({ data: event }) => {
-		// The first reminder is an invitation and the second is a deadline. Same
-		// notification type either way: a member who silenced one silenced both.
-		const opening = event.stage === 'window_open';
-		const title = opening
-			? 'You can confirm your reservation now'
-			: 'Please confirm your reservation';
-
-		await dispatch({
-			type: 'confirmation_reminder',
-			userId: event.userId,
-			userEmail: event.userEmail,
-			title,
-			body: `${event.date} from ${event.startTime} to ${event.endTime}`,
-			href: '/member/reservations',
-			email: {
-				recipientName: event.userName,
-				subject: `${title}: ${event.date}`,
-				preview_text: `${event.date}, ${event.startTime} – ${event.endTime}`,
-				heading: title,
-				paragraphs: [
-					{
-						text: opening
-							? `Confirming is open for this booking from today. ${UNCONFIRMED_RELEASE_NOTICE}`
-							: `You have an unconfirmed reservation. ${UNCONFIRMED_RELEASE_NOTICE}`
-					}
-				],
-				details: whenDetails(event.date, event.startTime, event.endTime),
-				footnote: 'Please confirm or cancel your reservation to free up the time slot for others.',
-				cta: { label: 'Confirm now' }
 			}
 		});
 	});

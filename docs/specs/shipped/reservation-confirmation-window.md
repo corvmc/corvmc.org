@@ -1,5 +1,10 @@
 # Door-code timing — Spec
 
+> **Superseded (2026-11-09, #2502).** The confirmation window this spec builds on is gone: a
+> reservation is `confirmed` the moment it is booked, the `cancel-unconfirmed` sweep and the
+> confirmation reminders are removed, and `CONFIRMATION_WINDOW_DAYS` survives only as the
+> door-code lead, `BOOKING_LEAD_DAYS`. Kept as the record of the earlier design.
+
 **Phase 3 of the reservation confirmation window. Shipped (#821).** Phases 1 and 2 shipped in
 #125. How all three behave today is in
 [development/business-workflows.md §1](../../development/business-workflows.md#1-reservation-booking-confirmation-and-payment);

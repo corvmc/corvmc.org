@@ -15,12 +15,6 @@ export async function seedNotifications(users: SeedUser[]) {
 			href: '/member/reservations'
 		},
 		{
-			type: 'confirmation_reminder',
-			title: 'Please confirm your reservation',
-			body: 'You have an unconfirmed reservation this week.',
-			href: '/member/reservations'
-		},
-		{
 			type: 'band_invitation',
 			title: 'Band invitation',
 			body: "You've been invited to join The Voltage Thieves.",
@@ -86,7 +80,6 @@ export async function seedNotificationPreferences(users: SeedUser[]) {
 	const configurableTypes = [
 		'check_in_reminder',
 		'reservation_reminder',
-		'confirmation_reminder',
 		'band_invitation',
 		'band_invitation_accepted',
 		'recurring_skipped'

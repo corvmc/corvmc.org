@@ -71,8 +71,8 @@
 		 * generic instantiation. Expressing "some remote form, I don't care
 		 * which" needs an existential type, which TypeScript does not have.
 		 *
-		 * Generics were tried and reverted; `ConfirmReservationAction` passes
-		 * `confirmReservation | payForReservation`, differing in both parameters, proves the point.
+		 * Generics were tried and reverted: a union of two remote forms differing
+		 * in both parameters has no single instantiation.
 		 */
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		action: (() => Promise<unknown>) | RemoteForm<any, any> | Omit<RemoteForm<any, any>, 'for'>;

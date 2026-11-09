@@ -21,8 +21,10 @@ vi.mock('#lib/server/media/media-service.js', () => ({
 
 const mockStaffCreate = vi.fn();
 const mockHasConflict = vi.fn();
+const mockAnnounceConfirmed = vi.fn();
 vi.mock('./reservation-service', () => ({
-	staffCreate: (...args: unknown[]) => mockStaffCreate(...args)
+	staffCreate: (...args: unknown[]) => mockStaffCreate(...args),
+	announceConfirmed: (...args: unknown[]) => mockAnnounceConfirmed(...args)
 }));
 vi.mock('./conflict-service', () => ({
 	hasConflict: (...args: unknown[]) => mockHasConflict(...args)
@@ -187,12 +189,14 @@ describe('generateRecurringReservations', () => {
 				bookerType: 'user',
 				bookerId: 'user-1',
 				createdByUserId: 'user-1',
-				status: 'scheduled',
+				status: 'confirmed',
 				startsAt: secs(OCC1),
 				endsAt: secs(OCC1_END),
 				notes: 'Weekly practice'
 			}
 		]);
+		// Confirmed the moment it exists, so announced exactly once (#2502).
+		expect(mockAnnounceConfirmed).toHaveBeenCalledTimes(1);
 	});
 
 	it('skips occurrences that already exist (dedup)', async () => {

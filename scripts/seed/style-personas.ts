@@ -268,7 +268,7 @@ export async function seedStylePersonaHistory(
 		bookerType: 'user',
 		bookerId: HALF,
 		createdByUserId: HALF,
-		status: 'scheduled',
+		status: 'confirmed',
 		startsAt: ptDate(9, 19),
 		endsAt: ptDate(9, 21),
 		notes: 'Will confirm the time',
@@ -447,7 +447,6 @@ export async function seedStylePersonaHistory(
 		[
 			'check_in_reminder',
 			'reservation_reminder',
-			'confirmation_reminder',
 			'band_invitation',
 			'band_invitation_accepted',
 			'recurring_skipped'

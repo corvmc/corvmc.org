@@ -1,9 +1,9 @@
 import { resolve } from '$app/paths';
-import { withinConfirmationWindow } from '#lib/config.js';
+import { bookingLeadHorizon } from '#lib/config.js';
 import { confirmedUnpaid } from '#lib/utils/reservation-actions.js';
 import type { NeedsYouItem } from '#lib/types/needs-you.js';
 
-/** A booking the dashboard may ask the member to pay for or confirm. */
+/** A booking the dashboard may ask the member to pay for. */
 export interface ReservationNeedingYou {
 	id: string;
 	startsAt: Date;
@@ -16,47 +16,32 @@ export interface ReservationNeedingYou {
 }
 
 /**
- * Nothing is asked before the confirmation window opens, since the member
- * cannot confirm then (#2107). A `scheduled` booking is released at its start
- * unless paid or confirmed; a confirmed one with cash owing is never released,
- * so it ranks after.
+ * A confirmed booking with a balance owed, asked about only once it is inside
+ * `BOOKING_LEAD_DAYS` (#2107). Free hours that cover it settle it from the
+ * reservations list; anything else is paid on the pay page.
  */
 export function reservationNeedsYouItems(rows: ReservationNeedingYou[], now: Date): NeedsYouItem[] {
 	const items: NeedsYouItem[] = [];
 	for (const r of rows) {
-		if (r.startsAt <= now || !withinConfirmationWindow(r.startsAt, now)) continue;
-		const pay = resolve('/member/reservations/[id]/pay', { id: r.id });
+		if (r.startsAt <= now || r.startsAt > bookingLeadHorizon(now)) continue;
+		if (!confirmedUnpaid(r)) continue;
 		const detail = (text: string) =>
 			r.bandName ? `${r.bandName}: ${text}` : text[0].toUpperCase() + text.slice(1);
-
-		if (r.status === 'scheduled') {
-			const confirm = r.coveredByFreeHours;
-			items.push({
-				id: `reservation-unconfirmed:${r.id}`,
-				kind: 'reservation-unconfirmed',
-				title: confirm
-					? 'Confirm your practice room booking'
-					: 'Pay for your practice room booking',
-				detail: detail(
-					`the room is released if it is not ${confirm ? 'confirmed' : 'paid for'} by the start`
-				),
-				href: confirm ? resolve('member/reservations') : pay,
-				label: confirm ? 'Confirm' : 'Pay',
-				dueAt: r.startsAt,
-				rank: 0
-			});
-		} else if (confirmedUnpaid(r)) {
-			items.push({
-				id: `reservation-unpaid:${r.id}`,
-				kind: 'reservation-unconfirmed',
-				title: 'Pay for your practice room booking',
-				detail: detail('confirmed, with a balance still owing'),
-				href: pay,
-				label: 'Pay',
-				dueAt: r.startsAt,
-				rank: 1
-			});
-		}
+		const credits = r.coveredByFreeHours;
+		items.push({
+			id: `reservation-unpaid:${r.id}`,
+			kind: 'reservation-unconfirmed',
+			title: 'Pay for your practice room booking',
+			detail: detail(
+				credits ? 'your free hours cover it' : 'confirmed, with a balance still owing'
+			),
+			href: credits
+				? resolve('/member/reservations')
+				: resolve('/member/reservations/[id]/pay', { id: r.id }),
+			label: credits ? 'Use free hours' : 'Pay',
+			dueAt: r.startsAt,
+			rank: 1
+		});
 	}
 	return items;
 }
