@@ -17,7 +17,6 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 	'*/15 * * * *': [
 		'/api/cron/auto-complete',
 		'/api/cron/complete-shifts',
-		'/api/cron/cancel-unconfirmed',
 		'/api/cron/expire-waitlisted',
 		'/api/cron/wake-snoozed',
 		// Before reminders: door_code_ready keys on the lockSyncedAt this stamps,
@@ -74,7 +73,6 @@ export const CRON_MONITORS: Record<string, 'live' | RetiredMonitor> = {
 	'send-campaigns': 'live',
 	'auto-complete': 'live',
 	'complete-shifts': 'live',
-	'cancel-unconfirmed': 'live',
 	'expire-waitlisted': 'live',
 	'wake-snoozed': 'live',
 	'lock-sync': 'live',
@@ -92,7 +90,8 @@ export const CRON_MONITORS: Record<string, 'live' | RetiredMonitor> = {
 	'shift-feedback': { retired: '2026-09-17', ref: '#1198' },
 	'reservation-reminders': { retired: '2026-09-17', ref: '#1198' },
 	'shift-reminders': { retired: '2026-09-17', ref: '#1198' },
-	'confirmation-reminders': { retired: '2026-09-17', ref: '#1198' }
+	'confirmation-reminders': { retired: '2026-09-17', ref: '#1198' },
+	'cancel-unconfirmed': { retired: '2026-11-09', ref: '#2502' }
 };
 
 export interface CronEnv {

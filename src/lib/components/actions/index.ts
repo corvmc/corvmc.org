@@ -1,5 +1,4 @@
 // Reservation
-export { default as ConfirmReservationAction } from './ConfirmReservationAction.svelte';
 export { default as ConfirmWaitlistedAction } from './ConfirmWaitlistedAction.svelte';
 export { default as CompleteReservationAction } from './CompleteReservationAction.svelte';
 export { default as CancelReservationAction } from './CancelReservationAction.svelte';

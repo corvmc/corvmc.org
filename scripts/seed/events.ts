@@ -228,7 +228,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 		const eventId = crypto.randomUUID();
 		let held: { reservationId: string; productionId: string; projectId: string } | undefined;
 		if (random() < 0.75) {
-			held = await createEventReservation(eventId, day, hour, hour + 3, creator.id, 'scheduled');
+			held = await createEventReservation(eventId, day, hour, hour + 3, creator.id, 'confirmed');
 		}
 
 		const [e] = await db
@@ -421,7 +421,7 @@ export async function seedEvents(users: SeedUser[]): Promise<SeedEvent[]> {
 				hour,
 				hour + duration,
 				creator.id,
-				'scheduled'
+				'confirmed'
 			);
 			const [inst] = await db
 				.insert(eventListing)

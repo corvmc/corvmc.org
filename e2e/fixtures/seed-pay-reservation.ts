@@ -1,5 +1,5 @@
 /**
- * Seed a known member + a payable (scheduled, balance-due) reservation into the
+ * Seed a known member + a payable (confirmed, balance-due) reservation into the
  * LOCAL D1 database used by `vite preview`, plus a credential account whose
  * password verifies against the app's scrypt path so the e2e test can log in
  * through the real better-auth UI flow.
@@ -87,9 +87,9 @@ export async function seedPayReservation(): Promise<void> {
 			updatedAt: now
 		});
 
-		// A 1-hour scheduled, uncommitted reservation. At the default $15/hr rate this
+		// A 1-hour confirmed, unpriced reservation. At the default $15/hr rate this
 		// is $15.00 due → remainingCents > 0 → checkbox visible, submit says "Pay $X".
-		// cashDueCents = null ⇒ credits not yet committed (plain scheduled).
+		// cashDueCents = null ⇒ credits not yet committed.
 		const startsAt = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 		startsAt.setUTCHours(20, 0, 0, 0); // ~1pm Pacific
 		const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
@@ -99,7 +99,7 @@ export async function seedPayReservation(): Promise<void> {
 			bookerType: 'user',
 			bookerId: SEED_USER_ID,
 			createdByUserId: SEED_USER_ID,
-			status: 'scheduled',
+			status: 'confirmed',
 			startsAt,
 			endsAt,
 			notes: 'E2E cover-fees payment flow',

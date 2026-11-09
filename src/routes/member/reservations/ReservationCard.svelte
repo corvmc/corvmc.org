@@ -5,15 +5,12 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import {
 		CancelReservationAction,
-		ConfirmReservationAction,
 		ConfirmWaitlistedAction
 	} from '#lib/components/actions/index.js';
 	import ReservationCardShell from '#lib/components/reservations/ReservationCardShell.svelte';
 	import ReservationSummary from '#lib/components/reservations/ReservationSummary.svelte';
 	import type { Reservation } from '#lib/server/db/schema.js';
 	import { resolve } from '$app/paths';
-	import UnconfirmedNotice from '#lib/components/reservations/UnconfirmedNotice.svelte';
-	import { withinConfirmationWindow } from '#lib/config.js';
 	import { memberPayAction } from '#lib/utils/reservation-actions.js';
 	import { payForReservation } from '#lib/remote/reservations.remote.js';
 
@@ -24,11 +21,8 @@
 		$props();
 
 	let isPast = $derived(reservation.startsAt.getTime() <= Date.now());
-	// Members may only confirm (without paying) within the window; before then we
-	// show when it opens and offer paying to lock the slot in early.
-	let canConfirm = $derived(withinConfirmationWindow(reservation.startsAt));
 	let payAction = $derived(memberPayAction(reservation));
-	// Settles from free hours alone, so it stands in for Confirm and the pay link.
+	// Settles from free hours alone, so it stands in for the pay link.
 	let withCredits = $derived(reservation.payableWithCredits === true);
 	const creditPay = $derived(payForReservation.for(reservation.id));
 </script>
@@ -66,17 +60,8 @@
 			</p>
 		{/if}
 	</a>
-	{#if !isPast && reservation.status === 'scheduled'}
-		<!-- Hints live above the action row so they never wrap behind the buttons. -->
-		<UnconfirmedNotice
-			startsAt={reservation.startsAt}
-			release={false}
-			class="space-y-0.5 px-3 text-right text-subtle"
-		/>
-	{/if}
-
 	{#snippet actions()}
-		{#if !isPast && ['waitlisted', 'scheduled', 'confirmed'].includes(reservation.status)}
+		{#if !isPast && ['waitlisted', 'confirmed'].includes(reservation.status)}
 			<CancelReservationAction
 				{reservation}
 				onsuccess={onchange}
@@ -86,8 +71,6 @@
 			/>
 			{#if reservation.status === 'waitlisted' && reservation.waitlistNotifiedAt}
 				<ConfirmWaitlistedAction {reservation} onsuccess={onchange} variant="success" size="xs" />
-			{:else if reservation.status === 'scheduled' && canConfirm && !withCredits}
-				<ConfirmReservationAction {reservation} onsuccess={onchange} variant="primary" size="xs" />
 			{/if}
 		{/if}
 		{#if withCredits}
@@ -116,9 +99,7 @@
 				size="xs"
 				outline
 			>
-				{payAction === 'reserve'
-					? m.member_reservations_reservation_card_prepay()
-					: m.member_pay_online()}
+				{m.member_pay_online()}
 			</Button>
 		{/if}
 	{/snippet}

@@ -1,10 +1,9 @@
 import { z } from 'zod';
 import { titleCase } from '#lib/utils/format.js';
 import {
-	CONFIRMATION_WINDOW_DAYS,
 	LONG_TEXT_MAX,
 	SHORT_TEXT_MAX,
-	confirmationHorizon,
+	bookingLeadHorizon,
 	creditCompCeiling,
 	creditsToHours,
 	hoursToCredits
@@ -633,7 +632,7 @@ export const getMemberDashboard = query(async () => {
 		dbSubscription,
 		profileComplete,
 		matches,
-		unconfirmed
+		owing
 	] = await Promise.all([
 		db
 			.select()
@@ -671,24 +670,18 @@ export const getMemberDashboard = query(async () => {
 		// is on one load-bearing query (`custom/no-concurrent-remote-queries`),
 		// and a card that fanned out a second one would not render past kit 2.64.
 		findMatchesFor(currentUser.id),
-		// Bookings inside their confirmation window that still need paying or
-		// confirming, whatever week they fall in (#964). Bounded at the window in
-		// SQL so out-of-window rows cannot use up the five (#2107).
+		// Confirmed bookings starting soon with a balance owed, whatever week they
+		// fall in (#964). Bounded in SQL so later rows cannot use up the five (#2107).
 		db
 			.select()
 			.from(reservation)
 			.where(
 				and(
-					or(
-						eq(reservation.status, 'scheduled'),
-						and(
-							eq(reservation.status, 'confirmed'),
-							isNull(reservation.paidAt),
-							or(isNull(reservation.cashDueCents), gt(reservation.cashDueCents, 0))
-						)
-					),
+					eq(reservation.status, 'confirmed'),
+					isNull(reservation.paidAt),
+					or(isNull(reservation.cashDueCents), gt(reservation.cashDueCents, 0)),
 					gte(reservation.startsAt, nowDate),
-					lte(reservation.startsAt, confirmationHorizon(nowDate)),
+					lte(reservation.startsAt, bookingLeadHorizon(nowDate)),
 					or(
 						and(
 							eq(reservation.createdByUserId, currentUser.id),
@@ -710,7 +703,7 @@ export const getMemberDashboard = query(async () => {
 	const subscription = mapDbSubscription(dbSubscription);
 
 	// Only read when there is a booking to price; the figure is live, never held.
-	const reservationConfig = unconfirmed.length > 0 ? await getReservationConfig() : null;
+	const reservationConfig = owing.length > 0 ? await getReservationConfig() : null;
 	const freeHoursWallet = {
 		balance: credits.free_hours ?? 0,
 		resetAt: freeHoursResetAt(dbSubscription)
@@ -721,7 +714,7 @@ export const getMemberDashboard = query(async () => {
 	// work on the server, not five.
 	const needsYou = await listNeedsYou({
 		userId: currentUser.id,
-		reservations: unconfirmed.map((r) => ({
+		reservations: owing.map((r) => ({
 			id: r.id,
 			startsAt: r.startsAt,
 			status: r.status,
@@ -781,14 +774,7 @@ export const getMemberDashboard = query(async () => {
 		usedThisMonth,
 		pendingInviteCount,
 		profileComplete,
-		matches,
-		unconfirmed: unconfirmed.map((r) => ({
-			id: r.id,
-			startsAt: r.startsAt,
-			endsAt: r.endsAt,
-			bandName: r.bookerType === 'group' ? (bandNameMap[r.bookerId] ?? null) : null,
-			confirmFrom: new Date(r.startsAt.getTime() - CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60 * 1000)
-		}))
+		matches
 	};
 });
 

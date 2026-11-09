@@ -3,12 +3,9 @@ import { mockUser } from '#lib/server/db/test-factory.js';
 import { error } from '@sveltejs/kit';
 import { can } from '#lib/server/authorization.js';
 
-// Regression: staff confirming/pricing a reservation on a member's behalf must key
-// free hours to the reservation OWNER, never the acting staff user. The staff
-// confirm UI previously routed through the member self-pay flow, which keyed both
-// the pricing display and the credit deduction to `currentUser.id` (the staff
-// member). Both `confirmReservation` (deduction) and `getReservationPricing`
-// (display) must use `reservation.createdByUserId`.
+// Regression: staff pricing a reservation on a member's behalf must key free
+// hours to the reservation OWNER, never the acting staff user.
+// `getReservationPricing` must use `reservation.createdByUserId`.
 
 const staffUser = mockUser({ id: 'staff-1', name: 'Staff Person', email: 'staff@example.com' });
 const ownerId = 'member-1';
@@ -135,8 +132,7 @@ vi.mock('$app/server', () => ({
 	}
 }));
 
-const { confirmReservation, getReservationPricing } =
-	(await import('#lib/remote/reservations.remote.js')) as any;
+const { getReservationPricing } = (await import('#lib/remote/reservations.remote.js')) as any;
 
 beforeEach(() => {
 	// requireCapabilityOrOwner short-circuits on ownership without consulting `can`,
@@ -150,113 +146,6 @@ beforeEach(() => {
 	getBalance.mockClear();
 	selectResults.length = 0;
 	updateSets.length = 0;
-});
-
-describe('staff confirm commits the owner credits, not the staff member', () => {
-	it('passes the reservation owner id to commitReservationCredits', async () => {
-		selectResults.push(
-			[
-				{
-					id: 'res-1',
-					createdByUserId: ownerId,
-					startsAt: new Date('2026-06-15T17:00:00Z'),
-					endsAt: new Date('2026-06-15T18:00:00Z'),
-					status: 'scheduled'
-				}
-			],
-			[{ email: 'member@example.com', name: 'Test Member' }]
-		);
-
-		// The `form` mock exposes the raw handler, so call it with parsed data.
-		await confirmReservation({ id: 'res-1' }, undefined);
-
-		expect(commitReservationCredits).toHaveBeenCalledTimes(1);
-		const arg = commitReservationCredits.mock.calls[0][0];
-		expect(arg.userId).toBe(ownerId);
-		expect(arg.userId).not.toBe(staffUser.id);
-	});
-});
-
-describe('confirmation window gating', () => {
-	const DAY = 24 * 60 * 60 * 1000;
-	// currentUser is staffUser; making them the OWNER lets us test the member path.
-	function scheduledRow(startsAt: Date) {
-		return {
-			id: 'res-w',
-			createdByUserId: staffUser.id,
-			startsAt,
-			endsAt: new Date(startsAt.getTime() + 60 * 60 * 1000),
-			status: 'scheduled'
-		};
-	}
-
-	it('blocks a member confirming more than 3 days out', async () => {
-		vi.mocked(can).mockResolvedValueOnce(false);
-		selectResults.push([scheduledRow(new Date(Date.now() + 10 * DAY))]);
-
-		await expect(confirmReservation({ id: 'res-w' }, undefined)).rejects.toMatchObject({
-			status: 400
-		});
-		expect(commitReservationCredits).not.toHaveBeenCalled();
-	});
-
-	it('allows a member confirming within 3 days', async () => {
-		vi.mocked(can).mockResolvedValueOnce(false);
-		selectResults.push(
-			[scheduledRow(new Date(Date.now() + 2 * DAY))],
-			[{ email: 'member@example.com', name: 'Test Member' }]
-		);
-
-		await confirmReservation({ id: 'res-w' }, undefined);
-		expect(commitReservationCredits).toHaveBeenCalledTimes(1);
-	});
-
-	it('lets staff confirm outside the window', async () => {
-		// `can` defaults to true in this suite.
-		selectResults.push(
-			[{ ...scheduledRow(new Date(Date.now() + 10 * DAY)), createdByUserId: ownerId }],
-			[{ email: 'member@example.com', name: 'Test Member' }]
-		);
-
-		await confirmReservation({ id: 'res-w' }, undefined);
-		expect(commitReservationCredits).toHaveBeenCalledTimes(1);
-	});
-});
-
-describe('staff comp choice on confirm', () => {
-	function scheduledRow() {
-		return {
-			id: 'res-c',
-			createdByUserId: ownerId,
-			startsAt: new Date('2026-06-15T17:00:00Z'),
-			endsAt: new Date('2026-06-15T18:00:00Z'),
-			status: 'scheduled'
-		};
-	}
-
-	it('comp=on waives payment without committing the owner credits', async () => {
-		selectResults.push([scheduledRow()]);
-
-		await confirmReservation({ id: 'res-c', comp: 'on' }, undefined);
-
-		expect(commitReservationCredits).not.toHaveBeenCalled();
-		expect(confirm).toHaveBeenCalledWith('res-c');
-		expect(updateSets).toContainEqual(expect.objectContaining({ cashDueCents: 0 }));
-	});
-
-	it('rejects comp from a non-staff owner', async () => {
-		vi.mocked(can).mockResolvedValueOnce(false);
-		// Owned by the acting (non-staff) user, within the confirmation window.
-		selectResults.push([
-			{ ...scheduledRow(), createdByUserId: staffUser.id, startsAt: new Date(Date.now() + 60_000) }
-		]);
-
-		await expect(confirmReservation({ id: 'res-c', comp: 'on' }, undefined)).rejects.toMatchObject({
-			status: 403
-		});
-		expect(confirm).not.toHaveBeenCalled();
-		expect(commitReservationCredits).not.toHaveBeenCalled();
-	});
 });
 
 describe('getReservationPricing keys free hours to the reservation owner', () => {

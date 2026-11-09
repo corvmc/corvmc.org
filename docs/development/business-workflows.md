@@ -21,12 +21,12 @@ Spec: [specs/reservation-system-spec.md](../specs/shipped/reservation-system-spe
 
 ### The story
 
-A member books a practice-room slot. Booking alone doesn't commit them — the reservation
-sits in `scheduled` status until they **confirm** it (which spends any free-hour credits
-and leaves cash due at the door) or **pay online** via Stripe. Members can only confirm
-within the **confirmation window — 3 days before the start time** — but paying with a real
-Stripe charge commits it any time. Anything still `scheduled` when its start time arrives
-was never committed, so a cron job cancels it and frees the slot.
+A member books a practice-room slot, and the booking is `confirmed` the moment it exists —
+however far ahead it is. Booking spends any free-hour credits that cover it and leaves the
+rest as cash due at the door, or the member **pays ahead** online via Stripe. There is no
+later confirmation step and no sweep that releases unconfirmed bookings (#2502; the
+schedule-then-confirm model is in
+[the superseded spec](../specs/shipped/reservation-confirmation-window.md)).
 
 ### Code path
 
@@ -37,19 +37,20 @@ in `src/lib/remote/reservations.remote.ts`, which calls `create()` in
 1. Validates the time range against operating hours and advance-booking limits —
    `validateBooking()` in `conflict-service.ts`, driven by KV site config
    (`reservation.operatingHoursStart`, `reservation.maxAdvanceDaysOneoff`, ...).
-2. Checks for overlapping reservations, inserts the row with `status: 'scheduled'`, then
+2. Checks for overlapping reservations, inserts the row with `status: 'confirmed'`, then
    **re-checks** for a race and deletes its own row if another booking landed concurrently
    (D1 has no transactions — this compensating-delete pattern is commented in the source at
    `reservation-service.ts:110`).
 
-**Confirm (no online payment).** Submitting with `skipPayment` on: the remote checks
-`withinConfirmationWindow(startsAt)` from `src/lib/config.ts`
-(`CONFIRMATION_WINDOW_DAYS = 3`), then calls `commitCreditsAndSettleIfCovered()` (a helper
-inside `reservations.remote.ts`). That commits free-hour credits via
-`commitReservationCredits()` in `reservation-credit-service.ts`; if credits fully cover the
-price, the reservation is settled and confirmed with `cashDueCents: 0`; otherwise it's
-confirmed with the cash remainder recorded in `cashDueCents` for staff to collect at the
-door.
+3. Announces it: `reservation.created`, then `reservation.confirmed` from
+   `announceConfirmed()`. That is the only announcement the booking gets.
+
+**Book (no online payment).** Submitting with `skipPayment` on calls
+`commitCreditsAndSettleIfCovered()` (a helper inside `reservations.remote.ts`). That commits
+free-hour credits via `commitReservationCredits()` in `reservation-credit-service.ts`; if
+credits fully cover the price, the reservation is settled with `cashDueCents: 0`; otherwise
+the cash remainder is recorded in `cashDueCents` for staff to collect at the door. Settling
+changes payment fields only — never the status, and it never announces again.
 
 **Pay online.** The remote commits credits the same way, then creates a Stripe Checkout
 Session via `checkout()` in `src/lib/server/finance/payment-service.ts` with
@@ -61,28 +62,28 @@ Stripe → POST /api/stripe/webhook            src/routes/api/stripe/webhook/+se
        → handleCheckoutCompleted()           src/lib/server/finance/webhook-handlers.ts
        → domainEvents.emit('checkout.completed', ...)
        → handleReservationCheckout(session)  src/lib/server/reservation/checkout-listener.ts
-       → reservation status → 'confirmed', paidAt set, cashDueCents 0
+       → paidAt set, cashDueCents 0 on the confirmed row
 ```
 
-The listener is idempotent (only transitions `scheduled`/`confirmed` rows), and the webhook
-route returns 500 on handler failure so Stripe re-delivers.
+The listener is idempotent (it only writes a `confirmed` row's payment fields), and the
+webhook route returns 500 on handler failure so Stripe re-delivers.
 
-**Door code.** Every confirm path above ends in `announceConfirmed()`, which emits
+**Door code.** `announceConfirmed()` is called only where a row becomes confirmed — `create()`,
+`staffCreate()`, recurring generation and waitlist confirmation — never from a settle path,
+which is what sent members up to five "Reservation confirmed" emails before #2502. It emits
 `reservation.confirmed`; a listener registered in
 `src/lib/server/event-bus/register-listeners.ts` calls `provisionOnConfirm()` in
 `src/lib/server/lock/lock-service.ts`. That mints the code on the lock straight away if the
-booking starts inside the confirmation window, has no code yet, and its member holds no standing
-code. It is best-effort and never throws — a U-tec failure must not fail a confirm — and
+booking starts within `BOOKING_LEAD_DAYS` (3), has no code yet, and its member holds no
+standing code. It is best-effort and never throws — a U-tec failure must not fail a confirm — and
 the daily lock job (`runDailyLockJob()`, which provisions across the same window) picks up
-anything it missed. A booking confirmed further ahead by a Stripe charge gets its code from the
-daily job once the window reaches it.
+anything it missed. A booking made further ahead gets its code from the daily job once it
+comes inside that lead.
 
-**The other half of the lifecycle — cron.** Four endpoints under `src/routes/api/cron/`
+**The other half of the lifecycle — cron.** Endpoints under `src/routes/api/cron/`
 (all `POST` with `Authorization: Bearer <CRON_SECRET>`, invoked by the Worker's own
 `scheduled` handler on native Cloudflare cron triggers — see the operations manual):
 
-- `cancel-unconfirmed` → `cancelUnconfirmedReservations()` in `reservation-service.ts` —
-  cancels every reservation still `scheduled` at its start time.
 - `auto-complete` → `autoCompleteExpired()` — marks confirmed, fully-paid reservations
   past their end time as `completed` (cash-owed ones are left for staff).
 - `reminders` — drains the registry in `src/lib/server/reminders/registry.ts` every 15
@@ -95,7 +96,7 @@ override), atomic conditional status update, Stripe refund if a payment record e
 (`reverseReservationCredits()`), and finally emits `reservation.cancelled` — which the
 waitlist listener uses to promote the next person (workflow 2).
 
-**Staff resolution.** Unresolved reservations (past end, still `scheduled` or cash owed)
+**Staff resolution.** Unresolved reservations (past end with cash owed)
 surface via `getUnresolvedReservations` in `reservations.remote.ts`; staff resolve with the
 `completeReservation` / `noShowReservation` / `cashReceivedReservation` /
 `compReservation` / `refundAndCancelReservation` / `refundOnlyReservation` forms in the same
@@ -105,21 +106,21 @@ only stamps `refundedAt`, which `reservationPaymentState` reads ahead of `paidAt
 
 ### Data touched
 
-`reservation` table (status machine: `scheduled → confirmed → completed`, or `cancelled` /
-`no_show` / `waitlisted`), `creditTransaction` ledger (free-hour commits and reversals),
+`reservation` table (status machine: `confirmed → completed`, or `cancelled` / `no_show`;
+`waitlisted → confirmed` when an offered slot is taken), `creditTransaction` ledger (free-hour commits and reversals),
 `paymentCache`, plus Stripe objects (Checkout Session, PaymentIntent, Refund).
 
 ### Where it breaks
 
-- **Member paid but reservation still `scheduled`** → the webhook didn't arrive or the
+- **Member paid but `paidAt` still null** → the webhook didn't arrive or the
   listener failed. Check Stripe dashboard → webhook delivery attempts, and Sentry for
   `stage: 'handler'` captures from the webhook route.
 - **"Time slot is not available" that looks wrong** → check the `waitlisted`/`cancelled`
   exclusions in the conflict query, and whether a `bookerType: 'event_listing'` reservation
   (created by an event) is holding the slot.
-- **Confirm button rejected with the window message** → expected outside 3 days before
-  start; only a Stripe charge (or staff) commits earlier.
-- **Confirmed inside the window but no door code** → the confirm-time mint failed; look for
+- **Member got two "Reservation confirmed" emails** → something other than a transition
+  into `confirmed` called `announceConfirmed()`; the settle paths must not (#2502).
+- **Booked inside the lead days but no door code** → the confirm-time mint failed; look for
   `Failed to provision lock access on confirm` in the logs. The next daily lock job (or Run now
   in Staff Settings, or re-issue on the staff reservation page) mints it.
 - **Double-deducted credits** → shouldn't happen: `commitReservationCredits` is idempotent
@@ -130,14 +131,12 @@ only stamps `refundedAt`, which `reservationPaymentState` reads ahead of `paidAt
 
 Staff work the same table from `/staff/reservations` (filterable list, with a resolve modal
 and a create-on-behalf modal) and `/staff/reservations/[id]` (detail plus every action).
-Three things differ from the member path:
+Two things differ from the member path:
 
 - **Staff may override.** Conflicts and business-hours violations are warnings with an
   override, not refusals. `ConflictWarnings` currently conflates "overlaps a confirmed
   booking" with "outside operating hours" into one flag — see #563; a double-booking
   deserves louder treatment than a late night.
-- **Staff confirm at any time.** The 3-day confirmation window is a member gate;
-  `visibleActions` is staff-only and unchanged by it.
 - **The resolve modal only surfaces unpaid reservations.** Paid ones auto-complete after
   their end time via the `auto-complete` cron, so they never reach the queue — which is why
   the queue is short enough to be worth working.
@@ -181,7 +180,7 @@ one is offered the slot with a 24-hour window to confirm.
   notification with a confirm link.
 - **Member confirms the offered slot:** `confirmWaitlisted` form in
   `reservations.remote.ts` — checks the offer hasn't expired, re-checks the slot is free,
-  flips to `scheduled`, then re-checks again and backs out if a competing booking raced in.
+  flips to `confirmed`, then re-checks again and backs out if a competing booking raced in.
 - **Expiry:** cron `expire-waitlisted` → `expireWaitlisted()` in `waitlist-service.ts` —
   cancels offers past their 24h window and promotes the next in line. It emits both
   `reservation.waitlist_expired` (the member's own notification) and
@@ -1211,7 +1210,7 @@ is a member's (`bookerType === 'user'`) and their first (`priorBookingCount`), t
 
 A booking that came off the **waitlist** announces itself too, from
 `announceWaitlistConfirmed()`, called by the `confirmWaitlisted` remote after its own race
-re-check. The emit hangs off the `waitlisted → scheduled` transition and nothing else:
+re-check. The emit hangs off the `waitlisted → confirmed` transition and nothing else:
 `createWaitlisted()` stays quiet because a queue position is not a visit, and
 `promoteNextWaitlisted()` stays quiet because it only _offers_ the slot — it stamps the 24h
 window and leaves the row `waitlisted`, where `expireWaitlisted()` can still cancel it without
@@ -1280,7 +1279,7 @@ already enforces it. Nothing new claims, assigns, or notifies.
   orientation once it drove this.
 - **A member whose first booking was waitlisted got no orientation** → they get one when they
   confirm the slot, not when they join the queue and not when it is offered to them. Check the
-  row actually reached `scheduled`: `confirmWaitlisted` rolls a confirmation back to
+  row actually reached `confirmed`: `confirmWaitlisted` rolls a confirmation back to
   `waitlisted` if a competing booking landed mid-write, and `announceWaitlistConfirmed()`
   deliberately says nothing for a row still in the queue. A booking that is only _offered_ —
   `waitlist_notified_at` set, status still `waitlisted` — has not been confirmed yet and is

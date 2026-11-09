@@ -55,9 +55,9 @@ export interface CheckoutCompletedEvent {
 /**
  * A booking is confirmed and the room is committed.
  *
- * Emitted from `reservation-service.announceConfirmed`, for the same reason
- * `reservation.created` is emitted from the service: a reservation reaches
- * `confirmed` six ways, and a seventh would be forgotten.
+ * Emitted once per booking from `reservation-service.announceConfirmed`, at
+ * the moment the row becomes confirmed. Paying or settling it later does not
+ * re-emit (#2502).
  */
 export interface ReservationConfirmedEvent {
 	reservationId: string;
@@ -155,22 +155,6 @@ export interface ReservationReminderDueEvent {
 /** The lock has reported a booking's code as synced, so the member may be told it. */
 export interface DoorCodeReadyEvent extends ReservationReminderDueEvent {
 	code: string;
-}
-
-export interface ConfirmationReminderDueEvent {
-	/**
-	 * Which reminder this is. `window_open` is the day confirming becomes
-	 * possible, `final` the day before the session — the same event twice, and
-	 * the copy differs because "please confirm" three days out reads as noise.
-	 */
-	stage: 'window_open' | 'final';
-	reservationId: string;
-	userId: string;
-	userName: string;
-	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
 }
 
 /**
@@ -896,7 +880,6 @@ export type DomainEvents = {
 	'reservation.confirmed': ReservationConfirmedEvent;
 	'reservation.cancelled': ReservationCancelledEvent;
 	'reservation.reminder_due': ReservationReminderDueEvent;
-	'reservation.confirmation_reminder_due': ConfirmationReminderDueEvent;
 	'reservation.door_code_ready': DoorCodeReadyEvent;
 	'ticket.purchased': TicketPurchasedEvent;
 	'audio.purchased': AudioPurchasedEvent;

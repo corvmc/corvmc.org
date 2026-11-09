@@ -1,14 +1,5 @@
-import { withinConfirmationWindow } from '#lib/config.js';
-
 export type ReservationActionKey =
-	| 'confirm'
-	| 'cashReceived'
-	| 'comp'
-	| 'complete'
-	| 'noShow'
-	| 'cancel'
-	| 'refundAndCancel'
-	| 'refundOnly';
+	'cashReceived' | 'comp' | 'complete' | 'noShow' | 'cancel' | 'refundAndCancel' | 'refundOnly';
 
 export type ReservationPaymentState =
 	'paid' | 'cash_due' | 'unpaid' | 'credits' | 'comped' | 'cancelled' | 'refunded' | 'no_show';
@@ -49,9 +40,8 @@ export function overlappingReservations<T extends OverlapCandidate>(
  * Derive a reservation's payment state for display. Order matters: refunded →
  * cancelled → paid → cash owed → not-yet-settled → credit-settled → comped.
  * Credit-settled and comped share `paidAt null & cashDueCents 0`; `creditsUsed`
- * is what distinguishes them. A null `cashDueCents` means credits were never
- * committed (plain scheduled, or a staff-created confirm) — that's `unpaid`,
- * never `comped`.
+ * is what distinguishes them. A null `cashDueCents` means the booking was never
+ * priced — that's `unpaid`, never `comped`.
  */
 export function reservationPaymentState(r: {
 	status: string;
@@ -99,19 +89,11 @@ export function visibleActions(
 	// 0 (comped / credit-settled) clears the debt.
 	const cashOwed = opts != null && !opts.paidAt && opts.cashDueCents !== 0;
 
-	if (status === 'scheduled') {
-		actions.add('confirm');
-		actions.add('cashReceived');
-		actions.add('comp');
-		actions.add('cancel');
-		if (now >= start) actions.add('noShow');
-	}
-
 	if (status === 'confirmed') {
 		actions.add('cancel');
 		if (now >= end) actions.add('complete');
 		if (now >= start) actions.add('noShow');
-		// Credits committed at Confirm, cash still owed → staff can record cash or waive it.
+		// Cash still owed → staff can record it or waive it.
 		if (cashOwed) {
 			actions.add('cashReceived');
 			actions.add('comp');
@@ -144,23 +126,15 @@ export function confirmedUnpaid(r: PayableReservation): boolean {
 
 /** What `getReservationPayment` accepts: the server's pay-page gate. */
 export function isAwaitingPayment(r: PayableReservation): boolean {
-	return r.status === 'scheduled' || confirmedUnpaid(r);
+	return confirmedUnpaid(r);
 }
 
 /**
- * The pay link a member's own reservation offers: `reserve` pays for a future
- * scheduled slot before its confirmation window opens, `balance` settles a
- * confirmed one. A balance stays payable after the session ends; the
- * start-time gate belongs to cancel and confirm, not to money owed.
+ * The pay link a member's own reservation offers. A balance stays payable after
+ * the session ends; the start-time gate belongs to cancel, not to money owed.
  */
-export function memberPayAction(
-	r: PayableReservation & { startsAt: Date },
-	now: Date = new Date()
-): 'reserve' | 'balance' | null {
-	if (confirmedUnpaid(r)) return 'balance';
-	if (r.startsAt <= now) return null;
-	if (r.status === 'scheduled' && !withinConfirmationWindow(r.startsAt, now)) return 'reserve';
-	return null;
+export function memberPayAction(r: PayableReservation): 'balance' | null {
+	return confirmedUnpaid(r) ? 'balance' : null;
 }
 
 /**

@@ -533,7 +533,6 @@
 	"src/routes/api/bands/[id=uuid]/press-kit.zip/+server.ts",
 	"src/routes/api/cron/auto-complete/+server.ts",
 	"src/routes/api/cron/cancel-stale-tickets/+server.ts",
-	"src/routes/api/cron/cancel-unconfirmed/+server.ts",
 	"src/routes/api/cron/complete-shifts/+server.ts",
 	"src/routes/api/cron/expire-waitlisted/+server.ts",
 	"src/routes/api/cron/generate-recurring-reservations/+server.ts",

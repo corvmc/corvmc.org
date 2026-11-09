@@ -21,7 +21,7 @@ import { hasActiveMemberCode, reconcileMemberCodeSync } from './member-code-serv
 import { getJson, putJson } from '#lib/server/kv.js';
 import { dispatchEmailOnly } from '#lib/server/notification/index.js';
 import * as env from '$app/env/private';
-import { DEFAULT_TIMEZONE, CONFIRMATION_WINDOW_DAYS } from '#lib/config.js';
+import { DEFAULT_TIMEZONE, BOOKING_LEAD_DAYS } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // LockService — provision and clean up Ultraloc temporary users
@@ -251,7 +251,7 @@ export interface UpcomingSyncResult {
 
 /**
  * The 15-minute pass of `reconcileSyncState`: only bookings inside the
- * confirmation window that have not ended. `door_code_ready` keys on the
+ * booking lead window that have not ended. `door_code_ready` keys on the
  * `lockSyncedAt` this stamps. Never throws, so it cannot fail its batch.
  *
  * An offline lock or a U-tec cooldown is a skip, not an error: nothing can
@@ -277,13 +277,12 @@ export async function reconcileUpcomingSync(now = new Date()): Promise<UpcomingS
 
 /**
  * Create Ultraloc temporary users for confirmed reservations starting inside
- * the confirmation window that don't already have lock access.
+ * `BOOKING_LEAD_DAYS` that don't already have lock access.
  *
  * The window used to be a single day, which left no slack at all: the job runs
  * once each morning, so a lock that was offline then meant a member with a
  * booking that evening had a code queued in U-tec's cloud and no way in. Over
- * `CONFIRMATION_WINDOW_DAYS` the queue has days to drain instead of hours, and
- * the two numbers stop being independently chosen.
+ * `BOOKING_LEAD_DAYS` the queue has days to drain instead of hours.
  *
  * The probe that prompted this measured 22 users on the lock, only four of them
  * temporary, so a three-day window is nowhere near the device's ceiling —
@@ -334,7 +333,7 @@ async function provisionDailyAccess(errors: string[]): Promise<number> {
 
 /**
  * Bookings starting in here should already hold a code: from the start of today
- * in club time through `CONFIRMATION_WINDOW_DAYS` past the end of it. Shared by
+ * in club time through `BOOKING_LEAD_DAYS` past the end of it. Shared by
  * the daily job and every path that mints outside it, so they cannot disagree.
  */
 function provisioningWindow(now = new Date()): { start: Date; end: Date } {
@@ -343,7 +342,7 @@ function provisioningWindow(now = new Date()): { start: Date; end: Date } {
 	return {
 		start: buildDateInTz(todayStr, '00:00', tz),
 		end: new Date(
-			buildDateInTz(todayStr, '23:59', tz).getTime() + CONFIRMATION_WINDOW_DAYS * 24 * 60 * 60_000
+			buildDateInTz(todayStr, '23:59', tz).getTime() + BOOKING_LEAD_DAYS * 24 * 60 * 60_000
 		)
 	};
 }

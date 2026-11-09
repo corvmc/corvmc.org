@@ -18,13 +18,12 @@
 		toLocalDate,
 		toLocalTime
 	} from '#lib/utils/format.js';
-	import { confirmWindowOpensAt, creditsToHours, withinConfirmationWindow } from '#lib/config.js';
+	import { creditsToHours } from '#lib/config.js';
 	import type { RemoteFormField } from '$app/server';
 
 	let {
 		reservation,
 		fields = {},
-		staff = false,
 		band = false,
 		bookerType = undefined,
 		payAhead = true,
@@ -32,9 +31,6 @@
 	}: {
 		reservation?: { id: string; startsAt: Date; endsAt: Date };
 		fields?: { id?: RemoteFormField<string> };
-		// Staff confirming on the owner's behalf: render a single Confirm action
-		// (no Pay Ahead / online checkout) and key pricing to the reservation owner.
-		staff?: boolean;
 		/**
 		 * A band booking its practice space. Book leaves it owed; Pay Ahead goes
 		 * to the payment step, whose submit sets `payNow` (#2095).
@@ -86,22 +82,9 @@
 
 	const isRecurring = $derived(recurringFrequency !== '');
 
-	// The confirmation window is enforced by `bookAndPayReservation`, so it
-	// applies to exactly the flow that goes through it: not a staff confirm, not
-	// a band session, and not teaching time (`payAhead={false}`, and
-	// `bookInstructorReservation` has no window at all). Before it opens, booking
-	// only holds the room, even when free hours would cover it (#2108).
-	const beforeConfirmWindow = $derived(
-		payAhead && !staff && !band && !!startsAt && !withinConfirmationWindow(startsAt)
-	);
-
-	// Paying is the only way to confirm a held booking, so Pay Ahead is offered
-	// whenever booking would not confirm it, even at $0. Inside the window,
-	// Confirm already spends the free hours, so it is offered only for a balance.
-	const showPayAhead = $derived(
-		payAhead && !!pricing && (pricing.remainingCents > 0 || beforeConfirmWindow || band)
-	);
-	const confirmOpensLabel = $derived(startsAt ? formatDate(confirmWindowOpensAt(startsAt)) : '');
+	// Booking already spends the free hours, so Pay Ahead is offered only for a
+	// balance, or for a band, whose booking leaves everything owed (#2095).
+	const showPayAhead = $derived(payAhead && !!pricing && (pricing.remainingCents > 0 || band));
 
 	function formatPreviewDate(iso: string): string {
 		return formatDate(new Date(iso));
@@ -213,7 +196,7 @@
 				alone — a non-visual reader heard "$15.00 $0.00". The labels are
 				`sr-only` because the strike-through already says it visually.
 			-->
-			{@const creditsCommitNow = pricing.creditsApplicable > 0 && !beforeConfirmWindow}
+			{@const creditsCommitNow = pricing.creditsApplicable > 0}
 			<dl class="space-y-2 py-4 text-sm">
 				<div class="flex justify-between">
 					<dt>
@@ -241,14 +224,7 @@
 				{#if pricing.creditsApplicable > 0}
 					{@const freeHours = creditsToHours(pricing.creditsApplicable)}
 					<div class="flex justify-between text-success">
-						<!-- Free hours are spent at confirmation, so before the window opens
-						     they are a promise rather than a discount. Saying "applied" there
-						     was a number the booking would not get. -->
-						<dt>
-							{creditsCommitNow
-								? m.reservations_booking_confirm_step_free_hours_applied()
-								: m.reservations_booking_confirm_step_free_hours_will_apply()}
-						</dt>
+						<dt>{m.reservations_booking_confirm_step_free_hours_applied()}</dt>
 						<dd>
 							−{freeHours}
 							{freeHours === 1
@@ -258,16 +234,6 @@
 					</div>
 				{/if}
 			</dl>
-
-			{#if beforeConfirmWindow}
-				<p class="text-subtle">
-					{(pricing.remainingCents <= 0
-						? m.reservations_booking_confirm_step_confirmation_opens_we_ll_h_2
-						: m.reservations_booking_confirm_step_confirmation_opens_we_ll_h)({
-						confirmOpensLabel
-					})}
-				</p>
-			{/if}
 		{/if}
 
 		{#if isRecurring}
@@ -322,11 +288,6 @@
 					{m.reservations_booking_confirm_step_hrs_own_free_hours_apply({ freeHours })}
 				{:else}{m.reservations_booking_confirm_step_s_booked_name_have_no()}{/if}
 			</p>
-		{:else if staff}
-			<p class="text-subtle">
-				{m.reservations_booking_confirm_step_comp_makes_reservation_ful()}
-				{#if pricing && pricing.creditsApplicable > 0}{m.reservations_booking_confirm_step_apply_credits_commits_thei()}{:else}{m.reservations_booking_confirm_step_confirm_leaves_full_amount()}{/if}
-			</p>
 		{/if}
 
 		<div class="flex justify-end gap-2 pt-2">
@@ -344,28 +305,13 @@
 						>{m.reservations_booking_confirm_step_pay_ahead()}</Button
 					>
 				{/if}
-			{:else if staff}
-				<!-- Staff choice: comp (fully free, no credits used) or apply the member's
-				     credits (submitter name/value sets comp only when that button submits). -->
-				<Button {...formCtx.fields.comp.as('submit', 'on')} variant="info" outline
-					>{m.reservations_booking_confirm_step_comp()}</Button
-				>
-				<Button type="submit" variant="primary">
-					{pricing && pricing.creditsApplicable > 0
-						? m.reservations_booking_confirm_step_apply_credits()
-						: m.reservations_booking_confirm_step_confirm()}
-				</Button>
 			{:else}
 				<!-- Native submit: the button's name/value sets skipPayment only when
 				     it's the submitter. Named for the dialog it finishes, and primary
 				     even beside Pay Ahead — booking is the action, paying early is the
-				     option (#1027). "Hold this slot" stays where it is true: before the
-				     confirmation window that is the outcome, and calling it booking
-				     would promise free hours the booking cannot spend yet. -->
+				     option (#1027). -->
 				<Button {...formCtx.fields.skipPayment.as('submit', 'on')} variant="primary"
-					>{beforeConfirmWindow
-						? m.reservations_booking_confirm_step_hold_slot()
-						: submitLabel}</Button
+					>{submitLabel}</Button
 				>
 				{#if showPayAhead}
 					<Button type="button" variant="ghost" onclick={() => formCtx.next()}

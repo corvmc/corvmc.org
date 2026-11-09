@@ -131,7 +131,7 @@ function booking(over: Record<string, unknown> = {}) {
 		id: 'res-1',
 		createdByUserId: member.id,
 		bookerType: 'user',
-		status: 'scheduled',
+		status: 'confirmed',
 		paidAt: null,
 		cashDueCents: null,
 		startsAt: new Date(Date.now() + HOUR),

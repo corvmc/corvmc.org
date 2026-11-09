@@ -13,7 +13,7 @@ import { user } from '#lib/server/db/schema/authentication.js';
 import { and, eq, isNull, lt, gt, gte, lte, ne, notInArray, or, sql } from 'drizzle-orm';
 import { getOccurrences, generationWindowEnd } from './rrule-helpers';
 import { formatDateInTz, formatTimeInTz } from './timezone';
-import { staffCreate } from './reservation-service';
+import { announceConfirmed, staffCreate } from './reservation-service';
 import { hasConflict } from './conflict-service';
 import { listingHoldBooker } from './event-hold';
 import { attachExisting } from '#lib/server/media/media-service.js';
@@ -276,17 +276,21 @@ async function processSeries(
 			continue;
 		}
 
-		// No conflict — create as scheduled
-		await db.insert(reservation).values({
-			bookerType: prototype.bookerType,
-			bookerId: prototype.bookerId,
-			createdByUserId: prototype.createdByUserId,
-			status: 'scheduled',
-			startsAt: occStart,
-			endsAt: occEnd,
-			notes: prototype.notes,
-			recurringSeriesId: series.id
-		});
+		// No conflict: an occurrence is confirmed the moment it exists (#2502).
+		const [occurrence] = await db
+			.insert(reservation)
+			.values({
+				bookerType: prototype.bookerType,
+				bookerId: prototype.bookerId,
+				createdByUserId: prototype.createdByUserId,
+				status: 'confirmed',
+				startsAt: occStart,
+				endsAt: occEnd,
+				notes: prototype.notes,
+				recurringSeriesId: series.id
+			})
+			.returning({ id: reservation.id });
+		await announceConfirmed(occurrence.id);
 
 		created++;
 	}

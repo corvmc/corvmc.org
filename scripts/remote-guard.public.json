@@ -60,7 +60,6 @@
 	"src/lib/remote/password-reset.remote.ts#resetPassword": "The reset token is the bearer; goes through better-auth.",
 	"src/lib/remote/radio.remote.ts#getRadioPage": "Public radio page.",
 	"src/lib/remote/radio.remote.ts#getRadioState": "Public now-playing state.",
-	"src/lib/remote/reservations.remote.ts#confirmReservation": "Loads the row requireCapabilityOrOwner checks; returns nothing before the check.",
 	"src/lib/remote/reservations.remote.ts#getAvailableDates": "Public room availability; no booker details.",
 	"src/lib/remote/reservations.remote.ts#getReservationEndTimes": "Public room availability; no booker details.",
 	"src/lib/remote/reservations.remote.ts#getReservationPayment": "Loads the row requireReservationPayer checks; returns nothing before the check.",

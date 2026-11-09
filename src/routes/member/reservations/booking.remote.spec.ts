@@ -133,6 +133,18 @@ vi.mock('#lib/server/db/index.js', () => ({
 const ensureContactPhone = vi.fn(async () => true);
 vi.mock('#lib/server/user/user-service.js', () => ({ ensureContactPhone }));
 
+// Pricing is not under test here: nothing is covered, so it settles at the door.
+vi.mock('#lib/server/reservation/reservation-credit-service.js', async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import('#lib/server/reservation/reservation-credit-service.js')
+	>()),
+	commitReservationCredits: vi.fn(async () => ({
+		remainingCents: 1500,
+		creditDiscountCents: 0,
+		alreadyCommitted: true
+	}))
+}));
+
 /** Stands in for the `issue` helper SvelteKit hands the form handler. */
 const issueProxy = new Proxy(
 	{},
@@ -276,12 +288,11 @@ describe('contact phone requirement', () => {
 		// `never` — cast to override it for the success path.
 		reservationServiceMock.create.mockImplementation((async () => ({
 			id: 'res-1',
-			status: 'scheduled',
+			status: 'confirmed',
 			startsAt: new Date(),
 			endsAt: new Date()
 		})) as never);
 
-		// Far enough out that the booking is held rather than charged.
 		const date = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 		const result = await bookAndPayReservation({
 			date,
@@ -297,61 +308,27 @@ describe('contact phone requirement', () => {
 });
 
 // ---------------------------------------------------------------------------
-// The confirmation window
-//
-// Confirming further out than the window inserted a `scheduled` row and then
-// threw a 400 the member never saw, which the row survived. That row is an
-// ordinary unconfirmed booking, so it is the answer rather than a failure — but it has to be reported as the hold it is. #872.
+// A booking far ahead is confirmed like any other (#2502); before, it was a
+// `scheduled` hold reported back as `scheduled: true` (#872).
 // ---------------------------------------------------------------------------
 
-describe('bookAndPayReservation before the confirmation window opens', () => {
-	/** A date far enough out that no plausible window covers it. */
-	function farOutDate(): string {
-		return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-	}
-
-	beforeEach(() => {
-		reservationServiceMock.create.mockImplementation(async () => ({
-			id: 'res-held',
-			status: 'scheduled',
+describe('bookAndPayReservation far ahead', () => {
+	it('confirms the booking rather than holding it', async () => {
+		reservationServiceMock.create.mockImplementation((async () => ({
+			id: 'res-far',
+			status: 'confirmed',
 			startsAt: new Date(),
 			endsAt: new Date()
-		}));
-	});
+		})) as never);
+		const date = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-	it('reports the booking as held rather than throwing over it', async () => {
 		const result = await bookAndPayReservation({
-			date: farOutDate(),
+			date,
 			startTime: '09:00',
 			endTime: '10:00',
 			skipPayment: 'on'
 		});
 
-		expect(result).toMatchObject({ reservationId: 'res-held', scheduled: true });
-		expect(result.confirmOpensAt).toEqual(expect.any(String));
-	});
-
-	/**
-	 * Both control cases run on past the held-booking return into the credit
-	 * commit, which this spec does not stand up — so what is asserted is that the
-	 * hold was not taken, not what the commit then did.
-	 */
-	async function tookTheHold(date: string): Promise<boolean> {
-		return bookAndPayReservation({ date, startTime: '09:00', endTime: '10:00', skipPayment: 'on' })
-			.then((r: { scheduled?: boolean }) => r?.scheduled === true)
-			.catch(() => false);
-	}
-
-	it('still confirms inside the window', async () => {
-		const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
-		expect(await tookTheHold(tomorrow)).toBe(false);
-	});
-
-	it('lets a reservation.comp holder confirm outside the window', async () => {
-		can.mockImplementation(async (cap) => cap === 'reservation.comp');
-
-		expect(await tookTheHold(farOutDate())).toBe(false);
-		expect(can).toHaveBeenCalledWith('reservation.comp');
+		expect(result).toEqual({ reservationId: 'res-far', confirmed: true });
 	});
 });

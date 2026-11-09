@@ -10,7 +10,6 @@
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
 	import {
-		ConfirmReservationAction,
 		CompleteReservationAction,
 		NoShowReservationAction,
 		CancelReservationAction,
@@ -123,9 +122,6 @@
 <!-- The booking's own workflow sits in the header, visible from anywhere on
      the page; money actions stay on the Payment card. -->
 <PageHeader width="3xl" title={m.staff_reservation()}>
-	{#if actions.has('confirm')}
-		<ConfirmReservationAction reservation={r} staff />
-	{/if}
 	{#if actions.has('complete')}
 		<CompleteReservationAction reservation={r} />
 	{/if}

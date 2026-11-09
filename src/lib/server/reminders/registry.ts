@@ -1,14 +1,9 @@
 import { db } from '#lib/server/db/index.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { eq, and, gt, gte, lt, isNotNull, notInArray } from 'drizzle-orm';
+import { eq, and, gt, gte, lt, isNotNull } from 'drizzle-orm';
 import { formatDateFull, formatTimeSimple } from '#lib/server/reservation/timezone.js';
-import {
-	CONFIRMATION_WINDOW_DAYS,
-	DEFAULT_TIMEZONE,
-	clubToday,
-	eventHoldBookers
-} from '#lib/config.js';
+import { DEFAULT_TIMEZONE, clubToday } from '#lib/config.js';
 import { addIsoDays } from '#lib/utils/deadline.js';
 import { listDevelopmentDeadlinesBetween } from '#lib/server/development/deadline-service.js';
 import {
@@ -194,17 +189,8 @@ function renewalExpiry(stage: '60d' | '14d', from: number, until: number) {
 	});
 }
 
-/**
- * Reservations owed a reminder, by status and how far ahead they start.
- *
- * A show's room is excluded from the confirmation ones: staff-held,
- * with no member confirm/pay flow to nag about.
- */
-async function reservationsStartingWithin(
-	status: 'scheduled' | 'confirmed',
-	ms: number,
-	now: Date
-) {
+/** Confirmed reservations starting within `ms` of `now`. */
+async function reservationsStartingWithin(ms: number, now: Date) {
 	return db
 		.select({
 			id: reservation.id,
@@ -218,10 +204,7 @@ async function reservationsStartingWithin(
 		.innerJoin(user, eq(user.id, reservation.createdByUserId))
 		.where(
 			and(
-				eq(reservation.status, status),
-				...(status === 'scheduled'
-					? [notInArray(reservation.bookerType, [...eventHoldBookers])]
-					: []),
+				eq(reservation.status, 'confirmed'),
 				gte(reservation.startsAt, now),
 				lt(reservation.startsAt, new Date(now.getTime() + ms))
 			)
@@ -243,59 +226,12 @@ const when = (row: { startsAt: Date; endsAt: Date }) => ({
  * why the job fires once — and that last one is what #1123 was.
  */
 export const reminders: ReminderDefinition[] = [
-	// Two stages over one subject, so they carry different keys and each is sent
-	// once. Before the mark they had to be non-overlapping bands on a job that
-	// ran exactly daily, which is the constraint that made #1123 unfixable.
-	defineReminder({
-		key: 'reservation_confirmation_window_open',
-		subjectType: 'reservation',
-		event: 'reservation.confirmation_reminder_due',
-		async due(now) {
-			const rows = await reservationsStartingWithin(
-				'scheduled',
-				CONFIRMATION_WINDOW_DAYS * DAY,
-				now
-			);
-			return rows.map((row) => ({
-				subjectId: row.id,
-				payload: {
-					stage: 'window_open' as const,
-					reservationId: row.id,
-					userId: row.userId,
-					userName: row.userName,
-					userEmail: row.userEmail,
-					...when(row)
-				}
-			}));
-		}
-	}),
-
-	defineReminder({
-		key: 'reservation_confirmation_final',
-		subjectType: 'reservation',
-		event: 'reservation.confirmation_reminder_due',
-		async due(now) {
-			const rows = await reservationsStartingWithin('scheduled', DAY, now);
-			return rows.map((row) => ({
-				subjectId: row.id,
-				payload: {
-					stage: 'final' as const,
-					reservationId: row.id,
-					userId: row.userId,
-					userName: row.userName,
-					userEmail: row.userEmail,
-					...when(row)
-				}
-			}));
-		}
-	}),
-
 	defineReminder({
 		key: 'reservation_reminder',
 		subjectType: 'reservation',
 		event: 'reservation.reminder_due',
 		async due(now) {
-			const rows = await reservationsStartingWithin('confirmed', DAY, now);
+			const rows = await reservationsStartingWithin(DAY, now);
 			return rows.map((row) => ({
 				subjectId: row.id,
 				payload: {

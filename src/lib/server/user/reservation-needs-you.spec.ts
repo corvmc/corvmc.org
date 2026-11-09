@@ -8,7 +8,7 @@ function row(over: Partial<ReservationNeedingYou> = {}): ReservationNeedingYou {
 	return {
 		id: 'res-1',
 		startsAt: new Date(now.getTime() + 2 * DAY),
-		status: 'scheduled',
+		status: 'confirmed',
 		paidAt: null,
 		cashDueCents: null,
 		bandName: null,
@@ -18,7 +18,7 @@ function row(over: Partial<ReservationNeedingYou> = {}): ReservationNeedingYou {
 }
 
 describe('reservationNeedsYouItems', () => {
-	it('asks nothing before the confirmation window opens (#2107)', () => {
+	it('asks nothing before the booking is inside its lead days (#2107)', () => {
 		const items = reservationNeedsYouItems(
 			[row({ startsAt: new Date(now.getTime() + 5 * DAY) })],
 			now
@@ -26,18 +26,18 @@ describe('reservationNeedsYouItems', () => {
 		expect(items).toEqual([]);
 	});
 
-	it('asks for payment inside the window, linking to the pay page', () => {
+	it('asks for payment inside the lead days, linking to the pay page', () => {
 		const [item] = reservationNeedsYouItems([row()], now);
-		expect(item).toMatchObject({ label: 'Pay', dueAt: row().startsAt, rank: 0 });
+		expect(item).toMatchObject({ dueAt: row().startsAt });
 		expect(item.href).toContain('/member/reservations/res-1/pay');
 	});
 
-	it('asks to confirm when free hours cover it', () => {
+	it('sends a booking free hours cover to the list, where they settle it', () => {
 		const [item] = reservationNeedsYouItems([row({ coveredByFreeHours: true })], now);
-		expect(item).toMatchObject({ label: 'Confirm', title: 'Confirm your practice room booking' });
+		expect(item.href).not.toContain('/pay');
 	});
 
-	it('asks a confirmed booking with cash owing to pay, old-model rows included', () => {
+	it('asks a confirmed booking with cash owing to pay, unpriced rows included', () => {
 		const owed = reservationNeedsYouItems(
 			[
 				row({ id: 'a', status: 'confirmed', cashDueCents: 1500 }),
@@ -45,10 +45,7 @@ describe('reservationNeedsYouItems', () => {
 			],
 			now
 		);
-		expect(owed.map((i) => [i.id, i.label])).toEqual([
-			['reservation-unpaid:a', 'Pay'],
-			['reservation-unpaid:b', 'Pay']
-		]);
+		expect(owed.map((i) => i.id)).toEqual(['reservation-unpaid:a', 'reservation-unpaid:b']);
 	});
 
 	it('asks nothing of a settled, paid or out-of-window confirmed booking', () => {

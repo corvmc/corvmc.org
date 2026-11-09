@@ -25,7 +25,7 @@ const bandRow = () => ({
 	bookerType: 'group',
 	bookerId: band.id,
 	createdByUserId: booker.id,
-	status: 'scheduled',
+	status: 'confirmed',
 	startsAt,
 	endsAt,
 	notes: null,

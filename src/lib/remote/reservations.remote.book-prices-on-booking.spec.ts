@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockUser } from '#lib/server/db/test-factory.js';
 
-// #2108: booking prices nothing. Outside the confirmation window the primary
-// button only holds the room, even when free hours would cover it; paying
-// ahead (a $0 payment when they do) is what confirms early. Inside the window,
-// confirming spends the free hours then, and any remainder is cash at the door.
+// #2502: a booking is confirmed when it is made, however far ahead, so the
+// primary button spends free hours then and any remainder is cash at the door
+// (#2108). Paying ahead charges the remainder online. Neither re-confirms it.
 
 const testUser = mockUser({ id: 'user-1', name: 'Test Member', email: 'member@example.com' });
 
@@ -93,16 +92,14 @@ vi.mock('#lib/server/finance/stripe-customer-service.js', () => ({
 	ensureStripeCustomer: vi.fn(async () => 'cus_test')
 }));
 
-const announceConfirmed = vi.fn(async () => undefined);
 vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	create: vi.fn(async () => ({
 		id: 'res-1',
-		status: 'scheduled',
+		status: 'confirmed',
 		startsAt: farOut,
 		endsAt: farOut
 	})),
 	createWaitlisted: vi.fn(),
-	announceConfirmed,
 	confirm: vi.fn(),
 	cancel: vi.fn(),
 	markComplete: vi.fn(),
@@ -160,57 +157,53 @@ beforeEach(() => {
 	can.mockResolvedValue(false);
 });
 
-describe('bookAndPayReservation prices at payment, not at booking', () => {
-	it('holds a fully covered booking outside the window without moving any hours', async () => {
+describe('bookAndPayReservation prices the booking when it is made', () => {
+	it.each([
+		['a month out', farOutDate, farOut],
+		['tomorrow', soonDate, soon]
+	])('spends free hours on a covered booking %s', async (_label, date, start) => {
 		wallet.balance = 8;
-		wallet.resetAt = new Date(farOut.getTime() + 7 * DAY);
+		wallet.resetAt = new Date(start.getTime() + 7 * DAY);
 
-		const result = await book();
+		const result = await book(date);
 
-		expect(result).toMatchObject({ reservationId: 'res-1', scheduled: true });
-		expect(result.confirmed).toBeUndefined();
-		expect(commitReservationCredits).not.toHaveBeenCalled();
-		expect(recordReservationCredit).not.toHaveBeenCalled();
-		expect(updateSets).toEqual([]);
-		expect(announceConfirmed).not.toHaveBeenCalled();
+		expect(result).toMatchObject({ reservationId: 'res-1', confirmed: true });
+		expect(commitReservationCredits).toHaveBeenCalledWith(
+			expect.objectContaining({ reservationId: 'res-1', userId: 'user-1' })
+		);
+		expect(updateSets).toContainEqual(expect.objectContaining({ cashDueCents: 0, creditsUsed: 1 }));
+		expect(checkout).not.toHaveBeenCalled();
 	});
 
-	it('holds a partly covered booking outside the window', async () => {
+	it('leaves the remainder of a partly covered booking owed at the door', async () => {
 		wallet.balance = 1;
 		wallet.resetAt = new Date(farOut.getTime() + 7 * DAY);
 
 		const result = await book();
 
-		expect(result).toMatchObject({ reservationId: 'res-1', scheduled: true });
-		expect(commitReservationCredits).not.toHaveBeenCalled();
-		expect(updateSets).toEqual([]);
+		expect(result).toMatchObject({ reservationId: 'res-1', confirmed: true });
+		expect(commitReservationCredits).toHaveBeenCalled();
+		expect(checkout).not.toHaveBeenCalled();
 	});
 
-	it('settles a covered booking paid ahead as a $0 payment, outside the window', async () => {
+	it('settles a covered booking paid ahead as a $0 payment', async () => {
 		wallet.balance = 8;
 		wallet.resetAt = new Date(farOut.getTime() + 7 * DAY);
 
 		const result = await book(farOutDate, false);
 
 		expect(result).toMatchObject({ reservationId: 'res-1', paid: true });
-		expect(commitReservationCredits).toHaveBeenCalledWith(
-			expect.objectContaining({ reservationId: 'res-1', userId: 'user-1' })
-		);
-		expect(updateSets).toContainEqual(
-			expect.objectContaining({ status: 'confirmed', cashDueCents: 0, creditsUsed: 1 })
-		);
+		expect(updateSets).toContainEqual(expect.objectContaining({ cashDueCents: 0, creditsUsed: 1 }));
 		expect(checkout).not.toHaveBeenCalled();
 	});
 
-	it('spends free hours when the member confirms inside the window', async () => {
+	it('changes payment fields only, never the status', async () => {
 		wallet.balance = 8;
-		wallet.resetAt = new Date(soon.getTime() + 7 * DAY);
+		wallet.resetAt = new Date(farOut.getTime() + 7 * DAY);
 
-		const result = await book(soonDate);
+		await book();
+		await book(farOutDate, false);
 
-		expect(result).toMatchObject({ reservationId: 'res-1', confirmed: true });
-		expect(commitReservationCredits).toHaveBeenCalled();
-		expect(updateSets).toContainEqual(expect.objectContaining({ status: 'confirmed' }));
-		expect(checkout).not.toHaveBeenCalled();
+		expect(updateSets.some((set) => 'status' in set)).toBe(false);
 	});
 });

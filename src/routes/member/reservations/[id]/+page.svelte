@@ -11,7 +11,6 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import { getReservationDetail } from '#lib/remote/reservations.remote.js';
 	import { resolve } from '$app/paths';
-	import UnconfirmedNotice from '#lib/components/reservations/UnconfirmedNotice.svelte';
 	import { EntityIdentity, EntityChip } from '#lib/components/ui/entity/index.js';
 	import {
 		CancelReservationAction,
@@ -107,27 +106,6 @@
 		{/if}
 	{/if}
 
-	{#if res.status === 'scheduled'}
-		<!-- The card carries the amount, the due date and the confirmation window;
-		     without them here, opening a booking to check what is outstanding
-		     tells a member less than the list they came from (#895). -->
-		<InfoCard title={m.member_reservations_id_not_confirmed_yet()}>
-			<p>
-				<ParaglideMessage
-					message={m.member_reservations_id_due_cash_at_door_card}
-					inputs={{ formatDollars: formatDollars(data.totalCents) }}
-					>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
-						>{/snippet}</ParaglideMessage
-				>
-			</p>
-			<UnconfirmedNotice startsAt={res.startsAt} class="space-y-1 text-muted" />
-		</InfoCard>
-
-		<Button href="/member/reservations/{res.id}/pay" variant="primary" class="w-full">
-			{m.member_reservations_id_pay_session()}
-		</Button>
-	{/if}
-
 	<!-- On the day, with a reader configured: the amount goes to the reader by
 	     the door and the member taps there. -->
 	{#if data.reader.payable}
@@ -144,7 +122,7 @@
 		do: cancelling was absent for every status, and a confirmed-but-unpaid
 		booking offered no way to pay (#1062).
 	-->
-	{#if owesBalance || (!isPast && ['waitlisted', 'scheduled', 'confirmed'].includes(res.status))}
+	{#if owesBalance || (!isPast && ['waitlisted', 'confirmed'].includes(res.status))}
 		<div class="flex flex-wrap items-center gap-2">
 			{#if !isPast && res.status === 'waitlisted' && res.waitlistNotifiedAt}
 				<ConfirmWaitlistedAction reservation={res} onsuccess={refresh} variant="success" />

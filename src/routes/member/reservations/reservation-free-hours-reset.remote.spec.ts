@@ -105,7 +105,7 @@ function bookTenDaysOut(resetOffsetMs: number) {
 	booking = {
 		id: 'res-1',
 		createdByUserId: testUser.id,
-		status: 'scheduled',
+		status: 'confirmed',
 		bookerType: 'user',
 		cashDueCents: null,
 		startsAt,
@@ -117,14 +117,14 @@ function bookTenDaysOut(resetOffsetMs: number) {
 	};
 }
 
-const settled = () => updates.find((u) => u.status === 'confirmed' && u.cashDueCents === 0);
+const settled = () => updates.find((u) => u.cashDueCents === 0 && u.creditsUsed != null);
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	updates.length = 0;
 });
 
-describe('payForReservation with credits, outside the confirmation window', () => {
+describe('payForReservation with credits, ten days out', () => {
 	const run = () => payForReservation({ id: 'res-1', coverFees: false, skipPayment: 'on' });
 
 	it('settles a session that starts one minute before the reset', async () => {
@@ -149,7 +149,7 @@ describe('payForReservation with credits, outside the confirmation window', () =
 	});
 });
 
-describe('payReservation (the pay page), outside the confirmation window', () => {
+describe('payReservation (the pay page), ten days out', () => {
 	const run = () => payReservation({ coverFees: false });
 
 	it('settles from free hours a session one minute before the reset, charging nothing', async () => {

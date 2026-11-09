@@ -98,7 +98,6 @@
 	"actions_condition": "Condition",
 	"actions_confirm": "Confirm",
 	"actions_confirm_reservation": "Confirm Reservation",
-	"actions_confirm_reservation_success_toast": "Confirmed",
 	"actions_confirm_waitlisted_have_until_confirm_before_slot": "You have until {formatDate} to confirm before the slot is offered to someone else.",
 	"actions_confirm_waitlisted_label": "Confirm Slot",
 	"actions_confirm_waitlisted_modal_title": "Confirm Waitlisted Reservation",
