@@ -73,7 +73,6 @@
 		remainingCents: number;
 	} | null>(null);
 
-	let startsAt = $state<Date | null>(null);
 	let dateLabel = $state('');
 	let timeLabel = $state('');
 	let recurringFrequency = $state('');
@@ -102,7 +101,6 @@
 				date = start.date;
 				startTime = start.time;
 				endTime = end.time;
-				startsAt = reservation.startsAt;
 				dateLabel = fullDate(reservation.startsAt);
 				timeLabel = formatTimeRange(reservation.startsAt, reservation.endsAt);
 				recurringFrequency = '';
@@ -119,7 +117,6 @@
 					if (date && startTime) {
 						const startIso = clubInstant(date, startTime);
 						const endIso = endTime ? clubInstant(date, endTime) : startIso;
-						startsAt = startIso;
 						dateLabel = fullDate(startIso);
 						timeLabel = formatTimeRange(startIso, endIso);
 					}

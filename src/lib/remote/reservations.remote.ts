@@ -54,12 +54,7 @@ import {
 	type ClosureRow
 } from '#lib/server/reservation/closure-timeline.js';
 import type { Pagination } from '#lib/types/pagination.js';
-import {
-	can,
-	requireCapability,
-	requireCapabilityOrOwner,
-	requireUser
-} from '#lib/server/authorization.js';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import {
 	bandRefColumns,
 	eventRefColumns,
