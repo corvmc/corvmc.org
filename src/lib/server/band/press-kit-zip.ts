@@ -23,6 +23,7 @@ import type { PressKitDocument } from '#lib/server/band/press-kit-html.js';
 import type { BandEpk } from '#lib/types/band-page.js';
 import { sanitizeBio } from '#lib/utils/markdown.js';
 import { canonicalAddress } from '#lib/utils/canonical-address.js';
+import { bandSiteUrl } from '#lib/utils/band-site-url.js';
 
 /**
  * Everything is held in memory at once: a Worker gets 128MB and each photo may
@@ -93,15 +94,16 @@ export async function packPressKit(
 type SiteContent = Awaited<ReturnType<typeof loadBandSiteContent>>;
 
 /**
- * The public kit, field for field what `/band-site/[slug]/epk` renders.
+ * The public kit: nothing `/band-site/[slug]/epk` does not render.
  *
- * `publicPressKit` drops every contact. Videos, hometown and founded year are
- * not on that page either, so they stay out. Members are credited by the
- * band's alias, as the page credits them, never by the account name.
+ * `publicPressKit` drops every contact, so a shared file carries none; it links
+ * to the page instead. Videos, hometown and founded year are not on that page,
+ * so they stay out. Members are credited as the page credits them.
  */
 export function publicPressKitContent(
 	content: Pick<SiteContent, 'band' | 'members' | 'events'>,
-	epk: BandEpk | null | undefined
+	epk: BandEpk | null | undefined,
+	customDomain: string | null = null
 ): PressKitContent {
 	const { band } = content;
 	return {
@@ -122,7 +124,9 @@ export function publicPressKitContent(
 			where: e.location ?? null
 		})),
 		links: (band.links ?? []).map((l) => ({ label: l.label, url: l.url })),
-		epk: { ...publicPressKit(epk), videos: [] }
+		epk: { ...publicPressKit(epk), videos: [] },
+		// The contacts stay on the page, so the file points at it.
+		contactUrl: `${bandSiteUrl(band.slug, publicEnv.PUBLIC_SITE_URL, customDomain)}/epk`
 	};
 }
 
@@ -153,7 +157,12 @@ export async function loadPublicPressKit(
 
 	return {
 		name: joined.band.name,
-		content: publicPressKitContent(siteContent, joined.site.epk),
+		content: publicPressKitContent(
+			siteContent,
+			joined.site.epk,
+			// Only a live custom domain, as `getBandSiteData` decides for canonical URLs.
+			joined.site.customDomainStatus === 'active' ? joined.site.customDomain : null
+		),
 		photoKeys: gallery.map((m) => m.key)
 	};
 }

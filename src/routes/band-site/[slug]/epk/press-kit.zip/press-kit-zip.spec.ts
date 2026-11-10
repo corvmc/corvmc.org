@@ -72,7 +72,10 @@ const EPK = {
 	videos: [{ url: 'https://video.private.test/live', label: 'Live at the Hall' }]
 };
 
-function joined(tier: string | null) {
+function joined(
+	tier: string | null,
+	domain: { customDomain: string; customDomainStatus: string } | null = null
+) {
 	return {
 		band: { id: 'b1', name: 'The Neons', slug: 'the-neons', avatarKey: null, deletedAt: null },
 		entry: {
@@ -81,7 +84,7 @@ function joined(tier: string | null) {
 			contactEmail: 'enquiries@private.test',
 			contactPhone: '541-555-0199'
 		},
-		site: tier ? { tier, epk: EPK } : null
+		site: tier ? { tier, epk: EPK, customDomain: null, ...domain } : null
 	};
 }
 
@@ -137,11 +140,25 @@ describe('GET /band-site/[slug]/epk/press-kit.zip', () => {
 			const text = strFromU8(files[name]);
 			expect(text).toContain('Blindingly good.');
 			expect(text).toContain('Neon Jo');
+			expect(text).toContain('https://the-neons.corvmc.test/epk');
 			expect(text).not.toContain('private.test');
 			expect(text).not.toMatch(/541-555/);
 			for (const hidden of ['Booker Bea', 'Manager Max', 'Press Pat', 'Hometown Private', '1999']) {
 				expect(text).not.toContain(hidden);
 			}
+		}
+	});
+
+	it.each([
+		['active', 'https://neons.band.test/epk'],
+		['pending', 'https://the-neons.corvmc.test/epk']
+	])('links to the page on the custom domain only once it is live (%s)', async (status, url) => {
+		selectResult.rows = [
+			joined('premium', { customDomain: 'neons.band.test', customDomainStatus: status })
+		];
+		const files = unzipSync(new Uint8Array(await ((await call()) as Response).arrayBuffer()));
+		for (const name of ['press-kit.html', 'press-kit.txt']) {
+			expect(strFromU8(files[name])).toContain(url);
 		}
 	});
 });
