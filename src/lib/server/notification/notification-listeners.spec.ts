@@ -1549,43 +1549,68 @@ describe('show cancelled, to each committee with open items (#1709)', () => {
 describe('committee show work due (#1709)', () => {
 	beforeEach(() => registerAllNotificationListeners());
 
-	const due = {
+	const item = {
 		stage: 'due_3d' as const,
 		workOrderId: 'wo-1',
 		title: 'Poster art made',
 		eventTitle: 'Friday Night Fuzz',
 		dueAt: '2026-10-09T03:00:00.000Z',
 		groupName: 'Art and Merchandise Committee',
-		groupSlug: 'art-and-merchandise-committee',
-		recipients: [
-			{ userId: 'u1', userName: 'Cy', userEmail: 'u1@test.com' },
-			{ userId: 'u2', userName: 'Di', userEmail: 'u2@test.com' }
-		]
+		groupSlug: 'art-and-merchandise-committee'
 	};
+	const recipient = { userId: 'u1', userName: 'Cy', userEmail: 'u1@test.com' };
+	const digest = (...items: object[]) => ({
+		recipient,
+		items
+	});
 	const calls = () =>
 		mockDispatch.mock.calls.map(([p]) => p).filter((p) => p.type === 'deliverable_due');
 
-	it('tells each recipient what is due and when, linking to the Open items tab', async () => {
-		await emit('volunteer.deliverable_due', due);
-		const sent = calls();
-		expect(sent.map((c) => c.userId)).toEqual(['u1', 'u2']);
-		expect(sent[0].href).toBe('/member/groups/art-and-merchandise-committee?tab=items');
-		expect(sent[0].title).toContain('Poster art made');
-		expect(paragraphText(sent[0].email)).toContain('Friday Night Fuzz');
-		expect(detailText(sent[0].email)).toContain('Committee: Art and Merchandise Committee');
+	it('names the item and its show for a single item, linking to the Open items tab', async () => {
+		await emit('volunteer.deliverable_due', digest(item));
+		const [sent] = calls();
+		expect(sent.userId).toBe('u1');
+		expect(sent.href).toBe('/member/groups/art-and-merchandise-committee?tab=items');
+		expect(sent.email.subject).toContain('Poster art made');
+		expect(sent.email.subject).toContain('Friday Night Fuzz');
+		expect(detailText(sent.email)).toContain('Committee: Art and Merchandise Committee');
 	});
 
-	it('says overdue once it is late', async () => {
-		await emit('volunteer.deliverable_due', { ...due, stage: 'overdue' });
+	it('names the show in an overdue subject too, so two shows do not read as duplicates', async () => {
+		await emit('volunteer.deliverable_due', digest({ ...item, stage: 'overdue' }));
 		const [first] = calls();
-		expect(first.title).toBe('Overdue: Poster art made');
-		expect(first.email.heading).toBe('Show work overdue');
+		expect(first.email.subject).toContain('Poster art made');
+		expect(first.email.subject).toContain('Friday Night Fuzz');
 	});
 
-	it('keeps going past a recipient whose dispatch fails', async () => {
+	it('sends several items as one mail, late ones first, one row each', async () => {
+		await emit(
+			'volunteer.deliverable_due',
+			digest(
+				item,
+				{ ...item, workOrderId: 'wo-2', eventTitle: 'Show B', stage: 'overdue' },
+				{
+					...item,
+					workOrderId: 'wo-3',
+					eventTitle: 'Show C',
+					groupSlug: 'booking',
+					groupName: 'Booking'
+				}
+			)
+		);
+		const sent = calls();
+		expect(sent).toHaveLength(1);
+		expect(sent[0].email.subject).toContain('3');
+		expect(sent[0].email.details).toHaveLength(3);
+		expect(sent[0].email.details[0].value).toContain('Show B');
+		expect(sent[0].data).toEqual({ workOrderIds: ['wo-2', 'wo-1', 'wo-3'] });
+		// Two committees: the link is the committees list, not one of them.
+		expect(sent[0].href).toBe('/member/groups');
+	});
+
+	it('lets a failed dispatch throw, so the drain leaves the items owed', async () => {
 		mockDispatch.mockRejectedValueOnce(new Error('down'));
-		await emit('volunteer.deliverable_due', due);
-		expect(mockDispatch).toHaveBeenCalledTimes(2);
+		await expect(emit('volunteer.deliverable_due', digest(item))).rejects.toThrow('down');
 	});
 });
 

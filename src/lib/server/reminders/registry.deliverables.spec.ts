@@ -56,15 +56,15 @@ describe('deliverable reminders', () => {
 		expect(await byKey('deliverable_due_3d').due(NOW)).toEqual([
 			{
 				subjectId: `wo-1:${item.dueAt.toISOString()}`,
-				payload: {
+				recipients: item.recipients,
+				item: {
 					stage: 'due_3d',
 					workOrderId: 'wo-1',
 					title: 'Poster art made',
 					eventTitle: 'Friday Night Fuzz',
 					dueAt: item.dueAt.toISOString(),
 					groupName: 'Art and Merchandise Committee',
-					groupSlug: 'art-and-merchandise-committee',
-					recipients: item.recipients
+					groupSlug: 'art-and-merchandise-committee'
 				}
 			}
 		]);

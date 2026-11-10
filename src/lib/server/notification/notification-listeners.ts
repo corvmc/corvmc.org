@@ -1287,46 +1287,65 @@ export function registerAllNotificationListeners(): void {
 	});
 
 	// --- A committee's show work, due in three days or late (#1709) ---
-	domainEvents.on('volunteer.deliverable_due', async ({ data: event }) => {
-		const due = formatWorkedOn(event.dueAt);
-		const late = event.stage === 'overdue';
-		const on = event.eventTitle ? ` for ${event.eventTitle}` : '';
-		const title = late ? `Overdue: ${event.title}` : `Due ${due}: ${event.title}`;
-		const line = late
-			? `"${event.title}"${on} was due ${due} and is not done yet.`
-			: `"${event.title}"${on} is due ${due}.`;
-		for (const person of event.recipients) {
-			try {
-				await dispatch({
-					type: 'deliverable_due',
-					userId: person.userId,
-					userEmail: person.userEmail,
-					title,
-					body: `${event.groupName} · ${line}`,
-					href: `/member/groups/${event.groupSlug}?tab=items`,
-					email: {
-						recipientName: person.userName,
-						subject: title,
-						heading: late ? 'Show work overdue' : 'Show work due soon',
-						paragraphs: [
-							{ text: line },
-							{
-								text: 'It is done once the show says so and its tasks are ticked. If it is done some other way, mark it done anyway.'
-							}
-						],
-						details: [
-							{ label: 'Item', value: event.title },
-							...(event.eventTitle ? [{ label: 'Show', value: event.eventTitle }] : []),
-							{ label: 'Due', value: due },
-							{ label: 'Committee', value: event.groupName }
-						],
-						cta: { label: 'Open the committee' }
+	// One event is one person's digest for a reminder pass (#2507). Not caught:
+	// a throw here is how the drain knows to leave the items owed.
+	domainEvents.on('volunteer.deliverable_due', async ({ data: { recipient, items: owed } }) => {
+		if (owed.length === 0) return;
+		const items = [...owed].sort(
+			(a, b) =>
+				Number(b.stage === 'overdue') - Number(a.stage === 'overdue') ||
+				a.dueAt.localeCompare(b.dueAt)
+		);
+		const late = items.filter((i) => i.stage === 'overdue').length;
+		const oneCommittee = new Set(items.map((i) => i.groupSlug)).size === 1;
+		const on = (i: (typeof items)[number]) => (i.eventTitle ? ` for ${i.eventTitle}` : '');
+		const due = (i: (typeof items)[number]) => formatWorkedOn(i.dueAt);
+
+		const [first] = items;
+		const single = items.length === 1;
+		const title = single
+			? first.stage === 'overdue'
+				? `Overdue: ${first.title}${on(first)}`
+				: `Due ${due(first)}: ${first.title}${on(first)}`
+			: `${items.length} show items need you`;
+		const line = single
+			? first.stage === 'overdue'
+				? `"${first.title}"${on(first)} was due ${due(first)} and is not done yet.`
+				: `"${first.title}"${on(first)} is due ${due(first)}.`
+			: `${items.length} show items are not done yet: ${late} late, ${items.length - late} due within three days.`;
+
+		await dispatch({
+			type: 'deliverable_due',
+			userId: recipient.userId,
+			userEmail: recipient.userEmail,
+			title,
+			body: single ? `${first.groupName} · ${line}` : line,
+			href: oneCommittee ? `/member/groups/${first.groupSlug}?tab=items` : '/member/groups',
+			data: { workOrderIds: items.map((i) => i.workOrderId) },
+			email: {
+				recipientName: recipient.userName,
+				subject: title,
+				heading: late > 0 ? 'Show work overdue' : 'Show work due soon',
+				paragraphs: [
+					{ text: line },
+					{
+						text: 'An item is done once the show says so and its tasks are ticked. If it is done some other way, mark it done anyway.'
 					}
-				});
-			} catch (err) {
-				captureException(err, { event: 'notification.deliverable_due', to: person.userEmail });
+				],
+				details: single
+					? [
+							{ label: 'Item', value: first.title },
+							...(first.eventTitle ? [{ label: 'Show', value: first.eventTitle }] : []),
+							{ label: 'Due', value: due(first) },
+							{ label: 'Committee', value: first.groupName }
+						]
+					: items.map((i) => ({
+							label: i.stage === 'overdue' ? `Overdue, ${due(i)}` : `Due ${due(i)}`,
+							value: [i.title, i.eventTitle, i.groupName].filter(Boolean).join(' · ')
+						})),
+				cta: { label: oneCommittee ? 'Open the committee' : 'Open your committees' }
 			}
-		}
+		});
 	});
 
 	domainEvents.on('event.unpublished_by_staff', async ({ data: event }) => {

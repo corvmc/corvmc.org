@@ -118,13 +118,15 @@ function radioAttestationExpiry(stage: '30d' | '7d', from: number, until: number
 /**
  * One stage of a committee's show work (#1709): open items due between `from`
  * and `until` days from now, done ones dropped. The subject carries the due
- * date, so an item whose date moves is owed its reminders again.
+ * date, so an item whose date moves is owed its reminders again. A digest: both
+ * stages reach each person as one mail per pass (#2507).
  */
 function deliverablesDue(stage: 'due_3d' | 'overdue', from: number, until: number) {
 	return defineReminder({
 		key: stage === 'due_3d' ? 'deliverable_due_3d' : 'deliverable_overdue',
 		subjectType: 'work_order',
 		event: 'volunteer.deliverable_due' as const,
+		digest: true,
 		async due(now: Date) {
 			const rows = await listDeliverablesDueBetween(
 				new Date(now.getTime() + from * DAY),
@@ -134,15 +136,15 @@ function deliverablesDue(stage: 'due_3d' | 'overdue', from: number, until: numbe
 				.filter((r) => r.recipients.length > 0)
 				.map((r) => ({
 					subjectId: `${r.id}:${r.dueAt.toISOString()}`,
-					payload: {
+					recipients: r.recipients,
+					item: {
 						stage,
 						workOrderId: r.id,
 						title: r.title,
 						eventTitle: r.eventTitle,
 						dueAt: r.dueAt.toISOString(),
 						groupName: r.groupName,
-						groupSlug: r.groupSlug,
-						recipients: r.recipients
+						groupSlug: r.groupSlug
 					}
 				}));
 		}

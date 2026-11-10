@@ -623,7 +623,7 @@ export interface ProductionCancelledEvent {
 }
 
 /** A committee deliverable is due soon, or late (#1709). */
-export interface DeliverableDueEvent {
+export interface DeliverableDueItem {
 	stage: 'due_3d' | 'overdue';
 	workOrderId: string;
 	title: string;
@@ -632,8 +632,16 @@ export interface DeliverableDueEvent {
 	dueAt: string;
 	groupName: string;
 	groupSlug: string;
-	/** Its live assignees, or the owning committee's active members when nobody has it. */
-	recipients: Array<{ userId: string; userName: string; userEmail: string }>;
+}
+
+/**
+ * Every show item newly owed to one person in one reminder pass, both stages
+ * together (#2507). Recipients are an item's live assignees, or the owning
+ * committee's active members when nobody has it.
+ */
+export interface DeliverableDueEvent {
+	recipient: { userId: string; userName: string; userEmail: string };
+	items: DeliverableDueItem[];
 }
 
 export interface EventUnpublishedByStaffEvent {
