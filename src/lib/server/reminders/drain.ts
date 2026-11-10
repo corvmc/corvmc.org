@@ -53,7 +53,7 @@ async function owed<T extends { subjectId: string }>(
 	now: Date,
 	out: DrainResult
 ): Promise<T[]> {
-	const due = (await definition.due(now)) as T[];
+	const due = (await definition.due(now)) as unknown as T[];
 	out.due += due.length;
 	if (due.length === 0) return [];
 	const sent = await alreadySentFor(

@@ -26,6 +26,8 @@ export interface DigestDue<K extends keyof DomainEvents> {
 	subjectId: string;
 	recipients: ReminderRecipient[];
 	item: DigestItem<K>;
+	/** Absent, so a widened definition's `due()` still reads as `payload | undefined`. */
+	payload?: never;
 }
 
 interface Common<K extends keyof DomainEvents> {
