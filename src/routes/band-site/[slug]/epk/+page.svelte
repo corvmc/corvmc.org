@@ -45,7 +45,13 @@
 
 <!-- Print button (hidden in print) -->
 <div class="no-print fixed top-4 right-4 z-50 flex gap-2">
-	<Button variant="primary" size="sm" onclick={() => window.print()}
+	<Button
+		href={bandSiteHref(band.slug, '/epk/press-kit.zip', page.url)}
+		download
+		variant="primary"
+		size="sm">{msg.public_band_site_slug_epk_download_press_kit()}</Button
+	>
+	<Button variant="ghost" size="sm" onclick={() => window.print()}
 		>{msg.public_band_site_slug_epk_download_print_pdf()}</Button
 	>
 	<Button href={bandSiteHref(band.slug, '', page.url)} variant="ghost" size="sm">

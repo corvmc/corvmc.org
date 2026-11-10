@@ -10,50 +10,33 @@
  * at a different moment. It lives at `/band/[slug]/rider` and exports itself.
  *
  * Admin-only, and deliberately so: this is the *full* kit, contacts and phone
- * numbers included. The public page publishes none of that.
+ * numbers included. The public download at `/band-site/[slug]/epk/press-kit.zip`
+ * carries none of that.
  *
  * A deferred step slots in here without moving anything else — Cloudflare
  * Browser Rendering turning `renderPressKitHtml`'s string into a real
  * `press-kit.pdf` beside the HTML.
  */
-import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { zipSync, strToU8 } from 'fflate';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { bandSite } from '#lib/server/db/schema/band-site.js';
 import { directoryEntry, directoryTag } from '#lib/server/db/schema/directory.js';
-import { and } from 'drizzle-orm';
 import { requireGroupRole } from '#lib/server/group/group-context.js';
 import { listFor as listMediaFor } from '#lib/server/media/media-service.js';
-import { getObject } from '#lib/server/storage.js';
 import { getMembers } from '#lib/server/band/band-service.js';
 import { listBandEventsUpcoming } from '#lib/server/event/event-service.js';
 import { fullPressKit } from '#lib/server/band/press-kit.js';
-import { renderPressKitHtml, renderPressKitText } from '#lib/server/band/press-kit-html.js';
-import type { PressKitDocument } from '#lib/server/band/press-kit-html.js';
+import {
+	formatShowDate,
+	packPressKit,
+	pressKitFilename,
+	type PressKitContent
+} from '#lib/server/band/press-kit-zip.js';
 import { sanitizeBio } from '#lib/utils/markdown.js';
 import { canonicalAddress } from '#lib/utils/canonical-address.js';
-import { extensionForType } from '#lib/server/storage-keys.js';
 import * as publicEnv from '$app/env/public';
 import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
-
-/**
- * Everything held in memory at once, so this is a real ceiling rather than a
- * guess. A Worker gets 128MB and each photo may be 10MB; refusing with a
- * message a band can act on beats an isolate killed mid-response, which they
- * would see as a download that silently produced nothing.
- */
-const MAX_PACK_BYTES = 50 * 1024 * 1024;
-
-function slugifyName(name: string): string {
-	return (
-		name
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')
-			.replace(/^-|-$/g, '') || 'press-kit'
-	);
-}
 
 export const GET: RequestHandler = async ({ params }) => {
 	const bandId = params.id;
@@ -85,45 +68,7 @@ export const GET: RequestHandler = async ({ params }) => {
 		listMediaFor('group', band.id, 'gallery')
 	]);
 
-	const files: Record<string, Uint8Array> = {};
-	let packBytes = 0;
-
-	/** Pull one object into the zip, or skip it if the bucket no longer has it. */
-	async function pack(key: string, path: string, fallbackType: string): Promise<string | null> {
-		const object = await getObject(key);
-		// A `media` row whose object is gone is a missing file, not a failure —
-		// the whole kit should still assemble.
-		if (!object) return null;
-		if (packBytes + object.bytes.byteLength > MAX_PACK_BYTES) return null;
-		packBytes += object.bytes.byteLength;
-		const ext = extensionForType(object.contentType ?? fallbackType);
-		const named = `${path}.${ext}`;
-		files[named] = object.bytes;
-		return named;
-	}
-
-	const photoPaths: string[] = [];
-	let i = 1;
-	for (const item of media.filter((m) => m.slot === 'gallery')) {
-		const path = await pack(item.key, `photos/press-${i}`, 'image/jpeg');
-		if (path) {
-			photoPaths.push(path);
-			i++;
-		}
-	}
-
-	if (packBytes >= MAX_PACK_BYTES) {
-		throw error(413, 'Your press kit is too large to package. Remove a few photos and try again.');
-	}
-
-	const dateFormat = new Intl.DateTimeFormat('en-US', {
-		weekday: 'short',
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric'
-	});
-
-	const doc: PressKitDocument = {
+	const content: PressKitContent = {
 		name: band.name,
 		tagline: entry?.tagline ?? null,
 		bioHtml: entry?.bio ? sanitizeBio(entry.bio) : null,
@@ -139,26 +84,21 @@ export const GET: RequestHandler = async ({ params }) => {
 			.map((m) => ({ name: m.member.title, position: m.position ?? null })),
 		shows: shows.map((e) => ({
 			title: e.title,
-			when: dateFormat.format(e.startsAt),
+			when: formatShowDate(e.startsAt),
 			where: e.location ?? null
 		})),
 		links: ((entry?.links as ProfileLink[] | null) ?? []).map((l) => ({
 			label: l.label,
 			url: l.url
 		})),
-		epk: fullPressKit(site?.epk),
-		photoPaths
+		epk: fullPressKit(site?.epk)
 	};
 
-	files['press-kit.html'] = strToU8(renderPressKitHtml(doc));
-	files['press-kit.txt'] = strToU8(renderPressKitText(doc));
-
-	// `zipSync`, not the streaming builder: everything is already resident by
-	// the time we get here, so streaming would add a pipeline without lowering
-	// the peak. `level: 0` for the images — a JPEG does not deflate, and the
-	// pass costs CPU for a percent or two.
-	const zipped = zipSync(files, { level: 6, mtime: new Date() });
-	const filename = `${slugifyName(band.name)}-press-kit.zip`;
+	const zipped = await packPressKit(
+		content,
+		media.filter((m) => m.slot === 'gallery').map((m) => m.key)
+	);
+	const filename = pressKitFilename(band.name);
 
 	return new Response(zipped, {
 		headers: {
