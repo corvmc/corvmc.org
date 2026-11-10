@@ -61,7 +61,7 @@ export function formatShowDate(date: Date): string {
 export async function packPressKit(
 	content: PressKitContent,
 	photoKeys: string[]
-): Promise<Uint8Array> {
+): Promise<Uint8Array<ArrayBuffer>> {
 	const files: Record<string, Uint8Array> = {};
 	const photoPaths: string[] = [];
 	let packBytes = 0;
