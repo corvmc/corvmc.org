@@ -30,6 +30,8 @@ export interface PressKitDocument {
 	shows: { title: string; when: string; where: string | null }[];
 	links: { label: string; url: string }[];
 	epk: FullPressKit;
+	/** Where a reader finds the contacts this kit leaves out. Public kit only. */
+	contactUrl?: string | null;
 	/** Paths *within the zip*, not URLs. */
 	photoPaths: string[];
 }
@@ -197,6 +199,7 @@ ${section('Upcoming shows', shows ? `<ul>${shows}</ul>` : '')}
 ${section('Listen', links ? `<ul>${links}</ul>` : '')}
 ${section('Watch', videos ? `<ul>${videos}</ul>` : '')}
 ${section('Contact', contacts ? `<div class="contacts">${contacts}</div>` : '')}
+${doc.contactUrl ? `<section><p>Contact and bookings: <a href="${escapeHtml(doc.contactUrl)}">${escapeHtml(doc.contactUrl)}</a></p></section>` : ''}
 
 <footer>
   ${qr ?? ''}
@@ -290,6 +293,7 @@ export function renderPressKitText(doc: PressKitDocument): string {
 	add('Management', epk.managementContact);
 	add('Press', epk.prContact);
 	block('Contact', contacts);
+	if (doc.contactUrl) lines.push('', `Contact and bookings: ${doc.contactUrl}`);
 
 	if (doc.url) lines.push('', `Always current at ${doc.url}`);
 
