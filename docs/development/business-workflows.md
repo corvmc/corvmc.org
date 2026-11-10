@@ -757,7 +757,9 @@ and re-labelling it `email` would let unrelated mail from the same address merge
 - **Inbound SMS:** Twilio webhook → `worker.js` (`admitTwilioInbound`, past Kit's CSRF check) →
   `src/routes/api/inbox/twilio/+server.ts` (verifies the signature) → `handleTwilioInbound()`.
 - **Contact form:** the public `/contact` page also funnels in via `handleContactForm()`,
-  which additionally emits `contact.form_submitted` → an alert email to `STAFF_CONTACT_EMAIL`.
+  which additionally emits `contact.form_submitted` → an alert email to `STAFF_CONTACT_EMAIL`,
+  or to `BOOKING_CONTACT_EMAIL` when the subject is "Performance Inquiry". Both carry the
+  thread's signed `Reply-To`, so a reply from either inbox is relayed and recorded.
 - All three thread the message via `thread-service.ts` / `message-service.ts` (match on
   sender address/number, else create a thread) and emit `inbox.message_received` — the
   listener in `events/register-listeners.ts` notifies every staff user, linking to

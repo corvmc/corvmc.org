@@ -92,6 +92,8 @@ EMAIL_FROM_NAME = "CorvMC"
 CMC_MIGRATE_AFTER_PUBLISH = "1"
 EMAIL_FROM_ADDRESS = "noreply@corvmc.org"
 STAFF_CONTACT_EMAIL = "contact@corvmc.org"
+# Recipient of contact-form alerts with the subject "Performance Inquiry".
+BOOKING_CONTACT_EMAIL = "booking@corvmc.org"
 # Postmark message streams. Custom streams, not Postmark's defaults
 # (`outbound`/`broadcast`) — both must exist with these exact ids on the server
 # POSTMARK_SERVER_TOKEN belongs to. Required: sends throw when either is unset.

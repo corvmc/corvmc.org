@@ -3,7 +3,12 @@ import {
 	type GroupInviteCreatedEvent,
 	type MemberInviteCreatedEvent
 } from '#lib/server/event-bus/event-bus.js';
-import { INVITE_EXPIRY_DAYS, hourLogExceptionLabels, renewalKindLabels } from '#lib/config.js';
+import {
+	INVITE_EXPIRY_DAYS,
+	PERFORMANCE_INQUIRY_SUBJECT,
+	hourLogExceptionLabels,
+	renewalKindLabels
+} from '#lib/config.js';
 import { formatCents } from '#lib/utils/format.js';
 import { groupKindLabels } from '#lib/terms.js';
 import { fanOutAnnouncement, fanOutGroupRoom } from '#lib/server/group/announcement-fanout.js';
@@ -1146,7 +1151,11 @@ export function registerAllNotificationListeners(): void {
 	// Plain text, and replyable: staff answer this from whatever mail client
 	// they already have open instead of clicking through to the inbox.
 	domainEvents.on('contact.form_submitted', async ({ data: event }) => {
-		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.org';
+		// Only the recipient differs by subject; the thread and its Reply-To do not.
+		const staffEmail =
+			event.subject === PERFORMANCE_INQUIRY_SUBJECT
+				? (env.BOOKING_CONTACT_EMAIL ?? 'booking@corvmc.org')
+				: (env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.org');
 
 		// The signed thread address routes a staff reply back through the inbox,
 		// which relays it to the sender and records it on the conversation. With
