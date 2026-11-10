@@ -88,7 +88,11 @@ comes inside that lead.
   past their end time as `completed` (cash-owed ones are left for staff).
 - `reminders` — drains the registry in `src/lib/server/reminders/registry.ts` every 15
   minutes and emits the reminder events for anything owed one (notification listeners
-  send the emails). `reminder_sent` is what makes each fire once.
+  send the emails). `reminder_sent` is what makes each fire once. A definition marked
+  `digest` (today only the two committee show-work stages) is folded with every other one
+  sharing its event into one emit per recipient per pass, so a person owed four items gets
+  one mail; each item is still stamped under its own stage, and only once its recipients'
+  sends went through (#2507).
 
 **Cancellation.** `cancel()` in `reservation-service.ts`: authorization (owner or staff
 override), atomic conditional status update, Stripe refund if a payment record exists

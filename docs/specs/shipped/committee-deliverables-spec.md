@@ -260,8 +260,9 @@ Both are over committee-owned work orders that are open and have a due date:
 - The subject carries the due date, so an item whose date moves is owed its reminders again.
 - The recipients are the item's live assignees if it has any, and otherwise the active members of
   the owning committee.
-- They send one new event, `volunteer.deliverable_due`, which carries a `stage`, and one new
-  catalogue type, `deliverable_due`, in category `shows`.
+- They send one new event, `volunteer.deliverable_due`, and one new catalogue type,
+  `deliverable_due`, in category `shows`. Since #2507 the event is a digest: one per person per
+  drain pass, listing every item owed them from both stages, each carrying its `stage`.
 - An item overdue by more than 14 days gets no further reminders. The queue shows it in red.
 
 ### 6. Permission: responsibility never narrows it
