@@ -10,6 +10,7 @@
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo '' && pnpm messages:compile && lefthook install",
 		"messages:compile": "paraglide-js compile --project ./project.inlang --silent",
+		"messages:roles": "tsx scripts/message-key-roles.ts",
 		"check": "svelte-kit sync && pnpm messages:compile && svelte-check --tsconfig ./tsconfig.json && pnpm check:tooling",
 		"check:tooling": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.tooling.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
