@@ -332,6 +332,7 @@ A single component that handles four patterns depending on its props: direct asy
 **Labels and modal titles are definite**: a verb and its object ("Log hours", "New suggestion",
 "Ask an act"), never "someone", "something" or "anyone". The form inside says who or what.
 `custom/definite-action-labels` enforces it on literal labels.
+Every title and label is scored against [writing.md](writing.md).
 
 ### Direct action
 
