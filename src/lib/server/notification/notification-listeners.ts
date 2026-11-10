@@ -649,11 +649,7 @@ export function registerAllNotificationListeners(): void {
 
 	// --- Equipment loan requested (notify staff) ---
 	domainEvents.on('equipment.loan_requested', async ({ data: event }) => {
-		// Only the recipient differs by subject; the thread and its Reply-To do not.
-		const staffEmail =
-			event.subject === PERFORMANCE_INQUIRY_SUBJECT
-				? (env.BOOKING_CONTACT_EMAIL ?? 'booking@corvmc.org')
-				: (env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.org');
+		const staffEmail = env.STAFF_CONTACT_EMAIL ?? 'staff@corvmc.org';
 
 		await dispatchEmailOnly({
 			type: 'equipment_loan_requested',
