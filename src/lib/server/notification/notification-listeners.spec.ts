@@ -630,6 +630,14 @@ describe('collapsed listeners use the generic template', () => {
 		expect(params.model.threadUrl).toBe('https://test.corvmc.com/staff/inbox/thread-9');
 	});
 
+	it('contact.form_submitted → a performance inquiry goes to booking, with the thread Reply-To', async () => {
+		await emit('contact.form_submitted', { ...contactFormEvent, subject: 'Performance Inquiry' });
+
+		const params = mockDispatchEmailOnly.mock.calls[0][0];
+		expect(params.toEmail).toBe('booking@corvmc.org');
+		expect(params.replyTo).toBe('reply+thread-9.sig@replies.test');
+	});
+
 	it('contact.form_submitted → replies route back through the thread address', async () => {
 		await emit('contact.form_submitted', contactFormEvent);
 

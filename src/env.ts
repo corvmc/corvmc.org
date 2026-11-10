@@ -10,6 +10,7 @@ const optionalPublic = { ...optional, public: true };
 
 export const variables = defineEnvVars({
 	BETTER_AUTH_SECRET: optional,
+	BOOKING_CONTACT_EMAIL: optional,
 	CLOUDFLARE_API_TOKEN: optional,
 	CLOUDFLARE_ZONE_ID: optional,
 	CRON_SECRET: optional,

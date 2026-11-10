@@ -1014,11 +1014,14 @@ export const EVENT_TIP_SUBJECT = 'Event Tip';
  * all, and fall into the filter's "Other" bucket rather than being forced into
  * one of these.
  */
+/** The contact-form subject whose alert goes to `BOOKING_CONTACT_EMAIL`. */
+export const PERFORMANCE_INQUIRY_SUBJECT = 'Performance Inquiry';
+
 export const contactSubjects = [
 	'General Inquiry',
 	'Membership Questions',
 	'Practice Space',
-	'Performance Inquiry',
+	PERFORMANCE_INQUIRY_SUBJECT,
 	EVENT_TIP_SUBJECT,
 	'Volunteer Opportunities',
 	'Donations'
