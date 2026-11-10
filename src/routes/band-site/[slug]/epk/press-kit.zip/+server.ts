@@ -1,11 +1,7 @@
 /**
- * The public press kit as a zip: the `/epk` page's one-pager, a plain-text
- * version and the gallery photos at full resolution.
- *
- * Unauthenticated, so it answers 404 for any band whose `/epk` page would, and
- * `loadPublicPressKit` decides that rather than the page that links here. Its
- * content is the public projection only — no contacts. The band's own download,
- * with contacts, is `/api/bands/[id]/press-kit.zip`.
+ * The public press kit as a zip. Unauthenticated, so `loadPublicPressKit`
+ * answers 404 for any band whose `/epk` page would. No contacts: the files
+ * link to that page instead. The band's own kit is `/api/bands/[id]/press-kit.zip`.
  */
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
