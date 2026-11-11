@@ -39,6 +39,7 @@
 		<FormField
 			field={importGigsForm.fields.text}
 			label={m.band_slug_events_import_gigs_modal_one_gig_per_line_label()}
+			description={m.band_slug_events_import_gigs_modal_one_per_line_body()}
 		>
 			<textarea
 				{...fields.text.as('text')}

@@ -85,8 +85,8 @@
 			"declarations": ["input count", "local countPlural = count: plural"],
 			"selectors": ["countPlural"],
 			"match": {
-				"countPlural=one": "instructor",
-				"countPlural=*": "instructors"
+				"countPlural=one": "teacher",
+				"countPlural=*": "teachers"
 			}
 		}
 	],

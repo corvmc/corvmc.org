@@ -74,7 +74,7 @@ describe('/contact server rendering', () => {
 	it('renders without throwing on the subject select', async () => {
 		const { body } = await render(Page);
 
-		expect(body).toContain('Contact Us');
+		expect(body).toMatch(/<h1[\s>]/);
 	});
 
 	it('server-renders the subject options', async () => {

@@ -38,7 +38,7 @@ export class InstructorNotFoundError extends DomainError {
 	readonly httpStatus = 404;
 
 	constructor() {
-		super('Instructor not found');
+		super('Teacher not found');
 		this.name = 'InstructorNotFoundError';
 	}
 }
@@ -70,7 +70,7 @@ export class AlreadyAnInstructorError extends DomainError {
 	readonly httpStatus = 409;
 
 	constructor() {
-		super('You already have an instructor record.');
+		super('You already have a teacher record.');
 		this.name = 'AlreadyAnInstructorError';
 	}
 }

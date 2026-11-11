@@ -19,7 +19,7 @@ sortOrder: 6
 - Both lists show the newest members and bands first. Choose **A–Z** under
   **Sort** to list them by name.
 - **Teaches privately** finds members who say they give lessons; **Teaches at the
-  Collective** finds the Collective's own instructors.
+  Collective** finds the Collective's own teachers.
 - Click any card to open the full profile, where you'll find their bio, links, and
   any contact info they've chosen to share.
 
