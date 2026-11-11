@@ -108,7 +108,7 @@ const cases: [string, Record<string, unknown>][] = [
 	['unassignTaskForm', { ...pair, confirm: true }],
 	['resolveTaskForm', pair],
 	['reopenTaskForm', pair],
-	['rescheduleTaskForm', { ...pair, startsAt: '2030-01-01T18:00', endsAt: '2030-01-01T20:00' }],
+	['rescheduleTaskForm', { ...pair, dueAt: '2030-01-01' }],
 	['cancelTaskForm', pair],
 	['addDutyForm', { ...pair, label: 'Sweep' }],
 	['setDutyDoneForm', { ...pair, dutyId: 'duty-1', done: true }],

@@ -10,11 +10,12 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import { toast } from 'svelte-sonner';
-	import { formatDateShort } from '#lib/utils/format.js';
+	import { formatDateShort, formatDateTimeShort } from '#lib/utils/format.js';
 	import { formatVolunteerHours } from '#lib/config.js';
 	import { Latest } from '#lib/latest.svelte.js';
 	import {
@@ -27,13 +28,19 @@
 		workOrderId,
 		shiftId,
 		startsAt,
+		shifts = [],
+		target = $bindable(''),
 		scope = $bindable('interested')
 	}: {
 		workOrderId: string;
-		/** The task's current shift. Null for a task with none: Add assigns the task. */
+		/** The shift people are asked onto. Null: Add assigns the task. */
 		shiftId: string | null;
-		/** Null for a task with no shift — clearance is judged as of today. */
+		/** Null with no shift chosen — clearance is judged as of today. */
 		startsAt: Date | null;
+		/** The task's shifts still to come, to choose between. */
+		shifts?: { id: string; startsAt: Date }[];
+		/** The chosen shift's id, or `''` for the task itself. */
+		target?: string;
 		scope?: 'interested' | 'worked' | 'all';
 	} = $props();
 
@@ -59,6 +66,7 @@
 	const candidates = new Latest(() =>
 		getShiftCandidates({
 			workOrderId,
+			shiftId: shiftId ?? undefined,
 			scope: search ? 'all' : scope,
 			search: search || undefined
 		})
@@ -157,6 +165,20 @@
 					value: startsAt ? formatDateShort(startsAt) : msg.volunteer_candidate_column_today_text()
 				})}
 			</p>
+			{#if shifts.length > 0}
+				<!-- A task can be assigned and have shifts: the choice is where Add puts them. -->
+				<Select
+					size="sm"
+					aria-label={msg.volunteer_candidate_column_add_to_label()}
+					bind:value={target}
+					data-testid="candidate-target"
+				>
+					{#each shifts as s (s.id)}
+						<option value={s.id}>{formatDateTimeShort(s.startsAt)}</option>
+					{/each}
+					<option value="">{msg.volunteer_candidate_column_assign_task_text()}</option>
+				</Select>
+			{/if}
 			<SearchInput bind:value={search} placeholder={msg.volunteer_candidate_column_placeholder()} />
 			<div class="flex flex-wrap gap-1" class:opacity-50={!!search}>
 				{#each SCOPES as s (s.key)}
@@ -238,9 +260,9 @@
 							data-testid="assign-candidate"
 							variant="ghost"
 							size="xs"
-							modalTitle={msg.volunteer_candidate_column_put_shift_title({
-								title: row.member.title
-							})}
+							modalTitle={shiftId
+								? msg.volunteer_candidate_column_put_shift_title({ title: row.member.title })
+								: msg.volunteer_candidate_column_assign_title({ title: row.member.title })}
 							submitLabel={msg.volunteer_candidate_column_add_them_label()}
 							successToast={msg.volunteer_candidate_column_added_they_re_booked_toast()}
 							onsuccess={warnOver}
@@ -263,11 +285,13 @@
 										.for(`${workOrderId}:${row.userId}`)
 										.fields.userId.as('hidden', row.userId)}
 								/>
-								<p class="text-sm">
-									{msg.volunteer_candidate_column_staff_add_booking_not_claim_text({
-										title: row.member.title
-									})}
-								</p>
+								{#if shiftId}
+									<p class="text-sm">
+										{msg.volunteer_candidate_column_staff_add_booking_not_claim_text({
+											title: row.member.title
+										})}
+									</p>
+								{/if}
 								{#if f.blocked}
 									<p class="text-sm text-error">
 										{msg.volunteer_candidate_column_missing_clearance_text({

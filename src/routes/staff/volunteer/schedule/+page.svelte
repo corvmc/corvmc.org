@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	/**
-	 * Every work order a coordinator staffs, in one table by date (#1933). A shift
-	 * is a work order with a window, so the ones still waiting for a time are the
-	 * last group of the same table rather than another page.
+	 * Every shift a coordinator staffs, one row each, in one table by date (#1933),
+	 * then the tasks with no shift yet as the last group of the same table.
 	 *
 	 * Three numbers per row, not one: `claimed` counts places taken and `confirmed`
 	 * places actually booked, and printing only the first says a shift with three
@@ -30,7 +29,7 @@
 	import LogHoursForMemberAction from '#lib/components/volunteer/LogHoursForMemberAction.svelte';
 	import NewWorkOrderAction from '../NewWorkOrderAction.svelte';
 	import ScheduleViews from './ScheduleViews.svelte';
-	import ConfirmFixedTable from './ConfirmFixedTable.svelte';
+	import EndedShiftsTable from './EndedShiftsTable.svelte';
 	import UnscheduledActions from './UnscheduledActions.svelte';
 	import { NEEDS, parseNeeds, type Needs } from './needs-filter';
 	import { PROJECT_FILTERS, matchesProject, parseProjectFilter } from './project-filter';
@@ -155,11 +154,12 @@
 	const matchesFilters = (w: Row) => matchesKind(w) && matchesProject(w, projectFilter);
 
 	/** The rows each Needs chip narrows to; staffing ones skip contractor work. */
-	function byNeed(live: Row[], staffed: Row[]): Record<Exclude<Needs, '' | 'confirm'>, Row[]> {
+	function byNeed(live: Row[], staffed: Row[]): Record<Exclude<Needs, '' | 'ended'>, Row[]> {
 		return {
 			claims: staffed.filter(hasClaims),
 			short: staffed.filter(isShort),
-			unscheduled: live.filter((w) => w.startsAt === null)
+			// The badge's predicate (`unassignedTaskWhere`): no shift and nobody assigned.
+			unassigned: live.filter((w) => w.startsAt === null && w.assignees === 0)
 		};
 	}
 
@@ -191,7 +191,7 @@
 		{#if !byContractor}
 			<Select
 				size="sm"
-				aria-label={m.staff_volunteer_schedule_how_far_ahead_label()}
+				aria-label={m.staff_volunteer_schedule_date_range_label()}
 				value={String(range)}
 				onchange={(e: Event) => {
 					range = parseRange((e.currentTarget as HTMLSelectElement).value);
@@ -283,8 +283,8 @@
 		)}
 		{@const staffed = live.filter((w) => !data.contractors[w.id]?.length)}
 		{@const need = byNeed(live, staffed)}
-		{@const counts = { ...need, confirm: data.waiting.toConfirm }}
-		{@const shown = needs && needs !== 'confirm' ? need[needs] : live}
+		{@const counts = { ...need, ended: data.waiting.ended }}
+		{@const shown = needs && needs !== 'ended' ? need[needs] : live}
 
 		<!-- What the dashboard's cards counted (#2379): four narrow this table, and the
 		     two about people link to the queue that holds them. Hidden at zero. -->
@@ -324,11 +324,11 @@
 			{/if}
 		</div>
 
-		{#if needs === 'confirm'}
-			<ConfirmFixedTable orders={data.waiting.toConfirm} onsuccess={refresh} />
+		{#if needs === 'ended'}
+			<EndedShiftsTable tasks={data.waiting.ended} onsuccess={refresh} />
 		{:else if shown.length === 0}
 			<EmptyState
-				title={m.staff_volunteer_schedule_no_work_orders_match_title()}
+				title={m.staff_volunteer_schedule_no_matching_tasks_title()}
 				description={m.staff_volunteer_schedule_description_body()}
 			/>
 		{:else}
@@ -430,7 +430,7 @@
 										size="xs"
 										class="text-success"
 										action={confirmShiftClaims.for(w.id)}
-										modalTitle={m.staff_confirm_everyone_shift_title()}
+										modalTitle={m.staff_confirm_all_volunteers_title()}
 										submitLabel={m.staff_confirm_all_label()}
 										successToast={m.staff_volunteer_schedule_success_toast()}
 										onsuccess={refresh}

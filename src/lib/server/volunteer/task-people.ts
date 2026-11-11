@@ -74,7 +74,8 @@ export type EngageOnTaskResult =
  * its assignees are removed and its shifts still to come called off.
  */
 export async function engageContractorOnTask(
-	input: CreateJobInput & { workOrderId: string },
+	// The work order supplies the title, unit and project; those are for work with none.
+	input: Omit<CreateJobInput, 'title' | 'assetId' | 'projectId'> & { workOrderId: string },
 	confirm: boolean
 ): Promise<EngageOnTaskResult> {
 	const live = await liveSignupsOn(input.workOrderId);

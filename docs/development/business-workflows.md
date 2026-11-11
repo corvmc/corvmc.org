@@ -1312,21 +1312,35 @@ sign up for it. A task has zero or more shifts. Deliverables and repairs usually
 - **Assigning and signing up are two acts.** Staff and committees assign a task to people
   (`work_order_assignee`, `assignee-service.ts`). Volunteers sign up for a shift
   (`volunteer_signup.shift_id` → `volunteer_shift`). A sign-up never stands for an assignment.
-- **A shift is open by existing.** There is no posting step. `openShift(taskId, times)` needs
-  the task to have a role and be open; the shift is then on the member board. A task with no
-  live shift is on the Schedule's "needs scheduling" queue.
+- **A shift is open by existing.** There is no posting step. **Open shift**
+  (`openShift(taskId, times)`) needs the task to have a role and be open; the shift is then on
+  the member board. It is offered on the task page, on Today's ended-shift rows, on the
+  Schedule's rows with no shift, and as the project assign picker's "Open shift" tab. Every
+  call adds a shift; a task can be assigned and have shifts at once.
+- **Unassigned tasks** are open tasks with no live shift and nobody assigned
+  (`unassignedTaskWhere`). The Schedule's chip and the sidebar badge both read it.
 - **The clock never closes a task.** When a shift ends, the completion cron completes its
   sign-ups. The task stays open, and an open task whose last live shift has ended is on the
-  Schedule's ended-shifts list (`listTasksWithEndedShifts`) until someone marks it done or
-  opens another shift. The sidebar badge counts that list.
+  Schedule's **Tasks with ended shifts** list (`listTasksWithEndedShifts`) until someone marks
+  it done or opens another shift; each row offers both. The sidebar badge counts that list.
 - **Marking a task done** (`resolveWorkOrder`) resolves its equipment reports, stamps
   `completed_at` on its assignees and writes the next recurring occurrence. It does not touch
   sign-ups, which the clock completes.
 - **Hours** name a shift, a task (`volunteer_hour_log.work_order_id`), or neither.
 - **Capability grants** from a role last for a confirmed sign-up's shift window, and for an
   assignment the task's event window, each plus the role's grace days.
-- Staff pages still show one shift per task: the latest live one (`getCurrentShift`). The
-  data allows several; the staff and member screens that list them come with the UI phases.
+- **The task page lists every shift** (`/staff/volunteer/shifts/[id]`, or a project's
+  `/tasks/[taskId]`), each with its own roster, invitations and edit, copy and cancel. Cancelling
+  a shift (`cancelOneShift`) leaves the task and its other shifts live; **Cancel task** calls off
+  the task and all of them. **Copy forward** adds a shift to the same task, so a standing weekly
+  slot is one task with a shift a week. Assignees are listed apart, each with Unassign. "Who to
+  ask" adds people to a chosen shift, or assigns the whole task.
+- **Engaging a contractor** from the task page or the project picker warns when people are on
+  the task, then removes its assignees and calls off its shifts still to come
+  (`engageContractorOnTask`, `task-people.ts`).
+- On a project, Reschedule moves the task's due date only; a shift's time is the shift's own.
+  The task list shows the latest live shift's time and how many more there are; the side panel
+  lists every live shift. Member screens still read one shift at a time until PR 4.
 
 Certifications gate _scheduling_, never the record of work already done. A role can require
 one; whether a member held it is evaluated **as of the shift's date**, with a deliberate
@@ -1356,8 +1370,8 @@ So:
   (`/staff/volunteer/roles`) holds roles and certifications, and the report is
   `/staff/reports/volunteering`. The retired routes (`shifts`, `people`, `setup`,
   `clearances`, `certifications`, `interest`, `hours`, `report`) are 308s.
-- **A called-off shift is a notify list.** `cancelShift` has always left its signups in
-  place; now `notifySignupsOfCancellation` is the button that tells them, and
+- **A called-off shift is a notify list.** Cancelling a shift or a task has always left its
+  sign-ups in place; now `notifySignupsOfCancellation` is the button that tells them, and
   `volunteer_signup.notified_at` records how far down the list staff have got. Cancelling
   deliberately notifies nobody on its own — calling a shift off and telling six people about
   it are two decisions, and the first is sometimes reversed.
@@ -1941,8 +1955,9 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
 
 Decision: [A work order is the task](../decisions/0054-a-work-order-is-the-task.md)
 
-- **Write:** work order changes are recorded in the shared services both the shift page and
-  the project page call (`updateShift`, `openShift`, `cancelShift`, `resolveWorkOrder`,
+- **Write:** task changes are recorded in the shared services both the shift page and
+  the project page call (`editTask`, `editShift`, `openShift`, `cancelOneShift`, `cancelShift`
+  for the whole task, `resolveWorkOrder`,
   `assignToTask` and `unassignFromTask`, `claimShift` for a staff place on a shift,
   `releaseSignup`, `inviteToShift`), engagement steps in
   contractor-job-service.ts against the engagement's work order, and project edits, status

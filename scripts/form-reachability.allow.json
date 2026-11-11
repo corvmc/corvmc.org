@@ -18,11 +18,6 @@
 	"src/lib/server/contractor/contractor-job-service.ts#completeJob(1)": {
 		"notes": "elsewhere: createJobForm writes the engagement's notes; completion keeps them"
 	},
-	"src/lib/server/contractor/contractor-job-service.ts#createJob(0)": {
-		"assetId": "internal: the branch without workOrderId; every caller engages on an existing work order since #1900",
-		"projectId": "internal: the branch without workOrderId; every caller engages on an existing work order since #1900",
-		"title": "internal: the branch without workOrderId; every caller engages on an existing work order since #1900"
-	},
 	"src/lib/server/event/community-event-service.ts#createCommunityEvent(0)": {
 		"address": "elsewhere: updateListing writes it after creation",
 		"description": "elsewhere: updateListing writes it after creation",
@@ -186,10 +181,6 @@
 	"src/lib/server/volunteer/work-order-service.ts#createWorkOrder(0)": {
 		"sectionId": "internal: project-task-service#addTask places a task in its section",
 		"sortOrder": "internal: project-task-service#addTask places a task in its section"
-	},
-	"src/lib/server/volunteer/work-order-service.ts#openShift(1)": {
-		"capacity": "#2518: the Open shift form in the staff UI phase sends places; the schedule form sends times only",
-		"notes": "#2518: the Open shift form in the staff UI phase sends a briefing; the schedule form sends times only"
 	},
 	"src/lib/server/volunteer/work-order-service.ts#resolveWorkOrder(1)": {
 		"recordReason": "internal: completeJob passes its own record as the reason"

@@ -20,13 +20,14 @@
 		unassignTaskForm
 	} from '#lib/remote/tasks.remote.js';
 	import { contractorJobStatusLabels, type ContractorJobStatus } from '#lib/config.js';
+	import { toLocalDateTime } from '#lib/utils/format.js';
 	import { engagementLabel, type Task } from './task-view';
 
 	/**
-	 * The assignment picker's contents, loaded when it opens. Members, Open to
-	 * volunteers, Contractor, and Unassign. Switching away from people or a
-	 * contractor warns first; confirming takes the people off or cancels the
-	 * engagement through its own Cancel, then switches.
+	 * The assignment picker's contents, loaded when it opens: assign members,
+	 * open a shift, engage a contractor, or unassign (#2518). A task can be both
+	 * assigned and have shifts. Moving to or from a contractor warns first;
+	 * confirming takes the people off or cancels the engagement, then switches.
 	 */
 	let {
 		task,
@@ -90,6 +91,8 @@
 
 	const assign = $derived(assignMembersForm.for(`${place}:${task.id}`));
 	const open = $derived(openTaskForm.for(`${place}:${task.id}`));
+	// The deadline itself where there is one, otherwise tomorrow; two hours long.
+	const start = $derived(task.dueAt ?? new Date(Date.now() + 86_400_000));
 	const engage = $derived(engageContractorForm.for(`${place}:${task.id}`));
 	const unassign = $derived(unassignTaskForm.for(`${place}:${task.id}`));
 
@@ -237,9 +240,21 @@
 				placeholder={msg.staff_projects_id_assign_picker_body_pick_role_placeholder()}
 			/>
 			<Field
+				field={open.fields.startsAt}
+				type="datetime-local"
+				label={msg.volunteer_shift_form_fields_starts_label()}
+				value={toLocalDateTime(start)}
+			/>
+			<Field
+				field={open.fields.endsAt}
+				type="datetime-local"
+				label={msg.volunteer_shift_form_fields_ends_label()}
+				value={toLocalDateTime(new Date(start.getTime() + 2 * 3_600_000))}
+			/>
+			<Field
 				field={open.fields.capacity}
 				type="number"
-				label={msg.staff_projects_id_assign_picker_body_spots_label()}
+				label={msg.volunteer_shift_form_fields_people_needed_label()}
 				value={task.capacity}
 			/>
 			<p class="text-muted text-sm">

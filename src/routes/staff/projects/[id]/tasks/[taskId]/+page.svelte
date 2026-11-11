@@ -20,13 +20,13 @@
 <WorkOrderView
 	{view}
 	subtitle={m.staff_task_body()}
-	parent={[{ label: view.project.name, href: withQuery(projectHref, `task=${view.shift.id}`) }]}
+	parent={[{ label: view.project.name, href: withQuery(projectHref, `task=${view.task.id}`) }]}
 >
 	{#snippet context()}
 		<a href={projectHref} class="link link-primary">{view.project.name}</a>
 	{/snippet}
 	{#snippet activity()}
-		{@const ids = { projectId: view.project.id, workOrderId: view.shift.id }}
+		{@const ids = { projectId: view.project.id, workOrderId: view.task.id }}
 		<ActivityCard query={(limit) => getProjectActivity(limit ? { ...ids, limit } : ids)} />
 	{/snippet}
 </WorkOrderView>

@@ -178,6 +178,9 @@
 	}
 </script>
 
+<!-- One hint for every move handle, so the labels stay short. -->
+<p id="task-move-hint" class="sr-only">{m.staff_projects_id_task_list_move_hint_body()}</p>
+
 <div class="flex flex-wrap items-center gap-2">
 	<Action
 		action={addTask}
@@ -293,6 +296,7 @@
 								aria-label={m.staff_projects_id_task_list_move_section_drag_press_up_label({
 									name
 								})}
+								aria-describedby="task-move-hint"
 								ondragstart={(e: DragEvent) => startDrag(e, { kind: 'section', id: sid! })}
 								ondragend={endDrag}
 								onkeydown={(e: KeyboardEvent) => sectionKey(e, sid!)}
@@ -352,6 +356,7 @@
 									aria-label={m.staff_projects_id_task_list_move_drag_press_up_down_label({
 										title: t.title
 									})}
+									aria-describedby="task-move-hint"
 									ondragstart={(e: DragEvent) => startDrag(e, { kind: 'task', id: t.id })}
 									ondragend={endDrag}
 									onkeydown={(e: KeyboardEvent) => taskKey(e, t.id)}

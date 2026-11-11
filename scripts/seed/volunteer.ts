@@ -798,13 +798,14 @@ export async function seedVolunteerHours(
 /**
  * Assignment beside a shift (#2518): the owner's example is Nia owning the
  * festival stage while a shift asks for two more people on the day. Gives the
- * soonest upcoming live shift's task an assignee who is not signed up for it.
+ * soonest upcoming live shift's task an assignee who is not signed up for it,
+ * and a second shift the day after, so the task page lists two rosters.
  * Runs last, after every seeder that writes shifts.
  */
 export async function seedTasksAndShifts() {
 	console.log('Seeding a task with both an assignee and a shift...');
 	const [upcoming] = await db
-		.select({ workOrderId: volunteerShift.workOrderId, shiftId: volunteerShift.id })
+		.select({ workOrderId: volunteerShift.workOrderId, shift: volunteerShift })
 		.from(volunteerShift)
 		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.where(
@@ -822,7 +823,7 @@ export async function seedTasksAndShifts() {
 	const onShift = await db
 		.select({ userId: volunteerSignup.userId })
 		.from(volunteerSignup)
-		.where(eq(volunteerSignup.shiftId, upcoming.shiftId));
+		.where(eq(volunteerSignup.shiftId, upcoming.shift.id));
 	const [owner] = await db
 		.select({ userId: volunteerProfile.userId })
 		.from(volunteerProfile)
@@ -843,6 +844,16 @@ export async function seedTasksAndShifts() {
 
 	await batchInsert(workOrderAssignee, [
 		{ workOrderId: upcoming.workOrderId, userId: owner.userId, assignedAt: new Date() }
+	]);
+	const DAY = 86_400_000;
+	await batchInsert(volunteerShift, [
+		{
+			workOrderId: upcoming.workOrderId,
+			startsAt: new Date(upcoming.shift.startsAt.getTime() + DAY),
+			endsAt: new Date(upcoming.shift.endsAt.getTime() + DAY),
+			capacity: upcoming.shift.capacity,
+			anchor: upcoming.shift.anchor
+		}
 	]);
 	return totals();
 }

@@ -25,17 +25,14 @@ import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { evaluateDone, type DeliverableState } from '#lib/server/volunteer/done-conditions.js';
 import {
 	auditWorkOrderChange,
-	cancelLiveShifts,
 	cancelShift,
 	capacitySql,
 	claimedSql,
 	createWorkOrder,
-	getCurrentShift,
 	openShift,
 	requireActiveRole,
 	resolveWorkOrder,
 	toTask,
-	updateShift,
 	validateCapacity,
 	workOrderModes,
 	type WorkOrderMode
@@ -54,7 +51,8 @@ import {
 	dutiesOn,
 	engagementsOn,
 	outstandingFor,
-	peopleOn
+	peopleOn,
+	shiftsOn
 } from '#lib/server/project/project-task-details.js';
 
 // ---------------------------------------------------------------------------
@@ -664,39 +662,15 @@ export async function reopenTask(projectId: string, workOrderId: string): Promis
 }
 
 /**
- * Set the shift's time (`YYYY-MM-DDTHH:mm`, club time; both or neither) and the
- * deadline. Times edit the task's current shift or open one; clearing them
- * calls its live shift off, so a task can lose its time as well as gain one.
+ * Move the task's deadline; blank clears it. A shift's time is the shift's own,
+ * edited on the task page or opened from the assign picker (#2518).
  */
 export async function rescheduleTask(
 	projectId: string,
 	workOrderId: string,
-	data: {
-		startsAt: string | null;
-		endsAt: string | null;
-		dueAt: Date | null;
-		byUserId?: string | null;
-	}
+	data: { dueAt: Date | null }
 ): Promise<Task> {
 	const task = await requireLiveTask(projectId, workOrderId);
-	if (!data.startsAt !== !data.endsAt) {
-		throw new TaskValidationError('Give this both a start and an end, or neither.');
-	}
-	const current = await getCurrentShift(task.id);
-	const live = current && !current.cancelledAt ? current : null;
-	if (data.startsAt && data.endsAt) {
-		await updateShift(task.id, {
-			startsAt: data.startsAt,
-			endsAt: data.endsAt,
-			updatedByUserId: data.byUserId ?? undefined
-		});
-	} else if (live) {
-		await cancelLiveShifts(task.id, data.byUserId ?? null, new Date());
-		await auditWorkOrderChange(
-			{ ...task, startsAt: live.startsAt, endsAt: live.endsAt },
-			{ ...task, startsAt: null, endsAt: null }
-		);
-	}
 	const [row] = await db
 		.update(workOrder)
 		.set({ dueAt: data.dueAt, updatedAt: new Date() })
@@ -839,12 +813,13 @@ export async function listProjectTasks(projectId: string) {
 		owningCommittee(projectId)
 	]);
 	const ids = rows.map((r) => r.id);
-	const [modes, states, people, engagements, duties] = await Promise.all([
+	const [modes, states, people, engagements, duties, shifts] = await Promise.all([
 		workOrderModes(ids),
 		evaluateDone(rows),
 		peopleOn(ids),
 		engagementsOn(ids),
-		dutiesOn(ids)
+		dutiesOn(ids),
+		shiftsOn(ids)
 	]);
 	const tasks = rows.map((r) => {
 		const items = duties.get(r.id) ?? [];
@@ -854,6 +829,7 @@ export async function listProjectTasks(projectId: string) {
 			state: states.get(r.id) ?? 'open',
 			people: people.get(r.id) ?? [],
 			engagement: engagements.get(r.id) ?? null,
+			shifts: shifts.get(r.id) ?? [],
 			dutyItems: items,
 			duties: { done: items.filter((d) => d.done).length, total: items.length }
 		};

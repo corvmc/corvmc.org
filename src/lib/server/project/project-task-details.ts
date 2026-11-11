@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { contractor, contractorJob } from '#lib/server/db/schema/contractor.js';
@@ -137,6 +137,51 @@ export async function peopleOn(ids: string[]): Promise<Map<string, TaskPerson[]>
 			image: resolveImageUrl(s.image),
 			status: s.status as TaskPerson['status']
 		});
+	}
+	return out;
+}
+
+export interface TaskShiftRow {
+	id: string;
+	startsAt: Date;
+	endsAt: Date;
+	capacity: number;
+	/** Places taken: claimed, confirmed or completed. */
+	claimed: number;
+}
+
+/** Each task's live shifts, earliest first, with places taken (#2518). */
+export async function shiftsOn(ids: string[]): Promise<Map<string, TaskShiftRow[]>> {
+	const rows = await byChunks(ids, (g) =>
+		db
+			.select({
+				workOrderId: volunteerShift.workOrderId,
+				id: volunteerShift.id,
+				startsAt: volunteerShift.startsAt,
+				endsAt: volunteerShift.endsAt,
+				capacity: volunteerShift.capacity,
+				claimed: sql<number>`(
+					select count(*) from "volunteer_signup" vs
+					where vs."shift_id" = ${volunteerShift.id}
+						and vs."status" in ('claimed', 'confirmed', 'completed')
+				)`
+			})
+			.from(volunteerShift)
+			.where(and(inArray(volunteerShift.workOrderId, g), isNull(volunteerShift.cancelledAt)))
+			.orderBy(asc(volunteerShift.startsAt), asc(volunteerShift.id))
+	);
+	const out = new Map<string, TaskShiftRow[]>();
+	for (const [id, list] of group(rows, (r) => r.workOrderId)) {
+		out.set(
+			id,
+			list.map((r) => ({
+				id: r.id,
+				startsAt: r.startsAt,
+				endsAt: r.endsAt,
+				capacity: r.capacity,
+				claimed: Number(r.claimed)
+			}))
+		);
 	}
 	return out;
 }

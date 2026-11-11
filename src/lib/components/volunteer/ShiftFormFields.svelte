@@ -24,7 +24,8 @@
 		capacity,
 		notes,
 		title,
-		timed = true
+		timed = true,
+		taskOnly = false
 	}: {
 		/**
 		 * The remote form this field set posts into — `createShift`, or
@@ -66,6 +67,8 @@
 		 * the event picker goes, since `createWorkOrder` only ties a timed one to a show.
 		 */
 		timed?: boolean;
+		/** Edits a task, not a shift: no times or places, and notes are the task's own. */
+		taskOnly?: boolean;
 	} = $props();
 
 	// Seeded once and then owned by the picker. `untrack` says that on purpose:
@@ -89,7 +92,7 @@
 
 {#if lockedEvent}
 	<input {...form.fields.eventId.as('hidden', lockedEvent.id)} />
-{:else if timed}
+{:else if timed || taskOnly}
 	<!--
 		Rendered unconditionally, even with nothing picked, and that is the whole
 		point: `updateShift` writes `eventId` only when the key is *present*, so an
@@ -151,7 +154,14 @@
 	description={m.volunteer_shift_form_fields_optional_leave_blank_use_event_body()}
 />
 
-{#if timed}
+{#if taskOnly}
+	<FormField
+		field={form.fields.notes}
+		label={m.volunteer_shift_form_fields_notes_label()}
+		type="textarea"
+		value={notes}
+	/>
+{:else if timed}
 	<FormField
 		field={form.fields.startsAt}
 		label={m.volunteer_shift_form_fields_starts_label()}
@@ -172,21 +182,23 @@
 		description={m.volunteer_shift_form_fields_optional_waits_unscheduled_work_body()}
 	/>
 {/if}
-<FormField
-	field={form.fields.capacity}
-	submitAs="text"
-	label={m.volunteer_shift_form_fields_people_needed_label()}
-	type="number"
-	min="1"
-	value={capacity}
-	description={m.volunteer_shift_form_fields_claims_beyond_refused_body()}
-/>
-<FormField
-	field={form.fields.notes}
-	label={m.volunteer_shift_form_fields_anything_they_should_know_label()}
-	type="textarea"
-	value={notes}
-	description={m.volunteer_shift_form_fields_where_meet_what_bring_shown_body({
-		VOLUNTEER_SHIFT_NOTES_MAX
-	})}
-/>
+{#if !taskOnly}
+	<FormField
+		field={form.fields.capacity}
+		submitAs="text"
+		label={m.volunteer_shift_form_fields_people_needed_label()}
+		type="number"
+		min="1"
+		value={capacity}
+		description={m.volunteer_shift_form_fields_claims_beyond_refused_body()}
+	/>
+	<FormField
+		field={form.fields.notes}
+		label={m.volunteer_shift_form_fields_anything_they_should_know_label()}
+		type="textarea"
+		value={notes}
+		description={m.volunteer_shift_form_fields_where_meet_what_bring_shown_body({
+			VOLUNTEER_SHIFT_NOTES_MAX
+		})}
+	/>
+{/if}

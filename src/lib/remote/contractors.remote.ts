@@ -245,7 +245,8 @@ export const createJobForm = form(
 				},
 				data.confirm === true
 			);
-			if (result.status === 'needs_confirmation') return result;
+			// `conflict` keeps the modal open, so the warning shows above the resubmit.
+			if (result.status === 'needs_confirmation') return { ...result, conflict: true };
 			const { job } = result;
 			await refreshWorkOrderPage(job);
 			if (job.assetId) {

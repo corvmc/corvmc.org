@@ -22,6 +22,12 @@
 {:else}
 	<span class="inline-flex items-center gap-1 {late ? 'text-error' : ''}">
 		{when.kind === 'due' && task.dueAt ? formatDateShort(task.dueAt) : when.label}
+		{#if task.shifts.length > 1}
+			<!-- The latest shift's time leads; the rest are on the task. -->
+			<span class="text-muted"
+				>{m.staff_projects_id_task_when_more_shifts_text({ more: task.shifts.length - 1 })}</span
+			>
+		{/if}
 		{#if late}<span class="sr-only">{m.staff_projects_id_task_when_overdue_text()}</span>{/if}
 		{#if when.endsAfterDue}
 			<IconFlag

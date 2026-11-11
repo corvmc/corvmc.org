@@ -1574,7 +1574,7 @@ export const getSchedulePage = query(
 	async (f) => {
 		await requireCapability('volunteer.read');
 		const now = new Date();
-		const [page, toConfirm, counts, lapsing] = await Promise.all([
+		const [page, ended, counts, lapsing] = await Promise.all([
 			f.contractor ? contractorSchedule(f.contractor) : staffedSchedule(f),
 			listTasksWithEndedShifts(now),
 			getStatusCounts(),
@@ -1583,7 +1583,7 @@ export const getSchedulePage = query(
 		return {
 			...page,
 			waiting: {
-				toConfirm,
+				ended,
 				pendingHours: counts.pending,
 				lapsingPeople: new Set(lapsing.map((l) => l.userId)).size
 			}

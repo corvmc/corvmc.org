@@ -115,6 +115,8 @@ export const SEED_VOL_SHIFT_ASSIGN_ID = 'e2e-vol-shift-assign';
 export const SEED_VOL_SHIFT_ASSIGN_NOTE = 'E2E waiting on a coordinator';
 export const SEED_VOL_SHIFT_RELEASE_ID = 'e2e-vol-shift-release';
 export const SEED_VOL_SIGNUP_RELEASE_ID = 'e2e-vol-signup-release';
+/** A task with two shifts, the cancel-one-shift test's alone (#2518). */
+export const SEED_VOL_TWO_SHIFTS_ID = 'e2e-vol-two-shifts';
 
 /**
  * A member with an account but no volunteer profile, for the onboarding gate.
@@ -195,6 +197,7 @@ const SHIFT_IDS = [
 	SEED_VOL_SHIFT_FULL_ID,
 	SEED_VOL_SHIFT_ASSIGN_ID,
 	SEED_VOL_SHIFT_RELEASE_ID,
+	SEED_VOL_TWO_SHIFTS_ID,
 	SEED_VOL_SHIFT_DONE_ID,
 	SEED_VOL_SHIFT_EVENT_ID,
 	SEED_VOL_ADVANCE_ID
@@ -573,8 +576,25 @@ export async function seedVolunteering(): Promise<void> {
 				startsAt: daysFromNow(8, 2),
 				endsAt: daysFromNow(8, 6),
 				capacity: 1
+			},
+			// Gets a second shift below; the cancel-one-shift test calls off the first.
+			{
+				id: SEED_VOL_TWO_SHIFTS_ID,
+				volunteerRoleId: SEED_VOL_ROLE_ID,
+				startsAt: daysFromNow(9, 2),
+				endsAt: daysFromNow(9, 6),
+				capacity: 1
 			}
 		]);
+		await db.insert(volunteerShift).values({
+			id: `${shiftIdOf(SEED_VOL_TWO_SHIFTS_ID)}-2`,
+			workOrderId: SEED_VOL_TWO_SHIFTS_ID,
+			startsAt: daysFromNow(10, 2),
+			endsAt: daysFromNow(10, 6),
+			capacity: 1,
+			createdAt: now,
+			updatedAt: now
+		});
 
 		// A published show with one shift on it. Both the staff event page's
 		// Volunteer Shifts card and the shift detail page's Event fact read this.
@@ -763,6 +783,26 @@ export async function readSignupStatus(taskId: string): Promise<string | null> {
 			.where(eq(volunteerShift.workOrderId, taskId))
 			.limit(1);
 		return row?.status ?? null;
+	});
+}
+
+/** Each of a task's shifts, by id, as called off or not; and whether the task is. */
+export async function readTaskShiftStates(
+	taskId: string
+): Promise<{ task: boolean; shifts: Record<string, boolean> }> {
+	return readLocalDb(async (db) => {
+		const [task] = await db
+			.select({ cancelledAt: workOrder.cancelledAt })
+			.from(workOrder)
+			.where(eq(workOrder.id, taskId));
+		const rows = await db
+			.select({ id: volunteerShift.id, cancelledAt: volunteerShift.cancelledAt })
+			.from(volunteerShift)
+			.where(eq(volunteerShift.workOrderId, taskId));
+		return {
+			task: !!task?.cancelledAt,
+			shifts: Object.fromEntries(rows.map((r) => [r.id, !!r.cancelledAt]))
+		};
 	});
 }
 

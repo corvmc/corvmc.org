@@ -509,34 +509,15 @@ describe('opening a shift', () => {
 });
 
 describe('rescheduling', () => {
-	it('opens a shift for a time, moves it, and calls it off when the time is cleared', async () => {
+	it('moves the deadline and leaves its shifts alone', async () => {
 		task('t', { volunteer_role_id: ROLE });
-		const times = { startsAt: '2030-06-01T18:00', endsAt: '2030-06-01T22:00' };
-		await tasks.rescheduleTask(PROJECT, 't', { ...times, dueAt: null, byUserId: STAFF });
-		expect(all(`select id from volunteer_shift where cancelled_at is null`)).toHaveLength(1);
-
-		await tasks.rescheduleTask(PROJECT, 't', {
-			startsAt: '2030-06-02T18:00',
-			endsAt: '2030-06-02T22:00',
-			dueAt: null
-		});
-		expect(all(`select id from volunteer_shift`)).toHaveLength(1);
+		shift('s', 't');
 
 		const due = new Date(1_950_000_000_000);
-		await tasks.rescheduleTask(PROJECT, 't', { startsAt: null, endsAt: null, dueAt: due });
-		expect(all(`select id from volunteer_shift where cancelled_at is null`)).toHaveLength(0);
-		expect(one(`select due_at from work_order where id = 't'`)).toEqual({ due_at: 1_950_000_000 });
-	});
+		await tasks.rescheduleTask(PROJECT, 't', { dueAt: due });
 
-	it('needs a role before a time opens a shift', async () => {
-		task('t');
-		await expect(
-			tasks.rescheduleTask(PROJECT, 't', {
-				startsAt: '2030-06-01T18:00',
-				endsAt: '2030-06-01T22:00',
-				dueAt: null
-			})
-		).rejects.toThrow(/role/);
+		expect(one(`select due_at from work_order where id = 't'`)).toEqual({ due_at: 1_950_000_000 });
+		expect(all(`select id from volunteer_shift where cancelled_at is null`)).toHaveLength(1);
 	});
 });
 

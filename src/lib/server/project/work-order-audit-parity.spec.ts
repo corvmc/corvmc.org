@@ -140,17 +140,15 @@ const logOf = (id: string) =>
 const actions = (id: string) => logOf(id).map((e) => e.action);
 
 describe('the same entries from either page', () => {
-	it('reschedules', async () => {
+	it('opens a shift', async () => {
 		twins();
-		await tasks.rescheduleTask(PROJECT, 'viaTask', {
-			startsAt: FUTURE,
-			endsAt: FUTURE_END,
-			dueAt: null
-		});
-		await shifts.updateShift('viaShift', { startsAt: FUTURE, endsAt: FUTURE_END });
+		const times = { startsAt: FUTURE, endsAt: FUTURE_END };
+		await tasks.openToVolunteers(PROJECT, 'viaTask', { ...times, postedByUserId: STAFF });
+		await shifts.openShift('viaShift', { ...times, createdByUserId: STAFF });
 
-		expect(actions('viaTask')).toEqual(['work_order.rescheduled']);
-		expect(logOf('viaShift')).toEqual(logOf('viaTask'));
+		const timing = (id: string) => logOf(id).filter((e) => e.action === 'work_order.rescheduled');
+		expect(timing('viaTask')).toHaveLength(1);
+		expect(timing('viaShift')).toEqual(timing('viaTask'));
 	});
 
 	// The task list assigns (#2518); the shift page puts somebody on a shift. Both

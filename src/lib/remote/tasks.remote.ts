@@ -374,22 +374,13 @@ export const reopenTaskForm = form(z.object({ projectId, workOrderId }), async (
 	return { success: true };
 });
 
-/** Window as `datetime-local` values (both or neither); due as a `date`. Blank clears. */
+/** The deadline, as a `date`; blank clears it. A shift's time is the shift's own. */
 export const rescheduleTaskForm = form(
-	z.object({
-		projectId,
-		workOrderId,
-		startsAt: z.string().optional(),
-		endsAt: z.string().optional(),
-		dueAt: z.string().optional()
-	}),
+	z.object({ projectId, workOrderId, dueAt: z.string().optional() }),
 	async (data) => {
-		const { user } = await guardTask(data.projectId, data.workOrderId);
+		await guardTask(data.projectId, data.workOrderId);
 		await rescheduleTask(data.projectId, data.workOrderId, {
-			startsAt: data.startsAt || null,
-			endsAt: data.endsAt || null,
-			dueAt: data.dueAt ? buildDateInTz(data.dueAt, '12:00', DEFAULT_TIMEZONE) : null,
-			byUserId: user.id
+			dueAt: data.dueAt ? buildDateInTz(data.dueAt, '12:00', DEFAULT_TIMEZONE) : null
 		});
 		await refresh(data.projectId);
 		return { success: true };
