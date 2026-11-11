@@ -170,7 +170,6 @@ export async function createJob(data: CreateJobInput): Promise<Engagement> {
 			assetId: data.assetId ?? null,
 			projectId: data.projectId ?? null,
 			volunteerRoleId: null,
-			postedAt: null,
 			createdByUserId: data.requestedByUserId ?? null
 		}),
 		db.insert(contractorJob).values({ ...engagement, id: jobId, workOrderId })

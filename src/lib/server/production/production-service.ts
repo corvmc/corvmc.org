@@ -313,8 +313,8 @@ export async function updateProductionDetails(
 				const delta = sql`${seconds} - (select ${column} from ${production} where ${production.id} = ${id})`;
 				// Then whatever was stamped before this time existed (#2034).
 				return [
-					shiftAnchoredWorkOrders(listing.id, [anchor], delta),
-					placePendingWorkOrders({ eventId: listing.id }, [anchor], sql`${seconds}`)
+					...shiftAnchoredWorkOrders(listing.id, [anchor], delta),
+					...placePendingWorkOrders({ eventId: listing.id }, [anchor], sql`${seconds}`)
 				];
 			})
 		: [];

@@ -18,8 +18,8 @@ import {
 	reassignDeliverable,
 	DeliverableNotFoundError
 } from '#lib/server/volunteer/deliverables-service.js';
-import { claimShift } from '#lib/server/volunteer/volunteer-signup-service.js';
-import { resolveWorkOrder } from '#lib/server/volunteer/work-order-service.js';
+import { assignToTask } from '#lib/server/volunteer/assignee-service.js';
+import { getWorkOrderById, resolveWorkOrder } from '#lib/server/volunteer/work-order-service.js';
 import { setWorkTaskDone } from '#lib/server/volunteer/duty-list-service.js';
 import { getStaffEventProduction } from './events.remote';
 
@@ -67,13 +67,15 @@ export const getCommitteeOpenItems = query(z.string().min(1), async (slug) => {
 	};
 });
 
-/** Take it: the caller claims the item, confirmed, because their committee is the coordinator. */
+/** Take it: the caller assigns themselves the item (#2518); their committee is the coordinator. */
 export const takeDeliverable = form(z.object({ id: z.string().min(1), ...from }), async (data) => {
 	const { groupId } = await ownerOf(data.id);
 	const { user } = await requireCommitteeMember(groupId, MANAGE);
 	let warnings: string[] = [];
 	try {
-		({ warnings } = await claimShift(data.id, user.id, { assignedByStaff: true }));
+		const task = await getWorkOrderById(data.id);
+		if (!task) error(404, 'That item is not open any more');
+		({ warnings } = await assignToTask(task, user.id, user.id));
 	} catch (err) {
 		mapDomainError(err);
 	}

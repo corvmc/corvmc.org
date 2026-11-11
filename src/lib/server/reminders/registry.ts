@@ -302,6 +302,7 @@ export const reminders: ReminderDefinition[] = [
 				payload: {
 					signupId: row.signupId,
 					shiftId: row.shiftId,
+					workOrderId: row.workOrderId,
 					userId: row.userId,
 					userName: row.userName,
 					userEmail: row.userEmail,
@@ -332,6 +333,7 @@ export const reminders: ReminderDefinition[] = [
 				payload: {
 					signupId: row.signupId,
 					shiftId: row.shiftId,
+					workOrderId: row.workOrderId,
 					userId: row.userId,
 					userName: row.userName,
 					userEmail: row.userEmail,

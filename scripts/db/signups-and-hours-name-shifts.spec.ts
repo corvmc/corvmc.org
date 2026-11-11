@@ -60,6 +60,8 @@ describe('sign-ups and hour logs name shifts', () => {
 				('copied', 'door', 1000, 5000, 2),
 				('late', 'door', 9000, 12000, 1);
 			INSERT INTO work_order (id, volunteer_role_id, title) VALUES ('untimed', 'door', 'Settlement');
+			INSERT INTO work_order (id, volunteer_role_id, pending_offset_minutes, pending_duration_minutes, capacity)
+				VALUES ('pending', 'door', -60, 240, 3);
 			INSERT INTO volunteer_shift (id, work_order_id, starts_at, ends_at, capacity) VALUES
 				('shift-copied', 'copied', 1000, 5000, 2);
 			INSERT INTO volunteer_signup (id, shift_id, user_id, status, claimed_at, completed_at) VALUES
@@ -125,6 +127,15 @@ describe('sign-ups and hour logs name shifts', () => {
 			{ id: 'h-copied', shift_id: shiftOf('copied'), work_order_id: null },
 			{ id: 'h-memory', shift_id: null, work_order_id: null },
 			{ id: 'h-untimed', shift_id: null, work_order_id: 'untimed' }
+		]);
+	});
+
+	it('keeps the places of a duty-list window still waiting for its time', () => {
+		expect(all(db, 'SELECT id, pending_capacity FROM work_order ORDER BY id')).toEqual([
+			{ id: 'copied', pending_capacity: null },
+			{ id: 'late', pending_capacity: null },
+			{ id: 'pending', pending_capacity: 3 },
+			{ id: 'untimed', pending_capacity: null }
 		]);
 	});
 

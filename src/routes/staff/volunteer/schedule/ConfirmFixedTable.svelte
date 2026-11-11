@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	/**
-	 * Scheduled repairs whose window has passed with their equipment reports still
-	 * open, because staff did not flag them "close reports on completion" (#1544).
-	 * Resolving closes the work order and its reports, and tells each reporter.
+	 * Open tasks whose last shift has ended (#2518). Marking one done resolves its
+	 * equipment reports and tells each reporter; the clock never does.
 	 */
 	import Table from '#lib/components/ui/Table.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
@@ -17,7 +16,7 @@
 		id: string;
 		title: string | null;
 		roleName: string | null;
-		endsAt: Date | null;
+		endsAt: Date;
 		unitName: string | null;
 		assetTag: string | null;
 		reports: number;
@@ -50,7 +49,7 @@
 				<div class="truncate text-subtle">{order.roleName ?? NO_ROLE_LABEL}</div>
 			</td>
 			<td class="col-support whitespace-nowrap">
-				{order.endsAt ? formatDateShort(order.endsAt) : '—'}
+				{formatDateShort(order.endsAt)}
 			</td>
 			<td class="col-support cell-num">{order.reports}</td>
 			<td class="w-px">
@@ -68,11 +67,13 @@
 				>
 					{#snippet form()}
 						<input {...resolveWorkOrder.for(order.id).fields.id.as('hidden', order.id)} />
-						<p class="text-sm">
-							{m.staff_volunteer_confirm_fixed_card_closes_work_order_its_rep_text({
-								reports: order.reports
-							})}
-						</p>
+						{#if order.reports > 0}
+							<p class="text-sm">
+								{m.staff_volunteer_confirm_fixed_card_closes_work_order_its_rep_text({
+									reports: order.reports
+								})}
+							</p>
+						{/if}
 						<FormField
 							field={resolveWorkOrder.for(order.id).fields.notes}
 							label={m.staff_volunteer_confirm_fixed_card_what_was_done_label()}

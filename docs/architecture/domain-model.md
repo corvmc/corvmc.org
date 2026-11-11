@@ -37,11 +37,11 @@ image, moderation and page machinery; none of the three verticals owns the publi
 room, the amp, and the amp at the repair shop are the same flow over different
 resources, which is why they are one vertical rather than "space" and "gear."
 
-**A show is a project.** `duty_list` stamps work orders onto a listing anchored at
-`doors|start|end`; `work_task` is the checklist; `volunteer_signup` is who claimed it.
-A work order is being split into a task and its shifts (#2518): `volunteer_shift` holds a time
-on a task and `work_order_assignee` who staff put on it. Both tables exist and carry copied data;
-the services still read the shift columns on `work_order`.
+**A show is a project.** `duty_list` stamps tasks (`work_order`) onto a listing anchored at
+`doors|start|end`; `work_task` is the checklist. A task's times are its shifts
+(`volunteer_shift`, #2518): `volunteer_signup` is who signed up for a shift, and
+`work_order_assignee` is who staff put on the task. The `work_order` columns that held a time,
+its places and the posted flag are no longer read, and go in a later migration.
 `eventKinds` includes `work_party`, which is a project outright. Volunteering is not a
 separate vertical — it is how a work order gets answered.
 
@@ -224,6 +224,11 @@ Three mechanics, and choosing between them has a rule:
 | Real table            | Instances are edited after the fact                        | `duty_list` — a roster changes constantly   |
 | Prototype row         | Instances are not edited after the fact                    | Recurring events — nobody edits a past show |
 | **Generate-on-close** | The next occurrence should not exist until this one closes | Monthly deep clean, quarterly PA check      |
+
+A real table's instance is a task, plus one shift when the item names a window: a duty-list
+item with an offset and a duration stamps both, and one with only a deadline stamps a task with
+a `due_at` (#2518). An item stamped before its anchor has a time keeps its offsets on the task,
+and the shift is made once the time is known.
 
 All three exist. Generate-on-close is `maintenance_schedule` (#1385): resolving or calling
 off an occurrence writes the next in the same `db.batch`, due an interval after the close,

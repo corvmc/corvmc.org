@@ -69,6 +69,8 @@ beforeEach(() => {
 		'contractor_job',
 		'work_task',
 		'volunteer_signup',
+		'volunteer_shift',
+		'work_order_assignee',
 		'work_order',
 		'duty_list_item',
 		'duty_list',
@@ -108,14 +110,25 @@ beforeEach(() => {
 });
 
 const task = (id: string, cols: Record<string, unknown> = {}) =>
-	insert('work_order', { id, project_id: PROJECT, title: id, capacity: 1, ...cols });
+	insert('work_order', { id, project_id: PROJECT, title: id, ...cols });
 
 const FUTURE = '2030-06-01T10:00';
 const FUTURE_END = '2030-06-01T12:00';
 
 /** Two twins on the project: `viaTask` changes through the task list, `viaShift` the shift page. */
 function twins() {
-	for (const id of ['viaTask', 'viaShift']) task(id, { volunteer_role_id: ROLE, capacity: 2 });
+	for (const id of ['viaTask', 'viaShift']) task(id, { volunteer_role_id: ROLE });
+}
+
+/** A shift still to come on the shift-page twin, with two places. */
+function viaShiftShift() {
+	insert('volunteer_shift', {
+		id: 'sh',
+		work_order_id: 'viaShift',
+		starts_at: 4_000_000_000,
+		ends_at: 4_000_003_600,
+		capacity: 2
+	});
 }
 
 const logOf = (id: string) =>
@@ -140,14 +153,15 @@ describe('the same entries from either page', () => {
 		expect(logOf('viaShift')).toEqual(logOf('viaTask'));
 	});
 
+	// The task list assigns (#2518); the shift page puts somebody on a shift. Both
+	// land on the task's log.
 	it('puts a member on it and takes them off', async () => {
 		twins();
+		viaShiftShift();
 		await tasks.assignMembers(PROJECT, 'viaTask', { userIds: [ADA] });
-		await signups.claimShift('viaShift', ADA, { assignedByStaff: true });
+		await signups.claimShift('sh', ADA, { assignedByStaff: true });
 		await tasks.unassignMember(PROJECT, 'viaTask', ADA);
-		const [signup] = all<{ id: string }>(
-			`select id from volunteer_signup where shift_id = 'viaShift'`
-		);
+		const [signup] = all<{ id: string }>(`select id from volunteer_signup where shift_id = 'sh'`);
 		await signups.releaseSignup(signup.id);
 
 		const roster = (id: string) =>
@@ -196,6 +210,7 @@ describe('the same entries from either page', () => {
 
 	it('names the fields a shift edit changed, leaving times to rescheduled', async () => {
 		twins();
+		viaShiftShift();
 		await shifts.updateShift('viaShift', { capacity: 3, title: 'Prime', notes: 'Bring rollers' });
 
 		expect(logOf('viaShift')).toEqual([
@@ -205,6 +220,7 @@ describe('the same entries from either page', () => {
 
 	it('records nothing for an edit that changed nothing', async () => {
 		twins();
+		viaShiftShift();
 		await shifts.updateShift('viaShift', { capacity: 2, title: 'viaShift' });
 
 		expect(logOf('viaShift')).toEqual([]);

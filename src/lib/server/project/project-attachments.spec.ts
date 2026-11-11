@@ -14,6 +14,7 @@ const { listProjectAttachments } = await import('./project-service');
 
 beforeEach(() => {
 	sqlite.exec('delete from volunteer_signup');
+	sqlite.exec('delete from volunteer_shift');
 	sqlite.exec('delete from work_order');
 	sqlite.exec('delete from event_listing');
 	sqlite.exec('delete from volunteer_role');
@@ -66,14 +67,18 @@ describe('attached work-order titles', () => {
 
 	it('counts the places taken, not cancelled claims', async () => {
 		sqlite.exec(
-			`insert into work_order (id, volunteer_role_id, project_id, capacity)
-				values ('wo-1', 'role-door', 'proj-1', 3)`
+			`insert into work_order (id, volunteer_role_id, project_id)
+				values ('wo-1', 'role-door', 'proj-1')`
+		);
+		sqlite.exec(
+			`insert into volunteer_shift (id, work_order_id, starts_at, ends_at, capacity)
+				values ('sh-1', 'wo-1', 1000, 2000, 3)`
 		);
 		sqlite.exec(
 			`insert into volunteer_signup (id, shift_id, user_id, status) values
-				('s1', 'wo-1', 'u1', 'claimed'),
-				('s2', 'wo-1', 'u2', 'confirmed'),
-				('s3', 'wo-1', 'u3', 'cancelled')`
+				('s1', 'sh-1', 'u1', 'claimed'),
+				('s2', 'sh-1', 'u2', 'confirmed'),
+				('s3', 'sh-1', 'u3', 'cancelled')`
 		);
 		const [wo] = (await listProjectAttachments('proj-1')).workOrders;
 		expect(wo.claimed).toBe(2);

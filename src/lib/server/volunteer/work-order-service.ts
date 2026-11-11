@@ -1,8 +1,26 @@
 import { db } from '#lib/server/db/index.js';
-import { workOrder, volunteerSignup, volunteerRole } from '#lib/server/db/schema/volunteer.js';
+import {
+	workOrder,
+	volunteerShift,
+	volunteerSignup,
+	volunteerRole,
+	workOrderAssignee
+} from '#lib/server/db/schema/volunteer.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { and, asc, count, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzle-orm';
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	getTableColumns,
+	gte,
+	inArray,
+	isNull,
+	lte,
+	sql
+} from 'drizzle-orm';
 import { DomainError } from '#lib/server/errors.js';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import {
@@ -13,8 +31,15 @@ import {
 	VOLUNTEER_SHIFT_NOTES_MAX,
 	VOLUNTEER_SHIFT_TITLE_MAX
 } from '#lib/config.js';
-import type { WorkOrder, VolunteerRoleGroup } from '#lib/server/db/schema/volunteer.js';
+import type {
+	Task,
+	VolunteerRoleGroup,
+	VolunteerShift,
+	WorkOrder,
+	WorkOrderLegacyColumn
+} from '#lib/server/db/schema/volunteer.js';
 import { chunk } from '#lib/server/utils/chunk.js';
+import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import type { WorkOrderField } from '#lib/types/audit.js';
 
@@ -24,11 +49,11 @@ export { isScheduled } from './scheduled';
 import { isScheduled } from './scheduled';
 
 // ---------------------------------------------------------------------------
-// Shifts
+// Tasks and shifts (#2518)
 // ---------------------------------------------------------------------------
-// A dated, time-bounded need for a role. Staff create them; members claim them.
-// A standing weekly slot is made by duplicating last week's; recurring
-// facility work is `maintenance-schedule-service.ts`.
+// A task (`work_order`) is the work; a shift (`volunteer_shift`) is a time
+// volunteers sign up for it. A task has zero or more shifts. Assignment is
+// `work_order_assignee`, never a sign-up.
 // ---------------------------------------------------------------------------
 
 const TZ = DEFAULT_TIMEZONE;
@@ -113,10 +138,53 @@ export async function requireActiveRole(volunteerRoleId: string): Promise<void> 
 	}
 }
 
+const LEGACY_COLUMNS: readonly WorkOrderLegacyColumn[] = [
+	'legacyStartsAt',
+	'legacyEndsAt',
+	'legacyCapacity',
+	'legacyPostedAt',
+	'legacyPostedByUserId',
+	'legacyCloseReportsOnCompletion'
+];
+
+/** A `work_order` row without the columns that moved to `volunteer_shift` or were retired. */
+export function toTask(row: WorkOrder): Task {
+	const task: Partial<WorkOrder> = { ...row };
+	for (const column of LEGACY_COLUMNS) delete task[column];
+	return task as Task;
+}
+
+/** `work_order`'s columns for a select, without the legacy ones. */
+export function taskColumns() {
+	const columns: Partial<ReturnType<typeof getTableColumns<typeof workOrder>>> = {
+		...getTableColumns(workOrder)
+	};
+	for (const column of LEGACY_COLUMNS) delete columns[column];
+	return columns as Omit<ReturnType<typeof getTableColumns<typeof workOrder>>, WorkOrderLegacyColumn>;
+}
+
+/** Not called off: what every forward-looking shift query reads. */
+export const liveShift = () => isNull(volunteerShift.cancelledAt);
+
+/** Open work: neither marked done nor called off. */
+export const openTask = () => and(isNull(workOrder.resolvedAt), isNull(workOrder.cancelledAt));
+
+/** Whether the task in scope has a shift that is not called off. */
+export function hasLiveShiftSql() {
+	return sql<number>`exists (
+		select 1 from "volunteer_shift" s
+		where s."work_order_id" = ${workOrder.id} and s."cancelled_at" is null
+	)`;
+}
+
 // ---------------------------------------------------------------------------
 // Mutations
 // ---------------------------------------------------------------------------
 
+/**
+ * A new task with one shift on it: the schedule page's "new shift" form, which
+ * names the role and the time together. The two rows are one `db.batch`.
+ */
 export async function createShift(data: {
 	volunteerRoleId: string;
 	eventId?: string | null;
@@ -130,7 +198,7 @@ export async function createShift(data: {
 	capacity: number;
 	notes?: string | null;
 	createdByUserId: string;
-}): Promise<WorkOrder> {
+}): Promise<Task & { shiftId: string }> {
 	const [role] = await db
 		.select({ id: volunteerRole.id, isActive: volunteerRole.isActive })
 		.from(volunteerRole)
@@ -143,51 +211,122 @@ export async function createShift(data: {
 	}
 
 	const times = validateTimes(parseLocal(data.startsAt, 'Start'), parseLocal(data.endsAt, 'End'));
+	const taskId = crypto.randomUUID();
 
-	const [row] = await db
-		.insert(workOrder)
+	const [[task], [shift]] = await db.batch([
+		db
+			.insert(workOrder)
+			.values({
+				id: taskId,
+				volunteerRoleId: data.volunteerRoleId,
+				eventId: data.eventId || null,
+				assetId: data.assetId || null,
+				title: validateTitle(data.title),
+				createdByUserId: data.createdByUserId
+			})
+			.returning(),
+		db
+			.insert(volunteerShift)
+			.values({
+				workOrderId: taskId,
+				startsAt: times.startsAt,
+				endsAt: times.endsAt,
+				capacity: validateCapacity(data.capacity),
+				notes: validateNotes(data.notes),
+				createdByUserId: data.createdByUserId
+			})
+			.returning()
+	]);
+
+	return { ...toTask(task), shiftId: shift.id };
+}
+
+/**
+ * Open a shift on a task: a time volunteers can sign up for. Creating it is what
+ * puts it on the board. A task with a shift needs a role, which is cross-table,
+ * so it is enforced here rather than by a CHECK.
+ */
+export async function openShift(
+	workOrderId: string,
+	data: {
+		/** `YYYY-MM-DDTHH:mm`, club time. */
+		startsAt: string;
+		endsAt: string;
+		capacity?: number;
+		notes?: string | null;
+		createdByUserId: string;
+	}
+): Promise<VolunteerShift> {
+	const task = await getWorkOrderById(workOrderId);
+	if (!task) throw new ShiftNotFoundError();
+	if (task.resolvedAt) throw new ShiftValidationError('That task is already done.');
+	if (task.cancelledAt) throw new ShiftValidationError('That task was called off.');
+	if (!task.volunteerRoleId) {
+		throw new ShiftValidationError('Give the task a volunteer role before opening a shift on it.');
+	}
+	await requireActiveRole(task.volunteerRoleId);
+
+	const times = validateTimes(parseLocal(data.startsAt, 'Start'), parseLocal(data.endsAt, 'End'));
+	const [shift] = await db
+		.insert(volunteerShift)
 		.values({
-			volunteerRoleId: data.volunteerRoleId,
-			eventId: data.eventId || null,
-			assetId: data.assetId || null,
-			title: validateTitle(data.title),
+			workOrderId,
 			startsAt: times.startsAt,
 			endsAt: times.endsAt,
-			capacity: validateCapacity(data.capacity),
+			capacity: validateCapacity(data.capacity ?? task.pendingCapacity ?? 1),
 			notes: validateNotes(data.notes),
-			// A shift made this way is open to volunteers: that is what the form is.
-			postedAt: new Date(),
-			postedByUserId: data.createdByUserId,
+			anchor: task.anchor,
 			createdByUserId: data.createdByUserId
 		})
 		.returning();
 
-	return row;
+	await recordAuditEntry({
+		action: 'work_order.rescheduled',
+		subject: { type: 'work_order', id: task.id, label: workOrderAuditLabel(task) },
+		details: {
+			from: { startsAt: null, endsAt: null, dueAt: iso(task.dueAt) },
+			to: { startsAt: iso(shift.startsAt), endsAt: iso(shift.endsAt), dueAt: iso(task.dueAt) }
+		}
+	});
+	return shift;
 }
 
 /**
- * Copy a shift forward. This is how a standing weekly slot gets made without
- * the table carrying series bookkeeping — the copy is an ordinary shift with
- * no link back, so editing or cancelling one never touches the other.
+ * The shift a task-shaped page shows and edits: its latest live shift, or its
+ * latest shift when every one was called off. Pages that show one shift per
+ * task read through this until they list every shift.
+ */
+export async function getCurrentShift(workOrderId: string): Promise<VolunteerShift | null> {
+	const [row] = await db
+		.select()
+		.from(volunteerShift)
+		.where(eq(volunteerShift.workOrderId, workOrderId))
+		.orderBy(sql`${volunteerShift.cancelledAt} is not null`, desc(volunteerShift.startsAt))
+		.limit(1);
+	return row ?? null;
+}
+
+/**
+ * Copy a task and its shift forward. This is how a standing weekly slot gets
+ * made without series bookkeeping: the copy is an ordinary task with no link
+ * back, so editing or cancelling one never touches the other.
  */
 export async function duplicateShift(
 	id: string,
 	offsetDays: number,
 	createdByUserId: string
-): Promise<WorkOrder> {
-	const original = await getShiftById(id);
+): Promise<Task & { shiftId: string }> {
+	const original = await getWorkOrderById(id);
 	if (!original) throw new ShiftNotFoundError();
 
 	if (!Number.isInteger(offsetDays) || offsetDays < 1 || offsetDays > 365) {
 		throw new ShiftValidationError('Copy it somewhere between tomorrow and a year out.');
 	}
 
-	// Duplication is "same shift, N days later", which needs a date to move. An
-	// unscheduled work order has none — and copying one would produce a second
-	// row for the same broken amp, which is a duplicate report, not a rota.
-	if (!original.startsAt || !original.endsAt) {
-		throw new ShiftValidationError('Give this a date before copying it forward.');
-	}
+	// Duplication is "same shift, N days later", which needs a date to move. A
+	// task with no shift has none, and copying it would duplicate the work.
+	const shift = await getCurrentShift(id);
+	if (!shift) throw new ShiftValidationError('Give this a date before copying it forward.');
 
 	// Shift the wall-clock date, not the instant: adding 7 × 86,400,000 ms across
 	// a DST boundary moves a 6pm shift to 5pm or 7pm.
@@ -204,44 +343,54 @@ export async function duplicateShift(
 		return buildDateInTz(moved.toISOString().slice(0, 10), hm, TZ);
 	};
 
-	const startsAt = shiftLocalDate(original.startsAt);
-	const endsAt = shiftLocalDate(original.endsAt);
+	const startsAt = shiftLocalDate(shift.startsAt);
+	const endsAt = shiftLocalDate(shift.endsAt);
 
 	// Copying an old shift forward by a week usually still lands in the past, and
-	// a past shift is invisible to members and unclaimable — so it would look
-	// scheduled to staff while the board stayed empty.
+	// a past shift is invisible to members and unclaimable.
 	if (endsAt < new Date()) {
 		throw new ShiftValidationError(
 			'That copy would land in the past. Pick an offset that reaches a future date.'
 		);
 	}
 
-	const [row] = await db
-		.insert(workOrder)
-		.values({
-			volunteerRoleId: original.volunteerRoleId,
-			// Deliberately not copied: the new date is not that event's date.
-			eventId: null,
-			// The title IS copied, and matters more here than anywhere: a standing
-			// slot with no event is exactly what gets duplicated forward, and it is
-			// the name that tells the two apart on the board.
-			title: original.title,
-			assetId: original.assetId,
-			startsAt,
-			endsAt,
-			capacity: original.capacity,
-			notes: original.notes,
-			// Posting is a decision about this row; a copy forward of a Members
-			// slot stays assigned, a copy of an open one goes on the board.
-			postedAt: original.postedAt ? new Date() : null,
-			postedByUserId: original.postedAt ? createdByUserId : null,
-			createdByUserId
-		})
-		.returning();
+	const taskId = crypto.randomUUID();
+	const [[task], [copy]] = await db.batch([
+		db
+			.insert(workOrder)
+			.values({
+				id: taskId,
+				volunteerRoleId: original.volunteerRoleId,
+				// Deliberately not copied: the new date is not that event's date.
+				eventId: null,
+				// The title is what tells two copies of a standing slot apart.
+				title: original.title,
+				assetId: original.assetId,
+				notes: original.notes,
+				createdByUserId
+			})
+			.returning(),
+		db
+			.insert(volunteerShift)
+			.values({
+				workOrderId: taskId,
+				startsAt,
+				endsAt,
+				capacity: shift.capacity,
+				notes: shift.notes,
+				createdByUserId
+			})
+			.returning()
+	]);
 
-	return row;
+	return { ...toTask(task), shiftId: copy.id };
 }
 
+/**
+ * Edit a task and, when it has one, its current shift. Times, places and the
+ * briefing are the shift's; the rest is the task's. Times on a task with no
+ * live shift open one.
+ */
 export async function updateShift(
 	id: string,
 	data: {
@@ -253,29 +402,27 @@ export async function updateShift(
 		endsAt?: string;
 		capacity?: number;
 		notes?: string | null;
-		closeReportsOnCompletion?: boolean;
+		updatedByUserId?: string;
 	}
-): Promise<WorkOrder> {
-	const existing = await getShiftById(id);
+): Promise<Task> {
+	const existing = await getWorkOrderById(id);
 	if (!existing) throw new ShiftNotFoundError();
+	const current = await getCurrentShift(id);
+	const shift = current && !current.cancelledAt ? current : null;
 
-	const startsAt = data.startsAt ? parseLocal(data.startsAt, 'Start') : existing.startsAt;
-	const endsAt = data.endsAt ? parseLocal(data.endsAt, 'End') : existing.endsAt;
-
-	// Both or neither, mirroring the table's CHECK. An unscheduled work order can
-	// have its notes or capacity edited without acquiring half a window, and the
-	// half-scheduled case is a bug rather than a state worth representing.
+	const startsAt = data.startsAt ? parseLocal(data.startsAt, 'Start') : shift?.startsAt;
+	const endsAt = data.endsAt ? parseLocal(data.endsAt, 'End') : shift?.endsAt;
 	if (startsAt && endsAt) {
 		validateTimes(startsAt, endsAt);
 	} else if (startsAt || endsAt) {
 		throw new ShiftValidationError('Give this both a start and an end, or neither.');
 	}
 
-	// Shrinking below what's already claimed would leave people rostered onto a
-	// shift that no longer has room for them.
+	// Shrinking below what's already taken would leave people on a shift that no
+	// longer has room for them.
 	if (data.capacity !== undefined) {
 		validateCapacity(data.capacity);
-		const claimed = await countActiveSignups(id);
+		const claimed = shift ? await countActiveSignups(shift.id) : 0;
 		if (data.capacity < claimed) {
 			throw new ShiftValidationError(
 				`${claimed} ${claimed === 1 ? 'person has' : 'people have'} already claimed this. ` +
@@ -284,45 +431,103 @@ export async function updateShift(
 		}
 	}
 
-	const [row] = await db
+	const roleId = data.volunteerRoleId || existing.volunteerRoleId;
+	const opening = !shift && startsAt && endsAt;
+	if (opening && !roleId) {
+		throw new ShiftValidationError('Give the task a volunteer role before opening a shift on it.');
+	}
+
+	const now = new Date();
+	const notes = data.notes !== undefined ? validateNotes(data.notes) : undefined;
+	const updateTask = db
 		.update(workOrder)
 		.set({
 			...(data.volunteerRoleId ? { volunteerRoleId: data.volunteerRoleId } : {}),
 			...(data.eventId !== undefined ? { eventId: data.eventId || null } : {}),
 			...(data.assetId !== undefined ? { assetId: data.assetId || null } : {}),
 			...(data.title !== undefined ? { title: validateTitle(data.title) } : {}),
-			startsAt,
-			endsAt,
-			...(data.capacity !== undefined ? { capacity: data.capacity } : {}),
-			...(data.notes !== undefined ? { notes: validateNotes(data.notes) } : {}),
-			...(data.closeReportsOnCompletion !== undefined
-				? { closeReportsOnCompletion: data.closeReportsOnCompletion }
-				: {}),
-			updatedAt: new Date()
+			...(notes !== undefined && !shift && !opening ? { notes } : {}),
+			updatedAt: now
 		})
 		.where(eq(workOrder.id, id))
 		.returning();
 
-	await auditWorkOrderChange(existing, row);
-	return row;
+	const shiftWrite = shift
+		? db
+				.update(volunteerShift)
+				.set({
+					startsAt: startsAt ?? shift.startsAt,
+					endsAt: endsAt ?? shift.endsAt,
+					...(data.capacity !== undefined ? { capacity: data.capacity } : {}),
+					...(notes !== undefined ? { notes } : {}),
+					updatedAt: now
+				})
+				.where(eq(volunteerShift.id, shift.id))
+				.returning()
+		: opening
+			? db
+					.insert(volunteerShift)
+					.values({
+						workOrderId: id,
+						startsAt: startsAt!,
+						endsAt: endsAt!,
+						capacity: data.capacity ?? existing.pendingCapacity ?? 1,
+						notes: notes ?? null,
+						anchor: existing.anchor,
+						createdByUserId: data.updatedByUserId ?? null
+					})
+					.returning()
+			: null;
+
+	const [[row], after] = shiftWrite
+		? await db.batch([updateTask, shiftWrite])
+		: [await updateTask, [shift] as const];
+
+	const afterView = auditView(toTask(row), after[0] ?? null);
+	// Opening a shift is a new time, not a change of places.
+	const beforeView = shift
+		? auditView(existing, shift)
+		: { ...auditView(existing, null), capacity: afterView.capacity };
+	await auditWorkOrderChange(beforeView, afterView);
+	return toTask(row);
 }
 
-const iso = (d: Date | null) => d?.toISOString() ?? null;
-const timing = (w: WorkOrder) => ({
+const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
+
+/** What an audit entry compares: the task, with its shift's times and places. */
+export type WorkOrderAuditView = Pick<
+	Task,
+	'id' | 'title' | 'dueAt' | 'volunteerRoleId' | 'notes' | 'eventId' | 'assetId'
+> & { startsAt?: Date | null; endsAt?: Date | null; capacity?: number | null };
+
+function auditView(task: Task, shift: VolunteerShift | null): WorkOrderAuditView {
+	return {
+		...task,
+		startsAt: shift?.startsAt ?? null,
+		endsAt: shift?.endsAt ?? null,
+		capacity: shift?.capacity ?? null,
+		notes: shift?.notes ?? task.notes
+	};
+}
+
+const timing = (w: WorkOrderAuditView) => ({
 	startsAt: iso(w.startsAt),
 	endsAt: iso(w.endsAt),
 	dueAt: iso(w.dueAt)
 });
 
 /** The label an entry keeps if the work order is later renamed or gone. */
-export const workOrderAuditLabel = (w: Pick<WorkOrder, 'id' | 'title'>) => w.title ?? w.id;
+export const workOrderAuditLabel = (w: Pick<Task, 'id' | 'title'>) => w.title ?? w.id;
 
 /**
  * Record what an edit changed: a new time as `.rescheduled`, anything else as
  * `.edited` by field name. Every path that edits a work order calls this, so
  * the shift page and the project page write the same entries.
  */
-export async function auditWorkOrderChange(before: WorkOrder, after: WorkOrder): Promise<void> {
+export async function auditWorkOrderChange(
+	before: WorkOrderAuditView,
+	after: WorkOrderAuditView
+): Promise<void> {
 	const subject = { type: 'work_order' as const, id: after.id, label: workOrderAuditLabel(after) };
 	const [from, to] = [timing(before), timing(after)];
 	if (from.startsAt !== to.startsAt || from.endsAt !== to.endsAt || from.dueAt !== to.dueAt) {
@@ -342,27 +547,36 @@ export async function auditWorkOrderChange(before: WorkOrder, after: WorkOrder):
 	}
 }
 
+/** Call off a task's live shifts, as a statement for the caller's batch. */
+export function cancelLiveShifts(workOrderId: string, cancelledByUserId: string | null, at: Date) {
+	return db
+		.update(volunteerShift)
+		.set({ cancelledAt: at, cancelledByUserId, updatedAt: at })
+		.where(and(eq(volunteerShift.workOrderId, workOrderId), liveShift()));
+}
+
 /**
- * Call off a shift. The row and its signups stay: claimants still need
- * notifying, and "we cancelled that one" is worth being able to see.
+ * Call off a task and every live shift on it. The rows and their sign-ups stay:
+ * people on the shifts still need telling, and "we cancelled that one" is worth
+ * being able to see.
  *
- * `cancelledByUserId` is what lets the cancelled shift say who called it off.
- * It is optional so the sweep-style callers a cron might grow don't have to
- * invent a user, but every staff path passes one.
+ * `cancelledByUserId` is what lets the cancelled task say who called it off.
+ * Optional so a sweep has no user to invent; every staff path passes one.
  */
-export async function cancelShift(id: string, cancelledByUserId?: string): Promise<WorkOrder> {
+export async function cancelShift(id: string, cancelledByUserId?: string): Promise<Task> {
 	const now = new Date();
+	const by = cancelledByUserId ?? null;
 	const cancel = db
 		.update(workOrder)
-		.set({ cancelledAt: now, cancelledByUserId: cancelledByUserId ?? null, updatedAt: now })
+		.set({ cancelledAt: now, cancelledByUserId: by, updatedAt: now })
 		.where(and(eq(workOrder.id, id), isNull(workOrder.cancelledAt)))
 		.returning();
 
 	// Calling off a recurring occurrence is still a close: the next one is owed.
-	const schedule = await liveScheduleOf(await getShiftById(id));
-	const [row] = schedule
-		? (await db.batch([cancel, nextOccurrenceInsert(schedule, now)]))[0]
-		: await cancel;
+	const schedule = await liveScheduleOf(await getWorkOrderById(id));
+	const [[row]] = schedule
+		? await db.batch([cancel, cancelLiveShifts(id, by, now), nextOccurrenceInsert(schedule, now)])
+		: await db.batch([cancel, cancelLiveShifts(id, by, now)]);
 
 	if (!row) throw new ShiftNotFoundError();
 	await recordAuditEntry({
@@ -370,11 +584,11 @@ export async function cancelShift(id: string, cancelledByUserId?: string): Promi
 		subject: { type: 'work_order', id: row.id, label: workOrderAuditLabel(row) },
 		details: {}
 	});
-	return row;
+	return toTask(row);
 }
 
 /** The schedule to write a next occurrence for, when closing this row owes one. */
-async function liveScheduleOf(row: WorkOrder | null) {
+async function liveScheduleOf(row: Task | null) {
 	if (!row?.maintenanceScheduleId || row.resolvedAt || row.cancelledAt) return null;
 	return getLiveSchedule(row.maintenanceScheduleId);
 }
@@ -383,9 +597,37 @@ async function liveScheduleOf(row: WorkOrder | null) {
 // Queries
 // ---------------------------------------------------------------------------
 
-export async function getShiftById(id: string): Promise<WorkOrder | null> {
+export async function getWorkOrderById(id: string): Promise<Task | null> {
 	const [row] = await db.select().from(workOrder).where(eq(workOrder.id, id)).limit(1);
-	return row ?? null;
+	return row ? toTask(row) : null;
+}
+
+/** A shift with the facts about its task that sign-ups branch on. */
+export interface ShiftRecord extends VolunteerShift {
+	volunteerRoleId: string | null;
+	title: string | null;
+	eventId: string | null;
+	taskCancelledAt: Date | null;
+	taskResolvedAt: Date | null;
+}
+
+export async function getShiftById(id: string): Promise<ShiftRecord | null> {
+	const [row] = await db
+		.select({
+			shift: volunteerShift,
+			volunteerRoleId: workOrder.volunteerRoleId,
+			title: workOrder.title,
+			eventId: workOrder.eventId,
+			taskCancelledAt: workOrder.cancelledAt,
+			taskResolvedAt: workOrder.resolvedAt
+		})
+		.from(volunteerShift)
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
+		.where(eq(volunteerShift.id, id))
+		.limit(1);
+	if (!row) return null;
+	const { shift, ...task } = row;
+	return { ...shift, ...task };
 }
 
 /**
@@ -401,6 +643,12 @@ export function notOnCancelledListing() {
 
 /** Claims that still hold a place — cancelled and no-show ones free their slot. */
 const ACTIVE_SIGNUP_STATUSES = ['claimed', 'confirmed', 'completed'] as const;
+
+const holdsAPlace = () =>
+	sql.join(
+		ACTIVE_SIGNUP_STATUSES.map((status) => sql`${status}`),
+		sql`, `
+	);
 
 export async function countActiveSignups(shiftId: string): Promise<number> {
 	const [row] = await db
@@ -418,7 +666,17 @@ export async function countActiveSignups(shiftId: string): Promise<number> {
 /** A `ShiftWithCounts` some date filter has already narrowed. See `isScheduled`. */
 export type ScheduledShiftWithCounts = ShiftWithCounts & { startsAt: Date; endsAt: Date };
 
-export interface ShiftWithCounts extends WorkOrder {
+/**
+ * A task as a staff list row, with one of its shifts. `id` is the task's;
+ * `shiftId` names the shift whose times, places and roster the row shows, and is
+ * null on a task with no shift.
+ */
+export interface ShiftWithCounts extends Task {
+	shiftId: string | null;
+	startsAt: Date | null;
+	endsAt: Date | null;
+	/** The shift's places; 1 on a task with no shift. */
+	capacity: number;
 	/** Null on a contractor's or not-yet-assigned work order: the role join is a left join. */
 	roleName: string | null;
 	roleGroup: VolunteerRoleGroup | null;
@@ -428,34 +686,39 @@ export interface ShiftWithCounts extends WorkOrder {
 	/** Places taken: claimed + confirmed + completed. */
 	claimed: number;
 	/**
-	 * How many of those places are actually booked.
-	 *
-	 * Separate from `claimed` because only a confirmed signup gets the day-before
-	 * reminder, auto-completes, and produces an hour log. A shift showing 3/3
-	 * where none are confirmed is not staffed.
+	 * How many of those places are actually booked. Only a confirmed sign-up gets
+	 * the day-before reminder, so 3/3 with none confirmed is not staffed.
 	 */
 	confirmed: number;
-	/**
-	 * People on a called-off shift who still have to be told. Meaningless while
-	 * `cancelledAt` is null — everybody on a live shift is trivially "unnotified".
-	 */
+	/** People on a called-off shift who still have to be told. Zero while it is live. */
 	unnotified: number;
 }
 
-function withCounts(
-	rows: {
-		shift: WorkOrder;
-		roleName: string | null;
-		roleGroup: VolunteerRoleGroup | null;
-		eventTitle: string | null;
-		assetName: string | null;
-		claimed: number;
-		confirmed: number;
-		unnotified: number;
-	}[]
-): ShiftWithCounts[] {
-	return rows.map((r) => ({
-		...r.shift,
+type ShiftRowSource = {
+	task: WorkOrder;
+	shift: VolunteerShift | null;
+	roleName: string | null;
+	roleGroup: VolunteerRoleGroup | null;
+	eventTitle: string | null;
+	assetName: string | null;
+	claimed: number;
+	confirmed: number;
+	unnotified: number;
+};
+
+function withCounts(rows: ShiftRowSource[]): ShiftWithCounts[] {
+	return rows.map(({ task, shift, ...r }) => ({
+		...toTask(task),
+		shiftId: shift?.id ?? null,
+		startsAt: shift?.startsAt ?? null,
+		endsAt: shift?.endsAt ?? null,
+		capacity: shift?.capacity ?? 1,
+		notes: shift?.notes ?? task.notes,
+		anchor: shift?.anchor ?? task.anchor,
+		cancelledAt: task.cancelledAt ?? shift?.cancelledAt ?? null,
+		cancelledByUserId: task.cancelledAt
+			? task.cancelledByUserId
+			: (shift?.cancelledByUserId ?? null),
 		roleName: r.roleName,
 		roleGroup: r.roleGroup,
 		eventTitle: r.eventTitle,
@@ -466,66 +729,86 @@ function withCounts(
 	}));
 }
 
-/**
- * Places taken on the work order in scope. Built from ACTIVE_SIGNUP_STATUSES
- * rather than spelled out, so a new status that holds a place can't quietly
- * stop counting.
- */
-export function claimedSql() {
-	const holdsAPlace = sql.join(
-		ACTIVE_SIGNUP_STATUSES.map((status) => sql`${status}`),
-		sql`, `
-	);
+/** Places taken on the shift in scope. */
+export function shiftClaimedSql() {
 	return sql<number>`(
 		select count(*) from "volunteer_signup" vs
-		where vs."shift_id" = ${workOrder.id}
-			and vs."status" in (${holdsAPlace})
+		where vs."shift_id" = ${volunteerShift.id}
+			and vs."status" in (${holdsAPlace()})
 	)`;
 }
 
 /**
- * The shows among these with a live, scheduled crew shift still short of its
- * capacity: what `shifts_filled` asks. Committee-owned work is not crew.
+ * Places taken across the live shifts of the task in scope. Built from
+ * ACTIVE_SIGNUP_STATUSES so a new status that holds a place can't quietly stop
+ * counting.
+ */
+export function claimedSql() {
+	return sql<number>`(
+		select count(*) from "volunteer_signup" vs
+		join "volunteer_shift" s on s."id" = vs."shift_id"
+		where s."work_order_id" = ${workOrder.id}
+			and s."cancelled_at" is null
+			and vs."status" in (${holdsAPlace()})
+	)`;
+}
+
+/** Places across the live shifts of the task in scope; 0 with no shift. */
+export function capacitySql() {
+	return sql<number>`(
+		select coalesce(sum(s."capacity"), 0) from "volunteer_shift" s
+		where s."work_order_id" = ${workOrder.id} and s."cancelled_at" is null
+	)`;
+}
+
+/** How many people are assigned the task in scope. */
+export function assigneeCountSql() {
+	return sql<number>`(
+		select count(*) from "work_order_assignee" a where a."work_order_id" = ${workOrder.id}
+	)`;
+}
+
+/**
+ * The shows among these with a live crew shift still short of its places: what
+ * `shifts_filled` asks. Committee-owned work is not crew.
  */
 export async function eventsShortOfCrew(eventIds: string[]): Promise<Set<string>> {
 	if (eventIds.length === 0) return new Set();
 	const rows = await db
 		.selectDistinct({ eventId: workOrder.eventId })
-		.from(workOrder)
+		.from(volunteerShift)
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.where(
 			and(
 				inArray(workOrder.eventId, eventIds),
 				isNull(workOrder.groupId),
-				isNotNull(workOrder.startsAt),
 				isNull(workOrder.cancelledAt),
-				sql`${claimedSql()} < ${workOrder.capacity}`
+				liveShift(),
+				sql`${shiftClaimedSql()} < ${volunteerShift.capacity}`
 			)
 		);
 	return new Set(rows.map((r) => r.eventId!));
 }
 
 /**
- * Upcoming shifts still short of capacity, per role — the "what needs attention"
- * column on the staff roles table.
- *
- * Only roles with at least one short shift come back; read the map with `?? 0`.
- * Past and cancelled shifts are excluded: neither is something anyone can still
- * fill, and counting them would leave every role permanently red.
+ * Upcoming shifts still short of places, per role — the "what needs attention"
+ * column on the staff roles table. Only roles with a short shift come back.
+ * Past and cancelled shifts are out: nobody can still fill them.
  */
 export async function countUnfilledByRole(from = new Date()): Promise<Map<string, number>> {
-	const claimed = claimedSql();
-
 	const rows = await db
 		.select({
 			volunteerRoleId: workOrder.volunteerRoleId,
 			unfilled: count()
 		})
-		.from(workOrder)
+		.from(volunteerShift)
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.where(
 			and(
+				liveShift(),
 				isNull(workOrder.cancelledAt),
-				gte(workOrder.startsAt, from),
-				sql`${claimed} < ${workOrder.capacity}`
+				gte(volunteerShift.startsAt, from),
+				sql`${shiftClaimedSql()} < ${volunteerShift.capacity}`
 			)
 		)
 		.groupBy(workOrder.volunteerRoleId);
@@ -537,74 +820,70 @@ export async function countUnfilledByRole(from = new Date()): Promise<Map<string
 }
 
 /**
- * The shift row as every staff surface wants it: the role's name, the title of
- * the show it staffs (null for a work party), and how many places are taken.
- *
- * Both joins are `leftJoin`s and have to stay so: `eventId` and
- * `volunteerRoleId` are nullable by design, and an inner join would quietly
- * drop every work order with no show, or a contractor's or unassigned one.
+ * The columns every staff row wants: the task, the shift, the role's name, the
+ * show's title, and the shift's counts. The role and event joins are left joins
+ * because both are nullable by design.
  */
+function rowColumns() {
+	return {
+		task: workOrder,
+		shift: volunteerShift,
+		roleName: volunteerRole.name,
+		roleGroup: volunteerRole.group,
+		eventTitle: eventListing.title,
+		assetName: sql<string | null>`(
+			select ii."name" || coalesce(' · ' || ia."asset_tag", '') from "inventory_asset" ia
+			join "inventory_item" ii on ii."id" = ia."item_id"
+			where ia."id" = ${workOrder.assetId}
+		)`,
+		claimed: shiftClaimedSql(),
+		// `completed` counts as confirmed: the completion sweep only promotes a
+		// booked sign-up, so leaving it out would make every past shift unconfirmed.
+		confirmed: sql<number>`(
+			select count(*) from "volunteer_signup" vs
+			where vs."shift_id" = ${volunteerShift.id}
+				and vs."status" in ('confirmed', 'completed')
+		)`,
+		unnotified: sql<number>`(
+			select count(*) from "volunteer_signup" vs
+			where vs."shift_id" = ${volunteerShift.id}
+				and vs."status" <> 'cancelled'
+				and vs."notified_at" is null
+		)`
+	};
+}
+
+/** One row per shift, with its task. */
 function shiftRowsQuery() {
 	return db
-		.select({
-			shift: workOrder,
-			roleName: volunteerRole.name,
-			roleGroup: volunteerRole.group,
-			eventTitle: eventListing.title,
-			assetName: sql<string | null>`(
-				select ii."name" || coalesce(' · ' || ia."asset_tag", '') from "inventory_asset" ia
-				join "inventory_item" ii on ii."id" = ia."item_id"
-				where ia."id" = ${workOrder.assetId}
-			)`,
-			claimed: sql<number>`(
-				select count(*) from "volunteer_signup" vs
-				where vs."shift_id" = ${workOrder.id}
-					and vs."status" in ('claimed', 'confirmed', 'completed')
-			)`,
-			// `completed` counts as confirmed: the completion sweep only ever promotes a
-			// confirmed signup, so a completed one WAS booked. Leaving it out would make
-			// every past shift read as unconfirmed forever.
-			confirmed: sql<number>`(
-				select count(*) from "volunteer_signup" vs
-				where vs."shift_id" = ${workOrder.id}
-					and vs."status" in ('confirmed', 'completed')
-			)`,
-			// Zero on every live shift, and the whole story on a cancelled one:
-			// there the roster is the list of people to ring, and this is what is
-			// left of it. Computed here rather than in a second query because the
-			// schedule needs it per cancelled row and the detail page needs it for
-			// the banner, which is the same number twice.
-			unnotified: sql<number>`(
-				select count(*) from "volunteer_signup" vs
-				where vs."shift_id" = ${workOrder.id}
-					and vs."status" <> 'cancelled'
-					and vs."notified_at" is null
-			)`
-		})
+		.select(rowColumns())
 		.from(workOrder)
+		.innerJoin(volunteerShift, eq(volunteerShift.workOrderId, workOrder.id))
+		.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId));
+}
+
+/** One row per task, with its current shift (see `getCurrentShift`) when it has one. */
+function taskRowsQuery() {
+	const current = sql`${volunteerShift.id} = (
+		select s2."id" from "volunteer_shift" s2
+		where s2."work_order_id" = ${workOrder.id}
+		order by s2."cancelled_at" is not null, s2."starts_at" desc
+		limit 1
+	)`;
+	return db
+		.select(rowColumns())
+		.from(workOrder)
+		.leftJoin(volunteerShift, current)
 		.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId));
 }
 
 /**
- * The staff list. Counts only the signups that hold a place, so a cancelled
- * claim reopens the slot rather than leaving the shift looking full.
- */
-// ---------------------------------------------------------------------------
-// Work orders
-//
-// A work order is one of these rows with no window on it yet. Everything else
-// about it -- claiming, clearances, hours, no-shows, feedback -- is the shift
-// machinery unchanged, which is the whole reason it is not a table of its own.
-// ---------------------------------------------------------------------------
-
-/**
- * Work that needs doing, with nobody booked to do it. Staff-created: a member's
- * `work_request` reaches one of these through a coordinator.
- *
- * With a role it is volunteer work and is posted, as queue work always was.
- * Without one it is a task typed into a project's list: nobody answers it yet,
- * so it is not posted, and its title is all it has.
+ * Create a task with no shift: work that needs doing, with nobody booked to do
+ * it. Staff-created: a member's `work_request` reaches one of these through a
+ * coordinator. Without a role it is a line typed into a project's list, and its
+ * title is all it has.
  */
 export async function createWorkOrder(data: {
 	volunteerRoleId?: string | null;
@@ -615,11 +894,12 @@ export async function createWorkOrder(data: {
 	sectionId?: string | null;
 	sortOrder?: number;
 	notes?: string | null;
-	/** A deadline, not a window. */
+	/** A deadline, not a shift. */
 	dueAt?: Date | null;
+	/** Places for a shift opened on it later (`pendingCapacity`). */
 	capacity?: number;
 	createdByUserId: string;
-}): Promise<WorkOrder> {
+}): Promise<Task> {
 	const roleId = data.volunteerRoleId || null;
 	const title = validateTitle(data.title);
 	if (roleId) await requireActiveRole(roleId);
@@ -634,44 +914,14 @@ export async function createWorkOrder(data: {
 			projectId: data.projectId || null,
 			sectionId: data.projectId ? data.sectionId || null : null,
 			sortOrder: data.sortOrder ?? 0,
-			// Both null: the CHECK requires either a whole window or none, and this
-			// is the "none" case by definition.
-			startsAt: null,
-			endsAt: null,
 			dueAt: data.dueAt ?? null,
-			capacity: validateCapacity(data.capacity ?? 1),
+			pendingCapacity: data.capacity ? validateCapacity(data.capacity) : null,
 			notes: data.notes ? validateNotes(data.notes) : null,
-			postedAt: roleId ? new Date() : null,
-			postedByUserId: roleId ? data.createdByUserId : null,
 			createdByUserId: data.createdByUserId
 		})
 		.returning();
 
-	return row;
-}
-
-/**
- * Give a work order a window, which turns it into an ordinary claimable shift.
- *
- * `updateShift` already enforces both-or-neither and the length rules, so this
- * is a thin named path rather than a second implementation — "we found a time
- * for it" is a different story from "somebody edited the shift", and the
- * coordinator's queue needs the former.
- */
-export async function scheduleWorkOrder(
-	id: string,
-	times: { startsAt: string; endsAt: string; closeReportsOnCompletion?: boolean }
-): Promise<WorkOrder> {
-	const existing = await getShiftById(id);
-	if (!existing) throw new ShiftNotFoundError();
-	if (existing.startsAt) {
-		throw new ShiftValidationError('That is already scheduled — edit it instead.');
-	}
-	return updateShift(id, {
-		startsAt: times.startsAt,
-		endsAt: times.endsAt,
-		closeReportsOnCompletion: times.closeReportsOnCompletion ?? false
-	});
+	return toTask(row);
 }
 
 export interface ResolveWorkOrderOptions {
@@ -682,21 +932,16 @@ export interface ResolveWorkOrderOptions {
 }
 
 /**
- * The work is finished, which is not the same as anybody having turned up.
- *
- * `completeFinishedShifts` promotes a signup once the clock runs out; a session
- * can end with the amp still broken, so closure lives on the work row. That cron
- * keys on `ends_at` and can never reach an unscheduled row, so resolving has to
- * complete the signups itself. Does not touch the asset.
+ * Mark a task done, which is not the same as anybody having turned up: a shift
+ * can end with the amp still broken, so closure lives on the task. Stamps every
+ * assignee's `completed_at` and resolves the attached equipment reports.
+ * Sign-ups are the completion cron's, by their shift's end. Does not touch the asset.
  */
-export async function resolveWorkOrder(
-	id: string,
-	opts: ResolveWorkOrderOptions
-): Promise<WorkOrder> {
+export async function resolveWorkOrder(id: string, opts: ResolveWorkOrderOptions): Promise<Task> {
 	const resolution = await prepareResolveWorkOrder(id, opts);
 	const [, [row]] = await db.batch(resolution.statements);
 	await resolution.afterCommit();
-	return row;
+	return toTask(row);
 }
 
 /**
@@ -706,7 +951,7 @@ export async function resolveWorkOrder(
  * run once that batch has landed.
  */
 export async function prepareResolveWorkOrder(id: string, opts: ResolveWorkOrderOptions) {
-	const existing = await getShiftById(id);
+	const existing = await getWorkOrderById(id);
 	if (!existing) throw new ShiftNotFoundError();
 	if (existing.resolvedAt) throw new ShiftValidationError('That is already closed.');
 	if (existing.cancelledAt) throw new ShiftValidationError('That was called off.');
@@ -723,15 +968,11 @@ export async function prepareResolveWorkOrder(id: string, opts: ResolveWorkOrder
 
 	const now = new Date();
 
-	const completeSignups = db
-		.update(volunteerSignup)
-		.set({ status: 'completed', completedAt: now, updatedAt: now })
-		.where(
-			and(
-				eq(volunteerSignup.shiftId, id),
-				inArray(volunteerSignup.status, ['claimed', 'confirmed'])
-			)
-		);
+	// The assignees' prompt to log hours for the work.
+	const completeAssignees = db
+		.update(workOrderAssignee)
+		.set({ completedAt: now })
+		.where(and(eq(workOrderAssignee.workOrderId, id), isNull(workOrderAssignee.completedAt)));
 
 	const close = db
 		.update(workOrder)
@@ -746,8 +987,8 @@ export async function prepareResolveWorkOrder(id: string, opts: ResolveWorkOrder
 
 	const schedule = await liveScheduleOf(existing);
 	const statements = schedule
-		? ([completeSignups, close, nextOccurrenceInsert(schedule, now)] as const)
-		: ([completeSignups, close] as const);
+		? ([completeAssignees, close, nextOccurrenceInsert(schedule, now)] as const)
+		: ([completeAssignees, close] as const);
 
 	async function afterCommit() {
 		await recordAuditEntry({
@@ -756,16 +997,15 @@ export async function prepareResolveWorkOrder(id: string, opts: ResolveWorkOrder
 			details: { override, reason: notes }
 		});
 
-		// The equipment reports this work answered close with it. Dynamic, like the
-		// orientation import below, so the two domains do not import each other.
+		// The equipment reports this work answered close with it, and only here:
+		// a shift ending never closes one (#2518). Dynamic, like the orientation
+		// import below, so the two domains do not import each other.
 		const { resolveFlagsForWorkOrder } = await import('../inventory/work-request-service');
 		await resolveFlagsForWorkOrder(id, opts.resolvedByUserId, notes ?? undefined);
 
-		// Staff closing an orientation by hand is the other way one gets finished.
-		// The cron path emits `volunteer.shift_completed` per signup and a listener
-		// picks it up there; this path emits nothing, because the shift's clock may
-		// never have run out. `completeOrientation` is `where completed_at is null`,
-		// so the two racing is a no-op rather than a rewrite of who ran it.
+		// Staff marking an orientation done is the other way one gets finished; the
+		// cron path emits `volunteer.shift_completed` per sign-up instead.
+		// `completeOrientation` is `where completed_at is null`, so the two racing is a no-op.
 		const { completeOrientation, orientationOwnerOf } = await import('./orientation-service');
 		const member = await orientationOwnerOf(id);
 		if (member) {
@@ -776,6 +1016,24 @@ export async function prepareResolveWorkOrder(id: string, opts: ResolveWorkOrder
 	return { statements, afterCommit };
 }
 
+/**
+ * Open tasks with a live shift and none still to finish: someone marks the task
+ * done or opens another shift. The clock never closes a task (#2518).
+ */
+export function tasksWithEndedShiftsWhere(now: Date) {
+	const nowSeconds = Math.floor(now.getTime() / 1000);
+	return and(
+		openTask(),
+		hasLiveShiftSql(),
+		sql`not exists (
+			select 1 from "volunteer_shift" s
+			where s."work_order_id" = ${workOrder.id}
+				and s."cancelled_at" is null
+				and s."ends_at" > ${nowSeconds}
+		)`
+	);
+}
+
 export interface WorkOrderQueueFilters {
 	volunteerRoleId?: string;
 	eventId?: string;
@@ -783,14 +1041,13 @@ export interface WorkOrderQueueFilters {
 }
 
 /**
- * Which work is waiting for a time. Shared with `countVolunteerWorkWaiting`, so
- * the badge can only count rows this queue lists (#1828).
+ * Open tasks with no live shift. Shared with `countVolunteerWorkWaiting`, so the
+ * badge can only count rows this queue lists (#1828).
  */
 export function unscheduledWorkWhere(filters: WorkOrderQueueFilters = {}) {
 	return and(
-		isNull(workOrder.startsAt),
-		isNull(workOrder.resolvedAt),
-		isNull(workOrder.cancelledAt),
+		sql`not ${hasLiveShiftSql()}`,
+		openTask(),
 		// The same optional anchors `listShifts` takes: the advance half of a duty
 		// list lands here carrying the event it is for.
 		filters.volunteerRoleId ? eq(workOrder.volunteerRoleId, filters.volunteerRoleId) : undefined,
@@ -801,26 +1058,25 @@ export function unscheduledWorkWhere(filters: WorkOrderQueueFilters = {}) {
 		// with no role is a contractor's or nobody's yet, not volunteer work to time.
 		filters.eventId || filters.projectId
 			? undefined
-			: and(isNull(workOrder.groupId), isNotNull(workOrder.volunteerRoleId))
+			: and(isNull(workOrder.groupId), sql`${workOrder.volunteerRoleId} is not null`)
 	);
 }
 
 /**
- * The coordinator's queue: work nobody has found a time for.
- *
- * Oldest first, like every queue in this app — the thing that has been sitting
- * a fortnight is the one that has gone wrong.
+ * The coordinator's queue: work nobody has found a time for. Oldest first, like
+ * every queue in this app.
  */
 export async function listWorkOrders(
 	filters: WorkOrderQueueFilters = {}
 ): Promise<ShiftWithCounts[]> {
-	const rows = await shiftRowsQuery()
+	const rows = await taskRowsQuery()
 		.where(unscheduledWorkWhere(filters))
 		.orderBy(asc(workOrder.createdAt), asc(workOrder.id));
 
 	return withCounts(rows);
 }
 
+/** Shifts by date, one row each, with their tasks. Tasks with no shift are `listWorkOrders`. */
 export async function listShifts(
 	filters: {
 		volunteerRoleId?: string;
@@ -833,63 +1089,74 @@ export async function listShifts(
 	const rows = await shiftRowsQuery()
 		.where(
 			and(
-				// Scheduled rows only. An unscheduled row is a work order — work
-				// nobody has booked a time for — and it belongs in the coordinator's
-				// "needs scheduling" queue, not in a table sorted by date where it
-				// would sit at one end with an empty column. `listWorkOrders` is the
-				// other half of this pair.
-				isNotNull(workOrder.startsAt),
-				filters.includeCancelled ? undefined : isNull(workOrder.cancelledAt),
+				filters.includeCancelled ? undefined : and(liveShift(), isNull(workOrder.cancelledAt)),
 				filters.volunteerRoleId
 					? eq(workOrder.volunteerRoleId, filters.volunteerRoleId)
 					: undefined,
 				filters.eventId ? eq(workOrder.eventId, filters.eventId) : undefined,
-				filters.from ? gte(workOrder.startsAt, filters.from) : undefined,
-				filters.to ? lte(workOrder.startsAt, filters.to) : undefined
+				filters.from ? gte(volunteerShift.startsAt, filters.from) : undefined,
+				filters.to ? lte(volunteerShift.startsAt, filters.to) : undefined
 			)
 		)
-		.orderBy(asc(workOrder.startsAt));
+		.orderBy(asc(volunteerShift.startsAt));
 
 	return withCounts(rows).filter(isScheduled);
 }
 
-/** These work orders as list rows, whatever their state; the caller picked them. */
+/** These tasks as list rows, whatever their state; the caller picked them. */
 export async function listWorkOrdersByIds(ids: string[]): Promise<ShiftWithCounts[]> {
 	if (ids.length === 0) return [];
-	const rows = await shiftRowsQuery()
+	const rows = await taskRowsQuery()
 		.where(inArray(workOrder.id, ids))
-		.orderBy(asc(workOrder.startsAt), asc(workOrder.createdAt), asc(workOrder.id));
+		.orderBy(asc(volunteerShift.startsAt), asc(workOrder.createdAt), asc(workOrder.id));
 	return withCounts(rows);
 }
 
 /**
- * One shift, with the same trimmings as a list row.
- *
- * Separate from `getShiftById`, which returns the bare table row that the signup
- * service branches on; widening it there would push the role and event joins
- * onto every claim, confirm and no-show. Cancelled shifts are included — the
- * detail page is where you go to find out what was called off.
+ * One task, with the same trimmings as a list row and its current shift.
+ * Cancelled tasks are included — the detail page is where you go to find out
+ * what was called off.
  */
 export async function getShiftDetail(id: string): Promise<ShiftWithCounts | null> {
-	const rows = await shiftRowsQuery().where(eq(workOrder.id, id)).limit(1);
+	const rows = await taskRowsQuery().where(eq(workOrder.id, id)).limit(1);
 	return withCounts(rows)[0] ?? null;
 }
 
-/**
- * Who called a shift off, by name.
- *
- * Its own lookup rather than a join on `shiftRowsQuery`: only one page asks, and
- * only when the shift is actually cancelled. On the shared row query it would
- * join `user` a second time on every schedule row.
- */
-export async function getShiftCancelledByName(shiftId: string): Promise<string | null> {
+/** Who called a task off, by name. Only one page asks, so it is not on the row query. */
+export async function getShiftCancelledByName(workOrderId: string): Promise<string | null> {
 	const [row] = await db
 		.select({ name: user.name })
 		.from(workOrder)
 		.innerJoin(user, eq(user.id, workOrder.cancelledByUserId))
-		.where(eq(workOrder.id, shiftId))
+		.where(eq(workOrder.id, workOrderId))
 		.limit(1);
 	return row?.name ?? null;
+}
+
+/** Who is assigned a task, in the order they were assigned. */
+export async function listWorkOrderAssignees(workOrderId: string) {
+	const rows = await db
+		.select({
+			userId: workOrderAssignee.userId,
+			member: memberRefColumns(),
+			assignedAt: workOrderAssignee.assignedAt,
+			completedAt: workOrderAssignee.completedAt
+		})
+		.from(workOrderAssignee)
+		.innerJoin(user, eq(user.id, workOrderAssignee.userId))
+		.where(eq(workOrderAssignee.workOrderId, workOrderId))
+		.orderBy(asc(workOrderAssignee.assignedAt), asc(user.name));
+	return rows.map((r) => ({ ...r, member: toMemberRef(r.member) }));
+}
+
+/** The task a shift is on, or `undefined` when there is no such shift. */
+export async function workOrderIdOfShift(shiftId: string): Promise<string | undefined> {
+	const [row] = await db
+		.select({ workOrderId: volunteerShift.workOrderId })
+		.from(volunteerShift)
+		.where(eq(volunteerShift.id, shiftId))
+		.limit(1);
+	return row?.workOrderId;
 }
 
 /** The project a work order is on, or `undefined` when there is no such work order. */
@@ -902,24 +1169,22 @@ export async function workOrderProjectId(id: string): Promise<string | null | un
 	return row ? row.projectId : undefined;
 }
 
-/** An `OpenShift` the `starts_at >= now` filter already narrowed. See `isScheduled`. */
-export type ScheduledOpenShift = OpenShift & { startsAt: Date; endsAt: Date };
-
 /**
- * `unnotified` is omitted deliberately: it counts people still owed a call about
- * a shift that was called off, and this query filters cancelled shifts out
- * before they can be one. Inheriting it would put a subquery on every row of the
- * member board to answer a question that is structurally zero there.
+ * A shift on the member board. `id` is the shift's (what a sign-up names);
+ * `workOrderId` is its task's.
  */
-export interface OpenShift extends Omit<
-	ShiftWithCounts,
-	'unnotified' | 'volunteerRoleId' | 'roleName' | 'roleGroup'
-> {
-	/** Never null here: only posted work is listed, and posting requires a role. */
+export interface OpenShift extends Omit<Task, 'volunteerRoleId'> {
+	workOrderId: string;
+	startsAt: Date;
+	endsAt: Date;
+	capacity: number;
 	volunteerRoleId: string;
 	roleName: string;
 	roleGroup: VolunteerRoleGroup;
-	/** This member's own claim, if they have a live one. */
+	eventTitle: string | null;
+	claimed: number;
+	confirmed: number;
+	/** This member's own sign-up, if they have a live one. */
 	myStatus: string | null;
 	mySignupId: string | null;
 	/** Empty when they can claim it. */
@@ -928,30 +1193,30 @@ export interface OpenShift extends Omit<
 	interested: boolean;
 }
 
+/** Kept for callers that named the narrowed type; every board shift has times. */
+export type ScheduledOpenShift = OpenShift;
+
 /**
- * What a member sees: posted work, upcoming and live, including shifts they can't
- * take — a shift you're not cleared for is worth seeing precisely because the
- * reason tells you what to go and get. Ordered so roles they've expressed
- * interest in surface first, which is the payoff for the interest table.
+ * What a member sees: upcoming live shifts on open tasks, including ones they
+ * can't take — the reason tells them what to go and get. Their own sign-ups
+ * first, then roles they said they'd help with.
  */
 export async function listOpenShiftsForMember(
 	userId: string,
 	opts: { limit?: number } = {}
-): Promise<Omit<ScheduledOpenShift, 'missingCertifications'>[]> {
+): Promise<Omit<OpenShift, 'missingCertifications'>[]> {
 	const now = new Date();
 
-	// Built once and reused in both the select list and the ORDER BY. The
-	// ranking has to be in SQL: ordering by date and re-sorting in JS after the
-	// LIMIT would drop a member's own claimed shift off the board entirely once
-	// more than `limit` shifts are scheduled ahead of it.
+	// Built once and reused in the select list and the ORDER BY: re-sorting in JS
+	// after the LIMIT would drop a member's own shift off a busy board.
 	const myStatusSql = sql<string | null>`(
 		select vs."status" from "volunteer_signup" vs
-		where vs."shift_id" = ${workOrder.id} and vs."user_id" = ${userId}
+		where vs."shift_id" = ${volunteerShift.id} and vs."user_id" = ${userId}
 			and vs."status" != 'cancelled'
 	)`;
 	const mySignupIdSql = sql<string | null>`(
 		select vs."id" from "volunteer_signup" vs
-		where vs."shift_id" = ${workOrder.id} and vs."user_id" = ${userId}
+		where vs."shift_id" = ${volunteerShift.id} and vs."user_id" = ${userId}
 			and vs."status" != 'cancelled'
 	)`;
 	const interestedSql = sql<number>`(
@@ -960,8 +1225,6 @@ export async function listOpenShiftsForMember(
 			and vri."user_id" = ${userId}
 	)`;
 
-	// Their own commitments first — the thing they most need to see — then roles
-	// they said they'd help with, then everything else.
 	const rankSql = sql`case
 		when ${myStatusSql} is not null then 0
 		when ${interestedSql} > 0 then 1
@@ -970,45 +1233,38 @@ export async function listOpenShiftsForMember(
 
 	const rows = await db
 		.select({
-			shift: workOrder,
+			task: workOrder,
+			shift: volunteerShift,
 			roleId: volunteerRole.id,
 			roleName: volunteerRole.name,
 			roleGroup: volunteerRole.group,
 			eventTitle: eventListing.title,
-			claimed: sql<number>`(
-				select count(*) from "volunteer_signup" vs
-				where vs."shift_id" = ${workOrder.id}
-					and vs."status" in ('claimed', 'confirmed', 'completed')
-			)`,
+			claimed: shiftClaimedSql(),
 			confirmed: sql<number>`(
 				select count(*) from "volunteer_signup" vs
-				where vs."shift_id" = ${workOrder.id}
+				where vs."shift_id" = ${volunteerShift.id}
 					and vs."status" in ('confirmed', 'completed')
 			)`,
 			myStatus: myStatusSql,
-			// The id comes back too, so "drop out" has something to post without a
-			// second round trip per shift.
 			mySignupId: mySignupIdSql,
 			interested: interestedSql
 		})
-		.from(workOrder)
+		.from(volunteerShift)
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
-		.where(
-			and(
-				// Staff opened it to volunteers. A Members work order is scheduled
-				// too, but it is staffed by assignment and is not on the board.
-				isNotNull(workOrder.postedAt),
-				isNull(workOrder.cancelledAt),
-				gte(workOrder.startsAt, now),
-				notOnCancelledListing()
-			)
-		)
-		.orderBy(asc(rankSql), asc(workOrder.startsAt))
+		.where(and(liveShift(), openTask(), gte(volunteerShift.startsAt, now), notOnCancelledListing()))
+		.orderBy(asc(rankSql), asc(volunteerShift.startsAt))
 		.limit(opts.limit ?? 50);
 
-	const open = rows.map((r) => ({
-		...r.shift,
+	return rows.map((r) => ({
+		...toTask(r.task),
+		id: r.shift.id,
+		workOrderId: r.task.id,
+		startsAt: r.shift.startsAt,
+		endsAt: r.shift.endsAt,
+		capacity: r.shift.capacity,
+		notes: r.shift.notes ?? r.task.notes,
 		volunteerRoleId: r.roleId,
 		roleName: r.roleName,
 		roleGroup: r.roleGroup,
@@ -1020,11 +1276,6 @@ export async function listOpenShiftsForMember(
 		interested: Number(r.interested) > 0,
 		isFull: Number(r.claimed) >= r.shift.capacity
 	}));
-
-	// `starts_at >= now` already excluded unscheduled work orders. The board a
-	// member browses is dated shifts; work assigned to them individually reaches
-	// them through their own list, not this one.
-	return open.filter(isScheduled);
 }
 
 // ---------------------------------------------------------------------------
@@ -1036,7 +1287,9 @@ export type WorkOrderMode = 'contractor' | 'open' | 'members' | 'unassigned';
 /** The precedence on its own, so it reads (and is tested) apart from the query. */
 export function deriveMode(facts: {
 	engaged: boolean;
+	/** Has a live shift: volunteers can sign up for it. */
 	posted: boolean;
+	/** Has assignees. */
 	staffed: boolean;
 }): WorkOrderMode {
 	if (facts.engaged) return 'contractor';
@@ -1073,11 +1326,11 @@ export async function workOrderModes(ids: string[]): Promise<Map<string, WorkOrd
 			db
 				.select({
 					id: workOrder.id,
-					posted: sql<number>`${workOrder.postedAt} is not null`,
 					// Wrapped: drizzle qualifies a column only inside a nested `sql`, and
-					// a bare "id" in the subquery would resolve to the engagement's own.
+					// a bare "id" in the subquery would resolve to the inner table's own.
+					posted: sql<number>`${hasLiveShiftSql()}`,
 					engaged: sql<number>`${liveEngagementSql()}`,
-					staffed: sql<number>`${claimedSql()} > 0`
+					staffed: sql<number>`${assigneeCountSql()} > 0`
 				})
 				.from(workOrder)
 				.where(inArray(workOrder.id, group))
@@ -1105,11 +1358,9 @@ export function isRoledShift(shift: ScheduledShiftWithCounts): shift is RoledShi
 }
 
 /**
- * Upcoming shifts still short of people, as rows rather than a per-role count.
- *
- * `countUnfilledByRole` answers "which roles need attention" for the roles table. This
- * answers "which nights are short", which is what a dashboard panel and a coordinator
- * planning the week both want. Cancelled shifts are out — nobody can fill one of those.
+ * Upcoming shifts still short of people, as rows rather than a per-role count:
+ * "which nights are short", for a dashboard panel and a coordinator planning
+ * the week. Cancelled shifts are out — nobody can fill one of those.
  */
 export async function listShortStaffedShifts(
 	withinDays: number,
@@ -1117,8 +1368,5 @@ export async function listShortStaffedShifts(
 ): Promise<RoledShift[]> {
 	const to = new Date(from.getTime() + withinDays * 24 * 60 * 60 * 1000);
 	const rows = await listShifts({ from, to });
-	// A window was passed, so `listShifts` already dropped the undated rows —
-	// "which nights are short" is a question only a dated shift can answer.
-	// Work with no role is nobody's to fill, so it is never short of people.
 	return rows.filter(isRoledShift).filter((shift) => shift.claimed < shift.capacity);
 }

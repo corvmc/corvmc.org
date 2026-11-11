@@ -248,8 +248,8 @@ export const deleteSectionForm = form(z.object({ projectId, sectionId }), async 
 // ---------------------------------------------------------------------------
 
 /**
- * Members mode: name people. Raises the places if they outnumber them. From a
- * contractor the first submit warns; resubmitting with `confirm` cancels them.
+ * Members mode: assign people to the task. From a contractor the first submit
+ * warns; resubmitting with `confirm` cancels the engagement.
  */
 export const assignMembersForm = form(
 	z.object({
@@ -260,11 +260,12 @@ export const assignMembersForm = form(
 		confirm: z.boolean().optional()
 	}),
 	async (data) => {
-		await guardTask(data.projectId, data.workOrderId);
+		const { user } = await guardTask(data.projectId, data.workOrderId);
 		const result = await assignMembers(data.projectId, data.workOrderId, {
 			userIds: data.userIds,
 			volunteerRoleId: data.volunteerRoleId || null,
-			confirm: data.confirm === true
+			confirm: data.confirm === true,
+			assignedByUserId: user.id
 		});
 		if (result.status === 'done') await refresh(data.projectId);
 		return result;
@@ -281,7 +282,7 @@ export const unassignMemberForm = form(
 	}
 );
 
-/** Open mode: post it to the claim board with a role and a number of places. Warns as Members does. */
+/** Open mode: the role and places of the task's shift, which needs a time. Warns as Members does. */
 export const openTaskForm = form(
 	z.object({
 		projectId,
@@ -335,9 +336,10 @@ export const engageContractorForm = form(
 export const unassignTaskForm = form(
 	z.object({ projectId, workOrderId, confirm: z.boolean().optional() }),
 	async (data) => {
-		await guardTask(data.projectId, data.workOrderId);
+		const { user } = await guardTask(data.projectId, data.workOrderId);
 		const result = await unassignTask(data.projectId, data.workOrderId, {
-			confirm: data.confirm === true
+			confirm: data.confirm === true,
+			byUserId: user.id
 		});
 		if (result.status === 'done') await refresh(data.projectId);
 		return result;
@@ -378,11 +380,12 @@ export const rescheduleTaskForm = form(
 		dueAt: z.string().optional()
 	}),
 	async (data) => {
-		await guardTask(data.projectId, data.workOrderId);
+		const { user } = await guardTask(data.projectId, data.workOrderId);
 		await rescheduleTask(data.projectId, data.workOrderId, {
 			startsAt: data.startsAt || null,
 			endsAt: data.endsAt || null,
-			dueAt: data.dueAt ? buildDateInTz(data.dueAt, '12:00', DEFAULT_TIMEZONE) : null
+			dueAt: data.dueAt ? buildDateInTz(data.dueAt, '12:00', DEFAULT_TIMEZONE) : null,
+			byUserId: user.id
 		});
 		await refresh(data.projectId);
 		return { success: true };

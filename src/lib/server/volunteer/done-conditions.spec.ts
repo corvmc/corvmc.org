@@ -27,6 +27,7 @@ const NOW = new Date((T0 - 86_400 * 30) * 1000);
 beforeEach(() => {
 	for (const t of [
 		'volunteer_signup',
+		'volunteer_shift',
 		'work_task',
 		'work_order',
 		'duty_list',
@@ -166,25 +167,30 @@ describe('each condition', () => {
 		expect(await stateOf(row)).toBe('done');
 	});
 
-	it('shifts_filled: every scheduled crew shift is at capacity, committee items aside', async () => {
+	it('shifts_filled: every live crew shift is at capacity, committee items aside', async () => {
 		const row = item('shifts_filled');
 		expect(await stateOf(row)).toBe('done');
-		exec(`insert into work_order (id, volunteer_role_id, event_id, starts_at, ends_at, capacity)
-			values ('door', 'crew', 'evt', ${T0}, ${T0 + 3600}, 2)`);
+		exec(`insert into work_order (id, volunteer_role_id, event_id) values ('door', 'crew', 'evt')`);
+		exec(`insert into volunteer_shift (id, work_order_id, starts_at, ends_at, capacity)
+			values ('door-shift', 'door', ${T0}, ${T0 + 3600}, 2)`);
 		exec(
-			`insert into volunteer_signup (id, shift_id, user_id, status) values ('s1', 'door', 'u1', 'claimed')`
+			`insert into volunteer_signup (id, shift_id, user_id, status) values ('s1', 'door-shift', 'u1', 'claimed')`
 		);
 		expect(await stateOf(row)).toBe('open');
 		exec(
-			`insert into volunteer_signup (id, shift_id, user_id, status) values ('s2', 'door', 'u2', 'cancelled')`
+			`insert into volunteer_signup (id, shift_id, user_id, status) values ('s2', 'door-shift', 'u2', 'cancelled')`
 		);
 		expect(await stateOf(row)).toBe('open');
 		exec(
-			`insert into volunteer_signup (id, shift_id, user_id, status) values ('s3', 'door', 'u3', 'confirmed')`
+			`insert into volunteer_signup (id, shift_id, user_id, status) values ('s3', 'door-shift', 'u3', 'confirmed')`
 		);
 		expect(await stateOf(row)).toBe('done');
-		exec(`insert into work_order (id, volunteer_role_id, event_id, starts_at, ends_at, cancelled_at)
-			values ('gone', 'crew', 'evt', ${T0}, ${T0 + 3600}, ${T0})`);
+		// An empty shift on a called-off task, and a called-off shift on a live one.
+		exec(`insert into work_order (id, volunteer_role_id, event_id, cancelled_at)
+			values ('gone', 'crew', 'evt', ${T0})`);
+		exec(`insert into volunteer_shift (id, work_order_id, starts_at, ends_at, cancelled_at) values
+			('gone-shift', 'gone', ${T0}, ${T0 + 3600}, null),
+			('door-off', 'door', ${T0 + 3600}, ${T0 + 7200}, ${T0})`);
 		expect(await stateOf(row)).toBe('done');
 	});
 
@@ -192,8 +198,8 @@ describe('each condition', () => {
 		const row = item('close_out_done');
 		expect(await stateOf(row)).toBe('done');
 		exec(`insert into duty_list (id, name, anchor) values ('lo', 'Load-out', 'load_out')`);
-		exec(`insert into work_order (id, volunteer_role_id, event_id, starts_at, ends_at, duty_list_id, anchor)
-			values ('lo-wo', 'crew', 'evt', ${T0}, ${T0 + 3600}, 'lo', 'load_out')`);
+		exec(`insert into work_order (id, volunteer_role_id, event_id, duty_list_id, anchor)
+			values ('lo-wo', 'crew', 'evt', 'lo', 'load_out')`);
 		task('lo-wo', false);
 		expect(await stateOf(row)).toBe('open');
 		exec(`update work_task set done = 1, done_at = ${T0} where work_order_id = 'lo-wo'`);

@@ -5,7 +5,6 @@ import {
 	volunteerHourLog,
 	volunteerProfile,
 	volunteerRoleInterest,
-	workOrder,
 	workTask,
 	volunteerShiftFeedback,
 	volunteerSignup
@@ -14,6 +13,7 @@ import { eventListing } from '../../src/lib/server/db/schema/event';
 import { ticketSale } from '../../src/lib/server/db/schema/ticket';
 import { and, eq, gt } from 'drizzle-orm';
 import { batchInsert, db } from './db';
+import { insertTasksWithShifts, shiftIdFor } from './shifts';
 import { scryptHash } from './hash';
 import { type SeedRole } from './types';
 import { ptDate } from './util';
@@ -190,35 +190,35 @@ export async function seedVolunteerPersonas(
 			volunteerRoleId: frontDesk.id,
 			...shiftAt(30, 18, 240),
 			capacity: 2,
-			notes: 'Float is in the drawer under the register.'
+			shiftNotes: 'Float is in the drawer under the register.'
 		},
 		{
 			id: 'seed-vol-shift-claimed',
 			volunteerRoleId: eventSetup.id,
 			...shiftAt(6, 15, 120),
 			capacity: 3,
-			notes: 'Meet at the side door 15 minutes early.'
+			shiftNotes: 'Meet at the side door 15 minutes early.'
 		},
 		{
 			id: 'seed-vol-shift-open',
 			volunteerRoleId: loadOut.id,
 			...shiftAt(3, 22, 90),
 			capacity: 4,
-			notes: null
+			shiftNotes: null
 		},
 		{
 			id: 'seed-vol-shift-feedback',
 			volunteerRoleId: frontDesk.id,
 			...shiftAt(-2, 18, 240),
 			capacity: 1,
-			notes: null
+			shiftNotes: null
 		},
 		{
 			id: 'seed-vol-shift-unlogged',
 			volunteerRoleId: eventSetup.id,
 			...shiftAt(-5, 15, 120),
 			capacity: 1,
-			notes: null
+			shiftNotes: null
 		},
 		{
 			// Cancelled, with its claimants left where they were. That mirrors
@@ -230,7 +230,7 @@ export async function seedVolunteerPersonas(
 			volunteerRoleId: outreach.id,
 			...shiftAt(9, 11, 180),
 			capacity: 2,
-			notes: 'Farmers market table — bring the banner from the office.',
+			shiftNotes: 'Farmers market table — bring the banner from the office.',
 			cancelledAt: ago(2),
 			cancelledByUserId: 'seed-vol-coordinator'
 		}
@@ -254,13 +254,13 @@ export async function seedVolunteerPersonas(
 				volunteerRoleId: frontDesk.id,
 				...shiftAt(1, 18, 300),
 				capacity: 2,
-				notes: 'Cash box from the office. Wristbands are in the drawer.',
+				shiftNotes: 'Cash box from the office. Wristbands are in the drawer.',
 				eventId: doorEvent.id,
 				createdByUserId: 'seed-vol-coordinator'
 			}
 		: null;
 
-	await batchInsert(workOrder, doorShift ? [...shifts, doorShift] : shifts, 8);
+	await insertTasksWithShifts(doorShift ? [...shifts, doorShift] : shifts);
 
 	// A checklist on two of them, because `applyDutyList` is the only other
 	// writer of `work_task` and none of the persona shifts come from a duty
@@ -318,7 +318,7 @@ export async function seedVolunteerPersonas(
 		[
 			{
 				id: 'seed-vol-signup-upcoming',
-				shiftId: 'seed-vol-shift-upcoming',
+				shiftId: 'seed-vol-shift-upcoming-shift',
 				userId: 'seed-vol-active',
 				status: 'confirmed',
 				claimedAt: ago(6),
@@ -331,7 +331,7 @@ export async function seedVolunteerPersonas(
 							// which is what makes /member/volunteer/shifts/<id> worth
 							// opening as `volunteer@`.
 							id: 'seed-vol-signup-door',
-							shiftId: doorShift.id,
+							shiftId: shiftIdFor(doorShift.id),
 							userId: 'seed-vol-active',
 							status: 'confirmed' as const,
 							claimedAt: ago(9),
@@ -341,7 +341,7 @@ export async function seedVolunteerPersonas(
 				: []),
 			{
 				id: 'seed-vol-signup-claimed',
-				shiftId: 'seed-vol-shift-claimed',
+				shiftId: 'seed-vol-shift-claimed-shift',
 				userId: 'seed-vol-active',
 				status: 'claimed',
 				claimedAt: ago(1)
@@ -351,7 +351,7 @@ export async function seedVolunteerPersonas(
 				// also leaves the load-out shift wholly empty, which guarantees the
 				// member board has something claimable however the random bulk falls.
 				id: 'seed-vol-signup-dropped',
-				shiftId: 'seed-vol-shift-open',
+				shiftId: 'seed-vol-shift-open-shift',
 				userId: 'seed-vol-coordinator',
 				status: 'cancelled',
 				claimedAt: ago(5),
@@ -361,7 +361,7 @@ export async function seedVolunteerPersonas(
 				// Worked, hours already filed, feedback NOT given — this is the one
 				// /member/volunteer/feedback/[signupId] is reachable through.
 				id: 'seed-vol-signup-feedback',
-				shiftId: 'seed-vol-shift-feedback',
+				shiftId: 'seed-vol-shift-feedback-shift',
 				userId: 'seed-vol-active',
 				status: 'completed',
 				claimedAt: ago(9),
@@ -372,7 +372,7 @@ export async function seedVolunteerPersonas(
 				// The mirror image: feedback given, hours still owed, so the member
 				// dashboard's "log these hours" prefill always has a row.
 				id: 'seed-vol-signup-unlogged',
-				shiftId: 'seed-vol-shift-unlogged',
+				shiftId: 'seed-vol-shift-unlogged-shift',
 				userId: 'seed-vol-active',
 				status: 'completed',
 				claimedAt: ago(12),
@@ -385,7 +385,7 @@ export async function seedVolunteerPersonas(
 				// where every row reads the same proves nothing. Sam is the
 				// outstanding one, so the banner reads "1 to notify".
 				id: 'seed-vol-signup-cancelled',
-				shiftId: 'seed-vol-shift-cancelled',
+				shiftId: 'seed-vol-shift-cancelled-shift',
 				userId: 'seed-vol-active',
 				status: 'confirmed',
 				claimedAt: ago(8),
@@ -393,7 +393,7 @@ export async function seedVolunteerPersonas(
 			},
 			{
 				id: 'seed-vol-signup-cancelled-notified',
-				shiftId: 'seed-vol-shift-cancelled',
+				shiftId: 'seed-vol-shift-cancelled-shift',
 				userId: 'seed-vol-coordinator',
 				status: 'claimed',
 				claimedAt: ago(7),
@@ -499,7 +499,7 @@ export async function seedVolunteerPersonas(
 				id: 'seed-vol-log-linked',
 				userId: 'seed-vol-active',
 				volunteerRoleId: frontDesk.id,
-				shiftId: 'seed-vol-shift-feedback',
+				shiftId: 'seed-vol-shift-feedback-shift',
 				workedOn: noon(2),
 				minutes: Math.round(
 					(shiftEnd('seed-vol-shift-feedback').getTime() -

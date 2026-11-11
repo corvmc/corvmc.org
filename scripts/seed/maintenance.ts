@@ -1,8 +1,8 @@
 import {
 	maintenanceSchedule,
 	volunteerRole,
-	volunteerSignup,
-	workOrder
+	workOrder,
+	workOrderAssignee
 } from '../../src/lib/server/db/schema/volunteer';
 import { inventoryAsset, inventoryItem } from '../../src/lib/server/db/schema/inventory';
 import { group } from '../../src/lib/server/db/schema/group';
@@ -56,7 +56,7 @@ export async function seedMaintenanceSchedules(staffId: string, cleanerId?: stri
 		}))
 	);
 
-	const base = { volunteerRoleId: role.id, capacity: 1, createdByUserId: staffId };
+	const base = { volunteerRoleId: role.id, createdByUserId: staffId };
 	await batchInsert(
 		workOrder,
 		[
@@ -80,7 +80,7 @@ export async function seedMaintenanceSchedules(staffId: string, cleanerId?: stri
 		}))
 	);
 
-	// Last week's is done; this week's is due in two days and already has its cleaner.
+	// Last week's is done; this week's is due in two days and is already assigned.
 	const bathroomOpen = randomUUID();
 	await batchInsert(workOrder, [
 		{
@@ -101,13 +101,12 @@ export async function seedMaintenanceSchedules(staffId: string, cleanerId?: stri
 		}
 	]);
 	if (cleanerId) {
-		await batchInsert(volunteerSignup, [
+		await batchInsert(workOrderAssignee, [
 			{
-				shiftId: bathroomOpen,
+				workOrderId: bathroomOpen,
 				userId: cleanerId,
-				status: 'confirmed',
-				claimedAt: at(-4),
-				confirmedAt: at(-3)
+				assignedByUserId: staffId,
+				assignedAt: at(-4)
 			}
 		]);
 	}

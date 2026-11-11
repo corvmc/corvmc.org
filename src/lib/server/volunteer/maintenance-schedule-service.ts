@@ -50,12 +50,9 @@ function occurrenceValues(s: OccurrenceSource, dueAt: Date) {
 		projectId: s.projectId,
 		assetId: s.assetId,
 		notes: s.notes,
-		capacity: s.capacity,
-		startsAt: null,
-		endsAt: null,
-		dueAt,
-		// Recurring facility work is volunteers' to claim once it has a time.
-		postedAt: new Date()
+		// The places for a shift opened on it once it has a time.
+		pendingCapacity: s.capacity,
+		dueAt
 	};
 }
 
@@ -270,10 +267,9 @@ export async function listMaintenanceSchedules(
 			openDueAt: workOrder.dueAt,
 			// Newline-separated: a name can hold a comma, not a line break.
 			assignees: sql<string | null>`(
-				select group_concat(u."name", char(10)) from "volunteer_signup" vs
-				join "user" u on u."id" = vs."user_id"
-				where vs."shift_id" = ${workOrder.id}
-					and vs."status" in ('claimed', 'confirmed', 'completed')
+				select group_concat(u."name", char(10)) from "work_order_assignee" a
+				join "user" u on u."id" = a."user_id"
+				where a."work_order_id" = ${workOrder.id}
 			)`,
 			lastClosedAt: sql<number | null>`(
 				select max(coalesce(wo."resolved_at", wo."cancelled_at")) from "work_order" wo

@@ -133,6 +133,8 @@ vi.mock('#lib/server/db/index.js', async (importOriginal) => {
 		...actual,
 		db: {
 			select: () => chainable(),
+			// The raw insert that places pending duty-list windows as shifts.
+			run: vi.fn(() => Promise.resolve({})),
 			// Referenced lazily — the factory is evaluated during the hoisted
 			// import, before these module-level consts initialize.
 			insert: (...args: unknown[]) => eventInsert(...(args as [])),

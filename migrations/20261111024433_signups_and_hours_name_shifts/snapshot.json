@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "25b17ef4-8122-4acc-b054-0dd2add40f53",
+  "id": "45f7ea00-43c0-4451-8c70-09395ebfb97f",
   "prevIds": [
     "517a5220-108d-46fd-b3c9-0312ae028889"
   ],
@@ -10525,6 +10525,16 @@
       "default": null,
       "generated": null,
       "name": "pending_duration_minutes",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "pending_capacity",
       "entityType": "columns",
       "table": "work_order"
     },

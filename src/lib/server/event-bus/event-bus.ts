@@ -11,6 +11,8 @@ import type {
 export interface VolunteerShiftEvent {
 	signupId: string;
 	shiftId: string;
+	/** The shift's task (#2518): what an orientation or the checklist hangs off. */
+	workOrderId: string;
 	userId: string;
 	userName: string;
 	userEmail: string;
@@ -22,13 +24,9 @@ export interface VolunteerShiftEvent {
 	 */
 	title: string | null;
 	eventTitle: string | null;
-	/**
-	 * ISO strings, like every other date on this bus — and null when the shift is
-	 * an unscheduled work order, which has no window until somebody books one.
-	 * Copy that reads a date must say so rather than rendering "null".
-	 */
-	startsAt: string | null;
-	endsAt: string | null;
+	/** ISO strings, like every other date on this bus. A shift always has both. */
+	startsAt: string;
+	endsAt: string;
 }
 
 // ---------------------------------------------------------------------------

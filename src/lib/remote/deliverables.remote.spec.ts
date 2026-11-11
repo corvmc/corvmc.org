@@ -48,16 +48,17 @@ vi.mock('#lib/server/authorization.js', async () => {
 });
 
 const writes = vi.hoisted(() => ({
-	claimShift: vi.fn(async () => ({})),
+	assignToTask: vi.fn(async () => ({})),
 	resolveWorkOrder: vi.fn(async () => ({})),
 	setWorkTaskDone: vi.fn(async () => ({})),
 	reassign: vi.fn(async () => undefined)
 }));
-vi.mock('#lib/server/volunteer/volunteer-signup-service.js', () => ({
-	claimShift: writes.claimShift
+vi.mock('#lib/server/volunteer/assignee-service.js', () => ({
+	assignToTask: writes.assignToTask
 }));
 vi.mock('#lib/server/volunteer/work-order-service.js', () => ({
-	resolveWorkOrder: writes.resolveWorkOrder
+	resolveWorkOrder: writes.resolveWorkOrder,
+	getWorkOrderById: async (id: string) => ({ id, title: id, volunteerRoleId: null })
 }));
 vi.mock('#lib/server/volunteer/duty-list-service.js', () => ({
 	setWorkTaskDone: writes.setWorkTaskDone,
@@ -127,7 +128,7 @@ const run = (action: string, g: string) => {
 	return remote[name](input);
 };
 const wrote = () =>
-	writes.claimShift.mock.calls.length +
+	writes.assignToTask.mock.calls.length +
 	writes.resolveWorkOrder.mock.calls.length +
 	writes.setWorkTaskDone.mock.calls.length +
 	writes.reassign.mock.calls.length;

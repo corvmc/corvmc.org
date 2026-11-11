@@ -146,7 +146,6 @@ describe('createJob', () => {
 		expect(insertValues[0]).toMatchObject({
 			title: 'Replace the panel',
 			volunteerRoleId: null,
-			postedAt: null,
 			createdByUserId: ACTOR
 		});
 		const wo = insertValues[0] as { id: string };

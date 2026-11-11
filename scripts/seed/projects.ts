@@ -6,15 +6,17 @@ import {
 	volunteerHourLog,
 	volunteerProfile,
 	volunteerRole,
-	volunteerSignup,
+	workOrderAssignee,
 	workTask
 } from '../../src/lib/server/db/schema/volunteer';
 import { contractorJob } from '../../src/lib/server/db/schema/contractor';
 import { acquisition, purchaseOrder } from '../../src/lib/server/db/schema/inventory';
 import { eventListing } from '../../src/lib/server/db/schema/event';
 import { batchInsert, db } from './db';
+import { insertTasksWithShifts } from './shifts';
+import { ptDate } from './util';
 import { randomUUID } from 'crypto';
-import { and, asc, eq, isNotNull, isNull, notInArray, sql } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import type { SeedEvent } from './types';
 
 /**
@@ -201,10 +203,9 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		.where(eq(volunteerRole.name, 'Facilities & Maintenance'))
 		.limit(1);
 
-	// Members mode: a role, not posted, and the people staff put on it.
-	let membersTaskId: string | null = null;
+	// Members mode: a role, no shift, and the people staff assigned it (#2518).
 	if (facilityRole) {
-		const backlog = [
+		const [membersTask] = await batchInsert(workOrder, [
 			{
 				id: randomUUID(),
 				title: 'Mask and prime the live room walls',
@@ -212,12 +213,13 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 				projectId: ids.facility,
 				sectionId: section.prep,
 				sortOrder: 0,
-				capacity: 2,
 				notes: 'Mask and prime the live room walls.',
 				createdByUserId: staffId
-			},
-			// Open: posted to the claim board, so it sets `posted_at` itself — the
-			// backfill ran before the seed did.
+			}
+		]);
+		// Open: a shift on it is what puts it on the volunteer board.
+		const openStart = ptDate(5, 10);
+		const [openTask] = await insertTasksWithShifts([
 			{
 				id: randomUUID(),
 				title: 'Pull the old cable runs',
@@ -225,15 +227,14 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 				projectId: ids.facility,
 				sectionId: section.prep,
 				sortOrder: 1,
-				capacity: 1,
 				notes: 'Pull the old cable runs before the electrician comes back.',
-				postedAt: now,
-				postedByUserId: staffId,
+				startsAt: openStart,
+				endsAt: new Date(openStart.getTime() + 4 * 3_600_000),
+				capacity: 1,
 				createdByUserId: staffId
 			}
-		];
-		await batchInsert(workOrder, backlog, 10);
-		membersTaskId = backlog[0].id;
+		]);
+		const backlog = [membersTask, openTask];
 
 		// Duties on the open task, one ticked, so the list has a row to unfold.
 		await batchInsert(
@@ -261,21 +262,21 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 			.orderBy(asc(volunteerProfile.userId))
 			.limit(2);
 		if (assignees.length) {
-			await db.insert(volunteerSignup).values(
+			await db.insert(workOrderAssignee).values(
 				assignees.map((a) => ({
-					shiftId: backlog[0].id,
+					workOrderId: backlog[0].id,
 					userId: a.userId,
-					status: 'confirmed' as const,
-					claimedAt: now,
-					confirmedAt: now
+					assignedByUserId: staffId,
+					assignedAt: now
 				}))
 			);
 		}
 
+		// Hours that name the task rather than a shift: committee work logged after the fact.
 		await db.insert(volunteerHourLog).values({
 			userId: staffId,
 			volunteerRoleId: facilityRole.id,
-			shiftId: backlog[0].id,
+			workOrderId: backlog[0].id,
 			workedOn: new Date(now.getTime() - 14 * day),
 			minutes: 240,
 			description: 'Masking and priming, live room refresh.',
@@ -353,28 +354,6 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		projects: rows.length,
 		events: upcoming.length,
 		workOrders: Number(attached ?? 0),
-		sections: 4,
-		unpostedWorkOrderIds: membersTaskId ? [membersTaskId] : []
+		sections: 4
 	};
-}
-
-/**
- * What the posted-at backfill migration did to production, done to the seed's
- * own rows: every work order with a role is on the claim board. The migration
- * ran before the seed wrote anything, so without this none of it would be.
- * `keepUnposted` is the work deliberately staffed by assignment instead.
- */
-export async function postSeededWorkOrders(keepUnposted: string[]) {
-	const posted = await db
-		.update(workOrder)
-		.set({ postedAt: sql`${workOrder.createdAt}` })
-		.where(
-			and(
-				isNull(workOrder.postedAt),
-				isNotNull(workOrder.volunteerRoleId),
-				keepUnposted.length ? notInArray(workOrder.id, keepUnposted) : undefined
-			)
-		)
-		.returning({ id: workOrder.id });
-	return posted.length;
 }

@@ -46,7 +46,16 @@ export function migratedSqlite(opts: { foreignKeys?: boolean; through?: string }
  * better-sqlite3's drizzle has none, and a service that batches needs one.
  */
 export function withBatch({ sqlite, testDb }: ReturnType<typeof migratedSqlite>) {
+	// better-sqlite3's `run` executes when called; D1's when awaited, so in a
+	// batch a raw statement runs after the ones before it. Deferred to match.
+	const run = testDb.run.bind(testDb);
 	return Object.assign(testDb, {
+		run: (query: Parameters<typeof run>[0]) => ({
+			then: <T>(resolve: (v: ReturnType<typeof run>) => T, reject?: (e: unknown) => T) =>
+				Promise.resolve()
+					.then(() => run(query))
+					.then(resolve, reject)
+		}),
 		batch: async (stmts: readonly PromiseLike<unknown>[]) => {
 			sqlite.exec('begin');
 			try {

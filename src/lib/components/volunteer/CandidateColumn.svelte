@@ -24,12 +24,15 @@
 	} from '#lib/remote/volunteer.remote.js';
 
 	let {
+		workOrderId,
 		shiftId,
 		startsAt,
 		scope = $bindable('interested')
 	}: {
-		shiftId: string;
-		/** Null for an unscheduled work order — clearance is judged as of today. */
+		workOrderId: string;
+		/** The task's current shift. Null for a task with none: Add assigns the task. */
+		shiftId: string | null;
+		/** Null for a task with no shift — clearance is judged as of today. */
 		startsAt: Date | null;
 		scope?: 'interested' | 'worked' | 'all';
 	} = $props();
@@ -54,7 +57,11 @@
 	let search = $state('');
 	// Not `{#await}`: a refresh would re-pend it and unmount an open Invite or Add.
 	const candidates = new Latest(() =>
-		getShiftCandidates({ shiftId, scope: search ? 'all' : scope, search: search || undefined })
+		getShiftCandidates({
+			workOrderId,
+			scope: search ? 'all' : scope,
+			search: search || undefined
+		})
 	);
 	$effect(() => {
 		if (candidates.error) throw candidates.error.e;
@@ -193,37 +200,40 @@
 						     shift keeps reading short-staffed until somebody answers;
 						     Add books them, which is what a coordinator who has already
 						     spoken to them means. -->
+						<!-- An invitation is to a shift; a task with none is assigned. -->
+						{#if shiftId}
+							<Action
+								action={inviteMemberToShift.for(`${shiftId}:${row.userId}`)}
+								label={msg.volunteer_candidate_column_invite_label()}
+								variant="primary"
+								size="xs"
+								modalTitle={msg.volunteer_candidate_column_ask_take_title({
+									title: row.member.title
+								})}
+								submitLabel={msg.volunteer_candidate_column_send_invitation_label()}
+								successToast={msg.volunteer_candidate_column_asked_they_ll_see_their_toast()}
+							>
+								{#snippet form()}
+									<input
+										{...inviteMemberToShift
+											.for(`${shiftId}:${row.userId}`)
+											.fields.shiftId.as('hidden', shiftId)}
+									/>
+									<input
+										{...inviteMemberToShift
+											.for(`${shiftId}:${row.userId}`)
+											.fields.userId.as('hidden', row.userId)}
+									/>
+									<p class="text-sm">
+										{msg.volunteer_candidate_column_invitation_holds_no_place_shift_text({
+											title: row.member.title
+										})}
+									</p>
+								{/snippet}
+							</Action>
+						{/if}
 						<Action
-							action={inviteMemberToShift.for(`${shiftId}:${row.userId}`)}
-							label={msg.volunteer_candidate_column_invite_label()}
-							variant="primary"
-							size="xs"
-							modalTitle={msg.volunteer_candidate_column_ask_take_title({
-								title: row.member.title
-							})}
-							submitLabel={msg.volunteer_candidate_column_send_invitation_label()}
-							successToast={msg.volunteer_candidate_column_asked_they_ll_see_their_toast()}
-						>
-							{#snippet form()}
-								<input
-									{...inviteMemberToShift
-										.for(`${shiftId}:${row.userId}`)
-										.fields.shiftId.as('hidden', shiftId)}
-								/>
-								<input
-									{...inviteMemberToShift
-										.for(`${shiftId}:${row.userId}`)
-										.fields.userId.as('hidden', row.userId)}
-								/>
-								<p class="text-sm">
-									{msg.volunteer_candidate_column_invitation_holds_no_place_shift_text({
-										title: row.member.title
-									})}
-								</p>
-							{/snippet}
-						</Action>
-						<Action
-							action={assignShiftToMember.for(`${shiftId}:${row.userId}`)}
+							action={assignShiftToMember.for(`${workOrderId}:${row.userId}`)}
 							label={msg.volunteer_candidate_column_add_label()}
 							data-testid="assign-candidate"
 							variant="ghost"
@@ -238,12 +248,19 @@
 							{#snippet form()}
 								<input
 									{...assignShiftToMember
-										.for(`${shiftId}:${row.userId}`)
-										.fields.shiftId.as('hidden', shiftId)}
+										.for(`${workOrderId}:${row.userId}`)
+										.fields.workOrderId.as('hidden', workOrderId)}
 								/>
+								{#if shiftId}
+									<input
+										{...assignShiftToMember
+											.for(`${workOrderId}:${row.userId}`)
+											.fields.shiftId.as('hidden', shiftId)}
+									/>
+								{/if}
 								<input
 									{...assignShiftToMember
-										.for(`${shiftId}:${row.userId}`)
+										.for(`${workOrderId}:${row.userId}`)
 										.fields.userId.as('hidden', row.userId)}
 								/>
 								<p class="text-sm">

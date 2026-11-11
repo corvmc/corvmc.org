@@ -52,6 +52,7 @@ beforeEach(() => {
 	for (const t of [
 		'audit_log',
 		'work_task',
+		'volunteer_shift',
 		'work_order',
 		'duty_list_item',
 		'duty_list',
@@ -93,21 +94,25 @@ const anchor = (a: string) => sqlite.exec(`UPDATE duty_list SET anchor = '${a}' 
 function shifts() {
 	return sqlite
 		.prepare(
-			`SELECT id, starts_at, ends_at, due_at, capacity, duty_list_id, event_id, project_id,
-				pending_offset_minutes, pending_duration_minutes
-			 FROM work_order ORDER BY coalesce(starts_at, due_at)`
+			// A task with the times and places of its shift, when it has one (#2518).
+			`SELECT wo.id, s.starts_at, s.ends_at, wo.due_at, s.capacity, wo.duty_list_id,
+				wo.event_id, wo.project_id, wo.pending_offset_minutes, wo.pending_duration_minutes,
+				wo.pending_capacity
+			 FROM work_order wo LEFT JOIN volunteer_shift s ON s.work_order_id = wo.id
+			 ORDER BY coalesce(s.starts_at, wo.due_at)`
 		)
 		.all() as {
 		id: string;
 		starts_at: number | null;
 		ends_at: number | null;
 		due_at: number | null;
-		capacity: number;
+		capacity: number | null;
 		duty_list_id: string | null;
 		event_id: string | null;
 		project_id: string | null;
 		pending_offset_minutes: number | null;
 		pending_duration_minutes: number | null;
+		pending_capacity: number | null;
 	}[];
 }
 
@@ -233,7 +238,7 @@ describe('applyDutyList — project subject', () => {
 		])('stamps %s items unscheduled with a warning', async (a, setUp, message) => {
 			setUp();
 			anchor(a);
-			addItem('i1', 'offset_minutes, duration_minutes', '-30, 60');
+			addItem('i1', 'offset_minutes, duration_minutes, capacity', '-30, 60, 2');
 			addItem('i2', 'due_offset_minutes', '-1440');
 
 			const result = await applyDutyList('dl-1', SHOW, 'u1');
@@ -251,6 +256,8 @@ describe('applyDutyList — project subject', () => {
 				[-1440, null],
 				[-30, 60]
 			]);
+			// The window's places wait on the task for the shift placement makes.
+			expect(rows.find((r) => r.pending_duration_minutes === 60)?.pending_capacity).toBe(2);
 		});
 	});
 

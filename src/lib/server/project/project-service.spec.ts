@@ -61,7 +61,9 @@ vi.mock('#lib/server/db/index.js', () => ({
 		batch: vi.fn(async (writes: unknown[]) => {
 			batchCalls.push(writes);
 			return writes.map(() => []);
-		})
+		}),
+		// A raw statement: placing pending duty-list shifts inserts through one.
+		run: vi.fn(() => Promise.resolve([]))
 	}
 }));
 

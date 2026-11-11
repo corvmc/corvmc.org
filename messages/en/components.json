@@ -1422,7 +1422,6 @@
 	"volunteer_work_order_view_cancel_shift_label": "Cancel shift",
 	"volunteer_work_order_view_cancel_shift_2_title": "Cancel this shift?",
 	"volunteer_work_order_view_claims_bookings_stay_place_they_text": "Claims and bookings stay in place — they are who you need to notify. The shift stops taking claims.",
-	"volunteer_work_order_view_close_equipment_reports_label": "Close the equipment reports",
 	"volunteer_work_order_view_confirm_label": "Confirm",
 	"volunteer_work_order_view_confirm_2_title": "Confirm {title}?",
 	"volunteer_work_order_view_confirm_all_label": "Confirm all {length}",
@@ -1485,10 +1484,8 @@
 	"volunteer_work_order_view_unconfirmed_label": "{length} unconfirmed",
 	"volunteer_work_order_view_unconfirmed_no_reminder_text": "Unconfirmed: no reminder.",
 	"volunteer_work_order_view_use_when_reached_them_another_text": "Use this when you reached them another way. Nothing is sent — it just takes them off the list.",
-	"volunteer_work_order_view_wait_today_me_confirm_label": "Wait on Today for me to confirm",
 	"volunteer_work_order_view_waiting_label": "WAITING",
 	"volunteer_work_order_view_wasn_t_set_up_label": "wasn't set up",
-	"volunteer_work_order_view_when_window_ends_label": "When the window ends",
 	"volunteer_work_order_view_who_s_title": "Who's on it",
 	"volunteer_work_order_view_who_tell_title": "Who to tell"
 }

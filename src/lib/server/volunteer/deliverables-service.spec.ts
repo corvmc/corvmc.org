@@ -24,6 +24,7 @@ const exec = (sql: string) => sqlite.exec(sql);
 beforeEach(() => {
 	for (const t of [
 		'volunteer_signup',
+		'work_order_assignee',
 		'work_task',
 		'work_order',
 		'media_attachment',
@@ -68,9 +69,7 @@ describe('listCommitteeOpenItems', () => {
 		wo('other', { group_id: 'book', title: 'Not ours', due_at: T0 - 40 * DAY });
 		wo('gone', { group_id: 'art', title: 'Called off', cancelled_at: T0 });
 		wo('closed', { group_id: 'art', title: 'Resolved', resolved_at: T0 });
-		exec(
-			`insert into volunteer_signup (id, shift_id, user_id, status) values ('s', 'soon', 'u1', 'confirmed')`
-		);
+		exec(`insert into work_order_assignee (work_order_id, user_id) values ('soon', 'u1')`);
 
 		const rows = await svc.listCommitteeOpenItems('art');
 		expect(rows.map((r) => [r.id, r.state, r.assignees.map((a) => a.name)])).toEqual([
@@ -167,9 +166,7 @@ describe('listDeliverablesDueBetween', () => {
 	it('tells the active committee when nobody has the item, and only its assignees once somebody does', async () => {
 		wo('free', { group_id: 'art', title: 'Nobody yet', due_at: T0 });
 		wo('held', { group_id: 'art', title: 'Taken', due_at: T0 });
-		exec(
-			`insert into volunteer_signup (id, shift_id, user_id, status) values ('s', 'held', 'u1', 'confirmed')`
-		);
+		exec(`insert into work_order_assignee (work_order_id, user_id) values ('held', 'u1')`);
 
 		const rows = await svc.listDeliverablesDueBetween(from, to);
 		const by = Object.fromEntries(rows.map((r) => [r.id, r.recipients.map((p) => p.userName)]));

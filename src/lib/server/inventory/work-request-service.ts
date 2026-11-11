@@ -1,8 +1,8 @@
 import { db } from '#lib/server/db/index.js';
 import { workRequest, inventoryAsset, inventoryItem } from '#lib/server/db/schema/inventory.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { workOrder, volunteerRole } from '#lib/server/db/schema/volunteer.js';
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, or } from 'drizzle-orm';
+import { workOrder, volunteerRole, volunteerShift } from '#lib/server/db/schema/volunteer.js';
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { toGenericRef } from '#lib/server/entity/refs.js';
@@ -450,7 +450,11 @@ export async function getWorkRequestDetail(id: string) {
 		id: workOrder.id,
 		notes: workOrder.notes,
 		dueAt: workOrder.dueAt,
-		startsAt: workOrder.startsAt,
+		// The next live shift on it, if it has one.
+		startsAt: sql<Date | null>`(
+			select min(s."starts_at") from "volunteer_shift" s
+			where s."work_order_id" = ${workOrder.id} and s."cancelled_at" is null
+		)`.mapWith(volunteerShift.startsAt),
 		roleName: volunteerRole.name
 	};
 

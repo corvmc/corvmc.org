@@ -62,14 +62,22 @@ describe('listShiftCandidates skill ranking', () => {
 			}
 		];
 
-		const out = await listShiftCandidates('shift-1', 'role-1', 'all');
+		const out = await listShiftCandidates(
+			{ workOrderId: 'task-1', shiftId: 'shift-1' },
+			'role-1',
+			'all'
+		);
 
 		expect(out[0].matchedSkills).toEqual(['live sound', 'sound engineer']);
 		expect(out[1].matchedSkills).toEqual([]);
 	});
 
 	it('ranks on skill matches after role history, against the role list', async () => {
-		await listShiftCandidates('shift-1', 'role-1', 'interested');
+		await listShiftCandidates(
+			{ workOrderId: 'task-1', shiftId: 'shift-1' },
+			'role-1',
+			'interested'
+		);
 
 		expect(orderByArgs).toHaveLength(3);
 		const { sql, params } = render(orderByArgs[1]);

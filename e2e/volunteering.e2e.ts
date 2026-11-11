@@ -38,7 +38,8 @@ import {
 	readVolunteerState,
 	readSignupStatus,
 	readShiftSignups,
-	readShiftEventId
+	readShiftEventId,
+	shiftIdOf
 } from './fixtures/seed-volunteering';
 import {
 	formatVolunteerHours,
@@ -549,8 +550,8 @@ test.describe('volunteering — member', () => {
  * A card on the claim board, by shift. A claimable card holds exactly one
  * button, the claim; a blocked one (full, or missing a clearance) holds none.
  */
-function boardCard(page: Page, shiftId: string) {
-	return page.locator(`li[data-shift-id="${shiftId}"]`);
+function boardCard(page: Page, taskId: string) {
+	return page.locator(`li[data-shift-id="${shiftIdOf(taskId)}"]`);
 }
 
 /** A shift the member is on, in the left column, by signup status and role. */

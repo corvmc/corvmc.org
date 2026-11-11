@@ -1,14 +1,29 @@
 import { db } from '#lib/server/db/index.js';
 import { toGenericRef } from '#lib/server/entity/refs.js';
-import { and, asc, count, eq, inArray, isNull, ne, notInArray, sql, type SQL } from 'drizzle-orm';
+import {
+	and,
+	asc,
+	count,
+	eq,
+	exists,
+	inArray,
+	isNull,
+	ne,
+	notInArray,
+	or,
+	sql,
+	type SQL
+} from 'drizzle-orm';
 import { placePendingWorkOrders } from './retime-work-orders';
 import { DomainError } from '#lib/server/domain-error.js';
 import {
 	dutyList,
 	dutyListItem,
 	volunteerRole,
+	volunteerShift,
 	volunteerSignup,
 	workOrder,
+	workOrderAssignee,
 	workTask
 } from '#lib/server/db/schema/volunteer.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
@@ -725,7 +740,7 @@ export async function placeWorkAwaitingEvent(projectId: string) {
 		const { at } = resolveAnchor(anchor, clock);
 		if (!at) return [];
 		const seconds = Math.floor(at.getTime() / 1000);
-		return [placePendingWorkOrders({ eventId: event.id }, [anchor], sql`${seconds}`)];
+		return placePendingWorkOrders({ eventId: event.id }, [anchor], sql`${seconds}`);
 	});
 	await db.batch([claim, ...places] as unknown as Parameters<typeof db.batch>[0]);
 }
@@ -792,27 +807,27 @@ export async function applyDutyList(
 		return { sectionId, sortOrder };
 	};
 
-	const shiftRows: (typeof workOrder.$inferInsert)[] = [];
+	const workRows: (typeof workOrder.$inferInsert)[] = [];
+	const shiftRows: (typeof volunteerShift.$inferInsert)[] = [];
 	const taskRows: (typeof workTask.$inferInsert)[] = [];
 
 	for (const item of items) {
 		const workOrderId = crypto.randomUUID();
 		const windowed = item.offsetMinutes !== null && item.durationMinutes !== null;
-		const startsAt = anchor && windowed ? addMinutes(anchor, item.offsetMinutes!) : null;
 
-		shiftRows.push({
+		// A window is a task and a shift; a deadline is a task alone (#2518).
+		workRows.push({
 			id: workOrderId,
 			volunteerRoleId: item.volunteerRoleId,
 			eventId,
 			projectId: subject.id,
-			startsAt,
-			endsAt: startsAt ? addMinutes(startsAt, item.durationMinutes!) : null,
 			dueAt:
 				anchor && item.dueOffsetMinutes !== null ? addMinutes(anchor, item.dueOffsetMinutes) : null,
-			// No time to measure from yet: keep the offset so retime can place it.
+			// No time to measure from yet: the task keeps the offsets, and the
+			// shift is made when the anchor gets one (#2033).
 			pendingOffsetMinutes: anchor ? null : (item.offsetMinutes ?? item.dueOffsetMinutes),
 			pendingDurationMinutes: anchor ? null : item.durationMinutes,
-			capacity: item.capacity,
+			pendingCapacity: anchor || !windowed ? null : item.capacity,
 			notes: item.notes,
 			// A copy, like the rest: re-owning the template leaves this show alone.
 			title: item.title,
@@ -821,24 +836,32 @@ export async function applyDutyList(
 			dutyListId,
 			anchor: list.anchor,
 			...place(item.section),
-			// On the claim board, as every stamped-out shift has always been.
-			postedAt: new Date(),
-			postedByUserId: createdByUserId,
 			createdByUserId
 		});
+
+		if (anchor && windowed) {
+			const startsAt = addMinutes(anchor, item.offsetMinutes!);
+			shiftRows.push({
+				workOrderId,
+				startsAt,
+				endsAt: addMinutes(startsAt, item.durationMinutes!),
+				capacity: item.capacity,
+				anchor: list.anchor,
+				createdByUserId
+			});
+		}
 
 		item.tasks.forEach((label, i) => {
 			taskRows.push({ workOrderId, label, sortOrder: i });
 		});
 	}
 
-	// Work orders first: a task carries `work_order_id`, so the row it names has
-	// to exist. `db.batch` and not `db.transaction` — the latter is broken on D1.
-	await db.batch(
-		shiftRows.map((row) => db.insert(workOrder).values(row)) as unknown as Parameters<
-			typeof db.batch
-		>[0]
-	);
+	// Tasks first: a shift and a checklist item each carry `work_order_id`, so the
+	// row it names has to exist. `db.batch`, never `db.transaction` (broken on D1).
+	await db.batch([
+		...workRows.map((row) => db.insert(workOrder).values(row)),
+		...shiftRows.map((row) => db.insert(volunteerShift).values(row))
+	] as unknown as Parameters<typeof db.batch>[0]);
 
 	if (taskRows.length > 0) {
 		await db.batch(
@@ -848,7 +871,7 @@ export async function applyDutyList(
 		);
 	}
 
-	const n = shiftRows.length;
+	const n = workRows.length;
 	const warnings = missing
 		? [`${missing} ${n === 1 ? 'Its item stays' : `All ${n} items stay`} unscheduled until then.`]
 		: [];
@@ -859,12 +882,12 @@ export async function applyDutyList(
 		details: {
 			dutyListId,
 			dutyListName: list.name,
-			tasks: shiftRows.length,
+			tasks: workRows.length,
 			...(existing > 0 ? { reappliedReason: reason! } : {})
 		}
 	});
 	return {
-		workOrderIds: shiftRows.map((r) => r.id!),
+		workOrderIds: workRows.map((r) => r.id!),
 		taskCount: taskRows.length,
 		warnings
 	};
@@ -916,24 +939,49 @@ export async function setWorkTaskDone(id: string, done: boolean, userId: string)
 }
 
 /**
- * Tick a task on a shift you are actually working.
+ * Tick a checklist item on a task you are actually on: signed up for one of its
+ * shifts, or assigned it.
  *
- * The assignment is checked in SQL, in one statement with the lookup, so there
- * is no window between deciding and writing. A cancelled signup or a called-off
- * work order is not an assignment: both drop out through the `IS NULL`s rather
- * than through a second read.
+ * Checked in SQL, in one statement with the lookup, so there is no window
+ * between deciding and writing. A cancelled sign-up or a called-off task is not
+ * being on it.
  */
 export async function setWorkTaskDoneAsAssignee(id: string, done: boolean, userId: string) {
 	const [assigned] = await db
 		.select({ id: workTask.id })
 		.from(workTask)
 		.innerJoin(workOrder, eq(workOrder.id, workTask.workOrderId))
-		.innerJoin(
-			volunteerSignup,
-			and(eq(volunteerSignup.shiftId, workOrder.id), eq(volunteerSignup.userId, userId))
-		)
 		.where(
-			and(eq(workTask.id, id), isNull(volunteerSignup.cancelledAt), isNull(workOrder.cancelledAt))
+			and(
+				eq(workTask.id, id),
+				isNull(workOrder.cancelledAt),
+				or(
+					exists(
+						db
+							.select({ one: sql`1` })
+							.from(volunteerSignup)
+							.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+							.where(
+								and(
+									eq(volunteerShift.workOrderId, workOrder.id),
+									eq(volunteerSignup.userId, userId),
+									isNull(volunteerSignup.cancelledAt)
+								)
+							)
+					),
+					exists(
+						db
+							.select({ one: sql`1` })
+							.from(workOrderAssignee)
+							.where(
+								and(
+									eq(workOrderAssignee.workOrderId, workOrder.id),
+									eq(workOrderAssignee.userId, userId)
+								)
+							)
+					)
+				)
+			)
 		)
 		.limit(1);
 

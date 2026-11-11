@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { group, groupCapability, groupMember } from '#lib/server/db/schema/group.js';
 import { user } from '#lib/server/db/schema/authentication.js';
@@ -6,8 +6,10 @@ import { projectCommittee } from '#lib/server/db/schema/project.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import {
 	volunteerRoleCapability,
+	volunteerShift,
 	volunteerSignup,
-	workOrder
+	workOrder,
+	workOrderAssignee
 } from '#lib/server/db/schema/volunteer.js';
 import { grantRuleFor, type Capability } from '#lib/config.js';
 import { allowlisted, type CommitteeGrant } from '#lib/server/capability/grant-rules.js';
@@ -123,8 +125,8 @@ type ShiftWindowRow = {
 };
 
 /**
- * When a role grant from this shift is live: from the shift's start until
- * `graceDays` after it ends. An unscheduled work order borrows its event's times.
+ * When a role grant is live: from the shift's start until `graceDays` after it
+ * ends. An assignment has no shift, so it borrows its task's event's times.
  */
 export function grantWindow(row: ShiftWindowRow, graceDays: number): { from: Date; until: Date } {
 	const from = row.startsAt ?? row.eventStartsAt;
@@ -133,9 +135,10 @@ export function grantWindow(row: ShiftWindowRow, graceDays: number): { from: Dat
 }
 
 /**
- * Does `userId` hold `cap` for `eventId` through a volunteer role? Needs a
- * confirmed or completed signup on a live work order for that event, in a role
- * that grants `cap`, with `now` inside the grant window.
+ * Does `userId` hold `cap` for `eventId` through a volunteer role? Needs, on a
+ * live task for that event in a role that grants `cap`, either a confirmed or
+ * completed sign-up on a live shift (its window) or an assignment (the event's
+ * window), with `now` inside the grant window (#2518).
  */
 export async function roleGrantAllows(
 	userId: string,
@@ -146,31 +149,53 @@ export async function roleGrantAllows(
 	const rule = grantRuleFor(cap)?.role;
 	if (!rule) return false;
 
-	const rows = await db
-		.select({
-			startsAt: workOrder.startsAt,
-			endsAt: workOrder.endsAt,
-			eventStartsAt: eventListing.startsAt,
-			eventEndsAt: eventListing.endsAt
-		})
-		.from(volunteerSignup)
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
-		.innerJoin(
-			volunteerRoleCapability,
-			eq(volunteerRoleCapability.volunteerRoleId, workOrder.volunteerRoleId)
-		)
-		.innerJoin(eventListing, eq(eventListing.id, workOrder.eventId))
-		.where(
-			and(
-				eq(volunteerRoleCapability.capability, cap),
-				eq(volunteerSignup.userId, userId),
-				eq(workOrder.eventId, eventId),
-				inArray(volunteerSignup.status, [...GRANTING_SIGNUP_STATUSES]),
-				isNull(workOrder.cancelledAt)
+	const onTask = and(
+		eq(volunteerRoleCapability.capability, cap),
+		eq(workOrder.eventId, eventId),
+		isNull(workOrder.cancelledAt)
+	);
+	const [signedUp, assigned] = await Promise.all([
+		db
+			.select({
+				startsAt: volunteerShift.startsAt,
+				endsAt: volunteerShift.endsAt,
+				eventStartsAt: eventListing.startsAt,
+				eventEndsAt: eventListing.endsAt
+			})
+			.from(volunteerSignup)
+			.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+			.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
+			.innerJoin(
+				volunteerRoleCapability,
+				eq(volunteerRoleCapability.volunteerRoleId, workOrder.volunteerRoleId)
 			)
-		);
+			.innerJoin(eventListing, eq(eventListing.id, workOrder.eventId))
+			.where(
+				and(
+					onTask,
+					eq(volunteerSignup.userId, userId),
+					inArray(volunteerSignup.status, [...GRANTING_SIGNUP_STATUSES]),
+					isNull(volunteerShift.cancelledAt)
+				)
+			),
+		db
+			.select({
+				startsAt: sql<Date | null>`null`,
+				endsAt: sql<Date | null>`null`,
+				eventStartsAt: eventListing.startsAt,
+				eventEndsAt: eventListing.endsAt
+			})
+			.from(workOrderAssignee)
+			.innerJoin(workOrder, eq(workOrder.id, workOrderAssignee.workOrderId))
+			.innerJoin(
+				volunteerRoleCapability,
+				eq(volunteerRoleCapability.volunteerRoleId, workOrder.volunteerRoleId)
+			)
+			.innerJoin(eventListing, eq(eventListing.id, workOrder.eventId))
+			.where(and(onTask, eq(workOrderAssignee.userId, userId)))
+	]);
 
-	return rows.some((r) => {
+	return [...signedUp, ...assigned].some((r) => {
 		const { from, until } = grantWindow(r, rule.graceDays);
 		return now >= from && now <= until;
 	});

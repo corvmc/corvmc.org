@@ -910,16 +910,18 @@ function listingClockWrites(
 	const writes = [];
 	if (updates.startsAt !== undefined) {
 		writes.push(
-			shiftAnchoredWorkOrders(eventId, ['start'], sql`${start} - ${current(sql`starts_at`)}`)
+			...shiftAnchoredWorkOrders(eventId, ['start'], sql`${start} - ${current(sql`starts_at`)}`)
 		);
 	}
 	if (updates.endsAt !== undefined) {
-		writes.push(shiftAnchoredWorkOrders(eventId, ['end'], sql`${end} - ${current(sql`ends_at`)}`));
+		writes.push(
+			...shiftAnchoredWorkOrders(eventId, ['end'], sql`${end} - ${current(sql`ends_at`)}`)
+		);
 	}
 	if (updates.startsAt !== undefined || updates.doorsAt !== undefined) {
 		// Doors falls back to the start, as `resolveAnchor` does.
 		writes.push(
-			shiftAnchoredWorkOrders(
+			...shiftAnchoredWorkOrders(
 				eventId,
 				['doors'],
 				sql`coalesce(${doors}, ${start}) - ${current(sql`coalesce(doors_at, starts_at)`)}`
@@ -928,7 +930,7 @@ function listingClockWrites(
 	}
 	// Work stamped before the time existed is placed against the new one.
 	if (updates.endsAt !== undefined) {
-		writes.push(placePendingWorkOrders({ eventId }, ['end'], end));
+		writes.push(...placePendingWorkOrders({ eventId }, ['end'], end));
 	}
 	if (
 		updates.startsAt !== undefined ||

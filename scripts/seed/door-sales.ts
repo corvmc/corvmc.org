@@ -1,12 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { eventListing } from '../../src/lib/server/db/schema/event';
-import {
-	volunteerRole,
-	volunteerSignup,
-	workOrder
-} from '../../src/lib/server/db/schema/volunteer';
+import { randomUUID } from 'crypto';
+import { volunteerRole, volunteerSignup } from '../../src/lib/server/db/schema/volunteer';
 import { ticket, ticketSale } from '../../src/lib/server/db/schema/ticket';
 import { db } from './db';
+import { insertTasksWithShifts } from './shifts';
 
 /**
  * Tonight's collective show at the door (#612).
@@ -76,19 +74,19 @@ export async function seedDoorSales(
 		.from(volunteerRole)
 		.where(eq(volunteerRole.name, 'Door'));
 	if (role) {
-		const [shift] = await db
-			.insert(workOrder)
-			.values({
+		const [shift] = await insertTasksWithShifts([
+			{
+				id: randomUUID(),
 				volunteerRoleId: role.id,
 				eventId: show.id,
 				startsAt: new Date(Date.now() - 30 * 60_000),
 				endsAt: new Date(startsAt.getTime() + 3 * 3600_000),
 				createdByUserId: adminUserId
-			})
-			.returning({ id: workOrder.id });
+			}
+		]);
 		await db
 			.insert(volunteerSignup)
-			.values({ shiftId: shift.id, userId: doorVolunteerId, status: 'confirmed' });
+			.values({ shiftId: shift.shiftId, userId: doorVolunteerId, status: 'confirmed' });
 	}
 
 	return { eventId: show.id };

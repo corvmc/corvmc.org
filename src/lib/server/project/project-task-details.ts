@@ -3,7 +3,12 @@ import { db } from '#lib/server/db/index.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { contractor, contractorJob } from '#lib/server/db/schema/contractor.js';
 import { artifactRequest } from '#lib/server/db/schema/artifact-request.js';
-import { volunteerSignup, workTask } from '#lib/server/db/schema/volunteer.js';
+import {
+	volunteerShift,
+	volunteerSignup,
+	workOrderAssignee,
+	workTask
+} from '#lib/server/db/schema/volunteer.js';
 import { resolveImageUrl } from '#lib/server/storage.js';
 import { chunk } from '#lib/server/utils/chunk.js';
 import {
@@ -67,39 +72,73 @@ function group<T, K>(rows: T[], key: (r: T) => K): Map<K, T[]> {
 	return out;
 }
 
+/**
+ * Who is on each task (#2518): its assignees first, in the order they were
+ * assigned, then anybody signed up for one of its live shifts. One entry per
+ * person. An assignee reads as `confirmed` until the task is marked done.
+ */
 export async function peopleOn(ids: string[]): Promise<Map<string, TaskPerson[]>> {
-	const rows = await byChunks(ids, (g) =>
-		db
-			.select({
-				shiftId: volunteerSignup.shiftId,
-				userId: user.id,
-				name: user.name,
-				image: user.image,
-				status: volunteerSignup.status
-			})
-			.from(volunteerSignup)
-			.innerJoin(user, eq(user.id, volunteerSignup.userId))
-			.where(
-				and(
-					inArray(volunteerSignup.shiftId, g),
-					inArray(volunteerSignup.status, [...PEOPLE_STATUSES])
+	const [assignees, signups] = await Promise.all([
+		byChunks(ids, (g) =>
+			db
+				.select({
+					workOrderId: workOrderAssignee.workOrderId,
+					userId: user.id,
+					name: user.name,
+					image: user.image,
+					completedAt: workOrderAssignee.completedAt
+				})
+				.from(workOrderAssignee)
+				.innerJoin(user, eq(user.id, workOrderAssignee.userId))
+				.where(inArray(workOrderAssignee.workOrderId, g))
+				.orderBy(asc(workOrderAssignee.assignedAt), asc(workOrderAssignee.userId))
+		),
+		byChunks(ids, (g) =>
+			db
+				.select({
+					workOrderId: volunteerShift.workOrderId,
+					userId: user.id,
+					name: user.name,
+					image: user.image,
+					status: volunteerSignup.status
+				})
+				.from(volunteerSignup)
+				.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+				.innerJoin(user, eq(user.id, volunteerSignup.userId))
+				.where(
+					and(
+						inArray(volunteerShift.workOrderId, g),
+						isNull(volunteerShift.cancelledAt),
+						inArray(volunteerSignup.status, [...PEOPLE_STATUSES])
+					)
 				)
-			)
-			.orderBy(asc(volunteerSignup.createdAt), asc(volunteerSignup.id))
-	);
-	const people = rows.map((r) => ({
-		shiftId: r.shiftId,
-		userId: r.userId,
-		name: r.name,
-		image: resolveImageUrl(r.image),
-		status: r.status as TaskPerson['status']
-	}));
-	return new Map(
-		[...group(people, (p) => p.shiftId)].map(([id, list]) => [
-			id,
-			list.map(({ shiftId: _, ...p }) => p)
-		])
-	);
+				.orderBy(asc(volunteerSignup.createdAt), asc(volunteerSignup.id))
+		)
+	]);
+	const out = new Map<string, TaskPerson[]>();
+	const add = (workOrderId: string, person: TaskPerson) => {
+		const list = out.get(workOrderId) ?? [];
+		if (list.some((p) => p.userId === person.userId)) return;
+		list.push(person);
+		out.set(workOrderId, list);
+	};
+	for (const a of assignees) {
+		add(a.workOrderId, {
+			userId: a.userId,
+			name: a.name,
+			image: resolveImageUrl(a.image),
+			status: a.completedAt ? 'completed' : 'confirmed'
+		});
+	}
+	for (const s of signups) {
+		add(s.workOrderId, {
+			userId: s.userId,
+			name: s.name,
+			image: resolveImageUrl(s.image),
+			status: s.status as TaskPerson['status']
+		});
+	}
+	return out;
 }
 
 /**

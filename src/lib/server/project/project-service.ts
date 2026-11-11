@@ -45,7 +45,7 @@ import {
 	type ProjectStatus
 } from '#lib/config.js';
 import { getHourValueCents } from '#lib/server/volunteer/hour-value.js';
-import { claimedSql } from '#lib/server/volunteer/work-order-service.js';
+import { claimedSql, taskColumns } from '#lib/server/volunteer/work-order-service.js';
 import { toEventRef } from '#lib/server/entity/refs.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import type { ProjectField } from '#lib/types/audit.js';
@@ -268,7 +268,7 @@ export async function updateProject(id: string, data: Partial<CreateProjectInput
 	// Template work stamped before the project had a start is placed now.
 	if (data.startsAt) {
 		const at = Math.floor(data.startsAt.getTime() / 1000);
-		await placePendingWorkOrders({ projectId: id }, ['project_start'], sql`${at}`);
+		await db.batch(placePendingWorkOrders({ projectId: id }, ['project_start'], sql`${at}`));
 	}
 	const after = await getProjectById(id);
 	const changed = changedFields(before, ownerBefore, data);
@@ -735,7 +735,7 @@ export async function listProjectAttachments(projectId: string) {
 		// has none, and is still the project's.
 		db
 			.select({
-				...getTableColumns(workOrder),
+				...taskColumns(),
 				title: sql<string>`coalesce(${workOrder.title}, ${eventListing.title}, ${volunteerRole.name}, 'Untitled task')`,
 				claimed: claimedSql().mapWith(Number)
 			})
@@ -743,7 +743,7 @@ export async function listProjectAttachments(projectId: string) {
 			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 			.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
 			.where(eq(workOrder.projectId, projectId))
-			.orderBy(asc(workOrder.startsAt)),
+			.orderBy(asc(workOrder.dueAt), asc(workOrder.createdAt), asc(workOrder.id)),
 		db
 			.select({
 				...getTableColumns(contractorJob),

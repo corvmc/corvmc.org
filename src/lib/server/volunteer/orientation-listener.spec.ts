@@ -101,9 +101,11 @@ function createdEvent(over: Record<string, unknown> = {}) {
 function shifts() {
 	return sqlite
 		.prepare(
-			`SELECT id, starts_at, ends_at, reservation_id, project_id, volunteer_role_id,
-				is_orientation, duty_list_id, cancelled_at
-			 FROM work_order ORDER BY created_at, id`
+			// The orientation task with the times of its shift (#2518).
+			`SELECT wo.id, s.starts_at, s.ends_at, wo.reservation_id, wo.project_id,
+				wo.volunteer_role_id, wo.is_orientation, wo.duty_list_id, wo.cancelled_at
+			 FROM work_order wo LEFT JOIN volunteer_shift s ON s.work_order_id = wo.id
+			 ORDER BY wo.created_at, wo.id`
 		)
 		.all() as {
 		id: string;
@@ -120,7 +122,13 @@ function shifts() {
 
 beforeEach(() => {
 	settings.clear();
-	for (const t of ['member_orientation', 'work_task', 'work_order', 'reservation']) {
+	for (const t of [
+		'member_orientation',
+		'work_task',
+		'volunteer_shift',
+		'work_order',
+		'reservation'
+	]) {
 		sqlite.exec(`DELETE FROM ${t}`);
 	}
 	sqlite.exec(`DELETE FROM volunteer_role WHERE id = 'role-orient'`);
@@ -149,8 +157,12 @@ function seedList() {
 /** A shift a coordinator made by hand for the booking, before the listener ran. */
 function byHandShift() {
 	sqlite.exec(
-		`INSERT INTO work_order (id, volunteer_role_id, reservation_id, starts_at, ends_at, is_orientation)
-		 VALUES ('wo-hand','role-orient','res-1', ${STARTS}, ${STARTS + 2700}, 1)`
+		`INSERT INTO work_order (id, volunteer_role_id, reservation_id, is_orientation)
+		 VALUES ('wo-hand','role-orient','res-1', 1)`
+	);
+	sqlite.exec(
+		`INSERT INTO volunteer_shift (id, work_order_id, starts_at, ends_at)
+		 VALUES ('wo-hand-shift','wo-hand', ${STARTS}, ${STARTS + 2700})`
 	);
 }
 

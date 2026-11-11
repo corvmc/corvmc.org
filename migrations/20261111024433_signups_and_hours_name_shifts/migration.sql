@@ -26,6 +26,8 @@ ALTER TABLE `__detach_volunteer_shift_feedback` RENAME TO `volunteer_shift_feedb
 --> statement-breakpoint
 CREATE INDEX `volunteer_shift_feedback_submitted_idx` ON `volunteer_shift_feedback` (`submitted_at`);
 --> statement-breakpoint
+ALTER TABLE `work_order` ADD `pending_capacity` integer;
+--> statement-breakpoint
 CREATE TABLE `__new_volunteer_hour_log` (
 	`id` text PRIMARY KEY,
 	`user_id` text NOT NULL,
@@ -133,5 +135,10 @@ WHERE EXISTS (SELECT 1 FROM `volunteer_shift` `s` WHERE `s`.`work_order_id` = `v
 UPDATE `volunteer_hour_log`
 SET `shift_id` = (SELECT `s`.`id` FROM `volunteer_shift` `s` WHERE `s`.`work_order_id` = `volunteer_hour_log`.`shift_id`)
 WHERE EXISTS (SELECT 1 FROM `volunteer_shift` `s` WHERE `s`.`work_order_id` = `volunteer_hour_log`.`shift_id`);
+--> statement-breakpoint
+-- A task with no shift keeps the places it asked for (a duty-list window waiting for its
+-- time, a recurring occurrence), for the shift opened on it later.
+UPDATE `work_order` SET `pending_capacity` = `capacity`
+WHERE `starts_at` IS NULL AND (`pending_duration_minutes` IS NOT NULL OR `capacity` > 1);
 --> statement-breakpoint
 PRAGMA defer_foreign_keys=OFF;

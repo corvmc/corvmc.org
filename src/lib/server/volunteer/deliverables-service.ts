@@ -20,7 +20,7 @@ import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { mediaAttachment } from '#lib/server/db/schema/media.js';
 import {
 	volunteerRole,
-	volunteerSignup,
+	workOrderAssignee,
 	workOrder,
 	workTask
 } from '#lib/server/db/schema/volunteer.js';
@@ -88,18 +88,14 @@ async function readDeliverables(where: SQL): Promise<DeliverableRow[]> {
 	if (rows.length === 0) return [];
 
 	const ids = rows.map((r) => r.id);
-	const [states, signups, tasks, art] = await Promise.all([
+	const [states, assigned, tasks, art] = await Promise.all([
 		evaluateDone(rows),
+		// Who is assigned the work (#2518), never who signed up for a shift on it.
 		db
-			.select({ workOrderId: volunteerSignup.shiftId, userId: user.id, name: user.name })
-			.from(volunteerSignup)
-			.innerJoin(user, eq(user.id, volunteerSignup.userId))
-			.where(
-				and(
-					inArray(volunteerSignup.shiftId, ids),
-					inArray(volunteerSignup.status, ['claimed', 'confirmed', 'completed'])
-				)
-			)
+			.select({ workOrderId: workOrderAssignee.workOrderId, userId: user.id, name: user.name })
+			.from(workOrderAssignee)
+			.innerJoin(user, eq(user.id, workOrderAssignee.userId))
+			.where(inArray(workOrderAssignee.workOrderId, ids))
 			.orderBy(asc(user.name)),
 		db
 			.select({
@@ -123,7 +119,7 @@ async function readDeliverables(where: SQL): Promise<DeliverableRow[]> {
 		}
 		return by;
 	};
-	const assignees = group_(signups);
+	const assignees = group_(assigned);
 	const checklist = group_(tasks);
 
 	return rows.map((r) => {

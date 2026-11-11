@@ -320,7 +320,7 @@
 						<div class="flex flex-wrap items-center gap-2">
 							<span class="text-muted">{m.staff_events_id_production_host_text()}</span>
 							{#if hostShift && hostShift.hosts.length > 0}
-								{#each hostShift.hosts as host (host.signupId)}
+								{#each hostShift.hosts as host (host.userId)}
 									<span class="font-medium">{host.name}</span>
 									<StatusBadge status={host.status} />
 								{/each}

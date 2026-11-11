@@ -34,6 +34,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			await domainEvents.emit('volunteer.shift_completed', {
 				signupId: row.signupId,
 				shiftId: row.shiftId,
+				workOrderId: row.workOrderId,
 				userId: row.userId,
 				userName: row.userName,
 				userEmail: row.userEmail,

@@ -341,7 +341,7 @@
 					<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 				{/snippet}
 
-				{#each shown as w, idx (w.id)}
+				{#each shown as w, idx (w.shiftId ?? w.id)}
 					{@const href = resolve('/staff/volunteer/shifts/[id]', { id: w.id })}
 					{@const unconfirmed = w.claimed - w.confirmed}
 					{@const full = w.confirmed >= w.capacity}
@@ -423,7 +423,7 @@
 
 						<td class="w-px">
 							<div class="flex w-max justify-end gap-1">
-								{#if unconfirmed > 0 && w.startsAt}
+								{#if unconfirmed > 0 && w.startsAt && w.shiftId}
 									<Action
 										label={m.staff_volunteer_schedule_label({ unconfirmed })}
 										variant="ghost"
@@ -436,7 +436,9 @@
 										onsuccess={refresh}
 									>
 										{#snippet form()}
-											<input {...confirmShiftClaims.for(w.id).fields.shiftId.as('hidden', w.id)} />
+											<input
+												{...confirmShiftClaims.for(w.id).fields.shiftId.as('hidden', w.shiftId)}
+											/>
 											<p class="text-sm">
 												{m.staff_volunteer_schedule_people_have_put_hand_up_text({
 													unconfirmed,
@@ -468,7 +470,7 @@
 			<!-- Below the divider: a called-off shift is people to ring, not work to staff. -->
 			<div class="divider"></div>
 			<ul class="space-y-1 text-sm">
-				{#each cancelled as shift (shift.id)}
+				{#each cancelled as shift (shift.shiftId ?? shift.id)}
 					<li>
 						<a href={resolve('/staff/volunteer/shifts/[id]', { id: shift.id })} class="link">
 							{m.staff_volunteer_schedule_cancelled_text({

@@ -3,12 +3,12 @@ import { holdRoom } from './room';
 import { eq } from 'drizzle-orm';
 import {
 	memberOrientation,
-	workOrder,
 	workTask,
 	volunteerSignup
 } from '../../src/lib/server/db/schema/volunteer';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { batchInsert, db } from './db';
+import { insertTasksWithShifts, shiftIdFor } from './shifts';
 import { ORIENTATION_DEFAULT_TASKS } from '../../src/lib/config';
 import { ptDate } from './util';
 
@@ -62,7 +62,7 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 			startsAt: from,
 			endsAt: new Date(from.getTime() + DURATION_MINUTES * 60_000),
 			capacity: 1,
-			notes: 'First visit — meet them at the front door.',
+			shiftNotes: 'First visit — meet them at the front door.',
 			anchor: 'start' as const,
 			isOrientation: true,
 			createdByUserId: null
@@ -168,7 +168,7 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 		});
 	}
 
-	if (workOrderRows.length > 0) await batchInsert(workOrder, workOrderRows, 8);
+	if (workOrderRows.length > 0) await insertTasksWithShifts(workOrderRows);
 	if (orientationRows.length > 0) await batchInsert(memberOrientation, orientationRows, 7);
 	if (taskRows.length > 0) await batchInsert(workTask, taskRows);
 
@@ -177,7 +177,7 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 	await batchInsert(volunteerSignup, [
 		{
 			id: 'seed-orientation-signup-cancelled',
-			shiftId: 'seed-orientation-wo-cancelled',
+			shiftId: shiftIdFor('seed-orientation-wo-cancelled'),
 			userId: 'seed-vol-active',
 			status: 'confirmed' as const,
 			claimedAt: new Date(Date.now() - 3 * 86_400_000),

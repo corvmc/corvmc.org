@@ -26,7 +26,8 @@ vi.mock('$app/server', () => ({
 		throw new Error('outside a request');
 	}
 }));
-vi.mock('#lib/server/volunteer/volunteer-profile-service.js', () => ({
+vi.mock('#lib/server/volunteer/volunteer-profile-service.js', async (importOriginal) => ({
+	...(await importOriginal<object>()),
 	requireActiveVolunteer: vi.fn(async () => undefined)
 }));
 const emit = vi.hoisted(() => vi.fn(async (..._a: unknown[]) => undefined));
@@ -81,6 +82,8 @@ beforeEach(() => {
 		'contractor_job',
 		'work_task',
 		'volunteer_signup',
+		'volunteer_shift',
+		'work_order_assignee',
 		'work_order',
 		'duty_list_item',
 		'duty_list',
@@ -120,7 +123,26 @@ beforeEach(() => {
 });
 
 const task = (id: string, cols: Record<string, unknown> = {}) =>
-	insert('work_order', { id, project_id: PROJECT, title: id, capacity: 1, ...cols });
+	insert('work_order', { id, project_id: PROJECT, title: id, ...cols });
+
+/** A shift on a task, still to come unless `cols` says otherwise. */
+const FUTURE = 4_000_000_000;
+const shift = (id: string, workOrderId: string, cols: Record<string, unknown> = {}) =>
+	insert('volunteer_shift', {
+		id,
+		work_order_id: workOrderId,
+		starts_at: FUTURE,
+		ends_at: FUTURE + 3600,
+		capacity: 1,
+		...cols
+	});
+const signup = (id: string, shiftId: string, userId: string, status: string) =>
+	insert('volunteer_signup', { id, shift_id: shiftId, user_id: userId, status });
+const assignees = (workOrderId: string) =>
+	all<{ user_id: string }>(
+		`select user_id from work_order_assignee where work_order_id = ? order by user_id`,
+		workOrderId
+	).map((r) => r.user_id);
 
 describe('inline create', () => {
 	it('makes a task with a title and nothing else, at the end of its section', async () => {
@@ -132,7 +154,7 @@ describe('inline create', () => {
 			sectionId: s.id,
 			createdByUserId: STAFF
 		});
-		expect(row).toMatchObject({ volunteerRoleId: null, postedAt: null, sortOrder: 1 });
+		expect(row).toMatchObject({ volunteerRoleId: null, sortOrder: 1 });
 		expect(order(s.id)).toEqual(['first', row.id]);
 		expect(audits('work_order.created')).toEqual([
 			{ id: row.id, projectId: PROJECT, title: 'Buy paint' }
@@ -281,18 +303,31 @@ describe('assigning members', () => {
 		);
 	});
 
-	it('raises the places when staff name more people than it has, and takes it off the board', async () => {
-		task('t', { volunteer_role_id: ROLE, capacity: 1, posted_at: 1 });
-		const result = await tasks.assignMembers(PROJECT, 't', { userIds: [ADA, BO, CAM] });
-		expect(result).toMatchObject({ assigned: [ADA, BO, CAM], refused: [], mode: 'members' });
-		expect(one(`select capacity, posted_at from work_order where id = 't'`)).toEqual({
-			capacity: 3,
-			posted_at: null
+	it('writes assignees, never sign-ups, and has no places to raise', async () => {
+		task('t', { volunteer_role_id: ROLE });
+		const result = await tasks.assignMembers(PROJECT, 't', {
+			userIds: [ADA, BO, CAM],
+			assignedByUserId: STAFF
 		});
+		expect(result).toMatchObject({ assigned: [ADA, BO, CAM], refused: [], mode: 'members' });
+		expect(assignees('t')).toEqual([ADA, BO, CAM].sort());
+		expect(all(`select 1 from volunteer_signup`)).toHaveLength(0);
+		expect(one(`select assigned_by_user_id from work_order_assignee where user_id = ?`, ADA)).toEqual(
+			{ assigned_by_user_id: STAFF }
+		);
 		expect(audits('work_order.assigned')).toEqual([
-			{ id: 't', from: 'open', to: 'members', cancelledSignups: 0 }
+			{ id: 't', from: 'unassigned', to: 'members', cancelledSignups: 0 }
 		]);
 		expect(audits('work_order.member_assigned')).toHaveLength(3);
+	});
+
+	it('adds nothing for somebody already assigned', async () => {
+		task('t', { volunteer_role_id: ROLE });
+		await tasks.assignMembers(PROJECT, 't', { userIds: [ADA] });
+		expect(await tasks.assignMembers(PROJECT, 't', { userIds: [ADA] })).toMatchObject({
+			assigned: []
+		});
+		expect(audits('work_order.member_assigned')).toHaveLength(1);
 	});
 
 	it('sets the role when one is given with the first person', async () => {
@@ -303,14 +338,39 @@ describe('assigning members', () => {
 		});
 	});
 
-	it('keeps whoever claimed it when an open task becomes a members one', async () => {
-		task('t', { volunteer_role_id: ROLE, capacity: 2, posted_at: 1 });
-		insert('volunteer_signup', { id: 'su', shift_id: 't', user_id: ADA, status: 'claimed' });
-		await tasks.assignMembers(PROJECT, 't', { userIds: [] });
+	it('leaves its shifts and whoever signed up for them alone', async () => {
+		task('t', { volunteer_role_id: ROLE });
+		shift('s', 't', { capacity: 2 });
+		signup('su', 's', ADA, 'claimed');
+		const result = await tasks.assignMembers(PROJECT, 't', { userIds: [BO] });
+		expect(result).toMatchObject({ assigned: [BO], mode: 'open' });
 		expect(one(`select status from volunteer_signup where id = 'su'`)).toEqual({
 			status: 'claimed'
 		});
-		expect(one(`select posted_at from work_order where id = 't'`)).toEqual({ posted_at: null });
+		expect(one(`select cancelled_at from volunteer_shift where id = 's'`)).toEqual({
+			cancelled_at: null
+		});
+	});
+
+	it('takes one person off: an assignee, or a sign-up on one of its shifts', async () => {
+		task('t', { volunteer_role_id: ROLE });
+		shift('s', 't', { capacity: 2 });
+		signup('su', 's', BO, 'confirmed');
+		await tasks.assignMembers(PROJECT, 't', { userIds: [ADA] });
+
+		await tasks.unassignMember(PROJECT, 't', ADA);
+		expect(assignees('t')).toEqual([]);
+		expect(audits('work_order.member_unassigned')).toEqual([
+			expect.objectContaining({ id: 't', userId: ADA })
+		]);
+
+		await tasks.unassignMember(PROJECT, 't', BO);
+		expect(one(`select status from volunteer_signup where id = 'su'`)).toEqual({
+			status: 'cancelled'
+		});
+		await expect(tasks.unassignMember(PROJECT, 't', CAM)).rejects.toBeInstanceOf(
+			tasks.TaskNotFoundError
+		);
 	});
 
 	it('assigns somebody missing a clearance, with the warning on the result and in the log', async () => {
@@ -391,6 +451,7 @@ describe('switching away from a contractor', () => {
 
 	it('cancels an asked engagement when opened to volunteers or unassigned', async () => {
 		task('t', { volunteer_role_id: ROLE });
+		shift('s', 't');
 		engagement('cj', 'asked');
 		expect(
 			await tasks.openToVolunteers(PROJECT, 't', { postedByUserId: STAFF, confirm: true })
@@ -415,8 +476,9 @@ describe('switching away from a contractor', () => {
 });
 
 describe('opening to volunteers', () => {
-	it('posts it, with a role and places', async () => {
+	it('sets the role and the places of its shift', async () => {
 		task('t');
+		shift('s', 't');
 		expect(
 			await tasks.openToVolunteers(PROJECT, 't', {
 				volunteerRoleId: ROLE,
@@ -424,22 +486,64 @@ describe('opening to volunteers', () => {
 				postedByUserId: STAFF
 			})
 		).toEqual({ status: 'done', mode: 'open' });
-		expect(one(`select capacity, posted_by_user_id from work_order where id = 't'`)).toEqual({
-			capacity: 4,
-			posted_by_user_id: STAFF
+		expect(one(`select capacity from volunteer_shift where id = 's'`)).toEqual({ capacity: 4 });
+		expect(one(`select volunteer_role_id from work_order where id = 't'`)).toEqual({
+			volunteer_role_id: ROLE
 		});
+	});
+
+	it('refuses a task with no shift: volunteers sign up for a time', async () => {
+		task('t', { volunteer_role_id: ROLE });
+		await expect(
+			tasks.openToVolunteers(PROJECT, 't', { postedByUserId: STAFF })
+		).rejects.toBeInstanceOf(tasks.TaskValidationError);
+	});
+});
+
+describe('rescheduling', () => {
+	it('opens a shift for a time, moves it, and calls it off when the time is cleared', async () => {
+		task('t', { volunteer_role_id: ROLE });
+		const times = { startsAt: '2030-06-01T18:00', endsAt: '2030-06-01T22:00' };
+		await tasks.rescheduleTask(PROJECT, 't', { ...times, dueAt: null, byUserId: STAFF });
+		expect(all(`select id from volunteer_shift where cancelled_at is null`)).toHaveLength(1);
+
+		await tasks.rescheduleTask(PROJECT, 't', {
+			startsAt: '2030-06-02T18:00',
+			endsAt: '2030-06-02T22:00',
+			dueAt: null
+		});
+		expect(all(`select id from volunteer_shift`)).toHaveLength(1);
+
+		const due = new Date(1_950_000_000_000);
+		await tasks.rescheduleTask(PROJECT, 't', { startsAt: null, endsAt: null, dueAt: due });
+		expect(all(`select id from volunteer_shift where cancelled_at is null`)).toHaveLength(0);
+		expect(one(`select due_at from work_order where id = 't'`)).toEqual({ due_at: 1_950_000_000 });
+	});
+
+	it('needs a role before a time opens a shift', async () => {
+		task('t');
+		await expect(
+			tasks.rescheduleTask(PROJECT, 't', {
+				startsAt: '2030-06-01T18:00',
+				endsAt: '2030-06-01T22:00',
+				dueAt: null
+			})
+		).rejects.toThrow(/role/);
 	});
 });
 
 describe('unassigning', () => {
 	it('warns how many are on it, then takes them off and tells them', async () => {
-		task('t', { volunteer_role_id: ROLE, capacity: 2 });
-		insert('volunteer_signup', { id: 'su-a', shift_id: 't', user_id: ADA, status: 'confirmed' });
-		insert('volunteer_signup', { id: 'su-b', shift_id: 't', user_id: BO, status: 'claimed' });
+		task('t', { volunteer_role_id: ROLE });
+		shift('s', 't', { capacity: 2 });
+		signup('su-a', 's', ADA, 'confirmed');
+		signup('su-b', 's', BO, 'claimed');
+		await tasks.assignMembers(PROJECT, 't', { userIds: [CAM] });
+		sqlite.exec(`delete from audit_log`);
 
 		expect(await tasks.unassignTask(PROJECT, 't')).toEqual({
 			status: 'needs_confirmation',
-			liveSignups: 2,
+			liveSignups: 3,
 			engagement: null
 		});
 		expect(all(`select 1 from volunteer_signup where status = 'cancelled'`)).toHaveLength(0);
@@ -450,10 +554,12 @@ describe('unassigning', () => {
 			mode: 'unassigned'
 		});
 		expect(all(`select 1 from volunteer_signup where status = 'cancelled'`)).toHaveLength(2);
+		expect(assignees('t')).toEqual([]);
+		expect(all(`select 1 from volunteer_shift where cancelled_at is null`)).toHaveLength(0);
 		await new Promise((r) => setTimeout(r, 0));
 		expect(emit.mock.calls.filter(([e]) => e === 'volunteer.signup_cancelled')).toHaveLength(2);
 		expect(audits('work_order.assigned')).toEqual([
-			{ id: 't', from: 'members', to: 'unassigned', cancelledSignups: 2 }
+			{ id: 't', from: 'open', to: 'unassigned', cancelledSignups: 2 }
 		]);
 	});
 });
@@ -526,9 +632,11 @@ describe('progress', () => {
 
 describe('the rows the list draws', () => {
 	it('carries the people, the engagement, the duties and the inherited committee', async () => {
-		task('crew', { volunteer_role_id: ROLE, capacity: 3 });
-		insert('volunteer_signup', { id: 'su-a', shift_id: 'crew', user_id: ADA, status: 'confirmed' });
-		insert('volunteer_signup', { id: 'su-b', shift_id: 'crew', user_id: BO, status: 'cancelled' });
+		task('crew', { volunteer_role_id: ROLE });
+		shift('s', 'crew', { capacity: 3 });
+		signup('su-a', 's', ADA, 'confirmed');
+		signup('su-b', 's', BO, 'cancelled');
+		insert('work_order_assignee', { work_order_id: 'crew', user_id: CAM, assigned_at: 1 });
 
 		task('wired');
 		sqlite.exec(`delete from contractor`);
@@ -563,7 +671,14 @@ describe('the rows the list draws', () => {
 		const row = (id: string) => list.tasks.find((t) => t.id === id)!;
 
 		expect(list.committee).toEqual({ id: COMMITTEE, name: 'Facilities' });
-		expect(row('crew').people.map((p) => p.userId)).toEqual([ADA]);
+		// Assignees first, then sign-ups on its live shifts; places are the shifts'.
+		expect(row('crew').people.map((p) => p.userId)).toEqual([CAM, ADA]);
+		expect(row('crew')).toMatchObject({
+			capacity: 3,
+			claimed: 1,
+			mode: 'open',
+			startsAt: new Date(FUTURE * 1000)
+		});
 		expect(row('crew').engagement).toBeNull();
 		expect(row('wired')).toMatchObject({
 			mode: 'contractor',
@@ -584,15 +699,18 @@ describe('the rows the list draws', () => {
 
 describe('delegating to a contractor', () => {
 	it('warns about the people on it, then takes them off and books the engagement asked', async () => {
-		task('t', { volunteer_role_id: ROLE, posted_at: 1, capacity: 2 });
-		insert('volunteer_signup', { id: 'su-a', shift_id: 't', user_id: ADA, status: 'confirmed' });
+		task('t', { volunteer_role_id: ROLE });
+		shift('s', 't', { capacity: 2 });
+		signup('su-a', 's', ADA, 'confirmed');
+		await tasks.assignMembers(PROJECT, 't', { userIds: [BO] });
+		sqlite.exec(`delete from audit_log`);
 		sqlite.exec(`delete from contractor`);
 		insert('contractor', { id: 'ctr', name: 'Benton Electric', trade: 'electrical' });
 		const input = { contractorId: 'ctr', quotedCents: 22000, requestedByUserId: STAFF };
 
 		expect(await tasks.engageContractor(PROJECT, 't', input)).toEqual({
 			status: 'needs_confirmation',
-			liveSignups: 1,
+			liveSignups: 2,
 			engagement: null
 		});
 		expect(one(`select count(*) n from contractor_job`)).toEqual({ n: 0 });
@@ -603,7 +721,11 @@ describe('delegating to a contractor', () => {
 			status: 'asked',
 			quoted_cents: 22000
 		});
-		expect(one(`select posted_at from work_order where id = 't'`)).toEqual({ posted_at: null });
+		// Delegating calls its shifts still to come off and removes its assignees (#2518).
+		expect(one(`select cancelled_at is not null as off from volunteer_shift where id = 's'`)).toEqual(
+			{ off: 1 }
+		);
+		expect(assignees('t')).toEqual([]);
 		expect(one(`select status from volunteer_signup where id = 'su-a'`)).not.toEqual({
 			status: 'confirmed'
 		});

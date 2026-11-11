@@ -286,22 +286,14 @@ export const volunteerRoleCapability = sqliteTable(
 );
 
 /**
- * A **work order**: a triaged, scoped piece of work for a role — "two Front
- * Desk, Saturday 6–10pm", or "re-cone the bass cab, whenever".
+ * A **work order**, which the interface calls a **task**: the work itself —
+ * "re-cone the bass cab", "door crew for Saturday". The CMMS term is deliberate
+ * (docs/specs/project-spec.md#vocabulary): a `work_request` is what someone
+ * noticed, a work order is what staff decided to do about it.
  *
- * The CMMS term, adopted deliberately (docs/specs/project-spec.md#vocabulary): a
- * `work_request` is what someone noticed, a work order is what staff have
- * decided to do about it — or work nobody requested at all. Its scheduled
- * state is a **shift**: where an interest says someone *would* do a job, a
- * shift is the job on a particular evening, and member-facing copy keeps that
- * word. Staff create them; members claim them. A standing weekly slot is
- * made by duplicating last week's; recurring facility work is a
- * `maintenanceSchedule`, which writes one occurrence at a time.
- *
- * Renamed from `volunteer_shift`. Check names keep the old prefix, because
- * renaming a check rebuilds the table. Index names are global in SQLite, so
- * they took the `work_order_` prefix when the new `volunteer_shift` table
- * arrived (#2518).
+ * The times volunteers show up are its shifts (`volunteerShift`, #2518), and
+ * who staff put on it are its assignees. `legacy*` properties are columns no
+ * service reads; a later migration drops them. Check names keep their old prefix.
  */
 export const workOrder = sqliteTable(
 	'work_order',
@@ -311,18 +303,14 @@ export const workOrder = sqliteTable(
 			.$defaultFn(() => crypto.randomUUID()),
 
 		// Restrict, like the hour log's: a worked shift is history, and deleting
-		// the role out from under it would rewrite the past.
-		//
-		// Null for work no volunteer does: a contractor's, or a task nobody has
-		// been put on yet. Anything posted to the claim board has one (the CHECK
-		// below), and a signup can only be made where one exists.
+		// the role out from under it would rewrite the past. Null for work no
+		// volunteer does, such as a contractor's. `openShift` refuses a task
+		// without one, so every shift's task has a role.
 		volunteerRoleId: text('volunteer_role_id').references(() => volunteerRole.id, {
 			onDelete: 'restrict'
 		}),
 
-		// When staff opened this to volunteers. The one assignment fact that
-		// cannot be derived from signups or engagements: it exists before anybody
-		// claims. Null is not on the claim board.
+		// Retired (#2518): a shift is open by existing.
 		legacyPostedAt: integer('posted_at', { mode: 'timestamp' }),
 		legacyPostedByUserId: text('posted_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
@@ -342,14 +330,7 @@ export const workOrder = sqliteTable(
 		// role", which is what every shift did before this column existed.
 		title: text('title'),
 
-		// Nullable, because an unscheduled row is a bare work order: work that
-		// needs doing with nobody booked to do it yet. Setting a window turns it
-		// into an ordinary claimable shift; the two are the same row in two states.
-		//
-		// Every forward-looking query filters `starts_at >= now` or orders by it,
-		// and `NULL >= x` is NULL in SQLite — so unscheduled work falls out of the
-		// member list, the reminder cron and the feedback cron on its own, with no
-		// query changed. That is load-bearing: assert it rather than trust it.
+		// Moved to `volunteer_shift` (#2518).
 		legacyStartsAt: integer('starts_at', { mode: 'timestamp' }),
 		legacyEndsAt: integer('ends_at', { mode: 'timestamp' }),
 
@@ -405,6 +386,9 @@ export const workOrder = sqliteTable(
 		// duration) and its length. Placing it, once the time is set, clears both.
 		pendingOffsetMinutes: integer('pending_offset_minutes'),
 		pendingDurationMinutes: integer('pending_duration_minutes'),
+		// Places for the shift this task will get, where the work said how many: a
+		// window waiting for its time, a recurring occurrence. `openShift` reads it.
+		pendingCapacity: integer('pending_capacity'),
 
 		// This is a member's orientation shift. Stamped, so clearing a list's
 		// trigger or deleting the list cannot orphan a booked orientation.
@@ -417,7 +401,7 @@ export const workOrder = sqliteTable(
 			{ onDelete: 'set null' }
 		),
 
-		/** How many people are needed. Claims beyond this are refused. */
+		// Moved to `volunteer_shift` (#2518); a task's own count is `pendingCapacity`.
 		legacyCapacity: integer('capacity').notNull().default(1),
 
 		/** "Meet at the side door" — anything the claimant needs to know. */
@@ -435,9 +419,8 @@ export const workOrder = sqliteTable(
 		}),
 
 		// Whether the *work* is finished, which is not whether anyone turned up.
-		// `completeFinishedShifts()` promotes a signup once the clock runs out —
-		// that says the volunteer worked and earns their hours. A session can end
-		// with the amp still broken, so closure lives here and nowhere else.
+		// The clock completes sign-ups on a shift; a shift can end with the amp
+		// still broken, so closure lives here, set only by marking the task done.
 		//
 		// A timestamp rather than a status enum, matching `cancelledAt` here and
 		// `retiredAt` / `deletedAt` / `revokedAt` across the schema. Open work is
@@ -448,9 +431,7 @@ export const workOrder = sqliteTable(
 		}),
 		resolutionNotes: text('resolution_notes'),
 
-		// Staff's call, made when scheduling: does the clock running out mean the
-		// attached equipment reports are fixed? Off, a finished work order waits on
-		// the coordinator's Today worklist to be confirmed instead (#1544).
+		// Retired (#2518): reports close only when the task is marked done.
 		legacyCloseReportsOnCompletion: integer('close_reports_on_completion', { mode: 'boolean' })
 			.notNull()
 			.default(false),

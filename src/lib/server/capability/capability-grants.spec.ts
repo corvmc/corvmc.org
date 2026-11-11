@@ -153,8 +153,8 @@ describe('roleGrantAllows', () => {
 		expect(await roleGrantAllows('u-1', 'event.uploadRecap', 'ev-1', showEnd)).toBe(false);
 	});
 
-	it('scopes the read to this user, this event, an accepted signup and a live work order', async () => {
-		selectResults = [[]];
+	it('scopes the read to this user, this event, an accepted signup, a live shift and a live task', async () => {
+		selectResults = [[], []];
 		await roleGrantAllows('u-1', 'event.uploadRecap', 'ev-1', showEnd);
 		const { sql, params } = rendered(0);
 		expect(sql).toContain('"volunteer_role_capability"."capability" = ?');
@@ -162,7 +162,23 @@ describe('roleGrantAllows', () => {
 		expect(sql).toContain('"work_order"."event_id" = ?');
 		expect(sql).toContain('"volunteer_signup"."status" in (?, ?)');
 		expect(sql).toContain('"work_order"."cancelled_at" is null');
-		expect(params).toEqual(['event.uploadRecap', 'u-1', 'ev-1', 'confirmed', 'completed']);
+		expect(sql).toContain('"volunteer_shift"."cancelled_at" is null');
+		expect(params).toEqual(['event.uploadRecap', 'ev-1', 'u-1', 'confirmed', 'completed']);
+	});
+
+	it('also reads assignments to a live task for this user and event (#2518)', async () => {
+		selectResults = [[], []];
+		await roleGrantAllows('u-1', 'event.uploadRecap', 'ev-1', showEnd);
+		const { sql, params } = rendered(1);
+		expect(sql).toContain('"work_order_assignee"."user_id" = ?');
+		expect(sql).toContain('"work_order"."event_id" = ?');
+		expect(sql).toContain('"work_order"."cancelled_at" is null');
+		expect(params).toEqual(['event.uploadRecap', 'ev-1', 'u-1']);
+	});
+
+	it('gives an assignment the event window, since it has no shift', async () => {
+		selectResults = [[], [{ ...shift(), startsAt: null, endsAt: null }]];
+		expect(await roleGrantAllows('u-1', 'event.uploadRecap', 'ev-1', showEnd)).toBe(true);
 	});
 
 	it('lets crew file an incident for 7 days after the shift, and not on the 8th', async () => {

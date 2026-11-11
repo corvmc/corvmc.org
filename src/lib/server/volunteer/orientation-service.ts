@@ -1,9 +1,10 @@
 import { db } from '#lib/server/db/index.js';
-import { and, asc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { config } from '#lib/server/site-config/site-config-service.js';
 import {
 	memberOrientation,
 	volunteerRole,
+	volunteerShift,
 	workOrder,
 	workTask
 } from '#lib/server/db/schema/volunteer.js';
@@ -11,7 +12,7 @@ import { reservation } from '#lib/server/db/schema/reservation.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import type { MemberOrientation } from '#lib/server/db/schema/volunteer.js';
 import type { MemberOrientationState } from '#lib/config.js';
-import { cancelShift, countActiveSignups } from './work-order-service';
+import { cancelShift, countActiveSignups, liveShift } from './work-order-service';
 
 /**
  * Whether a member has been shown around the space, and when.
@@ -199,19 +200,20 @@ export function parseOrientationTasks(text: string): string[] {
 export async function raiseOrientationShift(
 	reservationId: string,
 	bookingStartsAt: Date
-): Promise<{ id: string; startsAt: Date | null } | null> {
+): Promise<{ id: string; startsAt: Date } | null> {
 	const [live] = await db
-		.select({ id: workOrder.id, startsAt: workOrder.startsAt })
+		.select({ id: workOrder.id, startsAt: volunteerShift.startsAt })
 		.from(workOrder)
+		.innerJoin(volunteerShift, eq(volunteerShift.workOrderId, workOrder.id))
 		.where(
 			and(
 				eq(workOrder.reservationId, reservationId),
 				eq(workOrder.isOrientation, true),
 				isNull(workOrder.cancelledAt),
-				isNotNull(workOrder.startsAt)
+				liveShift()
 			)
 		)
-		.orderBy(asc(workOrder.startsAt))
+		.orderBy(asc(volunteerShift.startsAt))
 		.limit(1);
 	if (live) return live;
 
@@ -227,29 +229,38 @@ export async function raiseOrientationShift(
 	const now = new Date();
 	const id = crypto.randomUUID();
 	const startsAt = new Date(bookingStartsAt.getTime() - setting.leadMinutes * 60_000);
-	const insertShift = db.insert(workOrder).values({
+	// The orientation task on the booking, and one shift at the booking's time.
+	const insertTask = db.insert(workOrder).values({
 		id,
 		volunteerRoleId: setting.roleId,
 		reservationId,
-		startsAt,
-		endsAt: new Date(startsAt.getTime() + setting.minutes * 60_000),
 		anchor: 'start',
 		isOrientation: true,
 		notes: 'First visit — meet them at the front door.',
-		postedAt: now,
 		createdAt: now,
 		updatedAt: now
 	});
-	if (setting.tasks.length === 0) {
-		await insertShift;
-	} else {
-		await db.batch([
-			insertShift,
-			db
-				.insert(workTask)
-				.values(setting.tasks.map((label, sortOrder) => ({ workOrderId: id, label, sortOrder })))
-		]);
-	}
+	const insertShift = db.insert(volunteerShift).values({
+		workOrderId: id,
+		startsAt,
+		endsAt: new Date(startsAt.getTime() + setting.minutes * 60_000),
+		anchor: 'start',
+		createdAt: now,
+		updatedAt: now
+	});
+	await db.batch(
+		setting.tasks.length === 0
+			? [insertTask, insertShift]
+			: [
+					insertTask,
+					insertShift,
+					db
+						.insert(workTask)
+						.values(
+							setting.tasks.map((label, sortOrder) => ({ workOrderId: id, label, sortOrder }))
+						)
+				]
+	);
 	return { id, startsAt };
 }
 
@@ -281,7 +292,8 @@ export async function orientationOwnerOf(workOrderId: string): Promise<Orientati
 
 export interface ReservationOrientationShift {
 	workOrderId: string;
-	startsAt: Date | null;
+	shiftId: string;
+	startsAt: Date;
 	capacity: number;
 	claimed: number;
 }
@@ -300,22 +312,26 @@ export async function orientationForReservation(
 	const [row] = await db
 		.select({
 			workOrderId: workOrder.id,
-			startsAt: workOrder.startsAt,
-			capacity: workOrder.capacity
+			shiftId: volunteerShift.id,
+			startsAt: volunteerShift.startsAt,
+			capacity: volunteerShift.capacity
 		})
 		.from(workOrder)
+		.innerJoin(volunteerShift, eq(volunteerShift.workOrderId, workOrder.id))
 		.where(
 			and(
 				eq(workOrder.reservationId, reservationId),
 				eq(workOrder.isOrientation, true),
-				isNull(workOrder.cancelledAt)
+				isNull(workOrder.cancelledAt),
+				liveShift()
 			)
 		)
+		.orderBy(asc(volunteerShift.startsAt))
 		.limit(1);
 
 	if (!row) return null;
 
-	return { ...row, claimed: await countActiveSignups(row.workOrderId) };
+	return { ...row, claimed: await countActiveSignups(row.shiftId) };
 }
 
 /**
@@ -366,14 +382,20 @@ export async function rescheduleOrientationFor(
 	if (deltaMs === 0) return 0;
 
 	const live = await db
-		.select({ id: workOrder.id, startsAt: workOrder.startsAt, endsAt: workOrder.endsAt })
+		.select({
+			id: workOrder.id,
+			shiftId: volunteerShift.id,
+			startsAt: volunteerShift.startsAt,
+			endsAt: volunteerShift.endsAt
+		})
 		.from(workOrder)
+		.innerJoin(volunteerShift, eq(volunteerShift.workOrderId, workOrder.id))
 		.where(
 			and(
 				eq(workOrder.reservationId, reservationId),
 				isNull(workOrder.cancelledAt),
 				isNull(workOrder.resolvedAt),
-				isNotNull(workOrder.startsAt)
+				liveShift()
 			)
 		);
 
@@ -381,18 +403,21 @@ export async function rescheduleOrientationFor(
 
 	const now = new Date();
 	for (const row of live) {
-		const startsAt = new Date(row.startsAt!.getTime() + deltaMs);
-		const endsAt = new Date(row.endsAt!.getTime() + deltaMs);
+		const startsAt = new Date(row.startsAt.getTime() + deltaMs);
+		const endsAt = new Date(row.endsAt.getTime() + deltaMs);
 
-		await db
-			.update(workOrder)
-			.set({ startsAt, endsAt, updatedAt: now })
-			.where(eq(workOrder.id, row.id));
-
-		await db
-			.update(memberOrientation)
-			.set({ scheduledFor: startsAt, updatedAt: now })
-			.where(and(eq(memberOrientation.workOrderId, row.id), isNull(memberOrientation.completedAt)));
+		await db.batch([
+			db
+				.update(volunteerShift)
+				.set({ startsAt, endsAt, updatedAt: now })
+				.where(eq(volunteerShift.id, row.shiftId)),
+			db
+				.update(memberOrientation)
+				.set({ scheduledFor: startsAt, updatedAt: now })
+				.where(
+					and(eq(memberOrientation.workOrderId, row.id), isNull(memberOrientation.completedAt))
+				)
+		]);
 	}
 
 	return live.length;
