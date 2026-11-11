@@ -13,7 +13,7 @@ import type {
  * Writing and reading the financial record.
  *
  * Append-only: there is no update and no delete here, and a correction is a
- * reversing entry. See `docs/specs/financial-record-spec.md`.
+ * reversing entry. See `docs/decisions/NNNN-a-local-financial-record.md`.
  */
 
 export interface RecordEntryInput {

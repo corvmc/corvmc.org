@@ -240,6 +240,18 @@ taxonomy.
 
 **Derived balances, never stored counters.** Project burn is a `sum()` across these.
 
+`financial_entry` is the collective's accounting ledger: what was earned, spent, given and
+held for others. Stripe stays the record of settlement. Each row has a signed `amountCents`, a
+`kind` (`earned` · `spent` · `in_kind` · `pass_through`), a `category` from
+`financialCategories` in `src/lib/config.ts`, a `settlement` (`stripe` · `cash` · `credit` ·
+`none`) and a `subjectType`/`subjectId` with no foreign key, so an entry outlives what it
+describes. `occurredAt` is when the money moved. Writers go through
+`src/lib/server/finance/financial-entry-service.ts`; a refund is a reversing entry, a free sale
+still writes a $0 row, and `in_kind` is never summed with `earned`. `pass_through` rows share a
+`settlementGroup`, and a pool that does not net to zero is an anomaly to read, not a constraint.
+The `reconcile-ledger` cron compares the `stripe`-settled sum with Stripe's balance transactions
+(`reconciliation.ts`). Decision: [NNNN](../decisions/NNNN-a-local-financial-record.md).
+
 ### 5. Container membership `[social, projects, comms]`
 
 `group_member` · `volunteer_signup` · `audience_member` · `inbox_participant` ·

@@ -13,9 +13,8 @@ import {
  * What the collective earned, spent, and was given — append-only.
  *
  * Stripe stays authoritative for settlement; this owns accounting. Nothing here
- * mirrors a Stripe charge or tracks its lifecycle, which is the Laravel ledger
- * `finance-spec.md` deleted. Design and worked examples:
- * `docs/specs/financial-record-spec.md`.
+ * mirrors a Stripe charge or tracks its lifecycle; Stripe is the payment ledger.
+ * See `docs/decisions/NNNN-a-local-financial-record.md`.
  */
 export const financialEntry = sqliteTable(
 	'financial_entry',

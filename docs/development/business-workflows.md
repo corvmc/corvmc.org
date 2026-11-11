@@ -15,18 +15,12 @@ and reconcile deliberately.
 
 ## 1. Reservation booking, confirmation, and payment
 
-Spec: [specs/reservation-system-spec.md](../specs/shipped/reservation-system-spec.md) ·
-[specs/reservation-confirmation-window.md](../specs/shipped/reservation-confirmation-window.md) ·
-[specs/staff-reservations-spec.md](../specs/shipped/staff-reservations-spec.md)
-
 ### The story
 
 A member books a practice-room slot, and the booking is `confirmed` the moment it exists —
 however far ahead it is. Booking spends any free-hour credits that cover it and leaves the
 rest as cash due at the door, or the member **pays ahead** online via Stripe. There is no
-later confirmation step and no sweep that releases unconfirmed bookings (#2502; the
-schedule-then-confirm model is in
-[the superseded spec](../specs/shipped/reservation-confirmation-window.md)).
+later confirmation step and no sweep that releases unconfirmed bookings (#2502).
 
 ### Code path
 
@@ -45,6 +39,17 @@ in `src/lib/remote/reservations.remote.ts`, which calls `create()` in
 3. Announces it: `reservation.created`, then `reservation.confirmed` from
    `announceConfirmed()`. That is the only announcement the booking gets.
 
+**Booking rules.** The room's facts are `ReservationConfig` in
+`src/lib/server/reservation/config.ts`, each a `reservation.*` site-config key with a default:
+30-minute slots, 1 to 8 hours, 09:00 to 22:00, at least 60 minutes' notice, and one-off
+bookings up to 14 days ahead. The rate, minimum duration and advance windows depend on who is
+booking, so callers read them through `getBookingTerms(bookerType)` (see
+[Teaching bookings](#teaching-bookings)). `hasConflict()` in `conflict-service.ts` counts any
+reservation that is not `cancelled` or `waitlisted`, widened by `bufferMinutes` (default 0),
+and any `closure`. A closure is a reason and a time range with no booker, and takes no buffer.
+`reservation.bookerType` names the table `bookerId` points into; `createdByUserId` is always
+the member who owns, pays for and may cancel the booking.
+
 **Book (no online payment).** Submitting with `skipPayment` on calls
 `commitCreditsAndSettleIfCovered()` (a helper inside `reservations.remote.ts`). That commits
 free-hour credits via `commitReservationCredits()` in `reservation-credit-service.ts`; if
@@ -54,7 +59,8 @@ changes payment fields only — never the status, and it never announces again.
 
 **Pay online.** The remote commits credits the same way, then creates a Stripe Checkout
 Session via `checkout()` in `src/lib/server/finance/payment-service.ts` with
-`metadata: { reservation_id: res.id }`, and redirects the member to Stripe. Payment
+`metadata: { reservation_id: res.id }`, and sends the member to the in-app
+`/checkout/<session>` page, where they pay on a Stripe Payment Element. Payment
 completion comes back asynchronously:
 
 ```
@@ -67,6 +73,18 @@ Stripe → POST /api/stripe/webhook            src/routes/api/stripe/webhook/+se
 
 The listener is idempotent (it only writes a `confirmed` row's payment fields), and the
 webhook route returns 500 on handler failure so Stripe re-delivers.
+
+**Pay at the reader (#1659).** A member's own booking that still owes money can be paid on the
+practice room's Stripe smart reader, from two hours before it starts until it ends
+(`readerPayable()` in `src/lib/server/reservation/reader-payment.ts`). The `payAtReader`
+command commits credits first, as booking does, and touches the reader only for a remainder.
+`startReaderPayment()` creates a `card_present` PaymentIntent with
+`metadata.type: 'reader_reservation'` under an idempotency key, and puts it on the reader through
+the server-driven Terminal API with tipping off. `payment_intent.succeeded` dispatches on
+`metadata.type`; `settleReservationAtReader()` is the only writer, and its conditional update on
+a `confirmed`, unpaid row makes a redelivered event a no-op. The member's phone polls
+`getReaderPayment` and never reports a payment itself. The action is hidden until
+`STRIPE_TERMINAL_READER_ID` is set in `wrangler.toml`; the fake driver has its own reader.
 
 **Door code.** `announceConfirmed()` is called only where a row becomes confirmed — `create()`,
 `staffCreate()`, recurring generation and waitlist confirmation — never from a settle path,
@@ -149,11 +167,35 @@ Cash settlement (`cashReceived`), comping, refunds and no-shows all live here, e
 shared action component under `$lib/components/actions/`, so the member and staff
 surfaces cannot drift in what they do — only in who may do it.
 
+### Teaching bookings
+
+An **instructor** is a member staff have granted teaching terms in the practice room
+(`instructor` table, one row per user). CMC rents the room to the teacher and records nothing
+about students. Decision: [NNNN](../decisions/NNNN-instructors-rent-the-room.md).
+
+- **Status:** `requested` and `rejected` are the application, `active`, `paused` and `retired`
+  the grant (`instructorStatuses` in `src/lib/config.ts`). A member applies from
+  `/member/profile` with the draft listing; staff approve, send back with `reviewNotes`, grant
+  directly, pause or retire from `/staff/instructors` (`instructor-service.ts`). Pause and
+  retire need a `statusNote` and leave future teaching bookings in place.
+- **Booking:** `bookInstructorReservation` in `reservations.remote.ts` calls
+  `requireInstructor()`, which matches `status = 'active'` only, and books with
+  `bookerType: 'instructor'` and `bookerId` = the instructor row. `termsFor()` in
+  `reservation/config.ts` gives that booker type `reservation.teaching*` terms: $5/hr (the rate a
+  sustaining contribution buys), 30-minute minimum, 60 days one-off and 90 recurring. Credits
+  apply. A teaching series needs no sustaining membership, and `cancelAllForUser()` cancels only
+  `bookerType: 'user'` series when a subscription ends.
+- **Listing:** `/directory/instructors` (public) and `/member/directory/instructors` list active
+  instructors who are accepting students and have not hidden their directory listing, through
+  `instructor-directory-service.ts`. The
+  contact shown is `teachingContact`, falling back to the member's directory contact, and both
+  pass `contactForView('public', …)`.
+
 ---
 
 ## 2. Recurring reservations and the waitlist
 
-Spec: [specs/recurring-reservations-spec.md](../specs/shipped/recurring-reservations-spec.md)
+Decision: [NNNN](../decisions/NNNN-recurring-reservations-clone-a-prototype.md)
 
 ### The story
 
@@ -176,7 +218,15 @@ one is offered the slot with a 24-hour window to confirm.
   pass must treat as hard blocks — see the doc comment in that file). Occurrences that
   can't be booked emit `reservation.recurring_skipped` / `reservation.recurring_waitlisted`
   events so the member hears about it. The generation window is ~2.5 weeks
-  (`reservation.maxAdvanceDaysRecurring` config, default 17.5).
+  (`reservation.maxAdvanceDaysRecurring` config, default 17.5). It is longer than the 14-day
+  one-off window on purpose: an occurrence is already booked before any one-off booking can
+  reach its day. An instance already generated for a day, cancelled ones included, is never
+  generated again, so cancelling one occurrence leaves the series running.
+- **Schedules:** `buildRRule()` writes weekly, biweekly or monthly rules in club time. A
+  monthly room booking repeats on the nth weekday of the month, so it stays on the weekday
+  the member chose; only a recurring event may pick a fixed day of the month. A series may carry
+  an end date (`recurring_series.endsAt`, from `recurringSeriesEnd()` in `series-until.ts`).
+  A series is active while `cancelledAt` and `supersededBy` are both null.
 - **Waitlist promotion:** `cancel()` emits `reservation.cancelled`; the listener in
   `src/lib/server/event-bus/register-listeners.ts` calls `promoteNextWaitlisted()` in
   `waitlist-service.ts` — oldest overlapping waitlisted reservation wins, gets
@@ -195,7 +245,8 @@ one is offered the slot with a 24-hour window to confirm.
 
 ### Data touched
 
-`recurringSeries` (RRULE, prototype pointer, `supersededBy` chain), `reservation` rows
+`recurringSeries` (RRULE, prototype pointer, end date; `supersededBy` is read but nothing
+writes it yet, see #2546), `reservation` rows
 (status `waitlisted`, `waitlistNotifiedAt`, `waitlistExpiresAt`).
 
 ### Where it breaks
@@ -212,8 +263,7 @@ one is offered the slot with a 24-hour window to confirm.
 
 ## 3. Membership: signup, subscription, monthly credits
 
-Spec: [specs/membership-page-spec.md](../specs/shipped/membership-page-spec.md) ·
-[specs/finance-spec.md](../specs/shipped/finance-spec.md)
+Decision: [NNNN](../decisions/NNNN-stripe-is-the-payment-ledger.md)
 
 ### The story
 
@@ -242,14 +292,27 @@ when the member signs up.
      (`hoursPerReset`, `creditsResetAt`, `coveringFees`, `cancelAtPeriodEnd`).
 3. **Changes:** `updateAmount` / `resumeSubscription` forms in `membership.remote.ts` call
    `updateQuantity()` / `resume()` in `subscription-service.ts` and write-through to
-   `user.subscription` so the page updates before the webhook lands. Cancel goes through
-   the Stripe **billing portal** (`createBillingPortalUrl()`).
+   `user.subscription` so the page updates before the webhook lands. `cancelSubscription`
+   calls `cancel()`, which sets `cancel_at_period_end`: the member keeps the month they paid
+   for, and `resumeSubscription` undoes it until then. The card on file and invoice history
+   are `getBilling` and the card commands in `src/lib/remote/billing.remote.ts`, over
+   `finance/billing-service.ts`, loaded in their own boundary so a Stripe failure leaves the
+   rest of the page standing. The page's community figures come from `getCommunityStats()` in
+   `finance/community-stats.ts`, cached in KV for 24 hours.
 4. **Cancellation lands:** `customer.subscription.deleted` → `handleSubscriptionDeleted()`
    — zeroes both credit balances, cancels the member's recurring series, and clears
    `user.subscription`.
 
 Note: "is this member sustaining?" is answered by `user.subscription != null` (see
 `isSustainingMember` in `subscription-service.ts`), not by the `sustaining` role.
+
+**Staff credit adjustments.** `adjustCredits` in `src/lib/remote/users.remote.ts` takes two
+authorities. A holder of `credit.adjust` (admin only) adds or deducts any amount, written as
+`admin_adjustment`. A holder of `credit.comp` alone (staff) may only add, up to
+`creditCompCeiling` in `src/lib/config.ts` per adjustment: 4 free-hour credits (2 hours), and no
+equipment credits. A comp is written as `staff_comp`, so the ledger shows it apart. A refused
+amount comes back as a field issue on `amount`, not a 403. Decision:
+[NNNN](../decisions/NNNN-staff-comp-credits-up-to-a-ceiling.md).
 
 ### Data touched
 
@@ -414,8 +477,8 @@ events use RSVP instead.
 ### Door sales
 
 A card payment taken at the door on the CMC phone, which runs the `door-app/` shell over
-`/member/volunteer/door` ([door-app.md](door-app.md);
-design in [specs/shipped/tap-to-pay-spec.md](../specs/shipped/tap-to-pay-spec.md)).
+`/member/volunteer/door` ([door-app.md](door-app.md); decision:
+[NNNN](../decisions/NNNN-door-sales-on-one-tap-to-pay-phone.md)).
 
 - **Who:** `finance.collect`, checked per show by every remote in `src/lib/remote/door.remote.ts`.
   Staff hold it everywhere. A confirmed door volunteer holds it for their own show during the
@@ -428,8 +491,10 @@ design in [specs/shipped/tap-to-pay-spec.md](../specs/shipped/tap-to-pay-spec.md
   `pending` rows to `checked_in` and writes the ledger rows. A redelivered event matches no
   `pending` row and writes nothing. The door screen polls `getDoorSale` and never reports a
   payment itself.
+- **Refunds:** on the staff site, under `finance.refund`, never on the phone. `refund()` in
+  `payment-service.ts` refunds a `pi_…` record directly. Taking door payments does not grant it.
 - **Where it breaks:** a sale that stays `pending` after a successful tap means the webhook did not
-  arrive. Nothing sweeps card-present intents yet, so it is found by hand in Stripe. A sale
+  arrive. Nothing sweeps card-present intents yet (see #2547), so it is found by hand in Stripe. A sale
   abandoned before the tap is released by `cancelDoorSale`, or later by
   `cancelStalePendingTickets`.
 
@@ -1862,7 +1927,7 @@ comes back. Reading back is the list's status, kind and text filters.
 
 ## 21. Sponsors and grants: what comes due next
 
-Spec: [specs/shipped/development-agreements-spec.md](../specs/shipped/development-agreements-spec.md)
+Decision: [NNNN](../decisions/NNNN-sponsors-and-grants-are-two-modules.md)
 
 ### The story
 
@@ -1883,6 +1948,9 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
   counts after the grant is closed. Writes are guarded by `grant.manage`; a funder with
   applications cannot be deleted, and an application's reports cascade with it.
 - The sort and date display are shared, in `src/lib/utils/deadline.ts`.
+- **Archive:** a sponsor or funder with history is archived (`deletedAt`) rather than deleted
+  (#1577). It leaves the list until "Show archived", keeps its history, and can be restored. An
+  archived funder stays pickable on an application that already names it.
 - **Reminders (#1477):** `development_deadline_14d` and `development_deadline_3d` in
   `src/lib/server/reminders/registry.ts` read `listDevelopmentDeadlinesBetween` (in
   `src/lib/server/development/deadline-service.ts`) over every open deadline: a prospect's

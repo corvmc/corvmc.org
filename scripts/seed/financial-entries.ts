@@ -9,7 +9,7 @@ import { randomInt } from './util';
  *
  * Written as the real write paths will write it — a sale is three or four rows,
  * not one — so a report built against this fixture is built against the shape
- * production will have. See `docs/specs/financial-record-spec.md`.
+ * production will have. See `docs/architecture/domain-model.md` (the append-only ledger).
  */
 export async function seedFinancialEntries(users: SeedUser[], reservations: SeedReservation[]) {
 	console.log('Seeding financial entries...');

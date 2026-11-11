@@ -1,7 +1,7 @@
 # Associating a pass-through in with a pass-through out — prior art
 
 > Written 2026-09-08 while specifying `financial_entry`
-> ([financial-record-spec.md](../specs/financial-record-spec.md), #825).
+> ([decision NNNN](../decisions/NNNN-a-local-financial-record.md), #825).
 >
 > **The question.** Door money arrives as many inbound entries — one per ticket, spread over weeks
 > of presales — and leaves as one payout per act. Nothing links the two. Is `sum() == 0` the only
@@ -32,7 +32,7 @@ under a legal obligation: per-client sub-accounts, and a three-way reconciliatio
 the control account, and the sum of the sub-accounts.
 
 **What it costs here:** an account tree, which is most of double-entry, which
-`financial-record-spec.md` has explicitly declined. **What it teaches:** the association wants to be
+the `financial_entry` design has explicitly declined. **What it teaches:** the association wants to be
 a _place_ rather than a link.
 
 ## 2. Stripe `transfer_group` — the same idea as a string

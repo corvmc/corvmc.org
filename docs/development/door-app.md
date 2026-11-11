@@ -5,9 +5,30 @@ The Tap to Pay door phone (#612) runs a Capacitor shell, `door-app/`, which load
 the staffer sees is the web app, so a fix to the door screen is a deploy, not a reinstall. The
 native binary changes only when Capacitor or the Stripe Terminal SDK does.
 
-The design and its reasons are in [`docs/specs/shipped/tap-to-pay-spec.md`](../specs/shipped/tap-to-pay-spec.md).
-The owner's one-time setup (Stripe Location, secrets, webhook event) is its
-[Owner setup](../specs/shipped/tap-to-pay-spec.md#owner-setup) section.
+How a door sale runs is in
+[business-workflows](business-workflows.md#door-sales). Why it is built this way is
+[decision NNNN](../decisions/NNNN-door-sales-on-one-tap-to-pay-phone.md). The one-time setup is
+[Owner setup](#owner-setup) below.
+
+## Owner setup
+
+In the Stripe Dashboard, in test mode first and then live:
+
+1. Confirm Terminal is enabled on the account. Tap to Pay on Android needs no separate
+   application in the US.
+2. Create a **Location** with CMC's street address and the display name "Corvallis Music
+   Collective". Copy its `tml_…` id.
+3. Run `pnpm stripe:sync-webhooks`, which adds `payment_intent.succeeded` from
+   `src/lib/server/finance/webhook-events.ts` to the endpoint.
+4. Check the card-present rate on the account's pricing page against `CARD_PRESENT_PERCENT` and
+   `CARD_PRESENT_FIXED_CENTS` in `src/lib/finance/fees.ts`.
+
+Set `STRIPE_TERMINAL_LOCATION_ID` to the `tml_…` id, as a Worker secret in production and in
+`.env` for a sandbox. The existing `STRIPE_SECRET_KEY` mints connection tokens.
+
+The phone must run Android 13 or later, stock and not rooted, with a locked bootloader, a
+security patch under 12 months old, the Google Play Store, NFC on and a screen lock set. Stripe
+checks this when the reader connects.
 
 ## What is in `door-app/`
 

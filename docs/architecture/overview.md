@@ -468,6 +468,33 @@ All payments run through Stripe; the app never touches card data. The moving par
   `invoice.paid` (allocates monthly credits), `customer.subscription.updated/deleted`
   (syncs subscription state).
 
+**Stripe is the payment ledger.** There are no local order, transaction or line-item tables.
+Card payments are Checkout Sessions; cash and $0 credit-covered payments are reported to Stripe
+as Payment Records (`stripe.paymentRecords.reportPayment`), so each purchasable row
+(`reservation`, `ticket`, …) stores a `stripePaymentRecordId` as its proof of payment. What the
+collective earned and spent, for accounting, is the separate `financial_entry` ledger
+([domain model](domain-model.md#4-the-append-only-ledger-one-per-vertical-plus-money)).
+Decision: [NNNN](../decisions/NNNN-stripe-is-the-payment-ledger.md).
+
+- **Products and prices.** `product-config-service.ts` finds or creates each Stripe Product by
+  `metadata.corvmc_key`; unit amounts come from site config and go to Stripe as inline
+  `price_data`, never stored Price ids.
+- **Checkout is in-app.** `checkout()` creates sessions with `ui_mode: 'elements'`, so the buyer
+  pays on `/checkout/[id]` and the card fields stay in Stripe's iframe. A landing page can load
+  before the webhook lands, so each one polls its own query on a bounded retry
+  (`RETRY_LIMIT` / `RETRY_MS`) keyed on the fact the webhook writes.
+- **Credit balances** are two integer columns on `user`: `credit_free_hours` (30-minute
+  blocks) and `credit_equipment` (cents). D1 has no transactions, so `credit-service.ts` deducts
+  with a guarded relative decrement (`WHERE col >= amount`) and adds with a bounded
+  compare-and-swap retry. `credit_transaction` records every change.
+- **The gateway seam.** `src/lib/server/stripe.ts` returns a `PaymentGateway`
+  (`finance/gateway/types.ts`): the real Stripe client when `PAYMENTS_DRIVER` is `stripe`, and
+  otherwise the in-memory `fake-gateway.ts`. Production opts in through `wrangler.toml`; dev, e2e
+  and specs get the fake, because a developer `.env` here has carried a live key.
+  `gateway.contract.spec.ts` runs one suite against both drivers. Under the fake, the checkout
+  page renders a card-number form and Stripe.js never loads, so the real browser half of a
+  payment is checked by hand against a sandbox key.
+
 The full money flows, including reservation pricing and credit settlement,
 are traced step-by-step in [business-workflows.md](../development/business-workflows.md).
 

@@ -3,9 +3,9 @@
 --   wrangler d1 execute corvmc-db --local  --file=scripts/db/backfill/financial-entries.sql
 --   wrangler d1 execute corvmc-db --remote --file=scripts/db/backfill/financial-entries.sql
 --
--- Phase 3 of docs/specs/financial-record-spec.md. Run AFTER the phase-2 write
--- paths are deployed, which is the ordering the spec gives: a backfill written
--- before the writers settle gets written twice.
+-- Run AFTER the live write paths are deployed: a backfill written before the
+-- writers settle gets written twice. See
+-- docs/decisions/NNNN-a-local-financial-record.md.
 --
 -- D1 has no transactions, so idempotence is the safety property. Every insert
 -- is guarded on `NOT EXISTS` against the subject it describes, so a second run
