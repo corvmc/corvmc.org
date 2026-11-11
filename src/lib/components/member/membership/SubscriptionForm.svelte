@@ -87,6 +87,7 @@
 			label=""
 			bind:value={coverFees}
 			checkboxLabel={m.member_membership_subscription_form_checkbox_label_checkbox()}
+			description={m.member_membership_subscription_form_collective_receives_full_body()}
 		/>
 		{#if coverFees}
 			<p class="ml-12 text-muted">

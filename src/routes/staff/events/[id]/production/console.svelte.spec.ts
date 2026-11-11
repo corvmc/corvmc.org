@@ -152,11 +152,12 @@ describe('production console', () => {
 		await expect.element(header.getByCss('a.btn[href="/staff/events/evt-1"]')).toBeVisible();
 		expect(header.element().querySelectorAll('.btn')).toHaveLength(1);
 
-		for (const name of ['The night', 'Poster', 'Ticketing', 'Space Reservation']) {
+		for (const name of ['The night', 'Poster', 'Ticketing']) {
 			await expect
 				.element(page.getByRole('heading', { name, exact: true }))
 				.not.toBeInTheDocument();
 		}
+		expect(document.querySelector('[data-testid="space-hold"]')).toBeNull();
 		expect(document.querySelector('a[href="/staff/events/evt-1/check-in"]')).toBeNull();
 		// The console's tabs and nothing else: no listing tab such as Tickets.
 		expect(page.getByRole('tab').elements()).toHaveLength(TAB_KEYS.length);

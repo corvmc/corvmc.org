@@ -186,7 +186,7 @@ describe('AdjustStockAction', () => {
 	const preview = () => page.getByRole('dialog').getByTestId('stocktake-preview');
 
 	const count = async (value: string) => {
-		await userEvent.fill(page.getByLabelText('Counted on the shelf'), value);
+		await userEvent.fill(page.getByTestId('stocktake-counted'), value);
 	};
 
 	// A box pre-filled with the number being checked invites confirming the
@@ -405,12 +405,12 @@ describe('MarkReimbursedAction', () => {
 describe('ReceiveStockAction', () => {
 	const open = async () => {
 		await openWith(ReceiveStockAction, { itemId: 'item-3' });
-		await expect.element(page.getByLabelText('How it arrived')).toBeVisible();
+		await expect.element(page.getByRole('dialog').getByCss('[name="kind"]')).toBeVisible();
 		return page.getByRole('dialog');
 	};
 
 	const arrivedAs = async (kind: string) => {
-		await userEvent.selectOptions(page.getByLabelText('How it arrived'), [kind]);
+		await userEvent.selectOptions(page.getByRole('dialog').getByCss('[name="kind"]'), [kind]);
 	};
 
 	it('opens as a purchase, which owes no disclosure', async () => {
@@ -427,7 +427,9 @@ describe('ReceiveStockAction', () => {
 
 			await arrivedAs(gift);
 
-			await expect.element(page.getByLabelText('How the value was determined')).toBeVisible();
+			await expect
+				.element(page.getByRole('dialog').getByCss('[name="fairValueBasis"]'))
+				.toBeVisible();
 			// ASU 2020-07 discloses sold and utilized gifts on separate lines.
 			expect(named('monetized')).not.toBeNull();
 		});

@@ -9,7 +9,7 @@
 
 	let {
 		loanId,
-		label = m.actions_cancel_label(),
+		label = m.actions_cancel_loan_label(),
 		confirm: confirmText = m.actions_cancel_loan_confirm_body(),
 		variant = 'ghost',
 		size = 'sm',

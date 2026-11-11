@@ -39,7 +39,7 @@ test('the publish dialog names what the listing is missing, and asks why before 
 	const dialog = page.getByRole('dialog');
 	// The seed leaves out the poster and the description, and nothing else.
 	await expect(dialog.getByRole('alert').locator('li')).toHaveCount(2, { timeout: 15000 });
-	await expect(dialog.getByLabel('Why publish now?')).toBeVisible();
+	await expect(dialog.getByRole('textbox')).toBeVisible();
 	await expect(dialog.locator('button[type="submit"]')).toBeEnabled();
 });
 

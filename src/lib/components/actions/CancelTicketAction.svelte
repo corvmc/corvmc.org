@@ -28,7 +28,7 @@
 
 <Action
 	action={cancelTicket}
-	label={m.actions_cancel_label()}
+	label={m.actions_cancel_ticket_label()}
 	modalTitle={m.actions_cancel_ticket_modal_title()}
 	successToast={m.actions_cancel_ticket_success_toast()}
 	{variant}
