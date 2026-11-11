@@ -566,7 +566,10 @@ space-holding events.
 
 ## 6. Inventory, gear and consumables
 
-Spec: [specs/inventory-spec.md](../specs/inventory-spec.md)
+Decisions: [stock is a ledger](../decisions/NNNN-inventory-stock-is-a-ledger.md),
+[asset tags are bound](../decisions/NNNN-asset-tags-are-bound-not-generated.md),
+[no capitalization threshold](../decisions/NNNN-serialization-is-not-a-capitalization-threshold.md),
+[Form 8282 is the only tax check](../decisions/NNNN-form-8282-is-the-only-inventory-tax-check.md)
 
 ### The story
 
@@ -577,10 +580,10 @@ sticks, batteries — leave and do not.
 Members browse the catalog, request an item for a weekend, and staff schedule a
 pickup, hand it over and take it back. Charges are computed at return from days
 borrowed × a per-tier daily rate, discounted for sustaining members, payable from
-equipment credits first and cash for the rest. Both surfaces are always on — the
-`equipment` flag was cut in #286, since a flag whose only job was hiding a module
-nobody had entered data into stopped being useful the moment the data model was
-worth using.
+equipment credits first and cash for the rest. No feature flag gates either
+surface. The member nav shows Equipment once the catalog holds a loanable item
+(`hasLoanableItems()` in `item-service.ts`, read by `layout.remote.ts`), even when
+every unit is out on loan. If that query fails, the row stays hidden.
 
 ### The rule everything rests on
 
@@ -794,7 +797,8 @@ number.
 ### Data touched
 
 `inventory_item`, `inventory_asset`, `stock_movement`, `inventory_loan`,
-`acquisition`, `acquisition_line`, `inventory_location`, `equipment_category`
+`acquisition`, `acquisition_line`, `inventory_location` (a tree through
+`parentId`), `equipment_category`
 (unchanged), `media` + `media_attachment` (manuals, damage photos, receipts),
 `creditTransaction` (equipment credit spends).
 
@@ -2020,35 +2024,61 @@ vendors are listed on the event page.
 
 ## 20. The incident & safety log
 
-Spec: [specs/shipped/incident-log-spec.md](../specs/shipped/incident-log-spec.md)
-
 ### The story
 
 Whoever ran the night tells staff something went wrong — a neighbour called, a drummer fell on
-the stairs, the lobby window was found cracked. A staffer records it at `/staff/incidents`: when,
-where, what kind, a one-line summary and the account, optionally linking a member who was
-involved. Follow-ups are notes under it. Staff resolve it with a resolution, and reopen it if it
-comes back. Reading back is the list's status, kind and text filters.
+the stairs, the lobby window was found cracked. A staffer records it from the Incidents view of
+Moderation, `/staff/moderation/incidents` (`/staff/incidents` redirects there; a record stays at
+`/staff/incidents/[id]`): when, where, what kind, a one-line summary and the account, optionally
+linking a member who was involved. Follow-ups are notes under it. Staff resolve it with a
+resolution, and reopen it if it comes back. Reading back is the list's status, kind and text
+filters; the status filter starts at "Not resolved", which includes crew filings.
+
+Crew of a show can file for it themselves from `/member/volunteer/shifts/[signupId]`. A filing
+lands `reported`; staff accept it onto the log as `open`, or resolve it directly. The shift page
+lists only what that member filed for that show, without staff notes.
+
+The account is written once and later facts are notes, so the record reads the way it happened.
+Recording an incident changes nothing on the linked member's account, and that member cannot see
+it.
 
 ### Code path
 
 - **Read:** `getIncidentLog` and `getIncidentDetail` in `incidents.remote.ts`, behind
-  `incident.read`.
+  `incident.read`. Admin, staff, the site moderator and the volunteer coordinator hold it.
 - **Write:** `recordIncidentForm`, `addIncidentNoteForm`, `resolveIncidentForm`,
-  `reopenIncidentForm`, behind `incident.record`, over `src/lib/server/incident/incident-service.ts`.
-- **Resolve** is a conditional update on `status = 'open'`; **reopen** clears the old resolution
-  and writes it to an `incident.reopened` audit entry.
+  `reopenIncidentForm`, `acceptIncidentForm` and `setIncidentRetainForm`, behind
+  `incident.record` (admin and staff), over `src/lib/server/incident/incident-service.ts`.
+- **File:** `fileShowIncidentForm`, behind `requireCapability('incident.file', { eventId })`.
+  `incident.file` is a volunteer-role grant: a `confirmed` or `completed` signup, on a shift of
+  that event that was not called off, in a role carrying the grant, from the shift's start until
+  7 days after it ends. `listIncidentsFiledBy` feeds the filer's own list.
+- **Resolve** is a conditional update on `status != 'resolved'`; **reopen** clears the old
+  resolution and writes it to an `incident.reopened` audit entry.
+- **Retention:** `/api/cron/sweep-incidents` runs `sweepExpiredIncidents()` in
+  `incident-retention.ts` daily. It deletes every incident that happened more than seven years ago
+  and is not marked `retain`, and writes an `incident.deleted` audit entry for each, actor System.
+  Marking or releasing `retain` takes a reason, kept as an `incident.retention_changed` audit
+  entry. `audit-retention.ts` keeps `incident.reopened` and `incident.retention_changed` past the
+  audit log's 24 months while the incident exists.
 
 ### Data touched
 
 - `incident` — the account, written once. Author and resolver FKs are `set null`; the reporter's
-  name is copied beside the FK.
-- `incident_note` — append-only follow-ups, each with the author's name as written.
+  name is copied beside the FK, so purging an account does not anonymise a report. `eventId`
+  names the show a crew member filed at; `retain` exempts the row from the sweep.
+- `incident_note` — append-only follow-ups, each with the author's name as written. They cascade
+  with their incident.
+- `audit_log` — reopenings, retention changes and sweep deletions only. The incident tables are
+  their own trail for everything else.
 
 ### Where it breaks
 
 - Nothing acts on the member linked. Enforcement is the moderation surfaces' job.
-- There is no delete path in the application, by design.
+- Staff cannot delete an incident. Only the retention sweep does, and the `incident.deleted`
+  audit entry is then the only trace of it.
+- A crew member sees no filing form → their signup is `claimed` rather than `confirmed`, the role
+  lacks the `incident.file` grant, or the window closed 7 days after the shift ended.
 
 ## 21. Sponsors and grants: what comes due next
 

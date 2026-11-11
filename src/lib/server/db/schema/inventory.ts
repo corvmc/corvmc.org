@@ -28,7 +28,7 @@ import {
 // The rule the whole module rests on: **stock is a ledger, not a number.**
 // On-hand is the sum of movements and is never stored as an authoritative
 // figure — a stocktake correction is itself a movement, with reason `adjust`.
-// See `docs/specs/inventory-spec.md`.
+// See `docs/decisions/NNNN-inventory-stock-is-a-ledger.md`.
 // ---------------------------------------------------------------------------
 
 export type ItemKind = (typeof itemKinds)[number];

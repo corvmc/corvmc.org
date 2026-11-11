@@ -10,7 +10,7 @@ import { incidentCategories, incidentStatuses } from '../../../config';
  * `description` is written once; later facts are `incident_note` rows, so the
  * record reads the way it happened. Every user FK is `set null` with the name
  * copied beside it, because purging an account must not anonymise a report.
- * See docs/specs/incident-log-spec.md.
+ * See docs/development/business-workflows.md §20.
  */
 export const incident = sqliteTable(
 	'incident',
