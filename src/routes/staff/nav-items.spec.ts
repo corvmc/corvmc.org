@@ -278,6 +278,7 @@ describe('route coverage', () => {
 		'/staff/inventory/compliance',
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
 		'/staff/grants/funders', // reached from Grants' header; its breadcrumb runs through it
+		'/staff/keys', // reached from Practice space's header (#2574)
 		// Reached from the Bands view's header: the same staff job as a band.
 		'/staff/bands/acts',
 		// Moderation views, reached from its tab bar (#2393).
