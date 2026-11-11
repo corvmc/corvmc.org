@@ -82,3 +82,4 @@ docs/handoff/**/capture-report.json
 /project.inlang/.lix/
 /project.inlang/.meta.json
 /project.inlang/README.md
+/project.inlang/cache/
