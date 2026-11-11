@@ -3,17 +3,17 @@
 This folder holds all project documentation, grouped by type. Developer docs describe how the
 system is designed and built; the user manual (`manual/`) describes how to use it.
 
-| Folder                           | What's in it                                                                  | Audience            |
-| -------------------------------- | ----------------------------------------------------------------------------- | ------------------- |
-| [`decisions/`](decisions/README.md) | Dated decision records — why the app is built the way it is                 | Developers          |
-| [`specs/`](#specs)               | Being retired under #2525 — proposals now live on issues                      | Developers          |
-| [`specs/shipped/`](#specs)       | Being retired under #2525                                                     | Developers          |
-| [`plans/`](#plans)               | Sequenced implementation plans (PR-by-PR); historical once shipped            | Developers          |
-| [`architecture/`](#architecture) | System overview, operations manual, deployment runbook, infra proposals       | DevOps / Developers |
-| [`development/`](#development)   | Contributor guides — quickstart, conventions, workflows, UI patterns, testing | Developers          |
-| [`reports/`](#reports)           | Living status reports                                                         | Team / Stakeholders |
-| [`checklists/`](#checklists)     | Cross-cutting rollouts tracked to completion                                  | Developers          |
-| [`manual/`](#manual)             | End-user manual manifest & public-site articles                               | End users           |
+| Folder                              | What's in it                                                                  | Audience            |
+| ----------------------------------- | ----------------------------------------------------------------------------- | ------------------- |
+| [`decisions/`](decisions/README.md) | Dated decision records — why the app is built the way it is                   | Developers          |
+| [`specs/`](#specs)                  | Being retired under #2525 — proposals now live on issues                      | Developers          |
+| [`specs/shipped/`](#specs)          | Being retired under #2525                                                     | Developers          |
+| [`plans/`](#plans)                  | Sequenced implementation plans (PR-by-PR); historical once shipped            | Developers          |
+| [`architecture/`](#architecture)    | System overview, operations manual, deployment runbook, infra proposals       | DevOps / Developers |
+| [`development/`](#development)      | Contributor guides — quickstart, conventions, workflows, UI patterns, testing | Developers          |
+| [`reports/`](#reports)              | Living status reports                                                         | Team / Stakeholders |
+| [`checklists/`](#checklists)        | Cross-cutting rollouts tracked to completion                                  | Developers          |
+| [`manual/`](#manual)                | End-user manual manifest & public-site articles                               | End users           |
 
 The backlog is **[GitHub Issues](https://github.com/corvmc/corvmc.org/issues)**, not a file in
 here. `CHORES.md` and `IDEAS.md` used to sit at the repo root and were retired into the tracker in
