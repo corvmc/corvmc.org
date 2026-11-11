@@ -281,60 +281,6 @@ export async function resolveFlagsForWorkOrder(
 }
 
 /**
- * The clock-out path. Closes the reports only when staff flagged the work order
- * "close reports on completion"; otherwise it stays for the coordinator to confirm.
- */
-export async function resolveFlagsOnCompletion(
-	workOrderId: string,
-	userId: string,
-	notes?: string
-): Promise<string[]> {
-	const [order] = await db
-		.select({ closeReportsOnCompletion: workOrder.closeReportsOnCompletion })
-		.from(workOrder)
-		.where(eq(workOrder.id, workOrderId))
-		.limit(1);
-	if (!order?.closeReportsOnCompletion) return [];
-	return resolveFlagsForWorkOrder(workOrderId, userId, notes);
-}
-
-/**
- * Unflagged work orders whose window has passed with reports still attached and
- * open: "finished: confirm fixed?" on the coordinator's Today worklist.
- */
-export async function listFinishedWorkToConfirm(now = new Date()) {
-	return (
-		db
-			.select({
-				id: workOrder.id,
-				title: workOrder.title,
-				roleName: volunteerRole.name,
-				endsAt: workOrder.endsAt,
-				unitName: inventoryItem.name,
-				assetTag: inventoryAsset.assetTag,
-				reports: count(workRequest.id)
-			})
-			.from(workOrder)
-			.innerJoin(workRequest, eq(workRequest.workOrderId, workOrder.id))
-			// Left: a contractor's repair has no role and still answers the reports.
-			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-			.leftJoin(inventoryAsset, eq(inventoryAsset.id, workOrder.assetId))
-			.leftJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
-			.where(
-				and(
-					eq(workOrder.closeReportsOnCompletion, false),
-					isNull(workOrder.resolvedAt),
-					isNull(workOrder.cancelledAt),
-					lt(workOrder.endsAt, now),
-					eq(workRequest.status, 'pending')
-				)
-			)
-			.groupBy(workOrder.id)
-			.orderBy(asc(workOrder.endsAt), asc(workOrder.id))
-	);
-}
-
-/**
  * `sendToWorkOrder` only attaches reports on the work order's own unit, so one
  * asset — or none, for building problems, where each reporter hears about the
  * place they named.

@@ -40,3 +40,24 @@ export function migratedSqlite(opts: { foreignKeys?: boolean; through?: string }
 	// demonstrably exist on `sqlite`.
 	return { sqlite, testDb: drizzle({ client: sqlite }) };
 }
+
+/**
+ * `testDb` with D1's `batch`: the statements in order, as one transaction.
+ * better-sqlite3's drizzle has none, and a service that batches needs one.
+ */
+export function withBatch({ sqlite, testDb }: ReturnType<typeof migratedSqlite>) {
+	return Object.assign(testDb, {
+		batch: async (stmts: readonly PromiseLike<unknown>[]) => {
+			sqlite.exec('begin');
+			try {
+				const out = [];
+				for (const s of stmts) out.push(await s);
+				sqlite.exec('commit');
+				return out;
+			} catch (e) {
+				sqlite.exec('rollback');
+				throw e;
+			}
+		}
+	});
+}

@@ -22,7 +22,6 @@ export const listenerGroups: ReadonlyArray<() => Promise<void>> = [
 	registerInboxListeners,
 	registerWaitlistListeners,
 	registerOrientationGroup,
-	registerWorkRequestGroup,
 	registerLockListeners,
 	registerAuditGroup,
 	registerLocalResourceGroup,
@@ -67,12 +66,6 @@ async function registerLockListeners(): Promise<void> {
 	domainEvents.on('reservation.cancelled', async ({ data: event }) => {
 		await revokeAccessFor(event.reservationId);
 	});
-}
-
-async function registerWorkRequestGroup(): Promise<void> {
-	const { registerWorkRequestListeners } =
-		await import('#lib/server/inventory/work-request-listener.js');
-	registerWorkRequestListeners();
 }
 
 /**
