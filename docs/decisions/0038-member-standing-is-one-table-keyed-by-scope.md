@@ -1,4 +1,4 @@
-# NNNN Member standing is one table keyed by scope
+# 0038 Member standing is one table keyed by scope
 
 - **Date:** 2026-08-17
 - **Status:** Accepted

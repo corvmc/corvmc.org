@@ -357,7 +357,7 @@ export default defineConfig(
 							name: '#lib/server/authorization.js',
 							importNames: ['requireStaff', 'isStaff', 'hasRole', 'hasAnyRole'],
 							message:
-								'Guard on a capability: requireCapability(cap), or can(cap) for a branch. See docs/decisions/NNNN-guards-name-capabilities.md.'
+								'Guard on a capability: requireCapability(cap), or can(cap) for a branch. See docs/decisions/0032-guards-name-capabilities.md.'
 						}
 					]
 				}

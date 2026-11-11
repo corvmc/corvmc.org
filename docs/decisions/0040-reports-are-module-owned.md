@@ -1,4 +1,4 @@
-# NNNN Reports are module-owned over a shared kit
+# 0040 Reports are module-owned over a shared kit
 
 - **Date:** 2026-08-27
 - **Status:** Accepted

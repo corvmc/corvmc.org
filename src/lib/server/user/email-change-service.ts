@@ -16,7 +16,7 @@ import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { contactEmail } from '#lib/server/site-config/site-config-service.js';
 
 // ---------------------------------------------------------------------------
-// Staff-proposed, mailbox-confirmed email change (docs/decisions/NNNN-staff-propose-email-changes.md)
+// Staff-proposed, mailbox-confirmed email change (docs/decisions/0033-staff-propose-email-changes.md)
 // ---------------------------------------------------------------------------
 // The address is the login credential, so nothing here moves it on a staff
 // member's word alone: the change applies only when the new mailbox redeems

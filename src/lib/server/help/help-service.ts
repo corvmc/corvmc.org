@@ -15,7 +15,7 @@ import { isSustainingMember } from '#lib/server/finance/subscription-service.js'
  * position like `treasurer` exists, its holder resolves to `member` and the
  * whole Staff Guide disappears for them. Naming the three non-elevated rows
  * instead means a new position widens access by default, which is the failure
- * direction you want. See docs/decisions/NNNN-guards-name-capabilities.md.
+ * direction you want. See docs/decisions/0032-guards-name-capabilities.md.
  *
  * `sustaining` and `volunteer` are legacy seeded rows that grant nothing;
  * sustaining status comes from the subscription, not the role (below).

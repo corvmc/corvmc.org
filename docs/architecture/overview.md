@@ -215,7 +215,7 @@ admin > staff > sustaining > member
   holds `adminOnlyCapabilities` (granting roles, purging, adjusting credit, reopening a terminal
   record). `staff` holds every other capability, derived, so a new capability reaches `staff`
   unless it is named admin-only. See
-  [the decision record](../decisions/NNNN-guards-name-capabilities.md).
+  [the decision record](../decisions/0032-guards-name-capabilities.md).
 - `sustaining` — paying member (monthly Stripe subscription). Note that most sustaining
   checks actually look at the `user.subscription` JSON column, not the role — see
   `isSustainingMember` in `src/lib/server/finance/subscription-service.ts`.
@@ -524,7 +524,7 @@ A CSV download is a `+server.ts` route (`/staff/reports/export`,
 `/staff/reports/volunteering/export`) whose first statement is `requireCapability`. `toCsv`
 forces `escape_formulas` on, so a member-written cell beginning `=`, `+`, `-` or `@` is not run
 as a formula. `csvResponse` adds a UTF-8 BOM and `cache-control: no-store`. Why reports are
-shaped this way: [the decision record](../decisions/NNNN-reports-are-module-owned.md).
+shaped this way: [the decision record](../decisions/0040-reports-are-module-owned.md).
 
 ## Observability
 

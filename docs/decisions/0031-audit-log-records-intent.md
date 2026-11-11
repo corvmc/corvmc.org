@@ -1,4 +1,4 @@
-# NNNN The audit log records intent, best-effort and append-only
+# 0031 The audit log records intent, best-effort and append-only
 
 - **Date:** 2026-08-03
 - **Status:** Accepted

@@ -1,4 +1,4 @@
-# NNNN Band enquiries are threads the band owns
+# 0041 Band enquiries are threads the band owns
 
 - **Date:** 2026-09-04
 - **Status:** Accepted

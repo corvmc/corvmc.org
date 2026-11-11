@@ -296,7 +296,7 @@ off the row, never off the request.
 **When to group-scope a tool.** Most of `/staff` is a tool scoped to an organization that
 happens to be the collective. Once a tool is genuinely group-scoped, a band, a club and a
 committee can all have one; the inbox was the clearest case, and band chat
-([decision](../decisions/NNNN-band-enquiries-are-threads-the-band-owns.md),
+([decision](../decisions/0041-band-enquiries-are-threads-the-band-owns.md),
 [workflow](../development/business-workflows.md#10-messaging-portal-threads-direct-messages-and-band-enquiries))
 is what it became. Three conditions, all of which band chat demonstrates:
 

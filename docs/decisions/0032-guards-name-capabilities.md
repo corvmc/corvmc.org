@@ -1,4 +1,4 @@
-# NNNN Guards name capabilities, positions hold them
+# 0032 Guards name capabilities, positions hold them
 
 - **Date:** 2026-08-03
 - **Status:** Accepted

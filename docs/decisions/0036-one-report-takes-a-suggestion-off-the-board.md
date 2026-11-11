@@ -1,4 +1,4 @@
-# NNNN One report takes a suggestion off the board
+# 0036 One report takes a suggestion off the board
 
 - **Date:** 2026-08-16
 - **Status:** Accepted

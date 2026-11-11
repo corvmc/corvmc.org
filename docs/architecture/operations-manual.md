@@ -158,7 +158,7 @@ Notes:
 ### Break-glass: acting when no admin is reachable
 
 `admin` is now the only position holding `user.setRole`, `user.purge` and `credit.adjust`
-(see [the decision record](../decisions/NNNN-guards-name-capabilities.md) and the matrix in
+(see [the decision record](../decisions/0032-guards-name-capabilities.md) and the matrix in
 `src/lib/config.ts`). Two people hold it. If both are unavailable and a role genuinely has
 to change, this is the way in — **not** a second shared admin account.
 

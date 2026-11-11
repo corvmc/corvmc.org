@@ -62,3 +62,15 @@ A page or less. Link the issue and the PRs.
 | 0028 | [Local resources are their own table](0028-local-resources-are-their-own-table.md)                                        | 2026-09-08 | Accepted |
 | 0029 | [One durable packing list per band](0029-one-durable-packing-list-per-band.md)                                            | 2026-09-08 | Accepted |
 | 0030 | [One application mechanism for clubs and committees](0030-one-application-mechanism-for-clubs-and-committees.md)          | 2026-09-29 | Accepted |
+| 0031 | [The audit log records intent, best-effort and append-only](0031-audit-log-records-intent.md)                             | 2026-08-03 | Accepted |
+| 0032 | [Guards name capabilities, positions hold them](0032-guards-name-capabilities.md)                                         | 2026-08-03 | Accepted |
+| 0033 | [Staff propose a login email change and the new mailbox confirms it](0033-staff-propose-email-changes.md)                 | 2026-08-03 | Accepted |
+| 0034 | [Member conversations share the staff inbox](0034-member-conversations-share-the-staff-inbox.md)                          | 2026-08-12 | Accepted |
+| 0035 | [Direct message refusals look alike](0035-direct-message-refusals-look-alike.md)                                          | 2026-08-16 | Accepted |
+| 0036 | [One report takes a suggestion off the board](0036-one-report-takes-a-suggestion-off-the-board.md)                        | 2026-08-16 | Accepted |
+| 0037 | [Suggestion edits lock at the first outside vote](0037-suggestion-edits-lock-at-the-first-outside-vote.md)                | 2026-08-16 | Accepted |
+| 0038 | [Member standing is one table keyed by scope](0038-member-standing-is-one-table-keyed-by-scope.md)                        | 2026-08-17 | Accepted |
+| 0039 | [Moderation appeals hang off the upheld report](0039-moderation-appeals-hang-off-the-upheld-report.md)                    | 2026-08-18 | Accepted |
+| 0040 | [Reports are module-owned over a shared kit](0040-reports-are-module-owned.md)                                            | 2026-08-27 | Accepted |
+| 0041 | [Band enquiries are threads the band owns](0041-band-enquiries-are-threads-the-band-owns.md)                              | 2026-09-04 | Accepted |
+| 0042 | [A committed manifest keeps cron monitors in step with the schedule](0042-cron-monitor-manifest.md)                       | 2026-09-29 | Accepted |

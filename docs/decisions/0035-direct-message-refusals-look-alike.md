@@ -1,4 +1,4 @@
-# NNNN Direct message refusals look alike
+# 0035 Direct message refusals look alike
 
 - **Date:** 2026-08-16
 - **Status:** Accepted

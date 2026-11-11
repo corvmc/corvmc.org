@@ -1043,9 +1043,9 @@ on a bill and have it appear on that band's own profile without their say-so.
 
 ## 10. Messaging: portal threads, direct messages and band enquiries
 
-Decisions: [NNNN](../decisions/NNNN-member-conversations-share-the-staff-inbox.md) ·
-[NNNN](../decisions/NNNN-direct-message-refusals-look-alike.md) ·
-[NNNN](../decisions/NNNN-band-enquiries-are-threads-the-band-owns.md)
+Decisions: [Member conversations share the staff inbox](../decisions/0034-member-conversations-share-the-staff-inbox.md) ·
+[Direct message refusals look alike](../decisions/0035-direct-message-refusals-look-alike.md) ·
+[Band enquiries are threads the band owns](../decisions/0041-band-enquiries-are-threads-the-band-owns.md)
 
 ### The story
 
@@ -1140,10 +1140,10 @@ admins answer it at `/band/[slug]/messages`. Neither side sees the other's addre
 ## 11. Moderation: reports, standing, and the suggestion board
 
 Decisions: [listings publish first and are moderated after](../decisions/0006-listings-publish-first-and-are-moderated-after.md) ·
-[member standing is one table keyed by scope](../decisions/NNNN-member-standing-is-one-table-keyed-by-scope.md) ·
-[one report takes a suggestion off the board](../decisions/NNNN-one-report-takes-a-suggestion-off-the-board.md) ·
-[suggestion edits lock at the first outside vote](../decisions/NNNN-suggestion-edits-lock-at-the-first-outside-vote.md) ·
-[moderation appeals hang off the upheld report](../decisions/NNNN-moderation-appeals-hang-off-the-upheld-report.md)
+[member standing is one table keyed by scope](../decisions/0038-member-standing-is-one-table-keyed-by-scope.md) ·
+[one report takes a suggestion off the board](../decisions/0036-one-report-takes-a-suggestion-off-the-board.md) ·
+[suggestion edits lock at the first outside vote](../decisions/0037-suggestion-edits-lock-at-the-first-outside-vote.md) ·
+[moderation appeals hang off the upheld report](../decisions/0039-moderation-appeals-hang-off-the-upheld-report.md)
 
 ### The story
 
@@ -1230,7 +1230,7 @@ one about the standing. Nothing changes while an appeal waits.
   was deleted (#1528); `fileStaffAction` files the `staff_action` report such a form would need.
 - **An appeal the staffer cannot deny** → by design: whoever resolved the report may grant
   but not deny (`SelfReviewError`). A second staffer answers it. See
-  [NNNN](../decisions/NNNN-moderation-appeals-hang-off-the-upheld-report.md).
+  [Moderation appeals hang off the upheld report](../decisions/0039-moderation-appeals-hang-off-the-upheld-report.md).
 - **A restriction staff need to lift** → the Restore action on the member's Moderation panel
   (`/staff/members/[id]`), one scope at a time.
 - **A reported suggestion nobody can see** → reporting takes it off the board immediately,
@@ -1796,7 +1796,7 @@ between the two features: walking through the easy door furnishes the rider on t
 
 ## 16. The staff audit log: who changed a member's account
 
-Decision record: [the audit log records intent](../decisions/NNNN-audit-log-records-intent.md)
+Decision record: [the audit log records intent](../decisions/0031-audit-log-records-intent.md)
 
 ### The story
 
@@ -1892,7 +1892,7 @@ the row.
 
 ## 18. Staff email change
 
-Decision record: [staff propose, the mailbox confirms](../decisions/NNNN-staff-propose-email-changes.md)
+Decision record: [staff propose, the mailbox confirms](../decisions/0033-staff-propose-email-changes.md)
 
 ### The story
 

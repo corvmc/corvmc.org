@@ -126,7 +126,7 @@ export async function listBlockedBy(blockerUserId: string): Promise<BlockedMembe
 //
 // Only the second is theirs to change. Keeping them apart is why neither of the
 // first two needs to record who set it — see
-// `docs/decisions/NNNN-member-standing-is-one-table-keyed-by-scope.md`.
+// `docs/decisions/0038-member-standing-is-one-table-keyed-by-scope.md`.
 //
 // The third is the newest and the reason #556 exists. Being under 18 is a fact
 // about who a member is, not a judgement about what they did, and it used to be

@@ -1,4 +1,4 @@
-# NNNN Moderation appeals hang off the upheld report
+# 0039 Moderation appeals hang off the upheld report
 
 - **Date:** 2026-08-18
 - **Status:** Accepted

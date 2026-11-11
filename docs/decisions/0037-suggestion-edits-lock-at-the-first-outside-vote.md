@@ -1,4 +1,4 @@
-# NNNN Suggestion edits lock at the first outside vote
+# 0037 Suggestion edits lock at the first outside vote
 
 - **Date:** 2026-08-16
 - **Status:** Accepted

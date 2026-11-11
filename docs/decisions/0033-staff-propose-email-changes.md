@@ -1,4 +1,4 @@
-# NNNN Staff propose a login email change and the new mailbox confirms it
+# 0033 Staff propose a login email change and the new mailbox confirms it
 
 - **Date:** 2026-08-03
 - **Status:** Accepted

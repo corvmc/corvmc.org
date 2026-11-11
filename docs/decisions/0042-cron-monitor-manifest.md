@@ -1,4 +1,4 @@
-# NNNN A committed manifest keeps cron monitors in step with the schedule
+# 0042 A committed manifest keeps cron monitors in step with the schedule
 
 - **Date:** 2026-09-29
 - **Status:** Accepted

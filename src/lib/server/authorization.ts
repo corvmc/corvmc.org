@@ -31,7 +31,7 @@ export type { CapabilityScope } from '#lib/server/capability/capability-grants.j
 // Capabilities
 //
 // Guards name a capability; the matrix in `#lib/config.js` says who holds it.
-// See docs/decisions/NNNN-guards-name-capabilities.md.
+// See docs/decisions/0032-guards-name-capabilities.md.
 //
 // The access controller is built HERE rather than in config.ts because
 // `createAccessControl` is a better-auth import and config.ts is imported by
