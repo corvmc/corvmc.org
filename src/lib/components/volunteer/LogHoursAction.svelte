@@ -72,10 +72,10 @@
 
 	const title = $derived(
 		mode === 'fix'
-			? m.volunteer_log_hours_fix_these_hours()
+			? m.volunteer_log_hours_fix_these_hours_title()
 			: mode === 'shift'
-				? m.volunteer_log_hours_log_these_hours()
-				: m.volunteer_log_hours_log_hours()
+				? m.volunteer_log_hours_log_these_hours_title()
+				: m.volunteer_log_hours_log_hours_title()
 	);
 </script>
 
@@ -86,8 +86,10 @@
 	{variant}
 	{size}
 	modalTitle={title}
-	submitLabel={mode === 'fix' ? m.volunteer_save() : m.volunteer_log_hours_file()}
-	successToast={mode === 'fix' ? m.volunteer_log_hours_saved() : m.volunteer_hours_logged()}
+	submitLabel={mode === 'fix' ? m.volunteer_save_label() : m.volunteer_log_hours_file_label()}
+	successToast={mode === 'fix'
+		? m.volunteer_log_hours_saved_toast()
+		: m.volunteer_hours_logged_toast()}
 >
 	{#snippet form()}
 		{#if mode === 'fix'}
@@ -96,10 +98,10 @@
 		{:else if mode === 'shift'}
 			<input {...submitForm.fields.volunteerRoleId.as('hidden', shift!.volunteerRoleId)} />
 			<input {...submitForm.fields.shiftId.as('hidden', shift!.shiftId)} />
-			<p class="text-sm">{m.volunteer_log_hours_pre_filled_from_shift_adjust()}</p>
+			<p class="text-sm">{m.volunteer_log_hours_pre_filled_from_shift_adjust_text()}</p>
 		{:else}
 			<label class="fieldset w-full">
-				<span class="fieldset-legend">{m.volunteer_log_hours_what_did_help_with()}</span>
+				<span class="fieldset-legend">{m.volunteer_log_hours_what_did_help_with_label()}</span>
 				<Select {...submitForm.fields.volunteerRoleId.as('select')}>
 					{#each roles as role (role.id)}
 						<option value={role.id}>{role.name}</option>
@@ -112,9 +114,9 @@
 			<!-- Only for somebody who is on one. Most volunteering is for CMC at
 			     large, so this stays optional and blank by default. -->
 			<label class="fieldset w-full">
-				<span class="fieldset-legend">{m.volunteer_log_hours_was_committee_club()}</span>
+				<span class="fieldset-legend">{m.volunteer_log_hours_was_committee_club_label()}</span>
 				<Select {...submitForm.fields.groupId.as('select')}>
-					<option value="">{m.volunteer_log_hours_cmc_generally()}</option>
+					<option value="">{m.volunteer_log_hours_cmc_generally_label()}</option>
 					{#each programs as program (program.id)}
 						<option value={program.id}>{program.name}</option>
 					{/each}
@@ -124,7 +126,7 @@
 
 		<FormField
 			field={action.fields.workedOn}
-			label={m.volunteer_date()}
+			label={m.volunteer_date_label()}
 			type="date"
 			max={clubToday()}
 			value={mode === 'fix' ? log!.workedOn : mode === 'shift' ? shift!.workedOn : clubToday()}
@@ -132,21 +134,21 @@
 		<FormField
 			field={action.fields.hours}
 			submitAs="text"
-			label={m.volunteer_hours()}
+			label={m.volunteer_hours_label()}
 			type="number"
 			step={VOLUNTEER_HOUR_STEP}
 			min="0.25"
 			max="12"
 			value={mode === 'fix' ? log!.hours : mode === 'shift' ? shift!.hours : ''}
-			description={m.volunteer_log_hours_nearest_quarter_hour_twelve_most()}
+			description={m.volunteer_log_hours_nearest_quarter_hour_twelve_most_body()}
 		/>
 		<FormField
 			field={action.fields.description}
-			label={m.volunteer_log_hours_what_did()}
+			label={m.volunteer_log_hours_what_did_label()}
 			type="textarea"
 			maxlength={VOLUNTEER_DESCRIPTION_MAX}
 			value={mode === 'fix' ? log!.description : ''}
-			description={m.volunteer_log_hours_one_sentence()}
+			description={m.volunteer_log_hours_one_sentence_body()}
 		/>
 	{/snippet}
 </Action>

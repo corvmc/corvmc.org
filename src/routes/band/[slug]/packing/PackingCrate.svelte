@@ -62,12 +62,13 @@
 	<CardBody>
 		<div class="mb-3 flex flex-wrap items-center gap-2">
 			<h2 class="text-base font-semibold">{title}</h2>
-			{#if mine}<Badge variant="primary">{m.band_slug_packing_packing_crate_text()}</Badge>{/if}
+			{#if mine}<Badge variant="primary">{m.band_slug_packing_packing_crate_text_label()}</Badge
+				>{/if}
 			<Badge class="ml-auto"
 				>{count}
 				{count === 1
-					? m.band_slug_packing_packing_crate_thing()
-					: m.band_slug_packing_packing_crate_things()}</Badge
+					? m.band_slug_packing_packing_crate_thing_label()
+					: m.band_slug_packing_packing_crate_things_label()}</Badge
 			>
 		</div>
 		{#if subtitle}
@@ -84,7 +85,7 @@
 			>
 				<input {...savePackingItems.fields.bandId.as('hidden', bandId)} />
 				<PackingItemsEditor bind:items field={savePackingItems.fields.items} idPrefix={slotKey}>
-					{#snippet action()}<SubmitButton label={m.band_save()} />{/snippet}
+					{#snippet action()}<SubmitButton label={m.band_save_label()} />{/snippet}
 				</PackingItemsEditor>
 			</Form>
 		{:else if canEdit}
@@ -98,7 +99,7 @@
 				<input {...adminRemote.fields.bandId.as('hidden', bandId)} />
 				<input {...adminRemote.fields.targetUserId.as('hidden', ownerUserId ?? '')} />
 				<PackingItemsEditor bind:items field={adminRemote.fields.items} idPrefix={slotKey}>
-					{#snippet action()}<SubmitButton label={m.band_save()} />{/snippet}
+					{#snippet action()}<SubmitButton label={m.band_save_label()} />{/snippet}
 				</PackingItemsEditor>
 			</Form>
 		{:else}

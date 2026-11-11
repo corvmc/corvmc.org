@@ -15,12 +15,12 @@
 
 <Action
 	action={revokeCertification.for(id)}
-	label={m.staff_access_revoke_clearance_revoke()}
+	label={m.staff_access_revoke_clearance_revoke_label()}
 	variant="ghost"
 	size="xs"
 	class="text-error"
 	modalTitle={m.staff_access_revoke_clearance_modal_title({ name })}
-	submitLabel={m.staff_access_revoke_clearance_revoke()}
+	submitLabel={m.staff_access_revoke_clearance_revoke_label()}
 	submitVariant="error"
 	successToast={m.staff_access_revoke_clearance_success_toast()}
 	{onsuccess}
@@ -29,11 +29,11 @@
 		<input {...revokeCertification.for(id).fields.id.as('hidden', id)} />
 		<input {...revokeCertification.for(id).fields.userId.as('hidden', userId)} />
 		<p class="text-sm">
-			{m.staff_access_revoke_clearance_record_stays_period_covered_hi()}
+			{m.staff_access_revoke_clearance_record_stays_period_covered_hi_text()}
 		</p>
 		<FormField
 			field={revokeCertification.for(id).fields.reason}
-			label={m.staff_why()}
+			label={m.staff_why_label()}
 			type="textarea"
 		/>
 	{/snippet}

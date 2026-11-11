@@ -43,7 +43,7 @@
 			<p class="px-3 pb-1 text-sm">
 				{#if reservation.lockSyncedAt}
 					<ParaglideMessage
-						message={m.member_reservations_reservation_card_door_code}
+						message={m.member_reservations_reservation_card_door_code_text}
 						inputs={{ lockCode: reservation.lockCode }}
 						>{#snippet span({ children })}<span class="font-mono font-bold tracking-wider"
 								>{@render children?.()}</span
@@ -54,7 +54,7 @@
 					     here would be a promise we cannot keep; the detail page has
 					     the break-glass code once they are due in. -->
 					<span class="text-muted"
-						>{m.member_reservations_reservation_card_door_code_pending()}</span
+						>{m.member_reservations_reservation_card_door_code_pending_text()}</span
 					>
 				{/if}
 			</p>
@@ -77,7 +77,7 @@
 			<Action
 				action={creditPay}
 				label={m.member_reservations_reservation_card_label()}
-				modalTitle={m.member_reservations_reservation_card_label()}
+				modalTitle={m.member_reservations_reservation_card_title()}
 				submitLabel={m.member_reservations_reservation_card_label()}
 				successToast={m.member_reservations_reservation_card_success_toast()}
 				variant="primary"
@@ -87,7 +87,7 @@
 				{#snippet form()}
 					<input {...creditPay.fields.id.as('hidden', reservation.id)} />
 					<input {...creditPay.fields.skipPayment.as('hidden', 'on')} />
-					<p>{m.member_reservations_reservation_card_uses_free_hours_nothing()}</p>
+					<p>{m.member_reservations_reservation_card_uses_free_hours_nothing_text()}</p>
 				{/snippet}
 			</Action>
 		{:else if payAction}
@@ -99,7 +99,7 @@
 				size="xs"
 				outline
 			>
-				{m.member_pay_online()}
+				{m.member_pay_online_label()}
 			</Button>
 		{/if}
 	{/snippet}

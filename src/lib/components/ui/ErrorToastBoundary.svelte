@@ -65,7 +65,7 @@
 -->
 {#snippet failedAlert(error: unknown, reset: () => void)}
 	<div class="contents" data-boundary-failed>
-		<Alert type="error" {reset}>{m.ui_load_failed({ error: errorMessage(error) })}</Alert>
+		<Alert type="error" {reset}>{m.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
 	</div>
 {/snippet}
 

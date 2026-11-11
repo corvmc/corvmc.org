@@ -116,11 +116,11 @@
 		activeTab = 'integrations';
 
 		const messages: Record<string, [type: 'success' | 'error', msg: string]> = {
-			connected: ['success', m.staff_settings_utec_connected()],
-			denied: ['error', m.staff_settings_utec_denied()],
-			state_error: ['error', m.staff_settings_utec_state_error()],
-			exchange_failed: ['error', m.staff_settings_utec_exchange_failed()],
-			missing_config: ['error', m.staff_settings_utec_missing_config()]
+			connected: ['success', m.staff_settings_utec_connected_toast()],
+			denied: ['error', m.staff_settings_utec_denied_toast()],
+			state_error: ['error', m.staff_settings_utec_state_error_toast()],
+			exchange_failed: ['error', m.staff_settings_utec_exchange_failed_toast()],
+			missing_config: ['error', m.staff_settings_utec_missing_config_toast()]
 		};
 		const entry = messages[result];
 		if (entry) toast[entry[0]](entry[1]);
@@ -129,13 +129,13 @@
 	});
 
 	const tabs = [
-		{ key: 'pricing', label: m.staff_settings_pricing() },
-		{ key: 'reservations', label: m.staff_settings_reservations() },
-		{ key: 'organization', label: m.staff_settings_organization() },
-		{ key: 'integrations', label: m.staff_settings_integrations() },
-		{ key: 'inbox', label: m.staff_settings_inbox_channels() },
-		{ key: 'features', label: m.staff_settings_features() },
-		{ key: 'subscriptions', label: m.staff_settings_subscriptions() }
+		{ key: 'pricing', label: m.staff_settings_pricing_label() },
+		{ key: 'reservations', label: m.staff_settings_reservations_label() },
+		{ key: 'organization', label: m.staff_settings_organization_label() },
+		{ key: 'integrations', label: m.staff_settings_integrations_label() },
+		{ key: 'inbox', label: m.staff_settings_inbox_channels_label() },
+		{ key: 'features', label: m.staff_settings_features_label() },
+		{ key: 'subscriptions', label: m.staff_settings_subscriptions_label() }
 	];
 
 	let syncResult = $state<SubscriptionSyncSummary | null>(null);
@@ -187,8 +187,8 @@
 			selfTestResult = null;
 			toast.success(
 				removed > 0
-					? m.staff_settings_removed_test_code_s({ removed })
-					: m.staff_settings_no_test_codes_remove()
+					? m.staff_settings_removed_test_code_s_toast({ removed })
+					: m.staff_settings_no_test_codes_remove_toast()
 			);
 		} catch (err) {
 			toast.error((err as Error).message);
@@ -198,7 +198,11 @@
 	}
 </script>
 
-<PageHeader width="2xl" title={m.staff_settings_settings()} subtitle={m.staff_settings_subtitle()}>
+<PageHeader
+	width="2xl"
+	title={m.staff_settings_settings_title()}
+	subtitle={m.staff_settings_subtitle_body()}
+>
 	<TabBar collapse {tabs} active={activeTab} onchange={(key) => (activeTab = key)} />
 </PageHeader>
 
@@ -206,20 +210,23 @@
 	<div class="space-y-4" role="tabpanel" aria-labelledby="tab-{activeTab}">
 		{#if activeTab === 'pricing'}
 			<p class="text-muted">
-				{m.staff_settings_configure_products_pricing_used_checkout()}
+				{m.staff_settings_configure_products_pricing_used_checkout_text()}
 			</p>
 
 			{#each products as product (product.key)}
 				{@const isFee = product.key === 'fee_coverage'}
 				{@const instance = updateProduct.for(product.key)}
-				<Form remote={instance} successToast={m.staff_settings_updated({ name: product.name })}>
+				<Form
+					remote={instance}
+					successToast={m.staff_settings_updated_toast({ name: product.name })}
+				>
 					<Card>
 						<CardBody>
 							<div class="flex items-center justify-between">
 								<CardTitle size="base">{product.name}</CardTitle>
 								<SubmitButton
-									label={m.staff_settings_save()}
-									successLabel={m.staff_settings_saved()}
+									label={m.staff_settings_save_label()}
+									successLabel={m.staff_settings_saved_label()}
 									errorLabel={m.staff_settings_error_label()}
 									variant="primary"
 									size="sm"
@@ -229,7 +236,9 @@
 							{#if product.stripeProductId}
 								<p class="font-mono text-subtle">{product.stripeProductId}</p>
 							{:else}
-								<p class="text-subtle">{m.staff_settings_stripe_product_will_created_first()}</p>
+								<p class="text-subtle">
+									{m.staff_settings_stripe_product_will_created_first_text()}
+								</p>
 							{/if}
 
 							<input {...instance.fields.key.as('hidden', product.key)} />
@@ -237,7 +246,7 @@
 							<div class="mt-2 grid gap-4 sm:grid-cols-2">
 								<div class="fieldset">
 									<label class="label" for="name-{product.key}">
-										<span class="fieldset-legend">{m.staff_settings_product_name()}</span>
+										<span class="fieldset-legend">{m.staff_settings_product_name_label()}</span>
 									</label>
 									{#each instance.fields.name.issues() ?? [] as issue (issue.message)}
 										<p class="text-sm text-error">{issue.message}</p>
@@ -254,8 +263,8 @@
 									<div class="fieldset">
 										<label class="label" for="amount-{product.key}">
 											<span class="fieldset-legend">
-												{m.staff_settings_amount({
-													unitLabel: product.unitLabel ?? m.staff_settings_per_unit()
+												{m.staff_settings_amount_label({
+													unitLabel: product.unitLabel ?? m.staff_settings_per_unit_text()
 												})}
 											</span>
 										</label>
@@ -298,7 +307,7 @@
 
 							<div class="mt-2 fieldset">
 								<label class="label" for="desc-{product.key}">
-									<span class="fieldset-legend">{m.staff_settings_description()}</span>
+									<span class="fieldset-legend">{m.staff_settings_description_label()}</span>
 								</label>
 								<textarea
 									id="desc-{product.key}"
@@ -312,22 +321,22 @@
 			{/each}
 		{:else if activeTab === 'reservations'}
 			<p class="text-muted">
-				{m.staff_settings_configure_operating_hours_booking_rules()}
+				{m.staff_settings_configure_operating_hours_booking_rules_text()}
 			</p>
 
 			<Form
 				remote={updateReservationSettings}
 				guard
-				successToast={m.staff_settings_reservation_settings_updated()}
+				successToast={m.staff_settings_reservation_settings_updated_toast()}
 			>
 				<Card>
 					<CardBody>
-						<CardTitle size="base">{m.staff_settings_pricing()}</CardTitle>
+						<CardTitle size="base">{m.staff_settings_pricing_title()}</CardTitle>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<div class="fieldset">
 								<label class="label" for="hourlyRate">
-									<span class="fieldset-legend">{m.staff_settings_hourly_rate()}</span>
+									<span class="fieldset-legend">{m.staff_settings_hourly_rate_label()}</span>
 								</label>
 								<label class="input flex items-center gap-1 input-sm">
 									<span class="opacity-60">$</span>
@@ -365,19 +374,19 @@
 				<Card>
 					<CardBody>
 						<div class="flex items-center justify-between">
-							<CardTitle size="base">{m.staff_settings_operating_hours()}</CardTitle>
+							<CardTitle size="base">{m.staff_settings_operating_hours_title()}</CardTitle>
 						</div>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
 								field={updateReservationSettings.fields.operatingHoursStart}
-								label={m.staff_settings_opens_at()}
+								label={m.staff_settings_opens_at_label()}
 								type="time"
 								value={String(reservationSettings.operatingHoursStart ?? '09:00')}
 							/>
 							<FormField
 								field={updateReservationSettings.fields.operatingHoursEnd}
-								label={m.staff_settings_closes_at()}
+								label={m.staff_settings_closes_at_label()}
 								type="time"
 								value={String(reservationSettings.operatingHoursEnd ?? '22:00')}
 							/>
@@ -387,24 +396,24 @@
 
 				<Card>
 					<CardBody>
-						<CardTitle size="base">{m.staff_settings_booking_rules()}</CardTitle>
+						<CardTitle size="base">{m.staff_settings_booking_rules_title()}</CardTitle>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
 								field={updateReservationSettings.fields.timeSlotMinutes}
-								label={m.staff_settings_time_slot_granularity()}
+								label={m.staff_settings_time_slot_granularity_label()}
 								type="select"
 								value={String(reservationSettings.timeSlotMinutes ?? 30)}
 								options={[
-									{ value: '15', label: m.staff_settings_15_minutes() },
-									{ value: '30', label: m.staff_settings_30_minutes() },
-									{ value: '60', label: m.staff_settings_60_minutes() }
+									{ value: '15', label: m.staff_settings_15_minutes_label() },
+									{ value: '30', label: m.staff_settings_30_minutes_label() },
+									{ value: '60', label: m.staff_settings_60_minutes_label() }
 								]}
 							/>
 							<FormField
 								field={updateReservationSettings.fields.bufferMinutes}
 								submitAs="text"
-								label={m.staff_settings_buffer_between_reservations_min()}
+								label={m.staff_settings_buffer_between_reservations_min_label()}
 								type="number"
 								value={String(reservationSettings.bufferMinutes ?? 0)}
 								min="0"
@@ -413,7 +422,7 @@
 							<FormField
 								field={updateReservationSettings.fields.minAdvanceMinutes}
 								submitAs="text"
-								label={m.staff_settings_min_advance_booking_minutes()}
+								label={m.staff_settings_min_advance_booking_minutes_label()}
 								type="number"
 								value={String(reservationSettings.minAdvanceMinutes ?? 60)}
 								min="0"
@@ -422,7 +431,7 @@
 							<FormField
 								field={updateReservationSettings.fields.minDurationHours}
 								submitAs="text"
-								label={m.staff_settings_minimum_duration_hours()}
+								label={m.staff_settings_minimum_duration_hours_label()}
 								type="number"
 								value={String(reservationSettings.minDurationHours ?? 1)}
 								min="0.5"
@@ -431,7 +440,7 @@
 							<FormField
 								field={updateReservationSettings.fields.maxDurationHours}
 								submitAs="text"
-								label={m.staff_settings_maximum_duration_hours()}
+								label={m.staff_settings_maximum_duration_hours_label()}
 								type="number"
 								value={String(reservationSettings.maxDurationHours ?? 8)}
 								min="1"
@@ -440,7 +449,7 @@
 							<FormField
 								field={updateReservationSettings.fields.maxAdvanceDaysOneoff}
 								submitAs="text"
-								label={m.staff_settings_max_advance_booking_one_off()}
+								label={m.staff_settings_max_advance_booking_one_off_label()}
 								type="number"
 								value={String(reservationSettings.maxAdvanceDaysOneoff ?? 14)}
 								min="1"
@@ -448,7 +457,7 @@
 							<FormField
 								field={updateReservationSettings.fields.maxAdvanceDaysRecurring}
 								submitAs="text"
-								label={m.staff_settings_max_advance_booking_recurring_days()}
+								label={m.staff_settings_max_advance_booking_recurring_days_label()}
 								type="number"
 								value={String(reservationSettings.maxAdvanceDaysRecurring ?? 17.5)}
 								min="1"
@@ -464,8 +473,8 @@
 				     worse: each one saves all of it. -->
 				<div class="flex justify-end">
 					<SubmitButton
-						label={m.staff_settings_save_reservation_settings()}
-						successLabel={m.staff_settings_saved()}
+						label={m.staff_settings_save_reservation_settings_label()}
+						successLabel={m.staff_settings_saved_label()}
 						errorLabel={m.staff_settings_error_label()}
 						variant="primary"
 					/>
@@ -473,44 +482,44 @@
 			</Form>
 		{:else if activeTab === 'organization'}
 			<p class="text-muted">
-				{m.staff_settings_organization_identity_used_emails_branding()}
+				{m.staff_settings_organization_identity_used_emails_branding_text()}
 			</p>
 
 			<Form
 				remote={updateOrgSettings}
 				guard
-				successToast={m.staff_settings_organization_settings_updated()}
+				successToast={m.staff_settings_organization_settings_updated_toast()}
 			>
 				<Card>
 					<CardBody>
-						<CardTitle size="base">{m.staff_settings_location()}</CardTitle>
-						<p class="text-subtle">{m.staff_settings_shown_site_footer_contact_page()}</p>
+						<CardTitle size="base">{m.staff_settings_location_title()}</CardTitle>
+						<p class="text-subtle">{m.staff_settings_shown_site_footer_contact_page_text()}</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
 								field={updateOrgSettings.fields.addressStreet}
-								label={m.staff_settings_street_address()}
+								label={m.staff_settings_street_address_label()}
 								type="text"
 								value={String(orgSettings.addressStreet ?? '')}
-								placeholder={m.staff_settings_6775_sw_philomath_blvd()}
+								placeholder={m.staff_settings_6775_sw_philomath_blvd_placeholder()}
 							/>
 							<FormField
 								field={updateOrgSettings.fields.addressCity}
-								label={m.staff_settings_city()}
+								label={m.staff_settings_city_label()}
 								type="text"
 								value={String(orgSettings.addressCity ?? '')}
-								placeholder={m.staff_settings_corvallis()}
+								placeholder={m.staff_settings_corvallis_placeholder()}
 							/>
 							<FormField
 								field={updateOrgSettings.fields.addressState}
-								label={m.staff_settings_state()}
+								label={m.staff_settings_state_label()}
 								type="text"
 								value={String(orgSettings.addressState ?? '')}
-								placeholder={m.staff_settings_text()}
+								placeholder={m.staff_settings_text_placeholder()}
 							/>
 							<FormField
 								field={updateOrgSettings.fields.addressZip}
-								label={m.staff_settings_zip()}
+								label={m.staff_settings_zip_label()}
 								type="text"
 								value={String(orgSettings.addressZip ?? '')}
 								placeholder="97333"
@@ -521,13 +530,13 @@
 
 				<Card>
 					<CardBody>
-						<CardTitle size="base">{m.staff_settings_contact_email()}</CardTitle>
-						<p class="text-subtle">{m.staff_settings_contact_email_shown()}</p>
+						<CardTitle size="base">{m.staff_settings_contact_email_title()}</CardTitle>
+						<p class="text-subtle">{m.staff_settings_contact_email_shown_text()}</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
 								field={updateOrgSettings.fields.contactEmail}
-								label={m.staff_settings_contact_email()}
+								label={m.staff_settings_contact_email_label()}
 								type="email"
 								value={String(orgSettings.contactEmail ?? '')}
 								required
@@ -538,23 +547,23 @@
 
 				<Card>
 					<CardBody>
-						<CardTitle size="base">{m.staff_settings_social_links()}</CardTitle>
-						<p class="text-subtle">{m.staff_settings_shown_site_footer_leave_blank()}</p>
+						<CardTitle size="base">{m.staff_settings_social_links_title()}</CardTitle>
+						<p class="text-subtle">{m.staff_settings_shown_site_footer_leave_blank_text()}</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
 								field={updateOrgSettings.fields.socialFacebook}
-								label={m.staff_settings_facebook_url()}
+								label={m.staff_settings_facebook_url_label()}
 								type="text"
 								value={String(orgSettings.socialFacebook ?? '')}
-								placeholder={m.staff_settings_https_facebook_com()}
+								placeholder={m.staff_settings_https_facebook_com_placeholder()}
 							/>
 							<FormField
 								field={updateOrgSettings.fields.socialInstagram}
-								label={m.staff_settings_instagram_url()}
+								label={m.staff_settings_instagram_url_label()}
 								type="text"
 								value={String(orgSettings.socialInstagram ?? '')}
-								placeholder={m.staff_settings_https_instagram_com()}
+								placeholder={m.staff_settings_https_instagram_com_placeholder()}
 							/>
 						</div>
 					</CardBody>
@@ -566,8 +575,8 @@
 				     worse: each one saves all of it. -->
 				<div class="flex justify-end">
 					<SubmitButton
-						label={m.staff_settings_save_organization_settings()}
-						successLabel={m.staff_settings_saved()}
+						label={m.staff_settings_save_organization_settings_label()}
+						successLabel={m.staff_settings_saved_label()}
 						errorLabel={m.staff_settings_error_label()}
 						variant="primary"
 					/>
@@ -577,39 +586,39 @@
 			<Form
 				remote={updateVolunteerValueSettings}
 				guard
-				successToast={m.staff_settings_volunteer_hour_value_updated()}
+				successToast={m.staff_settings_volunteer_hour_value_updated_toast()}
 			>
 				<Card>
 					<CardBody>
 						<div class="flex items-center justify-between">
-							<CardTitle size="base">{m.staff_settings_volunteer_hour_value()}</CardTitle>
+							<CardTitle size="base">{m.staff_settings_volunteer_hour_value_title()}</CardTitle>
 							<SubmitButton
-								label={m.staff_settings_save()}
-								successLabel={m.staff_settings_saved()}
+								label={m.staff_settings_save_label()}
+								successLabel={m.staff_settings_saved_label()}
 								errorLabel={m.staff_settings_error_label()}
 								variant="primary"
 								size="sm"
 							/>
 						</div>
 						<p class="text-subtle">
-							{m.staff_settings_what_hour_donated_time_worth()}
+							{m.staff_settings_what_hour_donated_time_worth_text()}
 						</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
 								field={updateVolunteerValueSettings.fields.hourValueCents}
 								submitAs="text"
-								label={m.staff_settings_hourly_value_cents()}
+								label={m.staff_settings_hourly_value_cents_label()}
 								type="number"
 								value={String(volunteerValue.hourValueCents)}
 								placeholder="3766"
 							/>
 							<FormField
 								field={updateVolunteerValueSettings.fields.hourValueSource}
-								label={m.staff_settings_source()}
+								label={m.staff_settings_source_label()}
 								type="text"
 								value={volunteerValue.hourValueSource}
-								placeholder={m.staff_settings_independent_sector_oregon_2025()}
+								placeholder={m.staff_settings_independent_sector_oregon_2025_placeholder()}
 							/>
 						</div>
 					</CardBody>
@@ -619,55 +628,55 @@
 			<Form
 				remote={updateOrientationSettings}
 				guard
-				successToast={m.staff_settings_orientation_updated()}
+				successToast={m.staff_settings_orientation_updated_toast()}
 			>
 				<Card>
 					<CardBody>
 						<div class="flex items-center justify-between">
-							<CardTitle size="base">{m.staff_settings_orientation()}</CardTitle>
+							<CardTitle size="base">{m.staff_settings_orientation_title()}</CardTitle>
 							<SubmitButton
-								label={m.staff_settings_save()}
-								successLabel={m.staff_settings_saved()}
+								label={m.staff_settings_save_label()}
+								successLabel={m.staff_settings_saved_label()}
 								errorLabel={m.staff_settings_error_label()}
 								variant="primary"
 								size="sm"
 							/>
 						</div>
 						<p class="text-subtle">
-							{m.staff_settings_member_s_first_rehearsal_booking()}
+							{m.staff_settings_member_s_first_rehearsal_booking_text()}
 						</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
 								field={updateOrientationSettings.fields.roleId}
-								label={m.staff_settings_role()}
+								label={m.staff_settings_role_label()}
 								type="select"
 								value={orientation.roleId}
 								options={[
-									{ value: '', label: m.staff_settings_none() },
+									{ value: '', label: m.staff_settings_none_label() },
 									...orientation.roles.map((r) => ({ value: r.id, label: r.name }))
 								]}
 							/>
 							<FormField
 								field={updateOrientationSettings.fields.minutes}
 								submitAs="text"
-								label={m.staff_settings_length_minutes()}
+								label={m.staff_settings_length_minutes_label()}
 								type="number"
 								value={String(orientation.minutes)}
 							/>
 							<FormField
 								field={updateOrientationSettings.fields.leadMinutes}
 								submitAs="text"
-								label={m.staff_settings_starts_before_booking_minutes()}
+								label={m.staff_settings_starts_before_booking_minutes_label()}
 								type="number"
 								value={String(orientation.leadMinutes)}
 							/>
 						</div>
 						<FormField
 							field={updateOrientationSettings.fields.tasks}
-							label={m.staff_settings_checklist()}
+							label={m.staff_settings_checklist_label()}
 							type="textarea"
-							description={m.staff_settings_one_task_per_line()}
+							description={m.staff_settings_one_task_per_line_body()}
 							value={orientation.tasks.join('\n')}
 						/>
 					</CardBody>
@@ -677,29 +686,29 @@
 			<Form
 				remote={updateVenueSettings}
 				guard
-				successToast={m.staff_settings_room_settings_updated()}
+				successToast={m.staff_settings_room_settings_updated_toast()}
 			>
 				<Card>
 					<CardBody>
 						<div class="flex items-center justify-between">
-							<CardTitle size="base">{m.staff_settings_room()}</CardTitle>
+							<CardTitle size="base">{m.staff_settings_room_title()}</CardTitle>
 							<SubmitButton
-								label={m.staff_settings_save()}
-								successLabel={m.staff_settings_saved()}
+								label={m.staff_settings_save_label()}
+								successLabel={m.staff_settings_saved_label()}
 								errorLabel={m.staff_settings_error_label()}
 								variant="primary"
 								size="sm"
 							/>
 						</div>
 						<p class="text-subtle">
-							{m.staff_settings_how_many_inputs_desk_can()}
+							{m.staff_settings_how_many_inputs_desk_can_text()}
 						</p>
 
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
 								field={updateVenueSettings.fields.consoleChannels}
 								submitAs="text"
-								label={m.staff_settings_console_channels()}
+								label={m.staff_settings_console_channels_label()}
 								type="number"
 								value={String(venue.consoleChannels)}
 								placeholder="16"
@@ -710,23 +719,23 @@
 			</Form>
 		{:else if activeTab === 'integrations'}
 			<p class="text-muted">
-				{m.staff_settings_manage_credentials_third_party_integrations()}
+				{m.staff_settings_manage_credentials_third_party_integrations_text()}
 			</p>
 
 			<Form
 				remote={updateIntegrationSettings}
 				guard
-				successToast={m.staff_settings_u_tec_credentials_updated()}
+				successToast={m.staff_settings_u_tec_credentials_updated_toast()}
 			>
 				<Card>
 					<CardBody>
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-2">
-								<CardTitle size="base">{m.staff_settings_u_tec_smart_lock()}</CardTitle>
+								<CardTitle size="base">{m.staff_settings_u_tec_smart_lock_title()}</CardTitle>
 								<span class="badge badge-sm {utecConnected ? 'badge-success' : 'badge-ghost'}">
 									{utecConnected
-										? m.staff_settings_connected_2()
-										: m.staff_settings_not_connected()}
+										? m.staff_settings_connected_2_text()
+										: m.staff_settings_not_connected_text()}
 								</span>
 							</div>
 							<div class="flex gap-2">
@@ -744,7 +753,7 @@
 										{:else}
 											<IconPlugConnected class="size-4" />
 										{/if}
-										{m.staff_settings_test_connection()}
+										{m.staff_settings_test_connection_label()}
 									</Button>
 									<Button
 										href={resolve('api/integrations/utec/authorize')}
@@ -752,7 +761,7 @@
 										size="sm"
 										data-sveltekit-reload
 									>
-										{m.staff_settings_reconnect()}
+										{m.staff_settings_reconnect_label()}
 									</Button>
 								{:else}
 									<Button
@@ -763,12 +772,12 @@
 										data-sveltekit-reload
 									>
 										<IconPlugConnected class="size-4" />
-										{m.staff_settings_connect_u_tec()}
+										{m.staff_settings_connect_u_tec_label()}
 									</Button>
 								{/if}
 								<SubmitButton
-									label={m.staff_settings_save()}
-									successLabel={m.staff_settings_saved()}
+									label={m.staff_settings_save_label()}
+									successLabel={m.staff_settings_saved_label()}
 									errorLabel={m.staff_settings_error_label()}
 									variant="primary"
 									size="sm"
@@ -778,7 +787,7 @@
 
 						{#if !utecConnected && !utecCanConnect}
 							<p class="text-subtle">
-								{m.staff_settings_save_client_id_client_secret()}
+								{m.staff_settings_save_client_id_client_secret_text()}
 							</p>
 						{/if}
 
@@ -789,9 +798,11 @@
 									: 'alert-error'} py-2 text-sm"
 							>
 								{#if connectionTestResult.ok}
-									{m.staff_settings_connection_successful_token_refresh_verified()}
+									{m.staff_settings_connection_successful_token_refresh_verified_text()}
 								{:else}
-									{m.staff_settings_connection_failed({ error: connectionTestResult.error ?? '' })}
+									{m.staff_settings_connection_failed_text({
+										error: connectionTestResult.error ?? ''
+									})}
 								{/if}
 							</div>
 						{/if}
@@ -806,7 +817,9 @@
 
 								{#snippet failed(error, reset)}
 									<Alert type="warning" reset={() => retryQuery(getLockHealth(), reset)}>
-										{m.staff_settings_lock_did_not_answer({ errorMessage: errorMessage(error) })}
+										{m.staff_settings_lock_did_not_answer_body({
+											errorMessage: errorMessage(error)
+										})}
 									</Alert>
 								{/snippet}
 							</svelte:boundary>
@@ -816,7 +829,9 @@
 
 								{#snippet failed(error, reset)}
 									<Alert type="warning" reset={() => retryQuery(getUnmanagedLockUsers(), reset)}>
-										{m.staff_settings_could_not_read_lock_s({ errorMessage: errorMessage(error) })}
+										{m.staff_settings_could_not_read_lock_s_body({
+											errorMessage: errorMessage(error)
+										})}
 									</Alert>
 								{/snippet}
 							</svelte:boundary>
@@ -824,9 +839,9 @@
 							<div class="mt-2 border-t border-base-200 pt-3">
 								<div class="flex items-start justify-between gap-2">
 									<div>
-										<p class="text-sm font-medium">{m.staff_settings_lock_self_test()}</p>
+										<p class="text-sm font-medium">{m.staff_settings_lock_self_test_text()}</p>
 										<p class="text-subtle">
-											{m.staff_settings_issues_temporary_code_expires_its()}
+											{m.staff_settings_issues_temporary_code_expires_its_text()}
 										</p>
 									</div>
 									<div class="flex shrink-0 gap-2">
@@ -841,7 +856,7 @@
 											{#if selfTesting}
 												<span class="loading loading-xs loading-spinner"></span>
 											{/if}
-											{m.staff_settings_run_lock_self_test()}
+											{m.staff_settings_run_lock_self_test_label()}
 										</Button>
 										<Button
 											type="button"
@@ -853,7 +868,7 @@
 											{#if revokingTest}
 												<span class="loading loading-xs loading-spinner"></span>
 											{/if}
-											{m.staff_settings_revoke_test_codes()}
+											{m.staff_settings_revoke_test_codes_label()}
 										</Button>
 									</div>
 								</div>
@@ -862,7 +877,7 @@
 									<div class="mt-3 rounded-lg border border-base-300 p-3">
 										{#if selfTestResult.code}
 											<div class="mb-2 flex items-baseline gap-2">
-												<span class="text-subtle">{m.staff_settings_test_code()}</span>
+												<span class="text-subtle">{m.staff_settings_test_code_text()}</span>
 												<span class="font-mono text-2xl font-bold tracking-[0.2em]">
 													{selfTestResult.code}
 												</span>
@@ -888,13 +903,13 @@
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
 								field={updateIntegrationSettings.fields.clientId}
-								label={m.staff_settings_client_id()}
+								label={m.staff_settings_client_id_label()}
 								type="text"
 								value={integrationSettings.clientId}
 							/>
 							<FormField
 								field={updateIntegrationSettings.fields.clientSecret}
-								label={m.staff_settings_client_secret()}
+								label={m.staff_settings_client_secret_label()}
 								type="password"
 								value=""
 								description={clientSecretHint}
@@ -905,10 +920,10 @@
 								{#snippet failed()}
 									<FormField
 										field={updateIntegrationSettings.fields.deviceId}
-										label={m.staff_settings_device_id()}
+										label={m.staff_settings_device_id_label()}
 										type="text"
 										value={integrationSettings.deviceId}
-										description={m.staff_settings_could_not_reach_u_tec()}
+										description={m.staff_settings_could_not_reach_u_tec_body()}
 									/>
 								{/snippet}
 							</svelte:boundary>
@@ -916,7 +931,7 @@
 
 						<div class="mt-2">
 							<p class="text-subtle">
-								{m.staff_settings_redirect_uri_register_exact_value()}
+								{m.staff_settings_redirect_uri_register_exact_value_text()}
 							</p>
 							<div class="mt-1 flex items-center gap-2">
 								<code class="flex-1 truncate code-block px-2 py-1">
@@ -926,10 +941,10 @@
 									type="button"
 									variant="ghost"
 									size="xs"
-									title={m.staff_settings_copy_redirect_uri()}
+									title={m.staff_settings_copy_redirect_uri_title()}
 									onclick={() => {
 										navigator.clipboard.writeText(utecRedirectUri);
-										toast.success(m.staff_settings_redirect_uri_copied());
+										toast.success(m.staff_settings_redirect_uri_copied_toast());
 									}}
 								>
 									<IconCopy class="size-3.5" />
@@ -938,14 +953,14 @@
 						</div>
 
 						<p class="mt-2 text-subtle">
-							{m.staff_settings_click_connect_u_tec_authorize()}
+							{m.staff_settings_click_connect_u_tec_authorize_text()}
 						</p>
 					</CardBody>
 				</Card>
 			</Form>
 		{:else if activeTab === 'features'}
 			<p class="text-muted">
-				{m.staff_settings_enable_disable_feature_modules_members()}
+				{m.staff_settings_enable_disable_feature_modules_members_text()}
 			</p>
 
 			{#each Object.entries(featureMeta) as [flag, meta] (flag)}
@@ -977,7 +992,7 @@
 									outline={enabled}
 									size="sm"
 								>
-									{enabled ? m.staff_settings_disable() : m.staff_settings_enable()}
+									{enabled ? m.staff_settings_disable_label() : m.staff_settings_enable_label()}
 								</Button>
 							</Form>
 						</div>
@@ -986,7 +1001,7 @@
 			{/each}
 		{:else if activeTab === 'inbox'}
 			<p class="text-muted">
-				{m.staff_settings_enable_disable_communication_channels_staff()}
+				{m.staff_settings_enable_disable_communication_channels_staff_text()}
 			</p>
 
 			{#each channelConfigs as cfg (cfg.channel)}
@@ -1008,7 +1023,7 @@
 								</div>
 							</div>
 							{#if isAlwaysOn}
-								<Badge variant="success">{m.staff_settings_always()}</Badge>
+								<Badge variant="success">{m.staff_settings_always_label()}</Badge>
 							{:else}
 								<Form
 									remote={toggleForm}
@@ -1025,7 +1040,9 @@
 										outline={cfg.enabled}
 										size="sm"
 									>
-										{cfg.enabled ? m.staff_settings_disable() : m.staff_settings_enable()}
+										{cfg.enabled
+											? m.staff_settings_disable_label()
+											: m.staff_settings_enable_label()}
 									</Button>
 								</Form>
 							{/if}
@@ -1033,7 +1050,7 @@
 						{#if !isAlwaysOn}
 							<div class="mt-2 flex flex-wrap items-center justify-between gap-2">
 								<div class="text-xs opacity-40">
-									{m.staff_settings_env({ envHint: meta.envHint })}
+									{m.staff_settings_env_text({ envHint: meta.envHint })}
 								</div>
 								<!--
 									The page token has no refresh path, so an expired one does not
@@ -1054,7 +1071,7 @@
 										{:else}
 											<IconPlugConnected class="size-4" />
 										{/if}
-										{m.staff_settings_test_connection_2()}
+										{m.staff_settings_test_connection_2_label()}
 									</Button>
 								{/if}
 							</div>
@@ -1064,7 +1081,7 @@
 									class="alert {metaResult.ok ? 'alert-success' : 'alert-error'} mt-2 py-2 text-sm"
 								>
 									{#if metaResult.ok}
-										{m.staff_settings_connected({ pageName: metaResult.pageName ?? '' })}
+										{m.staff_settings_connected_text({ pageName: metaResult.pageName ?? '' })}
 									{:else}
 										{metaResult.error}
 									{/if}
@@ -1076,13 +1093,13 @@
 			{/each}
 		{:else if activeTab === 'subscriptions'}
 			<p class="text-muted">
-				{m.staff_settings_reconciles_every_member_band_subscription()}
+				{m.staff_settings_reconciles_every_member_band_subscription_text()}
 			</p>
 
 			<Action
-				label={m.staff_settings_sync_now()}
-				successLabel={m.staff_settings_synced()}
-				successToast={m.staff_settings_subscriptions_synced_from_stripe()}
+				label={m.staff_settings_sync_now_label()}
+				successLabel={m.staff_settings_synced_label()}
+				successToast={m.staff_settings_subscriptions_synced_from_stripe_toast()}
 				action={async () => {
 					syncResult = await syncSubscriptions();
 				}}
@@ -1090,22 +1107,34 @@
 
 			{#if syncResult}
 				<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
-					<StatCard title={m.staff_settings_scanned()} value={syncResult.totalScanned} />
-					<StatCard title={m.staff_settings_users_updated()} value={syncResult.usersUpdated} />
-					<StatCard title={m.staff_settings_users_cleared()} value={syncResult.usersCleared} />
+					<StatCard title={m.staff_settings_scanned_title()} value={syncResult.totalScanned} />
 					<StatCard
-						title={m.staff_settings_credits_reconciled()}
+						title={m.staff_settings_users_updated_title()}
+						value={syncResult.usersUpdated}
+					/>
+					<StatCard
+						title={m.staff_settings_users_cleared_title()}
+						value={syncResult.usersCleared}
+					/>
+					<StatCard
+						title={m.staff_settings_credits_reconciled_title()}
 						value={syncResult.creditsReconciled}
 					/>
-					<StatCard title={m.staff_settings_bands_updated()} value={syncResult.bandsUpdated} />
-					<StatCard title={m.staff_settings_bands_cleared()} value={syncResult.bandsCleared} />
-					<StatCard title={m.staff_settings_skipped()} value={syncResult.skipped} />
+					<StatCard
+						title={m.staff_settings_bands_updated_title()}
+						value={syncResult.bandsUpdated}
+					/>
+					<StatCard
+						title={m.staff_settings_bands_cleared_title()}
+						value={syncResult.bandsCleared}
+					/>
+					<StatCard title={m.staff_settings_skipped_title()} value={syncResult.skipped} />
 				</div>
 
 				{#if syncResult.errors.length > 0}
 					<Alert type="warning">
 						<p class="font-semibold">
-							{m.staff_settings_record_s_had_issues({ length: syncResult.errors.length })}
+							{m.staff_settings_record_s_had_issues_text({ length: syncResult.errors.length })}
 						</p>
 						<ul class="mt-1 list-disc space-y-0.5 pl-5 text-sm">
 							{#each syncResult.errors as err, i (i)}
@@ -1122,13 +1151,13 @@
 			<div class="divider"></div>
 
 			<p class="text-muted">
-				{m.staff_settings_community_impact_stats_sustaining_members()}
+				{m.staff_settings_community_impact_stats_sustaining_members_text()}
 			</p>
 
 			<Action
-				label={m.staff_settings_refresh_stats()}
-				successLabel={m.staff_settings_refreshed()}
-				successToast={m.staff_settings_community_stats_refreshed()}
+				label={m.staff_settings_refresh_stats_label()}
+				successLabel={m.staff_settings_refreshed_label()}
+				successToast={m.staff_settings_community_stats_refreshed_toast()}
 				action={async () => {
 					statsResult = await refreshCommunityStats();
 				}}
@@ -1137,15 +1166,15 @@
 			{#if statsResult}
 				<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
 					<StatCard
-						title={m.staff_settings_sustaining_members()}
+						title={m.staff_settings_sustaining_members_title()}
 						value={statsResult.sustainingMemberCount}
 					/>
 					<StatCard
-						title={m.staff_settings_free_hours_month()}
+						title={m.staff_settings_free_hours_month_title()}
 						value={statsResult.totalFreeHoursAllocated}
 					/>
 					<StatCard
-						title={m.staff_settings_participation()}
+						title={m.staff_settings_participation_title()}
 						value={`${statsResult.participationPercent}%`}
 					/>
 				</div>

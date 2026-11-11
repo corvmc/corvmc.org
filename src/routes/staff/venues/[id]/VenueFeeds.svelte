@@ -29,19 +29,19 @@
 	{#snippet action()}
 		<Action
 			action={addForm}
-			label={m.staff_add()}
+			label={m.staff_add_label()}
 			variant="ghost"
 			size="sm"
-			modalTitle={m.staff_venues_id_venue_feeds_add_calendar_feed()}
-			submitLabel={m.staff_add()}
-			successToast={m.staff_added()}
+			modalTitle={m.staff_venues_id_venue_feeds_add_calendar_feed_title()}
+			submitLabel={m.staff_add_label()}
+			successToast={m.staff_added_toast()}
 		>
 			{#snippet form()}
 				<input {...addForm.fields.venueId.as('hidden', venueId)} />
 				<Field
 					field={addForm.fields.url}
 					type="text"
-					label={m.staff_venues_id_venue_feeds_icalendar_url()}
+					label={m.staff_venues_id_venue_feeds_icalendar_url_label()}
 				/>
 			{/snippet}
 		</Action>
@@ -50,16 +50,17 @@
 	{#if feeds.length > 0}
 		<Table packed={false}>
 			{#snippet head()}
-				<th>{m.staff_venues_id_venue_feeds_feed()}</th>
-				<th class="col-support">{m.staff_venues_id_venue_feeds_last_fetched()}</th>
-				<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+				<th>{m.staff_venues_id_venue_feeds_feed_label()}</th>
+				<th class="col-support">{m.staff_venues_id_venue_feeds_last_fetched_label()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 			{/snippet}
 			{#each feeds as feed (feed.id)}
 				<tr data-testid="venue-feed">
 					<td class="max-w-0">
 						<div class="truncate" title={feed.url}>{feed.url}</div>
 						<div class="flex flex-wrap gap-1">
-							{#if feed.paused}<Badge size="sm">{m.staff_venues_id_venue_feeds_paused()}</Badge
+							{#if feed.paused}<Badge size="sm"
+									>{m.staff_venues_id_venue_feeds_paused_label()}</Badge
 								>{/if}
 							{#if feed.lastError}
 								<span class="text-sm text-error">{feed.lastError}</span>
@@ -78,10 +79,10 @@
 						<div class="flex w-max justify-end gap-1">
 							<Action
 								action={fetchVenueFeed.for(feed.id)}
-								label={m.staff_venues_id_venue_feeds_fetch_now()}
+								label={m.staff_venues_id_venue_feeds_fetch_now_label()}
 								variant="ghost"
 								size="xs"
-								successToast={m.staff_venues_id_venue_feeds_fetched()}
+								successToast={m.staff_venues_id_venue_feeds_fetched_toast()}
 								noFooter
 							>
 								{#snippet form()}
@@ -91,13 +92,13 @@
 							<Action
 								action={setVenueFeedPaused.for(feed.id)}
 								label={feed.paused
-									? m.staff_venues_id_venue_feeds_resume()
-									: m.staff_venues_id_venue_feeds_pause()}
+									? m.staff_venues_id_venue_feeds_resume_label()
+									: m.staff_venues_id_venue_feeds_pause_label()}
 								variant="ghost"
 								size="xs"
 								successToast={feed.paused
-									? m.staff_venues_id_venue_feeds_resumed()
-									: m.staff_venues_id_venue_feeds_paused()}
+									? m.staff_venues_id_venue_feeds_resumed_toast()
+									: m.staff_venues_id_venue_feeds_paused_toast()}
 								noFooter
 							>
 								{#snippet form()}
@@ -111,19 +112,19 @@
 							</Action>
 							<Action
 								action={removeVenueFeed.for(feed.id)}
-								label={m.staff_remove()}
+								label={m.staff_remove_label()}
 								variant="ghost"
 								size="xs"
 								class="text-error"
-								modalTitle={m.staff_venues_id_venue_feeds_remove_feed()}
-								submitLabel={m.staff_remove()}
+								modalTitle={m.staff_venues_id_venue_feeds_remove_feed_title()}
+								submitLabel={m.staff_remove_label()}
 								submitVariant="error"
-								successToast={m.staff_removed()}
+								successToast={m.staff_removed_toast()}
 							>
 								{#snippet form()}
 									<input {...removeVenueFeed.for(feed.id).fields.id.as('hidden', feed.id)} />
 									<p class="text-sm">
-										{m.staff_venues_id_venue_feeds_shows_already_added_stay_guide()}
+										{m.staff_venues_id_venue_feeds_shows_already_added_stay_guide_text()}
 									</p>
 								{/snippet}
 							</Action>

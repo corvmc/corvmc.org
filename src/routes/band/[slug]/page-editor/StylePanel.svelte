@@ -68,22 +68,22 @@
 
 <div class="flex min-h-0 flex-1 flex-col">
 	<div class="flex items-center justify-between gap-2 border-b border-base-300 px-4 py-3">
-		<h2 class="text-sm font-bold uppercase">{m.band_style()}</h2>
+		<h2 class="text-sm font-bold uppercase">{m.band_style_title()}</h2>
 		<Button type="button" variant="ghost" size="sm" shape="square" onclick={onclose}>
 			<IconX size={16} />
-			<span class="sr-only">{m.band_slug_page_editor_style_panel_close_style_panel()}</span>
+			<span class="sr-only">{m.band_slug_page_editor_style_panel_close_style_panel_label()}</span>
 		</Button>
 	</div>
 
 	<div class="flex min-h-0 flex-1 flex-col gap-3 p-4">
 		<label class="fieldset">
 			<span class="fieldset-legend text-xs font-medium"
-				>{m.band_slug_page_editor_style_panel_theme()}</span
+				>{m.band_slug_page_editor_style_panel_theme_label()}</span
 			>
 			<Select
 				size="sm"
 				class="mt-1 w-full"
-				aria-label={m.band_slug_page_editor_style_panel_theme()}
+				aria-label={m.band_slug_page_editor_style_panel_theme_label()}
 				value={state.theme}
 				onchange={(e: Event) =>
 					selectTheme((e.currentTarget as HTMLSelectElement).value as BandThemeValue)}
@@ -105,7 +105,7 @@
 			     identical either way: the theme's rules were folded in ahead of
 			     their overrides, which is the order that was already resolving. -->
 			<Alert type="info" class="text-xs">
-				{m.band_slug_page_editor_style_panel_page_s_theme_rules_have()}
+				{m.band_slug_page_editor_style_panel_page_s_theme_rules_have_body()}
 			</Alert>
 		{/if}
 
@@ -113,8 +113,8 @@
 			<div class="flex flex-wrap items-center justify-between gap-2 pb-1">
 				<span class="fieldset-legend text-xs font-medium">
 					{forked
-						? m.band_slug_page_editor_style_panel_css()
-						: m.band_slug_page_editor_style_panel_what_theme_does()}
+						? m.band_slug_page_editor_style_panel_css_text()
+						: m.band_slug_page_editor_style_panel_what_theme_does_text()}
 				</span>
 				{#if !forked}
 					<Button
@@ -125,7 +125,7 @@
 						data-testid="fork-theme"
 						onclick={() => onchange(fork(state, themeSheet))}
 					>
-						{m.band_slug_page_editor_style_panel_customize()}
+						{m.band_slug_page_editor_style_panel_customize_label()}
 					</Button>
 				{/if}
 			</div>
@@ -137,8 +137,8 @@
 				class="textarea min-h-64 w-full flex-1 font-mono text-xs"
 				readonly={!forked}
 				aria-label={forked
-					? m.band_slug_page_editor_style_panel_custom_css()
-					: m.band_slug_page_editor_style_panel_theme_css_read_only()}
+					? m.band_slug_page_editor_style_panel_custom_css_label()
+					: m.band_slug_page_editor_style_panel_theme_css_read_only_label()}
 				placeholder={`h1 {\n  /* your styles here */\n}`}
 				value={css}
 				oninput={(e) => onchange({ theme: 'custom', customCss: e.currentTarget.value })}></textarea>
@@ -146,13 +146,13 @@
 			<p class="mt-1 text-xs opacity-60">
 				{#if forked}
 					<ParaglideMessage
-						message={m.band_slug_page_editor_style_panel_wrapped_band_site_containe}
+						message={m.band_slug_page_editor_style_panel_wrapped_band_site_containe_text}
 						inputs={{}}
 						>{#snippet code({ children })}<code>{@render children?.()}</code
 							>{/snippet}</ParaglideMessage
 					>
 				{:else}
-					{m.band_slug_page_editor_style_panel_read_only_customize_take_t()}
+					{m.band_slug_page_editor_style_panel_read_only_customize_take_t_text()}
 				{/if}
 			</p>
 		</div>

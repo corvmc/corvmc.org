@@ -14,7 +14,7 @@
 </script>
 
 <PageHeader
-	title={m.staff_budget()}
+	title={m.staff_budget_title()}
 	documentTitle={m.staff_projects_id_budget_document_title({ name: data.project.name })}
 	parent={{
 		label: data.project.name,

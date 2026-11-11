@@ -79,8 +79,8 @@
 
 <Action
 	action={createItem}
-	label={m.actions_add_item_add_item()}
-	modalTitle={m.actions_add_item_add_item()}
+	label={m.actions_add_item_add_item_label()}
+	modalTitle={m.actions_add_item_add_item_title()}
 	successToast={m.actions_add_item_success_toast()}
 	addAnotherLabel={m.actions_add_item_add_another_label()}
 	onaddanother={nextItem}
@@ -91,24 +91,24 @@
 	{...rest}
 >
 	{#snippet form()}
-		<Field field={fields.name} type="text" label={m.actions_name()} />
+		<Field field={fields.name} type="text" label={m.actions_name_label()} />
 		<Field
 			field={fields.description}
 			type="textarea"
-			label={m.actions_description()}
+			label={m.actions_description_label()}
 			bind:value={description}
 		/>
 		<div class="grid grid-cols-2 gap-3">
 			<Field
 				field={fields.categoryId}
 				type="select"
-				label={m.actions_add_item_category()}
+				label={m.actions_add_item_category_label()}
 				options={categories.map((c) => ({ value: c.id, label: c.name }))}
 			/>
 			<Field
 				field={fields.kind}
 				type="select"
-				label={m.actions_add_item_tracked_as()}
+				label={m.actions_add_item_tracked_as_label()}
 				bind:value={kind}
 				options={itemKinds.map((k) => ({ value: k, label: kindLabels[k] }))}
 			/>
@@ -117,32 +117,41 @@
 			<Field
 				field={fields.unitOfMeasure}
 				type="select"
-				label={m.actions_add_item_unit()}
+				label={m.actions_add_item_unit_label()}
 				value="each"
 				options={unitsOfMeasure.map((u) => ({ value: u, label: u }))}
 			/>
-			<Field field={fields.gtin} type="text" label={m.actions_add_item_barcode_upc_ean()} />
+			<Field field={fields.gtin} type="text" label={m.actions_add_item_barcode_upc_ean_label()} />
 		</div>
 		<!-- Checked by default: most of what CMC owns is there to be borrowed, and
 		     "consumable" is the exception a person opts into. -->
 		<Field
 			field={fields.isLoanable}
 			type="checkbox"
-			label={m.actions_add_item_members_can_borrow()}
+			label={m.actions_add_item_members_can_borrow_label()}
 			value={true}
-			description={m.actions_add_item_description()}
+			description={m.actions_add_item_description_body()}
 		/>
 		{#if kind === 'bulk'}
 			<div class="grid grid-cols-2 gap-3">
-				<Field field={fields.reorderPoint} type="number" label={m.actions_add_item_reorder_at()} />
+				<Field
+					field={fields.reorderPoint}
+					type="number"
+					label={m.actions_add_item_reorder_at_label()}
+				/>
 				<Field
 					field={fields.reorderQuantity}
 					type="number"
-					label={m.actions_add_item_reorder_quantity()}
+					label={m.actions_add_item_reorder_quantity_label()}
 				/>
 			</div>
 		{/if}
-		<Field field={fields.resourceId} type="text" label={m.actions_add_item_resource_id()} />
-		<Field field={fields.notes} type="textarea" label={m.actions_notes()} bind:value={notes} />
+		<Field field={fields.resourceId} type="text" label={m.actions_add_item_resource_id_label()} />
+		<Field
+			field={fields.notes}
+			type="textarea"
+			label={m.actions_notes_label()}
+			bind:value={notes}
+		/>
 	{/snippet}
 </Action>

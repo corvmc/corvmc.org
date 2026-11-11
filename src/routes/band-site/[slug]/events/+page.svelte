@@ -23,27 +23,29 @@
 </script>
 
 <svelte:head>
-	<title>{m.public_band_site_slug_events_events({ name: data.band.name })}</title>
+	<title>{m.public_band_site_slug_events_events_title({ name: data.band.name })}</title>
 </svelte:head>
 
 <div class="mx-auto max-w-3xl px-6 py-12">
 	<a href={bandSiteHref(params.slug, '', page.url)} class="mb-6 block link text-muted">
-		{m.public_band_site_slug_events_back({ name: data.band.name })}
+		{m.public_band_site_slug_events_back_text({ name: data.band.name })}
 	</a>
 
 	<h1 class="mb-8 text-3xl font-bold">
-		{m.public_band_site_slug_events_all_events()}
+		{m.public_band_site_slug_events_all_events_title()}
 		{#if events.length > 0}
 			<span class="text-xl font-normal opacity-60"
-				>{m.public_band_site_slug_events_upcoming({ length: events.length })}</span
+				>{m.public_band_site_slug_events_upcoming_title({ length: events.length })}</span
 			>
 		{/if}
 	</h1>
 
 	{#if events.length === 0 && pastEvents.length === 0}
-		<p class="py-12 text-center opacity-60">{m.public_band_site_slug_events_no_events_yet()}</p>
+		<p class="py-12 text-center opacity-60">
+			{m.public_band_site_slug_events_no_events_yet_text()}
+		</p>
 	{:else if events.length === 0}
-		<p class="py-4 opacity-60">{m.public_band_site_slug_events_no_upcoming_events()}</p>
+		<p class="py-4 opacity-60">{m.public_band_site_slug_events_no_upcoming_events_text()}</p>
 	{:else}
 		<!-- A fixed date column and a bounded description, the shape `GigList`
 		     uses for these same events. Without it the upcoming list was less
@@ -97,7 +99,7 @@
 							size="sm"
 							class="ml-4 shrink-0"
 						>
-							{m.public_band_site_slug_events_tickets()}
+							{m.public_band_site_slug_events_tickets_label()}
 						</Button>
 					{/if}
 				</div>
@@ -107,7 +109,7 @@
 
 	{#if pastEvents.length > 0}
 		<h2 class="mt-12 mb-4 text-xl font-bold opacity-70">
-			{m.public_band_site_slug_events_past_shows()}
+			{m.public_band_site_slug_events_past_shows_title()}
 		</h2>
 		<div class="space-y-2">
 			{#each pastEvents as evt (evt.id)}
@@ -125,5 +127,5 @@
 
 <!-- Minimal footer -->
 <footer class="py-6 text-center text-xs opacity-40">
-	<a href={resolve('')} class="hover:opacity-70">{m.public_corvallis_music_collective()}</a>
+	<a href={resolve('')} class="hover:opacity-70">{m.public_corvallis_music_collective_text()}</a>
 </footer>

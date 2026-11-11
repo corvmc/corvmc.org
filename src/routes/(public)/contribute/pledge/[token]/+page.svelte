@@ -41,31 +41,31 @@
 			<div class="card shadow-xl surface">
 				<CardBody class="gap-4">
 					<CardTitle size="lg" level={2} class="justify-center"
-						>{m.public_contribute_pledge_token_confirm_pledge()}</CardTitle
+						>{m.public_contribute_pledge_token_confirm_pledge_title()}</CardTitle
 					>
 
 					{#if outcome?.status === 'confirmed'}
 						<Alert type="success" class="text-sm">
-							{m.public_contribute_pledge_token_thank_wishlist_now_shows_as()}
+							{m.public_contribute_pledge_token_thank_wishlist_now_shows_as_body()}
 						</Alert>
 						<Button variant="primary" class="w-full" href={resolve('contribute')}>
-							{m.public_contribute_pledge_token_back_wishlist()}
+							{m.public_contribute_pledge_token_back_wishlist_label()}
 						</Button>
 					{:else if outcome?.status === 'taken'}
 						<Alert type="info" class="text-sm">
-							{m.public_contribute_pledge_token_someone_else_confirmed_first()}
+							{m.public_contribute_pledge_token_someone_else_confirmed_first_body()}
 						</Alert>
 						<Button variant="primary" class="w-full" href={resolve('contribute')}>
-							{m.public_contribute_pledge_token_see_what_else_we_need()}
+							{m.public_contribute_pledge_token_see_what_else_we_need_label()}
 						</Button>
 					{:else if !pending || outcome}
 						<Alert type="error" class="text-sm">
-							{m.public_link_has_expired_has_already()}
+							{m.public_link_has_expired_has_already_body()}
 						</Alert>
 					{:else}
 						<p class="text-center">
 							<ParaglideMessage
-								message={m.public_contribute_pledge_token_confirm_ll_bring}
+								message={m.public_contribute_pledge_token_confirm_ll_bring_text}
 								inputs={{ entryName: pending.entryName }}
 								>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 									>{/snippet}</ParaglideMessage
@@ -73,7 +73,7 @@
 						</p>
 						<Form remote={confirmWishlistPledge} onsuccess={(r) => (outcome = r ?? null)}>
 							<input {...fields.token.as('hidden', token)} />
-							<SubmitButton label={m.public_confirm()} variant="primary" class="w-full" />
+							<SubmitButton label={m.public_confirm_label()} variant="primary" class="w-full" />
 						</Form>
 					{/if}
 				</CardBody>

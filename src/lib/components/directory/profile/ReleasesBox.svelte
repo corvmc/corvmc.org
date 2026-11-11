@@ -39,7 +39,7 @@
 {#if releases.length > 0}
 	<ProfileSection
 		title={m.directory_profile_releases_box_title()}
-		note={m.directory_profile_releases_box_note({ length: releases.length })}
+		note={m.directory_profile_releases_box_note_body({ length: releases.length })}
 	>
 		<ul class="space-y-3">
 			{#each releases as release (release.id)}
@@ -66,7 +66,7 @@
 						</span>
 						<span class="shrink-0 text-muted">
 							{release.priceMinCents === 0
-								? m.directory_profile_releases_box_free()
+								? m.directory_profile_releases_box_free_text()
 								: formatCents(release.priceMinCents)}
 						</span>
 					</a>

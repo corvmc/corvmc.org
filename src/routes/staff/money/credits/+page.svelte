@@ -67,7 +67,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder={m.staff_search_name_email()}
+				placeholder={m.staff_search_name_email_placeholder()}
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;
@@ -76,34 +76,34 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label={m.staff_credits_credit_type()}
+			aria-label={m.staff_credits_credit_type_label()}
 			value={creditType}
 			onchange={(e: Event) => {
 				creditType = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">{m.staff_credits_all_types()}</option>
-			<option value="free_hours">{m.staff_credits_free_hours()}</option>
-			<option value="equipment_credits">{m.staff_credits_equipment_credits()}</option>
+			<option value="">{m.staff_credits_all_types_label()}</option>
+			<option value="free_hours">{m.staff_credits_free_hours_label()}</option>
+			<option value="equipment_credits">{m.staff_credits_equipment_credits_label()}</option>
 		</Select>
 		<Select
 			size="sm"
-			aria-label={m.staff_source()}
+			aria-label={m.staff_source_label()}
 			value={source}
 			onchange={(e: Event) => {
 				source = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">{m.staff_credits_all_sources()}</option>
+			<option value="">{m.staff_credits_all_sources_label()}</option>
 			{#each Object.entries(creditSourceLabels) as [value, label] (value)}
 				<option {value}>{label}</option>
 			{/each}
 		</Select>
 		<input
 			type="date"
-			aria-label={m.staff_from_date()}
+			aria-label={m.staff_from_date_label()}
 			class="input input-sm"
 			bind:value={dateFrom}
 			onchange={() => {
@@ -112,7 +112,7 @@
 		/>
 		<input
 			type="date"
-			aria-label={m.staff_date_2()}
+			aria-label={m.staff_date_2_label()}
 			class="input input-sm"
 			bind:value={dateTo}
 			onchange={() => {
@@ -121,15 +121,15 @@
 		/>
 	</FilterBar>
 
-	<DataList {result} empty={m.staff_credits_empty()} onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_credits_empty_body()} onpage={(p) => (page = p)}>
 		{#snippet children(transactions)}
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_member()}</th>
-					<th class="col-extra whitespace-nowrap">{m.staff_type()}</th>
-					<th class="cell-num">{m.staff_amount()}</th>
-					<th class="col-support cell-num">{m.staff_credits_balance()}</th>
-					<th class="col-support">{m.staff_date()}</th>
+					<th>{m.staff_member_label()}</th>
+					<th class="col-extra whitespace-nowrap">{m.staff_type_label()}</th>
+					<th class="cell-num">{m.staff_amount_label()}</th>
+					<th class="col-support cell-num">{m.staff_credits_balance_label()}</th>
+					<th class="col-support">{m.staff_date_label()}</th>
 				{/snippet}
 
 				{#each transactions as t (t.id)}
@@ -150,8 +150,8 @@
 						<td class="col-extra whitespace-nowrap">
 							<Badge size="sm" variant="ghost">
 								{t.creditType === 'free_hours'
-									? m.staff_credits_free_hours_2()
-									: m.staff_equipment()}
+									? m.staff_credits_free_hours_2_label()
+									: m.staff_equipment_label()}
 							</Badge>
 						</td>
 						<td class="cell-num">

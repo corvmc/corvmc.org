@@ -20,6 +20,6 @@
 	<InlineAddField
 		field={add.fields.title}
 		label={m.staff_projects_id_add_task_line_label({ sectionName })}
-		placeholder={m.staff_add_task()}
+		placeholder={m.staff_add_task_placeholder()}
 	/>
 </Form>

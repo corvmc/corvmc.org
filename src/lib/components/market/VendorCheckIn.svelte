@@ -33,32 +33,37 @@
 	const booked = $derived(data.vendors.length - noShows);
 
 	const inviteOptions = [
-		{ value: 'yes', label: m.market_vendor_check_in_invite_back() },
-		{ value: 'no', label: m.market_vendor_check_in_do_not_invite_back() }
+		{ value: 'yes', label: m.market_vendor_check_in_invite_back_label() },
+		{ value: 'no', label: m.market_vendor_check_in_do_not_invite_back_label() }
 	];
 </script>
 
 <PageHeader
 	width="3xl"
-	title={m.market_vendor_check_in_market_day({ title: data.event.title })}
+	title={m.market_vendor_check_in_market_day_title({ title: data.event.title })}
 	subtitle={formatDateTime(data.event.startsAt)}
 	{parent}
 />
 <PageContent width="3xl">
 	<div class="flex flex-wrap gap-6">
 		<StatCard
-			title={m.market_vendor_check_in_arrived()}
+			title={m.market_vendor_check_in_arrived_title()}
 			value="{arrived} / {booked}"
 			size="sm"
 			class="p-4"
 		/>
-		<StatCard title={m.market_vendor_check_in_no_shows()} value={noShows} size="sm" class="p-4" />
+		<StatCard
+			title={m.market_vendor_check_in_no_shows_title()}
+			value={noShows}
+			size="sm"
+			class="p-4"
+		/>
 	</div>
 
 	{#if data.vendors.length === 0}
 		<EmptyState
-			title={m.market_vendor_check_in_no_vendors_booked()}
-			description={m.market_vendor_check_in_accepted_vendors_appear_here_check()}
+			title={m.market_vendor_check_in_no_vendors_booked_title()}
+			description={m.market_vendor_check_in_accepted_vendors_appear_here_check_body()}
 		/>
 	{/if}
 
@@ -71,22 +76,22 @@
 						<p class="font-medium">
 							{vendor.businessName}
 							{#if vendor.tableLabel}<span class="text-muted"
-									>{m.market_vendor_check_in_table({ tableLabel: vendor.tableLabel })}</span
+									>{m.market_vendor_check_in_table_text({ tableLabel: vendor.tableLabel })}</span
 								>{/if}
 						</p>
 						<p class="text-muted text-sm">
 							{vendor.tablesRequested}
 							{vendor.tablesRequested === 1
-								? m.market_vendor_check_in_table_2()
-								: m.market_vendor_check_in_tables()}{vendor.needsPower
-								? m.market_vendor_check_in_needs_power()
+								? m.market_vendor_check_in_table_2_text()
+								: m.market_vendor_check_in_tables_text()}{vendor.needsPower
+								? m.market_vendor_check_in_needs_power_text()
 								: ''}
 						</p>
 						{#if vendor.inviteBack !== null}
 							<p class="text-sm">
 								{vendor.inviteBack
-									? m.market_invite_back()
-									: m.market_do_not_invite_back()}{vendor.inviteBackNote
+									? m.market_invite_back_text()
+									: m.market_do_not_invite_back_text()}{vendor.inviteBackNote
 									? `: “${vendor.inviteBackNote}”`
 									: ''}
 							</p>
@@ -98,7 +103,7 @@
 							<StatusBadge status="no_show" />
 							<Form
 								remote={markNoShowForm.for(`undo-${vendor.id}`)}
-								successToast={m.market_vendor_check_in_restored()}
+								successToast={m.market_vendor_check_in_restored_toast()}
 								class="inline"
 							>
 								<input
@@ -109,14 +114,18 @@
 								<input
 									{...markNoShowForm.for(`undo-${vendor.id}`).fields.noShow.as('hidden', 'no')}
 								/>
-								<SubmitButton label={m.market_vendor_check_in_undo()} variant="ghost" size="sm" />
+								<SubmitButton
+									label={m.market_vendor_check_in_undo_label()}
+									variant="ghost"
+									size="sm"
+								/>
 							</Form>
 						{:else if vendor.checkedInAt}
 							<StatusBadge status="checked_in" />
 							<span class="text-muted text-sm">{formatTime(vendor.checkedInAt)}</span>
 							<Form
 								remote={checkInVendorForm.for(`out-${vendor.id}`)}
-								successToast={m.market_vendor_check_in_check_undone()}
+								successToast={m.market_vendor_check_in_check_undone_toast()}
 								class="inline"
 							>
 								<input
@@ -127,13 +136,17 @@
 								<input
 									{...checkInVendorForm.for(`out-${vendor.id}`).fields.arrived.as('hidden', 'no')}
 								/>
-								<SubmitButton label={m.market_vendor_check_in_undo()} variant="ghost" size="sm" />
+								<SubmitButton
+									label={m.market_vendor_check_in_undo_label()}
+									variant="ghost"
+									size="sm"
+								/>
 							</Form>
 						{:else}
 							<!-- 44px, as at the ticket door: tapped many times in a row, one-handed. -->
 							<Form
 								remote={checkInVendorForm.for(`in-${vendor.id}`)}
-								successToast={m.market_vendor_check_in_checked()}
+								successToast={m.market_vendor_check_in_checked_toast()}
 								class="inline"
 							>
 								<input
@@ -145,14 +158,14 @@
 									{...checkInVendorForm.for(`in-${vendor.id}`).fields.arrived.as('hidden', 'yes')}
 								/>
 								<SubmitButton
-									label={m.market_vendor_check_in_arrived()}
+									label={m.market_vendor_check_in_arrived_label()}
 									variant="primary"
 									class="min-h-11"
 								/>
 							</Form>
 							<Form
 								remote={markNoShowForm.for(`ns-${vendor.id}`)}
-								successToast={m.market_vendor_check_in_marked_no_show()}
+								successToast={m.market_vendor_check_in_marked_no_show_toast()}
 								class="inline"
 							>
 								<input
@@ -162,7 +175,7 @@
 									{...markNoShowForm.for(`ns-${vendor.id}`).fields.noShow.as('hidden', 'yes')}
 								/>
 								<SubmitButton
-									label={m.market_vendor_check_in_no_show()}
+									label={m.market_vendor_check_in_no_show_label()}
 									variant="ghost"
 									size="sm"
 								/>
@@ -171,12 +184,12 @@
 
 						<Action
 							action={inviteBackForm.for(vendor.id)}
-							label={m.market_vendor_check_in_invite_back_2()}
+							label={m.market_vendor_check_in_invite_back_2_label()}
 							modalTitle={m.market_vendor_check_in_modal_title({
 								businessName: vendor.businessName
 							})}
 							submitLabel={m.market_vendor_check_in_submit_label()}
-							successToast={m.market_vendor_check_in_saved()}
+							successToast={m.market_vendor_check_in_saved_toast()}
 							variant="ghost"
 							size="sm"
 						>
@@ -186,14 +199,14 @@
 									<FormField
 										field={inviteFields.inviteBack}
 										type="select"
-										label={m.market_vendor_check_in_next_market()}
+										label={m.market_vendor_check_in_next_market_label()}
 										options={inviteOptions}
 										value={vendor.inviteBack === false ? 'no' : 'yes'}
 									/>
 									<FormField
 										field={inviteFields.note}
-										label={m.market_vendor_check_in_note()}
-										description={m.market_vendor_check_in_shown_vendor_s_next_application()}
+										label={m.market_vendor_check_in_note_label()}
+										description={m.market_vendor_check_in_shown_vendor_s_next_application_body()}
 										value={vendor.inviteBackNote ?? ''}
 									/>
 								</div>

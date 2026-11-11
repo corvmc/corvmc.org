@@ -49,14 +49,14 @@
 </svelte:head>
 
 <div class="mx-auto max-w-4xl px-4 py-12">
-	<p class="eyebrow mb-2">{m.public_contact_get_touch()}</p>
-	<h1 class="mb-8 text-3xl font-bold">{m.public_contact_contact_us()}</h1>
+	<p class="eyebrow mb-2">{m.public_contact_get_touch_text()}</p>
+	<h1 class="mb-8 text-3xl font-bold">{m.public_contact_contact_us_title()}</h1>
 
 	<div class="grid grid-cols-1 gap-8 md:grid-cols-3">
 		<!-- Form -->
 		<div class="md:col-span-2">
 			{#if submitted}
-				<Alert type="success">{m.public_contact_thanks_reaching_out_we_ll()}</Alert>
+				<Alert type="success">{m.public_contact_thanks_reaching_out_we_ll_body()}</Alert>
 			{:else}
 				<Form
 					remote={submitContactForm}
@@ -74,13 +74,13 @@
 					class="flex flex-col gap-4"
 				>
 					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						<FormField field={fields.name} type="text" label={m.public_name()} required />
-						<FormField field={fields.email} type="email" label={m.public_email()} required />
+						<FormField field={fields.name} type="text" label={m.public_name_label()} required />
+						<FormField field={fields.email} type="email" label={m.public_email_label()} required />
 					</div>
 
 					<FormField
 						field={fields.subject}
-						label={m.public_contact_subject()}
+						label={m.public_contact_subject_label()}
 						type="select"
 						options={subjectOptions}
 						bind:value={subject}
@@ -91,27 +91,27 @@
 							<FormField
 								field={fields.tipEventName}
 								type="text"
-								label={m.public_contact_what_s_show()}
+								label={m.public_contact_what_s_show_label()}
 								maxlength="200"
 							/>
 							<FormField
 								field={fields.tipEventDate}
 								type="text"
-								label={m.public_contact_when()}
-								placeholder={m.public_contact_e_g_fri_12_june()}
+								label={m.public_contact_when_label()}
+								placeholder={m.public_contact_e_g_fri_12_june_placeholder()}
 								maxlength="100"
 							/>
 							<FormField
 								field={fields.tipVenue}
 								type="text"
-								label={m.public_contact_where()}
+								label={m.public_contact_where_label()}
 								maxlength="200"
 							/>
 							<FormField
 								field={fields.tipLink}
 								type="text"
-								label={m.public_contact_link()}
-								placeholder={m.public_contact_event_page_poster_anything()}
+								label={m.public_contact_link_label()}
+								placeholder={m.public_contact_event_page_poster_anything_placeholder()}
 								maxlength="500"
 							/>
 						</div>
@@ -119,15 +119,19 @@
 
 					<!-- Custom input mode: FormField's built-in textarea drops `rest`, so rows
 					     and placeholder would be lost. Issues still resolve by name. -->
-					<FormField field={submitContactForm.fields.message} label={m.public_contact_message()}>
+					<FormField
+						field={submitContactForm.fields.message}
+						label={m.public_contact_message_label()}
+					>
 						<textarea
 							{...fields.message.as('text')}
 							class="textarea w-full"
 							rows="5"
 							maxlength="5000"
 							required
-							placeholder={isEventTip ? m.public_contact_anything_else_worth_knowing_who() : ''}
-						></textarea>
+							placeholder={isEventTip
+								? m.public_contact_anything_else_worth_knowing_who_placeholder()
+								: ''}></textarea>
 					</FormField>
 
 					<Turnstile
@@ -139,7 +143,7 @@
 					{#if failure}
 						<Alert type="error">{failure}</Alert>
 					{/if}
-					<SubmitButton label={m.public_contact_send_message()} />
+					<SubmitButton label={m.public_contact_send_message_label()} />
 				</Form>
 			{/if}
 		</div>
@@ -149,35 +153,35 @@
 			<div>
 				<h3 class="mb-2 flex items-center gap-2 font-semibold">
 					<span class="text-cmc-teal"><IconMapPin size={18} /></span>
-					{m.public_contact_visit_us()}
+					{m.public_contact_visit_us_title()}
 				</h3>
 				<p class="text-muted">
 					{address.street}<br />
 					{cityStateZip}
 				</p>
 				<p class="mt-1 text-xs text-fg-3">
-					{m.public_contact_office_available_by_appointment_only()}
+					{m.public_contact_office_available_by_appointment_only_text()}
 				</p>
 			</div>
 
 			<div>
 				<h3 class="mb-2 flex items-center gap-2 font-semibold">
 					<span class="text-cmc-teal"><IconMail size={18} /></span>
-					{m.public_contact_email_heading()}
+					{m.public_contact_email_heading_title()}
 				</h3>
 				<a href="mailto:{email}" class="link text-sm">{email}</a>
 			</div>
 
 			<div>
-				<h3 class="mb-2 font-semibold">{m.public_contact_quick_answers()}</h3>
+				<h3 class="mb-2 font-semibold">{m.public_contact_quick_answers_title()}</h3>
 				<div class="space-y-2 text-sm">
 					<details class="collapse-arrow collapse bg-base-200">
 						<summary class="collapse-title min-h-0 py-2 font-medium"
-							>{m.public_contact_how_do_i_become_member()}</summary
+							>{m.public_contact_how_do_i_become_member_label()}</summary
 						>
 						<div class="collapse-content text-muted">
 							<ParaglideMessage
-								message={m.public_contact_get_started_free_memberships_available}
+								message={m.public_contact_get_started_free_memberships_available_text}
 								inputs={{}}
 								>{#snippet a({ children })}<a
 										href={signInHref({ register: true, returnTo: '/member' })}
@@ -188,18 +192,18 @@
 					</details>
 					<details class="collapse-arrow collapse bg-base-200">
 						<summary class="collapse-title min-h-0 py-2 font-medium"
-							>{m.public_contact_can_i_use_practice_space()}</summary
+							>{m.public_contact_can_i_use_practice_space_label()}</summary
 						>
 						<div class="collapse-content text-muted">
-							{m.public_contact_practice_space_available_all_members()}
+							{m.public_contact_practice_space_available_all_members_text()}
 						</div>
 					</details>
 					<details class="collapse-arrow collapse bg-base-200">
 						<summary class="collapse-title min-h-0 py-2 font-medium"
-							>{m.public_contact_how_do_i_submit_music()}</summary
+							>{m.public_contact_how_do_i_submit_music_label()}</summary
 						>
 						<div class="collapse-content text-muted">
-							<ParaglideMessage message={m.public_contact_all_ages_all_genres_if} inputs={{}}
+							<ParaglideMessage message={m.public_contact_all_ages_all_genres_if_text} inputs={{}}
 								>{#snippet a({ children })}<a href="mailto:booking@corvmc.org" class="link"
 										>{@render children?.()}</a
 									>{/snippet}</ParaglideMessage

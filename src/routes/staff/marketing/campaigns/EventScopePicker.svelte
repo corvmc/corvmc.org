@@ -44,26 +44,26 @@
 			onselect={(v) => onchange(v?.id ?? '')}
 			labelKey="title"
 			descriptionKey="when"
-			placeholder={m.staff_search_shows_by_name()}
+			placeholder={m.staff_search_shows_by_name_placeholder()}
 			search={(q) => searchEvents(q)}
 		/>
 	</div>
 	{#if chosen}
 		<Button type="button" variant="ghost" size="sm" onclick={clear}
-			>{m.staff_marketing_campaigns_event_scope_picker_clear()}</Button
+			>{m.staff_marketing_campaigns_event_scope_picker_clear_label()}</Button
 		>
 	{/if}
 </div>
 {#if count}
 	{#await count then n}
 		<p class="mt-1 text-subtle">
-			{m.staff_marketing_campaigns_event_scope_picker_show_s_audience({ n })}
+			{m.staff_marketing_campaigns_event_scope_picker_show_s_audience_text({ n })}
 		</p>
 	{:catch}
 		<!-- The count is a preview; choosing the show still works. -->
 	{/await}
 {:else}
 	<p class="mt-1 text-subtle">
-		{m.staff_marketing_campaigns_event_scope_picker_optional_pick_o()}
+		{m.staff_marketing_campaigns_event_scope_picker_optional_pick_o_text()}
 	</p>
 {/if}

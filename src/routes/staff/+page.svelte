@@ -40,7 +40,7 @@
 		appealsPending: 'Pending Appeals',
 		resourceTipsPending: 'Pending Resource Tips'
 	};
-	const dayLabels = [m.staff_room_today(), m.staff_room_tomorrow()];
+	const dayLabels = [m.staff_room_today_label(), m.staff_room_tomorrow_label()];
 
 	let data = $derived(await getStaffDashboard());
 
@@ -76,21 +76,21 @@
 	);
 </script>
 
-<PageHeader title={m.staff_dashboard()} />
+<PageHeader title={m.staff_dashboard_title()} />
 <PageContent>
 	{#if data.room}
 		{#if doorCodes > 0}
 			<Alert type="warning">
 				{doorCodes === 1
-					? m.staff_one_door_code_session_happening()
-					: m.staff_door_codes_sessions_happening_now({ doorCodes })}
+					? m.staff_one_door_code_session_happening_body()
+					: m.staff_door_codes_sessions_happening_now_body({ doorCodes })}
 			</Alert>
 		{/if}
 		{#each data.room as day, i (day.date)}
 			<SectionLabel label={dayLabels[i]} count={day.uses.length} />
 			{#if day.uses.length === 0}
 				<EmptyState
-					description={i === 0 ? m.staff_room_free_today() : m.staff_room_free_tomorrow()}
+					description={i === 0 ? m.staff_room_free_today_body() : m.staff_room_free_tomorrow_body()}
 				/>
 			{:else}
 				<div class="mt-4 mb-2">
@@ -109,9 +109,9 @@
 				</div>
 				<Table>
 					{#snippet head()}
-						<th class="whitespace-nowrap">{m.staff_when()}</th>
-						<th>{m.staff_room_use()}</th>
-						<th class="w-px">{m.staff_status()}</th>
+						<th class="whitespace-nowrap">{m.staff_when_label()}</th>
+						<th>{m.staff_room_use_label()}</th>
+						<th class="w-px">{m.staff_status_label()}</th>
 					{/snippet}
 					{#each day.uses as r (r.id)}
 						{#if r.kind === 'closure'}
@@ -119,7 +119,8 @@
 								<td class="whitespace-nowrap">{formatSpan(r.startsAt, r.endsAt)}</td>
 								<td class="cell-primary">{r.reason}</td>
 								<td class="w-px"
-									><Badge size="sm" variant="error">{m.staff_reservations_closed()}</Badge></td
+									><Badge size="sm" variant="error">{m.staff_reservations_closed_label()}</Badge
+									></td
 								>
 							</tr>
 						{:else}
@@ -128,7 +129,7 @@
 								<td class="cell-primary">
 									<EntityIdentity ref={r.booker} />
 									{#if r.doorCodeUnconfirmed}
-										<Badge variant="warning" size="xs">{m.staff_code_unconfirmed()}</Badge>
+										<Badge variant="warning" size="xs">{m.staff_code_unconfirmed_label()}</Badge>
 									{/if}
 								</td>
 								<td class="w-px"><StatusBadge status={r.status} label /></td>
@@ -140,21 +141,21 @@
 		{/each}
 		<div class="mt-2">
 			<Button variant="ghost" size="sm" href={resolve('staff/reservations')}>
-				{m.staff_open_reservations()}
+				{m.staff_open_reservations_label()}
 			</Button>
 		</div>
 	{/if}
 
 	{#if data.shows}
-		<SectionLabel label={m.staff_upcoming_shows()} count={data.shows.length} />
+		<SectionLabel label={m.staff_upcoming_shows_label()} count={data.shows.length} />
 		{#if data.shows.length === 0}
-			<EmptyState description={m.staff_no_shows_next_seven_days()} />
+			<EmptyState description={m.staff_no_shows_next_seven_days_body()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="whitespace-nowrap">{m.staff_when()}</th>
-					<th>{m.staff_show()}</th>
-					<th class="w-px">{m.staff_status()}</th>
+					<th class="whitespace-nowrap">{m.staff_when_label()}</th>
+					<th>{m.staff_show_label()}</th>
+					<th class="w-px">{m.staff_status_label()}</th>
 				{/snippet}
 				{#each data.shows as show (show.id)}
 					<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/events/${show.id}`)}>
@@ -166,7 +167,7 @@
 							<EntityIdentity ref={show.ref} />
 							{#if show.blockers.length > 0}
 								<div class="text-sm text-warning">
-									{m.staff_still_open({ join: show.blockers.join('; ') })}
+									{m.staff_still_open_text({ join: show.blockers.join('; ') })}
 								</div>
 							{/if}
 						</td>
@@ -178,19 +179,19 @@
 			</Table>
 		{/if}
 		<div class="mt-2">
-			<Button variant="ghost" size="sm" href={showsHref}>{m.staff_open_shows_list()}</Button>
+			<Button variant="ghost" size="sm" href={showsHref}>{m.staff_open_shows_list_label()}</Button>
 		</div>
 	{/if}
 
-	<SectionLabel label={m.staff_pending_queues()} />
+	<SectionLabel label={m.staff_pending_queues_label()} />
 	{#if nothingPending}
-		<EmptyState description={m.staff_nothing_waiting_staff_right_now()} />
+		<EmptyState description={m.staff_nothing_waiting_staff_right_now_body()} />
 	{/if}
 	{#if queues.length > 0}
 		<Table>
 			{#snippet head()}
-				<th>{m.staff_queue()}</th>
-				<th class="cell-num">{m.staff_waiting()}</th>
+				<th>{m.staff_queue_label()}</th>
+				<th class="cell-num">{m.staff_waiting_label()}</th>
 			{/snippet}
 			{#each queues as q (q.key)}
 				<tr class="hover cursor-pointer" use:rowLink={q.href}>
@@ -203,13 +204,13 @@
 
 	{#if data.shortShifts?.total}
 		<!-- A show that goes out a person short cannot be fixed next week. -->
-		<SectionLabel label={m.staff_short_staffed_shifts()} count={data.shortShifts.total} />
+		<SectionLabel label={m.staff_short_staffed_shifts_label()} count={data.shortShifts.total} />
 		<Table>
 			{#snippet head()}
-				<th class="whitespace-nowrap">{m.staff_when()}</th>
-				<th>{m.staff_role()}</th>
-				<th class="col-support">{m.staff_event()}</th>
-				<th class="cell-num whitespace-nowrap">{m.staff_still_need()}</th>
+				<th class="whitespace-nowrap">{m.staff_when_label()}</th>
+				<th>{m.staff_role_label()}</th>
+				<th class="col-support">{m.staff_event_label()}</th>
+				<th class="cell-num whitespace-nowrap">{m.staff_still_need_label()}</th>
 			{/snippet}
 			{#each data.shortShifts.rows as shift (shift.id)}
 				<tr
@@ -230,19 +231,19 @@
 				href={withQuery(resolve('staff/volunteer/schedule'), 'needs=short')}
 			>
 				{data.shortShifts.total > data.shortShifts.rows.length
-					? m.staff_see_all_short_shifts({ total: data.shortShifts.total })
-					: m.staff_open_volunteering_worklist()}
+					? m.staff_see_all_short_shifts_label({ total: data.shortShifts.total })
+					: m.staff_open_volunteering_worklist_label()}
 			</Button>
 		</div>
 	{/if}
 
 	{#if data.deadlines?.total}
-		<SectionLabel label={m.staff_upcoming_deadlines()} count={data.deadlines.total} />
+		<SectionLabel label={m.staff_upcoming_deadlines_label()} count={data.deadlines.total} />
 		<Table>
 			{#snippet head()}
-				<th class="whitespace-nowrap">{m.staff_due()}</th>
-				<th>{m.staff_what()}</th>
-				<th class="col-support">{m.staff_funder_sponsor()}</th>
+				<th class="whitespace-nowrap">{m.staff_due_label()}</th>
+				<th>{m.staff_what_label()}</th>
+				<th class="col-support">{m.staff_funder_sponsor_label()}</th>
 			{/snippet}
 			{#each data.deadlines.rows as d (d.module + d.subjectId)}
 				<tr
@@ -262,26 +263,28 @@
 		</Table>
 		{#if data.deadlines.total > data.deadlines.rows.length}
 			<p class="mt-2 text-muted">
-				{m.staff_more_grants_sponsors({ value: data.deadlines.total - data.deadlines.rows.length })}
+				{m.staff_more_grants_sponsors_text({
+					value: data.deadlines.total - data.deadlines.rows.length
+				})}
 			</p>
 		{/if}
 	{/if}
 
 	{#if data.lowStock?.total}
-		<SectionLabel label={m.staff_low_stock_items()} count={data.lowStock.total} />
+		<SectionLabel label={m.staff_low_stock_items_label()} count={data.lowStock.total} />
 		<Table>
 			{#snippet head()}
-				<th>{m.staff_item()}</th>
-				<th class="col-support">{m.staff_category()}</th>
-				<th class="cell-num">{m.staff_hand()}</th>
-				<th class="col-support cell-num">{m.staff_buy()}</th>
+				<th>{m.staff_item_label()}</th>
+				<th class="col-support">{m.staff_category_label()}</th>
+				<th class="cell-num">{m.staff_hand_label()}</th>
+				<th class="col-support cell-num">{m.staff_buy_label()}</th>
 			{/snippet}
 			{#each data.lowStock.rows as item (item.id)}
 				<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/inventory/${item.id}`)}>
 					<td class="cell-primary">
 						{item.name}
 						{#if item.isOut}
-							<Badge variant="error" size="xs">{m.staff_out()}</Badge>
+							<Badge variant="error" size="xs">{m.staff_out_label()}</Badge>
 						{/if}
 					</td>
 					<td class="col-support">{item.category.name}</td>
@@ -297,26 +300,26 @@
 				href={withQuery(resolve('staff/inventory'), 'show=restock')}
 			>
 				{data.lowStock.total > data.lowStock.rows.length
-					? m.staff_see_all_restock({ total: data.lowStock.total })
-					: m.staff_open_restock_list()}
+					? m.staff_see_all_restock_label({ total: data.lowStock.total })
+					: m.staff_open_restock_list_label()}
 			</Button>
 		</div>
 	{/if}
 
 	{#if data.members}
-		<SectionLabel label={m.staff_recent_members()} />
+		<SectionLabel label={m.staff_recent_members_label()} />
 		<p class="mb-2 text-muted">
 			{data.members.newThisMonth === 1
-				? m.staff_one_member_joined_month()
-				: m.staff_members_joined_month({ newThisMonth: data.members.newThisMonth })}
+				? m.staff_one_member_joined_month_text()
+				: m.staff_members_joined_month_text({ newThisMonth: data.members.newThisMonth })}
 		</p>
 		{#if data.members.recent.length === 0}
-			<EmptyState description={m.staff_no_members_yet()} />
+			<EmptyState description={m.staff_no_members_yet_body()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_member()}</th>
-					<th class="col-support whitespace-nowrap">{m.staff_joined()}</th>
+					<th>{m.staff_member_label()}</th>
+					<th class="col-support whitespace-nowrap">{m.staff_joined_label()}</th>
 				{/snippet}
 				{#each data.members.recent as u (u.id)}
 					<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/members/${u.id}`)}>

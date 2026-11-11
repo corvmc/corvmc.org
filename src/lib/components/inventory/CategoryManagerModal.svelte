@@ -54,15 +54,15 @@
 <Modal bind:open title={m.inventory_category_manager_modal_title()} maxWidth="max-w-lg">
 	<div class="mb-4">
 		{#if categories.length === 0}
-			<EmptyState description={m.inventory_category_manager_modal_description()} />
+			<EmptyState description={m.inventory_category_manager_modal_description_body()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>{m.inventory_category_manager_modal_name()}</th>
-					<th class="col-support">{m.inventory_category_manager_modal_pricing_tier()}</th>
-					<th class="col-support cell-num">{m.inventory_category_manager_modal_order()}</th>
+					<th>{m.inventory_category_manager_modal_name_label()}</th>
+					<th class="col-support">{m.inventory_category_manager_modal_pricing_tier_label()}</th>
+					<th class="col-support cell-num">{m.inventory_category_manager_modal_order_label()}</th>
 					<th class="w-px"
-						><span class="sr-only">{m.inventory_category_manager_modal_actions()}</span></th
+						><span class="sr-only">{m.inventory_category_manager_modal_actions_label()}</span></th
 					>
 				{/snippet}
 				{#each categories as cat (cat.id)}
@@ -81,7 +81,7 @@
 										name: cat.name,
 										displayOrder: cat.displayOrder,
 										pricingTier: cat.pricingTier as PricingTier
-									})}>{m.inventory_category_manager_modal_edit()}</Button
+									})}>{m.inventory_category_manager_modal_edit_label()}</Button
 							>
 							<RemoveCategoryAction categoryId={cat.id} name={cat.name} />
 						</td>
@@ -94,8 +94,8 @@
 	<div class="space-y-3 border-t pt-4">
 		<h4 class="text-sm font-semibold">
 			{(editingCategory?.id
-				? m.inventory_category_manager_modal_edit_category
-				: m.inventory_category_manager_modal_add_category)()}
+				? m.inventory_category_manager_modal_edit_category_title
+				: m.inventory_category_manager_modal_add_category_title)()}
 		</h4>
 		{#if !editingCategory}
 			<Button
@@ -111,14 +111,14 @@
 						pricingTier: 'accessory' as PricingTier
 					})}
 			>
-				{m.inventory_category_manager_modal_new_category()}
+				{m.inventory_category_manager_modal_new_category_label()}
 			</Button>
 		{:else}
 			<Form
 				remote={categoryForm}
 				successToast={editingCategory.id
-					? m.inventory_category_manager_modal_category_updated()
-					: m.inventory_category_manager_modal_category_added()}
+					? m.inventory_category_manager_modal_category_updated_toast()
+					: m.inventory_category_manager_modal_category_added_toast()}
 				onsuccess={refreshCategories}
 				class="space-y-3"
 			>
@@ -129,7 +129,7 @@
 					<Field
 						field={categoryForm.fields.name}
 						type="text"
-						label={m.inventory_category_manager_modal_name()}
+						label={m.inventory_category_manager_modal_name_label()}
 						class="col-span-2"
 						value={editingCategory.name}
 					/>
@@ -137,14 +137,14 @@
 						field={categoryForm.fields.displayOrder}
 						submitAs="text"
 						type="number"
-						label={m.inventory_category_manager_modal_order()}
+						label={m.inventory_category_manager_modal_order_label()}
 						value={editingCategory.displayOrder}
 					/>
 				</div>
 				<Field
 					field={categoryForm.fields.pricingTier}
 					type="select"
-					label={m.inventory_category_manager_modal_pricing_tier_2()}
+					label={m.inventory_category_manager_modal_pricing_tier_2_label()}
 					value={editingCategory.pricingTier}
 					options={pricingTiers.map((t) => ({
 						value: t,
@@ -153,12 +153,12 @@
 				/>
 				<div class="flex gap-2">
 					<Button type="button" variant="ghost" size="sm" onclick={() => (editingCategory = null)}
-						>{m.inventory_category_manager_modal_cancel()}</Button
+						>{m.inventory_category_manager_modal_cancel_label()}</Button
 					>
 					<SubmitButton
 						label={editingCategory.id
-							? m.inventory_category_manager_modal_save()
-							: m.inventory_category_manager_modal_add()}
+							? m.inventory_category_manager_modal_save_label()
+							: m.inventory_category_manager_modal_add_label()}
 						variant="primary"
 						size="sm"
 					/>

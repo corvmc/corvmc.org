@@ -36,29 +36,39 @@
 <Field
 	field={fields.title}
 	type="text"
-	label={m.staff_title()}
-	description={m.staff_sponsors_id_sponsorship_fields_2027_season_summer_conc()}
+	label={m.staff_title_label()}
+	description={m.staff_sponsors_id_sponsorship_fields_2027_season_summer_conc_body()}
 	value={value?.title ?? ''}
 />
 <Field
 	field={fields.status}
 	type="select"
-	label={m.staff_status()}
+	label={m.staff_status_label()}
 	options={statusOptions}
 	value={value?.status ?? 'prospect'}
 />
 <Field
 	field={fields.tier}
 	type="text"
-	label={m.staff_tier()}
-	description={m.staff_sponsors_id_sponsorship_fields_free_text_gold_kind()}
+	label={m.staff_tier_label()}
+	description={m.staff_sponsors_id_sponsorship_fields_free_text_gold_kind_body()}
 	value={value?.tier ?? ''}
 />
 <MoneyField
 	field={fields.amountCents}
-	label={m.staff_amount()}
+	label={m.staff_amount_label()}
 	value={value?.amountCents ?? undefined}
 />
-<Field field={fields.startsOn} type="date" label={m.staff_starts()} value={value?.startsOn ?? ''} />
-<Field field={fields.endsOn} type="date" label={m.staff_ends()} value={value?.endsOn ?? ''} />
-<Field field={fields.notes} type="textarea" label={m.staff_notes()} value={value?.notes ?? ''} />
+<Field
+	field={fields.startsOn}
+	type="date"
+	label={m.staff_starts_label()}
+	value={value?.startsOn ?? ''}
+/>
+<Field field={fields.endsOn} type="date" label={m.staff_ends_label()} value={value?.endsOn ?? ''} />
+<Field
+	field={fields.notes}
+	type="textarea"
+	label={m.staff_notes_label()}
+	value={value?.notes ?? ''}
+/>

@@ -102,24 +102,27 @@
 
 <section class="px-6 py-10">
 	<div class="mx-auto max-w-4xl">
-		<PageHeader title={evt.title} parent={{ label: m.public_events(), href: resolve('events') }}>
+		<PageHeader
+			title={evt.title}
+			parent={{ label: m.public_events_label(), href: resolve('events') }}
+		>
 			<div class="flex items-center gap-1">
 				<details class="dropdown dropdown-end">
 					<summary class="btn gap-1 btn-ghost btn-sm">
 						<IconCalendarPlus size={18} />
-						{m.public_events_id_add_calendar()}
+						{m.public_events_id_add_calendar_label()}
 					</summary>
 					<ul class="menu dropdown-content dropdown-panel w-48">
 						<li>
 							<a
 								href={googleCalendarUrl(calendarEvt)}
 								target="_blank"
-								rel="external noopener noreferrer">{m.public_events_id_google_calendar()}</a
+								rel="external noopener noreferrer">{m.public_events_id_google_calendar_text()}</a
 							>
 						</li>
 						<li>
 							<a href={icsDataUrl(calendarEvt)} rel="external" download="{evt.title}.ics"
-								>{m.public_events_id_apple_outlook_ics()}</a
+								>{m.public_events_id_apple_outlook_ics_text()}</a
 							>
 						</li>
 					</ul>
@@ -165,7 +168,7 @@
 				{#if isCancelled}
 					<div class="edet__cancelled" role="status">
 						<IconAlertTriangle size={18} />
-						<span>{m.public_events_id_event_has_been_cancelled()}</span>
+						<span>{m.public_events_id_event_has_been_cancelled_text()}</span>
 					</div>
 				{/if}
 
@@ -198,7 +201,7 @@
 					</p>
 				{:else if isBandEvent && evt.bandName}
 					<p class="edet__byline">
-						{m.public_events_id_by()}
+						{m.public_events_id_by_text()}
 						{#if bandHref}
 							<a href={bandHref} class="link">{evt.bandName}</a>
 						{:else}
@@ -235,7 +238,7 @@
 					<div class="edet__capacity">
 						<div class="edet__capacity-head">
 							<span
-								>{m.public_events_id_claimed({
+								>{m.public_events_id_claimed_text({
 									sold: data.sold ?? '',
 									ticketQuantity: evt.ticketQuantity ?? ''
 								})}</span
@@ -243,8 +246,8 @@
 							{#if lowAvailability}
 								<Badge variant="warning"
 									>{isFreeEvent
-										? m.public_events_id_almost_full()
-										: m.public_events_id_selling_fast()}</Badge
+										? m.public_events_id_almost_full_label()
+										: m.public_events_id_selling_fast_label()}</Badge
 								>
 							{/if}
 						</div>
@@ -259,28 +262,28 @@
 				<div class="edet__ctas">
 					{#if isCancelled}
 						<span class="text-base font-medium text-fg-2"
-							>{m.public_events_id_tickets_rsvps_closed()}</span
+							>{m.public_events_id_tickets_rsvps_closed_text()}</span
 						>
 					{:else if data.isPast}
 						<span class="text-base font-medium text-fg-2"
-							>{m.public_events_id_event_has_ended()}</span
+							>{m.public_events_id_event_has_ended_text()}</span
 						>
 					{:else if mode === 'platform'}
 						{#if soldOut}
 							<Button variant="default" size="lg" disabled
-								>{isFreeEvent ? m.public_full() : m.public_events_id_sold_out()}</Button
+								>{isFreeEvent ? m.public_full_label() : m.public_events_id_sold_out_label()}</Button
 							>
 						{:else}
 							<Button href={ticketsHref} variant="primary" size="lg">
 								{isFreeEvent
-									? m.public_events_id_get_free_ticket()
-									: m.public_events_id_get_tickets_2()}
+									? m.public_events_id_get_free_ticket_label()
+									: m.public_events_id_get_tickets_2_label()}
 							</Button>
 							{#if data.remaining !== null}
 								<span class="text-muted"
-									>{(isFreeEvent ? m.public_events_id_spots_remaining : m.public_tickets_remaining)(
-										{ remaining: data.remaining }
-									)}</span
+									>{(isFreeEvent
+										? m.public_events_id_spots_remaining_text
+										: m.public_tickets_remaining_text)({ remaining: data.remaining })}</span
 								>
 							{/if}
 						{/if}
@@ -293,13 +296,13 @@
 								target="_blank"
 								rel="noopener noreferrer"
 								variant="primary"
-								size="lg">{m.public_events_id_get_tickets()}</Button
+								size="lg">{m.public_events_id_get_tickets_label()}</Button
 							>
 						{/if}
 						<RsvpControl eventId={evt.id} eventTitle={evt.title} external={mode === 'external'} />
 						{#if data.rsvpCount > 0}
 							<span class="text-muted"
-								>{m.public_events_id_going({ rsvpCount: data.rsvpCount })}</span
+								>{m.public_events_id_going_text({ rsvpCount: data.rsvpCount })}</span
 							>
 						{/if}
 					{/if}
@@ -315,7 +318,7 @@
 
 		{#if data.recapHtml}
 			<section class="edet__recap">
-				<SectionLabel label={m.public_events_id_recap()} />
+				<SectionLabel label={m.public_events_id_recap_label()} />
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized markdown (renderMarkdown) -->
 				<div class="edet__recap-body">{@html data.recapHtml}</div>
 			</section>
@@ -331,7 +334,7 @@
 
 		{#if data.upcoming.length > 0}
 			<section class="edet__more">
-				<SectionLabel label={m.public_events_id_more_shows()} />
+				<SectionLabel label={m.public_events_id_more_shows_label()} />
 				<div class="edet__more-grid">
 					{#each data.upcoming as e (e.id)}
 						{@const eTags = parseTags(e.tags)}

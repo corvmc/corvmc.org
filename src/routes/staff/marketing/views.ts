@@ -5,13 +5,13 @@ import type { StaffView } from '../views';
 export const outreachViews: readonly StaffView<'campaigns' | 'audiences'>[] = [
 	{
 		key: 'campaigns',
-		label: () => m.staff_marketing_campaigns_title(),
+		label: () => m.staff_marketing_campaigns_label(),
 		href: resolve('staff/marketing/campaigns'),
 		cap: 'marketing.read'
 	},
 	{
 		key: 'audiences',
-		label: () => m.staff_audiences(),
+		label: () => m.staff_audiences_label(),
 		href: resolve('staff/marketing/audiences'),
 		cap: 'marketing.manageAudiences'
 	}

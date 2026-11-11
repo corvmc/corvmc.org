@@ -11,18 +11,18 @@
 
 <Action
 	{action}
-	label={m.member_publish()}
-	aria-label={m.member_publish_2({ title: event.title })}
+	label={m.member_publish_label()}
+	aria-label={m.member_publish_2_label({ title: event.title })}
 	modalTitle={m.member_groups_slug_project_event_publish_modal_title({ title: event.title })}
-	submitLabel={m.member_publish()}
-	successToast={m.member_published()}
+	submitLabel={m.member_publish_label()}
+	successToast={m.member_published_toast()}
 	variant="ghost"
 	size="xs"
 >
 	{#snippet form()}
 		<input {...action.fields.id.as('hidden', event.id)} />
 		<p class="text-sm">
-			{m.member_groups_slug_project_event_publish_goes_public_calenda()}
+			{m.member_groups_slug_project_event_publish_goes_public_calenda_text()}
 		</p>
 	{/snippet}
 </Action>

@@ -32,24 +32,30 @@
 </script>
 
 {#if claim === 'someone'}
-	<span class="text-sm text-fg-3">{m.public_contribute_wishlist_pledge_someone_bringing()}</span>
+	<span class="text-sm text-fg-3"
+		>{m.public_contribute_wishlist_pledge_someone_bringing_text()}</span
+	>
 {:else if claim === 'you' && pledgeId}
 	<Form
 		remote={release}
-		successToast={m.public_contribute_wishlist_pledge_released_someone_else_can()}
+		successToast={m.public_contribute_wishlist_pledge_released_someone_else_can_toast()}
 	>
 		<input {...release.fields.pledgeId.as('hidden', pledgeId)} />
-		<span class="text-sm text-fg-3">{m.public_contribute_wishlist_pledge_re_bringing()}</span>
-		<SubmitButton label={m.public_contribute_wishlist_pledge_release()} size="xs" variant="ghost" />
+		<span class="text-sm text-fg-3">{m.public_contribute_wishlist_pledge_re_bringing_text()}</span>
+		<SubmitButton
+			label={m.public_contribute_wishlist_pledge_release_label()}
+			size="xs"
+			variant="ghost"
+		/>
 	</Form>
 {:else if signedIn}
 	<Form
 		remote={pledge}
-		successToast={m.public_contribute_wishlist_pledge_thanks_staff_will_expect_3()}
+		successToast={m.public_contribute_wishlist_pledge_thanks_staff_will_expect_3_toast()}
 	>
 		<input {...pledge.fields.subjectType.as('hidden', subjectType)} />
 		<input {...pledge.fields.subjectId.as('hidden', subjectId)} />
-		<SubmitButton label={m.public_i_ll_bring()} size="xs" variant="default" outline />
+		<SubmitButton label={m.public_i_ll_bring_label()} size="xs" variant="default" outline />
 	</Form>
 {:else}
 	<GuestPledgeAction {subjectType} {subjectId} {entryName} />

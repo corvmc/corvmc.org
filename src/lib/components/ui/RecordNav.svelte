@@ -23,27 +23,27 @@
 
 <div class="flex items-center gap-4">
 	{#if prevHref}
-		<Button href={prevHref} variant="ghost" size="sm" title={m.ui_previous()}>
+		<Button href={prevHref} variant="ghost" size="sm" title={m.ui_previous_title()}>
 			<IconArrowLeft size={16} />
-			{m.ui_prev()}
+			{m.ui_prev_label()}
 		</Button>
 	{:else}
 		<Button disabled variant="ghost" size="sm">
 			<IconArrowLeft size={16} />
-			{m.ui_prev()}
+			{m.ui_prev_label()}
 		</Button>
 	{/if}
 
 	{#if nextHref}
-		<Button href={nextHref} variant="ghost" size="sm" title={m.ui_next()}>
-			{m.ui_next()}
+		<Button href={nextHref} variant="ghost" size="sm" title={m.ui_next_title()}>
+			{m.ui_next_label()}
 			<IconArrowRight size={16} />
 		</Button>
 	{:else if endLabel}
 		<span class="text-xs opacity-50">{endLabel}</span>
 	{:else}
 		<Button disabled variant="ghost" size="sm">
-			{m.ui_next()}
+			{m.ui_next_label()}
 			<IconArrowRight size={16} />
 		</Button>
 	{/if}

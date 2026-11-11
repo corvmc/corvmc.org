@@ -50,10 +50,10 @@
 				throw new Error(body.message || 'Upload failed');
 			}
 			await getPressKitEditor(band.slug).refresh();
-			toast.success(msg.band_uploaded());
+			toast.success(msg.band_uploaded_toast());
 		} catch (e) {
 			toast.error(
-				e instanceof Error ? e.message : msg.band_slug_press_kit_press_photos_upload_failed()
+				e instanceof Error ? e.message : msg.band_slug_press_kit_press_photos_upload_failed_toast()
 			);
 		} finally {
 			busy = false;
@@ -68,12 +68,12 @@
 			});
 			if (!res.ok) throw new Error('Could not remove that file');
 			await getPressKitEditor(band.slug).refresh();
-			toast.success(msg.band_removed());
+			toast.success(msg.band_removed_toast());
 		} catch (e) {
 			toast.error(
 				e instanceof Error
 					? e.message
-					: msg.band_slug_press_kit_press_photos_could_not_remove_file()
+					: msg.band_slug_press_kit_press_photos_could_not_remove_file_toast()
 			);
 		} finally {
 			busy = false;
@@ -94,20 +94,20 @@
 	const IMAGE_TYPES = 'image/jpeg,image/png,image/webp';
 </script>
 
-<InfoCard title={msg.band_slug_press_kit_press_photos_download_kit()}>
+<InfoCard title={msg.band_slug_press_kit_press_photos_download_kit_title()}>
 	<p class="text-muted">
-		{msg.band_slug_press_kit_press_photos_zip_holding_one_page_press()}
+		{msg.band_slug_press_kit_press_photos_zip_holding_one_page_press_text()}
 	</p>
 	<div>
 		<Button href="/api/bands/{band.id}/press-kit.zip" variant="primary" size="sm">
-			{msg.band_slug_press_kit_press_photos_download_press_kit_zip()}
+			{msg.band_slug_press_kit_press_photos_download_press_kit_zip_label()}
 		</Button>
 	</div>
 </InfoCard>
 
-<InfoCard title={msg.band_slug_press_kit_press_photos_press_photos()}>
+<InfoCard title={msg.band_slug_press_kit_press_photos_press_photos_title()}>
 	<p class="text-muted">
-		{msg.band_slug_press_kit_press_photos_high_resolution_shot_venue()}
+		{msg.band_slug_press_kit_press_photos_high_resolution_shot_venue_text()}
 	</p>
 	{#if photos.length > 0}
 		<div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -133,16 +133,16 @@
 						<input {...details.fields.attachmentId.as('hidden', photo.id)} />
 						<FormField
 							field={details.fields.altText}
-							label={msg.band_slug_press_kit_press_photos_alt_text()}
+							label={msg.band_slug_press_kit_press_photos_alt_text_label()}
 							value={photo.altText ?? ''}
-							description={msg.band_slug_press_kit_press_photos_description()}
+							description={msg.band_slug_press_kit_press_photos_description_body()}
 						/>
 						<FormField
 							field={details.fields.caption}
-							label={msg.band_slug_press_kit_press_photos_caption()}
+							label={msg.band_slug_press_kit_press_photos_caption_label()}
 							value={photo.caption ?? ''}
 						/>
-						<SubmitButton label={msg.band_save()} size="sm" />
+						<SubmitButton label={msg.band_save_label()} size="sm" />
 					</Form>
 					<Button
 						type="button"
@@ -151,13 +151,13 @@
 						disabled={busy}
 						onclick={() => remove(photo.id)}
 					>
-						{msg.band_remove()}
+						{msg.band_remove_label()}
 					</Button>
 				</figure>
 			{/each}
 		</div>
 	{:else}
-		<p class="text-muted">{msg.band_slug_press_kit_press_photos_no_press_photo_yet_band()}</p>
+		<p class="text-muted">{msg.band_slug_press_kit_press_photos_no_press_photo_yet_band_text()}</p>
 	{/if}
 
 	<div class="flex flex-wrap items-center gap-3">
@@ -169,15 +169,16 @@
 			disabled={busy || atLimit}
 			onclick={() => pick()}
 		>
-			{msg.band_add_photo()}
+			{msg.band_add_photo_label()}
 		</Button>
 		{#if photoLimit !== null}
 			<span class="text-muted text-sm">
 				{msg.band_slug_press_kit_press_photos_text({ length: photos.length, photoLimit })}
-				{#if atLimit}{msg.band_slug_press_kit_press_photos_band_site_lifts_limit()}{/if}
+				{#if atLimit}{msg.band_slug_press_kit_press_photos_band_site_lifts_limit_text()}{/if}
 			</span>
 		{:else}
-			<span class="text-muted text-sm">{msg.band_slug_press_kit_press_photos_unlimited_plan()}</span
+			<span class="text-muted text-sm"
+				>{msg.band_slug_press_kit_press_photos_unlimited_plan_text()}</span
 			>
 		{/if}
 	</div>

@@ -22,10 +22,10 @@
 -->
 <Action
 	action={createBandEventForm}
-	label={m.band_slug_events_create_event_modal_create_event()}
-	modalTitle={m.band_slug_events_create_event_modal_create_event()}
+	label={m.band_slug_events_create_event_modal_create_event_label()}
+	modalTitle={m.band_slug_events_create_event_modal_create_event_title()}
 	maxWidth="max-w-md"
-	submitLabel={m.band_slug_events_create_event_modal_create_event()}
+	submitLabel={m.band_slug_events_create_event_modal_create_event_label()}
 	successToast={m.band_slug_events_create_event_modal_success_toast()}
 	size="sm"
 	onsuccess={(result) => {
@@ -43,17 +43,22 @@
 			<FormField
 				field={fields.title}
 				type="text"
-				label={m.band_title()}
-				placeholder={m.band_e_g_live_at_venue()}
+				label={m.band_title_label()}
+				placeholder={m.band_e_g_live_at_venue_placeholder()}
 				maxlength="200"
 				required
 			/>
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-				<FormField field={fields.eventDate} type="date" label={m.band_date()} required />
-				<FormField field={fields.eventStartTime} type="time" label={m.band_start_time()} required />
+				<FormField field={fields.eventDate} type="date" label={m.band_date_label()} required />
+				<FormField
+					field={fields.eventStartTime}
+					type="time"
+					label={m.band_start_time_label()}
+					required
+				/>
 			</div>
 			<p class="text-muted">
-				{m.band_slug_events_create_event_modal_saved_as_draft_end_time()}
+				{m.band_slug_events_create_event_modal_saved_as_draft_end_time_text()}
 			</p>
 		</div>
 	{/snippet}

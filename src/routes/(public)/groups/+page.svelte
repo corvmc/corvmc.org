@@ -31,36 +31,38 @@
 </script>
 
 <svelte:head>
-	<title>{m.public_groups_groups_corvallis_music_collective()}</title>
+	<title>{m.public_groups_groups_corvallis_music_collective_title()}</title>
 	<meta
 		name="description"
 		content="Clubs and committees at the Corvallis Music Collective — jam nights, workshops, and the groups that keep the place running."
 	/>
 </svelte:head>
 
-<Hero title={m.public_groups_title()}>{m.public_groups_clubs_committees_at_collective_how()}</Hero>
+<Hero title={m.public_groups_title()}
+	>{m.public_groups_clubs_committees_at_collective_how_text()}</Hero
+>
 
 <Section>
 	{#if groups.length === 0}
-		<EmptyState description={m.public_groups_description()} />
+		<EmptyState description={m.public_groups_description_body()} />
 	{:else}
 		<div class="mb-6 flex flex-wrap gap-2">
 			<Button variant={kind === '' ? 'primary' : 'ghost'} size="sm" onclick={() => (kind = '')}>
-				{m.public_all()}
+				{m.public_all_label()}
 			</Button>
 			<Button
 				variant={kind === 'club' ? 'primary' : 'ghost'}
 				size="sm"
 				onclick={() => (kind = 'club')}
 			>
-				{m.public_clubs()}
+				{m.public_clubs_label()}
 			</Button>
 			<Button
 				variant={kind === 'committee' ? 'primary' : 'ghost'}
 				size="sm"
 				onclick={() => (kind = 'committee')}
 			>
-				{m.public_committees()}
+				{m.public_committees_label()}
 			</Button>
 		</div>
 
@@ -77,11 +79,11 @@
 						{/if}
 						<p class="text-subtle">
 							{g.memberCount}
-							{g.memberCount === 1 ? m.public_member() : m.public_members_2()}
+							{g.memberCount === 1 ? m.public_member_text() : m.public_members_2_text()}
 							{#if g.joinPolicy === 'open'}
-								{m.public_groups_open_join()}
+								{m.public_groups_open_join_text()}
 							{:else if g.joinPolicy === 'by_application'}
-								{m.public_groups_accepting_applications()}
+								{m.public_groups_accepting_applications_text()}
 							{/if}
 						</p>
 					</CardBody>

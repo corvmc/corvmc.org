@@ -34,7 +34,7 @@
 <Action
 	action={bookInstructorReservation}
 	label={m.member_reservations_teaching_create_modal_label()}
-	modalTitle={m.member_reservations_teaching_create_modal_label()}
+	modalTitle={m.member_reservations_teaching_create_modal_title()}
 	data-testid="book-teaching"
 	noFooter
 	variant="ghost"
@@ -42,9 +42,9 @@
 	onsuccess={(result) => {
 		const r = result as { waitlisted?: boolean } | undefined;
 		if (r?.waitlisted) {
-			toast.info(m.member_first_instance_waitlisted_because_slot());
+			toast.info(m.member_first_instance_waitlisted_because_slot_toast());
 		} else {
-			toast.success(m.member_reservations_teaching_create_modal_teaching_time_book());
+			toast.success(m.member_reservations_teaching_create_modal_teaching_time_book_toast());
 		}
 		onbooked?.();
 	}}

@@ -28,7 +28,7 @@
 		<CardTitle>
 			{title}
 			<span class="text-muted font-normal"
-				>{m.volunteer_shift_checklist_text({ done, length: tasks.length })}</span
+				>{m.volunteer_shift_checklist_text_title({ done, length: tasks.length })}</span
 			>
 		</CardTitle>
 	{/snippet}

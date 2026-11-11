@@ -16,19 +16,19 @@
 	// leaving a stat stranded on its own row.
 	const stats = $derived([
 		{
-			label: m.staff_members_id_panels_user_scoreboard_free_hours(),
+			label: m.staff_members_id_panels_user_scoreboard_free_hours_label(),
 			value: `${creditsToHours(overview.credits.free_hours)}`
 		},
 		{
-			label: m.staff_members_id_panels_user_scoreboard_upcoming_bookings(),
+			label: m.staff_members_id_panels_user_scoreboard_upcoming_bookings_label(),
 			value: String(overview.counts.upcomingReservations)
 		},
 		{
-			label: m.staff_members_id_panels_user_scoreboard_volunteer_hrs_ytd(),
+			label: m.staff_members_id_panels_user_scoreboard_volunteer_hrs_ytd_label(),
 			value: formatVolunteerHours(overview.counts.approvedMinutesThisYear)
 		},
 		{
-			label: m.staff_members_id_panels_user_scoreboard_lifetime_paid(),
+			label: m.staff_members_id_panels_user_scoreboard_lifetime_paid_label(),
 			value: formatCents(overview.counts.lifetimePaidCents)
 		}
 	]);

@@ -22,9 +22,9 @@
 	let {
 		roster,
 		result,
-		empty = m.roster_roster_empty(),
+		empty = m.roster_roster_empty_body(),
 		searchPlaceholder = m.roster_roster_search_placeholder(),
-		personLabel = m.roster_name(),
+		personLabel = m.roster_name_label(),
 		filters,
 		menu,
 		summary,
@@ -33,7 +33,7 @@
 		exportPath,
 		emails,
 		lead,
-		leadLabel = m.roster_status(),
+		leadLabel = m.roster_status_label(),
 		leadHead,
 		detail,
 		aside,
@@ -128,7 +128,7 @@
 		{#if exportHref}
 			<Button href={exportHref} rel="external" download variant="ghost" size="sm">
 				<IconDownload size={16} />
-				{m.roster_roster_export()}
+				{m.roster_roster_export_label()}
 			</Button>
 		{/if}
 	</div>

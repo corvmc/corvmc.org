@@ -48,7 +48,7 @@
 	<div class="date-block">
 		{#if !terminal && isVenueThisWeek(startsAt)}
 			<span class="upcoming-tag">
-				{#if isVenueToday(startsAt)}{m.reservations_reservation_card_shell_today()}{:else if isVenueTomorrow(startsAt)}{m.reservations_reservation_card_shell_tomorrow()}{:else}{m.reservations_reservation_card_shell_week()}{/if}
+				{#if isVenueToday(startsAt)}{m.reservations_reservation_card_shell_today_text()}{:else if isVenueTomorrow(startsAt)}{m.reservations_reservation_card_shell_tomorrow_text()}{:else}{m.reservations_reservation_card_shell_week_text()}{/if}
 			</span>
 		{/if}
 		<span>{formatWeekdayShortCased(startsAt)}</span>

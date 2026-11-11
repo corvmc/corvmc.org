@@ -30,7 +30,7 @@
 		 * case.
 		 */
 		presetUser = null,
-		label = m.volunteer_log_hours_for_member_log_hours(),
+		label = m.volunteer_log_hours_for_member_log_hours_label(),
 		size = 'sm'
 	}: {
 		presetUser?: { id: string; name: string } | null;
@@ -51,10 +51,10 @@
 	variant="ghost"
 	{size}
 	modalTitle={presetUser
-		? m.volunteer_log_hours_for_member_log_hours_2({ name: presetUser.name })
-		: m.volunteer_log_hours_for_member_log_hours_member()}
-	submitLabel={m.volunteer_log_hours_for_member_log_hours()}
-	successToast={m.volunteer_hours_logged()}
+		? m.volunteer_log_hours_for_member_log_hours_2_title({ name: presetUser.name })
+		: m.volunteer_log_hours_for_member_log_hours_member_title()}
+	submitLabel={m.volunteer_log_hours_for_member_log_hours_label()}
+	successToast={m.volunteer_hours_logged_toast()}
 	onsuccess={() => {
 		userId = '';
 		userName = '';
@@ -74,7 +74,7 @@
 		-->
 		<label class="fieldset w-full">
 			<span class="fieldset-legend"
-				>{m.volunteer_log_hours_for_member_what_did_they_help_with()}</span
+				>{m.volunteer_log_hours_for_member_what_did_they_help_with_label()}</span
 			>
 			<Select {...fields.volunteerRoleId.as('select')}>
 				<RoleOptions activeOnly />
@@ -83,27 +83,27 @@
 
 		<FormField
 			field={logHoursForMember.fields.workedOn}
-			label={m.volunteer_date()}
+			label={m.volunteer_date_label()}
 			type="date"
 			value={clubToday()}
 		/>
 		<FormField
 			field={logHoursForMember.fields.hours}
 			submitAs="text"
-			label={m.volunteer_hours()}
+			label={m.volunteer_hours_label()}
 			type="number"
 			step={VOLUNTEER_HOUR_STEP}
 			min="0.25"
-			description={m.volunteer_log_hours_for_member_nearest_quarter_hour()}
+			description={m.volunteer_log_hours_for_member_nearest_quarter_hour_body()}
 		/>
 		<FormField
 			field={logHoursForMember.fields.description}
-			label={m.volunteer_log_hours_for_member_what_they_did()}
+			label={m.volunteer_log_hours_for_member_what_they_did_label()}
 			type="textarea"
-			description={m.volunteer_log_hours_for_member_record_s_what_funder_s()}
+			description={m.volunteer_log_hours_for_member_record_s_what_funder_s_body()}
 		/>
 		<p class="text-muted">
-			{m.volunteer_log_hours_for_member_no_backdate_limit_lands_appro()}
+			{m.volunteer_log_hours_for_member_no_backdate_limit_lands_appro_text()}
 		</p>
 	{/snippet}
 </Action>

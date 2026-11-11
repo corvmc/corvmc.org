@@ -34,11 +34,11 @@
 	action={setAnnouncementMute}
 	data-testid="mute-announcements"
 	label={muted
-		? m.groups_mute_announcements_unmute_announcements()
-		: m.groups_mute_announcements_mute_announcements()}
+		? m.groups_mute_announcements_unmute_announcements_label()
+		: m.groups_mute_announcements_mute_announcements_label()}
 	successToast={muted
-		? m.groups_mute_announcements_announcements()
-		: m.groups_mute_announcements_announcements_muted()}
+		? m.groups_mute_announcements_announcements_toast()
+		: m.groups_mute_announcements_announcements_muted_toast()}
 	variant="ghost"
 	size="sm"
 	onsuccess={() => refreshAll()}
@@ -48,8 +48,8 @@
 		<input {...fields.intent.as('hidden', muted ? 'unmute' : 'mute')} />
 		<p class="py-2 text-sm">
 			{muted
-				? m.groups_mute_announcements_start_getting_announcements_from_a({ groupName })
-				: m.groups_mute_announcements_stop_getting_emails_notifications({ groupName })}
+				? m.groups_mute_announcements_start_getting_announcements_from_a_text({ groupName })
+				: m.groups_mute_announcements_stop_getting_emails_notifications_text({ groupName })}
 		</p>
 	{/snippet}
 </Action>

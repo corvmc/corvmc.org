@@ -40,8 +40,8 @@
 
 <Action
 	action={createAudience}
-	label={m.actions_create_audience_new_audience()}
-	modalTitle={m.actions_create_audience_new_audience()}
+	label={m.actions_create_audience_new_audience_label()}
+	modalTitle={m.actions_create_audience_new_audience_title()}
 	submitLabel={m.actions_create_audience_submit_label()}
 	canSubmit={!!name.trim()}
 	successToast={m.actions_create_audience_success_toast()}
@@ -60,13 +60,13 @@
 	{...rest}
 >
 	{#snippet form()}
-		{#snippet slugHint()}{m.actions_create_audience_used_signup_url_subscribe({
+		{#snippet slugHint()}{m.actions_create_audience_used_signup_url_subscribe_body({
 				value: slug || '...'
 			})}{/snippet}
 		<Field
 			field={createAudience.fields.name}
 			type="text"
-			label={m.actions_name()}
+			label={m.actions_name_label()}
 			bind:value={name}
 		/>
 		<!-- Custom input to keep the monospace slug box; `Field`'s own input has a
@@ -74,7 +74,7 @@
 		     slot the bare fieldset had no room for. -->
 		<Field
 			field={createAudience.fields.slug}
-			label={m.actions_create_audience_slug()}
+			label={m.actions_create_audience_slug_label()}
 			description={slugHint}
 		>
 			{#snippet input(id)}
@@ -92,15 +92,15 @@
 		<Field
 			field={createAudience.fields.description}
 			type="textarea"
-			label={m.actions_description()}
+			label={m.actions_description_label()}
 			bind:value={description}
 		/>
 		<Field
 			field={createAudience.fields.allowOptIn}
 			type="checkbox"
 			value={allowOptIn}
-			checkboxLabel={m.actions_create_audience_checkbox_label()}
-			description={m.actions_create_audience_description()}
+			checkboxLabel={m.actions_create_audience_checkbox_label_checkbox()}
+			description={m.actions_create_audience_description_body()}
 		/>
 	{/snippet}
 </Action>

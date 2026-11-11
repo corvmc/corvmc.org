@@ -288,7 +288,7 @@
 					// rendered; surface them without reporting a bug to Sentry.
 					await delay(150 - (performance.now() - start));
 					if (onfailure) onfailure(ctx.issues);
-					else toast.error(m.ui_form_fix_fields());
+					else toast.error(m.ui_form_fix_fields_toast());
 					status = 'error';
 				}
 			} catch (err) {

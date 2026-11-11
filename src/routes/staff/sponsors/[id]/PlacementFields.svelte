@@ -13,30 +13,30 @@
 	let chosen = $state<EventOption | null>(null);
 </script>
 
-<Field label={m.staff_show()} issues={fields.eventId.issues()}>
+<Field label={m.staff_show_label()} issues={fields.eventId.issues()}>
 	<SearchSelect
 		bind:value={chosen}
 		field={fields.eventId}
 		labelKey="title"
 		descriptionKey="when"
-		placeholder={m.staff_search_shows_by_name()}
+		placeholder={m.staff_search_shows_by_name_placeholder()}
 		search={(q) => searchEventsForPlacement(q)}
 	/>
 </Field>
 <Field
 	field={fields.onEventPage}
 	type="checkbox"
-	label={m.staff_event_page()}
+	label={m.staff_event_page_label()}
 	value={true}
-	checkboxLabel={m.staff_sponsors_id_placement_fields_credit_them_public_event()}
+	checkboxLabel={m.staff_sponsors_id_placement_fields_credit_them_public_event_checkbox()}
 />
 <Field
 	field={fields.inCampaign}
 	type="checkbox"
-	label={m.staff_email()}
+	label={m.staff_email_label()}
 	value={true}
-	checkboxLabel={m.staff_sponsors_id_placement_fields_credit_them_email_campaig()}
+	checkboxLabel={m.staff_sponsors_id_placement_fields_credit_them_email_campaig_checkbox()}
 />
 <p class="text-subtle">
-	{m.staff_sponsors_id_placement_fields_shown_only_while_sponsors()}
+	{m.staff_sponsors_id_placement_fields_shown_only_while_sponsors_text()}
 </p>

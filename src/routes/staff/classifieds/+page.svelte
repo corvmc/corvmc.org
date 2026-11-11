@@ -37,7 +37,7 @@
 	}));
 </script>
 
-<PageHeader title={m.staff_classifieds()} subtitle={m.staff_staff()}>
+<PageHeader title={m.staff_classifieds_title()} subtitle={m.staff_staff_body()}>
 	<TabBar
 		collapse
 		{tabs}
@@ -73,8 +73,8 @@
 	{#if tab === 'under_review'}
 		<p class="text-muted">
 			<ParaglideMessage
-				message={m.staff_classifieds_reported_posts_decided}
-				inputs={{ staff_content_flags: m.staff_content_flags() }}
+				message={m.staff_classifieds_reported_posts_decided_text}
+				inputs={{ staff_content_flags: m.staff_content_flags_text() }}
 				>{#snippet a({ children })}<a class="link" href={resolve('staff/moderation/flags')}
 						>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
@@ -82,14 +82,14 @@
 		</p>
 	{/if}
 
-	<DataList {result} empty={m.staff_classifieds_empty()} onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_classifieds_empty_body()} onpage={(p) => (page = p)}>
 		{#snippet children(rows)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_classifieds_post()}</th>
-					<th>{m.staff_classifieds_posted_by()}</th>
-					<th class="col-extra whitespace-nowrap">{m.staff_posted()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_classifieds_post_label()}</th>
+					<th>{m.staff_classifieds_posted_by_label()}</th>
+					<th class="col-extra whitespace-nowrap">{m.staff_posted_label()}</th>
 				{/snippet}
 				{#each rows as r (r.id)}
 					<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/classifieds/${r.id}`)}>

@@ -12,6 +12,6 @@
 <VendorCheckIn
 	{eventId}
 	parent={[
-		{ label: m.staff_vendors(), href: resolve('/staff/events/[id]/vendors', { id: eventId }) }
+		{ label: m.staff_vendors_label(), href: resolve('/staff/events/[id]/vendors', { id: eventId }) }
 	]}
 />

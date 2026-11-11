@@ -46,7 +46,7 @@
 <section class="space-y-4">
 	<div class="flex items-center gap-3">
 		<h2 class="text-lg font-semibold">
-			{m.band_slug_settings_custom_domain_section_custom_domain()}
+			{m.band_slug_settings_custom_domain_section_custom_domain_title()}
 		</h2>
 		<!-- Only meaningful once a domain is actually connected — a stored status
 		     with the feature switched off would read as a live domain. -->
@@ -59,7 +59,7 @@
 		<div class="alert">
 			<p class="text-sm">
 				<ParaglideMessage
-					message={m.band_slug_settings_custom_domain_section_custom_domains_aren}
+					message={m.band_slug_settings_custom_domain_section_custom_domains_aren_text}
 					inputs={{ freeAddress }}
 					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 						>{/snippet}</ParaglideMessage
@@ -71,7 +71,7 @@
 			{#if domain.status === 'active'}
 				<p class="text-sm">
 					<ParaglideMessage
-						message={m.band_slug_settings_custom_domain_section_site_live_at_point}
+						message={m.band_slug_settings_custom_domain_section_site_live_at_point_text}
 						inputs={{ domain: domain.domain, cnameTarget: domain.cnameTarget }}
 						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 							>{/snippet}{#snippet code({ children })}<code class="text-xs"
@@ -81,11 +81,11 @@
 				</p>
 			{:else if domain.status === 'failed'}
 				<p class="text-sm">
-					{m.band_slug_settings_custom_domain_section_we_couldn_t_verify()}
+					{m.band_slug_settings_custom_domain_section_we_couldn_t_verify_text()}
 				</p>
 			{:else}
 				<p class="text-sm">
-					{m.band_slug_settings_custom_domain_section_add_these_records_a()}
+					{m.band_slug_settings_custom_domain_section_add_these_records_a_text()}
 				</p>
 			{/if}
 
@@ -94,28 +94,28 @@
 					<table class="table table-sm">
 						<thead>
 							<tr
-								><th>{m.band_type()}</th><th>{m.band_name()}</th><th
-									>{m.band_slug_settings_custom_domain_section_value()}</th
+								><th>{m.band_type_label()}</th><th>{m.band_name_label()}</th><th
+									>{m.band_slug_settings_custom_domain_section_value_label()}</th
 								></tr
 							>
 						</thead>
 						<tbody>
 							{#if domain.verification.ownership}
 								<tr>
-									<td>{m.band_slug_settings_custom_domain_section_txt()}</td>
+									<td>{m.band_slug_settings_custom_domain_section_txt_text()}</td>
 									<td class="font-mono text-xs break-all">{domain.verification.ownership.name}</td>
 									<td class="font-mono text-xs break-all">{domain.verification.ownership.value}</td>
 								</tr>
 							{/if}
 							{#if domain.verification.ssl}
 								<tr>
-									<td>{m.band_slug_settings_custom_domain_section_txt()}</td>
+									<td>{m.band_slug_settings_custom_domain_section_txt_text()}</td>
 									<td class="font-mono text-xs break-all">{domain.verification.ssl.name}</td>
 									<td class="font-mono text-xs break-all">{domain.verification.ssl.value}</td>
 								</tr>
 							{/if}
 							<tr>
-								<td>{m.band_slug_settings_custom_domain_section_cname()}</td>
+								<td>{m.band_slug_settings_custom_domain_section_cname_text()}</td>
 								<td class="font-mono text-xs break-all">{domain.domain}</td>
 								<td class="font-mono text-xs break-all">{domain.verification.cnameTarget}</td>
 							</tr>
@@ -129,14 +129,14 @@
 					<Form
 						remote={refreshCustomDomain}
 						onsuccess={() => {
-							toast.success(m.band_slug_settings_custom_domain_section_status_updated());
+							toast.success(m.band_slug_settings_custom_domain_section_status_updated_toast());
 							refreshAll();
 						}}
 					>
 						<input {...refreshFields.slug.as('hidden', slug)} />
 						<SubmitButton
-							label={m.band_slug_settings_custom_domain_section_check_status()}
-							successLabel={m.band_slug_settings_custom_domain_section_checked()}
+							label={m.band_slug_settings_custom_domain_section_check_status_label()}
+							successLabel={m.band_slug_settings_custom_domain_section_checked_label()}
 							variant="default"
 							size="sm"
 							outline
@@ -146,14 +146,14 @@
 				<Form
 					remote={removeCustomDomain}
 					onsuccess={() => {
-						toast.success(m.band_slug_settings_custom_domain_section_custom_domain_remov());
+						toast.success(m.band_slug_settings_custom_domain_section_custom_domain_remov_toast());
 						refreshAll();
 					}}
 				>
 					<input {...removeFields.slug.as('hidden', slug)} />
 					<SubmitButton
-						label={m.band_remove()}
-						successLabel={m.band_removed()}
+						label={m.band_remove_label()}
+						successLabel={m.band_removed_label()}
 						variant="ghost"
 						size="sm"
 						class="text-error"
@@ -165,7 +165,7 @@
 		<InfoCard title={m.band_slug_settings_custom_domain_section_title()}>
 			<p class="text-sm">
 				<ParaglideMessage
-					message={m.band_slug_settings_custom_domain_section_serve_band_s_site_f}
+					message={m.band_slug_settings_custom_domain_section_serve_band_s_site_f_text}
 					inputs={{ freeAddress }}
 					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 						>{/snippet}</ParaglideMessage
@@ -174,7 +174,7 @@
 			<Form
 				remote={setCustomDomain}
 				onsuccess={() => {
-					toast.success(m.band_slug_settings_custom_domain_section_domain_added_add_dn());
+					toast.success(m.band_slug_settings_custom_domain_section_domain_added_add_dn_toast());
 					refreshAll();
 				}}
 			>
@@ -183,15 +183,15 @@
 					<FormField
 						field={setFields.domain}
 						type="text"
-						label={m.band_slug_settings_custom_domain_section_domain()}
+						label={m.band_slug_settings_custom_domain_section_domain_label()}
 						placeholder={m.band_slug_settings_custom_domain_section_placeholder()}
-						description={m.band_slug_settings_custom_domain_section_description()}
+						description={m.band_slug_settings_custom_domain_section_description_body()}
 						required
 					/>
 					<div class="flex justify-end">
 						<SubmitButton
-							label={m.band_slug_settings_custom_domain_section_add_domain()}
-							successLabel={m.band_slug_settings_custom_domain_section_added()}
+							label={m.band_slug_settings_custom_domain_section_add_domain_label()}
+							successLabel={m.band_slug_settings_custom_domain_section_added_label()}
 							variant="primary"
 							size="sm"
 						/>

@@ -31,8 +31,8 @@
 					<span class="recaps__meta">
 						{fullDate(recap.startsAt)} · {recap.photoCount}
 						{recap.photoCount === 1
-							? m.public_events_recent_recaps_photo()
-							: m.public_events_recent_recaps_photos()}
+							? m.public_events_recent_recaps_photo_text()
+							: m.public_events_recent_recaps_photos_text()}
 					</span>
 					{#if recap.excerpt}<span class="recaps__excerpt">{recap.excerpt}</span>{/if}
 				</a>

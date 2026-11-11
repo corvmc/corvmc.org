@@ -51,12 +51,12 @@
 	});
 </script>
 
-<PageHeader width="3xl" title={m.staff_locations()} subtitle={m.staff_inventory()} />
+<PageHeader width="3xl" title={m.staff_locations_title()} subtitle={m.staff_inventory_body()} />
 
 <PageContent width="3xl">
 	{#if data.locations.length === 0}
 		<Alert type="info" class="mb-4">
-			{m.staff_inventory_locations_nothing_has_home_yet_name()}
+			{m.staff_inventory_locations_nothing_has_home_yet_name_body()}
 		</Alert>
 	{/if}
 
@@ -65,8 +65,8 @@
 			{#if data.locations.length > 0}
 				<Table>
 					{#snippet head()}
-						<th>{m.staff_location()}</th>
-						<th class="cell-num">{m.staff_units()}</th>
+						<th>{m.staff_location_label()}</th>
+						<th class="cell-num">{m.staff_units_label()}</th>
 					{/snippet}
 					{#each rows as row (row.id)}
 						<tr class="hover">
@@ -85,12 +85,12 @@
 					{#if data.unassignedCount > 0}
 						<tr class="hover">
 							<td class="cell-primary">
-								<span class="font-medium">{m.staff_unassigned()}</span>
+								<span class="font-medium">{m.staff_unassigned_text()}</span>
 								<Badge variant="warning" size="xs"
-									>{m.staff_inventory_locations_needs_filing()}</Badge
+									>{m.staff_inventory_locations_needs_filing_label()}</Badge
 								>
 								<div class="text-subtle">
-									{m.staff_inventory_locations_units_entered_before_location_exis()}
+									{m.staff_inventory_locations_units_entered_before_location_exis_text()}
 								</div>
 							</td>
 							<td class="cell-num">{data.unassignedCount}</td>
@@ -101,28 +101,28 @@
 			{/if}
 		</div>
 
-		<InfoCard title={m.staff_inventory_locations_add_location()}>
+		<InfoCard title={m.staff_inventory_locations_add_location_title()}>
 			<Form remote={addLocation} successToast={m.staff_inventory_locations_success_toast()}>
-				<Field field={fields.name} type="text" label={m.staff_name()} />
+				<Field field={fields.name} type="text" label={m.staff_name_label()} />
 				<Field
 					field={fields.parentId}
 					type="select"
-					label={m.staff_inventory_locations_inside()}
+					label={m.staff_inventory_locations_inside_label()}
 					options={[
-						{ value: '', label: m.staff_inventory_locations_nothing_its_own_place() },
+						{ value: '', label: m.staff_inventory_locations_nothing_its_own_place_label() },
 						...rows.map((r) => ({ value: r.id, label: r.path.join(' → ') }))
 					]}
 				/>
-				<Field field={fields.notes} type="textarea" label={m.staff_notes()} />
+				<Field field={fields.notes} type="textarea" label={m.staff_notes_label()} />
 				<Field
 					field={fields.displayOrder}
 					type="number"
-					label={m.staff_order_2()}
+					label={m.staff_order_2_label()}
 					value={0}
 					min="0"
 				/>
 				<div class="mt-3">
-					<SubmitButton label={m.staff_inventory_locations_add_location_2()} />
+					<SubmitButton label={m.staff_inventory_locations_add_location_2_label()} />
 				</div>
 			</Form>
 		</InfoCard>

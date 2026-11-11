@@ -47,14 +47,14 @@
 	<FormField
 		field={fields.firstName}
 		type="text"
-		label={m.volunteer_profile_fields_first_name()}
+		label={m.volunteer_profile_fields_first_name_label()}
 		value={firstName}
 		required
 	/>
 	<FormField
 		field={fields.lastName}
 		type="text"
-		label={m.volunteer_profile_fields_last_name()}
+		label={m.volunteer_profile_fields_last_name_label()}
 		value={lastName}
 		required
 	/>
@@ -63,7 +63,7 @@
 <FormField
 	field={fields.pronouns}
 	type="text"
-	label={m.volunteer_profile_fields_pronouns()}
+	label={m.volunteer_profile_fields_pronouns_label()}
 	value={pronouns}
 	placeholder={m.volunteer_profile_fields_placeholder()}
 />
@@ -71,10 +71,10 @@
 <FormField
 	field={fields.phone}
 	type="tel"
-	label={m.volunteer_profile_fields_phone()}
+	label={m.volunteer_profile_fields_phone_label()}
 	value={phone}
 	placeholder="(541) 555-0123"
-	description={m.volunteer_profile_fields_description()}
+	description={m.volunteer_profile_fields_description_body()}
 />
 
 <!--
@@ -84,14 +84,14 @@
 -->
 <FormField
 	type="email"
-	label={m.volunteer_profile_fields_email()}
+	label={m.volunteer_profile_fields_email_label()}
 	value={email}
 	readonly
 	description={emailHint}
 />
 
 {#snippet emailHint()}
-	<ParaglideMessage message={m.volunteer_profile_fields_change} inputs={{}}
+	<ParaglideMessage message={m.volunteer_profile_fields_change_body} inputs={{}}
 		>{#snippet a({ children })}<a href={resolve('member/account')} class="link link-primary"
 				>{@render children?.()}</a
 			>{/snippet}</ParaglideMessage

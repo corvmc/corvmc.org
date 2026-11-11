@@ -42,8 +42,8 @@
 
 <Action
 	action={uploadDocument}
-	label={m.groups_document_upload_add_document()}
-	modalTitle={m.groups_document_upload_add_document()}
+	label={m.groups_document_upload_add_document_label()}
+	modalTitle={m.groups_document_upload_add_document_title()}
 	submitLabel={m.groups_document_upload_submit_label()}
 	successToast={m.groups_document_upload_success_toast()}
 	variant="primary"
@@ -57,19 +57,19 @@
 			<FormField
 				field={fields.file}
 				type="file"
-				label={m.groups_file()}
+				label={m.groups_file_label()}
 				accept={ACCEPT}
-				emptyLabel={m.groups_document_upload_empty_label()}
+				emptyLabel={m.groups_document_upload_empty_label_title()}
 				replaceLabel={m.groups_document_upload_replace_label()}
-				description={m.groups_document_upload_pdf_image_text_csv_word()}
+				description={m.groups_document_upload_pdf_image_text_csv_word_body()}
 				required
 			/>
 			<FormField
 				field={fields.description}
 				type="text"
-				label={m.groups_document_upload_description()}
+				label={m.groups_document_upload_description_label()}
 				placeholder={m.groups_document_upload_placeholder()}
-				description={m.groups_document_upload_optional_what_people_who_did()}
+				description={m.groups_document_upload_optional_what_people_who_did_body()}
 			/>
 		</div>
 	{/snippet}

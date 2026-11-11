@@ -31,7 +31,7 @@
 
 <Action
 	action={bookAndPayReservation}
-	label={m.member_reserve_space()}
+	label={m.member_reserve_space_label()}
 	data-testid="book-space"
 	modalTitle={m.member_reservations_create_modal_modal_title()}
 	noFooter
@@ -51,7 +51,7 @@
 			await goToCheckout(r.redirectUrl);
 		} else {
 			if (r?.waitlisted) {
-				toast.info(m.member_first_instance_waitlisted_because_slot());
+				toast.info(m.member_first_instance_waitlisted_because_slot_toast());
 			}
 			// Booked outside the window: held, with nothing priced (#2108). Saying so is the point:
 			// this outcome used to arrive as a 400 nobody rendered, over a held
@@ -60,8 +60,8 @@
 				const opens = r.confirmOpensAt ? formatDate(new Date(r.confirmOpensAt)) : null;
 				toast.info(
 					opens
-						? m.member_reservations_create_modal_room_held_pay_any_time({ opens })
-						: m.member_reservations_create_modal_room_held_pay_any_time_2()
+						? m.member_reservations_create_modal_room_held_pay_any_time_toast({ opens })
+						: m.member_reservations_create_modal_room_held_pay_any_time_2_toast()
 				);
 			}
 			onbooked?.();

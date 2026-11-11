@@ -90,7 +90,7 @@
 			variant="ghost"
 			size="xs"
 			shape="square"
-			aria-label={msg.public_calendar_mini_calendar_previous_month()}
+			aria-label={msg.public_calendar_mini_calendar_previous_month_label()}
 			onclick={() => shiftMonth(-1)}
 		>
 			<IconChevronLeft size={16} />
@@ -101,7 +101,7 @@
 			variant="ghost"
 			size="xs"
 			shape="square"
-			aria-label={msg.public_calendar_mini_calendar_next_month()}
+			aria-label={msg.public_calendar_mini_calendar_next_month_label()}
 			onclick={() => shiftMonth(1)}
 		>
 			<IconChevronRight size={16} />
@@ -123,7 +123,7 @@
 					class:mini-cal__day--out={date.month !== monthNumber}
 					class:mini-cal__day--today={key === todayStr}
 					class:mini-cal__day--anchor={key === anchor}
-					aria-label={msg.public_calendar_mini_calendar_jump({ key })}
+					aria-label={msg.public_calendar_mini_calendar_jump_label({ key })}
 				>
 					{date.day}
 					{#if dot}

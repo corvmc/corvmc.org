@@ -43,7 +43,7 @@
 			/>
 			<span class="text-sm">{a.name}</span>
 			{#if a.systemKey}
-				<span class="badge badge-xs badge-info">{m.staff_built()}</span>
+				<span class="badge badge-xs badge-info">{m.staff_built_label()}</span>
 			{/if}
 			<span class="text-subtle">({a.subscriberCount})</span>
 		</label>
@@ -51,6 +51,6 @@
 </div>
 {#if selected.length > 0}
 	<p class="mt-1 text-subtle">
-		{m.staff_marketing_campaigns_audience_picker_recipients_before({ total })}
+		{m.staff_marketing_campaigns_audience_picker_recipients_before_text({ total })}
 	</p>
 {/if}

@@ -59,10 +59,10 @@
 			{#if canEdit && roles.length > 0}
 				<Action
 					action={createCommitteeRecurringWork}
-					label={m.member_groups_slug_committee_recurring_work_add()}
-					modalTitle={m.member_groups_slug_committee_recurring_work_add_recurring_wo()}
-					submitLabel={m.member_groups_slug_committee_recurring_work_add()}
-					successToast={m.member_groups_slug_committee_recurring_work_recurring_work_a()}
+					label={m.member_groups_slug_committee_recurring_work_add_label()}
+					modalTitle={m.member_groups_slug_committee_recurring_work_add_recurring_wo_title()}
+					submitLabel={m.member_groups_slug_committee_recurring_work_add_label()}
+					successToast={m.member_groups_slug_committee_recurring_work_recurring_work_a_toast()}
 					variant="ghost"
 					size="sm"
 				>
@@ -71,35 +71,35 @@
 						<Field
 							field={fields.name}
 							type="text"
-							label={m.member_name()}
+							label={m.member_name_label()}
 							placeholder={m.member_groups_slug_committee_recurring_work_placeholder()}
 						/>
 						<Field
 							field={fields.volunteerRoleId}
 							type="select"
-							label={m.member_role()}
+							label={m.member_role_label()}
 							options={roles}
 						/>
 						<Field
 							field={fields.intervalDays}
 							type="number"
-							label={m.member_groups_slug_committee_recurring_work_repeat_every_day()}
+							label={m.member_groups_slug_committee_recurring_work_repeat_every_day_label()}
 							value="7"
-							description={m.member_groups_slug_committee_recurring_work_counted_from_whe()}
+							description={m.member_groups_slug_committee_recurring_work_counted_from_whe_body()}
 						/>
 						<Field
 							field={fields.firstDueOn}
 							type="date"
-							label={m.member_groups_slug_committee_recurring_work_first_one_due()}
+							label={m.member_groups_slug_committee_recurring_work_first_one_due_label()}
 							value={firstDue}
 						/>
 						<Field
 							field={fields.capacity}
 							type="number"
-							label={m.member_groups_slug_committee_recurring_work_how_many_people()}
+							label={m.member_groups_slug_committee_recurring_work_how_many_people_label()}
 							value="1"
 						/>
-						<Field field={fields.notes} type="textarea" label={m.member_what_needs_doing()} />
+						<Field field={fields.notes} type="textarea" label={m.member_what_needs_doing_label()} />
 					{/snippet}
 				</Action>
 			{/if}
@@ -107,15 +107,17 @@
 	{/snippet}
 
 	{#if schedules.length === 0}
-		<EmptyState description={m.member_groups_slug_committee_recurring_work_work_committee_d()} />
+		<EmptyState
+			description={m.member_groups_slug_committee_recurring_work_work_committee_d_body()}
+		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">{m.member_status()}</span></th>
-				<th>{m.member_name()}</th>
-				<th>{m.member_groups_slug_committee_recurring_work_repeats()}</th>
-				<th>{m.member_groups_slug_committee_recurring_work_next_due()}</th>
-				{#if canEdit}<th><span class="sr-only">{m.member_actions()}</span></th>{/if}
+				<th class="w-px"><span class="sr-only">{m.member_status_label()}</span></th>
+				<th>{m.member_name_label()}</th>
+				<th>{m.member_groups_slug_committee_recurring_work_repeats_label()}</th>
+				<th>{m.member_groups_slug_committee_recurring_work_next_due_label()}</th>
+				{#if canEdit}<th><span class="sr-only">{m.member_actions_label()}</span></th>{/if}
 			{/snippet}
 			{#each schedules as s (s.id)}
 				<tr>
@@ -140,22 +142,22 @@
 								{@const retire = retireCommitteeRecurringWork.for(s.id)}
 								<Action
 									action={retire}
-									label={m.member_groups_slug_committee_recurring_work_retire()}
+									label={m.member_groups_slug_committee_recurring_work_retire_label()}
 									aria-label={m.member_groups_slug_committee_recurring_work_aria_label({
 										name: s.name
 									})}
 									variant="ghost"
 									size="xs"
-									modalTitle={m.member_groups_slug_committee_recurring_work_retire_recurring()}
-									submitLabel={m.member_groups_slug_committee_recurring_work_retire()}
+									modalTitle={m.member_groups_slug_committee_recurring_work_retire_recurring_title()}
+									submitLabel={m.member_groups_slug_committee_recurring_work_retire_label()}
 									submitVariant="error"
-									successToast={m.member_groups_slug_committee_recurring_work_retired()}
+									successToast={m.member_groups_slug_committee_recurring_work_retired_toast()}
 								>
 									{#snippet form()}
 										<input {...retire.fields.id.as('hidden', s.id)} />
 										<p>
 											<ParaglideMessage
-												message={m.member_groups_slug_committee_recurring_work_stop_writing_new}
+												message={m.member_groups_slug_committee_recurring_work_stop_writing_new_text}
 												inputs={{ name: s.name }}
 												>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 													>{/snippet}</ParaglideMessage

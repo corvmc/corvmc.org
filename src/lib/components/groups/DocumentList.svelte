@@ -48,7 +48,7 @@
 		<!-- Managers only. A member who cannot upload has no use for a number
 		     describing a limit they will never meet. -->
 		<span class="text-subtle">
-			{m.groups_document_list_documents({
+			{m.groups_document_list_documents_text({
 				formatBytes: formatBytes(usage.usedBytes),
 				formatBytes2: formatBytes(usage.quotaBytes),
 				fileCount: usage.fileCount,
@@ -62,18 +62,18 @@
 {#if files.length === 0}
 	<EmptyState
 		description={canManage
-			? m.groups_document_list_nothing_here_yet_upload_minutes()
-			: m.groups_document_list_nothing_here_yet()}
+			? m.groups_document_list_nothing_here_yet_upload_minutes_body()
+			: m.groups_document_list_nothing_here_yet_body()}
 	/>
 {:else}
 	<Table>
 		{#snippet head()}
-			<th>{m.groups_file()}</th>
-			<th class="col-support">{m.groups_document_list_added_by()}</th>
-			<th class="col-support w-px whitespace-nowrap">{m.groups_document_list_size()}</th>
-			<th class="col-extra w-px whitespace-nowrap">{m.groups_added()}</th>
+			<th>{m.groups_file_label()}</th>
+			<th class="col-support">{m.groups_document_list_added_by_label()}</th>
+			<th class="col-support w-px whitespace-nowrap">{m.groups_document_list_size_label()}</th>
+			<th class="col-extra w-px whitespace-nowrap">{m.groups_added_label()}</th>
 			{#if canManage}
-				<th class="w-px"><span class="sr-only">{m.groups_document_list_actions()}</span></th>
+				<th class="w-px"><span class="sr-only">{m.groups_document_list_actions_label()}</span></th>
 			{/if}
 		{/snippet}
 		{#each files as doc (doc.id)}
@@ -97,7 +97,7 @@
 					{#if doc.uploadedBy}
 						<EntityIdentity ref={doc.uploadedBy} size="sm" />
 					{:else}
-						<span class="text-subtle">{m.groups_former_member()}</span>
+						<span class="text-subtle">{m.groups_former_member_text()}</span>
 					{/if}
 				</td>
 				<td class="col-support w-px whitespace-nowrap">{formatBytes(doc.sizeBytes)}</td>
@@ -106,11 +106,11 @@
 					<td class="w-px">
 						<Action
 							action={deleteDocument.for(doc.id)}
-							label={m.groups_delete()}
+							label={m.groups_delete_label()}
 							modalTitle={m.groups_document_list_modal_title()}
-							submitLabel={m.groups_delete()}
-							confirm={m.groups_document_list_confirm({ filename: doc.filename })}
-							successToast={m.groups_deleted()}
+							submitLabel={m.groups_delete_label()}
+							confirm={m.groups_document_list_confirm_body({ filename: doc.filename })}
+							successToast={m.groups_deleted_toast()}
 							variant="error"
 							size="xs"
 							outline

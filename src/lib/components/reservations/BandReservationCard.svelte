@@ -75,7 +75,7 @@
 			size="xs"
 			outline
 		>
-			{m.reservations_band_reservation_card_pay_online()}
+			{m.reservations_band_reservation_card_pay_online_label()}
 		</Button>
 	{/if}
 {/snippet}
@@ -89,7 +89,7 @@
 		<EntityIdentity ref={reservation.ref} size="md">
 			{#snippet subtitle()}
 				{reservation.ref.subtitle}
-				{#if reservation.bookedBy.id}{m.reservations_band_reservation_card_booked_by({
+				{#if reservation.bookedBy.id}{m.reservations_band_reservation_card_booked_by_body({
 						title: reservation.bookedBy.title
 					})}
 				{/if}

@@ -34,15 +34,15 @@
 <PageHeader
 	width="md"
 	title={session.driver === 'fake'
-		? m.public_checkout_id_test_checkout()
-		: m.public_checkout_id_checkout()}
-	subtitle={session.driver === 'fake' ? m.public_checkout_id_subtitle() : undefined}
+		? m.public_checkout_id_test_checkout_title()
+		: m.public_checkout_id_checkout_title()}
+	subtitle={session.driver === 'fake' ? m.public_checkout_id_subtitle_body() : undefined}
 />
 
 <PageContent width="md">
 	{#if session.driver === 'fake'}
 		<Alert type="warning">
-			{m.public_checkout_id_no_money_moves_here_page()}
+			{m.public_checkout_id_no_money_moves_here_page_body()}
 		</Alert>
 
 		<div class="h-4"></div>
@@ -53,14 +53,14 @@
 			<div class="flex items-baseline justify-between">
 				<span class="text-muted"
 					>{session.mode === 'subscription'
-						? m.public_checkout_id_due_today()
-						: m.public_checkout_id_total()}</span
+						? m.public_checkout_id_due_today_text()
+						: m.public_checkout_id_total_text()}</span
 				>
 				<span class="text-3xl font-bold">{total}</span>
 			</div>
 			{#if session.amountSubtotal !== session.amountTotal}
 				<p class="mt-1 text-muted text-sm">
-					{m.public_checkout_id_before_credits({
+					{m.public_checkout_id_before_credits_text({
 						money: money(session.amountSubtotal, session.currency)
 					})}
 				</p>
@@ -68,21 +68,21 @@
 
 			{#if session.status === 'complete'}
 				<div class="mt-4">
-					<Alert type="success">{m.public_checkout_id_session_has_already_been_paid()}</Alert>
+					<Alert type="success">{m.public_checkout_id_session_has_already_been_paid_body()}</Alert>
 				</div>
 			{:else if session.driver === 'fake'}
 				<div class="mt-6">
 					<Form remote={payFakeCheckout}>
 						<input {...fields.sessionId.as('hidden', sessionId)} />
 						<FormField
-							label={m.public_checkout_id_card_number()}
+							label={m.public_checkout_id_card_number_label()}
 							name="cardNumber"
 							type="text"
 							field={fields.cardNumber}
-							description={m.public_checkout_id_description()}
+							description={m.public_checkout_id_description_body()}
 						/>
 						<SubmitButton
-							label={m.public_checkout_id_pay({ total })}
+							label={m.public_checkout_id_pay_label({ total })}
 							successLabel={m.public_checkout_id_success_label()}
 						/>
 					</Form>
@@ -101,14 +101,14 @@
 				<div class="mt-4">
 					<!-- A `hosted_page` session reached by its id rather than its Stripe URL.
 					     Nothing to mount, and no way to recover it from here. -->
-					<Alert type="error">{m.public_checkout_id_checkout_can_t_completed_page()}</Alert>
+					<Alert type="error">{m.public_checkout_id_checkout_can_t_completed_page_body()}</Alert>
 				</div>
 			{/if}
 
 			{#if session.cancelUrl && session.status !== 'complete'}
 				<div class="mt-6">
 					<Button href={session.cancelUrl} variant="ghost" size="sm"
-						>{m.public_checkout_id_cancel_go_back()}</Button
+						>{m.public_checkout_id_cancel_go_back_label()}</Button
 					>
 				</div>
 			{/if}

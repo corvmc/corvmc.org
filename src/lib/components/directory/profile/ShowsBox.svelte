@@ -57,7 +57,7 @@
 				class:is-active={tab === 'upcoming'}
 				onclick={() => (tab = 'upcoming')}
 			>
-				{m.directory_profile_shows_box_upcoming()}
+				{m.directory_profile_shows_box_upcoming_label()}
 			</button>
 			<button
 				type="button"
@@ -65,7 +65,7 @@
 				class:is-active={tab === 'past'}
 				onclick={() => (tab = 'past')}
 			>
-				{m.directory_profile_shows_box_past({ pastCount })}
+				{m.directory_profile_shows_box_past_label({ pastCount })}
 			</button>
 		</div>
 	{/snippet}
@@ -74,7 +74,7 @@
 		{#if upcoming.length > 0}
 			<GigList events={upcoming} {eventBase} />
 		{:else}
-			<p class="shows__empty">{m.directory_profile_shows_box_no_upcoming_dates()}</p>
+			<p class="shows__empty">{m.directory_profile_shows_box_no_upcoming_dates_text()}</p>
 		{/if}
 	{:else if pastRows.length > 0}
 		<GigList events={pastRows} {eventBase} />
@@ -82,13 +82,13 @@
 			<div class="shows__more">
 				<Button type="button" variant="ghost" size="sm" disabled={loading} onclick={showMore}>
 					{loading
-						? m.directory_profile_shows_box_loading()
-						: m.directory_profile_shows_box_show_more()}
+						? m.directory_profile_shows_box_loading_label()
+						: m.directory_profile_shows_box_show_more_label()}
 				</Button>
 			</div>
 		{/if}
 	{:else}
-		<p class="shows__empty">{m.directory_profile_shows_box_no_past_shows_yet()}</p>
+		<p class="shows__empty">{m.directory_profile_shows_box_no_past_shows_yet_text()}</p>
 	{/if}
 </ProfileSection>
 

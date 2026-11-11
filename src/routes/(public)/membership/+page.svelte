@@ -42,29 +42,29 @@
 	const benefits = [
 		{
 			icon: IconClock,
-			title: m.public_membership_free_practice_hours(),
-			desc: m.public_membership_monthly_allotment_free_rehearsal_time()
+			title: m.public_membership_free_practice_hours_title(),
+			desc: m.public_membership_monthly_allotment_free_rehearsal_time_body()
 		},
 		{
 			icon: IconCalendarRepeat,
-			title: m.public_membership_recurring_reservations(),
-			desc: m.public_membership_lock_standing_weekly_practice_slot()
+			title: m.public_membership_recurring_reservations_title(),
+			desc: m.public_membership_lock_standing_weekly_practice_slot_body()
 		},
 		{
 			icon: IconTicket,
-			title: m.public_membership_member_events(),
-			desc: m.public_membership_invites_member_only_events_show()
+			title: m.public_membership_member_events_title(),
+			desc: m.public_membership_invites_member_only_events_show_body()
 		},
 		{
 			icon: IconDeviceSpeaker,
-			title: m.public_membership_gear_perks(),
-			desc: m.public_membership_free_accessory_loans_reduced_rates()
+			title: m.public_membership_gear_perks_title(),
+			desc: m.public_membership_free_accessory_loans_reduced_rates_body()
 		}
 	];
 </script>
 
 <svelte:head>
-	<title>{m.public_membership_membership_corvallis_music_collective()}</title>
+	<title>{m.public_membership_membership_corvallis_music_collective_title()}</title>
 	<meta
 		name="description"
 		content="A free account gets you started at the Corvallis Music Collective. Sustaining membership is a sliding-scale monthly contribution that supports the space and unlocks free practice hours and more."
@@ -72,57 +72,59 @@
 </svelte:head>
 
 <!-- Hero -->
-<Hero title={m.public_become_member()}>
-	{m.public_membership_free_account_gets_door_sustaining()}
+<Hero title={m.public_become_member_title()}>
+	{m.public_membership_free_account_gets_door_sustaining_text()}
 </Hero>
 
 <!-- Free vs Sustaining -->
 <Section>
 	<div class="mb-10 text-center">
-		<h2 class="mb-3 text-4xl font-bold tracking-tight">{m.public_membership_two_ways_belong()}</h2>
+		<h2 class="mb-3 text-4xl font-bold tracking-tight">
+			{m.public_membership_two_ways_belong_title()}
+		</h2>
 		<p class="mx-auto max-w-2xl text-base leading-relaxed text-fg-2">
-			{m.public_membership_everyone_starts_with_free_account()}
+			{m.public_membership_everyone_starts_with_free_account_text()}
 		</p>
 	</div>
 	<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 		<!-- Free -->
 		<Tile align="stack" gap="4" pad="lg">
 			<div>
-				<div class="text-3xl font-bold">{m.public_membership_free_account()}</div>
-				<div class="text-sm text-fg-3">{m.public_membership_always_free()}</div>
+				<div class="text-3xl font-bold">{m.public_membership_free_account_text()}</div>
+				<div class="text-sm text-fg-3">{m.public_membership_always_free_text()}</div>
 			</div>
 			<p class="text-muted leading-relaxed">
-				{m.public_membership_create_account_use_basics_book()}
+				{m.public_membership_create_account_use_basics_book_text()}
 			</p>
 			<ul class="space-y-2 text-muted">
-				<li>{m.public_membership_reserve_practice_space_hourly()}</li>
-				<li>{m.public_membership_member_directory_access()}</li>
-				<li>{m.public_membership_rsvp_events()}</li>
+				<li>{m.public_membership_reserve_practice_space_hourly_text()}</li>
+				<li>{m.public_membership_member_directory_access_text()}</li>
+				<li>{m.public_membership_rsvp_events_text()}</li>
 			</ul>
 			<Button
 				href={signInHref({ register: true, returnTo: '/member' })}
 				variant="default"
 				outline
-				class="mt-auto">{m.public_membership_create_account()}</Button
+				class="mt-auto">{m.public_membership_create_account_label()}</Button
 			>
 		</Tile>
 
 		<!-- Sustaining -->
 		<Tile align="stack" gap="4" pad="lg" fill="navy">
 			<div>
-				<div class="text-3xl font-bold">{m.public_membership_sustaining_member()}</div>
+				<div class="text-3xl font-bold">{m.public_membership_sustaining_member_text()}</div>
 				<div class="text-sm" style="opacity: 0.85">
-					{m.public_membership_from_10_month_sliding_scale()}
+					{m.public_membership_from_10_month_sliding_scale_text()}
 				</div>
 			</div>
 			<p class="text-sm leading-relaxed" style="opacity: 0.9">
-				{m.public_membership_recurring_contribution_supports_space_unlo()}
+				{m.public_membership_recurring_contribution_supports_space_unlo_text()}
 			</p>
 			<ul class="space-y-2 text-sm" style="opacity: 0.9">
-				<li>{m.public_membership_everything_free_account()}</li>
-				<li>{m.public_membership_free_practice_hours_every_month()}</li>
-				<li>{m.public_membership_recurring_reservations_2()}</li>
-				<li>{m.public_membership_gear_perks_member_only_events()}</li>
+				<li>{m.public_membership_everything_free_account_text()}</li>
+				<li>{m.public_membership_free_practice_hours_every_month_text()}</li>
+				<li>{m.public_membership_recurring_reservations_2_text()}</li>
+				<li>{m.public_membership_gear_perks_member_only_events_text()}</li>
 			</ul>
 			<Button
 				href={signInHref({ register: true, returnTo: '/member/membership' })}
@@ -130,7 +132,7 @@
 				size="sm"
 				class="mt-auto"
 			>
-				{m.public_become_sustaining_member()}
+				{m.public_become_sustaining_member_label()}
 			</Button>
 		</Tile>
 	</div>
@@ -138,7 +140,7 @@
 
 <!-- Benefits -->
 <Section tint="secondary">
-	<SectionHeading title={m.public_membership_what_sustaining_members_get()} />
+	<SectionHeading title={m.public_membership_what_sustaining_members_get_title()} />
 	<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
 		{#each benefits as item (item.title)}
 			<Tile fill="raised">
@@ -156,10 +158,10 @@
 <Section>
 	<div class="mb-10 text-center">
 		<h2 class="mb-3 text-4xl font-bold tracking-tight">
-			{m.public_membership_pick_contribution()}
+			{m.public_membership_pick_contribution_title()}
 		</h2>
 		<p class="mx-auto max-w-2xl text-base leading-relaxed text-fg-2">
-			<ParaglideMessage message={m.public_membership_s_sliding_scale_every_earns} inputs={{}}
+			<ParaglideMessage message={m.public_membership_s_sliding_scale_every_earns_text} inputs={{}}
 				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 					>{/snippet}</ParaglideMessage
 			>
@@ -170,7 +172,7 @@
 			<Tile pad="lg" gap="none" fill={tier.featured ? 'orange' : 'surface'}>
 				<div class="mb-1 text-5xl leading-none font-bold">{tier.amount}</div>
 				<div class="mb-3 text-xs" style={tier.featured ? 'opacity: 0.85' : 'color: var(--fg-3)'}>
-					{m.public_membership_per_month()}
+					{m.public_membership_per_month_text()}
 				</div>
 				<div
 					class="mb-3 text-sm font-bold tracking-widest uppercase"
@@ -194,13 +196,13 @@
 						? 'background: var(--cmc-navy); color: #fff; border-color: rgba(0,0,0,0.3)'
 						: ''}
 				>
-					{m.public_become_member()}
+					{m.public_become_member_label()}
 				</Button>
 			</Tile>
 		{/each}
 	</div>
 	<p class="mt-8 text-center text-sm text-fg-3">
-		<ParaglideMessage message={m.public_membership_not_looking_join_monthly_there} inputs={{}}
+		<ParaglideMessage message={m.public_membership_not_looking_join_monthly_there_text} inputs={{}}
 			>{#snippet a({ children })}<a href={resolve('contribute')} class="text-cmc-teal underline"
 					>{@render children?.()}</a
 				>{/snippet}</ParaglideMessage

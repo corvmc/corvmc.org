@@ -35,14 +35,14 @@
 	const { fields } = updateMemberRemote;
 
 	const roleOptions = [
-		{ value: 'member', label: m.band_role_member() },
-		{ value: 'admin', label: m.band_admin() }
+		{ value: 'member', label: m.band_role_member_label() },
+		{ value: 'admin', label: m.band_admin_label() }
 	];
 </script>
 
 <Action
 	action={update}
-	label={m.band_slug_members_edit_member_edit()}
+	label={m.band_slug_members_edit_member_edit_label()}
 	modalTitle={m.band_slug_members_edit_member_modal_title({ memberName })}
 	variant="ghost"
 	size="xs"
@@ -56,18 +56,18 @@
 			<FormField
 				field={fields.role}
 				type="select"
-				label={m.band_role()}
+				label={m.band_role_label()}
 				value={role}
 				options={roleOptions}
-				description={m.band_slug_members_edit_member_description()}
+				description={m.band_slug_members_edit_member_description_body()}
 			/>
 			<FormField
 				field={fields.position}
 				type="text"
-				label={m.band_instrument_role()}
+				label={m.band_instrument_role_label()}
 				value={position ?? ''}
 				maxlength="100"
-				placeholder={m.band_e_g_bass()}
+				placeholder={m.band_e_g_bass_placeholder()}
 			/>
 		</div>
 	{/snippet}

@@ -137,7 +137,7 @@
 						target="_blank"
 						class="btn btn-primary btn-sm"
 					>
-						<IconExternalLink size={14} />{m.directory_instructor_card_book_lesson()}
+						<IconExternalLink size={14} />{m.directory_instructor_card_book_lesson_text()}
 					</a>
 				{/if}
 			</div>

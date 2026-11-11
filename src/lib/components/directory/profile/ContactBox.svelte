@@ -23,7 +23,9 @@
 
 {#if hasAny}
 	<ProfileSection
-		title={kind === 'booking' ? m.directory_profile_booking() : m.directory_profile_contact()}
+		title={kind === 'booking'
+			? m.directory_profile_booking_title()
+			: m.directory_profile_contact_title()}
 		{note}
 	>
 		<div class="contact">

@@ -23,7 +23,7 @@
 
 <Action
 	{action}
-	label={m.public_i_ll_bring()}
+	label={m.public_i_ll_bring_label()}
 	aria-label={m.public_contribute_guest_pledge_aria_label({ entryName })}
 	modalTitle={m.public_contribute_guest_pledge_modal_title({ entryName })}
 	submitLabel={m.public_contribute_guest_pledge_submit_label()}
@@ -37,10 +37,10 @@
 		<input {...action.fields.subjectType.as('hidden', subjectType)} />
 		<input {...action.fields.subjectId.as('hidden', subjectId)} />
 		<p class="text-muted text-sm">
-			{m.public_contribute_guest_pledge_staff_will_expect_30_days()}
+			{m.public_contribute_guest_pledge_staff_will_expect_30_days_text()}
 		</p>
-		<Field field={action.fields.name} type="text" label={m.public_name_2()} />
-		<Field field={action.fields.email} type="email" label={m.public_email_2()} />
+		<Field field={action.fields.name} type="text" label={m.public_name_2_label()} />
+		<Field field={action.fields.email} type="email" label={m.public_email_2_label()} />
 		<Turnstile
 			siteKey={TURNSTILE_SITE_KEY}
 			responseFieldName={action.fields.turnstileToken.as('hidden', '').name}

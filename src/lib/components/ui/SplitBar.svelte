@@ -171,7 +171,7 @@
 		<div
 			role="slider"
 			tabindex="0"
-			aria-label={m.ui_split_share({ label: valueLabel })}
+			aria-label={m.ui_split_share_label({ label: valueLabel })}
 			aria-valuemin={0}
 			aria-valuemax={maxValue}
 			aria-valuenow={clamped}
@@ -249,7 +249,7 @@
 
 	<!-- The accessible and fine-grained path: everything the drag does, typed. -->
 	<details>
-		<summary class="cursor-pointer text-muted">{m.ui_split_adjust()}</summary>
+		<summary class="cursor-pointer text-muted">{m.ui_split_adjust_label()}</summary>
 		<div class="mt-2 flex flex-wrap items-end gap-3">
 			<!-- Whole cents, matching the drag: it snaps to the cent, and the share
 			     this opens at is a percentage of an arbitrary total. A coarser `step`
@@ -257,7 +257,7 @@
 			     inside a closed `<details>` blocks the surrounding form's submit with
 			     nothing focusable and nothing shown. -->
 			<label class="flex flex-col">
-				<span class="text-subtle">{m.ui_split_dollars({ label: valueLabel })}</span>
+				<span class="text-subtle">{m.ui_split_dollars_label({ label: valueLabel })}</span>
 				<input
 					type="number"
 					class="input w-28 input-sm"
@@ -272,7 +272,7 @@
 				/>
 			</label>
 			<button type="button" class="btn btn-ghost btn-sm" onclick={() => onchange(0)}>
-				{m.ui_none()}
+				{m.ui_none_label()}
 			</button>
 		</div>
 	</details>

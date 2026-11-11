@@ -29,37 +29,37 @@
 
 			<p class="text-muted">
 				{#if data.state === 'scheduled' && data.scheduledFor}
-					{m.staff_members_id_panels_orientation_card_booked({
+					{m.staff_members_id_panels_orientation_card_booked_text({
 						formatDateTimeShort: formatDateTimeShort(data.scheduledFor)
 					})}
 				{:else if data.state === 'completed' && data.detail?.completedAt}
-					{m.staff_members_id_panels_orientation_card_shown_around({
+					{m.staff_members_id_panels_orientation_card_shown_around_text({
 						formatDateTimeShort: formatDateTimeShort(data.detail.completedAt)
 					})}
 				{:else if data.state === 'waived' && data.detail?.waivedReason}
 					{data.detail.waivedReason}
 				{:else}
-					{m.staff_members_id_panels_orientation_card_their_first_booking()}
+					{m.staff_members_id_panels_orientation_card_their_first_booking_text()}
 				{/if}
 			</p>
 
 			{#if data.state === 'pending' || data.state === 'scheduled'}
 				<Action
 					action={waiveMemberOrientation}
-					label={m.staff_members_id_panels_orientation_card_waive()}
+					label={m.staff_members_id_panels_orientation_card_waive_label()}
 					variant="ghost"
 					size="sm"
 					modalTitle={m.staff_members_id_panels_orientation_card_modal_title()}
-					submitLabel={m.staff_members_id_panels_orientation_card_waive()}
+					submitLabel={m.staff_members_id_panels_orientation_card_waive_label()}
 					successToast={m.staff_members_id_panels_orientation_card_success_toast()}
 				>
 					{#snippet form()}
 						<input {...waiveMemberOrientation.fields.userId.as('hidden', id)} />
 						<FormField
 							field={waiveMemberOrientation.fields.reason}
-							label={m.staff_members_id_panels_orientation_card_why_not_needed()}
+							label={m.staff_members_id_panels_orientation_card_why_not_needed_label()}
 							type="textarea"
-							description={m.staff_members_id_panels_orientation_card_description()}
+							description={m.staff_members_id_panels_orientation_card_description_body()}
 						/>
 					{/snippet}
 				</Action>

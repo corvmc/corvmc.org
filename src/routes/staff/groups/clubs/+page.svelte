@@ -53,7 +53,7 @@
 	}
 </script>
 
-<PageHeader title={m.staff_groups()}>
+<PageHeader title={m.staff_groups_title()}>
 	<GroupViews active="clubs" />
 </PageHeader>
 <PageContent>
@@ -61,7 +61,7 @@
 		<ClubTotals />
 		{#snippet failed(_error, reset)}
 			<Alert type="warning" reset={() => retryQuery(getStaffClubTotals(), reset)}>
-				{m.staff_totals_didn_t_load()}
+				{m.staff_totals_didn_t_load_body()}
 			</Alert>
 		{/snippet}
 	</svelte:boundary>
@@ -76,7 +76,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder={m.staff_search_by_name()}
+				placeholder={m.staff_search_by_name_placeholder()}
 				onsearch={(q) => {
 					f.q = q;
 					f.page = 1;
@@ -85,31 +85,31 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label={m.staff_status()}
+			aria-label={m.staff_status_label()}
 			value={f.status}
 			onchange={(e: Event) => {
 				f.status = (e.currentTarget as HTMLSelectElement).value as typeof f.status;
 				f.page = 1;
 			}}
 		>
-			<option value="active">{m.staff_active()}</option>
-			<option value="deactivated">{m.staff_deactivated()}</option>
-			<option value="">{m.staff_all_statuses()}</option>
+			<option value="active">{m.staff_active_label()}</option>
+			<option value="deactivated">{m.staff_deactivated_label()}</option>
+			<option value="">{m.staff_all_statuses_label()}</option>
 		</Select>
 		{#snippet actions()}
 			<CreateGroupAction />
 		{/snippet}
 	</FilterBar>
 
-	<DataList {result} empty={m.staff_groups_clubs_empty()} onpage={(p) => (f.page = p)}>
+	<DataList {result} empty={m.staff_groups_clubs_empty_body()} onpage={(p) => (f.page = p)}>
 		{#snippet children(groups)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_groups_clubs_club()}</th>
-					<th>{m.staff_groups_clubs_chairs()}</th>
-					<th class="col-support cell-num">{m.staff_members()}</th>
-					<th class="col-extra whitespace-nowrap">{m.staff_created()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_groups_clubs_club_label()}</th>
+					<th>{m.staff_groups_clubs_chairs_label()}</th>
+					<th class="col-support cell-num">{m.staff_members_label()}</th>
+					<th class="col-extra whitespace-nowrap">{m.staff_created_label()}</th>
 				{/snippet}
 
 				{#each groups as g (g.id)}
@@ -129,7 +129,7 @@
 						<!-- A club with no chairs is legal; it reads as a fact, not a fault. -->
 						<td class="whitespace-nowrap">
 							{#if g.chairs.length === 0}
-								<span class="text-fg-2">{m.staff_groups_clubs_no_chairs()}</span>
+								<span class="text-fg-2">{m.staff_groups_clubs_no_chairs_text()}</span>
 							{:else}
 								{@const hidden = g.chairs.slice(MAX_CHAIRS)}
 								<span class="flex items-center gap-1">

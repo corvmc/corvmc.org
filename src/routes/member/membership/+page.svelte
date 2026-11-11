@@ -73,16 +73,16 @@
 
 {#snippet bottomCta(id?: string)}
 	<div {id} class="rounded-xl bg-primary/5 p-8 text-center">
-		<h2 class="mb-4 text-3xl font-bold">{m.member_membership_sounds_good()}</h2>
+		<h2 class="mb-4 text-3xl font-bold">{m.member_membership_sounds_good_title()}</h2>
 		<p class="mx-auto mb-6 max-w-2xl opacity-70">
-			{m.member_membership_members_already_contribution_whatever_amou({
+			{m.member_membership_members_already_contribution_whatever_amou_text({
 				sustainingMemberCount: communityStats.sustainingMemberCount
 			})}
 		</p>
 		<Button variant="primary" size="lg" onclick={() => (subscribeModalOpen = true)}>
-			{m.member_membership_become_sustaining_member()}
+			{m.member_membership_become_sustaining_member_label()}
 		</Button>
-		<p class="mt-4 text-muted">{m.member_membership_cancel_anytime_seriously()}</p>
+		<p class="mt-4 text-muted">{m.member_membership_cancel_anytime_seriously_text()}</p>
 	</div>
 {/snippet}
 
@@ -105,13 +105,13 @@
 
 		{#snippet failed()}
 			<Alert type="warning">
-				{m.member_membership_we_couldn_t_load_billing()}
+				{m.member_membership_we_couldn_t_load_billing_body()}
 			</Alert>
 		{/snippet}
 	</svelte:boundary>
 {/snippet}
 
-<Modal bind:open={subscribeModalOpen} title={m.member_membership_become_sustaining_member()}>
+<Modal bind:open={subscribeModalOpen} title={m.member_membership_become_sustaining_member_title()}>
 	<SubscriptionForm mode="create" remote={createSubscription} />
 </Modal>
 
@@ -119,8 +119,8 @@
 	{#if awaitingSubscription}
 		<Alert type="info">
 			{subscribeAttempts >= SUBSCRIBE_RETRY_LIMIT
-				? m.member_membership_we_haven_t_had_confirmation()
-				: m.member_confirming_payment()}
+				? m.member_membership_we_haven_t_had_confirmation_body()
+				: m.member_confirming_payment_body()}
 		</Alert>
 	{/if}
 	<!-- Active sustaining member view -->
@@ -164,7 +164,7 @@
 		<MembershipHero variant="marketing">
 			{#snippet actions()}
 				<Button variant="default" size="lg" onclick={() => (subscribeModalOpen = true)}>
-					{m.member_membership_become_sustaining_member()}
+					{m.member_membership_become_sustaining_member_label()}
 				</Button>
 			{/snippet}
 		</MembershipHero>

@@ -26,7 +26,7 @@
 <Action
 	action={unscheduleCampaign}
 	label={m.actions_unschedule_campaign_label()}
-	modalTitle={m.actions_confirm()}
+	modalTitle={m.actions_confirm_title()}
 	successToast={m.actions_unschedule_campaign_success_toast()}
 	{variant}
 	{size}
@@ -36,6 +36,6 @@
 >
 	{#snippet form()}
 		<input {...fields.campaignId.as('hidden', campaignId)} />
-		<p class="py-4">{m.actions_unschedule_campaign_cancel_scheduled_send_return_cam()}</p>
+		<p class="py-4">{m.actions_unschedule_campaign_cancel_scheduled_send_return_cam_text()}</p>
 	{/snippet}
 </Action>

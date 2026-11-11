@@ -25,7 +25,7 @@
 </script>
 
 {#if active}
-	<ProfileSection title={m.directory_profile_video_box_watch()}>
+	<ProfileSection title={m.directory_profile_video_box_watch_title()}>
 		{#if playable.length > 1}
 			<div class="video__tabs">
 				{#each playable as item, i (item.video.url)}
@@ -35,14 +35,14 @@
 						class:is-active={i === activeIndex}
 						onclick={() => (activeIndex = i)}
 					>
-						{item.video.label || m.directory_profile_video_box_video({ value: i + 1 })}
+						{item.video.label || m.directory_profile_video_box_video_label({ value: i + 1 })}
 					</button>
 				{/each}
 			</div>
 		{/if}
 		<iframe
 			src={active.embedUrl}
-			title={active.video.label || m.directory_profile_video_box_live_video()}
+			title={active.video.label || m.directory_profile_video_box_live_video_label()}
 			width="100%"
 			height="315"
 			frameborder="0"

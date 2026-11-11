@@ -27,13 +27,15 @@
 
 <Action
 	action={setRoomMute}
-	label={muted ? m.inbox_mute_room_unmute() : m.inbox_mute_room_mute()}
+	label={muted ? m.inbox_mute_room_unmute_label() : m.inbox_mute_room_mute_label()}
 	iconOnly
 	modalTitle={muted
-		? m.inbox_mute_room_unmute_2({ roomName })
-		: m.inbox_mute_room_mute_2({ roomName })}
-	submitLabel={muted ? m.inbox_mute_room_unmute() : m.inbox_mute_room_mute()}
-	successToast={muted ? m.inbox_mute_room_room_unmuted() : m.inbox_mute_room_room_muted()}
+		? m.inbox_mute_room_unmute_2_title({ roomName })
+		: m.inbox_mute_room_mute_2_title({ roomName })}
+	submitLabel={muted ? m.inbox_mute_room_unmute_label() : m.inbox_mute_room_mute_label()}
+	successToast={muted
+		? m.inbox_mute_room_room_unmuted_toast()
+		: m.inbox_mute_room_room_muted_toast()}
 	variant="ghost"
 	size="sm"
 >
@@ -44,8 +46,8 @@
 		<input {...fields.intent.as('hidden', muted ? 'unmute' : 'mute')} />
 		<p class="py-2 text-sm">
 			{muted
-				? m.inbox_mute_room_start_hearing_about_again({ roomName })
-				: m.inbox_mute_room_stop_being_notified_about_posts({ roomName })}
+				? m.inbox_mute_room_start_hearing_about_again_text({ roomName })
+				: m.inbox_mute_room_stop_being_notified_about_posts_text({ roomName })}
 		</p>
 	{/snippet}
 </Action>

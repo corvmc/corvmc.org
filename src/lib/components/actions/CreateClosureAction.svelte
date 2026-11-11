@@ -25,8 +25,8 @@
 
 <Action
 	action={createClosure}
-	label={m.actions_create_closure_new_closure()}
-	modalTitle={m.actions_create_closure_new_closure()}
+	label={m.actions_create_closure_new_closure_label()}
+	modalTitle={m.actions_create_closure_new_closure_title()}
 	submitLabel={m.actions_create_closure_submit_label()}
 	successToast={m.actions_create_closure_success_toast()}
 	{variant}
@@ -36,10 +36,10 @@
 	{...rest}
 >
 	{#snippet form()}
-		<Field field={fields.reason} type="text" label={m.actions_reason()} />
+		<Field field={fields.reason} type="text" label={m.actions_reason_label()} />
 		<div class="grid grid-cols-2 gap-3">
-			<Field field={fields.startsAt} type="datetime-local" label={m.actions_start()} />
-			<Field field={fields.endsAt} type="datetime-local" label={m.actions_end()} />
+			<Field field={fields.startsAt} type="datetime-local" label={m.actions_start_label()} />
+			<Field field={fields.endsAt} type="datetime-local" label={m.actions_end_label()} />
 		</div>
 	{/snippet}
 </Action>

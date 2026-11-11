@@ -38,51 +38,51 @@
 <Card>
 	<CardBody>
 		<CardTitle>
-			{m.band_slug_events_event_id_ticket_sale_card_sell_tickets_thro()}
+			{m.band_slug_events_event_id_ticket_sale_card_sell_tickets_thro_title()}
 			{#if sale.onSale && !sale.blocker}
 				<Badge variant="success" size="sm"
-					>{m.band_slug_events_event_id_ticket_sale_card_sale()}</Badge
+					>{m.band_slug_events_event_id_ticket_sale_card_sale_label()}</Badge
 				>
 			{:else if sale.onSale}
 				<Badge variant="warning" size="sm"
-					>{m.band_slug_events_event_id_ticket_sale_card_paused()}</Badge
+					>{m.band_slug_events_event_id_ticket_sale_card_paused_label()}</Badge
 				>
 			{/if}
 		</CardTitle>
 
 		{#if sale.blocker === 'not_premium'}
 			<Alert type="info" href={resolve('/band/[slug]/subscription', { slug })}>
-				{m.band_slug_events_event_id_ticket_sale_card_selling_tickets_t()}
+				{m.band_slug_events_event_id_ticket_sale_card_selling_tickets_t_body()}
 			</Alert>
 		{:else if sale.blocker === 'no_payouts'}
 			<Alert type="warning" href={resolve('/band/[slug]/music/payouts', { slug })}>
-				{m.band_slug_events_event_id_ticket_sale_card_finish_setting_up()}
+				{m.band_slug_events_event_id_ticket_sale_card_finish_setting_up_body()}
 			</Alert>
 		{/if}
 
 		{#if sale.onSale}
 			<p class="text-muted">
 				{sale.quantity
-					? m.band_slug_events_event_id_ticket_sale_card_sold_of({
+					? m.band_slug_events_event_id_ticket_sale_card_sold_of_text({
 							sold: sale.sold,
 							quantity: sale.quantity,
 							price: formatCents(sale.priceCents ?? 0)
 						})
-					: m.band_slug_events_event_id_ticket_sale_card_sold({
+					: m.band_slug_events_event_id_ticket_sale_card_sold_text({
 							sold: sale.sold,
 							price: formatCents(sale.priceCents ?? 0)
 						})}
 			</p>
 		{:else}
 			<p class="text-muted">
-				{m.band_slug_events_event_id_ticket_sale_card_buyers_pay_collec({ suggested })}
+				{m.band_slug_events_event_id_ticket_sale_card_buyers_pay_collec_text({ suggested })}
 			</p>
 		{/if}
 
 		{#if !sale.blocker}
 			<Form
 				remote={openBandTicketSaleForm}
-				successToast={m.band_slug_events_event_id_ticket_sale_card_tickets_saved()}
+				successToast={m.band_slug_events_event_id_ticket_sale_card_tickets_saved_toast()}
 				onsuccess={refresh}
 			>
 				<input {...openFields.slug.as('hidden', slug)} />
@@ -90,28 +90,28 @@
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 					<FormField
 						field={openFields.priceDollars}
-						label={m.band_slug_events_event_id_ticket_sale_card_suggested_price()}
+						label={m.band_slug_events_event_id_ticket_sale_card_suggested_price_label()}
 						value={dollars(sale.priceCents)}
 						placeholder="12.00"
 						required
 					/>
 					<FormField
 						field={openFields.floorDollars}
-						label={m.band_slug_events_event_id_ticket_sale_card_least_buyer_may_p()}
+						label={m.band_slug_events_event_id_ticket_sale_card_least_buyer_may_p_label()}
 						value={sale.onSale ? dollars(sale.priceFloorCents) || '0' : '0'}
-						description={m.band_slug_events_event_id_ticket_sale_card_0_lets_people_pay()}
+						description={m.band_slug_events_event_id_ticket_sale_card_0_lets_people_pay_body()}
 					/>
 					<FormField
 						field={openFields.quantity}
-						label={m.band_slug_events_event_id_ticket_sale_card_capacity()}
+						label={m.band_slug_events_event_id_ticket_sale_card_capacity_label()}
 						value={sale.quantity ? String(sale.quantity) : ''}
-						description={m.band_slug_events_event_id_ticket_sale_card_blank_no_limit()}
+						description={m.band_slug_events_event_id_ticket_sale_card_blank_no_limit_body()}
 					/>
 				</div>
 				<SubmitButton
 					label={sale.onSale
-						? m.band_slug_events_event_id_ticket_sale_card_save_ticket_terms()
-						: m.band_slug_events_event_id_ticket_sale_card_put_tickets_sale()}
+						? m.band_slug_events_event_id_ticket_sale_card_save_ticket_terms_label()
+						: m.band_slug_events_event_id_ticket_sale_card_put_tickets_sale_label()}
 				/>
 			</Form>
 		{/if}
@@ -119,14 +119,14 @@
 		{#if sale.onSale}
 			<Form
 				remote={closeBandTicketSaleForm}
-				successToast={m.band_slug_events_event_id_ticket_sale_card_tickets_taken_off()}
+				successToast={m.band_slug_events_event_id_ticket_sale_card_tickets_taken_off_toast()}
 				onsuccess={refresh}
 			>
 				<input {...closeFields.slug.as('hidden', slug)} />
 				<input {...closeFields.eventId.as('hidden', eventId)} />
 				<SubmitButton
 					variant="ghost"
-					label={m.band_slug_events_event_id_ticket_sale_card_stop_selling()}
+					label={m.band_slug_events_event_id_ticket_sale_card_stop_selling_label()}
 				/>
 			</Form>
 		{/if}

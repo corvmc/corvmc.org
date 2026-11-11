@@ -88,8 +88,8 @@
 		<div class="mb-4">
 			<Alert type="info">
 				{upgradeAttempts >= UPGRADE_RETRY_LIMIT
-					? m.band_slug_subscription_we_haven_t_had_confirmation()
-					: m.band_slug_subscription_confirming_payment()}
+					? m.band_slug_subscription_we_haven_t_had_confirmation_body()
+					: m.band_slug_subscription_confirming_payment_body()}
 			</Alert>
 		</div>
 	{/if}
@@ -98,17 +98,17 @@
 		<Card>
 			<CardBody>
 				<div class="flex items-center gap-3">
-					<CardTitle level={2}>{m.band_slug_subscription_premium_band_page()}</CardTitle>
-					<Badge variant="success">{m.band_slug_subscription_active()}</Badge>
+					<CardTitle level={2}>{m.band_slug_subscription_premium_band_page_title()}</CardTitle>
+					<Badge variant="success">{m.band_slug_subscription_active_label()}</Badge>
 				</div>
 				<DefinitionList class="mt-4">
-					<Fact label={m.band_slug_subscription_billing()}>
+					<Fact label={m.band_slug_subscription_billing_label()}>
 						<span class="capitalize">{info.subscription.billingInterval}</span>
 					</Fact>
-					<Fact label={m.band_slug_subscription_renews()}
+					<Fact label={m.band_slug_subscription_renews_label()}
 						>{formatDate(new Date(info.subscription.currentPeriodEnd))}</Fact
 					>
-					<Fact label={m.band_slug_subscription_site()}>
+					<Fact label={m.band_slug_subscription_site_label()}>
 						<!-- The band's own subdomain, so this leaves the app: rel="external" is
 						     both the correct annotation and what keeps it out of the router. -->
 						<a href={siteUrl} target="_blank" rel="external noopener" class="link">
@@ -119,19 +119,19 @@
 
 				{#if info.subscription.cancelAtPeriodEnd}
 					<Alert type="warning" class="mt-4">
-						{m.band_slug_subscription_subscription_will_end({
+						{m.band_slug_subscription_subscription_will_end_body({
 							formatDate: formatDate(new Date(info.subscription.currentPeriodEnd))
 						})}
 					</Alert>
 					{#if isOwner}
 						<Form
 							remote={resumePremium}
-							successToast={m.band_slug_subscription_subscription_resumed()}
+							successToast={m.band_slug_subscription_subscription_resumed_toast()}
 							onsuccess={() => refreshAll()}
 						>
 							<input {...resumePremium.fields.slug.as('hidden', band.slug)} />
 							<SubmitButton
-								label={m.band_slug_subscription_resume_subscription()}
+								label={m.band_slug_subscription_resume_subscription_label()}
 								variant="primary"
 								size="sm"
 								class="mt-2"
@@ -141,12 +141,12 @@
 				{:else if isOwner}
 					<Form
 						remote={cancelPremium}
-						successToast={m.band_slug_subscription_subscription_will_cancel_at_end()}
+						successToast={m.band_slug_subscription_subscription_will_cancel_at_end_toast()}
 						onsuccess={() => refreshAll()}
 					>
 						<input {...cancelPremium.fields.slug.as('hidden', band.slug)} />
 						<SubmitButton
-							label={m.band_slug_subscription_cancel_subscription()}
+							label={m.band_slug_subscription_cancel_subscription_label()}
 							variant="ghost"
 							size="sm"
 							class="mt-4 text-error"
@@ -172,10 +172,10 @@
 		<div class="space-y-6">
 			<Card>
 				<CardBody class="text-center">
-					<h2 class="text-2xl font-bold">{m.band_upgrade_premium()}</h2>
+					<h2 class="text-2xl font-bold">{m.band_upgrade_premium_title()}</h2>
 					<p class="mt-2 opacity-70">
 						<ParaglideMessage
-							message={m.band_slug_subscription_band_already_has_pointing_at}
+							message={m.band_slug_subscription_band_already_has_pointing_at_text}
 							inputs={{ slug: band.slug, baseDomain }}
 							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 								>{/snippet}</ParaglideMessage
@@ -188,10 +188,10 @@
 				<!-- Monthly -->
 				<Card class="border">
 					<CardBody center>
-						<h3 class="text-lg font-bold">{m.band_slug_subscription_monthly()}</h3>
+						<h3 class="text-lg font-bold">{m.band_slug_subscription_monthly_title()}</h3>
 						<p class="text-3xl font-bold">
 							{formatCents(info.pricing.monthlyCents)}<span class="text-muted font-normal"
-								>{m.band_slug_subscription_mo()}</span
+								>{m.band_slug_subscription_mo_text()}</span
 							>
 						</p>
 						{#if isOwner}
@@ -199,7 +199,7 @@
 								<input {...upgradeMonthly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeMonthly.fields.billingInterval.as('hidden', 'monthly')} />
 								<SubmitButton
-									label={m.band_slug_subscription_subscribe_monthly()}
+									label={m.band_slug_subscription_subscribe_monthly_label()}
 									variant="primary"
 									class="mt-4"
 								/>
@@ -212,14 +212,14 @@
 				<Card class="border border-primary">
 					<CardBody center>
 						<Badge variant="primary">
-							{m.band_slug_subscription_months_free({
+							{m.band_slug_subscription_months_free_label({
 								yearlyMonthsFree: info.pricing.yearlyMonthsFree
 							})}
 						</Badge>
-						<h3 class="text-lg font-bold">{m.band_slug_subscription_yearly()}</h3>
+						<h3 class="text-lg font-bold">{m.band_slug_subscription_yearly_title()}</h3>
 						<p class="text-3xl font-bold">
 							{formatCents(info.pricing.yearlyCents)}<span class="text-muted font-normal"
-								>{m.band_slug_subscription_yr()}</span
+								>{m.band_slug_subscription_yr_text()}</span
 							>
 						</p>
 						{#if isOwner}
@@ -227,7 +227,7 @@
 								<input {...upgradeYearly.fields.slug.as('hidden', band.slug)} />
 								<input {...upgradeYearly.fields.billingInterval.as('hidden', 'yearly')} />
 								<SubmitButton
-									label={m.band_slug_subscription_subscribe_yearly()}
+									label={m.band_slug_subscription_subscribe_yearly_label()}
 									variant="primary"
 									class="mt-4"
 								/>
@@ -240,11 +240,11 @@
 			<!-- Feature list -->
 			<Card>
 				<CardBody>
-					<h3 class="font-bold">{m.band_slug_subscription_what_s_included()}</h3>
+					<h3 class="font-bold">{m.band_slug_subscription_what_s_included_title()}</h3>
 					<ul class="mt-2 space-y-2 text-sm">
 						<li class="flex items-start gap-2">
 							<ParaglideMessage
-								message={m.band_slug_subscription_own_domain_keep_using}
+								message={m.band_slug_subscription_own_domain_keep_using_text}
 								inputs={{ slug: band.slug, baseDomain }}
 								>{#snippet span({ children })}<span class="text-success"
 										>{@render children?.()}</span
@@ -253,7 +253,7 @@
 						</li>
 						<li class="flex items-start gap-2">
 							<ParaglideMessage
-								message={m.band_slug_subscription_page_arrives_already_built_reorder}
+								message={m.band_slug_subscription_page_arrives_already_built_reorder_text}
 								inputs={{}}
 								>{#snippet span({ children })}<span class="text-success"
 										>{@render children?.()}</span
@@ -262,7 +262,7 @@
 						</li>
 						<li class="flex items-start gap-2">
 							<ParaglideMessage
-								message={m.band_slug_subscription_genre_themed_templates_punk_jazz}
+								message={m.band_slug_subscription_genre_themed_templates_punk_jazz_text}
 								inputs={{}}
 								>{#snippet span({ children })}<span class="text-success"
 										>{@render children?.()}</span
@@ -270,7 +270,7 @@
 							>
 						</li>
 						<li class="flex items-start gap-2">
-							<ParaglideMessage message={m.band_slug_subscription_full_custom_css} inputs={{}}
+							<ParaglideMessage message={m.band_slug_subscription_full_custom_css_text} inputs={{}}
 								>{#snippet span({ children })}<span class="text-success"
 										>{@render children?.()}</span
 									>{/snippet}</ParaglideMessage
@@ -282,7 +282,7 @@
 						     volume. -->
 						<li class="flex items-start gap-2">
 							<ParaglideMessage
-								message={m.band_slug_subscription_video_section_live_clips_page}
+								message={m.band_slug_subscription_video_section_live_clips_page_text}
 								inputs={{}}
 								>{#snippet span({ children })}<span class="text-success"
 										>{@render children?.()}</span
@@ -291,7 +291,7 @@
 						</li>
 						<li class="flex items-start gap-2">
 							<ParaglideMessage
-								message={m.band_slug_subscription_unlimited_press_photos_instead_one}
+								message={m.band_slug_subscription_unlimited_press_photos_instead_one_text}
 								inputs={{}}
 								>{#snippet span({ children })}<span class="text-success"
 										>{@render children?.()}</span

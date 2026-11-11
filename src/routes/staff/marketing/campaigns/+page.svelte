@@ -20,31 +20,31 @@
 	let campaigns = $derived(await getCampaigns({ status: statusFilter || undefined }));
 </script>
 
-<PageHeader title={m.staff_outreach()} documentTitle={m.staff_marketing_campaigns_title()}>
+<PageHeader title={m.staff_outreach_title()} documentTitle={m.staff_marketing_campaigns_title()}>
 	<StaffViews views={outreachViews} active="campaigns" />
 </PageHeader>
 <PageContent>
 	<div class="mb-4 flex gap-2">
-		<Select size="sm" aria-label={m.staff_status()} bind:value={statusFilter}>
-			<option value="">{m.staff_all_statuses()}</option>
-			<option value="draft">{m.staff_draft()}</option>
-			<option value="scheduled">{m.staff_marketing_campaigns_scheduled()}</option>
-			<option value="sent">{m.staff_sent()}</option>
+		<Select size="sm" aria-label={m.staff_status_label()} bind:value={statusFilter}>
+			<option value="">{m.staff_all_statuses_label()}</option>
+			<option value="draft">{m.staff_draft_label()}</option>
+			<option value="scheduled">{m.staff_marketing_campaigns_scheduled_label()}</option>
+			<option value="sent">{m.staff_sent_label()}</option>
 		</Select>
 		<Button class="ml-auto" href="/staff/marketing/campaigns/new" variant="default" size="sm"
-			>{m.staff_new_campaign()}</Button
+			>{m.staff_new_campaign_label()}</Button
 		>
 	</div>
 
 	{#if campaigns.length === 0}
-		<EmptyState description={m.staff_marketing_campaigns_description()} />
+		<EmptyState description={m.staff_marketing_campaigns_description_body()} />
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-				<th>{m.staff_campaign()}</th>
-				<th class="col-support cell-num">{m.staff_recipients()}</th>
-				<th class="col-support whitespace-nowrap">{m.staff_date()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+				<th>{m.staff_campaign_label()}</th>
+				<th class="col-support cell-num">{m.staff_recipients_label()}</th>
+				<th class="col-support whitespace-nowrap">{m.staff_date_label()}</th>
 			{/snippet}
 			{#each campaigns as c (c.id)}
 				{@const href =

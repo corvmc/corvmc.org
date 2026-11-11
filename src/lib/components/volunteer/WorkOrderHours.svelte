@@ -21,7 +21,7 @@
 	const variant = { pending: 'warning', approved: 'success', rejected: 'ghost' } as const;
 </script>
 
-<InfoCard title={m.volunteer_hours()}>
+<InfoCard title={m.volunteer_hours_title()}>
 	<ul class="flex flex-col gap-3">
 		{#each hours as log (log.id)}
 			<li class="flex flex-wrap items-center justify-between gap-2">
@@ -38,19 +38,19 @@
 					{@const approve = approveVolunteerHours.for(log.id)}
 					<Action
 						action={approve}
-						label={m.volunteer_work_order_hours_approve()}
+						label={m.volunteer_work_order_hours_approve_label()}
 						variant="ghost"
 						size="sm"
 						class="text-success"
 						modalTitle={m.volunteer_work_order_hours_modal_title()}
-						submitLabel={m.volunteer_work_order_hours_approve()}
+						submitLabel={m.volunteer_work_order_hours_approve_label()}
 						successToast={m.volunteer_work_order_hours_success_toast()}
 					>
 						{#snippet form()}
 							<input {...approve.fields.id.as('hidden', log.id)} />
 							<input {...approve.fields.shiftId.as('hidden', shiftId)} />
 							<p class="text-sm">
-								{m.volunteer_work_order_hours_by({
+								{m.volunteer_work_order_hours_by_text({
 									formatVolunteerHours: formatVolunteerHours(log.minutes),
 									roleName: log.roleName,
 									title: log.member.title,
@@ -60,9 +60,9 @@
 							<p class="text-muted">{log.description}</p>
 							<FormField
 								field={approve.fields.notes}
-								label={m.volunteer_work_order_hours_note_optional()}
+								label={m.volunteer_work_order_hours_note_optional_label()}
 								type="textarea"
-								description={m.volunteer_work_order_hours_description()}
+								description={m.volunteer_work_order_hours_description_body()}
 							/>
 						{/snippet}
 					</Action>
@@ -71,7 +71,9 @@
 		{/each}
 	</ul>
 	<p class="mt-2 text-subtle text-xs">
-		<ParaglideMessage message={m.volunteer_work_order_hours_return_log_correction_use} inputs={{}}
+		<ParaglideMessage
+			message={m.volunteer_work_order_hours_return_log_correction_use_text}
+			inputs={{}}
 			>{#snippet a({ children })}<a class="link" href={resolve('staff/members/volunteers/hours')}
 					>{@render children?.()}</a
 				>{/snippet}</ParaglideMessage

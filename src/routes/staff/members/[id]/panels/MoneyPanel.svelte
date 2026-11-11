@@ -40,52 +40,54 @@
 	const caps = $derived((await getStaffLayout()).capabilities);
 	const canAdjust = $derived(hasCapability(caps, 'credit.adjust'));
 	const canComp = $derived(hasCapability(caps, 'credit.comp'));
-	const compHint = msg.staff_members_id_panels_money_panel_comp_hint({
+	const compHint = msg.staff_members_id_panels_money_panel_comp_hint_body({
 		creditsToHours: creditsToHours(creditCompCeiling.free_hours)
 	});
 </script>
 
-<RelatedList title={msg.staff_membership()} result={getUserMembership(id)}>
+<RelatedList title={msg.staff_membership_title()} result={getUserMembership(id)}>
 	{#snippet children(m)}
 		{#if !m.subscription}
 			<EmptyState
-				title={msg.staff_members_id_panels_money_panel_no_membership_subscripti()}
-				description={msg.staff_members_id_panels_money_panel_member_free_tier_free_ho()}
+				title={msg.staff_members_id_panels_money_panel_no_membership_subscripti_title()}
+				description={msg.staff_members_id_panels_money_panel_member_free_tier_free_ho_body()}
 			/>
 		{:else}
 			{#if m.subscription.cancelAtPeriodEnd}
 				<Alert type="warning" class="mb-3">
-					{msg.staff_members_id_panels_money_panel_set_cancel_free_hours_st({
+					{msg.staff_members_id_panels_money_panel_set_cancel_free_hours_st_body({
 						formatDateShortYear: formatDateShortYear(m.subscription.currentPeriodEnd)
 					})}
 				</Alert>
 			{/if}
 			<DefinitionList>
-				<Fact label={msg.staff_status()}
-					><Badge variant="success" size="sm">{msg.staff_sustaining()}</Badge></Fact
+				<Fact label={msg.staff_status_label()}
+					><Badge variant="success" size="sm">{msg.staff_sustaining_label()}</Badge></Fact
 				>
 
-				<Fact label={msg.staff_members_id_panels_money_panel_allocation()}
-					>{msg.staff_members_id_panels_money_panel_hrs_month({
+				<Fact label={msg.staff_members_id_panels_money_panel_allocation_label()}
+					>{msg.staff_members_id_panels_money_panel_hrs_month_text({
 						creditsToHours: creditsToHours(m.allocated)
 					})}</Fact
 				>
 
-				<Fact label={msg.staff_members_id_panels_money_panel_used_period()}
-					>{msg.staff_members_id_panels_money_panel_hrs({
+				<Fact label={msg.staff_members_id_panels_money_panel_used_period_label()}
+					>{msg.staff_members_id_panels_money_panel_hrs_text({
 						creditsToHours: creditsToHours(m.used)
 					})}</Fact
 				>
 
-				<Fact label={msg.staff_members_id_panels_money_panel_renews()}
+				<Fact label={msg.staff_members_id_panels_money_panel_renews_label()}
 					>{formatDateShortYear(m.subscription.currentPeriodEnd)}</Fact
 				>
 
-				<Fact label={msg.staff_members_id_panels_money_panel_covering_fees()}
-					>{m.coveringFees ? msg.staff_yes() : msg.staff_members_id_panels_money_panel_no()}</Fact
+				<Fact label={msg.staff_members_id_panels_money_panel_covering_fees_label()}
+					>{m.coveringFees
+						? msg.staff_yes_text()
+						: msg.staff_members_id_panels_money_panel_no_text()}</Fact
 				>
 
-				<Fact label={msg.staff_members_id_panels_money_panel_subscription()}
+				<Fact label={msg.staff_members_id_panels_money_panel_subscription_label()}
 					><CopyableId value={m.subscription.id} /></Fact
 				>
 			</DefinitionList>
@@ -93,16 +95,19 @@
 	{/snippet}
 </RelatedList>
 
-<RelatedList title={msg.staff_members_id_panels_money_panel_credits()} result={getUserCredits(id)}>
+<RelatedList
+	title={msg.staff_members_id_panels_money_panel_credits_title()}
+	result={getUserCredits(id)}
+>
 	{#snippet children(credits)}
 		<div class="mb-3 flex gap-6">
 			<div>
 				<p class="text-2xl font-medium">{creditsToHours(credits.free_hours ?? 0)}</p>
-				<p class="text-muted">{msg.staff_members_id_panels_money_panel_free_hours()}</p>
+				<p class="text-muted">{msg.staff_members_id_panels_money_panel_free_hours_text()}</p>
 			</div>
 			<div>
 				<p class="text-2xl font-medium">{credits.equipment_credits ?? 0}</p>
-				<p class="text-muted">{msg.staff_members_id_panels_money_panel_equipment_credits()}</p>
+				<p class="text-muted">{msg.staff_members_id_panels_money_panel_equipment_credits_text()}</p>
 			</div>
 		</div>
 		{#if canAdjust || canComp}
@@ -121,7 +126,7 @@
 	page next to the number they add up to.
 -->
 <ActivityFeedCard
-	title={msg.staff_members_id_panels_money_panel_credit_history()}
+	title={msg.staff_members_id_panels_money_panel_credit_history_title()}
 	query={(limit) => getUserCreditHistory(limit ? { userId: id, limit } : { userId: id })}
 	toRow={(t) => ({
 		...feedItemRow(t),
@@ -129,8 +134,8 @@
 		credit: t
 	})}
 	empty={{
-		title: msg.staff_members_id_panels_money_panel_no_credit_activity(),
-		description: msg.staff_members_id_panels_money_panel_nothing_has_been_allocat()
+		title: msg.staff_members_id_panels_money_panel_no_credit_activity_title(),
+		description: msg.staff_members_id_panels_money_panel_nothing_has_been_allocat_body()
 	}}
 >
 	{#snippet trailing({ credit })}
@@ -140,13 +145,13 @@
 			{credit.amount > 0 ? '+' : ''}{units(credit.amount)}
 		</span>
 		<div class="text-muted text-xs">
-			{msg.staff_members_id_panels_money_panel_balance({ units: units(credit.balanceAfter) })}
+			{msg.staff_members_id_panels_money_panel_balance_text({ units: units(credit.balanceAfter) })}
 		</div>
 	{/snippet}
 </ActivityFeedCard>
 
 <RelatedList
-	title={msg.staff_members_id_panels_money_panel_payment_records()}
+	title={msg.staff_members_id_panels_money_panel_payment_records_title()}
 	result={getUserPayments(id)}
 >
 	{#snippet children(payments)}
@@ -154,20 +159,21 @@
 			<!-- Rendered even when empty: without it, "no payments" and "the query
 			     failed" were indistinguishable — both showed nothing at all. -->
 			<EmptyState
-				title={msg.staff_members_id_panels_money_panel_no_payments_yet()}
-				description={msg.staff_members_id_panels_money_panel_payments_appear_here_onc()}
+				title={msg.staff_members_id_panels_money_panel_no_payments_yet_title()}
+				description={msg.staff_members_id_panels_money_panel_payments_appear_here_onc_body()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{msg.staff_status()}</span></th>
-					<th>{msg.staff_paid()}</th>
-					<th class="cell-num">{msg.staff_amount()}</th>
+					<th class="w-px"><span class="sr-only">{msg.staff_status_label()}</span></th>
+					<th>{msg.staff_paid_label()}</th>
+					<th class="cell-num">{msg.staff_amount_label()}</th>
 					<!-- The Stripe id is diagnostic and tiers away; the link to the
 					     reservation is the row's only action and must not (#1229). -->
-					<th class="col-extra">{msg.staff_record()}</th>
+					<th class="col-extra">{msg.staff_record_label()}</th>
 					<th class="w-px"
-						><span class="sr-only">{msg.staff_members_id_panels_money_panel_reservation()}</span
+						><span class="sr-only"
+							>{msg.staff_members_id_panels_money_panel_reservation_label()}</span
 						></th
 					>
 				{/snippet}
@@ -184,13 +190,16 @@
 						</td>
 						<td class="cell-num font-medium">{formatCents(p.amountCents)}</td>
 						<td class="col-extra">
-							<CopyableId value={p.id} label={msg.staff_members_id_panels_money_panel_stripe()} />
+							<CopyableId
+								value={p.id}
+								label={msg.staff_members_id_panels_money_panel_stripe_label()}
+							/>
 						</td>
 						<td class="w-px">
 							{#if p.reservationId}
 								<div class="flex w-max justify-end">
 									<Button href="/staff/reservations/{p.reservationId}" variant="ghost" size="xs">
-										{msg.staff_members_id_panels_money_panel_view()}
+										{msg.staff_members_id_panels_money_panel_view_label()}
 									</Button>
 								</div>
 							{/if}

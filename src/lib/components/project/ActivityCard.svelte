@@ -58,6 +58,6 @@
 	{toRow}
 	empty={{
 		title: m.project_activity_card_title(),
-		description: m.project_activity_card_description()
+		description: m.project_activity_card_description_body()
 	}}
 />

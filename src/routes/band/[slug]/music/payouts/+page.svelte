@@ -46,35 +46,38 @@
 	<Card>
 		<CardBody>
 			<CardTitle>
-				{m.band_slug_music_payouts_stripe()}
+				{m.band_slug_music_payouts_stripe_title()}
 				{#if payouts.chargesEnabled}
-					<Badge variant="success" size="sm">{m.band_slug_music_payouts_ready()}</Badge>
+					<Badge variant="success" size="sm">{m.band_slug_music_payouts_ready_label()}</Badge>
 				{:else if payouts.connected}
-					<Badge variant="warning" size="sm">{m.band_slug_music_payouts_unfinished()}</Badge>
+					<Badge variant="warning" size="sm">{m.band_slug_music_payouts_unfinished_label()}</Badge>
 				{:else}
-					<Badge variant="ghost" size="sm">{m.band_slug_music_payouts_not_set_up()}</Badge>
+					<Badge variant="ghost" size="sm">{m.band_slug_music_payouts_not_set_up_label()}</Badge>
 				{/if}
 			</CardTitle>
 
 			{#if payouts.chargesEnabled}
 				<p class="text-muted">
-					{m.band_slug_music_payouts_sales_go_straight_own_stripe()}
+					{m.band_slug_music_payouts_sales_go_straight_own_stripe_text()}
 				</p>
 				<Form remote={openPayoutDashboard} onsuccess={goToStripe}>
 					{@const fields = openPayoutDashboard.fields}
 					<input {...fields.slug.as('hidden', slug)} />
-					<SubmitButton variant="ghost" label={m.band_slug_music_payouts_open_stripe_dashboard()} />
+					<SubmitButton
+						variant="ghost"
+						label={m.band_slug_music_payouts_open_stripe_dashboard_label()}
+					/>
 				</Form>
 			{:else}
 				<p class="text-muted">
-					{m.band_slug_music_payouts_sell_release_need_stripe_account()}
+					{m.band_slug_music_payouts_sell_release_need_stripe_account_text()}
 				</p>
 
 				{#if payouts.requirementsDue.length > 0}
 					<!-- Stripe's own list, verbatim. "Finish setting up" with no idea
 					     what is missing is the reason people abandon this. -->
 					<Alert type="warning">
-						{m.band_slug_music_payouts_stripe_still_needs({
+						{m.band_slug_music_payouts_stripe_still_needs_body({
 							join: payouts.requirementsDue.join(', ')
 						})}
 					</Alert>
@@ -85,8 +88,8 @@
 					<input {...fields.slug.as('hidden', slug)} />
 					<SubmitButton
 						label={payouts.connected
-							? m.band_slug_music_payouts_finish_setting_up_payouts()
-							: m.band_set_up_payouts()}
+							? m.band_slug_music_payouts_finish_setting_up_payouts_label()
+							: m.band_set_up_payouts_label()}
 					/>
 				</Form>
 			{/if}
@@ -95,17 +98,17 @@
 
 	<Card>
 		<CardBody>
-			<CardTitle>{m.band_slug_music_payouts_what_collective_takes()}</CardTitle>
+			<CardTitle>{m.band_slug_music_payouts_what_collective_takes_title()}</CardTitle>
 			<p class="text-muted">
 				<ParaglideMessage
-					message={m.band_slug_music_payouts_not_fixed_buyers_see_split}
+					message={m.band_slug_music_payouts_not_fixed_buyers_see_split_text}
 					inputs={{
 						suggested
 					}}>{#snippet em({ children })}<em>{@render children?.()}</em>{/snippet}</ParaglideMessage
 				>
 			</p>
 			<p class="text-muted">
-				{m.band_slug_music_payouts_free_releases_skip_all_record()}
+				{m.band_slug_music_payouts_free_releases_skip_all_record_text()}
 			</p>
 		</CardBody>
 	</Card>

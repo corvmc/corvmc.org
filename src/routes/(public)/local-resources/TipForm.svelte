@@ -25,7 +25,7 @@
 
 {#if submitted}
 	<Alert type="success">
-		{m.public_local_resources_tip_form_thanks_suggestion_we_ll_take()}
+		{m.public_local_resources_tip_form_thanks_suggestion_we_ll_take_body()}
 	</Alert>
 {:else}
 	<Form
@@ -44,12 +44,12 @@
 			<Field
 				field={fields.name}
 				type="text"
-				label={m.public_local_resources_tip_form_name_place_service()}
+				label={m.public_local_resources_tip_form_name_place_service_label()}
 			/>
 			<Field
 				field={fields.categoryId}
 				type="select"
-				label={m.public_local_resources_tip_form_category()}
+				label={m.public_local_resources_tip_form_category_label()}
 				placeholder={m.public_local_resources_tip_form_placeholder()}
 				options={categories}
 			/>
@@ -58,25 +58,25 @@
 			<Field
 				field={fields.website}
 				type="text"
-				label={m.public_local_resources_tip_form_website()}
+				label={m.public_local_resources_tip_form_website_label()}
 			/>
-			<Field field={fields.phone} type="tel" label={m.public_phone()} />
+			<Field field={fields.phone} type="tel" label={m.public_phone_label()} />
 		</div>
 		<Field
 			field={fields.addressLine}
 			type="text"
-			label={m.public_local_resources_tip_form_address_area()}
+			label={m.public_local_resources_tip_form_address_area_label()}
 		/>
 		<Field
 			field={fields.description}
 			type="textarea"
-			label={m.public_local_resources_tip_form_what_why_worth_knowing()}
+			label={m.public_local_resources_tip_form_what_why_worth_knowing_label()}
 		/>
 		<Field
 			field={fields.submitterEmail}
 			type="email"
-			label={m.public_email_2()}
-			description={m.public_local_resources_tip_form_description()}
+			label={m.public_email_2_label()}
+			description={m.public_local_resources_tip_form_description_body()}
 		/>
 		<Turnstile
 			siteKey={TURNSTILE_SITE_KEY}
@@ -88,7 +88,7 @@
 			<Alert type="error">{failure}</Alert>
 		{/if}
 		<SubmitButton
-			label={m.public_local_resources_tip_form_suggest_resource()}
+			label={m.public_local_resources_tip_form_suggest_resource_label()}
 			variant="primary"
 			class="mt-2"
 		/>

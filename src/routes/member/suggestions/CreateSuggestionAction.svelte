@@ -21,10 +21,12 @@
 
 <Action
 	action={createSuggestion}
-	label={m.member_suggestions_create_suggestion_new_suggestion()}
-	modalTitle={m.member_suggestions_create_suggestion_new_suggestion()}
-	submitLabel={m.member_post()}
-	successToast={standing.status !== 'none' ? m.member_sent_staff_review() : m.member_posted_board()}
+	label={m.member_suggestions_create_suggestion_new_suggestion_label()}
+	modalTitle={m.member_suggestions_create_suggestion_new_suggestion_title()}
+	submitLabel={m.member_post_label()}
+	successToast={standing.status !== 'none'
+		? m.member_sent_staff_review_toast()
+		: m.member_posted_board_toast()}
 	variant="primary"
 	size="sm"
 	onsuccess={(r) => {
@@ -36,22 +38,22 @@
 	{#snippet icon()}<IconPlus size={16} />{/snippet}
 	{#snippet form()}
 		{#if standing.status !== 'none'}
-			<p class="mb-3 text-muted">{m.member_staff_will_look_at_before()}</p>
+			<p class="mb-3 text-muted">{m.member_staff_will_look_at_before_text()}</p>
 		{/if}
 		<FormField
 			field={createSuggestion.fields.title}
 			type="text"
-			label={m.member_what_should_we_do()}
+			label={m.member_what_should_we_do_label()}
 		/>
 		<FormField
 			field={createSuggestion.fields.body}
 			type="textarea"
-			label={m.member_tell_us_bit_more()}
+			label={m.member_tell_us_bit_more_label()}
 		/>
 		<FormField
 			field={createSuggestion.fields.category}
 			type="select"
-			label={m.member_category()}
+			label={m.member_category_label()}
 			options={suggestionCategories.map((c) => ({
 				value: c,
 				label: suggestionCategoryLabels[c]

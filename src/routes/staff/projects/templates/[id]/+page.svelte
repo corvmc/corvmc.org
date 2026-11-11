@@ -42,23 +42,26 @@
 	const anchorOptions = dutyListAnchors.map((a) => ({ value: a, label: dutyListAnchorLabels[a] }));
 
 	const kindOptions = [
-		{ value: 'scheduled', label: m.staff_project_templates_id_scheduled_shift_with_start_end() },
-		{ value: 'due', label: m.staff_project_templates_id_due_by_work_order_with() }
+		{
+			value: 'scheduled',
+			label: m.staff_project_templates_id_scheduled_shift_with_start_end_label()
+		},
+		{ value: 'due', label: m.staff_project_templates_id_due_by_work_order_with_label() }
 	];
 	const unitOptions = [
-		{ value: 'minutes', label: m.staff_project_templates_id_minutes() },
-		{ value: 'hours', label: m.staff_project_templates_id_hours() },
-		{ value: 'days', label: m.staff_project_templates_id_days() }
+		{ value: 'minutes', label: m.staff_project_templates_id_minutes_label() },
+		{ value: 'hours', label: m.staff_project_templates_id_hours_label() },
+		{ value: 'days', label: m.staff_project_templates_id_days_label() }
 	];
 	const doneWhenOptions = [
-		{ value: '', label: m.staff_project_templates_id_only_when_somebody_marks_done() },
+		{ value: '', label: m.staff_project_templates_id_only_when_somebody_marks_done_label() },
 		...workDoneConditions.map((c) => ({ value: c, label: workDoneConditionLabels[c] }))
 	];
 	type Item = Awaited<ReturnType<typeof getDutyListPage>>['items'][number];
 
 	const directionOptions = [
-		{ value: 'before', label: m.staff_project_templates_id_before() },
-		{ value: 'after', label: m.staff_project_templates_id_after() }
+		{ value: 'before', label: m.staff_project_templates_id_before_label() },
+		{ value: 'after', label: m.staff_project_templates_id_after_label() }
 	];
 </script>
 
@@ -68,40 +71,40 @@
 	{@const anchorLabel = dutyListAnchorLabels[d.list.anchor]}
 	{@const roleOptions = d.roles.map((r) => ({ value: r.id, label: r.name }))}
 	{@const ownerOptions = [
-		{ value: '', label: m.staff_staff() },
+		{ value: '', label: m.staff_staff_label() },
 		...d.committees.map((c) => ({ value: c.id, label: c.name }))
 	]}
 
-	<PageHeader title={d.list.name} subtitle={m.staff_project_templates_id_subtitle()}>
+	<PageHeader title={d.list.name} subtitle={m.staff_project_templates_id_subtitle_body()}>
 		<!-- The status its list row shows. It existed on this page only as a
 		     toggle inside the Edit modal, so reading it meant opening a form you
 		     then had to cancel (#1067). -->
 		<StatusBadge status={d.list.isActive ? 'active' : 'archived'} label />
 		<Action
 			action={updateDutyList}
-			label={m.staff_edit()}
+			label={m.staff_edit_label()}
 			variant="ghost"
-			modalTitle={m.staff_project_templates_id_edit_template()}
-			submitLabel={m.staff_save()}
-			successToast={m.staff_saved()}
+			modalTitle={m.staff_project_templates_id_edit_template_title()}
+			submitLabel={m.staff_save_label()}
+			successToast={m.staff_saved_toast()}
 		>
 			{#snippet form()}
 				<input {...updateDutyList.fields.id.as('hidden', d.list.id)} />
 				<FormField
 					field={updateDutyList.fields.name}
-					label={m.staff_name()}
+					label={m.staff_name_label()}
 					type="text"
 					value={d.list.name}
 				/>
 				<FormField
 					field={updateDutyList.fields.description}
-					label={m.staff_description()}
+					label={m.staff_description_label()}
 					type="textarea"
 					value={d.list.description ?? ''}
 				/>
 				<FormField
 					field={updateDutyList.fields.anchor}
-					label={m.staff_measure_offsets_from()}
+					label={m.staff_measure_offsets_from_label()}
 					type="select"
 					options={anchorOptions}
 					value={d.list.anchor}
@@ -109,15 +112,15 @@
 				<FormField
 					field={updateDutyList.fields.startsProduction}
 					type="checkbox"
-					label={m.staff_production()}
-					checkboxLabel={m.staff_project_templates_starts_production()}
+					label={m.staff_production_label()}
+					checkboxLabel={m.staff_project_templates_starts_production_checkbox()}
 					value={d.list.projectKind === 'production'}
 				/>
 				<FormField
 					field={updateDutyList.fields.isActive}
 					type="checkbox"
-					label={m.staff_active()}
-					checkboxLabel={m.staff_project_templates_id_checkbox_label()}
+					label={m.staff_active_label()}
+					checkboxLabel={m.staff_project_templates_id_checkbox_label_checkbox()}
 					value={d.list.isActive}
 				/>
 			{/snippet}
@@ -125,10 +128,10 @@
 
 		<Action
 			action={addDutyListItem}
-			label={m.staff_project_templates_id_add_item()}
-			modalTitle={m.staff_project_templates_id_add_item_2()}
-			submitLabel={m.staff_add()}
-			successToast={m.staff_project_templates_id_item_added()}
+			label={m.staff_project_templates_id_add_item_label()}
+			modalTitle={m.staff_project_templates_id_add_item_2_title()}
+			submitLabel={m.staff_add_label()}
+			successToast={m.staff_project_templates_id_item_added_toast()}
 		>
 			{#snippet form()}
 				<input {...addDutyListItem.fields.dutyListId.as('hidden', d.list.id)} />
@@ -144,27 +147,27 @@
 			<p class="text-muted">{d.list.description}</p>
 		{/if}
 
-		<InfoCard title={m.staff_items()}>
+		<InfoCard title={m.staff_items_title()}>
 			<p class="mb-3 text-sm text-base-content/70">
-				{m.staff_project_templates_id_offsets_measured_from({
+				{m.staff_project_templates_id_offsets_measured_from_text({
 					toLowerCase: anchorLabel.toLowerCase()
 				})}
 			</p>
 			{#if d.items.length === 0}
 				<EmptyState
-					title={m.staff_project_templates_id_no_items_yet()}
-					description={m.staff_project_templates_id_add_work_orders_project_takes()}
+					title={m.staff_project_templates_id_no_items_yet_title()}
+					description={m.staff_project_templates_id_add_work_orders_project_takes_body()}
 				/>
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th>{m.staff_role()}</th>
-						<th class="col-support">{m.staff_owner()}</th>
-						<th>{m.staff_when()}</th>
-						<th class="col-support">{m.staff_project_templates_id_text()}</th>
-						<th class="cell-num">{m.staff_people()}</th>
-						<th class="col-support cell-num">{m.staff_project_templates_id_tasks()}</th>
-						<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+						<th>{m.staff_role_label()}</th>
+						<th class="col-support">{m.staff_owner_label()}</th>
+						<th>{m.staff_when_label()}</th>
+						<th class="col-support">{m.staff_project_templates_id_text_label()}</th>
+						<th class="cell-num">{m.staff_people_label()}</th>
+						<th class="col-support cell-num">{m.staff_project_templates_id_tasks_label()}</th>
+						<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 					{/snippet}
 
 					{#each d.items as item (item.id)}
@@ -182,7 +185,7 @@
 								{/if}
 							</td>
 							<td class="col-support">
-								{item.groupName ?? m.staff_staff()}
+								{item.groupName ?? m.staff_staff_text()}
 								{#if item.doneWhen}
 									<div class="text-sm text-base-content/60">
 										{workDoneConditionLabels[item.doneWhen]}
@@ -194,7 +197,7 @@
 									{describeOffset(item.offsetMinutes, anchorLabel)}
 								{:else if item.dueOffsetMinutes !== null}
 									<Badge variant="ghost"
-										>{m.staff_project_templates_id_due({
+										>{m.staff_project_templates_id_due_label({
 											describeOffset: describeOffset(item.dueOffsetMinutes, anchorLabel)
 										})}</Badge
 									>
@@ -209,15 +212,15 @@
 								<div class="flex w-max justify-end gap-2">
 									<Action
 										action={updateDutyListItem.for(item.id)}
-										label={m.staff_edit()}
+										label={m.staff_edit_label()}
 										aria-label={m.staff_project_templates_id_aria_label({
 											value: item.title ?? item.roleName
 										})}
 										variant="ghost"
 										size="sm"
-										modalTitle={m.staff_project_templates_id_edit_item()}
-										submitLabel={m.staff_save()}
-										successToast={m.staff_saved()}
+										modalTitle={m.staff_project_templates_id_edit_item_title()}
+										submitLabel={m.staff_save_label()}
+										successToast={m.staff_saved_toast()}
 									>
 										{#snippet form()}
 											<input {...updateDutyListItem.for(item.id).fields.id.as('hidden', item.id)} />
@@ -236,11 +239,11 @@
 									</Action>
 									<Action
 										action={removeDutyListItem}
-										label={m.staff_remove()}
+										label={m.staff_remove_label()}
 										variant="ghost"
 										size="sm"
-										confirm={m.staff_project_templates_id_remove_item_work_orders_already()}
-										successToast={m.staff_project_templates_id_item_removed()}
+										confirm={m.staff_project_templates_id_remove_item_work_orders_already_body()}
+										successToast={m.staff_project_templates_id_item_removed_toast()}
 									>
 										{#snippet form()}
 											<input {...removeDutyListItem.fields.id.as('hidden', item.id)} />
@@ -255,17 +258,17 @@
 			{/if}
 		</InfoCard>
 
-		<InfoCard title={m.staff_project_templates_id_danger_zone()}>
+		<InfoCard title={m.staff_project_templates_id_danger_zone_title()}>
 			<p class="mb-3 text-sm text-base-content/70">
-				{m.staff_project_templates_id_work_orders_already_created_from()}
+				{m.staff_project_templates_id_work_orders_already_created_from_text()}
 			</p>
 			<Action
 				action={deleteDutyList}
-				label={m.staff_project_templates_id_delete_template()}
+				label={m.staff_project_templates_id_delete_template_label()}
 				variant="error"
 				outline
-				confirm={m.staff_project_templates_id_delete({ name: d.list.name })}
-				successToast={m.staff_project_templates_id_template_deleted()}
+				confirm={m.staff_project_templates_id_delete_body({ name: d.list.name })}
+				successToast={m.staff_project_templates_id_template_deleted_toast()}
 				onsuccess={() => goto(resolve('staff/projects/templates'))}
 			>
 				{#snippet form()}
@@ -286,59 +289,59 @@
 	{@const offset = splitOffset(item ? (item.offsetMinutes ?? item.dueOffsetMinutes ?? 0) : -180)}
 	<FormField
 		field={fields.volunteerRoleId}
-		label={m.staff_role()}
+		label={m.staff_role_label()}
 		type="select"
 		options={roleOptions}
 		value={item?.volunteerRoleId}
 	/>
 	<FormField
 		field={fields.title}
-		label={m.staff_title()}
+		label={m.staff_title_label()}
 		type="text"
 		value={item?.title ?? ''}
-		description={m.staff_project_templates_id_what_work_order_called_blank()}
+		description={m.staff_project_templates_id_what_work_order_called_blank_body()}
 	/>
 	<FormField
 		field={fields.groupId}
-		label={m.staff_owner()}
+		label={m.staff_owner_label()}
 		type="select"
 		options={ownerOptions}
 		value={item?.groupId ?? ''}
 	/>
 	<FormField
 		field={fields.doneWhen}
-		label={m.staff_project_templates_id_done_when()}
+		label={m.staff_project_templates_id_done_when_label()}
 		type="select"
 		options={doneWhenOptions}
 		value={item?.doneWhen ?? ''}
-		description={m.staff_project_templates_id_fact_about_show_its_tasks()}
+		description={m.staff_project_templates_id_fact_about_show_its_tasks_body()}
 	/>
 	<FormField
 		field={fields.kind}
-		label={m.staff_kind()}
+		label={m.staff_kind_label()}
 		type="select"
 		options={kindOptions}
 		value={due ? 'due' : 'scheduled'}
-		description={m.staff_project_templates_id_deadline_item_becomes_unscheduled()}
+		description={m.staff_project_templates_id_deadline_item_becomes_unscheduled_body()}
 	/>
 	<div class="grid gap-4 sm:grid-cols-3">
 		<FormField
 			field={fields.offsetAmount}
 			submitAs="text"
-			label={m.staff_project_templates_id_offset()}
+			label={m.staff_project_templates_id_offset_label()}
 			type="number"
 			value={String(offset.amount)}
 		/>
 		<FormField
 			field={fields.offsetUnit}
-			label={m.staff_project_templates_id_unit()}
+			label={m.staff_project_templates_id_unit_label()}
 			type="select"
 			options={unitOptions}
 			value={offset.unit}
 		/>
 		<FormField
 			field={fields.offsetDirection}
-			label={m.staff_project_templates_id_direction()}
+			label={m.staff_project_templates_id_direction_label()}
 			type="select"
 			options={directionOptions}
 			value={offset.direction}
@@ -347,36 +350,36 @@
 	<FormField
 		field={fields.durationMinutes}
 		submitAs="text"
-		label={m.staff_project_templates_id_duration_minutes()}
+		label={m.staff_project_templates_id_duration_minutes_label()}
 		type="number"
 		value={String(item ? (item.durationMinutes ?? '') : 120)}
-		description={m.staff_project_templates_id_scheduled_items_only_ignored_dead()}
+		description={m.staff_project_templates_id_scheduled_items_only_ignored_dead_body()}
 	/>
 	<FormField
 		field={fields.capacity}
 		submitAs="text"
-		label={m.staff_project_templates_id_how_many_people()}
+		label={m.staff_project_templates_id_how_many_people_label()}
 		type="number"
 		value={String(item?.capacity ?? 1)}
 	/>
 	<FormField
 		field={fields.sortOrder}
 		submitAs="text"
-		label={m.staff_sort_order()}
+		label={m.staff_sort_order_label()}
 		type="number"
 		value={String(item?.sortOrder ?? 0)}
 	/>
 	<FormField
 		field={fields.notes}
-		label={m.staff_notes()}
+		label={m.staff_notes_label()}
 		type="textarea"
 		value={item?.notes ?? ''}
 	/>
 	<FormField
 		field={fields.tasks}
-		label={m.staff_project_templates_id_tasks()}
+		label={m.staff_project_templates_id_tasks_label()}
 		type="textarea"
 		value={item?.tasks.join('\n') ?? ''}
-		description={m.staff_project_templates_id_one_per_line_these_become()}
+		description={m.staff_project_templates_id_one_per_line_these_become_body()}
 	/>
 {/snippet}

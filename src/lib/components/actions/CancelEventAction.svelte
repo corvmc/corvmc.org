@@ -28,9 +28,9 @@
 
 <Action
 	action={cancelEvent}
-	label={m.actions_cancel_event()}
-	modalTitle={m.actions_cancel_event()}
-	successToast={m.actions_cancelled()}
+	label={m.actions_cancel_event_label()}
+	modalTitle={m.actions_cancel_event_title()}
+	successToast={m.actions_cancelled_toast()}
 	{variant}
 	{size}
 	{outline}
@@ -40,6 +40,6 @@
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', eventId)} />
-		<p class="py-2">{m.actions_cancel_event_cancel_event_cannot_undone()}</p>
+		<p class="py-2">{m.actions_cancel_event_cancel_event_cannot_undone_text()}</p>
 	{/snippet}
 </Action>

@@ -19,9 +19,9 @@
 
 <Action
 	action={grantInstructor}
-	label={m.staff_members_instructors_grant_instructor_add_instructor()}
-	modalTitle={m.staff_members_instructors_grant_instructor_add_instructor()}
-	submitLabel={m.staff_grant()}
+	label={m.staff_members_instructors_grant_instructor_add_instructor_label()}
+	modalTitle={m.staff_members_instructors_grant_instructor_add_instructor_title()}
+	submitLabel={m.staff_grant_label()}
 	successToast={m.staff_members_instructors_grant_instructor_success_toast()}
 	variant="primary"
 	size="sm"
@@ -29,17 +29,17 @@
 >
 	{#snippet form()}
 		<div class="space-y-4">
-			<FormField field={grantInstructor.fields.userId} label={m.staff_member()} required>
+			<FormField field={grantInstructor.fields.userId} label={m.staff_member_label()} required>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={member}
 					field={fields.userId}
-					placeholder={m.staff_search_by_name_email()}
+					placeholder={m.staff_search_by_name_email_placeholder()}
 				/>
 			</FormField>
 
 			<p class="text-subtle">
-				{m.staff_members_instructors_grant_instructor_they_can_book_roo()}
+				{m.staff_members_instructors_grant_instructor_they_can_book_roo_text()}
 			</p>
 		</div>
 	{/snippet}

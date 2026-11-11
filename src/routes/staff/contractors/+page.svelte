@@ -33,32 +33,37 @@
 	}));
 </script>
 
-<PageHeader title={m.staff_contractors_contractors()} subtitle={m.staff_space()}>
+<PageHeader title={m.staff_contractors_contractors_title()} subtitle={m.staff_space_body()}>
 	<Button
 		href={withQuery(resolve('staff/volunteer/schedule'), 'kind=contractor')}
 		variant="ghost"
-		size="sm">{m.staff_jobs()}</Button
+		size="sm">{m.staff_jobs_label()}</Button
 	>
 	<Action
 		action={createContractorForm}
-		label={m.staff_contractors_new_contractor()}
-		modalTitle={m.staff_contractors_new_contractor()}
+		label={m.staff_contractors_new_contractor_label()}
+		modalTitle={m.staff_contractors_new_contractor_title()}
 		successToast={m.staff_contractors_success_toast()}
 	>
 		{#snippet form()}
-			<Field field={fields.name} type="text" label={m.staff_name()} />
-			<Field field={fields.trade} type="select" label={m.staff_trade()} options={tradeOptions} />
-			<Field field={fields.contactName} type="text" label={m.staff_contact()} />
-			<Field field={fields.phone} type="tel" label={m.staff_phone()} />
-			<Field field={fields.email} type="email" label={m.staff_email()} />
-			<Field field={fields.licenseNumber} type="text" label={m.staff_licence_number()} />
+			<Field field={fields.name} type="text" label={m.staff_name_label()} />
+			<Field
+				field={fields.trade}
+				type="select"
+				label={m.staff_trade_label()}
+				options={tradeOptions}
+			/>
+			<Field field={fields.contactName} type="text" label={m.staff_contact_label()} />
+			<Field field={fields.phone} type="tel" label={m.staff_phone_label()} />
+			<Field field={fields.email} type="email" label={m.staff_email_label()} />
+			<Field field={fields.licenseNumber} type="text" label={m.staff_licence_number_label()} />
 			<Field
 				field={fields.insuranceExpiresAt}
 				type="date"
-				label={m.staff_insurance_expires()}
-				description={m.staff_contractors_leave_blank_if_we_hold()}
+				label={m.staff_insurance_expires_label()}
+				description={m.staff_contractors_leave_blank_if_we_hold_body()}
 			/>
-			<Field field={fields.notes} type="textarea" label={m.staff_notes()} />
+			<Field field={fields.notes} type="textarea" label={m.staff_notes_label()} />
 		{/snippet}
 	</Action>
 </PageHeader>
@@ -67,11 +72,11 @@
 	{#if data.overdue.length > 0}
 		<Alert type="warning">
 			<ParaglideMessage
-				message={m.staff_contractors_jobs_past_date_they_were}
+				message={m.staff_contractors_jobs_past_date_they_were_body}
 				inputs={{
-					staff_contractors_overdue: m.staff_contractors_overdue(),
+					staff_contractors_overdue: m.staff_contractors_overdue_body(),
 					length: data.overdue.length,
-					staff_contractors_open_queue: m.staff_contractors_open_queue()
+					staff_contractors_open_queue: m.staff_contractors_open_queue_body()
 				}}
 				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
 					>{/snippet}{#snippet a({ children })}<a
@@ -85,14 +90,14 @@
 
 	{#if data.lapsing.length > 0}
 		<Alert type="error">
-			<span class="font-medium">{m.staff_insurance()}</span>
+			<span class="font-medium">{m.staff_insurance_body()}</span>
 			{#each data.lapsing as c (c.id)}
 				<div>
 					<a class="link font-medium" href={resolve(`staff/contractors/${c.id}`)}>{c.name}</a>
 					{#if c.insuranceExpiresAt}
 						— {c.insuranceExpiresAt < new Date()
-							? m.staff_contractors_expired_2()
-							: m.staff_contractors_expires()}
+							? m.staff_contractors_expired_2_text()
+							: m.staff_contractors_expires_text()}
 						{formatDateShort(c.insuranceExpiresAt)}
 					{/if}
 				</div>
@@ -102,16 +107,16 @@
 
 	{#if data.contractors.length === 0}
 		<EmptyState
-			title={m.staff_contractors_no_contractors_yet()}
-			description={m.staff_contractors_add_people_call_when_something()}
+			title={m.staff_contractors_no_contractors_yet_title()}
+			description={m.staff_contractors_add_people_call_when_something_body()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th>{m.staff_name()}</th>
-				<th>{m.staff_trade()}</th>
-				<th>{m.staff_contact()}</th>
-				<th>{m.staff_insurance()}</th>
+				<th>{m.staff_name_label()}</th>
+				<th>{m.staff_trade_label()}</th>
+				<th>{m.staff_contact_label()}</th>
+				<th>{m.staff_insurance_label()}</th>
 			{/snippet}
 			{#each data.contractors as c (c.id)}
 				<tr class="hover">
@@ -129,10 +134,10 @@
 					<td>{c.phone ?? c.email ?? '—'}</td>
 					<td>
 						{#if !c.insuranceExpiresAt}
-							<span class="text-subtle">{m.staff_not_file()}</span>
+							<span class="text-subtle">{m.staff_not_file_text()}</span>
 						{:else if c.insuranceExpiresAt < new Date()}
 							<Badge variant="error" size="sm">
-								{m.staff_contractors_expired({
+								{m.staff_contractors_expired_label({
 									formatDateShort: formatDateShort(c.insuranceExpiresAt)
 								})}
 							</Badge>

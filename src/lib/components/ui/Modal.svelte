@@ -78,7 +78,7 @@
 						<Dialog.Title class="text-lg font-bold">{title}</Dialog.Title>
 					{/if}
 					<!-- The glyph is decoration; "Close" is the name the button is announced by. -->
-					<Dialog.Close class="btn btn-circle btn-outline btn-sm" aria-label={m.ui_close()}>
+					<Dialog.Close class="btn btn-circle btn-outline btn-sm" aria-label={m.ui_close_label()}>
 						<span aria-hidden="true">✕</span>
 					</Dialog.Close>
 				</div>

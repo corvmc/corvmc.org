@@ -23,7 +23,7 @@
 
 <PageHeader title={m.member_equipment_loans_title()}>
 	<Button href="/member/equipment" variant="ghost" size="sm"
-		>{m.member_equipment_loans_browse_catalog()}</Button
+		>{m.member_equipment_loans_browse_catalog_label()}</Button
 	>
 </PageHeader>
 <PageContent>
@@ -31,10 +31,14 @@
 		tabs={[
 			// Not "Active": the set includes loans still `requested`, which staff
 			// have not approved yet (#896).
-			{ key: 'active', label: m.member_equipment_loans_current(), badge: data.active.length },
+			{ key: 'active', label: m.member_equipment_loans_current_label(), badge: data.active.length },
 			// The real total, not the length of the page in hand — the badge used to
 			// read 50 forever.
-			{ key: 'past', label: m.member_equipment_loans_past(), badge: data.past.pagination.total }
+			{
+				key: 'past',
+				label: m.member_equipment_loans_past_label(),
+				badge: data.past.pagination.total
+			}
 		]}
 		active={activeTab}
 		onchange={(key) => (activeTab = key as 'active' | 'past')}
@@ -50,19 +54,21 @@
 	{#if activeTab === 'active'}
 		{#if data.active.length === 0}
 			<EmptyState
-				message={m.member_equipment_loans_message()}
+				message={m.member_equipment_loans_message_body()}
 				actionLabel={m.member_equipment_loans_action_label()}
 				actionHref="/member/equipment"
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.member_status()}</span></th>
-					<th class="cell-primary">{m.member_item()}</th>
-					<th class="col-support whitespace-nowrap">{m.member_equipment_loans_pickup()}</th>
-					<th class="whitespace-nowrap">{m.member_due()}</th>
-					<th class="col-extra cell-num whitespace-nowrap">{m.member_equipment_loans_cost()}</th>
-					<th class="w-px"><span class="sr-only">{m.member_actions()}</span></th>
+					<th class="w-px"><span class="sr-only">{m.member_status_label()}</span></th>
+					<th class="cell-primary">{m.member_item_label()}</th>
+					<th class="col-support whitespace-nowrap">{m.member_equipment_loans_pickup_label()}</th>
+					<th class="whitespace-nowrap">{m.member_due_label()}</th>
+					<th class="col-extra cell-num whitespace-nowrap"
+						>{m.member_equipment_loans_cost_label()}</th
+					>
+					<th class="w-px"><span class="sr-only">{m.member_actions_label()}</span></th>
 				{/snippet}
 
 				{#each data.active as loan (loan.id)}
@@ -83,7 +89,7 @@
 						<td class="col-support whitespace-nowrap">
 							{formatDate(loan.scheduledPickupDate ?? loan.requestedPickupDate)}
 							{#if !loan.scheduledPickupDate}
-								<div class="text-subtle">{m.member_equipment_loans_requested()}</div>
+								<div class="text-subtle">{m.member_equipment_loans_requested_text()}</div>
 							{/if}
 						</td>
 						<!-- The one fact with a deadline on it, so it keeps a full column
@@ -92,7 +98,7 @@
 							{#if loan.dueDate}
 								<span class:text-error={loan.isOverdue}>{formatDate(loan.dueDate)}</span>
 								{#if loan.isOverdue}
-									<Badge variant="error" size="xs">{m.member_overdue()}</Badge>
+									<Badge variant="error" size="xs">{m.member_overdue_label()}</Badge>
 								{/if}
 							{:else if loan.estimatedReturnDate}
 								<span class="text-subtle">~{formatDate(loan.estimatedReturnDate)}</span>
@@ -103,10 +109,12 @@
 						<td class="col-extra cell-num whitespace-nowrap">
 							{#if loan.estimatedCostCents != null}
 								{loan.estimatedCostCents === 0
-									? m.member_free()
+									? m.member_free_text()
 									: formatCents(loan.estimatedCostCents)}
 							{:else if loan.dailyRateCents != null}
-								{m.member_equipment_loans_day({ formatCents: formatCents(loan.dailyRateCents) })}
+								{m.member_equipment_loans_day_text({
+									formatCents: formatCents(loan.dailyRateCents)
+								})}
 							{:else}
 								<span class="text-subtle">—</span>
 							{/if}
@@ -116,8 +124,8 @@
 								<div class="flex w-max">
 									<CancelLoanAction
 										loanId={loan.id}
-										label={m.member_cancel()}
-										confirm={m.member_equipment_loans_confirm()}
+										label={m.member_cancel_label()}
+										confirm={m.member_equipment_loans_confirm_body()}
 									/>
 								</div>
 							{/if}
@@ -127,14 +135,14 @@
 			</Table>
 		{/if}
 	{:else if data.past.rows.length === 0}
-		<p class="py-8 text-center opacity-60">{m.member_equipment_loans_no_past_loans()}</p>
+		<p class="py-8 text-center opacity-60">{m.member_equipment_loans_no_past_loans_text()}</p>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">{m.member_status()}</span></th>
-				<th class="cell-primary">{m.member_item()}</th>
-				<th class="col-support whitespace-nowrap">{m.member_equipment_loans_returned()}</th>
-				<th class="cell-num whitespace-nowrap">{m.member_equipment_loans_charged()}</th>
+				<th class="w-px"><span class="sr-only">{m.member_status_label()}</span></th>
+				<th class="cell-primary">{m.member_item_label()}</th>
+				<th class="col-support whitespace-nowrap">{m.member_equipment_loans_returned_label()}</th>
+				<th class="cell-num whitespace-nowrap">{m.member_equipment_loans_charged_label()}</th>
 			{/snippet}
 
 			{#each data.past.rows as loan (loan.id)}
@@ -149,7 +157,7 @@
 							{formatCents(loan.totalChargeCents)}
 							{#if loan.creditsCents && loan.creditsCents > 0}
 								<div class="text-subtle">
-									{m.member_equipment_loans_credits({
+									{m.member_equipment_loans_credits_text({
 										formatCents: formatCents(loan.creditsCents)
 									})}
 								</div>

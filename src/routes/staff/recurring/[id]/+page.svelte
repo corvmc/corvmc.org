@@ -32,18 +32,18 @@
 <PageHeader
 	width="3xl"
 	title={formatScheduleLabel(series.frequencyLabel, series.prototypeStartsAt, series.monthlyMode)}
-	subtitle={m.staff_recurring_series()}
+	subtitle={m.staff_recurring_series_body()}
 	parent={{
-		label: m.staff_recurring_series(),
+		label: m.staff_recurring_series_label(),
 		href: withQuery(resolve('staff/reservations'), 'recurring')
 	}}
 >
 	{#if isActive}
 		<Action
 			action={cancelDetailSeries}
-			label={m.staff_recurring_id_cancel_series()}
-			modalTitle={m.staff_confirm()}
-			successToast={m.staff_series_cancelled()}
+			label={m.staff_recurring_id_cancel_series_label()}
+			modalTitle={m.staff_confirm_title()}
+			successToast={m.staff_series_cancelled_toast()}
 			variant="error"
 			size="sm"
 			outline
@@ -52,7 +52,7 @@
 			{#snippet form()}
 				<input {...cancelFields.seriesId.as('hidden', id)} />
 				<p class="py-4">
-					{m.staff_cancel_recurring_series_next_session()}
+					{m.staff_cancel_recurring_series_next_session_text()}
 				</p>
 			{/snippet}
 		</Action>
@@ -68,42 +68,44 @@
 	</div>
 
 	<!-- Current schedule -->
-	<InfoCard title={m.staff_schedule()}>
+	<InfoCard title={m.staff_schedule_title()}>
 		<DefinitionList>
 			<!-- The plain-English schedule the list row shows. The raw RRULE stays,
 			     because staff do read it when a series misbehaves — but it is no
 			     longer the only thing on offer (#1065). -->
-			<Fact label={m.staff_schedule()}>
+			<Fact label={m.staff_schedule_label()}>
 				{formatScheduleLabel(series.frequencyLabel, series.prototypeStartsAt, series.monthlyMode)}
 			</Fact>
 
-			<Fact label={m.staff_recurring_id_rrule()} mono>{series.rrule}</Fact>
+			<Fact label={m.staff_recurring_id_rrule_label()} mono>{series.rrule}</Fact>
 
-			<Fact label={m.staff_recurring_id_prototype_time()}
+			<Fact label={m.staff_recurring_id_prototype_time_label()}
 				>{formatTimeRange(series.prototypeStartsAt, series.prototypeEndsAt)}</Fact
 			>
 
-			<Fact label={m.staff_booker()}><EntityChip ref={series.booker} /></Fact>
+			<Fact label={m.staff_booker_label()}><EntityChip ref={series.booker} /></Fact>
 
 			<!-- The booking the series was cut from. Its times were on this page and
 			     its id was on the record, and there was no way to open it. -->
-			<Fact label={m.staff_recurring_id_prototype()}><EntityChip ref={series.prototype} /></Fact>
+			<Fact label={m.staff_recurring_id_prototype_label()}
+				><EntityChip ref={series.prototype} /></Fact
+			>
 
 			{#if series.prototypeNotes}
-				<Fact label={m.staff_notes()} wrap>{series.prototypeNotes}</Fact>
+				<Fact label={m.staff_notes_label()} wrap>{series.prototypeNotes}</Fact>
 			{/if}
 
-			<Fact label={m.staff_created()}>{formatDate(series.createdAt)}</Fact>
+			<Fact label={m.staff_created_label()}>{formatDate(series.createdAt)}</Fact>
 
 			{#if series.cancelledAt}
-				<Fact label={m.staff_cancelled()}>{formatDate(series.cancelledAt)}</Fact>
+				<Fact label={m.staff_cancelled_label()}>{formatDate(series.cancelledAt)}</Fact>
 			{/if}
 		</DefinitionList>
 	</InfoCard>
 
 	<!-- History -->
 	{#if history.length > 1}
-		<InfoCard title={m.staff_recurring_id_supersession_history()}>
+		<InfoCard title={m.staff_recurring_id_supersession_history_title()}>
 			<div class="space-y-2">
 				{#each history as h, i (h.id)}
 					<div class="flex items-center gap-3 text-sm" class:opacity-50={i > 0}>
@@ -113,7 +115,7 @@
 						{#if h.cancelledAt}
 							<StatusBadge status="cancelled" />
 						{:else if h.supersededBy}
-							<Badge variant="ghost">{m.staff_recurring_id_superseded()}</Badge>
+							<Badge variant="ghost">{m.staff_recurring_id_superseded_label()}</Badge>
 						{:else}
 							<StatusBadge status="active" />
 						{/if}

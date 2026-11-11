@@ -47,13 +47,13 @@
 		<div class="grid grid-cols-2 divide-x divide-base-300 sm:grid-cols-4">
 			<div class="px-4 py-3 text-center">
 				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
-					>{msg.reservations_booking_policy_rate()}</span
+					>{msg.reservations_booking_policy_rate_text()}</span
 				>
 				<span class="block text-lg font-bold">{fmtRate(policy.hourlyRateCents)}</span>
 			</div>
 			<div class="px-4 py-3 text-center">
 				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
-					>{msg.reservations_booking_policy_hours()}</span
+					>{msg.reservations_booking_policy_hours_text()}</span
 				>
 				<span class="block text-lg font-bold"
 					>{fmtHour(policy.operatingHoursStart)} – {fmtHour(policy.operatingHoursEnd)}</span
@@ -61,10 +61,10 @@
 			</div>
 			<div class="px-4 py-3 text-center">
 				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
-					>{msg.reservations_booking_policy_length()}</span
+					>{msg.reservations_booking_policy_length_text()}</span
 				>
 				<span class="block text-lg font-bold"
-					>{msg.reservations_booking_policy_hrs({
+					>{msg.reservations_booking_policy_hrs_text({
 						minDurationHours: policy.minDurationHours,
 						maxDurationHours: policy.maxDurationHours
 					})}</span
@@ -72,23 +72,23 @@
 			</div>
 			<div class="px-4 py-3 text-center">
 				<span class="block text-[.6rem] font-bold tracking-wide uppercase opacity-60"
-					>{msg.reservations_booking_policy_notice()}</span
+					>{msg.reservations_booking_policy_notice_text()}</span
 				>
 				<span class="block text-lg font-bold">{fmtNotice(policy.minAdvanceMinutes)}</span>
 			</div>
 		</div>
 	{:catch error}
-		<Alert type="error">{msg.ui_load_failed({ error: errorMessage(error) })}</Alert>
+		<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
 	{/await}
 	<details class="border-t-[2.5px] border-base-300">
 		<summary
 			class="cursor-pointer px-4 py-2 text-subtle font-semibold tracking-wide uppercase hover:opacity-100"
 		>
-			{msg.reservations_booking_policy_booking_policy()}
+			{msg.reservations_booking_policy_booking_policy_label()}
 		</summary>
 		<div class="space-y-1 px-4 pb-3 text-muted">
-			<p>{msg.reservations_booking_policy_payment_due_at_reservation_start()}</p>
-			<p>{msg.reservations_booking_policy_if_have_specific_needs_equipment()}</p>
+			<p>{msg.reservations_booking_policy_payment_due_at_reservation_start_text()}</p>
+			<p>{msg.reservations_booking_policy_if_have_specific_needs_equipment_text()}</p>
 		</div>
 	</details>
 </div>

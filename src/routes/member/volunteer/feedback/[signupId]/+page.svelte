@@ -42,20 +42,24 @@
 	const setUp = $derived(submitShiftFeedback.result?.wasSetUp ?? null);
 </script>
 
-<PageHeader width="md" title={m.member_how_did_go()} subtitle={m.member_volunteering()} />
+<PageHeader
+	width="md"
+	title={m.member_how_did_go_title()}
+	subtitle={m.member_volunteering_body()}
+/>
 
 <PageContent width="md">
 	{#if context.current !== undefined}
 		{@const ctx = context.current}
 		{#if !ctx}
 			<EmptyState
-				title={m.member_volunteer_feedback_signup_id_nothing_review_here()}
-				description={m.member_volunteer_feedback_signup_id_shift_isn_t_yours_hasn()}
+				title={m.member_volunteer_feedback_signup_id_nothing_review_here_title()}
+				description={m.member_volunteer_feedback_signup_id_shift_isn_t_yours_hasn_body()}
 				actionLabel={m.member_volunteer_feedback_signup_id_action_label()}
 				actionHref="/member/volunteer"
 			/>
 		{:else if ctx.alreadySubmitted || submitted}
-			<InfoCard title={m.member_volunteer_feedback_signup_id_thank()}>
+			<InfoCard title={m.member_volunteer_feedback_signup_id_thank_title()}>
 				<!--
 					The confirmation answers what they actually said. Somebody who has
 					just told us they were not set up to succeed should not be thanked
@@ -64,15 +68,15 @@
 				-->
 				<p class="text-sm">
 					{#if !submitted}
-						{m.member_volunteer_feedback_signup_id_already_answered_shift()}
+						{m.member_volunteer_feedback_signup_id_already_answered_shift_text()}
 					{:else if setUp === false}
-						{m.member_volunteer_feedback_signup_id_got_sorry_we_didn_t()}
+						{m.member_volunteer_feedback_signup_id_got_sorry_we_didn_t_text()}
 					{:else}
-						{m.member_volunteer_feedback_signup_id_got_thanks_helping_us_ru()}
+						{m.member_volunteer_feedback_signup_id_got_thanks_helping_us_ru_text()}
 					{/if}
 				</p>
 				<a href={resolve('member/volunteer')} class="link text-sm"
-					>{m.member_volunteer_feedback_signup_id_action_label()}</a
+					>{m.member_volunteer_feedback_signup_id_action_text()}</a
 				>
 			</InfoCard>
 		{:else}
@@ -84,7 +88,7 @@
 
 					<!-- Label-only wrapper: RatingGroup owns the real `rating` field via its
 				     hidden input, and naming the wrapper too double-registers the name. -->
-					<Field label={m.member_volunteer_feedback_signup_id_how_did_shift_go()}>
+					<Field label={m.member_volunteer_feedback_signup_id_how_did_shift_go_label()}>
 						<!--
 							RatingGroup writes the value to a hidden input via `name`, so it
 							submits like any other field while the stars stay keyboard- and
@@ -113,19 +117,22 @@
 					<FormField
 						field={submitShiftFeedback.fields.wasSetUp}
 						type="checkbox"
-						label={m.member_volunteer_feedback_signup_id_were_set_up_succeed()}
-						checkboxLabel={m.member_volunteer_feedback_signup_id_checkbox_label()}
-						description={m.member_volunteer_feedback_signup_id_used_fix_briefing_not_as()}
+						label={m.member_volunteer_feedback_signup_id_were_set_up_succeed_label()}
+						checkboxLabel={m.member_volunteer_feedback_signup_id_checkbox_label_checkbox()}
+						description={m.member_volunteer_feedback_signup_id_used_fix_briefing_not_as_body()}
 					/>
 
 					<FormField
 						field={submitShiftFeedback.fields.comment}
 						type="textarea"
-						label={m.member_volunteer_feedback_signup_id_anything_we_should_fix()}
-						description={m.member_volunteer_feedback_signup_id_optional_sent_staff_with()}
+						label={m.member_volunteer_feedback_signup_id_anything_we_should_fix_label()}
+						description={m.member_volunteer_feedback_signup_id_optional_sent_staff_with_body()}
 					/>
 
-					<SubmitButton label={m.member_volunteer_feedback_signup_id_send()} variant="primary" />
+					<SubmitButton
+						label={m.member_volunteer_feedback_signup_id_send_label()}
+						variant="primary"
+					/>
 				</Form>
 			</InfoCard>
 		{/if}

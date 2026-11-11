@@ -53,7 +53,7 @@
 
 <Action
 	action={receiveStock}
-	label={m.actions_receive_stock_receive()}
+	label={m.actions_receive_stock_receive_label()}
 	modalTitle={m.actions_receive_stock_modal_title()}
 	successToast={m.actions_receive_stock_success_toast()}
 	{variant}
@@ -65,11 +65,11 @@
 	{#snippet form()}
 		<input {...fields.itemId.as('hidden', itemId)} />
 		<div class="grid grid-cols-2 gap-3">
-			<Field field={fields.quantity} type="number" label={m.actions_quantity()} value={1} />
+			<Field field={fields.quantity} type="number" label={m.actions_quantity_label()} value={1} />
 			<Field
 				field={fields.kind}
 				type="select"
-				label={m.actions_receive_stock_how_arrived()}
+				label={m.actions_receive_stock_how_arrived_label()}
 				bind:value={kind}
 				options={acquisitionKinds.map((k) => ({ value: k, label: acquisitionKindLabels[k] }))}
 			/>
@@ -79,46 +79,50 @@
 		<Field
 			field={fields.occurredAt}
 			type="date"
-			label={m.actions_receive_stock_when_arrived()}
+			label={m.actions_receive_stock_when_arrived_label()}
 			value={clubToday()}
 			description={kind === 'opening_balance'
-				? m.actions_receive_stock_guess_fine_nothing_counts_opening()
+				? m.actions_receive_stock_guess_fine_nothing_counts_opening_body()
 				: undefined}
 		/>
 		{#if kind !== 'opening_balance'}
 			<Field
 				field={fields.sourceName}
 				type="text"
-				label={kind === 'purchase' ? m.actions_supplier() : m.actions_receive_stock_donor_grantor()}
+				label={kind === 'purchase'
+					? m.actions_supplier_label()
+					: m.actions_receive_stock_donor_grantor_label()}
 			/>
 		{/if}
 		<div class="grid grid-cols-2 gap-3">
 			<MoneyField
 				field={fields.unitValueCents}
-				label={kind === 'purchase' ? m.actions_unit_cost() : m.actions_receive_stock_value_each()}
+				label={kind === 'purchase'
+					? m.actions_unit_cost_label()
+					: m.actions_receive_stock_value_each_label()}
 			/>
 			<Field
 				field={fields.reference}
 				type="text"
-				label={m.actions_receive_stock_reference_receipt_no()}
+				label={m.actions_receive_stock_reference_receipt_no_label()}
 			/>
 		</div>
 		{#if isGift}
 			<Field
 				field={fields.fairValueBasis}
 				type="text"
-				label={m.actions_receive_stock_how_value_was_determined()}
-				description={m.actions_receive_stock_required_gifts_kind_disclosure_e()}
+				label={m.actions_receive_stock_how_value_was_determined_label()}
+				description={m.actions_receive_stock_required_gifts_kind_disclosure_e_body()}
 			/>
 			<Field
 				field={fields.intendedUse}
 				type="text"
-				label={m.actions_receive_stock_intended_use()}
+				label={m.actions_receive_stock_intended_use_label()}
 			/>
 			<MoneyField
 				field={fields.fairValueCents}
-				label={m.actions_receive_stock_total_fair_value()}
-				description={m.actions_receive_stock_gift_as_whole_leave_blank()}
+				label={m.actions_receive_stock_total_fair_value_label()}
+				description={m.actions_receive_stock_gift_as_whole_leave_blank_body()}
 			/>
 			<!-- ASU 2020-07 asks whether a gift was sold or put to use, and discloses
 			     the two on separate lines. Nothing could set this before, so every
@@ -126,8 +130,8 @@
 			<Field
 				field={fields.monetized}
 				type="checkbox"
-				label={m.actions_receive_stock_sold_rather_than_used()}
-				checkboxLabel={m.actions_receive_stock_checkbox_label()}
+				label={m.actions_receive_stock_sold_rather_than_used_label()}
+				checkboxLabel={m.actions_receive_stock_checkbox_label_checkbox()}
 			/>
 		{/if}
 		<!-- Distinct from the donor: a volunteer who buys strings is owed for them,
@@ -136,9 +140,9 @@
 			field={fields.paidByUserId}
 			bind:value={paidByUserId}
 			bind:name={paidByName}
-			label={m.actions_receive_stock_paid_by_leave_blank_if()}
+			label={m.actions_receive_stock_paid_by_leave_blank_if_label()}
 		/>
 		<LocationField field={fields.locationId} />
-		<Field field={fields.notes} type="textarea" label={m.actions_notes()} />
+		<Field field={fields.notes} type="textarea" label={m.actions_notes_label()} />
 	{/snippet}
 </Action>

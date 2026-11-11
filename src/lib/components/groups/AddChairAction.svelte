@@ -21,9 +21,9 @@
 
 <Action
 	action={setStaffGroupRole}
-	label={m.groups_add_chair_add_chair()}
-	modalTitle={m.groups_add_chair_add_chair()}
-	submitLabel={m.groups_add_chair_add_chair()}
+	label={m.groups_add_chair_add_chair_label()}
+	modalTitle={m.groups_add_chair_add_chair_title()}
+	submitLabel={m.groups_add_chair_add_chair_label()}
 	successToast={m.groups_add_chair_success_toast()}
 	variant="ghost"
 	size="sm"
@@ -34,17 +34,17 @@
 			<input {...fields.groupId.as('hidden', groupId)} />
 			<input {...fields.role.as('hidden', 'admin')} />
 
-			<FormField field={setStaffGroupRole.fields.userId} label={m.groups_member()} required>
+			<FormField field={setStaffGroupRole.fields.userId} label={m.groups_member_label()} required>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={chair}
 					field={fields.userId}
-					placeholder={m.groups_search_by_name_email()}
+					placeholder={m.groups_search_by_name_email_placeholder()}
 				/>
 			</FormField>
 
 			<p class="text-subtle">
-				{m.groups_add_chair_chairs_run_program_they_manage()}
+				{m.groups_add_chair_chairs_run_program_they_manage_text()}
 			</p>
 		</div>
 	{/snippet}

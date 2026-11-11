@@ -33,7 +33,9 @@
 <Action
 	action={recordForm8283}
 	data-testid="record-8283"
-	label={signedOn ? m.actions_record_form8283_edit_8283() : m.actions_record_form8283_record_8283()}
+	label={signedOn
+		? m.actions_record_form8283_edit_8283_label()
+		: m.actions_record_form8283_record_8283_label()}
 	modalTitle={m.actions_record_form8283_modal_title()}
 	successToast={m.actions_record_form8283_success_toast()}
 	{variant}
@@ -46,26 +48,26 @@
 		<input {...fields.id.as('hidden', acquisitionId)} />
 		<div class="mb-3 rounded bg-base-200 p-3 text-sm">
 			<p>
-				{m.actions_record_form8283_donor_claiming_deduction_over_5()}
+				{m.actions_record_form8283_donor_claiming_deduction_over_5_text()}
 			</p>
 			<!-- Not bookkeeping for its own sake: this is the fact that decides
 			     whether disposing of the gift later obliges a Form 8282 filing.
 			     Without it recorded, that warning stays silent. -->
 			<p class="mt-1 opacity-70">
-				{m.actions_record_form8283_what_makes_gift_reportable_if()}
+				{m.actions_record_form8283_what_makes_gift_reportable_if_text()}
 			</p>
 		</div>
 		<Field
 			field={fields.signedOn}
 			type="date"
-			label={m.actions_record_form8283_signed()}
+			label={m.actions_record_form8283_signed_label()}
 			value={signedOn ? utcCalendarDate(signedOn) : ''}
 		/>
 		<Field
 			field={fields.appraisalRef}
 			type="text"
-			label={m.actions_record_form8283_appraisal_reference_optional()}
-			description={m.actions_record_form8283_description()}
+			label={m.actions_record_form8283_appraisal_reference_optional_label()}
+			description={m.actions_record_form8283_description_body()}
 			value={appraisalRef ?? ''}
 		/>
 	{/snippet}

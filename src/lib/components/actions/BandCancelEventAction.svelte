@@ -34,8 +34,8 @@
 
 <Action
 	action={cancelBandEventForm}
-	label={m.actions_cancel_event()}
-	successToast={m.actions_cancelled()}
+	label={m.actions_cancel_event_label()}
+	successToast={m.actions_cancelled_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -46,7 +46,7 @@
 		<input {...fields.slug.as('hidden', slug)} />
 		<input {...fields.eventId.as('hidden', eventId)} />
 		<p class="py-2">
-			{m.actions_band_cancel_event_cancel_event_listing_stays_up()}
+			{m.actions_band_cancel_event_cancel_event_listing_stays_up_text()}
 		</p>
 	{/snippet}
 </Action>

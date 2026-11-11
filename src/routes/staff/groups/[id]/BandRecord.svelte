@@ -48,7 +48,7 @@
 <StaffBandForm {band} {id} {variant} {actions} />
 
 {#snippet body()}
-	<InfoCard title={msg.staff_members()}>
+	<InfoCard title={msg.staff_members_title()}>
 		{#snippet header(title)}
 			<header class="flex items-center justify-between">
 				<CardTitle>{title}</CardTitle>
@@ -60,13 +60,13 @@
 			</header>
 		{/snippet}
 		{#if members.length === 0}
-			<EmptyState description={msg.staff_groups_id_band_record_no_members()} />
+			<EmptyState description={msg.staff_groups_id_band_record_no_members_body()} />
 		{:else}
-			<RosterTable rows={members} personLabel={msg.staff_member()}>
+			<RosterTable rows={members} personLabel={msg.staff_member_label()}>
 				{#snippet lead(m)}<StatusBadge status={m.status} />{/snippet}
 				{#snippet columns()}
-					<th class="w-px">{msg.staff_role()}</th>
-					<th class="col-extra whitespace-nowrap">{msg.staff_joined()}</th>
+					<th class="w-px">{msg.staff_role_label()}</th>
+					<th class="col-extra whitespace-nowrap">{msg.staff_joined_label()}</th>
 				{/snippet}
 				{#snippet cells(m)}
 					<td class="w-px">
@@ -81,8 +81,8 @@
 									onchange={(e: Event) =>
 										(e.currentTarget as HTMLSelectElement).form?.requestSubmit()}
 								>
-									<option value="member">{msg.staff_member()}</option>
-									<option value="admin">{msg.staff_groups_id_band_record_admin()}</option>
+									<option value="member">{msg.staff_member_label()}</option>
+									<option value="admin">{msg.staff_groups_id_band_record_admin_label()}</option>
 								</Select>
 							</Form>
 						{:else}
@@ -110,13 +110,13 @@
 
 	<!-- Email invites — sent to an address with no account behind it -->
 	{#if emailInvites.filter((i) => i.status === 'pending').length > 0}
-		<InfoCard title={msg.staff_groups_id_band_record_awaiting_signup()}>
+		<InfoCard title={msg.staff_groups_id_band_record_awaiting_signup_title()}>
 			<Table>
 				{#snippet head()}
-					<th>{msg.staff_groups_id_band_record_invitee()}</th>
-					<th class="w-px">{msg.staff_role()}</th>
-					<th class="col-extra">{msg.staff_groups_id_band_record_invited_by()}</th>
-					<th class="w-px"><span class="sr-only">{msg.staff_actions()}</span></th>
+					<th>{msg.staff_groups_id_band_record_invitee_label()}</th>
+					<th class="w-px">{msg.staff_role_label()}</th>
+					<th class="col-extra">{msg.staff_groups_id_band_record_invited_by_label()}</th>
+					<th class="w-px"><span class="sr-only">{msg.staff_actions_label()}</span></th>
 				{/snippet}
 				{#each emailInvites.filter((i) => i.status === 'pending') as inv (inv.id)}
 					<tr class="hover">
@@ -137,16 +137,16 @@
 		</InfoCard>
 	{/if}
 
-	<InfoCard title={msg.staff_groups_id_band_record_recent_reservations()}>
+	<InfoCard title={msg.staff_groups_id_band_record_recent_reservations_title()}>
 		{#if reservations.length === 0}
-			<EmptyState description={msg.staff_groups_id_band_record_no_reservations()} />
+			<EmptyState description={msg.staff_groups_id_band_record_no_reservations_body()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{msg.staff_status()}</span></th>
-					<th>{msg.staff_reservation()}</th>
-					<th class="col-support">{msg.staff_booked_by()}</th>
-					<th class="col-extra">{msg.staff_notes()}</th>
+					<th class="w-px"><span class="sr-only">{msg.staff_status_label()}</span></th>
+					<th>{msg.staff_reservation_label()}</th>
+					<th class="col-support">{msg.staff_booked_by_label()}</th>
+					<th class="col-extra">{msg.staff_notes_label()}</th>
 				{/snippet}
 				{#each reservations as r (r.id)}
 					{@const href = resolve(`staff/reservations/${r.id}`)}
@@ -170,10 +170,10 @@
 
 	{#if variant === 'page'}
 		<ActivityFeedCard
-			title={msg.staff_history()}
+			title={msg.staff_history_title()}
 			query={(limit) => getBandHistory(limit ? { id, limit } : { id })}
 			toRow={feedItemRow}
-			empty={{ title: msg.staff_no_recorded_changes() }}
+			empty={{ title: msg.staff_no_recorded_changes_title() }}
 		/>
 	{/if}
 {/snippet}

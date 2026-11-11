@@ -98,7 +98,7 @@
 	);
 
 	const kindOptions = [
-		{ value: '', label: m.band_slug_packing_packing_items_editor_never_goes_stage() },
+		{ value: '', label: m.band_slug_packing_packing_items_editor_never_goes_stage_label() },
 		...riderElementKindOptions
 	];
 	const atLimit = $derived(items.length >= PACKING_MAX_ITEMS);
@@ -119,15 +119,15 @@
 			<div class="grid gap-3 md:grid-cols-[1fr_8rem_1fr]">
 				<Field
 					id="{idPrefix}_{i}_label"
-					label={m.band_slug_packing_packing_items_editor_what()}
+					label={m.band_slug_packing_packing_items_editor_what_label()}
 					bind:value={items[i].label}
 					{readonly}
-					placeholder={m.band_slug_packing_packing_items_editor_bass_rig()}
+					placeholder={m.band_slug_packing_packing_items_editor_bass_rig_placeholder()}
 				/>
 				<Field
 					id="{idPrefix}_{i}_qty"
 					type="number"
-					label={m.band_slug_packing_packing_items_editor_how_many()}
+					label={m.band_slug_packing_packing_items_editor_how_many_label()}
 					bind:value={items[i].quantity}
 					min={1}
 					max={PACKING_MAX_QUANTITY}
@@ -136,7 +136,7 @@
 				<Field
 					id="{idPrefix}_{i}_cat"
 					type="select"
-					label={m.band_slug_packing_packing_items_editor_where_lives()}
+					label={m.band_slug_packing_packing_items_editor_where_lives_label()}
 					options={packingCategoryOptions}
 					bind:value={items[i].category}
 					{readonly}
@@ -148,22 +148,22 @@
 				<Field
 					id="{idPrefix}_{i}_kind"
 					type="select"
-					label={m.band_slug_packing_packing_items_editor_stage_plot_as()}
+					label={m.band_slug_packing_packing_items_editor_stage_plot_as_label()}
 					options={kindOptions}
 					bind:value={items[i].riderKind}
 					{readonly}
 					display={item.riderKind
 						? riderElementKindLabels[item.riderKind]
 						: 'Never goes on a stage'}
-					description={m.band_slug_packing_packing_items_editor_description()}
+					description={m.band_slug_packing_packing_items_editor_description_body()}
 				/>
 				<Field
 					id="{idPrefix}_{i}_notes"
-					label={m.band_notes()}
+					label={m.band_notes_label()}
 					bind:value={items[i].notes}
 					maxlength={PACKING_ITEM_NOTES_MAX}
 					{readonly}
-					placeholder={m.band_slug_packing_packing_items_editor_lives_blue_crate()}
+					placeholder={m.band_slug_packing_packing_items_editor_lives_blue_crate_placeholder()}
 				/>
 			</div>
 
@@ -175,7 +175,7 @@
 						size="xs"
 						onclick={() => moveItem(i, -1)}
 						disabled={i === 0}
-						aria-label={m.band_slug_packing_packing_items_editor_move_up()}
+						aria-label={m.band_slug_packing_packing_items_editor_move_up_label()}
 					>
 						<IconChevronUp size={16} />
 					</Button>
@@ -185,7 +185,7 @@
 						size="xs"
 						onclick={() => moveItem(i, 1)}
 						disabled={i === items.length - 1}
-						aria-label={m.band_slug_packing_packing_items_editor_move_down()}
+						aria-label={m.band_slug_packing_packing_items_editor_move_down_label()}
 					>
 						<IconChevronDown size={16} />
 					</Button>
@@ -194,7 +194,7 @@
 						variant="ghost"
 						size="xs"
 						onclick={() => removeItem(i)}
-						aria-label={m.band_remove()}
+						aria-label={m.band_remove_label()}
 					>
 						<IconTrash size={16} />
 					</Button>
@@ -203,7 +203,7 @@
 		</div>
 	{:else}
 		<p class="text-sm text-base-content/60">
-			{m.band_slug_packing_packing_items_editor_nothing_here_yet()}
+			{m.band_slug_packing_packing_items_editor_nothing_here_yet_text()}
 		</p>
 	{/each}
 
@@ -214,11 +214,11 @@
 			<div class="flex items-center gap-2">
 				<Button type="button" variant="ghost" size="sm" onclick={addItem} disabled={atLimit}>
 					<IconPlus size={16} />
-					{m.band_slug_packing_packing_items_editor_add_something()}
+					{m.band_slug_packing_packing_items_editor_add_something_label()}
 				</Button>
 				{#if atLimit}
 					<span class="text-xs text-base-content/60">
-						{m.band_slug_packing_packing_items_editor_limit_one_crate({ PACKING_MAX_ITEMS })}
+						{m.band_slug_packing_packing_items_editor_limit_one_crate_text({ PACKING_MAX_ITEMS })}
 					</span>
 				{/if}
 			</div>

@@ -5,9 +5,12 @@
 
 	const totals = await getStaffClubTotals();
 	const stats = $derived([
-		{ title: m.staff_groups_clubs_club_totals_active_clubs(), value: totals.clubs },
-		{ title: m.staff_groups_clubs_club_totals_club_members(), value: totals.members },
-		{ title: m.staff_groups_clubs_club_totals_applications_waiting(), value: totals.applications }
+		{ title: m.staff_groups_clubs_club_totals_active_clubs_title(), value: totals.clubs },
+		{ title: m.staff_groups_clubs_club_totals_club_members_title(), value: totals.members },
+		{
+			title: m.staff_groups_clubs_club_totals_applications_waiting_title(),
+			value: totals.applications
+		}
 	]);
 </script>
 

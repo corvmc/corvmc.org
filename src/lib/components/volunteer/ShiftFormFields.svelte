@@ -78,7 +78,7 @@
 {#if roles}
 	<FormField
 		field={form.fields.volunteerRoleId}
-		label={m.volunteer_shift_form_fields_role()}
+		label={m.volunteer_shift_form_fields_role_label()}
 		type="select"
 		bind:value={roleId}
 		options={roles.map((r) => ({ value: r.id, label: r.name }))}
@@ -104,8 +104,8 @@
 	<input {...form.fields.eventId.as('hidden', selectedEvent?.id ?? '')} />
 	<FormField
 		field={form.fields.eventId}
-		label={m.volunteer_shift_form_fields_event()}
-		description={m.volunteer_shift_form_fields_optional_work_parties_repair_day()}
+		label={m.volunteer_shift_form_fields_event_label()}
+		description={m.volunteer_shift_form_fields_optional_work_parties_repair_day_body()}
 	>
 		<!-- Children rather than the `input` snippet: that snippet's argument is the
 		     id of the one control the caption labels, and SearchSelect has no single
@@ -116,7 +116,7 @@
 			bind:value={selectedEvent}
 			labelKey="title"
 			descriptionKey="when"
-			placeholder={m.volunteer_shift_form_fields_search_events_by_title()}
+			placeholder={m.volunteer_shift_form_fields_search_events_by_title_placeholder()}
 		/>
 	</FormField>
 {/if}
@@ -125,15 +125,15 @@
 <input {...form.fields.assetId.as('hidden', selectedAsset?.id ?? '')} />
 <FormField
 	field={form.fields.assetId}
-	label={m.volunteer_shift_form_fields_equipment()}
-	description={m.volunteer_shift_form_fields_optional_unit_work_about_such()}
+	label={m.volunteer_shift_form_fields_equipment_label()}
+	description={m.volunteer_shift_form_fields_optional_unit_work_about_such_body()}
 >
 	<SearchSelect
 		search={(q) => searchWorkAssets(q)}
 		bind:value={selectedAsset}
 		labelKey="name"
 		descriptionKey="detail"
-		placeholder={m.volunteer_shift_form_fields_search_by_item_tag_serial()}
+		placeholder={m.volunteer_shift_form_fields_search_by_item_tag_serial_placeholder()}
 	/>
 </FormField>
 
@@ -145,48 +145,48 @@
 -->
 <FormField
 	field={form.fields.title}
-	label={m.volunteer_shift_form_fields_name()}
+	label={m.volunteer_shift_form_fields_name_label()}
 	value={title}
 	maxlength={String(VOLUNTEER_SHIFT_TITLE_MAX)}
-	description={m.volunteer_shift_form_fields_optional_leave_blank_use_event()}
+	description={m.volunteer_shift_form_fields_optional_leave_blank_use_event_body()}
 />
 
 {#if timed}
 	<FormField
 		field={form.fields.startsAt}
-		label={m.volunteer_shift_form_fields_starts()}
+		label={m.volunteer_shift_form_fields_starts_label()}
 		type="datetime-local"
 		value={startsAt}
 	/>
 	<FormField
 		field={form.fields.endsAt}
-		label={m.volunteer_shift_form_fields_ends()}
+		label={m.volunteer_shift_form_fields_ends_label()}
 		type="datetime-local"
 		value={endsAt}
 	/>
 {:else}
 	<FormField
 		field={form.fields.dueAt}
-		label={m.volunteer_shift_form_fields_due_by()}
+		label={m.volunteer_shift_form_fields_due_by_label()}
 		type="datetime-local"
-		description={m.volunteer_shift_form_fields_optional_waits_unscheduled_work()}
+		description={m.volunteer_shift_form_fields_optional_waits_unscheduled_work_body()}
 	/>
 {/if}
 <FormField
 	field={form.fields.capacity}
 	submitAs="text"
-	label={m.volunteer_shift_form_fields_people_needed()}
+	label={m.volunteer_shift_form_fields_people_needed_label()}
 	type="number"
 	min="1"
 	value={capacity}
-	description={m.volunteer_shift_form_fields_claims_beyond_refused()}
+	description={m.volunteer_shift_form_fields_claims_beyond_refused_body()}
 />
 <FormField
 	field={form.fields.notes}
-	label={m.volunteer_shift_form_fields_anything_they_should_know()}
+	label={m.volunteer_shift_form_fields_anything_they_should_know_label()}
 	type="textarea"
 	value={notes}
-	description={m.volunteer_shift_form_fields_where_meet_what_bring_shown({
+	description={m.volunteer_shift_form_fields_where_meet_what_bring_shown_body({
 		VOLUNTEER_SHIFT_NOTES_MAX
 	})}
 />

@@ -31,16 +31,16 @@
 
 <PageHeader
 	width="md"
-	title={m.member_volunteer_start_volunteer_with_cmc()}
-	subtitle={m.member_volunteering()}
-	documentTitle={m.member_volunteer_sign_up()}
+	title={m.member_volunteer_start_volunteer_with_cmc_title()}
+	subtitle={m.member_volunteering_body()}
+	documentTitle={m.member_volunteer_sign_up_title()}
 />
 
 <PageContent width="md">
 	{#if step.current}
 		{@const me = step.current}
-		<InfoCard title={m.member_volunteer_start_about()}>
-			<p class="text-sm text-base-content/70">{m.member_volunteer_start_asked_once()}</p>
+		<InfoCard title={m.member_volunteer_start_about_title()}>
+			<p class="text-sm text-base-content/70">{m.member_volunteer_start_asked_once_text()}</p>
 
 			<Form remote={startVolunteerOnboarding}>
 				<ProfileFields
@@ -60,16 +60,16 @@
 				<FormField
 					field={startVolunteerOnboarding.fields.isAdult}
 					type="select"
-					label={m.member_volunteer_start_18_older()}
+					label={m.member_volunteer_start_18_older_label()}
 					placeholder={m.member_volunteer_start_placeholder()}
 					options={[
-						{ value: 'yes', label: m.member_volunteer_start_yes_i_am_18_older() },
-						{ value: 'no', label: m.member_volunteer_start_no_i_am_under_18() }
+						{ value: 'yes', label: m.member_volunteer_start_yes_i_am_18_older_label() },
+						{ value: 'no', label: m.member_volunteer_start_no_i_am_under_18_label() }
 					]}
-					description={m.member_volunteer_start_description()}
+					description={m.member_volunteer_start_description_body()}
 				/>
 
-				<SubmitButton label={m.member_volunteer_start_continue()} variant="primary" />
+				<SubmitButton label={m.member_volunteer_start_continue_label()} variant="primary" />
 			</Form>
 		</InfoCard>
 	{/if}

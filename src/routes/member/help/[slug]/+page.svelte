@@ -22,7 +22,7 @@
 <PageHeader
 	width="3xl"
 	title={article.title}
-	subtitle={m.member_help_center()}
+	subtitle={m.member_help_center_body()}
 	parent={category ? [{ label: category.name }] : []}
 />
 <PageContent width="3xl">

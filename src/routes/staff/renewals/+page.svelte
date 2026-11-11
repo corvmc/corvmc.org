@@ -18,11 +18,11 @@
 	const { renewals, assignees } = $derived(await getRenewals());
 </script>
 
-<PageHeader title={m.staff_renewals_renewals()} subtitle={m.staff_renewals_subtitle()}>
+<PageHeader title={m.staff_renewals_renewals_title()} subtitle={m.staff_renewals_subtitle_body()}>
 	<Action
 		action={createRenewal}
 		label={m.staff_renewals_label()}
-		modalTitle={m.staff_renewals_label()}
+		modalTitle={m.staff_renewals_title()}
 		submitLabel={m.staff_renewals_submit_label()}
 		successToast={m.staff_renewals_success_toast()}
 	>
@@ -35,25 +35,25 @@
 <PageContent>
 	{#if renewals.length === 0}
 		<EmptyState
-			title={m.staff_renewals_no_renewals_yet()}
-			description={m.staff_renewals_description()}
+			title={m.staff_renewals_no_renewals_yet_title()}
+			description={m.staff_renewals_description_body()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-				<th>{m.staff_renewals_renewal()}</th>
-				<th>{m.staff_expires()}</th>
-				<th class="col-support">{m.staff_kind()}</th>
-				<th class="col-extra">{m.staff_responsible()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+				<th>{m.staff_renewals_renewal_label()}</th>
+				<th>{m.staff_expires_label()}</th>
+				<th class="col-support">{m.staff_kind_label()}</th>
+				<th class="col-extra">{m.staff_responsible_label()}</th>
 			{/snippet}
 			{#each renewals as r (r.id)}
 				<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/renewals/${r.id}`)}>
 					<td class="w-px">
 						{#if r.deadline.overdue}
-							<Badge variant="error" size="sm">{m.staff_renewals_lapsed()}</Badge>
+							<Badge variant="error" size="sm">{m.staff_renewals_lapsed_label()}</Badge>
 						{:else if r.daysLeft <= 60}
-							<Badge variant="warning" size="sm">{m.staff_renewals_due_soon()}</Badge>
+							<Badge variant="warning" size="sm">{m.staff_renewals_due_soon_label()}</Badge>
 						{/if}
 					</td>
 					<td class="cell-primary">

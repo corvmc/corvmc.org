@@ -29,7 +29,7 @@
 		<input {...fields.recipientId.as('hidden', recipientId)} />
 		<div class="space-y-3">
 			<p class="text-muted">
-				{m.actions_message_member_goes_as_message_request_they({ recipientName })}
+				{m.actions_message_member_goes_as_message_request_they_text({ recipientName })}
 			</p>
 			<label class="fieldset w-full">
 				<span class="fieldset-legend">{m.actions_message_member_label()}</span>

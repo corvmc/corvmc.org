@@ -19,7 +19,7 @@
 
 	let {
 		result,
-		empty = m.ui_no_items_found(),
+		empty = m.ui_no_items_found_body(),
 		emptyTitle,
 		actionLabel,
 		actionHref,

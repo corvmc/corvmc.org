@@ -63,10 +63,11 @@
 		{#if scope.threadIds.length === 0}
 			<EmptyState
 				title={m.staff_inbox_daily_title()}
-				description={m.staff_inbox_daily_description()}
+				description={m.staff_inbox_daily_description_body()}
 			/>
 			<div class="flex justify-center">
-				<Button href={resolve('staff/inbox')} variant="default">{m.staff_back_inbox()}</Button>
+				<Button href={resolve('staff/inbox')} variant="default">{m.staff_back_inbox_label()}</Button
+				>
 			</div>
 		{:else}
 			<DailyStartCard
@@ -86,14 +87,14 @@
 	{:else}
 		<div class="flex items-center justify-between gap-3">
 			<div class="flex items-baseline gap-3">
-				<h1 class="text-xl font-bold">{m.staff_inbox_daily_daily()}</h1>
+				<h1 class="text-xl font-bold">{m.staff_inbox_daily_daily_title()}</h1>
 				<span class="text-muted text-sm"
 					>{m.staff_inbox_daily_text({ position: session.position, total: session.total })}</span
 				>
 			</div>
 			<Button variant="ghost" size="sm" onclick={leave}>
 				<IconX size={16} />
-				{m.staff_inbox_daily_esc_exit()}
+				{m.staff_inbox_daily_esc_exit_label()}
 			</Button>
 		</div>
 
@@ -110,13 +111,13 @@
 								{t.contactUserName ??
 									t.contactName ??
 									t.contactEmail ??
-									m.staff_inbox_daily_conversation()}
+									m.staff_inbox_daily_conversation_title()}
 							</h2>
 							<!-- The age line is the pressure signal, and in Daily it is the
 							     only context on screen — there is no list beside it saying
 							     how this thread compares to the rest. -->
 							<p class="text-muted text-sm">
-								{m.staff_inbox_daily_waiting_days({
+								{m.staff_inbox_daily_waiting_days_text({
 									value: t.subject ?? channelLabel(t.channel),
 									waitingDays: waitingDays(t),
 									count: waitingDays(t)
@@ -130,7 +131,7 @@
 
 						{#if t.awaitingReplySince}
 							<p class="text-subtle text-sm">
-								{m.staff_inbox_daily_no_response_since({
+								{m.staff_inbox_daily_no_response_since_text({
 									formatDateShortYear: formatDateShortYear(new Date(t.awaitingReplySince))
 								})}
 							</p>
@@ -152,13 +153,13 @@
 					</CardBody>
 				</Card>
 			{:catch error}
-				<Alert type="error">{m.ui_load_failed({ error: errorMessage(error) })}</Alert>
+				<Alert type="error">{m.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
 			{/await}
 
 			<div class="flex justify-center">
 				<Button variant="ghost" size="sm" onclick={() => session.skip()}>
 					<IconArrowDown size={16} />
-					{m.staff_inbox_daily_skip_stays_open_moves_end()}
+					{m.staff_inbox_daily_skip_stays_open_moves_end_label()}
 				</Button>
 			</div>
 		{/key}

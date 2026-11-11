@@ -9,7 +9,7 @@
 </script>
 
 <p class="text-muted leading-relaxed">
-	<ParaglideMessage message={m.public_programs_got_gear_collecting_dust_we} inputs={{ email }}
+	<ParaglideMessage message={m.public_programs_got_gear_collecting_dust_we_text} inputs={{ email }}
 		>{#snippet a({ children })}<a href="mailto:{email}" class="link">{@render children?.()}</a
 			>{/snippet}</ParaglideMessage
 	>

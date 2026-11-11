@@ -84,13 +84,13 @@
 	ontoggle={(e) => remember((e.currentTarget as HTMLDetailsElement).open)}
 >
 	<summary class="collapse-title min-h-0 py-2 text-sm font-medium">
-		{m.staff_inbox_id_details_panel_details()}
+		{m.staff_inbox_id_details_panel_details_label()}
 		<span class="ml-2 text-subtle font-normal">
 			{thread.contactUserName ??
 				thread.contactName ??
 				thread.contactEmail ??
 				channelLabel(thread.channel)}
-			{#if thread.assignedToName}{m.staff_inbox_id_details_panel_assigned({
+			{#if thread.assignedToName}{m.staff_inbox_id_details_panel_assigned_label({
 					assignedToName: thread.assignedToName
 				})}{/if}
 		</span>
@@ -100,7 +100,7 @@
 		{#if open}
 			<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				<div class="flex flex-col gap-1">
-					<SectionLabel label={m.staff_contact()} />
+					<SectionLabel label={m.staff_contact_label()} />
 					{#if thread.contactUserId}
 						<a href={resolve(`staff/members/${thread.contactUserId}`)} class="link link-primary">
 							{thread.contactUserName ?? thread.contactName}
@@ -117,52 +117,55 @@
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<SectionLabel label={m.staff_history()} />
+					<SectionLabel label={m.staff_history_label()} />
 					{#await getInboxThreadContext(thread.id)}
 						<span class="loading loading-xs loading-spinner"></span>
 					{:then context}
 						<span>
 							{context.priorConversations === 0
-								? m.staff_inbox_id_details_panel_no_other_conversations()
-								: m.staff_inbox_id_details_panel_previous_conversations({
+								? m.staff_inbox_id_details_panel_no_other_conversations_text()
+								: m.staff_inbox_id_details_panel_previous_conversations_text({
 										priorConversations: context.priorConversations
 									})}
 						</span>
 						<span class="text-subtle"
-							>{m.staff_inbox_id_details_panel_first_contact({
+							>{m.staff_inbox_id_details_panel_first_contact_text({
 								formatDate: formatDate(context.firstContactAt)
 							})}</span
 						>
 						<span class="text-subtle"
-							>{m.staff_inbox_id_details_panel_source({
+							>{m.staff_inbox_id_details_panel_source_text({
 								channelLabel: channelLabel(thread.channel)
 							})}</span
 						>
 					{:catch error}
-						<span class="text-subtle">{m.ui_load_failed({ error: errorMessage(error) })}</span>
+						<span class="text-subtle">{m.ui_load_failed_text({ error: errorMessage(error) })}</span>
 					{/await}
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<SectionLabel label={m.staff_inbox_id_details_panel_thread()} />
-					<span>{m.staff_inbox_id_details_panel_message_count({ count: thread.messageCount })}</span
+					<SectionLabel label={m.staff_inbox_id_details_panel_thread_label()} />
+					<span
+						>{m.staff_inbox_id_details_panel_message_count_text({
+							count: thread.messageCount
+						})}</span
 					>
 					<span class="text-subtle">
 						{thread.lastOutboundAt
-							? m.staff_inbox_id_details_panel_last_reply({
+							? m.staff_inbox_id_details_panel_last_reply_text({
 									formatDateTime: formatDateTime(thread.lastOutboundAt)
 								})
-							: m.staff_inbox_id_details_panel_never_answered()}
+							: m.staff_inbox_id_details_panel_never_answered_text()}
 					</span>
 					<span class="text-subtle"
-						>{m.staff_inbox_id_details_panel_opened({
+						>{m.staff_inbox_id_details_panel_opened_text({
 							formatDate: formatDate(thread.createdAt)
 						})}</span
 					>
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<SectionLabel label={m.staff_inbox_id_details_panel_tags()} />
+					<SectionLabel label={m.staff_inbox_id_details_panel_tags_label()} />
 					<!-- The same query as History; the remote layer dedupes it, and
 					     splitting the columns apart is what makes each one readable. -->
 					<ThreadTags threadId={thread.id} />

@@ -665,8 +665,30 @@ one place: one file per area under `messages/en/` (`ui`, `layout`, `actions`, `c
 `band`, `member`, `staff`, `public`), each listed in `project.inlang/settings.json`; terms stay
 in `messages/en.json`. A key is prefixed by its area and then the feature or file it serves
 (`ui_`, `layout_`, `actions_cancel_reservation_`, …), and it is not renamed when its wording
-changes. Read one as `m.ui_close()` from `#lib/paraglide/messages.js`; an interpolated string
-takes named inputs (`m.ui_pagination_range({ from, to, total })`).
+changes. Read one as `m.ui_close_label()` from `#lib/paraglide/messages.js`; an interpolated
+string takes named inputs (`m.ui_pagination_range_text({ from, to, total })`).
+
+**A key ends with its role** (#2513), so the catalog can be checked against the rubric for that
+role in [writing.md](writing.md). `term_*` keys are concepts and are exempt.
+
+| Suffix         | Passed to                                                                                                               |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `_title`       | `title`, `*Title` (`modalTitle`, `documentTitle`, `emptyTitle`), `emptyLabel`, `heading`, `legend`; `h1`–`h4` text      |
+| `_label`       | `label`, `*Label` (`submitLabel`, `actionLabel`, …), `aria-label`, a native element's `title`; `th`, button, badge text |
+| `_checkbox`    | `checkboxLabel`                                                                                                         |
+| `_body`        | `description`, `subtitle`, `empty`, `note`, `tip`, `hint`, `message`, `confirm`; `Alert` text                           |
+| `_toast`       | `successToast`, `*Toast`, `toast.*()`                                                                                   |
+| `_placeholder` | `placeholder`, `searchPlaceholder`                                                                                      |
+| `_error`       | `error`, a thrown or returned error, a variable named for one                                                           |
+| `_text`        | inline prose, a message's inputs, anything else                                                                         |
+
+A string used in two roles is two keys, even with the same text: a button's "Delete band" and its
+modal's "Delete band?" are different strings. `custom/message-key-role` fails lint when a copy prop
+receives a key with the wrong suffix. `pnpm messages:roles` renames keys from their call sites,
+splits a two-role key and deletes an unused one; it is idempotent, so after a rebase that conflicts
+over keys, take either side and re-run it. `scripts/message-copy.spec.ts` runs the rubric's mechanical
+checks by suffix, with `scripts/message-copy.allow.json` listing what failed when it landed; that
+list only shrinks.
 
 A sentence with inline markup stays one message: the markup goes in as `{#strong}…{/strong}`, and
 `<ParaglideMessage message={m.key} inputs={…}>` from `@inlang/paraglide-js-svelte` renders it,
@@ -716,6 +738,7 @@ more than one config object crashes eslint with "Cannot redefine plugin custom")
 | `custom/prefer-term-messages`              | **off**; `pnpm lint:terms` runs it on `*.svelte`                                                                          | A template text node, user-facing attribute or `label`/`title` property whose whole string is a form of a `term_*` message. Read it from `#lib/terms.js` instead. See [Terminology](#terminology).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `custom/no-wording-locators`               | **error** in `*.spec.ts` and `e2e/`; `pnpm test-wording-census` reports by file                                           | A literal `name:` in `getByRole`, a literal `getByText`, or a literal `toHaveTextContent`/`toContainText`/`toHaveText`. See [Locate and assert by structure](#locate-and-assert-by-structure).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `custom/no-literal-ui-text`                | **error** on `src/**/*.svelte` (not `*.test.svelte` or harnesses)                                                         | A template text node with a letter in it, a copy attribute (`label`, `title`, `note`, `confirm`, `*Label`, `*Toast`, …) or property, a literal branch of a `{…}` tag, a `toast.*()` message, or the literal a script variable rendered by any of those was declared with. Add it to `messages/en/<area>.json` and read `m.<key>()`. See [Interface copy](#interface-copy).                                                                                                                                                                                                                                                                                                                                                           |
+| `custom/message-key-role`                  | **error** on `src/**/*.{svelte,ts}` (not specs or `paraglide/`)                                                           | An `m.<key>` passed straight to a copy prop, property, prop default or `toast.*()` whose key does not end in that role's suffix. Run `pnpm messages:roles`. See [Interface copy](#interface-copy).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `custom/no-manual-field-name`              | **error** on `src/**/*.svelte`; `pnpm field-name-census` also lists name-only controls in files with no form of their own | A `name` on a control (`FormField`, `Select`, `MoneyField`, `SearchSelect`, a raw `input`/`select`/`textarea`/`button`, …) inside a `<Form remote>`, a remote `Action`'s `form` snippet, or a `<form>` spread from `.enhance()`. Kit 3 rejects such a submission at runtime (#2196). Pass `field={fields.x}`, or spread `fields.x.as('hidden', value)` / `.as('submit', value)`. A `<Form action>` keeps `name`.                                                                                                                                                                                                                                                                                                                     |
 
 ### Money columns declare themselves
@@ -848,6 +871,7 @@ Every script in `package.json`:
 | `preview`                   | Serve the production build on :4173 (a worktree gets its own port)                                                                                         |
 | `prepare`                   | (auto on install) svelte-kit sync + `messages:compile` + lefthook install                                                                                  |
 | `messages:compile`          | Compile `messages/en.json` into `src/lib/paraglide/` (see [Terminology](#terminology))                                                                     |
+| `messages:roles`            | Rename message keys to end with their role, from their call sites (see [Interface copy](#interface-copy))                                                  |
 | `check` / `check:watch`     | svelte-check type checking                                                                                                                                 |
 | `test:unit`                 | Vitest (watch mode; `--run` for one-shot, which queues behind any other full suite)                                                                        |
 | `test:components`           | One-shot client (browser) vitest project                                                                                                                   |

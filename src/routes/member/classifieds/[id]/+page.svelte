@@ -40,7 +40,7 @@
 	};
 </script>
 
-<PageHeader width="3xl" title={post.title} subtitle={m.member_classifieds()}>
+<PageHeader width="3xl" title={post.title} subtitle={m.member_classifieds_body()}>
 	{#if post.isMine}
 		{#if post.status === 'open'}
 			<EditClassifiedAction {post} onsuccess={refresh} />
@@ -48,9 +48,9 @@
 		{#if post.status === 'open' && post.visibility !== 'hidden'}
 			<Action
 				action={renewClassified}
-				label={m.member_classifieds_id_renew()}
-				modalTitle={m.member_classifieds_id_renew_post()}
-				successToast={m.member_classifieds_id_renewed()}
+				label={m.member_classifieds_id_renew_label()}
+				modalTitle={m.member_classifieds_id_renew_post_title()}
+				successToast={m.member_classifieds_id_renewed_toast()}
 				variant="ghost"
 				size="sm"
 				onsuccess={refresh}
@@ -58,14 +58,14 @@
 				{#snippet icon()}<IconRefresh size={16} />{/snippet}
 				{#snippet form()}
 					<input {...renewClassified.fields.postId.as('hidden', post.id)} />
-					<p class="py-2">{m.member_classifieds_id_will_stay_up_another_30()}</p>
+					<p class="py-2">{m.member_classifieds_id_will_stay_up_another_30_text()}</p>
 				{/snippet}
 			</Action>
 			<Action
 				action={closeClassified}
-				label={m.member_classifieds_id_close()}
-				modalTitle={m.member_classifieds_id_close_post()}
-				successToast={m.member_classifieds_id_closed()}
+				label={m.member_classifieds_id_close_label()}
+				modalTitle={m.member_classifieds_id_close_post_title()}
+				successToast={m.member_classifieds_id_closed_toast()}
 				variant="ghost"
 				size="sm"
 				onsuccess={refresh}
@@ -74,7 +74,7 @@
 				{#snippet form()}
 					<input {...closeClassified.fields.postId.as('hidden', post.id)} />
 					<p class="py-2">
-						{m.member_classifieds_id_filled_no_longer_needed_comes()}
+						{m.member_classifieds_id_filled_no_longer_needed_comes_text()}
 					</p>
 				{/snippet}
 			</Action>
@@ -88,11 +88,11 @@
 		{/if}
 		<Action
 			action={reportClassified}
-			label={m.member_report()}
+			label={m.member_report_label()}
 			iconOnly
-			modalTitle={m.member_classifieds_id_report_post()}
-			submitLabel={m.member_send_report()}
-			successToast={m.member_classifieds_id_reported_staff_will_take_look()}
+			modalTitle={m.member_classifieds_id_report_post_title()}
+			submitLabel={m.member_send_report_label()}
+			successToast={m.member_classifieds_id_reported_staff_will_take_look_toast()}
 			variant="ghost"
 			size="sm"
 			onsuccess={refresh}
@@ -101,17 +101,17 @@
 			{#snippet form()}
 				<input {...reportClassified.fields.postId.as('hidden', post.id)} />
 				<p class="mb-3 text-muted">
-					{m.member_classifieds_id_takes_post_off_board_while()}
+					{m.member_classifieds_id_takes_post_off_board_while_text()}
 				</p>
 				<FormField
 					field={reportClassified.fields.reason}
 					type="text"
-					label={m.member_what_s_problem()}
+					label={m.member_what_s_problem_label()}
 				/>
 				<FormField
 					field={reportClassified.fields.description}
 					type="textarea"
-					label={m.member_anything_else_optional()}
+					label={m.member_anything_else_optional_label()}
 				/>
 			{/snippet}
 		</Action>
@@ -125,7 +125,7 @@
 				{withheldCopy[post.displayStatus]}
 				{#if post.visibilityNote}
 					<ParaglideMessage
-						message={m.member_staff_s_note}
+						message={m.member_staff_s_note_text}
 						inputs={{ visibilityNote: post.visibilityNote }}
 						>{#snippet span({ children })}<span class="italic">{@render children?.()}</span
 							>{/snippet}</ParaglideMessage
@@ -138,7 +138,7 @@
 	{#if !post.isMine && open && !post.canMessage}
 		<Alert type="info">
 			<p>
-				{m.member_classifieds_id_answer_get_touch_through()}
+				{m.member_classifieds_id_answer_get_touch_through_text()}
 				<EntityChip ref={post.band ?? post.author} />.
 			</p>
 		</Alert>

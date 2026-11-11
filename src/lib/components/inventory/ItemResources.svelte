@@ -45,7 +45,7 @@
 
 <InfoCard title={m.inventory_item_resources_title()}>
 	{#if data.articles.length === 0 && data.manuals.length === 0}
-		<EmptyState description={m.inventory_item_resources_description()} />
+		<EmptyState description={m.inventory_item_resources_description_body()} />
 	{/if}
 
 	{#if data.manuals.length > 0}
@@ -54,7 +54,7 @@
 				<li class="flex items-center gap-2">
 					<IconFileText size={18} class="shrink-0 opacity-60" />
 					<a class="grow link" href={manual.url ?? '#'} target="_blank" rel="noopener external">
-						{manual.filename ?? m.inventory_item_resources_manual()}
+						{manual.filename ?? m.inventory_item_resources_manual_text()}
 					</a>
 				</li>
 			{/each}
@@ -72,7 +72,7 @@
 							<!-- Drafts stay off the member-facing page; saying so here stops a
 							     staffer wondering why it never appeared. -->
 							<Badge variant="outline" size="xs"
-								>{m.inventory_item_resources_draft_members_can_t_see()}</Badge
+								>{m.inventory_item_resources_draft_members_can_t_see_label()}</Badge
 							>
 						{/if}
 					</span>
@@ -87,7 +87,7 @@
 							type="submit"
 							variant="ghost"
 							size="xs"
-							aria-label={m.inventory_item_resources_unlink({ title: article.title })}
+							aria-label={m.inventory_item_resources_unlink_label({ title: article.title })}
 						>
 							<IconTrash size={16} />
 						</Button>
@@ -100,7 +100,7 @@
 	<div class="mt-4 flex flex-wrap items-center gap-3">
 		<FileUpload {upload} accept=".pdf,image/*" showPreview={false} variant="ghost">
 			<IconUpload size={16} />
-			{m.inventory_item_resources_add_manual()}
+			{m.inventory_item_resources_add_manual_text()}
 		</FileUpload>
 
 		{#if data.linkable.length > 0}
@@ -114,18 +114,20 @@
 				<input {...linkItemArticle.fields.itemId.as('hidden', itemId)} />
 				<Select
 					size="sm"
-					aria-label={m.inventory_item_resources_help_article()}
+					aria-label={m.inventory_item_resources_help_article_label()}
 					{...linkItemArticle.fields.articleId.as('select')}
 				>
-					<option value="">{m.inventory_item_resources_link_how()}</option>
+					<option value="">{m.inventory_item_resources_link_how_label()}</option>
 					{#each data.linkable as article (article.id)}
 						<option value={article.id}
-							>{article.title}{article.published ? '' : m.inventory_item_resources_draft()}</option
+							>{article.title}{article.published
+								? ''
+								: m.inventory_item_resources_draft_label()}</option
 						>
 					{/each}
 				</Select>
 				<Button type="submit" variant="ghost" size="sm" disabled={!chosenArticle}
-					>{m.inventory_item_resources_link()}</Button
+					>{m.inventory_item_resources_link_label()}</Button
 				>
 			</form>
 		{/if}

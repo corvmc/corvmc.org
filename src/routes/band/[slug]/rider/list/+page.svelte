@@ -88,7 +88,7 @@
 </script>
 
 <svelte:head>
-	<title>{msg.band_slug_rider_list_input_list({ name: layout.band.name })}</title>
+	<title>{msg.band_slug_rider_list_input_list_title({ name: layout.band.name })}</title>
 	<style>
 		@media print {
 			.no-print {
@@ -116,17 +116,17 @@
 
 <div class="no-print fixed top-4 right-4 z-50 flex gap-2">
 	<Button variant="primary" size="sm" onclick={() => window.print()}
-		>{msg.band_slug_rider_list_print()}</Button
+		>{msg.band_slug_rider_list_print_label()}</Button
 	>
 	<Button href={exportHref} variant="ghost" size="sm" data-sveltekit-reload
-		>{msg.band_slug_rider_list_download_csv()}</Button
+		>{msg.band_slug_rider_list_download_csv_label()}</Button
 	>
 	<Button
 		href={resolve('/band/[slug]/rider', { slug: layout.band.slug })}
 		variant="ghost"
 		size="sm"
 	>
-		{msg.band_slug_rider_list_edit()}
+		{msg.band_slug_rider_list_edit_label()}
 	</Button>
 </div>
 
@@ -134,33 +134,33 @@
 	<header class="mb-6 border-b-2 border-gray-200 pb-4">
 		<h1 class="text-3xl font-bold">{layout.band.name}</h1>
 		<p class="text-sm text-gray-600">
-			{msg.band_slug_rider_list_input_list_technical_requirements()}
+			{msg.band_slug_rider_list_input_list_technical_requirements_text()}
 		</p>
 		<dl class="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
 			<div>
-				<dt class="text-gray-500">{msg.band_channels()}</dt>
+				<dt class="text-gray-500">{msg.band_channels_label()}</dt>
 				<dd class="font-semibold">{rider.channelCount}</dd>
 			</div>
 			<div>
-				<dt class="text-gray-500">{msg.band_need_48v()}</dt>
+				<dt class="text-gray-500">{msg.band_need_48v_label()}</dt>
 				<dd class="font-semibold">{rider.phantomCount}</dd>
 			</div>
 			<div>
-				<dt class="text-gray-500">{msg.band_monitor_mixes()}</dt>
+				<dt class="text-gray-500">{msg.band_monitor_mixes_label()}</dt>
 				<dd class="font-semibold">{rider.monitorMixCount}</dd>
 			</div>
 			<div>
-				<dt class="text-gray-500">{msg.band_monitors()}</dt>
+				<dt class="text-gray-500">{msg.band_monitors_label()}</dt>
 				<dd class="font-semibold">
 					{rider.monitorFormat
 						? riderMonitorFormatLabels[rider.monitorFormat]
-						: msg.band_slug_rider_list_no_preference()}
+						: msg.band_slug_rider_list_no_preference_text()}
 				</dd>
 			</div>
 		</dl>
 		{#if contactName}
 			<p class="mt-2 text-sm">
-				<span class="text-gray-500">{msg.band_slug_rider_list_tech_contact()}</span>
+				<span class="text-gray-500">{msg.band_slug_rider_list_tech_contact_text()}</span>
 				{contactName}
 			</p>
 		{/if}
@@ -175,7 +175,7 @@
 		-->
 		<p class="over-capacity mb-6">
 			<ParaglideMessage
-				message={msg.band_slug_rider_list_asks_channels_room_s_desk}
+				message={msg.band_slug_rider_list_asks_channels_room_s_desk_text}
 				inputs={{ channelCount: rider.channelCount, consoleChannels: data.consoleChannels }}
 				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 					>{/snippet}</ParaglideMessage
@@ -185,7 +185,7 @@
 
 	{#if channels.length === 0}
 		<p class="mb-8 text-sm text-gray-600">
-			{msg.band_slug_rider_list_no_channels_listed_yet_anyone()}
+			{msg.band_slug_rider_list_no_channels_listed_yet_anyone_text()}
 		</p>
 	{/if}
 
@@ -193,19 +193,22 @@
 		<section class="bank mb-6">
 			{#if banks.length > 1}
 				<h2 class="section-label">
-					{msg.band_slug_rider_list_channels({ value: i * 8 + 1, value2: i * 8 + bank.length })}
+					{msg.band_slug_rider_list_channels_title({
+						value: i * 8 + 1,
+						value2: i * 8 + bank.length
+					})}
 				</h2>
 			{/if}
 			<table class="w-full text-sm">
 				<thead>
 					<tr class="head-row">
 						<th class="w-8 py-1">#</th>
-						<th class="py-1">{msg.band_slug_rider_list_source()}</th>
-						<th class="py-1">{msg.band_slug_rider_list_via()}</th>
-						<th class="py-1">{msg.band_slug_rider_list_mic_di()}</th>
-						<th class="py-1">{msg.band_slug_rider_list_stand()}</th>
-						<th class="w-12 py-1">{msg.band_slug_rider_list_48v()}</th>
-						<th class="py-1">{msg.band_slug_rider_list_monitor()}</th>
+						<th class="py-1">{msg.band_slug_rider_list_source_label()}</th>
+						<th class="py-1">{msg.band_slug_rider_list_via_label()}</th>
+						<th class="py-1">{msg.band_slug_rider_list_mic_di_label()}</th>
+						<th class="py-1">{msg.band_slug_rider_list_stand_label()}</th>
+						<th class="w-12 py-1">{msg.band_slug_rider_list_48v_label()}</th>
+						<th class="py-1">{msg.band_slug_rider_list_monitor_label()}</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -232,14 +235,14 @@
 
 	{#if hasPlot}
 		<section class="plot-section mb-6">
-			<h2 class="section-label">{msg.band_stage_plot()}</h2>
+			<h2 class="section-label">{msg.band_stage_plot_title()}</h2>
 			<StagePlot items={plotItems} readonly />
 		</section>
 	{/if}
 
 	{#if monitors.length}
 		<section class="mb-6">
-			<h2 class="section-label">{msg.band_monitors()}</h2>
+			<h2 class="section-label">{msg.band_monitors_title()}</h2>
 			<ul class="text-sm">
 				{#each monitors as wedge (wedge.id)}
 					<li class="border-b border-gray-100 py-1">
@@ -253,7 +256,7 @@
 
 	{#if fromVenue.length}
 		<section class="mb-6">
-			<h2 class="section-label">{msg.band_slug_rider_list_needed_from_venue()}</h2>
+			<h2 class="section-label">{msg.band_slug_rider_list_needed_from_venue_title()}</h2>
 			<ul class="text-sm">
 				{#each fromVenue as item (item.id)}
 					<li class="border-b border-gray-100 py-1">
@@ -268,19 +271,19 @@
 
 	{#if rider.notes}
 		<section class="mb-6">
-			<h2 class="section-label">{msg.band_notes()}</h2>
+			<h2 class="section-label">{msg.band_notes_title()}</h2>
 			<p class="text-sm whitespace-pre-line">{rider.notes}</p>
 		</section>
 	{/if}
 
 	{#if data.uploads.length}
 		<section>
-			<h2 class="section-label">{msg.band_slug_rider_list_supplied_by_band()}</h2>
+			<h2 class="section-label">{msg.band_slug_rider_list_supplied_by_band_title()}</h2>
 			<ul class="text-sm">
 				{#each data.uploads as file (file.attachmentId)}
 					<li class="py-1">
-						{file.slot === 'stage_plot' ? msg.band_stage_plot() : msg.band_tech_rider()}: {file.filename ??
-							msg.band_slug_rider_list_file()}
+						{file.slot === 'stage_plot' ? msg.band_stage_plot_text() : msg.band_tech_rider_text()}: {file.filename ??
+							msg.band_slug_rider_list_file_text()}
 					</li>
 				{/each}
 			</ul>

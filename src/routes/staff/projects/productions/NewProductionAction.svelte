@@ -13,7 +13,7 @@
 
 {#if hasCapability(caps, 'production.create')}
 	<Button variant="default" size="sm" onclick={() => (open = true)}
-		>{m.staff_new_production()}</Button
+		>{m.staff_new_production_label()}</Button
 	>
 	<NewProductionModal bind:open />
 {/if}

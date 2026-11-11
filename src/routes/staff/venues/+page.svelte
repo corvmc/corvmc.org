@@ -41,30 +41,30 @@
 	}
 </script>
 
-<PageHeader title={m.staff_venues_venues()} subtitle={m.staff_events()}>
+<PageHeader title={m.staff_venues_venues_title()} subtitle={m.staff_events_body()}>
 	<Action
 		action={createVenue}
-		label={m.staff_venues_new_venue()}
-		modalTitle={m.staff_venues_new_venue()}
+		label={m.staff_venues_new_venue_label()}
+		modalTitle={m.staff_venues_new_venue_title()}
 		successToast={m.staff_venues_success_toast()}
 	>
 		{#snippet form()}
-			<Field field={fields.name} type="text" label={m.staff_name()} />
-			<Field field={fields.address1} type="text" label={m.staff_address()} />
-			<Field field={fields.city} type="text" label={m.staff_city()} />
-			<Field field={fields.state} type="text" label={m.staff_state()} />
-			<Field field={fields.postalCode} type="text" label={m.staff_zip()} />
-			<Field field={fields.capacity} type="number" label={m.staff_capacity()} min="1" />
-			<Field field={fields.contactName} type="text" label={m.staff_contact()} />
-			<Field field={fields.contactEmail} type="email" label={m.staff_contact_email()} />
-			<Field field={fields.contactPhone} type="tel" label={m.staff_contact_phone()} />
+			<Field field={fields.name} type="text" label={m.staff_name_label()} />
+			<Field field={fields.address1} type="text" label={m.staff_address_label()} />
+			<Field field={fields.city} type="text" label={m.staff_city_label()} />
+			<Field field={fields.state} type="text" label={m.staff_state_label()} />
+			<Field field={fields.postalCode} type="text" label={m.staff_zip_label()} />
+			<Field field={fields.capacity} type="number" label={m.staff_capacity_label()} min="1" />
+			<Field field={fields.contactName} type="text" label={m.staff_contact_label()} />
+			<Field field={fields.contactEmail} type="email" label={m.staff_contact_email_label()} />
+			<Field field={fields.contactPhone} type="tel" label={m.staff_contact_phone_label()} />
 			<Field
 				field={fields.loadInNotes}
 				type="text"
-				label={m.staff_load()}
-				description={m.staff_where_van_goes_which_door()}
+				label={m.staff_load_label()}
+				description={m.staff_where_van_goes_which_door_body()}
 			/>
-			<Field field={fields.notes} type="textarea" label={m.staff_notes()} />
+			<Field field={fields.notes} type="textarea" label={m.staff_notes_label()} />
 		{/snippet}
 	</Action>
 </PageHeader>
@@ -78,10 +78,10 @@
 		-->
 		<Alert type="warning">
 			<ParaglideMessage
-				message={m.staff_venues_nothing_marked_as_ours_yet}
+				message={m.staff_venues_nothing_marked_as_ours_yet_body}
 				inputs={{
-					staff_venues_no_practice_room: m.staff_venues_no_practice_room(),
-					staff_make_room: m.staff_make_room()
+					staff_venues_no_practice_room: m.staff_venues_no_practice_room_body(),
+					staff_make_room: m.staff_make_room_body()
 				}}
 				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
 					>{/snippet}{#snippet em({ children })}<em>{@render children?.()}</em
@@ -98,32 +98,32 @@
 				checked={includeArchived}
 				onchange={(e) => setArchived(e.currentTarget.checked)}
 			/>
-			{m.staff_show_archived()}
+			{m.staff_show_archived_label()}
 		</label>
 	</div>
 
 	{#if venues.length === 0}
 		<EmptyState
-			title={m.staff_venues_no_venues_yet()}
-			description={m.staff_venues_add_practice_room_first_mark()}
+			title={m.staff_venues_no_venues_yet_title()}
+			description={m.staff_venues_add_practice_room_first_mark_body()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th>{m.staff_name()}</th>
-				<th>{m.staff_where()}</th>
-				<th class="cell-num">{m.staff_capacity()}</th>
-				<th class="cell-num">{m.staff_events()}</th>
+				<th>{m.staff_name_label()}</th>
+				<th>{m.staff_where_label()}</th>
+				<th class="cell-num">{m.staff_capacity_label()}</th>
+				<th class="cell-num">{m.staff_events_label()}</th>
 			{/snippet}
 			{#each venues as v (v.id)}
 				<tr class="hover" class:opacity-60={v.deletedAt}>
 					<td class="cell-primary">
 						<a class="link font-medium" href={resolve(`staff/venues/${v.id}`)}>{v.name}</a>
 						{#if v.isPrimary}
-							<Badge variant="primary" size="sm" class="ml-2">{m.staff_our_room()}</Badge>
+							<Badge variant="primary" size="sm" class="ml-2">{m.staff_our_room_label()}</Badge>
 						{/if}
 						{#if v.deletedAt}
-							<Badge variant="ghost" size="sm" class="ml-2">{m.staff_archived()}</Badge>
+							<Badge variant="ghost" size="sm" class="ml-2">{m.staff_archived_label()}</Badge>
 						{/if}
 					</td>
 					<td>{addressLine(v) || '—'}</td>

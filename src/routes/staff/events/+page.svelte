@@ -45,7 +45,7 @@
 	}
 </script>
 
-<PageHeader title={m.staff_events_title()} subtitle={m.staff_staff()}>
+<PageHeader title={m.staff_events_title()} subtitle={m.staff_staff_body()}>
 	<CreateListingAction />
 </PageHeader>
 <PageContent>
@@ -53,20 +53,20 @@
 		<CalendarTotals />
 		{#snippet failed(_error, reset)}
 			<Alert type="warning" reset={() => retryQuery(getStaffCalendarTotals(), reset)}>
-				{m.staff_events_calendar_totals_didn_t_load()}
+				{m.staff_events_calendar_totals_didn_t_load_body()}
 			</Alert>
 		{/snippet}
 	</svelte:boundary>
 
-	<DataList {result} empty={m.staff_events_empty()} onpage={(p) => (filters.page = p)}>
+	<DataList {result} empty={m.staff_events_empty_body()} onpage={(p) => (filters.page = p)}>
 		{#snippet children(events)}
 			<!-- No zebra: the bg-base-200 day-group rows are the striping here. -->
 			<Table zebra={false}>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_event()}</th>
-					<th class="col-support">{m.staff_posted_by()}</th>
-					<th class="col-extra">{m.staff_tags()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_event_label()}</th>
+					<th class="col-support">{m.staff_posted_by_label()}</th>
+					<th class="col-extra">{m.staff_tags_label()}</th>
 				{/snippet}
 
 				{#each events as e, idx (e.id)}
@@ -104,7 +104,7 @@
 						-->
 						<td class="col-support">
 							{#if e.source === 'cmc'}
-								<span class="text-muted">{m.staff_cmc()}</span>
+								<span class="text-muted">{m.staff_cmc_text()}</span>
 							{:else if e.source === 'band'}
 								<EntityChip ref={e.band} />
 							{:else}

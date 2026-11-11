@@ -93,20 +93,20 @@
 	}
 </script>
 
-<InfoCard title={m.volunteer_open_shifts_open_shifts()}>
+<InfoCard title={m.volunteer_open_shifts_open_shifts_title()}>
 	{#snippet header()}
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<CardTitle>
 				{showAll || !hasInterests
-					? m.volunteer_open_shifts_open_shifts()
-					: m.volunteer_open_shifts_open_shifts_2()}
+					? m.volunteer_open_shifts_open_shifts_title()
+					: m.volunteer_open_shifts_open_shifts_2_title()}
 				<span class="text-muted font-normal">· {filtered.length}</span>
 			</CardTitle>
 			{#if hasInterests && matches.length !== available.length}
 				<Button size="xs" variant="ghost" onclick={() => (showAll = !showAll)}>
 					{showAll
-						? m.volunteer_open_shifts_show_matches({ length: matches.length })
-						: m.volunteer_open_shifts_show_all({ length: available.length })}
+						? m.volunteer_open_shifts_show_matches_label({ length: matches.length })
+						: m.volunteer_open_shifts_show_all_label({ length: available.length })}
 				</Button>
 			{/if}
 		</div>
@@ -115,11 +115,11 @@
 	{#if filtered.length === 0}
 		<EmptyState
 			title={available.length === 0
-				? m.volunteer_open_shifts_nothing_open_right_now()
-				: m.volunteer_open_shifts_nothing_matches_roles()}
+				? m.volunteer_open_shifts_nothing_open_right_now_title()
+				: m.volunteer_open_shifts_nothing_matches_roles_title()}
 			description={available.length === 0
-				? m.volunteer_open_shifts_when_staff_post_shifts_ones()
-				: m.volunteer_open_shifts_try_every_open_shift_add()}
+				? m.volunteer_open_shifts_when_staff_post_shifts_ones_body()
+				: m.volunteer_open_shifts_try_every_open_shift_add_body()}
 		/>
 	{:else}
 		<ul class="divide-y divide-base-300">
@@ -134,7 +134,7 @@
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="font-medium">{shiftLabel(shift)}</span>
 						{#if shift.interested}
-							<Badge variant="info" size="xs">{m.volunteer_open_shifts_interested()}</Badge>
+							<Badge variant="info" size="xs">{m.volunteer_open_shifts_interested_label()}</Badge>
 						{/if}
 					</div>
 
@@ -149,8 +149,8 @@
 					     most likely to get somebody to take a shift. -->
 					<div class="text-xs {shift.claimed === 0 ? 'text-warning' : 'text-subtle'}">
 						{shift.claimed === 0
-							? m.volunteer_open_shifts_nobody_yet()
-							: m.volunteer_open_shifts_filled({
+							? m.volunteer_open_shifts_nobody_yet_text()
+							: m.volunteer_open_shifts_filled_text({
 									claimed: shift.claimed,
 									capacity: shift.capacity
 								})}
@@ -180,15 +180,17 @@
 									     the gap between them is a person deciding — which is the
 									     thing the old copy left the member to find out. -->
 									<div class="flex flex-wrap items-center gap-2 text-xs">
-										<span class="font-bold text-success">{m.volunteer_open_shifts_claim()}</span>
+										<span class="font-bold text-success"
+											>{m.volunteer_open_shifts_claim_text()}</span
+										>
 										<span class="text-subtle">→</span>
-										<span class="text-subtle">{m.volunteer_open_shifts_staff_confirm()}</span>
+										<span class="text-subtle">{m.volunteer_open_shifts_staff_confirm_text()}</span>
 										<span class="text-subtle">→</span>
-										<span class="text-subtle">{m.volunteer_booked()}</span>
+										<span class="text-subtle">{m.volunteer_booked_text()}</span>
 									</div>
 
 									<p class="text-sm">
-										{m.volunteer_open_shifts_re_not_booked_until_staff()}
+										{m.volunteer_open_shifts_re_not_booked_until_staff_text()}
 									</p>
 
 									{#if shift.notes}
@@ -204,7 +206,7 @@
 
 		{#if hidden > 0}
 			<Button size="xs" variant="ghost" class="mt-1" onclick={() => (expanded = true)}>
-				{m.volunteer_open_shifts_show_more({ hidden })}
+				{m.volunteer_open_shifts_show_more_label({ hidden })}
 			</Button>
 		{/if}
 	{/if}

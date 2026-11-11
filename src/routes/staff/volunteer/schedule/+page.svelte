@@ -166,7 +166,7 @@
 	const refresh = () => void getSchedulePage(args).refresh();
 </script>
 
-<PageHeader title={m.staff_schedule()} subtitle={m.staff_planning()}>
+<PageHeader title={m.staff_schedule_title()} subtitle={m.staff_planning_body()}>
 	<ScheduleViews active="orders" />
 </PageHeader>
 
@@ -191,7 +191,7 @@
 		{#if !byContractor}
 			<Select
 				size="sm"
-				aria-label={m.staff_volunteer_schedule_how_far_ahead()}
+				aria-label={m.staff_volunteer_schedule_how_far_ahead_label()}
 				value={String(range)}
 				onchange={(e: Event) => {
 					range = parseRange((e.currentTarget as HTMLSelectElement).value);
@@ -205,7 +205,7 @@
 
 		<Select
 			size="sm"
-			aria-label={m.staff_kind()}
+			aria-label={m.staff_kind_label()}
 			value={kind}
 			onchange={(e: Event) => {
 				kind = parseKind((e.currentTarget as HTMLSelectElement).value);
@@ -225,7 +225,7 @@
 
 		<Select
 			size="sm"
-			aria-label={m.staff_project()}
+			aria-label={m.staff_project_label()}
 			value={projectFilter}
 			onchange={(e: Event) => {
 				projectFilter = parseProjectFilter((e.currentTarget as HTMLSelectElement).value);
@@ -239,7 +239,7 @@
 		{#if byContractor}
 			<Select
 				size="sm"
-				aria-label={m.staff_volunteer_schedule_contractor_work()}
+				aria-label={m.staff_volunteer_schedule_contractor_work_label()}
 				value={contractorView}
 				onchange={(e: Event) => {
 					contractorView = parseView((e.currentTarget as HTMLSelectElement).value);
@@ -252,20 +252,22 @@
 		{:else}
 			<Select
 				size="sm"
-				aria-label={m.staff_role()}
+				aria-label={m.staff_role_label()}
 				value={roleFilter}
 				onchange={(e: Event) => {
 					roleFilter = (e.currentTarget as HTMLSelectElement).value;
 				}}
 			>
-				<option value="">{m.staff_all_roles()}</option>
+				<option value="">{m.staff_all_roles_label()}</option>
 				<RoleOptions />
 			</Select>
 		{/if}
 
 		{#snippet actions()}
 			<!-- Not a sidebar row: roles are set up now and then, not worked daily (#1791). -->
-			<Button variant="ghost" href={resolve('staff/volunteer/roles')}>{m.staff_roles()}</Button>
+			<Button variant="ghost" href={resolve('staff/volunteer/roles')}
+				>{m.staff_roles_label()}</Button
+			>
 			<LogHoursForMemberAction />
 			<NewWorkOrderAction onsuccess={refresh} />
 		{/snippet}
@@ -306,7 +308,7 @@
 			{/if}
 			{#if data.waiting.pendingHours > 0}
 				<Button size="sm" variant="ghost" href={resolve('staff/members/volunteers/hours')}>
-					{m.staff_volunteer_hours_to_review_card_title()}
+					{m.staff_volunteer_hours_to_review_card_title_label()}
 					<Badge size="sm">{data.waiting.pendingHours}</Badge>
 				</Button>
 			{/if}
@@ -316,7 +318,7 @@
 					variant="ghost"
 					href={withQuery(resolve('staff/members/volunteers'), 'lapsing=1')}
 				>
-					{m.staff_volunteer_lapsing_card_title()}
+					{m.staff_volunteer_lapsing_card_title_label()}
 					<Badge size="sm">{data.waiting.lapsingPeople}</Badge>
 				</Button>
 			{/if}
@@ -326,17 +328,17 @@
 			<ConfirmFixedTable orders={data.waiting.toConfirm} onsuccess={refresh} />
 		{:else if shown.length === 0}
 			<EmptyState
-				title={m.staff_volunteer_schedule_no_work_orders_match()}
-				description={m.staff_volunteer_schedule_description()}
+				title={m.staff_volunteer_schedule_no_work_orders_match_title()}
+				description={m.staff_volunteer_schedule_description_body()}
 			/>
 		{:else}
 			<!-- No zebra: the day-group rows are the striping, as on Reservations. -->
 			<Table zebra={false}>
 				{#snippet head()}
-					<th class="whitespace-nowrap">{m.staff_when()}</th>
-					<th>{m.staff_work()}</th>
-					<th class="cell-num whitespace-nowrap">{m.staff_volunteer_schedule_staffing()}</th>
-					<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+					<th class="whitespace-nowrap">{m.staff_when_label()}</th>
+					<th>{m.staff_work_label()}</th>
+					<th class="cell-num whitespace-nowrap">{m.staff_volunteer_schedule_staffing_label()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 				{/snippet}
 
 				{#each shown as w, idx (w.id)}
@@ -357,7 +359,7 @@
 						<td class="whitespace-nowrap">
 							<a {href} class:text-subtle={!w.startsAt} class="link font-medium">{when(w)}</a>
 							{#if !w.startsAt && isOverdue(w, anchor)}
-								<Badge variant="warning" size="sm">{m.staff_overdue()}</Badge>
+								<Badge variant="warning" size="sm">{m.staff_overdue_label()}</Badge>
 							{/if}
 						</td>
 
@@ -385,15 +387,15 @@
 									href={withQuery(
 										resolve('staff/volunteer/schedule/recurring'),
 										`id=${w.maintenanceScheduleId}`
-									)}>{m.staff_recurring()}</a
+									)}>{m.staff_recurring_text()}</a
 								>
 							{/if}
 							{#each engaged as c, i (i)}
 								<div class="truncate text-xs">
 									{c.name}
-									{#if c.late}<Badge variant="error" size="sm">{m.staff_late()}</Badge>{/if}
+									{#if c.late}<Badge variant="error" size="sm">{m.staff_late_label()}</Badge>{/if}
 									{#if c.awaitingInvoice}<Badge variant="warning" size="sm"
-											>{m.staff_volunteer_schedule_awaiting_invoice()}</Badge
+											>{m.staff_volunteer_schedule_awaiting_invoice_label()}</Badge
 										>{/if}
 								</div>
 							{/each}
@@ -413,7 +415,7 @@
 								</span>
 								{#if unconfirmed > 0}
 									<span class="text-xs text-warning"
-										>{m.staff_volunteer_schedule_unconfirmed({ unconfirmed })}</span
+										>{m.staff_volunteer_schedule_unconfirmed_text({ unconfirmed })}</span
 									>
 								{/if}
 							{/if}
@@ -428,15 +430,15 @@
 										size="xs"
 										class="text-success"
 										action={confirmShiftClaims.for(w.id)}
-										modalTitle={m.staff_confirm_everyone_shift()}
-										submitLabel={m.staff_confirm_all()}
+										modalTitle={m.staff_confirm_everyone_shift_title()}
+										submitLabel={m.staff_confirm_all_label()}
 										successToast={m.staff_volunteer_schedule_success_toast()}
 										onsuccess={refresh}
 									>
 										{#snippet form()}
 											<input {...confirmShiftClaims.for(w.id).fields.shiftId.as('hidden', w.id)} />
 											<p class="text-sm">
-												{m.staff_volunteer_schedule_people_have_put_hand_up({
+												{m.staff_volunteer_schedule_people_have_put_hand_up_text({
 													unconfirmed,
 													shiftLabel: shiftLabel(w),
 													formatDateShort: formatDateShort(w.startsAt!)
@@ -452,7 +454,7 @@
 									<!-- Opens the work order, whose candidate column is the picker
 									     and also shows who is already on it. -->
 									<Button {href} variant={empty ? 'primary' : 'ghost'} size="xs">
-										{m.staff_volunteer_schedule_add({ value: w.capacity - w.claimed })}
+										{m.staff_volunteer_schedule_add_label({ value: w.capacity - w.claimed })}
 									</Button>
 								{/if}
 							</div>
@@ -469,15 +471,15 @@
 				{#each cancelled as shift (shift.id)}
 					<li>
 						<a href={resolve('/staff/volunteer/shifts/[id]', { id: shift.id })} class="link">
-							{m.staff_volunteer_schedule_cancelled({
+							{m.staff_volunteer_schedule_cancelled_text({
 								formatDateShort: formatDateShort(shift.startsAt),
 								shiftLabel: shiftLabel(shift)
 							})}
 						</a>
 						<span class:text-warning={shift.unnotified > 0} class="text-subtle">
 							· {shift.unnotified > 0
-								? m.staff_volunteer_schedule_notify({ unnotified: shift.unnotified })
-								: m.staff_volunteer_schedule_everybody_notified()}
+								? m.staff_volunteer_schedule_notify_text({ unnotified: shift.unnotified })
+								: m.staff_volunteer_schedule_everybody_notified_text()}
 						</span>
 					</li>
 				{/each}

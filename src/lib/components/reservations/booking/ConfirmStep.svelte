@@ -197,7 +197,7 @@
 			<dl class="space-y-2 py-4 text-sm">
 				<div class="flex justify-between">
 					<dt>
-						{m.reservations_booking_confirm_step_hr_hr({
+						{m.reservations_booking_confirm_step_hr_hr_label({
 							durationHours: pricing.durationHours,
 							formatDollars: formatDollars(pricing.hourlyRateCents)
 						})}
@@ -206,11 +206,11 @@
 						<dd>
 							<span class="line-through opacity-60">
 								<span class="sr-only"
-									>{m.reservations_booking_confirm_step_before_free_hours()}</span
+									>{m.reservations_booking_confirm_step_before_free_hours_text()}</span
 								>${formatDollars(pricing.totalCents)}
 							</span>
 							<span class="ml-1 font-medium text-success">
-								<span class="sr-only">{m.reservations_booking_confirm_step_pay()}</span
+								<span class="sr-only">{m.reservations_booking_confirm_step_pay_text()}</span
 								>${formatDollars(pricing.remainingCents)}
 							</span>
 						</dd>
@@ -221,12 +221,12 @@
 				{#if pricing.creditsApplicable > 0}
 					{@const freeHours = creditsToHours(pricing.creditsApplicable)}
 					<div class="flex justify-between text-success">
-						<dt>{m.reservations_booking_confirm_step_free_hours_applied()}</dt>
+						<dt>{m.reservations_booking_confirm_step_free_hours_applied_label()}</dt>
 						<dd>
 							−{freeHours}
 							{freeHours === 1
-								? m.reservations_booking_confirm_step_hr()
-								: m.reservations_booking_confirm_step_hrs()}
+								? m.reservations_booking_confirm_step_hr_text()
+								: m.reservations_booking_confirm_step_hrs_text()}
 						</dd>
 					</div>
 				{/if}
@@ -240,7 +240,7 @@
 				{/if}
 				<div class="mt-2">
 					<p class="mb-1 text-subtle font-medium">
-						{m.reservations_booking_confirm_step_upcoming_instances()}
+						{m.reservations_booking_confirm_step_upcoming_instances_text()}
 					</p>
 					{#if !recurringPreview}
 						<div class="space-y-1">
@@ -250,7 +250,7 @@
 						</div>
 					{:else if recurringPreview.dates.length === 0}
 						<p class="text-subtle">
-							{m.reservations_booking_confirm_step_no_upcoming_instances_next()}
+							{m.reservations_booking_confirm_step_no_upcoming_instances_next_text()}
 						</p>
 					{:else}
 						<ul class="space-y-0.5 text-xs">
@@ -260,7 +260,7 @@
 						</ul>
 						{#if recurringPreview.totalInWindow > recurringPreview.dates.length}
 							<p class="mt-1 text-xs opacity-50">
-								{m.reservations_booking_confirm_step_more({
+								{m.reservations_booking_confirm_step_more_text({
 									value: recurringPreview.totalInWindow - recurringPreview.dates.length
 								})}
 							</p>
@@ -268,7 +268,7 @@
 					{/if}
 				</div>
 				<p class="mt-2 text-xs opacity-50">
-					{m.reservations_booking_confirm_step_future_instances_generated()}
+					{m.reservations_booking_confirm_step_future_instances_generated_text()}
 				</p>
 			</div>
 		{/if}
@@ -279,27 +279,27 @@
 			     `createdByUserId` and a band has no balance of its own. Unexplained
 			     that reads as a bug. -->
 			<p class="text-subtle" data-testid="band-credit-note">
-				{m.reservations_booking_confirm_step_bands_don_t_have_their()}
+				{m.reservations_booking_confirm_step_bands_don_t_have_their_text()}
 				{#if pricing && pricing.creditsApplicable > 0}
 					{@const freeHours = creditsToHours(pricing.creditsApplicable)}
-					{m.reservations_booking_confirm_step_hrs_own_free_hours_apply({ freeHours })}
-				{:else}{m.reservations_booking_confirm_step_s_booked_name_have_no()}{/if}
+					{m.reservations_booking_confirm_step_hrs_own_free_hours_apply_text({ freeHours })}
+				{:else}{m.reservations_booking_confirm_step_s_booked_name_have_no_text()}{/if}
 			</p>
 		{/if}
 
 		<div class="flex justify-end gap-2 pt-2">
 			{#if formCtx.currentStep > 0}
 				<Button type="button" variant="ghost" onclick={() => formCtx.back()}
-					>{m.reservations_booking_confirm_step_back()}</Button
+					>{m.reservations_booking_confirm_step_back_label()}</Button
 				>
 			{/if}
 			{#if band}
 				<Button type="submit" variant="primary"
-					>{m.reservations_booking_confirm_step_book_session()}</Button
+					>{m.reservations_booking_confirm_step_book_session_label()}</Button
 				>
 				{#if showPayAhead}
 					<Button type="button" variant="ghost" onclick={() => formCtx.next()}
-						>{m.reservations_booking_confirm_step_pay_ahead()}</Button
+						>{m.reservations_booking_confirm_step_pay_ahead_label()}</Button
 					>
 				{/if}
 			{:else}
@@ -312,7 +312,7 @@
 				>
 				{#if showPayAhead}
 					<Button type="button" variant="ghost" onclick={() => formCtx.next()}
-						>{m.reservations_booking_confirm_step_pay_ahead()}</Button
+						>{m.reservations_booking_confirm_step_pay_ahead_label()}</Button
 					>
 				{/if}
 			{/if}

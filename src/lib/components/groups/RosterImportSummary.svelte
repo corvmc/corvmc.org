@@ -14,19 +14,19 @@
 	let { result, ondismiss }: { result: RosterImportResult; ondismiss: () => void } = $props();
 
 	const rows = $derived([
-		{ label: m.groups_added(), hint: 'had an account, now active', emails: result.added },
+		{ label: m.groups_added_label(), hint: 'had an account, now active', emails: result.added },
 		{
-			label: m.groups_roster_import_summary_invited(),
+			label: m.groups_roster_import_summary_invited_label(),
 			hint: 'no account, invitation emailed',
 			emails: result.invited
 		},
 		{
-			label: m.groups_roster_import_summary_already_members(),
+			label: m.groups_roster_import_summary_already_members_label(),
 			hint: 'left as they were',
 			emails: result.alreadyMembers
 		},
 		{
-			label: m.groups_roster_import_summary_already_invited(),
+			label: m.groups_roster_import_summary_already_invited_label(),
 			hint: 'invitation still live, not re-sent',
 			emails: result.alreadyInvited
 		}
@@ -36,7 +36,7 @@
 <InfoCard title={m.groups_roster_import_summary_title()}>
 	{#snippet action()}
 		<Button variant="ghost" size="sm" onclick={ondismiss}
-			>{m.groups_roster_import_summary_dismiss()}</Button
+			>{m.groups_roster_import_summary_dismiss_label()}</Button
 		>
 	{/snippet}
 	<DefinitionList>
@@ -47,7 +47,7 @@
 				{#if row.emails.length > 0}
 					<details class="mt-1">
 						<summary class="cursor-pointer text-xs text-fg-2"
-							>{m.groups_roster_import_summary_show_addresses()}</summary
+							>{m.groups_roster_import_summary_show_addresses_label()}</summary
 						>
 						<ul class="mt-1 font-mono text-xs break-all">
 							{#each row.emails as email (email)}<li>{email}</li>{/each}
@@ -56,7 +56,7 @@
 				{/if}
 			</Fact>
 		{/each}
-		<Fact label={m.groups_roster_import_summary_invalid()}>
+		<Fact label={m.groups_roster_import_summary_invalid_label()}>
 			<span class="font-medium">{result.invalid.length}</span>
 			{#if result.invalid.length > 0}
 				<ul class="mt-1 text-xs">
@@ -68,7 +68,7 @@
 		</Fact>
 		{#if result.duplicates > 0}
 			<Fact
-				label={m.groups_roster_import_summary_duplicates()}
+				label={m.groups_roster_import_summary_duplicates_label()}
 				value="{result.duplicates} repeated, counted once"
 			/>
 		{/if}

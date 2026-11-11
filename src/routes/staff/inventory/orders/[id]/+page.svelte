@@ -51,16 +51,16 @@
 
 <PageHeader
 	width="3xl"
-	title={order.supplierName ?? m.staff_order_2()}
-	subtitle={m.staff_order_2()}
+	title={order.supplierName ?? m.staff_order_2_title()}
+	subtitle={m.staff_order_2_body()}
 >
 	<Badge variant={orderStatusBadge[status]} size="md">{orderStatusLabels[status]}</Badge>
 	{#if late}
-		<Badge variant="error" size="md">{m.staff_late()}</Badge>
+		<Badge variant="error" size="md">{m.staff_late_label()}</Badge>
 	{/if}
 	{#if status === 'placed' && outstanding.length > 0}
 		<Button href={`/staff/inventory/intake?order=${order.id}`} variant="primary" size="sm">
-			{m.staff_receive()}
+			{m.staff_receive_label()}
 		</Button>
 	{/if}
 </PageHeader>
@@ -68,18 +68,18 @@
 <PageContent width="3xl">
 	{#if status === 'draft'}
 		<Alert type="info" class="mb-4">
-			{m.staff_inventory_orders_id_draft_still_shopping_list_nothing()}
+			{m.staff_inventory_orders_id_draft_still_shopping_list_nothing_body()}
 		</Alert>
 	{/if}
 
 	<div class="mb-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
-		<InfoCard title={m.staff_inventory_orders_id_what_was_ordered()}>
+		<InfoCard title={m.staff_inventory_orders_id_what_was_ordered_title()}>
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_item()}</th>
-					<th class="cell-num">{m.staff_inventory_orders_id_ordered()}</th>
-					<th class="cell-num">{m.staff_received()}</th>
-					<th class="cell-num">{m.staff_each()}</th>
+					<th>{m.staff_item_label()}</th>
+					<th class="cell-num">{m.staff_inventory_orders_id_ordered_label()}</th>
+					<th class="cell-num">{m.staff_received_label()}</th>
+					<th class="cell-num">{m.staff_each_label()}</th>
 				{/snippet}
 				{#each order.lines as line (line.id)}
 					<tr class="hover">
@@ -87,7 +87,9 @@
 							<a class="link" href={resolve(`staff/inventory/${line.itemId}`)}>{line.item.name}</a>
 							{#if line.outstanding > 0 && status === 'placed'}
 								<Badge variant="warning" size="xs"
-									>{m.staff_inventory_orders_id_still_out({ outstanding: line.outstanding })}</Badge
+									>{m.staff_inventory_orders_id_still_out_label({
+										outstanding: line.outstanding
+									})}</Badge
 								>
 							{/if}
 						</td>
@@ -102,19 +104,21 @@
 		</InfoCard>
 
 		<div class="space-y-6">
-			<InfoCard title={m.staff_order_2()} class="bg-base-200 shadow-none">
+			<InfoCard title={m.staff_order_2_title()} class="bg-base-200 shadow-none">
 				<DefinitionList>
-					<Fact label={m.staff_reference()}>{order.reference ?? '—'}</Fact>
-					<Fact label={m.staff_inventory_orders_id_placed()}>
-						{order.placedAt ? formatDateShort(order.placedAt) : m.staff_not_yet()}
+					<Fact label={m.staff_reference_label()}>{order.reference ?? '—'}</Fact>
+					<Fact label={m.staff_inventory_orders_id_placed_label()}>
+						{order.placedAt ? formatDateShort(order.placedAt) : m.staff_not_yet_text()}
 					</Fact>
-					<Fact label={m.staff_expected()} class={late ? 'text-error' : ''}>
+					<Fact label={m.staff_expected_label()} class={late ? 'text-error' : ''}>
 						{order.expectedAt ? formatDateShort(order.expectedAt) : '—'}
 					</Fact>
-					<Fact label={m.staff_inventory_orders_id_estimated()}
+					<Fact label={m.staff_inventory_orders_id_estimated_label()}
 						>{formatCents(order.estimatedTotalCents)}</Fact
 					>
-					<Fact label={m.staff_inventory_orders_id_raised_by()}>{order.createdByName ?? '—'}</Fact>
+					<Fact label={m.staff_inventory_orders_id_raised_by_label()}
+						>{order.createdByName ?? '—'}</Fact
+					>
 				</DefinitionList>
 				{#if order.notes}
 					<p class="mt-3 whitespace-pre-wrap">{order.notes}</p>
@@ -122,7 +126,7 @@
 			</InfoCard>
 
 			{#if order.arrivals.length > 0}
-				<InfoCard title={m.staff_what_arrived()}>
+				<InfoCard title={m.staff_what_arrived_title()}>
 					<!-- The receipts this order produced. An order is a promise; these
 					     are the acquisitions that made it true. -->
 					<ul class="space-y-1">
@@ -141,39 +145,51 @@
 			     a titled box around one sentence is chrome (#1078). -->
 			{#if status !== 'draft' && status !== 'placed'}
 				<div class="flex items-center justify-between gap-2">
-					<p class="text-subtle">{m.staff_inventory_orders_id_order_closed()}</p>
+					<p class="text-subtle">{m.staff_inventory_orders_id_order_closed_text()}</p>
 					<ReopenAction action={reopenOrderForm} id={order.id} capability="inventory.reopen">
 						{(order.placedAt
-							? m.staff_inventory_orders_id_back_placed_what_was_received
-							: m.staff_inventory_orders_id_back_draft_what_was_received)()}
+							? m.staff_inventory_orders_id_back_placed_what_was_received_text
+							: m.staff_inventory_orders_id_back_draft_what_was_received_text)()}
 					</ReopenAction>
 				</div>
 			{:else}
-				<InfoCard title={m.staff_inventory_orders_id_next_step()}>
+				<InfoCard title={m.staff_inventory_orders_id_next_step_title()}>
 					{#if status === 'draft'}
 						<Form
 							remote={markOrderPlaced}
-							successToast={m.staff_inventory_orders_id_order_placed()}
+							successToast={m.staff_inventory_orders_id_order_placed_toast()}
 						>
 							<input {...markOrderPlaced.fields.id.as('hidden', order.id)} />
-							<SubmitButton label={m.staff_inventory_orders_id_mark_as_placed()} />
+							<SubmitButton label={m.staff_inventory_orders_id_mark_as_placed_label()} />
 						</Form>
 						<div class="mt-3">
-							<Form remote={dropOrder} successToast={m.staff_inventory_orders_id_order_cancelled()}>
+							<Form
+								remote={dropOrder}
+								successToast={m.staff_inventory_orders_id_order_cancelled_toast()}
+							>
 								<input {...dropOrder.fields.id.as('hidden', order.id)} />
-								<SubmitButton label={m.staff_inventory_orders_id_cancel_order()} variant="ghost" />
+								<SubmitButton
+									label={m.staff_inventory_orders_id_cancel_order_label()}
+									variant="ghost"
+								/>
 							</Form>
 						</div>
 					{:else if status === 'placed'}
 						<p class="mb-3 text-subtle">
-							{m.staff_inventory_orders_id_receiving_opens_intake_page_with()}
+							{m.staff_inventory_orders_id_receiving_opens_intake_page_with_text()}
 						</p>
-						<Form remote={closeOrder} successToast={m.staff_inventory_orders_id_order_closed_2()}>
+						<Form
+							remote={closeOrder}
+							successToast={m.staff_inventory_orders_id_order_closed_2_toast()}
+						>
 							<input {...closeOrder.fields.id.as('hidden', order.id)} />
-							<SubmitButton label={m.staff_inventory_orders_id_close_short()} variant="ghost" />
+							<SubmitButton
+								label={m.staff_inventory_orders_id_close_short_label()}
+								variant="ghost"
+							/>
 						</Form>
 						<p class="mt-2 text-subtle text-sm">
-							{m.staff_inventory_orders_id_use_when_rest_never_coming()}
+							{m.staff_inventory_orders_id_use_when_rest_never_coming_text()}
 						</p>
 					{/if}
 				</InfoCard>

@@ -62,10 +62,10 @@
 
 <Action
 	action={updateGroupSession.for(session.id)}
-	label={m.groups_edit()}
+	label={m.groups_edit_label()}
 	aria-label={m.groups_edit_session_aria_label({ title: session.title })}
 	modalTitle={m.groups_edit_session_modal_title()}
-	submitLabel={m.groups_save()}
+	submitLabel={m.groups_save_label()}
 	successToast={m.groups_edit_session_success_toast()}
 	variant="ghost"
 	size="xs"
@@ -79,7 +79,7 @@
 			<FormField
 				field={fields.title}
 				type="text"
-				label={m.groups_what()}
+				label={m.groups_what_label()}
 				value={session.title}
 				required
 			/>
@@ -87,15 +87,15 @@
 			<FormField
 				field={fields.description}
 				type="textarea"
-				label={m.groups_details()}
+				label={m.groups_details_label()}
 				value={session.description ?? ''}
-				description={m.groups_optional_shown_event_page()}
+				description={m.groups_optional_shown_event_page_body()}
 			/>
 
 			<FormField
 				field={fields.sessionDate}
 				type="date"
-				label={m.groups_date()}
+				label={m.groups_date_label()}
 				value={start[0]}
 				required
 			/>
@@ -104,14 +104,14 @@
 				<FormField
 					field={fields.startTime}
 					type="time"
-					label={m.groups_starts()}
+					label={m.groups_starts_label()}
 					value={start[1]}
 					required
 				/>
 				<FormField
 					field={fields.endTime}
 					type="time"
-					label={m.groups_ends()}
+					label={m.groups_ends_label()}
 					value={end ? end[1] : ''}
 					required
 				/>
@@ -120,33 +120,33 @@
 			<FormField
 				field={fields.reserveRoom}
 				type="checkbox"
-				label={m.groups_hold_practice_room()}
+				label={m.groups_hold_practice_room_label()}
 				value={session.reservesRoom}
-				description={m.groups_edit_session_free_program_no_credits_spent()}
+				description={m.groups_edit_session_free_program_no_credits_spent_body()}
 			/>
 
 			<FormField
 				field={fields.doorsTime}
 				type="time"
-				label={m.groups_doors()}
+				label={m.groups_doors_label()}
 				value={doors ?? ''}
-				description={m.groups_optional_when_people_can_turn()}
+				description={m.groups_optional_when_people_can_turn_body()}
 			/>
 
 			<FormField
 				field={fields.tags}
 				type="text"
-				label={m.groups_tags()}
+				label={m.groups_tags_label()}
 				value={session.tags ?? ''}
-				placeholder={m.groups_jazz_jam_all_ages()}
-				description={m.groups_optional_comma_separated_how_gig()}
+				placeholder={m.groups_jazz_jam_all_ages_placeholder()}
+				description={m.groups_optional_comma_separated_how_gig_body()}
 			/>
 
 			<FormField
 				field={fields.posterFile}
 				type="file"
-				label={m.groups_poster()}
-				description={m.groups_edit_session_optional_replaces_current_one()}
+				label={m.groups_poster_label()}
+				description={m.groups_edit_session_optional_replaces_current_one_body()}
 				accept="image/jpeg,image/png,image/webp"
 			/>
 
@@ -154,23 +154,23 @@
 				<FormField
 					field={fields.ticketPriceDollars}
 					type="text"
-					label={m.groups_price()}
+					label={m.groups_price_label()}
 					value={centsToDollars(session.ticketPrice)}
 					placeholder="10.00"
-					description={m.groups_optional_leave_blank_if_s()}
+					description={m.groups_optional_leave_blank_if_s_body()}
 				/>
 				<FormField
 					field={fields.externalTicketUrl}
 					type="text"
-					label={m.groups_tickets_at()}
+					label={m.groups_tickets_at_label()}
 					value={session.externalTicketUrl ?? ''}
-					placeholder={m.groups_https()}
-					description={m.groups_optional_where_people_buy()}
+					placeholder={m.groups_https_placeholder()}
+					description={m.groups_optional_where_people_buy_body()}
 				/>
 			</div>
 
 			<p class="text-subtle">
-				{m.groups_edit_session_moving_session_moves_room_holds()}
+				{m.groups_edit_session_moving_session_moves_room_holds_text()}
 			</p>
 		</div>
 	{/snippet}

@@ -23,11 +23,11 @@
 	const c = $derived(session.counts);
 	const stats = $derived(
 		[
-			{ n: c.resolve, label: m.staff_inbox_daily_session_summary_resolved() },
-			{ n: c.snooze, label: m.staff_inbox_daily_session_summary_snoozed() },
-			{ n: c.wait, label: m.staff_inbox_daily_session_summary_waiting_them() },
-			{ n: c.reopen, label: m.staff_inbox_daily_session_summary_reopened() },
-			{ n: c.skip, label: m.staff_inbox_daily_session_summary_skipped() }
+			{ n: c.resolve, label: m.staff_inbox_daily_session_summary_resolved_label() },
+			{ n: c.snooze, label: m.staff_inbox_daily_session_summary_snoozed_label() },
+			{ n: c.wait, label: m.staff_inbox_daily_session_summary_waiting_them_label() },
+			{ n: c.reopen, label: m.staff_inbox_daily_session_summary_reopened_label() },
+			{ n: c.skip, label: m.staff_inbox_daily_session_summary_skipped_label() }
 		].filter((s) => s.n > 0)
 	);
 
@@ -40,7 +40,7 @@
 <Card>
 	<CardBody class="gap-5">
 		<h1 class="text-2xl font-bold">
-			{m.staff_inbox_daily_session_summary_daily_done_handled({ handled })}
+			{m.staff_inbox_daily_session_summary_daily_done_handled_title({ handled })}
 		</h1>
 
 		<div class="flex flex-wrap gap-6">
@@ -57,33 +57,33 @@
 		{#await getInboxThreadCounts() then counts}
 			<p class="text-muted">
 				{counts.open === 0
-					? m.staff_inbox_daily_session_summary_nothing_left_open()
+					? m.staff_inbox_daily_session_summary_nothing_left_open_text()
 					: session.skipped.length
-						? m.staff_inbox_daily_session_summary_open_skipped({
+						? m.staff_inbox_daily_session_summary_open_skipped_text({
 								count: counts.open,
 								skipped: session.skipped.length
 							})
-						: m.staff_inbox_daily_session_summary_open({ count: counts.open })}
+						: m.staff_inbox_daily_session_summary_open_text({ count: counts.open })}
 				{#if counts.snoozed}
-					{m.staff_inbox_daily_session_summary_snoozed_count({ count: counts.snoozed })}
+					{m.staff_inbox_daily_session_summary_snoozed_count_text({ count: counts.snoozed })}
 				{/if}
 			</p>
 		{:catch error}
-			<p class="text-muted">{m.ui_load_failed({ error: errorMessage(error) })}</p>
+			<p class="text-muted">{m.ui_load_failed_text({ error: errorMessage(error) })}</p>
 		{/await}
 
 		<div class="flex flex-wrap gap-2">
-			<Button variant="primary" onclick={onclose}>{m.staff_back_inbox()}</Button>
+			<Button variant="primary" onclick={onclose}>{m.staff_back_inbox_label()}</Button>
 			<!-- The Resolved view rather than a bespoke surface: what you sent is
 			     already a list, and it is one staff can go back to tomorrow. -->
 			<Button href="{resolve('staff/inbox')}?view=resolved" variant="default" onclick={onclose}>
-				{m.staff_inbox_daily_session_summary_review_what_i_sent()}
+				{m.staff_inbox_daily_session_summary_review_what_i_sent_label()}
 			</Button>
 			<!-- The same ten-second undo the queue offers, reachable from here
 			     because the last thing you did is the one you are most likely to
 			     have got wrong. -->
 			<Button variant="ghost" onclick={() => undoLast()}
-				>{m.staff_inbox_daily_session_summary_undo_last_action()}</Button
+				>{m.staff_inbox_daily_session_summary_undo_last_action_label()}</Button
 			>
 		</div>
 	</CardBody>

@@ -30,7 +30,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.public_programs_programs_corvallis_music_collective()}</title>
+	<title>{m.public_programs_programs_corvallis_music_collective_title()}</title>
 	<meta
 		name="description"
 		content="Practice space, live events, meetups, and gear lending at the Corvallis Music Collective."
@@ -38,8 +38,8 @@
 </svelte:head>
 
 <!-- Hero -->
-<Hero title={m.public_programs_programs()}
-	>{m.public_programs_practice_spaces_performances_meetups_clubs()}</Hero
+<Hero title={m.public_programs_programs_title()}
+	>{m.public_programs_practice_spaces_performances_meetups_clubs_text()}</Hero
 >
 
 <!-- Practice Space -->
@@ -47,21 +47,21 @@
 	<div class="grid grid-cols-1 items-start gap-10 lg:grid-cols-2">
 		<div>
 			<span class="sticker-badge sticker-badge--teal" style="margin-bottom: 12px"
-				>{m.public_practice_space()}</span
+				>{m.public_practice_space_text()}</span
 			>
 			<h2 class="mt-3 mb-4 text-3xl leading-tight font-bold">
-				{m.public_programs_affordable_practice_space_musicians()}
+				{m.public_programs_affordable_practice_space_musicians_title()}
 			</h2>
 			<p class="mb-4 text-base leading-relaxed text-fg-2">
-				{m.public_programs_our_practice_rooms_equipped_with()}
+				{m.public_programs_our_practice_rooms_equipped_with_text()}
 			</p>
 			<p class="mb-4 text-base leading-relaxed text-fg-2">
-				{m.public_programs_members_can_book_hourly_sessions()}
+				{m.public_programs_members_can_book_hourly_sessions_text()}
 			</p>
 			<Tile fill="tint-teal" pad="sm" align="start" class="mt-4">
 				<IconInfoCircle size={20} class="mt-0.5 shrink-0 text-cmc-teal" />
 				<p class="text-muted leading-relaxed">
-					{m.public_programs_practice_space_access_requires_free()}
+					{m.public_programs_practice_space_access_requires_free_text()}
 				</p>
 			</Tile>
 		</div>
@@ -71,17 +71,19 @@
 	</div>
 	<div class="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2">
 		<div class="rounded-lg p-6 text-center surface">
-			<div class="eyebrow-muted mb-2">{m.public_programs_standard_rate()}</div>
-			<div class="text-4xl font-bold text-cmc-navy">{m.public_programs_15_hour()}</div>
-			<div class="mt-1 text-muted">{m.public_programs_all_equipment_included()}</div>
+			<div class="eyebrow-muted mb-2">{m.public_programs_standard_rate_text()}</div>
+			<div class="text-4xl font-bold text-cmc-navy">{m.public_programs_15_hour_text()}</div>
+			<div class="mt-1 text-muted">{m.public_programs_all_equipment_included_text()}</div>
 		</div>
 		<a
 			href={signInHref({ register: true, returnTo: '/member' })}
 			class="program-block__cta rounded-lg p-6 text-center tint-cmc-orange"
 		>
-			<div class="eyebrow-muted mb-2">{m.public_programs_sustaining_members()}</div>
-			<div class="text-4xl font-bold text-cmc-orange">{m.public_programs_up_12_free_hours()}</div>
-			<div class="mt-1 text-muted">{m.public_programs_every_month_then_15_hour()}</div>
+			<div class="eyebrow-muted mb-2">{m.public_programs_sustaining_members_text()}</div>
+			<div class="text-4xl font-bold text-cmc-orange">
+				{m.public_programs_up_12_free_hours_text()}
+			</div>
+			<div class="mt-1 text-muted">{m.public_programs_every_month_then_15_hour_text()}</div>
 		</a>
 	</div>
 </Section>
@@ -91,16 +93,18 @@
 	<div class="grid grid-cols-1 items-start gap-10 lg:grid-cols-2">
 		<div>
 			<span class="sticker-badge sticker-badge--teal" style="margin-bottom: 12px"
-				>{m.public_programs_gear_library()}</span
+				>{m.public_programs_gear_library_text()}</span
 			>
 			<h2 class="mt-3 mb-4 text-3xl leading-tight font-bold">
-				{m.public_programs_borrow_gear_need()}
+				{m.public_programs_borrow_gear_need_title()}
 			</h2>
 			<p class="mb-4 text-base leading-relaxed text-fg-2">
-				{m.public_programs_cmc_maintains_gear_library_available()}
+				{m.public_programs_cmc_maintains_gear_library_available_text()}
 			</p>
 			<p class="mb-4 text-base leading-relaxed text-fg-2">
-				<ParaglideMessage message={m.public_programs_need_amp_gig_instrument_session} inputs={{}}
+				<ParaglideMessage
+					message={m.public_programs_need_amp_gig_instrument_session_text}
+					inputs={{}}
 					>{#snippet a({ children })}<a href={resolve('contact')} class="link"
 							>{@render children?.()}</a
 						>{/snippet}</ParaglideMessage
@@ -113,14 +117,14 @@
 		</div>
 		<div class="grid grid-cols-1 gap-6 self-center sm:grid-cols-2">
 			<div class="rounded-lg p-6 text-center surface">
-				<div class="eyebrow-muted mb-2">{m.public_programs_instruments_amps()}</div>
-				<div class="text-4xl font-bold text-cmc-navy">{m.public_programs_5_day()}</div>
-				<div class="mt-1 text-muted">{m.public_programs_per_item()}</div>
+				<div class="eyebrow-muted mb-2">{m.public_programs_instruments_amps_text()}</div>
+				<div class="text-4xl font-bold text-cmc-navy">{m.public_programs_5_day_text()}</div>
+				<div class="mt-1 text-muted">{m.public_programs_per_item_text()}</div>
 			</div>
 			<div class="rounded-lg p-6 text-center tint-cmc-orange">
-				<div class="eyebrow-muted mb-2">{m.public_programs_cables_accessories()}</div>
-				<div class="text-4xl font-bold text-cmc-orange">{m.public_programs_1_day()}</div>
-				<div class="mt-1 text-muted">{m.public_programs_free_sustaining_members()}</div>
+				<div class="eyebrow-muted mb-2">{m.public_programs_cables_accessories_text()}</div>
+				<div class="text-4xl font-bold text-cmc-orange">{m.public_programs_1_day_text()}</div>
+				<div class="mt-1 text-muted">{m.public_programs_free_sustaining_members_text()}</div>
 			</div>
 		</div>
 	</div>
@@ -130,30 +134,30 @@
 <Section tint="primary" class="program-block">
 	<div class="mb-12 text-center">
 		<span class="sticker-badge sticker-badge--orange" style="margin-bottom: 12px"
-			>{m.public_programs_shows()}</span
+			>{m.public_programs_shows_text()}</span
 		>
 		<h2 class="mt-3 mb-3 text-4xl font-bold tracking-tight">
-			{m.public_programs_shows_performances()}
+			{m.public_programs_shows_performances_title()}
 		</h2>
 		<p class="mx-auto max-w-xl text-base leading-relaxed text-fg-2">
-			{m.public_programs_showcase_talent_connect_with_community()}
+			{m.public_programs_showcase_talent_connect_with_community_text()}
 		</p>
 	</div>
 	<div class="grid grid-cols-1 items-start gap-10 lg:grid-cols-2">
 		<div>
-			<h3 class="mb-3 text-2xl font-bold">{m.public_programs_perform_connect()}</h3>
+			<h3 class="mb-3 text-2xl font-bold">{m.public_programs_perform_connect_title()}</h3>
 			<p class="mb-4 text-base leading-relaxed text-fg-2">
-				{m.public_programs_whether_re_seasoned_performer_just()}
+				{m.public_programs_whether_re_seasoned_performer_just_text()}
 			</p>
 			<p class="mb-6 text-base leading-relaxed text-fg-2">
-				{m.public_programs_from_intimate_acoustic_sets_full()}
+				{m.public_programs_from_intimate_acoustic_sets_full_text()}
 			</p>
 			<div class="flex flex-wrap gap-3">
 				<Button href="/events" variant="default" class="program-block__cta"
-					>{m.public_programs_view_upcoming_shows()}</Button
+					>{m.public_programs_view_upcoming_shows_label()}</Button
 				>
 				<Button href="/contact" variant="default" outline
-					>{m.public_programs_apply_perform()}</Button
+					>{m.public_programs_apply_perform_label()}</Button
 				>
 			</div>
 		</div>
@@ -166,10 +170,12 @@
 <!-- Meetups & Clubs -->
 <Section tint="warning" class="program-block">
 	<div class="mb-12 text-center">
-		<span class="sticker-badge" style="margin-bottom: 12px">{m.public_clubs()}</span>
-		<h2 class="mt-3 mb-3 text-4xl font-bold tracking-tight">{m.public_programs_meetups_clubs()}</h2>
+		<span class="sticker-badge" style="margin-bottom: 12px">{m.public_clubs_text()}</span>
+		<h2 class="mt-3 mb-3 text-4xl font-bold tracking-tight">
+			{m.public_programs_meetups_clubs_title()}
+		</h2>
 		<p class="mx-auto max-w-xl text-base leading-relaxed text-fg-2">
-			{m.public_programs_connect_with_like_minded_musicians()}
+			{m.public_programs_connect_with_like_minded_musicians_text()}
 		</p>
 	</div>
 	<div class="grid grid-cols-1 items-start gap-10 lg:grid-cols-2">
@@ -180,42 +186,42 @@
 			<div class="rounded-lg p-6 tint-cmc-goldenrod">
 				<div class="mb-3 flex items-center gap-3">
 					<IconMusic size={24} class="text-cmc-navy" />
-					<h3 class="text-xl font-bold">{m.public_programs_real_book_club()}</h3>
+					<h3 class="text-xl font-bold">{m.public_programs_real_book_club_title()}</h3>
 				</div>
 				<p class="mb-3 text-muted leading-relaxed">
-					{m.public_programs_our_flagship_jazz_jam_club()}
+					{m.public_programs_our_flagship_jazz_jam_club_text()}
 				</p>
 				<Tile fill="tint-teal" pad="xs" align="start">
 					<IconBulb size={18} class="mt-0.5 shrink-0 text-cmc-teal" />
 					<p class="text-subtle leading-relaxed">
-						{m.public_programs_bring_instrument_real_book_we()}
+						{m.public_programs_bring_instrument_real_book_we_text()}
 					</p>
 				</Tile>
 			</div>
 			<div class="rounded-lg p-6 surface">
 				<div class="mb-2 flex items-center gap-3">
 					<IconUsers size={22} class="text-cmc-navy" />
-					<h3 class="text-lg font-bold">{m.public_programs_songwriter_circle()}</h3>
+					<h3 class="text-lg font-bold">{m.public_programs_songwriter_circle_title()}</h3>
 				</div>
 				<p class="mb-3 text-muted leading-relaxed">
-					{m.public_programs_monthly_gathering_sharing_original_songs()}
+					{m.public_programs_monthly_gathering_sharing_original_songs_text()}
 				</p>
 				<span class="sticker-badge sticker-badge--teal sticker-badge--sm"
-					>{m.public_programs_2nd_saturday_2_00_pm()}</span
+					>{m.public_programs_2nd_saturday_2_00_pm_text()}</span
 				>
 			</div>
 			<div class="rounded-lg p-6 surface">
 				<div class="mb-2 flex items-center gap-3">
 					<IconMicrophone size={22} class="text-cmc-navy" />
-					<h3 class="text-lg font-bold">{m.public_programs_monthly_meetup()}</h3>
+					<h3 class="text-lg font-bold">{m.public_programs_monthly_meetup_title()}</h3>
 				</div>
 				<p class="mb-3 text-muted leading-relaxed">
-					{m.public_programs_come_chat_with_just_listen()}
+					{m.public_programs_come_chat_with_just_listen_text()}
 				</p>
 				<a
 					href={resolve('events')}
 					class="program-block__cta sticker-badge sticker-badge--orange sticker-badge--sm"
-					>{m.public_programs_last_thursday_6_8_30()}</a
+					>{m.public_programs_last_thursday_6_8_30_text()}</a
 				>
 			</div>
 		</div>
@@ -223,7 +229,7 @@
 	{#if publicGroups.length > 0}
 		<div class="mt-10 text-center">
 			<Button href={resolve('groups')} variant="primary"
-				>{m.public_programs_see_all_clubs_committees()}</Button
+				>{m.public_programs_see_all_clubs_committees_label()}</Button
 			>
 		</div>
 	{/if}
@@ -232,13 +238,15 @@
 <!-- Ready to Get Involved -->
 <Section tint="primary">
 	<div class="mb-12 text-center">
-		<h2 class="mb-3 text-4xl font-bold tracking-tight">{m.public_programs_ready_get_involved()}</h2>
+		<h2 class="mb-3 text-4xl font-bold tracking-tight">
+			{m.public_programs_ready_get_involved_title()}
+		</h2>
 		<p class="mx-auto max-w-xl text-base leading-relaxed text-fg-2">
-			{m.public_programs_join_corvallis_music_collective_access()}
+			{m.public_programs_join_corvallis_music_collective_access_text()}
 		</p>
 	</div>
 	<div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-		{#each [{ num: '1', title: m.public_programs_join_cmc(), desc: m.public_programs_become_member_access_all_programs(), badge: 'sticker-badge--teal' }, { num: '2', title: m.public_programs_choose_path(), desc: m.public_programs_practice_perform_join_our_clubs(), badge: 'sticker-badge--orange' }, { num: '3', title: m.public_programs_make_music(), desc: m.public_programs_connect_create_with_community(), badge: '' }] as step (step.num)}
+		{#each [{ num: '1', title: m.public_programs_join_cmc_title(), desc: m.public_programs_become_member_access_all_programs_body(), badge: 'sticker-badge--teal' }, { num: '2', title: m.public_programs_choose_path_title(), desc: m.public_programs_practice_perform_join_our_clubs_body(), badge: 'sticker-badge--orange' }, { num: '3', title: m.public_programs_make_music_title(), desc: m.public_programs_connect_create_with_community_body(), badge: '' }] as step (step.num)}
 			<div class="flex flex-col items-center gap-3 text-center">
 				<span
 					class="sticker-badge {step.badge}"
@@ -257,8 +265,10 @@
 	</div>
 	<div class="mt-10 flex justify-center gap-4">
 		<Button href={signInHref({ register: true, returnTo: '/member' })} variant="default" size="lg"
-			>{m.public_become_member()}</Button
+			>{m.public_become_member_label()}</Button
 		>
-		<Button href="/contact" variant="default" outline>{m.public_programs_ask_questions()}</Button>
+		<Button href="/contact" variant="default" outline
+			>{m.public_programs_ask_questions_label()}</Button
+		>
 	</div>
 </Section>

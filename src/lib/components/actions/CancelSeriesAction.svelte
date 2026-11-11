@@ -28,8 +28,8 @@
 
 <Action
 	action={cancelRecurringSeries}
-	label={m.actions_cancel()}
-	modalTitle={m.actions_confirm()}
+	label={m.actions_cancel_label()}
+	modalTitle={m.actions_confirm_title()}
 	successToast={m.actions_cancel_series_success_toast()}
 	{variant}
 	{size}
@@ -41,7 +41,7 @@
 	{#snippet form()}
 		<input {...fields.id.as('hidden', seriesId)} />
 		<p class="py-4">
-			{m.actions_cancel_series_cancel_recurring_series_next_session()}
+			{m.actions_cancel_series_cancel_recurring_series_next_session_text()}
 		</p>
 	{/snippet}
 </Action>

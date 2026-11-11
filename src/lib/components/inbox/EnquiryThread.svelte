@@ -56,7 +56,7 @@
 
 <ThreadHeader
 	title={thread.contactName ?? m.inbox_enquiry_thread_title()}
-	subtitle={m.inbox_enquiry_thread_subtitle()}
+	subtitle={m.inbox_enquiry_thread_subtitle_body()}
 	{backHref}
 >
 	{#snippet actions()}
@@ -64,8 +64,8 @@
 		<Form
 			remote={setBandConversationStatus}
 			successToast={closed
-				? m.inbox_enquiry_thread_enquiry_reopened()
-				: m.inbox_enquiry_thread_enquiry_closed()}
+				? m.inbox_enquiry_thread_enquiry_reopened_toast()
+				: m.inbox_enquiry_thread_enquiry_closed_toast()}
 			onsuccess={() => onchanged?.()}
 		>
 			<input {...setBandConversationStatus.fields.threadId.as('hidden', thread.id)} />
@@ -73,7 +73,9 @@
 				{...setBandConversationStatus.fields.status.as('hidden', closed ? 'open' : 'resolved')}
 			/>
 			<SubmitButton
-				label={closed ? m.inbox_enquiry_thread_reopen() : m.inbox_enquiry_thread_close()}
+				label={closed
+					? m.inbox_enquiry_thread_reopen_label()
+					: m.inbox_enquiry_thread_close_label()}
 				variant="ghost"
 				size="sm"
 			>
@@ -94,13 +96,13 @@
 <div class="flex flex-col gap-2">
 	{#if closed}
 		<Alert type="info">
-			{m.inbox_enquiry_thread_closed_enquiry_reopen_reply_if()}
+			{m.inbox_enquiry_thread_closed_enquiry_reopen_reply_if_body()}
 		</Alert>
 	{:else}
 		<ThreadComposer threadId={thread.id} {replyForm} onsent={() => onchanged?.()} />
 		<p class="text-subtle text-xs">
-			{m.inbox_enquiry_thread_reply_goes_as_email_from({
-				contactName: thread.contactName ?? m.inbox_enquiry_thread_them(),
+			{m.inbox_enquiry_thread_reply_goes_as_email_from_text({
+				contactName: thread.contactName ?? m.inbox_enquiry_thread_them_text(),
 				bandName: thread.bandName
 			})}
 		</p>

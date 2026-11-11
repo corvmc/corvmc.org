@@ -27,20 +27,20 @@
 	<div class="edet__fact">
 		<dt class="edet__fact-label">
 			<IconCalendar size={18} aria-hidden="true" />
-			<span class="sr-only">{m.events_facts_date()}</span>
+			<span class="sr-only">{m.events_facts_date_label()}</span>
 		</dt>
 		<dd class="edet__fact-value">{fullDate(evt.startsAt)}</dd>
 	</div>
 	<div class="edet__fact">
 		<dt class="edet__fact-label">
 			<IconClock size={18} aria-hidden="true" />
-			<span class="sr-only">{m.events_facts_time()}</span>
+			<span class="sr-only">{m.events_facts_time_label()}</span>
 		</dt>
 		<dd class="edet__fact-value">
 			{formatEventTimeRange(evt.startsAt, evt.endsAt)}
 			{#if evt.doorsAt}
 				<span class="edet__fact-note block"
-					>{m.events_facts_doors({ formatTime: formatTime(evt.doorsAt) })}</span
+					>{m.events_facts_doors_text({ formatTime: formatTime(evt.doorsAt) })}</span
 				>
 			{/if}
 		</dd>
@@ -49,7 +49,7 @@
 		<div class="edet__fact">
 			<dt class="edet__fact-label">
 				<IconMapPin size={18} aria-hidden="true" />
-				<span class="sr-only">{m.events_facts_location()}</span>
+				<span class="sr-only">{m.events_facts_location_label()}</span>
 			</dt>
 			<dd class="edet__fact-value">
 				{evt.location ?? ''}
@@ -67,12 +67,12 @@
 	<div class="edet__fact">
 		<dt class="edet__fact-label">
 			<IconTicket size={18} aria-hidden="true" />
-			<span class="sr-only">{m.events_facts_price()}</span>
+			<span class="sr-only">{m.events_facts_price_label()}</span>
 		</dt>
 		<dd class="edet__fact-value">
 			{price.label}
 			{#if price.suggested}
-				<span class="edet__fact-note">{m.events_facts_suggested()}</span>
+				<span class="edet__fact-note">{m.events_facts_suggested_text()}</span>
 			{/if}
 		</dd>
 	</div>

@@ -31,16 +31,16 @@
 	const { fields } = updateGroupMember;
 
 	const roleOptions = [
-		{ value: 'member', label: m.groups_member() },
-		{ value: 'admin', label: m.groups_admin() }
+		{ value: 'member', label: m.groups_member_label() },
+		{ value: 'admin', label: m.groups_admin_label() }
 	];
 </script>
 
 <Action
 	action={updateGroupMember.for(memberId)}
-	label={m.groups_edit()}
+	label={m.groups_edit_label()}
 	aria-label={m.groups_group_member_edit_aria_label({ memberName })}
-	modalTitle={m.groups_group_member_edit_aria_label({ memberName })}
+	modalTitle={m.groups_group_member_edit_aria_title({ memberName })}
 	variant="ghost"
 	size="xs"
 	successToast={m.groups_group_member_edit_success_toast()}
@@ -53,15 +53,15 @@
 			<FormField
 				field={fields.role}
 				type="select"
-				label={m.groups_role()}
+				label={m.groups_role_label()}
 				value={role}
 				options={roleOptions}
-				description={m.groups_group_member_edit_description()}
+				description={m.groups_group_member_edit_description_body()}
 			/>
 			<FormField
 				field={fields.position}
 				type="text"
-				label={m.groups_position()}
+				label={m.groups_position_label()}
 				value={position ?? ''}
 				maxlength="100"
 				placeholder={m.groups_group_member_edit_placeholder({

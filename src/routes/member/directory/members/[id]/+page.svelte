@@ -61,15 +61,15 @@
 		const p: ProfilePill[] = [];
 		if (member.memberNumber != null)
 			p.push({
-				label: m.member_directory_members_id_member({
+				label: m.member_directory_members_id_member_label({
 					padStart: String(member.memberNumber).padStart(4, '0')
 				})
 			});
 		if (member.lookingForBand)
-			p.push({ label: m.member_directory_members_id_looking_band(), variant: 'warm' });
-		if (member.availableForHire) p.push({ label: m.member_available_hire() });
-		if (member.teachesLessons) p.push({ label: m.member_teaches_privately() });
-		if (member.openToCollaboration) p.push({ label: m.member_open_collaboration() });
+			p.push({ label: m.member_directory_members_id_looking_band_label(), variant: 'warm' });
+		if (member.availableForHire) p.push({ label: m.member_available_hire_label() });
+		if (member.teachesLessons) p.push({ label: m.member_teaches_privately_label() });
+		if (member.openToCollaboration) p.push({ label: m.member_open_collaboration_label() });
 		return p;
 	});
 
@@ -77,12 +77,12 @@
 		member
 			? [
 					{
-						label: m.member_directory_members_id_joined(),
+						label: m.member_directory_members_id_joined_label(),
 						value: String(new Date(member.createdAt).getFullYear())
 					},
-					{ label: m.member_pronouns(), value: member.pronouns },
-					{ label: m.member_based(), value: member.hometown },
-					{ label: m.member_looking(), value: member.lookingForBand ? 'A band' : null }
+					{ label: m.member_pronouns_label(), value: member.pronouns },
+					{ label: m.member_based_label(), value: member.hometown },
+					{ label: m.member_looking_label(), value: member.lookingForBand ? 'A band' : null }
 				]
 			: []
 	);
@@ -111,7 +111,7 @@
 	<PageContent width="3xl">
 		<div class="flex items-center justify-between">
 			<a href={resolve('member/directory')} class="link text-muted"
-				>{m.member_directory_members_id_back_directory()}</a
+				>{m.member_directory_members_id_back_directory_text()}</a
 			>
 			<div class="flex items-center gap-2">
 				{#if canMessage}
@@ -155,10 +155,10 @@
 				<CrossRefList
 					kind="bands"
 					items={bandRefs}
-					note={m.member_directory_members_id_note({ length: bandRefs.length })}
+					note={m.member_directory_members_id_note_body({ length: bandRefs.length })}
 				/>
-				<TagCloud label={m.member_directory_members_id_plays_genres()} {tags} />
-				<TagCloud label={m.member_skills()} tags={member.skills ?? []} />
+				<TagCloud label={m.member_directory_members_id_plays_genres_label()} {tags} />
+				<TagCloud label={m.member_skills_label()} tags={member.skills ?? []} />
 				<LinksBox {links} />
 				<ContactBox kind="contact" {contact} />
 			{/snippet}
@@ -166,10 +166,10 @@
 	</PageContent>
 {:else}
 	<Alert type="warning">
-		{m.member_directory_members_id_member_not_found_profile_hidden()}
+		{m.member_directory_members_id_member_not_found_profile_hidden_body()}
 		{#snippet action()}
 			<Button href="/member/directory" variant="default" size="sm"
-				>{m.member_directory_members_id_back_directory_2()}</Button
+				>{m.member_directory_members_id_back_directory_2_label()}</Button
 			>
 		{/snippet}
 	</Alert>

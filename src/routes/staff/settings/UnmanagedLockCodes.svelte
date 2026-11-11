@@ -39,9 +39,11 @@
 </script>
 
 <div class="mt-2 border-t border-base-200 pt-3">
-	<p class="text-sm font-medium">{m.staff_settings_unmanaged_lock_codes_unmanaged_door_codes()}</p>
+	<p class="text-sm font-medium">
+		{m.staff_settings_unmanaged_lock_codes_unmanaged_door_codes_text()}
+	</p>
 	<p class="text-subtle">
-		{m.staff_settings_unmanaged_lock_codes_standing_codes_lock_site()}
+		{m.staff_settings_unmanaged_lock_codes_standing_codes_lock_site_text()}
 	</p>
 
 	{#if failure}
@@ -50,7 +52,7 @@
 
 	{#if unmanaged.length === 0}
 		<p class="mt-2 text-subtle">
-			{m.staff_settings_unmanaged_lock_codes_every_standing_code_lock()}
+			{m.staff_settings_unmanaged_lock_codes_every_standing_code_lock_text()}
 		</p>
 	{:else}
 		<ul class="mt-2 divide-y divide-base-200">
@@ -59,7 +61,8 @@
 					<div class="flex items-center gap-2">
 						<span class="font-medium">{u.label}</span>
 						{#if !u.synced}
-							<Badge variant="warning">{m.staff_settings_unmanaged_lock_codes_not_lock_yet()}</Badge
+							<Badge variant="warning"
+								>{m.staff_settings_unmanaged_lock_codes_not_lock_yet_label()}</Badge
 							>
 						{/if}
 					</div>
@@ -72,7 +75,7 @@
 							disabled={busyId === u.lockAccessId}
 							onclick={() => adopt(u.lockAccessId, u.label)}
 						>
-							{m.staff_settings_unmanaged_lock_codes_adopt()}
+							{m.staff_settings_unmanaged_lock_codes_adopt_label()}
 						</Button>
 					</div>
 				</li>

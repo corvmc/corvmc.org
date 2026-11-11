@@ -47,42 +47,42 @@
 
 {#if !settlement}
 	<EmptyState
-		title={m.staff_no_production()}
-		description={m.staff_events_id_production_settlement_panel_open_one_from_ev()}
+		title={m.staff_no_production_title()}
+		description={m.staff_events_id_production_settlement_panel_open_one_from_ev_body()}
 	/>
 {:else}
 	<Alert type="info">
-		{m.staff_events_id_production_settlement_panel_what_night_took()}
+		{m.staff_events_id_production_settlement_panel_what_night_took_body()}
 	</Alert>
 
-	<InfoCard title={m.staff_night()}>
+	<InfoCard title={m.staff_night_title()}>
 		<div class="grid gap-6 sm:grid-cols-4">
 			<div>
-				<p class="text-muted">{m.staff_events_id_production_settlement_panel_bands_pool()}</p>
+				<p class="text-muted">{m.staff_events_id_production_settlement_panel_bands_pool_text()}</p>
 				<p class="text-lg font-medium">{formatCents(settlement.actsPoolCents)}</p>
 				<p class="text-xs text-fg-2">
-					{m.staff_events_id_production_settlement_panel_what_buyers_desi()}{#if settlement.door}{m.staff_events_id_production_settlement_panel_plus_door(
+					{m.staff_events_id_production_settlement_panel_what_buyers_desi_text()}{#if settlement.door}{m.staff_events_id_production_settlement_panel_plus_door_text(
 							{ formatCents: formatCents(settlement.door.actsCents) }
 						)}{/if}
 				</p>
 			</div>
 			<div>
-				<p class="text-muted">{m.staff_events_id_production_settlement_panel_collective()}</p>
+				<p class="text-muted">{m.staff_events_id_production_settlement_panel_collective_text()}</p>
 				<p class="text-lg font-medium">{formatCents(settlement.collectiveRevenueCents)}</p>
 			</div>
 			<div>
-				<p class="text-muted">{m.staff_events_id_production_settlement_panel_expenses()}</p>
+				<p class="text-muted">{m.staff_events_id_production_settlement_panel_expenses_text()}</p>
 				<p class="text-lg font-medium">{formatCents(settlement.expensesCents)}</p>
 				{#if settlement.deductibleExpensesCents !== settlement.expensesCents}
 					<p class="text-xs text-fg-2">
-						{m.staff_events_id_production_settlement_panel_deductible({
+						{m.staff_events_id_production_settlement_panel_deductible_text({
 							formatCents: formatCents(settlement.deductibleExpensesCents)
 						})}
 					</p>
 				{/if}
 			</div>
 			<div>
-				<p class="text-muted">{m.staff_events_id_production_settlement_panel_net()}</p>
+				<p class="text-muted">{m.staff_events_id_production_settlement_panel_net_text()}</p>
 				<p class="text-lg font-medium" class:text-error={settlement.netCents < 0}>
 					{formatCents(settlement.netCents)}
 				</p>
@@ -93,10 +93,10 @@
 	<!-- The drawer, and the split that follows from it. Its own card because
 	     counting the door is a thing somebody does at the end of the night,
 	     not a figure that arrives on its own like a ticket sale (#929). -->
-	<InfoCard title={m.staff_events_id_production_settlement_panel_door()}>
+	<InfoCard title={m.staff_events_id_production_settlement_panel_door_title()}>
 		<Form
 			remote={recordDoorTake}
-			successToast={m.staff_events_id_production_settlement_panel_door_recorded()}
+			successToast={m.staff_events_id_production_settlement_panel_door_recorded_toast()}
 		>
 			<input {...recordDoorTake.fields.id.as('hidden', settlement.productionId)} />
 			<input {...recordDoorTake.fields.eventId.as('hidden', eventId)} />
@@ -104,26 +104,26 @@
 			<div class="grid gap-3 sm:grid-cols-4">
 				<MoneyField
 					field={recordDoorTake.fields.doorCashCents}
-					label={m.staff_events_id_production_settlement_panel_cash_counted()}
+					label={m.staff_events_id_production_settlement_panel_cash_counted_label()}
 					value={settlement.door?.cashCents ?? null}
 				/>
 				<FormField
 					{...recordDoorTake.fields.doorCount.as('number')}
-					label={m.staff_events_id_production_settlement_panel_through_door()}
+					label={m.staff_events_id_production_settlement_panel_through_door_label()}
 					value={settlement.door?.count ?? undefined}
 					min={0}
 				/>
 				<FormField
 					{...recordDoorTake.fields.splitActsPercent.as('number')}
-					label={m.staff_events_id_production_settlement_panel_bands_share()}
-					description={m.staff_events_id_production_settlement_panel_blank_house_rule()}
+					label={m.staff_events_id_production_settlement_panel_bands_share_label()}
+					description={m.staff_events_id_production_settlement_panel_blank_house_rule_body()}
 					value={settlement.door?.overridden ? settlement.door.actsPercent : undefined}
 					min={0}
 					max={100}
 				/>
 				{#if !locked}
 					<div class="flex items-end">
-						<SubmitButton label={m.staff_record()} size="sm" />
+						<SubmitButton label={m.staff_record_label()} size="sm" />
 					</div>
 				{/if}
 			</div>
@@ -132,7 +132,7 @@
 		{#if settlement.door}
 			<p class="mt-3 text-muted">
 				<ParaglideMessage
-					message={m.staff_events_id_production_settlement_panel_splits_bands_col}
+					message={m.staff_events_id_production_settlement_panel_splits_bands_col_text}
 					inputs={{
 						formatCents: formatCents(settlement.door.cashCents),
 						actsPercent: settlement.door.actsPercent,
@@ -145,7 +145,7 @@
 				>
 				{#if settlement.door.overridden}
 					<Badge size="sm" variant="warning"
-						>{m.staff_events_id_production_settlement_panel_show_s_own_split()}</Badge
+						>{m.staff_events_id_production_settlement_panel_show_s_own_split_label()}</Badge
 					>
 				{/if}
 			</p>
@@ -154,24 +154,24 @@
 			     nothing, and a settlement cannot be honest about the difference
 			     unless the page is. -->
 			<p class="mt-3 text-muted">
-				{m.staff_events_id_production_settlement_panel_nobody_has_count()}
+				{m.staff_events_id_production_settlement_panel_nobody_has_count_text()}
 			</p>
 		{/if}
 	</InfoCard>
 
-	<InfoCard title={m.staff_events_id_production_settlement_panel_what_night_cost()}>
+	<InfoCard title={m.staff_events_id_production_settlement_panel_what_night_cost_title()}>
 		{#snippet header(title)}
 			<div class="flex flex-wrap items-center justify-between gap-2">
 				<CardTitle>{title}</CardTitle>
 				<Action
 					disabled={locked}
 					action={addProductionExpense}
-					label={m.staff_events_id_production_settlement_panel_add_cost()}
+					label={m.staff_events_id_production_settlement_panel_add_cost_label()}
 					variant="ghost"
 					size="xs"
-					modalTitle={m.staff_events_id_production_settlement_panel_what_did_show_pa()}
-					submitLabel={m.staff_events_id_production_settlement_panel_add()}
-					successToast={m.staff_events_id_production_settlement_panel_cost_recorded()}
+					modalTitle={m.staff_events_id_production_settlement_panel_what_did_show_pa_title()}
+					submitLabel={m.staff_events_id_production_settlement_panel_add_label()}
+					successToast={m.staff_events_id_production_settlement_panel_cost_recorded_toast()}
 				>
 					{#snippet form()}
 						<input {...addProductionExpense.fields.eventId.as('hidden', eventId)} />
@@ -180,27 +180,30 @@
 						/>
 						<FormField
 							field={addProductionExpense.fields.label}
-							label={m.staff_what_was()}
+							label={m.staff_what_was_label()}
 							required
 						/>
 						<FormField
 							field={addProductionExpense.fields.category}
 							type="select"
-							label={m.staff_category()}
+							label={m.staff_category_label()}
 							options={categoryOptions}
 							value="sound"
 						/>
-						<MoneyField field={addProductionExpense.fields.amountCents} label={m.staff_amount()} />
+						<MoneyField
+							field={addProductionExpense.fields.amountCents}
+							label={m.staff_amount_label()}
+						/>
 						<FormField
 							field={addProductionExpense.fields.paidTo}
-							label={m.staff_events_id_production_settlement_panel_paid()}
-							description={m.staff_events_id_production_settlement_panel_who_was_handed_m()}
+							label={m.staff_events_id_production_settlement_panel_paid_label()}
+							description={m.staff_events_id_production_settlement_panel_who_was_handed_m_body()}
 						/>
 						<FormField
 							field={addProductionExpense.fields.deductible}
 							type="checkbox"
-							label={m.staff_events_id_production_settlement_panel_deductible_2()}
-							checkboxLabel={m.staff_events_id_production_settlement_panel_checkbox_label()}
+							label={m.staff_events_id_production_settlement_panel_deductible_2_label()}
+							checkboxLabel={m.staff_events_id_production_settlement_panel_checkbox_label_checkbox()}
 							value={true}
 						/>
 					{/snippet}
@@ -210,15 +213,15 @@
 
 		{#if expenses.length === 0}
 			<p class="text-fg-2">
-				{m.staff_events_id_production_settlement_panel_nothing_recorded()}
+				{m.staff_events_id_production_settlement_panel_nothing_recorded_text()}
 			</p>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_what()}</th>
-					<th>{m.staff_category()}</th>
-					<th>{m.staff_events_id_production_settlement_panel_paid()}</th>
-					<th class="text-right">{m.staff_amount()}</th>
+					<th>{m.staff_what_label()}</th>
+					<th>{m.staff_category_label()}</th>
+					<th>{m.staff_events_id_production_settlement_panel_paid_label()}</th>
+					<th class="text-right">{m.staff_amount_label()}</th>
 					<th></th>
 				{/snippet}
 				{#each expenses as expense (expense.id)}
@@ -231,7 +234,7 @@
 								     it is not the act's to share. That distinction is what
 								     `againstNet` means, so it has to be visible on the line. -->
 								<Badge variant="neutral" size="xs"
-									>{m.staff_events_id_production_settlement_panel_not_deductible()}</Badge
+									>{m.staff_events_id_production_settlement_panel_not_deductible_label()}</Badge
 								>
 							{/if}
 						</td>
@@ -242,16 +245,16 @@
 							<Action
 								disabled={locked}
 								action={drop}
-								label={m.staff_remove()}
+								label={m.staff_remove_label()}
 								iconOnly
 								icon={trashIcon}
 								variant="ghost"
 								size="xs"
 								class="text-error"
-								modalTitle={m.staff_events_id_production_settlement_panel_remove_cost()}
-								submitLabel={m.staff_remove()}
+								modalTitle={m.staff_events_id_production_settlement_panel_remove_cost_title()}
+								submitLabel={m.staff_remove_label()}
 								submitVariant="error"
-								successToast={m.staff_events_id_production_settlement_panel_cost_removed()}
+								successToast={m.staff_events_id_production_settlement_panel_cost_removed_toast()}
 							>
 								{#snippet form()}
 									<input {...drop.fields.eventId.as('hidden', eventId)} />
@@ -265,7 +268,7 @@
 
 			{#if settlement.deductibleExpensesCents !== settlement.expensesCents}
 				<p class="mt-3 text-sm text-fg-2">
-					{m.staff_events_id_production_settlement_panel_comes_off_door_b({
+					{m.staff_events_id_production_settlement_panel_comes_off_door_b_text({
 						formatCents: formatCents(settlement.deductibleExpensesCents),
 						formatCents2: formatCents(settlement.expensesCents)
 					})}
@@ -274,35 +277,39 @@
 		{/if}
 	</InfoCard>
 
-	<InfoCard title={m.staff_events_id_production_settlement_panel_what_each_band_o()}>
+	<InfoCard title={m.staff_events_id_production_settlement_panel_what_each_band_o_title()}>
 		{#if acts.length === 0}
-			<p class="text-fg-2">{m.staff_events_id_production_settlement_panel_no_bands_running()}</p>
+			<p class="text-fg-2">
+				{m.staff_events_id_production_settlement_panel_no_bands_running_text()}
+			</p>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_band()}</th>
-					<th class="text-right">{m.staff_events_id_production_settlement_panel_designated()}</th>
-					<th>{m.staff_events_id_production_settlement_panel_deal()}</th>
-					<th class="text-right">{m.staff_suggested()}</th>
-					<th class="text-right">{m.staff_paid()}</th>
+					<th>{m.staff_band_label()}</th>
+					<th class="text-right"
+						>{m.staff_events_id_production_settlement_panel_designated_label()}</th
+					>
+					<th>{m.staff_events_id_production_settlement_panel_deal_label()}</th>
+					<th class="text-right">{m.staff_suggested_label()}</th>
+					<th class="text-right">{m.staff_paid_label()}</th>
 				{/snippet}
 				{#each acts as act (act.slotId)}
 					<tr>
-						<td>{act.actName ?? m.staff_not_bill()}</td>
+						<td>{act.actName ?? m.staff_not_bill_text()}</td>
 						<td class="text-right">{formatCents(act.designatedCents)}</td>
 						<td class="text-sm text-fg-2">
 							{#if act.contributed}
-								{m.staff_events_id_production_settlement_panel_donated_set()}
+								{m.staff_events_id_production_settlement_panel_donated_set_text()}
 							{:else}
 								{#if act.guaranteeCents}{formatCents(act.guaranteeCents)}{/if}
 								{#if act.guaranteeCents && act.percentageBps}
 									{act.versus
-										? m.staff_events_id_production_settlement_panel_versus()
-										: m.staff_events_id_production_settlement_panel_plus()}
+										? m.staff_events_id_production_settlement_panel_versus_text()
+										: m.staff_events_id_production_settlement_panel_plus_text()}
 								{/if}
 								{#if act.percentageBps}{(act.againstNet
-										? m.staff_events_id_production_settlement_panel_net_2
-										: m.staff_events_id_production_settlement_panel_pool)({
+										? m.staff_events_id_production_settlement_panel_net_2_text
+										: m.staff_events_id_production_settlement_panel_pool_text)({
 										toFixed: (act.percentageBps / 100).toFixed(0)
 									})}{/if}
 							{/if}
@@ -318,21 +325,23 @@
 										     this act alone, then it can be recorded again. -->
 										<Action
 											action={undo}
-											label={m.staff_undo()}
+											label={m.staff_undo_label()}
 											variant="ghost"
 											size="xs"
-											modalTitle={m.staff_events_id_production_settlement_panel_undo_s_payout({
-												value: act.actName ?? 'the band'
-											})}
-											submitLabel={m.staff_events_id_production_settlement_panel_undo_payout()}
+											modalTitle={m.staff_events_id_production_settlement_panel_undo_s_payout_title(
+												{
+													value: act.actName ?? 'the band'
+												}
+											)}
+											submitLabel={m.staff_events_id_production_settlement_panel_undo_payout_label()}
 											submitVariant="warning"
-											successToast={m.staff_events_id_production_settlement_panel_payout_undone()}
+											successToast={m.staff_events_id_production_settlement_panel_payout_undone_toast()}
 										>
 											{#snippet form()}
 												<input {...undo.fields.eventId.as('hidden', eventId)} />
 												<input {...undo.fields.slotId.as('hidden', act.slotId)} />
 												<p class="text-muted">
-													{m.staff_events_id_production_settlement_panel_writes_reversing({
+													{m.staff_events_id_production_settlement_panel_writes_reversing_text({
 														formatCents: formatCents(act.paidCents ?? 0)
 													})}
 												</p>
@@ -342,7 +351,7 @@
 								</span>
 							{:else if locked}
 								<span class="text-sm text-fg-2"
-									>{m.staff_events_id_production_settlement_panel_unpaid()}</span
+									>{m.staff_events_id_production_settlement_panel_unpaid_text()}</span
 								>
 							{:else}
 								<!-- The amount is staff's, not the worksheet's: a settlement is a
@@ -350,14 +359,14 @@
 								     the number that matters afterwards. -->
 								<Action
 									action={recordActPayout.for(act.slotId)}
-									label={m.staff_record()}
+									label={m.staff_record_label()}
 									variant="ghost"
 									size="xs"
-									modalTitle={m.staff_events_id_production_settlement_panel_what_did_take({
+									modalTitle={m.staff_events_id_production_settlement_panel_what_did_take_title({
 										value: act.actName ?? 'the band'
 									})}
-									submitLabel={m.staff_events_id_production_settlement_panel_record()}
-									successToast={m.staff_events_id_production_settlement_panel_recorded()}
+									submitLabel={m.staff_events_id_production_settlement_panel_record_label()}
+									successToast={m.staff_events_id_production_settlement_panel_recorded_toast()}
 								>
 									{#snippet form()}
 										<input {...fields.eventId.as('hidden', eventId)} />
@@ -365,13 +374,15 @@
 										<FormField
 											field={fields.amountCents}
 											type="number"
-											label={m.staff_paid()}
+											label={m.staff_paid_label()}
 											step="1"
 											min="0"
 											value={String(act.suggestedPayoutCents)}
-											description={m.staff_events_id_production_settlement_panel_cents_deal_sugge({
-												formatCents: formatCents(act.suggestedPayoutCents)
-											})}
+											description={m.staff_events_id_production_settlement_panel_cents_deal_sugge_body(
+												{
+													formatCents: formatCents(act.suggestedPayoutCents)
+												}
+											)}
 										/>
 									{/snippet}
 								</Action>
@@ -383,13 +394,13 @@
 
 			{#if settlement.unpaidActCount > 0}
 				<p class="mt-3 text-sm text-warning">
-					{m.staff_events_id_production_settlement_panel_bands_have_no_pa({
+					{m.staff_events_id_production_settlement_panel_bands_have_no_pa_text({
 						unpaidActCount: settlement.unpaidActCount
 					})}
 				</p>
 			{:else if acts.length > 0}
 				<p class="mt-3 text-sm text-success">
-					{m.staff_events_id_production_settlement_panel_everybody_settle({
+					{m.staff_events_id_production_settlement_panel_everybody_settle_text({
 						formatCents: formatCents(settlement.paidTotalCents)
 					})}
 				</p>
@@ -399,7 +410,7 @@
 				<!-- The number a programming committee should see: what the guarantees
 				     cost beyond what the door designated. Never netted away. -->
 				<p class="mt-3 text-sm text-fg-2">
-					{m.staff_events_id_production_settlement_panel_collective_toppi({
+					{m.staff_events_id_production_settlement_panel_collective_toppi_text({
 						formatCents: formatCents(topUpTotal)
 					})}
 				</p>

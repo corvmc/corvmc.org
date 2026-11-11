@@ -21,9 +21,9 @@
 {#if door.tickets.length > 0}
 	<Card>
 		<CardBody>
-			<CardTitle>{m.band_slug_events_event_id_door_list_card_door_list()}</CardTitle>
+			<CardTitle>{m.band_slug_events_event_id_door_list_card_door_list_title()}</CardTitle>
 			<p class="text-muted">
-				{m.band_slug_events_event_id_door_list_card_checked({
+				{m.band_slug_events_event_id_door_list_card_checked_text({
 					checkedIn: door.checkedIn,
 					length: door.tickets.length
 				})}

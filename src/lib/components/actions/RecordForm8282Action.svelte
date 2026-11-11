@@ -31,9 +31,9 @@
 
 <Action
 	action={recordForm8282}
-	label={m.actions_record_form8282_record_8282()}
+	label={m.actions_record_form8282_record_8282_label()}
 	modalTitle={m.actions_record_form8282_modal_title()}
-	successToast={m.actions_recorded()}
+	successToast={m.actions_recorded_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -44,8 +44,8 @@
 		<input {...fields.id.as('hidden', assetId)} />
 		<div class="mb-3 rounded bg-base-200 p-3 text-sm">
 			<p>
-				{m.actions_record_form8282_unit_was_donated_disposed_within()}{#if dueBy}<ParaglideMessage
-						message={m.actions_record_form8282_by}
+				{m.actions_record_form8282_unit_was_donated_disposed_within_text()}{#if dueBy}<ParaglideMessage
+						message={m.actions_record_form8282_by_text}
 						inputs={{ toLocalDate: toLocalDate(dueBy) }}
 						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 							>{/snippet}</ParaglideMessage
@@ -55,14 +55,14 @@
 			     whether the donor filed a Form 8283 that CMC signed, which is a fact
 			     about paperwork rather than about stock. -->
 			<p class="mt-1 opacity-70">
-				{m.actions_record_form8282_record_either_was_filed_no()}
+				{m.actions_record_form8282_record_either_was_filed_no_text()}
 			</p>
 		</div>
 		<Field
 			field={fields.note}
 			type="textarea"
-			label={m.actions_record_form8282_what_happened()}
-			description={m.actions_record_form8282_description()}
+			label={m.actions_record_form8282_what_happened_label()}
+			description={m.actions_record_form8282_description_body()}
 		/>
 	{/snippet}
 </Action>

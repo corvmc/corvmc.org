@@ -35,15 +35,20 @@
 		class="w-max"
 		dense
 		tabs={[
-			{ key: 'open', label: m.staff_open(), badge: counts.open, icon: IconInbox },
+			{ key: 'open', label: m.staff_open_label(), badge: counts.open, icon: IconInbox },
 			{
 				key: 'snoozed',
-				label: m.staff_inbox_inbox_views_snoozed(),
+				label: m.staff_inbox_inbox_views_snoozed_label(),
 				badge: counts.snoozed,
 				icon: IconAlarmSnooze
 			},
-			{ key: 'resolved', label: m.staff_resolved(), badge: counts.resolved, icon: IconInboxOff },
-			{ key: 'all', label: m.staff_all(), badge: counts.all, icon: IconLayoutList }
+			{
+				key: 'resolved',
+				label: m.staff_resolved_label(),
+				badge: counts.resolved,
+				icon: IconInboxOff
+			},
+			{ key: 'all', label: m.staff_all_label(), badge: counts.all, icon: IconLayoutList }
 		]}
 		active={view}
 		onchange={(key) => {

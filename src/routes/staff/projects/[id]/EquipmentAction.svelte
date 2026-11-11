@@ -31,8 +31,8 @@
 	size="xs"
 	class="justify-start font-normal"
 	modalTitle={m.staff_projects_id_equipment_modal_title({ title: task.title })}
-	submitLabel={m.staff_save()}
-	successToast={m.staff_saved()}
+	submitLabel={m.staff_save_label()}
+	successToast={m.staff_saved_toast()}
 >
 	{#snippet form()}
 		<input {...edit.fields.projectId.as('hidden', projectId)} />
@@ -40,15 +40,15 @@
 		<input {...edit.fields.assetId.as('hidden', selected?.id ?? '')} />
 		<FormField
 			field={edit.fields.assetId}
-			label={m.staff_unit()}
-			description={m.staff_projects_id_equipment_description()}
+			label={m.staff_unit_label()}
+			description={m.staff_projects_id_equipment_description_body()}
 		>
 			<SearchSelect
 				search={(q) => searchWorkAssets(q)}
 				bind:value={selected}
 				labelKey="name"
 				descriptionKey="detail"
-				placeholder={m.staff_search_by_item_tag_serial()}
+				placeholder={m.staff_search_by_item_tag_serial_placeholder()}
 			/>
 		</FormField>
 	{/snippet}

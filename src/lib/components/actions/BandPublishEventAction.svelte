@@ -34,8 +34,8 @@
 
 <Action
 	action={publishBandEvent}
-	label={m.actions_publish()}
-	successToast={m.actions_published()}
+	label={m.actions_publish_label()}
+	successToast={m.actions_published_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -46,7 +46,7 @@
 		<input {...fields.slug.as('hidden', slug)} />
 		<input {...fields.eventId.as('hidden', eventId)} />
 		<p class="py-2">
-			{m.actions_band_publish_event_publish_event_becomes_visible_pro()}
+			{m.actions_band_publish_event_publish_event_becomes_visible_pro_text()}
 		</p>
 	{/snippet}
 </Action>

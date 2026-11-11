@@ -45,13 +45,13 @@
 		{
 			slot: 'rider',
 			type: 'rider',
-			label: m.rider_rider_uploads_tech_rider(),
+			label: m.rider_rider_uploads_tech_rider_label(),
 			hint: 'A PDF or image of the rider you already send venues.'
 		},
 		{
 			slot: 'stage_plot',
 			type: 'stage_plot',
-			label: m.rider_rider_uploads_stage_plot(),
+			label: m.rider_rider_uploads_stage_plot_label(),
 			// The server has always taken a PDF here; only the old input said otherwise.
 			hint: 'A drawing of where everything stands. PDF or image.'
 		}
@@ -70,7 +70,7 @@
 			const err = (await res.json().catch(() => ({}))) as { message?: string };
 			throw new Error(err.message || 'Upload failed');
 		}
-		toast.success(m.rider_rider_uploads_uploaded());
+		toast.success(m.rider_rider_uploads_uploaded_toast());
 		onchanged();
 	}
 
@@ -81,10 +81,10 @@
 				method: 'DELETE'
 			});
 			if (res.ok) {
-				toast.success(m.rider_rider_uploads_removed());
+				toast.success(m.rider_rider_uploads_removed_toast());
 				onchanged();
 			} else {
-				toast.error(m.rider_rider_uploads_could_not_remove_file());
+				toast.error(m.rider_rider_uploads_could_not_remove_file_toast());
 			}
 		} finally {
 			busy = null;
@@ -119,7 +119,9 @@
 							size="sm"
 							shape="square"
 							class="ml-auto"
-							aria-label={m.rider_rider_uploads_remove({ value: file.filename ?? entry.label })}
+							aria-label={m.rider_rider_uploads_remove_label({
+								value: file.filename ?? entry.label
+							})}
 							disabled={busy === file.attachmentId}
 							onclick={() => remove(file.attachmentId)}
 						>
@@ -134,13 +136,13 @@
 					upload={(file) => upload(entry.type, file)}
 					accept="image/*,.pdf"
 					showPreview={false}
-					emptyLabel={m.rider_rider_uploads_empty_label()}
-					aria-label={m.rider_rider_uploads_upload({ label: entry.label })}
+					emptyLabel={m.rider_rider_uploads_empty_label_title()}
+					aria-label={m.rider_rider_uploads_upload_label({ label: entry.label })}
 				/>
 			{:else if filesFor(entry.slot).length === 0}
 				<p class="text-xs text-base-content/50">
 					<IconUpload size={14} class="inline" />
-					{m.rider_rider_uploads_nothing_uploaded()}
+					{m.rider_rider_uploads_nothing_uploaded_text()}
 				</p>
 			{/if}
 		</div>

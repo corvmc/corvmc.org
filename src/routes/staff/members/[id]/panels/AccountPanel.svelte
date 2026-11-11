@@ -89,19 +89,19 @@
 <EmailChangeCard {id} email={member.email} />
 
 <RelatedList
-	title={m.staff_members_id_panels_account_panel_directory_profile()}
+	title={m.staff_members_id_panels_account_panel_directory_profile_title()}
 	result={getUserDirectoryProfile(id)}
 >
 	{#snippet children(data)}
 		{#if !data.profile}
 			<EmptyState
-				title={m.staff_members_id_panels_account_panel_no_profile()}
-				description={m.staff_members_id_panels_account_panel_account_has_no_directo()}
+				title={m.staff_members_id_panels_account_panel_no_profile_title()}
+				description={m.staff_members_id_panels_account_panel_account_has_no_directo_body()}
 			/>
 		{:else}
 			<DefinitionList>
 				<Fact
-					label={m.staff_members_id_panels_account_panel_visibility()}
+					label={m.staff_members_id_panels_account_panel_visibility_label()}
 					class="flex items-center gap-2"
 				>
 					<Badge
@@ -112,21 +112,21 @@
 					</Badge>
 					{#if !data.complete}
 						<span class="opacity-60"
-							>{m.staff_members_id_panels_account_panel_profile_incomplete()}</span
+							>{m.staff_members_id_panels_account_panel_profile_incomplete_text()}</span
 						>
 					{/if}
 				</Fact>
 
-				<Fact label={m.staff_members_id_panels_account_panel_tagline()}
+				<Fact label={m.staff_members_id_panels_account_panel_tagline_label()}
 					>{data.profile.tagline || '—'}</Fact
 				>
 
-				<Fact label={m.staff_members_id_panels_account_panel_hometown()}
+				<Fact label={m.staff_members_id_panels_account_panel_hometown_label()}
 					>{data.profile.hometown || '—'}</Fact
 				>
 
 				<Fact
-					label={m.staff_members_id_panels_account_panel_instruments()}
+					label={m.staff_members_id_panels_account_panel_instruments_label()}
 					class="flex flex-wrap gap-1"
 				>
 					{#each data.profile.instruments as i (i)}
@@ -136,7 +136,10 @@
 					{/each}
 				</Fact>
 
-				<Fact label={m.staff_members_id_panels_account_panel_genres()} class="flex flex-wrap gap-1">
+				<Fact
+					label={m.staff_members_id_panels_account_panel_genres_label()}
+					class="flex flex-wrap gap-1"
+				>
 					{#each data.profile.genres as g (g)}
 						<Badge size="sm">{g}</Badge>
 					{:else}
@@ -144,18 +147,21 @@
 					{/each}
 				</Fact>
 
-				<Fact label={m.staff_members_id_panels_account_panel_open()} class="flex flex-wrap gap-1">
+				<Fact
+					label={m.staff_members_id_panels_account_panel_open_label()}
+					class="flex flex-wrap gap-1"
+				>
 					{#if data.profile.lookingForBand}<Badge size="sm"
-							>{m.staff_members_id_panels_account_panel_looking_band()}</Badge
+							>{m.staff_members_id_panels_account_panel_looking_band_label()}</Badge
 						>{/if}
 					{#if data.profile.availableForHire}<Badge size="sm"
-							>{m.staff_members_id_panels_account_panel_hire()}</Badge
+							>{m.staff_members_id_panels_account_panel_hire_label()}</Badge
 						>{/if}
 					{#if data.profile.teachesLessons}<Badge size="sm"
-							>{m.staff_members_id_panels_account_panel_teaches_privately()}</Badge
+							>{m.staff_members_id_panels_account_panel_teaches_privately_label()}</Badge
 						>{/if}
 					{#if data.profile.openToCollaboration}<Badge size="sm"
-							>{m.staff_members_id_panels_account_panel_collaboration()}</Badge
+							>{m.staff_members_id_panels_account_panel_collaboration_label()}</Badge
 						>{/if}
 					{#if !data.profile.lookingForBand && !data.profile.availableForHire && !data.profile.teachesLessons && !data.profile.openToCollaboration}
 						—
@@ -164,7 +170,7 @@
 			</DefinitionList>
 			<div class="mt-3">
 				<Button href={resolve(`member/directory/members/${id}`)} variant="ghost" size="sm">
-					{m.staff_members_id_panels_account_panel_view_public_profile()}
+					{m.staff_members_id_panels_account_panel_view_public_profile_label()}
 				</Button>
 			</div>
 		{/if}
@@ -176,35 +182,35 @@
 	already have for cutting off access — deactivation — deletes them all.
 -->
 <RelatedList
-	title={m.staff_members_id_panels_account_panel_sign_activity()}
+	title={m.staff_members_id_panels_account_panel_sign_activity_title()}
 	result={getUserSessions(id)}
 >
 	{#snippet children(data)}
 		<p class="mb-3 text-muted">
-			{m.staff_members_id_panels_account_panel_last_sign({
+			{m.staff_members_id_panels_account_panel_last_sign_text({
 				value: data.lastLoginAt
 					? formatDateTimeShort(data.lastLoginAt)
-					: m.staff_members_id_panels_account_panel_never_record()
+					: m.staff_members_id_panels_account_panel_never_record_text()
 			})}
 		</p>
 		{#if data.sessions.length === 0}
 			<EmptyState
-				title={m.staff_members_id_panels_account_panel_no_active_sessions()}
-				description={m.staff_members_id_panels_account_panel_they_signed_out_everyw()}
+				title={m.staff_members_id_panels_account_panel_no_active_sessions_title()}
+				description={m.staff_members_id_panels_account_panel_they_signed_out_everyw_body()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_started()}</th>
-					<th class="col-support">{m.staff_members_id_panels_account_panel_ip()}</th>
-					<th class="col-extra">{m.staff_expires()}</th>
+					<th>{m.staff_started_label()}</th>
+					<th class="col-support">{m.staff_members_id_panels_account_panel_ip_label()}</th>
+					<th class="col-extra">{m.staff_expires_label()}</th>
 				{/snippet}
 				{#each data.sessions as s (s.id)}
 					<tr class="hover">
 						<td class="cell-primary">
 							<div class="font-medium whitespace-nowrap">{formatDateTimeShort(s.createdAt)}</div>
 							<div class="truncate text-muted">
-								{s.userAgent ?? m.staff_members_id_panels_account_panel_unknown_device()}
+								{s.userAgent ?? m.staff_members_id_panels_account_panel_unknown_device_text()}
 							</div>
 						</td>
 						<td class="col-support font-mono text-xs">{s.ipAddress ?? '—'}</td>
@@ -218,55 +224,58 @@
 
 <!-- Staff changes to this account, newest first. Reads only; nothing here edits the log. -->
 <ActivityFeedCard
-	title={m.staff_history()}
+	title={m.staff_history_title()}
 	query={(limit) => getUserHistory(limit ? { userId: id, limit } : { userId: id })}
 	toRow={feedItemRow}
 	empty={{
-		title: m.staff_no_recorded_changes(),
-		description: m.staff_members_id_panels_account_panel_role_profile_credit_ac()
+		title: m.staff_no_recorded_changes_title(),
+		description: m.staff_members_id_panels_account_panel_role_profile_credit_ac_body()
 	}}
 />
 
-<InfoCard title={m.staff_details()} class="bg-base-200 shadow-none">
+<InfoCard title={m.staff_details_title()} class="bg-base-200 shadow-none">
 	<DefinitionList>
-		<Fact label={m.staff_members_id_panels_account_panel_user_id()} mono>{member.id}</Fact>
+		<Fact label={m.staff_members_id_panels_account_panel_user_id_label()} mono>{member.id}</Fact>
 
-		<Fact label={m.staff_members_id_panels_account_panel_member_no()}
+		<Fact label={m.staff_members_id_panels_account_panel_member_no_label()}
 			>{member.memberNumber ?? '—'}</Fact
 		>
 
 		<!-- Nothing is gated on this, so "not confirmed" is not a restriction and
 		     should not read like one. Every account predating #757 shows it. -->
-		<Fact label={m.staff_members_id_panels_account_panel_email_confirmed()}>
+		<Fact label={m.staff_members_id_panels_account_panel_email_confirmed_label()}>
 			{#if member.emailVerified}
-				{m.staff_yes()}
+				{m.staff_yes_text()}
 			{:else}
 				<span class="text-muted"
-					>{m.staff_members_id_panels_account_panel_not_yet_full_access_ei()}</span
+					>{m.staff_members_id_panels_account_panel_not_yet_full_access_ei_text()}</span
 				>
 			{/if}
 		</Fact>
 
-		<Fact label={m.staff_members_id_panels_account_panel_stripe_id()} mono
+		<Fact label={m.staff_members_id_panels_account_panel_stripe_id_label()} mono
 			>{member.stripeId ?? '—'}</Fact
 		>
 
-		<Fact label={m.staff_joined()}>{formatHistoryTime(new Date(member.createdAt))}</Fact>
+		<Fact label={m.staff_joined_label()}>{formatHistoryTime(new Date(member.createdAt))}</Fact>
 
 		{#if member.deletedAt}
-			<Fact label={m.staff_deactivated()}>{formatHistoryTime(new Date(member.deletedAt))}</Fact>
+			<Fact label={m.staff_deactivated_label()}
+				>{formatHistoryTime(new Date(member.deletedAt))}</Fact
+			>
 		{/if}
 
 		{#if member.bannedAt}
-			<Fact label={m.staff_members_id_panels_account_panel_banned()}>
-				{m.staff_members_id_panels_account_panel_by({
+			<Fact label={m.staff_members_id_panels_account_panel_banned_label()}>
+				{m.staff_members_id_panels_account_panel_by_text({
 					formatHistoryTime: formatHistoryTime(new Date(member.bannedAt)),
 					bannedByName:
-						member.bannedByName ?? m.staff_members_id_panels_account_panel_removed_account()
+						member.bannedByName ?? m.staff_members_id_panels_account_panel_removed_account_text()
 				})}
 			</Fact>
-			<Fact label={m.staff_members_id_panels_account_panel_ban_reason()} class="whitespace-pre-line"
-				>{member.banReason}</Fact
+			<Fact
+				label={m.staff_members_id_panels_account_panel_ban_reason_label()}
+				class="whitespace-pre-line">{member.banReason}</Fact
 			>
 		{/if}
 	</DefinitionList>
@@ -275,10 +284,10 @@
 {#snippet banAction()}
 	<Action
 		action={banUser}
-		label={m.staff_members_id_panels_account_panel_ban()}
+		label={m.staff_members_id_panels_account_panel_ban_label()}
 		modalTitle={m.staff_members_id_panels_account_panel_modal_title({ name: member.name })}
-		submitLabel={m.staff_members_id_panels_account_panel_ban()}
-		successToast={m.staff_members_id_panels_account_panel_member_banned()}
+		submitLabel={m.staff_members_id_panels_account_panel_ban_label()}
+		successToast={m.staff_members_id_panels_account_panel_member_banned_toast()}
 		variant="error"
 		size="sm"
 		onsuccess={refreshAccount}
@@ -286,13 +295,13 @@
 		{#snippet form()}
 			<input {...banFields.id.as('hidden', id)} />
 			<p class="pb-4">
-				{m.staff_members_id_panels_account_panel_ban_deactivates_accoun()}
+				{m.staff_members_id_panels_account_panel_ban_deactivates_accoun_text()}
 			</p>
 			<FormField
 				field={banFields.reason}
 				type="textarea"
-				label={m.staff_reason()}
-				description={m.staff_members_id_panels_account_panel_staff_only_what_they_d()}
+				label={m.staff_reason_label()}
+				description={m.staff_members_id_panels_account_panel_staff_only_what_they_d_body()}
 				required
 			/>
 		{/snippet}
@@ -300,18 +309,18 @@
 {/snippet}
 
 <InfoCard
-	title={m.staff_members_id_panels_account_panel_danger_zone()}
+	title={m.staff_members_id_panels_account_panel_danger_zone_title()}
 	class="mt-6 border border-error/30 bg-error/5 shadow-none"
 >
 	{#if member.bannedAt}
 		<p class="mb-3 text-muted">
-			{m.staff_members_id_panels_account_panel_account_banned_lifting()}
+			{m.staff_members_id_panels_account_panel_account_banned_lifting_text()}
 		</p>
 		<div class="flex gap-2">
 			<Action
 				action={unbanUser}
-				label={m.staff_members_id_panels_account_panel_lift_ban()}
-				successToast={m.staff_members_id_panels_account_panel_ban_lifted()}
+				label={m.staff_members_id_panels_account_panel_lift_ban_label()}
+				successToast={m.staff_members_id_panels_account_panel_ban_lifted_toast()}
 				variant="success"
 				size="sm"
 				onsuccess={onReactivated}
@@ -320,7 +329,7 @@
 					<input {...unbanFields.id.as('hidden', id)} />
 					<p class="py-4">
 						<ParaglideMessage
-							message={m.staff_members_id_panels_account_panel_lift_ban_restore_their}
+							message={m.staff_members_id_panels_account_panel_lift_ban_restore_their_text}
 							inputs={{ name: member.name }}
 							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 								>{/snippet}</ParaglideMessage
@@ -331,26 +340,26 @@
 		</div>
 	{:else if member.deletedAt}
 		<p class="mb-3 text-muted">
-			{m.staff_members_id_panels_account_panel_account_deactivated_re()}
+			{m.staff_members_id_panels_account_panel_account_deactivated_re_text()}
 		</p>
 		<div class="flex gap-2">
 			<Action
 				action={reactivateUser}
-				label={m.staff_members_id_panels_account_panel_reactivate()}
-				successToast={m.staff_members_id_panels_account_panel_account_reactivated()}
+				label={m.staff_members_id_panels_account_panel_reactivate_label()}
+				successToast={m.staff_members_id_panels_account_panel_account_reactivated_toast()}
 				variant="success"
 				size="sm"
 				onsuccess={onReactivated}
 			>
 				{#snippet form()}
 					<input {...reactivateFields.id.as('hidden', id)} />
-					<p class="py-4">{m.staff_members_id_panels_account_panel_reactivate_account()}</p>
+					<p class="py-4">{m.staff_members_id_panels_account_panel_reactivate_account_text()}</p>
 				{/snippet}
 			</Action>
 			<Action
 				action={purgeUser}
-				label={m.staff_members_id_panels_account_panel_delete_permanently()}
-				successToast={m.staff_members_id_panels_account_panel_account_deleted()}
+				label={m.staff_members_id_panels_account_panel_delete_permanently_label()}
+				successToast={m.staff_members_id_panels_account_panel_account_deleted_toast()}
 				variant="error"
 				size="sm"
 				onsuccess={() => goto(resolve('staff/members'))}
@@ -359,7 +368,7 @@
 					<input {...purgeFields.id.as('hidden', id)} />
 					<p class="py-4">
 						<ParaglideMessage
-							message={m.staff_members_id_panels_account_panel_permanently_delete_can}
+							message={m.staff_members_id_panels_account_panel_permanently_delete_can_text}
 							inputs={{ name: member.name }}
 							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 								>{/snippet}</ParaglideMessage
@@ -372,10 +381,10 @@
 	{:else}
 		<p class="mb-3 text-muted">
 			<ParaglideMessage
-				message={m.staff_members_id_panels_account_panel_deactivating_signs_mem}
+				message={m.staff_members_id_panels_account_panel_deactivating_signs_mem_text}
 				inputs={{
 					staff_members_id_panels_account_panel_cancelled_reservations:
-						m.staff_members_id_panels_account_panel_cancelled_reservations()
+						m.staff_members_id_panels_account_panel_cancelled_reservations_text()
 				}}
 				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 					>{/snippet}</ParaglideMessage
@@ -384,8 +393,8 @@
 		<div class="flex gap-2">
 			<Action
 				action={deactivateUser}
-				label={m.staff_deactivate()}
-				successToast={m.staff_members_id_panels_account_panel_account_deactivated()}
+				label={m.staff_deactivate_label()}
+				successToast={m.staff_members_id_panels_account_panel_account_deactivated_toast()}
 				variant="error"
 				size="sm"
 				onsuccess={refreshAccount}
@@ -393,7 +402,7 @@
 				{#snippet form()}
 					<input {...deactivateFields.id.as('hidden', id)} />
 					<p class="py-4">
-						{m.staff_members_id_panels_account_panel_deactivate_account_all()}
+						{m.staff_members_id_panels_account_panel_deactivate_account_all_text()}
 					</p>
 				{/snippet}
 			</Action>

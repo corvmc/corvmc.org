@@ -134,12 +134,12 @@
 	{#if t.status === 'snoozed' && t.snoozedUntil}
 		<p class="flex items-center gap-1.5 text-muted text-sm">
 			<IconAlarmSnooze size={14} />
-			{m.staff_inbox_id_returns({ formatDate: formatDate(new Date(t.snoozedUntil)) })}
+			{m.staff_inbox_id_returns_text({ formatDate: formatDate(new Date(t.snoozedUntil)) })}
 		</p>
 	{:else if t.awaitingReplySince}
 		<p class="flex items-center gap-1.5 text-muted text-sm">
 			<IconSend size={14} />
-			{m.staff_inbox_id_waiting_reply_since({
+			{m.staff_inbox_id_waiting_reply_since_text({
 				formatDate: formatDate(new Date(t.awaitingReplySince))
 			})}
 		</p>
@@ -180,7 +180,7 @@
 		<div class="flex flex-col gap-2">
 			{#if channelDisabled}
 				<Alert type="warning" href={resolve('staff/settings')}>
-					{m.staff_inbox_id_channel_disabled_enable_settings_inbox({
+					{m.staff_inbox_id_channel_disabled_enable_settings_inbox_body({
 						channelLabel: channelLabel(t.channel)
 					})}
 				</Alert>

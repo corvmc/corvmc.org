@@ -18,36 +18,41 @@
 
 <PageHeader
 	width="3xl"
-	subtitle={m.member_profile_teaching_apply_subtitle()}
-	title={m.member_apply_teach()}
+	subtitle={m.member_profile_teaching_apply_subtitle_body()}
+	title={m.member_apply_teach_title()}
 />
 <PageContent width="3xl">
-	<InfoCard title={m.member_profile_teaching_apply_application()}>
+	<InfoCard title={m.member_profile_teaching_apply_application_title()}>
 		<p class="mb-4 text-subtle">
-			{m.member_profile_teaching_apply_teachers_book_room_at_member()}
+			{m.member_profile_teaching_apply_teachers_book_room_at_member_text()}
 		</p>
 
 		<Form
 			remote={applyToTeach}
-			successToast={m.member_application_sent()}
+			successToast={m.member_application_sent_toast()}
 			onsuccess={() => goto(resolve('member/profile'))}
 		>
-			<FormField field={fields.headline} label={m.member_what_do_teach()} required />
-			<FormField field={fields.blurb} label={m.member_about_teaching()} type="textarea" required />
+			<FormField field={fields.headline} label={m.member_what_do_teach_label()} required />
+			<FormField
+				field={fields.blurb}
+				label={m.member_about_teaching_label()}
+				type="textarea"
+				required
+			/>
 			<FormField
 				field={fields.ratesNote}
-				label={m.member_profile_teaching_apply_rates_shown_as_written()}
+				label={m.member_profile_teaching_apply_rates_shown_as_written_label()}
 			/>
 			<FormField
 				field={fields.bookingUrl}
-				label={m.member_profile_teaching_apply_where_students_book_optional()}
+				label={m.member_profile_teaching_apply_where_students_book_optional_label()}
 			/>
 			<FormField
 				field={fields.applicationNote}
-				label={m.member_anything_staff_should_know_not()}
+				label={m.member_anything_staff_should_know_not_label()}
 				type="textarea"
 			/>
-			<SubmitButton>{m.member_send_application()}</SubmitButton>
+			<SubmitButton>{m.member_send_application_label()}</SubmitButton>
 		</Form>
 	</InfoCard>
 </PageContent>

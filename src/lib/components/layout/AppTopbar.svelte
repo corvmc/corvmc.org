@@ -140,7 +140,7 @@
 
 	<!-- Mobile brand -->
 	<span class="lg:hidden">
-		<img src={logo} alt={m.layout_brand()} class="h-full" />
+		<img src={logo} alt={m.layout_brand_text()} class="h-full" />
 	</span>
 
 	<!-- Right: notifications + messages + account.
@@ -162,8 +162,8 @@
 			shape="circle"
 			class="relative {messagesActive ? 'latched' : ''}"
 			aria-label={chrome.messagesUnread
-				? m.layout_messages_unread({ count: chrome.messagesUnread })
-				: m.layout_messages()}
+				? m.layout_messages_unread_label({ count: chrome.messagesUnread })
+				: m.layout_messages_label()}
 			aria-current={messagesActive ? 'page' : undefined}
 		>
 			<IconMessages size={20} />

@@ -29,10 +29,10 @@
 <div class="flex shrink-0 gap-2">
 	<Action
 		action={acceptGroupInvite.for(groupId)}
-		label={m.groups_accept()}
-		aria-label={m.groups_answer_group_invite_accept_invitation({ groupName })}
-		modalTitle={m.groups_join({ groupName })}
-		submitLabel={m.groups_join_2()}
+		label={m.groups_accept_label()}
+		aria-label={m.groups_answer_group_invite_accept_invitation_label({ groupName })}
+		modalTitle={m.groups_join_title({ groupName })}
+		submitLabel={m.groups_join_2_label()}
 		variant="primary"
 		size="sm"
 		onsuccess={(result) =>
@@ -41,17 +41,17 @@
 		{#snippet form()}
 			<input {...acceptFields.groupId.as('hidden', groupId)} />
 			<p class="text-sm">
-				{m.groups_answer_group_invite_ll_roster_see_announcements_can()}
+				{m.groups_answer_group_invite_ll_roster_see_announcements_can_text()}
 			</p>
 		{/snippet}
 	</Action>
 	<Action
 		action={declineGroupInvite.for(groupId)}
-		label={m.groups_decline()}
-		aria-label={m.groups_answer_group_invite_decline_invitation({ groupName })}
-		modalTitle={m.groups_answer_group_invite_decline_invitation_2()}
-		submitLabel={m.groups_decline()}
-		confirm={m.groups_answer_group_invite_confirm({ groupName })}
+		label={m.groups_decline_label()}
+		aria-label={m.groups_answer_group_invite_decline_invitation_label({ groupName })}
+		modalTitle={m.groups_answer_group_invite_decline_invitation_2_title()}
+		submitLabel={m.groups_decline_label()}
+		confirm={m.groups_answer_group_invite_confirm_body({ groupName })}
 		variant="ghost"
 		size="sm"
 		onsuccess={(result) => onAnswered(result as { success: boolean }, 'Invitation declined')}

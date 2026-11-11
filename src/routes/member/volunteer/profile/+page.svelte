@@ -52,7 +52,7 @@
 	};
 </script>
 
-<PageHeader width="3xl" title={m.member_profile()} subtitle={m.member_volunteering()} />
+<PageHeader width="3xl" title={m.member_profile_title()} subtitle={m.member_volunteering_body()} />
 
 <PageContent width="3xl">
 	{#if pageData.current}
@@ -60,19 +60,19 @@
 		{#each data.renew as c (c.name)}
 			<p class="text-sm text-warning">
 				{c.state === 'expired'
-					? m.member_volunteer_profile_clearance_lapsed({ name: c.name })
+					? m.member_volunteer_profile_clearance_lapsed_text({ name: c.name })
 					: c.expiresAt
-						? m.member_volunteer_profile_clearance_expires({
+						? m.member_volunteer_profile_clearance_expires_text({
 								name: c.name,
 								date: formatDateShort(c.expiresAt)
 							})
-						: m.member_volunteer_profile_clearance_expires_soon({ name: c.name })}
+						: m.member_volunteer_profile_clearance_expires_soon_text({ name: c.name })}
 			</p>
 		{/each}
-		<InfoCard title={m.member_volunteer_profile_contact_info()}>
+		<InfoCard title={m.member_volunteer_profile_contact_info_title()}>
 			<Form
 				remote={updateVolunteerProfile}
-				successToast={m.member_volunteer_profile_profile_updated()}
+				successToast={m.member_volunteer_profile_profile_updated_toast()}
 			>
 				<ProfileFields
 					fields={updateVolunteerProfile.fields}
@@ -83,16 +83,20 @@
 					email={data.access.email}
 				/>
 				<div class="flex justify-end">
-					<SubmitButton label={m.member_save()} successLabel={m.member_saved()} variant="primary" />
+					<SubmitButton
+						label={m.member_save_label()}
+						successLabel={m.member_saved_label()}
+						variant="primary"
+					/>
 				</div>
 			</Form>
 		</InfoCard>
 
-		<InfoCard title={m.member_preferred_roles()}>
+		<InfoCard title={m.member_preferred_roles_title()}>
 			{#if data.roles.length === 0}
-				<p class="text-muted">{m.member_volunteer_profile_no_volunteer_roles_open_right()}</p>
+				<p class="text-muted">{m.member_volunteer_profile_no_volunteer_roles_open_right_text()}</p>
 			{:else}
-				<Form remote={saveVolunteerInterests} successToast={m.member_saved()}>
+				<Form remote={saveVolunteerInterests} successToast={m.member_saved_toast()}>
 					<InterestFields
 						fields={saveVolunteerInterests.fields}
 						roleOptions={data.roles}
@@ -101,8 +105,8 @@
 					/>
 					<div class="flex justify-end">
 						<SubmitButton
-							label={m.member_save()}
-							successLabel={m.member_saved()}
+							label={m.member_save_label()}
+							successLabel={m.member_saved_label()}
 							variant="primary"
 						/>
 					</div>
@@ -110,18 +114,18 @@
 			{/if}
 		</InfoCard>
 
-		<InfoCard title={m.member_volunteer_profile_volunteer_hours()}>
+		<InfoCard title={m.member_volunteer_profile_volunteer_hours_title()}>
 			{#snippet action()}
 				<LogHoursAction
 					roles={data.roles}
 					programs={data.programs}
-					label={m.member_volunteer_profile_log_hours()}
+					label={m.member_volunteer_profile_log_hours_label()}
 					variant="primary"
 					size="sm"
 				/>
 			{/snippet}
 			{#if data.logs.length === 0}
-				<EmptyState title={m.member_volunteer_profile_nothing_filed_yet()} />
+				<EmptyState title={m.member_volunteer_profile_nothing_filed_yet_title()} />
 			{:else}
 				<ul class="flex flex-col gap-3">
 					{#each data.logs as log (log.id)}
@@ -161,8 +165,8 @@
 										mode="fix"
 										size="xs"
 										label={log.status === 'rejected'
-											? m.member_volunteer_profile_fix()
-											: m.member_edit()}
+											? m.member_volunteer_profile_fix_label()
+											: m.member_edit_label()}
 										log={{
 											id: log.id,
 											volunteerRoleId: log.volunteerRoleId,
@@ -173,22 +177,22 @@
 									/>
 									<Action
 										action={withdrawVolunteerHours.for(log.id)}
-										label={m.member_withdraw()}
+										label={m.member_withdraw_label()}
 										data-testid="withdraw-hours"
 										variant="ghost"
 										size="xs"
 										class="text-error"
 										modalTitle={m.member_volunteer_profile_modal_title()}
-										submitLabel={m.member_withdraw()}
+										submitLabel={m.member_withdraw_label()}
 										submitVariant="error"
-										successToast={m.member_volunteer_profile_withdrawn()}
+										successToast={m.member_volunteer_profile_withdrawn_toast()}
 									>
 										{#snippet form()}
 											<input
 												{...withdrawVolunteerHours.for(log.id).fields.id.as('hidden', log.id)}
 											/>
 											<p class="text-sm">
-												{m.member_volunteer_profile_comes_off_record_file_again()}
+												{m.member_volunteer_profile_comes_off_record_file_again_text()}
 											</p>
 										{/snippet}
 									</Action>

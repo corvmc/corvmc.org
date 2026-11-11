@@ -46,42 +46,44 @@
 </script>
 
 <RelatedList
-	title={m.staff_members_id_panels_volunteer_panel_volunteer_profile()}
+	title={m.staff_members_id_panels_volunteer_panel_volunteer_profile_title()}
 	result={getUserVolunteerProfile(id)}
 >
 	{#snippet children(data)}
 		{#if !data.profile}
 			<EmptyState
-				title={m.staff_members_id_panels_volunteer_panel_not_volunteer()}
-				description={m.staff_members_id_panels_volunteer_panel_member_has_never_com()}
+				title={m.staff_members_id_panels_volunteer_panel_not_volunteer_title()}
+				description={m.staff_members_id_panels_volunteer_panel_member_has_never_com_body()}
 			/>
 		{:else}
 			{#if data.profile.status === 'blocked'}
 				<Alert type="warning" class="mb-3">
-					{m.staff_members_id_panels_volunteer_panel_signup_blocked_under()}
+					{m.staff_members_id_panels_volunteer_panel_signup_blocked_under_body()}
 				</Alert>
 			{/if}
 			<DefinitionList>
-				<Fact label={m.staff_members_id_panels_volunteer_panel_name_file()}
+				<Fact label={m.staff_members_id_panels_volunteer_panel_name_file_label()}
 					>{data.profile.firstName} {data.profile.lastName}</Fact
 				>
 
-				<Fact label={m.staff_status()}><StatusBadge status={data.profile.status} label /></Fact>
-
-				<Fact label={m.staff_members_id_panels_volunteer_panel_age()}
-					>{data.profile.isAdult
-						? m.staff_members_id_panels_volunteer_panel_adult()
-						: m.staff_members_id_panels_volunteer_panel_under_18()}</Fact
+				<Fact label={m.staff_status_label()}
+					><StatusBadge status={data.profile.status} label /></Fact
 				>
 
-				<Fact label={m.staff_hours()}>
-					{m.staff_members_id_panels_volunteer_panel_approved_year({
+				<Fact label={m.staff_members_id_panels_volunteer_panel_age_label()}
+					>{data.profile.isAdult
+						? m.staff_members_id_panels_volunteer_panel_adult_text()
+						: m.staff_members_id_panels_volunteer_panel_under_18_text()}</Fact
+				>
+
+				<Fact label={m.staff_hours_label()}>
+					{m.staff_members_id_panels_volunteer_panel_approved_year_text({
 						formatVolunteerHours: formatVolunteerHours(data.summary.approvedMinutes),
 						formatVolunteerHours2: formatVolunteerHours(data.summary.approvedMinutesThisYear)
 					})}
 					{#if data.summary.pendingMinutes > 0}
 						· <span class="text-warning"
-							>{m.staff_members_id_panels_volunteer_panel_pending({
+							>{m.staff_members_id_panels_volunteer_panel_pending_text({
 								formatVolunteerHours: formatVolunteerHours(data.summary.pendingMinutes)
 							})}</span
 						>
@@ -94,16 +96,18 @@
 					Always rendered, never hidden when unset: "they didn't say" and "this page
 					doesn't track that" have to look different.
 				-->
-				<Fact label={m.staff_when_they_can_help()}>
+				<Fact label={m.staff_when_they_can_help_label()}>
 					{#if data.profile.availability}
 						{data.profile.availability}
 					{:else}
-						<span class="text-muted">{m.staff_members_id_panels_volunteer_panel_not_given()}</span>
+						<span class="text-muted"
+							>{m.staff_members_id_panels_volunteer_panel_not_given_text()}</span
+						>
 					{/if}
 				</Fact>
 
 				<Fact
-					label={m.staff_members_id_panels_volunteer_panel_interested()}
+					label={m.staff_members_id_panels_volunteer_panel_interested_label()}
 					class="flex flex-wrap gap-1"
 				>
 					{#each data.interests as i (i.roleId)}
@@ -112,7 +116,7 @@
 						</a>
 					{:else}
 						<span class="opacity-60"
-							>{m.staff_members_id_panels_volunteer_panel_no_roles_picked()}</span
+							>{m.staff_members_id_panels_volunteer_panel_no_roles_picked_text()}</span
 						>
 					{/each}
 				</Fact>
@@ -129,7 +133,7 @@
 -->
 {#if certifications.current}
 	{@const held = certifications.current}
-	<InfoCard title={m.staff_members_id_panels_volunteer_panel_certifications()}>
+	<InfoCard title={m.staff_members_id_panels_volunteer_panel_certifications_title()}>
 		{#snippet header(title: string)}
 			<div class="flex items-center justify-between gap-2">
 				<CardTitle>{title}</CardTitle>
@@ -139,8 +143,8 @@
 
 		{#if held.length === 0}
 			<EmptyState
-				title={m.staff_members_id_panels_volunteer_panel_nothing_record()}
-				description={m.staff_members_id_panels_volunteer_panel_no_clearances_grante()}
+				title={m.staff_members_id_panels_volunteer_panel_nothing_record_title()}
+				description={m.staff_members_id_panels_volunteer_panel_no_clearances_grante_body()}
 			/>
 		{:else}
 			<ul class="flex flex-col gap-3">
@@ -152,20 +156,20 @@
 								<StatusBadge status={record.state} label />
 							</div>
 							<div class="text-subtle">
-								{m.staff_clearance_granted({
+								{m.staff_clearance_granted_text({
 									date: formatDateShortYear(record.grantedAt)
-								})}{#if record.grantedByName}{m.staff_clearance_granted_by({
+								})}{#if record.grantedByName}{m.staff_clearance_granted_by_text({
 										name: record.grantedByName
 									})}{/if}{record.expiresAt
-									? m.staff_clearance_expires({ date: formatDateShortYear(record.expiresAt) })
-									: m.staff_clearance_no_expiry()}
+									? m.staff_clearance_expires_text({ date: formatDateShortYear(record.expiresAt) })
+									: m.staff_clearance_no_expiry_text()}
 							</div>
 							{#if record.reference}
 								<div class="text-subtle">#{record.reference}</div>
 							{/if}
 							{#if record.revokedReason}
 								<div class="text-xs text-error">
-									{m.staff_members_id_panels_volunteer_panel_revoked({
+									{m.staff_members_id_panels_volunteer_panel_revoked_text({
 										revokedReason: record.revokedReason
 									})}
 								</div>
@@ -175,14 +179,14 @@
 						{#if !record.revokedAt}
 							<Action
 								action={revokeCertification.for(record.id)}
-								label={m.staff_revoke()}
+								label={m.staff_revoke_label()}
 								variant="ghost"
 								size="xs"
 								class="text-error"
 								modalTitle={m.staff_members_id_panels_volunteer_panel_modal_title({
 									certificationName: record.certificationName
 								})}
-								submitLabel={m.staff_revoke()}
+								submitLabel={m.staff_revoke_label()}
 								submitVariant="error"
 								successToast={m.staff_members_id_panels_volunteer_panel_success_toast()}
 								onsuccess={refreshCertifications}
@@ -193,13 +197,13 @@
 									/>
 									<input {...revokeCertification.for(record.id).fields.userId.as('hidden', id)} />
 									<p class="text-sm">
-										{m.staff_members_id_panels_volunteer_panel_record_stays_period()}
+										{m.staff_members_id_panels_volunteer_panel_record_stays_period_text()}
 									</p>
 									<FormField
 										field={revokeCertification.for(record.id).fields.reason}
-										label={m.staff_why()}
+										label={m.staff_why_label()}
 										type="textarea"
-										description={m.staff_members_id_panels_volunteer_panel_shown_staff_page_mos()}
+										description={m.staff_members_id_panels_volunteer_panel_shown_staff_page_mos_body()}
 									/>
 								{/snippet}
 							</Action>
@@ -211,19 +215,22 @@
 	</InfoCard>
 {/if}
 
-<RelatedList title={m.staff_members_id_panels_volunteer_panel_shifts()} result={getUserShifts(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_volunteer_panel_shifts_title()}
+	result={getUserShifts(id)}
+>
 	{#snippet children(shifts)}
 		{#if shifts.length === 0}
 			<EmptyState
-				title={m.staff_members_id_panels_volunteer_panel_no_shifts()}
-				description={m.staff_members_id_panels_volunteer_panel_member_has_never_cla()}
+				title={m.staff_members_id_panels_volunteer_panel_no_shifts_title()}
+				description={m.staff_members_id_panels_volunteer_panel_member_has_never_cla_body()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_role()}</th>
-					<th class="col-extra">{m.staff_date()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_role_label()}</th>
+					<th class="col-extra">{m.staff_date_label()}</th>
 				{/snippet}
 				{#each shifts as s (s.signupId)}
 					<tr class="hover" use:rowLink={resolve(`staff/volunteer/shifts/${s.shiftId}`)}>
@@ -234,14 +241,14 @@
 							</a>
 							{#if s.shiftCancelledAt}
 								<div class="text-muted">
-									{m.staff_members_id_panels_volunteer_panel_shift_was_cancelled()}
+									{m.staff_members_id_panels_volunteer_panel_shift_was_cancelled_text()}
 								</div>
 							{/if}
 						</td>
 						<td class="col-extra whitespace-nowrap">
 							{s.startsAt
 								? formatDateShortYear(s.startsAt)
-								: m.staff_members_id_panels_volunteer_panel_unscheduled()}
+								: m.staff_members_id_panels_volunteer_panel_unscheduled_text()}
 						</td>
 					</tr>
 				{/each}
@@ -251,27 +258,29 @@
 </RelatedList>
 
 <RelatedList
-	title={m.staff_members_id_panels_volunteer_panel_hour_logs()}
+	title={m.staff_members_id_panels_volunteer_panel_hour_logs_title()}
 	result={getUserHourLogs(id)}
 >
 	{#snippet children(logs)}
 		{#if logs.length === 0}
 			<EmptyState
-				title={m.staff_members_id_panels_volunteer_panel_no_hours_logged()}
-				description={m.staff_members_id_panels_volunteer_panel_member_has_never_sub()}
+				title={m.staff_members_id_panels_volunteer_panel_no_hours_logged_title()}
+				description={m.staff_members_id_panels_volunteer_panel_member_has_never_sub_body()}
 			/>
 		{:else}
 			{#if logs.length > 10}
 				<p class="mb-3 text-muted">
-					{m.staff_members_id_panels_volunteer_panel_showing_10_most_rece({ length: logs.length })}
+					{m.staff_members_id_panels_volunteer_panel_showing_10_most_rece_text({
+						length: logs.length
+					})}
 				</p>
 			{/if}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_role()}</th>
-					<th class="cell-num">{m.staff_hours()}</th>
-					<th class="col-extra">{m.staff_worked()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_role_label()}</th>
+					<th class="cell-num">{m.staff_hours_label()}</th>
+					<th class="col-extra">{m.staff_worked_label()}</th>
 				{/snippet}
 				{#each logs.slice(0, 10) as log (log.id)}
 					<tr class="hover">

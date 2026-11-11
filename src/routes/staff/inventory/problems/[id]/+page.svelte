@@ -34,52 +34,58 @@
 
 <PageHeader
 	width="3xl"
-	subtitle={m.staff_inventory_problems_id_subtitle()}
-	title={report.asset?.title ?? report.location ?? m.staff_inventory_problems_id_building_problem()}
+	subtitle={m.staff_inventory_problems_id_subtitle_body()}
+	title={report.asset?.title ??
+		report.location ??
+		m.staff_inventory_problems_id_building_problem_title()}
 >
 	<StatusBadge status={report.stage === 'in_work_order' ? 'in_progress' : report.status} label />
 </PageHeader>
 <PageContent width="3xl">
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
-		<InfoCard title={m.staff_report()}>
+		<InfoCard title={m.staff_report_title()}>
 			<DefinitionList>
 				{#if report.asset}
-					<Fact label={m.staff_unit()}><EntityChip ref={report.asset} /></Fact>
+					<Fact label={m.staff_unit_label()}><EntityChip ref={report.asset} /></Fact>
 				{:else}
-					<Fact label={m.staff_inventory_problems_id_where()}>{report.location}</Fact>
+					<Fact label={m.staff_inventory_problems_id_where_label()}>{report.location}</Fact>
 				{/if}
-				<Fact label={m.staff_note()} wrap>{report.note}</Fact>
-				<Fact label={m.staff_inventory_problems_id_still_usable()}
-					>{report.blocksUse ? m.staff_inventory_problems_id_no_out_use() : m.staff_yes()}</Fact
+				<Fact label={m.staff_note_label()} wrap>{report.note}</Fact>
+				<Fact label={m.staff_inventory_problems_id_still_usable_label()}
+					>{report.blocksUse
+						? m.staff_inventory_problems_id_no_out_use_text()
+						: m.staff_yes_text()}</Fact
 				>
 				{#if report.condition}
-					<Fact label={m.staff_condition()} class="capitalize">{report.condition}</Fact>
+					<Fact label={m.staff_condition_label()} class="capitalize">{report.condition}</Fact>
 				{/if}
-				<Fact label={m.staff_inventory_problems_id_reported_by()}>
+				<Fact label={m.staff_inventory_problems_id_reported_by_label()}>
 					{#if report.reporterName}
 						{report.reporterName} <span class="opacity-60">({report.reporterEmail})</span>
 					{:else}
-						{m.staff_inventory_problems_id_deleted_account()}
+						{m.staff_inventory_problems_id_deleted_account_text()}
 					{/if}
 				</Fact>
-				<Fact label={m.staff_reported()}>{formatDateTime(report.createdAt)}</Fact>
+				<Fact label={m.staff_reported_label()}>{formatDateTime(report.createdAt)}</Fact>
 			</DefinitionList>
 		</InfoCard>
 
 		{#if report.asset}
 			<InfoCard
-				title={m.staff_inventory_problems_id_other_open_reports_unit()}
+				title={m.staff_inventory_problems_id_other_open_reports_unit_title()}
 				state={report.otherPending.length}
 			>
 				{#if report.otherPending.length === 0}
-					<p class="text-muted">{m.staff_inventory_problems_id_none_sending_work_order_takes()}</p>
+					<p class="text-muted">
+						{m.staff_inventory_problems_id_none_sending_work_order_takes_text()}
+					</p>
 				{:else}
 					<ul class="space-y-2">
 						{#each report.otherPending as o (o.id)}
 							<li>
 								<a class="link" href={resolve(`staff/inventory/problems/${o.id}`)}>{o.note}</a>
 								<div class="text-subtle">
-									{o.reporterName ?? m.staff_inventory_problems_id_deleted_account()} · {formatDateShort(
+									{o.reporterName ?? m.staff_inventory_problems_id_deleted_account_text()} · {formatDateShort(
 										o.createdAt
 									)}
 								</div>
@@ -90,31 +96,35 @@
 			</InfoCard>
 		{/if}
 
-		<InfoCard title={m.staff_inventory_problems_id_triage()} class="bg-base-200 shadow-none">
+		<InfoCard title={m.staff_inventory_problems_id_triage_title()} class="bg-base-200 shadow-none">
 			{#if report.stage === 'untriaged'}
 				<p class="mb-3 text-muted">
-					{m.staff_inventory_problems_id_send_work_will_fix_dismiss()}
+					{m.staff_inventory_problems_id_send_work_will_fix_dismiss_text()}
 				</p>
 				<div class="flex gap-2">
 					<Action
 						action={sendEquipmentReportToWorkOrder}
-						label={m.staff_inventory_problems_id_send_work_order()}
-						modalTitle={m.staff_inventory_problems_id_send_work_order_2()}
-						submitLabel={m.staff_inventory_problems_id_send()}
-						successToast={m.staff_inventory_problems_id_sent_work_order()}
+						label={m.staff_inventory_problems_id_send_work_order_label()}
+						modalTitle={m.staff_inventory_problems_id_send_work_order_2_title()}
+						submitLabel={m.staff_inventory_problems_id_send_label()}
+						successToast={m.staff_inventory_problems_id_sent_work_order_toast()}
 						variant="primary"
 						size="sm"
 					>
 						{#snippet form()}
 							<input {...sendFields.id.as('hidden', id)} />
 							<label class="fieldset w-full">
-								<span class="fieldset-legend">{m.staff_inventory_problems_id_work_order()}</span>
+								<span class="fieldset-legend"
+									>{m.staff_inventory_problems_id_work_order_label()}</span
+								>
 								<Select class="w-full" {...sendFields.workOrderId.as('select')}>
-									<option value="">{m.staff_inventory_problems_id_raise_new_work_order()}</option>
+									<option value=""
+										>{m.staff_inventory_problems_id_raise_new_work_order_label()}</option
+									>
 									{#each report.openWorkOrders as w (w.id)}
 										<option value={w.id}
 											>{w.roleName ?? NO_ROLE_LABEL}: {w.notes ??
-												m.staff_inventory_problems_id_no_notes()}</option
+												m.staff_inventory_problems_id_no_notes_label()}</option
 										>
 									{/each}
 								</Select>
@@ -122,11 +132,11 @@
 							{#if !sendFields.workOrderId.value()}
 								<label class="fieldset w-full">
 									<span class="fieldset-legend"
-										>{m.staff_inventory_problems_id_who_does_work()}</span
+										>{m.staff_inventory_problems_id_who_does_work_label()}</span
 									>
 									<Select class="w-full" {...sendFields.volunteerRoleId.as('select')}>
 										<option value="" disabled selected
-											>{m.staff_inventory_problems_id_choose_role()}</option
+											>{m.staff_inventory_problems_id_choose_role_label()}</option
 										>
 										<RoleOptions activeOnly />
 									</Select>
@@ -134,28 +144,28 @@
 								<Field
 									field={sendFields.dueAt}
 									type="date"
-									label={m.staff_inventory_problems_id_needed_by_optional()}
+									label={m.staff_inventory_problems_id_needed_by_optional_label()}
 								/>
 								<Field
 									field={sendFields.notes}
 									type="textarea"
-									label={m.staff_notes()}
-									description={m.staff_inventory_problems_id_description()}
+									label={m.staff_notes_label()}
+									description={m.staff_inventory_problems_id_description_body()}
 								/>
 							{/if}
 							<p class="text-muted text-wrap">
 								{report.asset
-									? m.staff_inventory_problems_id_every_other_open_report_unit()
-									: m.staff_inventory_problems_id_closes_when_work_order_resolved()}
+									? m.staff_inventory_problems_id_every_other_open_report_unit_text()
+									: m.staff_inventory_problems_id_closes_when_work_order_resolved_text()}
 							</p>
 						{/snippet}
 					</Action>
 					<Action
 						action={dismissEquipmentReport}
-						label={m.staff_inventory_problems_id_dismiss()}
-						modalTitle={m.staff_inventory_problems_id_dismiss_report()}
-						submitLabel={m.staff_inventory_problems_id_dismiss_nothing_do()}
-						successToast={m.staff_inventory_problems_id_report_dismissed()}
+						label={m.staff_inventory_problems_id_dismiss_label()}
+						modalTitle={m.staff_inventory_problems_id_dismiss_report_title()}
+						submitLabel={m.staff_inventory_problems_id_dismiss_nothing_do_label()}
+						successToast={m.staff_inventory_problems_id_report_dismissed_toast()}
 						size="sm"
 					>
 						{#snippet form()}
@@ -163,11 +173,11 @@
 							<Field
 								field={dismissFields.notes}
 								type="textarea"
-								label={m.staff_inventory_problems_id_why_optional()}
+								label={m.staff_inventory_problems_id_why_optional_label()}
 							/>
 							{#if report.blocksUse}
 								<p class="text-muted text-wrap">
-									{m.staff_inventory_problems_id_dismissing_does_not_put_unit()}
+									{m.staff_inventory_problems_id_dismissing_does_not_put_unit_text()}
 								</p>
 							{/if}
 						{/snippet}
@@ -176,10 +186,10 @@
 			{:else if report.stage === 'in_work_order' && report.workOrderId}
 				<p class="text-muted">
 					<ParaglideMessage
-						message={m.staff_inventory_problems_id_waiting_closes_when_does}
+						message={m.staff_inventory_problems_id_waiting_closes_when_does_text}
 						inputs={{
 							staff_inventory_problems_id_its_work_order:
-								m.staff_inventory_problems_id_its_work_order()
+								m.staff_inventory_problems_id_its_work_order_text()
 						}}
 						>{#snippet a({ children })}<a
 								class="link"
@@ -190,12 +200,12 @@
 				</p>
 			{:else}
 				<DefinitionList>
-					<Fact label={m.staff_outcome()}><StatusBadge status={report.status} label /></Fact>
+					<Fact label={m.staff_outcome_label()}><StatusBadge status={report.status} label /></Fact>
 					{#if report.resolutionNotes}
-						<Fact label={m.staff_notes()} wrap>{report.resolutionNotes}</Fact>
+						<Fact label={m.staff_notes_label()} wrap>{report.resolutionNotes}</Fact>
 					{/if}
 					{#if report.resolvedAt}
-						<Fact label={m.staff_closed()}>{formatDateTime(report.resolvedAt)}</Fact>
+						<Fact label={m.staff_closed_label()}>{formatDateTime(report.resolvedAt)}</Fact>
 					{/if}
 				</DefinitionList>
 			{/if}

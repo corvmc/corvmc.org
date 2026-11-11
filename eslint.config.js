@@ -26,6 +26,7 @@ import noLiteralUiText from './eslint-rules/no-literal-ui-text.js';
 import noManualFieldName from './eslint-rules/no-manual-field-name.js';
 import noInteractiveAwait from './eslint-rules/no-interactive-await.js';
 import requireAwaitCatch from './eslint-rules/require-await-catch.js';
+import messageKeyRole from './eslint-rules/message-key-role.js';
 
 import prettier from 'eslint-config-prettier';
 import path from 'node:path';
@@ -77,7 +78,8 @@ const customPlugin = {
 		'no-literal-ui-text': noLiteralUiText,
 		'no-manual-field-name': noManualFieldName,
 		'no-interactive-await': noInteractiveAwait,
-		'require-await-catch': requireAwaitCatch
+		'require-await-catch': requireAwaitCatch,
+		'message-key-role': messageKeyRole
 	}
 };
 
@@ -253,6 +255,13 @@ export default defineConfig(
 		rules: {
 			'custom/no-literal-ui-text': ['error', { allow: ['h1 { /* your styles here */ }'] }]
 		}
+	},
+	{
+		// A message key ends with its role (#2513); scripts/message-copy.spec.ts
+		// checks each string against the rubric for that role.
+		files: ['src/**/*.svelte', 'src/**/*.ts'],
+		ignores: ['src/lib/paraglide/**', '**/*.spec.ts'],
+		rules: { 'custom/message-key-role': 'error' }
 	},
 	{
 		// Kit 3 rejects a hand-written name in a remote form (#2196). Test

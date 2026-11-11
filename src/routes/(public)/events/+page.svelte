@@ -66,7 +66,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.public_events_events_corvallis_music_collective()}</title>
+	<title>{m.public_events_events_corvallis_music_collective_title()}</title>
 	<meta
 		name="description"
 		content="Shows at the Collective and gigs from our member bands around the region."
@@ -79,30 +79,30 @@
 	<link
 		rel="alternate"
 		type="application/rss+xml"
-		title={m.public_events_title()}
+		title={m.public_events_title_label()}
 		href="{page.url.origin}/events/feed.xml"
 	/>
 </svelte:head>
 
 <Section>
 	<div class="mb-10 text-center">
-		<h1 class="mb-2 text-4xl font-bold tracking-tight text-cmc-navy">{m.public_events()}</h1>
+		<h1 class="mb-2 text-4xl font-bold tracking-tight text-cmc-navy">{m.public_events_title()}</h1>
 		<p class="text-base text-fg-2">
-			{m.public_events_shows_at_collective_gigs_from()}
+			{m.public_events_shows_at_collective_gigs_from_text()}
 		</p>
 	</div>
 
 	{#if showNotice}
 		<div class="mb-8 flex items-center justify-between gap-4 notice-bar" role="status">
 			<p class="text-sm font-medium">
-				{m.public_events_no_show_at_collective_tonight()}
+				{m.public_events_no_show_at_collective_tonight_text()}
 			</p>
 			<button
 				type="button"
 				class="shrink-0 text-sm font-semibold underline"
 				onclick={() => (dismissed = true)}
 			>
-				{m.public_events_dismiss()}
+				{m.public_events_dismiss_label()}
 			</button>
 		</div>
 	{/if}
@@ -132,18 +132,20 @@
 			<MiniCalendar anchor={from} />
 			{#if from !== today}
 				<Button href="/events" variant="ghost" size="sm" class="mt-3"
-					>{m.public_events_back_today()}</Button
+					>{m.public_events_back_today_label()}</Button
 				>
 			{/if}
 			<p class="mt-6 text-sm text-fg-2">
-				<a class="link" href={webcalHref} rel="external">{m.public_events_subscribe_calendar()}</a>
-				· <a class="link" href="/events/feed.xml" rel="external">{m.public_events_rss()}</a>
+				<a class="link" href={webcalHref} rel="external"
+					>{m.public_events_subscribe_calendar_text()}</a
+				>
+				· <a class="link" href="/events/feed.xml" rel="external">{m.public_events_rss_text()}</a>
 			</p>
 		</aside>
 		<div class="guide__main">
 			{#if allEvents.length === 0}
 				<div class="py-12 text-center opacity-60">
-					<p class="text-base">{m.public_events_nothing_calendar_yet_check_back()}</p>
+					<p class="text-base">{m.public_events_nothing_calendar_yet_check_back_text()}</p>
 				</div>
 			{:else}
 				<GigList events={allEvents} {rsvpEventIds} />
@@ -153,8 +155,8 @@
 						     more" cannot tell two remaining from two hundred (#1059). -->
 						<Button type="button" variant="ghost" disabled={loadingMore} onclick={showMore}>
 							{loadingMore
-								? m.public_events_loading()
-								: m.public_events_show_more_left({ remaining })}
+								? m.public_events_loading_label()
+								: m.public_events_show_more_left_label({ remaining })}
 						</Button>
 					</div>
 				{/if}

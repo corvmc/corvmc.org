@@ -95,13 +95,13 @@
 	}
 </script>
 
-<PageHeader title={m.staff_inventory()}>
+<PageHeader title={m.staff_inventory_title()}>
 	<div class="flex gap-2">
 		<Button variant="ghost" size="sm" href={resolve('staff/inventory/locations')}
-			>{m.staff_locations()}</Button
+			>{m.staff_locations_label()}</Button
 		>
 		<Button variant="ghost" size="sm" onclick={() => (showCategoryModal = true)}
-			>{m.staff_inventory_categories()}</Button
+			>{m.staff_inventory_categories_label()}</Button
 		>
 		<HeaderActions />
 		<AddItemAction />
@@ -135,19 +135,19 @@
 		<ViewSelect value={view} onchange={setView} />
 		<Select
 			size="sm"
-			aria-label={m.staff_category()}
+			aria-label={m.staff_category_label()}
 			value={categoryId}
 			onchange={(e: Event) => {
 				categoryId = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">{m.staff_inventory_all_categories()}</option>
+			<option value="">{m.staff_inventory_all_categories_label()}</option>
 			<CategoryOptions />
 		</Select>
 		{#snippet menu()}
 			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">{m.staff_inventory_tracking()}</span>
+				<span class="text-muted text-xs">{m.staff_inventory_tracking_label()}</span>
 				<Select
 					size="sm"
 					value={kindFilter}
@@ -156,7 +156,7 @@
 						page = 1;
 					}}
 				>
-					<option value="">{m.staff_all_items()}</option>
+					<option value="">{m.staff_all_items_label()}</option>
 					{#each itemKinds as k (k)}
 						<option value={k}>{titleCase(k)}</option>
 					{/each}
@@ -171,7 +171,7 @@
 					bind:checked={includeDeleted}
 					onchange={() => (page = 1)}
 				/>
-				{m.staff_inventory_show_deactivated()}
+				{m.staff_inventory_show_deactivated_label()}
 			</label>
 		{/snippet}
 	</FilterBar>
@@ -179,16 +179,16 @@
 	{#if view === 'restock'}
 		<RestockList search={searchDebounced} {categoryId} />
 	{:else if result}
-		<DataList {result} empty={m.staff_inventory_empty()} onpage={(p) => (page = p)}>
+		<DataList {result} empty={m.staff_inventory_empty_body()} onpage={(p) => (page = p)}>
 			{#snippet children(equipment)}
 				<Table>
 					{#snippet head()}
-						<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-						<th>{m.staff_item()}</th>
-						<th class="col-support">{m.staff_category()}</th>
-						<th class="col-support">{m.staff_inventory_tracking()}</th>
-						<th class="cell-num">{m.staff_available()}</th>
-						<th class="col-support cell-num">{m.staff_total()}</th>
+						<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+						<th>{m.staff_item_label()}</th>
+						<th class="col-support">{m.staff_category_label()}</th>
+						<th class="col-support">{m.staff_inventory_tracking_label()}</th>
+						<th class="cell-num">{m.staff_available_label()}</th>
+						<th class="col-support cell-num">{m.staff_total_label()}</th>
 					{/snippet}
 
 					{#each equipment as e (e.id)}
@@ -208,7 +208,7 @@
 							<td class="col-support whitespace-nowrap">
 								<Badge size="sm" class="badge-ghost">{titleCase(e.kind)}</Badge>
 								{#if e.isConsumable}
-									<Badge size="sm" class="badge-ghost">{m.staff_consumable()}</Badge>
+									<Badge size="sm" class="badge-ghost">{m.staff_consumable_label()}</Badge>
 								{/if}
 							</td>
 							<td class="cell-num">
@@ -219,11 +219,12 @@
 								<span
 									class:text-warning={e.isLowStock}
 									class:font-semibold={e.isLowStock}
-									title={e.isLowStock ? m.staff_inventory_low_stock() : undefined}>{e.onHand}</span
+									title={e.isLowStock ? m.staff_inventory_low_stock_label() : undefined}
+									>{e.onHand}</span
 								>
 								{#if e.onOrder > 0}
 									<Badge variant="info" size="xs"
-										>{m.staff_inventory_order({ onOrder: e.onOrder })}</Badge
+										>{m.staff_inventory_order_label({ onOrder: e.onOrder })}</Badge
 									>
 								{/if}
 							</td>

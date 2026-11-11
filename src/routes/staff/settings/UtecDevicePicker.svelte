@@ -24,7 +24,7 @@
 {#if options.length > 0}
 	<FormField
 		field={updateIntegrationSettings.fields.deviceId}
-		label={m.staff_settings_utec_device_picker_device()}
+		label={m.staff_settings_utec_device_picker_device_label()}
 		type="select"
 		value={deviceId}
 		{options}
@@ -32,9 +32,9 @@
 {:else}
 	<FormField
 		field={updateIntegrationSettings.fields.deviceId}
-		label={m.staff_settings_utec_device_picker_device_id()}
+		label={m.staff_settings_utec_device_picker_device_id_label()}
 		type="text"
 		value={deviceId}
-		description={result.error ?? m.staff_settings_utec_device_picker_description()}
+		description={result.error ?? m.staff_settings_utec_device_picker_description_body()}
 	/>
 {/if}

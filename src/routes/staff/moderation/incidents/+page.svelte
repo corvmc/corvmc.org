@@ -52,7 +52,7 @@
 	}
 </script>
 
-<PageHeader title={m.staff_moderation()} documentTitle={m.staff_incidents_title()}>
+<PageHeader title={m.staff_moderation_title()} documentTitle={m.staff_incidents_title()}>
 	<StaffViews views={moderationViews} active="incidents" />
 </PageHeader>
 <PageContent>
@@ -69,29 +69,29 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label={m.staff_status()}
+			aria-label={m.staff_status_label()}
 			value={statusFilter}
 			onchange={(e: Event) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value as typeof statusFilter;
 				page = 1;
 			}}
 		>
-			<option value="">{m.staff_all_statuses()}</option>
-			<option value="unresolved">{m.staff_incidents_not_resolved()}</option>
-			<option value="reported">{m.staff_incidents_awaiting_review()}</option>
-			<option value="open">{m.staff_open()}</option>
-			<option value="resolved">{m.staff_resolved()}</option>
+			<option value="">{m.staff_all_statuses_label()}</option>
+			<option value="unresolved">{m.staff_incidents_not_resolved_label()}</option>
+			<option value="reported">{m.staff_incidents_awaiting_review_label()}</option>
+			<option value="open">{m.staff_open_label()}</option>
+			<option value="resolved">{m.staff_resolved_label()}</option>
 		</Select>
 		<Select
 			size="sm"
-			aria-label={m.staff_category()}
+			aria-label={m.staff_category_label()}
 			value={categoryFilter}
 			onchange={(e: Event) => {
 				categoryFilter = (e.currentTarget as HTMLSelectElement).value as typeof categoryFilter;
 				page = 1;
 			}}
 		>
-			<option value="">{m.staff_incidents_all_kinds()}</option>
+			<option value="">{m.staff_incidents_all_kinds_label()}</option>
 			{#each incidentCategories as c (c)}
 				<option value={c}>{incidentCategoryLabels[c]}</option>
 			{/each}
@@ -105,16 +105,16 @@
 	</FilterBar>
 
 	<!-- A table: the summary is capped at 200 characters and rows carry no actions. -->
-	<DataList {result} empty={m.staff_incidents_empty()} onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_incidents_empty_body()} onpage={(p) => (page = p)}>
 		{#snippet children(rows)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th class="col-support">{m.staff_when()}</th>
-					<th class="col-support">{m.staff_kind()}</th>
-					<th class="cell-primary">{m.staff_summary()}</th>
-					<th class="col-support">{m.staff_member_involved()}</th>
-					<th class="col-support">{m.staff_recorded_by()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th class="col-support">{m.staff_when_label()}</th>
+					<th class="col-support">{m.staff_kind_label()}</th>
+					<th class="cell-primary">{m.staff_summary_label()}</th>
+					<th class="col-support">{m.staff_member_involved_label()}</th>
+					<th class="col-support">{m.staff_recorded_by_label()}</th>
 				{/snippet}
 				{#each rows as r (r.id)}
 					<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/incidents/${r.id}`)}>

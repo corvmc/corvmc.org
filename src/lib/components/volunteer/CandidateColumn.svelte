@@ -42,9 +42,9 @@
 	}
 
 	const SCOPES = [
-		{ key: 'interested', label: msg.volunteer_candidate_column_interested() },
-		{ key: 'worked', label: msg.volunteer_candidate_column_has_worked() },
-		{ key: 'all', label: msg.volunteer_candidate_column_all() }
+		{ key: 'interested', label: msg.volunteer_candidate_column_interested_label() },
+		{ key: 'worked', label: msg.volunteer_candidate_column_has_worked_label() },
+		{ key: 'all', label: msg.volunteer_candidate_column_all_label() }
 	] as const;
 
 	// The desk case, kept from the picker this column replaced: somebody walks up
@@ -128,16 +128,16 @@
 	}
 </script>
 
-<InfoCard title={msg.volunteer_candidate_column_who_ask()}>
+<InfoCard title={msg.volunteer_candidate_column_who_ask_title()}>
 	{#snippet header()}
 		<div class="flex flex-col gap-2">
 			{#if candidates.current}
 				{@const g = grade(candidates.current.rows)}
 				<CardTitle>
-					{msg.volunteer_candidate_column_who_ask_2({ askable: g.askable })}
+					{msg.volunteer_candidate_column_who_ask_2_title({ askable: g.askable })}
 					{#if g.blocked > 0}
 						<span class="text-subtle text-sm font-normal"
-							>{msg.volunteer_candidate_column_not_cleared({ blocked: g.blocked })}</span
+							>{msg.volunteer_candidate_column_not_cleared_title({ blocked: g.blocked })}</span
 						>
 					{/if}
 				</CardTitle>
@@ -146,8 +146,8 @@
 			     without a date is the bug this column exists to fix: a card valid
 			     today does not cover a shift the week after it lapses. -->
 			<p class="text-subtle text-xs">
-				{msg.volunteer_candidate_column_cleared_as({
-					value: startsAt ? formatDateShort(startsAt) : msg.volunteer_candidate_column_today()
+				{msg.volunteer_candidate_column_cleared_as_text({
+					value: startsAt ? formatDateShort(startsAt) : msg.volunteer_candidate_column_today_text()
 				})}
 			</p>
 			<SearchInput bind:value={search} placeholder={msg.volunteer_candidate_column_placeholder()} />
@@ -170,12 +170,12 @@
 		{@const g = grade(result.rows)}
 		{#if result.rows.length === 0}
 			<EmptyState
-				title={msg.volunteer_candidate_column_nobody_left_group()}
+				title={msg.volunteer_candidate_column_nobody_left_group_title()}
 				description={search
-					? msg.volunteer_candidate_column_nobody_matches_who_not_already()
+					? msg.volunteer_candidate_column_nobody_matches_who_not_already_body()
 					: scope === 'all'
-						? msg.volunteer_candidate_column_everybody_with_volunteer_profile()
-						: msg.volunteer_candidate_column_try_all()}
+						? msg.volunteer_candidate_column_everybody_with_volunteer_profile_body()
+						: msg.volunteer_candidate_column_try_all_body()}
 			/>
 		{:else}
 			<ul class="flex flex-col gap-3">
@@ -184,7 +184,7 @@
 						<div class="min-w-0">
 							<EntityIdentity ref={row.member} />
 							<div class="truncate text-subtle text-xs">
-								{row.availability || msg.volunteer_candidate_column_hasn_t_said_when_they()}
+								{row.availability || msg.volunteer_candidate_column_hasn_t_said_when_they_text()}
 							</div>
 							<div class="{f.tone} truncate text-xs">{f.text}</div>
 						</div>
@@ -195,12 +195,14 @@
 						     spoken to them means. -->
 						<Action
 							action={inviteMemberToShift.for(`${shiftId}:${row.userId}`)}
-							label={msg.volunteer_candidate_column_invite()}
+							label={msg.volunteer_candidate_column_invite_label()}
 							variant="primary"
 							size="xs"
-							modalTitle={msg.volunteer_candidate_column_ask_take({ title: row.member.title })}
-							submitLabel={msg.volunteer_candidate_column_send_invitation()}
-							successToast={msg.volunteer_candidate_column_asked_they_ll_see_their()}
+							modalTitle={msg.volunteer_candidate_column_ask_take_title({
+								title: row.member.title
+							})}
+							submitLabel={msg.volunteer_candidate_column_send_invitation_label()}
+							successToast={msg.volunteer_candidate_column_asked_they_ll_see_their_toast()}
 						>
 							{#snippet form()}
 								<input
@@ -214,7 +216,7 @@
 										.fields.userId.as('hidden', row.userId)}
 								/>
 								<p class="text-sm">
-									{msg.volunteer_candidate_column_invitation_holds_no_place_shift({
+									{msg.volunteer_candidate_column_invitation_holds_no_place_shift_text({
 										title: row.member.title
 									})}
 								</p>
@@ -222,13 +224,15 @@
 						</Action>
 						<Action
 							action={assignShiftToMember.for(`${shiftId}:${row.userId}`)}
-							label={msg.volunteer_candidate_column_add()}
+							label={msg.volunteer_candidate_column_add_label()}
 							data-testid="assign-candidate"
 							variant="ghost"
 							size="xs"
-							modalTitle={msg.volunteer_candidate_column_put_shift({ title: row.member.title })}
-							submitLabel={msg.volunteer_candidate_column_add_them()}
-							successToast={msg.volunteer_candidate_column_added_they_re_booked()}
+							modalTitle={msg.volunteer_candidate_column_put_shift_title({
+								title: row.member.title
+							})}
+							submitLabel={msg.volunteer_candidate_column_add_them_label()}
+							successToast={msg.volunteer_candidate_column_added_they_re_booked_toast()}
 							onsuccess={warnOver}
 						>
 							{#snippet form()}
@@ -243,13 +247,13 @@
 										.fields.userId.as('hidden', row.userId)}
 								/>
 								<p class="text-sm">
-									{msg.volunteer_candidate_column_staff_add_booking_not_claim({
+									{msg.volunteer_candidate_column_staff_add_booking_not_claim_text({
 										title: row.member.title
 									})}
 								</p>
 								{#if f.blocked}
 									<p class="text-sm text-error">
-										{msg.volunteer_candidate_column_missing_clearance({
+										{msg.volunteer_candidate_column_missing_clearance_text({
 											names: new Intl.ListFormat('en').format(row.missing.map((m) => m.name))
 										})}
 									</p>

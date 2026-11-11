@@ -17,9 +17,9 @@
 
 <Action
 	{action}
-	label={m.inbox_new_topic_new_topic()}
+	label={m.inbox_new_topic_new_topic_label()}
 	iconOnly
-	modalTitle={m.inbox_new_topic_new_topic()}
+	modalTitle={m.inbox_new_topic_new_topic_title()}
 	submitLabel={m.inbox_new_topic_submit_label()}
 	successToast={m.inbox_new_topic_success_toast()}
 	variant="ghost"
@@ -36,8 +36,8 @@
 			<input {...fields.slug.as('hidden', slug)} />
 			<FormField
 				field={fields.subject}
-				label={m.inbox_new_topic_what_about()}
-				description={m.inbox_new_topic_description()}
+				label={m.inbox_new_topic_what_about_label()}
+				description={m.inbox_new_topic_description_body()}
 			/>
 		</div>
 	{/snippet}

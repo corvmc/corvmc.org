@@ -50,20 +50,20 @@
 <InfoCard title={m.member_profile_teaching_card_title()}>
 	{#if !instructor}
 		<p class="mb-4 text-subtle">
-			{m.member_profile_teaching_card_teach_here_can_book_room()}
+			{m.member_profile_teaching_card_teach_here_can_book_room_text()}
 		</p>
 
 		<!-- A link to its own page, not an embedded form: new members submitted
 		     the blank form while working down their profile (#1820). -->
 		<Button href={resolve('member/profile/teaching/apply')} size="sm"
-			>{m.member_apply_teach()}</Button
+			>{m.member_apply_teach_label()}</Button
 		>
 	{:else}
 		<div class="mb-4 flex items-center gap-2">
 			<StatusBadge status={instructor.status} />
 			{#if instructor.status === 'requested'}
 				<span class="text-subtle text-sm"
-					>{m.member_profile_teaching_card_staff_will_take_look()}</span
+					>{m.member_profile_teaching_card_staff_will_take_look_text()}</span
 				>
 			{/if}
 		</div>
@@ -72,9 +72,11 @@
 			<!-- Handed back, not refused. Stored rather than only emailed because
 			     they cannot fix what they cannot see. -->
 			<Alert type="warning" class="mb-4">
-				<p class="font-semibold">{m.member_profile_teaching_card_staff_asked_change()}</p>
+				<p class="font-semibold">{m.member_profile_teaching_card_staff_asked_change_text()}</p>
 				<p class="whitespace-pre-line">{instructor.reviewNotes}</p>
-				<p class="mt-2 text-sm">{m.member_profile_teaching_card_edit_below_send_back_nothing()}</p>
+				<p class="mt-2 text-sm">
+					{m.member_profile_teaching_card_edit_below_send_back_nothing_text()}
+				</p>
 			</Alert>
 		{/if}
 
@@ -84,9 +86,9 @@
 			     never publish a members-only contact on their behalf. -->
 			<Alert type="warning" class="mb-4">
 				{#if hasAnyContact}
-					{m.member_profile_teaching_card_contact_details_members_only_so()}
+					{m.member_profile_teaching_card_contact_details_members_only_so_body()}
 				{:else}
-					{m.member_profile_teaching_card_have_no_contact_details_so()}
+					{m.member_profile_teaching_card_have_no_contact_details_so_body()}
 				{/if}
 			</Alert>
 		{/if}
@@ -96,39 +98,39 @@
 				{@const f = isApplication ? applyFields : editFields}
 				<FormField
 					field={f.headline}
-					label={m.member_what_do_teach()}
+					label={m.member_what_do_teach_label()}
 					value={instructor.headline}
 					required={isApplication}
 				/>
 				<FormField
 					field={f.blurb}
-					label={m.member_about_teaching()}
+					label={m.member_about_teaching_label()}
 					type="textarea"
 					value={instructor.blurb}
 					required={isApplication}
 				/>
 				<FormField
 					field={f.ratesNote}
-					label={m.member_profile_teaching_card_rates()}
+					label={m.member_profile_teaching_card_rates_label()}
 					value={instructor.ratesNote}
 				/>
 				<FormField
 					field={f.bookingUrl}
-					label={m.member_profile_teaching_card_where_students_book()}
+					label={m.member_profile_teaching_card_where_students_book_label()}
 					value={instructor.bookingUrl}
 				/>
 				{#if isApplication}
 					<FormField
 						field={applyFields.applicationNote}
-						label={m.member_anything_staff_should_know_not()}
+						label={m.member_anything_staff_should_know_not_label()}
 						type="textarea"
 						value={instructor.applicationNote}
 					/>
 				{/if}
 				<SubmitButton
 					>{isApplication
-						? m.member_profile_teaching_card_send_review()
-						: m.member_profile_teaching_card_save_listing()}</SubmitButton
+						? m.member_profile_teaching_card_send_review_label()
+						: m.member_profile_teaching_card_save_listing_label()}</SubmitButton
 				>
 			</Form>
 		{/if}
@@ -140,8 +142,8 @@
 				/>
 				<SubmitButton variant="ghost">
 					{instructor.acceptingStudents
-						? m.member_profile_teaching_card_stop_taking_new_students()
-						: m.member_profile_teaching_card_take_new_students_again()}
+						? m.member_profile_teaching_card_stop_taking_new_students_label()
+						: m.member_profile_teaching_card_take_new_students_again_label()}
 				</SubmitButton>
 			</Form>
 		{/if}
@@ -149,14 +151,14 @@
 		{#if isApplication}
 			<Form remote={withdrawApplication} class="mt-4">
 				<SubmitButton variant="ghost"
-					>{m.member_profile_teaching_card_withdraw_application()}</SubmitButton
+					>{m.member_profile_teaching_card_withdraw_application_label()}</SubmitButton
 				>
 			</Form>
 		{/if}
 
 		{#if instructor.status === 'paused' || instructor.status === 'retired'}
 			<p class="text-subtle">
-				{m.member_profile_teaching_card_teaching_status_set_by_staff()}
+				{m.member_profile_teaching_card_teaching_status_set_by_staff_text()}
 			</p>
 		{/if}
 	{/if}

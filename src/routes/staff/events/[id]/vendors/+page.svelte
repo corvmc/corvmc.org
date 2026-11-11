@@ -60,7 +60,7 @@
 			label: marketVendorStatusLabels[s],
 			badge: counts?.[s] ?? 0
 		})),
-		{ key: 'all', label: m.staff_all(), badge: data.applications.length }
+		{ key: 'all', label: m.staff_all_label(), badge: data.applications.length }
 	]);
 	const rows = $derived(
 		tab === 'all' ? data.applications : data.applications.filter((a) => a.status === tab)
@@ -91,27 +91,27 @@
 )}
 	<MoneyField
 		field={setupFields.tableFeeCents}
-		label={m.staff_events_id_vendors_table_fee()}
-		description={m.staff_events_id_vendors_per_table_charged_when_vendor()}
+		label={m.staff_events_id_vendors_table_fee_label()}
+		description={m.staff_events_id_vendors_per_table_charged_when_vendor_body()}
 		value={market?.tableFeeCents || undefined}
 	/>
 	<FormField
 		field={setupFields.slidingScale}
 		type="checkbox"
-		label={m.staff_events_id_vendors_sliding_scale()}
-		description={m.staff_events_id_vendors_let_vendors_pay_what_they()}
+		label={m.staff_events_id_vendors_sliding_scale_label()}
+		description={m.staff_events_id_vendors_let_vendors_pay_what_they_body()}
 		value={market?.slidingScale ?? false}
 	/>
 	<MoneyField
 		field={setupFields.slidingScaleFloorCents}
-		label={m.staff_events_id_vendors_sliding_scale_floor()}
-		description={m.staff_events_id_vendors_per_table_only_used_with()}
+		label={m.staff_events_id_vendors_sliding_scale_floor_label()}
+		description={m.staff_events_id_vendors_per_table_only_used_with_body()}
 		value={market?.slidingScaleFloorCents || undefined}
 	/>
 {/snippet}
 
 <PageHeader
-	title={m.staff_events_id_vendors_vendors({ title: data.event.title })}
+	title={m.staff_events_id_vendors_vendors_title({ title: data.event.title })}
 	crumb="Vendors"
 	parent={{ label: data.event.title, href: resolve('/staff/events/[id]', { id: data.event.id }) }}
 >
@@ -121,13 +121,13 @@
 			variant="ghost"
 			size="sm"
 		>
-			{m.staff_events_id_vendors_market_day()}
+			{m.staff_events_id_vendors_market_day_label()}
 		</Button>
 		<Action
 			action={openMarketDayForm}
-			label={m.staff_events_id_vendors_edit_setup()}
-			modalTitle={m.staff_events_id_vendors_market_setup()}
-			successToast={m.staff_saved()}
+			label={m.staff_events_id_vendors_edit_setup_label()}
+			modalTitle={m.staff_events_id_vendors_market_setup_title()}
+			successToast={m.staff_saved_toast()}
 			variant="ghost"
 			size="sm"
 		>
@@ -136,8 +136,8 @@
 				<FormField
 					field={setupFields.applicationsCloseAt}
 					type="datetime-local"
-					label={m.staff_events_id_vendors_applications_close()}
-					description={m.staff_events_id_vendors_leave_blank_take_applications_until()}
+					label={m.staff_events_id_vendors_applications_close_label()}
+					description={m.staff_events_id_vendors_leave_blank_take_applications_until_body()}
 					value={data.market?.applicationsCloseAt
 						? toLocalDateTime(data.market.applicationsCloseAt)
 						: undefined}
@@ -145,7 +145,7 @@
 				<FormField
 					field={setupFields.tableCount}
 					type="number"
-					label={m.staff_events_id_vendors_tables_available()}
+					label={m.staff_events_id_vendors_tables_available_label()}
 					value={data.market?.tableCount ?? undefined}
 				/>
 				{@render feeFields(data.market)}
@@ -158,13 +158,13 @@
 	{#if !data.market}
 		<Card>
 			<CardBody>
-				<h2 class="font-semibold">{m.staff_events_id_vendors_take_vendor_applications()}</h2>
+				<h2 class="font-semibold">{m.staff_events_id_vendors_take_vendor_applications_title()}</h2>
 				<p class="text-muted">
-					{m.staff_events_id_vendors_opening_listing_as_market_puts()}
+					{m.staff_events_id_vendors_opening_listing_as_market_puts_text()}
 				</p>
 				<Form
 					remote={openMarketDayForm}
-					successToast={m.staff_events_id_vendors_open_applications()}
+					successToast={m.staff_events_id_vendors_open_applications_toast()}
 					class="space-y-2"
 				>
 					<input {...setupFields.eventId.as('hidden', data.event.id)} />
@@ -172,36 +172,36 @@
 						<FormField
 							field={setupFields.applicationsCloseAt}
 							type="datetime-local"
-							label={m.staff_events_id_vendors_applications_close()}
-							description={m.staff_events_id_vendors_blank_means_open_until_market()}
+							label={m.staff_events_id_vendors_applications_close_label()}
+							description={m.staff_events_id_vendors_blank_means_open_until_market_body()}
 						/>
 						<FormField
 							field={setupFields.tableCount}
 							type="number"
-							label={m.staff_events_id_vendors_tables_available()}
+							label={m.staff_events_id_vendors_tables_available_label()}
 						/>
 					</div>
 					{@render feeFields(null)}
-					<SubmitButton label={m.staff_events_id_vendors_open_applications()} />
+					<SubmitButton label={m.staff_events_id_vendors_open_applications_label()} />
 				</Form>
 			</CardBody>
 		</Card>
 	{:else}
 		<div class="flex flex-wrap gap-4">
 			<StatCard
-				title={m.staff_events_id_vendors_review()}
+				title={m.staff_events_id_vendors_review_title()}
 				value={counts?.applied ?? 0}
 				size="sm"
 				class="p-4"
 			/>
 			<StatCard
-				title={m.staff_events_id_vendors_accepted()}
+				title={m.staff_events_id_vendors_accepted_title()}
 				value={counts?.accepted ?? 0}
 				size="sm"
 				class="p-4"
 			/>
 			<StatCard
-				title={m.staff_events_id_vendors_tables_taken()}
+				title={m.staff_events_id_vendors_tables_taken_title()}
 				value={data.market.tableCount
 					? `${tablesAssigned} / ${data.market.tableCount}`
 					: tablesAssigned}
@@ -209,7 +209,7 @@
 				class="p-4"
 			/>
 			<StatCard
-				title={m.staff_events_id_vendors_applications()}
+				title={m.staff_events_id_vendors_applications_title()}
 				value={data.market.accepting
 					? data.market.applicationsCloseAt
 						? `Open until ${formatDateTime(data.market.applicationsCloseAt)}`
@@ -224,27 +224,27 @@
 
 		{#if rows.length === 0}
 			<EmptyState
-				title={m.staff_events_id_vendors_no_applications_here()}
+				title={m.staff_events_id_vendors_no_applications_here_title()}
 				description={tab === 'applied'
-					? m.staff_events_id_vendors_nothing_waiting_decision()
-					: m.staff_events_id_vendors_applications_arrive_from_public_even()}
+					? m.staff_events_id_vendors_nothing_waiting_decision_body()
+					: m.staff_events_id_vendors_applications_arrive_from_public_even_body()}
 			/>
 		{:else}
 			<p class="text-muted text-sm">
-				{m.staff_events_id_vendors_applications_2({
+				{m.staff_events_id_vendors_applications_2_text({
 					length: rows.length,
 					length2: data.applications.length
 				})}
 			</p>
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_events_id_vendors_vendor()}</th>
-					<th class="col-support">{m.staff_events_id_vendors_needs()}</th>
-					<th class="col-support">{m.staff_events_id_vendors_contact()}</th>
-					<th>{m.staff_events_id_vendors_table()}</th>
-					<th class="col-support">{m.staff_events_id_vendors_fee()}</th>
-					<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_events_id_vendors_vendor_label()}</th>
+					<th class="col-support">{m.staff_events_id_vendors_needs_label()}</th>
+					<th class="col-support">{m.staff_events_id_vendors_contact_label()}</th>
+					<th>{m.staff_events_id_vendors_table_label()}</th>
+					<th class="col-support">{m.staff_events_id_vendors_fee_label()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 				{/snippet}
 				{#each rows as row (row.id)}
 					<tr>
@@ -257,9 +257,9 @@
 						<td class="col-support">
 							{row.tablesRequested}
 							{row.tablesRequested === 1
-								? m.staff_events_id_vendors_table_3()
-								: m.staff_events_id_vendors_tables()}{row.needsPower
-								? m.staff_events_id_vendors_power()
+								? m.staff_events_id_vendors_table_3_text()
+								: m.staff_events_id_vendors_tables_text()}{row.needsPower
+								? m.staff_events_id_vendors_power_text()
 								: ''}
 						</td>
 						<td class="col-support">
@@ -276,11 +276,13 @@
 							{#if row.feeCents === 0}
 								<span class="text-muted">—</span>
 							{:else if row.refundedAt}
-								{m.staff_events_id_vendors_refunded()}
+								{m.staff_events_id_vendors_refunded_text()}
 							{:else if row.paidAt}
-								{m.staff_events_id_vendors_paid({ formatCents: formatCents(row.paidCents ?? 0) })}
+								{m.staff_events_id_vendors_paid_text({
+									formatCents: formatCents(row.paidCents ?? 0)
+								})}
 							{:else}
-								{m.staff_events_id_vendors_due({ formatCents: formatCents(row.feeCents) })}
+								{m.staff_events_id_vendors_due_text({ formatCents: formatCents(row.feeCents) })}
 							{/if}
 						</td>
 						<td>
@@ -288,12 +290,12 @@
 								{#if row.status === 'applied' || row.status === 'declined'}
 									<Action
 										action={decideVendorForm.for(`accept-${row.id}`)}
-										label={m.staff_events_id_vendors_accept()}
+										label={m.staff_events_id_vendors_accept_label()}
 										iconOnly
-										modalTitle={m.staff_events_id_vendors_accept_2({
+										modalTitle={m.staff_events_id_vendors_accept_2_title({
 											businessName: row.businessName
 										})}
-										successToast={m.staff_events_id_vendors_accepted_vendor_told()}
+										successToast={m.staff_events_id_vendors_accepted_vendor_told_toast()}
 										variant="ghost"
 										size="sm"
 									>
@@ -303,16 +305,16 @@
 											<input {...decideFields.decision.as('hidden', 'accepted')} />
 											<FormField
 												field={decideFields.tableLabel}
-												label={m.staff_events_id_vendors_table()}
+												label={m.staff_events_id_vendors_table_label()}
 												value=""
 											/>
 											<FormField
 												field={decideFields.message}
 												type="textarea"
-												label={m.staff_events_id_vendors_message_vendor()}
+												label={m.staff_events_id_vendors_message_vendor_label()}
 												description={data.market?.tableFeeCents
-													? m.staff_events_id_vendors_sent_by_email_their_inbox()
-													: m.staff_events_id_vendors_sent_by_email_their_inbox_2()}
+													? m.staff_events_id_vendors_sent_by_email_their_inbox_body()
+													: m.staff_events_id_vendors_sent_by_email_their_inbox_2_body()}
 												value={acceptMessage(row.businessName)}
 											/>
 										{/snippet}
@@ -321,12 +323,12 @@
 								{#if row.status === 'accepted'}
 									<Action
 										action={setTableLabelForm.for(row.id)}
-										label={m.staff_events_id_vendors_move_table()}
+										label={m.staff_events_id_vendors_move_table_label()}
 										iconOnly
-										modalTitle={m.staff_events_id_vendors_table_2({
+										modalTitle={m.staff_events_id_vendors_table_2_title({
 											businessName: row.businessName
 										})}
-										successToast={m.staff_events_id_vendors_table_saved()}
+										successToast={m.staff_events_id_vendors_table_saved_toast()}
 										variant="ghost"
 										size="sm"
 									>
@@ -335,7 +337,7 @@
 											<input {...tableFields.vendorId.as('hidden', row.id)} />
 											<FormField
 												field={tableFields.tableLabel}
-												label={m.staff_events_id_vendors_table()}
+												label={m.staff_events_id_vendors_table_label()}
 												value={row.tableLabel ?? ''}
 											/>
 										{/snippet}
@@ -344,12 +346,12 @@
 								{#if row.status === 'applied' || row.status === 'accepted'}
 									<Action
 										action={decideVendorForm.for(`decline-${row.id}`)}
-										label={m.staff_events_id_vendors_decline()}
+										label={m.staff_events_id_vendors_decline_label()}
 										iconOnly
-										modalTitle={m.staff_events_id_vendors_decline_2({
+										modalTitle={m.staff_events_id_vendors_decline_2_title({
 											businessName: row.businessName
 										})}
-										successToast={m.staff_events_id_vendors_declined_vendor_told()}
+										successToast={m.staff_events_id_vendors_declined_vendor_told_toast()}
 										variant="ghost"
 										size="sm"
 									>
@@ -360,8 +362,8 @@
 											<FormField
 												field={decideFields.message}
 												type="textarea"
-												label={m.staff_events_id_vendors_message_vendor()}
-												description={m.staff_events_id_vendors_sent_by_email_their_inbox_2()}
+												label={m.staff_events_id_vendors_message_vendor_label()}
+												description={m.staff_events_id_vendors_sent_by_email_their_inbox_2_body()}
 												value={declineMessage(row.businessName)}
 											/>
 										{/snippet}
@@ -370,12 +372,12 @@
 								{#if row.status !== 'withdrawn' && row.status !== 'no_show'}
 									<Action
 										action={withdrawVendorForm.for(row.id)}
-										label={m.staff_events_id_vendors_mark_withdrawn()}
+										label={m.staff_events_id_vendors_mark_withdrawn_label()}
 										iconOnly
-										modalTitle={m.staff_events_id_vendors_pulled_out({
+										modalTitle={m.staff_events_id_vendors_pulled_out_title({
 											businessName: row.businessName
 										})}
-										successToast={m.staff_events_id_vendors_marked_withdrawn()}
+										successToast={m.staff_events_id_vendors_marked_withdrawn_toast()}
 										variant="ghost"
 										size="sm"
 									>
@@ -383,7 +385,7 @@
 										{#snippet form()}
 											<input {...withdrawFields.vendorId.as('hidden', row.id)} />
 											<p>
-												{m.staff_events_id_vendors_when_vendor_says_they_can()}
+												{m.staff_events_id_vendors_when_vendor_says_they_can_text()}
 											</p>
 										{/snippet}
 									</Action>

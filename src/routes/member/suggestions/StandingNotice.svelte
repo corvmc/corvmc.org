@@ -21,10 +21,10 @@
 	     reasonably conclude the site was broken, or that they'd been shadowbanned. -->
 	<Alert type="warning">
 		<p>
-			{m.member_suggestions_standing_notice_suggestions_go_staff_look()}
+			{m.member_suggestions_standing_notice_suggestions_go_staff_look_text()}
 			{#if standing.reason}
 				<ParaglideMessage
-					message={m.member_suggestions_standing_notice_staff_s_note}
+					message={m.member_suggestions_standing_notice_staff_s_note_text}
 					inputs={{ reason: standing.reason }}
 					>{#snippet span({ children })}<span class="italic">{@render children?.()}</span
 						>{/snippet}</ParaglideMessage

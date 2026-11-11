@@ -126,7 +126,7 @@
 			{:else}
 				<IconSend size={16} />
 			{/if}
-			{m.inbox_reply()}
+			{m.inbox_reply_label()}
 		</Button>
 	{/if}
 
@@ -142,7 +142,7 @@
 			{:else}
 				<IconUser size={16} />
 			{/if}
-			{m.inbox_disposition_bar_assign()}
+			{m.inbox_disposition_bar_assign_label()}
 		</Button>
 	{/if}
 
@@ -166,7 +166,7 @@
 					{:else}
 						<IconAlarmSnooze size={16} />
 					{/if}
-					{m.inbox_disposition_bar_snooze()}
+					{m.inbox_disposition_bar_snooze_label()}
 				</Button>
 			{/snippet}
 		</SnoozeMenu>
@@ -185,10 +185,10 @@
 		>
 			<IconRotate size={16} />
 			{status === 'snoozed'
-				? m.inbox_disposition_bar_unsnooze()
+				? m.inbox_disposition_bar_unsnooze_label()
 				: awaiting
-					? m.inbox_disposition_bar_needs_reply()
-					: m.inbox_disposition_bar_reopen()}
+					? m.inbox_disposition_bar_needs_reply_label()
+					: m.inbox_disposition_bar_reopen_label()}
 		</Button>
 	{/if}
 
@@ -206,7 +206,7 @@
 			{:else}
 				<IconCheck size={16} />
 			{/if}
-			{m.inbox_disposition_bar_resolve()}
+			{m.inbox_disposition_bar_resolve_label()}
 		</Button>
 	{/if}
 </div>

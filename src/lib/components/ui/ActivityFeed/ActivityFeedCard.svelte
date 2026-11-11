@@ -17,7 +17,7 @@
 	 * a write can refresh it; "Show older" asks for a longer page.
 	 */
 	let {
-		title = m.ui_activity(),
+		title = m.ui_activity_title(),
 		query,
 		toRow,
 		empty,
@@ -55,7 +55,7 @@
 
 		{#snippet failed(error, reset)}
 			<Alert type="warning" reset={() => retryQuery(query(limit), reset)}>
-				{m.ui_feed_load_failed({ title: title.toLowerCase(), error: errorMessage(error) })}
+				{m.ui_feed_load_failed_body({ title: title.toLowerCase(), error: errorMessage(error) })}
 			</Alert>
 		{/snippet}
 	</svelte:boundary>

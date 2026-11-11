@@ -166,7 +166,7 @@
 						<Alert type="info" class="text-sm">
 							<span
 								><ParaglideMessage
-									message={m.public_login_invited_join_create_account_get}
+									message={m.public_login_invited_join_create_account_get_body}
 									inputs={{ inviterName: inviteMeta.inviterName, groupName: inviteMeta.groupName }}
 									>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 										>{/snippet}</ParaglideMessage
@@ -179,7 +179,7 @@
 						<Alert type="info" class="text-sm">
 							<span
 								><ParaglideMessage
-									message={m.public_login_sign_create_free_account_ll}
+									message={m.public_login_sign_create_free_account_ll_body}
 									inputs={{ intent }}
 									>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 										>{/snippet}</ParaglideMessage
@@ -189,7 +189,9 @@
 					{/if}
 
 					<CardTitle size="lg" level={2} class="justify-center">
-						{mode === 'login' ? m.public_login_sign_account() : m.public_login_create_account_2()}
+						{mode === 'login'
+							? m.public_login_sign_account_title()
+							: m.public_login_create_account_2_title()}
 					</CardTitle>
 
 					{#if error}
@@ -200,18 +202,18 @@
 
 					<Form action={handleSubmit} class="flex flex-col gap-3">
 						{#if mode === 'register'}
-							<Field name="name" type="text" label={m.public_name()} />
+							<Field name="name" type="text" label={m.public_name_label()} />
 						{/if}
 						<Field
 							name="email"
 							type="email"
-							label={m.public_email()}
+							label={m.public_email_label()}
 							value={inviteMeta?.email ?? ''}
 						/>
 						<Field
 							name="password"
 							type={showPassword ? 'text' : 'password'}
-							label={m.public_login_password()}
+							label={m.public_login_password_label()}
 							minlength={mode === 'register' ? 8 : undefined}
 						>
 							{#snippet input(id)}
@@ -251,7 +253,9 @@
 							/>
 						{/if}
 						<SubmitButton
-							label={mode === 'login' ? m.public_sign() : m.public_login_create_account()}
+							label={mode === 'login'
+								? m.public_sign_label()
+								: m.public_login_create_account_label()}
 							variant="primary"
 							class="mt-1 w-full"
 						/>
@@ -260,7 +264,7 @@
 					{#if mode === 'login'}
 						<div class="text-center text-sm">
 							<a class="link" href={resolve('forgot-password')}
-								>{m.public_login_forgot_password()}</a
+								>{m.public_login_forgot_password_text()}</a
 							>
 						</div>
 					{/if}
@@ -269,8 +273,8 @@
 
 					<Button variant="ghost" size="sm" onclick={toggleMode}>
 						{mode === 'login'
-							? m.public_login_don_t_have_account_sign()
-							: m.public_login_already_have_account_sign()}
+							? m.public_login_don_t_have_account_sign_label()
+							: m.public_login_already_have_account_sign_label()}
 					</Button>
 				</CardBody>
 			</div>

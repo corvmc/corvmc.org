@@ -13,11 +13,11 @@
 
 <Action
 	action={adjustListingHold}
-	label={m.events_edit_hold_edit_hold()}
+	label={m.events_edit_hold_edit_hold_label()}
 	variant="ghost"
 	size="sm"
-	modalTitle={m.events_edit_hold_edit_hold()}
-	submitLabel={m.events_save()}
+	modalTitle={m.events_edit_hold_edit_hold_title()}
+	submitLabel={m.events_save_label()}
 	successToast={m.events_edit_hold_success_toast()}
 >
 	{#snippet form()}
@@ -27,14 +27,14 @@
 				<FormField
 					field={fields.startTime}
 					type="time"
-					label={m.events_edit_hold_hold_starts()}
+					label={m.events_edit_hold_hold_starts_label()}
 					value={toLocalTime(startsAt)}
 					required
 				/>
 				<FormField
 					field={fields.endTime}
 					type="time"
-					label={m.events_edit_hold_hold_ends()}
+					label={m.events_edit_hold_hold_ends_label()}
 					value={toLocalTime(endsAt)}
 					required
 				/>
@@ -42,11 +42,11 @@
 			<FormField
 				field={fields.overrideConflicts}
 				type="checkbox"
-				label={m.events_edit_hold_book_anyway()}
-				description={m.events_edit_hold_description()}
+				label={m.events_edit_hold_book_anyway_label()}
+				description={m.events_edit_hold_description_body()}
 			/>
 			<p class="text-muted">
-				{m.events_edit_hold_hold_moves_place_keeps_its()}
+				{m.events_edit_hold_hold_moves_place_keeps_its_text()}
 			</p>
 		</div>
 	{/snippet}

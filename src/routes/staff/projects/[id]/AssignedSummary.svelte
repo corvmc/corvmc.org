@@ -16,7 +16,7 @@
 	const openSlots = $derived(Math.max(0, task.capacity - task.people.length));
 	const lone = $derived(task.people.length === 1 ? task.people[0] : null);
 	const spoken = $derived(
-		m.staff_projects_id_assigned_summary_spoken({
+		m.staff_projects_id_assigned_summary_spoken_text({
 			filled: task.people.length,
 			capacity: task.capacity,
 			names:
@@ -24,12 +24,12 @@
 					? new Intl.ListFormat('en', { style: 'short', type: 'unit' }).format(
 							task.people.map((p) => p.name)
 						)
-					: m.staff_projects_id_assigned_summary_nobody(),
+					: m.staff_projects_id_assigned_summary_nobody_text(),
 			mode:
 				task.mode === 'open'
-					? m.staff_projects_id_assigned_summary_open()
+					? m.staff_projects_id_assigned_summary_open_text()
 					: task.mode === 'unassigned'
-						? m.staff_projects_id_assigned_summary_unassigned()
+						? m.staff_projects_id_assigned_summary_unassigned_text()
 						: ''
 		})
 	);
@@ -43,7 +43,7 @@
 		</Badge>
 	</span>
 {:else if task.people.length === 0 && task.capacity < 1}
-	<span class="text-muted">{m.staff_unassigned()}</span>
+	<span class="text-muted">{m.staff_unassigned_text()}</span>
 {:else}
 	<span class="flex min-w-0 items-center gap-2">
 		<span class="flex shrink-0 -space-x-1.5" aria-hidden="true" data-assigned-stack>

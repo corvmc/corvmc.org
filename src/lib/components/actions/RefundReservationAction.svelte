@@ -40,15 +40,15 @@
 
 <Action
 	{action}
-	label={m.actions_refund_reservation_refund()}
+	label={m.actions_refund_reservation_refund_label()}
 	modalTitle={m.actions_refund_reservation_modal_title()}
 	submitLabel={cancelling
-		? m.actions_refund_reservation_refund_cancel()
-		: m.actions_refund_reservation_refund()}
+		? m.actions_refund_reservation_refund_cancel_label()
+		: m.actions_refund_reservation_refund_label()}
 	submitVariant="error"
 	successToast={cancelling
-		? m.actions_refund_reservation_payment_refunded_reservation_canc()
-		: m.actions_refund_reservation_payment_refunded()}
+		? m.actions_refund_reservation_payment_refunded_reservation_canc_toast()
+		: m.actions_refund_reservation_payment_refunded_toast()}
 	{variant}
 	{size}
 	{outline}
@@ -62,14 +62,14 @@
 		{#if canCancel}
 			<FormField
 				type="checkbox"
-				label={m.actions_refund_reservation_cancellation()}
-				checkboxLabel={m.actions_refund_reservation_checkbox_label()}
+				label={m.actions_refund_reservation_cancellation_label()}
+				checkboxLabel={m.actions_refund_reservation_checkbox_label_checkbox()}
 				bind:value={alsoCancel}
 			/>
 		{/if}
 		{#if !cancelling}
 			<p class="text-sm" data-testid="refund-only-note">
-				{m.actions_refund_reservation_payment_refunded_booking_not_canc()}
+				{m.actions_refund_reservation_payment_refunded_booking_not_canc_text()}
 			</p>
 		{/if}
 	{/snippet}

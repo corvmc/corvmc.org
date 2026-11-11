@@ -181,12 +181,12 @@
 <div class="flex flex-wrap items-center gap-2">
 	<Action
 		action={addTask}
-		label={m.staff_projects_id_task_list_add_task()}
+		label={m.staff_projects_id_task_list_add_task_label()}
 		variant="primary"
 		size="sm"
-		modalTitle={m.staff_add_task()}
-		submitLabel={m.staff_projects_id_task_list_add_task()}
-		successToast={m.staff_projects_id_task_list_task_added()}
+		modalTitle={m.staff_add_task_title()}
+		submitLabel={m.staff_projects_id_task_list_add_task_label()}
+		successToast={m.staff_projects_id_task_list_task_added_toast()}
 	>
 		{#snippet icon()}<IconPlus size={16} />{/snippet}
 		{#snippet form()}
@@ -195,23 +195,23 @@
 			<Field
 				field={addTask.fields.title}
 				type="text"
-				label={m.staff_projects_id_task_list_title()}
+				label={m.staff_projects_id_task_list_title_label()}
 			/>
 		{/snippet}
 	</Action>
 	<Action
 		action={addSection}
-		label={m.staff_projects_id_task_list_add_section()}
+		label={m.staff_projects_id_task_list_add_section_label()}
 		variant="ghost"
 		size="sm"
 		class="depth-0 bare bare-hover"
-		modalTitle={m.staff_projects_id_task_list_add_section_2()}
-		submitLabel={m.staff_projects_id_task_list_add_section()}
-		successToast={m.staff_projects_id_task_list_section_added()}
+		modalTitle={m.staff_projects_id_task_list_add_section_2_title()}
+		submitLabel={m.staff_projects_id_task_list_add_section_label()}
+		successToast={m.staff_projects_id_task_list_section_added_toast()}
 	>
 		{#snippet form()}
 			<input {...addSection.fields.projectId.as('hidden', projectId)} />
-			<Field field={addSection.fields.name} type="text" label={m.staff_name()} />
+			<Field field={addSection.fields.name} type="text" label={m.staff_name_label()} />
 		{/snippet}
 	</Action>
 	<div class="ms-auto flex items-center gap-1">
@@ -219,8 +219,8 @@
 			<summary class="depth-0 bare bare-hover btn btn-ghost font-normal btn-sm">
 				<IconFilter size={16} />
 				{filter === 'all'
-					? m.staff_projects_id_task_list_filter()
-					: m.staff_projects_id_task_list_filter_2({ value: TASK_FILTER_LABELS[filter] })}
+					? m.staff_projects_id_task_list_filter_label()
+					: m.staff_projects_id_task_list_filter_2_label({ value: TASK_FILTER_LABELS[filter] })}
 			</summary>
 			<div class="dropdown-content dropdown-panel flex w-56 flex-col gap-1">
 				{#each TASK_FILTERS as key (key)}
@@ -248,8 +248,8 @@
 		>
 			{#if showDone}<IconEyeOff size={16} />{:else}<IconEye size={16} />{/if}
 			{showDone
-				? m.staff_projects_id_task_list_hide_done()
-				: m.staff_projects_id_task_list_show_done({
+				? m.staff_projects_id_task_list_hide_done_label()
+				: m.staff_projects_id_task_list_show_done_label({
 						value: hiddenDone > 0 ? ` (${hiddenDone})` : ''
 					})}
 		</Button>
@@ -258,23 +258,23 @@
 
 {#if list.tasks.length === 0 && list.sections.length === 0}
 	<EmptyState
-		title={m.staff_no_tasks_yet()}
-		description={m.staff_projects_id_task_list_description()}
+		title={m.staff_no_tasks_yet_title()}
+		description={m.staff_projects_id_task_list_description_body()}
 	/>
 {:else}
 	<!-- Inset from the left: the drag grips live in that gutter, shown on row hover or focus. -->
 	<Table zebra={false} packed={false} class="task-table">
 		{#snippet head()}
-			<th class="cell-primary">{m.staff_task()}</th>
-			<th class="col-support">{m.staff_role()}</th>
-			<th>{m.staff_assigned()}</th>
-			<th class="col-support">{m.staff_when()}</th>
-			<th class="col-support cell-num">{m.staff_cost()}</th>
+			<th class="cell-primary">{m.staff_task_label()}</th>
+			<th class="col-support">{m.staff_role_label()}</th>
+			<th>{m.staff_assigned_label()}</th>
+			<th class="col-support">{m.staff_when_label()}</th>
+			<th class="col-support cell-num">{m.staff_cost_label()}</th>
 		{/snippet}
 		{#each groups as g (g.section?.id ?? 'loose')}
 			{@const sid = g.section?.id ?? null}
 			{@const key = sid ?? 'loose'}
-			{@const name = g.section?.name ?? m.staff_no_section()}
+			{@const name = g.section?.name ?? m.staff_no_section_text()}
 			{@const expanded = !folded.has(key)}
 			<tr
 				class="section-row group {dropAt === `head:${sid}` ? 'drop-target' : ''}"
@@ -290,7 +290,9 @@
 								shape="square"
 								class="gutter-control depth-0 bare absolute right-full cursor-grab"
 								draggable="true"
-								aria-label={m.staff_projects_id_task_list_move_section_drag_press_up({ name })}
+								aria-label={m.staff_projects_id_task_list_move_section_drag_press_up_label({
+									name
+								})}
 								ondragstart={(e: DragEvent) => startDrag(e, { kind: 'section', id: sid! })}
 								ondragend={endDrag}
 								onkeydown={(e: KeyboardEvent) => sectionKey(e, sid!)}
@@ -304,7 +306,7 @@
 							shape="square"
 							class="depth-0 bare"
 							aria-expanded={expanded}
-							aria-label={m.staff_projects_id_task_list_section({
+							aria-label={m.staff_projects_id_task_list_section_label({
 								value: expanded ? 'Collapse' : 'Expand',
 								name
 							})}
@@ -347,7 +349,7 @@
 									shape="square"
 									class="gutter-control depth-0 bare absolute right-full cursor-grab"
 									draggable="true"
-									aria-label={m.staff_projects_id_task_list_move_drag_press_up_down({
+									aria-label={m.staff_projects_id_task_list_move_drag_press_up_down_label({
 										title: t.title
 									})}
 									ondragstart={(e: DragEvent) => startDrag(e, { kind: 'task', id: t.id })}
@@ -373,7 +375,7 @@
 													size="xs"
 													class="duties-toggle depth-0 bare me-2"
 													aria-expanded={unfolded.has(t.id)}
-													aria-label={m.staff_projects_id_task_list_duties({
+													aria-label={m.staff_projects_id_task_list_duties_label({
 														value: unfolded.has(t.id) ? 'Fold' : 'Unfold',
 														title: t.title
 													})}
@@ -384,7 +386,7 @@
 													{:else}
 														<IconChevronRight size={12} />
 													{/if}
-													{m.staff_projects_id_task_list_duties_2({
+													{m.staff_projects_id_task_list_duties_2_label({
 														done: t.duties.done,
 														total: t.duties.total
 													})}
@@ -393,10 +395,10 @@
 											{#if t.mode === 'contractor' && t.engagement && list.contractorMoney}
 												<a class="link" href={resolve(`staff/contractors/jobs/${t.engagement.id}`)}
 													>{t.engagement.invoiceRef
-														? m.staff_projects_id_task_list_invoice({
+														? m.staff_projects_id_task_list_invoice_text({
 																invoiceRef: t.engagement.invoiceRef
 															})
-														: m.staff_projects_id_task_list_contractor_job()}</a
+														: m.staff_projects_id_task_list_contractor_job_text()}</a
 												>
 											{/if}
 										</div>
@@ -405,7 +407,7 @@
 								<a
 									{href}
 									class="gutter-control flex shrink-0 items-center rounded-sm p-0.5 text-subtle hover:bg-base-300"
-									aria-label={m.staff_projects_id_task_list_open_details({ title: t.title })}
+									aria-label={m.staff_projects_id_task_list_open_details_label({ title: t.title })}
 									onclick={(e) => open(e, t.id)}
 								>
 									<IconChevronRight size={16} />
@@ -432,8 +434,8 @@
 					<tr class="detail-row">
 						<td colspan="5" class="ps-8 text-subtle">
 							{g.total > 0
-								? m.staff_projects_id_task_list_nothing_here_matches_filter()
-								: m.staff_projects_id_task_list_no_tasks_yet()}
+								? m.staff_projects_id_task_list_nothing_here_matches_filter_text()
+								: m.staff_projects_id_task_list_no_tasks_yet_text()}
 						</td>
 					</tr>
 				{/each}

@@ -92,15 +92,15 @@
 	{/snippet}
 	<Select
 		size="sm"
-		aria-label={m.staff_kind()}
+		aria-label={m.staff_kind_label()}
 		value={kind}
 		onchange={(e: Event) => pickKind((e.currentTarget as HTMLSelectElement).value as Kind)}
 	>
-		<option value="position">{m.staff_position()}</option>
-		<option value="capability">{m.staff_access_permission_holders_capability()}</option>
-		<option value="clearance">{m.staff_clearance()}</option>
+		<option value="position">{m.staff_position_label()}</option>
+		<option value="capability">{m.staff_access_permission_holders_capability_label()}</option>
+		<option value="clearance">{m.staff_clearance_label()}</option>
 	</Select>
-	<Select size="sm" aria-label={m.staff_access_permission_holders_which()} bind:value={key}>
+	<Select size="sm" aria-label={m.staff_access_permission_holders_which_label()} bind:value={key}>
 		{#if kind === 'position'}
 			{#each positionOrder as p (p)}
 				<option value={p}>{positionLabels[p]}</option>
@@ -116,7 +116,7 @@
 		{:else}
 			{#each certifications as c (c.id)}
 				<option value={c.id}
-					>{c.name}{c.isActive ? '' : m.staff_access_permission_holders_archived()}</option
+					>{c.name}{c.isActive ? '' : m.staff_access_permission_holders_archived_label()}</option
 				>
 			{/each}
 		{/if}
@@ -124,23 +124,23 @@
 	{#if kind === 'clearance'}
 		<Select
 			size="sm"
-			aria-label={m.staff_access_permission_holders_clearance_state()}
+			aria-label={m.staff_access_permission_holders_clearance_state_label()}
 			bind:value={clearanceState}
 		>
-			<option value="">{m.staff_access_permission_holders_every_state()}</option>
-			<option value="current">{m.staff_access_permission_holders_current()}</option>
-			<option value="lapsing">{m.staff_access_permission_holders_lapsing_30_days()}</option>
-			<option value="expiring">{m.staff_access_permission_holders_expiring()}</option>
-			<option value="expired">{m.staff_access_permission_holders_expired()}</option>
-			<option value="revoked">{m.staff_access_permission_holders_revoked()}</option>
+			<option value="">{m.staff_access_permission_holders_every_state_label()}</option>
+			<option value="current">{m.staff_access_permission_holders_current_label()}</option>
+			<option value="lapsing">{m.staff_access_permission_holders_lapsing_30_days_label()}</option>
+			<option value="expiring">{m.staff_access_permission_holders_expiring_label()}</option>
+			<option value="expired">{m.staff_access_permission_holders_expired_label()}</option>
+			<option value="revoked">{m.staff_access_permission_holders_revoked_label()}</option>
 		</Select>
 	{/if}
 </FilterBar>
 
 {#if !result}
 	<EmptyState
-		title={m.staff_access_permission_holders_nothing_pick()}
-		description={m.staff_access_permission_holders_there_no_clearances_catalog()}
+		title={m.staff_access_permission_holders_nothing_pick_title()}
+		description={m.staff_access_permission_holders_there_no_clearances_catalog_body()}
 	/>
 {:else if holders.current?.tag === `${kind}:${key}`}
 	{@const data = holders.current.data}
@@ -149,8 +149,8 @@
 		{@render count(rows, `${rows.length} of ${data.members.length} holding this position`)}
 		{#if rows.length === 0}
 			<EmptyState
-				title={m.staff_access_permission_holders_nobody()}
-				description={m.staff_access_permission_holders_no_one_holds_position()}
+				title={m.staff_access_permission_holders_nobody_title()}
+				description={m.staff_access_permission_holders_no_one_holds_position_body()}
 			/>
 		{:else}
 			<RosterTable {rows} personLabel={m.staff_access_permission_holders_person_label()} />
@@ -160,18 +160,18 @@
 		{@render count(rows, `${rows.length} of ${data.holders.length} holding this capability`)}
 		{#if rows.length === 0}
 			<EmptyState
-				title={m.staff_access_permission_holders_nobody()}
-				description={m.staff_access_permission_holders_no_position_committee_seat_c()}
+				title={m.staff_access_permission_holders_nobody_title()}
+				description={m.staff_access_permission_holders_no_position_committee_seat_c_body()}
 			/>
 		{:else}
 			<RosterTable {rows} personLabel={m.staff_access_permission_holders_person_label()}>
-				{#snippet columns()}<th>{m.staff_through()}</th>{/snippet}
+				{#snippet columns()}<th>{m.staff_through_label()}</th>{/snippet}
 				{#snippet cells(h)}<td class="cell-text">{h.sources.join(', ')}</td>{/snippet}
 			</RosterTable>
 		{/if}
 		{#if data.committees.length > 0}
 			<InfoCard
-				title={m.staff_access_permission_holders_committees_granting()}
+				title={m.staff_access_permission_holders_committees_granting_title()}
 				state={data.committees.length}
 			>
 				<ul class="space-y-1">
@@ -182,7 +182,7 @@
 								groupId={c.groupId}
 								name={c.name}
 								held={c.held}
-								label={m.staff_edit_grants()}
+								label={m.staff_edit_grants_label()}
 								onsuccess={refresh}
 							/>
 						</li>
@@ -192,11 +192,11 @@
 		{/if}
 		{#if data.roles.length > 0}
 			<InfoCard
-				title={m.staff_access_permission_holders_volunteer_roles_granting_per()}
+				title={m.staff_access_permission_holders_volunteer_roles_granting_per_title()}
 				state={data.roles.length}
 			>
 				<p class="text-muted">
-					{m.staff_access_permission_holders_held_only_by_confirmed_volun()}
+					{m.staff_access_permission_holders_held_only_by_confirmed_volun_text()}
 				</p>
 				<p>{data.roles.map((r) => r.name).join(', ')}</p>
 			</InfoCard>
@@ -210,20 +210,20 @@
 		{@render count(rows, `${rows.length} of ${data.clearances.length} on record`)}
 		{#if rows.length === 0}
 			<EmptyState
-				title={m.staff_access_permission_holders_nobody()}
-				description={m.staff_access_permission_holders_no_grant_clearance_matches()}
+				title={m.staff_access_permission_holders_nobody_title()}
+				description={m.staff_access_permission_holders_no_grant_clearance_matches_body()}
 			/>
 		{:else}
 			<RosterTable {rows} personLabel={m.staff_access_permission_holders_person_label()}>
 				{#snippet lead(c)}<StatusBadge status={c.state} />{/snippet}
 				{#snippet columns()}
-					<th class="col-support">{m.staff_access_permission_holders_granted()}</th>
-					<th>{m.staff_expires()}</th>
+					<th class="col-support">{m.staff_access_permission_holders_granted_label()}</th>
+					<th>{m.staff_expires_label()}</th>
 				{/snippet}
 				{#snippet cells(c)}
 					<td class="col-support whitespace-nowrap">{formatDateShortYear(c.grantedAt)}</td>
 					<td class="whitespace-nowrap">
-						{c.expiresAt ? formatDateShortYear(c.expiresAt) : m.staff_no_expiry()}
+						{c.expiresAt ? formatDateShortYear(c.expiresAt) : m.staff_no_expiry_text()}
 					</td>
 				{/snippet}
 				{#snippet actions(c)}

@@ -59,30 +59,30 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label={m.staff_status()}
+			aria-label={m.staff_status_label()}
 			value={statusFilter}
 			onchange={(e: Event) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">{m.staff_all_statuses()}</option>
+			<option value="">{m.staff_all_statuses_label()}</option>
 			{#each loanStatuses as s (s)}
 				<option value={s}>{titleCase(s)}</option>
 			{/each}
 		</Select>
 	</FilterBar>
 
-	<DataList {result} empty={m.staff_inventory_loans_empty()} onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_inventory_loans_empty_body()} onpage={(p) => (page = p)}>
 		{#snippet children(loans)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_inventory_loans_loan()}</th>
-					<th>{m.staff_member()}</th>
-					<th class="col-support whitespace-nowrap">{m.staff_due()}</th>
-					<th class="col-extra whitespace-nowrap">{m.staff_inventory_loans_requested()}</th>
-					<th class="col-support cell-num">{m.staff_inventory_loans_charge()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_inventory_loans_loan_label()}</th>
+					<th>{m.staff_member_label()}</th>
+					<th class="col-support whitespace-nowrap">{m.staff_due_label()}</th>
+					<th class="col-extra whitespace-nowrap">{m.staff_inventory_loans_requested_label()}</th>
+					<th class="col-support cell-num">{m.staff_inventory_loans_charge_label()}</th>
 				{/snippet}
 
 				{#each loans as l (l.id)}
@@ -92,7 +92,7 @@
 							<div class="flex w-max items-center gap-1">
 								<StatusBadge status={l.status} label />
 								{#if l.isOverdue}
-									<Badge variant="error" size="xs">{m.staff_overdue()}</Badge>
+									<Badge variant="error" size="xs">{m.staff_overdue_label()}</Badge>
 								{/if}
 							</div>
 						</td>

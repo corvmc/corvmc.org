@@ -119,7 +119,7 @@
 		title={ready ? undefined : m.member_membership_setup_element_title()}
 	>
 		{saving
-			? m.member_membership_setup_element_saving()
-			: m.member_membership_setup_element_save_card()}
+			? m.member_membership_setup_element_saving_label()
+			: m.member_membership_setup_element_save_card_label()}
 	</Button>
 </div>

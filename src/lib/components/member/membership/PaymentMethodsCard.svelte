@@ -63,20 +63,24 @@
 			</div>
 			<div>
 				<h3 class="text-xl font-semibold">
-					{m.member_membership_payment_methods_card_payment_methods()}
+					{m.member_membership_payment_methods_card_payment_methods_title()}
 				</h3>
-				<p class="text-muted">{m.member_membership_payment_methods_card_card_contribution_bil()}</p>
+				<p class="text-muted">
+					{m.member_membership_payment_methods_card_card_contribution_bil_text()}
+				</p>
 			</div>
 		</div>
 
 		{#if !available}
 			<div class="mt-4">
 				<Alert type="warning">
-					{m.member_membership_payment_methods_card_we_couldn_t_reach_our()}
+					{m.member_membership_payment_methods_card_we_couldn_t_reach_our_body()}
 				</Alert>
 			</div>
 		{:else if cards.length === 0}
-			<p class="mt-4 text-muted">{m.member_membership_payment_methods_card_no_card_saved_yet()}</p>
+			<p class="mt-4 text-muted">
+				{m.member_membership_payment_methods_card_no_card_saved_yet_text()}
+			</p>
 		{:else}
 			<ul class="mt-4 divide-y divide-base-300">
 				{#each cards as card (card.id)}
@@ -84,12 +88,14 @@
 						<span class="font-medium">{brandName(card.brand)}</span>
 						<span class="text-muted tabular-nums">•••• {card.last4}</span>
 						<span class="text-subtle text-sm tabular-nums">
-							{m.member_membership_payment_methods_card_expires({
+							{m.member_membership_payment_methods_card_expires_text({
 								expiry: expiry(card.expMonth, card.expYear)
 							})}
 						</span>
 						{#if card.isDefault}
-							<Badge variant="success">{m.member_membership_payment_methods_card_default()}</Badge>
+							<Badge variant="success"
+								>{m.member_membership_payment_methods_card_default_label()}</Badge
+							>
 						{/if}
 
 						<div class="ms-auto flex gap-2">
@@ -98,12 +104,14 @@
 									action={async () => {
 										await makeDefaultCard({ paymentMethodId: card.id });
 									}}
-									label={m.member_membership_payment_methods_card_make_default()}
+									label={m.member_membership_payment_methods_card_make_default_label()}
 									variant="default"
 									size="sm"
 									outline
 									onsuccess={() =>
-										toast.success(m.member_membership_payment_methods_card_default_card_updated())}
+										toast.success(
+											m.member_membership_payment_methods_card_default_card_updated_toast()
+										)}
 									onfailure={(err) => toast.error(failureMessage(err))}
 								/>
 							{/if}
@@ -111,14 +119,14 @@
 								action={async () => {
 									await forgetCard({ paymentMethodId: card.id });
 								}}
-								label={m.member_membership_payment_methods_card_remove()}
+								label={m.member_membership_payment_methods_card_remove_label()}
 								variant="error"
 								size="sm"
 								outline
 								modalTitle={m.member_membership_payment_methods_card_modal_title()}
-								confirm={m.member_membership_payment_methods_card_confirm()}
+								confirm={m.member_membership_payment_methods_card_confirm_body()}
 								onsuccess={() =>
-									toast.success(m.member_membership_payment_methods_card_card_removed())}
+									toast.success(m.member_membership_payment_methods_card_card_removed_toast())}
 								onfailure={(err) => toast.error(failureMessage(err))}
 							/>
 						</div>
@@ -130,8 +138,8 @@
 		<div class="mt-4">
 			<Button variant="default" size="sm" outline onclick={() => (addOpen = true)}>
 				{cards.length === 0
-					? m.member_membership_payment_methods_card_add_card()
-					: m.member_membership_payment_methods_card_add_another_card()}
+					? m.member_membership_payment_methods_card_add_card_label()
+					: m.member_membership_payment_methods_card_add_another_card_label()}
 			</Button>
 		</div>
 	</CardBody>

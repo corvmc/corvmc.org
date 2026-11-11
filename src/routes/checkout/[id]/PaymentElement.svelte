@@ -171,7 +171,8 @@
 
 {#if savedCards.length > 0}
 	<fieldset class="mb-4 space-y-2">
-		<legend class="mb-2 font-medium">{m.public_checkout_id_payment_element_pay_with()}</legend>
+		<legend class="mb-2 font-medium">{m.public_checkout_id_payment_element_pay_with_title()}</legend
+		>
 		{#each savedCards as saved (saved.id)}
 			<label class="flex cursor-pointer items-center gap-3 rounded-box border border-base-300 p-3">
 				<input
@@ -184,7 +185,7 @@
 				/>
 				<span>{describe(saved)}</span>
 				<span class="text-muted text-sm tabular-nums">
-					{m.public_checkout_id_payment_element_expires({
+					{m.public_checkout_id_payment_element_expires_label({
 						padStart: String(saved.card.expMonth).padStart(2, '0'),
 						slice: String(saved.card.expYear).slice(-2)
 					})}
@@ -199,7 +200,7 @@
 				checked={chosenCard === null}
 				onchange={() => (chosenCard = null)}
 			/>
-			<span>{m.public_checkout_id_payment_element_use_different_payment_met()}</span>
+			<span>{m.public_checkout_id_payment_element_use_different_payment_met_label()}</span>
 		</label>
 	</fieldset>
 {/if}
@@ -216,7 +217,7 @@
 		title={ready ? undefined : m.public_checkout_id_payment_element_title()}
 	>
 		{confirming
-			? m.public_checkout_id_payment_element_paying()
-			: m.public_checkout_id_payment_element_pay({ total })}
+			? m.public_checkout_id_payment_element_paying_label()
+			: m.public_checkout_id_payment_element_pay_label({ total })}
 	</Button>
 </div>

@@ -34,7 +34,7 @@
 		<MemberRecord {id} bind:tab variant="panel">
 			{#snippet actions()}
 				<Button {href} variant="ghost" size="sm"
-					>{m.staff_members_id_member_record_panel_open_record()}</Button
+					>{m.staff_members_id_member_record_panel_open_record_label()}</Button
 				>
 			{/snippet}
 		</MemberRecord>
@@ -44,7 +44,7 @@
 		{/snippet}
 		{#snippet failed(_error, reset)}
 			<Alert type="warning" reset={() => retryQuery(getUserPage(id), reset)}>
-				{m.staff_members_id_member_record_panel_record_didn_t_load()}
+				{m.staff_members_id_member_record_panel_record_didn_t_load_body()}
 			</Alert>
 		{/snippet}
 	</svelte:boundary>

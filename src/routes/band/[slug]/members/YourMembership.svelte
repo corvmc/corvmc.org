@@ -65,7 +65,7 @@
 			<Form
 				remote={updateMyBandMembership}
 				guard
-				successToast={m.band_saved()}
+				successToast={m.band_saved_toast()}
 				onsuccess={onchanged}
 				class="space-y-4"
 			>
@@ -75,24 +75,24 @@
 					<FormField
 						field={fields.alias}
 						type="text"
-						label={m.band_slug_members_your_membership_stage_name()}
+						label={m.band_slug_members_your_membership_stage_name_label()}
 						value={me.alias ?? ''}
 						maxlength="100"
 						placeholder={me.member.title}
-						description={m.band_slug_members_your_membership_how_re_credited_band_s()}
+						description={m.band_slug_members_your_membership_how_re_credited_band_s_body()}
 					/>
 					<FormField
 						field={fields.position}
 						type="text"
-						label={m.band_instrument_role()}
+						label={m.band_instrument_role_label()}
 						value={me.position ?? ''}
 						maxlength="100"
-						placeholder={m.band_e_g_bass()}
-						description={m.band_slug_members_your_membership_what_play_band_admins_can()}
+						placeholder={m.band_e_g_bass_placeholder()}
+						description={m.band_slug_members_your_membership_what_play_band_admins_can_body()}
 					/>
 				</div>
 				<div class="flex justify-end">
-					<SubmitButton label={m.band_save()} />
+					<SubmitButton label={m.band_save_label()} />
 				</div>
 			</Form>
 
@@ -103,14 +103,14 @@
 					     and leaving them to guess. -->
 					<Alert type="info">
 						<ParaglideMessage
-							message={m.band_slug_members_your_membership_as_owner_can_t_leave}
+							message={m.band_slug_members_your_membership_as_owner_can_t_leave_body}
 							inputs={{ bandName }}
 							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 								>{/snippet}</ParaglideMessage
 						>
 						{#snippet action()}
 							<Button variant="ghost" size="sm" onclick={ontransfer}
-								>{m.band_slug_members_your_membership_transfer_ownership()}</Button
+								>{m.band_slug_members_your_membership_transfer_ownership_label()}</Button
 							>
 						{/snippet}
 					</Alert>
@@ -120,14 +120,14 @@
 					     leaves can ride the submission without losing the prompt. -->
 					<Action
 						action={leave}
-						label={m.band_slug_members_your_membership_leave_band()}
+						label={m.band_slug_members_your_membership_leave_band_label()}
 						variant="error"
 						size="sm"
 						outline
-						modalTitle={m.band_slug_members_your_membership_leave_band()}
-						submitLabel={m.band_slug_members_your_membership_leave_band()}
-						confirm={m.band_slug_members_your_membership_confirm({ bandName })}
-						successToast={m.band_slug_members_your_membership_have_left_band()}
+						modalTitle={m.band_slug_members_your_membership_leave_band_title()}
+						submitLabel={m.band_slug_members_your_membership_leave_band_label()}
+						confirm={m.band_slug_members_your_membership_confirm_body({ bandName })}
+						successToast={m.band_slug_members_your_membership_have_left_band_toast()}
 						onsuccess={() => goto(resolve('member/bands'))}
 					>
 						{#snippet form()}

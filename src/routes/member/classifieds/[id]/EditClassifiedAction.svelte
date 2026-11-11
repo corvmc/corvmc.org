@@ -28,10 +28,10 @@
 
 <Action
 	action={editClassified}
-	label={m.member_edit()}
+	label={m.member_edit_label()}
 	modalTitle={m.member_classifieds_id_edit_classified_modal_title()}
-	submitLabel={m.member_save()}
-	successToast={m.member_saved()}
+	submitLabel={m.member_save_label()}
+	successToast={m.member_saved_toast()}
 	variant="ghost"
 	size="sm"
 	{onsuccess}

@@ -96,8 +96,8 @@
 </script>
 
 <PageHeader
-	title={msg.staff_reports()}
-	documentTitle={msg.staff_reports_volunteering_volunteering()}
+	title={msg.staff_reports_title()}
+	documentTitle={msg.staff_reports_volunteering_volunteering_title()}
 >
 	<StaffViews views={reportViews} active="volunteering" collapse />
 </PageHeader>
@@ -119,7 +119,7 @@
 			-->
 			<Button href={exportHref} rel="external" download>
 				<IconDownload size={18} />
-				{msg.staff_export_csv()}
+				{msg.staff_export_csv_label()}
 			</Button>
 		{/snippet}
 	</DateRangeFilter>
@@ -129,11 +129,11 @@
 		     is the number that has to hold up to a funder. -->
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 			<StatCard
-				title={msg.staff_approved_hours()}
+				title={msg.staff_approved_hours_title()}
 				value={formatVolunteerHours(r.totals.totalMinutes)}
 			/>
-			<StatCard title={msg.staff_volunteers()} value={r.totals.volunteerCount} />
-			<StatCard title={msg.staff_reports_volunteering_logs()} value={r.totals.logCount} />
+			<StatCard title={msg.staff_volunteers_title()} value={r.totals.volunteerCount} />
+			<StatCard title={msg.staff_reports_volunteering_logs_title()} value={r.totals.logCount} />
 			<!--
 				Not an average. Everything else on this page is approved-only by
 				design, so without this the report cannot say how much work is still
@@ -141,7 +141,7 @@
 				long" are different problems with different fixes.
 			-->
 			{#await stillInReview then pending}
-				<StatCard title={msg.staff_reports_volunteering_still_review()} value={pending} />
+				<StatCard title={msg.staff_reports_volunteering_still_review_title()} value={pending} />
 			{:catch}
 				<!-- The `report` block around this says the page's query failed. -->
 			{/await}
@@ -153,16 +153,16 @@
 			the grant reader and the accountant alike. The copy under them says so
 			rather than trusting the layout to.
 		-->
-		<InfoCard title={msg.staff_reports_volunteering_what_time_was_worth()}>
+		<InfoCard title={msg.staff_reports_volunteering_what_time_was_worth_title()}>
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 				<div>
 					<StatCard
 						bare
-						title={msg.staff_impact_value()}
+						title={msg.staff_impact_value_title()}
 						value={formatCents(r.contributed.impactValueCents)}
 					/>
 					<p class="mt-1 text-subtle text-xs">
-						{msg.staff_reports_volunteering_every_approved_hour_at_hr({
+						{msg.staff_reports_volunteering_every_approved_hour_at_hr_text({
 							formatCents: formatCents(r.contributed.rateCents)
 						})}
 					</p>
@@ -170,22 +170,22 @@
 				<div>
 					<StatCard
 						bare
-						title={msg.staff_reports_volunteering_contributed_services()}
+						title={msg.staff_reports_volunteering_contributed_services_title()}
 						value={formatCents(r.contributed.recognizableServicesCents)}
 					/>
 					<p class="mt-1 text-subtle text-xs">
-						{msg.staff_reports_volunteering_specialized_hours_only_each_at()}
+						{msg.staff_reports_volunteering_specialized_hours_only_each_at_text()}
 					</p>
 				</div>
 			</div>
 			<p class="mt-3 text-subtle text-sm">
-				{msg.staff_reports_volunteering_these_two_answers_two_different({
+				{msg.staff_reports_volunteering_these_two_answers_two_different_text({
 					rateSource: r.contributed.rateSource
 				})}
 			</p>
 			{#if r.contributed.unpricedSpecializedMinutes > 0}
 				<p class="mt-2 text-sm text-warning">
-					{msg.staff_reports_volunteering_specialized_time_sits_role_with({
+					{msg.staff_reports_volunteering_specialized_time_sits_role_with_text({
 						formatVolunteerHours: formatVolunteerHours(r.contributed.unpricedSpecializedMinutes)
 					})}
 				</p>
@@ -197,12 +197,12 @@
 				<!-- Only when something named a program. Hours given to CMC at large
 				     are the rest of this page, so a "no program" row would be a
 				     restatement of the total under a confusing label. -->
-				<InfoCard title={msg.staff_reports_volunteering_hours_by_committee_club()}>
+				<InfoCard title={msg.staff_reports_volunteering_hours_by_committee_club_title()}>
 					<Table>
 						{#snippet head()}
-							<th>{msg.staff_reports_volunteering_program()}</th>
-							<th class="text-right">{msg.staff_reports_volunteering_hours()}</th>
-							<th class="text-right">{msg.staff_people()}</th>
+							<th>{msg.staff_reports_volunteering_program_label()}</th>
+							<th class="text-right">{msg.staff_reports_volunteering_hours_label()}</th>
+							<th class="text-right">{msg.staff_people_label()}</th>
 						{/snippet}
 						{#each groups as g (g.groupId)}
 							<tr>
@@ -218,9 +218,9 @@
 			<!-- The `report` block around this says the page's query failed. -->
 		{/await}
 
-		<InfoCard title={msg.staff_reports_volunteering_hours_by_role()}>
+		<InfoCard title={msg.staff_reports_volunteering_hours_by_role_title()}>
 			{#if r.byRole.length === 0}
-				<EmptyState description={msg.staff_reports_volunteering_description()} />
+				<EmptyState description={msg.staff_reports_volunteering_description_body()} />
 			{:else}
 				<!--
 					A bar list rather than a table: the question this answers is "where
@@ -235,13 +235,13 @@
 							<div class="mb-1 flex items-baseline justify-between gap-3 text-sm">
 								<span class="truncate">
 									{row.roleName}{#if !row.roleIsActive}<span class="ml-1 text-subtle"
-											>{msg.staff_reports_volunteering_archived()}</span
+											>{msg.staff_reports_volunteering_archived_text()}</span
 										>{/if}{#if row.isSpecializedSkill}<Badge
 											class="ml-2"
 											variant={row.marketRateCents === null ? 'warning' : 'outline'}
 											>{row.marketRateCents === null
-												? msg.staff_reports_volunteering_specialized_unpriced()
-												: msg.staff_reports_volunteering_specialized_hr({
+												? msg.staff_reports_volunteering_specialized_unpriced_label()
+												: msg.staff_reports_volunteering_specialized_hr_label({
 														formatCents: formatCents(row.marketRateCents)
 													})}</Badge
 										>{/if}
@@ -258,21 +258,21 @@
 					{/each}
 				</ul>
 				<p class="mt-3 text-subtle text-xs">
-					{msg.staff_reports_volunteering_approved_logs_only()}
+					{msg.staff_reports_volunteering_approved_logs_only_text()}
 				</p>
 			{/if}
 		</InfoCard>
 
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-			<InfoCard title={msg.staff_reports_volunteering_by_month()}>
+			<InfoCard title={msg.staff_reports_volunteering_by_month_title()}>
 				{#if r.byMonth.length === 0}
-					<EmptyState description={msg.staff_reports_volunteering_description()} />
+					<EmptyState description={msg.staff_reports_volunteering_description_body()} />
 				{:else}
 					<Table>
 						{#snippet head()}
-							<th>{msg.staff_reports_volunteering_month()}</th>
-							<th class="cell-num">{msg.staff_reports_volunteering_hours()}</th>
-							<th class="col-support cell-num">{msg.staff_reports_volunteering_logs()}</th>
+							<th>{msg.staff_reports_volunteering_month_label()}</th>
+							<th class="cell-num">{msg.staff_reports_volunteering_hours_label()}</th>
+							<th class="col-support cell-num">{msg.staff_reports_volunteering_logs_label()}</th>
 						{/snippet}
 						{#each r.byMonth as row (row.month)}
 							<tr>
@@ -286,23 +286,23 @@
 			</InfoCard>
 		</div>
 	{:catch error}
-		<Alert type="error">{msg.ui_load_failed({ error: errorMessage(error) })}</Alert>
+		<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
 	{/await}
 
-	<InfoCard title={msg.staff_reports_volunteering_by_member()}>
+	<InfoCard title={msg.staff_reports_volunteering_by_member_title()}>
 		<DataList
 			result={byMember}
-			empty={msg.staff_reports_volunteering_empty()}
+			empty={msg.staff_reports_volunteering_empty_body()}
 			onpage={(p) => (pageNumber = p)}
 		>
 			{#snippet children(members)}
 				<Table>
 					{#snippet head()}
-						<th>{msg.staff_member()}</th>
-						<th class="cell-num">{msg.staff_reports_volunteering_hours()}</th>
-						<th class="col-support cell-num">{msg.staff_reports_volunteering_logs()}</th>
+						<th>{msg.staff_member_label()}</th>
+						<th class="cell-num">{msg.staff_reports_volunteering_hours_label()}</th>
+						<th class="col-support cell-num">{msg.staff_reports_volunteering_logs_label()}</th>
 						<th class="col-support whitespace-nowrap"
-							>{msg.staff_reports_volunteering_last_worked()}</th
+							>{msg.staff_reports_volunteering_last_worked_label()}</th
 						>
 					{/snippet}
 					{#each members as m (m.userId)}
@@ -328,13 +328,15 @@
 	-->
 	{#await feedbackByRole then rollup}
 		{#if rollup.length > 0}
-			<InfoCard title={msg.staff_reports_volunteering_how_shifts_going()}>
+			<InfoCard title={msg.staff_reports_volunteering_how_shifts_going_title()}>
 				<Table>
 					{#snippet head()}
-						<th>{msg.staff_role()}</th>
-						<th class="cell-num">{msg.staff_reports_volunteering_avg_rating()}</th>
-						<th class="col-support cell-num">{msg.staff_reports_volunteering_set_up_succeed()}</th>
-						<th class="col-support cell-num">{msg.staff_reports_volunteering_responses()}</th>
+						<th>{msg.staff_role_label()}</th>
+						<th class="cell-num">{msg.staff_reports_volunteering_avg_rating_label()}</th>
+						<th class="col-support cell-num"
+							>{msg.staff_reports_volunteering_set_up_succeed_label()}</th
+						>
+						<th class="col-support cell-num">{msg.staff_reports_volunteering_responses_label()}</th>
 					{/snippet}
 
 					{#each rollup as role (role.volunteerRoleId)}
@@ -360,6 +362,6 @@
 			</InfoCard>
 		{/if}
 	{:catch error}
-		<Alert type="error">{msg.ui_load_failed({ error: errorMessage(error) })}</Alert>
+		<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
 	{/await}
 </PageContent>

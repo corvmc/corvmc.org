@@ -17,7 +17,10 @@
 {#await result then { rows }}
 	{#if rows.length > 0}
 		<div class="flex h-full items-center justify-center">
-			<EmptyState title={m.member_messages_title()} description={m.member_messages_description()} />
+			<EmptyState
+				title={m.member_messages_title()}
+				description={m.member_messages_description_body()}
+			/>
 		</div>
 	{/if}
 {:catch}

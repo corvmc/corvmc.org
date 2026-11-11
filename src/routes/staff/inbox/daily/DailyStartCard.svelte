@@ -40,10 +40,16 @@
 	// apart from them rather than as a fourth row that breaks the sum.
 	const rows = $derived(
 		[
-			{ label: m.staff_inbox_daily_daily_start_card_unanswered_by(), count: scope.unanswered },
-			{ label: m.staff_inbox_daily_daily_start_card_they_replied_waiting(), count: scope.replied },
 			{
-				label: m.staff_inbox_daily_daily_start_card_snoozed_threads_came_back(),
+				label: m.staff_inbox_daily_daily_start_card_unanswered_by_label(),
+				count: scope.unanswered
+			},
+			{
+				label: m.staff_inbox_daily_daily_start_card_they_replied_waiting_label(),
+				count: scope.replied
+			},
+			{
+				label: m.staff_inbox_daily_daily_start_card_snoozed_threads_came_back_label(),
 				count: scope.returned
 			}
 		].filter((r) => r.count > 0)
@@ -54,12 +60,12 @@
 	<CardBody class="gap-5">
 		<div class="flex flex-col gap-1">
 			<h1 class="text-2xl font-bold">
-				{m.staff_inbox_daily_daily_start_card_daily_conversations({
+				{m.staff_inbox_daily_daily_start_card_daily_conversations_title({
 					length: scope.threadIds.length
 				})}
 			</h1>
 			<p class="text-muted">
-				{m.staff_inbox_daily_daily_start_card_one_at_time_every_thread()}
+				{m.staff_inbox_daily_daily_start_card_one_at_time_every_thread_text()}
 			</p>
 		</div>
 
@@ -74,7 +80,7 @@
 
 		{#if scope.longWaiting}
 			<p class="text-muted text-sm">
-				{m.staff_inbox_daily_daily_start_card_these_have_been_waiting_o({
+				{m.staff_inbox_daily_daily_start_card_these_have_been_waiting_o_text({
 					longWaiting: scope.longWaiting
 				})}
 			</p>
@@ -82,20 +88,20 @@
 
 		{#if alreadyDone}
 			<p class="text-subtle text-sm">
-				{m.staff_inbox_daily_daily_start_card_already_finished_daily_to()}
+				{m.staff_inbox_daily_daily_start_card_already_finished_daily_to_text()}
 			</p>
 		{/if}
 
 		<div class="flex flex-wrap items-center gap-3">
 			<Button variant="primary" onclick={onstart}>
 				<IconPlayerPlay size={18} />
-				{m.staff_start()}
+				{m.staff_start_label()}
 			</Button>
 			<span class="text-subtle text-sm"
-				>{m.staff_inbox_daily_daily_start_card_roughly_minutes({ minutes })}</span
+				>{m.staff_inbox_daily_daily_start_card_roughly_minutes_text({ minutes })}</span
 			>
 			<Button variant="ghost" size="sm" class="ml-auto" onclick={oncancel}
-				>{m.staff_inbox_daily_daily_start_card_not_now()}</Button
+				>{m.staff_inbox_daily_daily_start_card_not_now_label()}</Button
 			>
 		</div>
 	</CardBody>

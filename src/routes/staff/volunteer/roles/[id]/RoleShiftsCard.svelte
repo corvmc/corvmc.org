@@ -70,8 +70,8 @@
 					variant="ghost"
 					size="sm"
 					modalTitle={m.staff_volunteer_roles_id_role_shifts_card_modal_title({ name: role.name })}
-					submitLabel={m.staff_create()}
-					successToast={m.staff_shift_scheduled()}
+					submitLabel={m.staff_create_label()}
+					successToast={m.staff_shift_scheduled_toast()}
 					onsuccess={() => getShifts({ volunteerRoleId: role.id, from }).refresh()}
 				>
 					{#snippet form()}
@@ -90,13 +90,13 @@
 
 	{#await shifts then rows}
 		{#if rows.length === 0}
-			<EmptyState description={m.staff_volunteer_roles_id_role_shifts_card_description()} />
+			<EmptyState description={m.staff_volunteer_roles_id_role_shifts_card_description_body()} />
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_when()}</th>
-					<th class="col-support">{m.staff_event()}</th>
-					<th class="cell-num whitespace-nowrap">{m.staff_confirmed()}</th>
+					<th>{m.staff_when_label()}</th>
+					<th class="col-support">{m.staff_event_label()}</th>
+					<th class="cell-num whitespace-nowrap">{m.staff_confirmed_label()}</th>
 				{/snippet}
 
 				{#each rows as shift (shift.id)}
@@ -126,7 +126,7 @@
 								<Badge variant="warning" size="xs" class="ml-2">+{unconfirmed}</Badge>
 							{:else if short}
 								<Badge variant="warning" size="xs" class="ml-2"
-									>{m.staff_volunteer_roles_id_role_shifts_card_short()}</Badge
+									>{m.staff_volunteer_roles_id_role_shifts_card_short_label()}</Badge
 								>
 							{/if}
 						</td>
@@ -135,6 +135,6 @@
 			</Table>
 		{/if}
 	{:catch error}
-		<Alert type="error">{m.ui_load_failed({ error: errorMessage(error) })}</Alert>
+		<Alert type="error">{m.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
 	{/await}
 </InfoCard>

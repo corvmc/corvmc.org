@@ -10,8 +10,8 @@
 	const { fields } = addBandMember;
 
 	const ROLE_OPTIONS = [
-		{ value: 'member', label: m.actions_member() },
-		{ value: 'admin', label: m.actions_admin() }
+		{ value: 'member', label: m.actions_member_label() },
+		{ value: 'admin', label: m.actions_admin_label() }
 	];
 
 	let {
@@ -54,7 +54,7 @@
 
 <Action
 	action={addBandMember}
-	label={m.actions_invite_member_add_member()}
+	label={m.actions_invite_member_add_member_label()}
 	modalTitle={m.actions_invite_member_modal_title()}
 	canSubmit={!!userId}
 	successToast={m.actions_invite_member_success_toast()}
@@ -78,7 +78,7 @@
 						onclick={() => {
 							userId = '';
 							userName = '';
-						}}>{m.actions_invite_member_change()}</Button
+						}}>{m.actions_invite_member_change_label()}</Button
 					>
 				</div>
 			{:else}
@@ -88,7 +88,7 @@
 				     thing on screen when `userId` is still empty. -->
 				<FormField
 					field={addBandMember.fields.userId}
-					label={m.actions_invite_member_search_members()}
+					label={m.actions_invite_member_search_members_label()}
 				>
 					{#snippet input(id)}
 						<input
@@ -97,7 +97,7 @@
 							class="input w-full"
 							bind:value={query}
 							oninput={handleSearch}
-							placeholder={m.actions_invite_member_name_email()}
+							placeholder={m.actions_invite_member_name_email_placeholder()}
 						/>
 					{/snippet}
 				</FormField>
@@ -119,13 +119,13 @@
 			<FormField
 				field={fields.role}
 				type="select"
-				label={m.actions_role()}
+				label={m.actions_role_label()}
 				options={ROLE_OPTIONS}
 			/>
 			<FormField
 				field={fields.position}
-				label={m.actions_position_optional()}
-				placeholder={m.actions_invite_member_e_g_guitarist()}
+				label={m.actions_position_optional_label()}
+				placeholder={m.actions_invite_member_e_g_guitarist_placeholder()}
 			/>
 		</div>
 	{/snippet}

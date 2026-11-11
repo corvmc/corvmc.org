@@ -5,9 +5,9 @@
 
 	const totals = await getStaffCalendarTotals();
 	const stats = $derived([
-		{ title: m.staff_events_calendar_totals_week(), value: totals.thisWeek },
-		{ title: m.staff_events_calendar_totals_month(), value: totals.thisMonth },
-		{ title: m.staff_events_calendar_totals_needs_review(), value: totals.needsReview }
+		{ title: m.staff_events_calendar_totals_week_title(), value: totals.thisWeek },
+		{ title: m.staff_events_calendar_totals_month_title(), value: totals.thisMonth },
+		{ title: m.staff_events_calendar_totals_needs_review_title(), value: totals.needsReview }
 	]);
 </script>
 

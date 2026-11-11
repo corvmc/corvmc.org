@@ -43,7 +43,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.staff_events_id_inputs_input_list({ title: data.title })}</title>
+	<title>{m.staff_events_id_inputs_input_list_title({ title: data.title })}</title>
 	<style>
 		@media print {
 			.no-print {
@@ -73,33 +73,37 @@
      and `top-4` would cover the account menu. -->
 <div class="no-print fixed top-16 right-4 z-50 flex gap-2">
 	<Button variant="primary" size="sm" onclick={() => window.print()}
-		>{m.staff_events_id_inputs_print()}</Button
+		>{m.staff_events_id_inputs_print_label()}</Button
 	>
 	<Button href={exportHref} variant="ghost" size="sm" data-sveltekit-reload
-		>{m.staff_events_id_inputs_download_csv()}</Button
+		>{m.staff_events_id_inputs_download_csv_label()}</Button
 	>
-	<Button href={backHref} variant="ghost" size="sm">{m.staff_events_id_inputs_production()}</Button>
+	<Button href={backHref} variant="ghost" size="sm"
+		>{m.staff_events_id_inputs_production_label()}</Button
+	>
 </div>
 
 <div class="bill-page mx-auto max-w-3xl">
 	<header class="mb-6 border-b-2 border-gray-200 pb-4">
 		<h1 class="text-3xl font-bold">{data.title}</h1>
-		<p class="text-sm text-gray-600">{m.staff_events_id_inputs_input_list_night({ dateLabel })}</p>
+		<p class="text-sm text-gray-600">
+			{m.staff_events_id_inputs_input_list_night_text({ dateLabel })}
+		</p>
 		<dl class="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
 			<div>
-				<dt class="text-gray-500">{m.staff_channels()}</dt>
+				<dt class="text-gray-500">{m.staff_channels_label()}</dt>
 				<dd class="font-semibold">{data.channelCount}</dd>
 			</div>
 			<div>
-				<dt class="text-gray-500">{m.staff_events_id_inputs_if_repeats_shared()}</dt>
+				<dt class="text-gray-500">{m.staff_events_id_inputs_if_repeats_shared_label()}</dt>
 				<dd class="font-semibold">{data.distinctCount}</dd>
 			</div>
 			<div>
-				<dt class="text-gray-500">{m.staff_events_id_inputs_need_48v()}</dt>
+				<dt class="text-gray-500">{m.staff_events_id_inputs_need_48v_label()}</dt>
 				<dd class="font-semibold">{data.phantomCount}</dd>
 			</div>
 			<div>
-				<dt class="text-gray-500">{m.staff_events_id_inputs_desk_takes()}</dt>
+				<dt class="text-gray-500">{m.staff_events_id_inputs_desk_takes_label()}</dt>
 				<dd class="font-semibold">{data.consoleChannels || '—'}</dd>
 			</div>
 		</dl>
@@ -111,21 +115,21 @@
 	{#if overCapacity}
 		<p class="over-capacity mb-6">
 			<ParaglideMessage
-				message={m.staff_events_id_inputs_bill_asks_channels_desk_takes}
+				message={m.staff_events_id_inputs_bill_asks_channels_desk_takes_text}
 				inputs={{ channelCount: data.channelCount, consoleChannels: data.consoleChannels }}
 				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 					>{/snippet}</ParaglideMessage
 			>
 			{#if fitsIfShared}
 				<ParaglideMessage
-					message={m.staff_events_id_inputs_fits_at_if_every_repeated}
+					message={m.staff_events_id_inputs_fits_at_if_every_repeated_text}
 					inputs={{ distinctCount: data.distinctCount }}
 					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 						>{/snippet}</ParaglideMessage
 				>
 			{:else}
 				<ParaglideMessage
-					message={m.staff_events_id_inputs_sharing_every_repeated_source_still}
+					message={m.staff_events_id_inputs_sharing_every_repeated_source_still_text}
 					inputs={{ distinctCount: data.distinctCount }}
 					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 						>{/snippet}</ParaglideMessage
@@ -136,7 +140,7 @@
 
 	{#if silent.length}
 		<p class="mb-6 text-sm text-gray-600">
-			{m.staff_events_id_inputs_nothing_listed_by_sheet_cannot({
+			{m.staff_events_id_inputs_nothing_listed_by_sheet_cannot_text({
 				join: silent.map((a) => a.name).join(', ')
 			})}
 		</p>
@@ -146,19 +150,22 @@
 		<section class="bank mb-6">
 			{#if banks.length > 1}
 				<h2 class="section-label">
-					{m.staff_events_id_inputs_channels({ value: i * 8 + 1, value2: i * 8 + bank.length })}
+					{m.staff_events_id_inputs_channels_title({
+						value: i * 8 + 1,
+						value2: i * 8 + bank.length
+					})}
 				</h2>
 			{/if}
 			<table class="w-full text-sm">
 				<thead>
 					<tr class="head-row">
 						<th class="w-8 py-1">#</th>
-						<th class="py-1">{m.staff_source()}</th>
-						<th class="py-1">{m.staff_band()}</th>
-						<th class="py-1">{m.staff_events_id_inputs_via()}</th>
-						<th class="py-1">{m.staff_events_id_inputs_mic_di()}</th>
-						<th class="py-1">{m.staff_events_id_inputs_stand()}</th>
-						<th class="w-12 py-1">{m.staff_events_id_inputs_48v()}</th>
+						<th class="py-1">{m.staff_source_label()}</th>
+						<th class="py-1">{m.staff_band_label()}</th>
+						<th class="py-1">{m.staff_events_id_inputs_via_label()}</th>
+						<th class="py-1">{m.staff_events_id_inputs_mic_di_label()}</th>
+						<th class="py-1">{m.staff_events_id_inputs_stand_label()}</th>
+						<th class="w-12 py-1">{m.staff_events_id_inputs_48v_label()}</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -175,7 +182,7 @@
 								{channel.actName}
 								{#if channel.sharedWith.length}
 									<span class="block text-xs text-amber-700">
-										{m.staff_events_id_inputs_also({ join: channel.sharedWith.join(', ') })}
+										{m.staff_events_id_inputs_also_text({ join: channel.sharedWith.join(', ') })}
 									</span>
 								{/if}
 							</td>
@@ -192,7 +199,7 @@
 
 	{#if data.channels.length === 0}
 		<p class="text-sm text-gray-600">
-			{m.staff_events_id_inputs_no_band_bill_has_listed()}
+			{m.staff_events_id_inputs_no_band_bill_has_listed_text()}
 		</p>
 	{/if}
 </div>

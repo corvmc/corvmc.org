@@ -36,7 +36,7 @@
 		size="xs"
 		shape="square"
 		class="depth-0"
-		aria-label={m.staff_projects_id_task_check_control_what_waiting({ title: task.title })}
+		aria-label={m.staff_projects_id_task_check_control_what_waiting_label({ title: task.title })}
 		onclick={() => onopen(task.id)}
 	>
 		<TaskCheck {task} />
@@ -51,7 +51,7 @@
 			size="xs"
 			shape="square"
 			class="depth-0 bare"
-			aria-label={m.staff_projects_id_task_check_control_mark_not_done({ title: task.title })}
+			aria-label={m.staff_projects_id_task_check_control_mark_not_done_label({ title: task.title })}
 		>
 			<TaskCheck {task} />
 		</Button>
@@ -66,7 +66,7 @@
 			size="xs"
 			shape="square"
 			class="depth-0 bare"
-			aria-label={m.staff_projects_id_task_check_control_mark_done({ title: task.title })}
+			aria-label={m.staff_projects_id_task_check_control_mark_done_label({ title: task.title })}
 		>
 			<TaskCheck {task} />
 		</Button>

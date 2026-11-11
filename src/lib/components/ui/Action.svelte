@@ -34,7 +34,7 @@
 		icon,
 		iconOnly = false,
 		successLabel = m.ui_action_success_label(),
-		errorLabel = m.ui_error(),
+		errorLabel = m.ui_error_label(),
 		confirm,
 		modalTitle,
 		form: formSnippet,
@@ -178,7 +178,7 @@
 			await minDelay;
 			dialogOpen = false;
 			onsuccess?.(result);
-			toast.success(successToast ?? m.ui_action_succeeded({ label }));
+			toast.success(successToast ?? m.ui_action_succeeded_toast({ label }));
 			status = 'success';
 		} catch (err) {
 			await minDelay;
@@ -313,12 +313,12 @@
 			     that "Keep editing" gives back exactly what was typed. -->
 			{#if askingDiscard}
 				<div class="space-y-4" data-testid="discard-prompt">
-					<p class="py-4">{m.ui_unsaved_close_prompt()}</p>
+					<p class="py-4">{m.ui_unsaved_close_prompt_text()}</p>
 					<div class="flex justify-end gap-2">
 						<Button type="button" variant="default" onclick={() => (askingDiscard = false)}>
-							{m.ui_keep_editing()}
+							{m.ui_keep_editing_label()}
 						</Button>
-						<Button type="button" variant="error" onclick={discard}>{m.ui_discard()}</Button>
+						<Button type="button" variant="error" onclick={discard}>{m.ui_discard_label()}</Button>
 					</div>
 				</div>
 			{/if}
@@ -362,7 +362,9 @@
 		{:else if confirm}
 			<p class="py-4">{confirm}</p>
 			<div class="modal-action">
-				<Button type="button" variant="default" outline onclick={close}>{m.ui_dismiss()}</Button>
+				<Button type="button" variant="default" outline onclick={close}
+					>{m.ui_dismiss_label()}</Button
+				>
 				<Button type="button" variant="primary" onclick={run}>
 					{@render icon?.()}
 					{label}

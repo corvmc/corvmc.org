@@ -20,6 +20,6 @@
 	<!-- Archived roles stay listed when the whole set is shown: their logs are still in the
 	     table they filter. The suffix is what tells them apart. -->
 	<option value={r.id}
-		>{r.name}{activeOnly || r.isActive ? '' : m.volunteer_role_options_archived()}</option
+		>{r.name}{activeOnly || r.isActive ? '' : m.volunteer_role_options_archived_label()}</option
 	>
 {/each}

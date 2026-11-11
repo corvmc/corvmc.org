@@ -9,7 +9,7 @@
 
 	const { fields } = returnLoan;
 	const conditionOptions = [
-		{ value: '', label: m.actions_mark_returned_not_checked() },
+		{ value: '', label: m.actions_mark_returned_not_checked_label() },
 		...equipmentConditions.map((c) => ({ value: c, label: c }))
 	];
 
@@ -35,7 +35,7 @@
 <Action
 	action={returnLoan}
 	data-testid="mark-returned"
-	label={m.actions_mark_returned_mark_returned()}
+	label={m.actions_mark_returned_mark_returned_label()}
 	modalTitle={m.actions_mark_returned_modal_title()}
 	successToast={m.actions_mark_returned_success_toast()}
 	{variant}
@@ -54,25 +54,25 @@
 		<Field
 			field={fields.condition}
 			type="select"
-			label={m.actions_condition()}
+			label={m.actions_condition_label()}
 			options={conditionOptions}
 		/>
 		<Field
 			field={fields.flagNote}
 			type="textarea"
-			label={m.actions_mark_returned_something_wrong()}
+			label={m.actions_mark_returned_something_wrong_label()}
 		/>
 		<Field
 			field={fields.flagBlocksUse}
 			type="checkbox"
-			label={m.actions_mark_returned_out_service()}
+			label={m.actions_mark_returned_out_service_label()}
 			value={true}
-			checkboxLabel={m.actions_mark_returned_checkbox_label()}
+			checkboxLabel={m.actions_mark_returned_checkbox_label_checkbox()}
 		/>
 		<Field
 			field={fields.staffNotes}
 			type="textarea"
-			label={m.actions_mark_returned_staff_notes_optional()}
+			label={m.actions_mark_returned_staff_notes_optional_label()}
 		/>
 	{/snippet}
 </Action>

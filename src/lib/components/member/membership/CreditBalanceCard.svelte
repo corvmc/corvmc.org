@@ -35,16 +35,18 @@
 			</div>
 			<div>
 				<h3 class="text-xl font-semibold">
-					{m.member_membership_credit_balance_card_free_practice_hours()}
+					{m.member_membership_credit_balance_card_free_practice_hours_title()}
 				</h3>
-				<p class="text-muted">{m.member_membership_credit_balance_card_monthly_allocation()}</p>
+				<p class="text-muted">
+					{m.member_membership_credit_balance_card_monthly_allocation_text()}
+				</p>
 			</div>
 		</div>
 
 		<div class="mt-4 grid gap-4 sm:grid-cols-3">
 			<div class="rounded-lg bg-base-200/50 p-4 text-center">
 				<div class="text-3xl font-bold text-primary">{allocatedHours}</div>
-				<div class="text-muted">{m.member_membership_credit_balance_card_total_month()}</div>
+				<div class="text-muted">{m.member_membership_credit_balance_card_total_month_text()}</div>
 			</div>
 			<div class="rounded-lg bg-base-200/50 p-4 text-center">
 				<div
@@ -54,18 +56,18 @@
 				>
 					{remaining}
 				</div>
-				<div class="text-muted">{m.member_membership_credit_balance_card_remaining()}</div>
+				<div class="text-muted">{m.member_membership_credit_balance_card_remaining_text()}</div>
 			</div>
 			<div class="rounded-lg bg-base-200/50 p-4 text-center">
 				<div class="text-3xl font-bold">{usedHours}</div>
-				<div class="text-muted">{m.member_membership_credit_balance_card_used()}</div>
+				<div class="text-muted">{m.member_membership_credit_balance_card_used_text()}</div>
 			</div>
 		</div>
 
 		<div class="mt-4 rounded-lg bg-primary/5 p-3 text-center">
 			<p class="text-muted">
 				<ParaglideMessage
-					message={m.member_membership_credit_balance_card_hours_refresh}
+					message={m.member_membership_credit_balance_card_hours_refresh_text}
 					inputs={{ refreshDate }}
 					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 						>{/snippet}</ParaglideMessage
@@ -78,7 +80,7 @@
 				<IconCircleCheck size={20} class="mt-0.5 shrink-0 text-success" />
 				<span
 					><ParaglideMessage
-						message={m.member_membership_credit_balance_card_lock_regular_practice}
+						message={m.member_membership_credit_balance_card_lock_regular_practice_text}
 						inputs={{}}
 						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 							>{/snippet}</ParaglideMessage
@@ -89,7 +91,7 @@
 				<IconCircleCheck size={20} class="mt-0.5 shrink-0 text-success" />
 				<span
 					><ParaglideMessage
-						message={m.member_membership_credit_balance_card_when_last_minute_openi}
+						message={m.member_membership_credit_balance_card_when_last_minute_openi_text}
 						inputs={{}}
 						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 							>{/snippet}</ParaglideMessage

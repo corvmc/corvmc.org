@@ -23,12 +23,12 @@
 
 <Select
 	size="sm"
-	aria-label={m.staff_show()}
+	aria-label={m.staff_show_label()}
 	{value}
 	onchange={(e: Event) =>
 		onchange((e.currentTarget as HTMLSelectElement).value as InventoryListView | '')}
 >
-	<option value="">{m.staff_all_items()}</option>
+	<option value="">{m.staff_all_items_label()}</option>
 	{#each views as v (v)}
 		<option value={v}>{inventoryListViewMeta[v].label}</option>
 	{/each}

@@ -42,17 +42,17 @@
 	let allowOptIn = $derived(audienceData.allowOptIn);
 </script>
 
-<PageHeader subtitle={m.staff_audience()} title={audienceData.name}>
+<PageHeader subtitle={m.staff_audience_body()} title={audienceData.name}>
 	<!-- Not gated on `isBuiltIn`: `updateAudience` refuses a built-in's *slug*
 	     and its opt-in, and says in its own comment that "name and description
 	     are staff-editable copy". Before this there was no way to change either
 	     on any audience, built-in or not (#1074). -->
 	<Action
 		action={updateAudience}
-		label={m.staff_marketing_audiences_id_rename()}
+		label={m.staff_marketing_audiences_id_rename_label()}
 		modalTitle={m.staff_marketing_audiences_id_modal_title()}
-		submitLabel={m.staff_save()}
-		successToast={m.staff_marketing_audiences_id_audience_updated()}
+		submitLabel={m.staff_save_label()}
+		successToast={m.staff_marketing_audiences_id_audience_updated_toast()}
 		variant="ghost"
 		size="sm"
 	>
@@ -61,16 +61,16 @@
 			<FormField
 				field={fields.name}
 				type="text"
-				label={m.staff_name()}
+				label={m.staff_name_label()}
 				value={audienceData.name}
 				required
 			/>
 			<FormField
 				field={fields.description}
 				type="textarea"
-				label={m.staff_description()}
+				label={m.staff_description_label()}
 				value={audienceData.description ?? ''}
-				description={m.staff_marketing_audiences_id_what_list_staff_only_subscriber()}
+				description={m.staff_marketing_audiences_id_what_list_staff_only_subscriber_body()}
 			/>
 		{/snippet}
 	</Action>
@@ -83,26 +83,26 @@
 </PageHeader>
 <PageContent>
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
-		<InfoCard title={m.staff_details()}>
+		<InfoCard title={m.staff_details_title()}>
 			<DefinitionList>
-				<Fact label={m.staff_slug()} mono>{audienceData.slug}</Fact>
+				<Fact label={m.staff_slug_label()} mono>{audienceData.slug}</Fact>
 
-				<Fact label={m.staff_subscribers()}>
+				<Fact label={m.staff_subscribers_label()}>
 					{audienceData.subscriberCount}
 					{isBuiltIn
-						? m.staff_marketing_audiences_id_matching_members()
-						: m.staff_marketing_audiences_id_active()}
+						? m.staff_marketing_audiences_id_matching_members_text()
+						: m.staff_marketing_audiences_id_active_text()}
 				</Fact>
 
-				<Fact label={m.staff_opt()}>
+				<Fact label={m.staff_opt_label()}>
 					{#if isBuiltIn}
-						<Badge variant="info" size="xs">{m.staff_built()}</Badge>
+						<Badge variant="info" size="xs">{m.staff_built_label()}</Badge>
 					{:else}
-						{audienceData.allowOptIn ? m.staff_public() : m.staff_staff_only()}
+						{audienceData.allowOptIn ? m.staff_public_text() : m.staff_staff_only_text()}
 					{/if}
 				</Fact>
 
-				<Fact label={m.staff_created()}
+				<Fact label={m.staff_created_label()}
 					>{formatDateShortYear(new Date(audienceData.createdAt))}</Fact
 				>
 			</DefinitionList>
@@ -113,26 +113,26 @@
 
 			{#if isBuiltIn}
 				<p class="mt-3 text-muted">
-					{m.staff_marketing_audiences_id_membership_worked_out_from_memb()}
+					{m.staff_marketing_audiences_id_membership_worked_out_from_memb_text()}
 				</p>
 			{/if}
 
 			{#if audienceData.allowOptIn}
 				<div class="mt-3 rounded bg-base-200 p-2 text-xs">
-					<span class="opacity-60">{m.staff_marketing_audiences_id_signup_url()}</span>
+					<span class="opacity-60">{m.staff_marketing_audiences_id_signup_url_text()}</span>
 					<code class="ml-1">/subscribe/{audienceData.slug}</code>
 				</div>
 			{/if}
 		</InfoCard>
 
 		{#if !isBuiltIn}
-			<InfoCard title={m.staff_actions()}>
+			<InfoCard title={m.staff_actions_title()}>
 				<div class="space-y-3">
 					<BulkAddMembersAction audienceId={id} />
 
 					<Form
 						remote={updateAudience}
-						successToast={m.staff_marketing_audiences_id_opt_setting_updated()}
+						successToast={m.staff_marketing_audiences_id_opt_setting_updated_toast()}
 					>
 						<input {...fields.id.as('hidden', id)} />
 						<input {...fields.allowOptIn.as('hidden', allowOptIn)} />
@@ -145,7 +145,7 @@
 									(e.target as HTMLInputElement).form?.requestSubmit();
 								}}
 							/>
-							<span class="text-sm">{m.staff_marketing_audiences_id_allow_public_opt()}</span>
+							<span class="text-sm">{m.staff_marketing_audiences_id_allow_public_opt_label()}</span>
 						</label>
 					</Form>
 				</div>
@@ -161,34 +161,36 @@
 	<!-- Subscriber List -->
 	<InfoCard
 		title={isBuiltIn
-			? m.staff_marketing_audiences_id_matching_members_showing({
+			? m.staff_marketing_audiences_id_matching_members_showing_title({
 					length: subscribers.length,
 					subscriberCount: audienceData.subscriberCount
 				})
-			: m.staff_marketing_audiences_id_subscribers({
+			: m.staff_marketing_audiences_id_subscribers_title({
 					subscriberCount: audienceData.subscriberCount
 				})}
 	>
 		{#if subscribers.length === 0}
 			<EmptyState
 				description={isBuiltIn
-					? m.staff_marketing_audiences_id_no_members_currently_match()
-					: m.staff_marketing_audiences_id_no_subscribers_yet()}
+					? m.staff_marketing_audiences_id_no_members_currently_match_body()
+					: m.staff_marketing_audiences_id_no_subscribers_yet_body()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_marketing_audiences_id_subscriber()}</th>
+					<th>{m.staff_marketing_audiences_id_subscriber_label()}</th>
 					<!-- A built-in's preview already excludes opt-outs, so every row
 					     would read "Active". -->
 					{#if !isBuiltIn}
-						<th class="col-support w-px">{m.staff_status()}</th>
+						<th class="col-support w-px">{m.staff_status_label()}</th>
 					{/if}
 					<th class="col-extra whitespace-nowrap"
-						>{isBuiltIn ? m.staff_marketing_audiences_id_member_since() : m.staff_joined()}</th
+						>{isBuiltIn
+							? m.staff_marketing_audiences_id_member_since_label()
+							: m.staff_joined_label()}</th
 					>
 					{#if !isBuiltIn}
-						<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+						<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 					{/if}
 				{/snippet}
 				<!-- Keyed by email: a built-in's preview rows come from `user`, where a
@@ -207,8 +209,8 @@
 							<td class="col-support w-px">
 								<Badge variant={s.unsubscribedAt ? 'ghost' : 'success'} size="xs">
 									{s.unsubscribedAt
-										? m.staff_marketing_audiences_id_unsubscribed()
-										: m.staff_active()}
+										? m.staff_marketing_audiences_id_unsubscribed_label()
+										: m.staff_active_label()}
 								</Badge>
 							</td>
 						{/if}

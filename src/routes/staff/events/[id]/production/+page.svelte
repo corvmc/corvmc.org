@@ -192,12 +192,12 @@
 <PageHeader
 	width="3xl"
 	title={evt.title}
-	subtitle={m.staff_production()}
+	subtitle={m.staff_production_body()}
 	crumb="Production"
 	parent={{ label: evt.title, href: resolve('/staff/events/[id]', { id }) }}
 >
 	<Button href={resolve('/staff/events/[id]', { id })} variant="ghost"
-		>{m.staff_events_id_production_view_listing()}</Button
+		>{m.staff_events_id_production_view_listing_label()}</Button
 	>
 </PageHeader>
 <PageContent width="3xl">
@@ -207,14 +207,16 @@
 		<StatusBadge status={evt.status} />
 		<span>{fullDate(evt.startsAt)}</span>
 		<span>
-			{#if evt.doorsAt}{m.staff_events_id_production_doors({
+			{#if evt.doorsAt}{m.staff_events_id_production_doors_text({
 					formatTime: formatTime(evt.doorsAt)
 				})}{/if}
-			{m.staff_events_id_production_show({
+			{m.staff_events_id_production_show_text({
 				formatEventTimeRange: formatEventTimeRange(evt.startsAt, evt.endsAt)
 			})}
 		</span>
-		<span>{evt.venueName ?? evt.location ?? m.staff_events_id_production_practice_space()}</span>
+		<span
+			>{evt.venueName ?? evt.location ?? m.staff_events_id_production_practice_space_text()}</span
+		>
 	</p>
 
 	<div bind:this={tabBarEl}>
@@ -240,7 +242,7 @@
 			guide is not a production, and most of them never become one.
 		-->
 			{#if productionRecord}
-				<InfoCard title={m.staff_production()} testid="production-record">
+				<InfoCard title={m.staff_production_title()} testid="production-record">
 					{#snippet header(title)}
 						<div class="flex flex-wrap items-center justify-between gap-2">
 							<CardTitle>{title}</CardTitle>
@@ -261,35 +263,37 @@
 						<!-- `updatedAt` is not this date: it moves on any later write. -->
 						<p class="text-muted text-sm">
 							{productionRecord.closedByName
-								? m.staff_events_id_production_closed_by({
+								? m.staff_events_id_production_closed_by_text({
 										date: formatDateTime(productionRecord.closedAt),
 										name: productionRecord.closedByName
 									})
-								: m.staff_events_id_production_closed({
+								: m.staff_events_id_production_closed_text({
 										date: formatDateTime(productionRecord.closedAt)
 									})}
 						</p>
 					{/if}
 					{#if productionLocked}
 						<p class="text-muted text-sm">
-							{m.staff_events_id_production_show_so_read_only({ status: productionRecord.status })}
+							{m.staff_events_id_production_show_so_read_only_text({
+								status: productionRecord.status
+							})}
 						</p>
 					{/if}
 					<!-- A terminal show is the past. Disabled here for clarity; the server refuses
 					     the writes either way. -->
 					<fieldset disabled={productionLocked} class="contents">
 						<div class="flex flex-wrap items-center gap-2">
-							<span class="text-muted">{m.staff_events_id_production_producer()}</span>
+							<span class="text-muted">{m.staff_events_id_production_producer_text()}</span>
 							<!-- The person running the night, reachable. It was their name as
 						     a bare string. -->
 							{#if productionRecord.producer}
 								<EntityChip ref={productionRecord.producer} />
 							{:else}
-								<span class="font-medium">{m.staff_events_id_production_nobody_yet()}</span>
+								<span class="font-medium">{m.staff_events_id_production_nobody_yet_text()}</span>
 							{/if}
 							<Form
 								remote={setProductionProducer}
-								successToast={m.staff_events_id_production_producer_updated()}
+								successToast={m.staff_events_id_production_producer_updated_toast()}
 							>
 								<input {...producerFields.id.as('hidden', productionRecord.id)} />
 								<input {...producerFields.eventId.as('hidden', evt.id)} />
@@ -301,8 +305,8 @@
 								/>
 								<SubmitButton
 									label={productionRecord.producerUserId
-										? m.staff_events_id_production_hand_back()
-										: m.staff_events_id_production_i_am_producing()}
+										? m.staff_events_id_production_hand_back_label()
+										: m.staff_events_id_production_i_am_producing_label()}
 									variant="ghost"
 									size="xs"
 								/>
@@ -314,32 +318,34 @@
 					     it through the same pipeline as any other volunteer, so the
 					     handover carries confirmation and hours with it (#932). -->
 						<div class="flex flex-wrap items-center gap-2">
-							<span class="text-muted">{m.staff_events_id_production_host()}</span>
+							<span class="text-muted">{m.staff_events_id_production_host_text()}</span>
 							{#if hostShift && hostShift.hosts.length > 0}
 								{#each hostShift.hosts as host (host.signupId)}
 									<span class="font-medium">{host.name}</span>
 									<StatusBadge status={host.status} />
 								{/each}
 							{:else if hostShift}
-								<span class="font-medium">{m.staff_events_id_production_shift_open_nobody()}</span>
+								<span class="font-medium"
+									>{m.staff_events_id_production_shift_open_nobody_text()}</span
+								>
 								<a
 									class="link text-sm"
 									href={resolve(`staff/volunteer/shifts/${hostShift.workOrderId}`)}
 								>
-									{m.staff_events_id_production_find_somebody()}
+									{m.staff_events_id_production_find_somebody_text()}
 								</a>
 							{:else}
 								<!-- "No host yet", not "Nobody yet": the Producer line above
 							     already says that, and `productions.e2e.ts` reads it by
 							     text — two matches make its locator ambiguous. -->
-								<span class="font-medium">{m.staff_events_id_production_no_host_yet()}</span>
+								<span class="font-medium">{m.staff_events_id_production_no_host_yet_text()}</span>
 								<Form
 									remote={openHostShift}
-									successToast={m.staff_events_id_production_host_shift_opened()}
+									successToast={m.staff_events_id_production_host_shift_opened_toast()}
 								>
 									<input {...openHostShift.fields.eventId.as('hidden', evt.id)} />
 									<SubmitButton
-										label={m.staff_events_id_production_open_host_shift()}
+										label={m.staff_events_id_production_open_host_shift_label()}
 										variant="ghost"
 										size="xs"
 									/>
@@ -350,7 +356,7 @@
 						<Form
 							remote={updateProduction}
 							guard
-							successToast={m.staff_events_id_production_production_updated()}
+							successToast={m.staff_events_id_production_production_updated_toast()}
 							onsuccess={() => void getStaffEventProduction(id).refresh()}
 						>
 							<input {...productionFields.id.as('hidden', productionRecord.id)} />
@@ -364,34 +370,34 @@
 							<FormField
 								field={productionFields.loadInDate}
 								type="date"
-								label={m.staff_events_id_production_show_date()}
+								label={m.staff_events_id_production_show_date_label()}
 								bind:value={productionDate}
 							/>
 							<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 								<FormField
 									field={productionFields.loadInTime}
 									type="time"
-									label={m.staff_events_id_production_load()}
+									label={m.staff_events_id_production_load_label()}
 								/>
 								<FormField
 									field={productionFields.soundcheckTime}
 									type="time"
-									label={m.staff_soundcheck()}
+									label={m.staff_soundcheck_label()}
 								/>
 								<FormField
 									field={productionFields.firstSetTime}
 									type="time"
-									label={m.staff_events_id_production_first_set()}
+									label={m.staff_events_id_production_first_set_label()}
 								/>
 								<FormField
 									field={productionFields.curfewTime}
 									type="time"
-									label={m.staff_events_id_production_curfew()}
+									label={m.staff_events_id_production_curfew_label()}
 								/>
 								<FormField
 									field={productionFields.loadOutTime}
 									type="time"
-									label={m.staff_events_id_production_load_out_by()}
+									label={m.staff_events_id_production_load_out_by_label()}
 								/>
 							</div>
 							<input {...productionFields.soundcheckDate.as('hidden', productionDate)} />
@@ -405,35 +411,35 @@
 							<FormField
 								field={productionFields.actsWanted}
 								type="select"
-								label={m.staff_events_id_production_bands_wanted()}
+								label={m.staff_events_id_production_bands_wanted_label()}
 								value={productionRecord.actsWanted?.toString() ?? ''}
 								options={[
-									{ value: '', label: m.staff_events_id_production_no_target_set() },
+									{ value: '', label: m.staff_events_id_production_no_target_set_label() },
 									...Array.from({ length: 8 }, (_, i) => ({
 										value: String(i + 1),
 										label: `${i + 1} ${i === 0 ? 'band' : 'bands'}`
 									}))
 								]}
-								description={m.staff_events_id_production_how_many_bill_should_end()}
+								description={m.staff_events_id_production_how_many_bill_should_end_body()}
 							/>
 
 							<FormField
 								field={productionFields.billingNotes}
-								label={m.staff_events_id_production_billing()}
-								description={m.staff_events_id_production_what_bands_were_told_about()}
+								label={m.staff_events_id_production_billing_label()}
+								description={m.staff_events_id_production_what_bands_were_told_about_body()}
 							/>
 							<FormField
 								field={productionFields.hospitalityNotes}
-								label={m.staff_hospitality()}
-								description={m.staff_events_id_production_green_room_food_parking_what()}
+								label={m.staff_hospitality_label()}
+								description={m.staff_events_id_production_green_room_food_parking_what_body()}
 							/>
 							<FormField
 								field={productionFields.internalNotes}
-								label={m.staff_events_id_production_internal_notes()}
-								description={m.staff_events_id_production_staff_only_never_shown_band()}
+								label={m.staff_events_id_production_internal_notes_label()}
+								description={m.staff_events_id_production_staff_only_never_shown_band_body()}
 							/>
 
-							<SubmitButton label={m.staff_events_id_production_save_production()} />
+							<SubmitButton label={m.staff_events_id_production_save_production_label()} />
 						</Form>
 					</fieldset>
 				</InfoCard>
@@ -442,14 +448,14 @@
 				     used to point back at the event page, so a first-timer who came
 				     here was sent where they had just been, with nothing on screen
 				     naming the button (#976). -->
-				<InfoCard title={m.staff_production()}>
+				<InfoCard title={m.staff_production_title()}>
 					<p class="text-muted">
-						{m.staff_events_id_production_no_production_record_yet_open()}
+						{m.staff_events_id_production_no_production_record_yet_open_text()}
 					</p>
 					<Form remote={createProduction} class="mt-3">
 						<input {...createProduction.fields.eventId.as('hidden', id)} />
 						<SubmitButton
-							label={m.staff_events_id_production_open_production()}
+							label={m.staff_events_id_production_open_production_label()}
 							variant="primary"
 							size="sm"
 						/>
@@ -486,13 +492,13 @@
 			documents.
 		-->
 			{#if riders.length > 0}
-				<InfoCard title={m.staff_events_id_production_tech_riders()}>
+				<InfoCard title={m.staff_events_id_production_tech_riders_title()}>
 					{#snippet header(title)}
 						<div class="flex items-center justify-between gap-2">
 							<CardTitle>{title}</CardTitle>
 							{#if ridersMissing > 0}
 								<Badge variant="warning"
-									>{m.staff_events_id_production_not_yet({ ridersMissing })}</Badge
+									>{m.staff_events_id_production_not_yet_label({ ridersMissing })}</Badge
 								>
 							{/if}
 						</div>
@@ -508,27 +514,31 @@
 									     blamed the act for it (#974). -->
 									{#if act.entryId}
 										<span class="text-sm text-base-content/60"
-											>{m.staff_events_id_production_nothing_sent_yet()}</span
+											>{m.staff_events_id_production_nothing_sent_yet_text()}</span
 										>
 									{:else}
 										<span class="text-sm text-base-content/60"
-											>{m.staff_events_id_production_not_directory_yet()}</span
+											>{m.staff_events_id_production_not_directory_yet_text()}</span
 										>
 										<Action
 											action={listActInDirectory.for(act.id)}
-											label={m.staff_events_id_production_add_directory()}
+											label={m.staff_events_id_production_add_directory_label()}
 											variant="ghost"
 											size="xs"
-											modalTitle={m.staff_events_id_production_add_directory_2({ name: act.name })}
-											submitLabel={m.staff_events_id_production_add_directory()}
-											successToast={m.staff_events_id_production_can_asked_now({ name: act.name })}
+											modalTitle={m.staff_events_id_production_add_directory_2_title({
+												name: act.name
+											})}
+											submitLabel={m.staff_events_id_production_add_directory_label()}
+											successToast={m.staff_events_id_production_can_asked_now_toast({
+												name: act.name
+											})}
 											onsuccess={() => getStaffEventProduction(id).refresh()}
 										>
 											{#snippet form()}
 												<input {...listActInDirectory.fields.eventBandId.as('hidden', act.id)} />
 												<p class="text-sm">
 													<ParaglideMessage
-														message={m.staff_events_id_production_records_as_external_act_no}
+														message={m.staff_events_id_production_records_as_external_act_no_text}
 														inputs={{ name: act.name }}
 														>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 															>{/snippet}</ParaglideMessage
@@ -540,24 +550,30 @@
 								{:else}
 									{#if act.channelCount > 0}
 										<Badge
-											>{m.staff_events_id_production_ch({ channelCount: act.channelCount })}</Badge
+											>{m.staff_events_id_production_ch_label({
+												channelCount: act.channelCount
+											})}</Badge
 										>
 									{/if}
 									{#if act.phantomCount > 0}
 										<Badge
-											>{m.staff_events_id_production_48v({ phantomCount: act.phantomCount })}</Badge
+											>{m.staff_events_id_production_48v_label({
+												phantomCount: act.phantomCount
+											})}</Badge
 										>
 									{/if}
 									{#if act.venueProvidedCount > 0}
 										<Badge variant="info"
-											>{m.staff_events_id_production_from_us({
+											>{m.staff_events_id_production_from_us_label({
 												venueProvidedCount: act.venueProvidedCount
 											})}</Badge
 										>
 									{/if}
 									{#if act.uploadCount > 0}
 										<Badge variant="ghost"
-											>{m.staff_events_id_production_files({ uploadCount: act.uploadCount })}</Badge
+											>{m.staff_events_id_production_files_label({
+												uploadCount: act.uploadCount
+											})}</Badge
 										>
 									{/if}
 								{/if}
@@ -571,14 +587,14 @@
 											variant="ghost"
 											size="sm"
 										>
-											{m.staff_events_id_production_rider()}
+											{m.staff_events_id_production_rider_label()}
 										</Button>
 										<Button
 											href={resolve('/band/[slug]/packing', { slug: act.slug })}
 											variant="ghost"
 											size="sm"
 										>
-											{m.staff_events_id_production_packing()}
+											{m.staff_events_id_production_packing_label()}
 										</Button>
 									</div>
 								{/if}
@@ -589,7 +605,7 @@
 					     count and it is the show that has to fit it (#818). -->
 					<div class="mt-2 border-t border-base-300 pt-2">
 						<Button href={resolve('/staff/events/[id]/inputs', { id })} variant="ghost" size="sm">
-							{m.staff_events_id_production_input_list_whole_bill()}
+							{m.staff_events_id_production_input_list_whole_bill_label()}
 						</Button>
 					</div>
 				</InfoCard>
@@ -602,7 +618,10 @@
 			and the second reading is how a calendar of events reaches production with
 			nothing booked. CMC does not staff a show it isn't producing.
 		-->
-			<InfoCard title={m.staff_events_id_production_volunteer_shifts()} testid="volunteer-shifts">
+			<InfoCard
+				title={m.staff_events_id_production_volunteer_shifts_title()}
+				testid="volunteer-shifts"
+			>
 				{#snippet header(title)}
 					<div class="flex items-center justify-between gap-2">
 						<CardTitle>{title}</CardTitle>
@@ -610,12 +629,14 @@
 							{#if dutyLists.length > 0}
 								<Action
 									action={applyDutyList}
-									label={m.staff_apply_template()}
+									label={m.staff_apply_template_label()}
 									variant="ghost"
 									size="sm"
-									modalTitle={m.staff_events_id_production_apply_template({ title: evt.title })}
-									submitLabel={m.staff_apply()}
-									successToast={m.staff_events_id_production_work_orders_created()}
+									modalTitle={m.staff_events_id_production_apply_template_title({
+										title: evt.title
+									})}
+									submitLabel={m.staff_apply_label()}
+									successToast={m.staff_events_id_production_work_orders_created_toast()}
 									onsuccess={(r) => {
 										toastWarnings(r);
 										void getStaffEventProduction(id).refresh();
@@ -625,13 +646,13 @@
 										<input {...applyDutyList.fields.eventId.as('hidden', evt.id)} />
 										<FormField
 											field={applyDutyList.fields.dutyListId}
-											label={m.staff_template()}
+											label={m.staff_template_label()}
 											type="select"
 											options={dutyLists.map((l) => ({ value: l.id, label: l.name }))}
 										/>
 										<FormField
 											field={applyDutyList.fields.reason}
-											label={m.staff_reason_if_applying_again()}
+											label={m.staff_reason_if_applying_again_label()}
 											type="text"
 										/>
 									{/snippet}
@@ -640,13 +661,15 @@
 							{#if liveVolunteerRoles.length > 0}
 								<Action
 									action={createShift}
-									label={m.staff_events_id_production_schedule_shift()}
+									label={m.staff_events_id_production_schedule_shift_label()}
 									data-testid="schedule-event-shift"
 									variant="ghost"
 									size="sm"
-									modalTitle={m.staff_events_id_production_schedule_shift_2({ title: evt.title })}
-									submitLabel={m.staff_create()}
-									successToast={m.staff_shift_scheduled()}
+									modalTitle={m.staff_events_id_production_schedule_shift_2_title({
+										title: evt.title
+									})}
+									submitLabel={m.staff_create_label()}
+									successToast={m.staff_shift_scheduled_toast()}
 									onsuccess={() => getStaffEventProduction(id).refresh()}
 								>
 									{#snippet form()}
@@ -672,7 +695,9 @@
 
 				{#if advance.length > 0}
 					<div class="mb-4">
-						<h3 class="mb-2 text-sm font-semibold">{m.staff_events_id_production_advance()}</h3>
+						<h3 class="mb-2 text-sm font-semibold">
+							{m.staff_events_id_production_advance_title()}
+						</h3>
 						<ul class="flex flex-col gap-1 text-sm">
 							{#each advance as order (order.id)}
 								<li class="flex flex-wrap items-baseline justify-between gap-2">
@@ -681,9 +706,9 @@
 									</a>
 									<span class="text-subtle whitespace-nowrap">
 										{#if order.dueAt}
-											{m.staff_due_2({ formatDateShort: formatDateShort(order.dueAt) })}
+											{m.staff_due_2_text({ formatDateShort: formatDateShort(order.dueAt) })}
 										{:else}
-											{m.staff_no_deadline()}
+											{m.staff_no_deadline_text()}
 										{/if}
 									</span>
 								</li>
@@ -694,15 +719,15 @@
 
 				{#if shifts.length === 0 && advance.length === 0}
 					<EmptyState
-						title={m.staff_events_id_production_no_volunteer_shifts()}
-						description={m.staff_events_id_production_nobody_scheduled_work_show_yet()}
+						title={m.staff_events_id_production_no_volunteer_shifts_title()}
+						description={m.staff_events_id_production_nobody_scheduled_work_show_yet_body()}
 					/>
 				{:else if shifts.length > 0}
 					<Table>
 						{#snippet head()}
-							<th>{m.staff_role()}</th>
-							<th class="whitespace-nowrap">{m.staff_when()}</th>
-							<th class="cell-num">{m.staff_confirmed()}</th>
+							<th>{m.staff_role_label()}</th>
+							<th class="whitespace-nowrap">{m.staff_when_label()}</th>
+							<th class="cell-num">{m.staff_confirmed_label()}</th>
 						{/snippet}
 
 						{#each shifts as shift (shift.id)}

@@ -30,7 +30,7 @@
 	);
 </script>
 
-<Modal bind:open title={m.staff_save_as_view()} maxWidth="max-w-sm">
+<Modal bind:open title={m.staff_save_as_view_title()} maxWidth="max-w-sm">
 	<Form
 		remote={saveInboxView}
 		successToast={m.staff_inbox_save_view_dialog_success_toast()}
@@ -40,13 +40,13 @@
 		<input {...saveInboxView.fields.filters.as('hidden', payload)} />
 		<FormField
 			field={saveInboxView.fields.name}
-			label={m.staff_name()}
+			label={m.staff_name_label()}
 			placeholder={m.staff_inbox_save_view_dialog_placeholder()}
 		/>
 		<div class="flex justify-end">
 			<SubmitButton
-				label={m.staff_inbox_save_view_dialog_save_view()}
-				successLabel={m.staff_saved()}
+				label={m.staff_inbox_save_view_dialog_save_view_label()}
+				successLabel={m.staff_saved_label()}
 			/>
 		</div>
 	</Form>

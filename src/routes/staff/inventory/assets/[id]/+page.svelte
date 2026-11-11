@@ -75,7 +75,7 @@
 <PageHeader
 	width="3xl"
 	subtitle={asset.item.name}
-	title={asset.assetTag ?? m.staff_inventory_assets_id_untagged_unit()}
+	title={asset.assetTag ?? m.staff_inventory_assets_id_untagged_unit_title()}
 	parent={{ label: asset.item.name, href: resolve('/staff/inventory/[id]', { id: asset.itemId }) }}
 >
 	<StatusBadge status={asset.status} />
@@ -89,25 +89,25 @@
 			<div>
 				<p>
 					<ParaglideMessage
-						message={m.staff_inventory_assets_id_unit_was_donated}
+						message={m.staff_inventory_assets_id_unit_was_donated_text}
 						inputs={{
 							staff_inventory_assets_id_form_8282_may_due:
-								m.staff_inventory_assets_id_form_8282_may_due()
+								m.staff_inventory_assets_id_form_8282_may_due_text()
 						}}
 						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 							>{/snippet}</ParaglideMessage
 					>{#if data.donor}
-						{m.staff_inventory_assets_id_by({
+						{m.staff_inventory_assets_id_by_text({
 							donor: data.donor
-						})}{/if}{m.staff_inventory_assets_id_cmc_signed_form_8283_was()}
+						})}{/if}{m.staff_inventory_assets_id_cmc_signed_form_8283_was_text()}
 				</p>
 				<p class="mt-1 text-sm">
 					{#if form8282.state === 'overdue'}
-						{m.staff_inventory_assets_id_125_days_ran_out({
+						{m.staff_inventory_assets_id_125_days_ran_out_text({
 							value: (form8282.dueBy && toLocalDate(form8282.dueBy)) ?? ''
 						})}
 					{:else}
-						{m.staff_inventory_assets_id_due_by_days_left({
+						{m.staff_inventory_assets_id_due_by_days_left_text({
 							value: (form8282.dueBy && toLocalDate(form8282.dueBy)) ?? '',
 							daysRemaining: form8282.daysRemaining ?? ''
 						})}
@@ -121,19 +121,19 @@
 	{/if}
 
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
-		<Form remote={editAsset} guard successToast={m.staff_inventory_assets_id_unit_updated()}>
+		<Form remote={editAsset} guard successToast={m.staff_inventory_assets_id_unit_updated_toast()}>
 			<input {...fields.id.as('hidden', id)} />
-			<InfoCard title={m.staff_inventory_assets_id_unit()}>
+			<InfoCard title={m.staff_inventory_assets_id_unit_title()}>
 				<Field
 					field={fields.serialNumber}
 					type="text"
-					label={m.staff_inventory_assets_id_serial_number()}
+					label={m.staff_inventory_assets_id_serial_number_label()}
 					value={asset.serialNumber ?? ''}
 				/>
 				<Field
 					field={fields.condition}
 					type="select"
-					label={m.staff_condition()}
+					label={m.staff_condition_label()}
 					value={asset.condition}
 					options={equipmentConditions.map((c) => ({ value: c, label: c }))}
 				/>
@@ -145,7 +145,7 @@
 				<Field
 					field={fields.notes}
 					type="textarea"
-					label={m.staff_notes()}
+					label={m.staff_notes_label()}
 					value={asset.notes ?? ''}
 				/>
 				<div class="mt-3">
@@ -158,28 +158,32 @@
 			</InfoCard>
 		</Form>
 
-		<InfoCard title={m.staff_record()} class="bg-base-200 shadow-none">
+		<InfoCard title={m.staff_record_title()} class="bg-base-200 shadow-none">
 			<DefinitionList>
-				<Fact label={m.staff_item()}>{asset.item.name}</Fact>
-				<Fact label={m.staff_category()}>
+				<Fact label={m.staff_item_label()}>{asset.item.name}</Fact>
+				<Fact label={m.staff_category_label()}>
 					{asset.category.name}
 					<Badge variant="outline" size="xs" class="ml-1">{asset.category.pricingTier}</Badge>
 				</Fact>
-				<Fact label={m.staff_tag()} mono>{asset.assetTag ?? '—'}</Fact>
-				<Fact label={m.staff_location()}>{asset.location?.name ?? m.staff_unassigned()}</Fact>
-				<Fact label={m.staff_inventory_assets_id_added()}>{formatDateShort(asset.createdAt)}</Fact>
+				<Fact label={m.staff_tag_label()} mono>{asset.assetTag ?? '—'}</Fact>
+				<Fact label={m.staff_location_label()}
+					>{asset.location?.name ?? m.staff_unassigned_text()}</Fact
+				>
+				<Fact label={m.staff_inventory_assets_id_added_label()}
+					>{formatDateShort(asset.createdAt)}</Fact
+				>
 				{#if asset.form8282ResolvedAt}
-					<Fact label={m.staff_inventory_assets_id_form_8282()}>
+					<Fact label={m.staff_inventory_assets_id_form_8282_label()}>
 						{asset.form8282Note}
 						<span class="text-subtle">
-							{m.staff_inventory_assets_id_recorded({
+							{m.staff_inventory_assets_id_recorded_text({
 								toLocalDate: toLocalDate(asset.form8282ResolvedAt)
 							})}
 						</span>
 					</Fact>
 				{/if}
 				{#if asset.retiredAt}
-					<Fact label={m.staff_retired()}>
+					<Fact label={m.staff_retired_label()}>
 						{formatDateShort(asset.retiredAt)}
 						{#if asset.retiredReason}
 							<span class="text-subtle">— {asset.retiredReason}</span>
@@ -200,7 +204,7 @@
 				<BindTagAction assetId={id} currentTag={asset.assetTag} />
 				{#if isTerminal}
 					<ReopenAction action={reopenAssetForm} {id} capability="inventory.reopen">
-						{m.staff_inventory_assets_id_back_service_with_stock_adjustment({
+						{m.staff_inventory_assets_id_back_service_with_stock_adjustment_text({
 							status: asset.status
 						})}
 					</ReopenAction>
@@ -211,7 +215,7 @@
 				<Form
 					remote={changeAssetStatus}
 					guard
-					successToast={m.staff_inventory_assets_id_status_updated()}
+					successToast={m.staff_inventory_assets_id_status_updated_toast()}
 					class="mt-4"
 				>
 					<input {...statusFields.id.as('hidden', id)} />
@@ -219,19 +223,22 @@
 						<Field
 							field={statusFields.status}
 							type="select"
-							label={m.staff_inventory_assets_id_move()}
+							label={m.staff_inventory_assets_id_move_label()}
 							value={asset.status}
 							options={[
-								{ value: 'in_service', label: m.staff_inventory_assets_id_service() },
-								{ value: 'maintenance', label: m.staff_inventory_assets_id_maintenance() },
-								{ value: 'retired', label: m.staff_retired() },
-								{ value: 'lost', label: m.staff_inventory_assets_id_lost() }
+								{ value: 'in_service', label: m.staff_inventory_assets_id_service_label() },
+								{ value: 'maintenance', label: m.staff_inventory_assets_id_maintenance_label() },
+								{ value: 'retired', label: m.staff_retired_label() },
+								{ value: 'lost', label: m.staff_inventory_assets_id_lost_label() }
 							]}
 						/>
-						<Field field={statusFields.notes} type="text" label={m.staff_why()} />
+						<Field field={statusFields.notes} type="text" label={m.staff_why_label()} />
 					</div>
 					<div class="mt-2">
-						<SubmitButton label={m.staff_inventory_assets_id_update_status()} variant="ghost" />
+						<SubmitButton
+							label={m.staff_inventory_assets_id_update_status_label()}
+							variant="ghost"
+						/>
 					</div>
 				</Form>
 			{/if}
@@ -243,10 +250,10 @@
 		left and came back, a service row who had it and what they charged.
 	-->
 	<ActivityFeedCard
-		title={m.staff_history()}
+		title={m.staff_history_title()}
 		query={(limit) => getAssetHistory(limit ? { id, limit } : { id })}
 		toRow={historyRow}
-		empty={{ title: m.staff_inventory_assets_id_nothing_recorded_against_unit_yet() }}
+		empty={{ title: m.staff_inventory_assets_id_nothing_recorded_against_unit_yet_title() }}
 	>
 		{#snippet trailing({ item })}
 			{#if item.kind === 'service'}

@@ -67,9 +67,9 @@
 	}
 </script>
 
-<PageHeader title={bandsLabel} subtitle={m.member_community()}>
+<PageHeader title={bandsLabel} subtitle={m.member_community_body()}>
 	<Button href={resolve('member/bands?create=1')} variant="ghost" data-sveltekit-reload>
-		{m.member_new()}
+		{m.member_new_label()}
 	</Button>
 </PageHeader>
 <PageContent>
@@ -77,30 +77,30 @@
 		<div class="directory-filters__row">
 			<input
 				type="text"
-				placeholder={m.member_search_by_name()}
-				aria-label={m.member_search_by_name_2()}
+				placeholder={m.member_search_by_name_placeholder()}
+				aria-label={m.member_search_by_name_2_label()}
 				class="input flex-1"
 				bind:value={search}
 			/>
 			<FormField
 				type="select"
 				name="sort"
-				label={m.member_sort()}
+				label={m.member_sort_label()}
 				options={directorySortOptions}
 				bind:value={sort}
 			/>
 			<label class="directory-filters__toggle">
 				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForMembers} />
-				<span>{m.member_looking_members()}</span>
+				<span>{m.member_looking_members_label()}</span>
 			</label>
 		</div>
 		<div class="directory-filters__tags">
 			<div class="directory-filters__tag-field">
-				<p class="directory-filters__label">{m.member_genres()}</p>
+				<p class="directory-filters__label">{m.member_genres_text()}</p>
 				<FreeformTagInput
 					bind:value={filterGenres}
 					suggestions={directory.genreSuggestions}
-					placeholder={m.member_filter_by_genre()}
+					placeholder={m.member_filter_by_genre_placeholder()}
 				/>
 			</div>
 		</div>
@@ -109,13 +109,13 @@
 	{#if bands.length === 0}
 		{#if hasFilters}
 			<EmptyState>
-				<p>{m.member_directory_bands_no_match_filters({ bandsNoun })}</p>
+				<p>{m.member_directory_bands_no_match_filters_text({ bandsNoun })}</p>
 				<Button variant="ghost" size="sm" class="mt-2" onclick={clearFilters}
-					>{m.member_clear_filters()}</Button
+					>{m.member_clear_filters_label()}</Button
 				>
 			</EmptyState>
 		{:else}
-			<EmptyState message={m.member_directory_bands_message({ bandsNoun })} />
+			<EmptyState message={m.member_directory_bands_message_body({ bandsNoun })} />
 		{/if}
 	{:else}
 		<div class="grid-gallery-tight">
@@ -138,7 +138,7 @@
 	{#if remaining > 0}
 		<div class="flex justify-center">
 			<Button variant="default" size="sm" outline onclick={showMore}>
-				{m.member_show_more_left({ remaining })}
+				{m.member_show_more_left_label({ remaining })}
 			</Button>
 		</div>
 	{/if}

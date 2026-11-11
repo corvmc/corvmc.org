@@ -48,7 +48,7 @@
 	<div>
 		<div class="flex items-baseline justify-between">
 			<span class="fieldset-legend font-medium"
-				>{m.member_membership_subscription_form_monthly_contribution()}</span
+				>{m.member_membership_subscription_form_monthly_contribution_text()}</span
 			>
 			<span class="text-3xl font-bold text-primary">${amount}</span>
 		</div>
@@ -76,7 +76,7 @@
 		</div>
 
 		<p class="mt-4 text-sm font-medium text-primary">
-			{m.member_membership_subscription_form_free_practice_hours_ever({ freeHours })}
+			{m.member_membership_subscription_form_free_practice_hours_ever_text({ freeHours })}
 		</p>
 	</div>
 
@@ -86,22 +86,24 @@
 			type="toggle"
 			label=""
 			bind:value={coverFees}
-			checkboxLabel={m.member_membership_subscription_form_checkbox_label()}
+			checkboxLabel={m.member_membership_subscription_form_checkbox_label_checkbox()}
 		/>
 		{#if coverFees}
 			<p class="ml-12 text-muted">
-				{m.member_membership_subscription_form_adds_cover_processing_fe({ feeDisplay })}
+				{m.member_membership_subscription_form_adds_cover_processing_fe_text({ feeDisplay })}
 			</p>
 		{/if}
 	</div>
 
 	<div class="rounded-lg bg-base-200/50 p-4">
-		<p class="text-muted">{m.member_membership_subscription_form_new_monthly_total()}</p>
+		<p class="text-muted">{m.member_membership_subscription_form_new_monthly_total_text()}</p>
 		<p class="mt-1 font-semibold text-primary">
-			{m.member_membership_subscription_form_00_membership({
+			{m.member_membership_subscription_form_00_membership_text({
 				amount
-			})}{#if coverFees}{m.member_membership_subscription_form_processing_fees({ feeDisplay })}{/if}
-			{m.member_membership_subscription_form_total_per_month({ totalDisplay })}
+			})}{#if coverFees}{m.member_membership_subscription_form_processing_fees_text({
+					feeDisplay
+				})}{/if}
+			{m.member_membership_subscription_form_total_per_month_text({ totalDisplay })}
 		</p>
 	</div>
 
@@ -109,7 +111,7 @@
 		variant="primary"
 		class="w-full"
 		label={mode === 'create'
-			? m.member_membership_subscription_form_become_sustaining_member()
-			: m.member_update_contribution()}
+			? m.member_membership_subscription_form_become_sustaining_member_label()
+			: m.member_update_contribution_label()}
 	/>
 </Form>

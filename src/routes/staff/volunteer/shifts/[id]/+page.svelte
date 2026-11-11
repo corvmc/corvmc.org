@@ -16,8 +16,8 @@
 <!-- Under Volunteering by URL, but reached from the schedule, which the URL does not say. -->
 <WorkOrderView
 	{view}
-	subtitle={m.staff_shift()}
-	parent={[{ label: m.staff_schedule(), href: resolve('staff/volunteer/schedule') }]}
+	subtitle={m.staff_shift_body()}
+	parent={[{ label: m.staff_schedule_label(), href: resolve('staff/volunteer/schedule') }]}
 >
 	{#snippet actions()}
 		{#if view.contractors.length > 0 && !view.shift.cancelledAt && !view.shift.resolvedAt}

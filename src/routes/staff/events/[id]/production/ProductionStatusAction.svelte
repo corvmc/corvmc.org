@@ -36,18 +36,22 @@
 	/** The usual path, forward one step, plus the walk-back a mis-click needs. */
 	const NEXT: Partial<Record<ProductionStatus, { to: ProductionStatus; label: string }[]>> = {
 		draft: [
-			{ to: 'offered', label: m.staff_events_id_production_production_status_send_offer() },
-			{ to: 'confirmed', label: m.staff_confirm() }
+			{ to: 'offered', label: m.staff_events_id_production_production_status_send_offer_label() },
+			{ to: 'confirmed', label: m.staff_confirm_label() }
 		],
 		offered: [
-			{ to: 'confirmed', label: m.staff_confirm() },
-			{ to: 'draft', label: m.staff_events_id_production_production_status_pull_offer() }
+			{ to: 'confirmed', label: m.staff_confirm_label() },
+			{ to: 'draft', label: m.staff_events_id_production_production_status_pull_offer_label() }
 		],
 		confirmed: [
-			{ to: 'completed', label: m.staff_events_id_production_production_status_mark_played() }
+			{ to: 'completed', label: m.staff_events_id_production_production_status_mark_played_label() }
 		],
-		completed: [{ to: 'settled', label: m.staff_events_id_production_production_status_settle() }],
-		settled: [{ to: 'closed', label: m.staff_events_id_production_production_status_close_out() }]
+		completed: [
+			{ to: 'settled', label: m.staff_events_id_production_production_status_settle_label() }
+		],
+		settled: [
+			{ to: 'closed', label: m.staff_events_id_production_production_status_close_out_label() }
+		]
 	};
 
 	const ALL: ProductionStatus[] = [
@@ -125,13 +129,13 @@
 				<FormField
 					field={step.fields.reason}
 					type="textarea"
-					label={m.staff_events_id_production_production_status_why_go_ahead()}
+					label={m.staff_events_id_production_production_status_why_go_ahead_label()}
 					required
 				/>
 			{:else}
 				<p class="text-muted">
 					<ParaglideMessage
-						message={m.staff_events_id_production_production_status_move_production}
+						message={m.staff_events_id_production_production_status_move_production_text}
 						inputs={{ to: move.to }}
 						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 							>{/snippet}</ParaglideMessage
@@ -146,7 +150,7 @@
 	{@const cancel = advanceProduction.for('cancelled')}
 	<Action
 		action={cancel}
-		label={m.staff_events_id_production_production_status_call_off()}
+		label={m.staff_events_id_production_production_status_call_off_label()}
 		variant="warning"
 		size="sm"
 		onsuccess={(r) => done(r, 'Production cancelled')}
@@ -156,7 +160,7 @@
 			<input {...cancel.fields.eventId.as('hidden', eventId)} />
 			<input {...cancel.fields.status.as('hidden', 'cancelled')} />
 			<p class="text-muted">
-				{m.staff_events_id_production_production_status_cancels_product()}
+				{m.staff_events_id_production_production_status_cancels_product_text()}
 			</p>
 		{/snippet}
 	</Action>
@@ -185,7 +189,7 @@
 			>
 				{#if terminal}
 					<DropdownMenu.Item class={itemClass} onSelect={() => (reopenOpen = true)}>
-						{m.staff_events_id_production_production_status_reopen()}
+						{m.staff_events_id_production_production_status_reopen_text()}
 					</DropdownMenu.Item>
 				{:else}
 					<DropdownMenu.Item
@@ -196,7 +200,7 @@
 							setOpen = true;
 						}}
 					>
-						{m.staff_events_id_production_production_status_set_status()}
+						{m.staff_events_id_production_production_status_set_status_text()}
 					</DropdownMenu.Item>
 				{/if}
 			</DropdownMenu.Content>
@@ -204,7 +208,10 @@
 	</DropdownMenu.Root>
 {/if}
 
-<Modal bind:open={setOpen} title={m.staff_events_id_production_production_status_set_status_2()}>
+<Modal
+	bind:open={setOpen}
+	title={m.staff_events_id_production_production_status_set_status_2_title()}
+>
 	<Form
 		remote={override}
 		class="space-y-4"
@@ -219,7 +226,7 @@
 		<FormField
 			field={override.fields.status}
 			type="select"
-			label={m.staff_status()}
+			label={m.staff_status_label()}
 			options={setOptions}
 			bind:value={setTo}
 			required
@@ -228,10 +235,15 @@
 			{@render warningsFor({ conflict: true, warnings: warned.warnings })}
 			<input {...override.fields.acknowledged.as('hidden', true)} />
 		{/if}
-		<FormField field={override.fields.reason} type="textarea" label={m.staff_reason()} required />
+		<FormField
+			field={override.fields.reason}
+			type="textarea"
+			label={m.staff_reason_label()}
+			required
+		/>
 		<div class="flex justify-end">
 			<SubmitButton
-				label={m.staff_events_id_production_production_status_change_status()}
+				label={m.staff_events_id_production_production_status_change_status_label()}
 				variant="default"
 			/>
 		</div>
@@ -239,7 +251,10 @@
 </Modal>
 
 {#if terminal && canReopen}
-	<Modal bind:open={reopenOpen} title={m.staff_events_id_production_production_status_reopen_2()}>
+	<Modal
+		bind:open={reopenOpen}
+		title={m.staff_events_id_production_production_status_reopen_2_title()}
+	>
 		<Form
 			remote={reopenProduction}
 			class="space-y-4"
@@ -251,17 +266,17 @@
 			<input {...reopenProduction.fields.id.as('hidden', production.id)} />
 			<input {...reopenProduction.fields.eventId.as('hidden', eventId)} />
 			<p class="text-muted text-sm">
-				{m.staff_events_id_production_production_status_show_reopening({
+				{m.staff_events_id_production_production_status_show_reopening_text({
 					status: production.status
 				})}
 				{#if production.status === 'cancelled'}
-					{m.staff_events_id_production_production_status_crew_shifts_cal()}
+					{m.staff_events_id_production_production_status_crew_shifts_cal_text()}
 				{/if}
 			</p>
 			<FormField
 				field={reopenProduction.fields.status}
 				type="select"
-				label={m.staff_events_id_production_production_status_reopen_3()}
+				label={m.staff_events_id_production_production_status_reopen_3_label()}
 				options={reopenOptions}
 				bind:value={reopenTo}
 				required
@@ -269,12 +284,12 @@
 			<FormField
 				field={reopenProduction.fields.reason}
 				type="textarea"
-				label={m.staff_reason()}
+				label={m.staff_reason_label()}
 				required
 			/>
 			<div class="flex justify-end">
 				<SubmitButton
-					label={m.staff_events_id_production_production_status_reopen_2()}
+					label={m.staff_events_id_production_production_status_reopen_2_label()}
 					variant="default"
 				/>
 			</div>

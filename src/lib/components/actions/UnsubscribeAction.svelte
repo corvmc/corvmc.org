@@ -29,7 +29,7 @@
 <Action
 	action={unsubscribe}
 	label={m.actions_unsubscribe_label()}
-	modalTitle={m.actions_unsubscribe_label()}
+	modalTitle={m.actions_unsubscribe_title()}
 	successToast={m.actions_unsubscribe_success_toast({ name })}
 	{variant}
 	{size}
@@ -39,6 +39,6 @@
 >
 	{#snippet form()}
 		<input {...fields.audienceId.as('hidden', audienceId)} />
-		<p class="py-4">{m.actions_unsubscribe_unsubscribe_from({ name })}</p>
+		<p class="py-4">{m.actions_unsubscribe_unsubscribe_from_text({ name })}</p>
 	{/snippet}
 </Action>

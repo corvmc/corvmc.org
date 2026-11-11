@@ -6,10 +6,10 @@ import { m } from '#lib/paraglide/messages.js';
  * any window the table could show.
  */
 export const NEEDS = {
-	claims: m.staff_volunteer_needs_confirming_card_title,
-	short: m.staff_volunteer_short_staffed_card_title,
-	unscheduled: m.staff_volunteer_needs_scheduling_card_title,
-	confirm: m.staff_volunteer_confirm_fixed_card_title
+	claims: m.staff_volunteer_needs_confirming_card_title_text,
+	short: m.staff_volunteer_short_staffed_card_title_text,
+	unscheduled: m.staff_volunteer_needs_scheduling_card_title_text,
+	confirm: m.staff_volunteer_confirm_fixed_card_title_body
 } as const;
 export type Needs = keyof typeof NEEDS | '';
 

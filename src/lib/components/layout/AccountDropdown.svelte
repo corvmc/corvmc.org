@@ -48,7 +48,7 @@
 		shape="circle"
 		class="overflow-hidden border-0 p-0"
 		onclick={() => (open = !open)}
-		aria-label={m.layout_account_menu()}
+		aria-label={m.layout_account_menu_label()}
 	>
 		<Avatar
 			class="size-full text-xs"
@@ -95,7 +95,7 @@
 					onclick={signOut}
 				>
 					<IconLogout size={16} />
-					{m.layout_sign_out()}
+					{m.layout_sign_out_label()}
 				</Button>
 			</div>
 		</div>

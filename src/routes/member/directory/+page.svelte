@@ -85,23 +85,23 @@
 	}
 </script>
 
-<PageHeader title={m.member_directory_title()} subtitle={m.member_community()}>
+<PageHeader title={m.member_directory_title()} subtitle={m.member_community_body()}>
 	<!-- The other half of the link on the profile editor: the entry you are
 	     looking at is the shape yours takes, and Profile left the sidebar for
 	     the account menu (#1244). -->
 	<Button href={resolve('member/profile')} variant="ghost" size="sm">
 		<IconPencil size={16} />
-		{m.member_directory_edit_profile()}
+		{m.member_directory_edit_profile_label()}
 	</Button>
 </PageHeader>
 <PageContent>
 	{#if directory.viewerHiddenBecause === 'incomplete'}
 		<Alert type="info" href={resolve('member/profile')}>
-			{m.member_directory_re_not_listed_here_yet()}
+			{m.member_directory_re_not_listed_here_yet_body()}
 		</Alert>
 	{:else if directory.viewerHiddenBecause === 'hidden'}
 		<Alert type="info" href={resolve('member/profile')}>
-			{m.member_directory_profile_hidden_so_re_not()}
+			{m.member_directory_profile_hidden_so_re_not_body()}
 		</Alert>
 	{/if}
 
@@ -110,30 +110,30 @@
 		<div class="directory-filters__row">
 			<input
 				type="text"
-				placeholder={m.member_search_by_name()}
-				aria-label={m.member_search_by_name_2()}
+				placeholder={m.member_search_by_name_placeholder()}
+				aria-label={m.member_search_by_name_2_label()}
 				class="input flex-1"
 				bind:value={search}
 			/>
 			<FormField
 				type="select"
 				name="sort"
-				label={m.member_sort()}
+				label={m.member_sort_label()}
 				options={directorySortOptions}
 				bind:value={sort}
 			/>
 			<label class="directory-filters__toggle">
 				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={lookingForBand} />
-				<span>{m.member_directory_looking_band()}</span>
+				<span>{m.member_directory_looking_band_label()}</span>
 			</label>
 			<label class="directory-filters__toggle">
 				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={availableForHire} />
-				<span>{m.member_available_hire()}</span>
+				<span>{m.member_available_hire_label()}</span>
 			</label>
 			<!-- Two different truths: a self-declared flag, and the instructor record. -->
 			<label class="directory-filters__toggle">
 				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={teachesLessons} />
-				<span>{m.member_teaches_privately()}</span>
+				<span>{m.member_teaches_privately_label()}</span>
 			</label>
 			<label class="directory-filters__toggle">
 				<input
@@ -142,36 +142,36 @@
 					class="checkbox checkbox-sm"
 					bind:checked={teachesAtCollective}
 				/>
-				<span>{m.member_directory_teaches_at_collective()}</span>
+				<span>{m.member_directory_teaches_at_collective_label()}</span>
 			</label>
 			<label class="directory-filters__toggle">
 				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={openToCollaboration} />
-				<span>{m.member_open_collaboration()}</span>
+				<span>{m.member_open_collaboration_label()}</span>
 			</label>
 		</div>
 		<div class="directory-filters__tags">
 			<div class="directory-filters__tag-field">
-				<p class="directory-filters__label">{m.member_instruments()}</p>
+				<p class="directory-filters__label">{m.member_instruments_text()}</p>
 				<FreeformTagInput
 					bind:value={filterInstruments}
 					suggestions={instrumentSuggestions}
-					placeholder={m.member_directory_filter_by_instrument()}
+					placeholder={m.member_directory_filter_by_instrument_placeholder()}
 				/>
 			</div>
 			<div class="directory-filters__tag-field">
-				<p class="directory-filters__label">{m.member_skills()}</p>
+				<p class="directory-filters__label">{m.member_skills_text()}</p>
 				<FreeformTagInput
 					bind:value={filterSkills}
 					suggestions={skillSuggestions}
-					placeholder={m.member_directory_filter_by_skill()}
+					placeholder={m.member_directory_filter_by_skill_placeholder()}
 				/>
 			</div>
 			<div class="directory-filters__tag-field">
-				<p class="directory-filters__label">{m.member_genres()}</p>
+				<p class="directory-filters__label">{m.member_genres_text()}</p>
 				<FreeformTagInput
 					bind:value={filterGenres}
 					suggestions={genreSuggestions}
-					placeholder={m.member_filter_by_genre()}
+					placeholder={m.member_filter_by_genre_placeholder()}
 				/>
 			</div>
 		</div>
@@ -180,13 +180,13 @@
 	{#if members.length === 0}
 		{#if hasFilters}
 			<EmptyState>
-				<p>{m.member_directory_no_members_match_filters()}</p>
+				<p>{m.member_directory_no_members_match_filters_text()}</p>
 				<Button variant="ghost" size="sm" class="mt-2" onclick={clearFilters}
-					>{m.member_clear_filters()}</Button
+					>{m.member_clear_filters_label()}</Button
 				>
 			</EmptyState>
 		{:else}
-			<EmptyState message={m.member_directory_message()} />
+			<EmptyState message={m.member_directory_message_body()} />
 		{/if}
 	{:else}
 		<div class="grid-gallery">
@@ -213,7 +213,7 @@
 	{#if remaining > 0}
 		<div class="flex justify-center">
 			<Button variant="default" size="sm" outline onclick={showMore}>
-				{m.member_show_more_left({ remaining })}
+				{m.member_show_more_left_label({ remaining })}
 			</Button>
 		</div>
 	{/if}

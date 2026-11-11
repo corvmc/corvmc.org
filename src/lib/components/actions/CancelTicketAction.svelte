@@ -28,7 +28,7 @@
 
 <Action
 	action={cancelTicket}
-	label={m.actions_cancel()}
+	label={m.actions_cancel_label()}
 	modalTitle={m.actions_cancel_ticket_modal_title()}
 	successToast={m.actions_cancel_ticket_success_toast()}
 	{variant}
@@ -39,6 +39,6 @@
 >
 	{#snippet form()}
 		<input {...fields.ticketId.as('hidden', ticketId)} />
-		<p class="py-2">{m.actions_cancel_ticket_cancel_ticket({ attendeeName })}</p>
+		<p class="py-2">{m.actions_cancel_ticket_cancel_ticket_text({ attendeeName })}</p>
 	{/snippet}
 </Action>

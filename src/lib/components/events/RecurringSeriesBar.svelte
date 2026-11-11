@@ -22,18 +22,20 @@
 
 <div class="flex flex-wrap items-center gap-2">
 	<Badge class="badge-info"
-		>{m.events_recurring_series_bar_recurring({ frequencyLabel: series.frequencyLabel })}</Badge
+		>{m.events_recurring_series_bar_recurring_label({
+			frequencyLabel: series.frequencyLabel
+		})}</Badge
 	>
 	{#if series.cancelledAt}
 		<span class="text-muted"
-			>{m.events_recurring_series_bar_series_cancelled_no_new_occurren()}</span
+			>{m.events_recurring_series_bar_series_cancelled_no_new_occurren_text()}</span
 		>
 	{:else}
 		<span class="text-muted">
-			{#if series.endsAt}{m.events_recurring_series_bar_repeats_until({
+			{#if series.endsAt}{m.events_recurring_series_bar_repeats_until_text({
 					fullDate: fullDate(series.endsAt)
 				})}
-			{:else}{m.events_recurring_series_bar_new_occurrences_generated_automa()}{/if}
+			{:else}{m.events_recurring_series_bar_new_occurrences_generated_automa_text()}{/if}
 		</span>
 		<Form
 			remote={cancelEventSeries}

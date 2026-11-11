@@ -64,5 +64,5 @@
 	type="textarea"
 	label={m.volunteer_interest_fields_label()}
 	value={availability}
-	description={m.volunteer_interest_fields_description()}
+	description={m.volunteer_interest_fields_description_body()}
 />

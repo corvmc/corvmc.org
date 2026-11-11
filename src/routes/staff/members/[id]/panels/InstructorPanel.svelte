@@ -17,45 +17,45 @@
 </script>
 
 <RelatedList
-	title={m.staff_members_id_panels_instructor_panel_teaching()}
+	title={m.staff_members_id_panels_instructor_panel_teaching_title()}
 	result={getUserInstructor(id)}
 >
 	{#snippet children(instructor)}
 		{#if !instructor}
-			<EmptyState title={m.staff_members_id_panels_instructor_panel_not_instructor()} />
+			<EmptyState title={m.staff_members_id_panels_instructor_panel_not_instructor_title()} />
 		{:else}
 			<DefinitionList>
-				<Fact label={m.staff_status()}><StatusBadge status={instructor.status} /></Fact>
+				<Fact label={m.staff_status_label()}><StatusBadge status={instructor.status} /></Fact>
 				{#if instructor.headline}
-					<Fact label={m.staff_teaches()}>{instructor.headline}</Fact>
+					<Fact label={m.staff_teaches_label()}>{instructor.headline}</Fact>
 				{/if}
-				<Fact label={m.staff_members_id_panels_instructor_panel_applied()}
+				<Fact label={m.staff_members_id_panels_instructor_panel_applied_label()}
 					>{formatDateShortYear(instructor.createdAt)}</Fact
 				>
 				{#if instructor.status === 'requested' && instructor.applicationNote}
-					<Fact label={m.staff_members_id_panels_instructor_panel_application()} wrap>
+					<Fact label={m.staff_members_id_panels_instructor_panel_application_label()} wrap>
 						<span class="whitespace-pre-line">{instructor.applicationNote}</span>
 					</Fact>
 				{/if}
 				{#if instructor.grantedAt}
-					<Fact label={m.staff_members_id_panels_instructor_panel_granted()}
+					<Fact label={m.staff_members_id_panels_instructor_panel_granted_label()}
 						>{formatDateShortYear(instructor.grantedAt)}</Fact
 					>
 				{/if}
 				{#if instructor.status === 'active'}
-					<Fact label={m.staff_students()}>
+					<Fact label={m.staff_students_label()}>
 						{instructor.acceptingStudents
-							? m.staff_accepting()
-							: m.staff_members_id_panels_instructor_panel_not_accepting()}
+							? m.staff_accepting_text()
+							: m.staff_members_id_panels_instructor_panel_not_accepting_text()}
 					</Fact>
 				{/if}
 				{#if instructor.reviewNotes}
 					<!-- What the member was told, as opposed to statusNote below, which
 					     is what staff told each other. -->
-					<Fact label={m.staff_rejected()}>{instructor.reviewNotes}</Fact>
+					<Fact label={m.staff_rejected_label()}>{instructor.reviewNotes}</Fact>
 				{/if}
 				{#if instructor.statusNote}
-					<Fact label={m.staff_members_id_panels_instructor_panel_staff_note()}
+					<Fact label={m.staff_members_id_panels_instructor_panel_staff_note_label()}
 						>{instructor.statusNote}</Fact
 					>
 				{/if}

@@ -86,7 +86,7 @@
 	);
 </script>
 
-<PageHeader title={m.staff_reports()} documentTitle={m.staff_reports_annual_report()}>
+<PageHeader title={m.staff_reports_title()} documentTitle={m.staff_reports_annual_report_title()}>
 	<StaffViews views={reportViews} active="annual" collapse />
 </PageHeader>
 
@@ -100,7 +100,7 @@
 			-->
 			<Button href={exportHref} rel="external" download>
 				<IconDownload size={18} />
-				{m.staff_export_csv()}
+				{m.staff_export_csv_label()}
 			</Button>
 		{/snippet}
 	</DateRangeFilter>
@@ -113,21 +113,24 @@
 			no way to tell that apart from a quiet year.
 		-->
 		<Alert type="info">
-			{m.staff_reports_financial_record_begins_money_collective({
+			{m.staff_reports_financial_record_begins_money_collective_body({
 				formatDateLong: formatDateLong(r.coverage.startsAt)
 			})}
 		</Alert>
 	{/if}
 
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-		<StatCard title={m.staff_reports_earned()} value={formatCents(r.money.totalsByKind.earned)} />
 		<StatCard
-			title={m.staff_reports_spent()}
+			title={m.staff_reports_earned_title()}
+			value={formatCents(r.money.totalsByKind.earned)}
+		/>
+		<StatCard
+			title={m.staff_reports_spent_title()}
 			value={formatCents(shownCents('spent', r.money.totalsByKind.spent))}
 		/>
-		<StatCard title={m.staff_reports_net()} value={formatCents(r.money.netCents)} />
+		<StatCard title={m.staff_reports_net_title()} value={formatCents(r.money.netCents)} />
 		<StatCard
-			title={m.staff_reports_given_kind()}
+			title={m.staff_reports_given_kind_title()}
 			value={formatCents(r.money.totalsByKind.in_kind)}
 		/>
 	</div>
@@ -136,12 +139,12 @@
 		<InfoCard title={kindTitles[kind]}>
 			<p class="mb-3 text-subtle text-sm">{kindNotes[kind]}</p>
 			{#if r.money.byKind[kind].length === 0}
-				<EmptyState description={m.staff_reports_description()} />
+				<EmptyState description={m.staff_reports_description_body()} />
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th>{m.staff_reports_line()}</th>
-						<th class="text-right">{m.staff_amount()}</th>
+						<th>{m.staff_reports_line_label()}</th>
+						<th class="text-right">{m.staff_amount_label()}</th>
 					{/snippet}
 					{#each r.money.byKind[kind] as line (line.category)}
 						<tr>
@@ -152,7 +155,7 @@
 						</tr>
 					{/each}
 					<tr class="font-semibold">
-						<td>{m.staff_reports_total()}</td>
+						<td>{m.staff_reports_total_text()}</td>
 						<td class="text-right tabular-nums"
 							>{formatCents(shownCents(kind, r.money.totalsByKind[kind]))}</td
 						>
@@ -162,15 +165,15 @@
 		</InfoCard>
 	{/each}
 
-	<InfoCard title={m.staff_reports_donated_time()}>
+	<InfoCard title={m.staff_reports_donated_time_title()}>
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 			<StatCard
-				title={m.staff_approved_hours()}
+				title={m.staff_approved_hours_title()}
 				value={formatVolunteerHours(r.volunteering.totals.totalMinutes)}
 			/>
-			<StatCard title={m.staff_volunteers()} value={r.volunteering.totals.volunteerCount} />
+			<StatCard title={m.staff_volunteers_title()} value={r.volunteering.totals.volunteerCount} />
 			<StatCard
-				title={m.staff_impact_value()}
+				title={m.staff_impact_value_title()}
 				value={formatCents(r.volunteering.contributed.impactValueCents)}
 			/>
 		</div>
@@ -182,7 +185,7 @@
 		-->
 		<p class="mt-3 text-subtle text-sm">
 			<ParaglideMessage
-				message={m.staff_reports_impact_value_prices_every_approved}
+				message={m.staff_reports_impact_value_prices_every_approved_text}
 				inputs={{
 					formatCents: formatCents(r.volunteering.contributed.rateCents),
 					formatCents2: formatCents(r.volunteering.contributed.recognizableServicesCents)
@@ -193,17 +196,20 @@
 		</p>
 	</InfoCard>
 
-	<InfoCard title={m.staff_events()}>
+	<InfoCard title={m.staff_events_2_title()}>
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-			<StatCard title={m.staff_reports_cmc_events()} value={r.events.cmcTotal} />
-			<StatCard title={m.staff_reports_band_listings()} value={r.events.bandListings} />
-			<StatCard title={m.staff_reports_community_listings()} value={r.events.communityListings} />
-			<StatCard title={m.staff_cancelled()} value={r.events.cancelled} />
+			<StatCard title={m.staff_reports_cmc_events_title()} value={r.events.cmcTotal} />
+			<StatCard title={m.staff_reports_band_listings_title()} value={r.events.bandListings} />
+			<StatCard
+				title={m.staff_reports_community_listings_title()}
+				value={r.events.communityListings}
+			/>
+			<StatCard title={m.staff_cancelled_title()} value={r.events.cancelled} />
 		</div>
 		<Table class="mt-4">
 			{#snippet head()}
-				<th>{m.staff_reports_cmc_events_by_kind()}</th>
-				<th class="text-right">{m.staff_reports_held()}</th>
+				<th>{m.staff_reports_cmc_events_by_kind_label()}</th>
+				<th class="text-right">{m.staff_reports_held_label()}</th>
 			{/snippet}
 			{#each Object.entries(r.events.cmcByKind) as [kind, total] (kind)}
 				<tr>
@@ -213,39 +219,39 @@
 			{/each}
 		</Table>
 		<p class="mt-3 text-subtle text-sm">
-			{m.staff_reports_counts_not_attendance_only_minority()}
+			{m.staff_reports_counts_not_attendance_only_minority_text()}
 		</p>
 	</InfoCard>
 
-	<InfoCard title={m.staff_reports_practice_room()}>
+	<InfoCard title={m.staff_reports_practice_room_title()}>
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-			<StatCard title={m.staff_reports_hours_booked()} value={r.room.hours} />
-			<StatCard title={m.staff_reports_sessions()} value={r.room.sessions} />
-			<StatCard title={m.staff_reports_distinct_bookers()} value={r.room.distinctBookers} />
-			<StatCard title={m.staff_reports_no_shows()} value={r.room.noShows} />
+			<StatCard title={m.staff_reports_hours_booked_title()} value={r.room.hours} />
+			<StatCard title={m.staff_reports_sessions_title()} value={r.room.sessions} />
+			<StatCard title={m.staff_reports_distinct_bookers_title()} value={r.room.distinctBookers} />
+			<StatCard title={m.staff_reports_no_shows_title()} value={r.room.noShows} />
 		</div>
 		<p class="mt-3 text-subtle text-sm">
-			{m.staff_reports_hours_room_was_held_including()}
+			{m.staff_reports_hours_room_was_held_including_text()}
 		</p>
 	</InfoCard>
 
-	<InfoCard title={m.staff_reports_membership()}>
+	<InfoCard title={m.staff_reports_membership_title()}>
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
 			<StatCard
-				title={m.staff_reports_sustaining_members()}
+				title={m.staff_reports_sustaining_members_title()}
 				value={r.membership.sustainingMemberCount}
 			/>
 			<StatCard
-				title={m.staff_reports_practice_hours_funded()}
+				title={m.staff_reports_practice_hours_funded_title()}
 				value={r.membership.totalFreeHoursAllocated}
 			/>
 			<StatCard
-				title={m.staff_reports_participation()}
+				title={m.staff_reports_participation_title()}
 				value={`${r.membership.participationPercent}%`}
 			/>
 		</div>
 		<p class="mt-3 text-subtle text-sm">
-			{m.staff_reports_as_today_not_over_range()}
+			{m.staff_reports_as_today_not_over_range_text()}
 		</p>
 	</InfoCard>
 </PageContent>

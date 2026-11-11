@@ -15,7 +15,9 @@
 </script>
 
 {#if html}
-	<ProfileSection title={kind === 'bio' ? m.directory_profile_bio() : m.directory_profile_about()}>
+	<ProfileSection
+		title={kind === 'bio' ? m.directory_profile_bio_title() : m.directory_profile_about_title()}
+	>
 		<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (markdown prose via sanitizeBio) -->
 		<div class="prose prose-sm max-w-none text-base-content/80">{@html html}</div>
 	</ProfileSection>

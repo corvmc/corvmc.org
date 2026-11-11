@@ -21,7 +21,7 @@
 	<ProfileSection
 		title={m.directory_profile_press_photo_title()}
 		note={shown.length > 1
-			? m.directory_profile_press_photo_note({ length: shown.length })
+			? m.directory_profile_press_photo_note_body({ length: shown.length })
 			: undefined}
 	>
 		<div class="photos" class:photos--single={shown.length === 1}>

@@ -107,8 +107,8 @@
 			<div class="flex flex-wrap items-center justify-between gap-2">
 				<TabBar
 					tabs={[
-						{ key: 'reply', label: m.inbox_reply() },
-						{ key: 'note', label: m.inbox_thread_composer_internal_note() }
+						{ key: 'reply', label: m.inbox_reply_label() },
+						{ key: 'note', label: m.inbox_thread_composer_internal_note_label() }
 					]}
 					active={mode}
 					onchange={(key) => {
@@ -119,7 +119,7 @@
 				{#if isNote}
 					<span class="flex items-center gap-1 text-subtle">
 						<IconNote size={14} />
-						{m.inbox_thread_composer_staff_only_contact_never_sees()}
+						{m.inbox_thread_composer_staff_only_contact_never_sees_text()}
 					</span>
 				{/if}
 			</div>
@@ -137,8 +137,8 @@
 			guard
 			remote={activeForm}
 			successToast={isNote
-				? m.inbox_thread_composer_note_added()
-				: m.inbox_thread_composer_reply_sent()}
+				? m.inbox_thread_composer_note_added_toast()
+				: m.inbox_thread_composer_reply_sent_toast()}
 			onsuccess={() => {
 				draft = '';
 				assignTo = '';
@@ -166,8 +166,8 @@
 						class="textarea field-sizing-content max-h-64 min-h-16 w-full"
 						rows={2}
 						placeholder={isNote
-							? m.inbox_thread_composer_add_internal_note()
-							: m.inbox_thread_composer_type_reply()}
+							? m.inbox_thread_composer_add_internal_note_placeholder()
+							: m.inbox_thread_composer_type_reply_placeholder()}
 						bind:value={draft}></textarea>
 				{/snippet}
 			</FormField>
@@ -189,13 +189,13 @@
 					     top-down. -->
 					<SendOption
 						value="resolve"
-						label={m.inbox_thread_composer_send_resolve()}
+						label={m.inbox_thread_composer_send_resolve_label()}
 						disabled={!draft.trim()}
 						class="order-2 sm:order-none"
 					/>
 					<SendOption
 						value="keep_open"
-						label={m.inbox_thread_composer_send_keep_open()}
+						label={m.inbox_thread_composer_send_keep_open_label()}
 						disabled={!draft.trim()}
 						class="order-3 sm:order-none"
 					/>
@@ -207,16 +207,16 @@
 				<SubmitButton
 					label={isNote
 						? assignTo
-							? m.inbox_thread_composer_post_note_assign()
-							: m.inbox_thread_composer_add_note()
+							? m.inbox_thread_composer_post_note_assign_label()
+							: m.inbox_thread_composer_add_note_label()
 						: staffSend
-							? m.inbox_thread_composer_send_wait_reply()
+							? m.inbox_thread_composer_send_wait_reply_label()
 							: sendLabel}
 					successLabel={isNote
 						? assignTo
-							? m.inbox_thread_composer_assigned()
-							: m.inbox_thread_composer_added()
-						: m.inbox_thread_composer_sent()}
+							? m.inbox_thread_composer_assigned_label()
+							: m.inbox_thread_composer_added_label()
+						: m.inbox_thread_composer_sent_label()}
 					shortcut="mod+enter"
 					title={staffSend ? m.inbox_thread_composer_title() : undefined}
 					disabled={!draft.trim()}

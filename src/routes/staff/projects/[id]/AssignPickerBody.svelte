@@ -83,7 +83,7 @@
 			.map((m) => ({
 				value: m.userId,
 				label: m.name,
-				description: m.via === 'staff' ? msg.staff_staff() : msg.staff_committee()
+				description: m.via === 'staff' ? msg.staff_staff_body() : msg.staff_committee_body()
 			}))
 	);
 	const nameOf = (id: string) => options.members.find((m) => m.userId === id)?.name ?? 'Someone';
@@ -104,7 +104,7 @@
 {#if engaged && !live}
 	<!-- Finished work stays the contractor's: its cost is on the record. -->
 	<Alert type="info" class="text-sm">
-		{msg.staff_projects_id_assign_picker_body_did_work_stays_theirs({
+		{msg.staff_projects_id_assign_picker_body_did_work_stays_theirs_body({
 			contractorName: engaged.contractorName,
 			engagementLabel: engagementLabel(engaged)
 		})}
@@ -114,7 +114,7 @@
 				size="xs"
 				variant="default"
 			>
-				{msg.staff_projects_id_assign_picker_body_open_engagement()}
+				{msg.staff_projects_id_assign_picker_body_open_engagement_label()}
 			</Button>
 		{/snippet}
 	</Alert>
@@ -123,9 +123,9 @@
 		dense
 		class="mb-3"
 		tabs={[
-			{ key: 'members', label: msg.staff_members() },
-			{ key: 'open', label: msg.staff_projects_id_assign_picker_body_open_volunteers() },
-			{ key: 'contractor', label: msg.staff_contractor() }
+			{ key: 'members', label: msg.staff_members_label() },
+			{ key: 'open', label: msg.staff_projects_id_assign_picker_body_open_volunteers_label() },
+			{ key: 'contractor', label: msg.staff_contractor_label() }
 		]}
 		active={tab}
 		onchange={(k) => (tab = k as Mode)}
@@ -133,7 +133,7 @@
 
 	{#if tab === 'members'}
 		{#if task.people.length > 0}
-			<ul class="mb-3 space-y-1 text-sm" aria-label={msg.staff_text_2()}>
+			<ul class="mb-3 space-y-1 text-sm" aria-label={msg.staff_text_2_label()}>
 				{#each task.people as p (p.userId)}
 					{@const drop = unassignMemberForm.for(`${place}:${task.id}:${p.userId}`)}
 					<li class="flex items-center justify-between gap-2">
@@ -144,7 +144,7 @@
 								<input {...drop.fields.workOrderId.as('hidden', task.id)} />
 								<input {...drop.fields.userId.as('hidden', p.userId)} />
 								<SubmitButton
-									label={msg.staff_projects_id_assign_picker_body_take_off()}
+									label={msg.staff_projects_id_assign_picker_body_take_off_label()}
 									variant="ghost"
 									size="xs"
 								/>
@@ -172,23 +172,23 @@
 			<Field
 				field={assign.fields.volunteerRoleId}
 				type="select"
-				label={msg.staff_role()}
+				label={msg.staff_role_label()}
 				options={roleOptions}
 				value={task.volunteerRoleId ?? ''}
-				placeholder={msg.staff_projects_id_assign_picker_body_pick_role()}
-				description={msg.staff_projects_id_assign_picker_body_their_hours_count_under()}
+				placeholder={msg.staff_projects_id_assign_picker_body_pick_role_placeholder()}
+				description={msg.staff_projects_id_assign_picker_body_their_hours_count_under_body()}
 			/>
 			<SearchInput
 				bind:value={search}
 				size="sm"
-				placeholder={msg.staff_projects_id_assign_picker_body_search_staff_committee()}
+				placeholder={msg.staff_projects_id_assign_picker_body_search_staff_committee_placeholder()}
 			/>
 			<div onchange={track}>
 				<CheckboxGroup
 					field={assign.fields.userIds}
 					options={memberOptions}
-					legend={msg.staff_projects_id_assign_picker_body_legend()}
-					description={msg.staff_projects_id_assign_picker_body_booked_straight_as_conf()}
+					legend={msg.staff_projects_id_assign_picker_body_legend_title()}
+					description={msg.staff_projects_id_assign_picker_body_booked_straight_as_conf_body()}
 				/>
 			</div>
 			{#if assignWarning}
@@ -197,15 +197,15 @@
 			{/if}
 			<SubmitButton
 				label={assignWarning
-					? msg.staff_projects_id_assign_picker_body_assign_cancel_engagemen()
-					: msg.staff_assign()}
+					? msg.staff_projects_id_assign_picker_body_assign_cancel_engagemen_label()
+					: msg.staff_assign_label()}
 				size="sm"
 			/>
 		</Form>
 		{#if warned.length > 0}
 			<!-- Assigned regardless; each warning is on the task's log. -->
 			<Alert type="warning" class="mt-3 text-sm">
-				{msg.staff_projects_id_assign_picker_body_assigned_over_warnings({
+				{msg.staff_projects_id_assign_picker_body_assigned_over_warnings_body({
 					join: warned.map((w) => `${w.name} (${w.warnings.join(' ')})`).join('; ')
 				})}
 			</Alert>
@@ -213,7 +213,7 @@
 		{#if refused.length > 0}
 			<!-- Only a profile under review, a full task or a closed one refuses. -->
 			<Alert type="error" class="mt-3 text-sm">
-				{msg.staff_projects_id_assign_picker_body_could_not_put({
+				{msg.staff_projects_id_assign_picker_body_could_not_put_body({
 					join: refused.map((r) => `${r.name} (${r.message})`).join('; ')
 				})}
 			</Alert>
@@ -231,19 +231,19 @@
 			<Field
 				field={open.fields.volunteerRoleId}
 				type="select"
-				label={msg.staff_role()}
+				label={msg.staff_role_label()}
 				options={roleOptions}
 				value={task.volunteerRoleId ?? ''}
-				placeholder={msg.staff_projects_id_assign_picker_body_pick_role()}
+				placeholder={msg.staff_projects_id_assign_picker_body_pick_role_placeholder()}
 			/>
 			<Field
 				field={open.fields.capacity}
 				type="number"
-				label={msg.staff_projects_id_assign_picker_body_spots()}
+				label={msg.staff_projects_id_assign_picker_body_spots_label()}
 				value={task.capacity}
 			/>
 			<p class="text-muted text-sm">
-				{msg.staff_projects_id_assign_picker_body_posts_claim_board_once()}
+				{msg.staff_projects_id_assign_picker_body_posts_claim_board_once_text()}
 			</p>
 			{#if openWarning}
 				<input {...open.fields.confirm.as('hidden', true)} />
@@ -251,14 +251,14 @@
 			{/if}
 			<SubmitButton
 				label={openWarning
-					? msg.staff_projects_id_assign_picker_body_open_cancel_engagement()
-					: msg.staff_projects_id_assign_picker_body_open_volunteers()}
+					? msg.staff_projects_id_assign_picker_body_open_cancel_engagement_label()
+					: msg.staff_projects_id_assign_picker_body_open_volunteers_label()}
 				size="sm"
 			/>
 		</Form>
 	{:else if live}
 		<Alert type="info" class="text-sm">
-			{msg.staff_projects_id_assign_picker_body_engaged_members_open_ca({
+			{msg.staff_projects_id_assign_picker_body_engaged_members_open_ca_body({
 				contractorName: live.contractorName,
 				engagementLabel: engagementLabel(live)
 			})}
@@ -268,7 +268,7 @@
 					size="xs"
 					variant="default"
 				>
-					{msg.staff_projects_id_assign_picker_body_open_engagement()}
+					{msg.staff_projects_id_assign_picker_body_open_engagement_label()}
 				</Button>
 			{/snippet}
 		</Alert>
@@ -285,27 +285,27 @@
 			<Field
 				field={engage.fields.contractorId}
 				type="select"
-				label={msg.staff_contractor()}
+				label={msg.staff_contractor_label()}
 				options={contractorOptions}
-				placeholder={msg.staff_projects_id_assign_picker_body_pick_one()}
+				placeholder={msg.staff_projects_id_assign_picker_body_pick_one_placeholder()}
 			/>
 			<MoneyField
 				field={engage.fields.quotedCents}
-				label={msg.staff_projects_id_assign_picker_body_quote_if_they_gave_one()}
+				label={msg.staff_projects_id_assign_picker_body_quote_if_they_gave_one_label()}
 			/>
 			{#if engageWarning > 0}
 				<input {...engage.fields.confirm.as('hidden', true)} />
 				<Alert type="warning" class="text-sm">
-					{msg.staff_projects_id_assign_picker_engage_warning({ count: engageWarning })}
+					{msg.staff_projects_id_assign_picker_engage_warning_body({ count: engageWarning })}
 				</Alert>
 			{/if}
 			<p class="text-muted text-sm">
-				{msg.staff_projects_id_assign_picker_body_asks_them_quote_booking()}
+				{msg.staff_projects_id_assign_picker_body_asks_them_quote_booking_text()}
 			</p>
 			<SubmitButton
 				label={engageWarning > 0
-					? msg.staff_projects_id_assign_picker_body_engage_cancel_signups()
-					: msg.staff_engage_contractor()}
+					? msg.staff_projects_id_assign_picker_body_engage_cancel_signups_label()
+					: msg.staff_engage_contractor_label()}
 				size="sm"
 			/>
 		</Form>
@@ -328,8 +328,8 @@
 				{/if}
 				<SubmitButton
 					label={unassignWarning
-						? msg.staff_projects_id_assign_picker_body_confirm_unassign()
-						: msg.staff_projects_id_assign_picker_body_unassign()}
+						? msg.staff_projects_id_assign_picker_body_confirm_unassign_label()
+						: msg.staff_projects_id_assign_picker_body_unassign_label()}
 					variant="error"
 					outline
 					size="sm"

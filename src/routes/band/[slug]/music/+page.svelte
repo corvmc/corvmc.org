@@ -21,7 +21,7 @@
 	const { releases, canManage } = $derived(await getBandMusicPage(params.slug));
 </script>
 
-<PageHeader width="2xl" title={m.band_slug_music_releases()} subtitle={band.name}>
+<PageHeader width="2xl" title={m.band_slug_music_releases_title()} subtitle={band.name}>
 	{#if canManage}
 		<CreateReleaseModal bandSlug={band.slug} />
 	{/if}
@@ -30,8 +30,8 @@
 <PageContent width="2xl">
 	{#if releases.length === 0}
 		<EmptyState
-			title={m.band_slug_music_no_releases_yet()}
-			description={m.band_slug_music_description()}
+			title={m.band_slug_music_no_releases_yet_title()}
+			description={m.band_slug_music_description_body()}
 		/>
 	{:else}
 		<div class="space-y-3">

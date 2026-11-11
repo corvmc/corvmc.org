@@ -61,8 +61,8 @@
 
 {#if !person}
 	<EmptyState
-		title={m.staff_access_person_access_pick_person()}
-		description={m.staff_access_person_access_description()}
+		title={m.staff_access_person_access_pick_person_title()}
+		description={m.staff_access_person_access_description_body()}
 	/>
 {:else}
 	{@const userId = person.id}
@@ -76,20 +76,23 @@
 		)}
 		{@const held = [...new Set([...access.capabilities, ...orgSeats.map((o) => o.cap)])]}
 
-		<InfoCard title={m.staff_access_person_access_positions()} state={access.positions.length}>
+		<InfoCard
+			title={m.staff_access_person_access_positions_title()}
+			state={access.positions.length}
+		>
 			{#snippet header(title)}
 				<div class="flex items-center justify-between gap-2">
 					<CardTitle>{title}</CardTitle>
 					{#if unheld.length > 0}
 						<Action
 							action={setPosition.for(`add-${userId}`)}
-							label={m.staff_access_person_access_assign_position()}
+							label={m.staff_access_person_access_assign_position_label()}
 							size="sm"
-							modalTitle={m.staff_access_person_access_assign_position_2({
+							modalTitle={m.staff_access_person_access_assign_position_2_title({
 								value: person?.name ?? ''
 							})}
-							submitLabel={m.staff_access_person_access_assign()}
-							successToast={m.staff_access_person_access_position_assigned()}
+							submitLabel={m.staff_access_person_access_assign_label()}
+							successToast={m.staff_access_person_access_position_assigned_toast()}
 							onsuccess={refresh}
 						>
 							{#snippet form()}
@@ -97,7 +100,7 @@
 								<input {...setPosition.for(`add-${userId}`).fields.change.as('hidden', 'add')} />
 								<FormField
 									field={setPosition.for(`add-${userId}`).fields.position}
-									label={m.staff_position()}
+									label={m.staff_position_label()}
 									type="select"
 									options={unheld.map((p) => ({ value: p, label: positionLabels[p] }))}
 								/>
@@ -108,14 +111,15 @@
 			{/snippet}
 			{#if access.positions.length === 0}
 				<p class="text-muted">
-					{m.staff_access_person_access_no_position_they_hold_only()}
+					{m.staff_access_person_access_no_position_they_hold_only_text()}
 				</p>
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th>{m.staff_position()}</th>
-						<th class="col-support cell-num">{m.staff_access_person_access_capabilities()}</th>
-						<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+						<th>{m.staff_position_label()}</th>
+						<th class="col-support cell-num">{m.staff_access_person_access_capabilities_label()}</th
+						>
+						<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 					{/snippet}
 					{#each access.positions as p (p)}
 						<tr>
@@ -126,17 +130,17 @@
 							<td class="w-px">
 								<Action
 									action={setPosition.for(`remove-${userId}-${p}`)}
-									label={m.staff_remove()}
+									label={m.staff_remove_label()}
 									variant="ghost"
 									size="xs"
 									class="text-error"
-									modalTitle={m.staff_access_person_access_remove_from({
+									modalTitle={m.staff_access_person_access_remove_from_title({
 										value: positionLabels[p],
 										value2: person?.name
 									})}
-									submitLabel={m.staff_remove()}
+									submitLabel={m.staff_remove_label()}
 									submitVariant="error"
-									successToast={m.staff_access_person_access_position_removed()}
+									successToast={m.staff_access_person_access_position_removed_toast()}
 									onsuccess={refresh}
 								>
 									{#snippet form()}
@@ -154,7 +158,7 @@
 												.fields.change.as('hidden', 'remove')}
 										/>
 										<p class="text-sm">
-											{m.staff_access_person_access_takes_effect_their_next_request()}
+											{m.staff_access_person_access_takes_effect_their_next_request_text()}
 										</p>
 									{/snippet}
 								</Action>
@@ -165,15 +169,15 @@
 			{/if}
 		</InfoCard>
 
-		<InfoCard title={m.staff_access_person_access_capabilities()} state={held.length}>
+		<InfoCard title={m.staff_access_person_access_capabilities_title()} state={held.length}>
 			{#if held.length === 0}
-				<p class="text-muted">{m.staff_access_person_access_nothing_beyond_member_s_own()}</p>
+				<p class="text-muted">{m.staff_access_person_access_nothing_beyond_member_s_own_text()}</p>
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th>{m.staff_access_person_access_area()}</th>
-						<th>{m.staff_access_person_access_may()}</th>
-						<th class="col-support">{m.staff_through()}</th>
+						<th>{m.staff_access_person_access_area_label()}</th>
+						<th>{m.staff_access_person_access_may_label()}</th>
+						<th class="col-support">{m.staff_through_label()}</th>
 					{/snippet}
 					{#each groupByResource(held) as g (g.resource)}
 						{@const from = [
@@ -194,15 +198,18 @@
 			{/if}
 		</InfoCard>
 
-		<InfoCard title={m.staff_access_person_access_committee_seats()} state={access.seats.length}>
+		<InfoCard
+			title={m.staff_access_person_access_committee_seats_title()}
+			state={access.seats.length}
+		>
 			{#if access.seats.length === 0}
-				<p class="text-muted">{m.staff_access_person_access_no_active_committee_seat()}</p>
+				<p class="text-muted">{m.staff_access_person_access_no_active_committee_seat_text()}</p>
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th>{m.staff_committee()}</th>
-						<th>{m.staff_access_person_access_grants_its_members()}</th>
-						<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+						<th>{m.staff_committee_label()}</th>
+						<th>{m.staff_access_person_access_grants_its_members_label()}</th>
+						<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 					{/snippet}
 					{#each access.seats as seat (seat.groupId)}
 						<tr>
@@ -212,13 +219,13 @@
 									href={resolve('/staff/groups/[id]', { id: seat.groupId })}>{seat.name}</a
 								>
 								<div class="text-muted">
-									{seat.chair ? m.staff_access_person_access_chair() : m.staff_member()}
+									{seat.chair ? m.staff_access_person_access_chair_text() : m.staff_member_text()}
 								</div>
 							</td>
 							<td class="cell-text whitespace-normal">
 								{#if seat.grants.length === 0}
 									<span class="text-muted"
-										>{m.staff_access_person_access_nothing_beyond_seat()}</span
+										>{m.staff_access_person_access_nothing_beyond_seat_text()}</span
 									>
 								{:else}
 									{seat.grants
@@ -234,7 +241,7 @@
 									groupId={seat.groupId}
 									name={seat.name}
 									held={seat.grants}
-									label={m.staff_edit_grants()}
+									label={m.staff_edit_grants_label()}
 									onsuccess={refresh}
 								/>
 							</td>
@@ -244,7 +251,10 @@
 			{/if}
 		</InfoCard>
 
-		<InfoCard title={m.staff_access_person_access_clearances()} state={access.clearances.length}>
+		<InfoCard
+			title={m.staff_access_person_access_clearances_title()}
+			state={access.clearances.length}
+		>
 			{#snippet header(title)}
 				<div class="flex items-center justify-between gap-2">
 					<CardTitle>{title}</CardTitle>
@@ -252,14 +262,14 @@
 				</div>
 			{/snippet}
 			{#if access.clearances.length === 0}
-				<p class="text-muted">{m.staff_access_person_access_no_clearance_record()}</p>
+				<p class="text-muted">{m.staff_access_person_access_no_clearance_record_text()}</p>
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-						<th>{m.staff_clearance()}</th>
-						<th class="col-support">{m.staff_expires()}</th>
-						<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+						<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+						<th>{m.staff_clearance_label()}</th>
+						<th class="col-support">{m.staff_expires_label()}</th>
+						<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 					{/snippet}
 					{#each access.clearances as c (c.id)}
 						<tr>
@@ -267,17 +277,17 @@
 							<td class="cell-primary">
 								<div class="truncate font-medium">{c.certificationName}</div>
 								<div class="truncate text-muted">
-									{m.staff_clearance_granted({
+									{m.staff_clearance_granted_text({
 										date: formatDateShortYear(c.grantedAt)
-									})}{#if c.grantedByName}{m.staff_clearance_granted_by({
+									})}{#if c.grantedByName}{m.staff_clearance_granted_by_text({
 											name: c.grantedByName
-										})}{/if}{#if c.revokedReason}{m.staff_clearance_revoked({
+										})}{/if}{#if c.revokedReason}{m.staff_clearance_revoked_text({
 											reason: c.revokedReason
 										})}{/if}
 								</div>
 							</td>
 							<td class="col-support whitespace-nowrap">
-								{c.expiresAt ? formatDateShortYear(c.expiresAt) : m.staff_no_expiry()}
+								{c.expiresAt ? formatDateShortYear(c.expiresAt) : m.staff_no_expiry_text()}
 							</td>
 							<td class="w-px">
 								{#if !c.revokedAt}

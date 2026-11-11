@@ -32,10 +32,10 @@
 
 <Action
 	action={cancelReservation}
-	label={m.actions_cancel()}
+	label={m.actions_cancel_label()}
 	modalTitle={m.actions_cancel_reservation_modal_title()}
 	submitVariant="error"
-	successToast={m.actions_cancelled()}
+	successToast={m.actions_cancelled_toast()}
 	{variant}
 	{size}
 	{outline}
@@ -46,7 +46,7 @@
 	{#snippet form()}
 		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
-		<p class="text-sm">{m.actions_cancel_reservation_sure_want_cancel_reservation()}</p>
+		<p class="text-sm">{m.actions_cancel_reservation_sure_want_cancel_reservation_text()}</p>
 		{#if showReasonInput}
 			<input
 				{...fields.reason.as('text')}

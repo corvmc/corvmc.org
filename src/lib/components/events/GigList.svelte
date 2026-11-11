@@ -98,17 +98,17 @@
 									<a {href} class="gig-row__title">{evt.title}</a>
 									{#if evt.source === 'community'}
 										<span class="sticker-badge sticker-badge--sm sticker-badge--green"
-											>{m.events_gig_list_community()}</span
+											>{m.events_gig_list_community_text()}</span
 										>
 									{:else if evt.source !== 'band'}
 										<span class="sticker-badge sticker-badge--sm sticker-badge--orange"
-											>{m.events_cmc()}</span
+											>{m.events_cmc_text()}</span
 										>
 									{/if}
 									{#if isCancelled}
 										<!-- The cancellation IS the announcement, so mark it plainly
 										     rather than greying the row into something people skim. -->
-										<span class="gig-row__cancelled-tag">{m.events_gig_list_cancelled()}</span>
+										<span class="gig-row__cancelled-tag">{m.events_gig_list_cancelled_text()}</span>
 									{/if}
 								</span>
 								<span class="gig-row__meta">
@@ -136,21 +136,21 @@
 											href={evt.externalTicketUrl}
 											target="_blank"
 											rel="external noopener noreferrer"
-											size="sm">{m.events_gig_list_get_tickets()}</Button
+											size="sm">{m.events_gig_list_get_tickets_label()}</Button
 										>
 									{:else if mode === 'platform'}
 										<Button
 											href={eventBase === '/member/events'
 												? href
 												: resolve(`events/${evt.id}/tickets`)}
-											size="sm">{m.events_gig_list_get_tickets()}</Button
+											size="sm">{m.events_gig_list_get_tickets_label()}</Button
 										>
 									{:else if going.has(evt.id)}
 										<span class="gig-row__going"
-											><IconCheck size={14} /> {m.events_gig_list_going()}</span
+											><IconCheck size={14} /> {m.events_gig_list_going_text()}</span
 										>
 									{:else}
-										<Button {href} size="sm">{m.events_gig_list_rsvp()}</Button>
+										<Button {href} size="sm">{m.events_gig_list_rsvp_label()}</Button>
 									{/if}
 								</div>
 							{/if}

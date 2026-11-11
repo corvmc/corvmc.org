@@ -84,14 +84,14 @@
 <PageHeader title={m.staff_help_title()}>
 	<Button href="/staff/help/create" variant="default" size="sm">
 		<IconPlus size={16} />
-		{m.staff_new_article()}
+		{m.staff_new_article_label()}
 	</Button>
 </PageHeader>
 <PageContent>
 	<!-- Categories section -->
 	<details class="collapse-arrow collapse mb-6 collapse-panel">
 		<summary class="collapse-title text-sm font-medium"
-			>{m.staff_help_manage_categories({ length: categories.length })}</summary
+			>{m.staff_help_manage_categories_label({ length: categories.length })}</summary
 		>
 		<div class="collapse-content">
 			<div class="space-y-2">
@@ -109,43 +109,46 @@
 							     only be corrected in the database. -->
 							<Action
 								action={editCat}
-								modalTitle={m.staff_help_edit_category()}
-								successToast={m.staff_help_category_updated()}
+								modalTitle={m.staff_help_edit_category_title()}
+								successToast={m.staff_help_category_updated_toast()}
 								onsuccess={refreshData}
 								variant="ghost"
 								size="xs"
 								iconOnly
-								label={m.staff_edit()}
+								label={m.staff_edit_label()}
 							>
 								{#snippet form()}
 									<input {...editCat.fields.id.as('hidden', cat.id)} />
 									<div class="space-y-2">
-										<FormField field={editCat.fields.name} label={m.staff_name()}>
+										<FormField field={editCat.fields.name} label={m.staff_name_label()}>
 											<input
 												{...editCat.fields.name.as('text', cat.name)}
 												class="input w-full input-sm"
 											/>
 										</FormField>
-										<FormField field={editCat.fields.slug} label={m.staff_slug()}>
+										<FormField field={editCat.fields.slug} label={m.staff_slug_label()}>
 											<input
 												{...editCat.fields.slug.as('text', cat.slug)}
 												class="input w-full input-sm"
 											/>
 										</FormField>
-										<FormField field={editCat.fields.description} label={m.staff_description()}>
+										<FormField
+											field={editCat.fields.description}
+											label={m.staff_description_label()}
+										>
 											<input
 												{...editCat.fields.description.as('text', cat.description ?? '')}
 												class="input w-full input-sm"
 											/>
 										</FormField>
-										<FormField field={editCat.fields.icon} label={m.staff_help_icon()}>
+										<FormField field={editCat.fields.icon} label={m.staff_help_icon_label()}>
 											<input
 												{...editCat.fields.icon.as('text', cat.icon ?? '')}
 												class="input w-full input-sm"
-												placeholder={m.staff_help_tabler_book()}
+												placeholder={m.staff_help_tabler_book_placeholder()}
 											/>
 										</FormField>
-										<FormField field={editCat.fields.minRole} label={m.staff_audience()}>
+										<FormField field={editCat.fields.minRole} label={m.staff_audience_label()}>
 											<Select
 												size="sm"
 												class="w-full"
@@ -156,7 +159,7 @@
 												{/each}
 											</Select>
 										</FormField>
-										<FormField field={editCat.fields.sortOrder} label={m.staff_sort_order()}>
+										<FormField field={editCat.fields.sortOrder} label={m.staff_sort_order_label()}>
 											<input
 												{...editCat.fields.sortOrder.as('text', String(cat.sortOrder))}
 												class="input w-full input-sm"
@@ -168,17 +171,19 @@
 							</Action>
 							<Action
 								action={deleteCategory}
-								modalTitle={m.staff_confirm()}
-								successToast={m.staff_category_deleted()}
+								modalTitle={m.staff_confirm_title()}
+								successToast={m.staff_category_deleted_toast()}
 								onsuccess={refreshData}
 								variant="ghost"
 								size="xs"
 								iconOnly
-								label={m.staff_delete()}
+								label={m.staff_delete_label()}
 							>
 								{#snippet form()}
 									<input {...deleteFields.id.as('hidden', cat.id)} />
-									<p class="py-4">{m.staff_help_delete_all_its_articles({ name: cat.name })}</p>
+									<p class="py-4">
+										{m.staff_help_delete_all_its_articles_text({ name: cat.name })}
+									</p>
 								{/snippet}
 								<IconTrash size={14} />
 							</Action>
@@ -188,45 +193,45 @@
 			</div>
 			<Form
 				remote={createCategory}
-				successToast={m.staff_help_category_created()}
+				successToast={m.staff_help_category_created_toast()}
 				onsuccess={refreshData}
 			>
 				<div class="mt-4 flex flex-wrap items-end gap-2">
-					<FormField field={createCategory.fields.name} label={m.staff_name()}>
+					<FormField field={createCategory.fields.name} label={m.staff_name_label()}>
 						<input
 							{...createCategory.fields.name.as('text')}
 							type="text"
 							class="input w-40 input-sm"
-							placeholder={m.staff_help_category_name()}
+							placeholder={m.staff_help_category_name_placeholder()}
 						/>
 					</FormField>
-					<FormField field={createCategory.fields.slug} label={m.staff_slug()}>
+					<FormField field={createCategory.fields.slug} label={m.staff_slug_label()}>
 						<input
 							{...createCategory.fields.slug.as('text')}
 							type="text"
 							class="input w-40 input-sm"
 							placeholder={slugFromName(createCategory.fields.name.value() ?? '') ||
-								m.staff_help_auto()}
+								m.staff_help_auto_placeholder()}
 						/>
 					</FormField>
-					<FormField field={createCategory.fields.description} label={m.staff_description()}>
+					<FormField field={createCategory.fields.description} label={m.staff_description_label()}>
 						<!-- The binding, like the edit row and the hidden sortOrder beside it,
 						     rather than the raw `name=` inputs this form otherwise uses. -->
 						<input
 							{...createCatFields.description.as('text', '')}
 							class="input w-56 input-sm"
-							placeholder={m.staff_help_what()}
+							placeholder={m.staff_help_what_placeholder()}
 						/>
 					</FormField>
-					<FormField field={createCategory.fields.icon} label={m.staff_help_icon()}>
+					<FormField field={createCategory.fields.icon} label={m.staff_help_icon_label()}>
 						<input
 							{...createCategory.fields.icon.as('text')}
 							type="text"
 							class="input w-32 input-sm"
-							placeholder={m.staff_help_tabler_book()}
+							placeholder={m.staff_help_tabler_book_placeholder()}
 						/>
 					</FormField>
-					<FormField field={createCategory.fields.minRole} label={m.staff_audience()}>
+					<FormField field={createCategory.fields.minRole} label={m.staff_audience_label()}>
 						<Select size="sm" class="w-32" {...createCategory.fields.minRole.as('select')}>
 							{#each helpAudiences as audience (audience)}
 								<option value={audience}>{helpAudienceLabels[audience]}</option>
@@ -234,7 +239,7 @@
 						</Select>
 					</FormField>
 					<input {...createCatFields.sortOrder.as('hidden', String(categories.length))} />
-					<SubmitButton label={m.staff_add()} variant="primary" size="sm" />
+					<SubmitButton label={m.staff_add_label()} variant="primary" size="sm" />
 				</div>
 			</Form>
 		</div>
@@ -242,7 +247,7 @@
 
 	<!-- Articles table -->
 	{#if articles.length === 0}
-		<EmptyState message={m.staff_help_message()} />
+		<EmptyState message={m.staff_help_message_body()} />
 	{:else}
 		<!--
 			Bulk publish bar. `pnpm help:sync` imports the markdown manual as drafts
@@ -251,19 +256,19 @@
 		-->
 		<div class="mb-3 flex flex-wrap items-center gap-2">
 			<span class="text-muted">
-				{m.staff_help_selected_drafts({ length: selectedIds.length, length2: drafts.length })}
+				{m.staff_help_selected_drafts_text({ length: selectedIds.length, length2: drafts.length })}
 			</span>
 			{#if drafts.length > 0}
 				<Button variant="ghost" size="xs" onclick={selectDrafts}
-					>{m.staff_help_select_all_drafts()}</Button
+					>{m.staff_help_select_all_drafts_label()}</Button
 				>
 			{/if}
 			{#if selectedIds.length > 0}
 				<Action
 					action={setArticlesPublishedForm}
-					label={m.staff_help_publish_selected()}
-					modalTitle={m.staff_help_publish_articles()}
-					successToast={m.staff_help_articles_published()}
+					label={m.staff_help_publish_selected_label()}
+					modalTitle={m.staff_help_publish_articles_title()}
+					successToast={m.staff_help_articles_published_toast()}
 					onsuccess={afterBulk}
 					variant="primary"
 					size="xs"
@@ -274,15 +279,17 @@
 						{/each}
 						<input {...bulkFields.published.as('hidden', true)} />
 						<p class="py-4">
-							{m.staff_help_publish_articles_member_help_centre({ length: selectedIds.length })}
+							{m.staff_help_publish_articles_member_help_centre_text({
+								length: selectedIds.length
+							})}
 						</p>
 					{/snippet}
 				</Action>
 				<Action
 					action={unpublishSelected}
-					label={m.staff_help_unpublish_selected()}
-					modalTitle={m.staff_help_unpublish_articles()}
-					successToast={m.staff_help_articles_unpublished()}
+					label={m.staff_help_unpublish_selected_label()}
+					modalTitle={m.staff_help_unpublish_articles_title()}
+					successToast={m.staff_help_articles_unpublished_toast()}
 					onsuccess={afterBulk}
 					variant="ghost"
 					size="xs"
@@ -293,7 +300,7 @@
 						{/each}
 						<input {...unpublishSelected.fields.published.as('hidden', false)} />
 						<p class="py-4">
-							{m.staff_help_hide_articles_from_members({ length: selectedIds.length })}
+							{m.staff_help_hide_articles_from_members_text({ length: selectedIds.length })}
 						</p>
 					{/snippet}
 				</Action>
@@ -306,16 +313,16 @@
 					<input
 						type="checkbox"
 						class="checkbox checkbox-sm"
-						aria-label={m.staff_help_select_all_articles()}
+						aria-label={m.staff_help_select_all_articles_label()}
 						checked={allSelected}
 						onchange={toggleAll}
 					/>
 				</th>
-				<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-				<th>{m.staff_help_article()}</th>
-				<th class="col-support w-px">{m.staff_source()}</th>
-				<th class="col-extra w-px">{m.staff_role()}</th>
-				<th class="col-support whitespace-nowrap">{m.staff_updated()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+				<th>{m.staff_help_article_label()}</th>
+				<th class="col-support w-px">{m.staff_source_label()}</th>
+				<th class="col-extra w-px">{m.staff_role_label()}</th>
+				<th class="col-support whitespace-nowrap">{m.staff_updated_label()}</th>
 			{/snippet}
 			{#each articles as a (a.id)}
 				{@const href = resolve(`staff/help/${a.id}`)}
@@ -326,7 +333,7 @@
 						<input
 							type="checkbox"
 							class="checkbox checkbox-sm"
-							aria-label={m.staff_help_select({ title: a.title })}
+							aria-label={m.staff_help_select_label({ title: a.title })}
 							checked={selectedIds.includes(a.id)}
 							onchange={() => toggleArticle(a.id)}
 						/>

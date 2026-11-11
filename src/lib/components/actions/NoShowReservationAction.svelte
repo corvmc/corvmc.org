@@ -42,6 +42,6 @@
 	{#snippet form()}
 		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
-		<p class="text-sm">{m.actions_no_show_reservation_mark_reservation_as_no_show()}</p>
+		<p class="text-sm">{m.actions_no_show_reservation_mark_reservation_as_no_show_text()}</p>
 	{/snippet}
 </Action>

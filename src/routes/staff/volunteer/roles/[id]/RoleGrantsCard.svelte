@@ -30,7 +30,7 @@
 			<CardTitle>{title}</CardTitle>
 			<Action
 				action={setVolunteerRoleGrants}
-				label={m.staff_edit()}
+				label={m.staff_edit_label()}
 				variant="ghost"
 				size="sm"
 				modalTitle={m.staff_volunteer_roles_id_role_grants_card_modal_title({ name: role.name })}
@@ -39,7 +39,7 @@
 				{#snippet form()}
 					<input {...setVolunteerRoleGrants.fields.roleId.as('hidden', role.id)} />
 					<p class="text-muted">
-						{m.staff_volunteer_roles_id_role_grants_card_volunteer_confirme()}
+						{m.staff_volunteer_roles_id_role_grants_card_volunteer_confirme_text()}
 					</p>
 					<CheckboxGroup
 						field={setVolunteerRoleGrants.fields.capabilities}
@@ -52,7 +52,9 @@
 	{/snippet}
 
 	{#if held.length === 0}
-		<p class="text-muted">{m.staff_volunteer_roles_id_role_grants_card_role_grants_nothin()}</p>
+		<p class="text-muted">
+			{m.staff_volunteer_roles_id_role_grants_card_role_grants_nothin_text()}
+		</p>
 	{:else}
 		<ul class="space-y-2 text-sm">
 			{#each held as cap (cap)}

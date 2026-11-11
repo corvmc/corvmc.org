@@ -35,10 +35,10 @@
 	<Action
 		action={directForm}
 		data-testid="message-member"
-		label={m.member_messages_compose_message_member()}
-		modalTitle={m.member_messages_compose_message_member_2()}
-		submitLabel={m.member_messages_compose_send_request()}
-		successToast={m.member_messages_compose_request_sent()}
+		label={m.member_messages_compose_message_member_label()}
+		modalTitle={m.member_messages_compose_message_member_2_title()}
+		submitLabel={m.member_messages_compose_send_request_label()}
+		successToast={m.member_messages_compose_request_sent_toast()}
 		variant="primary"
 		size="sm"
 		canSubmit={!!recipient && body.trim().length > 0}
@@ -59,7 +59,7 @@
 					<input {...directForm.fields.recipientId.as('hidden', recipient.id)} />
 				{/if}
 				<label class="fieldset w-full">
-					<span class="fieldset-legend">{m.member_text()}</span>
+					<span class="fieldset-legend">{m.member_text_label()}</span>
 					<!-- The picker lists everyone the viewer can already see in the
 					     directory, and says nothing about who accepts messages. Marking
 					     the unreachable ones would leak exactly what the silent drop in
@@ -68,7 +68,7 @@
 						bind:value={recipient}
 						labelKey="name"
 						descriptionKey="tagline"
-						placeholder={m.member_messages_compose_search_members_by_name()}
+						placeholder={m.member_messages_compose_search_members_by_name_placeholder()}
 						search={(q) => searchMessageRecipients({ search: q })}
 					/>
 					<!-- Picking someone commits a tick after the click, so submitting
@@ -76,23 +76,23 @@
 					     a silent no-op: the field has no FormField to hang its issue on,
 					     so nothing on screen changes. -->
 					{#each directForm.fields.recipientId.issues() ?? [] as issue (issue.message)}
-						<p class="text-sm text-error">{m.member_messages_compose_choose_who_going()}</p>
+						<p class="text-sm text-error">{m.member_messages_compose_choose_who_going_text()}</p>
 					{/each}
 				</label>
 
 				<p class="text-muted">
-					{m.member_messages_compose_goes_as_message_request_they()}
+					{m.member_messages_compose_goes_as_message_request_they_text()}
 				</p>
 
 				<label class="fieldset w-full">
-					<span class="fieldset-legend">{m.member_messages_compose_message()}</span>
+					<span class="fieldset-legend">{m.member_messages_compose_message_label()}</span>
 					<textarea
 						{...directForm.fields.body.as('text')}
 						class="textarea w-full"
 						rows="5"
 						maxlength={DIRECT_MESSAGE_BODY_MAX}
 						bind:value={body}
-						placeholder={m.member_messages_compose_say_who_what_re_after()}></textarea>
+						placeholder={m.member_messages_compose_say_who_what_re_after_placeholder()}></textarea>
 				</label>
 			</div>
 		{/snippet}
@@ -101,10 +101,10 @@
 
 <Action
 	action={startForm}
-	label={m.member_messages_compose_message_staff()}
-	modalTitle={m.member_messages_compose_message_corvmc_staff()}
-	submitLabel={m.member_messages_compose_send()}
-	successToast={m.member_messages_compose_message_sent()}
+	label={m.member_messages_compose_message_staff_label()}
+	modalTitle={m.member_messages_compose_message_corvmc_staff_title()}
+	submitLabel={m.member_messages_compose_send_label()}
+	successToast={m.member_messages_compose_message_sent_toast()}
 	variant={canMessageMembers ? 'default' : 'primary'}
 	outline={canMessageMembers}
 	size="sm"
@@ -117,13 +117,13 @@
 	{#snippet form()}
 		<FormField
 			field={startForm.fields.subject}
-			label={m.member_messages_compose_what_s_about()}
+			label={m.member_messages_compose_what_s_about_label()}
 			type="text"
-			description={m.member_messages_compose_description()}
+			description={m.member_messages_compose_description_body()}
 		/>
 		<FormField
 			field={startForm.fields.body}
-			label={m.member_messages_compose_message()}
+			label={m.member_messages_compose_message_label()}
 			type="textarea"
 		/>
 	{/snippet}

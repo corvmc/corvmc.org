@@ -70,8 +70,8 @@
 			<div class="text-subtle text-xs uppercase">{dayParts.month}</div>
 			<div class="text-xl font-bold">{dayParts.day}</div>
 		{:else}
-			<div class="text-subtle text-xs uppercase">{m.volunteer_my_shift_card_when()}</div>
-			<div class="text-subtle text-sm font-bold">{m.volunteer_my_shift_card_tbd()}</div>
+			<div class="text-subtle text-xs uppercase">{m.volunteer_my_shift_card_when_text()}</div>
+			<div class="text-subtle text-sm font-bold">{m.volunteer_my_shift_card_tbd_text()}</div>
 		{/if}
 	</div>
 
@@ -83,7 +83,9 @@
 		</div>
 
 		{#if calledOff}
-			<p class="mt-2 text-sm text-error">{m.volunteer_my_shift_card_was_called_off_there_s()}</p>
+			<p class="mt-2 text-sm text-error">
+				{m.volunteer_my_shift_card_was_called_off_there_s_text()}
+			</p>
 		{:else}
 			<div class="mt-2">
 				<ShiftProgress status={shift.status} notes={shift.notes} />
@@ -99,7 +101,7 @@
 					variant="ghost"
 					size="xs"
 				>
-					{m.volunteer_my_shift_card_open_shift()}
+					{m.volunteer_my_shift_card_open_shift_label()}
 				</Button>
 			{/if}
 			{#if worked}
@@ -108,7 +110,7 @@
 					variant="ghost"
 					size="xs"
 				>
-					{m.volunteer_my_shift_card_how_did_go()}
+					{m.volunteer_my_shift_card_how_did_go_label()}
 				</Button>
 			{:else if !calledOff}
 				<Action
@@ -132,7 +134,7 @@
 								: ''}, {timeRange}.
 						</p>
 						<p class="text-sm">
-							{m.volunteer_my_shift_card_notice_isn_t_no_show()}
+							{m.volunteer_my_shift_card_notice_isn_t_no_show_text()}
 						</p>
 					{/snippet}
 				</Action>

@@ -30,9 +30,9 @@
 	}
 </script>
 
-<PageHeader title={m.staff_grants()} subtitle={m.staff_money()}>
+<PageHeader title={m.staff_grants_title()} subtitle={m.staff_money_body()}>
 	<Button href={resolve('staff/grants/funders')} variant="ghost" size="sm"
-		>{m.staff_funders()}</Button
+		>{m.staff_funders_label()}</Button
 	>
 	{#if funders.length > 0}
 		<Action
@@ -58,27 +58,27 @@
 				checked={includeClosed}
 				onchange={(e) => setClosed(e.currentTarget.checked)}
 			/>
-			{m.staff_grants_show_closed()}
+			{m.staff_grants_show_closed_label()}
 		</label>
 	</div>
 
 	{#if funders.length === 0}
 		<EmptyState
-			title={m.staff_no_funders_yet()}
-			description={m.staff_grants_add_foundation_agency_first_under()}
+			title={m.staff_no_funders_yet_title()}
+			description={m.staff_grants_add_foundation_agency_first_under_body()}
 		/>
 	{:else if grants.length === 0}
 		<EmptyState
-			title={m.staff_grants_no_open_applications()}
-			description={m.staff_grants_add_grant_applying_with_its()}
+			title={m.staff_grants_no_open_applications_title()}
+			description={m.staff_grants_add_grant_applying_with_its_body()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-				<th>{m.staff_grants_application()}</th>
-				<th>{m.staff_grants_next_deadline()}</th>
-				<th class="col-support cell-num">{m.staff_amount()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+				<th>{m.staff_grants_application_label()}</th>
+				<th>{m.staff_grants_next_deadline_label()}</th>
+				<th class="col-support cell-num">{m.staff_amount_label()}</th>
 			{/snippet}
 			{#each grants as g (g.id)}
 				<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/grants/${g.id}`)}>
@@ -98,7 +98,7 @@
 								{formatIsoDay(g.deadline.on)}
 							</span>
 						{:else if g.status === 'applied'}
-							<span class="text-muted">{m.staff_grants_awaiting_decision()}</span>
+							<span class="text-muted">{m.staff_grants_awaiting_decision_text()}</span>
 						{:else}
 							—
 						{/if}
@@ -108,7 +108,9 @@
 							{formatCents(g.amountAwardedCents)}
 						{:else if g.amountRequestedCents != null}
 							<span class="text-muted"
-								>{m.staff_grants_asked({ formatCents: formatCents(g.amountRequestedCents) })}</span
+								>{m.staff_grants_asked_text({
+									formatCents: formatCents(g.amountRequestedCents)
+								})}</span
 							>
 						{:else}
 							—

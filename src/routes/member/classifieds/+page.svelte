@@ -76,15 +76,15 @@
 	}
 </script>
 
-<PageHeader title={m.member_classifieds()} subtitle={m.member_community()}>
+<PageHeader title={m.member_classifieds_title()} subtitle={m.member_community_body()}>
 	<CreateClassifiedAction />
 </PageHeader>
 
 <PageContent>
 	<TabBar
 		tabs={[
-			{ key: 'board', label: m.member_classifieds_board() },
-			{ key: 'mine', label: m.member_classifieds_posts() }
+			{ key: 'board', label: m.member_classifieds_board_label() },
+			{ key: 'mine', label: m.member_classifieds_posts_label() }
 		]}
 		active={tab}
 		onchange={(k) => {
@@ -106,34 +106,34 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label={m.member_classifieds_post_type()}
+			aria-label={m.member_classifieds_post_type_label()}
 			value={kindFilter}
 			onchange={(e: Event) => {
 				kindFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">{m.member_classifieds_any_type()}</option>
+			<option value="">{m.member_classifieds_any_type_label()}</option>
 			{#each classifiedKinds as k (k)}
 				<option value={k}>{classifiedKindLabels[k]}</option>
 			{/each}
 		</Select>
 		<Select
 			size="sm"
-			aria-label={m.member_category()}
+			aria-label={m.member_category_label()}
 			value={categoryFilter}
 			onchange={(e: Event) => {
 				categoryFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">{m.member_all_categories()}</option>
+			<option value="">{m.member_all_categories_label()}</option>
 			{#each classifiedCategories as c (c)}
 				<option value={c}>{classifiedCategoryLabels[c]}</option>
 			{/each}
 		</Select>
 		{#if tagValue}
-			<Badge size="sm" variant="outline">{m.member_classifieds_tagged({ tagValue })}</Badge>
+			<Badge size="sm" variant="outline">{m.member_classifieds_tagged_label({ tagValue })}</Badge>
 		{/if}
 	</FilterBar>
 
@@ -144,19 +144,21 @@
 	<DataList
 		{result}
 		empty={tab === 'mine'
-			? m.member_classifieds_have_not_posted_anything_yet()
-			: m.member_classifieds_nothing_board_right_now()}
+			? m.member_classifieds_have_not_posted_anything_yet_body()
+			: m.member_classifieds_nothing_board_right_now_body()}
 		onpage={(p) => (page = p)}
 	>
 		{#snippet children(rows)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.member_status()}</span></th>
-					<th>{m.member_classifieds_post()}</th>
-					<th>{m.member_classifieds_posted_by()}</th>
-					<th class="col-support">{m.member_tags()}</th>
+					<th class="w-px"><span class="sr-only">{m.member_status_label()}</span></th>
+					<th>{m.member_classifieds_post_label()}</th>
+					<th>{m.member_classifieds_posted_by_label()}</th>
+					<th class="col-support">{m.member_tags_label()}</th>
 					<th class="col-extra whitespace-nowrap"
-						>{tab === 'mine' ? m.member_classifieds_expires() : m.member_classifieds_posted()}</th
+						>{tab === 'mine'
+							? m.member_classifieds_expires_label()
+							: m.member_classifieds_posted_label()}</th
 					>
 				{/snippet}
 				{#each rows as r (r.id)}

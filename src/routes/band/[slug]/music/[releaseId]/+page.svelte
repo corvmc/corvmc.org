@@ -89,7 +89,7 @@
 		body.append('cover', file);
 		const res = await fetch(`/api/releases/${releaseId}/cover`, { method: 'POST', body });
 		if (!res.ok) throw new Error(await responseErrorMessage(res, 'Upload failed'));
-		toast.success(m.band_slug_music_release_id_cover_updated());
+		toast.success(m.band_slug_music_release_id_cover_updated_toast());
 		void getBandRelease({ slug, releaseId }).refresh();
 		void getBandMusicPage(slug).refresh();
 	}
@@ -98,7 +98,7 @@
 		try {
 			const res = await fetch(`/api/releases/${releaseId}/cover`, { method: 'DELETE' });
 			if (!res.ok) throw new Error(await responseErrorMessage(res, 'Remove failed'));
-			toast.success(m.band_slug_music_release_id_cover_removed());
+			toast.success(m.band_slug_music_release_id_cover_removed_toast());
 			void getBandRelease({ slug, releaseId }).refresh();
 			void getBandMusicPage(slug).refresh();
 		} catch (err) {
@@ -110,18 +110,18 @@
 <PageHeader width="2xl" title={release.title} subtitle={band.name}>
 	<Badge>{releaseKindLabels[release.kind]}</Badge>
 	{#if release.status === 'draft'}
-		<Badge variant="ghost">{m.band_draft()}</Badge>
+		<Badge variant="ghost">{m.band_draft_label()}</Badge>
 	{:else if release.status === 'published'}
-		<Badge variant="success">{m.band_slug_music_release_id_published()}</Badge>
+		<Badge variant="success">{m.band_slug_music_release_id_published_label()}</Badge>
 	{:else}
-		<Badge variant="error">{m.band_withheld()}</Badge>
+		<Badge variant="error">{m.band_withheld_label()}</Badge>
 	{/if}
 </PageHeader>
 
 <PageContent width="2xl">
 	{#if release.status === 'withheld'}
 		<Alert type="error">
-			{m.band_slug_music_release_id_cmc_staff_withheld_release_not({
+			{m.band_slug_music_release_id_cmc_staff_withheld_release_not_body({
 				value: release.radioExcludedReason ? ` — ${release.radioExcludedReason}` : ''
 			})}
 		</Alert>
@@ -140,24 +140,24 @@
 					<img src={release.coverUrl} alt="" class="size-20 shrink-0 rounded object-cover" />
 				{/if}
 				<DefinitionList class="grow">
-					<Fact label={m.band_slug_music_release_id_price()}>
-						{release.priceMinCents > 0 ? formatCents(release.priceMinCents) : m.band_free()}
+					<Fact label={m.band_slug_music_release_id_price_label()}>
+						{release.priceMinCents > 0 ? formatCents(release.priceMinCents) : m.band_free_text()}
 					</Fact>
 					{#if release.releasedAt}
-						<Fact label={m.band_slug_music_release_id_released()}
+						<Fact label={m.band_slug_music_release_id_released_label()}
 							>{formatDate(release.releasedAt)}</Fact
 						>
 					{/if}
-					<Fact label={m.band_slug_music_release_id_sold()}>{release.salesCount}</Fact>
-					<Fact label={m.band_slug_music_release_id_cmc_radio()}>
+					<Fact label={m.band_slug_music_release_id_sold_label()}>{release.salesCount}</Fact>
+					<Fact label={m.band_slug_music_release_id_cmc_radio_label()}>
 						{#if release.radioExcluded}
-							{m.band_slug_music_release_id_pulled_by_staff()}
+							{m.band_slug_music_release_id_pulled_by_staff_text()}
 						{:else}
 							{release.radioOptIn
 								? release.radioAttested
-									? m.band_slug_music_release_id_rotation()
-									: m.band_slug_music_release_id_waiting_attestation()
-								: m.band_slug_music_release_id_not_rotation()}
+									? m.band_slug_music_release_id_rotation_text()
+									: m.band_slug_music_release_id_waiting_attestation_text()
+								: m.band_slug_music_release_id_not_rotation_text()}
 						{/if}
 					</Fact>
 				</DefinitionList>
@@ -175,7 +175,7 @@
 		<CardBody>
 			<div class="flex flex-wrap items-start justify-between gap-4">
 				<div>
-					<CardTitle>{m.band_slug_music_release_id_tracks()}</CardTitle>
+					<CardTitle>{m.band_slug_music_release_id_tracks_title()}</CardTitle>
 					<p class="text-muted">{formatTrackSummary(tracks.length, totalMs)}</p>
 				</div>
 				{#if canManage}
@@ -190,7 +190,7 @@
 				{/if}
 			</div>
 
-			<TrackList {tracks} empty={m.band_slug_music_release_id_empty()}>
+			<TrackList {tracks} empty={m.band_slug_music_release_id_empty_body()}>
 				{#snippet rowActions(track)}
 					{#if canManage}
 						<Action
@@ -198,10 +198,10 @@
 							iconOnly
 							variant="ghost"
 							size="sm"
-							label={m.band_slug_music_release_id_rename()}
-							modalTitle={m.band_slug_music_release_id_rename_track()}
-							submitLabel={m.band_save()}
-							successToast={m.band_slug_music_release_id_track_renamed()}
+							label={m.band_slug_music_release_id_rename_label()}
+							modalTitle={m.band_slug_music_release_id_rename_track_title()}
+							submitLabel={m.band_save_label()}
+							successToast={m.band_slug_music_release_id_track_renamed_toast()}
 						>
 							{#snippet icon()}<IconPencil size={16} />{/snippet}
 							{#snippet form()}
@@ -212,7 +212,7 @@
 									<input {...fields.trackId.as('hidden', track.id)} />
 									<FormField
 										field={fields.title}
-										label={m.band_title()}
+										label={m.band_title_label()}
 										value={track.title}
 										required
 									/>
@@ -227,11 +227,11 @@
 							iconOnly
 							variant="ghost"
 							size="sm"
-							label={m.band_slug_music_release_id_delete()}
-							modalTitle={m.band_slug_music_release_id_delete_track()}
-							submitLabel={m.band_slug_music_release_id_delete()}
+							label={m.band_slug_music_release_id_delete_label()}
+							modalTitle={m.band_slug_music_release_id_delete_track_title()}
+							submitLabel={m.band_slug_music_release_id_delete_label()}
 							submitVariant="error"
-							successToast={m.band_slug_music_release_id_track_deleted()}
+							successToast={m.band_slug_music_release_id_track_deleted_toast()}
 						>
 							{#snippet icon()}<IconTrash size={16} />{/snippet}
 							{#snippet form()}
@@ -242,7 +242,7 @@
 									<input {...fields.trackId.as('hidden', track.id)} />
 									<p>
 										<ParaglideMessage
-											message={m.band_slug_music_release_id_delete_audio_file_removed_good}
+											message={m.band_slug_music_release_id_delete_audio_file_removed_good_text}
 											inputs={{ title: track.title }}
 											>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 												>{/snippet}</ParaglideMessage
@@ -271,9 +271,9 @@
 					</div>
 				{/if}
 				<div class="grow">
-					<CardTitle>{m.band_slug_music_release_id_cover()}</CardTitle>
+					<CardTitle>{m.band_slug_music_release_id_cover_title()}</CardTitle>
 					<p class="text-muted">
-						{m.band_slug_music_release_id_square_art_shown_wherever_record()}
+						{m.band_slug_music_release_id_square_art_shown_wherever_record_text()}
 					</p>
 					<div class="mt-2">
 						<FileUpload
@@ -281,14 +281,14 @@
 							accept="image/*"
 							showPreview={false}
 							emptyLabel={release.coverUrl
-								? m.band_slug_music_release_id_replace_cover()
-								: m.band_slug_music_release_id_add_cover()}
+								? m.band_slug_music_release_id_replace_cover_title()
+								: m.band_slug_music_release_id_add_cover_title()}
 						/>
 					</div>
 				</div>
 				{#if release.coverUrl}
 					<Button type="button" variant="ghost" size="sm" onclick={removeCover}
-						>{m.band_remove()}</Button
+						>{m.band_remove_label()}</Button
 					>
 				{/if}
 			</CardBody>
@@ -303,18 +303,18 @@
 			<CardBody>
 				<CardTitle>
 					<IconRadio size={18} />
-					{m.band_slug_music_release_id_cmc_radio()}
+					{m.band_slug_music_release_id_cmc_radio_title()}
 				</CardTitle>
 				<p class="text-muted">
-					{m.band_slug_music_release_id_put_record_rotation_station_plays()}
+					{m.band_slug_music_release_id_put_record_rotation_station_plays_text()}
 				</p>
 				<p class="text-muted text-sm">
-					{m.band_slug_music_release_id_station_pays_no_licence_fees()}
+					{m.band_slug_music_release_id_station_pays_no_licence_fees_text()}
 				</p>
 
 				{#if release.radioExcluded}
 					<Alert type="warning">
-						{m.band_slug_music_release_id_staff_pulled_release_from_rotatio({
+						{m.band_slug_music_release_id_staff_pulled_release_from_rotatio_body({
 							value: release.radioExcludedReason ? ` — ${release.radioExcludedReason}` : ''
 						})}
 					</Alert>
@@ -322,7 +322,7 @@
 
 				<Form
 					remote={setRadioOptInForm.for(releaseId)}
-					successToast={m.band_slug_music_release_id_radio_setting_saved()}
+					successToast={m.band_slug_music_release_id_radio_setting_saved_toast()}
 					class="mt-2"
 				>
 					{@const fields = setRadioOptInForm.for(releaseId).fields}
@@ -331,13 +331,13 @@
 					<FormField
 						field={fields.radioOptIn}
 						type="toggle"
-						label={m.band_slug_music_release_id_include_cmc_radio()}
-						checkboxLabel={m.band_slug_music_release_id_air()}
+						label={m.band_slug_music_release_id_include_cmc_radio_label()}
+						checkboxLabel={m.band_slug_music_release_id_air_checkbox()}
 						value={release.radioOptIn}
 					/>
 					{#if release.radioAttested && release.radioAttestedAt && release.radioAttestationExpiresAt}
 						<p class="text-muted text-sm">
-							{m.band_slug_music_release_id_attested_good_until({
+							{m.band_slug_music_release_id_attested_good_until_text({
 								formatDate: formatDate(release.radioAttestedAt),
 								formatDate2: formatDate(release.radioAttestationExpiresAt),
 								text: RADIO_PRO_ATTESTATION.text
@@ -346,25 +346,25 @@
 					{:else if release.radioOptIn}
 						<Alert type="warning">
 							{release.radioAttestedAt
-								? m.band_slug_music_release_id_attestation_release_has_run_out()
-								: m.band_slug_music_release_id_release_off_air_until_someone()}
+								? m.band_slug_music_release_id_attestation_release_has_run_out_body()
+								: m.band_slug_music_release_id_release_off_air_until_someone_body()}
 						</Alert>
 					{/if}
 					{#if !release.radioAttested || release.radioAttestationRenewable}
 						<FormField
 							field={fields.attestNotPro}
 							type="checkbox"
-							label={m.band_slug_music_release_id_performing_rights()}
+							label={m.band_slug_music_release_id_performing_rights_label()}
 							checkboxLabel={RADIO_PRO_ATTESTATION.text}
-							description={m.band_slug_music_release_id_required_go_air_again_every()}
+							description={m.band_slug_music_release_id_required_go_air_again_every_body()}
 						/>
 					{/if}
-					<SubmitButton>{m.band_save()}</SubmitButton>
+					<SubmitButton>{m.band_save_label()}</SubmitButton>
 				</Form>
 
 				{#if outOfRange.length > 0}
 					<Alert type="info">
-						{m.band_slug_music_release_id_station_plays_tracks_between_long({
+						{m.band_slug_music_release_id_station_plays_tracks_between_long_body({
 							formatRuntime: formatRuntime(RADIO_MIN_TRACK_MS),
 							formatRuntime2: formatRuntime(RADIO_MAX_TRACK_MS),
 							join: outOfRange.map((t) => t.title).join(', ')
@@ -378,9 +378,9 @@
 	{#if canManage}
 		<Card>
 			<CardBody>
-				<CardTitle>{m.band_slug_music_release_id_price()}</CardTitle>
+				<CardTitle>{m.band_slug_music_release_id_price_title()}</CardTitle>
 				<p class="text-muted">
-					{m.band_slug_music_release_id_name_minimum_free_real_answer()}
+					{m.band_slug_music_release_id_name_minimum_free_real_answer_text()}
 				</p>
 
 				{#if release.priceMinCents > 0 && !canSell}
@@ -388,7 +388,7 @@
 					     is set but nothing can take the money. -->
 					<Alert type="warning">
 						<ParaglideMessage
-							message={m.band_slug_music_release_id_release_has_price_but_payouts}
+							message={m.band_slug_music_release_id_release_has_price_but_payouts_body}
 							inputs={{}}
 							>{#snippet a({ children })}<a
 									class="link"
@@ -400,35 +400,35 @@
 
 				<Form
 					remote={updatePricingForm.for(releaseId)}
-					successToast={m.band_slug_music_release_id_price_saved()}
+					successToast={m.band_slug_music_release_id_price_saved_toast()}
 				>
 					{@const fields = updatePricingForm.for(releaseId).fields}
 					<input {...fields.slug.as('hidden', slug)} />
 					<input {...fields.releaseId.as('hidden', releaseId)} />
 					<MoneyField
 						field={fields.priceMinCents}
-						label={m.band_slug_music_release_id_minimum_price()}
+						label={m.band_slug_music_release_id_minimum_price_label()}
 						value={release.priceMinCents}
-						description={m.band_slug_music_release_id_enter_0_give_away()}
+						description={m.band_slug_music_release_id_enter_0_give_away_body()}
 					/>
 					<FormField
 						field={fields.allowPayMore}
 						type="toggle"
-						label={m.band_slug_music_release_id_let_buyers_pay_more()}
-						checkboxLabel={m.band_slug_music_release_id_name_price()}
+						label={m.band_slug_music_release_id_let_buyers_pay_more_label()}
+						checkboxLabel={m.band_slug_music_release_id_name_price_checkbox()}
 						value={release.allowPayMore}
 					/>
-					<SubmitButton label={m.band_slug_music_release_id_save_price()} />
+					<SubmitButton label={m.band_slug_music_release_id_save_price_label()} />
 				</Form>
 			</CardBody>
 		</Card>
 
 		<Card>
 			<CardBody>
-				<CardTitle>{m.band_slug_music_release_id_details()}</CardTitle>
+				<CardTitle>{m.band_slug_music_release_id_details_title()}</CardTitle>
 				<Form
 					remote={updateReleaseForm}
-					successToast={m.band_slug_music_release_id_release_saved()}
+					successToast={m.band_slug_music_release_id_release_saved_toast()}
 					guard
 				>
 					<input {...editFields.slug.as('hidden', slug)} />
@@ -436,13 +436,13 @@
 
 					<FormField
 						field={editFields.title}
-						label={m.band_title()}
+						label={m.band_title_label()}
 						value={release.title}
 						required
 					/>
 					<FormField
 						field={editFields.kind}
-						label={m.band_type()}
+						label={m.band_type_label()}
 						type="select"
 						options={kindOptions}
 						value={release.kind}
@@ -450,14 +450,14 @@
 					/>
 					<FormField
 						field={editFields.releasedAt}
-						label={m.band_release_date()}
+						label={m.band_release_date_label()}
 						type="date"
 						value={release.releasedAt ? toLocalDate(release.releasedAt) : ''}
 					/>
 					<!-- Custom-input mode: `type="textarea"` drops rows and placeholder. -->
 					<FormField
 						field={editFields.description}
-						label={m.band_slug_music_release_id_about_release()}
+						label={m.band_slug_music_release_id_about_release_label()}
 					>
 						{#snippet input(id)}
 							<textarea
@@ -471,26 +471,26 @@
 						{/snippet}
 					</FormField>
 
-					<SubmitButton label={m.band_slug_music_release_id_save_details()} />
+					<SubmitButton label={m.band_slug_music_release_id_save_details_label()} />
 				</Form>
 			</CardBody>
 		</Card>
 
 		<Card>
 			<CardBody>
-				<CardTitle>{m.band_slug_music_release_id_publishing()}</CardTitle>
+				<CardTitle>{m.band_slug_music_release_id_publishing_title()}</CardTitle>
 				{#if release.status === 'published'}
 					<p class="text-muted">
-						{m.band_slug_music_release_id_release_public_unpublishing_hides()}
+						{m.band_slug_music_release_id_release_public_unpublishing_hides_text()}
 					</p>
 					<div class="flex flex-wrap gap-2">
 						<Action
 							action={unpublishReleaseForm.for(releaseId)}
-							label={m.band_slug_music_release_id_unpublish()}
+							label={m.band_slug_music_release_id_unpublish_label()}
 							variant="ghost"
-							modalTitle={m.band_slug_music_release_id_unpublish_release()}
-							submitLabel={m.band_slug_music_release_id_unpublish()}
-							successToast={m.band_slug_music_release_id_release_unpublished()}
+							modalTitle={m.band_slug_music_release_id_unpublish_release_title()}
+							submitLabel={m.band_slug_music_release_id_unpublish_label()}
+							successToast={m.band_slug_music_release_id_release_unpublished_toast()}
 						>
 							{#snippet form()}
 								{@const fields = unpublishReleaseForm.for(releaseId).fields}
@@ -498,7 +498,7 @@
 								<input {...fields.releaseId.as('hidden', releaseId)} />
 								<p>
 									<ParaglideMessage
-										message={m.band_slug_music_release_id_hide_from_site}
+										message={m.band_slug_music_release_id_hide_from_site_text}
 										inputs={{ title: release.title }}
 										>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 											>{/snippet}</ParaglideMessage
@@ -510,19 +510,19 @@
 				{:else if release.status === 'draft'}
 					<p class="text-muted">
 						{#if tracks.length === 0}
-							{m.band_slug_music_release_id_add_at_least_one_track()}
+							{m.band_slug_music_release_id_add_at_least_one_track_text()}
 						{:else}
-							{m.band_slug_music_release_id_publishing_puts_record_profile_gi()}
+							{m.band_slug_music_release_id_publishing_puts_record_profile_gi_text()}
 						{/if}
 					</p>
 					<Action
 						action={publishReleaseForm.for(releaseId)}
-						label={m.band_slug_music_release_id_publish()}
+						label={m.band_slug_music_release_id_publish_label()}
 						disabled={tracks.length === 0}
-						modalTitle={m.band_slug_music_release_id_publish_release()}
+						modalTitle={m.band_slug_music_release_id_publish_release_title()}
 						data-testid="publish-release"
-						submitLabel={m.band_slug_music_release_id_publish()}
-						successToast={m.band_slug_music_release_id_release_published()}
+						submitLabel={m.band_slug_music_release_id_publish_label()}
+						successToast={m.band_slug_music_release_id_release_published_toast()}
 					>
 						{#snippet form()}
 							{@const fields = publishReleaseForm.for(releaseId).fields}
@@ -530,7 +530,7 @@
 							<input {...fields.releaseId.as('hidden', releaseId)} />
 							<p>
 								<ParaglideMessage
-									message={m.band_slug_music_release_id_publish_becomes_visible_band_s}
+									message={m.band_slug_music_release_id_publish_becomes_visible_band_s_text}
 									inputs={{ title: release.title }}
 									>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 										>{/snippet}</ParaglideMessage
@@ -543,15 +543,15 @@
 				<div class="mt-4 border-t border-base-300 pt-4">
 					<Action
 						action={deleteReleaseForm.for(releaseId)}
-						label={m.band_slug_music_release_id_delete_release()}
+						label={m.band_slug_music_release_id_delete_release_label()}
 						variant="ghost"
 						size="sm"
 						class="text-error"
-						modalTitle={m.band_slug_music_release_id_delete_release()}
+						modalTitle={m.band_slug_music_release_id_delete_release_title()}
 						data-testid="delete-release"
-						submitLabel={m.band_slug_music_release_id_delete()}
+						submitLabel={m.band_slug_music_release_id_delete_label()}
 						submitVariant="error"
-						successToast={m.band_slug_music_release_id_release_deleted()}
+						successToast={m.band_slug_music_release_id_release_deleted_toast()}
 						onsuccess={() => goto(resolve(`band/${band.slug}/music`))}
 					>
 						{#snippet form()}
@@ -561,14 +561,14 @@
 								<input {...fields.releaseId.as('hidden', releaseId)} />
 								<p>
 									<ParaglideMessage
-										message={m.band_slug_music_release_id_delete_its_tracks}
+										message={m.band_slug_music_release_id_delete_its_tracks_text}
 										inputs={{ title: release.title, length: tracks.length }}
 										>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 											>{/snippet}</ParaglideMessage
 									>
 								</p>
 								<p class="text-muted">
-									{m.band_slug_music_release_id_if_anyone_has_bought_release()}
+									{m.band_slug_music_release_id_if_anyone_has_bought_release_text()}
 								</p>
 							</div>
 						{/snippet}

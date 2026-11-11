@@ -43,10 +43,10 @@
 <dialog bind:this={confirmModal} class="modal">
 	<div class="modal-box">
 		<h3 class="text-lg font-bold">{m.ui_unsaved_title()}</h3>
-		<p class="py-4">{m.ui_unsaved_leave_prompt()}</p>
+		<p class="py-4">{m.ui_unsaved_leave_prompt_text()}</p>
 		<div class="modal-action">
 			<Button type="button" variant="default" onclick={() => confirmModal?.close()}
-				>{m.ui_keep_editing()}</Button
+				>{m.ui_keep_editing_label()}</Button
 			>
 			<Button
 				type="button"
@@ -57,11 +57,11 @@
 					pendingNavigation = null;
 				}}
 			>
-				{m.ui_discard_changes()}
+				{m.ui_discard_changes_label()}
 			</Button>
 		</div>
 	</div>
 	<form method="dialog" class="modal-backdrop">
-		<button type="submit">{m.ui_close()}</button>
+		<button type="submit">{m.ui_close_label()}</button>
 	</form>
 </dialog>

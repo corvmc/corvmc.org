@@ -10,7 +10,7 @@
 		isDeactivated,
 		deactivateAction,
 		reactivateAction,
-		entityLabel = m.actions_activate_toggle_entity_default(),
+		entityLabel = m.actions_activate_toggle_entity_default_label(),
 		deactivateWarning,
 		variant,
 		size = 'sm',
@@ -43,19 +43,19 @@
 	const confirmText = $derived(
 		isDeactivated
 			? undefined
-			: (deactivateWarning ?? m.actions_activate_toggle_deactivate_confirm({ entityLabel }))
+			: (deactivateWarning ?? m.actions_activate_toggle_deactivate_confirm_text({ entityLabel }))
 	);
 	const toast = $derived(
 		isDeactivated
-			? m.actions_activate_toggle_reactivated({ entityLabel })
-			: m.actions_activate_toggle_deactivated({ entityLabel })
+			? m.actions_activate_toggle_reactivated_toast({ entityLabel })
+			: m.actions_activate_toggle_deactivated_toast({ entityLabel })
 	);
 </script>
 
 <Action
 	{action}
 	{label}
-	modalTitle={m.actions_confirm()}
+	modalTitle={m.actions_confirm_title()}
 	successToast={toast}
 	variant={resolvedVariant}
 	{size}
@@ -68,7 +68,7 @@
 		{#if confirmText}
 			<p class="py-4">{confirmText}</p>
 		{:else}
-			<p class="py-4">{m.actions_activate_toggle_reactivate({ entityLabel })}</p>
+			<p class="py-4">{m.actions_activate_toggle_reactivate_text({ entityLabel })}</p>
 		{/if}
 	{/snippet}
 </Action>

@@ -44,7 +44,7 @@
 	}
 </script>
 
-<PageHeader title={m.staff_projects()}>
+<PageHeader title={m.staff_projects_title()}>
 	<StaffViews views={projectViews} active="projects" />
 </PageHeader>
 
@@ -52,25 +52,25 @@
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		<Select
 			size="sm"
-			aria-label={m.staff_show()}
+			aria-label={m.staff_show_label()}
 			value={view}
 			onchange={(e: Event) => {
 				view = (e.currentTarget as HTMLSelectElement).value as ProjectView;
 			}}
 		>
-			<option value="active">{m.staff_active()}</option>
-			<option value="archived">{m.staff_archived()}</option>
-			<option value="all">{m.staff_projects_active_archived()}</option>
+			<option value="active">{m.staff_active_label()}</option>
+			<option value="archived">{m.staff_archived_label()}</option>
+			<option value="all">{m.staff_projects_active_archived_label()}</option>
 		</Select>
 		<Select
 			size="sm"
-			aria-label={m.staff_committee()}
+			aria-label={m.staff_committee_label()}
 			value={committeeFilter}
 			onchange={(e: Event) => {
 				committeeFilter = (e.currentTarget as HTMLSelectElement).value;
 			}}
 		>
-			<option value="">{m.staff_projects_all_committees()}</option>
+			<option value="">{m.staff_projects_all_committees_label()}</option>
 			{#each data.committees as c (c.id)}
 				<option value={c.id}>{c.name}</option>
 			{/each}
@@ -78,8 +78,8 @@
 		{#snippet actions()}
 			<Action
 				action={createProjectForm}
-				label={m.staff_projects_new_project()}
-				modalTitle={m.staff_projects_new_project()}
+				label={m.staff_projects_new_project_label()}
+				modalTitle={m.staff_projects_new_project_title()}
 				successToast={m.staff_projects_success_toast()}
 				onsuccess={(result) => {
 					// A show leaves this list once it has a listing, so land on the project.
@@ -91,28 +91,28 @@
 					<Field
 						field={fields.name}
 						type="text"
-						label={m.staff_name()}
-						description={m.staff_projects_what_work_live_room_refresh()}
+						label={m.staff_name_label()}
+						description={m.staff_projects_what_work_live_room_refresh_body()}
 					/>
-					<Field field={fields.description} type="textarea" label={m.staff_description()} />
+					<Field field={fields.description} type="textarea" label={m.staff_description_label()} />
 					<Field
 						field={fields.templateId}
 						type="select"
-						label={m.staff_template()}
-						placeholder={m.ui_none()}
+						label={m.staff_template_label()}
+						placeholder={m.ui_none_placeholder()}
 						options={templateOptions}
 					/>
 					<Field
 						field={fields.groupId}
 						type="select"
-						label={m.staff_owning_committee()}
-						placeholder={m.ui_none()}
+						label={m.staff_owning_committee_label()}
+						placeholder={m.ui_none_placeholder()}
 						options={committeeOptions}
-						description={m.staff_projects_only_committee_can_own_project()}
+						description={m.staff_projects_only_committee_can_own_project_body()}
 					/>
-					<MoneyField field={fields.budgetCents} label={m.staff_budget()} />
-					<Field field={fields.startsAt} type="date" label={m.staff_starts()} />
-					<Field field={fields.endsAt} type="date" label={m.staff_ends()} />
+					<MoneyField field={fields.budgetCents} label={m.staff_budget_label()} />
+					<Field field={fields.startsAt} type="date" label={m.staff_starts_label()} />
+					<Field field={fields.endsAt} type="date" label={m.staff_ends_label()} />
 				{/snippet}
 			</Action>
 		{/snippet}
@@ -121,9 +121,9 @@
 	{#if data.projects.length === 0}
 		<EmptyState
 			title={view === 'archived'
-				? m.staff_projects_no_archived_projects()
-				: m.staff_projects_no_projects()}
-			description={m.staff_projects_start_one_when_work_spans()}
+				? m.staff_projects_no_archived_projects_title()
+				: m.staff_projects_no_projects_title()}
+			description={m.staff_projects_start_one_when_work_spans_body()}
 		/>
 	{:else}
 		<ProjectsTable projects={data.projects} {view} />

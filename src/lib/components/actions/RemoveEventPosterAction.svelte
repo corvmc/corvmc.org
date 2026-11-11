@@ -45,6 +45,6 @@
 	{#snippet form()}
 		<input {...fields.slug.as('hidden', slug)} />
 		<input {...fields.eventId.as('hidden', eventId)} />
-		<p class="py-2">{m.actions_remove_event_poster_remove_poster_from_event()}</p>
+		<p class="py-2">{m.actions_remove_event_poster_remove_poster_from_event_text()}</p>
 	{/snippet}
 </Action>

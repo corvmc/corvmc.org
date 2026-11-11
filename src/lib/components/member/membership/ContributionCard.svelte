@@ -56,9 +56,11 @@
 			</div>
 			<div>
 				<h3 class="text-xl font-semibold">
-					{m.member_membership_contribution_card_contribution()}
+					{m.member_membership_contribution_card_contribution_title()}
 				</h3>
-				<p class="text-muted">{m.member_membership_contribution_card_manage_monthly_support()}</p>
+				<p class="text-muted">
+					{m.member_membership_contribution_card_manage_monthly_support_text()}
+				</p>
 			</div>
 		</div>
 
@@ -66,38 +68,38 @@
 			<div>
 				<div class="flex items-center gap-2">
 					<span class="text-3xl font-bold"
-						>{m.member_membership_contribution_card_month({ amountPerMonth })}</span
+						>{m.member_membership_contribution_card_month_text({ amountPerMonth })}</span
 					>
 					{#if subscription.coveringFees}
 						<Badge variant="secondary"
-							>{m.member_membership_contribution_card_fees_covered({ feeAmount })}</Badge
+							>{m.member_membership_contribution_card_fees_covered_label({ feeAmount })}</Badge
 						>
 					{/if}
 				</div>
 				<p class="mt-1 text-muted">
-					{m.member_membership_contribution_card_next_bill({ nextBilling })}
+					{m.member_membership_contribution_card_next_bill_text({ nextBilling })}
 				</p>
 			</div>
 		</div>
 
 		<div class="mt-4 flex flex-wrap gap-2">
 			<Button variant="default" size="sm" outline onclick={() => (modalOpen = true)}
-				>{m.member_membership_contribution_card_modify_amount()}</Button
+				>{m.member_membership_contribution_card_modify_amount_label()}</Button
 			>
 			<Action
 				action={cancelAction}
 				label={m.member_membership_contribution_card_label()}
-				modalTitle={m.member_membership_contribution_card_label()}
+				modalTitle={m.member_membership_contribution_card_title()}
 				variant="error"
 				size="sm"
 				outline
 				onsuccess={() =>
-					toast.success(m.member_membership_contribution_card_membership_cancelled())}
+					toast.success(m.member_membership_contribution_card_membership_cancelled_toast())}
 			>
 				{#snippet form()}
 					<p class="py-4">
 						<ParaglideMessage
-							message={m.member_membership_contribution_card_benefits_including_stay}
+							message={m.member_membership_contribution_card_benefits_including_stay_text}
 							inputs={{
 								quantity: subscription.quantity,
 								nextBilling
@@ -113,7 +115,7 @@
 	</CardBody>
 </Card>
 
-<Modal bind:open={modalOpen} title={m.member_update_contribution()}>
+<Modal bind:open={modalOpen} title={m.member_update_contribution_title()}>
 	<SubscriptionForm
 		mode="modify"
 		currentAmount={amountPerMonth}
@@ -121,7 +123,7 @@
 		remote={updateRemote}
 		onsuccess={() => {
 			modalOpen = false;
-			toast.success(m.member_membership_contribution_card_contribution_updated());
+			toast.success(m.member_membership_contribution_card_contribution_updated_toast());
 		}}
 	/>
 </Modal>

@@ -64,16 +64,16 @@
 	const dmsOff = $derived(layout.features.directMessages && !layout.acceptsDirectMessages);
 	const emptyMessage = $derived(
 		dmsOff
-			? m.member_messages_conversation_list_direct_messages_switched_o()
+			? m.member_messages_conversation_list_direct_messages_switched_o_body()
 			: layout.features.directMessages
-				? m.member_messages_conversation_list_use_message_member_message()
-				: m.member_messages_conversation_list_use_message_staff_above_st()
+				? m.member_messages_conversation_list_use_message_member_message_body()
+				: m.member_messages_conversation_list_use_message_staff_above_st_body()
 	);
 </script>
 
 <div class="flex min-h-0 flex-col gap-3">
 	<div class="flex flex-wrap items-center justify-between gap-2">
-		<h1 class="text-xl font-bold">{m.member_messages_conversation_list_messages()}</h1>
+		<h1 class="text-xl font-bold">{m.member_messages_conversation_list_messages_title()}</h1>
 		<div class="flex flex-wrap gap-2">
 			<ComposeAction
 				canMessageMembers={layout.features.directMessages && layout.acceptsDirectMessages}
@@ -89,7 +89,7 @@
 	-->
 	{#if layout.pendingRequests > 0}
 		<p class="text-muted text-sm">
-			{m.member_messages_conversation_list_message_requests_waiting({
+			{m.member_messages_conversation_list_message_requests_waiting_text({
 				pendingRequests: layout.pendingRequests
 			})}
 		</p>
@@ -105,8 +105,8 @@
 			value={inbox}
 			onchange={(e: Event) => chooseInbox((e.currentTarget as HTMLSelectElement).value)}
 		>
-			<option value="all">{m.member_messages_conversation_list_all_inboxes()}</option>
-			<option value="own">{m.member_messages_conversation_list_just_mine()}</option>
+			<option value="all">{m.member_messages_conversation_list_all_inboxes_label()}</option>
+			<option value="own">{m.member_messages_conversation_list_just_mine_label()}</option>
 			{#each inboxes as box (box.slug)}
 				<option value={box.slug}>{box.name}</option>
 			{/each}

@@ -46,7 +46,7 @@
 						onclick={() => onpage?.(page - 1)}
 						variant="default"
 						class="join-item"
-						aria-label={m.ui_previous_page()}
+						aria-label={m.ui_previous_page_label()}
 					>
 						«
 					</Button>
@@ -72,7 +72,7 @@
 						onclick={() => onpage?.(page + 1)}
 						variant="default"
 						class="join-item"
-						aria-label={m.ui_next_page()}
+						aria-label={m.ui_next_page_label()}
 					>
 						»
 					</Button>
@@ -86,7 +86,7 @@
 					{total}
 					{unit}
 				{:else}
-					{m.ui_pagination_range({ from: range.from, to: range.to, total: total ?? 0 })}
+					{m.ui_pagination_range_text({ from: range.from, to: range.to, total: total ?? 0 })}
 				{/if}
 			</p>
 		{/if}

@@ -23,12 +23,12 @@
 					</defs>
 					<text>
 						<textPath href="#arc-top-cta" startOffset="50%" text-anchor="middle"
-							>{m.directory_vinyl_card_cta_band()}</textPath
+							>{m.directory_vinyl_card_cta_band_text()}</textPath
 						>
 					</text>
 					<text>
 						<textPath href="#arc-bot-cta" startOffset="50%" text-anchor="middle"
-							>{m.directory_corvallis_music_collective()}</textPath
+							>{m.directory_corvallis_music_collective_text()}</textPath
 						>
 					</text>
 				</svg>
@@ -44,8 +44,8 @@
 		</div>
 	</div>
 	<div class="vinyl-card__caption">
-		<div class="vinyl-card__band">{m.directory_vinyl_card_cta_band_here()}</div>
-		<div class="vinyl-card__meta">{m.directory_vinyl_card_cta_join_collective()}</div>
+		<div class="vinyl-card__band">{m.directory_vinyl_card_cta_band_here_text()}</div>
+		<div class="vinyl-card__meta">{m.directory_vinyl_card_cta_join_collective_text()}</div>
 	</div>
 </a>
 

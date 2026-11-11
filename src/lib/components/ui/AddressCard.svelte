@@ -55,8 +55,8 @@
 				<div class="mt-2">
 					<ShareButton
 						{url}
-						label={m.ui_address_copy()}
-						title={m.ui_address_copy_hint()}
+						label={m.ui_address_copy_label()}
+						title={m.ui_address_copy_hint_title()}
 						class="btn gap-2 btn-outline btn-sm"
 					/>
 				</div>

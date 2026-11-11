@@ -192,7 +192,7 @@
 	{:else if availableDates.length === 0}
 		<EmptyState
 			title={m.reservations_booking_date_time_step_title()}
-			description={m.reservations_booking_date_time_step_every_slot_current_booki()}
+			description={m.reservations_booking_date_time_step_every_slot_current_booki_body()}
 		/>
 	{:else}
 		<Form.Field
@@ -207,38 +207,38 @@
 
 		{#if date && noStartTimes}
 			<p class="mt-2 text-sm text-error">
-				{m.reservations_booking_date_time_step_no_available_times_date()}
+				{m.reservations_booking_date_time_step_no_available_times_date_text()}
 			</p>
 		{/if}
 
 		<div class="grid grid-cols-2 gap-2">
 			<Form.Field
 				field={fields.startTime}
-				label={m.reservations_booking_date_time_step_start_time()}
+				label={m.reservations_booking_date_time_step_start_time_label()}
 				type="select"
 				bind:value={startTime}
 				options={startTimeOptions ?? []}
 				placeholder={startTimeOptions === null
-					? m.reservations_booking_date_time_step_loading()
+					? m.reservations_booking_date_time_step_loading_placeholder()
 					: noStartTimes
-						? m.reservations_booking_date_time_step_no_times_available()
-						: m.reservations_booking_date_time_step_select_start_time()}
+						? m.reservations_booking_date_time_step_no_times_available_placeholder()
+						: m.reservations_booking_date_time_step_select_start_time_placeholder()}
 				required
 			/>
 
 			<Form.Field
 				field={fields.endTime}
-				label={m.reservations_booking_date_time_step_end_time()}
+				label={m.reservations_booking_date_time_step_end_time_label()}
 				type="select"
 				bind:value={endTime}
 				options={endTimeOptions ?? []}
 				placeholder={!startTime
-					? m.reservations_booking_date_time_step_select_start_time_first()
+					? m.reservations_booking_date_time_step_select_start_time_first_placeholder()
 					: endTimeOptions === null
-						? m.reservations_booking_date_time_step_loading()
+						? m.reservations_booking_date_time_step_loading_placeholder()
 						: endTimeOptions.length === 0
-							? m.reservations_booking_date_time_step_no_end_times_available()
-							: m.reservations_booking_date_time_step_select_end_time()}
+							? m.reservations_booking_date_time_step_no_end_times_available_placeholder()
+							: m.reservations_booking_date_time_step_select_end_time_placeholder()}
 				required
 			/>
 		</div>
@@ -248,28 +248,30 @@
 			<Form.Field
 				field={fields.phone}
 				type="tel"
-				label={m.reservations_booking_date_time_step_contact_phone()}
+				label={m.reservations_booking_date_time_step_contact_phone_label()}
 				bind:value={phone}
 				placeholder="(541) 555-0123"
 				required
-				description={m.reservations_booking_date_time_step_staff_use_reach_about_bo()}
+				description={m.reservations_booking_date_time_step_staff_use_reach_about_bo_body()}
 			/>
 		{/if}
 
 		<Form.Field
 			field={fields.notes}
-			label={m.reservations_booking_date_time_step_notes_optional()}
+			label={m.reservations_booking_date_time_step_notes_optional_label()}
 			type="textarea"
 			bind:value={notes}
-			placeholder={m.reservations_booking_date_time_step_what_working()}
+			placeholder={m.reservations_booking_date_time_step_what_working_placeholder()}
 			rows={2}
 		/>
 
 		{#if isSustaining}
 			<fieldset class="fieldset">
-				<legend class="fieldset-legend">{m.reservations_booking_date_time_step_frequency()}</legend>
+				<legend class="fieldset-legend"
+					>{m.reservations_booking_date_time_step_frequency_title()}</legend
+				>
 				<div class="flex gap-1">
-					{#each [{ value: '', label: m.reservations_booking_date_time_step_one_time() }, { value: 'weekly', label: m.reservations_booking_date_time_step_weekly() }, { value: 'biweekly', label: m.reservations_booking_date_time_step_biweekly() }, { value: 'monthly', label: m.reservations_booking_date_time_step_monthly() }] as opt (opt.value)}
+					{#each [{ value: '', label: m.reservations_booking_date_time_step_one_time_label() }, { value: 'weekly', label: m.reservations_booking_date_time_step_weekly_label() }, { value: 'biweekly', label: m.reservations_booking_date_time_step_biweekly_label() }, { value: 'monthly', label: m.reservations_booking_date_time_step_monthly_label() }] as opt (opt.value)}
 						<label class="btn flex-1 btn-sm" class:btn-primary={frequency === opt.value}>
 							<!-- One-time posts nothing: kit refuses a radio with an empty value. -->
 							<input
@@ -288,7 +290,7 @@
 			{#if isMonthly}
 				<fieldset class="fieldset">
 					<legend class="fieldset-legend"
-						>{m.reservations_booking_date_time_step_monthly_pattern()}</legend
+						>{m.reservations_booking_date_time_step_monthly_pattern_title()}</legend
 					>
 					<div class="flex flex-col gap-1">
 						{#each [{ value: 'weekday', label: monthlyLabels.weekday }, { value: 'monthday', label: monthlyLabels.monthday }] as opt (opt.value)}
@@ -318,7 +320,7 @@
 
 	<div class="flex justify-end pt-2">
 		<Form.SubmitButton
-			label={m.reservations_booking_date_time_step_save()}
+			label={m.reservations_booking_date_time_step_save_label()}
 			continueLabel={m.reservations_booking_date_time_step_continue_label()}
 			class="btn-primary"
 		/>

@@ -42,7 +42,7 @@
 			font-size="18"
 			fill="#16140f"
 			style="font-family: var(--font-chalk);"
-			transform="rotate(-1, 18, 52)">{m.illustrations_setlist_week()}</text
+			transform="rotate(-1, 18, 52)">{m.illustrations_setlist_week_text()}</text
 		>
 		<text
 			x="18"
@@ -50,7 +50,8 @@
 			font-size="11"
 			font-weight="600"
 			fill="rgba(22,20,15,0.6)"
-			style="font-family: var(--font-script);">{m.illustrations_setlist_recurring_schedule()}</text
+			style="font-family: var(--font-script);"
+			>{m.illustrations_setlist_recurring_schedule_text()}</text
 		>
 
 		<!-- Items -->
@@ -69,7 +70,7 @@
 			font-size="14"
 			font-weight="600"
 			fill="#16140f"
-			style="font-family: var(--font-script);">{m.illustrations_setlist_real_book_club()}</text
+			style="font-family: var(--font-script);">{m.illustrations_setlist_real_book_club_text()}</text
 		>
 		<text
 			x="202"
@@ -78,7 +79,7 @@
 			font-size="12"
 			font-weight="600"
 			fill="rgba(22,20,15,0.6)"
-			style="font-family: var(--font-script);">{m.illustrations_setlist_1st_thu()}</text
+			style="font-family: var(--font-script);">{m.illustrations_setlist_1st_thu_text()}</text
 		>
 		<line
 			x1="18"
@@ -105,7 +106,8 @@
 			font-size="14"
 			font-weight="600"
 			fill="#16140f"
-			style="font-family: var(--font-script);">{m.illustrations_setlist_songwriter_circle()}</text
+			style="font-family: var(--font-script);"
+			>{m.illustrations_setlist_songwriter_circle_text()}</text
 		>
 		<text
 			x="202"
@@ -114,7 +116,7 @@
 			font-size="12"
 			font-weight="600"
 			fill="rgba(22,20,15,0.6)"
-			style="font-family: var(--font-script);">{m.illustrations_setlist_2nd_sat()}</text
+			style="font-family: var(--font-script);">{m.illustrations_setlist_2nd_sat_text()}</text
 		>
 		<line
 			x1="18"
@@ -141,7 +143,7 @@
 			font-size="14"
 			font-weight="600"
 			fill="#16140f"
-			style="font-family: var(--font-script);">{m.illustrations_setlist_open_practice()}</text
+			style="font-family: var(--font-script);">{m.illustrations_setlist_open_practice_text()}</text
 		>
 		<text
 			x="202"
@@ -150,7 +152,7 @@
 			font-size="12"
 			font-weight="600"
 			fill="rgba(22,20,15,0.6)"
-			style="font-family: var(--font-script);">{m.illustrations_setlist_weekly()}</text
+			style="font-family: var(--font-script);">{m.illustrations_setlist_weekly_text()}</text
 		>
 		<line
 			x1="18"
@@ -177,7 +179,7 @@
 			font-size="14"
 			font-weight="600"
 			fill="#16140f"
-			style="font-family: var(--font-script);">{m.illustrations_setlist_monthly_meetup()}</text
+			style="font-family: var(--font-script);">{m.illustrations_setlist_monthly_meetup_text()}</text
 		>
 		<text
 			x="202"
@@ -186,7 +188,7 @@
 			font-size="12"
 			font-weight="600"
 			fill="rgba(22,20,15,0.6)"
-			style="font-family: var(--font-script);">{m.illustrations_setlist_last_thu()}</text
+			style="font-family: var(--font-script);">{m.illustrations_setlist_last_thu_text()}</text
 		>
 		<line
 			x1="18"
@@ -207,7 +209,7 @@
 			fill="#c63015"
 			style="font-family: var(--font-chalk);"
 			transform="rotate(-1.4, 18, 212)"
-			>{m.illustrations_setlist_open_jam_after_every_meetup()}</text
+			>{m.illustrations_setlist_open_jam_after_every_meetup_text()}</text
 		>
 	</g>
 </svg>

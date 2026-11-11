@@ -74,13 +74,13 @@
 	}
 
 	const tabs = $derived([
-		{ key: 'board', label: m.staff_suggestions_board() },
-		{ key: 'review', label: m.staff_suggestions_needs_review() },
-		{ key: 'hidden', label: m.staff_hidden() }
+		{ key: 'board', label: m.staff_suggestions_board_label() },
+		{ key: 'review', label: m.staff_suggestions_needs_review_label() },
+		{ key: 'hidden', label: m.staff_hidden_label() }
 	]);
 </script>
 
-<PageHeader title={m.staff_suggestions_title()} subtitle={m.staff_staff()}>
+<PageHeader title={m.staff_suggestions_title()} subtitle={m.staff_staff_body()}>
 	<TabBar
 		{tabs}
 		active={tab}
@@ -105,28 +105,28 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label={m.staff_category()}
+			aria-label={m.staff_category_label()}
 			value={categoryFilter}
 			onchange={(e: Event) => {
 				categoryFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">{m.staff_suggestions_all_categories()}</option>
+			<option value="">{m.staff_suggestions_all_categories_label()}</option>
 			{#each suggestionCategories as c (c)}
 				<option value={c}>{suggestionCategoryLabels[c]}</option>
 			{/each}
 		</Select>
 		<Select
 			size="sm"
-			aria-label={m.staff_status()}
+			aria-label={m.staff_status_label()}
 			value={statusFilter}
 			onchange={(e: Event) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">{m.staff_suggestions_any_status()}</option>
+			<option value="">{m.staff_suggestions_any_status_label()}</option>
 			{#each suggestionStatuses as s (s)}
 				<option value={s}>{suggestionStatusLabels[s]}</option>
 			{/each}
@@ -136,8 +136,8 @@
 	{#if tab === 'review'}
 		<p class="text-muted">
 			<ParaglideMessage
-				message={m.staff_suggestions_nothing_here_visible_members_reported}
-				inputs={{ staff_content_flags: m.staff_content_flags() }}
+				message={m.staff_suggestions_nothing_here_visible_members_reported_text}
+				inputs={{ staff_content_flags: m.staff_content_flags_text() }}
 				>{#snippet a({ children })}<a class="link" href={resolve('staff/moderation/flags')}
 						>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
@@ -148,19 +148,19 @@
 	<DataList
 		{result}
 		empty={tab === 'review'
-			? m.staff_suggestions_nothing_waiting()
-			: m.staff_suggestions_no_suggestions_found()}
+			? m.staff_suggestions_nothing_waiting_body()
+			: m.staff_suggestions_no_suggestions_found_body()}
 		onpage={(p) => (page = p)}
 	>
 		{#snippet children(rows)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_suggestion()}</th>
-					<th>{m.staff_suggestions_author()}</th>
-					<th class="col-support w-px">{m.staff_category()}</th>
-					<th class="col-support w-px cell-num">{m.staff_votes()}</th>
-					<th class="col-extra whitespace-nowrap">{m.staff_posted()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_suggestion_label()}</th>
+					<th>{m.staff_suggestions_author_label()}</th>
+					<th class="col-support w-px">{m.staff_category_label()}</th>
+					<th class="col-support w-px cell-num">{m.staff_votes_label()}</th>
+					<th class="col-extra whitespace-nowrap">{m.staff_posted_label()}</th>
 				{/snippet}
 				{#each rows as s (s.id)}
 					{@const href = resolve(`staff/suggestions/${s.id}`)}
@@ -187,16 +187,16 @@
 	{#if tab === 'review'}
 		{#await pendingEditsPromise then pendingEdits}
 			{#if pendingEdits.length > 0}
-				<h2 class="text-muted font-medium">{m.staff_suggestions_edits_waiting_approval()}</h2>
+				<h2 class="text-muted font-medium">{m.staff_suggestions_edits_waiting_approval_title()}</h2>
 				<!-- These sit apart from the two lists above: the suggestion itself is
 		     still on the board and untouched, it's only the proposed change that
 		     is waiting. -->
 				<Table>
 					{#snippet head()}
-						<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-						<th>{m.staff_suggestions_proposed_change()}</th>
-						<th>{m.staff_suggestions_requested_by()}</th>
-						<th class="col-extra whitespace-nowrap">{m.staff_requested()}</th>
+						<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+						<th>{m.staff_suggestions_proposed_change_label()}</th>
+						<th>{m.staff_suggestions_requested_by_label()}</th>
+						<th class="col-extra whitespace-nowrap">{m.staff_requested_label()}</th>
 					{/snippet}
 					{#each pendingEdits as e (e.id)}
 						{@const href = resolve(`staff/suggestions/${e.suggestionId}`)}
@@ -204,7 +204,7 @@
 							<td class="w-px"><StatusBadge status="pending_review" /></td>
 							<td class="cell-primary">
 								<EntityIdentity ref={e.ref}>
-									{#snippet subtitle()}{m.staff_suggestions_was({
+									{#snippet subtitle()}{m.staff_suggestions_was_body({
 											originalTitle: e.originalTitle
 										})}{/snippet}
 								</EntityIdentity>
@@ -221,16 +221,16 @@
 	{/if}
 
 	{#if tab === 'review'}
-		<h2 class="text-muted font-medium">{m.staff_suggestions_reported_pulled_from_board()}</h2>
-		<DataList result={underReview} empty={m.staff_suggestions_no_reported_suggestions()}>
+		<h2 class="text-muted font-medium">{m.staff_suggestions_reported_pulled_from_board_title()}</h2>
+		<DataList result={underReview} empty={m.staff_suggestions_no_reported_suggestions_body()}>
 			{#snippet children(rows)}
 				<Table>
 					{#snippet head()}
-						<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-						<th>{m.staff_suggestion()}</th>
-						<th>{m.staff_suggestions_author()}</th>
-						<th class="col-support w-px cell-num">{m.staff_votes()}</th>
-						<th class="col-extra whitespace-nowrap">{m.staff_posted()}</th>
+						<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+						<th>{m.staff_suggestion_label()}</th>
+						<th>{m.staff_suggestions_author_label()}</th>
+						<th class="col-support w-px cell-num">{m.staff_votes_label()}</th>
+						<th class="col-extra whitespace-nowrap">{m.staff_posted_label()}</th>
 					{/snippet}
 					{#each rows as s (s.id)}
 						{@const href = resolve(`staff/suggestions/${s.id}`)}

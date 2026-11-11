@@ -17,7 +17,7 @@
 	let {
 		field,
 		label = m.ui_member_picker_label(),
-		placeholder = m.ui_search_by_name_email(),
+		placeholder = m.ui_search_by_name_email_placeholder(),
 		value = $bindable(''),
 		name = $bindable(''),
 		search: searchFn
@@ -69,7 +69,7 @@
 			onclick={() => {
 				value = '';
 				name = '';
-			}}>{m.ui_change()}</Button
+			}}>{m.ui_change_label()}</Button
 		>
 	</div>
 {:else}

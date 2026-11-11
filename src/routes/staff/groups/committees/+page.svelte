@@ -24,7 +24,7 @@
 	const committees = $derived(data.committees.filter((c) => data.canManage || !c.deletedAt));
 </script>
 
-<PageHeader title={m.staff_groups()}>
+<PageHeader title={m.staff_groups_title()}>
 	<GroupViews active="committees" />
 </PageHeader>
 
@@ -35,7 +35,7 @@
 		</div>
 	{/if}
 	{#if committees.length === 0}
-		<EmptyState title={m.staff_groups_committees_no_committees()} />
+		<EmptyState title={m.staff_groups_committees_no_committees_title()} />
 	{:else}
 		<!-- Cards, not a table: there are a handful of committees, and each card is
 		     one control, so the chairs are names rather than chips of their own. -->
@@ -54,22 +54,22 @@
 							</span>
 							<span class="mt-1 text-sm text-fg-2">
 								{c.chairs.length === 0
-									? m.staff_groups_committees_no_chairs()
-									: m.staff_groups_committees_chaired_by({
+									? m.staff_groups_committees_no_chairs_text()
+									: m.staff_groups_committees_chaired_by_text({
 											join: c.chairs.map((ch) => ch.title).join(', ')
 										})}
 							</span>
 							<span class="mt-3 flex flex-wrap items-center gap-2 text-sm">
 								<span
 									>{c.memberCount}
-									{c.memberCount === 1 ? m.staff_member_2() : m.staff_members_2()}</span
+									{c.memberCount === 1 ? m.staff_member_2_text() : m.staff_members_2_text()}</span
 								>
 								{#if c.openApplications > 0}
 									<Badge variant="info">
 										{c.openApplications}
 										{c.openApplications === 1
-											? m.staff_groups_committees_application()
-											: m.staff_groups_committees_applications()}
+											? m.staff_groups_committees_application_label()
+											: m.staff_groups_committees_applications_label()}
 									</Badge>
 								{/if}
 							</span>

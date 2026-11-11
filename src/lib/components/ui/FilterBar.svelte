@@ -80,7 +80,7 @@
 				{#snippet child({ props })}
 					<Button {...props} variant="ghost" size="sm">
 						<IconFilter size={16} />
-						{m.ui_filters()}
+						{m.ui_filters_label()}
 						{@render badge(menuCount)}
 					</Button>
 				{/snippet}
@@ -96,7 +96,7 @@
 			</Popover.Content>
 		</Popover.Root>
 		{#if showClear}
-			<Button variant="ghost" size="sm" onclick={onclear}>{m.ui_clear()}</Button>
+			<Button variant="ghost" size="sm" onclick={onclear}>{m.ui_clear_label()}</Button>
 		{/if}
 	{:else if children}
 		<!-- Peer checkbox rather than <details>: <details> cannot be reliably
@@ -104,7 +104,7 @@
 		<input id="filters-{uid}" type="checkbox" class="peer hidden" />
 		<label for="filters-{uid}" class="btn btn-ghost btn-sm @lg:hidden">
 			<IconFilter size={16} />
-			{m.ui_filters()}
+			{m.ui_filters_label()}
 			{@render badge(activeCount)}
 		</label>
 
@@ -120,7 +120,7 @@
 		>
 			{@render children()}
 			{#if showClear}
-				<Button variant="ghost" size="sm" onclick={onclear}>{m.ui_clear()}</Button>
+				<Button variant="ghost" size="sm" onclick={onclear}>{m.ui_clear_label()}</Button>
 			{/if}
 		</div>
 	{/if}

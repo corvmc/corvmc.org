@@ -14,20 +14,20 @@
 {#if !(await getLocalUser()).subscription}
 	<div class="rounded-lg border border-base-300 px-4 pb-3 text-sm">
 		<h2 class="pt-4 text-lg font-semibold">
-			{m.member_reservations_manage_recurring_reservations_recurring()}
+			{m.member_reservations_manage_recurring_reservations_recurring_title()}
 		</h2>
 
 		<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-			<span>{m.member_reservations_manage_recurring_reservations_sustaining()}</span>
+			<span>{m.member_reservations_manage_recurring_reservations_sustaining_text()}</span>
 			<Button href="/member/membership" variant="default" size="sm" class="self-end sm:self-auto"
-				>{m.member_learn_more()}</Button
+				>{m.member_learn_more_label()}</Button
 			>
 		</div>
 	</div>
 {:else}
 	<div class="flex items-center justify-between pt-4">
 		<h2 class="text-lg font-semibold">
-			{m.member_reservations_manage_recurring_reservations_my_recurri()}
+			{m.member_reservations_manage_recurring_reservations_my_recurri_title()}
 		</h2>
 	</div>
 
@@ -48,7 +48,7 @@
 				</p>
 				{#if series.seriesEndsAt}
 					<p class="text-xs opacity-50">
-						{m.member_reservations_manage_recurring_reservations_ends({
+						{m.member_reservations_manage_recurring_reservations_ends_text({
 							formatDateShortYear: formatDateShortYear(series.seriesEndsAt)
 						})}
 					</p>
@@ -67,7 +67,7 @@
 		     no way in, and a walk reached exactly that conclusion (#1001). -->
 		<p class="text-muted">
 			<ParaglideMessage
-				message={m.member_reservations_manage_recurring_reservations_no_active}
+				message={m.member_reservations_manage_recurring_reservations_no_active_text}
 				inputs={{}}
 				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 					>{/snippet}</ParaglideMessage

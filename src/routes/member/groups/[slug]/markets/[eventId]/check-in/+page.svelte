@@ -14,7 +14,7 @@
 	{eventId}
 	parent={[
 		{
-			label: m.member_vendors(),
+			label: m.member_vendors_label(),
 			href: resolve('/member/groups/[slug]/markets/[eventId]', { slug, eventId })
 		}
 	]}

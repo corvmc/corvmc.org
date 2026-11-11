@@ -29,8 +29,8 @@
 	let debounce: ReturnType<typeof setTimeout>;
 
 	const roleOptions = [
-		{ value: 'member', label: m.groups_member() },
-		{ value: 'admin', label: m.groups_admin() }
+		{ value: 'member', label: m.groups_member_label() },
+		{ value: 'admin', label: m.groups_admin_label() }
 	];
 
 	async function search() {
@@ -62,9 +62,9 @@
 
 <Action
 	action={inviteGroupMember}
-	label={m.groups_invite_group_member_invite()}
-	aria-label={m.groups_invite_group_member_invite_someone({ groupName })}
-	modalTitle={m.groups_invite_group_member_invite_2({ groupName })}
+	label={m.groups_invite_group_member_invite_label()}
+	aria-label={m.groups_invite_group_member_invite_someone_label({ groupName })}
+	modalTitle={m.groups_invite_group_member_invite_2_title({ groupName })}
 	submitLabel={m.groups_invite_group_member_submit_label()}
 	successToast={m.groups_invite_group_member_success_toast()}
 	variant="primary"
@@ -77,19 +77,19 @@
 			<input {...memberFields.userId.as('hidden', selected?.id ?? '')} />
 
 			<FormField
-				label={m.groups_invite_group_member_who()}
+				label={m.groups_invite_group_member_who_label()}
 				type="text"
 				value={searchQuery}
 				oninput={onInput}
 				autocomplete="off"
-				placeholder={m.groups_invite_group_member_search_members_by_name_email()}
+				placeholder={m.groups_invite_group_member_search_members_by_name_email_placeholder()}
 				description={selected
-					? m.groups_invite_group_member_inviting({ name: selected.name })
-					: m.groups_invite_group_member_pick_somebody_from_results()}
+					? m.groups_invite_group_member_inviting_body({ name: selected.name })
+					: m.groups_invite_group_member_pick_somebody_from_results_body()}
 			/>
 
 			{#if searching}
-				<p class="text-subtle">{m.groups_invite_group_member_searching()}</p>
+				<p class="text-subtle">{m.groups_invite_group_member_searching_text()}</p>
 			{:else if results.length > 0}
 				<ul class="menu w-full rounded-box bg-base-200">
 					{#each results as candidate (candidate.id)}
@@ -103,23 +103,23 @@
 				</ul>
 			{:else if searchQuery.trim().length >= 2}
 				<p class="text-subtle">
-					{m.groups_invite_group_member_nobody_with_account_by_name()}
+					{m.groups_invite_group_member_nobody_with_account_by_name_text()}
 				</p>
 			{/if}
 
 			<FormField
 				field={memberFields.role}
 				type="select"
-				label={m.groups_role()}
+				label={m.groups_role_label()}
 				value="member"
 				options={roleOptions}
 			/>
 			<FormField
 				field={memberFields.position}
 				type="text"
-				label={m.groups_position()}
+				label={m.groups_position_label()}
 				maxlength="100"
-				placeholder={m.groups_invite_group_member_optional()}
+				placeholder={m.groups_invite_group_member_optional_placeholder()}
 			/>
 		</div>
 	{/snippet}
@@ -129,9 +129,9 @@
      — this writes a `group_invite` that resolves when they sign up. -->
 <Action
 	action={inviteGroupByEmail}
-	label={m.groups_invite_group_member_invite_by_email()}
-	aria-label={m.groups_invite_group_member_invite_someone_by_email({ groupName })}
-	modalTitle={m.groups_invite_group_member_invite_by_email_2({ groupName })}
+	label={m.groups_invite_group_member_invite_by_email_label()}
+	aria-label={m.groups_invite_group_member_invite_someone_by_email_label({ groupName })}
+	modalTitle={m.groups_invite_group_member_invite_by_email_2_title({ groupName })}
 	submitLabel={m.groups_invite_group_member_submit_label()}
 	successToast={m.groups_invite_group_member_success_toast()}
 	variant="default"
@@ -144,24 +144,24 @@
 			<FormField
 				field={emailFields.email}
 				type="email"
-				label={m.groups_invite_group_member_email()}
-				placeholder={m.groups_invite_group_member_them_example_com()}
-				description={m.groups_invite_group_member_they_join_roster_when_they()}
+				label={m.groups_invite_group_member_email_label()}
+				placeholder={m.groups_invite_group_member_them_example_com_placeholder()}
+				description={m.groups_invite_group_member_they_join_roster_when_they_body()}
 				required
 			/>
 			<FormField
 				field={emailFields.role}
 				type="select"
-				label={m.groups_role()}
+				label={m.groups_role_label()}
 				value="member"
 				options={roleOptions}
 			/>
 			<FormField
 				field={emailFields.position}
 				type="text"
-				label={m.groups_position()}
+				label={m.groups_position_label()}
 				maxlength="100"
-				placeholder={m.groups_invite_group_member_optional()}
+				placeholder={m.groups_invite_group_member_optional_placeholder()}
 			/>
 		</div>
 	{/snippet}

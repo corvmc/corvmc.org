@@ -60,21 +60,21 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label={m.staff_audit_action()}
+			aria-label={m.staff_audit_action_label()}
 			value={action}
 			onchange={(e: Event) => {
 				action = (e.currentTarget as HTMLSelectElement).value as AuditAction | '';
 				page = 1;
 			}}
 		>
-			<option value="">{m.staff_audit_all_actions()}</option>
+			<option value="">{m.staff_audit_all_actions_label()}</option>
 			{#each auditActions as value (value)}
 				<option {value}>{auditActionLabel(value)}</option>
 			{/each}
 		</Select>
 		<input
 			type="date"
-			aria-label={m.staff_from_date()}
+			aria-label={m.staff_from_date_label()}
 			class="input input-sm"
 			bind:value={dateFrom}
 			onchange={() => {
@@ -83,7 +83,7 @@
 		/>
 		<input
 			type="date"
-			aria-label={m.staff_date_2()}
+			aria-label={m.staff_date_2_label()}
 			class="input input-sm"
 			bind:value={dateTo}
 			onchange={() => {
@@ -92,13 +92,13 @@
 		/>
 	</FilterBar>
 
-	<DataList {result} empty={m.staff_audit_empty()} onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_audit_empty_body()} onpage={(p) => (page = p)}>
 		{#snippet children(entries)}
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_what_happened()}</th>
-					<th>{m.staff_audit_account()}</th>
-					<th class="col-support">{m.staff_by_2()}</th>
+					<th>{m.staff_what_happened_label()}</th>
+					<th>{m.staff_audit_account_label()}</th>
+					<th class="col-support">{m.staff_by_2_label()}</th>
 				{/snippet}
 				{#each entries as entry (entry.id)}
 					<tr>

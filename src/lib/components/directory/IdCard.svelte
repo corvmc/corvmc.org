@@ -49,12 +49,15 @@
 
 	const flags = $derived(
 		[
-			lookingForBand && { icon: IconUserSearch, label: m.directory_id_card_seeking_band() },
-			availableForHire && { icon: IconBriefcase, label: m.directory_id_card_available_hire() },
-			teachesLessons && { icon: IconSchool, label: m.directory_id_card_teaches_privately() },
+			lookingForBand && { icon: IconUserSearch, label: m.directory_id_card_seeking_band_label() },
+			availableForHire && {
+				icon: IconBriefcase,
+				label: m.directory_id_card_available_hire_label()
+			},
+			teachesLessons && { icon: IconSchool, label: m.directory_id_card_teaches_privately_label() },
 			openToCollaboration && {
 				icon: IconUsersPlus,
-				label: m.directory_id_card_open_collaboration()
+				label: m.directory_id_card_open_collaboration_label()
 			}
 		].filter(Boolean) as { icon: typeof IconUserSearch; label: string }[]
 	);
@@ -64,9 +67,9 @@
 	<div class="id-card__header">
 		<div class="id-card__brand">
 			<img src={speakerLogo} alt="" class="id-card__logo" />
-			<span>{m.directory_corvallis_music()}<br />{m.directory_collective()}</span>
+			<span>{m.directory_corvallis_music_text()}<br />{m.directory_collective_text()}</span>
 		</div>
-		<div class="id-card__tag">{m.directory_member()}</div>
+		<div class="id-card__tag">{m.directory_member_text()}</div>
 	</div>
 	<div class="id-card__body">
 		<div class="id-card__photo">
@@ -117,7 +120,7 @@
 		</div>
 	</div>
 	<div class="id-card__footer">
-		<div class="id-card__since">{m.directory_id_card_member_since({ memberSince })}</div>
+		<div class="id-card__since">{m.directory_id_card_member_since_text({ memberSince })}</div>
 		{#if flags.length}
 			<div class="id-card__flags">
 				{#each flags as flag (flag.label)}

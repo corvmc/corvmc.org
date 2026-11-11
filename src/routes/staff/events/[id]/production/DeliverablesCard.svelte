@@ -26,15 +26,18 @@
 	} = $props();
 
 	const owners = $derived([
-		{ value: '', label: m.staff_staff() },
+		{ value: '', label: m.staff_staff_label() },
 		...committees.map((c) => ({ value: c.id, label: c.name }))
 	]);
 
 	const STATE = {
-		done: { label: m.staff_events_id_production_deliverables_card_done(), variant: 'success' },
-		overdue: { label: m.staff_overdue(), variant: 'error' },
-		open: { label: m.staff_open(), variant: 'ghost' },
-		cancelled: { label: m.staff_cancelled(), variant: 'ghost' }
+		done: {
+			label: m.staff_events_id_production_deliverables_card_done_label(),
+			variant: 'success'
+		},
+		overdue: { label: m.staff_overdue_label(), variant: 'error' },
+		open: { label: m.staff_open_label(), variant: 'ghost' },
+		cancelled: { label: m.staff_cancelled_label(), variant: 'ghost' }
 	} as const;
 </script>
 
@@ -42,12 +45,12 @@
 	<InfoCard title={m.staff_events_id_production_deliverables_card_title()}>
 		<Table>
 			{#snippet head()}
-				<th>{m.staff_item()}</th>
-				<th>{m.staff_events_id_production_deliverables_card_owner()}</th>
-				<th>{m.staff_events_id_production_deliverables_card_who()}</th>
-				<th>{m.staff_due()}</th>
-				<th class="w-px">{m.staff_events_id_production_deliverables_card_state()}</th>
-				<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+				<th>{m.staff_item_label()}</th>
+				<th>{m.staff_events_id_production_deliverables_card_owner_label()}</th>
+				<th>{m.staff_events_id_production_deliverables_card_who_label()}</th>
+				<th>{m.staff_due_label()}</th>
+				<th class="w-px">{m.staff_events_id_production_deliverables_card_state_label()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 			{/snippet}
 			{#each items as item (item.id)}
 				<tr>
@@ -55,15 +58,15 @@
 						{item.title}
 						{#if item.artAwaitingUse}
 							<div class="text-muted text-sm font-normal">
-								{m.staff_events_id_production_deliverables_card_art_waiting_use()}
+								{m.staff_events_id_production_deliverables_card_art_waiting_use_text()}
 							</div>
 						{/if}
 					</td>
-					<td>{item.groupName ?? m.staff_staff()}</td>
+					<td>{item.groupName ?? m.staff_staff_text()}</td>
 					<td>
 						{item.assignees.length > 0
 							? item.assignees.map((a) => a.name).join(', ')
-							: m.staff_events_id_production_deliverables_card_nobody_yet()}
+							: m.staff_events_id_production_deliverables_card_nobody_yet_text()}
 					</td>
 					<td class="whitespace-nowrap">{item.dueAt ? formatDateShort(item.dueAt) : '—'}</td>
 					<td class="w-px">
@@ -73,12 +76,12 @@
 						{#if item.state === 'open' || item.state === 'overdue'}
 							<Action
 								action={reassignDeliverableForm.for(item.id)}
-								label={m.staff_events_id_production_deliverables_card_reassign()}
+								label={m.staff_events_id_production_deliverables_card_reassign_label()}
 								aria-label={m.staff_events_id_production_deliverables_card_aria_label({
 									title: item.title
 								})}
-								modalTitle={m.staff_events_id_production_deliverables_card_reassign()}
-								submitLabel={m.staff_events_id_production_deliverables_card_reassign()}
+								modalTitle={m.staff_events_id_production_deliverables_card_reassign_title()}
+								submitLabel={m.staff_events_id_production_deliverables_card_reassign_label()}
 								variant="ghost"
 								size="xs"
 								successToast={m.staff_events_id_production_deliverables_card_success_toast()}
@@ -92,7 +95,7 @@
 									/>
 									<FormField
 										field={reassignDeliverableForm.for(item.id).fields.groupId}
-										label={m.staff_events_id_production_deliverables_card_owner()}
+										label={m.staff_events_id_production_deliverables_card_owner_label()}
 										type="select"
 										options={owners}
 										value={item.groupId ?? ''}

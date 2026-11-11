@@ -18,7 +18,7 @@
 	{/snippet}
 
 	{#if held.length === 0}
-		<p class="text-muted">{m.groups_committee_grants_card_members_committee_hold_nothing()}</p>
+		<p class="text-muted">{m.groups_committee_grants_card_members_committee_hold_nothing_text()}</p>
 	{:else}
 		<ul class="space-y-2 text-sm">
 			{#each held as cap (cap)}

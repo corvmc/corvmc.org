@@ -14,7 +14,7 @@
 		options,
 		value = [],
 		name,
-		placeholder = m.ui_search_prompt(),
+		placeholder = m.ui_search_prompt_placeholder(),
 		onchange,
 		disabled = false
 	}: {
@@ -89,7 +89,7 @@
 						{opt.label}
 					</Combobox.Item>
 				{:else}
-					<div class="px-3 py-2 opacity-60">{m.ui_search_no_results()}</div>
+					<div class="px-3 py-2 opacity-60">{m.ui_search_no_results_text()}</div>
 				{/each}
 			</Combobox.Content>
 		</div>

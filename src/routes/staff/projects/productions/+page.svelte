@@ -116,26 +116,31 @@
 	}
 </script>
 
-<PageHeader title={m.staff_projects()}>
+<PageHeader title={m.staff_projects_title()}>
 	<StaffViews views={projectViews} active="productions" />
 </PageHeader>
 <PageContent>
 	<FilterBar {activeCount} onclear={clearFilters}>
-		<Select size="sm" aria-label={m.staff_status()} bind:value={status} onchange={() => (page = 1)}>
-			<option value="">{m.staff_projects_productions_every_status()}</option>
-			<option value="draft">{m.staff_projects_productions_draft()}</option>
-			<option value="published">{m.staff_projects_productions_published()}</option>
-			<option value="cancelled">{m.staff_cancelled()}</option>
+		<Select
+			size="sm"
+			aria-label={m.staff_status_label()}
+			bind:value={status}
+			onchange={() => (page = 1)}
+		>
+			<option value="">{m.staff_projects_productions_every_status_label()}</option>
+			<option value="draft">{m.staff_projects_productions_draft_label()}</option>
+			<option value="published">{m.staff_projects_productions_published_label()}</option>
+			<option value="cancelled">{m.staff_cancelled_label()}</option>
 		</Select>
 		{#if venues.current}
 			{@const data = venues.current}
 			<Select
 				size="sm"
-				aria-label={m.staff_projects_productions_venue()}
+				aria-label={m.staff_projects_productions_venue_label()}
 				bind:value={venueId}
 				onchange={() => (page = 1)}
 			>
-				<option value="">{m.staff_projects_productions_every_venue()}</option>
+				<option value="">{m.staff_projects_productions_every_venue_label()}</option>
 				{#each data.venues as v (v.id)}
 					<option value={v.id}>{v.name}</option>
 				{/each}
@@ -143,14 +148,14 @@
 		{/if}
 		<input
 			type="date"
-			aria-label={m.staff_projects_productions_from_date()}
+			aria-label={m.staff_projects_productions_from_date_label()}
 			class="input input-sm"
 			bind:value={dateFrom}
 			onchange={() => (page = 1)}
 		/>
 		<input
 			type="date"
-			aria-label={m.staff_projects_productions_date()}
+			aria-label={m.staff_projects_productions_date_label()}
 			class="input input-sm"
 			bind:value={dateTo}
 			onchange={() => (page = 1)}
@@ -162,29 +167,29 @@
 				bind:checked={needsActs}
 				onchange={() => (page = 1)}
 			/>
-			{m.staff_projects_productions_short_bands()}
+			{m.staff_projects_productions_short_bands_label()}
 		</label>
 		{#snippet actions()}
 			<NewProductionAction />
 		{/snippet}
 	</FilterBar>
 
-	<DataList {result} empty={m.staff_projects_productions_empty()} onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_projects_productions_empty_body()} onpage={(p) => (page = p)}>
 		{#snippet children(events)}
 			<!-- No zebra: the bg-base-200 day-group rows are the striping here. -->
 			<Table zebra={false}>
 				{#snippet head()}
 					<th class="w-px"
-						><span class="sr-only">{m.staff_projects_productions_listing_status()}</span></th
+						><span class="sr-only">{m.staff_projects_productions_listing_status_label()}</span></th
 					>
-					<th>{m.staff_event()}</th>
+					<th>{m.staff_event_label()}</th>
 					<!-- Two statuses, two columns, both labelled. The glyph on the left
 					     is the listing's — is it on the guide — and this one is the
 					     production's — how far through putting it on we are. -->
-					<th class="col-support w-px">{m.staff_status()}</th>
-					<th class="col-support">{m.staff_projects_productions_lineup()}</th>
-					<th class="col-extra">{m.staff_projects_productions_venue()}</th>
-					<th class="col-extra">{m.staff_tags()}</th>
+					<th class="col-support w-px">{m.staff_status_label()}</th>
+					<th class="col-support">{m.staff_projects_productions_lineup_label()}</th>
+					<th class="col-extra">{m.staff_projects_productions_venue_label()}</th>
+					<th class="col-extra">{m.staff_tags_label()}</th>
 				{/snippet}
 
 				{#each events as e, idx (e.id)}
@@ -217,7 +222,8 @@
 							{#if e.productionStatus}
 								<StatusBadge status={e.productionStatus} label />
 							{:else}
-								<span class="whitespace-nowrap text-base-content/50">{m.staff_no_production()}</span
+								<span class="whitespace-nowrap text-base-content/50"
+									>{m.staff_no_production_text()}</span
 								>
 							{/if}
 						</td>
@@ -232,7 +238,7 @@
 							     nothing rather than "0 wanted" (#859). -->
 							{#if e.lineup.short > 0}
 								<Badge variant="warning" size="xs"
-									>{m.staff_projects_productions_needs({ short: e.lineup.short })}</Badge
+									>{m.staff_projects_productions_needs_label({ short: e.lineup.short })}</Badge
 								>
 							{/if}
 						</td>

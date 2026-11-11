@@ -19,7 +19,7 @@
 	let audiences = $derived(await getAudienceList());
 </script>
 
-<PageHeader title={m.staff_outreach()} documentTitle={m.staff_audiences()}>
+<PageHeader title={m.staff_outreach_title()} documentTitle={m.staff_audiences_title()}>
 	<StaffViews views={outreachViews} active="audiences" />
 </PageHeader>
 <PageContent>
@@ -33,14 +33,14 @@
 		/>
 	</div>
 	{#if audiences.length === 0}
-		<EmptyState description={m.staff_marketing_audiences_description()} />
+		<EmptyState description={m.staff_marketing_audiences_description_body()} />
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th>{m.staff_audience()}</th>
-				<th class="col-support w-px">{m.staff_opt()}</th>
-				<th class="cell-num">{m.staff_subscribers()}</th>
-				<th class="col-extra whitespace-nowrap">{m.staff_created()}</th>
+				<th>{m.staff_audience_label()}</th>
+				<th class="col-support w-px">{m.staff_opt_label()}</th>
+				<th class="cell-num">{m.staff_subscribers_label()}</th>
+				<th class="col-extra whitespace-nowrap">{m.staff_created_label()}</th>
 			{/snippet}
 			{#each audiences as a (a.id)}
 				{@const href = resolve(`staff/marketing/audiences/${a.id}`)}
@@ -48,10 +48,12 @@
 					<td class="cell-primary"><EntityIdentity ref={a.ref} /></td>
 					<td class="col-support w-px">
 						{#if a.systemKey}
-							<Badge size="sm" variant="info" class="whitespace-nowrap">{m.staff_built()}</Badge>
+							<Badge size="sm" variant="info" class="whitespace-nowrap"
+								>{m.staff_built_label()}</Badge
+							>
 						{:else}
 							<Badge size="sm" variant={a.allowOptIn ? 'success' : 'ghost'}>
-								{a.allowOptIn ? m.staff_public() : m.staff_staff_only()}
+								{a.allowOptIn ? m.staff_public_label() : m.staff_staff_only_label()}
 							</Badge>
 						{/if}
 					</td>

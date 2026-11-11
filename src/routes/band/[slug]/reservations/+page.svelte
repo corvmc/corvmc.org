@@ -47,7 +47,7 @@
 	 */
 </script>
 
-<PageHeader width="2xl" title={m.band_slug_reservations_reservations()} subtitle={band.name}>
+<PageHeader width="2xl" title={m.band_slug_reservations_reservations_title()} subtitle={band.name}>
 	<CreateModal
 		slug={band.slug}
 		hasSustainingMember={membership.hasSustainingMember}
@@ -57,10 +57,13 @@
 <PageContent width="2xl">
 	<TabBar
 		tabs={[
-			{ key: 'upcoming', label: m.band_slug_reservations_upcoming({ length: upcoming.length }) },
+			{
+				key: 'upcoming',
+				label: m.band_slug_reservations_upcoming_label({ length: upcoming.length })
+			},
 			// Counted too. One tab counted and the other did not, and the
 			// uncounted one was the truncated one (#1040).
-			{ key: 'past', label: m.band_slug_reservations_past({ total: past.pagination.total }) }
+			{ key: 'past', label: m.band_slug_reservations_past_label({ total: past.pagination.total }) }
 		]}
 		active={activeTab}
 		onchange={(key) => (activeTab = key as 'upcoming' | 'past')}
@@ -69,8 +72,8 @@
 	{#if activeTab === 'upcoming'}
 		{#if upcoming.length === 0}
 			<EmptyState
-				title={m.band_slug_reservations_no_upcoming_sessions()}
-				description={m.band_slug_reservations_description()}
+				title={m.band_slug_reservations_no_upcoming_sessions_title()}
+				description={m.band_slug_reservations_description_body()}
 			/>
 		{:else}
 			<div class="flex flex-col gap-2">
@@ -83,7 +86,7 @@
 
 	{#if activeTab === 'past'}
 		{#if past.rows.length === 0}
-			<EmptyState message={m.band_slug_reservations_message()} />
+			<EmptyState message={m.band_slug_reservations_message_body()} />
 		{:else}
 			<div class="flex flex-col gap-2">
 				{#each past.rows as res (res.id)}

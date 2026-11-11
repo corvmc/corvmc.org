@@ -55,7 +55,7 @@
 	}
 </script>
 
-<PageHeader title={m.member_suggestions_title()} subtitle={m.member_member()}>
+<PageHeader title={m.member_suggestions_title()} subtitle={m.member_member_body()}>
 	<CreateSuggestionAction />
 </PageHeader>
 
@@ -75,50 +75,50 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label={m.member_category()}
+			aria-label={m.member_category_label()}
 			value={categoryFilter}
 			onchange={(e: Event) => {
 				categoryFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">{m.member_all_categories()}</option>
+			<option value="">{m.member_all_categories_label()}</option>
 			{#each suggestionCategories as c (c)}
 				<option value={c}>{suggestionCategoryLabels[c]}</option>
 			{/each}
 		</Select>
 		<Select
 			size="sm"
-			aria-label={m.member_status()}
+			aria-label={m.member_status_label()}
 			value={statusFilter}
 			onchange={(e: Event) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value;
 				page = 1;
 			}}
 		>
-			<option value="">{m.member_suggestions_any_status()}</option>
+			<option value="">{m.member_suggestions_any_status_label()}</option>
 			{#each suggestionStatuses as s (s)}
 				<option value={s}>{suggestionStatusLabels[s]}</option>
 			{/each}
 		</Select>
 		<Select
 			size="sm"
-			aria-label={m.member_sort()}
+			aria-label={m.member_sort_label()}
 			value={sort}
 			onchange={(e: Event) => {
 				sort = (e.currentTarget as HTMLSelectElement).value as 'top' | 'new';
 				page = 1;
 			}}
 		>
-			<option value="top">{m.member_suggestions_most_votes()}</option>
-			<option value="new">{m.member_suggestions_newest()}</option>
+			<option value="top">{m.member_suggestions_most_votes_label()}</option>
+			<option value="new">{m.member_suggestions_newest_label()}</option>
 		</Select>
 	</FilterBar>
 
 	<DataList
 		{result}
 		emptyTitle={m.member_suggestions_empty_title()}
-		empty={m.member_suggestions_empty()}
+		empty={m.member_suggestions_empty_body()}
 		onpage={(p) => (page = p)}
 	>
 		{#snippet children(rows)}

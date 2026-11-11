@@ -125,19 +125,19 @@
 		<details class="dropdown dropdown-end">
 			<summary class="btn gap-1 btn-ghost btn-sm">
 				<IconCalendarPlus size={18} />
-				{m.member_events_id_add_calendar()}
+				{m.member_events_id_add_calendar_label()}
 			</summary>
 			<ul class="menu dropdown-content dropdown-panel w-48">
 				<li>
 					<a
 						href={googleCalendarUrl(calendarEvt)}
 						target="_blank"
-						rel="external noopener noreferrer">{m.member_events_id_google_calendar()}</a
+						rel="external noopener noreferrer">{m.member_events_id_google_calendar_text()}</a
 					>
 				</li>
 				<li>
 					<a href={icsDataUrl(calendarEvt)} rel="external" download="{evt.title}.ics"
-						>{m.member_events_id_apple_outlook_ics()}</a
+						>{m.member_events_id_apple_outlook_ics_text()}</a
 					>
 				</li>
 			</ul>
@@ -149,7 +149,9 @@
 	{#if myTickets.length > 0}
 		<section>
 			<SectionLabel
-				label={myTickets.length === 1 ? m.member_events_id_ticket() : m.member_events_id_tickets()}
+				label={myTickets.length === 1
+					? m.member_events_id_ticket_label()
+					: m.member_events_id_tickets_label()}
 				count={myTickets.length}
 			/>
 			<div class="edet__stubs">
@@ -209,8 +211,8 @@
 				<div class="edet__ctas">
 					<span class="text-base font-medium text-fg-2">
 						{evt.status === 'cancelled'
-							? m.member_events_id_tickets_rsvps_closed()
-							: m.member_events_id_event_has_ended()}
+							? m.member_events_id_tickets_rsvps_closed_text()
+							: m.member_events_id_event_has_ended_text()}
 					</span>
 				</div>
 			{:else if evt.ticketingEnabled}
@@ -218,7 +220,7 @@
 					<div class="edet__capacity">
 						<div class="edet__capacity-head">
 							<span
-								>{m.member_events_id_claimed({
+								>{m.member_events_id_claimed_text({
 									sold: data.sold ?? '',
 									ticketQuantity: evt.ticketQuantity ?? ''
 								})}</span
@@ -226,8 +228,8 @@
 							{#if lowAvailability}
 								<Badge variant="warning"
 									>{isFreeEvent
-										? m.member_events_id_almost_full()
-										: m.member_events_id_selling_fast()}</Badge
+										? m.member_events_id_almost_full_label()
+										: m.member_events_id_selling_fast_label()}</Badge
 								>
 							{/if}
 						</div>
@@ -242,15 +244,17 @@
 				<div class="edet__ctas">
 					{#if soldOut}
 						<Button variant="default" size="lg" disabled
-							>{isFreeEvent ? m.member_events_id_full() : m.member_events_id_sold_out()}</Button
+							>{isFreeEvent
+								? m.member_events_id_full_label()
+								: m.member_events_id_sold_out_label()}</Button
 						>
 					{:else if !data.myTicket}
 						{#if isFreeEvent}
 							<Action
 								action={claimFreeTicket}
-								label={m.member_events_id_get_free_ticket()}
-								modalTitle={m.member_events_id_get_free_ticket()}
-								submitLabel={m.member_events_id_get({
+								label={m.member_events_id_get_free_ticket_label()}
+								modalTitle={m.member_events_id_get_free_ticket_title()}
+								submitLabel={m.member_events_id_get_label({
 									value: quantity > 1 ? `${quantity} tickets` : 'ticket'
 								})}
 								canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
@@ -262,7 +266,7 @@
 									<input {...rsvpFields.eventId.as('hidden', evt.id)} />
 
 									<Field
-										label={m.member_events_id_number_spots()}
+										label={m.member_events_id_number_spots_label()}
 										field={claimFreeTicket.fields.quantity}
 										type="select"
 										options={quantityOptions}
@@ -272,13 +276,13 @@
 									<Field
 										field={claimFreeTicket.fields.attendeeName}
 										type="text"
-										label={m.member_name()}
+										label={m.member_name_label()}
 										bind:value={attendeeName}
 									/>
 									<Field
 										field={claimFreeTicket.fields.attendeeEmail}
 										type="email"
-										label={m.member_email()}
+										label={m.member_email_label()}
 										bind:value={attendeeEmail}
 									/>
 								{/snippet}
@@ -286,13 +290,13 @@
 						{:else}
 							<Action
 								action={purchaseTickets}
-								label={m.member_events_id_get_tickets()}
-								modalTitle={m.member_events_id_get_tickets()}
+								label={m.member_events_id_get_tickets_label()}
+								modalTitle={m.member_events_id_get_tickets_title()}
 								submitLabel={chargeCents === 0
-									? m.member_events_id_get({
+									? m.member_events_id_get_label({
 											value: quantity === 1 ? 'ticket' : `${quantity} tickets`
 										})
-									: m.member_events_id_pay({ formatCents: formatCents(chargeCents) })}
+									: m.member_events_id_pay_label({ formatCents: formatCents(chargeCents) })}
 								canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim() && !amountBlocked}
 								variant="primary"
 								size="lg"
@@ -303,11 +307,11 @@
 
 									<div class="flex items-baseline gap-2">
 										<span class="text-lg font-bold">{formatCents(evt.ticketPrice!)}</span>
-										<span class="text-muted">{m.member_events_id_suggested_per_ticket()}</span>
+										<span class="text-muted">{m.member_events_id_suggested_per_ticket_text()}</span>
 									</div>
 
 									<Field
-										label={m.member_events_id_number_tickets()}
+										label={m.member_events_id_number_tickets_label()}
 										field={purchaseTickets.fields.quantity}
 										type="select"
 										options={quantityOptions}
@@ -317,13 +321,13 @@
 									<Field
 										field={purchaseTickets.fields.attendeeName}
 										type="text"
-										label={m.member_name()}
+										label={m.member_name_label()}
 										bind:value={attendeeName}
 									/>
 									<Field
 										field={purchaseTickets.fields.attendeeEmail}
 										type="email"
-										label={m.member_email()}
+										label={m.member_email_label()}
 										bind:value={attendeeEmail}
 									/>
 									<TicketPurchaseFields
@@ -347,8 +351,8 @@
 					{#if data.remaining !== null && !soldOut}
 						<span class="text-muted"
 							>{(isFreeEvent
-								? m.member_events_id_spots_remaining
-								: m.member_events_id_tickets_remaining)({ remaining: data.remaining })}</span
+								? m.member_events_id_spots_remaining_text
+								: m.member_events_id_tickets_remaining_text)({ remaining: data.remaining })}</span
 						>
 					{/if}
 				</div>
@@ -362,7 +366,7 @@
 							target="_blank"
 							rel="noopener noreferrer"
 							variant="primary"
-							size="lg">{m.member_events_id_get_tickets_2()}</Button
+							size="lg">{m.member_events_id_get_tickets_2_label()}</Button
 						>
 					{/if}
 					{#if data.myRsvp}
@@ -380,20 +384,20 @@
 								>
 							</div>
 							<div class="tixbanner__text">
-								<strong>{m.member_events_id_re_going()}</strong>
+								<strong>{m.member_events_id_re_going_text()}</strong>
 								<small>
 									{mode === 'external'
-										? m.member_events_id_tickets_sold_separately_grab_yours()
-										: m.member_events_id_we_ll_see_there()}
+										? m.member_events_id_tickets_sold_separately_grab_yours_text()
+										: m.member_events_id_we_ll_see_there_text()}
 								</small>
 							</div>
 						</div>
 						<Action
 							action={cancelRsvp}
-							label={m.member_events_id_can_t_make()}
-							confirm={m.member_events_id_confirm()}
-							modalTitle={m.member_events_id_cancel_rsvp()}
-							submitLabel={m.member_events_id_yes_cancel_my_rsvp()}
+							label={m.member_events_id_can_t_make_label()}
+							confirm={m.member_events_id_confirm_body()}
+							modalTitle={m.member_events_id_cancel_rsvp_title()}
+							submitLabel={m.member_events_id_yes_cancel_my_rsvp_label()}
 							submitVariant="error"
 							variant="ghost"
 							size="sm"
@@ -407,14 +411,14 @@
 						<Action
 							action={rsvpToEvent}
 							label={mode === 'external'
-								? m.member_events_id_i_m_going()
-								: m.member_events_id_rsvp()}
+								? m.member_events_id_i_m_going_label()
+								: m.member_events_id_rsvp_label()}
 							modalTitle={mode === 'external'
-								? m.member_events_id_i_m_going()
-								: m.member_events_id_rsvp()}
+								? m.member_events_id_i_m_going_title()
+								: m.member_events_id_rsvp_title()}
 							submitLabel={mode === 'external'
-								? m.member_events_id_i_m_going()
-								: m.member_events_id_rsvp()}
+								? m.member_events_id_i_m_going_label()
+								: m.member_events_id_rsvp_label()}
 							canSubmit={!!attendeeName.trim() && !!attendeeEmail.trim()}
 							class="btn-lg {mode === 'external' ? 'btn-outline' : 'btn-primary'}"
 							onsuccess={refreshDetail}
@@ -424,13 +428,13 @@
 								<Field
 									field={rsvpToEvent.fields.attendeeName}
 									type="text"
-									label={m.member_name()}
+									label={m.member_name_label()}
 									bind:value={attendeeName}
 								/>
 								<Field
 									field={rsvpToEvent.fields.attendeeEmail}
 									type="email"
-									label={m.member_email()}
+									label={m.member_email_label()}
 									bind:value={attendeeEmail}
 								/>
 							{/snippet}
@@ -438,7 +442,8 @@
 					{/if}
 
 					{#if data.rsvpCount > 0}
-						<span class="text-muted">{m.member_events_id_going({ rsvpCount: data.rsvpCount })}</span
+						<span class="text-muted"
+							>{m.member_events_id_going_text({ rsvpCount: data.rsvpCount })}</span
 						>
 					{/if}
 				</div>
@@ -448,7 +453,7 @@
 
 	{#if data.upcoming.length > 0}
 		<section class="edet__more">
-			<SectionLabel label={m.member_events_id_more_shows()} />
+			<SectionLabel label={m.member_events_id_more_shows_label()} />
 			<div class="edet__more-grid">
 				{#each data.upcoming as e (e.id)}
 					{@const eTags = parseTags(e.tags)}

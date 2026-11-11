@@ -52,21 +52,22 @@
 	let pills = $derived.by<ProfilePill[]>(() => {
 		const p: ProfilePill[] = [
 			{
-				label: msg.member_directory_bands_slug_member({
+				label: msg.member_directory_bands_slug_member_label({
 					memberCount: band.memberCount,
 					value: band.memberCount === 1 ? '' : 's'
 				})
 			}
 		];
-		if (band.lookingForMembers) p.push({ label: msg.member_looking_members(), variant: 'warm' });
+		if (band.lookingForMembers)
+			p.push({ label: msg.member_looking_members_label(), variant: 'warm' });
 		return p;
 	});
 
 	let facts = $derived([
-		{ label: msg.member_directory_bands_slug_formed(), value: band.foundedYear },
-		{ label: msg.member_directory_bands_slug_genre(), value: band.genres.join(' · ') },
-		{ label: msg.member_based(), value: band.hometown },
-		{ label: msg.member_looking(), value: band.lookingForMembers ? 'Members' : null }
+		{ label: msg.member_directory_bands_slug_formed_label(), value: band.foundedYear },
+		{ label: msg.member_directory_bands_slug_genre_label(), value: band.genres.join(' · ') },
+		{ label: msg.member_based_label(), value: band.hometown },
+		{ label: msg.member_looking_label(), value: band.lookingForMembers ? 'Members' : null }
 	]);
 
 	let memberRefs = $derived<CrossRef[]>(
@@ -127,9 +128,12 @@
 			<CrossRefList
 				kind="members"
 				items={memberRefs}
-				note={msg.member_directory_bands_slug_note({ memberCount: band.memberCount })}
+				note={msg.member_directory_bands_slug_note_body({ memberCount: band.memberCount })}
 			/>
-			<TagCloud label={msg.member_directory_bands_slug_genres_influences()} tags={band.genres} />
+			<TagCloud
+				label={msg.member_directory_bands_slug_genres_influences_label()}
+				tags={band.genres}
+			/>
 			<LinksBox links={band.links} />
 			<ContactForm slug={band.slug} bandName={band.name} />
 		{/snippet}

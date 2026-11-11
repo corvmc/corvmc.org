@@ -110,7 +110,7 @@
 	}
 </script>
 
-<PageHeader title={m.member_equipment_equipment_catalog()}>
+<PageHeader title={m.member_equipment_equipment_catalog_title()}>
 	<div class="flex items-center gap-3">
 		<!-- Equipment credits are stored in cents, the same as every other amount
 		     the ledger holds — `checkoutLoan` spends them against a cents total.
@@ -118,11 +118,11 @@
 		     fortune or a currency nobody could name. -->
 		{#if meta.creditBalance > 0}
 			<Badge variant="info" size="md"
-				>{m.member_equipment_credit({ formatCents: formatCents(meta.creditBalance) })}</Badge
+				>{m.member_equipment_credit_label({ formatCents: formatCents(meta.creditBalance) })}</Badge
 			>
 		{/if}
 		<Button href="/member/equipment/loans" variant="ghost" size="sm"
-			>{m.member_equipment_my_loans()}</Button
+			>{m.member_equipment_my_loans_label()}</Button
 		>
 	</div>
 </PageHeader>
@@ -142,18 +142,20 @@
 				categoryId = (e.currentTarget as HTMLSelectElement).value;
 			}}
 		>
-			<option value="">{m.member_all_categories()}</option>
+			<option value="">{m.member_all_categories_label()}</option>
 			{#each meta.categories as cat (cat.id)}
 				<option value={cat.id}>{cat.name}</option>
 			{/each}
 		</Select>
 		{#if hasActiveFilters()}
-			<Button variant="ghost" size="sm" onclick={clearFilters}>{m.member_equipment_clear()}</Button>
+			<Button variant="ghost" size="sm" onclick={clearFilters}
+				>{m.member_equipment_clear_label()}</Button
+			>
 		{/if}
 	</div>
 
 	{#if equipment.length === 0}
-		<EmptyState message={m.member_equipment_message()} />
+		<EmptyState message={m.member_equipment_message_body()} />
 	{:else}
 		{@const groups = equipment.reduce<Record<string, typeof equipment>>((acc, eq) => {
 			const key = eq.categoryName;
@@ -177,7 +179,9 @@
 									     one. Which unit you get is decided at checkout. -->
 									<Badge variant="ghost" size="xs">{priceLabel(eq.pricingTier)}</Badge>
 									<Badge variant={eq.availableQuantity <= 0 ? 'error' : 'ghost'} size="xs">
-										{m.member_equipment_available({ availableQuantity: eq.availableQuantity })}
+										{m.member_equipment_available_label({
+											availableQuantity: eq.availableQuantity
+										})}
 									</Badge>
 								</div>
 								<div class="mt-2 card-actions">
@@ -187,7 +191,7 @@
 										disabled={eq.availableQuantity <= 0}
 										onclick={() => openRequest(eq.id, eq.name, eq.pricingTier)}
 									>
-										{m.member_equipment_request()}
+										{m.member_equipment_request_label()}
 									</Button>
 								</div>
 							</CardBody>
@@ -199,9 +203,9 @@
 	{/if}
 
 	<div class="border-t pt-4">
-		<p class="mb-2 text-muted">{m.member_equipment_can_t_find_what_need()}</p>
+		<p class="mb-2 text-muted">{m.member_equipment_can_t_find_what_need_text()}</p>
 		<Button variant="default" size="sm" outline onclick={openFreeFormRequest}
-			>{m.member_equipment_describe_request()}</Button
+			>{m.member_equipment_describe_request_label()}</Button
 		>
 	</div>
 </PageContent>
@@ -209,8 +213,8 @@
 <Modal
 	bind:open={showRequestModal}
 	title={isFreeForm
-		? m.member_equipment_free_form_equipment_request()
-		: m.member_equipment_request_2({ selectedEquipmentName })}
+		? m.member_equipment_free_form_equipment_request_title()
+		: m.member_equipment_request_2_title({ selectedEquipmentName })}
 	maxWidth="max-w-md"
 >
 	<Form
@@ -232,7 +236,7 @@
 			<Field
 				field={submitRequest.fields.requestedPickupDate}
 				type="date"
-				label={m.member_equipment_preferred_pickup_date()}
+				label={m.member_equipment_preferred_pickup_date_label()}
 				required
 			/>
 		</div>
@@ -244,7 +248,7 @@
 			<Field
 				field={submitRequest.fields.estimatedReturnDate}
 				type="date"
-				label={m.member_equipment_estimated_return_date()}
+				label={m.member_equipment_estimated_return_date_label()}
 				required
 			/>
 		</div>
@@ -254,16 +258,16 @@
 				submitAs="text"
 				type="number"
 				value={1}
-				label={m.member_equipment_quantity()}
+				label={m.member_equipment_quantity_label()}
 			/>
 		{/if}
 		{#if costEstimate != null}
 			<div class="rounded-lg bg-info/10 px-4 py-3 text-sm">
 				{#if costEstimate === 0}
-					<span class="font-medium">{m.member_equipment_free_sustaining_members()}</span>
+					<span class="font-medium">{m.member_equipment_free_sustaining_members_text()}</span>
 				{:else}
 					<ParaglideMessage
-						message={m.member_equipment_estimated_cost}
+						message={m.member_equipment_estimated_cost_text}
 						inputs={{ formatCents: formatCents(costEstimate) }}
 						>{#snippet span({ children })}<span class="font-semibold">{@render children?.()}</span
 							>{/snippet}</ParaglideMessage
@@ -272,22 +276,22 @@
 			</div>
 		{:else if isFreeForm && pickupDateValue && returnDateValue}
 			<div class="rounded-lg bg-base-200 px-4 py-3 text-muted">
-				{m.member_equipment_cost_will_determined_when_equipment()}
+				{m.member_equipment_cost_will_determined_when_equipment_text()}
 			</div>
 		{/if}
 		<Field
 			field={submitRequest.fields.memberNotes}
 			type="textarea"
 			label={isFreeForm
-				? m.member_equipment_describe_what_need()
-				: m.member_equipment_notes_optional()}
+				? m.member_equipment_describe_what_need_label()
+				: m.member_equipment_notes_optional_label()}
 			required={isFreeForm}
 		/>
 		<div class="modal-action">
 			<Button type="button" variant="ghost" onclick={() => (showRequestModal = false)}
-				>{m.member_cancel()}</Button
+				>{m.member_cancel_label()}</Button
 			>
-			<SubmitButton label={m.member_equipment_submit_request()} />
+			<SubmitButton label={m.member_equipment_submit_request_label()} />
 		</div>
 	</Form>
 </Modal>

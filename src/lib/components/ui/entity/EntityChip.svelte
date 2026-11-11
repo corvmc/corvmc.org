@@ -187,7 +187,7 @@
 		shape="square"
 		size="sm"
 		variant="ghost"
-		aria-label={m.ui_open_named({ title: ref.title })}
+		aria-label={m.ui_open_named_label({ title: ref.title })}
 	>
 		<IconArrowRight size={18} />
 	</Button>

@@ -88,8 +88,8 @@
 
 <PageHeader
 	width="3xl"
-	title={msg.band_slug_packing_packing_list()}
-	subtitle={msg.band_slug_packing_what_takes_gig({ name: layout.band.name })}
+	title={msg.band_slug_packing_packing_list_title()}
+	subtitle={msg.band_slug_packing_what_takes_gig_body({ name: layout.band.name })}
 	documentTitle={msg.band_slug_packing_document_title({ name: layout.band.name })}
 >
 	<Button
@@ -97,14 +97,14 @@
 		variant="ghost"
 		size="sm"
 	>
-		{msg.band_tech_rider()}
+		{msg.band_tech_rider_label()}
 	</Button>
 </PageHeader>
 
 <PageContent width="3xl">
 	{#if data.isStaffViewer}
 		<Alert type="info" class="mb-4">
-			{msg.band_slug_packing_re_reading_as_staff_only()}
+			{msg.band_slug_packing_re_reading_as_staff_only_body()}
 		</Alert>
 	{/if}
 
@@ -114,9 +114,13 @@
 			gear and it is actionable days out; a packed count only means something
 			during load-in.
 		-->
-		<StatCard title={msg.band_slug_packing_nobody_has()} value={list.unassignedCount} size="sm" />
-		<StatCard title={msg.band_van()} value="{list.packedCount}/{list.itemCount}" size="sm" />
-		<StatCard title={msg.band_slug_packing_things()} value={list.itemCount} size="sm" />
+		<StatCard
+			title={msg.band_slug_packing_nobody_has_title()}
+			value={list.unassignedCount}
+			size="sm"
+		/>
+		<StatCard title={msg.band_van_title()} value="{list.packedCount}/{list.itemCount}" size="sm" />
+		<StatCard title={msg.band_slug_packing_things_title()} value={list.itemCount} size="sm" />
 	</div>
 
 	{#if list.itemCount > 0}
@@ -124,18 +128,18 @@
 			<CardBody>
 				<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
 					<div>
-						<h2 class="text-base font-semibold">{msg.band_slug_packing_load()}</h2>
+						<h2 class="text-base font-semibold">{msg.band_slug_packing_load_title()}</h2>
 						<p class="text-xs text-base-content/60">
 							{#if list.lastResetAt}
-								{msg.band_slug_packing_cleared({ format: dateFmt.format(list.lastResetAt) })}
-								{#if list.lastResetByName}{msg.band_slug_packing_by({
+								{msg.band_slug_packing_cleared_text({ format: dateFmt.format(list.lastResetAt) })}
+								{#if list.lastResetByName}{msg.band_slug_packing_by_text({
 										lastResetByName: list.lastResetByName
 									})}{/if}
 								{#if daysSinceReset !== null && daysSinceReset > 30}
-									{msg.band_slug_packing_which_was_while_ago()}
+									{msg.band_slug_packing_which_was_while_ago_text()}
 								{/if}
 							{:else}
-								{msg.band_slug_packing_never_cleared_ticks_stay_until()}
+								{msg.band_slug_packing_never_cleared_ticks_stay_until_text()}
 							{/if}
 						</p>
 					</div>
@@ -144,11 +148,15 @@
 						<Form
 							remote={resetPackingList}
 							guard
-							successToast={msg.band_slug_packing_cleared_next_load()}
+							successToast={msg.band_slug_packing_cleared_next_load_toast()}
 							onsuccess={refresh}
 						>
 							<input {...resetFields.bandId.as('hidden', data.bandId)} />
-							<SubmitButton label={msg.band_slug_packing_clear_ticks()} variant="ghost" size="sm" />
+							<SubmitButton
+								label={msg.band_slug_packing_clear_ticks_label()}
+								variant="ghost"
+								size="sm"
+							/>
 						</Form>
 					{/if}
 				</div>
@@ -156,7 +164,7 @@
 				{#if list.unassignedCount > 0}
 					<Alert type="warning" class="mb-4">
 						<ParaglideMessage
-							message={msg.band_slug_packing_things_have_nobody_bringing_them}
+							message={msg.band_slug_packing_things_have_nobody_bringing_them_body}
 							inputs={{ unassignedCount: list.unassignedCount }}
 							>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 								>{/snippet}</ParaglideMessage
@@ -187,9 +195,9 @@
 	{/if}
 
 	<div class="space-y-6">
-		<h2 class="text-base font-semibold">{msg.band_slug_packing_what_everyone_brings()}</h2>
+		<h2 class="text-base font-semibold">{msg.band_slug_packing_what_everyone_brings_title()}</h2>
 		<p class="-mt-4 text-xs text-base-content/60">
-			{msg.band_slug_packing_editing_here_changes_what_band()}
+			{msg.band_slug_packing_editing_here_changes_what_band_text()}
 		</p>
 
 		{#key stamp}
@@ -198,8 +206,8 @@
 					bandId={data.bandId}
 					ownerUserId={data.viewerId}
 					slotKey="mine"
-					title={msg.band_gear()}
-					subtitle={msg.band_slug_packing_what_bring_only_band_s()}
+					title={msg.band_gear_title()}
+					subtitle={msg.band_slug_packing_what_bring_only_band_s_body()}
 					initial={toRows(data.viewerId)}
 					mine
 					canEdit
@@ -215,7 +223,9 @@
 						ownerUserId={member.userId}
 						slotKey="m{i}"
 						title={member.name}
-						subtitle={data.canManage ? msg.band_slug_packing_can_edit_as_admin_but() : undefined}
+						subtitle={data.canManage
+							? msg.band_slug_packing_can_edit_as_admin_but_body()
+							: undefined}
 						initial={rows}
 						canEdit={data.canManage}
 						onsaved={refresh}
@@ -228,8 +238,8 @@
 					bandId={data.bandId}
 					ownerUserId={null}
 					slotKey="shared"
-					title={msg.band_slug_packing_band_s_own_stuff()}
-					subtitle={msg.band_slug_packing_merch_tub_spare_stands_things()}
+					title={msg.band_slug_packing_band_s_own_stuff_title()}
+					subtitle={msg.band_slug_packing_merch_tub_spare_stands_things_body()}
 					initial={toRows(null)}
 					canEdit={data.canManage}
 					onsaved={refresh}
@@ -239,12 +249,12 @@
 
 		<Card>
 			<CardBody>
-				<h2 class="mb-3 text-base font-semibold">{msg.band_slug_packing_notes_band()}</h2>
+				<h2 class="mb-3 text-base font-semibold">{msg.band_slug_packing_notes_band_title()}</h2>
 				{#if data.canManage}
 					<Form
 						remote={savePackingNotes}
 						guard
-						successToast={msg.band_saved()}
+						successToast={msg.band_saved_toast()}
 						onsuccess={refresh}
 						class="space-y-4"
 					>
@@ -252,17 +262,17 @@
 						<Field
 							field={notesFields.notes}
 							type="textarea"
-							label={msg.band_slug_packing_anything_band_needs_reminding()}
+							label={msg.band_slug_packing_anything_band_needs_reminding_label()}
 							value={list.notes ?? ''}
 							maxlength={PACKING_NOTES_MAX}
-							description={msg.band_slug_packing_description()}
+							description={msg.band_slug_packing_description_body()}
 						/>
-						<div class="flex justify-end"><SubmitButton label={msg.band_save()} /></div>
+						<div class="flex justify-end"><SubmitButton label={msg.band_save_label()} /></div>
 					</Form>
 				{:else if list.notes}
 					<p class="text-sm whitespace-pre-line">{list.notes}</p>
 				{:else}
-					<p class="text-sm text-base-content/60">{msg.band_slug_packing_nothing_noted()}</p>
+					<p class="text-sm text-base-content/60">{msg.band_slug_packing_nothing_noted_text()}</p>
 				{/if}
 			</CardBody>
 		</Card>

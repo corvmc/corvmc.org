@@ -26,8 +26,8 @@
 
 <Action
 	action={deleteClosure}
-	label={m.actions_delete()}
-	modalTitle={m.actions_confirm()}
+	label={m.actions_delete_label()}
+	modalTitle={m.actions_confirm_title()}
 	successToast={m.actions_delete_closure_success_toast()}
 	{variant}
 	{size}
@@ -37,6 +37,6 @@
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', closureId)} />
-		<p class="py-4">{m.actions_delete_closure_delete_closure()}</p>
+		<p class="py-4">{m.actions_delete_closure_delete_closure_text()}</p>
 	{/snippet}
 </Action>

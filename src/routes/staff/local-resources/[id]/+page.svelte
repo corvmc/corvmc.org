@@ -33,15 +33,15 @@
 	const removeFields = removeLocalResourceForm.fields;
 </script>
 
-<PageHeader width="3xl" title={r.name} subtitle={m.staff_local_resources_id_subtitle()}>
+<PageHeader width="3xl" title={r.name} subtitle={m.staff_local_resources_id_subtitle_body()}>
 	<StatusBadge status={r.status} label />
 	<Action
 		action={updateLocalResourceForm}
-		label={m.staff_edit()}
+		label={m.staff_edit_label()}
 		variant="ghost"
 		size="sm"
-		modalTitle={m.staff_edit_2({ name: r.name })}
-		successToast={m.staff_saved()}
+		modalTitle={m.staff_edit_2_title({ name: r.name })}
+		successToast={m.staff_saved_toast()}
 	>
 		{#snippet form()}
 			<input {...editFields.id.as('hidden', r.id)} />
@@ -50,43 +50,46 @@
 	</Action>
 	<Action
 		action={removeLocalResourceForm}
-		label={m.staff_remove()}
+		label={m.staff_remove_label()}
 		variant="ghost"
 		size="sm"
-		modalTitle={m.staff_remove_2({ name: r.name })}
-		submitLabel={m.staff_remove()}
-		successToast={m.staff_local_resources_id_listing_removed()}
+		modalTitle={m.staff_remove_2_title({ name: r.name })}
+		submitLabel={m.staff_remove_label()}
+		successToast={m.staff_local_resources_id_listing_removed_toast()}
 		onsuccess={() => void goto(resolve('staff/local-resources'))}
 	>
 		{#snippet form()}
 			<input {...removeFields.id.as('hidden', r.id)} />
-			<p>{m.staff_local_resources_id_comes_off_public_page_record()}</p>
+			<p>{m.staff_local_resources_id_comes_off_public_page_record_text()}</p>
 		{/snippet}
 	</Action>
 </PageHeader>
 
 <PageContent width="3xl">
 	<div class="grid gap-6">
-		<InfoCard title={m.staff_local_resources_id_listing()}>
+		<InfoCard title={m.staff_local_resources_id_listing_title()}>
 			<DefinitionList>
-				<Fact label={m.staff_category()}>{categoryName}</Fact>
-				{#if r.description}<Fact label={m.staff_description()} wrap>{r.description}</Fact>{/if}
-				{#if r.website}<Fact label={m.staff_website()}>{r.website}</Fact>{/if}
-				{#if r.phone}<Fact label={m.staff_phone()}>{r.phone}</Fact>{/if}
-				{#if r.addressLine}<Fact label={m.staff_address()}>{r.addressLine}</Fact>{/if}
-				{#if r.submitterEmail}<Fact label={m.staff_suggested_by()}>{r.submitterEmail}</Fact>{/if}
+				<Fact label={m.staff_category_label()}>{categoryName}</Fact>
+				{#if r.description}<Fact label={m.staff_description_label()} wrap>{r.description}</Fact
+					>{/if}
+				{#if r.website}<Fact label={m.staff_website_label()}>{r.website}</Fact>{/if}
+				{#if r.phone}<Fact label={m.staff_phone_label()}>{r.phone}</Fact>{/if}
+				{#if r.addressLine}<Fact label={m.staff_address_label()}>{r.addressLine}</Fact>{/if}
+				{#if r.submitterEmail}<Fact label={m.staff_suggested_by_label()}>{r.submitterEmail}</Fact
+					>{/if}
 			</DefinitionList>
 		</InfoCard>
 
-		<InfoCard title={m.staff_review()} class="bg-base-200 shadow-none">
+		<InfoCard title={m.staff_review_title()} class="bg-base-200 shadow-none">
 			{#if r.status === 'rejected' && r.staffNote}
 				<DefinitionList>
-					<Fact label={m.staff_local_resources_id_returned_because()} wrap>{r.staffNote}</Fact>
+					<Fact label={m.staff_local_resources_id_returned_because_label()} wrap>{r.staffNote}</Fact
+					>
 				</DefinitionList>
 			{/if}
 			{#if r.reviewedAt}
 				<p class="mb-3 text-muted">
-					{m.staff_local_resources_id_last_reviewed({
+					{m.staff_local_resources_id_last_reviewed_text({
 						formatDateTime: formatDateTime(r.reviewedAt)
 					})}
 				</p>
@@ -95,16 +98,16 @@
 				{#if r.status !== 'published'}
 					<Action
 						action={publishLocalResourceForm}
-						label={m.staff_local_resources_id_publish()}
-						modalTitle={m.staff_local_resources_id_publish_2({ name: r.name })}
-						submitLabel={m.staff_local_resources_id_publish()}
-						successToast={m.staff_published()}
+						label={m.staff_local_resources_id_publish_label()}
+						modalTitle={m.staff_local_resources_id_publish_2_title({ name: r.name })}
+						submitLabel={m.staff_local_resources_id_publish_label()}
+						successToast={m.staff_published_toast()}
 						variant="primary"
 						size="sm"
 					>
 						{#snippet form()}
 							<input {...publishFields.id.as('hidden', r.id)} />
-							<p>{m.staff_local_resources_id_appears_local_resources_straight_aw()}</p>
+							<p>{m.staff_local_resources_id_appears_local_resources_straight_aw_text()}</p>
 						{/snippet}
 					</Action>
 				{/if}
@@ -112,11 +115,11 @@
 					<Action
 						action={rejectLocalResourceForm}
 						label={r.status === 'published'
-							? m.staff_local_resources_id_unpublish()
-							: m.staff_local_resources_id_reject()}
-						modalTitle={m.staff_local_resources_id_return({ name: r.name })}
-						submitLabel={m.staff_local_resources_id_return_with_note()}
-						successToast={m.staff_returned()}
+							? m.staff_local_resources_id_unpublish_label()
+							: m.staff_local_resources_id_reject_label()}
+						modalTitle={m.staff_local_resources_id_return_title({ name: r.name })}
+						submitLabel={m.staff_local_resources_id_return_with_note_label()}
+						successToast={m.staff_returned_toast()}
 						size="sm"
 					>
 						{#snippet form()}
@@ -124,8 +127,8 @@
 							<Field
 								field={rejectFields.note}
 								type="textarea"
-								label={m.staff_local_resources_id_what_needs_change()}
-								description={m.staff_local_resources_id_description()}
+								label={m.staff_local_resources_id_what_needs_change_label()}
+								description={m.staff_local_resources_id_description_body()}
 							/>
 						{/snippet}
 					</Action>

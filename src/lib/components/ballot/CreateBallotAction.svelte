@@ -36,7 +36,9 @@
 	);
 	const noun = $derived(kind === 'member' ? 'member-wide ballot' : 'committee ballot');
 	const label = $derived(
-		decides ? msg.ballot_create_ballot_put({ noun }) : msg.ballot_create_ballot_new({ noun })
+		decides
+			? msg.ballot_create_ballot_put_title({ noun })
+			: msg.ballot_create_ballot_new_title({ noun })
 	);
 
 	let certifierId = $state('');
@@ -78,47 +80,47 @@
 			<FormField
 				field={action.fields.groupId}
 				type="select"
-				label={msg.ballot_create_ballot_committee()}
+				label={msg.ballot_create_ballot_committee_label()}
 				options={committees.map((c) => ({ value: c.id, label: c.name }))}
 			/>
 		{/if}
 		<FormField
 			field={action.fields.title}
 			type="text"
-			label={msg.ballot_create_ballot_question()}
+			label={msg.ballot_create_ballot_question_label()}
 			value={decides ? `${decides.title}?` : undefined}
 		/>
 		<FormField
 			field={action.fields.description}
 			type="textarea"
-			label={msg.ballot_create_ballot_background_optional()}
+			label={msg.ballot_create_ballot_background_optional_label()}
 		/>
 		<FormField
 			field={action.fields.options}
 			type="textarea"
-			label={msg.ballot_create_ballot_choices()}
+			label={msg.ballot_create_ballot_choices_label()}
 			description={decides
-				? msg.ballot_create_ballot_one_per_line_certifier_says()
-				: msg.ballot_create_ballot_one_per_line_between_2()}
+				? msg.ballot_create_ballot_one_per_line_certifier_says_body()
+				: msg.ballot_create_ballot_one_per_line_between_2_body()}
 			value={decides ? 'Yes\nNo' : undefined}
 		/>
 		<FormField
 			field={action.fields.closesOn}
 			type="date"
-			label={msg.ballot_create_ballot_voting_closes_at_end()}
+			label={msg.ballot_create_ballot_voting_closes_at_end_label()}
 		/>
 		{#if kind === 'group'}
 			<FormField
 				field={action.fields.certifierId}
 				type="select"
-				label={msg.ballot_create_ballot_certifier()}
-				description={msg.ballot_create_ballot_who_confirms_result_once_voting()}
+				label={msg.ballot_create_ballot_certifier_label()}
+				description={msg.ballot_create_ballot_who_confirms_result_once_voting_body()}
 				options={people}
 			/>
 		{:else}
 			<MemberPicker
 				field={action.fields.certifierId}
-				label={msg.ballot_create_ballot_certifier()}
+				label={msg.ballot_create_ballot_certifier_label()}
 				bind:value={certifierId}
 				bind:name={certifierName}
 			/>

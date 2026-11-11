@@ -20,7 +20,7 @@
 
 <Action
 	action={reportDirectThread}
-	label={m.member_report()}
+	label={m.member_report_label()}
 	modalTitle={m.member_messages_id_report_direct_thread_modal_title()}
 	submitLabel={m.member_messages_id_report_direct_thread_submit_label()}
 	successToast={m.member_messages_id_report_direct_thread_success_toast()}
@@ -37,21 +37,23 @@
 		<input {...fields.threadId.as('hidden', threadId)} />
 		<div class="space-y-3">
 			<p class="text-muted">
-				{m.member_messages_id_report_direct_thread_staff_will_able_read()}
+				{m.member_messages_id_report_direct_thread_staff_will_able_read_text()}
 			</p>
 			<label class="fieldset w-full">
-				<span class="fieldset-legend">{m.member_messages_id_report_direct_thread_reason()}</span>
+				<span class="fieldset-legend"
+					>{m.member_messages_id_report_direct_thread_reason_label()}</span
+				>
 				<input
 					{...fields.reason.as('text')}
 					class="input w-full"
 					bind:value={reason}
 					maxlength="100"
-					placeholder={m.member_messages_id_report_direct_thread_e_g_harassment_spam()}
+					placeholder={m.member_messages_id_report_direct_thread_e_g_harassment_spam_placeholder()}
 				/>
 			</label>
 			<label class="fieldset w-full">
 				<span class="fieldset-legend"
-					>{m.member_messages_id_report_direct_thread_details_optional()}</span
+					>{m.member_messages_id_report_direct_thread_details_optional_label()}</span
 				>
 				<textarea
 					{...fields.description.as('text')}
@@ -59,7 +61,8 @@
 					rows="3"
 					maxlength="1000"
 					bind:value={description}
-					placeholder={m.member_messages_id_report_direct_thread_anything_else_would()}></textarea>
+					placeholder={m.member_messages_id_report_direct_thread_anything_else_would_placeholder()}
+				></textarea>
 			</label>
 		</div>
 	{/snippet}

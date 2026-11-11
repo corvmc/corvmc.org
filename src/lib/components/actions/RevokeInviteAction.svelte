@@ -28,8 +28,8 @@
 
 <Action
 	action={revokeBandInvite}
-	label={m.actions_revoke()}
-	modalTitle={m.actions_confirm()}
+	label={m.actions_revoke_label()}
+	modalTitle={m.actions_confirm_title()}
 	successToast={m.actions_revoke_invite_success_toast()}
 	{variant}
 	{size}
@@ -39,6 +39,6 @@
 >
 	{#snippet form()}
 		<input {...fields.memberId.as('hidden', memberId)} />
-		<p class="py-4">{m.actions_revoke_invite_revoke_invitation({ name })}</p>
+		<p class="py-4">{m.actions_revoke_invite_revoke_invitation_text({ name })}</p>
 	{/snippet}
 </Action>

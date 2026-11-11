@@ -22,11 +22,11 @@
 	const label = $derived(
 		external
 			? name
-				? m.public_events_id_rsvp_control_i_m_going_as({ name })
-				: m.public_events_id_rsvp_control_i_m_going()
+				? m.public_events_id_rsvp_control_i_m_going_as_label({ name })
+				: m.public_events_id_rsvp_control_i_m_going_label()
 			: name
-				? m.public_events_id_rsvp_control_rsvp_as({ name })
-				: m.public_events_id_rsvp_control_rsvp()
+				? m.public_events_id_rsvp_control_rsvp_as_label({ name })
+				: m.public_events_id_rsvp_control_rsvp_label()
 	);
 	const variant = $derived(external ? 'ghost' : 'primary');
 </script>
@@ -46,7 +46,7 @@
 	</Form>
 {:else if status.state === 'going'}
 	<span class="text-base font-semibold" data-testid="rsvp-going"
-		>{m.public_events_id_rsvp_control_re_going()}</span
+		>{m.public_events_id_rsvp_control_re_going_text()}</span
 	>
 	<Action
 		action={withdrawRsvp}
@@ -59,15 +59,15 @@
 	>
 		{#snippet form()}
 			<input {...withdrawRsvp.fields.eventId.as('hidden', eventId)} />
-			<p>{m.public_events_id_rsvp_control_can_rsvp_again_any_time()}</p>
+			<p>{m.public_events_id_rsvp_control_can_rsvp_again_any_time_text()}</p>
 		{/snippet}
 	</Action>
 {:else if status.reason === 'ticketed'}
 	<Button href={resolve(`events/${eventId}/tickets`)} size="lg"
-		>{m.public_events_id_rsvp_control_get_tickets()}</Button
+		>{m.public_events_id_rsvp_control_get_tickets_label()}</Button
 	>
 {:else}
 	<span class="text-base font-medium text-fg-2"
-		>{m.public_events_id_rsvp_control_rsvps_closed_event()}</span
+		>{m.public_events_id_rsvp_control_rsvps_closed_event_text()}</span
 	>
 {/if}

@@ -39,7 +39,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.public_directory_instructors_music_teachers_corvallis_music()}</title>
+	<title>{m.public_directory_instructors_music_teachers_corvallis_music_title()}</title>
 	<meta
 		name="description"
 		content="Music teachers who give lessons at the Corvallis Music Collective."
@@ -49,21 +49,24 @@
 <!-- `px-6` supplies what `PageHeader`'s `-mx-6` bleeds into; without it the
      header overhangs and the page scrolls sideways at 375px (#970). -->
 <div class="px-6">
-	<PageHeader title={m.public_teachers()} subtitle={m.public_directory_instructors_subtitle()} />
+	<PageHeader
+		title={m.public_teachers_title()}
+		subtitle={m.public_directory_instructors_subtitle_body()}
+	/>
 
 	<PageContent>
 		<div class="mb-6 flex justify-center">
 			<TabBar
 				tabs={[
-					{ key: 'bands', label: m.public_bands(), href: resolve('directory') },
+					{ key: 'bands', label: m.public_bands_label(), href: resolve('directory') },
 					{
 						key: 'musicians',
-						label: m.public_musicians(),
+						label: m.public_musicians_label(),
 						href: resolve('directory?tab=musicians')
 					},
 					{
 						key: 'instructors',
-						label: m.public_teachers(),
+						label: m.public_teachers_label(),
 						href: resolve('directory/instructors')
 					}
 				]}
@@ -75,7 +78,7 @@
 			<FormField
 				type="text"
 				name="q"
-				label={m.public_search()}
+				label={m.public_search_label()}
 				class="w-full max-w-sm"
 				placeholder={m.public_directory_instructors_placeholder()}
 				bind:value={searchText}
@@ -93,7 +96,7 @@
 						variant={instrument === '' ? 'primary' : 'default'}
 						onclick={() => (instrument = '')}
 					>
-						{m.public_all()}
+						{m.public_all_label()}
 					</Button>
 					{#each page.instruments as inst (inst)}
 						<Button
@@ -109,8 +112,8 @@
 
 			{#if page.rows.length === 0}
 				<EmptyState
-					title={m.public_directory_instructors_no_teachers_listed_yet()}
-					description={m.public_directory_instructors_description()}
+					title={m.public_directory_instructors_no_teachers_listed_yet_title()}
+					description={m.public_directory_instructors_description_body()}
 				/>
 			{:else}
 				<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -133,7 +136,7 @@
 
 			{#snippet failed(_error, reset)}
 				<Alert type="warning" reset={() => retryQuery(instructors, reset)}>
-					{m.public_directory_instructors_list_teachers_didn_t_load()}
+					{m.public_directory_instructors_list_teachers_didn_t_load_body()}
 				</Alert>
 			{/snippet}
 		</svelte:boundary>

@@ -18,7 +18,7 @@
 		disabled = false,
 		orientation = 'row',
 		previewClass = 'h-24 w-24',
-		emptyLabel = m.ui_form_file_upload_empty_label(),
+		emptyLabel = m.ui_form_file_upload_empty_label_title(),
 		replaceLabel = m.ui_form_file_upload_replace_label(),
 		preview,
 		showPreview = true,
@@ -214,7 +214,7 @@
 		{#if uploadStatus === 'error'}
 			<p class="text-sm text-error">{uploadError}</p>
 		{:else if uploadStatus === 'success' && !isImage && (name || field)}
-			<p class="text-sm text-success">{m.ui_upload_done()}</p>
+			<p class="text-sm text-success">{m.ui_upload_done_text()}</p>
 		{:else if !deferred && selectedFile && !isImage && (name || field || uploadStatus === 'uploading')}
 			<!-- Immediate mode only. Deferred mode names the file above, beside the
 			     picker, and without this guard both branches match a non-image

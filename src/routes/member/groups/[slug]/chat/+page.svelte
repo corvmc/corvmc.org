@@ -15,7 +15,7 @@
 	const slug = $derived(params.slug);
 </script>
 
-<PageHeader width="2xl" title={m.member_chat()} />
+<PageHeader width="2xl" title={m.member_chat_title()} />
 <PageContent width="2xl">
 	<GroupTopicList
 		{slug}

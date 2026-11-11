@@ -33,10 +33,10 @@
 
 <Action
 	action={startEventSeries}
-	label={m.events_repeat_event_repeat_event()}
+	label={m.events_repeat_event_repeat_event_label()}
 	variant="ghost"
 	size="sm"
-	modalTitle={m.events_repeat_event_repeat_event()}
+	modalTitle={m.events_repeat_event_repeat_event_title()}
 	submitLabel={m.events_repeat_event_submit_label()}
 	successToast={m.events_repeat_event_success_toast()}
 	{onsuccess}
@@ -47,39 +47,39 @@
 			<FormField
 				field={fields.recurringFrequency}
 				type="select"
-				label={m.events_repeat_event_frequency()}
+				label={m.events_repeat_event_frequency_label()}
 				bind:value={frequency}
 				options={[
-					{ value: 'weekly', label: m.events_repeat_event_weekly() },
-					{ value: 'biweekly', label: m.events_repeat_event_every_2_weeks() },
-					{ value: 'monthly', label: m.events_repeat_event_monthly() }
+					{ value: 'weekly', label: m.events_repeat_event_weekly_label() },
+					{ value: 'biweekly', label: m.events_repeat_event_every_2_weeks_label() },
+					{ value: 'monthly', label: m.events_repeat_event_monthly_label() }
 				]}
 			/>
 			{#if isMonthly}
 				<FormField
 					field={fields.monthlyMode}
 					type="select"
-					label={m.events_repeat_event_monthly_pattern()}
+					label={m.events_repeat_event_monthly_pattern_label()}
 					bind:value={monthlyMode}
 					options={[
-						{ value: 'weekday', label: m.events_repeat_event_same_weekday_each_month_e() },
-						{ value: 'monthday', label: m.events_repeat_event_same_date_each_month_e() }
+						{ value: 'weekday', label: m.events_repeat_event_same_weekday_each_month_e_label() },
+						{ value: 'monthday', label: m.events_repeat_event_same_date_each_month_e_label() }
 					]}
 				/>
 			{/if}
 			<FormField
 				field={fields.recurringEndsAt}
 				type="date"
-				label={m.events_repeat_event_repeat_until_optional()}
+				label={m.events_repeat_event_repeat_until_optional_label()}
 				bind:value={endsAt}
 			/>
 			<p class="text-muted">
-				{m.events_repeat_event_occurrences_created_as_drafts_ahead()}
+				{m.events_repeat_event_occurrences_created_as_drafts_ahead_text()}
 			</p>
 			{#await previewRecurringEvents(previewArgs) then preview}
 				{#if preview.dates.length > 0}
 					<div class="text-sm">
-						<p class="font-medium">{m.events_repeat_event_next_occurrences()}</p>
+						<p class="font-medium">{m.events_repeat_event_next_occurrences_text()}</p>
 						<ul class="mt-1 opacity-70">
 							{#each preview.dates as iso (iso)}
 								<li>{formatOccurrence(iso)}</li>
@@ -87,7 +87,7 @@
 						</ul>
 					</div>
 				{:else}
-					<p class="text-muted">{m.events_repeat_event_no_upcoming_occurrences_next_60()}</p>
+					<p class="text-muted">{m.events_repeat_event_no_upcoming_occurrences_next_60_text()}</p>
 				{/if}
 			{:catch}
 				<!-- A courtesy preview: the form still submits without it. -->

@@ -43,10 +43,10 @@
 	<Card class="mb-6">
 		<CardBody>
 			<h2 class="text-base font-semibold">
-				{m.band_slug_packing_promote_to_rider_some_belongs_rider()}
+				{m.band_slug_packing_promote_to_rider_some_belongs_rider_title()}
 			</h2>
 			<p class="mt-0.5 mb-3 text-xs text-base-content/60">
-				{m.band_slug_packing_promote_to_rider_bring_these_they_stand_st()}
+				{m.band_slug_packing_promote_to_rider_bring_these_they_stand_st_text()}
 			</p>
 
 			<ul class="divide-y divide-base-300 rounded-box border border-base-300">

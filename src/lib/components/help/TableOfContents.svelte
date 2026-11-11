@@ -30,7 +30,7 @@
 {#if headings.length > 0}
 	<nav class="space-y-1 text-sm">
 		<p class="mb-2 text-subtle font-semibold tracking-wide uppercase">
-			{m.help_table_of_contents_page()}
+			{m.help_table_of_contents_page_text()}
 		</p>
 		{#each headings as heading (heading.id)}
 			<a

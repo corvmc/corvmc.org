@@ -13,24 +13,24 @@
 	const data = $derived(await getLocalResourceTips());
 </script>
 
-<PageHeader title={m.staff_local_resources()} subtitle={m.staff_outreach()}>
+<PageHeader title={m.staff_local_resources_title()} subtitle={m.staff_outreach_body()}>
 	<ResourceTabs active="tips" tipCount={data.tips.length} />
 </PageHeader>
 
 <PageContent>
 	{#if data.tips.length === 0}
 		<EmptyState
-			title={m.staff_local_resources_tips_no_tips_waiting()}
-			description={m.staff_local_resources_tips_description()}
+			title={m.staff_local_resources_tips_no_tips_waiting_title()}
+			description={m.staff_local_resources_tips_description_body()}
 		/>
 	{:else}
 		<!-- A table: short fields, and the decision lives on the listing's own page. -->
 		<Table>
 			{#snippet head()}
-				<th class="cell-primary">{m.staff_name()}</th>
-				<th class="col-support">{m.staff_category()}</th>
-				<th class="col-support">{m.staff_from()}</th>
-				<th class="whitespace-nowrap">{m.staff_sent()}</th>
+				<th class="cell-primary">{m.staff_name_label()}</th>
+				<th class="col-support">{m.staff_category_label()}</th>
+				<th class="col-support">{m.staff_from_label()}</th>
+				<th class="whitespace-nowrap">{m.staff_sent_label()}</th>
 			{/snippet}
 			{#each data.tips as tip (tip.id)}
 				{@const href = resolve(`staff/local-resources/${tip.id}`)}

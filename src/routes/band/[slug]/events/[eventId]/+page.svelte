@@ -77,9 +77,9 @@
 	<PageHeader width="2xl" title={evt.title} subtitle={band.name}>
 		<StatusBadge status={evt.status} />
 		{#if canEdit}
-			<SubmitButton label={m.band_save()} shortcut="mod+s" />
+			<SubmitButton label={m.band_save_label()} shortcut="mod+s" />
 			<details class="dropdown dropdown-end">
-				<summary class="btn btn-ghost btn-sm">{m.band_slug_events_event_id_more()}</summary>
+				<summary class="btn btn-ghost btn-sm">{m.band_slug_events_event_id_more_label()}</summary>
 				<div class="dropdown-content dropdown-panel flex w-56 flex-col gap-1">
 					{#if evt.status === 'draft'}
 						<BandPublishEventAction slug={band.slug} eventId={evt.id} class="justify-start" />
@@ -99,13 +99,17 @@
 		{#if !evt.isOwner}
 			<p class="text-muted text-sm">
 				{ownerActName
-					? m.band_slug_events_event_id_credited_added_by({ name: ownerActName })
-					: m.band_slug_events_event_id_credited()}
+					? m.band_slug_events_event_id_credited_added_by_text({ name: ownerActName })
+					: m.band_slug_events_event_id_credited_text()}
 			</p>
 		{:else if evt.status === 'cancelled'}
-			<p class="text-muted text-sm">{m.band_slug_events_event_id_event_cancelled_so_can_no()}</p>
+			<p class="text-muted text-sm">
+				{m.band_slug_events_event_id_event_cancelled_so_can_no_text()}
+			</p>
 		{:else if !isAdmin}
-			<p class="text-muted text-sm">{m.band_slug_events_event_id_band_admins_can_edit_event()}</p>
+			<p class="text-muted text-sm">
+				{m.band_slug_events_event_id_band_admins_can_edit_event_text()}
+			</p>
 		{/if}
 
 		<input {...updateFields.slug.as('hidden', band.slug)} />

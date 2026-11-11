@@ -32,11 +32,11 @@
 	});
 </script>
 
-<PageHeader width="3xl" title={m.staff_help_id_title()} subtitle={m.staff_help()}>
+<PageHeader width="3xl" title={m.staff_help_id_title()} subtitle={m.staff_help_body()}>
 	<Action
 		action={deleteArticle}
-		modalTitle={m.staff_confirm()}
-		successToast={m.staff_help_id_article_deleted()}
+		modalTitle={m.staff_confirm_title()}
+		successToast={m.staff_help_id_article_deleted_toast()}
 		onsuccess={() => goto(resolve('staff/help'))}
 		variant="error"
 		size="sm"
@@ -44,15 +44,15 @@
 	>
 		{#snippet form()}
 			<input {...deleteFields.id.as('hidden', id)} />
-			<p class="py-4">{m.staff_help_id_permanently_delete({ value: article?.title })}</p>
+			<p class="py-4">{m.staff_help_id_permanently_delete_text({ value: article?.title })}</p>
 		{/snippet}
 		<IconTrash size={16} />
-		{m.staff_delete()}
+		{m.staff_delete_text()}
 	</Action>
 </PageHeader>
 <PageContent width="3xl">
 	{#if article}
-		<Form remote={updateArticle} guard successToast={m.staff_help_id_article_updated()}>
+		<Form remote={updateArticle} guard successToast={m.staff_help_id_article_updated_toast()}>
 			<input {...updateFields.id.as('hidden', article.id)} />
 
 			<div class="space-y-4">
@@ -60,13 +60,13 @@
 					<FormField
 						field={updateArticle.fields.title}
 						type="text"
-						label={m.staff_title()}
+						label={m.staff_title_label()}
 						value={article.title}
 					/>
 					<FormField
 						field={updateArticle.fields.slug}
 						type="text"
-						label={m.staff_slug()}
+						label={m.staff_slug_label()}
 						value={article.slug}
 					/>
 				</div>
@@ -75,29 +75,29 @@
 					<FormField
 						field={updateArticle.fields.categoryId}
 						type="select"
-						label={m.staff_category()}
+						label={m.staff_category_label()}
 						value={article.categoryId}
 						options={categories.map((c) => ({ value: c.id, label: c.name }))}
 					/>
 					<FormField
 						field={updateArticle.fields.minRole}
 						type="select"
-						label={m.staff_audience()}
+						label={m.staff_audience_label()}
 						value={article.minRole}
 						options={helpAudiences.map((a) => ({ value: a, label: helpAudienceLabels[a] }))}
 					/>
 					<FormField
 						field={updateArticle.fields.published}
 						type="toggle"
-						label={m.staff_status()}
+						label={m.staff_status_label()}
 						value={article.published}
-						checkboxLabel={m.staff_published()}
+						checkboxLabel={m.staff_published_checkbox()}
 					/>
 					<FormField
 						field={updateArticle.fields.sortOrder}
 						submitAs="text"
 						type="number"
-						label={m.staff_order_2()}
+						label={m.staff_order_2_label()}
 						value={article.sortOrder}
 						min="0"
 					/>
@@ -106,25 +106,25 @@
 				<FormField
 					field={updateArticle.fields.summary}
 					type="text"
-					label={m.staff_summary()}
+					label={m.staff_summary_label()}
 					value={article.summary ?? ''}
 					placeholder={m.staff_help_id_placeholder()}
 				/>
 
-				<FormField field={updateArticle.fields.content} label={m.staff_content()}>
+				<FormField field={updateArticle.fields.content} label={m.staff_content_label()}>
 					<input {...updateFields.content.as('hidden', contentValue)} />
 					<MarkdownEditor bind:value={contentValue} />
 				</FormField>
 
 				{#if article.source === 'static'}
 					<Alert type="info" class="text-sm">
-						{m.staff_help_id_article_synced_from_markdown_file()}
+						{m.staff_help_id_article_synced_from_markdown_file_body()}
 					</Alert>
 				{/if}
 
 				<div class="flex justify-end gap-2">
-					<Button href="/staff/help" variant="ghost">{m.staff_cancel()}</Button>
-					<SubmitButton label={m.staff_help_id_save_changes()} />
+					<Button href="/staff/help" variant="ghost">{m.staff_cancel_label()}</Button>
+					<SubmitButton label={m.staff_help_id_save_changes_label()} />
 				</div>
 			</div>
 		</Form>

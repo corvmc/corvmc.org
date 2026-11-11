@@ -42,14 +42,14 @@
 <PageHeader
 	width="2xl"
 	title={data.shift.roleName}
-	subtitle={data.shift.eventTitle ?? m.member_volunteer_shifts_signup_id_subtitle()}
+	subtitle={data.shift.eventTitle ?? m.member_volunteer_shifts_signup_id_subtitle_body()}
 />
 <PageContent width="2xl">
 	{#if calledOff}
 		<Alert type="warning">
 			{data.shift.shiftCancelledAt
-				? m.member_volunteer_shifts_signup_id_shift_was_called_off_there()
-				: m.member_volunteer_shifts_signup_id_dropped_out_shift()}
+				? m.member_volunteer_shifts_signup_id_shift_was_called_off_there_body()
+				: m.member_volunteer_shifts_signup_id_dropped_out_shift_body()}
 		</Alert>
 	{/if}
 
@@ -66,7 +66,7 @@
 		</Card>
 	{/if}
 
-	<InfoCard title={m.member_when()}>
+	<InfoCard title={m.member_when_title()}>
 		<p class="font-medium">
 			{#if data.shift.startsAt && data.shift.endsAt}
 				{formatDateLong(data.shift.startsAt)} · {formatTimeRange(
@@ -74,7 +74,7 @@
 					data.shift.endsAt
 				)}
 			{:else}
-				{m.member_volunteer_shifts_signup_id_time_still_arranged()}
+				{m.member_volunteer_shifts_signup_id_time_still_arranged_text()}
 			{/if}
 		</p>
 		{#if data.shift.notes}
@@ -92,27 +92,29 @@
 	</InfoCard>
 
 	{#if data.checkIn && !calledOff}
-		<InfoCard title={m.member_volunteer_shifts_signup_id_door()}>
-			<p class="text-muted">{m.member_volunteer_shifts_signup_id_mark_people_arrived_as_the()}</p>
+		<InfoCard title={m.member_volunteer_shifts_signup_id_door_title()}>
+			<p class="text-muted">
+				{m.member_volunteer_shifts_signup_id_mark_people_arrived_as_the_text()}
+			</p>
 			<div class="mt-3">
 				<Button
 					href={resolve(`member/volunteer/shifts/${signupId}/check-in`)}
 					variant="primary"
 					size="sm"
 				>
-					{m.member_volunteer_shifts_signup_id_check_people()}
+					{m.member_volunteer_shifts_signup_id_check_people_label()}
 				</Button>
 			</div>
 		</InfoCard>
 	{/if}
 
-	<InfoCard title={m.member_volunteer_shifts_signup_id_checklist()}>
+	<InfoCard title={m.member_volunteer_shifts_signup_id_checklist_title()}>
 		{#snippet header(title)}
 			<CardTitle>
 				{title}
 				{#if data.tasks.length > 0}
 					<span class="text-muted font-normal"
-						>{m.member_volunteer_shifts_signup_id_text({
+						>{m.member_volunteer_shifts_signup_id_text_title({
 							doneCount,
 							length: data.tasks.length
 						})}</span
@@ -122,7 +124,7 @@
 		{/snippet}
 
 		{#if data.tasks.length === 0}
-			<EmptyState message={m.member_volunteer_shifts_signup_id_message()} />
+			<EmptyState message={m.member_volunteer_shifts_signup_id_message_body()} />
 		{:else}
 			<!-- Ticking submits on change: a checklist behind a Save button is a
 			     checklist people forget to save. -->
@@ -152,14 +154,16 @@
 
 	{#if data.incidentEventId}
 		<InfoCard
-			title={m.member_volunteer_shifts_signup_id_incidents()}
+			title={m.member_volunteer_shifts_signup_id_incidents_title()}
 			state={data.filedIncidents.length}
 		>
 			{#snippet action()}
 				<FileIncidentAction eventId={data.incidentEventId!} {signupId} />
 			{/snippet}
 			{#if data.filedIncidents.length === 0}
-				<p class="text-muted">{m.member_volunteer_shifts_signup_id_if_something_goes_wrong_ni()}</p>
+				<p class="text-muted">
+					{m.member_volunteer_shifts_signup_id_if_something_goes_wrong_ni_text()}
+				</p>
 			{:else}
 				<ul class="flex flex-col gap-3">
 					{#each data.filedIncidents as i (i.id)}
@@ -189,7 +193,7 @@
 				size="sm"
 				outline
 			>
-				{m.member_how_did_go()}
+				{m.member_how_did_go_label()}
 			</Button>
 		{:else if !calledOff}
 			<Action
@@ -205,7 +209,7 @@
 				{#snippet form()}
 					<input {...cancelMySignup.for(signupId).fields.signupId.as('hidden', signupId)} />
 					<p class="text-sm">
-						{m.member_volunteer_shifts_signup_id_notice_isn_t_no_show()}
+						{m.member_volunteer_shifts_signup_id_notice_isn_t_no_show_text()}
 					</p>
 				{/snippet}
 			</Action>

@@ -20,9 +20,9 @@
 
 <Action
 	{action}
-	label={m.band_slug_events_request_correction_request_correction()}
+	label={m.band_slug_events_request_correction_request_correction_label()}
 	iconOnly
-	modalTitle={m.band_slug_events_request_correction_request_correction()}
+	modalTitle={m.band_slug_events_request_correction_request_correction_title()}
 	submitLabel={m.band_slug_events_request_correction_submit_label()}
 	successToast={m.band_slug_events_request_correction_success_toast()}
 	variant="ghost"
@@ -35,12 +35,12 @@
 			<input {...fields.slug.as('hidden', slug)} />
 			<input {...fields.eventId.as('hidden', eventId)} />
 			<p class="text-muted">
-				{m.band_slug_events_request_correction_goes_corvmc_staff_who_ca()}
+				{m.band_slug_events_request_correction_goes_corvmc_staff_who_ca_text()}
 			</p>
 			<FormField
 				field={fields.body}
-				label={m.band_slug_events_request_correction_what_needs_changing()}
-				description={m.band_slug_events_request_correction_description()}
+				label={m.band_slug_events_request_correction_what_needs_changing_label()}
+				description={m.band_slug_events_request_correction_description_body()}
 			/>
 		</div>
 	{/snippet}

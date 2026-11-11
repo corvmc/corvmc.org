@@ -56,7 +56,7 @@
 	});
 
 	const assignOptions = $derived([
-		{ value: '', label: msg.band_nobody_yet() },
+		{ value: '', label: msg.band_nobody_yet_label() },
 		...roster.map((m) => ({ value: m.userId, label: m.name }))
 	]);
 </script>
@@ -75,17 +75,19 @@
 							<span class="font-medium" class:line-through={item.packed}>{item.label}</span>
 							{#if item.quantity > 1}<Badge size="sm">×{item.quantity}</Badge>{/if}
 							{#if item.packed}
-								<Badge variant="success" size="sm"><IconCheck size={12} /> {msg.band_van()}</Badge>
+								<Badge variant="success" size="sm"
+									><IconCheck size={12} /> {msg.band_van_label()}</Badge
+								>
 							{/if}
 						</div>
 						<p class="mt-0.5 text-xs text-base-content/60">
-							{#if item.ownerName}{msg.band_slug_packing_load_in_list_s({
+							{#if item.ownerName}{msg.band_slug_packing_load_in_list_s_text({
 									ownerName: item.ownerName
-								})}{:else}{msg.band_slug_packing_load_in_list_band_s()}{/if}
+								})}{:else}{msg.band_slug_packing_load_in_list_band_s_text()}{/if}
 							{#if item.notes}
 								· {item.notes}{/if}
 							{#if item.packed && item.packedByName}
-								{msg.band_slug_packing_load_in_list_ticked_by({
+								{msg.band_slug_packing_load_in_list_ticked_by_text({
 									packedByName: item.packedByName
 								})}{/if}
 						</p>
@@ -102,13 +104,13 @@
 								<Form
 									remote={releasePackingItem.for(item.id)}
 									guard
-									successToast={msg.band_slug_packing_load_in_list_handed_back()}
+									successToast={msg.band_slug_packing_load_in_list_handed_back_toast()}
 									onsuccess={onchanged}
 								>
 									<input {...releasePackingItem.for(item.id).fields.bandId.as('hidden', bandId)} />
 									<input {...releasePackingItem.for(item.id).fields.itemId.as('hidden', item.id)} />
 									<SubmitButton
-										label={msg.band_slug_packing_load_in_list_not_me()}
+										label={msg.band_slug_packing_load_in_list_not_me_label()}
 										variant="ghost"
 										size="xs"
 									/>
@@ -118,20 +120,20 @@
 							<Form
 								remote={claimPackingItem.for(item.id)}
 								guard
-								successToast={msg.band_slug_packing_load_in_list_re_bringing()}
+								successToast={msg.band_slug_packing_load_in_list_re_bringing_toast()}
 								onsuccess={onchanged}
 							>
 								<input {...claimPackingItem.for(item.id).fields.bandId.as('hidden', bandId)} />
 								<input {...claimPackingItem.for(item.id).fields.itemId.as('hidden', item.id)} />
 								<SubmitButton
-									label={msg.band_slug_packing_load_in_list_i_ll_bring()}
+									label={msg.band_slug_packing_load_in_list_i_ll_bring_label()}
 									variant="secondary"
 									size="xs"
 								/>
 							</Form>
 						{:else}
 							<Badge variant="warning" size="sm"
-								>{msg.band_slug_packing_load_in_list_nobody_has()}</Badge
+								>{msg.band_slug_packing_load_in_list_nobody_has_label()}</Badge
 							>
 						{/if}
 
@@ -141,8 +143,8 @@
 								remote={packForm}
 								guard
 								successToast={item.packed
-									? msg.band_slug_packing_load_in_list_taken_back_out()
-									: msg.band_van()}
+									? msg.band_slug_packing_load_in_list_taken_back_out_toast()
+									: msg.band_van_toast()}
 								onsuccess={onchanged}
 							>
 								<input {...packForm.fields.bandId.as('hidden', bandId)} />
@@ -150,8 +152,8 @@
 								<input {...packForm.fields.packed.as('hidden', item.packed ? '0' : '1')} />
 								<SubmitButton
 									label={item.packed
-										? msg.band_slug_packing_load_in_list_take_out()
-										: msg.band_slug_packing_load_in_list_pack()}
+										? msg.band_slug_packing_load_in_list_take_out_label()
+										: msg.band_slug_packing_load_in_list_pack_label()}
 									variant={item.packed ? 'ghost' : 'primary'}
 									size="xs"
 								/>
@@ -165,7 +167,7 @@
 						<Form
 							remote={assignForm}
 							guard
-							successToast={msg.band_slug_packing_load_in_list_reassigned()}
+							successToast={msg.band_slug_packing_load_in_list_reassigned_toast()}
 							onsuccess={onchanged}
 						>
 							<input {...assignForm.fields.bandId.as('hidden', bandId)} />
@@ -174,12 +176,12 @@
 								<Field
 									field={assignForm.fields.toUserId}
 									type="select"
-									label={msg.band_slug_packing_load_in_list_assign()}
+									label={msg.band_slug_packing_load_in_list_assign_label()}
 									options={assignOptions}
 									value={item.assignedUserId ?? ''}
 								/>
 								<SubmitButton
-									label={msg.band_slug_packing_load_in_list_set()}
+									label={msg.band_slug_packing_load_in_list_set_label()}
 									variant="ghost"
 									size="xs"
 								/>
@@ -194,7 +196,7 @@
 	<div class="rounded-box border border-dashed border-base-300 p-8 text-center">
 		<IconPackage size={32} class="mx-auto mb-2 text-base-content/30" />
 		<p class="text-sm text-base-content/60">
-			{msg.band_slug_packing_load_in_list_nothing_list_yet_add_what()}
+			{msg.band_slug_packing_load_in_list_nothing_list_yet_add_what_text()}
 		</p>
 	</div>
 {/each}

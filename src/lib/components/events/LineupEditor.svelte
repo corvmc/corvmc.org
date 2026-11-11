@@ -121,7 +121,7 @@
 						size="xs"
 						disabled={i === 0}
 						onclick={() => move(i, -1)}
-						aria-label={msg.events_lineup_editor_move_up({ name: chip.name })}>↑</Button
+						aria-label={msg.events_lineup_editor_move_up_label({ name: chip.name })}>↑</Button
 					>
 					<Button
 						type="button"
@@ -129,7 +129,7 @@
 						size="xs"
 						disabled={i === value.length - 1}
 						onclick={() => move(i, 1)}
-						aria-label={msg.events_lineup_editor_move_down({ name: chip.name })}>↓</Button
+						aria-label={msg.events_lineup_editor_move_down_label({ name: chip.name })}>↓</Button
 					>
 					<Button
 						type="button"
@@ -138,7 +138,7 @@
 						class="text-error"
 						disabled={!!ownerBandId && chip.bandId === ownerBandId}
 						onclick={() => remove(i)}
-						aria-label={msg.events_lineup_editor_remove({ name: chip.name })}>✕</Button
+						aria-label={msg.events_lineup_editor_remove_label({ name: chip.name })}>✕</Button
 					>
 				</div>
 			{/if}
@@ -146,7 +146,7 @@
 	{/each}
 
 	{#if readonly && value.length === 0}
-		<p class="text-subtle">{msg.events_lineup_editor_no_other_bands_bill()}</p>
+		<p class="text-subtle">{msg.events_lineup_editor_no_other_bands_bill_text()}</p>
 	{/if}
 
 	{#if !readonly}
@@ -165,7 +165,9 @@
 						<li>
 							<button type="button" onclick={() => add({ name: b.name, bandId: b.id })}>
 								{b.name}
-								<span class="badge badge-ghost badge-xs">{msg.events_lineup_editor_cmc()}</span>
+								<span class="badge badge-ghost badge-xs"
+									>{msg.events_lineup_editor_cmc_label()}</span
+								>
 							</button>
 						</li>
 					{/each}
@@ -173,7 +175,7 @@
 			{/if}
 
 			<p class="mt-1 text-subtle">
-				{msg.events_lineup_editor_anyone_can_go_bill_bands()}
+				{msg.events_lineup_editor_anyone_can_go_bill_bands_text()}
 			</p>
 		</div>
 	{/if}

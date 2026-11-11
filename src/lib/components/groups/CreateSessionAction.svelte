@@ -24,23 +24,23 @@
 	let frequency = $state('');
 
 	const frequencyOptions = [
-		{ value: 'weekly', label: m.groups_every_week() },
-		{ value: 'biweekly', label: m.groups_every_other_week() },
-		{ value: 'monthly', label: m.groups_every_month() }
+		{ value: 'weekly', label: m.groups_every_week_label() },
+		{ value: 'biweekly', label: m.groups_every_other_week_label() },
+		{ value: 'monthly', label: m.groups_every_month_label() }
 	];
 
 	// "Third Thursday" versus "the 17th". Only a monthly series has the choice.
 	const monthlyModeOptions = [
-		{ value: 'weekday', label: m.groups_same_weekday_month() },
-		{ value: 'monthday', label: m.groups_same_date_each_month() }
+		{ value: 'weekday', label: m.groups_same_weekday_month_label() },
+		{ value: 'monthday', label: m.groups_same_date_each_month_label() }
 	];
 </script>
 
 <Action
 	action={createGroupSession}
 	data-testid="new-session"
-	label={m.groups_create_session_new_session()}
-	modalTitle={m.groups_create_session_new_session()}
+	label={m.groups_create_session_new_session_label()}
+	modalTitle={m.groups_create_session_new_session_title()}
 	submitLabel={m.groups_create_session_submit_label()}
 	successToast={m.groups_create_session_success_toast()}
 	variant="primary"
@@ -54,38 +54,38 @@
 			<FormField
 				field={fields.title}
 				type="text"
-				label={m.groups_what()}
-				placeholder={m.groups_create_session_monthly_jam()}
+				label={m.groups_what_label()}
+				placeholder={m.groups_create_session_monthly_jam_placeholder()}
 				required
 			/>
 
 			<FormField
 				field={fields.description}
 				type="textarea"
-				label={m.groups_details()}
-				description={m.groups_optional_shown_event_page()}
+				label={m.groups_details_label()}
+				description={m.groups_optional_shown_event_page_body()}
 			/>
 
-			<FormField field={fields.sessionDate} type="date" label={m.groups_date()} required />
+			<FormField field={fields.sessionDate} type="date" label={m.groups_date_label()} required />
 
 			<div class="grid grid-cols-2 gap-3">
-				<FormField field={fields.startTime} type="time" label={m.groups_starts()} required />
-				<FormField field={fields.endTime} type="time" label={m.groups_ends()} required />
+				<FormField field={fields.startTime} type="time" label={m.groups_starts_label()} required />
+				<FormField field={fields.endTime} type="time" label={m.groups_ends_label()} required />
 			</div>
 
 			<FormField
 				field={fields.reserveRoom}
 				type="checkbox"
-				label={m.groups_hold_practice_room()}
-				description={m.groups_create_session_free_program_booking_belongs_session()}
+				label={m.groups_hold_practice_room_label()}
+				description={m.groups_create_session_free_program_booking_belongs_session_body()}
 			/>
 
 			<FormField
 				field={fields.recurring}
 				type="checkbox"
-				label={m.groups_create_session_repeats()}
+				label={m.groups_create_session_repeats_label()}
 				bind:value={recurring}
-				description={m.groups_create_session_puts_following_sessions_up_automatical()}
+				description={m.groups_create_session_puts_following_sessions_up_automatical_body()}
 			/>
 
 			{#if recurring}
@@ -93,7 +93,7 @@
 					<FormField
 						field={fields.recurringFrequency}
 						type="select"
-						label={m.groups_how_often()}
+						label={m.groups_how_often_label()}
 						options={frequencyOptions}
 						bind:value={frequency}
 						required
@@ -103,7 +103,7 @@
 						<FormField
 							field={fields.monthlyMode}
 							type="select"
-							label={m.groups_which_day()}
+							label={m.groups_which_day_label()}
 							options={monthlyModeOptions}
 							value="weekday"
 						/>
@@ -112,12 +112,12 @@
 					<FormField
 						field={fields.recurringEndsAt}
 						type="date"
-						label={m.groups_until()}
-						description={m.groups_optional_leave_empty_keep_going()}
+						label={m.groups_until_label()}
+						description={m.groups_optional_leave_empty_keep_going_body()}
 					/>
 
 					<p class="text-subtle">
-						{m.groups_create_session_if_later_date_already_booked()}
+						{m.groups_create_session_if_later_date_already_booked_text()}
 					</p>
 				</div>
 			{/if}
@@ -125,40 +125,40 @@
 			<FormField
 				field={fields.doorsTime}
 				type="time"
-				label={m.groups_doors()}
-				description={m.groups_optional_when_people_can_turn()}
+				label={m.groups_doors_label()}
+				description={m.groups_optional_when_people_can_turn_body()}
 			/>
 
 			<FormField
 				field={fields.tags}
 				type="text"
-				label={m.groups_tags()}
-				placeholder={m.groups_jazz_jam_all_ages()}
-				description={m.groups_optional_comma_separated_how_gig()}
+				label={m.groups_tags_label()}
+				placeholder={m.groups_jazz_jam_all_ages_placeholder()}
+				description={m.groups_optional_comma_separated_how_gig_body()}
 			/>
 
 			<FormField
 				field={fields.posterFile}
 				type="file"
-				label={m.groups_poster()}
+				label={m.groups_poster_label()}
 				accept="image/jpeg,image/png,image/webp"
-				description={m.groups_create_session_optional_shown_event_page_gig()}
+				description={m.groups_create_session_optional_shown_event_page_gig_body()}
 			/>
 
 			<div class="grid grid-cols-2 gap-3">
 				<FormField
 					field={fields.ticketPriceDollars}
 					type="text"
-					label={m.groups_price()}
+					label={m.groups_price_label()}
 					placeholder="10.00"
-					description={m.groups_optional_leave_blank_if_s()}
+					description={m.groups_optional_leave_blank_if_s_body()}
 				/>
 				<FormField
 					field={fields.externalTicketUrl}
 					type="text"
-					label={m.groups_tickets_at()}
-					placeholder={m.groups_https()}
-					description={m.groups_optional_where_people_buy()}
+					label={m.groups_tickets_at_label()}
+					placeholder={m.groups_https_placeholder()}
+					description={m.groups_optional_where_people_buy_body()}
 				/>
 			</div>
 		</div>

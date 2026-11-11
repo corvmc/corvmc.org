@@ -58,7 +58,7 @@
 				size="sm"
 				shape="square"
 				class="mr-auto lg:hidden"
-				aria-label={m.ui_back()}
+				aria-label={m.ui_back_label()}
 			>
 				<IconArrowLeft size={18} />
 			</Button>
@@ -71,8 +71,8 @@
 			<EmptyState
 				title={m.inbox_group_chat_title()}
 				description={chat.isGeneral
-					? m.inbox_group_chat_s_own_thread_everyone_group({ groupName: chat.groupName })
-					: m.inbox_group_chat_empty_everyone_reads({
+					? m.inbox_group_chat_s_own_thread_everyone_group_body({ groupName: chat.groupName })
+					: m.inbox_group_chat_empty_everyone_reads_body({
 							topicName: chat.topicName,
 							groupName: chat.groupName
 						})}

@@ -37,7 +37,7 @@
 <div>
 	<div class="mb-6 text-center">
 		<h2 class="text-3xl font-bold">
-			{m.member_membership_membership_faq_frequently_asked_questions()}
+			{m.member_membership_membership_faq_frequently_asked_questions_title()}
 		</h2>
 	</div>
 

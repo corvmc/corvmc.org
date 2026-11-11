@@ -28,7 +28,7 @@
 
 	{#if mine.standing.status !== 'none'}
 		<Alert type="info" class="mb-4">
-			<p>{m.member_events_my_listings_section_staff_check_listings_befor()}</p>
+			<p>{m.member_events_my_listings_section_staff_check_listings_befor_text()}</p>
 			<AppealPanel target={{ kind: 'standing', scope: 'community_event' }} />
 		</Alert>
 	{/if}
@@ -36,7 +36,7 @@
 	{#if mine.listings.length === 0 && mine.rejected.length === 0}
 		<EmptyState
 			title={m.member_events_my_listings_section_title()}
-			description={m.member_events_my_listings_section_description()}
+			description={m.member_events_my_listings_section_description_body()}
 		/>
 	{:else}
 		<ul class="mlist">

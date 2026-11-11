@@ -44,11 +44,11 @@
 {#if policy === 'open'}
 	<Action
 		action={joinGroupForm}
-		label={m.groups_join_2()}
-		aria-label={m.groups_join({ groupName })}
-		modalTitle={m.groups_join({ groupName })}
-		submitLabel={m.groups_join_2()}
-		successToast={m.groups_join_group_have_joined()}
+		label={m.groups_join_2_label()}
+		aria-label={m.groups_join_label({ groupName })}
+		modalTitle={m.groups_join_title({ groupName })}
+		submitLabel={m.groups_join_2_label()}
+		successToast={m.groups_join_group_have_joined_toast()}
 		variant="primary"
 		size="sm"
 		onsuccess={() => refreshAll()}
@@ -60,7 +60,7 @@
 					<p class="text-sm">{instructions}</p>
 				{/if}
 				<p class="text-subtle">
-					{m.groups_join_group_will_member_straight_away_no()}
+					{m.groups_join_group_will_member_straight_away_no_text()}
 				</p>
 			</div>
 		{/snippet}
@@ -70,18 +70,18 @@
 		href={withQuery(resolve('member/groups'), new URLSearchParams({ committee: slug }))}
 		variant="primary"
 		size="sm"
-		aria-label={m.groups_join_group_apply({ groupName })}
+		aria-label={m.groups_join_group_apply_label({ groupName })}
 	>
-		{m.groups_join_group_apply_2()}
+		{m.groups_join_group_apply_2_label()}
 	</Button>
 {:else}
 	<Action
 		action={applyForm}
-		label={m.groups_join_group_apply_2()}
-		aria-label={m.groups_join_group_apply({ groupName })}
-		modalTitle={m.groups_join_group_apply({ groupName })}
-		submitLabel={m.groups_join_group_send_application()}
-		successToast={m.groups_join_group_application_sent()}
+		label={m.groups_join_group_apply_2_label()}
+		aria-label={m.groups_join_group_apply_label({ groupName })}
+		modalTitle={m.groups_join_group_apply_title({ groupName })}
+		submitLabel={m.groups_join_group_send_application_label()}
+		successToast={m.groups_join_group_application_sent_toast()}
 		variant="primary"
 		size="sm"
 		onsuccess={() => refreshAll()}
@@ -95,7 +95,7 @@
 				{/if}
 				<FormField field={applyForm.fields.note} type="textarea" label={notePrompt} />
 				<p class="text-subtle">
-					{m.groups_join_group_group_s_chairs_will_see()}
+					{m.groups_join_group_group_s_chairs_will_see_text()}
 				</p>
 			</div>
 		{/snippet}

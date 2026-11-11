@@ -21,8 +21,8 @@
 
 <Action
 	action={importStaffGroupRoster}
-	label={m.groups_roster_import_import_emails()}
-	modalTitle={m.groups_roster_import_import_emails()}
+	label={m.groups_roster_import_import_emails_label()}
+	modalTitle={m.groups_roster_import_import_emails_title()}
 	submitLabel={m.groups_roster_import_submit_label()}
 	successToast={m.groups_roster_import_success_toast()}
 	variant="ghost"
@@ -39,8 +39,8 @@
 			<!-- The `input` snippet: `type="textarea"` drops `rows` and `placeholder`. -->
 			<FormField
 				field={fields.emails}
-				label={m.groups_roster_import_email_addresses()}
-				description={m.groups_roster_import_one_per_line_separated_by()}
+				label={m.groups_roster_import_email_addresses_label()}
+				description={m.groups_roster_import_one_per_line_separated_by_body()}
 			>
 				{#snippet input(id)}
 					<textarea
@@ -54,14 +54,14 @@
 			<FormField
 				field={fields.file}
 				type="file"
-				label={m.groups_roster_import_csv()}
+				label={m.groups_roster_import_csv_label()}
 				accept=".csv,text/csv"
-				emptyLabel={m.groups_roster_import_empty_label()}
+				emptyLabel={m.groups_roster_import_empty_label_title()}
 				replaceLabel={m.groups_roster_import_replace_label()}
-				description={m.groups_roster_import_zeffy_export_works_as_column()}
+				description={m.groups_roster_import_zeffy_export_works_as_column_body()}
 			/>
 			<p class="text-subtle">
-				{m.groups_roster_import_anyone_with_account_joins_straight({ ROSTER_IMPORT_MAX })}
+				{m.groups_roster_import_anyone_with_account_joins_straight_text({ ROSTER_IMPORT_MAX })}
 			</p>
 		</div>
 	{/snippet}

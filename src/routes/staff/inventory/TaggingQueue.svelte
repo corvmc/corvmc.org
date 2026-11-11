@@ -23,17 +23,17 @@
 
 {#if assets.length > 0}
 	<Button variant="ghost" size="sm" data-testid="tagging-queue" onclick={() => (open = true)}>
-		{m.staff_inventory_tagging_queue_needs_tagging()}
+		{m.staff_inventory_tagging_queue_needs_tagging_label()}
 		<Badge variant="warning" size="sm">{assets.length}</Badge>
 	</Button>
 {/if}
 
-<Modal bind:open title={m.staff_inventory_tagging_queue_needs_tagging()} maxWidth="max-w-2xl">
+<Modal bind:open title={m.staff_inventory_tagging_queue_needs_tagging_title()} maxWidth="max-w-2xl">
 	{#if assets.length === 0}
-		<p class="py-4 text-subtle">{m.staff_inventory_tagging_queue_everything_tagged()}</p>
+		<p class="py-4 text-subtle">{m.staff_inventory_tagging_queue_everything_tagged_text()}</p>
 	{:else}
 		<p class="mb-3 text-subtle text-sm">
-			{m.staff_inventory_tagging_queue_oldest_first_scan_type_tag()}
+			{m.staff_inventory_tagging_queue_oldest_first_scan_type_tag_text()}
 		</p>
 		<ul class="divide-y divide-base-300">
 			{#each assets as asset (asset.id)}
@@ -47,11 +47,11 @@
 							{asset.item.name}
 						</a>
 						<div class="text-subtle text-sm">
-							{#if asset.serialNumber}{m.staff_inventory_tagging_queue_serial({
+							{#if asset.serialNumber}{m.staff_inventory_tagging_queue_serial_text({
 									serialNumber: asset.serialNumber
 								})}{/if}
-							{m.staff_inventory_tagging_queue_entered({
-								value: asset.location?.name ?? m.staff_unassigned(),
+							{m.staff_inventory_tagging_queue_entered_text({
+								value: asset.location?.name ?? m.staff_unassigned_text(),
 								formatDateShort: formatDateShort(asset.createdAt)
 							})}
 						</div>
@@ -62,10 +62,10 @@
 							<Field
 								field={form.fields.assetTag}
 								type="text"
-								label={m.staff_asset_tag()}
-								placeholder={m.staff_cmc_000123()}
+								label={m.staff_asset_tag_label()}
+								placeholder={m.staff_cmc_000123_placeholder()}
 							/>
-							<SubmitButton label={m.staff_inventory_tagging_queue_bind()} />
+							<SubmitButton label={m.staff_inventory_tagging_queue_bind_label()} />
 						</div>
 					</Form>
 				</li>

@@ -74,10 +74,10 @@
 	const safePrefix = $derived(safeFieldPrefix(idPrefix));
 
 	const monitorOptions = $derived([
-		{ value: '', label: msg.rider_rider_elements_editor_no_preference() },
+		{ value: '', label: msg.rider_rider_elements_editor_no_preference_label() },
 		...roster.map((m) => ({
 			value: m.userId,
-			label: msg.rider_rider_elements_editor_s_mix({ name: m.name })
+			label: msg.rider_rider_elements_editor_s_mix_label({ name: m.name })
 		}))
 	]);
 
@@ -183,7 +183,7 @@
 				<Field
 					id="{safePrefix}_kind_{index}"
 					type="select"
-					label={msg.rider_rider_elements_editor_what()}
+					label={msg.rider_rider_elements_editor_what_label()}
 					options={riderElementKindOptions}
 					bind:value={element.kind}
 					{readonly}
@@ -192,15 +192,15 @@
 				<Field
 					id="{safePrefix}_label_{index}"
 					type="text"
-					label={msg.rider_rider_elements_editor_name()}
-					placeholder={msg.rider_rider_elements_editor_e_g_fender_twin()}
+					label={msg.rider_rider_elements_editor_name_label()}
+					placeholder={msg.rider_rider_elements_editor_e_g_fender_twin_placeholder()}
 					bind:value={element.label}
 					{readonly}
 				/>
 				<Field
 					id="{safePrefix}_provided_{index}"
 					type="select"
-					label={msg.rider_rider_elements_editor_who_brings()}
+					label={msg.rider_rider_elements_editor_who_brings_label()}
 					options={riderProvidedByOptions}
 					bind:value={element.providedBy}
 					{readonly}
@@ -213,7 +213,7 @@
 							variant="ghost"
 							size="sm"
 							shape="square"
-							aria-label={msg.rider_rider_elements_editor_move_up({
+							aria-label={msg.rider_rider_elements_editor_move_up_label({
 								value: element.label || 'item'
 							})}
 							disabled={index === 0}
@@ -226,7 +226,7 @@
 							variant="ghost"
 							size="sm"
 							shape="square"
-							aria-label={msg.rider_rider_elements_editor_move_down({
+							aria-label={msg.rider_rider_elements_editor_move_down_label({
 								value: element.label || 'item'
 							})}
 							disabled={index === elements.length - 1}
@@ -239,7 +239,7 @@
 							variant="ghost"
 							size="sm"
 							shape="square"
-							aria-label={msg.rider_rider_elements_editor_remove({
+							aria-label={msg.rider_rider_elements_editor_remove_label({
 								value: element.label || 'item'
 							})}
 							onclick={() => removeElement(index)}
@@ -253,8 +253,8 @@
 			<Field
 				id="{safePrefix}_notes_{index}"
 				type="text"
-				label={msg.rider_rider_elements_editor_anything_engineer_should_know()}
-				placeholder={msg.rider_rider_elements_editor_optional()}
+				label={msg.rider_rider_elements_editor_anything_engineer_should_know_label()}
+				placeholder={msg.rider_rider_elements_editor_optional_placeholder()}
 				bind:value={element.notes}
 				{readonly}
 				display={text(element.notes) || '—'}
@@ -263,12 +263,12 @@
 
 			{#if element.kind === 'monitor'}
 				<p class="mt-3 text-xs text-base-content/60">
-					{msg.rider_rider_elements_editor_monitor_takes_no_channel_desk()}
+					{msg.rider_rider_elements_editor_monitor_takes_no_channel_desk_text()}
 				</p>
 			{:else}
 				<div class="mt-4 border-t border-base-300 pt-3">
 					<div class="mb-2 flex items-center justify-between">
-						<span class="text-xs font-medium">{msg.rider_rider_elements_editor_inputs()}</span>
+						<span class="text-xs font-medium">{msg.rider_rider_elements_editor_inputs_text()}</span>
 						{#if !readonly}
 							<Button
 								type="button"
@@ -278,14 +278,14 @@
 								onclick={() => addInput(element)}
 							>
 								<IconPlus size={14} />
-								{msg.rider_rider_elements_editor_add_input()}
+								{msg.rider_rider_elements_editor_add_input_label()}
 							</Button>
 						{/if}
 					</div>
 
 					{#if element.inputs.length === 0}
 						<p class="text-xs text-base-content/60">
-							{msg.rider_rider_elements_editor_no_channels_yet_guitar_amp()}
+							{msg.rider_rider_elements_editor_no_channels_yet_guitar_amp_text()}
 						</p>
 					{/if}
 
@@ -294,15 +294,15 @@
 							<Field
 								id="{safePrefix}_inlabel_{index}_{j}"
 								type="text"
-								label={msg.rider_rider_elements_editor_input()}
-								placeholder={msg.rider_rider_elements_editor_e_g_kick()}
+								label={msg.rider_rider_elements_editor_input_label()}
+								placeholder={msg.rider_rider_elements_editor_e_g_kick_placeholder()}
 								bind:value={input.label}
 								{readonly}
 							/>
 							<Field
 								id="{safePrefix}_insource_{index}_{j}"
 								type="select"
-								label={msg.rider_rider_elements_editor_via()}
+								label={msg.rider_rider_elements_editor_via_label()}
 								options={riderInputSourceOptions}
 								bind:value={input.source}
 								{readonly}
@@ -311,8 +311,8 @@
 							<Field
 								id="{safePrefix}_inmic_{index}_{j}"
 								type="text"
-								label={msg.rider_rider_elements_editor_preferred_mic_di()}
-								placeholder={msg.rider_rider_elements_editor_optional_house_may_have_better()}
+								label={msg.rider_rider_elements_editor_preferred_mic_di_label()}
+								placeholder={msg.rider_rider_elements_editor_optional_house_may_have_better_placeholder()}
 								bind:value={input.micPref}
 								{readonly}
 								display={text(input.micPref) || '—'}
@@ -320,7 +320,7 @@
 							<Field
 								id="{safePrefix}_instand_{index}_{j}"
 								type="select"
-								label={msg.rider_rider_elements_editor_stand()}
+								label={msg.rider_rider_elements_editor_stand_label()}
 								options={riderStandTypeOptions}
 								bind:value={input.stand}
 								{readonly}
@@ -329,7 +329,7 @@
 							<Field
 								id="{safePrefix}_inmix_{index}_{j}"
 								type="select"
-								label={msg.rider_rider_elements_editor_monitor()}
+								label={msg.rider_rider_elements_editor_monitor_label()}
 								options={monitorOptions}
 								bind:value={input.monitorMixUserId}
 								{readonly}
@@ -343,8 +343,8 @@
 								<Field
 									id="{safePrefix}_inphantom_{index}_{j}"
 									type="checkbox"
-									label={msg.rider_rider_elements_editor_power()}
-									checkboxLabel={msg.rider_rider_elements_editor_checkbox_label()}
+									label={msg.rider_rider_elements_editor_power_label()}
+									checkboxLabel={msg.rider_rider_elements_editor_checkbox_label_checkbox()}
 									bind:value={input.phantom}
 									{readonly}
 									display={input.phantom ? '+48V' : 'No'}
@@ -355,7 +355,7 @@
 										variant="ghost"
 										size="sm"
 										shape="square"
-										aria-label={msg.rider_rider_elements_editor_move_up({
+										aria-label={msg.rider_rider_elements_editor_move_up_label({
 											value: input.label || 'input'
 										})}
 										disabled={j === 0}
@@ -368,7 +368,7 @@
 										variant="ghost"
 										size="sm"
 										shape="square"
-										aria-label={msg.rider_rider_elements_editor_move_down({
+										aria-label={msg.rider_rider_elements_editor_move_down_label({
 											value: input.label || 'input'
 										})}
 										disabled={j === element.inputs.length - 1}
@@ -381,7 +381,7 @@
 										variant="ghost"
 										size="sm"
 										shape="square"
-										aria-label={msg.rider_rider_elements_editor_remove({
+										aria-label={msg.rider_rider_elements_editor_remove_label({
 											value: input.label || 'input'
 										})}
 										onclick={() => removeInput(element, j)}
@@ -404,11 +404,11 @@
 			<div class="flex items-center gap-2">
 				<Button type="button" variant="ghost" size="sm" disabled={atLimit} onclick={addElement}>
 					<IconPlus size={16} />
-					{msg.rider_rider_elements_editor_add_something_stage()}
+					{msg.rider_rider_elements_editor_add_something_stage_label()}
 				</Button>
 				{#if atLimit}
 					<span class="text-xs text-base-content/60">
-						{msg.rider_rider_elements_editor_limit_one_corner({ RIDER_MAX_ELEMENTS })}
+						{msg.rider_rider_elements_editor_limit_one_corner_text({ RIDER_MAX_ELEMENTS })}
 					</span>
 				{/if}
 			</div>

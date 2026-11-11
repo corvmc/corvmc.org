@@ -42,6 +42,6 @@
 	{:then value}
 		{@render children(value)}
 	{:catch}
-		<Alert type="warning">{m.ui_related_load_failed({ title: title.toLowerCase() })}</Alert>
+		<Alert type="warning">{m.ui_related_load_failed_body({ title: title.toLowerCase() })}</Alert>
 	{/await}
 </InfoCard>

@@ -57,7 +57,7 @@
 <Action
 	action={correctStock}
 	data-testid="stocktake"
-	label={m.actions_adjust_stock_stocktake()}
+	label={m.actions_adjust_stock_stocktake_label()}
 	modalTitle={m.actions_adjust_stock_modal_title()}
 	successToast={m.actions_adjust_stock_success_toast()}
 	{variant}
@@ -73,14 +73,14 @@
 		<div class="mb-3 rounded bg-base-200 p-3 text-sm">
 			<p>
 				<ParaglideMessage
-					message={m.actions_adjust_stock_system_currently_shows_hand}
+					message={m.actions_adjust_stock_system_currently_shows_hand_text}
 					inputs={{ onHand }}
 					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 						>{/snippet}</ParaglideMessage
 				>
 			</p>
 			<p class="mt-1 opacity-70">
-				{m.actions_adjust_stock_enter_what_counted_difference_recorded()}
+				{m.actions_adjust_stock_enter_what_counted_difference_recorded_text()}
 			</p>
 		</div>
 		<!--
@@ -90,7 +90,7 @@
 		<Field
 			data-testid="stocktake-counted"
 			type="number"
-			label={m.actions_adjust_stock_counted_shelf()}
+			label={m.actions_adjust_stock_counted_shelf_label()}
 			bind:value={counted}
 			min="0"
 			issues={fields.delta.issues() ?? null}
@@ -102,7 +102,9 @@
 				data-testid="stocktake-preview"
 				data-direction={delta > 0 ? 'add' : 'remove'}
 			>
-				{(delta > 0 ? m.actions_adjust_stock_preview_add : m.actions_adjust_stock_preview_remove)({
+				{(delta > 0
+					? m.actions_adjust_stock_preview_add_text
+					: m.actions_adjust_stock_preview_remove_text)({
 					abs: Math.abs(delta),
 					onHand,
 					counted: counted ?? ''
@@ -110,12 +112,12 @@
 			</p>
 		{:else if delta === 0}
 			<p class="text-subtle text-sm" data-testid="stocktake-preview" data-direction="none">
-				{m.actions_adjust_stock_matches_record_submitting_will_change()}
+				{m.actions_adjust_stock_matches_record_submitting_will_change_text()}
 			</p>
 		{/if}
 		<!-- The service takes a delta and keeps taking one; only the question
 		     asked of the operator changed. -->
 		<input {...fields.delta.as('number', delta ?? undefined)} type="hidden" />
-		<Field field={fields.notes} type="textarea" label={m.actions_adjust_stock_why()} />
+		<Field field={fields.notes} type="textarea" label={m.actions_adjust_stock_why_label()} />
 	{/snippet}
 </Action>
