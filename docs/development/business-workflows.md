@@ -7,9 +7,8 @@ guards, the event bus, `db.batch`, site config).
 
 Each section follows the same shape: **the story** (what happens, in plain English), **the
 code path** (file → function for every step), **data touched**, and **where it breaks**
-(what to check when this workflow misbehaves). The matching design spec in `docs/specs/` is
-linked as the statement of intent — when code and spec disagree, treat the spec as intent
-and reconcile deliberately.
+(what to check when this workflow misbehaves). A section links the decision records that explain
+why it works the way it does.
 
 ---
 
@@ -724,6 +723,31 @@ ending leaves its reports open, and the task waits on the Schedule's ended-shift
 A select's empty option submits `''`, which `z.enum([...]).optional()` rejects,
 and a remote `form()` that fails validation runs no handler at all.
 
+### Contractors: paid repairs and building work
+
+Decision: [Contractor work has its own tables](../decisions/0051-contractor-work-has-its-own-tables.md)
+
+A `contractor` is somebody the collective pays: trade, contact, licence and
+`insurance_expires_at`, a bare date where null means no certificate is on file
+(`listLapsingInsurance` leaves those out). A contractor is archived, never deleted. A
+`contractor_job` is one contractor's engagement on a work order, which holds the title, the unit
+and the project. Staff work them at `/staff/contractors` and its Jobs view.
+
+`contractor/contractor-job-service.ts` moves an engagement `asked → booked → completed`, or ends
+it `declined`, `no_show` or `cancelled`. Custody goes through `setAssetStatus`, the one writer of
+the stock ledger:
+
+- `scheduleJob` takes the work order's unit to `maintenance` only when it is `in_service`, so a
+  unit on loan or already out is not touched twice.
+- `completeJob` brings the unit back only while it is still in `maintenance` and
+  `returnToService` is not false. It writes the cost to the ledger, resolves the work order and
+  updates the unit in one `db.batch`. A donated job carries `fair_value_cents` and no cost.
+- `cancelJob`, `declineJob` and `markJobNoShow` leave the unit where it is, because it is still
+  broken. `reopenJob` is admin-only (`contractor.reopen`) and takes a reason.
+
+Late is derived: `booked` with `expected_back_at` in the past. `contractorSpend` counts completed
+jobs by `completed_at`, apart from equipment spend. The invoice is a reference string, not a file.
+
 ### The donation wishlist
 
 `/contribute` shows **What We Need**: `getPublicWishlist` (unguarded, in
@@ -1246,7 +1270,8 @@ one about the standing. Nothing changes while an appeal waits.
 
 ## 12. Volunteering
 
-Spec: [specs/volunteering-spec.md](../specs/shipped/volunteering-spec.md)
+Decisions: [Volunteer hours are a record](../decisions/0048-volunteer-hours-are-a-record.md),
+[Certifications are an append-only catalog](../decisions/0047-certifications-are-an-append-only-catalog.md)
 
 ### The story
 
@@ -1255,8 +1280,29 @@ interest them (a standing note, not a commitment to a date), claim dated **shift
 **hours**. Staff work an approval queue, and a date-ranged report rolls approved hours up by
 member, role and month — which is the number the board and grant applications ask for.
 
-Approved hours are a record, not a currency: they never become practice-room credits and
-never touch the finance ledger, and there is a test that enforces it.
+Approved hours are a record, not a currency: they never become practice-room credits, and
+`hour-log-service.spec.ts` enforces it. The one ledger write is contributed services: an approved
+log under a specialized-skill role with a market rate writes an `in_kind` financial entry
+(`finance/in-kind-listener.ts`), and returning the log reverses it.
+
+**A log counts on entry unless something needs a look.** `submitHours` lands a member's log
+`approved`, or `pending` when `flagHourLogExceptions` names a reason: the member was not cleared
+for the role on the date worked, the role is a specialized skill, or the log is over eight hours.
+Only pending logs notify staff. Hours are integer minutes, at most twelve hours a log, and a
+member may backdate 90 days. A member edits or withdraws their own log until a staffer approves
+it, and withdrawing deletes it. Staff return a log with a required reason, which the member sees as
+**Returned**, including one already approved. Approving a returned log takes a reason, audited as
+`volunteer_hours.approved_over_return`.
+
+**Roles and clearances keep their history.** A role with logs is archived, not deleted
+(`VolunteerRoleInUseError`), and archiving hides it only from the log form. A clearance that was
+ever true is revoked with a reason; `deleteCertificationRecord` is only for a grant the same
+staffer made the same day.
+
+**The under-18 block is enforced in the service.** `completeVolunteerOnboarding` maps an under-18
+answer to a `blocked` profile, `updateVolunteerProfile` accepts neither `isAdult` nor `status`,
+and `requireActiveVolunteer` refuses a blocked member in `claimShift`, `submitHours` and
+`updateHourLog`. Approving a minor moves `status` and leaves `isAdult` set.
 
 ### Tasks and shifts (#2518)
 
@@ -1304,13 +1350,12 @@ So:
   shift and tasks whose shifts have ended are count chips that filter the Schedule (`?needs=`); hours to review
   and clearances lapsing before a booked shift are counts that link to Members → Volunteers
   (`/hours`, `?lapsing=1`). Each is hidden at zero.
-- **Four screens, not seven.** Today, Schedule, People, Setup, plus a read-only Report.
-  Schedule absorbed the shift catalog (its "Everything" window is what the old Include-past
-  checkbox was); People absorbed the volunteers index, the under-18 queue and the clearances
-  table; Setup absorbed roles and certifications. The retired routes are 308s, and role
-  detail, the full hour queue and the richer report survive as unlisted pages reached from
-  the screens that replaced them. See
-  [specs/shipped/volunteering-redesign-spec.md](../specs/shipped/volunteering-redesign-spec.md).
+- **Three homes.** The Schedule (`/staff/volunteer/schedule`) holds the shifts and their
+  recurring work. Members → Volunteers (`/staff/members/volunteers`, with `/hours` for the
+  review queue) holds the people, the under-18 queue (`?status=blocked`) and clearances. Roles
+  (`/staff/volunteer/roles`) holds roles and certifications, and the report is
+  `/staff/reports/volunteering`. The retired routes (`shifts`, `people`, `setup`,
+  `clearances`, `certifications`, `interest`, `hours`, `report`) are 308s.
 - **A called-off shift is a notify list.** `cancelShift` has always left its signups in
   place; now `notifySignupsOfCancellation` is the button that tells them, and
   `volunteer_signup.notified_at` records how far down the list staff have got. Cancelling
@@ -1523,6 +1568,28 @@ would sit at `scheduled` for ever with its time in the past and need a cron to u
 Who may run one is the ordinary clearance gate: `volunteer_role_certification` links the
 Rehearsal Orientation role to the Space Orientation Trained certification, and `claimShift`
 already enforces it. Nothing new claims, assigns, or notifies.
+
+### Committee deliverables
+
+Decision: [A committee owns show work](../decisions/0053-committees-own-deliverables-not-permissions.md)
+
+A work order can name the committee that answers for it (`work_order.group_id`) and a fact that
+marks it done (`done_when`, one of `workDoneConditions`). Both are copied from the template item
+when a template is stamped. `evaluateDone` in `volunteer/done-conditions.ts` reads an item as done
+when it is resolved by hand, or when its condition holds and its tasks are ticked; nothing is
+stored, so an item reopens if the fact goes away. The conditions share their predicates with the
+publish and close-out gates (`event/show-readiness.ts`), and a deliverable never gates anything.
+
+- **Reads:** `deliverables-service.ts` — `listCommitteeOpenItems` for a committee's Open items
+  tab on `/member/groups/[slug]`, `listShowDeliverables` for a show's Deliverables card,
+  `reassignDeliverable` to hand an item to another committee. The remote is
+  `deliverables.remote.ts`, guarded by `requireCommitteeMember(groupId, 'volunteer.manageShifts')`.
+- **Cancellation:** cancelling a show reads its committees' open items first, cancels them, and
+  notifies each committee that had one (`production/cancellation-notice.ts`).
+- **Reminders:** `deliverable_due_3d` and `deliverable_overdue` in the reminders registry, over
+  open, committee-owned items with a due date. Items finished early or overdue by more than 14
+  days are not chased.
+- The coordinator's unscheduled-work queue leaves out committee-owned items.
 
 ### Data touched
 
@@ -1872,7 +1939,7 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
 
 ### Projects and work orders
 
-Spec: [specs/shipped/work-orders-as-tasks-spec.md](../specs/shipped/work-orders-as-tasks-spec.md)
+Decision: [A work order is the task](../decisions/0054-a-work-order-is-the-task.md)
 
 - **Write:** work order changes are recorded in the shared services both the shift page and
   the project page call (`updateShift`, `openShift`, `cancelShift`, `resolveWorkOrder`,
@@ -2223,7 +2290,7 @@ fourteen days ahead.
 
 ## 23. Formal ballots: a frozen roll, a secret or recorded vote, a certified result
 
-Spec: [specs/shipped/formal-balloting-spec.md](../specs/shipped/formal-balloting-spec.md)
+Decision: [Secret ballots keep a counter](../decisions/0052-secret-ballots-count-without-a-vote-row.md)
 
 ### The story
 
@@ -2236,6 +2303,13 @@ Electors vote from `/member/ballots/[id]`:
 
 - a committee vote is recorded and can be changed until the close;
 - a member-wide vote is secret and final.
+
+A **member of record** is an account that is neither deleted nor banned, was created at least
+`ballot.memberOfRecordDays` before the ballot opens, and has completed or been waived through
+orientation. Holders of `ballot.manage` include or exclude a member by hand on a member-wide
+ballot, with a reason, audited as `ballot.elector_overridden`. On a draft an override applies at
+open; on an open ballot it changes the roll at once, and an exclude is refused for anyone who
+has already voted.
 
 Nobody sees a tally until the close. After it, the certifier certifies the result, and every member
 is told. Certifying includes the certifier's call on whether the result **passed**: the app never
@@ -2282,7 +2356,7 @@ the suggestion, and moves the suggestion to Planned. The project's staff page sh
 ### Where it breaks
 
 - Secrecy is from the app, not from Cloudflare account holders. D1 Time Travel can diff the database
-  between two votes. The spec states this limit.
+  between two votes. The decision record states this limit.
 - A member purged before certification drops out of the participation count but not the counter.
   The certified snapshot is taken from the live tables at that moment.
 - The member-of-record age is `ballot.memberOfRecordDays` in site config (default 60). It is read at

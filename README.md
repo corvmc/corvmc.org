@@ -62,7 +62,7 @@ Start at the [docs index](docs/README.md). New maintainer? Read in this order:
    provisioning only
 
 Also: [ui-patterns.md](docs/development/ui-patterns.md) (mandatory before touching pages),
-`docs/specs/` (per-feature design intent), `docs/manual/` + `src/content/help/` (the
+`docs/decisions/` (why it is built the way it is), `docs/manual/` + `src/content/help/` (the
 end-user help articles).
 
 ## Common commands

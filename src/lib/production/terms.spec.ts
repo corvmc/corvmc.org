@@ -3,7 +3,7 @@ import { describeTerms } from './terms';
 import type { ActTerms } from './terms';
 
 /**
- * One row per line of `docs/specs/project-spec.md#the-deal-shape`, because the
+ * One row per deal shape (`docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md`), because the
  * console and the band's own page both render this string and the act reading it
  * is the only check on the number.
  */

@@ -28,10 +28,9 @@ function percent(bps: number): string {
 }
 
 /**
- * Five shapes, from `docs/specs/project-spec.md#the-deal-shape`.
+ * Five shapes, from `docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md`.
  *
- * The spec's table lists "flat fee" and "guarantee against the door" with
- * identical columns; the difference is the `versus` flag, which is what "against
+ * "Flat fee" and "guarantee against the door" set the same columns; the difference is the `versus` flag, which is what "against
  * the door" means — pay the greater of the two. A guarantee and a percentage
  * *without* it is the other real deal: a floor plus points on top.
  */

@@ -6,8 +6,6 @@ system is designed and built; the user manual (`manual/`) describes how to use i
 | Folder                              | What's in it                                                                  | Audience            |
 | ----------------------------------- | ----------------------------------------------------------------------------- | ------------------- |
 | [`decisions/`](decisions/README.md) | Dated decision records — why the app is built the way it is                   | Developers          |
-| [`specs/`](#specs)                  | Being retired under #2525 — proposals now live on issues                      | Developers          |
-| [`specs/shipped/`](#specs)          | Being retired under #2525                                                     | Developers          |
 | [`plans/`](#plans)                  | Sequenced implementation plans (PR-by-PR); historical once shipped            | Developers          |
 | [`architecture/`](#architecture)    | System overview, operations manual, deployment runbook, infra proposals       | DevOps / Developers |
 | [`development/`](#development)      | Contributor guides — quickstart, conventions, workflows, UI patterns, testing | Developers          |
@@ -62,71 +60,6 @@ describe current behaviour, and a feature's last PR adds a record to
 [deployment-checklist](architecture/deployment-checklist.md) (first deploy only).
 
 ---
-
-## specs
-
-`specs/` is being retired under #2525. New proposals go on the issue; the table below stays until
-then.
-
-`specs/` holds design intent for things that are **not built**. When code and a spec there disagree,
-treat the spec as intent and the code as reality — reconcile deliberately.
-
-`specs/shipped/` is the archive. Those features are live, so how they _behave_ is documented in
-[development/business-workflows.md](development/business-workflows.md) and
-[manual/](manual/README.md); what survives in the spec is the design rationale — the options weighed
-and rejected — which no manual article carries. Read a shipped spec to find out **why** something is
-the way it is, and the workflow guide to find out **what** it does today.
-
-### Bands & groups
-
-| Doc                                                                | Status | Lifecycle | Notes                                                                                                                                                                                                                                                                                                                                             |
-| ------------------------------------------------------------------ | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [committees-and-roles-spec.md](specs/committees-and-roles-spec.md) | 📋     | spec      | The six committees and the event roles as user stories, each marked with what serves it today. A requirements map rather than one feature's design. **Re-checked 2026-09-13**: eighteen markers corrected in place, and the capability layer it calls impossible now exists — what remains is `requireCommitteeRole`, a guard over `group_member` |
-
-### Events
-
-| Doc                                                                            | Status | Lifecycle | Notes                                                                                                                                                                                                                                                                                                                  |
-| ------------------------------------------------------------------------------ | ------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [project-spec.md](specs/project-spec.md)                                       | 🔧     | split     | Phases 1–3 shipped — the table, its five `project_id` anchors, `project-service.ts`, `/staff/projects` and the suggestion loop. #822 carries the deal shape and generate-on-close. `project` as a root entity above events: committee ownership, the suggestion pipeline, derived budget burn, the general deal shape  |
-| [work-orders-as-tasks-spec.md](specs/shipped/work-orders-as-tasks-spec.md)     | ✅     | archived  | A project as a checklist of work orders: one Assigned field (members, open to volunteers, or a contractor), a contractor job reshaped into an engagement on a work order like a signup, `project_section`, and `/staff/projects/[id]` rebuilt as a task list with a side panel, task pages and an Activity tab (#1806) |
-| [committee-deliverables-spec.md](specs/shipped/committee-deliverables-spec.md) | ✅     | archived  | Responsibility apart from permission: an owning committee and a derived `done_when` on work orders, a default `Show deliverables` duty list, committee Open items and a show's Deliverables card, cancellation notices and derived reminders (#1701)                                                                   |
-
-### Members & directory
-
-| Doc                                                                | Status | Lifecycle | Notes                                                                                                                                                                                                                                             |
-| ------------------------------------------------------------------ | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [formal-balloting-spec.md](specs/shipped/formal-balloting-spec.md) | ✅     | archived  | Group ballots (committee roster, recorded) and member-wide ballots (members of record, secret but auditable: participation and a per-option counter, no joinable link). Tallies hidden until close; a named certifier publishes the result (#577) |
-
-### Money & messaging
-
-| Doc | Status | Lifecycle | Notes |
-| --- | ------ | --------- | ----- |
-
-### Volunteering
-
-| Doc                                                                          | Status | Lifecycle | Notes                                                                                                                                                                                                                                |
-| ---------------------------------------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [volunteering-spec.md](specs/shipped/volunteering-spec.md)                   | ✅     | archived  | **Both phases shipped.** Roles, hour logging, approval queue and reporting; plus shifts, sign-up, certifications, clearances and post-shift feedback (#235)                                                                          |
-| [volunteering-redesign-spec.md](specs/shipped/volunteering-redesign-spec.md) | ✅     | archived  | Reshaped both applications without changing the model: staff's seven nav rows became Today / Schedule / People / Setup, the member half became a next-action stack beside a claim board, and a called-off shift became a notify list |
-
-### Inventory & assets
-
-| Doc                                                              | Status | Lifecycle | Notes                                                                                                                                                                                         |
-| ---------------------------------------------------------------- | ------ | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [contractor-work-spec.md](specs/shipped/contractor-work-spec.md) | ✅     | archived  | Paid outside work — an instrument tech, an electrician: `contractor` + `contractor_job`. The other of the two places a broken thing gets fixed, and the first service expense the app records |
-
-### Staff platform
-
-| Doc | Status | Lifecycle | Notes |
-| --- | ------ | --------- | ----- |
-
-The last three all came out of #164, which closed the follow-ups from a since-retired staff
-user-management audit by writing a spec for each. None has been built since.
-
-### Platform
-
-| Doc | Status | Lifecycle | Notes |
-| --- | ------ | --------- | ----- |
 
 ## plans
 
@@ -199,9 +132,3 @@ the in-app Help/KB via `pnpm help:sync`. The manifest tracks coverage across all
 | ------------------------------------ | ------ | ---------------------------------------------------------- |
 | [manual/README.md](manual/README.md) | 🔧     | User-manual manifest & checklist (~82 articles)            |
 | [manual/public/](manual/public)      | 🔧     | Public-site how-tos (markdown only — the KB is auth-gated) |
-
----
-
-### Open action items (from the docs above)
-
-None. Nothing in `specs/` is half-built.

@@ -491,9 +491,8 @@ export async function returnLoan(
 	if (loan.status !== 'checked_out') throw new InvalidLoanTransitionError(loan.status, 'returned');
 
 	// The inspection happens before anything else is decided, because it is the
-	// *input* to the decision. `committees-and-roles-spec.md:522` marks "condition
-	// at both ends" as covered; only the checkout end existed, so a unit could
-	// come back visibly worse and the only record was free text on the loan.
+	// *input* to the decision. Condition is recorded at both ends of a loan, so a
+	// unit that comes back worse has a record beyond free text on the loan.
 	//
 	// Flags are raised first so `hasBlockingFlag` below can see them: the whole
 	// point is that something noticed on the counter keeps the unit off the shelf.

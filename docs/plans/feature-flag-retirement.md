@@ -160,8 +160,8 @@ feature branch, not a flag.
 | `groupEvents`    | Group-authored events reaching the gig guide                                                           | `group-events.remote.ts`, `groups.remote.ts`                                 |
 | `announcements`  | Band and group announcements, incl. the band nav entry                                                 | `announcements.remote.ts`, `groups.remote.ts`                                |
 
-Specs: `bandPremium`, `emailMarketing`, `contentFlags`, `directMessages` and `volunteering` all have
-specs in `docs/specs/shipped/`. `groups`, `groupEvents`, `announcements` and `groupFiles` belong to
+Specs: `bandPremium`, `emailMarketing`, `contentFlags`, `directMessages` and `volunteering` all had
+specs, since retired into `docs/decisions/` under #2525. `groups`, `groupEvents`, `announcements` and `groupFiles` belong to
 the groups module, all of whose phases had shipped except documents. `helpArticles` has no spec.
 
 ### If a feature is not ready to launch

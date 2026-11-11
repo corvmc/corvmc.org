@@ -288,8 +288,8 @@ export const volunteerRoleCapability = sqliteTable(
 /**
  * A **work order**, which the interface calls a **task**: the work itself —
  * "re-cone the bass cab", "door crew for Saturday". The CMMS term is deliberate
- * (docs/specs/project-spec.md#vocabulary): a `work_request` is what someone
- * noticed, a work order is what staff decided to do about it.
+ * (docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md): a `work_request`
+ * is what someone noticed, a work order is what staff decided to do about it.
  *
  * The times volunteers show up are its shifts (`volunteerShift`, #2518), and
  * who staff put on it are its assignees. `legacy*` properties are columns no
@@ -1270,7 +1270,7 @@ export const dutyListItem = sqliteTable(
  * **Generate-on-close**, not a window materializer: the next work order is
  * written only when the open one is resolved or called off, due `intervalDays`
  * after that close. Nothing is scheduled ahead, so it cannot drift or pile up
- * unclosed duplicates. See docs/specs/project-spec.md#recurring-work.
+ * unclosed duplicates. See docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md.
  */
 export const maintenanceSchedule = sqliteTable(
 	'maintenance_schedule',

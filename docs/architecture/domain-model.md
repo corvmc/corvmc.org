@@ -90,7 +90,7 @@ A listing's room hold is booked to its production when it has one, else to the g
 running it, else to the listing itself (#2004). Holding the room never opens a
 production: a CMC workshop with no back-of-house can still take the room.
 
-See [project-spec.md](../specs/project-spec.md).
+See [A project is a budgeted body of work](../decisions/0050-a-project-is-a-budgeted-body-of-work.md).
 
 ## The seam
 
@@ -249,6 +249,12 @@ backdating-and-correction stories. That each vertical grew its own is a point _f
 taxonomy.
 
 **Derived balances, never stored counters.** Project burn is a `sum()` across these.
+`getProjectBurn` in `project-service.ts` reads cash spend (contractor engagements on the
+project's work orders, purchase orders when placed, acquisitions, a show's expenses and guarantee
+top-ups) and contributed value apart. Volunteer time carries two valuations that are never
+added: impact value over every approved minute at `volunteer.hourValueCents`, and recognizable
+contributed services over specialized-skill minutes at each role's market rate. A specialized
+role with no rate counts as zero and is reported as unpriced.
 
 `financial_entry` is the collective's accounting ledger: what was earned, spent, given and
 held for others. Stripe stays the record of settlement. Each row has a signed `amountCents`, a
@@ -386,10 +392,11 @@ The bar for what "worked out" looks like, and the thing to imitate rather than r
 
 ## Further reading
 
-- [project-spec.md](../specs/project-spec.md) — the `project` design
+- [A project is a budgeted body of work](../decisions/0050-a-project-is-a-budgeted-body-of-work.md)
+  — the `project` decision
 - [project-management-prior-art.md](../reports/project-management-prior-art.md) — the
   comparable products and why these decisions were made
 - [social-prior-art.md](../reports/social-prior-art.md) — the same, per social role, and
   what those products do better
-- [committees-and-roles-spec.md](../specs/committees-and-roles-spec.md) — committees as
-  the owners of projects
+- [A committee is a group, chaired by its admins](../decisions/0049-a-committee-is-a-group-chaired-by-admins.md)
+  — what a committee is in the data
