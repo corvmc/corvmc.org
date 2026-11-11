@@ -474,7 +474,7 @@ as Payment Records (`stripe.paymentRecords.reportPayment`), so each purchasable 
 (`reservation`, `ticket`, …) stores a `stripePaymentRecordId` as its proof of payment. What the
 collective earned and spent, for accounting, is the separate `financial_entry` ledger
 ([domain model](domain-model.md#4-the-append-only-ledger-one-per-vertical-plus-money)).
-Decision: [NNNN](../decisions/0013-stripe-is-the-payment-ledger.md).
+Decision: [Stripe is the payment ledger](../decisions/0013-stripe-is-the-payment-ledger.md).
 
 - **Products and prices.** `product-config-service.ts` finds or creates each Stripe Product by
   `metadata.corvmc_key`; unit amounts come from site config and go to Stripe as inline
