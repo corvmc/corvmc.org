@@ -416,7 +416,7 @@ export const getShiftCandidates = query(
 		const [candidates, required] = await Promise.all([
 			listShiftCandidates(
 				{ workOrderId: task.id, shiftId: shift.shiftId },
-				shift.volunteerRoleId,
+				task.volunteerRoleId,
 				f.scope,
 				f.search || undefined
 			),

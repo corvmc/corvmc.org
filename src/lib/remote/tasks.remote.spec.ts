@@ -156,7 +156,7 @@ describe('the task page', () => {
 		const page = (await remotes.getProjectTaskPage({
 			projectId: THEIRS,
 			workOrderId: 'wo-theirs'
-		})) as { project: { name: string }; shift: { id: string }; engagements: unknown[] };
+		})) as { project: { name: string }; task: { id: string }; engagements: unknown[] };
 		expect(page.project.name).toBe('Theirs');
 		expect(page.task.id).toBe('wo-theirs');
 		expect(page.engagements).toEqual([]);
