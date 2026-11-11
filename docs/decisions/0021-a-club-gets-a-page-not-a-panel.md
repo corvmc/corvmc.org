@@ -1,4 +1,4 @@
-# NNNN A club gets a page, not a panel
+# 0021 A club gets a page, not a panel
 
 - **Date:** 2026-08-08
 - **Status:** Accepted

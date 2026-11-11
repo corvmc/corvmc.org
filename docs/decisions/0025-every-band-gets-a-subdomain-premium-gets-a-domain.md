@@ -1,4 +1,4 @@
-# NNNN Every band gets a subdomain; premium gets its own domain
+# 0025 Every band gets a subdomain; premium gets its own domain
 
 - **Date:** 2026-08-10
 - **Status:** Accepted

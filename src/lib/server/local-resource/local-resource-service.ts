@@ -8,7 +8,7 @@ import { captureException } from '#lib/server/sentry.js';
 
 /**
  * The local resources directory: a public, staff-curated list of music
- * businesses and services. docs/decisions/NNNN-local-resources-are-their-own-table.md
+ * businesses and services. docs/decisions/0028-local-resources-are-their-own-table.md
  */
 
 export const LOCAL_RESOURCE_NAME_MAX = 120;

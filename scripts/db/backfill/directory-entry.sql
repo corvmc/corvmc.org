@@ -14,7 +14,7 @@
 -- create (3a) → backfill (here) → drop (3c) is what makes a mistake in the
 -- mapping recoverable from columns that still exist. See
 -- `scripts/db/backfill/member-standing.sql` for the same shape, and
--- docs/decisions/NNNN-groups-split-the-band-table-by-purpose.md.
+-- docs/decisions/0024-groups-split-the-band-table-by-purpose.md.
 --
 -- D1 has no transactions, so idempotence is the safety property instead.
 -- **Every statement here is an INSERT. There is no UPDATE in this file and

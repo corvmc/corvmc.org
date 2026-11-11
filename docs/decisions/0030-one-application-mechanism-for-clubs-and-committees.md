@@ -1,4 +1,4 @@
-# NNNN One application mechanism for clubs and committees
+# 0030 One application mechanism for clubs and committees
 
 - **Date:** 2026-09-29
 - **Status:** Accepted

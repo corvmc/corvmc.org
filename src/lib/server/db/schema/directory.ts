@@ -84,7 +84,7 @@ export type DirectoryTagKind = (typeof directoryTagKinds)[number];
  * **This table is authoritative.** The phase-3a port landed and the listing
  * columns it replaced were dropped from `user` and `group` in 3c, so this is the
  * only place a member's or a group's public presence lives. See
- * docs/decisions/NNNN-groups-split-the-band-table-by-purpose.md.
+ * docs/decisions/0024-groups-split-the-band-table-by-purpose.md.
  */
 export const directoryEntry = sqliteTable(
 	'directory_entry',

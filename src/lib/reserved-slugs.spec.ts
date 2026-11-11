@@ -11,7 +11,7 @@ import { RESERVED_SLUGS, isReservedSlug } from './reserved-slugs';
  * someone else, which is exactly the shape of change a test should guard.
  */
 describe('reserved slugs', () => {
-	/** docs/decisions/NNNN-groups-split-the-band-table-by-purpose.md — the groups module cannot ship without these. */
+	/** docs/decisions/0024-groups-split-the-band-table-by-purpose.md — the groups module cannot ship without these. */
 	const GROUP_VOCABULARY = [
 		'group',
 		'groups',

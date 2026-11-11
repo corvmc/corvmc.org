@@ -5,7 +5,7 @@ import { group } from './group';
 
 /**
  * A document a group holds for its own members. See
- * `docs/decisions/NNNN-uploads-are-detached-and-swept.md`.
+ * `docs/decisions/0026-uploads-are-detached-and-swept.md`.
  *
  * **A file store, not a document tool.** Members upload files produced
  * elsewhere — minutes from whatever word processor the committee already uses,

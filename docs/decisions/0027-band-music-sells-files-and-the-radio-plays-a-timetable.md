@@ -1,4 +1,4 @@
-# NNNN Band music sells files, and the radio plays a timetable
+# 0027 Band music sells files, and the radio plays a timetable
 
 - **Date:** 2026-09-03
 - **Status:** Accepted

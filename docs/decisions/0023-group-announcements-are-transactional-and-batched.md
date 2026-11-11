@@ -1,4 +1,4 @@
-# NNNN Group announcements are transactional and batched
+# 0023 Group announcements are transactional and batched
 
 - **Date:** 2026-08-08
 - **Status:** Accepted

@@ -10,7 +10,7 @@ import { packingCategories, riderElementKinds } from '../../../config';
  * One list per band and durable — no event link, no per-show copy.
  * `last_reset_at` is the column this head table exists for.
  *
- * Record: docs/decisions/NNNN-one-durable-packing-list-per-band.md
+ * Record: docs/decisions/0029-one-durable-packing-list-per-band.md
  */
 export const packingList = sqliteTable(
 	'packing_list',
@@ -35,7 +35,7 @@ export const packingList = sqliteTable(
 		 *
 		 * A reset is the one write whose own effect destroys the evidence it
 		 * happened, so without this "never packed" and "cleared an hour ago" are
-		 * the same picture. Record: docs/decisions/NNNN-one-durable-packing-list-per-band.md
+		 * the same picture. Record: docs/decisions/0029-one-durable-packing-list-per-band.md
 		 */
 		lastResetAt: integer('last_reset_at', { mode: 'timestamp' }),
 		lastResetByUserId: text('last_reset_by_user_id').references(() => user.id, {
@@ -70,7 +70,7 @@ export type NewPackingList = typeof packingList.$inferInsert;
  * `user_id` (whose gear) and `assigned_user_id` (who carries it) are two facts
  * and neither substitutes for the other — the band's merch tub forces both.
  * Order comes from `category`, not `sort_order`, and there is no
- * `rider_element_id`. Record: docs/decisions/NNNN-one-durable-packing-list-per-band.md
+ * `rider_element_id`. Record: docs/decisions/0029-one-durable-packing-list-per-band.md
  */
 export const packingItem = sqliteTable(
 	'packing_item',
@@ -91,7 +91,7 @@ export const packingItem = sqliteTable(
 		 * loses gear, and the one the load-in page leads with.
 		 *
 		 * A reset does not clear this: ticks are per-trip, who brings the PA is
-		 * not. Record: docs/decisions/NNNN-one-durable-packing-list-per-band.md
+		 * not. Record: docs/decisions/0029-one-durable-packing-list-per-band.md
 		 */
 		assignedUserId: text('assigned_user_id').references(() => user.id, { onDelete: 'set null' }),
 		assignedAt: integer('assigned_at', { mode: 'timestamp' }),
@@ -136,7 +136,7 @@ export const packingItem = sqliteTable(
 		 *
 		 * **Not a foreign key, on purpose.** It records that the band made the
 		 * decision; the live "is it there" answer is a label match computed on
-		 * read. Record: docs/decisions/NNNN-one-durable-packing-list-per-band.md
+		 * read. Record: docs/decisions/0029-one-durable-packing-list-per-band.md
 		 */
 		promotedAt: integer('promoted_at', { mode: 'timestamp' }),
 

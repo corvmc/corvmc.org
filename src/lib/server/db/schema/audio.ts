@@ -45,7 +45,7 @@ export type PurchaseStatus = (typeof purchaseStatuses)[number];
  * `attachableType: 'audio_release'`, slot `'cover'`, so it shares the sweep and
  * the transform pipeline every other image in the app already uses.
  *
- * See docs/decisions/NNNN-band-music-sells-files-and-the-radio-plays-a-timetable.md.
+ * See docs/decisions/0027-band-music-sells-files-and-the-radio-plays-a-timetable.md.
  */
 export const audioRelease = sqliteTable(
 	'audio_release',

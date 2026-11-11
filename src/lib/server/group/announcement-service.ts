@@ -10,7 +10,7 @@ import { renderMarkdown } from '#lib/utils/markdown.js';
 
 /**
  * Announcements — a group talking to its own roster. See
- * `docs/decisions/NNNN-group-announcements-are-transactional-and-batched.md`.
+ * `docs/decisions/0023-group-announcements-are-transactional-and-batched.md`.
  *
  * The whole module is group-scoped by argument: every function takes a
  * `groupId` and every write is scoped to it. Nothing here guards — that is

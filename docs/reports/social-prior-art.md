@@ -175,7 +175,7 @@ links" stops being a nag when the payoff is that other members hear you.
 ## Role 5 — Identity and claiming
 
 **Ours.** An external act is a `directory_entry` with both `userId` and `groupId` null.
-[The record](../decisions/NNNN-external-acts-are-staff-records-with-private-contacts.md) keeps it on three grounds — marketing material on
+[The record](../decisions/0022-external-acts-are-staff-records-with-private-contacts.md) keeps it on three grounds — marketing material on
 hand, a contact record, and a promotion path — and makes promotion **one statement**:
 create a `group`, set `directory_entry.groupId`, insert the owner row, one `db.batch`.
 "Nothing merges, no identity columns move, and every event they ever played is still

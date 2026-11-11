@@ -1,7 +1,7 @@
 /**
  * backfill-media.ts
  *
- * Phase 3 of docs/decisions/NNNN-uploads-are-detached-and-swept.md. Reads the four places an R2 key is stored
+ * Phase 3 of docs/decisions/0026-uploads-are-detached-and-swept.md. Reads the four places an R2 key is stored
  * today into `media` + `media_attachment`, so phase 4 has something to cut over
  * to. Nothing is removed and no behaviour changes: the source columns keep their
  * values and stay authoritative until phase 6 drops them.

@@ -1,4 +1,4 @@
-# NNNN Uploads are detached and swept, never deleted inline
+# 0026 Uploads are detached and swept, never deleted inline
 
 - **Date:** 2026-08-28
 - **Status:** Accepted

@@ -334,11 +334,11 @@ Subscription/Invoice objects.
 
 ## 4. Bands: creation, invitations, premium pages
 
-Records: [groups split the band table](../decisions/NNNN-groups-split-the-band-table-by-purpose.md) ·
-[band addresses](../decisions/NNNN-every-band-gets-a-subdomain-premium-gets-a-domain.md) ·
-[a club gets a page](../decisions/NNNN-a-club-gets-a-page-not-a-panel.md) ·
-[announcements](../decisions/NNNN-group-announcements-are-transactional-and-batched.md) ·
-[external acts](../decisions/NNNN-external-acts-are-staff-records-with-private-contacts.md)
+Records: [groups split the band table](../decisions/0024-groups-split-the-band-table-by-purpose.md) ·
+[band addresses](../decisions/0025-every-band-gets-a-subdomain-premium-gets-a-domain.md) ·
+[a club gets a page](../decisions/0021-a-club-gets-a-page-not-a-panel.md) ·
+[announcements](../decisions/0023-group-announcements-are-transactional-and-batched.md) ·
+[external acts](../decisions/0022-external-acts-are-staff-records-with-private-contacts.md)
 
 ### The story
 
@@ -1454,7 +1454,7 @@ already enforces it. Nothing new claims, assigns, or notifies.
 ## 13. Music and CMC Radio
 
 Behind two flags: `bandAudio` (the storefront) and `cmcRadio` (the station). Record:
-[band music sells files](../decisions/NNNN-band-music-sells-files-and-the-radio-plays-a-timetable.md).
+[band music sells files](../decisions/0027-band-music-sells-files-and-the-radio-plays-a-timetable.md).
 
 ### The story
 
@@ -1664,7 +1664,7 @@ restore crew shifts or retract a cancellation notice.
 
 ## 15. The packing list: what goes in the van, and who is bringing it
 
-Record: [one durable packing list per band](../decisions/NNNN-one-durable-packing-list-per-band.md)
+Record: [one durable packing list per band](../decisions/0029-one-durable-packing-list-per-band.md)
 
 ### The story
 
@@ -1779,7 +1779,7 @@ Spec: [specs/shipped/work-orders-as-tasks-spec.md](../specs/shipped/work-orders-
 
 ## 17. The local resources directory
 
-Record: [local resources are their own table](../decisions/NNNN-local-resources-are-their-own-table.md)
+Record: [local resources are their own table](../decisions/0028-local-resources-are-their-own-table.md)
 
 ### The story
 
@@ -2147,7 +2147,7 @@ the suggestion, and moves the suggestion to Planned. The project's staff page sh
 
 ## 24. Group applications: applying to a club or a committee
 
-Record: [one application mechanism](../decisions/NNNN-one-application-mechanism-for-clubs-and-committees.md) (#1700;
+Record: [one application mechanism](../decisions/0030-one-application-mechanism-for-clubs-and-committees.md) (#1700;
 decisions #1727–#1730)
 
 ### The story

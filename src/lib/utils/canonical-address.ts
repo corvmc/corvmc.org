@@ -22,7 +22,7 @@ import { baseDomainFromSiteUrl } from './band-site-url';
  *
  * `external` is a directory entry with neither a user nor a group — a visiting
  * act on a lineup. Such an entry has no page, slug or share link
- * (`docs/decisions/NNNN-external-acts-are-staff-records-with-private-contacts.md`), so it is a case this
+ * (`docs/decisions/0022-external-acts-are-staff-records-with-private-contacts.md`), so it is a case this
  * module answers `null` to rather than one it has no branch for.
  */
 export type AddressSubject =

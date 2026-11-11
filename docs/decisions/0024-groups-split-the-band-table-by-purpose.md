@@ -1,4 +1,4 @@
-# NNNN Groups split the band table by purpose
+# 0024 Groups split the band table by purpose
 
 - **Date:** 2026-08-08
 - **Status:** Accepted

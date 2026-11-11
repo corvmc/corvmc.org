@@ -1,4 +1,4 @@
-# NNNN External acts are staff records with private contacts
+# 0022 External acts are staff records with private contacts
 
 - **Date:** 2026-08-08
 - **Status:** Accepted

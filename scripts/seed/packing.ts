@@ -11,7 +11,7 @@ import type { RiderElementKind } from '../../src/lib/config';
  * account reaches both features. Covers the rules a reader would otherwise take
  * on faith: owning and carrying as different facts, rows nobody has, a row
  * ticked by a third party, and all three promotion states. Nothing is random —
- * counts here are load-bearing. Record: docs/decisions/NNNN-one-durable-packing-list-per-band.md
+ * counts here are load-bearing. Record: docs/decisions/0029-one-durable-packing-list-per-band.md
  */
 
 const ADMIN = 'seed-rider-admin';

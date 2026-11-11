@@ -241,7 +241,7 @@ describe('holding the room', () => {
  * #714. The remotes guard with `requireProgramRole`, but free room time is an
  * invariant of the data rather than of one endpoint: a band that reaches this
  * creator by any route gets a `confirmed` reservation nobody is billed for, and
- * `docs/decisions/NNNN-groups-split-the-band-table-by-purpose.md` rests the design on that being impossible.
+ * `docs/decisions/0024-groups-split-the-band-table-by-purpose.md` rests the design on that being impossible.
  */
 describe('a band is not a program', () => {
 	it('refuses a band group before anything is written', async () => {

@@ -374,7 +374,7 @@ The bar for what "worked out" looks like, and the thing to imitate rather than r
   path deletes an R2 object: a row detaches, and `/api/cron/sweep-media` reaps objects nothing
   points at, after a grace window. A count across parents goes through
   `liveAttachmentCondition()`. See
-  [uploads are detached and swept](../decisions/NNNN-uploads-are-detached-and-swept.md).
+  [uploads are detached and swept](../decisions/0026-uploads-are-detached-and-swept.md).
 - **One vocabulary file.** [config.ts](../../src/lib/config.ts), imported by schema _by
   relative path_ — a `$lib` alias breaks `db:generate`.
 

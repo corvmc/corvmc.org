@@ -1,4 +1,4 @@
-# NNNN One durable packing list per band
+# 0029 One durable packing list per band
 
 - **Date:** 2026-09-08
 - **Status:** Accepted

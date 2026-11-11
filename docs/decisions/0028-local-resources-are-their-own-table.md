@@ -1,4 +1,4 @@
-# NNNN Local resources are their own table
+# 0028 Local resources are their own table
 
 - **Date:** 2026-09-08
 - **Status:** Accepted
