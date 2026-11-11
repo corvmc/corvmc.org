@@ -6,8 +6,8 @@ import type Stripe from 'stripe';
 /**
  * Write a completed checkout into the financial record.
  *
- * A sale is several rows that only make sense together — see the worked example
- * in `docs/specs/financial-record-spec.md`. The allocation is already in the
+ * A sale is several rows that only make sense together — see
+ * `docs/decisions/0016-a-local-financial-record.md`. The allocation is already in the
  * session metadata, put there so a settlement could read it.
  */
 export async function handleCheckoutEntries(session: Stripe.Checkout.Session): Promise<void> {

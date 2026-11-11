@@ -4,7 +4,7 @@ import { grantStatuses } from '../../../config';
 
 /**
  * A foundation, trust or agency the collective applies to.
- * See docs/specs/shipped/development-agreements-spec.md.
+ * See docs/decisions/0019-sponsors-and-grants-are-two-modules.md.
  */
 export const funder = sqliteTable('funder', {
 	id: text('id')

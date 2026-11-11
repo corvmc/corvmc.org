@@ -21,7 +21,7 @@ import {
 /**
  * An in-memory stand-in for Stripe, because Stripe's own guidance rules out
  * driving the real thing from a suite and `stripe-mock` is stateless — see
- * `docs/specs/shipped/finance-spec.md#testing`. State lives for the life of the
+ * `docs/decisions/0017-payments-run-against-a-fake-gateway.md`. State lives for the life of the
  * worker isolate, which is what makes an end-to-end run possible: create a
  * session on one request, complete it on another, read the row on a third.
  */

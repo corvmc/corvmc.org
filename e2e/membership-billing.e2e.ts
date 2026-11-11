@@ -15,7 +15,7 @@ import {
  * This was Stripe's billing portal until phase 6 — another origin no test could
  * follow into — so none of it had coverage. Under `fake` the round trip runs
  * with no network: SetupIntent → attach → default → detach. What it cannot
- * reach: `docs/specs/shipped/finance-spec.md#testing`.
+ * reach: `docs/decisions/0017-payments-run-against-a-fake-gateway.md`.
  */
 const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 

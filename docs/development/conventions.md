@@ -109,7 +109,8 @@ carries the sequences; what follows is why they are what they are.
 
 **Not everything needs a branch.** Instructors shipped six phases straight to `main` with no flag
 and no branch, ordering the work so nothing advertised a capability that did not exist yet
-(`docs/specs/instructors-spec.md`). That is the better default when it is available:
+([decision 0015](../decisions/0015-instructors-rent-the-room.md)). That is the better default
+when it is available:
 
 - Staff-only surfaces land on `main` directly.
 - Schema and refactors land on `main` when they are safe standing alone.

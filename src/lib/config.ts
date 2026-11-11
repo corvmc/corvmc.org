@@ -421,7 +421,7 @@ export const assetStatusLabels: Record<AssetStatus, string> = {
  *
  * `in_kind` and `pass_through` are exactly what a naive `sum()` gets wrong, which
  * is why they are a column rather than a convention. See
- * `docs/specs/financial-record-spec.md`.
+ * `docs/architecture/domain-model.md` (the append-only ledger).
  */
 export const financialEntryKinds = ['earned', 'spent', 'in_kind', 'pass_through'] as const;
 export type FinancialEntryKind = (typeof financialEntryKinds)[number];
@@ -2088,7 +2088,8 @@ export const PACKING_MAX_QUANTITY = 99;
 // ---------------------------------------------------------------------------
 
 /**
- * The five states of an instructor record — see `docs/specs/shipped/instructors-spec.md`.
+ * The five states of an instructor record — see `docs/development/business-workflows.md`
+ * (Teaching bookings).
  *
  * `requested` and `rejected` are the application; the other three are the grant.
  * Keeping them in one enum on one row is what makes the application *be* the
