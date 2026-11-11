@@ -21,6 +21,7 @@
 	} from '#lib/remote/packing.remote.js';
 	import { resolve } from '$app/paths';
 	import { PACKING_NOTES_MAX } from '#lib/config.js';
+	import { formatDateShortYear } from '#lib/utils/format.js';
 	import type { PackingItemRowState } from '#lib/types/packing.js';
 	import { getBandLayoutContext } from '../layout-context';
 
@@ -70,8 +71,6 @@
 	 * tick or a claim, which is why neither of those touches `updatedAt`.
 	 */
 	const stamp = $derived(list.updatedAt?.getTime() ?? 0);
-
-	const dateFmt = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' });
 
 	/**
 	 * How stale the ticks are. A list that has not been reset in a month is
@@ -131,7 +130,9 @@
 						<h2 class="text-base font-semibold">{msg.band_slug_packing_load_title()}</h2>
 						<p class="text-xs text-base-content/60">
 							{#if list.lastResetAt}
-								{msg.band_slug_packing_cleared_text({ format: dateFmt.format(list.lastResetAt) })}
+								{msg.band_slug_packing_cleared_text({
+									format: formatDateShortYear(list.lastResetAt)
+								})}
 								{#if list.lastResetByName}{msg.band_slug_packing_by_text({
 										lastResetByName: list.lastResetByName
 									})}{/if}
