@@ -43,7 +43,7 @@ describe('NewProductionModal', () => {
 		];
 		await render(NewProductionModal, { open: true });
 
-		const select = page.getByLabelText('Listing');
+		const select = page.getByRole('dialog').getByRole('combobox');
 		await expect.element(select).toBeVisible();
 		await expect.element(select).toHaveValue('evt-1');
 		expect(select.element().querySelectorAll('option[value="evt-1"]')).toHaveLength(1);
@@ -54,7 +54,7 @@ describe('NewProductionModal', () => {
 		attachable.rows = [];
 		await render(NewProductionModal, { open: true });
 
-		// Nothing to attach: no Listing picker, and the footer's last button creates one.
+		// Nothing to attach: no event picker, and the footer's last button creates one.
 		const footer = page.getByRole('dialog').getByCss('.modal-action button');
 		await expect.element(footer.last()).toBeVisible();
 		expect(document.querySelector('form')).toBeNull();

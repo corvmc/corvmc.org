@@ -154,7 +154,7 @@
 			<Table>
 				{#snippet head()}
 					<th class="whitespace-nowrap">{m.staff_when_label()}</th>
-					<th>{m.staff_show_label()}</th>
+					<th>{m.staff_event_label()}</th>
 					<th class="w-px">{m.staff_status_label()}</th>
 				{/snippet}
 				{#each data.shows as show (show.id)}
