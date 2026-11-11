@@ -323,8 +323,8 @@ export const workOrder = sqliteTable(
 		// When staff opened this to volunteers. The one assignment fact that
 		// cannot be derived from signups or engagements: it exists before anybody
 		// claims. Null is not on the claim board.
-		postedAt: integer('posted_at', { mode: 'timestamp' }),
-		postedByUserId: text('posted_by_user_id').references(() => user.id, {
+		legacyPostedAt: integer('posted_at', { mode: 'timestamp' }),
+		legacyPostedByUserId: text('posted_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
 		}),
 
@@ -350,8 +350,8 @@ export const workOrder = sqliteTable(
 		// and `NULL >= x` is NULL in SQLite — so unscheduled work falls out of the
 		// member list, the reminder cron and the feedback cron on its own, with no
 		// query changed. That is load-bearing: assert it rather than trust it.
-		startsAt: integer('starts_at', { mode: 'timestamp' }),
-		endsAt: integer('ends_at', { mode: 'timestamp' }),
+		legacyStartsAt: integer('starts_at', { mode: 'timestamp' }),
+		legacyEndsAt: integer('ends_at', { mode: 'timestamp' }),
 
 		// What the work is about, when it is about a thing. Null for an ordinary
 		// shift — nobody staffs the front desk on behalf of an amp.
@@ -418,7 +418,7 @@ export const workOrder = sqliteTable(
 		),
 
 		/** How many people are needed. Claims beyond this are refused. */
-		capacity: integer('capacity').notNull().default(1),
+		legacyCapacity: integer('capacity').notNull().default(1),
 
 		/** "Meet at the side door" — anything the claimant needs to know. */
 		notes: text('notes'),
@@ -451,7 +451,7 @@ export const workOrder = sqliteTable(
 		// Staff's call, made when scheduling: does the clock running out mean the
 		// attached equipment reports are fixed? Off, a finished work order waits on
 		// the coordinator's Today worklist to be confirmed instead (#1544).
-		closeReportsOnCompletion: integer('close_reports_on_completion', { mode: 'boolean' })
+		legacyCloseReportsOnCompletion: integer('close_reports_on_completion', { mode: 'boolean' })
 			.notNull()
 			.default(false),
 
@@ -480,7 +480,7 @@ export const workOrder = sqliteTable(
 		// The member's "what's coming up" list and the reminder cron both scan
 		// forward from now over live shifts.
 		index('work_order_upcoming_idx')
-			.on(t.startsAt)
+			.on(t.legacyStartsAt)
 			.where(sql`cancelled_at IS NULL`),
 		index('work_order_role_idx').on(t.volunteerRoleId),
 		index('work_order_event_idx').on(t.eventId),
@@ -622,7 +622,7 @@ export const volunteerSignup = sqliteTable(
 
 		shiftId: text('shift_id')
 			.notNull()
-			.references(() => workOrder.id, { onDelete: 'cascade' }),
+			.references(() => volunteerShift.id, { onDelete: 'cascade' }),
 
 		userId: text('user_id')
 			.notNull()
@@ -702,7 +702,7 @@ export const volunteerHourLog = sqliteTable(
 		// logged from memory. Staff can approve one of these with less scrutiny —
 		// they already knew the person was rostered. Set-null, not cascade:
 		// deleting a shift must not delete the hours somebody actually worked.
-		shiftId: text('shift_id').references(() => workOrder.id, { onDelete: 'set null' }),
+		shiftId: text('shift_id').references(() => volunteerShift.id, { onDelete: 'set null' }),
 
 		// The task this time went to, when it was logged for one rather than for a
 		// shift: committee work is logged after the fact (#2518). A log may name a
@@ -1422,6 +1422,18 @@ export type VolunteerHourLog = typeof volunteerHourLog.$inferSelect;
 export type VolunteerRoleInterest = typeof volunteerRoleInterest.$inferSelect;
 export type VolunteerProfile = typeof volunteerProfile.$inferSelect;
 export type WorkOrder = typeof workOrder.$inferSelect;
+/** The `work_order` columns that moved to `volunteer_shift` or were retired (#2518). */
+export type WorkOrderLegacyColumn =
+	| 'legacyStartsAt'
+	| 'legacyEndsAt'
+	| 'legacyCapacity'
+	| 'legacyPostedAt'
+	| 'legacyPostedByUserId'
+	| 'legacyCloseReportsOnCompletion';
+/** A task: the work order without the columns no service reads any more. */
+export type Task = Omit<WorkOrder, WorkOrderLegacyColumn>;
+export type VolunteerShift = typeof volunteerShift.$inferSelect;
+export type WorkOrderAssignee = typeof workOrderAssignee.$inferSelect;
 export type VolunteerSignup = typeof volunteerSignup.$inferSelect;
 export type VolunteerShiftFeedback = typeof volunteerShiftFeedback.$inferSelect;
 export type VolunteerCertification = typeof volunteerCertification.$inferSelect;
