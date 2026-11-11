@@ -1721,7 +1721,7 @@ between the two features: walking through the easy door furnishes the rider on t
 
 ## 16. The staff audit log: who changed a member's account
 
-Spec: [specs/audit-log-spec.md](../specs/shipped/audit-log-spec.md)
+Decision record: [the audit log records intent](../decisions/NNNN-audit-log-records-intent.md)
 
 ### The story
 
@@ -1743,6 +1743,10 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
   deactivation writes one row per member sharing `details.batchId`.
 - **Read:** `getUserHistory` (`user.read`) → `listAuditEntriesForSubject`, rendered by
   `summarizeAuditEntry` in `src/lib/utils/audit-display.ts`.
+- **Global log:** `/staff/audit` → `getAuditLog` (`audit.read`, which `user.read` does not
+  grant) in `src/lib/remote/audit.remote.ts` → `listAuditEntries`, 50 rows a page, filtered by
+  action, actor (matched against the stored name and email, so a purged staffer is still
+  findable) and a from–to range in whole days.
 
 ### Data touched
 
@@ -1813,7 +1817,7 @@ the row.
 
 ## 18. Staff email change
 
-Spec: [specs/shipped/staff-email-change-spec.md](../specs/shipped/staff-email-change-spec.md)
+Decision record: [staff propose, the mailbox confirms](../decisions/NNNN-staff-propose-email-changes.md)
 
 ### The story
 
@@ -2245,6 +2249,35 @@ decide.
 `directory_tag`), `content_flag`, `member_standing`.
 
 ---
+
+## 26. The staff member record
+
+### The story
+
+A member calls about a cancelled booking, missing free hours or a band. Staff open
+`/staff/members/[id]`, or the side panel on the Members lists, and read the answer from one
+record: an identity header and scoreboard above nine tabs — Overview, Space, Bands, Volunteer,
+Instructor, Money, Comms, Moderation and Account. A tab's badge counts only things that want a
+staff member. The Overview badge counts every attention item, such as a deactivated account, an
+open report, an overdue loan or an unpaid booking.
+
+### Code path
+
+- Page: `src/routes/staff/members/[id]/+page.svelte` mirrors the tab into `?tab=` with a
+  shallow update, so a tab change is not a navigation. `tabs.ts` holds the tab keys.
+- Record: `MemberRecord.svelte`, shared by the page and `MemberRecordPanel.svelte`. A tab mounts
+  on first visit and is hidden, not unmounted, after that. Its queries run once, and a half-typed
+  Account edit survives a tab change.
+- First paint is one query, `getUserPage` (`user.read`). It returns `getUser` and
+  `getUserOverview`, which back the header, scoreboard, every tab badge and the Overview tab.
+  Every other tab fetches its own data (`getUserReservations`, `getUserMembership`,
+  `getUserCreditHistory`, `getUserHistory`, …) when first opened.
+- Service: `getUserOverview` in `src/lib/server/user/user-overview-service.ts`.
+- No tab is gated on a feature flag. A switched-off program shows its empty state.
+
+### Where it breaks
+
+- **A tab key in the URL that does not exist** falls back to Overview (`parseTab`).
 
 ## Cross-cutting patterns worth internalizing
 

@@ -252,7 +252,7 @@ Already half-designed, and the schema anticipated it. From `duty_list`'s comment
 
 `docs/specs/committees-and-roles-spec.md` establishes a committee as a `group` row
 with `joinPolicy = 'by_application'` — six committees, each with a chair. And
-`admin-vs-staff-spec.md` states the guard mechanism outright: **"a committee guard
+the capabilities design (`docs/decisions/NNNN-guards-name-capabilities.md`) states the guard mechanism outright: **"a committee guard
 reads `group_member`, not the role table, and the two are independent."** So a
 committee-scoped view needs no role work and is not blocked on the admin/staff split.
 
@@ -261,7 +261,7 @@ Retrofitting ownership onto existing rows is far harder than starting with it, a
 committee-scoped project views are what make this usable by the people doing the work
 rather than another staff-only queue. This is also the answer to giving committees a
 window into their own work without handing them the whole panel — which
-`admin-vs-staff-spec.md` names as the failure mode that motivated it.
+that design names as the failure mode that motivated it.
 
 ### C. Projects are suggestion-shaped, and the pipeline closes a real loop
 
