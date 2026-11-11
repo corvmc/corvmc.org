@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { INVITE_EXPIRY_DAYS } from '#lib/config.js';
+import { forEachTimeZone } from '#lib/test/clock-edges.js';
 import { buildNotificationEmail } from './email/build-model';
 import { normalizeNotificationModel } from './email/normalize-model';
 
@@ -1651,5 +1652,66 @@ describe('group application submitted (#1726)', () => {
 		mockApplicationNotice.mockResolvedValueOnce(null as never);
 		await emit('group.application_submitted', submitted);
 		expect(mockDispatch).not.toHaveBeenCalled();
+	});
+});
+
+describe('notification dates are the club day in any runtime zone (#2509)', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	// 8 PM on Nov 10 in Corvallis is already Nov 11 in UTC, the Workers zone.
+	const evening = '2026-11-11T04:00:00.000Z';
+	const sentOf = (type: string) =>
+		mockDispatch.mock.calls.map(([p]) => p).find((p) => p.type === type);
+
+	forEachTimeZone('a cancelled show names its own day', async () => {
+		await emit('production.cancelled', {
+			productionId: 'prod-1',
+			eventId: 'evt-1',
+			eventTitle: 'Friday Night Fuzz',
+			startsAt: evening,
+			cancelledByName: null,
+			recipients: [
+				{ userId: 'u1', userName: 'Cy', userEmail: 'u1@test.com', committeeSlug: 'c', items: ['x'] }
+			]
+		});
+		const sent = sentOf('production_cancelled');
+		expect(detailText(sent.email)).toContain('November 10');
+		expect(sent.body).not.toContain('November 11');
+	});
+
+	forEachTimeZone('a deliverable is due on the club day', async () => {
+		await emit('volunteer.deliverable_due', {
+			recipient: { userId: 'u1', userName: 'Cy', userEmail: 'u1@test.com' },
+			items: [
+				{
+					stage: 'due_3d',
+					workOrderId: 'wo-1',
+					title: 'Poster art made',
+					eventTitle: null,
+					dueAt: evening,
+					groupName: 'Art',
+					groupSlug: 'art'
+				}
+			]
+		});
+		expect(sentOf('deliverable_due').title).toContain('November 10');
+	});
+
+	forEachTimeZone('a shift reads in club time', async () => {
+		await emit('volunteer.shift_reminder_due', {
+			signupId: 'sg-1',
+			shiftId: 'wo-1',
+			userId: 'vol-1',
+			userName: 'Sam',
+			userEmail: 'sam@test.com',
+			roleName: 'Door',
+			title: null,
+			eventTitle: null,
+			startsAt: evening,
+			endsAt: '2026-11-11T06:00:00.000Z'
+		});
+		const sent = sentOf('volunteer_shift_reminder');
+		expect(sent.body).toContain('November 10');
+		expect(sent.body).toContain('8:00');
 	});
 });

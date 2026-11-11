@@ -52,3 +52,27 @@ tsRuleTester().run('club-time-dates (remote)', rule as never, {
 		{ code: 'const to = now.toISOString().slice(0, 10);', errors: [{ messageId: 'isoSlice' }] }
 	]
 });
+
+const formattingOnly = [{ formattingOnly: true }];
+
+tsRuleTester().run('club-time-dates (server)', rule as never, {
+	valid: [
+		{ code: "new Intl.DateTimeFormat('en-US', { timeZone: DEFAULT_TIMEZONE, day: 'numeric' });" },
+		{ code: "new Intl.DateTimeFormat('en-US', opts);" },
+		{ code: 'const day = now.toISOString().slice(0, 10);', options: formattingOnly },
+		{ code: 'new Date(`${date}T${time}`);', options: formattingOnly }
+	],
+	invalid: [
+		{
+			code: "const f = new Intl.DateTimeFormat('en-US', { weekday: 'short', day: 'numeric' });",
+			options: formattingOnly,
+			errors: [{ messageId: 'noTimeZone' }]
+		},
+		{ code: 'Intl.DateTimeFormat().format(d);', errors: [{ messageId: 'noTimeZone' }] },
+		{
+			code: "new Date(x).toLocaleDateString('en-US', { month: 'long' });",
+			options: formattingOnly,
+			errors: [{ messageId: 'noTimeZone' }]
+		}
+	]
+});
