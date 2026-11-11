@@ -79,7 +79,7 @@ export interface MemberNavInput {
 export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 	const items: MemberNavItem[] = [
 		{ key: 'dashboard', label: 'Dashboard', href: resolve('member'), exact: true },
-		{ key: 'reservations', label: 'Reservations', href: resolve('member/reservations') },
+		{ key: 'reservations', label: 'Practice space', href: resolve('member/reservations') },
 		{
 			key: 'events',
 			label: 'Events',
