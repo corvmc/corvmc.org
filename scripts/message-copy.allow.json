@@ -26,17 +26,9 @@
 	"staff_inventory_id_nothing_has_moved_yet_title": ["T4"],
 	"staff_keys_nothing_recorded_yet_title": ["T4"],
 	"staff_members_id_panels_money_panel_no_payments_yet_title": ["T4"],
-	"staff_members_volunteers_hours_why_approve_them_now_label": ["L1"],
-	"staff_no_tasks_yet_title": ["T4"],
-	"staff_project_templates_id_no_items_yet_title": ["T4"],
-	"staff_project_templates_no_templates_yet_title": ["T4"],
-	"staff_volunteer_roles_no_clearances_yet_title": ["T4"],
-	"staff_volunteer_roles_no_roles_yet_title": ["T4"],
-	"volunteer_interest_fields_label": ["L1"],
 	"volunteer_log_hours_for_member_what_did_they_help_with_label": ["L1"],
 	"volunteer_log_hours_was_committee_club_label": ["L1"],
 	"volunteer_log_hours_what_did_help_with_label": ["L1"],
 	"volunteer_my_shift_card_how_did_go_label": ["L1"],
-	"volunteer_open_shifts_nothing_open_right_now_title": ["T4"],
-	"volunteer_work_order_view_nobody_yet_title": ["T4"]
+	"volunteer_open_shifts_nothing_open_right_now_title": ["T4"]
 }

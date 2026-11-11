@@ -36,8 +36,8 @@ test.describe('duty lists — the unscheduled half', () => {
 		await page.goto('/staff/volunteer');
 		await expect(page).toHaveURL(/\/staff\/volunteer\/schedule/);
 
-		await page.locator('[data-testid="schedule-needs"] [data-needs="unscheduled"]').click();
-		await expect(page).toHaveURL(/needs=unscheduled/);
+		await page.locator('[data-testid="schedule-needs"] [data-needs="unassigned"]').click();
+		await expect(page).toHaveURL(/needs=unassigned/);
 		await expect(
 			page.locator(`main table a[href="/staff/volunteer/shifts/${SEED_VOL_ADVANCE_ID}"]`).first()
 		).toBeVisible();

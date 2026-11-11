@@ -96,7 +96,10 @@ import {
 	setWorkTaskDoneAsAssignee
 } from '#lib/server/volunteer/duty-list-service.js';
 import { listTasksWithEndedShifts } from '#lib/server/volunteer/ended-shifts.js';
-import { assignToTask as assignToTaskService } from '#lib/server/volunteer/assignee-service.js';
+import {
+	assignToTask as assignToTaskService,
+	unassignFromTask as unassignFromTaskService
+} from '#lib/server/volunteer/assignee-service.js';
 import { getById } from '#lib/server/event/event-service.js';
 import {
 	checkIn as checkInTicketService,
@@ -106,12 +109,15 @@ import {
 } from '#lib/server/ticket/ticket-service.js';
 import {
 	createShift as createShiftService,
-	duplicateShift as duplicateShiftService,
-	updateShift as updateShiftService,
-	cancelShift as cancelShiftService,
+	copyShiftForward as copyShiftForwardService,
+	editShift as editShiftService,
+	editTask as editTaskService,
+	cancelOneShift as cancelOneShiftService,
+	cancelShift as cancelTaskService,
 	listShifts,
 	countUnfilledByRole,
 	listOpenShiftsForMember,
+	getShiftById,
 	getShiftDetail,
 	workOrderProjectId,
 	createWorkOrder as createWorkOrderService,
@@ -389,24 +395,32 @@ const WEEKDAYS: string[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export const getShiftCandidates = query(
 	z.object({
 		workOrderId: z.string().min(1),
+		/** The shift people are asked onto; absent, Add assigns the task. */
+		shiftId: z.string().optional(),
 		scope: z.enum(['interested', 'worked', 'all']).default('interested'),
 		search: z.string().optional()
 	}),
 	async (f) => {
 		await requireCapability('volunteer.read');
 
-		const shift = await getShiftDetail(f.workOrderId);
+		const task = await getShiftDetail(f.workOrderId);
 		// No role, no candidates: nobody can be put on it until it has one.
-		if (!shift?.volunteerRoleId) return { gated: false, rows: [] };
+		if (!task?.volunteerRoleId) return { gated: false, rows: [] };
+		// A shift named by the client counts only when it is on this task.
+		const target = f.shiftId ? await getShiftById(f.shiftId) : null;
+		const shift =
+			target && target.workOrderId === task.id
+				? { ...task, shiftId: target.id, startsAt: target.startsAt }
+				: { ...task, shiftId: null, startsAt: null };
 
 		const [candidates, required] = await Promise.all([
 			listShiftCandidates(
-				{ workOrderId: shift.id, shiftId: shift.shiftId },
-				shift.volunteerRoleId,
+				{ workOrderId: task.id, shiftId: shift.shiftId },
+				task.volunteerRoleId,
 				f.scope,
 				f.search || undefined
 			),
-			getRequirementsForRole(shift.volunteerRoleId)
+			getRequirementsForRole(task.volunteerRoleId)
 		]);
 
 		const held = await listHeldForGateMany(candidates.map((c) => c.userId));
@@ -1560,7 +1574,7 @@ export const getSchedulePage = query(
 	async (f) => {
 		await requireCapability('volunteer.read');
 		const now = new Date();
-		const [page, toConfirm, counts, lapsing] = await Promise.all([
+		const [page, ended, counts, lapsing] = await Promise.all([
 			f.contractor ? contractorSchedule(f.contractor) : staffedSchedule(f),
 			listTasksWithEndedShifts(now),
 			getStatusCounts(),
@@ -1569,7 +1583,7 @@ export const getSchedulePage = query(
 		return {
 			...page,
 			waiting: {
-				toConfirm,
+				ended,
 				pendingHours: counts.pending,
 				lapsingPeople: new Set(lapsing.map((l) => l.userId)).size
 			}
@@ -1700,22 +1714,31 @@ export const createShift = form(shiftFormSchema, async (data) => {
 	return { success: true };
 });
 
-export const updateShift = form(
-	shiftFormSchema.partial().extend({ id: z.string().min(1) }),
+const notesSchema = z
+	.string()
+	.max(VOLUNTEER_SHIFT_NOTES_MAX, `Keep the notes under ${VOLUNTEER_SHIFT_NOTES_MAX} characters`)
+	.optional();
+
+/** Edit the task alone: role, show, unit, name and notes. A shift's times are `updateShift`. */
+export const updateTask = form(
+	z.object({
+		id: z.string().min(1),
+		volunteerRoleId: z.string().optional(),
+		eventId: z.string().optional(),
+		assetId: z.string().optional(),
+		title: shiftFormSchema.shape.title,
+		notes: notesSchema
+	}),
 	async (data) => {
-		const staff = await requireCapability('volunteer.manageShifts');
+		await requireCapability('volunteer.manageShifts');
 
 		try {
-			await updateShiftService(data.id, {
-				volunteerRoleId: data.volunteerRoleId,
+			await editTaskService(data.id, {
+				volunteerRoleId: data.volunteerRoleId || undefined,
 				eventId: data.eventId,
 				assetId: data.assetId,
 				title: data.title,
-				startsAt: data.startsAt,
-				endsAt: data.endsAt,
-				capacity: data.capacity ? parseInt(data.capacity, 10) : undefined,
-				notes: data.notes,
-				updatedByUserId: staff.id
+				notes: data.notes
 			});
 		} catch (err) {
 			mapDomainError(err);
@@ -1726,13 +1749,43 @@ export const updateShift = form(
 	}
 );
 
+/** Edit one shift: its times, places and briefing. */
+export const updateShift = form(
+	z.object({
+		shiftId: z.string().min(1),
+		startsAt: z.string().optional(),
+		endsAt: z.string().optional(),
+		capacity: z.string().optional(),
+		notes: notesSchema
+	}),
+	async (data) => {
+		await requireCapability('volunteer.manageShifts');
+
+		try {
+			await editShiftService(data.shiftId, {
+				startsAt: data.startsAt || undefined,
+				endsAt: data.endsAt || undefined,
+				capacity: data.capacity ? parseInt(data.capacity, 10) : undefined,
+				notes: data.notes
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+
+		await refreshShiftViews(data.shiftId);
+		return { success: true };
+	}
+);
+
+/** Copy a shift forward onto the same task, N days later. */
 export const duplicateShift = form(
-	z.object({ id: z.string().min(1), offsetDays: z.number().int() }),
+	z.object({ shiftId: z.string().min(1), offsetDays: z.number().int() }),
 	async (data) => {
 		const staff = await requireCapability('volunteer.manageShifts');
 
 		try {
-			const copy = await duplicateShiftService(data.id, data.offsetDays, staff.id);
+			const copy = await copyShiftForwardService(data.shiftId, data.offsetDays, staff.id);
+			await refreshShiftViews(copy.id);
 			return { success: true, id: copy.id };
 		} catch (err) {
 			mapDomainError(err);
@@ -1740,18 +1793,47 @@ export const duplicateShift = form(
 	}
 );
 
-export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data) => {
+/** Call off one shift; its task stays open. Calling off the task is `cancelTask`. */
+export const cancelShift = form(z.object({ shiftId: z.string().min(1) }), async (data) => {
 	const staff = await requireCapability('volunteer.manageShifts');
 
 	try {
-		await cancelShiftService(data.id, staff.id);
+		await cancelOneShiftService(data.shiftId, staff.id);
 	} catch (err) {
 		mapDomainError(err);
 	}
 
-	await refreshWorkOrderPage(data.id);
+	await refreshShiftViews(data.shiftId);
 	return { success: true };
 });
+
+/** Call off a task and every live shift on it. */
+export const cancelTask = form(z.object({ id: z.string().min(1) }), async (data) => {
+	const staff = await requireCapability('volunteer.manageShifts');
+
+	try {
+		await cancelTaskService(data.id, staff.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	await refreshTaskViews(data.id);
+	return { success: true };
+});
+
+/** Take somebody off a task they were assigned. Their sign-ups on its shifts stay. */
+export const unassignFromTask = form(
+	z.object({ workOrderId: z.string().min(1), userId: z.string().min(1) }),
+	async (data) => {
+		await requireCapability('volunteer.manageRoster');
+
+		const task = await requireTask(data.workOrderId);
+		await unassignFromTaskService(task, data.userId);
+
+		await refreshTaskViews(data.workOrderId);
+		return { success: true };
+	}
+);
 
 // ---------------------------------------------------------------------------
 // Work orders — the unscheduled half
@@ -1851,7 +1933,9 @@ export const openShift = form(
 	z.object({
 		id: z.string().min(1),
 		startsAt: z.string().min(1, 'Pick when it starts'),
-		endsAt: z.string().min(1, 'Pick when it ends')
+		endsAt: z.string().min(1, 'Pick when it ends'),
+		capacity: z.string().optional(),
+		notes: notesSchema
 	}),
 	async (data) => {
 		const staff = await requireCapability('volunteer.manageShifts');
@@ -1860,6 +1944,8 @@ export const openShift = form(
 			await openShiftService(data.id, {
 				startsAt: data.startsAt,
 				endsAt: data.endsAt,
+				capacity: data.capacity ? parseInt(data.capacity, 10) : undefined,
+				notes: data.notes,
 				createdByUserId: staff.id
 			});
 		} catch (err) {

@@ -25,7 +25,7 @@ export type TaskFilter = (typeof TASK_FILTERS)[number];
 export const TASK_FILTER_LABELS: Record<TaskFilter, string> = {
 	all: 'All',
 	mine: 'Mine',
-	open: 'Open to volunteers',
+	open: 'With shifts',
 	contractors: 'Contractors',
 	unassigned: 'Unassigned'
 };

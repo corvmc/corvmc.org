@@ -6,74 +6,48 @@
 	 */
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
+	import OpenShiftAction from '#lib/components/volunteer/OpenShiftAction.svelte';
 	import { IconCheck } from '@tabler/icons-svelte';
-	import { toLocalDateTime } from '#lib/utils/format.js';
-	import { openShift, resolveWorkOrder } from '#lib/remote/volunteer.remote.js';
+	import { resolveWorkOrder } from '#lib/remote/volunteer.remote.js';
 
 	let {
 		order,
 		label,
 		onsuccess
 	}: {
-		order: { id: string; dueAt: Date | null };
+		order: { id: string; dueAt: Date | null; pendingCapacity: number | null };
 		label: string;
 		onsuccess?: () => void;
 	} = $props();
 
-	// The deadline itself where there is one, otherwise tomorrow.
-	const start = $derived(order.dueAt ?? new Date(Date.now() + 86_400_000));
+	const done = $derived(resolveWorkOrder.for(order.id));
 </script>
 
-<Action
-	action={openShift.for(order.id)}
-	label={m.staff_schedule_label()}
-	variant="primary"
-	size="xs"
-	modalTitle={m.staff_volunteer_needs_scheduling_card_find_time_title({ value: label })}
-	submitLabel={m.staff_schedule_label()}
-	successToast={m.staff_scheduled_toast()}
+<OpenShiftAction
+	taskId={order.id}
+	{label}
+	start={order.dueAt}
+	capacity={order.pendingCapacity ?? 1}
 	{onsuccess}
->
-	{#snippet form()}
-		<input {...openShift.for(order.id).fields.id.as('hidden', order.id)} />
-		<p class="text-sm">
-			{m.staff_volunteer_needs_scheduling_card_once_has_window_appear_text()}
-		</p>
-		<FormField
-			field={openShift.for(order.id).fields.startsAt}
-			label={m.staff_starts_label()}
-			type="datetime-local"
-			value={toLocalDateTime(start)}
-		/>
-		<FormField
-			field={openShift.for(order.id).fields.endsAt}
-			label={m.staff_ends_label()}
-			type="datetime-local"
-			value={toLocalDateTime(new Date(start.getTime() + 2 * 3_600_000))}
-		/>
-	{/snippet}
-</Action>
+/>
 
 <Action
-	action={resolveWorkOrder.for(order.id)}
-	label={m.staff_volunteer_needs_scheduling_card_close_work_order_label()}
+	action={done}
+	label={m.staff_volunteer_mark_done_label()}
 	iconOnly
 	icon={doneIcon}
 	variant="ghost"
 	size="xs"
-	modalTitle={m.staff_volunteer_needs_scheduling_card_close_title({ value: label })}
-	submitLabel={m.staff_volunteer_needs_scheduling_card_close_work_order_label()}
-	successToast={m.staff_closed_toast()}
+	modalTitle={m.staff_volunteer_mark_done_title({ subject: label })}
+	submitLabel={m.staff_volunteer_mark_done_label()}
+	successToast={m.staff_volunteer_marked_done_toast()}
 	{onsuccess}
 >
 	{#snippet form()}
-		<input {...resolveWorkOrder.for(order.id).fields.id.as('hidden', order.id)} />
-		<p class="text-sm">
-			{m.staff_volunteer_needs_scheduling_card_says_work_finished_whi_text()}
-		</p>
+		<input {...done.fields.id.as('hidden', order.id)} />
 		<FormField
-			field={resolveWorkOrder.for(order.id).fields.notes}
-			label={m.staff_what_happened_label()}
+			field={done.fields.notes}
+			label={m.staff_volunteer_work_done_label()}
 			type="textarea"
 		/>
 	{/snippet}

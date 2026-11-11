@@ -282,12 +282,14 @@ export const unassignMemberForm = form(
 	}
 );
 
-/** Open mode: the role and places of the task's shift, which needs a time. Warns as Members does. */
+/** Open a shift on the task: a role, a time and places. Warns as Members does. */
 export const openTaskForm = form(
 	z.object({
 		projectId,
 		workOrderId,
 		volunteerRoleId: optionalId,
+		startsAt: z.string().min(1, 'Pick when it starts'),
+		endsAt: z.string().min(1, 'Pick when it ends'),
 		capacity: z.number().int().min(1).optional(),
 		confirm: z.boolean().optional()
 	}),
@@ -295,6 +297,8 @@ export const openTaskForm = form(
 		const { user } = await guardTask(data.projectId, data.workOrderId);
 		const result = await openToVolunteers(data.projectId, data.workOrderId, {
 			volunteerRoleId: data.volunteerRoleId || null,
+			startsAt: data.startsAt,
+			endsAt: data.endsAt,
 			capacity: data.capacity,
 			postedByUserId: user.id,
 			confirm: data.confirm === true
@@ -370,22 +374,13 @@ export const reopenTaskForm = form(z.object({ projectId, workOrderId }), async (
 	return { success: true };
 });
 
-/** Window as `datetime-local` values (both or neither); due as a `date`. Blank clears. */
+/** The deadline, as a `date`; blank clears it. A shift's time is the shift's own. */
 export const rescheduleTaskForm = form(
-	z.object({
-		projectId,
-		workOrderId,
-		startsAt: z.string().optional(),
-		endsAt: z.string().optional(),
-		dueAt: z.string().optional()
-	}),
+	z.object({ projectId, workOrderId, dueAt: z.string().optional() }),
 	async (data) => {
-		const { user } = await guardTask(data.projectId, data.workOrderId);
+		await guardTask(data.projectId, data.workOrderId);
 		await rescheduleTask(data.projectId, data.workOrderId, {
-			startsAt: data.startsAt || null,
-			endsAt: data.endsAt || null,
-			dueAt: data.dueAt ? buildDateInTz(data.dueAt, '12:00', DEFAULT_TIMEZONE) : null,
-			byUserId: user.id
+			dueAt: data.dueAt ? buildDateInTz(data.dueAt, '12:00', DEFAULT_TIMEZONE) : null
 		});
 		await refresh(data.projectId);
 		return { success: true };

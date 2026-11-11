@@ -140,17 +140,15 @@ const logOf = (id: string) =>
 const actions = (id: string) => logOf(id).map((e) => e.action);
 
 describe('the same entries from either page', () => {
-	it('reschedules', async () => {
+	it('opens a shift', async () => {
 		twins();
-		await tasks.rescheduleTask(PROJECT, 'viaTask', {
-			startsAt: FUTURE,
-			endsAt: FUTURE_END,
-			dueAt: null
-		});
-		await shifts.updateShift('viaShift', { startsAt: FUTURE, endsAt: FUTURE_END });
+		const times = { startsAt: FUTURE, endsAt: FUTURE_END };
+		await tasks.openToVolunteers(PROJECT, 'viaTask', { ...times, postedByUserId: STAFF });
+		await shifts.openShift('viaShift', { ...times, createdByUserId: STAFF });
 
-		expect(actions('viaTask')).toEqual(['work_order.rescheduled']);
-		expect(logOf('viaShift')).toEqual(logOf('viaTask'));
+		const timing = (id: string) => logOf(id).filter((e) => e.action === 'work_order.rescheduled');
+		expect(timing('viaTask')).toHaveLength(1);
+		expect(timing('viaShift')).toEqual(timing('viaTask'));
 	});
 
 	// The task list assigns (#2518); the shift page puts somebody on a shift. Both
@@ -208,20 +206,23 @@ describe('the same entries from either page', () => {
 		expect(logOf('viaShift')).toEqual(logOf('viaTask'));
 	});
 
-	it('names the fields a shift edit changed, leaving times to rescheduled', async () => {
+	it('names the fields a task edit and a shift edit changed, leaving times to rescheduled', async () => {
 		twins();
 		viaShiftShift();
-		await shifts.updateShift('viaShift', { capacity: 3, title: 'Prime', notes: 'Bring rollers' });
+		await shifts.editTask('viaShift', { title: 'Prime' });
+		await shifts.editShift('sh', { capacity: 3, notes: 'Bring rollers' });
 
 		expect(logOf('viaShift')).toEqual([
-			{ action: 'work_order.edited', details: { fields: ['title', 'capacity', 'notes'] } }
+			{ action: 'work_order.edited', details: { fields: ['title'] } },
+			{ action: 'work_order.edited', details: { fields: ['capacity', 'notes'] } }
 		]);
 	});
 
 	it('records nothing for an edit that changed nothing', async () => {
 		twins();
 		viaShiftShift();
-		await shifts.updateShift('viaShift', { capacity: 2, title: 'viaShift' });
+		await shifts.editTask('viaShift', { title: 'viaShift' });
+		await shifts.editShift('sh', { capacity: 2 });
 
 		expect(logOf('viaShift')).toEqual([]);
 	});

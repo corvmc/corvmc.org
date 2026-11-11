@@ -56,12 +56,12 @@ vi.mock('#lib/server/volunteer/work-order-service.js', () => ({
 vi.mock('#lib/server/contractor/contractor-job-service.js', () => ({ listJobs: svc.listJobs }));
 
 const waiting = vi.hoisted(() => ({
-	toConfirm: [] as { id: string }[],
+	ended: [] as { id: string }[],
 	pending: 0,
 	lapsing: [] as { userId: string }[]
 }));
 vi.mock('#lib/server/volunteer/ended-shifts.js', () => ({
-	listTasksWithEndedShifts: async () => waiting.toConfirm
+	listTasksWithEndedShifts: async () => waiting.ended
 }));
 vi.mock('#lib/server/volunteer/hour-log-service.js', async (orig) => ({
 	...(await orig<object>()),
@@ -78,7 +78,7 @@ const { getSchedulePage } = (await import('./volunteer.remote')) as unknown as {
 		unscheduled: { id: string }[];
 		contractors: Record<string, { name: string; late: boolean; awaitingInvoice: boolean }[]>;
 		contractorAccess: boolean;
-		waiting: { toConfirm: { id: string }[]; pendingHours: number; lapsingPeople: number };
+		waiting: { ended: { id: string }[]; pendingHours: number; lapsingPeople: number };
 	}>;
 };
 
@@ -105,7 +105,7 @@ beforeEach(() => {
 	svc.listWorkOrders.mockResolvedValue([]);
 	svc.listJobs.mockResolvedValue([]);
 	svc.listWorkOrdersByIds.mockResolvedValue([]);
-	waiting.toConfirm = [];
+	waiting.ended = [];
 	waiting.pending = 0;
 	waiting.lapsing = [];
 });
@@ -113,7 +113,7 @@ beforeEach(() => {
 // The dashboard's counts that are not rows in the range (#2379).
 describe('getSchedulePage, waiting', () => {
 	it('carries tasks with ended shifts, hours to review and people lapsing, one each', async () => {
-		waiting.toConfirm = [{ id: 'wo-done' }];
+		waiting.ended = [{ id: 'wo-done' }];
 		waiting.pending = 3;
 		// One person on two shifts is one person to chase.
 		waiting.lapsing = [{ userId: 'usr-a' }, { userId: 'usr-a' }, { userId: 'usr-b' }];
@@ -121,7 +121,7 @@ describe('getSchedulePage, waiting', () => {
 		const page = await getSchedulePage({});
 
 		expect(page.waiting).toEqual({
-			toConfirm: [{ id: 'wo-done' }],
+			ended: [{ id: 'wo-done' }],
 			pendingHours: 3,
 			lapsingPeople: 2
 		});

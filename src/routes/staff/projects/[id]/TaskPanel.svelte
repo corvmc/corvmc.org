@@ -105,18 +105,22 @@
 				</Fact>
 			{/if}
 		{/if}
-		{#if task.startsAt && task.endsAt}
-			<Fact label={m.staff_scheduled_label()}>
-				{#if live}
-					<RescheduleAction
-						{task}
-						{projectId}
-						key="window"
-						label={windowLabel(task.startsAt, task.endsAt)}
-					/>
-				{:else}
-					{windowLabel(task.startsAt, task.endsAt)}
-				{/if}
+		{#if task.shifts.length > 0}
+			<!-- Each shift on the task, with its places; its roster is on the task page. -->
+			<Fact label={m.staff_projects_id_task_panel_shifts_label()}>
+				<ul class="space-y-1" data-testid="task-shifts">
+					{#each task.shifts as s (s.id)}
+						<li>
+							{windowLabel(s.startsAt, s.endsAt)}
+							<span class="text-muted"
+								>· {m.staff_projects_id_task_panel_filled_text({
+									claimed: s.claimed,
+									capacity: s.capacity
+								})}</span
+							>
+						</li>
+					{/each}
+				</ul>
 			</Fact>
 		{/if}
 		{#if task.dueAt}
@@ -216,19 +220,11 @@
 		{/if}
 	</DefinitionList>
 
-	{#if live && (!task.startsAt || !task.dueAt || !task.assetId)}
+	{#if live && (!task.dueAt || !task.assetId)}
 		<div
 			class="flex flex-wrap gap-1"
 			aria-label={m.staff_projects_id_task_panel_add_property_label()}
 		>
-			{#if !task.startsAt}
-				<RescheduleAction
-					{task}
-					{projectId}
-					key="add-window"
-					label={m.staff_projects_id_task_panel_scheduled_label()}
-				/>
-			{/if}
 			{#if !task.dueAt}
 				<RescheduleAction
 					{task}

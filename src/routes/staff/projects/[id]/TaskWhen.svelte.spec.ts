@@ -14,6 +14,7 @@ const task = (over: Partial<Task> = {}) =>
 		startsAt: null,
 		endsAt: null,
 		dueAt: null,
+		shifts: [],
 		...over
 	}) as Task;
 

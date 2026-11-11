@@ -16,16 +16,16 @@
 <!-- Under Volunteering by URL, but reached from the schedule, which the URL does not say. -->
 <WorkOrderView
 	{view}
-	subtitle={m.staff_shift_body()}
+	subtitle={m.staff_task_body()}
 	parent={[{ label: m.staff_schedule_label(), href: resolve('staff/volunteer/schedule') }]}
 >
 	{#snippet actions()}
-		{#if view.contractors.length > 0 && !view.shift.cancelledAt && !view.shift.resolvedAt}
-			<EngageContractorAction workOrderId={view.shift.id} contractors={view.contractors} />
+		{#if view.contractors.length > 0 && !view.task.cancelledAt && !view.task.resolvedAt}
+			<EngageContractorAction workOrderId={view.task.id} contractors={view.contractors} />
 		{/if}
 	{/snippet}
 	{#snippet activity()}
-		{@const ids = { workOrderId: view.shift.id }}
+		{@const ids = { workOrderId: view.task.id }}
 		<ActivityCard query={(limit) => getWorkOrderActivity(limit ? { ...ids, limit } : ids)} />
 	{/snippet}
 </WorkOrderView>

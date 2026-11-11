@@ -73,7 +73,7 @@ const taskEngagement = {
 
 beforeEach(() => {
 	granted = new Set();
-	loadWorkOrderView.mockResolvedValue({ shift: { id: 'wo-1' }, engagements: [engagementRow] });
+	loadWorkOrderView.mockResolvedValue({ task: { id: 'wo-1' }, engagements: [engagementRow] });
 	listProjectTasks.mockResolvedValue({
 		sections: [],
 		committee: null,

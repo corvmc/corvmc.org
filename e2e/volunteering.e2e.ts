@@ -23,6 +23,7 @@ import {
 	SEED_VOL_SHIFT_FULL_ID,
 	SEED_VOL_SHIFT_ASSIGN_ID,
 	SEED_VOL_SHIFT_RELEASE_ID,
+	SEED_VOL_TWO_SHIFTS_ID,
 	SEED_VOL_OTHER_MEMBER_ID,
 	SEED_VOL_MEMBER_ID,
 	SEED_VOL_SHIFT_EVENT_ID,
@@ -38,6 +39,7 @@ import {
 	readVolunteerState,
 	readSignupStatus,
 	readShiftSignups,
+	readTaskShiftStates,
 	readShiftEventId,
 	shiftIdOf
 } from './fixtures/seed-volunteering';
@@ -827,8 +829,8 @@ test.describe('volunteering — shifts and events', () => {
 			timeout: 15000
 		});
 
-		// Detach: clear the picker and save.
-		await page.getByTestId('edit-shift').click();
+		// Detach: clear the picker and save. The event is the task's, not a shift's.
+		await page.getByTestId('edit-task').click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible();
 		await dialog.getByRole('button', { name: `Clear ${SEED_VOL_EVENT_TITLE}` }).click();
@@ -845,7 +847,7 @@ test.describe('volunteering — shifts and events', () => {
 		await expect.poll(() => readShiftEventId(SEED_VOL_SHIFT_EVENT_ID), DB_POLL).toBeNull();
 
 		// And back on again, through the search picker this time.
-		await page.getByTestId('edit-shift').click();
+		await page.getByTestId('edit-task').click();
 		const reopened = page.getByRole('dialog');
 		// Typed, not filled. `fill()` sets the value and fires one input event;
 		// bits-ui's Combobox opens its listbox off the keystrokes, so a filled
@@ -959,5 +961,22 @@ test.describe('volunteering — staff acting on somebody else', () => {
 		await expect
 			.poll(() => readShiftSignups(SEED_VOL_SHIFT_RELEASE_ID), DB_POLL)
 			.toMatchObject({ [SEED_VOL_OTHER_MEMBER_ID]: 'cancelled' });
+	});
+
+	// #2518: a shift is called off on its own card; the task and its other shift stay live.
+	test('cancelling one shift leaves the task and its other shift live', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_TWO_SHIFTS_ID}`);
+
+		const cards = page.getByTestId('task-shift');
+		await expect(cards).toHaveCount(2, { timeout: 15000 });
+		await cards.first().getByTestId('cancel-shift').click();
+		await modalSubmit(page).click();
+
+		const first = shiftIdOf(SEED_VOL_TWO_SHIFTS_ID);
+		await expect
+			.poll(() => readTaskShiftStates(SEED_VOL_TWO_SHIFTS_ID), DB_POLL)
+			.toEqual({ task: false, shifts: { [first]: true, [`${first}-2`]: false } });
+		await expect(cards.last().getByTestId('cancel-shift')).toBeVisible();
 	});
 });
