@@ -180,7 +180,7 @@
 						/>
 						<FormField
 							field={addProductionExpense.fields.label}
-							label={m.staff_what_was_label()}
+							label={m.staff_description_label()}
 							required
 						/>
 						<FormField

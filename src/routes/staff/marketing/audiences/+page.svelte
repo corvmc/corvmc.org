@@ -33,7 +33,10 @@
 		/>
 	</div>
 	{#if audiences.length === 0}
-		<EmptyState description={m.staff_marketing_audiences_description_body()} />
+		<EmptyState
+			title={m.staff_marketing_audiences_no_audiences_title()}
+			description={m.staff_marketing_audiences_description_body()}
+		/>
 	{:else}
 		<Table>
 			{#snippet head()}
