@@ -24,7 +24,7 @@ export const TAB_LABELS: Record<TabKey, string> = {
 	space: 'Space',
 	bands: 'Bands',
 	volunteer: 'Volunteer',
-	instructor: 'Instructor',
+	instructor: 'Teacher',
 	money: 'Money',
 	comms: 'Comms',
 	moderation: 'Moderation',

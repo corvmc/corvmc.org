@@ -79,9 +79,7 @@
 
 		{#snippet summary(total)}
 			{total}
-			{total === 1
-				? m.staff_members_instructors_instructor_text()
-				: m.staff_members_instructors_instructors_text()}
+			{m.term_instructor({ count: total })}
 			{#await list then { pending }}
 				{#if pending > 0 && f.status !== 'requested'}
 					·
