@@ -277,6 +277,7 @@
 								field={deleteAccount.fields.password}
 								type="password"
 								label={m.member_account_enter_password_confirm_label()}
+								description={m.member_account_required_delete_account_body()}
 								autocomplete="current-password"
 							/>
 						{/snippet}

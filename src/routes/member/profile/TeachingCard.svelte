@@ -123,6 +123,7 @@
 					<FormField
 						field={applyFields.applicationNote}
 						label={m.member_anything_staff_should_know_not_label()}
+						description={m.member_not_published_body()}
 						type="textarea"
 						value={instructor.applicationNote}
 					/>
