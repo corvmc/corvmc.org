@@ -7,9 +7,8 @@ guards, the event bus, `db.batch`, site config).
 
 Each section follows the same shape: **the story** (what happens, in plain English), **the
 code path** (file → function for every step), **data touched**, and **where it breaks**
-(what to check when this workflow misbehaves). The matching design spec in `docs/specs/` is
-linked as the statement of intent — when code and spec disagree, treat the spec as intent
-and reconcile deliberately.
+(what to check when this workflow misbehaves). A section links the decision records that explain
+why it works the way it does.
 
 ---
 

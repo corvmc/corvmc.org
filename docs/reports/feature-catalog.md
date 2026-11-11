@@ -12,10 +12,10 @@ else finds out the feature exists.
 > un-migrated logins — so there was nothing left to reach parity with. The comparison columns were
 > dropped and the file renamed to what it had actually become.
 
-**Status legend:** ✅ Built · 📋 Designed, not built (see the linked spec)
+**Status legend:** ✅ Built
 
-**Not here:** unbuilt ideas are `Feature` issues, design intent for unbuilt features
-in [`docs/specs/`](../specs), tech debt is `Tech debt` issues, and how the eight core
+**Not here:** unbuilt ideas and their proposals are `Feature` issues, why built features
+work as they do is in [`docs/decisions/`](../decisions/README.md), tech debt is `Tech debt` issues, and how the eight core
 workflows actually behave in
 [development/business-workflows.md](../development/business-workflows.md).
 
