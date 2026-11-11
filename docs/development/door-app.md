@@ -7,7 +7,7 @@ native binary changes only when Capacitor or the Stripe Terminal SDK does.
 
 How a door sale runs is in
 [business-workflows](business-workflows.md#door-sales). Why it is built this way is
-[decision NNNN](../decisions/0018-door-sales-on-one-tap-to-pay-phone.md). The one-time setup is
+[decision 0018](../decisions/0018-door-sales-on-one-tap-to-pay-phone.md). The one-time setup is
 [Owner setup](#owner-setup) below.
 
 ## Owner setup
