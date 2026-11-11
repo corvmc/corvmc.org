@@ -26,5 +26,5 @@
 	</Form.Step>
 	<ConfirmStep />
 	<!-- The payment step's place: with none, Continue turns into a submit mid-click. -->
-	<Form.Step>{''}</Form.Step>
+	<Form.Step><span></span></Form.Step>
 </Form.Root>
