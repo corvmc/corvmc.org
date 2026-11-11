@@ -94,13 +94,16 @@ const untouched = () =>
 		)
 		.get();
 
+/** A shift's time as the Open shift form posts it. */
+const TIMES = { startsAt: '2030-01-01T18:00', endsAt: '2030-01-01T20:00' };
+
 const cases: [string, Record<string, unknown>][] = [
 	['getProjectTaskPage', pair],
 	['getTaskAssignees', pair],
 	['moveTaskCommand', { ...pair, sectionId: null, index: 0 }],
 	['assignMembersForm', { ...pair, userIds: ['usr-staff'] }],
 	['unassignMemberForm', { ...pair, userId: 'usr-staff' }],
-	['openTaskForm', { ...pair, capacity: 2 }],
+	['openTaskForm', { ...pair, ...TIMES, capacity: 2 }],
 	['engageContractorForm', { ...pair, contractorId: 'ctr-1', confirm: true }],
 	['unassignTaskForm', { ...pair, confirm: true }],
 	['resolveTaskForm', pair],
@@ -136,14 +139,15 @@ describe('a work order named with a project it is not on', () => {
 			index: 0
 		});
 		expect(untouched()).toMatchObject({ project_id: THEIRS, sort_order: 0 });
-		sqlite.exec(
-			`insert into volunteer_shift (id, work_order_id, starts_at, ends_at)
-				values ('sh-theirs', 'wo-theirs', 4000000000, 4000003600)`
-		);
-		await remotes.openTaskForm({ projectId: THEIRS, workOrderId: 'wo-theirs', capacity: 2 });
+		await remotes.openTaskForm({
+			projectId: THEIRS,
+			workOrderId: 'wo-theirs',
+			...TIMES,
+			capacity: 2
+		});
 		expect(
-			sqlite.prepare(`select capacity from volunteer_shift where id = 'sh-theirs'`).get()
-		).toEqual({ capacity: 2 });
+			sqlite.prepare(`select capacity from volunteer_shift where work_order_id = 'wo-theirs'`).all()
+		).toEqual([{ capacity: 2 }]);
 	});
 });
 
@@ -154,7 +158,7 @@ describe('the task page', () => {
 			workOrderId: 'wo-theirs'
 		})) as { project: { name: string }; shift: { id: string }; engagements: unknown[] };
 		expect(page.project.name).toBe('Theirs');
-		expect(page.shift.id).toBe('wo-theirs');
+		expect(page.task.id).toBe('wo-theirs');
 		expect(page.engagements).toEqual([]);
 	});
 });

@@ -9,6 +9,7 @@ import { getProjectTaskPage } from './tasks.remote';
 import { getProjectActivity } from './projects.remote';
 import { contractorTrades, contractorJobStatuses, DEFAULT_TIMEZONE } from '#lib/config.js';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
+import { engageContractorOnTask } from '#lib/server/volunteer/task-people.js';
 import {
 	archiveContractor,
 	createContractor,
@@ -20,7 +21,6 @@ import {
 import {
 	cancelJob,
 	completeJob,
-	createJob,
 	declineJob,
 	listJobs,
 	listOverdueJobs,
@@ -222,29 +222,42 @@ export const archiveContractorForm = form(
 // Job mutations
 // ---------------------------------------------------------------------------
 
-export const createJobForm = form(z.object(jobFields), async (raw) => {
-	const actor = await requireCapability('contractor.manage');
-	const data = raw as z.infer<z.ZodObject<typeof jobFields>>;
-	try {
-		const job = await createJob({
-			contractorId: data.contractorId,
-			workOrderId: data.workOrderId,
-			scheduledFor: calendarDate(data.scheduledFor) ?? null,
-			expectedBackAt: calendarDate(data.expectedBackAt) ?? null,
-			quotedCents: data.quotedCents ?? null,
-			notes: data.notes ?? null,
-			requestedByUserId: actor.id
-		});
-		await refreshWorkOrderPage(job);
-		if (job.assetId) {
-			void getStaffAssetDetail(job.assetId).refresh();
-			void getAssetHistory({ id: job.assetId }).refresh();
+/**
+ * Engage a contractor on a task. With people assigned or signed up for its
+ * shifts still to come, the first submit only says how many; resubmitting with
+ * `confirm` takes them off and calls those shifts off (#2518).
+ */
+export const createJobForm = form(
+	z.object({ ...jobFields, confirm: z.boolean().optional() }),
+	async (raw) => {
+		const actor = await requireCapability('contractor.manage');
+		const data = raw as z.infer<z.ZodObject<typeof jobFields>> & { confirm?: boolean };
+		try {
+			const result = await engageContractorOnTask(
+				{
+					contractorId: data.contractorId,
+					workOrderId: data.workOrderId,
+					scheduledFor: calendarDate(data.scheduledFor) ?? null,
+					expectedBackAt: calendarDate(data.expectedBackAt) ?? null,
+					quotedCents: data.quotedCents ?? null,
+					notes: data.notes ?? null,
+					requestedByUserId: actor.id
+				},
+				data.confirm === true
+			);
+			if (result.status === 'needs_confirmation') return result;
+			const { job } = result;
+			await refreshWorkOrderPage(job);
+			if (job.assetId) {
+				void getStaffAssetDetail(job.assetId).refresh();
+				void getAssetHistory({ id: job.assetId }).refresh();
+			}
+			return { status: 'done' as const, id: job.id };
+		} catch (err) {
+			mapDomainError(err);
 		}
-		return { success: true, id: job.id };
-	} catch (err) {
-		mapDomainError(err);
 	}
-});
+);
 
 export const scheduleJobForm = form(
 	z.object({

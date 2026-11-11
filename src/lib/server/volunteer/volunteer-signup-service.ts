@@ -26,7 +26,7 @@ import {
 	liveShift,
 	notOnCancelledListing,
 	openTask,
-	unscheduledWorkWhere,
+	unassignedTaskWhere,
 	workOrderAuditLabel,
 	type ShiftRecord
 } from './work-order-service';
@@ -901,9 +901,9 @@ export async function countVolunteerWorkWaiting(now = new Date()): Promise<numbe
 			.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
 			.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 			.where(and(eq(volunteerSignup.status, 'claimed'), outstandingClaimWhere(now))),
-		// Work with no shift on it, by the predicate the Needs Scheduling card
-		// lists with. Committee-owned work is on its committee's queue instead.
-		db.select({ n: count() }).from(workOrder).where(unscheduledWorkWhere()),
+		// Unassigned tasks, by the predicate the Schedule's chip lists with.
+		// Committee-owned work is on its committee's queue instead.
+		db.select({ n: count() }).from(workOrder).where(unassignedTaskWhere()),
 		// Open tasks whose last shift has ended: the list itself, which leaves out
 		// a task whose done condition holds, so the badge cannot count one more.
 		listTasksWithEndedShifts(now)

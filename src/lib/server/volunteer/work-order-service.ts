@@ -310,86 +310,6 @@ export async function getCurrentShift(workOrderId: string): Promise<VolunteerShi
 }
 
 /**
- * Copy a task and its shift forward. This is how a standing weekly slot gets
- * made without series bookkeeping: the copy is an ordinary task with no link
- * back, so editing or cancelling one never touches the other.
- */
-export async function duplicateShift(
-	id: string,
-	offsetDays: number,
-	createdByUserId: string
-): Promise<Task & { shiftId: string }> {
-	const original = await getWorkOrderById(id);
-	if (!original) throw new ShiftNotFoundError();
-
-	if (!Number.isInteger(offsetDays) || offsetDays < 1 || offsetDays > 365) {
-		throw new ShiftValidationError('Copy it somewhere between tomorrow and a year out.');
-	}
-
-	// Duplication is "same shift, N days later", which needs a date to move. A
-	// task with no shift has none, and copying it would duplicate the work.
-	const shift = await getCurrentShift(id);
-	if (!shift) throw new ShiftValidationError('Give this a date before copying it forward.');
-
-	// Shift the wall-clock date, not the instant: adding 7 × 86,400,000 ms across
-	// a DST boundary moves a 6pm shift to 5pm or 7pm.
-	const shiftLocalDate = (d: Date) => {
-		const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(d);
-		const hm = new Intl.DateTimeFormat('en-GB', {
-			timeZone: TZ,
-			hour: '2-digit',
-			minute: '2-digit',
-			hour12: false
-		}).format(d);
-		const [y, m, day] = ymd.split('-').map(Number);
-		const moved = new Date(Date.UTC(y, m - 1, day + offsetDays));
-		return buildDateInTz(moved.toISOString().slice(0, 10), hm, TZ);
-	};
-
-	const startsAt = shiftLocalDate(shift.startsAt);
-	const endsAt = shiftLocalDate(shift.endsAt);
-
-	// Copying an old shift forward by a week usually still lands in the past, and
-	// a past shift is invisible to members and unclaimable.
-	if (endsAt < new Date()) {
-		throw new ShiftValidationError(
-			'That copy would land in the past. Pick an offset that reaches a future date.'
-		);
-	}
-
-	const taskId = crypto.randomUUID();
-	const [[task], [copy]] = await db.batch([
-		db
-			.insert(workOrder)
-			.values({
-				id: taskId,
-				volunteerRoleId: original.volunteerRoleId,
-				// Deliberately not copied: the new date is not that event's date.
-				eventId: null,
-				// The title is what tells two copies of a standing slot apart.
-				title: original.title,
-				assetId: original.assetId,
-				notes: original.notes,
-				createdByUserId
-			})
-			.returning(),
-		db
-			.insert(volunteerShift)
-			.values({
-				workOrderId: taskId,
-				startsAt,
-				endsAt,
-				capacity: shift.capacity,
-				notes: shift.notes,
-				createdByUserId
-			})
-			.returning()
-	]);
-
-	return { ...toTask(task), shiftId: copy.id };
-}
-
-/**
  * Edit a task and, when it has one, its current shift. Times, places and the
  * briefing are the shift's; the rest is the task's. Times on a task with no
  * live shift open one.
@@ -590,6 +510,205 @@ export async function cancelShift(id: string, cancelledByUserId?: string): Promi
 	return toTask(row);
 }
 
+/** A shift that can still be changed: it exists, it is live, and its task is open. */
+async function requireEditableShift(shiftId: string) {
+	const shift = await getShiftById(shiftId);
+	if (!shift) throw new ShiftNotFoundError();
+	if (shift.cancelledAt) throw new ShiftValidationError('That shift was called off.');
+	if (shift.taskResolvedAt) throw new ShiftValidationError('That task is already done.');
+	if (shift.taskCancelledAt) throw new ShiftValidationError('That task was called off.');
+	const task = await getWorkOrderById(shift.workOrderId);
+	if (!task) throw new ShiftNotFoundError();
+	return { shift, task };
+}
+
+/**
+ * Edit the task alone: its role, show, unit, name and notes. Times and places
+ * are each shift's (`editShift`), so nothing here moves a shift.
+ */
+export async function editTask(
+	id: string,
+	data: {
+		volunteerRoleId?: string;
+		eventId?: string | null;
+		assetId?: string | null;
+		title?: string | null;
+		notes?: string | null;
+	}
+): Promise<Task> {
+	const existing = await getWorkOrderById(id);
+	if (!existing) throw new ShiftNotFoundError();
+	if (data.volunteerRoleId && data.volunteerRoleId !== existing.volunteerRoleId) {
+		await requireActiveRole(data.volunteerRoleId);
+	}
+	const [row] = await db
+		.update(workOrder)
+		.set({
+			...(data.volunteerRoleId ? { volunteerRoleId: data.volunteerRoleId } : {}),
+			...(data.eventId !== undefined ? { eventId: data.eventId || null } : {}),
+			...(data.assetId !== undefined ? { assetId: data.assetId || null } : {}),
+			...(data.title !== undefined ? { title: validateTitle(data.title) } : {}),
+			...(data.notes !== undefined ? { notes: validateNotes(data.notes) } : {}),
+			updatedAt: new Date()
+		})
+		.where(eq(workOrder.id, id))
+		.returning();
+	const task = toTask(row);
+	await auditWorkOrderChange(existing, task);
+	return task;
+}
+
+/**
+ * Edit one shift: its times, places and briefing. Refuses fewer places than are
+ * already taken, which would leave people on a shift with no room for them.
+ */
+export async function editShift(
+	shiftId: string,
+	data: { startsAt?: string; endsAt?: string; capacity?: number; notes?: string | null }
+): Promise<VolunteerShift> {
+	const { shift, task } = await requireEditableShift(shiftId);
+	const times = validateTimes(
+		data.startsAt ? parseLocal(data.startsAt, 'Start') : shift.startsAt,
+		data.endsAt ? parseLocal(data.endsAt, 'End') : shift.endsAt
+	);
+	if (data.capacity !== undefined) {
+		validateCapacity(data.capacity);
+		const claimed = await countActiveSignups(shift.id);
+		if (data.capacity < claimed) {
+			throw new ShiftValidationError(
+				`${claimed} ${claimed === 1 ? 'person has' : 'people have'} already signed up. ` +
+					`Take someone off before reducing it below ${claimed}.`
+			);
+		}
+	}
+	const [row] = await db
+		.update(volunteerShift)
+		.set({
+			startsAt: times.startsAt,
+			endsAt: times.endsAt,
+			...(data.capacity !== undefined ? { capacity: data.capacity } : {}),
+			...(data.notes !== undefined ? { notes: validateNotes(data.notes) } : {}),
+			updatedAt: new Date()
+		})
+		.where(eq(volunteerShift.id, shift.id))
+		.returning();
+	await auditWorkOrderChange(auditView(task, shift), auditView(task, row));
+	return row;
+}
+
+/**
+ * Call off one shift and leave its task open. Its sign-ups stay, as a list of
+ * people still to tell; calling off the task is `cancelShift`.
+ */
+export async function cancelOneShift(
+	shiftId: string,
+	cancelledByUserId: string
+): Promise<VolunteerShift> {
+	const { shift, task } = await requireEditableShift(shiftId);
+	const now = new Date();
+	const [row] = await db
+		.update(volunteerShift)
+		.set({ cancelledAt: now, cancelledByUserId, updatedAt: now })
+		.where(and(eq(volunteerShift.id, shift.id), liveShift()))
+		.returning();
+	if (!row) throw new ShiftNotFoundError();
+	await recordAuditEntry({
+		action: 'work_order.rescheduled',
+		subject: { type: 'work_order', id: task.id, label: workOrderAuditLabel(task) },
+		details: {
+			from: { startsAt: iso(shift.startsAt), endsAt: iso(shift.endsAt), dueAt: iso(task.dueAt) },
+			to: { startsAt: null, endsAt: null, dueAt: iso(task.dueAt) }
+		}
+	});
+	return row;
+}
+
+/**
+ * Copy a shift forward onto the same task, N days later by the club's clock.
+ * A standing slot is one task with a shift per week, so its checklist, reports
+ * and assignees stay in one place. Nobody on the original is copied.
+ */
+export async function copyShiftForward(
+	shiftId: string,
+	offsetDays: number,
+	createdByUserId: string
+): Promise<VolunteerShift> {
+	const shift = await getShiftById(shiftId);
+	if (!shift) throw new ShiftNotFoundError();
+	if (shift.taskResolvedAt) throw new ShiftValidationError('That task is already done.');
+	if (shift.taskCancelledAt) throw new ShiftValidationError('That task was called off.');
+	if (!Number.isInteger(offsetDays) || offsetDays < 1 || offsetDays > 365) {
+		throw new ShiftValidationError('Copy it somewhere between tomorrow and a year out.');
+	}
+	const startsAt = moveLocalDate(shift.startsAt, offsetDays);
+	const endsAt = moveLocalDate(shift.endsAt, offsetDays);
+	if (endsAt < new Date()) {
+		throw new ShiftValidationError(
+			'That copy would land in the past. Pick an offset that reaches a future date.'
+		);
+	}
+	const [copy] = await db
+		.insert(volunteerShift)
+		.values({
+			workOrderId: shift.workOrderId,
+			startsAt,
+			endsAt,
+			capacity: shift.capacity,
+			notes: shift.notes,
+			createdByUserId
+		})
+		.returning();
+	return copy;
+}
+
+/**
+ * Move an instant by whole days of wall-clock time, not by milliseconds: adding
+ * 7 × 86,400,000 ms across a DST boundary moves a 6pm shift to 5pm or 7pm.
+ */
+function moveLocalDate(d: Date, days: number): Date {
+	const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(d);
+	const hm = new Intl.DateTimeFormat('en-GB', {
+		timeZone: TZ,
+		hour: '2-digit',
+		minute: '2-digit',
+		hour12: false
+	}).format(d);
+	const [y, m, day] = ymd.split('-').map(Number);
+	const moved = new Date(Date.UTC(y, m - 1, day + days));
+	return buildDateInTz(moved.toISOString().slice(0, 10), hm, TZ);
+}
+
+/** One shift of a task, with its counts and who called it off. */
+export interface TaskShift extends VolunteerShift {
+	claimed: number;
+	confirmed: number;
+	unnotified: number;
+	cancelledByName: string | null;
+}
+
+/** Every shift on a task, earliest first, live and called off alike. */
+export async function listTaskShifts(workOrderId: string): Promise<TaskShift[]> {
+	const rows = await db
+		.select({
+			shift: volunteerShift,
+			claimed: shiftClaimedSql(),
+			confirmed: shiftConfirmedSql(),
+			unnotified: shiftUnnotifiedSql(),
+			cancelledByName: user.name
+		})
+		.from(volunteerShift)
+		.leftJoin(user, eq(user.id, volunteerShift.cancelledByUserId))
+		.where(eq(volunteerShift.workOrderId, workOrderId))
+		.orderBy(asc(volunteerShift.startsAt), asc(volunteerShift.id));
+	return rows.map((r) => ({
+		...r.shift,
+		claimed: Number(r.claimed),
+		confirmed: Number(r.confirmed),
+		unnotified: Number(r.unnotified),
+		cancelledByName: r.cancelledByName
+	}));
+}
+
 /** The schedule to write a next occurrence for, when closing this row owes one. */
 async function liveScheduleOf(row: Task | null) {
 	if (!row?.maintenanceScheduleId || row.resolvedAt || row.cancelledAt) return null;
@@ -695,6 +814,8 @@ export interface ShiftWithCounts extends Task {
 	confirmed: number;
 	/** People on a called-off shift who still have to be told. Zero while it is live. */
 	unnotified: number;
+	/** People assigned the task (`work_order_assignee`), apart from any shift. */
+	assignees: number;
 }
 
 type ShiftRowSource = {
@@ -707,6 +828,7 @@ type ShiftRowSource = {
 	claimed: number;
 	confirmed: number;
 	unnotified: number;
+	assignees: number;
 };
 
 function withCounts(rows: ShiftRowSource[]): ShiftWithCounts[] {
@@ -728,7 +850,8 @@ function withCounts(rows: ShiftRowSource[]): ShiftWithCounts[] {
 		assetName: r.assetName,
 		claimed: Number(r.claimed),
 		confirmed: Number(r.confirmed),
-		unnotified: Number(r.unnotified)
+		unnotified: Number(r.unnotified),
+		assignees: Number(r.assignees)
 	}));
 }
 
@@ -840,20 +963,32 @@ function rowColumns() {
 			where ia."id" = ${workOrder.assetId}
 		)`,
 		claimed: shiftClaimedSql(),
-		// `completed` counts as confirmed: the completion sweep only promotes a
-		// booked sign-up, so leaving it out would make every past shift unconfirmed.
-		confirmed: sql<number>`(
-			select count(*) from "volunteer_signup" vs
-			where vs."shift_id" = ${volunteerShift.id}
-				and vs."status" in ('confirmed', 'completed')
-		)`,
-		unnotified: sql<number>`(
-			select count(*) from "volunteer_signup" vs
-			where vs."shift_id" = ${volunteerShift.id}
-				and vs."status" <> 'cancelled'
-				and vs."notified_at" is null
-		)`
+		confirmed: shiftConfirmedSql(),
+		unnotified: shiftUnnotifiedSql(),
+		assignees: assigneeCountSql()
 	};
+}
+
+/**
+ * Booked places on the shift in scope. `completed` counts: the completion sweep
+ * only promotes a booked sign-up, so leaving it out makes every past shift unconfirmed.
+ */
+function shiftConfirmedSql() {
+	return sql<number>`(
+		select count(*) from "volunteer_signup" vs
+		where vs."shift_id" = ${volunteerShift.id}
+			and vs."status" in ('confirmed', 'completed')
+	)`;
+}
+
+/** People on the shift in scope who have not been told it was called off. */
+function shiftUnnotifiedSql() {
+	return sql<number>`(
+		select count(*) from "volunteer_signup" vs
+		where vs."shift_id" = ${volunteerShift.id}
+			and vs."status" <> 'cancelled'
+			and vs."notified_at" is null
+	)`;
 }
 
 /** One row per shift, with its task. */
@@ -1063,6 +1198,14 @@ export function unscheduledWorkWhere(filters: WorkOrderQueueFilters = {}) {
 			? undefined
 			: and(isNull(workOrder.groupId), sql`${workOrder.volunteerRoleId} is not null`)
 	);
+}
+
+/**
+ * Unassigned tasks: open, with no live shift and nobody assigned. The Schedule's
+ * chip and the staff badge both read this, so they cannot disagree (#1828).
+ */
+export function unassignedTaskWhere(filters: WorkOrderQueueFilters = {}) {
+	return and(unscheduledWorkWhere(filters), sql`${assigneeCountSql()} = 0`);
 }
 
 /**

@@ -136,6 +136,8 @@ const shift = (id: string, workOrderId: string, cols: Record<string, unknown> = 
 		capacity: 1,
 		...cols
 	});
+/** A time to open a shift at, as the form posts it. */
+const TIMES = { startsAt: '2030-06-01T18:00', endsAt: '2030-06-01T22:00' };
 const signup = (id: string, shiftId: string, userId: string, status: string) =>
 	insert('volunteer_signup', { id, shift_id: shiftId, user_id: userId, status });
 const assignees = (workOrderId: string) =>
@@ -451,10 +453,13 @@ describe('switching away from a contractor', () => {
 
 	it('cancels an asked engagement when opened to volunteers or unassigned', async () => {
 		task('t', { volunteer_role_id: ROLE });
-		shift('s', 't');
 		engagement('cj', 'asked');
 		expect(
-			await tasks.openToVolunteers(PROJECT, 't', { postedByUserId: STAFF, confirm: true })
+			await tasks.openToVolunteers(PROJECT, 't', {
+				...TIMES,
+				postedByUserId: STAFF,
+				confirm: true
+			})
 		).toEqual({ status: 'done', mode: 'open' });
 		expect(one(`select status from contractor_job where id = 'cj'`)).toEqual({
 			status: 'cancelled'
@@ -475,28 +480,31 @@ describe('switching away from a contractor', () => {
 	});
 });
 
-describe('opening to volunteers', () => {
-	it('sets the role and the places of its shift', async () => {
+describe('opening a shift', () => {
+	it('adds a shift with the places asked for, and sets the role', async () => {
 		task('t');
 		shift('s', 't');
 		expect(
 			await tasks.openToVolunteers(PROJECT, 't', {
+				...TIMES,
 				volunteerRoleId: ROLE,
 				capacity: 4,
 				postedByUserId: STAFF
 			})
 		).toEqual({ status: 'done', mode: 'open' });
-		expect(one(`select capacity from volunteer_shift where id = 's'`)).toEqual({ capacity: 4 });
+		expect(all(`select capacity from volunteer_shift where work_order_id = 't'`)).toHaveLength(2);
+		expect(one(`select capacity from volunteer_shift where id <> 's'`)).toEqual({ capacity: 4 });
 		expect(one(`select volunteer_role_id from work_order where id = 't'`)).toEqual({
 			volunteer_role_id: ROLE
 		});
 	});
 
-	it('refuses a task with no shift: volunteers sign up for a time', async () => {
+	it('refuses without a start and an end', async () => {
 		task('t', { volunteer_role_id: ROLE });
 		await expect(
 			tasks.openToVolunteers(PROJECT, 't', { postedByUserId: STAFF })
 		).rejects.toBeInstanceOf(tasks.TaskValidationError);
+		expect(all(`select 1 from volunteer_shift`)).toHaveLength(0);
 	});
 });
 

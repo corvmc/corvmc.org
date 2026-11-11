@@ -73,12 +73,12 @@ describe('getStaffShiftPage', () => {
 	});
 
 	it('serves the view, with who can be engaged on it, to a caller who has it', async () => {
-		loadWorkOrderView.mockResolvedValue({ shift: { id: 'wo-1' } });
+		loadWorkOrderView.mockResolvedValue({ task: { id: 'wo-1' } });
 		listContractors.mockResolvedValue([
 			{ id: 'c-1', name: 'Benton Electric', trade: 'electrical' }
 		]);
 		await expect(getStaffShiftPage('wo-1')).resolves.toEqual({
-			shift: { id: 'wo-1' },
+			task: { id: 'wo-1' },
 			contractors: [{ id: 'c-1', name: 'Benton Electric' }]
 		});
 	});
@@ -86,7 +86,7 @@ describe('getStaffShiftPage', () => {
 	// #2071: a volunteer coordinator holds volunteer.read but not contractor.read.
 	it('serves no engagements (quote, cost, invoice) without contractor.read', async () => {
 		granted = new Set(['volunteer.read']);
-		loadWorkOrderView.mockResolvedValue({ shift: { id: 'wo-1' }, engagements: [engagement] });
+		loadWorkOrderView.mockResolvedValue({ task: { id: 'wo-1' }, engagements: [engagement] });
 		const page = (await getStaffShiftPage('wo-1')) as Record<string, unknown>;
 		expect(page.engagements).toEqual([]);
 		expect(page.contractors).toEqual([]);
@@ -95,7 +95,7 @@ describe('getStaffShiftPage', () => {
 
 	it('serves the engagements to a caller with contractor.read', async () => {
 		granted = new Set(['volunteer.read', 'contractor.read']);
-		loadWorkOrderView.mockResolvedValue({ shift: { id: 'wo-1' }, engagements: [engagement] });
+		loadWorkOrderView.mockResolvedValue({ task: { id: 'wo-1' }, engagements: [engagement] });
 		const page = (await getStaffShiftPage('wo-1')) as Record<string, unknown>;
 		expect(page.engagements).toEqual([engagement]);
 		expect(page.contractors).toEqual([]);
