@@ -1,10 +1,10 @@
 /**
  * Authorisation by assignment, against a real database on the real schema.
  *
- * The whole question is a join — does a signup connect this member to the work
- * order this task hangs off — so a mock would be asserting on the mock. The
- * negatives matter more than the positive here: a cancelled signup and a
- * called-off shift both have to stop reading as an assignment.
+ * The whole question is a join — does a sign-up on one of its shifts, or an
+ * assignment, connect this member to the task this checklist item hangs off —
+ * so a mock would be asserting on the mock. The negatives matter more than the
+ * positive: a cancelled sign-up and a called-off task stop reading as being on it.
  */
 import { describe, expect, it, beforeAll, beforeEach, vi } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
@@ -39,6 +39,8 @@ beforeAll(async () => {
 beforeEach(() => {
 	for (const t of [
 		'volunteer_signup',
+		'volunteer_shift',
+		'work_order_assignee',
 		'work_task',
 		'work_order',
 		'event_listing',
@@ -60,13 +62,15 @@ beforeEach(() => {
 		INSERT INTO event_listing (id, title, starts_at, ends_at, created_by_user_id)
 		 VALUES ('evt-1', 'Show', ${STARTS}, ${ENDS}, 'u-crew');
 
-		INSERT INTO work_order (id, volunteer_role_id, event_id, starts_at, ends_at)
-		 VALUES ('wo-1', 'role-1', 'evt-1', ${STARTS}, ${ENDS});
+		INSERT INTO work_order (id, volunteer_role_id, event_id) VALUES ('wo-1', 'role-1', 'evt-1');
+
+		INSERT INTO volunteer_shift (id, work_order_id, starts_at, ends_at)
+		 VALUES ('shift-1', 'wo-1', ${STARTS}, ${ENDS});
 
 		INSERT INTO work_task (id, work_order_id, label) VALUES ('task-1', 'wo-1', 'Sweep the stage');
 
 		INSERT INTO volunteer_signup (id, shift_id, user_id, status)
-		 VALUES ('signup-1', 'wo-1', 'u-crew', 'confirmed');
+		 VALUES ('signup-1', 'shift-1', 'u-crew', 'confirmed');
 	`);
 });
 
@@ -102,7 +106,16 @@ describe('setWorkTaskDoneAsAssignee', () => {
 		);
 	});
 
-	it('refuses once the shift itself is called off', async () => {
+	it('lets somebody assigned the task tick it, with no shift', async () => {
+		sqlite.exec(
+			`INSERT INTO work_order_assignee (work_order_id, user_id, assigned_at) VALUES ('wo-1', 'u-other', unixepoch())`
+		);
+
+		await setWorkTaskDoneAsAssignee('task-1', true, 'u-other');
+		expect(task().done_by_user_id).toBe('u-other');
+	});
+
+	it('refuses once the task itself is called off', async () => {
 		sqlite.exec(`UPDATE work_order SET cancelled_at = unixepoch() WHERE id = 'wo-1'`);
 
 		await expect(setWorkTaskDoneAsAssignee('task-1', true, 'u-crew')).rejects.toThrow(
@@ -124,7 +137,8 @@ describe('getSignupForUser', () => {
 		const row = await getSignupForUser('signup-1', 'u-crew');
 
 		expect(row).toMatchObject({
-			shiftId: 'wo-1',
+			shiftId: 'shift-1',
+			workOrderId: 'wo-1',
 			roleName: 'Setup',
 			eventId: 'evt-1',
 			eventTitle: 'Show',

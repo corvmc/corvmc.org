@@ -9,8 +9,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
-	return migratedSqlite();
+	const { migratedSqlite, withBatch } = await import('#lib/server/testing/migrated-sqlite.js');
+	const db = migratedSqlite();
+	return { sqlite: db.sqlite, testDb: withBatch(db) };
 });
 
 vi.mock('#lib/server/db/index.js', () => ({
@@ -24,7 +25,7 @@ vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const { cancelShiftsForEvent, cancelShiftsForProduction, cancelDeliverablesForEvent } =
 	await import('./show-cancellation');
-const { listOpenShiftsForMember, getShiftById } = await import('./work-order-service');
+const { listOpenShiftsForMember, getWorkOrderById } = await import('./work-order-service');
 const { listSignupsStartingBetween } = await import('./volunteer-signup-service');
 
 const STAFF = 'usr-staff';
@@ -41,7 +42,7 @@ async function seed() {
 	const { user } = await import('#lib/server/db/schema/authentication.js');
 	const { eventListing } = await import('#lib/server/db/schema/event.js');
 	const { production } = await import('#lib/server/db/schema/production.js');
-	const { volunteerRole, workOrder, volunteerSignup } =
+	const { volunteerRole, volunteerShift, workOrder, volunteerSignup } =
 		await import('#lib/server/db/schema/volunteer.js');
 
 	await testDb.insert(user).values(
@@ -72,39 +73,59 @@ async function seed() {
 	);
 	await testDb.insert(volunteerRole).values({ id: ROLE, name: 'Door', isActive: true } as never);
 
-	const shift = (id: string, eventId: string, extra: Record<string, unknown> = {}) => ({
+	// A task per crew job, and a shift on each that has a time (#2518).
+	const task = (id: string, eventId: string, extra: Record<string, unknown> = {}) => ({
 		id,
 		volunteerRoleId: ROLE,
 		eventId,
-		startsAt: inHours(47),
-		endsAt: inHours(53),
-		capacity: 3,
-		postedAt: new Date(),
 		createdByUserId: STAFF,
 		...extra
 	});
 	await testDb
 		.insert(workOrder)
 		.values([
-			shift('door', SHOW),
-			shift('bar', SHOW),
-			shift('unscheduled', SHOW, { startsAt: null, endsAt: null }),
-			shift('load-in-done', SHOW, { resolvedAt: inHours(-1) }),
-			shift('last-week', SHOW, { startsAt: inHours(-170), endsAt: inHours(-166) }),
-			shift('other-door', OTHER)
+			task('door', SHOW),
+			task('bar', SHOW),
+			task('unscheduled', SHOW),
+			task('load-in-done', SHOW, { resolvedAt: inHours(-1) }),
+			task('last-week', SHOW),
+			task('other-door', OTHER)
+		] as never);
+	const shift = (taskId: string, startsAt = inHours(47), endsAt = inHours(53)) => ({
+		id: `${taskId}-shift`,
+		workOrderId: taskId,
+		startsAt,
+		endsAt,
+		capacity: 3,
+		createdByUserId: STAFF
+	});
+	await testDb
+		.insert(volunteerShift)
+		.values([
+			shift('door'),
+			shift('bar'),
+			shift('load-in-done'),
+			shift('last-week', inHours(-170), inHours(-166)),
+			shift('other-door')
 		] as never);
 
 	await testDb.insert(volunteerSignup).values([
-		{ id: 'su-ada', shiftId: 'door', userId: ADA, status: 'confirmed' },
-		{ id: 'su-bo', shiftId: 'door', userId: BO, status: 'claimed' },
-		{ id: 'su-bo-dropped', shiftId: 'bar', userId: BO, status: 'cancelled' },
-		{ id: 'su-other', shiftId: 'other-door', userId: ADA, status: 'confirmed' }
+		{ id: 'su-ada', shiftId: 'door-shift', userId: ADA, status: 'confirmed' },
+		{ id: 'su-bo', shiftId: 'door-shift', userId: BO, status: 'claimed' },
+		{ id: 'su-bo-dropped', shiftId: 'bar-shift', userId: BO, status: 'cancelled' },
+		{ id: 'su-other', shiftId: 'other-door-shift', userId: ADA, status: 'confirmed' }
 	] as never);
 }
 
 beforeEach(async () => {
 	emit.mockClear();
-	for (const t of ['volunteer_signup', 'work_order', 'volunteer_role', 'event_listing']) {
+	for (const t of [
+		'volunteer_signup',
+		'volunteer_shift',
+		'work_order',
+		'volunteer_role',
+		'event_listing'
+	]) {
 		sqlite.exec(`delete from ${t}`);
 	}
 	sqlite.exec('delete from production');
@@ -116,17 +137,26 @@ beforeEach(async () => {
 /** The emits are fire-and-forget; let them run. */
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-const cancelled = async (id: string) => (await getShiftById(id))?.cancelledAt ?? null;
+const cancelled = async (id: string) => (await getWorkOrderById(id))?.cancelledAt ?? null;
 
 describe('cancelling a show', () => {
 	it('calls off every live work order on it, naming who did', async () => {
 		expect(await cancelShiftsForEvent(SHOW, STAFF)).toBe(3);
 
 		for (const id of ['door', 'bar', 'unscheduled']) {
-			const row = await getShiftById(id);
+			const row = await getWorkOrderById(id);
 			expect(row?.cancelledAt).not.toBeNull();
 			expect(row?.cancelledByUserId).toBe(STAFF);
 		}
+	});
+
+	it('calls off the shifts on that work with it', async () => {
+		await cancelShiftsForEvent(SHOW, STAFF);
+		const live = sqlite
+			.prepare(`select id from volunteer_shift where cancelled_at is null order by id`)
+			.all()
+			.map((r) => (r as { id: string }).id);
+		expect(live).toEqual(['last-week-shift', 'load-in-done-shift', 'other-door-shift']);
 	});
 
 	it('leaves finished and past work, and other shows, alone', async () => {
@@ -191,7 +221,7 @@ describe("a committee's items on the show (#1709)", () => {
 
 	it('are called off quietly when the show is deleted outright', async () => {
 		await cancelDeliverablesForEvent(SHOW, STAFF);
-		expect((await getShiftById('poster'))?.cancelledByUserId).toBe(STAFF);
+		expect((await getWorkOrderById('poster'))?.cancelledByUserId).toBe(STAFF);
 		expect(await cancelled('door')).toBeNull();
 	});
 });
@@ -209,7 +239,7 @@ describe('after a show is cancelled', () => {
 		sqlite.exec(`update event_listing set status = 'cancelled' where id = '${SHOW}'`);
 
 		const board = await listOpenShiftsForMember(ADA);
-		expect(board.map((s) => s.id)).toEqual(['other-door']);
+		expect(board.map((s) => s.workOrderId)).toEqual(['other-door']);
 	});
 
 	it('sends no reminder for a live work order on a cancelled listing', async () => {

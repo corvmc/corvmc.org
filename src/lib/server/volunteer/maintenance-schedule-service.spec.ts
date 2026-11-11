@@ -74,7 +74,7 @@ describe('nextDueAt', () => {
 });
 
 describe('nextOccurrenceInsert', () => {
-	it('writes an unscheduled work order carrying the schedule, due one interval after close', () => {
+	it('writes a task with no shift carrying the schedule, due one interval after close', () => {
 		const closed = new Date('2026-09-10T12:00:00Z');
 		nextOccurrenceInsert(schedule, closed);
 
@@ -84,11 +84,11 @@ describe('nextOccurrenceInsert', () => {
 			title: 'Monthly deep clean',
 			volunteerRoleId: 'role-1',
 			projectId: 'proj-1',
-			capacity: 2,
-			startsAt: null,
-			endsAt: null,
+			// The places wait on the task for a shift opened on it (#2518).
+			pendingCapacity: 2,
 			dueAt: new Date(closed.getTime() + 30 * DAY)
 		});
+		expect(values).not.toHaveProperty('legacyPostedAt');
 	});
 
 	it("carries the schedule's asset onto every occurrence (#1423)", () => {
@@ -243,14 +243,15 @@ describe('listMaintenanceSchedules', () => {
 		expect(rows.map((r) => r.assignees)).toEqual([['Ada Lovelace', 'Bo Diddley'], []]);
 	});
 
-	it('counts only places still held, and only on the open occurrence', async () => {
+	it('names the open occurrence’s assignees', async () => {
 		selectQueue = [[]];
 		await listMaintenanceSchedules();
 		const select = vi.mocked((await import('#lib/server/db/index.js')).db.select).mock
 			.calls[0][0] as any;
 		const rendered = new SQLiteSyncDialect().sqlToQuery(select.assignees as SQL).sql;
-		expect(rendered).toContain('"volunteer_signup"');
-		expect(rendered).toContain("'claimed', 'confirmed', 'completed'");
+		// Assignment, not sign-ups: an occurrence is a task (#2518).
+		expect(rendered).toContain('"work_order_assignee"');
+		expect(rendered).not.toContain('"volunteer_signup"');
 	});
 });
 

@@ -60,8 +60,8 @@ const waiting = vi.hoisted(() => ({
 	pending: 0,
 	lapsing: [] as { userId: string }[]
 }));
-vi.mock('#lib/server/inventory/work-request-service.js', () => ({
-	listFinishedWorkToConfirm: async () => waiting.toConfirm
+vi.mock('#lib/server/volunteer/ended-shifts.js', () => ({
+	listTasksWithEndedShifts: async () => waiting.toConfirm
 }));
 vi.mock('#lib/server/volunteer/hour-log-service.js', async (orig) => ({
 	...(await orig<object>()),
@@ -112,7 +112,7 @@ beforeEach(() => {
 
 // The dashboard's counts that are not rows in the range (#2379).
 describe('getSchedulePage, waiting', () => {
-	it('carries repairs to verify, hours to review and people lapsing, one each', async () => {
+	it('carries tasks with ended shifts, hours to review and people lapsing, one each', async () => {
 		waiting.toConfirm = [{ id: 'wo-done' }];
 		waiting.pending = 3;
 		// One person on two shifts is one person to chase.

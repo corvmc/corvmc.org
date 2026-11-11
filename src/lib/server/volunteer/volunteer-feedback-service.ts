@@ -2,6 +2,7 @@ import { db } from '#lib/server/db/index.js';
 import {
 	volunteerShiftFeedback,
 	volunteerSignup,
+	volunteerShift,
 	workOrder,
 	volunteerRole
 } from '#lib/server/db/schema/volunteer.js';
@@ -115,14 +116,15 @@ export async function getFeedbackContext(signupId: string, userId: string) {
 			signupId: volunteerSignup.id,
 			status: volunteerSignup.status,
 			roleName: volunteerRole.name,
-			startsAt: workOrder.startsAt,
-			endsAt: workOrder.endsAt,
+			startsAt: volunteerShift.startsAt,
+			endsAt: volunteerShift.endsAt,
 			alreadySubmitted: sql<number>`exists (
 				select 1 from "volunteer_shift_feedback" f where f."signup_id" = ${volunteerSignup.id}
 			)`
 		})
 		.from(volunteerSignup)
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.where(and(eq(volunteerSignup.id, signupId), eq(volunteerSignup.userId, userId)))
 		.limit(1);
@@ -146,8 +148,8 @@ export interface ShiftFeedbackRow {
 	submittedAt: Date;
 }
 
-/** Responses for one shift — the staff detail view. */
-export async function listFeedbackForShift(shiftId: string): Promise<ShiftFeedbackRow[]> {
+/** Responses for every shift on one task — the staff detail view. */
+export async function listFeedbackForWorkOrder(workOrderId: string): Promise<ShiftFeedbackRow[]> {
 	return db
 		.select({
 			signupId: volunteerShiftFeedback.signupId,
@@ -158,7 +160,8 @@ export async function listFeedbackForShift(shiftId: string): Promise<ShiftFeedba
 		})
 		.from(volunteerShiftFeedback)
 		.innerJoin(volunteerSignup, eq(volunteerSignup.id, volunteerShiftFeedback.signupId))
-		.where(eq(volunteerSignup.shiftId, shiftId))
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.where(eq(volunteerShift.workOrderId, workOrderId))
 		.orderBy(desc(volunteerShiftFeedback.submittedAt));
 }
 
@@ -190,7 +193,8 @@ export async function summarizeFeedbackByRole(): Promise<RoleFeedbackSummary[]> 
 		})
 		.from(volunteerShiftFeedback)
 		.innerJoin(volunteerSignup, eq(volunteerSignup.id, volunteerShiftFeedback.signupId))
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.groupBy(workOrder.volunteerRoleId)
 		.orderBy(desc(count()));
@@ -205,7 +209,8 @@ export async function summarizeFeedbackByRole(): Promise<RoleFeedbackSummary[]> 
 			})
 			.from(volunteerShiftFeedback)
 			.innerJoin(volunteerSignup, eq(volunteerSignup.id, volunteerShiftFeedback.signupId))
-			.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+			.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+			.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 			.where(
 				and(
 					eq(workOrder.volunteerRoleId, row.volunteerRoleId),

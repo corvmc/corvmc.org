@@ -4,6 +4,7 @@ import {
 	volunteerCertification,
 	volunteerRole,
 	volunteerRoleCertification,
+	volunteerShift,
 	workOrder,
 	volunteerSignup
 } from '#lib/server/db/schema/volunteer.js';
@@ -614,12 +615,13 @@ export async function listLapsingBeforeRosteredShift(
 			certificationId: volunteerCertification.id,
 			certificationName: volunteerCertification.name,
 			expiresAt: memberCertification.expiresAt,
-			shiftId: workOrder.id,
+			shiftId: volunteerShift.id,
 			roleName: volunteerRole.name,
-			startsAt: workOrder.startsAt
+			startsAt: volunteerShift.startsAt
 		})
 		.from(volunteerSignup)
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.innerJoin(
 			volunteerRoleCertification,
@@ -641,14 +643,15 @@ export async function listLapsingBeforeRosteredShift(
 			and(
 				inArray(volunteerSignup.status, ['claimed', 'confirmed']),
 				isNull(workOrder.cancelledAt),
-				gte(workOrder.startsAt, now),
+				isNull(volunteerShift.cancelledAt),
+				gte(volunteerShift.startsAt, now),
 				isNull(memberCertification.revokedAt),
-				lte(memberCertification.grantedAt, workOrder.startsAt),
+				lte(memberCertification.grantedAt, volunteerShift.startsAt),
 				isNotNull(memberCertification.expiresAt),
-				lt(memberCertification.expiresAt, workOrder.startsAt)
+				lt(memberCertification.expiresAt, volunteerShift.startsAt)
 			)
 		)
-		.orderBy(asc(workOrder.startsAt));
+		.orderBy(asc(volunteerShift.startsAt));
 
 	return (
 		rows

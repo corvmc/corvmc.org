@@ -29,6 +29,8 @@ import {
 	memberCertification,
 	volunteerRoleCertification,
 	workOrder,
+	workOrderAssignee,
+	volunteerShift,
 	volunteerSignup,
 	volunteerShiftFeedback,
 	dutyList,
@@ -198,6 +200,12 @@ const SHIFT_IDS = [
 	SEED_VOL_ADVANCE_ID
 ];
 
+/**
+ * The one shift on a seeded task (#2518). The board and sign-ups name the shift;
+ * the staff page and the constants above name the task.
+ */
+export const shiftIdOf = (taskId: string) => `${taskId}-shift`;
+
 /** Days out, at a fixed hour, so the board always has a future shift to claim. */
 function daysFromNow(days: number, hourUtc: number): Date {
 	const d = new Date();
@@ -229,6 +237,39 @@ function workedOnDaysAgo(days: number): Date {
 	return d;
 }
 
+type FixtureDb = Parameters<Parameters<typeof withPlatformEnv>[0]>[0]['db'];
+
+/** Timed work as the app writes it: a task, then its one shift (`shiftIdOf`). */
+async function insertTimed(
+	db: FixtureDb,
+	now: Date,
+	rows: (typeof workOrder.$inferInsert & {
+		id: string;
+		startsAt: Date;
+		endsAt: Date;
+		capacity: number;
+	})[]
+) {
+	await db.insert(workOrder).values(
+		rows.map(({ startsAt: _s, endsAt: _e, capacity: _c, ...task }) => ({
+			...task,
+			createdAt: now,
+			updatedAt: now
+		}))
+	);
+	await db.insert(volunteerShift).values(
+		rows.map((r) => ({
+			id: shiftIdOf(r.id),
+			workOrderId: r.id,
+			startsAt: r.startsAt,
+			endsAt: r.endsAt,
+			capacity: r.capacity,
+			createdAt: now,
+			updatedAt: now
+		}))
+	);
+}
+
 export async function seedVolunteering(): Promise<void> {
 	await withPlatformEnv(async ({ db }) => {
 		// Child before parent: the role FK is ON DELETE RESTRICT, and signups and
@@ -245,10 +286,20 @@ export async function seedVolunteering(): Promise<void> {
 			.where(inArray(workOrder.volunteerRoleId, ALL_ROLE_IDS));
 		const shiftIds = [...new Set([...SHIFT_IDS, ...staleShifts.map((r) => r.id)])];
 
-		const staleSignups = await db
-			.select({ id: volunteerSignup.id })
-			.from(volunteerSignup)
-			.where(inArray(volunteerSignup.shiftId, shiftIds));
+		const staleShiftIds = (
+			await db
+				.select({ id: volunteerShift.id })
+				.from(volunteerShift)
+				.where(inArray(volunteerShift.workOrderId, shiftIds))
+		).map((r) => r.id);
+
+		const staleSignups =
+			staleShiftIds.length > 0
+				? await db
+						.select({ id: volunteerSignup.id })
+						.from(volunteerSignup)
+						.where(inArray(volunteerSignup.shiftId, staleShiftIds))
+				: [];
 
 		if (staleSignups.length > 0) {
 			await db.delete(volunteerShiftFeedback).where(
@@ -258,7 +309,11 @@ export async function seedVolunteering(): Promise<void> {
 				)
 			);
 		}
-		await db.delete(volunteerSignup).where(inArray(volunteerSignup.shiftId, shiftIds));
+		if (staleShiftIds.length > 0) {
+			await db.delete(volunteerSignup).where(inArray(volunteerSignup.shiftId, staleShiftIds));
+			await db.delete(volunteerShift).where(inArray(volunteerShift.id, staleShiftIds));
+		}
+		await db.delete(workOrderAssignee).where(inArray(workOrderAssignee.workOrderId, shiftIds));
 		await db.delete(workOrder).where(inArray(workOrder.id, shiftIds));
 		// After the shifts: the FK is ON DELETE SET NULL, so deleting the event
 		// first would silently unlink the very row the linked-shift tests assert on.
@@ -477,29 +532,22 @@ export async function seedVolunteering(): Promise<void> {
 			}
 		]);
 
-		// Every row is posted, as the backfill left production: the board lists
-		// only posted work, and the member claim refuses anything else.
-		await db.insert(workOrder).values([
+		// Each a task with one shift: a shift is on the board by existing (#2518).
+		await insertTimed(db, now, [
 			{
 				id: SEED_VOL_SHIFT_OPEN_ID,
 				volunteerRoleId: SEED_VOL_ROLE_ID,
 				startsAt: daysFromNow(3, 2),
 				endsAt: daysFromNow(3, 6),
 				capacity: 1,
-				postedAt: now,
-				notes: SEED_VOL_SHIFT_OPEN_NOTE,
-				createdAt: now,
-				updatedAt: now
+				notes: SEED_VOL_SHIFT_OPEN_NOTE
 			},
 			{
 				id: SEED_VOL_SHIFT_GATED_ID,
 				volunteerRoleId: SEED_VOL_GATED_ROLE_ID,
 				startsAt: daysFromNow(4, 2),
 				endsAt: daysFromNow(4, 6),
-				capacity: 1,
-				postedAt: now,
-				createdAt: now,
-				updatedAt: now
+				capacity: 1
 			},
 			{
 				id: SEED_VOL_SHIFT_FULL_ID,
@@ -507,10 +555,7 @@ export async function seedVolunteering(): Promise<void> {
 				startsAt: daysFromNow(5, 2),
 				endsAt: daysFromNow(5, 6),
 				capacity: 1,
-				postedAt: now,
-				notes: SEED_VOL_SHIFT_FULL_NOTE,
-				createdAt: now,
-				updatedAt: now
+				notes: SEED_VOL_SHIFT_FULL_NOTE
 			},
 			// Empty, and the staff-assign test's alone.
 			{
@@ -519,10 +564,7 @@ export async function seedVolunteering(): Promise<void> {
 				startsAt: daysFromNow(7, 2),
 				endsAt: daysFromNow(7, 6),
 				capacity: 2,
-				postedAt: now,
-				notes: SEED_VOL_SHIFT_ASSIGN_NOTE,
-				createdAt: now,
-				updatedAt: now
+				notes: SEED_VOL_SHIFT_ASSIGN_NOTE
 			},
 			// Carries one live claim for the staff-release test to take off again.
 			{
@@ -530,10 +572,7 @@ export async function seedVolunteering(): Promise<void> {
 				volunteerRoleId: SEED_VOL_ROLE_ID,
 				startsAt: daysFromNow(8, 2),
 				endsAt: daysFromNow(8, 6),
-				capacity: 1,
-				postedAt: now,
-				createdAt: now,
-				updatedAt: now
+				capacity: 1
 			}
 		]);
 
@@ -554,17 +593,16 @@ export async function seedVolunteering(): Promise<void> {
 			updatedAt: now
 		});
 
-		await db.insert(workOrder).values({
-			id: SEED_VOL_SHIFT_EVENT_ID,
-			volunteerRoleId: SEED_VOL_ROLE_ID,
-			eventId: SEED_VOL_EVENT_ID,
-			startsAt: daysFromNow(6, 1),
-			endsAt: daysFromNow(6, 6),
-			capacity: 2,
-			postedAt: now,
-			createdAt: now,
-			updatedAt: now
-		});
+		await insertTimed(db, now, [
+			{
+				id: SEED_VOL_SHIFT_EVENT_ID,
+				volunteerRoleId: SEED_VOL_ROLE_ID,
+				eventId: SEED_VOL_EVENT_ID,
+				startsAt: daysFromNow(6, 1),
+				endsAt: daysFromNow(6, 6),
+				capacity: 2
+			}
+		]);
 
 		// A duty list and the advance work order it would have stamped out. The
 		// work order carries no window at all — a deadline is not a window — and
@@ -585,11 +623,7 @@ export async function seedVolunteering(): Promise<void> {
 			id: SEED_VOL_ADVANCE_ID,
 			volunteerRoleId: SEED_VOL_ADVANCE_ROLE_ID,
 			eventId: SEED_VOL_EVENT_ID,
-			startsAt: null,
-			endsAt: null,
 			dueAt: daysFromNow(2, 17),
-			capacity: 1,
-			postedAt: now,
 			dutyListId: SEED_VOL_DUTY_LIST_ID,
 			anchor: 'doors',
 			createdAt: now,
@@ -623,20 +657,19 @@ export async function seedVolunteering(): Promise<void> {
 
 		// Ended yesterday, completed, unreviewed — exactly what the day-after
 		// survey cron would have asked about.
-		await db.insert(workOrder).values({
-			id: SEED_VOL_SHIFT_DONE_ID,
-			volunteerRoleId: SEED_VOL_ROLE_ID,
-			startsAt: workedOnDaysAgo(1),
-			endsAt: new Date(workedOnDaysAgo(1).getTime() + 4 * 3_600_000),
-			capacity: 1,
-			postedAt: now,
-			createdAt: now,
-			updatedAt: now
-		});
+		await insertTimed(db, now, [
+			{
+				id: SEED_VOL_SHIFT_DONE_ID,
+				volunteerRoleId: SEED_VOL_ROLE_ID,
+				startsAt: workedOnDaysAgo(1),
+				endsAt: new Date(workedOnDaysAgo(1).getTime() + 4 * 3_600_000),
+				capacity: 1
+			}
+		]);
 
 		await db.insert(volunteerSignup).values({
 			id: SEED_VOL_SIGNUP_DONE_ID,
-			shiftId: SEED_VOL_SHIFT_DONE_ID,
+			shiftId: shiftIdOf(SEED_VOL_SHIFT_DONE_ID),
 			userId: SEED_VOL_MEMBER_ID,
 			status: 'completed',
 			claimedAt: now,
@@ -648,7 +681,7 @@ export async function seedVolunteering(): Promise<void> {
 
 		await db.insert(volunteerSignup).values({
 			id: 'e2e-vol-signup-other',
-			shiftId: SEED_VOL_SHIFT_FULL_ID,
+			shiftId: shiftIdOf(SEED_VOL_SHIFT_FULL_ID),
 			userId: SEED_VOL_OTHER_MEMBER_ID,
 			status: 'confirmed',
 			claimedAt: now,
@@ -661,7 +694,7 @@ export async function seedVolunteering(): Promise<void> {
 		// also the row the dashboard's "Pending Assignments" card is built to surface.
 		await db.insert(volunteerSignup).values({
 			id: SEED_VOL_SIGNUP_RELEASE_ID,
-			shiftId: SEED_VOL_SHIFT_RELEASE_ID,
+			shiftId: shiftIdOf(SEED_VOL_SHIFT_RELEASE_ID),
 			userId: SEED_VOL_OTHER_MEMBER_ID,
 			status: 'claimed',
 			claimedAt: now,
@@ -720,25 +753,27 @@ export async function seedVolunteering(): Promise<void> {
 	});
 }
 
-/** The member's signup status on a shift, for assertions the UI cannot make. */
-export async function readSignupStatus(shiftId: string): Promise<string | null> {
+/** The member's sign-up status on a task's shift, for assertions the UI cannot make. */
+export async function readSignupStatus(taskId: string): Promise<string | null> {
 	return readLocalDb(async (db) => {
 		const [row] = await db
 			.select({ status: volunteerSignup.status })
 			.from(volunteerSignup)
-			.where(eq(volunteerSignup.shiftId, shiftId))
+			.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+			.where(eq(volunteerShift.workOrderId, taskId))
 			.limit(1);
 		return row?.status ?? null;
 	});
 }
 
-/** Every signup on a shift, keyed by user — what the roster actually says. */
-export async function readShiftSignups(shiftId: string): Promise<Record<string, string>> {
+/** Every sign-up on a task's shifts, keyed by user — what the roster actually says. */
+export async function readShiftSignups(taskId: string): Promise<Record<string, string>> {
 	return readLocalDb(async (db) => {
 		const rows = await db
 			.select({ userId: volunteerSignup.userId, status: volunteerSignup.status })
 			.from(volunteerSignup)
-			.where(eq(volunteerSignup.shiftId, shiftId));
+			.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+			.where(eq(volunteerShift.workOrderId, taskId));
 		return Object.fromEntries(rows.map((r) => [r.userId, r.status]));
 	});
 }

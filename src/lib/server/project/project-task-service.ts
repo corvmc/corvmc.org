@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import {
@@ -14,11 +14,13 @@ import { contractor, contractorJob } from '#lib/server/db/schema/contractor.js';
 import { projectCommittee } from '#lib/server/db/schema/project.js';
 import {
 	volunteerRole,
+	volunteerShift,
 	volunteerSignup,
 	dutyList,
 	workOrder,
+	workOrderAssignee,
 	workTask,
-	type WorkOrder
+	type Task
 } from '#lib/server/db/schema/volunteer.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { DomainError } from '#lib/server/domain-error.js';
@@ -26,19 +28,26 @@ import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { evaluateDone, type DeliverableState } from '#lib/server/volunteer/done-conditions.js';
 import {
 	auditWorkOrderChange,
+	cancelLiveShifts,
 	cancelShift,
+	capacitySql,
 	claimedSql,
-	countActiveSignups,
 	createWorkOrder,
-	parseLocal,
+	getCurrentShift,
 	requireActiveRole,
 	resolveWorkOrder,
+	toTask,
+	updateShift,
 	validateCapacity,
-	validateTimes,
 	workOrderModes,
 	type WorkOrderMode
 } from '#lib/server/volunteer/work-order-service.js';
-import { claimShift, releaseSignup } from '#lib/server/volunteer/volunteer-signup-service.js';
+import { releaseSignup } from '#lib/server/volunteer/volunteer-signup-service.js';
+import {
+	assignToTask,
+	removeAllAssignees,
+	unassignFromTask
+} from '#lib/server/volunteer/assignee-service.js';
 import { setWorkTaskDone } from '#lib/server/volunteer/duty-list-service.js';
 import { cancelJob, createJob } from '#lib/server/contractor/contractor-job-service.js';
 import {
@@ -83,33 +92,30 @@ export class TaskConflictError extends DomainError {
 const FINISHED = 'A contractor did this work and its cost is on the record, so it stays theirs.';
 
 /** The work order, refused (404) unless it belongs to this project. */
-export async function requireTaskInProject(
-	projectId: string,
-	workOrderId: string
-): Promise<WorkOrder> {
+export async function requireTaskInProject(projectId: string, workOrderId: string): Promise<Task> {
 	const [row] = await db
 		.select()
 		.from(workOrder)
 		.where(and(eq(workOrder.id, workOrderId), eq(workOrder.projectId, projectId)))
 		.limit(1);
 	if (!row) throw new TaskNotFoundError();
-	return row;
+	return toTask(row);
 }
 
-async function requireLiveTask(projectId: string, workOrderId: string): Promise<WorkOrder> {
+async function requireLiveTask(projectId: string, workOrderId: string): Promise<Task> {
 	const task = await requireTaskInProject(projectId, workOrderId);
 	if (task.cancelledAt) throw new TaskConflictError('That task was called off.');
 	return task;
 }
 
-const label = (task: Pick<WorkOrder, 'id' | 'title'>) => task.title ?? task.id;
+const label = (task: Pick<Task, 'id' | 'title'>) => task.title ?? task.id;
 
 async function modeOf(id: string): Promise<WorkOrderMode> {
 	return (await workOrderModes([id])).get(id) ?? 'unassigned';
 }
 
 async function auditModeChange(
-	task: WorkOrder,
+	task: Task,
 	from: WorkOrderMode,
 	to: WorkOrderMode,
 	cancelledSignups = 0,
@@ -141,7 +147,7 @@ interface OpenEngagement {
  * What a switch away from Contractor cancels: the engagement still asked or
  * booked. Refused once one has completed, since that work is done and paid for.
  */
-async function engagementsToCancel(task: WorkOrder, from: WorkOrderMode) {
+async function engagementsToCancel(task: Task, from: WorkOrderMode) {
 	if (from !== 'contractor') return [];
 	const rows: OpenEngagement[] = await db
 		.select({
@@ -188,7 +194,7 @@ export async function createTask(data: {
 	title: string;
 	sectionId?: string | null;
 	createdByUserId: string;
-}): Promise<WorkOrder> {
+}): Promise<Task> {
 	const sectionId = data.sectionId || null;
 	if (sectionId) await requireSection(data.projectId, sectionId);
 	if (!data.title.trim()) throw new TaskValidationError('Give the task a title.');
@@ -295,7 +301,7 @@ export interface AssignableMember {
 }
 
 /** The committee answerable for the task: its own, else its project's owner. */
-async function committeeOf(task: WorkOrder): Promise<string | null> {
+async function committeeOf(task: Task): Promise<string | null> {
 	if (task.groupId) return task.groupId;
 	if (!task.projectId) return null;
 	const [owner] = await db
@@ -306,7 +312,7 @@ async function committeeOf(task: WorkOrder): Promise<string | null> {
 	return owner?.groupId ?? null;
 }
 
-async function assignableTo(task: WorkOrder): Promise<AssignableMember[]> {
+async function assignableTo(task: Task): Promise<AssignableMember[]> {
 	const committeeId = await committeeOf(task);
 	const [staff, committee] = await Promise.all([
 		db
@@ -338,21 +344,53 @@ export async function listAssignableMembers(
 	return assignableTo(await requireTaskInProject(projectId, workOrderId));
 }
 
-async function signupsOn(workOrderId: string, statuses: string[]) {
+/** Live sign-ups on the task's shifts that have not ended: who a switch takes off. */
+async function liveSignupsOn(workOrderId: string) {
 	return db
-		.select({ id: volunteerSignup.id, userId: volunteerSignup.userId, name: user.name })
+		.select({ id: volunteerSignup.id, userId: volunteerSignup.userId })
 		.from(volunteerSignup)
-		.innerJoin(user, eq(user.id, volunteerSignup.userId))
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
 		.where(
 			and(
-				eq(volunteerSignup.shiftId, workOrderId),
-				inArray(volunteerSignup.status, statuses as ('claimed' | 'confirmed')[])
+				eq(volunteerShift.workOrderId, workOrderId),
+				isNull(volunteerShift.cancelledAt),
+				gt(volunteerShift.endsAt, new Date()),
+				inArray(volunteerSignup.status, ['claimed', 'confirmed'])
 			)
 		);
 }
 
+async function assigneesOf(workOrderId: string) {
+	return db
+		.select({ userId: workOrderAssignee.userId })
+		.from(workOrderAssignee)
+		.where(eq(workOrderAssignee.workOrderId, workOrderId));
+}
+
+/**
+ * Take everybody off the task: assignees removed, sign-ups on shifts still to
+ * come released (which tells each person), and those shifts called off.
+ */
+async function takeEveryoneOff(task: Task, by: string | null, signups: { id: string }[]) {
+	for (const s of signups) await releaseSignup(s.id);
+	const now = new Date();
+	await db.batch([
+		removeAllAssignees(task.id),
+		db
+			.update(volunteerShift)
+			.set({ cancelledAt: now, cancelledByUserId: by, updatedAt: now })
+			.where(
+				and(
+					eq(volunteerShift.workOrderId, task.id),
+					isNull(volunteerShift.cancelledAt),
+					gt(volunteerShift.endsAt, now)
+				)
+			)
+	]);
+}
+
 /** The role the task will run under: the one given, else its own. Required for volunteer work. */
-async function roleFor(task: WorkOrder, volunteerRoleId?: string | null): Promise<string> {
+async function roleFor(task: Task, volunteerRoleId?: string | null): Promise<string> {
 	const roleId = volunteerRoleId || task.volunteerRoleId;
 	if (!roleId) throw new TaskValidationError('Pick a role first: hours are logged against it.');
 	if (roleId !== task.volunteerRoleId) await requireActiveRole(roleId);
@@ -362,7 +400,7 @@ async function roleFor(task: WorkOrder, volunteerRoleId?: string | null): Promis
 export interface AssignResult {
 	status: 'done';
 	assigned: string[];
-	/** People the signup service refused, with its reason (a profile awaiting review, no room, …). */
+	/** People refused, with the reason (a profile awaiting review, …). */
 	refused: { userId: string; message: string }[];
 	/** People assigned over warnings (no volunteer profile, a missing clearance); recorded in the log. */
 	warned: { userId: string; warnings: string[] }[];
@@ -370,15 +408,20 @@ export interface AssignResult {
 }
 
 /**
- * Put named people on the task: staff-made signups, landing confirmed. Takes it
- * off the claim board and keeps whoever is already on it, so Open → Members
- * loses nobody. Naming more people than it has places raises the places.
+ * Assign named people to the task (#2518): `work_order_assignee` rows, never
+ * sign-ups. Its shifts and anyone signed up for them stay. A role is still
+ * required, because assignees log their hours against it.
  * From a contractor, the first call warns and `confirm` cancels the engagement.
  */
 export async function assignMembers(
 	projectId: string,
 	workOrderId: string,
-	data: { userIds: string[]; volunteerRoleId?: string | null; confirm?: boolean }
+	data: {
+		userIds: string[];
+		volunteerRoleId?: string | null;
+		confirm?: boolean;
+		assignedByUserId?: string | null;
+	}
 ): Promise<AssignResult | SwitchWarning> {
 	const task = await requireLiveTask(projectId, workOrderId);
 	const from = await modeOf(task.id);
@@ -390,33 +433,28 @@ export async function assignMembers(
 	if (wanted.some((id) => !allowed.has(id))) {
 		throw new TaskValidationError('Only staff and members of its committee can be assigned.');
 	}
-	const holding = await signupsOn(task.id, ['claimed', 'confirmed', 'completed']);
-	const onIt = new Set(holding.map((s) => s.userId));
+	const onIt = new Set((await assigneesOf(task.id)).map((a) => a.userId));
 	const adding = wanted.filter((id) => !onIt.has(id));
-	if (adding.length === 0 && holding.length === 0) {
+	if (adding.length === 0 && onIt.size === 0) {
 		throw new TaskValidationError('Pick at least one person.');
 	}
 	if (open.length > 0 && !data.confirm) return warning(0, open);
 	await cancelEngagements(open);
 
-	const capacity = validateCapacity(Math.max(task.capacity, holding.length + adding.length));
-	await db
-		.update(workOrder)
-		.set({
-			volunteerRoleId: roleId,
-			capacity,
-			postedAt: null,
-			postedByUserId: null,
-			updatedAt: new Date()
-		})
-		.where(eq(workOrder.id, task.id));
+	if (roleId !== task.volunteerRoleId) {
+		await db
+			.update(workOrder)
+			.set({ volunteerRoleId: roleId, updatedAt: new Date() })
+			.where(eq(workOrder.id, task.id));
+	}
 
 	const assigned: string[] = [];
 	const refused: AssignResult['refused'] = [];
 	const warned: AssignResult['warned'] = [];
+	const target = { ...task, volunteerRoleId: roleId };
 	for (const userId of adding) {
 		try {
-			const { warnings } = await claimShift(task.id, userId, { assignedByStaff: true });
+			const { warnings } = await assignToTask(target, userId, data.assignedByUserId ?? null);
 			assigned.push(userId);
 			if (warnings.length > 0) warned.push({ userId, warnings });
 		} catch (err) {
@@ -424,38 +462,35 @@ export async function assignMembers(
 			refused.push({ userId, message: err.message });
 		}
 	}
-	// Places are raised for the people actually put on it, not those refused.
-	if (refused.length > 0) {
-		await db
-			.update(workOrder)
-			.set({ capacity: Math.max(task.capacity, holding.length + assigned.length) })
-			.where(eq(workOrder.id, task.id));
-	}
 
 	const mode = await modeOf(task.id);
 	await auditModeChange(task, from, mode, 0, open);
 	return { status: 'done', assigned, refused, warned, mode };
 }
 
-/** Take one person off the task, telling them the way a dropped shift does. */
+/**
+ * Take one person off the task: their assignment, or else their sign-up on one
+ * of its shifts still to come, released the way a dropped shift is.
+ */
 export async function unassignMember(
 	projectId: string,
 	workOrderId: string,
 	userId: string
 ): Promise<void> {
 	const task = await requireLiveTask(projectId, workOrderId);
-	const [signup] = (await signupsOn(task.id, ['claimed', 'confirmed'])).filter(
-		(s) => s.userId === userId
-	);
-	if (!signup) throw new TaskNotFoundError();
 	const from = await modeOf(task.id);
-	await releaseSignup(signup.id);
+	if (!(await unassignFromTask(task, userId))) {
+		const [signup] = (await liveSignupsOn(task.id)).filter((s) => s.userId === userId);
+		if (!signup) throw new TaskNotFoundError();
+		await releaseSignup(signup.id);
+	}
 	await auditModeChange(task, from, await modeOf(task.id));
 }
 
 /**
- * Open the task to volunteers on the claim board. Needs a role and a number of
- * places; anybody already on it stays on it.
+ * Set the role and places of the task's shift (#2518). A shift is what is open
+ * to volunteers, and it needs a time: a task with none is given one through
+ * Reschedule, which opens it. Anybody already on it stays on it.
  */
 export async function openToVolunteers(
 	projectId: string,
@@ -471,28 +506,20 @@ export async function openToVolunteers(
 	const from = await modeOf(task.id);
 	const open = await engagementsToCancel(task, from);
 	const roleId = await roleFor(task, data.volunteerRoleId);
-	const capacity = validateCapacity(data.capacity ?? task.capacity);
-	const taken = await countActiveSignups(task.id);
-	if (capacity < taken) {
+	const shift = await getCurrentShift(task.id);
+	if (!shift || shift.cancelledAt) {
 		throw new TaskValidationError(
-			`${taken} ${taken === 1 ? 'person is' : 'people are'} already on this. Ask for at least ${taken}.`
+			'Give it a time first: volunteers sign up for a shift, and a shift has a start and an end.'
 		);
 	}
+	const capacity = validateCapacity(data.capacity ?? shift.capacity);
 	if (open.length > 0 && !data.confirm) return warning(0, open);
 	await cancelEngagements(open);
-	const now = new Date();
-	await db
-		.update(workOrder)
-		.set({
-			volunteerRoleId: roleId,
-			capacity,
-			postedAt: task.postedAt ?? now,
-			postedByUserId: task.postedAt ? task.postedByUserId : data.postedByUserId,
-			updatedAt: now
-		})
-		.where(eq(workOrder.id, task.id));
-	await auditModeChange(task, from, 'open', 0, open);
-	return { status: 'done', mode: 'open' };
+	// `updateShift` refuses fewer places than are already taken.
+	await updateShift(task.id, { volunteerRoleId: roleId, capacity });
+	const mode = await modeOf(task.id);
+	await auditModeChange(task, from, mode, 0, open);
+	return { status: 'done', mode };
 }
 
 export type UnassignResult =
@@ -506,20 +533,17 @@ export type UnassignResult =
 export async function unassignTask(
 	projectId: string,
 	workOrderId: string,
-	data: { confirm?: boolean } = {}
+	data: { confirm?: boolean; byUserId?: string | null } = {}
 ): Promise<UnassignResult> {
 	const task = await requireLiveTask(projectId, workOrderId);
 	const from = await modeOf(task.id);
 	const open = await engagementsToCancel(task, from);
-	const live = await signupsOn(task.id, ['claimed', 'confirmed']);
-	if ((live.length > 0 || open.length > 0) && !data.confirm) return warning(live.length, open);
+	const live = await liveSignupsOn(task.id);
+	const people = live.length + (await assigneesOf(task.id)).length;
+	if ((people > 0 || open.length > 0) && !data.confirm) return warning(people, open);
 
 	await cancelEngagements(open);
-	await db
-		.update(workOrder)
-		.set({ postedAt: null, postedByUserId: null, updatedAt: new Date() })
-		.where(eq(workOrder.id, task.id));
-	for (const s of live) await releaseSignup(s.id);
+	await takeEveryoneOff(task, data.byUserId ?? null, live);
 	const mode = await modeOf(task.id);
 	await auditModeChange(task, from, mode, live.length, open);
 	return { status: 'done', cancelledSignups: live.length, mode };
@@ -547,8 +571,9 @@ export async function engageContractor(
 	const task = await requireLiveTask(projectId, workOrderId);
 	if (task.resolvedAt) throw new TaskConflictError('That task is already done.');
 	const from = await modeOf(task.id);
-	const live = await signupsOn(task.id, ['claimed', 'confirmed']);
-	if (live.length > 0 && !data.confirm) return warning(live.length, []);
+	const live = await liveSignupsOn(task.id);
+	const people = live.length + (await assigneesOf(task.id)).length;
+	if (people > 0 && !data.confirm) return warning(people, []);
 
 	// The engagement first: it refuses an archived contractor before anything moves.
 	const job = await createJob({
@@ -557,11 +582,8 @@ export async function engageContractor(
 		quotedCents: data.quotedCents ?? null,
 		requestedByUserId: data.requestedByUserId
 	});
-	await db
-		.update(workOrder)
-		.set({ postedAt: null, postedByUserId: null, updatedAt: new Date() })
-		.where(eq(workOrder.id, task.id));
-	for (const s of live) await releaseSignup(s.id);
+	// Delegating cancels its shifts still to come and removes its assignees (#2518).
+	await takeEveryoneOff(task, data.requestedByUserId, live);
 	const mode = await modeOf(task.id);
 	await auditModeChange(task, from, mode, live.length);
 	return { status: 'done', engagementId: job.id, cancelledSignups: live.length, mode };
@@ -625,7 +647,7 @@ export async function setTaskEquipment(
 		.set({ assetId, updatedAt: new Date() })
 		.where(eq(workOrder.id, task.id))
 		.returning();
-	await auditWorkOrderChange(task, row);
+	await auditWorkOrderChange(task, toTask(row));
 }
 
 // ---------------------------------------------------------------------------
@@ -640,7 +662,7 @@ export async function resolveTask(
 	projectId: string,
 	workOrderId: string,
 	data: { resolvedByUserId: string; reason?: string | null }
-): Promise<WorkOrder> {
+): Promise<Task> {
 	const task = await requireLiveTask(projectId, workOrderId);
 	const reason = data.reason?.trim() || null;
 	if (task.doneWhen !== null && !reason) {
@@ -652,7 +674,7 @@ export async function resolveTask(
 }
 
 /** Untick it. A task with a done condition goes back to reading it. */
-export async function reopenTask(projectId: string, workOrderId: string): Promise<WorkOrder> {
+export async function reopenTask(projectId: string, workOrderId: string): Promise<Task> {
 	const task = await requireLiveTask(projectId, workOrderId);
 	if (!task.resolvedAt) throw new TaskConflictError('That task is not ticked.');
 	try {
@@ -671,7 +693,7 @@ export async function reopenTask(projectId: string, workOrderId: string): Promis
 			subject: { type: 'work_order', id: task.id, label: label(task) },
 			details: {}
 		});
-		return row;
+		return toTask(row);
 	} catch (err) {
 		// A recurring occurrence: closing it already wrote the next one.
 		if (isUniqueConstraintError(err)) {
@@ -682,29 +704,47 @@ export async function reopenTask(projectId: string, workOrderId: string): Promis
 }
 
 /**
- * Set the window (`YYYY-MM-DDTHH:mm`, club time; both or neither) and the
- * deadline. Either may be cleared: a task can lose its time as well as gain one.
+ * Set the shift's time (`YYYY-MM-DDTHH:mm`, club time; both or neither) and the
+ * deadline. Times edit the task's current shift or open one; clearing them
+ * calls its live shift off, so a task can lose its time as well as gain one.
  */
 export async function rescheduleTask(
 	projectId: string,
 	workOrderId: string,
-	data: { startsAt: string | null; endsAt: string | null; dueAt: Date | null }
-): Promise<WorkOrder> {
+	data: {
+		startsAt: string | null;
+		endsAt: string | null;
+		dueAt: Date | null;
+		byUserId?: string | null;
+	}
+): Promise<Task> {
 	const task = await requireLiveTask(projectId, workOrderId);
 	if (!data.startsAt !== !data.endsAt) {
 		throw new TaskValidationError('Give this both a start and an end, or neither.');
 	}
-	const times =
-		data.startsAt && data.endsAt
-			? validateTimes(parseLocal(data.startsAt, 'Start'), parseLocal(data.endsAt, 'End'))
-			: { startsAt: null, endsAt: null };
+	const current = await getCurrentShift(task.id);
+	const live = current && !current.cancelledAt ? current : null;
+	if (data.startsAt && data.endsAt) {
+		await updateShift(task.id, {
+			startsAt: data.startsAt,
+			endsAt: data.endsAt,
+			updatedByUserId: data.byUserId ?? undefined
+		});
+	} else if (live) {
+		await cancelLiveShifts(task.id, data.byUserId ?? null, new Date());
+		await auditWorkOrderChange(
+			{ ...task, startsAt: live.startsAt, endsAt: live.endsAt },
+			{ ...task, startsAt: null, endsAt: null }
+		);
+	}
 	const [row] = await db
 		.update(workOrder)
-		.set({ ...times, dueAt: data.dueAt, updatedAt: new Date() })
+		.set({ dueAt: data.dueAt, updatedAt: new Date() })
 		.where(eq(workOrder.id, task.id))
 		.returning();
-	await auditWorkOrderChange(task, row);
-	return row;
+	const after = toTask(row);
+	await auditWorkOrderChange(task, after);
+	return after;
 }
 
 /** Call it off. Its signups stay, as a notify list, exactly as a cancelled shift's do. */
@@ -712,7 +752,7 @@ export async function cancelTask(
 	projectId: string,
 	workOrderId: string,
 	cancelledByUserId: string
-): Promise<WorkOrder> {
+): Promise<Task> {
 	const task = await requireLiveTask(projectId, workOrderId);
 	return cancelShift(task.id, cancelledByUserId);
 }
@@ -786,6 +826,15 @@ async function owningCommittee(projectId: string) {
 }
 
 /** Everything the task list draws: sections, each task with its mode and state, and progress. */
+/** One time of the task's latest live shift, or null with none. */
+function liveShiftTime(column: 'starts_at' | 'ends_at') {
+	return sql<Date | null>`(
+		select s.${sql.raw(`"${column}"`)} from "volunteer_shift" s
+		where s."work_order_id" = ${workOrder.id} and s."cancelled_at" is null
+		order by s."starts_at" desc limit 1
+	)`.mapWith((v: number | null) => (v === null ? null : new Date(Number(v) * 1000)));
+}
+
 export async function listProjectTasks(projectId: string) {
 	const [sections, rows, committee] = await Promise.all([
 		listSections(projectId),
@@ -797,11 +846,15 @@ export async function listProjectTasks(projectId: string) {
 				sortOrder: workOrder.sortOrder,
 				volunteerRoleId: workOrder.volunteerRoleId,
 				roleName: volunteerRole.name,
-				capacity: workOrder.capacity,
+				// Across the task's live shifts; with none, the places it asked for.
+				capacity:
+					sql<number>`coalesce(nullif(${capacitySql()}, 0), ${workOrder.pendingCapacity}, 1)`.mapWith(
+						Number
+					),
 				claimed: claimedSql().mapWith(Number),
-				startsAt: workOrder.startsAt,
-				endsAt: workOrder.endsAt,
-				postedAt: workOrder.postedAt,
+				// The latest live shift's time, which is what a one-shift row shows.
+				startsAt: liveShiftTime('starts_at'),
+				endsAt: liveShiftTime('ends_at'),
 				groupId: workOrder.groupId,
 				groupName: group.name,
 				notes: workOrder.notes,

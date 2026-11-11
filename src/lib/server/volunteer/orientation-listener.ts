@@ -80,7 +80,7 @@ export function registerOrientationListeners(): void {
 	// stored.
 	domainEvents.on('volunteer.shift_completed', async ({ data: event }) => {
 		try {
-			const member = await orientationOwnerOf(event.shiftId);
+			const member = await orientationOwnerOf(event.workOrderId);
 			if (!member) return;
 
 			// The member is the one who was shown around; `event.userId` is the

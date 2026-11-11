@@ -245,7 +245,6 @@ export async function seedContractors(staffId: string) {
 		title: spec.title,
 		assetId: spec.assetId ?? null,
 		volunteerRoleId: null,
-		postedAt: null,
 		resolvedAt: spec.status === 'completed' ? (spec.completedAt ?? null) : null,
 		resolvedByUserId: spec.status === 'completed' ? staffId : null,
 		cancelledAt: spec.status === 'cancelled' ? (spec.scheduledFor ?? now) : null,

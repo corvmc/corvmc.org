@@ -13,8 +13,9 @@ import {
 	volunteerShiftFeedback,
 	volunteerSignup
 } from '../../src/lib/server/db/schema/volunteer';
-import { and, asc, eq, isNotNull, isNull, notInArray } from 'drizzle-orm';
+import { and, asc, count, eq, gt, isNotNull, isNull, notInArray } from 'drizzle-orm';
 import { batchInsert, db } from './db';
+import { insertTasksWithShifts } from './shifts';
 import { type SeedEvent, type SeedUser } from './types';
 import { pick, pickN, ptDate, random, randomInt } from './util';
 import { randomUUID } from 'crypto';
@@ -497,11 +498,8 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 	// Named work parties, so the board shows something other than the role.
 	const UNATTACHED_SHIFT_TITLES = ['Spring Deep Clean', 'Back Room Build', 'Gear Triage Day'];
 
-	// `startsAt`/`endsAt` are nullable on `work_order` — an undated duty-list job
-	// has no times — but every row built below sets both. Narrowed once here so
-	// the reads downstream do not each need a non-null assertion.
-	const shiftRows = (await batchInsert(
-		workOrder,
+	// Each row is a task with one shift on it (#2518); sign-ups name `shiftId`.
+	const shiftRows = await insertTasksWithShifts(
 		[-10, -7, -4, -2, 1, 2, 4, 6, 8, 11].map((offset, i) => {
 			// Every third shift is deliberately left unattached.
 			const pool = offset < 0 ? pastShows : futureShows;
@@ -532,13 +530,10 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 				// paired with — which is what keeps it inside the dashboard's two-week
 				// horizon rather than wherever the events happen to fall.
 				capacity: offset === 2 ? 4 : 1 + (i % 3),
-				notes: i % 2 === 0 ? 'Meet at the side door 15 minutes early.' : null
+				shiftNotes: i % 2 === 0 ? 'Meet at the side door 15 minutes early.' : null
 			};
-		}),
-		// One more bound column per row than this insert used to carry, and D1 caps
-		// a statement at 100 parameters.
-		8
-	)) as (typeof workOrder.$inferSelect & { startsAt: Date; endsAt: Date })[];
+		})
+	);
 
 	const signupRows: (typeof volunteerSignup.$inferInsert)[] = [];
 	const feedbackRows: (typeof volunteerShiftFeedback.$inferInsert)[] = [];
@@ -589,7 +584,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 					: 'claimed';
 			signupRows.push({
 				id: signupId,
-				shiftId: shift.id,
+				shiftId: shift.shiftId,
 				userId: u.id,
 				status,
 				// Five days before the shift, but never in the future: a claim is something
@@ -606,7 +601,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 			if (status === 'completed') {
 				completions.push({
 					signupId,
-					shiftId: shift.id,
+					shiftId: shift.shiftId,
 					userId: u.id,
 					volunteerRoleId,
 					eventId: shift.eventId,
@@ -647,7 +642,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 		for (const [i, u] of asked.entries()) {
 			signupRows.push({
 				id: randomUUID(),
-				shiftId: invitableShift.id,
+				shiftId: invitableShift.shiftId,
 				userId: u.id,
 				status: i === 0 ? ('invited' as const) : ('declined' as const),
 				invitedAt: new Date(now.getTime() - (i + 1) * day),
@@ -668,7 +663,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 	let docShifts = 0;
 	if (docRole && lastShow) {
 		const endsAt = lastShow.endsAt ?? new Date(lastShow.startsAt.getTime() + 4 * 3_600_000);
-		const [docShift] = await batchInsert(workOrder, [
+		const [docShift] = await insertTasksWithShifts([
 			{
 				id: randomUUID(),
 				volunteerRoleId: docRole.id,
@@ -680,7 +675,7 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 		]);
 		signupRows.push({
 			id: randomUUID(),
-			shiftId: docShift.id,
+			shiftId: docShift.shiftId,
 			userId: photographer.id,
 			status: 'completed',
 			claimedAt: new Date(lastShow.startsAt.getTime() - 5 * day),
@@ -801,81 +796,63 @@ export async function seedVolunteerHours(
 }
 
 /**
- * The task/shift split (#2518), written beside the old shape until readers move.
- * Last, because every seeder above writes work orders: each timed one gets a
- * shift, as the migration did in production. Staff-made sign-ups on untimed
- * tasks become assignees; one upcoming task gets an assignee beside its shift;
- * and the first assignee logs hours naming the task.
+ * Assignment beside a shift (#2518): the owner's example is Nia owning the
+ * festival stage while a shift asks for two more people on the day. Gives the
+ * soonest upcoming live shift's task an assignee who is not signed up for it.
+ * Runs last, after every seeder that writes shifts.
  */
-export async function seedTasksAndShifts(roles: { id: string; isActive: boolean | null }[]) {
-	console.log('Seeding shifts and task assignees...');
-	const timed = await db
-		.select()
-		.from(workOrder)
-		.where(and(isNotNull(workOrder.startsAt), isNotNull(workOrder.endsAt)))
-		.orderBy(asc(workOrder.startsAt), asc(workOrder.id));
-	const shifts = await batchInsert(
-		volunteerShift,
-		timed.map((wo) => ({
-			id: randomUUID(),
-			workOrderId: wo.id,
-			startsAt: wo.startsAt!,
-			endsAt: wo.endsAt!,
-			capacity: wo.capacity,
-			anchor: wo.anchor,
-			notes: wo.notes,
-			cancelledAt: wo.cancelledAt,
-			cancelledByUserId: wo.cancelledByUserId,
-			createdByUserId: wo.postedByUserId ?? wo.createdByUserId
-		}))
-	);
-
-	const assigned = await db
-		.select({
-			workOrderId: volunteerSignup.shiftId,
-			userId: volunteerSignup.userId,
-			assignedAt: volunteerSignup.claimedAt,
-			volunteerRoleId: workOrder.volunteerRoleId
-		})
-		.from(volunteerSignup)
-		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+export async function seedTasksAndShifts() {
+	console.log('Seeding a task with both an assignee and a shift...');
+	const [upcoming] = await db
+		.select({ workOrderId: volunteerShift.workOrderId, shiftId: volunteerShift.id })
+		.from(volunteerShift)
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.where(
 			and(
-				isNull(workOrder.startsAt),
-				notInArray(volunteerSignup.status, ['cancelled', 'declined', 'invited'])
+				gt(volunteerShift.startsAt, new Date()),
+				isNull(volunteerShift.cancelledAt),
+				isNull(workOrder.cancelledAt),
+				isNull(workOrder.resolvedAt)
 			)
 		)
-		.orderBy(asc(volunteerSignup.shiftId), asc(volunteerSignup.userId));
+		.orderBy(asc(volunteerShift.startsAt), asc(volunteerShift.id))
+		.limit(1);
+	if (!upcoming) return totals();
 
-	const now = new Date();
-	const upcoming = timed.find((wo) => wo.startsAt! > now && !wo.cancelledAt && !wo.resolvedAt);
-	const both =
-		upcoming && assigned[0]
-			? [{ workOrderId: upcoming.id, userId: assigned[0].userId, assignedAt: now }]
-			: [];
-	const assignees = await batchInsert(workOrderAssignee, [
-		...assigned.map(({ workOrderId, userId, assignedAt }) => ({ workOrderId, userId, assignedAt })),
-		...both.filter(
-			(b) => !assigned.some((a) => a.workOrderId === b.workOrderId && a.userId === b.userId)
+	const onShift = await db
+		.select({ userId: volunteerSignup.userId })
+		.from(volunteerSignup)
+		.where(eq(volunteerSignup.shiftId, upcoming.shiftId));
+	const [owner] = await db
+		.select({ userId: volunteerProfile.userId })
+		.from(volunteerProfile)
+		.where(
+			and(
+				eq(volunteerProfile.status, 'active'),
+				onShift.length
+					? notInArray(
+							volunteerProfile.userId,
+							onShift.map((r) => r.userId)
+						)
+					: undefined
+			)
 		)
+		.orderBy(asc(volunteerProfile.userId))
+		.limit(1);
+	if (!owner) return totals();
+
+	await batchInsert(workOrderAssignee, [
+		{ workOrderId: upcoming.workOrderId, userId: owner.userId, assignedAt: new Date() }
 	]);
+	return totals();
+}
 
-	const first = assigned[0];
-	const roleId = first?.volunteerRoleId ?? roles.find((r) => r.isActive)?.id;
-	const taskHours =
-		first && roleId
-			? await batchInsert(volunteerHourLog, [
-					{
-						userId: first.userId,
-						volunteerRoleId: roleId,
-						workOrderId: first.workOrderId,
-						workedOn: ptDate(-3, 12),
-						minutes: 120,
-						description: 'Prep for the task, logged after the fact.',
-						status: 'pending' as const
-					}
-				])
-			: [];
-
-	return { shifts: shifts.length, assignees: assignees.length, taskHours: taskHours.length };
+/** What every seeder above wrote, for the summary line. */
+async function totals() {
+	const [[shifts], [assignees], [taskHours]] = await Promise.all([
+		db.select({ n: count() }).from(volunteerShift),
+		db.select({ n: count() }).from(workOrderAssignee),
+		db.select({ n: count() }).from(volunteerHourLog).where(isNotNull(volunteerHourLog.workOrderId))
+	]);
+	return { shifts: shifts.n, assignees: assignees.n, taskHours: taskHours.n };
 }

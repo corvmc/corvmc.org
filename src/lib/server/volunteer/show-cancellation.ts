@@ -1,9 +1,9 @@
 import { db } from '#lib/server/db/index.js';
-import { workOrder } from '#lib/server/db/schema/volunteer.js';
+import { volunteerShift, workOrder } from '#lib/server/db/schema/volunteer.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { production } from '#lib/server/db/schema/production.js';
-import { and, eq, gt, inArray, isNotNull, isNull, or, type SQL } from 'drizzle-orm';
-import { cancelShift } from './work-order-service';
+import { and, eq, inArray, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { cancelShift, hasLiveShiftSql, liveShift } from './work-order-service';
 import { notifySignupsOfCancellation } from './volunteer-signup-service';
 
 /**
@@ -28,13 +28,26 @@ async function cancelLiveShifts(where: SQL, cancelledByUserId?: string | null): 
 				isNull(workOrder.groupId),
 				isNull(workOrder.cancelledAt),
 				isNull(workOrder.resolvedAt),
-				or(isNull(workOrder.endsAt), gt(workOrder.endsAt, now))
+				// A task with no shift yet, or one with a shift still to come.
+				or(
+					sql`not ${hasLiveShiftSql()}`,
+					sql`exists (
+						select 1 from "volunteer_shift" s
+						where s."work_order_id" = ${workOrder.id}
+							and s."cancelled_at" is null
+							and s."ends_at" > ${Math.floor(now.getTime() / 1000)}
+					)`
+				)
 			)
 		);
 
 	for (const { id } of live) {
+		const shifts = await db
+			.select({ id: volunteerShift.id })
+			.from(volunteerShift)
+			.where(and(eq(volunteerShift.workOrderId, id), liveShift()));
 		await cancelShift(id, cancelledByUserId ?? undefined);
-		await notifySignupsOfCancellation(id);
+		for (const shift of shifts) await notifySignupsOfCancellation(shift.id);
 	}
 	return live.length;
 }

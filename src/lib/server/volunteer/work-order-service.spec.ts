@@ -53,8 +53,8 @@ import {
 	createWorkOrder,
 	listShifts,
 	listWorkOrders,
+	openShift,
 	resolveWorkOrder,
-	scheduleWorkOrder,
 	updateShift
 } from './work-order-service';
 
@@ -232,9 +232,13 @@ describe('createShift and the asset link', () => {
 		await createShift({ ...base, assetId: 'asset-pa' });
 		await createShift({ ...base, assetId: '' });
 
-		const values = chainCalls.filter((c) => c.method === 'values').map((c) => c.args[0] as any);
-		expect(values[0].assetId).toBe('asset-pa');
-		expect(values[1].assetId).toBeNull();
+		// Each call writes a task, which carries the asset, then its shift.
+		const tasks = chainCalls
+			.filter((c) => c.method === 'values')
+			.map((c) => c.args[0] as any)
+			.filter((v) => 'assetId' in v);
+		expect(tasks[0].assetId).toBe('asset-pa');
+		expect(tasks[1].assetId).toBeNull();
 	});
 });
 
@@ -318,12 +322,8 @@ describe('cancelShift', () => {
 });
 
 describe('work orders', () => {
-	/**
-	 * The CHECK is both-or-neither, so a work order is the "neither" case. Writing
-	 * one end and not the other is the shape that used to slip through, because
-	 * `false OR NULL` is NULL and SQLite passes a CHECK returning NULL.
-	 */
-	it('creates a row with no window at all', async () => {
+	/** A task's times are its shifts (#2518): creating one writes the task alone. */
+	it('creates a task and no shift', async () => {
 		selectResult = [{ id: 'role-1', isActive: true }];
 
 		await createWorkOrder({
@@ -333,11 +333,10 @@ describe('work orders', () => {
 			createdByUserId: 'staff-1'
 		});
 
-		const values = chainCalls.find((c) => c.method === 'values')!.args[0] as Record<
-			string,
-			unknown
-		>;
-		expect(values).toMatchObject({ startsAt: null, endsAt: null, assetId: 'as-1' });
+		const values = chainCalls.filter((c) => c.method === 'values');
+		expect(values).toHaveLength(1);
+		expect(values[0].args[0]).toMatchObject({ assetId: 'as-1' });
+		expect(values[0].args[0]).not.toHaveProperty('legacyStartsAt');
 	});
 
 	it('anchors a work order to a project when given one, and to none otherwise', async () => {
@@ -364,7 +363,7 @@ describe('work orders', () => {
 		).rejects.toThrow();
 	});
 
-	it('creates a task with only a title: no role, not posted', async () => {
+	it('creates a task with only a title and no role', async () => {
 		await createWorkOrder({
 			title: ' Buy paint ',
 			projectId: 'proj-1',
@@ -377,19 +376,18 @@ describe('work orders', () => {
 		expect(values).toMatchObject({
 			title: 'Buy paint',
 			volunteerRoleId: null,
-			postedAt: null,
 			projectId: 'proj-1'
 		});
 	});
 
-	it('posts volunteer work, which has a role', async () => {
+	it('keeps the places it asks for until a shift is opened on it', async () => {
 		selectResult = [{ id: 'role-1', isActive: true }];
-		await createWorkOrder({ volunteerRoleId: 'role-1', createdByUserId: 'staff-1' });
+		await createWorkOrder({ volunteerRoleId: 'role-1', capacity: 3, createdByUserId: 'staff-1' });
 		const values = chainCalls.find((c) => c.method === 'values')!.args[0] as Record<
 			string,
 			unknown
 		>;
-		expect(values.postedAt).toBeInstanceOf(Date);
+		expect(values.pendingCapacity).toBe(3);
 	});
 
 	it('refuses a task with neither a role nor a title', async () => {
@@ -398,14 +396,14 @@ describe('work orders', () => {
 		);
 	});
 
-	it('queues only work that is unscheduled, unresolved and live', async () => {
+	it('queues only open tasks with no live shift', async () => {
 		selectResult = [];
 		await listWorkOrders();
 
 		const sql = renderedWhere().sql;
-		expect(sql).toContain('"starts_at" is null');
+		expect(sql).toMatch(/not exists \(\s*select 1 from "volunteer_shift" s/);
+		expect(sql).toContain('s."cancelled_at" is null');
 		expect(sql).toContain('"resolved_at" is null');
-		expect(sql).toContain('"cancelled_at" is null');
 	});
 
 	/**
@@ -444,17 +442,17 @@ describe('work orders', () => {
 	});
 
 	/**
-	 * `completeFinishedShifts` keys on `ends_at`, so it can never reach a row that
-	 * never had one. Without this the signups on an unscheduled work order sit at
-	 * `confirmed` forever — including after the work is done.
+	 * Marking a task done stamps its assignees, which prompts them to log hours.
+	 * Sign-ups are the completion cron's, by their shift's end (#2518).
 	 */
-	it('completes the signups itself, because the clock never will', async () => {
-		selectResult = [shiftRow({ startsAt: null, endsAt: null, resolvedAt: null })];
+	it('stamps its assignees and leaves sign-ups to the clock', async () => {
+		selectResult = [shiftRow({ resolvedAt: null })];
 
 		await resolveWorkOrder('shift-1', { resolvedByUserId: 'staff-1', notes: 'New jack fitted' });
 
 		const sets = chainCalls.filter((c) => c.method === 'set').map((c) => c.args[0]);
-		expect(sets.some((v: any) => v.status === 'completed')).toBe(true);
+		expect(sets.some((v: any) => v.completedAt instanceof Date)).toBe(true);
+		expect(sets.some((v: any) => v.status === 'completed')).toBe(false);
 		expect(sets.some((v: any) => v.resolvedAt instanceof Date)).toBe(true);
 	});
 
@@ -472,32 +470,41 @@ describe('work orders', () => {
 		await expect(resolveWorkOrder('shift-1', { resolvedByUserId: 'staff-1' })).rejects.toThrow();
 	});
 
-	it('records whether finishing should close its reports, off unless staff say so', async () => {
-		selectResult = [shiftRow({ startsAt: null, endsAt: null })];
-		await scheduleWorkOrder('shift-1', {
-			startsAt: '2026-06-02T18:00',
-			endsAt: '2026-06-02T20:00'
-		});
-		expect(updatedColumns().closeReportsOnCompletion).toBe(false);
+	// `scheduleWorkOrder` and its close-reports flag are gone (#2518): a task gets a
+	// time by opening a shift on it, and the clock never closes its reports.
+	it('opens a shift on a task with a role, carrying its anchor', async () => {
+		selectQueue = [[shiftRow({ anchor: 'doors' })], [{ id: 'role-1', isActive: true }]];
+		selectResult = [{ id: 'shift-9', startsAt: new Date(), endsAt: new Date() }];
 
-		chainCalls = [];
-		await scheduleWorkOrder('shift-1', {
+		await openShift('shift-1', {
 			startsAt: '2026-06-02T18:00',
 			endsAt: '2026-06-02T20:00',
-			closeReportsOnCompletion: true
+			capacity: 2,
+			createdByUserId: 'staff-1'
 		});
-		expect(updatedColumns().closeReportsOnCompletion).toBe(true);
+
+		const shift = chainCalls.find((c) => c.method === 'values')!.args[0] as Record<string, unknown>;
+		expect(shift).toMatchObject({ workOrderId: 'shift-1', capacity: 2, anchor: 'doors' });
 	});
 
-	it('refuses to schedule something that already has a window', async () => {
-		selectResult = [shiftRow()];
-
+	it('refuses to open a shift on a task with no role, or one already done', async () => {
+		selectResult = [shiftRow({ volunteerRoleId: null })];
 		await expect(
-			scheduleWorkOrder('shift-1', {
+			openShift('shift-1', {
 				startsAt: '2026-06-02T18:00',
-				endsAt: '2026-06-02T22:00'
+				endsAt: '2026-06-02T20:00',
+				createdByUserId: 'staff-1'
 			})
-		).rejects.toThrow();
+		).rejects.toThrow(/volunteer role/);
+
+		selectResult = [shiftRow({ resolvedAt: new Date() })];
+		await expect(
+			openShift('shift-1', {
+				startsAt: '2026-06-02T18:00',
+				endsAt: '2026-06-02T20:00',
+				createdByUserId: 'staff-1'
+			})
+		).rejects.toThrow(/already done/);
 	});
 });
 
@@ -561,13 +568,14 @@ describe('closing a recurring occurrence', () => {
 		expect(nextOccurrence()).toMatchObject({ maintenanceScheduleId: 'ms-1' });
 	});
 
-	it('leaves an ordinary shift out of it', async () => {
+	it('leaves an ordinary task out of it, calling off only the task and its shifts', async () => {
 		selectQueue = [[shiftRow()]];
 		selectResult = [{ id: 'shift-1' }];
 
 		await cancelShift('shift-1', 'staff-1');
 
-		expect(batch).not.toHaveBeenCalled();
+		expect(batch).toHaveBeenCalledTimes(1);
+		expect(batch.mock.calls[0][0]).toHaveLength(2);
 		expect(nextOccurrence()).toBeUndefined();
 	});
 });

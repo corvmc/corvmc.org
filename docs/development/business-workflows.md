@@ -712,8 +712,10 @@ people noticing one crackle is the signal.
 Staff triage them in Inventory's Reported Problems queue, `/staff/inventory/problems` (#1840), behind
 `inventory.manageAssets`: dismiss, or send to a work order — an open one on the same unit
 or a new one — and every other untriaged report on that unit goes with it
-(`sendToWorkOrder`). Resolving the work order closes every report attached to it
-(`resolveWorkOrder` → `resolveFlagsForWorkOrder`).
+(`sendToWorkOrder`). Marking the task done closes every report attached to it
+(`resolveWorkOrder` → `resolveFlagsForWorkOrder`), and nothing else does: a shift on the task
+ending leaves its reports open, and the task waits on the Schedule's ended-shifts list
+(#2518). The "close reports on completion" option and its listener are gone.
 
 **Where it breaks** — a report appears to do nothing: check the form validated.
 A select's empty option submits `''`, which `z.enum([...]).optional()` rejects,
@@ -1252,6 +1254,30 @@ member, role and month — which is the number the board and grant applications 
 Approved hours are a record, not a currency: they never become practice-room credits and
 never touch the finance ledger, and there is a test that enforces it.
 
+### Tasks and shifts (#2518)
+
+A **task** (`work_order`) is the work; a **shift** (`volunteer_shift`) is a time volunteers
+sign up for it. A task has zero or more shifts. Deliverables and repairs usually have none.
+
+- **Assigning and signing up are two acts.** Staff and committees assign a task to people
+  (`work_order_assignee`, `assignee-service.ts`). Volunteers sign up for a shift
+  (`volunteer_signup.shift_id` → `volunteer_shift`). A sign-up never stands for an assignment.
+- **A shift is open by existing.** There is no posting step. `openShift(taskId, times)` needs
+  the task to have a role and be open; the shift is then on the member board. A task with no
+  live shift is on the Schedule's "needs scheduling" queue.
+- **The clock never closes a task.** When a shift ends, the completion cron completes its
+  sign-ups. The task stays open, and an open task whose last live shift has ended is on the
+  Schedule's ended-shifts list (`listTasksWithEndedShifts`) until someone marks it done or
+  opens another shift. The sidebar badge counts that list.
+- **Marking a task done** (`resolveWorkOrder`) resolves its equipment reports, stamps
+  `completed_at` on its assignees and writes the next recurring occurrence. It does not touch
+  sign-ups, which the clock completes.
+- **Hours** name a shift, a task (`volunteer_hour_log.work_order_id`), or neither.
+- **Capability grants** from a role last for a confirmed sign-up's shift window, and for an
+  assignment the task's event window, each plus the role's grace days.
+- Staff pages still show one shift per task: the latest live one (`getCurrentShift`). The
+  data allows several; the staff and member screens that list them come with the UI phases.
+
 Certifications gate _scheduling_, never the record of work already done. A role can require
 one; whether a member held it is evaluated **as of the shift's date**, with a deliberate
 asymmetry — a clearance pulled on the day was not in force, but a card is valid through its
@@ -1270,8 +1296,8 @@ were bound to the session.
 So:
 
 - **The Schedule is the worklist (#2379).** `/staff/volunteer` was a dashboard of cards and
-  308s to `/staff/volunteer/schedule` now. Claims to confirm, short shifts, unscheduled work
-  and unverified repairs are count chips that filter the Schedule (`?needs=`); hours to review
+  308s to `/staff/volunteer/schedule` now. Claims to confirm, short shifts, tasks with no
+  shift and tasks whose shifts have ended are count chips that filter the Schedule (`?needs=`); hours to review
   and clearances lapsing before a booked shift are counts that link to Members → Volunteers
   (`/hours`, `?lapsing=1`). Each is hidden at zero.
 - **Four screens, not seven.** Today, Schedule, People, Setup, plus a read-only Report.
@@ -1286,9 +1312,10 @@ So:
   `volunteer_signup.notified_at` records how far down the list staff have got. Cancelling
   deliberately notifies nobody on its own — calling a shift off and telling six people about
   it are two decisions, and the first is sometimes reversed.
-- **Staff can assign, release and confirm.** `assignShiftToMember` lands the signup
-  `confirmed` — a coordinator typing the name in _is_ the decision, and leaving it `claimed`
-  would cost the member their reminder. For staff the clearance and onboarding gates warn,
+- **Staff can assign, release and confirm.** On a task with a shift, `assignShiftToMember`
+  lands a sign-up `confirmed` — a coordinator typing the name in _is_ the decision, and leaving
+  it `claimed` would cost the member their reminder. On a task with no shift it assigns the
+  task instead. For staff the clearance and onboarding gates warn,
   record and allow: an uncleared member, or one with no volunteer profile, is added, the
   gaps come back as warnings, and `work_order.assigned_over_warnings` is written to the
   audit log. A profile awaiting under-18 review is still refused.
@@ -1322,9 +1349,10 @@ So:
   so a filtered member still comes back with all their roles).
 - **Onboarding:** `volunteer-profile-service.ts` — the one-time name/phone/over-18 gate on
   `/member/volunteer/start`.
-- **Shifts:** `work-order-service.ts` + `volunteer-signup-service.ts`. A shift may name
-  the event it staffs. Only _confirmed_ signups get the reminder; claimed and confirmed
-  both auto-complete as worked once the shift ends (#1943).
+- **Tasks and shifts:** `work-order-service.ts` (tasks, shifts, the queues) +
+  `volunteer-signup-service.ts` + `assignee-service.ts`. A task may name the event it staffs.
+  Only _confirmed_ sign-ups get the reminder; claimed and confirmed both auto-complete as
+  worked once the shift ends (#1943).
   `claimShift(shiftId, userId, { assignedByStaff })` serves both the member's claim and the
   coordinator's assignment; `releaseSignup` is `cancelSignup` without the owner clause.
 - **The dashboard:** `listOutstandingClaims` and
@@ -1338,8 +1366,9 @@ So:
 - **Hours and review:** `hour-log-service.ts`; the report is `volunteer-report-service.ts`.
 - **Feedback:** `volunteer-feedback-service.ts` — the day-after two-question survey, rolled
   up per role anonymously.
-- **Crons:** `complete-shifts` (every 15 minutes) under `src/routes/api/cron/`. The shift
-  reminder and the feedback ask are entries in the reminder registry, drained by
+- **Crons:** `complete-shifts` (every 15 minutes) under `src/routes/api/cron/` completes
+  sign-ups on ended shifts and closes nothing else. The shift reminder and the feedback ask are
+  entries in the reminder registry keyed on `volunteer_shift` times, drained by
   `/api/cron/reminders` on the same tick.
 - **Surfaces:** `volunteer.remote.ts` for the member
   side; the staff pages under `/staff/volunteer/` are always on, per the panel-wide rule
@@ -1353,7 +1382,9 @@ So:
 > and `end` read the project's earliest live event, or the show it is applied from, and the
 > production anchors read that event's production. Each stamped row copies its `anchor`
 > (#2033). A missing anchor time stamps the items unscheduled with a warning and
-> `pending_offset_minutes`, and `placePendingWorkOrders` places them once the time is set.
+> `pending_offset_minutes` (and, for a window, `pending_duration_minutes` and
+> `pending_capacity`), and `placePendingWorkOrders` places them once the time is set: a
+> window gets its shift then, a deadline its `due_at`.
 > Re-applying by hand needs an audited reason. A template is stamped **once per project**, not
 > once per show (#2152): a second night in the same project gets it by a reasoned re-apply from
 > that show's console, timed from that show. The rest of this section is the history and the
@@ -1391,11 +1422,11 @@ minutes against it. `volunteer_signup` is unique per (shift, member) and
 orders — it sits a level below one, as `work_task`. That table is four columns and stops:
 `doneByUserId` is attribution, never credit, and nothing in it touches hours.
 
-`duty_list_item`'s time columns mirror the work order's own nullability, which is what lets one
-row type produce both halves of a show. An item with `offsetMinutes` + `durationMinutes`
-becomes a scheduled shift (Door, at doors); an item with only `dueOffsetMinutes` becomes an
-unscheduled work order with a `dueAt` (Booking Lead, a week out, whose tasks are the advance
-checklist). So there is **no `phase` column and no "advance" concept** — which phase a piece of
+One `duty_list_item` row type produces both halves of a show. An item with `offsetMinutes` +
+`durationMinutes` stamps a task and one shift (Door, at doors): the task takes the role,
+title, committee, `done_when`, section and checklist; the shift takes the times and places.
+Both carry the anchor. An item with only `dueOffsetMinutes` stamps a task with a `dueAt`
+(Booking Lead, a week out, whose tasks are the advance checklist). So there is **no `phase` column and no "advance" concept** — which phase a piece of
 work belongs to is which role's work order its tasks are on, and the offset says when.
 
 Applying is `applyDutyList(id, subject, createdByUserId)` in
@@ -1426,8 +1457,10 @@ from April's.
 
 > **Since #2034** orientation is a **setting**, not a list. `volunteer.orientationRoleId` and
 > `volunteer.orientationMinutes` are set from Settings → Orientation, and an empty role means
-> off. `raiseOrientationShift` inserts one work order at the booking's start, with no project,
-> marked `work_order.is_orientation`, or reuses the live one already on the booking. That marker
+> off. `raiseOrientationShift` inserts one task, marked `work_order.is_orientation`, with one
+> shift at the booking's start and no project, or reuses the live one already on the booking.
+> Retiming or cancelling the booking moves or calls off the shift; `member_orientation`
+> points at the task. That marker
 > is what `orientationOwnerOf` and `orientationForReservation` read. The trigger and re-apply
 > guard described below are retired.
 
@@ -1838,8 +1871,9 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
 Spec: [specs/shipped/work-orders-as-tasks-spec.md](../specs/shipped/work-orders-as-tasks-spec.md)
 
 - **Write:** work order changes are recorded in the shared services both the shift page and
-  the project page call (`updateShift`, `cancelShift`, `resolveWorkOrder`, `claimShift` for a
-  staff assignment, `releaseSignup`, `inviteToShift`), engagement steps in
+  the project page call (`updateShift`, `openShift`, `cancelShift`, `resolveWorkOrder`,
+  `assignToTask` and `unassignFromTask`, `claimShift` for a staff place on a shift,
+  `releaseSignup`, `inviteToShift`), engagement steps in
   contractor-job-service.ts against the engagement's work order, and project edits, status
   moves, duty lists and sections in the project and section services.
 - **Read:** `listActivity` in `src/lib/server/project/project-activity.ts` merges a project's

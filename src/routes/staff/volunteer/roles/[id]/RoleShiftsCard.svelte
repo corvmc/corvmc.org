@@ -99,7 +99,7 @@
 					<th class="cell-num whitespace-nowrap">{m.staff_confirmed_label()}</th>
 				{/snippet}
 
-				{#each rows as shift (shift.id)}
+				{#each rows as shift (shift.shiftId ?? shift.id)}
 					{@const href = resolve(`staff/volunteer/shifts/${shift.id}`)}
 					{@const short = shift.claimed < shift.capacity}
 					{@const unconfirmed = shift.claimed - shift.confirmed}

@@ -379,7 +379,7 @@ export const relations = defineRelations(schema, (t) => ({
 	volunteerRole: {
 		hourLogs: t.many.volunteerHourLog(),
 		interests: t.many.volunteerRoleInterest(),
-		shifts: t.many.workOrder(),
+		workOrders: t.many.workOrder(),
 		requiredCertifications: t.many.volunteerRoleCertification()
 	},
 	volunteerRoleInterest: {
@@ -402,21 +402,20 @@ export const relations = defineRelations(schema, (t) => ({
 			from: t.workOrder.resolvedByUserId,
 			to: t.user.id
 		}),
-		postedBy: t.one.user({ from: t.workOrder.postedByUserId, to: t.user.id }),
-		signups: t.many.volunteerSignup(),
 		contractorJobs: t.many.contractorJob(),
 		shifts: t.many.volunteerShift(),
 		assignees: t.many.workOrderAssignee()
 	},
 	volunteerShift: {
-		workOrder: t.one.workOrder({ from: t.volunteerShift.workOrderId, to: t.workOrder.id })
+		workOrder: t.one.workOrder({ from: t.volunteerShift.workOrderId, to: t.workOrder.id }),
+		signups: t.many.volunteerSignup()
 	},
 	workOrderAssignee: {
 		workOrder: t.one.workOrder({ from: t.workOrderAssignee.workOrderId, to: t.workOrder.id }),
 		user: t.one.user({ from: t.workOrderAssignee.userId, to: t.user.id })
 	},
 	volunteerSignup: {
-		shift: t.one.workOrder({ from: t.volunteerSignup.shiftId, to: t.workOrder.id }),
+		shift: t.one.volunteerShift({ from: t.volunteerSignup.shiftId, to: t.volunteerShift.id }),
 		user: t.one.user({ from: t.volunteerSignup.userId, to: t.user.id }),
 		feedback: t.one.volunteerShiftFeedback({
 			from: t.volunteerSignup.id,
@@ -459,6 +458,7 @@ export const relations = defineRelations(schema, (t) => ({
 			from: t.volunteerHourLog.volunteerRoleId,
 			to: t.volunteerRole.id
 		}),
+		shift: t.one.volunteerShift({ from: t.volunteerHourLog.shiftId, to: t.volunteerShift.id }),
 		workOrder: t.one.workOrder({ from: t.volunteerHourLog.workOrderId, to: t.workOrder.id })
 	},
 	media: {

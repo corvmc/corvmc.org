@@ -66,7 +66,10 @@
 	} = $props();
 
 	const shift = $derived(view.shift);
+	// The roster belongs to the task's current shift; claimants exist only with one.
+	const rosterShiftId = $derived(shift.shiftId ?? '');
 	const claimants = $derived(view.claimants);
+	const assignees = $derived(view.assignees);
 	const unconfirmed = $derived(claimants.filter((c) => c.status === 'claimed'));
 	const booked = $derived(
 		claimants.filter((c) => c.status === 'confirmed' || c.status === 'completed')
@@ -170,7 +173,7 @@
 					>
 						{#snippet form()}
 							<input
-								{...notifyCancelledShift.for(shift.id).fields.shiftId.as('hidden', shift.id)}
+								{...notifyCancelledShift.for(shift.id).fields.shiftId.as('hidden', rosterShiftId)}
 							/>
 							<p class="text-sm">
 								{m.volunteer_work_order_view_people_still_shift_will_emailed_text({ toNotify })}
@@ -206,7 +209,7 @@
 						<CardTitle>
 							{calledOff
 								? m.volunteer_work_order_view_who_tell_title()
-								: m.volunteer_work_order_view_who_s_title()} · {claimants.length}
+								: m.volunteer_work_order_view_who_s_title()} · {claimants.length + assignees.length}
 						</CardTitle>
 						{#if !calledOff && unconfirmed.length > 1}
 							<Action
@@ -222,7 +225,9 @@
 								successToast={m.volunteer_work_order_view_confirmed_toast()}
 							>
 								{#snippet form()}
-									<input {...confirmSignups.for(shift.id).fields.shiftId.as('hidden', shift.id)} />
+									<input
+										{...confirmSignups.for(shift.id).fields.shiftId.as('hidden', rosterShiftId)}
+									/>
 									{#each unconfirmed as c, i (c.signupId)}
 										<input
 											{...confirmSignups.for(shift.id).fields.signupIds[i].as('hidden', c.signupId)}
@@ -239,14 +244,24 @@
 					</div>
 				{/snippet}
 
-				{#if claimants.length === 0}
+				{#if assignees.length > 0}
+					<ul class="mb-4 flex flex-col gap-2" data-testid="assignees">
+						{#each assignees as a (a.userId)}
+							<li class="flex flex-wrap items-center gap-2">
+								<EntityIdentity ref={a.member} />
+								<span class="badge badge-sm badge-success">{m.staff_assigned_label()}</span>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+				{#if claimants.length === 0 && assignees.length === 0}
 					<EmptyState
 						title={m.volunteer_work_order_view_nobody_yet_title()}
 						description={view.engagements.length > 0
 							? m.volunteer_work_order_view_contractor_answers_one_see_engagem_body()
 							: m.volunteer_work_order_view_members_interested_role_see_at_body()}
 					/>
-				{:else}
+				{:else if claimants.length > 0}
 					<ul class="flex flex-col gap-4">
 						{#each claimants as claimant (claimant.signupId)}
 							<li class="flex flex-col gap-2">
@@ -302,7 +317,7 @@
 														<input
 															{...markSignupNotified
 																.for(claimant.signupId)
-																.fields.shiftId.as('hidden', shift.id)}
+																.fields.shiftId.as('hidden', rosterShiftId)}
 														/>
 														<p class="text-sm">
 															{m.volunteer_work_order_view_use_when_reached_them_another_text()}
@@ -335,7 +350,7 @@
 														<input
 															{...confirmSignup
 																.for(claimant.signupId)
-																.fields.shiftId.as('hidden', shift.id)}
+																.fields.shiftId.as('hidden', rosterShiftId)}
 														/>
 														<p class="text-sm">
 															{m.volunteer_work_order_view_they_ll_get_reminder_day_text()}
@@ -369,7 +384,7 @@
 														<input
 															{...releaseSignup
 																.for(claimant.signupId)
-																.fields.shiftId.as('hidden', shift.id)}
+																.fields.shiftId.as('hidden', rosterShiftId)}
 														/>
 														<p class="text-sm">
 															{m.volunteer_work_order_view_their_place_opens_up_straight_text()}
@@ -404,7 +419,7 @@
 														<input
 															{...markSignupNoShow
 																.for(claimant.signupId)
-																.fields.shiftId.as('hidden', shift.id)}
+																.fields.shiftId.as('hidden', rosterShiftId)}
 														/>
 														<p class="text-sm">
 															{m.volunteer_work_order_view_different_from_removing_them_remov_text()}
@@ -501,24 +516,6 @@
 								notes={shift.notes ?? ''}
 								title={shift.title ?? ''}
 							/>
-							{#if view.reports.length > 0 || shift.closeReportsOnCompletion}
-								<FormField
-									field={editForm.fields.closeReports}
-									type="select"
-									label={m.volunteer_work_order_view_when_window_ends_label()}
-									value={shift.closeReportsOnCompletion ? 'close' : 'wait'}
-									options={[
-										{
-											value: 'close',
-											label: m.volunteer_work_order_view_close_equipment_reports_label()
-										},
-										{
-											value: 'wait',
-											label: m.volunteer_work_order_view_wait_today_me_confirm_label()
-										}
-									]}
-								/>
-							{/if}
 						{/snippet}
 					</Action>
 
@@ -577,7 +574,7 @@
 
 		<!-- Nobody can be put on work with no role, so there is nobody to suggest. -->
 		{#if !calledOff && shift.roleName !== null}
-			<CandidateColumn shiftId={shift.id} startsAt={shift.startsAt} />
+			<CandidateColumn workOrderId={shift.id} shiftId={shift.shiftId} startsAt={shift.startsAt} />
 		{/if}
 	</div>
 

@@ -95,7 +95,8 @@ import {
 	listWorkTasks,
 	setWorkTaskDoneAsAssignee
 } from '#lib/server/volunteer/duty-list-service.js';
-import { listFinishedWorkToConfirm } from '#lib/server/inventory/work-request-service.js';
+import { listTasksWithEndedShifts } from '#lib/server/volunteer/ended-shifts.js';
+import { assignToTask as assignToTaskService } from '#lib/server/volunteer/assignee-service.js';
 import { getById } from '#lib/server/event/event-service.js';
 import {
 	checkIn as checkInTicketService,
@@ -114,7 +115,9 @@ import {
 	getShiftDetail,
 	workOrderProjectId,
 	createWorkOrder as createWorkOrderService,
-	scheduleWorkOrder as scheduleWorkOrderService,
+	openShift as openShiftService,
+	workOrderIdOfShift,
+	getWorkOrderById,
 	resolveWorkOrder as resolveWorkOrderService,
 	listWorkOrders,
 	listWorkOrdersByIds,
@@ -385,19 +388,24 @@ const WEEKDAYS: string[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
  */
 export const getShiftCandidates = query(
 	z.object({
-		shiftId: z.string().min(1),
+		workOrderId: z.string().min(1),
 		scope: z.enum(['interested', 'worked', 'all']).default('interested'),
 		search: z.string().optional()
 	}),
 	async (f) => {
 		await requireCapability('volunteer.read');
 
-		const shift = await getShiftDetail(f.shiftId);
+		const shift = await getShiftDetail(f.workOrderId);
 		// No role, no candidates: nobody can be put on it until it has one.
 		if (!shift?.volunteerRoleId) return { gated: false, rows: [] };
 
 		const [candidates, required] = await Promise.all([
-			listShiftCandidates(f.shiftId, shift.volunteerRoleId, f.scope, f.search || undefined),
+			listShiftCandidates(
+				{ workOrderId: shift.id, shiftId: shift.shiftId },
+				shift.volunteerRoleId,
+				f.scope,
+				f.search || undefined
+			),
 			getRequirementsForRole(shift.volunteerRoleId)
 		]);
 
@@ -787,6 +795,8 @@ const hoursFormSchema = z.object({
 	// Present when the log comes from a completed shift's pre-fill; staff see
 	// those marked as scheduled in the queue and can approve with less scrutiny.
 	shiftId: z.string().optional(),
+	// The task the time went to, for work logged after the fact. Ignored beside a shift.
+	workOrderId: z.string().optional(),
 	workedOn: z.string().min(1, 'Pick the date you worked'),
 	hours: z.string().min(1, 'Enter how long you worked'),
 	description: z
@@ -805,7 +815,8 @@ export const submitVolunteerHours = form(hoursFormSchema, async (data) => {
 			workedOn: data.workedOn,
 			minutes: hoursToMinutes(data.hours),
 			description: data.description,
-			shiftId: data.shiftId || null
+			shiftId: data.shiftId || null,
+			workOrderId: data.workOrderId || null
 		});
 	} catch (err) {
 		mapDomainError(err);
@@ -984,7 +995,8 @@ export const logHoursForMember = form(
 					workedOn: data.workedOn,
 					minutes: hoursToMinutes(data.hours),
 					description: data.description,
-					shiftId: data.shiftId || null
+					shiftId: data.shiftId || null,
+					workOrderId: data.workOrderId || null
 				},
 				{ enteredByUserId: staff.id }
 			);
@@ -1480,11 +1492,18 @@ async function refreshCertificationViews() {
  * The shift detail page is arg-keyed but the id is known here, so it comes too — the same
  * opt-in `refreshRoleViews` makes.
  */
+/** After a roster write: the badge, the member board, and the page of the shift's task. */
 async function refreshShiftViews(shiftId?: string) {
+	const workOrderId = shiftId ? await workOrderIdOfShift(shiftId) : undefined;
+	await refreshTaskViews(workOrderId);
+}
+
+/** After a task write: the badge, the member board, and the task's page. */
+async function refreshTaskViews(workOrderId?: string) {
 	await Promise.all([
 		getStaffLayout().refresh(),
 		getMemberVolunteerPage().refresh(),
-		...(shiftId ? [refreshWorkOrderPage(shiftId)] : [])
+		...(workOrderId ? [refreshWorkOrderPage(workOrderId)] : [])
 	]);
 }
 
@@ -1543,7 +1562,7 @@ export const getSchedulePage = query(
 		const now = new Date();
 		const [page, toConfirm, counts, lapsing] = await Promise.all([
 			f.contractor ? contractorSchedule(f.contractor) : staffedSchedule(f),
-			listFinishedWorkToConfirm(now),
+			listTasksWithEndedShifts(now),
 			getStatusCounts(),
 			listLapsingBeforeRosteredShift(now)
 		]);
@@ -1682,13 +1701,9 @@ export const createShift = form(shiftFormSchema, async (data) => {
 });
 
 export const updateShift = form(
-	shiftFormSchema.partial().extend({
-		id: z.string().min(1),
-		// A select, not a checkbox: an unticked box sends nothing, which reads as "unchanged".
-		closeReports: z.enum(['close', 'wait']).optional()
-	}),
+	shiftFormSchema.partial().extend({ id: z.string().min(1) }),
 	async (data) => {
-		await requireCapability('volunteer.manageShifts');
+		const staff = await requireCapability('volunteer.manageShifts');
 
 		try {
 			await updateShiftService(data.id, {
@@ -1700,7 +1715,7 @@ export const updateShift = form(
 				endsAt: data.endsAt,
 				capacity: data.capacity ? parseInt(data.capacity, 10) : undefined,
 				notes: data.notes,
-				closeReportsOnCompletion: data.closeReports ? data.closeReports === 'close' : undefined
+				updatedByUserId: staff.id
 			});
 		} catch (err) {
 			mapDomainError(err);
@@ -1742,7 +1757,7 @@ export const cancelShift = form(z.object({ id: z.string().min(1) }), async (data
 // Work orders — the unscheduled half
 // ---------------------------------------------------------------------------
 // Work that needs doing with nobody booked to do it. `createWorkOrder`,
-// `scheduleWorkOrder`, `resolveWorkOrder` and `listWorkOrders` were written,
+// `openShift`, `resolveWorkOrder` and `listWorkOrders` were written,
 // specced and then never exposed, so the rows `applyDutyList` stamps out from a
 // `dueOffsetMinutes` item existed and appeared nowhere. Everything here is a
 // thin pass through to a service that already exists.
@@ -1831,37 +1846,34 @@ export const createWorkOrder = form(
 	}
 );
 
-/** "We found a time for it" — which turns the work order into an ordinary shift. */
-export const scheduleWorkOrder = form(
+/** Open a shift on a task: a time volunteers can sign up for (#2518). `id` is the task's. */
+export const openShift = form(
 	z.object({
 		id: z.string().min(1),
 		startsAt: z.string().min(1, 'Pick when it starts'),
-		endsAt: z.string().min(1, 'Pick when it ends'),
-		closeReportsOnCompletion: z.boolean().default(false)
+		endsAt: z.string().min(1, 'Pick when it ends')
 	}),
 	async (data) => {
-		await requireCapability('volunteer.manageShifts');
+		const staff = await requireCapability('volunteer.manageShifts');
 
 		try {
-			await scheduleWorkOrderService(data.id, {
+			await openShiftService(data.id, {
 				startsAt: data.startsAt,
 				endsAt: data.endsAt,
-				closeReportsOnCompletion: data.closeReportsOnCompletion
+				createdByUserId: staff.id
 			});
 		} catch (err) {
 			mapDomainError(err);
 		}
 
-		await refreshShiftViews(data.id);
+		await refreshTaskViews(data.id);
 		return { success: true };
 	}
 );
 
 /**
- * The work is finished, which is not the same as anybody having turned up.
- *
- * `completeFinishedShifts` keys on `ends_at` and can never reach a row that
- * never had one, so the service completes the signups itself.
+ * Mark a task done, which is not the same as anybody having turned up. Resolves
+ * its equipment reports and stamps its assignees; sign-ups complete by the clock.
  */
 export const resolveWorkOrder = form(
 	z.object({ id: z.string().min(1), notes: z.string().max(500).optional() }),
@@ -1877,7 +1889,7 @@ export const resolveWorkOrder = form(
 			mapDomainError(err);
 		}
 
-		await refreshShiftViews(data.id);
+		await refreshTaskViews(data.id);
 		return { success: true };
 	}
 );
@@ -1894,7 +1906,7 @@ export const notifyCancelledShift = form(z.object({ shiftId: z.string().min(1) }
 
 	const notified = await notifySignupsOfCancellationService(data.shiftId);
 
-	void getStaffShiftPage(data.shiftId).refresh();
+	await refreshShiftViews(data.shiftId);
 	return { success: true, notified };
 });
 
@@ -1906,7 +1918,7 @@ export const markSignupNotified = form(
 
 		await markSignupNotifiedService(data.signupId);
 
-		void getStaffShiftPage(data.shiftId).refresh();
+		await refreshShiftViews(data.shiftId);
 		return { success: true };
 	}
 );
@@ -2006,24 +2018,36 @@ export const declineShiftInvitation = form(
 	}
 );
 
+async function requireTask(id: string) {
+	const task = await getWorkOrderById(id);
+	if (!task) throw error(404, 'Task not found');
+	return task;
+}
+
+/**
+ * Put a member on a task's shift, or, on a task with no shift, assign them the
+ * task (#2518). Either way staff go over a missing profile or clearance with a
+ * recorded warning; a profile awaiting under-18 review is refused.
+ */
 export const assignShiftToMember = form(
 	z.object({
-		shiftId: z.string().min(1),
+		workOrderId: z.string().min(1),
+		shiftId: z.string().optional(),
 		userId: z.string().min(1, 'Pick a member')
 	}),
 	async (data) => {
-		await requireCapability('volunteer.manageRoster');
+		const staff = await requireCapability('volunteer.manageRoster');
 
 		let warnings: string[] = [];
 		try {
-			({ warnings } = await claimShiftService(data.shiftId, data.userId, {
-				assignedByStaff: true
-			}));
+			({ warnings } = data.shiftId
+				? await claimShiftService(data.shiftId, data.userId, { assignedByStaff: true })
+				: await assignToTaskService(await requireTask(data.workOrderId), data.userId, staff.id));
 		} catch (err) {
 			mapDomainError(err);
 		}
 
-		await refreshShiftViews(data.shiftId);
+		await refreshTaskViews(data.workOrderId);
 		return { success: true, warnings };
 	}
 );
@@ -2458,7 +2482,7 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 	if (!shift) throw error(404, 'Shift not found');
 
 	const [tasks, event, crew, filedIncidents] = await Promise.all([
-		listWorkTasks(shift.shiftId),
+		listWorkTasks(shift.workOrderId),
 		shift.eventId ? getById(shift.eventId) : Promise.resolve(null),
 		shift.eventId ? can('incident.file', { eventId: shift.eventId }) : Promise.resolve(false),
 		shift.eventId ? listIncidentsFiledBy(currentUser.id, shift.eventId) : Promise.resolve([])

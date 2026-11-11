@@ -1,6 +1,12 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
-import { volunteerRole, workOrder, volunteerSignup } from '#lib/server/db/schema/volunteer.js';
+import {
+	volunteerRole,
+	volunteerShift,
+	volunteerSignup,
+	workOrder,
+	workOrderAssignee
+} from '#lib/server/db/schema/volunteer.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { HOST_VOLUNTEER_ROLE } from '#lib/config.js';
 import { production } from '#lib/server/db/schema/production.js';
@@ -16,7 +22,8 @@ import { assertNotTerminal } from './production-scope';
  */
 
 export interface ShowHost {
-	signupId: string;
+	/** Null for somebody assigned the host task rather than signed up for its shift. */
+	signupId: string | null;
 	userId: string;
 	name: string;
 	/** `claimed` is taken but unconfirmed; only `confirmed` is a promise. */
@@ -46,35 +53,58 @@ export async function getHostShift(eventId: string): Promise<HostShift | null> {
 	if (!roleId) return null;
 
 	const [order] = await db
-		.select({
-			id: workOrder.id,
-			startsAt: workOrder.startsAt,
-			endsAt: workOrder.endsAt
-		})
+		.select({ id: workOrder.id })
 		.from(workOrder)
 		.where(and(eq(workOrder.eventId, eventId), eq(workOrder.volunteerRoleId, roleId)))
 		.limit(1);
 	if (!order) return null;
 
-	const hosts = await db
-		.select({
-			signupId: volunteerSignup.id,
-			userId: volunteerSignup.userId,
-			name: user.name,
-			status: volunteerSignup.status
-		})
-		.from(volunteerSignup)
-		.innerJoin(user, eq(user.id, volunteerSignup.userId))
-		.where(
-			and(
-				eq(volunteerSignup.shiftId, order.id),
-				// Cancelled and no-show are history, not an answer to "who is
-				// running this".
-				inArray(volunteerSignup.status, ['claimed', 'confirmed', 'completed'])
-			)
-		);
+	const [[shift], signedUp, assigned] = await Promise.all([
+		db
+			.select({ startsAt: volunteerShift.startsAt, endsAt: volunteerShift.endsAt })
+			.from(volunteerShift)
+			.where(and(eq(volunteerShift.workOrderId, order.id), isNull(volunteerShift.cancelledAt)))
+			.orderBy(asc(volunteerShift.startsAt))
+			.limit(1),
+		db
+			.select({
+				signupId: volunteerSignup.id,
+				userId: volunteerSignup.userId,
+				name: user.name,
+				status: volunteerSignup.status
+			})
+			.from(volunteerSignup)
+			.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+			.innerJoin(user, eq(user.id, volunteerSignup.userId))
+			.where(
+				and(
+					eq(volunteerShift.workOrderId, order.id),
+					isNull(volunteerShift.cancelledAt),
+					// Cancelled and no-show are history, not an answer to "who is
+					// running this".
+					inArray(volunteerSignup.status, ['claimed', 'confirmed', 'completed'])
+				)
+			),
+		db
+			.select({ userId: workOrderAssignee.userId, name: user.name })
+			.from(workOrderAssignee)
+			.innerJoin(user, eq(user.id, workOrderAssignee.userId))
+			.where(eq(workOrderAssignee.workOrderId, order.id))
+	]);
 
-	return { workOrderId: order.id, startsAt: order.startsAt, endsAt: order.endsAt, hosts };
+	// Assigned is a staff decision, so it reads as confirmed.
+	const hosts: ShowHost[] = [
+		...signedUp,
+		...assigned
+			.filter((a) => !signedUp.some((s) => s.userId === a.userId))
+			.map((a) => ({ signupId: null, userId: a.userId, name: a.name, status: 'confirmed' }))
+	];
+	return {
+		workOrderId: order.id,
+		startsAt: shift?.startsAt ?? null,
+		endsAt: shift?.endsAt ?? null,
+		hosts
+	};
 }
 
 export class NoHostRoleError extends Error {
@@ -106,18 +136,25 @@ export async function openHostShift(eventId: string): Promise<string> {
 		.where(announcedBy(eventId))
 		.limit(1);
 
-	const [created] = await db
+	// The task, and its shift when the show's times are known. Without them it
+	// is a task the producer can assign or open a shift on later.
+	const id = crypto.randomUUID();
+	const task = db
 		.insert(workOrder)
-		.values({
-			volunteerRoleId: roleId,
-			eventId,
-			title: HOST_VOLUNTEER_ROLE,
-			startsAt: prod?.loadInAt ?? null,
-			endsAt: prod?.loadOutBy ?? null,
-			capacity: 1,
-			postedAt: new Date()
-		})
-		.returning({ id: workOrder.id });
-
-	return created.id;
+		.values({ id, volunteerRoleId: roleId, eventId, title: HOST_VOLUNTEER_ROLE });
+	const timed = prod?.loadInAt && prod.loadOutBy && prod.loadOutBy > prod.loadInAt;
+	if (timed) {
+		await db.batch([
+			task,
+			db.insert(volunteerShift).values({
+				workOrderId: id,
+				startsAt: prod.loadInAt!,
+				endsAt: prod.loadOutBy!,
+				capacity: 1
+			})
+		]);
+	} else {
+		await task;
+	}
+	return id;
 }

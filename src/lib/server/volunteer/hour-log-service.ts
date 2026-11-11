@@ -91,6 +91,11 @@ export interface SubmitHoursData {
 	description: string;
 	/** The completed shift this log pre-filled from, when it did. */
 	shiftId?: string | null;
+	/**
+	 * The task the time went to, for work logged after the fact (#2518). A log
+	 * names a shift, a task, or neither: a shift already says its task.
+	 */
+	workOrderId?: string | null;
 }
 
 /**
@@ -297,6 +302,7 @@ export async function submitHours(
 			volunteerRoleId: role.id,
 			groupId,
 			shiftId: data.shiftId ?? null,
+			workOrderId: data.shiftId ? null : (data.workOrderId ?? null),
 			workedOn,
 			minutes,
 			description,
@@ -638,8 +644,10 @@ export interface HourLogFilters {
 	status?: VolunteerHourStatus;
 	userId?: string;
 	volunteerRoleId?: string;
-	/** The shift (work order) the hours were worked on. */
+	/** One shift's hours. */
 	shiftId?: string;
+	/** One task's hours: logs naming the task or one of its shifts. */
+	workOrderId?: string;
 	/** YYYY-MM-DD, club time. */
 	from?: string;
 	to?: string;
@@ -664,6 +672,8 @@ export interface HourLogRow {
 	description: string;
 	/** Set when the log pre-filled from a completed shift — staff scheduled it. */
 	shiftId: string | null;
+	/** Set when the log names a task rather than a shift. */
+	workOrderId: string | null;
 	status: VolunteerHourStatus;
 	reviewedByName: string | null;
 	reviewedAt: Date | null;
@@ -682,6 +692,16 @@ function buildFilters(filters: HourLogFilters): SQL[] {
 		conditions.push(eq(volunteerHourLog.volunteerRoleId, filters.volunteerRoleId));
 	}
 	if (filters.shiftId) conditions.push(eq(volunteerHourLog.shiftId, filters.shiftId));
+	if (filters.workOrderId) {
+		conditions.push(
+			or(
+				eq(volunteerHourLog.workOrderId, filters.workOrderId),
+				sql`${volunteerHourLog.shiftId} in (
+					select s."id" from "volunteer_shift" s where s."work_order_id" = ${filters.workOrderId}
+				)`
+			)!
+		);
+	}
 	if (filters.from) {
 		conditions.push(gte(volunteerHourLog.workedOn, buildDateInTz(filters.from, '00:00', TZ)));
 	}
@@ -745,6 +765,7 @@ function toHourLogRow(row: HourLogSelectRow): HourLogRow {
 		minutes: row.log.minutes,
 		description: row.log.description,
 		shiftId: row.log.shiftId,
+		workOrderId: row.log.workOrderId,
 		status: row.log.status,
 		reviewedByName: row.reviewedByName,
 		reviewedAt: row.log.reviewedAt,

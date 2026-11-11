@@ -1,6 +1,7 @@
 import { inventoryAsset, workRequest } from '../../src/lib/server/db/schema/inventory';
 import { workOrder } from '../../src/lib/server/db/schema/volunteer';
 import { batchInsert, db } from './db';
+import { insertTasksWithShifts } from './shifts';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 
@@ -36,21 +37,20 @@ export async function seedEquipmentReports(
 			volunteerRoleId: roleId,
 			assetId: c.id,
 			notes: 'Input jack is loose — resolder',
-			capacity: 1,
 			createdByUserId: staffId,
 			createdAt: ago(4)
-		},
-		// Scheduled, finished yesterday, not flagged to close its report: it sits on
-		// Today as "finished: confirm fixed?" (#1544).
+		}
+	]);
+	// Its shift ended yesterday and the task is still open, so it sits on Today
+	// as a task with ended shifts, its report open until someone marks it done (#2518).
+	await insertTasksWithShifts([
 		{
 			id: buildingOrderId,
 			volunteerRoleId: roleId,
 			assetId: null,
 			startsAt: ago(1),
 			endsAt: new Date(ago(1).getTime() + 2 * 3600_000),
-			closeReportsOnCompletion: false,
 			notes: 'Room B: Ceiling light flickers',
-			capacity: 1,
 			createdByUserId: staffId,
 			createdAt: ago(3)
 		}

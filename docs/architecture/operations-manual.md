@@ -457,7 +457,9 @@ them 1 = Sunday, while the Sentry monitor that receives the same string numbers 
 Each trigger runs its jobs sequentially in the order listed. The daily batch generates
 first, so freshly generated occurrences are visible to lock provisioning. Reminders are not
 a daily sweep: `/api/cron/reminders` drains a registry every 15 minutes, after
-`complete-shifts`. `CRON_SCHEDULE` in `src/lib/server/cron/schedule.ts` is the source; the
+`complete-shifts`, which completes sign-ups on shifts that have ended and closes nothing else:
+a task and its equipment reports stay open until someone marks the task done (#2518).
+`CRON_SCHEDULE` in `src/lib/server/cron/schedule.ts` is the source; the
 schedule spec pins both `wrangler.toml [triggers]` and this table against it.
 
 Manual invocation (safe — every job is idempotent and returns a JSON summary):

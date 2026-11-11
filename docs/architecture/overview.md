@@ -362,7 +362,7 @@ an hour with DST). The schedule spec pins this table to `CRON_SCHEDULE`:
 | ------------------------------------------- | -------------------------------------------------------------------------------------- | -------------- |
 | `/api/cron/send-campaigns`                  | Send email campaigns whose `scheduledFor` has arrived                                  | `*/5 * * * *`  |
 | `/api/cron/auto-complete`                   | Mark paid reservations past their end time as `completed`                              | `*/15 * * * *` |
-| `/api/cron/complete-shifts`                 | Complete confirmed volunteer signups for shifts that have ended                        | `*/15 * * * *` |
+| `/api/cron/complete-shifts`                 | Complete sign-ups on ended shifts; tasks and their reports stay open                   | `*/15 * * * *` |
 | `/api/cron/expire-waitlisted`               | Expire waitlist offers past their 24h window; promotes the next in line                | `*/15 * * * *` |
 | `/api/cron/wake-snoozed`                    | Return snoozed and long-awaiting-reply inbox threads to the open queue                 | `*/15 * * * *` |
 | `/api/cron/lock-sync`                       | Confirm pending door codes reached the lock, soonest booking first, 25 reads per run   | `*/15 * * * *` |

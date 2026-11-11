@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "c83c93bc-1d03-4086-b1d6-7de1964128fc",
+  "id": "45f7ea00-43c0-4451-8c70-09395ebfb97f",
   "prevIds": [
-    "84bbb02b-3540-40a3-8f4e-e1ecb9a894bc"
+    "517a5220-108d-46fd-b3c9-0312ae028889"
   ],
   "ddl": [
     {
@@ -10530,6 +10530,16 @@
     },
     {
       "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "pending_capacity",
+      "entityType": "columns",
+      "table": "work_order"
+    },
+    {
+      "type": "integer",
       "notNull": true,
       "autoincrement": false,
       "default": "false",
@@ -17657,7 +17667,7 @@
       "columns": [
         "shift_id"
       ],
-      "tableTo": "work_order",
+      "tableTo": "volunteer_shift",
       "columnsTo": [
         "id"
       ],
@@ -17882,7 +17892,7 @@
       "columns": [
         "shift_id"
       ],
-      "tableTo": "work_order",
+      "tableTo": "volunteer_shift",
       "columnsTo": [
         "id"
       ],

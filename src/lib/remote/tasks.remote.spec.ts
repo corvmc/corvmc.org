@@ -73,6 +73,7 @@ const pair = { projectId: MINE, workOrderId: 'wo-theirs' };
 beforeEach(() => {
 	requireProjectCommittee.mockClear();
 	sqlite.exec('delete from volunteer_signup');
+	sqlite.exec('delete from volunteer_shift');
 	sqlite.exec('delete from work_order');
 	sqlite.exec('delete from volunteer_role');
 	sqlite.exec('delete from project');
@@ -135,8 +136,14 @@ describe('a work order named with a project it is not on', () => {
 			index: 0
 		});
 		expect(untouched()).toMatchObject({ project_id: THEIRS, sort_order: 0 });
+		sqlite.exec(
+			`insert into volunteer_shift (id, work_order_id, starts_at, ends_at)
+				values ('sh-theirs', 'wo-theirs', 4000000000, 4000003600)`
+		);
 		await remotes.openTaskForm({ projectId: THEIRS, workOrderId: 'wo-theirs', capacity: 2 });
-		expect(untouched()).toMatchObject({ posted_at: expect.any(Number) });
+		expect(
+			sqlite.prepare(`select capacity from volunteer_shift where id = 'sh-theirs'`).get()
+		).toEqual({ capacity: 2 });
 	});
 });
 

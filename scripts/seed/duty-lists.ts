@@ -5,6 +5,7 @@ import {
 	workTask
 } from '../../src/lib/server/db/schema/volunteer';
 import { batchInsert } from './db';
+import { insertTasksWithShifts } from './shifts';
 
 /**
  * Project templates, and one show's project they have been stamped into.
@@ -173,7 +174,7 @@ export async function seedDutyLists(volunteerRoles: any[], events: any[], groups
 		anchor: 'doors' as const,
 		createdByUserId: 'seed-vol-coordinator'
 	}));
-	await batchInsert(workOrder, workOrders, 8);
+	await insertTasksWithShifts(workOrders);
 
 	// The setup crew's list partly done, so the partly-worked state is rendered
 	// rather than only the empty and finished ones.

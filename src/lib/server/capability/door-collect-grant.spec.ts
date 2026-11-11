@@ -39,9 +39,20 @@ function doorShift(id: string, eventId: string, grants: string[] = ['finance.col
 			`insert or ignore into volunteer_role_capability (volunteer_role_id, capability)
 			 values ('${roleId}', '${cap}')`
 		);
+	// The task is `<id>-task`; the shift volunteers sign up for is `<id>` (#2518).
 	sqlite.exec(
-		`insert into work_order (id, volunteer_role_id, event_id, starts_at, ends_at)
-		 values ('${id}', 'role-${grants.join('-') || 'none'}', '${eventId}', ${secs(shiftStart)}, ${secs(shiftEnd)})`
+		`insert into work_order (id, volunteer_role_id, event_id)
+		 values ('${id}-task', '${roleId}', '${eventId}')`
+	);
+	sqlite.exec(
+		`insert into volunteer_shift (id, work_order_id, starts_at, ends_at)
+		 values ('${id}', '${id}-task', ${secs(shiftStart)}, ${secs(shiftEnd)})`
+	);
+}
+
+function assign(shiftId: string, userId: string) {
+	sqlite.exec(
+		`insert into work_order_assignee (work_order_id, user_id) values ('${shiftId}-task', '${userId}')`
 	);
 }
 
@@ -55,6 +66,8 @@ function signup(shiftId: string, userId: string, status: string) {
 beforeEach(() => {
 	for (const t of [
 		'volunteer_signup',
+		'work_order_assignee',
+		'volunteer_shift',
 		'work_order',
 		'volunteer_role_capability',
 		'volunteer_role',
@@ -87,6 +100,18 @@ describe('finance.collect through a door shift', () => {
 		signup('door-tonight', 'vol', 'confirmed');
 		expect(await collect('vol', 'tonight', new Date(shiftStart.getTime() - 60_000))).toBe(false);
 		expect(await collect('vol', 'tonight', new Date(shiftEnd.getTime() + 60_000))).toBe(false);
+	});
+
+	it('allows somebody assigned the door task, within the show', async () => {
+		assign('door-tonight', 'lead');
+		expect(await collect('lead', 'tonight', during)).toBe(true);
+		expect(await collect('lead', 'other', during)).toBe(false);
+	});
+
+	it('denies a signup on a shift that was called off', async () => {
+		signup('door-tonight', 'vol', 'confirmed');
+		sqlite.exec(`update volunteer_shift set cancelled_at = 1 where id = 'door-tonight'`);
+		expect(await collect('vol', 'tonight', during)).toBe(false);
 	});
 
 	it('denies a claimed signup that staff have not confirmed', async () => {

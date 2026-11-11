@@ -1,15 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 /**
- * Who answers a work order, against a real SQLite: the claim board's filter,
- * the member claim's refusal, the derived mode, and the staff reads that must
- * not drop a work order for having no role. Each is a `WHERE` or a join, which
- * a mocked `db` would agree with either way.
+ * Who answers a task, against a real SQLite: the board's filter, the member
+ * claim's refusal, the derived mode, and the staff reads that must not drop a
+ * task for having no role. Each is a `WHERE` or a join, which a mocked `db`
+ * would agree with either way. A task's times are its shifts (#2518).
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
-	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
-	return migratedSqlite();
+	const { migratedSqlite, withBatch } = await import('#lib/server/testing/migrated-sqlite.js');
+	const db = migratedSqlite();
+	return { sqlite: db.sqlite, testDb: withBatch(db) };
 });
 
 vi.mock('#lib/server/db/index.js', () => ({
@@ -50,14 +51,21 @@ function insert(table: string, row: Record<string, unknown>) {
 		.run(...keys.map((k) => row[k]));
 }
 
-function workOrder(id: string, cols: Record<string, string | number | null> = {}) {
-	insert('work_order', {
-		id,
-		volunteer_role_id: ROLE,
+/** A task, and unless `untimed`, one live shift on it named `<id>-shift`. */
+function workOrder(
+	id: string,
+	cols: Record<string, string | number | null> = {},
+	opts: { untimed?: boolean; shift?: Record<string, string | number | null> } = {}
+) {
+	insert('work_order', { id, volunteer_role_id: ROLE, ...cols });
+	if (opts.untimed) return;
+	insert('volunteer_shift', {
+		id: `${id}-shift`,
+		work_order_id: id,
 		starts_at: inHours(48),
 		ends_at: inHours(52),
 		capacity: 2,
-		...cols
+		...opts.shift
 	});
 }
 
@@ -84,7 +92,15 @@ function engagement(workOrderId: string, status: string) {
 }
 
 beforeEach(() => {
-	for (const t of ['contractor_job', 'volunteer_signup', 'work_order', 'volunteer_role', 'user']) {
+	for (const t of [
+		'contractor_job',
+		'volunteer_signup',
+		'volunteer_shift',
+		'work_order_assignee',
+		'work_order',
+		'volunteer_role',
+		'user'
+	]) {
 		sqlite.exec(`delete from ${t}`);
 	}
 	insert('user', { id: ADA, name: 'Ada', email: 'ada@example.com', email_verified: 0 });
@@ -92,11 +108,14 @@ beforeEach(() => {
 });
 
 describe('the claim board', () => {
-	it('lists posted work and leaves out scheduled work nobody posted', async () => {
-		workOrder('posted', { posted_at: inHours(-1) });
-		workOrder('assigned');
+	// A shift is open by existing: there is no posting step (#2518).
+	it('lists each live shift on an open task, and no task without one', async () => {
+		workOrder('timed');
+		workOrder('untimed', {}, { untimed: true });
+		workOrder('done', { resolved_at: inHours(-1) });
+		workOrder('shift-off', {}, { shift: { cancelled_at: inHours(-1) } });
 		const board = await listOpenShiftsForMember(ADA);
-		expect(board.map((s) => s.id)).toEqual(['posted']);
+		expect(board.map((s) => s.id)).toEqual(['timed-shift']);
 	});
 
 	it('still lists a shift made the way staff always made them', async () => {
@@ -108,28 +127,28 @@ describe('the claim board', () => {
 			capacity: 2,
 			createdByUserId: ADA
 		});
-		expect(made.postedAt).not.toBeNull();
-		expect((await listOpenShiftsForMember(ADA)).map((s) => s.id)).toEqual([made.id]);
+		expect((await listOpenShiftsForMember(ADA)).map((s) => s.id)).toEqual([made.shiftId]);
 	});
 });
 
 describe('claiming', () => {
-	it("refuses a member claiming work that isn't open for sign-up", async () => {
-		workOrder('assigned');
-		const attempt = claimShift('assigned', ADA);
-		await expect(attempt).rejects.toBeInstanceOf(ShiftClosedError);
-		await expect(attempt).rejects.toThrow("This shift isn't open for sign-up.");
+	it('refuses a member and staff alike once the task is done', async () => {
+		workOrder('done', { resolved_at: inHours(-1) });
+		await expect(claimShift('done-shift', ADA)).rejects.toBeInstanceOf(ShiftClosedError);
+		await expect(claimShift('done-shift', ADA, { assignedByStaff: true })).rejects.toThrow(
+			'That task is already done.'
+		);
 	});
 
-	it('lets staff assign somebody onto that same unposted work', async () => {
-		workOrder('assigned');
-		const signup = await claimShift('assigned', ADA, { assignedByStaff: true });
+	it('lets staff put somebody on a shift, booked', async () => {
+		workOrder('door');
+		const signup = await claimShift('door-shift', ADA, { assignedByStaff: true });
 		expect(signup.status).toBe('confirmed');
 	});
 
-	it('lets a member claim posted work', async () => {
-		workOrder('posted', { posted_at: inHours(-1) });
-		const signup = await claimShift('posted', ADA);
+	it('lets a member sign up for a shift, unconfirmed', async () => {
+		workOrder('door');
+		const signup = await claimShift('door-shift', ADA);
 		expect(signup.status).toBe('claimed');
 	});
 });
@@ -144,34 +163,25 @@ describe('the assignment mode', () => {
 	});
 
 	it('derives each from the rows behind it', async () => {
-		workOrder('contractor', { volunteer_role_id: null, title: 'Rewire' });
+		workOrder('contractor', { volunteer_role_id: null, title: 'Rewire' }, { untimed: true });
 		engagement('contractor', 'completed');
-		workOrder('called-off', { posted_at: inHours(-1) });
+		workOrder('called-off');
 		engagement('called-off', 'cancelled');
-		workOrder('declined', { volunteer_role_id: null, title: 'Quote' });
+		workOrder('declined', { volunteer_role_id: null, title: 'Quote' }, { untimed: true });
 		engagement('declined', 'declined');
-		workOrder('members');
-		insert('volunteer_signup', {
-			id: 'su-1',
-			shift_id: 'members',
-			user_id: ADA,
-			status: 'confirmed'
-		});
-		workOrder('dropped');
-		insert('volunteer_signup', {
-			id: 'su-2',
-			shift_id: 'dropped',
-			user_id: ADA,
-			status: 'cancelled'
-		});
-		workOrder('typed', { volunteer_role_id: null, title: 'Buy paint' });
+		// Assigned, not signed up: assignment is its own table (#2518).
+		workOrder('members', {}, { untimed: true });
+		insert('work_order_assignee', { work_order_id: 'members', user_id: ADA, assigned_at: 1 });
+		// A called-off shift opens nothing.
+		workOrder('shift-off', {}, { shift: { cancelled_at: inHours(-1) } });
+		workOrder('typed', { volunteer_role_id: null, title: 'Buy paint' }, { untimed: true });
 
 		const modes = await workOrderModes([
 			'contractor',
 			'called-off',
 			'declined',
 			'members',
-			'dropped',
+			'shift-off',
 			'typed',
 			'missing'
 		]);
@@ -180,14 +190,14 @@ describe('the assignment mode', () => {
 			'called-off': 'open',
 			declined: 'unassigned',
 			members: 'members',
-			dropped: 'unassigned',
+			'shift-off': 'unassigned',
 			typed: 'unassigned'
 		});
 	});
 
 	it('answers more ids than one statement can bind', async () => {
 		const ids = Array.from({ length: 170 }, (_, i) => `wo-${i}`);
-		for (const id of ids) workOrder(id, { posted_at: inHours(-1) });
+		for (const id of ids) workOrder(id);
 		const modes = await workOrderModes(ids);
 		expect(modes.size).toBe(170);
 		expect(new Set(modes.values())).toEqual(new Set(['open']));
@@ -196,14 +206,12 @@ describe('the assignment mode', () => {
 
 describe('work orders with no role, on staff surfaces', () => {
 	beforeEach(() => {
-		workOrder('roleless', { volunteer_role_id: null, title: 'Rewire', capacity: 1 });
-		workOrder('roleless-queue', {
-			volunteer_role_id: null,
-			title: 'Get a quote',
-			starts_at: null,
-			ends_at: null,
-			project_id: 'proj-1'
-		});
+		workOrder('roleless', { volunteer_role_id: null, title: 'Rewire' }, { shift: { capacity: 1 } });
+		workOrder(
+			'roleless-queue',
+			{ volunteer_role_id: null, title: 'Get a quote', project_id: 'proj-1' },
+			{ untimed: true }
+		);
 	});
 
 	it('are on the schedule and have a detail page', async () => {

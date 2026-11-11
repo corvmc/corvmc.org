@@ -35,6 +35,7 @@ const svc = await import('./volunteer-signup-service');
 const { listShifts } = await import('./work-order-service');
 
 const ROLE = 'role-1';
+const TASK = 'task-1';
 const SHIFT = 'shift-1';
 const COORDINATOR = 'usr-coordinator';
 const ADA = 'usr-ada';
@@ -45,7 +46,8 @@ const inHours = (n: number) => new Date(Date.now() + n * 3_600_000);
 
 async function seed(capacity = 1) {
 	const { user } = await import('#lib/server/db/schema/authentication.js');
-	const { volunteerRole, workOrder } = await import('#lib/server/db/schema/volunteer.js');
+	const { volunteerRole, volunteerShift, workOrder } =
+		await import('#lib/server/db/schema/volunteer.js');
 
 	await testDb.insert(user).values(
 		[COORDINATOR, ADA, BO, CAM].map((id) => ({
@@ -58,13 +60,18 @@ async function seed(capacity = 1) {
 	await testDb
 		.insert(volunteerRole)
 		.values({ id: ROLE, name: 'Front Desk', isActive: true } as never);
+	// A task and the one shift volunteers sign up for (#2518).
 	await testDb.insert(workOrder).values({
-		id: SHIFT,
+		id: TASK,
 		volunteerRoleId: ROLE,
+		createdByUserId: COORDINATOR
+	} as never);
+	await testDb.insert(volunteerShift).values({
+		id: SHIFT,
+		workOrderId: TASK,
 		startsAt: inHours(48),
 		endsAt: inHours(52),
 		capacity,
-		postedAt: new Date(),
 		createdByUserId: COORDINATOR
 	} as never);
 }
@@ -75,7 +82,7 @@ async function claimedCount() {
 }
 
 beforeEach(async () => {
-	for (const t of ['volunteer_signup', 'work_order', 'volunteer_role', 'user']) {
+	for (const t of ['volunteer_signup', 'volunteer_shift', 'work_order', 'volunteer_role', 'user']) {
 		sqlite.exec(`delete from ${t}`);
 	}
 	await seed();
@@ -181,14 +188,14 @@ describe('declining', () => {
 
 describe('expiry, which is derived rather than stored', () => {
 	it('drops off the member’s list once the shift has started', async () => {
-		const { workOrder } = await import('#lib/server/db/schema/volunteer.js');
+		const { volunteerShift } = await import('#lib/server/db/schema/volunteer.js');
 		const { eq } = await import('drizzle-orm');
 		await svc.inviteToShift(SHIFT, ADA, COORDINATOR);
 
 		await testDb
-			.update(workOrder)
+			.update(volunteerShift)
 			.set({ startsAt: inHours(-2), endsAt: inHours(-1) })
-			.where(eq(workOrder.id, SHIFT));
+			.where(eq(volunteerShift.id, SHIFT));
 
 		expect(await svc.listInvitationsForUser(ADA)).toEqual([]);
 	});
@@ -204,9 +211,12 @@ describe('expiry, which is derived rather than stored', () => {
 	});
 
 	it('is refused outright once the shift has been called off', async () => {
-		const { workOrder } = await import('#lib/server/db/schema/volunteer.js');
+		const { volunteerShift } = await import('#lib/server/db/schema/volunteer.js');
 		const { eq } = await import('drizzle-orm');
-		await testDb.update(workOrder).set({ cancelledAt: new Date() }).where(eq(workOrder.id, SHIFT));
+		await testDb
+			.update(volunteerShift)
+			.set({ cancelledAt: new Date() })
+			.where(eq(volunteerShift.id, SHIFT));
 
 		await expect(svc.inviteToShift(SHIFT, ADA, COORDINATOR)).rejects.toBeInstanceOf(
 			svc.ShiftClosedError
