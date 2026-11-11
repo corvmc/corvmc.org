@@ -12,8 +12,8 @@ import { contractorJobStatuses, contractorTrades } from '../../../config';
 // is `contractor_job`. A labor invoice is not stock arriving, which is why cost
 // lives here rather than on `acquisition` or `purchase_order`.
 //
-// See `docs/specs/shipped/contractor-work-spec.md` and
-// `docs/specs/shipped/work-orders-as-tasks-spec.md`.
+// See `docs/decisions/NNNN-contractor-work-has-its-own-tables.md` and
+// `docs/decisions/NNNN-a-work-order-is-the-task.md`.
 // ---------------------------------------------------------------------------
 
 /**

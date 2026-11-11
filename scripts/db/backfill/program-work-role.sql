@@ -4,8 +4,8 @@
 -- role, so archiving them closed the only door. Four people had already used
 -- it. This reopens it with a single role, and `volunteer_hour_log.group_id`
 -- says which committee or club the time was for -- so there is no per-committee
--- role to drift from the group of the same name, which is what decision 2 of
--- committees-and-roles-spec.md killed.
+-- role to drift from the group of the same name, which decision 2 of
+-- docs/decisions/NNNN-a-committee-is-a-group-chaired-by-admins.md retired.
 --
 -- Idempotent on the name, which is UNIQUE.
 

@@ -623,7 +623,7 @@ export type InventoryItemArticle = typeof inventoryItemArticle.$inferSelect;
 
 /**
  * A **work request**: something a person noticed about one unit, not yet
- * authorized — the CMMS term (docs/specs/project-spec.md#vocabulary). Triage
+ * authorized — the CMMS term (docs/decisions/NNNN-a-project-is-a-budgeted-body-of-work.md). Triage
  * turns it into a `work_order`, and N requests may collapse onto one.
  *
  * Shaped after `content_flag` and sharing its `flagStatuses` verbatim — one

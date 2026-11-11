@@ -1,8 +1,8 @@
 # Volunteering: what happens when a coordinator actually uses it
 
 > A hands-on pass over the volunteering module, driven as the volunteer coordinator, ahead
-> of a workflow redesign. Companion to `docs/specs/shipped/volunteering-spec.md` (design
-> rationale) and `docs/development/business-workflows.md` (shipped behaviour), and a
+> of a workflow redesign. Companion to `docs/decisions/NNNN-volunteer-hours-are-a-record.md`
+> (design rationale) and `docs/development/business-workflows.md` (shipped behaviour), and a
 > deliberate echo of `docs/reports/inventory-workflow-findings.md`.
 >
 > **Status: findings complete. The restructure they argue for is separate work.**

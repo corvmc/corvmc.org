@@ -21,7 +21,7 @@ export interface BallotCertifiedResult {
 }
 
 /**
- * One question, one choice per elector. See docs/specs/shipped/formal-balloting-spec.md.
+ * One question, one choice per elector. See docs/decisions/NNNN-secret-ballots-count-without-a-vote-row.md.
  *
  * Lifecycle is derived from timestamps: draft until `opened_at`, closed once
  * `closes_at` passes, final once `certified_at` or `cancelled_at` is set.
