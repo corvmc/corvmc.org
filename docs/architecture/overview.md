@@ -170,6 +170,11 @@ Auth is [better-auth](https://better-auth.com) configured in `src/lib/server/aut
   request — the session row stays in the DB but is inert (see the comment at
   `src/hooks.server.ts:46`). Sign-in for deactivated accounts is also rejected with the same
   generic message as a wrong password, to avoid account enumeration.
+- **Banned users**: `banUser` in `src/lib/server/user/user-service.ts` writes `user.bannedAt`,
+  `bannedById` and `banReason`, then deactivates the account, so the `deletedAt` gate above
+  does the enforcing. `reactivateUser` refuses a banned account; `unbanUser` is the only way
+  back. Sign-in names the suspension only after the password matches. A ban is indefinite and
+  is not routed through a report, so it cannot be appealed in the app.
 - **`ORIGIN` is required**: better-auth uses it as its `baseURL` and `createAuth()` throws at
   startup if it's unset.
 

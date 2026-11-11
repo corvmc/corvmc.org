@@ -99,21 +99,8 @@ the way it is, and the workflow guide to find out **what** it does today.
 
 ### Money & messaging
 
-| Doc                                                                    | Status | Lifecycle | Notes                                                                          |
-| ---------------------------------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------ |
-| [email-marketing-spec.md](specs/shipped/email-marketing-spec.md)       | ✅     | archived  | Audiences, campaigns, scheduled sends                                          |
-| [member-portal-chat-spec.md](specs/shipped/member-portal-chat-spec.md) | ✅     | archived  | Member↔staff conversations as an inbox channel (`portal`); `inbox_participant` |
-| [direct-messages-spec.md](specs/shipped/direct-messages-spec.md)       | ✅     | archived  | Member↔member DMs: request/accept consent, silent drops, blocks, reporting     |
-| [band-chat-spec.md](specs/shipped/band-chat-spec.md)                   | ✅     | archived  | Booking enquiries as band-owned threads (`band`); `inbox_thread.group_id`      |
-
-### Moderation
-
-| Doc                                                                    | Status | Lifecycle | Notes                                                                                                                        |
-| ---------------------------------------------------------------------- | ------ | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| [member-standing-spec.md](specs/shipped/member-standing-spec.md)       | ✅     | archived  | Scoped `member_standing`: what an upheld report costs, per domain. Merges the three per-domain standing tables               |
-| [member-suggestions-spec.md](specs/shipped/member-suggestions-spec.md) | ✅     | archived  | Upvoted member idea board with staff responses, duplicate merging, posting-under-review                                      |
-| [moderation-appeals-spec.md](specs/shipped/moderation-appeals-spec.md) | ✅     | archived  | Every moderation action is an upheld report; `moderation_appeal` hangs off the upheld flag                                   |
-| [platform-ban-spec.md](specs/platform-ban-spec.md)                     | 📋     | spec      | There is no ban, only deactivation. `account_removal` records who, why and until when; suspension is a term, not a mechanism |
+| Doc | Status | Lifecycle | Notes |
+| --- | ------ | --------- | ----- |
 
 ### Volunteering
 
