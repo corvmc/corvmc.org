@@ -298,9 +298,10 @@ export const volunteerRoleCapability = sqliteTable(
  * made by duplicating last week's; recurring facility work is a
  * `maintenanceSchedule`, which writes one occurrence at a time.
  *
- * Renamed from `volunteer_shift`. Index and check names keep the old prefix:
- * SQLite carries them through `RENAME TO` for free, and renaming them would
- * turn a one-line ALTER into a table rebuild for no gain.
+ * Renamed from `volunteer_shift`. Check names keep the old prefix, because
+ * renaming a check rebuilds the table. Index names are global in SQLite, so
+ * they took the `work_order_` prefix when the new `volunteer_shift` table
+ * arrived (#2518).
  */
 export const workOrder = sqliteTable(
 	'work_order',
@@ -478,12 +479,12 @@ export const workOrder = sqliteTable(
 	(t) => [
 		// The member's "what's coming up" list and the reminder cron both scan
 		// forward from now over live shifts.
-		index('volunteer_shift_upcoming_idx')
+		index('work_order_upcoming_idx')
 			.on(t.startsAt)
 			.where(sql`cancelled_at IS NULL`),
-		index('volunteer_shift_role_idx').on(t.volunteerRoleId),
-		index('volunteer_shift_event_idx').on(t.eventId),
-		index('volunteer_shift_asset_idx').on(t.assetId),
+		index('work_order_role_idx').on(t.volunteerRoleId),
+		index('work_order_event_idx').on(t.eventId),
+		index('work_order_asset_idx').on(t.assetId),
 		index('work_order_project_idx').on(t.projectId),
 		// At most one open occurrence per schedule, stated by the database: this is
 		// what makes generate-on-close unable to pile up duplicates.
@@ -499,7 +500,7 @@ export const workOrder = sqliteTable(
 			.on(t.groupId, t.dueAt)
 			.where(sql`group_id is not null and resolved_at is null and cancelled_at is null`),
 		// The coordinator's queue: work that needs somebody on it.
-		index('volunteer_shift_unscheduled_idx')
+		index('work_order_unscheduled_idx')
 			.on(t.createdAt)
 			.where(sql`starts_at is null and resolved_at is null and cancelled_at is null`),
 		// Either both ends are set or neither is — a half-scheduled shift is a bug,
@@ -517,6 +518,91 @@ export const workOrder = sqliteTable(
 		check('volunteer_shift_capacity_positive', sql`capacity > 0`),
 		// Posting is what puts work on the claim board, and claiming needs a role.
 		check('work_order_posted_has_role', sql`posted_at is null or volunteer_role_id is not null`)
+	]
+);
+
+/**
+ * A time volunteers show up for a task (#2518). A task has zero or more shifts;
+ * work with no time is a task with none, so both ends are NOT NULL here.
+ * Creating a shift is what opens it to volunteers. The role stays on the task.
+ */
+export const volunteerShift = sqliteTable(
+	'volunteer_shift',
+	{
+		id: text()
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+
+		// Cascade: a shift is a time on a task. Services cancel tasks rather than
+		// delete them, so this fires only on a hard delete.
+		workOrderId: text('work_order_id')
+			.notNull()
+			.references(() => workOrder.id, { onDelete: 'cascade' }),
+
+		startsAt: integer('starts_at', { mode: 'timestamp' }).notNull(),
+		endsAt: integer('ends_at', { mode: 'timestamp' }).notNull(),
+
+		/** How many people are needed. Sign-ups beyond this are refused. */
+		capacity: integer('capacity').notNull().default(1),
+
+		// Copied from the task at stamp time; retime reads it, never the list's (#2033).
+		anchor: text('anchor', { enum: dutyListAnchors }),
+
+		/** "Meet at the side door" — anything the volunteer needs to know. */
+		notes: text('notes'),
+
+		cancelledAt: integer('cancelled_at', { mode: 'timestamp' }),
+		cancelledByUserId: text('cancelled_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		createdByUserId: text('created_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		// The board, the reminder cron and the completion cron scan forward from now.
+		index('volunteer_shift_upcoming_idx')
+			.on(t.startsAt)
+			.where(sql`cancelled_at IS NULL`),
+		index('volunteer_shift_work_order_idx').on(t.workOrderId),
+		check('volunteer_shift_end_after_start', sql`ends_at > starts_at`),
+		check('volunteer_shift_places_positive', sql`capacity > 0`)
+	]
+);
+
+/**
+ * Who staff or a committee have put on a task (#2518). Assignment is not a
+ * sign-up: it has no capacity, reminder, feedback or clock-driven completion.
+ * `completedAt` is stamped when the task is marked done.
+ */
+export const workOrderAssignee = sqliteTable(
+	'work_order_assignee',
+	{
+		workOrderId: text('work_order_id')
+			.notNull()
+			.references(() => workOrder.id, { onDelete: 'cascade' }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		assignedByUserId: text('assigned_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		assignedAt: integer('assigned_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		completedAt: integer('completed_at', { mode: 'timestamp' })
+	},
+	(t) => [
+		primaryKey({ columns: [t.workOrderId, t.userId] }),
+		// A member's Assigned tasks list.
+		index('work_order_assignee_user_idx').on(t.userId)
 	]
 );
 
@@ -618,6 +704,11 @@ export const volunteerHourLog = sqliteTable(
 		// deleting a shift must not delete the hours somebody actually worked.
 		shiftId: text('shift_id').references(() => workOrder.id, { onDelete: 'set null' }),
 
+		// The task this time went to, when it was logged for one rather than for a
+		// shift: committee work is logged after the fact (#2518). A log may name a
+		// shift, a task, or neither. Set-null, matching `shiftId`.
+		workOrderId: text('work_order_id').references(() => workOrder.id, { onDelete: 'set null' }),
+
 		// The program this time was given to — a committee or a club. Nullable:
 		// most volunteering is for CMC at large and names no program.
 		//
@@ -681,6 +772,7 @@ export const volunteerHourLog = sqliteTable(
 		index('volunteer_hour_log_worked_on_idx').on(t.workedOn),
 		// The by-role rollup and the delete guard.
 		index('volunteer_hour_log_role_idx').on(t.volunteerRoleId),
+		index('volunteer_hour_log_work_order_idx').on(t.workOrderId),
 		// Backstop only — the service enforces the tighter VOLUNTEER_MAX_MINUTES_PER_LOG.
 		check('volunteer_minutes_positive', sql`minutes > 0 AND minutes <= 1440`)
 	]

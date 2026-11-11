@@ -89,7 +89,8 @@ import {
 	seedVolunteerInterests,
 	seedCertifications,
 	seedWorkOrders,
-	seedVolunteerHours
+	seedVolunteerHours,
+	seedTasksAndShifts
 } from './seed/volunteer';
 import { seedVolunteerPersonas } from './seed/volunteer-personas';
 import { seedSustainingPersonas } from './seed/sustaining-personas';
@@ -320,6 +321,8 @@ async function main() {
 	// Last of all: posts every work order the seeders above wrote, as the
 	// backfill migration did in production.
 	const postedWorkOrders = await postSeededWorkOrders(projects.unpostedWorkOrderIds);
+	// After every work-order seeder: copies the timed ones into shifts (#2518).
+	const tasksAndShifts = await seedTasksAndShifts(volunteerRoles);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -345,6 +348,9 @@ async function main() {
 	);
 	console.log(
 		`  ${orientation.workOrders} orientation shifts, ${orientation.orientations} member orientations`
+	);
+	console.log(
+		`  ${tasksAndShifts.shifts} shifts, ${tasksAndShifts.assignees} task assignees, ${tasksAndShifts.taskHours} hour log naming a task`
 	);
 	console.log(`  ${externalActs.length} external acts (hidden, unowned)`);
 	console.log(

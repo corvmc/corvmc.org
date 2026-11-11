@@ -107,6 +107,9 @@ export const tableOrder = [
 	'work_task',
 	// References user, work_order and reservation, so it follows all three.
 	'member_orientation',
+	// Both reference work_order and user.
+	'volunteer_shift',
+	'work_order_assignee',
 	'volunteer_signup',
 	// independents (no FKs)
 	'closure',
