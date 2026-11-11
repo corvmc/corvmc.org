@@ -10,7 +10,7 @@ import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import type { IncidentCategory, IncidentStatusFilter } from '#lib/config.js';
 
 /**
- * The incident & safety log. docs/specs/incident-log-spec.md
+ * The incident & safety log. docs/development/business-workflows.md §20
  *
  * Staff-only, and nothing here acts on a member: recording that a member was
  * involved changes nothing about their account. There is no edit and no delete

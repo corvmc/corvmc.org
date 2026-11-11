@@ -20,13 +20,13 @@ import { contractorJobStatuses, contractorTrades } from '../../../config';
  * Somebody the collective pays to do work: an instrument tech, an electrician,
  * the company that services the extinguishers.
  *
- * This is the entity `docs/specs/inventory-spec.md` deferred — "revisit when
- * free text actually fragments, or when one of those features forces the entity
- * into being." Servicing forces it: `purchase_order.supplier_name` can stay free
+ * Inventory declined a `supplier` table until free text fragments
+ * (`docs/decisions/0045-inventory-stock-is-a-ledger.md`). Servicing needs this
+ * entity now: `purchase_order.supplier_name` can stay free
  * text because you never have to *phone* a receipt, and "who serviced the
  * building and when" is unanswerable without a row to hang a history off.
  *
- * It is still not the `supplier` table that spec declined, and the two should
+ * It is still not the `supplier` table that record declined, and the two should
  * not be merged on the strength of the word alone. A supplier sells goods that
  * arrive and enter stock; a contractor performs work that leaves no stock
  * behind. That the same shop may one day be both is a consolidation to make

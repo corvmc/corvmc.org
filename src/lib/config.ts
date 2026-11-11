@@ -714,7 +714,7 @@ export const accessHoldingKindLabels: Record<AccessHoldingKind, string> = {
 export const localResourceStatuses = ['pending', 'published', 'rejected'] as const;
 export type LocalResourceStatus = (typeof localResourceStatuses)[number];
 
-/** What kind of thing went wrong. docs/specs/incident-log-spec.md */
+/** What kind of thing went wrong. docs/development/business-workflows.md §20 */
 export const incidentCategories = [
 	'noise_complaint',
 	'injury',

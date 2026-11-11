@@ -74,3 +74,7 @@ A page or less. Link the issue and the PRs.
 | 0040 | [Reports are module-owned over a shared kit](0040-reports-are-module-owned.md)                                            | 2026-08-27 | Accepted |
 | 0041 | [Band enquiries are threads the band owns](0041-band-enquiries-are-threads-the-band-owns.md)                              | 2026-09-04 | Accepted |
 | 0042 | [A committed manifest keeps cron monitors in step with the schedule](0042-cron-monitor-manifest.md)                       | 2026-09-29 | Accepted |
+| 0043 | [Asset tags are bound, not generated](0043-asset-tags-are-bound-not-generated.md)                                         | 2026-08-27 | Accepted |
+| 0044 | [Form 8282 is the only inventory tax check](0044-form-8282-is-the-only-inventory-tax-check.md)                            | 2026-08-27 | Accepted |
+| 0045 | [Inventory stock is a ledger](0045-inventory-stock-is-a-ledger.md)                                                        | 2026-08-27 | Accepted |
+| 0046 | [Serialization is not a capitalization threshold](0046-serialization-is-not-a-capitalization-threshold.md)                | 2026-08-27 | Accepted |

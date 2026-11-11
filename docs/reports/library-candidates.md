@@ -90,7 +90,7 @@ checkout, always beside the field it fills rather than in place of it — a USB
 wedge scanner types into those fields already, and a member scanning a tag uses
 their phone's own camera, which resolves the `/a/{tag}` URL with no app.
 
-`bwip-js` is **not** adopted, and may never need to be. `docs/specs/inventory-spec.md`
+`bwip-js` is **not** adopted, and may never need to be. `docs/decisions/0043-asset-tags-are-bound-not-generated.md`
 settles that serialized tags are bought pre-printed rather than generated; the
 only printing left is consumable bin labels, and `qrcode-svg` is already a
 dependency for event tickets.
