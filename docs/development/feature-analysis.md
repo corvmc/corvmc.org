@@ -1,7 +1,7 @@
 # Working out what to build
 
 The [feature checklist](conventions.md#the-feature-checklist) starts at Design and says the
-deliverable is a spec. This is how you get to a spec worth building from — the pass that happens
+deliverable is a proposal on the issue. This is how you get to a spec worth building from — the pass that happens
 before it, and the one that decides whether the next month is spent on the right thing.
 
 It is not a process to follow in order. It is a set of moves that repeatedly turned out to matter,

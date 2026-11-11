@@ -1,5 +1,7 @@
 # specs
 
+**This folder is being retired under #2525.** New proposals go on the issue; see [conventions](../development/conventions.md#living-docs-and-decision-records).
+
 Design intent for things that are **not built**. When code and a spec here disagree, the spec is
 intent and the code is reality — reconcile deliberately rather than assuming either one won.
 

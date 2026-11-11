@@ -148,8 +148,8 @@ BASE_REF=origin/feature/<slug> pnpm lint:changed
 Only when the feature is complete and its member-facing surfaces work.
 
 Work the nine-phase checklist's finishing steps first — seed data, the feature catalog row,
-`pnpm docs:routes && pnpm docs:check` if a route moved, and retire the spec into
-`docs/specs/shipped/`. Then:
+`pnpm docs:routes && pnpm docs:check` if a route moved, and the feature's decision record in
+`docs/decisions/`. Then:
 
 ```bash
 gh pr create --base main --title "<spec>: <the feature>"
