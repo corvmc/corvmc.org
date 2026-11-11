@@ -92,7 +92,8 @@ const insertValues = vi.fn((vals: Record<string, unknown> | Record<string, unkno
 		)
 	};
 });
-const eventInsert = vi.fn(() => ({ values: insertValues }));
+// `select` is the insert-from-select that places pending duty-list windows as shifts.
+const eventInsert = vi.fn(() => ({ values: insertValues, select: () => Promise.resolve([]) }));
 
 const deleteWhere = vi.fn(() => Promise.resolve());
 const eventDelete = vi.fn(() => ({ where: deleteWhere }));
@@ -133,8 +134,6 @@ vi.mock('#lib/server/db/index.js', async (importOriginal) => {
 		...actual,
 		db: {
 			select: () => chainable(),
-			// The raw insert that places pending duty-list windows as shifts.
-			run: vi.fn(() => Promise.resolve({})),
 			// Referenced lazily — the factory is evaluated during the hoisted
 			// import, before these module-level consts initialize.
 			insert: (...args: unknown[]) => eventInsert(...(args as [])),

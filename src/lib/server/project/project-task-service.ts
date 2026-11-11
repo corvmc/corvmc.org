@@ -846,8 +846,11 @@ export async function listProjectTasks(projectId: string) {
 				sortOrder: workOrder.sortOrder,
 				volunteerRoleId: workOrder.volunteerRoleId,
 				roleName: volunteerRole.name,
-				// Across the task's live shifts; 0 with none.
-				capacity: capacitySql().mapWith(Number),
+				// Across the task's live shifts; with none, the places it asked for.
+				capacity:
+					sql<number>`coalesce(nullif(${capacitySql()}, 0), ${workOrder.pendingCapacity}, 1)`.mapWith(
+						Number
+					),
 				claimed: claimedSql().mapWith(Number),
 				// The latest live shift's time, which is what a one-shift row shows.
 				startsAt: liveShiftTime('starts_at'),

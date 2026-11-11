@@ -50,7 +50,9 @@ vi.mock('#lib/server/db/index.js', () => ({
 			values: (v: unknown) => {
 				insertValues.push(v);
 				return chain(() => [{ id: 'proj-1', ...(v as object) }]);
-			}
+			},
+			// Placing pending duty-list windows inserts shifts from a select.
+			select: () => chain(() => [])
 		})),
 		update: vi.fn(() => ({
 			set: (values: Record<string, unknown>) => {
@@ -61,9 +63,7 @@ vi.mock('#lib/server/db/index.js', () => ({
 		batch: vi.fn(async (writes: unknown[]) => {
 			batchCalls.push(writes);
 			return writes.map(() => []);
-		}),
-		// A raw statement: placing pending duty-list shifts inserts through one.
-		run: vi.fn(() => Promise.resolve([]))
+		})
 	}
 }));
 

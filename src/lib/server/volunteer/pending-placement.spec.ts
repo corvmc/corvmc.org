@@ -10,21 +10,8 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	return migratedSqlite();
 });
 
-// better-sqlite3 runs `db.run` when it is called; D1's waits to be awaited, so
-// a batch runs it in order. This makes it lazy, as D1's is.
-const syncRun = testDb.run.bind(testDb);
-
 vi.mock('#lib/server/db/index.js', () => ({
 	db: Object.assign(testDb, {
-		run: (query: Parameters<typeof syncRun>[0]) => ({
-			then: (ok: (v: unknown) => unknown, fail: (e: unknown) => unknown) => {
-				try {
-					return Promise.resolve(syncRun(query)).then(ok, fail);
-				} catch (e) {
-					return Promise.reject(e).then(ok, fail);
-				}
-			}
-		}),
 		batch: async (stmts: PromiseLike<unknown>[]) => {
 			sqlite.exec('begin');
 			try {

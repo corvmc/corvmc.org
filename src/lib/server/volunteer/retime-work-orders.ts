@@ -92,16 +92,26 @@ export function placePendingWorkOrders(
 		substr(lower(hex(randomblob(2))), 2) || '-' ||
 		substr('89ab', 1 + (abs(random()) % 4), 1) || substr(lower(hex(randomblob(2))), 2) || '-' ||
 		lower(hex(randomblob(6)))`;
-	const shifts = db.run(sql`
-		insert into ${volunteerShift}
-			("id", "work_order_id", "starts_at", "ends_at", "capacity", "anchor",
-			 "created_by_user_id", "created_at", "updated_at")
-		select ${uuid}, ${workOrder.id}, ${start}, ${start} + ${workOrder.pendingDurationMinutes} * 60,
-			coalesce(${workOrder.pendingCapacity}, 1), ${workOrder.anchor},
-			${workOrder.createdByUserId}, ${now}, ${now}
-		from ${workOrder}
-		where ${and(waiting, isNotNull(workOrder.pendingDurationMinutes))}
-	`);
+	// A builder, not `db.run`: D1's batch takes only builders.
+	const shifts = db.insert(volunteerShift).select(
+		db
+			.select({
+				id: sql<string>`${uuid}`.as('id'),
+				workOrderId: workOrder.id,
+				startsAt: sql<number>`${start}`.as('starts_at'),
+				endsAt: sql<number>`${start} + ${workOrder.pendingDurationMinutes} * 60`.as('ends_at'),
+				capacity: sql<number>`coalesce(${workOrder.pendingCapacity}, 1)`.as('capacity'),
+				anchor: workOrder.anchor,
+				notes: sql<string | null>`null`.as('notes'),
+				cancelledAt: sql<number | null>`null`.as('cancelled_at'),
+				cancelledByUserId: sql<string | null>`null`.as('cancelled_by_user_id'),
+				createdByUserId: workOrder.createdByUserId,
+				createdAt: sql<number>`${now}`.as('created_at'),
+				updatedAt: sql<number>`${now}`.as('updated_at')
+			})
+			.from(workOrder)
+			.where(and(waiting, isNotNull(workOrder.pendingDurationMinutes)))
+	);
 
 	const windowed = sql`${workOrder.pendingDurationMinutes} is not null`;
 	const tasks = db
