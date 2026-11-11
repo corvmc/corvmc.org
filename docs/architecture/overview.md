@@ -170,6 +170,11 @@ Auth is [better-auth](https://better-auth.com) configured in `src/lib/server/aut
   request — the session row stays in the DB but is inert (see the comment at
   `src/hooks.server.ts:46`). Sign-in for deactivated accounts is also rejected with the same
   generic message as a wrong password, to avoid account enumeration.
+- **Banned users**: `banUser` in `src/lib/server/user/user-service.ts` writes `user.bannedAt`,
+  `bannedById` and `banReason`, then deactivates the account, so the `deletedAt` gate above
+  does the enforcing. `reactivateUser` refuses a banned account; `unbanUser` is the only way
+  back. Sign-in names the suspension only after the password matches. A ban is indefinite and
+  is not routed through a report, so it cannot be appealed in the app.
 - **`ORIGIN` is required**: better-auth uses it as its `baseURL` and `createAuth()` throws at
   startup if it's unset.
 
@@ -206,8 +211,11 @@ admin > staff > sustaining > member
 ```
 
 - `admin`, `staff` and the named positions — each grants a set of capabilities from the
-  matrix in `src/lib/config.ts`; guards name the capability, never the role. See
-  [admin-vs-staff-spec.md](../specs/shipped/admin-vs-staff-spec.md).
+  matrix in `src/lib/config.ts`; guards name the capability, never the role. `admin` alone
+  holds `adminOnlyCapabilities` (granting roles, purging, adjusting credit, reopening a terminal
+  record). `staff` holds every other capability, derived, so a new capability reaches `staff`
+  unless it is named admin-only. See
+  [the decision record](../decisions/0032-guards-name-capabilities.md).
 - `sustaining` — paying member (monthly Stripe subscription). Note that most sustaining
   checks actually look at the `user.subscription` JSON column, not the role — see
   `isSustainingMember` in `src/lib/server/finance/subscription-service.ts`.
@@ -224,10 +232,11 @@ function starts with a guard call. The guards:
 | Guard                                    | Defined in                              | What it does                                                                                                                                                                                                                                                           |
 | ---------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `requireUser()`                          | `src/lib/server/authorization.ts`       | 401 unless logged in; returns the user                                                                                                                                                                                                                                 |
-| `requireCapability(cap)`                 | `src/lib/server/authorization.ts`       | 401/403 unless one of the caller's positions grants `cap`; returns the user                                                                                                                                                                                            |
+| `requireCapability(cap, scope?)`         | `src/lib/server/authorization.ts`       | 401/403 unless one of the caller's positions grants `cap`, or a committee or volunteer-role grant does (an optional `{ eventId, groupId, projectId }` scope); returns the user                                                                                         |
 | `requireCapabilityOrOwner(cap, ownerId)` | `src/lib/server/authorization.ts`       | Allows the resource owner or a holder of `cap`; returns which one matched                                                                                                                                                                                              |
 | `can(cap)`                               | `src/lib/server/authorization.ts`       | The same test without throwing, for a branch inside a handler                                                                                                                                                                                                          |
 | `requireGroupRole(ref, min, opts?)`      | `src/lib/server/group/group-context.ts` | Resolves a group from an **explicit** `{ slug }` or `{ id }` ref — never `params` — and requires the caller holds at least `min` (`owner > admin > member`); returns `{ user, group, role }`. `{ allowStaff: true }` admits a non-member staff user as `role: 'staff'` |
+| `requireCommitteeMember(groupId, cap)`   | `src/lib/server/group/group-context.ts` | For a record a committee owns: an active member of that committee whose grants carry `cap`, or any holder of `cap`. `groupId` is read off the record, never the request                                                                                                |
 | `requireFeature(flag)`                   | `src/lib/server/feature-flags.ts`       | 404 unless the feature flag is enabled (see Configuration below)                                                                                                                                                                                                       |
 
 Each of the three logged-in areas also has a **layout guard remote** in
@@ -497,6 +506,25 @@ Decision: [Stripe is the payment ledger](../decisions/0013-stripe-is-the-payment
 
 The full money flows, including reservation pricing and credit settlement,
 are traced step-by-step in [business-workflows.md](../development/business-workflows.md).
+
+## Reports
+
+`/staff/reports` holds four views, each behind its own capability (`views.ts` beside the
+route): Annual (`finance.read`), Volunteering (`volunteer.report`), Inventory spend
+(`inventory.report`) and Acquisitions (`inventory.manageAcquisitions`).
+
+Each module computes its own figures in its own `*-report-service.ts`. The shared kit is
+`src/lib/server/report/`: `range.ts` (`rangeCondition`, whole days in the collective's time
+zone), `bucket.ts` (`monthBucket`, `dayBucket`) and `csv.ts`, plus
+`src/lib/components/ui/DateRangeFilter.svelte` with This year, Last year and All time presets.
+`annual-report-service.ts` writes no queries of its own. It calls the module services, and its
+money lines come from the `financial_entry` ledger.
+
+A CSV download is a `+server.ts` route (`/staff/reports/export`,
+`/staff/reports/volunteering/export`) whose first statement is `requireCapability`. `toCsv`
+forces `escape_formulas` on, so a member-written cell beginning `=`, `+`, `-` or `@` is not run
+as a formula. `csvResponse` adds a UTF-8 BOM and `cache-control: no-store`. Why reports are
+shaped this way: [the decision record](../decisions/0040-reports-are-module-owned.md).
 
 ## Observability
 

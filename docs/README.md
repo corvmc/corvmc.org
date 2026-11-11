@@ -95,26 +95,12 @@ the way it is, and the workflow guide to find out **what** it does today.
 
 | Doc                                                                | Status | Lifecycle | Notes                                                                                                                                                                                                                                             |
 | ------------------------------------------------------------------ | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [member-dashboard-spec.md](specs/shipped/member-dashboard-spec.md) | ✅     | archived  | Member landing page                                                                                                                                                                                                                               |
 | [formal-balloting-spec.md](specs/shipped/formal-balloting-spec.md) | ✅     | archived  | Group ballots (committee roster, recorded) and member-wide ballots (members of record, secret but auditable: participation and a per-option counter, no joinable link). Tallies hidden until close; a named certifier publishes the result (#577) |
 
 ### Money & messaging
 
-| Doc                                                                    | Status | Lifecycle | Notes                                                                          |
-| ---------------------------------------------------------------------- | ------ | --------- | ------------------------------------------------------------------------------ |
-| [email-marketing-spec.md](specs/shipped/email-marketing-spec.md)       | ✅     | archived  | Audiences, campaigns, scheduled sends                                          |
-| [member-portal-chat-spec.md](specs/shipped/member-portal-chat-spec.md) | ✅     | archived  | Member↔staff conversations as an inbox channel (`portal`); `inbox_participant` |
-| [direct-messages-spec.md](specs/shipped/direct-messages-spec.md)       | ✅     | archived  | Member↔member DMs: request/accept consent, silent drops, blocks, reporting     |
-| [band-chat-spec.md](specs/shipped/band-chat-spec.md)                   | ✅     | archived  | Booking enquiries as band-owned threads (`band`); `inbox_thread.group_id`      |
-
-### Moderation
-
-| Doc                                                                    | Status | Lifecycle | Notes                                                                                                                        |
-| ---------------------------------------------------------------------- | ------ | --------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| [member-standing-spec.md](specs/shipped/member-standing-spec.md)       | ✅     | archived  | Scoped `member_standing`: what an upheld report costs, per domain. Merges the three per-domain standing tables               |
-| [member-suggestions-spec.md](specs/shipped/member-suggestions-spec.md) | ✅     | archived  | Upvoted member idea board with staff responses, duplicate merging, posting-under-review                                      |
-| [moderation-appeals-spec.md](specs/shipped/moderation-appeals-spec.md) | ✅     | archived  | Every moderation action is an upheld report; `moderation_appeal` hangs off the upheld flag                                   |
-| [platform-ban-spec.md](specs/platform-ban-spec.md)                     | 📋     | spec      | There is no ban, only deactivation. `account_removal` records who, why and until when; suspension is a term, not a mechanism |
+| Doc | Status | Lifecycle | Notes |
+| --- | ------ | --------- | ----- |
 
 ### Volunteering
 
@@ -133,23 +119,16 @@ the way it is, and the workflow guide to find out **what** it does today.
 
 ### Staff platform
 
-| Doc                                                                                  | Status | Lifecycle | Notes                                                                                                                                                                                                                                                                                          |
-| ------------------------------------------------------------------------------------ | ------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [staff-user-detail-context-spec.md](specs/shipped/staff-user-detail-context-spec.md) | ✅     | archived  | `/staff/members/[id]` as an operational record: 8 tabs, 9 panels                                                                                                                                                                                                                               |
-| [reporting-spec.md](specs/shipped/reporting-spec.md)                                 | ✅     | archived  | **All four phases shipped.** The `range`/`bucket`/`csv` kit, the shared `DateRangeFilter`, the volunteer CSV, and the annual rollup at `/staff/reports` reading the financial record. Module-owned reports over a shared kit; which vendor answers which question, and why there are no charts |
-| [audit-log-spec.md](specs/shipped/audit-log-spec.md)                                 | ✅     | archived  | Who did what to a member's account: append-only `audit_log`, the History card and `/staff/audit`, and a 24-month retention sweep that keeps `user.purged` rows with name and email stripped                                                                                                    |
-| [staff-email-change-spec.md](specs/shipped/staff-email-change-spec.md)               | ✅     | archived  | Staff propose a member's new login email; it applies when the new mailbox confirms (#820)                                                                                                                                                                                                      |
-| [admin-vs-staff-spec.md](specs/shipped/admin-vs-staff-spec.md)                       | ✅     | archived  | Roles are org positions, not tiers: guards name capabilities, the matrix maps positions to them, assignment stays in `model_has_roles`. Drops the dead spatie tables; break-glass is a documented runbook                                                                                      |
-| [card-list-density-spec.md](specs/card-list-density-spec.md)                         | 📋     | spec      | A table, unless the row earns a card — four testable clauses replacing the rule at `ui-patterns.md:959`, whose three cited precedents none satisfy. The card grammar as the row's four slots folded at the container query. Decides #1032's fourteen open children                             |
+| Doc | Status | Lifecycle | Notes |
+| --- | ------ | --------- | ----- |
 
 The last three all came out of #164, which closed the follow-ups from a since-retired staff
 user-management audit by writing a spec for each. None has been built since.
 
 ### Platform
 
-| Doc                                                                  | Status | Lifecycle | Notes                                                                                                                                                                                                                                          |
-| -------------------------------------------------------------------- | ------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [cron-monitor-manifest-spec.md](specs/cron-monitor-manifest-spec.md) | ✅     | spec      | `CRON_MONITORS` beside `CRON_SCHEDULE`: every slug that ever had a Sentry monitor, live or retired, and a spec that fails when a scheduled job disappears without a tombstone. Disabling the monitor stays a manual Sentry step (#1327, #1717) |
+| Doc | Status | Lifecycle | Notes |
+| --- | ------ | --------- | ----- |
 
 ## plans
 

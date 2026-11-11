@@ -973,7 +973,7 @@ if it's broadly useful.
 ### Analytics and reporting tools
 
 Which vendor owns which question, so this is not re-litigated per feature. The governing rule
-lives in `docs/specs/reporting-spec.md`: **a report belongs in the app only when it joins data no
+lives in [a decision record](../decisions/0040-reports-are-module-owned.md): **a report belongs in the app only when it joins data no
 single vendor holds.**
 
 | Question                                                              | Where it is answered                                                                    | Notes                                                             |

@@ -823,8 +823,6 @@ number.
 
 ## 7. Marketing campaigns
 
-Spec: [specs/email-marketing-spec.md](../specs/shipped/email-marketing-spec.md)
-
 ### The story
 
 Staff compose email campaigns, pick audiences (rule-based or manual lists of subscribers),
@@ -833,6 +831,19 @@ them through Postmark's **broadcast** message stream (separate from transactiona
 newsletter complaints can't hurt receipt deliverability). Every recipient gets a signed
 unsubscribe link.
 
+A `subscriber` is an email address, not an account. `subscriber.userId` links it to a member
+when one matches. An audience is either a staff-kept static list or a built-in: a row whose
+`systemKey` names a code-defined predicate in `marketing/system-audience-defs.ts`, resolved
+against member accounts at send time. Staff cannot create or edit built-ins. An audience with
+`allowOptIn` appears on the public `/subscribe` pages and in the member's account
+subscriptions.
+
+Opting out works at two levels. The unsubscribe link sets `audience_member.unsubscribedAt` for
+the one audience its token names. The page then offers "unsubscribe from all", which sets
+`subscriber.suppressedAt` with reason `unsubscribe` and excludes the address from every
+campaign. Opting in again clears that reason; `bounce` and `complaint` suppressions stay. The
+RFC 8058 one-click POST to the same URL only ever leaves the named audience.
+
 ### Code path
 
 - **Compose/schedule:** `staff/marketing` UI → `marketing.remote.ts` →
@@ -840,7 +851,9 @@ unsubscribe link.
   Status is derived, not stored: `deriveCampaignStatus()` maps
   (`scheduledFor`, `sentAt`) → `draft | scheduled | sending | sent`.
 - **Audiences:** `audience-service.ts` + `subscriber-service.ts`;
-  `getRecipientsForCampaign()` resolves and dedupes recipients at send time.
+  `getRecipientsForCampaign()` resolves and dedupes recipients at send time. A recipient in
+  several targeted audiences keeps the lowest-sorted audience id, so the audience their
+  unsubscribe token names does not depend on row order.
 - **The send:** cron `send-campaigns` (`src/routes/api/cron/send-campaigns/+server.ts`) →
   `processDueCampaigns()` → `executeSend(campaignId)` — renders per-recipient HTML into the
   campaign layout, a hand-maintained TS constant in `marketing/campaign-layout.ts` kept
@@ -1028,10 +1041,11 @@ on a bill and have it appear on that band's own profile without their say-so.
 
 ---
 
-## 10. Messaging: portal threads and direct messages
+## 10. Messaging: portal threads, direct messages and band enquiries
 
-Spec: [specs/member-portal-chat-spec.md](../specs/shipped/member-portal-chat-spec.md) ·
-[specs/direct-messages-spec.md](../specs/shipped/direct-messages-spec.md)
+Decisions: [Member conversations share the staff inbox](../decisions/0034-member-conversations-share-the-staff-inbox.md) ·
+[Direct message refusals look alike](../decisions/0035-direct-message-refusals-look-alike.md) ·
+[Band enquiries are threads the band owns](../decisions/0041-band-enquiries-are-threads-the-band-owns.md)
 
 ### The story
 
@@ -1048,6 +1062,10 @@ about what happened to it. A decline, a block, messaging switched off, and simpl
 opening it are all indistinguishable from the outside — which is the point, because a
 visible decline is one people hesitate to make.
 
+A band's booking enquiries run on the same tables. The contact form on a band's public profile
+opens a `channel: 'band'` thread owned by `inbox_thread.group_id`, and the band's owner and
+admins answer it at `/band/[slug]/messages`. Neither side sees the other's address.
+
 ### Code path
 
 - **The list:** `/member/messages` → `direct-messages.remote.ts`: `getMyMessages()` →
@@ -1055,7 +1073,12 @@ visible decline is one people hesitate to make.
   single query.
 - **Portal threads:** `inbox.remote.ts`: `startConversation()` → `inbox/portal-service.ts`:
   `startPortalConversation()`, `replyToPortalThread()`, `markPortalThreadRead()`. Staff
-  answer from `/staff/inbox` exactly as in §8.
+  answer from `/staff/inbox` exactly as in §8. A member holds at most
+  `MAX_OPEN_PORTAL_THREADS` open or snoozed threads. A resolved thread is read-only to the
+  member, and a member reply to a snoozed one reopens it. `portal-service.ts` never reads
+  `inbox_note`, which is why it exists instead of reusing `getThread()`.
+- **Portal delivery:** `dispatchReply()` sends nothing for `portal`; the stored message is the
+  delivery. The `inbox.message_sent` listener sends `portal_message_reply` to the participant.
 - **Starting a DM:** `startDirectConversation()` → `direct-service.ts:startDirectThread()`.
   Every rejection except one comes back as a plain success — the exception is a member whose
   own standing forbids it, who is entitled to know and to read the staff reason.
@@ -1070,11 +1093,34 @@ visible decline is one people hesitate to make.
   on `/member/account`. This is the member's own preference and is not `member_standing`.
 - **Reporting:** `reportDirectThread()` verifies participation before filing, because filing
   the flag is what makes a private conversation readable by staff.
+- **Limits:** `MAX_PENDING_SENT_REQUESTS` caps unanswered requests a member has sent, and
+  `MAX_UNRESOLVED_REPORTS` caps their reports waiting in the staff queue. Both are counted
+  in the database and fall as the other side acts.
+- **Staff visibility:** `staffVisibleThread` in `inbox/thread-service.ts` hides every
+  channel in `PRIVATE_CHANNELS` (`direct`, `band`, `group`) from staff lists, counts and
+  search unless the thread has a pending flag. `getThread()` refuses those channels outright.
+- **DM email:** a notification type with `emailOmitsUserContent` has its quote and preview
+  stripped in `notification/email/normalize-model.ts`, so DM emails never carry the
+  message. `handlePostmarkInbound()` drops any inbound email aimed at a `direct` thread.
+  DM rows use `inbox_message.direction = 'peer'`, so the email reply chain, built from
+  `inbound` rows, skips them.
+- **Band enquiries:** `band-contact.remote.ts:submitBandContactForm()` →
+  `inbox/band-service.ts:handleBandEnquiry()`, which always opens a new thread. A band
+  thread has no `inbox_participant` rows; readers come from the roster at read time, and
+  `inbox_group_read` holds each reader's cursor. `band-messages.remote.ts` guards with
+  `requireGroupRole(…, 'admin')`, and its mutations resolve the band from the thread
+  (`bandOfThread()`), never from the slug. Replies go out through `dispatchBandReply()` in
+  `inbox/channel-dispatcher.ts` as "<Band> via CorvMC". The Postmark relay that turns a
+  staffer's emailed reply into an outbound message skips band threads.
+- **Enquiry notifications:** `band_enquiry_received` goes to the band's owner and admins.
+  The old `band_site_contact` email goes only to a press-kit or profile booking address
+  that matches no owner or admin.
 
 ### Data touched
 
-`inbox_thread`, `inbox_message`, `inbox_participant`, `user_block`,
-`user.acceptsDirectMessages`, `member_standing` (scope `messaging`), `content_flag`.
+`inbox_thread` (including `group_id`), `inbox_message`, `inbox_participant`,
+`inbox_group_read`, `user_block`, `user.acceptsDirectMessages`, `member_standing` (scope
+`messaging`), `content_flag`.
 
 ### Where it breaks
 
@@ -1085,16 +1131,19 @@ visible decline is one people hesitate to make.
   follow anyone around the site; the count renders on the Messages page only.
 - **A staff reply reads as anonymous** → the staff inbox orients bubbles by `outbound`
   rather than by author, so a colleague's reply reads as the organisation's. That is
-  deliberate (see `member-portal-chat-spec.md`) and pinned from both sides by
-  `ThreadTimeline.svelte.spec.ts` — do not flip the axis to "fix" it.
+  deliberate and pinned from both sides by `ThreadTimeline.svelte.spec.ts` — do not flip
+  the axis to "fix" it. The member inbox passes `viewerUserId` and orients by author.
+  `EnquiryThread.svelte` omits it, so a bandmate's reply to a booker reads as the band's.
 
 ---
 
 ## 11. Moderation: reports, standing, and the suggestion board
 
-Spec: [specs/member-standing-spec.md](../specs/shipped/member-standing-spec.md) ·
-[specs/member-suggestions-spec.md](../specs/shipped/member-suggestions-spec.md) ·
-[listings publish first and are moderated after](../decisions/0006-listings-publish-first-and-are-moderated-after.md)
+Decisions: [listings publish first and are moderated after](../decisions/0006-listings-publish-first-and-are-moderated-after.md) ·
+[member standing is one table keyed by scope](../decisions/0038-member-standing-is-one-table-keyed-by-scope.md) ·
+[one report takes a suggestion off the board](../decisions/0036-one-report-takes-a-suggestion-off-the-board.md) ·
+[suggestion edits lock at the first outside vote](../decisions/0037-suggestion-edits-lock-at-the-first-outside-vote.md) ·
+[moderation appeals hang off the upheld report](../decisions/0039-moderation-appeals-hang-off-the-upheld-report.md)
 
 ### The story
 
@@ -1115,6 +1164,17 @@ The suggestion board is the same machinery applied to a different surface: repor
 suggestion pulls it off the board pending review, and an upheld report puts the author's
 later suggestions through review first.
 
+A suggestion carries two independent fields. `status` is what staff decided about the idea.
+`visibility` is whether it is on the board: `visible`, `pending_review` (posted by a member on
+review, never yet public), `under_review` (pulled by a report) or `hidden`. The board shows
+`visible` only. One pending report is enough to pull a post (`SUGGESTION_FLAGS_TO_WITHHOLD`),
+and dismissing the report puts it back.
+
+Every moderation action is an upheld report. A staffer acting on their own files a
+`staff_action` report (`content_flag.origin`), resolved as they file it, so the member can
+appeal it like any other. An appeal makes two separate decisions, one about the content and
+one about the standing. Nothing changes while an appeal waits.
+
 ### Code path
 
 - **Filing:** `flags.remote.ts`: `submitFlag()` for profiles and listings (narrowed to
@@ -1131,7 +1191,22 @@ later suggestions through review first.
   an entity type to the standing scope it can affect.
 - **Standing:** `standing-service.ts`: `getStanding()` / `getStandings()`,
   `restrictStanding()`, `restoreStanding()`, with `setStanding()` underneath. Surfaced on
-  the member record via `standing.remote.ts`.
+  the member record via `standing.remote.ts`. Every scope shares the ladder `none` /
+  `restricted` / `disabled`; `standingScopeConfig` in `src/lib/config.ts` lists the rungs
+  each scope may hold, and `setStanding()` throws on any other, or on a call without a
+  `flagId`. Only `messaging` may be `disabled`. `restoreStanding()` only updates an existing
+  row, keeping its `reason` and `triggeringFlagId`.
+- **Messaging reachability:** `moderation-service.ts:messagingIsDisabled()` returns one
+  boolean from the member's own `acceptsDirectMessages`, the age rule and `messaging`
+  standing, so a sender cannot tell which one applied.
+- **Appeals:** `appeals.remote.ts` → `moderation/appeal-service.ts`. `fileAppeal()` finds the
+  member's upheld flag from what they are looking at (a suggestion, a listing, a standing),
+  never from a flag id, and is rate-limited per member. `uq_moderation_appeal_flag` allows one
+  appeal per report. `decideAppeal()` applies the restores first and stamps `decidedAt` last;
+  `decidedAt IS NULL` means pending. A restored listing is published directly, not through
+  the standing-aware submit. The staffer who resolved the report may grant but not deny
+  (`SelfReviewError`). `reopenAppeal()` returns a decided appeal to the queue without undoing
+  its effects. The member's notification states the verdict only.
 - **Suggestions:** `suggestion/suggestion-service.ts` — the board
   (`getSuggestionBoard`, votes deduped per member), the staff queue
   (`getSuggestionsQueue`, `respondToSuggestion`, `setSuggestionVisibility`),
@@ -1155,7 +1230,7 @@ later suggestions through review first.
   was deleted (#1528); `fileStaffAction` files the `staff_action` report such a form would need.
 - **An appeal the staffer cannot deny** → by design: whoever resolved the report may grant
   but not deny (`SelfReviewError`). A second staffer answers it. See
-  [specs/shipped/moderation-appeals-spec.md](../specs/shipped/moderation-appeals-spec.md).
+  [Moderation appeals hang off the upheld report](../decisions/0039-moderation-appeals-hang-off-the-upheld-report.md).
 - **A restriction staff need to lift** → the Restore action on the member's Moderation panel
   (`/staff/members/[id]`), one scope at a time.
 - **A reported suggestion nobody can see** → reporting takes it off the board immediately,
@@ -1721,7 +1796,7 @@ between the two features: walking through the easy door furnishes the rider on t
 
 ## 16. The staff audit log: who changed a member's account
 
-Spec: [specs/audit-log-spec.md](../specs/shipped/audit-log-spec.md)
+Decision record: [the audit log records intent](../decisions/0031-audit-log-records-intent.md)
 
 ### The story
 
@@ -1743,6 +1818,10 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
   deactivation writes one row per member sharing `details.batchId`.
 - **Read:** `getUserHistory` (`user.read`) → `listAuditEntriesForSubject`, rendered by
   `summarizeAuditEntry` in `src/lib/utils/audit-display.ts`.
+- **Global log:** `/staff/audit` → `getAuditLog` (`audit.read`, which `user.read` does not
+  grant) in `src/lib/remote/audit.remote.ts` → `listAuditEntries`, 50 rows a page, filtered by
+  action, actor (matched against the stored name and email, so a purged staffer is still
+  findable) and a from–to range in whole days.
 
 ### Data touched
 
@@ -1813,7 +1892,7 @@ the row.
 
 ## 18. Staff email change
 
-Spec: [specs/shipped/staff-email-change-spec.md](../specs/shipped/staff-email-change-spec.md)
+Decision record: [staff propose, the mailbox confirms](../decisions/0033-staff-propose-email-changes.md)
 
 ### The story
 
@@ -2245,6 +2324,35 @@ decide.
 `directory_tag`), `content_flag`, `member_standing`.
 
 ---
+
+## 26. The staff member record
+
+### The story
+
+A member calls about a cancelled booking, missing free hours or a band. Staff open
+`/staff/members/[id]`, or the side panel on the Members lists, and read the answer from one
+record: an identity header and scoreboard above nine tabs — Overview, Space, Bands, Volunteer,
+Instructor, Money, Comms, Moderation and Account. A tab's badge counts only things that want a
+staff member. The Overview badge counts every attention item, such as a deactivated account, an
+open report, an overdue loan or an unpaid booking.
+
+### Code path
+
+- Page: `src/routes/staff/members/[id]/+page.svelte` mirrors the tab into `?tab=` with a
+  shallow update, so a tab change is not a navigation. `tabs.ts` holds the tab keys.
+- Record: `MemberRecord.svelte`, shared by the page and `MemberRecordPanel.svelte`. A tab mounts
+  on first visit and is hidden, not unmounted, after that. Its queries run once, and a half-typed
+  Account edit survives a tab change.
+- First paint is one query, `getUserPage` (`user.read`). It returns `getUser` and
+  `getUserOverview`, which back the header, scoreboard, every tab badge and the Overview tab.
+  Every other tab fetches its own data (`getUserReservations`, `getUserMembership`,
+  `getUserCreditHistory`, `getUserHistory`, …) when first opened.
+- Service: `getUserOverview` in `src/lib/server/user/user-overview-service.ts`.
+- No tab is gated on a feature flag. A switched-off program shows its empty state.
+
+### Where it breaks
+
+- **A tab key in the URL that does not exist** falls back to Overview (`parseTab`).
 
 ## Cross-cutting patterns worth internalizing
 

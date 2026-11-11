@@ -59,7 +59,8 @@ export type UserBlock = typeof userBlock.$inferSelect;
  * `decidedAt IS NULL` is the pending predicate; there is no status column, and
  * the verdict a person reads is derived from the two outcomes (`appealVerdict`).
  * One row per flag, enforced here: staff reopen by clearing the decision, so a
- * member can never file twice. See `docs/specs/shipped/moderation-appeals-spec.md`.
+ * member can never file twice. See
+ * `docs/decisions/0039-moderation-appeals-hang-off-the-upheld-report.md`.
  */
 export const moderationAppeal = sqliteTable(
 	'moderation_appeal',

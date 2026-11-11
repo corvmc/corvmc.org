@@ -18,7 +18,7 @@
 	 *
 	 * A print page rather than a PDF, following the EPK page next door: a print
 	 * stylesheet is the app's answer to "make me a document" and
-	 * `reporting-spec.md` says so outright — Cloudflare Browser Rendering is the
+	 * the reports decision record says so — Cloudflare Browser Rendering is the
 	 * escape hatch if a real PDF is ever needed, and it is not needed for one
 	 * table.
 	 *
