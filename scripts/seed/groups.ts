@@ -122,7 +122,7 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			joinInstructions: null as string | null,
 			positions: ['Chair', 'Member'],
 			memberCount: 2,
-			// The show's running half (production-projects-spec.md), and #1564's work orders.
+			// The show's running half (#1673), and #1564's work orders.
 			capabilityGrants: [
 				'finance.read',
 				'production.run',

@@ -16,7 +16,7 @@ import { DomainError } from '#lib/server/domain-error.js';
  * What a show took, what it cost, and what each act is owed.
  *
  * A worksheet, not a disbursement system — it suggests, staff decide, and no
- * money moves from here. `docs/specs/production-workflow-spec.md` § Settlement.
+ * money moves from here. `docs/development/business-workflows.md` §14.
  */
 
 export interface ActSettlement {

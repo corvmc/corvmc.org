@@ -36,7 +36,7 @@
 	const params = routeParams('id');
 
 	/**
-	 * A market day's vendor applications. docs/specs/shipped/market-vendors-spec.md.
+	 * A market day's vendor applications. docs/development/business-workflows.md §19.
 	 *
 	 * Accept and decline each send the vendor a message on their inbox thread,
 	 * which is why both modals ask for one: the decision and the telling are one

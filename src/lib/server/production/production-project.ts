@@ -13,7 +13,7 @@ import {
 import { captureException } from '#lib/server/sentry.js';
 
 /**
- * Every production is a project, specialised — docs/specs/production-projects-spec.md.
+ * Every production is a project, specialised — docs/decisions/0011-productions-are-projects.md.
  *
  * The writes that open a show's two rows and its committees, as batch items, so
  * each caller runs them in the same `db.batch` as whatever else it writes.

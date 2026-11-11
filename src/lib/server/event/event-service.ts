@@ -1597,7 +1597,7 @@ export async function cancel(eventId: string, userId: string): Promise<void> {
 					userId: h.userId ?? undefined
 				})),
 				// Refunds are handled manually by staff — do not promise automatic
-				// processing (no auto-refund flow exists; see tickets-spec deferred).
+				// processing (no auto-refund flow exists for a collective sale).
 				refundNote:
 					'If you purchased tickets, CMC staff will reach out about your refund. Questions? Reply to this email.'
 			});
@@ -1877,7 +1877,8 @@ export async function listEventsNear(
 //
 // So a band can credit anyone on its own bill (it's their factual statement
 // about their own show) without that credit appearing on the named band's
-// profile until they agree. See `docs/specs/shipped/event-lineup-spec.md`.
+// profile until they agree. See
+// `docs/decisions/0005-lineup-credits-need-the-bands-consent.md`.
 
 export interface LineupRow {
 	id: string;

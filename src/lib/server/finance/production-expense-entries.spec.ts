@@ -12,7 +12,7 @@ const recordEntries = vi.fn<(inputs: Record<string, unknown>[]) => Promise<void>
 );
 const reverseEntriesForSubject = vi.fn(async () => 0);
 let posted: Record<string, unknown[]> = {};
-// A show's ledger rows name its project (production-projects-spec.md); resolving
+// A show's ledger rows name its project (#1673); resolving
 // one is a read with its own home, so here it is a fixed answer.
 vi.mock('./show-project', () => ({
 	showProjectIdForEvent: async (eventId: string | null) => (eventId ? 'proj-show' : null),

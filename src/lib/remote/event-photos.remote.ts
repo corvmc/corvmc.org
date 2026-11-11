@@ -12,7 +12,7 @@ import { recapUploadAccess } from '#lib/server/event/recap-access.js';
 import { getPublicEventDetail, getStaffEventPage } from '#lib/remote/events.remote.js';
 
 /**
- * Recap photo writes (docs/specs/event-recaps-spec.md). The event id comes from
+ * Recap photo writes (business-workflows.md §9). The event id comes from
  * the form body and is the scope every service call checks against. Uploading
  * is open to volunteer photographers; editing and removing stay `event.manage`.
  */

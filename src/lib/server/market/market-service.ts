@@ -12,7 +12,7 @@ import { marketVendorStatuses, type MarketVendorStatus } from '#lib/config.js';
 import { refundVendorFee, vendorPayPath } from './vendor-fee-service';
 
 /**
- * Vendor applications for a market day CMC hosts. docs/specs/shipped/market-vendors-spec.md.
+ * Vendor applications for a market day CMC hosts. docs/development/business-workflows.md §19.
  *
  * Unguarded: the remote layer guards. The vendor's contact details live on the
  * inbox thread each application opens, never on `market_vendor`, so the public

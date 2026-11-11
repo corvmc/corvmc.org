@@ -52,7 +52,7 @@ import {
 
 /**
  * Productions are guarded on the two halves of a show
- * (docs/specs/production-projects-spec.md): `production.book` for acts, offers,
+ * (docs/decisions/0011-productions-are-projects.md): `production.book` for acts, offers,
  * deals and billing, `production.run` for the run of show, the advance, crew,
  * the door and settlement. A committee taking part in the show's project holds
  * them through its grants; staff hold both. The project is always read off the

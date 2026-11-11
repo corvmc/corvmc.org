@@ -6,7 +6,7 @@ import { inboxThread } from './inbox';
 import { marketVendorStatuses } from '../../../config';
 
 /**
- * A listing that takes vendor applications. See docs/specs/shipped/market-vendors-spec.md.
+ * A listing that takes vendor applications. See docs/development/business-workflows.md §19.
  *
  * Back-of-house, so it stays off `event_listing`, which is the advertisement.
  * The row existing is what opens the listing to applications.

@@ -1163,7 +1163,8 @@ export const getStaffEventPage = query(z.string(), async (id) => {
  * holds for a CMC production. It is false for a listing: staff did not book a
  * member's show, and confirming on their behalf would put a credit on the named
  * band's public profile that the band never agreed to. Consent is the whole
- * point of the pending state — see `docs/specs/shipped/event-lineup-spec.md`.
+ * point of the pending state — see
+ * `docs/decisions/0005-lineup-credits-need-the-bands-consent.md`.
  *
  * So the flag follows the source, and on a listing a new link lands `pending`
  * and invites the band, exactly as when a member links it. Do not simplify this
@@ -1276,7 +1277,7 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		listShowDeliverables(id),
 		listCommittees()
 	]);
-	// The show's budget and burn are its project's (production-projects-spec.md).
+	// The show's budget and burn are its project's (#1673).
 	// Keyed off the production, not the listing: a listing's project is only the
 	// show's when it announces one.
 	const projectId = production?.projectId ?? null;

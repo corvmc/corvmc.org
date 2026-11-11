@@ -330,7 +330,9 @@ premium subscription that unlocks a public band microsite.
 
 ## 5. Events and tickets
 
-Spec: [specs/tickets-spec.md](../specs/shipped/tickets-spec.md)
+Decisions: [a ticket row is one entry pass](../decisions/0002-a-ticket-row-is-one-entry-pass.md) ·
+[a ticket price is a sliding scale](../decisions/0008-ticket-price-is-a-sliding-scale.md) ·
+[the canonical event URL holds the general view](../decisions/0007-the-canonical-event-url-holds-the-general-view.md)
 
 ### The story
 
@@ -374,12 +376,21 @@ events use RSVP instead.
   `checkout.completed` bus event → `handleTicketCheckout()` in
   `ticket/checkout-listener.ts` → `fulfillPurchase(purchaseId)` flips the purchase's
   tickets `pending → valid` and emits `ticket.purchased` (confirmation email with codes).
-- **What the buyer chooses, and what the row remembers.** The 50% sustaining-member rate is a
-  default, not a rule: `waiveDiscount` on the form charges full price for that purchase, and the
-  ticket records `discountWaived` so a waiver stays legible after the fact (a non-member checking
-  the box waives nothing — `discountWaived` is derived from whether a discount actually applied).
-  An optional `contribution` becomes a second line item under the `ticket_contribution` product,
-  never a bigger ticket price. Both purchase surfaces — the public `/events/[id]/tickets` page and
+- **Who sells.** `sellerFor` in `ticket/ticket-seller.ts` answers per listing. A `ticket_sale` with
+  no `group_id` is the collective's, and the collective sells only `source = 'cmc'` shows. A band
+  sells its own gig into its Connect account by destination charge (#1471), only while its site is
+  premium and Stripe takes charges for it. No seller means no checkout.
+- **What the buyer chooses, and what the row remembers.** `ticket_sale.priceCents` is the
+  suggested price, where the sliding scale opens, and `priceFloorCents` (default 0) is the least a
+  buyer may pay; a floor equal to the price is a fixed-price show. The buyer also drags a split bar
+  between the acts and the collective, with card processing a locked third slice.
+  `src/lib/finance/ticket-split.ts` does the arithmetic for both the preview and the server, and
+  `purchaseTickets` re-derives it with `validateTicketSplit` from the listing's own price and floor.
+  The purchase's first ticket records `actsCents`, `collectiveCents` and `feeCoveredCents`; for a
+  collective sale the money all lands in CMC's account and staff settle the acts from those rows.
+  Paying above the suggestion is a contribution, sent as a second line item under the
+  `ticket_contribution` product, never a bigger ticket price. There is no member discount;
+  `discountWaived` survives on older rows and is no longer written. Both purchase surfaces — the public `/events/[id]/tickets` page and
   the member event page's `<Action>` modal — render the same `TicketPurchaseFields` component, so
   the total they preview is the total Stripe charges; fee coverage is computed on the ticket
   subtotal _plus_ the gift, because that is what Stripe takes its cut of.
@@ -424,9 +435,11 @@ design in [specs/shipped/tap-to-pay-spec.md](../specs/shipped/tap-to-pay-spec.md
 
 ### Data touched
 
-`event_listing`, `ticket` (status: `pending → valid → checked_in`, or `cancelled`; plus the money the
-purchase settled at — `unitPriceCents`, `contributionCents` on the purchase's first row only, and
-`discountWaived`), `eventRsvp`, linked `reservation` rows for space-holding events.
+`event_listing`, `ticket_sale` (the sale terms and the seller), `ticket` (status:
+`pending → valid → checked_in`, or `cancelled`; plus the money the purchase settled at —
+`unitPriceCents` on every row, and `contributionCents`, `actsCents`, `collectiveCents` and
+`feeCoveredCents` on the purchase's first row only), `eventRsvp`, linked `reservation` rows for
+space-holding events.
 
 ### Where it breaks
 
@@ -796,10 +809,9 @@ and re-labelling it `email` would let unrelated mail from the same address merge
 
 ## 9. The gig guide and community listings
 
-Spec: [specs/community-calendar-spec.md](../specs/shipped/community-calendar-spec.md) ·
-[specs/community-events-spec.md](../specs/shipped/community-events-spec.md) ·
-[specs/event-lineup-spec.md](../specs/shipped/event-lineup-spec.md) ·
-[specs/event-moderation-spec.md](../specs/shipped/event-moderation-spec.md)
+Decisions: [listings publish first and are moderated after](../decisions/0006-listings-publish-first-and-are-moderated-after.md) ·
+[lineup credits need the band's consent](../decisions/0005-lineup-credits-need-the-bands-consent.md) ·
+[partner feeds import as community listings](../decisions/0012-partner-feeds-import-as-community-listings.md)
 
 ### The story
 
@@ -856,11 +868,39 @@ on a bill and have it appear on that band's own profile without their say-so.
 - **Moderation:** `flags.remote.ts`: `submitEventReport()` files against `entityType:
 'event'`; upholding in `/staff/flags/[id]` can `unpublishWithNotice()` in the same step,
   which notifies every band on the bill rather than only the owner.
+- **Cancelled stays listed:** the guide and the feeds read `publicEventStatuses`
+  (`published`, `cancelled`), so a cancelled show stays on `/events`, marked, until its date
+  passes. The homepage posters and the mini-calendar dots read published only.
+- **Deleting:** `remove()` in `event-service.ts`, from `/staff/events/[id]`, is for a row that
+  should never have existed. It refuses once the event has any ticket, in any status, with
+  `EventHasTicketsError`. It cancels the linked reservation rather than orphaning it, detaches the
+  poster and deletes the event's `content_flag` rows; `event_band` and `event_rsvp` cascade.
+- **Syndication:** `/events/calendar.ics` is the guide as an iCalendar subscription, from 30 days
+  back to a year ahead so a client keeps last week's show, and `/events/feed.xml` is RSS over the
+  next 100 listings. Both read the public statuses above.
+- **Partner imports:** `calendar_source` is one partner venue's iCalendar feed, added, paused or
+  fetched now from `/staff/venues/[id]`. The daily `/api/cron/import-partner-calendars` runs
+  `runPartnerImports` in `event/partner-import-service.ts`: a 15-second fetch capped at 2 MB, then
+  `parseFeed` (`ical.js`) keeps timed events from today to a year ahead and expands recurrences.
+  Rows are upserted on `(importSourceId, importUid)` as `source = 'community'` listings at the
+  feed's venue, authored by the staffer who added the feed. A run overwrites an imported row only
+  while it is `published` or `cancelled`, skips a new show already listed at that venue on that
+  local day, and leaves a show that left the feed alone. A fetch failure is written to
+  `lastError`.
+- **Recaps:** once an event has started and is not cancelled, `uploadEventPhotos`
+  (`event-photos.remote.ts`) attaches photos to the listing's `gallery` slot through
+  `event/event-photo-service.ts`, at most 10 per upload and 60 per event. The uploader holds
+  `event.uploadRecap` everywhere, or for that one show through a volunteer-role grant
+  (`recapUploadAccess` in `event/recap-access.ts`). Captions, alt text, removal and the written
+  `recapText` need `event.manage`. Removing a photo detaches it, and the media sweep reclaims the
+  object. `/events/[id]#photos` shows the gallery, and `listRecentRecaps` feeds the Recent recaps
+  strip on `/events`.
 
 ### Data touched
 
-`event_listing` (`source`, `status`, `startsAt`, `bandId`, `submittedByUserId`), `event_band`,
-`content_flag`, `member_standing` (scope `community_event`).
+`event_listing` (`source`, `status`, `startsAt`, `bandId`, `submittedByUserId`, `importSourceId`,
+`importUid`, `recapText`), `event_band`, `content_flag`, `member_standing` (scope
+`community_event`), `calendar_source`, `media_attachment` (slot `gallery`).
 
 ### Where it breaks
 
@@ -942,7 +982,7 @@ visible decline is one people hesitate to make.
 
 Spec: [specs/member-standing-spec.md](../specs/shipped/member-standing-spec.md) ·
 [specs/member-suggestions-spec.md](../specs/shipped/member-suggestions-spec.md) ·
-[specs/event-moderation-spec.md](../specs/shipped/event-moderation-spec.md)
+[listings publish first and are moderated after](../decisions/0006-listings-publish-first-and-are-moderated-after.md)
 
 ### The story
 
@@ -1368,8 +1408,10 @@ tells the band's admins 30 and 7 days before it lapses; see
 
 ## 14. Producing a show: the production record
 
-Design spec: [production-workflow-spec.md](../specs/production-workflow-spec.md) —
-**read its 2026-09-04 amendment first**; most of the body is superseded.
+Decisions: [a production is a child of its listing](../decisions/0003-a-production-is-a-child-of-its-listing.md) ·
+[set times are derived and running order is fractional](../decisions/0004-set-times-are-derived-and-running-order-is-fractional.md) ·
+[productions are projects](../decisions/0011-productions-are-projects.md) ·
+[poster art is an artifact request](../decisions/0010-poster-art-is-an-artifact-request.md)
 
 ### The story
 
@@ -1399,20 +1441,31 @@ restore crew shifts or retract a cancellation notice.
 ### Code path
 
 1. `/staff/events/[id]` → **Add production** → `createProduction`
-   (`lib/remote/productions.remote.ts`, guard `event.manage`) →
+   (`lib/remote/productions.remote.ts`, guard `production.create`, org-wide) →
    `production-service.createProduction()`. The service reads the listing's `source`
    first and refuses anything but `'cmc'` (422) — a production is the ops record for a
    show CMC puts on, and about nine listings in ten are somebody else's gig at somebody
-   else's venue. The button is hidden for those too, but the service is the guard. The
-   1:1 is a different shape: it is held by `uq_production_event`, so the insert reads
-   the violation rather than selecting first — _that_ select-then-insert would be a
-   race.
-2. `/staff/events/[id]/production` reads it through `getStaffEventProduction`, which
+   else's venue. The button is hidden for those too, but the service is the guard.
+   `createShowProject` writes the project (`kind = 'production'`), the production and the
+   show's `project_committee` rows (Booking as `booking`, Production as `production`) in one
+   `db.batch`. Moving the listing onto that project is the claim: a conditional update that
+   matches nothing when the listing is already on a show's project, in which case the new
+   rows are deleted and the call answers `ProductionExistsError`. There is no
+   `production.event_id`; `announcedBy(eventId)` finds a listing's production through
+   `event_listing.project_id`.
+2. **Guards on the console** go through `requireProjectCommittee(projectId, cap)`: a member
+   of a committee taking part in the show whose grants carry the capability, or staff.
+   `production.book` covers the bill, the deal, billing and poster art; `production.run`
+   covers times, run of show, the door take, expenses and the advance. `advanceProduction`
+   asks for `book` to move to `draft`, `offered`, `confirmed` or `cancelled` and `run` for
+   the rest. `updateProduction` compares each field with the stored row and asks only for
+   the capability whose fields changed.
+3. `/staff/events/[id]/production` reads it through `getStaffEventProduction`, which
    adds one entry to its existing `Promise.all` rather than a second remote query.
-3. **Overview** tab → `updateProduction` (times and notes) and
+4. **Overview** tab → `updateProduction` (times and notes) and
    `setProductionProducer` (who is running it — `'me'` resolves server-side, so the
    client never names a user id).
-4. `ProductionStatusAction` → `advanceProduction` →
+5. `ProductionStatusAction` → `advanceProduction` →
    `production-service.transitionProduction()`. It reads the status, computes
    `transitionWarnings()` (`lib/production/status.ts`), and returns them unmoved unless
    acknowledged with a reason. The move itself is `UPDATE … WHERE id = ? AND status = ?`
@@ -1423,23 +1476,62 @@ restore crew shifts or retract a cancellation notice.
    `done` from `completed` on, `declined` when cancelled, and `open` again if walked
    back. `reopenProduction` (guard `production.reopen`) is the only way out of a
    terminal state.
-5. **Settlement** tab → `recordActPayout` / `undoActPayout` (both `finance.refund`).
+6. **Settlement** tab → `recordActPayout` / `undoActPayout` (both `finance.refund`).
    A payout is never edited: undo writes reversing ledger rows for that act alone
    (`reverseActPayout`, matched on `metadata.slotId`) and marks it unpaid, and it is
    recorded again. Both are audited.
-6. `event-service.cancel()` → `cancelProductionsForEvent()`. One conditional update
+7. `event-service.cancel()` → `cancelProductionsForEvent()`. One conditional update
    over the three pre-completed statuses; a production that already `completed`
    describes a night that happened, and cancelling the advertisement does not
    un-happen it.
-7. `/staff/projects/productions` reads everything through the one `getStaffEvents` query:
+8. `/staff/projects/productions` reads everything through the one `getStaffEvents` query:
    `listAll()` left-joins `venue` and `production` (both 1:1, so no fan-out), and
    `getEventLineups()` — the batched helper — supplies the headliner and the count.
+9. **Run of Show** tab → the slot remotes in `productions.remote.ts` (`production.run`) →
+   `run-of-show-service.ts`. A `production_slot` is one act's night, keyed to its
+   `event_band` row (set-null, so a dropped credit keeps the payout record). Set times are
+   never stored by hand: `computeSetTimes` in `production/run-of-show.ts` walks the slots
+   from `firstSetAt`, and the service rewrites them on every slot change and when the
+   downbeat moves. `sortOrder` is a `real` placed at the midpoint of its neighbours and
+   renumbered only when two converge past `SORT_EPSILON`. `runOfShowWarnings` flags a curfew
+   overrun, a first set before doors, an odd set length or a late soundcheck, and refuses
+   nothing. `setRunOfShowTerms` (`production.book`) writes the deal: `guaranteeCents`,
+   `percentageBps`, `versus`, `againstNet` and `contributed`.
+10. **Settlement** reads through `getSettlement` in `production/settlement-service.ts`, with
+    no settlement table. The acts' pool is the `pass_through` ledger rows in the show's
+    settlement group plus the acts' share of the door cash; the collective's revenue is the
+    `earned` `ticket_sales` rows plus its share of the door. `recordDoorTake`
+    (`production.run`) records the drawer and count, split at `doorSplitActsPercent` or the
+    house `DOOR_SPLIT_ACTS_PERCENT`. Expenses come from `production_expense`. Each act's
+    suggested payout comes from its deal, and a guarantee above what buyers sent the acts is
+    a collective top-up. Door cash never goes to Stripe.
+11. **Poster.** `askForArtifact` (`production.run`) asks any directory entry for
+    `poster_art`, and the artist uploads on `/act/{token}` through
+    `/api/acts/{token}/poster-art` → `deliverPosterArt`, which attaches the file to the
+    **request**, slot `poster`. `usePosterArt` (`production.book`) → `promotePosterArt`
+    points the listing's poster slot at the same media row. `usePosterArtWithFooter` and
+    `useTemplateFlyerAsPoster` render a 1080×1350 PNG with `renderFlyer`
+    (`src/lib/server/poster/flyer.ts`, on `@cf-wasm/og`) and replace the slot; a flyer is a
+    snapshot and is not re-rendered when the event changes.
+12. **Crew follows the clock.** When a production time, or the listing's doors, start or
+    end, moves, `shiftAnchoredWorkOrders` in `volunteer/retime-work-orders.ts` moves every
+    live work order anchored to it by the same delta, in the same batch.
+13. **Burn.** `getProjectBurn` returns a `show` block for a production's project: ticket
+    revenue, the acts' pool in, act payouts, guarantee top-ups and show expenses. Expenses
+    and top-ups count as spend; the pool passes through and never does.
 
 ### Data touched
 
-- `production` — the record. Cascades from `event_listing`; `producerUserId` and
-  `createdByUserId` are both set-null, because purging a staff account must not
-  delete the collective's production records.
+- `production` — the record. It specialises one `project` (`project_id`, restrict, required
+  by the `production_project_required` triggers); the listing reaches it through
+  `event_listing.project_id`. `producerUserId` and `createdByUserId` are both set-null,
+  because purging a staff account must not delete the collective's production records.
+- `project` (`kind = 'production'`) and `project_committee` — the show's budget, dates and
+  committees.
+- `production_slot`, `production_expense` — the run of show, the deal and payouts, and the
+  cost sheet.
+- `financial_entry` — ticket, payout and expense rows, read by settlement group. Door cash stays
+  on `production` (`doorCashCents`, `doorCount`, `doorSplitActsPercent`).
 - `event_listing.venueId` — where the show is, and therefore whether it holds the
   practice room. Deliberately **not** duplicated onto `production`.
 - `event_band` — the bill, which the index summarises and the production never
@@ -1669,7 +1761,8 @@ password from there.
 
 ## 19. Market vendors: applications for a market day CMC hosts
 
-Spec: [specs/shipped/market-vendors-spec.md](../specs/shipped/market-vendors-spec.md) (#609). Open decision: #1504 (what the public sees).
+Decision: [market vendor contact lives on the inbox thread](../decisions/0009-market-vendor-contact-lives-on-the-inbox-thread.md)
+(#609). Open decision: #1504 (what the public sees).
 
 ### The story
 

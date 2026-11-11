@@ -19,7 +19,7 @@ import { sql } from 'drizzle-orm';
 // So this table exists to answer one question first — `isPrimary` — and to give
 // the address, the capacity and the load-in notes somewhere to live second.
 //
-// See `docs/specs/production-workflow-spec.md#venue`.
+// See `docs/development/business-workflows.md` §14.
 // ---------------------------------------------------------------------------
 
 export const venue = sqliteTable(
