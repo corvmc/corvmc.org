@@ -11,7 +11,7 @@ import type { RiderElementKind } from '../../src/lib/config';
  * account reaches both features. Covers the rules a reader would otherwise take
  * on faith: owning and carrying as different facts, rows nobody has, a row
  * ticked by a third party, and all three promotion states. Nothing is random —
- * counts here are load-bearing. Rationale: docs/specs/shipped/packing-list-spec.md#seed
+ * counts here are load-bearing. Record: docs/decisions/NNNN-one-durable-packing-list-per-band.md
  */
 
 const ADMIN = 'seed-rider-admin';
@@ -41,8 +41,8 @@ interface Seeded {
  * Every category, every assignment state, and most rows carrying no `riderKind`.
  * Two promotion states are static: a kind with no `promotedAt` (the nudge), and
  * "Rhodes suitcase", promoted then deleted from the rider, which must read as
- * settled rather than nag forever. The third is derived by `settledRows` — see
- * the spec's "seed" for why guessing the pair silently failed.
+ * settled rather than nag forever. The third is derived by `settledRows`, because
+ * the rider seed assigns corners round-robin and a guessed pair silently failed.
  */
 const ITEMS: Seeded[] = [
 	// ---- backline: the heavy things, and the two-column case ----

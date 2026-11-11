@@ -21,7 +21,7 @@ import { pick, pickN } from './util';
  * Each of the three join policies gets a group, because the roster tab and the
  * member index lead with a different action under each and none of that can be
  * looked at locally without one of each. The Real Book Club is `open` because it
- * is the spec's driving case: a drop-in jazz jam anyone may join unaided. The
+ * is the groups module's driving case: a drop-in jazz jam anyone may join unaided. The
  * Songwriters Circle is the one `by_application` club, so a club application
  * and its `note` answer render somewhere.
  *

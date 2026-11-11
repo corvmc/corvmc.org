@@ -240,6 +240,7 @@ Bulk secret upload: copy `secrets.template.json` → `.secrets.json` (gitignored
 | `META_APP_SECRET` / `META_PAGE_ACCESS_TOKEN` / `META_VERIFY_TOKEN` | Instagram + Messenger inbox channels (`src/routes/api/inbox/meta/+server.ts`) — built and tested, not yet provisioned; see [meta-inbox-setup](meta-inbox-setup.md)                                         |
 | `ULTRALOC_CLIENT_SECRET`                                           | U-Tec smart-lock API (`src/lib/server/lock/ultraloc-client.ts`) — an optional fallback, like `ULTRALOC_CLIENT_ID` / `_DEVICE_ID` / `_REFRESH_TOKEN`. All four are staff-settable and the stored value wins |
 | `TURNSTILE_SECRET_KEY`                                             | Server-side Turnstile verification (`src/lib/server/turnstile.ts`)                                                                                                                                         |
+| `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ZONE_ID`                      | Band custom domains (`src/lib/server/band/custom-domain-service.ts`) — optional; unset, the feature reports itself unavailable                                                                             |
 
 Local equivalents: Worker secrets go in **`.dev.vars`** (read by `vite dev` / wrangler),
 Node-script vars (drizzle-kit, seed, bridge scripts) go in **`.env`**. Both are gitignored;
@@ -372,6 +373,16 @@ run was a log line, which is how three days of unminted door codes went unnotice
 Pressing it twice is safe — every stage filters on work still outstanding, so a repeat run
 reports zeros rather than issuing a code again. The run record lives in KV at
 `ultraloc:lastJobRun`, written by the scheduled batch too.
+
+### Cloudflare for SaaS (band addresses)
+
+Every band answers at `{slug}.corvmc.org` through the `*.corvmc.org/*` route in `wrangler.toml`,
+which needs a proxied wildcard DNS record in the zone. A premium band's own domain is a Cloudflare
+for SaaS custom hostname that `custom-domain-service.ts` creates through the API, with TXT
+validation; the band points a CNAME at `domains.corvmc.org`. The wildcard-host route in
+`wrangler.toml` is what lets the Worker answer those hosts as the fallback origin. The API calls
+need `CLOUDFLARE_API_TOKEN` (Zone → SSL and Certificates → Edit) and `CLOUDFLARE_ZONE_ID` as Worker
+secrets; with either unset, the band's settings page reports custom domains as unavailable.
 
 ### Turnstile (bot protection)
 

@@ -260,4 +260,4 @@ fees and CMC's net separately — they reconcile to the gross, and a regression 
 | Band-facing surface                         | `src/routes/band/[slug]/music/payouts/`            |
 | Staff reporting                             | `src/routes/staff/music/`                          |
 
-Rationale and the full design record: [band-audio-spec](../specs/shipped/band-audio-spec.md).
+Rationale: [band music sells files](../decisions/NNNN-band-music-sells-files-and-the-radio-plays-a-timetable.md).

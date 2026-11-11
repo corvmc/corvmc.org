@@ -14,8 +14,7 @@ import { ptDate, randomInt } from './util';
  *
  * A solo performer is a `group` like any other — `kind` stays `'band'`, the
  * roster is one `group_member` row, and promotion to a multi-person act is a
- * second insert with nothing to migrate. See `docs/specs/groups-spec.md`
- * § Solo acts, which this seeds the reachable case for.
+ * second insert with nothing to migrate. This seeds the reachable case.
  *
  * It exists because the copy on every band surface is now written to be true at
  * a roster of one ("Nobody else yet", "Invite anyone else in this band",

@@ -146,7 +146,7 @@ export const BOOKING_LEAD_DAYS = 3;
  * mid-upload. Rails' `purge_unattached` guards the same hazard.
  *
  * A day is far longer than any form takes and still bounds how long an abandoned
- * upload is billed for. See docs/specs/shipped/media-spec.md.
+ * upload is billed for. See docs/decisions/NNNN-uploads-are-detached-and-swept.md.
  */
 export const MEDIA_SWEEP_GRACE_MS = 24 * 60 * 60 * 1000;
 
@@ -160,7 +160,7 @@ export const MEDIA_SWEEP_GRACE_MS = 24 * 60 * 60 * 1000;
  * document's row and object are written in one request, so no such gap exists —
  * what the delay buys instead is an undo window on a destructive click, and a
  * week is the useful size for "the minutes I deleted on Monday". See
- * docs/specs/shipped/groups-spec.md § Documents and private storage.
+ * docs/decisions/NNNN-uploads-are-detached-and-swept.md.
  */
 export const DOCUMENT_SWEEP_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -282,7 +282,7 @@ export function estimateLoanCost(
 export const groupKinds = ['band', 'club', 'committee'] as const;
 export type GroupKind = (typeof groupKinds)[number];
 
-/** An announcement's title and markdown body — see docs/specs/shipped/groups-spec.md. */
+/** An announcement's title and markdown body — see docs/decisions/NNNN-group-announcements-are-transactional-and-batched.md. */
 export const ANNOUNCEMENT_TITLE_MAX = 200;
 export const ANNOUNCEMENT_BODY_MAX = 10000;
 
@@ -305,7 +305,7 @@ export const ANNOUNCEMENT_BODY_MAX = 10000;
  * under all three. A band is always `invite_only` and the service refuses any
  * other value for `kind: 'band'` — a band member may spend the band's credits on
  * rehearsal time, so an `open` band would be a way to join a stranger's band and
- * spend their money. See `docs/specs/shipped/groups-spec.md`.
+ * spend their money. See `docs/decisions/NNNN-groups-split-the-band-table-by-purpose.md`.
  */
 export const groupJoinPolicies = ['invite_only', 'open', 'by_application'] as const;
 export type GroupJoinPolicy = (typeof groupJoinPolicies)[number];

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { sourceFiles } from './lib/source-files';
 
 /**
- * Guards the phase-2 rename in `docs/specs/groups-spec.md`: `band_member` became
+ * Guards the phase-2 rename in `docs/decisions/NNNN-groups-split-the-band-table-by-purpose.md`: `band_member` became
  * `group_member` and `band_slug_history` became `group_slug_history`.
  *
  * A grep gate rather than a type check, because `pnpm check` typechecks only

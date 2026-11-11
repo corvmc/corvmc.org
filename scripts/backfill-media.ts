@@ -1,7 +1,7 @@
 /**
  * backfill-media.ts
  *
- * Phase 3 of docs/specs/shipped/media-spec.md. Reads the four places an R2 key is stored
+ * Phase 3 of docs/decisions/NNNN-uploads-are-detached-and-swept.md. Reads the four places an R2 key is stored
  * today into `media` + `media_attachment`, so phase 4 has something to cut over
  * to. Nothing is removed and no behaviour changes: the source columns keep their
  * values and stay authoritative until phase 6 drops them.
@@ -119,7 +119,7 @@ function publicUrl(): string {
  * subcommand (only get/put/delete, and `get` would download every byte), and the
  * S3 SDK is not a dependency of this project. Every object in this bucket is
  * publicly readable — that is a documented property of attaching a custom domain
- * to an R2 bucket, and the reason groups-spec puts private documents in a second
+ * to an R2 bucket, and the reason private documents live in a second
  * bucket — so no credentials are involved.
  *
  * **The bare object URL, never the transform URL.** `getPublicUrl()` wraps image

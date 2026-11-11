@@ -53,7 +53,7 @@ export type MediaSlot = (typeof mediaSlots)[number];
  * strands every gallery object it had. Here the object's lifetime is decided by
  * how many `media_attachment` rows point at it, and by nothing else.
  *
- * See docs/specs/shipped/media-spec.md.
+ * See docs/decisions/NNNN-uploads-are-detached-and-swept.md.
  */
 export const media = sqliteTable(
 	'media',
@@ -120,7 +120,7 @@ export type Media = typeof media.$inferSelect;
  * new row cannot inherit a dead one's id. The failure mode that makes unenforced
  * links genuinely dangerous — sequential ids being reissued — does not exist here.
  *
- * What it does cost is narrower than the spec's first draft claimed. A per-parent
+ * What it does cost is narrow. A per-parent
  * read needs no guard, because it filters to an id its caller already holds and an
  * orphan belongs to a deleted parent. Only a **global** aggregate sees them, so
  * anything summing across parents goes through `liveAttachmentCondition()` in

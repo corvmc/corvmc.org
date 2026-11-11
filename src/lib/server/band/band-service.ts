@@ -200,9 +200,9 @@ export class NotAnActiveBandMemberError extends DomainError {
 /**
  * Only a band can be deleted by the person who runs it.
  *
- * `docs/specs/shipped/groups-spec.md:818` is the one place the role table differs by
- * kind: an appointed program leader runs the program, they do not own it, and
- * ending a CMC program is a staff decision made in `/staff/clubs`.
+ * This is the one place the role table differs by kind: an appointed program
+ * leader runs the program, they do not own it, and ending a CMC program is a
+ * staff decision made in `/staff/clubs`.
  */
 export class CannotDeleteProgramError extends DomainError {
 	readonly httpStatus = 403;
@@ -375,7 +375,7 @@ export async function deleteBand(bandId: string, actorUserId: string) {
 
 	// Release the avatar. Not a delete: `media_attachment` has no foreign key to
 	// the group by design, so nothing cascades here, and whether the object can
-	// be reclaimed is the sweep's question. See docs/specs/shipped/media-spec.md.
+	// be reclaimed is the sweep's question. See docs/decisions/NNNN-uploads-are-detached-and-swept.md.
 	await detachSlot('group', bandId, 'avatar');
 
 	// Private documents, deleted BEFORE the group row. `file.groupId` cascades,
@@ -500,7 +500,7 @@ export async function getById(bandId: string) {
  * and committees the moment the first one is created, and the group surfaces
  * must not list bands: `/member/groups` answers "what can I be part of", and a
  * band, always `invite_only` and already holding its own index and panel, has no
- * answer to give. See docs/specs/shipped/groups-spec.md § The index.
+ * answer to give. See docs/decisions/NNNN-a-club-gets-a-page-not-a-panel.md.
  */
 export async function listForUser(
 	userId: string,

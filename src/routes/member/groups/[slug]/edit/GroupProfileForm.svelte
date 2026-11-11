@@ -93,7 +93,7 @@
 
 	<InfoCard title={m.member_groups_slug_edit_group_profile_form_joining_title()}>
 		<!-- Read-only, and it says who to ask. The join policy decides who may
-		     walk in, and the spec's case for free room time rests on staff being
+		     walk in, and the case for free room time rests on staff being
 		     the ones who settle that — so a leader sees it rather than sets it. -->
 		<FormField
 			label={m.member_groups_slug_edit_group_profile_form_who_can_join_label()}

@@ -39,7 +39,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	await uploadFile(buffer, key, contentType);
 
 	// The previous poster is released, never deleted — a recurring series'
-	// occurrences share one object. See docs/specs/shipped/media-spec.md.
+	// occurrences share one object. See docs/decisions/NNNN-uploads-are-detached-and-swept.md.
 	await replaceSlot({
 		attachableType: 'event_listing',
 		attachableId: params.id,

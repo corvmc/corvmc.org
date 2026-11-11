@@ -28,7 +28,7 @@
 	/**
 	 * What goes in the van, who is bringing it, and whether it is loaded yet.
 	 * Every member gets this page; a member's save touches only their own rows.
-	 * Rationale: docs/specs/shipped/packing-list-spec.md
+	 * Record: docs/decisions/NNNN-one-durable-packing-list-per-band.md
 	 *
 	 * Read above the awaited query: a declaration after a top-level await is
 	 * async-gated, which compiles every `fields.X.as()` into an async derived.

@@ -7,7 +7,7 @@ import { sweepGroupFiles } from '#lib/server/group/file-sweep.js';
 /**
  * Cron endpoint for reclaiming R2 objects nothing points at any more.
  *
- * This is the other half of the rule in docs/specs/shipped/media-spec.md: the write path
+ * This is the other half of the rule in docs/decisions/NNNN-uploads-are-detached-and-swept.md: the write path
  * never deletes an object, because no single write can see whether a sibling
  * still needs it. Without this job that rule would just be a leak.
  *

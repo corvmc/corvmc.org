@@ -72,7 +72,7 @@ export const tableOrder = [
 	'sponsor_placement',
 	// `media` references user; `media_attachment` references media. Its
 	// attachable_type/attachable_id parent link carries no foreign key by design
-	// (docs/specs/shipped/media-spec.md), so it constrains nothing else in this order.
+	// (docs/decisions/NNNN-uploads-are-detached-and-swept.md), so it constrains nothing else in this order.
 	'media',
 	'media_attachment',
 	'campaign',

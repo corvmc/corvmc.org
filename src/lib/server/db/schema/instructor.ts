@@ -85,8 +85,8 @@ export const instructor = sqliteTable(
 		 * renders no contact on the public card rather than having their choice
 		 * overridden by this module.
 		 *
-		 * Named `teachingContact`, not `contact`, on purpose. groups-spec phase
-		 * 10 adds a `contact` *table* holding private third-party booking
+		 * Named `teachingContact`, not `contact`, on purpose. The `contact`
+		 * *table* holds private third-party booking
 		 * details behind its own ESLint rule — the opposite privacy posture from
 		 * this column, which is published by definition.
 		 */
