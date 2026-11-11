@@ -34,22 +34,23 @@
 
 	const data = $derived(await getCommitteeOpenItems(slug));
 	const handTo = $derived([
-		{ value: '', label: m.member_groups_slug_committee_open_items_staff() },
+		{ value: '', label: m.member_groups_slug_committee_open_items_staff_label() },
 		...data.committees.map((c) => ({ value: c.id, label: c.name }))
 	]);
 </script>
 
-<InfoCard title={m.member_open_items()}>
+<InfoCard title={m.member_open_items_title()}>
 	{#if data.items.length === 0}
-		<EmptyState description={m.member_groups_slug_committee_open_items_description()} />
+		<EmptyState description={m.member_groups_slug_committee_open_items_description_body()} />
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th>{m.member_item()}</th>
-				<th>{m.member_show()}</th>
-				<th>{m.member_due()}</th>
-				<th>{m.member_groups_slug_committee_open_items_who()}</th>
-				{#if data.canKeep}<th class="w-px"><span class="sr-only">{m.member_actions()}</span></th
+				<th>{m.member_item_label()}</th>
+				<th>{m.member_show_label()}</th>
+				<th>{m.member_due_label()}</th>
+				<th>{m.member_groups_slug_committee_open_items_who_label()}</th>
+				{#if data.canKeep}<th class="w-px"
+						><span class="sr-only">{m.member_actions_label()}</span></th
 					>{/if}
 			{/snippet}
 			{#each data.items as item (item.id)}
@@ -103,7 +104,7 @@
 						{#if item.dueAt}
 							{#if item.state === 'overdue'}
 								<Badge variant="error" size="sm"
-									>{m.member_groups_slug_committee_open_items_overdue({
+									>{m.member_groups_slug_committee_open_items_overdue_label({
 										formatDateShort: formatDateShort(item.dueAt)
 									})}</Badge
 								>
@@ -117,7 +118,7 @@
 					<td>
 						{item.assignees.length > 0
 							? item.assignees.map((a) => a.name).join(', ')
-							: m.member_groups_slug_committee_open_items_nobody_yet()}
+							: m.member_groups_slug_committee_open_items_nobody_yet_text()}
 					</td>
 					{#if data.canKeep}
 						<td class="w-px">
@@ -125,13 +126,13 @@
 								{#if !mine}
 									<Action
 										action={takeDeliverable.for(item.id)}
-										label={m.member_groups_slug_committee_open_items_take()}
-										aria-label={m.member_groups_slug_committee_open_items_take_2({
+										label={m.member_groups_slug_committee_open_items_take_label()}
+										aria-label={m.member_groups_slug_committee_open_items_take_2_label({
 											title: item.title
 										})}
 										variant="ghost"
 										size="xs"
-										successToast={m.member_groups_slug_committee_open_items_s_yours()}
+										successToast={m.member_groups_slug_committee_open_items_s_yours_toast()}
 										onsuccess={warnOver}
 									>
 										{#snippet form()}
@@ -142,24 +143,24 @@
 								{/if}
 								<Action
 									action={resolveDeliverable.for(item.id)}
-									label={m.member_groups_slug_committee_open_items_done_anyway()}
-									aria-label={m.member_groups_slug_committee_open_items_mark_done({
+									label={m.member_groups_slug_committee_open_items_done_anyway_label()}
+									aria-label={m.member_groups_slug_committee_open_items_mark_done_label({
 										title: item.title
 									})}
 									variant="ghost"
 									size="xs"
-									modalTitle={m.member_groups_slug_committee_open_items_mark_done_2({
+									modalTitle={m.member_groups_slug_committee_open_items_mark_done_2_title({
 										title: item.title
 									})}
-									submitLabel={m.member_groups_slug_committee_open_items_done_anyway()}
-									successToast={m.member_groups_slug_committee_open_items_marked_done()}
+									submitLabel={m.member_groups_slug_committee_open_items_done_anyway_label()}
+									successToast={m.member_groups_slug_committee_open_items_marked_done_toast()}
 								>
 									{#snippet form()}
 										<input {...resolveDeliverable.for(item.id).fields.id.as('hidden', item.id)} />
 										<input {...resolveDeliverable.for(item.id).fields.slug.as('hidden', slug)} />
 										<FormField
 											field={resolveDeliverable.for(item.id).fields.reason}
-											label={m.member_groups_slug_committee_open_items_why()}
+											label={m.member_groups_slug_committee_open_items_why_label()}
 											type="textarea"
 											required={item.doneWhen !== null}
 										/>
@@ -167,15 +168,15 @@
 								</Action>
 								<Action
 									action={reassignDeliverableForm.for(item.id)}
-									label={m.member_groups_slug_committee_open_items_hand()}
-									aria-label={m.member_groups_slug_committee_open_items_hand_another_committ({
+									label={m.member_groups_slug_committee_open_items_hand_label()}
+									aria-label={m.member_groups_slug_committee_open_items_hand_another_committ_label({
 										title: item.title
 									})}
-									modalTitle={m.member_groups_slug_committee_open_items_hand_another_committ_2()}
-									submitLabel={m.member_groups_slug_committee_open_items_hand()}
+									modalTitle={m.member_groups_slug_committee_open_items_hand_another_committ_2_title()}
+									submitLabel={m.member_groups_slug_committee_open_items_hand_label()}
 									variant="ghost"
 									size="xs"
-									successToast={m.member_groups_slug_committee_open_items_handed()}
+									successToast={m.member_groups_slug_committee_open_items_handed_toast()}
 								>
 									{#snippet form()}
 										<input
@@ -186,7 +187,7 @@
 										/>
 										<FormField
 											field={reassignDeliverableForm.for(item.id).fields.groupId}
-											label={m.member_text()}
+											label={m.member_text_label()}
 											type="select"
 											options={handTo}
 										/>

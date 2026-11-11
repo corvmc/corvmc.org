@@ -18,10 +18,10 @@
 
 <Action
 	{action}
-	label={m.member_groups_slug_project_work_order_work_order()}
+	label={m.member_groups_slug_project_work_order_work_order_label()}
 	aria-label={m.member_groups_slug_project_work_order_aria_label({ name: project.name })}
-	modalTitle={m.member_groups_slug_project_work_order_aria_label({ name: project.name })}
-	submitLabel={m.member_open()}
+	modalTitle={m.member_groups_slug_project_work_order_aria_title({ name: project.name })}
+	submitLabel={m.member_open_label()}
 	successToast={m.member_groups_slug_project_work_order_success_toast()}
 	variant="ghost"
 	size="xs"
@@ -31,19 +31,19 @@
 		<Field
 			field={action.fields.volunteerRoleId}
 			type="select"
-			label={m.member_role()}
+			label={m.member_role_label()}
 			options={roles}
 		/>
 		<Field
 			field={action.fields.notes}
 			type="textarea"
-			label={m.member_what_needs_doing()}
-			description={m.member_groups_slug_project_work_order_description()}
+			label={m.member_what_needs_doing_label()}
+			description={m.member_groups_slug_project_work_order_description_body()}
 		/>
 		<Field
 			field={action.fields.dueAt}
 			type="date"
-			label={m.member_groups_slug_project_work_order_due_by()}
+			label={m.member_groups_slug_project_work_order_due_by_label()}
 		/>
 	{/snippet}
 </Action>

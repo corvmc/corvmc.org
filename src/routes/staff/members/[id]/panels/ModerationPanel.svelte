@@ -20,11 +20,11 @@
 	// sentence would be true of both and useful for neither.
 	const restrictedCopy: Record<string, { title: string; body: string }> = {
 		community_event: {
-			title: m.staff_community_listings(),
+			title: m.staff_community_listings_title(),
 			body: "This member's listings are reviewed by staff before they go on the public calendar, after a report was upheld against one of them."
 		},
 		suggestion: {
-			title: m.staff_members_id_panels_moderation_panel_suggestions(),
+			title: m.staff_members_id_panels_moderation_panel_suggestions_title(),
 			body: "This member's suggestions are reviewed by staff before they go on the board, after a report was upheld against one of them."
 		}
 	};
@@ -53,10 +53,10 @@
 		(scope) => standings[scope].status !== 'none'
 	)}
 	{#if restricted.length === 0}
-		<InfoCard title={m.staff_members_id_panels_moderation_panel_standing()}>
+		<InfoCard title={m.staff_members_id_panels_moderation_panel_standing_title()}>
 			<EmptyState
-				title={m.staff_members_id_panels_moderation_panel_no_restrictions()}
-				description={m.staff_members_id_panels_moderation_panel_nothing_member_post()}
+				title={m.staff_members_id_panels_moderation_panel_no_restrictions_title()}
+				description={m.staff_members_id_panels_moderation_panel_nothing_member_post_body()}
 			/>
 		</InfoCard>
 	{/if}
@@ -65,22 +65,22 @@
 		<InfoCard title={restrictedCopy[scope].title}>
 			<p class="text-sm">{restrictedCopy[scope].body}</p>
 			{#if standing.reason}
-				<p class="mt-1 text-muted">{m.staff_staff_note({ reason: standing.reason })}</p>
+				<p class="mt-1 text-muted">{m.staff_staff_note_text({ reason: standing.reason })}</p>
 			{/if}
 			{#if standing.triggeringFlagId}
 				<p class="mt-1 text-sm">
 					<a class="link" href={resolve(`staff/flags/${standing.triggeringFlagId}`)}>
-						{m.staff_members_id_panels_moderation_panel_see_report()}
+						{m.staff_members_id_panels_moderation_panel_see_report_text()}
 					</a>
 				</p>
 			{/if}
 			<div class="mt-2">
 				<Action
 					action={restoreMemberStanding.for(scope)}
-					label={m.staff_restore()}
+					label={m.staff_restore_label()}
 					variant="ghost"
 					size="sm"
-					confirm={m.staff_members_id_panels_moderation_panel_confirm()}
+					confirm={m.staff_members_id_panels_moderation_panel_confirm_body()}
 					successToast={m.staff_members_id_panels_moderation_panel_success_toast()}
 				>
 					{#snippet form()}
@@ -95,21 +95,21 @@
 {/if}
 
 <RelatedList
-	title={m.staff_members_id_panels_moderation_panel_reports_against_mem()}
+	title={m.staff_members_id_panels_moderation_panel_reports_against_mem_title()}
 	result={getFlagsAgainstUser(id)}
 >
 	{#snippet children(flags)}
 		{#if flags.length === 0}
 			<EmptyState
-				title={m.staff_members_id_panels_moderation_panel_no_reports()}
-				description={m.staff_members_id_panels_moderation_panel_nobody_has_reported()}
+				title={m.staff_members_id_panels_moderation_panel_no_reports_title()}
+				description={m.staff_members_id_panels_moderation_panel_nobody_has_reported_body()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_reason()}</th>
-					<th class="col-extra">{m.staff_members_id_panels_moderation_panel_filed()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_reason_label()}</th>
+					<th class="col-extra">{m.staff_members_id_panels_moderation_panel_filed_label()}</th>
 				{/snippet}
 				{#each flags as f (f.id)}
 					<tr class="hover" use:rowLink={resolve(`staff/flags/${f.id}`)}>
@@ -117,9 +117,9 @@
 						<td class="cell-primary">
 							<a class="font-medium" href={resolve(`staff/flags/${f.id}`)}>{f.reason}</a>
 							<div class="text-muted">
-								{m.staff_members_id_panels_moderation_panel_by({
+								{m.staff_members_id_panels_moderation_panel_by_text({
 									reportedByName:
-										f.reportedByName ?? m.staff_members_id_panels_moderation_panel_anonymous()
+										f.reportedByName ?? m.staff_members_id_panels_moderation_panel_anonymous_text()
 								})}
 							</div>
 						</td>
@@ -132,21 +132,21 @@
 </RelatedList>
 
 <RelatedList
-	title={m.staff_members_id_panels_moderation_panel_reports_they_filed()}
+	title={m.staff_members_id_panels_moderation_panel_reports_they_filed_title()}
 	result={getFlagsByUser(id)}
 >
 	{#snippet children(flags)}
 		{#if flags.length === 0}
 			<EmptyState
-				title={m.staff_members_id_panels_moderation_panel_none_filed()}
-				description={m.staff_members_id_panels_moderation_panel_member_has_not_repo()}
+				title={m.staff_members_id_panels_moderation_panel_none_filed_title()}
+				description={m.staff_members_id_panels_moderation_panel_member_has_not_repo_body()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_about()}</th>
-					<th class="col-extra">{m.staff_members_id_panels_moderation_panel_filed()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_about_label()}</th>
+					<th class="col-extra">{m.staff_members_id_panels_moderation_panel_filed_label()}</th>
 				{/snippet}
 				{#each flags as f (f.id)}
 					<tr class="hover" use:rowLink={resolve(`staff/flags/${f.id}`)}>

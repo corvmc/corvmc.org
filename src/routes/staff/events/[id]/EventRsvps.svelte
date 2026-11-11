@@ -16,7 +16,7 @@
 </script>
 
 {#if roster}
-	<InfoCard title={m.staff_events_id_event_rsvps_rsvps()} state={roster.total}>
+	<InfoCard title={m.staff_events_id_event_rsvps_rsvps_title()} state={roster.total}>
 		{#snippet action()}
 			{#if roster.total > 0}
 				<div class="flex gap-1">
@@ -26,20 +26,20 @@
 						rel="external"
 						download
 						variant="ghost"
-						size="sm">{m.staff_events_id_event_rsvps_export_csv()}</Button
+						size="sm">{m.staff_events_id_event_rsvps_export_csv_label()}</Button
 					>
 				</div>
 			{/if}
 		{/snippet}
 		{#if roster.total === 0}
 			<EmptyState
-				title={m.staff_events_id_event_rsvps_no_rsvps_yet()}
-				description={m.staff_events_id_event_rsvps_description()}
+				title={m.staff_events_id_event_rsvps_no_rsvps_yet_title()}
+				description={m.staff_events_id_event_rsvps_description_body()}
 			/>
 		{:else}
 			<RosterTable rows={roster.rows}>
 				{#snippet columns()}
-					<th class="col-extra">{m.staff_events_id_event_rsvps_rsvp_d()}</th>
+					<th class="col-extra">{m.staff_events_id_event_rsvps_rsvp_d_label()}</th>
 				{/snippet}
 				{#snippet cells(row)}
 					<td class="col-extra whitespace-nowrap">{formatDateTimeShort(row.rsvpedAt)}</td>

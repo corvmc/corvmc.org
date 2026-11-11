@@ -19,9 +19,9 @@
 
 	let {
 		rows,
-		personLabel = m.roster_name(),
+		personLabel = m.roster_name_label(),
 		lead,
-		leadLabel = m.roster_status(),
+		leadLabel = m.roster_status_label(),
 		leadHead,
 		detail,
 		aside,
@@ -94,9 +94,10 @@
 			</th>
 		{/if}
 		<th>{personLabel}</th>
-		<th>{m.roster_roster_table_email()}</th>
+		<th>{m.roster_roster_table_email_label()}</th>
 		{@render columns?.()}
-		{#if actions}<th class="w-px"><span class="sr-only">{m.roster_roster_table_actions()}</span></th
+		{#if actions}<th class="w-px"
+				><span class="sr-only">{m.roster_roster_table_actions_label()}</span></th
 			>{/if}
 	{/snippet}
 
@@ -139,7 +140,7 @@
 							shape="square"
 							class="border-transparent"
 							aria-label={m.roster_roster_table_aria_label()}
-							title={m.roster_roster_table_aria_label()}
+							title={m.roster_roster_table_aria_title()}
 							onclick={() => copyEmail(email)}
 						>
 							<IconCopy size={14} />

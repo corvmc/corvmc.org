@@ -31,7 +31,7 @@
 <Action
 	action={transferOwnership}
 	label={m.actions_transfer_ownership_label()}
-	modalTitle={m.actions_confirm()}
+	modalTitle={m.actions_confirm_title()}
 	successToast={m.actions_transfer_ownership_success_toast()}
 	{variant}
 	{size}
@@ -42,6 +42,8 @@
 	{#snippet form()}
 		<input {...fields.bandId.as('hidden', bandId)} />
 		<input {...fields.newOwnerId.as('hidden', newOwnerId)} />
-		<p class="py-4">{m.actions_transfer_ownership_transfer_ownership_current_owner({ name })}</p>
+		<p class="py-4">
+			{m.actions_transfer_ownership_transfer_ownership_current_owner_text({ name })}
+		</p>
 	{/snippet}
 </Action>

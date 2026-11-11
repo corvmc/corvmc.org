@@ -25,18 +25,20 @@
 <!-- No actions column to end the row, so the name takes the slack (#1968). -->
 <Table packed={false}>
 	{#snippet head()}
-		<th class="w-px"><span class="sr-only">{m.staff_projects_projects_table_progress()}</span></th>
-		<th>{m.staff_project()}</th>
-		<th>{m.staff_projects_projects_table_committees()}</th>
-		<th>{m.staff_projects_projects_table_dates()}</th>
-		<th class="cell-num">{m.staff_budget()}</th>
-		<th class="cell-num">{m.staff_spent()}</th>
+		<th class="w-px"
+			><span class="sr-only">{m.staff_projects_projects_table_progress_label()}</span></th
+		>
+		<th>{m.staff_project_label()}</th>
+		<th>{m.staff_projects_projects_table_committees_label()}</th>
+		<th>{m.staff_projects_projects_table_dates_label()}</th>
+		<th class="cell-num">{m.staff_budget_label()}</th>
+		<th class="cell-num">{m.staff_spent_label()}</th>
 	{/snippet}
 	{#each projects as row (row.project.id)}
 		<tr class="hover" use:rowLink={resolve(`staff/projects/${row.project.id}`)}>
 			<td class="w-px">
 				{#if row.progress.total === 0}
-					<span class="text-fg-3" title={m.staff_no_tasks_yet()}>—</span>
+					<span class="text-fg-3" title={m.staff_no_tasks_yet_label()}>—</span>
 				{:else}
 					{@const pct = Math.round((row.progress.done / row.progress.total) * 100)}
 					<div
@@ -63,11 +65,11 @@
 					{row.project.name}
 				</a>
 				{#if view === 'all' && isProjectArchived(row.project.status)}
-					<Badge size="sm" variant="ghost">{m.staff_archived()}</Badge>
+					<Badge size="sm" variant="ghost">{m.staff_archived_label()}</Badge>
 				{/if}
 				{#if row.burn.contributed.volunteerMinutes > 0}
 					<div class="text-subtle">
-						{m.staff_projects_projects_table_volunteer_hours({
+						{m.staff_projects_projects_table_volunteer_hours_text({
 							round: Math.round(row.burn.contributed.volunteerMinutes / 60)
 						})}
 					</div>
@@ -75,7 +77,7 @@
 			</td>
 			<td class="whitespace-nowrap" title={row.committeeNames.join(', ') || undefined}>
 				{#if row.committeeNames.length === 0}
-					<span class="text-muted">{m.staff_projects_projects_table_unowned()}</span>
+					<span class="text-muted">{m.staff_projects_projects_table_unowned_text()}</span>
 				{:else}
 					{row.committeeNames[0]}
 					{#if row.committeeNames.length > 1}
@@ -86,7 +88,7 @@
 			<td class="whitespace-nowrap">{dateRange(row.project.startsAt, row.project.endsAt)}</td>
 			<td class="cell-num">
 				{row.project.budgetCents === null
-					? m.staff_none_set()
+					? m.staff_none_set_text()
 					: formatCents(row.project.budgetCents)}
 			</td>
 			<td class="cell-num">

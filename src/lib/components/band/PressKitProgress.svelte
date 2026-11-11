@@ -41,17 +41,17 @@
 	<CardBody>
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<div>
-				<h2 class="font-semibold">{m.band_press_kit_progress_press_kit()}</h2>
+				<h2 class="font-semibold">{m.band_press_kit_progress_press_kit_title()}</h2>
 				<p class="text-muted text-sm">
-					{m.band_press_kit_progress_pieces({ done, total })}
-					{#if next}{m.band_press_kit_progress_next({
+					{m.band_press_kit_progress_pieces_text({ done, total })}
+					{#if next}{m.band_press_kit_progress_next_text({
 							label: next.label
-						})}{:else}{m.band_press_kit_progress_ready_send()}{/if}
+						})}{:else}{m.band_press_kit_progress_ready_send_text()}{/if}
 				</p>
 			</div>
 			{#if compact}
 				<Button href={href(next ?? sections[0])} variant="default" size="sm" outline>
-					{next ? m.band_press_kit_progress_finish() : m.band_press_kit_progress_view()}
+					{next ? m.band_press_kit_progress_finish_label() : m.band_press_kit_progress_view_label()}
 				</Button>
 			{/if}
 		</div>
@@ -85,7 +85,7 @@
 			     none, because a ladder that simply ends reads better than a teaser. -->
 			{#if premiumSections.length > 0}
 				<div class="mt-3 border-t pt-3">
-					<p class="mb-1 text-muted text-xs">{m.band_press_kit_progress_with_band_site()}</p>
+					<p class="mb-1 text-muted text-xs">{m.band_press_kit_progress_with_band_site_text()}</p>
 					<ul class="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
 						{#each premiumSections as section (section.key)}
 							<li class="flex items-start gap-2 py-1 text-sm">

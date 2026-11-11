@@ -8,7 +8,7 @@
 <div class="rounded-lg bg-base-200/50 p-8">
 	<div class="mb-6 text-center">
 		<h2 class="text-3xl font-bold">
-			{m.member_membership_community_impact_what_we_re_building_toget()}
+			{m.member_membership_community_impact_what_we_re_building_toget_title()}
 		</h2>
 	</div>
 
@@ -16,26 +16,28 @@
 		<div class="text-center">
 			<div class="mb-2 text-4xl font-bold text-primary">{stats.sustainingMemberCount}</div>
 			<div class="text-sm font-medium">
-				{m.member_membership_community_impact_sustaining_members()}
+				{m.member_membership_community_impact_sustaining_members_text()}
 			</div>
 			<div class="mt-1 text-subtle">
-				{m.member_membership_community_impact_showing_up_collective_eve()}
+				{m.member_membership_community_impact_showing_up_collective_eve_text()}
 			</div>
 		</div>
 		<div class="text-center">
 			<div class="mb-2 text-4xl font-bold text-secondary">
 				{stats.totalFreeHoursAllocated.toLocaleString()}
 			</div>
-			<div class="text-sm font-medium">{m.member_membership_community_impact_free_hours()}</div>
+			<div class="text-sm font-medium">
+				{m.member_membership_community_impact_free_hours_text()}
+			</div>
 			<div class="mt-1 text-subtle">
-				{m.member_membership_community_impact_practice_time_funded_mont()}
+				{m.member_membership_community_impact_practice_time_funded_mont_text()}
 			</div>
 		</div>
 		<div class="text-center">
 			<div class="mb-2 text-4xl font-bold text-accent">{stats.participationPercent}%</div>
-			<div class="text-sm font-medium">{m.member_membership_community_impact_members()}</div>
+			<div class="text-sm font-medium">{m.member_membership_community_impact_members_text()}</div>
 			<div class="mt-1 text-subtle">
-				{m.member_membership_community_impact_chipping_keep_things_runn()}
+				{m.member_membership_community_impact_chipping_keep_things_runn_text()}
 			</div>
 		</div>
 	</div>

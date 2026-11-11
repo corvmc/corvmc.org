@@ -50,21 +50,21 @@
 	<p class="whitespace-pre-wrap">{post.body}</p>
 </InfoCard>
 
-<InfoCard title={m.classified_details()}>
+<InfoCard title={m.classified_details_title()}>
 	<DefinitionList>
-		<Fact label={m.classified_post_detail_status()}
+		<Fact label={m.classified_post_detail_status_label()}
 			><StatusBadge status={post.displayStatus} label /></Fact
 		>
 		<Fact
-			label={m.classified_category()}
+			label={m.classified_category_label()}
 			value={classifiedCategoryLabels[post.category as ClassifiedCategory] ?? post.category}
 		/>
-		<Fact label={m.classified_post_detail_posted_by()}><EntityChip ref={post.author} /></Fact>
+		<Fact label={m.classified_post_detail_posted_by_label()}><EntityChip ref={post.author} /></Fact>
 		{#if post.band}
-			<Fact label={m.classified_post_detail_text()}><EntityChip ref={post.band} /></Fact>
+			<Fact label={m.classified_post_detail_text_label()}><EntityChip ref={post.band} /></Fact>
 		{/if}
 		{#if post.tags.length > 0}
-			<Fact label={m.classified_post_detail_tags()}>
+			<Fact label={m.classified_post_detail_tags_label()}>
 				<span class="flex flex-wrap gap-1">
 					{#each post.tags as t (`${t.kind}:${t.value}`)}
 						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- tagHref resolves the path -->
@@ -73,7 +73,7 @@
 				</span>
 			</Fact>
 		{/if}
-		<Fact label={m.classified_post_detail_posted()} value={formatDateTime(post.createdAt)} />
-		<Fact label={m.classified_post_detail_expires()} value={formatDate(post.expiresAt)} />
+		<Fact label={m.classified_post_detail_posted_label()} value={formatDateTime(post.createdAt)} />
+		<Fact label={m.classified_post_detail_expires_label()} value={formatDate(post.expiresAt)} />
 	</DefinitionList>
 </InfoCard>

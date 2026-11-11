@@ -136,7 +136,7 @@
 	who this is.
 -->
 {#if attention.length > 0}
-	<InfoCard title={m.staff_members_id_panels_overview_panel_needs_attention()}>
+	<InfoCard title={m.staff_members_id_panels_overview_panel_needs_attention_title()}>
 		<ul class="flex flex-col gap-2">
 			{#each attention as item (item.text)}
 				<li>
@@ -161,38 +161,38 @@
 	already; repeating them here as rows was the same duplication the identity
 	strip had, one card down. What stays is what the header has no room to say.
 -->
-<InfoCard title={m.staff_members_id_panels_overview_panel_at_glance()}>
+<InfoCard title={m.staff_members_id_panels_overview_panel_at_glance_title()}>
 	<DefinitionList>
-		<Fact label={m.staff_joined()}>{formatDateShortYear(member.createdAt)}</Fact>
+		<Fact label={m.staff_joined_label()}>{formatDateShortYear(member.createdAt)}</Fact>
 
-		<Fact label={m.staff_members_id_panels_overview_panel_last_sign()}>
+		<Fact label={m.staff_members_id_panels_overview_panel_last_sign_label()}>
 			{#if overview.lastLoginAt}
 				{formatDateTimeShort(overview.lastLoginAt)}
 			{:else}
 				<span class="opacity-60"
-					>{m.staff_members_id_panels_overview_panel_never_signed_out_ever()}</span
+					>{m.staff_members_id_panels_overview_panel_never_signed_out_ever_text()}</span
 				>
 			{/if}
 		</Fact>
 
 		<!-- Sustaining is a header badge; the free tier has no badge, so it says so. -->
-		<Fact label={m.staff_membership()}>
+		<Fact label={m.staff_membership_label()}>
 			{#if overview.membership.sustaining}
 				{overview.membership.hoursPerReset
-					? m.staff_members_id_panels_overview_panel_hrs_month({
+					? m.staff_members_id_panels_overview_panel_hrs_month_text({
 							value: overview.membership.hoursPerReset / 2
 						})
-					: m.staff_sustaining()}
+					: m.staff_sustaining_text()}
 			{:else}
-				{m.staff_members_id_panels_overview_panel_free_tier()}
+				{m.staff_members_id_panels_overview_panel_free_tier_text()}
 			{/if}
 		</Fact>
 
-		<Fact label={m.staff_members_id_panels_overview_panel_directory()}>
+		<Fact label={m.staff_members_id_panels_overview_panel_directory_label()}>
 			{overview.directory.visibility}
 			{#if !overview.directory.profileComplete}
 				<span class="opacity-60">
-					{m.staff_members_id_panels_overview_panel_profile_incomplete()}</span
+					{m.staff_members_id_panels_overview_panel_profile_incomplete_text()}</span
 				>
 			{/if}
 		</Fact>

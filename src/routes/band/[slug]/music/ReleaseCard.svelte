@@ -67,20 +67,20 @@
 				<div class="flex flex-wrap items-center gap-2">
 					<Badge size="sm">{releaseKindLabels[release.kind]}</Badge>
 					{#if release.status === 'draft'}
-						<Badge size="sm" variant="ghost">{m.band_draft()}</Badge>
+						<Badge size="sm" variant="ghost">{m.band_draft_label()}</Badge>
 					{:else if release.status === 'withheld'}
-						<Badge size="sm" variant="error">{m.band_withheld()}</Badge>
+						<Badge size="sm" variant="error">{m.band_withheld_label()}</Badge>
 					{/if}
 					{#if release.radioOptIn && !release.radioExcluded}
 						{#if release.radioAttested}
 							<Badge size="sm" variant="info">
 								<IconRadio size={12} />
-								{m.band_slug_music_release_card_radio()}
+								{m.band_slug_music_release_card_radio_label()}
 							</Badge>
 						{:else}
 							<Badge size="sm" variant="warning">
 								<IconRadio size={12} />
-								{m.band_slug_music_release_card_needs_attestation()}
+								{m.band_slug_music_release_card_needs_attestation_label()}
 							</Badge>
 						{/if}
 					{/if}
@@ -98,7 +98,7 @@
 				     and this is where they will look. -->
 				{#if release.radioExcluded}
 					<p class="line-clamp-2 text-warning">
-						{m.band_slug_music_release_card_pulled_from_radio({
+						{m.band_slug_music_release_card_pulled_from_radio_text({
 							value: release.radioExcludedReason ? ` — ${release.radioExcludedReason}` : ''
 						})}
 					</p>
@@ -109,17 +109,17 @@
 			     column, the price won the eye over the release's name (#1049). -->
 			<div class="shrink-0 text-right">
 				<p>
-					{release.priceMinCents === 0 ? m.band_free() : formatCents(release.priceMinCents)}
+					{release.priceMinCents === 0 ? m.band_free_text() : formatCents(release.priceMinCents)}
 					{#if release.priceMinCents > 0 && release.allowPayMore}
-						<span class="text-muted">{m.band_slug_music_release_card_more()}</span>
+						<span class="text-muted">{m.band_slug_music_release_card_more_text()}</span>
 					{/if}
 				</p>
 				{#if release.salesCount > 0}
 					<p class="text-muted">
 						{release.salesCount}
 						{release.salesCount === 1
-							? m.band_slug_music_release_card_sale()
-							: m.band_slug_music_release_card_sales()}
+							? m.band_slug_music_release_card_sale_text()
+							: m.band_slug_music_release_card_sales_text()}
 					</p>
 				{/if}
 			</div>

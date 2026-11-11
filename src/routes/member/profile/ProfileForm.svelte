@@ -39,9 +39,9 @@
 
 	/** The nullable two-value column, as three options. `''` saves as null. */
 	const LOOKING_FOR_OPTIONS = [
-		{ value: '', label: m.member_profile_profile_form_nothing_right_now() },
-		{ value: 'band', label: m.member_profile_profile_form_band_join() },
-		{ value: 'members', label: m.member_profile_profile_form_members_my_project() }
+		{ value: '', label: m.member_profile_profile_form_nothing_right_now_label() },
+		{ value: 'band', label: m.member_profile_profile_form_band_join_label() },
+		{ value: 'members', label: m.member_profile_profile_form_members_my_project_label() }
 	];
 
 	// Editable copies of the complex fields, seeded once from the loaded profile.
@@ -97,16 +97,16 @@
 	<input {...fields.skills.as('hidden', JSON.stringify(skills))} />
 
 	<!-- About You: identity, photo, and bio -->
-	<InfoCard title={m.member_profile_profile_form_about()}>
+	<InfoCard title={m.member_profile_profile_form_about_title()}>
 		<div class="flex flex-col gap-4 sm:flex-row sm:items-start">
 			<div class="flex-1 space-y-4">
 				<FormField
 					field={fields.tagline}
-					label={m.member_profile_profile_form_tagline()}
+					label={m.member_profile_profile_form_tagline_label()}
 					type="text"
 					value={profile?.tagline ?? ''}
-					placeholder={m.member_profile_profile_form_e_g_drummer_jazz_funk()}
-					description={m.member_profile_profile_form_short_one_liner_shown_directory()}
+					placeholder={m.member_profile_profile_form_e_g_drummer_jazz_funk_placeholder()}
+					description={m.member_profile_profile_form_short_one_liner_shown_directory_body()}
 				/>
 			</div>
 
@@ -125,32 +125,32 @@
 		</div>
 
 		<div class="mt-4">
-			<FormField field={fields.bio} label={m.member_bio()}>
+			<FormField field={fields.bio} label={m.member_bio_label()}>
 				<input {...fields.bio.as('hidden', bioHtml)} />
 				<RichTextEditor
 					bind:value={bioHtml}
-					placeholder={m.member_profile_profile_form_tell_other_members_about_yoursel()}
+					placeholder={m.member_profile_profile_form_tell_other_members_about_yoursel_placeholder()}
 				/>
 			</FormField>
 		</div>
 	</InfoCard>
 
 	<!-- Music -->
-	<InfoCard title={m.member_profile_profile_form_music()}>
+	<InfoCard title={m.member_profile_profile_form_music_title()}>
 		<div class="grid gap-4 sm:grid-cols-2">
-			<FormField field={fields.instruments} label={m.member_instruments()}>
+			<FormField field={fields.instruments} label={m.member_instruments_label()}>
 				<FreeformTagInput
 					bind:value={instruments}
 					suggestions={instrumentSuggestions}
-					placeholder={m.member_profile_profile_form_e_g_guitar_vocals_drums()}
+					placeholder={m.member_profile_profile_form_e_g_guitar_vocals_drums_placeholder()}
 				/>
 			</FormField>
 
-			<FormField field={fields.genres} label={m.member_genres()}>
+			<FormField field={fields.genres} label={m.member_genres_label()}>
 				<FreeformTagInput
 					bind:value={genres}
 					suggestions={genreSuggestions}
-					placeholder={m.member_profile_profile_form_e_g_jazz_funk_rock()}
+					placeholder={m.member_profile_profile_form_e_g_jazz_funk_rock_placeholder()}
 				/>
 			</FormField>
 		</div>
@@ -158,13 +158,13 @@
 		<div class="mt-4">
 			<FormField
 				field={fields.skills}
-				label={m.member_skills()}
-				description={m.member_profile_profile_form_what_can_help_with_besides()}
+				label={m.member_skills_label()}
+				description={m.member_profile_profile_form_what_can_help_with_besides_body()}
 			>
 				<FreeformTagInput
 					bind:value={skills}
 					suggestions={skillSuggestions}
-					placeholder={m.member_profile_profile_form_e_g_sound_engineer_photographer()}
+					placeholder={m.member_profile_profile_form_e_g_sound_engineer_photographer_placeholder()}
 				/>
 			</FormField>
 		</div>
@@ -173,10 +173,10 @@
 			<FormField
 				field={fields.lookingFor}
 				type="select"
-				label={m.member_profile_profile_form_i_m_looking()}
+				label={m.member_profile_profile_form_i_m_looking_label()}
 				bind:value={lookingFor}
 				options={LOOKING_FOR_OPTIONS}
-				description={m.member_profile_profile_form_what_dashboard_matches_we_ll()}
+				description={m.member_profile_profile_form_what_dashboard_matches_we_ll_body()}
 			/>
 		</div>
 
@@ -186,12 +186,12 @@
 			<div class="mt-4">
 				<FormField
 					field={fields.seekingInstruments}
-					label={m.member_profile_profile_form_instruments_need()}
+					label={m.member_profile_profile_form_instruments_need_label()}
 				>
 					<FreeformTagInput
 						bind:value={seekingInstruments}
 						suggestions={instrumentSuggestions}
-						placeholder={m.member_profile_profile_form_e_g_drums_bass()}
+						placeholder={m.member_profile_profile_form_e_g_drums_bass_placeholder()}
 					/>
 				</FormField>
 			</div>
@@ -202,65 +202,65 @@
 				field={fields.availableForHire}
 				type="toggle"
 				value={availableForHire}
-				checkboxLabel={m.member_profile_profile_form_i_m_available_hire()}
+				checkboxLabel={m.member_profile_profile_form_i_m_available_hire_checkbox()}
 			/>
 			<FormField
 				field={fields.teachesLessons}
 				type="toggle"
 				value={teachesLessons}
-				checkboxLabel={m.member_profile_profile_form_i_teach_lessons_privately()}
+				checkboxLabel={m.member_profile_profile_form_i_teach_lessons_privately_checkbox()}
 			/>
 			<FormField
 				field={fields.openToCollaboration}
 				type="toggle"
 				value={openToCollaboration}
-				checkboxLabel={m.member_profile_profile_form_i_m_open_collaboration()}
+				checkboxLabel={m.member_profile_profile_form_i_m_open_collaboration_checkbox()}
 			/>
 		</div>
 	</InfoCard>
 
 	<div class="mb-6 grid gap-6 lg:grid-cols-2">
 		<!-- Links -->
-		<InfoCard title={m.member_profile_profile_form_links()}>
+		<InfoCard title={m.member_profile_profile_form_links_title()}>
 			<p class="mb-3 text-muted">
-				{m.member_profile_profile_form_add_links_music_social_media()}
+				{m.member_profile_profile_form_add_links_music_social_media_text()}
 			</p>
 			<LinkListEditor bind:value={links} field={fields.links} />
 		</InfoCard>
 
 		<!-- Contact -->
-		<InfoCard title={m.member_profile_profile_form_directory_contact_info()}>
+		<InfoCard title={m.member_profile_profile_form_directory_contact_info_title()}>
 			<p class="mb-3 text-muted">
-				{m.member_profile_profile_form_optional_contact_details_shown_d()}
+				{m.member_profile_profile_form_optional_contact_details_shown_d_text()}
 			</p>
 			<div class="space-y-3">
 				<FormField
 					field={fields.contactEmail}
-					label={m.member_profile_profile_form_display_email()}
+					label={m.member_profile_profile_form_display_email_label()}
 					type="email"
 					value={contact.email ?? ''}
-					placeholder={m.member_profile_profile_form_example_com()}
+					placeholder={m.member_profile_profile_form_example_com_placeholder()}
 				/>
 				<FormField
 					field={fields.contactPhone}
-					label={m.member_phone()}
+					label={m.member_phone_label()}
 					type="tel"
 					value={contact.phone ?? ''}
-					placeholder={m.member_profile_profile_form_optional()}
+					placeholder={m.member_profile_profile_form_optional_placeholder()}
 				/>
 				<FormField
 					field={fields.contactSocial}
-					label={m.member_profile_profile_form_social_handle()}
+					label={m.member_profile_profile_form_social_handle_label()}
 					type="text"
 					value={contact.social ?? ''}
-					placeholder={m.member_profile_profile_form_handle_url()}
+					placeholder={m.member_profile_profile_form_handle_url_placeholder()}
 				/>
 				<FormField
 					field={fields.contactPublic}
 					type="toggle"
 					value={contactPublic}
-					checkboxLabel={m.member_profile_profile_form_show_my_contact_info_my()}
-					description={m.member_profile_profile_form_off_by_default_contact_info()}
+					checkboxLabel={m.member_profile_profile_form_show_my_contact_info_my_checkbox()}
+					description={m.member_profile_profile_form_off_by_default_contact_info_body()}
 				/>
 			</div>
 		</InfoCard>
@@ -268,15 +268,15 @@
 
 	<!-- Visibility -->
 	<div class="mb-6">
-		<InfoCard title={m.member_profile_profile_form_visibility()}>
+		<InfoCard title={m.member_profile_profile_form_visibility_title()}>
 			<VisibilityField field={fields.directoryVisibility} bind:value={directoryVisibility} />
 		</InfoCard>
 	</div>
 
 	<div class="flex justify-end">
 		<SubmitButton
-			label={m.member_save()}
-			successLabel={m.member_saved()}
+			label={m.member_save_label()}
+			successLabel={m.member_saved_label()}
 			variant="primary"
 			shortcut="mod+s"
 		>

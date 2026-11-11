@@ -34,7 +34,7 @@
 <Modal title={m.member_groups_committee_apply_modal_title()} bind:open {onclose}>
 	<Form
 		remote={applyToGroups}
-		successToast={m.member_application_sent()}
+		successToast={m.member_application_sent_toast()}
 		onsuccess={() => (open = false)}
 		class="space-y-6"
 	>
@@ -42,7 +42,7 @@
 		{#key selectedId}
 			<CheckboxGroup
 				field={fields.groupIds}
-				legend={m.member_groups_committee_apply_modal_legend()}
+				legend={m.member_groups_committee_apply_modal_legend_title()}
 				options={committees.map((c) => ({ value: c.id, label: c.name, description: c.bio }))}
 				selected={selectedId ? [selectedId] : []}
 			/>
@@ -63,10 +63,12 @@
 			maxlength={String(APPLICATION_ANSWER_MAX)}
 		/>
 
-		<Alert type="info">{m.member_groups_committee_apply_modal_chair_will_contact_accou()}</Alert>
+		<Alert type="info"
+			>{m.member_groups_committee_apply_modal_chair_will_contact_accou_body()}</Alert
+		>
 
 		<div class="flex justify-end">
-			<SubmitButton label={m.member_send_application()} />
+			<SubmitButton label={m.member_send_application_label()} />
 		</div>
 	</Form>
 </Modal>

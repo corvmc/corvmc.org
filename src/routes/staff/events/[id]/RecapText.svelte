@@ -19,15 +19,15 @@
 <InfoCard title={m.staff_events_id_recap_text_title()} state={text ? 'Published' : 'Not written'}>
 	{#if closedReason}
 		<p class="text-muted text-sm">
-			{m.staff_events_id_recap_text_clearing_existing_recap_still_wor({ closedReason })}
+			{m.staff_events_id_recap_text_clearing_existing_recap_still_wor_text({ closedReason })}
 		</p>
 	{/if}
 	<Form remote={saveEventRecapText} successToast={m.staff_events_id_recap_text_success_toast()}>
 		<input {...fields.eventId.as('hidden', eventId)} />
 		<FormField
 			field={fields.recapText}
-			label={m.staff_events_id_recap_text_paragraph_about_night()}
-			description={m.staff_events_id_recap_text_description()}
+			label={m.staff_events_id_recap_text_paragraph_about_night_label()}
+			description={m.staff_events_id_recap_text_description_body()}
 		>
 			{#snippet input(id)}
 				<textarea
@@ -38,6 +38,6 @@
 					maxlength="5000"></textarea>
 			{/snippet}
 		</FormField>
-		<SubmitButton label={m.staff_events_id_recap_text_save_recap()} />
+		<SubmitButton label={m.staff_events_id_recap_text_save_recap_label()} />
 	</Form>
 </InfoCard>

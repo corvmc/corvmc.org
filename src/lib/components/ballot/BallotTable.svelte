@@ -42,11 +42,11 @@
 
 <Table>
 	{#snippet head()}
-		<th class="w-px"><span class="sr-only">{m.ballot_ballot_table_status()}</span></th>
-		<th>{m.ballot_ballot_table_ballot()}</th>
-		<th>{m.ballot_ballot_table_closes()}</th>
+		<th class="w-px"><span class="sr-only">{m.ballot_ballot_table_status_label()}</span></th>
+		<th>{m.ballot_ballot_table_ballot_label()}</th>
+		<th>{m.ballot_ballot_table_closes_label()}</th>
 		{#if panel === 'member'}
-			<th class="col-support">{m.ballot_ballot_table_part()}</th>
+			<th class="col-support">{m.ballot_ballot_table_part_label()}</th>
 		{/if}
 	{/snippet}
 	{#each rows as r (r.id)}

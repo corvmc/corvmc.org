@@ -48,7 +48,7 @@
 				>
 					<span class="min-w-0 truncate" class:font-medium={topic.unread}>{topic.name}</span>
 					{#if topic.unread}
-						<Badge variant="primary" size="xs">{m.inbox_group_topic_list_new()}</Badge>
+						<Badge variant="primary" size="xs">{m.inbox_group_topic_list_new_label()}</Badge>
 					{:else if topic.muted}
 						<IconBellOff
 							size={14}

@@ -116,18 +116,18 @@
 			{@const due = shift.dueAt}
 			<!-- A deadline is not a window: "done by Friday" is not "happens Friday 6-8". -->
 			<ParaglideMessage
-				message={m.volunteer_work_order_view_due}
+				message={m.volunteer_work_order_view_due_text}
 				inputs={{ formatDateShortYear: formatDateShortYear(due) }}
 				>{#snippet time({ children })}<time datetime={new Date(due).toISOString()}
 						>{@render children?.()}</time
 					>{/snippet}</ParaglideMessage
 			>
-		{:else}{m.volunteer_work_order_view_time_arranged()}{/if} ·
+		{:else}{m.volunteer_work_order_view_time_arranged_text()}{/if} ·
 		{#if shift.eventId && shift.eventTitle}
 			<a href={resolve(`staff/events/${shift.eventId}`)} class="link link-primary">
 				{shift.eventTitle}
 			</a>
-		{:else}{m.volunteer_work_order_view_not_tied_event()}{/if}
+		{:else}{m.volunteer_work_order_view_not_tied_event_text()}{/if}
 		{#if shift.assetId && shift.assetName}
 			·
 			<a href={resolve(`staff/inventory/assets/${shift.assetId}`)} class="link link-primary">
@@ -144,16 +144,16 @@
 				<div>
 					<p class="font-medium">
 						{toNotify > 0
-							? m.volunteer_work_order_view_notify({ toNotify })
-							: m.volunteer_work_order_view_everybody_has_been_notified()}
+							? m.volunteer_work_order_view_notify_text({ toNotify })
+							: m.volunteer_work_order_view_everybody_has_been_notified_text()}
 					</p>
 					<p class="text-sm">
 						{shift.cancelledByName
-							? m.volunteer_work_order_view_called_off_by({
+							? m.volunteer_work_order_view_called_off_by_text({
 									date: formatDateShort(shift.cancelledAt!),
 									name: shift.cancelledByName
 								})
-							: m.volunteer_work_order_view_called_off({
+							: m.volunteer_work_order_view_called_off_text({
 									date: formatDateShort(shift.cancelledAt!)
 								})}
 					</p>
@@ -161,19 +161,19 @@
 				{#if toNotify > 0}
 					<Action
 						action={notifyCancelledShift.for(shift.id)}
-						label={m.volunteer_work_order_view_notify_all()}
+						label={m.volunteer_work_order_view_notify_all_label()}
 						variant="warning"
 						size="sm"
-						modalTitle={m.volunteer_work_order_view_tell_everybody_off()}
-						submitLabel={m.volunteer_work_order_view_notify_all()}
-						successToast={m.volunteer_work_order_view_sent_they_know()}
+						modalTitle={m.volunteer_work_order_view_tell_everybody_off_title()}
+						submitLabel={m.volunteer_work_order_view_notify_all_label()}
+						successToast={m.volunteer_work_order_view_sent_they_know_toast()}
 					>
 						{#snippet form()}
 							<input
 								{...notifyCancelledShift.for(shift.id).fields.shiftId.as('hidden', shift.id)}
 							/>
 							<p class="text-sm">
-								{m.volunteer_work_order_view_people_still_shift_will_emailed({ toNotify })}
+								{m.volunteer_work_order_view_people_still_shift_will_emailed_text({ toNotify })}
 							</p>
 						{/snippet}
 					</Action>
@@ -186,7 +186,7 @@
 	{#if view.engagements.length > 0}
 		<section class="flex flex-col gap-3" aria-labelledby="engagements-heading">
 			<h2 id="engagements-heading" class="text-lg font-semibold">
-				{m.volunteer_work_order_view_engagements()}
+				{m.volunteer_work_order_view_engagements_title()}
 			</h2>
 			{#each view.engagements as row (row.job.id)}
 				<EngagementCard {row} />
@@ -198,26 +198,28 @@
 		<div class="flex flex-col gap-6">
 			<InfoCard
 				title={calledOff
-					? m.volunteer_work_order_view_who_tell()
-					: m.volunteer_work_order_view_who_s()}
+					? m.volunteer_work_order_view_who_tell_title()
+					: m.volunteer_work_order_view_who_s_title()}
 			>
 				{#snippet header()}
 					<div class="flex items-center justify-between gap-2">
 						<CardTitle>
 							{calledOff
-								? m.volunteer_work_order_view_who_tell()
-								: m.volunteer_work_order_view_who_s()} · {claimants.length}
+								? m.volunteer_work_order_view_who_tell_title()
+								: m.volunteer_work_order_view_who_s_title()} · {claimants.length}
 						</CardTitle>
 						{#if !calledOff && unconfirmed.length > 1}
 							<Action
 								action={confirmSignups.for(shift.id)}
-								label={m.volunteer_work_order_view_confirm_all({ length: unconfirmed.length })}
+								label={m.volunteer_work_order_view_confirm_all_label({
+									length: unconfirmed.length
+								})}
 								variant="ghost"
 								size="sm"
 								class="text-success"
-								modalTitle={m.volunteer_work_order_view_confirm_everyone_waiting()}
-								submitLabel={m.volunteer_work_order_view_confirm_all_2()}
-								successToast={m.volunteer_work_order_view_confirmed()}
+								modalTitle={m.volunteer_work_order_view_confirm_everyone_waiting_title()}
+								submitLabel={m.volunteer_work_order_view_confirm_all_2_label()}
+								successToast={m.volunteer_work_order_view_confirmed_toast()}
 							>
 								{#snippet form()}
 									<input {...confirmSignups.for(shift.id).fields.shiftId.as('hidden', shift.id)} />
@@ -227,7 +229,7 @@
 										/>
 									{/each}
 									<p class="text-sm">
-										{m.volunteer_work_order_view_all_confirmed_shift_each_them({
+										{m.volunteer_work_order_view_all_confirmed_shift_each_them_text({
 											join: unconfirmed.map((c) => c.member.title).join(', ')
 										})}
 									</p>
@@ -239,10 +241,10 @@
 
 				{#if claimants.length === 0}
 					<EmptyState
-						title={m.volunteer_work_order_view_nobody_yet()}
+						title={m.volunteer_work_order_view_nobody_yet_title()}
 						description={view.engagements.length > 0
-							? m.volunteer_work_order_view_contractor_answers_one_see_engagem()
-							: m.volunteer_work_order_view_members_interested_role_see_at()}
+							? m.volunteer_work_order_view_contractor_answers_one_see_engagem_body()
+							: m.volunteer_work_order_view_members_interested_role_see_at_body()}
 					/>
 				{:else}
 					<ul class="flex flex-col gap-4">
@@ -258,8 +260,8 @@
 													: 'badge-warning'}"
 											>
 												{claimant.notifiedAt
-													? m.volunteer_work_order_view_notified_2()
-													: m.volunteer_work_order_view_not_notified()}
+													? m.volunteer_work_order_view_notified_2_text()
+													: m.volunteer_work_order_view_not_notified_text()}
 											</span>
 										{:else}
 											<span
@@ -275,21 +277,21 @@
 										{#if calledOff}
 											{#if claimant.notifiedAt}
 												<span class="text-sm text-success"
-													>{m.volunteer_work_order_view_notified()}</span
+													>{m.volunteer_work_order_view_notified_text()}</span
 												>
 											{:else}
 												<!-- The escape hatch beside the mail-out, for staff who
 												     rang them. Sends nothing. -->
 												<Action
 													action={markSignupNotified.for(claimant.signupId)}
-													label={m.volunteer_work_order_view_mark_as_notified()}
+													label={m.volunteer_work_order_view_mark_as_notified_label()}
 													variant="ghost"
 													size="sm"
-													modalTitle={m.volunteer_work_order_view_mark_as_told({
+													modalTitle={m.volunteer_work_order_view_mark_as_told_title({
 														title: claimant.member.title
 													})}
-													submitLabel={m.volunteer_work_order_view_mark_as_notified()}
-													successToast={m.volunteer_work_order_view_marked()}
+													submitLabel={m.volunteer_work_order_view_mark_as_notified_label()}
+													successToast={m.volunteer_work_order_view_marked_toast()}
 												>
 													{#snippet form()}
 														<input
@@ -303,7 +305,7 @@
 																.fields.shiftId.as('hidden', shift.id)}
 														/>
 														<p class="text-sm">
-															{m.volunteer_work_order_view_use_when_reached_them_another()}
+															{m.volunteer_work_order_view_use_when_reached_them_another_text()}
 														</p>
 													{/snippet}
 												</Action>
@@ -312,17 +314,17 @@
 											{#if claimant.status === 'claimed'}
 												<Action
 													action={confirmSignup.for(claimant.signupId)}
-													label={m.volunteer_work_order_view_confirm()}
+													label={m.volunteer_work_order_view_confirm_label()}
 													iconOnly
 													icon={checkIcon}
 													variant="ghost"
 													size="sm"
 													class="text-success"
-													modalTitle={m.volunteer_work_order_view_confirm_2({
+													modalTitle={m.volunteer_work_order_view_confirm_2_title({
 														title: claimant.member.title
 													})}
-													submitLabel={m.volunteer_work_order_view_confirm()}
-													successToast={m.volunteer_work_order_view_confirmed()}
+													submitLabel={m.volunteer_work_order_view_confirm_label()}
+													successToast={m.volunteer_work_order_view_confirmed_toast()}
 												>
 													{#snippet form()}
 														<input
@@ -336,7 +338,7 @@
 																.fields.shiftId.as('hidden', shift.id)}
 														/>
 														<p class="text-sm">
-															{m.volunteer_work_order_view_they_ll_get_reminder_day()}
+															{m.volunteer_work_order_view_they_ll_get_reminder_day_text()}
 														</p>
 													{/snippet}
 												</Action>
@@ -347,16 +349,16 @@
 												     can't make it should not get a mark against them. -->
 												<Action
 													action={releaseSignup.for(claimant.signupId)}
-													label={m.volunteer_work_order_view_remove()}
+													label={m.volunteer_work_order_view_remove_label()}
 													iconOnly
 													icon={releaseIcon}
 													variant="ghost"
 													size="sm"
-													modalTitle={m.volunteer_work_order_view_take_off_shift({
+													modalTitle={m.volunteer_work_order_view_take_off_shift_title({
 														title: claimant.member.title
 													})}
-													submitLabel={m.volunteer_work_order_view_take_them_off()}
-													successToast={m.volunteer_work_order_view_taken_off_place_open_again()}
+													submitLabel={m.volunteer_work_order_view_take_them_off_label()}
+													successToast={m.volunteer_work_order_view_taken_off_place_open_again_toast()}
 												>
 													{#snippet form()}
 														<input
@@ -370,7 +372,7 @@
 																.fields.shiftId.as('hidden', shift.id)}
 														/>
 														<p class="text-sm">
-															{m.volunteer_work_order_view_their_place_opens_up_straight()}
+															{m.volunteer_work_order_view_their_place_opens_up_straight_text()}
 														</p>
 													{/snippet}
 												</Action>
@@ -380,18 +382,18 @@
 												<!-- Confirmed people only: a claim nobody confirmed was never a booking. -->
 												<Action
 													action={markSignupNoShow.for(claimant.signupId)}
-													label={m.volunteer_work_order_view_mark_no_show()}
+													label={m.volunteer_work_order_view_mark_no_show_label()}
 													iconOnly
 													icon={noShowIcon}
 													variant="ghost"
 													size="sm"
 													class="text-error"
-													modalTitle={m.volunteer_work_order_view_mark_as_no_show({
+													modalTitle={m.volunteer_work_order_view_mark_as_no_show_title({
 														title: claimant.member.title
 													})}
-													submitLabel={m.volunteer_work_order_view_no_show()}
+													submitLabel={m.volunteer_work_order_view_no_show_label()}
 													submitVariant="error"
-													successToast={m.volunteer_work_order_view_marked_as_no_show()}
+													successToast={m.volunteer_work_order_view_marked_as_no_show_toast()}
 												>
 													{#snippet form()}
 														<input
@@ -405,7 +407,7 @@
 																.fields.shiftId.as('hidden', shift.id)}
 														/>
 														<p class="text-sm">
-															{m.volunteer_work_order_view_different_from_removing_them_remov()}
+															{m.volunteer_work_order_view_different_from_removing_them_remov_text()}
 														</p>
 													{/snippet}
 												</Action>
@@ -418,7 +420,7 @@
 									<!-- Only confirmation sends the reminder; the claim still
 									     completes as worked once the shift ends. -->
 									<p class="border-l-2 border-warning pl-2 text-xs text-warning">
-										{m.volunteer_work_order_view_unconfirmed_no_reminder()}
+										{m.volunteer_work_order_view_unconfirmed_no_reminder_text()}
 									</p>
 								{/if}
 							</li>
@@ -434,49 +436,49 @@
 			<!-- Apart from "Who's on it", because neither an invitation nor a
 			     refusal holds a place. -->
 			{#if view.invitations.length > 0}
-				<InfoCard title={m.volunteer_work_order_view_asked()}>
+				<InfoCard title={m.volunteer_work_order_view_asked_title()}>
 					<ul class="flex flex-col gap-2">
 						{#each view.invitations as invitation (invitation.signupId)}
 							<li class="flex flex-wrap items-center gap-2">
 								<EntityIdentity ref={invitation.member} size="sm" />
 								<Badge variant={invitation.status === 'declined' ? 'error' : 'ghost'} size="xs">
 									{invitation.status === 'declined'
-										? m.volunteer_work_order_view_said_no()
-										: m.volunteer_work_order_view_waiting()}
+										? m.volunteer_work_order_view_said_no_label()
+										: m.volunteer_work_order_view_waiting_label()}
 								</Badge>
 								{#if invitation.invitedByName}
 									<span class="text-subtle text-xs"
-										>{m.volunteer_asked({ invitedByName: invitation.invitedByName })}</span
+										>{m.volunteer_asked_text({ invitedByName: invitation.invitedByName })}</span
 									>
 								{/if}
 							</li>
 						{/each}
 					</ul>
 					<p class="mt-2 text-subtle text-xs">
-						{m.volunteer_work_order_view_invitation_holds_no_place_no()}
+						{m.volunteer_work_order_view_invitation_holds_no_place_no_text()}
 					</p>
 				</InfoCard>
 			{/if}
 
-			<InfoCard title={m.volunteer_work_order_view_briefing()}>
+			<InfoCard title={m.volunteer_work_order_view_briefing_title()}>
 				{#if shift.notes}
 					<p class="text-sm">{shift.notes}</p>
 				{:else}
 					<p class="text-subtle text-sm">
-						{m.volunteer_work_order_view_no_briefing_yet_add_one()}
+						{m.volunteer_work_order_view_no_briefing_yet_add_one_text()}
 					</p>
 				{/if}
 
 				<div class="mt-4 flex flex-wrap gap-2">
 					<Action
 						action={editForm}
-						label={m.volunteer_work_order_view_edit()}
+						label={m.volunteer_work_order_view_edit_label()}
 						data-testid="edit-shift"
 						variant="ghost"
 						size="sm"
-						modalTitle={m.volunteer_work_order_view_edit_shift()}
-						submitLabel={m.volunteer_save()}
-						successToast={m.volunteer_work_order_view_shift_updated_everyone_stays()}
+						modalTitle={m.volunteer_work_order_view_edit_shift_title()}
+						submitLabel={m.volunteer_save_label()}
+						successToast={m.volunteer_work_order_view_shift_updated_everyone_stays_toast()}
 					>
 						{#snippet icon()}<IconPencil size={16} />{/snippet}
 						{#snippet form()}
@@ -503,14 +505,17 @@
 								<FormField
 									field={editForm.fields.closeReports}
 									type="select"
-									label={m.volunteer_work_order_view_when_window_ends()}
+									label={m.volunteer_work_order_view_when_window_ends_label()}
 									value={shift.closeReportsOnCompletion ? 'close' : 'wait'}
 									options={[
 										{
 											value: 'close',
-											label: m.volunteer_work_order_view_close_equipment_reports()
+											label: m.volunteer_work_order_view_close_equipment_reports_label()
 										},
-										{ value: 'wait', label: m.volunteer_work_order_view_wait_today_me_confirm() }
+										{
+											value: 'wait',
+											label: m.volunteer_work_order_view_wait_today_me_confirm_label()
+										}
 									]}
 								/>
 							{/if}
@@ -521,12 +526,12 @@
 						{@const copy = duplicateShift.for(shift.id)}
 						<Action
 							action={copy}
-							label={m.volunteer_work_order_view_copy_forward()}
+							label={m.volunteer_work_order_view_copy_forward_label()}
 							variant="ghost"
 							size="sm"
-							modalTitle={m.volunteer_work_order_view_copy_shift_forward()}
-							submitLabel={m.volunteer_work_order_view_copy()}
-							successToast={m.volunteer_work_order_view_copied_nobody_copy_yet()}
+							modalTitle={m.volunteer_work_order_view_copy_shift_forward_title()}
+							submitLabel={m.volunteer_work_order_view_copy_label()}
+							successToast={m.volunteer_work_order_view_copied_nobody_copy_yet_toast()}
 							onsuccess={(r) => {
 								const copyId = (r as { id?: string } | undefined)?.id;
 								// The shift URL sends a project's copy on to its task page.
@@ -538,9 +543,9 @@
 								<FormField
 									field={copy.fields.offsetDays}
 									type="number"
-									label={m.volunteer_work_order_view_days_later()}
+									label={m.volunteer_work_order_view_days_later_label()}
 									value={7}
-									description={m.volunteer_work_order_view_same_role_times_capacity_later()}
+									description={m.volunteer_work_order_view_same_role_times_capacity_later_body()}
 								/>
 							{/snippet}
 						</Action>
@@ -549,19 +554,19 @@
 					{#if !calledOff}
 						<Action
 							action={cancelShift.for(shift.id)}
-							label={m.volunteer_work_order_view_cancel_shift()}
+							label={m.volunteer_work_order_view_cancel_shift_label()}
 							variant="ghost"
 							size="sm"
 							class="text-error"
-							modalTitle={m.volunteer_work_order_view_cancel_shift_2()}
-							submitLabel={m.volunteer_work_order_view_cancel_shift()}
+							modalTitle={m.volunteer_work_order_view_cancel_shift_2_title()}
+							submitLabel={m.volunteer_work_order_view_cancel_shift_label()}
 							submitVariant="error"
-							successToast={m.volunteer_work_order_view_called_off_tell_people()}
+							successToast={m.volunteer_work_order_view_called_off_tell_people_toast()}
 						>
 							{#snippet form()}
 								<input {...cancelShift.for(shift.id).fields.id.as('hidden', shift.id)} />
 								<p class="text-sm">
-									{m.volunteer_work_order_view_claims_bookings_stay_place_they()}
+									{m.volunteer_work_order_view_claims_bookings_stay_place_they_text()}
 								</p>
 							{/snippet}
 						</Action>
@@ -580,12 +585,12 @@
 	     is confirmed gets no reminders, never completes and produces no hours. -->
 	{#if shift.roleName !== null}
 		<p class="text-subtle text-sm">
-			{m.volunteer_work_order_view_confirmed_2({
+			{m.volunteer_work_order_view_confirmed_2_text({
 				length: booked.length,
 				capacity: shift.capacity
 			})}{#if unconfirmed.length > 0}
 				<Badge variant="warning" size="sm" class="ml-1">
-					{m.volunteer_work_order_view_unconfirmed({ length: unconfirmed.length })}
+					{m.volunteer_work_order_view_unconfirmed_label({ length: unconfirmed.length })}
 				</Badge>
 			{/if}
 		</p>
@@ -600,7 +605,7 @@
 	{/if}
 
 	{#if view.feedback.length > 0}
-		<InfoCard title={m.volunteer_work_order_view_how_went()}>
+		<InfoCard title={m.volunteer_work_order_view_how_went_title()}>
 			<ul class="flex flex-col gap-3">
 				{#each view.feedback as response (response.signupId)}
 					<li class="text-sm">
@@ -614,7 +619,7 @@
 							{#if !response.wasSetUp}
 								<!-- The actionable signal: enjoyment and preparedness pull
 								     apart exactly where the briefing needs work. -->
-								<Badge variant="warning">{m.volunteer_work_order_view_wasn_t_set_up()}</Badge>
+								<Badge variant="warning">{m.volunteer_work_order_view_wasn_t_set_up_label()}</Badge>
 							{/if}
 						</div>
 						{#if response.comment}

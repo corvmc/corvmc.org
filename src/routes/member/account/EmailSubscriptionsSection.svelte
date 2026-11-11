@@ -20,11 +20,13 @@
 		{#if latest.current}
 			{@const { subscriptions: subs, available: avail } = latest.current}
 			{#if subs.length === 0 && avail.length === 0}
-				<p class="text-muted">{m.member_account_email_subscriptions_section_no_mailing_lists()}</p>
+				<p class="text-muted">
+					{m.member_account_email_subscriptions_section_no_mailing_lists_text()}
+				</p>
 			{:else}
 				{#if subs.length > 0}
 					<p class="mb-2 text-subtle font-medium">
-						{m.member_account_email_subscriptions_section_subscriptions()}
+						{m.member_account_email_subscriptions_section_subscriptions_text()}
 					</p>
 					<div class="mb-4 space-y-2">
 						{#each subs as sub (sub.audienceId)}
@@ -43,7 +45,7 @@
 
 				{#if avail.length > 0}
 					<p class="mb-2 text-subtle font-medium">
-						{m.member_account_email_subscriptions_section_available_lists()}
+						{m.member_account_email_subscriptions_section_available_lists_text()}
 					</p>
 					<div class="space-y-2">
 						{#each avail as a (a.id)}
@@ -62,7 +64,7 @@
 			{/if}
 		{:else if latest.error}
 			<p class="text-sm text-error">
-				{m.member_account_email_subscriptions_section_failed_load_subsc()}
+				{m.member_account_email_subscriptions_section_failed_load_subsc_text()}
 			</p>
 		{:else}
 			<div class="flex justify-center p-4">
@@ -73,7 +75,7 @@
 
 	{#snippet failed(_error, reset)}
 		<Alert type="warning" reset={() => retryQuery(lists, reset)}>
-			{m.member_account_email_subscriptions_section_email_subscriptio()}
+			{m.member_account_email_subscriptions_section_email_subscriptio_body()}
 		</Alert>
 	{/snippet}
 </svelte:boundary>

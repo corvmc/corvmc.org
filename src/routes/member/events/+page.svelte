@@ -129,7 +129,7 @@
 
 	{#if activeTickets.length > 0}
 		<section>
-			<SectionLabel label={m.member_events_my_tickets()} count={activeTickets.length} />
+			<SectionLabel label={m.member_events_my_tickets_label()} count={activeTickets.length} />
 			<Carousel itemCount={activeTickets.length} cardWidth={360}>
 				{#each activeTickets as ticket (ticket.id)}
 					<TicketStub
@@ -152,7 +152,7 @@
 	     listed a dozen (#1025). -->
 	{#if upcoming.length > 0}
 		<section>
-			<SectionLabel label={m.member_events_at_collective()} count={upcoming.length} />
+			<SectionLabel label={m.member_events_at_collective_label()} count={upcoming.length} />
 
 			{#if allTags.length > 1}
 				<div class="mb-4">
@@ -163,7 +163,9 @@
 							class="join-item {activeFilter === null ? 'latched' : ''}"
 							onclick={() => (activeFilter = null)}
 						>
-							<ParaglideMessage message={m.member_events_all} inputs={{ length: upcoming.length }}
+							<ParaglideMessage
+								message={m.member_events_all_label}
+								inputs={{ length: upcoming.length }}
 								>{#snippet span({ children })}<span class="ml-1 opacity-60"
 										>{@render children?.()}</span
 									>{/snippet}</ParaglideMessage
@@ -215,14 +217,16 @@
 	<section>
 		{#if allEvents.length === 0}
 			<div class="py-8 text-center opacity-60">
-				<p class="text-base">{m.member_events_nothing_calendar_yet_check_back()}</p>
+				<p class="text-base">{m.member_events_nothing_calendar_yet_check_back_text()}</p>
 			</div>
 		{:else}
 			<GigList events={allEvents} eventBase="/member/events" {rsvpEventIds} />
 			{#if hasMore}
 				<div class="mt-8 text-center">
 					<Button type="button" variant="ghost" disabled={loadingMore} onclick={showMore}>
-						{loadingMore ? m.member_events_loading() : m.member_show_more_left({ remaining })}
+						{loadingMore
+							? m.member_events_loading_label()
+							: m.member_show_more_left_label({ remaining })}
 					</Button>
 				</div>
 			{/if}
@@ -231,12 +235,12 @@
 
 	{#if past.length > 0}
 		<section class="opacity-75">
-			<SectionLabel label={m.member_events_past_events()} />
+			<SectionLabel label={m.member_events_past_events_label()} />
 			<GigList events={pastRows} eventBase="/member/events" />
 			{#if !showAllPast && past.length > PAST_PREVIEW}
 				<div class="mt-4 text-center">
 					<Button type="button" variant="ghost" size="sm" onclick={() => (showAllPast = true)}>
-						{m.member_events_show_more()}
+						{m.member_events_show_more_label()}
 					</Button>
 				</div>
 			{/if}

@@ -24,7 +24,7 @@
 <PageHeader
 	width="3xl"
 	title={m.band_slug_announcements_title()}
-	subtitle={m.band_slug_announcements_subtitle()}
+	subtitle={m.band_slug_announcements_subtitle_body()}
 >
 	<!-- Null for a staff non-member, who has no roster row to mute. -->
 	{#if data.notifyAnnouncements !== null}

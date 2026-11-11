@@ -34,15 +34,15 @@
 	const fields = updateStaffGroup.fields;
 
 	const policyOptions = [
-		{ value: 'invite_only', label: m.groups_invite_only_someone_adds() },
-		{ value: 'open', label: m.groups_open_any_member_joins_themselves() },
-		{ value: 'by_application', label: m.groups_by_application_ask_chair_approves() }
+		{ value: 'invite_only', label: m.groups_invite_only_someone_adds_label() },
+		{ value: 'open', label: m.groups_open_any_member_joins_themselves_label() },
+		{ value: 'by_application', label: m.groups_by_application_ask_chair_approves_label() }
 	];
 
 	const visibilityOptions = [
-		{ value: 'public', label: m.groups_public_anyone_can_find() },
-		{ value: 'members', label: m.groups_members_signed_members_only() },
-		{ value: 'hidden', label: m.groups_hidden_not_listed_anywhere() }
+		{ value: 'public', label: m.groups_public_anyone_can_find_label() },
+		{ value: 'members', label: m.groups_members_signed_members_only_label() },
+		{ value: 'hidden', label: m.groups_hidden_not_listed_anywhere_label() }
 	];
 </script>
 
@@ -50,7 +50,7 @@
 	<Form
 		remote={updateStaffGroup}
 		guard
-		successToast={m.groups_saved()}
+		successToast={m.groups_saved_toast()}
 		onsuccess={() => refreshAll()}
 	>
 		<input {...fields.groupId.as('hidden', groupId)} />
@@ -65,31 +65,31 @@
 				<FormField
 					field={fields.joinPolicy}
 					type="select"
-					label={m.groups_group_settings_form_how_people_join()}
+					label={m.groups_group_settings_form_how_people_join_label()}
 					value={joinPolicy}
 					options={policyOptions}
-					description={m.groups_group_settings_form_invitations_work_same_way_under()}
+					description={m.groups_group_settings_form_invitations_work_same_way_under_body()}
 				/>
 			{/if}
 
 			<FormField
 				field={fields.joinInstructions}
 				type="textarea"
-				label={m.groups_group_settings_form_joining_instructions()}
+				label={m.groups_group_settings_form_joining_instructions_label()}
 				value={joinInstructions ?? ''}
-				description={m.groups_group_settings_form_shown_beside_join_button_over()}
+				description={m.groups_group_settings_form_shown_beside_join_button_over_body()}
 			/>
 
 			<FormField
 				field={fields.visibility}
 				type="select"
-				label={m.groups_visibility()}
+				label={m.groups_visibility_label()}
 				value={visibility}
 				options={visibilityOptions}
 			/>
 
 			<div class="flex justify-end">
-				<SubmitButton label={m.groups_save()} />
+				<SubmitButton label={m.groups_save_label()} />
 			</div>
 		</div>
 	</Form>

@@ -9,8 +9,8 @@
 	const { fields } = inviteByEmailApi;
 
 	const ROLE_OPTIONS = [
-		{ value: 'member', label: m.actions_member() },
-		{ value: 'admin', label: m.actions_admin() }
+		{ value: 'member', label: m.actions_member_label() },
+		{ value: 'admin', label: m.actions_admin_label() }
 	];
 
 	let {
@@ -34,8 +34,8 @@
 
 <Action
 	action={inviteByEmailApi}
-	label={m.actions_invite_by_email_invite_by_email()}
-	modalTitle={m.actions_invite_by_email_invite_by_email()}
+	label={m.actions_invite_by_email_invite_by_email_label()}
+	modalTitle={m.actions_invite_by_email_invite_by_email_title()}
 	successToast={m.actions_invite_by_email_success_toast()}
 	{variant}
 	{size}
@@ -48,26 +48,26 @@
 		<input {...fields.bandId.as('hidden', bandId)} />
 		<div class="space-y-3">
 			<p class="text-muted">
-				{m.actions_invite_by_email_invite_someone_who_doesn_t()}
+				{m.actions_invite_by_email_invite_someone_who_doesn_t_text()}
 			</p>
 			<!-- The handler raises its "already a member" rejection as an issue on
 			     `email`, which a bare input renders as `aria-invalid` and nothing else. -->
 			<FormField
 				field={fields.email}
 				type="email"
-				label={m.actions_email()}
-				placeholder={m.actions_invite_by_email_musician_example_com()}
+				label={m.actions_email_label()}
+				placeholder={m.actions_invite_by_email_musician_example_com_placeholder()}
 			/>
 			<FormField
 				field={fields.role}
 				type="select"
-				label={m.actions_role()}
+				label={m.actions_role_label()}
 				options={ROLE_OPTIONS}
 			/>
 			<FormField
 				field={fields.position}
-				label={m.actions_position_optional()}
-				placeholder={m.actions_invite_by_email_e_g_bassist()}
+				label={m.actions_position_optional_label()}
+				placeholder={m.actions_invite_by_email_e_g_bassist_placeholder()}
 			/>
 		</div>
 	{/snippet}

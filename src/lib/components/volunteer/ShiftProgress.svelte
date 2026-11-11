@@ -20,14 +20,14 @@
      thing in words — two rows for one bit of state in a 480px column (#1044). -->
 {#if booked && !worked}
 	<div class="flex items-center gap-2 text-xs">
-		<span class="font-bold text-success">{m.volunteer_shift_progress_claimed()}</span>
+		<span class="font-bold text-success">{m.volunteer_shift_progress_claimed_text()}</span>
 		<span class="text-subtle">→</span>
-		<span class="font-bold text-success">{m.volunteer_booked()}</span>
+		<span class="font-bold text-success">{m.volunteer_booked_text()}</span>
 	</div>
 {/if}
 
 <p class="mt-1 text-subtle text-sm">
-	{#if !booked}{m.volunteer_shift_progress_awaiting_staff_confirmation()}{:else if worked}{m.volunteer_shift_progress_worked_log_hours_when_get()}{:else}{m.volunteer_shift_progress_reminder_lands_day_before()}{/if}
+	{#if !booked}{m.volunteer_shift_progress_awaiting_staff_confirmation_text()}{:else if worked}{m.volunteer_shift_progress_worked_log_hours_when_get_text()}{:else}{m.volunteer_shift_progress_reminder_lands_day_before_text()}{/if}
 </p>
 
 <!-- Its own line. Spliced in front of the fixed copy, an unbounded staff note

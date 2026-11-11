@@ -43,7 +43,7 @@
 <Action
 	action={bookBandReservation}
 	label={m.band_slug_reservations_create_modal_label()}
-	modalTitle={m.band_slug_reservations_create_modal_label()}
+	modalTitle={m.band_slug_reservations_create_modal_title()}
 	data-testid="book-session"
 	noFooter
 	variant="primary"
@@ -54,9 +54,9 @@
 		if (r?.redirectUrl) {
 			await goToCheckout(r.redirectUrl);
 		} else if (r?.waitlisted) {
-			toast.info(m.band_slug_reservations_create_modal_first_instance_waitliste());
+			toast.info(m.band_slug_reservations_create_modal_first_instance_waitliste_toast());
 		} else {
-			toast.success(m.band_slug_reservations_create_modal_session_booked());
+			toast.success(m.band_slug_reservations_create_modal_session_booked_toast());
 		}
 	}}
 >

@@ -22,10 +22,10 @@
 		class:text-success={previous.inviteBack}
 		class:text-error={!previous.inviteBack}
 	>
-		{previous.inviteBack ? m.market_invite_back() : m.market_do_not_invite_back()}
+		{previous.inviteBack ? m.market_invite_back_text() : m.market_do_not_invite_back_text()}
 		<span class="text-muted">
 			· {previous.eventTitle}, {formatDate(previous.startsAt)}{previous.status === 'no_show'
-				? m.market_previous_market_note_no_show()
+				? m.market_previous_market_note_no_show_text()
 				: ''}{previous.note ? `: “${previous.note}”` : ''}
 		</span>
 	</div>

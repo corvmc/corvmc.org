@@ -29,7 +29,7 @@
 	<Card>
 		<CardBody>
 			<div class="flex flex-wrap items-center justify-between gap-2">
-				<CardTitle size="base">{m.band_slug_subscription_card_file()}</CardTitle>
+				<CardTitle size="base">{m.band_slug_subscription_card_file_title()}</CardTitle>
 				<Button
 					type="button"
 					variant="default"
@@ -38,26 +38,26 @@
 					onclick={() => (addCardOpen = true)}
 				>
 					{billing.cards.length > 0
-						? m.band_slug_subscription_replace_card()
-						: m.band_slug_subscription_add_card()}
+						? m.band_slug_subscription_replace_card_label()
+						: m.band_slug_subscription_add_card_label()}
 				</Button>
 			</div>
 
 			{#if !billing.available}
 				<p class="text-muted">
-					{m.band_slug_subscription_we_could_not_reach_our()}
+					{m.band_slug_subscription_we_could_not_reach_our_text()}
 				</p>
 			{:else if billing.cards.length === 0}
 				<p class="text-muted">
-					{m.band_slug_subscription_no_card_saved_act_renewals()}
+					{m.band_slug_subscription_no_card_saved_act_renewals_text()}
 				</p>
 			{:else}
 				{#each billing.cards as card (card.id)}
 					<p class="text-sm">
 						<ParaglideMessage
 							message={card.isDefault
-								? m.band_slug_subscription_expires_billed
-								: m.band_slug_subscription_expires}
+								? m.band_slug_subscription_expires_billed_text
+								: m.band_slug_subscription_expires_text}
 							inputs={{
 								toUpperCase: card.brand.toUpperCase(),
 								last4: card.last4,
@@ -72,7 +72,7 @@
 					</p>
 				{/each}
 				<p class="mt-2 text-muted">
-					{m.band_slug_subscription_band_s_card_not_member()}
+					{m.band_slug_subscription_band_s_card_not_member_text()}
 				</p>
 			{/if}
 

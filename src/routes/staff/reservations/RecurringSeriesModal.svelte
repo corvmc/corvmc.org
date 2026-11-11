@@ -29,9 +29,9 @@
 	const result = $derived(open ? getStaffRecurring(filters) : null);
 </script>
 
-<Button variant="ghost" size="sm" onclick={() => (open = true)}>{m.staff_recurring()}</Button>
+<Button variant="ghost" size="sm" onclick={() => (open = true)}>{m.staff_recurring_label()}</Button>
 
-<Modal bind:open title={m.staff_recurring_series()} maxWidth="max-w-3xl">
+<Modal bind:open title={m.staff_recurring_series_title()} maxWidth="max-w-3xl">
 	<div class="mb-3 w-40">
 		<Select
 			size="sm"
@@ -42,25 +42,25 @@
 				pageNo = 1;
 			}}
 		>
-			<option value="active">{m.staff_active()}</option>
-			<option value="cancelled">{m.staff_cancelled()}</option>
-			<option value="all">{m.staff_all()}</option>
+			<option value="active">{m.staff_active_label()}</option>
+			<option value="cancelled">{m.staff_cancelled_label()}</option>
+			<option value="all">{m.staff_all_label()}</option>
 		</Select>
 	</div>
 	{#if result}
 		<DataList
 			{result}
-			empty={m.staff_reservations_recurring_series_modal_empty()}
+			empty={m.staff_reservations_recurring_series_modal_empty_body()}
 			onpage={(p) => (pageNo = p)}
 		>
 			{#snippet children(series)}
 				<Table>
 					{#snippet head()}
-						<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-						<th>{m.staff_reservations_recurring_series_modal_series()}</th>
-						<th>{m.staff_booker()}</th>
-						<th class="col-support whitespace-nowrap">{m.staff_starts()}</th>
-						<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+						<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+						<th>{m.staff_reservations_recurring_series_modal_series_label()}</th>
+						<th>{m.staff_booker_label()}</th>
+						<th class="col-support whitespace-nowrap">{m.staff_starts_label()}</th>
+						<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 					{/snippet}
 
 					{#each series as s (s.id)}
@@ -86,8 +86,8 @@
 										action={cancelStaffSeries}
 										label={m.staff_reservations_recurring_series_modal_label()}
 										iconOnly
-										modalTitle={m.staff_confirm()}
-										successToast={m.staff_series_cancelled()}
+										modalTitle={m.staff_confirm_title()}
+										successToast={m.staff_series_cancelled_toast()}
 										onsuccess={() => void getStaffRecurring(filters).refresh()}
 										variant="ghost"
 										size="sm"
@@ -98,7 +98,7 @@
 										{#snippet form()}
 											<input {...cancelFields.seriesId.as('hidden', s.id)} />
 											<p class="py-4">
-												{m.staff_cancel_recurring_series_next_session()}
+												{m.staff_cancel_recurring_series_next_session_text()}
 											</p>
 										{/snippet}
 									</Action>

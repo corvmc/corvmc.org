@@ -27,14 +27,18 @@
 
 {#if sale.status === 'paid'}
 	<Alert type="success">
-		{m.member_volunteer_door_door_sale_status_paid_tickets_checked({ quantity: sale.quantity })}
+		{m.member_volunteer_door_door_sale_status_paid_tickets_checked_body({
+			quantity: sale.quantity
+		})}
 	</Alert>
 {:else if sale.status === 'cancelled'}
-	<Alert type="warning">{m.member_volunteer_door_door_sale_status_sale_was_cancelled_no()}</Alert>
+	<Alert type="warning"
+		>{m.member_volunteer_door_door_sale_status_sale_was_cancelled_no_body()}</Alert
+	>
 {:else if attempts >= RETRY_LIMIT}
 	<Alert type="warning">
-		{m.member_volunteer_door_door_sale_status_card_was_accepted_but()}
+		{m.member_volunteer_door_door_sale_status_card_was_accepted_but_body()}
 	</Alert>
 {:else}
-	<Alert>{m.member_volunteer_door_door_sale_status_card_accepted_recordi()}</Alert>
+	<Alert>{m.member_volunteer_door_door_sale_status_card_accepted_recordi_body()}</Alert>
 {/if}

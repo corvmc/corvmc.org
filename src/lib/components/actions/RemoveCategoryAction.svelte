@@ -28,8 +28,8 @@
 
 <Action
 	action={removeCategory}
-	label={m.actions_delete()}
-	modalTitle={m.actions_confirm()}
+	label={m.actions_delete_label()}
+	modalTitle={m.actions_confirm_title()}
 	successToast={m.actions_remove_category_success_toast()}
 	{variant}
 	{size}
@@ -39,6 +39,6 @@
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', categoryId)} />
-		<p class="py-4">{m.actions_remove_category_delete_category_must_have_no({ name })}</p>
+		<p class="py-4">{m.actions_remove_category_delete_category_must_have_no_text({ name })}</p>
 	{/snippet}
 </Action>

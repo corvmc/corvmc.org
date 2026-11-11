@@ -84,12 +84,18 @@
 
 <PageHeader
 	width="3xl"
-	title={orderId ? m.staff_inventory_intake_receive_order() : m.staff_receive_stock()}
-	subtitle={m.staff_inventory()}
+	title={orderId ? m.staff_inventory_intake_receive_order_title() : m.staff_receive_stock_title()}
+	subtitle={m.staff_inventory_body()}
 	parent={orderId
 		? [
-				{ label: m.staff_order(), href: withQuery(resolve('staff/inventory'), 'show=on-order') },
-				{ label: m.staff_order_2(), href: resolve('/staff/inventory/orders/[id]', { id: orderId }) }
+				{
+					label: m.staff_order_label(),
+					href: withQuery(resolve('staff/inventory'), 'show=on-order')
+				},
+				{
+					label: m.staff_order_2_label(),
+					href: resolve('/staff/inventory/orders/[id]', { id: orderId })
+				}
 			]
 		: []}
 />
@@ -97,26 +103,26 @@
 <PageContent width="3xl">
 	{#if data.order}
 		<Alert type="info" class="mb-4">
-			{m.staff_inventory_intake_receiving_against_partial_deliveries({
-				supplierName: data.order.supplierName ?? m.staff_inventory_intake_order()
+			{m.staff_inventory_intake_receiving_against_partial_deliveries_body({
+				supplierName: data.order.supplierName ?? m.staff_inventory_intake_order_text()
 			})}
 		</Alert>
 	{:else}
 		<Alert type="info" class="mb-4">
-			{m.staff_inventory_intake_one_trip_one_receipt_however()}
+			{m.staff_inventory_intake_one_trip_one_receipt_however_body()}
 		</Alert>
 	{/if}
 
 	{#if data.pledges.length > 0}
 		<!-- Who said they would bring what. Linking the gear request, or naming
 		     the donor on a donation that includes the item, closes the pledge. -->
-		<InfoCard title={m.staff_inventory_intake_promised_by_donors()} class="mb-6">
+		<InfoCard title={m.staff_inventory_intake_promised_by_donors_title()} class="mb-6">
 			<ul class="flex flex-col gap-2">
 				{#each data.pledges as p (p.id)}
 					<li class="flex flex-wrap justify-between gap-2">
 						<span><strong>{p.entryName}</strong> — {p.donorName}</span>
 						<span class="text-subtle"
-							>{m.staff_inventory_intake_until({ formatDate: formatDate(p.expiresAt) })}</span
+							>{m.staff_inventory_intake_until_text({ formatDate: formatDate(p.expiresAt) })}</span
 						>
 					</li>
 				{/each}
@@ -140,22 +146,22 @@
 			<input {...fields.purchaseOrderId.as('hidden', orderId)} />
 		{/if}
 		<div class="space-y-6">
-			<InfoCard title={m.staff_inventory_intake_trip()}>
+			<InfoCard title={m.staff_inventory_intake_trip_title()}>
 				<div class="grid gap-3 md:grid-cols-2">
 					<Field
 						field={fields.kind}
 						type="select"
-						label={m.staff_how_arrived()}
+						label={m.staff_how_arrived_label()}
 						bind:value={kind}
 						options={acquisitionKinds.map((k) => ({ value: k, label: acquisitionKindLabels[k] }))}
 					/>
 					<Field
 						field={fields.occurredAt}
 						type="date"
-						label={m.staff_when_arrived()}
+						label={m.staff_when_arrived_label()}
 						value={clubToday()}
 						description={kind === 'opening_balance'
-							? m.staff_inventory_intake_guess_fine_nothing_counts_opening()
+							? m.staff_inventory_intake_guess_fine_nothing_counts_opening_body()
 							: undefined}
 					/>
 				</div>
@@ -164,30 +170,30 @@
 					<Field
 						field={fields.sourceName}
 						type="text"
-						label={kind === 'purchase' ? m.staff_supplier() : m.staff_donor_grantor()}
+						label={kind === 'purchase' ? m.staff_supplier_label() : m.staff_donor_grantor_label()}
 					/>
 				{/if}
-				<Field field={fields.reference} type="text" label={m.staff_reference_receipt_no()} />
+				<Field field={fields.reference} type="text" label={m.staff_reference_receipt_no_label()} />
 
 				{#if data.plannedGear.length > 0}
 					<Field
 						field={fields.suggestionId}
 						type="select"
-						label={m.staff_inventory_intake_fulfils_gear_request()}
+						label={m.staff_inventory_intake_fulfils_gear_request_label()}
 						bind:value={suggestionId}
 						placeholder={m.staff_inventory_intake_placeholder()}
 						options={data.plannedGear.map((g) => ({
 							value: g.id,
 							label: `${g.title} (${g.voteCount} ${g.voteCount === 1 ? 'vote' : 'votes'})`
 						}))}
-						description={m.staff_inventory_intake_marks_request_done_tells_whoever()}
+						description={m.staff_inventory_intake_marks_request_done_tells_whoever_body()}
 					/>
 				{/if}
 
 				<MoneyField
 					field={fields.totalCents}
-					label={m.staff_receipt_total()}
-					description={m.staff_inventory_intake_what_paperwork_says_enough_its()}
+					label={m.staff_receipt_total_label()}
+					description={m.staff_inventory_intake_what_paperwork_says_enough_its_body()}
 				/>
 
 				{#if isGift}
@@ -199,7 +205,7 @@
 						field={fields.donorUserId}
 						bind:value={donorUserId}
 						bind:name={donorName}
-						label={m.staff_donated_by()}
+						label={m.staff_donated_by_label()}
 					/>
 				{/if}
 
@@ -208,31 +214,34 @@
 						field={fields.paidByUserId}
 						bind:value={paidByUserId}
 						bind:name={paidByName}
-						label={m.staff_inventory_intake_paid_by_owed_back_leave()}
+						label={m.staff_inventory_intake_paid_by_owed_back_leave_label()}
 					/>
 				{/if}
 
-				<LocationField field={fields.locationId} label={m.staff_inventory_intake_where_going()} />
-				<Field field={fields.notes} type="textarea" label={m.staff_notes()} />
+				<LocationField
+					field={fields.locationId}
+					label={m.staff_inventory_intake_where_going_label()}
+				/>
+				<Field field={fields.notes} type="textarea" label={m.staff_notes_label()} />
 
 				{#if isGift}
 					<Alert type="warning" class="mt-3">
-						{m.staff_inventory_intake_gift_owes_fair_value_basis()}
+						{m.staff_inventory_intake_gift_owes_fair_value_basis_body()}
 					</Alert>
 				{/if}
 			</InfoCard>
 
-			<InfoCard title={m.staff_what_arrived()}>
+			<InfoCard title={m.staff_what_arrived_title()}>
 				<IntakeLines {items} bind:lines />
 				{#if lines.length === 0}
 					<p class="mt-2 text-subtle">
-						{m.staff_inventory_intake_optional_record_total_receipt_now()}
+						{m.staff_inventory_intake_optional_record_total_receipt_now_text()}
 					</p>
 				{/if}
 			</InfoCard>
 
 			<div>
-				<SubmitButton label={m.staff_inventory_intake_record_arrival()} />
+				<SubmitButton label={m.staff_inventory_intake_record_arrival_label()} />
 			</div>
 		</div>
 	</Form>

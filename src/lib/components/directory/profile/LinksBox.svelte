@@ -60,7 +60,7 @@
 	<ProfileSection title={m.directory_profile_links_box_title()}>
 		<div class="links-box">
 			{#if streaming.length > 0}
-				<p class="links-box__group">{m.directory_profile_links_box_listen()}</p>
+				<p class="links-box__group">{m.directory_profile_links_box_listen_text()}</p>
 				<div class="links-box__ribbon">
 					{#each streaming as item (item.link.url)}
 						{@const Icon = item.icon}
@@ -79,7 +79,7 @@
 			{/if}
 
 			{#if web.length > 0}
-				<p class="links-box__group">{m.directory_profile_links_box_web()}</p>
+				<p class="links-box__group">{m.directory_profile_links_box_web_text()}</p>
 				<div class="links-box__rows">
 					{#each web as item (item.link.url)}
 						{@const Icon = item.icon}

@@ -27,60 +27,60 @@
 
 <Action
 	action={scheduleWorkOrder.for(order.id)}
-	label={m.staff_schedule()}
+	label={m.staff_schedule_label()}
 	variant="primary"
 	size="xs"
-	modalTitle={m.staff_volunteer_needs_scheduling_card_find_time({ value: label })}
-	submitLabel={m.staff_schedule()}
-	successToast={m.staff_scheduled()}
+	modalTitle={m.staff_volunteer_needs_scheduling_card_find_time_title({ value: label })}
+	submitLabel={m.staff_schedule_label()}
+	successToast={m.staff_scheduled_toast()}
 	{onsuccess}
 >
 	{#snippet form()}
 		<input {...scheduleWorkOrder.for(order.id).fields.id.as('hidden', order.id)} />
 		<p class="text-sm">
-			{m.staff_volunteer_needs_scheduling_card_once_has_window_appear()}
+			{m.staff_volunteer_needs_scheduling_card_once_has_window_appear_text()}
 		</p>
 		<FormField
 			field={scheduleWorkOrder.for(order.id).fields.startsAt}
-			label={m.staff_starts()}
+			label={m.staff_starts_label()}
 			type="datetime-local"
 			value={toLocalDateTime(start)}
 		/>
 		<FormField
 			field={scheduleWorkOrder.for(order.id).fields.endsAt}
-			label={m.staff_ends()}
+			label={m.staff_ends_label()}
 			type="datetime-local"
 			value={toLocalDateTime(new Date(start.getTime() + 2 * 3_600_000))}
 		/>
 		<FormField
 			field={scheduleWorkOrder.for(order.id).fields.closeReportsOnCompletion}
 			type="checkbox"
-			checkboxLabel={m.staff_volunteer_needs_scheduling_card_checkbox_label()}
-			description={m.staff_volunteer_needs_scheduling_card_description()}
+			checkboxLabel={m.staff_volunteer_needs_scheduling_card_checkbox_label_checkbox()}
+			description={m.staff_volunteer_needs_scheduling_card_description_body()}
 		/>
 	{/snippet}
 </Action>
 
 <Action
 	action={resolveWorkOrder.for(order.id)}
-	label={m.staff_volunteer_needs_scheduling_card_close_work_order()}
+	label={m.staff_volunteer_needs_scheduling_card_close_work_order_label()}
 	iconOnly
 	icon={doneIcon}
 	variant="ghost"
 	size="xs"
-	modalTitle={m.staff_volunteer_needs_scheduling_card_close({ value: label })}
-	submitLabel={m.staff_volunteer_needs_scheduling_card_close_work_order()}
-	successToast={m.staff_closed()}
+	modalTitle={m.staff_volunteer_needs_scheduling_card_close_title({ value: label })}
+	submitLabel={m.staff_volunteer_needs_scheduling_card_close_work_order_label()}
+	successToast={m.staff_closed_toast()}
 	{onsuccess}
 >
 	{#snippet form()}
 		<input {...resolveWorkOrder.for(order.id).fields.id.as('hidden', order.id)} />
 		<p class="text-sm">
-			{m.staff_volunteer_needs_scheduling_card_says_work_finished_whi()}
+			{m.staff_volunteer_needs_scheduling_card_says_work_finished_whi_text()}
 		</p>
 		<FormField
 			field={resolveWorkOrder.for(order.id).fields.notes}
-			label={m.staff_what_happened()}
+			label={m.staff_what_happened_label()}
 			type="textarea"
 		/>
 	{/snippet}

@@ -37,12 +37,12 @@
 	label={m.actions_mark_reimbursed_label()}
 	modalTitle={m.actions_mark_reimbursed_modal_title()}
 	confirm={amountCents
-		? m.actions_mark_reimbursed_confirm_amount({
-				name: paidByName ?? m.actions_mark_reimbursed_whoever_paid(),
+		? m.actions_mark_reimbursed_confirm_amount_body({
+				name: paidByName ?? m.actions_mark_reimbursed_whoever_paid_text(),
 				amount: formatCents(amountCents)
 			})
-		: m.actions_mark_reimbursed_confirm({
-				name: paidByName ?? m.actions_mark_reimbursed_whoever_paid()
+		: m.actions_mark_reimbursed_confirm_body({
+				name: paidByName ?? m.actions_mark_reimbursed_whoever_paid_text()
 			})}
 	successToast={m.actions_mark_reimbursed_success_toast()}
 	{variant}

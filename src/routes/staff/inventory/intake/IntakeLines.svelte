@@ -41,7 +41,7 @@
 	const itemById = $derived(new Map(items.map((i) => [i.id, i])));
 
 	const options = $derived([
-		{ value: '', label: m.staff_inventory_intake_intake_lines_pick_item() },
+		{ value: '', label: m.staff_inventory_intake_intake_lines_pick_item_label() },
 		...items.map((i) => ({
 			value: i.id,
 			label: i.categoryName ? `${i.categoryName} → ${i.name}` : i.name
@@ -134,7 +134,7 @@
 				<Field
 					id="lineItem_{index}"
 					type="select"
-					label={m.staff_item()}
+					label={m.staff_item_label()}
 					{options}
 					bind:value={line.itemId}
 					onchange={() => syncUnits(line)}
@@ -142,7 +142,7 @@
 				<Field
 					id="lineQty_{index}"
 					type="number"
-					label={m.staff_quantity()}
+					label={m.staff_quantity_label()}
 					min="1"
 					bind:value={line.quantity}
 					onchange={() => syncUnits(line)}
@@ -151,7 +151,7 @@
 					<Field
 						id="lineCost_{index}"
 						type="text"
-						label={m.staff_inventory_intake_intake_lines_each()}
+						label={m.staff_inventory_intake_intake_lines_each_label()}
 						bind:value={line.unitCost}
 					/>
 				</div>
@@ -171,27 +171,27 @@
 			{#if isSerialized(line) && line.units.length > 0}
 				<div class="mt-3 space-y-2">
 					<p class="text-subtle text-sm">
-						{m.staff_inventory_intake_intake_lines_one_row_per_unit_blank()}
+						{m.staff_inventory_intake_intake_lines_one_row_per_unit_blank_text()}
 					</p>
 					{#each line.units as unit, u (u)}
 						<div class="grid gap-2 md:grid-cols-3">
 							<Field
 								id="unitTag_{index}_{u}"
 								type="text"
-								label={u === 0 ? m.staff_asset_tag() : undefined}
-								placeholder={m.staff_cmc_000123()}
+								label={u === 0 ? m.staff_asset_tag_label() : undefined}
+								placeholder={m.staff_cmc_000123_placeholder()}
 								bind:value={unit.assetTag}
 							/>
 							<Field
 								id="unitSerial_{index}_{u}"
 								type="text"
-								label={u === 0 ? m.staff_serial() : undefined}
+								label={u === 0 ? m.staff_serial_label() : undefined}
 								bind:value={unit.serialNumber}
 							/>
 							<Field
 								id="unitCondition_{index}_{u}"
 								type="select"
-								label={u === 0 ? m.staff_condition() : undefined}
+								label={u === 0 ? m.staff_condition_label() : undefined}
 								options={conditionOptions}
 								bind:value={unit.condition}
 							/>
@@ -204,7 +204,7 @@
 
 	<Button type="button" variant="ghost" size="sm" data-testid="add-intake-line" onclick={addLine}>
 		<IconPlus size={16} />
-		{m.staff_add_line()}
+		{m.staff_add_line_label()}
 	</Button>
 </div>
 
@@ -212,14 +212,16 @@
 <StickyBar class="mt-4 flex flex-wrap items-center gap-3">
 	<span
 		><ParaglideMessage
-			message={m.staff_inventory_intake_intake_lines_lines}
+			message={m.staff_inventory_intake_intake_lines_lines_text}
 			inputs={{ length: lines.filter((l) => l.itemId).length }}
 			>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 				>{/snippet}</ParaglideMessage
 		></span
 	>
 	<span
-		><ParaglideMessage message={m.staff_inventory_intake_intake_lines_units} inputs={{ unitTotal }}
+		><ParaglideMessage
+			message={m.staff_inventory_intake_intake_lines_units_text}
+			inputs={{ unitTotal }}
 			>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 				>{/snippet}</ParaglideMessage
 		></span
@@ -227,7 +229,7 @@
 	<span><strong>{formatCents(valueTotal)}</strong></span>
 	{#if needsTagging > 0}
 		<Badge variant="warning" size="sm"
-			>{m.staff_inventory_intake_intake_lines_will_need_tagging({ needsTagging })}</Badge
+			>{m.staff_inventory_intake_intake_lines_will_need_tagging_label({ needsTagging })}</Badge
 		>
 	{/if}
 </StickyBar>

@@ -18,6 +18,6 @@
      source, cost, quantities, each unit's tag — as one acquisition (#1838). -->
 {#if hasCapability(caps, 'inventory.manageStock')}
 	<Button variant="ghost" size="sm" href={resolve('staff/inventory/intake')}
-		>{m.staff_receive_stock()}</Button
+		>{m.staff_receive_stock_label()}</Button
 	>
 {/if}

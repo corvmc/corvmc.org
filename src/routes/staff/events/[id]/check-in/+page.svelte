@@ -37,7 +37,7 @@
 
 <PageHeader
 	width="3xl"
-	title={m.staff_events_id_check_in_check({ title: data.event.title })}
+	title={m.staff_events_id_check_in_check_title({ title: data.event.title })}
 	crumb="Check-in"
 	parent={{ label: data.event.title, href: resolve('/staff/events/[id]', { id: data.event.id }) }}
 />
@@ -45,13 +45,13 @@
 	<!-- Stats -->
 	<div class="flex gap-6">
 		<StatCard
-			title={m.staff_events_id_check_in_checked()}
+			title={m.staff_events_id_check_in_checked_title()}
 			value={data.stats.checkedIn}
 			size="sm"
 			class="p-4"
 		/>
 		<StatCard
-			title={m.staff_events_id_check_in_tickets_sold()}
+			title={m.staff_events_id_check_in_tickets_sold_title()}
 			value={data.stats.sold}
 			size="sm"
 			class="p-4"
@@ -113,8 +113,8 @@
 		{#if filteredTickets.length === 0}
 			<p class="py-8 text-center opacity-50">
 				{search
-					? m.staff_events_id_check_in_no_tickets_match_search()
-					: m.staff_events_id_check_in_no_tickets_check()}
+					? m.staff_events_id_check_in_no_tickets_match_search_text()
+					: m.staff_events_id_check_in_no_tickets_check_text()}
 			</p>
 		{/if}
 	</div>

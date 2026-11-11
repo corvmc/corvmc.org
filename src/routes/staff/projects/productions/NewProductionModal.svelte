@@ -43,44 +43,48 @@
 	}
 </script>
 
-<Modal bind:open title={m.staff_new_production()} maxWidth="max-w-md">
+<Modal bind:open title={m.staff_new_production_title()} maxWidth="max-w-md">
 	{#if listings === null}
 		<div class="flex items-center justify-center p-8">
 			<span class="loading loading-md loading-spinner"></span>
 		</div>
 	{:else if listings.length === 0}
-		<p class="text-muted">{m.staff_projects_productions_new_production_modal_no_show_cale()}</p>
+		<p class="text-muted">
+			{m.staff_projects_productions_new_production_modal_no_show_cale_text()}
+		</p>
 		<div class="modal-action">
 			<Button type="button" variant="ghost" onclick={() => (open = false)}
-				>{m.staff_cancel()}</Button
+				>{m.staff_cancel_label()}</Button
 			>
 			<Button type="button" variant="primary" onclick={createListing}
-				>{m.staff_projects_productions_new_production_modal_create_listi()}</Button
+				>{m.staff_projects_productions_new_production_modal_create_listi_label()}</Button
 			>
 		</div>
 	{:else}
 		<Form
 			remote={createProduction}
-			successToast={m.staff_projects_productions_new_production_modal_success_toas()}
+			successToast={m.staff_projects_productions_new_production_modal_success_toas_toast()}
 			onsuccess={handleSuccess}
 			class="space-y-4"
 		>
 			<Field
 				field={createProduction.fields.eventId}
 				type="select"
-				label={m.staff_listing()}
+				label={m.staff_listing_label()}
 				bind:value={eventId}
 				options={listings.map((l) => ({
 					value: l.id,
 					label: `${l.title} · ${formatDateTimeShort(l.startsAt)}`
 				}))}
-				description={m.staff_projects_productions_new_production_modal_description()}
+				description={m.staff_projects_productions_new_production_modal_description_body()}
 			/>
 			<div class="modal-action">
 				<Button type="button" variant="ghost" onclick={createListing}
-					>{m.staff_projects_productions_new_production_modal_create_listi()}</Button
+					>{m.staff_projects_productions_new_production_modal_create_listi_label()}</Button
 				>
-				<SubmitButton label={m.staff_projects_productions_new_production_modal_open_product()} />
+				<SubmitButton
+					label={m.staff_projects_productions_new_production_modal_open_product_label()}
+				/>
 			</div>
 		</Form>
 	{/if}
@@ -89,6 +93,6 @@
 <CreateEventModal
 	bind:open={creating}
 	production
-	title={m.staff_new_production()}
-	submitLabel={m.staff_create_listing()}
+	title={m.staff_new_production_title()}
+	submitLabel={m.staff_create_listing_label()}
 />

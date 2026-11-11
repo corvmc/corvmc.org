@@ -29,7 +29,7 @@
 <Action
 	action={bulkAddMembers}
 	label={m.actions_bulk_add_members_label()}
-	modalTitle={m.actions_confirm()}
+	modalTitle={m.actions_confirm_title()}
 	successToast={m.actions_bulk_add_members_success_toast()}
 	{variant}
 	{size}
@@ -40,6 +40,6 @@
 >
 	{#snippet form()}
 		<input {...fields.audienceId.as('hidden', audienceId)} />
-		<p class="py-4">{m.actions_bulk_add_members_add_all_active_members_audience()}</p>
+		<p class="py-4">{m.actions_bulk_add_members_add_all_active_members_audience_text()}</p>
 	{/snippet}
 </Action>

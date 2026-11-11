@@ -89,8 +89,8 @@
 		<ThreadHeader
 			{title}
 			subtitle={t.kind === 'direct'
-				? m.member_messages_id_conversation_with_another_member()
-				: m.member_messages_id_conversation_with_corvmc_staff()}
+				? m.member_messages_id_conversation_with_another_member_body()
+				: m.member_messages_id_conversation_with_corvmc_staff_body()}
 			backHref="/member/messages"
 		>
 			{#snippet actions()}
@@ -100,7 +100,7 @@
 
 		<div class="min-h-0 flex-1 overflow-y-auto">
 			{#if t.kind === 'direct' && t.counterpartDeleted}
-				<Alert type="info">{m.member_messages_id_member_s_account_no_longer()}</Alert>
+				<Alert type="info">{m.member_messages_id_member_s_account_no_longer_body()}</Alert>
 			{/if}
 
 			<ThreadTimeline messages={t.messages} viewerUserId={t.viewerUserId} />
@@ -114,18 +114,18 @@
 				<Card bordered>
 					<CardBody padding="sm" class="gap-3">
 						<p class="text-muted">
-							{m.member_messages_id_would_like_start_conversation_with({
-								counterpartName: t.counterpartName ?? m.member_messages_id_member()
+							{m.member_messages_id_would_like_start_conversation_with_text({
+								counterpartName: t.counterpartName ?? m.member_messages_id_member_text()
 							})}
 						</p>
 						<div class="flex flex-wrap items-center gap-2">
 							<Form
 								remote={acceptDirectRequest}
-								successToast={m.member_messages_id_request_accepted()}
+								successToast={m.member_messages_id_request_accepted_toast()}
 								onsuccess={refreshConversations}
 							>
 								<input {...acceptDirectRequest.fields.threadId.as('hidden', t.id)} />
-								<SubmitButton label={m.member_accept()} variant="primary" size="sm">
+								<SubmitButton label={m.member_accept_label()} variant="primary" size="sm">
 									{#snippet icon()}<IconCheck size={16} />{/snippet}
 								</SubmitButton>
 							</Form>
@@ -135,11 +135,11 @@
 						     request, which is what makes saying no cost nothing. -->
 							<Form
 								remote={declineDirectRequest}
-								successToast={m.member_messages_id_request_declined()}
+								successToast={m.member_messages_id_request_declined_toast()}
 								onsuccess={refreshConversations}
 							>
 								<input {...declineDirectRequest.fields.threadId.as('hidden', t.id)} />
-								<SubmitButton label={m.member_decline()} variant="ghost" size="sm">
+								<SubmitButton label={m.member_decline_label()} variant="ghost" size="sm">
 									{#snippet icon()}<IconX size={16} />{/snippet}
 								</SubmitButton>
 							</Form>
@@ -150,12 +150,12 @@
 				</Card>
 			{:else if blocked}
 				<Alert type="info">
-					{m.member_messages_id_conversation_closed_can_still_read()}
+					{m.member_messages_id_conversation_closed_can_still_read_body()}
 				</Alert>
 			{:else if closed}
 				<Alert type="info">
-					{m.member_messages_id_conversation_has_been_closed()}
-					{#if t.kind === 'staff'}{m.member_messages_id_start_new_message_if_need()}{/if}
+					{m.member_messages_id_conversation_has_been_closed_body()}
+					{#if t.kind === 'staff'}{m.member_messages_id_start_new_message_if_need_body()}{/if}
 				</Alert>
 			{:else}
 				<!-- No noteForm: internal notes are staff-private, so the shared composer
@@ -175,11 +175,16 @@
 					<ReportDirectThreadAction threadId={t.id} />
 					<Form
 						remote={blockFromThread}
-						successToast={m.member_messages_id_blocked()}
+						successToast={m.member_messages_id_blocked_toast()}
 						onsuccess={refreshConversations}
 					>
 						<input {...blockFromThread.fields.threadId.as('hidden', t.id)} />
-						<SubmitButton label={m.member_messages_id_block()} variant="error" size="sm" outline>
+						<SubmitButton
+							label={m.member_messages_id_block_label()}
+							variant="error"
+							size="sm"
+							outline
+						>
 							{#snippet icon()}<IconBan size={16} />{/snippet}
 						</SubmitButton>
 					</Form>

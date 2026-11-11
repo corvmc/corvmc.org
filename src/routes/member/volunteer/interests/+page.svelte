@@ -44,7 +44,11 @@
 	});
 </script>
 
-<PageHeader width="md" title={m.member_preferred_roles()} subtitle={m.member_volunteering()} />
+<PageHeader
+	width="md"
+	title={m.member_preferred_roles_title()}
+	subtitle={m.member_volunteering_body()}
+/>
 
 <PageContent width="md">
 	{#if pageData.current}
@@ -53,10 +57,10 @@
 			<CardBody>
 				{#if roleOptions.length === 0}
 					<p class="text-muted">
-						{m.member_volunteer_interests_no_volunteer_roles_open_right()}
+						{m.member_volunteer_interests_no_volunteer_roles_open_right_text()}
 					</p>
 					<a href={resolve('member/volunteer')} class="link text-sm"
-						>{m.member_volunteer_interests_go_volunteering()}</a
+						>{m.member_volunteer_interests_go_volunteering_text()}</a
 					>
 				{:else}
 					<!--
@@ -79,14 +83,16 @@
 						<div class="flex items-center justify-between gap-3">
 							<Button href={resolve('member/volunteer')} variant="ghost" size="sm">
 								{onboarding
-									? m.member_volunteer_interests_skip()
-									: m.member_volunteer_interests_back()}
+									? m.member_volunteer_interests_skip_label()
+									: m.member_volunteer_interests_back_label()}
 							</Button>
 							<!-- Disabled until something changes, and it says "Saved" after —
 						     which is what makes a page you can leave open feel settled. -->
 							<SubmitButton
-								label={onboarding ? m.member_volunteer_interests_finish() : m.member_save()}
-								successLabel={m.member_saved()}
+								label={onboarding
+									? m.member_volunteer_interests_finish_label()
+									: m.member_save_label()}
+								successLabel={m.member_saved_label()}
 								variant="primary"
 							/>
 						</div>

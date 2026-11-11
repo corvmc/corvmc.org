@@ -16,7 +16,7 @@
 		hasMore = false,
 		onmore,
 		empty,
-		label = m.ui_activity(),
+		label = m.ui_activity_label(),
 		trailing
 	}: {
 		rows: T[];
@@ -74,6 +74,6 @@
 		{/each}
 	</ol>
 	{#if hasMore && onmore}
-		<Button size="sm" variant="ghost" onclick={onmore}>{m.ui_feed_show_older()}</Button>
+		<Button size="sm" variant="ghost" onclick={onmore}>{m.ui_feed_show_older_label()}</Button>
 	{/if}
 {/if}

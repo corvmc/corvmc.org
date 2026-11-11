@@ -19,18 +19,18 @@
 		try {
 			const list = uniqueEmails(typeof emails === 'function' ? await emails() : emails);
 			if (list.length === 0) {
-				toast.info(m.roster_copy_emails_button_no_email_addresses());
+				toast.info(m.roster_copy_emails_button_no_email_addresses_toast());
 				return;
 			}
 			await navigator.clipboard.writeText(list.join(', '));
 			toast.success(
-				m.roster_copy_emails_button_copied({
+				m.roster_copy_emails_button_copied_toast({
 					length: list.length,
 					value: list.length === 1 ? 'address' : 'addresses'
 				})
 			);
 		} catch {
-			toast.error(m.roster_copy_emails_button_couldn_t_copy());
+			toast.error(m.roster_copy_emails_button_couldn_t_copy_toast());
 		} finally {
 			copying = false;
 		}
@@ -39,5 +39,5 @@
 
 <Button variant="ghost" size="sm" onclick={copy} disabled={copying}>
 	<IconCopy size={16} />
-	{m.roster_copy_emails_button_copy_emails()}
+	{m.roster_copy_emails_button_copy_emails_label()}
 </Button>

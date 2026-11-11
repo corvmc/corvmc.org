@@ -32,18 +32,18 @@
 			{#if certOptions.length > 0}
 				<Action
 					action={setRoleCertifications}
-					label={m.staff_edit()}
+					label={m.staff_edit_label()}
 					variant="ghost"
 					size="sm"
 					modalTitle={m.staff_volunteer_roles_id_role_requirements_card_modal_title({
 						name: role.name
 					})}
-					successToast={m.staff_volunteer_roles_id_role_requirements_card_success_toas()}
+					successToast={m.staff_volunteer_roles_id_role_requirements_card_success_toas_toast()}
 				>
 					{#snippet form()}
 						<input {...setRoleCertifications.fields.roleId.as('hidden', role.id)} />
 						<p class="text-muted">
-							{m.staff_volunteer_roles_id_role_requirements_card_someone_must()}
+							{m.staff_volunteer_roles_id_role_requirements_card_someone_must_text()}
 						</p>
 						<CheckboxGroup
 							field={setRoleCertifications.fields.certificationIds}
@@ -52,7 +52,7 @@
 								value: c.id,
 								label: c.name,
 								description:
-									c.issuedBy ?? m.staff_volunteer_roles_id_role_requirements_card_description()
+									c.issuedBy ?? m.staff_volunteer_roles_id_role_requirements_card_description_body()
 							}))}
 						/>
 					{/snippet}
@@ -62,7 +62,9 @@
 	{/snippet}
 
 	{#if held.length === 0}
-		<p class="text-muted">{m.staff_volunteer_roles_id_role_requirements_card_anyone_can_c()}</p>
+		<p class="text-muted">
+			{m.staff_volunteer_roles_id_role_requirements_card_anyone_can_c_text()}
+		</p>
 	{:else}
 		<ul class="space-y-2 text-sm">
 			{#each held as cert (cert.id)}
@@ -70,7 +72,7 @@
 					<span class="font-medium">{cert.name}</span>
 					<span class="opacity-60"
 						>· {cert.issuedBy ??
-							m.staff_volunteer_roles_id_role_requirements_card_granted_by_c()}</span
+							m.staff_volunteer_roles_id_role_requirements_card_granted_by_c_text()}</span
 					>
 				</li>
 			{/each}

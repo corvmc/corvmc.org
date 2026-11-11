@@ -60,12 +60,16 @@
 
 <!-- `3xl`, not `2xl`: 672px split into two columns is ~320px each, which
      wrapped every category name and description (#1045). -->
-<PageHeader width="3xl" title={m.member_help_center()} subtitle={m.member_help_subtitle()} />
+<PageHeader
+	width="3xl"
+	title={m.member_help_center_title()}
+	subtitle={m.member_help_subtitle_body()}
+/>
 <PageContent width="3xl">
 	<HelpSearch onselect={handleSelect} />
 
 	{#if categories.length === 0}
-		<EmptyState message={m.member_help_message()} />
+		<EmptyState message={m.member_help_message_body()} />
 	{:else}
 		<div class="grid gap-4 sm:grid-cols-2">
 			{#each categories as category (category.id)}
@@ -106,11 +110,11 @@
 								<!-- A count, not a link: there is no per-category page to go
 								     to, and the search above is how the rest are found. -->
 								<p class="mt-2 text-subtle text-sm">
-									{m.member_help_more({ value: category.articles.length - ARTICLES_SHOWN })}
+									{m.member_help_more_text({ value: category.articles.length - ARTICLES_SHOWN })}
 								</p>
 							{/if}
 						{:else}
-							<p class="mt-3 text-subtle italic">{m.member_help_no_articles_yet()}</p>
+							<p class="mt-3 text-subtle italic">{m.member_help_no_articles_yet_text()}</p>
 						{/if}
 					</CardBody>
 				</Card>

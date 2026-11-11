@@ -24,7 +24,7 @@
 	const { fields } = createLocalResourceForm;
 </script>
 
-<PageHeader title={m.staff_local_resources()} subtitle={m.staff_outreach()}>
+<PageHeader title={m.staff_local_resources_title()} subtitle={m.staff_outreach_body()}>
 	<ResourceTabs active="listings" tipCount={data.tipCount} />
 </PageHeader>
 
@@ -32,26 +32,26 @@
 	<FilterBar activeCount={status ? 1 : 0} onclear={() => (status = '')}>
 		<Select
 			size="sm"
-			aria-label={m.staff_status()}
+			aria-label={m.staff_status_label()}
 			value={status}
 			onchange={(e: Event) => {
 				status = (e.currentTarget as HTMLSelectElement).value as typeof status;
 			}}
 		>
-			<option value="">{m.staff_local_resources_all_listings()}</option>
-			<option value="pending">{m.staff_pending()}</option>
-			<option value="published">{m.staff_published()}</option>
-			<option value="rejected">{m.staff_local_resources_rejected()}</option>
+			<option value="">{m.staff_local_resources_all_listings_label()}</option>
+			<option value="pending">{m.staff_pending_label()}</option>
+			<option value="published">{m.staff_published_label()}</option>
+			<option value="rejected">{m.staff_local_resources_rejected_label()}</option>
 		</Select>
 		{#snippet actions()}
 			<Button href="/staff/local-resources/categories" variant="ghost" size="sm"
-				>{m.staff_categories()}</Button
+				>{m.staff_categories_label()}</Button
 			>
 			{#if data.categories.length > 0}
 				<Action
 					action={createLocalResourceForm}
 					label={m.staff_local_resources_label()}
-					modalTitle={m.staff_local_resources_label()}
+					modalTitle={m.staff_local_resources_2_title()}
 					successToast={m.staff_local_resources_success_toast()}
 				>
 					{#snippet form()}
@@ -64,24 +64,24 @@
 
 	{#if data.categories.length === 0}
 		<EmptyState
-			title={m.staff_no_categories_yet()}
-			description={m.staff_local_resources_add_categories_first_instrument_shops()}
+			title={m.staff_no_categories_yet_title()}
+			description={m.staff_local_resources_add_categories_first_instrument_shops_body()}
 			actionLabel={m.staff_local_resources_action_label()}
 			actionHref={resolve('staff/local-resources/categories')}
 		/>
 	{:else if data.resources.length === 0}
 		<EmptyState
-			title={m.staff_local_resources_no_listings()}
-			description={m.staff_local_resources_add_music_businesses_services_communit()}
+			title={m.staff_local_resources_no_listings_title()}
+			description={m.staff_local_resources_add_music_businesses_services_communit_body()}
 		/>
 	{:else}
 		<!-- A table: short fields and no row actions, so no card test passes. -->
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-				<th class="cell-primary">{m.staff_name()}</th>
-				<th class="col-support">{m.staff_category()}</th>
-				<th class="col-support">{m.staff_website()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+				<th class="cell-primary">{m.staff_name_label()}</th>
+				<th class="col-support">{m.staff_category_label()}</th>
+				<th class="col-support">{m.staff_website_label()}</th>
 			{/snippet}
 			{#each data.resources as r (r.id)}
 				{@const href = resolve(`staff/local-resources/${r.id}`)}

@@ -116,7 +116,7 @@
 			<video bind:this={video} class="w-full rounded bg-base-300" muted playsinline></video>
 			<Button type="button" variant="ghost" size="sm" class="mt-2" onclick={stop}>
 				<IconCameraOff size={16} />
-				{m.ui_scanner_stop()}
+				{m.ui_scanner_stop_label()}
 			</Button>
 		{:else}
 			<Button type="button" variant="ghost" size="sm" onclick={start}>
@@ -127,7 +127,7 @@
 
 		{#if error}
 			<!-- Says what to do instead, because the field beside this still works. -->
-			<p class="mt-1 text-subtle">{error} {m.ui_scanner_type_instead()}</p>
+			<p class="mt-1 text-subtle">{error} {m.ui_scanner_type_instead_text()}</p>
 		{/if}
 	</div>
 {/if}

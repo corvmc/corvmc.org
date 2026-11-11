@@ -35,12 +35,12 @@
 
 <Action
 	action={submitFlag}
-	label={m.actions_report()}
+	label={m.actions_report_label()}
 	modalTitle={entityLabel
-		? m.actions_report_content_report({ entityLabel })
-		: m.actions_report_content_report_content()}
-	submitLabel={m.actions_submit_report()}
-	successToast={m.actions_report_submitted_thank()}
+		? m.actions_report_content_report_title({ entityLabel })
+		: m.actions_report_content_report_content_title()}
+	submitLabel={m.actions_submit_report_label()}
+	successToast={m.actions_report_submitted_thank_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -57,14 +57,14 @@
 		<input {...fields.entityId.as('hidden', entityId)} />
 		<div class="space-y-3">
 			<p class="text-muted">
-				{m.actions_report_content_let_staff_know_what_s()}
+				{m.actions_report_content_let_staff_know_what_s_text()}
 			</p>
 			<!-- Custom inputs rather than FormField's own: both keep `bind:value`,
 			     which `canSubmit` and the post-success reset read, and the textarea
 			     keeps its rows and length cap. The wrapper is here for the error
 			     slot — a rejected report whose message never renders reads as a
 			     submit that did nothing. -->
-			<FormField field={fields.reason} label={m.actions_reason()}>
+			<FormField field={fields.reason} label={m.actions_reason_label()}>
 				{#snippet input(id)}
 					<input
 						{...fields.reason.as('text')}
@@ -72,11 +72,11 @@
 						class="input w-full"
 						bind:value={reason}
 						maxlength="100"
-						placeholder={m.actions_report_content_e_g_inappropriate_content_impersonati()}
+						placeholder={m.actions_report_content_e_g_inappropriate_content_impersonati_placeholder()}
 					/>
 				{/snippet}
 			</FormField>
-			<FormField field={fields.description} label={m.actions_details_optional()}>
+			<FormField field={fields.description} label={m.actions_details_optional_label()}>
 				{#snippet input(id)}
 					<textarea
 						{...fields.description.as('text')}
@@ -85,7 +85,7 @@
 						rows="3"
 						maxlength="1000"
 						bind:value={description}
-						placeholder={m.actions_anything_else_would_help_us()}></textarea>
+						placeholder={m.actions_anything_else_would_help_us_placeholder()}></textarea>
 				{/snippet}
 			</FormField>
 		</div>

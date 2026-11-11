@@ -19,7 +19,7 @@
 
 {#if submitted}
 	<div class="alert alert-success">
-		{m.band_site_band_site_band_contact_form_thanks_message_has_bee({ bandName })}
+		{m.band_site_band_site_band_contact_form_thanks_message_has_bee_text({ bandName })}
 	</div>
 {:else}
 	<Form
@@ -39,20 +39,20 @@
 			<FormField
 				field={fields.name}
 				type="text"
-				label={m.band_site_band_site_band_contact_form_name()}
+				label={m.band_site_band_site_band_contact_form_name_label()}
 				required
 			/>
 			<FormField
 				field={fields.email}
 				type="email"
-				label={m.band_site_band_site_band_contact_form_email()}
+				label={m.band_site_band_site_band_contact_form_email_label()}
 				required
 			/>
 		</div>
 		<FormField
 			field={fields.message}
 			type="textarea"
-			label={m.band_site_band_site_band_contact_form_message()}
+			label={m.band_site_band_site_band_contact_form_message_label()}
 			rows={5}
 			required
 		/>
@@ -65,6 +65,6 @@
 		{#if failure}
 			<div class="alert alert-error" role="alert">{failure}</div>
 		{/if}
-		<SubmitButton label={m.band_site_band_site_band_contact_form_send_message()} />
+		<SubmitButton label={m.band_site_band_site_band_contact_form_send_message_label()} />
 	</Form>
 {/if}

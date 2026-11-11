@@ -72,51 +72,56 @@
 >
 	<Action
 		action={updateContractorForm}
-		label={m.staff_edit()}
+		label={m.staff_edit_label()}
 		variant="ghost"
 		size="sm"
-		modalTitle={m.staff_edit_2({ name: data.contractor.name })}
-		successToast={m.staff_saved()}
+		modalTitle={m.staff_edit_2_title({ name: data.contractor.name })}
+		successToast={m.staff_saved_toast()}
 	>
 		{#snippet form()}
 			<input {...fields.id.as('hidden', data.contractor.id)} />
-			<Field field={fields.name} type="text" label={m.staff_name()} value={data.contractor.name} />
+			<Field
+				field={fields.name}
+				type="text"
+				label={m.staff_name_label()}
+				value={data.contractor.name}
+			/>
 			<Field
 				field={fields.trade}
 				type="select"
-				label={m.staff_trade()}
+				label={m.staff_trade_label()}
 				options={tradeOptions}
 				value={data.contractor.trade}
 			/>
 			<Field
 				field={fields.contactName}
 				type="text"
-				label={m.staff_contact()}
+				label={m.staff_contact_label()}
 				value={data.contractor.contactName ?? ''}
 			/>
 			<Field
 				field={fields.phone}
 				type="tel"
-				label={m.staff_phone()}
+				label={m.staff_phone_label()}
 				value={data.contractor.phone ?? ''}
 			/>
 			<Field
 				field={fields.email}
 				type="email"
-				label={m.staff_email()}
+				label={m.staff_email_label()}
 				value={data.contractor.email ?? ''}
 			/>
 			<Field
 				field={fields.licenseNumber}
 				type="text"
-				label={m.staff_licence_number()}
+				label={m.staff_licence_number_label()}
 				value={data.contractor.licenseNumber ?? ''}
 			/>
 			<Field
 				field={fields.insuranceExpiresAt}
 				type="date"
-				label={m.staff_insurance_expires()}
-				description={m.staff_contractors_id_leave_blank_if_we_hold()}
+				label={m.staff_insurance_expires_label()}
+				description={m.staff_contractors_id_leave_blank_if_we_hold_body()}
 				value={data.contractor.insuranceExpiresAt
 					? toLocalDate(data.contractor.insuranceExpiresAt)
 					: ''}
@@ -124,7 +129,7 @@
 			<Field
 				field={fields.notes}
 				type="textarea"
-				label={m.staff_notes()}
+				label={m.staff_notes_label()}
 				value={data.contractor.notes ?? ''}
 			/>
 		{/snippet}
@@ -132,13 +137,15 @@
 
 	<Action
 		action={archiveContractorForm}
-		label={data.contractor.archivedAt ? m.staff_contractors_id_bring_back() : m.staff_archive()}
+		label={data.contractor.archivedAt
+			? m.staff_contractors_id_bring_back_label()
+			: m.staff_archive_label()}
 		variant="ghost"
 		size="sm"
 		modalTitle={data.contractor.archivedAt
-			? m.staff_contractors_id_bring_back()
-			: m.staff_archive()}
-		successToast={m.staff_saved()}
+			? m.staff_contractors_id_bring_back_title()
+			: m.staff_archive_title()}
+		successToast={m.staff_saved_toast()}
 	>
 		{#snippet form()}
 			<input {...archiveFields.id.as('hidden', data.contractor.id)} />
@@ -151,9 +158,9 @@
 			<input {...archiveFields.archived.as('hidden', !data.contractor.archivedAt)} />
 			<p class="text-sm">
 				{#if data.contractor.archivedAt}
-					{m.staff_contractors_id_they_will_show_pickers_again()}
+					{m.staff_contractors_id_they_will_show_pickers_again_text()}
 				{:else}
-					{m.staff_contractors_id_they_stay_out_pickers_no()}
+					{m.staff_contractors_id_they_stay_out_pickers_no_text()}
 				{/if}
 			</p>
 		{/snippet}
@@ -164,9 +171,9 @@
 	{#if data.contractor.archivedAt}
 		<Alert type="info">
 			<ParaglideMessage
-				message={m.staff_contractors_id_archived_history_below_stays}
+				message={m.staff_contractors_id_archived_history_below_stays_body}
 				inputs={{
-					staff_archived: m.staff_archived(),
+					staff_archived: m.staff_archived_body(),
 					formatDateShort: formatDateShort(data.contractor.archivedAt)
 				}}
 				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
@@ -178,9 +185,9 @@
 	{#if data.contractor.insuranceExpiresAt && data.contractor.insuranceExpiresAt < new Date()}
 		<Alert type="error">
 			<ParaglideMessage
-				message={m.staff_contractors_id_their_certificate_ran_out}
+				message={m.staff_contractors_id_their_certificate_ran_out_body}
 				inputs={{
-					staff_contractors_id_insurance_expired: m.staff_contractors_id_insurance_expired(),
+					staff_contractors_id_insurance_expired: m.staff_contractors_id_insurance_expired_body(),
 					formatDateShort: formatDateShort(data.contractor.insuranceExpiresAt)
 				}}
 				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
@@ -189,31 +196,31 @@
 		</Alert>
 	{/if}
 
-	<InfoCard title={m.staff_details()}>
+	<InfoCard title={m.staff_details_title()}>
 		<dl class="grid gap-3 sm:grid-cols-2">
 			<div>
-				<dt class="text-subtle text-xs">{m.staff_contact()}</dt>
+				<dt class="text-subtle text-xs">{m.staff_contact_label()}</dt>
 				<dd>{data.contractor.contactName ?? '—'}</dd>
 			</div>
 			<div>
-				<dt class="text-subtle text-xs">{m.staff_phone()}</dt>
+				<dt class="text-subtle text-xs">{m.staff_phone_label()}</dt>
 				<dd>{data.contractor.phone ?? '—'}</dd>
 			</div>
 			<div>
-				<dt class="text-subtle text-xs">{m.staff_email()}</dt>
+				<dt class="text-subtle text-xs">{m.staff_email_label()}</dt>
 				<dd>{data.contractor.email ?? '—'}</dd>
 			</div>
 			<div>
-				<dt class="text-subtle text-xs">{m.staff_contractors_id_licence()}</dt>
+				<dt class="text-subtle text-xs">{m.staff_contractors_id_licence_label()}</dt>
 				<dd>{data.contractor.licenseNumber ?? '—'}</dd>
 			</div>
 			<div>
-				<dt class="text-subtle text-xs">{m.staff_insurance()}</dt>
+				<dt class="text-subtle text-xs">{m.staff_insurance_label()}</dt>
 				<dd>
 					{#if data.contractor.insuranceExpiresAt}
 						{formatDateShort(data.contractor.insuranceExpiresAt)}
 					{:else}
-						<span class="text-subtle">{m.staff_not_file()}</span>
+						<span class="text-subtle">{m.staff_not_file_text()}</span>
 					{/if}
 				</dd>
 			</div>
@@ -223,15 +230,15 @@
 		{/if}
 	</InfoCard>
 
-	<InfoCard title={m.staff_jobs()}>
+	<InfoCard title={m.staff_jobs_title()}>
 		<ActivityFeed
-			label={m.staff_jobs()}
+			label={m.staff_jobs_label()}
 			rows={jobRows.slice(0, shown)}
 			hasMore={jobRows.length > shown}
 			onmore={() => (shown += FEED_PAGE)}
 			empty={{
-				title: m.staff_contractors_id_no_jobs_yet(),
-				description: m.staff_contractors_id_nothing_has_been_sent_them()
+				title: m.staff_contractors_id_no_jobs_yet_title(),
+				description: m.staff_contractors_id_nothing_has_been_sent_them_body()
 			}}
 		>
 			{#snippet trailing({ job })}

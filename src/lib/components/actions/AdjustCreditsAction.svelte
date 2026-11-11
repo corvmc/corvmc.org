@@ -37,7 +37,7 @@
 
 <Action
 	action={adjustCredits}
-	label={m.actions_adjust_credits_adjust()}
+	label={m.actions_adjust_credits_adjust_label()}
 	modalTitle={m.actions_adjust_credits_modal_title()}
 	successToast={m.actions_adjust_credits_success_toast()}
 	{variant}
@@ -56,17 +56,19 @@
 			     the wrapper supplies the error slot. Without it, a field issue from
 			     the server sets aria-invalid and renders no message at all — which
 			     is what happened to the over-deduction message before. -->
-			<FormField field={fields.creditType} label={m.actions_adjust_credits_credit_type()}>
+			<FormField field={fields.creditType} label={m.actions_adjust_credits_credit_type_label()}>
 				<Select class="w-full" {...fields.creditType.as('select')} bind:value={creditType}>
-					<option value="free_hours">{m.actions_adjust_credits_free_hours()}</option>
-					<option value="equipment_credits">{m.actions_adjust_credits_equipment_credits()}</option>
+					<option value="free_hours">{m.actions_adjust_credits_free_hours_label()}</option>
+					<option value="equipment_credits"
+						>{m.actions_adjust_credits_equipment_credits_label()}</option
+					>
 				</Select>
 			</FormField>
 			<FormField
 				field={fields.amount}
 				label={creditType === 'free_hours'
-					? m.actions_adjust_credits_hours()
-					: m.actions_adjust_credits_credits()}
+					? m.actions_adjust_credits_hours_label()
+					: m.actions_adjust_credits_credits_label()}
 				description={amountHint}
 			>
 				<input
@@ -75,15 +77,15 @@
 					step={creditType === 'free_hours' ? 0.5 : 1}
 					class="input w-full"
 					bind:value={amount}
-					placeholder={m.actions_adjust_credits_positive_add_negative_deduct()}
+					placeholder={m.actions_adjust_credits_positive_add_negative_deduct_placeholder()}
 				/>
 			</FormField>
-			<FormField field={fields.description} label={m.actions_reason()}>
+			<FormField field={fields.description} label={m.actions_reason_label()}>
 				<input
 					{...fields.description.as('text')}
 					class="input w-full"
 					bind:value={description}
-					placeholder={m.actions_adjust_credits_why_adjustment_being_made()}
+					placeholder={m.actions_adjust_credits_why_adjustment_being_made_placeholder()}
 				/>
 			</FormField>
 		</div>

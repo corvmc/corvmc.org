@@ -41,33 +41,38 @@
 <Field
 	field={fields.categoryId}
 	type="select"
-	label={m.staff_category()}
+	label={m.staff_category_label()}
 	{options}
 	value={values.categoryId ?? ''}
 />
-<Field field={fields.name} type="text" label={m.staff_name()} value={values.name ?? ''} />
+<Field field={fields.name} type="text" label={m.staff_name_label()} value={values.name ?? ''} />
 <Field
 	field={fields.description}
 	type="textarea"
-	label={m.staff_description()}
-	description={m.staff_local_resources_resource_fields_description()}
+	label={m.staff_description_label()}
+	description={m.staff_local_resources_resource_fields_description_body()}
 	value={values.description ?? ''}
 />
-<Field field={fields.website} type="text" label={m.staff_website()} value={values.website ?? ''} />
-<Field field={fields.phone} type="tel" label={m.staff_phone()} value={values.phone ?? ''} />
+<Field
+	field={fields.website}
+	type="text"
+	label={m.staff_website_label()}
+	value={values.website ?? ''}
+/>
+<Field field={fields.phone} type="tel" label={m.staff_phone_label()} value={values.phone ?? ''} />
 <Field
 	field={fields.addressLine}
 	type="text"
-	label={m.staff_address()}
+	label={m.staff_address_label()}
 	value={values.addressLine ?? ''}
 />
 <Field
 	field={fields.displayOrder}
 	type="number"
-	label={m.staff_order_2()}
+	label={m.staff_order_2_label()}
 	value={values.displayOrder ?? 0}
 	min="0"
 />
 <p class="text-muted text-wrap">
-	{m.staff_local_resources_resource_fields_everything_here_shown()}
+	{m.staff_local_resources_resource_fields_everything_here_shown_text()}
 </p>

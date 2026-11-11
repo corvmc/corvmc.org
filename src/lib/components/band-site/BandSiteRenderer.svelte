@@ -208,7 +208,7 @@
 							<span
 								>{link.label ||
 									platform?.name ||
-									msg.band_site_band_site_band_site_renderer_link()}</span
+									msg.band_site_band_site_band_site_renderer_link_label()}</span
 							>
 						</Button>
 					{/each}
@@ -219,7 +219,7 @@
 		{#if members.length > 0}
 			<div class="mx-auto max-w-3xl px-6 py-8">
 				<h2 class="mb-4 text-2xl font-bold">
-					{msg.band_site_band_site_band_site_renderer_members()}
+					{msg.band_site_band_site_band_site_renderer_members_title()}
 				</h2>
 				<div class="grid grid-cols-2 gap-4 md:grid-cols-3">
 					{#each members as member (member.id)}
@@ -252,7 +252,7 @@
 		{#if events.length > 0}
 			<div class="mx-auto max-w-3xl px-6 py-8">
 				<h2 class="mb-4 text-2xl font-bold">
-					{msg.band_site_band_site_band_site_renderer_upcoming_shows()}
+					{msg.band_site_band_site_band_site_renderer_upcoming_shows_title()}
 				</h2>
 				<div class="space-y-3">
 					{#each events.slice(0, block.limit ?? 10) as evt (evt.id)}
@@ -277,7 +277,7 @@
 									variant="primary"
 									size="sm"
 								>
-									{msg.band_site_band_site_band_site_renderer_tickets()}
+									{msg.band_site_band_site_band_site_renderer_tickets_label()}
 								</Button>
 							{/if}
 						</div>
@@ -289,7 +289,7 @@
 		{#if block.showPast && pastEvents.length > 0}
 			<div class="mx-auto max-w-3xl px-6 py-8">
 				<h2 class="mb-4 text-2xl font-bold">
-					{msg.band_site_band_site_band_site_renderer_past_shows()}
+					{msg.band_site_band_site_band_site_renderer_past_shows_title()}
 				</h2>
 				<div class="space-y-2">
 					{#each pastEvents.slice(0, block.limit ?? 10) as evt (evt.id)}
@@ -352,7 +352,7 @@
 		{#if epk?.pressQuotes && epk.pressQuotes.length > 0}
 			<div class="mx-auto max-w-3xl px-6 py-8">
 				<h2 class="mb-4 text-2xl font-bold">
-					{msg.band_site_band_site_band_site_renderer_press()}
+					{msg.band_site_band_site_band_site_renderer_press_title()}
 				</h2>
 				<div class="space-y-4">
 					{#each epk.pressQuotes as quote (quote.quote)}
@@ -373,7 +373,7 @@
 		{#if epk?.achievements && epk.achievements.length > 0}
 			<div class="mx-auto max-w-3xl px-6 py-8">
 				<h2 class="mb-4 text-2xl font-bold">
-					{msg.band_site_band_site_band_site_renderer_highlights()}
+					{msg.band_site_band_site_band_site_renderer_highlights_title()}
 				</h2>
 				<ul class="space-y-2">
 					{#each epk.achievements as achievement (achievement)}
@@ -390,14 +390,14 @@
 		{#if showForm || epk?.bookingContact || epk?.managementContact || epk?.prContact}
 			<div class="mx-auto max-w-3xl px-6 py-8">
 				<h2 class="mb-4 text-2xl font-bold">
-					{msg.band_site_band_site_band_site_renderer_contact()}
+					{msg.band_site_band_site_band_site_renderer_contact_title()}
 				</h2>
 				{#if epk?.bookingContact || epk?.managementContact || epk?.prContact}
 					<div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
 						{#if epk.bookingContact}
 							<div>
 								<h3 class="text-muted font-semibold uppercase">
-									{msg.band_site_band_site_band_site_renderer_booking()}
+									{msg.band_site_band_site_band_site_renderer_booking_title()}
 								</h3>
 								<p class="font-medium">{epk.bookingContact.name}</p>
 								<a href="mailto:{epk.bookingContact.email}" class="link text-sm"
@@ -411,7 +411,7 @@
 						{#if epk.managementContact}
 							<div>
 								<h3 class="text-muted font-semibold uppercase">
-									{msg.band_site_band_site_band_site_renderer_management()}
+									{msg.band_site_band_site_band_site_renderer_management_title()}
 								</h3>
 								<p class="font-medium">{epk.managementContact.name}</p>
 								<a href="mailto:{epk.managementContact.email}" class="link text-sm"
@@ -422,7 +422,7 @@
 						{#if epk.prContact}
 							<div>
 								<h3 class="text-muted font-semibold uppercase">
-									{msg.band_site_band_site_band_site_renderer_press()}
+									{msg.band_site_band_site_band_site_renderer_press_title()}
 								</h3>
 								<p class="font-medium">{epk.prContact.name}</p>
 								<a href="mailto:{epk.prContact.email}" class="link text-sm">{epk.prContact.email}</a
@@ -449,12 +449,12 @@
 		{#if stageMedia?.url || riderMedia?.url}
 			<div class="mx-auto max-w-3xl px-6 py-8">
 				<h2 class="mb-4 text-2xl font-bold">
-					{msg.band_site_band_site_band_site_renderer_technical_requirement()}
+					{msg.band_site_band_site_band_site_renderer_technical_requirement_title()}
 				</h2>
 				{#if stageMedia?.url}
 					<img
 						src={stageMedia.url}
-						alt={msg.band_site_band_site_band_site_renderer_alt()}
+						alt={msg.band_site_band_site_band_site_renderer_alt_text()}
 						class="mb-4 max-w-full rounded-lg"
 					/>
 				{/if}
@@ -466,7 +466,7 @@
 						variant="default"
 						size="sm"
 					>
-						{msg.band_site_band_site_band_site_renderer_download_tech_rider()}
+						{msg.band_site_band_site_band_site_renderer_download_tech_rider_label()}
 					</Button>
 				{/if}
 			</div>
@@ -482,7 +482,7 @@
 		{#if block.items.length > 0}
 			<div class="mx-auto max-w-3xl px-6 py-8">
 				<h2 class="mb-4 text-2xl font-bold">
-					{msg.band_site_band_site_band_site_renderer_merch()}
+					{msg.band_site_band_site_band_site_renderer_merch_title()}
 				</h2>
 				<div class="grid grid-cols-2 gap-4 md:grid-cols-3">
 					{#each block.items as item (item.url)}
@@ -550,7 +550,7 @@
 					<p
 						class="editor-chrome m-0 flex items-center gap-2 border-b border-base-300 bg-base-200 px-4 py-3 text-xs text-base-content/60"
 					>
-						{msg.band_site_band_site_band_site_renderer_not_published_whateve()}
+						{msg.band_site_band_site_band_site_renderer_not_published_whateve_text()}
 					</p>
 				{:else if blockIsEmpty(block, contentContext)}
 					<BlockGhost
@@ -626,7 +626,9 @@
 							outline
 							class="w-full"
 						>
-							{link.label || platform?.name || msg.band_site_band_site_band_site_renderer_link()}
+							{link.label ||
+								platform?.name ||
+								msg.band_site_band_site_band_site_renderer_link_label()}
 						</Button>
 					{/if}
 				{/each}
@@ -641,14 +643,14 @@
 		<a
 			href={bandSiteHref(params.slug, '/events', page.url)}
 			class="transition-opacity hover:opacity-100"
-			>{msg.band_site_band_site_band_site_renderer_all_events()}</a
+			>{msg.band_site_band_site_band_site_renderer_all_events_text()}</a
 		>
 	{/if}
 	{#if epk}
 		<a
 			href={bandSiteHref(params.slug, '/epk', page.url)}
 			class="transition-opacity hover:opacity-100"
-			>{msg.band_site_band_site_band_site_renderer_press_kit()}</a
+			>{msg.band_site_band_site_band_site_renderer_press_kit_text()}</a
 		>
 	{/if}
 </nav>

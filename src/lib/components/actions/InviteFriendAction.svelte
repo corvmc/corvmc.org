@@ -25,15 +25,15 @@
 
 <Action
 	action={inviteFriendForm}
-	label={m.actions_invite_friend_invite_friend()}
-	modalTitle={m.actions_invite_friend_invite_friend()}
+	label={m.actions_invite_friend_invite_friend_label()}
+	modalTitle={m.actions_invite_friend_invite_friend_title()}
 	submitLabel={m.actions_invite_friend_submit_label()}
 	{variant}
 	{size}
 	{onsuccess}
 >
 	{#snippet form()}
-		<Field field={fields.email} type="email" label={m.actions_email()} required />
-		<Field field={fields.name} type="text" label={m.actions_name_optional()} />
+		<Field field={fields.email} type="email" label={m.actions_email_label()} required />
+		<Field field={fields.name} type="text" label={m.actions_name_optional_label()} />
 	{/snippet}
 </Action>

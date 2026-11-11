@@ -49,7 +49,7 @@
 		label={m.staff_volunteer_new_work_order_label()}
 		data-testid="new-work-order"
 		modalTitle={m.staff_volunteer_new_work_order_modal_title()}
-		submitLabel={m.staff_create()}
+		submitLabel={m.staff_create_label()}
 		successToast={m.staff_volunteer_new_work_order_success_toast()}
 		{onsuccess}
 	>
@@ -57,7 +57,7 @@
 			<FormField
 				field={createWorkOrder.fields.timed}
 				type="checkbox"
-				checkboxLabel={m.staff_volunteer_new_work_order_checkbox_label()}
+				checkboxLabel={m.staff_volunteer_new_work_order_checkbox_label_checkbox()}
 				bind:value={timed}
 			/>
 			<ShiftFormFields

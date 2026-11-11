@@ -23,12 +23,12 @@
 
 <Action
 	action={updateMyGroupMembership}
-	label={m.groups_edit()}
+	label={m.groups_edit_label()}
 	aria-label={m.groups_group_self_edit_aria_label()}
 	modalTitle={m.groups_group_self_edit_modal_title()}
 	variant="ghost"
 	size="xs"
-	successToast={m.groups_saved()}
+	successToast={m.groups_saved_toast()}
 	onsuccess={onchanged}
 >
 	{#snippet form()}
@@ -37,10 +37,10 @@
 			<FormField
 				field={fields.alias}
 				type="text"
-				label={m.groups_group_self_edit_display_name()}
+				label={m.groups_group_self_edit_display_name_label()}
 				value={alias ?? ''}
 				maxlength="100"
-				description={m.groups_group_self_edit_description()}
+				description={m.groups_group_self_edit_description_body()}
 			/>
 		</div>
 	{/snippet}

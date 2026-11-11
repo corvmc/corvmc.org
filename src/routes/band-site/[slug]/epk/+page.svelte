@@ -19,7 +19,7 @@
 </script>
 
 <svelte:head>
-	<title>{msg.public_band_site_slug_epk_epk({ name: band.name })}</title>
+	<title>{msg.public_band_site_slug_epk_epk_title({ name: band.name })}</title>
 	<style>
 		@media print {
 			.no-print {
@@ -49,13 +49,13 @@
 		href={bandSiteHref(band.slug, '/epk/press-kit.zip', page.url)}
 		download
 		variant="primary"
-		size="sm">{msg.public_band_site_slug_epk_download_press_kit()}</Button
+		size="sm">{msg.public_band_site_slug_epk_download_press_kit_label()}</Button
 	>
 	<Button variant="ghost" size="sm" onclick={() => window.print()}
-		>{msg.public_band_site_slug_epk_download_print_pdf()}</Button
+		>{msg.public_band_site_slug_epk_download_print_pdf_label()}</Button
 	>
 	<Button href={bandSiteHref(band.slug, '', page.url)} variant="ghost" size="sm">
-		{msg.public_band_site_slug_epk_back()}
+		{msg.public_band_site_slug_epk_back_label()}
 	</Button>
 </div>
 
@@ -79,7 +79,7 @@
 			<p class="mt-2 text-sm text-gray-400">{band.genres.join(' · ')}</p>
 		{/if}
 		<p class="mt-3 text-xs tracking-widest text-gray-400 uppercase">
-			{msg.public_band_site_slug_epk_electronic_press_kit()}
+			{msg.public_band_site_slug_epk_electronic_press_kit_text()}
 		</p>
 	</header>
 
@@ -87,7 +87,7 @@
 	{#if band.bio}
 		<section class="mb-8">
 			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">
-				{msg.public_about()}
+				{msg.public_about_title()}
 			</h2>
 			<div class="prose prose-sm max-w-none leading-relaxed text-gray-700">
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted/sanitized HTML (markdown bio) -->
@@ -100,7 +100,7 @@
 	{#if members.length > 0}
 		<section class="mb-8">
 			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">
-				{msg.public_members()}
+				{msg.public_members_title()}
 			</h2>
 			<div class="flex flex-wrap gap-x-6 gap-y-1">
 				{#each members as member (member.id)}
@@ -118,7 +118,7 @@
 	{#if epk?.pressQuotes && epk.pressQuotes.length > 0}
 		<section class="mb-8">
 			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">
-				{msg.public_band_site_slug_epk_press()}
+				{msg.public_band_site_slug_epk_press_title()}
 			</h2>
 			<div class="space-y-3">
 				{#each epk.pressQuotes as quote (quote.quote)}
@@ -138,7 +138,7 @@
 	{#if epk?.achievements && epk.achievements.length > 0}
 		<section class="mb-8">
 			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">
-				{msg.public_band_site_slug_epk_highlights()}
+				{msg.public_band_site_slug_epk_highlights_title()}
 			</h2>
 			<ul class="space-y-1">
 				{#each epk.achievements as achievement (achievement)}
@@ -155,7 +155,7 @@
 	{#if galleryMedia.length > 0}
 		<section class="page-break mb-8" data-testid="epk-gallery">
 			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">
-				{msg.public_photos()}
+				{msg.public_photos_title()}
 			</h2>
 			<div class="grid grid-cols-3 gap-2">
 				{#each galleryMedia.slice(0, 6) as img (img.id)}
@@ -175,7 +175,7 @@
 			</div>
 			{#if galleryMedia.length > 6}
 				<p class="mt-2 text-xs text-gray-400">
-					{msg.public_band_site_slug_epk_more_photos_available_at_corvmc({
+					{msg.public_band_site_slug_epk_more_photos_available_at_corvmc_text({
 						value: galleryMedia.length - 6,
 						slug: band.slug
 					})}
@@ -188,7 +188,7 @@
 	{#if events.length > 0}
 		<section class="mb-8">
 			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">
-				{msg.public_band_site_slug_epk_upcoming_shows()}
+				{msg.public_band_site_slug_epk_upcoming_shows_title()}
 			</h2>
 			<div class="space-y-1">
 				{#each events.slice(0, 5) as evt (evt.id)}
@@ -205,7 +205,7 @@
 	{#if band.links && band.links.length > 0}
 		<section class="mb-8">
 			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">
-				{msg.public_band_site_slug_epk_links()}
+				{msg.public_band_site_slug_epk_links_title()}
 			</h2>
 			<div class="flex flex-wrap gap-x-6 gap-y-1 text-sm">
 				{#each band.links as link (link.url)}
@@ -226,13 +226,13 @@
 	{#if epk?.bookingContact || epk?.managementContact || epk?.prContact}
 		<section class="mt-8 border-t-2 border-gray-200 pt-6">
 			<h2 class="mb-3 text-sm font-bold tracking-wider text-gray-400 uppercase">
-				{msg.public_contact()}
+				{msg.public_contact_title()}
 			</h2>
 			<div class="grid grid-cols-1 gap-6 text-sm sm:grid-cols-3">
 				{#if epk.bookingContact}
 					<div>
 						<p class="text-xs font-semibold text-gray-600 uppercase">
-							{msg.public_band_site_slug_epk_booking()}
+							{msg.public_band_site_slug_epk_booking_text()}
 						</p>
 						<p class="text-gray-700">{epk.bookingContact.name}</p>
 						<p class="text-gray-500">{epk.bookingContact.email}</p>
@@ -244,7 +244,7 @@
 				{#if epk.managementContact}
 					<div>
 						<p class="text-xs font-semibold text-gray-600 uppercase">
-							{msg.public_band_site_slug_epk_management()}
+							{msg.public_band_site_slug_epk_management_text()}
 						</p>
 						<p class="text-gray-700">{epk.managementContact.name}</p>
 						<p class="text-gray-500">{epk.managementContact.email}</p>
@@ -253,7 +253,7 @@
 				{#if epk.prContact}
 					<div>
 						<p class="text-xs font-semibold text-gray-600 uppercase">
-							{msg.public_band_site_slug_epk_press()}
+							{msg.public_band_site_slug_epk_press_text()}
 						</p>
 						<p class="text-gray-700">{epk.prContact.name}</p>
 						<p class="text-gray-500">{epk.prContact.email}</p>
@@ -265,6 +265,6 @@
 
 	<!-- Footer -->
 	<footer class="mt-12 border-t border-gray-100 pt-4 text-center text-xs text-gray-400">
-		{msg.public_band_site_slug_epk_corvmc_org({ name: band.name, slug: band.slug })}
+		{msg.public_band_site_slug_epk_corvmc_org_text({ name: band.name, slug: band.slug })}
 	</footer>
 </div>

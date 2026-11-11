@@ -30,7 +30,7 @@
 	let autoSlug = $derived(slugify(createArticle.fields.title.value() ?? ''));
 </script>
 
-<PageHeader width="3xl" title={m.staff_new_article()} subtitle={m.staff_help()} />
+<PageHeader width="3xl" title={m.staff_new_article_title()} subtitle={m.staff_help_body()} />
 <PageContent width="3xl">
 	<Form
 		remote={createArticle}
@@ -39,20 +39,20 @@
 	>
 		<div class="space-y-4">
 			<div class="grid gap-4 sm:grid-cols-2">
-				<FormField field={createArticle.fields.title} label={m.staff_title()}>
+				<FormField field={createArticle.fields.title} label={m.staff_title_label()}>
 					<input
 						{...createArticle.fields.title.as('text')}
 						type="text"
 						class="input w-full"
-						placeholder={m.staff_help_create_article_title()}
+						placeholder={m.staff_help_create_article_title_placeholder()}
 					/>
 				</FormField>
-				<FormField field={createArticle.fields.slug} label={m.staff_slug()}>
+				<FormField field={createArticle.fields.slug} label={m.staff_slug_label()}>
 					<input
 						{...createArticle.fields.slug.as('text')}
 						type="text"
 						class="input w-full"
-						placeholder={autoSlug || m.staff_help_create_auto_generated()}
+						placeholder={autoSlug || m.staff_help_create_auto_generated_placeholder()}
 					/>
 				</FormField>
 			</div>
@@ -61,30 +61,30 @@
 				<FormField
 					field={createArticle.fields.categoryId}
 					type="select"
-					label={m.staff_category()}
+					label={m.staff_category_label()}
 					options={[
-						{ value: '', label: m.staff_help_create_select_category() },
+						{ value: '', label: m.staff_help_create_select_category_label() },
 						...categories.map((c) => ({ value: c.id, label: c.name }))
 					]}
 				/>
 				<FormField
 					field={createArticle.fields.minRole}
 					type="select"
-					label={m.staff_audience()}
+					label={m.staff_audience_label()}
 					value="member"
 					options={helpAudiences.map((a) => ({ value: a, label: helpAudienceLabels[a] }))}
 				/>
 				<FormField
 					field={createArticle.fields.published}
 					type="toggle"
-					label={m.staff_status()}
-					checkboxLabel={m.staff_published()}
+					label={m.staff_status_label()}
+					checkboxLabel={m.staff_published_checkbox()}
 				/>
 				<FormField
 					field={createArticle.fields.sortOrder}
 					submitAs="text"
 					type="number"
-					label={m.staff_order_2()}
+					label={m.staff_order_2_label()}
 					value={0}
 					min="0"
 				/>
@@ -93,18 +93,18 @@
 			<FormField
 				field={createArticle.fields.summary}
 				type="text"
-				label={m.staff_summary()}
-				placeholder={m.staff_help_create_brief_description_listings()}
+				label={m.staff_summary_label()}
+				placeholder={m.staff_help_create_brief_description_listings_placeholder()}
 			/>
 
-			<FormField field={createArticle.fields.content} label={m.staff_content()}>
+			<FormField field={createArticle.fields.content} label={m.staff_content_label()}>
 				<input {...fields.content.as('hidden', contentValue)} />
 				<MarkdownEditor bind:value={contentValue} />
 			</FormField>
 
 			<div class="flex justify-end gap-2">
-				<Button href="/staff/help" variant="ghost">{m.staff_cancel()}</Button>
-				<SubmitButton label={m.staff_help_create_create_article()} />
+				<Button href="/staff/help" variant="ghost">{m.staff_cancel_label()}</Button>
+				<SubmitButton label={m.staff_help_create_create_article_label()} />
 			</div>
 		</div>
 	</Form>

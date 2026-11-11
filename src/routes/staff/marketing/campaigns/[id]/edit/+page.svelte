@@ -77,10 +77,10 @@
 				audienceIds: selectedAudienceIds,
 				eventId
 			});
-			toast.success(m.staff_marketing_campaigns_id_edit_draft_saved());
+			toast.success(m.staff_marketing_campaigns_id_edit_draft_saved_toast());
 		} catch (err) {
 			toast.error(
-				err instanceof Error ? err.message : m.staff_marketing_campaigns_id_edit_failed_save()
+				err instanceof Error ? err.message : m.staff_marketing_campaigns_id_edit_failed_save_toast()
 			);
 		} finally {
 			submitting = false;
@@ -118,7 +118,7 @@
 			submitting = false;
 			return;
 		}
-		toast.success(m.staff_marketing_campaigns_id_edit_campaign_sent());
+		toast.success(m.staff_marketing_campaigns_id_edit_campaign_sent_toast());
 		goto(resolve(`staff/marketing/campaigns/${id}`));
 	}
 
@@ -135,11 +135,13 @@
 				eventId
 			});
 			await scheduleCampaign({ scheduledFor: new Date(scheduledFor).toISOString() });
-			toast.success(m.staff_marketing_campaigns_id_edit_campaign_scheduled());
+			toast.success(m.staff_marketing_campaigns_id_edit_campaign_scheduled_toast());
 			goto(resolve(`staff/marketing/campaigns/${id}`));
 		} catch (err) {
 			toast.error(
-				err instanceof Error ? err.message : m.staff_marketing_campaigns_id_edit_failed_schedule()
+				err instanceof Error
+					? err.message
+					: m.staff_marketing_campaigns_id_edit_failed_schedule_toast()
 			);
 		} finally {
 			submitting = false;
@@ -154,22 +156,24 @@
 		confirmingDelete = false;
 		try {
 			await deleteCampaign({});
-			toast.success(m.staff_marketing_campaigns_id_edit_campaign_deleted());
+			toast.success(m.staff_marketing_campaigns_id_edit_campaign_deleted_toast());
 			goto(resolve('staff/marketing/campaigns'));
 		} catch (err) {
 			toast.error(
-				err instanceof Error ? err.message : m.staff_marketing_campaigns_id_edit_failed_delete()
+				err instanceof Error
+					? err.message
+					: m.staff_marketing_campaigns_id_edit_failed_delete_toast()
 			);
 		}
 	}
 </script>
 
 <PageHeader
-	title={m.staff_marketing_campaigns_id_edit_edit_campaign()}
-	subtitle={m.staff_marketing()}
+	title={m.staff_marketing_campaigns_id_edit_edit_campaign_title()}
+	subtitle={m.staff_marketing_body()}
 >
 	<Button variant="ghost" size="sm" class="text-error" onclick={handleDelete}
-		>{m.staff_delete()}</Button
+		>{m.staff_delete_label()}</Button
 	>
 </PageHeader>
 <PageContent>
@@ -177,38 +181,40 @@
 		<!-- Editor pane -->
 		<div class="space-y-4">
 			<div>
-				<label for="campaign-subject" class="label text-sm font-medium">{m.staff_subject()}</label>
+				<label for="campaign-subject" class="label text-sm font-medium"
+					>{m.staff_subject_label()}</label
+				>
 				<input
 					id="campaign-subject"
 					type="text"
 					bind:value={subject}
-					placeholder={m.staff_email_subject_line()}
+					placeholder={m.staff_email_subject_line_placeholder()}
 					class="input w-full"
 				/>
 			</div>
 
 			<div>
-				<p class="label text-sm font-medium">{m.staff_audiences()}</p>
+				<p class="label text-sm font-medium">{m.staff_audiences_text()}</p>
 				<AudiencePicker bind:selected={selectedAudienceIds} bind:total={totalSubscribers} />
 			</div>
 
 			<div>
-				<p class="label text-sm font-medium">{m.staff_about_show()}</p>
+				<p class="label text-sm font-medium">{m.staff_about_show_text()}</p>
 				<EventScopePicker initial={campaignData.event} onchange={(id) => (eventId = id)} />
 			</div>
 
 			<div>
 				<label for="campaign-body" class="label text-sm font-medium"
-					>{m.staff_body_markdown()}</label
+					>{m.staff_body_markdown_label()}</label
 				>
 				<textarea
 					id="campaign-body"
 					bind:value={markdownBody}
-					placeholder={m.staff_write_email_markdown()}
+					placeholder={m.staff_write_email_markdown_placeholder()}
 					class="textarea w-full font-mono text-sm"
 					rows="20"></textarea>
 				<p class="mt-1 text-subtle">
-					{m.staff_marketing_campaigns_available_variables({
+					{m.staff_marketing_campaigns_available_variables_text({
 						first: '{{subscriber_name}}',
 						second: '{{unsubscribe_url}}'
 					})}
@@ -217,7 +223,7 @@
 
 			<div>
 				<label for="campaign-schedule" class="label text-sm font-medium">
-					{m.staff_schedule_later_optional()}
+					{m.staff_schedule_later_optional_label()}
 				</label>
 				<input
 					id="campaign-schedule"
@@ -226,7 +232,7 @@
 					class="input w-full"
 				/>
 				{#if scheduledFor && !isFutureSchedule()}
-					<p class="mt-1 text-xs text-error">{m.staff_pick_time_future()}</p>
+					<p class="mt-1 text-xs text-error">{m.staff_pick_time_future_text()}</p>
 				{/if}
 			</div>
 
@@ -238,7 +244,7 @@
 					disabled={!isValid() || submitting}
 					onclick={handleSave}
 				>
-					{m.staff_save_draft()}
+					{m.staff_save_draft_label()}
 				</Button>
 				<Button
 					variant="secondary"
@@ -246,7 +252,7 @@
 					disabled={!isValid() || !isFutureSchedule() || submitting}
 					onclick={handleSchedule}
 				>
-					{m.staff_schedule()}
+					{m.staff_schedule_label()}
 				</Button>
 				<Button
 					variant="primary"
@@ -254,13 +260,13 @@
 					disabled={!isValid() || submitting}
 					onclick={handleSendNow}
 				>
-					{m.staff_send_now()}
+					{m.staff_send_now_label()}
 				</Button>
 			</div>
 
 			{#if submitting}
 				<div class="flex items-center gap-2 text-muted">
-					<ParaglideMessage message={m.staff_working} inputs={{}}
+					<ParaglideMessage message={m.staff_working_text} inputs={{}}
 						>{#snippet span({ children })}<span class="loading loading-sm loading-spinner"
 								>{@render children?.()}</span
 							>{/snippet}</ParaglideMessage
@@ -271,51 +277,54 @@
 
 		<!-- Preview pane -->
 		<div>
-			<p class="label text-sm font-medium">{m.staff_preview()}</p>
+			<p class="label text-sm font-medium">{m.staff_preview_text()}</p>
 			<CampaignPreview markdown={markdownBody} />
 		</div>
 	</div>
 </PageContent>
 
-<Modal bind:open={confirmingSend} title={m.staff_send_campaign_now()}>
+<Modal bind:open={confirmingSend} title={m.staff_send_campaign_now_title()}>
 	<p>
 		<ParaglideMessage
-			message={m.staff_goes_people_immediately_as}
+			message={m.staff_goes_people_immediately_as_text}
 			inputs={{
 				totalSubscribers,
-				trim: subject.trim() || m.staff_marketing_campaigns_id_edit_untitled_campaign()
+				trim: subject.trim() || m.staff_marketing_campaigns_id_edit_untitled_campaign_text()
 			}}
 			>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 				>{/snippet}{#snippet em({ children })}<em>{@render children?.()}</em
 				>{/snippet}</ParaglideMessage
 		>
 	</p>
-	<p class="mt-2 text-muted">{m.staff_marketing_campaigns_id_edit_there_no_recall()}</p>
+	<p class="mt-2 text-muted">{m.staff_marketing_campaigns_id_edit_there_no_recall_text()}</p>
 	<div class="modal-action">
 		<Button variant="default" size="sm" outline onclick={() => (confirmingSend = false)}>
-			{m.staff_not_yet()}
+			{m.staff_not_yet_label()}
 		</Button>
 		<Button variant="primary" size="sm" onclick={sendNow}>
-			{m.staff_send_people({ totalSubscribers })}
+			{m.staff_send_people_label({ totalSubscribers })}
 		</Button>
 	</div>
 </Modal>
 
-<Modal bind:open={confirmingDelete} title={m.staff_marketing_campaigns_id_edit_delete_draft()}>
+<Modal
+	bind:open={confirmingDelete}
+	title={m.staff_marketing_campaigns_id_edit_delete_draft_title()}
+>
 	<p>
 		<ParaglideMessage
-			message={m.staff_marketing_campaigns_id_edit_delete_goes}
+			message={m.staff_marketing_campaigns_id_edit_delete_goes_text}
 			inputs={{
-				subject: subject.trim() || m.staff_marketing_campaigns_id_edit_untitled_campaign_2()
+				subject: subject.trim() || m.staff_marketing_campaigns_id_edit_untitled_campaign_2_text()
 			}}>{#snippet em({ children })}<em>{@render children?.()}</em>{/snippet}</ParaglideMessage
 		>
 	</p>
 	<div class="modal-action">
 		<Button variant="default" size="sm" outline onclick={() => (confirmingDelete = false)}>
-			{m.staff_marketing_campaigns_id_edit_keep()}
+			{m.staff_marketing_campaigns_id_edit_keep_label()}
 		</Button>
 		<Button variant="error" size="sm" onclick={deleteNow}
-			>{m.staff_marketing_campaigns_id_edit_delete_draft_2()}</Button
+			>{m.staff_marketing_campaigns_id_edit_delete_draft_2_label()}</Button
 		>
 	</div>
 </Modal>

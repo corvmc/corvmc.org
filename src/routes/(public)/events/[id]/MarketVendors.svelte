@@ -26,11 +26,11 @@
 		{#if info.accepting}
 			<div class="market__apply">
 				<Button href={resolve(`events/${eventId}/vendors/apply`)} variant="primary">
-					{m.public_events_id_market_vendors_apply_table()}
+					{m.public_events_id_market_vendors_apply_table_label()}
 				</Button>
 				{#if info.closesAt}
 					<span class="text-muted"
-						>{m.public_events_id_market_vendors_applications_close({
+						>{m.public_events_id_market_vendors_applications_close_text({
 							formatDateTime: formatDateTime(info.closesAt)
 						})}</span
 					>
@@ -53,7 +53,7 @@
 								{v.businessName}
 							{/if}
 							{#if v.tableLabel}<span class="text-muted font-normal">
-									{m.public_events_id_market_vendors_table({ tableLabel: v.tableLabel })}</span
+									{m.public_events_id_market_vendors_table_text({ tableLabel: v.tableLabel })}</span
 								>{/if}
 						</div>
 						<p class="text-muted">{v.offering}</p>
@@ -61,7 +61,9 @@
 				{/each}
 			</ul>
 		{:else}
-			<p class="text-muted">{m.public_events_id_market_vendors_vendor_list_announced_as_tab()}</p>
+			<p class="text-muted">
+				{m.public_events_id_market_vendors_vendor_list_announced_as_tab_text()}
+			</p>
 		{/if}
 	</section>
 {/if}

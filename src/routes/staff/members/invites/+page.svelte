@@ -26,14 +26,14 @@
 	const revokeFields = revokeMemberInviteForm.fields;
 
 	const badges: Record<string, { label: string; variant: BadgeVariant }> = {
-		pending: { label: m.staff_pending(), variant: 'info' },
-		expired: { label: m.staff_members_invites_expired(), variant: 'warning' },
-		accepted: { label: m.staff_joined(), variant: 'success' },
-		revoked: { label: m.staff_members_invites_revoked(), variant: 'ghost' }
+		pending: { label: m.staff_pending_label(), variant: 'info' },
+		expired: { label: m.staff_members_invites_expired_label(), variant: 'warning' },
+		accepted: { label: m.staff_joined_label(), variant: 'success' },
+		revoked: { label: m.staff_members_invites_revoked_label(), variant: 'ghost' }
 	};
 </script>
 
-<PageHeader title={m.staff_members()}>
+<PageHeader title={m.staff_members_title()}>
 	<MemberViews active="invites" />
 </PageHeader>
 
@@ -47,32 +47,32 @@
 	>
 		<Select
 			size="sm"
-			aria-label={m.staff_status()}
+			aria-label={m.staff_status_label()}
 			value={status}
 			onchange={(e: Event) => {
 				status = (e.currentTarget as HTMLSelectElement).value as Status;
 				page = 1;
 			}}
 		>
-			<option value="pending">{m.staff_pending()}</option>
-			<option value="accepted">{m.staff_joined()}</option>
-			<option value="revoked">{m.staff_members_invites_revoked()}</option>
-			<option value="">{m.staff_all_statuses()}</option>
+			<option value="pending">{m.staff_pending_label()}</option>
+			<option value="accepted">{m.staff_joined_label()}</option>
+			<option value="revoked">{m.staff_members_invites_revoked_label()}</option>
+			<option value="">{m.staff_all_statuses_label()}</option>
 		</Select>
 		{#snippet actions()}
 			<InviteMemberAction />
 		{/snippet}
 	</FilterBar>
 
-	<DataList {result} empty={m.staff_members_invites_empty()} onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_members_invites_empty_body()} onpage={(p) => (page = p)}>
 		{#snippet children(invites)}
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_members_invites_invited()}</th>
-					<th class="col-support">{m.staff_members_invites_invited_by()}</th>
-					<th class="col-support">{m.staff_members_invites_sent()}</th>
-					<th class="w-px">{m.staff_status()}</th>
-					<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+					<th>{m.staff_members_invites_invited_label()}</th>
+					<th class="col-support">{m.staff_members_invites_invited_by_label()}</th>
+					<th class="col-support">{m.staff_members_invites_sent_label()}</th>
+					<th class="w-px">{m.staff_status_label()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 				{/snippet}
 				{#each invites as inv (inv.id)}
 					{@const badge = badges[inv.expired ? 'expired' : inv.status]}
@@ -88,12 +88,12 @@
 							{#if inv.status === 'pending'}
 								<Action
 									action={resendMemberInviteForm.for(inv.id)}
-									label={m.staff_resend()}
-									aria-label={m.staff_members_invites_resend_invitation({ email: inv.email })}
+									label={m.staff_resend_label()}
+									aria-label={m.staff_members_invites_resend_invitation_label({ email: inv.email })}
 									variant="ghost"
 									size="xs"
-									confirm={m.staff_members_invites_send_invitation_again({ email: inv.email })}
-									successToast={m.staff_members_invites_invitation_sent()}
+									confirm={m.staff_members_invites_send_invitation_again_body({ email: inv.email })}
+									successToast={m.staff_members_invites_invitation_sent_toast()}
 									onsuccess={() => result.refresh()}
 								>
 									{#snippet form()}
@@ -102,12 +102,12 @@
 								</Action>
 								<Action
 									action={revokeMemberInviteForm.for(inv.id)}
-									label={m.staff_revoke()}
-									aria-label={m.staff_members_invites_revoke_invitation({ email: inv.email })}
+									label={m.staff_revoke_label()}
+									aria-label={m.staff_members_invites_revoke_invitation_label({ email: inv.email })}
 									variant="ghost"
 									size="xs"
-									confirm={m.staff_members_invites_revoke_invitation_2({ email: inv.email })}
-									successToast={m.staff_members_invites_invitation_revoked()}
+									confirm={m.staff_members_invites_revoke_invitation_2_body({ email: inv.email })}
+									successToast={m.staff_members_invites_invitation_revoked_toast()}
 									onsuccess={() => result.refresh()}
 								>
 									{#snippet form()}

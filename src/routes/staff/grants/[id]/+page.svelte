@@ -37,15 +37,15 @@
 	const cents = (n: number | null) => (n != null ? formatCents(n) : '—');
 </script>
 
-<PageHeader width="3xl" title={grant.funderName} subtitle={m.staff_grants_id_subtitle()}>
+<PageHeader width="3xl" title={grant.funderName} subtitle={m.staff_grants_id_subtitle_body()}>
 	<Action
 		action={editForm}
-		label={m.staff_edit()}
+		label={m.staff_edit_label()}
 		variant="ghost"
 		size="sm"
-		modalTitle={m.staff_edit_3({ title: grant.title })}
-		submitLabel={m.staff_save()}
-		successToast={m.staff_saved()}
+		modalTitle={m.staff_edit_3_title({ title: grant.title })}
+		submitLabel={m.staff_save_label()}
+		successToast={m.staff_saved_toast()}
 	>
 		{#snippet form()}
 			<input {...editForm.fields.id.as('hidden', grant.id)} />
@@ -57,7 +57,7 @@
 <PageContent width="3xl">
 	{#if grant.deadline?.overdue}
 		<Alert type="warning">
-			{m.staff_grants_id_has_passed_record_once_dealt({
+			{m.staff_grants_id_has_passed_record_once_dealt_body({
 				value: grantDeadlineLabels[grant.deadline.kind],
 				formatIsoDay: formatIsoDay(grant.deadline.on)
 			})}
@@ -66,34 +66,34 @@
 
 	<InfoCard title={grant.title}>
 		<DefinitionList>
-			<Fact label={m.staff_status()}>
+			<Fact label={m.staff_status_label()}>
 				<Badge variant={grantStatusBadge[grant.status]} size="sm">
 					{grantStatusLabels[grant.status]}
 				</Badge>
 			</Fact>
-			<Fact label={m.staff_requested()} value={cents(grant.amountRequestedCents)} />
-			<Fact label={m.staff_grants_id_awarded()} value={cents(grant.amountAwardedCents)} />
-			<Fact label={m.staff_grants_id_apply_by()} value={formatIsoDay(grant.applyBy)} />
+			<Fact label={m.staff_requested_label()} value={cents(grant.amountRequestedCents)} />
+			<Fact label={m.staff_grants_id_awarded_label()} value={cents(grant.amountAwardedCents)} />
+			<Fact label={m.staff_grants_id_apply_by_label()} value={formatIsoDay(grant.applyBy)} />
 			<Fact
-				label={m.staff_grants_id_award_period()}
+				label={m.staff_grants_id_award_period_label()}
 				value="{formatIsoDay(grant.startsOn)} – {formatIsoDay(grant.endsOn)}"
 			/>
 			{#if grant.notes}
-				<Fact label={m.staff_notes()} wrap>{grant.notes}</Fact>
+				<Fact label={m.staff_notes_label()} wrap>{grant.notes}</Fact>
 			{/if}
 		</DefinitionList>
 	</InfoCard>
 
-	<InfoCard title={m.staff_reports()}>
+	<InfoCard title={m.staff_reports_title()}>
 		{#snippet action()}
 			<Action
 				action={addGrantReport}
-				label={m.staff_grants_id_add_report()}
+				label={m.staff_grants_id_add_report_label()}
 				variant="ghost"
 				size="sm"
-				modalTitle={m.staff_grants_id_new_report_deadline()}
-				submitLabel={m.staff_add()}
-				successToast={m.staff_grants_id_report_added()}
+				modalTitle={m.staff_grants_id_new_report_deadline_title()}
+				submitLabel={m.staff_add_label()}
+				successToast={m.staff_grants_id_report_added_toast()}
 			>
 				{#snippet form()}
 					<input {...addGrantReport.fields.grantApplicationId.as('hidden', grant.id)} />
@@ -103,16 +103,16 @@
 		{/snippet}
 		{#if grant.reports.length === 0}
 			<EmptyState
-				title={m.staff_grants_id_no_reports_owed()}
-				description={m.staff_grants_id_description()}
+				title={m.staff_grants_id_no_reports_owed_title()}
+				description={m.staff_grants_id_description_body()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_report()}</th>
-					<th>{m.staff_due()}</th>
-					<th>{m.staff_submitted()}</th>
-					<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+					<th>{m.staff_report_label()}</th>
+					<th>{m.staff_due_label()}</th>
+					<th>{m.staff_submitted_label()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 				{/snippet}
 				{#each grant.reports as r (r.id)}
 					{@const edit = updateGrantReport.for(r.id)}
@@ -123,12 +123,12 @@
 						<td class="w-px whitespace-nowrap">
 							<Action
 								action={edit}
-								label={m.staff_edit()}
+								label={m.staff_edit_label()}
 								variant="ghost"
 								size="sm"
-								modalTitle={m.staff_edit_3({ title: r.title })}
-								submitLabel={m.staff_save()}
-								successToast={m.staff_saved()}
+								modalTitle={m.staff_edit_3_title({ title: r.title })}
+								submitLabel={m.staff_save_label()}
+								successToast={m.staff_saved_toast()}
 								data-testid="edit-report"
 							>
 								{#snippet form()}
@@ -139,14 +139,14 @@
 							</Action>
 							<Action
 								action={deleteGrantReport.for(r.id)}
-								label={m.staff_delete()}
+								label={m.staff_delete_label()}
 								variant="ghost"
 								size="sm"
 								class="text-error"
-								modalTitle={m.staff_delete_3({ title: r.title })}
-								submitLabel={m.staff_delete()}
+								modalTitle={m.staff_delete_3_title({ title: r.title })}
+								submitLabel={m.staff_delete_label()}
 								submitVariant="error"
-								successToast={m.staff_deleted()}
+								successToast={m.staff_deleted_toast()}
 							>
 								{#snippet form()}
 									<input {...deleteGrantReport.for(r.id).fields.id.as('hidden', r.id)} />
@@ -156,7 +156,7 @@
 											.fields.grantApplicationId.as('hidden', grant.id)}
 									/>
 									<p class="text-sm">
-										{m.staff_grants_id_report_funder_does_not_require()}
+										{m.staff_grants_id_report_funder_does_not_require_text()}
 									</p>
 								{/snippet}
 							</Action>
@@ -170,20 +170,20 @@
 	<div class="flex flex-wrap gap-2">
 		<Action
 			action={deleteGrant.for(grant.id)}
-			label={m.staff_delete()}
+			label={m.staff_delete_label()}
 			variant="ghost"
 			size="sm"
 			class="text-error"
-			modalTitle={m.staff_delete_3({ title: grant.title })}
-			submitLabel={m.staff_delete()}
+			modalTitle={m.staff_delete_3_title({ title: grant.title })}
+			submitLabel={m.staff_delete_label()}
 			submitVariant="error"
-			successToast={m.staff_deleted()}
+			successToast={m.staff_deleted_toast()}
 			onsuccess={() => goto(resolve('staff/grants'))}
 		>
 			{#snippet form()}
 				<input {...deleteGrant.for(grant.id).fields.id.as('hidden', grant.id)} />
 				<p class="text-sm">
-					{m.staff_grants_id_row_should_never_have_existed()}
+					{m.staff_grants_id_row_should_never_have_existed_text()}
 				</p>
 			{/snippet}
 		</Action>

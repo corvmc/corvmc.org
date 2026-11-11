@@ -52,23 +52,23 @@
 
 <div class="mt-2 border-t border-base-200 pt-3">
 	<div class="flex flex-wrap items-center gap-2">
-		<span class="text-sm font-medium">{m.staff_settings_lock_health_lock()}</span>
+		<span class="text-sm font-medium">{m.staff_settings_lock_health_lock_text()}</span>
 		{#if !health.ok}
-			<Badge variant="error">{m.staff_settings_lock_health_unreachable()}</Badge>
+			<Badge variant="error">{m.staff_settings_lock_health_unreachable_label()}</Badge>
 			<span class="text-subtle">{health.error}</span>
 		{:else if health.online}
-			<Badge variant="success">{m.staff_settings_lock_health_online()}</Badge>
+			<Badge variant="success">{m.staff_settings_lock_health_online_label()}</Badge>
 			<span class="text-subtle">
-				{m.staff_settings_lock_health_battery_5({
-					lockState: health.lockState ?? m.staff_settings_lock_health_unknown(),
+				{m.staff_settings_lock_health_battery_5_text({
+					lockState: health.lockState ?? m.staff_settings_lock_health_unknown_text(),
 					value: health.batteryLevel ?? '?'
 				})}
 			</span>
 		{:else}
-			<Badge variant="warning">{m.staff_settings_lock_health_offline()}</Badge>
+			<Badge variant="warning">{m.staff_settings_lock_health_offline_label()}</Badge>
 			<span class="text-subtle">
-				{m.staff_settings_lock_health_door_codes_queued_will_not({
-					lockState: health.lockState ?? m.staff_settings_lock_health_unknown(),
+				{m.staff_settings_lock_health_door_codes_queued_will_not_text({
+					lockState: health.lockState ?? m.staff_settings_lock_health_unknown_text(),
 					value: health.batteryLevel ?? '?'
 				})}
 			</span>
@@ -76,32 +76,34 @@
 	</div>
 
 	<div class="mt-3 flex flex-wrap items-center gap-2">
-		<span class="text-subtle">{m.staff_settings_lock_health_daily_job()}</span>
+		<span class="text-subtle">{m.staff_settings_lock_health_daily_job_text()}</span>
 		{#if health.lastRun}
 			{#if health.lastRun.errors.length > 0}
 				<Badge variant="error">
 					{health.lastRun.errors.length}
 					{health.lastRun.errors.length === 1
-						? m.staff_settings_lock_health_error()
-						: m.staff_settings_lock_health_errors()}
+						? m.staff_settings_lock_health_error_label()
+						: m.staff_settings_lock_health_errors_label()}
 				</Badge>
 			{:else}
-				<Badge variant="success">{m.staff_settings_lock_health_clean()}</Badge>
+				<Badge variant="success">{m.staff_settings_lock_health_clean_label()}</Badge>
 			{/if}
 			<span class="text-subtle">
-				{m.staff_settings_lock_health_provisioned_cleaned_confirmed({
+				{m.staff_settings_lock_health_provisioned_cleaned_confirmed_text({
 					timeAgo: timeAgo(new Date(health.lastRun.at)),
-					triggeredBy: health.lastRun.triggeredBy ?? m.staff_settings_lock_health_scheduled(),
+					triggeredBy: health.lastRun.triggeredBy ?? m.staff_settings_lock_health_scheduled_text(),
 					provisioned: health.lastRun.provisioned,
 					cleaned: health.lastRun.cleaned,
 					confirmed: health.lastRun.confirmed
 				})}
 			</span>
 		{:else}
-			<span class="text-subtle">{m.staff_settings_lock_health_never_run_not_since_was()}</span>
+			<span class="text-subtle">{m.staff_settings_lock_health_never_run_not_since_was_text()}</span>
 		{/if}
 		<Button type="button" variant="ghost" size="sm" onclick={handleRun} disabled={running}>
-			{running ? m.staff_settings_lock_health_running() : m.staff_settings_lock_health_run_now()}
+			{running
+				? m.staff_settings_lock_health_running_label()
+				: m.staff_settings_lock_health_run_now_label()}
 		</Button>
 	</div>
 
@@ -119,22 +121,22 @@
 
 	{#if health.ok}
 		<div class="mt-3 flex flex-wrap items-center gap-2">
-			<span class="text-subtle">{m.staff_settings_lock_health_break_glass_code()}</span>
+			<span class="text-subtle">{m.staff_settings_lock_health_break_glass_code_text()}</span>
 			{#if health.fallbackCode}
 				<span class="font-mono font-bold tracking-[0.2em]">{health.fallbackCode}</span>
 				<Button type="button" variant="ghost" size="sm" onclick={handleRotate} disabled={rotating}>
-					{m.staff_settings_lock_health_rotate()}
+					{m.staff_settings_lock_health_rotate_label()}
 				</Button>
 			{:else}
 				<span class="text-subtle">
-					{m.staff_settings_lock_health_none_confirmed_lock_yet_one()}
+					{m.staff_settings_lock_health_none_confirmed_lock_yet_one_text()}
 				</span>
 			{/if}
 		</div>
 		{#if rotateResult}
 			<p class="mt-1 text-subtle">
 				{rotateResult.ok
-					? m.staff_settings_lock_health_replacement_its_way_lock_current()
+					? m.staff_settings_lock_health_replacement_its_way_lock_current_text()
 					: rotateResult.error}
 			</p>
 		{/if}

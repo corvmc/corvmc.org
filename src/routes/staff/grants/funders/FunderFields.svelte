@@ -21,18 +21,28 @@
 	} = $props();
 </script>
 
-<Field field={fields.name} type="text" label={m.staff_funder()} value={value?.name ?? ''} />
-<Field field={fields.website} type="text" label={m.staff_website()} value={value?.website ?? ''} />
+<Field field={fields.name} type="text" label={m.staff_funder_label()} value={value?.name ?? ''} />
+<Field
+	field={fields.website}
+	type="text"
+	label={m.staff_website_label()}
+	value={value?.website ?? ''}
+/>
 <Field
 	field={fields.contactName}
 	type="text"
-	label={m.staff_grants_funders_funder_fields_program_officer()}
+	label={m.staff_grants_funders_funder_fields_program_officer_label()}
 	value={value?.contactName ?? ''}
 />
 <Field
 	field={fields.contactEmail}
 	type="email"
-	label={m.staff_contact_email()}
+	label={m.staff_contact_email_label()}
 	value={value?.contactEmail ?? ''}
 />
-<Field field={fields.notes} type="textarea" label={m.staff_notes()} value={value?.notes ?? ''} />
+<Field
+	field={fields.notes}
+	type="textarea"
+	label={m.staff_notes_label()}
+	value={value?.notes ?? ''}
+/>

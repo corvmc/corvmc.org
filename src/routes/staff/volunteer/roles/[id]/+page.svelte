@@ -68,8 +68,8 @@
 <PageHeader
 	width="3xl"
 	title={role.name}
-	subtitle={m.staff_volunteer_roles_id_subtitle()}
-	parent={{ label: m.staff_roles(), href: resolve('staff/volunteer/roles') }}
+	subtitle={m.staff_volunteer_roles_id_subtitle_body()}
+	parent={{ label: m.staff_roles_label(), href: resolve('staff/volunteer/roles') }}
 >
 	<StatusBadge status={role.isActive ? 'active' : 'retired'} label />
 
@@ -81,37 +81,37 @@
 	{#if role.isActive}
 		<Action
 			action={archiveVolunteerRole}
-			label={m.staff_archive()}
+			label={m.staff_archive_label()}
 			data-testid="role-archive"
 			icon={archiveIcon}
 			variant="ghost"
 			size="sm"
-			modalTitle={m.staff_archive_2({ name: role.name })}
-			submitLabel={m.staff_archive()}
-			successToast={m.staff_volunteer_roles_id_role_archived()}
+			modalTitle={m.staff_archive_2_title({ name: role.name })}
+			submitLabel={m.staff_archive_label()}
+			successToast={m.staff_volunteer_roles_id_role_archived_toast()}
 		>
 			{#snippet form()}
 				<input {...archiveVolunteerRole.fields.id.as('hidden', role.id)} />
 				<p class="text-sm">
-					{m.staff_volunteer_roles_id_members_won_t_able_log()}
+					{m.staff_volunteer_roles_id_members_won_t_able_log_text()}
 				</p>
 			{/snippet}
 		</Action>
 	{:else}
 		<Action
 			action={restoreVolunteerRole}
-			label={m.staff_restore()}
+			label={m.staff_restore_label()}
 			data-testid="role-restore"
 			icon={unarchiveIcon}
 			variant="ghost"
 			size="sm"
-			modalTitle={m.staff_restore_2({ name: role.name })}
-			submitLabel={m.staff_restore()}
-			successToast={m.staff_volunteer_roles_id_role_restored()}
+			modalTitle={m.staff_restore_2_title({ name: role.name })}
+			submitLabel={m.staff_restore_label()}
+			successToast={m.staff_volunteer_roles_id_role_restored_toast()}
 		>
 			{#snippet form()}
 				<input {...restoreVolunteerRole.fields.id.as('hidden', role.id)} />
-				<p class="text-sm">{m.staff_volunteer_roles_id_members_will_able_log_hours()}</p>
+				<p class="text-sm">{m.staff_volunteer_roles_id_members_will_able_log_hours_text()}</p>
 			{/snippet}
 		</Action>
 	{/if}
@@ -119,22 +119,22 @@
 	{#if role.logCount === 0}
 		<Action
 			action={deleteVolunteerRole}
-			label={m.staff_delete()}
+			label={m.staff_delete_label()}
 			data-testid="role-delete"
 			icon={trashIcon}
 			variant="ghost"
 			size="sm"
 			class="text-error"
-			modalTitle={m.staff_delete_2({ name: role.name })}
-			submitLabel={m.staff_delete()}
+			modalTitle={m.staff_delete_2_title({ name: role.name })}
+			submitLabel={m.staff_delete_label()}
 			submitVariant="error"
-			successToast={m.staff_volunteer_roles_id_role_deleted()}
+			successToast={m.staff_volunteer_roles_id_role_deleted_toast()}
 			onsuccess={() => goto(resolve('staff/volunteer/roles'))}
 		>
 			{#snippet form()}
 				<input {...deleteVolunteerRole.fields.id.as('hidden', role.id)} />
 				<p class="text-sm">
-					{m.staff_volunteer_roles_id_nothing_has_been_logged_against()}
+					{m.staff_volunteer_roles_id_nothing_has_been_logged_against_text()}
 				</p>
 			{/snippet}
 		</Action>
@@ -146,39 +146,39 @@
 		<Form
 			remote={updateVolunteerRole}
 			guard
-			successToast={m.staff_volunteer_roles_id_role_updated()}
+			successToast={m.staff_volunteer_roles_id_role_updated_toast()}
 		>
 			<input {...fields.id.as('hidden', role.id)} />
-			<InfoCard title={m.staff_volunteer_roles_id_role_info()}>
-				<Field field={fields.name} type="text" label={m.staff_name()} value={role.name} />
+			<InfoCard title={m.staff_volunteer_roles_id_role_info_title()}>
+				<Field field={fields.name} type="text" label={m.staff_name_label()} value={role.name} />
 				<Field
 					field={fields.description}
 					type="textarea"
-					label={m.staff_job_description()}
+					label={m.staff_job_description_label()}
 					value={role.description ?? ''}
-					description={m.staff_volunteer_roles_id_markdown_what_members_read_their()}
+					description={m.staff_volunteer_roles_id_markdown_what_members_read_their_body()}
 				/>
 				<Field
 					field={fields.group}
 					type="select"
-					label={m.staff_group()}
+					label={m.staff_group_label()}
 					value={role.group}
 					options={groupOptions}
 				/>
 				<Field
 					field={fields.displayOrder}
 					type="number"
-					label={m.staff_display_order()}
+					label={m.staff_display_order_label()}
 					value={String(role.displayOrder)}
-					description={m.staff_volunteer_roles_id_lower_sorts_first_within_group()}
+					description={m.staff_volunteer_roles_id_lower_sorts_first_within_group_body()}
 				/>
 
 				<fieldset class="mt-2 rounded-box border border-base-300 p-4">
 					<legend class="px-2 text-sm font-medium"
-						>{m.staff_volunteer_roles_id_shift_defaults()}</legend
+						>{m.staff_volunteer_roles_id_shift_defaults_title()}</legend
 					>
 					<p class="mb-2 text-subtle">
-						{m.staff_volunteer_roles_id_what_new_shift_form_starts()}
+						{m.staff_volunteer_roles_id_what_new_shift_form_starts_text()}
 					</p>
 					<!--
 						Posted by name rather than through `fields.x`. A field registered as
@@ -193,7 +193,7 @@
 							submitAs="text"
 							type="number"
 							min="1"
-							label={m.staff_volunteer_roles_id_usual_length_minutes()}
+							label={m.staff_volunteer_roles_id_usual_length_minutes_label()}
 							value={role.defaultDurationMinutes === null
 								? ''
 								: String(role.defaultDurationMinutes)}
@@ -203,21 +203,22 @@
 							submitAs="text"
 							type="number"
 							min="1"
-							label={m.staff_volunteer_roles_id_people_needed()}
+							label={m.staff_volunteer_roles_id_people_needed_label()}
 							value={role.defaultCapacity === null ? '' : String(role.defaultCapacity)}
 						/>
 					</div>
 				</fieldset>
 
 				<fieldset class="mt-2 rounded-box border border-base-300 p-4">
-					<legend class="px-2 text-sm font-medium">{m.staff_volunteer_roles_id_accounting()}</legend
+					<legend class="px-2 text-sm font-medium"
+						>{m.staff_volunteer_roles_id_accounting_title()}</legend
 					>
 					<p class="mb-2 text-subtle">
 						<ParaglideMessage
-							message={m.staff_volunteer_roles_id_every_approved_hour_counts_toward}
+							message={m.staff_volunteer_roles_id_every_approved_hour_counts_toward_text}
 							inputs={{
 								staff_volunteer_roles_id_specialized_skill:
-									m.staff_volunteer_roles_id_specialized_skill()
+									m.staff_volunteer_roles_id_specialized_skill_text()
 							}}
 							>{#snippet em({ children })}<em>{@render children?.()}</em
 								>{/snippet}</ParaglideMessage
@@ -233,9 +234,9 @@
 						<Field
 							field={fields.isSpecializedSkill}
 							type="checkbox"
-							label={m.staff_volunteer_roles_id_specialized_skill_2()}
+							label={m.staff_volunteer_roles_id_specialized_skill_2_label()}
 							value={role.isSpecializedSkill}
-							description={m.staff_volunteer_roles_id_work_collective_would_otherwise_hav()}
+							description={m.staff_volunteer_roles_id_work_collective_would_otherwise_hav_body()}
 						/>
 						<!--
 							Posted by name rather than through `fields.x`, like the shift
@@ -249,9 +250,9 @@
 							type="number"
 							min="0"
 							step="0.01"
-							label={m.staff_volunteer_roles_id_market_rate_hr()}
+							label={m.staff_volunteer_roles_id_market_rate_hr_label()}
 							value={role.marketRateCents === null ? '' : (role.marketRateCents / 100).toFixed(2)}
-							description={m.staff_volunteer_roles_id_blank_counts_as_zero_never()}
+							description={m.staff_volunteer_roles_id_blank_counts_as_zero_never_body()}
 						/>
 					</div>
 				</fieldset>
@@ -259,8 +260,8 @@
 				<input {...fields.skillMatches.as('hidden', JSON.stringify(skillMatches))} />
 				<FormField
 					field={fields.skillMatches}
-					label={m.staff_volunteer_roles_id_skills_suit_role()}
-					description={m.staff_volunteer_roles_id_member_skill_tags_as_members()}
+					label={m.staff_volunteer_roles_id_skills_suit_role_label()}
+					description={m.staff_volunteer_roles_id_member_skill_tags_as_members_body()}
 				>
 					<FreeformTagInput
 						bind:value={skillMatches}
@@ -301,12 +302,12 @@
 	-->
 	{@const summary = feedbackList.find((f) => f.volunteerRoleId === id)}
 	{#if summary}
-		<InfoCard title={m.staff_volunteer_roles_id_how_s_going()}>
+		<InfoCard title={m.staff_volunteer_roles_id_how_s_going_title()}>
 			<div class="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
 				<span><span class="text-lg font-medium">{summary.averageRating.toFixed(1)}</span> / 5</span>
 				<span>
 					<ParaglideMessage
-						message={m.staff_volunteer_roles_id_set_up_arrival}
+						message={m.staff_volunteer_roles_id_set_up_arrival_text}
 						inputs={{ round: Math.round(summary.setUpShare * 100) }}
 						>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
 							>{/snippet}</ParaglideMessage
@@ -315,8 +316,8 @@
 				<span class="opacity-60">
 					{summary.responses}
 					{summary.responses === 1
-						? m.staff_volunteer_roles_id_response()
-						: m.staff_volunteer_roles_id_responses()}
+						? m.staff_volunteer_roles_id_response_text()
+						: m.staff_volunteer_roles_id_responses_text()}
 				</span>
 			</div>
 
@@ -333,10 +334,10 @@
 	{/if}
 
 	<ActivityFeedCard
-		title={m.staff_history()}
+		title={m.staff_history_title()}
 		query={(limit) => getVolunteerRoleHistory(limit ? { id, limit } : { id })}
 		toRow={feedItemRow}
-		empty={{ title: m.staff_no_recorded_changes() }}
+		empty={{ title: m.staff_no_recorded_changes_title() }}
 	/>
 </PageContent>
 

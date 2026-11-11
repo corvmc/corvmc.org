@@ -24,25 +24,28 @@
 	const data = $derived(await getForm8282Obligations());
 </script>
 
-<PageHeader title={m.staff_inventory_compliance_compliance()} subtitle={m.staff_inventory()} />
+<PageHeader
+	title={m.staff_inventory_compliance_compliance_title()}
+	subtitle={m.staff_inventory_body()}
+/>
 
 <PageContent>
 	{#if data.rows.length === 0}
 		<EmptyState
-			title={m.staff_inventory_compliance_nothing_outstanding()}
+			title={m.staff_inventory_compliance_nothing_outstanding_title()}
 			description={data.noFormOnRecord > 0
-				? m.staff_inventory_compliance_donated_disposed_inside_three_yea({
+				? m.staff_inventory_compliance_donated_disposed_inside_three_yea_body({
 						noFormOnRecord: data.noFormOnRecord,
 						value: data.noFormOnRecord === 1 ? 'unit was' : 'units were'
 					})
-				: m.staff_inventory_compliance_no_donated_gear_has_been()}
+				: m.staff_inventory_compliance_no_donated_gear_has_been_body()}
 		/>
 	{:else}
 		{#if data.overdueCount > 0}
 			<Alert type="error" class="mb-4">
 				{data.overdueCount === 1
-					? m.staff_inventory_compliance_one_filing_window_has_already()
-					: m.staff_inventory_compliance_filing_windows_have_already_close({
+					? m.staff_inventory_compliance_one_filing_window_has_already_body()
+					: m.staff_inventory_compliance_filing_windows_have_already_close_body({
 							overdueCount: data.overdueCount
 						})}
 			</Alert>
@@ -50,17 +53,17 @@
 
 		<!-- Stated once, at the top: the system is flagging, not determining. -->
 		<p class="mb-4 text-subtle">
-			{m.staff_inventory_compliance_disposing_donated_property_within()}
+			{m.staff_inventory_compliance_disposing_donated_property_within_text()}
 		</p>
 
 		<Table>
 			{#snippet head()}
-				<th>{m.staff_unit()}</th>
-				<th class="col-support">{m.staff_inventory_compliance_donor()}</th>
-				<th class="col-extra whitespace-nowrap">{m.staff_received()}</th>
-				<th class="whitespace-nowrap">{m.staff_inventory_compliance_disposed()}</th>
-				<th class="whitespace-nowrap">{m.staff_inventory_compliance_due_by()}</th>
-				<th class="w-px"><span class="sr-only">{m.staff_record()}</span></th>
+				<th>{m.staff_unit_label()}</th>
+				<th class="col-support">{m.staff_inventory_compliance_donor_label()}</th>
+				<th class="col-extra whitespace-nowrap">{m.staff_received_label()}</th>
+				<th class="whitespace-nowrap">{m.staff_inventory_compliance_disposed_label()}</th>
+				<th class="whitespace-nowrap">{m.staff_inventory_compliance_due_by_label()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_record_label()}</span></th>
 			{/snippet}
 			{#each data.rows as row (row.id)}
 				<tr class="hover">
@@ -85,7 +88,7 @@
 					<td class="whitespace-nowrap">
 						{#if row.state === 'overdue'}
 							<Badge variant="error" size="sm">
-								{m.staff_inventory_compliance_overdue({
+								{m.staff_inventory_compliance_overdue_label({
 									value: row.dueBy ? formatDateShort(row.dueBy) : ''
 								})}
 							</Badge>
@@ -93,7 +96,7 @@
 							<span class:text-warning={(row.daysRemaining ?? 99) < 30}>
 								{row.dueBy ? formatDateShort(row.dueBy) : '—'}
 								<span class="text-subtle"
-									>{m.staff_inventory_compliance_d({
+									>{m.staff_inventory_compliance_d_text({
 										daysRemaining: row.daysRemaining ?? ''
 									})}</span
 								>

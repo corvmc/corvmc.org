@@ -157,18 +157,18 @@
 </script>
 
 <svelte:head>
-	<title>{m.public_directory_directory_corvallis_music_collective()}</title>
+	<title>{m.public_directory_directory_corvallis_music_collective_title()}</title>
 	<meta name="description" content="Bands and musicians in the Corvallis Music Collective." />
 </svelte:head>
 
 {#snippet empty(singular: string, plural: string, total: number)}
 	{#if total === 0}
-		<EmptyState message={m.public_directory_message({ singular })} />
+		<EmptyState message={m.public_directory_message_body({ singular })} />
 	{:else}
 		<EmptyState>
-			<p>{m.public_directory_no_match_search({ plural })}</p>
+			<p>{m.public_directory_no_match_search_text({ plural })}</p>
 			<Button variant="ghost" size="sm" class="mt-2" onclick={clearFilters}
-				>{m.public_directory_clear_filters()}</Button
+				>{m.public_directory_clear_filters_label()}</Button
 			>
 		</EmptyState>
 	{/if}
@@ -177,28 +177,28 @@
 <Section>
 	<div class="mb-8 text-center">
 		<h1 class="mb-3 text-4xl font-bold tracking-tight text-cmc-navy">
-			{m.public_directory_directory()}
+			{m.public_directory_directory_title()}
 		</h1>
 		<p class="text-base text-fg-2">
-			{m.public_directory_bands_musicians_corvallis_music_collective()}
+			{m.public_directory_bands_musicians_corvallis_music_collective_text()}
 		</p>
 	</div>
 
 	{#if data.failed}
-		<Alert type="error">{m.public_directory_couldn_t_load_directory_right()}</Alert>
+		<Alert type="error">{m.public_directory_couldn_t_load_directory_right_body()}</Alert>
 	{:else}
 		<div class="mb-6 flex justify-center">
 			<TabBar
 				tabs={[
 					{
 						key: 'bands',
-						label: m.public_bands(),
+						label: m.public_bands_label(),
 						badge: bandMatches.length,
 						href: directoryHref('bands', searchText, genre)
 					},
 					{
 						key: 'musicians',
-						label: m.public_musicians(),
+						label: m.public_musicians_label(),
 						badge: musicianMatches.length,
 						href: directoryHref('musicians', searchText, genre)
 					},
@@ -207,7 +207,7 @@
 						// the columns both differ. TabBar renders an <a> in URL mode, so
 						// cross-route tabs compose with no shared state.
 						key: 'instructors',
-						label: m.public_teachers(),
+						label: m.public_teachers_label(),
 						href: resolve('directory/instructors')
 					}
 				]}
@@ -219,17 +219,17 @@
 			<FormField
 				type="text"
 				name="q"
-				label={m.public_search()}
+				label={m.public_search_label()}
 				class="w-full max-w-sm"
 				placeholder={tab === 'bands'
-					? m.public_directory_search_bands_by_name()
-					: m.public_directory_search_musicians_by_name()}
+					? m.public_directory_search_bands_by_name_placeholder()
+					: m.public_directory_search_musicians_by_name_placeholder()}
 				bind:value={searchText}
 			/>
 			<FormField
 				type="select"
 				name="sort"
-				label={m.public_directory_sort()}
+				label={m.public_directory_sort_label()}
 				class="w-full max-w-sm"
 				options={directorySortOptions}
 				bind:value={sort}
@@ -253,7 +253,7 @@
 
 			{#if hasFilters}
 				<Button variant="ghost" size="xs" onclick={clearFilters}
-					>{m.public_directory_clear_filters()}</Button
+					>{m.public_directory_clear_filters_label()}</Button
 				>
 			{/if}
 		</div>
@@ -312,7 +312,7 @@
 		{#if remaining > 0}
 			<div class="mt-8 flex justify-center">
 				<Button variant="default" size="sm" outline onclick={showMore}>
-					{m.public_directory_show_more_left({ remaining })}
+					{m.public_directory_show_more_left_label({ remaining })}
 				</Button>
 			</div>
 		{/if}
@@ -321,8 +321,8 @@
 			<p class="mt-10 text-center text-sm text-fg-3">
 				<ParaglideMessage
 					message={visibility === 'hidden'
-						? m.public_directory_don_t_see_name_profile_2
-						: m.public_directory_don_t_see_name_profile}
+						? m.public_directory_don_t_see_name_profile_2_text
+						: m.public_directory_don_t_see_name_profile_text}
 					inputs={{}}
 					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 						>{/snippet}{#snippet a({ children })}<a
@@ -333,7 +333,7 @@
 			</p>
 		{:else if profileIsIncomplete}
 			<p class="mt-10 text-center text-sm text-fg-3">
-				<ParaglideMessage message={m.public_directory_don_t_see_name_profiles} inputs={{}}
+				<ParaglideMessage message={m.public_directory_don_t_see_name_profiles_text} inputs={{}}
 					>{#snippet a({ children })}<a
 							href={resolve('member/profile')}
 							class="text-cmc-teal underline">{@render children?.()}</a

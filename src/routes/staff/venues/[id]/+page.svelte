@@ -46,69 +46,79 @@
 	);
 </script>
 
-<PageHeader width="3xl" title={venue.name} subtitle={m.staff_venue()}>
+<PageHeader width="3xl" title={venue.name} subtitle={m.staff_venue_body()}>
 	<Action
 		action={editForm}
-		label={m.staff_edit()}
+		label={m.staff_edit_label()}
 		variant="ghost"
 		size="sm"
-		modalTitle={m.staff_edit_2({ name: venue.name })}
-		submitLabel={m.staff_save()}
-		successToast={m.staff_saved()}
+		modalTitle={m.staff_edit_2_title({ name: venue.name })}
+		submitLabel={m.staff_save_label()}
+		successToast={m.staff_saved_toast()}
 	>
 		{#snippet form()}
 			<input {...editForm.fields.id.as('hidden', venue.id)} />
-			<Field field={fields.name} type="text" label={m.staff_name()} value={venue.name} />
+			<Field field={fields.name} type="text" label={m.staff_name_label()} value={venue.name} />
 			<Field
 				field={fields.address1}
 				type="text"
-				label={m.staff_address()}
+				label={m.staff_address_label()}
 				value={venue.address1 ?? ''}
 			/>
-			<Field field={fields.city} type="text" label={m.staff_city()} value={venue.city ?? ''} />
-			<Field field={fields.state} type="text" label={m.staff_state()} value={venue.state ?? ''} />
+			<Field
+				field={fields.city}
+				type="text"
+				label={m.staff_city_label()}
+				value={venue.city ?? ''}
+			/>
+			<Field
+				field={fields.state}
+				type="text"
+				label={m.staff_state_label()}
+				value={venue.state ?? ''}
+			/>
 			<Field
 				field={fields.postalCode}
 				type="text"
-				label={m.staff_zip()}
+				label={m.staff_zip_label()}
 				value={venue.postalCode ?? ''}
 			/>
 			<Field
 				field={fields.capacity}
 				type="number"
-				label={m.staff_capacity()}
+				label={m.staff_capacity_label()}
 				min="1"
 				value={venue.capacity != null ? String(venue.capacity) : ''}
 			/>
 			<Field
 				field={fields.contactName}
 				type="text"
-				label={m.staff_contact()}
+				label={m.staff_contact_label()}
 				value={venue.contactName ?? ''}
 			/>
 			<Field
 				field={fields.contactEmail}
 				type="email"
-				label={m.staff_contact_email()}
+				label={m.staff_contact_email_label()}
 				value={venue.contactEmail ?? ''}
 			/>
 			<Field
 				field={fields.contactPhone}
 				type="tel"
-				label={m.staff_contact_phone()}
+				label={m.staff_contact_phone_label()}
 				value={venue.contactPhone ?? ''}
 			/>
 			<Field
 				field={fields.loadInNotes}
 				type="text"
-				label={m.staff_load()}
+				label={m.staff_load_label()}
 				value={venue.loadInNotes ?? ''}
-				description={m.staff_where_van_goes_which_door()}
+				description={m.staff_where_van_goes_which_door_body()}
 			/>
 			<Field
 				field={fields.notes}
 				type="textarea"
-				label={m.staff_notes()}
+				label={m.staff_notes_label()}
 				value={venue.notes ?? ''}
 			/>
 		{/snippet}
@@ -121,18 +131,18 @@
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<span>
 					<ParaglideMessage
-						message={m.staff_venues_id_stays_every_event_named_off}
-						inputs={{ staff_archived_2: m.staff_archived_2() }}
+						message={m.staff_venues_id_stays_every_event_named_off_text}
+						inputs={{ staff_archived_2: m.staff_archived_2_text() }}
 						>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
 							>{/snippet}</ParaglideMessage
 					>
 				</span>
 				<Action
 					action={restoreVenue.for(venue.id)}
-					label={m.staff_restore()}
+					label={m.staff_restore_label()}
 					variant="ghost"
 					size="xs"
-					successToast={m.staff_restored()}
+					successToast={m.staff_restored_toast()}
 					noFooter
 				>
 					{#snippet form()}
@@ -143,33 +153,35 @@
 		</Alert>
 	{/if}
 
-	<InfoCard title={m.staff_where()}>
+	<InfoCard title={m.staff_where_title()}>
 		{#if venue.isPrimary}
 			<p>
-				<Badge variant="primary" size="sm">{m.staff_our_room()}</Badge>
-				<span class="ml-2 text-muted">{m.staff_venues_id_show_here_holds_practice_space()}</span>
+				<Badge variant="primary" size="sm">{m.staff_our_room_label()}</Badge>
+				<span class="ml-2 text-muted"
+					>{m.staff_venues_id_show_here_holds_practice_space_text()}</span
+				>
 			</p>
 		{:else}
 			<p class="text-muted">
-				{m.staff_venues_id_show_here_holds_nothing_practice()}
+				{m.staff_venues_id_show_here_holds_nothing_practice_text()}
 			</p>
 		{/if}
 
 		<dl class="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
 			<div>
-				<dt class="text-subtle text-sm">{m.staff_address()}</dt>
+				<dt class="text-subtle text-sm">{m.staff_address_label()}</dt>
 				<dd>{address || '—'}</dd>
 			</div>
 			<div>
-				<dt class="text-subtle text-sm">{m.staff_capacity()}</dt>
+				<dt class="text-subtle text-sm">{m.staff_capacity_label()}</dt>
 				<dd>{venue.capacity ?? '—'}</dd>
 			</div>
 			<div>
-				<dt class="text-subtle text-sm">{m.staff_contact()}</dt>
+				<dt class="text-subtle text-sm">{m.staff_contact_label()}</dt>
 				<dd>{contact || '—'}</dd>
 			</div>
 			<div>
-				<dt class="text-subtle text-sm">{m.staff_load()}</dt>
+				<dt class="text-subtle text-sm">{m.staff_load_label()}</dt>
 				<dd>{venue.loadInNotes ?? '—'}</dd>
 			</div>
 		</dl>
@@ -187,17 +199,17 @@
 		{#if !venue.isPrimary && !venue.deletedAt}
 			<Action
 				action={setPrimaryVenue.for(venue.id)}
-				label={m.staff_make_room()}
+				label={m.staff_make_room_label()}
 				variant="ghost"
 				size="sm"
-				modalTitle={m.staff_venues_id_make_practice_room({ name: venue.name })}
-				submitLabel={m.staff_venues_id_make_room()}
-				successToast={m.staff_done()}
+				modalTitle={m.staff_venues_id_make_practice_room_title({ name: venue.name })}
+				submitLabel={m.staff_venues_id_make_room_label()}
+				successToast={m.staff_done_toast()}
 			>
 				{#snippet form()}
 					<input {...setPrimaryVenue.for(venue.id).fields.id.as('hidden', venue.id)} />
 					<p class="text-sm">
-						{m.staff_venues_id_exactly_one_venue_ours_so()}
+						{m.staff_venues_id_exactly_one_venue_ours_so_text()}
 					</p>
 				{/snippet}
 			</Action>
@@ -206,17 +218,17 @@
 		{#if !venue.isPrimary && !venue.deletedAt}
 			<Action
 				action={archiveVenue.for(venue.id)}
-				label={m.staff_archive()}
+				label={m.staff_archive_label()}
 				variant="ghost"
 				size="sm"
-				modalTitle={m.staff_archive_2({ name: venue.name })}
-				submitLabel={m.staff_archive()}
-				successToast={m.staff_archived()}
+				modalTitle={m.staff_archive_2_title({ name: venue.name })}
+				submitLabel={m.staff_archive_label()}
+				successToast={m.staff_archived_toast()}
 			>
 				{#snippet form()}
 					<input {...archiveVenue.for(venue.id).fields.id.as('hidden', venue.id)} />
 					<p class="text-sm">
-						{m.staff_venues_id_comes_off_picker_new_events()}
+						{m.staff_venues_id_comes_off_picker_new_events_text()}
 					</p>
 				{/snippet}
 			</Action>
@@ -225,20 +237,20 @@
 		{#if !venue.isPrimary}
 			<Action
 				action={deleteVenue.for(venue.id)}
-				label={m.staff_delete()}
+				label={m.staff_delete_label()}
 				variant="ghost"
 				size="sm"
 				class="text-error"
-				modalTitle={m.staff_delete_2({ name: venue.name })}
-				submitLabel={m.staff_delete()}
+				modalTitle={m.staff_delete_2_title({ name: venue.name })}
+				submitLabel={m.staff_delete_label()}
 				submitVariant="error"
-				successToast={m.staff_deleted()}
+				successToast={m.staff_deleted_toast()}
 				onsuccess={() => goto(resolve('staff/venues'))}
 			>
 				{#snippet form()}
 					<input {...deleteVenue.for(venue.id).fields.id.as('hidden', venue.id)} />
 					<p class="text-sm">
-						{m.staff_venues_id_row_should_never_have_existed()}
+						{m.staff_venues_id_row_should_never_have_existed_text()}
 					</p>
 				{/snippet}
 			</Action>

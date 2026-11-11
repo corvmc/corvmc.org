@@ -46,7 +46,7 @@
 		style="font-family: var(--font-chalk); text-transform: uppercase;"
 		transform="rotate(-1, 55, 108)"
 	>
-		<tspan x="55" dy="0">{m.illustrations_keyfob_practice_room()}</tspan>
+		<tspan x="55" dy="0">{m.illustrations_keyfob_practice_room_text()}</tspan>
 	</text>
 
 	<!-- Tri-color stripe -->
@@ -64,7 +64,7 @@
 		letter-spacing="1"
 		fill="#c4cfde"
 		style="font-family: 'Courier New', ui-monospace, monospace;"
-		>{m.illustrations_keyfob_10a_10p()}</text
+		>{m.illustrations_keyfob_10a_10p_text()}</text
 	>
 </svg>
 

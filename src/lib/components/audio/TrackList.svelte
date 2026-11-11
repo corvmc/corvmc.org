@@ -14,7 +14,7 @@
 		tracks,
 		/** Rendered after each row — the band panel puts rename and delete here. */
 		rowActions,
-		empty = m.audio_track_list_empty()
+		empty = m.audio_track_list_empty_body()
 	}: {
 		tracks: PlayableTrack[];
 		rowActions?: import('svelte').Snippet<[PlayableTrack]>;
@@ -102,8 +102,8 @@
 						type="button"
 						class="btn btn-circle btn-ghost btn-sm"
 						aria-label={active && !paused
-							? m.audio_track_list_pause({ title: track.title })
-							: m.audio_track_list_play({ title: track.title })}
+							? m.audio_track_list_pause_label({ title: track.title })
+							: m.audio_track_list_play_label({ title: track.title })}
 						onclick={() => toggle(track)}
 					>
 						{#if active && !paused}

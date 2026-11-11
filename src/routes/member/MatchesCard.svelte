@@ -21,8 +21,8 @@
 
 	const title = $derived(
 		matches.direction === 'members'
-			? m.member_matches_card_members_looking_band()
-			: m.member_matches_card_bands_looking_members()
+			? m.member_matches_card_members_looking_band_title()
+			: m.member_matches_card_bands_looking_members_title()
 	);
 
 	/**
@@ -52,16 +52,16 @@
 		<!-- Naming the setting rather than hiding the card: a member who cannot
 		     remember switching off reads an empty card as a broken one. -->
 		<EmptyState
-			message={m.member_matches_card_profile_hidden_so_we_re()}
-			actionLabel={m.member_matches_card_change_who_can_see()}
+			message={m.member_matches_card_profile_hidden_so_we_re_body()}
+			actionLabel={m.member_matches_card_change_who_can_see_label()}
 			actionHref="/member/profile"
 		/>
 	{:else if matches.matches.length === 0}
 		<EmptyState
 			message={missing.length > 0
-				? m.member_matches_card_add_profile_we_ll_suggest({ missingSentence })
-				: m.member_matches_card_nothing_suggest_yet_check_back()}
-			actionLabel={missing.length > 0 ? m.member_matches_card_update_profile() : undefined}
+				? m.member_matches_card_add_profile_we_ll_suggest_body({ missingSentence })
+				: m.member_matches_card_nothing_suggest_yet_check_back_body()}
+			actionLabel={missing.length > 0 ? m.member_matches_card_update_profile_label() : undefined}
 			actionHref={missing.length > 0 ? '/member/profile' : undefined}
 		/>
 	{:else}
@@ -83,7 +83,7 @@
 		{#if missing.length > 0}
 			<p class="mt-3 text-subtle">
 				<ParaglideMessage
-					message={m.member_matches_card_add_closer_matches}
+					message={m.member_matches_card_add_closer_matches_text}
 					inputs={{ missingSentence }}
 					>{#snippet a({ children })}<a href={resolve('member/profile')} class="link link-primary"
 							>{@render children?.()}</a

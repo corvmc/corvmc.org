@@ -29,7 +29,7 @@
 
 <Action
 	action={unpublishEvent}
-	label={m.actions_unpublish()}
+	label={m.actions_unpublish_label()}
 	modalTitle={m.actions_unpublish_event_modal_title()}
 	successToast={m.actions_unpublish_event_success_toast()}
 	{variant}
@@ -41,12 +41,12 @@
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', eventId)} />
-		<p class="py-2">{m.actions_unpublish_event_revert_event_draft_will_no()}</p>
+		<p class="py-2">{m.actions_unpublish_event_revert_event_draft_will_no_text()}</p>
 		<FormField
 			field={unpublishEvent.fields.notes}
 			type="textarea"
-			label={m.actions_reason()}
-			description={m.actions_unpublish_event_description()}
+			label={m.actions_reason_label()}
+			description={m.actions_unpublish_event_description_body()}
 		/>
 	{/snippet}
 </Action>

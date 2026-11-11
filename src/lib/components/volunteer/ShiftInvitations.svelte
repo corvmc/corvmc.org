@@ -56,7 +56,7 @@
 					<div class="text-subtle text-sm">
 						{invitation.startsAt
 							? formatDateShort(invitation.startsAt)
-							: m.volunteer_shift_invitations_date_set()} ·
+							: m.volunteer_shift_invitations_date_set_text()} ·
 						{timeRange(invitation.startsAt, invitation.endsAt)}
 						{#if invitation.eventTitle}
 							· {invitation.roleName}
@@ -64,7 +64,7 @@
 					</div>
 					{#if invitation.invitedByName}
 						<div class="text-subtle text-xs">
-							{m.volunteer_asked({ invitedByName: invitation.invitedByName })}
+							{m.volunteer_asked_text({ invitedByName: invitation.invitedByName })}
 						</div>
 					{/if}
 					{#if invitation.notes}
@@ -74,10 +74,10 @@
 					<div class="mt-2 flex flex-wrap gap-2">
 						<Action
 							action={acceptShiftInvitation.for(invitation.signupId)}
-							label={m.volunteer_shift_invitations_yes_i_can()}
+							label={m.volunteer_shift_invitations_yes_i_can_label()}
 							variant="primary"
 							size="xs"
-							successToast={m.volunteer_shift_invitations_taken_staff_confirm_next()}
+							successToast={m.volunteer_shift_invitations_taken_staff_confirm_next_toast()}
 							onsuccess={onchanged}
 						>
 							{#snippet form()}
@@ -86,10 +86,10 @@
 						</Action>
 						<Action
 							action={declineShiftInvitation.for(invitation.signupId)}
-							label={m.volunteer_shift_invitations_can_t_make()}
+							label={m.volunteer_shift_invitations_can_t_make_label()}
 							variant="ghost"
 							size="xs"
-							successToast={m.volunteer_shift_invitations_thanks_saying_they_ll_ask()}
+							successToast={m.volunteer_shift_invitations_thanks_saying_they_ll_ask_toast()}
 							onsuccess={onchanged}
 						>
 							{#snippet form()}

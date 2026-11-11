@@ -24,7 +24,7 @@
 	$effect(() => {
 		if (!result || result === handled) return;
 		const message = result.conflict
-			? m.reservations_booking_booking_conflict_message()
+			? m.reservations_booking_booking_conflict_message_toast()
 			: result.validationError;
 		if (!message) return;
 		handled = result;

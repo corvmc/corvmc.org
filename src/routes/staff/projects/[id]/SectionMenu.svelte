@@ -36,24 +36,29 @@
 	<div class="dropdown-content dropdown-panel flex w-48 flex-col gap-1">
 		<Action
 			action={rename}
-			label={m.staff_projects_id_section_menu_rename_section()}
+			label={m.staff_projects_id_section_menu_rename_section_label()}
 			variant="ghost"
 			size="sm"
 			class="justify-start"
-			modalTitle={m.staff_projects_id_section_menu_rename({ name: section.name })}
-			submitLabel={m.staff_projects_id_section_menu_rename_2()}
-			successToast={m.staff_projects_id_section_menu_renamed()}
+			modalTitle={m.staff_projects_id_section_menu_rename_title({ name: section.name })}
+			submitLabel={m.staff_projects_id_section_menu_rename_2_label()}
+			successToast={m.staff_projects_id_section_menu_renamed_toast()}
 		>
 			{#snippet form()}
 				<input {...rename.fields.projectId.as('hidden', projectId)} />
 				<input {...rename.fields.sectionId.as('hidden', section.id)} />
-				<Field field={rename.fields.name} type="text" label={m.staff_name()} value={section.name} />
+				<Field
+					field={rename.fields.name}
+					type="text"
+					label={m.staff_name_label()}
+					value={section.name}
+				/>
 			{/snippet}
 		</Action>
 		{#if up}
 			<Action
 				action={() => move(up)}
-				label={m.staff_projects_id_section_menu_move_section_up()}
+				label={m.staff_projects_id_section_menu_move_section_up_label()}
 				variant="ghost"
 				size="sm"
 				class="justify-start"
@@ -62,7 +67,7 @@
 		{#if down}
 			<Action
 				action={() => move(down)}
-				label={m.staff_projects_id_section_menu_move_section_down()}
+				label={m.staff_projects_id_section_menu_move_section_down_label()}
 				variant="ghost"
 				size="sm"
 				class="justify-start"
@@ -70,22 +75,22 @@
 		{/if}
 		<Action
 			action={remove}
-			label={m.staff_projects_id_section_menu_delete_section()}
+			label={m.staff_projects_id_section_menu_delete_section_label()}
 			variant="error"
 			outline
 			size="sm"
 			class="justify-start"
-			modalTitle={m.staff_delete_2({ name: section.name })}
-			submitLabel={m.staff_projects_id_section_menu_delete_section()}
-			successToast={m.staff_projects_id_section_menu_section_deleted()}
+			modalTitle={m.staff_delete_2_title({ name: section.name })}
+			submitLabel={m.staff_projects_id_section_menu_delete_section_label()}
+			successToast={m.staff_projects_id_section_menu_section_deleted_toast()}
 		>
 			{#snippet form()}
 				<input {...remove.fields.projectId.as('hidden', projectId)} />
 				<input {...remove.fields.sectionId.as('hidden', section.id)} />
 				<p class="text-sm">
 					{taskCount === 0
-						? m.staff_projects_id_section_menu_has_no_tasks()
-						: m.staff_projects_id_section_menu_tasks_move({ count: taskCount })}
+						? m.staff_projects_id_section_menu_has_no_tasks_text()
+						: m.staff_projects_id_section_menu_tasks_move_text({ count: taskCount })}
 				</p>
 			{/snippet}
 		</Action>

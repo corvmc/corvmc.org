@@ -37,7 +37,7 @@
 	}
 </script>
 
-<PageHeader width="md" title={m.member_reservations_id_reservation()} />
+<PageHeader width="md" title={m.member_reservations_id_reservation_title()} />
 <PageContent width="md">
 	<!--
 		The detail-page shape ui-patterns names: `EntityIdentity size="lg"` over a
@@ -54,15 +54,15 @@
 		{#if data.band}
 			<!-- Whose booking this is, when it is not simply the member's own. A
 			     band booking looked identical to a personal one on this page. -->
-			<Fact label={m.member_reservations_id_booked()}><EntityChip ref={data.band} /></Fact>
+			<Fact label={m.member_reservations_id_booked_label()}><EntityChip ref={data.band} /></Fact>
 		{/if}
 		{#if res.notes}
-			<Fact label={m.member_reservations_id_notes()} wrap>{res.notes}</Fact>
+			<Fact label={m.member_reservations_id_notes_label()} wrap>{res.notes}</Fact>
 		{/if}
 	</DefinitionList>
 
 	{#if paidAtReader && res.status === 'confirmed'}
-		<Alert type="success">{m.member_reservations_id_paid_booking_confirmed()}</Alert>
+		<Alert type="success">{m.member_reservations_id_paid_booking_confirmed_body()}</Alert>
 	{/if}
 
 	{#if res.status === 'confirmed'}
@@ -70,20 +70,20 @@
 		     were a single paragraph inside an `InfoCard` titled "Door Code",
 		     which is a box around one sentence (#1061). -->
 		{#if res.lockCode && res.lockSyncedAt}
-			<InfoCard title={m.member_reservations_id_door_code()}>
+			<InfoCard title={m.member_reservations_id_door_code_title()}>
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{res.lockCode}</p>
 				<p class="text-muted">
-					{m.member_reservations_id_enter_code_door_keypad_get()}
+					{m.member_reservations_id_enter_code_door_keypad_get_text()}
 				</p>
 			</InfoCard>
 		{:else if data.fallbackCode}
 			<!-- Their own code has not reached the lock, and they are due in now.
 			     The break-glass code was synced long ago, so it opens the door
 			     even while the lock is offline. -->
-			<InfoCard title={m.member_reservations_id_door_code()}>
+			<InfoCard title={m.member_reservations_id_door_code_title()}>
 				<p class="font-mono text-4xl font-bold tracking-[0.3em]">{data.fallbackCode}</p>
 				<p class="text-muted">
-					{m.member_reservations_id_we_couldn_t_confirm_usual()}
+					{m.member_reservations_id_we_couldn_t_confirm_usual_text()}
 				</p>
 			</InfoCard>
 		{:else if data.inAccessWindow}
@@ -91,7 +91,9 @@
 			     break-glass code is confirmed on the lock right now, which happens
 			     mid-rotation. Standing outside is the failure mode. -->
 			<Alert type="error">
-				<ParaglideMessage message={m.member_reservations_id_code_hasn_t_reached_door} inputs={{}}
+				<ParaglideMessage
+					message={m.member_reservations_id_code_hasn_t_reached_door_body}
+					inputs={{}}
 					>{#snippet a({ children })}<a class="link" href={resolve('contact')}
 							>{@render children?.()}</a
 						>{/snippet}</ParaglideMessage
@@ -99,10 +101,10 @@
 			</Alert>
 		{:else if res.lockCode}
 			<p class="text-muted">
-				{m.member_reservations_id_door_code_issued_but_door()}
+				{m.member_reservations_id_door_code_issued_but_door_text()}
 			</p>
 		{:else}
-			<p class="text-muted">{m.member_reservations_id_door_code_will_appear_here()}</p>
+			<p class="text-muted">{m.member_reservations_id_door_code_will_appear_here_text()}</p>
 		{/if}
 	{/if}
 
@@ -131,13 +133,15 @@
 			{#if owesBalance}
 				{#if (res.cashDueCents ?? 0) > 0}
 					<span class="text-sm font-medium">
-						{(isPast ? m.member_reservations_id_due : m.member_reservations_id_due_at_door)({
+						{(isPast
+							? m.member_reservations_id_due_text
+							: m.member_reservations_id_due_at_door_text)({
 							formatDollars: formatDollars(res.cashDueCents ?? 0)
 						})}
 					</span>
 				{/if}
 				<Button href="/member/reservations/{res.id}/pay" variant="primary" outline>
-					{m.member_pay_online()}
+					{m.member_pay_online_label()}
 				</Button>
 			{/if}
 			{#if !isPast}
@@ -147,6 +151,6 @@
 	{/if}
 
 	<Button href="/member/reservations" variant="ghost" class="w-full"
-		>{m.member_back_reservations()}</Button
+		>{m.member_back_reservations_label()}</Button
 	>
 </PageContent>

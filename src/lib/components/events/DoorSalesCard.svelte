@@ -34,30 +34,30 @@
 	>
 		<div class="flex flex-wrap gap-6">
 			<div>
-				<p class="text-muted">{m.events_door_sales_card_card()}</p>
+				<p class="text-muted">{m.events_door_sales_card_card_text()}</p>
 				<p class="text-lg font-medium">{formatCents(takings.card.grossCents)}</p>
 				<p class="text-muted text-sm">
 					{takings.card.tickets}
 					{takings.card.tickets === 1
-						? m.events_door_sales_card_ticket()
-						: m.events_door_sales_card_tickets()}
+						? m.events_door_sales_card_ticket_text()
+						: m.events_door_sales_card_tickets_text()}
 				</p>
 			</div>
 			<div>
-				<p class="text-muted">{m.events_free()}</p>
+				<p class="text-muted">{m.events_free_text()}</p>
 				<p class="text-lg font-medium">{takings.free.tickets}</p>
-				<p class="text-muted text-sm">{m.events_door_sales_card_let_at_no_charge()}</p>
+				<p class="text-muted text-sm">{m.events_door_sales_card_let_at_no_charge_text()}</p>
 			</div>
 		</div>
 		<!-- No door refund path exists; a refund is a human in the Stripe dashboard. -->
 		<p class="mt-2 text-muted text-sm">
-			{m.events_as_sold_refunds_handled_stripe()}
+			{m.events_as_sold_refunds_handled_stripe_text()}
 		</p>
 		{#if open}
 			<div class="mt-3">
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- withQuery over resolve() -->
 				<a href={tillHref} class="link text-sm link-primary"
-					>{m.events_door_sales_card_open_till()}</a
+					>{m.events_door_sales_card_open_till_text()}</a
 				>
 			</div>
 		{/if}

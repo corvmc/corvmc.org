@@ -21,8 +21,8 @@
 </script>
 
 <PageHeader
-	title={m.staff_projects()}
-	documentTitle={m.staff_project_templates_project_templates()}
+	title={m.staff_projects_title()}
+	documentTitle={m.staff_project_templates_project_templates_title()}
 >
 	<StaffViews views={projectViews} active="templates" />
 </PageHeader>
@@ -32,48 +32,48 @@
 		<Action
 			size="sm"
 			action={createDutyList}
-			label={m.staff_project_templates_new_template()}
+			label={m.staff_project_templates_new_template_label()}
 			modalTitle={m.staff_project_templates_modal_title()}
 			submitLabel={m.staff_project_templates_submit_label()}
 			successToast={m.staff_project_templates_success_toast()}
 		>
 			{#snippet form()}
-				<FormField field={createDutyList.fields.name} label={m.staff_name()} type="text" />
+				<FormField field={createDutyList.fields.name} label={m.staff_name_label()} type="text" />
 				<FormField
 					field={createDutyList.fields.description}
-					label={m.staff_description()}
+					label={m.staff_description_label()}
 					type="textarea"
-					description={m.staff_project_templates_shown_when_choosing_template_apply()}
+					description={m.staff_project_templates_shown_when_choosing_template_apply_body()}
 				/>
 				<FormField
 					field={createDutyList.fields.anchor}
-					label={m.staff_measure_offsets_from()}
+					label={m.staff_measure_offsets_from_label()}
 					type="select"
 					options={anchorOptions}
-					description={m.staff_project_templates_every_item_timed_from()}
+					description={m.staff_project_templates_every_item_timed_from_body()}
 				/>
 				<FormField
 					field={createDutyList.fields.startsProduction}
 					type="checkbox"
-					label={m.staff_production()}
-					checkboxLabel={m.staff_project_templates_starts_production()}
+					label={m.staff_production_label()}
+					checkboxLabel={m.staff_project_templates_starts_production_checkbox()}
 				/>
 			{/snippet}
 		</Action>
 	</div>
 	{#if rows.length === 0}
 		<EmptyState
-			title={m.staff_project_templates_no_templates_yet()}
-			description={m.staff_project_templates_template_set_work_orders_project()}
+			title={m.staff_project_templates_no_templates_yet_title()}
+			description={m.staff_project_templates_template_set_work_orders_project_body()}
 		/>
 	{:else}
-		<InfoCard title={m.staff_project_templates_templates()}>
+		<InfoCard title={m.staff_project_templates_templates_title()}>
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_name()}</th>
-					<th>{m.staff_project_templates_anchor()}</th>
-					<th class="cell-num">{m.staff_items()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_name_label()}</th>
+					<th>{m.staff_project_templates_anchor_label()}</th>
+					<th class="cell-num">{m.staff_items_label()}</th>
 				{/snippet}
 
 				{#each rows as list (list.id)}

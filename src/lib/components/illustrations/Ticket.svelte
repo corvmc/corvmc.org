@@ -31,12 +31,12 @@
 		letter-spacing="1.8"
 		fill="#c63015"
 		style="font-family: ui-monospace, Menlo, monospace; text-transform: uppercase;"
-		>{m.illustrations_ticket_corvallis_music_collective()}</text
+		>{m.illustrations_ticket_corvallis_music_collective_text()}</text
 	>
 
 	<!-- Title -->
 	<text x="14" y="42" font-size="19" fill="#1a1410" style="font-family: var(--font-chalk);"
-		>{m.illustrations_ticket_showcase_night()}</text
+		>{m.illustrations_ticket_showcase_night_text()}</text
 	>
 
 	<!-- When -->
@@ -46,7 +46,7 @@
 		font-weight="700"
 		font-size="15"
 		fill="#1a1410"
-		style="font-family: var(--font-script);">{m.illustrations_ticket_fri_dec_13_7_pm()}</text
+		style="font-family: var(--font-script);">{m.illustrations_ticket_fri_dec_13_7_pm_text()}</text
 	>
 
 	<!-- Where -->
@@ -55,7 +55,8 @@
 		y="75"
 		font-size="12"
 		fill="rgba(26,20,16,0.72)"
-		style="font-family: var(--font-script);">{m.illustrations_ticket_6775_sw_philomath_blvd()}</text
+		style="font-family: var(--font-script);"
+		>{m.illustrations_ticket_6775_sw_philomath_blvd_text()}</text
 	>
 
 	<!-- Dashed line -->
@@ -78,7 +79,7 @@
 		letter-spacing="1.1"
 		fill="#c63015"
 		style="font-family: ui-monospace, Menlo, monospace; text-transform: uppercase;"
-		>{m.illustrations_ticket_5_notaflof()}</text
+		>{m.illustrations_ticket_5_notaflof_text()}</text
 	>
 	<text
 		x="216"
@@ -89,7 +90,7 @@
 		letter-spacing="1.1"
 		fill="rgba(26,20,16,0.55)"
 		style="font-family: ui-monospace, Menlo, monospace; text-transform: uppercase;"
-		>{m.illustrations_ticket_doors_6_30()}</text
+		>{m.illustrations_ticket_doors_6_30_text()}</text
 	>
 
 	<!-- Perforation -->
@@ -123,7 +124,7 @@
 			letter-spacing="2.8"
 			fill="#c63015"
 			transform="rotate(-90, 257, 55)"
-			style="text-transform: uppercase;">{m.illustrations_ticket_admit_one()}</text
+			style="text-transform: uppercase;">{m.illustrations_ticket_admit_one_text()}</text
 		>
 	</g>
 </svg>

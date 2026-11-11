@@ -32,42 +32,42 @@
 <Field
 	field={fields.name}
 	type="text"
-	label={m.renewal_renewal_fields_name()}
-	description={m.renewal_renewal_fields_general_liability_insurance_olcc_spec()}
+	label={m.renewal_renewal_fields_name_label()}
+	description={m.renewal_renewal_fields_general_liability_insurance_olcc_spec_body()}
 	value={value?.name ?? ''}
 />
 <Field
 	field={fields.kind}
 	type="select"
-	label={m.renewal_renewal_fields_kind()}
+	label={m.renewal_renewal_fields_kind_label()}
 	options={kindOptions}
 	value={value?.kind ?? 'permit'}
 />
 <Field
 	field={fields.issuer}
 	type="text"
-	label={m.renewal_renewal_fields_issued_by()}
-	description={m.renewal_renewal_fields_city_olcc_insurer()}
+	label={m.renewal_renewal_fields_issued_by_label()}
+	description={m.renewal_renewal_fields_city_olcc_insurer_body()}
 	value={value?.issuer ?? ''}
 />
 <Field
 	field={fields.reference}
 	type="text"
-	label={m.renewal_renewal_fields_reference()}
-	description={m.renewal_renewal_fields_permit_license_policy_number()}
+	label={m.renewal_renewal_fields_reference_label()}
+	description={m.renewal_renewal_fields_permit_license_policy_number_body()}
 	value={value?.reference ?? ''}
 />
 <Field
 	field={fields.expiresOn}
 	type="date"
-	label={m.renewal_renewal_fields_expires()}
+	label={m.renewal_renewal_fields_expires_label()}
 	value={value?.expiresOn ?? ''}
 />
 <Field
 	field={fields.responsibleUserId}
 	type="select"
-	label={m.renewal_renewal_fields_responsible()}
-	description={m.renewal_renewal_fields_gets_reminders_with_nobody_named()}
+	label={m.renewal_renewal_fields_responsible_label()}
+	description={m.renewal_renewal_fields_gets_reminders_with_nobody_named_body()}
 	placeholder={m.renewal_renewal_fields_placeholder()}
 	options={assigneeOptions}
 	value={value?.responsibleUserId ?? ''}
@@ -75,6 +75,6 @@
 <Field
 	field={fields.notes}
 	type="textarea"
-	label={m.renewal_renewal_fields_notes()}
+	label={m.renewal_renewal_fields_notes_label()}
 	value={value?.notes ?? ''}
 />

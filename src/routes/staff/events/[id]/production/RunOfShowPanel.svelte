@@ -64,7 +64,7 @@
 	const addFields = addRunOfShowSlot.fields;
 
 	const actOptions = $derived([
-		{ value: '', label: m.staff_events_id_production_run_of_show_panel_not_bill_dj_hos() },
+		{ value: '', label: m.staff_events_id_production_run_of_show_panel_not_bill_dj_hos_label() },
 		...(runOfShow?.unslotted ?? []).map((act) => ({ value: act.eventBandId, label: act.name }))
 	]);
 
@@ -77,19 +77,19 @@
 
 {#if !runOfShow}
 	<EmptyState
-		title={m.staff_events_id_production_run_of_show_panel_no_production_y()}
-		description={m.staff_events_id_production_run_of_show_panel_open_one_overvi()}
+		title={m.staff_events_id_production_run_of_show_panel_no_production_y_title()}
+		description={m.staff_events_id_production_run_of_show_panel_open_one_overvi_body()}
 	/>
 {:else}
-	<InfoCard title={m.staff_night()}>
+	<InfoCard title={m.staff_night_title()}>
 		<div class="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
 			<span>
 				<ParaglideMessage
-					message={m.staff_events_id_production_run_of_show_panel_first_set}
+					message={m.staff_events_id_production_run_of_show_panel_first_set_text}
 					inputs={{
 						value: runOfShow.firstSetAt
 							? formatTime(runOfShow.firstSetAt)
-							: m.staff_events_id_production_run_of_show_panel_not_set()
+							: m.staff_events_id_production_run_of_show_panel_not_set_text()
 					}}
 					>{#snippet strong({ children })}<strong class="tabular-nums"
 							>{@render children?.()}</strong
@@ -98,11 +98,11 @@
 			</span>
 			<span>
 				<ParaglideMessage
-					message={m.staff_events_id_production_run_of_show_panel_curfew}
+					message={m.staff_events_id_production_run_of_show_panel_curfew_text}
 					inputs={{
 						value: runOfShow.curfewAt
 							? formatTime(runOfShow.curfewAt)
-							: m.staff_events_id_production_run_of_show_panel_not_set()
+							: m.staff_events_id_production_run_of_show_panel_not_set_text()
 					}}
 					>{#snippet strong({ children })}<strong class="tabular-nums"
 							>{@render children?.()}</strong
@@ -118,7 +118,7 @@
 			as a bug rather than as a question nobody has answered yet.
 		-->
 		<Alert type="warning">
-			{m.staff_events_id_production_run_of_show_panel_set_first_set_t()}
+			{m.staff_events_id_production_run_of_show_panel_set_first_set_t_body()}
 		</Alert>
 	{/if}
 
@@ -128,18 +128,20 @@
 
 	{#if runOfShow.slots.length === 0}
 		<EmptyState
-			title={m.staff_events_id_production_run_of_show_panel_nothing_stage_y()}
-			description={m.staff_events_id_production_run_of_show_panel_build_running_o()}
+			title={m.staff_events_id_production_run_of_show_panel_nothing_stage_y_title()}
+			description={m.staff_events_id_production_run_of_show_panel_build_running_o_body()}
 		>
 			<Form
 				remote={buildRunOfShowFromLineup}
-				successToast={m.staff_events_id_production_run_of_show_panel_running_order_b()}
+				successToast={m.staff_events_id_production_run_of_show_panel_running_order_b_toast()}
 			>
 				<input {...buildRunOfShowFromLineup.fields.eventId.as('hidden', eventId)} />
 				<input
 					{...buildRunOfShowFromLineup.fields.productionId.as('hidden', runOfShow.productionId)}
 				/>
-				<SubmitButton label={m.staff_events_id_production_run_of_show_panel_build_from_bill()} />
+				<SubmitButton
+					label={m.staff_events_id_production_run_of_show_panel_build_from_bill_label()}
+				/>
 			</Form>
 		</EmptyState>
 	{:else}
@@ -169,7 +171,7 @@
 										)}{/if}
 									{#if drift !== null}
 										<span class:text-error={drift > 0} class:text-success={drift <= 0}>
-											{m.staff_events_id_production_run_of_show_panel_m({
+											{m.staff_events_id_production_run_of_show_panel_m_text({
 												value: drift > 0 ? `+${drift}` : drift
 											})}
 										</span>
@@ -180,18 +182,18 @@
 
 						<div class="min-w-0 grow">
 							<div class="flex items-center gap-2">
-								<span class="truncate font-medium">{slot.actName ?? m.staff_not_bill()}</span>
+								<span class="truncate font-medium">{slot.actName ?? m.staff_not_bill_text()}</span>
 								{#if slot.actStatus}
 									<StatusBadge status={slot.actStatus} />
 								{/if}
 							</div>
 							<div class="text-subtle">
-								{m.staff_events_id_production_run_of_show_panel_min_set_min_cha({
+								{m.staff_events_id_production_run_of_show_panel_min_set_min_cha_text({
 									setLengthMinutes: slot.setLengthMinutes,
 									changeoverMinutes: slot.changeoverMinutes
 								})}
 								{#if slot.soundcheckAt}
-									{m.staff_events_id_production_run_of_show_panel_soundcheck({
+									{m.staff_events_id_production_run_of_show_panel_soundcheck_text({
 										formatTime: formatTime(slot.soundcheckAt)
 									})}
 								{/if}
@@ -213,7 +215,7 @@
 							{#if !slot.actualEndAt}
 								<Form
 									remote={clock}
-									successToast={m.staff_events_id_production_run_of_show_panel_noted()}
+									successToast={m.staff_events_id_production_run_of_show_panel_noted_toast()}
 								>
 									<input {...clock.fields.slotId.as('hidden', slot.id)} />
 									<input {...clock.fields.eventId.as('hidden', eventId)} />
@@ -222,19 +224,19 @@
 									/>
 									<input {...clock.fields.action.as('hidden', 'now')} />
 									<SubmitButton
-										label={slot.actualStartAt ? m.staff_finished() : m.staff_started()}
+										label={slot.actualStartAt ? m.staff_finished_label() : m.staff_started_label()}
 										variant={slot.actualStartAt ? 'default' : 'primary'}
 										size="xs"
 									/>
 								</Form>
 							{/if}
 							{#if slot.actualStartAt}
-								<Form remote={undo} successToast={m.staff_cleared()}>
+								<Form remote={undo} successToast={m.staff_cleared_toast()}>
 									<input {...undo.fields.slotId.as('hidden', slot.id)} />
 									<input {...undo.fields.eventId.as('hidden', eventId)} />
 									<input {...undo.fields.edge.as('hidden', slot.actualEndAt ? 'end' : 'start')} />
 									<input {...undo.fields.action.as('hidden', 'clear')} />
-									<SubmitButton label={m.staff_undo()} variant="ghost" size="xs" />
+									<SubmitButton label={m.staff_undo_label()} variant="ghost" size="xs" />
 								</Form>
 							{/if}
 						</div>
@@ -250,7 +252,7 @@
 								<input {...up.fields.slotId.as('hidden', slot.id)} />
 								<input {...up.fields.direction.as('hidden', 'up')} />
 								<SubmitButton
-									label={m.staff_events_id_production_run_of_show_panel_up()}
+									label={m.staff_events_id_production_run_of_show_panel_up_label()}
 									variant="ghost"
 									size="sm"
 									icon={upIcon}
@@ -262,7 +264,7 @@
 								<input {...down.fields.slotId.as('hidden', slot.id)} />
 								<input {...down.fields.direction.as('hidden', 'down')} />
 								<SubmitButton
-									label={m.staff_events_id_production_run_of_show_panel_down()}
+									label={m.staff_events_id_production_run_of_show_panel_down_label()}
 									variant="ghost"
 									size="sm"
 									icon={downIcon}
@@ -275,28 +277,29 @@
 								onclick={() => (openSlotId = openSlotId === slot.id ? null : slot.id)}
 							>
 								{openSlotId === slot.id
-									? m.staff_events_id_production_run_of_show_panel_close()
-									: m.staff_edit()}
+									? m.staff_events_id_production_run_of_show_panel_close_label()
+									: m.staff_edit_label()}
 							</Button>
 							<Action
 								action={drop}
-								label={m.staff_remove()}
+								label={m.staff_remove_label()}
 								iconOnly
 								icon={trashIcon}
 								variant="ghost"
 								size="sm"
 								class="text-error"
 								modalTitle={m.staff_events_id_production_run_of_show_panel_modal_title()}
-								submitLabel={m.staff_remove()}
+								submitLabel={m.staff_remove_label()}
 								submitVariant="error"
-								successToast={m.staff_events_id_production_run_of_show_panel_set_removed()}
+								successToast={m.staff_events_id_production_run_of_show_panel_set_removed_toast()}
 							>
 								{#snippet form()}
 									<input {...drop.fields.eventId.as('hidden', eventId)} />
 									<input {...drop.fields.slotId.as('hidden', slot.id)} />
 									<p class="text-sm">
-										{m.staff_events_id_production_run_of_show_panel_comes_off_runni({
-											actName: slot.actName ?? m.staff_events_id_production_run_of_show_panel_set()
+										{m.staff_events_id_production_run_of_show_panel_comes_off_runni_text({
+											actName:
+												slot.actName ?? m.staff_events_id_production_run_of_show_panel_set_text()
 										})}
 									</p>
 								{/snippet}
@@ -309,7 +312,7 @@
 					{/each}
 
 					{#if openSlotId === slot.id}
-						<Form remote={edit} guard successToast={m.staff_saved()} class="mt-3 space-y-4">
+						<Form remote={edit} guard successToast={m.staff_saved_toast()} class="mt-3 space-y-4">
 							<input {...edit.fields.eventId.as('hidden', eventId)} />
 							<input {...edit.fields.slotId.as('hidden', slot.id)} />
 							<input {...edit.fields.soundcheckDate.as('hidden', showDate)} />
@@ -317,58 +320,58 @@
 								<Field
 									field={edit.fields.setLengthMinutes}
 									type="number"
-									label={m.staff_events_id_production_run_of_show_panel_set_length_minu()}
+									label={m.staff_events_id_production_run_of_show_panel_set_length_minu_label()}
 									value={slot.setLengthMinutes}
 								/>
 								<Field
 									field={edit.fields.changeoverMinutes}
 									type="number"
-									label={m.staff_events_id_production_run_of_show_panel_changeover_afte()}
+									label={m.staff_events_id_production_run_of_show_panel_changeover_afte_label()}
 									value={slot.changeoverMinutes}
 								/>
 								<Field
 									field={edit.fields.soundcheckTime}
 									type="time"
-									label={m.staff_soundcheck()}
+									label={m.staff_soundcheck_label()}
 									value={slot.soundcheckAt ? toLocalTime(slot.soundcheckAt) : ''}
-									description={m.staff_events_id_production_run_of_show_panel_not_part_schedu()}
+									description={m.staff_events_id_production_run_of_show_panel_not_part_schedu_body()}
 								/>
 							</div>
 							<Field
 								field={edit.fields.techNotes}
 								type="textarea"
-								label={m.staff_events_id_production_run_of_show_panel_tech_notes()}
+								label={m.staff_events_id_production_run_of_show_panel_tech_notes_label()}
 								value={slot.techNotes ?? ''}
 							/>
 							<Field
 								field={edit.fields.backlineNeeds}
 								type="textarea"
-								label={m.staff_events_id_production_run_of_show_panel_backline()}
+								label={m.staff_events_id_production_run_of_show_panel_backline_label()}
 								value={slot.backlineNeeds ?? ''}
 							/>
 							<Field
 								field={edit.fields.hospitalityNotes}
 								type="textarea"
-								label={m.staff_hospitality()}
+								label={m.staff_hospitality_label()}
 								value={slot.hospitalityNotes ?? ''}
 							/>
 							<div class="grid gap-4 md:grid-cols-3">
 								<Field
 									field={edit.fields.contactName}
-									label={m.staff_events_id_production_run_of_show_panel_contact_show()}
+									label={m.staff_events_id_production_run_of_show_panel_contact_show_label()}
 									value={slot.contactName ?? ''}
-									description={m.staff_events_id_production_run_of_show_panel_tour_manager_wh()}
+									description={m.staff_events_id_production_run_of_show_panel_tour_manager_wh_body()}
 								/>
 								<Field
 									field={edit.fields.contactEmail}
 									type="email"
-									label={m.staff_email()}
+									label={m.staff_email_label()}
 									value={slot.contactEmail ?? ''}
 								/>
 								<Field
 									field={edit.fields.contactPhone}
 									type="tel"
-									label={m.staff_phone()}
+									label={m.staff_phone_label()}
 									value={slot.contactPhone ?? ''}
 								/>
 							</div>
@@ -385,7 +388,7 @@
 								{:else}
 									<span></span>
 								{/if}
-								<SubmitButton label={m.staff_save()} />
+								<SubmitButton label={m.staff_save_label()} />
 							</div>
 						</Form>
 
@@ -399,54 +402,54 @@
 							<Form
 								remote={terms}
 								guard
-								successToast={m.staff_events_id_production_run_of_show_panel_terms_saved()}
+								successToast={m.staff_events_id_production_run_of_show_panel_terms_saved_toast()}
 								class="mt-4 space-y-4"
 							>
 								<input {...terms.fields.eventId.as('hidden', eventId)} />
 								<input {...terms.fields.slotId.as('hidden', slot.id)} />
 								<h3 class="text-sm font-semibold">
-									{m.staff_events_id_production_run_of_show_panel_deal()}
+									{m.staff_events_id_production_run_of_show_panel_deal_title()}
 								</h3>
 								<div class="grid gap-4 md:grid-cols-2">
 									<MoneyField
 										field={terms.fields.guaranteeCents}
-										label={m.staff_events_id_production_run_of_show_panel_guarantee()}
+										label={m.staff_events_id_production_run_of_show_panel_guarantee_label()}
 										value={slot.terms.guaranteeCents}
-										description={m.staff_events_id_production_run_of_show_panel_leave_empty_no()}
+										description={m.staff_events_id_production_run_of_show_panel_leave_empty_no_body()}
 									/>
 									<Field
 										field={terms.fields.percentageBps}
 										type="number"
-										label={m.staff_events_id_production_run_of_show_panel_percentage_basi()}
+										label={m.staff_events_id_production_run_of_show_panel_percentage_basi_label()}
 										value={slot.terms.percentageBps ?? undefined}
-										description={m.staff_events_id_production_run_of_show_panel_7000_70()}
+										description={m.staff_events_id_production_run_of_show_panel_7000_70_body()}
 									/>
 								</div>
 								<Field
 									field={terms.fields.versus}
 									type="checkbox"
-									label={m.staff_events_id_production_run_of_show_panel_versus()}
-									checkboxLabel={m.staff_events_id_production_run_of_show_panel_pay_guarantee_p()}
+									label={m.staff_events_id_production_run_of_show_panel_versus_label()}
+									checkboxLabel={m.staff_events_id_production_run_of_show_panel_pay_guarantee_p_checkbox()}
 									value={slot.terms.versus}
 								/>
 								<Field
 									field={terms.fields.againstNet}
 									type="checkbox"
-									label={m.staff_events_id_production_run_of_show_panel_against_net()}
-									checkboxLabel={m.staff_events_id_production_run_of_show_panel_percentage_net()}
+									label={m.staff_events_id_production_run_of_show_panel_against_net_label()}
+									checkboxLabel={m.staff_events_id_production_run_of_show_panel_percentage_net_checkbox()}
 									value={slot.terms.againstNet}
 								/>
 								<Field
 									field={terms.fields.contributed}
 									type="checkbox"
-									label={m.staff_events_id_production_run_of_show_panel_donated()}
-									checkboxLabel={m.staff_events_id_production_run_of_show_panel_played_free_rec()}
+									label={m.staff_events_id_production_run_of_show_panel_donated_label()}
+									checkboxLabel={m.staff_events_id_production_run_of_show_panel_played_free_rec_checkbox()}
 									value={slot.terms.contributed}
 								/>
 								<div class="flex items-center justify-between gap-3">
 									<span class="text-subtle">{describeTerms(slot.terms)}</span>
 									<SubmitButton
-										label={m.staff_events_id_production_run_of_show_panel_save_terms()}
+										label={m.staff_events_id_production_run_of_show_panel_save_terms_label()}
 									/>
 								</div>
 							</Form>
@@ -457,10 +460,10 @@
 		</ul>
 	{/if}
 
-	<InfoCard title={m.staff_events_id_production_run_of_show_panel_add_set()}>
+	<InfoCard title={m.staff_events_id_production_run_of_show_panel_add_set_title()}>
 		<Form
 			remote={addRunOfShowSlot}
-			successToast={m.staff_events_id_production_run_of_show_panel_set_added()}
+			successToast={m.staff_events_id_production_run_of_show_panel_set_added_toast()}
 			class="space-y-4"
 		>
 			<input {...addFields.eventId.as('hidden', eventId)} />
@@ -469,33 +472,33 @@
 				<Field
 					field={addFields.eventBandId}
 					type="select"
-					label={m.staff_band()}
+					label={m.staff_band_label()}
 					options={actOptions}
 				/>
 				<Field
 					field={addFields.setLengthMinutes}
 					type="number"
-					label={m.staff_events_id_production_run_of_show_panel_set_length_minu()}
+					label={m.staff_events_id_production_run_of_show_panel_set_length_minu_label()}
 					value={30}
 				/>
 				<Field
 					field={addFields.changeoverMinutes}
 					type="number"
-					label={m.staff_events_id_production_run_of_show_panel_changeover_afte()}
+					label={m.staff_events_id_production_run_of_show_panel_changeover_afte_label()}
 					value={10}
 				/>
 			</div>
-			<div class="flex justify-end"><SubmitButton label={m.staff_add()} /></div>
+			<div class="flex justify-end"><SubmitButton label={m.staff_add_label()} /></div>
 		</Form>
 		{#if runOfShow.unslotted.length > 0}
 			<p class="mt-2 text-subtle">
-				{m.staff_events_id_production_run_of_show_panel_still_off_runni({
+				{m.staff_events_id_production_run_of_show_panel_still_off_runni_text({
 					join: runOfShow.unslotted.map((a) => a.name).join(', ')
 				})}
 			</p>
 		{:else if runOfShow.slots.length > 0}
 			<p class="mt-2 text-subtle">
-				{m.staff_events_id_production_run_of_show_panel_every_band_bill()}
+				{m.staff_events_id_production_run_of_show_panel_every_band_bill_text()}
 			</p>
 		{/if}
 	</InfoCard>

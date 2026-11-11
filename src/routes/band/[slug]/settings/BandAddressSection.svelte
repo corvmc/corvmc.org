@@ -40,12 +40,14 @@
 </script>
 
 <section class="space-y-4">
-	<h2 class="text-lg font-semibold">{m.band_slug_settings_band_address_section_band_address()}</h2>
+	<h2 class="text-lg font-semibold">
+		{m.band_slug_settings_band_address_section_band_address_title()}
+	</h2>
 
 	<InfoCard title={`${slug}.${baseDomain}`}>
 		<p class="text-sm">
 			<ParaglideMessage
-				message={m.band_slug_settings_band_address_section_band_s_address_s_als}
+				message={m.band_slug_settings_band_address_section_band_s_address_s_als_text}
 				inputs={{ slug }}
 				>{#snippet code({ children })}<code class="text-xs">{@render children?.()}</code
 					>{/snippet}</ParaglideMessage
@@ -56,7 +58,7 @@
 			     `changeBandAddress` is owner-guarded. A button that 403s would be
 			     worse than none. -->
 			<p class="mt-2 text-subtle">
-				{m.band_slug_settings_band_address_section_only_band_s_owner_ca()}
+				{m.band_slug_settings_band_address_section_only_band_s_owner_ca_text()}
 			</p>
 		{:else}
 			<div class="mt-2 card-actions justify-end">
@@ -66,7 +68,7 @@
 					outline
 					data-testid="change-address"
 					onclick={() => (showChange = true)}
-					>{m.band_slug_settings_band_address_section_change_address()}</Button
+					>{m.band_slug_settings_band_address_section_change_address_label()}</Button
 				>
 			</div>
 		{/if}
@@ -80,10 +82,10 @@
 		onsuccess={(result) => {
 			showChange = false;
 			if (!result?.changed) {
-				toast.info(m.band_slug_settings_band_address_section_already_address());
+				toast.info(m.band_slug_settings_band_address_section_already_address_toast());
 				return;
 			}
-			toast.success(m.band_slug_settings_band_address_section_address_updated());
+			toast.success(m.band_slug_settings_band_address_section_address_updated_toast());
 			// Every query on this page is keyed on the old slug, and `getBandLayout`
 			// answers that with a forward to the bare address, which `refreshQueries`
 			// above keeps from racing this. Changing page.params.slug re-keys them.
@@ -101,18 +103,18 @@
 			<FormField
 				field={fields.newSlug}
 				type="text"
-				label={m.band_slug_settings_band_address_section_new_address()}
+				label={m.band_slug_settings_band_address_section_new_address_label()}
 				placeholder={m.band_slug_settings_band_address_section_placeholder()}
 				oninput={(e: Event & { currentTarget: HTMLInputElement }) =>
 					(draft = e.currentTarget.value)}
-				description={m.band_slug_settings_band_address_section_description()}
+				description={m.band_slug_settings_band_address_section_description_body()}
 				required
 			/>
 
 			{#if normalized}
 				<p class="text-sm">
 					<ParaglideMessage
-						message={m.band_slug_settings_band_address_section_band_s_site_moves}
+						message={m.band_slug_settings_band_address_section_band_s_site_moves_text}
 						inputs={{ normalized, baseDomain }}
 						>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 							>{/snippet}</ParaglideMessage
@@ -122,13 +124,13 @@
 
 			{#if reserved}
 				<p class="text-sm text-error">
-					{m.band_slug_settings_band_address_section_address_reserved_pic()}
+					{m.band_slug_settings_band_address_section_address_reserved_pic_text()}
 				</p>
 			{/if}
 
 			<Alert type="warning" class="text-sm">
 				<ParaglideMessage
-					message={m.band_slug_settings_band_address_section_links_will_forward_n}
+					message={m.band_slug_settings_band_address_section_links_will_forward_n_body}
 					inputs={{ slug, baseDomain }}
 					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 						>{/snippet}</ParaglideMessage
@@ -137,7 +139,7 @@
 
 			<div class="flex justify-end pt-2">
 				<SubmitButton
-					label={m.band_slug_settings_band_address_section_change_address()}
+					label={m.band_slug_settings_band_address_section_change_address_label()}
 					successLabel={m.band_slug_settings_band_address_section_success_label()}
 					variant="warning"
 				/>

@@ -35,21 +35,23 @@
 			<span class="font-semibold">{invite.name}</span>
 			<p class="text-subtle">
 				{#if kindLabel}{kindLabel} ·
-				{/if}{m.groups_email_invite_card_invited_as({
-					invitedByName: invite.invitedByName ?? m.groups_email_invite_card_someone(),
+				{/if}{m.groups_email_invite_card_invited_as_text({
+					invitedByName: invite.invitedByName ?? m.groups_email_invite_card_someone_text(),
 					role: invite.role
 				})}
 			</p>
 			<p class="text-muted text-sm">
-				{#if invite.expired}{m.groups_email_invite_card_invitation_expired_ask_them_send({
+				{#if invite.expired}{m.groups_email_invite_card_invitation_expired_ask_them_send_text({
 						formatDate: formatDate(invite.expiresAt)
-					})}{:else}{m.groups_email_invite_card_link_email_works_until({
+					})}{:else}{m.groups_email_invite_card_link_email_works_until_text({
 						formatDate: formatDate(invite.expiresAt)
 					})}{/if}
 			</p>
 		</div>
 		<Badge variant={invite.expired ? 'ghost' : 'warning'}>
-			{invite.expired ? m.groups_email_invite_card_expired() : m.groups_email_invite_card_invited()}
+			{invite.expired
+				? m.groups_email_invite_card_expired_label()
+				: m.groups_email_invite_card_invited_label()}
 		</Badge>
 	</CardBody>
 </Card>

@@ -20,7 +20,7 @@
 		{@html html}
 	{:else}
 		<div class="flex h-full items-center justify-center p-12 text-sm opacity-40">
-			{m.staff_marketing_campaigns_campaign_preview_start_typing_see()}
+			{m.staff_marketing_campaigns_campaign_preview_start_typing_see_text()}
 		</div>
 	{/if}
 </div>

@@ -25,7 +25,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.public_radio_cmc_radio_corvallis_music_collective()}</title>
+	<title>{m.public_radio_cmc_radio_corvallis_music_collective_title()}</title>
 	<meta
 		name="description"
 		content="A continuous stream of music by bands at the Corvallis Music Collective."
@@ -36,15 +36,15 @@
 	<div>
 		<h1 class="flex items-center gap-2 text-3xl font-semibold">
 			<IconRadio size={28} />
-			{m.public_radio_cmc_radio()}
+			{m.public_radio_cmc_radio_title()}
 		</h1>
 		<p class="text-muted">
-			{m.public_radio_music_by_bands_at_collective()}
+			{m.public_radio_music_by_bands_at_collective_text()}
 		</p>
 	</div>
 
 	{#if !current}
-		<EmptyState title={m.public_radio_title()} description={m.public_radio_description()} />
+		<EmptyState title={m.public_radio_title()} description={m.public_radio_description_body()} />
 	{:else}
 		<Card>
 			<CardBody row class="items-center gap-4">
@@ -52,7 +52,7 @@
 					<img src={current.coverUrl} alt="" class="size-20 shrink-0 rounded object-cover" />
 				{/if}
 				<div class="min-w-0">
-					<p class="text-subtle">{m.public_radio_now_playing()}</p>
+					<p class="text-subtle">{m.public_radio_now_playing_text()}</p>
 					<p class="truncate text-xl font-medium">{current.trackTitle}</p>
 					<p class="truncate">
 						<a class="link" href={resolve(`directory/bands/${current.bandSlug}`)}
@@ -67,7 +67,7 @@
 		{#if upNext.length > 0}
 			<Card>
 				<CardBody>
-					<CardTitle>{m.public_radio_up_next()}</CardTitle>
+					<CardTitle>{m.public_radio_up_next_title()}</CardTitle>
 					<ul class="divide-y divide-base-300">
 						{#each upNext as entry (entry.playId)}
 							<li class="flex items-center gap-2 py-2">
@@ -89,7 +89,7 @@
 	{#if recent.length > 0}
 		<Card>
 			<CardBody>
-				<CardTitle>{m.public_radio_recently_played()}</CardTitle>
+				<CardTitle>{m.public_radio_recently_played_title()}</CardTitle>
 				<ul class="divide-y divide-base-300">
 					{#each recent as entry (entry.playId)}
 						<li class="flex items-center gap-2 py-2">
@@ -110,7 +110,7 @@
 	{#if bands.length > 0}
 		<Card>
 			<CardBody>
-				<CardTitle>{m.public_radio_rotation()}</CardTitle>
+				<CardTitle>{m.public_radio_rotation_title()}</CardTitle>
 				<p class="flex flex-wrap gap-x-3 gap-y-1">
 					{#each bands as b (b.slug)}
 						<a class="link" href={resolve(`directory/bands/${b.slug}`)}>{b.name}</a>

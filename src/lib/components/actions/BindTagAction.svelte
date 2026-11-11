@@ -50,8 +50,10 @@
 <Action
 	action={bindTag}
 	data-testid="bind-tag"
-	label={currentTag ? m.actions_bind_tag_rebind_tag() : m.actions_bind_tag_bind_tag()}
-	modalTitle={currentTag ? m.actions_bind_tag_rebind_tag_2() : m.actions_bind_tag_bind_tag_2()}
+	label={currentTag ? m.actions_bind_tag_rebind_tag_label() : m.actions_bind_tag_bind_tag_label()}
+	modalTitle={currentTag
+		? m.actions_bind_tag_rebind_tag_2_title()
+		: m.actions_bind_tag_bind_tag_2_title()}
 	successToast={m.actions_bind_tag_success_toast()}
 	{variant}
 	{size}
@@ -68,20 +70,25 @@
 			{#if currentTag}
 				<p>
 					<ParaglideMessage
-						message={m.actions_bind_tag_unit_currently_wears}
+						message={m.actions_bind_tag_unit_currently_wears_text}
 						inputs={{ currentTag }}
 						>{#snippet strong({ children })}<strong class="font-mono">{@render children?.()}</strong
 							>{/snippet}</ParaglideMessage
 					>
 				</p>
 				<p class="mt-1 opacity-70">
-					{m.actions_bind_tag_binding_new_one_keeps_every()}
+					{m.actions_bind_tag_binding_new_one_keeps_every_text()}
 				</p>
 			{:else}
-				<p class="opacity-70">{m.actions_bind_tag_scan_type_tag_printed_sticker()}</p>
+				<p class="opacity-70">{m.actions_bind_tag_scan_type_tag_printed_sticker_text()}</p>
 			{/if}
 		</div>
-		<Field field={fields.assetTag} type="text" label={m.actions_tag()} bind:value={assetTag} />
-		<BarcodeScanner onscan={handleScan} label={m.actions_bind_tag_scan_tag()} class="mt-2" />
+		<Field
+			field={fields.assetTag}
+			type="text"
+			label={m.actions_tag_label()}
+			bind:value={assetTag}
+		/>
+		<BarcodeScanner onscan={handleScan} label={m.actions_bind_tag_scan_tag_label()} class="mt-2" />
 	{/snippet}
 </Action>

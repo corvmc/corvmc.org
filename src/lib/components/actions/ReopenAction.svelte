@@ -33,11 +33,11 @@
 {#if hasCapability(caps, capability)}
 	<Action
 		{action}
-		label={m.actions_reopen_reopen()}
+		label={m.actions_reopen_reopen_label()}
 		variant="ghost"
 		size="xs"
-		modalTitle={m.actions_reopen_reopen()}
-		submitLabel={m.actions_reopen_reopen()}
+		modalTitle={m.actions_reopen_reopen_title()}
+		submitLabel={m.actions_reopen_reopen_label()}
 		successToast={m.actions_reopen_success_toast()}
 	>
 		{#snippet form()}
@@ -45,7 +45,12 @@
 			{#if children}
 				<div class="text-muted text-sm">{@render children()}</div>
 			{/if}
-			<Field field={action.fields.reason} type="textarea" label={m.actions_reason()} required />
+			<Field
+				field={action.fields.reason}
+				type="textarea"
+				label={m.actions_reason_label()}
+				required
+			/>
 		{/snippet}
 	</Action>
 {/if}

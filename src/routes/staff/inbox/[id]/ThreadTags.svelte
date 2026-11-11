@@ -34,7 +34,7 @@
 				<button
 					type="button"
 					class="cursor-pointer opacity-50 hover:opacity-100"
-					aria-label={m.staff_inbox_id_details_panel_remove_tag({ tag })}
+					aria-label={m.staff_inbox_id_details_panel_remove_tag_label({ tag })}
 					onclick={() => removeInboxThreadTag({ threadId, tag })}
 				>
 					<IconX size={11} />
@@ -46,7 +46,7 @@
 		<input
 			class="input w-24 input-xs"
 			placeholder={m.staff_inbox_id_details_panel_placeholder()}
-			aria-label={m.staff_inbox_id_details_panel_add_tag()}
+			aria-label={m.staff_inbox_id_details_panel_add_tag_label()}
 			bind:value={newTag}
 			onkeydown={(e) => {
 				if (e.key !== 'Enter' || !newTag.trim()) return;

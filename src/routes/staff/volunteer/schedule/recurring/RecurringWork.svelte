@@ -32,7 +32,7 @@
 	const data = $derived(await getRecurringWorkPage());
 	const roleOptions = $derived(data.roles.map((r) => ({ value: r.id, label: r.name })));
 	const projectOptions = $derived([
-		{ value: '', label: m.staff_volunteer_schedule_recurring_recurring_work_none() },
+		{ value: '', label: m.staff_volunteer_schedule_recurring_recurring_work_none_label() },
 		...data.projects.map((p) => ({ value: p.id, label: p.name }))
 	]);
 	const selected = $derived(data.schedules.find((s) => s.id === url.id));
@@ -40,30 +40,30 @@
 
 <div class="flex items-center justify-between gap-2">
 	<SectionLabel
-		label={m.staff_volunteer_schedule_recurring_recurring_work_recurring()}
+		label={m.staff_volunteer_schedule_recurring_recurring_work_recurring_label()}
 		count={data.schedules.length}
 	/>
 	{#if data.roles.length > 0}
 		<Action
 			action={createRecurringWork}
-			label={m.staff_volunteer_schedule_recurring_recurring_work_new_recurr()}
+			label={m.staff_volunteer_schedule_recurring_recurring_work_new_recurr_label()}
 			data-testid="new-recurring-work"
 			variant="ghost"
 			size="xs"
-			modalTitle={m.staff_volunteer_schedule_recurring_recurring_work_modal_titl()}
-			submitLabel={m.staff_create()}
-			successToast={m.staff_volunteer_schedule_recurring_recurring_work_success_to()}
+			modalTitle={m.staff_volunteer_schedule_recurring_recurring_work_modal_titl_title()}
+			submitLabel={m.staff_create_label()}
+			successToast={m.staff_volunteer_schedule_recurring_recurring_work_success_to_toast()}
 		>
 			{#snippet form()}
 				<FormField
 					field={createRecurringWork.fields.name}
-					label={m.staff_name()}
+					label={m.staff_name_label()}
 					type="text"
-					placeholder={m.staff_volunteer_schedule_recurring_recurring_work_monthly_de()}
+					placeholder={m.staff_volunteer_schedule_recurring_recurring_work_monthly_de_placeholder()}
 				/>
 				<FormField
 					field={createRecurringWork.fields.volunteerRoleId}
-					label={m.staff_role()}
+					label={m.staff_role_label()}
 					type="select"
 					options={roleOptions}
 					value={roleOptions[0]?.value}
@@ -71,43 +71,43 @@
 				<FormField
 					field={createRecurringWork.fields.intervalDays}
 					submitAs="text"
-					label={m.staff_repeat_every_days()}
+					label={m.staff_repeat_every_days_label()}
 					type="number"
 					value="30"
-					description={m.staff_volunteer_schedule_recurring_recurring_work_descriptio()}
+					description={m.staff_volunteer_schedule_recurring_recurring_work_descriptio_body()}
 				/>
 				<FormField
 					field={createRecurringWork.fields.firstDueOn}
-					label={m.staff_volunteer_schedule_recurring_recurring_work_first_one()}
+					label={m.staff_volunteer_schedule_recurring_recurring_work_first_one_label()}
 					type="date"
 					value={defaultFirstDue}
 				/>
 				<FormField
 					field={createRecurringWork.fields.capacity}
 					submitAs="text"
-					label={m.staff_how_many_people()}
+					label={m.staff_how_many_people_label()}
 					type="number"
 					value="1"
 				/>
 				<FormField
 					field={createRecurringWork.fields.projectId}
-					label={m.staff_project()}
+					label={m.staff_project_label()}
 					type="select"
 					options={projectOptions}
 				/>
-				<FormField field={createRecurringWork.fields.assetId} label={m.staff_equipment()}>
+				<FormField field={createRecurringWork.fields.assetId} label={m.staff_equipment_label()}>
 					<SearchSelect
 						search={(q) => searchWorkAssets(q)}
 						bind:value={asset}
 						field={assetField}
 						labelKey="name"
 						descriptionKey="detail"
-						placeholder={m.staff_search_by_item_tag_serial()}
+						placeholder={m.staff_search_by_item_tag_serial_placeholder()}
 					/>
 				</FormField>
 				<FormField
 					field={createRecurringWork.fields.notes}
-					label={m.staff_notes()}
+					label={m.staff_notes_label()}
 					type="textarea"
 				/>
 			{/snippet}
@@ -117,14 +117,14 @@
 
 {#if data.schedules.length === 0}
 	<p class="text-subtle text-sm">
-		{m.staff_volunteer_schedule_recurring_recurring_work_none_yet()}
+		{m.staff_volunteer_schedule_recurring_recurring_work_none_yet_text()}
 	</p>
 {:else}
 	<Table>
 		{#snippet head()}
-			<th>{m.staff_name()}</th>
-			<th class="whitespace-nowrap">{m.staff_repeats()}</th>
-			<th class="col-support whitespace-nowrap">{m.staff_last_closed()}</th>
+			<th>{m.staff_name_label()}</th>
+			<th class="whitespace-nowrap">{m.staff_repeats_label()}</th>
+			<th class="col-support whitespace-nowrap">{m.staff_last_closed_label()}</th>
 		{/snippet}
 
 		{#each data.schedules as s (s.id)}
@@ -139,13 +139,15 @@
 							· {s.projectName}{/if}
 					</div>
 				</td>
-				<td class="whitespace-nowrap">{s.retiredAt ? m.staff_retired() : every(s.intervalDays)}</td>
+				<td class="whitespace-nowrap"
+					>{s.retiredAt ? m.staff_retired_text() : every(s.intervalDays)}</td
+				>
 				<td class="col-support whitespace-nowrap">
 					{#if s.lastClosedAt}
 						{formatDate(s.lastClosedAt)}
 					{:else}
 						<span class="text-subtle"
-							>{m.staff_volunteer_schedule_recurring_recurring_work_never()}</span
+							>{m.staff_volunteer_schedule_recurring_recurring_work_never_text()}</span
 						>
 					{/if}
 				</td>

@@ -31,7 +31,7 @@
 	action={confirmWaitlisted}
 	label={m.actions_confirm_waitlisted_label()}
 	modalTitle={m.actions_confirm_waitlisted_modal_title()}
-	submitLabel={m.actions_confirm_reservation()}
+	submitLabel={m.actions_confirm_reservation_label()}
 	submitVariant="success"
 	successToast={m.actions_confirm_waitlisted_success_toast()}
 	{variant}
@@ -44,11 +44,11 @@
 		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
 		<p class="text-sm">
-			{m.actions_confirm_waitlisted_slot_has_opened_up_time()}
+			{m.actions_confirm_waitlisted_slot_has_opened_up_time_text()}
 		</p>
 		{#if reservation.waitlistExpiresAt}
 			<p class="text-subtle">
-				{m.actions_confirm_waitlisted_have_until_confirm_before_slot({
+				{m.actions_confirm_waitlisted_have_until_confirm_before_slot_text({
 					formatDate: formatDate(reservation.waitlistExpiresAt)
 				})}
 			</p>

@@ -29,7 +29,7 @@
 <Action
 	action={subscribe}
 	label={m.actions_subscribe_label()}
-	modalTitle={m.actions_subscribe_label()}
+	modalTitle={m.actions_subscribe_title()}
 	successToast={m.actions_subscribe_success_toast({ name })}
 	{variant}
 	{size}
@@ -39,6 +39,6 @@
 >
 	{#snippet form()}
 		<input {...fields.audienceId.as('hidden', audienceId)} />
-		<p class="py-4">{m.actions_subscribe_subscribe({ name })}</p>
+		<p class="py-4">{m.actions_subscribe_subscribe_text({ name })}</p>
 	{/snippet}
 </Action>

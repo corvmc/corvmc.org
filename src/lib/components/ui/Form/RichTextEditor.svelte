@@ -118,7 +118,7 @@
 				size="xs"
 				shape="square"
 				class="join-item rounded-b-none {isActive('bold') ? 'btn-active' : ''}"
-				aria-label={m.ui_editor_bold()}
+				aria-label={m.ui_editor_bold_label()}
 				onclick={() => editor!.chain().focus().toggleBold().run()}
 			>
 				<IconBold size={16} />
@@ -129,7 +129,7 @@
 				size="xs"
 				shape="square"
 				class="join-item {isActive('italic') ? 'btn-active' : ''}"
-				aria-label={m.ui_editor_italic()}
+				aria-label={m.ui_editor_italic_label()}
 				onclick={() => editor!.chain().focus().toggleItalic().run()}
 			>
 				<IconItalic size={16} />
@@ -140,7 +140,7 @@
 				size="xs"
 				shape="square"
 				class="join-item {isActive('underline') ? 'btn-active' : ''}"
-				aria-label={m.ui_editor_underline()}
+				aria-label={m.ui_editor_underline_label()}
 				onclick={() => editor!.chain().focus().toggleUnderline().run()}
 			>
 				<IconUnderline size={16} />
@@ -151,7 +151,7 @@
 				size="xs"
 				shape="square"
 				class="join-item {isActive('heading', { level: 3 }) ? 'btn-active' : ''}"
-				aria-label={m.ui_editor_heading()}
+				aria-label={m.ui_editor_heading_label()}
 				onclick={() => editor!.chain().focus().toggleHeading({ level: 3 }).run()}
 			>
 				<IconH3 size={16} />
@@ -162,7 +162,7 @@
 				size="xs"
 				shape="square"
 				class="join-item {isActive('bulletList') ? 'btn-active' : ''}"
-				aria-label={m.ui_editor_bullet_list()}
+				aria-label={m.ui_editor_bullet_list_label()}
 				onclick={() => editor!.chain().focus().toggleBulletList().run()}
 			>
 				<IconList size={16} />
@@ -173,7 +173,7 @@
 				size="xs"
 				shape="square"
 				class="join-item {isActive('orderedList') ? 'btn-active' : ''}"
-				aria-label={m.ui_editor_numbered_list()}
+				aria-label={m.ui_editor_numbered_list_label()}
 				onclick={() => editor!.chain().focus().toggleOrderedList().run()}
 			>
 				<IconListNumbers size={16} />
@@ -184,7 +184,7 @@
 				size="xs"
 				shape="square"
 				class="join-item {isActive('blockquote') ? 'btn-active' : ''}"
-				aria-label={m.ui_editor_quote()}
+				aria-label={m.ui_editor_quote_label()}
 				onclick={() => editor!.chain().focus().toggleBlockquote().run()}
 			>
 				<IconBlockquote size={16} />
@@ -195,7 +195,7 @@
 				size="xs"
 				shape="square"
 				class="join-item rounded-b-none {isActive('link') ? 'btn-active' : ''}"
-				aria-label={m.ui_editor_link()}
+				aria-label={m.ui_editor_link_label()}
 				onclick={toggleLink}
 			>
 				<IconLink size={16} />

@@ -61,9 +61,9 @@
 	);
 </script>
 
-<PageHeader width="5xl" title={m.member_volunteering()} subtitle={m.member_member()}>
+<PageHeader width="5xl" title={m.member_volunteering_title()} subtitle={m.member_member_body()}>
 	<Button href={resolve('member/volunteer/profile')} variant="ghost" size="sm"
-		>{m.member_profile()}</Button
+		>{m.member_profile_label()}</Button
 	>
 </PageHeader>
 
@@ -77,12 +77,12 @@
 					until they say what it was.
 				-->
 				<InfoCard
-					title={m.member_volunteer_hours_log()}
+					title={m.member_volunteer_hours_log_title()}
 					state={pageData.unloggedShifts.length}
 					class="border-l-4 border-warning"
 				>
 					<!-- Once, not on every row: it was the same sentence under each. -->
-					<p class="text-subtle text-sm">{m.member_volunteer_add_what_did_file()}</p>
+					<p class="text-subtle text-sm">{m.member_volunteer_add_what_did_file_text()}</p>
 					<ul class="flex flex-col gap-3">
 						{#each pageData.unloggedShifts as owed (owed.signupId)}
 							<li class="flex flex-wrap items-center justify-between gap-2">
@@ -90,12 +90,12 @@
 									<div class="font-medium">{owed.roleName}</div>
 									<div class="text-subtle text-sm">
 										{#if owed.startsAt}
-											{m.member_volunteer_hrs({
+											{m.member_volunteer_hrs_text({
 												formatDateShort: formatDateShort(owed.startsAt),
 												shiftHours: shiftHours(owed.startsAt, owed.endsAt)
 											})}
 										{:else}
-											{m.member_volunteer_no_time_was_booked_say()}
+											{m.member_volunteer_no_time_was_booked_say_text()}
 										{/if}
 									</div>
 								</div>
@@ -119,11 +119,11 @@
 				</InfoCard>
 			{/if}
 
-			<InfoCard title={m.member_volunteer_claimed_shifts()} state={liveShifts.length}>
+			<InfoCard title={m.member_volunteer_claimed_shifts_title()} state={liveShifts.length}>
 				{#if liveShifts.length === 0}
 					<EmptyState
-						title={m.member_volunteer_re_not_any_shifts()}
-						description={m.member_volunteer_description()}
+						title={m.member_volunteer_re_not_any_shifts_title()}
+						description={m.member_volunteer_description_body()}
 					/>
 				{:else}
 					<ul class="divide-y divide-base-300">

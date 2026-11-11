@@ -84,7 +84,7 @@
 		<!-- A priced release whose band has not finished Stripe. Saying so beats
 		     a Buy button that 409s. -->
 		<Alert type="info">
-			{m.public_music_band_slug_release_slug_hasn_t_finished_setting({ name: band.name })}
+			{m.public_music_band_slug_release_slug_hasn_t_finished_setting_body({ name: band.name })}
 		</Alert>
 	{/if}
 </div>

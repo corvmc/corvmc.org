@@ -106,21 +106,25 @@
 	} {
 		switch (state) {
 			case 'no_show':
-				return { label: m.staff_no_show(), color: 'text-error', icon: IconUserX };
+				return { label: m.staff_no_show_label(), color: 'text-error', icon: IconUserX };
 			case 'refunded':
-				return { label: m.staff_refunded(), color: 'text-error', icon: IconArrowBackUp };
+				return { label: m.staff_refunded_label(), color: 'text-error', icon: IconArrowBackUp };
 			case 'cancelled':
-				return { label: m.staff_cancelled(), color: 'text-base-content', icon: IconCircleX };
+				return { label: m.staff_cancelled_label(), color: 'text-base-content', icon: IconCircleX };
 			case 'paid':
-				return { label: m.staff_paid(), color: 'text-success', icon: IconCheck };
+				return { label: m.staff_paid_label(), color: 'text-success', icon: IconCheck };
 			case 'cash_due':
-				return { label: m.staff_reservations_cash_due(), color: 'text-warning', icon: IconClock };
+				return {
+					label: m.staff_reservations_cash_due_label(),
+					color: 'text-warning',
+					icon: IconClock
+				};
 			case 'unpaid':
-				return { label: m.staff_unpaid(), color: 'text-warning', icon: IconClock };
+				return { label: m.staff_unpaid_label(), color: 'text-warning', icon: IconClock };
 			case 'credits':
-				return { label: m.staff_paid_with_credits(), color: 'text-info', icon: IconCoin };
+				return { label: m.staff_paid_with_credits_label(), color: 'text-info', icon: IconCoin };
 			case 'comped':
-				return { label: m.staff_comped(), color: 'text-info', icon: IconGift };
+				return { label: m.staff_comped_label(), color: 'text-info', icon: IconGift };
 		}
 	}
 
@@ -159,8 +163,8 @@
 	{#await counts}
 		<TabBar
 			tabs={[
-				{ key: 'upcoming', label: m.staff_reservations_upcoming() },
-				{ key: 'all', label: m.staff_all() }
+				{ key: 'upcoming', label: m.staff_reservations_upcoming_label() },
+				{ key: 'all', label: m.staff_all_label() }
 			]}
 			active={tab}
 			onchange={(key) => {
@@ -171,8 +175,8 @@
 	{:then c}
 		<TabBar
 			tabs={[
-				{ key: 'upcoming', label: m.staff_reservations_upcoming(), badge: c.upcoming },
-				{ key: 'all', label: m.staff_all(), badge: c.all }
+				{ key: 'upcoming', label: m.staff_reservations_upcoming_label(), badge: c.upcoming },
+				{ key: 'all', label: m.staff_all_label(), badge: c.all }
 			]}
 			active={tab}
 			onchange={(key) => {
@@ -189,7 +193,7 @@
 			size="sm"
 			onclick={() => (resolveOpen = true)}
 		>
-			{m.staff_resolve()}
+			{m.staff_resolve_label()}
 			{#if unresolvedCount > 0}
 				<Badge>{unresolvedCount}</Badge>
 			{/if}
@@ -213,7 +217,7 @@
 		{/snippet}
 		{#snippet menu()}
 			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">{m.staff_from_date()}</span>
+				<span class="text-muted text-xs">{m.staff_from_date_label()}</span>
 				<input
 					type="date"
 					class="input input-sm"
@@ -224,7 +228,7 @@
 				/>
 			</label>
 			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">{m.staff_date_2()}</span>
+				<span class="text-muted text-xs">{m.staff_date_2_label()}</span>
 				<input
 					type="date"
 					class="input input-sm"
@@ -235,7 +239,7 @@
 				/>
 			</label>
 			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">{m.staff_booked_by()}</span>
+				<span class="text-muted text-xs">{m.staff_booked_by_label()}</span>
 				<Select
 					size="sm"
 					value={bookerType}
@@ -244,18 +248,18 @@
 						page = 1;
 					}}
 				>
-					<option value="">{m.staff_anyone()}</option>
-					<option value="user">{m.staff_members()}</option>
+					<option value="">{m.staff_anyone_label()}</option>
+					<option value="user">{m.staff_members_label()}</option>
 					<!-- A programme's session books as its group too, so this is no longer
 					     bands alone; a production's hold is only ever a show. -->
-					<option value="group">{m.staff_reservations_bands_programs()}</option>
-					<option value="production">{m.staff_reservations_shows()}</option>
+					<option value="group">{m.staff_reservations_bands_programs_label()}</option>
+					<option value="production">{m.staff_reservations_shows_label()}</option>
 					<!-- A listing with no production holds the room in its own name. -->
-					<option value="event_listing">{m.staff_listings()}</option>
+					<option value="event_listing">{m.staff_listings_label()}</option>
 				</Select>
 			</label>
 			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">{m.staff_show()}</span>
+				<span class="text-muted text-xs">{m.staff_show_label()}</span>
 				<Select
 					size="sm"
 					value={show}
@@ -264,9 +268,9 @@
 						page = 1;
 					}}
 				>
-					<option value="everything">{m.staff_reservations_reservations_closures()}</option>
-					<option value="reservations">{m.staff_reservations_title()}</option>
-					<option value="closures">{m.staff_reservations_closures()}</option>
+					<option value="everything">{m.staff_reservations_reservations_closures_label()}</option>
+					<option value="reservations">{m.staff_reservations_label()}</option>
+					<option value="closures">{m.staff_reservations_closures_label()}</option>
 				</Select>
 			</label>
 		{/snippet}
@@ -275,8 +279,8 @@
 	<DataList
 		{result}
 		empty={show === 'closures'
-			? m.staff_reservations_no_closures_found()
-			: m.staff_reservations_no_reservations_found()}
+			? m.staff_reservations_no_closures_found_body()
+			: m.staff_reservations_no_reservations_found_body()}
 		onpage={(p) => (page = p)}
 	>
 		{#snippet children(reservations)}
@@ -284,11 +288,11 @@
 			     `wide-only` hides it below 32rem, where the cards below take over. -->
 			<Table zebra={false} class="wide-only">
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_booker()}</th>
-					<th>{m.staff_time()}</th>
-					<th class="col-support cell-num">{m.staff_payment()}</th>
-					<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_booker_label()}</th>
+					<th>{m.staff_time_label()}</th>
+					<th class="col-support cell-num">{m.staff_payment_label()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 				{/snippet}
 
 				{#each reservations as r, idx (`${r.kind}:${r.id}`)}
@@ -304,7 +308,7 @@
 					{#if r.kind === 'closure'}
 						<tr>
 							<td class="w-px"
-								><Badge size="sm" variant="error">{m.staff_reservations_closed()}</Badge></td
+								><Badge size="sm" variant="error">{m.staff_reservations_closed_label()}</Badge></td
 							>
 							<td class="min-w-0 font-medium">{r.reason}</td>
 							<td class="cell-primary whitespace-nowrap">{formatSpan(r.startsAt, r.endsAt)}</td>
@@ -347,7 +351,7 @@
 										{formatTimeRange(r.startsAt, r.endsAt)}
 									</a>
 									{#if r.recurringSeriesId}
-										<span class="tooltip" data-tip={m.staff_recurring()}>
+										<span class="tooltip" data-tip={m.staff_recurring_label()}>
 											<IconRepeat size={14} class="text-base-content" />
 										</span>
 									{/if}
@@ -359,7 +363,7 @@
 										member — the capacity is not the party — so without this the
 										row could not say it is teaching rather than rehearsal.
 									-->
-										<span class="tooltip" data-tip={m.staff_reservations_teaching()}>
+										<span class="tooltip" data-tip={m.staff_reservations_teaching_label()}>
 											<BookerTypeIcon type={r.bookerType} size={14} />
 										</span>
 									{/if}
@@ -371,9 +375,9 @@
 									-->
 										<span
 											class="tooltip"
-											data-tip={m.staff_first_reservation()}
+											data-tip={m.staff_first_reservation_label()}
 											role="img"
-											aria-label={m.staff_first_reservation()}
+											aria-label={m.staff_first_reservation_label()}
 										>
 											<IconUserPlus size={14} class="text-success" />
 										</span>
@@ -384,9 +388,9 @@
 									     thing StatusBadge does. -->
 										<span
 											class="tooltip"
-											data-tip={m.staff_reservations_member_left_note()}
+											data-tip={m.staff_reservations_member_left_note_label()}
 											role="img"
-											aria-label={m.staff_reservations_member_left_note()}
+											aria-label={m.staff_reservations_member_left_note_label()}
 										>
 											<IconNote size={14} class="text-info" />
 										</span>
@@ -462,7 +466,7 @@
 								<p>{r.reason}</p>
 							</div>
 							<div class="flex shrink-0 flex-col items-end gap-2">
-								<Badge size="sm" variant="error">{m.staff_reservations_closed()}</Badge>
+								<Badge size="sm" variant="error">{m.staff_reservations_closed_label()}</Badge>
 								{@render closureActions(r, false)}
 							</div>
 						</li>
@@ -487,7 +491,7 @@
 										<ul class="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted text-sm">
 											{#if r.recurringSeriesId}
 												<li class="flex items-center gap-1">
-													<IconRepeat size={14} />{m.staff_recurring()}
+													<IconRepeat size={14} />{m.staff_recurring_text()}
 												</li>
 											{/if}
 											{#if r.bookerType === 'instructor'}
@@ -495,7 +499,7 @@
 													<BookerTypeIcon
 														type={r.bookerType}
 														size={14}
-													/>{m.staff_reservations_teaching()}
+													/>{m.staff_reservations_teaching_text()}
 												</li>
 											{/if}
 											{#if r.isFirstReservation}
@@ -503,7 +507,7 @@
 													<IconUserPlus
 														size={14}
 														class="text-success"
-													/>{m.staff_first_reservation()}
+													/>{m.staff_first_reservation_text()}
 												</li>
 											{/if}
 											{#if r.notes}
@@ -511,7 +515,7 @@
 													<IconNote
 														size={14}
 														class="text-info"
-													/>{m.staff_reservations_member_left_note()}
+													/>{m.staff_reservations_member_left_note_text()}
 												</li>
 											{/if}
 										</ul>
@@ -527,7 +531,7 @@
 										{@const owed = state === 'cash_due' || state === 'unpaid'}
 										<p class="flex flex-wrap items-center gap-1 text-sm">
 											<ps.icon size={16} class={ps.color} />
-											<span class="font-medium">{owed ? m.staff_due() : ps.label}</span>
+											<span class="font-medium">{owed ? m.staff_due_text() : ps.label}</span>
 											<span class="text-muted" class:line-through={state === 'comped'}>
 												{formatPaymentBreakdown(
 													r.startsAt,

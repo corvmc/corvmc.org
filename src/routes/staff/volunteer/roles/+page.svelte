@@ -59,7 +59,7 @@
 		label: volunteerRoleGroupLabels[g]
 	}));
 
-	const descriptionHelp = m.staff_volunteer_roles_description_help();
+	const descriptionHelp = m.staff_volunteer_roles_description_help_body();
 
 	// Retired roles are off by default. They stay listed for staff — the work done
 	// under them still resolves everywhere — but a coordinator setting up next
@@ -104,7 +104,7 @@
 	}
 </script>
 
-<PageHeader title={m.staff_roles()} subtitle={m.staff_volunteering()} />
+<PageHeader title={m.staff_roles_title()} subtitle={m.staff_volunteering_body()} />
 
 <PageContent>
 	{#if data.current}
@@ -114,10 +114,10 @@
 
 		<div class="grid gap-6 lg:grid-cols-2">
 			<div class="flex flex-col gap-4">
-				<InfoCard title={m.staff_roles()}>
+				<InfoCard title={m.staff_roles_title()}>
 					{#snippet header()}
 						<div class="flex flex-wrap items-center justify-between gap-2">
-							<CardTitle>{m.staff_volunteer_roles_roles_live({ live })}</CardTitle>
+							<CardTitle>{m.staff_volunteer_roles_roles_live_title({ live })}</CardTitle>
 							<div class="flex items-center gap-2">
 								<label class="label cursor-pointer gap-2 text-sm">
 									<input
@@ -126,42 +126,42 @@
 										checked={showRetired}
 										onchange={(e) => (showRetired = e.currentTarget.checked)}
 									/>
-									{m.staff_retired()}
+									{m.staff_retired_label()}
 								</label>
 								<Action
 									action={createVolunteerRole}
-									label={m.staff_volunteer_roles_new_role()}
+									label={m.staff_volunteer_roles_new_role_label()}
 									size="sm"
-									modalTitle={m.staff_volunteer_roles_new_volunteer_role()}
-									submitLabel={m.staff_create()}
-									successToast={m.staff_volunteer_roles_role_created()}
+									modalTitle={m.staff_volunteer_roles_new_volunteer_role_title()}
+									submitLabel={m.staff_create_label()}
+									successToast={m.staff_volunteer_roles_role_created_toast()}
 								>
 									{#snippet form()}
 										<FormField
 											field={createVolunteerRole.fields.name}
-											label={m.staff_name()}
+											label={m.staff_name_label()}
 											type="text"
 										/>
 										<FormField
 											field={createVolunteerRole.fields.description}
-											label={m.staff_job_description()}
+											label={m.staff_job_description_label()}
 											type="textarea"
 											description={descriptionHelp}
 											maxlength={VOLUNTEER_ROLE_DESCRIPTION_MAX}
 										/>
 										<FormField
 											field={createVolunteerRole.fields.group}
-											label={m.staff_group()}
+											label={m.staff_group_label()}
 											type="select"
 											options={groupOptions}
 										/>
 										<FormField
 											field={createVolunteerRole.fields.displayOrder}
 											submitAs="text"
-											label={m.staff_display_order()}
+											label={m.staff_display_order_label()}
 											type="number"
 											value="0"
-											description={m.staff_volunteer_roles_lower_sorts_first()}
+											description={m.staff_volunteer_roles_lower_sorts_first_body()}
 										/>
 									{/snippet}
 								</Action>
@@ -171,8 +171,8 @@
 
 					{#if groups.length === 0}
 						<EmptyState
-							title={m.staff_volunteer_roles_no_roles_yet()}
-							description={m.staff_volunteer_roles_role_name_plus_what_job()}
+							title={m.staff_volunteer_roles_no_roles_yet_title()}
+							description={m.staff_volunteer_roles_role_name_plus_what_job_body()}
 						/>
 					{:else}
 						{#each groups as group (group.key)}
@@ -188,7 +188,7 @@
 												<span class="font-medium">{role.name}</span>
 												{#if !role.isActive}
 													<Badge variant="ghost" size="xs"
-														>{m.staff_volunteer_roles_retired()}</Badge
+														>{m.staff_volunteer_roles_retired_label()}</Badge
 													>
 												{/if}
 												{#each role.requiredCertifications as cert (cert.id)}
@@ -196,7 +196,7 @@
 													     without it is how somebody schedules a shift
 													     nobody on the list can take. -->
 													<Badge variant="info" size="xs"
-														>{m.staff_volunteer_roles_needs({ name: cert.name })}</Badge
+														>{m.staff_volunteer_roles_needs_label({ name: cert.name })}</Badge
 													>
 												{/each}
 												{#if role.unfilled > 0}
@@ -205,7 +205,9 @@
 													     tells you to go and recruit for it rather than
 													     chase one more shift. -->
 													<Badge variant="warning" size="xs"
-														>{m.staff_volunteer_roles_short({ unfilled: role.unfilled })}</Badge
+														>{m.staff_volunteer_roles_short_label({
+															unfilled: role.unfilled
+														})}</Badge
 													>
 												{/if}
 											</div>
@@ -223,47 +225,47 @@
 			</div>
 
 			<div class="flex flex-col gap-4">
-				<InfoCard title={m.staff_volunteer_roles_clearances()}>
+				<InfoCard title={m.staff_volunteer_roles_clearances_title()}>
 					{#snippet header()}
 						<div class="flex flex-wrap items-center justify-between gap-2">
 							<CardTitle
-								>{m.staff_volunteer_roles_clearances_2({
+								>{m.staff_volunteer_roles_clearances_2_title({
 									length: certifications.length
 								})}</CardTitle
 							>
 							<Action
 								action={createCertification}
-								label={m.staff_volunteer_roles_new_clearance()}
+								label={m.staff_volunteer_roles_new_clearance_label()}
 								size="sm"
-								modalTitle={m.staff_volunteer_roles_new_clearance_2()}
-								submitLabel={m.staff_create()}
-								successToast={m.staff_volunteer_roles_clearance_created()}
+								modalTitle={m.staff_volunteer_roles_new_clearance_2_title()}
+								submitLabel={m.staff_create_label()}
+								successToast={m.staff_volunteer_roles_clearance_created_toast()}
 							>
 								{#snippet form()}
 									<FormField
 										field={createCertification.fields.name}
-										label={m.staff_name()}
+										label={m.staff_name_label()}
 										type="text"
 										maxlength={CERT_NAME_MAX}
 									/>
 									<FormField
 										field={createCertification.fields.description}
-										label={m.staff_volunteer_roles_what_covers()}
+										label={m.staff_volunteer_roles_what_covers_label()}
 										type="textarea"
 										maxlength={CERT_DESCRIPTION_MAX}
 									/>
 									<FormField
 										field={createCertification.fields.issuedBy}
-										label={m.staff_volunteer_roles_issued_by()}
+										label={m.staff_volunteer_roles_issued_by_label()}
 										type="text"
-										description={m.staff_volunteer_roles_leave_blank_something_cmc_signs()}
+										description={m.staff_volunteer_roles_leave_blank_something_cmc_signs_body()}
 									/>
 									<FormField
 										field={createCertification.fields.validityMonths}
 										submitAs="text"
-										label={m.staff_volunteer_roles_valid_months()}
+										label={m.staff_volunteer_roles_valid_months_label()}
 										type="number"
-										description={m.staff_volunteer_roles_blank_means_never_lapses_changing()}
+										description={m.staff_volunteer_roles_blank_means_never_lapses_changing_body()}
 									/>
 								{/snippet}
 							</Action>
@@ -272,8 +274,8 @@
 
 					{#if certifications.length === 0}
 						<EmptyState
-							title={m.staff_volunteer_roles_no_clearances_yet()}
-							description={m.staff_volunteer_roles_clearance_something_volunteer_must_hol()}
+							title={m.staff_volunteer_roles_no_clearances_yet_title()}
+							description={m.staff_volunteer_roles_clearance_something_volunteer_must_hol_body()}
 						/>
 					{:else}
 						<ul class="flex flex-col gap-2">
@@ -282,14 +284,16 @@
 									<div class="flex flex-wrap items-center gap-2">
 										<span class="font-medium">{cert.name}</span>
 										{#if !cert.isActive}
-											<Badge variant="ghost" size="xs">{m.staff_volunteer_roles_retired()}</Badge>
+											<Badge variant="ghost" size="xs"
+												>{m.staff_volunteer_roles_retired_label()}</Badge
+											>
 										{/if}
 									</div>
 									<div class="text-subtle text-xs">
-										{cert.issuedBy ?? m.staff_cmc()} · {validityLabel(cert.validityMonths)}
+										{cert.issuedBy ?? m.staff_cmc_text()} · {validityLabel(cert.validityMonths)}
 									</div>
 									<div class="text-subtle text-xs">
-										{m.staff_volunteer_roles_hold_required_by_roles({
+										{m.staff_volunteer_roles_hold_required_by_roles_text({
 											holderCount: cert.holderCount,
 											roleCount: cert.roleCount
 										})}
@@ -297,13 +301,13 @@
 									<div class="mt-2 flex flex-wrap gap-1">
 										<Action
 											action={updateCertification.for(cert.id)}
-											label={m.staff_edit()}
+											label={m.staff_edit_label()}
 											iconOnly
 											icon={pencilIcon}
 											variant="ghost"
 											size="xs"
-											modalTitle={m.staff_edit_2({ name: cert.name })}
-											successToast={m.staff_volunteer_roles_clearance_updated()}
+											modalTitle={m.staff_edit_2_title({ name: cert.name })}
+											successToast={m.staff_volunteer_roles_clearance_updated_toast()}
 										>
 											{#snippet form()}
 												<input
@@ -311,39 +315,41 @@
 												/>
 												<FormField
 													field={updateCertification.for(cert.id).fields.name}
-													label={m.staff_name()}
+													label={m.staff_name_label()}
 													type="text"
 													value={cert.name}
 												/>
 												<FormField
 													field={updateCertification.for(cert.id).fields.description}
-													label={m.staff_volunteer_roles_what_covers()}
+													label={m.staff_volunteer_roles_what_covers_label()}
 													type="textarea"
 													value={cert.description ?? ''}
 													maxlength={CERT_DESCRIPTION_MAX}
 												/>
 												<FormField
 													field={updateCertification.for(cert.id).fields.issuedBy}
-													label={m.staff_volunteer_roles_issued_by()}
+													label={m.staff_volunteer_roles_issued_by_label()}
 													type="text"
 													value={cert.issuedBy ?? ''}
-													description={m.staff_volunteer_roles_leave_blank_something_cmc_signs()}
+													description={m.staff_volunteer_roles_leave_blank_something_cmc_signs_body()}
 												/>
 												<FormField
 													field={updateCertification.for(cert.id).fields.validityMonths}
 													submitAs="text"
-													label={m.staff_volunteer_roles_valid_months()}
+													label={m.staff_volunteer_roles_valid_months_label()}
 													type="number"
 													min="1"
 													value={cert.validityMonths ? String(cert.validityMonths) : ''}
-													description={m.staff_volunteer_roles_blank_means_never_lapses_changing_2({
-														holderCount: cert.holderCount
-													})}
+													description={m.staff_volunteer_roles_blank_means_never_lapses_changing_2_body(
+														{
+															holderCount: cert.holderCount
+														}
+													)}
 												/>
 												<FormField
 													field={updateCertification.for(cert.id).fields.displayOrder}
 													submitAs="text"
-													label={m.staff_display_order()}
+													label={m.staff_display_order_label()}
 													type="number"
 													value={String(cert.displayOrder)}
 												/>
@@ -353,42 +359,42 @@
 										{#if cert.isActive}
 											<Action
 												action={archiveCertification.for(cert.id)}
-												label={m.staff_archive()}
+												label={m.staff_archive_label()}
 												iconOnly
 												icon={archiveIcon}
 												variant="ghost"
 												size="xs"
-												modalTitle={m.staff_archive_2({ name: cert.name })}
-												submitLabel={m.staff_archive()}
-												successToast={m.staff_volunteer_roles_clearance_archived()}
+												modalTitle={m.staff_archive_2_title({ name: cert.name })}
+												submitLabel={m.staff_archive_label()}
+												successToast={m.staff_volunteer_roles_clearance_archived_toast()}
 											>
 												{#snippet form()}
 													<input
 														{...archiveCertification.for(cert.id).fields.id.as('hidden', cert.id)}
 													/>
 													<p class="text-sm">
-														{m.staff_volunteer_roles_disappears_from_grant_form_everyone()}
+														{m.staff_volunteer_roles_disappears_from_grant_form_everyone_text()}
 													</p>
 												{/snippet}
 											</Action>
 										{:else}
 											<Action
 												action={restoreCertification.for(cert.id)}
-												label={m.staff_restore()}
+												label={m.staff_restore_label()}
 												iconOnly
 												icon={unarchiveIcon}
 												variant="ghost"
 												size="xs"
-												modalTitle={m.staff_restore_2({ name: cert.name })}
-												submitLabel={m.staff_restore()}
-												successToast={m.staff_volunteer_roles_clearance_restored()}
+												modalTitle={m.staff_restore_2_title({ name: cert.name })}
+												submitLabel={m.staff_restore_label()}
+												successToast={m.staff_volunteer_roles_clearance_restored_toast()}
 											>
 												{#snippet form()}
 													<input
 														{...restoreCertification.for(cert.id).fields.id.as('hidden', cert.id)}
 													/>
 													<p class="text-sm">
-														{m.staff_volunteer_roles_staff_will_able_grant_again()}
+														{m.staff_volunteer_roles_staff_will_able_grant_again_text()}
 													</p>
 												{/snippet}
 											</Action>
@@ -402,23 +408,23 @@
 										{#if cert.holderCount === 0}
 											<Action
 												action={deleteCertification.for(cert.id)}
-												label={m.staff_delete()}
+												label={m.staff_delete_label()}
 												iconOnly
 												icon={trashIcon}
 												variant="ghost"
 												size="xs"
 												class="text-error"
-												modalTitle={m.staff_delete_2({ name: cert.name })}
-												submitLabel={m.staff_delete()}
+												modalTitle={m.staff_delete_2_title({ name: cert.name })}
+												submitLabel={m.staff_delete_label()}
 												submitVariant="error"
-												successToast={m.staff_volunteer_roles_clearance_deleted()}
+												successToast={m.staff_volunteer_roles_clearance_deleted_toast()}
 											>
 												{#snippet form()}
 													<input
 														{...deleteCertification.for(cert.id).fields.id.as('hidden', cert.id)}
 													/>
 													<p class="text-sm">
-														{m.staff_volunteer_roles_nobody_holds_so_can_removed()}
+														{m.staff_volunteer_roles_nobody_holds_so_can_removed_text()}
 													</p>
 												{/snippet}
 											</Action>
@@ -432,7 +438,7 @@
 											href={withQuery(resolve('staff/members/volunteers'), 'lapsing=1')}
 											class="mt-1 inline-block link text-xs text-warning"
 										>
-											{m.staff_volunteer_roles_lapse_before_booked_shift({
+											{m.staff_volunteer_roles_lapse_before_booked_shift_text({
 												lapsingBeforeShift: cert.lapsingBeforeShift
 											})}
 										</a>
@@ -441,13 +447,13 @@
 							{/each}
 						</ul>
 						<p class="mt-3 text-subtle text-xs">
-							{m.staff_volunteer_roles_grants_made_person_s_record()}
+							{m.staff_volunteer_roles_grants_made_person_s_record_text()}
 						</p>
 					{/if}
 				</InfoCard>
 
 				<Button href={resolve('staff/members/volunteers')} variant="ghost" size="sm">
-					{m.staff_volunteer_roles_see_who_s_cleared()}
+					{m.staff_volunteer_roles_see_who_s_cleared_label()}
 				</Button>
 			</div>
 		</div>

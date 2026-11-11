@@ -14,19 +14,19 @@
 	const views: { key: GroupView; label: string; href: ResolvedPathname; cap: Capability }[] = [
 		{
 			key: 'bands',
-			label: m.staff_groups_group_views_bands(),
+			label: m.staff_groups_group_views_bands_label(),
 			href: resolve('staff/groups/bands'),
 			cap: 'band.read'
 		},
 		{
 			key: 'clubs',
-			label: m.staff_groups_group_views_clubs(),
+			label: m.staff_groups_group_views_clubs_label(),
 			href: resolve('staff/groups/clubs'),
 			cap: 'group.read'
 		},
 		{
 			key: 'committees',
-			label: m.staff_groups_group_views_committees(),
+			label: m.staff_groups_group_views_committees_label(),
 			href: resolve('staff/groups/committees'),
 			cap: 'committee.reviewApplications'
 		}

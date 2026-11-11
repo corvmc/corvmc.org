@@ -16,7 +16,7 @@
 		value = $bindable(null),
 		labelKey = 'name' as StringKey<T>,
 		descriptionKey = 'email' as StringKey<T>,
-		placeholder = m.ui_search_by_name_email(),
+		placeholder = m.ui_search_by_name_email_placeholder(),
 		minChars = 2,
 		name,
 		field,
@@ -132,7 +132,7 @@
 				variant="ghost"
 				size="xs"
 				shape="circle"
-				aria-label={m.ui_clear_value({ value: String(value[labelKey]) })}
+				aria-label={m.ui_clear_value_label({ value: String(value[labelKey]) })}
 				onclick={clear}>✕</Button
 			>
 		</div>
@@ -172,9 +172,9 @@
 					</Combobox.Item>
 				{:else}
 					{#if query.length < minChars}
-						<div class="px-3 py-2 opacity-60">{m.ui_search_prompt()}</div>
+						<div class="px-3 py-2 opacity-60">{m.ui_search_prompt_text()}</div>
 					{:else if settled === query}
-						<div class="px-3 py-2 opacity-60">{m.ui_search_no_results()}</div>
+						<div class="px-3 py-2 opacity-60">{m.ui_search_no_results_text()}</div>
 					{/if}
 				{/each}
 			</Combobox.Content>
@@ -182,7 +182,7 @@
 	</Combobox.Root>
 	{#if failure}
 		<Alert type="warning" reset={() => run(query)}>
-			{m.ui_search_failed({ error: errorMessage(failure) })}
+			{m.ui_search_failed_body({ error: errorMessage(failure) })}
 		</Alert>
 	{/if}
 {/if}

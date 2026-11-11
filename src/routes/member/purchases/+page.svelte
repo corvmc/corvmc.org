@@ -28,23 +28,26 @@
 	const purchases = $derived(await getMyPurchases());
 </script>
 
-<PageHeader title={m.member_purchases_purchases()} subtitle={m.member_purchases_subtitle()} />
+<PageHeader
+	title={m.member_purchases_purchases_title()}
+	subtitle={m.member_purchases_subtitle_body()}
+/>
 
 <PageContent>
 	{#if purchases.length === 0}
 		<EmptyState
-			title={m.member_purchases_nothing_yet()}
-			description={m.member_purchases_description()}
+			title={m.member_purchases_nothing_yet_title()}
+			description={m.member_purchases_description_body()}
 		/>
 	{:else}
 		<Card>
 			<CardBody>
 				<Table>
 					{#snippet head()}
-						<th>{m.member_purchases_type()}</th>
-						<th>{m.member_item()}</th>
-						<th class="col-support">{m.member_when()}</th>
-						<th>{m.member_amount()}</th>
+						<th>{m.member_purchases_type_label()}</th>
+						<th>{m.member_item_label()}</th>
+						<th class="col-support">{m.member_when_label()}</th>
+						<th>{m.member_amount_label()}</th>
 						<th></th>
 					{/snippet}
 
@@ -53,8 +56,8 @@
 							<td>
 								<Badge variant={purchase.kind === 'music' ? 'secondary' : 'primary'}>
 									{purchase.kind === 'music'
-										? m.member_purchases_music()
-										: m.member_purchases_ticket()}
+										? m.member_purchases_music_label()
+										: m.member_purchases_ticket_label()}
 								</Badge>
 							</td>
 							<td>
@@ -70,7 +73,7 @@
 									<span class="text-muted">
 										— {formatDate(purchase.eventStartsAt)}
 										{#if purchase.quantity > 1}
-											{m.member_purchases_tickets({ quantity: purchase.quantity })}
+											{m.member_purchases_tickets_text({ quantity: purchase.quantity })}
 										{/if}
 									</span>
 								{/if}
@@ -82,13 +85,13 @@
 							     price a record at nothing and still want the sale recorded. -->
 							<td
 								>{purchase.amountCents === 0
-									? m.member_free()
+									? m.member_free_text()
 									: formatCents(purchase.amountCents)}</td
 							>
 							<td class="text-right">
 								{#if purchase.kind === 'music'}
 									<Button size="sm" href={resolve(`music/download/${purchase.downloadToken}`)}>
-										{m.member_purchases_download()}
+										{m.member_purchases_download_label()}
 									</Button>
 								{:else}
 									<Button
@@ -96,7 +99,7 @@
 										variant="ghost"
 										href={resolve(`member/events/${purchase.eventId}`)}
 									>
-										{m.member_purchases_view()}
+										{m.member_purchases_view_label()}
 									</Button>
 								{/if}
 							</td>

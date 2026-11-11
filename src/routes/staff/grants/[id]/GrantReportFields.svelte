@@ -23,16 +23,21 @@
 <Field
 	field={fields.title}
 	type="text"
-	label={m.staff_report()}
-	description={m.staff_grants_id_grant_report_fields_interim_report_final_rep()}
+	label={m.staff_report_label()}
+	description={m.staff_grants_id_grant_report_fields_interim_report_final_rep_body()}
 	value={value?.title ?? ''}
 />
-<Field field={fields.dueOn} type="date" label={m.staff_due()} value={value?.dueOn ?? ''} />
+<Field field={fields.dueOn} type="date" label={m.staff_due_label()} value={value?.dueOn ?? ''} />
 <Field
 	field={fields.submittedOn}
 	type="date"
-	label={m.staff_submitted()}
-	description={m.staff_grants_id_grant_report_fields_blank_until_sent()}
+	label={m.staff_submitted_label()}
+	description={m.staff_grants_id_grant_report_fields_blank_until_sent_body()}
 	value={value?.submittedOn ?? ''}
 />
-<Field field={fields.notes} type="textarea" label={m.staff_notes()} value={value?.notes ?? ''} />
+<Field
+	field={fields.notes}
+	type="textarea"
+	label={m.staff_notes_label()}
+	value={value?.notes ?? ''}
+/>

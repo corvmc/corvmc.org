@@ -40,35 +40,37 @@
 
 <InfoCard title={m.staff_flags_id_appeal_card_title()} class="lg:col-span-2">
 	<DefinitionList>
-		<Fact label={m.staff_from()}>
+		<Fact label={m.staff_from_label()}>
 			{#if appeal.appellantUserId}
 				<a class="link" href={resolve(`staff/members/${appeal.appellantUserId}`)}>
 					{appeal.appellantName}
 				</a>
 			{:else}
-				{m.staff_flags_id_appeal_card_deleted_account()}
+				{m.staff_flags_id_appeal_card_deleted_account_text()}
 			{/if}
 		</Fact>
-		<Fact label={m.staff_flags_id_appeal_card_filed()}>{formatDateTime(appeal.createdAt)}</Fact>
-		<Fact label={m.staff_flags_id_appeal_card_their_case()} wrap>{appeal.body}</Fact>
+		<Fact label={m.staff_flags_id_appeal_card_filed_label()}
+			>{formatDateTime(appeal.createdAt)}</Fact
+		>
+		<Fact label={m.staff_flags_id_appeal_card_their_case_label()} wrap>{appeal.body}</Fact>
 	</DefinitionList>
 
 	{#if appeal.decision}
 		<div class="mt-4">
 			<DefinitionList>
-				<Fact label={m.staff_flags_id_appeal_card_verdict()}
+				<Fact label={m.staff_flags_id_appeal_card_verdict_label()}
 					>{appealVerdictLabels[appeal.decision.verdict]}</Fact
 				>
-				<Fact label={m.staff_content()}>{outcomeLabels[appeal.decision.contentOutcome]}</Fact>
-				<Fact label={m.staff_flags_id_appeal_card_standing()}
+				<Fact label={m.staff_content_label()}>{outcomeLabels[appeal.decision.contentOutcome]}</Fact>
+				<Fact label={m.staff_flags_id_appeal_card_standing_label()}
 					>{outcomeLabels[appeal.decision.standingOutcome]}</Fact
 				>
 				{#if appeal.decision.notes}
-					<Fact label={m.staff_flags_id_appeal_card_reason_staff_only()} wrap
+					<Fact label={m.staff_flags_id_appeal_card_reason_staff_only_label()} wrap
 						>{appeal.decision.notes}</Fact
 					>
 				{/if}
-				<Fact label={m.staff_flags_id_appeal_card_decided()}
+				<Fact label={m.staff_flags_id_appeal_card_decided_label()}
 					>{formatDateTime(appeal.decision.decidedAt)}</Fact
 				>
 			</DefinitionList>
@@ -76,10 +78,10 @@
 		<div class="mt-3">
 			<Action
 				action={reopenAppeal}
-				label={m.staff_flags_id_appeal_card_reopen_appeal()}
-				modalTitle={m.staff_flags_id_appeal_card_reopen_appeal_2()}
-				submitLabel={m.staff_reopen()}
-				successToast={m.staff_flags_id_appeal_card_appeal_reopened()}
+				label={m.staff_flags_id_appeal_card_reopen_appeal_label()}
+				modalTitle={m.staff_flags_id_appeal_card_reopen_appeal_2_title()}
+				submitLabel={m.staff_reopen_label()}
+				successToast={m.staff_flags_id_appeal_card_appeal_reopened_toast()}
 				variant="default"
 				size="sm"
 				outline
@@ -87,7 +89,7 @@
 				{#snippet form()}
 					<input {...reopenAppeal.fields.flagId.as('hidden', flagId)} />
 					<p class="text-muted text-wrap">
-						{m.staff_flags_id_appeal_card_puts_appeal_back_queue_fresh()}
+						{m.staff_flags_id_appeal_card_puts_appeal_back_queue_fresh_text()}
 					</p>
 				{/snippet}
 			</Action>
@@ -95,16 +97,16 @@
 	{:else}
 		{#if !appeal.canDeny}
 			<Alert type="info" class="mt-4">
-				{m.staff_flags_id_appeal_card_upheld_report_so_can_grant()}
+				{m.staff_flags_id_appeal_card_upheld_report_so_can_grant_body()}
 			</Alert>
 		{/if}
 		<div class="mt-3">
 			<Action
 				action={decideAppeal}
-				label={m.staff_flags_id_appeal_card_decide_appeal()}
-				modalTitle={m.staff_flags_id_appeal_card_decide_appeal_2()}
-				submitLabel={m.staff_flags_id_appeal_card_record_decision()}
-				successToast={m.staff_flags_id_appeal_card_appeal_decided()}
+				label={m.staff_flags_id_appeal_card_decide_appeal_label()}
+				modalTitle={m.staff_flags_id_appeal_card_decide_appeal_2_title()}
+				submitLabel={m.staff_flags_id_appeal_card_record_decision_label()}
+				successToast={m.staff_flags_id_appeal_card_appeal_decided_toast()}
 				variant="primary"
 				size="sm"
 			>
@@ -112,13 +114,13 @@
 					<input {...fields.flagId.as('hidden', flagId)} />
 					<div class="space-y-3">
 						<p class="text-muted text-wrap">
-							{m.staff_flags_id_appeal_card_each_box_tick_applied_as()}
+							{m.staff_flags_id_appeal_card_each_box_tick_applied_as_text()}
 						</p>
 						{#if appeal.contentApplicable}
 							<label class="label cursor-pointer justify-start gap-2">
 								<input class="checkbox checkbox-sm" {...fields.restoreContent.as('checkbox')} />
 								<span class="fieldset-legend text-wrap"
-									>{m.staff_flags_id_appeal_card_put_content_back_up()}</span
+									>{m.staff_flags_id_appeal_card_put_content_back_up_label()}</span
 								>
 							</label>
 						{/if}
@@ -126,18 +128,18 @@
 							<label class="label cursor-pointer justify-start gap-2">
 								<input class="checkbox checkbox-sm" {...fields.restoreStanding.as('checkbox')} />
 								<span class="fieldset-legend text-wrap">
-									{m.staff_flags_id_appeal_card_restore_member_s_standing_their()}
+									{m.staff_flags_id_appeal_card_restore_member_s_standing_their_label()}
 								</span>
 							</label>
 						{/if}
 						{#if !appeal.contentApplicable && !appeal.standingApplicable}
 							<p class="text-muted text-wrap">
-								{m.staff_flags_id_appeal_card_nothing_from_report_still_force()}
+								{m.staff_flags_id_appeal_card_nothing_from_report_still_force_text()}
 							</p>
 						{/if}
 						<label class="fieldset w-full">
 							<span class="fieldset-legend"
-								>{m.staff_flags_id_appeal_card_reason_staff_only_member_told()}</span
+								>{m.staff_flags_id_appeal_card_reason_staff_only_member_told_label()}</span
 							>
 							<textarea class="textarea w-full" rows="3" {...fields.notes.as('text')}></textarea>
 						</label>

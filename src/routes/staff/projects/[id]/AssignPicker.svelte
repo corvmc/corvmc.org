@@ -30,7 +30,9 @@
 					variant="ghost"
 					size="xs"
 					class="depth-0 bare bare-hover assign-trigger"
-					aria-label={m.staff_projects_id_assign_picker_change_who_does({ title: task.title })}
+					aria-label={m.staff_projects_id_assign_picker_change_who_does_label({
+						title: task.title
+					})}
 				>
 					<AssignedSummary {task} {showNames} />
 				</Button>
@@ -44,12 +46,12 @@
 						{#snippet pending()}
 							<span
 								class="loading loading-sm loading-spinner"
-								aria-label={m.staff_projects_id_assign_picker_loading()}
+								aria-label={m.staff_projects_id_assign_picker_loading_label()}
 							></span>
 						{/snippet}
 						{#snippet failed(error, reset)}
 							<Alert type="error" {reset}
-								>{m.staff_projects_id_assign_picker_couldn_t_load_options({
+								>{m.staff_projects_id_assign_picker_couldn_t_load_options_body({
 									errorMessage: errorMessage(error)
 								})}</Alert
 							>

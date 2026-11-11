@@ -23,37 +23,41 @@
 <OrientationCard {id} />
 
 <RelatedList
-	title={m.staff_members_id_panels_space_panel_reservations()}
+	title={m.staff_members_id_panels_space_panel_reservations_title()}
 	result={getUserReservations(id)}
 >
 	{#snippet children(data)}
 		{#if data.counts.upcoming === 0 && data.counts.past === 0}
 			<EmptyState
-				title={m.staff_members_id_panels_space_panel_no_reservations()}
-				description={m.staff_members_id_panels_space_panel_nothing_booked_by_member()}
+				title={m.staff_members_id_panels_space_panel_no_reservations_title()}
+				description={m.staff_members_id_panels_space_panel_nothing_booked_by_member_body()}
 			/>
 		{:else}
 			<p class="mb-3 text-muted">
-				{m.staff_members_id_panels_space_panel_upcoming_past({
+				{m.staff_members_id_panels_space_panel_upcoming_past_text({
 					upcoming: data.counts.upcoming,
 					past: data.counts.past
 				})}
 				{#if data.counts.unpaid > 0}
 					· <span class="text-warning"
-						>{m.staff_members_id_panels_space_panel_unpaid({ unpaid: data.counts.unpaid })}</span
+						>{m.staff_members_id_panels_space_panel_unpaid_text({
+							unpaid: data.counts.unpaid
+						})}</span
 					>
 				{/if}
 			</p>
 
-			{#each [{ label: m.staff_members_id_panels_space_panel_upcoming(), rows: data.upcoming }, { label: m.staff_members_id_panels_space_panel_past(), rows: data.past }] as group (group.label)}
+			{#each [{ label: m.staff_members_id_panels_space_panel_upcoming_label(), rows: data.upcoming }, { label: m.staff_members_id_panels_space_panel_past_label(), rows: data.past }] as group (group.label)}
 				{#if group.rows.length > 0}
 					<h4 class="mt-3 mb-1 text-subtle font-semibold uppercase">{group.label}</h4>
 					<Table>
 						{#snippet head()}
-							<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-							<th>{m.staff_when()}</th>
-							<th class="col-support">{m.staff_members_id_panels_space_panel_booked_by()}</th>
-							<th class="col-extra cell-num">{m.staff_members_id_panels_space_panel_owed()}</th>
+							<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+							<th>{m.staff_when_label()}</th>
+							<th class="col-support">{m.staff_members_id_panels_space_panel_booked_by_label()}</th>
+							<th class="col-extra cell-num"
+								>{m.staff_members_id_panels_space_panel_owed_label()}</th
+							>
 						{/snippet}
 						{#each group.rows as r (r.id)}
 							<tr class="hover" use:rowLink={resolve(`staff/reservations/${r.id}`)}>
@@ -78,7 +82,7 @@
 									<span class="inline-flex items-center gap-1">
 										<BookerTypeIcon type={r.bookerType} />
 										{r.bandName ??
-											(r.own ? m.staff_members_id_panels_space_panel_themselves() : '—')}
+											(r.own ? m.staff_members_id_panels_space_panel_themselves_text() : '—')}
 									</span>
 								</td>
 								<td class="col-extra cell-num">
@@ -100,21 +104,21 @@
 </RelatedList>
 
 <RelatedList
-	title={m.staff_members_id_panels_space_panel_recurring_bookings()}
+	title={m.staff_members_id_panels_space_panel_recurring_bookings_title()}
 	result={getUserRecurringSeries(id)}
 >
 	{#snippet children(series)}
 		{#if series.length === 0}
 			<EmptyState
-				title={m.staff_members_id_panels_space_panel_no_recurring_bookings()}
-				description={m.staff_members_id_panels_space_panel_no_standing_weekly_month()}
+				title={m.staff_members_id_panels_space_panel_no_recurring_bookings_title()}
+				description={m.staff_members_id_panels_space_panel_no_standing_weekly_month_body()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_members_id_panels_space_panel_pattern()}</th>
-					<th class="col-support">{m.staff_members_id_panels_space_panel_time()}</th>
-					<th class="col-extra">{m.staff_members_id_panels_space_panel_runs_until()}</th>
+					<th>{m.staff_members_id_panels_space_panel_pattern_label()}</th>
+					<th class="col-support">{m.staff_members_id_panels_space_panel_time_label()}</th>
+					<th class="col-extra">{m.staff_members_id_panels_space_panel_runs_until_label()}</th>
 				{/snippet}
 				{#each series as s (s.id)}
 					<tr class="hover" use:rowLink={resolve(`staff/recurring/${s.id}`)}>
@@ -127,7 +131,7 @@
 						<td class="col-extra">
 							{s.seriesEndsAt
 								? formatDateShortYear(s.seriesEndsAt)
-								: m.staff_members_id_panels_space_panel_no_end_date()}
+								: m.staff_members_id_panels_space_panel_no_end_date_text()}
 						</td>
 					</tr>
 				{/each}
@@ -137,29 +141,29 @@
 </RelatedList>
 
 <RelatedList
-	title={m.staff_members_id_panels_space_panel_equipment_loans()}
+	title={m.staff_members_id_panels_space_panel_equipment_loans_title()}
 	result={getUserLoans(id)}
 >
 	{#snippet children(loans)}
 		{#if loans.length === 0}
 			<EmptyState
-				title={m.staff_members_id_panels_space_panel_no_loans()}
-				description={m.staff_members_id_panels_space_panel_member_has_never_borrowe()}
+				title={m.staff_members_id_panels_space_panel_no_loans_title()}
+				description={m.staff_members_id_panels_space_panel_member_has_never_borrowe_body()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_item()}</th>
-					<th class="col-support">{m.staff_due()}</th>
-					<th class="col-extra">{m.staff_returned()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_item_label()}</th>
+					<th class="col-support">{m.staff_due_label()}</th>
+					<th class="col-extra">{m.staff_returned_label()}</th>
 				{/snippet}
 				{#each loans as loan (loan.id)}
 					<tr class="hover" use:rowLink={resolve(`staff/inventory/loans/${loan.id}`)}>
 						<td class="w-px"><StatusBadge status={loan.status} /></td>
 						<td class="cell-primary">
 							<a class="font-medium" href={resolve(`staff/inventory/loans/${loan.id}`)}>
-								{loan.equipmentName ?? m.staff_members_id_panels_space_panel_removed_item()}
+								{loan.equipmentName ?? m.staff_members_id_panels_space_panel_removed_item_text()}
 							</a>
 							{#if loan.quantity > 1}
 								<div class="text-muted">×{loan.quantity}</div>
@@ -169,7 +173,7 @@
 							{#if loan.dueDate}
 								{formatDateShortYear(loan.dueDate)}
 								{#if loan.isOverdue}
-									<Badge variant="error" size="sm">{m.staff_overdue()}</Badge>
+									<Badge variant="error" size="sm">{m.staff_overdue_label()}</Badge>
 								{/if}
 							{:else}
 								—

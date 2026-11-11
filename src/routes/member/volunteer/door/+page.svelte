@@ -129,17 +129,17 @@
 	<title>{pageTitle('Door sales')}</title>
 </svelte:head>
 
-<PageHeader width="2xl" title={m.member_volunteer_door_door_sales()} />
+<PageHeader width="2xl" title={m.member_volunteer_door_door_sales_title()} />
 <PageContent width="2xl">
 	{#if door.events.length === 0}
 		<EmptyState
-			title={m.member_volunteer_door_no_show_at_door()}
-			description={m.member_volunteer_door_collective_shows_starting_within_day()}
+			title={m.member_volunteer_door_no_show_at_door_title()}
+			description={m.member_volunteer_door_collective_shows_starting_within_day_body()}
 		/>
 	{:else if sale}
 		<Alert>
-			{m.member_volunteer_door_charging({ formatCents: formatCents(sale.chargeCents) })}
-			{#if !tapped && bridge}{m.member_volunteer_door_hand_phone_over_have_them()}{/if}
+			{m.member_volunteer_door_charging_body({ formatCents: formatCents(sale.chargeCents) })}
+			{#if !tapped && bridge}{m.member_volunteer_door_hand_phone_over_have_them_body()}{/if}
 		</Alert>
 
 		{#if tapError}
@@ -149,39 +149,41 @@
 		{#if tapped}
 			<DoorSaleStatus paymentIntentId={sale.paymentIntentId} />
 			<Button variant="primary" class="min-h-11" onclick={reset}
-				>{m.member_volunteer_door_next_sale()}</Button
+				>{m.member_volunteer_door_next_sale_label()}</Button
 			>
 		{:else}
 			<div class="flex flex-wrap gap-3">
 				{#if bridge}
 					<Button variant="primary" class="min-h-11" disabled={busy} onclick={tap}>
-						{tapError ? m.member_volunteer_door_try_tap_again() : m.member_volunteer_door_tap_pay()}
+						{tapError
+							? m.member_volunteer_door_try_tap_again_label()
+							: m.member_volunteer_door_tap_pay_label()}
 					</Button>
 				{:else if door.canSimulate}
 					<Button variant="primary" class="min-h-11" disabled={busy} onclick={simulate}>
-						{m.member_simulate_tap()}
+						{m.member_simulate_tap_label()}
 					</Button>
 				{:else}
 					<Alert type="warning">
-						{m.member_volunteer_door_no_card_reader_here_door()}
+						{m.member_volunteer_door_no_card_reader_here_door_body()}
 					</Alert>
 				{/if}
 				<Button variant="ghost" class="min-h-11" disabled={busy} onclick={cancel}
-					>{m.member_volunteer_door_cancel_sale()}</Button
+					>{m.member_volunteer_door_cancel_sale_label()}</Button
 				>
 			</div>
 		{/if}
 	{:else}
 		{#if freeLetIn !== null}
 			<Alert type="success">
-				{m.member_volunteer_door_free_tickets_checked_let_them({ freeLetIn })}
+				{m.member_volunteer_door_free_tickets_checked_let_them_body({ freeLetIn })}
 			</Alert>
 		{/if}
 
 		<Form remote={startDoorSale} {onsuccess} class="space-y-4">
 			<FormField
 				field={fields.eventId}
-				label={m.member_show()}
+				label={m.member_show_label()}
 				type="select"
 				options={eventOptions}
 				bind:value={chosenEventId}
@@ -189,7 +191,7 @@
 			/>
 			<FormField
 				field={fields.quantity}
-				label={m.member_volunteer_door_how_many()}
+				label={m.member_volunteer_door_how_many_label()}
 				type="number"
 				bind:value={quantity}
 				required
@@ -199,34 +201,34 @@
 			{/if}
 			<MoneyField
 				field={fields.unitPriceCents}
-				label={m.member_volunteer_door_each_ticket()}
+				label={m.member_volunteer_door_each_ticket_label()}
 				value={door.events[0].suggestedCents}
-				description={m.member_volunteer_door_whatever_they_can_pay_at({
+				description={m.member_volunteer_door_whatever_they_can_pay_at_body({
 					formatCents: formatCents(TICKET_MIN_CHARGE_CENTS)
 				})}
 			/>
-			<SubmitButton label={m.member_volunteer_door_take_payment()} class="min-h-11" />
+			<SubmitButton label={m.member_volunteer_door_take_payment_label()} class="min-h-11" />
 		</Form>
 
 		<!-- Always here, not only after a failure: a card that cannot tap, and a
 		     staffer whose screen reader blocks PIN entry, never see an error. -->
 		<section class="space-y-2">
-			<h2 class="font-semibold">{m.member_volunteer_door_card_will_not_tap()}</h2>
+			<h2 class="font-semibold">{m.member_volunteer_door_card_will_not_tap_title()}</h2>
 			{#each door.events as event (event.id)}
 				<p class="text-muted">
-					{m.member_volunteer_door_event_suggested({
+					{m.member_volunteer_door_event_suggested_text({
 						title: event.title,
 						price: formatCents(event.suggestedCents)
-					})}{#if event.floorCents}{m.member_volunteer_door_event_floor({
+					})}{#if event.floorCents}{m.member_volunteer_door_event_floor_text({
 							floor: formatCents(event.floorCents)
-						})}{/if}{#if event.remaining !== null && event.remaining >= 0}{m.member_volunteer_door_event_left(
+						})}{/if}{#if event.remaining !== null && event.remaining >= 0}{m.member_volunteer_door_event_left_text(
 							{ count: event.remaining }
-						)}{:else if event.remaining !== null}{m.member_volunteer_door_event_over({
+						)}{:else if event.remaining !== null}{m.member_volunteer_door_event_over_text({
 							count: -event.remaining
 						})}{/if}.
 					{#if event.onlineSales}
 						<ParaglideMessage
-							message={m.member_volunteer_door_they_can_buy_their_own}
+							message={m.member_volunteer_door_they_can_buy_their_own_text}
 							inputs={{
 								id: event.id
 							}}
@@ -235,7 +237,7 @@
 								>{/snippet}</ParaglideMessage
 						>
 					{:else}
-						{m.member_volunteer_door_online_sales_closed_show()}
+						{m.member_volunteer_door_online_sales_closed_show_text()}
 					{/if}
 				</p>
 			{/each}

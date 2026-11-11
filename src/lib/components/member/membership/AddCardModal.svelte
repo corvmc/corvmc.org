@@ -75,24 +75,24 @@
 	{#if errorMessage}
 		<Alert type="error">{errorMessage}</Alert>
 	{:else if !clientSecret}
-		<p class="py-4 text-muted">{m.member_membership_add_card_modal_getting_things_ready()}</p>
+		<p class="py-4 text-muted">{m.member_membership_add_card_modal_getting_things_ready_text()}</p>
 	{:else if driver === 'fake'}
 		<Alert type="warning">
-			{m.member_membership_add_card_modal_no_card_stored_here_fake()}
+			{m.member_membership_add_card_modal_no_card_stored_here_fake_body()}
 		</Alert>
 
 		<div class="mt-4">
 			<Form remote={payFakeSetupIntent} onsuccess={done}>
 				<input {...fields.setupIntentId.as('hidden', setupIntentId)} />
 				<FormField
-					label={m.member_membership_add_card_modal_card_number()}
+					label={m.member_membership_add_card_modal_card_number_label()}
 					name="cardNumber"
 					type="text"
 					field={fields.cardNumber}
-					description={m.member_membership_add_card_modal_description()}
+					description={m.member_membership_add_card_modal_description_body()}
 				/>
 				<SubmitButton
-					label={m.member_membership_add_card_modal_save_card()}
+					label={m.member_membership_add_card_modal_save_card_label()}
 					successLabel={m.member_membership_add_card_modal_success_label()}
 				/>
 			</Form>

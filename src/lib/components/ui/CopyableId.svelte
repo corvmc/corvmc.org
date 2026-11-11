@@ -26,7 +26,7 @@
 			variant="ghost"
 			size="xs"
 			onclick={() => navigator.clipboard.writeText(value)}
-			title={m.ui_copy()}
+			title={m.ui_copy_title()}
 		>
 			<IconCopy size={14} />
 		</Button>

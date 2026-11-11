@@ -50,7 +50,7 @@
 					</text>
 					<text>
 						<textPath href="#arc-bot-{id}" startOffset="50%" text-anchor="middle"
-							>{m.directory_corvallis_music_collective()}</textPath
+							>{m.directory_corvallis_music_collective_text()}</textPath
 						>
 					</text>
 				</svg>
@@ -74,7 +74,7 @@
 				{/if}
 			</div>
 			{#if lookingForMembers}
-				<div class="vinyl-card__gaff">{m.directory_vinyl_card_seeking_members()}</div>
+				<div class="vinyl-card__gaff">{m.directory_vinyl_card_seeking_members_text()}</div>
 			{/if}
 		</div>
 	</div>

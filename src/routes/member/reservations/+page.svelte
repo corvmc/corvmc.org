@@ -155,7 +155,7 @@
 	}
 </script>
 
-<PageHeader title={m.member_reservations_reserve_practice_space()}>
+<PageHeader title={m.member_reservations_reserve_practice_space_title()}>
 	<CreateModal {isSustaining} needsPhone={contact.needsPhone} onbooked={refreshReservations} />
 	{#if isInstructor}
 		<!-- A separate button rather than a mode: teaching time has its own rate,
@@ -168,8 +168,8 @@
 		<div class="mb-4">
 			<Alert type="info">
 				{paidAttempts >= PAID_RETRY_LIMIT
-					? m.member_reservations_we_haven_t_had_confirmation()
-					: m.member_confirming_payment()}
+					? m.member_reservations_we_haven_t_had_confirmation_body()
+					: m.member_confirming_payment_body()}
 			</Alert>
 		</div>
 	{/if}
@@ -178,19 +178,19 @@
 	<article class="@container">
 		<Tabs.Root bind:value={activeTab}>
 			<header class="mb-4 flex w-full items-center justify-between">
-				<h2 class="title">{m.member_reservations_my_reservations()}</h2>
+				<h2 class="title">{m.member_reservations_my_reservations_title()}</h2>
 				<Tabs.List class="join">
 					<Tabs.Trigger
 						value="active"
 						class={clsx('btn join-item btn-sm', {
 							'latched btn-primary': activeTab === 'active'
-						})}>{m.member_reservations_upcoming()}</Tabs.Trigger
+						})}>{m.member_reservations_upcoming_text()}</Tabs.Trigger
 					>
 					<Tabs.Trigger
 						value="all"
 						class={clsx('btn join-item btn-sm', {
 							'latched btn-primary': activeTab === 'all'
-						})}>{m.member_all()}</Tabs.Trigger
+						})}>{m.member_all_text()}</Tabs.Trigger
 					>
 				</Tabs.List>
 			</header>
@@ -203,7 +203,7 @@
 					{#await overdueReservations then overdue}
 						{#if overdue.length > 0}
 							<section class="mb-6">
-								<SectionLabel label={m.member_overdue()} count={overdue.length} />
+								<SectionLabel label={m.member_overdue_label()} count={overdue.length} />
 								<OverdueTable reservations={overdue} />
 							</section>
 						{/if}
@@ -215,7 +215,7 @@
 							<ReservationCard {reservation} onchange={refreshReservations} />
 						{:else}
 							<EmptyState
-								message={m.member_reservations_no_upcoming_reservations_use_reserve()}
+								message={m.member_reservations_no_upcoming_reservations_use_reserve_body()}
 								class="col-span-full"
 							/>
 						{/each}
@@ -229,17 +229,17 @@
 						{#if history.length > 0}
 							<p class="mb-3 text-subtle">
 								{#if shown.length < history.length}
-									{m.member_reservations_showing_most_recent_reservations({
+									{m.member_reservations_showing_most_recent_reservations_text({
 										length: shown.length,
 										length2: history.length
 									})}
 								{:else}
-									{m.member_reservations_reservations_newest_first({ length: history.length })}
+									{m.member_reservations_reservations_newest_first_text({ length: history.length })}
 								{/if}
 							</p>
 						{/if}
 						{#if shown.length === 0}
-							<EmptyState message={m.member_reservations_no_reservations_yet_use_reserve()} />
+							<EmptyState message={m.member_reservations_no_reservations_yet_use_reserve_body()} />
 						{/if}
 						<!-- A month header every dozen-or-so rows. Two years of fortnightly
 						     bookings is 53 rows that look alike, and scrolling was the only
@@ -257,7 +257,7 @@
 						{#if shown.length < history.length}
 							<div class="mt-3 flex justify-center">
 								<Button variant="ghost" size="sm" onclick={() => (showAllHistory = true)}>
-									{m.member_reservations_show_all({ length: history.length })}
+									{m.member_reservations_show_all_label({ length: history.length })}
 								</Button>
 							</div>
 						{/if}
@@ -274,7 +274,7 @@
 {#if confirmReservation}
 	<Modal
 		bind:open={confirmModalOpen}
-		title={m.member_reservations_slot_available()}
+		title={m.member_reservations_slot_available_title()}
 		maxWidth="max-w-md"
 		onclose={closeConfirmModal}
 	>
@@ -287,7 +287,7 @@
 			}}
 		>
 			<div class="space-y-4">
-				<p class="text-sm">{m.member_reservations_slot_has_opened_up_waitlisted()}</p>
+				<p class="text-sm">{m.member_reservations_slot_has_opened_up_waitlisted_text()}</p>
 				<div class="inset border border-base-300 px-4 py-3">
 					<p class="font-medium">{formatMonthDayYear(confirmReservation.startsAt)}</p>
 					<p class="text-muted">
@@ -296,7 +296,7 @@
 				</div>
 				{#if confirmReservation.waitlistExpiresAt}
 					<p class="text-subtle">
-						{m.member_reservations_confirm_by_slot_will_offered({
+						{m.member_reservations_confirm_by_slot_will_offered_text({
 							formatMonthDayYear: formatMonthDayYear(confirmReservation.waitlistExpiresAt)
 						})}
 					</p>
@@ -304,10 +304,10 @@
 				<input {...fields.id.as('hidden', confirmReservation.id)} />
 				<div class="flex justify-end gap-2">
 					<Button type="button" variant="default" size="sm" outline onclick={closeConfirmModal}
-						>{m.member_reservations_dismiss()}</Button
+						>{m.member_reservations_dismiss_label()}</Button
 					>
 					<SubmitButton
-						label={m.member_reservations_confirm_reservation()}
+						label={m.member_reservations_confirm_reservation_label()}
 						variant="success"
 						size="sm"
 					/>

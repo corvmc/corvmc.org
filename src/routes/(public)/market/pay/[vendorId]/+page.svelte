@@ -36,42 +36,44 @@
 
 <div class="mx-auto max-w-xl space-y-6 px-4 py-12">
 	<div>
-		<p class="eyebrow mb-2">{m.public_market_pay_vendor_id_market_vendor()}</p>
+		<p class="eyebrow mb-2">{m.public_market_pay_vendor_id_market_vendor_text()}</p>
 		<h1 class="text-3xl font-bold">{fee.businessName}</h1>
 		<p class="text-muted">{fee.marketTitle} · {formatDateTime(fee.startsAt)}</p>
 	</div>
 
 	{#if fee.refunded}
-		<Alert>{m.public_market_pay_vendor_id_table_fee_was_refunded()}</Alert>
+		<Alert>{m.public_market_pay_vendor_id_table_fee_was_refunded_body()}</Alert>
 	{:else if fee.paidCents !== null}
 		<Alert type="success">
-			{m.public_market_pay_vendor_id_paid_thank_see_at_market({
+			{m.public_market_pay_vendor_id_paid_thank_see_at_market_body({
 				formatCents: formatCents(fee.paidCents)
 			})}
 		</Alert>
 	{:else if returned}
-		<Alert>{m.public_market_pay_vendor_id_payment_being_confirmed_page_wil()}</Alert>
+		<Alert>{m.public_market_pay_vendor_id_payment_being_confirmed_page_wil_body()}</Alert>
 	{:else if !fee.due}
-		<Alert>{m.public_market_pay_vendor_id_there_no_table_fee_pay()}</Alert>
+		<Alert>{m.public_market_pay_vendor_id_there_no_table_fee_pay_body()}</Alert>
 	{:else}
 		<Form remote={payVendorFeeForm} {onsuccess} class="space-y-4">
 			<input {...fields.vendorId.as('hidden', fee.vendorId)} />
 			{#if fee.slidingScale}
 				<p>
-					{m.public_market_pay_vendor_id_market_runs_sliding_scale_table({
+					{m.public_market_pay_vendor_id_market_runs_sliding_scale_table_text({
 						formatCents: formatCents(fee.feeCents),
 						formatCents2: formatCents(fee.floorCents)
 					})}
 				</p>
 				<MoneyField
 					field={fields.amountCents}
-					label={m.public_market_pay_vendor_id_amount()}
+					label={m.public_market_pay_vendor_id_amount_label()}
 					value={fee.feeCents}
 				/>
 			{:else}
-				<p>{m.public_market_pay_vendor_id_table_fee({ formatCents: formatCents(fee.feeCents) })}</p>
+				<p>
+					{m.public_market_pay_vendor_id_table_fee_text({ formatCents: formatCents(fee.feeCents) })}
+				</p>
 			{/if}
-			<SubmitButton label={m.public_market_pay_vendor_id_pay_table_fee()} />
+			<SubmitButton label={m.public_market_pay_vendor_id_pay_table_fee_label()} />
 		</Form>
 	{/if}
 </div>

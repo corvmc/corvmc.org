@@ -55,14 +55,14 @@
 {#if rows.length === 0}
 	<EmptyState
 		title={m.staff_inventory_restock_list_title()}
-		description={m.staff_inventory_restock_list_description()}
+		description={m.staff_inventory_restock_list_description_body()}
 	/>
 {:else}
 	{#if outCount > 0}
 		<Alert type="warning" class="mb-4">
 			{outCount === 1
-				? m.staff_inventory_restock_list_one_item_has_run_out()
-				: m.staff_inventory_restock_list_items_have_run_out({ outCount })}
+				? m.staff_inventory_restock_list_one_item_has_run_out_body()
+				: m.staff_inventory_restock_list_items_have_run_out_body({ outCount })}
 		</Alert>
 	{/if}
 
@@ -70,19 +70,19 @@
 		<SectionLabel label={categoryName} />
 		<Table>
 			{#snippet head()}
-				<th>{m.staff_item()}</th>
-				<th class="cell-num">{m.staff_hand()}</th>
-				<th class="col-support cell-num">{m.staff_reorder_at()}</th>
-				<th class="cell-num">{m.staff_inventory_restock_list_buy()}</th>
-				<th class="col-support cell-num">{m.staff_order()}</th>
-				<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+				<th>{m.staff_item_label()}</th>
+				<th class="cell-num">{m.staff_hand_label()}</th>
+				<th class="col-support cell-num">{m.staff_reorder_at_label()}</th>
+				<th class="cell-num">{m.staff_inventory_restock_list_buy_label()}</th>
+				<th class="col-support cell-num">{m.staff_order_label()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 			{/snippet}
 			{#each group as row (row.id)}
 				<tr class="hover">
 					<td class="cell-primary">
 						<a class="font-medium" href={resolve(`staff/inventory/${row.id}`)}>{row.name}</a>
 						{#if row.isOut}
-							<Badge variant="error" size="xs">{m.staff_inventory_restock_list_out()}</Badge>
+							<Badge variant="error" size="xs">{m.staff_inventory_restock_list_out_label()}</Badge>
 						{/if}
 						{#if row.gtin}
 							<div class="font-mono text-subtle">{row.gtin}</div>
@@ -95,13 +95,13 @@
 							{row.suggestedOrder}
 							<span class="text-subtle">{row.unitOfMeasure}</span>
 						{:else}
-							<span class="text-subtle">{m.staff_inventory_restock_list_covered()}</span>
+							<span class="text-subtle">{m.staff_inventory_restock_list_covered_text()}</span>
 						{/if}
 					</td>
 					<td class="col-support cell-num">
 						{#if row.onOrder > 0}
 							<Badge variant="info" size="xs"
-								>{m.staff_inventory_restock_list_coming({ onOrder: row.onOrder })}</Badge
+								>{m.staff_inventory_restock_list_coming_label({ onOrder: row.onOrder })}</Badge
 							>
 						{:else}
 							<span class="text-subtle">—</span>
@@ -113,7 +113,7 @@
 								name="pick_{row.id}"
 								type="checkbox"
 								label={undefined}
-								checkboxLabel={m.staff_order_2()}
+								checkboxLabel={m.staff_order_2_checkbox()}
 								bind:value={picked[row.id]}
 							/>
 							<!-- Receiving from here: you come back from the shop with the list open. -->
@@ -135,12 +135,12 @@
 			>
 				<input {...markOrdered.fields.lines.as('hidden', orderLines)} />
 				<div class="flex flex-wrap items-end gap-3">
-					<Field field={fields.expectedAt} type="date" label={m.staff_expected()} required />
-					<Field field={fields.supplierName} type="text" label={m.staff_supplier()} />
-					<Field field={fields.reference} type="text" label={m.staff_reference()} />
-					<Field field={fields.notes} type="text" label={m.staff_notes()} />
+					<Field field={fields.expectedAt} type="date" label={m.staff_expected_label()} required />
+					<Field field={fields.supplierName} type="text" label={m.staff_supplier_label()} />
+					<Field field={fields.reference} type="text" label={m.staff_reference_label()} />
+					<Field field={fields.notes} type="text" label={m.staff_notes_label()} />
 					<SubmitButton
-						label={m.staff_inventory_restock_list_mark_as_ordered({
+						label={m.staff_inventory_restock_list_mark_as_ordered_label({
 							length: pickedRows.length,
 							value: pickedRows.length === 1 ? 'item' : 'items'
 						})}

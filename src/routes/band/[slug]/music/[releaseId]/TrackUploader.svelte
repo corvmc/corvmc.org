@@ -78,8 +78,8 @@
 			const result = (await response.json()) as { tracks: unknown[] };
 			toast.success(
 				result.tracks.length === 1
-					? m.band_slug_music_release_id_track_uploader_track_added()
-					: m.band_slug_music_release_id_track_uploader_tracks_added({
+					? m.band_slug_music_release_id_track_uploader_track_added_toast()
+					: m.band_slug_music_release_id_track_uploader_tracks_added_toast({
 							length: result.tracks.length
 						})
 			);
@@ -99,9 +99,9 @@
 		busyLabel={progressLabel || m.band_slug_music_release_id_track_uploader_busy_label()}
 	>
 		<IconUpload size={16} />
-		{m.band_slug_music_release_id_track_uploader_add_tracks()}
+		{m.band_slug_music_release_id_track_uploader_add_tracks_text()}
 	</FileUpload>
 	<p class="text-subtle">
-		{m.band_slug_music_release_id_track_uploader_mp3_m4a_flac_wav_o({ maxLabel })}
+		{m.band_slug_music_release_id_track_uploader_mp3_m4a_flac_wav_o_text({ maxLabel })}
 	</p>
 </div>

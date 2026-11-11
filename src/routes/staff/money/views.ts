@@ -5,13 +5,13 @@ import type { StaffView } from '../views';
 export const moneyViews: readonly StaffView<'payments' | 'credits'>[] = [
 	{
 		key: 'payments',
-		label: () => m.staff_payments_title(),
+		label: () => m.staff_payments_2_label(),
 		href: resolve('staff/money/payments'),
 		cap: 'finance.read'
 	},
 	{
 		key: 'credits',
-		label: () => m.staff_credits_title(),
+		label: () => m.staff_credits_label(),
 		href: resolve('staff/money/credits'),
 		cap: 'credit.read'
 	}

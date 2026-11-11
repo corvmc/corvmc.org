@@ -40,7 +40,7 @@
 	let showDeleteModal = $state(false);
 </script>
 
-<PageHeader width="md" title={m.band_slug_settings_settings()} subtitle={band.name} />
+<PageHeader width="md" title={m.band_slug_settings_settings_title()} subtitle={band.name} />
 <PageContent width="md">
 	<!-- The free subdomain is the band's primary address; the custom domain below
 	     is the upsell on top of it. -->
@@ -52,7 +52,7 @@
 		<div class="h-8"></div>
 	{:else}
 		<Alert type="info" href={`/staff/groups/${band.id}`}>
-			{m.band_slug_settings_re_viewing_band_as_staff()}
+			{m.band_slug_settings_re_viewing_band_as_staff_body()}
 		</Alert>
 	{/if}
 
@@ -63,15 +63,15 @@
 
 	{#if isOwner}
 		<section class="space-y-4">
-			<h2 class="text-lg font-semibold text-error">{m.band_slug_settings_danger_zone()}</h2>
+			<h2 class="text-lg font-semibold text-error">{m.band_slug_settings_danger_zone_title()}</h2>
 			<div class="card border border-error/30 bg-base-100">
 				<CardBody>
 					<p class="text-sm">
-						{m.band_slug_settings_deleting_band_will_cancel_all()}
+						{m.band_slug_settings_deleting_band_will_cancel_all_text()}
 					</p>
 					<div class="mt-2 card-actions justify-end">
 						<Button variant="error" size="sm" outline onclick={() => (showDeleteModal = true)}>
-							{m.band_slug_settings_delete_band()}
+							{m.band_slug_settings_delete_band_label()}
 						</Button>
 					</div>
 				</CardBody>
@@ -80,7 +80,7 @@
 	{/if}
 </PageContent>
 
-<Modal title={m.band_slug_settings_delete_band()} bind:open={showDeleteModal}>
+<Modal title={m.band_slug_settings_delete_band_title()} bind:open={showDeleteModal}>
 	<Form
 		remote={deleteBandForm}
 		onsuccess={() => {
@@ -92,7 +92,7 @@
 			<input {...deleteFields.bandId.as('hidden', band.id)} />
 			<Alert type="error">
 				<ParaglideMessage
-					message={m.band_slug_settings_sure_want_permanently_delete_all}
+					message={m.band_slug_settings_sure_want_permanently_delete_all_body}
 					inputs={{ name: band.name }}
 					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 						>{/snippet}</ParaglideMessage
@@ -100,7 +100,7 @@
 			</Alert>
 			<div class="flex justify-end pt-2">
 				<SubmitButton
-					label={m.band_slug_settings_delete_band()}
+					label={m.band_slug_settings_delete_band_label()}
 					successLabel={m.band_slug_settings_success_label()}
 					variant="error"
 				/>

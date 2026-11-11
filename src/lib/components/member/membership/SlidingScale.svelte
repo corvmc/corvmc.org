@@ -11,9 +11,9 @@
 
 <div>
 	<div class="mb-6 text-center">
-		<h2 class="text-3xl font-bold">{m.member_membership_sliding_scale_pick_what_works()}</h2>
+		<h2 class="text-3xl font-bold">{m.member_membership_sliding_scale_pick_what_works_title()}</h2>
 		<p class="mt-2 opacity-70">
-			{m.member_membership_sliding_scale_there_s_no_wrong_number()}
+			{m.member_membership_sliding_scale_there_s_no_wrong_number_text()}
 		</p>
 	</div>
 
@@ -21,7 +21,7 @@
 		<CardBody>
 			<div class="mb-8 text-center">
 				<div class="mb-4 text-6xl font-bold text-primary">
-					{m.member_membership_sliding_scale_1_hour_5()}
+					{m.member_membership_sliding_scale_1_hour_5_text()}
 				</div>
 			</div>
 
@@ -37,15 +37,15 @@
 
 			<div class="rounded-lg bg-primary/5 p-6">
 				<div class="mb-2 text-center text-sm font-semibold tracking-wide text-primary uppercase">
-					{m.member_membership_sliding_scale_why_sliding_scale()}
+					{m.member_membership_sliding_scale_why_sliding_scale_text()}
 				</div>
 				<p class="text-center opacity-70">
-					{m.member_membership_sliding_scale_music_shouldn_t_gated_by()}
+					{m.member_membership_sliding_scale_music_shouldn_t_gated_by_text()}
 				</p>
 			</div>
 
 			<p class="mt-6 text-center text-muted">
-				{m.member_membership_sliding_scale_change_cancel_anytime_no_com()}
+				{m.member_membership_sliding_scale_change_cancel_anytime_no_com_text()}
 			</p>
 		</CardBody>
 	</Card>

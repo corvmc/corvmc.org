@@ -21,7 +21,7 @@
 
 	// Built by hand rather than with `resolve()`: the code must hold an absolute
 	// URL, and a printed poster outlives any base path the app might gain.
-	const href = $derived(m.events_listing_qr_card_href({ origin, eventId }));
+	const href = $derived(m.events_listing_qr_card_href_text({ origin, eventId }));
 	const slug = $derived(
 		title
 			.toLowerCase()
@@ -66,7 +66,7 @@
 <InfoCard title={m.events_listing_qr_card_title()}>
 	{#if !published}
 		<Alert type="warning" class="mb-3">
-			{m.events_listing_qr_card_listing_not_published_yet_so()}
+			{m.events_listing_qr_card_listing_not_published_yet_so_body()}
 		</Alert>
 	{/if}
 
@@ -83,15 +83,17 @@
 			<div class="flex flex-wrap gap-2">
 				<Button size="sm" onclick={copyLink}
 					>{copied
-						? m.events_listing_qr_card_copied()
-						: m.events_listing_qr_card_copy_link()}</Button
+						? m.events_listing_qr_card_copied_label()
+						: m.events_listing_qr_card_copy_link_label()}</Button
 				>
 				<Button size="sm" href={svgHref} download="{slug}-qr.svg"
-					>{m.events_listing_qr_card_download_svg()}</Button
+					>{m.events_listing_qr_card_download_svg_label()}</Button
 				>
-				<Button size="sm" onclick={downloadPng}>{m.events_listing_qr_card_download_png()}</Button>
+				<Button size="sm" onclick={downloadPng}
+					>{m.events_listing_qr_card_download_png_label()}</Button
+				>
 			</div>
-			<p class="text-muted text-xs">{m.events_listing_qr_card_svg_scales_any_print_size()}</p>
+			<p class="text-muted text-xs">{m.events_listing_qr_card_svg_scales_any_print_size_text()}</p>
 		</div>
 	</div>
 </InfoCard>

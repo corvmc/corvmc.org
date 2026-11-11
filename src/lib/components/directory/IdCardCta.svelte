@@ -16,9 +16,9 @@
 	<div class="id-card__header">
 		<div class="id-card__brand">
 			<img src={speakerLogo} alt="" class="id-card__logo" />
-			<span>{m.directory_corvallis_music()}<br />{m.directory_collective()}</span>
+			<span>{m.directory_corvallis_music_text()}<br />{m.directory_collective_text()}</span>
 		</div>
-		<div class="id-card__tag">{m.directory_member()}</div>
+		<div class="id-card__tag">{m.directory_member_text()}</div>
 	</div>
 	<div class="id-card__body">
 		<div class="id-card__photo">
@@ -27,14 +27,14 @@
 			</div>
 		</div>
 		<div class="id-card__info">
-			<div class="id-card__name">{m.directory_id_card_cta_name_here()}</div>
-			<div class="id-card__role">{m.directory_id_card_cta_join_collective()}</div>
-			<div class="id-card__cta-arrow">{m.directory_id_card_cta_get_started()}</div>
+			<div class="id-card__name">{m.directory_id_card_cta_name_here_text()}</div>
+			<div class="id-card__role">{m.directory_id_card_cta_join_collective_text()}</div>
+			<div class="id-card__cta-arrow">{m.directory_id_card_cta_get_started_text()}</div>
 		</div>
 	</div>
 	<div class="id-card__footer">
 		<div class="id-card__since">
-			{m.directory_id_card_cta_member_since({ getFullYear: new Date().getFullYear() })}
+			{m.directory_id_card_cta_member_since_text({ getFullYear: new Date().getFullYear() })}
 		</div>
 		<div class="id-card__barcode" aria-hidden="true"></div>
 	</div>

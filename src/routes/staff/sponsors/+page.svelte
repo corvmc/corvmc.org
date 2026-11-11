@@ -29,11 +29,11 @@
 	}
 </script>
 
-<PageHeader title={m.staff_sponsors_sponsors()} subtitle={m.staff_money()}>
+<PageHeader title={m.staff_sponsors_sponsors_title()} subtitle={m.staff_money_body()}>
 	<Action
 		action={createSponsor}
 		label={m.staff_sponsors_label()}
-		modalTitle={m.staff_sponsors_label()}
+		modalTitle={m.staff_sponsors_title()}
 		submitLabel={m.staff_sponsors_submit_label()}
 		successToast={m.staff_sponsors_success_toast()}
 		data-testid="new-sponsor"
@@ -53,23 +53,23 @@
 				checked={includeArchived}
 				onchange={(e) => setArchived(e.currentTarget.checked)}
 			/>
-			{m.staff_show_archived()}
+			{m.staff_show_archived_label()}
 		</label>
 	</div>
 
 	{#if sponsors.length === 0}
 		<EmptyState
-			title={m.staff_sponsors_no_sponsors_yet()}
-			description={m.staff_sponsors_description()}
+			title={m.staff_sponsors_no_sponsors_yet_title()}
+			description={m.staff_sponsors_description_body()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-				<th>{m.staff_sponsor()}</th>
-				<th>{m.staff_ends()}</th>
-				<th class="col-support cell-num">{m.staff_amount()}</th>
-				<th class="col-extra">{m.staff_tier()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+				<th>{m.staff_sponsor_label()}</th>
+				<th>{m.staff_ends_label()}</th>
+				<th class="col-support cell-num">{m.staff_amount_label()}</th>
+				<th class="col-extra">{m.staff_tier_label()}</th>
 			{/snippet}
 			{#each sponsors as s (s.id)}
 				<tr
@@ -87,13 +87,13 @@
 					<td class="cell-primary">
 						<a class="link font-medium" href={resolve(`staff/sponsors/${s.id}`)}>{s.name}</a>
 						{#if s.deletedAt}
-							<Badge variant="ghost" size="sm" class="ml-2">{m.staff_archived()}</Badge>
+							<Badge variant="ghost" size="sm" class="ml-2">{m.staff_archived_label()}</Badge>
 						{/if}
 						<div class="truncate text-muted">
 							{s.current?.title ??
 								(s.sponsorships
-									? m.staff_sponsors_no_current_sponsorship()
-									: m.staff_sponsors_never_sponsored())}
+									? m.staff_sponsors_no_current_sponsorship_text()
+									: m.staff_sponsors_never_sponsored_text())}
 						</div>
 					</td>
 					<td class="whitespace-nowrap">

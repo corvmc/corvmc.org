@@ -58,15 +58,15 @@
 		<Sidebar>
 			{#snippet brand()}
 				<span class="block flex h-[48px] items-center justify-between px-3">
-					<img src={logo} alt={m.layout_brand()} class="h-full p-2" />
+					<img src={logo} alt={m.layout_brand_text()} class="h-full p-2" />
 					<Button
 						variant="default"
 						size="sm"
 						shape="square"
 						outline
 						class="latched"
-						title={m.layout_to_public_site()}
-						aria-label={m.layout_to_public_site()}
+						title={m.layout_to_public_site_title()}
+						aria-label={m.layout_to_public_site_label()}
 						href="/"
 					>
 						<IconWorld class="size-5 text-primary" />

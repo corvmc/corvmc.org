@@ -45,10 +45,10 @@
 	{#if incident.status === 'reported'}
 		<Action
 			action={acceptIncidentForm}
-			label={m.staff_incidents_id_accept()}
-			modalTitle={m.staff_incidents_id_accept_report()}
-			confirm={m.staff_incidents_id_joins_log_as_open_incident()}
-			successToast={m.staff_incidents_id_accepted()}
+			label={m.staff_incidents_id_accept_label()}
+			modalTitle={m.staff_incidents_id_accept_report_title()}
+			confirm={m.staff_incidents_id_joins_log_as_open_incident_body()}
+			successToast={m.staff_incidents_id_accepted_toast()}
 			variant="primary"
 			size="sm"
 		>
@@ -60,52 +60,56 @@
 </PageHeader>
 <PageContent width="3xl">
 	<div class="grid gap-6">
-		<InfoCard title={m.staff_report()}>
+		<InfoCard title={m.staff_report_title()}>
 			<DefinitionList>
-				<Fact label={m.staff_when()}>{formatDateTime(incident.occurredAt)}</Fact>
+				<Fact label={m.staff_when_label()}>{formatDateTime(incident.occurredAt)}</Fact>
 				{#if incident.location}
-					<Fact label={m.staff_where()}>{incident.location}</Fact>
+					<Fact label={m.staff_where_label()}>{incident.location}</Fact>
 				{/if}
-				<Fact label={m.staff_what_happened()} wrap>{incident.description}</Fact>
+				<Fact label={m.staff_what_happened_label()} wrap>{incident.description}</Fact>
 				{#if incident.involvedUserId}
-					<Fact label={m.staff_member_involved()}>
+					<Fact label={m.staff_member_involved_label()}>
 						<a class="link" href={resolve(`staff/members/${incident.involvedUserId}`)}>
-							{incident.involvedName ?? m.staff_member()}
+							{incident.involvedName ?? m.staff_member_text()}
 						</a>
 					</Fact>
 				{/if}
 				{#if incident.eventId}
-					<Fact label={m.staff_show()}>
+					<Fact label={m.staff_show_label()}>
 						<a class="link" href={resolve(`staff/events/${incident.eventId}`)}>
-							{incident.eventTitle ?? m.staff_event()}
+							{incident.eventTitle ?? m.staff_event_text()}
 						</a>
 					</Fact>
 				{/if}
-				<Fact label={m.staff_recorded_by()}>
+				<Fact label={m.staff_recorded_by_label()}>
 					{incident.reportedByName}, {formatDateTime(incident.createdAt)}
 				</Fact>
 			</DefinitionList>
 		</InfoCard>
 
-		<InfoCard title={m.staff_notes()} state={incident.notes.length}>
+		<InfoCard title={m.staff_notes_title()} state={incident.notes.length}>
 			{#snippet action()}
 				{#if canRecord}
 					<Action
 						action={addIncidentNoteForm}
-						label={m.staff_incidents_id_add_note()}
-						modalTitle={m.staff_incidents_id_add_note_2()}
-						successToast={m.staff_incidents_id_note_added()}
+						label={m.staff_incidents_id_add_note_label()}
+						modalTitle={m.staff_incidents_id_add_note_2_title()}
+						successToast={m.staff_incidents_id_note_added_toast()}
 						size="sm"
 					>
 						{#snippet form()}
 							<input {...noteFields.incidentId.as('hidden', id)} />
-							<Field field={noteFields.body} type="textarea" label={m.staff_incidents_id_note()} />
+							<Field
+								field={noteFields.body}
+								type="textarea"
+								label={m.staff_incidents_id_note_label()}
+							/>
 						{/snippet}
 					</Action>
 				{/if}
 			{/snippet}
 			{#if incident.notes.length === 0}
-				<p class="text-muted">{m.staff_incidents_id_no_follow_ups_yet()}</p>
+				<p class="text-muted">{m.staff_incidents_id_no_follow_ups_yet_text()}</p>
 			{:else}
 				<ol class="space-y-3">
 					{#each incident.notes as n (n.id)}
@@ -118,15 +122,15 @@
 			{/if}
 		</InfoCard>
 
-		<InfoCard title={m.staff_resolution()} class="bg-base-200 shadow-none">
+		<InfoCard title={m.staff_resolution_title()} class="bg-base-200 shadow-none">
 			{#if incident.status !== 'resolved' && !canRecord}
-				<p class="text-muted">{m.staff_incidents_id_not_resolved_yet()}</p>
+				<p class="text-muted">{m.staff_incidents_id_not_resolved_yet_text()}</p>
 			{:else if incident.status !== 'resolved'}
 				<Action
 					action={resolveIncidentForm}
-					label={m.staff_resolve()}
-					modalTitle={m.staff_incidents_id_resolve_incident()}
-					successToast={m.staff_incidents_id_incident_resolved()}
+					label={m.staff_resolve_label()}
+					modalTitle={m.staff_incidents_id_resolve_incident_title()}
+					successToast={m.staff_incidents_id_incident_resolved_toast()}
 					variant="primary"
 					size="sm"
 				>
@@ -135,25 +139,25 @@
 						<Field
 							field={resolveFields.resolution}
 							type="textarea"
-							label={m.staff_incidents_id_how_was_resolved()}
+							label={m.staff_incidents_id_how_was_resolved_label()}
 						/>
 					{/snippet}
 				</Action>
 			{:else}
 				<DefinitionList>
-					<Fact label={m.staff_resolution()} wrap>{incident.resolution}</Fact>
+					<Fact label={m.staff_resolution_label()} wrap>{incident.resolution}</Fact>
 					{#if incident.resolvedAt}
-						<Fact label={m.staff_resolved()}>{formatDateTime(incident.resolvedAt)}</Fact>
+						<Fact label={m.staff_resolved_label()}>{formatDateTime(incident.resolvedAt)}</Fact>
 					{/if}
 				</DefinitionList>
 				{#if canRecord}
 					<div class="mt-3">
 						<Action
 							action={reopenIncidentForm}
-							label={m.staff_reopen()}
-							modalTitle={m.staff_incidents_id_reopen_incident()}
-							confirm={m.staff_incidents_id_current_resolution_kept_its_history()}
-							successToast={m.staff_incidents_id_incident_reopened()}
+							label={m.staff_reopen_label()}
+							modalTitle={m.staff_incidents_id_reopen_incident_title()}
+							confirm={m.staff_incidents_id_current_resolution_kept_its_history_body()}
+							successToast={m.staff_incidents_id_incident_reopened_toast()}
 							size="sm"
 						>
 							{#snippet form()}
@@ -165,24 +169,24 @@
 			{/if}
 		</InfoCard>
 
-		<InfoCard title={m.staff_incidents_id_retention()} class="bg-base-200 shadow-none">
+		<InfoCard title={m.staff_incidents_id_retention_title()} class="bg-base-200 shadow-none">
 			<p class="text-muted text-wrap">
 				{incident.retain
-					? m.staff_incidents_id_marked_retain_kept_past_seven()
-					: m.staff_incidents_id_deleted_seven_years_after_happened()}
+					? m.staff_incidents_id_marked_retain_kept_past_seven_text()
+					: m.staff_incidents_id_deleted_seven_years_after_happened_text()}
 			</p>
 			<div class="mt-3">
 				<Action
 					action={setIncidentRetainForm}
 					label={incident.retain
-						? m.staff_incidents_id_release_hold()
-						: m.staff_incidents_id_mark_retain()}
+						? m.staff_incidents_id_release_hold_label()
+						: m.staff_incidents_id_mark_retain_label()}
 					modalTitle={incident.retain
-						? m.staff_incidents_id_release_retention_hold()
-						: m.staff_incidents_id_keep_record()}
+						? m.staff_incidents_id_release_retention_hold_title()
+						: m.staff_incidents_id_keep_record_title()}
 					successToast={incident.retain
-						? m.staff_incidents_id_hold_released()
-						: m.staff_incidents_id_marked_retain()}
+						? m.staff_incidents_id_hold_released_toast()
+						: m.staff_incidents_id_marked_retain_toast()}
 					size="sm"
 				>
 					{#snippet form()}
@@ -191,8 +195,8 @@
 						<Field
 							field={retainFields.reason}
 							type="text"
-							label={m.staff_why()}
-							description={m.staff_incidents_id_description()}
+							label={m.staff_why_label()}
+							description={m.staff_incidents_id_description_body()}
 						/>
 					{/snippet}
 				</Action>
@@ -200,10 +204,10 @@
 		</InfoCard>
 
 		<ActivityFeedCard
-			title={m.staff_history()}
+			title={m.staff_history_title()}
 			query={(limit) => getIncidentHistory(limit ? { id, limit } : { id })}
 			toRow={feedItemRow}
-			empty={{ title: m.staff_no_recorded_changes() }}
+			empty={{ title: m.staff_no_recorded_changes_title() }}
 		/>
 	</div>
 </PageContent>

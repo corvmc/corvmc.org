@@ -38,33 +38,33 @@
 			<div class="card shadow-xl surface">
 				<CardBody class="gap-4">
 					<CardTitle size="lg" level={2} class="justify-center"
-						>{m.public_confirm_email_token_confirm_email()}</CardTitle
+						>{m.public_confirm_email_token_confirm_email_title()}</CardTitle
 					>
 
 					{#if outcome?.status === 'changed'}
 						<Alert type="success" class="text-sm">
 							<ParaglideMessage
-								message={m.public_confirm_email_token_now_sign_as_were_signed}
+								message={m.public_confirm_email_token_now_sign_as_were_signed_body}
 								inputs={{ email: outcome.email }}
 								>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 									>{/snippet}</ParaglideMessage
 							>
 						</Alert>
 						<Button variant="primary" class="w-full" href={resolve('login')}
-							>{m.public_sign()}</Button
+							>{m.public_sign_label()}</Button
 						>
 					{:else if outcome?.status === 'taken'}
 						<Alert type="error" class="text-sm">
-							{m.public_confirm_email_token_address_now_belongs_another_accou()}
+							{m.public_confirm_email_token_address_now_belongs_another_accou_body()}
 						</Alert>
 					{:else if !request || outcome}
 						<Alert type="error" class="text-sm">
-							{m.public_link_has_expired_has_already()}
+							{m.public_link_has_expired_has_already_body()}
 						</Alert>
 					{:else}
 						<p class="text-center">
 							<ParaglideMessage
-								message={m.public_confirm_email_token_use_sign_corvmc_account_from}
+								message={m.public_confirm_email_token_use_sign_corvmc_account_from_text}
 								inputs={{ email: request.email }}
 								>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 									>{/snippet}</ParaglideMessage
@@ -72,7 +72,7 @@
 						</p>
 						<Form remote={confirmEmailChange} onsuccess={(r) => (outcome = r ?? null)}>
 							<input {...fields.token.as('hidden', token)} />
-							<SubmitButton label={m.public_confirm()} variant="primary" class="w-full" />
+							<SubmitButton label={m.public_confirm_label()} variant="primary" class="w-full" />
 						</Form>
 					{/if}
 				</CardBody>

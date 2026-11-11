@@ -27,7 +27,7 @@
 					<button
 						type="button"
 						class="cursor-pointer opacity-50 hover:opacity-100"
-						aria-label={m.staff_remove_2({ name: v.name })}
+						aria-label={m.staff_remove_2_label({ name: v.name })}
 						onclick={() => removeInboxView(v.id)}
 					>
 						<IconX size={12} />

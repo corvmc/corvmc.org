@@ -20,7 +20,7 @@
 	<EmptyState
 		title={m.band_slug_messages_title()}
 		description={canReadEnquiries
-			? m.band_slug_messages_open_band_s_chat_pick()
-			: m.band_slug_messages_open_band_s_chat_from()}
+			? m.band_slug_messages_open_band_s_chat_pick_body()
+			: m.band_slug_messages_open_band_s_chat_from_body()}
 	/>
 </div>

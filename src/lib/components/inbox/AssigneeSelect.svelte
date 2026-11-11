@@ -24,14 +24,14 @@
 
 {#if staff.current}
 	<label class="flex items-center gap-2 text-sm">
-		<span class="text-subtle">{m.inbox_thread_composer_assign()}</span>
+		<span class="text-subtle">{m.inbox_thread_composer_assign_label()}</span>
 		<Select
 			size="sm"
 			{value}
-			aria-label={m.inbox_thread_composer_assign()}
+			aria-label={m.inbox_thread_composer_assign_label()}
 			onchange={(e: Event) => (value = (e.currentTarget as HTMLSelectElement).value)}
 		>
-			<option value="">{m.inbox_thread_composer_nobody()}</option>
+			<option value="">{m.inbox_thread_composer_nobody_label()}</option>
 			{#each staff.current as s (s.id)}
 				<option value={s.id}>{s.name}</option>
 			{/each}

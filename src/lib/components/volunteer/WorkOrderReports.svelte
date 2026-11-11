@@ -19,7 +19,7 @@
 					{report.note.length > 80 ? `${report.note.slice(0, 80)}…` : report.note}
 				</a>
 				{#if report.blocksUse}
-					<Badge variant="error" size="xs">{m.volunteer_work_order_reports_out_use()}</Badge>
+					<Badge variant="error" size="xs">{m.volunteer_work_order_reports_out_use_label()}</Badge>
 				{/if}
 				<Badge variant={report.status === 'pending' ? 'warning' : 'ghost'} size="xs">
 					{report.status}

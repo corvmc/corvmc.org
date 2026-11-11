@@ -29,7 +29,7 @@
 
 <Action
 	action={createAsset}
-	label={m.actions_add_asset_add_unit()}
+	label={m.actions_add_asset_add_unit_label()}
 	modalTitle={m.actions_add_asset_modal_title()}
 	successToast={m.actions_add_asset_success_toast()}
 	{variant}
@@ -44,19 +44,23 @@
 			<Field
 				field={fields.assetTag}
 				type="text"
-				label={m.actions_tag()}
-				description={m.actions_add_asset_description()}
+				label={m.actions_tag_label()}
+				description={m.actions_add_asset_description_body()}
 			/>
-			<Field field={fields.serialNumber} type="text" label={m.actions_add_asset_serial_number()} />
+			<Field
+				field={fields.serialNumber}
+				type="text"
+				label={m.actions_add_asset_serial_number_label()}
+			/>
 		</div>
 		<Field
 			field={fields.condition}
 			type="select"
-			label={m.actions_condition()}
+			label={m.actions_condition_label()}
 			value="good"
 			options={equipmentConditions.map((c) => ({ value: c, label: c }))}
 		/>
 		<LocationField field={fields.locationId} />
-		<Field field={fields.notes} type="textarea" label={m.actions_notes()} />
+		<Field field={fields.notes} type="textarea" label={m.actions_notes_label()} />
 	{/snippet}
 </Action>

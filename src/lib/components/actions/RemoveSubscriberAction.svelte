@@ -30,8 +30,8 @@
 
 <Action
 	action={removeSubscriber}
-	label={m.actions_remove()}
-	modalTitle={m.actions_confirm()}
+	label={m.actions_remove_label()}
+	modalTitle={m.actions_confirm_title()}
 	successToast={m.actions_remove_subscriber_success_toast()}
 	{variant}
 	{size}
@@ -42,6 +42,6 @@
 	{#snippet form()}
 		<input {...fields.audienceId.as('hidden', audienceId)} />
 		<input {...fields.subscriberId.as('hidden', subscriberId)} />
-		<p class="py-4">{m.actions_remove_subscriber_remove_from_audience({ email })}</p>
+		<p class="py-4">{m.actions_remove_subscriber_remove_from_audience_text({ email })}</p>
 	{/snippet}
 </Action>

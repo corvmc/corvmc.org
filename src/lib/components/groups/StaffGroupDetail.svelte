@@ -71,13 +71,13 @@
 	{actions}
 	title={group.name}
 	subtitle={group.kind === 'committee'
-		? msg.groups_staff_group_detail_committee()
-		: msg.groups_staff_group_detail_club()}
+		? msg.groups_staff_group_detail_committee_body()
+		: msg.groups_staff_group_detail_club_body()}
 >
 	{#snippet header()}
 		<StatusBadge status={isDeactivated ? 'deactivated' : 'active'} />
 		<span class="text-muted">
-			{msg.groups_staff_group_detail_members_since({
+			{msg.groups_staff_group_detail_members_since_text({
 				memberCount: group.memberCount,
 				formatDateShortYear: formatDateShortYear(group.createdAt)
 			})}
@@ -90,17 +90,17 @@
 		<!-- Deactivation is the normal end of a program: nothing is removed and
 		     nobody loses their place, so putting it back is one control rather
 		     than a recovery procedure. -->
-		<InfoCard title={msg.groups_staff_group_detail_deactivated()}>
+		<InfoCard title={msg.groups_staff_group_detail_deactivated_title()}>
 			<p class="text-sm">
-				{msg.groups_staff_group_detail_group_hidden_from_directory_its()}
+				{msg.groups_staff_group_detail_group_hidden_from_directory_its_text()}
 			</p>
 			<Action
 				action={reactivateGroup}
-				label={msg.groups_staff_group_detail_reactivate()}
-				modalTitle={msg.groups_staff_group_detail_reactivate_group()}
-				submitLabel={msg.groups_staff_group_detail_reactivate()}
-				confirm={msg.groups_staff_group_detail_put_back_directory({ name: group.name })}
-				successToast={msg.groups_staff_group_detail_reactivated()}
+				label={msg.groups_staff_group_detail_reactivate_label()}
+				modalTitle={msg.groups_staff_group_detail_reactivate_group_title()}
+				submitLabel={msg.groups_staff_group_detail_reactivate_label()}
+				confirm={msg.groups_staff_group_detail_put_back_directory_body({ name: group.name })}
+				successToast={msg.groups_staff_group_detail_reactivated_toast()}
 				variant="primary"
 				size="sm"
 				onsuccess={() => refreshAll()}
@@ -116,7 +116,7 @@
 		<RosterImportSummary result={importResult} ondismiss={() => (importResult = null)} />
 	{/if}
 
-	<InfoCard title={msg.groups_staff_group_detail_roster()}>
+	<InfoCard title={msg.groups_staff_group_detail_roster_title()}>
 		{#snippet action()}
 			<div class="flex gap-1">
 				{#if members.active.length > 0}
@@ -128,7 +128,7 @@
 			</div>
 		{/snippet}
 		{#if members.active.length === 0 && members.pending.length === 0}
-			<EmptyState description={msg.groups_staff_group_detail_description()} />
+			<EmptyState description={msg.groups_staff_group_detail_description_body()} />
 		{:else}
 			<!-- A position, where there is one, is the name's subline (`getMembers`). -->
 			<RosterTable
@@ -137,8 +137,8 @@
 			>
 				{#snippet lead(m)}<StatusBadge status={m.status} />{/snippet}
 				{#snippet columns()}
-					<th class="w-px">{msg.groups_staff_group_detail_role()}</th>
-					<th class="whitespace-nowrap">{msg.groups_staff_group_detail_joined()}</th>
+					<th class="w-px">{msg.groups_staff_group_detail_role_label()}</th>
+					<th class="whitespace-nowrap">{msg.groups_staff_group_detail_joined_label()}</th>
 				{/snippet}
 				{#snippet cells(m)}
 					<td class="w-px"><Badge variant="ghost">{m.role}</Badge></td>
@@ -150,22 +150,22 @@
 						<Action
 							action={setStaffGroupRole.for(m.id)}
 							label={makeChair
-								? msg.groups_staff_group_detail_make_chair()
-								: msg.groups_staff_group_detail_remove_chair()}
+								? msg.groups_staff_group_detail_make_chair_label()
+								: msg.groups_staff_group_detail_remove_chair_label()}
 							aria-label={makeChair
-								? msg.groups_staff_group_detail_make_chair_2({ title: m.member.title })
-								: msg.groups_staff_group_detail_remove_as_chair({ title: m.member.title })}
+								? msg.groups_staff_group_detail_make_chair_2_label({ title: m.member.title })
+								: msg.groups_staff_group_detail_remove_as_chair_label({ title: m.member.title })}
 							confirm={makeChair
-								? msg.groups_staff_group_detail_make_chair_3({
+								? msg.groups_staff_group_detail_make_chair_3_body({
 										title: m.member.title,
 										name: group.name
 									})
-								: msg.groups_staff_group_detail_remove_as_chair_they_stay({
+								: msg.groups_staff_group_detail_remove_as_chair_they_stay_body({
 										title: m.member.title
 									})}
 							successToast={makeChair
-								? msg.groups_staff_group_detail_chair_added()
-								: msg.groups_staff_group_detail_chair_removed()}
+								? msg.groups_staff_group_detail_chair_added_toast()
+								: msg.groups_staff_group_detail_chair_removed_toast()}
 							variant="ghost"
 							size="xs"
 							onsuccess={() => refreshAll()}
@@ -199,9 +199,9 @@
 	<!-- One line each, so labelled facts rather than cards of their own (#1078). -->
 	<DefinitionList>
 		<!-- No chairs is legal: the program runs, and staff add one when appointed. -->
-		<Fact label={msg.groups_staff_group_detail_chairs()}>
+		<Fact label={msg.groups_staff_group_detail_chairs_label()}>
 			{#if group.chairs.length === 0}
-				<span class="text-fg-2">{msg.groups_staff_group_detail_no_chairs()}</span>
+				<span class="text-fg-2">{msg.groups_staff_group_detail_no_chairs_text()}</span>
 			{:else}
 				<span class="flex flex-wrap gap-2">
 					{#each group.chairs as chair (chair.id)}
@@ -210,15 +210,15 @@
 				</span>
 			{/if}
 		</Fact>
-		<Fact label={msg.groups_staff_group_detail_public_page()}>
+		<Fact label={msg.groups_staff_group_detail_public_page_label()}>
 			{#if group.visibility === 'public'}
 				<a class="link link-primary" href={resolve(`groups/${group.slug}`)}
-					>{msg.groups_staff_group_detail_groups({ slug: group.slug })}</a
+					>{msg.groups_staff_group_detail_groups_text({ slug: group.slug })}</a
 				>
 			{:else}
 				<span class="text-fg-2">
 					<ParaglideMessage
-						message={msg.groups_staff_group_detail_not_listed_publicly_set_visibility}
+						message={msg.groups_staff_group_detail_not_listed_publicly_set_visibility_text}
 						inputs={{ slug: group.slug }}
 						>{#snippet code({ children })}<code class="text-xs">{@render children?.()}</code
 							>{/snippet}</ParaglideMessage
@@ -230,27 +230,27 @@
 
 	{#if variant === 'page'}
 		<ActivityFeedCard
-			title={msg.groups_staff_group_detail_history()}
+			title={msg.groups_staff_group_detail_history_title()}
 			query={(limit) => getGroupHistory(limit ? { id, limit } : { id })}
 			toRow={feedItemRow}
-			empty={{ title: msg.groups_staff_group_detail_no_recorded_changes() }}
+			empty={{ title: msg.groups_staff_group_detail_no_recorded_changes_title() }}
 		/>
 	{/if}
 
 	{#if !isDeactivated}
-		<InfoCard title={msg.groups_staff_group_detail_end_program()}>
+		<InfoCard title={msg.groups_staff_group_detail_end_program_title()}>
 			<p class="text-sm">
-				{msg.groups_staff_group_detail_deactivating_hides_from_directory()}
+				{msg.groups_staff_group_detail_deactivating_hides_from_directory_text()}
 			</p>
 			<Action
 				action={deactivateGroup}
-				label={msg.groups_staff_group_detail_deactivate()}
-				modalTitle={msg.groups_staff_group_detail_deactivate_group()}
-				submitLabel={msg.groups_staff_group_detail_deactivate()}
-				confirm={msg.groups_staff_group_detail_deactivate_its_roster_history_stay({
+				label={msg.groups_staff_group_detail_deactivate_label()}
+				modalTitle={msg.groups_staff_group_detail_deactivate_group_title()}
+				submitLabel={msg.groups_staff_group_detail_deactivate_label()}
+				confirm={msg.groups_staff_group_detail_deactivate_its_roster_history_stay_body({
 					name: group.name
 				})}
-				successToast={msg.groups_staff_group_detail_deactivated()}
+				successToast={msg.groups_staff_group_detail_deactivated_toast()}
 				variant="error"
 				size="sm"
 				outline

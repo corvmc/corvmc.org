@@ -20,9 +20,9 @@
 
 <Action
 	action={recordIncidentForm}
-	label={m.staff_incidents_record_incident_record_incident()}
+	label={m.staff_incidents_record_incident_record_incident_label()}
 	modalTitle={m.staff_incidents_record_incident_modal_title()}
-	submitLabel={m.staff_record()}
+	submitLabel={m.staff_record_label()}
 	successToast={m.staff_incidents_record_incident_success_toast()}
 	onsuccess={(result) => {
 		involvedUserId = '';
@@ -33,31 +33,41 @@
 >
 	{#snippet form()}
 		<div class="grid grid-cols-2 gap-3">
-			<Field field={fields.occurredOn} type="date" label={m.staff_date()} value={clubToday()} />
-			<Field field={fields.occurredAt} type="time" label={m.staff_time()} />
+			<Field
+				field={fields.occurredOn}
+				type="date"
+				label={m.staff_date_label()}
+				value={clubToday()}
+			/>
+			<Field field={fields.occurredAt} type="time" label={m.staff_time_label()} />
 		</div>
-		<Field field={fields.category} type="select" label={m.staff_kind()} options={categoryOptions} />
+		<Field
+			field={fields.category}
+			type="select"
+			label={m.staff_kind_label()}
+			options={categoryOptions}
+		/>
 		<Field
 			field={fields.summary}
 			type="text"
-			label={m.staff_summary()}
-			description={m.staff_incidents_record_incident_one_line_what_log_shows()}
+			label={m.staff_summary_label()}
+			description={m.staff_incidents_record_incident_one_line_what_log_shows_body()}
 		/>
 		<Field
 			field={fields.description}
 			type="textarea"
-			label={m.staff_what_happened()}
-			description={m.staff_incidents_record_incident_written_once_anything_learne()}
+			label={m.staff_what_happened_label()}
+			description={m.staff_incidents_record_incident_written_once_anything_learne_body()}
 		/>
-		<Field field={fields.location} type="text" label={m.staff_where()} />
+		<Field field={fields.location} type="text" label={m.staff_where_label()} />
 		<MemberPicker
 			field={fields.involvedUserId}
-			label={m.staff_incidents_record_incident_member_involved_optional()}
+			label={m.staff_incidents_record_incident_member_involved_optional_label()}
 			bind:value={involvedUserId}
 			bind:name={involvedName}
 		/>
 		<p class="text-muted text-wrap">
-			{m.staff_incidents_record_incident_recording_changes_nothing_ab()}
+			{m.staff_incidents_record_incident_recording_changes_nothing_ab_text()}
 		</p>
 	{/snippet}
 </Action>

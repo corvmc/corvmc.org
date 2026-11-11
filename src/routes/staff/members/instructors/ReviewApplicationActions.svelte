@@ -21,10 +21,10 @@
 <div class="flex w-max gap-2">
 	<Action
 		action={sendBackInstructor}
-		label={m.staff_members_instructors_review_application_actions_reject()}
-		modalTitle={m.staff_members_instructors_review_application_actions_reject_2({ name })}
-		submitLabel={m.staff_members_instructors_review_application_actions_reject()}
-		successToast={m.staff_rejected()}
+		label={m.staff_members_instructors_review_application_actions_reject_label()}
+		modalTitle={m.staff_members_instructors_review_application_actions_reject_2_title({ name })}
+		submitLabel={m.staff_members_instructors_review_application_actions_reject_label()}
+		successToast={m.staff_rejected_toast()}
 		variant="ghost"
 		size="sm"
 		onsuccess={() => refreshAll()}
@@ -34,12 +34,12 @@
 				<input {...sendBackFields.id.as('hidden', id)} />
 				<FormField
 					field={sendBackFields.note}
-					label={m.staff_members_instructors_review_application_actions_what_ne()}
+					label={m.staff_members_instructors_review_application_actions_what_ne_label()}
 					type="textarea"
 					required
 				/>
 				<p class="text-subtle">
-					{m.staff_members_instructors_review_application_actions_they_se()}
+					{m.staff_members_instructors_review_application_actions_they_se_text()}
 				</p>
 			</div>
 		{/snippet}
@@ -47,11 +47,11 @@
 
 	<Action
 		action={approveInstructor}
-		label={m.staff_approve()}
-		modalTitle={m.staff_members_instructors_review_application_actions_approve({ name })}
+		label={m.staff_approve_label()}
+		modalTitle={m.staff_members_instructors_review_application_actions_approve_title({ name })}
 		data-testid="approve-instructor"
-		submitLabel={m.staff_approve()}
-		successToast={m.staff_approved()}
+		submitLabel={m.staff_approve_label()}
+		successToast={m.staff_approved_toast()}
 		variant="primary"
 		size="sm"
 		onsuccess={() => refreshAll()}
@@ -60,7 +60,7 @@
 			<div class="space-y-4">
 				<input {...approveFields.id.as('hidden', id)} />
 				<p class="text-subtle">
-					{m.staff_members_instructors_review_application_actions_their_l()}
+					{m.staff_members_instructors_review_application_actions_their_l_text()}
 				</p>
 			</div>
 		{/snippet}

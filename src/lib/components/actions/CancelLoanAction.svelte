@@ -9,8 +9,8 @@
 
 	let {
 		loanId,
-		label = m.actions_cancel(),
-		confirm: confirmText = m.actions_cancel_loan_confirm(),
+		label = m.actions_cancel_label(),
+		confirm: confirmText = m.actions_cancel_loan_confirm_body(),
 		variant = 'ghost',
 		size = 'sm',
 		class: className = 'text-error',
@@ -31,7 +31,7 @@
 <Action
 	action={cancelLoan}
 	{label}
-	modalTitle={m.actions_confirm()}
+	modalTitle={m.actions_confirm_title()}
 	successToast={m.actions_cancel_loan_success_toast()}
 	{variant}
 	{size}

@@ -32,9 +32,11 @@
 
 <Action
 	action={publishEvent}
-	label={m.actions_publish()}
-	submitLabel={blockers.length > 0 ? m.actions_publish_event_publish_anyway() : m.actions_publish()}
-	successToast={m.actions_published()}
+	label={m.actions_publish_label()}
+	submitLabel={blockers.length > 0
+		? m.actions_publish_event_publish_anyway_label()
+		: m.actions_publish_label()}
+	successToast={m.actions_published_toast()}
 	data-testid="publish-event"
 	{variant}
 	{size}
@@ -46,7 +48,7 @@
 		<input {...fields.id.as('hidden', eventId)} />
 		{#if blockers.length > 0}
 			<Alert type="warning">
-				{m.actions_publish_event_not_ready_announce()}
+				{m.actions_publish_event_not_ready_announce_body()}
 				<ul class="mt-1 list-inside list-disc">
 					{#each blockers as blocker (blocker)}
 						<li>{blocker}</li>
@@ -55,15 +57,15 @@
 			</Alert>
 			<!-- Warn, record, allow (#1787): the reason goes to the audit log. -->
 			<p class="py-2 text-muted">
-				{m.actions_publish_event_fix_these_first_if_can()}
+				{m.actions_publish_event_fix_these_first_if_can_text()}
 			</p>
 			<Field
 				field={fields.reason}
 				type="textarea"
-				label={m.actions_publish_event_why_publish_now()}
+				label={m.actions_publish_event_why_publish_now_label()}
 			/>
 		{:else}
-			<p class="py-2">{m.actions_publish_event_publish_event_make_visible_public()}</p>
+			<p class="py-2">{m.actions_publish_event_publish_event_make_visible_public_text()}</p>
 		{/if}
 	{/snippet}
 </Action>

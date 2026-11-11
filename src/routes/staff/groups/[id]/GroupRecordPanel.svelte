@@ -31,7 +31,7 @@
 		<GroupRecord {kind} {id} variant="panel">
 			{#snippet actions()}
 				<Button href={resolve(`staff/groups/${id}`)} variant="ghost" size="sm"
-					>{m.staff_groups_id_group_record_panel_open_record()}</Button
+					>{m.staff_groups_id_group_record_panel_open_record_label()}</Button
 				>
 			{/snippet}
 		</GroupRecord>
@@ -41,7 +41,7 @@
 		{/snippet}
 		{#snippet failed(_error, reset)}
 			<Alert type="warning" reset={() => retryQuery(recordQuery(), reset)}
-				>{m.staff_groups_id_group_record_panel_record_didn_t_load()}</Alert
+				>{m.staff_groups_id_group_record_panel_record_didn_t_load_body()}</Alert
 			>
 		{/snippet}
 	</svelte:boundary>

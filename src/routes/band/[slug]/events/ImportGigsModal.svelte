@@ -23,7 +23,7 @@
 	const preview = $derived(text.trim() ? parseGigImport(text) : { rows: [], errors: [] });
 </script>
 
-<Modal bind:open title={m.band_import_past_gigs()} maxWidth="max-w-2xl">
+<Modal bind:open title={m.band_import_past_gigs_title()} maxWidth="max-w-2xl">
 	<Form
 		remote={importGigsForm}
 		successToast={m.band_slug_events_import_gigs_modal_success_toast()}
@@ -38,7 +38,7 @@
 
 		<FormField
 			field={importGigsForm.fields.text}
-			label={m.band_slug_events_import_gigs_modal_one_gig_per_line()}
+			label={m.band_slug_events_import_gigs_modal_one_gig_per_line_label()}
 		>
 			<textarea
 				{...fields.text.as('text')}
@@ -50,7 +50,7 @@
 
 		<p class="text-subtle">
 			<ParaglideMessage
-				message={m.band_slug_events_import_gigs_modal_date_venue_title_ticket_l}
+				message={m.band_slug_events_import_gigs_modal_date_venue_title_ticket_l_text}
 				inputs={{ GIG_IMPORT_MAX_LINES }}
 				>{#snippet code({ children })}<code>{@render children?.()}</code
 					>{/snippet}</ParaglideMessage
@@ -60,12 +60,15 @@
 		{#if preview.errors.length > 0}
 			<div class="rounded border border-error/40 bg-error/10 p-3">
 				<p class="text-sm font-medium">
-					{m.band_slug_events_import_gigs_modal_these_lines_will_skipped()}
+					{m.band_slug_events_import_gigs_modal_these_lines_will_skipped_text()}
 				</p>
 				<ul class="mt-1 space-y-0.5 text-xs">
 					{#each preview.errors as err (err.line)}
 						<li>
-							{m.band_slug_events_import_gigs_modal_line({ line: err.line, message: err.message })}
+							{m.band_slug_events_import_gigs_modal_line_text({
+								line: err.line,
+								message: err.message
+							})}
 						</li>
 					{/each}
 				</ul>
@@ -77,9 +80,9 @@
 				<table class="table table-xs">
 					<thead>
 						<tr
-							><th>{m.band_date()}</th><th>{m.band_title()}</th><th>{m.band_venue()}</th><th
-								>{m.band_slug_events_import_gigs_modal_with()}</th
-							></tr
+							><th>{m.band_date_label()}</th><th>{m.band_title_label()}</th><th
+								>{m.band_venue_label()}</th
+							><th>{m.band_slug_events_import_gigs_modal_with_label()}</th></tr
 						>
 					</thead>
 					<tbody>
@@ -99,8 +102,8 @@
 		<div class="flex justify-end gap-2">
 			<SubmitButton
 				label={preview.rows.length > 0
-					? m.band_slug_events_import_gigs_modal_import_gigs({ length: preview.rows.length })
-					: m.band_slug_events_import_gigs_modal_import()}
+					? m.band_slug_events_import_gigs_modal_import_gigs_label({ length: preview.rows.length })
+					: m.band_slug_events_import_gigs_modal_import_label()}
 				variant="primary"
 				disabled={preview.rows.length === 0}
 			/>

@@ -82,13 +82,13 @@
 					{#if application.status === 'submitted'}
 						<Action
 							action={markApplicantContacted.for(application.choiceId)}
-							label={m.groups_applications_card_mark_contacted()}
-							aria-label={m.groups_applications_card_mark_as_contacted({
+							label={m.groups_applications_card_mark_contacted_label()}
+							aria-label={m.groups_applications_card_mark_as_contacted_label({
 								title: application.applicant.title
 							})}
 							variant="ghost"
 							size="xs"
-							successToast={m.groups_applications_card_marked_contacted()}
+							successToast={m.groups_applications_card_marked_contacted_toast()}
 						>
 							{#snippet form()}
 								<input {...contactFields.slug.as('hidden', slug)} />
@@ -98,14 +98,20 @@
 					{/if}
 					<Action
 						action={acceptGroupApplication.for(application.choiceId)}
-						label={m.groups_accept()}
-						aria-label={m.groups_applications_card_accept({ title: application.applicant.title })}
+						label={m.groups_accept_label()}
+						aria-label={m.groups_applications_card_accept_label({
+							title: application.applicant.title
+						})}
 						variant="primary"
 						size="xs"
-						modalTitle={m.groups_applications_card_accept({ title: application.applicant.title })}
-						submitLabel={m.groups_applications_card_accept_invite()}
-						confirm={m.groups_applications_card_confirm({ title: application.applicant.title })}
-						successToast={m.groups_applications_card_accepted_invitation_sent()}
+						modalTitle={m.groups_applications_card_accept_title({
+							title: application.applicant.title
+						})}
+						submitLabel={m.groups_applications_card_accept_invite_label()}
+						confirm={m.groups_applications_card_confirm_body({
+							title: application.applicant.title
+						})}
+						successToast={m.groups_applications_card_accepted_invitation_sent_toast()}
 					>
 						{#snippet form()}
 							<input {...acceptFields.slug.as('hidden', slug)} />
@@ -114,13 +120,17 @@
 					</Action>
 					<Action
 						action={declineGroupApplication.for(application.choiceId)}
-						label={m.groups_decline()}
-						aria-label={m.groups_applications_card_decline({ title: application.applicant.title })}
+						label={m.groups_decline_label()}
+						aria-label={m.groups_applications_card_decline_label({
+							title: application.applicant.title
+						})}
 						variant="ghost"
 						size="xs"
-						modalTitle={m.groups_applications_card_decline({ title: application.applicant.title })}
-						submitLabel={m.groups_decline()}
-						successToast={m.groups_applications_card_declined()}
+						modalTitle={m.groups_applications_card_decline_title({
+							title: application.applicant.title
+						})}
+						submitLabel={m.groups_decline_label()}
+						successToast={m.groups_applications_card_declined_toast()}
 					>
 						{#snippet form()}
 							<input {...declineFields.slug.as('hidden', slug)} />
@@ -128,9 +138,9 @@
 							<FormField
 								field={declineFields.reviewNotes}
 								type="textarea"
-								label={m.groups_applications_card_why_optional()}
+								label={m.groups_applications_card_why_optional_label()}
 								maxlength={String(APPLICATION_ANSWER_MAX)}
-								description={m.groups_applications_card_description()}
+								description={m.groups_applications_card_description_body()}
 							/>
 						{/snippet}
 					</Action>

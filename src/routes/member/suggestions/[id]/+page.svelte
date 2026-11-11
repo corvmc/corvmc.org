@@ -54,7 +54,7 @@
 	};
 </script>
 
-<PageHeader width="3xl" title={s.title} subtitle={m.member_suggestions_id_subtitle()}>
+<PageHeader width="3xl" title={s.title} subtitle={m.member_suggestions_id_subtitle_body()}>
 	{#if s.status !== 'open'}
 		<StatusBadge status={s.status} label />
 	{/if}
@@ -69,7 +69,7 @@
 	{#if project}
 		<Alert type="success">
 			<ParaglideMessage
-				message={m.member_suggestions_id_staff_started_work}
+				message={m.member_suggestions_id_staff_started_work_body}
 				inputs={{ name: project.name }}
 				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
 					>{/snippet}</ParaglideMessage
@@ -80,7 +80,11 @@
 	<!-- A certified result is every member's to read; before that the ballot's
 	     own page is its electors', so the link waits for certification. -->
 	{#if ballots.length > 0}
-		<InfoCard title={ballots.length === 1 ? m.member_suggestions_id_ballot() : m.member_ballots()}>
+		<InfoCard
+			title={ballots.length === 1
+				? m.member_suggestions_id_ballot_title()
+				: m.member_ballots_title()}
+		>
 			<ul class="space-y-2">
 				{#each ballots as b (b.id)}
 					<li>
@@ -101,9 +105,9 @@
 	{#if s.mergedIntoId}
 		<Alert type="info" href={resolve(`member/suggestions/${s.mergedIntoId}`)}>
 			<ParaglideMessage
-				message={m.member_suggestions_id_merged_into_votes_moved_across}
+				message={m.member_suggestions_id_merged_into_votes_moved_across_body}
 				inputs={{
-					mergedIntoTitle: s.mergedIntoTitle ?? m.member_suggestions_id_another_suggestion()
+					mergedIntoTitle: s.mergedIntoTitle ?? m.member_suggestions_id_another_suggestion_title()
 				}}
 				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
 					>{/snippet}</ParaglideMessage
@@ -112,10 +116,10 @@
 	{:else if s.visibility !== 'visible'}
 		<Alert type={s.visibility === 'hidden' ? 'error' : 'warning'}>
 			<p>
-				{withheldCopy[s.visibility] ?? m.member_suggestions_id_not_board_right_now()}
+				{withheldCopy[s.visibility] ?? m.member_suggestions_id_not_board_right_now_text()}
 				{#if s.visibilityNote}
 					<ParaglideMessage
-						message={m.member_staff_s_note}
+						message={m.member_staff_s_note_text}
 						inputs={{ visibilityNote: s.visibilityNote }}
 						>{#snippet span({ children })}<span class="italic">{@render children?.()}</span
 							>{/snippet}</ParaglideMessage
@@ -132,14 +136,14 @@
 		<Alert type="info">
 			<div class="flex w-full flex-wrap items-center justify-between gap-2">
 				<p>
-					{m.member_suggestions_id_edit_with_staff_suggestion_below()}
+					{m.member_suggestions_id_edit_with_staff_suggestion_below_text()}
 				</p>
 				<Action
 					action={cancelSuggestionEdit}
-					label={m.member_withdraw()}
-					submitLabel={m.member_suggestions_id_withdraw_edit()}
-					modalTitle={m.member_suggestions_id_withdraw_edit_2()}
-					successToast={m.member_suggestions_id_edit_withdrawn()}
+					label={m.member_withdraw_label()}
+					submitLabel={m.member_suggestions_id_withdraw_edit_label()}
+					modalTitle={m.member_suggestions_id_withdraw_edit_2_title()}
+					successToast={m.member_suggestions_id_edit_withdrawn_toast()}
 					variant="ghost"
 					size="xs"
 					onsuccess={refresh}
@@ -149,14 +153,14 @@
 						<input
 							{...cancelSuggestionEdit.fields.editId.as('hidden', editState.pendingEdit?.id ?? '')}
 						/>
-						<p class="py-2">{m.member_suggestions_id_take_edit_back_can_submit()}</p>
+						<p class="py-2">{m.member_suggestions_id_take_edit_back_can_submit_text()}</p>
 					{/snippet}
 				</Action>
 			</div>
 		</Alert>
 	{/if}
 
-	<InfoCard title={m.member_suggestions_id_subtitle()}>
+	<InfoCard title={m.member_suggestions_id_subtitle_title()}>
 		<div class="flex items-start gap-4">
 			<Form remote={vote} class="shrink-0" onsuccess={refresh}>
 				<input {...vote.fields.suggestionId.as('hidden', s.id)} />
@@ -168,8 +172,8 @@
 					disabled={s.visibility !== 'visible' || !!s.mergedIntoId}
 					aria-pressed={!!s.hasVoted}
 					aria-label={s.hasVoted
-						? m.member_suggestions_id_remove_vote()
-						: m.member_suggestions_id_vote_suggestion()}
+						? m.member_suggestions_id_remove_vote_label()
+						: m.member_suggestions_id_vote_suggestion_label()}
 					class="h-auto flex-col gap-0 py-1 btn-sm {s.hasVoted ? 'btn-primary' : 'btn-outline'}"
 				>
 					{#snippet icon()}<IconCaretUpFilled size={16} />{/snippet}
@@ -183,12 +187,12 @@
 				</Badge>
 				<p class="whitespace-pre-wrap">{s.body}</p>
 				<div class="text-muted">
-					{m.member_suggestions_id_suggested_by({
-						authorName: s.authorName ?? m.member_suggestions_id_former_member(),
+					{m.member_suggestions_id_suggested_by_text({
+						authorName: s.authorName ?? m.member_suggestions_id_former_member_text(),
 						formatDateTime: formatDateTime(s.createdAt)
 					})}
 					{#if s.editedAt}
-						{m.member_suggestions_id_edited({ formatDateTime: formatDateTime(s.editedAt) })}
+						{m.member_suggestions_id_edited_text({ formatDateTime: formatDateTime(s.editedAt) })}
 					{/if}
 				</div>
 			</div>
@@ -197,15 +201,17 @@
 				<Action
 					action={editSuggestion}
 					data-testid="edit-suggestion"
-					label={editState.direct ? m.member_edit() : m.member_suggestions_id_request_edit()}
+					label={editState.direct
+						? m.member_edit_label()
+						: m.member_suggestions_id_request_edit_label()}
 					iconOnly
 					modalTitle={editState.direct
-						? m.member_suggestions_id_edit_suggestion()
-						: m.member_suggestions_id_request_edit()}
-					submitLabel={editState.direct ? m.member_save() : m.member_send_staff()}
+						? m.member_suggestions_id_edit_suggestion_title()
+						: m.member_suggestions_id_request_edit_title()}
+					submitLabel={editState.direct ? m.member_save_label() : m.member_send_staff_label()}
 					successToast={editState.direct
-						? m.member_suggestions_id_updated()
-						: m.member_sent_staff()}
+						? m.member_suggestions_id_updated_toast()
+						: m.member_sent_staff_toast()}
 					variant="ghost"
 					size="sm"
 					class="shrink-0"
@@ -218,25 +224,25 @@
 							<!-- Say why, plainly. Being told "this needs review" without a
 							     reason reads as the site distrusting you personally. -->
 							<p class="mb-3 text-muted">
-								{m.member_suggestions_id_other_members_have_already_voted()}
+								{m.member_suggestions_id_other_members_have_already_voted_text()}
 							</p>
 						{/if}
 						<FormField
 							field={editSuggestion.fields.title}
 							type="text"
-							label={m.member_what_should_we_do()}
+							label={m.member_what_should_we_do_label()}
 							value={s.title}
 						/>
 						<FormField
 							field={editSuggestion.fields.body}
 							type="textarea"
-							label={m.member_tell_us_bit_more()}
+							label={m.member_tell_us_bit_more_label()}
 							value={s.body}
 						/>
 						<FormField
 							field={editSuggestion.fields.category}
 							type="select"
-							label={m.member_category()}
+							label={m.member_category_label()}
 							value={s.category}
 							options={suggestionCategories.map((c) => ({
 								value: c,
@@ -251,11 +257,11 @@
 				<Action
 					action={flag}
 					data-testid="flag-suggestion"
-					label={m.member_flag_review()}
+					label={m.member_flag_review_label()}
 					iconOnly
-					modalTitle={m.member_flag_review()}
-					submitLabel={m.member_send_report()}
-					successToast={m.member_reported_staff_will_take_look()}
+					modalTitle={m.member_flag_review_title()}
+					submitLabel={m.member_send_report_label()}
+					successToast={m.member_reported_staff_will_take_look_toast()}
 					variant="ghost"
 					size="sm"
 					class="shrink-0"
@@ -265,13 +271,17 @@
 					{#snippet form()}
 						<input {...flag.fields.suggestionId.as('hidden', s.id)} />
 						<p class="mb-3 text-muted">
-							{m.member_takes_suggestion_off_board_straight()}
+							{m.member_takes_suggestion_off_board_straight_text()}
 						</p>
-						<FormField field={flag.fields.reason} type="text" label={m.member_what_s_problem()} />
+						<FormField
+							field={flag.fields.reason}
+							type="text"
+							label={m.member_what_s_problem_label()}
+						/>
 						<FormField
 							field={flag.fields.description}
 							type="textarea"
-							label={m.member_anything_else_optional()}
+							label={m.member_anything_else_optional_label()}
 						/>
 					{/snippet}
 				</Action>
@@ -280,10 +290,10 @@
 	</InfoCard>
 
 	{#if s.responseBody}
-		<InfoCard title={m.member_suggestions_id_official_response()}>
+		<InfoCard title={m.member_suggestions_id_official_response_title()}>
 			<p class="whitespace-pre-wrap">{s.responseBody}</p>
 			<p class="mt-2 text-muted">
-				{s.responderName ?? m.member_suggestions_id_staff()}{s.responseAt
+				{s.responderName ?? m.member_suggestions_id_staff_text()}{s.responseAt
 					? ` · ${formatDateTime(s.responseAt)}`
 					: ''}
 			</p>

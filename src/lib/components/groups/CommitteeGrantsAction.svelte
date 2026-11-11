@@ -21,7 +21,7 @@
 		groupId,
 		name,
 		held,
-		label = m.groups_edit(),
+		label = m.groups_edit_label(),
 		onsuccess
 	}: {
 		groupId: string;
@@ -51,7 +51,7 @@
 	{#snippet form()}
 		<input {...instance.fields.groupId.as('hidden', groupId)} />
 		<p class="text-muted">
-			{m.groups_committee_grants_every_active_member_committee_holds()}
+			{m.groups_committee_grants_every_active_member_committee_holds_text()}
 		</p>
 		<CheckboxGroup field={instance.fields.capabilities} selected={held} {options} />
 	{/snippet}

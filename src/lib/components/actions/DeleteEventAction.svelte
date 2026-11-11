@@ -36,7 +36,7 @@
 {#if impact.deletable}
 	<Action
 		action={deleteEvent}
-		label={m.actions_delete()}
+		label={m.actions_delete_label()}
 		modalTitle={m.actions_delete_event_modal_title()}
 		submitLabel={m.actions_delete_event_submit_label()}
 		submitVariant="error"
@@ -51,10 +51,10 @@
 		{#snippet form()}
 			<input {...fields.id.as('hidden', eventId)} />
 			<p class="py-2">
-				{m.actions_delete_event_removes_event_outright_use_something()}
+				{m.actions_delete_event_removes_event_outright_use_something_text()}
 			</p>
 			<p class="pb-2">
-				<ParaglideMessage message={m.actions_delete_event_if_show_was_real_isn} inputs={{}}
+				<ParaglideMessage message={m.actions_delete_event_if_show_was_real_isn_text} inputs={{}}
 					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 						>{/snippet}</ParaglideMessage
 				>
@@ -62,11 +62,11 @@
 
 			{#if impact.rsvpCount > 0 || impact.lineupCount > 0 || impact.hasReservation}
 				<Alert type="warning">
-					{m.actions_delete_event_deleting_also_removes()}
+					{m.actions_delete_event_deleting_also_removes_body()}
 					<ul class="mt-1 list-inside list-disc">
 						{#if impact.rsvpCount > 0}
 							<li>
-								{m.actions_delete_event_rsvp({
+								{m.actions_delete_event_rsvp_text({
 									rsvpCount: impact.rsvpCount,
 									value: impact.rsvpCount === 1 ? '' : 's'
 								})}
@@ -74,20 +74,20 @@
 						{/if}
 						{#if impact.lineupCount > 0}
 							<li>
-								{m.actions_delete_event_lineup_credit_show_disappears_from({
+								{m.actions_delete_event_lineup_credit_show_disappears_from_text({
 									lineupCount: impact.lineupCount,
 									value: impact.lineupCount === 1 ? '' : 's'
 								})}
 							</li>
 						{/if}
 						{#if impact.hasReservation}
-							<li>{m.actions_delete_event_space_booking_released()}</li>
+							<li>{m.actions_delete_event_space_booking_released_text()}</li>
 						{/if}
 					</ul>
 				</Alert>
 			{/if}
 
-			<p class="pt-2 text-muted">{m.actions_delete_event_cannot_undone()}</p>
+			<p class="pt-2 text-muted">{m.actions_delete_event_cannot_undone_text()}</p>
 		{/snippet}
 	</Action>
 {:else}
@@ -101,6 +101,6 @@
 		data-testid="delete-event"
 		title={m.actions_delete_event_title()}
 	>
-		{m.actions_delete()}
+		{m.actions_delete_label()}
 	</Button>
 {/if}

@@ -39,6 +39,6 @@
 	{#snippet form()}
 		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
-		<p class="text-sm">{m.actions_complete_reservation_mark_reservation_as_completed()}</p>
+		<p class="text-sm">{m.actions_complete_reservation_mark_reservation_as_completed_text()}</p>
 	{/snippet}
 </Action>

@@ -14,11 +14,11 @@
 <!-- A listing only: no production is opened unless Productions is asked for one. -->
 {#if hasCapability(caps, 'event.manage')}
 	<Button variant="default" size="sm" data-testid="create-listing" onclick={() => (open = true)}
-		>{m.staff_create_listing()}</Button
+		>{m.staff_create_listing_label()}</Button
 	>
 	<CreateEventModal
 		bind:open
-		title={m.staff_create_listing()}
-		submitLabel={m.staff_create_listing()}
+		title={m.staff_create_listing_title()}
+		submitLabel={m.staff_create_listing_label()}
 	/>
 {/if}

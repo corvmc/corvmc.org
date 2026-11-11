@@ -52,7 +52,9 @@
 {#if !staff.current}
 	<div class="flex items-end gap-2 py-2">
 		<span class="loading loading-xs loading-spinner"></span>
-		<span class="text-subtle text-sm">{m.staff_inbox_id_assign_control_loading_assignees()}</span>
+		<span class="text-subtle text-sm"
+			>{m.staff_inbox_id_assign_control_loading_assignees_text()}</span
+		>
 	</div>
 {:else}
 	{@const staffUsers = staff.current}
@@ -64,15 +66,19 @@
 		<input {...action.fields.threadId.as('hidden', threadId)} />
 		<FormField
 			field={action.fields.userId}
-			label={m.staff_assigned_2()}
+			label={m.staff_assigned_2_label()}
 			type="select"
 			options={[
-				{ value: '', label: m.staff_unassigned() },
+				{ value: '', label: m.staff_unassigned_label() },
 				...staffUsers.map((s) => ({ value: s.id, label: s.name }))
 			]}
 			value={assignedToUserId ?? ''}
 			class="flex-1"
 		/>
-		<SubmitButton label={m.staff_inbox_id_assign_control_update()} variant="default" size="sm" />
+		<SubmitButton
+			label={m.staff_inbox_id_assign_control_update_label()}
+			variant="default"
+			size="sm"
+		/>
 	</Form>
 {/if}

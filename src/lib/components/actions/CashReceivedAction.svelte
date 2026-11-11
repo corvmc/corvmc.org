@@ -42,6 +42,6 @@
 	{#snippet form()}
 		<input {...fields.id.as('hidden', reservation.id)} />
 		<ReservationSummary {reservation} />
-		<p class="text-sm">{m.actions_cash_received_record_cash_was_received_reservation()}</p>
+		<p class="text-sm">{m.actions_cash_received_record_cash_was_received_reservation_text()}</p>
 	{/snippet}
 </Action>

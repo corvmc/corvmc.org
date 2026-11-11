@@ -21,12 +21,12 @@
 	traversable band → members, so a staff member holding a name had no way to
 	reach the bands behind it.
 -->
-<RelatedList title={m.staff_members_id_panels_bands_panel_bands()} result={getUserBands(id)}>
+<RelatedList title={m.staff_members_id_panels_bands_panel_bands_title()} result={getUserBands(id)}>
 	{#snippet children(bands)}
 		{#if bands.length === 0}
 			<EmptyState
-				title={m.staff_members_id_panels_bands_panel_not_any_bands()}
-				description={m.staff_members_id_panels_bands_panel_no_band_membership_invit()}
+				title={m.staff_members_id_panels_bands_panel_not_any_bands_title()}
+				description={m.staff_members_id_panels_bands_panel_no_band_membership_invit_body()}
 			/>
 		{:else}
 			<ul class="flex flex-col gap-2">
@@ -38,7 +38,7 @@
 								<StatusBadge status={b.role} label />
 								{#if b.status !== 'active'}
 									<Badge variant="warning" size="sm"
-										>{m.staff_members_id_panels_bands_panel_invite_pending()}</Badge
+										>{m.staff_members_id_panels_bands_panel_invite_pending_label()}</Badge
 									>
 								{/if}
 							{/snippet}
@@ -50,25 +50,28 @@
 	{/snippet}
 </RelatedList>
 
-<RelatedList title={m.staff_members_id_panels_bands_panel_shows_played()} result={getUserShows(id)}>
+<RelatedList
+	title={m.staff_members_id_panels_bands_panel_shows_played_title()}
+	result={getUserShows(id)}
+>
 	{#snippet children(shows)}
 		{#if shows.upcoming.length === 0 && shows.past.length === 0}
 			<EmptyState
-				title={m.staff_members_id_panels_bands_panel_no_shows()}
-				description={m.staff_members_id_panels_bands_panel_no_published_show_credit()}
+				title={m.staff_members_id_panels_bands_panel_no_shows_title()}
+				description={m.staff_members_id_panels_bands_panel_no_published_show_credit_body()}
 			/>
 		{:else}
 			<p class="mb-3 text-muted">
-				{m.staff_members_id_panels_bands_panel_upcoming_played({
+				{m.staff_members_id_panels_bands_panel_upcoming_played_text({
 					length: shows.upcoming.length,
 					pastCount: shows.pastCount
 				})}
 			</p>
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_show()}</th>
-					<th class="col-support">{m.staff_members_id_panels_bands_panel_with()}</th>
-					<th class="col-extra">{m.staff_date()}</th>
+					<th>{m.staff_show_label()}</th>
+					<th class="col-support">{m.staff_members_id_panels_bands_panel_with_label()}</th>
+					<th class="col-extra">{m.staff_date_label()}</th>
 				{/snippet}
 				{#each [...shows.upcoming, ...shows.past] as show (show.id)}
 					<tr class="hover" use:rowLink={resolve(`staff/events/${show.id}`)}>
@@ -84,25 +87,25 @@
 	{/snippet}
 </RelatedList>
 
-<RelatedList title={m.staff_community_listings()} result={getUserListings(id)}>
+<RelatedList title={m.staff_community_listings_title()} result={getUserListings(id)}>
 	{#snippet children(data)}
 		{@const all = [...data.rejected, ...data.listings]}
 		{#if all.length === 0}
 			<EmptyState
-				title={m.staff_members_id_panels_bands_panel_no_listings()}
-				description={m.staff_members_id_panels_bands_panel_member_has_never_submitt()}
+				title={m.staff_members_id_panels_bands_panel_no_listings_title()}
+				description={m.staff_members_id_panels_bands_panel_member_has_never_submitt_body()}
 			/>
 		{:else}
 			<p class="mb-3 text-muted">
-				{m.staff_members_id_panels_bands_panel_currently_public_calenda({
+				{m.staff_members_id_panels_bands_panel_currently_public_calenda_text({
 					publishedCount: data.publishedCount
 				})}
 			</p>
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_listing()}</th>
-					<th class="col-extra">{m.staff_date()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_listing_label()}</th>
+					<th class="col-extra">{m.staff_date_label()}</th>
 				{/snippet}
 				{#each all as e (e.id)}
 					<tr class="hover" use:rowLink={resolve(`staff/events/${e.id}`)}>
@@ -121,22 +124,22 @@
 </RelatedList>
 
 <RelatedList
-	title={m.staff_members_id_panels_bands_panel_tickets_rsvps()}
+	title={m.staff_members_id_panels_bands_panel_tickets_rsvps_title()}
 	result={getUserTicketsAndRsvps(id)}
 >
 	{#snippet children(data)}
 		{#if data.tickets.length === 0 && data.rsvps.length === 0}
 			<EmptyState
-				title={m.staff_members_id_panels_bands_panel_no_tickets_rsvps()}
-				description={m.staff_members_id_panels_bands_panel_member_has_not_booked_on()}
+				title={m.staff_members_id_panels_bands_panel_no_tickets_rsvps_title()}
+				description={m.staff_members_id_panels_bands_panel_member_has_not_booked_on_body()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_event()}</th>
-					<th class="col-support">{m.staff_kind()}</th>
-					<th class="col-extra">{m.staff_date()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_event_label()}</th>
+					<th class="col-support">{m.staff_kind_label()}</th>
+					<th class="col-extra">{m.staff_date_label()}</th>
 				{/snippet}
 				{#each data.tickets as t (t.id)}
 					<tr class="hover" use:rowLink={resolve(`staff/events/${t.eventId}`)}>
@@ -146,7 +149,7 @@
 								{#snippet subtitle()}{t.code}{/snippet}
 							</EntityIdentity>
 						</td>
-						<td class="col-support">{m.staff_members_id_panels_bands_panel_ticket()}</td>
+						<td class="col-support">{m.staff_members_id_panels_bands_panel_ticket_text()}</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(t.eventStartsAt)}</td>
 					</tr>
 				{/each}
@@ -154,7 +157,7 @@
 					<tr class="hover" use:rowLink={resolve(`staff/events/${r.eventId}`)}>
 						<td class="w-px"><StatusBadge status={r.eventStatus} /></td>
 						<td class="cell-primary"><EntityIdentity ref={r.ref} /></td>
-						<td class="col-support">{m.staff_members_id_panels_bands_panel_rsvp()}</td>
+						<td class="col-support">{m.staff_members_id_panels_bands_panel_rsvp_text()}</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(r.startsAt)}</td>
 					</tr>
 				{/each}

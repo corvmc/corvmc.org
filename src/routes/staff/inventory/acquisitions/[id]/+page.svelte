@@ -103,11 +103,11 @@
 
 <PageHeader
 	width="3xl"
-	subtitle={m.staff_acquisition()}
+	subtitle={m.staff_acquisition_body()}
 	title={`${acquisitionKindLabels[data.kind]} — ${formatDateShort(data.occurredAt)}`}
 >
 	{#if data.awaitingReimbursement}
-		<Badge variant="warning">{m.staff_awaiting_reimbursement()}</Badge>
+		<Badge variant="warning">{m.staff_awaiting_reimbursement_label()}</Badge>
 	{/if}
 </PageHeader>
 
@@ -119,7 +119,7 @@
 			<div>
 				<p>
 					<ParaglideMessage
-						message={m.staff_inventory_acquisitions_id_fronted_has_not_been_paid}
+						message={m.staff_inventory_acquisitions_id_fronted_has_not_been_paid_text}
 						inputs={{
 							paidByName: data.paidByName ?? '',
 							formatCents: formatCents(data.totalCents ?? data.linesTotalCents)
@@ -143,10 +143,10 @@
 		<Form
 			remote={editAcquisition}
 			guard
-			successToast={m.staff_inventory_acquisitions_id_acquisition_updated()}
+			successToast={m.staff_inventory_acquisitions_id_acquisition_updated_toast()}
 		>
 			<input {...fields.id.as('hidden', id)} />
-			<InfoCard title={m.staff_details()}>
+			<InfoCard title={m.staff_details_title()}>
 				<!--
 					Kind and date are editable because both are guessed at entry, and a
 					stocktake guesses them a few hundred times. A wrong kind is the
@@ -159,14 +159,14 @@
 					<Field
 						field={fields.kind}
 						type="select"
-						label={m.staff_how_arrived()}
+						label={m.staff_how_arrived_label()}
 						bind:value={kind}
 						options={acquisitionKinds.map((k) => ({ value: k, label: acquisitionKindLabels[k] }))}
 					/>
 					<Field
 						field={fields.occurredAt}
 						type="date"
-						label={m.staff_when_arrived()}
+						label={m.staff_when_arrived_label()}
 						value={toLocalDate(data.occurredAt)}
 					/>
 				</div>
@@ -174,48 +174,48 @@
 					<Field
 						field={fields.sourceName}
 						type="text"
-						label={kind === 'purchase' ? m.staff_supplier() : m.staff_donor_grantor()}
+						label={kind === 'purchase' ? m.staff_supplier_label() : m.staff_donor_grantor_label()}
 						value={data.sourceName ?? ''}
 					/>
 				{/if}
 				<Field
 					field={fields.reference}
 					type="text"
-					label={m.staff_reference_receipt_no()}
+					label={m.staff_reference_receipt_no_label()}
 					value={data.reference ?? ''}
 				/>
 
 				<MoneyField
 					field={fields.totalCents}
-					label={m.staff_receipt_total()}
+					label={m.staff_receipt_total_label()}
 					value={data.totalCents}
-					description={m.staff_inventory_acquisitions_id_what_paperwork_says_includin()}
+					description={m.staff_inventory_acquisitions_id_what_paperwork_says_includin_body()}
 				/>
 
 				{#if isGift}
 					<MoneyField
 						field={fields.fairValueCents}
-						label={m.staff_inventory_acquisitions_id_total_fair_value()}
+						label={m.staff_inventory_acquisitions_id_total_fair_value_label()}
 						value={data.fairValueCents}
 					/>
 					<Field
 						field={fields.fairValueBasis}
 						type="text"
-						label={m.staff_inventory_acquisitions_id_how_value_was_determined()}
-						description={m.staff_inventory_acquisitions_id_required_gifts_kind_disclosu()}
+						label={m.staff_inventory_acquisitions_id_how_value_was_determined_label()}
+						description={m.staff_inventory_acquisitions_id_required_gifts_kind_disclosu_body()}
 						value={data.fairValueBasis ?? ''}
 					/>
 					<Field
 						field={fields.intendedUse}
 						type="text"
-						label={m.staff_inventory_acquisitions_id_intended_use()}
+						label={m.staff_inventory_acquisitions_id_intended_use_label()}
 						value={data.intendedUse ?? ''}
 					/>
 					<Field
 						field={fields.monetized}
 						type="checkbox"
-						label={m.staff_inventory_acquisitions_id_sold_rather_than_used()}
-						checkboxLabel={m.staff_inventory_acquisitions_id_checkbox_label()}
+						label={m.staff_inventory_acquisitions_id_sold_rather_than_used_label()}
+						checkboxLabel={m.staff_inventory_acquisitions_id_checkbox_label_checkbox()}
 						value={data.monetized}
 					/>
 				{/if}
@@ -225,7 +225,7 @@
 						field={fields.donorUserId}
 						bind:value={donorUserId}
 						bind:name={donorName}
-						label={m.staff_donated_by()}
+						label={m.staff_donated_by_label()}
 					/>
 				</div>
 
@@ -237,14 +237,14 @@
 						field={fields.paidByUserId}
 						bind:value={paidByUserId}
 						bind:name={paidByName}
-						label={m.staff_inventory_acquisitions_id_paid_by_owed_back_leave()}
+						label={m.staff_inventory_acquisitions_id_paid_by_owed_back_leave_label()}
 					/>
 				</div>
 
 				<Field
 					field={fields.notes}
 					type="textarea"
-					label={m.staff_notes()}
+					label={m.staff_notes_label()}
 					value={data.notes ?? ''}
 				/>
 
@@ -259,38 +259,38 @@
 		</Form>
 
 		<div class="space-y-6">
-			<InfoCard title={m.staff_record()} class="bg-base-200 shadow-none">
+			<InfoCard title={m.staff_record_title()} class="bg-base-200 shadow-none">
 				<DefinitionList>
-					<Fact label={m.staff_kind()}>{acquisitionKindLabels[data.kind]}</Fact>
-					<Fact label={m.staff_inventory_acquisitions_id_occurred()}
+					<Fact label={m.staff_kind_label()}>{acquisitionKindLabels[data.kind]}</Fact>
+					<Fact label={m.staff_inventory_acquisitions_id_occurred_label()}
 						>{formatDateShort(data.occurredAt)}</Fact
 					>
-					<Fact label={m.staff_source()}>{data.donorName ?? '—'}</Fact>
+					<Fact label={m.staff_source_label()}>{data.donorName ?? '—'}</Fact>
 					{#if data.fulfils}
 						<!-- What a member asked for, and where it came from. The request
 						     sat at Planned after the thing was on the shelf (#603). -->
-						<Fact label={m.staff_inventory_acquisitions_id_fulfils()}>
+						<Fact label={m.staff_inventory_acquisitions_id_fulfils_label()}>
 							<a class="link" href={resolve(`staff/suggestions/${data.fulfils.id}`)}>
 								{data.fulfils.title}
 							</a>
 						</Fact>
 					{/if}
-					<Fact label={m.staff_inventory_acquisitions_id_lines_total()}>
+					<Fact label={m.staff_inventory_acquisitions_id_lines_total_label()}>
 						{formatCents(data.linesTotalCents)}
 						{#if data.totalCents != null && data.totalCents !== data.linesTotalCents}
 							<span class="text-subtle">
-								{m.staff_inventory_acquisitions_id_receipt_says({
+								{m.staff_inventory_acquisitions_id_receipt_says_text({
 									formatCents: formatCents(data.totalCents)
 								})}
 							</span>
 						{/if}
 					</Fact>
 					{#if data.paidByName}
-						<Fact label={m.staff_inventory_acquisitions_id_paid_by()}>
+						<Fact label={m.staff_inventory_acquisitions_id_paid_by_label()}>
 							{data.paidByName}
 							{#if data.reimbursedAt}
 								<span class="text-subtle">
-									{m.staff_inventory_acquisitions_id_reimbursed({
+									{m.staff_inventory_acquisitions_id_reimbursed_text({
 										formatDateShort: formatDateShort(data.reimbursedAt)
 									})}
 								</span>
@@ -301,13 +301,13 @@
 			</InfoCard>
 
 			{#if data.kind === 'donation'}
-				<InfoCard title={m.staff_inventory_acquisitions_id_form_8283()}>
+				<InfoCard title={m.staff_inventory_acquisitions_id_form_8283_title()}>
 					{#if data.acknowledgedAt}
 						<DefinitionList>
-							<Fact label={m.staff_inventory_acquisitions_id_signed()}
+							<Fact label={m.staff_inventory_acquisitions_id_signed_label()}
 								>{formatDateShort(data.acknowledgedAt)}</Fact
 							>
-							<Fact label={m.staff_inventory_acquisitions_id_appraisal()}
+							<Fact label={m.staff_inventory_acquisitions_id_appraisal_label()}
 								>{data.appraisalRef ?? '—'}</Fact
 							>
 						</DefinitionList>
@@ -316,7 +316,7 @@
 						     error: with no 8283 recorded, disposing of this gift raises no
 						     Form 8282 warning at all. -->
 						<p class="text-subtle">
-							{m.staff_inventory_acquisitions_id_nothing_recorded_donor_claim()}
+							{m.staff_inventory_acquisitions_id_nothing_recorded_donor_claim_text()}
 						</p>
 					{/if}
 					<div class="mt-3">
@@ -330,9 +330,9 @@
 				</InfoCard>
 			{/if}
 
-			<InfoCard title={m.staff_inventory_acquisitions_id_receipts()}>
+			<InfoCard title={m.staff_inventory_acquisitions_id_receipts_title()}>
 				{#if data.receipts.length === 0}
-					<EmptyState description={m.staff_inventory_acquisitions_id_nothing_attached_yet()} />
+					<EmptyState description={m.staff_inventory_acquisitions_id_nothing_attached_yet_body()} />
 				{:else}
 					<ul class="space-y-2">
 						{#each data.receipts as receipt (receipt.attachmentId)}
@@ -344,7 +344,7 @@
 									target="_blank"
 									rel="noopener external"
 								>
-									{receipt.filename ?? m.staff_inventory_acquisitions_id_receipt()}
+									{receipt.filename ?? m.staff_inventory_acquisitions_id_receipt_text()}
 								</a>
 							</li>
 						{/each}
@@ -358,23 +358,23 @@
 						variant="ghost"
 					>
 						<IconUpload size={16} />
-						{m.staff_inventory_acquisitions_id_attach_receipt()}
+						{m.staff_inventory_acquisitions_id_attach_receipt_text()}
 					</FileUpload>
 				</div>
 			</InfoCard>
 		</div>
 	</div>
 
-	<InfoCard title={m.staff_what_arrived()} class="mb-6">
+	<InfoCard title={m.staff_what_arrived_title()} class="mb-6">
 		{#snippet header(title)}
 			<div class="flex items-center justify-between gap-2">
 				<CardTitle>{title}</CardTitle>
 				<Action
 					action={addAcquisitionLineForm}
-					label={m.staff_add_line()}
-					modalTitle={m.staff_add_line()}
-					submitLabel={m.staff_add()}
-					successToast={m.staff_inventory_acquisitions_id_line_added()}
+					label={m.staff_add_line_label()}
+					modalTitle={m.staff_add_line_title()}
+					submitLabel={m.staff_add_label()}
+					successToast={m.staff_inventory_acquisitions_id_line_added_toast()}
 					variant="ghost"
 					size="xs"
 				>
@@ -384,7 +384,7 @@
 							<Field
 								field={addLineFields.itemId}
 								type="select"
-								label={m.staff_what_was()}
+								label={m.staff_what_was_label()}
 								options={itemOptions}
 								required
 							/>
@@ -392,14 +392,14 @@
 								<Field
 									field={addLineFields.quantity}
 									type="number"
-									label={m.staff_inventory_acquisitions_id_how_many()}
+									label={m.staff_inventory_acquisitions_id_how_many_label()}
 									value={1}
 									required
 								/>
-								<MoneyField field={addLineFields.unitValueCents} label={m.staff_each()} />
+								<MoneyField field={addLineFields.unitValueCents} label={m.staff_each_label()} />
 							</div>
 							<p class="text-subtle">
-								{m.staff_inventory_acquisitions_id_adding_line_receives_stock_n()}
+								{m.staff_inventory_acquisitions_id_adding_line_receives_stock_n_text()}
 							</p>
 						</div>
 					{/snippet}
@@ -408,14 +408,16 @@
 		{/snippet}
 
 		{#if data.lines.length === 0}
-			<EmptyState description={m.staff_inventory_acquisitions_id_nothing_itemised_yet_receipt()} />
+			<EmptyState
+				description={m.staff_inventory_acquisitions_id_nothing_itemised_yet_receipt_body()}
+			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_item()}</th>
-					<th class="cell-num">{m.staff_quantity()}</th>
-					<th class="cell-num">{m.staff_unit_value()}</th>
-					<th class="cell-num">{m.staff_inventory_acquisitions_id_line_total()}</th>
+					<th>{m.staff_item_label()}</th>
+					<th class="cell-num">{m.staff_quantity_label()}</th>
+					<th class="cell-num">{m.staff_unit_value_label()}</th>
+					<th class="cell-num">{m.staff_inventory_acquisitions_id_line_total_label()}</th>
 				{/snippet}
 				{#each data.lines as line (line.id)}
 					<tr class="hover">
@@ -434,7 +436,7 @@
 					</tr>
 				{/each}
 				<tr class="font-medium">
-					<td>{m.staff_total()}</td>
+					<td>{m.staff_total_text()}</td>
 					<td class="cell-num"></td>
 					<td class="cell-num"></td>
 					<td class="cell-num">{formatCents(data.linesTotalCents)}</td>
@@ -443,18 +445,20 @@
 		{/if}
 	</InfoCard>
 
-	<InfoCard title={m.staff_inventory_acquisitions_id_stock_wrote()}>
+	<InfoCard title={m.staff_inventory_acquisitions_id_stock_wrote_title()}>
 		{#if data.movements.length === 0}
 			<!-- Worth showing rather than hiding: an acquisition whose lines wrote no
 			     movements is paperwork with no stock behind it. -->
-			<EmptyState description={m.staff_inventory_acquisitions_id_no_stock_movements_were_writ()} />
+			<EmptyState
+				description={m.staff_inventory_acquisitions_id_no_stock_movements_were_writ_body()}
+			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th class="whitespace-nowrap">{m.staff_when()}</th>
-					<th>{m.staff_item()}</th>
-					<th>{m.staff_what_happened()}</th>
-					<th class="cell-num">{m.staff_quantity()}</th>
+					<th class="whitespace-nowrap">{m.staff_when_label()}</th>
+					<th>{m.staff_item_label()}</th>
+					<th>{m.staff_what_happened_label()}</th>
+					<th class="cell-num">{m.staff_quantity_label()}</th>
 				{/snippet}
 				{#each data.movements as movement (movement.id)}
 					<tr>

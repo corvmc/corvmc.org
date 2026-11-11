@@ -12,10 +12,10 @@
 	import TriageTable from '#lib/components/ui/TriageTable.svelte';
 
 	const stages = [
-		{ value: 'untriaged', label: m.staff_inventory_problems_needs_triage() },
-		{ value: 'in_work_order', label: m.staff_inventory_problems_work_order() },
-		{ value: 'resolved', label: m.staff_inventory_problems_resolved() },
-		{ value: 'dismissed', label: m.staff_inventory_problems_dismissed() }
+		{ value: 'untriaged', label: m.staff_inventory_problems_needs_triage_label() },
+		{ value: 'in_work_order', label: m.staff_inventory_problems_work_order_label() },
+		{ value: 'resolved', label: m.staff_inventory_problems_resolved_label() },
+		{ value: 'dismissed', label: m.staff_inventory_problems_dismissed_label() }
 	] as const;
 	type Stage = (typeof stages)[number]['value'];
 
@@ -64,14 +64,14 @@
 				page = 1;
 			}}
 		>
-			<option value="">{m.staff_inventory_problems_all_reports()}</option>
+			<option value="">{m.staff_inventory_problems_all_reports_label()}</option>
 			{#each stages as s (s.value)}
 				<option value={s.value}>{s.label}</option>
 			{/each}
 		</Select>
 	</FilterBar>
 
-	<DataList {result} empty={m.staff_inventory_problems_empty()} onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_inventory_problems_empty_body()} onpage={(p) => (page = p)}>
 		{#snippet children(reports)}
 			<TriageTable
 				subjectLabel={m.staff_inventory_problems_subject_label()}

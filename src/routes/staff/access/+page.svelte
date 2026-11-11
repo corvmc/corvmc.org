@@ -14,18 +14,18 @@
 
 	const data = $derived(await getAccessPage());
 	const stats = $derived([
-		{ title: m.staff_access_admins(), value: data.summary.admins },
-		{ title: m.staff_staff(), value: data.summary.staff },
-		{ title: m.staff_access_positions_held(), value: data.summary.positionsHeld },
-		{ title: m.staff_access_clearances_lapsing_30_days(), value: data.summary.lapsingSoon }
+		{ title: m.staff_access_admins_title(), value: data.summary.admins },
+		{ title: m.staff_staff_title(), value: data.summary.staff },
+		{ title: m.staff_access_positions_held_title(), value: data.summary.positionsHeld },
+		{ title: m.staff_access_clearances_lapsing_30_days_title(), value: data.summary.lapsingSoon }
 	]);
 </script>
 
-<PageHeader title={m.staff_access_access()} subtitle={m.staff_access_subtitle()}>
+<PageHeader title={m.staff_access_access_title()} subtitle={m.staff_access_subtitle_body()}>
 	<TabBar
 		tabs={[
-			{ key: 'person', label: m.staff_access_by_person() },
-			{ key: 'permission', label: m.staff_access_by_permission() }
+			{ key: 'person', label: m.staff_access_by_person_label() },
+			{ key: 'permission', label: m.staff_access_by_permission_label() }
 		]}
 		active={view}
 		onchange={(key) => (view = key as typeof view)}

@@ -9,12 +9,12 @@
 	const tabs = [
 		{
 			key: 'orders',
-			label: m.staff_volunteer_schedule_schedule_views_work_orders(),
+			label: m.staff_volunteer_schedule_schedule_views_work_orders_label(),
 			href: resolve('staff/volunteer/schedule')
 		},
 		{
 			key: 'recurring',
-			label: m.staff_recurring(),
+			label: m.staff_recurring_label(),
 			href: resolve('staff/volunteer/schedule/recurring')
 		}
 	];

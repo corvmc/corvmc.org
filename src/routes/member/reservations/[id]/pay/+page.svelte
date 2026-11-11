@@ -54,7 +54,7 @@
 		<CardBody>
 			<p class="font-medium">{formatDateLong(res.startsAt)}</p>
 			<p>
-				{m.member_reservations_id_pay_hours({
+				{m.member_reservations_id_pay_hours_text({
 					formatTime: formatTime(res.startsAt),
 					formatTime2: formatTime(res.endsAt),
 					durationHours
@@ -70,7 +70,7 @@
 		<CardBody class="space-y-2">
 			<div class="flex justify-between">
 				<span
-					>{m.member_reservations_id_pay_room_rental_hr_hr({
+					>{m.member_reservations_id_pay_room_rental_hr_hr_text({
 						durationHours,
 						formatDollars: formatDollars(totalCents / durationHours)
 					})}</span
@@ -82,9 +82,9 @@
 				<div class="flex justify-between text-success">
 					<span>
 						{#if committed}
-							{m.member_reservations_id_pay_free_hours_applied_hr({ creditsApplicable })}
+							{m.member_reservations_id_pay_free_hours_applied_hr_text({ creditsApplicable })}
 						{:else}
-							{m.member_reservations_id_pay_free_hours_available({
+							{m.member_reservations_id_pay_free_hours_available_text({
 								creditsApplicable,
 								availableHours
 							})}
@@ -96,7 +96,7 @@
 
 			{#if remainingCents > 0 && coverFees}
 				<div class="flex justify-between text-muted">
-					<span>{m.member_reservations_id_pay_processing_fee_coverage()}</span>
+					<span>{m.member_reservations_id_pay_processing_fee_coverage_text()}</span>
 					<span>+${formatDollars(feeCents)}</span>
 				</div>
 			{/if}
@@ -104,10 +104,10 @@
 			<div class="divider my-1"></div>
 
 			<div class="flex justify-between font-bold">
-				<span>{m.member_reservations_id_pay_total()}</span>
+				<span>{m.member_reservations_id_pay_total_text()}</span>
 				<span>
 					{#if remainingCents <= 0}
-						{m.member_reservations_id_pay_0_00_covered_by_free()}
+						{m.member_reservations_id_pay_0_00_covered_by_free_text()}
 					{:else}
 						${formatDollars(chargeTotal)}
 					{/if}
@@ -123,7 +123,7 @@
 				type="checkbox"
 				label=""
 				bind:value={coverFees}
-				checkboxLabel={m.member_reservations_id_pay_checkbox_label()}
+				checkboxLabel={m.member_reservations_id_pay_checkbox_label_checkbox()}
 			/>
 		{/if}
 
@@ -132,11 +132,12 @@
 			variant="primary"
 			class="mt-4 w-full"
 			label={remainingCents <= 0
-				? m.member_reservations_id_pay_pay_with_free_hours()
-				: m.member_reservations_id_pay_pay({ formatDollars: formatDollars(chargeTotal) })}
+				? m.member_reservations_id_pay_pay_with_free_hours_label()
+				: m.member_reservations_id_pay_pay_label({ formatDollars: formatDollars(chargeTotal) })}
 		/>
 	</Form>
 
-	<Button href={data.backPath} variant="ghost" class="w-full">{m.member_back_reservations()}</Button
+	<Button href={data.backPath} variant="ghost" class="w-full"
+		>{m.member_back_reservations_label()}</Button
 	>
 </PageContent>

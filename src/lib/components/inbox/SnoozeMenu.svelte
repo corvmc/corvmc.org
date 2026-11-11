@@ -56,7 +56,7 @@
 			align="end"
 			class="z-[1000] min-w-64 rounded-lg border border-base-300 bg-base-100 p-2 shadow-lg"
 		>
-			<p class="px-3 pt-1 pb-2 text-subtle text-xs">{m.inbox_snooze_menu_snooze_until()}</p>
+			<p class="px-3 pt-1 pb-2 text-subtle text-xs">{m.inbox_snooze_menu_snooze_until_text()}</p>
 
 			{#each presets as preset (preset.label)}
 				<DropdownMenu.Item class={itemClass} onSelect={() => onpick(preset.value)}>
@@ -74,7 +74,7 @@
 				onSelect={(e) => e.preventDefault()}
 			>
 				<span class="flex items-center gap-2"
-					><IconCalendar size={15} />{m.inbox_snooze_menu_pick_date()}</span
+					><IconCalendar size={15} />{m.inbox_snooze_menu_pick_date_text()}</span
 				>
 				<input
 					type="date"
@@ -89,11 +89,11 @@
 
 			<DropdownMenu.Item class={itemClass} onSelect={onwait} data-testid="snooze-until-reply">
 				<span class="flex items-center gap-2"
-					><IconSend size={15} />{m.inbox_snooze_menu_when_they_reply()}</span
+					><IconSend size={15} />{m.inbox_snooze_menu_when_they_reply_text()}</span
 				>
 			</DropdownMenu.Item>
 			<p class="px-3 pt-1 pb-1 text-subtle text-xs">
-				{m.inbox_snooze_menu_leaves_queue_now_comes_back()}
+				{m.inbox_snooze_menu_leaves_queue_now_comes_back_text()}
 			</p>
 		</DropdownMenu.Content>
 	</DropdownMenu.Portal>

@@ -37,35 +37,35 @@
 		     before #556 they were shown a moderation notice about their own
 		     date of birth. -->
 		<Alert type="info">
-			{m.member_account_direct_messages_section_direct_messages_open({ ADULT_AGE_YEARS })}
+			{m.member_account_direct_messages_section_direct_messages_open_body({ ADULT_AGE_YEARS })}
 		</Alert>
 	{:else if messaging.standing.status !== 'none'}
 		<Alert type="warning">
 			{messaging.standing.status === 'disabled'
-				? m.member_account_direct_messages_section_direct_messaging_swit()
-				: m.member_account_direct_messages_section_cannot_start_new_conv()}
+				? m.member_account_direct_messages_section_direct_messaging_swit_body()
+				: m.member_account_direct_messages_section_cannot_start_new_conv_body()}
 			{#if messaging.standing.reason}
 				<span class="mt-1 block opacity-80">{messaging.standing.reason}</span>
 			{/if}
 			<AppealPanel target={{ kind: 'standing', scope: 'messaging' }}>
 				{#snippet fallback()}
 					<span class="mt-1 block text-muted">
-						{m.member_account_direct_messages_section_contact_staff_if_thin()}
+						{m.member_account_direct_messages_section_contact_staff_if_thin_text()}
 					</span>
 				{/snippet}
 			</AppealPanel>
 		</Alert>
 	{/if}
 	<p class="mt-3 mb-3 text-muted">
-		{m.member_account_direct_messages_section_when_other_members_ca()}
+		{m.member_account_direct_messages_section_when_other_members_ca_text()}
 	</p>
 	<Form
 		remote={setMyMessaging}
-		successToast={m.member_saved()}
+		successToast={m.member_saved_toast()}
 		class="flex items-center justify-between gap-4"
 	>
 		<span class="font-medium"
-			>{m.member_account_direct_messages_section_allow_direct_messages()}</span
+			>{m.member_account_direct_messages_section_allow_direct_messages_text()}</span
 		>
 		<input
 			{...setMyMessaging.fields.enabled.as(
@@ -75,8 +75,8 @@
 		/>
 		<SubmitButton
 			label={messaging.acceptsDirectMessages
-				? m.member_account_direct_messages_section_turn_off()
-				: m.member_account_direct_messages_section_turn()}
+				? m.member_account_direct_messages_section_turn_off_label()
+				: m.member_account_direct_messages_section_turn_label()}
 			variant={messaging.acceptsDirectMessages ? 'default' : 'primary'}
 			outline={messaging.acceptsDirectMessages}
 			size="sm"
@@ -91,9 +91,11 @@
 	-->
 	{#if blocks.length > 0}
 		<div class="mt-4 border-t border-base-300 pt-4">
-			<h3 class="mb-2 font-medium">{m.member_account_direct_messages_section_blocked_members()}</h3>
+			<h3 class="mb-2 font-medium">
+				{m.member_account_direct_messages_section_blocked_members_title()}
+			</h3>
 			<p class="mb-3 text-muted text-sm">
-				{m.member_account_direct_messages_section_neither_can_write_oth()}
+				{m.member_account_direct_messages_section_neither_can_write_oth_text()}
 			</p>
 			<ul class="flex flex-col gap-1">
 				{#each blocks as blocked (blocked.userId)}
@@ -102,21 +104,21 @@
 							<span class="truncate font-medium">{blocked.name}</span>
 							{#if blocked.source === 'declined_request'}
 								<span class="ml-2 text-subtle text-xs"
-									>{m.member_account_direct_messages_section_from_declined_request()}</span
+									>{m.member_account_direct_messages_section_from_declined_request_text()}</span
 								>
 							{:else if blocked.source === 'reported'}
 								<span class="ml-2 text-subtle text-xs"
-									>{m.member_account_direct_messages_section_from_report()}</span
+									>{m.member_account_direct_messages_section_from_report_text()}</span
 								>
 							{/if}
 						</span>
 						<Form
 							remote={unblockMember}
-							successToast={m.member_account_direct_messages_section_unblocked()}
+							successToast={m.member_account_direct_messages_section_unblocked_toast()}
 						>
 							<input {...unblockMember.fields.userId.as('hidden', blocked.userId)} />
 							<SubmitButton
-								label={m.member_account_direct_messages_section_unblock()}
+								label={m.member_account_direct_messages_section_unblock_label()}
 								variant="ghost"
 								size="sm"
 							/>

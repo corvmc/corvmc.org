@@ -63,7 +63,7 @@
 
 	<Alert type="info">
 		<ParaglideMessage
-			message={m.band_slug_press_kit_press_kit_form_everything_page_free_ever}
+			message={m.band_slug_press_kit_press_kit_form_everything_page_free_ever_body}
 			inputs={{}}
 			>{#snippet a({ children })}<a href={riderHref} class="link">{@render children?.()}</a
 				>{/snippet}</ParaglideMessage
@@ -71,26 +71,30 @@
 	</Alert>
 
 	<!-- Public: what a stranger reads -->
-	<InfoCard title={m.band_slug_press_kit_press_kit_form_press_quotes()}>
-		<p class="text-muted">{m.band_slug_press_kit_press_kit_form_shown_public_page()}</p>
+	<InfoCard title={m.band_slug_press_kit_press_kit_form_press_quotes_title()}>
+		<p class="text-muted">{m.band_slug_press_kit_press_kit_form_shown_public_page_text()}</p>
 		{#if epk.pressQuotes.length === 0}
-			<p class="text-muted">{m.band_slug_press_kit_press_kit_form_nothing_quoted_yet()}</p>
+			<p class="text-muted">{m.band_slug_press_kit_press_kit_form_nothing_quoted_yet_text()}</p>
 		{/if}
 		<div class="space-y-4">
 			{#each epk.pressQuotes as _quote, i (i)}
 				<div class="space-y-2 inset p-3">
 					<FormField
 						type="textarea"
-						label={m.band_slug_press_kit_press_kit_form_quote()}
+						label={m.band_slug_press_kit_press_kit_form_quote_label()}
 						bind:value={epk.pressQuotes[i].quote}
 					/>
 					<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
 						<FormField
 							type="text"
-							label={m.band_slug_press_kit_press_kit_form_publication()}
+							label={m.band_slug_press_kit_press_kit_form_publication_label()}
 							bind:value={epk.pressQuotes[i].publication}
 						/>
-						<FormField type="text" label={m.band_date()} bind:value={epk.pressQuotes[i].date} />
+						<FormField
+							type="text"
+							label={m.band_date_label()}
+							bind:value={epk.pressQuotes[i].date}
+						/>
 					</div>
 					<Button
 						type="button"
@@ -98,22 +102,22 @@
 						size="sm"
 						onclick={() => (epk.pressQuotes = removeAt(epk.pressQuotes, i))}
 					>
-						{m.band_slug_press_kit_press_kit_form_remove_quote()}
+						{m.band_slug_press_kit_press_kit_form_remove_quote_label()}
 					</Button>
 				</div>
 			{/each}
 		</div>
 		<Button type="button" variant="default" size="sm" outline onclick={addQuote}>
-			{m.band_slug_press_kit_press_kit_form_add_quote()}
+			{m.band_slug_press_kit_press_kit_form_add_quote_label()}
 		</Button>
 	</InfoCard>
 
-	<InfoCard title={m.band_slug_press_kit_press_kit_form_highlights()}>
+	<InfoCard title={m.band_slug_press_kit_press_kit_form_highlights_title()}>
 		<p class="text-muted">
-			{m.band_slug_press_kit_press_kit_form_awards_notable_supports_f()}
+			{m.band_slug_press_kit_press_kit_form_awards_notable_supports_f_text()}
 		</p>
 		{#if epk.achievements.length === 0}
-			<p class="text-muted">{m.band_slug_press_kit_press_kit_form_nothing_listed_yet()}</p>
+			<p class="text-muted">{m.band_slug_press_kit_press_kit_form_nothing_listed_yet_text()}</p>
 		{/if}
 		<div class="space-y-2">
 			{#each epk.achievements as _, i (i)}
@@ -121,7 +125,7 @@
 					<div class="flex-1">
 						<FormField
 							type="text"
-							label={m.band_slug_press_kit_press_kit_form_highlight()}
+							label={m.band_slug_press_kit_press_kit_form_highlight_label()}
 							bind:value={epk.achievements[i]}
 						/>
 					</div>
@@ -131,30 +135,30 @@
 						size="sm"
 						onclick={() => (epk.achievements = removeAt(epk.achievements, i))}
 					>
-						{m.band_remove()}
+						{m.band_remove_label()}
 					</Button>
 				</div>
 			{/each}
 		</div>
 		<Button type="button" variant="default" size="sm" outline onclick={addAchievement}>
-			{m.band_slug_press_kit_press_kit_form_add_highlight()}
+			{m.band_slug_press_kit_press_kit_form_add_highlight_label()}
 		</Button>
 	</InfoCard>
 
 	{#if premium}
-		<InfoCard title={m.band_slug_press_kit_press_kit_form_video()}>
+		<InfoCard title={m.band_slug_press_kit_press_kit_form_video_title()}>
 			<p class="text-muted">
-				{m.band_slug_press_kit_press_kit_form_live_clips_page_press_kit()}
+				{m.band_slug_press_kit_press_kit_form_live_clips_page_press_kit_text()}
 			</p>
 			{#if epk.videos.length === 0}
-				<p class="text-muted">{m.band_slug_press_kit_press_kit_form_no_video_yet()}</p>
+				<p class="text-muted">{m.band_slug_press_kit_press_kit_form_no_video_yet_text()}</p>
 			{/if}
 			<div class="space-y-4">
 				{#each epk.videos as _video, i (i)}
 					<div class="grid grid-cols-1 gap-2 inset p-3 sm:grid-cols-2">
 						<FormField
 							type="text"
-							label={m.band_slug_press_kit_press_kit_form_video_url()}
+							label={m.band_slug_press_kit_press_kit_form_video_url_label()}
 							bind:value={epk.videos[i].url}
 						/>
 						<FormField
@@ -169,38 +173,38 @@
 							class="sm:col-span-2"
 							onclick={() => (epk.videos = removeAt(epk.videos, i))}
 						>
-							{m.band_slug_press_kit_press_kit_form_remove_video()}
+							{m.band_slug_press_kit_press_kit_form_remove_video_label()}
 						</Button>
 					</div>
 				{/each}
 			</div>
 			{#if epk.videos.length < MAX_VIDEOS}
 				<Button type="button" variant="default" size="sm" outline onclick={addVideo}>
-					{m.band_slug_press_kit_press_kit_form_add_video()}
+					{m.band_slug_press_kit_press_kit_form_add_video_label()}
 				</Button>
 			{/if}
 		</InfoCard>
 	{/if}
 
 	<!-- Package only: what a venue is sent -->
-	<InfoCard title={m.band_slug_press_kit_press_kit_form_who_contact()}>
+	<InfoCard title={m.band_slug_press_kit_press_kit_form_who_contact_title()}>
 		<p class="text-muted">
-			{m.band_slug_press_kit_press_kit_form_package_only_public_page()}
+			{m.band_slug_press_kit_press_kit_form_package_only_public_page_text()}
 		</p>
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-3">
 			<ContactRoleFields
-				label={m.band_slug_press_kit_press_kit_form_booking()}
-				description={m.band_slug_press_kit_press_kit_form_where_booking_enquiry_fro()}
+				label={m.band_slug_press_kit_press_kit_form_booking_label()}
+				description={m.band_slug_press_kit_press_kit_form_where_booking_enquiry_fro_body()}
 				bind:contact={epk.bookingContact}
 			/>
 			<ContactRoleFields
-				label={m.band_slug_press_kit_press_kit_form_management()}
-				description={m.band_slug_press_kit_press_kit_form_if_someone_else_handles_b()}
+				label={m.band_slug_press_kit_press_kit_form_management_label()}
+				description={m.band_slug_press_kit_press_kit_form_if_someone_else_handles_b_body()}
 				bind:contact={epk.managementContact}
 			/>
 			<ContactRoleFields
-				label={m.band_slug_press_kit_press_kit_form_press()}
-				description={m.band_slug_press_kit_press_kit_form_who_journalist_should_ask()}
+				label={m.band_slug_press_kit_press_kit_form_press_label()}
+				description={m.band_slug_press_kit_press_kit_form_who_journalist_should_ask_body()}
 				bind:contact={epk.prContact}
 				withPhone={false}
 			/>
@@ -208,6 +212,6 @@
 	</InfoCard>
 
 	<div class="flex justify-end">
-		<SubmitButton>{m.band_slug_press_kit_press_kit_form_save_press_kit()}</SubmitButton>
+		<SubmitButton>{m.band_slug_press_kit_press_kit_form_save_press_kit_label()}</SubmitButton>
 	</div>
 </Form>

@@ -21,23 +21,23 @@
 	</div>
 
 	{#if success}
-		<Alert type="success">{m.public_subscribe_slug_re_subscribed_look_out_our()}</Alert>
+		<Alert type="success">{m.public_subscribe_slug_re_subscribed_look_out_our_body()}</Alert>
 	{:else}
 		<Form remote={subscribeToAudience} onsuccess={() => (success = true)} class="space-y-4">
 			<input {...subscribeToAudience.fields.slug.as('hidden', data.audience.slug)} />
 			<Field
 				field={subscribeToAudience.fields.email}
 				type="email"
-				label={m.public_email()}
-				placeholder={m.public_email_com()}
+				label={m.public_email_label()}
+				placeholder={m.public_email_com_placeholder()}
 			/>
 			<Field
 				field={subscribeToAudience.fields.name}
 				type="text"
-				label={m.public_name_optional()}
-				placeholder={m.public_name_2()}
+				label={m.public_name_optional_label()}
+				placeholder={m.public_name_2_placeholder()}
 			/>
-			<SubmitButton label={m.public_subscribe()} variant="primary" class="w-full" />
+			<SubmitButton label={m.public_subscribe_label()} variant="primary" class="w-full" />
 		</Form>
 	{/if}
 </div>

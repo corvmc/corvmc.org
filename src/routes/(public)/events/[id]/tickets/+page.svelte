@@ -56,10 +56,10 @@
 <div class="mx-auto max-w-lg space-y-6 px-6">
 	<PageHeader
 		title={isFreeEvent
-			? m.public_events_id_tickets_get_free_ticket()
-			: m.public_events_id_tickets_get_tickets()}
+			? m.public_events_id_tickets_get_free_ticket_title()
+			: m.public_events_id_tickets_get_tickets_title()}
 		parent={[
-			{ label: m.public_events(), href: resolve('events') },
+			{ label: m.public_events_label(), href: resolve('events') },
 			{ label: evt.title, href: resolve(`events/${params.id}`) }
 		]}
 	/>
@@ -70,7 +70,7 @@
 			<p class="opacity-70">
 				{fullDate(evt.startsAt)}
 				{#if evt.doorsAt}
-					{m.public_events_id_tickets_doors({ formatTime: formatTime(evt.doorsAt) })}
+					{m.public_events_id_tickets_doors_text({ formatTime: formatTime(evt.doorsAt) })}
 				{/if}
 				· {formatEventTimeRange(evt.startsAt, evt.endsAt)}
 			</p>
@@ -79,23 +79,23 @@
 				     discount off anything. -->
 				<div class="mt-2 flex items-baseline gap-2">
 					<span class="text-lg font-bold">{formatCents(unitPrice)}</span>
-					<span class="text-muted">{m.public_events_id_tickets_suggested_per_ticket()}</span>
+					<span class="text-muted">{m.public_events_id_tickets_suggested_per_ticket_text()}</span>
 				</div>
 			{:else}
 				<div class="mt-2">
-					<Badge variant="info">{m.public_events_id_tickets_free_event()}</Badge>
+					<Badge variant="info">{m.public_events_id_tickets_free_event_label()}</Badge>
 				</div>
 			{/if}
 			{#if scaleReachesFree}
 				<!-- The scale IS the mechanism now, so the policy points at the form
 				     rather than at the door. -->
 				<p class="mt-3 text-muted text-sm">
-					{m.public_events_id_tickets_no_one_turned_away_lack()}
+					{m.public_events_id_tickets_no_one_turned_away_lack_text()}
 				</p>
 			{:else if !isFreeEvent}
 				<p class="mt-3 text-muted text-sm">
 					<ParaglideMessage
-						message={m.public_events_id_tickets_no_one_turned_away_lack_2}
+						message={m.public_events_id_tickets_no_one_turned_away_lack_2_text}
 						inputs={{}}
 						>{#snippet a({ children })}<a href={resolve('contact')} class="link"
 								>{@render children?.()}</a
@@ -107,12 +107,14 @@
 				<p class="mt-1 text-sm">
 					{#if soldOut}
 						<span class="font-medium text-error"
-							>{isFreeEvent ? m.public_full() : m.public_events_id_tickets_sold_out()}</span
+							>{isFreeEvent
+								? m.public_full_text()
+								: m.public_events_id_tickets_sold_out_text()}</span
 						>
 					{:else}
 						{(isFreeEvent
-							? m.public_events_id_tickets_spots_remaining
-							: m.public_tickets_remaining)({ remaining: data.remaining })}
+							? m.public_events_id_tickets_spots_remaining_text
+							: m.public_tickets_remaining_text)({ remaining: data.remaining })}
 					{/if}
 				</p>
 			{/if}
@@ -122,8 +124,8 @@
 	{#if soldOut}
 		<Alert type="warning"
 			>{(isFreeEvent
-				? m.public_events_id_tickets_event_full
-				: m.public_events_id_tickets_event_sold_out)()}</Alert
+				? m.public_events_id_tickets_event_full_body
+				: m.public_events_id_tickets_event_sold_out_body)()}</Alert
 		>
 	{:else if isFreeEvent}
 		<Form remote={claimFreeTicket} onsuccess={handleSuccess}>
@@ -131,7 +133,7 @@
 			<Card>
 				<CardBody class="space-y-4">
 					<Field
-						label={m.public_events_id_tickets_number_spots()}
+						label={m.public_events_id_tickets_number_spots_label()}
 						field={claimFreeTicket.fields.quantity}
 					>
 						<Select
@@ -150,20 +152,20 @@
 						<Field
 							field={claimFreeTicket.fields.attendeeName}
 							type="text"
-							label={m.public_name()}
+							label={m.public_name_label()}
 							value={attendeeName}
 						/>
 
 						<Field
 							field={claimFreeTicket.fields.attendeeEmail}
 							type="email"
-							label={m.public_email()}
+							label={m.public_email_label()}
 							value={attendeeEmail}
 						/>
 					{/if}
 
 					<SubmitButton
-						label={m.public_events_id_tickets_get({
+						label={m.public_events_id_tickets_get_label({
 							value: quantity > 1 ? `${quantity} tickets` : 'ticket'
 						})}
 						variant="primary"
@@ -181,7 +183,7 @@
 					     caption points at, so as children this select had no accessible
 					     name at all and read as "combo box, 1" (#994). -->
 					<Field
-						label={m.public_events_id_tickets_number_tickets()}
+						label={m.public_events_id_tickets_number_tickets_label()}
 						field={purchaseTickets.fields.quantity}
 					>
 						{#snippet input(id)}
@@ -203,14 +205,14 @@
 						<Field
 							field={purchaseTickets.fields.attendeeName}
 							type="text"
-							label={m.public_name()}
+							label={m.public_name_label()}
 							value={attendeeName}
 						/>
 
 						<Field
 							field={purchaseTickets.fields.attendeeEmail}
 							type="email"
-							label={m.public_email()}
+							label={m.public_email_label()}
 							value={attendeeEmail}
 						/>
 					{/if}
@@ -218,7 +220,7 @@
 					{#if data.soldByBand}
 						<!-- #1203: a band's own gig. Its share is paid to it at the sale. -->
 						<p class="text-muted text-sm">
-							{m.public_events_id_tickets_band_sells_gig_through_collective()}
+							{m.public_events_id_tickets_band_sells_gig_through_collective_text()}
 						</p>
 					{/if}
 

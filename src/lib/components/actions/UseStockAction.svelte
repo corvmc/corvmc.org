@@ -28,9 +28,9 @@
 <Action
 	action={useStock}
 	data-testid="use-stock"
-	label={m.actions_use_stock_use()}
+	label={m.actions_use_stock_use_label()}
 	modalTitle={m.actions_use_stock_modal_title()}
-	successToast={m.actions_recorded()}
+	successToast={m.actions_recorded_toast()}
 	{variant}
 	{size}
 	class={className}
@@ -39,7 +39,12 @@
 >
 	{#snippet form()}
 		<input {...fields.itemId.as('hidden', itemId)} />
-		<Field field={fields.quantity} type="number" label={m.actions_use_stock_how_many()} value={1} />
-		<Field field={fields.notes} type="textarea" label={m.actions_use_stock_what()} />
+		<Field
+			field={fields.quantity}
+			type="number"
+			label={m.actions_use_stock_how_many_label()}
+			value={1}
+		/>
+		<Field field={fields.notes} type="textarea" label={m.actions_use_stock_what_label()} />
 	{/snippet}
 </Action>

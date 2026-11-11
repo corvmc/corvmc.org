@@ -23,10 +23,10 @@
 <div class="flex w-max gap-2">
 	<Action
 		action={pauseInstructor}
-		label={m.staff_members_instructors_end_grant_actions_pause()}
-		modalTitle={m.staff_members_instructors_end_grant_actions_pause_2({ name })}
-		submitLabel={m.staff_members_instructors_end_grant_actions_pause()}
-		successToast={m.staff_members_instructors_end_grant_actions_paused()}
+		label={m.staff_members_instructors_end_grant_actions_pause_label()}
+		modalTitle={m.staff_members_instructors_end_grant_actions_pause_2_title({ name })}
+		submitLabel={m.staff_members_instructors_end_grant_actions_pause_label()}
+		successToast={m.staff_members_instructors_end_grant_actions_paused_toast()}
 		variant="ghost"
 		size="sm"
 		onsuccess={() => refreshAll()}
@@ -36,12 +36,12 @@
 				<input {...pauseFields.id.as('hidden', id)} />
 				<FormField
 					field={pauseFields.note}
-					label={m.staff_members_instructors_end_grant_actions_why()}
+					label={m.staff_members_instructors_end_grant_actions_why_label()}
 					type="textarea"
 					required
 				/>
 				<p class="text-subtle">
-					{m.staff_members_instructors_end_grant_actions_they_stop_being()}
+					{m.staff_members_instructors_end_grant_actions_they_stop_being_text()}
 				</p>
 			</div>
 		{/snippet}
@@ -49,10 +49,10 @@
 
 	<Action
 		action={retireInstructor}
-		label={m.staff_retire()}
-		modalTitle={m.staff_members_instructors_end_grant_actions_retire({ name })}
-		submitLabel={m.staff_retire()}
-		successToast={m.staff_retired()}
+		label={m.staff_retire_label()}
+		modalTitle={m.staff_members_instructors_end_grant_actions_retire_title({ name })}
+		submitLabel={m.staff_retire_label()}
+		successToast={m.staff_retired_toast()}
 		variant="ghost"
 		size="sm"
 		onsuccess={() => refreshAll()}
@@ -62,12 +62,12 @@
 				<input {...retireFields.id.as('hidden', id)} />
 				<FormField
 					field={retireFields.note}
-					label={m.staff_members_instructors_end_grant_actions_why()}
+					label={m.staff_members_instructors_end_grant_actions_why_label()}
 					type="textarea"
 					required
 				/>
 				<p class="text-subtle">
-					{m.staff_members_instructors_end_grant_actions_someone_who_has()}
+					{m.staff_members_instructors_end_grant_actions_someone_who_has_text()}
 				</p>
 			</div>
 		{/snippet}

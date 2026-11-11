@@ -34,7 +34,7 @@
 
 <Action
 	action={unpublishBandEvent}
-	label={m.actions_unpublish()}
+	label={m.actions_unpublish_label()}
 	successToast={m.actions_band_unpublish_event_success_toast()}
 	{variant}
 	{size}
@@ -46,7 +46,7 @@
 		<input {...fields.slug.as('hidden', slug)} />
 		<input {...fields.eventId.as('hidden', eventId)} />
 		<p class="py-2">
-			{m.actions_band_unpublish_event_take_event_back_draft_stops()}
+			{m.actions_band_unpublish_event_take_event_back_draft_stops_text()}
 		</p>
 	{/snippet}
 </Action>

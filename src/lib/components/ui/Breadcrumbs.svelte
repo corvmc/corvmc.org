@@ -10,7 +10,7 @@
 
 {#if crumbs.length > 0}
 	<nav
-		aria-label={m.ui_breadcrumb()}
+		aria-label={m.ui_breadcrumb_label()}
 		class="breadcrumbs py-0 text-xs text-base-content/60 {className}"
 	>
 		<ol>

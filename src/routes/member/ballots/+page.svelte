@@ -12,7 +12,7 @@
 	const { ballots, committees } = $derived(await getMemberBallots());
 </script>
 
-<PageHeader title={m.member_ballots()} subtitle={m.member_member()}>
+<PageHeader title={m.member_ballots_title()} subtitle={m.member_member_body()}>
 	{#if committees.length > 0}
 		<CreateBallotAction kind="group" panel="member" {committees} />
 	{/if}
@@ -21,8 +21,8 @@
 <PageContent>
 	{#if ballots.length === 0}
 		<EmptyState
-			title={m.member_ballots_no_ballots_yet()}
-			description={m.member_ballots_description()}
+			title={m.member_ballots_no_ballots_yet_title()}
+			description={m.member_ballots_description_body()}
 		/>
 	{:else}
 		<BallotTable rows={ballots} panel="member" />

@@ -16,7 +16,7 @@
 		<div class="flex items-center gap-2">
 			<IconClock size={18} class="text-gray-400" />
 			<span class="text-gray-400"
-				>{m.member_membership_free_hours_remaining_loading_free_hours()}</span
+				>{m.member_membership_free_hours_remaining_loading_free_hours_text()}</span
 			>
 		</div>
 	{:then membership}
@@ -26,7 +26,7 @@
 			<div class="flex items-center gap-2">
 				<IconClock size={18} class={hasHours ? 'text-success' : 'opacity-40'} />
 				<ParaglideMessage
-					message={m.member_membership_free_hours_remaining_free_hours_remaining}
+					message={m.member_membership_free_hours_remaining_free_hours_remaining_text}
 					inputs={{ hoursRemaining }}
 					>{#snippet span({ children })}<span
 							class={hasHours ? 'font-medium' : 'font-medium opacity-40'}
@@ -38,7 +38,7 @@
 			</div>
 			{#if membership.creditsResetAt}
 				<span class="text-sm {hasHours ? 'opacity-60' : 'opacity-30'}">
-					{m.member_membership_free_hours_remaining_resets({
+					{m.member_membership_free_hours_remaining_resets_text({
 						creditsToHours: creditsToHours(membership.hoursPerReset),
 						formatDate: formatDate(new Date(membership.creditsResetAt))
 					})}
@@ -47,13 +47,13 @@
 		{:else}
 			<div class="flex items-center gap-3">
 				<IconClock size={18} class="shrink-0 opacity-40" />
-				<span>{m.member_membership_free_hours_remaining_get_free_practice_hou()}</span>
+				<span>{m.member_membership_free_hours_remaining_get_free_practice_hou_text()}</span>
 			</div>
 			<Button href="/member/membership" variant="default" size="sm" class="self-end sm:self-auto"
-				>{m.member_membership_free_hours_remaining_learn_more()}</Button
+				>{m.member_membership_free_hours_remaining_learn_more_label()}</Button
 			>
 		{/if}
 	{:catch error}
-		<span class="text-subtle">{m.ui_load_failed({ error: errorMessage(error) })}</span>
+		<span class="text-subtle">{m.ui_load_failed_text({ error: errorMessage(error) })}</span>
 	{/await}
 </div>

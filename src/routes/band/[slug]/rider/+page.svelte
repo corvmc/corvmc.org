@@ -81,7 +81,7 @@
 	const mine = $derived(roster.find((m) => m.userId === data.viewerId) ?? null);
 
 	const contactOptions = $derived([
-		{ value: '', label: msg.band_nobody_yet() },
+		{ value: '', label: msg.band_nobody_yet_label() },
 		...roster.map((m) => ({ value: m.userId, label: m.name }))
 	]);
 
@@ -130,8 +130,8 @@
 
 <PageHeader
 	width="3xl"
-	title={msg.band_tech_rider()}
-	subtitle={msg.band_slug_rider_what_needs_stage({ name: layout.band.name })}
+	title={msg.band_tech_rider_title()}
+	subtitle={msg.band_slug_rider_what_needs_stage_body({ name: layout.band.name })}
 	documentTitle={msg.band_slug_rider_document_title({ name: layout.band.name })}
 >
 	<Button
@@ -139,21 +139,21 @@
 		variant="ghost"
 		size="sm"
 	>
-		{msg.band_slug_rider_input_list()}
+		{msg.band_slug_rider_input_list_label()}
 	</Button>
 </PageHeader>
 
 <PageContent width="3xl">
 	{#if data.isStaffViewer}
 		<Alert type="info" class="mb-4">
-			{msg.band_slug_rider_re_reading_as_staff_only()}
+			{msg.band_slug_rider_re_reading_as_staff_only_body()}
 		</Alert>
 	{/if}
 
 	{#if overCapacity}
 		<Alert type="warning" class="mb-4">
 			<ParaglideMessage
-				message={msg.band_slug_rider_rider_asks_channels_room_s}
+				message={msg.band_slug_rider_rider_asks_channels_room_s_body}
 				inputs={{ channelCount: rider.channelCount, consoleChannels: data.consoleChannels }}
 				>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 					>{/snippet}</ParaglideMessage
@@ -162,11 +162,11 @@
 	{/if}
 
 	<div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-		<StatCard title={msg.band_channels()} value={rider.channelCount} size="sm" />
-		<StatCard title={msg.band_need_48v()} value={rider.phantomCount} size="sm" />
-		<StatCard title={msg.band_monitor_mixes()} value={rider.monitorMixCount} size="sm" />
+		<StatCard title={msg.band_channels_title()} value={rider.channelCount} size="sm" />
+		<StatCard title={msg.band_need_48v_title()} value={rider.phantomCount} size="sm" />
+		<StatCard title={msg.band_monitor_mixes_title()} value={rider.monitorMixCount} size="sm" />
 		<StatCard
-			title={msg.band_slug_rider_needed_from_cmc()}
+			title={msg.band_slug_rider_needed_from_cmc_title()}
 			value={rider.venueProvidedCount}
 			size="sm"
 		/>
@@ -183,8 +183,8 @@
 				<RiderCorner
 					bandId={data.bandId}
 					ownerUserId={data.viewerId}
-					title={msg.band_gear()}
-					subtitle={msg.band_slug_rider_what_bring_what_needs_plugged()}
+					title={msg.band_gear_title()}
+					subtitle={msg.band_slug_rider_what_bring_what_needs_plugged_body()}
 					initial={toRows(data.viewerId)}
 					{roster}
 					mine
@@ -200,7 +200,7 @@
 						bandId={data.bandId}
 						ownerUserId={member.userId}
 						title={member.name}
-						subtitle={data.canManage ? msg.band_slug_rider_can_edit_as_admin_but() : undefined}
+						subtitle={data.canManage ? msg.band_slug_rider_can_edit_as_admin_but_body() : undefined}
 						initial={rows}
 						{roster}
 						canEdit={data.canManage}
@@ -213,8 +213,8 @@
 				<RiderCorner
 					bandId={data.bandId}
 					ownerUserId={null}
-					title={msg.band_slug_rider_band_s_own_gear()}
-					subtitle={msg.band_slug_rider_shared_kit_belongs_nobody_particular()}
+					title={msg.band_slug_rider_band_s_own_gear_title()}
+					subtitle={msg.band_slug_rider_shared_kit_belongs_nobody_particular_body()}
 					initial={toRows(null)}
 					{roster}
 					canEdit={data.canManage}
@@ -223,14 +223,14 @@
 			{/if}
 		{/key}
 
-		<InfoCard title={msg.band_stage_plot()}>
+		<InfoCard title={msg.band_stage_plot_title()}>
 			<p class="mb-3 text-xs text-base-content/60">
-				{msg.band_slug_rider_where_everything_stands_drag_use()}
+				{msg.band_slug_rider_where_everything_stands_drag_use_text()}
 			</p>
 			<Form
 				remote={saveRiderPlacements}
 				guard
-				successToast={msg.band_slug_rider_stage_plot_saved()}
+				successToast={msg.band_slug_rider_stage_plot_saved_toast()}
 				onsuccess={refresh}
 				class="space-y-3"
 			>
@@ -238,18 +238,18 @@
 				<StagePlot items={plotItems} field={placementFields.placements} readonly={!canPlaceAny} />
 				{#if canPlaceAny}
 					<div class="flex justify-end">
-						<SubmitButton label={msg.band_slug_rider_save_plot()} />
+						<SubmitButton label={msg.band_slug_rider_save_plot_label()} />
 					</div>
 				{/if}
 			</Form>
 		</InfoCard>
 
-		<InfoCard title={msg.band_slug_rider_rest_rider()}>
+		<InfoCard title={msg.band_slug_rider_rest_rider_title()}>
 			{#if data.canManage}
 				<Form
 					remote={saveRiderDetails}
 					guard
-					successToast={msg.band_saved()}
+					successToast={msg.band_saved_toast()}
 					onsuccess={refresh}
 					class="space-y-4"
 				>
@@ -258,17 +258,17 @@
 						<Field
 							field={detailFields.techContactUserId}
 							type="select"
-							label={msg.band_slug_rider_who_engineer_should_call()}
+							label={msg.band_slug_rider_who_engineer_should_call_label()}
 							options={contactOptions}
 							value={rider.techContactUserId ?? ''}
-							description={msg.band_slug_rider_every_rider_guide_asks_one()}
+							description={msg.band_slug_rider_every_rider_guide_asks_one_body()}
 						/>
 						<Field
 							field={detailFields.monitorFormat}
 							type="select"
-							label={msg.band_monitors()}
+							label={msg.band_monitors_label()}
 							options={[
-								{ value: '', label: msg.band_slug_rider_no_preference() },
+								{ value: '', label: msg.band_slug_rider_no_preference_label() },
 								...riderMonitorFormatOptions
 							]}
 							value={rider.monitorFormat ?? ''}
@@ -277,29 +277,29 @@
 					<Field
 						field={detailFields.notes}
 						type="textarea"
-						label={msg.band_slug_rider_anything_else()}
+						label={msg.band_slug_rider_anything_else_label()}
 						value={rider.notes ?? ''}
 						maxlength={RIDER_NOTES_MAX}
-						description={msg.band_slug_rider_power_load_anything_not_piece()}
+						description={msg.band_slug_rider_power_load_anything_not_piece_body()}
 					/>
-					<div class="flex justify-end"><SubmitButton label={msg.band_save()} /></div>
+					<div class="flex justify-end"><SubmitButton label={msg.band_save_label()} /></div>
 				</Form>
 			{:else}
 				<DefinitionList>
-					<Fact label={msg.band_slug_rider_who_engineer_should_call()}>
+					<Fact label={msg.band_slug_rider_who_engineer_should_call_label()}>
 						{roster.find((m) => m.userId === rider.techContactUserId)?.name ??
-							msg.band_nobody_yet()}
+							msg.band_nobody_yet_text()}
 					</Fact>
 					{#if rider.notes}
-						<Fact label={msg.band_notes()} class="whitespace-pre-line">{rider.notes}</Fact>
+						<Fact label={msg.band_notes_label()} class="whitespace-pre-line">{rider.notes}</Fact>
 					{/if}
 				</DefinitionList>
 			{/if}
 		</InfoCard>
 
-		<InfoCard title={msg.band_slug_rider_hand_over_one_already_have()}>
+		<InfoCard title={msg.band_slug_rider_hand_over_one_already_have_title()}>
 			<p class="mb-4 text-xs text-base-content/60">
-				{msg.band_slug_rider_filling_list_above_not_compulsory()}
+				{msg.band_slug_rider_filling_list_above_not_compulsory_text()}
 			</p>
 			<RiderUploads
 				bandId={data.bandId}

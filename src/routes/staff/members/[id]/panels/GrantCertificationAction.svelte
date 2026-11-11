@@ -28,11 +28,11 @@
 	{@const options = catalog.current.map((c) => ({ value: c.id, label: c.name }))}
 	<Action
 		action={grantCertification}
-		label={m.staff_grant()}
+		label={m.staff_grant_label()}
 		variant="default"
 		size="sm"
 		modalTitle={m.staff_members_id_panels_grant_certification_modal_title()}
-		submitLabel={m.staff_grant()}
+		submitLabel={m.staff_grant_label()}
 		successToast={m.staff_members_id_panels_grant_certification_success_toast()}
 		{onsuccess}
 	>
@@ -40,25 +40,29 @@
 			<input {...grantCertification.fields.userId.as('hidden', userId)} />
 			<FormField
 				field={grantCertification.fields.certificationId}
-				label={m.staff_members_id_panels_grant_certification_certification()}
+				label={m.staff_members_id_panels_grant_certification_certification_label()}
 				type="select"
 				{options}
 			/>
 			<FormField
 				field={grantCertification.fields.grantedOn}
-				label={m.staff_granted()}
+				label={m.staff_granted_label()}
 				type="date"
 				value={clubToday()}
 				max={clubToday()}
-				description={m.staff_members_id_panels_grant_certification_expiry_worked_ou()}
+				description={m.staff_members_id_panels_grant_certification_expiry_worked_ou_body()}
 			/>
 			<FormField
 				field={grantCertification.fields.reference}
-				label={m.staff_members_id_panels_grant_certification_card_licence_num()}
+				label={m.staff_members_id_panels_grant_certification_card_licence_num_label()}
 				type="text"
-				description={m.staff_members_id_panels_grant_certification_external_card_le()}
+				description={m.staff_members_id_panels_grant_certification_external_card_le_body()}
 			/>
-			<FormField field={grantCertification.fields.notes} label={m.staff_notes()} type="textarea" />
+			<FormField
+				field={grantCertification.fields.notes}
+				label={m.staff_notes_label()}
+				type="textarea"
+			/>
 		{/snippet}
 	</Action>
 {/if}

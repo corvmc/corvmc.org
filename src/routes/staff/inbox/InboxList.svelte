@@ -132,12 +132,12 @@
 			variant={filterPanel.open ? 'primary' : 'default'}
 			size="sm"
 			aria-label={activeCount()
-				? m.staff_inbox_inbox_list_filters_active({ activeCount: activeCount() })
-				: m.staff_inbox_inbox_list_filters()}
+				? m.staff_inbox_inbox_list_filters_active_label({ activeCount: activeCount() })
+				: m.staff_inbox_inbox_list_filters_label()}
 			onclick={() => (filterPanel.open = !filterPanel.open)}
 		>
 			<IconFilter size={16} />
-			<span class="hidden @md:inline">{m.staff_inbox_inbox_list_filters()}</span>
+			<span class="hidden @md:inline">{m.staff_inbox_inbox_list_filters_label()}</span>
 			{#if activeCount()}<Badge class="ml-1">{activeCount()}</Badge>{/if}
 		</Button>
 		{#if activeCount()}
@@ -145,7 +145,7 @@
 				variant="ghost"
 				size="sm"
 				onclick={reset}
-				aria-label={m.staff_inbox_inbox_list_clear_filters()}
+				aria-label={m.staff_inbox_inbox_list_clear_filters_label()}
 			>
 				<IconX size={16} />
 			</Button>
@@ -155,17 +155,17 @@
 	{#if sortedByWaiting}
 		<!-- The order is not obvious from the rows, and an unexplained order reads
 		     as an arbitrary one. -->
-		<p class="text-subtle text-xs">{m.staff_inbox_inbox_list_sorted_by_longest_waiting()}</p>
+		<p class="text-subtle text-xs">{m.staff_inbox_inbox_list_sorted_by_longest_waiting_text()}</p>
 	{/if}
 
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		<DataList
 			{result}
 			empty={filters.view === 'open'
-				? m.staff_inbox_inbox_list_nothing_open_queue_clear()
+				? m.staff_inbox_inbox_list_nothing_open_queue_clear_body()
 				: filters.view === 'snoozed'
-					? m.staff_inbox_inbox_list_nothing_waiting_date_reply()
-					: m.staff_inbox_inbox_list_no_conversations_found()}
+					? m.staff_inbox_inbox_list_nothing_waiting_date_reply_body()
+					: m.staff_inbox_inbox_list_no_conversations_found_body()}
 			onpage={(p) => (filters.page = p)}
 		>
 			{#snippet children(threads)}

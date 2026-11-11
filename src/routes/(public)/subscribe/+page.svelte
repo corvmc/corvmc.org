@@ -18,12 +18,12 @@
 
 <div class="mx-auto max-w-lg space-y-6 p-6">
 	<div class="text-center">
-		<h1 class="text-2xl font-bold">{m.public_subscribe()}</h1>
-		<p class="mt-1 opacity-60">{m.public_subscribe_join_our_mailing_lists_stay()}</p>
+		<h1 class="text-2xl font-bold">{m.public_subscribe_title()}</h1>
+		<p class="mt-1 opacity-60">{m.public_subscribe_join_our_mailing_lists_stay_text()}</p>
 	</div>
 
 	{#if success}
-		<Alert type="success">{m.public_subscribe_ve_been_subscribed_check_inbox()}</Alert>
+		<Alert type="success">{m.public_subscribe_ve_been_subscribed_check_inbox_body()}</Alert>
 		<Button
 			variant="ghost"
 			size="sm"
@@ -32,11 +32,11 @@
 				selectedSlug = '';
 			}}
 		>
-			{m.public_subscribe_subscribe_another_list()}
+			{m.public_subscribe_subscribe_another_list_label()}
 		</Button>
 	{:else if audiences.length === 0}
 		<p class="text-center opacity-60">
-			{m.public_subscribe_no_mailing_lists_currently_accepting()}
+			{m.public_subscribe_no_mailing_lists_currently_accepting_text()}
 		</p>
 	{:else}
 		<Form
@@ -46,7 +46,7 @@
 			}}
 			class="space-y-4"
 		>
-			<Field field={fields.slug} label={m.public_subscribe_choose_list()}>
+			<Field field={fields.slug} label={m.public_subscribe_choose_list_label()}>
 				<div class="space-y-2">
 					{#each audiences as a (a.id)}
 						<label
@@ -73,14 +73,14 @@
 			<Field
 				field={subscribeToAudience.fields.email}
 				type="email"
-				label={m.public_email()}
-				placeholder={m.public_email_com()}
+				label={m.public_email_label()}
+				placeholder={m.public_email_com_placeholder()}
 			/>
 			<Field
 				field={subscribeToAudience.fields.name}
 				type="text"
-				label={m.public_name_optional()}
-				placeholder={m.public_name_2()}
+				label={m.public_name_optional_label()}
+				placeholder={m.public_name_2_placeholder()}
 			/>
 
 			<Turnstile
@@ -89,7 +89,7 @@
 				theme="auto"
 			/>
 
-			<SubmitButton label={m.public_subscribe()} variant="primary" class="w-full" />
+			<SubmitButton label={m.public_subscribe_label()} variant="primary" class="w-full" />
 		</Form>
 	{/if}
 </div>

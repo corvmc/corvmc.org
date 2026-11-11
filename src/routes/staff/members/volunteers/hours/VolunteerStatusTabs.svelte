@@ -21,10 +21,10 @@
 	class="mb-4"
 	collapse
 	tabs={[
-		{ key: 'pending', label: m.staff_pending(), badge: c.pending },
-		{ key: 'approved', label: m.staff_approved(), badge: c.approved },
-		{ key: 'rejected', label: m.staff_returned(), badge: c.rejected },
-		{ key: 'all', label: m.staff_all(), badge: c.all }
+		{ key: 'pending', label: m.staff_pending_label(), badge: c.pending },
+		{ key: 'approved', label: m.staff_approved_label(), badge: c.approved },
+		{ key: 'rejected', label: m.staff_returned_label(), badge: c.rejected },
+		{ key: 'all', label: m.staff_all_label(), badge: c.all }
 	]}
 	active={view}
 	onchange={(key) => {

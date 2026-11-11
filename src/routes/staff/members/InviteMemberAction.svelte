@@ -22,16 +22,19 @@
 			| undefined;
 		if (r?.kind === 'existing') {
 			const href = resolve('/staff/members/[id]', { id: r.userId });
-			toast.info(m.staff_members_invite_member_already_has_account({ name: r.name }), {
-				action: { label: m.staff_open(), onClick: () => goto(href) }
+			toast.info(m.staff_members_invite_member_already_has_account_toast({ name: r.name }), {
+				action: { label: m.staff_open_label(), onClick: () => goto(href) }
 			});
 		} else if (r?.kind === 'pending') {
 			const href = resolve('staff/members/invites');
-			toast.info(m.staff_members_invite_member_already_has_pending_invitation({ email: r.email }), {
-				action: { label: m.staff_open(), onClick: () => goto(href) }
-			});
+			toast.info(
+				m.staff_members_invite_member_already_has_pending_invitation_toast({ email: r.email }),
+				{
+					action: { label: m.staff_open_label(), onClick: () => goto(href) }
+				}
+			);
 		} else if (r?.kind === 'invited') {
-			toast.success(m.staff_members_invite_member_invitation_sent({ email: r.email }));
+			toast.success(m.staff_members_invite_member_invitation_sent_toast({ email: r.email }));
 		}
 	}
 </script>
@@ -39,18 +42,18 @@
 {#if groups}
 	<Action
 		action={inviteMemberForm}
-		label={m.staff_members_invite_member_invite_member()}
-		modalTitle={m.staff_members_invite_member_invite_member()}
+		label={m.staff_members_invite_member_invite_member_label()}
+		modalTitle={m.staff_members_invite_member_invite_member_title()}
 		{onsuccess}
 	>
 		{#snippet form()}
-			<FormField field={fields.email} type="email" label={m.staff_email()} required />
-			<FormField field={fields.name} label={m.staff_members_invite_member_name_optional()} />
+			<FormField field={fields.email} type="email" label={m.staff_email_label()} required />
+			<FormField field={fields.name} label={m.staff_members_invite_member_name_optional_label()} />
 			{#if groups.length > 0}
 				<CheckboxGroup
 					field={fields.groupIds}
-					legend={m.staff_members_invite_member_legend()}
-					description={m.staff_members_invite_member_description()}
+					legend={m.staff_members_invite_member_legend_title()}
+					description={m.staff_members_invite_member_description_body()}
 					options={groups.map((g) => ({
 						value: g.id,
 						label: g.name,

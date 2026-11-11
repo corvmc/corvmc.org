@@ -15,9 +15,9 @@
 
 <Action
 	action={createShow}
-	label={m.member_groups_slug_new_show_new_show()}
+	label={m.member_groups_slug_new_show_new_show_label()}
 	modalTitle={m.member_groups_slug_new_show_modal_title()}
-	submitLabel={m.member_open()}
+	submitLabel={m.member_open_label()}
 	successToast={m.member_groups_slug_new_show_success_toast()}
 	size="sm"
 	onsuccess={(result) => {
@@ -28,17 +28,21 @@
 	{#snippet form()}
 		<Field
 			field={fields.title}
-			label={m.member_name()}
-			description={m.member_groups_slug_new_show_description()}
+			label={m.member_name_label()}
+			description={m.member_groups_slug_new_show_description_body()}
 		/>
-		<Field field={fields.eventDate} type="date" label={m.member_date()} />
+		<Field field={fields.eventDate} type="date" label={m.member_date_label()} />
 		<div class="grid grid-cols-2 gap-3">
 			<Field
 				field={fields.eventStartTime}
 				type="time"
-				label={m.member_groups_slug_new_show_starts()}
+				label={m.member_groups_slug_new_show_starts_label()}
 			/>
-			<Field field={fields.eventEndTime} type="time" label={m.member_groups_slug_new_show_ends()} />
+			<Field
+				field={fields.eventEndTime}
+				type="time"
+				label={m.member_groups_slug_new_show_ends_label()}
+			/>
 		</div>
 	{/snippet}
 </Action>

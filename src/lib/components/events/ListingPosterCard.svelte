@@ -41,11 +41,11 @@
 			src={poster.src}
 			srcset={poster.srcset}
 			sizes={poster.sizes}
-			alt={m.events_listing_poster_card_alt()}
+			alt={m.events_listing_poster_card_alt_text()}
 			class="max-h-64 rounded object-contain"
 		/>
 	{:else}
-		<p class="text-muted">{m.events_listing_poster_card_no_poster_uploaded()}</p>
+		<p class="text-muted">{m.events_listing_poster_card_no_poster_uploaded_text()}</p>
 	{/if}
 
 	{#if !cancelled || uploadWhileCancelled}
@@ -56,9 +56,9 @@
 				accept="image/jpeg,image/png,image/webp"
 				showPreview={false}
 				emptyLabel={posterUrl
-					? m.events_listing_poster_card_replace_poster()
-					: m.events_listing_poster_card_upload_poster()}
-				aria-label={m.events_listing_poster_card_upload_poster()}
+					? m.events_listing_poster_card_replace_poster_title()
+					: m.events_listing_poster_card_upload_poster_title()}
+				aria-label={m.events_listing_poster_card_upload_poster_label()}
 			/>
 			{#if !cancelled}
 				<!-- The fallback when no art arrives: a real poster, so it passes the publish gate. -->
@@ -75,7 +75,7 @@
 					{#snippet form()}
 						<input {...useTemplateFlyerAsPoster.fields.eventId.as('hidden', eventId)} />
 						<p class="text-sm">
-							{m.events_listing_poster_card_flyer_drawn_from_title_date()}
+							{m.events_listing_poster_card_flyer_drawn_from_title_date_text()}
 						</p>
 					{/snippet}
 				</Action>

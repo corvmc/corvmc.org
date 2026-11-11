@@ -5,9 +5,9 @@
 
 	const totals = await getStaffBandTotals();
 	const stats = $derived([
-		{ title: m.staff_groups_band_totals_active_bands(), value: totals.active },
-		{ title: m.staff_premium(), value: totals.premium },
-		{ title: m.staff_groups_band_totals_new_30_days(), value: totals.newBands }
+		{ title: m.staff_groups_band_totals_active_bands_title(), value: totals.active },
+		{ title: m.staff_premium_title(), value: totals.premium },
+		{ title: m.staff_groups_band_totals_new_30_days_title(), value: totals.newBands }
 	]);
 </script>
 

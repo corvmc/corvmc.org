@@ -28,7 +28,7 @@
 			<div class="card shadow-xl surface">
 				<CardBody class="gap-4">
 					<CardTitle size="lg" level={2} class="justify-center"
-						>{m.public_forgot_password_reset_password()}</CardTitle
+						>{m.public_forgot_password_reset_password_title()}</CardTitle
 					>
 
 					{#if submitted}
@@ -38,11 +38,11 @@
 							and for a throttled one.
 						-->
 						<Alert type="success" class="text-sm">
-							{m.public_forgot_password_if_address_has_account_reset()}
+							{m.public_forgot_password_if_address_has_account_reset_body()}
 						</Alert>
 					{:else}
 						<p class="text-muted">
-							{m.public_forgot_password_enter_email_address_account_we()}
+							{m.public_forgot_password_enter_email_address_account_we_text()}
 						</p>
 
 						<Form
@@ -50,9 +50,14 @@
 							onsuccess={() => (submitted = true)}
 							class="flex flex-col gap-3"
 						>
-							<FormField field={fields.email} type="email" label={m.public_email()} required />
+							<FormField
+								field={fields.email}
+								type="email"
+								label={m.public_email_label()}
+								required
+							/>
 							<SubmitButton
-								label={m.public_forgot_password_send_reset_link()}
+								label={m.public_forgot_password_send_reset_link_label()}
 								variant="primary"
 								class="mt-1 w-full"
 							/>
@@ -60,7 +65,7 @@
 					{/if}
 
 					<div class="text-center text-sm">
-						<a class="link" href={resolve('login')}>{m.public_forgot_password_back_sign()}</a>
+						<a class="link" href={resolve('login')}>{m.public_forgot_password_back_sign_text()}</a>
 					</div>
 				</CardBody>
 			</div>

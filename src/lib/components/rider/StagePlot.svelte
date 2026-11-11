@@ -128,10 +128,10 @@
 	bind:this={stage}
 	class="stage"
 	role="group"
-	aria-label={m.rider_stage_plot_stage_plot_audience_at_bottom()}
+	aria-label={m.rider_stage_plot_stage_plot_audience_at_bottom_label()}
 >
-	<span class="stage-edge stage-edge-back">{m.rider_stage_plot_back_stage()}</span>
-	<span class="stage-edge stage-edge-front">{m.rider_stage_plot_audience()}</span>
+	<span class="stage-edge stage-edge-back">{m.rider_stage_plot_back_stage_text()}</span>
+	<span class="stage-edge stage-edge-front">{m.rider_stage_plot_audience_text()}</span>
 
 	{#each onStage as item (item.id)}
 		{@const at = placed[item.id]!}
@@ -141,7 +141,7 @@
 			class:pin-static={readonly || !item.movable}
 			style="left:{at.x}%; top:{at.y}%"
 			disabled={readonly || !item.movable}
-			aria-label={m.rider_stage_plot_percent_across_percent_back_arrow({
+			aria-label={m.rider_stage_plot_percent_across_percent_back_arrow_label({
 				label: item.label,
 				value: item.ownerName ? `, ${item.ownerName}` : '',
 				x: at.x,
@@ -163,7 +163,7 @@
 {#if !readonly}
 	<div class="mt-3 flex flex-wrap items-center gap-2">
 		{#if unplaced.length}
-			<span class="text-xs text-base-content/60">{m.rider_stage_plot_not_stage_yet()}</span>
+			<span class="text-xs text-base-content/60">{m.rider_stage_plot_not_stage_yet_text()}</span>
 			{#each unplaced as item (item.id)}
 				<Button
 					type="button"
@@ -176,16 +176,16 @@
 				</Button>
 			{/each}
 		{:else}
-			<span class="text-xs text-base-content/60">{m.rider_stage_plot_everything_stage()}</span>
+			<span class="text-xs text-base-content/60">{m.rider_stage_plot_everything_stage_text()}</span>
 		{/if}
 	</div>
 
 	<details class="mt-3">
 		<summary class="cursor-pointer text-xs text-base-content/60"
-			>{m.rider_stage_plot_place_exactly()}</summary
+			>{m.rider_stage_plot_place_exactly_label()}</summary
 		>
 		<p class="mt-2 text-xs text-base-content/60">
-			{m.rider_stage_plot_percentages_across_back_same_two()}
+			{m.rider_stage_plot_percentages_across_back_same_two_text()}
 		</p>
 		<div class="mt-2 space-y-2">
 			{#each onStage as item, i (item.id)}
@@ -198,7 +198,7 @@
 					<Field
 						id="{safeFieldPrefix(item.id)}_x_{i}"
 						type="number"
-						label={m.rider_stage_plot_across()}
+						label={m.rider_stage_plot_across_label()}
 						value={String(at.x)}
 						disabled={!item.movable}
 						oninput={(e: Event) =>
@@ -210,7 +210,7 @@
 					<Field
 						id="{safeFieldPrefix(item.id)}_y_{i}"
 						type="number"
-						label={m.rider_stage_plot_back()}
+						label={m.rider_stage_plot_back_label()}
 						value={String(at.y)}
 						disabled={!item.movable}
 						oninput={(e: Event) =>
@@ -227,7 +227,7 @@
 							disabled={!item.movable}
 							onclick={() => remove(item.id)}
 						>
-							{m.rider_stage_plot_take_off()}
+							{m.rider_stage_plot_take_off_label()}
 						</Button>
 					</div>
 				</div>

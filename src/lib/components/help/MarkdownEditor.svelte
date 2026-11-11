@@ -34,7 +34,7 @@
 			class={activeTab === 'write' ? 'btn-active' : ''}
 			onclick={() => (activeTab = 'write')}
 		>
-			{m.help_markdown_editor_write()}
+			{m.help_markdown_editor_write_label()}
 		</Button>
 		<Button
 			type="button"
@@ -43,7 +43,7 @@
 			class={activeTab === 'preview' ? 'btn-active' : ''}
 			onclick={() => (activeTab = 'preview')}
 		>
-			{m.help_markdown_editor_preview()}
+			{m.help_markdown_editor_preview_label()}
 		</Button>
 		<div class="flex-1"></div>
 		{#if uploadImage}
@@ -72,7 +72,7 @@
 			{#if value.trim()}
 				<MarkdownPreview content={value} />
 			{:else}
-				<p class="text-sm italic opacity-50">{m.help_markdown_editor_nothing_preview()}</p>
+				<p class="text-sm italic opacity-50">{m.help_markdown_editor_nothing_preview_text()}</p>
 			{/if}
 		</div>
 	{/if}

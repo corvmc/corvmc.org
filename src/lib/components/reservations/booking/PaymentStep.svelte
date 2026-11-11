@@ -85,9 +85,11 @@
 	let payLabel = $derived(
 		pricing
 			? pricing.remainingCents <= 0
-				? m.reservations_booking_payment_step_pay_with_free_hours()
-				: m.reservations_booking_payment_step_pay({ formatDollars: formatDollars(chargeTotal) })
-			: m.reservations_booking_payment_step_loading()
+				? m.reservations_booking_payment_step_pay_with_free_hours_label()
+				: m.reservations_booking_payment_step_pay_label({
+						formatDollars: formatDollars(chargeTotal)
+					})
+			: m.reservations_booking_payment_step_loading_label()
 	);
 </script>
 
@@ -113,7 +115,7 @@
 			<div class="space-y-2">
 				<div class="flex justify-between">
 					<span
-						>{m.reservations_booking_payment_step_room_rental_hr_hr({
+						>{m.reservations_booking_payment_step_room_rental_hr_hr_text({
 							durationHours: pricing.durationHours,
 							formatDollars: formatDollars(pricing.hourlyRateCents)
 						})}</span
@@ -124,7 +126,7 @@
 				{#if pricing.creditsApplicable > 0}
 					<div class="flex justify-between text-success">
 						<span
-							>{m.reservations_booking_payment_step_free_hours_available({
+							>{m.reservations_booking_payment_step_free_hours_available_text({
 								creditsToHours: creditsToHours(pricing.creditsApplicable),
 								creditsToHours2: creditsToHours(pricing.freeHoursBalance)
 							})}</span
@@ -135,7 +137,7 @@
 
 				{#if pricing.remainingCents > 0 && coverFees}
 					<div class="flex justify-between text-muted">
-						<span>{m.reservations_booking_payment_step_processing_fee_coverage()}</span>
+						<span>{m.reservations_booking_payment_step_processing_fee_coverage_text()}</span>
 						<span>+${formatDollars(feeCents)}</span>
 					</div>
 				{/if}
@@ -143,9 +145,9 @@
 				<div class="divider my-1"></div>
 
 				<div class="flex justify-between font-bold">
-					<span>{m.reservations_booking_payment_step_total()}</span>
+					<span>{m.reservations_booking_payment_step_total_text()}</span>
 					<span>
-						{#if pricing.remainingCents <= 0}{m.reservations_booking_payment_step_0_00_covered_by_free()}{:else}
+						{#if pricing.remainingCents <= 0}{m.reservations_booking_payment_step_0_00_covered_by_free_text()}{:else}
 							${formatDollars(chargeTotal)}
 						{/if}
 					</span>
@@ -158,7 +160,7 @@
 					label=""
 					type="checkbox"
 					bind:value={coverFees}
-					checkboxLabel={m.reservations_booking_payment_step_checkbox_label({
+					checkboxLabel={m.reservations_booking_payment_step_checkbox_label_checkbox({
 						formatDollars: formatDollars(
 							calculateTotalWithFeeCoverage(pricing.remainingCents).feeCents
 						)
@@ -169,7 +171,7 @@
 			{#if !pricing.isSustainingMember}
 				<div class="mt-2 rounded-box border border-base-300 bg-base-200 px-4 py-3 text-sm">
 					<ParaglideMessage
-						message={m.reservations_booking_payment_step_sustaining_members_get_fre}
+						message={m.reservations_booking_payment_step_sustaining_members_get_fre_text}
 						inputs={{}}
 						>{#snippet a({ children })}<a
 								href={resolve('member/membership')}

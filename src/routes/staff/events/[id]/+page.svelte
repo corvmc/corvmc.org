@@ -113,7 +113,7 @@
 	}
 </script>
 
-<PageHeader width="3xl" title={evt.title} subtitle={m.staff_event()}>
+<PageHeader width="3xl" title={evt.title} subtitle={m.staff_event_body()}>
 	<div class="flex flex-wrap items-center gap-2">
 		{#if isProduction}
 			<!-- One entry, not two. "Manage production" and "Add production" sat
@@ -124,26 +124,26 @@
 			     (#976). -->
 			<Button href={resolve(`staff/events/${id}/production`)} variant="default" size="sm" outline>
 				{data.production
-					? m.staff_events_id_manage_production()
-					: m.staff_events_id_open_production()}
+					? m.staff_events_id_manage_production_label()
+					: m.staff_events_id_open_production_label()}
 			</Button>
 		{/if}
 
 		{#if evt.ticketingEnabled}
 			<Button href="/staff/events/{evt.id}/check-in" variant="ghost" size="sm"
-				>{m.staff_events_id_check()}</Button
+				>{m.staff_events_id_check_label()}</Button
 			>
 		{/if}
 
 		{#if evt.kind === 'market'}
 			<Button href={resolve(`staff/events/${id}/vendors`)} variant="ghost" size="sm"
-				>{m.staff_vendors()}</Button
+				>{m.staff_vendors_label()}</Button
 			>
 		{/if}
 
 		{#if (evt.status !== 'cancelled' || data.canEditCancelled) && !editing}
 			<Button variant="ghost" size="sm" data-testid="edit-listing" onclick={startEditing}>
-				{m.staff_edit()}
+				{m.staff_edit_label()}
 			</Button>
 		{/if}
 
@@ -157,22 +157,22 @@
 			     `rejected` exists so the member can fix and resubmit. -->
 			<Action
 				action={approveListing}
-				label={m.staff_approve()}
-				successToast={m.staff_events_id_approved_published()}
+				label={m.staff_approve_label()}
+				successToast={m.staff_events_id_approved_published_toast()}
 				variant="success"
 				size="sm"
 				onsuccess={() => refreshAll()}
 			>
 				{#snippet form()}
 					<input {...approveListing.fields.eventId.as('hidden', evt.id)} />
-					<p class="py-2">{m.staff_events_id_publish_listing_let_member_know()}</p>
+					<p class="py-2">{m.staff_events_id_publish_listing_let_member_know_text()}</p>
 				{/snippet}
 			</Action>
 			<Action
 				action={rejectListing}
-				label={m.staff_events_id_turn_down()}
+				label={m.staff_events_id_turn_down_label()}
 				data-testid="reject-listing"
-				successToast={m.staff_events_id_sent_back_member()}
+				successToast={m.staff_events_id_sent_back_member_toast()}
 				variant="warning"
 				size="sm"
 				onsuccess={() => refreshAll()}
@@ -182,8 +182,8 @@
 					<FormField
 						field={rejectFields.notes}
 						type="textarea"
-						label={m.staff_events_id_what_needs_change()}
-						description={m.staff_events_id_description()}
+						label={m.staff_events_id_what_needs_change_label()}
+						description={m.staff_events_id_description_body()}
 					/>
 				{/snippet}
 			</Action>
@@ -206,7 +206,7 @@
 		<StatusBadge status={evt.status} label />
 		{#if evt.publishedAt}
 			<span class="text-muted"
-				>{m.staff_events_id_published({ fullDate: fullDate(evt.publishedAt) })}</span
+				>{m.staff_events_id_published_text({ fullDate: fullDate(evt.publishedAt) })}</span
 			>
 		{/if}
 	</div>
@@ -214,7 +214,7 @@
 	<!-- What was already said, before saying it again. -->
 	{#if evt.status === 'rejected' && evt.reviewNotes}
 		<Alert type="warning">
-			{m.staff_events_id_turned_down_staff_note({ reviewNotes: evt.reviewNotes })}
+			{m.staff_events_id_turned_down_staff_note_body({ reviewNotes: evt.reviewNotes })}
 		</Alert>
 	{/if}
 
@@ -224,15 +224,15 @@
 		answer with neither. This also absorbs what used to be a second "Created
 		by" card saying the same name and email over again.
 	-->
-	<InfoCard title={m.staff_posted_by()}>
+	<InfoCard title={m.staff_posted_by_title()}>
 		{#if isProduction}
-			<p class="text-sm font-medium">{m.staff_cmc()}</p>
+			<p class="text-sm font-medium">{m.staff_cmc_text()}</p>
 		{:else if isBandEvent}
 			<p class="flex flex-wrap items-center gap-2 text-sm">
 				{#if detail.bandRef}
 					<EntityChip ref={detail.bandRef} />
 				{:else}
-					<span class="font-medium">{m.staff_events_id_band()}</span>
+					<span class="font-medium">{m.staff_events_id_band_text()}</span>
 				{/if}
 			</p>
 		{:else}
@@ -240,7 +240,7 @@
 				{#if detail.submitter}
 					<EntityChip ref={detail.submitter} />
 				{:else}
-					<span class="font-medium">{m.staff_events_id_unknown_member()}</span>
+					<span class="font-medium">{m.staff_events_id_unknown_member_text()}</span>
 				{/if}
 				{#if detail.creator?.email}
 					<span class="text-muted">{detail.creator.email}</span>
@@ -249,16 +249,16 @@
 		{/if}
 
 		<p class="mt-1 text-muted">
-			{m.staff_events_id_submitted({ fullDate: fullDate(evt.createdAt) })}
+			{m.staff_events_id_submitted_text({ fullDate: fullDate(evt.createdAt) })}
 		</p>
 
 		<!-- Community only: standing is a member-level fact, and whether a band
 		     can be flagged the same way is a different axis. -->
 		{#if isCommunityEvent && detail.submitterStanding && detail.submitterStanding.status !== 'none'}
 			<Alert type="warning" class="mt-2">
-				{m.staff_events_id_member_s_listings_checked_before()}
+				{m.staff_events_id_member_s_listings_checked_before_body()}
 				{#if detail.submitterStanding.reason}
-					{m.staff_staff_note({ reason: detail.submitterStanding.reason })}
+					{m.staff_staff_note_body({ reason: detail.submitterStanding.reason })}
 				{/if}
 			</Alert>
 		{/if}
@@ -273,24 +273,26 @@
 		noise.
 	-->
 	{#if data.production}
-		<InfoCard title={m.staff_production()}>
+		<InfoCard title={m.staff_production_title()}>
 			<div class="flex flex-wrap items-center gap-2">
 				<StatusBadge status={data.production.status} label />
 				{#if data.production.producerName}
 					<span class="text-muted"
-						>{m.staff_events_id_produced_by({ producerName: data.production.producerName })}</span
+						>{m.staff_events_id_produced_by_text({
+							producerName: data.production.producerName
+						})}</span
 					>
 				{:else}
-					<span class="text-muted">{m.staff_events_id_no_producer_yet()}</span>
+					<span class="text-muted">{m.staff_events_id_no_producer_yet_text()}</span>
 				{/if}
 			</div>
 
 			{#if data.production.loadInAt}
 				<p class="mt-2 text-sm">
-					{m.staff_events_id_load({ fullDate: fullDate(data.production.loadInAt) })}
+					{m.staff_events_id_load_text({ fullDate: fullDate(data.production.loadInAt) })}
 				</p>
 			{:else}
-				<p class="mt-2 text-muted">{m.staff_events_id_load_soundcheck_curfew_not_set()}</p>
+				<p class="mt-2 text-muted">{m.staff_events_id_load_soundcheck_curfew_not_set_text()}</p>
 			{/if}
 
 			<Button
@@ -300,7 +302,7 @@
 				outline
 				class="mt-3"
 			>
-				{m.staff_events_id_open_console()}
+				{m.staff_events_id_open_console_label()}
 			</Button>
 		</InfoCard>
 	{/if}
@@ -326,7 +328,7 @@
 			oncancel={() => (editing = false)}
 		/>
 
-		<InfoCard title={m.staff_events_id_bill()}>
+		<InfoCard title={m.staff_events_id_bill_title()}>
 			<!--
 				The bill saves separately. `setStaffEventLineup` decides consent from
 				the event's source, and folding it into `updateEvent` would put that
@@ -335,7 +337,7 @@
 			<div>
 				<Form
 					remote={setStaffEventLineup}
-					successToast={m.staff_events_id_bill_updated()}
+					successToast={m.staff_events_id_bill_updated_toast()}
 					onsuccess={() => {
 						editing = false;
 						refresh();
@@ -347,17 +349,17 @@
 						bind:value={lineup}
 						search={searchBandsForListing}
 					/>
-					<div class="mt-3"><SubmitButton label={m.staff_events_id_save_bill()} /></div>
+					<div class="mt-3"><SubmitButton label={m.staff_events_id_save_bill_label()} /></div>
 				</Form>
 			</div>
 		</InfoCard>
 	{/if}
 
-	<InfoCard title={m.staff_event()}>
+	<InfoCard title={m.staff_event_title()}>
 		<p class="text-xl font-medium">{fullDate(evt.startsAt)}</p>
 		<p class="text-muted">
 			{#if evt.doorsAt}
-				{m.staff_events_id_doors_show({
+				{m.staff_events_id_doors_show_text({
 					formatTime: formatTime(evt.doorsAt),
 					formatEventTimeRange: formatEventTimeRange(evt.startsAt, evt.endsAt)
 				})}
@@ -377,13 +379,13 @@
 				target="_blank"
 				rel="noopener noreferrer external"
 			>
-				{m.staff_events_id_tickets()}
+				{m.staff_events_id_tickets_text()}
 			</a>
 		{/if}
 
 		{#if detail.lineup.length > 0}
 			<div class="mt-4 border-t border-base-200 pt-4">
-				<p class="mb-2 text-muted font-medium">{m.staff_events_id_bill_2()}</p>
+				<p class="mb-2 text-muted font-medium">{m.staff_events_id_bill_2_text()}</p>
 				<ul class="space-y-1">
 					{#each detail.lineup as act (act.id)}
 						<li class="flex flex-wrap items-center gap-2 text-sm">
@@ -467,15 +469,15 @@
 		able to see the slot. An empty result says so out loud rather than
 		rendering nothing, which reads as "this page doesn't check".
 	-->
-	<InfoCard title={m.staff_events_id_within_two_hours()}>
+	<InfoCard title={m.staff_events_id_within_two_hours_title()}>
 		{#if data.nearby.length === 0}
-			<p class="text-muted">{m.staff_events_id_nothing_else_within_two_hours()}</p>
+			<p class="text-muted">{m.staff_events_id_nothing_else_within_two_hours_text()}</p>
 		{:else}
 			<Table zebra={false}>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_event()}</th>
-					<th>{m.staff_posted_by()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_event_label()}</th>
+					<th>{m.staff_posted_by_label()}</th>
 				{/snippet}
 				{#each data.nearby as n (n.id)}
 					{@const href = resolve(`staff/events/${n.id}`)}
@@ -492,11 +494,11 @@
 						</td>
 						<td>
 							{#if n.source === 'cmc'}
-								<span class="text-muted">{m.staff_cmc()}</span>
+								<span class="text-muted">{m.staff_cmc_text()}</span>
 							{:else if n.source === 'band'}
 								<EntityChip ref={n.band} />
 							{:else}
-								<span class="text-muted">{m.staff_events_id_community()}</span>
+								<span class="text-muted">{m.staff_events_id_community_text()}</span>
 							{/if}
 						</td>
 					</tr>
@@ -506,9 +508,9 @@
 	</InfoCard>
 
 	<ActivityFeedCard
-		title={m.staff_history()}
+		title={m.staff_history_title()}
 		query={(limit) => getEventHistory(limit ? { id, limit } : { id })}
 		toRow={feedItemRow}
-		empty={{ title: m.staff_no_recorded_changes() }}
+		empty={{ title: m.staff_no_recorded_changes_title() }}
 	/>
 </PageContent>

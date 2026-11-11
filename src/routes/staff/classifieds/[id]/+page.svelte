@@ -23,15 +23,15 @@
 	}
 </script>
 
-<PageHeader width="3xl" title={post.title} subtitle={m.staff_classifieds()}>
+<PageHeader width="3xl" title={post.title} subtitle={m.staff_classifieds_body()}>
 	{#if post.visibility !== 'visible'}
 		<Action
 			action={showForm}
 			label={post.visibility === 'pending_review'
-				? m.staff_classifieds_id_approve()
-				: m.staff_restore()}
-			modalTitle={m.staff_classifieds_id_put_post_board()}
-			successToast={m.staff_classifieds_id_board()}
+				? m.staff_classifieds_id_approve_label()
+				: m.staff_restore_label()}
+			modalTitle={m.staff_classifieds_id_put_post_board_title()}
+			successToast={m.staff_classifieds_id_board_toast()}
 			size="sm"
 			onsuccess={refresh}
 		>
@@ -40,7 +40,7 @@
 				<input {...showForm.fields.postId.as('hidden', post.id)} />
 				<input {...showForm.fields.visibility.as('hidden', 'visible')} />
 				<p class="py-2">
-					{m.staff_classifieds_id_members_will_see_straight_away()}
+					{m.staff_classifieds_id_members_will_see_straight_away_text()}
 				</p>
 			{/snippet}
 		</Action>
@@ -48,10 +48,10 @@
 	{#if post.visibility !== 'hidden'}
 		<Action
 			action={hideForm}
-			label={m.staff_classifieds_id_hide()}
-			modalTitle={m.staff_classifieds_id_take_post_down()}
+			label={m.staff_classifieds_id_hide_label()}
+			modalTitle={m.staff_classifieds_id_take_post_down_title()}
 			submitLabel={m.staff_classifieds_id_submit_label()}
-			successToast={m.staff_hidden()}
+			successToast={m.staff_hidden_toast()}
 			variant="ghost"
 			size="sm"
 			onsuccess={refresh}
@@ -61,12 +61,12 @@
 				<input {...hideForm.fields.postId.as('hidden', post.id)} />
 				<input {...hideForm.fields.visibility.as('hidden', 'hidden')} />
 				<p class="mb-3 text-muted">
-					{m.staff_classifieds_id_nothing_deleted_author_sees_note()}
+					{m.staff_classifieds_id_nothing_deleted_author_sees_note_text()}
 				</p>
 				<FormField
 					field={hideForm.fields.note}
 					type="textarea"
-					label={m.staff_classifieds_id_what_should_author_change()}
+					label={m.staff_classifieds_id_what_should_author_change_label()}
 				/>
 			{/snippet}
 		</Action>
@@ -76,7 +76,9 @@
 <PageContent width="3xl">
 	{#if post.visibilityNote}
 		<Alert type="info"
-			><p>{m.staff_classifieds_id_note_author({ visibilityNote: post.visibilityNote })}</p></Alert
+			><p>
+				{m.staff_classifieds_id_note_author_text({ visibilityNote: post.visibilityNote })}
+			</p></Alert
 		>
 	{/if}
 	<PostDetail {post} />

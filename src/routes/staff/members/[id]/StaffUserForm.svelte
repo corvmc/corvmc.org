@@ -61,14 +61,14 @@
 		<div class="@container grid grid-cols-4 gap-x-2">
 			<Field
 				field={updateUser.fields.name}
-				label={m.staff_name()}
+				label={m.staff_name_label()}
 				type="text"
 				value={member.name}
 				class="col-span-4 @md:col-span-2 @lg:col-span-3"
 			/>
 			<Field
 				field={updateUser.fields.pronouns}
-				label={m.staff_pronouns()}
+				label={m.staff_pronouns_label()}
 				type="text"
 				value={member.pronouns ?? ''}
 				class="col-span-4 @md:col-span-2 @lg:col-span-1"
@@ -82,7 +82,7 @@
 			/>
 			<Field
 				field={updateUser.fields.phone}
-				label={m.staff_phone()}
+				label={m.staff_phone_label()}
 				type="tel"
 				value={member.phone ?? ''}
 				class="col-span-4 @md:col-span-2 @lg:col-span-2"
@@ -110,7 +110,7 @@
 				<Field
 					class="col-span-4"
 					field={updateUser.fields.roles}
-					label={m.staff_roles()}
+					label={m.staff_roles_label()}
 					type="tags"
 					options={roleOptions}
 					multiple={true}

@@ -91,7 +91,7 @@
 			type="button"
 			class="flex h-[22px] w-6 items-center justify-center rounded-sm hover:bg-white/15
 			       disabled:pointer-events-none disabled:opacity-25"
-			aria-label={m.band_site_band_site_block_chrome_move_up({ label })}
+			aria-label={m.band_site_band_site_block_chrome_move_up_label({ label })}
 			disabled={index === 0}
 			onclick={() => onMove(-1)}
 		>
@@ -101,7 +101,7 @@
 			type="button"
 			class="flex h-[22px] w-6 items-center justify-center rounded-sm hover:bg-white/15
 			       disabled:pointer-events-none disabled:opacity-25"
-			aria-label={m.band_site_band_site_block_chrome_move_down({ label })}
+			aria-label={m.band_site_band_site_block_chrome_move_down_label({ label })}
 			disabled={index === total - 1}
 			onclick={() => onMove(1)}
 		>
@@ -111,8 +111,8 @@
 			type="button"
 			class="flex h-[22px] w-6 items-center justify-center rounded-sm hover:bg-white/15"
 			aria-label={hidden
-				? m.band_site_band_site_block_chrome_publish({ label })
-				: m.band_site_band_site_block_chrome_stop_publishing({ label })}
+				? m.band_site_band_site_block_chrome_publish_label({ label })
+				: m.band_site_band_site_block_chrome_stop_publishing_label({ label })}
 			aria-pressed={!hidden}
 			onclick={onToggleHidden}
 		>
@@ -126,7 +126,7 @@
 			<button
 				type="button"
 				class="flex h-[22px] w-6 items-center justify-center rounded-sm hover:bg-white/15"
-				aria-label={m.band_site_band_site_block_chrome_settings({ label })}
+				aria-label={m.band_site_band_site_block_chrome_settings_label({ label })}
 				aria-expanded={open}
 				onclick={onToggleOpen}
 			>

@@ -40,7 +40,7 @@
 	<title
 		>{download.status === 'ready'
 			? m.public_music_download_title({ title: download.releaseTitle })
-			: m.public_music_download_title_pending()}</title
+			: m.public_music_download_title_pending_title()}</title
 	>
 	<!-- Never indexed: the URL in the address bar IS the entitlement. -->
 	<meta name="robots" content="noindex, nofollow" />
@@ -48,11 +48,13 @@
 
 <div class="mx-auto max-w-2xl space-y-6 p-6">
 	{#if download.status === 'pending'}
-		<h1 class="text-3xl font-semibold">{m.public_music_download_token_confirming_payment()}</h1>
+		<h1 class="text-3xl font-semibold">
+			{m.public_music_download_token_confirming_payment_title()}
+		</h1>
 		<Alert type={attempts >= RETRY_LIMIT ? 'warning' : 'info'}>
 			{attempts >= RETRY_LIMIT
-				? m.public_music_download_token_we_haven_t_had_confirmation()
-				: m.public_music_download_token_usually_takes_couple_seconds_fil()}
+				? m.public_music_download_token_we_haven_t_had_confirmation_body()
+				: m.public_music_download_token_usually_takes_couple_seconds_fil_body()}
 		</Alert>
 	{:else}
 		<div>
@@ -64,7 +66,7 @@
 		     the only handle they have on what they bought. The receipt email carries
 		     the same link, which is the copy that survives closing the tab. -->
 		<Alert type="info">
-			{m.public_music_download_token_bookmark_page_s_how_get()}
+			{m.public_music_download_token_bookmark_page_s_how_get_body()}
 		</Alert>
 
 		<Card>
@@ -88,7 +90,7 @@
 							>
 								<IconDownload size={16} />
 								<span class="sr-only"
-									>{m.public_music_download_token_download({ title: track.title })}</span
+									>{m.public_music_download_token_download_label({ title: track.title })}</span
 								>
 							</Button>
 						</li>

@@ -50,7 +50,7 @@
 	<PageHeader
 		title={m.public_events_id_tickets_success_title()}
 		parent={[
-			{ label: m.public_events(), href: resolve('events') },
+			{ label: m.public_events_label(), href: resolve('events') },
 			{ label: evt.title, href: resolve(`events/${params.id}`) }
 		]}
 	/>
@@ -72,12 +72,12 @@
 			     Stripe webhook). Free claims send nothing, so don't promise one. -->
 			<p class="text-muted">
 				{#if isFreeClaim}
-					{m.public_events_id_tickets_success_save_codes_below_s_confirma({
+					{m.public_events_id_tickets_success_save_codes_below_s_confirma_text({
 						count: data.tickets.length
 					})}
 				{:else}
-					{m.public_events_id_tickets_success_confirmation_email_receipt({
-						value: data.tickets[0]?.attendeeEmail ?? m.public_events_id_tickets_success_email()
+					{m.public_events_id_tickets_success_confirmation_email_receipt_text({
+						value: data.tickets[0]?.attendeeEmail ?? m.public_events_id_tickets_success_email_text()
 					})}
 				{/if}
 			</p>
@@ -87,15 +87,15 @@
 	{#if pending}
 		<Alert type="info">
 			{attempts >= RETRY_LIMIT
-				? m.public_events_id_tickets_success_we_haven_t_had_confirmation()
-				: m.public_events_id_tickets_success_confirming_payment()}
+				? m.public_events_id_tickets_success_we_haven_t_had_confirmation_body()
+				: m.public_events_id_tickets_success_confirming_payment_body()}
 		</Alert>
 	{/if}
 
 	<!-- Ticket codes -->
 	<Card>
 		<CardBody>
-			<h3 class="mb-3 font-medium">{m.public_events_id_tickets_success_tickets()}</h3>
+			<h3 class="mb-3 font-medium">{m.public_events_id_tickets_success_tickets_title()}</h3>
 			<div class="space-y-3">
 				{#each data.tickets as ticket (ticket.id)}
 					<div class="flex items-center justify-between inset p-3">
@@ -107,7 +107,7 @@
 							<p class="font-mono text-lg font-bold tracking-wider" data-testid="ticket-code">
 								{ticket.code}
 							</p>
-							<p class="text-subtle">{m.public_events_id_tickets_success_ticket_code()}</p>
+							<p class="text-subtle">{m.public_events_id_tickets_success_ticket_code_text()}</p>
 						</div>
 					</div>
 				{/each}
@@ -117,7 +117,7 @@
 
 	<div class="text-center">
 		<Button href="/events" variant="ghost"
-			>{m.public_events_id_tickets_success_back_events()}</Button
+			>{m.public_events_id_tickets_success_back_events_label()}</Button
 		>
 	</div>
 </div>

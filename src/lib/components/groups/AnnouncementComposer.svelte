@@ -34,11 +34,11 @@
 {#if editing && post}
 	<Action
 		action={updateAnnouncement.for(post.id)}
-		label={m.groups_edit()}
+		label={m.groups_edit_label()}
 		iconOnly={false}
-		modalTitle={m.groups_announcement_composer_edit_announcement()}
-		submitLabel={m.groups_save()}
-		successToast={m.groups_saved()}
+		modalTitle={m.groups_announcement_composer_edit_announcement_title()}
+		submitLabel={m.groups_save_label()}
+		successToast={m.groups_saved_toast()}
 		variant="ghost"
 		size="xs"
 		onsuccess={() => refreshAll()}
@@ -50,16 +50,16 @@
 				<FormField
 					field={updateFields.title}
 					type="text"
-					label={m.groups_announcement_composer_title()}
+					label={m.groups_announcement_composer_title_label()}
 					value={post.title}
 					required
 				/>
 				<FormField
 					field={updateFields.body}
 					type="textarea"
-					label={m.groups_announcement_composer_body()}
+					label={m.groups_announcement_composer_body_label()}
 					value={post.body}
-					description={m.groups_announcement_composer_markdown_links_lists_bold_work()}
+					description={m.groups_announcement_composer_markdown_links_lists_bold_work_body()}
 					required
 				/>
 			</div>
@@ -69,10 +69,10 @@
 	<Action
 		action={createAnnouncement}
 		data-testid="new-announcement"
-		label={m.groups_announcement_composer_new_announcement()}
-		modalTitle={m.groups_announcement_composer_new_announcement()}
-		submitLabel={m.groups_announcement_composer_save_draft()}
-		successToast={m.groups_announcement_composer_draft_saved()}
+		label={m.groups_announcement_composer_new_announcement_label()}
+		modalTitle={m.groups_announcement_composer_new_announcement_title()}
+		submitLabel={m.groups_announcement_composer_save_draft_label()}
+		successToast={m.groups_announcement_composer_draft_saved_toast()}
 		variant="primary"
 		size="sm"
 		onsuccess={() => refreshAll()}
@@ -83,15 +83,15 @@
 				<FormField
 					field={createFields.title}
 					type="text"
-					label={m.groups_announcement_composer_title()}
+					label={m.groups_announcement_composer_title_label()}
 					placeholder={m.groups_announcement_composer_placeholder()}
 					required
 				/>
 				<FormField
 					field={createFields.body}
 					type="textarea"
-					label={m.groups_announcement_composer_body()}
-					description={m.groups_announcement_composer_markdown_nobody_notified_until()}
+					label={m.groups_announcement_composer_body_label()}
+					description={m.groups_announcement_composer_markdown_nobody_notified_until_body()}
 					required
 				/>
 			</div>

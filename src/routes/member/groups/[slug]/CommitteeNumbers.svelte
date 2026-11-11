@@ -33,34 +33,36 @@
 {#await report then r}
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		<StatCard
-			title={m.member_groups_slug_committee_numbers_earned()}
+			title={m.member_groups_slug_committee_numbers_earned_title()}
 			value={formatCents(r.money.totalsByKind.earned)}
 		/>
 		<StatCard
-			title={m.member_groups_slug_committee_numbers_spent()}
+			title={m.member_groups_slug_committee_numbers_spent_title()}
 			value={formatCents(r.money.totalsByKind.spent)}
 		/>
 		<StatCard
-			title={m.member_groups_slug_committee_numbers_net()}
+			title={m.member_groups_slug_committee_numbers_net_title()}
 			value={formatCents(r.money.netCents)}
 		/>
 		<StatCard
-			title={m.member_groups_slug_committee_numbers_approved_hours()}
+			title={m.member_groups_slug_committee_numbers_approved_hours_title()}
 			value={formatVolunteerHours(r.volunteering.totalMinutes)}
 		/>
 	</div>
 
-	<InfoCard title={m.member_groups_slug_committee_numbers_ledger_lines()}>
+	<InfoCard title={m.member_groups_slug_committee_numbers_ledger_lines_title()}>
 		<p class="mb-3 text-subtle text-sm">
-			{m.member_groups_slug_committee_numbers_entries_recorded_agains()}
+			{m.member_groups_slug_committee_numbers_entries_recorded_agains_text()}
 		</p>
 		{#if r.money.byKind.earned.length + r.money.byKind.spent.length === 0}
-			<EmptyState description={m.member_groups_slug_committee_numbers_nothing_recorded_agains()} />
+			<EmptyState
+				description={m.member_groups_slug_committee_numbers_nothing_recorded_agains_body()}
+			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>{m.member_groups_slug_committee_numbers_line()}</th>
-					<th class="text-right">{m.member_amount()}</th>
+					<th>{m.member_groups_slug_committee_numbers_line_label()}</th>
+					<th class="text-right">{m.member_amount_label()}</th>
 				{/snippet}
 				{#each [...r.money.byKind.earned, ...r.money.byKind.spent] as line, i (i)}
 					<tr>
@@ -72,17 +74,19 @@
 		{/if}
 	</InfoCard>
 
-	<InfoCard title={m.member_groups_slug_committee_numbers_project_budgets()}>
+	<InfoCard title={m.member_groups_slug_committee_numbers_project_budgets_title()}>
 		{#if r.projects.length === 0}
-			<EmptyState description={m.member_groups_slug_committee_numbers_committee_has_no_projec()} />
+			<EmptyState
+				description={m.member_groups_slug_committee_numbers_committee_has_no_projec_body()}
+			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>{m.member_project()}</th>
-					<th>{m.member_status()}</th>
-					<th class="text-right">{m.member_groups_slug_committee_numbers_budget()}</th>
-					<th class="text-right">{m.member_groups_slug_committee_numbers_committed()}</th>
-					<th class="text-right">{m.member_groups_slug_committee_numbers_remaining()}</th>
+					<th>{m.member_project_label()}</th>
+					<th>{m.member_status_label()}</th>
+					<th class="text-right">{m.member_groups_slug_committee_numbers_budget_label()}</th>
+					<th class="text-right">{m.member_groups_slug_committee_numbers_committed_label()}</th>
+					<th class="text-right">{m.member_groups_slug_committee_numbers_remaining_label()}</th>
 				{/snippet}
 				{#each r.projects as project (project.id)}
 					<tr>
@@ -99,10 +103,10 @@
 				{/each}
 			</Table>
 			<p class="mt-3 text-subtle text-sm">
-				{m.member_groups_slug_committee_numbers_committed_cash_each_pro()}
+				{m.member_groups_slug_committee_numbers_committed_cash_each_pro_text()}
 			</p>
 		{/if}
 	</InfoCard>
 {:catch error}
-	<Alert type="error">{m.ui_load_failed({ error: errorMessage(error) })}</Alert>
+	<Alert type="error">{m.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
 {/await}

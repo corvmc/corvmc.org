@@ -95,7 +95,7 @@
 	{#if checked.error}
 		<!-- No `data-conflicts` here: the check never settled, so nothing may read it as clear. -->
 		<Alert type="warning">
-			{m.reservations_conflict_warnings_could_not_check_time_conflict({
+			{m.reservations_conflict_warnings_could_not_check_time_conflict_body({
 				errorMessage: errorMessage(checked.error)
 			})}
 		</Alert>
@@ -122,14 +122,14 @@
 	{#snippet pending()}
 		<div class="flex items-center gap-2 py-1">
 			<span class="loading loading-xs loading-spinner"></span>
-			<span class="text-subtle">{m.reservations_conflict_warnings_checking_conflicts()}</span>
+			<span class="text-subtle">{m.reservations_conflict_warnings_checking_conflicts_text()}</span>
 		</div>
 	{/snippet}
 
 	<!-- No `data-conflicts` here: the check never settled, so nothing may read it as clear. -->
 	{#snippet failed(error, reset)}
 		<Alert type="warning" {reset}>
-			{m.reservations_conflict_warnings_could_not_check_time_conflict({
+			{m.reservations_conflict_warnings_could_not_check_time_conflict_body({
 				errorMessage: errorMessage(error)
 			})}
 		</Alert>

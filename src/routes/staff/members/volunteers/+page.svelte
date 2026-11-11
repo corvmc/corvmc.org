@@ -87,14 +87,16 @@
 	{#if volunteer.status === 'blocked'}
 		<Action
 			action={approveVolunteerSignup.for(volunteer.userId)}
-			label={m.staff_approve()}
+			label={m.staff_approve_label()}
 			data-testid="approve-volunteer-signup"
 			variant="ghost"
 			size="xs"
 			class="text-success"
-			modalTitle={m.staff_members_volunteers_let_volunteer({ title: volunteer.member.title })}
-			submitLabel={m.staff_approve()}
-			successToast={m.staff_members_volunteers_can_volunteer_now({ title: volunteer.member.title })}
+			modalTitle={m.staff_members_volunteers_let_volunteer_title({ title: volunteer.member.title })}
+			submitLabel={m.staff_approve_label()}
+			successToast={m.staff_members_volunteers_can_volunteer_now_toast({
+				title: volunteer.member.title
+			})}
 			onsuccess={() => void list.refresh()}
 		>
 			{#snippet form()}
@@ -104,20 +106,20 @@
 						.fields.userId.as('hidden', volunteer.userId)}
 				/>
 				<p class="text-sm">
-					{m.staff_members_volunteers_confirms_guardian_has_signed_off()}
+					{m.staff_members_volunteers_confirms_guardian_has_signed_off_text()}
 				</p>
 			{/snippet}
 		</Action>
 	{:else if volunteer.claim}
 		<Action
 			action={confirmSignup.for(volunteer.claim.signupId)}
-			label={m.staff_confirm()}
+			label={m.staff_confirm_label()}
 			variant="ghost"
 			size="xs"
 			class="text-success"
-			modalTitle={m.staff_confirm_2({ title: volunteer.member.title })}
-			submitLabel={m.staff_confirm()}
-			successToast={m.staff_confirmed()}
+			modalTitle={m.staff_confirm_2_title({ title: volunteer.member.title })}
+			submitLabel={m.staff_confirm_label()}
+			successToast={m.staff_confirmed_toast()}
 		>
 			{#snippet form()}
 				<input
@@ -131,7 +133,7 @@
 						.fields.shiftId.as('hidden', volunteer.claim!.shiftId)}
 				/>
 				<p class="text-sm">
-					{m.staff_members_volunteers_confirming_books_them_they_get({
+					{m.staff_members_volunteers_confirming_books_them_they_get_text({
 						roleName: volunteer.claim!.roleName,
 						formatDateShort: formatDateShort(volunteer.claim!.startsAt)
 					})}
@@ -140,18 +142,18 @@
 		</Action>
 	{:else if volunteer.lapse}
 		<Button href={recordHref(volunteer)} variant="ghost" size="xs" class="text-warning">
-			{m.staff_members_volunteers_chase()}
+			{m.staff_members_volunteers_chase_label()}
 		</Button>
 	{:else}
 		<LogHoursForMemberAction
 			presetUser={{ id: volunteer.userId, name: volunteer.member.title }}
-			label={m.staff_members_volunteers_log_hours()}
+			label={m.staff_members_volunteers_log_hours_label()}
 			size="xs"
 		/>
 	{/if}
 {/snippet}
 
-<PageHeader title={m.staff_members()}>
+<PageHeader title={m.staff_members_title()}>
 	<MemberViews active="volunteers" />
 </PageHeader>
 
@@ -159,7 +161,7 @@
 	<Roster
 		{roster}
 		result={list}
-		empty={m.staff_members_volunteers_empty()}
+		empty={m.staff_members_volunteers_empty_body()}
 		searchPlaceholder={m.staff_members_volunteers_search_placeholder()}
 		personLabel={m.staff_members_volunteers_person_label()}
 		exportPath={resolve('staff/members/volunteers/export')}
@@ -173,27 +175,27 @@
 		{#snippet filters()}
 			<Select
 				size="sm"
-				aria-label={m.staff_members_volunteers_interested_role()}
+				aria-label={m.staff_members_volunteers_interested_role_label()}
 				value={f.role}
 				onchange={(e: Event) => {
 					f.role = (e.currentTarget as HTMLSelectElement).value;
 					f.page = 1;
 				}}
 			>
-				<option value="">{m.staff_members_volunteers_any_role()}</option>
+				<option value="">{m.staff_members_volunteers_any_role_label()}</option>
 				<RoleOptions />
 			</Select>
 
 			<Select
 				size="sm"
-				aria-label={m.staff_status()}
+				aria-label={m.staff_status_label()}
 				value={f.status}
 				onchange={(e: Event) => {
 					f.status = (e.currentTarget as HTMLSelectElement).value as StatusFilter;
 					f.page = 1;
 				}}
 			>
-				<option value="">{m.staff_members_volunteers_any_status()}</option>
+				<option value="">{m.staff_members_volunteers_any_status_label()}</option>
 				<!-- Labels come from the vocabulary, not from here: "blocked" reads as a
 				     punishment for answering honestly, and the enum's label already says so. -->
 				{#each volunteerProfileStatuses as s (s)}
@@ -203,14 +205,14 @@
 
 			<Select
 				size="sm"
-				aria-label={m.staff_clearance()}
+				aria-label={m.staff_clearance_label()}
 				value={f.cert}
 				onchange={(e: Event) => {
 					f.cert = (e.currentTarget as HTMLSelectElement).value;
 					f.page = 1;
 				}}
 			>
-				<option value="">{m.staff_members_volunteers_any_clearance()}</option>
+				<option value="">{m.staff_members_volunteers_any_clearance_label()}</option>
 				<CertificationOptions />
 			</Select>
 		{/snippet}
@@ -219,8 +221,8 @@
 		{#snippet summary(total)}
 			{total}
 			{total === 1
-				? m.staff_members_volunteers_volunteer()
-				: m.staff_members_volunteers_volunteers()}
+				? m.staff_members_volunteers_volunteer_text()
+				: m.staff_members_volunteers_volunteers_text()}
 			{#await list then { minorsWaiting, lapsingPeople }}
 				{#if minorsWaiting > 0 && f.status !== 'blocked'}
 					·
@@ -232,7 +234,7 @@
 							f.page = 1;
 						}}
 					>
-						{m.staff_members_volunteers_awaiting_sign_off({ minorsWaiting })}
+						{m.staff_members_volunteers_awaiting_sign_off_label({ minorsWaiting })}
 					</button>
 				{/if}
 				{#if lapsingPeople > 0 && !f.lapsing}
@@ -246,7 +248,7 @@
 							f.page = 1;
 						}}
 					>
-						{m.staff_members_volunteers_lapsing({ lapsingPeople })}
+						{m.staff_members_volunteers_lapsing_label({ lapsingPeople })}
 					</button>
 				{/if}
 			{:catch}
@@ -255,7 +257,7 @@
 			{#await getVolunteerStatusCounts() then { pending }}
 				{#if pending > 0}
 					<ParaglideMessage
-						message={m.staff_members_volunteers_hour_logs_review}
+						message={m.staff_members_volunteers_hour_logs_review_text}
 						inputs={{ pending }}
 						>{#snippet a({ children })}<a
 								class="link"
@@ -271,7 +273,7 @@
 		{#snippet aside(volunteer)}
 			{#if !volunteer.isAdult}
 				<!-- Kept after a staff override: an approved minor still changes how a shift is staffed. -->
-				<Badge variant="ghost" size="xs">{m.staff_members_volunteers_minor()}</Badge>
+				<Badge variant="ghost" size="xs">{m.staff_members_volunteers_minor_label()}</Badge>
 			{/if}
 		{/snippet}
 
@@ -283,8 +285,8 @@
 		{/snippet}
 
 		{#snippet columns()}
-			<th class="col-support">{m.staff_members_volunteers_followed_roles()}</th>
-			<th class="col-support cell-num">{m.staff_hours()}</th>
+			<th class="col-support">{m.staff_members_volunteers_followed_roles_label()}</th>
+			<th class="col-support cell-num">{m.staff_hours_label()}</th>
 		{/snippet}
 
 		{#snippet cells(volunteer)}
@@ -294,7 +296,7 @@
 				{:else}
 					<!-- The interests step is skippable, so this is an answer, not
 					     missing data: they signed up without picking anything. -->
-					<span class="text-subtle">{m.staff_members_volunteers_none_picked()}</span>
+					<span class="text-subtle">{m.staff_members_volunteers_none_picked_text()}</span>
 				{/if}
 			</td>
 			<td class="col-support cell-num">

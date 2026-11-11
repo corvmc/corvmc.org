@@ -40,10 +40,10 @@
 		...data.attachments.orders.map((order) => ({
 			kind: 'purchase_order',
 			kindLabel: order.reference
-				? m.staff_projects_id_budget_report_purchase_order({ reference: order.reference })
-				: m.staff_projects_id_budget_report_purchase_order_2(),
+				? m.staff_projects_id_budget_report_purchase_order_label({ reference: order.reference })
+				: m.staff_projects_id_budget_report_purchase_order_2_label(),
 			id: order.id,
-			label: order.supplierName ?? m.staff_order_2(),
+			label: order.supplierName ?? m.staff_order_2_label(),
 			href: resolve(`staff/inventory/orders/${order.id}`),
 			status: order.status as string | null,
 			date: order.placedAt,
@@ -51,7 +51,7 @@
 		})),
 		...data.attachments.acquisitions.map((acq) => ({
 			kind: 'acquisition',
-			kindLabel: m.staff_acquisition(),
+			kindLabel: m.staff_acquisition_label(),
 			id: acq.id,
 			label: acq.sourceName ?? acq.kind,
 			href: resolve(`staff/inventory/acquisitions/${acq.id}`),
@@ -66,40 +66,43 @@
 	]);
 
 	const attachKinds = [
-		{ value: 'purchase_order', label: m.staff_projects_id_budget_report_purchase_order_2() },
-		{ value: 'work_order', label: m.staff_projects_id_budget_report_work_order_lands_task_list() },
-		{ value: 'acquisition', label: m.staff_acquisition() },
-		{ value: 'event_listing', label: m.staff_event() }
+		{ value: 'purchase_order', label: m.staff_projects_id_budget_report_purchase_order_2_label() },
+		{
+			value: 'work_order',
+			label: m.staff_projects_id_budget_report_work_order_lands_task_list_label()
+		},
+		{ value: 'acquisition', label: m.staff_acquisition_label() },
+		{ value: 'event_listing', label: m.staff_event_label() }
 	];
 </script>
 
 <div class="grid gap-4 lg:grid-cols-2">
-	<InfoCard title={m.staff_projects_id_budget_report_cash()}>
+	<InfoCard title={m.staff_projects_id_budget_report_cash_title()}>
 		<Table>
 			{#snippet head()}
-				<th>{m.staff_source()}</th>
-				<th class="cell-num">{m.staff_amount()}</th>
+				<th>{m.staff_source_label()}</th>
+				<th class="cell-num">{m.staff_amount_label()}</th>
 			{/snippet}
 			<tr>
-				<td>{m.staff_projects_id_budget_report_contractors()}</td>
+				<td>{m.staff_projects_id_budget_report_contractors_text()}</td>
 				<td class="cell-num">{formatCents(burn.cash.contractorCents)}</td>
 			</tr>
 			<tr>
-				<td>{m.staff_projects_id_budget_report_purchase_orders()}</td>
+				<td>{m.staff_projects_id_budget_report_purchase_orders_text()}</td>
 				<td class="cell-num">{formatCents(burn.cash.purchaseOrderCents)}</td>
 			</tr>
 			<tr>
-				<td>{m.staff_acquisitions()}</td>
+				<td>{m.staff_acquisitions_text()}</td>
 				<td class="cell-num">{formatCents(burn.cash.acquisitionCents)}</td>
 			</tr>
 			{#if project.kind === 'production' || burn.cash.showCents > 0}
 				<tr>
 					<td>
 						<ParaglideMessage
-							message={m.staff_projects_id_budget_report_show_costs}
+							message={m.staff_projects_id_budget_report_show_costs_text}
 							inputs={{
 								staff_projects_id_budget_report_cost_sheet_guarantee_top_ups:
-									m.staff_projects_id_budget_report_cost_sheet_guarantee_top_ups()
+									m.staff_projects_id_budget_report_cost_sheet_guarantee_top_ups_text()
 							}}
 							>{#snippet span({ children })}<span class="block text-subtle text-xs"
 									>{@render children?.()}</span
@@ -110,17 +113,19 @@
 				</tr>
 			{/if}
 			<tr class="font-medium">
-				<td>{m.staff_spent()}</td>
+				<td>{m.staff_spent_text()}</td>
 				<td class="cell-num">{formatCents(burn.cash.totalCents)}</td>
 			</tr>
 			<tr>
-				<td>{m.staff_budget()}</td>
+				<td>{m.staff_budget_text()}</td>
 				<td class="cell-num">
-					{project.budgetCents === null ? m.staff_none_set() : formatCents(project.budgetCents)}
+					{project.budgetCents === null
+						? m.staff_none_set_text()
+						: formatCents(project.budgetCents)}
 				</td>
 			</tr>
 			<tr class="font-medium">
-				<td>{m.staff_remaining()}</td>
+				<td>{m.staff_remaining_text()}</td>
 				<td class="cell-num {overBudget ? 'text-error' : ''}">
 					{burn.remainingCents === null ? '—' : signedCents(burn.remainingCents)}
 				</td>
@@ -128,19 +133,19 @@
 		</Table>
 	</InfoCard>
 
-	<InfoCard title={m.staff_projects_id_budget_report_contributed()}>
+	<InfoCard title={m.staff_projects_id_budget_report_contributed_title()}>
 		<Table>
 			{#snippet head()}
-				<th>{m.staff_source()}</th>
-				<th class="cell-num">{m.staff_value()}</th>
+				<th>{m.staff_source_label()}</th>
+				<th class="cell-num">{m.staff_value_label()}</th>
 			{/snippet}
 			<tr>
 				<td>
 					<ParaglideMessage
-						message={m.staff_projects_id_budget_report_volunteer_time_impact_value}
+						message={m.staff_projects_id_budget_report_volunteer_time_impact_value_text}
 						inputs={{
 							staff_projects_id_budget_report_every_approved_hour_at_hr:
-								m.staff_projects_id_budget_report_every_approved_hour_at_hr({
+								m.staff_projects_id_budget_report_every_approved_hour_at_hr_text({
 									hrs: hrs(volunteerHours),
 									formatCents: formatCents(burn.contributed.hourValueCents)
 								})
@@ -154,14 +159,14 @@
 			</tr>
 			<tr>
 				<td>
-					{m.staff_projects_id_budget_report_specialized()}
+					{m.staff_projects_id_budget_report_specialized_text()}
 					<span class="block text-subtle text-xs">
 						{unpricedHours > 0
-							? m.staff_projects_id_budget_report_specialized_unpriced({
+							? m.staff_projects_id_budget_report_specialized_unpriced_text({
 									hours: hrs(specializedHours),
 									unpriced: hrs(unpricedHours)
 								})
-							: m.staff_projects_id_budget_report_specialized_rate({
+							: m.staff_projects_id_budget_report_specialized_rate_text({
 									hours: hrs(specializedHours)
 								})}
 					</span>
@@ -169,49 +174,50 @@
 				<td class="cell-num">{formatCents(burn.contributed.recognizableServicesCents)}</td>
 			</tr>
 			<tr>
-				<td>{m.staff_projects_id_budget_report_donated_services()}</td>
+				<td>{m.staff_projects_id_budget_report_donated_services_text()}</td>
 				<td class="cell-num">{formatCents(burn.contributed.donatedServicesCents)}</td>
 			</tr>
 			<tr>
-				<td>{m.staff_projects_id_budget_report_donated_goods()}</td>
+				<td>{m.staff_projects_id_budget_report_donated_goods_text()}</td>
 				<td class="cell-num">{formatCents(burn.contributed.donatedGoodsCents)}</td>
 			</tr>
 		</Table>
 		<p class="mt-2 text-subtle text-sm">
 			<ParaglideMessage
-				message={m.staff_projects_id_budget_report_never_added_cash_donated_tim}
+				message={m.staff_projects_id_budget_report_never_added_cash_donated_tim_text}
 				inputs={{
-					staff_projects_id_budget_report_each_other: m.staff_projects_id_budget_report_each_other()
+					staff_projects_id_budget_report_each_other:
+						m.staff_projects_id_budget_report_each_other_text()
 				}}>{#snippet em({ children })}<em>{@render children?.()}</em>{/snippet}</ParaglideMessage
 			>
 		</p>
 	</InfoCard>
 </div>
 
-<InfoCard title={m.staff_projects_id_budget_report_orders_acquisitions()}>
+<InfoCard title={m.staff_projects_id_budget_report_orders_acquisitions_title()}>
 	{#snippet header(title)}
 		<div class="flex items-center justify-between gap-2">
 			<CardTitle level={2}>{title}</CardTitle>
 			<Action
 				action={attachToProjectForm}
-				label={m.staff_projects_id_budget_report_attach()}
+				label={m.staff_projects_id_budget_report_attach_label()}
 				size="sm"
-				modalTitle={m.staff_projects_id_budget_report_attach_project()}
-				successToast={m.staff_projects_id_budget_report_attached()}
+				modalTitle={m.staff_projects_id_budget_report_attach_project_title()}
+				successToast={m.staff_projects_id_budget_report_attached_toast()}
 			>
 				{#snippet form()}
 					<input {...attachFields.projectId.as('hidden', project.id)} />
 					<Field
 						field={attachFields.kind}
 						type="select"
-						label={m.staff_what()}
+						label={m.staff_what_label()}
 						options={attachKinds}
 					/>
 					<Field
 						field={attachFields.rowId}
 						type="text"
-						label={m.staff_projects_id_budget_report_id()}
-						description={m.staff_projects_id_budget_report_row_s_id_copied_from()}
+						label={m.staff_projects_id_budget_report_id_label()}
+						description={m.staff_projects_id_budget_report_row_s_id_copied_from_body()}
 					/>
 				{/snippet}
 			</Action>
@@ -221,11 +227,11 @@
 	{#if attached.length > 0}
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-				<th class="cell-primary">{m.staff_item()}</th>
-				<th class="col-support">{m.staff_date()}</th>
-				<th class="cell-num">{m.staff_amount()}</th>
-				<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+				<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+				<th class="cell-primary">{m.staff_item_label()}</th>
+				<th class="col-support">{m.staff_date_label()}</th>
+				<th class="cell-num">{m.staff_amount_label()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 			{/snippet}
 			{#each attached as row (row.id)}
 				<tr class="hover cursor-pointer" use:rowLink={row.href}>
@@ -243,11 +249,11 @@
 					<td class="w-px">
 						<Action
 							action={detachFromProjectForm.for(row.id)}
-							label={m.staff_projects_id_budget_report_detach()}
+							label={m.staff_projects_id_budget_report_detach_label()}
 							variant="ghost"
 							size="xs"
-							modalTitle={m.staff_projects_id_budget_report_detach_2({ label: row.label })}
-							successToast={m.staff_projects_id_budget_report_detached()}
+							modalTitle={m.staff_projects_id_budget_report_detach_2_title({ label: row.label })}
+							successToast={m.staff_projects_id_budget_report_detached_toast()}
 						>
 							{#snippet form()}
 								<input {...detachFields.projectId.as('hidden', project.id)} />
@@ -255,7 +261,7 @@
 								<input {...detachFields.rowId.as('hidden', row.id)} />
 								<p class="text-sm">
 									<ParaglideMessage
-										message={m.staff_projects_id_budget_report_takes_off_project_record_its}
+										message={m.staff_projects_id_budget_report_takes_off_project_record_its_text}
 										inputs={{ label: row.label }}
 										>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 											>{/snippet}</ParaglideMessage
@@ -269,8 +275,8 @@
 		</Table>
 	{:else}
 		<EmptyState
-			title={m.staff_projects_id_budget_report_nothing_attached()}
-			description={m.staff_projects_id_budget_report_attach_purchase_order_acquis()}
+			title={m.staff_projects_id_budget_report_nothing_attached_title()}
+			description={m.staff_projects_id_budget_report_attach_purchase_order_acquis_body()}
 		/>
 	{/if}
 </InfoCard>

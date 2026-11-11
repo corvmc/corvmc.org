@@ -26,7 +26,7 @@
 	<div>
 		<p>
 			<ParaglideMessage
-				message={m.member_membership_cancelled_banner_sustaining_membership_has}
+				message={m.member_membership_cancelled_banner_sustaining_membership_has_text}
 				inputs={{
 					freeHours,
 					endDate
@@ -41,13 +41,15 @@
 			<Action
 				action={resumeAction}
 				label={m.member_membership_cancelled_banner_label()}
-				modalTitle={m.member_membership_cancelled_banner_label()}
+				modalTitle={m.member_membership_cancelled_banner_title()}
 				variant="primary"
 				size="sm"
 				onsuccess={() => toast.success(m.member_membership_cancelled_banner_toast())}
 			>
 				{#snippet form()}
-					<p class="py-4">{m.member_membership_cancelled_banner_resume_sustaining_members()}</p>
+					<p class="py-4">
+						{m.member_membership_cancelled_banner_resume_sustaining_members_text()}
+					</p>
 				{/snippet}
 			</Action>
 		</div>

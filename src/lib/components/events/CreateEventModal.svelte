@@ -69,50 +69,50 @@
 		<Form
 			remote={production ? createShow : createEvent}
 			successToast={production
-				? m.events_create_event_modal_production_opened()
-				: m.events_create_event_modal_event_created()}
+				? m.events_create_event_modal_production_opened_toast()
+				: m.events_create_event_modal_event_created_toast()}
 			onsuccess={handleSuccess}
 			class="space-y-4"
 		>
 			<Field
 				field={(production ? createShow : createEvent).fields.title}
 				type="text"
-				label={m.events_title()}
+				label={m.events_title_label()}
 				bind:value={title}
 			/>
 			{#if !production}
 				<Field
 					field={createEvent.fields.kind}
 					type="select"
-					label={m.events_kind()}
+					label={m.events_kind_label()}
 					bind:value={kind}
 					options={[
-						{ value: 'show', label: m.events_show() },
-						{ value: 'work_party', label: m.events_work_party() },
-						{ value: 'meeting', label: m.events_meeting() },
-						{ value: 'class', label: m.events_class() },
-						{ value: 'market', label: m.events_market() }
+						{ value: 'show', label: m.events_show_label() },
+						{ value: 'work_party', label: m.events_work_party_label() },
+						{ value: 'meeting', label: m.events_meeting_label() },
+						{ value: 'class', label: m.events_class_label() },
+						{ value: 'market', label: m.events_market_label() }
 					]}
-					description={m.events_only_shows_reach_homepage_posters()}
+					description={m.events_only_shows_reach_homepage_posters_body()}
 				/>
 				{#if programs.length > 0}
 					<Field
 						field={createEvent.fields.groupId}
 						type="select"
-						label={m.events_create_event_modal_run_by()}
+						label={m.events_create_event_modal_run_by_label()}
 						bind:value={groupId}
 						options={[
-							{ value: '', label: m.events_cmc() },
+							{ value: '', label: m.events_cmc_label() },
 							...programs.map((g) => ({ value: g.id, label: g.name }))
 						]}
-						description={m.events_create_event_modal_committee_club_behind_work_party()}
+						description={m.events_create_event_modal_committee_club_behind_work_party_body()}
 					/>
 				{/if}
 			{/if}
 			<Field
 				field={(production ? createShow : createEvent).fields.eventDate}
 				type="date"
-				label={m.events_date()}
+				label={m.events_date_label()}
 				bind:value={eventDate}
 			/>
 
@@ -120,24 +120,24 @@
 				<Field
 					field={(production ? createShow : createEvent).fields.eventStartTime}
 					type="time"
-					label={m.events_start_time()}
+					label={m.events_start_time_label()}
 					bind:value={eventStartTime}
 				/>
 				<Field
 					field={(production ? createShow : createEvent).fields.eventEndTime}
 					type="time"
-					label={m.events_end_time()}
+					label={m.events_end_time_label()}
 					bind:value={eventEndTime}
 				/>
 			</div>
 
 			<p class="text-muted">
-				{#if production}{m.events_create_event_modal_saved_as_draft_show_with()}{:else}{m.events_create_event_modal_saved_as_draft_description_poster()}{/if}
+				{#if production}{m.events_create_event_modal_saved_as_draft_show_with_text()}{:else}{m.events_create_event_modal_saved_as_draft_description_poster_text()}{/if}
 			</p>
 
 			<div class="modal-action">
 				<Button type="button" variant="ghost" onclick={() => (open = false)}
-					>{m.events_cancel()}</Button
+					>{m.events_cancel_label()}</Button
 				>
 				<SubmitButton label={submitLabel} />
 			</div>
@@ -151,7 +151,7 @@
 
 		{#snippet failed(error, reset)}
 			<Alert type="warning" {reset}
-				>{m.events_create_event_modal_could_not_load_event_form({
+				>{m.events_create_event_modal_could_not_load_event_form_body({
 					errorMessage: errorMessage(error)
 				})}</Alert
 			>

@@ -54,7 +54,7 @@
 				srcset={img.srcset}
 				alt={name}
 				class="absolute inset-0 size-full object-cover"
-				style:display={status === 'loaded' ? undefined : m.ui_none_2()}
+				style:display={status === 'loaded' ? undefined : m.ui_none_2_text()}
 				{@attach imageStatus((s) => (status = s))}
 			/>
 		{/key}

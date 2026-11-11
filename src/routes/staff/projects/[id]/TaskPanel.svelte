@@ -53,9 +53,9 @@
 	<div class="min-w-0 flex-1">
 		<h2 id="task-panel-title" class="text-lg font-semibold">{task.title}</h2>
 		<p class="text-muted">
-			{section?.name ?? m.staff_no_section()} ·
+			{section?.name ?? m.staff_no_section_text()} ·
 			<a class="link" href={resolve(`staff/projects/${projectId}/tasks/${task.id}`)}
-				>{m.staff_details()}</a
+				>{m.staff_details_text()}</a
 			>
 		</p>
 	</div>
@@ -63,7 +63,7 @@
 		variant="ghost"
 		size="sm"
 		shape="square"
-		aria-label={m.staff_projects_id_task_panel_close_task()}
+		aria-label={m.staff_projects_id_task_panel_close_task_label()}
 		onclick={onclose}
 	>
 		<IconX size={18} />
@@ -72,7 +72,7 @@
 
 <div class="space-y-6 p-4">
 	<DefinitionList>
-		<Fact label={m.staff_assigned()}>
+		<Fact label={m.staff_assigned_label()}>
 			<AssignPicker {task} {projectId} place="panel" showNames />
 			{#if task.roleName && task.mode !== 'contractor'}
 				<span class="block text-muted">{task.roleName}</span>
@@ -80,25 +80,25 @@
 		</Fact>
 		{#if engagement && list.contractorMoney}
 			{#if engagement.quotedCents !== null}
-				<Fact label={m.staff_quoted()} value={formatCents(engagement.quotedCents)} />
+				<Fact label={m.staff_quoted_label()} value={formatCents(engagement.quotedCents)} />
 			{/if}
-			<Fact label={m.staff_cost()}>
+			<Fact label={m.staff_cost_label()}>
 				{#if engagement.costCents !== null}
 					{formatCents(engagement.costCents)}
 				{:else if engagement.isDonated}
 					{engagement.fairValueCents !== null
-						? m.staff_projects_id_task_panel_donated_worth({
+						? m.staff_projects_id_task_panel_donated_worth_text({
 								value: formatCents(engagement.fairValueCents)
 							})
-						: m.staff_projects_id_task_panel_donated()}
+						: m.staff_projects_id_task_panel_donated_text()}
 				{:else}
-					<span class="text-muted">{m.staff_projects_id_task_panel_no_invoice_yet()}</span>
+					<span class="text-muted">{m.staff_projects_id_task_panel_no_invoice_yet_text()}</span>
 				{/if}
 			</Fact>
 			{#if engagement.invoiceRef}
-				<Fact label={m.staff_projects_id_task_panel_invoice()}>
+				<Fact label={m.staff_projects_id_task_panel_invoice_label()}>
 					{engagement.invoiceRef}{engagement.paidAt
-						? m.staff_projects_id_task_panel_paid({
+						? m.staff_projects_id_task_panel_paid_text({
 								formatDateShort: formatDateShort(engagement.paidAt)
 							})
 						: ''}
@@ -106,7 +106,7 @@
 			{/if}
 		{/if}
 		{#if task.startsAt && task.endsAt}
-			<Fact label={m.staff_scheduled()}>
+			<Fact label={m.staff_scheduled_label()}>
 				{#if live}
 					<RescheduleAction
 						{task}
@@ -120,7 +120,7 @@
 			</Fact>
 		{/if}
 		{#if task.dueAt}
-			<Fact label={m.staff_due()}>
+			<Fact label={m.staff_due_label()}>
 				<span class="inline-flex items-center gap-1">
 					{#if live}
 						<RescheduleAction
@@ -134,34 +134,36 @@
 					{/if}
 					{#if when.endsAfterDue}
 						<IconFlag size={14} class="text-warning" aria-hidden="true" />
-						<span class="text-warning">{m.staff_projects_id_task_panel_window_ends_after()}</span>
+						<span class="text-warning"
+							>{m.staff_projects_id_task_panel_window_ends_after_text()}</span
+						>
 					{/if}
 				</span>
 			</Fact>
 		{/if}
-		<Fact label={m.staff_committee()}>
+		<Fact label={m.staff_committee_label()}>
 			{#if task.groupName}
 				{task.groupName}
 			{:else if list.committee}
 				{list.committee.name}
-				<span class="text-muted">{m.staff_projects_id_task_panel_from_project()}</span>
+				<span class="text-muted">{m.staff_projects_id_task_panel_from_project_text()}</span>
 			{:else}
-				<span class="text-muted">{m.staff_staff()}</span>
+				<span class="text-muted">{m.staff_staff_text()}</span>
 			{/if}
 		</Fact>
 		{#if task.assetId}
-			<Fact label={m.staff_equipment()}>
+			<Fact label={m.staff_equipment_label()}>
 				{#if live}
 					<EquipmentAction
 						{task}
 						{projectId}
 						label="{task.assetName ??
-							m.staff_projects_id_task_panel_equipment_fallback()}{task.assetTag
+							m.staff_projects_id_task_panel_equipment_fallback_label()}{task.assetTag
 							? ` · ${task.assetTag}`
 							: ''}"
 					/>
 				{:else}
-					{task.assetName ?? m.staff_equipment()}{task.assetTag ? ` · ${task.assetTag}` : ''}
+					{task.assetName ?? m.staff_equipment_text()}{task.assetTag ? ` · ${task.assetTag}` : ''}
 				{/if}
 				{#if task.assetStatus && task.assetStatus !== 'in_service'}
 					<span class="block text-muted">{assetStatusLabels[task.assetStatus]}</span>
@@ -169,14 +171,14 @@
 			</Fact>
 		{/if}
 		{#if task.dutyListName}
-			<Fact label={m.staff_from()} value={task.dutyListName} />
+			<Fact label={m.staff_from_label()} value={task.dutyListName} />
 		{/if}
 		{#if task.doneWhen}
-			<Fact label={m.staff_projects_id_task_panel_done_when()}>
+			<Fact label={m.staff_projects_id_task_panel_done_when_label()}>
 				{workDoneConditionLabels[task.doneWhen]}
 				{#if task.resolvedAt}
 					<span class="block text-muted">
-						{m.staff_projects_id_task_panel_ticked_by_hand({
+						{m.staff_projects_id_task_panel_ticked_by_hand_text({
 							value: task.resolutionNotes ? `: ${task.resolutionNotes}` : ''
 						})}
 					</span>
@@ -186,26 +188,26 @@
 				{#if live && !task.resolvedAt}
 					<Action
 						action={override}
-						label={m.staff_projects_id_task_panel_tick_by_hand()}
+						label={m.staff_projects_id_task_panel_tick_by_hand_label()}
 						variant="ghost"
 						size="xs"
 						class="mt-1"
-						modalTitle={m.staff_projects_id_task_panel_tick_by_hand_2({ title: task.title })}
-						submitLabel={m.staff_projects_id_task_panel_tick()}
-						successToast={m.staff_projects_id_task_panel_ticked()}
+						modalTitle={m.staff_projects_id_task_panel_tick_by_hand_2_title({ title: task.title })}
+						submitLabel={m.staff_projects_id_task_panel_tick_label()}
+						successToast={m.staff_projects_id_task_panel_ticked_toast()}
 					>
 						{#snippet form()}
 							<input {...override.fields.projectId.as('hidden', projectId)} />
 							<input {...override.fields.workOrderId.as('hidden', task.id)} />
 							<p class="text-sm">
-								{m.staff_projects_id_task_panel_ticks_itself_when_ticking_now({
+								{m.staff_projects_id_task_panel_ticks_itself_when_ticking_now_text({
 									toLowerCase: workDoneConditionLabels[task.doneWhen!].toLowerCase()
 								})}
 							</p>
 							<FormField
 								field={override.fields.reason}
 								type="textarea"
-								label={m.staff_projects_id_task_panel_why_done()}
+								label={m.staff_projects_id_task_panel_why_done_label()}
 							/>
 						{/snippet}
 					</Action>
@@ -215,13 +217,16 @@
 	</DefinitionList>
 
 	{#if live && (!task.startsAt || !task.dueAt || !task.assetId)}
-		<div class="flex flex-wrap gap-1" aria-label={m.staff_projects_id_task_panel_add_property()}>
+		<div
+			class="flex flex-wrap gap-1"
+			aria-label={m.staff_projects_id_task_panel_add_property_label()}
+		>
 			{#if !task.startsAt}
 				<RescheduleAction
 					{task}
 					{projectId}
 					key="add-window"
-					label={m.staff_projects_id_task_panel_scheduled()}
+					label={m.staff_projects_id_task_panel_scheduled_label()}
 				/>
 			{/if}
 			{#if !task.dueAt}
@@ -229,23 +234,27 @@
 					{task}
 					{projectId}
 					key="add-due"
-					label={m.staff_projects_id_task_panel_due_date()}
+					label={m.staff_projects_id_task_panel_due_date_label()}
 				/>
 			{/if}
 			{#if !task.assetId}
-				<EquipmentAction {task} {projectId} label={m.staff_projects_id_task_panel_equipment()} />
+				<EquipmentAction
+					{task}
+					{projectId}
+					label={m.staff_projects_id_task_panel_equipment_label()}
+				/>
 			{/if}
 		</div>
 	{/if}
 
-	<section class="space-y-2" aria-label={m.staff_projects_id_task_panel_duties()}>
-		<SectionLabel label={m.staff_projects_id_task_panel_duties()} count={task.duties.total} />
+	<section class="space-y-2" aria-label={m.staff_projects_id_task_panel_duties_label()}>
+		<SectionLabel label={m.staff_projects_id_task_panel_duties_label()} count={task.duties.total} />
 		<DutyItems {task} {projectId} place="panel" />
 	</section>
 
 	{#if task.notes}
-		<section class="space-y-2" aria-label={m.staff_notes()}>
-			<SectionLabel label={m.staff_notes()} />
+		<section class="space-y-2" aria-label={m.staff_notes_label()}>
+			<SectionLabel label={m.staff_notes_label()} />
 			<p class="text-sm whitespace-pre-wrap">{task.notes}</p>
 		</section>
 	{/if}
@@ -255,19 +264,19 @@
 	<div class="border-t border-base-300 p-4">
 		<Action
 			action={cancel}
-			label={m.staff_projects_id_task_panel_cancel_task()}
+			label={m.staff_projects_id_task_panel_cancel_task_label()}
 			variant="error"
 			outline
 			size="sm"
-			modalTitle={m.staff_projects_id_task_panel_cancel({ title: task.title })}
-			submitLabel={m.staff_projects_id_task_panel_cancel_task()}
-			successToast={m.staff_projects_id_task_panel_task_called_off()}
+			modalTitle={m.staff_projects_id_task_panel_cancel_title({ title: task.title })}
+			submitLabel={m.staff_projects_id_task_panel_cancel_task_label()}
+			successToast={m.staff_projects_id_task_panel_task_called_off_toast()}
 		>
 			{#snippet form()}
 				<input {...cancel.fields.projectId.as('hidden', projectId)} />
 				<input {...cancel.fields.workOrderId.as('hidden', task.id)} />
 				<p class="text-sm">
-					{m.staff_projects_id_task_panel_calls_off_stays_list_struck()}
+					{m.staff_projects_id_task_panel_calls_off_stays_list_struck_text()}
 				</p>
 			{/snippet}
 		</Action>
@@ -279,14 +288,14 @@
 		{#if o.kind === 'acts'}
 			{#if o.notAsked.length > 0}
 				<p>
-					{m.staff_projects_id_task_panel_not_asked_yet({
+					{m.staff_projects_id_task_panel_not_asked_yet_text({
 						join: o.notAsked.map((a) => a.name).join(', ')
 					})}
 				</p>
 			{/if}
 			{#if o.awaiting.length > 0}
 				<p>
-					{m.staff_projects_id_task_panel_asked_not_arrived({
+					{m.staff_projects_id_task_panel_asked_not_arrived_text({
 						join: o.awaiting
 							.map(
 								(r) =>
@@ -297,15 +306,15 @@
 				</p>
 			{/if}
 			<a class="link" href="{resolve(`staff/events/${o.eventId}/production`)}?tab=advance">
-				{m.staff_projects_id_task_panel_artifact_requests()}
+				{m.staff_projects_id_task_panel_artifact_requests_text()}
 			</a>
 		{:else if o.kind === 'listing' || o.kind === 'production'}
 			<a class="link" href={resolve(`staff/events/${o.eventId}/production`)}
-				>{m.staff_projects_id_task_panel_open_show()}</a
+				>{m.staff_projects_id_task_panel_open_show_text()}</a
 			>
 		{:else if o.kind === 'crew'}
 			{#if o.taskIds.length > 0}
-				<p>{m.staff_projects_id_task_panel_still_short()}</p>
+				<p>{m.staff_projects_id_task_panel_still_short_text()}</p>
 				<ul>
 					{#each o.taskIds as id (id)}
 						<li>
@@ -314,12 +323,12 @@
 					{/each}
 				</ul>
 			{:else}
-				<p>{m.staff_projects_id_task_panel_crew_tasks_list_full_others()}</p>
+				<p>{m.staff_projects_id_task_panel_crew_tasks_list_full_others_text()}</p>
 			{/if}
 		{:else if o.kind === 'duties'}
-			<p>{m.staff_projects_id_task_panel_its_duties_below()}</p>
+			<p>{m.staff_projects_id_task_panel_its_duties_below_text()}</p>
 		{:else}
-			<p>{m.staff_projects_id_task_panel_task_no_show_so_its()}</p>
+			<p>{m.staff_projects_id_task_panel_task_no_show_so_its_text()}</p>
 		{/if}
 	</div>
 {/snippet}

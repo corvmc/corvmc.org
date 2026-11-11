@@ -29,13 +29,13 @@
 		try {
 			await navigator.clipboard.writeText(emails.join(', '));
 			toast.success(
-				msg.staff_volunteer_roles_id_role_interested_card_copied({
+				msg.staff_volunteer_roles_id_role_interested_card_copied_toast({
 					length: emails.length,
 					value: emails.length === 1 ? 'address' : 'addresses'
 				})
 			);
 		} catch {
-			toast.error(msg.staff_volunteer_roles_id_role_interested_card_couldn_t_copy());
+			toast.error(msg.staff_volunteer_roles_id_role_interested_card_couldn_t_copy_toast());
 		}
 	}
 
@@ -65,7 +65,7 @@
 				{#await interested then r}
 					{#if r.gated && r.rows.length > 0}
 						<span class="text-muted font-normal">
-							{msg.staff_volunteer_roles_id_role_interested_card_cleared_today({
+							{msg.staff_volunteer_roles_id_role_interested_card_cleared_today_title({
 								length: r.rows.filter((m) => m.missing.length === 0).length,
 								length2: r.rows.length
 							})}
@@ -78,7 +78,7 @@
 			{#await interested then r}
 				{#if r.rows.length > 0}
 					<Button variant="ghost" size="sm" onclick={() => copyEmails(r.rows.map((m) => m.email))}>
-						{msg.staff_volunteer_roles_id_role_interested_card_copy_emails_pa()}
+						{msg.staff_volunteer_roles_id_role_interested_card_copy_emails_pa_label()}
 					</Button>
 				{/if}
 			{:catch}
@@ -91,18 +91,18 @@
 		{@const gated = r.gated}
 		<DataList
 			result={interested}
-			empty={msg.staff_volunteer_roles_id_role_interested_card_empty()}
+			empty={msg.staff_volunteer_roles_id_role_interested_card_empty_body()}
 			onpage={(p) => (pageNumber = p)}
 		>
 			{#snippet children(members)}
 				<Table>
 					{#snippet head()}
 						{#if gated}
-							<th class="w-px"><span class="sr-only">{msg.staff_cleared()}</span></th>
+							<th class="w-px"><span class="sr-only">{msg.staff_cleared_label()}</span></th>
 						{/if}
-						<th>{msg.staff_member()}</th>
-						<th class="col-support">{msg.staff_when_they_can_help()}</th>
-						<th class="col-extra whitespace-nowrap">{msg.staff_since()}</th>
+						<th>{msg.staff_member_label()}</th>
+						<th class="col-support">{msg.staff_when_they_can_help_label()}</th>
+						<th class="col-extra whitespace-nowrap">{msg.staff_since_label()}</th>
 					{/snippet}
 
 					{#each members as member (member.userId)}
@@ -117,7 +117,7 @@
 								<EntityIdentity ref={member.member} />
 								{#if gated && member.missing.length > 0}
 									<div class="text-xs text-warning">
-										{msg.staff_volunteer_roles_id_role_interested_card_needs({
+										{msg.staff_volunteer_roles_id_role_interested_card_needs_text({
 											join: member.missing.map((c) => c.name).join(', ')
 										})}
 									</div>
@@ -141,6 +141,6 @@
 			{/snippet}
 		</DataList>
 	{:catch error}
-		<Alert type="error">{msg.ui_load_failed({ error: errorMessage(error) })}</Alert>
+		<Alert type="error">{msg.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
 	{/await}
 </InfoCard>

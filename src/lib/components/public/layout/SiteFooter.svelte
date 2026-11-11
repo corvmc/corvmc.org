@@ -15,14 +15,14 @@
 	);
 
 	const footerLinks = [
-		{ href: resolve('about'), label: m.public_about() },
-		{ href: resolve('programs'), label: m.public_programs() },
-		{ href: resolve('events'), label: m.public_events() },
-		{ href: resolve('directory'), label: m.public_directory() },
+		{ href: resolve('about'), label: m.public_about_label() },
+		{ href: resolve('programs'), label: m.public_programs_label() },
+		{ href: resolve('events'), label: m.public_events_label() },
+		{ href: resolve('directory'), label: m.public_directory_label() },
 		// Static, like every row here. The list cannot ask whether any group is
 		// published — a second remote query in this component crashes past kit
 		// 2.64 — so /groups carries its own empty state instead.
-		{ href: resolve('groups'), label: m.public_site_footer_groups() },
+		{ href: resolve('groups'), label: m.public_site_footer_groups_label() },
 		// CMC Radio had a row here and it 404'd for every visitor: `getRadioPage`
 		// calls `requireFeature('cmcRadio')`, the flag is off, and production has
 		// no plays to put on the air. /groups could carry an empty state because
@@ -31,17 +31,25 @@
 		// The row was also the way back from a dismissed radio bar. Nothing is
 		// lost: the bar only renders while the flag is on, so with it off there is
 		// nothing to have dismissed. Launching the station puts this row back.
-		{ href: resolve('local-resources'), label: m.public_site_footer_local_resources() },
-		{ href: resolve('contribute'), label: m.public_contribute() },
-		{ href: resolve('about/bylaws'), label: m.public_site_footer_bylaws() },
-		{ href: resolve('about/privacy'), label: m.public_site_footer_privacy() },
-		{ href: resolve('contact'), label: m.public_contact() }
+		{ href: resolve('local-resources'), label: m.public_site_footer_local_resources_label() },
+		{ href: resolve('contribute'), label: m.public_contribute_2_label() },
+		{ href: resolve('about/bylaws'), label: m.public_site_footer_bylaws_label() },
+		{ href: resolve('about/privacy'), label: m.public_site_footer_privacy_label() },
+		{ href: resolve('contact'), label: m.public_contact_label() }
 	];
 
 	const socials = $derived(
 		[
-			{ href: social.facebook, label: m.public_site_footer_facebook(), icon: IconBrandFacebook },
-			{ href: social.instagram, label: m.public_site_footer_instagram(), icon: IconBrandInstagram }
+			{
+				href: social.facebook,
+				label: m.public_site_footer_facebook_label(),
+				icon: IconBrandFacebook
+			},
+			{
+				href: social.instagram,
+				label: m.public_site_footer_instagram_label(),
+				icon: IconBrandInstagram
+			}
 		].filter((s) => s.href)
 	);
 </script>
@@ -75,12 +83,12 @@
 
 		<div class="mt-6 text-xs text-fg-3">
 			<p>
-				{m.public_site_footer_corvallis_music_collective_all_rights({
+				{m.public_site_footer_corvallis_music_collective_all_rights_text({
 					getFullYear: new Date().getFullYear()
 				})}
 			</p>
 			<p class="mt-1">
-				{m.public_site_footer_501_c_3_nonprofit()}{#if addressLine}&nbsp;&middot; {addressLine}{/if}
+				{m.public_site_footer_501_c_3_nonprofit_text()}{#if addressLine}&nbsp;&middot; {addressLine}{/if}
 			</p>
 		</div>
 	</div>

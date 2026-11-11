@@ -62,7 +62,7 @@
 						<span class="truncate font-medium" class:font-bold={c.unread}>{titleOf(c)}</span>
 						{#if c.pending}
 							<span class="badge shrink-0 badge-sm badge-warning" data-testid="request-badge"
-								>{m.inbox_conversation_rows_request()}</span
+								>{m.inbox_conversation_rows_request_text()}</span
 							>
 						{/if}
 						{#if showInbox && c.groupName}
@@ -73,7 +73,7 @@
 						{#if c.unread}
 							<span
 								class="size-2 shrink-0 rounded-full bg-primary"
-								title={m.inbox_conversation_rows_title()}
+								title={m.inbox_conversation_rows_title_label()}
 							></span>
 						{/if}
 					</span>
@@ -84,7 +84,7 @@
 
 					<span class="text-subtle text-xs">
 						{c.lastMessageAt ? relativeDay(c.lastMessageAt) : '—'}
-						{#if c.status === 'resolved'}{m.inbox_conversation_rows_closed()}{/if}
+						{#if c.status === 'resolved'}{m.inbox_conversation_rows_closed_text()}{/if}
 					</span>
 				</span>
 			</a>

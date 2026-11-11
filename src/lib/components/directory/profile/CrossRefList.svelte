@@ -29,7 +29,9 @@
 
 {#if items.length > 0}
 	<ProfileSection
-		title={kind === 'bands' ? m.directory_profile_bands() : m.directory_profile_members()}
+		title={kind === 'bands'
+			? m.directory_profile_bands_title()
+			: m.directory_profile_members_title()}
 		{note}
 	>
 		<div class="rel-list">
@@ -38,9 +40,11 @@
 					<div class="rel-row rel-row--private">
 						<EntityAvatar shape={item.avatarShape} name="Private member" class="rel-row__av" />
 						<div class="rel-row__meta">
-							<p class="rel-row__name">{m.directory_profile_cross_ref_list_private_member()}</p>
+							<p class="rel-row__name">
+								{m.directory_profile_cross_ref_list_private_member_text()}
+							</p>
 							<p class="rel-row__sub">
-								{item.sub || m.directory_profile_cross_ref_list_not_shown()}
+								{item.sub || m.directory_profile_cross_ref_list_not_shown_text()}
 							</p>
 						</div>
 						<IconLock size={16} class="rel-row__icon" />

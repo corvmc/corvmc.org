@@ -73,7 +73,7 @@
 					size="sm"
 					shape="circle"
 					outline
-					aria-label={m.events_ticket_qrmodal_previous_ticket()}
+					aria-label={m.events_ticket_qrmodal_previous_ticket_label()}
 					onclick={() => (offset -= 1)}
 				>
 					<svg
@@ -94,7 +94,7 @@
 					size="sm"
 					shape="circle"
 					outline
-					aria-label={m.events_ticket_qrmodal_next_ticket()}
+					aria-label={m.events_ticket_qrmodal_next_ticket_label()}
 					onclick={() => (offset += 1)}
 				>
 					<svg

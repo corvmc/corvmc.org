@@ -40,10 +40,10 @@
 	const f = roster.values;
 
 	const flagFilters = [
-		{ key: 'sustaining', label: m.staff_members_sustaining_member() },
-		{ key: 'inBand', label: m.staff_members_band() },
-		{ key: 'staff', label: m.staff_members_staff_position() },
-		{ key: 'instructor', label: m.staff_members_teaching_instructor() }
+		{ key: 'sustaining', label: m.staff_members_sustaining_member_label() },
+		{ key: 'inBand', label: m.staff_members_band_label() },
+		{ key: 'staff', label: m.staff_members_staff_position_label() },
+		{ key: 'instructor', label: m.staff_members_teaching_instructor_label() }
 	] as const;
 
 	const asBool = (v: YesNo) => (v === '' ? undefined : v === 'yes');
@@ -81,7 +81,7 @@
 	}
 </script>
 
-<PageHeader title={m.staff_members()}>
+<PageHeader title={m.staff_members_title()}>
 	<MemberViews active="all" />
 </PageHeader>
 
@@ -90,7 +90,7 @@
 		<UserTotals />
 		{#snippet failed(_error, reset)}
 			<Alert type="warning" reset={() => retryQuery(getStaffUserTotals(), reset)}>
-				{m.staff_members_totals_didn_t_load()}
+				{m.staff_members_totals_didn_t_load_body()}
 			</Alert>
 		{/snippet}
 	</svelte:boundary>
@@ -98,8 +98,8 @@
 	<Roster
 		{roster}
 		result={list}
-		empty={m.staff_members_empty()}
-		searchPlaceholder={m.staff_search_by_name_email()}
+		empty={m.staff_members_empty_body()}
+		searchPlaceholder={m.staff_search_by_name_email_placeholder()}
 		exportPath={resolve('staff/members/export')}
 		emails={() => getStaffUserEmails({ ...f, q: f.q || undefined })}
 	>
@@ -110,14 +110,14 @@
 		{#snippet filters()}
 			<Select
 				size="sm"
-				aria-label={m.staff_status()}
+				aria-label={m.staff_status_label()}
 				value={f.status}
 				onchange={(e: Event) =>
 					setFilter('status', (e.currentTarget as HTMLSelectElement).value as typeof f.status)}
 			>
-				<option value="active">{m.staff_active()}</option>
-				<option value="deactivated">{m.staff_deactivated()}</option>
-				<option value="all">{m.staff_all_statuses()}</option>
+				<option value="active">{m.staff_active_label()}</option>
+				<option value="deactivated">{m.staff_deactivated_label()}</option>
+				<option value="all">{m.staff_all_statuses_label()}</option>
 			</Select>
 		{/snippet}
 
@@ -131,9 +131,9 @@
 						onchange={(e: Event) =>
 							setFilter(x.key, (e.currentTarget as HTMLSelectElement).value as YesNo)}
 					>
-						<option value="">{m.staff_members_either()}</option>
-						<option value="yes">{m.staff_yes()}</option>
-						<option value="no">{m.staff_members_no()}</option>
+						<option value="">{m.staff_members_either_label()}</option>
+						<option value="yes">{m.staff_yes_label()}</option>
+						<option value="no">{m.staff_members_no_label()}</option>
 					</Select>
 				</label>
 			{/each}
@@ -141,21 +141,21 @@
 
 		{#snippet summary(total)}
 			{total}
-			{total === 1 ? m.staff_member_2() : m.staff_members_2()}
+			{total === 1 ? m.staff_member_2_text() : m.staff_members_2_text()}
 		{/snippet}
 
 		{#snippet bulk()}
 			{#if selected.size > 0}
 				<span class="text-sm" data-testid="selected-count"
-					>{m.staff_members_selected({ size: selected.size })}</span
+					>{m.staff_members_selected_text({ size: selected.size })}</span
 				>
 				<Action
 					action={bulkDeactivateUsers}
-					label={m.staff_deactivate()}
+					label={m.staff_deactivate_label()}
 					variant="error"
 					size="sm"
 					modalTitle={m.staff_members_modal_title()}
-					submitLabel={m.staff_deactivate()}
+					submitLabel={m.staff_deactivate_label()}
 					submitVariant="error"
 					onsuccess={(result) => {
 						const r = result as { deactivated: string[]; skipped: string[] };
@@ -171,12 +171,14 @@
 					{#snippet form()}
 						<input {...bulkFields.ids.as('hidden', JSON.stringify([...selected]))} />
 						<p class="py-2">
-							{m.staff_members_deactivate_selected_members_their_future({ size: selected.size })}
+							{m.staff_members_deactivate_selected_members_their_future_text({
+								size: selected.size
+							})}
 						</p>
 					{/snippet}
 				</Action>
 				<Button variant="ghost" size="sm" onclick={() => selected.clear()}
-					>{m.staff_members_clear()}</Button
+					>{m.staff_members_clear_label()}</Button
 				>
 			{/if}
 		{/snippet}
@@ -186,7 +188,7 @@
 			<input
 				type="checkbox"
 				class="checkbox checkbox-sm"
-				aria-label={m.staff_members_select_all_page()}
+				aria-label={m.staff_members_select_all_page_label()}
 				disabled={ids.length === 0}
 				checked={ids.length > 0 && ids.every((id) => selected.has(id))}
 				onchange={(e) => toggleAll(rows, e.currentTarget.checked)}
@@ -197,7 +199,7 @@
 			<input
 				type="checkbox"
 				class="checkbox checkbox-sm"
-				aria-label={m.staff_members_select({ title: row.member.title })}
+				aria-label={m.staff_members_select_label({ title: row.member.title })}
 				disabled={!!row.deletedAt}
 				checked={selected.has(row.id)}
 				onchange={(e) => {
@@ -208,9 +210,9 @@
 		{/snippet}
 
 		{#snippet columns()}
-			<th class="col-support">{m.staff_phone()}</th>
-			<th class="col-support">{m.staff_membership()}</th>
-			<th class="col-support">{m.staff_joined()}</th>
+			<th class="col-support">{m.staff_phone_label()}</th>
+			<th class="col-support">{m.staff_membership_label()}</th>
+			<th class="col-support">{m.staff_joined_label()}</th>
 		{/snippet}
 
 		{#snippet cells(row)}
@@ -223,9 +225,9 @@
 			</td>
 			<td class="col-support whitespace-nowrap">
 				{#if row.sustaining}
-					<Badge size="sm" class="badge-primary">{m.staff_sustaining()}</Badge>
+					<Badge size="sm" class="badge-primary">{m.staff_sustaining_label()}</Badge>
 				{:else}
-					<span class="text-fg-3">{m.staff_members_free()}</span>
+					<span class="text-fg-3">{m.staff_members_free_text()}</span>
 				{/if}
 			</td>
 			<td class="col-support whitespace-nowrap">{formatDateShortYear(row.createdAt)}</td>

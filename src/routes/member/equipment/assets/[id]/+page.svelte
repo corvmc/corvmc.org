@@ -38,7 +38,10 @@
 	width="2xl"
 	subtitle={asset.categoryName}
 	title={asset.name}
-	parent={{ label: m.member_equipment_assets_id_equipment(), href: resolve('member/equipment') }}
+	parent={{
+		label: m.member_equipment_assets_id_equipment_label(),
+		href: resolve('member/equipment')
+	}}
 >
 	<!-- The whole point of the sticker. This page had `itemId` and used it only
 	     to fetch resources, so a member who scanned a thing they wanted was told
@@ -46,20 +49,20 @@
 	     request form; `?request=` opens it on the right item. -->
 	{#if asset.isAvailable}
 		<Button href={resolve(`member/equipment?request=${asset.itemId}`)} variant="primary" size="sm">
-			{m.member_equipment_assets_id_ask_borrow()}
+			{m.member_equipment_assets_id_ask_borrow_label()}
 		</Button>
 	{:else}
 		<Button href={resolve('member/equipment')} variant="default" size="sm" outline>
-			{m.member_equipment_assets_id_see_what_else_free()}
+			{m.member_equipment_assets_id_see_what_else_free_label()}
 		</Button>
 	{/if}
 </PageHeader>
 
 <PageContent width="2xl">
-	<InfoCard title={asset.assetTag ?? m.member_equipment_assets_id_unit()}>
+	<InfoCard title={asset.assetTag ?? m.member_equipment_assets_id_unit_title()}>
 		{#if !asset.isAvailable}
 			<Alert type="warning" class="mb-4">
-				{m.member_equipment_assets_id_one_right_now({
+				{m.member_equipment_assets_id_one_right_now_body({
 					toLowerCase: assetStatusLabels[asset.status].toLowerCase()
 				})}
 			</Alert>
@@ -70,16 +73,16 @@
 		{/if}
 
 		<DefinitionList>
-			<Fact label={m.member_equipment_assets_id_condition()}>
+			<Fact label={m.member_equipment_assets_id_condition_label()}>
 				<Badge size="sm" class={equipmentConditionBadge[asset.condition] ?? 'badge-ghost'}>
 					{titleCase(asset.condition)}
 				</Badge>
 			</Fact>
 			{#if asset.locationName}
-				<Fact label={m.member_equipment_assets_id_kept()}>{asset.locationName}</Fact>
+				<Fact label={m.member_equipment_assets_id_kept_label()}>{asset.locationName}</Fact>
 			{/if}
 			{#if asset.assetTag}
-				<Fact label={m.member_equipment_assets_id_tag()} mono>{asset.assetTag}</Fact>
+				<Fact label={m.member_equipment_assets_id_tag_label()} mono>{asset.assetTag}</Fact>
 			{/if}
 		</DefinitionList>
 
@@ -93,7 +96,7 @@
 	<!-- Documentation belongs to the catalog entry, not the unit: the manual for a
 	     K12.2 is the manual for all four of them. -->
 	{#if resources.manuals.length > 0 || resources.articles.length > 0}
-		<InfoCard title={m.member_equipment_assets_id_how_use()} class="mt-6">
+		<InfoCard title={m.member_equipment_assets_id_how_use_title()} class="mt-6">
 			{#if resources.articles.length > 0}
 				<ul class="space-y-2">
 					{#each resources.articles as article (article.id)}
@@ -116,7 +119,7 @@
 						<li class="flex items-start gap-2">
 							<IconFileText size={18} class="mt-0.5 shrink-0 opacity-60" />
 							<a class="link" href={manual.url ?? '#'} target="_blank" rel="noopener external">
-								{manual.filename ?? m.member_equipment_assets_id_manual()}
+								{manual.filename ?? m.member_equipment_assets_id_manual_text()}
 							</a>
 						</li>
 					{/each}

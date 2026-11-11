@@ -94,26 +94,26 @@
 
 <PageHeader
 	title={project.name}
-	subtitle={committeeNames || m.staff_projects_id_subtitle()}
+	subtitle={committeeNames || m.staff_projects_id_subtitle_body()}
 	sticky={false}
 	menuLabel={m.staff_projects_id_menu_label()}
 >
 	{#if data.showId}
 		<Button variant="default" href={resolve(`staff/events/${data.showId}/production`)}>
-			{m.staff_production()}
+			{m.staff_production_label()}
 		</Button>
 	{/if}
 	<Button variant="default" href={resolve(`staff/projects/${project.id}/budget`)}
-		>{m.staff_budget()}</Button
+		>{m.staff_budget_label()}</Button
 	>
 	{#if dutyListOptions.length > 0}
 		<Action
 			action={applyDutyListToProjectForm}
-			label={m.staff_apply_template()}
+			label={m.staff_apply_template_label()}
 			variant="default"
-			modalTitle={m.staff_projects_id_apply_template({ name: project.name })}
-			submitLabel={m.staff_apply()}
-			successToast={m.staff_projects_id_tasks_created()}
+			modalTitle={m.staff_projects_id_apply_template_title({ name: project.name })}
+			submitLabel={m.staff_apply_label()}
+			successToast={m.staff_projects_id_tasks_created_toast()}
 			onsuccess={toastWarnings}
 		>
 			{#snippet form()}
@@ -121,10 +121,14 @@
 				<Field
 					field={applyFields.dutyListId}
 					type="select"
-					label={m.staff_template()}
+					label={m.staff_template_label()}
 					options={dutyListOptions}
 				/>
-				<Field field={applyFields.reason} type="text" label={m.staff_reason_if_applying_again()} />
+				<Field
+					field={applyFields.reason}
+					type="text"
+					label={m.staff_reason_if_applying_again_label()}
+				/>
 			{/snippet}
 		</Action>
 	{/if}
@@ -132,51 +136,56 @@
 	{#snippet primary()}
 		<Action
 			action={updateProjectForm}
-			label={m.staff_projects_id_edit_project()}
-			modalTitle={m.staff_projects_id_edit_project()}
-			successToast={m.staff_saved()}
+			label={m.staff_projects_id_edit_project_label()}
+			modalTitle={m.staff_projects_id_edit_project_title()}
+			successToast={m.staff_saved_toast()}
 		>
 			{#snippet form()}
 				<input {...editFields.id.as('hidden', project.id)} />
-				<Field field={editFields.name} type="text" label={m.staff_name()} value={project.name} />
+				<Field
+					field={editFields.name}
+					type="text"
+					label={m.staff_name_label()}
+					value={project.name}
+				/>
 				<Field
 					field={editFields.description}
 					type="textarea"
-					label={m.staff_description()}
+					label={m.staff_description_label()}
 					value={project.description ?? ''}
 				/>
 				<Field
 					field={editFields.groupId}
 					type="select"
-					label={m.staff_owning_committee()}
-					placeholder={m.ui_none()}
+					label={m.staff_owning_committee_label()}
+					placeholder={m.ui_none_placeholder()}
 					options={committeeOptions}
 					value={owner?.groupId ?? ''}
 				/>
 				<Field
 					field={editFields.suggestionId}
 					type="select"
-					label={m.staff_projects_id_answers_suggestion()}
-					placeholder={m.ui_none()}
+					label={m.staff_projects_id_answers_suggestion_label()}
+					placeholder={m.ui_none_placeholder()}
 					options={suggestionOptions}
 					value={project.suggestionId ?? ''}
-					description={m.staff_projects_id_one_project_per_suggestion_its()}
+					description={m.staff_projects_id_one_project_per_suggestion_its_body()}
 				/>
 				<MoneyField
 					field={editFields.budgetCents}
-					label={m.staff_budget()}
+					label={m.staff_budget_label()}
 					value={project.budgetCents}
 				/>
 				<Field
 					field={editFields.startsAt}
 					type="date"
-					label={m.staff_starts()}
+					label={m.staff_starts_label()}
 					value={asDateValue(project.startsAt)}
 				/>
 				<Field
 					field={editFields.endsAt}
 					type="date"
-					label={m.staff_ends()}
+					label={m.staff_ends_label()}
 					value={asDateValue(project.endsAt)}
 				/>
 			{/snippet}
@@ -187,33 +196,33 @@
 		{#if isProjectArchived(project.status)}
 			<Action
 				action={setProjectStatusForm}
-				label={m.staff_projects_id_unarchive()}
-				modalTitle={m.staff_projects_id_unarchive_project()}
-				successToast={m.staff_projects_id_project_unarchived()}
+				label={m.staff_projects_id_unarchive_label()}
+				modalTitle={m.staff_projects_id_unarchive_project_title()}
+				successToast={m.staff_projects_id_project_unarchived_toast()}
 			>
 				{#snippet form()}
 					<input {...statusFields.id.as('hidden', project.id)} />
 					<input {...statusFields.status.as('hidden', PROJECT_UNARCHIVED_STATUS)} />
-					<p class="text-sm">{m.staff_projects_id_returns_active_list_with_its()}</p>
+					<p class="text-sm">{m.staff_projects_id_returns_active_list_with_its_text()}</p>
 				{/snippet}
 			</Action>
 		{:else}
 			<Action
 				action={setProjectStatusForm}
-				label={m.staff_archive()}
-				modalTitle={m.staff_projects_id_archive_project()}
-				successToast={m.staff_projects_id_project_archived()}
+				label={m.staff_archive_label()}
+				modalTitle={m.staff_projects_id_archive_project_title()}
+				successToast={m.staff_projects_id_project_archived_toast()}
 			>
 				{#snippet form()}
 					<input {...statusFields.id.as('hidden', project.id)} />
 					<Field
 						field={statusFields.status}
 						type="select"
-						label={m.staff_outcome()}
+						label={m.staff_outcome_label()}
 						options={projectArchiveOutcomeOptions}
 						value="done"
 						description={project.suggestionId
-							? m.staff_projects_id_suggestion_answers_reports_same_outcome()
+							? m.staff_projects_id_suggestion_answers_reports_same_outcome_body()
 							: undefined}
 					/>
 				{/snippet}
@@ -232,17 +241,17 @@
 <PageContent>
 	<div
 		class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm"
-		aria-label={m.staff_projects_id_project_status()}
+		aria-label={m.staff_projects_id_project_status_label()}
 	>
 		{#if isProjectArchived(project.status)}
-			<Badge variant="ghost">{m.staff_archived()}</Badge>
+			<Badge variant="ghost">{m.staff_archived_label()}</Badge>
 		{/if}
 		<span class="inline-flex items-center gap-2">
 			<progress
 				class="progress w-28 progress-success"
 				value={progress.done}
 				max={Math.max(progress.total, 1)}
-				aria-label={m.staff_projects_id_tasks_done()}
+				aria-label={m.staff_projects_id_tasks_done_label()}
 			></progress>
 			<span class="inline-flex items-center gap-1">
 				<ParaglideMessage
@@ -251,38 +260,38 @@
 					>{#snippet strong({ children })}<strong>{@render children?.()}</strong
 						>{/snippet}</ParaglideMessage
 				>
-				<IconCheck size={14} aria-label={m.staff_projects_id_tasks_done_2()} />
+				<IconCheck size={14} aria-label={m.staff_projects_id_tasks_done_2_label()} />
 			</span>
 		</span>
 		<span class="text-muted">
 			{#if project.startsAt}
 				{formatDateShort(project.startsAt)}{project.endsAt
 					? ` – ${formatDateShort(project.endsAt)}`
-					: m.staff_projects_id_onward()}
+					: m.staff_projects_id_onward_text()}
 			{:else}
-				{m.staff_projects_id_no_dates_set()}
+				{m.staff_projects_id_no_dates_set_text()}
 			{/if}
 		</span>
 	</div>
 
 	<details class="collapse-arrow collapse border border-base-300">
-		<summary class="collapse-title font-medium">{m.staff_about()}</summary>
+		<summary class="collapse-title font-medium">{m.staff_about_label()}</summary>
 		<div class="collapse-content space-y-4 text-sm">
 			{#if project.description}
 				<p class="whitespace-pre-wrap">{project.description}</p>
 			{:else}
-				<p class="text-muted">{m.staff_projects_id_no_description_yet_add_one()}</p>
+				<p class="text-muted">{m.staff_projects_id_no_description_yet_add_one_text()}</p>
 			{/if}
 			<DefinitionList>
 				{#if origin.suggestion}
-					<Fact label={m.staff_suggested()}>
+					<Fact label={m.staff_suggested_label()}>
 						<a class="link" href={resolve(`staff/suggestions/${origin.suggestion.id}`)}>
 							{origin.suggestion.title}
 						</a>
 					</Fact>
 				{/if}
 				{#if origin.ballot}
-					<Fact label={m.staff_projects_id_authorised_by()}>
+					<Fact label={m.staff_projects_id_authorised_by_label()}>
 						<BallotLine
 							ballot={origin.ballot}
 							href={surfaces.ballots ? resolve(`staff/ballots/${origin.ballot.id}`) : null}
@@ -290,7 +299,7 @@
 					</Fact>
 				{/if}
 				{#each origin.decidedBy as b (b.id)}
-					<Fact label={m.staff_projects_id_put_ballot()}>
+					<Fact label={m.staff_projects_id_put_ballot_label()}>
 						<BallotLine
 							ballot={b}
 							href={surfaces.ballots ? resolve(`staff/ballots/${b.id}`) : null}
@@ -298,12 +307,12 @@
 					</Fact>
 				{/each}
 				{#if !origin.suggestion && !origin.ballot && origin.decidedBy.length === 0}
-					<Fact label={m.staff_projects_id_origin()}
-						>{m.staff_projects_id_staff_started_directly()}</Fact
+					<Fact label={m.staff_projects_id_origin_label()}
+						>{m.staff_projects_id_staff_started_directly_text()}</Fact
 					>
 				{/if}
 				{#if data.attachments.events.length > 0}
-					<Fact label={m.staff_projects_id_events()}>
+					<Fact label={m.staff_projects_id_events_label()}>
 						<span class="flex flex-wrap gap-2">
 							{#each data.attachments.events as ev (ev.id)}
 								<EntityChip ref={ev.ref} />
@@ -347,9 +356,9 @@
 			</aside>
 		{:else if selectedId}
 			<Alert type="warning" class="ml-4">
-				{m.staff_projects_id_task_not_project()}
+				{m.staff_projects_id_task_not_project_body()}
 				{#snippet action()}
-					<Button size="sm" onclick={closeTask}>{m.staff_projects_id_close()}</Button>
+					<Button size="sm" onclick={closeTask}>{m.staff_projects_id_close_label()}</Button>
 				{/snippet}
 			</Alert>
 		{:else}

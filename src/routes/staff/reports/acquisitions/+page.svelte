@@ -64,7 +64,7 @@
 	}
 </script>
 
-<PageHeader title={m.staff_reports()} documentTitle={m.staff_acquisitions()}>
+<PageHeader title={m.staff_reports_title()} documentTitle={m.staff_acquisitions_title()}>
 	<StaffViews views={reportViews} active="acquisitions" collapse />
 </PageHeader>
 
@@ -73,30 +73,30 @@
 		<Field
 			name="kind"
 			type="select"
-			label={m.staff_kind()}
+			label={m.staff_kind_label()}
 			bind:value={kind}
 			options={[
-				{ value: '', label: m.staff_all() },
+				{ value: '', label: m.staff_all_label() },
 				...acquisitionKinds.map((k) => ({ value: k, label: acquisitionKindLabels[k] }))
 			]}
 		/>
-		<Field name="from" type="date" label={m.staff_from()} bind:value={from} />
-		<Field name="to" type="date" label={m.staff_text()} bind:value={to} />
+		<Field name="from" type="date" label={m.staff_from_label()} bind:value={from} />
+		<Field name="to" type="date" label={m.staff_text_label()} bind:value={to} />
 		<Field
 			name="owed"
 			type="checkbox"
-			label={m.staff_awaiting_reimbursement()}
+			label={m.staff_awaiting_reimbursement_label()}
 			bind:value={owed}
-			checkboxLabel={m.staff_inventory_acquisitions_checkbox_label()}
+			checkboxLabel={m.staff_inventory_acquisitions_checkbox_label_checkbox()}
 		/>
-		<Button variant="default" size="sm" onclick={() => apply()}>{m.staff_apply()}</Button>
+		<Button variant="default" size="sm" onclick={() => apply()}>{m.staff_apply_label()}</Button>
 	</div>
 
 	{#if data.owedCount > 0 && !owed}
 		<p class="mb-4 text-subtle">
 			{data.owedCount === 1
-				? m.staff_inventory_acquisitions_one_acquisition_awaiting_reimbu()
-				: m.staff_inventory_acquisitions_acquisitions_awaiting_reimburse({
+				? m.staff_inventory_acquisitions_one_acquisition_awaiting_reimbu_text()
+				: m.staff_inventory_acquisitions_acquisitions_awaiting_reimburse_text({
 						owedCount: data.owedCount
 					})}
 		</p>
@@ -104,21 +104,21 @@
 
 	{#if data.rows.length === 0}
 		<EmptyState
-			title={m.staff_inventory_acquisitions_nothing_recorded()}
+			title={m.staff_inventory_acquisitions_nothing_recorded_title()}
 			description={owed
-				? m.staff_inventory_acquisitions_nobody_currently_owed_anything()
-				: m.staff_inventory_acquisitions_receiving_stock_against_item_wh()}
+				? m.staff_inventory_acquisitions_nobody_currently_owed_anything_body()
+				: m.staff_inventory_acquisitions_receiving_stock_against_item_wh_body()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th class="whitespace-nowrap">{m.staff_date()}</th>
-				<th>{m.staff_source()}</th>
-				<th class="col-support">{m.staff_kind()}</th>
-				<th class="col-extra">{m.staff_reference()}</th>
-				<th class="col-support cell-num">{m.staff_inventory_acquisitions_lines()}</th>
-				<th class="cell-num">{m.staff_value()}</th>
-				<th>{m.staff_inventory_acquisitions_reimbursement()}</th>
+				<th class="whitespace-nowrap">{m.staff_date_label()}</th>
+				<th>{m.staff_source_label()}</th>
+				<th class="col-support">{m.staff_kind_label()}</th>
+				<th class="col-extra">{m.staff_reference_label()}</th>
+				<th class="col-support cell-num">{m.staff_inventory_acquisitions_lines_label()}</th>
+				<th class="cell-num">{m.staff_value_label()}</th>
+				<th>{m.staff_inventory_acquisitions_reimbursement_label()}</th>
 			{/snippet}
 			{#each data.rows as row (row.id)}
 				<tr class="hover">
@@ -131,7 +131,7 @@
 						{row.donorName ?? '—'}
 						{#if row.kind === 'donation' && row.acknowledgedAt}
 							<Badge variant="outline" size="xs"
-								>{m.staff_inventory_acquisitions_8283_signed()}</Badge
+								>{m.staff_inventory_acquisitions_8283_signed_label()}</Badge
 							>
 						{/if}
 					</td>
@@ -142,11 +142,13 @@
 					<td>
 						{#if row.awaitingReimbursement}
 							<Badge variant="warning" size="sm"
-								>{m.staff_inventory_acquisitions_owed({ paidByName: row.paidByName ?? '' })}</Badge
+								>{m.staff_inventory_acquisitions_owed_label({
+									paidByName: row.paidByName ?? ''
+								})}</Badge
 							>
 						{:else if row.reimbursedAt}
 							<span class="text-subtle">
-								{m.staff_inventory_acquisitions_repaid({
+								{m.staff_inventory_acquisitions_repaid_text({
 									formatDateShort: formatDateShort(row.reimbursedAt)
 								})}
 							</span>

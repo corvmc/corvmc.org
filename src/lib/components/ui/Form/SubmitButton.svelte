@@ -14,7 +14,7 @@
 		label = m.ui_form_submit_button_label(),
 		continueLabel = m.ui_form_submit_button_continue_label(),
 		successLabel = m.ui_form_submit_button_success_label(),
-		errorLabel = m.ui_error(),
+		errorLabel = m.ui_error_label(),
 		variant = 'primary',
 		size,
 		class: className = '',
@@ -60,7 +60,7 @@
 	// `{...rest}` is spread after it, so a caller's own `title` still wins.
 	const disabledReason = $derived(
 		browser && !disabled && !ctx.currentStepValid
-			? m.ui_form_submit_button_disabled_reason()
+			? m.ui_form_submit_button_disabled_reason_title()
 			: undefined
 	);
 
@@ -83,7 +83,7 @@
 
 <div class="flex items-center gap-2">
 	{#if ctx.currentStep > 0}
-		<Button type="button" variant="ghost" onclick={() => ctx.back()}>{m.ui_back()}</Button>
+		<Button type="button" variant="ghost" onclick={() => ctx.back()}>{m.ui_back_label()}</Button>
 	{/if}
 	<Button
 		type={isLastStep ? 'submit' : 'button'}

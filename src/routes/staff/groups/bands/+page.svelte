@@ -51,7 +51,7 @@
 	}
 </script>
 
-<PageHeader title={m.staff_groups()}>
+<PageHeader title={m.staff_groups_title()}>
 	<GroupViews active="bands" />
 </PageHeader>
 <PageContent>
@@ -59,7 +59,7 @@
 		<BandTotals />
 		{#snippet failed(_error, reset)}
 			<Alert type="warning" reset={() => retryQuery(getStaffBandTotals(), reset)}>
-				{m.staff_totals_didn_t_load()}
+				{m.staff_totals_didn_t_load_body()}
 			</Alert>
 		{/snippet}
 	</svelte:boundary>
@@ -75,7 +75,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder={m.staff_search_by_name()}
+				placeholder={m.staff_search_by_name_placeholder()}
 				onsearch={(q) => {
 					f.q = q;
 					f.page = 1;
@@ -84,7 +84,7 @@
 		{/snippet}
 		{#snippet menu()}
 			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">{m.staff_status()}</span>
+				<span class="text-muted text-xs">{m.staff_status_label()}</span>
 				<Select
 					size="sm"
 					value={f.status}
@@ -93,13 +93,13 @@
 						f.page = 1;
 					}}
 				>
-					<option value="active">{m.staff_active()}</option>
-					<option value="deactivated">{m.staff_deactivated()}</option>
-					<option value="all">{m.staff_all_statuses()}</option>
+					<option value="active">{m.staff_active_label()}</option>
+					<option value="deactivated">{m.staff_deactivated_label()}</option>
+					<option value="all">{m.staff_all_statuses_label()}</option>
 				</Select>
 			</label>
 			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">{m.staff_tier()}</span>
+				<span class="text-muted text-xs">{m.staff_tier_label()}</span>
 				<Select
 					size="sm"
 					value={f.tier}
@@ -108,31 +108,31 @@
 						f.page = 1;
 					}}
 				>
-					<option value="">{m.staff_groups_all_tiers()}</option>
-					<option value="free">{m.staff_groups_free()}</option>
-					<option value="premium">{m.staff_premium()}</option>
+					<option value="">{m.staff_groups_all_tiers_label()}</option>
+					<option value="free">{m.staff_groups_free_label()}</option>
+					<option value="premium">{m.staff_premium_label()}</option>
 				</Select>
 			</label>
 		{/snippet}
 		{#snippet actions()}
 			<!-- External acts stay beside bands: the same staff job, and one can become the other. -->
 			<Button variant="ghost" size="sm" href={resolve('staff/bands/acts')}
-				>{m.staff_external_acts()}</Button
+				>{m.staff_external_acts_label()}</Button
 			>
 			<CreateBandAction />
 		{/snippet}
 	</FilterBar>
 
-	<DataList {result} empty={m.staff_groups_empty()} onpage={(p) => (f.page = p)}>
+	<DataList {result} empty={m.staff_groups_empty_body()} onpage={(p) => (f.page = p)}>
 		{#snippet children(bands)}
 			<Table>
 				{#snippet head()}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_band()}</th>
-					<th>{m.staff_owner()}</th>
-					<th class="col-support">{m.staff_tier()}</th>
-					<th class="col-support cell-num">{m.staff_members()}</th>
-					<th class="col-extra whitespace-nowrap">{m.staff_created()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_band_label()}</th>
+					<th>{m.staff_owner_label()}</th>
+					<th class="col-support">{m.staff_tier_label()}</th>
+					<th class="col-support cell-num">{m.staff_members_label()}</th>
+					<th class="col-extra whitespace-nowrap">{m.staff_created_label()}</th>
 				{/snippet}
 
 				{#each bands as b (b.id)}

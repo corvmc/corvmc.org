@@ -35,13 +35,13 @@
 	}
 </script>
 
-<PageHeader title={m.staff_funders()} subtitle={m.staff_grants()}>
+<PageHeader title={m.staff_funders_title()} subtitle={m.staff_grants_body()}>
 	<Action
 		action={createFunder}
-		label={m.staff_grants_funders_new_funder()}
-		modalTitle={m.staff_grants_funders_new_funder()}
-		submitLabel={m.staff_grants_funders_add_funder()}
-		successToast={m.staff_grants_funders_funder_added()}
+		label={m.staff_grants_funders_new_funder_label()}
+		modalTitle={m.staff_grants_funders_new_funder_title()}
+		submitLabel={m.staff_grants_funders_add_funder_label()}
+		successToast={m.staff_grants_funders_funder_added_toast()}
 		onsuccess={refresh}
 	>
 		{#snippet form()}
@@ -59,22 +59,22 @@
 				checked={includeArchived}
 				onchange={(e) => setArchived(e.currentTarget.checked)}
 			/>
-			{m.staff_show_archived()}
+			{m.staff_show_archived_label()}
 		</label>
 	</div>
 
 	{#if funders.length === 0}
 		<EmptyState
-			title={m.staff_no_funders_yet()}
-			description={m.staff_grants_funders_description()}
+			title={m.staff_no_funders_yet_title()}
+			description={m.staff_grants_funders_description_body()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th>{m.staff_funder()}</th>
-				<th class="col-support">{m.staff_contact()}</th>
-				<th class="cell-num">{m.staff_grants_funders_applications()}</th>
-				<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+				<th>{m.staff_funder_label()}</th>
+				<th class="col-support">{m.staff_contact_label()}</th>
+				<th class="cell-num">{m.staff_grants_funders_applications_label()}</th>
+				<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 			{/snippet}
 			{#each funders as f (f.id)}
 				{@const edit = updateFunder.for(f.id)}
@@ -82,7 +82,7 @@
 					<td class="cell-primary font-medium">
 						{f.name}
 						{#if f.deletedAt}
-							<Badge variant="ghost" size="sm" class="ml-2">{m.staff_archived()}</Badge>
+							<Badge variant="ghost" size="sm" class="ml-2">{m.staff_archived_label()}</Badge>
 						{/if}
 					</td>
 					<td class="col-support">
@@ -92,12 +92,12 @@
 					<td class="w-px whitespace-nowrap">
 						<Action
 							action={edit}
-							label={m.staff_edit()}
+							label={m.staff_edit_label()}
 							variant="ghost"
 							size="sm"
-							modalTitle={m.staff_edit_2({ name: f.name })}
-							submitLabel={m.staff_save()}
-							successToast={m.staff_saved()}
+							modalTitle={m.staff_edit_2_title({ name: f.name })}
+							submitLabel={m.staff_save_label()}
+							successToast={m.staff_saved_toast()}
 							onsuccess={refresh}
 						>
 							{#snippet form()}
@@ -108,10 +108,10 @@
 						{#if f.deletedAt}
 							<Action
 								action={restoreFunder.for(f.id)}
-								label={m.staff_restore()}
+								label={m.staff_restore_label()}
 								variant="ghost"
 								size="sm"
-								successToast={m.staff_restored()}
+								successToast={m.staff_restored_toast()}
 								onsuccess={refresh}
 								noFooter
 							>
@@ -122,18 +122,18 @@
 						{:else}
 							<Action
 								action={archiveFunder.for(f.id)}
-								label={m.staff_archive()}
+								label={m.staff_archive_label()}
 								variant="ghost"
 								size="sm"
-								modalTitle={m.staff_archive_2({ name: f.name })}
-								submitLabel={m.staff_archive()}
-								successToast={m.staff_archived()}
+								modalTitle={m.staff_archive_2_title({ name: f.name })}
+								submitLabel={m.staff_archive_label()}
+								successToast={m.staff_archived_toast()}
 								onsuccess={refresh}
 							>
 								{#snippet form()}
 									<input {...archiveFunder.for(f.id).fields.id.as('hidden', f.id)} />
 									<p class="text-sm">
-										{m.staff_grants_funders_comes_off_list_picker_new()}
+										{m.staff_grants_funders_comes_off_list_picker_new_text()}
 									</p>
 								{/snippet}
 							</Action>
@@ -141,19 +141,21 @@
 						{#if f.applications === 0}
 							<Action
 								action={deleteFunder.for(f.id)}
-								label={m.staff_delete()}
+								label={m.staff_delete_label()}
 								variant="ghost"
 								size="sm"
 								class="text-error"
-								modalTitle={m.staff_delete_2({ name: f.name })}
-								submitLabel={m.staff_delete()}
+								modalTitle={m.staff_delete_2_title({ name: f.name })}
+								submitLabel={m.staff_delete_label()}
 								submitVariant="error"
-								successToast={m.staff_deleted()}
+								successToast={m.staff_deleted_toast()}
 								onsuccess={refresh}
 							>
 								{#snippet form()}
 									<input {...deleteFunder.for(f.id).fields.id.as('hidden', f.id)} />
-									<p class="text-sm">{m.staff_grants_funders_has_no_applications_so_nothing()}</p>
+									<p class="text-sm">
+										{m.staff_grants_funders_has_no_applications_so_nothing_text()}
+									</p>
 								{/snippet}
 							</Action>
 						{/if}

@@ -29,19 +29,23 @@
 	const status = $derived(data.viewerStatus?.status ?? null);
 
 	const kindLabel = $derived(
-		group.kind === 'committee' ? m.public_groups_slug_committee() : m.public_groups_slug_club()
+		group.kind === 'committee'
+			? m.public_groups_slug_committee_label()
+			: m.public_groups_slug_club_label()
 	);
 	const joinable = $derived(group.joinPolicy === 'open' || group.joinPolicy === 'by_application');
 </script>
 
 <svelte:head>
-	<title>{m.public_corvallis_music_collective_2({ name: group.name })}</title>
+	<title>{m.public_corvallis_music_collective_2_title({ name: group.name })}</title>
 	{#if group.bio}
 		<meta name="description" content={group.bio} />
 	{/if}
 </svelte:head>
 
-<Hero title={group.name}>{m.public_groups_slug_at_corvallis_music_collective({ kindLabel })}</Hero>
+<Hero title={group.name}
+	>{m.public_groups_slug_at_corvallis_music_collective_text({ kindLabel })}</Hero
+>
 
 <Section>
 	<div class="mx-auto flex max-w-2xl flex-col gap-6">
@@ -52,7 +56,7 @@
 		<p class="text-subtle">
 			<Badge variant="ghost">{kindLabel}</Badge>
 			{group.memberCount}
-			{group.memberCount === 1 ? m.public_member() : m.public_members_2()}
+			{group.memberCount === 1 ? m.public_member_text() : m.public_members_2_text()}
 		</p>
 
 		{#if group.joinInstructions}
@@ -64,20 +68,20 @@
 
 		{#if status === 'active'}
 			<Alert type="success">
-				{m.public_groups_slug_re_already_group()}
+				{m.public_groups_slug_re_already_group_body()}
 				{#snippet action()}
 					<Button href={resolve(`member/groups/${group.slug}`)} variant="ghost" size="sm">
-						{m.public_groups_slug_open()}
+						{m.public_groups_slug_open_label()}
 					</Button>
 				{/snippet}
 			</Alert>
 		{:else if data.applied}
-			<Alert type="info">{m.public_groups_slug_application_with_group_s_chairs()}</Alert>
+			<Alert type="info">{m.public_groups_slug_application_with_group_s_chairs_body()}</Alert>
 		{:else if status === 'pending'}
-			<Alert type="info">{m.public_groups_slug_ve_been_invited_group_accept()}</Alert>
+			<Alert type="info">{m.public_groups_slug_ve_been_invited_group_accept_body()}</Alert>
 		{:else if !joinable}
 			<Alert type="info">
-				{m.public_groups_slug_group_invite_only_ask_someone()}
+				{m.public_groups_slug_group_invite_only_ask_someone_body()}
 			</Alert>
 		{:else if !data.signedIn}
 			<!-- A prompt rather than a button that fails. The redirect brings them
@@ -85,8 +89,8 @@
 			<Alert type="info">
 				<span
 					>{(group.joinPolicy === 'open'
-						? m.public_groups_slug_sign_join
-						: m.public_groups_slug_sign_apply)()}</span
+						? m.public_groups_slug_sign_join_body
+						: m.public_groups_slug_sign_apply_body)()}</span
 				>
 				{#snippet action()}
 					<Button
@@ -94,7 +98,7 @@
 						variant="primary"
 						size="sm"
 					>
-						{m.public_sign()}
+						{m.public_sign_label()}
 					</Button>
 				{/snippet}
 			</Alert>

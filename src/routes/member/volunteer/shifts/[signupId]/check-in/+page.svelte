@@ -39,23 +39,23 @@
 
 <PageHeader
 	width="2xl"
-	title={m.member_volunteer_shifts_signup_id_check_in_check()}
+	title={m.member_volunteer_shifts_signup_id_check_in_check_title()}
 	subtitle={data.event.title}
 	parent={{
-		label: m.member_volunteer_shifts_signup_id_check_in_shift(),
+		label: m.member_volunteer_shifts_signup_id_check_in_shift_label(),
 		href: resolve('/member/volunteer/shifts/[signupId]', { signupId })
 	}}
 />
 <PageContent width="2xl">
 	<div class="flex gap-4">
 		<StatCard
-			title={m.member_volunteer_shifts_signup_id_check_in_checked()}
+			title={m.member_volunteer_shifts_signup_id_check_in_checked_title()}
 			value={data.stats.checkedIn}
 			size="sm"
 			class="p-4"
 		/>
 		<StatCard
-			title={m.member_volunteer_shifts_signup_id_check_in_tickets_sold()}
+			title={m.member_volunteer_shifts_signup_id_check_in_tickets_sold_title()}
 			value={data.stats.sold}
 			size="sm"
 			class="p-4"
@@ -82,7 +82,7 @@
 						     at a door, one-handed. daisyUI's default `btn` is 40 (#971). -->
 						<Form
 							remote={checkInAsVolunteer.for(ticket.id)}
-							successToast={m.member_volunteer_shifts_signup_id_check_in_checked()}
+							successToast={m.member_volunteer_shifts_signup_id_check_in_checked_toast()}
 							class="inline"
 						>
 							<input
@@ -92,7 +92,7 @@
 								{...checkInAsVolunteer.for(ticket.id).fields.signupId.as('hidden', signupId)}
 							/>
 							<SubmitButton
-								label={m.member_volunteer_shifts_signup_id_check_in_check_2()}
+								label={m.member_volunteer_shifts_signup_id_check_in_check_2_label()}
 								variant="primary"
 								class="min-h-11"
 							/>
@@ -103,8 +103,8 @@
 		{:else}
 			<p class="py-8 text-center text-muted">
 				{search
-					? m.member_volunteer_shifts_signup_id_check_in_nobody_matches()
-					: m.member_volunteer_shifts_signup_id_check_in_no_tickets_check()}
+					? m.member_volunteer_shifts_signup_id_check_in_nobody_matches_text()
+					: m.member_volunteer_shifts_signup_id_check_in_no_tickets_check_text()}
 			</p>
 		{/each}
 	</div>

@@ -39,32 +39,36 @@
 	}
 </script>
 
-<PageHeader title={m.staff_external_acts()} subtitle={m.staff_bands_acts_subtitle()}>
+<PageHeader title={m.staff_external_acts_title()} subtitle={m.staff_bands_acts_subtitle_body()}>
 	<CreateExternalActAction />
 </PageHeader>
 
 <PageContent>
 	<Alert type="info" class="text-sm">
-		{m.staff_bands_acts_these_records_not_pages_external()}
+		{m.staff_bands_acts_these_records_not_pages_external_body()}
 	</Alert>
 
-	<InfoCard title={m.staff_bands_acts_acts()}>
-		<SearchInput bind:value={searchText} placeholder={m.staff_search_by_name()} onsearch={search} />
+	<InfoCard title={m.staff_bands_acts_acts_title()}>
+		<SearchInput
+			bind:value={searchText}
+			placeholder={m.staff_search_by_name_placeholder()}
+			onsearch={search}
+		/>
 
 		{#if acts.rows.length === 0}
 			<EmptyState
 				description={searchDebounced
-					? m.staff_bands_acts_no_acts_match()
-					: m.staff_bands_acts_no_external_acts_recorded_yet()}
+					? m.staff_bands_acts_no_acts_match_body()
+					: m.staff_bands_acts_no_external_acts_recorded_yet_body()}
 			/>
 		{:else}
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_name()}</th>
-					<th class="col-support">{m.staff_hometown()}</th>
-					<th class="col-extra">{m.staff_their_site()}</th>
-					<th class="col-extra whitespace-nowrap">{m.staff_added()}</th>
-					<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+					<th>{m.staff_name_label()}</th>
+					<th class="col-support">{m.staff_hometown_label()}</th>
+					<th class="col-extra">{m.staff_their_site_label()}</th>
+					<th class="col-extra whitespace-nowrap">{m.staff_added_label()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 				{/snippet}
 				{#each acts.rows as act (act.id)}
 					<tr>
@@ -77,7 +81,8 @@
 									href={act.links[0].url}
 									class="link"
 									target="_blank"
-									rel="noopener noreferrer nofollow">{act.links[0].label || m.staff_website()}</a
+									rel="noopener noreferrer nofollow"
+									>{act.links[0].label || m.staff_website_text()}</a
 								>
 								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							{:else}

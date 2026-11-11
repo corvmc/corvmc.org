@@ -92,9 +92,9 @@
 <FormField
 	field={fields.title}
 	type="text"
-	label={readonly ? m.band_title() : m.band_slug_events_event_fields_title()}
+	label={readonly ? m.band_title_label() : m.band_slug_events_event_fields_title_label()}
 	value={evt?.title ?? ''}
-	placeholder={m.band_e_g_live_at_venue()}
+	placeholder={m.band_e_g_live_at_venue_placeholder()}
 	maxlength="200"
 	{readonly}
 	display={evt?.title}
@@ -105,7 +105,7 @@
      `readonly` now wins over this child rather than being ignored by it. -->
 <FormField
 	field={fields.description}
-	label={m.band_slug_events_event_fields_description()}
+	label={m.band_slug_events_event_fields_description_label()}
 	{readonly}
 	display={evt?.description ?? '—'}
 >
@@ -114,14 +114,14 @@
 		class="textarea w-full"
 		rows="4"
 		maxlength="5000"
-		placeholder={m.band_slug_events_event_fields_tell_people_what_expect()}></textarea>
+		placeholder={m.band_slug_events_event_fields_tell_people_what_expect_placeholder()}></textarea>
 </FormField>
 
 {#if readonly}
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<FormField label={m.band_date()} readonly display={evt ? formatDate(evt.startsAt) : ''} />
+		<FormField label={m.band_date_label()} readonly display={evt ? formatDate(evt.startsAt) : ''} />
 		<FormField
-			label={m.band_slug_events_event_fields_time()}
+			label={m.band_slug_events_event_fields_time_label()}
 			readonly
 			display={evt ? formatEventTimeRange(evt.startsAt, evt.endsAt) : ''}
 		/>
@@ -131,23 +131,23 @@
 		<FormField
 			field={fields.eventDate}
 			type="date"
-			label={m.band_date()}
+			label={m.band_date_label()}
 			value={evt ? toLocalDate(evt.startsAt) : ''}
 			required
 		/>
 		<FormField
 			field={fields.eventStartTime}
 			type="time"
-			label={m.band_start_time()}
+			label={m.band_start_time_label()}
 			value={evt ? toLocalTime(evt.startsAt) : ''}
 			required
 		/>
 		<FormField
 			field={fields.eventEndTime}
 			type="time"
-			label={m.band_slug_events_event_fields_end_time()}
+			label={m.band_slug_events_event_fields_end_time_label()}
 			value={evt?.endsAt ? toLocalTime(evt.endsAt) : ''}
-			description={m.band_slug_events_event_fields_optional_clear_if_don_t()}
+			description={m.band_slug_events_event_fields_optional_clear_if_don_t_body()}
 		/>
 	</div>
 {/if}
@@ -158,7 +158,7 @@
 		<FormField
 			field={fields.doorsTime}
 			type="time"
-			label={m.band_slug_events_event_fields_doors_open()}
+			label={m.band_slug_events_event_fields_doors_open_label()}
 			value={evt?.doorsAt ? toLocalTime(evt.doorsAt) : ''}
 			{readonly}
 			display={evt?.doorsAt ? formatTime(evt.doorsAt) : undefined}
@@ -168,7 +168,7 @@
 		<FormField
 			field={fields.location}
 			type="text"
-			label={m.band_venue()}
+			label={m.band_venue_label()}
 			value={evt?.location ?? ''}
 			maxlength="500"
 			{readonly}
@@ -179,7 +179,7 @@
 		<FormField
 			field={fields.address}
 			type="text"
-			label={m.band_slug_events_event_fields_address()}
+			label={m.band_slug_events_event_fields_address_label()}
 			value={evt?.address ?? ''}
 			maxlength="500"
 			{readonly}
@@ -195,16 +195,16 @@
 	<FormField
 		field={fields.tags}
 		type="text"
-		label={m.band_slug_events_event_fields_tags()}
+		label={m.band_slug_events_event_fields_tags_label()}
 		value={evt?.tags ?? ''}
-		placeholder={m.band_slug_events_event_fields_comma_separated_tags()}
+		placeholder={m.band_slug_events_event_fields_comma_separated_tags_placeholder()}
 		maxlength="500"
 		{readonly}
 		display={evt?.tags ?? undefined}
 	/>
 {/if}
 
-<FormField field={fields.lineup} label={m.band_slug_events_event_fields_who_s_playing()}>
+<FormField field={fields.lineup} label={m.band_slug_events_event_fields_who_s_playing_label()}>
 	<LineupEditor
 		field={fields.lineup}
 		bind:value={lineup}
@@ -228,21 +228,21 @@
 	<FormField
 		field={fields.posterFile}
 		type="file"
-		label={m.band_slug_events_event_fields_poster()}
+		label={m.band_slug_events_event_fields_poster_label()}
 		accept="image/jpeg,image/png,image/webp"
 		src={poster?.src}
 		previewClass="h-40 w-32"
-		emptyLabel={m.band_slug_events_event_fields_empty_label()}
+		emptyLabel={m.band_slug_events_event_fields_empty_label_title()}
 		replaceLabel={m.band_slug_events_event_fields_replace_label()}
-		description={m.band_slug_events_event_fields_shown_events_list_band_s()}
+		description={m.band_slug_events_event_fields_shown_events_list_band_s_body()}
 	/>
 {:else if poster}
-	<FormField label={m.band_slug_events_event_fields_poster()} readonly>
+	<FormField label={m.band_slug_events_event_fields_poster_label()} readonly>
 		{#snippet display()}
 			<img
 				src={poster.src}
 				srcset={poster.srcset}
-				alt={m.band_slug_events_event_fields_alt()}
+				alt={m.band_slug_events_event_fields_alt_text()}
 				class="h-40 w-32 rounded object-cover"
 			/>
 		{/snippet}
@@ -254,9 +254,9 @@
 		<FormField
 			field={fields.externalTicketUrl}
 			type="text"
-			label={m.band_slug_events_event_fields_ticket_link()}
+			label={m.band_slug_events_event_fields_ticket_link_label()}
 			value={evt?.externalTicketUrl ?? ''}
-			placeholder={m.band_slug_events_event_fields_https_eventbrite_com()}
+			placeholder={m.band_slug_events_event_fields_https_eventbrite_com_placeholder()}
 			{readonly}
 		>
 			{#snippet display()}
@@ -280,11 +280,11 @@
 	<FormField
 		field={fields.ticketPriceDollars}
 		type="text"
-		label={m.band_slug_events_event_fields_ticket_price()}
+		label={m.band_slug_events_event_fields_ticket_price_label()}
 		value={evt?.ticketPrice ? formatDollars(evt.ticketPrice) : ''}
 		placeholder="10.00"
 		inputmode="decimal"
-		description={m.band_slug_events_event_fields_what_people_pay_at_door()}
+		description={m.band_slug_events_event_fields_what_people_pay_at_door_body()}
 		{readonly}
 		display={evt ? priceDisplay({ ...evt, ticketingEnabled: false }).label : undefined}
 	/>

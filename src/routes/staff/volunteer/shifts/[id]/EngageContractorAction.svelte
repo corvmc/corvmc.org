@@ -16,27 +16,27 @@
 
 <Action
 	action={createJobForm}
-	label={m.staff_engage_contractor()}
+	label={m.staff_engage_contractor_label()}
 	variant="ghost"
 	size="sm"
-	modalTitle={m.staff_engage_contractor()}
+	modalTitle={m.staff_engage_contractor_title()}
 	successToast={m.staff_volunteer_shifts_id_engage_contractor_success_toast()}
 	data-testid="engage-contractor"
 >
 	{#snippet form()}
 		<input {...createJobForm.fields.workOrderId.as('hidden', workOrderId)} />
-		<Field field={fields.contractorId} type="select" label={m.staff_contractor()} {options} />
+		<Field field={fields.contractorId} type="select" label={m.staff_contractor_label()} {options} />
 		<Field
 			field={fields.scheduledFor}
 			type="date"
-			label={m.staff_volunteer_shifts_id_engage_contractor_when_they_come()}
+			label={m.staff_volunteer_shifts_id_engage_contractor_when_they_come_label()}
 		/>
 		<Field
 			field={fields.expectedBackAt}
 			type="date"
-			label={m.staff_volunteer_shifts_id_engage_contractor_promised_back()}
+			label={m.staff_volunteer_shifts_id_engage_contractor_promised_back_label()}
 		/>
-		<MoneyField field={fields.quotedCents} label={m.staff_quoted()} />
-		<Field field={fields.notes} type="textarea" label={m.staff_notes()} />
+		<MoneyField field={fields.quotedCents} label={m.staff_quoted_label()} />
+		<Field field={fields.notes} type="textarea" label={m.staff_notes_label()} />
 	{/snippet}
 </Action>

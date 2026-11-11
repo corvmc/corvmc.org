@@ -32,14 +32,14 @@
 	<span class="block text-muted">
 		{ballot.result.options.map((o) => `${o.label} ${o.votes}`).join(' · ')}
 		— {ballot.passed === null
-			? m.ballot_ballot_line_outcome_not_recorded()
+			? m.ballot_ballot_line_outcome_not_recorded_text()
 			: ballot.passed
-				? m.ballot_ballot_line_passed()
-				: m.ballot_ballot_line_did_not_pass()}
+				? m.ballot_ballot_line_passed_text()
+				: m.ballot_ballot_line_did_not_pass_text()}
 	</span>
 {:else if ballot.status === 'open'}
 	<span class="block text-muted"
-		>{m.ballot_ballot_line_voting_closes({
+		>{m.ballot_ballot_line_voting_closes_text({
 			formatDateShortYear: formatDateShortYear(ballot.closesAt)
 		})}</span
 	>

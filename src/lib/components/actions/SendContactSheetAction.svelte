@@ -33,10 +33,10 @@
 
 <Action
 	action={sendContactSheetLink}
-	label={m.actions_send_contact_sheet_send_contact_sheet()}
+	label={m.actions_send_contact_sheet_send_contact_sheet_label()}
 	modalTitle={actName
-		? m.actions_send_contact_sheet_contact_sheet({ actName })
-		: m.actions_send_contact_sheet_send_contact_sheet()}
+		? m.actions_send_contact_sheet_contact_sheet_title({ actName })
+		: m.actions_send_contact_sheet_send_contact_sheet_title()}
 	successToast={m.actions_send_contact_sheet_success_toast()}
 	{variant}
 	{size}
@@ -49,9 +49,12 @@
 		<input {...fields.entryId.as('hidden', entryId)} />
 		<div class="space-y-3">
 			<p class="text-sm text-fg-2">
-				{m.actions_send_contact_sheet_sends_private_link_where_act()}
+				{m.actions_send_contact_sheet_sends_private_link_where_act_text()}
 			</p>
-			<FormField field={fields.email} label={m.actions_send_contact_sheet_where_should_link_go()}>
+			<FormField
+				field={fields.email}
+				label={m.actions_send_contact_sheet_where_should_link_go_label()}
+			>
 				<input
 					{...fields.email.as('email')}
 					bind:value={email}

@@ -33,12 +33,12 @@
 
 <Table>
 	{#snippet head()}
-		<th>{m.staff_work()}</th>
-		<th class="col-support whitespace-nowrap">{m.staff_finished()}</th>
+		<th>{m.staff_work_label()}</th>
+		<th class="col-support whitespace-nowrap">{m.staff_finished_label()}</th>
 		<th class="col-support cell-num whitespace-nowrap"
-			>{m.staff_volunteer_confirm_fixed_card_reports()}</th
+			>{m.staff_volunteer_confirm_fixed_card_reports_label()}</th
 		>
-		<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+		<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 	{/snippet}
 
 	{#each orders as order (order.id)}
@@ -56,26 +56,26 @@
 			<td class="w-px">
 				<Action
 					action={resolveWorkOrder.for(order.id)}
-					label={m.staff_volunteer_confirm_fixed_card_verify()}
+					label={m.staff_volunteer_confirm_fixed_card_verify_label()}
 					variant="primary"
 					size="xs"
 					modalTitle={m.staff_volunteer_confirm_fixed_card_modal_title({
 						subject: subject(order)
 					})}
-					submitLabel={m.staff_volunteer_confirm_fixed_card_verify()}
+					submitLabel={m.staff_volunteer_confirm_fixed_card_verify_label()}
 					successToast={m.staff_volunteer_confirm_fixed_card_success_toast()}
 					{onsuccess}
 				>
 					{#snippet form()}
 						<input {...resolveWorkOrder.for(order.id).fields.id.as('hidden', order.id)} />
 						<p class="text-sm">
-							{m.staff_volunteer_confirm_fixed_card_closes_work_order_its_rep({
+							{m.staff_volunteer_confirm_fixed_card_closes_work_order_its_rep_text({
 								reports: order.reports
 							})}
 						</p>
 						<FormField
 							field={resolveWorkOrder.for(order.id).fields.notes}
-							label={m.staff_volunteer_confirm_fixed_card_what_was_done()}
+							label={m.staff_volunteer_confirm_fixed_card_what_was_done_label()}
 							type="textarea"
 						/>
 					{/snippet}

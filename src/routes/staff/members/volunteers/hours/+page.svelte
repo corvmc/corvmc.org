@@ -110,11 +110,11 @@
 		const { approved = 0, skipped = 0 } = (result ?? {}) as { approved?: number; skipped?: number };
 		if (skipped > 0) {
 			toast.warning(
-				m.staff_members_volunteers_hours_approved_were_already_reviewe({ approved, skipped })
+				m.staff_members_volunteers_hours_approved_were_already_reviewe_toast({ approved, skipped })
 			);
 		} else {
 			toast.success(
-				m.staff_members_volunteers_hours_approved({
+				m.staff_members_volunteers_hours_approved_toast({
 					approved,
 					value: approved === 1 ? 'entry' : 'entries'
 				})
@@ -134,7 +134,7 @@
 </script>
 
 <!-- A view on Members → Volunteers (#2075), so it wears that page's frame. -->
-<PageHeader title={m.staff_members()}>
+<PageHeader title={m.staff_members_title()}>
 	<MemberViews active="volunteers" />
 </PageHeader>
 
@@ -160,21 +160,21 @@
 
 		<Select
 			size="sm"
-			aria-label={m.staff_role()}
+			aria-label={m.staff_role_label()}
 			value={filters.role}
 			onchange={(e: Event) => {
 				filters.role = (e.currentTarget as HTMLSelectElement).value;
 				filters.page = 1;
 			}}
 		>
-			<option value="">{m.staff_all_roles()}</option>
+			<option value="">{m.staff_all_roles_label()}</option>
 			<RoleOptions />
 		</Select>
 
 		<input
 			type="date"
 			class="input input-sm"
-			aria-label={m.staff_members_volunteers_hours_worked_after()}
+			aria-label={m.staff_members_volunteers_hours_worked_after_label()}
 			value={filters.from}
 			onchange={(e) => {
 				filters.from = (e.currentTarget as HTMLInputElement).value;
@@ -184,7 +184,7 @@
 		<input
 			type="date"
 			class="input input-sm"
-			aria-label={m.staff_members_volunteers_hours_worked_before()}
+			aria-label={m.staff_members_volunteers_hours_worked_before_label()}
 			value={filters.to}
 			onchange={(e) => {
 				filters.to = (e.currentTarget as HTMLInputElement).value;
@@ -204,16 +204,16 @@
 		-->
 		<div class="flex items-center justify-between gap-3 rounded-box bg-base-200 px-4 py-2">
 			<span class="text-sm"
-				>{m.staff_members_volunteers_hours_entries_selected({ size: selected.size })}</span
+				>{m.staff_members_volunteers_hours_entries_selected_text({ size: selected.size })}</span
 			>
 			<Action
 				action={approveVolunteerHoursBulk}
-				label={m.staff_members_volunteers_hours_approve_selected()}
+				label={m.staff_members_volunteers_hours_approve_selected_label()}
 				icon={checkIcon}
 				variant="primary"
 				size="sm"
-				modalTitle={m.staff_approve_these_hours()}
-				submitLabel={m.staff_approve()}
+				modalTitle={m.staff_approve_these_hours_title()}
+				submitLabel={m.staff_approve_label()}
 				onsuccess={handleBulkApproved}
 			>
 				{#snippet form()}
@@ -221,16 +221,16 @@
 						{...approveVolunteerHoursBulk.fields.ids.as('hidden', JSON.stringify([...selected]))}
 					/>
 					<p class="text-sm">
-						{m.staff_members_volunteers_hours_entries_total({
+						{m.staff_members_volunteers_hours_entries_total_text({
 							size: selected.size,
 							formatVolunteerHours: formatVolunteerHours(selectedMinutes)
 						})}
 					</p>
 					<FormField
 						field={approveVolunteerHoursBulk.fields.notes}
-						label={m.staff_note_optional()}
+						label={m.staff_note_optional_label()}
 						type="textarea"
-						description={m.staff_members_volunteers_hours_shared_with_every_member_sele()}
+						description={m.staff_members_volunteers_hours_shared_with_every_member_sele_body()}
 					/>
 				{/snippet}
 			</Action>
@@ -240,8 +240,8 @@
 	<DataList
 		{result}
 		empty={filters.status === 'pending'
-			? m.staff_members_volunteers_hours_nothing_review_queue_clear()
-			: m.staff_members_volunteers_hours_no_hour_logs_found()}
+			? m.staff_members_volunteers_hours_nothing_review_queue_clear_body()
+			: m.staff_members_volunteers_hours_no_hour_logs_found_body()}
 		onpage={(p) => (filters.page = p)}
 	>
 		{#snippet children(logs)}
@@ -252,7 +252,7 @@
 							<input
 								type="checkbox"
 								class="checkbox checkbox-sm"
-								aria-label={m.staff_members_volunteers_hours_select_every_row_page()}
+								aria-label={m.staff_members_volunteers_hours_select_every_row_page_label()}
 								checked={logs.length > 0 && logs.every((l) => selected.has(l.id))}
 								onchange={(e) => {
 									const on = e.currentTarget.checked;
@@ -261,12 +261,12 @@
 							/>
 						</th>
 					{/if}
-					<th class="w-px"><span class="sr-only">{m.staff_status()}</span></th>
-					<th>{m.staff_member()}</th>
-					<th class="col-support">{m.staff_role()}</th>
-					<th class="col-support whitespace-nowrap">{m.staff_worked()}</th>
-					<th class="col-support cell-num">{m.staff_hours()}</th>
-					<th class="w-px"><span class="sr-only">{m.staff_actions()}</span></th>
+					<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
+					<th>{m.staff_member_label()}</th>
+					<th class="col-support">{m.staff_role_label()}</th>
+					<th class="col-support whitespace-nowrap">{m.staff_worked_label()}</th>
+					<th class="col-support cell-num">{m.staff_hours_label()}</th>
+					<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 				{/snippet}
 
 				{#each logs as log (log.id)}
@@ -276,7 +276,7 @@
 								<input
 									type="checkbox"
 									class="checkbox checkbox-sm"
-									aria-label={m.staff_members_volunteers_hours_select_these_hours()}
+									aria-label={m.staff_members_volunteers_hours_select_these_hours_label()}
 									checked={selected.has(log.id)}
 									onchange={(e) => toggle(log.id, e.currentTarget.checked)}
 								/>
@@ -291,8 +291,8 @@
 									variant="ghost"
 									size="xs"
 									class="mt-1"
-									title={m.staff_members_volunteers_hours_logged_from_scheduled_shift()}
-									>{m.staff_members_volunteers_hours_scheduled()}</Badge
+									title={m.staff_members_volunteers_hours_logged_from_scheduled_shift_title()}
+									>{m.staff_members_volunteers_hours_scheduled_label()}</Badge
 								>
 							{/if}
 						</td>
@@ -310,14 +310,14 @@
 							</EntityIdentity>
 							{#if log.reviewNotes}
 								<div class="truncate text-subtle">
-									{log.reviewedByName ?? m.staff_staff()}: {log.reviewNotes}
+									{log.reviewedByName ?? m.staff_staff_text()}: {log.reviewNotes}
 								</div>
 							{/if}
 						</td>
 
 						<td class="col-support">
 							{log.roleName}{#if !log.roleIsActive}<span class="ml-1 text-subtle"
-									>{m.staff_members_volunteers_hours_archived()}</span
+									>{m.staff_members_volunteers_hours_archived_text()}</span
 								>{/if}
 							<HourLogExceptions exceptions={log.exceptions} />
 						</td>
@@ -332,15 +332,15 @@
 								{#if log.status === 'pending'}
 									<Action
 										action={approveVolunteerHours.for(log.id)}
-										label={m.staff_approve()}
+										label={m.staff_approve_label()}
 										iconOnly
 										icon={checkIcon}
 										variant="ghost"
 										size="sm"
 										class="text-success"
-										modalTitle={m.staff_approve_these_hours()}
-										submitLabel={m.staff_approve()}
-										successToast={m.staff_hours_approved()}
+										modalTitle={m.staff_approve_these_hours_title()}
+										submitLabel={m.staff_approve_label()}
+										successToast={m.staff_hours_approved_toast()}
 										onsuccess={refreshQueue}
 									>
 										{#snippet form()}
@@ -348,7 +348,7 @@
 												{...approveVolunteerHours.for(log.id).fields.id.as('hidden', log.id)}
 											/>
 											<p class="text-sm">
-												{m.staff_by({
+												{m.staff_by_text({
 													formatVolunteerHours: formatVolunteerHours(log.minutes),
 													roleName: log.roleName,
 													title: log.member.title,
@@ -358,9 +358,9 @@
 											<p class="text-muted">{log.description}</p>
 											<FormField
 												field={approveVolunteerHours.for(log.id).fields.notes}
-												label={m.staff_note_optional()}
+												label={m.staff_note_optional_label()}
 												type="textarea"
-												description={m.staff_shared_with_member()}
+												description={m.staff_shared_with_member_body()}
 											/>
 										{/snippet}
 									</Action>
@@ -368,14 +368,14 @@
 									<!-- Warn, record, allow (#2233): the reason goes to the audit log. -->
 									<Action
 										action={approveVolunteerHours.for(log.id)}
-										label={m.staff_members_volunteers_hours_approve_anyway()}
+										label={m.staff_members_volunteers_hours_approve_anyway_label()}
 										iconOnly
 										icon={checkIcon}
 										variant="ghost"
 										size="sm"
-										modalTitle={m.staff_members_volunteers_hours_approve_returned_hours()}
-										submitLabel={m.staff_members_volunteers_hours_approve_anyway()}
-										successToast={m.staff_hours_approved()}
+										modalTitle={m.staff_members_volunteers_hours_approve_returned_hours_title()}
+										submitLabel={m.staff_members_volunteers_hours_approve_anyway_label()}
+										successToast={m.staff_hours_approved_toast()}
 										onsuccess={refreshQueue}
 									>
 										{#snippet form()}
@@ -383,7 +383,7 @@
 												{...approveVolunteerHours.for(log.id).fields.id.as('hidden', log.id)}
 											/>
 											<p class="text-sm">
-												{m.staff_members_volunteers_hours_by_were_returned_member({
+												{m.staff_members_volunteers_hours_by_were_returned_member_text({
 													formatVolunteerHours: formatVolunteerHours(log.minutes),
 													roleName: log.roleName,
 													title: log.member.title,
@@ -392,9 +392,9 @@
 											</p>
 											<FormField
 												field={approveVolunteerHours.for(log.id).fields.reason}
-												label={m.staff_members_volunteers_hours_why_approve_them_now()}
+												label={m.staff_members_volunteers_hours_why_approve_them_now_label()}
 												type="textarea"
-												description={m.staff_members_volunteers_hours_recorded_audit_log()}
+												description={m.staff_members_volunteers_hours_recorded_audit_log_body()}
 											/>
 										{/snippet}
 									</Action>
@@ -403,22 +403,22 @@
 								{#if log.status !== 'rejected'}
 									<Action
 										action={rejectVolunteerHours.for(log.id)}
-										label={m.staff_return()}
+										label={m.staff_return_label()}
 										iconOnly
 										icon={returnIcon}
 										variant="ghost"
 										size="sm"
 										class="text-error"
-										modalTitle={m.staff_return_these_hours()}
-										submitLabel={m.staff_return()}
+										modalTitle={m.staff_return_these_hours_title()}
+										submitLabel={m.staff_return_label()}
 										submitVariant="error"
-										successToast={m.staff_hours_returned()}
+										successToast={m.staff_hours_returned_toast()}
 										onsuccess={refreshQueue}
 									>
 										{#snippet form()}
 											<input {...rejectVolunteerHours.for(log.id).fields.id.as('hidden', log.id)} />
 											<p class="text-sm">
-												{m.staff_by({
+												{m.staff_by_text({
 													formatVolunteerHours: formatVolunteerHours(log.minutes),
 													roleName: log.roleName,
 													title: log.member.title,
@@ -428,9 +428,9 @@
 											<p class="text-muted">{log.description}</p>
 											<FormField
 												field={rejectVolunteerHours.for(log.id).fields.notes}
-												label={m.staff_reason()}
+												label={m.staff_reason_label()}
 												type="textarea"
-												description={m.staff_required_member_needs_correct_resubmit()}
+												description={m.staff_required_member_needs_correct_resubmit_body()}
 											/>
 										{/snippet}
 									</Action>

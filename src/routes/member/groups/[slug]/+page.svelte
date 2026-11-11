@@ -112,7 +112,9 @@
 		resolve(`member/groups/${slug}${t === defaultTab ? '' : `?tab=${t}`}`);
 
 	const kindLabel = $derived(
-		group.kind === 'committee' ? msg.member_groups_slug_committee() : msg.member_groups_slug_club()
+		group.kind === 'committee'
+			? msg.member_groups_slug_committee_body()
+			: msg.member_groups_slug_club_body()
 	);
 	// Staff read this page without being on the roster, so there is nothing for
 	// them to leave.
@@ -147,7 +149,7 @@
 	{/if}
 	{#if data.canManage}
 		<Button href={resolve(`member/groups/${slug}/edit`)} variant="ghost" size="sm"
-			>{msg.member_edit()}</Button
+			>{msg.member_edit_label()}</Button
 		>
 	{/if}
 	<!-- Beside Leave, which is the other thing a member does to a group they are
@@ -162,13 +164,13 @@
 	{#if isMember}
 		<Action
 			action={leaveGroupForm}
-			label={msg.member_groups_slug_leave()}
-			modalTitle={msg.member_groups_slug_leave_group()}
-			submitLabel={msg.member_groups_slug_leave()}
+			label={msg.member_groups_slug_leave_label()}
+			modalTitle={msg.member_groups_slug_leave_group_title()}
+			submitLabel={msg.member_groups_slug_leave_label()}
 			confirm={group.joinPolicy === 'open'
-				? msg.member_groups_slug_leave_can_rejoin_whenever_like({ name: group.name })
-				: msg.member_groups_slug_leave_ll_need_invited_back({ name: group.name })}
-			successToast={msg.member_groups_slug_have_left()}
+				? msg.member_groups_slug_leave_can_rejoin_whenever_like_body({ name: group.name })
+				: msg.member_groups_slug_leave_ll_need_invited_back_body({ name: group.name })}
+			successToast={msg.member_groups_slug_have_left_toast()}
 			variant="ghost"
 			size="sm"
 			onsuccess={() => goto(resolve('member/groups'))}
@@ -188,12 +190,12 @@
 		tabs={[
 			{
 				key: 'announcements',
-				label: msg.member_groups_slug_announcements(),
+				label: msg.member_groups_slug_announcements_label(),
 				href: tabHref('announcements')
 			},
 			{
 				key: 'documents',
-				label: msg.member_groups_slug_documents(),
+				label: msg.member_groups_slug_documents_label(),
 				badge: data.files.length,
 				href: tabHref('documents')
 			},
@@ -204,7 +206,7 @@
 				? [
 						{
 							key: 'projects',
-							label: msg.member_groups_slug_projects(),
+							label: msg.member_groups_slug_projects_label(),
 							badge: projects.length,
 							href: tabHref('projects')
 						}
@@ -213,20 +215,30 @@
 			// What the committee owes on its shows (#1701). Committee-only, and hidden
 			// while there is nothing unfinished, as Projects is.
 			...(group.kind === 'committee' && data.hasOpenItems
-				? [{ key: 'items', label: msg.member_open_items(), href: tabHref('items') }]
+				? [{ key: 'items', label: msg.member_open_items_label(), href: tabHref('items') }]
 				: []),
 			// Its roster only (#1562); staff read the whole report on `/staff/reports`.
 			...(group.kind === 'committee' && may('finance.read')
-				? [{ key: 'numbers', label: msg.member_groups_slug_numbers(), href: tabHref('numbers') }]
+				? [
+						{
+							key: 'numbers',
+							label: msg.member_groups_slug_numbers_label(),
+							href: tabHref('numbers')
+						}
+					]
 				: []),
-			{ key: 'sessions', label: msg.member_groups_slug_sessions(), href: tabHref('sessions') },
+			{
+				key: 'sessions',
+				label: msg.member_groups_slug_sessions_label(),
+				href: tabHref('sessions')
+			},
 			{
 				key: 'roster',
-				label: msg.member_groups_slug_roster(),
+				label: msg.member_groups_slug_roster_label(),
 				badge: members.active.length,
 				href: tabHref('roster')
 			},
-			{ key: 'overview', label: msg.member_groups_slug_overview(), href: tabHref('overview') }
+			{ key: 'overview', label: msg.member_groups_slug_overview_label(), href: tabHref('overview') }
 		]}
 		active={tab}
 	/>
@@ -238,21 +250,21 @@
 			canManage={data.canManage}
 		/>
 	{:else if tab === 'projects'}
-		<InfoCard title={msg.member_groups_slug_projects()}>
+		<InfoCard title={msg.member_groups_slug_projects_title()}>
 			{#snippet action()}
 				{#if may('production.create')}
 					<NewShowAction />
 				{/if}
 			{/snippet}
 			{#if projects.length === 0}
-				<EmptyState description={msg.member_groups_slug_nothing_go_right_now()} />
+				<EmptyState description={msg.member_groups_slug_nothing_go_right_now_body()} />
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th>{msg.member_project()}</th>
-						<th>{msg.member_status()}</th>
-						<th>{msg.member_groups_slug_dates()}</th>
-						{#if isMember}<th><span class="sr-only">{msg.member_actions()}</span></th>{/if}
+						<th>{msg.member_project_label()}</th>
+						<th>{msg.member_status_label()}</th>
+						<th>{msg.member_groups_slug_dates_label()}</th>
+						{#if isMember}<th><span class="sr-only">{msg.member_actions_label()}</span></th>{/if}
 					{/snippet}
 					{#each projects as project (project.id)}
 						<tr>
@@ -265,7 +277,7 @@
 									{formatDateShort(project.startsAt)}
 									{project.endsAt
 										? ` – ${formatDateShort(project.endsAt)}`
-										: msg.member_groups_slug_onward()}
+										: msg.member_groups_slug_onward_text()}
 								{:else}
 									—
 								{/if}
@@ -289,14 +301,14 @@
 			{/if}
 		</InfoCard>
 		{#if data.projectEvents.length > 0}
-			<InfoCard title={msg.member_groups_slug_events_these_projects()}>
+			<InfoCard title={msg.member_groups_slug_events_these_projects_title()}>
 				<Table>
 					{#snippet head()}
-						<th>{msg.member_groups_slug_event()}</th>
-						<th>{msg.member_project()}</th>
-						<th>{msg.member_status()}</th>
-						<th>{msg.member_when()}</th>
-						{#if isMember}<th><span class="sr-only">{msg.member_actions()}</span></th>{/if}
+						<th>{msg.member_groups_slug_event_label()}</th>
+						<th>{msg.member_project_label()}</th>
+						<th>{msg.member_status_label()}</th>
+						<th>{msg.member_when_label()}</th>
+						{#if isMember}<th><span class="sr-only">{msg.member_actions_label()}</span></th>{/if}
 					{/snippet}
 					{#each data.projectEvents as event (event.id)}
 						<tr>
@@ -351,22 +363,22 @@
 				<CreateSessionAction groupId={group.id} />
 			</div>
 		{/if}
-		<InfoCard title={msg.member_groups_slug_sessions()}>
+		<InfoCard title={msg.member_groups_slug_sessions_title()}>
 			{#if data.sessions.length === 0}
 				<EmptyState
 					description={data.canManage
-						? msg.member_groups_slug_nothing_calendar_put_first_session()
-						: msg.member_groups_slug_nothing_calendar_yet()}
+						? msg.member_groups_slug_nothing_calendar_put_first_session_body()
+						: msg.member_groups_slug_nothing_calendar_yet_body()}
 				/>
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th>{msg.member_when()}</th>
-						<th>{msg.member_groups_slug_what()}</th>
-						<th class="w-px"><span class="sr-only">{msg.member_groups_slug_room()}</span></th>
-						<th class="w-px">{msg.member_status()}</th>
+						<th>{msg.member_when_label()}</th>
+						<th>{msg.member_groups_slug_what_label()}</th>
+						<th class="w-px"><span class="sr-only">{msg.member_groups_slug_room_label()}</span></th>
+						<th class="w-px">{msg.member_status_label()}</th>
 						{#if data.canManage}
-							<th class="w-px"><span class="sr-only">{msg.member_actions()}</span></th>
+							<th class="w-px"><span class="sr-only">{msg.member_actions_label()}</span></th>
 						{/if}
 					{/snippet}
 					{#each data.sessions as s (s.id)}
@@ -380,7 +392,7 @@
 								     it merely advertises: this one holds the room, free. -->
 								{#if s.reservesRoom}
 									<Badge variant="ghost" data-testid="room-held"
-										>{msg.member_groups_slug_room_held()}</Badge
+										>{msg.member_groups_slug_room_held_label()}</Badge
 									>
 								{/if}
 							</td>
@@ -400,16 +412,18 @@
 											{#if s.status === 'published'}
 												<Action
 													action={unpublishGroupSession.for(s.id)}
-													label={msg.member_groups_slug_unlist()}
-													aria-label={msg.member_groups_slug_take_off_gig_guide({ title: s.title })}
-													modalTitle={msg.member_groups_slug_take_off_guide()}
-													submitLabel={msg.member_groups_slug_unlist()}
-													confirm={msg.member_groups_slug_take_off_public_gig_guide({
+													label={msg.member_groups_slug_unlist_label()}
+													aria-label={msg.member_groups_slug_take_off_gig_guide_label({
+														title: s.title
+													})}
+													modalTitle={msg.member_groups_slug_take_off_guide_title()}
+													submitLabel={msg.member_groups_slug_unlist_label()}
+													confirm={msg.member_groups_slug_take_off_public_gig_guide_body({
 														title: s.title
 													})}
 													variant="ghost"
 													size="xs"
-													successToast={msg.member_groups_slug_taken_off_guide()}
+													successToast={msg.member_groups_slug_taken_off_guide_toast()}
 													onsuccess={refreshRoster}
 												>
 													{#snippet form()}
@@ -420,14 +434,16 @@
 											{:else}
 												<Action
 													action={publishGroupSession.for(s.id)}
-													label={msg.member_publish()}
-													aria-label={msg.member_publish_2({ title: s.title })}
-													modalTitle={msg.member_groups_slug_publish_session()}
-													submitLabel={msg.member_publish()}
-													confirm={msg.member_groups_slug_put_public_gig_guide({ title: s.title })}
+													label={msg.member_publish_label()}
+													aria-label={msg.member_publish_2_label({ title: s.title })}
+													modalTitle={msg.member_groups_slug_publish_session_title()}
+													submitLabel={msg.member_publish_label()}
+													confirm={msg.member_groups_slug_put_public_gig_guide_body({
+														title: s.title
+													})}
 													variant="ghost"
 													size="xs"
-													successToast={msg.member_published()}
+													successToast={msg.member_published_toast()}
 													onsuccess={refreshRoster}
 												>
 													{#snippet form()}
@@ -438,16 +454,18 @@
 											{/if}
 											<Action
 												action={cancelGroupSession.for(s.id)}
-												label={msg.member_cancel()}
-												aria-label={msg.member_groups_slug_cancel({ title: s.title })}
-												modalTitle={msg.member_groups_slug_call_off()}
-												submitLabel={msg.member_groups_slug_cancel_session()}
+												label={msg.member_cancel_label()}
+												aria-label={msg.member_groups_slug_cancel_label({ title: s.title })}
+												modalTitle={msg.member_groups_slug_call_off_title()}
+												submitLabel={msg.member_groups_slug_cancel_session_label()}
 												confirm={s.reservesRoom
-													? msg.member_groups_slug_cancel_room_holds_goes_back({ title: s.title })
-													: msg.member_groups_slug_cancel_2({ title: s.title })}
+													? msg.member_groups_slug_cancel_room_holds_goes_back_body({
+															title: s.title
+														})
+													: msg.member_groups_slug_cancel_2_body({ title: s.title })}
 												variant="ghost"
 												size="xs"
-												successToast={msg.member_groups_slug_session_cancelled()}
+												successToast={msg.member_groups_slug_session_cancelled_toast()}
 												onsuccess={refreshRoster}
 											>
 												{#snippet form()}
@@ -465,18 +483,18 @@
 			{/if}
 		</InfoCard>
 	{:else if tab === 'overview'}
-		<InfoCard title={msg.member_about()}>
+		<InfoCard title={msg.member_about_title()}>
 			{#if group.bio}
 				<p class="text-sm">{group.bio}</p>
 			{:else}
 				<EmptyState
 					description={data.canManage
-						? msg.member_groups_slug_nothing_written_about_program_yet()
-						: msg.member_groups_slug_nothing_written_about_program_yet_2()}
+						? msg.member_groups_slug_nothing_written_about_program_yet_body()
+						: msg.member_groups_slug_nothing_written_about_program_yet_2_body()}
 				>
 					{#if data.canManage}
 						<Button href={resolve(`member/groups/${slug}/edit`)} variant="primary" size="sm">
-							{msg.member_groups_slug_write()}
+							{msg.member_groups_slug_write_label()}
 						</Button>
 					{/if}
 				</EmptyState>
@@ -484,7 +502,7 @@
 		</InfoCard>
 
 		{#if group.joinInstructions}
-			<InfoCard title={msg.member_how_works()}>
+			<InfoCard title={msg.member_how_works_title()}>
 				<p class="text-sm">{group.joinInstructions}</p>
 			</InfoCard>
 		{/if}
@@ -502,22 +520,22 @@
 			</div>
 		{/if}
 
-		<InfoCard title={msg.member_members()}>
+		<InfoCard title={msg.member_members_title()}>
 			{#if members.active.length === 0 && members.pending.length === 0}
 				<EmptyState
 					description={data.canManage
-						? msg.member_groups_slug_nobody_roster_yet_invite_first()
-						: msg.member_groups_slug_no_members_yet()}
+						? msg.member_groups_slug_nobody_roster_yet_invite_first_body()
+						: msg.member_groups_slug_no_members_yet_body()}
 				/>
 			{:else}
 				<Table>
 					{#snippet head()}
-						<th class="w-px"><span class="sr-only">{msg.member_status()}</span></th>
-						<th>{msg.member_member()}</th>
-						<th class="w-px">{msg.member_role()}</th>
-						<th>{msg.member_groups_slug_position()}</th>
+						<th class="w-px"><span class="sr-only">{msg.member_status_label()}</span></th>
+						<th>{msg.member_member_label()}</th>
+						<th class="w-px">{msg.member_role_label()}</th>
+						<th>{msg.member_groups_slug_position_label()}</th>
 						{#if rosterActions}
-							<th class="w-px"><span class="sr-only">{msg.member_actions()}</span></th>
+							<th class="w-px"><span class="sr-only">{msg.member_actions_label()}</span></th>
 						{/if}
 					{/snippet}
 					{#each [...members.active, ...members.pending] as m (m.id)}
@@ -537,16 +555,16 @@
 										{#if data.canManage && m.status === 'pending'}
 											<Action
 												action={revokeGroupInvitation.for(m.id)}
-												label={msg.member_groups_slug_revoke()}
-												aria-label={msg.member_groups_slug_revoke_invitation({
+												label={msg.member_groups_slug_revoke_label()}
+												aria-label={msg.member_groups_slug_revoke_invitation_label({
 													title: m.member.title
 												})}
 												variant="ghost"
 												size="xs"
-												confirm={msg.member_groups_slug_revoke_invitation_3({
+												confirm={msg.member_groups_slug_revoke_invitation_3_body({
 													title: m.member.title
 												})}
-												successToast={msg.member_groups_slug_invitation_revoked()}
+												successToast={msg.member_groups_slug_invitation_revoked_toast()}
 												onsuccess={refreshRoster}
 											>
 												{#snippet form()}
@@ -566,15 +584,17 @@
 											/>
 											<Action
 												action={removeGroupMember.for(m.id)}
-												label={msg.member_groups_slug_remove()}
-												aria-label={msg.member_groups_slug_remove_2({ title: m.member.title })}
+												label={msg.member_groups_slug_remove_label()}
+												aria-label={msg.member_groups_slug_remove_2_label({
+													title: m.member.title
+												})}
 												variant="ghost"
 												size="xs"
-												confirm={msg.member_groups_slug_remove_from({
+												confirm={msg.member_groups_slug_remove_from_body({
 													title: m.member.title,
 													name: group.name
 												})}
-												successToast={msg.member_groups_slug_member_removed()}
+												successToast={msg.member_groups_slug_member_removed_toast()}
 												onsuccess={refreshRoster}
 											>
 												{#snippet form()}
@@ -595,12 +615,12 @@
 		{#if data.canManage && pendingEmailInvites.length > 0}
 			<!-- Invitations to an address rather than an account. They have no roster
 			     row until the person signs up, so they cannot live in the table. -->
-			<InfoCard title={msg.member_groups_slug_invited_by_email()}>
+			<InfoCard title={msg.member_groups_slug_invited_by_email_title()}>
 				<Table>
 					{#snippet head()}
-						<th>{msg.member_email()}</th>
-						<th class="w-px">{msg.member_role()}</th>
-						<th class="w-px"><span class="sr-only">{msg.member_actions()}</span></th>
+						<th>{msg.member_email_label()}</th>
+						<th class="w-px">{msg.member_role_label()}</th>
+						<th class="w-px"><span class="sr-only">{msg.member_actions_label()}</span></th>
 					{/snippet}
 					{#each pendingEmailInvites as inv (inv.id)}
 						<tr>
@@ -609,12 +629,14 @@
 							<td class="w-px">
 								<Action
 									action={revokeGroupEmailInvite.for(inv.id)}
-									label={msg.member_groups_slug_revoke()}
-									aria-label={msg.member_groups_slug_revoke_invitation_2({ email: inv.email })}
+									label={msg.member_groups_slug_revoke_label()}
+									aria-label={msg.member_groups_slug_revoke_invitation_2_label({
+										email: inv.email
+									})}
 									variant="ghost"
 									size="xs"
-									confirm={msg.member_groups_slug_revoke_invitation_4({ email: inv.email })}
-									successToast={msg.member_groups_slug_invitation_revoked()}
+									confirm={msg.member_groups_slug_revoke_invitation_4_body({ email: inv.email })}
+									successToast={msg.member_groups_slug_invitation_revoked_toast()}
 									onsuccess={refreshRoster}
 								>
 									{#snippet form()}

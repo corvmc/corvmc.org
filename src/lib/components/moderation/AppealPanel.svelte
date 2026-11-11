@@ -35,12 +35,12 @@
 	<div class="mt-3 space-y-2 text-sm">
 		{#if !view.appeal}
 			<p class="text-wrap">
-				{m.moderation_appeal_panel_if_think_decision_was_wrong()}
+				{m.moderation_appeal_panel_if_think_decision_was_wrong_text()}
 			</p>
 			<Action
 				action={instance}
 				label={m.moderation_appeal_panel_label()}
-				modalTitle={m.moderation_appeal_panel_label()}
+				modalTitle={m.moderation_appeal_panel_title()}
 				submitLabel={m.moderation_appeal_panel_submit_label()}
 				successToast={m.moderation_appeal_panel_success_toast()}
 				variant="default"
@@ -54,7 +54,7 @@
 						{#if view.upheld.notes}
 							<p class="text-muted text-wrap">
 								<ParaglideMessage
-									message={m.moderation_appeal_panel_staff_s_reason}
+									message={m.moderation_appeal_panel_staff_s_reason_text}
 									inputs={{ notes: view.upheld.notes }}
 									>{#snippet span({ children })}<span class="italic">{@render children?.()}</span
 										>{/snippet}</ParaglideMessage
@@ -63,7 +63,7 @@
 						{/if}
 						<label class="fieldset w-full">
 							<span class="fieldset-legend"
-								>{m.moderation_appeal_panel_why_do_think_was_wrong()}</span
+								>{m.moderation_appeal_panel_why_do_think_was_wrong_label()}</span
 							>
 							<textarea
 								class="textarea w-full"
@@ -72,14 +72,14 @@
 								{...instance.fields.body.as('text')}></textarea>
 						</label>
 						<p class="text-muted text-wrap">
-							{m.moderation_appeal_panel_nothing_changes_while_appeal_looked()}
+							{m.moderation_appeal_panel_nothing_changes_while_appeal_looked_text()}
 						</p>
 					</div>
 				{/snippet}
 			</Action>
 		{:else if !view.appeal.decision}
 			<p class="text-wrap">
-				{m.moderation_appeal_panel_appealed_member_staff_will_look({
+				{m.moderation_appeal_panel_appealed_member_staff_will_look_text({
 					formatDate: formatDate(view.appeal.createdAt)
 				})}
 			</p>

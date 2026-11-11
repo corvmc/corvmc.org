@@ -121,8 +121,8 @@
 
 <Action
 	action={createReservation}
-	label={m.staff_reservations_create_modal_new_reservation()}
-	modalTitle={m.staff_reservations_create_modal_new_reservation()}
+	label={m.staff_reservations_create_modal_new_reservation_label()}
+	modalTitle={m.staff_reservations_create_modal_new_reservation_title()}
 	submitLabel={m.staff_reservations_create_modal_submit_label()}
 	variant="primary"
 	size="sm"
@@ -145,21 +145,21 @@
 			<input {...fields.endTime.as('hidden', endTime)} />
 
 			<fieldset class="fieldset">
-				<legend class="fieldset-legend">{m.staff_reservations_create_modal_booking()}</legend>
+				<legend class="fieldset-legend">{m.staff_reservations_create_modal_booking_title()}</legend>
 				<Select bind:value={bookerType} class="w-full">
-					<option value="user">{m.staff_reservations_create_modal_member()}</option>
-					<option value="group">{m.staff_reservations_create_modal_band()}</option>
+					<option value="user">{m.staff_reservations_create_modal_member_label()}</option>
+					<option value="group">{m.staff_reservations_create_modal_band_label()}</option>
 				</Select>
 			</fieldset>
 
 			{#if bookerType === 'group'}
 				<fieldset class="fieldset">
-					<legend class="fieldset-legend">{m.staff_band()}</legend>
+					<legend class="fieldset-legend">{m.staff_band_title()}</legend>
 					<SearchSelect
 						search={searchBands}
 						bind:value={selectedBand}
 						descriptionKey="ownerName"
-						placeholder={m.staff_reservations_create_modal_search_bands_by_name()}
+						placeholder={m.staff_reservations_create_modal_search_bands_by_name_placeholder()}
 						onselect={onBandSelected}
 					/>
 				</fieldset>
@@ -167,41 +167,46 @@
 
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">
-					{bookerType === 'group' ? m.staff_booked_by() : m.staff_member()}
+					{bookerType === 'group' ? m.staff_booked_by_title() : m.staff_member_title()}
 				</legend>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={selectedMember}
-					placeholder={m.staff_search_by_name_email()}
+					placeholder={m.staff_search_by_name_email_placeholder()}
 				/>
 			</fieldset>
 
 			<Field
 				field={createReservation.fields.date}
 				type="date"
-				label={m.staff_date()}
+				label={m.staff_date_label()}
 				bind:value={date}
 			/>
 
 			<fieldset class="fieldset">
-				<legend class="fieldset-legend">{m.staff_reservations_create_modal_start_time()}</legend>
+				<legend class="fieldset-legend"
+					>{m.staff_reservations_create_modal_start_time_title()}</legend
+				>
 				<Select bind:value={startTime} class="w-full" disabled={!(await startOptions)?.length}>
-					<option value="">{m.staff_reservations_create_modal_select_start_time()}</option>
+					<option value="">{m.staff_reservations_create_modal_select_start_time_label()}</option>
 					{#each await startOptions as opt (opt.value)}
 						<option value={opt.value}>
-							{opt.label}{opt.available ? '' : m.staff_reservations_create_modal_conflict()}
+							{opt.label}{opt.available ? '' : m.staff_reservations_create_modal_conflict_label()}
 						</option>
 					{/each}
 				</Select>
 			</fieldset>
 
 			<fieldset class="fieldset">
-				<legend class="fieldset-legend">{m.staff_reservations_create_modal_end_time()}</legend>
+				<legend class="fieldset-legend">{m.staff_reservations_create_modal_end_time_title()}</legend
+				>
 				<Select bind:value={endTime} class="w-full" disabled={!startTime}>
-					<option value="">{m.staff_reservations_create_modal_select_end_time()}</option>
+					<option value="">{m.staff_reservations_create_modal_select_end_time_label()}</option>
 					{#each await endOptions as opt (opt.value)}
 						<option value={opt.value} class:opacity-40={!opt.available}>
-							{opt.label}{opt.available ? '' : m.staff_reservations_create_modal_unavailable()}
+							{opt.label}{opt.available
+								? ''
+								: m.staff_reservations_create_modal_unavailable_label()}
 						</option>
 					{/each}
 				</Select>
@@ -215,8 +220,8 @@
 				<Field
 					field={fields.overrideConflicts}
 					type="checkbox"
-					label={m.staff_reservations_create_modal_override()}
-					checkboxLabel={m.staff_reservations_create_modal_checkbox_label()}
+					label={m.staff_reservations_create_modal_override_label()}
+					checkboxLabel={m.staff_reservations_create_modal_checkbox_label_checkbox()}
 					bind:value={overrideConflicts}
 				/>
 			{/if}
@@ -224,7 +229,7 @@
 			<Field
 				field={createReservation.fields.notes}
 				type="textarea"
-				label={m.staff_notes()}
+				label={m.staff_notes_label()}
 				bind:value={notes}
 			/>
 
@@ -236,7 +241,7 @@
 
 			{#snippet failed(error, reset)}
 				<Alert type="warning" reset={() => retryQuery(slots, reset)}>
-					{m.staff_reservations_create_modal_could_not_load_booking_form({
+					{m.staff_reservations_create_modal_could_not_load_booking_form_body({
 						errorMessage: errorMessage(error)
 					})}
 				</Alert>

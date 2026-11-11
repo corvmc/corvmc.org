@@ -28,7 +28,7 @@
 	const allocatedHours = $derived(creditsToHours(data.allocatedThisMonth));
 </script>
 
-<PageHeader title={m.member_dashboard()}>
+<PageHeader title={m.member_dashboard_title()}>
 	<InviteFriendAction />
 	<ReportBuildingProblemAction />
 </PageHeader>
@@ -43,11 +43,11 @@
 	<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
 		<!-- This week's reservations -->
 		<div class="lg:col-span-2">
-			<InfoCard title={m.member_week()}>
+			<InfoCard title={m.member_week_title()}>
 				{#if data.weekReservations.length === 0}
 					<EmptyState
-						message={m.member_no_sessions_booked_week()}
-						actionLabel={m.member_book_session()}
+						message={m.member_no_sessions_booked_week_body()}
+						actionLabel={m.member_book_session_label()}
 						actionHref="/member/reservations"
 					/>
 				{:else}
@@ -64,7 +64,7 @@
 											{formatDate(res.startsAt)}
 											<span class="opacity-60"
 												>· {res.bandName ??
-													(res.notes?.trim() || m.member_practice_reservation())}</span
+													(res.notes?.trim() || m.member_practice_reservation_text())}</span
 											>
 										</p>
 										<p class="text-subtle">
@@ -84,11 +84,11 @@
 		</div>
 
 		<!-- Credit balance -->
-		<InfoCard title={m.member_practice_credits()}>
+		<InfoCard title={m.member_practice_credits_title()}>
 			{#if isSustaining}
 				<div class="space-y-3">
 					<p class="text-3xl font-medium">
-						{freeHours}<span class="text-base opacity-60"> {m.member_hrs_left()}</span>
+						{freeHours}<span class="text-base opacity-60"> {m.member_hrs_left_text()}</span>
 					</p>
 					<progress
 						class="progress w-full progress-primary"
@@ -96,16 +96,16 @@
 						max={data.allocatedThisMonth || 1}
 					></progress>
 					<p class="text-subtle">
-						{m.member_hours_used_month({ usedHours, allocatedHours })}
+						{m.member_hours_used_month_text({ usedHours, allocatedHours })}
 					</p>
 				</div>
 			{:else}
 				<div class="space-y-3">
 					<p class="text-muted">
-						{m.member_become_sustaining_member_get_free()}
+						{m.member_become_sustaining_member_get_free_text()}
 					</p>
 					<Button href="/member/membership" variant="default" size="sm"
-						>{m.member_learn_more()}</Button
+						>{m.member_learn_more_label()}</Button
 					>
 				</div>
 			{/if}
@@ -117,11 +117,11 @@
 	<MatchesCard matches={data.matches} />
 
 	<!-- Upcoming events -->
-	<InfoCard title={m.member_upcoming_events()}>
+	<InfoCard title={m.member_upcoming_events_title()}>
 		{#if data.upcomingEvents.length === 0}
 			<EmptyState
-				message={m.member_no_events_horizon()}
-				actionLabel={m.member_browse_events()}
+				message={m.member_no_events_horizon_body()}
+				actionLabel={m.member_browse_events_label()}
 				actionHref="/member/events"
 			/>
 		{:else}

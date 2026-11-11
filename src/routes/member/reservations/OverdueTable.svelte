@@ -17,9 +17,9 @@
 
 <Table zebra={false}>
 	{#snippet head()}
-		<th>{m.member_date()}</th>
-		<th class="cell-num">{m.member_reservations_overdue_table_amount_due()}</th>
-		<th class="w-px"><span class="sr-only">{m.member_actions()}</span></th>
+		<th>{m.member_date_label()}</th>
+		<th class="cell-num">{m.member_reservations_overdue_table_amount_due_label()}</th>
+		<th class="w-px"><span class="sr-only">{m.member_actions_label()}</span></th>
 	{/snippet}
 	{#each reservations as reservation (reservation.id)}
 		{@const href = resolve('/member/reservations/[id]', { id: reservation.id })}
@@ -43,7 +43,7 @@
 						size="xs"
 						outline
 					>
-						{m.member_pay_online()}
+						{m.member_pay_online_label()}
 					</Button>
 				{/if}
 			</td>

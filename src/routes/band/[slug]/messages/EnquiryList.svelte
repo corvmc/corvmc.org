@@ -30,14 +30,14 @@
 	<SectionLabel label={m.band_slug_messages_enquiry_list_label()} />
 
 	<p class="text-muted text-sm">
-		{m.band_slug_messages_enquiry_list_enquiries_from_public_bookin()}
+		{m.band_slug_messages_enquiry_list_enquiries_from_public_bookin_text()}
 	</p>
 
 	<div class="min-h-0 flex-1 overflow-y-auto">
 		<DataList
 			{result}
 			emptyTitle={m.band_slug_messages_enquiry_list_empty_title()}
-			empty={m.band_slug_messages_enquiry_list_empty()}
+			empty={m.band_slug_messages_enquiry_list_empty_body()}
 			onpage={(p) => (enquiryList.page = p)}
 		>
 			{#snippet children(rows)}

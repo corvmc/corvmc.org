@@ -77,11 +77,15 @@
 	const applyId = $derived(committees.find((c) => c.slug === applySlug)?.id ?? null);
 </script>
 
-<PageHeader width="3xl" title={m.member_groups_groups()} subtitle={m.member_groups_subtitle()} />
+<PageHeader
+	width="3xl"
+	title={m.member_groups_groups_title()}
+	subtitle={m.member_groups_subtitle_body()}
+/>
 <PageContent width="3xl">
-	<InfoCard title={m.member_groups_programs()}>
+	<InfoCard title={m.member_groups_programs_title()}>
 		{#if active.length === 0 && invited.length === 0 && applied.length === 0 && data.emailInvites.length === 0}
-			<EmptyState description={m.member_groups_description()} />
+			<EmptyState description={m.member_groups_description_body()} />
 		{:else}
 			<div class="space-y-3">
 				{#each active as g (g.id)}
@@ -90,7 +94,7 @@
 							<div class="min-w-0">
 								<a class="link font-semibold" href={resolve(`member/groups/${g.slug}`)}>{g.name}</a>
 								<p class="text-subtle">
-									{m.member_groups_members({
+									{m.member_groups_members_text({
 										kindLabel: kindLabel(g.kind),
 										memberCount: g.memberCount
 									})}
@@ -107,7 +111,7 @@
 							<div class="min-w-0">
 								<span class="font-semibold">{g.name}</span>
 								<p class="text-subtle">
-									{m.member_groups_invited_join({ kindLabel: kindLabel(g.kind) })}
+									{m.member_groups_invited_join_text({ kindLabel: kindLabel(g.kind) })}
 								</p>
 							</div>
 							<AnswerGroupInviteAction groupId={g.id} groupName={g.name} />
@@ -126,8 +130,8 @@
 								<span class="font-semibold">{a.name}</span>
 								<p class="text-subtle">
 									{kindLabel(a.kind)} · {a.open
-										? m.member_groups_applied_join()
-										: m.member_groups_application()}
+										? m.member_groups_applied_join_text()
+										: m.member_groups_application_text()}
 								</p>
 								<!-- The reviewer's reason, where they left one: a decision you
 								     cannot see is one you cannot ask about. -->
@@ -144,15 +148,15 @@
 								{#if a.open}
 									<Action
 										action={withdrawGroupApplication.for(a.applicationId)}
-										label={m.member_withdraw()}
-										aria-label={m.member_groups_withdraw_application({ name: a.name })}
+										label={m.member_withdraw_label()}
+										aria-label={m.member_groups_withdraw_application_label({ name: a.name })}
 										variant="ghost"
 										size="xs"
 										confirm={a.sharedWith > 0
-											? m.member_groups_application_also_names_other_committees({
+											? m.member_groups_application_also_names_other_committees_body({
 													sharedWith: a.sharedWith
 												})
-											: m.member_groups_confirm()}
+											: m.member_groups_confirm_body()}
 										successToast={m.member_groups_success_toast()}
 									>
 										{#snippet form()}
@@ -169,7 +173,7 @@
 	</InfoCard>
 
 	{#if data.open.length > 0}
-		<InfoCard title={m.member_groups_open_join()}>
+		<InfoCard title={m.member_groups_open_join_title()}>
 			<div class="space-y-3">
 				{#each data.open as g (g.id)}
 					<Card>
@@ -194,7 +198,7 @@
 	{/if}
 
 	{#if data.byApplication.length > 0}
-		<InfoCard title={m.member_groups_apply_join()}>
+		<InfoCard title={m.member_groups_apply_join_title()}>
 			<div class="space-y-3">
 				{#each data.byApplication as g (g.id)}
 					<Card>
@@ -207,8 +211,8 @@
 								<Button
 									variant="primary"
 									size="sm"
-									aria-label={m.member_groups_apply({ name: g.name })}
-									onclick={() => openApply(g.slug)}>{m.member_apply()}</Button
+									aria-label={m.member_groups_apply_label({ name: g.name })}
+									onclick={() => openApply(g.slug)}>{m.member_apply_label()}</Button
 								>
 							{:else}
 								<JoinGroupAction
@@ -230,7 +234,7 @@
 	{#if data.inviteOnly.length > 0}
 		<!-- Listed with their instructions and no action. Seeing that a committee
 		     exists is the point; the way in is a conversation. -->
-		<InfoCard title={m.member_groups_invite_only()}>
+		<InfoCard title={m.member_groups_invite_only_title()}>
 			<div class="space-y-3">
 				{#each data.inviteOnly as g (g.id)}
 					<Card>

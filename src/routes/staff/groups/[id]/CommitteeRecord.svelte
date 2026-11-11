@@ -34,9 +34,9 @@
 		{actions}
 	/>
 {:else}
-	<RecordFrame {variant} {actions} title={data.committee.name} subtitle={m.staff_committee()}>
+	<RecordFrame {variant} {actions} title={data.committee.name} subtitle={m.staff_committee_body()}>
 		{#if data.applications.length === 0}
-			<EmptyState description={m.staff_groups_id_committee_record_description()} />
+			<EmptyState description={m.staff_groups_id_committee_record_description_body()} />
 		{:else}
 			{@render applications()}
 		{/if}

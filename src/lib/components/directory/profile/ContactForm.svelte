@@ -31,7 +31,9 @@
 
 <ProfileSection title={m.directory_profile_contact_form_title()}>
 	{#if submitted}
-		<p class="contact__done">{m.directory_profile_contact_form_sent_will_get_back({ bandName })}</p>
+		<p class="contact__done">
+			{m.directory_profile_contact_form_sent_will_get_back_text({ bandName })}
+		</p>
 	{:else}
 		<Form
 			remote={rf}
@@ -50,19 +52,19 @@
 			<FormField
 				field={fields.name}
 				type="text"
-				label={m.directory_profile_contact_form_name()}
+				label={m.directory_profile_contact_form_name_label()}
 				required
 			/>
 			<FormField
 				field={fields.email}
 				type="email"
-				label={m.directory_profile_contact_form_email()}
+				label={m.directory_profile_contact_form_email_label()}
 				required
 			/>
 			<FormField
 				field={fields.message}
 				type="textarea"
-				label={m.directory_profile_contact_form_message()}
+				label={m.directory_profile_contact_form_message_label()}
 				required
 			/>
 			<Turnstile
@@ -74,7 +76,7 @@
 			{#if failure}
 				<p class="contact__error" role="alert">{failure}</p>
 			{/if}
-			<SubmitButton label={m.directory_profile_contact_form_send()} />
+			<SubmitButton label={m.directory_profile_contact_form_send_label()} />
 		</Form>
 	{/if}
 </ProfileSection>

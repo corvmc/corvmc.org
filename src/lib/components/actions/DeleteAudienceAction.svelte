@@ -25,8 +25,8 @@
 
 <Action
 	action={deleteAudience}
-	label={m.actions_delete()}
-	modalTitle={m.actions_confirm()}
+	label={m.actions_delete_label()}
+	modalTitle={m.actions_confirm_title()}
 	successToast={m.actions_delete_audience_success_toast()}
 	{variant}
 	{size}
@@ -36,6 +36,6 @@
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', audienceId)} />
-		<p class="py-4">{m.actions_delete_audience_delete_audience_all_subscribers_will()}</p>
+		<p class="py-4">{m.actions_delete_audience_delete_audience_all_subscribers_will_text()}</p>
 	{/snippet}
 </Action>

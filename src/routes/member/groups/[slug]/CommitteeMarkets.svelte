@@ -17,9 +17,9 @@
 	<InfoCard title={m.member_groups_slug_committee_markets_title()}>
 		<Table>
 			{#snippet head()}
-				<th>{m.member_groups_slug_committee_markets_market()}</th>
-				<th>{m.member_date()}</th>
-				<th><span class="sr-only">{m.member_vendors()}</span></th>
+				<th>{m.member_groups_slug_committee_markets_market_label()}</th>
+				<th>{m.member_date_label()}</th>
+				<th><span class="sr-only">{m.member_vendors_label()}</span></th>
 			{/snippet}
 			{#each markets as market (market.eventId)}
 				<tr>
@@ -27,11 +27,11 @@
 					<td>{formatDateShort(market.startsAt)}</td>
 					<td class="text-right">
 						<a class="link" href={resolve(`member/groups/${slug}/markets/${market.eventId}`)}>
-							{m.member_vendors()}
+							{m.member_vendors_text()}
 						</a>
 						{#if market.toReview > 0}
 							<Badge variant="warning" size="sm"
-								>{m.member_groups_slug_committee_markets_review({
+								>{m.member_groups_slug_committee_markets_review_label({
 									toReview: market.toReview
 								})}</Badge
 							>

@@ -20,7 +20,7 @@
 <button
 	type="button"
 	class="nav-star btn btn-square btn-ghost btn-xs"
-	aria-label={m.layout_nav_star()}
+	aria-label={m.layout_nav_star_label()}
 	aria-describedby={describedby}
 	aria-pressed={starred}
 	onclick={ontoggle}

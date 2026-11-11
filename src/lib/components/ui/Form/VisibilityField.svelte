@@ -6,7 +6,7 @@
 	let {
 		field,
 		value = $bindable('members'),
-		publicDescription = m.ui_visibility_public_hint(),
+		publicDescription = m.ui_visibility_public_hint_body(),
 		name = 'directoryVisibility'
 	}: {
 		field?: RemoteFormField<RemoteFormFieldValue>;
@@ -18,15 +18,15 @@
 	const options = $derived([
 		{
 			value: 'hidden',
-			label: m.ui_visibility_hidden(),
-			description: m.ui_visibility_hidden_hint()
+			label: m.ui_visibility_hidden_label(),
+			description: m.ui_visibility_hidden_hint_body()
 		},
 		{
 			value: 'members',
-			label: m.ui_visibility_members(),
-			description: m.ui_visibility_members_hint()
+			label: m.ui_visibility_members_label(),
+			description: m.ui_visibility_members_hint_body()
 		},
-		{ value: 'public', label: m.ui_visibility_public(), description: publicDescription }
+		{ value: 'public', label: m.ui_visibility_public_label(), description: publicDescription }
 	]);
 </script>
 

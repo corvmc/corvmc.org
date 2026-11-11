@@ -30,8 +30,8 @@
 
 <Action
 	action={addSubscriber}
-	label={m.actions_add_subscriber_add_subscriber()}
-	modalTitle={m.actions_add_subscriber_add_subscriber()}
+	label={m.actions_add_subscriber_add_subscriber_label()}
+	modalTitle={m.actions_add_subscriber_add_subscriber_title()}
 	canSubmit={!!email.trim()}
 	successToast={m.actions_add_subscriber_success_toast()}
 	{variant}
@@ -52,16 +52,16 @@
 		<FormField
 			field={addSubscriber.fields.email}
 			type="email"
-			label={m.actions_email()}
+			label={m.actions_email_label()}
 			bind:value={email}
-			placeholder={m.actions_add_subscriber_email_example_com()}
+			placeholder={m.actions_add_subscriber_email_example_com_placeholder()}
 			required
 		/>
 		<FormField
 			field={addSubscriber.fields.name}
-			label={m.actions_name_optional()}
+			label={m.actions_name_optional_label()}
 			bind:value={name}
-			placeholder={m.actions_name()}
+			placeholder={m.actions_name_placeholder()}
 		/>
 	{/snippet}
 </Action>

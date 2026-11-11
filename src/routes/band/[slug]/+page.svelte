@@ -35,11 +35,11 @@
 	let upcoming = $derived(getBandUpcoming(band.id));
 </script>
 
-<PageHeader title={m.band_slug_dashboard()} subtitle={band.name} />
+<PageHeader title={m.band_slug_dashboard_title()} subtitle={band.name} />
 <PageContent>
 	{#if address}
-		<AddressCard url={address} title={m.band_slug_band_s_address()}>
-			{m.band_slug_put_flyer_bio_goes_s({ name: band.name })}
+		<AddressCard url={address} title={m.band_slug_band_s_address_title()}>
+			{m.band_slug_put_flyer_bio_goes_s_text({ name: band.name })}
 		</AddressCard>
 	{/if}
 
@@ -49,7 +49,7 @@
 
 			{#snippet failed(_error, reset)}
 				<Alert type="warning" reset={() => retryQuery(getPressKitProgress(band.slug), reset)}>
-					{m.band_slug_press_kit_progress_didn_t()}
+					{m.band_slug_press_kit_progress_didn_t_body()}
 				</Alert>
 			{/snippet}
 		</svelte:boundary>
@@ -57,9 +57,9 @@
 
 	<!-- Band overview -->
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-		<StatCard title={m.band_members()} value={band.memberCount} size="sm" />
+		<StatCard title={m.band_members_title()} value={band.memberCount} size="sm" />
 		<StatCard
-			title={m.band_slug_role()}
+			title={m.band_slug_role_title()}
 			value={layout.userRole}
 			size="sm"
 			valueClass="capitalize"
@@ -72,7 +72,7 @@
 	<section>
 		{#await upcoming}
 			<div class="mb-3 flex items-center justify-between">
-				<h2 class="text-lg font-semibold">{m.band_slug_upcoming_sessions()}</h2>
+				<h2 class="text-lg font-semibold">{m.band_slug_upcoming_sessions_title()}</h2>
 			</div>
 			<div class="flex justify-center py-8">
 				<span class="loading loading-lg loading-spinner"></span>
@@ -80,18 +80,18 @@
 		{:then sessions}
 			<div class="mb-3 flex items-center justify-between">
 				<h2 class="text-lg font-semibold">
-					{m.band_slug_upcoming_sessions()}
+					{m.band_slug_upcoming_sessions_title()}
 					{#if sessions.length > 0}
 						<span class="font-normal text-base-content/60">({sessions.length})</span>
 					{/if}
 				</h2>
 				<a href={resolve(`band/${band.slug}/reservations`)} class="link text-sm link-primary">
-					{m.band_slug_view_all()}
+					{m.band_slug_view_all_text()}
 				</a>
 			</div>
 
 			{#if sessions.length === 0}
-				<EmptyState message={m.band_slug_message()} />
+				<EmptyState message={m.band_slug_message_body()} />
 			{:else}
 				<div class="flex flex-col gap-2">
 					{#each sessions as res (res.id)}
@@ -100,19 +100,19 @@
 				</div>
 			{/if}
 		{:catch error}
-			<h2 class="mb-3 text-lg font-semibold">{m.band_slug_upcoming_sessions()}</h2>
-			<Alert type="error">{m.ui_load_failed({ error: errorMessage(error) })}</Alert>
+			<h2 class="mb-3 text-lg font-semibold">{m.band_slug_upcoming_sessions_title()}</h2>
+			<Alert type="error">{m.ui_load_failed_body({ error: errorMessage(error) })}</Alert>
 		{/await}
 	</section>
 
 	<!-- Quick links -->
 	<div class="flex gap-3">
 		<Button href="/band/{band.slug}/members" variant="default" size="sm" outline
-			>{m.band_slug_manage_members()}</Button
+			>{m.band_slug_manage_members_label()}</Button
 		>
 		{#if isOwnerOrAdmin}
 			<Button href="/band/{band.slug}/edit" variant="default" size="sm" outline
-				>{m.band_slug_edit_band_profile()}</Button
+				>{m.band_slug_edit_band_profile_label()}</Button
 			>
 		{/if}
 	</div>

@@ -24,30 +24,30 @@
 <Field
 	field={fields.name}
 	type="text"
-	label={m.sponsor_sponsor_fields_business()}
+	label={m.sponsor_sponsor_fields_business_label()}
 	value={value?.name ?? ''}
 />
 <Field
 	field={fields.website}
 	type="text"
-	label={m.sponsor_sponsor_fields_website()}
+	label={m.sponsor_sponsor_fields_website_label()}
 	value={value?.website ?? ''}
 />
 <Field
 	field={fields.contactName}
 	type="text"
-	label={m.sponsor_sponsor_fields_contact()}
+	label={m.sponsor_sponsor_fields_contact_label()}
 	value={value?.contactName ?? ''}
 />
 <Field
 	field={fields.contactEmail}
 	type="email"
-	label={m.sponsor_sponsor_fields_contact_email()}
+	label={m.sponsor_sponsor_fields_contact_email_label()}
 	value={value?.contactEmail ?? ''}
 />
 <Field
 	field={fields.notes}
 	type="textarea"
-	label={m.sponsor_sponsor_fields_notes()}
+	label={m.sponsor_sponsor_fields_notes_label()}
 	value={value?.notes ?? ''}
 />

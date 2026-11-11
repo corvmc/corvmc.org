@@ -47,7 +47,7 @@
 	}
 </script>
 
-<PageHeader title={m.staff_moderation()} documentTitle={m.staff_content_flags()}>
+<PageHeader title={m.staff_moderation_title()} documentTitle={m.staff_content_flags_title()}>
 	<StaffViews views={moderationViews} active="flags" />
 </PageHeader>
 <PageContent>
@@ -64,22 +64,22 @@
 		{/snippet}
 		<Select
 			size="sm"
-			aria-label={m.staff_status()}
+			aria-label={m.staff_status_label()}
 			value={statusFilter}
 			onchange={(e: Event) => {
 				statusFilter = (e.currentTarget as HTMLSelectElement).value as typeof statusFilter;
 				page = 1;
 			}}
 		>
-			<option value="">{m.staff_all_statuses()}</option>
+			<option value="">{m.staff_all_statuses_label()}</option>
 			{#each flagStatuses as s (s)}
 				<option value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
 			{/each}
-			<option value="appealed">{m.staff_flags_appeal_waiting()}</option>
+			<option value="appealed">{m.staff_flags_appeal_waiting_label()}</option>
 		</Select>
 	</FilterBar>
 
-	<DataList {result} empty={m.staff_flags_empty()} onpage={(p) => (page = p)}>
+	<DataList {result} empty={m.staff_flags_empty_body()} onpage={(p) => (page = p)}>
 		{#snippet children(flags)}
 			<!-- `ref.type` is `flag` for every row, so what was flagged is the
 			     type column, read from `target.type`. -->

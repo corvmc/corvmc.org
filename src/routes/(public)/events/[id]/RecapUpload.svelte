@@ -23,7 +23,7 @@
 	{#if recap.closedReason}
 		<p class="text-muted">{recap.closedReason}</p>
 	{:else if recap.remaining === 0}
-		<p class="text-muted">{m.public_events_id_recap_upload_event_s_recap_full()}</p>
+		<p class="text-muted">{m.public_events_id_recap_upload_event_s_recap_full_text()}</p>
 	{:else}
 		<Form
 			remote={uploadEventPhotos}
@@ -33,8 +33,8 @@
 			<input {...uploadFields.eventId.as('hidden', eventId)} />
 			<FormField
 				field={uploadFields.photos}
-				label={m.public_photos()}
-				description={m.public_events_id_recap_upload_description({
+				label={m.public_photos_label()}
+				description={m.public_events_id_recap_upload_description_body({
 					maxPerUpload: recap.maxPerUpload
 				})}
 			>
@@ -47,7 +47,7 @@
 					/>
 				{/snippet}
 			</FormField>
-			<SubmitButton label={m.public_events_id_recap_upload_upload()} />
+			<SubmitButton label={m.public_events_id_recap_upload_upload_label()} />
 		</Form>
 	{/if}
 </InfoCard>

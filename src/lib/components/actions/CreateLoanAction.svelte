@@ -32,7 +32,7 @@
 
 <Action
 	action={createLoan}
-	label={m.actions_create_loan_new_loan()}
+	label={m.actions_create_loan_new_loan_label()}
 	modalTitle={m.actions_create_loan_modal_title()}
 	successToast={m.actions_create_loan_success_toast()}
 	{variant}
@@ -60,7 +60,7 @@
 				<Field
 					field={fields.itemId}
 					type="select"
-					label={m.actions_create_loan_equipment()}
+					label={m.actions_create_loan_equipment_label()}
 					placeholder={m.actions_create_loan_placeholder()}
 					value=""
 				>
@@ -68,21 +68,21 @@
 						<option value={eq.id}>{eq.name}</option>
 					{/each}
 				</Field>
-				<Field field={fields.quantity} type="number" label={m.actions_quantity()} value={1} />
+				<Field field={fields.quantity} type="number" label={m.actions_quantity_label()} value={1} />
 				<Field
 					field={fields.requestedPickupDate}
 					type="date"
-					label={m.actions_create_loan_requested_pickup_date()}
+					label={m.actions_create_loan_requested_pickup_date_label()}
 				/>
 				<Field
 					field={fields.estimatedReturnDate}
 					type="date"
-					label={m.actions_create_loan_estimated_return_date()}
+					label={m.actions_create_loan_estimated_return_date_label()}
 				/>
 				<Field
 					field={fields.memberNotes}
 					type="textarea"
-					label={m.actions_create_loan_notes_optional()}
+					label={m.actions_create_loan_notes_optional_label()}
 				/>
 			</div>
 
@@ -94,7 +94,7 @@
 
 			{#snippet failed(error, reset)}
 				<Alert type="warning" reset={() => retryQuery(getAvailableItems(), reset)}>
-					{m.actions_create_loan_could_not_load_equipment_list({
+					{m.actions_create_loan_could_not_load_equipment_list_body({
 						errorMessage: errorMessage(error)
 					})}
 				</Alert>

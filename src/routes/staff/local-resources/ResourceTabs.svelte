@@ -9,10 +9,10 @@
 
 <TabBar
 	tabs={[
-		{ key: 'listings', label: m.staff_listings(), href: resolve('staff/local-resources') },
+		{ key: 'listings', label: m.staff_listings_label(), href: resolve('staff/local-resources') },
 		{
 			key: 'tips',
-			label: m.staff_local_resources_resource_tabs_tips(),
+			label: m.staff_local_resources_resource_tabs_tips_label(),
 			href: resolve('staff/local-resources/tips'),
 			...(tipCount > 0 ? { badge: tipCount } : {})
 		}

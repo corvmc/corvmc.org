@@ -13,10 +13,10 @@
 
 <Action
 	{action}
-	label={m.member_status()}
+	label={m.member_status_label()}
 	aria-label={m.member_groups_slug_project_status_aria_label({ name: project.name })}
 	modalTitle={m.member_groups_slug_project_status_modal_title()}
-	submitLabel={m.member_save()}
+	submitLabel={m.member_save_label()}
 	successToast={m.member_groups_slug_project_status_success_toast()}
 	variant="ghost"
 	size="xs"
@@ -26,7 +26,7 @@
 		<Field
 			field={action.fields.status}
 			type="select"
-			label={m.member_status()}
+			label={m.member_status_label()}
 			options={projectStatusOptions}
 			value={project.status}
 		/>

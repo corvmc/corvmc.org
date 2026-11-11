@@ -21,10 +21,10 @@
 	<div>
 		<div class="mb-6 text-center">
 			<h2 class="text-3xl font-bold">
-				{m.member_membership_benefits_grid_sustaining_member_benefits()}
+				{m.member_membership_benefits_grid_sustaining_member_benefits_title()}
 			</h2>
 			<p class="mt-2 opacity-70">
-				{m.member_membership_benefits_grid_everything_get_with_monthly()}
+				{m.member_membership_benefits_grid_everything_get_with_monthly_text()}
 			</p>
 		</div>
 
@@ -34,9 +34,9 @@
 					<div class="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary/10">
 						<IconMusic size={24} class="text-primary" />
 					</div>
-					<CardTitle>{m.member_membership_benefits_grid_practice_time()}</CardTitle>
+					<CardTitle>{m.member_membership_benefits_grid_practice_time_title()}</CardTitle>
 					<p class="opacity-70">
-						{m.member_membership_benefits_grid_every_5_put_each_month()}
+						{m.member_membership_benefits_grid_every_5_put_each_month_text()}
 					</p>
 				</CardBody>
 			</Card>
@@ -46,9 +46,9 @@
 					<div class="mb-2 flex size-12 items-center justify-center rounded-xl bg-secondary/10">
 						<IconTool size={24} class="text-secondary" />
 					</div>
-					<CardTitle>{m.member_membership_benefits_grid_gear_library()}</CardTitle>
+					<CardTitle>{m.member_membership_benefits_grid_gear_library_title()}</CardTitle>
 					<p class="opacity-70">
-						{m.member_membership_benefits_grid_collective_has_whole_library()}
+						{m.member_membership_benefits_grid_collective_has_whole_library_text()}
 					</p>
 				</CardBody>
 			</Card>
@@ -58,9 +58,9 @@
 					<div class="mb-2 flex size-12 items-center justify-center rounded-xl bg-accent/10">
 						<IconUsers size={24} class="text-accent" />
 					</div>
-					<CardTitle>{m.member_membership_benefits_grid_shows_community()}</CardTitle>
+					<CardTitle>{m.member_membership_benefits_grid_shows_community_title()}</CardTitle>
 					<p class="opacity-70">
-						{m.member_membership_benefits_grid_first_dibs_workshops_member()}
+						{m.member_membership_benefits_grid_first_dibs_workshops_member_text()}
 					</p>
 				</CardBody>
 			</Card>
@@ -71,7 +71,7 @@
 	<div class="grid gap-6 md:grid-cols-2">
 		<Card>
 			<CardBody>
-				<CardTitle>{m.member_membership_benefits_grid_gear_library()}</CardTitle>
+				<CardTitle>{m.member_membership_benefits_grid_gear_library_title()}</CardTitle>
 				<ul class="mt-2 space-y-2">
 					{@render benefitItem(
 						'<strong>Free accessory rentals</strong> — cables, stands, mic clips, all the essentials'
@@ -86,7 +86,7 @@
 
 		<Card>
 			<CardBody>
-				<CardTitle>{m.member_membership_benefits_grid_shows_community()}</CardTitle>
+				<CardTitle>{m.member_membership_benefits_grid_shows_community_title()}</CardTitle>
 				<ul class="mt-2 space-y-2">
 					{@render benefitItem(
 						'<strong>Show tickets on a sliding scale</strong> — for everyone, because of you'

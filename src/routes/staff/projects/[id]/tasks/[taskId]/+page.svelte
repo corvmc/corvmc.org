@@ -19,7 +19,7 @@
 
 <WorkOrderView
 	{view}
-	subtitle={m.staff_task()}
+	subtitle={m.staff_task_body()}
 	parent={[{ label: view.project.name, href: withQuery(projectHref, `task=${view.shift.id}`) }]}
 >
 	{#snippet context()}

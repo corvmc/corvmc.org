@@ -43,7 +43,7 @@
 	);
 </script>
 
-<PageHeader title={m.staff_members()}>
+<PageHeader title={m.staff_members_title()}>
 	<MemberViews active="instructors" />
 </PageHeader>
 
@@ -51,7 +51,7 @@
 	<Roster
 		{roster}
 		result={list}
-		empty={m.staff_members_instructors_empty()}
+		empty={m.staff_members_instructors_empty_body()}
 		searchPlaceholder={m.staff_members_instructors_search_placeholder()}
 		personLabel={m.staff_members_instructors_person_label()}
 		exportPath={resolve('staff/members/instructors/export')}
@@ -64,7 +64,7 @@
 		{#snippet filters()}
 			<Select
 				size="sm"
-				aria-label={m.staff_status()}
+				aria-label={m.staff_status_label()}
 				value={f.status}
 				onchange={(e: Event) => {
 					f.status = (e.currentTarget as HTMLSelectElement).value as Status;
@@ -80,8 +80,8 @@
 		{#snippet summary(total)}
 			{total}
 			{total === 1
-				? m.staff_members_instructors_instructor()
-				: m.staff_members_instructors_instructors()}
+				? m.staff_members_instructors_instructor_text()
+				: m.staff_members_instructors_instructors_text()}
 			{#await list then { pending }}
 				{#if pending > 0 && f.status !== 'requested'}
 					·
@@ -93,7 +93,7 @@
 							f.page = 1;
 						}}
 					>
-						{m.staff_members_instructors_pending({ pending })}
+						{m.staff_members_instructors_pending_label({ pending })}
 					</button>
 				{/if}
 			{:catch}
@@ -117,9 +117,9 @@
 		{/snippet}
 
 		{#snippet columns()}
-			<th>{m.staff_teaches()}</th>
-			<th class="w-px">{m.staff_students()}</th>
-			<th class="col-support whitespace-nowrap">{m.staff_since()}</th>
+			<th>{m.staff_teaches_label()}</th>
+			<th class="w-px">{m.staff_students_label()}</th>
+			<th class="col-support whitespace-nowrap">{m.staff_since_label()}</th>
 		{/snippet}
 
 		{#snippet cells(row)}
@@ -128,7 +128,9 @@
 				<!-- The instructor's own switch: "my book is full" is theirs to set. -->
 				{#if row.status === 'active'}
 					<Badge variant={row.acceptingStudents ? 'success' : 'ghost'}>
-						{row.acceptingStudents ? m.staff_accepting() : m.staff_members_instructors_full()}
+						{row.acceptingStudents
+							? m.staff_accepting_label()
+							: m.staff_members_instructors_full_label()}
 					</Badge>
 				{/if}
 			</td>

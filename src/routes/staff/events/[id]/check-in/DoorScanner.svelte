@@ -74,7 +74,7 @@
 	<div class="flex flex-wrap items-center gap-2">
 		<BarcodeScanner {onscan} label={m.staff_events_id_check_in_door_scanner_label()} />
 		<span class="text-subtle text-sm"
-			>{m.staff_events_id_check_in_door_scanner_find_them_by_name_belo()}</span
+			>{m.staff_events_id_check_in_door_scanner_find_them_by_name_belo_text()}</span
 		>
 	</div>
 
@@ -89,11 +89,11 @@
 			{#snippet action()}
 				<Button size="sm" onclick={drain} disabled={draining}>
 					{draining
-						? m.staff_events_id_check_in_door_scanner_syncing()
-						: m.staff_events_id_check_in_door_scanner_sync_now()}
+						? m.staff_events_id_check_in_door_scanner_syncing_label()
+						: m.staff_events_id_check_in_door_scanner_sync_now_label()}
 				</Button>
 			{/snippet}
-			{m.staff_events_id_check_in_door_scanner_waiting_sync({
+			{m.staff_events_id_check_in_door_scanner_waiting_sync_body({
 				join: pending.map((p) => p.name).join(', ')
 			})}
 		</Alert>

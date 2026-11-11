@@ -61,11 +61,13 @@
 	// timeline passes no contactName — naming the other side after the thread's
 	// contact would have staff replies signed with the member's own name.
 	const ownName = $derived(
-		viewerUserId ? m.inbox_thread_timeline_text() : m.inbox_thread_timeline_staff()
+		viewerUserId ? m.inbox_thread_timeline_text() : m.inbox_thread_timeline_staff_text()
 	);
 	const otherName = $derived(
 		contactName ??
-			(viewerUserId ? m.inbox_thread_timeline_corvmc() : m.inbox_thread_timeline_contact())
+			(viewerUserId
+				? m.inbox_thread_timeline_corvmc_text()
+				: m.inbox_thread_timeline_contact_text())
 	);
 
 	type Entry =
@@ -112,14 +114,16 @@
 			<div class="mx-6 border-l-2 border-dashed border-base-content/20 py-1 pl-3">
 				<div class="flex items-center gap-1.5 text-xs opacity-50">
 					<IconNote size={13} />
-					{note.authorName ?? m.inbox_thread_timeline_staff()} · {formatDateTime(note.createdAt)}
+					{note.authorName ?? m.inbox_thread_timeline_staff_text()} · {formatDateTime(
+						note.createdAt
+					)}
 				</div>
 				<div class="text-muted whitespace-pre-wrap">{note.body}</div>
 			</div>
 		{/if}
 	{:else}
 		<p class="py-8 text-center text-muted">
-			{m.inbox_thread_timeline_no_messages_conversation_yet()}
+			{m.inbox_thread_timeline_no_messages_conversation_yet_text()}
 		</p>
 	{/each}
 </div>

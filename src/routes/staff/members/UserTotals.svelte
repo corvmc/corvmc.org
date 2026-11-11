@@ -5,9 +5,9 @@
 
 	const totals = await getStaffUserTotals();
 	const stats = $derived([
-		{ title: m.staff_members_user_totals_accounts(), value: totals.accounts },
-		{ title: m.staff_members_user_totals_sustaining_members(), value: totals.sustaining },
-		{ title: m.staff_members_user_totals_new_members(), value: totals.newMembers }
+		{ title: m.staff_members_user_totals_accounts_title(), value: totals.accounts },
+		{ title: m.staff_members_user_totals_sustaining_members_title(), value: totals.sustaining },
+		{ title: m.staff_members_user_totals_new_members_title(), value: totals.newMembers }
 	]);
 </script>
 

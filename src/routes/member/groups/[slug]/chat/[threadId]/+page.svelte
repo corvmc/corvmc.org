@@ -19,9 +19,9 @@
 </script>
 
 <PageHeader
-	title={m.member_chat()}
+	title={m.member_chat_title()}
 	crumb={chat.topicName}
-	parent={[{ label: m.member_chat(), href: resolve('/member/groups/[slug]/chat', { slug }) }]}
+	parent={[{ label: m.member_chat_label(), href: resolve('/member/groups/[slug]/chat', { slug }) }]}
 />
 <PageContent>
 	<GroupChat {chat} viewerUserId={memberLayout.current.user.id} />

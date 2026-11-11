@@ -154,11 +154,11 @@
 		flush={isPremium}
 	>
 		{#if isPremium && pageData.config}
-			<Badge variant="success">{msg.band_slug_page_editor_premium()}</Badge>
+			<Badge variant="success">{msg.band_slug_page_editor_premium_label()}</Badge>
 			<!-- The band's own subdomain, so this leaves the app: rel="external" is
 			     both the correct annotation and what keeps it out of the router. -->
 			<a href={siteUrl} target="_blank" rel="external noopener" class="link text-sm">
-				{msg.band_slug_page_editor_view_site()}
+				{msg.band_slug_page_editor_view_site_text()}
 			</a>
 			<Button
 				type="button"
@@ -168,21 +168,25 @@
 				onclick={() => (styleOpen = styleOpen === true ? false : true)}
 			>
 				<IconAdjustments size={16} />
-				{msg.band_style()}
+				{msg.band_style_label()}
 			</Button>
-			<SubmitButton label={msg.band_slug_page_editor_save_changes()} variant="primary" size="sm" />
+			<SubmitButton
+				label={msg.band_slug_page_editor_save_changes_label()}
+				variant="primary"
+				size="sm"
+			/>
 		{/if}
 	</PageHeader>
 
 	{#if !isPremium}
 		<PageContent width="2xl">
 			<EmptyState>
-				<p class="text-lg font-medium">{msg.band_slug_page_editor_premium_feature()}</p>
+				<p class="text-lg font-medium">{msg.band_slug_page_editor_premium_feature_text()}</p>
 				<p class="mt-2 opacity-70">
-					{msg.band_slug_page_editor_page_editor_available_with_premium()}
+					{msg.band_slug_page_editor_page_editor_available_with_premium_text()}
 				</p>
 				<Button href="../subscription" variant="primary" class="mt-4"
-					>{msg.band_upgrade_premium()}</Button
+					>{msg.band_upgrade_premium_label()}</Button
 				>
 			</EmptyState>
 		</PageContent>
@@ -258,7 +262,7 @@
 			<BlockMediaField
 				bandId={band.id}
 				type="hero"
-				label={msg.band_slug_page_editor_hero_image()}
+				label={msg.band_slug_page_editor_hero_image_label()}
 				src={imageUrls[block.imageKey]}
 				previewClass="h-20 w-32"
 				onuploaded={(key, url) => {
@@ -267,7 +271,9 @@
 				}}
 			/>
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_image_key_url()}</span>
+				<span class="fieldset-legend text-xs"
+					>{msg.band_slug_page_editor_image_key_url_label()}</span
+				>
 				<input
 					type="text"
 					class="input w-full input-sm"
@@ -278,7 +284,7 @@
 				/>
 			</label>
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_headline()}</span>
+				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_headline_label()}</span>
 				<input
 					type="text"
 					class="input w-full input-sm"
@@ -289,7 +295,7 @@
 				/>
 			</label>
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_subtitle()}</span>
+				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_subtitle_label()}</span>
 				<input
 					type="text"
 					class="input w-full input-sm"
@@ -302,7 +308,7 @@
 		{:else if block.type === 'bio'}
 			<label class="fieldset w-full">
 				<span class="fieldset-legend text-xs"
-					>{msg.band_slug_page_editor_content_html_markdown()}</span
+					>{msg.band_slug_page_editor_content_html_markdown_label()}</span
 				>
 				<textarea
 					class="textarea w-full text-sm"
@@ -314,7 +320,7 @@
 			</label>
 		{:else if block.type === 'links'}
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">{msg.band_style()}</span>
+				<span class="fieldset-legend text-xs">{msg.band_style_label()}</span>
 				<Select
 					size="sm"
 					class="w-full"
@@ -324,9 +330,9 @@
 							'buttons' | 'icons' | 'list';
 					}}
 				>
-					<option value="buttons">{msg.band_slug_page_editor_buttons()}</option>
-					<option value="icons">{msg.band_slug_page_editor_icons()}</option>
-					<option value="list">{msg.band_slug_page_editor_list()}</option>
+					<option value="buttons">{msg.band_slug_page_editor_buttons_label()}</option>
+					<option value="icons">{msg.band_slug_page_editor_icons_label()}</option>
+					<option value="list">{msg.band_slug_page_editor_list_label()}</option>
 				</Select>
 			</label>
 		{:else if block.type === 'members'}
@@ -339,11 +345,13 @@
 						block.showPositions = e.currentTarget.checked;
 					}}
 				/>
-				<span class="text-sm">{msg.band_slug_page_editor_show_member_positions()}</span>
+				<span class="text-sm">{msg.band_slug_page_editor_show_member_positions_label()}</span>
 			</label>
 		{:else if block.type === 'events'}
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_max_events_show()}</span>
+				<span class="fieldset-legend text-xs"
+					>{msg.band_slug_page_editor_max_events_show_label()}</span
+				>
 				<input
 					type="number"
 					class="input w-24 input-sm"
@@ -364,13 +372,13 @@
 						block.showPast = e.currentTarget.checked;
 					}}
 				/>
-				<span class="text-sm">{msg.band_slug_page_editor_also_list_past_shows()}</span>
+				<span class="text-sm">{msg.band_slug_page_editor_also_list_past_shows_label()}</span>
 			</label>
 		{:else if block.type === 'gallery'}
 			<BlockMediaField
 				bandId={band.id}
 				type="image"
-				label={msg.band_add_photo()}
+				label={msg.band_add_photo_label()}
 				onuploaded={() => refreshAll()}
 			/>
 			{#if mediaIn('gallery').length}
@@ -389,15 +397,17 @@
 						block.downloadable = e.currentTarget.checked;
 					}}
 				/>
-				<span class="text-sm">{msg.band_slug_page_editor_allow_downloads_press_quality()}</span>
+				<span class="text-sm"
+					>{msg.band_slug_page_editor_allow_downloads_press_quality_label()}</span
+				>
 			</label>
 		{:else if block.type === 'embed'}
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_platform()}</span>
+				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_platform_label()}</span>
 				<input
 					type="text"
 					class="input w-full input-sm"
-					placeholder={msg.band_slug_page_editor_spotify_youtube_soundcloud()}
+					placeholder={msg.band_slug_page_editor_spotify_youtube_soundcloud_placeholder()}
 					value={block.platform}
 					oninput={(e) => {
 						block.platform = e.currentTarget.value;
@@ -405,11 +415,11 @@
 				/>
 			</label>
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_url()}</span>
+				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_url_label()}</span>
 				<input
 					type="url"
 					class="input w-full input-sm"
-					placeholder={msg.band_slug_page_editor_https_open_spotify_com_track()}
+					placeholder={msg.band_slug_page_editor_https_open_spotify_com_track_placeholder()}
 					value={block.url}
 					oninput={(e) => {
 						block.url = e.currentTarget.value;
@@ -418,7 +428,7 @@
 			</label>
 		{:else if block.type === 'spacer'}
 			<label class="fieldset">
-				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_height()}</span>
+				<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_height_label()}</span>
 				<Select
 					size="sm"
 					class="w-full"
@@ -427,15 +437,15 @@
 						block.height = (e.currentTarget as HTMLSelectElement).value as 'sm' | 'md' | 'lg';
 					}}
 				>
-					<option value="sm">{msg.band_slug_page_editor_small()}</option>
-					<option value="md">{msg.band_slug_page_editor_medium()}</option>
-					<option value="lg">{msg.band_slug_page_editor_large()}</option>
+					<option value="sm">{msg.band_slug_page_editor_small_label()}</option>
+					<option value="md">{msg.band_slug_page_editor_medium_label()}</option>
+					<option value="lg">{msg.band_slug_page_editor_large_label()}</option>
 				</Select>
 			</label>
 		{:else if block.type === 'custom_html'}
 			<label class="fieldset w-full">
 				<span class="fieldset-legend text-xs"
-					>{msg.band_slug_page_editor_html_content_sanitized_save()}</span
+					>{msg.band_slug_page_editor_html_content_sanitized_save_label()}</span
 				>
 				<textarea
 					class="textarea w-full font-mono text-sm"
@@ -453,7 +463,7 @@
 			<BlockMediaField
 				bandId={band.id}
 				type="stage_plot"
-				label={msg.band_stage_plot()}
+				label={msg.band_stage_plot_label()}
 				accept="image/*,.pdf"
 				src={mediaIn('stage_plot')[0]?.url ?? undefined}
 				onuploaded={() => refreshAll()}
@@ -461,7 +471,7 @@
 			<BlockMediaField
 				bandId={band.id}
 				type="rider"
-				label={msg.band_slug_page_editor_tech_rider_pdf_image()}
+				label={msg.band_slug_page_editor_tech_rider_pdf_image_label()}
 				accept="image/*,.pdf"
 				src={mediaIn('rider')[0]?.url ?? undefined}
 				onuploaded={() => refreshAll()}
@@ -477,7 +487,7 @@
 					}}
 				/>
 				<span class="text-sm">
-					{msg.band_slug_page_editor_show_contact_form_messages_emailed()}
+					{msg.band_slug_page_editor_show_contact_form_messages_emailed_label()}
 				</span>
 			</label>
 		{:else if block.type === 'merch'}
@@ -487,7 +497,7 @@
 						<input
 							type="text"
 							class="input flex-1 input-sm"
-							placeholder={msg.band_title()}
+							placeholder={msg.band_title_placeholder()}
 							value={item.title}
 							oninput={(e) => {
 								item.title = e.currentTarget.value;
@@ -496,7 +506,7 @@
 						<input
 							type="url"
 							class="input flex-1 input-sm"
-							placeholder={msg.band_slug_page_editor_url()}
+							placeholder={msg.band_slug_page_editor_url_placeholder()}
 							value={item.url}
 							oninput={(e) => {
 								item.url = e.currentTarget.value;
@@ -528,18 +538,20 @@
 					size="xs"
 					onclick={() => {
 						block.items = [...block.items, { title: '', url: '' }];
-					}}>{msg.band_slug_page_editor_add_item()}</Button
+					}}>{msg.band_slug_page_editor_add_item_label()}</Button
 				>
 			</div>
 		{/if}
 
 		<!-- CSS class (all blocks) -->
 		<label class="fieldset">
-			<span class="fieldset-legend text-xs">{msg.band_slug_page_editor_css_class_optional()}</span>
+			<span class="fieldset-legend text-xs"
+				>{msg.band_slug_page_editor_css_class_optional_label()}</span
+			>
 			<input
 				type="text"
 				class="input w-full input-sm"
-				placeholder={msg.band_slug_page_editor_custom_class()}
+				placeholder={msg.band_slug_page_editor_custom_class_placeholder()}
 				value={block.cssClass ?? ''}
 				oninput={(e) => {
 					// Every member of the Block union carries `cssClass`, but TypeScript

@@ -6,7 +6,7 @@
 	let {
 		title,
 		description,
-		message = m.ui_no_items_found(),
+		message = m.ui_no_items_found_body(),
 		actionLabel,
 		actionHref,
 		class: className = '',

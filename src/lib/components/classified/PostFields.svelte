@@ -48,65 +48,65 @@
 	<FormField
 		field={fields.kind}
 		type="select"
-		label={m.classified_post_fields_wanted_offered_trade()}
-		description={m.classified_post_fields_description()}
+		label={m.classified_post_fields_wanted_offered_trade_label()}
+		description={m.classified_post_fields_description_body()}
 		value={initial?.kind ?? 'wanted'}
 		options={classifiedKindOptions}
 	/>
 	<FormField
 		field={fields.category}
 		type="select"
-		label={m.classified_category()}
+		label={m.classified_category_label()}
 		bind:value={category}
 		options={classifiedCategoryOptions}
 	/>
 </div>
 {#if category === 'gear'}
 	<Alert type="warning">
-		{m.classified_post_fields_replies_come_inbox_do_not({ CLASSIFIED_GEAR_DISCLAIMER })}
+		{m.classified_post_fields_replies_come_inbox_do_not_body({ CLASSIFIED_GEAR_DISCLAIMER })}
 	</Alert>
 {/if}
 <FormField
 	field={fields.title}
 	type="text"
-	label={m.classified_post_fields_title()}
+	label={m.classified_post_fields_title_label()}
 	value={initial?.title ?? ''}
 />
 <FormField
 	field={fields.body}
 	type="textarea"
-	label={m.classified_details()}
+	label={m.classified_details_label()}
 	value={initial?.body ?? ''}
 />
 {#if bands.length > 0}
 	<FormField
 		field={fields.groupId}
 		type="select"
-		label={m.classified_post_fields_post_as()}
+		label={m.classified_post_fields_post_as_label()}
 		value={initial?.groupId ?? ''}
-		options={[{ value: '', label: m.classified_post_fields_just_me() }, ...bands]}
+		options={[{ value: '', label: m.classified_post_fields_just_me_label() }, ...bands]}
 	/>
 {/if}
-<FormField field={fields.instruments} label={m.classified_post_fields_instruments()}>
+<FormField field={fields.instruments} label={m.classified_post_fields_instruments_label()}>
 	<FreeformTagInput
 		bind:value={instruments}
 		suggestions={instrumentSuggestions}
 		field={fields.instruments}
-		placeholder={m.classified_post_fields_e_g_drums_bass()}
+		placeholder={m.classified_post_fields_e_g_drums_bass_placeholder()}
 	/>
 </FormField>
-<FormField field={fields.genres} label={m.classified_post_fields_genres()}>
+<FormField field={fields.genres} label={m.classified_post_fields_genres_label()}>
 	<FreeformTagInput
 		bind:value={genres}
 		suggestions={genreSuggestions}
 		field={fields.genres}
-		placeholder={m.classified_post_fields_e_g_surf_jazz()}
+		placeholder={m.classified_post_fields_e_g_surf_jazz_placeholder()}
 	/>
 </FormField>
-<FormField field={fields.skills} label={m.classified_post_fields_skills()}>
+<FormField field={fields.skills} label={m.classified_post_fields_skills_label()}>
 	<FreeformTagInput
 		bind:value={skills}
 		field={fields.skills}
-		placeholder={m.classified_post_fields_e_g_mixing_lessons()}
+		placeholder={m.classified_post_fields_e_g_mixing_lessons_placeholder()}
 	/>
 </FormField>

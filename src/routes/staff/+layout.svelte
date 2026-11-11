@@ -196,7 +196,7 @@
 <AppShell drawerId="staff-drawer" {panels} activePanel="staff" chrome={layout.chrome}>
 	{#snippet navigation()}
 		{#if navStarred.length > 0}
-			<Nav.Group title={m.staff_starred()}>
+			<Nav.Group title={m.staff_starred_title()}>
 				{#each navStarred as item (item.key)}
 					{@render flat(item)}
 				{/each}

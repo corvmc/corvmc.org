@@ -34,11 +34,11 @@
 	{/snippet}
 	{#if venueName && !venueIsPrimary}
 		<p class="text-muted">
-			{m.events_space_hold_card_off_site_practice_space_stays({ venueName })}
+			{m.events_space_hold_card_off_site_practice_space_stays_text({ venueName })}
 		</p>
 	{:else if reservation}
 		<EntityIdentity ref={reservation.ref} size="md" status />
 	{:else}
-		<p class="text-muted">{m.events_space_hold_card_no_space_held_event_use()}</p>
+		<p class="text-muted">{m.events_space_hold_card_no_space_held_event_use_text()}</p>
 	{/if}
 </InfoCard>

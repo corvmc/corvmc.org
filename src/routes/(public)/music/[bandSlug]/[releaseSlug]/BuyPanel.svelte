@@ -85,8 +85,8 @@
 	<CardBody>
 		<CardTitle
 			>{free
-				? m.public_music_band_slug_release_slug_buy_panel_get()
-				: m.public_music_band_slug_release_slug_buy_panel_buy()}</CardTitle
+				? m.public_music_band_slug_release_slug_buy_panel_get_title()
+				: m.public_music_band_slug_release_slug_buy_panel_buy_title()}</CardTitle
 		>
 
 		<Form remote={buyReleaseForm} onsuccess={afterBuy}>
@@ -97,12 +97,12 @@
 				<label class="flex flex-col gap-1">
 					<span class="font-medium">
 						{allowPayMore
-							? m.public_music_band_slug_release_slug_buy_panel_name_price()
-							: m.public_music_band_slug_release_slug_buy_panel_price()}
+							? m.public_music_band_slug_release_slug_buy_panel_name_price_label()
+							: m.public_music_band_slug_release_slug_buy_panel_price_label()}
 						{#if priceMinCents > 0}
 							<span class="text-muted">
 								— {allowPayMore
-									? m.public_music_band_slug_release_slug_buy_panel_more({
+									? m.public_music_band_slug_release_slug_buy_panel_more_label({
 											dollars: dollars(priceMinCents)
 										})
 									: dollars(priceMinCents)}
@@ -127,7 +127,7 @@
 			{#if totalCents > 0}
 				<div class="mt-4 space-y-2">
 					<p class="text-muted">
-						{m.public_music_band_slug_release_slug_buy_panel_where_money_go()}
+						{m.public_music_band_slug_release_slug_buy_panel_where_money_go_text()}
 					</p>
 					<!--
 						No `otherFloorCents`. What protects the band is the TOTAL being at
@@ -158,7 +158,7 @@
 							     explaining the consequence was saying twice what the control
 							     shows once. -->
 							<span
-								>{m.public_music_band_slug_release_slug_buy_panel_add_cover_proc({
+								>{m.public_music_band_slug_release_slug_buy_panel_add_cover_proc_label({
 									dollars: dollars(covered.feeCoveredCents)
 								})}</span
 							>
@@ -169,13 +169,15 @@
 								class="btn btn-ghost btn-xs"
 								onclick={() => (platformOverride = null)}
 							>
-								{m.public_music_band_slug_release_slug_buy_panel_reset_suggeste()}
+								{m.public_music_band_slug_release_slug_buy_panel_reset_suggeste_label()}
 							</button>
 						{/if}
 					</div>
 				</div>
 			{:else if priceMinCents === 0}
-				<p class="text-muted">{m.public_music_band_slug_release_slug_buy_panel_one_s_free_pay()}</p>
+				<p class="text-muted">
+					{m.public_music_band_slug_release_slug_buy_panel_one_s_free_pay_text()}
+				</p>
 			{/if}
 
 			<!--
@@ -198,7 +200,7 @@
 					<input {...fields.email.as('hidden', viewerEmail)} />
 					<p class="text-muted">
 						<ParaglideMessage
-							message={m.public_music_band_slug_release_slug_buy_panel_buying_as_ll_s}
+							message={m.public_music_band_slug_release_slug_buy_panel_buying_as_ll_s_text}
 							inputs={{
 								viewerEmail
 							}}
@@ -212,14 +214,14 @@
 				{:else}
 					<FormField
 						field={fields.email}
-						label={m.public_email()}
+						label={m.public_email_label()}
 						type="email"
-						description={m.public_music_band_slug_release_slug_buy_panel_description()}
+						description={m.public_music_band_slug_release_slug_buy_panel_description_body()}
 						required
 					/>
 					<p class="text-muted">
 						<ParaglideMessage
-							message={m.public_music_band_slug_release_slug_buy_panel_got_account_la}
+							message={m.public_music_band_slug_release_slug_buy_panel_got_account_la_text}
 							inputs={{}}
 							>{#snippet a({ children })}<a
 									class="link"
@@ -240,8 +242,8 @@
 
 			<SubmitButton
 				label={free
-					? m.public_music_band_slug_release_slug_buy_panel_download()
-					: m.public_music_band_slug_release_slug_buy_panel_pay({
+					? m.public_music_band_slug_release_slug_buy_panel_download_label()
+					: m.public_music_band_slug_release_slug_buy_panel_pay_label({
 							dollars: dollars(split.chargeCents)
 						})}
 				disabled={totalCents > 0 && totalCents < AUDIO_MIN_PRICE_CENTS}
@@ -249,7 +251,7 @@
 
 			{#if totalCents > 0 && totalCents < AUDIO_MIN_PRICE_CENTS}
 				<p class="text-warning">
-					{m.public_music_band_slug_release_slug_buy_panel_pay_nothing_at({
+					{m.public_music_band_slug_release_slug_buy_panel_pay_nothing_at_text({
 						dollars: dollars(AUDIO_MIN_PRICE_CENTS)
 					})}
 				</p>

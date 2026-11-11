@@ -6,7 +6,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.public_local_resources_local_resources_corvallis_music_colle()}</title>
+	<title>{m.public_local_resources_local_resources_corvallis_music_colle_title()}</title>
 	<meta
 		name="description"
 		content="A community-built list of local music resources around Corvallis — shops, venues, record stores, artists, and more. Suggest one you think belongs."
@@ -15,7 +15,7 @@
 
 <!-- Hero -->
 <Hero title={m.public_local_resources_title()}>
-	{m.public_local_resources_music_shops_venues_record_stores()}
+	{m.public_local_resources_music_shops_venues_record_stores_text()}
 </Hero>
 
 <!-- The directory. Its own boundary: a failure drops the list, not the tip form. -->
@@ -29,10 +29,10 @@
 	<div class="mx-auto max-w-xl">
 		<div class="mb-8 text-center">
 			<h2 class="mb-2 text-3xl font-bold tracking-tight">
-				{m.public_local_resources_suggest_resource()}
+				{m.public_local_resources_suggest_resource_title()}
 			</h2>
 			<p class="text-base leading-relaxed text-fg-2">
-				{m.public_local_resources_know_resource_corvallis_music_communi()}
+				{m.public_local_resources_know_resource_corvallis_music_communi_text()}
 			</p>
 		</div>
 

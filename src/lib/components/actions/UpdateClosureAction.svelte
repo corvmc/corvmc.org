@@ -32,7 +32,7 @@
 
 <Action
 	action={edit}
-	label={m.actions_update_closure_edit_closure()}
+	label={m.actions_update_closure_edit_closure_label()}
 	modalTitle={m.actions_update_closure_modal_title()}
 	submitLabel={m.actions_update_closure_submit_label()}
 	successToast={m.actions_update_closure_success_toast()}
@@ -45,18 +45,23 @@
 >
 	{#snippet form()}
 		<input {...fields.id.as('hidden', closure.id)} />
-		<Field field={fields.reason} type="text" label={m.actions_reason()} value={closure.reason} />
+		<Field
+			field={fields.reason}
+			type="text"
+			label={m.actions_reason_label()}
+			value={closure.reason}
+		/>
 		<div class="grid grid-cols-2 gap-3">
 			<Field
 				field={fields.startsAt}
 				type="datetime-local"
-				label={m.actions_start()}
+				label={m.actions_start_label()}
 				value={toLocalDateTime(closure.startsAt)}
 			/>
 			<Field
 				field={fields.endsAt}
 				type="datetime-local"
-				label={m.actions_end()}
+				label={m.actions_end_label()}
 				value={toLocalDateTime(closure.endsAt)}
 			/>
 		</div>

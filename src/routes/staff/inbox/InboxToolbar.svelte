@@ -25,7 +25,7 @@
 			? 'hidden lg:flex'
 			: 'flex w-full'}"
 	>
-		<h1 class="text-xl font-bold">{m.staff_inbox_inbox_toolbar_inbox()}</h1>
+		<h1 class="text-xl font-bold">{m.staff_inbox_inbox_toolbar_inbox_title()}</h1>
 
 		<!-- Only offered when there is something to walk through. A "Start Daily · 0"
 		     is an invitation to a session that ends on the frame it starts on. -->
@@ -39,8 +39,8 @@
 				>
 					<IconPlayerPlay size={16} />
 					{doneToday()
-						? m.staff_inbox_inbox_toolbar_daily_again()
-						: m.staff_inbox_inbox_toolbar_start_daily()} · {counts.open}
+						? m.staff_inbox_inbox_toolbar_daily_again_label()
+						: m.staff_inbox_inbox_toolbar_start_daily_label()} · {counts.open}
 				</Button>
 			{/if}
 		{:catch}

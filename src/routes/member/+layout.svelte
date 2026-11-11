@@ -60,7 +60,7 @@
 				href: resolve('/member/groups/[slug]', { slug: g.slug })
 			}));
 			return navTrail(
-				[{ items: memberNavItems(navInput) }, { title: m.member_my_groups(), items: groups }],
+				[{ items: memberNavItems(navInput) }, { title: m.member_my_groups_title(), items: groups }],
 				page.url.pathname
 			);
 		}
@@ -140,7 +140,7 @@
 		     every member's localStorage, so renaming it would silently re-expand the
 		     group for everyone who had collapsed it. -->
 		<Nav.Group
-			title={m.member_my({ many: many(m.term_band) })}
+			title={m.member_my_title({ many: many(m.term_band) })}
 			collapsible
 			persistKey="my-bands"
 			persistScope="member"
@@ -153,7 +153,7 @@
 					size="xs"
 					class="latched"
 					aria-label={m.member_aria_label({ term_band: m.term_band({ count: 1 }) })}
-					data-sveltekit-reload>{m.member_new()}</Button
+					data-sveltekit-reload>{m.member_new_label()}</Button
 				>
 			{/snippet}
 			{#each layout.userBands as band (band.slug)}
@@ -184,7 +184,7 @@
 		     with a panel, a club is a program with a page. No New here, because
 		     members cannot create clubs or committees. -->
 		<Nav.Group
-			title={m.member_my_groups()}
+			title={m.member_my_groups_title()}
 			collapsible
 			persistKey="my-groups"
 			persistScope="member"

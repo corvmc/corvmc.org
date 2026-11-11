@@ -38,14 +38,14 @@
 					type="text"
 					value={link.label}
 					oninput={(e) => updateLink(i, 'label', e.currentTarget.value)}
-					placeholder={m.directory_link_list_editor_label_e_g_my_soundcloud()}
+					placeholder={m.directory_link_list_editor_label_e_g_my_soundcloud_placeholder()}
 					class="input w-full input-sm"
 				/>
 				<input
 					type="url"
 					value={link.url}
 					oninput={(e) => updateLink(i, 'url', e.currentTarget.value)}
-					placeholder={m.directory_link_list_editor_https()}
+					placeholder={m.directory_link_list_editor_https_placeholder()}
 					class="input w-full input-sm"
 				/>
 			</div>
@@ -64,6 +64,6 @@
 	{/each}
 	<Button type="button" variant="default" size="sm" outline class="gap-1" onclick={addLink}>
 		<IconPlus size={16} />
-		{m.directory_link_list_editor_add_link()}
+		{m.directory_link_list_editor_add_link_label()}
 	</Button>
 </div>

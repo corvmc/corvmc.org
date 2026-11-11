@@ -24,7 +24,7 @@
 
 <Action
 	action={claimStaffExternalAct.for(entryId)}
-	label={m.staff_bands_acts_claim_external_act_claim()}
+	label={m.staff_bands_acts_claim_external_act_claim_label()}
 	modalTitle={m.staff_bands_acts_claim_external_act_modal_title({ actName })}
 	submitLabel={m.staff_bands_acts_claim_external_act_submit_label()}
 	successToast={m.staff_bands_acts_claim_external_act_success_toast()}
@@ -39,23 +39,23 @@
 		<div class="space-y-4">
 			<input {...fields.entryId.as('hidden', entryId)} />
 			<p class="text-sm">
-				{m.staff_bands_acts_claim_external_act_becomes_cmc_band_with_sl({ actName })}
+				{m.staff_bands_acts_claim_external_act_becomes_cmc_band_with_sl_text({ actName })}
 			</p>
 			<FormField
 				field={claimStaffExternalAct.for(entryId).fields.ownerId}
-				label={m.staff_owner()}
+				label={m.staff_owner_label()}
 				required
 			>
 				<SearchSelect
 					search={searchMembers}
 					bind:value={owner}
 					field={fields.ownerId}
-					placeholder={m.staff_search_by_name_email()}
+					placeholder={m.staff_search_by_name_email_placeholder()}
 				/>
 			</FormField>
 			<fieldset class="fieldset">
 				<p class="text-subtle">
-					{m.staff_bands_acts_claim_external_act_member_from_act_who_join()}
+					{m.staff_bands_acts_claim_external_act_member_from_act_who_join_text()}
 				</p>
 			</fieldset>
 		</div>

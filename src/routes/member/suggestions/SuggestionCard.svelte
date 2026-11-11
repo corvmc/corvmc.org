@@ -88,13 +88,13 @@
 				     unclamped made one row several times taller than its neighbours,
 				     and it was the only unclamped text on the board (#1046). -->
 				<p class="line-clamp-3 border-l-2 border-primary/40 pl-3 text-sm">
-					<span class="font-medium">{m.member_suggestions_suggestion_card_staff()}</span>
+					<span class="font-medium">{m.member_suggestions_suggestion_card_staff_text()}</span>
 					{suggestion.responseBody}
 				</p>
 			{/if}
 
 			<p class="text-muted">
-				{suggestion.authorName ?? m.member_suggestions_suggestion_card_former_member()} · {relativeDay(
+				{suggestion.authorName ?? m.member_suggestions_suggestion_card_former_member_text()} · {relativeDay(
 					suggestion.createdAt
 				)}
 			</p>
@@ -103,11 +103,11 @@
 		{#if !isMine}
 			<Action
 				action={flag}
-				label={m.member_suggestions_suggestion_card_flag()}
+				label={m.member_suggestions_suggestion_card_flag_label()}
 				iconOnly
-				modalTitle={m.member_flag_review()}
-				submitLabel={m.member_send_report()}
-				successToast={m.member_reported_staff_will_take_look()}
+				modalTitle={m.member_flag_review_title()}
+				submitLabel={m.member_send_report_label()}
+				successToast={m.member_reported_staff_will_take_look_toast()}
 				variant="ghost"
 				size="xs"
 				class="shrink-0"
@@ -117,13 +117,17 @@
 				{#snippet form()}
 					<input {...flag.fields.suggestionId.as('hidden', suggestion.id)} />
 					<p class="mb-3 text-muted">
-						{m.member_takes_suggestion_off_board_straight()}
+						{m.member_takes_suggestion_off_board_straight_text()}
 					</p>
-					<FormField field={flag.fields.reason} type="text" label={m.member_what_s_problem()} />
+					<FormField
+						field={flag.fields.reason}
+						type="text"
+						label={m.member_what_s_problem_label()}
+					/>
 					<FormField
 						field={flag.fields.description}
 						type="textarea"
-						label={m.member_anything_else_optional()}
+						label={m.member_anything_else_optional_label()}
 					/>
 				{/snippet}
 			</Action>

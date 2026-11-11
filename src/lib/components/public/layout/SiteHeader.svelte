@@ -16,11 +16,11 @@
 	);
 
 	const links = [
-		{ href: resolve('events'), label: m.public_events() },
-		{ href: resolve('directory'), label: m.public_directory() },
-		{ href: resolve('programs'), label: m.public_programs() },
-		{ href: resolve('membership'), label: m.public_site_header_membership() },
-		{ href: resolve('about'), label: m.public_about() }
+		{ href: resolve('events'), label: m.public_events_label() },
+		{ href: resolve('directory'), label: m.public_directory_label() },
+		{ href: resolve('programs'), label: m.public_programs_label() },
+		{ href: resolve('membership'), label: m.public_site_header_membership_label() },
+		{ href: resolve('about'), label: m.public_about_label() }
 	];
 
 	function isActive(href: string): boolean {
@@ -44,18 +44,18 @@
 
 			<!-- Title -->
 			<div class="text-2xl font-bold" style="color: var(--cmc-teal); grid-row: 1; grid-column: 2">
-				{m.public_site_header_corvallis_music_collective()}
+				{m.public_site_header_corvallis_music_collective_text()}
 			</div>
 
 			<!-- Actions -->
 			<div class="flex items-center gap-2" style="grid-row: 1 / 3; grid-column: 3">
 				{#if user}
 					<Button href="/member" variant="default" size="sm"
-						>{m.public_site_header_my_account()}</Button
+						>{m.public_site_header_my_account_label()}</Button
 					>
 				{:else}
 					<Button href={signInLink} variant="default" size="sm"
-						>{m.public_site_header_sign()}</Button
+						>{m.public_site_header_sign_label()}</Button
 					>
 				{/if}
 				<Button
@@ -104,7 +104,7 @@
 					class="ml-3"
 					style="--btn-fill: var(--bg-page)"
 				>
-					{m.public_contribute()}
+					{m.public_contribute_2_label()}
 				</Button>
 			</nav>
 		</div>
@@ -116,7 +116,7 @@
 			style="border-bottom: 1px solid var(--surface-border); background: var(--bg-page)"
 		>
 			<ul class="menu menu-sm p-2">
-				{#each [...links, { href: resolve('contribute'), label: m.public_contribute() }, { href: resolve('contact'), label: m.public_contact() }] as link (link.href)}
+				{#each [...links, { href: resolve('contribute'), label: m.public_contribute_2_label() }, { href: resolve('contact'), label: m.public_contact_label() }] as link (link.href)}
 					<li>
 						<a
 							href={link.href}

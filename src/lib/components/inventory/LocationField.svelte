@@ -28,7 +28,7 @@
 	let {
 		field,
 		value = undefined,
-		label = m.inventory_location_field_location()
+		label = m.inventory_location_field_location_label()
 	}: {
 		// FormField's own `field?: RemoteFormField<any>`; narrowing it here would
 		// reject every caller's concrete field type.
@@ -69,7 +69,7 @@
 		}
 
 		return [
-			{ value: '', label: m.inventory_location_field_unassigned() },
+			{ value: '', label: m.inventory_location_field_unassigned_label() },
 			...locations
 				.map((l) => ({ value: l.id, label: path(l.id) }))
 				.sort((a, b) => a.label.localeCompare(b.label))
@@ -83,5 +83,5 @@
 	{label}
 	value={value ?? ''}
 	{options}
-	description={locations.length === 0 ? m.inventory_location_field_description() : undefined}
+	description={locations.length === 0 ? m.inventory_location_field_description_body() : undefined}
 />

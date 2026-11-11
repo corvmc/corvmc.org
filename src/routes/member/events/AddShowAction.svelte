@@ -17,8 +17,8 @@
 -->
 <Action
 	action={createListing}
-	label={m.member_events_add_show_add_show()}
-	modalTitle={m.member_events_add_show_add_show()}
+	label={m.member_events_add_show_add_show_label()}
+	modalTitle={m.member_events_add_show_add_show_title()}
 	maxWidth="max-w-md"
 	submitLabel={m.member_events_add_show_submit_label()}
 	successToast={m.member_events_add_show_success_toast()}
@@ -35,29 +35,29 @@
 			<FormField
 				field={fields.title}
 				type="text"
-				label={m.member_title()}
-				placeholder={m.member_events_add_show_e_g_paper_wolves_at()}
+				label={m.member_title_label()}
+				placeholder={m.member_events_add_show_e_g_paper_wolves_at_placeholder()}
 				maxlength="200"
 				required
 			/>
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-				<FormField field={fields.eventDate} type="date" label={m.member_date()} required />
+				<FormField field={fields.eventDate} type="date" label={m.member_date_label()} required />
 				<FormField
 					field={fields.eventStartTime}
 					type="time"
-					label={m.member_start_time()}
+					label={m.member_start_time_label()}
 					required
 				/>
 			</div>
 			<FormField
 				field={fields.location}
 				type="text"
-				label={m.member_venue()}
-				placeholder={m.member_events_add_show_e_g_whiteside_theatre()}
+				label={m.member_venue_label()}
+				placeholder={m.member_events_add_show_e_g_whiteside_theatre_placeholder()}
 				maxlength="500"
 				required
 			/>
-			<p class="text-muted">{m.member_events_add_show_saved_as_draft_only_can()}</p>
+			<p class="text-muted">{m.member_events_add_show_saved_as_draft_only_can_text()}</p>
 		</div>
 	{/snippet}
 </Action>

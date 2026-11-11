@@ -117,7 +117,7 @@
 		size="sm"
 		shape="circle"
 		onclick={toggleDropdown}
-		aria-label={m.layout_notifications()}
+		aria-label={m.layout_notifications_label()}
 	>
 		<IconBell size={20} />
 		{#if unreadCount > 0}
@@ -134,10 +134,10 @@
 			class="absolute top-full right-0 z-1000 mt-2 w-80 rounded-lg border border-base-300 bg-base-100 shadow-lg"
 		>
 			<div class="flex items-center justify-between border-b border-base-300 px-4 py-3">
-				<span class="text-sm font-semibold">{m.layout_notifications()}</span>
+				<span class="text-sm font-semibold">{m.layout_notifications_text()}</span>
 				{#if unreadCount > 0}
 					<button class="text-xs text-primary hover:underline" onclick={markAllRead}>
-						{m.layout_notifications_mark_all_read()}
+						{m.layout_notifications_mark_all_read_label()}
 					</button>
 				{/if}
 			</div>
@@ -145,7 +145,7 @@
 			<div class="max-h-80 overflow-y-auto">
 				{#if notifications.length === 0}
 					<div class="p-6 text-center text-sm text-base-content/60">
-						{m.layout_notifications_empty()}
+						{m.layout_notifications_empty_text()}
 					</div>
 				{:else}
 					{#each notifications as n (n.id)}
@@ -182,7 +182,7 @@
 											     accessibility tree, where 28 rows read identically. -->
 											<p class={['truncate text-sm', isUnread ? 'font-bold' : 'font-medium']}>
 												{#if isUnread}<span class="sr-only"
-														>{m.layout_notification_unread()}
+														>{m.layout_notification_unread_text()}
 													</span>{/if}{n.title}
 											</p>
 											{#if n.body}
@@ -199,7 +199,7 @@
 											<button
 												class="mt-1.5 h-2 w-2 shrink-0 cursor-pointer rounded-full bg-primary"
 												onclick={() => markRead(n.id)}
-												aria-label={m.layout_notification_mark_read()}
+												aria-label={m.layout_notification_mark_read_label()}
 											></button>
 										{:else}
 											<span class="w-2 shrink-0"></span>

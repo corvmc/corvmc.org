@@ -14,7 +14,7 @@
 
 <!-- `id="photos"` is the anchor a band shares and the recaps strip links to. -->
 <section id="photos" class="recap">
-	<SectionLabel label={m.public_photos()} />
+	<SectionLabel label={m.public_photos_label()} />
 	<ul class="recap__grid">
 		{#each photos as photo (photo.id)}
 			{#if photo.url}
@@ -27,7 +27,7 @@
 								src={shot.src}
 								srcset={shot.srcset}
 								sizes={shot.sizes}
-								alt={photo.altText ?? m.public_events_id_event_photos_alt({ eventTitle })}
+								alt={photo.altText ?? m.public_events_id_event_photos_alt_text({ eventTitle })}
 								loading="lazy"
 							/>
 						</a>

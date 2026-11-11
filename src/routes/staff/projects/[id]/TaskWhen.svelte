@@ -15,19 +15,19 @@
 	<span
 		class="inline-flex size-6 items-center justify-center rounded-full border border-dashed border-base-content/40 text-subtle"
 		role="img"
-		aria-label={m.staff_projects_id_task_when_no_date()}
+		aria-label={m.staff_projects_id_task_when_no_date_label()}
 	>
 		<IconCalendar size={14} stroke={1.5} />
 	</span>
 {:else}
 	<span class="inline-flex items-center gap-1 {late ? 'text-error' : ''}">
 		{when.kind === 'due' && task.dueAt ? formatDateShort(task.dueAt) : when.label}
-		{#if late}<span class="sr-only">{m.staff_projects_id_task_when_overdue()}</span>{/if}
+		{#if late}<span class="sr-only">{m.staff_projects_id_task_when_overdue_text()}</span>{/if}
 		{#if when.endsAfterDue}
 			<IconFlag
 				size={14}
 				class="text-warning"
-				aria-label={m.staff_projects_id_task_when_ends_after_its_due_date()}
+				aria-label={m.staff_projects_id_task_when_ends_after_its_due_date_label()}
 			/>
 		{/if}
 	</span>

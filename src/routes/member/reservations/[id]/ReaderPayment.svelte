@@ -59,7 +59,7 @@
 			<Alert type="warning">{failure}</Alert>
 		{/if}
 		<Button variant="primary" outline class="w-full" disabled={busy} onclick={start}>
-			{m.member_reservations_id_reader_payment_pay_at_reader()}
+			{m.member_reservations_id_reader_payment_pay_at_reader_label()}
 		</Button>
 	</div>
 {/if}

@@ -45,20 +45,20 @@
 <!-- Recap photos (docs/specs/event-recaps-spec.md): shown publicly on the event
      page as soon as they are added. -->
 <InfoCard
-	title={m.staff_events_id_recap_photos_recap_photos()}
+	title={m.staff_events_id_recap_photos_recap_photos_title()}
 	state="{photos.length} of {recap.maxPhotos}"
 >
 	{#if !recap.closedReason && !full}
 		<Form
 			remote={uploadEventPhotos}
 			enctype="multipart/form-data"
-			successToast={m.staff_events_id_recap_photos_photos_added()}
+			successToast={m.staff_events_id_recap_photos_photos_added_toast()}
 		>
 			<input {...uploadFields.eventId.as('hidden', eventId)} />
 			<FormField
 				field={uploadFields.photos}
-				label={m.staff_events_id_recap_photos_add_photos()}
-				description={m.staff_events_id_recap_photos_jpeg_png_webp_up_10({
+				label={m.staff_events_id_recap_photos_add_photos_label()}
+				description={m.staff_events_id_recap_photos_jpeg_png_webp_up_10_body({
 					maxPerUpload: recap.maxPerUpload
 				})}
 			>
@@ -71,14 +71,14 @@
 					/>
 				{/snippet}
 			</FormField>
-			<SubmitButton label={m.staff_events_id_recap_photos_upload()} />
+			<SubmitButton label={m.staff_events_id_recap_photos_upload_label()} />
 		</Form>
 	{/if}
 
 	{#if photos.length === 0}
 		<EmptyState
-			title={m.staff_events_id_recap_photos_no_photos_yet()}
-			description={m.staff_events_id_recap_photos_photos_from_night_go_public()}
+			title={m.staff_events_id_recap_photos_no_photos_yet_title()}
+			description={m.staff_events_id_recap_photos_photos_from_night_go_public_body()}
 		/>
 	{:else}
 		<ul class="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -89,7 +89,7 @@
 						src={shot.src}
 						srcset={shot.srcset}
 						sizes={shot.sizes}
-						alt={photo.altText ?? m.staff_events_id_recap_photos_alt({ eventTitle })}
+						alt={photo.altText ?? m.staff_events_id_recap_photos_alt_text({ eventTitle })}
 						class="aspect-square w-full rounded object-cover"
 						loading="lazy"
 					/>
@@ -106,10 +106,10 @@
 							iconOnly
 							variant="ghost"
 							size="sm"
-							label={m.staff_events_id_recap_photos_describe()}
-							modalTitle={m.staff_events_id_recap_photos_describe_photo()}
-							submitLabel={m.staff_save()}
-							successToast={m.staff_saved()}
+							label={m.staff_events_id_recap_photos_describe_label()}
+							modalTitle={m.staff_events_id_recap_photos_describe_photo_title()}
+							submitLabel={m.staff_save_label()}
+							successToast={m.staff_saved_toast()}
 						>
 							{#snippet icon()}<IconPencil size={16} />{/snippet}
 							{#snippet form()}
@@ -119,13 +119,13 @@
 									<input {...fields.attachmentId.as('hidden', photo.attachmentId)} />
 									<FormField
 										field={fields.altText}
-										label={m.staff_events_id_recap_photos_alt_text()}
-										description={m.staff_events_id_recap_photos_what_photo_shows_someone_who()}
+										label={m.staff_events_id_recap_photos_alt_text_label()}
+										description={m.staff_events_id_recap_photos_what_photo_shows_someone_who_body()}
 										value={photo.altText ?? ''}
 									/>
 									<FormField
 										field={fields.caption}
-										label={m.staff_events_id_recap_photos_caption()}
+										label={m.staff_events_id_recap_photos_caption_label()}
 										value={photo.caption ?? ''}
 									/>
 								</div>
@@ -136,18 +136,18 @@
 							iconOnly
 							variant="ghost"
 							size="sm"
-							label={m.staff_remove()}
-							modalTitle={m.staff_events_id_recap_photos_remove_photo()}
-							submitLabel={m.staff_remove()}
+							label={m.staff_remove_label()}
+							modalTitle={m.staff_events_id_recap_photos_remove_photo_title()}
+							submitLabel={m.staff_remove_label()}
 							submitVariant="error"
-							successToast={m.staff_events_id_recap_photos_photo_removed()}
+							successToast={m.staff_events_id_recap_photos_photo_removed_toast()}
 						>
 							{#snippet icon()}<IconTrash size={16} />{/snippet}
 							{#snippet form()}
 								{@const fields = removeEventPhoto.for(photo.attachmentId).fields}
 								<input {...fields.eventId.as('hidden', eventId)} />
 								<input {...fields.attachmentId.as('hidden', photo.attachmentId)} />
-								<p>{m.staff_events_id_recap_photos_take_photo_off_public_event()}</p>
+								<p>{m.staff_events_id_recap_photos_take_photo_off_public_event_text()}</p>
 							{/snippet}
 						</Action>
 					</div>

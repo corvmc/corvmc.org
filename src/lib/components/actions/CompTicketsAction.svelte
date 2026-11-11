@@ -29,8 +29,8 @@
 
 <Action
 	action={compTickets}
-	label={m.actions_comp_tickets_comp_tickets()}
-	modalTitle={m.actions_comp_tickets_comp_tickets()}
+	label={m.actions_comp_tickets_comp_tickets_label()}
+	modalTitle={m.actions_comp_tickets_comp_tickets_title()}
 	submitLabel={m.actions_comp_tickets_submit_label()}
 	successToast={m.actions_comp_tickets_success_toast()}
 	{variant}
@@ -45,15 +45,20 @@
 		<div class="space-y-3">
 			<FormField
 				field={fields.attendeeName}
-				label={m.actions_comp_tickets_attendee_name()}
+				label={m.actions_comp_tickets_attendee_name_label()}
 				required
 			/>
-			<FormField field={fields.attendeeEmail} type="email" label={m.actions_email()} required />
+			<FormField
+				field={fields.attendeeEmail}
+				type="email"
+				label={m.actions_email_label()}
+				required
+			/>
 			<!-- Custom input: the handler's schema reads quantity as a string
 			     (`z.string().transform(Number)`), so the field stays registered
 			     `as('text')` and `type="number"` is the spinner alone. Registering
 			     it `as('number')` submits an `n:` field the schema rejects. -->
-			<FormField field={fields.quantity} label={m.actions_quantity()}>
+			<FormField field={fields.quantity} label={m.actions_quantity_label()}>
 				{#snippet input(id)}
 					<input
 						{...fields.quantity.as('text')}

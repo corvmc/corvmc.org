@@ -52,7 +52,7 @@
 <PageHeader title={m.band_slug_events_title()} subtitle={band.name}>
 	{#if isAdmin}
 		<Button variant="ghost" size="sm" onclick={() => (importing = true)}
-			>{m.band_import_past_gigs()}</Button
+			>{m.band_import_past_gigs_label()}</Button
 		>
 		<CreateEventModal bandSlug={band.slug} />
 	{/if}
@@ -62,7 +62,7 @@
 	     the show is on the other band's listing only — never on this profile. -->
 	{#if invites.length > 0}
 		<div class="mb-6 space-y-3">
-			<h2 class="text-muted font-semibold uppercase">{m.band_slug_events_invitations()}</h2>
+			<h2 class="text-muted font-semibold uppercase">{m.band_slug_events_invitations_title()}</h2>
 			{#each invites as invite (invite.eventId)}
 				<!-- One form object can only back a single <form>, so each invite gets
 				     its own instance with its own pending state. -->
@@ -76,8 +76,8 @@
 								{formatDate(invite.startsAt)}{invite.location ? ` · ${invite.location}` : ''}
 							</p>
 							<p class="text-subtle">
-								{m.band_slug_events_added_by({
-									ownerBandName: invite.ownerBandName ?? m.band_slug_events_cmc_staff()
+								{m.band_slug_events_added_by_text({
+									ownerBandName: invite.ownerBandName ?? m.band_slug_events_cmc_staff_text()
 								})}
 							</p>
 						</div>
@@ -86,23 +86,31 @@
 								<RequestCorrectionAction slug={band.slug} eventId={invite.eventId} />
 								<Form
 									remote={confirm}
-									successToast={m.band_slug_events_added_profile()}
+									successToast={m.band_slug_events_added_profile_toast()}
 									onsuccess={() => refreshAll()}
 									class="inline"
 								>
 									<input {...confirm.fields.slug.as('hidden', band.slug)} />
 									<input {...confirm.fields.eventId.as('hidden', invite.eventId)} />
-									<SubmitButton label={m.band_slug_events_confirm()} variant="primary" size="sm" />
+									<SubmitButton
+										label={m.band_slug_events_confirm_label()}
+										variant="primary"
+										size="sm"
+									/>
 								</Form>
 								<Form
 									remote={decline}
-									successToast={m.band_slug_events_declined()}
+									successToast={m.band_slug_events_declined_toast()}
 									onsuccess={() => refreshAll()}
 									class="inline"
 								>
 									<input {...decline.fields.slug.as('hidden', band.slug)} />
 									<input {...decline.fields.eventId.as('hidden', invite.eventId)} />
-									<SubmitButton label={m.band_slug_events_decline()} variant="ghost" size="sm" />
+									<SubmitButton
+										label={m.band_slug_events_decline_label()}
+										variant="ghost"
+										size="sm"
+									/>
 								</Form>
 							</div>
 						{/if}
@@ -119,15 +127,15 @@
 	-->
 	{#if bookings.length > 0}
 		<div class="mb-6 space-y-3">
-			<h2 class="text-muted font-semibold uppercase">{m.band_slug_events_bookings()}</h2>
+			<h2 class="text-muted font-semibold uppercase">{m.band_slug_events_bookings_title()}</h2>
 			<!-- A table: read-only with no actions at all, and the call times were a
 			     run-on line of up to four conditional facts (#1048). -->
 			<Table>
 				{#snippet head()}
-					<th class="cell-primary">{m.band_slug_events_show()}</th>
-					<th class="col-support whitespace-nowrap">{m.band_slug_events_at()}</th>
-					<th class="col-extra whitespace-nowrap">{m.band_slug_events_call_times()}</th>
-					<th class="whitespace-nowrap">{m.band_slug_events_terms()}</th>
+					<th class="cell-primary">{m.band_slug_events_show_label()}</th>
+					<th class="col-support whitespace-nowrap">{m.band_slug_events_at_label()}</th>
+					<th class="col-extra whitespace-nowrap">{m.band_slug_events_call_times_label()}</th>
+					<th class="whitespace-nowrap">{m.band_slug_events_terms_label()}</th>
 				{/snippet}
 
 				{#each bookings as booking (booking.eventId)}
@@ -145,20 +153,26 @@
 								<span class="text-subtle">—</span>
 							{/if}
 							<div class="text-subtle">
-								{m.band_slug_events_min({ setLengthMinutes: booking.setLengthMinutes })}
+								{m.band_slug_events_min_text({ setLengthMinutes: booking.setLengthMinutes })}
 							</div>
 						</td>
 						<td class="col-extra text-subtle">
 							{#if booking.soundcheckAt}
 								<div>
-									{m.band_slug_events_soundcheck({ formatTime: formatTime(booking.soundcheckAt) })}
+									{m.band_slug_events_soundcheck_text({
+										formatTime: formatTime(booking.soundcheckAt)
+									})}
 								</div>
 							{/if}
 							{#if booking.loadInAt}
-								<div>{m.band_slug_events_load({ formatTime: formatTime(booking.loadInAt) })}</div>
+								<div>
+									{m.band_slug_events_load_text({ formatTime: formatTime(booking.loadInAt) })}
+								</div>
 							{/if}
 							{#if booking.curfewAt}
-								<div>{m.band_slug_events_curfew({ formatTime: formatTime(booking.curfewAt) })}</div>
+								<div>
+									{m.band_slug_events_curfew_text({ formatTime: formatTime(booking.curfewAt) })}
+								</div>
 							{/if}
 						</td>
 						<td class="whitespace-nowrap">{describeTerms(booking.terms)}</td>
@@ -170,7 +184,7 @@
 
 	{#if events.length === 0}
 		<EmptyState>
-			<p>{m.band_slug_events_no_events_yet()}</p>
+			<p>{m.band_slug_events_no_events_yet_text()}</p>
 			{#if isAdmin}
 				<div class="mt-2">
 					<CreateEventModal bandSlug={band.slug} />
@@ -186,11 +200,11 @@
 		-->
 		<Table>
 			{#snippet head()}
-				<th class="w-px"><span class="sr-only">{m.band_slug_events_status()}</span></th>
-				<th class="cell-primary">{m.band_slug_events_event()}</th>
-				<th class="col-support">{m.band_slug_events_where()}</th>
-				<th class="col-extra">{m.band_slug_events_bill()}</th>
-				<th class="w-px"><span class="sr-only">{m.band_slug_events_actions()}</span></th>
+				<th class="w-px"><span class="sr-only">{m.band_slug_events_status_label()}</span></th>
+				<th class="cell-primary">{m.band_slug_events_event_label()}</th>
+				<th class="col-support">{m.band_slug_events_where_label()}</th>
+				<th class="col-extra">{m.band_slug_events_bill_label()}</th>
+				<th class="w-px"><span class="sr-only">{m.band_slug_events_actions_label()}</span></th>
 			{/snippet}
 
 			{#each events as evt (evt.id)}
@@ -201,7 +215,7 @@
 					<td class="w-px whitespace-nowrap">
 						<StatusBadge status={evt.status} />
 						{#if !evt.isOwner}
-							<Badge variant="ghost" size="xs">{m.band_slug_events_guest()}</Badge>
+							<Badge variant="ghost" size="xs">{m.band_slug_events_guest_label()}</Badge>
 						{/if}
 					</td>
 					<td class="cell-primary">
