@@ -28,7 +28,7 @@
 
 <Action
 	action={cancelRecurringSeries}
-	label={m.actions_cancel_label()}
+	label={m.actions_cancel_series_label()}
 	modalTitle={m.actions_confirm_title()}
 	successToast={m.actions_cancel_series_success_toast()}
 	{variant}

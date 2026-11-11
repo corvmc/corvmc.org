@@ -165,6 +165,7 @@
 							calculateTotalWithFeeCoverage(pricing.remainingCents).feeCents
 						)
 					})}
+					description={m.reservations_booking_payment_step_collective_receives_full_body()}
 				/>
 			{/if}
 

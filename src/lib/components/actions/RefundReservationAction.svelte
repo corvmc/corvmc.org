@@ -64,6 +64,7 @@
 				type="checkbox"
 				label={m.actions_refund_reservation_cancellation_label()}
 				checkboxLabel={m.actions_refund_reservation_checkbox_label_checkbox()}
+				description={m.actions_refund_reservation_releases_slot_waitlist_body()}
 				bind:value={alsoCancel}
 			/>
 		{/if}

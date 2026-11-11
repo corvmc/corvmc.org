@@ -264,7 +264,9 @@
 			label=""
 			bind:value={coverFees}
 			checkboxLabel={m.events_ticket_purchase_fields_checkbox_label_checkbox({
-				formatCents: formatCents(covered.feeCoveredCents),
+				formatCents: formatCents(covered.feeCoveredCents)
+			})}
+			description={m.events_ticket_purchase_fields_acts_collective_keep_full_body({
 				actsLabel,
 				formatCents2: formatCents(totalCents)
 			})}

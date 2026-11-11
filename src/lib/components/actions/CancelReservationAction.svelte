@@ -32,7 +32,7 @@
 
 <Action
 	action={cancelReservation}
-	label={m.actions_cancel_label()}
+	label={m.actions_cancel_reservation_label()}
 	modalTitle={m.actions_cancel_reservation_modal_title()}
 	submitVariant="error"
 	successToast={m.actions_cancelled_toast()}

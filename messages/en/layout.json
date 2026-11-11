@@ -5,7 +5,7 @@
 	"layout_messages_label": "Messages",
 	"layout_messages_unread_label": "Messages, {count} unread",
 	"layout_nav_star_label": "Star",
-	"layout_notification_mark_read_label": "Mark as read",
+	"layout_notification_mark_read_label": "Mark read",
 	"layout_notification_unread_text": "Unread.",
 	"layout_notifications_label": "Notifications",
 	"layout_notifications_text": "Notifications",
@@ -14,6 +14,6 @@
 	"layout_page_title": "{title} — CorvMC",
 	"layout_sidebar_title": "CorvMC",
 	"layout_sign_out_label": "Sign Out",
-	"layout_to_public_site_label": "To Public Site",
-	"layout_to_public_site_title": "To Public Site"
+	"layout_to_public_site_label": "Go to public site",
+	"layout_to_public_site_title": "Go to public site"
 }
