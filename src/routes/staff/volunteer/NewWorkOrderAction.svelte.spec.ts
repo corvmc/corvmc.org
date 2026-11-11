@@ -76,7 +76,7 @@ describe('NewWorkOrderAction', () => {
 	it('swaps the window for a deadline when it has no set time', async () => {
 		const { locator } = await render(NewWorkOrderAction, {});
 		await locator.getByRole('button').click();
-		await page.getByLabelText('It has a set time').click();
+		await page.getByLabelText('Has a set time').click();
 
 		await expect.poll(() => field('dueAt')?.type).toBe('datetime-local');
 		expect(field('startsAt')).toBeNull();
