@@ -16,7 +16,7 @@ event bus, cron; this document is about what the tables _mean_ and which shapes 
 
 **Horizontals** — services every vertical emits into:
 
-- **Comms** — `inbox`, `notification`, `marketing`, direct messages, `announcement`
+- **Comms** — `inbox`, `notification`, `marketing`, direct messages, group announcements
 - **Money** — `finance`, Stripe, `credit_transaction`, `payment_cache`
 - **Publishing** — what faces the public: the gig guide (`event_listing`), `band_site`,
   the directory, local resources, recaps, posters, radio, the help manual; with `media`,
@@ -112,7 +112,7 @@ each are in
 | ---------------------------- | ------------------------------------------------------------------ |
 | Member directory and profile | `directory_entry`, `directory_tag`, the four intent signals        |
 | The organization             | `group`, `group_member`, `group_invite`, ownership as a roster row |
-| Governance                   | Committees, chairs, `by_application` — designed, largely unbuilt   |
+| Governance                   | Committees, chairs, `by_application`, ballots                      |
 | Self-published presence      | `band_site`, `band_page_config`, custom domains                    |
 | Identity and claiming        | External acts: `directory_entry` with both FKs null                |
 | Member-to-member contact     | DMs as request/accept/decline, `user_block`                        |
@@ -299,8 +299,9 @@ the collective's. Nothing else marks a row as CMC's, so there is no second colum
 A project's committees are rows in `project_committee`, each with a role, and a project with none
 is staff's, the same as a null above. `project` itself has no committee column.
 
-`announcement` and `event_group` are the same idea without the null: a band posting to its
-roster and a committee posting to its members are the same act on one table. Because the
+Group announcements (`inbox_thread` with `channel: 'group'`) and `event_group` are the same
+idea without the null: a band posting to its roster and a committee posting to its members
+are the same act on one table. Because the
 null is the collective, every query for an owner LEFT joins, and a guard reads the column
 off the row, never off the request.
 
