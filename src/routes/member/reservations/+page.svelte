@@ -203,7 +203,10 @@
 					{#await overdueReservations then overdue}
 						{#if overdue.length > 0}
 							<section class="mb-6">
-								<SectionLabel label={m.member_overdue_label()} count={overdue.length} />
+								<SectionLabel
+									label={m.member_reservations_overdue_payments_label()}
+									count={overdue.length}
+								/>
 								<OverdueTable reservations={overdue} />
 							</section>
 						{/if}

@@ -124,6 +124,7 @@
 				label=""
 				bind:value={coverFees}
 				checkboxLabel={m.member_reservations_id_pay_checkbox_label_checkbox()}
+				description={m.member_reservations_id_pay_collective_receives_100_body()}
 			/>
 		{/if}
 

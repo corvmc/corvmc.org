@@ -42,6 +42,7 @@
 			<FormField
 				field={fields.ratesNote}
 				label={m.member_profile_teaching_apply_rates_shown_as_written_label()}
+				description={m.member_profile_teaching_apply_shown_as_written_body()}
 			/>
 			<FormField
 				field={fields.bookingUrl}
@@ -50,6 +51,7 @@
 			<FormField
 				field={fields.applicationNote}
 				label={m.member_anything_staff_should_know_not_label()}
+				description={m.member_not_published_body()}
 				type="textarea"
 			/>
 			<SubmitButton>{m.member_send_application_label()}</SubmitButton>
