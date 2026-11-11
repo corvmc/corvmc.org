@@ -332,6 +332,7 @@
 		const start = performance.now();
 
 		try {
+			// eslint-disable-next-line no-restricted-syntax -- an `action` form posts its FormData whole
 			const result = await action(new FormData(formEl));
 			await delay(150 - (performance.now() - start));
 			await onsuccess?.(result ?? undefined);

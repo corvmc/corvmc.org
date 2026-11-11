@@ -70,6 +70,8 @@ test('a band books a session, and only the booker is offered Cancel', async ({ p
 	await expect(dialog.getByTestId('band-credit-note')).toBeVisible({
 		timeout: 15000
 	});
+	// The note renders without a price, so the price is asserted on its own (#2571).
+	await expect(dialog.getByTestId('confirm-pricing')).toBeVisible({ timeout: 15000 });
 
 	await dialog.locator('[data-step="1"] button[type="submit"]').click();
 	await expect(dialog).toBeHidden({ timeout: 20000 });
