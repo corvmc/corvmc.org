@@ -42,7 +42,7 @@ import {
 import { mapDomainError } from '#lib/server/errors.js';
 
 /**
- * Market vendor applications. docs/specs/shipped/market-vendors-spec.md.
+ * Market vendor applications. docs/development/business-workflows.md §19.
  *
  * The public half takes no session. Setup, seating and withdrawals guard on
  * `event.manage`; accept and decline also belong to the committees taking part

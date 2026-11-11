@@ -42,7 +42,7 @@
 	const uploadFields = uploadEventPhotos.fields;
 </script>
 
-<!-- Recap photos (docs/specs/event-recaps-spec.md): shown publicly on the event
+<!-- Recap photos (business-workflows.md §9): shown publicly on the event
      page as soon as they are added. -->
 <InfoCard
 	title={m.staff_events_id_recap_photos_recap_photos_title()}

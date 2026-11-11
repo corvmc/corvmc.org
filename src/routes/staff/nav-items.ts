@@ -157,7 +157,7 @@ export const staffNavSections: StaffNavSection[] = [
 	},
 	{
 		// What the Collective decides to do: what members asked for, what was
-		// voted, and the work (production-projects-spec.md).
+		// voted, and the work.
 		key: 'planning',
 		title: 'Planning',
 		items: [

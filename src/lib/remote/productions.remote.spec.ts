@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Who may do what on a show (docs/specs/production-projects-spec.md), as a
+ * Who may do what on a show (docs/decisions/NNNN-productions-are-projects.md), as a
  * matrix: every write, against Booking, Production, a committee on some other
  * show, the treasurer and staff. The committee guard is faked here from the
  * persona's grants; its resolution against `project_committee` has its own

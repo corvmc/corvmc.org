@@ -5,7 +5,7 @@ import { production } from '#lib/server/db/schema/production.js';
 
 /**
  * The project a show's money counts toward: the project its production
- * specialises (docs/specs/production-projects-spec.md). Null for a listing that
+ * specialises (#1673). Null for a listing that
  * announces no production — a band's gig, a community night — whose money is
  * nobody's project burn.
  */

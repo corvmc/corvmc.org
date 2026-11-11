@@ -8,7 +8,7 @@ import { assertNotTerminal } from './production-scope';
 /**
  * What a show cost, and the denominator a percentage-of-net deal divides against.
  *
- * `docs/specs/production-workflow-spec.md` § Production expense. Filed as #839,
+ * `docs/development/business-workflows.md` §14. Filed as #839,
  * where the promise was reaching acts before the number existed.
  */
 

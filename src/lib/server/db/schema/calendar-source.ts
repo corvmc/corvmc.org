@@ -7,9 +7,8 @@ import { venue } from './venue';
  * A partner venue's published iCalendar feed, which the daily cron copies onto
  * the gig guide. Always a venue's: the importer dedupes against listings at
  * that venue, and the venue is where its shows are.
- *
  * `createdByUserId` is who added it and who owns what it imports, since every
- * `event_listing` needs an author. See docs/specs/shipped/partner-calendar-import-spec.md.
+ * `event_listing` needs an author. See business-workflows.md §9.
  */
 export const calendarSource = sqliteTable(
 	'calendar_source',

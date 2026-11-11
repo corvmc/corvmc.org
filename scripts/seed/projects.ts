@@ -323,7 +323,7 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 	// --- The festival's two nights -------------------------------------------
 
 	// Only listings with no production: a show's listing names its own project
-	// (production-projects-spec.md), and a festival over shows is deferred.
+	// (#1673), and a festival over shows is deferred.
 	const free = await db
 		.select({ id: eventListing.id })
 		.from(eventListing)

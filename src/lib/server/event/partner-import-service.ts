@@ -12,7 +12,7 @@ import { parseFeed, type FeedShow } from './partner-feed';
 
 // ---------------------------------------------------------------------------
 // Partner calendar import — the daily copy of partner venues' feeds onto the
-// gig guide. docs/specs/shipped/partner-calendar-import-spec.md has the rules;
+// gig guide. docs/development/business-workflows.md §9 has the rules;
 // the ones that are easy to break are named where they are enforced.
 // ---------------------------------------------------------------------------
 

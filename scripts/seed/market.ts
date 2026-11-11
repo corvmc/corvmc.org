@@ -7,7 +7,7 @@ import { batchInsert, db } from './db';
 import type { SeedUser } from './types';
 
 /**
- * One market day CMC hosts, taking applications. docs/specs/shipped/market-vendors-spec.md.
+ * One market day CMC hosts, taking applications. docs/development/business-workflows.md §19.
  *
  * A vendor in every status, so each tab of /staff/events/[id]/vendors has rows,
  * plus the awkward ones: no website, two tables with power. Each has the web

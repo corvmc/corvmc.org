@@ -36,7 +36,7 @@ import { productionExpenseCategories } from '../../../config';
 // `production_slot` below; adding columns nothing reads is how a table starts
 // lying about what it holds.
 //
-// See `docs/specs/production-workflow-spec.md#production`.
+// See `docs/decisions/NNNN-a-production-is-a-child-of-its-listing.md`.
 // ---------------------------------------------------------------------------
 
 /**
@@ -207,7 +207,7 @@ export type NewProduction = typeof production.$inferInsert;
  * find or delete. `productionId` is the row's home and the predicate every
  * ordered read filters on.
  *
- * See `docs/specs/production-workflow-spec.md` — the 2026-09-07 amendment.
+ * See `docs/decisions/NNNN-a-production-is-a-child-of-its-listing.md`.
  */
 export const productionSlot = sqliteTable(
 	'production_slot',

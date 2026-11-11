@@ -1836,7 +1836,7 @@ export type ProjectView = (typeof projectViews)[number];
 /**
  * A `'production'` project is the generic half of a show: its production row
  * carries the show layer and points back here, one to one.
- * See docs/specs/production-projects-spec.md.
+ * See docs/decisions/NNNN-productions-are-projects.md.
  */
 export const projectKinds = ['general', 'production'] as const;
 export type ProjectKind = (typeof projectKinds)[number];
@@ -2240,7 +2240,7 @@ export const capabilities = {
 	// certificate is theirs, and it stays on their record.
 	renewal: ['read', 'manage'],
 	project: ['read', 'manage'],
-	// The two halves of a show (docs/specs/production-projects-spec.md). `book`
+	// The two halves of a show (business-workflows.md §14). `book`
 	// is acts, offers, deals and billing; `run` is the run of show, the advance,
 	// crew, the door and settlement. Held by committees through a show's project.
 	// `create` opens a production, before any project exists to reach (#1675).

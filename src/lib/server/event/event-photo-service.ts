@@ -16,7 +16,7 @@ import { markdownExcerpt } from '#lib/utils/markdown.js';
 
 /**
  * Recap photos: an event's `gallery` slot on `media_attachment`.
- * docs/specs/event-recaps-spec.md. Identity is the remote's guard; this owns
+ * docs/development/business-workflows.md §9. Identity is the remote's guard; this owns
  * the rules — when a gallery is open, how large it may grow, and scoping every
  * attachment id to the event it is presented with.
  */
