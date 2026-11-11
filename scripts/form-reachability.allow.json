@@ -177,7 +177,8 @@
 	},
 	"src/lib/server/volunteer/hour-log-service.ts#updateHourLog(2)": {
 		"groupId": "internal: in the Partial<SubmitHoursData> type, never written; links are fixed at submission",
-		"shiftId": "internal: in the Partial<SubmitHoursData> type, never written; links are fixed at submission"
+		"shiftId": "internal: in the Partial<SubmitHoursData> type, never written; links are fixed at submission",
+		"workOrderId": "internal: in the type through SubmitHoursData; a log's task is set when it is filed"
 	},
 	"src/lib/server/volunteer/volunteer-role-service.ts#createVolunteerRole(0)": {
 		"skillMatches": "elsewhere: the role update form writes it"
@@ -185,6 +186,10 @@
 	"src/lib/server/volunteer/work-order-service.ts#createWorkOrder(0)": {
 		"sectionId": "internal: project-task-service#addTask places a task in its section",
 		"sortOrder": "internal: project-task-service#addTask places a task in its section"
+	},
+	"src/lib/server/volunteer/work-order-service.ts#openShift(1)": {
+		"capacity": "#2518: the Open shift form in the staff UI phase sends places; the schedule form sends times only",
+		"notes": "#2518: the Open shift form in the staff UI phase sends a briefing; the schedule form sends times only"
 	},
 	"src/lib/server/volunteer/work-order-service.ts#resolveWorkOrder(1)": {
 		"recordReason": "internal: completeJob passes its own record as the reason"
