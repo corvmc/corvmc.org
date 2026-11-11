@@ -726,7 +726,7 @@ and a remote `form()` that fails validation runs no handler at all.
 
 ### Contractors: paid repairs and building work
 
-Decision: [Contractor work has its own tables](../decisions/NNNN-contractor-work-has-its-own-tables.md)
+Decision: [Contractor work has its own tables](../decisions/0051-contractor-work-has-its-own-tables.md)
 
 A `contractor` is somebody the collective pays: trade, contact, licence and
 `insurance_expires_at`, a bare date where null means no certificate is on file
@@ -1271,8 +1271,8 @@ one about the standing. Nothing changes while an appeal waits.
 
 ## 12. Volunteering
 
-Decisions: [Volunteer hours are a record](../decisions/NNNN-volunteer-hours-are-a-record.md),
-[Certifications are an append-only catalog](../decisions/NNNN-certifications-are-an-append-only-catalog.md)
+Decisions: [Volunteer hours are a record](../decisions/0048-volunteer-hours-are-a-record.md),
+[Certifications are an append-only catalog](../decisions/0047-certifications-are-an-append-only-catalog.md)
 
 ### The story
 
@@ -1572,7 +1572,7 @@ already enforces it. Nothing new claims, assigns, or notifies.
 
 ### Committee deliverables
 
-Decision: [A committee owns show work](../decisions/NNNN-committees-own-deliverables-not-permissions.md)
+Decision: [A committee owns show work](../decisions/0053-committees-own-deliverables-not-permissions.md)
 
 A work order can name the committee that answers for it (`work_order.group_id`) and a fact that
 marks it done (`done_when`, one of `workDoneConditions`). Both are copied from the template item
@@ -1940,7 +1940,7 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
 
 ### Projects and work orders
 
-Decision: [A work order is the task](../decisions/NNNN-a-work-order-is-the-task.md)
+Decision: [A work order is the task](../decisions/0054-a-work-order-is-the-task.md)
 
 - **Write:** work order changes are recorded in the shared services both the shift page and
   the project page call (`updateShift`, `openShift`, `cancelShift`, `resolveWorkOrder`,
@@ -2291,7 +2291,7 @@ fourteen days ahead.
 
 ## 23. Formal ballots: a frozen roll, a secret or recorded vote, a certified result
 
-Decision: [Secret ballots keep a counter](../decisions/NNNN-secret-ballots-count-without-a-vote-row.md)
+Decision: [Secret ballots keep a counter](../decisions/0052-secret-ballots-count-without-a-vote-row.md)
 
 ### The story
 

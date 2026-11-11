@@ -23,7 +23,7 @@ type ProductionRow = typeof production.$inferSelect & { eventId: string };
 
 /**
  * One deal per act, walking the deal shapes in
- * `docs/decisions/NNNN-a-project-is-a-budgeted-body-of-work.md`. Every
+ * `docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md`. Every
  * shape has to be reachable locally or the terms editor and the band-facing
  * summary are both built against one case.
  */

@@ -1,4 +1,4 @@
-# NNNN Volunteer hours are a record, not a currency
+# 0048 Volunteer hours are a record, not a currency
 
 - **Date:** 2026-08-08
 - **Status:** Accepted

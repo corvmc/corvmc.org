@@ -1,4 +1,4 @@
-# NNNN A committee is a group, chaired by its admins
+# 0049 A committee is a group, chaired by its admins
 
 - **Date:** 2026-08-28
 - **Status:** Accepted

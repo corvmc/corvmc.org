@@ -28,7 +28,7 @@ function percent(bps: number): string {
 }
 
 /**
- * Five shapes, from `docs/decisions/NNNN-a-project-is-a-budgeted-body-of-work.md`.
+ * Five shapes, from `docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md`.
  *
  * "Flat fee" and "guarantee against the door" set the same columns; the difference is the `versus` flag, which is what "against
  * the door" means — pay the greater of the two. A guarantee and a percentage

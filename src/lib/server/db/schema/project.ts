@@ -16,7 +16,7 @@ import { projectCommitteeRoles, projectKinds, projectStatuses } from '../../../c
 
 /**
  * A **project**: a body of work with a budget and an owner —
- * docs/decisions/NNNN-a-project-is-a-budgeted-body-of-work.md, and the prior art behind it in
+ * docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md, and the prior art behind it in
  * docs/reports/project-management-prior-art.md.
  *
  * Not an event and not a subtype of one. Events, work orders, contractor jobs,

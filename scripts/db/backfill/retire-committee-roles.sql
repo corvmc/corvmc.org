@@ -1,6 +1,6 @@
 -- Retire the six committee `volunteer_role` rows.
 --
--- `docs/decisions/NNNN-a-committee-is-a-group-chaired-by-admins.md` decision 2:
+-- `docs/decisions/0049-a-committee-is-a-group-chaired-by-admins.md` decision 2:
 -- a committee is a group, and the volunteer roles that shadowed them retire. Their interest rows became
 -- applications in `committee-interest.sql`, which has to have run first.
 --

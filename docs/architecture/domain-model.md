@@ -90,7 +90,7 @@ A listing's room hold is booked to its production when it has one, else to the g
 running it, else to the listing itself (#2004). Holding the room never opens a
 production: a CMC workshop with no back-of-house can still take the room.
 
-See [A project is a budgeted body of work](../decisions/NNNN-a-project-is-a-budgeted-body-of-work.md).
+See [A project is a budgeted body of work](../decisions/0050-a-project-is-a-budgeted-body-of-work.md).
 
 ## The seam
 
@@ -392,11 +392,11 @@ The bar for what "worked out" looks like, and the thing to imitate rather than r
 
 ## Further reading
 
-- [A project is a budgeted body of work](../decisions/NNNN-a-project-is-a-budgeted-body-of-work.md)
+- [A project is a budgeted body of work](../decisions/0050-a-project-is-a-budgeted-body-of-work.md)
   — the `project` decision
 - [project-management-prior-art.md](../reports/project-management-prior-art.md) — the
   comparable products and why these decisions were made
 - [social-prior-art.md](../reports/social-prior-art.md) — the same, per social role, and
   what those products do better
-- [A committee is a group, chaired by its admins](../decisions/NNNN-a-committee-is-a-group-chaired-by-admins.md)
+- [A committee is a group, chaired by its admins](../decisions/0049-a-committee-is-a-group-chaired-by-admins.md)
   — what a committee is in the data

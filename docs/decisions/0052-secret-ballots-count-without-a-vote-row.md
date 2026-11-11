@@ -1,4 +1,4 @@
-# NNNN Secret ballots keep a counter, not a row per vote
+# 0052 Secret ballots keep a counter, not a row per vote
 
 - **Date:** 2026-09-24
 - **Status:** Accepted

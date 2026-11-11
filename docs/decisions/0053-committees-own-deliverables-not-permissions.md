@@ -1,4 +1,4 @@
-# NNNN A committee owns show work; ownership grants no permission
+# 0053 A committee owns show work; ownership grants no permission
 
 - **Date:** 2026-09-29
 - **Status:** Accepted

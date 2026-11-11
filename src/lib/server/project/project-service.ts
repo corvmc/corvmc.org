@@ -51,7 +51,7 @@ import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import type { ProjectField } from '#lib/types/audit.js';
 
 /**
- * A body of work with a budget and an owner — docs/decisions/NNNN-a-project-is-a-budgeted-body-of-work.md.
+ * A body of work with a budget and an owner — docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md.
  *
  * The container the schema kept describing and never had: a facility
  * improvement is a dozen work orders, an electrician's invoice and a purchase

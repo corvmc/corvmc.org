@@ -192,7 +192,7 @@ export const TICKET_CONTRIBUTION_MAX_CENTS = 100_000;
  * This is the house suggestion, and it is not the deal. CMC's standing
  * arrangement is 70% of the door to the bands, but a bill with three acts on
  * three different deals has no single percentage — the deal itself lives on
- * `production_slot` (see `docs/decisions/NNNN-a-project-is-a-budgeted-body-of-work.md`). Say "we
+ * `production_slot` (see `docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md`). Say "we
  * suggest 70% to the acts" in copy, never "the acts' deal is 70%".
  *
  * The acts' 70% is a guarantee against the **suggested price**, not against
@@ -1294,7 +1294,7 @@ export const groupApplicationStatusLabels: Record<GroupApplicationStatus, string
 
 // `committee` retired 2026-09-14. A committee is a `group` and is applied to
 // through `group_application`, not signed up for — see decision 2 of
-// docs/decisions/NNNN-a-committee-is-a-group-chaired-by-admins.md. The six roles that shadowed them are archived
+// docs/decisions/0049-a-committee-is-a-group-chaired-by-admins.md. The six roles that shadowed them are archived
 // in `away-from-shows` rather than deleted, because hour logs point at two.
 export const volunteerRoleGroups = ['at-shows', 'away-from-shows'] as const;
 
@@ -1377,7 +1377,7 @@ export type DutyListAutoApplyTrigger = (typeof dutyListAutoApplyTriggers)[number
 
 /**
  * The fact about a show that says a committee's work order is done
- * (docs/decisions/NNNN-committees-own-deliverables-not-permissions.md). Closed, because each member is a
+ * (docs/decisions/0053-committees-own-deliverables-not-permissions.md). Closed, because each member is a
  * typed function in `volunteer/done-conditions.ts`; a template picks one. Adding
  * a condition is one entry here and one in that registry.
  */
@@ -1598,7 +1598,7 @@ export function formatVolunteerHours(minutes: number): string {
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// Ballots — see docs/decisions/NNNN-secret-ballots-count-without-a-vote-row.md
+// Ballots — see docs/decisions/0052-secret-ballots-count-without-a-vote-row.md
 // ---------------------------------------------------------------------------
 
 /** `group`: a committee's roster, recorded. `member`: members of record, secret. */
@@ -1794,7 +1794,7 @@ export const classifiedCategoryOptions = classifiedCategories.map((value) => ({
 /**
  * A project's lifecycle: the suggestion's, less `in_ballot`. A project exists
  * only once something is decided, and its status is what the suggestion it
- * answers reports back (docs/decisions/NNNN-a-project-is-a-budgeted-body-of-work.md).
+ * answers reports back (docs/decisions/0050-a-project-is-a-budgeted-body-of-work.md).
  */
 export const projectStatuses = [
 	'open',

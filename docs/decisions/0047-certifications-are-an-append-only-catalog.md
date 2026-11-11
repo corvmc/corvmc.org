@@ -1,4 +1,4 @@
-# NNNN Certifications are an append-only catalog
+# 0047 Certifications are an append-only catalog
 
 - **Date:** 2026-08-08
 - **Status:** Accepted

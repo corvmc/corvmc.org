@@ -1,4 +1,4 @@
-# NNNN A work order is the task, and a contractor job is an engagement on it
+# 0054 A work order is the task, and a contractor job is an engagement on it
 
 - **Date:** 2026-10-13
 - **Status:** Accepted
@@ -10,7 +10,7 @@ Projects were run from spreadsheets, and the staff project page was a set of typ
 with its own create form, status machine and page. Staff wanted a checklist: type a line, tick it
 off, fill in the rest later. A contractor job was a separate record with its own title, unit and
 project, so a repair had two records for one piece of work. This narrows part of
-[Contractor work has its own tables](NNNN-contractor-work-has-its-own-tables.md) (2026-09-02).
+[Contractor work has its own tables](0051-contractor-work-has-its-own-tables.md) (2026-09-02).
 
 ## Decision
 

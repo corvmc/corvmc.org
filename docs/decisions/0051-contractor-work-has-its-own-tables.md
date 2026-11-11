@@ -1,4 +1,4 @@
-# NNNN Contractor work has its own tables
+# 0051 Contractor work has its own tables
 
 - **Date:** 2026-09-02
 - **Status:** Accepted
@@ -30,7 +30,7 @@ it: `work_order`, `purchase_order` and `acquisition`. The inventory design had d
 - **`work_order`.** As it stood, its role and capacity were required and meant nothing for an
   electrician. A contractor's appointment in `starts_at` would have put the job on the member
   claim board, in shift reminders and feedback, and credited volunteer hours for paid work. The
-  2026-10-13 record [A work order is the task](NNNN-a-work-order-is-the-task.md) later made the
+  2026-10-13 record [A work order is the task](0054-a-work-order-is-the-task.md) later made the
   work order the task and kept `contractor_job` as the engagement on it.
 - **`purchase_order`.** Its lines must name a catalog item, and receiving an order records an
   acquisition.
