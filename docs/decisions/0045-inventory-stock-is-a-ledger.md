@@ -1,4 +1,4 @@
-# NNNN Inventory stock is a ledger
+# 0045 Inventory stock is a ledger
 
 - **Date:** 2026-08-27
 - **Status:** Accepted

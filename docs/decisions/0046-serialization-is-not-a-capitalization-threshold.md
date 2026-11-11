@@ -1,4 +1,4 @@
-# NNNN Serialization is not a capitalization threshold
+# 0046 Serialization is not a capitalization threshold
 
 - **Date:** 2026-08-27
 - **Status:** Accepted

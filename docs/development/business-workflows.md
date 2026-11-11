@@ -566,10 +566,10 @@ space-holding events.
 
 ## 6. Inventory, gear and consumables
 
-Decisions: [stock is a ledger](../decisions/NNNN-inventory-stock-is-a-ledger.md),
-[asset tags are bound](../decisions/NNNN-asset-tags-are-bound-not-generated.md),
-[no capitalization threshold](../decisions/NNNN-serialization-is-not-a-capitalization-threshold.md),
-[Form 8282 is the only tax check](../decisions/NNNN-form-8282-is-the-only-inventory-tax-check.md)
+Decisions: [stock is a ledger](../decisions/0045-inventory-stock-is-a-ledger.md),
+[asset tags are bound](../decisions/0043-asset-tags-are-bound-not-generated.md),
+[no capitalization threshold](../decisions/0046-serialization-is-not-a-capitalization-threshold.md),
+[Form 8282 is the only tax check](../decisions/0044-form-8282-is-the-only-inventory-tax-check.md)
 
 ### The story
 

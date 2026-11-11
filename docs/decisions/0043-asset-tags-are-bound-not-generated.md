@@ -1,4 +1,4 @@
-# NNNN Asset tags are bound, not generated
+# 0043 Asset tags are bound, not generated
 
 - **Date:** 2026-08-27
 - **Status:** Accepted

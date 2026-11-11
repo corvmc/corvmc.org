@@ -22,7 +22,7 @@ import { DomainError } from '#lib/server/domain-error.js';
  *
  * The old `equipment.totalQuantity` was a number somebody typed, which is why
  * "how many packs of strings did we go through last quarter" was not a hard
- * question but an unanswerable one. See `docs/decisions/NNNN-inventory-stock-is-a-ledger.md`.
+ * question but an unanswerable one. See `docs/decisions/0045-inventory-stock-is-a-ledger.md`.
  */
 
 // ---------------------------------------------------------------------------

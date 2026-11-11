@@ -21,7 +21,7 @@ import { contractorJobStatuses, contractorTrades } from '../../../config';
  * the company that services the extinguishers.
  *
  * Inventory declined a `supplier` table until free text fragments
- * (`docs/decisions/NNNN-inventory-stock-is-a-ledger.md`). Servicing needs this
+ * (`docs/decisions/0045-inventory-stock-is-a-ledger.md`). Servicing needs this
  * entity now: `purchase_order.supplier_name` can stay free
  * text because you never have to *phone* a receipt, and "who serviced the
  * building and when" is unanswerable without a row to hang a history off.

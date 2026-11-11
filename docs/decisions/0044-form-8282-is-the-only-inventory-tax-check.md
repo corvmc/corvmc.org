@@ -1,4 +1,4 @@
-# NNNN Form 8282 is the only inventory tax check
+# 0044 Form 8282 is the only inventory tax check
 
 - **Date:** 2026-08-27
 - **Status:** Accepted
