@@ -137,22 +137,28 @@ async function complianceLists(page: Page, tag: string): Promise<boolean> {
 }
 
 test.describe('inventory', () => {
-	test('the item list shows both kinds, and a serialized item lists its units', async ({
+	test('Gear and Supplies split the items, and a serialized item lists its units', async ({
 		page
 	}) => {
 		await loginAsStaff(page);
+		const search = () =>
+			page
+				.locator('input[type="search"], input:is([name="search"], [name^="search/"])')
+				.first()
+				.fill('E2E Test');
+
+		// Gear holds the serialized item; Supplies holds the consumable (#2573).
 		await page.goto('/staff/inventory');
-
-		await expect(page).toHaveURL(/\/staff\/inventory/);
-		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 		await expect(page.getByRole('table')).toBeVisible();
-
-		await page
-			.locator('input[type="search"], input:is([name="search"], [name^="search/"])')
-			.first()
-			.fill('E2E Test');
+		await search();
 		await expect(page.getByText(SEED_ITEM_NAME)).toBeVisible({ timeout: 10000 });
-		await expect(page.getByText(SEED_CONSUMABLE_NAME)).toBeVisible();
+		await expect(page.getByText(SEED_CONSUMABLE_NAME)).toHaveCount(0);
+
+		await page.goto('/staff/inventory/supplies');
+		await expect(page.getByRole('table')).toBeVisible();
+		await search();
+		await expect(page.getByText(SEED_CONSUMABLE_NAME)).toBeVisible({ timeout: 10000 });
+		await expect(page.getByText(SEED_ITEM_NAME)).toHaveCount(0);
 
 		// A serialized item lists its units, tagged and not.
 		await page.goto(`/staff/inventory/${SEED_ITEM_ID}`);
@@ -245,9 +251,9 @@ test.describe('inventory', () => {
 			page
 		}) => {
 			await loginAsStaff(page);
-			// The old Restock page forwards to the list's reorder-point view (#2021).
+			// The old Restock page forwards to the Supplies reorder-point view (#2021, #2573).
 			await page.goto('/staff/inventory/restock');
-			await page.waitForURL(/\/staff\/inventory\?show=restock$/);
+			await page.waitForURL(/\/staff\/inventory\/supplies\?show=restock$/);
 			await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 			const row = page.getByRole('row').filter({ hasText: SEED_LOW_NAME });
 			await expect(row).toBeVisible();

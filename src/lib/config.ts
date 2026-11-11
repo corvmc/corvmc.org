@@ -653,6 +653,20 @@ export const inventoryListViewMeta = {
 	problems: { label: 'Open problem', capability: 'inventory.manageAssets' }
 } as const satisfies Record<InventoryListView, { label: string; capability: Capability }>;
 
+/**
+ * Staff inventory's two lists (#2573). Gear is tracked unit by unit or lent out;
+ * Supplies is what is used up. `src/lib/server/inventory/sections.ts` holds the
+ * predicate, so every list and count reads the same definition.
+ */
+export const inventorySections = ['gear', 'supplies'] as const;
+export type InventorySection = (typeof inventorySections)[number];
+
+/** Which `?show=` views each list offers. A view with no rows in a list is left off it. */
+export const inventorySectionViews = {
+	gear: ['on-loan', 'overdue', 'problems', 'on-order', 'late', 'restock'],
+	supplies: ['restock', 'on-order', 'late']
+} as const satisfies Record<InventorySection, readonly InventoryListView[]>;
+
 export const pricingTiers = ['major', 'accessory'] as const;
 export type PricingTier = (typeof pricingTiers)[number];
 export const loanStatuses = [

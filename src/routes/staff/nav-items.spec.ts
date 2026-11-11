@@ -76,21 +76,23 @@ describe('activeNavKey', () => {
 		['/staff/renewals', 'renewals'],
 		['/staff/renewals/abc', 'renewals'],
 		['/staff/grants/funders', 'grants'],
-		['/staff/inventory', 'equipment'],
-		['/staff/inventory/abc', 'equipment'],
-		['/staff/inventory/intake', 'equipment'],
+		['/staff/inventory', 'gear'],
+		['/staff/inventory/abc', 'gear'],
+		['/staff/inventory/intake', 'gear'],
+		// Gear and Supplies split the list (#2573); Supplies is the longer match.
+		['/staff/inventory/supplies', 'supplies'],
 		// Restock and Orders are views of the list now (#2021, #2022); an order's page stays.
-		['/staff/inventory/orders/abc', 'equipment'],
+		['/staff/inventory/orders/abc', 'gear'],
 		['/staff/inventory/spend', 'reports'],
 		['/staff/inventory/acquisitions/abc', 'reports'],
-		['/staff/inventory/compliance', 'inventory-compliance'],
-		// Loans left Inventory's children for a row of its own; its URL did not move.
-		['/staff/inventory/loans', 'equipment-loans'],
-		['/staff/inventory/loans/abc', 'equipment-loans'],
+		// Loans, reported problems and compliance are Gear's tabs; their URLs did not move.
+		['/staff/inventory/compliance', 'gear'],
+		['/staff/inventory/loans', 'gear'],
+		['/staff/inventory/loans/abc', 'gear'],
 		['/staff/reservations/abc', 'reservations'],
 		['/staff/recurring/abc', 'reservations'],
-		['/staff/inventory/problems', 'equipment-reports'],
-		['/staff/inventory/problems/abc', 'equipment-reports'],
+		['/staff/inventory/problems', 'gear'],
+		['/staff/inventory/problems/abc', 'gear'],
 		['/staff/contractors', 'contractors'],
 		['/staff/contractors/abc', 'contractors'],
 		// Records keep their addresses under the row they moved to (#2393).
@@ -221,13 +223,7 @@ describe('the nav tree', () => {
 		expect(keys('planning')).toEqual(['suggestions', 'ballots', 'projects', 'volunteer-schedule']);
 		// Recurring work is a Schedule view (#2087).
 		expect(activeNavKey('/staff/volunteer/schedule/recurring')).toBe('volunteer-schedule');
-		expect(keys('space')).toEqual([
-			'reservations',
-			'equipment',
-			'equipment-loans',
-			'renewals',
-			'keys'
-		]);
+		expect(keys('space')).toEqual(['reservations', 'gear', 'supplies', 'renewals', 'keys']);
 		expect(keys('partners')).toEqual(['sponsors', 'venues', 'local-resources', 'contractors']);
 		expect(keys('moderation')).toEqual(['moderation', 'classifieds']);
 		expect(keys('outreach')).toEqual(['outreach']);
@@ -272,8 +268,12 @@ describe('route coverage', () => {
 		'/staff/volunteer/schedule/recurring', // a Schedule view (#2087)
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
-		'/staff/inventory/locations', // reached from Inventory, beside Categories; its breadcrumb runs through it
-		'/staff/inventory/intake', // a session started from Inventory's header, not a list (#1838)
+		'/staff/inventory/locations', // reached from Gear and Supplies, beside Categories
+		'/staff/inventory/intake', // a session started from Gear or Supplies, not a list (#1838)
+		// Gear's tabs (#2573).
+		'/staff/inventory/loans',
+		'/staff/inventory/problems',
+		'/staff/inventory/compliance',
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
 		'/staff/grants/funders', // reached from Grants' header; its breadcrumb runs through it
 		// Reached from the Bands view's header: the same staff job as a band.

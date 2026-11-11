@@ -605,6 +605,24 @@ A **consumable is a bulk item that is not loanable**, derived and never stored.
 Twelve XLR cables are bulk _and_ returnable, which is why one enum could not
 carry both.
 
+### Gear and Supplies
+
+Staff see the catalog as two lists, two sidebar rows under Space (#2573):
+
+- **Gear**, `/staff/inventory`: `kind = 'serialized' OR is_loanable`. The room's
+  PA is serialized and never lent, and it is Gear. Its tabs are Items, Loans
+  (`/staff/inventory/loans`), Reported problems (`/staff/inventory/problems`) and
+  Compliance (`/staff/inventory/compliance`), each behind its own capability.
+- **Supplies**, `/staff/inventory/supplies`: `kind = 'bulk' AND NOT is_loanable`,
+  the consumable definition, with stock levels, restocking and orders.
+
+The two are disjoint and cover every item. The predicate lives once, in
+`src/lib/server/inventory/sections.ts`: `inSection()` is the `WHERE` term every
+list filters with (`listItems`, `listLowStock`), and `sectionOf()` labels a row.
+`sections.spec.ts` runs both against a real SQLite. One intake,
+`/staff/inventory/intake`, serves both lists, and each line files under its
+item's section. Item pages stay at `/staff/inventory/[id]` for either.
+
 ### Code path
 
 Services live in `src/lib/server/inventory/`, driven by `inventory.remote.ts`:
@@ -645,11 +663,13 @@ A `bulk` item can carry a reorder point. `listLowStock()` in `stock-service.ts`
 returns everything at or below it, emptiest first, with a `suggestedOrder` (the
 reorder quantity where one is set, otherwise enough to reach the point) and an
 `isOut` flag. It surfaces twice: the top five on the staff dashboard, and the
-whole list as the Inventory list's `?show=restock` view, grouped by category with
+whole list as the `?show=restock` view on Supplies (and on Gear, for a returnable
+bulk item with a reorder point), grouped by category with
 a Receive action per row and a bulk **Mark as ordered**, which writes one `placed`
-purchase order with a line per ticked item. The list's other cross-item views
-(`?show=on-order`, `late`, `on-loan`, `overdue`, `problems`) replaced the Orders
-list; an order's own page stays, reached from the items on it.
+purchase order with a line per ticked item. The lists' other cross-item views
+(`?show=on-order` and `late` on both; `on-loan`, `overdue` and `problems` on Gear)
+replaced the Orders list, and `/staff/inventory/orders` and `/staff/inventory/restock`
+redirect to Supplies; an order's own page stays, reached from the items on it.
 
 `/staff/inventory/spend` reports purchase spend over a window (default: the
 current calendar year), per category via `spendByCategory()` and per supplier via
@@ -711,7 +731,7 @@ whether the unit is still usable, and takes an in-service unit out of service on
 the reporter says it is not. A second report on the same unit is a second row — three
 people noticing one crackle is the signal.
 
-Staff triage them in Inventory's Reported Problems queue, `/staff/inventory/problems` (#1840), behind
+Staff triage them in Gear's Reported problems tab, `/staff/inventory/problems` (#1840), behind
 `inventory.manageAssets`: dismiss, or send to a work order — an open one on the same unit
 or a new one — and every other untriaged report on that unit goes with it
 (`sendToWorkOrder`). Marking the task done closes every report attached to it

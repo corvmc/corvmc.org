@@ -568,6 +568,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/inventory/supplies",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/keys",
 		"panel": "staff"
 	},

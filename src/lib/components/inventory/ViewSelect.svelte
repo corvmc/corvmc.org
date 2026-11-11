@@ -3,21 +3,29 @@
 	import { Select } from '#lib/components/ui/Form/index.js';
 	import {
 		hasCapability,
-		inventoryListViews,
 		inventoryListViewMeta,
-		type InventoryListView
+		inventorySectionViews,
+		type InventoryListView,
+		type InventorySection
 	} from '#lib/config.js';
 	import { getStaffLayout } from '#lib/remote/layout.remote.js';
 
 	let {
+		section,
 		value,
 		onchange
-	}: { value: InventoryListView | ''; onchange: (v: InventoryListView | '') => void } = $props();
+	}: {
+		section: InventorySection;
+		value: InventoryListView | '';
+		onchange: (v: InventoryListView | '') => void;
+	} = $props();
 
 	// Its own component so the page keeps one query; the staff layout already fetched this.
 	const caps = $derived((await getStaffLayout()).capabilities);
 	const views = $derived(
-		inventoryListViews.filter((v) => hasCapability(caps, inventoryListViewMeta[v].capability))
+		inventorySectionViews[section].filter((v) =>
+			hasCapability(caps, inventoryListViewMeta[v].capability)
+		)
 	);
 </script>
 

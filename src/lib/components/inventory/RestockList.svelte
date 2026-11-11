@@ -12,17 +12,22 @@
 	import { ReceiveStockAction } from '#lib/components/actions/index.js';
 	import { resolve } from '$app/paths';
 	import { getRestockList, markOrdered } from '#lib/remote/inventory.remote.js';
+	import type { InventorySection } from '#lib/config.js';
 
 	/**
-	 * The at-or-below-reorder-point view of the Inventory list (#2021): unpaginated
+	 * The at-or-below-reorder-point view of a section's list (#2021): unpaginated
 	 * and grouped by category, because it is the list taken on a shop trip. "Buy"
 	 * already has what is on order taken off it.
 	 */
-	let { search = '', categoryId = '' }: { search?: string; categoryId?: string } = $props();
+	let {
+		section,
+		search = '',
+		categoryId = ''
+	}: { section: InventorySection; search?: string; categoryId?: string } = $props();
 
 	let picked = $state<Record<string, boolean>>({});
 
-	const data = $derived(await getRestockList());
+	const data = $derived(await getRestockList(section));
 	const needle = $derived(search.trim().toLowerCase());
 	const rows = $derived(
 		data.rows.filter(

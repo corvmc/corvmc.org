@@ -29,9 +29,9 @@ test.describe('inventory intake', () => {
 		page
 	}) => {
 		await loginAsStaff(page);
-		// Reached from Inventory's header, which names it for what it does (#1937).
-		await page.goto('/staff/inventory');
-		await page.locator('[data-page-header] a[href="/staff/inventory/intake"]').click();
+		// Reached from Supplies as well as Gear: one intake files into either (#2573).
+		await page.goto('/staff/inventory/supplies');
+		await page.locator('a[href="/staff/inventory/intake"]').click();
 		await page.waitForURL(/\/staff\/inventory\/intake$/, { timeout: 15000 });
 		// A walk-in arrival, not one posted against an order.
 		await expect(page.locator('input#lineQty_0')).toBeVisible();

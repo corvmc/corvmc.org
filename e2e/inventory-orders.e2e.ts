@@ -30,7 +30,7 @@ test.describe('purchase orders', () => {
 	 */
 	test('an order suppresses the restock ask and survives a partial delivery', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/inventory?show=restock');
+		await page.goto('/staff/inventory/supplies?show=restock');
 
 		const row = page.getByRole('row').filter({ hasText: SEED_ORDER_ITEM_NAME });
 		await expect(row).toContainText(String(SEED_ORDER_ITEM_REORDER_QUANTITY));
@@ -64,7 +64,7 @@ test.describe('purchase orders', () => {
 		expect(lines[0].quantityOrdered).toBe(SEED_ORDER_ITEM_REORDER_QUANTITY);
 
 		// Still at or below its point, so still listed — but no longer asked for.
-		await page.goto('/staff/inventory?show=restock');
+		await page.goto('/staff/inventory/supplies?show=restock');
 		// Columns: item, on hand, reorder at, buy, on order.
 		const afterCells = page
 			.getByRole('row')

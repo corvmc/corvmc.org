@@ -90,7 +90,7 @@
 		? [
 				{
 					label: m.staff_order_label(),
-					href: withQuery(resolve('staff/inventory'), 'show=on-order')
+					href: withQuery(resolve('staff/inventory/supplies'), 'show=on-order')
 				},
 				{
 					label: m.staff_order_2_label(),

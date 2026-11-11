@@ -10,6 +10,8 @@
 	import { resolve } from '$app/paths';
 	import { getEquipmentReportQueue } from '#lib/remote/work-requests.remote.js';
 	import TriageTable from '#lib/components/ui/TriageTable.svelte';
+	import StaffViews from '../../StaffViews.svelte';
+	import { gearViews } from '../views';
 
 	const stages = [
 		{ value: 'untriaged', label: m.staff_inventory_problems_needs_triage_label() },
@@ -42,7 +44,9 @@
 	}
 </script>
 
-<PageHeader title={m.staff_inventory_problems_title()} />
+<PageHeader title={m.staff_gear_title()} documentTitle={m.staff_gear_problems_label()}>
+	<StaffViews views={gearViews} active="problems" />
+</PageHeader>
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
 		{#snippet search()}
