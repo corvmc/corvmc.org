@@ -206,20 +206,23 @@ describe('the same entries from either page', () => {
 		expect(logOf('viaShift')).toEqual(logOf('viaTask'));
 	});
 
-	it('names the fields a shift edit changed, leaving times to rescheduled', async () => {
+	it('names the fields a task edit and a shift edit changed, leaving times to rescheduled', async () => {
 		twins();
 		viaShiftShift();
-		await shifts.updateShift('viaShift', { capacity: 3, title: 'Prime', notes: 'Bring rollers' });
+		await shifts.editTask('viaShift', { title: 'Prime' });
+		await shifts.editShift('sh', { capacity: 3, notes: 'Bring rollers' });
 
 		expect(logOf('viaShift')).toEqual([
-			{ action: 'work_order.edited', details: { fields: ['title', 'capacity', 'notes'] } }
+			{ action: 'work_order.edited', details: { fields: ['title'] } },
+			{ action: 'work_order.edited', details: { fields: ['capacity', 'notes'] } }
 		]);
 	});
 
 	it('records nothing for an edit that changed nothing', async () => {
 		twins();
 		viaShiftShift();
-		await shifts.updateShift('viaShift', { capacity: 2, title: 'viaShift' });
+		await shifts.editTask('viaShift', { title: 'viaShift' });
+		await shifts.editShift('sh', { capacity: 2 });
 
 		expect(logOf('viaShift')).toEqual([]);
 	});

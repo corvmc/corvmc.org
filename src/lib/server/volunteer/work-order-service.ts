@@ -8,19 +8,7 @@ import {
 } from '#lib/server/db/schema/volunteer.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import {
-	and,
-	asc,
-	count,
-	desc,
-	eq,
-	getTableColumns,
-	gte,
-	inArray,
-	isNull,
-	lte,
-	sql
-} from 'drizzle-orm';
+import { and, asc, count, eq, getTableColumns, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/errors.js';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import {
@@ -292,127 +280,6 @@ export async function openShift(
 		}
 	});
 	return shift;
-}
-
-/**
- * The shift a task-shaped page shows and edits: its latest live shift, or its
- * latest shift when every one was called off. Pages that show one shift per
- * task read through this until they list every shift.
- */
-export async function getCurrentShift(workOrderId: string): Promise<VolunteerShift | null> {
-	const [row] = await db
-		.select()
-		.from(volunteerShift)
-		.where(eq(volunteerShift.workOrderId, workOrderId))
-		.orderBy(sql`${volunteerShift.cancelledAt} is not null`, desc(volunteerShift.startsAt))
-		.limit(1);
-	return row ?? null;
-}
-
-/**
- * Edit a task and, when it has one, its current shift. Times, places and the
- * briefing are the shift's; the rest is the task's. Times on a task with no
- * live shift open one.
- */
-export async function updateShift(
-	id: string,
-	data: {
-		volunteerRoleId?: string;
-		eventId?: string | null;
-		assetId?: string | null;
-		title?: string | null;
-		startsAt?: string;
-		endsAt?: string;
-		capacity?: number;
-		notes?: string | null;
-		updatedByUserId?: string;
-	}
-): Promise<Task> {
-	const existing = await getWorkOrderById(id);
-	if (!existing) throw new ShiftNotFoundError();
-	const current = await getCurrentShift(id);
-	const shift = current && !current.cancelledAt ? current : null;
-
-	const startsAt = data.startsAt ? parseLocal(data.startsAt, 'Start') : shift?.startsAt;
-	const endsAt = data.endsAt ? parseLocal(data.endsAt, 'End') : shift?.endsAt;
-	if (startsAt && endsAt) {
-		validateTimes(startsAt, endsAt);
-	} else if (startsAt || endsAt) {
-		throw new ShiftValidationError('Give this both a start and an end, or neither.');
-	}
-
-	// Shrinking below what's already taken would leave people on a shift that no
-	// longer has room for them.
-	if (data.capacity !== undefined) {
-		validateCapacity(data.capacity);
-		const claimed = shift ? await countActiveSignups(shift.id) : 0;
-		if (data.capacity < claimed) {
-			throw new ShiftValidationError(
-				`${claimed} ${claimed === 1 ? 'person has' : 'people have'} already claimed this. ` +
-					`Cancel a claim before reducing it below ${claimed}.`
-			);
-		}
-	}
-
-	const roleId = data.volunteerRoleId || existing.volunteerRoleId;
-	const opening = !shift && startsAt && endsAt;
-	if (opening && !roleId) {
-		throw new ShiftValidationError('Give the task a volunteer role before opening a shift on it.');
-	}
-
-	const now = new Date();
-	const notes = data.notes !== undefined ? validateNotes(data.notes) : undefined;
-	const updateTask = db
-		.update(workOrder)
-		.set({
-			...(data.volunteerRoleId ? { volunteerRoleId: data.volunteerRoleId } : {}),
-			...(data.eventId !== undefined ? { eventId: data.eventId || null } : {}),
-			...(data.assetId !== undefined ? { assetId: data.assetId || null } : {}),
-			...(data.title !== undefined ? { title: validateTitle(data.title) } : {}),
-			...(notes !== undefined && !shift && !opening ? { notes } : {}),
-			updatedAt: now
-		})
-		.where(eq(workOrder.id, id))
-		.returning();
-
-	const shiftWrite = shift
-		? db
-				.update(volunteerShift)
-				.set({
-					startsAt: startsAt ?? shift.startsAt,
-					endsAt: endsAt ?? shift.endsAt,
-					...(data.capacity !== undefined ? { capacity: data.capacity } : {}),
-					...(notes !== undefined ? { notes } : {}),
-					updatedAt: now
-				})
-				.where(eq(volunteerShift.id, shift.id))
-				.returning()
-		: opening
-			? db
-					.insert(volunteerShift)
-					.values({
-						workOrderId: id,
-						startsAt: startsAt!,
-						endsAt: endsAt!,
-						capacity: data.capacity ?? existing.pendingCapacity ?? 1,
-						notes: notes ?? null,
-						anchor: existing.anchor,
-						createdByUserId: data.updatedByUserId ?? null
-					})
-					.returning()
-			: null;
-
-	const [[row], after] = shiftWrite
-		? await db.batch([updateTask, shiftWrite])
-		: [await updateTask, [shift] as const];
-
-	const afterView = auditView(toTask(row), after[0] ?? null);
-	// Opening a shift is a new time, not a change of places.
-	const beforeView = shift
-		? auditView(existing, shift)
-		: { ...auditView(existing, null), capacity: afterView.capacity };
-	await auditWorkOrderChange(beforeView, afterView);
-	return toTask(row);
 }
 
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
@@ -1001,7 +868,7 @@ function shiftRowsQuery() {
 		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId));
 }
 
-/** One row per task, with its current shift (see `getCurrentShift`) when it has one. */
+/** One row per task, with its latest live shift (else its latest) when it has one. */
 function taskRowsQuery() {
 	const current = sql`${volunteerShift.id} = (
 		select s2."id" from "volunteer_shift" s2

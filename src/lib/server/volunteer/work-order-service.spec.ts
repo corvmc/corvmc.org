@@ -54,8 +54,8 @@ import {
 	listShifts,
 	listWorkOrders,
 	openShift,
-	resolveWorkOrder,
-	updateShift
+	editTask,
+	resolveWorkOrder
 } from './work-order-service';
 
 /** The rendered WHERE clause of the query that ran. */
@@ -186,13 +186,13 @@ describe('listShifts', () => {
 	});
 });
 
-describe('updateShift and the event link', () => {
+describe('editTask and the event link', () => {
 	beforeEach(() => {
 		selectResult = [shiftRow()];
 	});
 
 	it('attaches an event', async () => {
-		await updateShift('shift-1', { eventId: 'event-2' });
+		await editTask('shift-1', { eventId: 'event-2' });
 
 		expect(updatedColumns().eventId).toBe('event-2');
 	});
@@ -204,7 +204,7 @@ describe('updateShift and the event link', () => {
 	 * `eventId` (the role page's create modal, say) must not wipe the link.
 	 */
 	it('detaches the event when the field arrives empty', async () => {
-		await updateShift('shift-1', { eventId: '' });
+		await editTask('shift-1', { eventId: '' });
 
 		const set = updatedColumns();
 		expect('eventId' in set).toBe(true);
@@ -212,7 +212,7 @@ describe('updateShift and the event link', () => {
 	});
 
 	it('leaves the event alone when the field is absent', async () => {
-		await updateShift('shift-1', { capacity: 3 });
+		await editTask('shift-1', { notes: 'Bring gloves' });
 
 		expect('eventId' in updatedColumns()).toBe(false);
 	});
@@ -242,42 +242,42 @@ describe('createShift and the asset link', () => {
 	});
 });
 
-describe('updateShift and the asset link', () => {
+describe('editTask and the asset link', () => {
 	beforeEach(() => {
 		selectResult = [shiftRow()];
 	});
 
 	it('attaches an asset', async () => {
-		await updateShift('shift-1', { assetId: 'asset-pa' });
+		await editTask('shift-1', { assetId: 'asset-pa' });
 		expect(updatedColumns().assetId).toBe('asset-pa');
 	});
 
 	it('detaches the asset when the field arrives empty', async () => {
-		await updateShift('shift-1', { assetId: '' });
+		await editTask('shift-1', { assetId: '' });
 		const set = updatedColumns();
 		expect('assetId' in set).toBe(true);
 		expect(set.assetId).toBeNull();
 	});
 
 	it('leaves the asset alone when the field is absent', async () => {
-		await updateShift('shift-1', { capacity: 3 });
+		await editTask('shift-1', { notes: 'Bring gloves' });
 		expect('assetId' in updatedColumns()).toBe(false);
 	});
 });
 
-describe("a shift's own name", () => {
+describe("a task's own name", () => {
 	beforeEach(() => {
 		selectResult = [shiftRow()];
 	});
 
 	it('trims it, because a heading with trailing space is a heading', async () => {
-		await updateShift('shift-1', { title: '  Spring Deep Clean  ' });
+		await editTask('shift-1', { title: '  Spring Deep Clean  ' });
 		expect(updatedColumns().title).toBe('Spring Deep Clean');
 	});
 
 	/** Same contract as `eventId`: empty means clear, absent means leave alone. */
 	it('clears the name when the field arrives empty', async () => {
-		await updateShift('shift-1', { title: '' });
+		await editTask('shift-1', { title: '' });
 
 		const set = updatedColumns();
 		expect('title' in set).toBe(true);
@@ -285,12 +285,12 @@ describe("a shift's own name", () => {
 	});
 
 	it('leaves the name alone when the field is absent', async () => {
-		await updateShift('shift-1', { capacity: 3 });
+		await editTask('shift-1', { notes: 'Bring gloves' });
 		expect('title' in updatedColumns()).toBe(false);
 	});
 
 	it('refuses one longer than the cap rather than truncating it', async () => {
-		await expect(updateShift('shift-1', { title: 'x'.repeat(101) })).rejects.toThrow(
+		await expect(editTask('shift-1', { title: 'x'.repeat(101) })).rejects.toThrow(
 			/under 100 characters/i
 		);
 	});

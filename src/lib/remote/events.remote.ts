@@ -1466,7 +1466,7 @@ export const updateEvent = form(
 		if (data.location !== undefined) updateParams.location = data.location || null;
 		if (data.address !== undefined) updateParams.address = data.address.trim() || null;
 		// An empty string detaches, an absent field leaves it alone — the same
-		// distinction `updateShift` draws for its own event link, and for the same
+		// distinction `updateTask` draws for its own event link, and for the same
 		// reason: a form that omits the field must not silently clear it.
 		if (data.venueId !== undefined) updateParams.venueId = data.venueId || null;
 		if (data.externalTicketUrl !== undefined) {
