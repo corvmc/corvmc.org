@@ -117,6 +117,11 @@ each are in
 | Identity and claiming        | External acts: `directory_entry` with both FKs null                |
 | Member-to-member contact     | DMs as request/accept/decline, `user_block`                        |
 
+`directory_tag.kind` is `genre`, `instrument`, `seeking_instrument` or `skill`. A member lists what
+they play and, as `skill`, what else they do (sound engineer, photographer); a band lists what it
+needs as `seeking_instrument`. Values are free text, lower-cased, with suggestions drawn from what
+members have already typed.
+
 ### The scope ladder
 
 `directory_entry`, `group` and `band_site` look like three peers and are not. They sit at
@@ -365,7 +370,11 @@ The bar for what "worked out" looks like, and the thing to imitate rather than r
   three surfaces, merged from three per-domain tables.
 - **Polymorphic booking.** `reservation.bookerType` over
   `['user','group','event','instructor']`.
-- **Polymorphic attachment.** `media` / `media_attachment` over `attachableTypes`.
+- **Polymorphic attachment.** `media` / `media_attachment` over `attachableTypes`. No write
+  path deletes an R2 object: a row detaches, and `/api/cron/sweep-media` reaps objects nothing
+  points at, after a grace window. A count across parents goes through
+  `liveAttachmentCondition()`. See
+  [uploads are detached and swept](../decisions/0026-uploads-are-detached-and-swept.md).
 - **One vocabulary file.** [config.ts](../../src/lib/config.ts), imported by schema _by
   relative path_ — a `$lib` alias breaks `db:generate`.
 

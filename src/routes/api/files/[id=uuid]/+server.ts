@@ -17,8 +17,7 @@ import { contentDispositionAttachment } from '#lib/server/storage-keys.js';
  *
  * An API route rather than a remote function because it returns a stream, not
  * JSON — which is also why the upload and the delete are *not* here. Those are
- * remote forms in `#lib/remote/files.remote.js`; the spec's routes table listed
- * a `DELETE` verb only because this `GET` was already in it.
+ * remote forms in `#lib/remote/files.remote.js`.
  */
 export const GET: RequestHandler = async ({ params }) => {
 	// Read the row first. The group this authorizes against comes from stored

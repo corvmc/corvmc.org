@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { sourceFiles } from './lib/source-files';
 
 /**
- * Guards the phase-3a fold in `docs/specs/groups-spec.md`: `band_genre`,
+ * Guards the phase-3a fold in `docs/decisions/0024-groups-split-the-band-table-by-purpose.md`: `band_genre`,
  * `user_genre` and `user_instrument` became one `directory_tag` table
  * discriminated by `kind`.
  *

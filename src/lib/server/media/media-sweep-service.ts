@@ -26,7 +26,7 @@ import { MEDIA_SWEEP_GRACE_MS } from '#lib/config.js';
 import { and, eq, lt, sql, notExists, inArray, type SQLWrapper } from 'drizzle-orm';
 
 /**
- * The reaper behind the rule in docs/specs/shipped/media-spec.md:
+ * The reaper behind the rule in docs/decisions/0026-uploads-are-detached-and-swept.md:
  *
  *   An R2 object is never deleted as a side effect of deleting a row.
  *

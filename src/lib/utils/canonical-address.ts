@@ -21,9 +21,9 @@ import { baseDomainFromSiteUrl } from './band-site-url';
  * Who the address belongs to.
  *
  * `external` is a directory entry with neither a user nor a group — a visiting
- * act on a lineup. `groups-spec.md` is explicit that such an entry has "no
- * public profile, no share link, no short id", so it is a case this module
- * answers `null` to rather than one it has no branch for.
+ * act on a lineup. Such an entry has no page, slug or share link
+ * (`docs/decisions/0022-external-acts-are-staff-records-with-private-contacts.md`), so it is a case this
+ * module answers `null` to rather than one it has no branch for.
  */
 export type AddressSubject =
 	| { kind: 'member'; memberNumber: number | null | undefined }

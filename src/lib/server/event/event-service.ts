@@ -1890,9 +1890,9 @@ export interface LineupRow {
 	 * Where to send someone for an act with no CMC page — the first link the act
 	 * gave. Null when they gave none, and then the name renders as plain text.
 	 *
-	 * This is the third case in the spec's render table. `bandSlug` covers
-	 * "confirmed, entry has an owner"; this covers "confirmed, entry has no
-	 * owner"; neither is set for the rest.
+	 * The third way a credit renders: `bandSlug` covers "confirmed, entry has an
+	 * owner"; this covers "confirmed, entry has no owner"; neither is set for the
+	 * rest. See docs/decisions/0022-external-acts-are-staff-records-with-private-contacts.md.
 	 */
 	externalUrl: string | null;
 	/** The CMC band's avatar storage key; resolve it with `toBandRef`. */
@@ -2644,7 +2644,7 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 			userId: createdByUserId,
 			// `'group'` since #855. The discriminator says which table `booker_id`
 			// points at; free-versus-paid is `group.kind`, and only a band pays —
-			// groups-spec.md § Room time keeps those two apart on purpose.
+			// docs/decisions/0024-groups-split-the-band-table-by-purpose.md keeps those two apart on purpose.
 			bookerType: 'group',
 			hardHold: true,
 			bookerId: groupId,
@@ -2895,7 +2895,7 @@ export async function cancelGroupSession(
  * (#808) and reads resolve through `eventPosterKeySql`. The previous poster is
  * *detached*, never deleted here, because a recurring series' occurrences may
  * share one object and only the sweep can see that.
- * See docs/specs/shipped/media-spec.md.
+ * See docs/decisions/0026-uploads-are-detached-and-swept.md.
  */
 async function writeEventPoster(
 	eventId: string,

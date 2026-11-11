@@ -82,7 +82,7 @@ export const createGroupSession = form(
 		...listingFields
 	}),
 	async (data, issue) => {
-		// Owner or admin, matching the spec's role table: members read the
+		// Owner or admin, matching the group role table: members read the
 		// calendar, they do not put things on it. `requireProgramRole`, not
 		// `requireGroupRole`: this is the one member-reachable path that holds the
 		// room for free, and that privilege travels with `kind`. A band admin

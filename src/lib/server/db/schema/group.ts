@@ -24,7 +24,7 @@ import { groupKinds, groupJoinPolicies } from '../../../config';
  * (`tagline`, `hometown`, `links`, `directoryVisibility`, …) live on
  * `directory_entry` and the premium ones (`tier`, `subscription`, the
  * `customDomain*` set) on `band_site`. What is left is what a group *is* — an
- * identity, a roster policy, and a slug. See docs/specs/shipped/groups-spec.md.
+ * identity, a roster policy, and a slug. See docs/decisions/0024-groups-split-the-band-table-by-purpose.md.
  */
 export const group = sqliteTable(
 	'group',

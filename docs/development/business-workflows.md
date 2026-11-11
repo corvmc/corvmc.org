@@ -334,8 +334,11 @@ Subscription/Invoice objects.
 
 ## 4. Bands: creation, invitations, premium pages
 
-Spec: [specs/bands-spec.md](../specs/shipped/bands-spec.md) ·
-[specs/staff-bands-spec.md](../specs/shipped/staff-bands-spec.md)
+Records: [groups split the band table](../decisions/0024-groups-split-the-band-table-by-purpose.md) ·
+[band addresses](../decisions/0025-every-band-gets-a-subdomain-premium-gets-a-domain.md) ·
+[a club gets a page](../decisions/0021-a-club-gets-a-page-not-a-panel.md) ·
+[announcements](../decisions/0023-group-announcements-are-transactional-and-batched.md) ·
+[external acts](../decisions/0022-external-acts-are-staff-records-with-private-contacts.md)
 
 ### The story
 
@@ -374,11 +377,20 @@ premium subscription that unlocks a public band microsite.
   member-editable page config in `bandPageConfig` — custom CSS passes through `css-sanitizer.ts`.
 - **Staff moderation:** `staff/bands` pages → the staff forms in `bands.remote.ts`
   (`deactivateBand`, `reactivateBand`, `updateStaffBand`, ...), each guarded on a `band.*` capability.
+- **Addresses:** every band answers at `{slug}.corvmc.org`. `handleBandSubdomain` in
+  `src/hooks.server.ts` lets a premium band through to its microsite and 302s anything else to the
+  group's public page. A premium owner can attach a custom domain (`band-custom-domain.remote.ts` →
+  `custom-domain-service.ts`, a Cloudflare for SaaS hostname with TXT validation); `reroute` in
+  `src/hooks.ts` resolves such hosts through `/api/host-route`, KV-cached for five minutes. A rename
+  does not move the address: the owner changes it with `changeBandAddress` →
+  `changeBandSlug()` in `band-address-service.ts`, three times per 30 days. The released slug goes
+  into `group_slug_history`, and `resolveBandSlug()` 302s it to the new address until another group
+  claims it.
 
 ### Data touched
 
-`group`, `groupMember`, `groupInvite`, `bandPageConfig`, `bandMedia`, Stripe subscription
-(band premium).
+`group`, `groupMember`, `groupInvite`, `groupSlugHistory`, `bandSite`, `bandPageConfig`,
+`directoryEntry`, Stripe subscription (band premium).
 
 ### Where it breaks
 
@@ -388,6 +400,41 @@ premium subscription that unlocks a public band microsite.
 - **Premium page not appearing** → the band's `band_site.tier` is not `premium`, so
   subscription state didn't sync — check the `customer.subscription.*` webhook deliveries
   and `syncFromWebhook`.
+- **Custom domain section says it is unavailable** → `CLOUDFLARE_API_TOKEN` or
+  `CLOUDFLARE_ZONE_ID` is unset (`isCustomDomainConfigured()`).
+
+### Clubs and committees
+
+Staff create clubs and committees from `/staff/groups` (`createStaffGroup`, `group.manage`), and
+appoint their chairs; a program has admins and no owner. Staff alone set a program's `joinPolicy` and
+listing visibility (`updateStaffGroup`). Members find programs on `/member/groups` and use one
+tabbed page per program, `/member/groups/[slug]`, loaded by `getMemberGroup`. `open` programs take
+`joinGroupForm`; `by_application` programs take applications (§24).
+
+- **Sessions:** `group-events.remote.ts` → `createGroupEvent()` in `event-service.ts`.
+  `requireProgramGroup()` (`src/lib/server/group/group-kind.ts`) refuses a band, so only a program
+  holds the room free: a `confirmed` reservation with `bookerType: 'group'`, after a `hasConflict`
+  check. The recurring generator re-checks the kind.
+- **Announcements** (bands too): an announcement is a `channel: 'group'` inbox thread with
+  `post_policy: 'leadership'` (`announcement-service.ts`). Publishing emits an event; the listener in
+  `announcement-fanout.ts` latches on `notified_at`, reads recipients in one query (active, not
+  muted on `group_member.notifyAnnouncements`, not the author), inserts in-app rows in chunks, and
+  emails through `sendTemplateBatch()` on the transactional stream.
+- **Documents** (clubs and committees only): `files.remote.ts` → `file-service.ts`, into
+  `R2_PRIVATE`, capped at 250 MB and 50 files per group. `GET /api/files/[id]` authorizes against
+  the file's own group with `requireGroupRole(…, 'member', { allowStaff: true })` and answers
+  `private, no-store`, `Vary: Cookie`, as an attachment. Removing a document sets `deletedAt`;
+  `sweepGroupFiles()` in the media sweep reclaims the object.
+
+### External acts
+
+An act CMC books that has no account is a `directory_entry` with no user and no group, forced
+hidden (`createExternalAct()` in `src/lib/server/directory/entry-service.ts`, from
+`external-acts.remote.ts` under `event.manage`). Its private booking details are a `contact` row,
+read and written only through `contact-service.ts`. Staff can send a contact-sheet link
+(`issueContactSheetLink()` in `contact-sheet-service.ts`, `directory.shareContactSheet`): the act
+edits its own details at `/act/[token]` for 30 days, with no session, and cannot change its name.
+`claimExternalAct()` turns the entry into a band and archives the contact.
 
 ---
 
@@ -1406,8 +1453,8 @@ already enforces it. Nothing new claims, assigns, or notifies.
 
 ## 13. Music and CMC Radio
 
-Behind two flags: `bandAudio` (the storefront) and `cmcRadio` (the station). Design
-rationale in [band-audio-spec.md](../specs/shipped/band-audio-spec.md).
+Behind two flags: `bandAudio` (the storefront) and `cmcRadio` (the station). Record:
+[band music sells files](../decisions/0027-band-music-sells-files-and-the-radio-plays-a-timetable.md).
 
 ### The story
 
@@ -1446,8 +1493,7 @@ entry, the next three, and the **server's clock**; the widget in the root layout
 seeks to `serverNow − startsAt`. A release plays only while its attestation is
 current: given to today's wording of `RADIO_PRO_ATTESTATION` (originals only, by
 band members who belong to no PRO) and under a year old. The reminder registry
-tells the band's admins 30 and 7 days before it lapses; see
-[band-audio-spec.md](../specs/shipped/band-audio-spec.md#the-radio-plays-only-what-costs-nothing-to-license).
+tells the band's admins 30 and 7 days before it lapses.
 
 ### Data touched
 
@@ -1618,7 +1664,7 @@ restore crew shifts or retract a cancellation notice.
 
 ## 15. The packing list: what goes in the van, and who is bringing it
 
-Spec: [specs/shipped/packing-list-spec.md](../specs/shipped/packing-list-spec.md)
+Record: [one durable packing list per band](../decisions/0029-one-durable-packing-list-per-band.md)
 
 ### The story
 
@@ -1733,7 +1779,7 @@ Spec: [specs/shipped/work-orders-as-tasks-spec.md](../specs/shipped/work-orders-
 
 ## 17. The local resources directory
 
-Spec: [specs/local-resources-spec.md](../specs/shipped/local-resources-spec.md)
+Record: [local resources are their own table](../decisions/0028-local-resources-are-their-own-table.md)
 
 ### The story
 
@@ -2101,8 +2147,8 @@ the suggestion, and moves the suggestion to Planned. The project's staff page sh
 
 ## 24. Group applications: applying to a club or a committee
 
-Spec: [specs/group-applications-spec.md](../specs/shipped/group-applications-spec.md) (#1700; decisions
-#1727–#1730)
+Record: [one application mechanism](../decisions/0030-one-application-mechanism-for-clubs-and-committees.md) (#1700;
+decisions #1727–#1730)
 
 ### The story
 
@@ -2161,6 +2207,44 @@ nothing is open for that group.
   and `submitApplication` refuses it. Open choices stay answerable.
 - **`group.manage` alone cannot decide an application.** A staffer who is not the group's owner or
   admin sees no card. On a committee they need `committee.reviewApplications`.
+
+## 25. Classifieds: wanted and offered posts
+
+Switched off: `surfaces.classifieds` in `src/lib/config.ts` is `false` (#2116), so every route and
+remote 404s through `requireSurface('classifieds')` until a deploy turns it on.
+
+### The story
+
+A member posts a short wanted or offered notice in a category, optionally tagged and optionally
+posted as a band they run. It stays on `/member/classifieds` for 30 days unless the author renews
+it, and the author closes it once it is filled. Others answer by direct message, or through the
+author's or band's profile when direct messages are off. A report withholds the post until staff
+decide.
+
+### Code path
+
+- **Post:** `createClassified` → `createPost()` in
+  `src/lib/server/classified/classified-service.ts`. At most `MAX_OPEN_CLASSIFIEDS` (5) open,
+  unexpired posts per member. An author whose `classified` standing is restricted posts into
+  `pending_review`.
+- **On the board:** `status = 'open'`, `visibility = 'visible'` and `expires_at` in the future,
+  computed at read time (`onBoard`); no cron job expires anything. The author and staff see a post
+  in every state; anyone else gets a 404.
+- **Edit, renew, close:** author only. An edit to a hidden post, or by a restricted author, returns
+  it to `pending_review`. A renewal resets `expires_at` and refuses a closed or hidden post.
+- **Report:** `reportClassified` files a `content_flag` (`classified_post`), and `createFlag` moves
+  the post to `under_review`. Resolving the flag in `flag-service.ts` hides an upheld post with the
+  staff note and restores a dismissed one; an upheld report also restricts the author's
+  `classified` standing.
+- **Staff:** `/staff/classifieds` under `listing.review`; `moderateClassified` hides (a note is
+  required) or restores.
+
+### Data touched
+
+`classified_post`, `classified_post_tag` (instrument, genre and skill values normalised like
+`directory_tag`), `content_flag`, `member_standing`.
+
+---
 
 ## Cross-cutting patterns worth internalizing
 

@@ -67,8 +67,7 @@ describe('canonicalAddress — groups', () => {
 });
 
 describe('canonicalAddress — external acts', () => {
-	// groups-spec.md: an external act has "no public profile, no share link, no
-	// short id". Null here is what makes the share affordance simply absent.
+	// An external act has no page, slug or share link (docs/decisions/0022-external-acts-are-staff-records-with-private-contacts.md). Null here is what makes the share affordance simply absent.
 	it('never has an address', () => {
 		expect(canonicalAddress({ kind: 'external' }, { siteUrl: SITE })).toBeNull();
 	});

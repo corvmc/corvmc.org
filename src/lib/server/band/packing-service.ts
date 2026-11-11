@@ -23,7 +23,7 @@ import {
  *
  * **Takes-no-argument enforces each rule, not a role check** — `saveOwnItems`
  * takes no owner and `claimItem` no assignee, because the flag is the thing
- * that gets passed wrong. Rationale: docs/specs/packing-list-spec.md
+ * that gets passed wrong. Record: docs/decisions/0029-one-durable-packing-list-per-band.md
  */
 
 /** More things than any real band's van, and than one payload should carry. */
@@ -137,7 +137,7 @@ const categoryRank = new Map(packingCategories.map((c, i) => [c, i]));
  *
  * **Category, not `sortOrder`.** `sortOrder` is dense *within one owner's rows*,
  * so two members each holding position 0 would otherwise interleave by whoever
- * saved last. See the spec's "ordering comes from category".
+ * saved last. See docs/decisions/0029-one-durable-packing-list-per-band.md.
  */
 export function compareItems(
 	a: Pick<PackingItemView, 'category' | 'sortOrder' | 'label'>,
@@ -305,7 +305,7 @@ export async function getPackingList(groupId: string): Promise<PackingListView> 
  * A packing item holds `packed`, `assignedUserId` and `promotedAt` — state
  * nobody typed — so a rebuild would unpack the van on every spelling fix. Ids
  * are scoped by `(listId, ownerUserId)`; one the filter did not return is
- * rejected, never adopted. See the spec's "the save is a diff".
+ * rejected, never adopted. See docs/decisions/0029-one-durable-packing-list-per-band.md.
  */
 async function applyItemsForOwner(
 	listId: string,
@@ -445,7 +445,7 @@ async function requireItem(groupId: string, itemId: string) {
  * **Takes no assignee**, so no code path puts a row on somebody else. The write
  * carries its own `assigned_user_id IS NULL` predicate and reports zero rows as
  * `PackingAlreadyClaimedError` — expected, not exceptional, because a
- * read-then-write loses the first claim. Spec: "claimItem is a conditional write".
+ * read-then-write loses the first claim.
  */
 export async function claimItem(groupId: string, callerUserId: string, itemId: string) {
 	const { head } = await requireItem(groupId, itemId);
@@ -585,7 +585,7 @@ export async function resetPacked(
  * **Takes no owner**, like every other own-rows verb here. `promotedAt` is
  * stamped whether or not anything was added, because it records that the band
  * made the decision — the live "is it there" answer is the label match
- * `getPackingList` computes on read. Rationale: docs/specs/packing-list-spec.md
+ * `getPackingList` computes on read. Record: docs/decisions/0029-one-durable-packing-list-per-band.md
  */
 export async function promoteOwnItems(
 	groupId: string,

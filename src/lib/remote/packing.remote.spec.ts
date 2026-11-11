@@ -6,7 +6,7 @@ import { mockUser } from '#lib/server/db/test-factory.js';
  *
  * These pin the shape the whole feature's safety rests on: the member-facing
  * writes take no owner and no assignee, so the guard's user is the only thing
- * that can reach the service. Spec: docs/specs/shipped/packing-list-spec.md
+ * that can reach the service. Record: docs/decisions/0029-one-durable-packing-list-per-band.md
  */
 
 class FakeAlreadyClaimed extends Error {

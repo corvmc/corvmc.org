@@ -86,7 +86,7 @@ export type CustomDomainVerification = z.infer<typeof customDomainVerificationSc
  *
  * Vocabularies still live in `group.ts` alongside the columns they describe;
  * they move here in the phase that drops those columns. See
- * docs/specs/shipped/groups-spec.md.
+ * docs/decisions/0024-groups-split-the-band-table-by-purpose.md.
  */
 export const bandSite = sqliteTable(
 	'band_site',

@@ -313,9 +313,8 @@ export async function countAttachments(mediaId: string): Promise<number> {
  * the last sweep. This returns the `EXISTS` predicate that excludes them, one
  * arm per `attachableType`, so there is a single place that has to be right.
  *
- * Note this is narrower than `docs/specs/shipped/media-spec.md` claims: the spec says a
- * per-group quota needs it, and a per-group quota does not, because it filters
- * to a live group's id already. Global reporting totals are the real case.
+ * A per-group quota does not need it, because it filters to a live group's id
+ * already. Global reporting totals are the real case.
  */
 export function liveAttachmentCondition(): SQL {
 	return sql`(

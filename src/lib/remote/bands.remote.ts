@@ -162,7 +162,7 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 	// `allowStaff`, like every band-panel read below it. `getBandLayout` admits a
 	// staff non-member and reports `userRole: 'staff'`, but the member-only guard
 	// these carried 403'd them — so staff rendered the panel frame and every card
-	// inside it failed. See groups-spec.md § The guard.
+	// inside it failed.
 	const { group: band } = await requireGroupRole({ id: bandId }, 'member', { allowStaff: true });
 	const now = new Date();
 	const rows = await db

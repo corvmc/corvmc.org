@@ -226,7 +226,7 @@ export const DELETE: RequestHandler = async ({ params, url }) => {
 
 	// Detach only. Nothing here deletes the R2 object: another band, or another
 	// slot, may still point at it, and only `/api/cron/sweep-media` can see the
-	// whole reference graph. See docs/specs/shipped/media-spec.md.
+	// whole reference graph. See docs/decisions/0026-uploads-are-detached-and-swept.md.
 	await detach(row.id);
 
 	return Response.json({ success: true });
