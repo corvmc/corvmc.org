@@ -86,6 +86,10 @@ Anything that adds schema or spans several files follows the nine phases in
 (`scripts/seed-dev.ts`), the feature catalog row, and `pnpm docs:routes && pnpm docs:check` if a
 route moved.
 
+**Proposals live on the issue, never in the repo.** Each build PR updates the living docs for the
+behaviour it changes, and a feature's last PR adds a record to `docs/decisions/`. Do not add files
+to `docs/specs/`; #2525 retires it.
+
 **Where it lands is the first decision.** A member-facing or public feature needing more than one
 PR goes on a long-lived `feature/<slug>` branch; staff-only surfaces, schema and refactors go to
 `main`. `/feature-branch` and `docs/development/conventions.md#long-lived-feature-branches` cover

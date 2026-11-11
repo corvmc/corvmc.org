@@ -5,8 +5,9 @@ system is designed and built; the user manual (`manual/`) describes how to use i
 
 | Folder                           | What's in it                                                                  | Audience            |
 | -------------------------------- | ----------------------------------------------------------------------------- | ------------------- |
-| [`specs/`](#specs)               | Design intent for features that are not built yet                             | Developers          |
-| [`specs/shipped/`](#specs)       | Archived specs — design rationale for features that have shipped              | Developers          |
+| [`decisions/`](decisions/README.md) | Dated decision records — why the app is built the way it is                 | Developers          |
+| [`specs/`](#specs)               | Being retired under #2525 — proposals now live on issues                      | Developers          |
+| [`specs/shipped/`](#specs)       | Being retired under #2525                                                     | Developers          |
 | [`plans/`](#plans)               | Sequenced implementation plans (PR-by-PR); historical once shipped            | Developers          |
 | [`architecture/`](#architecture) | System overview, operations manual, deployment runbook, infra proposals       | DevOps / Developers |
 | [`development/`](#development)   | Contributor guides — quickstart, conventions, workflows, UI patterns, testing | Developers          |
@@ -45,12 +46,11 @@ Library evaluations for unbuilt work moved to
 
 **Status legend:** ✅ Current · 🔧 In progress · 📋 Designed, not built · 📦 Historical (shipped) · ⚠️ Action needed
 
-**Spec lifecycle:** a spec whose feature has shipped no longer describes intent — it describes live
-behavior, which is documentation's job. The **Lifecycle** column below reads **archived** for those:
-their behavior is written up in [business-workflows](development/business-workflows.md) and
-[manual/](manual/README.md), and the file itself sits in `specs/shipped/` for its design rationale.
-**spec** means it still describes something unbuilt and stays in `specs/`. When you ship a feature,
-moving its spec is the last step of the checklist, not an afterthought.
+**Proposals live on issues; the repo keeps living docs and decision records.** A feature's
+proposal is the issue body or a comment, and is never committed. Each build PR updates the docs that
+describe current behaviour, and a feature's last PR adds a record to
+[`decisions/`](decisions/README.md), which indexes its own records. See
+[conventions](development/conventions.md#living-docs-and-decision-records).
 
 **New maintainer? Read in this order:**
 [local-dev-quickstart](development/local-dev-quickstart.md) →
@@ -64,6 +64,9 @@ moving its spec is the last step of the checklist, not an afterthought.
 ---
 
 ## specs
+
+`specs/` is being retired under #2525. New proposals go on the issue; the table below stays until
+then.
 
 `specs/` holds design intent for things that are **not built**. When code and a spec there disagree,
 treat the spec as intent and the code as reality — reconcile deliberately.

@@ -20,10 +20,10 @@ When building a new feature, work through these phases in order:
    `main` — a half-built admin page is a normal intermediate state. `/feature-branch start <slug>`
    sets one up.
 1. **Design** — understand the domain and map the workflows before proposing models. For
-   anything that touches multiple files or introduces schema, write a spec in
-   `docs/specs/` first. `docs/specs/shipped/` holds specs for features that already
-   exist — good templates, and the place to check whether the thing you are designing has
-   been argued about before.
+   anything that touches multiple files or introduces schema, write the proposal on the issue,
+   as its body or a comment, and settle it there. A proposal is never committed. Read
+   [`docs/decisions/`](../decisions/README.md) first to see whether the question has been
+   decided before. [Working out what to build](feature-analysis.md) covers the pass before it.
 2. **Schema** — add columns/tables in `src/lib/server/db/schema/`, then generate the
    migration yourself with `pnpm db:generate` and **review the SQL** before committing.
    Add shared types to `src/lib/types/` if the feature introduces new structures (JSONB
@@ -66,37 +66,35 @@ When building a new feature, work through these phases in order:
    (`docs/reports/feature-catalog.md`) — one row per feature, written in the final phase, because
    that table is a recurring merge conflict when every phase edits it; update/add help
    articles and run the docs checks (see
-   [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below). If the
-   feature had a spec, **retire it now** — see below.
+   [Docs workflow](#docs-workflow-when-you-change-routes-or-help-content) below). The last PR
+   adds the feature's decision record — see
+   [Living docs and decision records](#living-docs-and-decision-records).
 9. **Land** — descriptive message summarizing what the feature adds. **No co-author lines.**
    `Fixes #<n>` in the PR body if it answers an issue, so the queue's merge closes it.
    A phase PR targets its feature branch and merges with `gh pr merge --squash`; the finished
    feature targets `main` and is queued with `gh pr merge --auto`. See
    [Long-lived feature branches](#long-lived-feature-branches).
 
-### Retiring a spec
+### Living docs and decision records
 
-A spec describes what you intend to build. The moment it is built, it describes live
-behavior instead — and a document that describes live behavior with a spec's authority is
-how a doc folder starts lying, because nothing makes anyone update it. `docs/specs/` once held
-23 such files, three of which asserted a feature was unbuilt that had shipped months earlier,
-before an audit sorted them into `docs/specs/shipped/` and this rule got written down.
+The repo documents what the app does now and why it was built that way. What is planned lives on
+the issue.
 
-So when a feature lands, do three things in the same PR:
+**Each build PR updates the docs that describe current behaviour**, in the same PR as the code:
 
-1. **Write the behavior where behavior lives** — a section in
-   [business-workflows.md](business-workflows.md) for anything with a code path worth
-   tracing, and help articles for anything a member or staffer touches. The workflow
-   sections all follow one shape: the story, the code path, data touched, where it breaks.
-2. **Move the spec to `docs/specs/shipped/`** and fix the links that pointed at it. What
-   survives there is the design rationale — the options weighed and rejected — which is the
-   half no manual article ever carries.
-3. **If only part of it shipped, split it.** `specs/shipped/reservation-confirmation-window.md` was
-   the worked example: the shipped phases became prose in business-workflows §1 and the file
-   was rewritten down to the one phase that was never built.
+- [domain-model.md](../architecture/domain-model.md) — what the tables mean.
+- [overview.md](../architecture/overview.md) — how the system is wired.
+- [business-workflows.md](business-workflows.md) — a section for anything with a code path worth
+  tracing: the story, the code path, data touched, where it breaks.
+- [operations-manual.md](../architecture/operations-manual.md) — what staff and operators run.
+- Help articles for anything a member or staffer touches.
 
-Nothing enforces this. It is the last thing anyone feels like doing and the first thing that
-rots, which is exactly why it is written down.
+The update rides with the code so a reviewer reads both together.
+
+**A feature's last PR adds a decision record** in [`docs/decisions/`](../decisions/README.md):
+the context, the decision, the alternatives rejected and the consequences, in a page or less.
+A record is never edited after it merges. A later record supersedes it by number. The format is in
+[the decisions README](../decisions/README.md).
 
 ## Long-lived feature branches
 
