@@ -8,11 +8,11 @@ event bus, cron; this document is about what the tables _mean_ and which shapes 
 
 **Verticals** — a thing the collective does, with its own screens and its own lifecycle:
 
-| Vertical               | What it is                                         | Modules                                                                                                                                                                                 |
-| ---------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Asset management**   | Physical resources: reserve, loan, service, retire | `reservation`, `recurring_series`, `closure`, lock codes, `instructor`, `inventory_*`, `stock_movement`, `acquisition`, `purchase_order`, `contractor_job` (repair), `media`            |
-| **Project management** | Work that has to get done, by someone, by a time   | `project`, `work_order`, `volunteer_signup`, `work_task`, `duty_list*`, `volunteer_hour_log`, certifications, `contractor_job` (commissioned), `event_listing` (CMC-produced), `ticket` |
-| **Social**             | People and the connections between them            | `user`, `directory_entry`, `group`, `group_member`, `band_site`, `suggestion`, `content_flag`, `member_standing`, `user_block`, `event_listing` (band and community)                    |
+| Vertical               | What it is                                         | Modules                                                                                                                                                                                                                           |
+| ---------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Asset management**   | Physical resources: reserve, loan, service, retire | `reservation`, `recurring_series`, `closure`, lock codes, `instructor`, `inventory_*`, `stock_movement`, `acquisition`, `purchase_order`, `contractor_job` (repair), `media`                                                      |
+| **Project management** | Work that has to get done, by someone, by a time   | `project`, `work_order`, `volunteer_shift`, `work_order_assignee`, `volunteer_signup`, `work_task`, `duty_list*`, `volunteer_hour_log`, certifications, `contractor_job` (commissioned), `event_listing` (CMC-produced), `ticket` |
+| **Social**             | People and the connections between them            | `user`, `directory_entry`, `group`, `group_member`, `band_site`, `suggestion`, `content_flag`, `member_standing`, `user_block`, `event_listing` (band and community)                                                              |
 
 **Horizontals** — services every vertical emits into:
 
@@ -39,6 +39,9 @@ resources, which is why they are one vertical rather than "space" and "gear."
 
 **A show is a project.** `duty_list` stamps work orders onto a listing anchored at
 `doors|start|end`; `work_task` is the checklist; `volunteer_signup` is who claimed it.
+A work order is being split into a task and its shifts (#2518): `volunteer_shift` holds a time
+on a task and `work_order_assignee` who staff put on it. Both tables exist and carry copied data;
+the services still read the shift columns on `work_order`.
 `eventKinds` includes `work_party`, which is a project outright. Volunteering is not a
 separate vertical — it is how a work order gets answered.
 
@@ -199,6 +202,11 @@ Availability genuinely differs. The state machine and the settlement do not.
 Someone notices, staff triage, work is raised, the work closes the request. This is the
 industry-standard **work request → work order** pattern; `work_request` is the request and
 `work_order` is the order.
+
+The order is the task: the work, its owner and whether it is done. A `volunteer_shift` is a time
+volunteers sign up for on it, and a `work_order_assignee` is a person staff assigned to it. A
+task has zero or more of each, and marking it done is what closes its reports. An hour log may
+name a shift, a task (`volunteer_hour_log.work_order_id`) or neither.
 
 `content_flag` is the same lifecycle in social, where the "work" is a moderation decision
 rather than a repair — which is why `work_request` shares `flagStatuses` verbatim and

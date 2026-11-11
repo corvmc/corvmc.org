@@ -404,7 +404,16 @@ export const relations = defineRelations(schema, (t) => ({
 		}),
 		postedBy: t.one.user({ from: t.workOrder.postedByUserId, to: t.user.id }),
 		signups: t.many.volunteerSignup(),
-		contractorJobs: t.many.contractorJob()
+		contractorJobs: t.many.contractorJob(),
+		shifts: t.many.volunteerShift(),
+		assignees: t.many.workOrderAssignee()
+	},
+	volunteerShift: {
+		workOrder: t.one.workOrder({ from: t.volunteerShift.workOrderId, to: t.workOrder.id })
+	},
+	workOrderAssignee: {
+		workOrder: t.one.workOrder({ from: t.workOrderAssignee.workOrderId, to: t.workOrder.id }),
+		user: t.one.user({ from: t.workOrderAssignee.userId, to: t.user.id })
 	},
 	volunteerSignup: {
 		shift: t.one.workOrder({ from: t.volunteerSignup.shiftId, to: t.workOrder.id }),
@@ -449,7 +458,8 @@ export const relations = defineRelations(schema, (t) => ({
 		role: t.one.volunteerRole({
 			from: t.volunteerHourLog.volunteerRoleId,
 			to: t.volunteerRole.id
-		})
+		}),
+		workOrder: t.one.workOrder({ from: t.volunteerHourLog.workOrderId, to: t.workOrder.id })
 	},
 	media: {
 		attachments: t.many.mediaAttachment()

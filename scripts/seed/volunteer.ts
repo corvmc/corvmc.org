@@ -8,9 +8,12 @@ import {
 	volunteerRoleCertification,
 	volunteerRoleInterest,
 	workOrder,
+	workOrderAssignee,
+	volunteerShift,
 	volunteerShiftFeedback,
 	volunteerSignup
 } from '../../src/lib/server/db/schema/volunteer';
+import { and, asc, eq, isNotNull, isNull, notInArray } from 'drizzle-orm';
 import { batchInsert, db } from './db';
 import { type SeedEvent, type SeedUser } from './types';
 import { pick, pickN, ptDate, random, randomInt } from './util';
@@ -795,4 +798,84 @@ export async function seedVolunteerHours(
 	// 13 columns × the default batch of 10 is 130 bound parameters, over D1's
 	// 100-variable ceiling for a single statement. 7 × 13 = 91.
 	return batchInsert(volunteerHourLog, [...linked, ...bulk], 7);
+}
+
+/**
+ * The task/shift split (#2518), written beside the old shape until readers move.
+ * Last, because every seeder above writes work orders: each timed one gets a
+ * shift, as the migration did in production. Staff-made sign-ups on untimed
+ * tasks become assignees; one upcoming task gets an assignee beside its shift;
+ * and the first assignee logs hours naming the task.
+ */
+export async function seedTasksAndShifts(roles: { id: string; isActive: boolean | null }[]) {
+	console.log('Seeding shifts and task assignees...');
+	const timed = await db
+		.select()
+		.from(workOrder)
+		.where(and(isNotNull(workOrder.startsAt), isNotNull(workOrder.endsAt)))
+		.orderBy(asc(workOrder.startsAt), asc(workOrder.id));
+	const shifts = await batchInsert(
+		volunteerShift,
+		timed.map((wo) => ({
+			id: randomUUID(),
+			workOrderId: wo.id,
+			startsAt: wo.startsAt!,
+			endsAt: wo.endsAt!,
+			capacity: wo.capacity,
+			anchor: wo.anchor,
+			notes: wo.notes,
+			cancelledAt: wo.cancelledAt,
+			cancelledByUserId: wo.cancelledByUserId,
+			createdByUserId: wo.postedByUserId ?? wo.createdByUserId
+		}))
+	);
+
+	const assigned = await db
+		.select({
+			workOrderId: volunteerSignup.shiftId,
+			userId: volunteerSignup.userId,
+			assignedAt: volunteerSignup.claimedAt,
+			volunteerRoleId: workOrder.volunteerRoleId
+		})
+		.from(volunteerSignup)
+		.innerJoin(workOrder, eq(workOrder.id, volunteerSignup.shiftId))
+		.where(
+			and(
+				isNull(workOrder.startsAt),
+				notInArray(volunteerSignup.status, ['cancelled', 'declined', 'invited'])
+			)
+		)
+		.orderBy(asc(volunteerSignup.shiftId), asc(volunteerSignup.userId));
+
+	const now = new Date();
+	const upcoming = timed.find((wo) => wo.startsAt! > now && !wo.cancelledAt && !wo.resolvedAt);
+	const both =
+		upcoming && assigned[0]
+			? [{ workOrderId: upcoming.id, userId: assigned[0].userId, assignedAt: now }]
+			: [];
+	const assignees = await batchInsert(workOrderAssignee, [
+		...assigned.map(({ workOrderId, userId, assignedAt }) => ({ workOrderId, userId, assignedAt })),
+		...both.filter(
+			(b) => !assigned.some((a) => a.workOrderId === b.workOrderId && a.userId === b.userId)
+		)
+	]);
+
+	const first = assigned[0];
+	const roleId = first?.volunteerRoleId ?? roles.find((r) => r.isActive)?.id;
+	const taskHours =
+		first && roleId
+			? await batchInsert(volunteerHourLog, [
+					{
+						userId: first.userId,
+						volunteerRoleId: roleId,
+						workOrderId: first.workOrderId,
+						workedOn: ptDate(-3, 12),
+						minutes: 120,
+						description: 'Prep for the task, logged after the fact.',
+						status: 'pending' as const
+					}
+				])
+			: [];
+
+	return { shifts: shifts.length, assignees: assignees.length, taskHours: taskHours.length };
 }

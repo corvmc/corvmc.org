@@ -1,7 +1,7 @@
 {
-  "id": "e2381c9a-f9b1-4db5-a929-0544aa0bffe0",
+  "id": "4736c7d2-02d9-4b8b-a6c2-341496c46bab",
   "prevIds": [
-    "537209e9-e387-499b-9c01-a9edb233c039"
+    "c83c93bc-1d03-4086-b1d6-7de1964128fc"
   ],
   "version": "7",
   "dialect": "sqlite",
@@ -359,6 +359,10 @@
       "entityType": "tables"
     },
     {
+      "name": "volunteer_shift",
+      "entityType": "tables"
+    },
+    {
       "name": "volunteer_shift_feedback",
       "entityType": "tables"
     },
@@ -368,6 +372,10 @@
     },
     {
       "name": "work_order",
+      "entityType": "tables"
+    },
+    {
+      "name": "work_order_assignee",
       "entityType": "tables"
     },
     {
@@ -9546,6 +9554,16 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "work_order_id",
+      "entityType": "columns",
+      "table": "volunteer_hour_log"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "group_id",
       "entityType": "columns",
       "table": "volunteer_hour_log"
@@ -9989,6 +10007,126 @@
       "name": "created_at",
       "entityType": "columns",
       "table": "volunteer_role_interest"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "volunteer_shift"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "work_order_id",
+      "entityType": "columns",
+      "table": "volunteer_shift"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "starts_at",
+      "entityType": "columns",
+      "table": "volunteer_shift"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ends_at",
+      "entityType": "columns",
+      "table": "volunteer_shift"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "1",
+      "generated": null,
+      "name": "capacity",
+      "entityType": "columns",
+      "table": "volunteer_shift"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "anchor",
+      "entityType": "columns",
+      "table": "volunteer_shift"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "volunteer_shift"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cancelled_at",
+      "entityType": "columns",
+      "table": "volunteer_shift"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cancelled_by_user_id",
+      "entityType": "columns",
+      "table": "volunteer_shift"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_by_user_id",
+      "entityType": "columns",
+      "table": "volunteer_shift"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "volunteer_shift"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "volunteer_shift"
     },
     {
       "type": "text",
@@ -10539,6 +10677,56 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "work_order"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "work_order_id",
+      "entityType": "columns",
+      "table": "work_order_assignee"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "work_order_assignee"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "assigned_by_user_id",
+      "entityType": "columns",
+      "table": "work_order_assignee"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "assigned_at",
+      "entityType": "columns",
+      "table": "work_order_assignee"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "completed_at",
+      "entityType": "columns",
+      "table": "work_order_assignee"
     },
     {
       "type": "text",
@@ -17482,6 +17670,21 @@
     },
     {
       "columns": [
+        "work_order_id"
+      ],
+      "tableTo": "work_order",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_volunteer_hour_log_work_order_id_work_order_id_fk",
+      "entityType": "fks",
+      "table": "volunteer_hour_log"
+    },
+    {
+      "columns": [
         "group_id"
       ],
       "tableTo": "group",
@@ -17614,6 +17817,51 @@
       "name": "fk_volunteer_role_interest_volunteer_role_id_volunteer_role_id_fk",
       "entityType": "fks",
       "table": "volunteer_role_interest"
+    },
+    {
+      "columns": [
+        "work_order_id"
+      ],
+      "tableTo": "work_order",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_volunteer_shift_work_order_id_work_order_id_fk",
+      "entityType": "fks",
+      "table": "volunteer_shift"
+    },
+    {
+      "columns": [
+        "cancelled_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_volunteer_shift_cancelled_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "volunteer_shift"
+    },
+    {
+      "columns": [
+        "created_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_volunteer_shift_created_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "volunteer_shift"
     },
     {
       "columns": [
@@ -17869,6 +18117,51 @@
       "name": "fk_volunteer_shift_created_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "work_order"
+    },
+    {
+      "columns": [
+        "work_order_id"
+      ],
+      "tableTo": "work_order",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_work_order_assignee_work_order_id_work_order_id_fk",
+      "entityType": "fks",
+      "table": "work_order_assignee"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_work_order_assignee_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "work_order_assignee"
+    },
+    {
+      "columns": [
+        "assigned_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_work_order_assignee_assigned_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "work_order_assignee"
     },
     {
       "columns": [
@@ -19192,6 +19485,16 @@
     },
     {
       "columns": [
+        "work_order_id",
+        "user_id"
+      ],
+      "nameExplicit": false,
+      "name": "work_order_assignee_pk",
+      "entityType": "pks",
+      "table": "work_order_assignee"
+    },
+    {
+      "columns": [
         "project_id",
         "group_id"
       ],
@@ -19958,6 +20261,15 @@
       "nameExplicit": false,
       "name": "volunteer_role_interest_pk",
       "table": "volunteer_role_interest",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "volunteer_shift_pk",
+      "table": "volunteer_shift",
       "entityType": "pks"
     },
     {
@@ -23156,6 +23468,20 @@
     {
       "columns": [
         {
+          "value": "work_order_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "volunteer_hour_log_work_order_idx",
+      "entityType": "indexes",
+      "table": "volunteer_hour_log"
+    },
+    {
+      "columns": [
+        {
           "value": "status",
           "isExpression": false
         },
@@ -23212,6 +23538,34 @@
       "name": "volunteer_role_interest_user_idx",
       "entityType": "indexes",
       "table": "volunteer_role_interest"
+    },
+    {
+      "columns": [
+        {
+          "value": "starts_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "cancelled_at IS NULL",
+      "origin": "manual",
+      "name": "volunteer_shift_upcoming_idx",
+      "entityType": "indexes",
+      "table": "volunteer_shift"
+    },
+    {
+      "columns": [
+        {
+          "value": "work_order_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "volunteer_shift_work_order_idx",
+      "entityType": "indexes",
+      "table": "volunteer_shift"
     },
     {
       "columns": [
@@ -23273,7 +23627,7 @@
       "isUnique": false,
       "where": "cancelled_at IS NULL",
       "origin": "manual",
-      "name": "volunteer_shift_upcoming_idx",
+      "name": "work_order_upcoming_idx",
       "entityType": "indexes",
       "table": "work_order"
     },
@@ -23287,7 +23641,7 @@
       "isUnique": false,
       "where": null,
       "origin": "manual",
-      "name": "volunteer_shift_role_idx",
+      "name": "work_order_role_idx",
       "entityType": "indexes",
       "table": "work_order"
     },
@@ -23301,7 +23655,7 @@
       "isUnique": false,
       "where": null,
       "origin": "manual",
-      "name": "volunteer_shift_event_idx",
+      "name": "work_order_event_idx",
       "entityType": "indexes",
       "table": "work_order"
     },
@@ -23315,7 +23669,7 @@
       "isUnique": false,
       "where": null,
       "origin": "manual",
-      "name": "volunteer_shift_asset_idx",
+      "name": "work_order_asset_idx",
       "entityType": "indexes",
       "table": "work_order"
     },
@@ -23389,9 +23743,23 @@
       "isUnique": false,
       "where": "starts_at is null and resolved_at is null and cancelled_at is null",
       "origin": "manual",
-      "name": "volunteer_shift_unscheduled_idx",
+      "name": "work_order_unscheduled_idx",
       "entityType": "indexes",
       "table": "work_order"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "work_order_assignee_user_idx",
+      "entityType": "indexes",
+      "table": "work_order_assignee"
     },
     {
       "columns": [
@@ -25069,6 +25437,18 @@
       "name": "volunteer_minutes_positive",
       "entityType": "checks",
       "table": "volunteer_hour_log"
+    },
+    {
+      "value": "ends_at > starts_at",
+      "name": "volunteer_shift_end_after_start",
+      "entityType": "checks",
+      "table": "volunteer_shift"
+    },
+    {
+      "value": "capacity > 0",
+      "name": "volunteer_shift_places_positive",
+      "entityType": "checks",
+      "table": "volunteer_shift"
     },
     {
       "value": "rating >= 1 AND rating <= 5",
