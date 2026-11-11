@@ -160,7 +160,10 @@ export function taskColumns() {
 		...getTableColumns(workOrder)
 	};
 	for (const column of LEGACY_COLUMNS) delete columns[column];
-	return columns as Omit<ReturnType<typeof getTableColumns<typeof workOrder>>, WorkOrderLegacyColumn>;
+	return columns as Omit<
+		ReturnType<typeof getTableColumns<typeof workOrder>>,
+		WorkOrderLegacyColumn
+	>;
 }
 
 /** Not called off: what every forward-looking shift query reads. */

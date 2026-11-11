@@ -20,13 +20,10 @@ function openTasksIn(scope: { eventId: string } | { projectId: string }) {
 }
 
 /**
- * Move a show's duty-list shifts and deadlines with the time they were measured
- * from: two statements for the caller's batch, each by its own stamped anchor
- * (#2033), never the list's current one.
- *
- * A delta, not a recomputation: a shift a coordinator moved by hand keeps its
- * adjustment. `deltaSeconds` is SQL so it reads the old time inside the batch
- * that writes the new one. Closed tasks and cancelled shifts stay put.
+ * Move a show's duty-list shifts and deadlines by `deltaSeconds`, each by its own
+ * stamped anchor (#2033): two statements for the caller's batch. A delta keeps a
+ * hand-made adjustment; as SQL it reads the old time inside the batch that
+ * writes the new one. Closed tasks and cancelled shifts stay put.
  */
 export function shiftAnchoredWorkOrders(
 	eventId: string,

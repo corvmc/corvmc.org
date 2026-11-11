@@ -437,7 +437,9 @@
 									>
 										{#snippet form()}
 											<input
-												{...confirmShiftClaims.for(w.id).fields.shiftId.as('hidden', w.shiftId)}
+												{...confirmShiftClaims
+													.for(w.id)
+													.fields.shiftId.as('hidden', w.shiftId ?? '')}
 											/>
 											<p class="text-sm">
 												{m.staff_volunteer_schedule_people_have_put_hand_up_text({

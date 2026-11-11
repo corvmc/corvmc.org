@@ -92,10 +92,7 @@ export class TaskConflictError extends DomainError {
 const FINISHED = 'A contractor did this work and its cost is on the record, so it stays theirs.';
 
 /** The work order, refused (404) unless it belongs to this project. */
-export async function requireTaskInProject(
-	projectId: string,
-	workOrderId: string
-): Promise<Task> {
+export async function requireTaskInProject(projectId: string, workOrderId: string): Promise<Task> {
 	const [row] = await db
 		.select()
 		.from(workOrder)

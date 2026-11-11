@@ -2,7 +2,7 @@ import { db } from '#lib/server/db/index.js';
 import { workRequest, inventoryAsset, inventoryItem } from '#lib/server/db/schema/inventory.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { workOrder, volunteerRole, volunteerShift } from '#lib/server/db/schema/volunteer.js';
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { toGenericRef } from '#lib/server/entity/refs.js';

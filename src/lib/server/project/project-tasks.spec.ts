@@ -312,9 +312,9 @@ describe('assigning members', () => {
 		expect(result).toMatchObject({ assigned: [ADA, BO, CAM], refused: [], mode: 'members' });
 		expect(assignees('t')).toEqual([ADA, BO, CAM].sort());
 		expect(all(`select 1 from volunteer_signup`)).toHaveLength(0);
-		expect(one(`select assigned_by_user_id from work_order_assignee where user_id = ?`, ADA)).toEqual(
-			{ assigned_by_user_id: STAFF }
-		);
+		expect(
+			one(`select assigned_by_user_id from work_order_assignee where user_id = ?`, ADA)
+		).toEqual({ assigned_by_user_id: STAFF });
 		expect(audits('work_order.assigned')).toEqual([
 			{ id: 't', from: 'unassigned', to: 'members', cancelledSignups: 0 }
 		]);
@@ -722,9 +722,9 @@ describe('delegating to a contractor', () => {
 			quoted_cents: 22000
 		});
 		// Delegating calls its shifts still to come off and removes its assignees (#2518).
-		expect(one(`select cancelled_at is not null as off from volunteer_shift where id = 's'`)).toEqual(
-			{ off: 1 }
-		);
+		expect(
+			one(`select cancelled_at is not null as off from volunteer_shift where id = 's'`)
+		).toEqual({ off: 1 });
 		expect(assignees('t')).toEqual([]);
 		expect(one(`select status from volunteer_signup where id = 'su-a'`)).not.toEqual({
 			status: 'confirmed'
