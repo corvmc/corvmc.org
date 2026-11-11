@@ -1164,7 +1164,7 @@ export const getStaffEventPage = query(z.string(), async (id) => {
  * member's show, and confirming on their behalf would put a credit on the named
  * band's public profile that the band never agreed to. Consent is the whole
  * point of the pending state — see
- * `docs/decisions/NNNN-lineup-credits-need-the-bands-consent.md`.
+ * `docs/decisions/0005-lineup-credits-need-the-bands-consent.md`.
  *
  * So the flag follows the source, and on a listing a new link lands `pending`
  * and invites the band, exactly as when a member links it. Do not simplify this

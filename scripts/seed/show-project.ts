@@ -4,7 +4,7 @@ import { production } from '../../src/lib/server/db/schema/production';
 import { batchInsert, db } from './db';
 
 /**
- * Every production is a project (docs/decisions/NNNN-productions-are-projects.md), and
+ * Every production is a project (docs/decisions/0011-productions-are-projects.md), and
  * `production.project_id` is required by a trigger. The seeders mint a show's
  * production before its listing exists, so the project starts with a stand-in
  * name and `syncShowProjects` copies the listing's title and dates over once

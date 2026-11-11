@@ -330,9 +330,9 @@ premium subscription that unlocks a public band microsite.
 
 ## 5. Events and tickets
 
-Decisions: [a ticket row is one entry pass](../decisions/NNNN-a-ticket-row-is-one-entry-pass.md) ·
-[a ticket price is a sliding scale](../decisions/NNNN-ticket-price-is-a-sliding-scale.md) ·
-[the canonical event URL holds the general view](../decisions/NNNN-the-canonical-event-url-holds-the-general-view.md)
+Decisions: [a ticket row is one entry pass](../decisions/0002-a-ticket-row-is-one-entry-pass.md) ·
+[a ticket price is a sliding scale](../decisions/0008-ticket-price-is-a-sliding-scale.md) ·
+[the canonical event URL holds the general view](../decisions/0007-the-canonical-event-url-holds-the-general-view.md)
 
 ### The story
 
@@ -809,9 +809,9 @@ and re-labelling it `email` would let unrelated mail from the same address merge
 
 ## 9. The gig guide and community listings
 
-Decisions: [listings publish first and are moderated after](../decisions/NNNN-listings-publish-first-and-are-moderated-after.md) ·
-[lineup credits need the band's consent](../decisions/NNNN-lineup-credits-need-the-bands-consent.md) ·
-[partner feeds import as community listings](../decisions/NNNN-partner-feeds-import-as-community-listings.md)
+Decisions: [listings publish first and are moderated after](../decisions/0006-listings-publish-first-and-are-moderated-after.md) ·
+[lineup credits need the band's consent](../decisions/0005-lineup-credits-need-the-bands-consent.md) ·
+[partner feeds import as community listings](../decisions/0012-partner-feeds-import-as-community-listings.md)
 
 ### The story
 
@@ -982,7 +982,7 @@ visible decline is one people hesitate to make.
 
 Spec: [specs/member-standing-spec.md](../specs/shipped/member-standing-spec.md) ·
 [specs/member-suggestions-spec.md](../specs/shipped/member-suggestions-spec.md) ·
-[listings publish first and are moderated after](../decisions/NNNN-listings-publish-first-and-are-moderated-after.md)
+[listings publish first and are moderated after](../decisions/0006-listings-publish-first-and-are-moderated-after.md)
 
 ### The story
 
@@ -1408,10 +1408,10 @@ tells the band's admins 30 and 7 days before it lapses; see
 
 ## 14. Producing a show: the production record
 
-Decisions: [a production is a child of its listing](../decisions/NNNN-a-production-is-a-child-of-its-listing.md) ·
-[set times are derived and running order is fractional](../decisions/NNNN-set-times-are-derived-and-running-order-is-fractional.md) ·
-[productions are projects](../decisions/NNNN-productions-are-projects.md) ·
-[poster art is an artifact request](../decisions/NNNN-poster-art-is-an-artifact-request.md)
+Decisions: [a production is a child of its listing](../decisions/0003-a-production-is-a-child-of-its-listing.md) ·
+[set times are derived and running order is fractional](../decisions/0004-set-times-are-derived-and-running-order-is-fractional.md) ·
+[productions are projects](../decisions/0011-productions-are-projects.md) ·
+[poster art is an artifact request](../decisions/0010-poster-art-is-an-artifact-request.md)
 
 ### The story
 
@@ -1761,7 +1761,7 @@ password from there.
 
 ## 19. Market vendors: applications for a market day CMC hosts
 
-Decision: [market vendor contact lives on the inbox thread](../decisions/NNNN-market-vendor-contact-lives-on-the-inbox-thread.md)
+Decision: [market vendor contact lives on the inbox thread](../decisions/0009-market-vendor-contact-lives-on-the-inbox-thread.md)
 (#609). Open decision: #1504 (what the public sees).
 
 ### The story

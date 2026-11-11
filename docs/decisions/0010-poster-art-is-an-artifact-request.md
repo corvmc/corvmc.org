@@ -1,4 +1,4 @@
-# NNNN Poster art is an artifact request
+# 0010 Poster art is an artifact request
 
 - **Date:** 2026-09-23
 - **Status:** Accepted

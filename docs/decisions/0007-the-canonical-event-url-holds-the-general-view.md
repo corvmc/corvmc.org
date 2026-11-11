@@ -1,4 +1,4 @@
-# NNNN The canonical event URL holds the general view
+# 0007 The canonical event URL holds the general view
 
 - **Date:** 2026-08-28
 - **Status:** Accepted

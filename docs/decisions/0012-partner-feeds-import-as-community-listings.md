@@ -1,4 +1,4 @@
-# NNNN Partner feeds import as community listings
+# 0012 Partner feeds import as community listings
 
 - **Date:** 2026-11-02
 - **Status:** Accepted

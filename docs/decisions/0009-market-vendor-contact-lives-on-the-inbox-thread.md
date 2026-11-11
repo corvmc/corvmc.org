@@ -1,4 +1,4 @@
-# NNNN Market vendor contact lives on the inbox thread
+# 0009 Market vendor contact lives on the inbox thread
 
 - **Date:** 2026-09-23
 - **Status:** Accepted

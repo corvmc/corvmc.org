@@ -1836,7 +1836,7 @@ export type ProjectView = (typeof projectViews)[number];
 /**
  * A `'production'` project is the generic half of a show: its production row
  * carries the show layer and points back here, one to one.
- * See docs/decisions/NNNN-productions-are-projects.md.
+ * See docs/decisions/0011-productions-are-projects.md.
  */
 export const projectKinds = ['general', 'production'] as const;
 export type ProjectKind = (typeof projectKinds)[number];

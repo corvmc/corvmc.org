@@ -1878,7 +1878,7 @@ export async function listEventsNear(
 // So a band can credit anyone on its own bill (it's their factual statement
 // about their own show) without that credit appearing on the named band's
 // profile until they agree. See
-// `docs/decisions/NNNN-lineup-credits-need-the-bands-consent.md`.
+// `docs/decisions/0005-lineup-credits-need-the-bands-consent.md`.
 
 export interface LineupRow {
 	id: string;

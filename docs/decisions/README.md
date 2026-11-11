@@ -30,6 +30,17 @@ A page or less. Link the issue and the PRs.
 
 ## Records
 
-| #    | Record                                               | Date       | Status   |
-| ---- | ---------------------------------------------------- | ---------- | -------- |
-| 0001 | [Specs live on issues](0001-specs-live-on-issues.md) | 2026-11-10 | Accepted |
+| #    | Record                                                                                                                 | Date       | Status   |
+| ---- | ---------------------------------------------------------------------------------------------------------------------- | ---------- | -------- |
+| 0001 | [Specs live on issues](0001-specs-live-on-issues.md)                                                                   | 2026-11-10 | Accepted |
+| 0002 | [A ticket row is one entry pass](0002-a-ticket-row-is-one-entry-pass.md)                                               | 2026-05-14 | Accepted |
+| 0003 | [A production is a child of its listing](0003-a-production-is-a-child-of-its-listing.md)                               | 2026-08-02 | Accepted |
+| 0004 | [Set times are derived and running order is fractional](0004-set-times-are-derived-and-running-order-is-fractional.md) | 2026-08-02 | Accepted |
+| 0005 | [Lineup credits need the band's consent](0005-lineup-credits-need-the-bands-consent.md)                                | 2026-08-12 | Accepted |
+| 0006 | [Listings publish first and are moderated after](0006-listings-publish-first-and-are-moderated-after.md)               | 2026-08-13 | Accepted |
+| 0007 | [The canonical event URL holds the general view](0007-the-canonical-event-url-holds-the-general-view.md)               | 2026-08-28 | Accepted |
+| 0008 | [A ticket price is a sliding scale](0008-ticket-price-is-a-sliding-scale.md)                                           | 2026-09-03 | Accepted |
+| 0009 | [Market vendor contact lives on the inbox thread](0009-market-vendor-contact-lives-on-the-inbox-thread.md)             | 2026-09-23 | Accepted |
+| 0010 | [Poster art is an artifact request](0010-poster-art-is-an-artifact-request.md)                                         | 2026-09-23 | Accepted |
+| 0011 | [Productions are projects](0011-productions-are-projects.md)                                                           | 2026-09-29 | Accepted |
+| 0012 | [Partner feeds import as community listings](0012-partner-feeds-import-as-community-listings.md)                       | 2026-11-02 | Accepted |

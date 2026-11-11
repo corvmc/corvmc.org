@@ -1,4 +1,4 @@
-# NNNN A ticket price is a sliding scale
+# 0008 A ticket price is a sliding scale
 
 - **Date:** 2026-09-03
 - **Status:** Accepted

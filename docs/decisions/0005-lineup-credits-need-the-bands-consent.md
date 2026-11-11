@@ -1,4 +1,4 @@
-# NNNN Lineup credits need the band's consent
+# 0005 Lineup credits need the band's consent
 
 - **Date:** 2026-08-12
 - **Status:** Accepted

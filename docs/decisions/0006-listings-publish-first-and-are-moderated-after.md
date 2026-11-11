@@ -1,4 +1,4 @@
-# NNNN Listings publish first and are moderated after
+# 0006 Listings publish first and are moderated after
 
 - **Date:** 2026-08-13
 - **Status:** Accepted
