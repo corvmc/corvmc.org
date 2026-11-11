@@ -109,7 +109,7 @@ carries the sequences; what follows is why they are what they are.
 
 **Not everything needs a branch.** Instructors shipped six phases straight to `main` with no flag
 and no branch, ordering the work so nothing advertised a capability that did not exist yet
-([decision NNNN](../decisions/NNNN-instructors-rent-the-room.md)). That is the better default
+([decision NNNN](../decisions/0015-instructors-rent-the-room.md)). That is the better default
 when it is available:
 
 - Staff-only surfaces land on `main` directly.

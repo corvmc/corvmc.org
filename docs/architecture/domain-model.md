@@ -250,7 +250,7 @@ describes. `occurredAt` is when the money moved. Writers go through
 still writes a $0 row, and `in_kind` is never summed with `earned`. `pass_through` rows share a
 `settlementGroup`, and a pool that does not net to zero is an anomaly to read, not a constraint.
 The `reconcile-ledger` cron compares the `stripe`-settled sum with Stripe's balance transactions
-(`reconciliation.ts`). Decision: [NNNN](../decisions/NNNN-a-local-financial-record.md).
+(`reconciliation.ts`). Decision: [NNNN](../decisions/0016-a-local-financial-record.md).
 
 ### 5. Container membership `[social, projects, comms]`
 

@@ -1,4 +1,4 @@
-# NNNN Payments run against a fake gateway
+# 0017 Payments run against a fake gateway
 
 - **Date:** 2026-09-11
 - **Status:** Accepted

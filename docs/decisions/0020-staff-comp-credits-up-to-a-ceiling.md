@@ -1,4 +1,4 @@
-# NNNN Staff comp credits up to a ceiling
+# 0020 Staff comp credits up to a ceiling
 
 - **Date:** 2026-09-23
 - **Status:** Accepted

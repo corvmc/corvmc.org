@@ -1,4 +1,4 @@
-# NNNN Recurring reservations clone a prototype
+# 0014 Recurring reservations clone a prototype
 
 - **Date:** 2026-05-15
 - **Status:** Accepted

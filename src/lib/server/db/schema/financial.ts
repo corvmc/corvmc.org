@@ -14,7 +14,7 @@ import {
  *
  * Stripe stays authoritative for settlement; this owns accounting. Nothing here
  * mirrors a Stripe charge or tracks its lifecycle; Stripe is the payment ledger.
- * See `docs/decisions/NNNN-a-local-financial-record.md`.
+ * See `docs/decisions/0016-a-local-financial-record.md`.
  */
 export const financialEntry = sqliteTable(
 	'financial_entry',

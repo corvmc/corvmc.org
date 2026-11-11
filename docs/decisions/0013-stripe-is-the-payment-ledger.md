@@ -1,4 +1,4 @@
-# NNNN Stripe is the payment ledger
+# 0013 Stripe is the payment ledger
 
 - **Date:** 2026-05-12
 - **Status:** Accepted

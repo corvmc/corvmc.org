@@ -6,7 +6,7 @@ import { eventListing } from './event';
 /**
  * A business that sponsors, or might sponsor, the collective. The row outlives
  * any one term, so its history and its contact stay in one place.
- * See docs/decisions/NNNN-sponsors-and-grants-are-two-modules.md.
+ * See docs/decisions/0019-sponsors-and-grants-are-two-modules.md.
  */
 export const sponsor = sqliteTable('sponsor', {
 	id: text('id')

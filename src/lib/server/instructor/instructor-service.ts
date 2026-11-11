@@ -14,7 +14,7 @@ import type { InstructorStatus } from '#lib/config.js';
 
 /**
  * Instructors — people CMC has granted the right to rent the practice room on
- * teaching terms. See `docs/decisions/NNNN-instructors-rent-the-room.md`.
+ * teaching terms. See `docs/decisions/0015-instructors-rent-the-room.md`.
  *
  * Two things this module is not, both load-bearing:
  *

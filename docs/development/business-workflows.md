@@ -171,7 +171,7 @@ surfaces cannot drift in what they do — only in who may do it.
 
 An **instructor** is a member staff have granted teaching terms in the practice room
 (`instructor` table, one row per user). CMC rents the room to the teacher and records nothing
-about students. Decision: [NNNN](../decisions/NNNN-instructors-rent-the-room.md).
+about students. Decision: [NNNN](../decisions/0015-instructors-rent-the-room.md).
 
 - **Status:** `requested` and `rejected` are the application, `active`, `paused` and `retired`
   the grant (`instructorStatuses` in `src/lib/config.ts`). A member applies from
@@ -195,7 +195,7 @@ about students. Decision: [NNNN](../decisions/NNNN-instructors-rent-the-room.md)
 
 ## 2. Recurring reservations and the waitlist
 
-Decision: [NNNN](../decisions/NNNN-recurring-reservations-clone-a-prototype.md)
+Decision: [NNNN](../decisions/0014-recurring-reservations-clone-a-prototype.md)
 
 ### The story
 
@@ -263,7 +263,7 @@ writes it yet, see #2546), `reservation` rows
 
 ## 3. Membership: signup, subscription, monthly credits
 
-Decision: [NNNN](../decisions/NNNN-stripe-is-the-payment-ledger.md)
+Decision: [NNNN](../decisions/0013-stripe-is-the-payment-ledger.md)
 
 ### The story
 
@@ -312,7 +312,7 @@ authorities. A holder of `credit.adjust` (admin only) adds or deducts any amount
 `creditCompCeiling` in `src/lib/config.ts` per adjustment: 4 free-hour credits (2 hours), and no
 equipment credits. A comp is written as `staff_comp`, so the ledger shows it apart. A refused
 amount comes back as a field issue on `amount`, not a 403. Decision:
-[NNNN](../decisions/NNNN-staff-comp-credits-up-to-a-ceiling.md).
+[NNNN](../decisions/0020-staff-comp-credits-up-to-a-ceiling.md).
 
 ### Data touched
 
@@ -478,7 +478,7 @@ events use RSVP instead.
 
 A card payment taken at the door on the CMC phone, which runs the `door-app/` shell over
 `/member/volunteer/door` ([door-app.md](door-app.md); decision:
-[NNNN](../decisions/NNNN-door-sales-on-one-tap-to-pay-phone.md)).
+[NNNN](../decisions/0018-door-sales-on-one-tap-to-pay-phone.md)).
 
 - **Who:** `finance.collect`, checked per show by every remote in `src/lib/remote/door.remote.ts`.
   Staff hold it everywhere. A confirmed door volunteer holds it for their own show during the
@@ -1927,7 +1927,7 @@ comes back. Reading back is the list's status, kind and text filters.
 
 ## 21. Sponsors and grants: what comes due next
 
-Decision: [NNNN](../decisions/NNNN-sponsors-and-grants-are-two-modules.md)
+Decision: [NNNN](../decisions/0019-sponsors-and-grants-are-two-modules.md)
 
 ### The story
 

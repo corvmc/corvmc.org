@@ -1,7 +1,7 @@
 # Associating a pass-through in with a pass-through out — prior art
 
 > Written 2026-09-08 while specifying `financial_entry`
-> ([decision NNNN](../decisions/NNNN-a-local-financial-record.md), #825).
+> ([decision NNNN](../decisions/0016-a-local-financial-record.md), #825).
 >
 > **The question.** Door money arrives as many inbound entries — one per ticket, spread over weeks
 > of presales — and leaves as one payout per act. Nothing links the two. Is `sum() == 0` the only

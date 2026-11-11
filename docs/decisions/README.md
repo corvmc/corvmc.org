@@ -44,3 +44,11 @@ A page or less. Link the issue and the PRs.
 | 0010 | [Poster art is an artifact request](0010-poster-art-is-an-artifact-request.md)                                         | 2026-09-23 | Accepted |
 | 0011 | [Productions are projects](0011-productions-are-projects.md)                                                           | 2026-09-29 | Accepted |
 | 0012 | [Partner feeds import as community listings](0012-partner-feeds-import-as-community-listings.md)                       | 2026-11-02 | Accepted |
+| 0013 | [Stripe is the payment ledger](0013-stripe-is-the-payment-ledger.md)                                                   | 2026-05-12 | Accepted |
+| 0014 | [Recurring reservations clone a prototype](0014-recurring-reservations-clone-a-prototype.md)                           | 2026-05-15 | Accepted |
+| 0015 | [Instructors rent the room](0015-instructors-rent-the-room.md)                                                         | 2026-08-31 | Accepted |
+| 0016 | [A local financial record](0016-a-local-financial-record.md)                                                           | 2026-09-08 | Accepted |
+| 0017 | [Payments run against a fake gateway](0017-payments-run-against-a-fake-gateway.md)                                     | 2026-09-11 | Accepted |
+| 0018 | [Door sales on one Tap to Pay phone](0018-door-sales-on-one-tap-to-pay-phone.md)                                       | 2026-09-22 | Accepted |
+| 0019 | [Sponsors and grants are two modules](0019-sponsors-and-grants-are-two-modules.md)                                     | 2026-09-23 | Accepted |
+| 0020 | [Staff comp credits up to a ceiling](0020-staff-comp-credits-up-to-a-ceiling.md)                                       | 2026-09-23 | Accepted |

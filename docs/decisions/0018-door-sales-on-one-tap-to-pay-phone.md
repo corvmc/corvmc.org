@@ -1,4 +1,4 @@
-# NNNN Door sales on one Tap to Pay phone
+# 0018 Door sales on one Tap to Pay phone
 
 - **Date:** 2026-09-22
 - **Status:** Accepted
