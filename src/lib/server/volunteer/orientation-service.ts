@@ -13,6 +13,7 @@ import { user } from '#lib/server/db/schema/authentication.js';
 import type { MemberOrientation } from '#lib/server/db/schema/volunteer.js';
 import type { MemberOrientationState } from '#lib/config.js';
 import { cancelShift, countActiveSignups, liveShift } from './work-order-service';
+import { grantPracticeSpaceClearance } from './practice-space-clearance';
 
 /**
  * Whether a member has been shown around the space, and when.
@@ -126,6 +127,8 @@ export async function completeOrientation(
 			updatedAt: now
 		})
 		.where(and(eq(memberOrientation.userId, userId), isNull(memberOrientation.completedAt)));
+
+	await grantPracticeSpaceClearance(userId, { grantedByUserId: opts.completedByUserId });
 }
 
 /**
@@ -159,6 +162,11 @@ export async function waiveOrientation(
 				updatedAt: now
 			}
 		});
+
+	await grantPracticeSpaceClearance(userId, {
+		grantedByUserId: opts.waivedByUserId,
+		notes: reason
+	});
 }
 
 /**

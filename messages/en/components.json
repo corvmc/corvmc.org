@@ -1157,6 +1157,7 @@
 	"reservations_booking_date_time_step_continue_label": "Continue",
 	"reservations_booking_date_time_step_end_time_label": "End time",
 	"reservations_booking_date_time_step_every_slot_current_booki_body": "All times in the booking window are taken.",
+	"reservations_booking_date_time_step_first_booking_notice_body": "Your first booking needs {days} days' notice so someone can show you around.",
 	"reservations_booking_date_time_step_frequency_title": "Frequency",
 	"reservations_booking_date_time_step_label": "Until (optional)",
 	"reservations_booking_date_time_step_loading_placeholder": "Loading...",

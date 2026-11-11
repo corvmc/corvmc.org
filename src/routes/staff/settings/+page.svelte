@@ -429,6 +429,16 @@
 								step="15"
 							/>
 							<FormField
+								field={updateReservationSettings.fields.newMemberMinAdvanceMinutes}
+								submitAs="text"
+								label={m.staff_settings_first_booking_notice_minutes_label()}
+								type="number"
+								value={String(reservationSettings.newMemberMinAdvanceMinutes ?? 4320)}
+								min="0"
+								step="60"
+								description={m.staff_settings_first_booking_notice_minutes_body()}
+							/>
+							<FormField
 								field={updateReservationSettings.fields.minDurationHours}
 								submitAs="text"
 								label={m.staff_settings_minimum_duration_hours_label()}

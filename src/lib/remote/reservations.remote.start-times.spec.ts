@@ -37,7 +37,8 @@ vi.mock('#lib/server/reservation/conflict-service.js', () => ({
 		{ startTime: '12:00', available: true }
 	]),
 	getConflictDetails: vi.fn(),
-	getValidationWarnings: vi.fn()
+	getValidationWarnings: vi.fn(),
+	noticeFor: vi.fn(async () => ({ minutes: 60, newMember: false }))
 }));
 
 const testUser = mockUser({ id: 'user-1', name: 'Test Member', email: 'member@example.com' });
@@ -72,7 +73,7 @@ type Option = { value: string; label: string; disabled?: boolean };
 
 describe('getReservationStartTimes', () => {
 	it('lists every operating-hour slot, not only the bookable ones', async () => {
-		const options: Option[] = await getReservationStartTimes('2026-09-09');
+		const options: Option[] = await getReservationStartTimes({ date: '2026-09-09' });
 
 		expect(options.map((o) => o.value)).toEqual([
 			'09:00',
@@ -86,7 +87,7 @@ describe('getReservationStartTimes', () => {
 	});
 
 	it('disables a taken slot rather than dropping it', async () => {
-		const options: Option[] = await getReservationStartTimes('2026-09-09');
+		const options: Option[] = await getReservationStartTimes({ date: '2026-09-09' });
 		const taken = options.find((o) => o.value === '10:00')!;
 
 		expect(taken.disabled).toBe(true);
@@ -98,7 +99,7 @@ describe('getReservationStartTimes', () => {
 	// Free, but with too little room after it to fit the shortest session, which
 	// is as unpickable as taken.
 	it('disables a slot that is free but too short', async () => {
-		const options: Option[] = await getReservationStartTimes('2026-09-09');
+		const options: Option[] = await getReservationStartTimes({ date: '2026-09-09' });
 		const short = options.find((o) => o.value === '09:30')!;
 
 		expect(short.disabled).toBe(true);
@@ -106,7 +107,7 @@ describe('getReservationStartTimes', () => {
 	});
 
 	it('leaves a genuinely bookable slot selectable', async () => {
-		const options: Option[] = await getReservationStartTimes('2026-09-09');
+		const options: Option[] = await getReservationStartTimes({ date: '2026-09-09' });
 
 		expect(options.filter((o) => !o.disabled).map((o) => o.value)).toEqual([
 			'09:00',

@@ -231,6 +231,7 @@ const reservationSettingsSchema = z
 		maxDurationHours: z.string().regex(/^\d+$/).transform(Number),
 		bufferMinutes: z.string().regex(/^\d+$/).transform(Number),
 		minAdvanceMinutes: z.string().regex(/^\d+$/).transform(Number),
+		newMemberMinAdvanceMinutes: z.string().regex(/^\d+$/).transform(Number),
 		maxAdvanceDaysOneoff: z.string().regex(/^\d+$/).transform(Number),
 		maxAdvanceDaysRecurring: z
 			.string()
@@ -268,6 +269,7 @@ export const updateReservationSettings = form(reservationSettingsSchema, async (
 		{ key: 'reservation.maxDurationHours', value: data.maxDurationHours },
 		{ key: 'reservation.bufferMinutes', value: data.bufferMinutes },
 		{ key: 'reservation.minAdvanceMinutes', value: data.minAdvanceMinutes },
+		{ key: 'reservation.newMemberMinAdvanceMinutes', value: data.newMemberMinAdvanceMinutes },
 		{ key: 'reservation.maxAdvanceDaysOneoff', value: data.maxAdvanceDaysOneoff },
 		{ key: 'reservation.maxAdvanceDaysRecurring', value: data.maxAdvanceDaysRecurring },
 		{ key: 'reservation.hourlyRateCents', value: data.hourlyRateCents },

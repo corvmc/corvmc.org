@@ -26,6 +26,7 @@ const READERS: Record<string, string> = {
 	'reservation.maxAdvanceDaysOneoff': 'src/lib/server/reservation/config.ts',
 	'reservation.maxAdvanceDaysRecurring': 'src/lib/server/reservation/config.ts',
 	'reservation.minAdvanceMinutes': 'src/lib/server/reservation/config.ts',
+	'reservation.newMemberMinAdvanceMinutes': 'src/lib/server/reservation/config.ts',
 	'reservation.hourlyRateCents': 'src/lib/server/reservation/config.ts',
 	'reservation.teachingRateCents': 'src/lib/server/reservation/config.ts',
 	'reservation.teachingMinDurationHours': 'src/lib/server/reservation/config.ts',
