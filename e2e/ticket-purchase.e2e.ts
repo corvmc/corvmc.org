@@ -74,13 +74,19 @@ async function openPurchasePage(page: import('@playwright/test').Page, url = tic
  */
 async function payPerTicket(page: import('@playwright/test').Page, dollars: string) {
 	const amount = page.locator('#ticketAmount');
+	const cents = page.locator('input:is([name$="unitPriceCents"], [name*="unitPriceCents/"])');
+	const target = String(Math.round(Number(dollars) * 100));
+	// A target the server already rendered passes the check below on its first
+	// poll, hydrated or not, and a click after that can beat hydration (#2551).
+	// Moving off it first is a change that only a hydrated page can make.
+	if ((await cents.inputValue()) === target) {
+		await payPerTicket(page, (Number(dollars) + 1).toFixed(2));
+	}
 	await expect(async () => {
 		await amount.fill('');
 		await amount.fill(dollars);
-		await expect(
-			page.locator('input:is([name$="unitPriceCents"], [name*="unitPriceCents/"])')
-		).toHaveValue(
-			String(Math.round(Number(dollars) * 100)),
+		await expect(cents).toHaveValue(
+			target,
 			// Deliberately far below the enclosing `toPass` budget: this is one
 			// attempt, not the deadline. Hydration lands in well under a second once
 			// it lands at all, so an attempt that has not taken by now is one where
@@ -266,9 +272,8 @@ async function fillGuestDetails(page: import('@playwright/test').Page) {
  * the number on the button is the number the server is about to charge.
  *
  * `payPerTicket` first, to set that amount explicitly rather than trusting the
- * default, and because it doubles as the hydration proof this file's other
- * interactive tests rely on (see its own note): it retries until the hidden
- * field has actually changed, which cannot happen before Svelte has attached.
+ * default, and because it doubles as the hydration proof: it retries until the
+ * hidden field has changed, which cannot happen before Svelte has attached.
  * Submitting a remote form before hydration would post it as a plain GET.
  */
 async function submitPurchase(page: import('@playwright/test').Page) {
