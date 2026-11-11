@@ -96,7 +96,7 @@
 		{#snippet children(entries)}
 			<Table>
 				{#snippet head()}
-					<th>{m.staff_what_happened_label()}</th>
+					<th>{m.staff_audit_action_label()}</th>
 					<th>{m.staff_audit_account_label()}</th>
 					<th class="col-support">{m.staff_by_2_label()}</th>
 				{/snippet}

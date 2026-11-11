@@ -242,7 +242,7 @@
 		<Table>
 			{#snippet head()}
 				<th class="whitespace-nowrap">{m.staff_due_label()}</th>
-				<th>{m.staff_what_label()}</th>
+				<th>{m.staff_deadline_label()}</th>
 				<th class="col-support">{m.staff_funder_sponsor_label()}</th>
 			{/snippet}
 			{#each data.deadlines.rows as d (d.module + d.subjectId)}

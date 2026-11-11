@@ -171,7 +171,7 @@
 							</Action>
 							<Action
 								action={deleteCategory}
-								modalTitle={m.staff_confirm_title()}
+								modalTitle={m.staff_help_delete_category_title()}
 								successToast={m.staff_category_deleted_toast()}
 								onsuccess={refreshData}
 								variant="ghost"
@@ -247,7 +247,10 @@
 
 	<!-- Articles table -->
 	{#if articles.length === 0}
-		<EmptyState message={m.staff_help_message_body()} />
+		<EmptyState
+			title={m.staff_help_no_articles_title()}
+			description={m.staff_help_message_body()}
+		/>
 	{:else}
 		<!--
 			Bulk publish bar. `pnpm help:sync` imports the markdown manual as drafts
