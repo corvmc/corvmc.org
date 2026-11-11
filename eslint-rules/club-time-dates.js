@@ -36,6 +36,18 @@ function optionKeys(/** @type {RuleNode | undefined} */ options) {
 	return keys;
 }
 
+/** `new Intl.DateTimeFormat(…)` or `Intl.DateTimeFormat(…)`. */
+function isIntlDateTimeFormat(/** @type {RuleNode} */ node) {
+	const callee = node.callee;
+	return (
+		callee?.type === 'MemberExpression' &&
+		!callee.computed &&
+		callee.object?.type === 'Identifier' &&
+		callee.object.name === 'Intl' &&
+		callee.property?.name === 'DateTimeFormat'
+	);
+}
+
 function isNewDate(/** @type {RuleNode} */ node) {
 	return node?.type === 'NewExpression' && node.callee?.name === 'Date';
 }
@@ -107,8 +119,17 @@ function isZonelessDateTime(/** @type {RuleNode} */ node) {
 export default {
 	meta: {
 		type: 'problem',
-		docs: { description: 'Require club-time dates in templates and remotes.' },
-		schema: [],
+		docs: { description: 'Require club-time dates in templates, remotes and server code.' },
+		schema: [
+			{
+				type: 'object',
+				properties: {
+					// Only the formatter check: where `isoSlice` hits are still open (#2537).
+					formattingOnly: { type: 'boolean' }
+				},
+				additionalProperties: false
+			}
+		],
 		messages: {
 			noTimeZone:
 				'`{{method}}` without a `timeZone` renders in UTC on the server and the viewer zone in the browser. Use a formatter from $lib/utils/format (formatDateShortYear, formatHistoryTime, …).',
@@ -119,14 +140,27 @@ export default {
 		}
 	},
 	create(context) {
+		const formattingOnly = context.options[0]?.formattingOnly === true;
+		/** @param {RuleNode} node */
+		function checkIntl(node) {
+			if (!isIntlDateTimeFormat(node)) return false;
+			const keys = optionKeys(node.arguments?.[1]);
+			if (keys !== null && !keys.has('timeZone')) {
+				context.report({ node, messageId: 'noTimeZone', data: { method: 'Intl.DateTimeFormat' } });
+			}
+			return true;
+		}
 		return {
 			/** @param {RuleNode} node */
 			NewExpression(node) {
+				if (checkIntl(node)) return;
+				if (formattingOnly) return;
 				if (isZonelessDateTime(node)) context.report({ node, messageId: 'zonelessDateTime' });
 			},
 			/** @param {RuleNode} node */
 			CallExpression(node) {
-				if (isIsoDateSlice(node)) {
+				if (checkIntl(node)) return;
+				if (!formattingOnly && isIsoDateSlice(node)) {
 					context.report({ node, messageId: 'isoSlice' });
 					return;
 				}

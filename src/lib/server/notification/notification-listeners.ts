@@ -9,7 +9,7 @@ import {
 	hourLogExceptionLabels,
 	renewalKindLabels
 } from '#lib/config.js';
-import { formatCents } from '#lib/utils/format.js';
+import { formatCents, formatDateLong, formatTime } from '#lib/utils/format.js';
 import { groupKindLabels } from '#lib/terms.js';
 import { fanOutAnnouncement, fanOutGroupRoom } from '#lib/server/group/announcement-fanout.js';
 import { fanOutBallotNotice } from '#lib/server/ballot/ballot-fanout.js';
@@ -107,8 +107,10 @@ function memberInvitationEmail(event: MemberInviteCreatedEvent): StandaloneEmail
 	};
 }
 
+/** A pickup date is a date input stored as UTC midnight, so its UTC day is the day. */
 function formatPickupDate(value: string): string {
 	return new Date(value).toLocaleDateString('en-US', {
+		timeZone: 'UTC',
 		weekday: 'long',
 		month: 'long',
 		day: 'numeric'
@@ -121,13 +123,9 @@ function formatHours(hours: number): string {
 	return `${rendered} ${hours === 1 ? 'hour' : 'hours'}`;
 }
 
-/** Calendar date for volunteer copy — no time component to render. */
-function formatWorkedOn(value: string): string {
-	return new Date(value).toLocaleDateString('en-US', {
-		weekday: 'long',
-		month: 'long',
-		day: 'numeric'
-	});
+/** An instant as the club's calendar day: "Tuesday, November 10". */
+function formatClubDay(value: string): string {
+	return formatDateLong(new Date(value));
 }
 
 /** "Saturday, February 7, 6:00–10:00 PM" — one string for a shift's when. */
@@ -141,10 +139,7 @@ function formatWorkedOn(value: string): string {
  */
 function formatShiftWhen(startsAt: string | null, endsAt: string | null): string {
 	if (!startsAt || !endsAt) return 'a time to be arranged';
-	const start = new Date(startsAt);
-	const end = new Date(endsAt);
-	const time = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-	return `${formatWorkedOn(startsAt)}, ${time(start)}–${time(end)}`;
+	return `${formatClubDay(startsAt)}, ${formatTime(new Date(startsAt))}–${formatTime(new Date(endsAt))}`;
 }
 
 /** Date + time range as rows for the details card. En-dash per the brand voice. */
@@ -628,7 +623,7 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: `Equipment pickup confirmed: ${event.equipmentName}`,
-			body: `Pickup on ${new Date(event.scheduledPickupDate).toLocaleDateString()}`,
+			body: `Pickup on ${formatPickupDate(event.scheduledPickupDate)}`,
 			href: '/member/equipment/loans',
 			email: {
 				recipientName: event.userName,
@@ -850,7 +845,7 @@ export function registerAllNotificationListeners(): void {
 		const details: NotificationEmailDetail[] = [
 			{ label: 'Contribution', value: `${formatCents(event.amountCents)} / month` },
 			{ label: 'Free rehearsal hours', value: `${formatHours(event.freeHoursPerMonth)} / month` },
-			{ label: 'Next renewal', value: formatPickupDate(event.periodEnd) }
+			{ label: 'Next renewal', value: formatClubDay(event.periodEnd) }
 		];
 		if (event.coveringFees) {
 			details.push({ label: 'Processing fees', value: 'Covered by you — thank you' });
@@ -912,7 +907,7 @@ export function registerAllNotificationListeners(): void {
 			{ label: 'Amount due', value: formatCents(event.amountCents) }
 		];
 		if (event.nextAttemptAt) {
-			details.push({ label: 'Next attempt', value: formatPickupDate(event.nextAttemptAt) });
+			details.push({ label: 'Next attempt', value: formatClubDay(event.nextAttemptAt) });
 		}
 
 		// Stripe's hosted invoice is a card form the member can complete without
@@ -952,7 +947,7 @@ export function registerAllNotificationListeners(): void {
 
 	domainEvents.on('membership.cancellation_scheduled', async ({ data: event }) => {
 		const details: NotificationEmailDetail[] = event.endsAt
-			? [{ label: 'Benefits run through', value: formatPickupDate(event.endsAt) }]
+			? [{ label: 'Benefits run through', value: formatClubDay(event.endsAt) }]
 			: [];
 
 		await dispatch({
@@ -960,7 +955,7 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: 'Your membership is set to end',
-			body: event.endsAt ? `Benefits run through ${formatPickupDate(event.endsAt)}` : undefined,
+			body: event.endsAt ? `Benefits run through ${formatClubDay(event.endsAt)}` : undefined,
 			href: '/member/membership',
 			email: {
 				recipientName: event.userName,
@@ -1234,7 +1229,7 @@ export function registerAllNotificationListeners(): void {
 						heading: 'You were added to a lineup',
 						paragraphs: [
 							{
-								text: `${host} listed ${event.invitedBandName} on the lineup for "${event.eventTitle}" on ${formatWorkedOn(event.startsAt)}.`
+								text: `${host} listed ${event.invitedBandName} on the lineup for "${event.eventTitle}" on ${formatClubDay(event.startsAt)}.`
 							},
 							{
 								text: 'The show will not appear on your band’s profile until you confirm it. If this is wrong, decline and your band will be unlinked from the listing.'
@@ -1256,8 +1251,8 @@ export function registerAllNotificationListeners(): void {
 	domainEvents.on('production.cancelled', async ({ data: event }) => {
 		const by = event.cancelledByName;
 		const line = by
-			? `${by} cancelled "${event.eventTitle}" on ${formatWorkedOn(event.startsAt)}.`
-			: `"${event.eventTitle}" on ${formatWorkedOn(event.startsAt)} was cancelled.`;
+			? `${by} cancelled "${event.eventTitle}" on ${formatClubDay(event.startsAt)}.`
+			: `"${event.eventTitle}" on ${formatClubDay(event.startsAt)} was cancelled.`;
 		for (const member of event.recipients) {
 			const items = member.items.join(', ');
 			try {
@@ -1280,7 +1275,7 @@ export function registerAllNotificationListeners(): void {
 						],
 						details: [
 							{ label: 'Show', value: event.eventTitle },
-							{ label: 'Date', value: formatWorkedOn(event.startsAt) },
+							{ label: 'Date', value: formatClubDay(event.startsAt) },
 							...(by ? [{ label: 'Cancelled by', value: by }] : [])
 						],
 						cta: { label: 'Open the committee' }
@@ -1308,7 +1303,7 @@ export function registerAllNotificationListeners(): void {
 		const late = items.filter((i) => i.stage === 'overdue').length;
 		const oneCommittee = new Set(items.map((i) => i.groupSlug)).size === 1;
 		const on = (i: (typeof items)[number]) => (i.eventTitle ? ` for ${i.eventTitle}` : '');
-		const due = (i: (typeof items)[number]) => formatWorkedOn(i.dueAt);
+		const due = (i: (typeof items)[number]) => formatClubDay(i.dueAt);
 
 		const [first] = items;
 		const single = items.length === 1;
@@ -1428,7 +1423,7 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: `${formatHours(event.hours)} of volunteer time approved`,
-			body: `${event.roleName} on ${formatWorkedOn(event.workedOn)}`,
+			body: `${event.roleName} on ${formatClubDay(event.workedOn)}`,
 			href: '/member/volunteer',
 			email: {
 				recipientName: event.userName,
@@ -1439,7 +1434,7 @@ export function registerAllNotificationListeners(): void {
 					...(event.reviewNotes ? [{ text: `Note from staff: ${event.reviewNotes}` }] : [])
 				],
 				details: [
-					{ label: 'Date', value: formatWorkedOn(event.workedOn) },
+					{ label: 'Date', value: formatClubDay(event.workedOn) },
 					{ label: 'Role', value: event.roleName },
 					{ label: 'Hours', value: formatHours(event.hours) }
 				],
@@ -1457,7 +1452,7 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: `${formatHours(event.hours)} of volunteer time needs another look`,
-			body: event.reviewNotes ?? `${event.roleName} on ${formatWorkedOn(event.workedOn)}`,
+			body: event.reviewNotes ?? `${event.roleName} on ${formatClubDay(event.workedOn)}`,
 			href: '/member/volunteer',
 			email: {
 				recipientName: event.userName,
@@ -1470,7 +1465,7 @@ export function registerAllNotificationListeners(): void {
 					...(event.reviewNotes ? [{ text: `Reason: ${event.reviewNotes}` }] : [])
 				],
 				details: [
-					{ label: 'Date', value: formatWorkedOn(event.workedOn) },
+					{ label: 'Date', value: formatClubDay(event.workedOn) },
 					{ label: 'Role', value: event.roleName },
 					{ label: 'Hours', value: formatHours(event.hours) },
 					...(event.reviewNotes ? [{ label: 'Reason', value: event.reviewNotes }] : [])
@@ -1726,7 +1721,7 @@ export function registerAllNotificationListeners(): void {
 					{
 						// The date is dropped rather than faked when the work had no
 						// scheduled window — "on null" is worse than no date at all.
-						text: `Thanks for working ${shiftLabel(event)}${event.startsAt ? ` on ${formatWorkedOn(event.startsAt)}` : ''}. Two questions, and they genuinely change how we run the next one.`
+						text: `Thanks for working ${shiftLabel(event)}${event.startsAt ? ` on ${formatClubDay(event.startsAt)}` : ''}. Two questions, and they genuinely change how we run the next one.`
 					}
 				],
 				cta: { label: 'Answer two questions' }

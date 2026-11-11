@@ -9,6 +9,7 @@ import { error } from '@sveltejs/kit';
 import { zipSync, strToU8 } from 'fflate';
 import { and, eq, isNull } from 'drizzle-orm';
 import * as publicEnv from '$app/env/public';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import { db } from '#lib/server/db/index.js';
 import { group } from '#lib/server/db/schema/group.js';
 import { directoryEntry } from '#lib/server/db/schema/directory.js';
@@ -45,6 +46,7 @@ export function pressKitFilename(name: string): string {
 }
 
 const showDate = new Intl.DateTimeFormat('en-US', {
+	timeZone: DEFAULT_TIMEZONE,
 	weekday: 'short',
 	month: 'short',
 	day: 'numeric',
