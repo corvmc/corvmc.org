@@ -297,7 +297,7 @@
 			<Button
 				variant="ghost"
 				size="sm"
-				href={withQuery(resolve('staff/inventory'), 'show=restock')}
+				href={withQuery(resolve('staff/inventory/supplies'), 'show=restock')}
 			>
 				{data.lowStock.total > data.lowStock.rows.length
 					? m.staff_see_all_restock_label({ total: data.lowStock.total })

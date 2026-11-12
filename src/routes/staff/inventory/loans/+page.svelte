@@ -16,6 +16,8 @@
 	import { loanStatuses } from '#lib/config.js';
 	import { CreateLoanAction } from '#lib/components/actions/index.js';
 	import { getStaffLoans } from '#lib/remote/inventory.remote.js';
+	import StaffViews from '../../StaffViews.svelte';
+	import { gearViews } from '../views';
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
@@ -42,8 +44,8 @@
 	}
 </script>
 
-<PageHeader title={m.staff_inventory_loans_title()}>
-	<CreateLoanAction />
+<PageHeader title={m.staff_gear_title()} documentTitle={m.staff_gear_loans_title()}>
+	<StaffViews views={gearViews} active="loans" />
 </PageHeader>
 <PageContent>
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
@@ -56,6 +58,9 @@
 					page = 1;
 				}}
 			/>
+		{/snippet}
+		{#snippet actions()}
+			<CreateLoanAction />
 		{/snippet}
 		<Select
 			size="sm"

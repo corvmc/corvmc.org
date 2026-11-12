@@ -10,18 +10,18 @@ type Load = (e: unknown) => unknown;
 const run = async (load: unknown, path: string) =>
 	(load as Load)({ params: {}, url: new URL(`http://x${path}`), route: { id: path } });
 
-describe('retired Inventory lists', () => {
+describe('retired Inventory lists, now Supplies views', () => {
 	it('forwards Restock to the reorder-point view', async () => {
 		await expect(run(restock.load, '/staff/inventory/restock')).rejects.toMatchObject({
 			status: 308,
-			location: '/staff/inventory?show=restock'
+			location: '/staff/inventory/supplies?show=restock'
 		});
 	});
 
 	it('forwards Orders to the on-order view', async () => {
 		await expect(run(orders.load, '/staff/inventory/orders')).rejects.toMatchObject({
 			status: 308,
-			location: '/staff/inventory?show=on-order'
+			location: '/staff/inventory/supplies?show=on-order'
 		});
 	});
 });

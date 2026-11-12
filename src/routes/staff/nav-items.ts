@@ -39,10 +39,8 @@ export type StaffNavKey =
 	| 'ballots'
 	| 'volunteer-schedule'
 	| 'reservations'
-	| 'equipment'
-	| 'equipment-loans'
-	| 'equipment-reports'
-	| 'inventory-compliance'
+	| 'gear'
+	| 'supplies'
 	| 'contractors'
 	| 'keys'
 	| 'projects'
@@ -209,42 +207,20 @@ export const staffNavSections: StaffNavSection[] = [
 				href: resolve('staff/reservations'),
 				also: [resolve('staff/recurring')]
 			},
+			// Gear is what is tracked unit by unit or lent out; Supplies is what is
+			// used up (#2573, predicate in `server/inventory/sections.ts`). Loans,
+			// reported problems and compliance are Gear's tabs, at their old URLs.
 			{
-				// Equipment used to hang the other way up: the parent row landed on
-				// Loans and the child was labelled Inventory, which the loans page
-				// itself contradicted by pointing back to `/staff/inventory`.
-				//
-				// "Inventory" rather than "Equipment" since #286: the section now
-				// covers consumables too, and calling it Equipment would send anyone
-				// looking for the drumstick count somewhere else.
-				key: 'equipment',
+				key: 'gear',
 				capability: 'inventory.read',
-				label: 'Inventory',
-				href: resolve('staff/inventory'),
-				children: [
-					{
-						// Gear and building problems members report: a repair queue, not
-						// moderation and not a Reports-section report (#1840).
-						key: 'equipment-reports',
-						capability: 'inventory.manageAssets',
-						label: 'Reported Problems',
-						href: resolve('staff/inventory/problems')
-					},
-					{
-						key: 'inventory-compliance',
-						capability: 'inventory.manageAcquisitions',
-						label: 'Compliance',
-						href: resolve('staff/inventory/compliance')
-					}
-				]
+				label: 'Gear',
+				href: resolve('staff/inventory')
 			},
-			// A row of its own, not under Inventory: the loan desk is somewhere staff
-			// go, and the URL stays where loan links already point (#1937).
 			{
-				key: 'equipment-loans',
-				capability: 'inventory.manageLoans',
-				label: 'Loans',
-				href: resolve('staff/inventory/loans')
+				key: 'supplies',
+				capability: 'inventory.read',
+				label: 'Supplies',
+				href: resolve('staff/inventory/supplies')
 			},
 			// Permit, license and insurance renewals: compliance for the building.
 			{

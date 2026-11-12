@@ -1,5 +1,7 @@
 import { db } from '#lib/server/db/index.js';
 import { onOrderQuantities } from './order-service';
+import { inSection } from './sections';
+import type { InventorySection } from '#lib/config.js';
 import {
 	equipmentCategory,
 	inventoryAsset,
@@ -305,7 +307,7 @@ export async function listMovements(opts: ListMovementsOptions = {}) {
  * a query the staff dashboard runs rather than something a person remembers to
  * check.
  */
-export async function listLowStock() {
+export async function listLowStock(opts: { section?: InventorySection } = {}) {
 	const onHand = db
 		.select({
 			itemId: stockMovement.itemId,
@@ -328,6 +330,7 @@ export async function listLowStock() {
 			and(
 				isNull(inventoryItem.deletedAt),
 				sql`${inventoryItem.reorderPoint} IS NOT NULL`,
+				opts.section ? inSection(opts.section) : undefined,
 				sql`COALESCE(${onHand.qty}, 0) <= ${inventoryItem.reorderPoint}`
 			)
 		)

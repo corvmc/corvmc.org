@@ -107,6 +107,7 @@ import {
 	itemKinds,
 	inventoryListViews,
 	inventoryListViewMeta,
+	inventorySections,
 	unitsOfMeasure,
 	type AssetStatus,
 	type AcquisitionKind,
@@ -217,6 +218,7 @@ const staffItemFilters = z.object({
 	categoryId: z.string().optional(),
 	kind: z.string().optional(),
 	includeDeleted: z.boolean().optional(),
+	section: z.enum(inventorySections).optional(),
 	view: z.enum(inventoryListViews.filter((v) => v !== 'restock')).optional(),
 	page: z.number().optional()
 });
@@ -231,6 +233,7 @@ export const getStaffItemList = query(staffItemFilters, async (filters) => {
 			categoryId: filters.categoryId || undefined,
 			kind: (filters.kind || undefined) as ItemKind | undefined,
 			includeDeleted: filters.includeDeleted,
+			section: filters.section,
 			view: filters.view
 		},
 		{ page: filters.page ?? 1, pageSize: 50 }
@@ -923,7 +926,7 @@ export const recordIntake = form(
 			// Everything this touched: the catalog's on-hand numbers, the tagging
 			// backlog it just added to, and the register the receipt now appears in.
 			void getUntaggedAssets().refresh();
-			void getRestockList().refresh();
+			refreshRestockLists();
 
 			return { success: true, ...result };
 		} catch (err) {
@@ -984,7 +987,7 @@ async function placeNewOrder(
 	} catch (err) {
 		mapDomainError(err);
 	}
-	void getRestockList().refresh();
+	refreshRestockLists();
 	for (const l of lines) {
 		void getStaffItemDetail(l.itemId).refresh();
 		void getItemMovementFeed({ id: l.itemId }).refresh();
@@ -1057,7 +1060,7 @@ export const markOrderPlaced = form(z.object({ id: z.string() }), async (raw) =>
 	// Placing is what removes an item from the restock list, so that list has to
 	// be refreshed by name — it has no id to key on.
 	void getOrder(data.id).refresh();
-	void getRestockList().refresh();
+	refreshRestockLists();
 	return { success: true };
 });
 
@@ -1071,7 +1074,7 @@ export const dropOrder = form(z.object({ id: z.string() }), async (raw) => {
 	}
 	void getOrder(data.id).refresh();
 	// Cancelling puts the shortfall back on the shopping list.
-	void getRestockList().refresh();
+	refreshRestockLists();
 	return { success: true };
 });
 
@@ -1084,7 +1087,7 @@ export const closeOrder = form(z.object({ id: z.string() }), async (raw) => {
 		mapDomainError(err);
 	}
 	void getOrder(data.id).refresh();
-	void getRestockList().refresh();
+	refreshRestockLists();
 	return { success: true };
 });
 
@@ -1100,7 +1103,7 @@ export const reopenOrderForm = form(
 			mapDomainError(err);
 		}
 		void getOrder(data.id).refresh();
-		void getRestockList().refresh();
+		refreshRestockLists();
 		return { success: true };
 	}
 );
@@ -1427,14 +1430,19 @@ export const getUserLoans = query(z.string(), async (userId) => {
  * things the collective stocks, and a paginated shopping list is a worse
  * shopping list.
  */
-export const getRestockList = query(z.void(), async () => {
+export const getRestockList = query(z.enum(inventorySections), async (section) => {
 	await requireCapability('inventory.report');
-	const rows = await listLowStock();
+	const rows = await listLowStock({ section });
 	return {
 		rows,
 		outCount: rows.filter((r) => r.isOut).length
 	};
 });
+
+/** One restock list per section (#2573); a stock change can move either. */
+function refreshRestockLists() {
+	for (const section of inventorySections) void getRestockList(section).refresh();
+}
 
 const spendRange = z.object({
 	from: z.string().optional(),
@@ -1797,7 +1805,7 @@ export const addAcquisitionLineForm = form(
 		// backlog both changed with it.
 		void getStaffAcquisitionDetail(data.acquisitionId).refresh();
 		void getUntaggedAssets().refresh();
-		void getRestockList().refresh();
+		refreshRestockLists();
 		return { success: true };
 	}
 );

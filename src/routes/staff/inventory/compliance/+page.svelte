@@ -10,6 +10,8 @@
 	import { RecordForm8282Action } from '#lib/components/actions/index.js';
 	import { resolve } from '$app/paths';
 	import { getForm8282Obligations } from '#lib/remote/inventory.remote.js';
+	import StaffViews from '../../StaffViews.svelte';
+	import { gearViews } from '../views';
 	import { formatCents, formatDateShort } from '#lib/utils/format.js';
 
 	/**
@@ -24,10 +26,9 @@
 	const data = $derived(await getForm8282Obligations());
 </script>
 
-<PageHeader
-	title={m.staff_inventory_compliance_compliance_title()}
-	subtitle={m.staff_inventory_body()}
-/>
+<PageHeader title={m.staff_gear_title()} documentTitle={m.staff_gear_compliance_title()}>
+	<StaffViews views={gearViews} active="compliance" />
+</PageHeader>
 
 <PageContent>
 	{#if data.rows.length === 0}

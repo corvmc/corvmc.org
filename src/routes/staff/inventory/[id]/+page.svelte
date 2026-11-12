@@ -63,7 +63,10 @@
 
 <Form remote={editItem} guard successToast={msg.staff_inventory_id_success_toast()}>
 	<input {...fields.id.as('hidden', id)} />
-	<PageHeader subtitle={msg.staff_inventory_body()} title={item.name}>
+	<PageHeader
+		subtitle={item.section === 'gear' ? msg.staff_gear_body() : msg.staff_supplies_body()}
+		title={item.name}
+	>
 		{#if isDeactivated}
 			<Badge variant="error" size="md">{msg.staff_deactivated_label()}</Badge>
 		{/if}
