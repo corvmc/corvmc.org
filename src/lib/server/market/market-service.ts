@@ -509,6 +509,9 @@ export async function getMarketProjectId(eventId: string): Promise<string | null
 	return row?.projectId ?? null;
 }
 
+/** An application nobody has answered: the review feed's predicate. */
+export const appliedVendor = () => eq(marketVendor.status, 'applied');
+
 /** A committee's market days, soonest first, with how many applications wait on a decision. */
 export async function listCommitteeMarkets(groupId: string) {
 	const rows = await db
@@ -516,7 +519,7 @@ export async function listCommitteeMarkets(groupId: string) {
 			eventId: marketDay.eventId,
 			title: eventListing.title,
 			startsAt: eventListing.startsAt,
-			toReview: sql<number>`(select count(*) from ${marketVendor} where ${marketVendor.eventId} = ${marketDay.eventId} and ${marketVendor.status} = 'applied')`
+			toReview: sql<number>`(select count(*) from ${marketVendor} where ${marketVendor.eventId} = ${marketDay.eventId} and ${appliedVendor()})`
 		})
 		.from(marketDay)
 		.innerJoin(eventListing, eq(eventListing.id, marketDay.eventId))

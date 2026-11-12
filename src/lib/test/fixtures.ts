@@ -83,5 +83,9 @@ const sample: Record<EntityType, { title: string; subtitle?: string; [k: string]
 	incident: { title: 'Cable run across the side-stage steps', subtitle: 'Safety hazard' },
 	project: { title: 'Rehearsal room soundproofing', subtitle: 'Facilities committee' },
 	local_resource: { title: 'Corvallis Guitar Repair', subtitle: 'Repair shops' },
-	hour_log: { title: 'Door', subtitle: '2 hours · Mar 14' }
+	hour_log: { title: 'Door', subtitle: '2 hours · Mar 14' },
+	work_request: { title: 'Bass amp crackles', subtitle: 'Ampeg BA-112' },
+	group_application: { title: 'Real Book Club', subtitle: 'Club', groupId: 'club-1' },
+	market_vendor: { title: 'Riverside Records', subtitle: 'Used vinyl', eventId: 'event-1' },
+	volunteer: { title: 'Sam Rivera', subtitle: 'Door' }
 };

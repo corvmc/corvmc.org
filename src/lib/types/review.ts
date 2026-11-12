@@ -11,10 +11,16 @@ export const reviewKinds = [
 	'suggestion_answer',
 	'suggestion_edit',
 	'listing',
+	'classified',
 	'resource_tip',
+	'flag',
 	'appeal',
+	'problem',
+	'group_application',
+	'market_vendor',
 	'hour_log',
-	'shift_claim'
+	'shift_claim',
+	'minor_volunteer'
 ] as const;
 export type ReviewKind = (typeof reviewKinds)[number];
 
