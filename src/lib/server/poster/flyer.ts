@@ -1,30 +1,24 @@
-import { render } from '@cf-wasm/og';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import { priceDisplay } from '#lib/utils/event-ticketing.js';
-import lexendRegular from './assets/Lexend-Regular.ttf?inline';
-import lexendBold from './assets/Lexend-Bold.ttf?inline';
-import speaker from './assets/cmc-speaker.png?inline';
+import {
+	bytesDataUrl,
+	C,
+	el,
+	mascot,
+	renderPng,
+	sponsorRow,
+	stripe,
+	type Node,
+	type SponsorLogo
+} from './brand';
 
-/**
- * A show's flyer: the template when there is no art, or the art above a
- * details footer. Brand rules from the design system: Lexend only, flat fills
- * on cream, a hard-stop tri-stripe, and the speaker mascot. Fonts are bundled
- * so a render never waits on a third party.
- */
+/** A show's flyer: the template when there is no art, or the art above a details footer. */
 
 export const FLYER_WIDTH = 1080;
 export const FLYER_HEIGHT = 1350;
 const ART_HEIGHT = 1000;
-
-const C = {
-	cream: '#fffbf6',
-	navy: '#003b5c',
-	teal: '#00859b',
-	orange: '#e5771e',
-	goldenrod: '#ffb500',
-	redOrange: '#f84d13',
-	brown: '#5a3d2b'
-};
+// The art gives up this much height when a sponsor row joins the footer.
+const SPONSOR_ROW_HEIGHT = 90;
 
 export interface FlyerSource {
 	title: string;
@@ -47,7 +41,7 @@ export interface FlyerLines {
 	price: string;
 }
 
-function clock(d: Date): string {
+export function clock(d: Date): string {
 	const parts = new Intl.DateTimeFormat('en-US', {
 		timeZone: DEFAULT_TIMEZONE,
 		hour: 'numeric',
@@ -93,19 +87,6 @@ export function flyerLines(src: FlyerSource): FlyerLines {
 	};
 }
 
-type Node = { type: string; props: Record<string, unknown> };
-
-function el(type: string, style: Record<string, unknown>, children?: unknown, extra = {}): Node {
-	return { type, props: { style, children, ...extra } };
-}
-
-const stripe = (height: number) =>
-	el('div', { display: 'flex', flexDirection: 'column', width: '100%' }, [
-		el('div', { height, background: C.teal }),
-		el('div', { height, background: C.goldenrod }),
-		el('div', { height, background: C.redOrange })
-	]);
-
 function details(lines: FlyerLines, compact: boolean): Node {
 	const small = compact ? 30 : 38;
 	return el(
@@ -127,22 +108,13 @@ function details(lines: FlyerLines, compact: boolean): Node {
 	);
 }
 
-function mascot(width: number): Node {
-	return el(
-		'img',
-		{ width, height: Math.round((width * 125) / 255), flexShrink: 0, marginLeft: 24 },
-		undefined,
-		{ src: speaker }
-	);
-}
-
 function titleSize(title: string): number {
 	if (title.length <= 16) return 124;
 	if (title.length <= 32) return 96;
 	return 68;
 }
 
-function templateTree(lines: FlyerLines): Node {
+function templateTree(lines: FlyerLines, sponsors: SponsorLogo[]): Node {
 	return el(
 		'div',
 		{
@@ -188,7 +160,8 @@ function templateTree(lines: FlyerLines): Node {
 					el('div', { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }, [
 						details(lines, false),
 						mascot(220)
-					])
+					]),
+					sponsorRow(sponsors, 80)
 				].filter(Boolean)
 			),
 			stripe(22)
@@ -196,7 +169,8 @@ function templateTree(lines: FlyerLines): Node {
 	);
 }
 
-function artTree(lines: FlyerLines, artSrc: string): Node {
+function artTree(lines: FlyerLines, artSrc: string, sponsors: SponsorLogo[]): Node {
+	const artHeight = sponsors.length > 0 ? ART_HEIGHT - SPONSOR_ROW_HEIGHT : ART_HEIGHT;
 	return el(
 		'div',
 		{
@@ -208,7 +182,7 @@ function artTree(lines: FlyerLines, artSrc: string): Node {
 			fontFamily: 'Lexend'
 		},
 		[
-			el('img', { width: FLYER_WIDTH, height: ART_HEIGHT, objectFit: 'cover' }, undefined, {
+			el('img', { width: FLYER_WIDTH, height: artHeight, objectFit: 'cover' }, undefined, {
 				src: artSrc
 			}),
 			stripe(12),
@@ -216,55 +190,42 @@ function artTree(lines: FlyerLines, artSrc: string): Node {
 				'div',
 				{
 					display: 'flex',
+					flexDirection: 'column',
 					flexGrow: 1,
-					alignItems: 'center',
-					justifyContent: 'space-between',
+					justifyContent: 'center',
+					gap: 20,
 					padding: '0 56px'
 				},
 				[
-					el('div', { display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 780 }, [
-						el(
-							'div',
-							{ color: C.navy, fontSize: 40, fontWeight: 700, textTransform: 'uppercase' },
-							lines.title
-						),
-						details(lines, true)
+					el('div', { display: 'flex', alignItems: 'center', justifyContent: 'space-between' }, [
+						el('div', { display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 780 }, [
+							el(
+								'div',
+								{ color: C.navy, fontSize: 40, fontWeight: 700, textTransform: 'uppercase' },
+								lines.title
+							),
+							details(lines, true)
+						]),
+						mascot(160)
 					]),
-					mascot(160)
-				]
+					sponsorRow(sponsors, 64)
+				].filter(Boolean)
 			)
 		]
 	);
 }
 
-function dataUrlBytes(dataUrl: string): ArrayBuffer {
-	const bin = atob(dataUrl.slice(dataUrl.indexOf(',') + 1));
-	const out = new Uint8Array(bin.length);
-	for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-	return out.buffer;
-}
-
-function bytesDataUrl(bytes: Uint8Array, contentType: string): string {
-	let bin = '';
-	for (let i = 0; i < bytes.length; i += 0x8000) {
-		bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-	}
-	return `data:${contentType};base64,${btoa(bin)}`;
-}
-
-/** Rasterize a flyer to PNG. With `art`, the art sits above a details footer. */
+/**
+ * Rasterize a flyer to PNG. With `art`, the art sits above a details footer;
+ * `sponsors` adds a logo row to the footer of either.
+ */
 export async function renderFlyer(
 	lines: FlyerLines,
-	art?: { bytes: Uint8Array; contentType: string }
+	opts: { art?: { bytes: Uint8Array; contentType: string }; sponsors?: SponsorLogo[] } = {}
 ): Promise<Uint8Array> {
-	const tree = art ? artTree(lines, bytesDataUrl(art.bytes, art.contentType)) : templateTree(lines);
-	const png = await render(tree as never, {
-		width: FLYER_WIDTH,
-		height: FLYER_HEIGHT,
-		fonts: [
-			{ name: 'Lexend', data: dataUrlBytes(lexendRegular), weight: 400, style: 'normal' },
-			{ name: 'Lexend', data: dataUrlBytes(lexendBold), weight: 700, style: 'normal' }
-		]
-	}).asPng();
-	return png.image;
+	const sponsors = opts.sponsors ?? [];
+	const tree = opts.art
+		? artTree(lines, bytesDataUrl(opts.art.bytes, opts.art.contentType), sponsors)
+		: templateTree(lines, sponsors);
+	return renderPng(tree, FLYER_WIDTH, FLYER_HEIGHT);
 }

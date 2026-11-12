@@ -19,15 +19,28 @@ vi.mock('#lib/server/storage.js', () => ({
 		return key;
 	},
 	getObject: async (key: string) =>
-		objects.has(key) ? { bytes: objects.get(key)!, contentType: 'image/png' } : null,
+		objects.has(key)
+			? {
+					bytes: objects.get(key)!,
+					contentType: key.endsWith('.avif') ? 'image/avif' : 'image/png'
+				}
+			: null,
 	resolveImageUrl: (key: string | null) => key
 }));
 
-const rendered: { title: string; withArt: boolean }[] = [];
+type Drawn = { name: string; src: string | null };
+const rendered: { title: string; withArt: boolean; sponsors: Drawn[] }[] = [];
 vi.mock('./flyer', async (orig) => ({
 	...(await orig<typeof import('./flyer')>()),
-	renderFlyer: async (lines: { title: string }, art?: unknown) => {
-		rendered.push({ title: lines.title, withArt: Boolean(art) });
+	renderFlyer: async (
+		lines: { title: string },
+		opts: { art?: unknown; sponsors?: Drawn[] } = {}
+	) => {
+		rendered.push({
+			title: lines.title,
+			withArt: Boolean(opts.art),
+			sponsors: opts.sponsors ?? []
+		});
 		return new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
 	}
 }));
@@ -51,6 +64,9 @@ function posterAttachments() {
 
 beforeEach(() => {
 	for (const t of [
+		'sponsor_placement',
+		'sponsorship',
+		'sponsor',
 		'media_attachment',
 		'media',
 		'artifact_request',
@@ -76,7 +92,7 @@ describe('useTemplateFlyer', () => {
 	it('renders the template and makes it the poster', async () => {
 		await useTemplateFlyer(EVENT);
 
-		expect(rendered).toEqual([{ title: 'Harvest Show', withArt: false }]);
+		expect(rendered).toEqual([{ title: 'Harvest Show', withArt: false, sponsors: [] }]);
 		expect(uploads).toEqual([
 			{ key: expect.stringMatching(/^events\/posters\/.*\.png$/), type: 'image/png' }
 		]);
@@ -93,7 +109,48 @@ describe('useTemplateFlyer', () => {
 		await expect(useTemplateFlyer('nope')).rejects.toBeInstanceOf(FlyerEventNotFoundError);
 		expect(uploads).toEqual([]);
 	});
+
+	it('draws the sponsors the event page credits, by name when a logo cannot be drawn', async () => {
+		credit('sp-a', 'Acme Audio', 'active', { logo: 'sponsors/logos/a.png' });
+		credit('sp-b', 'Bean Cafe', 'ended', { logo: 'sponsors/logos/b.avif' });
+		credit('sp-c', 'Corner Co', 'active');
+		credit('sp-d', 'Deal Pending', 'prospect', { logo: 'sponsors/logos/d.png' });
+		credit('sp-e', 'Email Only', 'active', { onEventPage: false });
+
+		await useTemplateFlyer(EVENT);
+
+		expect(rendered[0].sponsors).toEqual([
+			{ name: 'Acme Audio', src: expect.stringMatching(/^data:image\/png;base64,/) },
+			{ name: 'Bean Cafe', src: null },
+			{ name: 'Corner Co', src: null }
+		]);
+	});
 });
+
+function credit(
+	id: string,
+	name: string,
+	status: string,
+	opts: { logo?: string; onEventPage?: boolean } = {}
+) {
+	sqlite.exec(`insert into sponsor (id, name) values ('${id}', '${name}')`);
+	sqlite.exec(
+		`insert into sponsorship (id, sponsor_id, title, status) values ('${id}-s', '${id}', 'Show', '${status}')`
+	);
+	sqlite.exec(
+		`insert into sponsor_placement (id, sponsorship_id, event_id, on_event_page, in_campaign)
+		 values ('${id}-p', '${id}-s', '${EVENT}', ${opts.onEventPage === false ? 0 : 1}, 1)`
+	);
+	if (!opts.logo) return;
+	sqlite.exec(
+		`insert into media (id, key, content_type, byte_size) values ('${id}-m', '${opts.logo}', 'image/png', 3)`
+	);
+	sqlite.exec(
+		`insert into media_attachment (id, media_id, attachable_type, attachable_id, slot)
+		 values ('${id}-a', '${id}-m', 'sponsor', '${id}', 'logo')`
+	);
+	objects.set(opts.logo, new Uint8Array([1, 2, 3]));
+}
 
 describe('useArtWithFooter', () => {
 	async function delivered() {
@@ -115,7 +172,7 @@ describe('useArtWithFooter', () => {
 		await delivered();
 		await useArtWithFooter('req-1');
 
-		expect(rendered).toEqual([{ title: 'Harvest Show', withArt: true }]);
+		expect(rendered).toEqual([{ title: 'Harvest Show', withArt: true, sponsors: [] }]);
 		expect(posterAttachments()).toEqual([
 			{ key: expect.stringMatching(/^events\/posters\//), alt: 'Flyer for Harvest Show' }
 		]);

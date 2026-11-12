@@ -1902,7 +1902,9 @@ restore crew shifts or retract a cancellation notice.
     points the listing's poster slot at the same media row. `usePosterArtWithFooter` and
     `useTemplateFlyerAsPoster` render a 1080×1350 PNG with `renderFlyer`
     (`src/lib/server/poster/flyer.ts`, on `@cf-wasm/og`) and replace the slot; a flyer is a
-    snapshot and is not re-rendered when the event changes.
+    snapshot and is not re-rendered when the event changes. Its footer draws the sponsors
+    `creditsForEvent(eventId, 'eventPage')` returns. `sponsorLogos` reads each logo through
+    the R2 binding, and a logo that is not PNG, JPEG or SVG is drawn as the sponsor's name.
 12. **Crew follows the clock.** When a production time, or the listing's doors, start or
     end, moves, `shiftAnchoredWorkOrders` in `volunteer/retime-work-orders.ts` moves every
     live work order anchored to it by the same delta, in the same batch.

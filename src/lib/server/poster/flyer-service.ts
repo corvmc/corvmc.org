@@ -11,7 +11,9 @@ import {
 	deliveredPosterArt,
 	PosterRequestNotFoundError
 } from '#lib/server/production/artifact-request-service.js';
+import { creditsForEvent } from '#lib/server/sponsor/credit-service.js';
 import { flyerLines, renderFlyer, type FlyerSource } from './flyer';
+import { sponsorLogos } from './sponsor-logos';
 
 /**
  * Rendering a flyer and making it the event's poster. A flyer is a snapshot:
@@ -70,10 +72,16 @@ async function publishFlyer(eventId: string, title: string, png: Uint8Array): Pr
 	});
 }
 
+/** The sponsors the event page credits, as the flyer draws them. */
+async function flyerSponsors(eventId: string) {
+	return sponsorLogos(await creditsForEvent(eventId, 'eventPage'));
+}
+
 /** The template flyer, from the event's own details, as its poster. */
 export async function useTemplateFlyer(eventId: string): Promise<void> {
 	const source = await flyerSource(eventId);
-	await publishFlyer(eventId, source.title, await renderFlyer(flyerLines(source)));
+	const sponsors = await flyerSponsors(eventId);
+	await publishFlyer(eventId, source.title, await renderFlyer(flyerLines(source), { sponsors }));
 }
 
 /**
@@ -87,8 +95,8 @@ export async function useArtWithFooter(requestId: string): Promise<{ eventId: st
 
 	const source = await flyerSource(eventId);
 	const png = await renderFlyer(flyerLines(source), {
-		bytes: object.bytes,
-		contentType: object.contentType ?? 'image/png'
+		art: { bytes: object.bytes, contentType: object.contentType ?? 'image/png' },
+		sponsors: await flyerSponsors(eventId)
 	});
 	await publishFlyer(eventId, source.title, png);
 	return { eventId };
