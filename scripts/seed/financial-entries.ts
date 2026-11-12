@@ -1,6 +1,6 @@
 import { financialEntry } from '../../src/lib/server/db/schema/financial';
 import { calculateProcessingFee } from '../../src/lib/finance/fees';
-import { batchInsert, db } from './db';
+import { batchInsert } from './db';
 import { type SeedReservation, type SeedUser } from './types';
 import { randomInt } from './util';
 
