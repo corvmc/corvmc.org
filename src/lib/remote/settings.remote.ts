@@ -8,7 +8,6 @@ import {
 	type ProductKey
 } from '#lib/server/finance/product-config-service.js';
 import {
-	config,
 	getConfigsByPrefix,
 	updateSiteConfigs,
 	updateSiteConfig
@@ -110,14 +109,9 @@ export const getVolunteerValueSettings = query(async () => {
 /** The orientation shift a first booking raises: role, timing and checklist. */
 export const getOrientationSettings = query(async () => {
 	await requireCapability('settings.read');
-	const [setting, roles, firstVisitNotes] = await Promise.all([
-		getOrientationSetting(),
-		listVolunteerRoles(),
-		config('volunteer.firstVisitNotes')
-	]);
+	const [setting, roles] = await Promise.all([getOrientationSetting(), listVolunteerRoles()]);
 	return {
 		...setting,
-		firstVisitNotes: String(firstVisitNotes),
 		roles: roles.filter((r) => r.isActive).map((r) => ({ id: r.id, name: r.name }))
 	};
 });

@@ -48,7 +48,6 @@ type ConfigWrite = { key: string; value: unknown };
 const updateSiteConfigs = vi.fn(async (_writes: ConfigWrite[]) => undefined);
 const updateSiteConfig = vi.fn(async () => undefined);
 vi.mock('#lib/server/site-config/site-config-service.js', () => ({
-	config: async () => '',
 	getConfigsByPrefix: (...args: unknown[]) => getConfigsByPrefix(...(args as [string])),
 	updateSiteConfigs: (...args: unknown[]) => updateSiteConfigs(...(args as [ConfigWrite[]])),
 	updateSiteConfig: (...args: unknown[]) => updateSiteConfig(...(args as []))
