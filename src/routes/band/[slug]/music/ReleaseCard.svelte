@@ -86,7 +86,7 @@
 					{/if}
 				</div>
 
-				<p class="text-muted">
+				<p class="text-muted" data-track-count={release.trackCount}>
 					{formatTrackSummary(release.trackCount, release.durationMs)}
 					{#if release.releasedAt}
 						· {formatDateYear(release.releasedAt)}
