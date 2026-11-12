@@ -44,7 +44,7 @@
 	}
 </script>
 
-<PageHeader title={m.staff_gear_title()} documentTitle={m.staff_gear_problems_label()}>
+<PageHeader title={m.staff_gear_title()} documentTitle={m.staff_gear_problems_title()}>
 	<StaffViews views={gearViews} active="problems" />
 </PageHeader>
 <PageContent>

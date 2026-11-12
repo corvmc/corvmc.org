@@ -26,7 +26,7 @@
 	const data = $derived(await getForm8282Obligations());
 </script>
 
-<PageHeader title={m.staff_gear_title()} documentTitle={m.staff_gear_compliance_label()}>
+<PageHeader title={m.staff_gear_title()} documentTitle={m.staff_gear_compliance_title()}>
 	<StaffViews views={gearViews} active="compliance" />
 </PageHeader>
 
