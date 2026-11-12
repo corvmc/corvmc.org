@@ -67,12 +67,13 @@
 
 <!-- Null is a viewer who may read the record but not its tasks. -->
 {#if related.current}
+	{@const data = related.current}
 	<InfoCard title={m.staff_related_tasks_title()} testid="related-tasks">
 		{#snippet header(title)}
 			<div class="flex flex-wrap items-center justify-between gap-2">
 				<CardTitle>{title}</CardTitle>
 				<div class="flex items-center gap-1">
-					{#if related.current.groups.length > 0 || showDone}
+					{#if data.groups.length > 0 || showDone}
 						<Button
 							variant="ghost"
 							size="sm"
@@ -86,8 +87,8 @@
 							{m.staff_related_tasks_view_all_label()}
 						</Button>
 					{/if}
-					{#if related.current.prefill}
-						{@const prefill = related.current.prefill}
+					{#if data.prefill}
+						{@const prefill = data.prefill}
 						<Action
 							action={createCatalogueTaskForm}
 							label={m.staff_tasks_new_task_label()}
@@ -123,8 +124,7 @@
 			</div>
 		{/snippet}
 
-		{#if related.current.groups.length > 0}
-			{@const data = related.current}
+		{#if data.groups.length > 0}
 			{@const marksOf = (id: string) => data.contractors[id] ?? []}
 			{@const all = data.groups.flatMap((g) => g.tasks)}
 			<div class="flex flex-wrap gap-2" data-testid="related-task-chips">
