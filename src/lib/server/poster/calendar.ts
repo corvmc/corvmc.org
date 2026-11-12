@@ -9,7 +9,7 @@ export const CALENDAR_WIDTH = 1080;
 export const CALENDAR_HEIGHT = 1350;
 
 // The listing area: the page less stripes, padding, the month heading and the footer.
-const BODY_HEIGHT = 820;
+const BODY_HEIGHT = 860;
 const BODY_WIDTH = CALENDAR_WIDTH - 2 * 56;
 const COLUMN_GAP = 40;
 const MAX_LOGOS = 5;
@@ -103,14 +103,15 @@ export function layOut(blocks: CalendarPoster['blocks']) {
 	return { columns: truncated(blocks, columns, size), size };
 }
 
+/** "THU 19", in club time. */
 function dayLabel(d: Date): string {
-	return new Intl.DateTimeFormat('en-US', {
+	const parts = new Intl.DateTimeFormat('en-US', {
 		timeZone: DEFAULT_TIMEZONE,
 		weekday: 'short',
 		day: 'numeric'
-	})
-		.format(d)
-		.toUpperCase();
+	}).formatToParts(d);
+	const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+	return `${part('weekday').toUpperCase()} ${part('day')}`;
 }
 
 function lineNode(line: Line, size: number): Node {
@@ -143,12 +144,18 @@ function lineNode(line: Line, size: number): Node {
 	return el('div', { display: 'flex', alignItems: 'center', height, fontSize: size }, [
 		el(
 			'div',
-			{ width: Math.round(size * 3.6), flexShrink: 0, color: C.navy, fontWeight: 700 },
+			{
+				width: Math.round(size * 4.6),
+				flexShrink: 0,
+				color: C.navy,
+				fontWeight: 700,
+				whiteSpace: 'nowrap'
+			},
 			dayLabel(line.event.startsAt)
 		),
 		el(
 			'div',
-			{ width: Math.round(size * 4.4), flexShrink: 0, color: C.orange },
+			{ width: Math.round(size * 4), flexShrink: 0, color: C.orange, whiteSpace: 'nowrap' },
 			clock(line.event.startsAt)
 		),
 		el(

@@ -288,6 +288,7 @@ describe('route coverage', () => {
 		// Outreach views, reached from its tab bar (#2394).
 		'/staff/marketing/campaigns',
 		'/staff/marketing/audiences',
+		'/staff/marketing/posters',
 		// Payments views, reached from its tab bar (#2395).
 		'/staff/money/payments',
 		'/staff/money/credits',

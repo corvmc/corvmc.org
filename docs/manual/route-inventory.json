@@ -620,6 +620,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/marketing/posters",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/members",
 		"panel": "staff"
 	},
