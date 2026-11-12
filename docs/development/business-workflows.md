@@ -1586,8 +1586,8 @@ from April's.
 > **Since #2568** that booking starts `volunteer.orientationMinutes` earlier for the tour, at no
 > charge, so the shift raised at its start covers the tour without cutting into the session. The migration that added it backfilled every
 > member with a `completed` booking of their own (not a staff hold) and every completed or
-> waived orientation. Staff switch the shift on by picking a role under Settings → Orientation
-> on `/staff/settings`; `pnpm db:seed` sets it locally.
+> waived orientation. Staff switch the shift on by picking a role under Orientation on Practice space settings
+> (`/staff/reservations/settings`); `pnpm db:seed` sets it locally.
 
 > **Since #2567 and #2569** two reminders in `reminders/registry.ts` cover the day before, both
 > read from `volunteer/orientation-reminders.ts`:
@@ -1605,7 +1605,7 @@ from April's.
 >   own bookings and any booking already sent `first_visit`.
 
 > **Since #2034** orientation is a **setting**, not a list. `volunteer.orientationRoleId` and
-> `volunteer.orientationMinutes` are set from Settings → Orientation, and an empty role means
+> `volunteer.orientationMinutes` are set from Orientation on Practice space settings, and an empty role means
 > off. `raiseOrientationShift` inserts one task, marked `work_order.is_orientation`, with one
 > shift at the booking's start and no project, or reuses the live one already on the booking.
 > Retiming or cancelling the booking moves or calls off the shift; `member_orientation`

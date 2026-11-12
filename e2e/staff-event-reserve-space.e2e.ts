@@ -165,6 +165,8 @@ test.describe('staff event creation — minimal modal', () => {
 		// Searching the title is itself part of the change: the list only matched
 		// member and band names, so an event hold was unfindable by its show.
 		await page.getByRole('searchbox').fill(title);
+		// The search is applied once it reaches the address.
+		await expect(page).toHaveURL(/[?&]q=/);
 		// The date bounds keep the row off a later page of the 50-row list. They
 		// sit in the Date panel, closed again so it cannot cover the row.
 		await page.getByTestId('date-filter').click();
@@ -172,6 +174,7 @@ test.describe('staff event creation — minimal modal', () => {
 		await page.getByLabel('To', { exact: true }).fill(eventDate);
 		await page.keyboard.press('Escape');
 		await expect(page.getByLabel('From', { exact: true })).toBeHidden();
+		await expect(page).toHaveURL(/[?&]to=/);
 
 		const row = page.locator('tr', { has: page.getByRole('link', { name: title }) });
 		await expect(row.getByRole('link', { name: title })).toHaveAttribute(

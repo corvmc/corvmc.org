@@ -165,6 +165,7 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
 	{ name: 'getVenueSettings', cap: 'settings.read' },
 	{ name: 'getIntegrationSettings', cap: 'settings.read' },
 	{ name: 'getStaffSettingsPage', cap: 'settings.read' },
+	{ name: 'getPracticeSpaceSettingsPage', cap: 'settings.read' },
 	{ name: 'testUtecConnection', cap: 'settings.read' },
 	{ name: 'getUtecDevices', cap: 'settings.read' },
 	// Not reads: each has a real-world effect. runLockSelfTest issues a working
@@ -346,22 +347,18 @@ describe('settings.remote staff guards', () => {
 	// strings: a projection is a place a credential leaks back into by accident,
 	// and an equality assertion only catches the field name someone thought to
 	// check. Serialising the whole payload catches it under any name, at any
-	// depth, on every path that projects this object — the query, and the
-	// combined page query the staff route SSRs into its HTML.
-	it.each(['getIntegrationSettings', 'getStaffSettingsPage'])(
-		'%s serialises no U-tec credential',
-		async (name) => {
-			requireCapability.mockResolvedValue(undefined);
-			const payload = JSON.stringify(await settings[name]());
+	// depth. The Building access sidebar is the only reader now.
+	it.each(['getIntegrationSettings'])('%s serialises no U-tec credential', async (name) => {
+		requireCapability.mockResolvedValue(undefined);
+		const payload = JSON.stringify(await settings[name]());
 
-			for (const [field, sentinel] of Object.entries(CREDENTIALS)) {
-				expect(payload, `${field} reached the browser`).not.toContain(sentinel);
-			}
-			// Proves the assertions above are looking at a payload that really was
-			// built from the credential-bearing config, not an empty object.
-			expect(payload).toContain('utec-client');
+		for (const [field, sentinel] of Object.entries(CREDENTIALS)) {
+			expect(payload, `${field} reached the browser`).not.toContain(sentinel);
 		}
-	);
+		// Proves the assertions above are looking at a payload that really was
+		// built from the credential-bearing config, not an empty object.
+		expect(payload).toContain('utec-client');
+	});
 
 	// Both credentials are written now (#745 reversed): an id and its secret are
 	// one credential, and a form that can save only half of it is how the two

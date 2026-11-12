@@ -728,6 +728,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/reservations/settings",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/settings",
 		"panel": "staff"
 	},

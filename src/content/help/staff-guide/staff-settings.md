@@ -14,11 +14,9 @@ changes are validated and saved per tab. Some settings are admin-only.
 
 ## The tabs
 
-- **Products** — Hourly practice rate, free-tier allocation, and sustaining-member
-  rates.
-- **Reservations** — Slot duration, min/max booking length, the booking window, and
-  the confirmation deadline.
-- **Organization** — Organization name, timezone, and feature flags.
+- **Organization** — Location, contact email, social links and the volunteer hour value.
+- Pricing, booking rules, operating hours, the room and orientation are on
+  **Practice space settings**: **Settings** in the **Staff → Practice space** header.
 - The smart-lock (U-tec) settings are under **Lock settings** in the **Building access**
   sidebar on **Staff → Practice space**.
 - **Inbox Channels** — Configuration for the email, SMS, web, Instagram, and

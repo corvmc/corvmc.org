@@ -2,6 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { isEventHold } from '#lib/config.js';
 	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
@@ -25,7 +26,7 @@
 	import CreateReservation from './CreateModal.svelte';
 	import RecurringSeriesModal from './RecurringSeriesModal.svelte';
 	import BuildingAccess from './BuildingAccess.svelte';
-	import { page as appPage } from '$app/state';
+	import { page as appPage, navigating } from '$app/state';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
 	import { goto } from '$app/navigation';
 	import {
@@ -69,6 +70,7 @@
 	const statuses: Status[] = ['confirmed', 'payment_due', 'waitlisted', 'cancelled'];
 	const bookers: Booker[] = ['user', 'group', 'production', 'event_listing'];
 	const ranges: DateRange[] = [...datePresets, 'custom'];
+	const FILTER_KEYS = ['q', 'booker', 'date', 'from', 'to', 'status', 'page'];
 
 	// Seeded once from the URL and mirrored back below, so a round trip through a
 	// reservation lands on the same view.
@@ -107,13 +109,24 @@
 		if (filters.dateTo) pairs.push(['to', filters.dateTo]);
 		if (status) pairs.push(['status', status]);
 		if (page > 1) pairs.push(['page', String(page)]);
-		const query = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = `${location.pathname}${query ? `?${query}` : ''}`;
+		const encode = (list: [string, string][]) =>
+			list.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+		// Only the filters' own keys decide whether the address is stale, so a link's
+		// `?recurring` or `?access` is not rewritten away on arrival.
+		const current = [...new URL(location.href).searchParams].filter(([k]) =>
+			FILTER_KEYS.includes(k)
+		);
+		if (encode(current) === encode(pairs)) return;
+		// A search landing just after a row was clicked must not replace the
+		// navigation that click started.
+		if (navigating.to) return;
+		const query = encode(pairs);
 		// Shallow: a full navigation re-ran the layout under a click that had just
 		// opened a row's dialog, and the dialog never showed.
-		if (location.pathname + location.search !== href) {
-			void goto(href, { replace: true, shallow: true });
-		}
+		void goto(`${location.pathname}${query ? `?${query}` : ''}`, {
+			replace: true,
+			shallow: true
+		});
 	});
 
 	// One query, `.then()` views off it. Not awaited: awaiting would suspend the page
@@ -217,11 +230,16 @@
 			<BuildingAccess
 				bind:open={accessOpen}
 				offline={settled.lock.offline}
-				canReadSettings={settled.lock.canReadSettings}
+				canReadSettings={settled.canSettings}
 				utec={utecParam}
 			/>
 		{/if}
 		<RecurringSeriesModal />
+		{#if settled?.canSettings}
+			<Button variant="ghost" size="sm" href={resolve('staff/reservations/settings')}>
+				{m.staff_reservations_settings_label()}
+			</Button>
+		{/if}
 		<div class="join">
 			<CreateReservation class="join-item" />
 			{#if canManageClosures}

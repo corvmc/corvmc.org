@@ -90,3 +90,4 @@ A page or less. Link the issue and the PRs.
 | 0056 | [A task is the work, and a shift is when volunteers show up](0056-a-task-is-the-work-a-shift-is-when.md)                  | 2026-11-10 | Accepted |
 | 0057 | [The day before a first visit](0057-the-day-before-a-first-visit.md)                                                      | 2026-11-11 | Accepted |
 | 0058 | [A first booking holds unbilled tour time](0058-a-first-booking-holds-unbilled-tour-time.md)                              | 2026-11-11 | Accepted |
+| 0059 | [The Practice space page runs the space](0059-the-practice-space-page-runs-the-space.md)                                  | 2026-11-11 | Accepted |
