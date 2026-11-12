@@ -8,6 +8,7 @@
  * wiping roles) shipped undetected. See PR #164.
  *
  * Seeds:
+ *  - one confirmed reservation the operator booked for themselves;
  *  - one operator holding both `staff` and `admin`, with a credential account
  *    whose password verifies against the app's scrypt path so the test can log
  *    in through the real better-auth UI;
@@ -28,6 +29,8 @@ import { eq, inArray } from 'drizzle-orm';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import { directoryEntry } from '../../src/lib/server/db/schema/directory';
+import { reservation } from '../../src/lib/server/db/schema/reservation';
+import { buildTimeRangeInTz } from '../../src/lib/server/reservation/timezone';
 import { scryptHash } from './seed-pay-reservation';
 import { withPlatformDb } from './platform-db';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
@@ -42,6 +45,13 @@ export const SEED_TARGET_ID = 'e2e-staff-target';
 export const SEED_TARGET_EMAIL = 'e2e.staff.target@example.com';
 export const SEED_TARGET_NAME = 'E2E Role Target';
 export const SEED_TARGET_ROLE = 'member';
+
+/**
+ * The operator's own booking, so their member reservations list always has a
+ * record to open. A date no booking test's block reaches.
+ */
+export const SEED_STAFF_RESERVATION_ID = 'e2e-staff-own-reservation';
+const STAFF_RESERVATION_DATE = '2030-03-04';
 
 /** `/staff/members` pages at 20 rows; seed past that so page 2 exists. */
 export const FILLER_COUNT = 24;
@@ -75,6 +85,7 @@ async function ensureRole(
 export async function seedStaffUser(): Promise<void> {
 	await withPlatformDb(async (db) => {
 		// Clean slate. Delete explicitly (FKs may be disabled on local D1).
+		await db.delete(reservation).where(eq(reservation.id, SEED_STAFF_RESERVATION_ID));
 		await db.delete(modelHasRole).where(inArray(modelHasRole.userId, ALL_IDS));
 		await db.delete(directoryEntry).where(inArray(directoryEntry.userId, ALL_IDS));
 		await db.delete(account).where(inArray(account.userId, ALL_IDS));
@@ -112,6 +123,23 @@ export async function seedStaffUser(): Promise<void> {
 			{ roleId: staffRole.id, userId: SEED_STAFF_ID },
 			{ roleId: adminRole.id, userId: SEED_STAFF_ID }
 		]);
+
+		const { startsAt, endsAt } = buildTimeRangeInTz(
+			STAFF_RESERVATION_DATE,
+			'10:00',
+			'12:00',
+			'America/Los_Angeles'
+		);
+		await db.insert(reservation).values({
+			id: SEED_STAFF_RESERVATION_ID,
+			bookerType: 'user',
+			bookerId: SEED_STAFF_ID,
+			createdByUserId: SEED_STAFF_ID,
+			status: 'confirmed',
+			startsAt,
+			endsAt,
+			notes: 'e2e: the record page panel-nav opens'
+		});
 
 		// The edit target. Created oldest so it never drifts onto page 1 as filler
 		// accumulates — the list orders by createdAt DESC.

@@ -11,6 +11,8 @@ import {
 	SEED_AUDIO_TRACK_TITLE,
 	SEED_AUDIO_DRAFT_ID,
 	SEED_AUDIO_DRAFT_TITLE,
+	SEED_AUDIO_DRAFT_TRACK_COUNT,
+	SEED_AUDIO_RELEASE_TRACK_COUNT,
 	SEED_AUDIO_DELETABLE_ID,
 	SEED_AUDIO_DELETABLE_TRACK_ID,
 	SEED_AUDIO_UNPUBLISHED_TRACK_ID,
@@ -51,11 +53,23 @@ test.describe('band music panel', () => {
 		await login(page);
 		await page.goto(`${band}/music`);
 
-		await expect(page.getByText(SEED_AUDIO_RELEASE_TITLE)).toBeVisible({ timeout: 15000 });
-		await expect(page.getByText(SEED_AUDIO_DRAFT_TITLE)).toBeVisible();
+		const card = (id: string) => page.locator(`a[href="${band}/music/${id}"]`);
+		const published = card(SEED_AUDIO_RELEASE_ID);
+		const draft = card(SEED_AUDIO_DRAFT_ID);
+
+		await expect(published.getByText(SEED_AUDIO_RELEASE_TITLE)).toBeVisible({ timeout: 15000 });
+		await expect(draft.getByText(SEED_AUDIO_DRAFT_TITLE)).toBeVisible();
+		await expect(published.locator('[data-track-count]')).toHaveAttribute(
+			'data-track-count',
+			String(SEED_AUDIO_RELEASE_TRACK_COUNT)
+		);
+		await expect(draft.locator('[data-track-count]')).toHaveAttribute(
+			'data-track-count',
+			String(SEED_AUDIO_DRAFT_TRACK_COUNT)
+		);
 		// A draft has to be visibly a draft, or a band cannot tell what is public.
 		// The draft badge is the card's only ghost one.
-		await expect(page.locator('.badge-ghost').first()).toBeVisible();
+		await expect(draft.locator('.badge-ghost')).toBeVisible();
 	});
 
 	test('shows the tracklist and a play control on the release page', async ({ page }) => {

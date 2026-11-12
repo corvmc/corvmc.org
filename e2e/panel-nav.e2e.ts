@@ -1,6 +1,10 @@
 import { expect, test, type Page } from './fixtures/test';
 import { signInAs } from './fixtures/auth';
-import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
+import {
+	SEED_STAFF_EMAIL,
+	SEED_STAFF_PASSWORD,
+	SEED_STAFF_RESERVATION_ID
+} from './fixtures/seed-staff-user';
 import { SEED_PREMIUM_BAND_SLUG } from './fixtures/seed-band-onboarding';
 
 /**
@@ -45,13 +49,14 @@ test.describe('member sidebar', () => {
 		await expect(nav(page).locator('a.active')).toHaveAttribute('href', '/member/reservations');
 
 		// A reservation record: exact matching lit nothing here.
-		const first = page.locator('a[href^="/member/reservations/"]').first();
-		if (await first.count()) {
-			await first.click();
-			await page.waitForURL(/\/member\/reservations\/.+/);
-			await expect(nav(page).locator('a.active')).toHaveCount(1);
-			await expect(nav(page).locator('a.active')).toHaveAttribute('href', '/member/reservations');
-		}
+		// The list renders after an awaited query, so wait on the seeded link itself.
+		const record = `/member/reservations/${SEED_STAFF_RESERVATION_ID}`;
+		const recordLink = page.locator(`main a[href="${record}"]`).first();
+		await expect(recordLink).toBeVisible({ timeout: 15000 });
+		await recordLink.click();
+		await page.waitForURL(`**${record}`);
+		await expect(nav(page).locator('a.active')).toHaveCount(1);
+		await expect(nav(page).locator('a.active')).toHaveAttribute('href', '/member/reservations');
 
 		// The meta rows stay pinned to the foot of the sidebar.
 		await page.goto('/member');
