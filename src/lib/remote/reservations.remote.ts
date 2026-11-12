@@ -479,18 +479,17 @@ export const getBandReservationDetail = query(
 			canCancel:
 				(bandAdmin || isBooker) &&
 				res.startsAt.getTime() > Date.now() &&
-				(res.status === 'scheduled' || res.status === 'confirmed'),
+				res.status === 'confirmed',
 			// The member checkout takes this row — it authorizes on
 			// `createdByUserId`, and a band booking is in its booker's own list —
 			// so the booker gets the link the member page has. The condition is
 			// `getReservationPayment`'s own, restated rather than re-derived:
-			// awaiting confirmation, or confirmed with a balance still owed.
+			// confirmed with a balance still owed.
 			canPay:
 				isBooker &&
-				(res.status === 'scheduled' ||
-					(res.status === 'confirmed' &&
-						!res.paidAt &&
-						(res.cashDueCents == null || res.cashDueCents > 0)))
+				res.status === 'confirmed' &&
+				!res.paidAt &&
+				(res.cashDueCents == null || res.cashDueCents > 0)
 		};
 	}
 );
@@ -2182,7 +2181,7 @@ export const getReservations = query(
 			// confirm/pay flow, so listing it here offered actions that don't apply.
 			notAProgramHold(),
 			after && gt(reservation.endsAt, after),
-			!includeTerminal && inArray(reservation.status, ['scheduled', 'confirmed', 'waitlisted'])
+			!includeTerminal && inArray(reservation.status, ['confirmed', 'waitlisted'])
 		];
 		// Resolved per row rather than once for the list: this query excludes only
 		// `event`, so a member's own teaching bookings appear here too and would
@@ -2221,7 +2220,7 @@ export const getReservations = query(
 			// which `usableFreeHours` has already applied (#2060).
 			const payableWithCredits =
 				creditsAvailable &&
-				(value.status === 'scheduled' || value.status === 'confirmed') &&
+				value.status === 'confirmed' &&
 				computeReservationCredit({
 					totalCents,
 					durationHours,

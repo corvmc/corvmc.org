@@ -463,7 +463,7 @@ export async function adjustWindow(
 	// Atomic conditional update, in the shape of updateStatus(): only a live
 	// booking can be re-timed, and a row cancelled between the read and the
 	// write must not silently come back.
-	const adjustable: ReservationStatus[] = ['scheduled', 'confirmed'];
+	const adjustable: ReservationStatus[] = ['confirmed'];
 	const result = await db
 		.update(reservation)
 		.set({ startsAt, endsAt, updatedAt: new Date() })
@@ -565,7 +565,7 @@ export async function cancel(
 		(options?.staffOverride && cancelledByUserId !== row.createdByUserId ? 'staff' : 'member');
 
 	// Atomic conditional update — only cancels if status hasn't changed since read
-	const cancellable: ReservationStatus[] = ['scheduled', 'confirmed', 'waitlisted'];
+	const cancellable: ReservationStatus[] = ['confirmed', 'waitlisted'];
 	const result = await db
 		.update(reservation)
 		.set({
@@ -653,11 +653,11 @@ export async function markComplete(reservationId: string): Promise<void> {
 }
 
 export async function markNoShow(reservationId: string): Promise<void> {
-	await updateStatus(reservationId, ['confirmed', 'scheduled'], 'no_show');
+	await updateStatus(reservationId, ['confirmed'], 'no_show');
 }
 
 /**
- * Staff records cash payment for a scheduled or confirmed (cash-owed) reservation
+ * Staff records cash payment for a confirmed (cash-owed) reservation
  * and completes it in one action. Returns the Stripe payment record ID for
  * bookkeeping.
  */
@@ -674,12 +674,7 @@ export async function recordCashAndComplete(
 			cashDueCents: 0,
 			updatedAt: new Date()
 		})
-		.where(
-			and(
-				eq(reservation.id, reservationId),
-				inArray(reservation.status, ['scheduled', 'confirmed'])
-			)
-		);
+		.where(and(eq(reservation.id, reservationId), eq(reservation.status, 'confirmed')));
 
 	if (getRowCount(result) === 0) {
 		const [row] = await db
@@ -689,9 +684,7 @@ export async function recordCashAndComplete(
 			.limit(1);
 
 		if (!row) throw new ReservationNotFoundError();
-		throw new ReservationStateError(
-			`Expected status "scheduled" or "confirmed", got "${row.status}"`
-		);
+		throw new ReservationStateError(`Expected status "confirmed", got "${row.status}"`);
 	}
 }
 

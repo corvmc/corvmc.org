@@ -709,8 +709,6 @@
 	"member_reservations_confirm_by_slot_will_offered_text": "Confirm by {formatMonthDayYear} or the slot will be offered to someone else.",
 	"member_reservations_confirm_reservation_label": "Confirm reservation",
 	"member_reservations_create_modal_modal_title": "Reserve space",
-	"member_reservations_create_modal_room_held_pay_any_time_toast": "Room held. Pay for it any time, or confirm it from {opens}.",
-	"member_reservations_create_modal_room_held_pay_any_time_2_toast": "Room held. Pay for it any time, or confirm it closer to the date.",
 	"member_reservations_create_modal_submit_label": "Reserve space",
 	"member_reservations_dismiss_label": "Dismiss",
 	"member_reservations_id_booked_label": "Booked for",

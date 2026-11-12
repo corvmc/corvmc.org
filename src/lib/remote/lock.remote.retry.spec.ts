@@ -112,7 +112,7 @@ describe('retryDoorCodes', () => {
 	});
 
 	it('refuses a booking that is not confirmed, and touches nothing', async () => {
-		selectResults.push([{ ...confirmed, status: 'scheduled' }]);
+		selectResults.push([{ ...confirmed, status: 'waitlisted' }]);
 
 		await expect(retryDoorCodes('res-1')).rejects.toMatchObject({ status: 400 });
 		expect(calls).toEqual([]);

@@ -21,10 +21,10 @@ describe('reservationPaymentState', () => {
 		expect(reservationPaymentState({ ...base, paidAt: null, cashDueCents: 500 })).toBe('cash_due');
 	});
 
-	it('not yet settled (scheduled) → unpaid', () => {
+	it('not yet settled → unpaid', () => {
 		expect(
 			reservationPaymentState({
-				status: 'scheduled',
+				status: 'confirmed',
 				paidAt: null,
 				cashDueCents: null,
 				refundedAt: null
@@ -128,7 +128,6 @@ describe('isTerminalStatus', () => {
 	});
 
 	it('treats live statuses as non-terminal', () => {
-		expect(isTerminalStatus('scheduled')).toBe(false);
 		expect(isTerminalStatus('confirmed')).toBe(false);
 		expect(isTerminalStatus('waitlisted')).toBe(false);
 	});
@@ -239,7 +238,7 @@ describe('overlappingReservations', () => {
 		const others = [
 			{ id: 'a', startsAt: at(13), endsAt: at(15), status: 'confirmed' },
 			{ id: 'b', startsAt: at(10), endsAt: at(12), status: 'confirmed' }, // touches, no overlap
-			{ id: 'c', startsAt: at(14), endsAt: at(16), status: 'scheduled' } // touches, no overlap
+			{ id: 'c', startsAt: at(14), endsAt: at(16), status: 'confirmed' } // touches, no overlap
 		];
 		expect(overlappingReservations(current, others).map((o) => o.id)).toEqual(['a']);
 	});

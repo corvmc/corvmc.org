@@ -9,7 +9,7 @@ export async function seedPaymentRecords(users: SeedUser[], reservations: SeedRe
 	const rows = [];
 
 	const payableReservations = reservations
-		.filter((r) => ['completed', 'confirmed', 'scheduled'].includes(r.status))
+		.filter((r) => ['completed', 'confirmed'].includes(r.status))
 		.slice(0, 25);
 
 	for (const r of payableReservations) {

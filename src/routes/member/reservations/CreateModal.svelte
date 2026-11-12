@@ -9,7 +9,6 @@
 	import ConfirmStep from '#lib/components/reservations/booking/ConfirmStep.svelte';
 	import PaymentStep from '#lib/components/reservations/booking/PaymentStep.svelte';
 	import BookingConflict from '#lib/components/reservations/booking/BookingConflict.svelte';
-	import { formatDate } from '#lib/utils/format.js';
 
 	const { fields } = bookAndPayReservation;
 
@@ -43,8 +42,6 @@
 			paid?: boolean;
 			confirmed?: boolean;
 			waitlisted?: boolean;
-			scheduled?: boolean;
-			confirmOpensAt?: string;
 			redirectUrl?: string;
 		};
 		if (r?.redirectUrl) {
@@ -52,17 +49,6 @@
 		} else {
 			if (r?.waitlisted) {
 				toast.info(m.member_first_instance_waitlisted_because_slot_toast());
-			}
-			// Booked outside the window: held, with nothing priced (#2108). Saying so is the point:
-			// this outcome used to arrive as a 400 nobody rendered, over a held
-			// booking the member was never told about.
-			if (r?.scheduled) {
-				const opens = r.confirmOpensAt ? formatDate(new Date(r.confirmOpensAt)) : null;
-				toast.info(
-					opens
-						? m.member_reservations_create_modal_room_held_pay_any_time_toast({ opens })
-						: m.member_reservations_create_modal_room_held_pay_any_time_2_toast()
-				);
 			}
 			onbooked?.();
 		}

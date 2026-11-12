@@ -189,7 +189,7 @@ state machine, credit settlement, a cancel.
 
 |                         | agreed      | committed   | in custody    | returned    | abandoned               |
 | ----------------------- | ----------- | ----------- | ------------- | ----------- | ----------------------- |
-| `reservationStatuses`   | `scheduled` | `confirmed` | —             | `completed` | `no_show` / `cancelled` |
+| `reservationStatuses`   | —           | `confirmed` | —             | `completed` | `no_show` / `cancelled` |
 | `loanStatuses`          | `requested` | `scheduled` | `checked_out` | `returned`  | `cancelled`             |
 | `contractorJobStatuses` | `asked`     | `booked`    | —             | `completed` | `no_show` / `cancelled` |
 
