@@ -6,8 +6,12 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
-	/** A task in a project or none; the rest is set on its page, where it lands. */
-	let { projects }: { projects: { id: string; name: string }[] } = $props();
+	/**
+	 * A task in a project or none; the rest is set on its page, where it lands.
+	 * With `projectId`, it is that project's and the project is not asked.
+	 */
+	let { projects, projectId }: { projects: { id: string; name: string }[]; projectId?: string } =
+		$props();
 
 	const { fields } = createCatalogueTaskForm;
 	const options = $derived(projects.map((p) => ({ value: p.id, label: p.name })));
@@ -26,13 +30,17 @@
 >
 	{#snippet form()}
 		<Field field={fields.title} type="text" label={m.staff_title_label()} />
-		<Field
-			field={fields.projectId}
-			type="select"
-			label={m.staff_project_label()}
-			placeholder={m.ui_none_placeholder()}
-			{options}
-		/>
+		{#if projectId}
+			<input {...fields.projectId.as('hidden', projectId)} />
+		{:else}
+			<Field
+				field={fields.projectId}
+				type="select"
+				label={m.staff_project_label()}
+				placeholder={m.ui_none_placeholder()}
+				{options}
+			/>
+		{/if}
 		<Field field={fields.dueAt} type="date" label={m.staff_tasks_due_date_label()} />
 	{/snippet}
 </Action>

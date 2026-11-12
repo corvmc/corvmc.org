@@ -1,5 +1,4 @@
 import { isOverdue } from '#lib/utils/work-order-due.js';
-import { matchesProject, parseProjectFilter } from '../volunteer/schedule/project-filter';
 
 /**
  * The Tasks table's filters, chips and groups (#2625), all read from the URL so
@@ -58,7 +57,8 @@ export function parseTaskQuery(params: Pick<URLSearchParams, 'get'>): TaskQuery 
 	return {
 		group: params.get('group') === 'project' ? 'project' : 'due',
 		days: (WINDOWS as readonly number[]).includes(days) ? (days as Window) : 'all',
-		project: project === 'none' || parseProjectFilter(project) === '' ? project : '',
+		// `project` was the Schedule's "in a project" value; Tasks groups by project instead.
+		project: project === 'project' ? '' : project,
 		role: params.get('role') ?? '',
 		kind: pick(KINDS, params.get('kind')),
 		chip: pick(CHIPS, params.get('chip')),
@@ -121,7 +121,8 @@ export function matchesWindow(days: Window, t: TaskFacts, now: Date) {
 }
 
 export function matchesTaskProject(filter: string, t: TaskFacts) {
-	if (filter === '' || filter === 'none') return matchesProject(t, filter);
+	if (filter === '') return true;
+	if (filter === 'none') return t.projectId === null;
 	return t.projectId === filter;
 }
 

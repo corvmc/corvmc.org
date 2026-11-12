@@ -80,3 +80,7 @@ export { default as ReportEventAction } from './ReportEventAction.svelte';
 // Cross-domain
 export { default as ReopenAction } from './ReopenAction.svelte';
 export { default as ActivateToggleAction } from './ActivateToggleAction.svelte';
+
+// Tasks and projects
+export { default as NewTaskAction } from './NewTaskAction.svelte';
+export { default as NewProjectAction } from './NewProjectAction.svelte';
