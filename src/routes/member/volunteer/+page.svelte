@@ -162,27 +162,36 @@
 										{/if}
 									</div>
 								</div>
-								<!-- A task with a done condition closes itself when it holds. -->
-								{#if !task.closesItself}
-									<Action
-										action={markMyTaskDone.for(task.workOrderId)}
-										label={m.member_volunteer_assigned_tasks_mark_done_label()}
+								<div class="flex flex-wrap gap-2">
+									<Button
+										href={resolve(`member/volunteer/tasks/${task.workOrderId}`)}
 										variant="ghost"
 										size="xs"
-										modalTitle={m.member_volunteer_assigned_tasks_mark_done_title()}
-										submitLabel={m.member_volunteer_assigned_tasks_mark_done_label()}
-										successToast={m.member_volunteer_assigned_tasks_marked_done_toast()}
 									>
-										{#snippet form()}
-											<input
-												{...markMyTaskDone
-													.for(task.workOrderId)
-													.fields.workOrderId.as('hidden', task.workOrderId)}
-											/>
-											<p class="text-sm">{m.member_volunteer_assigned_tasks_mark_done_body()}</p>
-										{/snippet}
-									</Action>
-								{/if}
+										{m.member_volunteer_assigned_tasks_open_label()}
+									</Button>
+									<!-- A task with a done condition closes itself when it holds. -->
+									{#if !task.closesItself}
+										<Action
+											action={markMyTaskDone.for(task.workOrderId)}
+											label={m.member_volunteer_assigned_tasks_mark_done_label()}
+											variant="ghost"
+											size="xs"
+											modalTitle={m.member_volunteer_assigned_tasks_mark_done_title()}
+											submitLabel={m.member_volunteer_assigned_tasks_mark_done_label()}
+											successToast={m.member_volunteer_assigned_tasks_marked_done_toast()}
+										>
+											{#snippet form()}
+												<input
+													{...markMyTaskDone
+														.for(task.workOrderId)
+														.fields.workOrderId.as('hidden', task.workOrderId)}
+												/>
+												<p class="text-sm">{m.member_volunteer_assigned_tasks_mark_done_body()}</p>
+											{/snippet}
+										</Action>
+									{/if}
+								</div>
 							</li>
 						{/each}
 					</ul>
