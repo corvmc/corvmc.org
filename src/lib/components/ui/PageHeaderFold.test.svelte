@@ -1,6 +1,6 @@
 <!--
 	Test harness for a header with more actions than a phone row holds, shaped like
-	/staff/projects/[id] (#1910). `inline` passes all four as children, the way a
+	/staff/tasks/projects/[id] (#1910). `inline` passes all four as children, the way a
 	page without a `menu` does; `folded` splits them into primary, children and menu.
 -->
 <script lang="ts">
@@ -11,7 +11,7 @@
 
 	let { shape }: { shape: 'inline' | 'folded' } = $props();
 
-	const parent = { label: 'Projects', href: '/staff/projects' } as const;
+	const parent = { label: 'Projects', href: '/staff/tasks/projects' } as const;
 </script>
 
 {#snippet editProject()}

@@ -37,10 +37,10 @@
 		resolveWorkOrder,
 		unassignFromTask,
 		updateTask,
-		type getStaffShiftPage
+		type getTaskPage
 	} from '#lib/remote/volunteer.remote.js';
 
-	type View = Omit<Awaited<ReturnType<typeof getStaffShiftPage>>, 'contractors'>;
+	type View = Omit<Awaited<ReturnType<typeof getTaskPage>>, 'contractors'>;
 	let {
 		view,
 		subtitle,

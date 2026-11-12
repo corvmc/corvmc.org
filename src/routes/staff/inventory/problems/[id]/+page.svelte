@@ -193,8 +193,7 @@
 						}}
 						>{#snippet a({ children })}<a
 								class="link"
-								href={resolve(`staff/volunteer/shifts/${report.workOrderId}`)}
-								>{@render children?.()}</a
+								href={resolve(`staff/tasks/${report.workOrderId}`)}>{@render children?.()}</a
 							>{/snippet}</ParaglideMessage
 					>
 				</p>

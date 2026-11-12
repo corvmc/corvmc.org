@@ -3,11 +3,11 @@
 	/** The equipment reports this work order answers; resolving it closes them together. */
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
-	import type { getStaffShiftPage } from '#lib/remote/volunteer.remote.js';
+	import type { getTaskPage } from '#lib/remote/volunteer.remote.js';
 	import { formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 
-	type Report = Awaited<ReturnType<typeof getStaffShiftPage>>['reports'][number];
+	type Report = Awaited<ReturnType<typeof getTaskPage>>['reports'][number];
 	let { reports }: { reports: Report[] } = $props();
 </script>
 

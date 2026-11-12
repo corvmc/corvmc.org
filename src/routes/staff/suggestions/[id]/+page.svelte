@@ -135,7 +135,7 @@
 		project here is that link, and the votes above are its mandate.
 	-->
 	{#if project}
-		<Alert type="success" href={resolve(`staff/projects/${project.id}`)}>
+		<Alert type="success" href={resolve(`staff/tasks/projects/${project.id}`)}>
 			<ParaglideMessage
 				message={m.staff_suggestions_id_answered_by_its_status_drives_body}
 				inputs={{ name: project.name }}

@@ -668,34 +668,6 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/projects",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/projects/[id]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/projects/[id]/budget",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/projects/[id]/tasks/[taskId]",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/projects/productions",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/projects/templates",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/projects/templates/[id]",
-		"panel": "staff"
-	},
-	{
 		"route": "/staff/recurring/[id]",
 		"panel": "staff"
 	},
@@ -748,6 +720,42 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/tasks",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks/productions",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks/projects",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks/projects/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks/projects/[id]/budget",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks/recurring",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks/templates",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/tasks/templates/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/venues",
 		"panel": "staff"
 	},
@@ -765,14 +773,6 @@
 	},
 	{
 		"route": "/staff/volunteer/schedule",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/volunteer/schedule/recurring",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/volunteer/shifts/[id]",
 		"panel": "staff"
 	},
 	{

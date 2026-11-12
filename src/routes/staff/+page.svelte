@@ -71,7 +71,7 @@
 	);
 	let showsHref = $derived(
 		hasCapability(data.capabilities, 'event.manage')
-			? resolve('staff/projects/productions')
+			? resolve('staff/tasks/productions')
 			: resolve('staff/events')
 	);
 </script>
@@ -213,10 +213,7 @@
 				<th class="cell-num whitespace-nowrap">{m.staff_still_need_label()}</th>
 			{/snippet}
 			{#each data.shortShifts.rows as shift (shift.id)}
-				<tr
-					class="hover cursor-pointer"
-					use:rowLink={resolve(`staff/volunteer/shifts/${shift.id}`)}
-				>
+				<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/tasks/${shift.id}`)}>
 					<td class="whitespace-nowrap">{formatDateShort(shift.startsAt)}</td>
 					<td class="cell-primary">{shift.roleName}</td>
 					<td class="col-support cell-text truncate">{shift.eventTitle ?? ''}</td>

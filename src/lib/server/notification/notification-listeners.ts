@@ -1539,7 +1539,7 @@ export function registerAllNotificationListeners(): void {
 				title,
 				body: single ? formatShiftWhen(first.startsAt, first.endsAt) : line,
 				href: single
-					? `/staff/volunteer/shifts/${first.workOrderId}`
+					? `/staff/tasks/${first.workOrderId}`
 					: '/staff/volunteer/schedule?needs=short',
 				data: { workOrderIds: items.map((i) => i.workOrderId) },
 				email: {

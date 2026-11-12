@@ -4,8 +4,7 @@ import { form } from './_remote';
 import { can, requireCapability } from '#lib/server/authorization.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import { getAssetHistory, getStaffAssetDetail } from './inventory.remote';
-import { getStaffShiftPage, getWorkOrderActivity } from './volunteer.remote';
-import { getProjectTaskPage } from './tasks.remote';
+import { getTaskPage, getWorkOrderActivity } from './volunteer.remote';
 import { getProjectActivity } from './projects.remote';
 import { contractorTrades, contractorJobStatuses, DEFAULT_TIMEZONE } from '#lib/config.js';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
@@ -153,12 +152,12 @@ async function refreshWorkOrderPage(job: { workOrderId: string; projectId: strin
 	const workOrderId = job.workOrderId;
 	if (!job.projectId) {
 		void getWorkOrderActivity({ workOrderId }).refresh();
-		return getStaffShiftPage(workOrderId).refresh();
+		return getTaskPage(workOrderId).refresh();
 	}
 	// The task page's guard is the project's; a caller without it is not looking at it.
 	if (await can('project.read')) {
 		void getProjectActivity({ projectId: job.projectId, workOrderId }).refresh();
-		return getProjectTaskPage({ projectId: job.projectId, workOrderId }).refresh();
+		return getTaskPage(workOrderId).refresh();
 	}
 }
 

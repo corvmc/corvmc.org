@@ -39,7 +39,7 @@ test.describe('duty lists — the unscheduled half', () => {
 		await page.locator('[data-testid="schedule-needs"] [data-needs="unassigned"]').click();
 		await expect(page).toHaveURL(/needs=unassigned/);
 		await expect(
-			page.locator(`main table a[href="/staff/volunteer/shifts/${SEED_VOL_ADVANCE_ID}"]`).first()
+			page.locator(`main table a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`).first()
 		).toBeVisible();
 	});
 
@@ -63,7 +63,7 @@ test.describe('duty lists — the unscheduled half', () => {
 	 */
 	test('its checklist renders, and a box stays ticked', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_ADVANCE_ID}`);
+		await page.goto(`/staff/tasks/${SEED_VOL_ADVANCE_ID}`);
 
 		// A deadline is not a window, and the page must not print an empty range.
 		// The deadline branch is the only one that renders a `<time>` there.

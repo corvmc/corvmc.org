@@ -10,12 +10,12 @@
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
-	import { approveVolunteerHours, type getStaffShiftPage } from '#lib/remote/volunteer.remote.js';
+	import { approveVolunteerHours, type getTaskPage } from '#lib/remote/volunteer.remote.js';
 	import { formatVolunteerHours, volunteerHourStatusLabels } from '#lib/config.js';
 	import { formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 
-	type Log = Awaited<ReturnType<typeof getStaffShiftPage>>['hours'][number];
+	type Log = Awaited<ReturnType<typeof getTaskPage>>['hours'][number];
 	let { hours, shiftId }: { hours: Log[]; shiftId: string } = $props();
 
 	const variant = { pending: 'warning', approved: 'success', rejected: 'ghost' } as const;

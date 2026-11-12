@@ -399,11 +399,11 @@ test.describe('volunteering — roles', () => {
 		await expect(page).toHaveURL(/\/staff\/members\/volunteers$/);
 
 		await page.goto('/staff/volunteer/recurring');
-		await expect(page).toHaveURL(/\/staff\/volunteer\/schedule\/recurring$/);
+		await expect(page).toHaveURL(/\/staff\/tasks\/recurring$/);
 		await expect(page.getByTestId('new-recurring-work')).toBeVisible();
 
 		await page.goto('/staff/recurring-work');
-		await expect(page).toHaveURL(/\/staff\/volunteer\/schedule\/recurring$/);
+		await expect(page).toHaveURL(/\/staff\/tasks\/recurring$/);
 
 		await page.goto('/staff/volunteer/people?tab=signoff');
 		await expect(page).toHaveURL(/\/staff\/members\/volunteers\?/);
@@ -752,7 +752,7 @@ test.describe('volunteering — shifts', () => {
 		});
 
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_OPEN_ID}`);
+		await page.goto(`/staff/tasks/${SEED_VOL_SHIFT_OPEN_ID}`);
 
 		const claimant = page.locator('li').filter({ hasText: SEED_VOL_MEMBER_EMAIL });
 		await expect(claimant).toBeVisible({ timeout: 15000 });
@@ -792,7 +792,7 @@ test.describe('volunteering — shifts and events', () => {
 
 		// Straight through to the shift, which is the point of the card.
 		await card.getByRole('link', { name: SEED_VOL_ROLE_NAME }).click();
-		await expect(page).toHaveURL(new RegExp(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_EVENT_ID}$`));
+		await expect(page).toHaveURL(new RegExp(`/staff/tasks/${SEED_VOL_SHIFT_EVENT_ID}$`));
 	});
 
 	test('scheduling from the event page attaches the shift to it', async ({ page }) => {
@@ -825,7 +825,7 @@ test.describe('volunteering — shifts and events', () => {
 		page
 	}) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_EVENT_ID}`);
+		await page.goto(`/staff/tasks/${SEED_VOL_SHIFT_EVENT_ID}`);
 
 		await expect(page.getByRole('link', { name: SEED_VOL_EVENT_TITLE })).toBeVisible({
 			timeout: 15000
@@ -906,7 +906,7 @@ test.describe('volunteering — post-shift feedback', () => {
 	test('staff see the response on the shift and in the per-role rollup', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
 
-		await page.goto(`/staff/volunteer/shifts/e2e-vol-shift-done`);
+		await page.goto(`/staff/tasks/e2e-vol-shift-done`);
 		await expect(page.getByText(FEEDBACK_COMMENT)).toBeVisible({ timeout: 15000 });
 
 		// The rollup is anonymous by design — the response appears under its role
@@ -933,7 +933,7 @@ test.describe('volunteering — post-shift feedback', () => {
 test.describe('volunteering — staff acting on somebody else', () => {
 	test('staff can put a member on a shift, and they land confirmed', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_ASSIGN_ID}`);
+		await page.goto(`/staff/tasks/${SEED_VOL_SHIFT_ASSIGN_ID}`);
 
 		// Through the candidate column's search rather than its shortlist: the
 		// shortlist is a convenience, and the path that has to work is "somebody
@@ -953,7 +953,7 @@ test.describe('volunteering — staff acting on somebody else', () => {
 
 	test('taking somebody off a shift is a cancellation, never a no-show', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_SHIFT_RELEASE_ID}`);
+		await page.goto(`/staff/tasks/${SEED_VOL_SHIFT_RELEASE_ID}`);
 
 		await page.locator('button[data-button-root][aria-label="Remove"]').first().click();
 		await modalSubmit(page).click();
@@ -968,7 +968,7 @@ test.describe('volunteering — staff acting on somebody else', () => {
 	// #2518: a shift is called off on its own card; the task and its other shift stay live.
 	test('cancelling one shift leaves the task and its other shift live', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto(`/staff/volunteer/shifts/${SEED_VOL_TWO_SHIFTS_ID}`);
+		await page.goto(`/staff/tasks/${SEED_VOL_TWO_SHIFTS_ID}`);
 
 		const cards = page.getByTestId('task-shift');
 		await expect(cards).toHaveCount(2, { timeout: 15000 });

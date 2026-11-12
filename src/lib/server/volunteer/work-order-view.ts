@@ -14,9 +14,9 @@ import { listFlagsForWorkOrder } from '#lib/server/inventory/work-request-servic
 
 /**
  * Everything one task's page shows, read through services: the task, and each
- * of its shifts with its own roster and invitations. Unguarded: the two remotes
- * that serve it (`getStaffShiftPage`, `getProjectTaskPage`) each guard first,
- * by different rules, and then call this. `null` when there is no such task.
+ * of its shifts with its own roster and invitations. Unguarded: `getTaskPage`
+ * guards first, by the project's rule or the loose task's, and then calls this.
+ * `null` when there is no such task.
  */
 export async function loadWorkOrderView(id: string) {
 	const [detail, row] = await Promise.all([getShiftDetail(id), getWorkOrderById(id)]);

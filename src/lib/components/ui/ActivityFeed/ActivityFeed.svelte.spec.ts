@@ -11,7 +11,7 @@ const rows = [
 		at: now,
 		actor: { name: 'Sam Staff' },
 		summary: 'Edited name, phone',
-		href: '/staff/projects/p' as ResolvedPathname
+		href: '/staff/tasks/projects/p' as ResolvedPathname
 	},
 	{ id: 'b', at: new Date(now.getTime() - 3_600_000), actor: null, summary: 'Reopened it' },
 	{
@@ -31,7 +31,7 @@ describe('ActivityFeed', () => {
 		expect(items).toHaveLength(3);
 		expect(items[2].querySelector('time')?.textContent).toContain(String(earlierYear));
 		expect(items[0].querySelector('time')?.textContent).not.toContain(String(earlierYear));
-		expect(items[0].querySelector('a')?.getAttribute('href')).toBe('/staff/projects/p');
+		expect(items[0].querySelector('a')?.getAttribute('href')).toBe('/staff/tasks/projects/p');
 		expect(container.querySelector('button')).toBeNull();
 	});
 

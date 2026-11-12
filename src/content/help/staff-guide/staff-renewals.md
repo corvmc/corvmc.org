@@ -7,7 +7,7 @@ minRole: staff
 sortOrder: 21
 ---
 
-Permits, licenses and insurance policies are recurring work. They live on **Staff → Schedule**,
+Permits, licenses and insurance policies are recurring work. They live on **Staff → Tasks**,
 in the **Recurring** view, beside the deep clean and the PA check.
 
 ## Adding one

@@ -1,13 +1,17 @@
 import { z } from 'zod';
-import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { command, form } from './_remote';
-import { can, requireUser } from '#lib/server/authorization.js';
+import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import { requireProjectCommittee } from '#lib/server/group/group-context.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import { DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_TITLE_MAX } from '#lib/config.js';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
-import { getProjectById } from '#lib/server/project/project-service.js';
+import {
+	getProjectById,
+	listCommittees,
+	listProjects
+} from '#lib/server/project/project-service.js';
+import { listDutyLists } from '#lib/server/volunteer/duty-list-service.js';
 import { getProjectActivity, getProjectDetail } from './projects.remote';
 import {
 	createSection,
@@ -38,7 +42,9 @@ import {
 } from '#lib/server/project/project-task-service.js';
 import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
 import { listContractors } from '#lib/server/contractor/contractor-service.js';
-import { loadWorkOrderView } from '#lib/server/volunteer/work-order-view.js';
+import { listJobs } from '#lib/server/contractor/contractor-job-service.js';
+import { listTaskCatalogue } from '#lib/server/volunteer/task-catalogue.js';
+import { createWorkOrder } from '#lib/server/volunteer/work-order-service.js';
 
 /**
  * A project's task list: its work orders as a checklist, with sections.
@@ -79,6 +85,61 @@ async function guardTask(projectId: string, workOrderId: string) {
 // Reads
 // ---------------------------------------------------------------------------
 
+type TaskJob = Awaited<ReturnType<typeof listJobs>>[number];
+
+/** Per task, who is engaged on it and whether that is late or awaiting an invoice. */
+function contractorMarks(jobs: TaskJob[]) {
+	const marks: Record<string, { name: string; late: boolean; awaitingInvoice: boolean }[]> = {};
+	for (const j of jobs) {
+		(marks[j.job.workOrderId] ??= []).push({
+			name: j.contractor.name,
+			late: j.late,
+			awaitingInvoice: j.awaitingInvoice
+		});
+	}
+	return marks;
+}
+
+/**
+ * The Tasks table (#2625): every task, in a project or none. Engagements are
+ * read by view rather than by task id, which would bind one parameter per row.
+ * Done work awaiting an invoice rides along so its chip can count it.
+ */
+export const getTasksPage = query(
+	z.object({
+		volunteerRoleId: z.string().optional(),
+		includeDone: z.boolean().optional()
+	}),
+	async (f) => {
+		await requireCapability('project.read');
+		const contractorAccess = await can('contractor.read');
+		const jobs = contractorAccess
+			? (
+					await Promise.all([listJobs({ view: 'open' }), listJobs({ view: 'awaiting-invoice' })])
+				).flat()
+			: [];
+		const [tasks, projects, committees, templates] = await Promise.all([
+			listTaskCatalogue({
+				volunteerRoleId: f.volunteerRoleId || undefined,
+				includeDone: f.includeDone,
+				withAwaitingInvoice: contractorAccess
+			}),
+			listProjects({ archived: false }),
+			listCommittees(),
+			listDutyLists()
+		]);
+		return {
+			tasks,
+			contractors: contractorMarks(jobs),
+			contractorAccess,
+			// What New task and New project offer.
+			projects: projects.map((p) => ({ id: p.id, name: p.name })),
+			committees: committees.map((c) => ({ id: c.id, name: c.name })),
+			templates: templates.filter((t) => t.itemCount > 0).map((t) => ({ id: t.id, name: t.name }))
+		};
+	}
+);
+
 export const getProjectTasks = query(projectId, async (id) => {
 	requireUser();
 	try {
@@ -93,30 +154,6 @@ export const getProjectTasks = query(projectId, async (id) => {
 		mapDomainError(err);
 	}
 });
-
-/**
- * A task's own page: the work order view under its project. Both ids come from
- * the client, so it 404s unless the work order is on that project; access is
- * the project's, as `getProjectTasks` reads it.
- */
-export const getProjectTaskPage = query(
-	z.object({ projectId, workOrderId }),
-	async ({ projectId, workOrderId }) => {
-		requireUser();
-		try {
-			const project = await getProjectById(projectId);
-			if (!(await can('project.read'))) await requireProjectCommittee(projectId, 'project.manage');
-			await requireTaskInProject(projectId, workOrderId);
-			const view = await loadWorkOrderView(workOrderId);
-			if (!view) throw error(404, 'Task not found');
-			// The project's guard says nothing about contractor money (#2071).
-			const engagements = (await can('contractor.read')) ? view.engagements : [];
-			return { project: { id: project.id, name: project.name }, ...view, engagements };
-		} catch (err) {
-			mapDomainError(err);
-		}
-	}
-);
 
 /** What the assignment picker offers for one task: people, roles and contractors. */
 export const getTaskAssignees = query(
@@ -211,6 +248,36 @@ export const createTaskForm = form(
 			createdByUserId: user.id
 		});
 		await refresh(data.projectId);
+		return { id: row.id };
+	}
+);
+
+/**
+ * New task from the Tasks table, in a project or none. In a project it is the
+ * project's to write, as a line typed into its list is; in none, it is the
+ * coordinator's, as a new work order is.
+ */
+export const createCatalogueTaskForm = form(
+	z.object({
+		title: z.string().trim().min(1, 'Give it a title').max(VOLUNTEER_SHIFT_TITLE_MAX),
+		projectId: z.union([z.literal(''), projectId]).optional(),
+		dueAt: z.string().optional()
+	}),
+	async (data) => {
+		const dueAt = data.dueAt ? buildDateInTz(data.dueAt, '12:00', DEFAULT_TIMEZONE) : null;
+		if (data.projectId) {
+			const { user } = await guardProject(data.projectId);
+			const row = await createTask({
+				projectId: data.projectId,
+				title: data.title,
+				createdByUserId: user.id
+			});
+			if (dueAt) await rescheduleTask(data.projectId, row.id, { dueAt });
+			await refresh(data.projectId);
+			return { id: row.id };
+		}
+		const staff = await requireCapability('volunteer.manageShifts');
+		const row = await createWorkOrder({ title: data.title, dueAt, createdByUserId: staff.id });
 		return { id: row.id };
 	}
 );

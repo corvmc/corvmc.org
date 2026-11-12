@@ -13,10 +13,10 @@ const event = {
 
 describe('every old templates URL lands in one hop', () => {
 	it.each([
-		['/staff/project-templates', oldIndex, '/staff/projects/templates'],
-		['/staff/project-templates/abc', oldDetail, '/staff/projects/templates/abc'],
-		['/staff/volunteer/duty-lists', dutyIndex, '/staff/projects/templates'],
-		['/staff/volunteer/duty-lists/abc', dutyDetail, '/staff/projects/templates/abc']
+		['/staff/project-templates', oldIndex, '/staff/tasks/templates'],
+		['/staff/project-templates/abc', oldDetail, '/staff/tasks/templates/abc'],
+		['/staff/volunteer/duty-lists', dutyIndex, '/staff/tasks/templates'],
+		['/staff/volunteer/duty-lists/abc', dutyDetail, '/staff/tasks/templates/abc']
 	])('%s', async (_from, load, location) => {
 		// Async whichever way the file writes it: the build wraps every load.
 		await expect((async () => (load as (e: never) => unknown)(event))()).rejects.toMatchObject({

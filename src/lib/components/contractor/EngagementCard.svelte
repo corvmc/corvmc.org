@@ -25,9 +25,9 @@
 	import { contractorJobStatusBadge, contractorJobStatusLabels } from '#lib/config.js';
 	import { formatCents, formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
-	import type { getStaffShiftPage } from '#lib/remote/volunteer.remote.js';
+	import type { getTaskPage } from '#lib/remote/volunteer.remote.js';
 
-	type Row = Awaited<ReturnType<typeof getStaffShiftPage>>['engagements'][number];
+	type Row = Awaited<ReturnType<typeof getTaskPage>>['engagements'][number];
 	let { row }: { row: Row } = $props();
 
 	const job = $derived(row.job);

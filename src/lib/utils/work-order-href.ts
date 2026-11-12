@@ -1,23 +1,16 @@
-export type WorkOrderPath =
-	`/staff/projects/${string}/tasks/${string}` | `/staff/volunteer/shifts/${string}`;
+export type WorkOrderPath = `/staff/tasks/${string}`;
 
 /**
- * A work order's canonical staff page: its project's task page when it is on a
- * project, else the shift page. Nothing stores this, so moving a work order
- * onto or off a project moves its URL with it.
+ * A work order's staff page. Every task has one, in a project or not (#2625),
+ * so the address no longer moves when a work order moves onto a project.
  */
-export function workOrderHref(wo: { id: string; projectId: string | null }): WorkOrderPath {
-	return wo.projectId
-		? `/staff/projects/${wo.projectId}/tasks/${wo.id}`
-		: `/staff/volunteer/shifts/${wo.id}`;
+export function workOrderHref(wo: { id: string }): WorkOrderPath {
+	return `/staff/tasks/${wo.id}`;
 }
 
 type Unslashed<T> = T extends `/${infer P}` ? P : never;
 
 /** `workOrderHref` as a pathname for `resolve()`, which reads a leading `/` as a route ID. */
-export function workOrderPathname(wo: {
-	id: string;
-	projectId: string | null;
-}): Unslashed<WorkOrderPath> {
+export function workOrderPathname(wo: { id: string }): Unslashed<WorkOrderPath> {
 	return workOrderHref(wo).slice(1) as Unslashed<WorkOrderPath>;
 }

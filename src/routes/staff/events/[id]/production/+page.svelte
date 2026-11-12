@@ -328,10 +328,7 @@
 								<span class="font-medium"
 									>{m.staff_events_id_production_shift_open_nobody_text()}</span
 								>
-								<a
-									class="link text-sm"
-									href={resolve(`staff/volunteer/shifts/${hostShift.workOrderId}`)}
-								>
+								<a class="link text-sm" href={resolve(`staff/tasks/${hostShift.workOrderId}`)}>
 									{m.staff_events_id_production_find_somebody_text()}
 								</a>
 							{:else}
@@ -701,7 +698,7 @@
 						<ul class="flex flex-col gap-1 text-sm">
 							{#each advance as order (order.id)}
 								<li class="flex flex-wrap items-baseline justify-between gap-2">
-									<a href={resolve(`staff/volunteer/shifts/${order.id}`)} class="link font-medium">
+									<a href={resolve(`staff/tasks/${order.id}`)} class="link font-medium">
 										{order.roleName}
 									</a>
 									<span class="text-subtle whitespace-nowrap">
@@ -733,7 +730,7 @@
 						{#each shifts as shift (shift.id)}
 							<tr class="hover">
 								<td class="cell-primary">
-									<a href={resolve(`staff/volunteer/shifts/${shift.id}`)} class="link font-medium"
+									<a href={resolve(`staff/tasks/${shift.id}`)} class="link font-medium"
 										>{shift.roleName}</a
 									>
 								</td>

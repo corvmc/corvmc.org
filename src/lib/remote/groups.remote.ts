@@ -539,7 +539,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		})),
 		// Name, status and dates only. A committee member reads what their group is
 		// working on; the budget and what it has burned are a staff question, and
-		// `/staff/projects` is where that is answered.
+		// `/staff/tasks` is where that is answered.
 		projects: projects.map((project) => ({
 			id: project.id,
 			name: project.name,

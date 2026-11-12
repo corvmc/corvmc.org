@@ -21,8 +21,7 @@ import {
 	updateDutyList as updateService,
 	updateDutyListItem as updateItemService
 } from '#lib/server/volunteer/duty-list-service.js';
-import { getStaffShiftPage, getWorkOrderActivity } from './volunteer.remote';
-import { getProjectTaskPage } from './tasks.remote';
+import { getTaskPage, getWorkOrderActivity } from './volunteer.remote';
 import { getProjectActivity } from './projects.remote';
 import { workOrderProjectId } from '#lib/server/volunteer/work-order-service.js';
 
@@ -84,7 +83,7 @@ export const getActiveDutyLists = query(async () => {
 	return lists.filter((l) => l.itemCount > 0);
 });
 
-/** One load-bearing query for `/staff/projects/templates/[id]`. */
+/** One load-bearing query for `/staff/tasks/templates/[id]`. */
 export const getDutyListPage = query(z.string(), async (id) => {
 	await requireCapability('project.read');
 
@@ -334,10 +333,10 @@ export const setWorkTaskDone = form(
 			const workOrderId = data.shiftId;
 			if (!projectId) {
 				void getWorkOrderActivity({ workOrderId }).refresh();
-				await getStaffShiftPage(workOrderId).refresh();
+				await getTaskPage(workOrderId).refresh();
 			} else if (await can('project.read')) {
 				void getProjectActivity({ projectId, workOrderId }).refresh();
-				await getProjectTaskPage({ projectId, workOrderId }).refresh();
+				await getTaskPage(workOrderId).refresh();
 			}
 			return { success: true };
 		} catch (err) {

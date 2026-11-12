@@ -12,7 +12,8 @@ import {
 } from '#lib/server/capability/capability-grant-service.js';
 import { toEventRef } from '#lib/server/entity/refs.js';
 import { getStaffLayout } from './layout.remote';
-import { getProjectTaskPage } from './tasks.remote';
+import { requireProjectCommittee } from '#lib/server/group/group-context.js';
+import { getProjectById } from '#lib/server/project/project-service.js';
 import { getProjectActivity } from './projects.remote';
 import { ACTIVITY_MAX, listActivity } from '#lib/server/project/project-activity.js';
 import { loadWorkOrderView } from '#lib/server/volunteer/work-order-view.js';
@@ -1527,17 +1528,17 @@ async function refreshTaskViews(workOrderId?: string) {
 	]);
 }
 
-/** Whichever page is canonical for the work order: its project's task page, or the shift page. */
+/** The task's page, and its history as that page reads it. */
 async function refreshWorkOrderPage(id: string) {
 	const projectId = await workOrderProjectId(id);
 	if (!projectId) {
 		void getWorkOrderActivity({ workOrderId: id }).refresh();
-		return getStaffShiftPage(id).refresh();
+		return getTaskPage(id).refresh();
 	}
-	// The task page's guard is the project's; a caller without it is not looking at it.
+	// A project task's page is guarded as the project; a caller without it is not looking at it.
 	if (await can('project.read')) {
 		void getProjectActivity({ projectId, workOrderId: id }).refresh();
-		return getProjectTaskPage({ projectId, workOrderId: id }).refresh();
+		return getTaskPage(id).refresh();
 	}
 }
 
@@ -2526,33 +2527,56 @@ export const getStaffVolunteerRolePage = query(z.string(), async (id) => {
 });
 
 /**
- * A work order's page, for one that belongs to no project; a project's work
- * order is served by `getProjectTaskPage` under that project's guard. Guarded
- * here, first, and read through services, so no part of the bundle leans on
- * another query's guard (#1907).
+ * A task in no project is read by staff who see either list it is on: Tasks
+ * (`project.read`) or the Schedule (`volunteer.read`).
  */
-export const getStaffShiftPage = query(z.string(), async (id) => {
-	await requireCapability('volunteer.read');
+async function requireLooseTaskReader() {
+	if (!(await can('project.read'))) await requireCapability('volunteer.read');
+}
+
+/** `project` when the task is in one; a task in a project is guarded as the project is. */
+async function guardTaskPage(id: string): Promise<{ id: string; name: string } | null> {
+	requireUser();
+	const projectId = await workOrderProjectId(id);
+	if (projectId === undefined) error(404, 'Task not found');
+	if (!projectId) {
+		await requireLooseTaskReader();
+		return null;
+	}
+	try {
+		if (!(await can('project.read'))) await requireProjectCommittee(projectId, 'project.manage');
+		const project = await getProjectById(projectId);
+		return { id: project.id, name: project.name };
+	} catch (err) {
+		mapDomainError(err);
+	}
+}
+
+/**
+ * Any task's page (#2625), in a project or not. Guarded before the view is
+ * read, so no part of the bundle leans on another query's guard (#1907).
+ */
+export const getTaskPage = query(z.string(), async (id) => {
+	const project = await guardTaskPage(id);
 	const view = await loadWorkOrderView(id);
-	if (!view) throw error(404, 'Shift not found');
-	// `volunteer.read` says nothing about contractor money (#2071): a volunteer
-	// coordinator holds it without `contractor.read`.
+	if (!view) error(404, 'Task not found');
+	// Neither guard says anything about contractor money (#2071).
 	const engagements = (await can('contractor.read')) ? view.engagements : [];
 	// Who can be engaged from this page; empty for a caller who cannot engage.
 	const contractors = (await can('contractor.manage'))
 		? (await listContractors()).map((c) => ({ id: c.id, name: c.name }))
 		: [];
-	return { ...view, engagements, contractors };
+	return { project, ...view, engagements, contractors };
 });
 
-/** A shift page's history: the work order's audit entries and duty ticks, newest first. */
+/** A task's history, for a task in no project: its audit entries and duty ticks, newest first. */
 export const getWorkOrderActivity = query(
 	z.object({
 		workOrderId: z.string().min(1),
 		limit: z.number().int().min(1).max(ACTIVITY_MAX).optional()
 	}),
 	async ({ workOrderId, limit }) => {
-		await requireCapability('volunteer.read');
+		await requireLooseTaskReader();
 		return listActivity({ workOrderId }, { limit });
 	}
 );

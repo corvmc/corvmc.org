@@ -25,10 +25,10 @@
 		notifyCancelledShift,
 		releaseSignup,
 		updateShift,
-		type getStaffShiftPage
+		type getTaskPage
 	} from '#lib/remote/volunteer.remote.js';
 
-	type Shift = Awaited<ReturnType<typeof getStaffShiftPage>>['shifts'][number];
+	type Shift = Awaited<ReturnType<typeof getTaskPage>>['shifts'][number];
 	let {
 		shift,
 		taskOpen

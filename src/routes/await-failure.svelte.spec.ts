@@ -6,7 +6,7 @@ import BookingPolicy from '#lib/components/reservations/BookingPolicy.svelte';
 import VolunteerBlocked from './member/volunteer/blocked/+page.svelte';
 import CommitteeNumbers from './member/groups/[slug]/CommitteeNumbers.svelte';
 import PublicInstructors from './(public)/directory/instructors/+page.svelte';
-import ProjectTemplates from './staff/projects/templates/+page.svelte';
+import ProjectTemplates from './staff/tasks/templates/+page.svelte';
 import RoleShiftsCard from './staff/volunteer/roles/[id]/RoleShiftsCard.svelte';
 import InboxIndex from './staff/inbox/+page.svelte';
 import Daily from './staff/inbox/daily/+page.svelte';

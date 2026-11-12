@@ -21,6 +21,6 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	} catch (err) {
 		mapDomainError(err);
 	}
-	const page = workOrderHref({ id: job.workOrderId, projectId: job.projectId });
+	const page = workOrderHref({ id: job.workOrderId });
 	redirect(307, `${page}#engagement-${job.id}`);
 };

@@ -50,10 +50,7 @@
 				id: job.id,
 				at: job.completedAt ?? job.scheduledFor ?? job.createdAt,
 				summary: job.title,
-				href: withHash(
-					resolve(workOrderPathname({ id: job.workOrderId, projectId: job.projectId })),
-					`engagement-${job.id}`
-				),
+				href: withHash(resolve(workOrderPathname({ id: job.workOrderId })), `engagement-${job.id}`),
 				context: itemName ? { label: assetTag ? `${itemName} · ${assetTag}` : itemName } : null,
 				job
 			}))
