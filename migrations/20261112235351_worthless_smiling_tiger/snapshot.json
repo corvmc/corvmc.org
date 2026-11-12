@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "14897e5f-6763-40da-9a9c-a238303573f4",
+  "id": "3ec5b855-99a4-4a54-bbf5-852ea7d54c70",
   "prevIds": [
-    "1e76309e-3dbd-4b8d-ac68-c634d52a3f0a"
+    "9a1a4c38-5dd5-481e-9cf0-aa0c75ae5d44"
   ],
   "ddl": [
     {
@@ -516,10 +516,6 @@
     },
     {
       "name": "grant_application",
-      "entityType": "tables"
-    },
-    {
-      "name": "grant_report",
       "entityType": "tables"
     },
     {
@@ -9059,6 +9055,16 @@
       "table": "duty_list"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "grant_stage",
+      "entityType": "columns",
+      "table": "duty_list"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -14290,6 +14296,26 @@
     },
     {
       "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "sponsorship"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "funds_project_id",
+      "entityType": "columns",
+      "table": "sponsorship"
+    },
+    {
+      "type": "text",
       "notNull": true,
       "autoincrement": false,
       "default": null,
@@ -14400,6 +14426,26 @@
     },
     {
       "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "grant_application"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "funds_project_id",
+      "entityType": "columns",
+      "table": "grant_application"
+    },
+    {
+      "type": "text",
       "notNull": true,
       "autoincrement": false,
       "default": null,
@@ -14497,86 +14543,6 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "grant_application"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "grant_report"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "grant_application_id",
-      "entityType": "columns",
-      "table": "grant_report"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "title",
-      "entityType": "columns",
-      "table": "grant_report"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "due_on",
-      "entityType": "columns",
-      "table": "grant_report"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "submitted_on",
-      "entityType": "columns",
-      "table": "grant_report"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "notes",
-      "entityType": "columns",
-      "table": "grant_report"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "grant_report"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "grant_report"
     },
     {
       "type": "text",
@@ -19070,6 +19036,36 @@
     },
     {
       "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "RESTRICT",
+      "nameExplicit": false,
+      "name": "fk_sponsorship_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "sponsorship"
+    },
+    {
+      "columns": [
+        "funds_project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_sponsorship_funds_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "sponsorship"
+    },
+    {
+      "columns": [
         "organization_id"
       ],
       "tableTo": "organization",
@@ -19085,18 +19081,33 @@
     },
     {
       "columns": [
-        "grant_application_id"
+        "project_id"
       ],
-      "tableTo": "grant_application",
+      "tableTo": "project",
       "columnsTo": [
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "RESTRICT",
       "nameExplicit": false,
-      "name": "fk_grant_report_grant_application_id_grant_application_id_fk",
+      "name": "fk_grant_application_project_id_project_id_fk",
       "entityType": "fks",
-      "table": "grant_report"
+      "table": "grant_application"
+    },
+    {
+      "columns": [
+        "funds_project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_grant_application_funds_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "grant_application"
     },
     {
       "columns": [
@@ -20608,15 +20619,6 @@
       "nameExplicit": false,
       "name": "grant_application_pk",
       "table": "grant_application",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "grant_report_pk",
-      "table": "grant_report",
       "entityType": "pks"
     },
     {
@@ -23477,6 +23479,20 @@
     {
       "columns": [
         {
+          "value": "grant_stage",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "grant_stage is not null",
+      "origin": "manual",
+      "name": "uq_duty_list_grant_stage",
+      "entityType": "indexes",
+      "table": "duty_list"
+    },
+    {
+      "columns": [
+        {
           "value": "duty_list_id",
           "isExpression": false
         },
@@ -24945,6 +24961,34 @@
     {
       "columns": [
         {
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "project_id is not null",
+      "origin": "manual",
+      "name": "uq_sponsorship_project",
+      "entityType": "indexes",
+      "table": "sponsorship"
+    },
+    {
+      "columns": [
+        {
+          "value": "funds_project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "sponsorship_funds_project_idx",
+      "entityType": "indexes",
+      "table": "sponsorship"
+    },
+    {
+      "columns": [
+        {
           "value": "organization_id",
           "isExpression": false
         }
@@ -24973,16 +25017,30 @@
     {
       "columns": [
         {
-          "value": "grant_application_id",
+          "value": "project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "project_id is not null",
+      "origin": "manual",
+      "name": "uq_grant_application_project",
+      "entityType": "indexes",
+      "table": "grant_application"
+    },
+    {
+      "columns": [
+        {
+          "value": "funds_project_id",
           "isExpression": false
         }
       ],
       "isUnique": false,
       "where": null,
       "origin": "manual",
-      "name": "grant_report_application_idx",
+      "name": "grant_application_funds_project_idx",
       "entityType": "indexes",
-      "table": "grant_report"
+      "table": "grant_application"
     },
     {
       "columns": [

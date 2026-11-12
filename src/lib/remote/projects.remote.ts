@@ -153,7 +153,9 @@ export const getProjectsPage = query(projectFilters, async (filters) => {
 
 	return {
 		committees,
-		templates: templates.filter((t) => t.itemCount > 0).map((t) => ({ id: t.id, name: t.name })),
+		templates: templates
+			.filter((t) => t.itemCount > 0 && !t.grantStage)
+			.map((t) => ({ id: t.id, name: t.name })),
 		projects: projects.map((project, i) => ({
 			project,
 			burn: burns[i],

@@ -1,26 +1,16 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	/** One grant application: what was asked, what was awarded, and what is owed back. */
+	/** One grant application: what was asked and awarded. Its work, reports included, is its project's tasks. */
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
-	import Table from '#lib/components/ui/Table.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
-	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
 	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 	import GrantFields from '#lib/components/grant/GrantFields.svelte';
-	import GrantReportFields from './GrantReportFields.svelte';
-	import {
-		getGrantDetail,
-		updateGrant,
-		deleteGrant,
-		addGrantReport,
-		updateGrantReport,
-		deleteGrantReport
-	} from '#lib/remote/grants.remote.js';
+	import { getGrantDetail, updateGrant, deleteGrant } from '#lib/remote/grants.remote.js';
 	import { grantStatusLabels, grantStatusBadge, grantDeadlineLabels } from '#lib/config.js';
 	import { formatCents } from '#lib/utils/format.js';
 	import { formatIsoDay } from '#lib/utils/deadline.js';
@@ -78,93 +68,21 @@
 				label={m.staff_grants_id_award_period_label()}
 				value="{formatIsoDay(grant.startsOn)} – {formatIsoDay(grant.endsOn)}"
 			/>
+			{#if grant.projectId}
+				<Fact label={m.staff_grants_id_project_label()}>
+					<a
+						class="link"
+						href={resolve('/staff/tasks/projects/[id]', { id: grant.projectId })}
+						data-testid="grant-project"
+					>
+						{m.staff_grants_id_view_tasks_label()}
+					</a>
+				</Fact>
+			{/if}
 			{#if grant.notes}
 				<Fact label={m.staff_notes_label()} wrap>{grant.notes}</Fact>
 			{/if}
 		</DefinitionList>
-	</InfoCard>
-
-	<InfoCard title={m.staff_reports_title()}>
-		{#snippet action()}
-			<Action
-				action={addGrantReport}
-				label={m.staff_grants_id_add_report_label()}
-				variant="ghost"
-				size="sm"
-				modalTitle={m.staff_grants_id_new_report_deadline_title()}
-				submitLabel={m.staff_add_label()}
-				successToast={m.staff_grants_id_report_added_toast()}
-			>
-				{#snippet form()}
-					<input {...addGrantReport.fields.grantApplicationId.as('hidden', grant.id)} />
-					<GrantReportFields fields={addGrantReport.fields} />
-				{/snippet}
-			</Action>
-		{/snippet}
-		{#if grant.reports.length === 0}
-			<EmptyState
-				title={m.staff_grants_id_no_reports_owed_title()}
-				description={m.staff_grants_id_description_body()}
-			/>
-		{:else}
-			<Table>
-				{#snippet head()}
-					<th>{m.staff_report_label()}</th>
-					<th>{m.staff_due_label()}</th>
-					<th>{m.staff_submitted_label()}</th>
-					<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
-				{/snippet}
-				{#each grant.reports as r (r.id)}
-					{@const edit = updateGrantReport.for(r.id)}
-					<tr>
-						<td class="cell-primary font-medium">{r.title}</td>
-						<td class="whitespace-nowrap" class:text-error={r.overdue}>{formatIsoDay(r.dueOn)}</td>
-						<td class="whitespace-nowrap">{formatIsoDay(r.submittedOn)}</td>
-						<td class="w-px whitespace-nowrap">
-							<Action
-								action={edit}
-								label={m.staff_edit_label()}
-								variant="ghost"
-								size="sm"
-								modalTitle={m.staff_edit_3_title({ title: r.title })}
-								submitLabel={m.staff_save_label()}
-								successToast={m.staff_saved_toast()}
-								data-testid="edit-report"
-							>
-								{#snippet form()}
-									<input {...edit.fields.id.as('hidden', r.id)} />
-									<input {...edit.fields.grantApplicationId.as('hidden', grant.id)} />
-									<GrantReportFields fields={edit.fields} value={r} />
-								{/snippet}
-							</Action>
-							<Action
-								action={deleteGrantReport.for(r.id)}
-								label={m.staff_delete_label()}
-								variant="ghost"
-								size="sm"
-								class="text-error"
-								modalTitle={m.staff_delete_3_title({ title: r.title })}
-								submitLabel={m.staff_delete_label()}
-								submitVariant="error"
-								successToast={m.staff_deleted_toast()}
-							>
-								{#snippet form()}
-									<input {...deleteGrantReport.for(r.id).fields.id.as('hidden', r.id)} />
-									<input
-										{...deleteGrantReport
-											.for(r.id)
-											.fields.grantApplicationId.as('hidden', grant.id)}
-									/>
-									<p class="text-sm">
-										{m.staff_grants_id_report_funder_does_not_require_text()}
-									</p>
-								{/snippet}
-							</Action>
-						</td>
-					</tr>
-				{/each}
-			</Table>
-		{/if}
 	</InfoCard>
 
 	<div class="flex flex-wrap gap-2">

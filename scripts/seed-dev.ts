@@ -82,6 +82,7 @@ import { seedEquipmentReports } from './seed/equipment-reports';
 import { seedCrewIncidentFiling, seedIncidents } from './seed/incidents';
 import { seedMemberInvites } from './seed/member-invites';
 import { seedDutyLists } from './seed/duty-lists';
+import { seedFundingWork } from './seed/funding';
 import { seedOrientation } from './seed/orientation';
 import { seedPracticeSpaceClearance } from './seed/practice-space';
 import {
@@ -282,6 +283,8 @@ async function main() {
 	// schedules against the role catalog.
 	const personas = await seedVolunteerPersonas(roles, volunteerRoles, certifications, adminUser);
 	const dutyLists = await seedDutyLists(volunteerRoles, events, groups);
+	// After the committees and the role catalog: the grant templates name both.
+	const fundingWork = await seedFundingWork();
 	// After the duty lists and the reservations both: it seeds a list of its own
 	// and hangs work orders off bookings that already exist.
 	const orientation = await seedOrientation(volunteerRoles, allUsers);
@@ -340,6 +343,9 @@ async function main() {
 	);
 	console.log(`  ${sponsors.sponsors} sponsors, ${sponsors.placements} event placements`);
 	console.log(`  ${grants.applications} grant applications to ${grants.funders} funders`);
+	console.log(
+		`  ${fundingWork.owners} grant and sponsorship projects owned, ${fundingWork.tasks} tasks on them`
+	);
 	console.log(
 		`  ${contacts.organizations} more contacts (a partner, the press, two likely duplicates)`
 	);

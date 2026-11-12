@@ -3,13 +3,10 @@ import { organization } from '#lib/server/db/schema/party.js';
 import { requireRole } from '#lib/server/party/organization-service.js';
 import {
 	grantApplication,
-	grantReport,
 	type GrantApplication,
-	type GrantReport,
-	type NewGrantApplication,
-	type NewGrantReport
+	type NewGrantApplication
 } from '#lib/server/db/schema/grant.js';
-import { asc, eq, inArray, isNull } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
 import {
 	grantDeadlineLabels,
@@ -18,6 +15,15 @@ import {
 	type GrantStatus
 } from '#lib/config.js';
 import { byDeadline, due, earliest, type Deadline } from '#lib/utils/deadline.js';
+import {
+	deleteFundingProjectWrites,
+	fundingCommitteeId,
+	fundingProjectWrites,
+	renameFundingProject,
+	stampGrantStage
+} from '#lib/server/development/funding-project.js';
+import { grantDayAt } from '#lib/server/volunteer/duty-list-service.js';
+import { placePendingWorkOrders } from '#lib/server/volunteer/retime-work-orders.js';
 
 export class GrantNotFoundError extends DomainError {
 	readonly httpStatus = 404;
@@ -26,95 +32,51 @@ export class GrantNotFoundError extends DomainError {
 	}
 }
 
-export class GrantReportNotFoundError extends DomainError {
-	readonly httpStatus = 404;
-	constructor() {
-		super('Report not found');
-	}
-}
-
 export type GrantDeadline = Deadline<GrantDeadlineKind>;
-
-type ReportDates = Pick<GrantReport, 'dueOn' | 'submittedOn'>;
 
 type GrantDates = Pick<GrantApplication, 'status' | 'applyBy' | 'endsOn'>;
 
 /**
- * Every deadline still open on an application. A prospect owes its application;
- * an award owes each outstanding report and the end of the award period. An
- * outstanding report stays owed after the grant is closed, since a final
- * report usually falls due after the money is spent.
+ * The dates on the grant itself. A prospect owes its application; an award runs
+ * to its end. Reports are tasks on the grant's project, reminded as tasks.
  */
-function openDeadlines<R extends ReportDates>(g: GrantDates, reports: R[]) {
-	type Open = { kind: GrantDeadlineKind; on: string; report?: R };
-	if (g.status === 'prospect') return g.applyBy ? [{ kind: 'apply', on: g.applyBy } as Open] : [];
-	if (g.status !== 'awarded' && g.status !== 'closed') return [];
-
-	const open: Open[] = reports
-		.filter((r) => !r.submittedOn)
-		.map((r) => ({ kind: 'report', on: r.dueOn, report: r }));
-	if (g.status === 'awarded' && g.endsOn) open.push({ kind: 'end', on: g.endsOn });
-	return open;
+function openDeadlines(g: GrantDates): { kind: GrantDeadlineKind; on: string }[] {
+	if (g.status === 'prospect') return g.applyBy ? [{ kind: 'apply', on: g.applyBy }] : [];
+	if (g.status === 'awarded' && g.endsOn) return [{ kind: 'end', on: g.endsOn }];
+	return [];
 }
 
-/** What comes due next: the soonest of `openDeadlines`. */
-export function grantDeadline(
-	g: GrantDates,
-	reports: ReportDates[],
-	today: string
-): GrantDeadline | null {
-	return earliest<GrantDeadlineKind>(
-		...openDeadlines(g, reports).map((d) => due(d.kind, d.on, today))
-	);
+/** What comes due next on the grant itself. */
+export function grantDeadline(g: GrantDates, today: string): GrantDeadline | null {
+	return earliest<GrantDeadlineKind>(...openDeadlines(g).map((d) => due(d.kind, d.on, today)));
 }
 
-/**
- * Each open deadline with a subject id of its own, so a reminder about one
- * report is not also the reminder about the next.
- */
-export function grantDeadlineItems(
-	g: GrantDates & { id: string },
-	reports: (ReportDates & { id: string; title: string })[]
-) {
-	return openDeadlines(g, reports).map((d) => ({
+/** Each open deadline with a subject id of its own, for the reminder sweep. */
+export function grantDeadlineItems(g: GrantDates & { id: string }) {
+	return openDeadlines(g).map((d) => ({
 		kind: d.kind,
 		on: d.on,
-		subjectId: d.report ? `report:${d.report.id}` : `${d.kind}:${g.id}`,
-		title: d.report ? d.report.title : grantDeadlineLabels[d.kind]
+		subjectId: `${d.kind}:${g.id}`,
+		title: grantDeadlineLabels[d.kind]
 	}));
 }
 
 /** Every open grant deadline falling on a day in `[from, to]`. */
 export async function listGrantDeadlinesBetween(from: string, to: string) {
-	const [apps, reports] = await Promise.all([
-		db
-			.select({
-				id: grantApplication.id,
-				title: grantApplication.title,
-				status: grantApplication.status,
-				applyBy: grantApplication.applyBy,
-				endsOn: grantApplication.endsOn,
-				funderName: organization.name
-			})
-			.from(grantApplication)
-			.innerJoin(organization, eq(organization.id, grantApplication.organizationId))
-			.where(inArray(grantApplication.status, ['prospect', 'awarded', 'closed'])),
-		db
-			.select({
-				id: grantReport.id,
-				grantApplicationId: grantReport.grantApplicationId,
-				title: grantReport.title,
-				dueOn: grantReport.dueOn,
-				submittedOn: grantReport.submittedOn
-			})
-			.from(grantReport)
-			.where(isNull(grantReport.submittedOn))
-	]);
+	const apps = await db
+		.select({
+			id: grantApplication.id,
+			title: grantApplication.title,
+			status: grantApplication.status,
+			applyBy: grantApplication.applyBy,
+			endsOn: grantApplication.endsOn,
+			funderName: organization.name
+		})
+		.from(grantApplication)
+		.innerJoin(organization, eq(organization.id, grantApplication.organizationId))
+		.where(inArray(grantApplication.status, ['prospect', 'awarded']));
 	return apps.flatMap((g) =>
-		grantDeadlineItems(
-			g,
-			reports.filter((r) => r.grantApplicationId === g.id)
-		)
+		grantDeadlineItems(g)
 			.filter((d) => d.on >= from && d.on <= to)
 			.map((d) => ({ ...d, parentId: g.id, parentTitle: g.title, counterparty: g.funderName }))
 	);
@@ -123,47 +85,31 @@ export async function listGrantDeadlinesBetween(from: string, to: string) {
 /** Attach each application's deadline and sort soonest first, undated last. */
 export function withDeadlines<
 	G extends Pick<GrantApplication, 'id' | 'status' | 'applyBy' | 'endsOn'> & { funderName: string }
->(apps: G[], reports: (ReportDates & { grantApplicationId: string })[], today: string) {
+>(apps: G[], today: string) {
 	return apps
-		.map((g) => ({
-			...g,
-			deadline: grantDeadline(
-				g,
-				reports.filter((r) => r.grantApplicationId === g.id),
-				today
-			)
-		}))
+		.map((g) => ({ ...g, deadline: grantDeadline(g, today) }))
 		.sort(byDeadline((r) => r.funderName));
 }
 
 const open: readonly GrantStatus[] = openGrantStatuses;
 
 export async function listGrants(opts: { today: string; includeClosed?: boolean }) {
-	const [apps, reports] = await Promise.all([
-		db
-			.select({
-				id: grantApplication.id,
-				title: grantApplication.title,
-				status: grantApplication.status,
-				amountRequestedCents: grantApplication.amountRequestedCents,
-				amountAwardedCents: grantApplication.amountAwardedCents,
-				applyBy: grantApplication.applyBy,
-				endsOn: grantApplication.endsOn,
-				funderId: grantApplication.organizationId,
-				funderName: organization.name
-			})
-			.from(grantApplication)
-			.innerJoin(organization, eq(organization.id, grantApplication.organizationId)),
-		db
-			.select({
-				grantApplicationId: grantReport.grantApplicationId,
-				dueOn: grantReport.dueOn,
-				submittedOn: grantReport.submittedOn
-			})
-			.from(grantReport)
-			.where(isNull(grantReport.submittedOn))
-	]);
-	return withDeadlines(apps, reports, opts.today).filter(
+	const apps = await db
+		.select({
+			id: grantApplication.id,
+			projectId: grantApplication.projectId,
+			title: grantApplication.title,
+			status: grantApplication.status,
+			amountRequestedCents: grantApplication.amountRequestedCents,
+			amountAwardedCents: grantApplication.amountAwardedCents,
+			applyBy: grantApplication.applyBy,
+			endsOn: grantApplication.endsOn,
+			funderId: grantApplication.organizationId,
+			funderName: organization.name
+		})
+		.from(grantApplication)
+		.innerJoin(organization, eq(organization.id, grantApplication.organizationId));
+	return withDeadlines(apps, opts.today).filter(
 		(g) => opts.includeClosed || open.includes(g.status) || g.deadline
 	);
 }
@@ -176,30 +122,58 @@ export async function getGrant(id: string, today: string) {
 		.where(eq(grantApplication.id, id))
 		.limit(1);
 	if (!row) throw new GrantNotFoundError();
-
-	const reports = await db
-		.select()
-		.from(grantReport)
-		.where(eq(grantReport.grantApplicationId, id))
-		.orderBy(asc(grantReport.dueOn));
 	return {
 		...row.grant,
 		funderId: row.grant.organizationId,
 		funderName: row.funderName,
-		reports: reports.map((r) => ({
-			...r,
-			overdue: !r.submittedOn && due('report', r.dueOn, today).overdue
-		})),
-		deadline: grantDeadline(row.grant, reports, today)
+		deadline: grantDeadline(row.grant, today)
 	};
 }
 
-export type GrantInput = Omit<NewGrantApplication, 'id' | 'createdAt' | 'updatedAt'>;
+export type GrantInput = Omit<
+	NewGrantApplication,
+	'id' | 'projectId' | 'fundsProjectId' | 'createdAt' | 'updatedAt'
+>;
 
-export async function createGrant(input: GrantInput): Promise<GrantApplication> {
+/**
+ * The application, its project owned by the committee holding `grant.manage`,
+ * and the "Grant application" template stamped into it.
+ */
+export async function createGrant(
+	input: GrantInput,
+	opts: { createdByUserId?: string | null } = {}
+): Promise<GrantApplication> {
 	await requireRole(input.organizationId, 'funder');
-	const [row] = await db.insert(grantApplication).values(input).returning();
+	const createdByUserId = opts.createdByUserId ?? null;
+	const projectId = crypto.randomUUID();
+	const id = crypto.randomUUID();
+	await db.batch([
+		...fundingProjectWrites({
+			projectId,
+			kind: 'grant',
+			name: input.title,
+			ownerGroupId: await fundingCommitteeId('grant'),
+			createdByUserId
+		}),
+		db.insert(grantApplication).values({ ...input, id, projectId })
+	]);
+	await stampGrantStage(projectId, 'application', createdByUserId);
+	const [row] = await db.select().from(grantApplication).where(eq(grantApplication.id, id));
 	return row;
+}
+
+/** Template work waiting on a grant date is placed once the date is set. */
+function placeGrantWork(projectId: string, input: GrantInput) {
+	const dates = [
+		['apply_by', input.applyBy],
+		['award_start', input.startsOn],
+		['award_end', input.endsOn]
+	] as const;
+	return dates.flatMap(([anchor, day]) => {
+		if (!day) return [];
+		const at = Math.floor(grantDayAt(day).getTime() / 1000);
+		return placePendingWorkOrders({ projectId }, [anchor], sql`${at}`);
+	});
 }
 
 export async function updateGrant(id: string, input: GrantInput): Promise<void> {
@@ -208,41 +182,26 @@ export async function updateGrant(id: string, input: GrantInput): Promise<void> 
 		.update(grantApplication)
 		.set({ ...input, updatedAt: new Date() })
 		.where(eq(grantApplication.id, id))
-		.returning({ id: grantApplication.id });
+		.returning({ projectId: grantApplication.projectId });
 	if (rows.length === 0) throw new GrantNotFoundError();
+	const projectId = rows[0].projectId;
+	if (!projectId) return;
+	await db.batch([
+		renameFundingProject(projectId, input.title),
+		...placeGrantWork(projectId, input)
+	]);
 }
 
-/** Its reports go with it (cascade). */
+/** Its project and that project's tasks go with it. */
 export async function deleteGrant(id: string): Promise<void> {
-	const rows = await db
-		.delete(grantApplication)
+	const [row] = await db
+		.select({ projectId: grantApplication.projectId })
+		.from(grantApplication)
 		.where(eq(grantApplication.id, id))
-		.returning({ id: grantApplication.id });
-	if (rows.length === 0) throw new GrantNotFoundError();
-}
-
-export type GrantReportInput = Omit<NewGrantReport, 'id' | 'createdAt' | 'updatedAt'>;
-
-export async function addGrantReport(input: GrantReportInput): Promise<void> {
-	await db.insert(grantReport).values(input);
-}
-
-export async function updateGrantReport(
-	id: string,
-	input: Omit<GrantReportInput, 'grantApplicationId'>
-): Promise<void> {
-	const rows = await db
-		.update(grantReport)
-		.set({ ...input, updatedAt: new Date() })
-		.where(eq(grantReport.id, id))
-		.returning({ id: grantReport.id });
-	if (rows.length === 0) throw new GrantReportNotFoundError();
-}
-
-export async function deleteGrantReport(id: string): Promise<void> {
-	const rows = await db
-		.delete(grantReport)
-		.where(eq(grantReport.id, id))
-		.returning({ id: grantReport.id });
-	if (rows.length === 0) throw new GrantReportNotFoundError();
+		.limit(1);
+	if (!row) throw new GrantNotFoundError();
+	await db.batch([
+		db.delete(grantApplication).where(eq(grantApplication.id, id)),
+		...(row.projectId ? deleteFundingProjectWrites(row.projectId) : [])
+	]);
 }

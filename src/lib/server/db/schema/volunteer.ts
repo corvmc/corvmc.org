@@ -45,6 +45,7 @@ import {
 	dutyListAnchors,
 	dutyListAutoApplyTriggers,
 	projectKinds,
+	grantStages,
 	dutyListStoredSubjects,
 	workDoneConditions
 } from '../../../config';
@@ -1111,6 +1112,10 @@ export const dutyList = sqliteTable(
 		// so the index below holds it to one template.
 		projectKind: text('project_kind', { enum: projectKinds }).notNull().default('general'),
 
+		// A grant template's stage: `application` is stamped when a grant is created,
+		// the others are offered on the grant. One template per stage.
+		grantStage: text('grant_stage', { enum: grantStages }),
+
 		isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
 		createdByUserId: text('created_by_user_id').references(() => user.id, {
 			onDelete: 'set null'
@@ -1132,7 +1137,10 @@ export const dutyList = sqliteTable(
 			.where(sql`auto_apply_on is not null`),
 		uniqueIndex('uq_duty_list_production')
 			.on(t.projectKind)
-			.where(sql`project_kind = 'production'`)
+			.where(sql`project_kind = 'production'`),
+		uniqueIndex('uq_duty_list_grant_stage')
+			.on(t.grantStage)
+			.where(sql`grant_stage is not null`)
 	]
 );
 

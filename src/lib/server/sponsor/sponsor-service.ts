@@ -18,6 +18,12 @@ import {
 	type OrganizationInput
 } from '#lib/server/party/organization-service.js';
 import { DomainError } from '#lib/server/domain-error.js';
+import {
+	deleteFundingProjectWrites,
+	fundingCommitteeId,
+	fundingProjectWrites,
+	renameFundingProject
+} from '#lib/server/development/funding-project.js';
 import { byDeadline, due, type Deadline } from '#lib/utils/deadline.js';
 
 export class SponsorNotFoundError extends DomainError {
@@ -175,11 +181,30 @@ export async function deleteSponsor(id: string): Promise<void> {
 	await removeRole(id, 'sponsor', Number(used?.n ?? 0));
 }
 
-export type SponsorshipInput = Omit<NewSponsorship, 'id' | 'createdAt' | 'updatedAt'>;
+export type SponsorshipInput = Omit<
+	NewSponsorship,
+	'id' | 'projectId' | 'fundsProjectId' | 'createdAt' | 'updatedAt'
+>;
 
-export async function createSponsorship(input: SponsorshipInput): Promise<Sponsorship> {
+/** The sponsorship and its project, owned by the committee holding `sponsor.manage`. */
+export async function createSponsorship(
+	input: SponsorshipInput,
+	opts: { createdByUserId?: string | null } = {}
+): Promise<Sponsorship> {
 	await requireRole(input.organizationId, 'sponsor');
-	const [row] = await db.insert(sponsorship).values(input).returning();
+	const projectId = crypto.randomUUID();
+	const id = crypto.randomUUID();
+	await db.batch([
+		...fundingProjectWrites({
+			projectId,
+			kind: 'sponsorship',
+			name: input.title,
+			ownerGroupId: await fundingCommitteeId('sponsorship'),
+			createdByUserId: opts.createdByUserId ?? null
+		}),
+		db.insert(sponsorship).values({ ...input, id, projectId })
+	]);
+	const [row] = await db.select().from(sponsorship).where(eq(sponsorship.id, id));
 	return row;
 }
 
@@ -191,14 +216,21 @@ export async function updateSponsorship(
 		.update(sponsorship)
 		.set({ ...input, updatedAt: new Date() })
 		.where(eq(sponsorship.id, id))
-		.returning({ id: sponsorship.id });
+		.returning({ projectId: sponsorship.projectId });
 	if (rows.length === 0) throw new SponsorshipNotFoundError();
+	if (rows[0].projectId) await renameFundingProject(rows[0].projectId, input.title);
 }
 
+/** Its placements, its project and that project's tasks go with it. */
 export async function deleteSponsorship(id: string): Promise<void> {
-	const rows = await db
-		.delete(sponsorship)
+	const [row] = await db
+		.select({ projectId: sponsorship.projectId })
+		.from(sponsorship)
 		.where(eq(sponsorship.id, id))
-		.returning({ id: sponsorship.id });
-	if (rows.length === 0) throw new SponsorshipNotFoundError();
+		.limit(1);
+	if (!row) throw new SponsorshipNotFoundError();
+	await db.batch([
+		db.delete(sponsorship).where(eq(sponsorship.id, id)),
+		...(row.projectId ? deleteFundingProjectWrites(row.projectId) : [])
+	]);
 }

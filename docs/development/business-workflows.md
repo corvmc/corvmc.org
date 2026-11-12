@@ -2301,8 +2301,12 @@ Decision: [Sponsors and grants are two modules](../decisions/0019-sponsors-and-g
 The Development committee signs sponsors and applies for grants. They are two modules over one
 set of parties: a sponsor or a funder is an `organization` holding that role (#2622), and the
 person there is a `contact`. A sponsor is a business with a history of terms; staff read `/staff/sponsors` soonest-ending first. A grant
-is an application to a funder that, once awarded, owes reports; staff read `/staff/grants`
-soonest-deadline first. Status moves by hand through each edit form, with no side effects.
+is an application to a funder; staff read `/staff/grants` soonest-deadline first. Status moves by
+hand through each edit form, with no side effects.
+
+Each grant application and sponsorship is a project of kind `grant` or `sponsorship`, made with it
+and owned by the Development committee. The work (the application's steps, the reports an award
+owes, follow-ups) is that project's tasks, with due dates, assignees and committee reminders.
 
 ### Code path
 
@@ -2312,11 +2316,18 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
   `sponsor.manage`; a sponsor with sponsorships cannot be deleted, and `createSponsorship` refuses
   an organization without the `sponsor` role.
 - **Grants:** `getGrants` / `getGrantDetail` / `getFunders` in `grants.remote.ts`, guarded by
-  `grant.read`. `grantDeadline` in `grant-service.ts` is pure: apply-by for a prospect, the
-  earliest unsubmitted report or the award's end once awarded, and an unsubmitted report still
-  counts after the grant is closed. Writes are guarded by `grant.manage`; a funder with
-  applications cannot be deleted, an application's reports cascade with it, and `createGrant`
-  refuses an organization without the `funder` role.
+  `grant.read`. `grantDeadline` in `grant-service.ts` is pure: apply-by for a prospect and the
+  award's end once awarded. Writes are guarded by `grant.manage`; a funder with applications
+  cannot be deleted, and `createGrant` refuses an organization without the `funder` role.
+- **The project (#2622):** `createGrant` and `createSponsorship` write the project, its `owner`
+  row and the side-table row in one batch, through `funding-project.ts` in
+  `src/lib/server/development/`. The owner is the live committee holding `grant.manage` or
+  `sponsor.manage`, `development-committee` first; with none, the project has no committee.
+  `createGrant` then stamps the template whose `duty_list.grant_stage` is `application`, timed
+  from the apply-by date (the `apply_by`, `award_start` and `award_end` anchors read the grant's
+  dates). Without that date its tasks wait, and `updateGrant` places them once it is set. Editing
+  the title renames the project; deleting the row deletes the project and its tasks. The three
+  stage templates come from a migration and carry their help text in each item's notes.
 - **People:** each form's contact name, email and phone is the organization's first `contact`,
   written and read through `primary-contact.ts`, which calls `contact-service.ts`. Seeing them needs
   `contact.read` and changing them `contact.manage`, which staff and the Development committee
@@ -2339,7 +2350,8 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
 - **Reminders (#1477):** `development_deadline_14d` and `development_deadline_3d` in
   `src/lib/server/reminders/registry.ts` read `listDevelopmentDeadlinesBetween` (in
   `src/lib/server/development/deadline-service.ts`) over every open deadline: a prospect's
-  apply-by, each unsubmitted report, an award's end, and an active sponsorship's end. The first
+  apply-by, an award's end, and an active sponsorship's end. Reports are tasks, reminded as
+  tasks. The first
   stage covers 4 to 14 days out and the second 0 to 3, so one drain sends one stage and a
   past deadline gets none. The subject is `<module>:<deadline>:<date>`, so a moved date is
   reminded again. `development.deadline_due` fans out to holders of `grant.manage` or
@@ -2356,7 +2368,8 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
 
 ### Data touched
 
-- `sponsor`, `sponsorship`, `sponsor_placement`, `funder`, `grant_application`, `grant_report`. Dates are
+- `organization`, `sponsorship`, `sponsor_placement`, `grant_application`, and the `project`,
+  `project_committee` and `work_order` rows each one's work lives in. Dates are
   `YYYY-MM-DD` text, compared as strings. The amount columns are `notAccounting` in
   `money-map.ts`; an award arrives outside the app, as a manual `grant` entry.
 
@@ -2365,8 +2378,9 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
 - **A deadline shows a day early or late.** Something parsed a date column as a `Date`.
   `new Date('2026-10-01')` is UTC midnight, the day before in Corvallis. Display goes through
   `formatIsoDay`, and comparisons stay on the strings.
-- **An award reads as done while a report is owed.** The report has no `submittedOn`; the list
-  keeps a closed grant visible for exactly this.
+- **A grant has no tasks.** The `application` template was inactive or missing when it was
+  created, or the stamp failed (reported to Sentry as `grant.template`). Apply it from the
+  project page.
 - **Nobody was reminded.** Nobody holds `grant.manage` or `sponsor.manage` through a position.
   The fan-out goes to capability holders, not to the Development committee (#607).
 - **A placed sponsor does not show.** Its sponsorship is still Pitched. Pitches and declined terms

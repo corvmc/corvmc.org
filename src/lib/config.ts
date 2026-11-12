@@ -923,13 +923,20 @@ export const grantStatusBadge = {
 	closed: 'ghost'
 } as const satisfies Record<GrantStatus, string>;
 
-export type GrantDeadlineKind = 'apply' | 'report' | 'end';
+export type GrantDeadlineKind = 'apply' | 'end';
 
 export const grantDeadlineLabels: Record<GrantDeadlineKind, string> = {
 	apply: 'Apply by',
-	report: 'Report due',
 	end: 'Award ends'
 };
+
+/**
+ * The three grant templates, each found by its stage rather than its name so
+ * staff can rename it. `application` is applied when the grant is created;
+ * the other two are offered, never applied unasked.
+ */
+export const grantStages = ['application', 'award', 'close_out'] as const;
+export type GrantStage = (typeof grantStages)[number];
 
 // ---------------------------------------------------------------------------
 // Credit transaction sources
@@ -1373,7 +1380,10 @@ export const dutyListAnchors = [
 	'first_set',
 	'curfew',
 	'load_out',
-	'project_start'
+	'project_start',
+	'apply_by',
+	'award_start',
+	'award_end'
 ] as const;
 export type DutyListAnchor = (typeof dutyListAnchors)[number];
 
@@ -1408,8 +1418,18 @@ export const dutyListAnchorLabels: Record<DutyListAnchor, string> = {
 	first_set: 'First set',
 	curfew: 'Curfew',
 	load_out: 'Load-out',
-	project_start: 'Project start'
+	project_start: 'Project start',
+	apply_by: 'Apply-by date',
+	award_start: 'Award start',
+	award_end: 'Award end'
 };
+
+/** Read off the grant application whose project it is; missing on any other project. */
+export const grantDutyListAnchors = [
+	'apply_by',
+	'award_start',
+	'award_end'
+] as const satisfies readonly DutyListAnchor[];
 
 /**
  * Every value `duty_list.subject` has held. Only `project` is written now:
@@ -1900,14 +1920,24 @@ export type ProjectView = (typeof projectViews)[number];
 /**
  * A `'production'` project is the generic half of a show: its production row
  * carries the show layer and points back here, one to one.
- * See docs/decisions/0011-productions-are-projects.md.
+ * See docs/decisions/0011-productions-are-projects.md. A `'grant'` or
+ * `'sponsorship'` project is the work of one grant application or sponsorship,
+ * whose side table points back the same way (#2622).
  */
-export const projectKinds = ['general', 'production'] as const;
+export const projectKinds = ['general', 'production', 'grant', 'sponsorship'] as const;
 export type ProjectKind = (typeof projectKinds)[number];
+
+/** The kinds a funding side table makes: never chosen, never started from a template. */
+export const fundingProjectKinds = [
+	'grant',
+	'sponsorship'
+] as const satisfies readonly ProjectKind[];
 
 export const projectKindLabels: Record<ProjectKind, string> = {
 	general: 'General',
-	production: 'Production'
+	production: 'Production',
+	grant: 'Grant',
+	sponsorship: 'Sponsorship'
 };
 
 /**

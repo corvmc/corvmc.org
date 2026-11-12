@@ -9,11 +9,11 @@ vi.mock('#lib/server/sponsor/sponsor-service.js', () => ({ listSponsorshipDeadli
 
 const { listDevelopmentDeadlinesBetween } = await import('./deadline-service');
 
-const report = {
-	kind: 'report',
+const award = {
+	kind: 'end',
 	on: '2026-10-09',
-	subjectId: 'report:r1',
-	title: 'Interim report',
+	subjectId: 'end:g1',
+	title: 'Award ends',
 	parentId: 'g1',
 	parentTitle: 'Operating support',
 	counterparty: 'Oregon Arts Commission'
@@ -30,7 +30,7 @@ const term = {
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	listGrantDeadlinesBetween.mockResolvedValue([report]);
+	listGrantDeadlinesBetween.mockResolvedValue([award]);
 	listSponsorshipDeadlinesBetween.mockResolvedValue([term]);
 });
 
