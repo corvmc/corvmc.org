@@ -48,10 +48,25 @@ describe('seed typing', () => {
 		expect(offenders, 'fix the row shape instead of casting it away').toEqual([]);
 	});
 
+	it('sends every multi-row insert through `batchInsert`', () => {
+		// D1 binds at most 100 parameters a statement, and a multi-row insert binds
+		// rows × columns. Only `batchInsert` sizes the chunk from the table, so a
+		// column added later cannot push a hand-sized insert over (#2592).
+		const offenders = seedFiles
+			.filter(([name]) => name !== 'db.ts')
+			.flatMap(([name, source]) =>
+				[...source.matchAll(/\.insert\((\w+)\)\s*\.values\(\s*(?!\{)/g)]
+					.filter((m) => !(name === 'bands.ts' && m[1] === 'group'))
+					.map((m) => `${name}: ${m[1]}`)
+			);
+
+		expect(offenders, 'use `batchInsert(table, rows)`').toEqual([]);
+	});
+
 	it('keeps `batchInsert` generic over the table it writes to', () => {
 		const source = readFileSync(new URL('db.ts', seedDir), 'utf8');
 		expect(source).toMatch(/batchInsert<TTable extends SQLiteTable>/);
-		expect(source).toMatch(/rows: InferInsertModel<TTable>\[\]/);
+		expect(source).toMatch(/rows: InferInsertModel<TTable>\[\]\n\)/);
 		// The return is what the database hands back, not what went in — reading
 		// `.id` off a seeded row depends on it.
 		expect(source).toMatch(/Promise<InferSelectModel<TTable>\[\]>/);

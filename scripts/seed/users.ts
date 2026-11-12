@@ -4,7 +4,7 @@ import {
 	user
 } from '../../src/lib/server/db/schema/authentication';
 import { modelHasRole, role } from '../../src/lib/server/db/schema/authorization';
-import { db } from './db';
+import { batchInsert, db } from './db';
 import { scryptHash } from './hash';
 import { pendingEntries, pendingTags } from './pending';
 import {
@@ -169,14 +169,14 @@ export async function seedUserRoles(users: SeedUser[], adminUser: SeedUser, role
 	const volunteerRole = roles.find((r) => r.name === 'volunteer')!;
 	const sustainingRole = roles.find((r) => r.name === 'sustaining')!;
 
-	await db.insert(modelHasRole).values([
+	await batchInsert(modelHasRole, [
 		{ roleId: adminRole.id, userId: adminUser.id },
 		{ roleId: staffRole.id, userId: adminUser.id },
 		{ roleId: memberRole.id, userId: adminUser.id }
 	]);
 
 	for (let i = 0; i < 2; i++) {
-		await db.insert(modelHasRole).values([
+		await batchInsert(modelHasRole, [
 			{ roleId: adminRole.id, userId: users[i].id },
 			{ roleId: staffRole.id, userId: users[i].id }
 		]);
