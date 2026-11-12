@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { forEachClockEdge, addCalendarDays } from '#lib/test/clock-edges';
+import { forEachClockEdge, addCalendarDays } from '#lib/test/clock-edges.js';
 
 /**
  * The staff Events list against a real SQLite: the date presets, their order,
