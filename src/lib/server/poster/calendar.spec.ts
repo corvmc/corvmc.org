@@ -1,65 +1,106 @@
-import { describe, it, expect } from 'vitest';
-import { CALENDAR_HEIGHT, CALENDAR_WIDTH, layOut, renderCalendar } from './calendar';
-import type { CalendarBlock } from './calendar-service';
+import { describe, it, expect, vi } from 'vitest';
+import { posterFormats } from '#lib/config.js';
+import { calendarHtml, monthUrl, renderCalendar, type PosterPage } from './calendar';
 
-/** How a month fits the poster, and that it rasterizes at the flyer's size. */
+/** What the poster page carries, and how each format is printed. Layout is the browser's. */
 
-const events = (n: number, prefix: string) =>
-	Array.from({ length: n }, (_, i) => ({
-		id: `${prefix}${i}`,
-		title: `${prefix} show ${i}`,
-		startsAt: new Date(Date.UTC(2026, 10, 1 + (i % 28), 4))
-	}));
+const event = (id: string, madeBy: 'cmc' | 'member', title = id) => ({
+	id,
+	title,
+	startsAt: new Date(Date.UTC(2026, 10, 15, 4)),
+	madeBy
+});
 
-const month = (cmc: number, sustaining: number, member: number) => [
-	{ block: 'cmc' as CalendarBlock, events: events(cmc, 'c') },
-	{ block: 'sustaining' as CalendarBlock, events: events(sustaining, 's') },
-	{ block: 'member' as CalendarBlock, events: events(member, 'm') }
-];
+const poster = {
+	month: '2026-11',
+	events: [event('first', 'member'), event('second', 'cmc'), event('third', 'member')],
+	sponsors: [{ name: 'Acme Audio', src: null }]
+};
 
-const rows = (cols: ReturnType<typeof layOut>['columns']) =>
-	cols.flat().filter((l) => l.kind === 'row').length;
+function fakePage() {
+	const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+	const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+	const page = {
+		setViewport: vi.fn(async () => {}),
+		setContent: vi.fn(async () => {}),
+		evaluate: vi.fn(async () => {}),
+		screenshot: vi.fn(async () => png),
+		pdf: vi.fn(async () => pdf)
+	} satisfies PosterPage;
+	return { page, png, pdf };
+}
 
-describe('layOut', () => {
-	it('prints a quiet month in one column at full size', () => {
-		const { columns, size } = layOut(month(3, 2, 4));
-		expect(columns).toHaveLength(1);
-		expect(size).toBe(34);
-		expect(rows(columns)).toBe(9);
-	});
-
-	it('moves a busy month to two columns before dropping anything', () => {
-		const { columns } = layOut(month(12, 12, 20));
-		expect(columns).toHaveLength(2);
-		expect(rows(columns)).toBe(44);
-		expect(columns.flat().some((l) => l.kind === 'more')).toBe(false);
-	});
-
-	it('names what it leaves out of a month that cannot fit', () => {
-		const { columns } = layOut(month(10, 10, 80));
-		const more = columns.flat().find((l) => l.kind === 'more');
-		expect(more).toMatchObject({ kind: 'more', block: 'member' });
-		expect(rows(columns) + (more as { count: number }).count).toBe(100);
-	});
-
-	it('skips a block with no listings', () => {
-		const { columns } = layOut(month(2, 0, 1));
-		expect(columns.flat().filter((l) => l.kind === 'head')).toEqual([
-			{ kind: 'head', block: 'cmc' },
-			{ kind: 'head', block: 'member' }
+describe('calendarHtml', () => {
+	it('lists events in the order given, each marked by who made it', () => {
+		const html = calendarHtml(poster, 'letter');
+		const rows = [
+			...html.matchAll(/<li class="row"><span class="mark (\w+)">.*?<span class="title">(\w+)</g)
+		];
+		expect(rows.map((r) => [r[2], r[1]])).toEqual([
+			['first', 'member'],
+			['second', 'cmc'],
+			['third', 'member']
 		]);
+	});
+
+	it('escapes listing titles and sponsor names', () => {
+		const html = calendarHtml(
+			{
+				...poster,
+				events: [event('x', 'cmc', '<script>alert(1)</script> & co')],
+				sponsors: [{ name: 'A "B" <C>', src: null }]
+			},
+			'social'
+		);
+		expect(html).not.toContain('<script>alert');
+		expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt; &amp; co');
+		expect(html).toContain('A &quot;B&quot; &lt;C&gt;');
+	});
+
+	it("prints the QR code's address under it", () => {
+		const html = calendarHtml(poster, 'tabloid');
+		expect(html).toContain('<svg');
+		expect(html).toContain(monthUrl('2026-11').replace(/^https?:\/\//, ''));
+	});
+});
+
+describe('monthUrl', () => {
+	it("opens the public events page at the month's first day", () => {
+		expect(monthUrl('2026-12')).toMatch(/^https:\/\/[^/]+\/events\?from=2026-12-01$/);
 	});
 });
 
 describe('renderCalendar', () => {
-	it('renders a portrait PNG with sponsors', async () => {
-		const png = await renderCalendar({
-			month: '2026-11',
-			blocks: month(4, 3, 30),
-			sponsors: [{ name: 'Acme Audio', src: null }]
+	it.each([
+		['letter', 'Letter'],
+		['tabloid', 'Tabloid']
+	] as const)('prints %s as a one-page PDF with a PNG preview', async (format, paper) => {
+		const { page, png, pdf } = fakePage();
+		const out = await renderCalendar(page, poster, format);
+		expect(page.pdf).toHaveBeenCalledWith({
+			format: paper,
+			printBackground: true,
+			pageRanges: '1'
 		});
-		const view = new DataView(png.buffer, png.byteOffset, png.byteLength);
-		expect(view.getUint32(0)).toBe(0x89504e47);
-		expect([view.getUint32(16), view.getUint32(20)]).toEqual([CALENDAR_WIDTH, CALENDAR_HEIGHT]);
+		expect(out).toEqual({ file: pdf, contentType: 'application/pdf', preview: png });
+	});
+
+	it('captures the social size as a PNG and prints no PDF', async () => {
+		const { page, png } = fakePage();
+		const out = await renderCalendar(page, poster, 'social');
+		expect(page.setViewport).toHaveBeenCalledWith({ width: 1080, height: 1350 });
+		expect(page.pdf).not.toHaveBeenCalled();
+		expect(out).toEqual({ file: png, contentType: 'image/png', preview: png });
+	});
+
+	it('fits the page before capturing it, in every format', async () => {
+		for (const format of posterFormats) {
+			const { page } = fakePage();
+			await renderCalendar(page, poster, format);
+			const order = (fn: { mock: { invocationCallOrder: number[] } }) =>
+				fn.mock.invocationCallOrder[0];
+			expect(order(page.setContent)).toBeLessThan(order(page.evaluate));
+			expect(order(page.evaluate)).toBeLessThan(order(page.screenshot));
+		}
 	});
 });

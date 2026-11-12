@@ -1,7 +1,7 @@
 # 0060 A month poster groups by who made the event
 
 - **Date:** 2026-11-12
-- **Status:** Accepted
+- **Status:** Superseded by 0061
 - **Issue:** [#2597](https://github.com/corvmc/corvmc.org/issues/2597)
 
 ## Context

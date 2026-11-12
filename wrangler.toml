@@ -165,6 +165,11 @@ bucket_name = "corvmc-private"
 binding = "KV"
 id = "fc85459046fe47f9bbfae4f343012041"
 
+# Browser Rendering: lays out the month calendar poster and prints it to PDF
+# (src/lib/server/poster/browser.ts).
+[browser]
+binding = "BROWSER"
+
 # The deploy version id. NOT how Sentry gets its release tag, despite what this
 # comment used to claim: @sentry/cloudflare reads this binding only in
 # `getFinalOptions`, which the `withSentry` wrappers call and

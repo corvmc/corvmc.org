@@ -1,46 +1,27 @@
 import { db } from '#lib/server/db/index.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
-import { groupMember } from '#lib/server/db/schema/group.js';
-import { user } from '#lib/server/db/schema/authentication.js';
-import { and, asc, eq, gte, isNull, lt, sql } from 'drizzle-orm';
+import { group } from '#lib/server/db/schema/group.js';
+import { and, asc, eq, gte, isNull, lt, ne, or } from 'drizzle-orm';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
-import { DEFAULT_TIMEZONE, type EventSource } from '#lib/config.js';
+import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import { creditsForEvents, type SponsorCredit } from '#lib/server/sponsor/credit-service.js';
-import { renderCalendar } from './calendar';
+import { renderCalendar, type PosterFormat } from './calendar';
+import { withPosterPage } from './browser';
 import { sponsorLogos } from './sponsor-logos';
 
-/** The poster's three blocks, in the order they print. */
-export const calendarBlocks = ['cmc', 'sustaining', 'member'] as const;
-export type CalendarBlock = (typeof calendarBlocks)[number];
-
-export interface CalendarFacts {
-	source: EventSource;
-	/** An active member of the owning group has a subscription. */
-	groupHasSustaining: boolean;
-	/** The member who submitted the listing has a subscription. */
-	creatorIsSustaining: boolean;
-}
-
-/**
- * Which block a listing prints in. A band or group listing is a sustaining
- * member's when any active member of the owning group subscribes; a community
- * listing when its submitter does (#2597).
- */
-export function calendarBlock(e: CalendarFacts): CalendarBlock {
-	if (e.source === 'cmc') return 'cmc';
-	const sustaining = e.source === 'community' ? e.creatorIsSustaining : e.groupHasSustaining;
-	return sustaining ? 'sustaining' : 'member';
-}
+/** Who made a listing, as the poster marks it: the CMC, or a member or their group. */
+export type CalendarMaker = 'cmc' | 'member';
 
 export interface CalendarEvent {
 	id: string;
 	title: string;
 	startsAt: Date;
+	madeBy: CalendarMaker;
 }
 
 export interface MonthCalendar {
 	month: string;
-	blocks: { block: CalendarBlock; events: CalendarEvent[] }[];
+	events: CalendarEvent[];
 	sponsors: SponsorCredit[];
 }
 
@@ -54,14 +35,11 @@ export function monthBounds(month: string): { from: Date; to: Date } {
 	};
 }
 
-// Drizzle prints an interpolated column unqualified in a one-table select, and
-// inside these subqueries a bare `group_id` would bind to `gm`, not the listing.
-const outer = (column: string) => sql.raw(`"event_listing"."${column}"`);
-
 /**
- * A month's published listings, grouped into the poster's blocks, and the
- * sponsors their event pages credit. Partner-feed imports are left out: no
- * member made them.
+ * A month's public listings in date order, and the sponsors their event pages
+ * credit. Public means published, not a meeting, and not a committee's: a
+ * committee session is a meeting whatever its `kind` says. Partner-feed
+ * imports are left out: no member made them.
  */
 export async function monthCalendar(month: string): Promise<MonthCalendar> {
 	const { from, to } = monthBounds(month);
@@ -70,21 +48,15 @@ export async function monthCalendar(month: string): Promise<MonthCalendar> {
 			id: eventListing.id,
 			title: eventListing.title,
 			startsAt: eventListing.startsAt,
-			source: eventListing.source,
-			groupHasSustaining: sql<boolean>`exists (
-				select 1 from ${groupMember} gm join ${user} u on u.id = gm.user_id
-				where gm.group_id = ${outer('group_id')} and gm.status = 'active'
-					and u.subscription is not null
-			)`.mapWith(Boolean),
-			creatorIsSustaining: sql<boolean>`exists (
-				select 1 from ${user} u
-				where u.id = ${outer('created_by_user_id')} and u.subscription is not null
-			)`.mapWith(Boolean)
+			source: eventListing.source
 		})
 		.from(eventListing)
+		.leftJoin(group, eq(group.id, eventListing.groupId))
 		.where(
 			and(
 				eq(eventListing.status, 'published'),
+				ne(eventListing.kind, 'meeting'),
+				or(isNull(group.kind), ne(group.kind, 'committee')),
 				gte(eventListing.startsAt, from),
 				lt(eventListing.startsAt, to),
 				isNull(eventListing.importSourceId)
@@ -92,21 +64,22 @@ export async function monthCalendar(month: string): Promise<MonthCalendar> {
 		)
 		.orderBy(asc(eventListing.startsAt), asc(eventListing.title));
 
-	const blocks = calendarBlocks.map((block) => ({ block, events: [] as CalendarEvent[] }));
-	for (const r of rows) {
-		blocks
-			.find((b) => b.block === calendarBlock(r))!
-			.events.push({ id: r.id, title: r.title, startsAt: r.startsAt });
-	}
+	const events = rows.map((r) => ({
+		id: r.id,
+		title: r.title,
+		startsAt: r.startsAt,
+		madeBy: (r.source === 'cmc' ? 'cmc' : 'member') as CalendarMaker
+	}));
 	const sponsors = await creditsForEvents(
-		rows.map((r) => r.id),
+		events.map((e) => e.id),
 		'eventPage'
 	);
-	return { month, blocks, sponsors };
+	return { month, events, sponsors };
 }
 
-/** The month's calendar poster as a PNG. A snapshot: nothing stores it. */
-export async function renderMonthPoster(month: string): Promise<Uint8Array> {
+/** The month's poster in one format. A snapshot: nothing stores it. */
+export async function renderMonthPoster(month: string, format: PosterFormat) {
 	const cal = await monthCalendar(month);
-	return renderCalendar({ ...cal, sponsors: await sponsorLogos(cal.sponsors) });
+	const poster = { ...cal, sponsors: await sponsorLogos(cal.sponsors) };
+	return withPosterPage((page) => renderCalendar(page, poster, format));
 }
