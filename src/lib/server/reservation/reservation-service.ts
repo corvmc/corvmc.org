@@ -103,6 +103,7 @@ export interface ReservationRow {
 	status: string;
 	startsAt: Date;
 	endsAt: Date;
+	tourMinutes: number;
 	notes: string | null;
 	cancellationReason: string | null;
 	stripePaymentRecordId: string | null;
@@ -112,13 +113,16 @@ export interface ReservationRow {
 }
 
 export async function create(params: CreateReservationParams): Promise<ReservationRow> {
-	const { userId, bookerType, bookerId, startsAt, endsAt, notes } = params;
+	const { userId, bookerType, bookerId, endsAt, notes } = params;
 
 	// Validate time constraints
-	const validation = await validateBooking(startsAt, endsAt, { bookerType, userId });
+	const validation = await validateBooking(params.startsAt, endsAt, { bookerType, userId });
 	if (!validation.valid) {
 		throw new ReservationValidationError(validation.error!);
 	}
+	// A new member's tour is held before the time they asked for (#2568).
+	const tourMinutes = validation.tourMinutes ?? 0;
+	const startsAt = new Date(params.startsAt.getTime() - tourMinutes * 60_000);
 
 	// Conflict check then insert (D1 doesn't support interactive transactions)
 	const conflicts = await db
@@ -150,6 +154,7 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 			status,
 			startsAt,
 			endsAt,
+			tourMinutes,
 			notes: notes ?? null
 		})
 		.returning();
@@ -226,12 +231,14 @@ async function emitCreated(row: typeof reservation.$inferSelect): Promise<void> 
  * is where the announcement happens instead.
  */
 export async function createWaitlisted(params: CreateReservationParams): Promise<ReservationRow> {
-	const { userId, bookerType, bookerId, startsAt, endsAt, notes } = params;
+	const { userId, bookerType, bookerId, endsAt, notes } = params;
 
-	const validation = await validateBooking(startsAt, endsAt, { bookerType, userId });
+	const validation = await validateBooking(params.startsAt, endsAt, { bookerType, userId });
 	if (!validation.valid) {
 		throw new ReservationValidationError(validation.error!);
 	}
+	const tourMinutes = validation.tourMinutes ?? 0;
+	const startsAt = new Date(params.startsAt.getTime() - tourMinutes * 60_000);
 
 	const [row] = await db
 		.insert(reservation)
@@ -242,6 +249,7 @@ export async function createWaitlisted(params: CreateReservationParams): Promise
 			status: 'waitlisted',
 			startsAt,
 			endsAt,
+			tourMinutes,
 			notes: notes ?? null
 		})
 		.returning();

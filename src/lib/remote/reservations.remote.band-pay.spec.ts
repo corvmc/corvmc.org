@@ -28,6 +28,7 @@ const bandRow = () => ({
 	status: 'confirmed',
 	startsAt,
 	endsAt,
+	tourMinutes: 0,
 	notes: null,
 	paidAt: null,
 	cashDueCents: null,

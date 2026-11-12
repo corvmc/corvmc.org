@@ -52,7 +52,20 @@ picker's slot queries (`getAvailableDates`, `getReservationStartTimes`) read it,
 never offers a start the server refuses. The picker says why in one line. Band, teaching and
 event bookings keep the room minimum, and `staffCreate()` checks neither. The clearance is
 granted when an orientation is completed or waived — see
-[Rehearsal orientation](#rehearsal-orientation). The rate, minimum duration and advance windows depend on who is
+[Rehearsal orientation](#rehearsal-orientation).
+
+**Tour time (#2568).** While an orientation role is set, the same member's booking also holds
+the room for `volunteer.orientationMinutes` before the start they asked for. `noticeFor()`
+returns the length as `tourMinutes`; `validateBooking()` checks opening hours and notice
+against the earlier arrival time; `create()` and `createWaitlisted()` move `startsAt` earlier and
+store `reservation.tour_minutes`. The stored value keeps a later change to the setting from
+moving or repricing a booking. The tour is not charged: every price and free-hours figure reads
+`billableHours(row)` in `reservation-credit-service.ts`, which subtracts it, and
+`billable-hours.spec.ts` fails on a stored window turned into hours without it. The picker offers
+a start only when the tour's slots before it are free too (`isBookableStart()`), and
+`DateTimeStep` shows the arrival time in one line. A recurring series repeats the session, not
+the tour. `staffCreate()` adds none. Every booking made before the clearance gets the tour time;
+only the first raises an orientation shift. The rate, minimum duration and advance windows depend on who is
 booking, so callers read them through `getBookingTerms(bookerType)` (see
 [Teaching bookings](#teaching-bookings)). `hasConflict()` in `conflict-service.ts` counts any
 reservation that is not `cancelled` or `waitlisted`, widened by `bufferMinutes` (default 0),
@@ -1569,7 +1582,9 @@ from April's.
 > `grantPracticeSpaceClearance` in `volunteer/practice-space-clearance.ts`: an append-only
 > `member_certification` row, skipped when a current one exists, carrying the waive reason as
 > its note. Until a member holds it, their own booking needs 3 days' notice, which is the time
-> the orientation shift has to find a volunteer. The migration that added it backfilled every
+> the orientation shift has to find a volunteer.
+> **Since #2568** that booking starts `volunteer.orientationMinutes` earlier for the tour, at no
+> charge, so the shift raised at its start covers the tour without cutting into the session. The migration that added it backfilled every
 > member with a `completed` booking of their own (not a staff hold) and every completed or
 > waived orientation. Staff switch the shift on by picking a role under Settings → Orientation
 > on `/staff/settings`; `pnpm db:seed` sets it locally.

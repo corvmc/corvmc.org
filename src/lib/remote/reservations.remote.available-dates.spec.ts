@@ -42,14 +42,18 @@ const openDay = [
 	{ startTime: '10:00', available: true },
 	{ startTime: '10:30', available: true }
 ];
-vi.mock('#lib/server/reservation/conflict-service.js', () => ({
+vi.mock('#lib/server/reservation/conflict-service.js', async (importOriginal) => ({
+	isBookableStart: (
+		await importOriginal<typeof import('#lib/server/reservation/conflict-service.js')>()
+	).isBookableStart,
+	tourSlotsFor: () => 0,
 	getAvailableSlots: vi.fn(async () => openDay),
 	getAvailableSlotsForDates: vi.fn(
 		async (dates: string[]) => new Map(dates.map((d) => [d, openDay]))
 	),
 	getConflictDetails: vi.fn(),
 	getValidationWarnings: vi.fn(),
-	noticeFor: vi.fn(async () => ({ minutes: 60, newMember: false }))
+	noticeFor: vi.fn(async () => ({ minutes: 60, newMember: false, tourMinutes: 0 }))
 }));
 
 const testUser = mockUser({ id: 'user-1', name: 'Test Member', email: 'member@example.com' });

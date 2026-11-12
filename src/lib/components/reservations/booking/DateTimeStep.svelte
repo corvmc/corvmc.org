@@ -12,6 +12,7 @@
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import { today, getLocalTimeZone, parseDate, type DateValue } from '@internationalized/date';
 	import { isValidPhone } from '#lib/utils/phone.js';
+	import { formatSlotTime } from '#lib/utils/format.js';
 
 	let {
 		isSustaining = false,
@@ -82,6 +83,8 @@
 	let availableDates = $state<string[]>([]);
 	// Minutes of notice when the member has no Practice space clearance yet.
 	let newMemberNotice = $state<number | null>(null);
+	// Minutes held before the chosen start for a new member's tour.
+	let tourMinutes = $state(0);
 	let initialLoading = $state(true);
 
 	// Bound the calendar by what the server actually offers rather than
@@ -113,6 +116,7 @@
 			if (gen !== availGen) return;
 			availableDates = dates;
 			newMemberNotice = result?.newMemberNoticeMinutes ?? null;
+			tourMinutes = result?.tourMinutes ?? 0;
 			// Preselect the first bookable day, and re-pick if a conflict reload
 			// took the selected day away — otherwise the user is stranded on a
 			// date the server no longer offers. untrack: reading `date` here must
@@ -176,6 +180,14 @@
 		} else {
 			endTimeOptions = [];
 		}
+	});
+
+	// "HH:MM" less the tour, for the arrival line.
+	const arrivalTime = $derived.by(() => {
+		if (!startTime || tourMinutes <= 0) return '';
+		const [h, min] = startTime.split(':').map(Number);
+		const total = h * 60 + min - tourMinutes;
+		return formatSlotTime(`${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`);
 	});
 
 	const step1Valid = $derived(
@@ -254,6 +266,15 @@
 				required
 			/>
 		</div>
+
+		{#if arrivalTime}
+			<p class="text-muted text-sm">
+				{m.reservations_booking_date_time_step_tour_arrival_body({
+					time: arrivalTime,
+					minutes: tourMinutes
+				})}
+			</p>
+		{/if}
 
 		{#if needsPhone}
 			<!-- Bound as well as field-backed: step1Valid needs to see each keystroke. -->
