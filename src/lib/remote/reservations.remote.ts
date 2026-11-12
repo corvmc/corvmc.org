@@ -9,12 +9,7 @@ import { query, getRequestEvent } from '$app/server';
 import { command, form } from './_remote';
 import { db } from '#lib/server/db/index.js';
 import { user, type Subscription } from '#lib/server/db/schema/authentication.js';
-import {
-	reservation,
-	type Reservation,
-	reservationStatuses,
-	type ReservationStatus
-} from '#lib/server/db/schema/reservation.js';
+import { reservation, type Reservation } from '#lib/server/db/schema/reservation.js';
 import { createReservationSchema } from '#lib/server/db/schema/reservation.js';
 import {
 	or,
@@ -24,7 +19,6 @@ import {
 	lt,
 	gt,
 	gte,
-	lte,
 	inArray,
 	notInArray,
 	sql,
@@ -55,7 +49,6 @@ import {
 import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import {
 	bandRefColumns,
-	eventRefColumns,
 	memberRefColumns,
 	reservationRefColumns,
 	toBandRef,
@@ -80,7 +73,6 @@ import {
 	markComplete,
 	markNoShow,
 	recordCashAndComplete,
-	isFirstReservationSql,
 	priorBookingCount,
 	announceWaitlistConfirmed,
 	ReservationConflictError,
@@ -136,7 +128,7 @@ import { paginate } from '#lib/server/db/paginate.js';
 import { ensureContactPhone } from '#lib/server/user/user-service.js';
 import { PHONE_REQUIRED_MESSAGE, isValidPhone } from '#lib/utils/phone.js';
 import { recurringSeriesEnd, UNTIL_BEFORE_START } from '#lib/server/reservation/series-until.js';
-import { DEFAULT_TIMEZONE, SEARCH_LIMIT, LIST_LIMIT } from '#lib/config.js';
+import { DEFAULT_TIMEZONE, SEARCH_LIMIT } from '#lib/config.js';
 
 // ===========================================================================
 // Queries

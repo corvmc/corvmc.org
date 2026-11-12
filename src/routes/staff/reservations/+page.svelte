@@ -107,7 +107,7 @@
 		const query = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
 		const href = `${location.pathname}${query ? `?${query}` : ''}`;
 		if (location.pathname + location.search !== href) {
-			goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 
