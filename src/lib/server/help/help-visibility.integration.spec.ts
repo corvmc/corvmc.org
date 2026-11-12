@@ -63,7 +63,7 @@ beforeAll(() => {
 
 		INSERT INTO help_articles (id, category_id, title, slug, content, min_role, published, capabilities) VALUES
 			('a-sponsors', 'c-staff', 'Track Sponsors and Grants', 'staff-sponsors-grants', 'sponsor body', 'staff', 1, '["sponsor.read","grant.read"]'),
-			('a-renewals', 'c-staff', 'Track Renewals', 'staff-renewals', 'renewal body', 'staff', 1, '["renewal.read"]'),
+			('a-incidents', 'c-staff', 'Read Incidents', 'staff-incidents', 'incident body', 'staff', 1, '["incident.read"]'),
 			('a-bookings', 'c-staff', 'Manage Bookings', 'staff-bookings', 'sponsor mention', 'staff', 1, NULL),
 			('a-welcome', 'c-member', 'Welcome', 'welcome', 'hello', 'member', 1, NULL);
 	`);
@@ -81,7 +81,7 @@ describe('a committee member granted sponsor.read, holding no position', () => {
 	it('does not read a staff article that names no capability, or one naming another', async () => {
 		const reader = await resolveHelpReader('u-committee');
 		expect(await getArticleBySlug('staff-bookings', reader)).toBeNull();
-		expect(await getArticleBySlug('staff-renewals', reader)).toBeNull();
+		expect(await getArticleBySlug('staff-incidents', reader)).toBeNull();
 	});
 
 	it('sees the staff category listing only the article it is admitted to', async () => {
@@ -112,18 +112,18 @@ describe('readers the capability clause must not change', () => {
 		const articles = await listArticlesByCategory('c-staff', reader);
 		expect(articles.map((a) => a.slug).sort()).toEqual([
 			'staff-bookings',
-			'staff-renewals',
+			'staff-incidents',
 			'staff-sponsors-grants'
 		]);
 	});
 });
 
 describe('the shipped frontmatter', () => {
-	it.each([
-		['staff-guide/staff-sponsors-grants.md', 'sponsor.read, grant.read'],
-		['staff-guide/staff-renewals.md', 'renewal.read']
-	])('%s names the capabilities that gate its page', (file, caps) => {
-		const raw = readFileSync(join(CONTENT_DIR, file), 'utf-8');
-		expect(raw).toMatch(new RegExp(`^capabilities: ${caps.replaceAll('.', '\\.')}$`, 'm'));
-	});
+	it.each([['staff-guide/staff-sponsors-grants.md', 'sponsor.read, grant.read']])(
+		'%s names the capabilities that gate its page',
+		(file, caps) => {
+			const raw = readFileSync(join(CONTENT_DIR, file), 'utf-8');
+			expect(raw).toMatch(new RegExp(`^capabilities: ${caps.replaceAll('.', '\\.')}$`, 'm'));
+		}
+	);
 });

@@ -3,7 +3,6 @@ import type {
 	BookerType,
 	GroupKind,
 	HourLogException,
-	RenewalKind,
 	ReservationCanceller,
 	ThreadNotifyPolicy
 } from '#lib/config.js';
@@ -877,20 +876,6 @@ export interface MembershipLifecycleEvent {
 	endsAt: string | null;
 }
 
-/** A permit, license or policy of CMC's own is about to expire (#1478). */
-export interface RenewalExpiryDueEvent {
-	stage: '60d' | '14d';
-	renewalId: string;
-	name: string;
-	kind: RenewalKind;
-	issuer: string | null;
-	reference: string | null;
-	/** `YYYY-MM-DD` */
-	expiresOn: string;
-	/** Told alone when named; otherwise every holder of `renewal.manage` is. */
-	responsible: { id: string; name: string; email: string } | null;
-}
-
 /** A release's yearly radio attestation is about to lapse (#1516). */
 export interface RadioAttestationDueEvent {
 	stage: '30d' | '7d';
@@ -989,7 +974,6 @@ export type DomainEvents = {
 	'volunteer.shift_reminder_due': VolunteerShiftEvent;
 	'volunteer.shift_completed': VolunteerShiftEvent;
 	'volunteer.shift_feedback_due': VolunteerShiftEvent;
-	'renewal.expiry_due': RenewalExpiryDueEvent;
 	'ballot.opened': BallotEvent;
 	'ballot.certified': BallotEvent;
 };

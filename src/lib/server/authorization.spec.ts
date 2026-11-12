@@ -460,28 +460,14 @@ describe('listUsersWithCapability', () => {
 	});
 });
 
-describe('sponsors, grants and renewals through a committee seat (#1578, #1602)', () => {
+describe('sponsors and grants through a committee seat (#1578, #1602)', () => {
 	const DEVELOPMENT = [
 		{
 			groupId: 'dev',
-			capabilities: [
-				'sponsor.read',
-				'sponsor.manage',
-				'grant.read',
-				'grant.manage',
-				'renewal.read',
-				'renewal.manage'
-			]
+			capabilities: ['sponsor.read', 'sponsor.manage', 'grant.read', 'grant.manage']
 		}
 	];
-	const CAPS = [
-		'sponsor.read',
-		'sponsor.manage',
-		'grant.read',
-		'grant.manage',
-		'renewal.read',
-		'renewal.manage'
-	] as const;
+	const CAPS = ['sponsor.read', 'sponsor.manage', 'grant.read', 'grant.manage'] as const;
 
 	for (const cap of CAPS) {
 		it(`admits a member of a committee granting ${cap}, holding no position`, async () => {
@@ -502,7 +488,6 @@ describe('sponsors, grants and renewals through a committee seat (#1578, #1602)'
 		expect(await can('sponsor.read')).toBe(true);
 		expect(await can('grant.read')).toBe(true);
 		expect(await can('sponsor.manage')).toBe(false);
-		expect(await can('renewal.read')).toBe(false);
 	});
 
 	it('gives a seat nothing its committee does not carry', async () => {
@@ -523,9 +508,9 @@ describe('sponsors, grants and renewals through a committee seat (#1578, #1602)'
 			{ id: 'u-1', name: 'A', email: 'a@x' },
 			{ id: 'dev-1', name: 'D', email: 'd@x' }
 		]);
-		const rows = await listUsersWithCapability('renewal.manage');
+		const rows = await listUsersWithCapability('grant.manage');
 		expect(rows.map((r) => r.id)).toEqual(['u-1', 'dev-1']);
-		expect(listCommitteeHolders).toHaveBeenCalledWith('renewal.manage');
+		expect(listCommitteeHolders).toHaveBeenCalledWith('grant.manage');
 	});
 });
 

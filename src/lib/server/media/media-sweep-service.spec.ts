@@ -214,16 +214,6 @@ describe('sweepMedia — unreferenced media', () => {
 		expect(result.reapedMedia).toBe(1);
 	});
 
-	it('deletes a renewal certificate from the private bucket', async () => {
-		const cert = 'renewals/r1/0f0f0f0f-0000-4000-8000-000000000000.pdf';
-		mediaCandidates = [{ id: 'm1', key: cert }];
-
-		await sweepMedia(NOW);
-
-		expect(deletePrivateObjectMock).toHaveBeenCalledWith(cert);
-		expect(deleteObjectMock).not.toHaveBeenCalled();
-	});
-
 	/**
 	 * A receipt uploaded before receipts moved can still sit in the public
 	 * bucket. The sweep cannot assume a backfill ran, so it has to look.

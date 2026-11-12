@@ -1,48 +1,31 @@
 ---
-title: Track Permits, Licenses and Insurance
+title: Keep Permits and Insurance Current
 slug: staff-renewals
 category: staff-guide
-summary: Keep the collective's own permits, licenses and insurance policies in one list, sorted by what expires next, with reminders before each one lapses.
+summary: Track the collective's own permits, licenses and insurance policies as yearly recurring work.
 minRole: staff
-capabilities: renewal.read
 sortOrder: 21
 ---
 
-**Renewals** lives under **Staff → System**. It holds the things the collective itself must keep
-current: insurance policies, city permits, liquor and performance licenses. A contractor's
-insurance certificate is not here; it stays on the contractor's record.
-
-Staff can read and change renewals, and so can members of any committee whose grants include them.
-The Development Committee has them to start with. To move renewals to another committee, edit
-the **Grants** on each committee's page under **Staff → People → Groups**.
+Permits, licenses and insurance policies are recurring work. They live on **Staff → Schedule**,
+in the **Recurring** view, beside the deep clean and the PA check.
 
 ## Adding one
 
-Choose **New renewal** and fill in:
+Choose **New recurring work** and fill in:
 
-- **Name**, such as "General liability insurance".
-- **Kind**: Permit, License, Insurance or Other.
-- **Issued by**: the city, the OLCC, the insurer.
-- **Reference**: the permit, license or policy number.
-- **Expires**: the date on the certificate.
-- **Responsible**: who renews it. They get the reminders.
+- **Name**, such as "Renew general liability insurance".
+- **Role**: Administration, or whichever role does the paperwork.
+- **Repeat every (days)**: 365 for a yearly policy.
+- **First due date**: about a month before the expiry date on the certificate.
+- **Notes**: who issues it and the permit, license or policy number.
 
-The list shows the one that expires soonest at the top. One that has expired shows **Lapsed** in
-red, and one expiring within sixty days shows **Due soon**.
+Then open the work order and assign the person who renews it.
 
 ## Renewing
 
-When a renewal comes through, open it, choose **Edit**, and move **Expires** to the new date. Then
-use **Attach document** to add the new certificate. There is one entry per permit or policy, not
-one per year, so you do not need to add a new one.
+When the renewal comes through, resolve the work order. The next one is written straight away,
+due one term after you closed it. Check its due date against the new certificate and move it if
+the expiry date differs.
 
-Documents are private. They can only be opened by people who can see this list.
-
-## Reminders
-
-The responsible person is notified sixty days before the expiry date and again fourteen days
-before. If nobody is named, everyone who manages renewals is notified. Moving the expiry date
-forward sets up both reminders again for the new date.
-
-Turn the email off under your notification settings, as **Permit, license or insurance
-expiring**.
+Keep the certificate in the shared drive. Recurring work holds no documents.

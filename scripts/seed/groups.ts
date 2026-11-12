@@ -374,8 +374,6 @@ async function seedDevelopmentCommittee(users: SeedUser[], leaders: SeedUser[]) 
 				'grant.manage',
 				'grant.read',
 				'project.manage',
-				'renewal.manage',
-				'renewal.read',
 				'sponsor.manage',
 				'sponsor.read'
 			]

@@ -55,7 +55,6 @@ export type StaffNavKey =
 	| 'payments'
 	| 'sponsors'
 	| 'grants'
-	| 'renewals'
 	| 'reports'
 	| 'settings'
 	| 'access'
@@ -221,13 +220,6 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'inventory.read',
 				label: 'Supplies',
 				href: resolve('staff/inventory/supplies')
-			},
-			// Permit, license and insurance renewals: compliance for the building.
-			{
-				key: 'renewals',
-				capability: 'renewal.read',
-				label: 'Renewals',
-				href: resolve('staff/renewals')
 			}
 		]
 	},
