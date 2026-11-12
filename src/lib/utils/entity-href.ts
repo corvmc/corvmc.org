@@ -31,6 +31,7 @@
 import { resolve } from '$app/paths';
 import { surfaces } from '#lib/config.js';
 import type { EntityRef, Panel, Viewer } from '#lib/types/entity.js';
+import { withQuery } from './with-query';
 
 type Candidate = { panel: Panel; href: string };
 
@@ -200,6 +201,27 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 		case 'hour_log':
 			if (can('volunteer.reviewHours'))
 				out.push({ panel: 'staff', href: resolve('staff/members/volunteers/hours') });
+			break;
+		// A minor is signed off from the roster, filtered to who is waiting.
+		case 'volunteer':
+			if (can('volunteer.manageRoster'))
+				out.push({
+					panel: 'staff',
+					href: withQuery(resolve('staff/members/volunteers'), 'status=blocked')
+				});
+			break;
+		case 'work_request':
+			if (can('inventory.manageAssets'))
+				out.push({ panel: 'staff', href: resolve(`staff/inventory/problems/${id}`) });
+			break;
+		// Both are decided on the record they belong to.
+		case 'group_application':
+			if (ref.groupId && (can('group.read') || can('committee.reviewApplications')))
+				out.push({ panel: 'staff', href: resolve(`staff/groups/${ref.groupId}`) });
+			break;
+		case 'market_vendor':
+			if (ref.eventId && can('event.manage'))
+				out.push({ panel: 'staff', href: resolve(`staff/events/${ref.eventId}/vendors`) });
 			break;
 	}
 

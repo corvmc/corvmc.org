@@ -28,6 +28,21 @@ import {
 /** Decided means decided — a reviewer does not un-accept, they remove from the roster. */
 const OPEN_STATUSES = ['submitted', 'contacted'] as const;
 
+/** Undecided, not withdrawn, from an account that still exists. Joins the application and its user. */
+const openChoice = () =>
+	and(
+		isNull(groupApplication.withdrawnAt),
+		isNull(user.deletedAt),
+		inArray(groupApplicationChoice.status, [...OPEN_STATUSES])
+	);
+
+/**
+ * The review feed's predicate: an open choice on a live club or committee.
+ * Band owners decide band applications, so those stay out. Joins the group too.
+ */
+export const openStaffApplication = () =>
+	and(openChoice(), inArray(group.kind, ['club', 'committee']), isNull(group.deletedAt));
+
 export class NotAcceptingApplicationsError extends DomainError {
 	readonly httpStatus = 422;
 
@@ -396,14 +411,7 @@ export function openApplicationCount(groupIdColumn: SQLiteColumn) {
 		.from(groupApplicationChoice)
 		.innerJoin(groupApplication, eq(groupApplication.id, groupApplicationChoice.applicationId))
 		.innerJoin(user, eq(user.id, groupApplication.userId))
-		.where(
-			and(
-				eq(groupApplicationChoice.groupId, groupIdColumn),
-				isNull(groupApplication.withdrawnAt),
-				isNull(user.deletedAt),
-				inArray(groupApplicationChoice.status, [...OPEN_STATUSES])
-			)
-		);
+		.where(and(eq(groupApplicationChoice.groupId, groupIdColumn), openChoice()));
 	return sql<number>`(${counted})`;
 }
 

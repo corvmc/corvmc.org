@@ -341,6 +341,9 @@ export interface BlockedVolunteer {
  * Projects the same member ref the hour-log queue does, so the two queues draw
  * the person identically.
  */
+/** An under-18 profile nobody has signed off: the review feed's predicate. */
+export const minorAwaitingSignOff = () => eq(volunteerProfile.status, 'blocked');
+
 export async function listBlockedVolunteers(): Promise<BlockedVolunteer[]> {
 	const rows = await db
 		.select({
@@ -354,7 +357,7 @@ export async function listBlockedVolunteers(): Promise<BlockedVolunteer[]> {
 		})
 		.from(volunteerProfile)
 		.innerJoin(user, eq(user.id, volunteerProfile.userId))
-		.where(eq(volunteerProfile.status, 'blocked'))
+		.where(minorAwaitingSignOff())
 		.orderBy(asc(volunteerProfile.createdAt), asc(volunteerProfile.id));
 
 	return rows.map((row) => ({ ...row, member: toMemberRef(row.member) }));

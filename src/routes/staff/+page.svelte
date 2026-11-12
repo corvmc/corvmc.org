@@ -39,10 +39,16 @@
 		suggestion_answer: m.staff_review_kind_suggestion_answer_label,
 		suggestion_edit: m.staff_review_kind_suggestion_edit_label,
 		listing: m.staff_review_kind_listing_label,
+		classified: m.staff_review_kind_classified_label,
 		resource_tip: m.staff_review_kind_resource_tip_label,
+		flag: m.staff_review_kind_flag_label,
 		appeal: m.staff_review_kind_appeal_label,
+		problem: m.staff_review_kind_problem_label,
+		group_application: m.staff_review_kind_group_application_label,
+		market_vendor: m.staff_review_kind_market_vendor_label,
 		hour_log: m.staff_review_kind_hour_log_label,
-		shift_claim: m.staff_review_kind_shift_claim_label
+		shift_claim: m.staff_review_kind_shift_claim_label,
+		minor_volunteer: m.staff_review_kind_minor_volunteer_label
 	};
 	const dayLabels = [m.staff_room_today_label(), m.staff_room_tomorrow_label()];
 	const viewer = getEntityViewer();

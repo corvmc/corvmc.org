@@ -5,8 +5,18 @@ import { suggestion, suggestionEdit } from '#lib/server/db/schema/suggestion.js'
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { localResource } from '#lib/server/db/schema/local-resource.js';
 import { moderationAppeal } from '#lib/server/db/schema/moderation.js';
+import { classifiedPost } from '#lib/server/db/schema/classified.js';
+import { contentFlag } from '#lib/server/db/schema/flag.js';
+import { inventoryAsset, inventoryItem, workRequest } from '#lib/server/db/schema/inventory.js';
+import {
+	groupApplication,
+	groupApplicationChoice
+} from '#lib/server/db/schema/group-application.js';
+import { group } from '#lib/server/db/schema/group.js';
+import { marketVendor } from '#lib/server/db/schema/market.js';
 import {
 	volunteerHourLog,
+	volunteerProfile,
 	volunteerRole,
 	volunteerShift,
 	volunteerSignup,
@@ -21,8 +31,14 @@ import { pendingListing } from '#lib/server/event/community-event-service.js';
 import { pendingTip } from '#lib/server/local-resource/local-resource-service.js';
 import { pendingAppeal } from '#lib/server/moderation/appeal-service.js';
 import { outstandingClaimWhere } from '#lib/server/volunteer/volunteer-signup-service.js';
+import { minorAwaitingSignOff } from '#lib/server/volunteer/volunteer-profile-service.js';
+import { pendingPost } from '#lib/server/classified/classified-service.js';
+import { DIRECT_CONVERSATION_LABEL, pendingFlag } from '#lib/server/flag/flag-service.js';
+import { untriagedRequest } from '#lib/server/inventory/work-request-service.js';
+import { openStaffApplication } from '#lib/server/group/application-service.js';
+import { appliedVendor } from '#lib/server/market/market-service.js';
 import { captureException } from '#lib/server/sentry.js';
-import { hasCapability, type Capability } from '#lib/config.js';
+import { hasCapability, surfaces, type Capability, type Surface } from '#lib/config.js';
 import type { EntityRef } from '#lib/types/entity.js';
 import type { FeedPage } from '#lib/types/activity.js';
 import { mergeFeedOldestFirst } from '#lib/types/activity.js';
@@ -50,6 +66,8 @@ interface Row {
 export interface ReviewKindDefinition {
 	kind: ReviewKind;
 	capability: Capability;
+	/** A kind on a surface that is off is offered to nobody. */
+	surface?: Surface;
 	count(now: Date): Promise<number>;
 	/** Rows waiting longest first, `limit` of them. */
 	list(opts: { limit: number; now: Date }): Promise<ReviewItem[]>;
@@ -59,6 +77,7 @@ export interface ReviewKindDefinition {
 function defineReviewKind(def: {
 	kind: ReviewKind;
 	capability: Capability;
+	surface?: Surface;
 	count: (now: Date) => Promise<number>;
 	rows: (opts: { limit: number; now: Date }) => Promise<Row[]>;
 	ref: (row: Row) => EntityRef;
@@ -66,6 +85,7 @@ function defineReviewKind(def: {
 	return {
 		kind: def.kind,
 		capability: def.capability,
+		surface: def.surface,
 		count: def.count,
 		async list(opts) {
 			const rows = await def.rows(opts);
@@ -88,6 +108,20 @@ const actor = { actorId: user.id, actorName: user.name };
 const SUMMARY_CHARS = 120;
 const oneLine = (body: SQLWrapper) =>
 	sql<string>`substr(replace(${body}, char(10), ' '), 1, ${SUMMARY_CHARS})`;
+
+/** `count(*)` of a query joined and filtered the way the kind's `rows` are. */
+const total = async (q: Promise<{ n: number }[]>) => Number((await q)[0]?.n ?? 0);
+const countAll = () => ({ n: sql<number>`count(*)` });
+
+/** What a report is about, by name; a private conversation gets a content-free label. */
+const flagTarget = () => sql<string | null>`case ${contentFlag.entityType}
+	when 'member_profile' then (select t.name from ${user} t where t.id = ${contentFlag.entityId})
+	when 'band_profile' then (select ${group.name} from ${group} where ${group.id} = ${contentFlag.entityId})
+	when 'event' then (select ${eventListing.title} from ${eventListing} where ${eventListing.id} = ${contentFlag.entityId})
+	when 'suggestion' then (select ${suggestion.title} from ${suggestion} where ${suggestion.id} = ${contentFlag.entityId})
+	when 'classified_post' then (select ${classifiedPost.title} from ${classifiedPost} where ${classifiedPost.id} = ${contentFlag.entityId})
+	when 'inbox_thread' then ${DIRECT_CONVERSATION_LABEL}
+end`;
 
 function suggestionKind(kind: ReviewKind, capability: Capability, where: () => SQL | undefined) {
 	return defineReviewKind({
@@ -162,6 +196,31 @@ export const reviewRegistry: Record<ReviewKind, ReviewKindDefinition> = {
 		ref: (r) => ({ type: 'event', id: r.id, title: r.summary ?? '' })
 	}),
 
+	classified: (() => {
+		// Held at posting or on an edit; a post held before the column existed has none.
+		const since = sql`coalesce(${classifiedPost.visibilityChangedAt}, ${classifiedPost.createdAt})`;
+		return defineReviewKind({
+			kind: 'classified',
+			capability: 'listing.review',
+			surface: 'classifieds',
+			count: () => db.$count(classifiedPost, pendingPost()),
+			rows: ({ limit }) =>
+				db
+					.select({
+						id: classifiedPost.id,
+						at: since.mapWith(classifiedPost.createdAt),
+						summary: classifiedPost.title,
+						...actor
+					})
+					.from(classifiedPost)
+					.leftJoin(user, eq(user.id, classifiedPost.authorUserId))
+					.where(pendingPost())
+					.orderBy(asc(since), asc(classifiedPost.id))
+					.limit(limit),
+			ref: (r) => ({ type: 'classified', id: r.id, title: r.summary ?? '' })
+		});
+	})(),
+
 	resource_tip: defineReviewKind({
 		kind: 'resource_tip',
 		capability: 'localResource.manage',
@@ -184,6 +243,26 @@ export const reviewRegistry: Record<ReviewKind, ReviewKindDefinition> = {
 		ref: (r) => ({ type: 'local_resource', id: r.id, title: r.summary ?? '' })
 	}),
 
+	flag: defineReviewKind({
+		kind: 'flag',
+		capability: 'moderation.reviewFlags',
+		count: () => db.$count(contentFlag, pendingFlag()),
+		rows: ({ limit }) =>
+			db
+				.select({
+					id: contentFlag.id,
+					at: contentFlag.createdAt,
+					summary: sql<string>`coalesce(${flagTarget()}, ${contentFlag.reason})`,
+					...actor
+				})
+				.from(contentFlag)
+				.leftJoin(user, eq(user.id, contentFlag.reportedByUserId))
+				.where(pendingFlag())
+				.orderBy(asc(contentFlag.createdAt), asc(contentFlag.id))
+				.limit(limit),
+		ref: (r) => ({ type: 'flag', id: r.id, title: r.summary ?? '' })
+	}),
+
 	appeal: defineReviewKind({
 		kind: 'appeal',
 		capability: 'moderation.reviewFlags',
@@ -204,6 +283,98 @@ export const reviewRegistry: Record<ReviewKind, ReviewKindDefinition> = {
 				.limit(limit),
 		// An appeal is decided on the report it contests.
 		ref: (r) => ({ type: 'flag', id: r.refId ?? null, title: r.summary ?? '' })
+	}),
+
+	problem: defineReviewKind({
+		kind: 'problem',
+		capability: 'inventory.manageAssets',
+		count: () => db.$count(workRequest, untriagedRequest()),
+		rows: ({ limit }) =>
+			db
+				.select({
+					id: workRequest.id,
+					at: workRequest.createdAt,
+					// The unit's item, or where in the building a building problem is.
+					summary: sql<
+						string | null
+					>`coalesce(${inventoryItem.name}, ${workRequest.location}, ${oneLine(workRequest.note)})`,
+					...actor
+				})
+				.from(workRequest)
+				.leftJoin(inventoryAsset, eq(inventoryAsset.id, workRequest.assetId))
+				.leftJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
+				.leftJoin(user, eq(user.id, workRequest.reportedByUserId))
+				.where(untriagedRequest())
+				.orderBy(asc(workRequest.createdAt), asc(workRequest.id))
+				.limit(limit),
+		ref: (r) => ({ type: 'work_request', id: r.id, title: r.summary ?? '' })
+	}),
+
+	group_application: defineReviewKind({
+		kind: 'group_application',
+		capability: 'committee.reviewApplications',
+		count: () =>
+			total(
+				db
+					.select(countAll())
+					.from(groupApplicationChoice)
+					.innerJoin(
+						groupApplication,
+						eq(groupApplication.id, groupApplicationChoice.applicationId)
+					)
+					.innerJoin(user, eq(user.id, groupApplication.userId))
+					.innerJoin(group, eq(group.id, groupApplicationChoice.groupId))
+					.where(openStaffApplication())
+			),
+		rows: ({ limit }) =>
+			db
+				.select({
+					id: groupApplicationChoice.id,
+					refId: group.id,
+					at: groupApplication.createdAt,
+					summary: group.name,
+					...actor
+				})
+				.from(groupApplicationChoice)
+				.innerJoin(groupApplication, eq(groupApplication.id, groupApplicationChoice.applicationId))
+				.innerJoin(user, eq(user.id, groupApplication.userId))
+				.innerJoin(group, eq(group.id, groupApplicationChoice.groupId))
+				.where(openStaffApplication())
+				.orderBy(asc(groupApplication.createdAt), asc(groupApplicationChoice.id))
+				.limit(limit),
+		ref: (r) => ({
+			type: 'group_application',
+			id: r.id,
+			groupId: r.refId ?? null,
+			title: r.summary ?? ''
+		})
+	}),
+
+	market_vendor: defineReviewKind({
+		kind: 'market_vendor',
+		capability: 'event.manage',
+		count: () => db.$count(marketVendor, appliedVendor()),
+		rows: ({ limit }) =>
+			db
+				.select({
+					id: marketVendor.id,
+					refId: marketVendor.eventId,
+					at: marketVendor.createdAt,
+					summary: marketVendor.businessName,
+					// A vendor applies from a public form, with no account.
+					actorId: sql<string | null>`null`,
+					actorName: sql<string | null>`null`
+				})
+				.from(marketVendor)
+				.where(appliedVendor())
+				.orderBy(asc(marketVendor.createdAt), asc(marketVendor.id))
+				.limit(limit),
+		ref: (r) => ({
+			type: 'market_vendor',
+			id: r.id,
+			eventId: r.refId ?? null,
+			title: r.summary ?? ''
+		})
 	}),
 
 	hour_log: defineReviewKind({
@@ -265,13 +436,41 @@ export const reviewRegistry: Record<ReviewKind, ReviewKindDefinition> = {
 					.limit(limit),
 			ref: (r) => ({ type: 'shift', id: r.refId ?? null, title: r.summary ?? '' })
 		});
-	})()
+	})(),
+
+	minor_volunteer: defineReviewKind({
+		kind: 'minor_volunteer',
+		capability: 'volunteer.manageRoster',
+		count: () =>
+			total(
+				db
+					.select(countAll())
+					.from(volunteerProfile)
+					.innerJoin(user, eq(user.id, volunteerProfile.userId))
+					.where(minorAwaitingSignOff())
+			),
+		rows: ({ limit }) =>
+			db
+				.select({
+					id: volunteerProfile.userId,
+					at: volunteerProfile.createdAt,
+					summary: sql<string>`${volunteerProfile.firstName} || ' ' || ${volunteerProfile.lastName}`,
+					...actor
+				})
+				.from(volunteerProfile)
+				.innerJoin(user, eq(user.id, volunteerProfile.userId))
+				.where(minorAwaitingSignOff())
+				.orderBy(asc(volunteerProfile.createdAt), asc(volunteerProfile.id))
+				.limit(limit),
+		ref: (r) => ({ type: 'volunteer', id: r.id, title: r.summary ?? '' })
+	})
 };
 
 /** The kinds this viewer may decide, in registry order. */
 export function reviewKindsFor(capabilities: readonly string[]): ReviewKindDefinition[] {
 	return reviewKinds
 		.map((k) => reviewRegistry[k])
+		.filter((def) => !def.surface || surfaces[def.surface])
 		.filter((def) => hasCapability(capabilities, def.capability));
 }
 

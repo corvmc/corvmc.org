@@ -94,6 +94,9 @@ function onBoard(now: Date): SQL {
 	)!;
 }
 
+/** A post held for a moderator before it shows: the review feed's predicate. */
+export const pendingPost = () => eq(classifiedPost.visibility, 'pending_review');
+
 /** On the board to everyone; in any state to its author and to staff. */
 export function canView(
 	post: { authorUserId: string; status: string; visibility: string; expiresAt: Date },
