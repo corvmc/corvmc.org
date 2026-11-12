@@ -27,7 +27,7 @@ function migrated(committees: string): DatabaseSync {
 	applyMigrations(file);
 	const db = new DatabaseSync(file);
 	// The trigger this migration finds its list by, which a later one clears (#2387).
-	db.exec(`UPDATE duty_list SET auto_apply_on = 'production.created';
+	db.exec(`UPDATE duty_list SET auto_apply_on = 'production.created' WHERE name = 'Show deliverables';
 		DELETE FROM duty_list_item; ${committees}`);
 	return db;
 }
@@ -81,7 +81,9 @@ describe('the Show deliverables migration', () => {
 	it('writes the list, auto-applied to a new show and anchored at its start', () => {
 		const db = migrated('');
 		const lists = db
-			.prepare(`SELECT name, anchor, subject, auto_apply_on AS on_ FROM duty_list`)
+			.prepare(
+				`SELECT name, anchor, subject, auto_apply_on AS on_ FROM duty_list WHERE grant_stage IS NULL`
+			)
 			.all();
 		expect(lists).toEqual([
 			// `backfill_templates_to_project` moved it from `event` (#2034).

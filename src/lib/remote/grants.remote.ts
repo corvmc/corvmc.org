@@ -158,9 +158,9 @@ export const getGrantDetail = query(z.string(), async (id) => {
 });
 
 export const createGrant = form(z.object(grantFields), async (data) => {
-	await requireCapability('grant.manage');
+	const staff = await requireCapability('grant.manage');
 	try {
-		const row = await grants.createGrant(grantInput(data));
+		const row = await grants.createGrant(grantInput(data), { createdByUserId: staff.id });
 		return { id: row.id };
 	} catch (err) {
 		mapDomainError(err);
@@ -186,52 +186,3 @@ export const deleteGrant = form(z.object({ id: z.string().min(1) }), async (data
 	await grants.deleteGrant(data.id);
 	return { success: true };
 });
-
-// ------------------------------------------------------------------ reports
-
-const reportFields = {
-	grantApplicationId: z.string().min(1),
-	title: z.string().trim().min(1, 'Name the report').max(SHORT_TEXT_MAX),
-	dueOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick the due date'),
-	submittedOn: isoDay,
-	notes: optionalText(LONG_TEXT_MAX)
-};
-
-function reportInput(d: z.infer<z.ZodObject<typeof reportFields>>) {
-	return {
-		title: d.title,
-		dueOn: d.dueOn,
-		submittedOn: d.submittedOn || null,
-		notes: d.notes || null
-	};
-}
-
-export const addGrantReport = form(z.object(reportFields), async (data) => {
-	await requireCapability('grant.manage');
-	await grants.addGrantReport({
-		grantApplicationId: data.grantApplicationId,
-		...reportInput(data)
-	});
-	await getGrantDetail(data.grantApplicationId).refresh();
-	return { success: true };
-});
-
-export const updateGrantReport = form(
-	z.object({ id: z.string().min(1), ...reportFields }),
-	async (data) => {
-		await requireCapability('grant.manage');
-		await grants.updateGrantReport(data.id, reportInput(data));
-		await getGrantDetail(data.grantApplicationId).refresh();
-		return { success: true };
-	}
-);
-
-export const deleteGrantReport = form(
-	z.object({ id: z.string().min(1), grantApplicationId: z.string().min(1) }),
-	async (data) => {
-		await requireCapability('grant.manage');
-		await grants.deleteGrantReport(data.id);
-		await getGrantDetail(data.grantApplicationId).refresh();
-		return { success: true };
-	}
-);

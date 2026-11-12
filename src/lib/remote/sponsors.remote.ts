@@ -142,12 +142,12 @@ export const deleteSponsor = form(z.object({ id: z.string().min(1) }), async (da
 export const createSponsorship = form(
 	z.object({ sponsorId: z.string().min(1), ...sponsorshipFields }),
 	async (data) => {
-		await requireCapability('sponsor.manage');
+		const staff = await requireCapability('sponsor.manage');
 		try {
-			await service.createSponsorship({
-				organizationId: data.sponsorId,
-				...sponsorshipInput(data)
-			});
+			await service.createSponsorship(
+				{ organizationId: data.sponsorId, ...sponsorshipInput(data) },
+				{ createdByUserId: staff.id }
+			);
 		} catch (err) {
 			mapDomainError(err);
 		}

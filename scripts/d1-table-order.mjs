@@ -34,12 +34,12 @@ export const tableOrder = [
 	// References venue and user; `event_listing.import_source_id` points at it.
 	'calendar_source',
 	// An outside party: references directory_entry. Parent of contractor_detail,
-	// sponsorship, grant_application, contractor_job, contact and party_role.
+	// sponsorship, grant_application, contractor_job, contact and party_role. The
+	// two funding tables also reference project, which comes first.
 	'organization',
 	'contractor_detail',
 	'sponsorship',
 	'grant_application',
-	'grant_report',
 	'equipment_category',
 	'inventory_location',
 	'inventory_item',

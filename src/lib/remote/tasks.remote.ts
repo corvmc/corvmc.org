@@ -135,7 +135,9 @@ export const getTasksPage = query(
 			// What New task and New project offer.
 			projects: projects.map((p) => ({ id: p.id, name: p.name })),
 			committees: committees.map((c) => ({ id: c.id, name: c.name })),
-			templates: templates.filter((t) => t.itemCount > 0).map((t) => ({ id: t.id, name: t.name }))
+			templates: templates
+				.filter((t) => t.itemCount > 0 && !t.grantStage)
+				.map((t) => ({ id: t.id, name: t.name }))
 		};
 	}
 );

@@ -1387,19 +1387,19 @@ describe('development deadline due (#1477)', () => {
 		registerAllNotificationListeners();
 	});
 
-	const grantReport = {
+	const grantApply = {
 		stage: '14d',
 		module: 'grant',
-		kind: 'report',
+		kind: 'apply',
 		on: '2026-10-01',
-		title: 'Interim report',
+		title: 'Apply by',
 		parentId: 'g1',
 		parentTitle: '2027 operating support',
 		counterparty: 'Oregon Arts Commission'
 	};
 
 	it('tells every grant manager, linking to the application', async () => {
-		await emit('development.deadline_due', grantReport);
+		await emit('development.deadline_due', grantApply);
 
 		expect(mockStaffUsers).toHaveBeenCalledWith('grant.manage');
 		const calls = mockDispatch.mock.calls
@@ -1407,13 +1407,13 @@ describe('development deadline due (#1477)', () => {
 			.filter((p) => p.type === 'development_deadline');
 		expect(new Set(calls.map((c) => c.userId))).toEqual(new Set(['staff-1', 'staff-2']));
 		expect(calls[0].href).toBe('/staff/grants/g1');
-		expect(calls[0].title).toContain('Interim report');
+		expect(calls[0].title).toContain('Apply by');
 		expect(calls[0].email.subject).toContain('Oregon Arts Commission');
 	});
 
 	it("tells sponsor managers about a term's end, linking to the sponsor", async () => {
 		await emit('development.deadline_due', {
-			...grantReport,
+			...grantApply,
 			stage: '3d',
 			module: 'sponsor',
 			kind: 'end',
