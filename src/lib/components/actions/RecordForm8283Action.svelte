@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { utcCalendarDate } from '#lib/utils/format.js';
+	import { toLocalDate } from '#lib/utils/format.js';
 	import Action from '../ui/Action.svelte';
 	import type { ButtonSize, ButtonVariant } from '../ui/Button.svelte';
 	import { refreshAll } from '$app/navigation';
@@ -61,7 +61,7 @@
 			field={fields.signedOn}
 			type="date"
 			label={m.actions_record_form8283_signed_label()}
-			value={signedOn ? utcCalendarDate(signedOn) : ''}
+			value={signedOn ? toLocalDate(signedOn) : ''}
 		/>
 		<Field
 			field={fields.appraisalRef}

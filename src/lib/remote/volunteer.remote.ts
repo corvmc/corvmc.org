@@ -195,6 +195,7 @@ import {
 	VOLUNTEER_ROLE_NAME_MAX
 } from '#lib/config.js';
 import type { VolunteerHourStatus } from '#lib/server/db/schema/volunteer.js';
+import { clubInstant } from '#lib/utils/format.js';
 
 // Hours come off the form as a decimal (0.25 steps) and are stored as integer
 // minutes. One place does the conversion so the two can't drift.
@@ -1916,9 +1917,8 @@ export const createWorkOrder = form(
 					volunteerRoleId: data.volunteerRoleId,
 					assetId: data.assetId,
 					title: data.title,
-					// A deadline, not a window — read as club wall-clock time like every
-					// other date on this layer.
-					dueAt: data.dueAt ? new Date(data.dueAt) : null,
+					// A datetime-local value has no zone: it is club wall-clock time.
+					dueAt: data.dueAt ? clubInstant(data.dueAt.slice(0, 10), data.dueAt.slice(11, 16)) : null,
 					capacity,
 					notes: data.notes,
 					createdByUserId: staff.id

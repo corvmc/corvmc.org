@@ -6,7 +6,8 @@
  * hydration — and `toISOString().slice(0, 10)` is the UTC calendar day. Both
  * show the wrong day for part of every day. `new Date(\`${date}T${time}\`)` with
  * no `Z` or offset is the same mistake in reverse: it reads a wall clock in the
- * runtime's zone.
+ * runtime's zone. `z.coerce.date()` is both: a date input's `YYYY-MM-DD` becomes
+ * UTC midnight, the previous evening in club time.
  */
 
 const DATE_KEYS = new Set([
@@ -115,32 +116,32 @@ function isZonelessDateTime(/** @type {RuleNode} */ node) {
 	return !/(Z|[+-]\d{2}:?\d{2})$/.test(parts.at(-1) ?? '');
 }
 
+/** `z.coerce.date()`, or `coerce.date()` on any receiver. */
+function isCoerceDate(/** @type {RuleNode} */ node) {
+	const callee = node.callee;
+	if (callee?.type !== 'MemberExpression' || callee.property?.name !== 'date') return false;
+	const inner = callee.object;
+	return inner?.type === 'MemberExpression' && inner.property?.name === 'coerce';
+}
+
 /** @type {import('eslint').Rule.RuleModule} */
 export default {
 	meta: {
 		type: 'problem',
 		docs: { description: 'Require club-time dates in templates, remotes and server code.' },
-		schema: [
-			{
-				type: 'object',
-				properties: {
-					// Only the formatter check: where `isoSlice` hits are still open (#2537).
-					formattingOnly: { type: 'boolean' }
-				},
-				additionalProperties: false
-			}
-		],
+		schema: [],
 		messages: {
 			noTimeZone:
 				'`{{method}}` without a `timeZone` renders in UTC on the server and the viewer zone in the browser. Use a formatter from $lib/utils/format (formatDateShortYear, formatHistoryTime, …).',
 			isoSlice:
 				'`toISOString()` gives the UTC calendar day. Use clubToday() / toLocalDate() for an instant, addIsoDays() for date arithmetic, or utcCalendarDate() for a stored date-only value.',
 			zonelessDateTime:
-				"A date and time with no `Z` or offset is read in the runtime zone — the viewer's in the browser. Use clubInstant(date, time) from $lib/utils/format."
+				"A date and time with no `Z` or offset is read in the runtime zone — the viewer's in the browser. Use clubInstant(date, time) from $lib/utils/format.",
+			coerceDate:
+				"`z.coerce.date()` reads a date input as UTC midnight, the previous evening in club time. Take a string and build the instant with clubInstant(date, '12:00')."
 		}
 	},
 	create(context) {
-		const formattingOnly = context.options[0]?.formattingOnly === true;
 		/** @param {RuleNode} node */
 		function checkIntl(node) {
 			if (!isIntlDateTimeFormat(node)) return false;
@@ -154,14 +155,17 @@ export default {
 			/** @param {RuleNode} node */
 			NewExpression(node) {
 				if (checkIntl(node)) return;
-				if (formattingOnly) return;
 				if (isZonelessDateTime(node)) context.report({ node, messageId: 'zonelessDateTime' });
 			},
 			/** @param {RuleNode} node */
 			CallExpression(node) {
 				if (checkIntl(node)) return;
-				if (!formattingOnly && isIsoDateSlice(node)) {
+				if (isIsoDateSlice(node)) {
 					context.report({ node, messageId: 'isoSlice' });
+					return;
+				}
+				if (isCoerceDate(node)) {
+					context.report({ node, messageId: 'coerceDate' });
 					return;
 				}
 				const callee = node.callee;

@@ -9,6 +9,7 @@ import {
 	LOCK_GRACE_MINUTES
 } from './ultraloc-client';
 import type { LockFallbackCode } from '#lib/server/db/schema/reservation.js';
+import { clubToday } from '#lib/config.js';
 
 // The break-glass door code.
 //
@@ -134,7 +135,7 @@ async function mintFallbackCode(errors: string[]): Promise<void> {
 	// 8 digits: this one is handed out by hand in an emergency and is worth
 	// making harder to guess than a 4-digit reservation code.
 	const code = generateLockCode() * 10_000 + generateLockCode();
-	const name = `${FALLBACK_NAME_PREFIX} ${new Date().toISOString().slice(0, 10)}`;
+	const name = `${FALLBACK_NAME_PREFIX} ${clubToday()}`;
 
 	try {
 		const lockAccessId = await addLockUser({ name, type: 0, password: code });

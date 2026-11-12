@@ -9,6 +9,7 @@ import {
 	eventKindLabels,
 	financialEntryKinds
 } from '#lib/config.js';
+import { toLocalDate } from '#lib/utils/format.js';
 
 const DATE = z
 	.string()
@@ -187,7 +188,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const notes = [
 		`# CorvMC report — ${range.from ?? 'start'} to ${range.to ?? 'today'}`,
 		report.coverage.startsAt
-			? `# Financial record begins ${report.coverage.startsAt.toISOString().slice(0, 10)}; earlier income was never recorded in the app.`
+			? `# Financial record begins ${toLocalDate(report.coverage.startsAt)}; earlier income was never recorded in the app.`
 			: '# The financial record is empty for every range.',
 		'# Impact value and contributed services overlap — do not add them.',
 		'# Membership figures are as of the download, not the range.'

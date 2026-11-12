@@ -16,7 +16,8 @@ vi.mock('#lib/server/authorization.js', () => ({
 
 const report = {
 	range: {},
-	coverage: { startsAt: new Date('2025-03-04T00:00:00Z'), complete: false },
+	// 6 PM club time on March 4, already March 5 in UTC (#2537).
+	coverage: { startsAt: new Date('2025-03-05T02:00:00Z'), complete: false },
 	money: {
 		byKind: {
 			earned: [

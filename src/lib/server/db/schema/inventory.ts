@@ -110,11 +110,12 @@ export const updateCategorySchema = createCategorySchema.partial();
 
 export const scheduleLoanSchema = z.object({
 	itemId: z.uuid(),
-	scheduledPickupDate: z.coerce.date()
+	/** A date input's `YYYY-MM-DD`; the remote stores it as noon club time. */
+	scheduledPickupDate: z.iso.date()
 });
 
 export const checkoutLoanSchema = z.object({
-	dueDate: z.coerce.date(),
+	dueDate: z.iso.date(),
 	assetId: z.uuid().optional(),
 	/** Checking out a requested loan without scheduling it: the override's reason. */
 	reason: z.string().trim().max(1000).optional()

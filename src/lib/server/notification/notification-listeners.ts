@@ -107,16 +107,6 @@ function memberInvitationEmail(event: MemberInviteCreatedEvent): StandaloneEmail
 	};
 }
 
-/** A pickup date is a date input stored as UTC midnight, so its UTC day is the day. */
-function formatPickupDate(value: string): string {
-	return new Date(value).toLocaleDateString('en-US', {
-		timeZone: 'UTC',
-		weekday: 'long',
-		month: 'long',
-		day: 'numeric'
-	});
-}
-
 /** Display hours for email copy. 3 → "3 hours", 1.5 → "1.5 hours", 1 → "1 hour". */
 function formatHours(hours: number): string {
 	const rendered = Number.isInteger(hours) ? String(hours) : String(Number(hours.toFixed(2)));
@@ -665,7 +655,7 @@ export function registerAllNotificationListeners(): void {
 			userId: event.userId,
 			userEmail: event.userEmail,
 			title: `Equipment pickup confirmed: ${event.equipmentName}`,
-			body: `Pickup on ${formatPickupDate(event.scheduledPickupDate)}`,
+			body: `Pickup on ${formatClubDay(event.scheduledPickupDate)}`,
 			href: '/member/equipment/loans',
 			email: {
 				recipientName: event.userName,
@@ -677,7 +667,7 @@ export function registerAllNotificationListeners(): void {
 				],
 				details: [
 					{ label: 'Item', value: event.equipmentName },
-					{ label: 'Pickup date', value: formatPickupDate(event.scheduledPickupDate) }
+					{ label: 'Pickup date', value: formatClubDay(event.scheduledPickupDate) }
 				],
 				cta: { label: 'View my loans' }
 			}
@@ -697,7 +687,7 @@ export function registerAllNotificationListeners(): void {
 				paragraphs: [{ text: `${event.userName} has requested to borrow equipment.` }],
 				details: [
 					{ label: 'Item', value: event.equipmentName ?? 'Free-form request' },
-					{ label: 'Requested pickup', value: formatPickupDate(event.requestedPickupDate) },
+					{ label: 'Requested pickup', value: formatClubDay(event.requestedPickupDate) },
 					...(event.memberNotes ? [{ label: 'Notes', value: event.memberNotes }] : [])
 				],
 				cta: { url: `/staff/inventory/loans/${event.loanId}`, label: 'Review request' }

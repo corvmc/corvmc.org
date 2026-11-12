@@ -2155,7 +2155,7 @@ type ReservationWithPrice = Reservation & {
 export const getReservations = query(
 	z
 		.object({
-			after: z.coerce.date().optional(),
+			after: z.iso.datetime().optional(),
 			forUser: z.string().optional(),
 			includeTerminal: z.boolean().optional(),
 			/**
@@ -2181,7 +2181,7 @@ export const getReservations = query(
 			// The room a program holds is the venue's, not theirs — it has no member
 			// confirm/pay flow, so listing it here offered actions that don't apply.
 			notAProgramHold(),
-			after && gt(reservation.endsAt, after),
+			after && gt(reservation.endsAt, new Date(after)),
 			!includeTerminal && inArray(reservation.status, ['scheduled', 'confirmed', 'waitlisted'])
 		];
 		// Resolved per row rather than once for the list: this query excludes only

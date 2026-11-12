@@ -5,6 +5,7 @@
 
 import { resetLocalTimeZone } from '@internationalized/date';
 import { it, vi } from 'vitest';
+import { addIsoDays } from '#lib/utils/deadline.js';
 
 export type ClockEdge = {
 	/** A fresh `Date` on every read, so a spec that mutates one cannot leak it. */
@@ -137,7 +138,5 @@ export function forEachTimeZone(
 
 /** `YYYY-MM-DD` plus `days`, as calendar arithmetic with no zone involved. */
 export function addCalendarDays(date: string, days: number): string {
-	const d = new Date(`${date}T00:00:00Z`);
-	d.setUTCDate(d.getUTCDate() + days);
-	return d.toISOString().slice(0, 10);
+	return addIsoDays(date, days);
 }

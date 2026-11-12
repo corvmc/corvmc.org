@@ -5,7 +5,7 @@
  * days compare correctly as strings, so nothing here parses one into a `Date`
  * except for display. Client-safe: no server imports.
  */
-import { formatDateShortYear } from './format';
+import { formatDateShortYear, utcCalendarDate } from './format';
 
 export interface Deadline<K extends string = string> {
 	kind: K;
@@ -23,7 +23,7 @@ export function due<K extends string>(kind: K, on: string, today: string): Deadl
 export function addIsoDays(iso: string, n: number): string {
 	const d = new Date(`${iso}T00:00:00Z`);
 	d.setUTCDate(d.getUTCDate() + n);
-	return d.toISOString().slice(0, 10);
+	return utcCalendarDate(d);
 }
 
 /** The soonest of the given deadlines, skipping missing ones. */
