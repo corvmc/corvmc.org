@@ -10,7 +10,7 @@
 	 * same value the nav uses, so the two cannot disagree.
 	 */
 	import { page } from '$app/state';
-	import InboxShell from '#lib/components/inbox/InboxShell.svelte';
+	import ListDetailShell from '#lib/components/ui/ListDetailShell.svelte';
 	import BandInbox from './BandInbox.svelte';
 	import { getBandLayoutContext } from '../layout-context';
 
@@ -27,8 +27,8 @@
 	);
 </script>
 
-<InboxShell {threadOpen} {children}>
+<ListDetailShell open={threadOpen} {children}>
 	{#snippet list()}
 		<BandInbox {canReadEnquiries} />
 	{/snippet}
-</InboxShell>
+</ListDetailShell>

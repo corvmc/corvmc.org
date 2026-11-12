@@ -162,7 +162,7 @@ test.describe.serial('band booking enquiries', () => {
 		await expect(page.getByRole('heading', { name: enquirer })).toBeVisible({ timeout: 15000 });
 
 		// `.last()` because the message reads twice: once truncated into the row's
-		// preview, once in full in the timeline. `InboxShell` renders the list pane
+		// preview, once in full in the timeline. `ListDetailShell` renders the list pane
 		// (from the layout) before the thread pane (its children), so the timeline
 		// is the later of the two — and on a retry the earlier rows are the
 		// previous attempts'.

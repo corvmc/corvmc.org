@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import InboxShell from '#lib/components/inbox/InboxShell.svelte';
+	import ListDetailShell from '#lib/components/ui/ListDetailShell.svelte';
 	import InboxList from './InboxList.svelte';
 	import FilterPanel from './FilterPanel.svelte';
 	import SaveViewDialog from './SaveViewDialog.svelte';
@@ -27,7 +27,7 @@
 {#if daily}
 	{@render children()}
 {:else}
-	<InboxShell {threadOpen}>
+	<ListDetailShell open={threadOpen}>
 		{#snippet toolbar()}
 			<InboxToolbar {threadOpen} />
 		{/snippet}
@@ -48,7 +48,7 @@
 		{:else}
 			{@render children()}
 		{/if}
-	</InboxShell>
+	</ListDetailShell>
 {/if}
 
 <SaveViewDialog bind:open={saving} />

@@ -1326,6 +1326,34 @@ Rows are deliberately **not** focusable: a focusable `<tr>` announces the whole
 row as one button. The accessible path is the real `<a>` in the primary cell,
 which every clickable row must have.
 
+### List and detail
+
+For a list whose records are read while scanning it, the record opens in a pane beside the list
+from `lg` up, and as its own page below `lg`. `ListDetailShell` (`#lib/components/ui/`) is the
+frame. Mount it from the list's `+layout.svelte` with the list in the `list` snippet and the routed
+`[id]` page as its children, so the URL still names the open record and links, back and forward
+work unchanged. `open` is whether the route is the record's.
+
+- **`mode="panes"`** (default): both panes always from `lg`, in a padded frame; the index page
+  fills the right pane. The inboxes use it.
+- **`mode="pages"`**: each pane is a whole page — `PageHeader` plus `PageContent` — scrolling
+  itself. With nothing open the list is the full width and there is no detail pane; open, the list
+  narrows to a column (its container queries switch a table to its cards) beside the record.
+  `/staff/reservations` uses it.
+
+What the list owes, in `pages` mode (`src/routes/staff/reservations/` is the example):
+
+- **Filters live in the layout**, in a class seeded from the URL and shared through context, so the
+  record's close control returns to the same view. Row links carry the filter query
+  (`withQuery`), and the list mirrors it onto the current pathname, not the index path.
+- **The open row** carries `aria-current="page"` and `bg-base-200`, and is scrolled into view.
+- **Keys**: Escape closes, Up and Down open the previous and next record in the list. The handler
+  stands down for a focused input, an open menu or an open dialog.
+- **The list header passes `documentTitle={null}`** while a record is open, so the record's header
+  names the tab. The record's close control is `lg`-only; a phone has the back crumb.
+- **One awaited query per view**: the list's query stays un-awaited, so the layout adds nothing for
+  the record's route to wait on.
+
 ### Sorting
 
 There isn't any, on purpose. No `query()` accepts a sort parameter, and a
@@ -1547,11 +1575,11 @@ Pure display logic (link partitioning, embeddable-service ordering, the private-
 
 ## Inbox
 
-`/member/messages` and `/staff/inbox` are the same two-pane interface: a conversation list beside the open conversation. Both mount `InboxShell` from a `+layout.svelte`, so the list survives navigating between threads and every `/…/[id]` URL keeps working — `/staff/inbox/[id]` is deep-linked from notification emails, the in-app bell and the staff user record.
+`/member/messages` and `/staff/inbox` are the same two-pane interface: a conversation list beside the open conversation. Both mount `ListDetailShell` (see [List and detail](#list-and-detail)) from a `+layout.svelte`, so the list survives navigating between threads and every `/…/[id]` URL keeps working — `/staff/inbox/[id]` is deep-linked from notification emails, the in-app bell and the staff user record.
 
 Components in `src/lib/components/inbox/`:
 
-- `InboxShell` — the two-pane frame. One pane at a time below `lg`, both from `lg`; which one shows on a phone follows whether a thread is open. Each pane scrolls its own overflow, so a conversation and a list of conversations never share a scrollbar. Every link in that flex chain needs `min-h-0`.
+- `ListDetailShell` (in `ui/`) — the two-pane frame, in its default `panes` mode. Each pane scrolls its own overflow, so a conversation and a list of conversations never share a scrollbar. Every link in that flex chain needs `min-h-0`.
 - `ThreadHeader` — title, subtitle, trailing actions, and an optional disclosure below. Its back button is `lg:hidden` and is the only way out of a conversation on a phone.
 - `ThreadTimeline` — messages (and staff-only notes) on one chronological spine. Orients on `viewerUserId` when given, on direction otherwise; see [the decision](../decisions/0034-member-conversations-share-the-staff-inbox.md).
 - `ThreadComposer` — the reply box. `noteForm` is **optional**: omit it and the Reply/Internal note tabs disappear, which is the member side, since notes are staff-private.
