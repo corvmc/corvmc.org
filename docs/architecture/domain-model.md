@@ -304,7 +304,7 @@ the collective's. Nothing else marks a row as CMC's, so there is no second colum
 A project's committees are rows in `project_committee`, each with a role, and a project with none
 is staff's, the same as a null above. `project` itself has no committee column.
 
-Group announcements (`inbox_thread` with `channel: 'group'`) and `event_group` are the same
+Group announcements (`group_announcement`, posted to the group's one Announcements thread) and `event_group` are the same
 idea without the null: a band posting to its roster and a committee posting to its members
 are the same act on one table. Because the
 null is the collective, every query for an owner LEFT joins, and a guard reads the column

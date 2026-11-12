@@ -32,7 +32,6 @@ const {
 	listGroupTopics,
 	createGroupTopic,
 	postToGroupChat,
-	publishGroupRoom,
 	RoomIsReadOnlyError,
 	TopicNameTakenError,
 	GENERAL_TOPIC
@@ -258,56 +257,34 @@ describe('createGroupTopic', () => {
 		expect(threadsOf('g1')).toHaveLength(1);
 	});
 
-	// A second General would be unreachable beside the null-subject one.
-	it.each(['General', 'general', '  GENERAL '])('refuses %o', async (name) => {
-		await expect(createGroupTopic('g1', name)).rejects.toBeInstanceOf(TopicNameTakenError);
-		expect(threadsOf('g1')).toEqual([]);
-	});
+	// A second General or Announcements would sit unreachable beside the real one.
+	it.each(['General', 'general', '  GENERAL ', 'Announcements', 'announcements'])(
+		'refuses %o',
+		async (name) => {
+			await expect(createGroupTopic('g1', name)).rejects.toBeInstanceOf(TopicNameTakenError);
+			expect(threadsOf('g1')).toEqual([]);
+		}
+	);
 });
 
-// #1304. A room differs from a chat topic on two axes and nothing else.
-describe('room policy', () => {
-	it('marks a leadership room read-only for a member, and not for a leader', async () => {
+// The Announcements thread (#2618): publishing an announcement is its only way in.
+describe('the announcements room', () => {
+	it('is read-only in the topic list, for leaders too', async () => {
 		topic('general');
-		topic('a1', { subject: 'Notices', postPolicy: 'leadership', notifyPolicy: 'email' });
+		topic('a1', { subject: 'Announcements', postPolicy: 'leadership', notifyPolicy: 'email' });
 
-		const readOnly = async (isLeader: boolean) =>
-			(await listGroupTopics('g1', 'u1', isLeader)).find((t) => t.id === 'a1')?.readOnly;
-		expect(await readOnly(false)).toBe(true);
-		expect(await readOnly(true)).toBe(false);
+		const room = (await listGroupTopics('g1', 'u1')).find((t) => t.id === 'a1');
+		expect(room?.readOnly).toBe(true);
 	});
 
-	it('refuses a member posting to a leadership room', async () => {
-		topic('t1', { postPolicy: 'leadership', notifyPolicy: 'email' });
+	it('refuses a typed post, which would bypass the per-post email latch', async () => {
+		topic('t1', { subject: 'Announcements', postPolicy: 'leadership', notifyPolicy: 'email' });
+		member('u1');
 
-		await expect(post({ isLeader: false })).rejects.toBeInstanceOf(RoomIsReadOnlyError);
+		await expect(post()).rejects.toBeInstanceOf(RoomIsReadOnlyError);
 		// Refused before the insert, not filtered after it.
 		expect(messageCount()).toBe(0);
-	});
-
-	// A half-written notice must not reach the roster because somebody saved it.
-	it('does not notify an unpublished email room', async () => {
-		topic('t1', { postPolicy: 'leadership', notifyPolicy: 'email' });
-		member('u1');
-		member('u2');
-
-		await post({ isLeader: true, body: 'draft' });
-
-		expect(messageCount()).toBe(1);
 		expect(emitted).toEqual([]);
-	});
-
-	it('notifies once it is published, says which policy, and skips the sender', async () => {
-		topic('t1', { postPolicy: 'leadership', notifyPolicy: 'email', publishedAt: T0 });
-		member('u1');
-		member('u2');
-
-		await post({ isLeader: true, body: 'Rehearsal moves' });
-
-		expect(emitted.map(([name]) => name)).toEqual(['inbox.group_message']);
-		// `email` routes the listener to the batched announcement fan-out; getting
-		// this wrong is silent.
-		expect(emitted[0][1]).toMatchObject({ notifyPolicy: 'email', recipientIds: ['u2'] });
 	});
 
 	it('keeps a chat topic on the quiet path', async () => {
@@ -317,19 +294,6 @@ describe('room policy', () => {
 
 		await post({ body: 'see you thursday' });
 
-		// Unpublished, and it still notifies: publishing is a step an email room
-		// has and a chat topic does not.
-		expect(emitted[0][1]).toMatchObject({ notifyPolicy: 'in_app' });
-	});
-});
-
-describe('publishGroupRoom', () => {
-	// The latch. At-least-once delivery means the second publish must report
-	// nothing, or the roster is emailed twice.
-	it('stamps once, and reports nothing on a second publish', async () => {
-		topic('t1', { notifyPolicy: 'email' });
-
-		await expect(publishGroupRoom('t1')).resolves.toBe(true);
-		await expect(publishGroupRoom('t1')).resolves.toBe(false);
+		expect(emitted[0][1]).toMatchObject({ notifyPolicy: 'in_app', recipientIds: ['u2'] });
 	});
 });

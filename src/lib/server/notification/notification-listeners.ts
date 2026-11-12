@@ -10,7 +10,7 @@ import {
 } from '#lib/config.js';
 import { formatCents, formatDateLong, formatTime } from '#lib/utils/format.js';
 import { groupKindLabels } from '#lib/terms.js';
-import { fanOutAnnouncement, fanOutGroupRoom } from '#lib/server/group/announcement-fanout.js';
+import { fanOutAnnouncement } from '#lib/server/group/announcement-fanout.js';
 import { fanOutBallotNotice } from '#lib/server/ballot/ballot-fanout.js';
 import { dispatch, dispatchBatch, dispatchEmailOnly, dispatchEmailOnlyBatch } from './dispatcher';
 import { membersAddedNotice } from '#lib/server/group/roster-import-service.js';
@@ -154,16 +154,6 @@ export function registerAllNotificationListeners(): void {
 	// frequency thing on the site, and the notification names the group and the
 	// person, never what they wrote.
 	domainEvents.on('inbox.group_message', async ({ data: event }) => {
-		// An `email` room is an announcement, and a roster-sized email fan-out
-		// does not belong in the per-reader loop below: `dispatch` is a
-		// preference SELECT, an INSERT, an SSE push and an outbound HTTPS call
-		// each, awaited serially, against a Worker's 1000-subrequest ceiling.
-		// `fanOutGroupRoom` is the batched path (#1304).
-		if (event.notifyPolicy === 'email') {
-			await fanOutGroupRoom(event, siteUrl);
-			return;
-		}
-
 		const readers = await db
 			.select({ id: user.id, name: user.name, email: user.email })
 			.from(user)

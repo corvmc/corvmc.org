@@ -1,7 +1,7 @@
 {
-  "id": "13cd0950-8631-4c49-89af-dc63b5344def",
+  "id": "34b41447-214a-44a1-812b-110a74fd9170",
   "prevIds": [
-    "481039de-81db-4ac9-b7ac-ac534e035205"
+    "f929088d-aec3-422a-bc3a-1daea9763281"
   ],
   "version": "7",
   "dialect": "sqlite",
@@ -240,6 +240,10 @@
     },
     {
       "name": "help_categories",
+      "entityType": "tables"
+    },
+    {
+      "name": "group_announcement",
       "entityType": "tables"
     },
     {
@@ -516,10 +520,6 @@
     },
     {
       "name": "grant_report",
-      "entityType": "tables"
-    },
-    {
-      "name": "renewal",
       "entityType": "tables"
     },
     {
@@ -7167,6 +7167,146 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "help_categories"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "author_user_id",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "author_name",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "pinned",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "published_at",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "message_id",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notified_at",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "recipient_count",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "group_announcement"
     },
     {
       "type": "text",
@@ -14546,106 +14686,6 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
-      "table": "renewal"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "name",
-      "entityType": "columns",
-      "table": "renewal"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "kind",
-      "entityType": "columns",
-      "table": "renewal"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "issuer",
-      "entityType": "columns",
-      "table": "renewal"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "reference",
-      "entityType": "columns",
-      "table": "renewal"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "expires_on",
-      "entityType": "columns",
-      "table": "renewal"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "responsible_user_id",
-      "entityType": "columns",
-      "table": "renewal"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "notes",
-      "entityType": "columns",
-      "table": "renewal"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "renewal"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "renewal"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
       "table": "ballot"
     },
     {
@@ -16787,6 +16827,51 @@
       "name": "fk_help_articles_created_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "help_articles"
+    },
+    {
+      "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_group_announcement_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "group_announcement"
+    },
+    {
+      "columns": [
+        "author_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_group_announcement_author_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "group_announcement"
+    },
+    {
+      "columns": [
+        "message_id"
+      ],
+      "tableTo": "inbox_message",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_group_announcement_message_id_inbox_message_id_fk",
+      "entityType": "fks",
+      "table": "group_announcement"
     },
     {
       "columns": [
@@ -19025,21 +19110,6 @@
     },
     {
       "columns": [
-        "responsible_user_id"
-      ],
-      "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "nameExplicit": false,
-      "name": "fk_renewal_responsible_user_id_user_id_fk",
-      "entityType": "fks",
-      "table": "renewal"
-    },
-    {
-      "columns": [
         "group_id"
       ],
       "tableTo": "group",
@@ -19988,6 +20058,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "group_announcement_pk",
+      "table": "group_announcement",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "inbox_channel_config_pk",
       "table": "inbox_channel_config",
       "entityType": "pks"
@@ -20548,15 +20627,6 @@
       "nameExplicit": false,
       "name": "grant_report_pk",
       "table": "grant_report",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "renewal_pk",
-      "table": "renewal",
       "entityType": "pks"
     },
     {
@@ -22547,6 +22617,28 @@
       "name": "idx_help_articles_published",
       "entityType": "indexes",
       "table": "help_articles"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        },
+        {
+          "value": "pinned",
+          "isExpression": false
+        },
+        {
+          "value": "published_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_group_announcement_group",
+      "entityType": "indexes",
+      "table": "group_announcement"
     },
     {
       "columns": [
@@ -24767,20 +24859,6 @@
       "name": "grant_report_application_idx",
       "entityType": "indexes",
       "table": "grant_report"
-    },
-    {
-      "columns": [
-        {
-          "value": "expires_on",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "renewal_expires_on_idx",
-      "entityType": "indexes",
-      "table": "renewal"
     },
     {
       "columns": [

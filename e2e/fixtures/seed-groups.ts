@@ -22,7 +22,7 @@ import {
 	groupApplicationChoice
 } from '../../src/lib/server/db/schema/group-application';
 import { directoryEntry, directoryTag } from '../../src/lib/server/db/schema/directory';
-import { inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
+import { groupAnnouncement, inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
 import { SEED_STAFF_ID, SEED_TARGET_ID } from './seed-staff-user';
 import { SEED_BANDMATE_ID } from './seed-band-onboarding';
 import { withPlatformEnv, readLocalDb } from './platform-db';
@@ -127,7 +127,8 @@ export async function seedGroups(): Promise<void> {
 			await db.delete(groupApplication).where(inArray(groupApplication.id, applicationIds));
 		}
 		for (const groupId of GROUP_IDS) {
-			for (const suffix of ['-published', '-draft']) {
+			await db.delete(groupAnnouncement).where(eq(groupAnnouncement.groupId, groupId));
+			for (const suffix of ['-published', '-draft', '-announcements']) {
 				await db.delete(inboxMessage).where(eq(inboxMessage.threadId, `${groupId}${suffix}`));
 			}
 			await db.delete(inboxThread).where(eq(inboxThread.groupId, groupId));
@@ -305,50 +306,64 @@ export async function seedGroups(): Promise<void> {
 		// not the draft" and "a leader sees both" are the same fixture read twice.
 		// `notifiedAt` stays null: it is the fan-out latch, and nothing has sent.
 		//
-		// An announcement is a thread (#1304) — `post_policy: 'leadership'` is what
-		// separates one from a chat topic, and the title lives on the thread while
-		// the body lives on its first message.
+		// The published post is also the one message in the group's Announcements
+		// thread (#2618); the draft is only a row.
 		const posts = [SEED_LED_ID, SEED_READER_ID].flatMap((groupId) => [
 			{
 				id: `${groupId}-published`,
 				groupId,
 				title: SEED_PUBLISHED_TITLE,
 				body: 'Everyone on the roster can read this one.',
-				publishedAt: new Date('2026-08-01T00:00:00Z')
+				publishedAt: new Date('2026-08-01T00:00:00Z'),
+				messageId: `${groupId}-published-body`
 			},
 			{
 				id: `${groupId}-draft`,
 				groupId,
 				title: SEED_DRAFT_TITLE,
 				body: 'Nobody outside the leadership should ever see this.',
-				publishedAt: null
+				publishedAt: null,
+				messageId: null
 			}
 		]);
+		const published = posts.filter((post) => post.messageId !== null);
 
 		await db.insert(inboxThread).values(
-			posts.map((post) => ({
-				id: post.id,
+			published.map((post) => ({
+				id: `${post.groupId}-announcements`,
 				channel: 'group' as const,
 				groupId: post.groupId,
 				status: 'open' as const,
-				subject: post.title,
-				preview: post.body.slice(0, 120),
+				subject: 'Announcements',
+				preview: post.title,
 				postPolicy: 'leadership' as const,
 				notifyPolicy: 'email' as const,
 				messageCount: 1,
-				publishedAt: post.publishedAt,
-				lastMessageAt: post.publishedAt ?? new Date('2026-08-01T00:00:00Z')
+				lastMessageAt: post.publishedAt
 			}))
 		);
 
 		await db.insert(inboxMessage).values(
-			posts.map((post) => ({
-				id: `${post.id}-body`,
-				threadId: post.id,
+			published.map((post) => ({
+				id: post.messageId!,
+				threadId: `${post.groupId}-announcements`,
 				direction: 'peer' as const,
-				body: post.body,
+				body: `${post.title}\n\n${post.body}`,
 				authorName: 'E2E Staff',
 				authorUserId: SEED_STAFF_ID
+			}))
+		);
+
+		await db.insert(groupAnnouncement).values(
+			posts.map((post) => ({
+				id: post.id,
+				groupId: post.groupId,
+				title: post.title,
+				body: post.body,
+				authorUserId: SEED_STAFF_ID,
+				authorName: 'E2E Staff',
+				publishedAt: post.publishedAt,
+				messageId: post.messageId
 			}))
 		);
 	});

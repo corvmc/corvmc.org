@@ -1,10 +1,10 @@
 {
-  "id": "c2dc6adf-99fe-4e51-ae70-6906de0a0e8c",
-  "prevIds": [
-    "0efc071c-bbb8-4595-856e-445d3afd7e24"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "f929088d-aec3-422a-bc3a-1daea9763281",
+  "prevIds": [
+    "c2dc6adf-99fe-4e51-ae70-6906de0a0e8c"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -240,6 +240,10 @@
     },
     {
       "name": "help_categories",
+      "entityType": "tables"
+    },
+    {
+      "name": "group_announcement",
       "entityType": "tables"
     },
     {
@@ -7163,6 +7167,146 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "help_categories"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "group_id",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "author_user_id",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "author_name",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "pinned",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "published_at",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "message_id",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notified_at",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "recipient_count",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "group_announcement"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "group_announcement"
     },
     {
       "type": "text",
@@ -16686,6 +16830,51 @@
     },
     {
       "columns": [
+        "group_id"
+      ],
+      "tableTo": "group",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_group_announcement_group_id_group_id_fk",
+      "entityType": "fks",
+      "table": "group_announcement"
+    },
+    {
+      "columns": [
+        "author_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_group_announcement_author_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "group_announcement"
+    },
+    {
+      "columns": [
+        "message_id"
+      ],
+      "tableTo": "inbox_message",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_group_announcement_message_id_inbox_message_id_fk",
+      "entityType": "fks",
+      "table": "group_announcement"
+    },
+    {
+      "columns": [
         "thread_id"
       ],
       "tableTo": "inbox_thread",
@@ -19869,6 +20058,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "group_announcement_pk",
+      "table": "group_announcement",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "inbox_channel_config_pk",
       "table": "inbox_channel_config",
       "entityType": "pks"
@@ -22419,6 +22617,28 @@
       "name": "idx_help_articles_published",
       "entityType": "indexes",
       "table": "help_articles"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        },
+        {
+          "value": "pinned",
+          "isExpression": false
+        },
+        {
+          "value": "published_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_group_announcement_group",
+      "entityType": "indexes",
+      "table": "group_announcement"
     },
     {
       "columns": [

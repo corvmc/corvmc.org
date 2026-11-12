@@ -1,350 +1,255 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 
-// ---------------------------------------------------------------------------
-// Mocks
-// ---------------------------------------------------------------------------
-//
-// The db is faked; `renderMarkdown` is NOT. It is pure `marked` + `xss` with no
-// DOM and no environment, so mocking it would replace the one part of `shape()`
-// that can actually be wrong with a stub that always agrees.
+/**
+ * Announcements against a real SQLite (#2618). A draft is a `group_announcement`
+ * row; publishing posts it as one message in the group's single Announcements
+ * thread. The rules worth pinning are `WHERE` clauses and the unique index, which
+ * a mocked `db` would agree with either way. `renderMarkdown` is real too: it is
+ * the one part of `shape()` that can be wrong in a way that matters (XSS).
+ */
 
-/** Rows the next select resolves to, one array per statement. */
-let selectQueue: unknown[][] = [];
-/** Rows the next `.returning()` resolves to, one array per statement. */
-let returningQueue: unknown[][] = [];
-/** Every statement, with the predicate kept beside the write it belongs to. */
-let statements: {
-	op: 'select' | 'update' | 'insert';
-	values?: Record<string, unknown>;
-	where?: unknown;
-}[] = [];
-
-function next(queue: unknown[][]): unknown[] {
-	return queue.length > 0 ? queue.shift()! : [];
-}
-
-function selectChain(record: { where?: unknown }) {
-	const proxy: any = new Proxy(() => proxy, {
-		get(_, prop) {
-			if (prop === 'where') {
-				return (clause: unknown) => {
-					record.where = clause;
-					return proxy;
-				};
-			}
-			if (prop === 'then') {
-				return (resolve: (v: unknown[]) => void) => resolve(next(selectQueue));
-			}
-			return () => proxy;
-		}
-	});
-	return proxy;
-}
-
-vi.mock('#lib/server/db/index.js', () => ({
-	db: {
-		select: () => {
-			const record: { op: 'select'; where?: unknown } = { op: 'select' };
-			statements.push(record);
-			return selectChain(record);
-		},
-		insert: () => ({
-			values: (values: Record<string, unknown>) => {
-				statements.push({ op: 'insert', values });
-				return { returning: () => Promise.resolve(next(returningQueue)) };
-			}
-		}),
-		update: () => ({
-			set: (values: Record<string, unknown>) => {
-				const record = { op: 'update' as const, values };
-				statements.push(record);
-				return {
-					where: (clause: unknown) => {
-						(record as { where?: unknown }).where = clause;
-						return { returning: () => Promise.resolve(next(returningQueue)) };
-					}
-				};
-			}
-		})
-	}
-}));
-
-const {
-	listPublished,
-	listForManager,
-	getById,
-	create,
-	update,
-	publish,
-	remove,
-	listRecipients,
-	AnnouncementNotFoundError,
-	AlreadyPublishedError
-} = await import('./announcement-service');
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const dialect = new SQLiteSyncDialect();
-
-/** The rendered SQL of a statement's WHERE, so a test asserts on meaning. */
-function whereOf(index: number): string {
-	const clause = statements[index]?.where;
-	if (!clause) return '';
-	return dialect.sqlToQuery(clause as Parameters<typeof dialect.sqlToQuery>[0]).sql;
-}
-
-function lastWhere(): string {
-	for (let i = statements.length - 1; i >= 0; i--) {
-		if (statements[i].where) return whereOf(i);
-	}
-	return '';
-}
-
-function row(over: Record<string, unknown> = {}) {
-	return {
-		id: 'ann-1',
-		groupId: 'group-1',
-		title: 'Session moved',
-		body: 'The jam is **next** Thursday.',
-		pinned: false,
-		publishedAt: new Date('2026-08-01'),
-		notifiedAt: null,
-		recipientCount: null,
-		createdAt: new Date('2026-07-30'),
-		updatedAt: new Date('2026-07-30'),
-		author: { id: 'user-1', name: 'Alice', email: 'a@x.test', pronouns: null },
-		...over
-	};
-}
-
-beforeEach(() => {
-	vi.clearAllMocks();
-	selectQueue = [];
-	returningQueue = [];
-	statements = [];
+const { sqlite, testDb } = await vi.hoisted(async () => {
+	const { migratedSqlite, withBatch } = await import('#lib/server/testing/migrated-sqlite.js');
+	const handle = migratedSqlite({ foreignKeys: true });
+	return { sqlite: handle.sqlite, testDb: withBatch(handle) };
 });
 
-// ---------------------------------------------------------------------------
+vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
-describe('listPublished', () => {
-	it('excludes drafts and deleted posts, scoped to the group', async () => {
-		selectQueue.push([row()]);
+const svc = await import('./announcement-service');
+const { getOrCreateGroupChat } = await import('#lib/server/inbox/group-chat-service.js');
 
-		await listPublished('group-1');
+const all = <T>(sql: string, ...args: unknown[]) => sqlite.prepare(sql).all(...args) as T[];
+const announcementThreads = (groupId = 'g1') =>
+	all<{ id: string; subject: string; message_count: number; preview: string | null }>(
+		`select id, subject, message_count, preview from inbox_thread
+		 where group_id = ? and post_policy = 'leadership'`,
+		groupId
+	);
+const messagesIn = (threadId: string) =>
+	all<{ id: string; body: string }>(
+		`select id, body from inbox_message where thread_id = ? order by created_at, id`,
+		threadId
+	);
 
-		const where = lastWhere();
-		expect(where).toContain('"group_id" = ?');
-		expect(where).toContain('"deleted_at" is null');
-		// The whole difference between this and the manager list.
-		expect(where).toContain('"published_at" is not null');
+beforeEach(() => {
+	for (const t of [
+		'group_announcement',
+		'inbox_group_read',
+		'inbox_message',
+		'inbox_thread',
+		'group_member',
+		'"group"',
+		'user'
+	]) {
+		sqlite.exec(`delete from ${t}`);
+	}
+	sqlite.exec(`insert into user (id, name, email) values
+	  ('chair', 'Ada Chair', 'chair@example.com'), ('u2', 'Bo', 'bo@example.com'),
+	  ('u3', 'Cy', 'cy@example.com')`);
+	sqlite.exec(`insert into "group" (id, kind, name, slug) values
+	  ('g1', 'club', 'Real Book Club', 'rbc'), ('g2', 'band', 'Church Ladies', 'cl')`);
+	sqlite.exec(`insert into group_member (id, group_id, user_id, role, status) values
+	  ('m1', 'g1', 'chair', 'admin', 'active'), ('m2', 'g1', 'u2', 'member', 'active'),
+	  ('m3', 'g1', 'u3', 'member', 'active')`);
+});
+
+const draft = (title = 'Week one', body = 'Tunes for **week one**', groupId = 'g1') =>
+	svc.create(groupId, 'chair', { title, body });
+
+describe('drafts', () => {
+	it('writes a row and no thread', async () => {
+		const post = await draft();
+
+		expect(post).toMatchObject({ title: 'Week one', publishedAt: null, pinned: false });
+		expect(post.author?.id).toBe('chair');
+		expect(announcementThreads()).toEqual([]);
 	});
 
+	it('stays off the member list and on the manager list', async () => {
+		const kept = await draft('Kept');
+		await svc.publish(kept.id, 'g1');
+		await draft('Unsent');
+		await draft('Elsewhere', 'body', 'g2');
+
+		expect((await svc.listPublished('g1')).map((p) => p.title)).toEqual(['Kept']);
+		expect((await svc.listForManager('g1')).map((p) => p.title).sort()).toEqual(['Kept', 'Unsent']);
+	});
+
+	it('is reachable only through its own group', async () => {
+		const post = await draft();
+		await expect(svc.getById(post.id, 'g2')).rejects.toBeInstanceOf(svc.AnnouncementNotFoundError);
+		await expect(svc.update(post.id, 'g2', { title: 'x' })).rejects.toBeInstanceOf(
+			svc.AnnouncementNotFoundError
+		);
+	});
+});
+
+describe('publish', () => {
+	// The class #2618 closes: every post used to open a thread of its own.
+	it('posts every announcement into the one Announcements thread, title first', async () => {
+		// A week apart, as the club posts them: the thread orders by `created_at`.
+		vi.useFakeTimers({ toFake: ['Date'] });
+		try {
+			for (const [i, title] of ['Week one', 'Week two', 'Week three'].entries()) {
+				vi.setSystemTime(new Date(Date.UTC(2026, 9, 1 + 7 * i)));
+				const post = await draft(title, `Tunes for ${title}`);
+				await svc.publish(post.id, 'g1');
+			}
+		} finally {
+			vi.useRealTimers();
+		}
+
+		const [thread] = announcementThreads();
+		expect(announcementThreads()).toHaveLength(1);
+		expect(thread).toMatchObject({ subject: 'Announcements', message_count: 3 });
+		expect(messagesIn(thread.id).map((m) => m.body)).toEqual([
+			'Week one\n\nTunes for Week one',
+			'Week two\n\nTunes for Week two',
+			'Week three\n\nTunes for Week three'
+		]);
+	});
+
+	it('keeps the group’s General chat separate', async () => {
+		const general = await getOrCreateGroupChat('g1');
+		const post = await draft();
+		await svc.publish(post.id, 'g1');
+
+		expect(announcementThreads()[0].id).not.toBe(general);
+		expect(messagesIn(general)).toEqual([]);
+	});
+
+	it('gives each group its own Announcements thread', async () => {
+		await svc.publish((await draft('A')).id, 'g1');
+		await svc.publish((await draft('B', 'b', 'g2')).id, 'g2');
+
+		expect(announcementThreads('g1')).toHaveLength(1);
+		expect(announcementThreads('g2')).toHaveLength(1);
+	});
+
+	it('tells an admin the post was already published, and posts nothing twice', async () => {
+		const post = await draft();
+		await svc.publish(post.id, 'g1');
+
+		await expect(svc.publish(post.id, 'g1')).rejects.toBeInstanceOf(svc.AlreadyPublishedError);
+		expect(announcementThreads()[0].message_count).toBe(1);
+	});
+
+	it('404s an id that is not this group’s', async () => {
+		const post = await draft();
+		await expect(svc.publish(post.id, 'g2')).rejects.toBeInstanceOf(svc.AnnouncementNotFoundError);
+	});
+});
+
+describe('one Announcements thread per group', () => {
+	it('settles a race on the unique index rather than opening a second thread', async () => {
+		const ids = await Promise.all([
+			svc.getOrCreateAnnouncementThread('g1'),
+			svc.getOrCreateAnnouncementThread('g1')
+		]);
+
+		expect(new Set(ids).size).toBe(1);
+		expect(announcementThreads()).toHaveLength(1);
+	});
+
+	it('refuses a second leadership thread written by any path', () => {
+		const insert = (id: string) =>
+			sqlite
+				.prepare(
+					`insert into inbox_thread (id, channel, group_id, status, subject, post_policy, notify_policy)
+					 values (?, 'group', 'g1', 'open', ?, 'leadership', 'email')`
+				)
+				.run(id, id);
+
+		insert('first');
+		expect(() => insert('second')).toThrow(/UNIQUE/);
+	});
+});
+
+describe('update', () => {
+	it('edits the message a published post became', async () => {
+		const post = await draft();
+		await svc.publish(post.id, 'g1');
+
+		await svc.update(post.id, 'g1', { title: 'Week one, corrected' });
+
+		const [thread] = announcementThreads();
+		expect(messagesIn(thread.id).map((m) => m.body)).toEqual([
+			'Week one, corrected\n\nTunes for **week one**'
+		]);
+		expect(thread.message_count).toBe(1);
+	});
+
+	it('pins without touching the message', async () => {
+		const post = await draft();
+		await svc.update(post.id, 'g1', { pinned: true });
+		expect((await svc.getById(post.id, 'g1')).pinned).toBe(true);
+	});
+});
+
+describe('remove', () => {
+	it('takes the post out of the thread and keeps the row', async () => {
+		const first = await draft('First');
+		await svc.publish(first.id, 'g1');
+		const second = await draft('Second');
+		await svc.publish(second.id, 'g1');
+
+		await svc.remove(second.id, 'g1');
+
+		const [thread] = announcementThreads();
+		expect(messagesIn(thread.id).map((m) => m.body)).toEqual(['First\n\nTunes for **week one**']);
+		expect(thread).toMatchObject({ message_count: 1, preview: 'First\n\nTunes for **week one**' });
+		expect(
+			all(`select deleted_at is not null as gone from group_announcement where id = ?`, second.id)
+		).toEqual([{ gone: 1 }]);
+		expect(await svc.listPublished('g1')).toHaveLength(1);
+	});
+
+	it('404s an id from another group', async () => {
+		const post = await draft();
+		await expect(svc.remove(post.id, 'g2')).rejects.toBeInstanceOf(svc.AnnouncementNotFoundError);
+	});
+});
+
+describe('shape', () => {
 	it('renders the body to sanitized HTML beside the markdown source', async () => {
-		selectQueue.push([row({ body: 'The jam is **next** Thursday.' })]);
+		const post = await draft('Jam', 'The jam is **next** Thursday. <script>alert(1)</script>');
 
-		const [post] = await listPublished('group-1');
-
-		expect(post.body).toBe('The jam is **next** Thursday.');
+		expect(post.body).toContain('**next**');
 		expect(post.bodyHtml).toContain('<strong>next</strong>');
-	});
-
-	/**
-	 * The body is member-authored markdown rendered as HTML on a page other
-	 * members read, which is the exact shape of a stored XSS. `renderMarkdown`
-	 * runs the js-xss allowlist; this is here so that a later "just use
-	 * marked.parse" cannot quietly remove it.
-	 */
-	it('strips script from an authored body', async () => {
-		selectQueue.push([row({ body: 'Hello <script>alert(1)</script> there' })]);
-
-		const [post] = await listPublished('group-1');
-
 		expect(post.bodyHtml).not.toContain('<script>');
 		expect(post.bodyHtml).not.toContain('alert(1)');
 	});
 
 	it('reports no author once the account is gone', async () => {
-		// `author_id` is ON DELETE SET NULL, so the left join yields null columns.
-		selectQueue.push([row({ author: { id: null, name: null, email: null, pronouns: null } })]);
+		const post = await draft();
+		sqlite.exec(`delete from user where id = 'chair'`);
 
-		const [post] = await listPublished('group-1');
-
-		expect(post.author).toBeNull();
+		expect((await svc.getById(post.id, 'g1')).author).toBeNull();
 	});
 });
 
-describe('listForManager', () => {
-	it('includes drafts', async () => {
-		selectQueue.push([row({ publishedAt: null })]);
-
-		await listForManager('group-1');
-
-		const where = lastWhere();
-		expect(where).toContain('"group_id" = ?');
-		expect(where).toContain('"deleted_at" is null');
-		expect(where).not.toContain('"published_at" is not null');
-	});
-});
-
-describe('getById', () => {
-	/**
-	 * The guard at the remote boundary proves the caller administers *a* group.
-	 * Without `group_id` in the predicate, an id alone would let an admin of one
-	 * group read another group's unpublished draft.
-	 */
-	it('scopes the lookup to the group, not just the id', async () => {
-		selectQueue.push([row()]);
-
-		await getById('ann-1', 'group-1');
-
-		const where = lastWhere();
-		expect(where).toContain('"id" = ?');
-		expect(where).toContain('"group_id" = ?');
-	});
-
-	it('404s an id that belongs to another group', async () => {
-		selectQueue.push([]);
-
-		await expect(getById('ann-other', 'group-1')).rejects.toBeInstanceOf(AnnouncementNotFoundError);
-	});
-});
-
-describe('create', () => {
-	it('writes a draft — no publishedAt', async () => {
-		// The author's name is looked up first and stored on the message: the
-		// post outlives the account, so the timeline cannot re-join `user`.
-		selectQueue.push([{ name: 'Ada Lovelace' }]);
-		returningQueue.push([{ id: 'ann-new' }]);
-		selectQueue.push([row({ id: 'ann-new', publishedAt: null })]);
-
-		const post = await create('group-1', 'user-1', { title: '  Trimmed  ', body: 'Body' });
-
-		const inserts = statements.filter((s) => s.op === 'insert');
-		// The thread carries the title and what makes it an announcement (#1304).
-		expect(inserts[0]?.values).toMatchObject({
-			channel: 'group',
-			groupId: 'group-1',
-			subject: 'Trimmed',
-			pinned: false,
-			postPolicy: 'leadership',
-			notifyPolicy: 'email'
-		});
-		// The body is its first message.
-		expect(inserts[1]?.values).toMatchObject({
-			body: 'Body',
-			authorUserId: 'user-1',
-			authorName: 'Ada Lovelace'
-		});
-		// Nothing reaches a member until publish() stamps it.
-		expect(inserts[0]?.values).not.toHaveProperty('publishedAt');
-		expect(post.publishedAt).toBeNull();
-	});
-});
-
-describe('update', () => {
-	it('scopes the write to the group and 404s when nothing matched', async () => {
-		returningQueue.push([]);
-
-		await expect(update('ann-1', 'group-1', { title: 'New' })).rejects.toBeInstanceOf(
-			AnnouncementNotFoundError
-		);
-		expect(lastWhere()).toContain('"group_id" = ?');
-	});
-
-	it('leaves untouched fields out of the SET', async () => {
-		returningQueue.push([{ id: 'ann-1' }]);
-		selectQueue.push([row({ pinned: true })]);
-
-		await update('ann-1', 'group-1', { pinned: true });
-
-		const set = statements.find((s) => s.op === 'update')?.values;
-		expect(set).toMatchObject({ pinned: true });
-		expect(set).not.toHaveProperty('title');
-		expect(set).not.toHaveProperty('body');
-	});
-});
-
-describe('publish', () => {
-	/**
-	 * The double-publish guard, and it is in the UPDATE rather than in a SELECT
-	 * before it on purpose: two admins clicking Publish on the same draft would
-	 * both pass a read-then-write check, both emit, and the roster would be
-	 * emailed twice — which cannot be taken back.
-	 */
-	it('conditions the write on the row still being unpublished', async () => {
-		returningQueue.push([{ id: 'ann-1' }]);
-		selectQueue.push([row()]);
-
-		await publish('ann-1', 'group-1');
-
-		const where = whereOf(statements.findIndex((s) => s.op === 'update'));
-		expect(where).toContain('"published_at" is null');
-		expect(where).toContain('"group_id" = ?');
-	});
-
-	it('tells an admin the post was already published, rather than 404ing', async () => {
-		returningQueue.push([]); // the conditional update matched nothing
-		selectQueue.push([{ publishedAt: new Date('2026-08-01') }]); // but the row exists
-
-		await expect(publish('ann-1', 'group-1')).rejects.toBeInstanceOf(AlreadyPublishedError);
-	});
-
-	it('404s when the row is genuinely absent', async () => {
-		returningQueue.push([]);
-		selectQueue.push([]);
-
-		await expect(publish('ann-1', 'group-1')).rejects.toBeInstanceOf(AnnouncementNotFoundError);
-	});
-});
-
-describe('remove', () => {
-	/**
-	 * A soft delete. A committee's announcements are part of the record of the
-	 * committee, and "we never said that" is not a claim a delete button should
-	 * be able to make.
-	 */
-	it('stamps deletedAt rather than deleting the row', async () => {
-		returningQueue.push([{ id: 'ann-1' }]);
-
-		await remove('ann-1', 'group-1');
-
-		const write = statements.find((s) => s.op === 'update');
-		expect(write?.values).toHaveProperty('deletedAt');
-		expect(statements.some((s) => s.op === ('delete' as never))).toBe(false);
-	});
-
-	it('404s an id from another group', async () => {
-		returningQueue.push([]);
-
-		await expect(remove('ann-1', 'group-1')).rejects.toBeInstanceOf(AnnouncementNotFoundError);
-		expect(lastWhere()).toContain('"group_id" = ?');
+describe('the fan-out latch', () => {
+	it('claims a post once', async () => {
+		const post = await draft();
+		await expect(svc.claimForNotification(post.id)).resolves.toBe(true);
+		await expect(svc.claimForNotification(post.id)).resolves.toBe(false);
 	});
 });
 
 describe('listRecipients', () => {
-	it('drops anyone who muted this one room, without muting the group for them', async () => {
-		// The group-wide `notify_announcements` cannot express "this thread":
-		// a room is a thread, so the exclusion is a join on `inbox_group_read`
-		// keyed to the pair (#1309).
-		selectQueue.push([]);
+	it('drops the author and anyone who muted the Announcements thread', async () => {
+		const thread = await svc.getOrCreateAnnouncementThread('g1');
+		sqlite.exec(
+			`insert into inbox_group_read (id, thread_id, user_id, muted) values ('r', '${thread}', 'u3', 1)`
+		);
 
-		await listRecipients('group-1', null, 'thread-1');
-
-		const where = lastWhere();
-		expect(where).toContain('"notify_announcements" = ?');
-		expect(where).toContain('"muted"');
+		const ids = (await svc.listRecipients('g1', 'chair', thread)).map((r) => r.userId);
+		expect(ids).toEqual(['u2']);
 	});
 
-	it('excludes nobody extra when the post has no room', async () => {
-		selectQueue.push([]);
-
-		await listRecipients('group-1', null);
-
-		// Still joined, but on a false predicate, so the LEFT JOIN contributes
-		// no rows and the mute cannot exclude a reader who never had one.
-		expect(lastWhere()).toContain('"notify_announcements" = ?');
+	it('excludes nobody extra when the group has no thread yet', async () => {
+		const ids = (await svc.listRecipients('g1', 'chair')).map((r) => r.userId).sort();
+		expect(ids).toEqual(['u2', 'u3']);
 	});
 });

@@ -183,6 +183,8 @@ export const tableOrder = [
 	'credit_transaction',
 	'help_articles',
 	'inbox_message',
+	// An announcement: child of group, user and the message it was posted as.
+	'group_announcement',
 	'inbox_note',
 	'inbox_participant',
 	// The band inbox's per-reader cursor: child of inbox_thread and user.
