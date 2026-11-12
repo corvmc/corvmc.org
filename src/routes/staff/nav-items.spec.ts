@@ -230,7 +230,7 @@ describe('the nav tree', () => {
 		expect(keys('money')).toContain('grants');
 		expect(keys('reports')).toEqual(['reports']);
 		expect(keys('system')).toContain('help');
-		expect(keys('events')).toEqual(['calendar']);
+		expect(staffNavTop.map((i) => i.key)).toEqual(['dashboard', 'inbox', 'calendar']);
 	});
 
 	// A show's door takings are on its staff page (#1809); the till is reached from there.

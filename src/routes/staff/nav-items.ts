@@ -64,7 +64,6 @@ export type StaffNavSectionKey =
 	| 'people'
 	| 'planning'
 	| 'space'
-	| 'events'
 	| 'partners'
 	| 'moderation'
 	| 'outreach'
@@ -123,6 +122,15 @@ export const staffNavTop: StaffNavItem[] = [
 		label: 'Inbox',
 		href: resolve('staff/inbox'),
 		badgeKey: 'inboxUnread'
+	},
+	// Every source, everything the public can see plus what is asking to join
+	// it. The CMC work surface over the same table is Productions on Projects.
+	{
+		key: 'calendar',
+		capability: 'event.read',
+		label: 'Events',
+		href: resolve('staff/events'),
+		badgeKey: 'listingsPending'
 	}
 ];
 
@@ -220,26 +228,6 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'inventory.read',
 				label: 'Supplies',
 				href: resolve('staff/inventory/supplies')
-			}
-		]
-	},
-	{
-		// Keyed `events`, not `programs`: "programs" is spoken-for — it is a
-		// reserved slug for the Groups module, where a program is a club or
-		// committee that runs its own sessions. Those will want a home of their
-		// own, and it should not have to fight this section for the name.
-		key: 'events',
-		title: 'Events',
-		items: [
-			// Every source, everything the public can see plus what is asking to
-			// join it, at the address every event ref resolves to. The CMC work
-			// surface over the same table is the Productions view on Projects.
-			{
-				key: 'calendar',
-				capability: 'event.read',
-				label: 'Calendar',
-				href: resolve('staff/events'),
-				badgeKey: 'listingsPending'
 			}
 		]
 	},

@@ -64,20 +64,10 @@ test.describe('staff sidebar', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff');
 
-		for (const title of [
-			'People',
-			'Space',
-			'Events',
-			'Moderation',
-			'Outreach',
-			'Money',
-			'System'
-		]) {
-			await expect(nav(page).getByRole('button', { name: title })).toHaveAttribute(
-				'aria-expanded',
-				'true'
-			);
-		}
+		// Every section toggle, whatever the sections are called.
+		const toggles = nav(page).locator('button[aria-expanded]');
+		await expect(toggles.first()).toBeVisible();
+		await expect(nav(page).locator('button[aria-expanded="false"]')).toHaveCount(0);
 
 		// A row from each of the far ends of the list, both reachable by role.
 		await expect(navLink(page, '/staff/members')).toBeVisible();
