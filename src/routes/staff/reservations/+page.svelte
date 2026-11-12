@@ -24,7 +24,7 @@
 	import OverflowMenu from '#lib/components/ui/OverflowMenu.svelte';
 	import CreateReservation from './CreateModal.svelte';
 	import RecurringSeriesModal from './RecurringSeriesModal.svelte';
-	import HeaderLinks from './HeaderLinks.svelte';
+	import BuildingAccess from './BuildingAccess.svelte';
 	import { page as appPage } from '$app/state';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
 	import { goto } from '$app/navigation';
@@ -84,6 +84,9 @@
 	let dateTo = $state(params.get('to') ?? '');
 	let status = $state<Status | ''>(pick(statuses, 'status') ?? '');
 	let page = $state(Number(params.get('page')) || 1);
+	// `?access` opens Building access: where the lock-offline email and the U-tec sign-in land.
+	let accessOpen = $state(params.has('access') || params.has('utec'));
+	const utecParam = params.get('utec');
 
 	let filters = $derived({
 		search: searchDebounced || undefined,
@@ -208,7 +211,9 @@
 
 <PageHeader title={m.staff_reservations_practice_space_title()}>
 	<div class="flex flex-wrap justify-end gap-2">
-		<HeaderLinks />
+		{#if settled?.lock}
+			<BuildingAccess bind:open={accessOpen} offline={settled.lock.offline} utec={utecParam} />
+		{/if}
 		<RecurringSeriesModal />
 		<div class="join">
 			<CreateReservation class="join-item" />

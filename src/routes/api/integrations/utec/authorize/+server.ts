@@ -12,7 +12,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 	const clientId = await getUtecClientId();
 	if (!clientId) {
-		redirect(303, '/staff/settings?utec=missing_config');
+		redirect(303, '/staff/reservations?utec=missing_config');
 	}
 
 	const state = randomUUID();

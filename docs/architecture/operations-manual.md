@@ -348,8 +348,10 @@ collection for the vendor API is checked in at
 `docs/architecture/U-Tec Api.postman_collection.json`.
 
 **All four values are staff-settable**, each falling back to its `ULTRALOC_*` env var when
-the stored value is blank. Change any of them at Staff Settings → Integrations; no deploy is
-involved, and the client secret is not a special case.
+the stored value is blank. Change any of them under **Lock settings** in the **Building
+access** sidebar on Staff → Practice space (behind **Reconnect** once connected); no deploy is
+involved, and the client secret is not a special case. `/staff/settings?tab=integrations`
+redirects there.
 
 #745 had moved the client secret out to a Worker secret alone. That is **reversed**: a client
 id and its secret are one credential, and keeping half of it somewhere the app could not write
@@ -373,6 +375,13 @@ run was a log line, which is how three days of unminted door codes went unnotice
 Pressing it twice is safe — every stage filters on work still outstanding, so a repeat run
 reports zeros rather than issuing a code again. The run record lives in KV at
 `ultraloc:lastJobRun`, written by the scheduled batch too.
+
+**The Building access sidebar reads KV and D1 only.** Lock status is the daily job's last
+health reading (`ultraloc:lastSeenOnline`) and last-seen time (`ultraloc:lastOnlineAt`); the
+red dot on the header's Building access button is the same reading. Active codes list
+per-booking codes, standing key-holder codes and the break-glass code, each by its last two
+digits and whether the lock has confirmed it. Recent usage is not shown: no U-tec directive
+for access history has been confirmed (#2589).
 
 ### Cloudflare for SaaS (band addresses)
 

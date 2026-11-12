@@ -38,6 +38,7 @@ const ownerMember = alias(groupMember, 'owner_member');
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { formatDateInTz, buildDateInTz } from '#lib/server/reservation/timezone.js';
 import { describeFrequency, monthlyModeOf } from '#lib/server/reservation/rrule-helpers.js';
+import { getLockStatus } from '#lib/server/lock/lock-service.js';
 import { closuresOverlapping } from '#lib/server/reservation/closure-timeline.js';
 import {
 	countOwedAfterSession,
@@ -2328,14 +2329,19 @@ const staffReservationsPageSchema = z.object({
 export const getStaffReservationsPage = query(staffReservationsPageSchema, async (filters) => {
 	await requireCapability('reservation.read');
 	const now = new Date();
-	const [list, statusCounts, owedAfterSession, hourlyRates, canManageClosures] = await Promise.all([
-		listStaffReservations(filters, now),
-		countStaffStatuses(filters, now),
-		countOwedAfterSession(now),
-		getHourlyRates(),
-		can('reservation.manageClosures')
-	]);
-	return { list, statusCounts, owedAfterSession, hourlyRates, canManageClosures };
+	// The header's Building access dot: the last health reading in KV, never a U-tec call.
+	const lockReading = async () =>
+		(await can('lock.manage')) ? { offline: (await getLockStatus()).online === false } : null;
+	const [list, statusCounts, owedAfterSession, hourlyRates, canManageClosures, lock] =
+		await Promise.all([
+			listStaffReservations(filters, now),
+			countStaffStatuses(filters, now),
+			countOwedAfterSession(now),
+			getHourlyRates(),
+			can('reservation.manageClosures'),
+			lockReading()
+		]);
+	return { list, statusCounts, owedAfterSession, hourlyRates, canManageClosures, lock };
 });
 
 /**

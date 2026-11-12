@@ -37,7 +37,7 @@ export async function getActiveFallbackCode(): Promise<LockFallbackCode | null> 
 }
 
 /** A minted successor that has not yet been confirmed on the lock. */
-async function getPendingFallbackCode(): Promise<LockFallbackCode | null> {
+export async function getPendingFallbackCode(): Promise<LockFallbackCode | null> {
 	const [row] = await db
 		.select()
 		.from(lockFallbackCode)

@@ -15,13 +15,13 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 	// U-tec reported an error (e.g. the user declined consent).
 	if (url.searchParams.get('error')) {
-		redirect(303, '/staff/settings?utec=denied');
+		redirect(303, '/staff/reservations?utec=denied');
 	}
 
 	const code = url.searchParams.get('code');
 	const state = url.searchParams.get('state');
 	if (!code || !state || !expectedState || state !== expectedState) {
-		redirect(303, '/staff/settings?utec=state_error');
+		redirect(303, '/staff/reservations?utec=state_error');
 	}
 
 	const redirectUri = `${url.origin}/api/integrations/utec/callback`;
@@ -31,8 +31,8 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		await updateSiteConfig('integration.utec.refreshToken', refreshToken);
 	} catch (err) {
 		console.error('U-tec OAuth code exchange failed:', (err as Error).message);
-		redirect(303, '/staff/settings?utec=exchange_failed');
+		redirect(303, '/staff/reservations?utec=exchange_failed');
 	}
 
-	redirect(303, '/staff/settings?utec=connected');
+	redirect(303, '/staff/reservations?utec=connected');
 };

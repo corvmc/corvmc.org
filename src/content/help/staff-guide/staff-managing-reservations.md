@@ -40,6 +40,17 @@ A session that ended owing money shows **Cash received** and **No-show** on its 
 Open any row to reach the [detail page](/member/help/staff-reservation-payments) for
 payment handling and a day-timeline view of the slot.
 
+## Building access
+
+**Building access** in the header opens a sidebar about the door. A red dot on the button
+means the last reading found the lock offline.
+
+- **Lock status**: online or offline, and when the lock was last seen.
+- **Active codes**: per-booking codes, key holders' standing codes and the break-glass
+  code. Each shows its last two digits and whether it is on the lock or waiting for it.
+- **Lock settings**: the U-tec connection, lock health and the last daily run, with Test
+  connection, Run self-test, Rotate break-glass code and Reconnect.
+
 ## Closures
 
 **Add closure** is in the menu beside **New reservation**. Closures show in the list under

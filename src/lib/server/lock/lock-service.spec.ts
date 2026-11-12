@@ -535,6 +535,17 @@ describe('lock health', () => {
 			expect.objectContaining({ type: 'lock_offline' })
 		);
 		expect(mockPutJson).toHaveBeenCalledWith('ultraloc:lastSeenOnline', false);
+		// Last seen stays at the last reading that found it online.
+		expect(mockPutJson).not.toHaveBeenCalledWith('ultraloc:lastOnlineAt', expect.anything());
+	});
+
+	it('records when an online reading last saw the lock', async () => {
+		mockQueryDeviceHealth.mockResolvedValue({ online: true, lockState: null, batteryLevel: 5 });
+		mockGetJson.mockResolvedValue(true);
+
+		await runDailyLockJob();
+
+		expect(mockPutJson).toHaveBeenCalledWith('ultraloc:lastOnlineAt', expect.any(String));
 	});
 
 	// A week-long outage should be one email, not seven identical ones.

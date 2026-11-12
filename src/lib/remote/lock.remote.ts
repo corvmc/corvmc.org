@@ -8,8 +8,10 @@ import { reservation } from '#lib/server/db/schema/reservation.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { eq } from 'drizzle-orm';
 import { queryDeviceHealth } from '#lib/server/lock/ultraloc-client.js';
+import { listActiveCodes } from '#lib/server/lock/building-access.js';
 import {
 	getLastLockJobRun,
+	getLockStatus,
 	reprovisionAccessFor,
 	runDailyLockJob
 } from '#lib/server/lock/lock-service.js';
@@ -69,6 +71,22 @@ export const getLockHealth = query(async () => {
 	} catch (err) {
 		return { ok: false as const, lastRun, error: (err as Error).message };
 	}
+});
+
+/**
+ * The Building access sidebar: the last health reading, the last daily run, and
+ * every code the door holds or is waiting for. KV and D1 only, so opening the
+ * sidebar never waits on U-tec.
+ */
+export const getBuildingAccess = query(async () => {
+	await requireCapability('lock.manage');
+	const now = new Date();
+	const [status, lastRun, codes] = await Promise.all([
+		getLockStatus(),
+		getLastLockJobRun(),
+		listActiveCodes(now)
+	]);
+	return { status, lastRun, codes };
 });
 
 /**
