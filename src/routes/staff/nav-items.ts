@@ -42,7 +42,6 @@ export type StaffNavKey =
 	| 'gear'
 	| 'supplies'
 	| 'contractors'
-	| 'keys'
 	| 'projects'
 	| 'venues'
 	| 'calendar'
@@ -200,12 +199,13 @@ export const staffNavSections: StaffNavSection[] = [
 		items: [
 			{
 				// Closures sit in its list and recurring series in a modal off its
-				// header (#1936); a series' own page still lights this row.
+				// header (#1936); a series' own page still lights this row. Key
+				// holders is a header link on its page (#2574), so it lights it too.
 				key: 'reservations',
 				capability: 'reservation.read',
-				label: 'Reservations',
+				label: 'Practice space',
 				href: resolve('staff/reservations'),
-				also: [resolve('staff/recurring')]
+				also: [resolve('staff/recurring'), resolve('staff/keys')]
 			},
 			// Gear is what is tracked unit by unit or lent out; Supplies is what is
 			// used up (#2573, predicate in `server/inventory/sections.ts`). Loans,
@@ -228,14 +228,6 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'renewal.read',
 				label: 'Renewals',
 				href: resolve('staff/renewals')
-			},
-			{
-				// Standing access to the building. Door codes are managed in Settings;
-				// this lists them beside the keys and alarm codes nothing else records.
-				key: 'keys',
-				capability: 'lock.manage',
-				label: 'Key Holders',
-				href: resolve('staff/keys')
 			}
 		]
 	},
