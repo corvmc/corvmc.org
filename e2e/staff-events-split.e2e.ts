@@ -47,18 +47,25 @@ test.describe('staff events split', () => {
 		await expect(page.getByText(SEED_SPLIT_CMC_DRAFT_TITLE)).toBeVisible();
 		await expect(page.getByText(SEED_SPLIT_DRAFT_TITLE)).toHaveCount(0);
 
-		// Listings waiting on staff are pinned above the dates, under their own
-		// group: the first group row, before the second.
+		// A listing waiting on staff sits in date order, not pinned above the
+		// dates: the CMC draft starts two days before it.
 		await expect
 			.poll(() =>
-				page.getByRole('row').evaluateAll((rows, title) => {
-					const groups = rows.flatMap((r, i) => (r.querySelector('.cell-group') ? [i] : []));
-					const at = rows.findIndex((r) => r.textContent?.includes(title));
-					return groups[0] === 1 && at > groups[0] && at < (groups[1] ?? -1);
-				}, SEED_SPLIT_PENDING_TITLE)
+				page.getByRole('row').evaluateAll(
+					(rows, { first, second }) => {
+						const at = (t: string) => rows.findIndex((r) => r.textContent?.includes(t));
+						return at(first) >= 0 && at(first) < at(second);
+					},
+					{ first: SEED_SPLIT_CMC_DRAFT_TITLE, second: SEED_SPLIT_PENDING_TITLE }
+				)
 			)
 			.toBe(true);
-		await expect(page.getByLabel('Status')).toHaveCount(0);
+
+		// The status filter narrows the list and goes into the address.
+		await page.getByTestId('status-filter').selectOption('pending_review');
+		await expect(page).toHaveURL(/[?&]status=pending_review/);
+		await expect(pending).toBeVisible();
+		await expect(page.getByText(SEED_SPLIT_CMC_DRAFT_TITLE)).toHaveCount(0);
 	});
 
 	test('Productions holds CMC work, including drafts, and no listings', async ({ page }) => {
