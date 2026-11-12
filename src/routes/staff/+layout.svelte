@@ -14,14 +14,12 @@
 	import {
 		IconDisc,
 		IconCheckbox,
-		IconMapPinPlus,
 		IconBulb,
 		IconSpeakerphone,
 		IconUsers,
 		IconClipboardCheck,
 		IconSettings,
 		IconHistory,
-		IconShieldLock,
 		IconCash,
 		IconMail,
 		IconTool,
@@ -123,23 +121,18 @@
 		outreach: IconMail,
 		help: IconBook,
 		'local-resources': IconMapPin,
-		'resource-tips': IconMapPinPlus,
 		reports: IconReportAnalytics,
 		payments: IconCash,
 		sponsors: IconBuildingStore,
 		grants: IconContract,
 		settings: IconSettings,
-		access: IconShieldLock,
 		audit: IconHistory
 	};
 
 	let badges = $derived({
 		inboxUnread: layout.inboxUnread,
-		resourceTipsPending: layout.resourceTipsPending,
-		suggestionsAwaiting: layout.suggestionsAwaiting,
 		volunteerPending: layout.volunteerPending,
-		listingsPending: layout.listingsPending,
-		appealsPending: layout.appealsPending
+		reviewWaiting: layout.reviewWaiting
 	} satisfies Record<StaffNavBadgeKey, number>);
 
 	let activeKey = $derived(activeNavKey(page.url.pathname));

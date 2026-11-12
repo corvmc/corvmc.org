@@ -5,7 +5,6 @@ import {
 	volunteerSignup,
 	volunteerRole,
 	volunteerProfile,
-	volunteerHourLog,
 	volunteerShiftFeedback
 } from '#lib/server/db/schema/volunteer.js';
 import { user } from '#lib/server/db/schema/authentication.js';
@@ -841,7 +840,7 @@ export interface OutstandingClaim {
 }
 
 /** A claim still worth confirming: its shift and task are live and the shift is ahead. */
-function outstandingClaimWhere(now: Date) {
+export function outstandingClaimWhere(now: Date) {
 	return and(liveShift(), openTask(), gte(volunteerShift.startsAt, now));
 }
 
@@ -889,22 +888,12 @@ export async function listOutstandingClaims(
 }
 
 /**
- * How many things are waiting on a coordinator, as one number.
- *
- * The sidebar badge and the dashboard summary both read this, so nav and page
- * cannot disagree. It counts rather than lists: the badge runs on every staff
- * page load. Lapsing clearances and guardian sign-offs are deliberately absent:
- * neither is urgent, and a badge that never reaches zero stops being read.
+ * Coordinator work still to do, as one number: unassigned tasks and tasks whose
+ * shifts have ended. The Schedule's badge reads it. Submissions waiting on a
+ * decision (hour logs, claims) are the staff review feed's (#2623), not this.
  */
 export async function countVolunteerWorkWaiting(now = new Date()): Promise<number> {
-	const [pendingHours, claims, unscheduled, ended] = await Promise.all([
-		db.select({ n: count() }).from(volunteerHourLog).where(eq(volunteerHourLog.status, 'pending')),
-		db
-			.select({ n: count() })
-			.from(volunteerSignup)
-			.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
-			.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
-			.where(and(eq(volunteerSignup.status, 'claimed'), outstandingClaimWhere(now))),
+	const [unscheduled, ended] = await Promise.all([
 		// Unassigned tasks, by the predicate the Schedule's chip lists with.
 		// Committee-owned work is on its committee's queue instead.
 		db.select({ n: count() }).from(workOrder).where(unassignedTaskWhere()),
@@ -913,12 +902,7 @@ export async function countVolunteerWorkWaiting(now = new Date()): Promise<numbe
 		listTasksWithEndedShifts(now)
 	]);
 
-	return (
-		Number(pendingHours[0]?.n ?? 0) +
-		Number(claims[0]?.n ?? 0) +
-		Number(unscheduled[0]?.n ?? 0) +
-		ended.length
-	);
+	return Number(unscheduled[0]?.n ?? 0) + ended.length;
 }
 
 // ---------------------------------------------------------------------------

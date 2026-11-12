@@ -15,6 +15,7 @@
 	} from '#lib/remote/settings.remote.js';
 	import { updateInboxChannelConfig, testMetaConnection } from '#lib/remote/inbox.remote.js';
 	import { isAlwaysEnabledChannel } from '#lib/config.js';
+	import AccessTab from './access/AccessTab.svelte';
 	import { channelLabel, channelIcon } from '#lib/components/inbox/channels.js';
 	import { inboxChannelMeta } from './inbox-channel-meta';
 	import { featureMeta } from './feature-meta';
@@ -52,12 +53,17 @@
 	);
 	let metaTesting = $state<string | null>(null);
 
-	const tabs = [
+	const tabs = $derived([
 		{ key: 'organization', label: m.staff_settings_organization_label() },
 		{ key: 'inbox', label: m.staff_settings_inbox_channels_label() },
 		{ key: 'features', label: m.staff_settings_features_label() },
-		{ key: 'subscriptions', label: m.staff_settings_subscriptions_label() }
-	];
+		{ key: 'subscriptions', label: m.staff_settings_subscriptions_label() },
+		...(settings.canManageAccess ? [{ key: 'access', label: m.staff_settings_access_label() }] : [])
+	]);
+	// A `?tab=` naming a tab this viewer is not offered opens the first one.
+	const shown = $derived(tabs.some((t) => t.key === activeTab) ? activeTab : 'organization');
+	// Access holds tables; the other tabs are forms.
+	const width = $derived(shown === 'access' ? 'full' : '2xl');
 
 	let syncResult = $state<SubscriptionSyncSummary | null>(null);
 	let statsResult = $state<CommunityStats | null>(null);
@@ -78,16 +84,16 @@
 </script>
 
 <PageHeader
-	width="2xl"
+	{width}
 	title={m.staff_settings_settings_title()}
 	subtitle={m.staff_settings_subtitle_body()}
 >
-	<TabBar collapse {tabs} active={activeTab} onchange={(key) => (activeTab = key)} />
+	<TabBar collapse {tabs} active={shown} onchange={(key) => (activeTab = key)} />
 </PageHeader>
 
-<PageContent width="2xl">
-	<div class="space-y-4" role="tabpanel" aria-labelledby="tab-{activeTab}">
-		{#if activeTab === 'organization'}
+<PageContent {width}>
+	<div class="space-y-4" role="tabpanel" aria-labelledby="tab-{shown}">
+		{#if shown === 'organization'}
 			<p class="text-muted">
 				{m.staff_settings_organization_identity_used_emails_branding_text()}
 			</p>
@@ -231,7 +237,7 @@
 					</CardBody>
 				</Card>
 			</Form>
-		{:else if activeTab === 'features'}
+		{:else if shown === 'features'}
 			<p class="text-muted">
 				{m.staff_settings_enable_disable_feature_modules_members_text()}
 			</p>
@@ -272,7 +278,7 @@
 					</CardBody>
 				</Card>
 			{/each}
-		{:else if activeTab === 'inbox'}
+		{:else if shown === 'inbox'}
 			<p class="text-muted">
 				{m.staff_settings_enable_disable_communication_channels_staff_text()}
 			</p>
@@ -364,7 +370,7 @@
 					</CardBody>
 				</Card>
 			{/each}
-		{:else if activeTab === 'subscriptions'}
+		{:else if shown === 'subscriptions'}
 			<p class="text-muted">
 				{m.staff_settings_reconciles_every_member_band_subscription_text()}
 			</p>
@@ -452,6 +458,8 @@
 					/>
 				</div>
 			{/if}
+		{:else if shown === 'access'}
+			<AccessTab />
 		{/if}
 	</div>
 </PageContent>

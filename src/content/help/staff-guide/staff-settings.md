@@ -21,6 +21,9 @@ changes are validated and saved per tab. Some settings are admin-only.
   sidebar on **Staff → Practice space**.
 - **Inbox Channels** — Configuration for the email, SMS, web, Instagram, and
   Messenger channels that feed the [inbox](/member/help/staff-inbox).
+- **Access** — Admins only. Who holds which position, committee grant and clearance.
+  **By person** shows one member's access; **By permission** lists everyone holding a
+  position, capability or clearance. Positions are assigned and removed here.
 
 ## Maintenance actions
 

@@ -121,6 +121,7 @@ describe('activeNavKey', () => {
 		['/staff/help/create', 'help'],
 		['/staff/local-resources', 'local-resources'],
 		['/staff/local-resources/categories', 'local-resources'],
+		['/staff/local-resources/tips', 'local-resources'],
 		['/staff/settings', 'settings'],
 		['/staff/audit', 'audit']
 	];
@@ -201,18 +202,22 @@ describe('the nav tree', () => {
 		}
 	});
 
-	it('puts the resource tips queue under Local Resources, with its pending count', () => {
-		expect(staffNavTop.map((i) => i.key)).not.toContain('resource-tips');
+	// Submissions waiting on a decision are one badge, on the review feed (#2623).
+	it('badges only the Dashboard, Inbox and Schedule', () => {
+		const badged = allStaffNavItems()
+			.filter((i) => i.badgeKey)
+			.map((i) => [i.key, i.badgeKey]);
+		expect(badged).toEqual([
+			['dashboard', 'reviewWaiting'],
+			['inbox', 'inboxUnread'],
+			['volunteer-schedule', 'volunteerPending']
+		]);
+	});
+
+	it('reaches the resource tips queue through Local Resources (#2623)', () => {
 		const parent = allStaffNavItems().find((i) => i.key === 'local-resources');
-		expect(parent?.badgeKey).toBe('resourceTipsPending');
-		const tips = parent?.children?.find((i) => i.key === 'resource-tips');
-		expect(tips).toMatchObject({
-			href: '/staff/local-resources/tips',
-			badgeKey: 'resourceTipsPending',
-			capability: 'localResource.manage'
-		});
-		expect(activeNavKey('/staff/local-resources/tips')).toBe('resource-tips');
-		expect(activeNavKey('/staff/local-resources')).toBe('local-resources');
+		expect(parent?.children).toBeUndefined();
+		expect(activeNavKey('/staff/local-resources/tips')).toBe('local-resources');
 	});
 
 	// The #1788 regrouping: each row in the section that owns what it is about.
@@ -278,6 +283,7 @@ describe('route coverage', () => {
 		'/staff/inventory/problems',
 		'/staff/inventory/compliance',
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
+		'/staff/local-resources/tips', // a Local Resources tab, and the review feed's tip rows (#2623)
 		'/staff/grants/funders', // reached from Grants' header; its breadcrumb runs through it
 		'/staff/keys', // reached from Practice space's header (#2574)
 		'/staff/reservations/settings', // reached from Practice space's header (#2586)

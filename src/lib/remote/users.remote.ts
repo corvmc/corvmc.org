@@ -311,7 +311,7 @@ export const updateUser = form(updateUserSchema, async (rawData) => {
 				error(403, 'You cannot change roles.');
 			}
 
-			// Self-demotion and the last admin are refused here and on /staff/access.
+			// Self-demotion and the last admin are refused here and on the Settings Access tab.
 			const refusal = await positionChangeRefusal({
 				actorId: actor.id,
 				targetId: id,

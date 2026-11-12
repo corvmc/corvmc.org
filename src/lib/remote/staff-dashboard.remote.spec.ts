@@ -6,7 +6,8 @@ let caps: string[] = [];
 let seat: string[] = [];
 
 vi.mock('$app/server', () => ({
-	query: (fn: () => unknown) => Object.assign(fn, { __: { type: 'query' } }),
+	query: (_schema: unknown, fn: (args: unknown) => unknown) =>
+		Object.assign(fn, { __: { type: 'query' } }),
 	getRequestEvent: () => ({ locals: { user: { id: 'u1' } } })
 }));
 
@@ -25,8 +26,10 @@ vi.mock('#lib/server/user/staff-dashboard-service.js', () => ({
 	listUpcomingShows: () => listUpcomingShows(),
 	listMemberSummary: () => listMemberSummary()
 }));
-vi.mock('#lib/server/user/staff-queue-counts.js', () => ({
-	countStaffQueues: async () => ({ inboxUnread: 3 })
+const listReviewFeed = vi.fn(async () => ({ items: [], hasMore: false }));
+vi.mock('#lib/server/review/review-registry.js', () => ({
+	listReviewFeed: (...a: unknown[]) => listReviewFeed(...(a as [])),
+	countReviewFeed: async () => ({ total: 0, byKind: {} })
 }));
 const listLowStock = vi.fn(async () => []);
 vi.mock('#lib/server/inventory/stock-service.js', () => ({ listLowStock: () => listLowStock() }));
@@ -52,7 +55,7 @@ beforeEach(() => {
 describe('getStaffDashboard', () => {
 	it('gives a committee seat real data for its own areas (#1578)', async () => {
 		seat = ['grant.read'];
-		const data = await getStaffDashboard();
+		const data = await getStaffDashboard({});
 		expect(data.deadlines?.rows).toHaveLength(1);
 		expect(data.room).toBeNull();
 		expect(data.members).toBeNull();
@@ -62,7 +65,7 @@ describe('getStaffDashboard', () => {
 
 	it('reads the room and the shows for whoever may read reservations and events', async () => {
 		caps = ['reservation.read', 'event.read'];
-		const data = await getStaffDashboard();
+		const data = await getStaffDashboard({});
 		expect(data.room).toEqual([{ date: '2026-10-28', reservations: [] }]);
 		expect(data.shows).toEqual([]);
 		expect(data.deadlines).toBeNull();
@@ -72,13 +75,24 @@ describe('getStaffDashboard', () => {
 
 	it('keeps the members breakdown for user.list', async () => {
 		caps = ['user.list'];
-		const data = await getStaffDashboard();
+		const data = await getStaffDashboard({});
 		expect(data.members).toEqual({ newThisMonth: 2, recent: [] });
 		expect(data.capabilities).toEqual(['user.list']);
 	});
 
+	it('reads the review feed with the viewer’s capabilities, its filter and a clamped limit', async () => {
+		caps = ['listing.review'];
+		await getStaffDashboard({ kind: 'listing', limit: 50 });
+		expect(listReviewFeed).toHaveBeenCalledWith(['listing.review'], { kind: 'listing', limit: 50 });
+		await getStaffDashboard({});
+		expect(listReviewFeed).toHaveBeenLastCalledWith(['listing.review'], {
+			kind: undefined,
+			limit: 25
+		});
+	});
+
 	it('refuses a caller with neither a position nor a seat', async () => {
-		await expect(getStaffDashboard()).rejects.toMatchObject({ status: 403 });
+		await expect(getStaffDashboard({})).rejects.toMatchObject({ status: 403 });
 		expect(listRoomDays).not.toHaveBeenCalled();
 	});
 });

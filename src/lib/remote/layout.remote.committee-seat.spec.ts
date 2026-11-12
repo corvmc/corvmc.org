@@ -44,19 +44,8 @@ vi.mock('#lib/server/inbox/direct-service.js', () => ({
 vi.mock('#lib/server/volunteer/volunteer-signup-service.js', () => ({
 	countVolunteerWorkWaiting: vi.fn(async () => 0)
 }));
-vi.mock('#lib/server/event/community-event-service.js', () => ({
-	countPendingSubmissions: vi.fn(async () => 0)
-}));
-vi.mock('#lib/server/local-resource/local-resource-service.js', () => ({
-	countPendingTips: vi.fn(async () => 0)
-}));
-vi.mock('#lib/server/suggestion/suggestion-service.js', () => ({
-	countAwaitingModeration: vi.fn(async () => 0),
-	countAwaitingResponse: vi.fn(async () => 0),
-	countPendingEdits: vi.fn(async () => 0)
-}));
-vi.mock('#lib/server/moderation/appeal-service.js', () => ({
-	countPendingAppeals: vi.fn(async () => 0)
+vi.mock('#lib/server/review/review-registry.js', () => ({
+	countReviewFeed: vi.fn(async () => ({ total: 0, byKind: {} }))
 }));
 vi.mock('#lib/server/moderation/moderation-service.js', () => ({
 	acceptsDirectMessages: vi.fn(async () => true)

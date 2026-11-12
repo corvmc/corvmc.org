@@ -821,13 +821,8 @@ export async function listPendingEdits() {
 		.orderBy(desc(suggestionEdit.createdAt), desc(suggestionEdit.id));
 }
 
-export async function countPendingEdits(): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(suggestionEdit)
-		.where(eq(suggestionEdit.status, 'pending'));
-	return row?.count ?? 0;
-}
+/** An edit waiting on staff: the review feed's predicate. */
+export const pendingEdit = () => eq(suggestionEdit.status, 'pending');
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -964,30 +959,18 @@ export async function listMergeCandidates(excludeId: string) {
 		.limit(MERGE_CANDIDATE_LIMIT);
 }
 
-/** Suggestions members cannot see while they wait. Leads the staff nav badge. */
-export async function countAwaitingModeration(): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(suggestion)
-		.where(inArray(suggestion.visibility, ['pending_review', 'under_review']));
-	return row?.count ?? 0;
-}
+/** Suggestions members cannot see while they wait: the review feed's predicate. */
+export const awaitingModeration = () =>
+	inArray(suggestion.visibility, ['pending_review', 'under_review']);
 
 /** On the board, open, and nobody has written back yet. */
-export async function countAwaitingResponse(): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(suggestion)
-		.where(
-			and(
-				eq(suggestion.visibility, 'visible'),
-				eq(suggestion.status, 'open'),
-				isNull(suggestion.responseBody),
-				isNull(suggestion.mergedIntoId)
-			)
-		);
-	return row?.count ?? 0;
-}
+export const awaitingResponse = () =>
+	and(
+		eq(suggestion.visibility, 'visible'),
+		eq(suggestion.status, 'open'),
+		isNull(suggestion.responseBody),
+		isNull(suggestion.mergedIntoId)
+	);
 
 // ---------------------------------------------------------------------------
 // Side effects

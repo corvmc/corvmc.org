@@ -194,6 +194,15 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 			if (can('incident.read'))
 				out.push({ panel: 'staff', href: resolve(`staff/incidents/${id}`) });
 			break;
+		// Both are decided in a queue with no page per record, so they link to it.
+		case 'local_resource':
+			if (can('localResource.manage'))
+				out.push({ panel: 'staff', href: resolve('staff/local-resources/tips') });
+			break;
+		case 'hour_log':
+			if (can('volunteer.reviewHours'))
+				out.push({ panel: 'staff', href: resolve('staff/members/volunteers/hours') });
+			break;
 	}
 
 	return out;

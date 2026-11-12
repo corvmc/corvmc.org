@@ -35,11 +35,32 @@ export function newestFirst(a: FeedItem, b: FeedItem): number {
 	return b.at.getTime() - a.at.getTime();
 }
 
-/** Merge already-limited sources into one page of `limit`. */
-export function mergeFeed<T extends FeedItem>(limit: number, ...pages: FeedPage<T>[]): FeedPage<T> {
-	const merged = pages.flatMap((p) => p.items).sort(newestFirst);
+/** Oldest first, for a queue: what has waited longest leads. Stable, as `newestFirst`. */
+export function oldestFirst(a: FeedItem, b: FeedItem): number {
+	return a.at.getTime() - b.at.getTime();
+}
+
+function merge<T extends FeedItem>(
+	order: (a: FeedItem, b: FeedItem) => number,
+	limit: number,
+	pages: FeedPage<T>[]
+): FeedPage<T> {
+	const merged = pages.flatMap((p) => p.items).sort(order);
 	return {
 		items: merged.slice(0, limit),
 		hasMore: merged.length > limit || pages.some((p) => p.hasMore)
 	};
+}
+
+/** Merge already-limited sources into one page of `limit`. */
+export function mergeFeed<T extends FeedItem>(limit: number, ...pages: FeedPage<T>[]): FeedPage<T> {
+	return merge(newestFirst, limit, pages);
+}
+
+/** `mergeFeed` for a queue, oldest first; each source is read oldest first too. */
+export function mergeFeedOldestFirst<T extends FeedItem>(
+	limit: number,
+	...pages: FeedPage<T>[]
+): FeedPage<T> {
+	return merge(oldestFirst, limit, pages);
 }

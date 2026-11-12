@@ -5,7 +5,7 @@ import { memberStanding } from '#lib/server/db/schema/standing.js';
 import { suggestion } from '#lib/server/db/schema/suggestion.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { and, count, desc, eq, isNull, ne } from 'drizzle-orm';
+import { and, desc, eq, isNull, ne } from 'drizzle-orm';
 import {
 	APPEAL_BODY_MAX,
 	appealVerdict,
@@ -284,13 +284,8 @@ export async function getAppealForFlag(
 	};
 }
 
-export async function countPendingAppeals(): Promise<number> {
-	const [row] = await db
-		.select({ count: count() })
-		.from(moderationAppeal)
-		.where(isNull(moderationAppeal.decidedAt));
-	return row?.count ?? 0;
-}
+/** An appeal nobody has decided: the review feed's predicate. */
+export const pendingAppeal = () => isNull(moderationAppeal.decidedAt);
 
 // ---------------------------------------------------------------------------
 // Consequences — read from actual state, never from the form

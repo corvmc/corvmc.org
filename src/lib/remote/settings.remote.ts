@@ -14,7 +14,7 @@ import {
 } from '#lib/server/site-config/site-config-service.js';
 import { testConnection, credentialStatus, listDevices } from '#lib/server/lock/ultraloc-client.js';
 import { issueLockSelfTest, revokeLockSelfTest } from '#lib/server/lock/lock-service.js';
-import { requireCapability } from '#lib/server/authorization.js';
+import { can, requireCapability } from '#lib/server/authorization.js';
 import {
 	getOrientationSetting,
 	parseOrientationTasks
@@ -490,13 +490,15 @@ export const updateIntegrationSettings = form(integrationSettingsSchema, async (
  */
 export const getStaffSettingsPage = query(z.void(), async () => {
 	await requireCapability('settings.read');
-	const [org, volunteerValue, channelConfigs, featureFlags] = await Promise.all([
+	const [org, volunteerValue, channelConfigs, featureFlags, canManageAccess] = await Promise.all([
 		getOrgSettings(),
 		getVolunteerValueSettings(),
 		getInboxChannelConfigs(),
-		getFeatureFlags()
+		getFeatureFlags(),
+		// Offers the Access tab; `getAccessPage` and the access remotes stay the guard.
+		can('user.setRole')
 	]);
-	return { org, volunteerValue, channelConfigs, featureFlags };
+	return { org, volunteerValue, channelConfigs, featureFlags, canManageAccess };
 });
 
 /** The Practice space settings page's one load-bearing query, built the same way (#2586). */
