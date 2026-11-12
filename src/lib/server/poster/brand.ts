@@ -1,5 +1,4 @@
 import { render } from '@cf-wasm/og';
-import { parse, type Font } from '@shuding/opentype.js';
 import lexendRegular from './assets/Lexend-Regular.ttf?inline';
 import lexendBold from './assets/Lexend-Bold.ttf?inline';
 import speaker from './assets/cmc-speaker.png?inline';
@@ -95,14 +94,6 @@ export function bytesDataUrl(bytes: Uint8Array, contentType: string): string {
 		bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
 	}
 	return `data:${contentType};base64,${btoa(bin)}`;
-}
-
-let lexend: { regular: Font; bold: Font } | null = null;
-
-/** How wide `text` sets in Lexend at `size` px, for sizing columns before layout. */
-export function textWidth(text: string, size: number, bold = false): number {
-	lexend ??= { regular: parse(dataUrlBytes(lexendRegular)), bold: parse(dataUrlBytes(lexendBold)) };
-	return (bold ? lexend.bold : lexend.regular).getAdvanceWidth(text, size);
 }
 
 /** Rasterize a poster tree to PNG in Lexend. */

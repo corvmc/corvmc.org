@@ -2755,6 +2755,10 @@ export const eventKindLabels = {
 	market: 'Markets'
 } as const;
 
+/** The month calendar poster's sizes: two print PDFs and a social-feed PNG. */
+export const posterFormats = ['letter', 'tabloid', 'social'] as const;
+export type PosterFormat = (typeof posterFormats)[number];
+
 /**
  * Where a market vendor's application stands. `withdrawn` is terminal; a
  * decision can be reversed, a vendor's own withdrawal cannot. `no_show` is an

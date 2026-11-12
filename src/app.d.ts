@@ -42,6 +42,7 @@ declare global {
 			R2_BUCKET: R2Bucket;
 			R2_PRIVATE: R2Bucket;
 			KV: KVNamespace;
+			BROWSER: Fetcher;
 		}
 	}
 }
