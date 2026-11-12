@@ -8,7 +8,7 @@ import {
 } from '#lib/server/db/schema/volunteer.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { and, asc, count, eq, getTableColumns, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { and, asc, count, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/errors.js';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import {
@@ -23,8 +23,7 @@ import type {
 	Task,
 	VolunteerRoleGroup,
 	VolunteerShift,
-	WorkOrder,
-	WorkOrderLegacyColumn
+	WorkOrder
 } from '#lib/server/db/schema/volunteer.js';
 import { chunk } from '#lib/server/utils/chunk.js';
 import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
@@ -126,34 +125,6 @@ export async function requireActiveRole(volunteerRoleId: string): Promise<void> 
 	}
 }
 
-const LEGACY_COLUMNS: readonly WorkOrderLegacyColumn[] = [
-	'legacyStartsAt',
-	'legacyEndsAt',
-	'legacyCapacity',
-	'legacyPostedAt',
-	'legacyPostedByUserId',
-	'legacyCloseReportsOnCompletion'
-];
-
-/** A `work_order` row without the columns that moved to `volunteer_shift` or were retired. */
-export function toTask(row: WorkOrder): Task {
-	const task: Partial<WorkOrder> = { ...row };
-	for (const column of LEGACY_COLUMNS) delete task[column];
-	return task as Task;
-}
-
-/** `work_order`'s columns for a select, without the legacy ones. */
-export function taskColumns() {
-	const columns: Partial<ReturnType<typeof getTableColumns<typeof workOrder>>> = {
-		...getTableColumns(workOrder)
-	};
-	for (const column of LEGACY_COLUMNS) delete columns[column];
-	return columns as Omit<
-		ReturnType<typeof getTableColumns<typeof workOrder>>,
-		WorkOrderLegacyColumn
-	>;
-}
-
 /** Not called off: what every forward-looking shift query reads. */
 export const liveShift = () => isNull(volunteerShift.cancelledAt);
 
@@ -229,7 +200,7 @@ export async function createShift(data: {
 			.returning()
 	]);
 
-	return { ...toTask(task), shiftId: shift.id };
+	return { ...task, shiftId: shift.id };
 }
 
 /**
@@ -374,7 +345,7 @@ export async function cancelShift(id: string, cancelledByUserId?: string): Promi
 		subject: { type: 'work_order', id: row.id, label: workOrderAuditLabel(row) },
 		details: {}
 	});
-	return toTask(row);
+	return row;
 }
 
 /** A shift that can still be changed: it exists, it is live, and its task is open. */
@@ -420,9 +391,8 @@ export async function editTask(
 		})
 		.where(eq(workOrder.id, id))
 		.returning();
-	const task = toTask(row);
-	await auditWorkOrderChange(existing, task);
-	return task;
+	await auditWorkOrderChange(existing, row);
+	return row;
 }
 
 /**
@@ -588,7 +558,7 @@ async function liveScheduleOf(row: Task | null) {
 
 export async function getWorkOrderById(id: string): Promise<Task | null> {
 	const [row] = await db.select().from(workOrder).where(eq(workOrder.id, id)).limit(1);
-	return row ? toTask(row) : null;
+	return row ?? null;
 }
 
 /** A shift with the facts about its task that sign-ups branch on. */
@@ -700,7 +670,7 @@ type ShiftRowSource = {
 
 function withCounts(rows: ShiftRowSource[]): ShiftWithCounts[] {
 	return rows.map(({ task, shift, ...r }) => ({
-		...toTask(task),
+		...task,
 		shiftId: shift?.id ?? null,
 		startsAt: shift?.startsAt ?? null,
 		endsAt: shift?.endsAt ?? null,
@@ -926,7 +896,7 @@ export async function createWorkOrder(data: {
 		})
 		.returning();
 
-	return toTask(row);
+	return row;
 }
 
 export interface ResolveWorkOrderOptions {
@@ -946,7 +916,7 @@ export async function resolveWorkOrder(id: string, opts: ResolveWorkOrderOptions
 	const resolution = await prepareResolveWorkOrder(id, opts);
 	const [, [row]] = await db.batch(resolution.statements);
 	await resolution.afterCommit();
-	return toTask(row);
+	return row;
 }
 
 /**
@@ -1271,7 +1241,7 @@ export async function listOpenShiftsForMember(
 		.limit(opts.limit ?? 50);
 
 	return rows.map((r) => ({
-		...toTask(r.task),
+		...r.task,
 		id: r.shift.id,
 		workOrderId: r.task.id,
 		startsAt: r.shift.startsAt,

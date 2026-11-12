@@ -102,7 +102,9 @@ describe('listShowDeliverables', () => {
 		wo('a', { group_id: 'art', due_at: T0 });
 		wo('b', { group_id: 'book', resolved_at: T0 });
 		wo('c', { group_id: null, done_when: 'event_published' });
-		wo('crew', { starts_at: T0, ends_at: T0 + 3600 });
+		wo('crew', {});
+		exec(`insert into volunteer_shift (id, work_order_id, starts_at, ends_at)
+			values ('crew-shift', 'crew', ${T0}, ${T0 + 3600})`);
 		const rows = await svc.listShowDeliverables('evt');
 		expect(rows.map((r) => [r.id, r.state]).sort()).toEqual(
 			[

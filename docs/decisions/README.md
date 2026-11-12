@@ -87,3 +87,4 @@ A page or less. Link the issue and the PRs.
 | 0053 | [A committee owns show work; ownership grants no permission](0053-committees-own-deliverables-not-permissions.md)         | 2026-09-29 | Accepted |
 | 0054 | [A work order is the task, and a contractor job is an engagement on it](0054-a-work-order-is-the-task.md)                 | 2026-10-13 | Accepted |
 | 0055 | [Space training is a clearance and sets booking notice](0055-space-training-is-a-clearance-and-sets-booking-notice.md)    | 2026-11-11 | Accepted |
+| 0056 | [A task is the work, and a shift is when volunteers show up](0056-a-task-is-the-work-a-shift-is-when.md)                  | 2026-11-10 | Accepted |

@@ -126,7 +126,7 @@
 								{#if !mine}
 									<Action
 										action={takeDeliverable.for(item.id)}
-										label={m.member_groups_slug_committee_open_items_take_label()}
+										label={m.member_groups_slug_committee_open_items_assign_to_me_label()}
 										aria-label={m.member_groups_slug_committee_open_items_take_2_label({
 											title: item.title
 										})}
