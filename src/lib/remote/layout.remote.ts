@@ -203,10 +203,13 @@ export const getStaffLayout = query(async () => {
 	// member/band/public surfaces only, so staff can administer a feature
 	// before (and after) it is switched on for everyone else.
 	const user = locals.user;
+	// Which rows this viewer is offered. The redirect above only settled that
+	// they may open the panel at all.
+	const capabilities = withSeat(capabilitySet(positions), seat);
 	const [userBands, queues, chrome] = await Promise.all([
 		listForUser(user.id, ['band']).catch(() => []),
-		// Shared with the dashboard's Pending Queues, so a badge and its row agree.
-		countStaffQueues(),
+		// The review total is the dashboard feed's own count, so badge and feed agree.
+		countStaffQueues(capabilities),
 		appChrome(user)
 	]);
 
@@ -214,9 +217,7 @@ export const getStaffLayout = query(async () => {
 		user: { id: user.id, name: user.name, email: user.email },
 		// See `appChrome`.
 		chrome,
-		// Which rows this viewer is offered. The redirect above only settled that
-		// they may open the panel at all.
-		capabilities: withSeat(capabilitySet(positions), seat),
+		capabilities,
 		userBands: activeOnly(userBands).map((b) => ({ id: b.id, name: b.name, slug: b.slug })),
 		...queues
 	};

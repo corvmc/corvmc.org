@@ -13,12 +13,14 @@
 	import DayTimeline from '#lib/components/reservations/DayTimeline.svelte';
 	import { rowLink } from '#lib/actions/row-link.js';
 	import { getStaffDashboard } from '#lib/remote/staff-dashboard.remote.js';
-	import {
-		allStaffNavItems,
-		filterNavItems,
-		type StaffNavBadgeKey,
-		type StaffNavItem
-	} from './nav-items';
+	import { ActivityFeed, type ActivityRow } from '#lib/components/ui/ActivityFeed/index.js';
+	import { getEntityViewer } from '#lib/components/ui/entity/context.js';
+	import { entityHref } from '#lib/utils/entity-href.js';
+	import { FEED_MAX, FEED_PAGE } from '#lib/types/activity.js';
+	import { isReviewKind, reviewKinds, type ReviewKind } from '#lib/types/review.js';
+	import type { ResolvedPathname } from '$app/types';
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { withQuery } from '#lib/utils/with-query.js';
 	import { hasCapability } from '#lib/config.js';
@@ -31,43 +33,58 @@
 	import { formatEventTimeRange } from '#lib/utils/event-time.js';
 	import { formatIsoDay } from '#lib/utils/deadline.js';
 
-	// Typed by the badge keys, so a new sidebar count cannot reach this page unnamed.
-	const queueLabels: Record<StaffNavBadgeKey, string> = {
-		inboxUnread: 'Unresolved Inbox Threads',
-		volunteerPending: 'Waiting Volunteer Work',
-		listingsPending: 'Listings Awaiting Review',
-		suggestionsAwaiting: 'Suggestions Awaiting Staff',
-		appealsPending: 'Pending Appeals',
-		resourceTipsPending: 'Pending Resource Tips'
+	// Typed by the kinds, so a new review kind cannot reach this page unnamed.
+	const kindLabels: Record<ReviewKind, () => string> = {
+		suggestion_moderation: m.staff_review_kind_suggestion_moderation_label,
+		suggestion_answer: m.staff_review_kind_suggestion_answer_label,
+		suggestion_edit: m.staff_review_kind_suggestion_edit_label,
+		listing: m.staff_review_kind_listing_label,
+		resource_tip: m.staff_review_kind_resource_tip_label,
+		appeal: m.staff_review_kind_appeal_label,
+		hour_log: m.staff_review_kind_hour_log_label,
+		shift_claim: m.staff_review_kind_shift_claim_label
 	};
 	const dayLabels = [m.staff_room_today_label(), m.staff_room_tomorrow_label()];
+	const viewer = getEntityViewer();
 
-	let data = $derived(await getStaffDashboard());
+	// The review filter lives in the URL; Show more raises the one query's limit.
+	const initialKind = page.url.searchParams.get('review');
+	let kind = $state<ReviewKind | undefined>(isReviewKind(initialKind) ? initialKind : undefined);
+	let limit = $state(FEED_PAGE);
 
-	// The sidebar's own rows and filter, so a queue links where its badge does and
-	// only for a viewer who could open it. A badge on parent and child keeps the child.
-	let queues = $derived.by(() => {
-		const byKey: Partial<Record<StaffNavBadgeKey, StaffNavItem>> = {};
-		for (const item of filterNavItems(allStaffNavItems(), data.capabilities)) {
-			if (item.badgeKey) byKey[item.badgeKey] = item;
+	$effect(() => {
+		const href = withQuery(resolve('staff'), kind ? `review=${kind}` : '');
+		if (location.pathname + location.search !== href) {
+			void goto(href, { replace: true, reset: false });
 		}
-		return (Object.entries(byKey) as [StaffNavBadgeKey, StaffNavItem][])
-			.map(([key, item]) => ({
-				key,
-				href: item.href,
-				label: queueLabels[key],
-				count: data.queues[key]
-			}))
-			.filter((q) => q.count > 0);
 	});
+
+	function filter(next: ReviewKind | undefined) {
+		kind = next;
+		limit = FEED_PAGE;
+	}
+
+	let data = $derived(await getStaffDashboard({ kind, limit }));
+
+	// Chips only for kinds with something waiting, plus the selected one.
+	let chips = $derived(
+		reviewKinds
+			.filter((k) => data.review.counts.byKind[k] || k === kind)
+			.map((k) => ({ kind: k, count: data.review.counts.byKind[k] ?? 0 }))
+	);
+	let reviewRows = $derived(
+		data.review.items.map((item): ActivityRow => ({
+			id: item.id,
+			at: item.at,
+			actor: item.actorName ? { name: item.actorName } : null,
+			summary: item.summary || kindLabels[item.kind](),
+			// entityHref resolves its routes; the cast only restores the type it widened.
+			href: entityHref(item.ref, viewer) as ResolvedPathname | null,
+			context: { label: kindLabels[item.kind]() }
+		}))
+	);
 	let doorCodes = $derived(
 		data.room?.[0].reservations.filter((r) => r.doorCodeUnconfirmed).length ?? 0
-	);
-	let nothingPending = $derived(
-		queues.length === 0 &&
-			!data.shortShifts?.total &&
-			!data.deadlines?.total &&
-			!data.lowStock?.total
 	);
 	let showsHref = $derived(
 		hasCapability(data.capabilities, 'event.manage')
@@ -183,24 +200,40 @@
 		</div>
 	{/if}
 
-	<SectionLabel label={m.staff_pending_queues_label()} />
-	{#if nothingPending}
-		<EmptyState description={m.staff_nothing_waiting_staff_right_now_body()} />
-	{/if}
-	{#if queues.length > 0}
-		<Table>
-			{#snippet head()}
-				<th>{m.staff_queue_label()}</th>
-				<th class="cell-num">{m.staff_waiting_label()}</th>
-			{/snippet}
-			{#each queues as q (q.key)}
-				<tr class="hover cursor-pointer" use:rowLink={q.href}>
-					<td class="cell-primary">{q.label}</td>
-					<td class="cell-num">{q.count}</td>
-				</tr>
+	<SectionLabel label={m.staff_review_waiting_label()} count={data.review.counts.total} />
+	{#if chips.length > 0}
+		<div class="mb-2 flex flex-wrap gap-2" data-testid="review-filter">
+			<Button
+				size="sm"
+				variant={kind ? 'ghost' : 'primary'}
+				aria-pressed={!kind}
+				onclick={() => filter(undefined)}
+			>
+				{m.staff_review_all_label()}
+				<Badge size="sm">{data.review.counts.total}</Badge>
+			</Button>
+			{#each chips as chip (chip.kind)}
+				<Button
+					size="sm"
+					variant={kind === chip.kind ? 'primary' : 'ghost'}
+					aria-pressed={kind === chip.kind}
+					data-review-kind={chip.kind}
+					onclick={() => filter(kind === chip.kind ? undefined : chip.kind)}
+				>
+					{kindLabels[chip.kind]()}
+					<Badge size="sm">{chip.count}</Badge>
+				</Button>
 			{/each}
-		</Table>
+		</div>
 	{/if}
+	<ActivityFeed
+		rows={reviewRows}
+		label={m.staff_review_waiting_label()}
+		hasMore={data.review.hasMore && limit < FEED_MAX}
+		moreLabel={m.staff_review_show_more_label()}
+		onmore={() => (limit = Math.min(limit + FEED_PAGE, FEED_MAX))}
+		empty={{ description: m.staff_review_empty_body() }}
+	/>
 
 	{#if data.shortShifts?.total}
 		<!-- A show that goes out a person short cannot be fixed next week. -->

@@ -81,5 +81,7 @@ const sample: Record<EntityType, { title: string; subtitle?: string; [k: string]
 	help: { title: 'How to book the practice space', subtitle: 'Getting started', slug: 'booking' },
 	classified: { title: 'Drummer wanted for a surf trio', subtitle: 'Wanted · Musicians' },
 	incident: { title: 'Cable run across the side-stage steps', subtitle: 'Safety hazard' },
-	project: { title: 'Rehearsal room soundproofing', subtitle: 'Facilities committee' }
+	project: { title: 'Rehearsal room soundproofing', subtitle: 'Facilities committee' },
+	local_resource: { title: 'Corvallis Guitar Repair', subtitle: 'Repair shops' },
+	hour_log: { title: 'Door', subtitle: '2 hours · Mar 14' }
 };

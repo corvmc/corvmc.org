@@ -230,6 +230,26 @@
 			}
 		}
 	],
+	"term_resource_tip": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "resource tip",
+				"countPlural=*": "resource tips"
+			}
+		}
+	],
+	"term_hour_log": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "hour log",
+				"countPlural=*": "hour logs"
+			}
+		}
+	],
 	"term_club": [
 		{
 			"declarations": ["input count", "local countPlural = count: plural"],

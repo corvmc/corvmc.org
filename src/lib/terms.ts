@@ -35,7 +35,9 @@ export const entityTerms: Record<EntityType, Term> = {
 	help: m.term_help,
 	classified: m.term_classified,
 	incident: m.term_incident,
-	project: m.term_project
+	project: m.term_project,
+	local_resource: m.term_resource_tip,
+	hour_log: m.term_hour_log
 };
 
 /**

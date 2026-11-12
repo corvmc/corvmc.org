@@ -7,7 +7,8 @@
 	import type { ActivityRow } from './types';
 
 	/**
-	 * Every staff history, newest first, whatever it was read from. `trailing`
+	 * Every staff history, newest first, whatever it was read from. A queue read
+	 * oldest first passes its own `moreLabel`. `trailing`
 	 * carries a source's own figure (`+$10 · balance $40`, `−2 · repaired`) at
 	 * the row's end; the caller maps its rows and owns the empty-state words.
 	 */
@@ -17,13 +18,15 @@
 		onmore,
 		empty,
 		label = m.ui_activity_label(),
+		moreLabel = m.ui_feed_show_older_label(),
 		trailing
 	}: {
 		rows: T[];
 		hasMore?: boolean;
 		onmore?: () => void;
-		empty: { title: string; description?: string };
+		empty: { title?: string; description?: string };
 		label?: string;
+		moreLabel?: string;
 		trailing?: Snippet<[T]>;
 	} = $props();
 </script>
@@ -74,6 +77,6 @@
 		{/each}
 	</ol>
 	{#if hasMore && onmore}
-		<Button size="sm" variant="ghost" onclick={onmore}>{m.ui_feed_show_older_label()}</Button>
+		<Button size="sm" variant="ghost" onclick={onmore}>{moreLabel}</Button>
 	{/if}
 {/if}
