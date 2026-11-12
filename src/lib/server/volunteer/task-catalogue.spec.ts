@@ -22,7 +22,7 @@ const at = (hours: number) => Math.floor(NOW.getTime() / 1000) + hours * 3600;
 beforeEach(() => {
 	for (const table of [
 		'contractor_job',
-		'contractor',
+		'organization',
 		'volunteer_signup',
 		'volunteer_shift',
 		'work_order_assignee',
@@ -52,8 +52,8 @@ beforeEach(() => {
 		insert into volunteer_signup (id, shift_id, user_id, status) values ('s1', 'next', 'nia', 'confirmed');
 		insert into work_order_assignee (work_order_id, user_id) values ('loose', 'nia');
 		insert into work_order (id, title, resolved_at) values ('owed', 'Rewire', ${at(-24)});
-		insert into contractor (id, name, trade) values ('c1', 'Benton', 'electrical');
-		insert into contractor_job (id, contractor_id, work_order_id, status) values
+		insert into organization (id, name) values ('c1', 'Benton');
+		insert into contractor_job (id, organization_id, work_order_id, status) values
 			('j1', 'c1', 'owed', 'completed');
 	`);
 });
