@@ -13,7 +13,7 @@ import { user } from '#lib/server/db/schema/authentication.js';
 import { audioRelease } from '#lib/server/db/schema/audio.js';
 import { directoryEntry } from '#lib/server/db/schema/directory.js';
 import { artifactRequest } from '#lib/server/db/schema/artifact-request.js';
-import { sponsor } from '#lib/server/db/schema/sponsor.js';
+import { organization } from '#lib/server/db/schema/party.js';
 import { deleteObject, objectExists } from '#lib/server/storage.js';
 import { deletePrivateObject, privateObjectExists } from '#lib/server/private-storage.js';
 import { isReceiptKey, isWithheldPosterKey } from '#lib/server/storage-keys.js';
@@ -55,9 +55,9 @@ const PARENT_TABLES = {
 	// Delivered poster art. A request cascades with its event, and a promoted
 	// poster is a second attachment, so reaping this one frees nothing in use.
 	artifact_request: artifactRequest,
-	// A sponsor's logo. Sponsors are refused deletion while they have terms, so
-	// this reaps only the logo of one deleted before it ever sponsored.
-	sponsor
+	// An organization's logo. Organizations are refused deletion while records
+	// name them, so this reaps only the logo of one that never had any.
+	organization
 } as const satisfies Record<AttachableType, unknown>;
 
 export type SweepResult = {

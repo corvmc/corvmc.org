@@ -31,7 +31,6 @@ vi.mock('#lib/server/db/index.js', () => ({
 
 const { grantDeadline, grantDeadlineItems, withDeadlines, getGrant, GrantNotFoundError } =
 	await import('./grant-service');
-const { deleteFunder, FunderInUseError } = await import('./funder-service');
 
 const TODAY = '2026-09-23';
 
@@ -171,13 +170,5 @@ describe('withDeadlines', () => {
 describe('getGrant', () => {
 	it('throws a not-found domain error for an unknown id', async () => {
 		await expect(getGrant('nope', TODAY)).rejects.toBeInstanceOf(GrantNotFoundError);
-	});
-});
-
-describe('deleteFunder', () => {
-	it('refuses while applications still name the funder', async () => {
-		selectResult = [{ n: 1 }];
-		await expect(deleteFunder('f1')).rejects.toBeInstanceOf(FunderInUseError);
-		expect(chainCalls.some((c) => c.method === 'returning')).toBe(false);
 	});
 });

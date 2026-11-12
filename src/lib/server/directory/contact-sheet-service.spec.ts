@@ -172,13 +172,13 @@ describe('saving a sheet', () => {
 	it('records the contact as self-entered', async () => {
 		selectQueue = [[live()]];
 
-		await saveContactSheet('tok', { contact: { bookingEmail: 'a@b.test' } });
+		await saveContactSheet('tok', { contact: { email: 'a@b.test' } });
 
 		// The whole point of this path: CMC holds what the act chose to give,
 		// rather than what staff transcribed.
 		expect(writeContactUnguarded).toHaveBeenCalledWith(
 			'de-1',
-			expect.objectContaining({ bookingEmail: 'a@b.test' }),
+			expect.objectContaining({ email: 'a@b.test' }),
 			'self_entered'
 		);
 	});

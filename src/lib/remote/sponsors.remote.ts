@@ -6,6 +6,7 @@ import { mapDomainError } from '#lib/server/errors.js';
 import { invalid } from '@sveltejs/kit';
 import * as service from '#lib/server/sponsor/sponsor-service.js';
 import * as credits from '#lib/server/sponsor/credit-service.js';
+import { savePrimaryContact, withPrimaryContact } from '#lib/server/party/primary-contact.js';
 import { resolveImageUrl, validateUpload } from '#lib/server/storage.js';
 import { clubToday, LONG_TEXT_MAX, SHORT_TEXT_MAX, sponsorshipStatuses } from '#lib/config.js';
 
@@ -28,10 +29,12 @@ function sponsorInput(d: z.infer<z.ZodObject<typeof sponsorFields>>) {
 	return {
 		name: d.name,
 		website: d.website || null,
-		contactName: d.contactName || null,
-		contactEmail: d.contactEmail || null,
 		notes: d.notes || null
 	};
+}
+
+function sponsorContact(d: z.infer<z.ZodObject<typeof sponsorFields>>) {
+	return { contactName: d.contactName || null, contactEmail: d.contactEmail || null };
 }
 
 const sponsorshipFields = {
@@ -75,7 +78,8 @@ export const getSponsorDetail = query(z.string(), async (id) => {
 			credits.listPlacementsForSponsor(id),
 			credits.sponsorLogoKey(id)
 		]);
-		return { ...detail, placements, logoUrl: resolveImageUrl(logoKey) };
+		const [withContact] = await withPrimaryContact([detail]);
+		return { ...withContact, placements, logoUrl: resolveImageUrl(logoKey) };
 	} catch (err) {
 		mapDomainError(err);
 	}
@@ -84,6 +88,7 @@ export const getSponsorDetail = query(z.string(), async (id) => {
 export const createSponsor = form(z.object(sponsorFields), async (data) => {
 	await requireCapability('sponsor.manage');
 	const row = await service.createSponsor(sponsorInput(data));
+	await savePrimaryContact(row.id, sponsorContact(data));
 	return { id: row.id };
 });
 
@@ -91,7 +96,12 @@ export const updateSponsor = form(
 	z.object({ id: z.string().min(1), ...sponsorFields }),
 	async (data) => {
 		await requireCapability('sponsor.manage');
-		await service.updateSponsor(data.id, sponsorInput(data));
+		try {
+			await service.updateSponsor(data.id, sponsorInput(data));
+			await savePrimaryContact(data.id, sponsorContact(data));
+		} catch (err) {
+			mapDomainError(err);
+		}
 		await getSponsorDetail(data.id).refresh();
 		return { success: true };
 	}
@@ -133,7 +143,14 @@ export const createSponsorship = form(
 	z.object({ sponsorId: z.string().min(1), ...sponsorshipFields }),
 	async (data) => {
 		await requireCapability('sponsor.manage');
-		await service.createSponsorship({ sponsorId: data.sponsorId, ...sponsorshipInput(data) });
+		try {
+			await service.createSponsorship({
+				organizationId: data.sponsorId,
+				...sponsorshipInput(data)
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
 		await getSponsorDetail(data.sponsorId).refresh();
 		return { success: true };
 	}

@@ -387,6 +387,8 @@ async function seedDevelopmentCommittee(users: SeedUser[], leaders: SeedUser[]) 
 			// `invite_only` above so that policy has a committee to show it.
 			joinPolicy: 'by_application',
 			capabilityGrants: [
+				'contact.manage',
+				'contact.read',
 				'finance.read',
 				'grant.manage',
 				'grant.read',

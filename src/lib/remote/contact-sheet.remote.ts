@@ -88,9 +88,9 @@ export const saveContactSheetForm = form(
 				hometown: data.hometown || null,
 				url: data.url || null,
 				contact: {
-					bookingName: data.bookingName || null,
-					bookingEmail: data.bookingEmail || null,
-					bookingPhone: data.bookingPhone || null
+					name: data.bookingName || null,
+					email: data.bookingEmail || null,
+					phone: data.bookingPhone || null
 				}
 			});
 			return { success: true };

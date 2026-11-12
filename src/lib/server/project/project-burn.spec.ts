@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { clearOrganizationsSql, contractorSql } from '#lib/server/testing/contractor-sql.js';
 
 /**
  * Contractor spend reaches a project through its work orders, and only from
@@ -17,21 +18,20 @@ const { getProjectBurn, listProjectAttachments } = await import('./project-servi
 
 function engagement(id: string, workOrderId: string, status: string, money: string) {
 	sqlite.exec(
-		`insert into contractor_job (id, contractor_id, work_order_id, status, ${money.split('=')[0]})
+		`insert into contractor_job (id, organization_id, work_order_id, status, ${money.split('=')[0]})
 			values ('${id}', 'c-1', '${workOrderId}', '${status}', ${money.split('=')[1]})`
 	);
 }
 
 beforeEach(() => {
-	for (const table of ['contractor_job', 'work_order', 'contractor', 'project']) {
+	for (const table of ['contractor_job', 'work_order', 'project']) {
 		sqlite.exec(`delete from ${table}`);
 	}
+	sqlite.exec(clearOrganizationsSql);
 	sqlite.exec(
 		`insert into project (id, name) values ('proj-1', 'Stage power'), ('proj-2', 'Other')`
 	);
-	sqlite.exec(
-		`insert into contractor (id, name, trade) values ('c-1', 'Benton Electric', 'electrical')`
-	);
+	sqlite.exec(contractorSql('c-1', 'Benton Electric', 'electrical'));
 	sqlite.exec(
 		`insert into work_order (id, title, project_id) values
 			('wo-1', 'Add a dedicated circuit', 'proj-1'),
@@ -59,7 +59,7 @@ describe('contractor burn', () => {
 	it('does not count a declined quote, cash or donated', async () => {
 		engagement('job-1', 'wo-1', 'declined', 'cost_cents=30000');
 		sqlite.exec(
-			`insert into contractor_job (id, contractor_id, work_order_id, status, is_donated, fair_value_cents)
+			`insert into contractor_job (id, organization_id, work_order_id, status, is_donated, fair_value_cents)
 				values ('job-2', 'c-1', 'wo-1', 'declined', 1, 42000)`
 		);
 

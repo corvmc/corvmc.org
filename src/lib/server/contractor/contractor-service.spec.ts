@@ -6,7 +6,7 @@ import type { SQL } from 'drizzle-orm';
  * Contractors.
  *
  * Two rules are worth pinning. Archiving is a soft retire, because
- * `contractor_job.contractor_id` restricts deletion and the service history is
+ * `contractor_job.organization_id` restricts deletion and the service history is
  * the point of the table. And the insurance list reads a date rather than a
  * status, which means it has to be explicit about the case a status would have
  * swallowed: a contractor we hold no certificate for is not lapsed, it is
@@ -61,14 +61,8 @@ vi.mock('#lib/server/db/index.js', () => ({
 	}
 }));
 
-const {
-	createContractor,
-	updateContractor,
-	archiveContractor,
-	getContractorById,
-	listLapsingInsurance,
-	ContractorNotFoundError
-} = await import('./contractor-service');
+const { updateContractor, getContractorById, listLapsingInsurance, ContractorNotFoundError } =
+	await import('./contractor-service');
 
 beforeEach(() => {
 	selectResults = [];
@@ -85,45 +79,11 @@ describe('getContractorById', () => {
 	});
 });
 
-describe('createContractor', () => {
-	it('stores the trade and the way to reach them', async () => {
-		await createContractor({
-			name: 'Corvallis Amp Works',
-			trade: 'instrument_repair',
-			phone: '541-555-0143'
-		});
-
-		expect(insertValues[0]).toMatchObject({
-			name: 'Corvallis Amp Works',
-			trade: 'instrument_repair',
-			phone: '541-555-0143'
-		});
-	});
-});
-
 describe('updateContractor', () => {
 	it('refuses to update one that does not exist', async () => {
 		selectResults = [[]];
 
 		await expect(updateContractor('nope', { name: 'x' })).rejects.toThrow(ContractorNotFoundError);
-	});
-});
-
-describe('archiveContractor', () => {
-	it('stamps a date rather than deleting the row', async () => {
-		selectResults = [[{ id: 'c-1' }]];
-
-		await archiveContractor('c-1');
-
-		expect(updateValues[0].archivedAt).toBeInstanceOf(Date);
-	});
-
-	it('clears the stamp to bring somebody back', async () => {
-		selectResults = [[{ id: 'c-1' }]];
-
-		await archiveContractor('c-1', false);
-
-		expect(updateValues[0].archivedAt).toBeNull();
 	});
 });
 

@@ -10,7 +10,8 @@ import { user } from '#lib/server/db/schema/authentication.js';
 import { role, modelHasRole } from '#lib/server/db/schema/authorization.js';
 import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { inventoryAsset, inventoryItem } from '#lib/server/db/schema/inventory.js';
-import { contractor, contractorJob } from '#lib/server/db/schema/contractor.js';
+import { contractorJob } from '#lib/server/db/schema/contractor.js';
+import { organization } from '#lib/server/db/schema/party.js';
 import { projectCommittee } from '#lib/server/db/schema/project.js';
 import {
 	volunteerRole,
@@ -145,10 +146,10 @@ async function engagementsToCancel(task: Task, from: WorkOrderMode) {
 		.select({
 			id: contractorJob.id,
 			status: contractorJob.status,
-			contractorName: contractor.name
+			contractorName: organization.name
 		})
 		.from(contractorJob)
-		.innerJoin(contractor, eq(contractor.id, contractorJob.contractorId))
+		.innerJoin(organization, eq(organization.id, contractorJob.organizationId))
 		.where(
 			and(
 				eq(contractorJob.workOrderId, task.id),

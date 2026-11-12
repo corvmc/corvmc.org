@@ -149,7 +149,7 @@ describe('setSponsorLogo', () => {
 		await setSponsorLogo('s1', file, 'u1');
 		expect(uploadFile).toHaveBeenCalledOnce();
 		expect(replaceSlot).toHaveBeenCalledWith(
-			expect.objectContaining({ attachableType: 'sponsor', attachableId: 's1', slot: 'logo' })
+			expect.objectContaining({ attachableType: 'organization', attachableId: 's1', slot: 'logo' })
 		);
 	});
 });
