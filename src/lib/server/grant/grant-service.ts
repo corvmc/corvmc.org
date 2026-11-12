@@ -1,6 +1,7 @@
 import { db } from '#lib/server/db/index.js';
+import { organization } from '#lib/server/db/schema/party.js';
+import { requireRole } from '#lib/server/party/organization-service.js';
 import {
-	funder,
 	grantApplication,
 	grantReport,
 	type GrantApplication,
@@ -93,10 +94,10 @@ export async function listGrantDeadlinesBetween(from: string, to: string) {
 				status: grantApplication.status,
 				applyBy: grantApplication.applyBy,
 				endsOn: grantApplication.endsOn,
-				funderName: funder.name
+				funderName: organization.name
 			})
 			.from(grantApplication)
-			.innerJoin(funder, eq(funder.id, grantApplication.funderId))
+			.innerJoin(organization, eq(organization.id, grantApplication.organizationId))
 			.where(inArray(grantApplication.status, ['prospect', 'awarded', 'closed'])),
 		db
 			.select({
@@ -148,11 +149,11 @@ export async function listGrants(opts: { today: string; includeClosed?: boolean 
 				amountAwardedCents: grantApplication.amountAwardedCents,
 				applyBy: grantApplication.applyBy,
 				endsOn: grantApplication.endsOn,
-				funderId: grantApplication.funderId,
-				funderName: funder.name
+				funderId: grantApplication.organizationId,
+				funderName: organization.name
 			})
 			.from(grantApplication)
-			.innerJoin(funder, eq(funder.id, grantApplication.funderId)),
+			.innerJoin(organization, eq(organization.id, grantApplication.organizationId)),
 		db
 			.select({
 				grantApplicationId: grantReport.grantApplicationId,
@@ -169,9 +170,9 @@ export async function listGrants(opts: { today: string; includeClosed?: boolean 
 
 export async function getGrant(id: string, today: string) {
 	const [row] = await db
-		.select({ grant: grantApplication, funderName: funder.name })
+		.select({ grant: grantApplication, funderName: organization.name })
 		.from(grantApplication)
-		.innerJoin(funder, eq(funder.id, grantApplication.funderId))
+		.innerJoin(organization, eq(organization.id, grantApplication.organizationId))
 		.where(eq(grantApplication.id, id))
 		.limit(1);
 	if (!row) throw new GrantNotFoundError();
@@ -183,6 +184,7 @@ export async function getGrant(id: string, today: string) {
 		.orderBy(asc(grantReport.dueOn));
 	return {
 		...row.grant,
+		funderId: row.grant.organizationId,
 		funderName: row.funderName,
 		reports: reports.map((r) => ({
 			...r,
@@ -195,11 +197,13 @@ export async function getGrant(id: string, today: string) {
 export type GrantInput = Omit<NewGrantApplication, 'id' | 'createdAt' | 'updatedAt'>;
 
 export async function createGrant(input: GrantInput): Promise<GrantApplication> {
+	await requireRole(input.organizationId, 'funder');
 	const [row] = await db.insert(grantApplication).values(input).returning();
 	return row;
 }
 
 export async function updateGrant(id: string, input: GrantInput): Promise<void> {
+	await requireRole(input.organizationId, 'funder');
 	const rows = await db
 		.update(grantApplication)
 		.set({ ...input, updatedAt: new Date() })

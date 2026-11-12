@@ -327,7 +327,6 @@
 	"src/lib/server/contractor/contractor-job-service.spec.ts",
 	"src/lib/server/contractor/contractor-job-service.ts",
 	"src/lib/server/contractor/contractor-service.spec.ts",
-	"src/lib/server/contractor/contractor-service.ts",
 	"src/lib/server/correlated-sql.spec.ts",
 	"src/lib/server/cron/schedule.ts",
 	"src/lib/server/cron/sentry-check-in.ts",

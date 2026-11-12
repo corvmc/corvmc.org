@@ -9,13 +9,15 @@
  * Run by `e2e/prepare.ts`, before Playwright starts the preview server.
  *
  * Idempotent: deletes and recreates its own rows on every run. Jobs go first —
- * `contractor_job.contractor_id` and `.work_order_id` restrict deletion, so
+ * `contractor_job.organization_id` and `.work_order_id` restrict deletion, so
  * clearing a parent before the child fails outright rather than cascading. The
  * work orders a run's jobs were made with go after them.
  */
 import 'dotenv/config';
 import { eq, inArray } from 'drizzle-orm';
-import { contractor, contractorJob } from '../../src/lib/server/db/schema/contractor';
+import { contractorJob } from '../../src/lib/server/db/schema/contractor';
+import { contractorDetail, organization } from '../../src/lib/server/db/schema/party';
+import { partyRole } from '../../src/lib/server/db/schema/contact';
 import {
 	inventoryAsset,
 	inventoryItem,
@@ -55,8 +57,8 @@ export async function seedContractors() {
 		const jobWorkOrders = await db
 			.select({ id: contractorJob.workOrderId })
 			.from(contractorJob)
-			.where(inArray(contractorJob.contractorId, contractorIds));
-		await db.delete(contractorJob).where(inArray(contractorJob.contractorId, contractorIds));
+			.where(inArray(contractorJob.organizationId, contractorIds));
+		await db.delete(contractorJob).where(inArray(contractorJob.organizationId, contractorIds));
 		if (jobWorkOrders.length > 0) {
 			await db.delete(workOrder).where(
 				inArray(
@@ -71,7 +73,8 @@ export async function seedContractors() {
 				SEED_SERVICE_ASSETS.map((a) => a.workOrderId)
 			)
 		);
-		await db.delete(contractor).where(inArray(contractor.id, contractorIds));
+		// Roles and detail cascade with their organization.
+		await db.delete(organization).where(inArray(organization.id, contractorIds));
 		const assetIds = SEED_SERVICE_ASSETS.map((a) => a.id);
 		await db.delete(stockMovement).where(inArray(stockMovement.assetId, assetIds));
 		await db.delete(inventoryAsset).where(inArray(inventoryAsset.id, assetIds));
@@ -111,23 +114,22 @@ export async function seedContractors() {
 			}))
 		);
 
-		await db.insert(contractor).values([
-			{
-				id: SEED_CONTRACTOR_ID,
-				name: SEED_CONTRACTOR_NAME,
-				trade: 'instrument_repair',
-				phone: '541-555-0000',
-				createdAt: now,
-				updatedAt: now
-			},
+		await db.insert(organization).values([
+			{ id: SEED_CONTRACTOR_ID, name: SEED_CONTRACTOR_NAME, createdAt: now, updatedAt: now },
 			{
 				id: SEED_ARCHIVED_CONTRACTOR_ID,
 				name: SEED_ARCHIVED_CONTRACTOR_NAME,
-				trade: 'other',
 				archivedAt: now,
 				createdAt: now,
 				updatedAt: now
 			}
+		]);
+		await db
+			.insert(partyRole)
+			.values(contractorIds.map((id) => ({ organizationId: id, role: 'contractor' as const })));
+		await db.insert(contractorDetail).values([
+			{ organizationId: SEED_CONTRACTOR_ID, trade: 'instrument_repair' },
+			{ organizationId: SEED_ARCHIVED_CONTRACTOR_ID, trade: 'other' }
 		]);
 	});
 }

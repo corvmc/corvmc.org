@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { clearOrganizationsSql, contractorSql } from '#lib/server/testing/contractor-sql.js';
 
 /**
  * A task with several shifts (#2518, PR 3), against a real SQLite: each shift
@@ -38,7 +39,9 @@ function local(daysAhead: number, hour: number) {
 beforeEach(() => {
 	for (const table of [
 		'contractor_job',
-		'contractor',
+		'contractor_detail',
+		'party_role',
+		'organization',
 		'volunteer_signup',
 		'volunteer_shift',
 		'work_order_assignee',
@@ -194,8 +197,8 @@ describe('unassigned tasks', () => {
 describe('engaging a contractor on a task', () => {
 	it('warns with people on it, then takes them off and calls off its shifts', async () => {
 		const { task, first } = await taskWithTwoShifts();
+		sqlite.exec(contractorSql('c1', 'Sparky'));
 		sqlite.exec(`
-			insert into contractor (id, name, trade) values ('c1', 'Sparky', 'electrical');
 			insert into volunteer_signup (id, shift_id, user_id, status) values
 				('s1', '${first.id}', 'sam', 'confirmed');
 		`);

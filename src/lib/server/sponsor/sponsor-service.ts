@@ -1,13 +1,22 @@
 import { db } from '#lib/server/db/index.js';
 import {
-	sponsor,
 	sponsorship,
-	type NewSponsor,
 	type NewSponsorship,
-	type Sponsor,
 	type Sponsorship
 } from '#lib/server/db/schema/sponsor.js';
-import { and, count, eq, gte, isNull, lte } from 'drizzle-orm';
+import { organization } from '#lib/server/db/schema/party.js';
+import { and, count, eq, gte, lte } from 'drizzle-orm';
+import {
+	createOrganization,
+	getOrganizationInRole,
+	listOrganizations,
+	OrganizationNotFoundError,
+	removeRole,
+	requireRole,
+	setOrganizationArchived,
+	updateOrganization,
+	type OrganizationInput
+} from '#lib/server/party/organization-service.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { byDeadline, due, type Deadline } from '#lib/utils/deadline.js';
 
@@ -18,19 +27,20 @@ export class SponsorNotFoundError extends DomainError {
 	}
 }
 
+/** A sponsor is an organization holding the `sponsor` role (#2622). */
+async function getSponsorOrg(id: string) {
+	try {
+		return await getOrganizationInRole(id, 'sponsor');
+	} catch (err) {
+		if (err instanceof OrganizationNotFoundError) throw new SponsorNotFoundError();
+		throw err;
+	}
+}
+
 export class SponsorshipNotFoundError extends DomainError {
 	readonly httpStatus = 404;
 	constructor() {
 		super('Sponsorship not found');
-	}
-}
-
-export class SponsorInUseError extends DomainError {
-	readonly httpStatus = 409;
-	constructor(n: number) {
-		super(
-			`${n} ${n === 1 ? 'sponsorship names' : 'sponsorships name'} this sponsor. Archive it instead.`
-		);
 	}
 }
 
@@ -54,11 +64,11 @@ export async function listSponsorshipDeadlinesBetween(from: string, to: string) 
 			id: sponsorship.id,
 			title: sponsorship.title,
 			endsOn: sponsorship.endsOn,
-			sponsorId: sponsorship.sponsorId,
-			sponsorName: sponsor.name
+			sponsorId: sponsorship.organizationId,
+			sponsorName: organization.name
 		})
 		.from(sponsorship)
-		.innerJoin(sponsor, eq(sponsor.id, sponsorship.sponsorId))
+		.innerJoin(organization, eq(organization.id, sponsorship.organizationId))
 		.where(
 			and(
 				eq(sponsorship.status, 'active'),
@@ -79,7 +89,7 @@ export async function listSponsorshipDeadlinesBetween(from: string, to: string) 
 
 type ShipSummary = Pick<
 	Sponsorship,
-	'id' | 'sponsorId' | 'title' | 'tier' | 'status' | 'amountCents' | 'startsOn' | 'endsOn'
+	'id' | 'organizationId' | 'title' | 'tier' | 'status' | 'amountCents' | 'startsOn' | 'endsOn'
 >;
 
 /** A running term beats a pitch as "current"; anything else is history. */
@@ -91,14 +101,14 @@ function currentOf<T extends ShipSummary>(ships: T[]): T | null {
 }
 
 /** Each sponsor with its current sponsorship, soonest-ending first. */
-export function summarizeSponsors<S extends Pick<Sponsor, 'id' | 'name'>, T extends ShipSummary>(
+export function summarizeSponsors<S extends { id: string; name: string }, T extends ShipSummary>(
 	sponsors: S[],
 	ships: T[],
 	today: string
 ) {
 	return sponsors
 		.map((s) => {
-			const mine = ships.filter((p) => p.sponsorId === s.id);
+			const mine = ships.filter((p) => p.organizationId === s.id);
 			const current = currentOf(mine);
 			return {
 				...s,
@@ -115,19 +125,15 @@ export async function listSponsors(
 	{ includeArchived = false }: { includeArchived?: boolean } = {}
 ) {
 	const [sponsors, ships] = await Promise.all([
-		db
-			.select()
-			.from(sponsor)
-			.where(includeArchived ? undefined : isNull(sponsor.deletedAt)),
+		listOrganizations({ role: 'sponsor', includeArchived }),
 		db.select().from(sponsorship)
 	]);
 	return summarizeSponsors(sponsors, ships, today);
 }
 
 export async function getSponsor(id: string, today: string) {
-	const [row] = await db.select().from(sponsor).where(eq(sponsor.id, id)).limit(1);
-	if (!row) throw new SponsorNotFoundError();
-	const ships = await db.select().from(sponsorship).where(eq(sponsorship.sponsorId, id));
+	const row = await getSponsorOrg(id);
+	const ships = await db.select().from(sponsorship).where(eq(sponsorship.organizationId, id));
 	return {
 		...row,
 		sponsorships: ships
@@ -137,63 +143,49 @@ export async function getSponsor(id: string, today: string) {
 	};
 }
 
-export type SponsorInput = Omit<NewSponsor, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>;
+export type SponsorInput = OrganizationInput;
 
-export async function createSponsor(input: SponsorInput): Promise<Sponsor> {
-	const [row] = await db.insert(sponsor).values(input).returning();
-	return row;
+export function createSponsor(input: SponsorInput) {
+	return createOrganization(input, ['sponsor']);
 }
 
 export async function updateSponsor(id: string, input: SponsorInput): Promise<void> {
-	const rows = await db
-		.update(sponsor)
-		.set({ ...input, updatedAt: new Date() })
-		.where(eq(sponsor.id, id))
-		.returning({ id: sponsor.id });
-	if (rows.length === 0) throw new SponsorNotFoundError();
-}
-
-async function setSponsorArchived(id: string, deletedAt: Date | null): Promise<void> {
-	const rows = await db
-		.update(sponsor)
-		.set({ deletedAt, updatedAt: new Date() })
-		.where(eq(sponsor.id, id))
-		.returning({ id: sponsor.id });
-	if (rows.length === 0) throw new SponsorNotFoundError();
+	await getSponsorOrg(id);
+	await updateOrganization(id, input);
 }
 
 /** Off the active list; its sponsorships, placements and logo all stay. */
-export function archiveSponsor(id: string): Promise<void> {
-	return setSponsorArchived(id, new Date());
+export async function archiveSponsor(id: string): Promise<void> {
+	await getSponsorOrg(id);
+	await setOrganizationArchived(id, true);
 }
 
-export function restoreSponsor(id: string): Promise<void> {
-	return setSponsorArchived(id, null);
+export async function restoreSponsor(id: string): Promise<void> {
+	await getSponsorOrg(id);
+	await setOrganizationArchived(id, false);
 }
 
-/** Only for a row that should never have existed. Refused once a sponsorship names it. */
+/** Only for a row that should never have been a sponsor. Refused once a sponsorship names it. */
 export async function deleteSponsor(id: string): Promise<void> {
+	await getSponsorOrg(id);
 	const [used] = await db
 		.select({ n: count() })
 		.from(sponsorship)
-		.where(eq(sponsorship.sponsorId, id));
-	const n = Number(used?.n ?? 0);
-	if (n > 0) throw new SponsorInUseError(n);
-
-	const rows = await db.delete(sponsor).where(eq(sponsor.id, id)).returning({ id: sponsor.id });
-	if (rows.length === 0) throw new SponsorNotFoundError();
+		.where(eq(sponsorship.organizationId, id));
+	await removeRole(id, 'sponsor', Number(used?.n ?? 0));
 }
 
 export type SponsorshipInput = Omit<NewSponsorship, 'id' | 'createdAt' | 'updatedAt'>;
 
 export async function createSponsorship(input: SponsorshipInput): Promise<Sponsorship> {
+	await requireRole(input.organizationId, 'sponsor');
 	const [row] = await db.insert(sponsorship).values(input).returning();
 	return row;
 }
 
 export async function updateSponsorship(
 	id: string,
-	input: Omit<SponsorshipInput, 'sponsorId'>
+	input: Omit<SponsorshipInput, 'organizationId'>
 ): Promise<void> {
 	const rows = await db
 		.update(sponsorship)

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { clearOrganizationsSql, contractorSql } from '#lib/server/testing/contractor-sql.js';
 
 /**
  * The jobs list's filters are WHERE clauses over two derived states — late and
@@ -19,18 +20,17 @@ const NOW = new Date('2026-10-13T12:00:00Z');
 const sec = (d: string) => Math.floor(new Date(d).getTime() / 1000);
 
 function job(id: string, status: string, extra: Record<string, number | null> = {}) {
-	const cols = ['id', 'contractor_id', 'work_order_id', 'status', ...Object.keys(extra)];
+	const cols = ['id', 'organization_id', 'work_order_id', 'status', ...Object.keys(extra)];
 	const vals = [`'${id}'`, `'c-1'`, `'wo-1'`, `'${status}'`, ...Object.values(extra).map(String)];
 	sqlite.exec(`insert into contractor_job (${cols.join(', ')}) values (${vals.join(', ')})`);
 }
 
 beforeEach(() => {
-	for (const table of ['contractor_job', 'work_order', 'contractor']) {
+	for (const table of ['contractor_job', 'work_order']) {
 		sqlite.exec(`delete from ${table}`);
 	}
-	sqlite.exec(
-		`insert into contractor (id, name, trade) values ('c-1', 'Benton Electric', 'electrical')`
-	);
+	sqlite.exec(clearOrganizationsSql);
+	sqlite.exec(contractorSql('c-1', 'Benton Electric', 'electrical'));
 	sqlite.exec(`insert into work_order (id, title) values ('wo-1', 'Add a dedicated circuit')`);
 
 	job('asked', 'asked');
@@ -81,7 +81,7 @@ describe('jobs list filters', () => {
 	it('narrows to the given work orders, and to nothing for none', async () => {
 		sqlite.exec(`insert into work_order (id, title) values ('wo-2', 'Other work')`);
 		sqlite.exec(
-			`insert into contractor_job (id, contractor_id, work_order_id, status) values ('elsewhere', 'c-1', 'wo-2', 'asked')`
+			`insert into contractor_job (id, organization_id, work_order_id, status) values ('elsewhere', 'c-1', 'wo-2', 'asked')`
 		);
 		expect(await ids({ workOrderIds: ['wo-2'] })).toEqual(['elsewhere']);
 		expect(await ids({ workOrderIds: [] })).toEqual([]);

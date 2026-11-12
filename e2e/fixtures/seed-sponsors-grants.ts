@@ -6,8 +6,10 @@
  */
 import { eq, inArray } from 'drizzle-orm';
 import { withPlatformEnv } from './platform-db';
-import { sponsor, sponsorship } from '../../src/lib/server/db/schema/sponsor';
-import { funder, grantApplication, grantReport } from '../../src/lib/server/db/schema/grant';
+import { sponsorship } from '../../src/lib/server/db/schema/sponsor';
+import { grantApplication, grantReport } from '../../src/lib/server/db/schema/grant';
+import { organization } from '../../src/lib/server/db/schema/party';
+import { partyRole } from '../../src/lib/server/db/schema/contact';
 
 export const SEED_SPONSOR_ID = 'e2e-sponsor';
 export const SEED_SPONSOR_NAME = 'E2E Guitar Shop';
@@ -29,15 +31,24 @@ function day(offset: number): string {
 
 export async function seedSponsorsAndGrants(): Promise<void> {
 	await withPlatformEnv(async ({ db }) => {
-		await db.delete(sponsorship).where(eq(sponsorship.sponsorId, SEED_SPONSOR_ID));
-		await db.delete(sponsor).where(eq(sponsor.id, SEED_SPONSOR_ID));
+		await db.delete(sponsorship).where(eq(sponsorship.organizationId, SEED_SPONSOR_ID));
 		// Reports cascade with their application.
-		await db.delete(grantApplication).where(eq(grantApplication.funderId, SEED_FUNDER_ID));
-		await db.delete(funder).where(inArray(funder.id, [SEED_FUNDER_ID]));
+		await db.delete(grantApplication).where(eq(grantApplication.organizationId, SEED_FUNDER_ID));
+		// Roles cascade with their organization.
+		await db
+			.delete(organization)
+			.where(inArray(organization.id, [SEED_SPONSOR_ID, SEED_FUNDER_ID]));
 
-		await db.insert(sponsor).values({ id: SEED_SPONSOR_ID, name: SEED_SPONSOR_NAME });
+		await db.insert(organization).values([
+			{ id: SEED_SPONSOR_ID, name: SEED_SPONSOR_NAME },
+			{ id: SEED_FUNDER_ID, name: SEED_FUNDER_NAME }
+		]);
+		await db.insert(partyRole).values([
+			{ organizationId: SEED_SPONSOR_ID, role: 'sponsor' },
+			{ organizationId: SEED_FUNDER_ID, role: 'funder' }
+		]);
 		await db.insert(sponsorship).values({
-			sponsorId: SEED_SPONSOR_ID,
+			organizationId: SEED_SPONSOR_ID,
 			title: SEED_LAPSED_SPONSORSHIP_TITLE,
 			tier: 'Gold',
 			status: 'active',
@@ -45,11 +56,10 @@ export async function seedSponsorsAndGrants(): Promise<void> {
 			endsOn: day(-5)
 		});
 
-		await db.insert(funder).values({ id: SEED_FUNDER_ID, name: SEED_FUNDER_NAME });
 		await db.insert(grantApplication).values([
 			{
 				id: SEED_GRANT_OVERDUE_ID,
-				funderId: SEED_FUNDER_ID,
+				organizationId: SEED_FUNDER_ID,
 				title: SEED_GRANT_OVERDUE_TITLE,
 				status: 'awarded',
 				startsOn: day(-100),
@@ -57,14 +67,14 @@ export async function seedSponsorsAndGrants(): Promise<void> {
 			},
 			{
 				id: 'e2e-grant-prospect',
-				funderId: SEED_FUNDER_ID,
+				organizationId: SEED_FUNDER_ID,
 				title: SEED_GRANT_PROSPECT_TITLE,
 				status: 'prospect',
 				applyBy: day(30)
 			},
 			{
 				id: SEED_GRANT_SUBMIT_ID,
-				funderId: SEED_FUNDER_ID,
+				organizationId: SEED_FUNDER_ID,
 				title: 'E2E report to submit',
 				status: 'awarded',
 				endsOn: day(100)

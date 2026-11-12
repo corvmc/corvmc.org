@@ -78,10 +78,10 @@
 			{/snippet}
 			{#each funders as f (f.id)}
 				{@const edit = updateFunder.for(f.id)}
-				<tr class:opacity-60={f.deletedAt}>
+				<tr class:opacity-60={f.archivedAt}>
 					<td class="cell-primary font-medium">
 						{f.name}
-						{#if f.deletedAt}
+						{#if f.archivedAt}
 							<Badge variant="ghost" size="sm" class="ml-2">{m.staff_archived_label()}</Badge>
 						{/if}
 					</td>
@@ -105,7 +105,7 @@
 								<FunderFields fields={edit.fields} value={f} />
 							{/snippet}
 						</Action>
-						{#if f.deletedAt}
+						{#if f.archivedAt}
 							<Action
 								action={restoreFunder.for(f.id)}
 								label={m.staff_restore_label()}

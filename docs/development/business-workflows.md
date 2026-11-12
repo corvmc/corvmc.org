@@ -780,11 +780,12 @@ and a remote `form()` that fails validation runs no handler at all.
 
 Decision: [Contractor work has its own tables](../decisions/0051-contractor-work-has-its-own-tables.md)
 
-A `contractor` is somebody the collective pays: trade, contact, licence and
-`insurance_expires_at`, a bare date where null means no certificate is on file
-(`listLapsingInsurance` leaves those out). A contractor is archived, never deleted. A
+A contractor is somebody the collective pays: an `organization` holding the `contractor` role
+(#2622), with a `contractor_detail` row for trade, licence and `insurance_expires_at`, a bare date
+where null means no certificate is on file (`listLapsingInsurance` leaves those out). The person to
+call is a `contact` at the organization. A contractor is archived, never deleted. A
 `contractor_job` is one contractor's engagement on a work order, which holds the title, the unit
-and the project. Staff work them at `/staff/contractors` and its Jobs view.
+and the project. `createJob` refuses an organization that does not hold the role. Staff work them at `/staff/contractors` and its Jobs view.
 
 `contractor/contractor-job-service.ts` moves an engagement `asked → booked → completed`, or ends
 it `declined`, `no_show` or `cancelled`. Custody goes through `setAssetStatus`, the one writer of
@@ -2297,8 +2298,9 @@ Decision: [Sponsors and grants are two modules](../decisions/0019-sponsors-and-g
 
 ### The story
 
-The Development committee signs sponsors and applies for grants. They are two modules. A sponsor
-is a business with a history of terms; staff read `/staff/sponsors` soonest-ending first. A grant
+The Development committee signs sponsors and applies for grants. They are two modules over one
+set of parties: a sponsor or a funder is an `organization` holding that role (#2622), and the
+person there is a `contact`. A sponsor is a business with a history of terms; staff read `/staff/sponsors` soonest-ending first. A grant
 is an application to a funder that, once awarded, owes reports; staff read `/staff/grants`
 soonest-deadline first. Status moves by hand through each edit form, with no side effects.
 
@@ -2307,14 +2309,20 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
 - **Sponsors:** `getSponsors` / `getSponsorDetail` in `sponsors.remote.ts`, guarded by
   `sponsor.read`, call `listSponsors` / `getSponsor` in `sponsor-service.ts` with `clubToday()`.
   `sponsorshipDeadline` is pure: an active term's end, nothing otherwise. Writes are guarded by
-  `sponsor.manage`; a sponsor with sponsorships cannot be deleted.
+  `sponsor.manage`; a sponsor with sponsorships cannot be deleted, and `createSponsorship` refuses
+  an organization without the `sponsor` role.
 - **Grants:** `getGrants` / `getGrantDetail` / `getFunders` in `grants.remote.ts`, guarded by
   `grant.read`. `grantDeadline` in `grant-service.ts` is pure: apply-by for a prospect, the
   earliest unsubmitted report or the award's end once awarded, and an unsubmitted report still
   counts after the grant is closed. Writes are guarded by `grant.manage`; a funder with
-  applications cannot be deleted, and an application's reports cascade with it.
+  applications cannot be deleted, an application's reports cascade with it, and `createGrant`
+  refuses an organization without the `funder` role.
+- **People:** each form's contact name, email and phone is the organization's first `contact`,
+  written and read through `primary-contact.ts`, which calls `contact-service.ts`. Seeing them needs
+  `contact.read` and changing them `contact.manage`, which staff and the Development committee
+  hold.
 - The sort and date display are shared, in `src/lib/utils/deadline.ts`.
-- **Archive:** a sponsor or funder with history is archived (`deletedAt`) rather than deleted
+- **Archive:** a sponsor or funder with history is archived (`archivedAt`) rather than deleted
   (#1577). It leaves the list until "Show archived", keeps its history, and can be restored. An
   archived funder stays pickable on an application that already names it.
 - **Reminders (#1477):** `development_deadline_14d` and `development_deadline_3d` in

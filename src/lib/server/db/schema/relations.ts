@@ -301,7 +301,10 @@ export const relations = defineRelations(schema, (t) => ({
 		project: t.one.project({ from: t.suggestion.id, to: t.project.suggestionId })
 	},
 	contractorJob: {
-		contractor: t.one.contractor({ from: t.contractorJob.contractorId, to: t.contractor.id }),
+		organization: t.one.organization({
+			from: t.contractorJob.organizationId,
+			to: t.organization.id
+		}),
 		requestedBy: t.one.user({ from: t.contractorJob.requestedByUserId, to: t.user.id }),
 		workOrder: t.one.workOrder({ from: t.contractorJob.workOrderId, to: t.workOrder.id })
 	},

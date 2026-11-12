@@ -74,7 +74,7 @@
 			{#each sponsors as s (s.id)}
 				<tr
 					class="hover cursor-pointer"
-					class:opacity-60={s.deletedAt}
+					class:opacity-60={s.archivedAt}
 					use:rowLink={resolve(`staff/sponsors/${s.id}`)}
 				>
 					<td class="w-px">
@@ -86,7 +86,7 @@
 					</td>
 					<td class="cell-primary">
 						<a class="link font-medium" href={resolve(`staff/sponsors/${s.id}`)}>{s.name}</a>
-						{#if s.deletedAt}
+						{#if s.archivedAt}
 							<Badge variant="ghost" size="sm" class="ml-2">{m.staff_archived_label()}</Badge>
 						{/if}
 						<div class="truncate text-muted">

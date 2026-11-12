@@ -1,5 +1,7 @@
 import { db } from '#lib/server/db/index.js';
-import { sponsor, sponsorship, sponsorPlacement } from '#lib/server/db/schema/sponsor.js';
+import { sponsorship, sponsorPlacement } from '#lib/server/db/schema/sponsor.js';
+import { organization } from '#lib/server/db/schema/party.js';
+import { OrganizationLacksRoleError, requireRole } from '#lib/server/party/organization-service.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { media, mediaAttachment } from '#lib/server/db/schema/media.js';
 import { and, desc, eq, inArray } from 'drizzle-orm';
@@ -88,9 +90,9 @@ export async function creditsForEvents(
 function creditRows(eventIds: string[]) {
 	return db
 		.select({
-			sponsorId: sponsor.id,
-			name: sponsor.name,
-			website: sponsor.website,
+			sponsorId: organization.id,
+			name: organization.name,
+			website: organization.website,
 			status: sponsorship.status,
 			onEventPage: sponsorPlacement.onEventPage,
 			inCampaign: sponsorPlacement.inCampaign,
@@ -98,12 +100,12 @@ function creditRows(eventIds: string[]) {
 		})
 		.from(sponsorPlacement)
 		.innerJoin(sponsorship, eq(sponsorship.id, sponsorPlacement.sponsorshipId))
-		.innerJoin(sponsor, eq(sponsor.id, sponsorship.sponsorId))
+		.innerJoin(organization, eq(organization.id, sponsorship.organizationId))
 		.leftJoin(
 			mediaAttachment,
 			and(
-				eq(mediaAttachment.attachableType, 'sponsor'),
-				eq(mediaAttachment.attachableId, sponsor.id),
+				eq(mediaAttachment.attachableType, 'organization'),
+				eq(mediaAttachment.attachableId, organization.id),
 				eq(mediaAttachment.slot, 'logo')
 			)
 		)
@@ -127,7 +129,7 @@ export async function listPlacementsForSponsor(sponsorId: string) {
 		.from(sponsorPlacement)
 		.innerJoin(sponsorship, eq(sponsorship.id, sponsorPlacement.sponsorshipId))
 		.innerJoin(eventListing, eq(eventListing.id, sponsorPlacement.eventId))
-		.where(eq(sponsorship.sponsorId, sponsorId))
+		.where(eq(sponsorship.organizationId, sponsorId))
 		.orderBy(desc(eventListing.startsAt));
 }
 
@@ -182,7 +184,7 @@ export async function sponsorLogoKey(sponsorId: string): Promise<string | null> 
 		.innerJoin(media, eq(media.id, mediaAttachment.mediaId))
 		.where(
 			and(
-				eq(mediaAttachment.attachableType, 'sponsor'),
+				eq(mediaAttachment.attachableType, 'organization'),
 				eq(mediaAttachment.attachableId, sponsorId),
 				eq(mediaAttachment.slot, 'logo')
 			)
@@ -196,17 +198,17 @@ export async function setSponsorLogo(
 	file: { buffer: ArrayBuffer; contentType: string; filename: string | null },
 	uploadedByUserId: string
 ): Promise<void> {
-	const [row] = await db
-		.select({ id: sponsor.id })
-		.from(sponsor)
-		.where(eq(sponsor.id, sponsorId))
-		.limit(1);
-	if (!row) throw new SponsorNotFoundError();
+	try {
+		await requireRole(sponsorId, 'sponsor');
+	} catch (err) {
+		if (err instanceof OrganizationLacksRoleError) throw new SponsorNotFoundError();
+		throw err;
+	}
 
 	const key = mediaKey('sponsors/logos', sponsorId, file.contentType);
 	await uploadFile(file.buffer, key, file.contentType);
 	await replaceSlot({
-		attachableType: 'sponsor',
+		attachableType: 'organization',
 		attachableId: sponsorId,
 		slot: 'logo',
 		key,
@@ -218,5 +220,5 @@ export async function setSponsorLogo(
 }
 
 export async function removeSponsorLogo(sponsorId: string): Promise<void> {
-	await detachSlot('sponsor', sponsorId, 'logo');
+	await detachSlot('organization', sponsorId, 'logo');
 }

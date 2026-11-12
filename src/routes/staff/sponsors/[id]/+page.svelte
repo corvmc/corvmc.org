@@ -65,7 +65,7 @@
 </PageHeader>
 
 <PageContent>
-	{#if sponsor.deletedAt}
+	{#if sponsor.archivedAt}
 		<Alert type="warning">
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<span>
@@ -338,7 +338,7 @@
 	</InfoCard>
 
 	<div class="flex flex-wrap gap-2">
-		{#if !sponsor.deletedAt}
+		{#if !sponsor.archivedAt}
 			<Action
 				action={archiveSponsor.for(sponsor.id)}
 				label={m.staff_sponsors_id_archive_sponsor_label()}
