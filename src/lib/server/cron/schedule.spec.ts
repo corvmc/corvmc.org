@@ -22,7 +22,8 @@ const ALL_ENDPOINTS = [
 	'/api/cron/sweep-incidents',
 	'/api/cron/sweep-audit-log',
 	'/api/cron/import-partner-calendars',
-	'/api/cron/reconcile-ledger'
+	'/api/cron/reconcile-ledger',
+	'/api/cron/sweep-door-sales'
 ];
 
 function okFetcher() {
@@ -239,7 +240,7 @@ describe('runScheduledJobs', () => {
 
 		const results = await runScheduledJobs('*/15 * * * *', env, fetcher);
 
-		expect(fetcher).toHaveBeenCalledTimes(7);
+		expect(fetcher).toHaveBeenCalledTimes(8);
 		const requests = fetcher.mock.calls.map(([request]: [Request]) => request);
 		expect(requests.map((r) => r.url)).toEqual([
 			'https://corvmc.test/api/cron/auto-complete',
@@ -248,7 +249,8 @@ describe('runScheduledJobs', () => {
 			'https://corvmc.test/api/cron/wake-snoozed',
 			'https://corvmc.test/api/cron/lock-sync',
 			'https://corvmc.test/api/cron/reminders',
-			'https://corvmc.test/api/cron/schedule-radio'
+			'https://corvmc.test/api/cron/schedule-radio',
+			'https://corvmc.test/api/cron/sweep-door-sales'
 		]);
 		for (const request of requests) {
 			expect(request.method).toBe('POST');
@@ -295,7 +297,7 @@ describe('runScheduledJobs', () => {
 
 		const results = await runScheduledJobs('*/15 * * * *', env, fetcher);
 
-		expect(fetcher).toHaveBeenCalledTimes(7);
+		expect(fetcher).toHaveBeenCalledTimes(8);
 		expect(results).toEqual([
 			{ path: '/api/cron/auto-complete', ok: false, error: 'boom' },
 			{ path: '/api/cron/complete-shifts', ok: true, status: 200 },
@@ -303,7 +305,8 @@ describe('runScheduledJobs', () => {
 			{ path: '/api/cron/wake-snoozed', ok: true, status: 200 },
 			{ path: '/api/cron/lock-sync', ok: true, status: 200 },
 			{ path: '/api/cron/reminders', ok: true, status: 200 },
-			{ path: '/api/cron/schedule-radio', ok: true, status: 200 }
+			{ path: '/api/cron/schedule-radio', ok: true, status: 200 },
+			{ path: '/api/cron/sweep-door-sales', ok: true, status: 200 }
 		]);
 	});
 
@@ -318,6 +321,7 @@ describe('runScheduledJobs', () => {
 
 		expect(results.map((r) => ({ ok: r.ok, status: r.status }))).toEqual([
 			{ ok: false, status: 401 },
+			{ ok: true, status: 200 },
 			{ ok: true, status: 200 },
 			{ ok: true, status: 200 },
 			{ ok: true, status: 200 },
@@ -354,7 +358,9 @@ describe('runScheduledJobs', () => {
 			{ slug: 'reminders', status: 'in_progress', cron: '*/15 * * * *' },
 			{ slug: 'reminders', status: 'ok', checkInId: 'ci-6' },
 			{ slug: 'schedule-radio', status: 'in_progress', cron: '*/15 * * * *' },
-			{ slug: 'schedule-radio', status: 'ok', checkInId: 'ci-7' }
+			{ slug: 'schedule-radio', status: 'ok', checkInId: 'ci-7' },
+			{ slug: 'sweep-door-sales', status: 'in_progress', cron: '*/15 * * * *' },
+			{ slug: 'sweep-door-sales', status: 'ok', checkInId: 'ci-8' }
 		]);
 	});
 
@@ -374,7 +380,16 @@ describe('runScheduledJobs', () => {
 		const closes = checkIn.mock.calls
 			.map(([opts]) => opts as { status: string; checkInId?: string })
 			.filter((o) => o.status !== 'in_progress');
-		expect(closes.map((o) => o.status)).toEqual(['error', 'error', 'ok', 'ok', 'ok', 'ok', 'ok']);
+		expect(closes.map((o) => o.status)).toEqual([
+			'error',
+			'error',
+			'ok',
+			'ok',
+			'ok',
+			'ok',
+			'ok',
+			'ok'
+		]);
 		expect(closes.every((o) => o.checkInId === 'ci-x')).toBe(true);
 	});
 

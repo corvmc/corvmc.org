@@ -502,7 +502,13 @@ export function createFakeGateway(): PaymentGateway {
 				const cancelled: Stripe.PaymentIntent = { ...intent, status: 'canceled' };
 				store.paymentIntents.set(id, cancelled);
 				return respond(cancelled);
-			}) as PaymentGateway['paymentIntents']['cancel']
+			}) as PaymentGateway['paymentIntents']['cancel'],
+			list: (params) => {
+				const created = params?.created;
+				const gte = typeof created === 'object' ? (created.gte ?? 0) : (created ?? 0);
+				const matched = [...store.paymentIntents.values()].filter((i) => i.created >= gte);
+				return listOf(matched.slice(0, params?.limit ?? matched.length));
+			}
 		},
 
 		paymentMethods: {

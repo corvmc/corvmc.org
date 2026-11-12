@@ -5,6 +5,7 @@ import { eventListing } from '#lib/server/db/schema/event.js';
 import { ticket, ticketSale } from '#lib/server/db/schema/ticket.js';
 import { stripe } from '#lib/server/stripe.js';
 import { DomainError } from '#lib/server/domain-error.js';
+import { captureException } from '#lib/server/sentry.js';
 import { doorTicketSplit } from '#lib/finance/ticket-split.js';
 import { recordDoorTicketSale, recordFreeTicketSale } from '#lib/server/finance/ticket-entries.js';
 import {
@@ -217,6 +218,57 @@ export async function cancelDoorSale(paymentIntentId: string): Promise<void> {
 	if (intent.status === 'succeeded') throw new DoorSaleError('That card has already been charged');
 	if (intent.status !== 'canceled') await stripe.paymentIntents.cancel(paymentIntentId);
 	await cancelPurchase(paymentIntentId);
+}
+
+/** Twice the 24 hours `cancelStalePendingTickets` waits, so a missed tap is seen before and after. */
+const SWEEP_WINDOW_MS = 48 * 3600_000;
+
+export interface DoorSaleSweep {
+	/** Succeeded door intents looked at. */
+	checked: number;
+	/** Intents whose `pending` rows the sweep checked in. */
+	fulfilled: string[];
+	/** Intents with no live rows to check in, left for a staffer to attach or refund. */
+	unmatched: string[];
+}
+
+/**
+ * The backstop for a `payment_intent.succeeded` that never arrived (#2547).
+ * It runs `fulfillDoorSale`, the webhook's own writer, so a re-run or a late
+ * webhook writes nothing twice. An intent whose rows are gone or cancelled is
+ * reported, not written: the card was charged and a staffer decides.
+ */
+export async function sweepDoorSales(now = new Date()): Promise<DoorSaleSweep> {
+	const result: DoorSaleSweep = { checked: 0, fulfilled: [], unmatched: [] };
+	const createdGte = Math.floor((now.getTime() - SWEEP_WINDOW_MS) / 1000);
+	let startingAfter: string | undefined;
+	for (;;) {
+		const page = await stripe.paymentIntents.list({
+			created: { gte: createdGte },
+			limit: 100,
+			...(startingAfter ? { starting_after: startingAfter } : {})
+		});
+		for (const intent of page.data) {
+			if (intent.status !== 'succeeded' || intent.metadata?.type !== 'door_ticket') continue;
+			result.checked++;
+			const rows = await getTicketsByPurchase(intent.id);
+			if (rows.some((r) => r.status === 'pending')) {
+				await fulfillDoorSale(intent);
+				result.fulfilled.push(intent.id);
+			} else if (!rows.some((r) => r.status === 'checked_in')) {
+				result.unmatched.push(intent.id);
+				captureException(new Error('Door card payment has no tickets'), {
+					event: 'door-sale.unmatched',
+					paymentIntentId: intent.id,
+					eventId: intent.metadata.event_id,
+					amountCents: intent.amount
+				});
+			}
+		}
+		if (!page.has_more || page.data.length === 0) break;
+		startingAfter = page.data.at(-1)?.id;
+	}
+	return result;
 }
 
 /**

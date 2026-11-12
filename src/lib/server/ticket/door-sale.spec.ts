@@ -17,6 +17,11 @@ vi.mock('#lib/server/finance/ticket-entries.js', () => ({
 	recordFreeTicketSale: (...a: unknown[]) => recordFreeTicketSale(...(a as []))
 }));
 
+const captureException = vi.fn();
+vi.mock('#lib/server/sentry.js', () => ({
+	captureException: (...a: unknown[]) => captureException(...a)
+}));
+
 const { initStripe, stripe } = await import('#lib/server/stripe.js');
 const { createFakeGateway, resetFakeGateway, completeFakeTerminalPayment } =
 	await import('#lib/server/finance/gateway/fake-gateway.js');
@@ -29,6 +34,7 @@ const {
 	doorSaleEventId,
 	getEventDoorTakings,
 	isOnTheDoor,
+	sweepDoorSales,
 	DoorSaleError
 } = await import('./door-sale');
 
@@ -247,6 +253,71 @@ describe('the tap landing', () => {
 
 		expect((await stripe.paymentIntents.retrieve(result.paymentIntentId)).status).toBe('canceled');
 		expect(await getDoorSale(result.paymentIntentId)).toEqual({ status: 'cancelled', quantity: 0 });
+	});
+});
+
+describe('the sweep for a missed webhook', () => {
+	const tap = async () => {
+		const result = await startDoorSale({
+			eventId: 'tonight',
+			quantity: 2,
+			unitPriceCents: 1500,
+			staffUserId: 'staff-1',
+			now: NOW
+		});
+		if (result.kind !== 'card') throw new Error('expected a card sale');
+		return {
+			id: result.paymentIntentId,
+			paid: completeFakeTerminalPayment(result.paymentIntentId)
+		};
+	};
+
+	it('checks in a tapped sale the webhook missed, and a re-run finds nothing new', async () => {
+		const { id, paid } = await tap();
+
+		expect(await sweepDoorSales()).toEqual({ checked: 1, fulfilled: [id], unmatched: [] });
+		expect(rows(id).every((r) => r.status === 'checked_in')).toBe(true);
+
+		expect(await sweepDoorSales()).toEqual({ checked: 1, fulfilled: [], unmatched: [] });
+		await fulfillDoorSale(paid); // The webhook arrives late.
+		expect(recordDoorTicketSale).toHaveBeenCalledTimes(1);
+		expect(captureException).not.toHaveBeenCalled();
+	});
+
+	it('leaves a sale the webhook already checked in', async () => {
+		const { paid } = await tap();
+		await fulfillDoorSale(paid);
+		vi.clearAllMocks();
+
+		expect(await sweepDoorSales()).toEqual({ checked: 1, fulfilled: [], unmatched: [] });
+		expect(recordDoorTicketSale).not.toHaveBeenCalled();
+	});
+
+	it('reports a charged intent whose tickets were cancelled, and writes nothing', async () => {
+		const { id } = await tap();
+		sqlite.prepare(`update ticket set status = 'cancelled' where purchase_id = ?`).run(id);
+
+		expect(await sweepDoorSales()).toEqual({ checked: 1, fulfilled: [], unmatched: [id] });
+		expect(rows(id).every((r) => r.status === 'cancelled')).toBe(true);
+		expect(recordDoorTicketSale).not.toHaveBeenCalled();
+		expect(captureException).toHaveBeenCalledWith(
+			expect.any(Error),
+			expect.objectContaining({ paymentIntentId: id, eventId: 'tonight' })
+		);
+	});
+
+	it('ignores untapped door intents and intents that are not door sales', async () => {
+		await startDoorSale({
+			eventId: 'tonight',
+			quantity: 1,
+			unitPriceCents: 1500,
+			staffUserId: 'staff-1',
+			now: NOW
+		});
+		const other = await stripe.paymentIntents.create({ amount: 500, currency: 'usd' });
+		completeFakeTerminalPayment(other.id);
+
+		expect(await sweepDoorSales()).toEqual({ checked: 0, fulfilled: [], unmatched: [] });
 	});
 });
 

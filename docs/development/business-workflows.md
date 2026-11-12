@@ -565,8 +565,12 @@ A card payment taken at the door on the CMC phone, which runs the `door-app/` sh
   payment itself.
 - **Refunds:** on the staff site, under `finance.refund`, never on the phone. `refund()` in
   `payment-service.ts` refunds a `pi_…` record directly. Taking door payments does not grant it.
-- **Where it breaks:** a sale that stays `pending` after a successful tap means the webhook did not
-  arrive. Nothing sweeps card-present intents yet (see #2547), so it is found by hand in Stripe. A sale
+- **Missed webhook:** `/api/cron/sweep-door-sales` runs every 15 minutes (#2547). It lists the
+  last 48 hours of succeeded `door_ticket` intents and runs `fulfillDoorSale` on any with `pending`
+  rows, so it writes what the webhook would have, once.
+- **Where it breaks:** a succeeded intent with no `pending` or `checked_in` rows is reported to
+  Sentry as `door-sale.unmatched`, usually rows `cancelStalePendingTickets` cancelled. A staffer
+  attaches the payment or refunds it in Stripe. A sale
   abandoned before the tap is released by `cancelDoorSale`, or later by
   `cancelStalePendingTickets`.
 
