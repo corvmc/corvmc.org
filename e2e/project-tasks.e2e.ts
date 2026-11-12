@@ -108,6 +108,6 @@ test.describe('project tasks', () => {
 
 		// Back on the project, the new task is a row of its table.
 		await page.goto(projectUrl);
-		await expect(page.getByRole('table').locator(`a[href="/staff/tasks/${taskId}"]`)).toBeVisible();
+		await expect(page.getByRole('table').locator(`tr[data-task="${taskId}"]`)).toBeVisible();
 	});
 });
