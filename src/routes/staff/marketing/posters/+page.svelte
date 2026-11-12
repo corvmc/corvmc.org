@@ -25,7 +25,11 @@
 	const poster = $derived(await getCalendarPoster(month));
 </script>
 
-<PageHeader title={m.staff_outreach_title()} documentTitle={m.staff_calendar_poster_title()}>
+<PageHeader
+	title={m.staff_outreach_title()}
+	documentTitle={m.staff_calendar_poster_title()}
+	width="2xl"
+>
 	<StaffViews views={outreachViews} active="posters" />
 </PageHeader>
 <PageContent width="2xl">
