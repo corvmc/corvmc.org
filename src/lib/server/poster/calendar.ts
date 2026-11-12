@@ -1,8 +1,8 @@
-import { renderSVG } from 'uqr';
 import * as publicEnv from '$app/env/public';
 import { DEFAULT_TIMEZONE, type PosterFormat } from '#lib/config.js';
 import { C, type SponsorLogo } from './brand';
 import { clock } from './flyer';
+import { posterQr } from './qr';
 import type { CalendarEvent } from './calendar-service';
 import lexendRegular from './assets/Lexend-Regular.ttf?inline';
 import lexendBold from './assets/Lexend-Bold.ttf?inline';
@@ -147,7 +147,7 @@ export function calendarHtml(poster: CalendarPoster, format: PosterFormat): stri
 	const width = page.width - 2 * page.margin;
 	const height = page.height - 2 * page.margin;
 	const url = monthUrl(poster.month);
-	const qr = renderSVG(url, { border: 2, blackColor: C.navy, whiteColor: C.cream });
+	const qr = posterQr(url, 2);
 	const stripe = `<div class="stripe"><div style="background:${C.teal}"></div><div style="background:${C.goldenrod}"></div><div style="background:${C.redOrange}"></div></div>`;
 	const sponsors = poster.sponsors.length
 		? `<h2>SPONSORED BY</h2><div class="logos">${poster.sponsors.map(sponsor).join('')}</div>`

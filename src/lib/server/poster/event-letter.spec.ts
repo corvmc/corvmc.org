@@ -1,11 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { renderSVG } from 'uqr';
+import { posterQr } from './qr';
 import {
 	billLine,
 	eventLetterHtml,
 	eventUrl,
 	printedUrl,
-	QR_OPTIONS,
 	renderEventLetter,
 	whereLine,
 	type EventLetter
@@ -51,7 +50,7 @@ function rows(html: string) {
 describe('eventLetterHtml', () => {
 	it('prints every detail the event has', () => {
 		const html = eventLetterHtml(full);
-		expect(html).toContain('<h1>Harvest Show</h1>');
+		expect(html).toContain('<h1><span>Harvest Show</span></h1>');
 		expect(rows(html)).toMatchObject({
 			bill: 'First Band · Second Band',
 			when: 'SATURDAY, NOVEMBER 14 | 8 PM · DOORS 7 PM',
@@ -78,7 +77,7 @@ describe('eventLetterHtml', () => {
 
 	it("codes the event's page in the QR and prints the events page under it", () => {
 		const html = eventLetterHtml(full);
-		const qr = renderSVG(full.url, QR_OPTIONS);
+		const qr = posterQr(full.url);
 		expect(html).toContain(qr);
 		expect(html).toContain(`<div>${printedUrl()}</div>`);
 		expect(html.replace(qr, '')).not.toContain('evt-1');

@@ -1,10 +1,9 @@
-import { renderSVG } from 'uqr';
 import { C, type SponsorLogo } from './brand';
 import { esc, siteUrl, type PosterPage } from './calendar';
 import type { FlyerLines } from './flyer';
 import lexendRegular from './assets/Lexend-Regular.ttf?inline';
 import lexendBold from './assets/Lexend-Bold.ttf?inline';
-import speaker from './assets/cmc-speaker.png?inline';
+import { posterQr } from './qr';
 
 /**
  * One event's social image full bleed on a Letter page, above a dense footer
@@ -88,21 +87,17 @@ em { font-style: normal; display: inline-block; }
 .sponsors img { height: 1.6em; max-width: 6em; object-fit: contain; }
 .sponsors span { font-weight: 700; font-size: 0.85em; }
 .side { display: flex; align-items: flex-end; gap: 6px; flex-shrink: 0; }
-.mascot { width: 56px; }
 .qr { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .qr svg { width: 96px; height: 96px; display: block; }
 .qr div { font-size: 9px; line-height: 1.1; color: ${C.teal}; white-space: nowrap; }
 `;
-
-// Navy on cream with a one-module quiet zone; the cream footer extends it.
-export const QR_OPTIONS = { border: 1, blackColor: C.navy, whiteColor: C.cream };
 
 const sep = ' · ';
 
 /** The poster as a self-contained page: fonts, images and QR code inline. */
 export function eventLetterHtml(poster: EventLetter): string {
 	const { lines } = poster;
-	const qr = renderSVG(poster.url, QR_OPTIONS);
+	const qr = posterQr(poster.url);
 	const stripe = `<div class="stripe"><div style="background:${C.teal}"></div><div style="background:${C.goldenrod}"></div><div style="background:${C.redOrange}"></div></div>`;
 	const bill = billLine(lines);
 	const where = whereLine(lines.venue, poster.address);
@@ -123,7 +118,7 @@ export function eventLetterHtml(poster: EventLetter): string {
 				.join('')}</div>`
 		: '';
 	const details = [
-		`<h1>${esc(lines.title)}</h1>`,
+		`<h1><span>${esc(lines.title)}</span></h1>`,
 		bill ? `<div class="bill">${ems(bill)}</div>` : '',
 		`<div class="info">${info}</div>`,
 		sponsors
@@ -131,14 +126,15 @@ export function eventLetterHtml(poster: EventLetter): string {
 	return `<!doctype html><html><head><meta charset="utf-8"><style>${STYLE}</style></head><body><div class="poster">
 <img class="art" src="${esc(poster.art)}" alt="">
 <footer>${stripe}<div class="body"><div class="details" style="font-size:${SIZES[0]}px">${details}</div>
-<div class="side"><img class="mascot" src="${speaker}" alt=""><div class="qr">${qr}<div>${esc(
+<div class="side"><div class="qr">${qr}<div>${esc(
 		printedUrl()
 	)}</div></div></div></div></footer></div></body></html>`;
 }
 
 // Runs in the page, as a string so no bundler helper leaks into it. Sizes the
 // art box, then the QR code to the footer left, then takes the largest type
-// that fits, with the title shrunk onto one line at each size.
+// that fits, with the title shrunk onto one line at each size. Each fit keeps
+// slack: print sets text slightly wider than the screen it was measured on.
 const FIT_SCRIPT = `(async () => {
 	await document.fonts.ready;
 	await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
@@ -150,18 +146,19 @@ const FIT_SCRIPT = `(async () => {
 	const body = document.querySelector('.body');
 	const details = document.querySelector('.details');
 	const title = details.querySelector('h1');
+	const text = title.querySelector('span');
 	const qr = document.querySelector('.qr svg');
-	const room = body.clientHeight - 6 - ${INSET} - 12;
+	const avail = body.clientHeight - 6 - ${INSET};
+	const room = avail - 12;
 	const side = Math.max(64, Math.min(132, room));
 	qr.style.width = qr.style.height = side + 'px';
-	document.querySelector('.mascot').style.width = Math.round(side * 0.58) + 'px';
 	for (const size of ${JSON.stringify(SIZES)}) {
 		details.style.fontSize = size + 'px';
 		for (let t = 2.4; t >= 1.1; t -= 0.05) {
 			title.style.fontSize = t + 'em';
-			if (title.scrollWidth <= title.clientWidth + 1) break;
+			if (text.getBoundingClientRect().width <= title.clientWidth * 0.96) break;
 		}
-		if (details.scrollHeight <= details.clientHeight + 1) return;
+		if (details.scrollHeight <= avail - 4) return;
 	}
 })()`;
 

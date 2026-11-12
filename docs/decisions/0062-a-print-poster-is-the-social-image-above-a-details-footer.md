@@ -31,9 +31,13 @@ poster through Browser Rendering.
    weekday, date, start and doors times, the venue and street address (the listing's own, else
    the venue's), the price in the flyer's wording, the sponsors the event page credits (logo, or
    name when there is none), a QR code to `/events/<id>` with `corvmc.org/events` printed under
-   it, the mascot and the tri-stripe. A script in the page sizes the QR code to the footer and
-   takes the largest type that fits, with the title on one line.
-5. **The download is a listing write** (`requireListingWriter`), the same check as the template
+   it, and the tri-stripe. A script in the page sizes the QR code to the footer and takes the
+   largest type that fits, with the title on one line.
+5. **The QR code carries the speaker cabinet** (the design system's favicon, without the sound
+   lines) on a cream square at its centre. `posterQr` in `src/lib/server/poster/qr.ts` encodes at
+   error correction H and clears at most 20% of the code's width, leaving the finder patterns
+   whole. The calendar poster uses the same helper. Every test render decoded with jsQR at 20%.
+6. **The download is a listing write** (`requireListingWriter`), the same check as the template
    flyer, through `printEventPoster` in `src/lib/remote/event-poster.remote.ts`.
 
 ## Alternatives rejected
