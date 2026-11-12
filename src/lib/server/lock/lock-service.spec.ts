@@ -220,7 +220,7 @@ describe('runDailyLockJob', () => {
 
 	it('provisions only confirmed, codeless bookings that start inside the window', async () => {
 		booking('res-ok');
-		booking('res-scheduled', { status: 'scheduled' });
+		booking('res-waitlisted', { status: 'waitlisted' });
 		booking('res-has-code', { lockCode: '1111' });
 		booking('res-yesterday', { startsAt: TODAY - 5 * HOUR });
 		booking('res-next-week', { startsAt: TODAY + 7 * DAY });
@@ -230,7 +230,7 @@ describe('runDailyLockJob', () => {
 		expect(result.provisioned).toBe(1);
 		expect(mockCreateTemporaryUser).toHaveBeenCalledOnce();
 		expect(lockCols('res-ok').lock_code).toBe('4242');
-		expect(lockCols('res-scheduled').lock_code).toBeNull();
+		expect(lockCols('res-waitlisted').lock_code).toBeNull();
 		expect(lockCols('res-next-week').lock_code).toBeNull();
 	});
 
@@ -778,7 +778,7 @@ describe('provisionOnConfirm', () => {
 	});
 
 	it('ignores a booking that is not confirmed', async () => {
-		booking('res-1', { startsAt: T0 + DAY, status: 'scheduled' });
+		booking('res-1', { startsAt: T0 + DAY, status: 'waitlisted' });
 
 		await expect(provisionOnConfirm('res-1')).resolves.toBe(false);
 		expect(mockCreateTemporaryUser).not.toHaveBeenCalled();

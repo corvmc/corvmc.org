@@ -144,42 +144,38 @@ export async function seedVolunteerPersonas(
 	// Profiles for two of the four. The newcomer gets none — that absence is what
 	// /member/volunteer/start exists to handle — and the minor is blocked, which
 	// is the state the under-18 queue works.
-	await batchInsert(
-		volunteerProfile,
-		[
-			{
-				id: 'seed-vol-profile-coordinator',
-				userId: 'seed-vol-coordinator',
-				firstName: 'Nia',
-				lastName: 'Okafor',
-				isAdult: true,
-				status: 'active',
-				availability: 'Most evenings, and every show night I am not already on the books.',
-				createdAt: ago(380)
-			},
-			{
-				id: 'seed-vol-profile-active',
-				userId: 'seed-vol-active',
-				firstName: 'Sam',
-				lastName: 'Whitfield',
-				isAdult: true,
-				status: 'active',
-				availability: 'Weeknights after 6, and Saturdays if I know a week ahead.',
-				createdAt: ago(210)
-			},
-			{
-				id: 'seed-vol-profile-minor',
-				userId: 'seed-vol-minor',
-				firstName: 'Robin',
-				lastName: 'Vance',
-				isAdult: false,
-				status: 'blocked',
-				availability: null,
-				createdAt: ago(2)
-			}
-		],
-		8
-	);
+	await batchInsert(volunteerProfile, [
+		{
+			id: 'seed-vol-profile-coordinator',
+			userId: 'seed-vol-coordinator',
+			firstName: 'Nia',
+			lastName: 'Okafor',
+			isAdult: true,
+			status: 'active',
+			availability: 'Most evenings, and every show night I am not already on the books.',
+			createdAt: ago(380)
+		},
+		{
+			id: 'seed-vol-profile-active',
+			userId: 'seed-vol-active',
+			firstName: 'Sam',
+			lastName: 'Whitfield',
+			isAdult: true,
+			status: 'active',
+			availability: 'Weeknights after 6, and Saturdays if I know a week ahead.',
+			createdAt: ago(210)
+		},
+		{
+			id: 'seed-vol-profile-minor',
+			userId: 'seed-vol-minor',
+			firstName: 'Robin',
+			lastName: 'Vance',
+			isAdult: false,
+			status: 'blocked',
+			availability: null,
+			createdAt: ago(2)
+		}
+	]);
 
 	// Six shifts owned outright by the personas, rather than folded into the bulk
 	// map above — that map's offsets and event pairings are load-bearing for the
@@ -265,143 +261,135 @@ export async function seedVolunteerPersonas(
 	// A checklist on two of them, because `applyDutyList` is the only other
 	// writer of `work_task` and none of the persona shifts come from a duty
 	// list — so the volunteer's own page had nothing to tick.
-	await batchInsert(
-		workTask,
-		[
-			{
-				id: 'seed-vol-task-float',
-				workOrderId: 'seed-vol-shift-upcoming',
-				label: 'Count the float',
-				sortOrder: 0
-			},
-			{
-				id: 'seed-vol-task-signage',
-				workOrderId: 'seed-vol-shift-upcoming',
-				label: 'Put the A-board out',
-				sortOrder: 1
-			},
-			...(doorShift
-				? [
-						{
-							id: 'seed-vol-task-wristbands',
-							workOrderId: doorShift.id,
-							label: 'Lay out wristbands and the guest list',
-							sortOrder: 0
-						},
-						{
-							id: 'seed-vol-task-door-open',
-							workOrderId: doorShift.id,
-							label: 'Prop the side door for load-in',
-							sortOrder: 1,
-							done: true,
-							doneAt: ago(0),
-							doneByUserId: 'seed-vol-active'
-						},
-						{
-							id: 'seed-vol-task-cashup',
-							workOrderId: doorShift.id,
-							label: 'Cash up and hand the box to staff',
-							sortOrder: 2
-						}
-					]
-				: [])
-		],
-		8
-	);
+	await batchInsert(workTask, [
+		{
+			id: 'seed-vol-task-float',
+			workOrderId: 'seed-vol-shift-upcoming',
+			label: 'Count the float',
+			sortOrder: 0
+		},
+		{
+			id: 'seed-vol-task-signage',
+			workOrderId: 'seed-vol-shift-upcoming',
+			label: 'Put the A-board out',
+			sortOrder: 1
+		},
+		...(doorShift
+			? [
+					{
+						id: 'seed-vol-task-wristbands',
+						workOrderId: doorShift.id,
+						label: 'Lay out wristbands and the guest list',
+						sortOrder: 0
+					},
+					{
+						id: 'seed-vol-task-door-open',
+						workOrderId: doorShift.id,
+						label: 'Prop the side door for load-in',
+						sortOrder: 1,
+						done: true,
+						doneAt: ago(0),
+						doneByUserId: 'seed-vol-active'
+					},
+					{
+						id: 'seed-vol-task-cashup',
+						workOrderId: doorShift.id,
+						label: 'Cash up and hand the box to staff',
+						sortOrder: 2
+					}
+				]
+			: [])
+	]);
 
 	const byId = new Map(shifts.map((sh) => [sh.id, sh]));
 	const shiftEnd = (id: string) => byId.get(id)!.endsAt;
 	const shiftStart = (id: string) => byId.get(id)!.startsAt;
 
-	await batchInsert(
-		volunteerSignup,
-		[
-			{
-				id: 'seed-vol-signup-upcoming',
-				shiftId: 'seed-vol-shift-upcoming-shift',
-				userId: 'seed-vol-active',
-				status: 'confirmed',
-				claimedAt: ago(6),
-				confirmedAt: ago(4)
-			},
-			...(doorShift
-				? [
-						{
-							// The one signup that reaches a checklist and a door list,
-							// which is what makes /member/volunteer/shifts/<id> worth
-							// opening as `volunteer@`.
-							id: 'seed-vol-signup-door',
-							shiftId: shiftIdFor(doorShift.id),
-							userId: 'seed-vol-active',
-							status: 'confirmed' as const,
-							claimedAt: ago(9),
-							confirmedAt: ago(7)
-						}
-					]
-				: []),
-			{
-				id: 'seed-vol-signup-claimed',
-				shiftId: 'seed-vol-shift-claimed-shift',
-				userId: 'seed-vol-active',
-				status: 'claimed',
-				claimedAt: ago(1)
-			},
-			{
-				// A dropped claim, so `cancelled` is in the vocabulary somewhere. It
-				// also leaves the load-out shift wholly empty, which guarantees the
-				// member board has something claimable however the random bulk falls.
-				id: 'seed-vol-signup-dropped',
-				shiftId: 'seed-vol-shift-open-shift',
-				userId: 'seed-vol-coordinator',
-				status: 'cancelled',
-				claimedAt: ago(5),
-				cancelledAt: ago(2)
-			},
-			{
-				// Worked, hours already filed, feedback NOT given — this is the one
-				// /member/volunteer/feedback/[signupId] is reachable through.
-				id: 'seed-vol-signup-feedback',
-				shiftId: 'seed-vol-shift-feedback-shift',
-				userId: 'seed-vol-active',
-				status: 'completed',
-				claimedAt: ago(9),
-				confirmedAt: ago(7),
-				completedAt: shiftEnd('seed-vol-shift-feedback')
-			},
-			{
-				// The mirror image: feedback given, hours still owed, so the member
-				// dashboard's "log these hours" prefill always has a row.
-				id: 'seed-vol-signup-unlogged',
-				shiftId: 'seed-vol-shift-unlogged-shift',
-				userId: 'seed-vol-active',
-				status: 'completed',
-				claimedAt: ago(12),
-				confirmedAt: ago(10),
-				completedAt: shiftEnd('seed-vol-shift-unlogged')
-			},
-			{
-				// Two people on the called-off shift, one told and one not, because
-				// the cancelled shift's whole job is being a notify list and a list
-				// where every row reads the same proves nothing. Sam is the
-				// outstanding one, so the banner reads "1 to notify".
-				id: 'seed-vol-signup-cancelled',
-				shiftId: 'seed-vol-shift-cancelled-shift',
-				userId: 'seed-vol-active',
-				status: 'confirmed',
-				claimedAt: ago(8),
-				confirmedAt: ago(6)
-			},
-			{
-				id: 'seed-vol-signup-cancelled-notified',
-				shiftId: 'seed-vol-shift-cancelled-shift',
-				userId: 'seed-vol-coordinator',
-				status: 'claimed',
-				claimedAt: ago(7),
-				notifiedAt: ago(2)
-			}
-		],
-		8
-	);
+	await batchInsert(volunteerSignup, [
+		{
+			id: 'seed-vol-signup-upcoming',
+			shiftId: 'seed-vol-shift-upcoming-shift',
+			userId: 'seed-vol-active',
+			status: 'confirmed',
+			claimedAt: ago(6),
+			confirmedAt: ago(4)
+		},
+		...(doorShift
+			? [
+					{
+						// The one signup that reaches a checklist and a door list,
+						// which is what makes /member/volunteer/shifts/<id> worth
+						// opening as `volunteer@`.
+						id: 'seed-vol-signup-door',
+						shiftId: shiftIdFor(doorShift.id),
+						userId: 'seed-vol-active',
+						status: 'confirmed' as const,
+						claimedAt: ago(9),
+						confirmedAt: ago(7)
+					}
+				]
+			: []),
+		{
+			id: 'seed-vol-signup-claimed',
+			shiftId: 'seed-vol-shift-claimed-shift',
+			userId: 'seed-vol-active',
+			status: 'claimed',
+			claimedAt: ago(1)
+		},
+		{
+			// A dropped claim, so `cancelled` is in the vocabulary somewhere. It
+			// also leaves the load-out shift wholly empty, which guarantees the
+			// member board has something claimable however the random bulk falls.
+			id: 'seed-vol-signup-dropped',
+			shiftId: 'seed-vol-shift-open-shift',
+			userId: 'seed-vol-coordinator',
+			status: 'cancelled',
+			claimedAt: ago(5),
+			cancelledAt: ago(2)
+		},
+		{
+			// Worked, hours already filed, feedback NOT given — this is the one
+			// /member/volunteer/feedback/[signupId] is reachable through.
+			id: 'seed-vol-signup-feedback',
+			shiftId: 'seed-vol-shift-feedback-shift',
+			userId: 'seed-vol-active',
+			status: 'completed',
+			claimedAt: ago(9),
+			confirmedAt: ago(7),
+			completedAt: shiftEnd('seed-vol-shift-feedback')
+		},
+		{
+			// The mirror image: feedback given, hours still owed, so the member
+			// dashboard's "log these hours" prefill always has a row.
+			id: 'seed-vol-signup-unlogged',
+			shiftId: 'seed-vol-shift-unlogged-shift',
+			userId: 'seed-vol-active',
+			status: 'completed',
+			claimedAt: ago(12),
+			confirmedAt: ago(10),
+			completedAt: shiftEnd('seed-vol-shift-unlogged')
+		},
+		{
+			// Two people on the called-off shift, one told and one not, because
+			// the cancelled shift's whole job is being a notify list and a list
+			// where every row reads the same proves nothing. Sam is the
+			// outstanding one, so the banner reads "1 to notify".
+			id: 'seed-vol-signup-cancelled',
+			shiftId: 'seed-vol-shift-cancelled-shift',
+			userId: 'seed-vol-active',
+			status: 'confirmed',
+			claimedAt: ago(8),
+			confirmedAt: ago(6)
+		},
+		{
+			id: 'seed-vol-signup-cancelled-notified',
+			shiftId: 'seed-vol-shift-cancelled-shift',
+			userId: 'seed-vol-coordinator',
+			status: 'claimed',
+			claimedAt: ago(7),
+			notifiedAt: ago(2)
+		}
+	]);
 
 	await db.insert(volunteerShiftFeedback).values({
 		id: 'seed-vol-feedback-unlogged',
@@ -484,7 +472,7 @@ export async function seedVolunteerPersonas(
 			reference: 'OR-FH-448120'
 		});
 	}
-	if (certRows.length > 0) await batchInsert(memberCertification, certRows, 7);
+	if (certRows.length > 0) await batchInsert(memberCertification, certRows);
 
 	// One log in every status, all reviewed by the coordinator rather than the
 	// admin, so "Reviewed by Nia Okafor" is what renders. Two of the approved ones
@@ -492,76 +480,72 @@ export async function seedVolunteerPersonas(
 	// January 1st through today, and a seed run in early January would otherwise
 	// open on an empty report.
 	const noon = (daysAgo: number) => ptDate(-daysAgo, 12);
-	await batchInsert(
-		volunteerHourLog,
-		[
-			{
-				id: 'seed-vol-log-linked',
-				userId: 'seed-vol-active',
-				volunteerRoleId: frontDesk.id,
-				shiftId: 'seed-vol-shift-feedback-shift',
-				workedOn: noon(2),
-				minutes: Math.round(
-					(shiftEnd('seed-vol-shift-feedback').getTime() -
-						shiftStart('seed-vol-shift-feedback').getTime()) /
-						60_000
-				),
-				description: 'Covered the door for the Thursday bill.',
-				status: 'approved',
-				reviewedByUserId: 'seed-vol-coordinator',
-				reviewedAt: ago(1)
-			},
-			{
-				id: 'seed-vol-log-approved-recent',
-				userId: 'seed-vol-active',
-				volunteerRoleId: eventSetup.id,
-				shiftId: null,
-				workedOn: noon(12),
-				minutes: 120,
-				description: 'Chairs, PA and the merch table before doors.',
-				status: 'approved',
-				reviewedByUserId: 'seed-vol-coordinator',
-				reviewedAt: ago(10)
-			},
-			{
-				id: 'seed-vol-log-approved-older',
-				userId: 'seed-vol-active',
-				volunteerRoleId: loadOut.id,
-				shiftId: null,
-				workedOn: noon(35),
-				minutes: 180,
-				description: 'Strike, cable coil and floor reset after the all-ages show.',
-				status: 'approved',
-				reviewedByUserId: 'seed-vol-coordinator',
-				reviewedAt: ago(33)
-			},
-			{
-				id: 'seed-vol-log-pending',
-				userId: 'seed-vol-active',
-				volunteerRoleId: frontDesk.id,
-				shiftId: null,
-				workedOn: noon(1),
-				minutes: 90,
-				description: 'Afternoon open hours — signed up two new members.',
-				status: 'pending'
-			},
-			{
-				id: 'seed-vol-log-rejected',
-				userId: 'seed-vol-active',
-				volunteerRoleId: outreach.id,
-				shiftId: null,
-				workedOn: noon(20),
-				minutes: 300,
-				description: 'Tabling at the farmers market.',
-				status: 'rejected',
-				reviewedByUserId: 'seed-vol-coordinator',
-				reviewedAt: ago(18),
-				reviewNotes:
-					'We had you down for two hours on this, not five. Log the corrected time and we will approve it.'
-			}
-		],
-		7
-	);
+	await batchInsert(volunteerHourLog, [
+		{
+			id: 'seed-vol-log-linked',
+			userId: 'seed-vol-active',
+			volunteerRoleId: frontDesk.id,
+			shiftId: 'seed-vol-shift-feedback-shift',
+			workedOn: noon(2),
+			minutes: Math.round(
+				(shiftEnd('seed-vol-shift-feedback').getTime() -
+					shiftStart('seed-vol-shift-feedback').getTime()) /
+					60_000
+			),
+			description: 'Covered the door for the Thursday bill.',
+			status: 'approved',
+			reviewedByUserId: 'seed-vol-coordinator',
+			reviewedAt: ago(1)
+		},
+		{
+			id: 'seed-vol-log-approved-recent',
+			userId: 'seed-vol-active',
+			volunteerRoleId: eventSetup.id,
+			shiftId: null,
+			workedOn: noon(12),
+			minutes: 120,
+			description: 'Chairs, PA and the merch table before doors.',
+			status: 'approved',
+			reviewedByUserId: 'seed-vol-coordinator',
+			reviewedAt: ago(10)
+		},
+		{
+			id: 'seed-vol-log-approved-older',
+			userId: 'seed-vol-active',
+			volunteerRoleId: loadOut.id,
+			shiftId: null,
+			workedOn: noon(35),
+			minutes: 180,
+			description: 'Strike, cable coil and floor reset after the all-ages show.',
+			status: 'approved',
+			reviewedByUserId: 'seed-vol-coordinator',
+			reviewedAt: ago(33)
+		},
+		{
+			id: 'seed-vol-log-pending',
+			userId: 'seed-vol-active',
+			volunteerRoleId: frontDesk.id,
+			shiftId: null,
+			workedOn: noon(1),
+			minutes: 90,
+			description: 'Afternoon open hours — signed up two new members.',
+			status: 'pending'
+		},
+		{
+			id: 'seed-vol-log-rejected',
+			userId: 'seed-vol-active',
+			volunteerRoleId: outreach.id,
+			shiftId: null,
+			workedOn: noon(20),
+			minutes: 300,
+			description: 'Tabling at the farmers market.',
+			status: 'rejected',
+			reviewedByUserId: 'seed-vol-coordinator',
+			reviewedAt: ago(18),
+			reviewNotes:
+				'We had you down for two hours on this, not five. Log the corrected time and we will approve it.'
+		}
+	]);
 
 	return { users: VOLUNTEER_PERSONAS.length };
 }

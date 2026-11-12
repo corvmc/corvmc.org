@@ -281,7 +281,7 @@ describe('revealFallbackCodeFor', () => {
 	it('does not reveal it for an unconfirmed reservation', async () => {
 		fallback('f1', { syncedAt: T0 - DAY });
 
-		expect(await revealFallbackCodeFor({ ...inWindow, status: 'scheduled' })).toBeNull();
+		expect(await revealFallbackCodeFor({ ...inWindow, status: 'waitlisted' })).toBeNull();
 	});
 
 	it('returns null rather than inventing one when no code is active', async () => {
@@ -333,6 +333,6 @@ describe('fallbackShownFor', () => {
 	});
 
 	it('is null for a booking that is not confirmed', async () => {
-		expect(await fallbackShownFor({ ...inWindow, status: 'scheduled' })).toBeNull();
+		expect(await fallbackShownFor({ ...inWindow, status: 'waitlisted' })).toBeNull();
 	});
 });

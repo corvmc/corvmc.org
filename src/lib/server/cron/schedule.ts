@@ -29,7 +29,10 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		// Fills the radio timetable 45 minutes ahead — three passes of slack, so
 		// one missed run is inaudible rather than dead air. No-ops while the
 		// `cmcRadio` flag is off.
-		'/api/cron/schedule-radio'
+		'/api/cron/schedule-radio',
+		// Well inside the 24 hours before cancel-stale-tickets cancels a door
+		// sale's pending rows, so a missed webhook is checked in, not lost.
+		'/api/cron/sweep-door-sales'
 	],
 	'0 16 * * *': [
 		'/api/cron/generate-recurring-reservations',
@@ -78,6 +81,7 @@ export const CRON_MONITORS: Record<string, 'live' | RetiredMonitor> = {
 	'lock-sync': 'live',
 	reminders: 'live',
 	'schedule-radio': 'live',
+	'sweep-door-sales': 'live',
 	'generate-recurring-reservations': 'live',
 	'lock-access': 'live',
 	'cancel-stale-tickets': 'live',

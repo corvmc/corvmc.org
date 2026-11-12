@@ -212,11 +212,7 @@ export interface SeriesCancelOutcome {
 }
 
 const SERIES_CANCEL_REASON = 'Recurring series cancelled';
-const LIVE_STATUSES: ('scheduled' | 'confirmed' | 'waitlisted')[] = [
-	'scheduled',
-	'confirmed',
-	'waitlisted'
-];
+const LIVE_STATUSES: ('confirmed' | 'waitlisted')[] = ['confirmed', 'waitlisted'];
 
 /**
  * A booking that may be hard-deleted: nothing paid or committed against it, no

@@ -74,7 +74,7 @@ beforeAll(() => {
 	insertReservation('event', 'cancelled', 'Event cancelled', BEFORE_AUDIT);
 	insertReservation('recent-member', 'cancelled', 'Changed plans', AFTER_AUDIT);
 	insertReservation('old-unknown', 'cancelled', 'Changed plans', BEFORE_AUDIT);
-	insertReservation('live', 'scheduled', null, AFTER_AUDIT);
+	insertReservation('live', 'confirmed', null, AFTER_AUDIT);
 
 	runBackfill();
 });

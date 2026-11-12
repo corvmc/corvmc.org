@@ -102,7 +102,7 @@ describe('ReservationService', () => {
 			txSelect.mockReturnValue({ from: txFrom });
 
 			// tx.insert for the new reservation
-			const mockRow = { id: 'res-1', ...params, status: 'scheduled', createdByUserId: 'user-1' };
+			const mockRow = { id: 'res-1', ...params, status: 'confirmed', createdByUserId: 'user-1' };
 			const returning = vi.fn().mockResolvedValue([mockRow]);
 			const values = vi.fn().mockReturnValue({ returning });
 			txInsert.mockReturnValue({ values });
@@ -198,11 +198,11 @@ describe('ReservationService', () => {
 			return set;
 		}
 
-		it('cancels a scheduled reservation without refund', async () => {
+		it('cancels an unpaid reservation without refund', async () => {
 			setupSelectMock({
 				id: 'res-1',
 				createdByUserId: 'user-1',
-				status: 'scheduled',
+				status: 'confirmed',
 				stripePaymentRecordId: null,
 				startsAt: future,
 				endsAt: futureEnd
@@ -265,7 +265,7 @@ describe('ReservationService', () => {
 			setupSelectMock({
 				id: 'res-1',
 				createdByUserId: 'user-1',
-				status: 'scheduled',
+				status: 'confirmed',
 				stripePaymentRecordId: null
 			});
 
@@ -307,7 +307,7 @@ describe('ReservationService', () => {
 			setupSelectMock({
 				id: 'res-1',
 				createdByUserId: 'user-1',
-				status: 'scheduled',
+				status: 'confirmed',
 				stripePaymentRecordId: null,
 				startsAt: future,
 				endsAt: futureEnd
@@ -321,7 +321,7 @@ describe('ReservationService', () => {
 			setupSelectMock({
 				id: 'res-1',
 				createdByUserId: 'user-1',
-				status: 'scheduled',
+				status: 'confirmed',
 				stripePaymentRecordId: null,
 				startsAt: past,
 				endsAt: new Date(past.getTime() + 2 * 60 * 60 * 1000)
@@ -338,7 +338,7 @@ describe('ReservationService', () => {
 			const row = {
 				id: 'res-1',
 				createdByUserId: 'user-1',
-				status: 'scheduled',
+				status: 'confirmed',
 				stripePaymentRecordId: null,
 				startsAt: future,
 				endsAt: futureEnd
@@ -448,7 +448,7 @@ describe('ReservationService', () => {
 		});
 
 		it('uses provided status', async () => {
-			const mockRow = { ...returnedRow, id: 'res-2', status: 'scheduled' };
+			const mockRow = { ...returnedRow, id: 'res-2', status: 'waitlisted' };
 			setupInsertMock(mockRow);
 
 			const result = await staffCreate({
@@ -457,10 +457,10 @@ describe('ReservationService', () => {
 				bookerId: 'user-1',
 				startsAt: new Date('2025-07-15T17:00:00Z'),
 				endsAt: new Date('2025-07-15T19:00:00Z'),
-				status: 'scheduled'
+				status: 'waitlisted'
 			});
 
-			expect(result.status).toBe('scheduled');
+			expect(result.status).toBe('waitlisted');
 		});
 	});
 
@@ -479,7 +479,7 @@ describe('ReservationService', () => {
 
 		const row = {
 			id: 'res-1',
-			status: 'scheduled',
+			status: 'confirmed',
 			bookerType: 'user',
 			createdByUserId: 'user-1',
 			createdByStaffId: null,
@@ -675,7 +675,6 @@ describe('ReservationService', () => {
 
 			const { sql: rendered, params } = dialect.sqlToQuery(updateWhere.mock.calls[0][0] as SQL);
 			expect(rendered).toContain('status');
-			expect(params).toContain('scheduled');
 			expect(params).toContain('confirmed');
 			expect(params).not.toContain('cancelled');
 		});
@@ -807,7 +806,7 @@ describe('ReservationService', () => {
 		});
 
 		it('throws when reservation has wrong status', async () => {
-			setupUpdateMock(0, { status: 'scheduled' });
+			setupUpdateMock(0, { status: 'cancelled' });
 
 			await expect(markComplete('res-1')).rejects.toThrow(ReservationStateError);
 		});
@@ -844,7 +843,7 @@ describe('ReservationService', () => {
 			vi.mocked(db.update).mockReturnValue({ set } as any);
 		}
 
-		it('transitions scheduled → completed with payment record', async () => {
+		it('transitions confirmed → completed with payment record', async () => {
 			setupUpdateMock(1);
 			await recordCashAndComplete('res-1', 'pr_abc');
 			expect(db.update).toHaveBeenCalled();

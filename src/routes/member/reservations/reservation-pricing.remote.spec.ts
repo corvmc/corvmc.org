@@ -91,7 +91,7 @@ function eightHourRow(overrides: Record<string, unknown> = {}) {
 	const endsAt = new Date('2026-06-12T00:00:00Z');
 	return {
 		id: 'res-8h',
-		status: 'scheduled',
+		status: 'confirmed',
 		startsAt,
 		endsAt,
 		tourMinutes: 0,
@@ -157,7 +157,7 @@ describe('getReservations payableWithCredits', () => {
 		const startsAt = new Date(Date.now() + startsInHours * HOUR);
 		return {
 			id: 'res-2h',
-			status: 'scheduled',
+			status: 'confirmed',
 			startsAt,
 			endsAt: new Date(startsAt.getTime() + 2 * HOUR),
 			tourMinutes: 0,

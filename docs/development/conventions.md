@@ -151,12 +151,9 @@ What the three rules mean in practice:
 
 That last one is what makes landing a merge from `main` possible at all; see below.
 
-Two details worth knowing before trusting a green feature branch. The required set is
-`E2E`, `Unit tests`, `Schema drift`, `Svelte Check` and **`Lint (full)`** — but `Lint (full)` is
-`if: github.event_name == 'push'`, so on a PR it reports `skipped`, which rulesets count as passing.
-`Lint (changed)` and `Docs integrity` are required on `main` and **not** on `feature/*`. So lint and
-docs failures reach the branch and surface only at the landing PR. Run them yourself
-(#762 tracks the mismatch).
+The required set on both `main` and `feature/*` is `E2E`, `Unit tests`, `Schema drift`,
+`Svelte Check`, `Lint (changed)` and `Docs integrity`. `Lint (full)` is not required: it runs only on
+pushes to `main`, in its own workflow (`lint-full.yml`), and opens a `ci-failure` issue when red.
 
 ### Merging `main` in is a push, not a PR
 

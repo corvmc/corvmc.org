@@ -21,7 +21,7 @@ binding = "ASSETS"
 crons = [
   "*/5 * * * *",  # send-campaigns
   "*/15 * * * *", # auto-complete, complete-shifts, expire-waitlisted, wake-snoozed,
-                  #   lock-sync, reminders, schedule-radio
+                  #   lock-sync, reminders, schedule-radio, sweep-door-sales
   "0 16 * * *",   # daily batch, 8am PST / 9am PDT, in order:
                   #   generate-recurring-reservations, lock-access,
                   #   cancel-stale-tickets, sweep-audio-purchases, sweep-incidents,

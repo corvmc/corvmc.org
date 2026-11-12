@@ -68,55 +68,51 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 
 	const ids = { facility: randomUUID(), suggested: randomUUID(), festival: randomUUID() };
 
-	const rows = await batchInsert(
-		project,
-		[
-			{
-				id: ids.facility,
-				name: 'Live room refresh',
-				description:
-					'Repaint, rewire the stage subpanel, and replace the worst of the cabling. Runs through the autumn.',
-				status: 'in_progress' as const,
-				// Set just under what the attached ledgers come to, so the over-budget
-				// rendering is reachable locally without editing anything — and only
-				// just under, because a burn bar at 400% tests nothing a bar at 110%
-				// does not.
-				budgetCents: 100_000,
-				startsAt: new Date(now.getTime() - 30 * day),
-				endsAt: new Date(now.getTime() + 60 * day),
-				createdByUserId: staffId
-			},
-			{
-				id: ids.suggested,
-				name: 'Soundproofing for room B',
-				description:
-					'Acoustic panels on the shared wall, plus a door sweep. Came off the suggestion board.',
-				status: 'planned' as const,
-				suggestionId: soundproofing?.id ?? null,
-				budgetCents: 120_000,
-				createdByUserId: staffId
-			},
-			{
-				id: ids.festival,
-				name: 'Winter showcase',
-				description: 'Two nights in December. One budget, one backlog, two shows.',
-				status: 'open' as const,
-				// Deliberately null: "no budget set" is a different rendering from
-				// zero, and nothing else in the seed exercises it.
-				budgetCents: null,
-				startsAt: new Date(now.getTime() + 80 * day),
-				createdByUserId: staffId
-			}
-		],
-		10
-	);
+	const rows = await batchInsert(project, [
+		{
+			id: ids.facility,
+			name: 'Live room refresh',
+			description:
+				'Repaint, rewire the stage subpanel, and replace the worst of the cabling. Runs through the autumn.',
+			status: 'in_progress' as const,
+			// Set just under what the attached ledgers come to, so the over-budget
+			// rendering is reachable locally without editing anything — and only
+			// just under, because a burn bar at 400% tests nothing a bar at 110%
+			// does not.
+			budgetCents: 100_000,
+			startsAt: new Date(now.getTime() - 30 * day),
+			endsAt: new Date(now.getTime() + 60 * day),
+			createdByUserId: staffId
+		},
+		{
+			id: ids.suggested,
+			name: 'Soundproofing for room B',
+			description:
+				'Acoustic panels on the shared wall, plus a door sweep. Came off the suggestion board.',
+			status: 'planned' as const,
+			suggestionId: soundproofing?.id ?? null,
+			budgetCents: 120_000,
+			createdByUserId: staffId
+		},
+		{
+			id: ids.festival,
+			name: 'Winter showcase',
+			description: 'Two nights in December. One budget, one backlog, two shows.',
+			status: 'open' as const,
+			// Deliberately null: "no budget set" is a different rendering from
+			// zero, and nothing else in the seed exercises it.
+			budgetCents: null,
+			startsAt: new Date(now.getTime() + 80 * day),
+			createdByUserId: staffId
+		}
+	]);
 
 	const owners = [
 		{ projectId: ids.facility, groupId: facilities?.id },
 		{ projectId: ids.suggested, groupId: facilities?.id },
 		{ projectId: ids.festival, groupId: programming?.id }
 	].flatMap((o) => (o.groupId ? [{ ...o, groupId: o.groupId, role: 'owner' as const }] : []));
-	if (owners.length) await db.insert(projectCommittee).values(owners);
+	if (owners.length) await batchInsert(projectCommittee, owners);
 
 	// --- Attach real rows to the facility project, one per burn line ----------
 
@@ -128,16 +124,12 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		finish: randomUUID(),
 		closeOut: randomUUID()
 	};
-	await batchInsert(
-		projectSection,
-		[
-			{ id: section.prep, projectId: ids.facility, name: 'Prep', sortOrder: 0 },
-			{ id: section.electrical, projectId: ids.facility, name: 'Electrical', sortOrder: 1 },
-			{ id: section.finish, projectId: ids.facility, name: 'Finish', sortOrder: 2 },
-			{ id: section.closeOut, projectId: ids.facility, name: 'Close-out', sortOrder: 3 }
-		],
-		10
-	);
+	await batchInsert(projectSection, [
+		{ id: section.prep, projectId: ids.facility, name: 'Prep', sortOrder: 0 },
+		{ id: section.electrical, projectId: ids.facility, name: 'Electrical', sortOrder: 1 },
+		{ id: section.finish, projectId: ids.facility, name: 'Finish', sortOrder: 2 },
+		{ id: section.closeOut, projectId: ids.facility, name: 'Close-out', sortOrder: 3 }
+	]);
 
 	// The electrician's subpanel job — the building work whose orphan status is
 	// the reason this table exists. `seedContractors` made its work order (no
@@ -178,14 +170,10 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		doneWhen: 'tasks_ticked',
 		createdByUserId: staffId
 	});
-	await batchInsert(
-		workTask,
-		[
-			{ workOrderId: punchList, label: 'Touch up the trim', sortOrder: 0, done: true, doneAt: now },
-			{ workOrderId: punchList, label: 'Test every wall outlet', sortOrder: 1 }
-		],
-		10
-	);
+	await batchInsert(workTask, [
+		{ workOrderId: punchList, label: 'Touch up the trim', sortOrder: 0, done: true, doneAt: now },
+		{ workOrderId: punchList, label: 'Test every wall outlet', sortOrder: 1 }
+	]);
 
 	// The project's own work orders, and its own hour log against one of them.
 	//
@@ -250,8 +238,7 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 				done: done as boolean,
 				doneAt: done ? now : null,
 				doneByUserId: done ? staffId : null
-			})),
-			10
+			}))
 		);
 
 		// Ordered so the same two volunteers are assigned on every seed.
@@ -262,7 +249,8 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 			.orderBy(asc(volunteerProfile.userId))
 			.limit(2);
 		if (assignees.length) {
-			await db.insert(workOrderAssignee).values(
+			await batchInsert(
+				workOrderAssignee,
 				assignees.map((a) => ({
 					workOrderId: backlog[0].id,
 					userId: a.userId,

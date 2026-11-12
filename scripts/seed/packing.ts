@@ -232,10 +232,7 @@ export async function seedPacking(structuredBandId: string | null) {
 		createdAt: new Date(now - 60 * DAYS)
 	}));
 
-	// Eighteen columns a row here — the seed writes every one rather than leaning
-	// on defaults — so five rows a statement stays under D1's 100-bound-parameter
-	// cap.
-	await batchInsert(packingItem, rows, 5);
+	await batchInsert(packingItem, rows);
 
 	return {
 		items: rows.length,

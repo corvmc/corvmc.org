@@ -3457,5 +3457,10 @@
 	"staff_reservations_lock_settings_label": "Lock settings",
 	"staff_reservations_utec_account_text": "U-tec account",
 	"staff_reservations_settings_label": "Settings",
-	"staff_reservations_settings_title": "Practice space settings"
+	"staff_reservations_settings_title": "Practice space settings",
+	"staff_posters_label": "Posters",
+	"staff_calendar_poster_title": "Calendar poster",
+	"staff_calendar_poster_month_label": "Month",
+	"staff_calendar_poster_download_label": "Download poster",
+	"staff_calendar_poster_alt_text": "Calendar poster for {month}"
 }

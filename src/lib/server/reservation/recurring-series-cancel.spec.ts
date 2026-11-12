@@ -59,7 +59,7 @@ function insertReservation(
 		booker_type: 'user',
 		booker_id: MEMBER,
 		created_by_user_id: MEMBER,
-		status: extra.status ?? 'scheduled',
+		status: extra.status ?? 'confirmed',
 		recurring_series_id: extra.series ?? 'ser-1',
 		...extra.columns
 	};
@@ -183,7 +183,7 @@ describe('cancelling a reservation series', () => {
 
 	it('never deletes the prototype, even when it is still ahead', async () => {
 		sqlite.exec(`UPDATE reservation SET starts_at = unixepoch() + ${3 * DAY},
-		             ends_at = unixepoch() + ${3 * DAY + 7200}, status = 'scheduled' WHERE id = 'res-proto'`);
+		             ends_at = unixepoch() + ${3 * DAY + 7200}, status = 'confirmed' WHERE id = 'res-proto'`);
 
 		await svc.cancel('ser-1', { kind: 'staff', userId: STAFF });
 
@@ -196,8 +196,8 @@ describe('cancelling a reservation series', () => {
 		await expect(svc.cancel('ser-1', { kind: 'staff', userId: STAFF })).rejects.toThrow(
 			svc.RecurringSeriesError
 		);
-		expect(statusOf('res-next')).toBe('scheduled');
-		expect(statusOf('res-later-a')).toBe('scheduled');
+		expect(statusOf('res-next')).toBe('confirmed');
+		expect(statusOf('res-later-a')).toBe('confirmed');
 	});
 
 	it('leaves an event series’ bookings alone', async () => {
@@ -209,8 +209,8 @@ describe('cancelling a reservation series', () => {
 
 		await svc.cancel('ser-event', { kind: 'staff', userId: STAFF });
 
-		expect(statusOf('res-event-next')).toBe('scheduled');
-		expect(statusOf('res-event-later')).toBe('scheduled');
+		expect(statusOf('res-event-next')).toBe('confirmed');
+		expect(statusOf('res-event-later')).toBe('confirmed');
 		expect(emit).not.toHaveBeenCalled();
 	});
 });

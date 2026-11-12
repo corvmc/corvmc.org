@@ -31,7 +31,11 @@ export interface PaymentGateway {
 	readonly coupons: Pick<Stripe['coupons'], 'create' | 'del'>;
 	readonly customers: Pick<Stripe['customers'], 'create' | 'update'>;
 	readonly invoices: Pick<Stripe['invoices'], 'list'>;
-	readonly paymentIntents: Pick<Stripe['paymentIntents'], 'retrieve' | 'create' | 'cancel'>;
+	/** `list` is the door sale sweep (#2547), finding taps whose webhook never came. */
+	readonly paymentIntents: Pick<
+		Stripe['paymentIntents'],
+		'retrieve' | 'create' | 'cancel' | 'list'
+	>;
 	readonly paymentMethods: Pick<Stripe['paymentMethods'], 'list' | 'detach' | 'update'>;
 	readonly paymentRecords: Pick<
 		Stripe['paymentRecords'],
