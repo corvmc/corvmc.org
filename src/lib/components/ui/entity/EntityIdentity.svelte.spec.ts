@@ -59,7 +59,7 @@ describe('EntityIdentity', () => {
 
 	it('marks a subtype with its glyph and label', async () => {
 		await render(Harness, { ref: fakeRef('member', { id: 'm1', subtype: 'sustaining' }) });
-		expect(document.querySelector('[data-tip]')?.getAttribute('data-tip')).toBe(
+		expect(document.querySelector('[role="img"]')?.getAttribute('aria-label')).toBe(
 			'Sustaining member'
 		);
 	});
@@ -71,12 +71,12 @@ describe('EntityIdentity', () => {
 	 */
 	it('leaves the ordinary case unmarked', async () => {
 		await render(Harness, { ref: fakeRef('member', { id: 'm1', subtype: null }) });
-		expect(document.querySelector('[data-tip]')).toBeNull();
+		expect(document.querySelector('[role="img"]')).toBeNull();
 	});
 
 	it('leaves an unrecognised subtype unmarked rather than blank', async () => {
 		await render(Harness, { ref: fakeRef('member', { id: 'm1', subtype: 'nonsense' }) });
-		expect(document.querySelector('[data-tip]')).toBeNull();
+		expect(document.querySelector('[role="img"]')).toBeNull();
 		expect(document.querySelector('td.cell-primary > a')?.textContent).toContain('Jane Doe');
 	});
 

@@ -128,10 +128,17 @@
 			plus half an x-height, not to the middle of the line. One line tall,
 			topped to the line box, centring its contents puts the glyph's centre on
 			the line's centre exactly — and keeps it inline, so the anchor stays
-			`block truncate` and the cell-primary contract holds.
+			`block truncate` and the cell-primary contract holds. No daisyUI
+			`tooltip`: its hidden ::before overflows a short name, and Firefox then
+			ellipsises the line and hides the glyph (#2633).
 		-->
-		<span class="tooltip mr-1 inline-flex h-[1lh] items-center align-top" data-tip={glyph.label}>
-			<glyph.icon size={14} />
+		<span
+			role="img"
+			aria-label={glyph.label}
+			title={glyph.label}
+			class="mr-1 inline-flex h-[1lh] items-center align-top"
+		>
+			<glyph.icon size={14} aria-hidden="true" />
 		</span>
 	{/if}{ref.title}
 {/snippet}
