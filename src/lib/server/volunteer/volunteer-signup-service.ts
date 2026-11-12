@@ -714,6 +714,8 @@ export interface MemberSignup {
 	signupId: string;
 	shiftId: string;
 	workOrderId: string;
+	/** The task's own name; the card falls back to the show, then the role. */
+	title: string | null;
 	roleName: string;
 	startsAt: Date;
 	endsAt: Date;
@@ -740,6 +742,7 @@ export async function listSignupsForUser(
 			signupId: volunteerSignup.id,
 			shiftId: volunteerShift.id,
 			workOrderId: workOrder.id,
+			title: workOrder.title,
 			roleName: volunteerRole.name,
 			startsAt: volunteerShift.startsAt,
 			endsAt: volunteerShift.endsAt,
@@ -776,6 +779,7 @@ export async function getSignupForUser(signupId: string, userId: string) {
 			workOrderId: workOrder.id,
 			status: volunteerSignup.status,
 			cancelledAt: volunteerSignup.cancelledAt,
+			title: workOrder.title,
 			roleName: volunteerRole.name,
 			startsAt: volunteerShift.startsAt,
 			endsAt: volunteerShift.endsAt,

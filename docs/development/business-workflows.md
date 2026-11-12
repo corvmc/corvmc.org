@@ -1276,8 +1276,8 @@ Decisions: [Volunteer hours are a record](../decisions/0048-volunteer-hours-are-
 ### The story
 
 Staff define **roles** — job types with markdown descriptions. Members say which roles
-interest them (a standing note, not a commitment to a date), claim dated **shifts**, and log
-**hours**. Staff work an approval queue, and a date-ranged report rolls approved hours up by
+interest them (a standing note, not a commitment to a date), sign up for dated **shifts**, work
+the **tasks** assigned to them, and log **hours**. Staff work an approval queue, and a date-ranged report rolls approved hours up by
 member, role and month — which is the number the board and grant applications ask for.
 
 Approved hours are a record, not a currency: they never become practice-room credits, and
@@ -1340,7 +1340,14 @@ sign up for it. A task has zero or more shifts. Deliverables and repairs usually
   (`engageContractorOnTask`, `task-people.ts`).
 - On a project, Reschedule moves the task's due date only; a shift's time is the shift's own.
   The task list shows the latest live shift's time and how many more there are; the side panel
-  lists every live shift. Member screens still read one shift at a time until PR 4.
+  lists every live shift.
+- **The member's page** (`/member/volunteer`) lists shifts, never tasks, on the board: each
+  shift is its own row with **Sign up**, so a task with two shifts shows both, and signing up for
+  one leaves the other there. **My shifts** lists the member's sign-ups, one row per shift,
+  named by the task. **Assigned tasks** lists the open tasks they are assigned
+  (`listAssignedTasksForUser`), with **Mark done** (`markAssignedTaskDone`) unless the task has a
+  done condition, which closes it by itself. A task marked done moves to **Unlogged work** beside
+  the shifts that owe hours, until an hour log names the task (`workOrderId`).
 
 Certifications gate _scheduling_, never the record of work already done. A role can require
 one; whether a member held it is evaluated **as of the shift's date**, with a deliberate

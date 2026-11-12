@@ -11,6 +11,8 @@
 	 * - **shift** — started from a worked shift that owes hours, so the role,
 	 *   date and duration are already known and the picker would be asking a
 	 *   question the button already answered.
+	 * - **task** — started from a task marked done that the member was
+	 *   assigned. The task names the role when it has one; no time is known.
 	 * - **fix** — a log the member is correcting. Same fields, filled in; the
 	 *   service classifies it again, as if it were new.
 	 */
@@ -31,9 +33,10 @@
 		variant = 'ghost',
 		size = 'sm',
 		shift,
+		task,
 		log
 	}: {
-		mode?: 'free' | 'shift' | 'fix';
+		mode?: 'free' | 'shift' | 'task' | 'fix';
 		roles?: Role[];
 		/** Committees and clubs the member belongs to. Empty hides the picker. */
 		programs?: Program[];
@@ -46,9 +49,15 @@
 			shiftId: string;
 			volunteerRoleId: string;
 			roleName: string;
-			/** Null for an unscheduled work order. */
-			startsAt: Date | null;
+			startsAt: Date;
 			hours: string;
+			workedOn: string;
+		};
+		/** `task` mode: the done task the hours are owed for. */
+		task?: {
+			workOrderId: string;
+			/** Null asks for the role, from `roles`. */
+			volunteerRoleId: string | null;
 			workedOn: string;
 		};
 		/** `fix` mode: the returned log being corrected. */
@@ -65,7 +74,11 @@
 	// uses the bare form — two of those on one page would share state, which is
 	// why the dashboard renders exactly one.
 	const submitForm = $derived(
-		shift ? submitVolunteerHours.for(shift.signupId) : submitVolunteerHours
+		shift
+			? submitVolunteerHours.for(shift.signupId)
+			: task
+				? submitVolunteerHours.for(task.workOrderId)
+				: submitVolunteerHours
 	);
 	const editForm = $derived(log ? editVolunteerHours.for(log.id) : undefined);
 	const action = $derived(mode === 'fix' ? editForm! : submitForm);
@@ -73,7 +86,7 @@
 	const title = $derived(
 		mode === 'fix'
 			? m.volunteer_log_hours_fix_these_hours_title()
-			: mode === 'shift'
+			: mode === 'shift' || mode === 'task'
 				? m.volunteer_log_hours_log_these_hours_title()
 				: m.volunteer_log_hours_log_hours_title()
 	);
@@ -99,7 +112,13 @@
 			<input {...submitForm.fields.volunteerRoleId.as('hidden', shift!.volunteerRoleId)} />
 			<input {...submitForm.fields.shiftId.as('hidden', shift!.shiftId)} />
 			<p class="text-sm">{m.volunteer_log_hours_pre_filled_from_shift_adjust_text()}</p>
+		{:else if mode === 'task' && task!.volunteerRoleId}
+			<input {...submitForm.fields.volunteerRoleId.as('hidden', task!.volunteerRoleId)} />
+			<input {...submitForm.fields.workOrderId.as('hidden', task!.workOrderId)} />
 		{:else}
+			{#if mode === 'task'}
+				<input {...submitForm.fields.workOrderId.as('hidden', task!.workOrderId)} />
+			{/if}
 			<label class="fieldset w-full">
 				<span class="fieldset-legend">{m.volunteer_log_hours_what_did_help_with_label()}</span>
 				<Select {...submitForm.fields.volunteerRoleId.as('select')}>
@@ -129,7 +148,13 @@
 			label={m.volunteer_date_label()}
 			type="date"
 			max={clubToday()}
-			value={mode === 'fix' ? log!.workedOn : mode === 'shift' ? shift!.workedOn : clubToday()}
+			value={mode === 'fix'
+				? log!.workedOn
+				: mode === 'shift'
+					? shift!.workedOn
+					: mode === 'task'
+						? task!.workedOn
+						: clubToday()}
 		/>
 		<FormField
 			field={action.fields.hours}

@@ -23,11 +23,11 @@
 	}: {
 		shift: {
 			signupId: string;
+			shiftId: string;
 			roleName: string;
 			title?: string | null;
-			/** Null for an unscheduled work order — work with no window booked yet. */
-			startsAt: Date | null;
-			endsAt: Date | null;
+			startsAt: Date;
+			endsAt: Date;
 			status: string;
 			notes: string | null;
 			eventTitle: string | null;
@@ -39,7 +39,6 @@
 	const calledOff = $derived(!!shift.shiftCancelledAt);
 
 	const timeRange = $derived.by(() => {
-		if (!shift.startsAt || !shift.endsAt) return 'a time to be arranged';
 		const fmt = new Intl.DateTimeFormat('en-US', {
 			hour: 'numeric',
 			minute: '2-digit',
@@ -48,10 +47,7 @@
 		return `${fmt.format(shift.startsAt)}–${fmt.format(shift.endsAt)}`;
 	});
 
-	// Null for an unscheduled work order, which the date block reads as "TBD"
-	// rather than inventing a day for.
 	const dayParts = $derived.by(() => {
-		if (!shift.startsAt) return null;
 		const tz = DEFAULT_TIMEZONE;
 		return {
 			month: new Intl.DateTimeFormat('en-US', { month: 'short', timeZone: tz }).format(
@@ -64,15 +60,10 @@
 
 <!-- No border of its own: the list divides, and PageContent → InfoCard → this
      was three padded containers for one row (#1044). -->
-<div class="flex gap-3 py-3" data-signup-status={shift.status}>
+<div class="flex gap-3 py-3" data-signup-status={shift.status} data-shift-id={shift.shiftId}>
 	<div class="text-center leading-tight">
-		{#if dayParts}
-			<div class="text-subtle text-xs uppercase">{dayParts.month}</div>
-			<div class="text-xl font-bold">{dayParts.day}</div>
-		{:else}
-			<div class="text-subtle text-xs uppercase">{m.volunteer_my_shift_card_when_text()}</div>
-			<div class="text-subtle text-sm font-bold">{m.volunteer_my_shift_card_tbd_text()}</div>
-		{/if}
+		<div class="text-subtle text-xs uppercase">{dayParts.month}</div>
+		<div class="text-xl font-bold">{dayParts.day}</div>
 	</div>
 
 	<div class="min-w-0 flex-1">
@@ -127,11 +118,10 @@
 							{...cancelMySignup.for(shift.signupId).fields.signupId.as('hidden', shift.signupId)}
 						/>
 						<p class="text-sm">
-							{shift.roleName}{shift.startsAt
-								? m.volunteer_my_shift_card_text({
-										formatDateShort: formatDateShort(shift.startsAt)
-									})
-								: ''}, {timeRange}.
+							{shiftLabel(shift)}
+							{m.volunteer_my_shift_card_text({
+								formatDateShort: formatDateShort(shift.startsAt)
+							})}, {timeRange}.
 						</p>
 						<p class="text-sm">
 							{m.volunteer_my_shift_card_notice_isn_t_no_show_text()}

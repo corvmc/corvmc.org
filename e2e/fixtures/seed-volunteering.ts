@@ -16,7 +16,7 @@
  *
  * Mirrors the D1 access pattern in seed-staff-user.ts.
  */
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { readLocalDb, withPlatformEnv } from './platform-db';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { role, modelHasRole } from '../../src/lib/server/db/schema/authorization';
@@ -117,6 +117,11 @@ export const SEED_VOL_SHIFT_RELEASE_ID = 'e2e-vol-shift-release';
 export const SEED_VOL_SIGNUP_RELEASE_ID = 'e2e-vol-signup-release';
 /** A task with two shifts, the cancel-one-shift test's alone (#2518). */
 export const SEED_VOL_TWO_SHIFTS_ID = 'e2e-vol-two-shifts';
+/**
+ * A task with two shifts the member's sign-up test owns (#2518). Its shifts are
+ * the board's soonest, so both sit inside the board's first screen.
+ */
+export const SEED_VOL_SIGN_UP_ONE_ID = 'e2e-vol-sign-up-one';
 
 /**
  * A member with an account but no volunteer profile, for the onboarding gate.
@@ -198,6 +203,7 @@ const SHIFT_IDS = [
 	SEED_VOL_SHIFT_ASSIGN_ID,
 	SEED_VOL_SHIFT_RELEASE_ID,
 	SEED_VOL_TWO_SHIFTS_ID,
+	SEED_VOL_SIGN_UP_ONE_ID,
 	SEED_VOL_SHIFT_DONE_ID,
 	SEED_VOL_SHIFT_EVENT_ID,
 	SEED_VOL_ADVANCE_ID
@@ -584,17 +590,27 @@ export async function seedVolunteering(): Promise<void> {
 				startsAt: daysFromNow(9, 2),
 				endsAt: daysFromNow(9, 6),
 				capacity: 1
+			},
+			// Gets a second shift below; the member signs up for the first.
+			{
+				id: SEED_VOL_SIGN_UP_ONE_ID,
+				volunteerRoleId: SEED_VOL_ROLE_ID,
+				startsAt: daysFromNow(1, 2),
+				endsAt: daysFromNow(1, 6),
+				capacity: 2
 			}
 		]);
-		await db.insert(volunteerShift).values({
-			id: `${shiftIdOf(SEED_VOL_TWO_SHIFTS_ID)}-2`,
-			workOrderId: SEED_VOL_TWO_SHIFTS_ID,
-			startsAt: daysFromNow(10, 2),
-			endsAt: daysFromNow(10, 6),
-			capacity: 1,
-			createdAt: now,
-			updatedAt: now
-		});
+		await db.insert(volunteerShift).values(
+			[SEED_VOL_TWO_SHIFTS_ID, SEED_VOL_SIGN_UP_ONE_ID].map((taskId) => ({
+				id: `${shiftIdOf(taskId)}-2`,
+				workOrderId: taskId,
+				startsAt: daysFromNow(taskId === SEED_VOL_SIGN_UP_ONE_ID ? 2 : 10, 2),
+				endsAt: daysFromNow(taskId === SEED_VOL_SIGN_UP_ONE_ID ? 2 : 10, 6),
+				capacity: taskId === SEED_VOL_SIGN_UP_ONE_ID ? 2 : 1,
+				createdAt: now,
+				updatedAt: now
+			}))
+		);
 
 		// A published show with one shift on it. Both the staff event page's
 		// Volunteer Shifts card and the shift detail page's Event fact read this.
@@ -783,6 +799,21 @@ export async function readSignupStatus(taskId: string): Promise<string | null> {
 			.where(eq(volunteerShift.workOrderId, taskId))
 			.limit(1);
 		return row?.status ?? null;
+	});
+}
+
+/** A member's live sign-up status on each of a task's shifts, by shift id. */
+export async function readMemberSignupsByShift(
+	taskId: string,
+	userId: string
+): Promise<Record<string, string>> {
+	return readLocalDb(async (db) => {
+		const rows = await db
+			.select({ shiftId: volunteerShift.id, status: volunteerSignup.status })
+			.from(volunteerSignup)
+			.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+			.where(and(eq(volunteerShift.workOrderId, taskId), eq(volunteerSignup.userId, userId)));
+		return Object.fromEntries(rows.map((r) => [r.shiftId, r.status]));
 	});
 }
 

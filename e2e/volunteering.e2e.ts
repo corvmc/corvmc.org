@@ -24,6 +24,7 @@ import {
 	SEED_VOL_SHIFT_ASSIGN_ID,
 	SEED_VOL_SHIFT_RELEASE_ID,
 	SEED_VOL_TWO_SHIFTS_ID,
+	SEED_VOL_SIGN_UP_ONE_ID,
 	SEED_VOL_OTHER_MEMBER_ID,
 	SEED_VOL_MEMBER_ID,
 	SEED_VOL_SHIFT_EVENT_ID,
@@ -40,6 +41,7 @@ import {
 	readSignupStatus,
 	readShiftSignups,
 	readTaskShiftStates,
+	readMemberSignupsByShift,
 	readShiftEventId,
 	shiftIdOf
 } from './fixtures/seed-volunteering';
@@ -556,9 +558,9 @@ function boardCard(page: Page, taskId: string) {
 	return page.locator(`li[data-shift-id="${shiftIdOf(taskId)}"]`);
 }
 
-/** A shift the member is on, in the left column, by signup status and role. */
-function myShift(page: Page, status: string, role: string) {
-	return page.locator(`[data-signup-status="${status}"]`).filter({ hasText: role });
+/** A seeded task's shift the member is on, in the left column, by signup status. */
+function myShift(page: Page, status: string, taskId: string, shiftId = shiftIdOf(taskId)) {
+	return page.locator(`[data-signup-status="${status}"][data-shift-id="${shiftId}"]`);
 }
 
 test.describe('volunteering — onboarding', () => {
@@ -696,7 +698,7 @@ test.describe('volunteering — shifts', () => {
 		// A claim crosses the page: the board is what you could take on, and the
 		// left column is what you have. Landing on "Claimed" rather than "Booked"
 		// is the distinction the rail exists to draw.
-		const mine = myShift(page, 'claimed', SEED_VOL_ROLE_NAME);
+		const mine = myShift(page, 'claimed', SEED_VOL_SHIFT_OPEN_ID);
 		await expect(mine.first()).toBeVisible({ timeout: 15000 });
 		await expect(open).toHaveCount(0);
 		await expect.poll(() => readSignupStatus(SEED_VOL_SHIFT_OPEN_ID), DB_POLL).toBe('claimed');
@@ -745,7 +747,7 @@ test.describe('volunteering — shifts', () => {
 		const card = boardCard(page, SEED_VOL_SHIFT_OPEN_ID);
 		await card.getByRole('button').click();
 		await modalSubmit(page).click();
-		await expect(myShift(page, 'claimed', SEED_VOL_ROLE_NAME).first()).toBeVisible({
+		await expect(myShift(page, 'claimed', SEED_VOL_SHIFT_OPEN_ID).first()).toBeVisible({
 			timeout: 15000
 		});
 
@@ -978,5 +980,26 @@ test.describe('volunteering — staff acting on somebody else', () => {
 			.poll(() => readTaskShiftStates(SEED_VOL_TWO_SHIFTS_ID), DB_POLL)
 			.toEqual({ task: false, shifts: { [first]: true, [`${first}-2`]: false } });
 		await expect(cards.last().getByTestId('cancel-shift')).toBeVisible();
+	});
+
+	// #2518: a volunteer signs up for a shift, never a task; the task's other shift stays open.
+	test("a member signs up for one of a task's two shifts", async ({ page }) => {
+		await login(page, SEED_VOL_MEMBER_EMAIL, SEED_VOL_MEMBER_PASSWORD);
+		await page.goto('/member/volunteer');
+
+		const first = shiftIdOf(SEED_VOL_SIGN_UP_ONE_ID);
+		const second = `${first}-2`;
+		const rows = page.locator(`li[data-work-order-id="${SEED_VOL_SIGN_UP_ONE_ID}"]`);
+		await expect(rows).toHaveCount(2, { timeout: 15000 });
+
+		await page.locator(`li[data-shift-id="${first}"]`).getByRole('button').click();
+		await modalSubmit(page).click();
+
+		await expect(myShift(page, 'claimed', SEED_VOL_SIGN_UP_ONE_ID)).toBeVisible();
+		await expect(rows).toHaveCount(1);
+		await expect(page.locator(`li[data-shift-id="${second}"]`).getByRole('button')).toBeVisible();
+		await expect
+			.poll(() => readMemberSignupsByShift(SEED_VOL_SIGN_UP_ONE_ID, SEED_VOL_MEMBER_ID), DB_POLL)
+			.toEqual({ [first]: 'claimed' });
 	});
 });

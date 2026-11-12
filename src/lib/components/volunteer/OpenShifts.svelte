@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	/**
-	 * The claim board.
+	 * The open shifts board. Each shift is its own row, so a task with two
+	 * shifts shows both, and signing up for one leaves the other on the board.
 	 *
 	 * Filtered to the roles the member said they'd take, because that is what
 	 * their interests are *for* — a list that ignores them makes picking roles a
@@ -27,6 +28,7 @@
 
 	type Shift = {
 		id: string;
+		workOrderId: string;
 		roleName: string;
 		title?: string | null;
 		startsAt: Date;
@@ -130,7 +132,12 @@
 						{formatDateShort(shift.startsAt)}
 					</li>
 				{/if}
-				<li class="py-3" class:opacity-60={blocked} data-shift-id={shift.id}>
+				<li
+					class="py-3"
+					class:opacity-60={blocked}
+					data-shift-id={shift.id}
+					data-work-order-id={shift.workOrderId}
+				>
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="font-medium">{shiftLabel(shift)}</span>
 						{#if shift.interested}
@@ -176,7 +183,7 @@
 										{timeRange(shift.startsAt, shift.endsAt)}.
 									</p>
 
-									<!-- Three steps, one of them lit. Claiming is not booking, and
+									<!-- Three steps, one of them lit. Signing up is not booking, and
 									     the gap between them is a person deciding — which is the
 									     thing the old copy left the member to find out. -->
 									<div class="flex flex-wrap items-center gap-2 text-xs">

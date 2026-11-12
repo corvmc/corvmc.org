@@ -29,6 +29,7 @@
 	import { incidentCategoryLabels } from '#lib/config.js';
 	import { getMyShift, setMyWorkTaskDone, cancelMySignup } from '#lib/remote/volunteer.remote.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
+	import { shiftLabel, shiftRoleSuffix } from '#lib/utils/shift-label.js';
 
 	const params = routeParams('signupId');
 
@@ -41,8 +42,10 @@
 
 <PageHeader
 	width="2xl"
-	title={data.shift.roleName}
-	subtitle={data.shift.eventTitle ?? m.member_volunteer_shifts_signup_id_subtitle_body()}
+	title={shiftLabel(data.shift)}
+	subtitle={shiftRoleSuffix(data.shift) ??
+		data.shift.eventTitle ??
+		m.member_volunteer_shifts_signup_id_subtitle_body()}
 />
 <PageContent width="2xl">
 	{#if calledOff}
@@ -68,14 +71,10 @@
 
 	<InfoCard title={m.member_when_title()}>
 		<p class="font-medium">
-			{#if data.shift.startsAt && data.shift.endsAt}
-				{formatDateLong(data.shift.startsAt)} · {formatTimeRange(
-					data.shift.startsAt,
-					data.shift.endsAt
-				)}
-			{:else}
-				{m.member_volunteer_shifts_signup_id_time_still_arranged_text()}
-			{/if}
+			{formatDateLong(data.shift.startsAt)} · {formatTimeRange(
+				data.shift.startsAt,
+				data.shift.endsAt
+			)}
 		</p>
 		{#if data.shift.notes}
 			<p class="mt-2 text-muted">{data.shift.notes}</p>
