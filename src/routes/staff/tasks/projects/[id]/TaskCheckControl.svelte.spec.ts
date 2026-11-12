@@ -2,8 +2,8 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import type { Task } from './task-view';
-import '../../../layout.css';
-import '../../../retro-buttons.css';
+import '../../../../layout.css';
+import '../../../../retro-buttons.css';
 
 vi.mock('#lib/remote/tasks.remote.js', () => {
 	const field = (name: string) => ({

@@ -53,8 +53,8 @@ describe('the Projects row (#2411)', () => {
 				container.querySelector('[data-page-header] a[href="/staff/tasks/productions"]')
 			).not.toBeNull()
 		);
-		expect(container.querySelector('[data-page-header] button')).toBeNull();
-		expect(container.querySelector('button')).not.toBeNull();
+		expect(container.querySelector('[data-page-header] [data-testid="new-project"]')).toBeNull();
+		expect(container.querySelector('[data-testid="new-project"]')).not.toBeNull();
 	});
 });
 
@@ -62,7 +62,7 @@ describe('the New Project modal', () => {
 	// #2388: with no empty option the browser submits the first committee.
 	it('leaves the committee and the template unset until somebody picks one', async () => {
 		await render(ProjectsPage);
-		await page.getByRole('button').first().click();
+		await page.getByTestId('new-project').click();
 
 		const dialog = page.getByRole('dialog');
 		await expect.element(dialog).toBeVisible();

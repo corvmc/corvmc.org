@@ -19,6 +19,7 @@
 	label={m.staff_projects_new_project_label()}
 	modalTitle={m.staff_projects_new_project_title()}
 	successToast={m.staff_projects_success_toast()}
+	data-testid="new-project"
 	onsuccess={(result) => {
 		// A show leaves the Projects list once it has a listing, so land on the project.
 		const id = (result as { id?: string } | undefined)?.id;

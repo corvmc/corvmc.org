@@ -4,7 +4,7 @@ import { render } from 'vitest-browser-svelte';
 import '#lib/test/locators.js';
 import type { ComponentProps } from 'svelte';
 import Harness from './ProjectsTable.test.svelte';
-import '../../layout.css';
+import '../../../layout.css';
 
 type Row = ComponentProps<typeof Harness>['projects'][number];
 
