@@ -26,8 +26,8 @@ poster through Browser Rendering.
 4. **The footer carries** the title, the lineup (left out when it only repeats the title), the
    weekday, date, start and doors times, the venue and street address (the listing's own, else
    the venue's), the price in the flyer's wording, the sponsors the event page credits (logo, or
-   name when there is none), a QR code to `/events/<id>` with its address printed under it, the
-   mascot and the tri-stripe. A script in the page shrinks the type until the details fit.
+   name when there is none), a QR code to `/events/<id>` with `corvmc.org/events` printed under
+   it, the mascot and the tri-stripe. A script in the page shrinks the type until the details fit.
 5. **The download is a listing write** (`requireListingWriter`), the same check as the template
    flyer, through `printEventPoster` in `src/lib/remote/event-poster.remote.ts`.
 
@@ -42,5 +42,6 @@ poster through Browser Rendering.
 ## Consequences
 
 - `event_listing` has no age policy, so the footer prints none.
-- Event ids are UUIDs, so the printed address is long and wraps to two lines under the QR code.
-  A short link would need a new route.
+- Events have no slug or short link, and a UUID path cannot be typed off paper. The text under the
+  QR code names the events page; only the code reaches the event itself. A short link would need a
+  new route.

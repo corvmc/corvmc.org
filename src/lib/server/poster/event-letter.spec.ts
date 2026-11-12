@@ -1,8 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
+import { renderSVG } from 'uqr';
+import { C } from './brand';
 import {
 	billLine,
 	eventLetterHtml,
 	eventUrl,
+	printedUrl,
 	renderEventLetter,
 	whereLine,
 	type EventLetter
@@ -74,10 +77,12 @@ describe('eventLetterHtml', () => {
 		expect(html).toContain('<span>Bean Cafe</span>');
 	});
 
-	it('prints the QR code with its address under it', () => {
+	it("codes the event's page in the QR and prints the events page under it", () => {
 		const html = eventLetterHtml(full);
-		expect(html).toContain('<svg');
-		expect(html).toContain('<div>corvmc.org/events/evt-1</div>');
+		const qr = renderSVG(full.url, { border: 2, blackColor: C.navy, whiteColor: C.cream });
+		expect(html).toContain(qr);
+		expect(html).toContain(`<div>${printedUrl()}</div>`);
+		expect(html.replace(qr, '')).not.toContain('evt-1');
 	});
 
 	it('escapes event text', () => {
@@ -94,6 +99,12 @@ describe('eventLetterHtml', () => {
 describe('eventUrl', () => {
 	it("is the event's public page", () => {
 		expect(eventUrl('evt-9')).toMatch(/^https:\/\/[^/]+\/events\/evt-9$/);
+	});
+});
+
+describe('printedUrl', () => {
+	it('is the events page, without the scheme', () => {
+		expect(printedUrl()).toMatch(/^[^/:]+\/events$/);
 	});
 });
 

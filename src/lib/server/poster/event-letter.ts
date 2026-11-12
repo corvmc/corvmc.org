@@ -36,6 +36,14 @@ export function eventUrl(eventId: string): string {
 	return `${siteUrl()}/events/${eventId}`;
 }
 
+/**
+ * The address printed under the QR code. Events have no slug or short link,
+ * and a UUID path cannot be typed off paper, so it names the events page.
+ */
+export function printedUrl(): string {
+	return `${siteUrl().replace(/^https?:\/\//, '')}/events`;
+}
+
 /** The lineup, unless it only repeats the title. */
 export function billLine(lines: FlyerLines): string[] | null {
 	const bill = lines.bill.filter((b) => b.trim());
@@ -81,7 +89,7 @@ h1 { font-size: 1.9em; font-weight: 700; line-height: 1.05; text-transform: uppe
 .mascot { width: 96px; }
 .qr { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 132px; }
 .qr svg { width: 120px; height: 120px; display: block; }
-.qr div { font-size: 8.5px; line-height: 1.25; color: ${C.teal}; text-align: center; overflow-wrap: anywhere; }
+.qr div { font-size: 11px; line-height: 1.25; color: ${C.teal}; text-align: center; overflow-wrap: anywhere; }
 `;
 
 /** The poster as a self-contained page: fonts, images and QR code inline. */
@@ -113,7 +121,7 @@ export function eventLetterHtml(poster: EventLetter): string {
 <img class="art" src="${esc(poster.art)}" alt="">
 <footer>${stripe}<div class="body"><div class="details" style="font-size:${SIZES[0]}px">${details}</div>
 <div class="side"><img class="mascot" src="${speaker}" alt=""><div class="qr">${qr}<div>${esc(
-		poster.url.replace(/^https?:\/\//, '')
+		printedUrl()
 	)}</div></div></div></div></footer></div></body></html>`;
 }
 
