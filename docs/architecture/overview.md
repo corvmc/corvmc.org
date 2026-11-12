@@ -368,6 +368,7 @@ an hour with DST). The schedule spec pins this table to `CRON_SCHEDULE`:
 | `/api/cron/lock-sync`                       | Confirm pending door codes reached the lock, soonest booking first, 25 reads per run   | `*/15 * * * *` |
 | `/api/cron/reminders`                       | Send every reminder the registry says is owed (`src/lib/server/reminders/`)            | `*/15 * * * *` |
 | `/api/cron/schedule-radio`                  | Fill the CMC Radio timetable 45 minutes ahead; no-op while `cmcRadio` is off           | `*/15 * * * *` |
+| `/api/cron/sweep-door-sales`                | Check in door card sales the webhook missed; report charged intents with no tickets    | `*/15 * * * *` |
 | `/api/cron/generate-recurring-reservations` | Expand active recurring series into concrete reservation/event rows (2.5-week window)  | `0 16 * * *`   |
 | `/api/cron/lock-access`                     | Provision/clean up U-Tec door lock access for the day's reservations                   | `0 16 * * *`   |
 | `/api/cron/cancel-stale-tickets`            | Cancel `pending` tickets whose Stripe Checkout was abandoned                           | `0 16 * * *`   |
