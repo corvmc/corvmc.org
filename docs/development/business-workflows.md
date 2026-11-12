@@ -479,7 +479,7 @@ events use RSVP instead.
 ### Code path
 
 - **Two staff surfaces, one table, and the URLs say which is the general case.** `/staff/events`
-  is the **Calendar** — `getStaffCalendar` → `listStaffCalendar()`, every source, public
+  is **Events** — `getStaffCalendar` → `listStaffCalendar()`, every source, public
   statuses plus `pending_review`, forward from today — the staff view of the public gig guide,
   where listings are moderated. `/staff/projects/productions` is the CMC work index, `source='cmc'` at
   every status via `getStaffEvents` → `listAll()`, and the only page holding drafts. A
@@ -2352,48 +2352,28 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
 
 ## 22. Renewals: CMC's own permits, licenses and insurance
 
-Decision: [#1597](https://github.com/corvmc/corvmc.org/issues/1597). Issue: #1478.
+Decision: [Renewals are recurring work](../decisions/0063-renewals-are-recurring-work.md). Issue:
+#2611.
 
 ### The story
 
-The collective holds things that expire: a liability policy, a sound permit, an OLCC license.
-Staff keep one row per obligation at `/staff/renewals` (under System), sorted by next expiry,
-with the issuer, the reference number, the person responsible and the certificate. Renewing
-moves `expiresOn` forward on the same row; there is no row per term. Reminders go out sixty and
-fourteen days ahead.
+The collective holds things that expire: a liability policy, a business license, a sound permit.
+Each one is a `maintenance_schedule` named "Renew <name>", on a yearly interval, shown in the
+Schedule's Recurring view. Its notes carry the issuer and the reference number. The open work
+order is due about a month before the expiry date, and its assignee is the person who renews it.
+Resolving it writes next year's.
 
 ### Code path
 
-- **Reads:** `getRenewals` / `getRenewalDetail` in `renewals.remote.ts`, guarded by
-  `renewal.read`, call `listRenewals` / `getRenewal` in `src/lib/server/renewal/renewal-service.ts`
-  with `clubToday()`. The deadline and sort reuse `due` and `byDeadline` from
-  `src/lib/utils/deadline.ts`. Both queries also return the assignee list: holders of
-  `renewal.manage`, names only.
-- **Writes:** `createRenewal` / `updateRenewal` / `deleteRenewal` and the two document forms, all
-  guarded by `renewal.manage`.
-- **Documents:** `uploadRenewalDocument` writes to the private bucket under `renewals/<id>/`
-  (`renewalDocumentKey`) and records a `media` row plus a `media_attachment`
-  (`attachableType: 'renewal'`, slot `certificate`). `GET /api/renewals/documents/[id]` streams it
-  back by attachment id behind `renewal.read`; the key never reaches the browser. Removing a
-  document or deleting the renewal only drops attachments; `sweepMedia` reaps the object, from
-  the private bucket because `isRenewalDocumentKey` says so.
-- **Reminders:** `renewal_expiry_60d` (15 to 60 days out) and `renewal_expiry_14d` (0 to 14) in
-  `src/lib/server/reminders/registry.ts` read `listRenewalsExpiringBetween`. The subject is
-  `<id>:<expiresOn>`, so moving the date forward re-arms both. `renewal.expiry_due` goes to the
-  responsible staffer alone, or to every `renewal.manage` holder when nobody is named, as
-  `renewal_expiry`.
-
-### Data touched
-
-- `renewal` (`expires_on` is `YYYY-MM-DD` text; `responsible_user_id` is set null when the user
-  goes), `media`, `media_attachment`, `reminder_sent`.
+The recurring-work path in full: `maintenance-schedules.remote.ts` and
+`src/lib/server/volunteer/maintenance-schedule-service.ts`. Nothing is specific to renewals.
 
 ### Where it breaks
 
-- **Nobody was reminded.** Nobody is named and nobody holds `renewal.manage` through a position
-  other than `admin` / `staff`.
-- **A reminder went to someone who left.** The named staffer still has an account but no
-  position; the reminder does not check that they can open the page.
+- **The next one is due on the wrong day.** Generate-on-close dates the next occurrence from the
+  close, not from the certificate. A renewal resolved late or early moves next year's due date
+  with it; fix the open work order's date by hand.
+- **The certificate is not in the app.** Recurring work holds no documents.
 
 ## 23. Formal ballots: a frozen roll, a secret or recorded vote, a certified result
 

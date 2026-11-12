@@ -237,8 +237,8 @@ and the shift is made once the time is known.
 
 All three exist. Generate-on-close is `maintenance_schedule` (#1385): resolving or calling
 off an occurrence writes the next in the same `db.batch`, due an interval after the close,
-with a partial unique index allowing one open occurrence per schedule. Cleaning schedules
-and committee checklists run on it. `recurring_series` still materializes 2.5 weeks ahead,
+with a partial unique index allowing one open occurrence per schedule. Cleaning schedules,
+committee checklists and CMC's own permit, license and insurance renewals run on it. `recurring_series` still materializes 2.5 weeks ahead,
 which suits bookings, where the future slots must be held.
 
 ### 4. The append-only ledger `[one per vertical, plus money]`

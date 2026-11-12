@@ -94,3 +94,4 @@ A page or less. Link the issue and the PRs.
 | 0060 | [A month poster groups by who made the event](0060-a-month-poster-groups-by-who-made-the-event.md)                             | 2026-11-12 | Superseded by 0061 |
 | 0061 | [A month poster is a printable list of public events](0061-a-month-poster-is-a-printable-list-of-public-events.md)             | 2026-11-12 | Accepted           |
 | 0062 | [A print poster is the social image above a details footer](0062-a-print-poster-is-the-social-image-above-a-details-footer.md) | 2026-11-12 | Accepted           |
+| 0063 | [Renewals are recurring work](0063-renewals-are-recurring-work.md)                                                             | 2026-11-12 | Accepted           |

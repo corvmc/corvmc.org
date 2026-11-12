@@ -35,7 +35,6 @@ import { seedVenues } from './seed/venues';
 import { seedPartnerCalendars } from './seed/partner-calendars';
 import { seedSponsors } from './seed/sponsors';
 import { seedGrants } from './seed/grants';
-import { seedRenewals } from './seed/renewals';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
@@ -141,7 +140,6 @@ async function main() {
 	const venues = await seedVenues(events);
 	const sponsors = await seedSponsors(events);
 	const grants = await seedGrants();
-	const renewals = await seedRenewals(adminUser.id);
 	const bands = await seedBands(allUsers);
 	// Appended rather than folded into `seedBands`: it brings its own persona and
 	// login, and every downstream band seeder either maps over the whole array —
@@ -340,7 +338,6 @@ async function main() {
 	);
 	console.log(`  ${sponsors.sponsors} sponsors, ${sponsors.placements} event placements`);
 	console.log(`  ${grants.applications} grant applications to ${grants.funders} funders`);
-	console.log(`  ${renewals.renewals} permits, licenses and policies`);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium, 1 solo act)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
 	console.log(
@@ -443,7 +440,7 @@ async function main() {
 		`  ${projectCommittees} project committee rows (owners, and Booking and Production on each show)`
 	);
 	console.log(
-		`  ${maintenance.schedules} recurring work schedules (1 overdue, 1 retired, 1 assigned, 1 a committee's)`
+		`  ${maintenance.schedules} recurring work schedules (1 overdue, 1 retired, 1 assigned, 1 a committee's, 2 renewals)`
 	);
 	console.log(
 		`  ${productions.productions} productions covering every status, ${productions.withoutProduction} CMC shows deliberately without one`

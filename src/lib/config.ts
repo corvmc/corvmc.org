@@ -840,20 +840,6 @@ export const sponsorshipStatusBadge = {
 } as const satisfies Record<SponsorshipStatus, string>;
 
 // ---------------------------------------------------------------------------
-// Renewals: CMC's own permits, licenses and insurance policies (#1478)
-// ---------------------------------------------------------------------------
-
-export const renewalKinds = ['permit', 'license', 'insurance', 'other'] as const;
-export type RenewalKind = (typeof renewalKinds)[number];
-
-export const renewalKindLabels: Record<RenewalKind, string> = {
-	permit: 'Permit',
-	license: 'License',
-	insurance: 'Insurance',
-	other: 'Other'
-};
-
-// ---------------------------------------------------------------------------
 // Grants: funders, applications, awards and the reports they require
 // ---------------------------------------------------------------------------
 
@@ -2258,9 +2244,6 @@ export const capabilities = {
 	incident: ['read', 'record', 'file'],
 	sponsor: ['read', 'manage'],
 	grant: ['read', 'manage'],
-	// CMC's own permits, licenses and policies. Not `contractor`: a contractor's
-	// certificate is theirs, and it stays on their record.
-	renewal: ['read', 'manage'],
 	project: ['read', 'manage'],
 	// The two halves of a show (business-workflows.md §14). `book`
 	// is acts, offers, deals and billing; `run` is the run of show, the advance,
@@ -2540,8 +2523,6 @@ export const grantableCapabilities = {
 	'sponsor.manage': { label: 'Manage sponsors', committee: 'org' },
 	'grant.read': { label: 'See grants', committee: 'org' },
 	'grant.manage': { label: 'Manage grants', committee: 'org' },
-	'renewal.read': { label: 'See renewals', committee: 'org' },
-	'renewal.manage': { label: 'Manage renewals', committee: 'org' },
 	// Powers over records a committee owns or takes part in (projects, its
 	// markets, its schedules). The guard names the record; the resolver finds the
 	// committees on it.
@@ -2702,9 +2683,7 @@ export const attachableTypes = [
 	 */
 	'artifact_request',
 	/** A sponsor's `logo`, shown beside its credit on an event (#583). */
-	'sponsor',
-	/** A permit, license or policy of CMC's own: its certificate, privately. */
-	'renewal'
+	'sponsor'
 ] as const;
 export type AttachableType = (typeof attachableTypes)[number];
 
