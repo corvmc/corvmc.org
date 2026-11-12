@@ -156,7 +156,7 @@
 							     own queue is where it gets filled. -->
 							{#if data.orientation && data.orientation.claimed === 0}
 								<Badge variant="warning"
-									>{m.staff_reservations_id_orientation_unclaimed_label()}</Badge
+									>{m.staff_reservations_id_orientation_unstaffed_label()}</Badge
 								>
 							{:else if data.orientation}
 								<Badge variant="info">{m.staff_reservations_id_orientation_covered_label()}</Badge>

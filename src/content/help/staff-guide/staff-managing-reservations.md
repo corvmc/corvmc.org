@@ -51,6 +51,11 @@ means the last reading found the lock offline.
 - **Lock settings**: the U-tec connection, lock health and the last daily run, with Test
   connection, Run self-test, Rotate break-glass code and Reconnect.
 
+## Practice space settings
+
+**Settings** in the header opens the space's own settings: pricing, the hourly rate,
+operating hours, booking rules, the room's console channels and orientation.
+
 ## Closures
 
 **Add closure** is in the menu beside **New reservation**. Closures show in the list under

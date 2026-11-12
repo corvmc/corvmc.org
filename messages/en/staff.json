@@ -2691,7 +2691,7 @@
 	"staff_reservations_id_no_reason_given_body": "No reason given.",
 	"staff_reservations_id_not_provisioned_yet_text": "Not provisioned yet.",
 	"staff_reservations_id_orientation_covered_label": "Orientation covered",
-	"staff_reservations_id_orientation_unclaimed_label": "Orientation unclaimed",
+	"staff_reservations_id_orientation_unstaffed_label": "Unstaffed orientation",
 	"staff_reservations_id_overlaps_other_bookings_body": [
 		{
 			"declarations": ["input length", "input join", "local lengthPlural = length: plural"],
@@ -2877,7 +2877,6 @@
 	"staff_settings_orientation_updated_toast": "Orientation updated",
 	"staff_settings_participation_title": "Participation",
 	"staff_settings_per_unit_text": "per unit",
-	"staff_settings_pricing_label": "Pricing",
 	"staff_settings_pricing_title": "Pricing",
 	"staff_settings_product_name_label": "Product name",
 	"staff_settings_reconciles_every_member_band_subscription_text": "Reconciles every member and band subscription status from Stripe into the local database. Use this as a one-time backfill after migration, or any time to re-sync if a webhook was missed. For active members it also tops up any missing monthly credits by replaying their latest paid invoice — it never reduces a balance already spent down this month, and leaves canceled members' credits untouched.",
@@ -2889,7 +2888,6 @@
 	"staff_settings_refreshed_label": "Refreshed",
 	"staff_settings_removed_test_code_s_toast": "Removed {removed} test code(s)",
 	"staff_settings_reservation_settings_updated_toast": "Reservation settings updated",
-	"staff_settings_reservations_label": "Reservations",
 	"staff_settings_revoke_test_codes_label": "Revoke test codes",
 	"staff_settings_role_label": "Role",
 	"staff_settings_room_title": "The Room",
@@ -3457,5 +3455,7 @@
 	"staff_reservations_code_ending_label": "Code ending {tail}",
 	"staff_reservations_lock_settings_title": "Lock settings",
 	"staff_reservations_lock_settings_label": "Lock settings",
-	"staff_reservations_utec_account_text": "U-tec account"
+	"staff_reservations_utec_account_text": "U-tec account",
+	"staff_reservations_settings_label": "Settings",
+	"staff_reservations_settings_title": "Practice space settings"
 }

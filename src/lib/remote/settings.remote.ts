@@ -210,7 +210,7 @@ export const updateProduct = form(updateProductSchema, async (raw) => {
 		unitAmountCents: parseInt(data.unitAmountCents, 10)
 	});
 
-	void getStaffSettingsPage().refresh();
+	void getPracticeSpaceSettingsPage().refresh();
 
 	return { success: true };
 });
@@ -285,7 +285,7 @@ export const updateReservationSettings = form(reservationSettingsSchema, async (
 		}
 	]);
 
-	void getStaffSettingsPage().refresh();
+	void getPracticeSpaceSettingsPage().refresh();
 
 	return { success: true };
 });
@@ -387,7 +387,7 @@ export const updateOrientationSettings = form(orientationSchema, async (raw) => 
 		{ key: 'volunteer.firstVisitNotes', value: data.firstVisitNotes?.trim() ?? '' }
 	]);
 
-	void getStaffSettingsPage().refresh();
+	void getPracticeSpaceSettingsPage().refresh();
 	return { success: true };
 });
 
@@ -405,7 +405,7 @@ export const updateVenueSettings = form(venueSettingsSchema, async (raw) => {
 
 	await updateSiteConfigs([{ key: 'venue.consoleChannels', value: data.consoleChannels }]);
 
-	void getStaffSettingsPage().refresh();
+	void getPracticeSpaceSettingsPage().refresh();
 
 	return { success: true };
 });
@@ -479,52 +479,34 @@ export const updateIntegrationSettings = form(integrationSettingsSchema, async (
 			: [])
 	]);
 
-	void getStaffSettingsPage().refresh();
+	void getIntegrationSettings().refresh();
 
 	return { success: true };
 });
 
 /**
- * The staff settings page's one load-bearing query.
- *
- * Six tabs' worth of configuration, and every constituent is unparameterized — which is what makes
- * this composable at all: each of the mutations that used to refresh them one at a time can name
- * this wrapper with no argument.
+ * The staff settings page's one load-bearing query. Every constituent is unparameterized, so each
+ * mutation that used to refresh them one at a time can name this wrapper with no argument.
  */
 export const getStaffSettingsPage = query(z.void(), async () => {
 	await requireCapability('settings.read');
-
-	const [
-		products,
-		reservation,
-		org,
-		volunteerValue,
-		orientation,
-		venue,
-		integration,
-		channelConfigs,
-		featureFlags
-	] = await Promise.all([
-		getProducts(),
-		getReservationSettings(),
+	const [org, volunteerValue, channelConfigs, featureFlags] = await Promise.all([
 		getOrgSettings(),
 		getVolunteerValueSettings(),
-		getOrientationSettings(),
-		getVenueSettings(),
-		getIntegrationSettings(),
 		getInboxChannelConfigs(),
 		getFeatureFlags()
 	]);
+	return { org, volunteerValue, channelConfigs, featureFlags };
+});
 
-	return {
-		products,
-		reservation,
-		org,
-		volunteerValue,
-		orientation,
-		venue,
-		integration,
-		channelConfigs,
-		featureFlags
-	};
+/** The Practice space settings page's one load-bearing query, built the same way (#2586). */
+export const getPracticeSpaceSettingsPage = query(z.void(), async () => {
+	await requireCapability('settings.read');
+	const [products, reservation, orientation, venue] = await Promise.all([
+		getProducts(),
+		getReservationSettings(),
+		getOrientationSettings(),
+		getVenueSettings()
+	]);
+	return { products, reservation, orientation, venue };
 });

@@ -13,11 +13,11 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
  * handed it every channel in the vocabulary, and reading `.icon` off undefined
  * blanked Settings.
  *
- * Nothing else clicks these six, and the per-tab assertion is deliberately
+ * Nothing else clicks these four, and the per-tab assertion is deliberately
  * thin: the point is that each panel renders at all.
  */
 
-const TABS = ['pricing', 'reservations', 'organization', 'inbox', 'features', 'subscriptions'];
+const TABS = ['organization', 'inbox', 'features', 'subscriptions'];
 
 const panel = (page: Page, key: string) =>
 	page.locator(`[role="tabpanel"][aria-labelledby="tab-${key}"]`);
@@ -35,7 +35,7 @@ test.describe('staff settings tabs', () => {
 
 		// The boundary swallows the tab bar too, so this is also the check that the
 		// page rendered at all before the first click.
-		await expect(page.locator('#tab-pricing')).toBeVisible({ timeout: 15000 });
+		await expect(page.locator('#tab-organization')).toBeVisible({ timeout: 15000 });
 
 		for (const key of TABS) {
 			await page.locator(`#tab-${key}`).click();
@@ -52,6 +52,19 @@ test.describe('staff settings tabs', () => {
 		// `direct` is member↔member: staff never reply on it and there is nothing
 		// behind it to enable, so it is not one of this tab's rows.
 		await expect(panel(page, 'inbox').locator('[data-channel="direct"]')).toHaveCount(0);
+	});
+
+	test('the old Pricing and Reservations tabs land on Practice space settings', async ({
+		page
+	}) => {
+		await loginAsStaff(page);
+		for (const tab of ['pricing', 'reservations']) {
+			await page.goto(`/staff/settings?tab=${tab}`);
+			await page.waitForURL(/\/staff\/reservations\/settings$/);
+			await expect(page.getByTestId('pricing-settings')).toBeVisible();
+			await expect(page.getByTestId('space-settings')).toBeVisible();
+			await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
+		}
 	});
 
 	test('the old Integrations tab opens Building access, where the lock card moved', async ({

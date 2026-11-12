@@ -2,6 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { isEventHold } from '#lib/config.js';
 	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
@@ -217,11 +218,16 @@
 			<BuildingAccess
 				bind:open={accessOpen}
 				offline={settled.lock.offline}
-				canReadSettings={settled.lock.canReadSettings}
+				canReadSettings={settled.canSettings}
 				utec={utecParam}
 			/>
 		{/if}
 		<RecurringSeriesModal />
+		{#if settled?.canSettings}
+			<Button variant="ghost" size="sm" href={resolve('staff/reservations/settings')}>
+				{m.staff_reservations_settings_label()}
+			</Button>
+		{/if}
 		<div class="join">
 			<CreateReservation class="join-item" />
 			{#if canManageClosures}
