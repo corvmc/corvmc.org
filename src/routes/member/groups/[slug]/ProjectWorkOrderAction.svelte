@@ -18,7 +18,7 @@
 
 <Action
 	{action}
-	label={m.member_groups_slug_project_work_order_work_order_label()}
+	label={m.member_groups_slug_project_work_order_add_task_label()}
 	aria-label={m.member_groups_slug_project_work_order_aria_label({ name: project.name })}
 	modalTitle={m.member_groups_slug_project_work_order_aria_title({ name: project.name })}
 	submitLabel={m.member_open_label()}

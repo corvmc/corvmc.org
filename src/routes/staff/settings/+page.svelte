@@ -58,7 +58,8 @@
 		IconToggleLeft
 	} from '@tabler/icons-svelte';
 
-	let activeTab = $state('pricing');
+	// `?tab=` opens a tab on arrival: Practice space links Door access to Integrations.
+	let activeTab = $state(page.url.searchParams.get('tab') ?? 'pricing');
 	// One query. All six are unparameterized, which is what lets every mutation that used to
 	// refresh them individually name this wrapper instead.
 	const settings = $derived(await getStaffSettingsPage());

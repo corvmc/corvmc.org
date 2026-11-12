@@ -22,6 +22,7 @@
 	import ResolveModal from './ResolveModal.svelte';
 	import CreateReservation from './CreateModal.svelte';
 	import RecurringSeriesModal from './RecurringSeriesModal.svelte';
+	import HeaderLinks from './HeaderLinks.svelte';
 	import { page as appPage } from '$app/state';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
 	import TabBar from '#lib/components/ui/TabBar.svelte';
@@ -159,7 +160,7 @@
 	}
 </script>
 
-<PageHeader title={m.staff_reservations_title()}>
+<PageHeader title={m.staff_reservations_practice_space_title()}>
 	{#await counts}
 		<TabBar
 			tabs={[
@@ -188,6 +189,7 @@
 		<!-- DataList takes this rejection to the boundary. -->
 	{/await}
 	<div class="flex flex-wrap justify-end gap-2">
+		<HeaderLinks />
 		<Button
 			variant={unresolvedCount > 0 ? 'warning' : 'ghost'}
 			size="sm"

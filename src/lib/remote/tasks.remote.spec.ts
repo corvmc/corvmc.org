@@ -80,16 +80,17 @@ beforeEach(() => {
 	sqlite.exec(`insert into project (id, name) values ('${MINE}', 'Mine'), ('${THEIRS}', 'Theirs')`);
 	sqlite.exec(`insert into volunteer_role (id, name, is_active) values ('role-1', 'Door', 1)`);
 	sqlite.exec(
-		`insert into work_order (id, project_id, title, volunteer_role_id, capacity, sort_order)
-			values ('wo-theirs', '${THEIRS}', 'Theirs', 'role-1', 1, 5),
-				('wo-first', '${THEIRS}', 'First', 'role-1', 1, 0)`
+		`insert into work_order (id, project_id, title, volunteer_role_id, sort_order)
+			values ('wo-theirs', '${THEIRS}', 'Theirs', 'role-1', 5),
+				('wo-first', '${THEIRS}', 'First', 'role-1', 0)`
 	);
 });
 
 const untouched = () =>
 	sqlite
 		.prepare(
-			`select project_id, posted_at, resolved_at, cancelled_at, section_id, sort_order, starts_at
+			`select project_id, resolved_at, cancelled_at, section_id, sort_order,
+				(select count(*) from volunteer_shift where work_order_id = 'wo-theirs') as shifts
 				from work_order where id = 'wo-theirs'`
 		)
 		.get();
@@ -119,10 +120,9 @@ const before = {
 	project_id: THEIRS,
 	section_id: null,
 	sort_order: 5,
-	posted_at: null,
 	resolved_at: null,
 	cancelled_at: null,
-	starts_at: null
+	shifts: 0
 };
 
 describe('a work order named with a project it is not on', () => {

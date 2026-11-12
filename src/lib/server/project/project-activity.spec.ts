@@ -70,9 +70,9 @@ beforeEach(() => {
 	insert('user', { id: ADA, name: 'Ada', email: 'a@example.com', email_verified: 0 });
 	insert('project', { id: PROJECT, name: 'Renovation', created_at: T0, created_by_user_id: STAFF });
 	insert('project', { id: OTHER, name: 'Other', created_at: T0 });
-	insert('work_order', { id: 'wo-1', project_id: PROJECT, title: 'Paint', capacity: 1 });
-	insert('work_order', { id: 'wo-2', project_id: PROJECT, title: 'Sand', capacity: 1 });
-	insert('work_order', { id: 'wo-x', project_id: OTHER, title: 'Elsewhere', capacity: 1 });
+	insert('work_order', { id: 'wo-1', project_id: PROJECT, title: 'Paint' });
+	insert('work_order', { id: 'wo-2', project_id: PROJECT, title: 'Sand' });
+	insert('work_order', { id: 'wo-x', project_id: OTHER, title: 'Elsewhere' });
 });
 
 const summaries = (items: { summary: string }[]) => items.map((i) => i.summary);
@@ -201,8 +201,7 @@ describe('a project', () => {
 			insert('work_order', {
 				id: `bulk-${i}`,
 				project_id: PROJECT,
-				title: `Bulk ${i}`,
-				capacity: 1
+				title: `Bulk ${i}`
 			});
 			audit('work_order', `bulk-${i}`, 'work_order.reopened', T0 + 1000 + i);
 		}

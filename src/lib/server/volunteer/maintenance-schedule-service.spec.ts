@@ -88,7 +88,6 @@ describe('nextOccurrenceInsert', () => {
 			pendingCapacity: 2,
 			dueAt: new Date(closed.getTime() + 30 * DAY)
 		});
-		expect(values).not.toHaveProperty('legacyPostedAt');
 	});
 
 	it("carries the schedule's asset onto every occurrence (#1423)", () => {

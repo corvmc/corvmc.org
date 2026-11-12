@@ -190,7 +190,7 @@
 			{/if}
 
 			<InfoCard
-				title={m.member_volunteer_claimed_shifts_title()}
+				title={m.member_volunteer_my_shifts_title()}
 				state={liveShifts.length}
 				testid="my-shifts"
 			>

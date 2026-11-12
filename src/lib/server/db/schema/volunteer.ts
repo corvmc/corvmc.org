@@ -292,8 +292,7 @@ export const volunteerRoleCapability = sqliteTable(
  * is what someone noticed, a work order is what staff decided to do about it.
  *
  * The times volunteers show up are its shifts (`volunteerShift`, #2518), and
- * who staff put on it are its assignees. `legacy*` properties are columns no
- * service reads; a later migration drops them. Check names keep their old prefix.
+ * who staff put on it are its assignees.
  */
 export const workOrder = sqliteTable(
 	'work_order',
@@ -310,12 +309,6 @@ export const workOrder = sqliteTable(
 			onDelete: 'restrict'
 		}),
 
-		// Retired (#2518): a shift is open by existing.
-		legacyPostedAt: integer('posted_at', { mode: 'timestamp' }),
-		legacyPostedByUserId: text('posted_by_user_id').references(() => user.id, {
-			onDelete: 'set null'
-		}),
-
 		// Optional. Most shifts hang off a show, but work parties and gear repair
 		// days don't, so this can't be required. Set-null rather than cascade —
 		// deleting an event must not silently delete the record that four people
@@ -329,10 +322,6 @@ export const workOrder = sqliteTable(
 		// Nullable and not defaulted: an empty title means "use the event, or the
 		// role", which is what every shift did before this column existed.
 		title: text('title'),
-
-		// Moved to `volunteer_shift` (#2518).
-		legacyStartsAt: integer('starts_at', { mode: 'timestamp' }),
-		legacyEndsAt: integer('ends_at', { mode: 'timestamp' }),
 
 		// What the work is about, when it is about a thing. Null for an ordinary
 		// shift — nobody staffs the front desk on behalf of an amp.
@@ -401,9 +390,6 @@ export const workOrder = sqliteTable(
 			{ onDelete: 'set null' }
 		),
 
-		// Moved to `volunteer_shift` (#2518); a task's own count is `pendingCapacity`.
-		legacyCapacity: integer('capacity').notNull().default(1),
-
 		/** "Meet at the side door" — anything the claimant needs to know. */
 		notes: text('notes'),
 
@@ -431,11 +417,6 @@ export const workOrder = sqliteTable(
 		}),
 		resolutionNotes: text('resolution_notes'),
 
-		// Retired (#2518): reports close only when the task is marked done.
-		legacyCloseReportsOnCompletion: integer('close_reports_on_completion', { mode: 'boolean' })
-			.notNull()
-			.default(false),
-
 		// The committee answerable for this work (#1701). Null is staff's, as it
 		// always was. Set-null like `maintenance_schedule.group_id`: a disbanded
 		// committee's items fall back to staff. Responsibility only — it grants
@@ -458,11 +439,6 @@ export const workOrder = sqliteTable(
 			.default(sql`(unixepoch())`)
 	},
 	(t) => [
-		// The member's "what's coming up" list and the reminder cron both scan
-		// forward from now over live shifts.
-		index('work_order_upcoming_idx')
-			.on(t.legacyStartsAt)
-			.where(sql`cancelled_at IS NULL`),
 		index('work_order_role_idx').on(t.volunteerRoleId),
 		index('work_order_event_idx').on(t.eventId),
 		index('work_order_asset_idx').on(t.assetId),
@@ -479,26 +455,7 @@ export const workOrder = sqliteTable(
 		// A committee's Open items queue.
 		index('work_order_group_open_idx')
 			.on(t.groupId, t.dueAt)
-			.where(sql`group_id is not null and resolved_at is null and cancelled_at is null`),
-		// The coordinator's queue: work that needs somebody on it.
-		index('work_order_unscheduled_idx')
-			.on(t.createdAt)
-			.where(sql`starts_at is null and resolved_at is null and cancelled_at is null`),
-		// Either both ends are set or neither is — a half-scheduled shift is a bug,
-		// not a work order.
-		//
-		// Compare null-ness rather than writing `(a is null and b is null) or
-		// b > a`: that form leaves `starts_at` set and `ends_at` null evaluating to
-		// `false OR NULL` = NULL, and SQLite passes a CHECK that returns NULL. Only
-		// an explicit false rejects. `(x is null)` always yields 0 or 1, so this
-		// cannot leak — same shape as `member_certification_revoked_has_reason`.
-		check(
-			'volunteer_shift_ends_after_start',
-			sql`(starts_at is null) = (ends_at is null) and (ends_at is null or ends_at > starts_at)`
-		),
-		check('volunteer_shift_capacity_positive', sql`capacity > 0`),
-		// Posting is what puts work on the claim board, and claiming needs a role.
-		check('work_order_posted_has_role', sql`posted_at is null or volunteer_role_id is not null`)
+			.where(sql`group_id is not null and resolved_at is null and cancelled_at is null`)
 	]
 );
 
@@ -1403,16 +1360,8 @@ export type VolunteerHourLog = typeof volunteerHourLog.$inferSelect;
 export type VolunteerRoleInterest = typeof volunteerRoleInterest.$inferSelect;
 export type VolunteerProfile = typeof volunteerProfile.$inferSelect;
 export type WorkOrder = typeof workOrder.$inferSelect;
-/** The `work_order` columns that moved to `volunteer_shift` or were retired (#2518). */
-export type WorkOrderLegacyColumn =
-	| 'legacyStartsAt'
-	| 'legacyEndsAt'
-	| 'legacyCapacity'
-	| 'legacyPostedAt'
-	| 'legacyPostedByUserId'
-	| 'legacyCloseReportsOnCompletion';
-/** A task: the work order without the columns no service reads any more. */
-export type Task = Omit<WorkOrder, WorkOrderLegacyColumn>;
+/** A task: the work. Its times are `VolunteerShift` rows. */
+export type Task = WorkOrder;
 export type VolunteerShift = typeof volunteerShift.$inferSelect;
 export type WorkOrderAssignee = typeof workOrderAssignee.$inferSelect;
 export type VolunteerSignup = typeof volunteerSignup.$inferSelect;

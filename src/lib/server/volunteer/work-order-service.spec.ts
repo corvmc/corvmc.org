@@ -336,7 +336,6 @@ describe('work orders', () => {
 		const values = chainCalls.filter((c) => c.method === 'values');
 		expect(values).toHaveLength(1);
 		expect(values[0].args[0]).toMatchObject({ assetId: 'as-1' });
-		expect(values[0].args[0]).not.toHaveProperty('legacyStartsAt');
 	});
 
 	it('anchors a work order to a project when given one, and to none otherwise', async () => {

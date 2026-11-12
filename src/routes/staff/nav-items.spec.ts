@@ -223,7 +223,9 @@ describe('the nav tree', () => {
 		expect(keys('planning')).toEqual(['suggestions', 'ballots', 'projects', 'volunteer-schedule']);
 		// Recurring work is a Schedule view (#2087).
 		expect(activeNavKey('/staff/volunteer/schedule/recurring')).toBe('volunteer-schedule');
-		expect(keys('space')).toEqual(['reservations', 'gear', 'supplies', 'renewals', 'keys']);
+		expect(keys('space')).toEqual(['reservations', 'gear', 'supplies', 'renewals']);
+		// Key holders is a header link on Practice space (#2574), not a row.
+		expect(activeNavKey('/staff/keys')).toBe('reservations');
 		expect(keys('partners')).toEqual(['sponsors', 'venues', 'local-resources', 'contractors']);
 		expect(keys('moderation')).toEqual(['moderation', 'classifieds']);
 		expect(keys('outreach')).toEqual(['outreach']);
@@ -276,6 +278,7 @@ describe('route coverage', () => {
 		'/staff/inventory/compliance',
 		'/staff/local-resources/categories', // reached from Local Resources' header, like inventory's
 		'/staff/grants/funders', // reached from Grants' header; its breadcrumb runs through it
+		'/staff/keys', // reached from Practice space's header (#2574)
 		// Reached from the Bands view's header: the same staff job as a band.
 		'/staff/bands/acts',
 		// Moderation views, reached from its tab bar (#2393).
