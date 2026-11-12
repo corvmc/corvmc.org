@@ -94,6 +94,7 @@ function eightHourRow(overrides: Record<string, unknown> = {}) {
 		status: 'scheduled',
 		startsAt,
 		endsAt,
+		tourMinutes: 0,
 		cashDueCents: null,
 		...overrides
 	};
@@ -159,6 +160,7 @@ describe('getReservations payableWithCredits', () => {
 			status: 'scheduled',
 			startsAt,
 			endsAt: new Date(startsAt.getTime() + 2 * HOUR),
+			tourMinutes: 0,
 			cashDueCents: null,
 			...overrides
 		};
