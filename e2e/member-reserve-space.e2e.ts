@@ -3,13 +3,10 @@ import { signInAs } from './fixtures/auth';
 import { SEED_APPLICANT_EMAIL, SEED_APPLICANT_PASSWORD } from './fixtures/seed-instructors';
 
 /**
- * The member Reserve space modal reaches a priced confirm step (#2571).
- *
- * The step reads the first step's values from the form, and kit names each
- * field `<key>/<form id>`. Read by bare key, the step got nothing, sent no
- * pricing request and stayed on skeletons. It stops at the confirm step: the
- * booking itself is covered by the band and teaching specs, and a write here
- * would race them for the first free slot.
+ * The member Reserve space modal reaches a priced confirm step (#2571): kit
+ * names each field `<key>/<form id>`, and a read by bare key priced nothing.
+ * It stops at the confirm step. The band and teaching specs cover booking, and
+ * a write here would race them for the first free slot.
  */
 test('the member Reserve space modal prices the chosen slot', async ({ page }) => {
 	await signInAs(page, { email: SEED_APPLICANT_EMAIL, password: SEED_APPLICANT_PASSWORD });
