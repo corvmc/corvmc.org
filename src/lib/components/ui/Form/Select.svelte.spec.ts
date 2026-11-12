@@ -1,3 +1,4 @@
+import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { createRawSnippet } from 'svelte';
@@ -16,8 +17,9 @@ describe('Select', () => {
 		'leaves no vertical padding on the inner control (%s)',
 		async (size) => {
 			await render(Select, { size, children: options });
-			const style = getComputedStyle(document.querySelector<HTMLSelectElement>('select')!);
-			expect([style.paddingTop, style.paddingBottom]).toEqual(['0px', '0px']);
+			await expect
+				.element(page.getByRole('combobox'))
+				.toHaveStyle({ paddingTop: '0px', paddingBottom: '0px' });
 		}
 	);
 });
