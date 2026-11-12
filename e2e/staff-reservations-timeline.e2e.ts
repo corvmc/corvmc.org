@@ -71,6 +71,8 @@ test.describe('reservations timeline', () => {
 		await expectSuccessToast(page);
 
 		await page.getByRole('searchbox').fill(reason);
+		// The search is applied once it reaches the address.
+		await expect(page).toHaveURL(/[?&]q=/);
 		const row = page.getByRole('row').filter({ hasText: reason });
 		// A closure row, not a booking: the error badge is the closure's marker.
 		await expect(row.locator('.badge-error')).toBeVisible();

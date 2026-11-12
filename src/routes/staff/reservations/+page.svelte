@@ -26,7 +26,7 @@
 	import CreateReservation from './CreateModal.svelte';
 	import RecurringSeriesModal from './RecurringSeriesModal.svelte';
 	import BuildingAccess from './BuildingAccess.svelte';
-	import { page as appPage } from '$app/state';
+	import { page as appPage, navigating } from '$app/state';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
 	import { goto } from '$app/navigation';
 	import {
@@ -117,6 +117,9 @@
 			FILTER_KEYS.includes(k)
 		);
 		if (encode(current) === encode(pairs)) return;
+		// A search landing just after a row was clicked must not replace the
+		// navigation that click started.
+		if (navigating.to) return;
 		const query = encode(pairs);
 		// Shallow: a full navigation re-ran the layout under a click that had just
 		// opened a row's dialog, and the dialog never showed.
