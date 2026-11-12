@@ -70,6 +70,7 @@
 	const statuses: Status[] = ['confirmed', 'payment_due', 'waitlisted', 'cancelled'];
 	const bookers: Booker[] = ['user', 'group', 'production', 'event_listing'];
 	const ranges: DateRange[] = [...datePresets, 'custom'];
+	const FILTER_KEYS = ['q', 'booker', 'date', 'from', 'to', 'status', 'page'];
 
 	// Seeded once from the URL and mirrored back below, so a round trip through a
 	// reservation lands on the same view.
@@ -108,13 +109,21 @@
 		if (filters.dateTo) pairs.push(['to', filters.dateTo]);
 		if (status) pairs.push(['status', status]);
 		if (page > 1) pairs.push(['page', String(page)]);
-		const query = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-		const href = `${location.pathname}${query ? `?${query}` : ''}`;
+		const encode = (list: [string, string][]) =>
+			list.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+		// Only the filters' own keys decide whether the address is stale, so a link's
+		// `?recurring` or `?access` is not rewritten away on arrival.
+		const current = [...new URL(location.href).searchParams].filter(([k]) =>
+			FILTER_KEYS.includes(k)
+		);
+		if (encode(current) === encode(pairs)) return;
+		const query = encode(pairs);
 		// Shallow: a full navigation re-ran the layout under a click that had just
 		// opened a row's dialog, and the dialog never showed.
-		if (location.pathname + location.search !== href) {
-			void goto(href, { replace: true, shallow: true });
-		}
+		void goto(`${location.pathname}${query ? `?${query}` : ''}`, {
+			replace: true,
+			shallow: true
+		});
 	});
 
 	// One query, `.then()` views off it. Not awaited: awaiting would suspend the page
