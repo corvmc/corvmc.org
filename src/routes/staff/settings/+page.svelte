@@ -690,6 +690,13 @@
 							description={m.staff_settings_one_task_per_line_body()}
 							value={orientation.tasks.join('\n')}
 						/>
+						<FormField
+							field={updateOrientationSettings.fields.firstVisitNotes}
+							label={m.staff_settings_first_visit_notes_label()}
+							type="textarea"
+							description={m.staff_settings_first_visit_notes_body()}
+							value={orientation.firstVisitNotes}
+						/>
 					</CardBody>
 				</Card>
 			</Form>

@@ -563,6 +563,23 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'first_visit',
+		category: 'practice-space',
+		label: 'First visit',
+		// Sent in place of the reservation reminder for that booking.
+		description:
+			'The day before your first reservation: when to arrive, where to go, and the house rules',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
+		key: 'orientation_unclaimed',
+		category: 'volunteering',
+		label: 'Unclaimed orientation',
+		description: 'A day before an orientation shift that has no volunteer signed up',
+		defaults: { email: true, inApp: true, sms: false },
+		staffOnly: true
+	},
+	{
 		key: 'community_event_submitted',
 		category: 'shows',
 		label: 'Community listing needs review',

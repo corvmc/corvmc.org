@@ -1,7 +1,8 @@
 import { db } from '#lib/server/db/index.js';
 import { reservation } from '#lib/server/db/schema/reservation.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { eq, and, gt, gte, lt, isNotNull } from 'drizzle-orm';
+import { reminderSent } from '#lib/server/db/schema/reminder.js';
+import { eq, and, gt, gte, lt, isNotNull, ne, or, sql } from 'drizzle-orm';
 import { formatDateFull, formatTimeSimple } from '#lib/server/reservation/timezone.js';
 import { DEFAULT_TIMEZONE, clubToday } from '#lib/config.js';
 import { addIsoDays } from '#lib/utils/deadline.js';
@@ -14,6 +15,13 @@ import { listLoansDueBetween } from '#lib/server/inventory/loan-service.js';
 import { listRenewalsExpiringBetween } from '#lib/server/renewal/renewal-service.js';
 import { listRadioAttestationsExpiringBetween } from '#lib/server/audio/radio-attestation.js';
 import { listDeliverablesDueBetween } from '#lib/server/volunteer/deliverables-service.js';
+import {
+	listFirstVisitsBetween,
+	listUnclaimedOrientationsBetween
+} from '#lib/server/volunteer/orientation-reminders.js';
+import { holdsPracticeSpaceClearanceSql } from '#lib/server/volunteer/practice-space-clearance.js';
+import { listUsersWithCapability } from '#lib/server/authorization.js';
+import { config } from '#lib/server/site-config/site-config-service.js';
 import { defineReminder, type ReminderDefinition } from './types';
 
 const TZ = DEFAULT_TIMEZONE;
@@ -191,7 +199,29 @@ function renewalExpiry(stage: '60d' | '14d', from: number, until: number) {
 	});
 }
 
-/** Confirmed reservations starting within `ms` of `now`. */
+const FIRST_VISIT = 'first_visit';
+
+/** What every first-visit mail says about the place: its address and staff notes. */
+async function firstVisitSettings() {
+	const [street, city, notes] = await Promise.all([
+		config('org.addressStreet'),
+		config('org.addressCity'),
+		config('volunteer.firstVisitNotes')
+	]);
+	return {
+		address: [street, city]
+			.map((v) => String(v).trim())
+			.filter(Boolean)
+			.join(', '),
+		notes: String(notes).trim()
+	};
+}
+
+/**
+ * Confirmed reservations starting within `ms` of `now`, less first visits:
+ * those get `first_visit` instead. A booking already sent that one stays out
+ * after a clearance lands, so the member gets one mail, not two.
+ */
 async function reservationsStartingWithin(ms: number, now: Date) {
 	return db
 		.select({
@@ -208,7 +238,12 @@ async function reservationsStartingWithin(ms: number, now: Date) {
 			and(
 				eq(reservation.status, 'confirmed'),
 				gte(reservation.startsAt, now),
-				lt(reservation.startsAt, new Date(now.getTime() + ms))
+				lt(reservation.startsAt, new Date(now.getTime() + ms)),
+				or(
+					ne(reservation.bookerType, 'user'),
+					holdsPracticeSpaceClearanceSql(reservation.createdByUserId, now)
+				),
+				sql`not exists (select 1 from ${reminderSent} where ${reminderSent.reminderKey} = ${FIRST_VISIT} and ${reminderSent.subjectId} = ${reservation.id})`
 			)
 		)
 		.limit(500);
@@ -242,6 +277,62 @@ export const reminders: ReminderDefinition[] = [
 					userName: row.userName,
 					userEmail: row.userEmail,
 					...when(row)
+				}
+			}));
+		}
+	}),
+
+	// A member's visit before they hold the Practice space clearance (#2569).
+	defineReminder({
+		key: FIRST_VISIT,
+		subjectType: 'reservation',
+		event: 'reservation.first_visit_due',
+		async due(now) {
+			const rows = await listFirstVisitsBetween(now, new Date(now.getTime() + DAY), now);
+			if (rows.length === 0) return [];
+			const { address, notes } = await firstVisitSettings();
+			return rows.map((row) => ({
+				subjectId: row.id,
+				payload: {
+					reservationId: row.id,
+					userId: row.userId,
+					userName: row.userName,
+					userEmail: row.userEmail,
+					...when(row),
+					tourTime: row.tourStartsAt ? formatTimeSimple(row.tourStartsAt, TZ) : null,
+					address,
+					notes
+				}
+			}));
+		}
+	}),
+
+	// An orientation shift nobody has signed up for, a day out (#2567). A digest,
+	// so two on one day reach each coordinator as one mail. The subject carries
+	// the start, so a shift moved to another day is owed the alert again.
+	defineReminder({
+		key: 'orientation_unclaimed',
+		subjectType: 'work_order',
+		event: 'volunteer.orientation_unclaimed',
+		digest: true,
+		async due(now) {
+			const rows = await listUnclaimedOrientationsBetween(now, new Date(now.getTime() + DAY));
+			if (rows.length === 0) return [];
+			const staff = await listUsersWithCapability('volunteer.manageShifts');
+			if (staff.length === 0) return [];
+			const recipients = staff.map((s) => ({
+				userId: s.id,
+				userName: s.name,
+				userEmail: s.email
+			}));
+			return rows.map((r) => ({
+				subjectId: `${r.workOrderId}:${r.startsAt.toISOString()}`,
+				recipients,
+				item: {
+					workOrderId: r.workOrderId,
+					memberName: r.memberName,
+					startsAt: r.startsAt.toISOString(),
+					endsAt: r.endsAt.toISOString()
 				}
 			}));
 		}

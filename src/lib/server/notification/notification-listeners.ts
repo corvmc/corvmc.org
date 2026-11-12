@@ -407,6 +407,48 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- First visit, the day before (#2569) ---
+	// Sent in place of the reservation reminder for that booking. The door code
+	// opens at the reservation's start, so before then the volunteer lets them in.
+	domainEvents.on('reservation.first_visit_due', async ({ data: event }) => {
+		const arrive = event.tourTime
+			? `Arrive by ${event.tourTime}. Someone will meet you at the door and show you around before your reservation starts at ${event.startTime}.`
+			: `Arrive a few minutes before ${event.startTime}.`;
+		await dispatch({
+			type: 'first_visit',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: `First visit: ${event.date}`,
+			body: event.tourTime
+				? `Arrive by ${event.tourTime}`
+				: `${event.startTime} – ${event.endTime}`,
+			href: '/member/reservations',
+			email: {
+				recipientName: event.userName,
+				subject: `First visit: ${event.date}`,
+				preview_text: event.tourTime
+					? `Arrive by ${event.tourTime} on ${event.date}.`
+					: `${event.date}, ${event.startTime} – ${event.endTime}`,
+				heading: 'First visit',
+				paragraphs: [
+					{ text: arrive },
+					...(event.address ? [{ text: `The space is at ${event.address}.` }] : []),
+					{
+						text: event.tourTime
+							? 'Your door code comes in a separate email. It works from the start of your reservation; until then, the person showing you around lets you in.'
+							: 'Your door code comes in a separate email. It works from the start of your reservation.'
+					}
+				],
+				...(event.notes ? { body_plain: event.notes } : {}),
+				details: [
+					...(event.tourTime ? [{ label: 'Arrive by', value: event.tourTime }] : []),
+					...whenDetails(event.date, event.startTime, event.endTime)
+				],
+				cta: { label: 'View my reservations' }
+			}
+		});
+	});
+
 	// --- Door code ready (the lock has confirmed it) ---
 	domainEvents.on('reservation.door_code_ready', async ({ data: event }) => {
 		await dispatch({
@@ -1493,6 +1535,51 @@ export function registerAllNotificationListeners(): void {
 			href: '/member/volunteer'
 		});
 	});
+
+	// --- Orientation shifts a day out with nobody signed up (#2567) ---
+	// One event is one coordinator's digest for a reminder pass. Not caught: a
+	// throw here is how the drain knows to leave the items owed.
+	domainEvents.on(
+		'volunteer.orientation_unclaimed',
+		async ({ data: { recipient, items: owed } }) => {
+			if (owed.length === 0) return;
+			const items = [...owed].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+			const [first] = items;
+			const single = items.length === 1;
+			const title = single
+				? `Unclaimed orientation: ${first.memberName}`
+				: `${items.length} unclaimed orientations`;
+			const line = single
+				? `${first.memberName}'s orientation, ${formatShiftWhen(first.startsAt, first.endsAt)}, has no volunteer signed up.`
+				: `${items.length} orientations in the next day have no volunteer signed up.`;
+
+			await dispatch({
+				type: 'orientation_unclaimed',
+				userId: recipient.userId,
+				userEmail: recipient.userEmail,
+				title,
+				body: single ? formatShiftWhen(first.startsAt, first.endsAt) : line,
+				href: single
+					? `/staff/volunteer/shifts/${first.workOrderId}`
+					: '/staff/volunteer/schedule?needs=short',
+				data: { workOrderIds: items.map((i) => i.workOrderId) },
+				email: {
+					recipientName: recipient.userName,
+					subject: title,
+					heading: 'Unclaimed orientation',
+					paragraphs: [
+						{ text: line },
+						{ text: 'Sign up for the shift, or invite a volunteer from the shift page.' }
+					],
+					details: items.map((i) => ({
+						label: i.memberName,
+						value: formatShiftWhen(i.startsAt, i.endsAt)
+					})),
+					cta: { label: single ? 'View shift' : 'View short-staffed shifts' }
+				}
+			});
+		}
+	);
 
 	// Declined (notify staff). Fanned out like a claim, because the next move is
 	// somebody else's to ask and whoever picks it up needs to know.

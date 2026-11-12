@@ -116,6 +116,8 @@ export interface NotificationEmailContent {
 	details?: NotificationEmailDetail[];
 	/** Raw member-written text. Escaped, and dropped for types that must not carry it. */
 	quote?: string;
+	/** Raw plain text carried as the body, line breaks kept. Escaped like `quote`. */
+	body_plain?: string;
 	footnote?: string;
 	transactional_only?: boolean;
 	/**

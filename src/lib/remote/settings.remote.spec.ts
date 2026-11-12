@@ -289,12 +289,17 @@ describe('updateOrientationSettings', () => {
 			roleId: 'role-1',
 			minutes: '30',
 			leadMinutes: '10',
-			tasks: '  Meet them at the door \n\nDoor code\n'
+			tasks: '  Meet them at the door \n\nDoor code\n',
+			firstVisitNotes: '  Park on the street.\nNo food in the room.\n'
 		});
 		expect(updateSiteConfigs).toHaveBeenCalledWith(
 			expect.arrayContaining([
 				{ key: 'volunteer.orientationLeadMinutes', value: 10 },
-				{ key: 'volunteer.orientationTasks', value: 'Meet them at the door\nDoor code' }
+				{ key: 'volunteer.orientationTasks', value: 'Meet them at the door\nDoor code' },
+				{
+					key: 'volunteer.firstVisitNotes',
+					value: 'Park on the street.\nNo food in the room.'
+				}
 			])
 		);
 	});

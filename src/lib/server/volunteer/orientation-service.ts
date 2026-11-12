@@ -178,18 +178,21 @@ export async function getOrientationSetting(): Promise<{
 	minutes: number;
 	leadMinutes: number;
 	tasks: string[];
+	firstVisitNotes: string;
 }> {
-	const [roleId, minutes, leadMinutes, tasks] = await Promise.all([
+	const [roleId, minutes, leadMinutes, tasks, firstVisitNotes] = await Promise.all([
 		config('volunteer.orientationRoleId'),
 		config('volunteer.orientationMinutes'),
 		config('volunteer.orientationLeadMinutes'),
-		config('volunteer.orientationTasks')
+		config('volunteer.orientationTasks'),
+		config('volunteer.firstVisitNotes')
 	]);
 	return {
 		roleId: String(roleId).trim(),
 		minutes: Number(minutes),
 		leadMinutes: Number(leadMinutes) || 0,
-		tasks: parseOrientationTasks(String(tasks))
+		tasks: parseOrientationTasks(String(tasks)),
+		firstVisitNotes: String(firstVisitNotes).trim()
 	};
 }
 

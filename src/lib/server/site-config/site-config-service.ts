@@ -68,6 +68,9 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	'volunteer.orientationMinutes': 30,
 	'volunteer.orientationLeadMinutes': 10,
 	'volunteer.orientationTasks': ORIENTATION_DEFAULT_TASKS.join('\n'),
+	// Parking, house rules and anything else a first-time member reads in the
+	// first-visit email, as plain text. Empty leaves that part out.
+	'volunteer.firstVisitNotes': '',
 
 	// How many inputs the desk in the practice room can actually take.
 	//
