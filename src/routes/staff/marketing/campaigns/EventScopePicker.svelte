@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * Which show this blast is about (#857). Sets `campaign.eventId`, the one
-	 * thing that makes the "This show's audience" built-in resolve to anybody
+	 * thing that makes the "Event audience" built-in resolve to anybody
 	 * — without it that audience matches nobody, which is the safe direction.
 	 *
 	 * `SearchSelect` rather than a `<select>`: the list is every live listing,

@@ -256,8 +256,8 @@
 					     bands alone; a production's hold is only ever a show. -->
 					<option value="group">{m.staff_reservations_bands_programs_label()}</option>
 					<option value="production">{m.staff_reservations_shows_label()}</option>
-					<!-- A listing with no production holds the room in its own name. -->
-					<option value="event_listing">{m.staff_listings_label()}</option>
+					<!-- An event with no production holds the room in its own name. -->
+					<option value="event_listing">{m.staff_reservations_events_label()}</option>
 				</Select>
 			</label>
 			<label class="flex flex-col gap-1">
