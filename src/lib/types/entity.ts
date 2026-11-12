@@ -82,12 +82,34 @@ export interface ReservationRef extends BaseRef {
 	bandSlug?: string | null;
 }
 
-/** The types whose reference is identity and nothing more. */
-export interface GenericRef extends BaseRef {
-	type: Exclude<EntityType, 'member' | 'band' | 'event' | 'reservation'>;
+/** Decided on its group's record, so the ref carries the group. */
+export interface GroupApplicationRef extends BaseRef {
+	type: 'group_application';
+	groupId?: string | null;
 }
 
-export type EntityRef = MemberRef | BandRef | EventRef | ReservationRef | GenericRef;
+/** Decided on its market day's vendors page, so the ref carries the event. */
+export interface MarketVendorRef extends BaseRef {
+	type: 'market_vendor';
+	eventId?: string | null;
+}
+
+/** The types whose reference is identity and nothing more. */
+export interface GenericRef extends BaseRef {
+	type: Exclude<
+		EntityType,
+		'member' | 'band' | 'event' | 'reservation' | 'group_application' | 'market_vendor'
+	>;
+}
+
+export type EntityRef =
+	| MemberRef
+	| BandRef
+	| EventRef
+	| ReservationRef
+	| GroupApplicationRef
+	| MarketVendorRef
+	| GenericRef;
 
 /** Which panel is being rendered. `public` is the unauthenticated site. */
 export type Panel = 'staff' | 'band' | 'member' | 'public';

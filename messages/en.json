@@ -250,6 +250,36 @@
 			}
 		}
 	],
+	"term_work_request": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "problem",
+				"countPlural=*": "problems"
+			}
+		}
+	],
+	"term_group_application": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "application",
+				"countPlural=*": "applications"
+			}
+		}
+	],
+	"term_market_vendor": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "vendor",
+				"countPlural=*": "vendors"
+			}
+		}
+	],
 	"term_club": [
 		{
 			"declarations": ["input count", "local countPlural = count: plural"],

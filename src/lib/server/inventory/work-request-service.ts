@@ -188,6 +188,10 @@ export async function hasBlockingFlag(assetId: string): Promise<boolean> {
  * Oldest first. A report that has been sitting a fortnight is the one that has
  * gone wrong, and a queue sorted newest-first hides exactly that.
  */
+/** Reported and not yet sent to a work order: the review feed's predicate. */
+export const untriagedRequest = () =>
+	and(eq(workRequest.status, 'pending'), isNull(workRequest.workOrderId));
+
 export async function listPendingFlags() {
 	return db
 		.select({
@@ -200,7 +204,7 @@ export async function listPendingFlags() {
 		.innerJoin(inventoryAsset, eq(inventoryAsset.id, workRequest.assetId))
 		.innerJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
 		.leftJoin(user, eq(user.id, workRequest.reportedByUserId))
-		.where(and(eq(workRequest.status, 'pending'), isNull(workRequest.workOrderId)))
+		.where(untriagedRequest())
 		.orderBy(asc(workRequest.createdAt), asc(workRequest.id));
 }
 
@@ -342,7 +346,7 @@ export type WorkRequestStage = (typeof workRequestStages)[number];
 function stageWhere(stage: WorkRequestStage | undefined) {
 	switch (stage) {
 		case 'untriaged':
-			return and(eq(workRequest.status, 'pending'), isNull(workRequest.workOrderId));
+			return untriagedRequest();
 		case 'in_work_order':
 			return and(eq(workRequest.status, 'pending'), isNotNull(workRequest.workOrderId));
 		case 'resolved':

@@ -2875,7 +2875,11 @@ export const entityTypes = [
 	'incident',
 	'project',
 	'local_resource',
-	'hour_log'
+	'hour_log',
+	'work_request',
+	'group_application',
+	'market_vendor',
+	'volunteer'
 ] as const;
 export type EntityType = (typeof entityTypes)[number];
 

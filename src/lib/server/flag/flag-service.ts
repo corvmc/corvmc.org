@@ -418,6 +418,13 @@ export interface FlagFilters {
 	appealPending?: boolean;
 }
 
+// Classifieds are off in code (#2116); their reports leave the queue with them.
+const surfaceOpen = () =>
+	surfaces.classifieds ? undefined : ne(contentFlag.entityType, 'classified_post');
+
+/** A report still waiting on a moderator: the review feed's predicate. */
+export const pendingFlag = () => and(eq(contentFlag.status, 'pending'), surfaceOpen());
+
 export async function listFlags(filters: FlagFilters, pagination: PaginationInput) {
 	const conditions = [];
 	if (filters.status) conditions.push(eq(contentFlag.status, filters.status));
@@ -426,8 +433,8 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 	}
 	if (filters.entityType) conditions.push(eq(contentFlag.entityType, filters.entityType));
 	if (filters.entityId) conditions.push(eq(contentFlag.entityId, filters.entityId));
-	// Classifieds are off in code (#2116); their reports leave the queue with them.
-	if (!surfaces.classifieds) conditions.push(ne(contentFlag.entityType, 'classified_post'));
+	const open = surfaceOpen();
+	if (open) conditions.push(open);
 	if (filters.reportedByUserId) {
 		conditions.push(eq(contentFlag.reportedByUserId, filters.reportedByUserId));
 	}

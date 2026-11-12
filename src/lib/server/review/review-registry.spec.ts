@@ -16,6 +16,7 @@ vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 const { reviewRegistry, countReviewFeed, listReviewFeed, reviewKindsFor } =
 	await import('./review-registry');
 const { reviewKinds } = await import('#lib/types/review.js');
+const { surfaces } = await import('#lib/config.js');
 
 const NOW = new Date('2026-11-12T12:00:00Z');
 const T = Math.floor(NOW.getTime() / 1000);
@@ -49,8 +50,12 @@ beforeAll(() => {
 			('r-live', 'cat', 'Published', 'published', null, ${T - 4 * DAY});
 		update local_resource set deleted_at = ${T} where id = 'r-gone';
 
-		insert into content_flag (id, entity_type, entity_id, reason) values
-			('f1', 'band', 'b1', 'spam'), ('f2', 'band', 'b2', 'spam');
+		insert into content_flag (id, entity_type, entity_id, reason, status, created_at) values
+			('f1', 'band_profile', 'b1', 'spam', 'resolved', ${T - 3 * DAY}),
+			('f2', 'band_profile', 'b2', 'spam', 'resolved', ${T - 3 * DAY}),
+			('f-open', 'event', 'l-live', 'spam', 'pending', ${T - 3 * DAY}),
+			('f-gone', 'band_profile', 'nobody', 'Rude bio', 'pending', ${T - 3 * DAY}),
+			('f-ad', 'classified_post', 'p-held', 'spam', 'pending', ${T - 3 * DAY});
 		insert into moderation_appeal (id, flag_id, appellant_user_id, body, created_at) values
 			('a-open', 'f1', 'ana', 'Please look again', ${T - 3 * DAY}),
 			('a-done', 'f2', 'ana', 'Decided', ${T - 3 * DAY});
@@ -69,6 +74,43 @@ beforeAll(() => {
 			('c-ahead', 'ahead', 'ana', 'claimed', ${T - DAY}, ${T - DAY}),
 			('c-past', 'past', 'ana', 'claimed', ${T - 2 * DAY}, ${T - 2 * DAY}),
 			('c-confirmed', 'ahead', 'bo', 'confirmed', ${T - DAY}, ${T - DAY});
+
+		insert into classified_post (id, author_user_id, kind, category, title, body, visibility,
+			visibility_changed_at, expires_at, created_at) values
+			('p-held', 'ana', 'offered', 'gear', 'Amp for sale', 'b', 'pending_review', ${T - 5 * DAY}, ${T + 30 * DAY}, ${T - 6 * DAY}),
+			('p-old', 'ana', 'offered', 'gear', 'Held before the column', 'b', 'pending_review', null, ${T + 30 * DAY}, ${T - 6 * DAY}),
+			('p-live', 'ana', 'offered', 'gear', 'On the board', 'b', 'visible', null, ${T + 30 * DAY}, ${T - 6 * DAY});
+
+		insert into equipment_category (id, name, pricing_tier) values ('amps', 'Amps', 'major');
+		insert into inventory_item (id, name, category_id, kind) values ('item', 'Bass amp', 'amps', 'serialized');
+		insert into inventory_asset (id, item_id, condition) values ('unit', 'item', 'good');
+		insert into work_request (id, asset_id, location, reported_by_user_id, note, status, work_order_id, created_at) values
+			('w-unit', 'unit', null, 'bo', 'Crackles', 'pending', null, ${T - 3 * DAY}),
+			('w-room', null, 'Bathroom', 'bo', 'Running toilet', 'pending', null, ${T - 3 * DAY}),
+			('w-sent', 'unit', null, 'bo', 'Crackles again', 'pending', 'wo', ${T - 3 * DAY}),
+			('w-done', 'unit', null, 'bo', 'Fixed', 'resolved', null, ${T - 3 * DAY});
+
+		insert into "group" (id, name, slug, kind) values
+			('club', 'Real Book Club', 'real-book', 'club'),
+			('cttee', 'Booking', 'booking', 'committee'),
+			('band', 'The Owls', 'owls', 'band');
+		insert into group_application (id, user_id, created_at) values
+			('app-ana', 'ana', ${T - 2 * DAY}), ('app-gone', 'bo', ${T - 2 * DAY}), ('app-bo', 'bo', ${T - 2 * DAY});
+		update group_application set withdrawn_at = ${T} where id = 'app-gone';
+		insert into group_application_choice (id, application_id, group_id, status) values
+			('g-club', 'app-ana', 'club', 'submitted'),
+			('g-cttee', 'app-ana', 'cttee', 'contacted'),
+			('g-band', 'app-ana', 'band', 'submitted'),
+			('g-withdrawn', 'app-gone', 'club', 'submitted'),
+			('g-decided', 'app-bo', 'cttee', 'accepted');
+
+		insert into market_vendor (id, event_id, business_name, offering, status, created_at) values
+			('v-applied', 'l-live', 'Riverside Records', 'Vinyl', 'applied', ${T - DAY}),
+			('v-accepted', 'l-live', 'Taken', 'Vinyl', 'accepted', ${T - DAY});
+
+		insert into volunteer_profile (id, user_id, first_name, last_name, is_adult, status, created_at) values
+			('vp-minor', 'ana', 'Ana', 'Young', 0, 'blocked', ${T - DAY}),
+			('vp-adult', 'bo', 'Bo', 'Grown', 1, 'active', ${T - DAY});
 	`);
 });
 
@@ -77,10 +119,17 @@ const WAITING: Record<string, string[]> = {
 	suggestion_answer: ['s-answer'],
 	suggestion_edit: ['e-pending'],
 	listing: ['l-pending'],
+	classified: ['p-held', 'p-old'],
 	resource_tip: ['r-tip'],
+	// The classified report waits only while classifieds are on.
+	flag: ['f-gone', 'f-open'],
 	appeal: ['a-open'],
+	problem: ['w-room', 'w-unit'],
+	group_application: ['g-club', 'g-cttee'],
+	market_vendor: ['v-applied'],
 	hour_log: ['h-pending'],
-	shift_claim: ['c-ahead']
+	shift_claim: ['c-ahead'],
+	minor_volunteer: ['ana']
 };
 
 describe('the review registry', () => {
@@ -100,6 +149,27 @@ describe('the review registry', () => {
 	it('offers a viewer only the kinds their capabilities allow', () => {
 		expect(reviewKindsFor(['volunteer.reviewHours']).map((d) => d.kind)).toEqual(['hour_log']);
 		expect(reviewKindsFor(['payment.read'])).toEqual([]);
+		expect(reviewKindsFor(['committee.reviewApplications']).map((d) => d.kind)).toEqual([
+			'group_application'
+		]);
+		expect(reviewKindsFor(['volunteer.manageRoster']).map((d) => d.kind)).toEqual([
+			'shift_claim',
+			'minor_volunteer'
+		]);
+	});
+
+	it('offers classifieds, and counts their reports, only while the surface is on', async () => {
+		expect(reviewKindsFor(['listing.review']).map((d) => d.kind)).toEqual(['listing']);
+		surfaces.classifieds = true;
+		try {
+			expect(reviewKindsFor(['listing.review']).map((d) => d.kind)).toEqual([
+				'listing',
+				'classified'
+			]);
+			expect(await reviewRegistry.flag.count(NOW)).toBe(3);
+		} finally {
+			surfaces.classifieds = false;
+		}
 	});
 });
 
@@ -130,6 +200,23 @@ describe('the feed', () => {
 		expect(page.items.map((i) => [i.id, i.ref.type, i.ref.id])).toEqual([
 			['appeal:a-open', 'flag', 'f1']
 		]);
+	});
+
+	it('links each row to the record its decision is made on', async () => {
+		const page = await listReviewFeed(everything, { limit: 100 }, NOW);
+		const refs = Object.fromEntries(page.items.map((i) => [i.id, i.ref]));
+		expect(refs['group_application:g-club']).toMatchObject({ groupId: 'club' });
+		expect(refs['market_vendor:v-applied']).toMatchObject({ eventId: 'l-live' });
+		expect(refs['problem:w-room']).toMatchObject({ type: 'work_request', id: 'w-room' });
+		expect(refs['minor_volunteer:ana']).toMatchObject({ type: 'volunteer', id: 'ana' });
+	});
+
+	it('names what a report is about, or its reason when the target is gone', async () => {
+		const page = await listReviewFeed(everything, { kind: 'flag', limit: 10 }, NOW);
+		expect(Object.fromEntries(page.items.map((i) => [i.id, i.summary]))).toEqual({
+			'flag:f-open': 'Live show',
+			'flag:f-gone': 'Rude bio'
+		});
 	});
 
 	it('names the submitter, or the email a public tip came from', async () => {
