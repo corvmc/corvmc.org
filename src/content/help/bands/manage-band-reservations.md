@@ -17,7 +17,7 @@ its status.
 
 - Review what's coming up and who booked it.
 - **Cancel** an upcoming or confirmed session (owners and admins).
-- Check status badges to see what's scheduled, confirmed, completed, or cancelled.
+- Check status badges to see what's confirmed, completed, or cancelled.
 
 ## Related
 

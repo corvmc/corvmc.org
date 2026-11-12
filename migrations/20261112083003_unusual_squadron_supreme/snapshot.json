@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "bb73f594-67df-405d-8c1f-797cfdc930c3",
+  "id": "e3945250-7a75-4ea5-93de-bbe6a712433a",
   "prevIds": [
-    "a10de0a9-7054-4dc2-b8b3-dd7b5859157d"
+    "bb73f594-67df-405d-8c1f-797cfdc930c3"
   ],
   "ddl": [
     {
@@ -1732,7 +1732,7 @@
       "type": "text",
       "notNull": true,
       "autoincrement": false,
-      "default": "'scheduled'",
+      "default": "'confirmed'",
       "generated": null,
       "name": "status",
       "entityType": "columns",

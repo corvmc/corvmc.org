@@ -92,10 +92,6 @@
 		@apply bg-secondary text-secondary-content;
 	}
 
-	.scheduled .date-block {
-		@apply bg-warning text-warning-content;
-	}
-
 	.completed .date-block {
 		@apply bg-success text-success-content;
 	}

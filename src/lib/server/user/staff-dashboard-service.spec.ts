@@ -41,7 +41,7 @@ describe('listRoomDays', () => {
 			`insert into reservation (id, booker_type, booker_id, created_by_user_id, status, starts_at, ends_at, lock_code) values
 				${row('late-last-night', 'confirmed', '2026-10-28T05:00:00Z', '2026-10-28T06:30:00Z')},
 				${row('now', 'confirmed', '2026-10-28T18:00:00Z', '2026-10-28T20:00:00Z', "'1234'")},
-				${row('this-evening', 'scheduled', '2026-10-29T01:00:00Z', '2026-10-29T03:00:00Z')},
+				${row('this-evening', 'confirmed', '2026-10-29T01:00:00Z', '2026-10-29T03:00:00Z')},
 				${row('dropped', 'cancelled', '2026-10-28T21:00:00Z', '2026-10-28T22:00:00Z')},
 				${row('tomorrow', 'confirmed', '2026-10-29T20:00:00Z', '2026-10-29T22:00:00Z')},
 				${row('friday', 'confirmed', '2026-10-30T20:00:00Z', '2026-10-30T22:00:00Z')}`

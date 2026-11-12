@@ -47,7 +47,7 @@ beforeEach(async () => {
 			bookerType: 'user',
 			bookerId: 'user-1',
 			createdByUserId: 'user-1',
-			status: 'scheduled',
+			status: 'confirmed',
 			startsAt: r.startsAt,
 			endsAt: new Date(r.startsAt.getTime() + 2 * HOUR)
 		});

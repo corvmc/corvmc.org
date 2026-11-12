@@ -45,7 +45,7 @@ const reservationServiceMock = {
 		id: 'res-new',
 		bookerType: 'group',
 		bookerId: 'band-1',
-		status: 'scheduled',
+		status: 'confirmed',
 		startsAt: new Date(),
 		endsAt: new Date()
 	})),
@@ -243,7 +243,7 @@ beforeEach(() => {
  * once a session has started, because `cancel()` refuses it — and `new Date()`
  * is already in the past by the time the handler reads its own clock.
  */
-function reservationRow(createdByUserId: string, status = 'scheduled', hoursFromNow = 24) {
+function reservationRow(createdByUserId: string, status = 'confirmed', hoursFromNow = 24) {
 	const startsAt = new Date(Date.now() + hoursFromNow * 3600_000);
 	const endsAt = new Date(startsAt.getTime() + 3600_000);
 	return {

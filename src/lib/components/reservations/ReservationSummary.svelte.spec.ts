@@ -52,7 +52,7 @@ describe('ReservationSummary, waitlisted', () => {
 	});
 
 	it(`leaves an ordinary booking's money line alone`, async () => {
-		await render(ReservationSummary, { reservation: { ...base, status: 'scheduled' } });
+		await render(ReservationSummary, { reservation: { ...base, status: 'confirmed' } });
 
 		expect(text()).toContain('$30.00');
 		expect(text()).not.toContain('A slot opened up');

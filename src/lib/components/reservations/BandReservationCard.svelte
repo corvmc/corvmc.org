@@ -44,10 +44,7 @@
 	// `canCancel` comes from the server — `cancelBandReservation` authorizes on
 	// `createdByUserId`, so rendering it for every bandmate offered a button that
 	// answered with an error toast. Nothing is shown to someone who can't.
-	const showCancel = $derived(
-		reservation.canCancel &&
-			(reservation.status === 'scheduled' || reservation.status === 'confirmed')
-	);
+	const showCancel = $derived(reservation.canCancel && reservation.status === 'confirmed');
 </script>
 
 <!-- Passed only when it has something in it: an empty footer is padding under
