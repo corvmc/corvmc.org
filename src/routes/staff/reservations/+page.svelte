@@ -109,8 +109,10 @@
 		if (page > 1) pairs.push(['page', String(page)]);
 		const query = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
 		const href = `${location.pathname}${query ? `?${query}` : ''}`;
+		// Shallow: a full navigation re-ran the layout under a click that had just
+		// opened a row's dialog, and the dialog never showed.
 		if (location.pathname + location.search !== href) {
-			void goto(href, { replace: true, reset: false });
+			void goto(href, { replace: true, shallow: true });
 		}
 	});
 
