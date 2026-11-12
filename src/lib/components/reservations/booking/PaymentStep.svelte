@@ -5,6 +5,7 @@
 	import { resolve } from '$app/paths';
 	import { getReservationPricing } from '#lib/remote/reservations.remote.js';
 	import { getFormContext } from '#lib/components/ui/Form/Form.svelte';
+	import { formValue } from '#lib/components/ui/Form/form-value.js';
 	import * as Form from '#lib/components/ui/Form/index.js';
 	import { formatDollars, toLocalDate, toLocalTime } from '#lib/utils/format.js';
 	import { creditsToHours } from '#lib/config.js';
@@ -41,6 +42,8 @@
 		isSustainingMember: boolean;
 	} | null>(null);
 
+	let pricingFailed = $state(false);
+
 	function extractTimeFields(d: Date) {
 		return { date: toLocalDate(d), time: toLocalTime(d) };
 	}
@@ -60,18 +63,21 @@
 			} else {
 				const form = el.closest('form');
 				if (form) {
-					const fd = new FormData(form);
-					date = fd.get('date') as string;
-					startTime = fd.get('startTime') as string;
-					endTime = fd.get('endTime') as string;
+					date = formValue(form, 'date');
+					startTime = formValue(form, 'startTime');
+					endTime = formValue(form, 'endTime');
 				}
 			}
 
 			if (date && startTime && endTime) {
 				pricing = null;
+				pricingFailed = false;
 				getReservationPricing({ date, startTime, endTime, reservationId: reservation?.id }).then(
 					(result) => {
 						pricing = result;
+					},
+					() => {
+						pricingFailed = true;
 					}
 				);
 			}
@@ -99,7 +105,11 @@
 			<input {...fields.id.as('hidden', reservation.id)} />
 		{/if}
 
-		{#if !pricing}
+		{#if pricingFailed}
+			<p class="py-2 text-sm text-error" data-testid="payment-pricing-error">
+				{m.reservations_booking_payment_step_pricing_failed_body()}
+			</p>
+		{:else if !pricing}
 			<div class="space-y-2 py-2">
 				<div class="flex justify-between">
 					<div class="h-5 w-48 skeleton"></div>

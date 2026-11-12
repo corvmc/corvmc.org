@@ -176,6 +176,13 @@ export default defineConfig(
 					selector:
 						"CallExpression[callee.name='goto'] > ObjectExpression > Property[key.name=/^(replaceState|invalidateAll)$/]",
 					message: 'Deprecated in kit 3. goto takes replace and refreshAll.'
+				},
+				{
+					// Kit names a remote form's fields `<key>/<form id>`, so reading a
+					// form element's FormData by bare key gets null (#2571).
+					selector: "NewExpression[callee.name='FormData'][arguments.length>0]",
+					message:
+						'Read a remote form field with formValue() from ui/Form/form-value, not FormData.get() by bare key.'
 				}
 			]
 		}

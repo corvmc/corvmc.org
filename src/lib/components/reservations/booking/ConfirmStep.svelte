@@ -6,6 +6,7 @@
 		previewRecurringInstances
 	} from '#lib/remote/reservations.remote.js';
 	import { getFormContext } from '#lib/components/ui/Form/Form.svelte';
+	import { formValue } from '#lib/components/ui/Form/form-value.js';
 	import * as Form from '#lib/components/ui/Form/index.js';
 	import Button from '#lib/components/ui/Button.svelte';
 	import {
@@ -73,6 +74,8 @@
 		remainingCents: number;
 	} | null>(null);
 
+	// A failed quote shows an error line, not a skeleton that never resolves.
+	let pricingFailed = $state(false);
 	let dateLabel = $state('');
 	let timeLabel = $state('');
 	let recurringFrequency = $state('');
@@ -107,13 +110,13 @@
 			} else {
 				const form = el.closest('form');
 				if (form) {
-					const fd = new FormData(form);
-					date = fd.get('date') as string;
-					startTime = fd.get('startTime') as string;
-					endTime = fd.get('endTime') as string;
-					recurringFrequency = (fd.get('recurring') as string) || '';
-					const monthlyMode = (fd.get('monthlyMode') as 'weekday' | 'monthday') || 'weekday';
-					const until = (fd.get('recurringUntil') as string) || undefined;
+					date = formValue(form, 'date');
+					startTime = formValue(form, 'startTime');
+					endTime = formValue(form, 'endTime');
+					recurringFrequency = formValue(form, 'recurring') || '';
+					const monthlyMode =
+						(formValue(form, 'monthlyMode') as 'weekday' | 'monthday' | null) || 'weekday';
+					const until = formValue(form, 'recurringUntil') || undefined;
 					if (date && startTime) {
 						const startIso = clubInstant(date, startTime);
 						const endIso = endTime ? clubInstant(date, endTime) : startIso;
@@ -151,15 +154,21 @@
 
 			if (date && startTime && endTime) {
 				pricing = null;
+				pricingFailed = false;
 				getReservationPricing({
 					date,
 					startTime,
 					endTime,
 					bookerType,
 					reservationId: reservation?.id
-				}).then((result) => {
-					pricing = result;
-				});
+				}).then(
+					(result) => {
+						pricing = result;
+					},
+					() => {
+						pricingFailed = true;
+					}
+				);
 			}
 		}
 	});
@@ -173,14 +182,18 @@
 
 		<div class="rounded-lg border border-base-300 bg-base-200/50 px-4 py-3">
 			{#if dateLabel}
-				<p class="font-medium">{dateLabel}</p>
+				<p class="font-medium" data-testid="confirm-slot">{dateLabel}</p>
 				<p class="text-muted">{timeLabel}</p>
 			{:else}
 				<div class="h-5 w-48 skeleton"></div>
 			{/if}
 		</div>
 
-		{#if !pricing}
+		{#if pricingFailed}
+			<p class="py-2 text-sm text-error" data-testid="confirm-pricing-error">
+				{m.reservations_booking_confirm_step_pricing_failed_body()}
+			</p>
+		{:else if !pricing}
 			<div class="flex justify-between py-2">
 				<div class="h-5 w-32 skeleton"></div>
 				<div class="h-5 w-16 skeleton"></div>
@@ -194,7 +207,7 @@
 				`sr-only` because the strike-through already says it visually.
 			-->
 			{@const creditsCommitNow = pricing.creditsApplicable > 0}
-			<dl class="space-y-2 py-4 text-sm">
+			<dl class="space-y-2 py-4 text-sm" data-testid="confirm-pricing">
 				<div class="flex justify-between">
 					<dt>
 						{m.reservations_booking_confirm_step_hr_hr_label({
