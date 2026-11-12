@@ -1,4 +1,4 @@
-# 0055 A task is the work, and a shift is when volunteers show up
+# 0056 A task is the work, and a shift is when volunteers show up
 
 - **Date:** 2026-11-10
 - **Status:** Accepted

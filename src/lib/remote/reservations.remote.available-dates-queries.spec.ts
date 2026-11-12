@@ -37,6 +37,12 @@ vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
 	}))
 }));
 
+// A cleared member, so only the two window reads count here; the clearance read
+// is per request, not per day, and `booking-notice.spec.ts` owns it.
+vi.mock('#lib/server/volunteer/practice-space-clearance.js', () => ({
+	holdsPracticeSpaceClearance: vi.fn(async () => true)
+}));
+
 const testUser = mockUser({ id: 'user-1', name: 'Test Member', email: 'member@example.com' });
 
 vi.mock('$app/server', () => ({
@@ -66,7 +72,7 @@ const { getAvailableDates } = (await import('#lib/remote/reservations.remote.js'
 describe('getAvailableDates query count', () => {
 	it('reads reservations and closures once for the whole window, not once per day', async () => {
 		select.mockClear();
-		const dates: string[] = await getAvailableDates();
+		const { dates }: { dates: string[] } = await getAvailableDates();
 
 		// Today may be past closing, so 13 or 14 days are offered; either way the
 		// window spans many days and the read count must not scale with it.

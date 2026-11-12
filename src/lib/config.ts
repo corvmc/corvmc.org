@@ -1558,6 +1558,13 @@ export const ORIENTATION_NOTES_MAX = 1000;
 /** A card inside this window of expiry reads as "expiring soon" rather than current. */
 export const CERT_EXPIRY_WARNING_DAYS = 60;
 
+/**
+ * The "Practice space" clearance's catalog id, fixed by the migration that seeds
+ * the row. Keyed on the id rather than the name: staff may rename a catalog entry,
+ * and the booking-notice rule must not switch off when they do.
+ */
+export const PRACTICE_SPACE_CLEARANCE_ID = 'practice-space';
+
 /** How long a group invite stays valid. The invite email's footnote interpolates it. */
 export const INVITE_EXPIRY_DAYS = 7;
 

@@ -7,6 +7,7 @@ import { getReservationConfig, termsFor } from './config';
 import { buildDateInTz, formatTimeInTz } from './timezone';
 import type { TimeSlot } from '#lib/server/db/schema/reservation.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
+import { holdsPracticeSpaceClearance } from '#lib/server/volunteer/practice-space-clearance.js';
 
 // ---------------------------------------------------------------------------
 // ConflictService — availability checks and slot generation
@@ -60,6 +61,28 @@ export interface BusyInterval {
 
 type SlotConfig = Awaited<ReturnType<typeof getReservationConfig>>;
 
+export interface BookingNotice {
+	minutes: number;
+	/** The new-member minimum applies: no current Practice space clearance. */
+	newMember: boolean;
+}
+
+/**
+ * How much notice a booking needs, resolved for who is booking. Only a member's
+ * own booking (`'user'`) can need the new-member minimum — the same booker type
+ * that raises an orientation shift. Staff paths never call this.
+ */
+export async function noticeFor(
+	config: SlotConfig,
+	who: { userId: string | null; bookerType?: BookerType }
+): Promise<BookingNotice> {
+	const own = (who.bookerType ?? 'user') === 'user' && who.userId !== null;
+	if (own && !(await holdsPracticeSpaceClearance(who.userId!))) {
+		return { minutes: config.newMemberMinAdvanceMinutes, newMember: true };
+	}
+	return { minutes: config.minAdvanceMinutes, newMember: false };
+}
+
 /**
  * One day's slots from rows already fetched. Pure: rows outside the day's
  * operating window are ignored, so a caller may pass a whole range's rows.
@@ -69,7 +92,8 @@ export function buildDaySlots(
 	config: SlotConfig,
 	reservations: BusyInterval[],
 	closures: BusyInterval[],
-	now: number = Date.now()
+	now: number = Date.now(),
+	minAdvanceMinutes: number = config.minAdvanceMinutes
 ): TimeSlot[] {
 	const tz = DEFAULT_TIMEZONE;
 	const dayStart = buildDateInTz(dateStr, config.operatingHoursStart, tz);
@@ -81,7 +105,7 @@ export function buildDaySlots(
 	const slots: TimeSlot[] = [];
 	const slotMs = config.timeSlotMinutes * 60 * 1000;
 	const bufferMs = config.bufferMinutes * 60 * 1000;
-	const earliestStart = now + config.minAdvanceMinutes * 60 * 1000;
+	const earliestStart = now + minAdvanceMinutes * 60 * 1000;
 
 	for (let time = dayStart.getTime(); time < dayEnd.getTime(); time += slotMs) {
 		const slotStart = time;
@@ -114,7 +138,8 @@ export function buildDaySlots(
  *   the result matches the submit/validation path whatever the runtime timezone.
  */
 export async function getAvailableSlotsForDates(
-	dateStrs: string[]
+	dateStrs: string[],
+	opts: { minAdvanceMinutes?: number } = {}
 ): Promise<Map<string, TimeSlot[]>> {
 	const result = new Map<string, TimeSlot[]>();
 	if (dateStrs.length === 0) return result;
@@ -144,13 +169,19 @@ export async function getAvailableSlotsForDates(
 	]);
 
 	const now = Date.now();
-	for (const d of dateStrs) result.set(d, buildDaySlots(d, config, reservations, closures, now));
+	const notice = opts.minAdvanceMinutes ?? config.minAdvanceMinutes;
+	for (const d of dateStrs) {
+		result.set(d, buildDaySlots(d, config, reservations, closures, now, notice));
+	}
 	return result;
 }
 
 /** One day's slots within operating hours, marked available or not. */
-export async function getAvailableSlots(dateStr: string): Promise<TimeSlot[]> {
-	return (await getAvailableSlotsForDates([dateStr])).get(dateStr) ?? [];
+export async function getAvailableSlots(
+	dateStr: string,
+	opts: { minAdvanceMinutes?: number } = {}
+): Promise<TimeSlot[]> {
+	return (await getAvailableSlotsForDates([dateStr], opts)).get(dateStr) ?? [];
 }
 
 // ---------------------------------------------------------------------------
@@ -170,6 +201,7 @@ export type BookingRejection =
 	| 'BEFORE_OPENING'
 	| 'AFTER_CLOSING'
 	| 'TOO_SOON'
+	| 'NEW_MEMBER_NOTICE'
 	| 'TOO_FAR_AHEAD';
 
 export interface ValidationResult {
@@ -191,6 +223,12 @@ export interface ValidateBookingOptions {
 	 * would otherwise be warned that a perfectly valid lesson is too short.
 	 */
 	bookerType?: BookerType;
+	/**
+	 * The member booking. A `'user'` booking by a member without a current
+	 * Practice space clearance needs the new-member notice. Omitted, only the
+	 * room minimum applies.
+	 */
+	userId?: string | null;
 }
 
 /**
@@ -264,12 +302,22 @@ export async function validateBooking(
 
 	// The near end of the window, which the slot picker also applies. A past start
 	// falls inside it too. Staff paths use `staffCreate`, which never calls this.
-	if (startsAt.getTime() < Date.now() + config.minAdvanceMinutes * 60 * 1000) {
-		return {
-			valid: false,
-			code: 'TOO_SOON',
-			error: `Bookings must start at least ${config.minAdvanceMinutes} minutes from now`
-		};
+	const notice = await noticeFor(config, {
+		userId: options?.userId ?? null,
+		bookerType: options?.bookerType
+	});
+	if (startsAt.getTime() < Date.now() + notice.minutes * 60 * 1000) {
+		return notice.newMember
+			? {
+					valid: false,
+					code: 'NEW_MEMBER_NOTICE',
+					error: `Your first booking needs ${formatNotice(notice.minutes)} notice so someone can show you around`
+				}
+			: {
+					valid: false,
+					code: 'TOO_SOON',
+					error: `Bookings must start at least ${notice.minutes} minutes from now`
+				};
 	}
 
 	// Check advance booking window
@@ -284,6 +332,13 @@ export async function validateBooking(
 	}
 
 	return { valid: true };
+}
+
+/** 4320 → "3 days'", 90 → "90 minutes'": the possessive the notice sentence wants. */
+export function formatNotice(minutes: number): string {
+	if (minutes % 1440 === 0) return minutes === 1440 ? "1 day's" : `${minutes / 1440} days'`;
+	if (minutes % 60 === 0) return minutes === 60 ? "1 hour's" : `${minutes / 60} hours'`;
+	return `${minutes} minutes'`;
 }
 
 // ---------------------------------------------------------------------------
