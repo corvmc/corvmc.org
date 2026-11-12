@@ -9,22 +9,21 @@ sortOrder: 7
 
 ## Closures
 
-**Staff → Closures** defines periods when the facility is unavailable — holidays,
-maintenance, private events. During a closure, members can't book the affected
-times.
+A closure is a period when the practice space is unavailable: holidays, maintenance,
+private events. During a closure, members can't book the affected times.
 
 ## Creating a closure
 
-1. Open **Closures**.
-2. Use the form to set a **reason** and a **start** and **end** date/time.
-3. Save it. It appears in the list of upcoming closures.
+1. Open **Staff → Practice space**.
+2. Open the menu beside **New reservation** and choose **Add closure**.
+3. Set a **reason** and a **start** and **end** date and time, then save it.
 
 ## Managing closures
 
-The list shows future closures; you can **edit** or **delete** them. Past closures
-drop off automatically.
+Closures are rows of the Practice space list, under All bookers and All statuses. A
+closure that has not started can be **edited** or **deleted** from its row.
 
 ## Tips
 
 - Set closures ahead of time so members see availability accurately when they plan.
-- Use a clear reason — it helps when reviewing the schedule later.
+- Use a clear reason. It helps when reviewing the schedule later.

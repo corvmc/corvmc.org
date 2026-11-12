@@ -2,7 +2,6 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { isEventHold } from '#lib/config.js';
 	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
-	import Button from '#lib/components/ui/Button.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import StatusBadge from '#lib/components/ui/StatusBadge.svelte';
@@ -14,18 +13,21 @@
 	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
 	import {
+		CashReceivedAction,
+		NoShowReservationAction,
 		CompleteReservationAction,
 		CreateClosureAction,
 		UpdateClosureAction,
 		DeleteClosureAction
 	} from '#lib/components/actions/index.js';
-	import ResolveModal from './ResolveModal.svelte';
+	import DateFilter, { datePresets, type DateRange } from './DateFilter.svelte';
+	import OverflowMenu from '#lib/components/ui/OverflowMenu.svelte';
 	import CreateReservation from './CreateModal.svelte';
 	import RecurringSeriesModal from './RecurringSeriesModal.svelte';
 	import HeaderLinks from './HeaderLinks.svelte';
 	import { page as appPage } from '$app/state';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
-	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import { goto } from '$app/navigation';
 	import {
 		IconCheck,
 		IconCircleCheck,
@@ -39,7 +41,8 @@
 		IconUserPlus,
 		IconNote,
 		IconPencil,
-		IconTrash
+		IconTrash,
+		IconChevronDown
 	} from '@tabler/icons-svelte';
 	import {
 		formatDate,
@@ -48,57 +51,97 @@
 		formatSpan
 	} from '#lib/utils/format.js';
 	import { DEFAULT_TIMEZONE } from '#lib/config.js';
-	import { visibleActions, reservationPaymentState } from '#lib/utils/reservation-actions.js';
+	import {
+		visibleActions,
+		reservationPaymentState,
+		owedAfterSession
+	} from '#lib/utils/reservation-actions.js';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import { getStaffReservationsPage } from '#lib/remote/reservations.remote.js';
 	import { Latest } from '#lib/latest.svelte.js';
 
 	type Row = Awaited<ReturnType<typeof getStaffReservationsPage>>['list']['rows'][number];
 	type Closure = Extract<Row, { kind: 'closure' }>;
+	type Reservation = Extract<Row, { kind: 'reservation' }>;
 
-	let tab = $state<'upcoming' | 'all'>('upcoming');
-	// Closures interleave with bookings (#1833); `?show=closures` is where the
-	// old `/staff/closures` redirects.
-	const shows = ['everything', 'reservations', 'closures'] as const;
-	const initialShow = appPage.url.searchParams.get('show');
-	let show = $state<(typeof shows)[number]>(shows.find((s) => s === initialShow) ?? 'everything');
-	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
-	// named `search`, and a snippet shadows a same-named script binding.
-	let searchText = $state('');
-	let dateFrom = $state('');
-	let dateTo = $state('');
-	let bookerType = $state<'user' | 'group' | 'production' | 'event_listing' | ''>('');
-	let page = $state(1);
+	type Status = 'confirmed' | 'payment_due' | 'waitlisted' | 'cancelled';
+	type Booker = 'user' | 'group' | 'production' | 'event_listing';
+	const statuses: Status[] = ['confirmed', 'payment_due', 'waitlisted', 'cancelled'];
+	const bookers: Booker[] = ['user', 'group', 'production', 'event_listing'];
+	const ranges: DateRange[] = [...datePresets, 'custom'];
 
-	let searchDebounced = $state('');
+	// Seeded once from the URL and mirrored back below, so a round trip through a
+	// reservation lands on the same view.
+	const params = appPage.url.searchParams;
+	const pick = <T extends string>(list: readonly T[], key: string) =>
+		list.find((v) => v === params.get(key));
+	// `searchText`, not `search`: FilterBar's `search` snippet shadows a same-named binding.
+	let searchText = $state(params.get('q') ?? '');
+	let searchDebounced = $state(params.get('q') ?? '');
+	let bookerType = $state<Booker | ''>(pick(bookers, 'booker') ?? '');
+	let range = $state<DateRange>(pick(ranges, 'date') ?? 'from_today');
+	let dateFrom = $state(params.get('from') ?? '');
+	let dateTo = $state(params.get('to') ?? '');
+	let status = $state<Status | ''>(pick(statuses, 'status') ?? '');
+	let page = $state(Number(params.get('page')) || 1);
+
 	let filters = $derived({
-		tab,
 		search: searchDebounced || undefined,
-		dateFrom: dateFrom || undefined,
-		dateTo: dateTo || undefined,
 		bookerType: bookerType || undefined,
-		show: show === 'everything' ? undefined : show,
+		range,
+		dateFrom: range === 'custom' && dateFrom ? dateFrom : undefined,
+		dateTo: range === 'custom' && dateTo ? dateTo : undefined,
+		status: status || undefined,
 		page
 	});
 
-	// One query, four `.then()` views off it. Four separate promises here were recreated on every
-	// filter keystroke, and a superseded one that rejects has no consumer left — that is where
-	// JAVASCRIPT-SVELTEKIT-3's unhandled rejections came from. Not awaited, because awaiting would
-	// suspend the page into the layout boundary's pending snippet on every keystroke.
+	$effect(() => {
+		const pairs: [string, string][] = [];
+		if (searchDebounced) pairs.push(['q', searchDebounced]);
+		if (bookerType) pairs.push(['booker', bookerType]);
+		if (range !== 'from_today') pairs.push(['date', range]);
+		if (filters.dateFrom) pairs.push(['from', filters.dateFrom]);
+		if (filters.dateTo) pairs.push(['to', filters.dateTo]);
+		if (status) pairs.push(['status', status]);
+		if (page > 1) pairs.push(['page', String(page)]);
+		const query = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+		const href = `${location.pathname}${query ? `?${query}` : ''}`;
+		if (location.pathname + location.search !== href) {
+			goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+		}
+	});
+
+	// One query, `.then()` views off it. Not awaited: awaiting would suspend the page
+	// into the layout boundary's pending snippet on every keystroke.
 	const pageData = $derived(getStaffReservationsPage(filters));
 	const latestPage = new Latest(() => pageData);
 
 	const result = $derived(pageData.then((d) => d.list));
-	const counts = $derived(pageData.then((d) => d.counts));
 	const hourlyRates = $derived(pageData.then((d) => d.hourlyRates));
-	// Latched, not `{#await}`ed: every refresh hands `.then()` a fresh promise, the
-	// `{#await}` re-pends, and its subtree unmounts — an open dialog and what was
-	// typed in it with it (#2350, #2352). A notification's `refreshAll()` is enough.
+	// Latched, not `{#await}`ed: every refresh hands `.then()` a fresh promise, and a
+	// re-pending `{#await}` unmounts an open dialog with it (#2350, #2352).
 	const settled = $derived(latestPage.current);
 	const canManageClosures = $derived(settled?.canManageClosures ?? false);
-	const unresolvedCount = $derived(settled?.unresolved.length ?? 0);
+	const statusCounts = $derived(settled?.statusCounts);
+	const owedDot = $derived((settled?.owedAfterSession ?? 0) > 0 && status !== 'payment_due');
 
-	let resolveOpen = $state(false);
+	const statusLabel: Record<Status, (count: number) => string> = {
+		confirmed: (count) => m.staff_reservations_status_confirmed_label({ count }),
+		payment_due: (count) => m.staff_reservations_status_payment_due_label({ count }),
+		waitlisted: (count) => m.staff_reservations_status_waitlisted_label({ count }),
+		cancelled: (count) => m.staff_reservations_status_cancelled_label({ count })
+	};
+
+	function setStatus(next: Status | '') {
+		status = next;
+		// Money owed is not bound to a date, so Payment due shows every date.
+		if (next === 'payment_due') {
+			range = 'any';
+			dateFrom = '';
+			dateTo = '';
+		}
+		page = 1;
+	}
 
 	function paymentStatus(state: ReturnType<typeof reservationPaymentState>): {
 		label: string;
@@ -144,145 +187,99 @@
 		return label;
 	}
 
-	const menuFilterCount = $derived(
-		(dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (bookerType ? 1 : 0) + (show !== 'everything' ? 1 : 0)
+	const activeFilterCount = $derived(
+		(searchDebounced ? 1 : 0) +
+			(bookerType ? 1 : 0) +
+			(range !== 'from_today' ? 1 : 0) +
+			(status ? 1 : 0)
 	);
-	const activeFilterCount = $derived((searchDebounced ? 1 : 0) + menuFilterCount);
 
 	function clearFilters() {
 		searchText = '';
 		searchDebounced = '';
+		bookerType = '';
+		range = 'from_today';
 		dateFrom = '';
 		dateTo = '';
-		bookerType = '';
-		show = 'everything';
+		status = '';
 		page = 1;
 	}
 </script>
 
 <PageHeader title={m.staff_reservations_practice_space_title()}>
-	{#await counts}
-		<TabBar
-			tabs={[
-				{ key: 'upcoming', label: m.staff_reservations_upcoming_label() },
-				{ key: 'all', label: m.staff_all_label() }
-			]}
-			active={tab}
-			onchange={(key) => {
-				tab = key as 'upcoming' | 'all';
-				page = 1;
-			}}
-		/>
-	{:then c}
-		<TabBar
-			tabs={[
-				{ key: 'upcoming', label: m.staff_reservations_upcoming_label(), badge: c.upcoming },
-				{ key: 'all', label: m.staff_all_label(), badge: c.all }
-			]}
-			active={tab}
-			onchange={(key) => {
-				tab = key as 'upcoming' | 'all';
-				page = 1;
-			}}
-		/>
-	{:catch}
-		<!-- DataList takes this rejection to the boundary. -->
-	{/await}
 	<div class="flex flex-wrap justify-end gap-2">
 		<HeaderLinks />
-		<Button
-			variant={unresolvedCount > 0 ? 'warning' : 'ghost'}
-			size="sm"
-			onclick={() => (resolveOpen = true)}
-		>
-			{m.staff_resolve_label()}
-			{#if unresolvedCount > 0}
-				<Badge>{unresolvedCount}</Badge>
-			{/if}
-		</Button>
 		<RecurringSeriesModal />
-		{#if canManageClosures}<CreateClosureAction data-testid="new-closure" />{/if}
-		<CreateReservation />
+		<div class="join">
+			<CreateReservation class="join-item" />
+			{#if canManageClosures}
+				<OverflowMenu triggerClass="btn-primary join-item" class="join-item">
+					{#snippet icon()}<IconChevronDown size={16} />{/snippet}
+					<CreateClosureAction data-testid="new-closure" />
+				</OverflowMenu>
+			{/if}
+		</div>
 	</div>
 </PageHeader>
 <PageContent>
-	<FilterBar activeCount={activeFilterCount} menuCount={menuFilterCount} onclear={clearFilters}>
+	<FilterBar activeCount={activeFilterCount} onclear={clearFilters} searchWidth="wide">
 		{#snippet search()}
-			<SearchInput
-				bind:value={searchText}
-				placeholder={m.staff_reservations_placeholder()}
-				onsearch={(q) => {
-					searchDebounced = q;
-					page = 1;
-				}}
-			/>
-		{/snippet}
-		{#snippet menu()}
-			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">{m.staff_from_date_label()}</span>
-				<input
-					type="date"
-					class="input input-sm"
-					bind:value={dateFrom}
-					onchange={() => {
-						page = 1;
-					}}
-				/>
-			</label>
-			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">{m.staff_date_2_label()}</span>
-				<input
-					type="date"
-					class="input input-sm"
-					bind:value={dateTo}
-					onchange={() => {
-						page = 1;
-					}}
-				/>
-			</label>
-			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">{m.staff_booked_by_label()}</span>
+			<div class="join w-full">
 				<Select
 					size="sm"
+					class="join-item w-auto shrink-0"
+					aria-label={m.staff_reservations_booker_type_label()}
+					data-testid="booker-filter"
 					value={bookerType}
 					onchange={(e: Event) => {
 						bookerType = (e.currentTarget as HTMLSelectElement).value as typeof bookerType;
 						page = 1;
 					}}
 				>
-					<option value="">{m.staff_anyone_label()}</option>
+					<option value="">{m.staff_reservations_all_bookers_label()}</option>
 					<option value="user">{m.staff_members_label()}</option>
-					<!-- A programme's session books as its group too, so this is no longer
-					     bands alone; a production's hold is only ever a show. -->
-					<option value="group">{m.staff_reservations_bands_programs_label()}</option>
-					<option value="production">{m.staff_reservations_shows_label()}</option>
-					<!-- An event with no production holds the room in its own name. -->
+					<!-- A programme's session books as its group too. -->
+					<option value="group">{m.staff_reservations_groups_label()}</option>
+					<option value="production">{m.staff_reservations_productions_label()}</option>
 					<option value="event_listing">{m.staff_reservations_events_label()}</option>
 				</Select>
-			</label>
-			<label class="flex flex-col gap-1">
-				<span class="text-muted text-xs">{m.staff_show_label()}</span>
-				<Select
-					size="sm"
-					value={show}
-					onchange={(e: Event) => {
-						show = (e.currentTarget as HTMLSelectElement).value as typeof show;
+				<SearchInput
+					class="input join-item w-full input-sm"
+					bind:value={searchText}
+					placeholder={m.staff_reservations_placeholder()}
+					onsearch={(q) => {
+						searchDebounced = q;
 						page = 1;
 					}}
-				>
-					<option value="everything">{m.staff_reservations_reservations_closures_label()}</option>
-					<option value="reservations">{m.staff_reservations_label()}</option>
-					<option value="closures">{m.staff_reservations_closures_label()}</option>
-				</Select>
-			</label>
+				/>
+			</div>
 		{/snippet}
+		<DateFilter bind:range bind:from={dateFrom} bind:to={dateTo} onchange={() => (page = 1)} />
+		<div class="indicator">
+			{#if owedDot}
+				<span class="indicator-item status status-error" data-testid="payment-due-dot">
+					<span class="sr-only">{m.staff_reservations_payment_overdue_text()}</span>
+				</span>
+			{/if}
+			<Select
+				size="sm"
+				aria-label={m.staff_status_label()}
+				data-testid="status-filter"
+				value={status}
+				onchange={(e: Event) =>
+					setStatus((e.currentTarget as HTMLSelectElement).value as Status | '')}
+			>
+				<option value="">{m.staff_reservations_all_statuses_label()}</option>
+				{#each statuses as s (s)}
+					<option value={s}>{statusLabel[s](statusCounts?.[s] ?? 0)}</option>
+				{/each}
+			</Select>
+		</div>
 	</FilterBar>
 
 	<DataList
 		{result}
-		empty={show === 'closures'
-			? m.staff_reservations_no_closures_found_body()
-			: m.staff_reservations_no_reservations_found_body()}
+		empty={m.staff_reservations_no_reservations_found_body()}
 		onpage={(p) => (page = p)}
 	>
 		{#snippet children(reservations)}
@@ -432,7 +429,9 @@
 
 							<td class="w-px">
 								<div class="flex w-max items-center justify-end gap-1">
-									{#if actions.has('complete')}
+									{#if owedAfterSession(r)}
+										{@render settleActions(r)}
+									{:else if actions.has('complete')}
 										<CompleteReservationAction
 											reservation={r}
 											iconOnly
@@ -547,7 +546,9 @@
 										<!-- DataList takes this rejection to the boundary. -->
 									{/await}
 								{/if}
-								{#if actions.has('complete')}
+								{#if owedAfterSession(r)}
+									<div class="flex gap-2">{@render settleActions(r)}</div>
+								{:else if actions.has('complete')}
 									<CompleteReservationAction reservation={r} size="sm" />
 								{/if}
 							</div>
@@ -578,10 +579,14 @@
 	{/if}
 {/snippet}
 
-{#if settled}
-	<ResolveModal
-		bind:open={resolveOpen}
-		unresolved={settled.unresolved}
-		hourlyRates={settled.hourlyRates}
+<!-- A session that ended owing money is settled from its row. -->
+{#snippet settleActions(r: Reservation)}
+	<CashReceivedAction reservation={r} data-testid="cash-received" />
+	<NoShowReservationAction
+		reservation={r}
+		variant="error"
+		size="sm"
+		outline
+		data-testid="no-show"
 	/>
-{/if}
+{/snippet}

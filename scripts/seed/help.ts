@@ -172,9 +172,9 @@ export async function seedHelp() {
 				categoryId: cats[3].id,
 				title: 'Managing Reservations',
 				slug: 'staff-managing-reservations',
-				summary: 'How to confirm, complete, and resolve reservations.',
+				summary: 'How to confirm, complete, and settle reservations.',
 				content:
-					"## Managing Reservations\n\nAs staff, you can manage all member reservations.\n\n### Actions\n\n- **Confirm** — Approve a pending reservation\n- **Complete** — Mark as done after the session\n- **No-show** — Mark if the member didn't arrive\n- **Cancel** — Cancel with an optional reason\n\n### Resolving Issues\n\nUse the Resolve panel to handle unresolved reservations (past their end time but not completed).",
+					"## Managing Reservations\n\nAs staff, you can manage all member reservations.\n\n### Actions\n\n- **Confirm** — Approve a pending reservation\n- **Complete** — Mark as done after the session\n- **No-show** — Mark if the member didn't arrive\n- **Cancel** — Cancel with an optional reason\n\n### Payment due\n\nThe Payment due status lists sessions that ended owing money. Each one shows Cash received and No-show on its row.",
 				source: 'static',
 				minRole: 'staff',
 				published: true,

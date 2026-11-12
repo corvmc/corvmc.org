@@ -5,6 +5,7 @@ import {
 	isTerminalStatus,
 	memberPayAction,
 	overlappingReservations,
+	owedAfterSession,
 	reservationPaymentState,
 	visibleActions
 } from './reservation-actions';
@@ -310,5 +311,30 @@ describe('isOverdue', () => {
 		expect(isOverdue({ ...base, refundedAt: ended }, now)).toBe(false);
 		expect(isOverdue({ ...base, cashDueCents: 0 }, now)).toBe(false);
 		expect(isOverdue({ ...base, status: 'cancelled' }, now)).toBe(false);
+	});
+});
+
+describe('owedAfterSession', () => {
+	const now = new Date('2026-06-15T19:00:00Z');
+	const ended = new Date(now.getTime() - 1);
+	const r = (endsAt: Date, extra: Record<string, unknown> = {}) => ({
+		status: 'confirmed',
+		paidAt: null,
+		cashDueCents: 3000,
+		bookerType: 'user',
+		refundedAt: null,
+		endsAt,
+		...extra
+	});
+
+	it('offers settling once the session has ended owing', () => {
+		expect(owedAfterSession(r(ended), now)).toBe(true);
+		expect(owedAfterSession(r(now), now)).toBe(false);
+	});
+
+	it('leaves a paid, settled or event-hold session alone', () => {
+		expect(owedAfterSession(r(ended, { paidAt: now }), now)).toBe(false);
+		expect(owedAfterSession(r(ended, { cashDueCents: 0 }), now)).toBe(false);
+		expect(owedAfterSession(r(ended, { bookerType: 'production' }), now)).toBe(false);
 	});
 });

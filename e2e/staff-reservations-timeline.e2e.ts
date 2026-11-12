@@ -38,11 +38,13 @@ test.describe('reservations timeline', () => {
 		await fakeNotificationStream(page);
 		await loginAsStaff(page);
 		await page.goto('/staff/closures');
-		await page.waitForURL(/\/staff\/reservations\?show=closures/, { timeout: 15000 });
+		await page.waitForURL(/\/staff\/reservations$/, { timeout: 15000 });
 
 		// Far enough out that it blocks no slot another spec books.
 		const reason = `E2E closure ${Date.now()}`;
 		const start = { entered: '09:00', shown: '9:00' };
+		// Add closure sits in the New reservation split button's menu.
+		await page.locator('details:has([data-testid="new-closure"]) > summary').click();
 		await page.getByTestId('new-closure').click();
 		const dialog = page
 			.getByRole('dialog')
@@ -85,6 +87,28 @@ test.describe('reservations timeline', () => {
 		await page.evaluate(() => (window as unknown as { __notify: () => void }).__notify());
 		await rowRefreshed;
 		await expect(edit.locator('input:is([name="reason"], [name^="reason/"])')).toHaveValue(edited);
+	});
+
+	test('the filter row lives in the URL, and Payment due widens the date', async ({ page }) => {
+		await loginAsStaff(page);
+		await page.goto('/staff/reservations');
+
+		await page.getByTestId('booker-filter').selectOption('group');
+		await expect(page).toHaveURL(/[?&]booker=group/);
+
+		await page.getByTestId('status-filter').selectOption('payment_due');
+		await expect(page).toHaveURL(/[?&]status=payment_due/);
+		await expect(page).toHaveURL(/[?&]date=any/);
+
+		// A reload, which a round trip through a reservation amounts to, keeps the view.
+		await page.reload();
+		await expect(page.getByTestId('status-filter')).toHaveValue('payment_due');
+		await expect(page.getByTestId('booker-filter')).toHaveValue('group');
+		await page.getByTestId('date-filter').click();
+		await expect(page.locator('[data-range="any"]')).toHaveAttribute('aria-pressed', 'true');
+
+		await page.locator('[data-range="next_7"]').click();
+		await expect(page).toHaveURL(/[?&]date=next_7/);
 	});
 
 	test('the old recurring address opens the series modal', async ({ page }) => {

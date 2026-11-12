@@ -166,12 +166,12 @@ test.describe('staff event creation — minimal modal', () => {
 		// member and band names, so an event hold was unfindable by its show.
 		await page.getByRole('searchbox').fill(title);
 		// The date bounds keep the row off a later page of the 50-row list. They
-		// sit in the Filters menu, closed again so it cannot cover the row.
-		await page.getByRole('main').locator('button[aria-haspopup="dialog"]').click();
-		await page.getByLabel('From date').fill(eventDate);
-		await page.getByLabel('To date').fill(eventDate);
+		// sit in the Date panel, closed again so it cannot cover the row.
+		await page.getByTestId('date-filter').click();
+		await page.getByLabel('From', { exact: true }).fill(eventDate);
+		await page.getByLabel('To', { exact: true }).fill(eventDate);
 		await page.keyboard.press('Escape');
-		await expect(page.getByLabel('From date')).toBeHidden();
+		await expect(page.getByLabel('From', { exact: true })).toBeHidden();
 
 		const row = page.locator('tr', { has: page.getByRole('link', { name: title }) });
 		await expect(row.getByRole('link', { name: title })).toHaveAttribute(
