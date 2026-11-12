@@ -95,7 +95,7 @@ test.describe('reservations timeline', () => {
 		await loginAsStaff(page);
 		await page.goto('/staff/reservations');
 
-		await page.getByTestId('booker-filter').selectOption('group');
+		await page.getByTestId('type-filter').selectOption('group');
 		await expect(page).toHaveURL(/[?&]booker=group/);
 
 		await page.getByTestId('status-filter').selectOption('payment_due');
@@ -105,7 +105,7 @@ test.describe('reservations timeline', () => {
 		// A reload, which a round trip through a reservation amounts to, keeps the view.
 		await page.reload();
 		await expect(page.getByTestId('status-filter')).toHaveValue('payment_due');
-		await expect(page.getByTestId('booker-filter')).toHaveValue('group');
+		await expect(page.getByTestId('type-filter')).toHaveValue('group');
 		await page.getByTestId('date-filter').click();
 		await expect(page.locator('[data-range="any"]')).toHaveAttribute('aria-pressed', 'true');
 

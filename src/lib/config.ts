@@ -1620,6 +1620,10 @@ export const SHIFT_FEEDBACK_MIN_RATING = 1;
 export const SHIFT_FEEDBACK_MAX_RATING = 5;
 export const SHIFT_FEEDBACK_COMMENT_MAX = 2000;
 
+/** The date presets a staff list's date filter offers, and `custom` for a typed range. */
+export const listDateRanges = ['from_today', 'next_7', 'past_30', 'any', 'custom'] as const;
+export type ListDateRange = (typeof listDateRanges)[number];
+
 /**
  * Today's calendar date in club time, as YYYY-MM-DD.
  *

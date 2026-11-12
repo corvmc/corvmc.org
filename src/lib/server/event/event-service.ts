@@ -1,5 +1,4 @@
 import { db, getRowCount } from '#lib/server/db/index.js';
-import { staffVisible } from './calendar-totals-service';
 import { DomainError } from '#lib/server/domain-error.js';
 import {
 	eventListing,
@@ -61,7 +60,6 @@ import {
 import { alias } from 'drizzle-orm/sqlite-core';
 
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
-import { memberRefColumns } from '#lib/server/entity/refs.js';
 import type { EventStatus } from '#lib/server/db/schema/event.js';
 import { staffCreate, adjustWindow } from '#lib/server/reservation/reservation-service.js';
 import { getProductionByEvent } from '#lib/server/production/production-service.js';
@@ -1748,64 +1746,7 @@ export async function listAll(
 	return paginate(dataQ, countQ, pagination);
 }
 
-/**
- * The staff calendar: the public gig guide, plus what is asking to join it.
- *
- * Modelled on `listPublicUpcomingEvents` rather than on `listAll`, because it
- * answers a different question. `listAll` is an admin index — newest first,
- * every status, one source at a time — and it is what `/staff/events` uses to
- * run the shows CMC produces. This is the moderation surface, and moderation
- * asks what the public can see, so it reads forward from today across every
- * source, ordered the way the guide orders it.
- *
- * `pending_review` sits alongside the public statuses here and nowhere else. A
- * listing waiting on staff is not public, but it is asking to be, and it has a
- * date — so it belongs in the day it would land on rather than in a queue
- * beside the calendar. That adjacency is the whole point: it is how a staffer
- * sees that the show they are about to approve is already on the calendar under
- * a different name. `checkForDuplicate` calls that the characteristic failure of
- * a community calendar and names moderation as the only backstop, and until this
- * existed the moderation UI could not see it.
- *
- * `from` floors what is *on* the calendar — published and cancelled — and
- * deliberately does not floor the rows that are merely asking to be. See the
- * filter below.
- *
- * The community-draft exclusion is kept even though `draft` is not a status any
- * caller should pass. The list arrives from the caller; a member's private
- * working copy must not become visible because someone widened a Zod enum later.
- */
-/**
- * Every listing staff may see, in every status and on any date: the ones
- * waiting on staff first, then newest first.
- */
-export async function listStaffCalendar(pagination: PaginationInput = {}) {
-	const where = staffVisible();
-
-	const dataQ = db
-		.select({
-			...getTableColumns(eventListing),
-			bandName: group.name,
-			bandSlug: group.slug,
-			// Who posted it. `listAll` needs no such join — every row there is
-			// CMC's — but on the calendar the submitter is the first fact a
-			// moderator wants. Left, so a deleted account does not take the event
-			// off the calendar with it; `toMemberRef` renders the missing side as
-			// an unlinked row rather than dropping it.
-			submitter: memberRefColumns()
-		})
-		.from(eventListing)
-		.leftJoin(group, eq(group.id, eventListing.groupId))
-		.leftJoin(user, eq(user.id, eventListing.createdByUserId))
-		.where(where)
-		.orderBy(
-			sql`case when ${eventListing.status} = ${'pending_review'} then 0 else 1 end`,
-			desc(eventListing.startsAt)
-		)
-		.$dynamic();
-	const countQ = db.select({ count: count() }).from(eventListing).where(where);
-	return paginate(dataQ, countQ, pagination);
-}
+export { listStaffCalendar } from './staff-calendar';
 
 /** How far either side of a show counts as "the same slot". */
 const NEAR_WINDOW_MINUTES = 120;

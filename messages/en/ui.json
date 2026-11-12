@@ -97,5 +97,12 @@
 	"ui_visibility_members_label": "Members only",
 	"ui_visibility_members_hint_body": "Visible to logged-in members",
 	"ui_visibility_public_label": "Public",
-	"ui_visibility_public_hint_body": "Anyone can see your profile, no login required"
+	"ui_visibility_public_hint_body": "Anyone can see your profile, no login required",
+	"ui_date_filter_label": "Date",
+	"ui_date_filter_from_today_label": "From today",
+	"ui_date_filter_next_7_days_label": "Next 7 days",
+	"ui_date_filter_past_30_days_label": "Past 30 days",
+	"ui_date_filter_any_date_label": "Any date",
+	"ui_list_filters_all_statuses_label": "All statuses",
+	"ui_list_filters_status_label": "Status"
 }

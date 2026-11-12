@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { isEventHold } from '#lib/config.js';
-	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
@@ -9,8 +8,6 @@
 	import BookerTypeIcon from '#lib/components/reservations/BookerTypeIcon.svelte';
 	import DataList from '#lib/components/ui/DataList.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
-	import FilterBar from '#lib/components/ui/FilterBar.svelte';
-	import Select from '#lib/components/ui/Form/Select.svelte';
 	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
 	import {
@@ -21,7 +18,8 @@
 		UpdateClosureAction,
 		DeleteClosureAction
 	} from '#lib/components/actions/index.js';
-	import DateFilter, { datePresets, type DateRange } from './DateFilter.svelte';
+	import { datePresets, type DateRange } from '#lib/components/ui/DateFilter.svelte';
+	import ListFilters from '#lib/components/ui/ListFilters.svelte';
 	import OverflowMenu from '#lib/components/ui/OverflowMenu.svelte';
 	import CreateReservation from './CreateModal.svelte';
 	import RecurringSeriesModal from './RecurringSeriesModal.svelte';
@@ -77,8 +75,6 @@
 	const params = appPage.url.searchParams;
 	const pick = <T extends string>(list: readonly T[], key: string) =>
 		list.find((v) => v === params.get(key));
-	// `searchText`, not `search`: FilterBar's `search` snippet shadows a same-named binding.
-	let searchText = $state(params.get('q') ?? '');
 	let searchDebounced = $state(params.get('q') ?? '');
 	let bookerType = $state<Booker | ''>(pick(bookers, 'booker') ?? '');
 	let range = $state<DateRange>(pick(ranges, 'date') ?? 'from_today');
@@ -150,15 +146,13 @@
 		cancelled: (count) => m.staff_reservations_status_cancelled_label({ count })
 	};
 
-	function setStatus(next: Status | '') {
-		status = next;
-		// Money owed is not bound to a date, so Payment due shows every date.
+	// Money owed is not bound to a date, so Payment due shows every date.
+	function onstatus(next: Status | '') {
 		if (next === 'payment_due') {
 			range = 'any';
 			dateFrom = '';
 			dateTo = '';
 		}
-		page = 1;
 	}
 
 	function paymentStatus(state: ReturnType<typeof reservationPaymentState>): {
@@ -204,24 +198,6 @@
 		if (localDate === tomorrow) return `${label} (Tomorrow)`;
 		return label;
 	}
-
-	const activeFilterCount = $derived(
-		(searchDebounced ? 1 : 0) +
-			(bookerType ? 1 : 0) +
-			(range !== 'from_today' ? 1 : 0) +
-			(status ? 1 : 0)
-	);
-
-	function clearFilters() {
-		searchText = '';
-		searchDebounced = '';
-		bookerType = '';
-		range = 'from_today';
-		dateFrom = '';
-		dateTo = '';
-		status = '';
-		page = 1;
-	}
 </script>
 
 <PageHeader title={m.staff_reservations_practice_space_title()}>
@@ -252,60 +228,28 @@
 	</div>
 </PageHeader>
 <PageContent>
-	<FilterBar activeCount={activeFilterCount} onclear={clearFilters} searchWidth="wide">
-		{#snippet search()}
-			<div class="join w-full">
-				<Select
-					size="sm"
-					class="join-item w-auto shrink-0"
-					aria-label={m.staff_reservations_booker_type_label()}
-					data-testid="booker-filter"
-					value={bookerType}
-					onchange={(e: Event) => {
-						bookerType = (e.currentTarget as HTMLSelectElement).value as typeof bookerType;
-						page = 1;
-					}}
-				>
-					<option value="">{m.staff_reservations_all_bookers_label()}</option>
-					<option value="user">{m.staff_members_label()}</option>
-					<!-- A programme's session books as its group too. -->
-					<option value="group">{m.staff_reservations_groups_label()}</option>
-					<option value="production">{m.staff_reservations_productions_label()}</option>
-					<option value="event_listing">{m.staff_reservations_events_label()}</option>
-				</Select>
-				<SearchInput
-					class="input join-item w-full input-sm"
-					bind:value={searchText}
-					placeholder={m.staff_reservations_placeholder()}
-					onsearch={(q) => {
-						searchDebounced = q;
-						page = 1;
-					}}
-				/>
-			</div>
-		{/snippet}
-		<DateFilter bind:range bind:from={dateFrom} bind:to={dateTo} onchange={() => (page = 1)} />
-		<div class="indicator">
-			{#if owedDot}
-				<span class="indicator-item status status-error" data-testid="payment-due-dot">
-					<span class="sr-only">{m.staff_reservations_payment_overdue_text()}</span>
-				</span>
-			{/if}
-			<Select
-				size="sm"
-				aria-label={m.staff_status_label()}
-				data-testid="status-filter"
-				value={status}
-				onchange={(e: Event) =>
-					setStatus((e.currentTarget as HTMLSelectElement).value as Status | '')}
-			>
-				<option value="">{m.staff_reservations_all_statuses_label()}</option>
-				{#each statuses as s (s)}
-					<option value={s}>{statusLabel[s](statusCounts?.[s] ?? 0)}</option>
-				{/each}
-			</Select>
-		</div>
-	</FilterBar>
+	<ListFilters
+		types={[
+			{ value: 'user', label: m.staff_members_label() },
+			// A programme's session books as its group too.
+			{ value: 'group', label: m.staff_reservations_groups_label() },
+			{ value: 'production', label: m.staff_reservations_productions_label() },
+			{ value: 'event_listing', label: m.staff_reservations_events_label() }
+		] satisfies { value: Booker; label: string }[]}
+		typeAllLabel={m.staff_reservations_all_bookers_label()}
+		typeLabel={m.staff_reservations_booker_type_label()}
+		bind:type={bookerType}
+		searchPlaceholder={m.staff_reservations_placeholder()}
+		bind:search={searchDebounced}
+		bind:range
+		bind:from={dateFrom}
+		bind:to={dateTo}
+		statuses={statuses.map((s) => ({ value: s, label: statusLabel[s](statusCounts?.[s] ?? 0) }))}
+		bind:status
+		statusDot={owedDot ? m.staff_reservations_payment_overdue_text() : undefined}
+		{onstatus}
+		bind:page
+	/>
 
 	<DataList
 		{result}

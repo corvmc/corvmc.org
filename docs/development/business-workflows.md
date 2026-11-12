@@ -482,13 +482,13 @@ events use RSVP instead.
 ### Code path
 
 - **Two staff surfaces, one table, and the URLs say which is the general case.** `/staff/events`
-  is **Events** — `getStaffCalendar` → `listStaffCalendar()`, every source, public
-  statuses plus `pending_review`, forward from today — the staff view of the public gig guide,
-  where listings are moderated. `/staff/projects/productions` is the CMC work index, `source='cmc'` at
-  every status via `getStaffEvents` → `listAll()`, and the only page holding drafts. A
-  published CMC show is on both. The date floor applies only to rows actually on the calendar,
-  so a `pending_review` listing whose date passed stays reachable and keeps agreeing with the
-  sidebar badge (`countPendingSubmissions`, which has no date filter).
+  is **Events** — `getStaffCalendar` → `listStaffCalendar()`, every listing staff may see
+  (a community draft is its author's alone), filtered by source, search, date range and status
+  with the Practice space list's filter row (`ListFilters`). It opens on From today by club day,
+  soonest first; Past 30 days lists newest first. Pending listings sit in date order with their
+  badge; the dashboard feed collects the ones waiting for review. `/staff/projects/productions`
+  is the CMC work index, `source='cmc'` at every status via `getStaffEvents` → `listAll()`. A
+  published CMC show is on both.
 - **The detail view is layered the same way.** `/staff/events/[id]` is the general view for
   every source — facts, the bill, the event's lifecycle actions, and a two-hour window of what
   else is on (`listEventsNear`). It sits at the address `entity-href` resolves every event ref
