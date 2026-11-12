@@ -1400,7 +1400,7 @@ So:
   auto-complete and the hour log — had nothing prompting it.
 - **Every list splits `confirmed` from `claimed`.** One conflated number made a shift with
   three unconfirmed claims read as fully staffed. The member's half now draws the same
-  distinction as a two-step **Claimed → Booked** rail, because a claim nobody confirms earns
+  distinction as a two-step **Signed up → Booked** rail, because a claim nobody confirms earns
   no reminder and never auto-completes — and the person who made it could not previously tell
   that from a booking.
 - **"Who to ask" sits beside the shift**, not on the role's page, and is judged as of the
