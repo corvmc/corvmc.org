@@ -132,6 +132,10 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			const line = parts.join('; ') || 'saved grants unchanged';
 			return line.charAt(0).toUpperCase() + line.slice(1);
 		}
+		case 'organization.merged':
+			return `Merged ${entry.details.mergedName} into it`;
+		case 'contact.merged':
+			return 'Merged a duplicate person into them';
 		case 'incident.deleted':
 			return `Deleted after ${entry.details.retentionYears} years (occurred ${entry.details.occurredAt.slice(0, 10)})`;
 		case 'incident.reopened':

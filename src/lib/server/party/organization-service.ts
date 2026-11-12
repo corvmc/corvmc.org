@@ -1,10 +1,12 @@
 import { db } from '#lib/server/db/index.js';
-import { organization, type Organization } from '#lib/server/db/schema/party.js';
+import { contractorDetail, organization, type Organization } from '#lib/server/db/schema/party.js';
+import { mediaAttachment } from '#lib/server/db/schema/media.js';
+import { workOrder } from '#lib/server/db/schema/volunteer.js';
 import { partyRole } from '#lib/server/db/schema/contact.js';
 import { grantApplication } from '#lib/server/db/schema/grant.js';
 import { sponsorship } from '#lib/server/db/schema/sponsor.js';
 import { contractorJob } from '#lib/server/db/schema/contractor.js';
-import { and, asc, count, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
 import { partyRoleLabels, type PartyRole } from '#lib/config.js';
 
@@ -167,14 +169,164 @@ export async function countRecords(id: string): Promise<number> {
 /**
  * Take a role away, for a row entered in the wrong place. Refused while
  * `inUse` records name it in that role. An organization left with no role
- * and no records is deleted outright.
+ * and no records is deleted outright, and this returns true.
  */
-export async function removeRole(id: string, role: PartyRole, inUse: number): Promise<void> {
+export async function removeRole(id: string, role: PartyRole, inUse: number): Promise<boolean> {
 	if (inUse > 0) throw new OrganizationInUseError(inUse);
 	const org = await getOrganization(id);
 	await db.delete(partyRole).where(and(eq(partyRole.organizationId, id), eq(partyRole.role, role)));
 	const rest = org.roles.filter((r) => r !== role);
 	if (rest.length === 0 && (await countRecords(id)) === 0) {
 		await db.delete(organization).where(eq(organization.id, id));
+		return true;
+	}
+	return false;
+}
+// ---------------------------------------------------------------------------
+// The Contacts screens: records, duplicates and merging
+// ---------------------------------------------------------------------------
+
+export class OrganizationMergeError extends DomainError {
+	readonly httpStatus = 422;
+	constructor() {
+		super('Pick two different organizations to merge.');
 	}
 }
+
+/** What names an organization, for its page: one list per role it holds. */
+export async function organizationRecords(id: string) {
+	const [grants, sponsorships, jobs] = await Promise.all([
+		db
+			.select({
+				id: grantApplication.id,
+				title: grantApplication.title,
+				status: grantApplication.status
+			})
+			.from(grantApplication)
+			.where(eq(grantApplication.organizationId, id))
+			.orderBy(desc(grantApplication.createdAt), desc(grantApplication.id)),
+		db
+			.select({
+				id: sponsorship.id,
+				title: sponsorship.title,
+				status: sponsorship.status
+			})
+			.from(sponsorship)
+			.where(eq(sponsorship.organizationId, id))
+			.orderBy(desc(sponsorship.createdAt), desc(sponsorship.id)),
+		db
+			.select({
+				id: contractorJob.id,
+				status: contractorJob.status,
+				title: sql<string>`coalesce(${workOrder.title}, 'Work order')`
+			})
+			.from(contractorJob)
+			.innerJoin(workOrder, eq(workOrder.id, contractorJob.workOrderId))
+			.where(eq(contractorJob.organizationId, id))
+			.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id))
+	]);
+	return { grants, sponsorships, jobs };
+}
+
+/** `https://www.example.org/about` → `example.org`; null when there is no host. */
+export function websiteDomain(website: string | null): string | null {
+	if (!website?.trim()) return null;
+	try {
+		const url = new URL(/^[a-z]+:\/\//i.test(website) ? website : `https://${website.trim()}`);
+		return url.hostname.toLowerCase().replace(/^www\./, '') || null;
+	} catch {
+		return null;
+	}
+}
+
+/** Live organizations sharing a website domain: likely one, never merged on their own. */
+export async function listOrganizationMergeSuggestions() {
+	const rows = await db
+		.select({
+			id: organization.id,
+			name: organization.name,
+			website: organization.website
+		})
+		.from(organization)
+		.where(isNull(organization.archivedAt))
+		.orderBy(asc(organization.createdAt), asc(organization.id));
+	const groups = new Map<string, typeof rows>();
+	for (const r of rows) {
+		const domain = websiteDomain(r.website);
+		if (!domain) continue;
+		groups.set(domain, [...(groups.get(domain) ?? []), r]);
+	}
+	return [...groups.entries()]
+		.filter(([, list]) => list.length > 1)
+		.map(([domain, organizations]) => ({ domain, organizations }));
+}
+
+/**
+ * Fold `otherId` into `survivorId`: its roles, records, contractor detail and
+ * logo move over where the survivor lacks them, its notes are kept, and it is
+ * deleted. Its people move first, through `contact-service.ts`.
+ */
+export async function mergeOrganizations(survivorId: string, otherId: string) {
+	if (survivorId === otherId) throw new OrganizationMergeError();
+	const [survivor, other] = await Promise.all([
+		getOrganization(survivorId),
+		getOrganization(otherId)
+	]);
+	const [[survivorDetail], [survivorLogo]] = await Promise.all([
+		db
+			.select({ id: contractorDetail.organizationId })
+			.from(contractorDetail)
+			.where(eq(contractorDetail.organizationId, survivorId)),
+		db.select({ id: mediaAttachment.id }).from(mediaAttachment).where(logoOf(survivorId))
+	]);
+	const notes = [survivor.notes, other.notes && `From ${other.name}: ${other.notes}`]
+		.filter(Boolean)
+		.join('\n');
+	const moveTo = { organizationId: survivorId, updatedAt: new Date() };
+
+	await db.batch([
+		db
+			.update(organization)
+			.set({
+				website: survivor.website ?? other.website,
+				notes: notes || null,
+				updatedAt: new Date()
+			})
+			.where(eq(organization.id, survivorId)),
+		...other.roles.map((role) =>
+			db.insert(partyRole).values({ organizationId: survivorId, role }).onConflictDoNothing()
+		),
+		db.update(grantApplication).set(moveTo).where(eq(grantApplication.organizationId, otherId)),
+		db.update(sponsorship).set(moveTo).where(eq(sponsorship.organizationId, otherId)),
+		db.update(contractorJob).set(moveTo).where(eq(contractorJob.organizationId, otherId)),
+		...(survivorDetail
+			? []
+			: [
+					db
+						.update(contractorDetail)
+						.set({ organizationId: survivorId })
+						.where(eq(contractorDetail.organizationId, otherId))
+				]),
+		...(survivorLogo
+			? []
+			: [db.update(mediaAttachment).set({ attachableId: survivorId }).where(logoOf(otherId))]),
+		// The directory link is unique, so it moves only after the other row lets go.
+		db.delete(organization).where(eq(organization.id, otherId)),
+		...(survivor.directoryEntryId || !other.directoryEntryId
+			? []
+			: [
+					db
+						.update(organization)
+						.set({ directoryEntryId: other.directoryEntryId })
+						.where(eq(organization.id, survivorId))
+				])
+	]);
+	return { survivor: survivor.name, other: other.name };
+}
+
+const logoOf = (id: string) =>
+	and(
+		eq(mediaAttachment.attachableType, 'organization'),
+		eq(mediaAttachment.attachableId, id),
+		eq(mediaAttachment.slot, 'logo')
+	);

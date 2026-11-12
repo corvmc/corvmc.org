@@ -23,7 +23,6 @@
 		IconCash,
 		IconMail,
 		IconTool,
-		IconHammer,
 		IconFolders,
 		IconPackage,
 		IconBook,
@@ -35,7 +34,7 @@
 		IconCalendarWeek,
 		IconCalendarMonth,
 		IconMapPin,
-		IconBuildingStore,
+		IconAddressBook,
 		IconContract
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout, requireLayoutSession } from '#lib/remote/layout.remote.js';
@@ -111,7 +110,6 @@
 		reservations: IconClipboardCheck,
 		gear: IconTool,
 		supplies: IconPackage,
-		contractors: IconHammer,
 		projects: IconFolders,
 		venues: IconMapPin,
 		calendar: IconCalendarMonth,
@@ -123,7 +121,7 @@
 		'local-resources': IconMapPin,
 		reports: IconReportAnalytics,
 		payments: IconCash,
-		sponsors: IconBuildingStore,
+		contacts: IconAddressBook,
 		grants: IconContract,
 		settings: IconSettings,
 		audit: IconHistory

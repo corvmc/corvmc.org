@@ -136,3 +136,68 @@ describe('contractors', () => {
 		expect((await orgs.getOrganization(shop.id)).roles.sort()).toEqual(['contractor', 'sponsor']);
 	});
 });
+describe('merging organizations', () => {
+	it('moves roles, records and contractor detail to the survivor, then deletes the other', async () => {
+		const keep = await sponsors.createSponsor({
+			name: 'Guitar Shop',
+			notes: 'Main store'
+		});
+		const dupe = await contractors.createContractor({
+			name: 'Guitar Shop Repairs',
+			trade: 'instrument_repair',
+			notes: 'Back room'
+		});
+		await funders.createFunder({ name: 'Unrelated' });
+		sqlite.exec(`insert into work_order (id, title) values ('wo-m', 'Retube')`);
+		sqlite.exec(
+			`insert into contractor_job (id, organization_id, work_order_id, status) values ('job-m', '${dupe.id}', 'wo-m', 'asked')`
+		);
+
+		const names = await orgs.mergeOrganizations(keep.id, dupe.id);
+
+		expect(names).toEqual({
+			survivor: 'Guitar Shop',
+			other: 'Guitar Shop Repairs'
+		});
+		const merged = await orgs.getOrganization(keep.id);
+		expect(merged.roles.sort()).toEqual(['contractor', 'sponsor']);
+		expect(merged.notes).toContain('Back room');
+		expect((await contractors.getContractorById(keep.id)).trade).toBe('instrument_repair');
+		expect(
+			sqlite.prepare(`select organization_id as o from contractor_job where id = 'job-m'`).get()
+		).toEqual({ o: keep.id });
+		await expect(orgs.getOrganization(dupe.id)).rejects.toBeInstanceOf(
+			orgs.OrganizationNotFoundError
+		);
+		sqlite.exec(`delete from contractor_job; delete from work_order`);
+	});
+
+	it('suggests organizations that share a website domain', async () => {
+		await sponsors.createSponsor({
+			name: 'Block 15',
+			website: 'https://www.block15.example/'
+		});
+		await funders.createFunder({
+			name: 'Block 15 Brewing',
+			website: 'block15.example'
+		});
+		await funders.createFunder({
+			name: 'Other',
+			website: 'https://other.example'
+		});
+
+		const groups = await orgs.listOrganizationMergeSuggestions();
+		expect(groups.map((g) => g.domain)).toEqual(['block15.example']);
+		expect(groups[0].organizations.map((o) => o.name).sort()).toEqual([
+			'Block 15',
+			'Block 15 Brewing'
+		]);
+	});
+
+	it('refuses to merge an organization into itself', async () => {
+		const shop = await sponsors.createSponsor({ name: 'Guitar Shop' });
+		await expect(orgs.mergeOrganizations(shop.id, shop.id)).rejects.toBeInstanceOf(
+			orgs.OrganizationMergeError
+		);
+	});
+});
