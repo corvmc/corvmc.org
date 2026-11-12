@@ -574,7 +574,7 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 	{
 		key: 'orientation_unclaimed',
 		category: 'volunteering',
-		label: 'Unclaimed orientation',
+		label: 'Unstaffed orientation',
 		description: 'A day before an orientation shift that has no volunteer signed up',
 		defaults: { email: true, inApp: true, sms: false },
 		staffOnly: true
