@@ -1,5 +1,15 @@
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
-import { C, el, mascot, renderPng, sponsorRow, stripe, type Node, type SponsorLogo } from './brand';
+import {
+	C,
+	el,
+	mascot,
+	renderPng,
+	sponsorRow,
+	stripe,
+	textWidth,
+	type Node,
+	type SponsorLogo
+} from './brand';
 import { clock } from './flyer';
 import type { CalendarBlock, CalendarEvent } from './calendar-service';
 
@@ -45,8 +55,59 @@ const LAYOUTS = [
 	{ columns: 2, size: 17 }
 ];
 
-const lineHeight = (line: Line, size: number) =>
-	line.kind === 'head' ? Math.round(size * 1.9) : Math.round(size * 1.45);
+const columnWidth = (columns: number) =>
+	columns === 1 ? BODY_WIDTH : Math.floor((BODY_WIDTH - COLUMN_GAP) / columns);
+
+const rowHeight = (size: number) => Math.round(size * 1.45);
+const wrapHeight = (size: number) => Math.round(size * 1.2);
+
+const DAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].flatMap((w) =>
+	Array.from({ length: 31 }, (_, i) => `${w} ${i + 1}`)
+);
+const CLOCK_LABELS = ['AM', 'PM'].flatMap((p) =>
+	Array.from({ length: 12 * 60 }, (_, i) => {
+		const m = String(i % 60).padStart(2, '0');
+		return `${Math.floor(i / 60) + 1}:${m} ${p}`;
+	})
+);
+
+const grids = new Map<number, { date: number; time: number }>();
+
+/** Date and time column widths: the widest label either can print, plus a gap. */
+function grid(size: number) {
+	let g = grids.get(size);
+	if (!g) {
+		const widest = (labels: string[], bold: boolean) =>
+			Math.ceil(Math.max(...labels.map((l) => textWidth(l, size, bold)))) + Math.round(size * 0.6);
+		g = { date: widest(DAY_LABELS, true), time: widest(CLOCK_LABELS, false) };
+		grids.set(size, g);
+	}
+	return g;
+}
+
+/** A title broken into at most two lines; the second is cut with an ellipsis when long. */
+function titleLines(title: string, size: number, columns: number): string[] {
+	const g = grid(size);
+	const width = columnWidth(columns) - g.date - g.time - 4;
+	const lines: string[] = [];
+	let current = '';
+	for (const word of title.split(/\s+/)) {
+		const next = current ? `${current} ${word}` : word;
+		if (current && textWidth(next, size) > width) {
+			lines.push(current);
+			current = word;
+		} else current = next;
+	}
+	lines.push(current);
+	return lines.length <= 2 ? lines : [lines[0], lines.slice(1).join(' ')];
+}
+
+function lineHeight(line: Line, size: number, columns: number): number {
+	if (line.kind === 'head') return Math.round(size * 1.9);
+	if (line.kind === 'more') return rowHeight(size);
+	const extra = titleLines(line.event.title, size, columns).length - 1;
+	return rowHeight(size) + extra * wrapHeight(size);
+}
 
 function linesOf(blocks: CalendarPoster['blocks']): Line[] {
 	return blocks
@@ -62,7 +123,7 @@ function flow(lines: Line[], columns: number, size: number): Line[][] | null {
 	const out: Line[][] = [[]];
 	let used = 0;
 	for (const line of lines) {
-		const h = lineHeight(line, size);
+		const h = lineHeight(line, size, columns);
 		if (used + h > BODY_HEIGHT) {
 			if (out.length === columns) return null;
 			out.push([]);
@@ -114,8 +175,8 @@ function dayLabel(d: Date): string {
 	return `${part('weekday').toUpperCase()} ${part('day')}`;
 }
 
-function lineNode(line: Line, size: number): Node {
-	const height = lineHeight(line, size);
+function lineNode(line: Line, size: number, columns: number): Node {
+	const height = lineHeight(line, size, columns);
 	if (line.kind === 'head') {
 		const s = BLOCK_STYLE[line.block];
 		return el(
@@ -141,23 +202,9 @@ function lineNode(line: Line, size: number): Node {
 			`+${line.count} more ${BLOCK_STYLE[line.block].noun}`
 		);
 	}
-	return el('div', { display: 'flex', alignItems: 'center', height, fontSize: size }, [
-		el(
-			'div',
-			{
-				width: Math.round(size * 4.6),
-				flexShrink: 0,
-				color: C.navy,
-				fontWeight: 700,
-				whiteSpace: 'nowrap'
-			},
-			dayLabel(line.event.startsAt)
-		),
-		el(
-			'div',
-			{ width: Math.round(size * 4), flexShrink: 0, color: C.orange, whiteSpace: 'nowrap' },
-			clock(line.event.startsAt)
-		),
+	const g = grid(size);
+	const [first, second] = titleLines(line.event.title, size, columns);
+	const title = (text: string) =>
 		el(
 			'div',
 			{
@@ -168,9 +215,33 @@ function lineNode(line: Line, size: number): Node {
 				whiteSpace: 'nowrap',
 				textOverflow: 'ellipsis'
 			},
-			line.event.title
-		)
-	]);
+			text
+		);
+	return el(
+		'div',
+		{ display: 'flex', flexDirection: 'column', height, fontSize: size },
+		[
+			el('div', { display: 'flex', alignItems: 'center', height: rowHeight(size) }, [
+				el(
+					'div',
+					{ width: g.date, flexShrink: 0, color: C.navy, fontWeight: 700, whiteSpace: 'nowrap' },
+					dayLabel(line.event.startsAt)
+				),
+				el(
+					'div',
+					{ width: g.time, flexShrink: 0, color: C.orange, whiteSpace: 'nowrap' },
+					clock(line.event.startsAt)
+				),
+				title(first)
+			]),
+			second === undefined
+				? null
+				: el('div', { display: 'flex', alignItems: 'flex-start', height: wrapHeight(size) }, [
+						el('div', { width: g.date + g.time, flexShrink: 0 }),
+						title(second)
+					])
+		].filter(Boolean)
+	);
 }
 
 function monthLabel(month: string): string {
@@ -198,8 +269,7 @@ function footer(sponsors: SponsorLogo[]): Node {
 
 function tree(poster: CalendarPoster): Node {
 	const { columns, size } = layOut(poster.blocks);
-	const width =
-		columns.length === 1 ? BODY_WIDTH : Math.floor((BODY_WIDTH - COLUMN_GAP) / columns.length);
+	const width = columnWidth(columns.length);
 	return el(
 		'div',
 		{
@@ -233,7 +303,7 @@ function tree(poster: CalendarPoster): Node {
 							el(
 								'div',
 								{ display: 'flex', flexDirection: 'column', width },
-								col.map((line) => lineNode(line, size))
+								col.map((line) => lineNode(line, size, columns.length))
 							)
 						)
 					),
