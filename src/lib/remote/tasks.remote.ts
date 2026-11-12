@@ -103,10 +103,12 @@ function contractorMarks(jobs: TaskJob[]) {
 /**
  * The Tasks table (#2625): every task, in a project or none. Engagements are
  * read by view rather than by task id, which would bind one parameter per row.
- * Done work awaiting an invoice rides along so its chip can count it.
+ * Done work awaiting an invoice rides along so its chip can count it. With
+ * `projectId`, it is that project's list, as the project's page shows it.
  */
 export const getTasksPage = query(
 	z.object({
+		projectId: projectId.optional(),
 		volunteerRoleId: z.string().optional(),
 		includeDone: z.boolean().optional()
 	}),
@@ -120,6 +122,7 @@ export const getTasksPage = query(
 			: [];
 		const [tasks, projects, committees, templates] = await Promise.all([
 			listTaskCatalogue({
+				projectId: f.projectId,
 				volunteerRoleId: f.volunteerRoleId || undefined,
 				includeDone: f.includeDone,
 				withAwaitingInvoice: contractorAccess

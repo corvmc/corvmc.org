@@ -2051,8 +2051,8 @@ action, the actor and a small payload. Staff read the latest twenty on the membe
 
 Decision: [A work order is the task](../decisions/0054-a-work-order-is-the-task.md)
 
-- **Write:** task changes are recorded in the shared services both the shift page and
-  the project page call (`editTask`, `editShift`, `openShift`, `cancelOneShift`, `cancelShift`
+- **Write:** task changes are recorded in the shared services the task page and the
+  Tasks table call (`editTask`, `editShift`, `openShift`, `cancelOneShift`, `cancelShift`
   for the whole task, `resolveWorkOrder`,
   `assignToTask` and `unassignFromTask`, `claimShift` for a staff place on a shift,
   `releaseSignup`, `inviteToShift`), engagement steps in
@@ -2061,7 +2061,7 @@ Decision: [A work order is the task](../decisions/0054-a-work-order-is-the-task.
 - **Read:** `listActivity` in `src/lib/server/project/project-activity.ts` merges a project's
   entries, its work orders' entries, duty ticks (from `work_task`, never audited) and the
   origin chain (suggestion, ballots, project start, from their own rows). The project page's
-  Activity tab, the task page and the shift page render it, each loaded lazily.
+  Activity sidebar and the task page render it, each loaded lazily.
 
 ### Where it breaks
 
