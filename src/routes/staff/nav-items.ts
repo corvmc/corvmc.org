@@ -57,7 +57,6 @@ export type StaffNavKey =
 	| 'grants'
 	| 'reports'
 	| 'settings'
-	| 'access'
 	| 'audit';
 
 export type StaffNavSectionKey =
@@ -381,13 +380,6 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'help.read',
 				label: 'Help Articles',
 				href: resolve('staff/help')
-			},
-			// Who holds which position, committee grant and clearance (#1942).
-			{
-				key: 'access',
-				capability: 'user.setRole',
-				label: 'Access',
-				href: resolve('staff/access')
 			},
 			{ key: 'audit', capability: 'audit.read', label: 'Audit Log', href: resolve('staff/audit') }
 		]
