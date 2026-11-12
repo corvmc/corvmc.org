@@ -273,6 +273,11 @@ The `reconcile-ledger` cron compares the `stripe`-settled sum with Stripe's bala
 `group_member` · `volunteer_signup` · `audience_member` · `inbox_participant` ·
 `event_rsvp` · `member_certification`. All are (container, person, status, joined_at).
 
+One certification has a job in code: **Practice space** (`PRACTICE_SPACE_CLEARANCE_ID`, id
+`practice-space`) says a member has been shown around the room. Completing or waiving their
+orientation grants it, and without a current grant their own booking needs 3 days' notice.
+Decision: [Space training is a clearance](../decisions/0055-space-training-is-a-clearance-and-sets-booking-notice.md).
+
 The repeated hard part is the per-membership notification preference:
 `group_member.notifyAnnouncements` exists precisely because the global
 `notification_preference` cannot express it, and the next container hits the same wall.

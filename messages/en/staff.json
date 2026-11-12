@@ -2830,6 +2830,8 @@
 	"staff_settings_error_label": "Error",
 	"staff_settings_facebook_url_label": "Facebook URL",
 	"staff_settings_features_label": "Features",
+	"staff_settings_first_booking_notice_minutes_body": "For members without the Practice space clearance. 4320 is 3 days.",
+	"staff_settings_first_booking_notice_minutes_label": "First booking notice (minutes)",
 	"staff_settings_free_hours_month_title": "Free hours / month",
 	"staff_settings_hourly_rate_label": "Hourly rate",
 	"staff_settings_hourly_value_cents_label": "Hourly value (cents)",

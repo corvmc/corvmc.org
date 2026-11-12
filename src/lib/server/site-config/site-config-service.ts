@@ -33,6 +33,8 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// `config('reservation.minAdvanceMinutes')` threw Unknown site config key.
 	// It worked only because `reservation/config.ts` supplies its own fallback.
 	'reservation.minAdvanceMinutes': 60,
+	// A member's own booking, while they hold no Practice space clearance.
+	'reservation.newMemberMinAdvanceMinutes': 4320,
 	'reservation.hourlyRateCents': 1500,
 	// Teaching terms. The rate is not a discount on the one above — it is what a
 	// sustaining member's contribution already buys, with the monthly cap lifted.

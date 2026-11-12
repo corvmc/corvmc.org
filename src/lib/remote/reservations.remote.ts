@@ -69,7 +69,9 @@ import {
 	getAvailableSlots,
 	getAvailableSlotsForDates,
 	getConflictDetails,
-	getValidationWarnings
+	getValidationWarnings,
+	noticeFor,
+	type BookingNotice
 } from '#lib/server/reservation/conflict-service.js';
 import {
 	staffCreate,
@@ -718,9 +720,25 @@ export const getStaffSlots = query(z.string(), async (dateParam) => {
 	};
 });
 
-/** Member: dates with bookable availability in the next N days. */
-export const getAvailableDates = query(async () => {
+/**
+ * The notice the signed-in member's own booking needs, so the picker offers only
+ * starts `validateBooking` will accept. Signed out, the room minimum.
+ */
+async function viewerNotice(
+	config: Awaited<ReturnType<typeof getReservationConfig>>,
+	bookerType: BookerType | undefined
+): Promise<BookingNotice> {
+	const { locals } = getRequestEvent();
+	return noticeFor(config, { userId: locals.user?.id ?? null, bookerType });
+}
+
+/**
+ * Member: dates with bookable availability in the next N days, and the
+ * new-member notice in minutes when it is what holds back the earliest starts.
+ */
+export const getAvailableDates = query(z.enum(bookerTypes).optional(), async (bookerType) => {
 	const config = await getReservationConfig();
+	const notice = await viewerNotice(config, bookerType);
 	const minSlots = config.minDurationHours * (60 / config.timeSlotMinutes);
 	// Floor, not ceil: the validator (validateBooking) rejects any start *instant*
 	// more than `maxAdvanceDaysOneoff * 24h` past now. A whole calendar day is only
@@ -740,7 +758,9 @@ export const getAvailableDates = query(async () => {
 	const dateStrs = Array.from({ length: Math.max(days, 0) }, (_, i) =>
 		formatDateInTz(new Date(anchor.getTime() + i * 86_400_000), tz)
 	);
-	const slotsByDate = await getAvailableSlotsForDates(dateStrs);
+	const slotsByDate = await getAvailableSlotsForDates(dateStrs, {
+		minAdvanceMinutes: notice.minutes
+	});
 
 	const results: string[] = [];
 	for (const dateStr of dateStrs) {
@@ -758,40 +778,42 @@ export const getAvailableDates = query(async () => {
 		}
 		if (maxRun >= minSlots) results.push(dateStr);
 	}
-	return results;
+	return { dates: results, newMemberNoticeMinutes: notice.newMember ? notice.minutes : null };
 });
 
 /** Available start times for a given date, with pricing config. */
-export const getReservationStartTimes = query(z.string(), async (dateParam) => {
-	const dateStr = dateParam || formatDateInTz(new Date(), DEFAULT_TIMEZONE);
-	const [slots, reservationConfig] = await Promise.all([
-		getAvailableSlots(dateStr),
-		getReservationConfig()
-	]);
+export const getReservationStartTimes = query(
+	z.object({ date: z.string(), bookerType: z.enum(bookerTypes).optional() }),
+	async ({ date: dateParam, bookerType }) => {
+		const dateStr = dateParam || formatDateInTz(new Date(), DEFAULT_TIMEZONE);
+		const reservationConfig = await getReservationConfig();
+		const notice = await viewerNotice(reservationConfig, bookerType);
+		const slots = await getAvailableSlots(dateStr, { minAdvanceMinutes: notice.minutes });
 
-	const minSlots = reservationConfig.minDurationHours * (60 / reservationConfig.timeSlotMinutes);
+		const minSlots = reservationConfig.minDurationHours * (60 / reservationConfig.timeSlotMinutes);
 
-	function contiguousFrom(startIdx: number): number {
-		let count = 0;
-		for (let i = startIdx; i < slots.length && slots[i].available; i++) count++;
-		return count;
+		function contiguousFrom(startIdx: number): number {
+			let count = 0;
+			for (let i = startIdx; i < slots.length && slots[i].available; i++) count++;
+			return count;
+		}
+
+		// Every operating-hour slot, not only the bookable ones. Dropping the rest
+		// left gaps with no cause: the policy strip says 9 AM – 10 PM and the list
+		// simply did not contain 10 AM, which reads as a broken app rather than as
+		// somebody else having the room. The *reason* it is unpickable is not
+		// spelled out on the option — "booked" and "too short" were asked for and
+		// then asked back off, because a greyed row already reads as unavailable and
+		// the suffix doubled the length of every line (#1027).
+		return slots.map((s, i) => {
+			const label = formatSlotTime(s.startTime);
+			// Free, but with a booking or closing time too soon after it to fit the
+			// shortest session, is as unpickable as taken.
+			const bookable = s.available && contiguousFrom(i) >= minSlots;
+			return { value: s.startTime, label, disabled: !bookable };
+		});
 	}
-
-	// Every operating-hour slot, not only the bookable ones. Dropping the rest
-	// left gaps with no cause: the policy strip says 9 AM – 10 PM and the list
-	// simply did not contain 10 AM, which reads as a broken app rather than as
-	// somebody else having the room. The *reason* it is unpickable is not
-	// spelled out on the option — "booked" and "too short" were asked for and
-	// then asked back off, because a greyed row already reads as unavailable and
-	// the suffix doubled the length of every line (#1027).
-	return slots.map((s, i) => {
-		const label = formatSlotTime(s.startTime);
-		// Free, but with a booking or closing time too soon after it to fit the
-		// shortest session, is as unpickable as taken.
-		const bookable = s.available && contiguousFrom(i) >= minSlots;
-		return { value: s.startTime, label, disabled: !bookable };
-	});
-});
+);
 
 /** Available end times for a given date and start time. */
 export const getReservationEndTimes = query(
@@ -975,13 +997,15 @@ export const checkConflicts = query(
  */
 export const getReservationPolicy = query(async () => {
 	const reservationConfig = await getReservationConfig();
+	// The viewer's own notice: a new member is told 3 days, not the room's hour.
+	const notice = await viewerNotice(reservationConfig, 'user');
 	return {
 		hourlyRateCents: reservationConfig.hourlyRateCents,
 		operatingHoursStart: reservationConfig.operatingHoursStart,
 		operatingHoursEnd: reservationConfig.operatingHoursEnd,
 		minDurationHours: reservationConfig.minDurationHours,
 		maxDurationHours: reservationConfig.maxDurationHours,
-		minAdvanceMinutes: reservationConfig.minAdvanceMinutes
+		minAdvanceMinutes: notice.minutes
 	};
 });
 

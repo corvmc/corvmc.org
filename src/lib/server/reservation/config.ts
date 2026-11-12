@@ -12,6 +12,8 @@ export const DEFAULT_OPERATING_HOURS_START = '09:00';
 export const DEFAULT_OPERATING_HOURS_END = '22:00';
 export const DEFAULT_BUFFER_MINUTES = 0;
 export const DEFAULT_MIN_ADVANCE_MINUTES = 60;
+// A member without the Practice space clearance: 3 days to find someone to show them around.
+export const DEFAULT_NEW_MEMBER_MIN_ADVANCE_MINUTES = 4320;
 export const DEFAULT_MAX_ADVANCE_DAYS_ONEOFF = 14;
 export const DEFAULT_MAX_ADVANCE_DAYS_RECURRING = 17.5;
 
@@ -39,6 +41,7 @@ export interface ReservationConfig {
 	operatingHoursEnd: string;
 	bufferMinutes: number;
 	minAdvanceMinutes: number;
+	newMemberMinAdvanceMinutes: number;
 	maxAdvanceDaysOneoff: number;
 	maxAdvanceDaysRecurring: number;
 	hourlyRateCents: number;
@@ -58,6 +61,9 @@ export async function getReservationConfig(): Promise<ReservationConfig> {
 		operatingHoursEnd: String(raw.operatingHoursEnd ?? DEFAULT_OPERATING_HOURS_END),
 		bufferMinutes: Number(raw.bufferMinutes ?? DEFAULT_BUFFER_MINUTES),
 		minAdvanceMinutes: Number(raw.minAdvanceMinutes ?? DEFAULT_MIN_ADVANCE_MINUTES),
+		newMemberMinAdvanceMinutes: Number(
+			raw.newMemberMinAdvanceMinutes ?? DEFAULT_NEW_MEMBER_MIN_ADVANCE_MINUTES
+		),
 		maxAdvanceDaysOneoff: Number(raw.maxAdvanceDaysOneoff ?? DEFAULT_MAX_ADVANCE_DAYS_ONEOFF),
 		maxAdvanceDaysRecurring: Number(
 			raw.maxAdvanceDaysRecurring ?? DEFAULT_MAX_ADVANCE_DAYS_RECURRING

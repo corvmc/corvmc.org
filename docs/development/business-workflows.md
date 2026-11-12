@@ -41,7 +41,18 @@ in `src/lib/remote/reservations.remote.ts`, which calls `create()` in
 **Booking rules.** The room's facts are `ReservationConfig` in
 `src/lib/server/reservation/config.ts`, each a `reservation.*` site-config key with a default:
 30-minute slots, 1 to 8 hours, 09:00 to 22:00, at least 60 minutes' notice, and one-off
-bookings up to 14 days ahead. The rate, minimum duration and advance windows depend on who is
+bookings up to 14 days ahead.
+
+**New-member notice (#2565).** A member's own booking (`bookerType: 'user'`) needs
+`reservation.newMemberMinAdvanceMinutes` of notice (default 4320, 3 days) while they hold no
+current **Practice space** clearance, so someone can be found to show them around. With the
+clearance it is the room's 60 minutes. `noticeFor()` in `conflict-service.ts` decides it, and both
+`validateBooking()` (given the member's `userId` by `create()` and `createWaitlisted()`) and the
+picker's slot queries (`getAvailableDates`, `getReservationStartTimes`) read it, so the picker
+never offers a start the server refuses. The picker says why in one line. Band, teaching and
+event bookings keep the room minimum, and `staffCreate()` checks neither. The clearance is
+granted when an orientation is completed or waived — see
+[Rehearsal orientation](#rehearsal-orientation). The rate, minimum duration and advance windows depend on who is
 booking, so callers read them through `getBookingTerms(bookerType)` (see
 [Teaching bookings](#teaching-bookings)). `hasConflict()` in `conflict-service.ts` counts any
 reservation that is not `cancelled` or `waitlisted`, widened by `bufferMinutes` (default 0),
@@ -1544,6 +1555,17 @@ every application already has a row identifying it, and March's deep clean is a 
 from April's.
 
 ### Rehearsal orientation
+
+> **Since #2565** finishing an orientation is what clears a member to book at short notice.
+> `completeOrientation` and `waiveOrientation` grant the **Practice space** clearance
+> (`PRACTICE_SPACE_CLEARANCE_ID`, catalog id `practice-space`, never expires) through
+> `grantPracticeSpaceClearance` in `volunteer/practice-space-clearance.ts`: an append-only
+> `member_certification` row, skipped when a current one exists, carrying the waive reason as
+> its note. Until a member holds it, their own booking needs 3 days' notice, which is the time
+> the orientation shift has to find a volunteer. The migration that added it backfilled every
+> member with a `completed` booking of their own (not a staff hold) and every completed or
+> waived orientation. Staff switch the shift on by picking a role under Settings → Orientation
+> on `/staff/settings`; `pnpm db:seed` sets it locally.
 
 > **Since #2034** orientation is a **setting**, not a list. `volunteer.orientationRoleId` and
 > `volunteer.orientationMinutes` are set from Settings → Orientation, and an empty role means

@@ -63,7 +63,7 @@
 	{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
 	{#snippet form()}
 		<input {...bookBandReservation.fields.slug.as('hidden', slug)} />
-		<DateTimeStep isSustaining={hasSustainingMember} {needsPhone} />
+		<DateTimeStep isSustaining={hasSustainingMember} {needsPhone} bookerType="group" />
 		<ConfirmStep band />
 		<PaymentStep
 			fields={{ coverFees: bookBandReservation.fields.coverFees }}

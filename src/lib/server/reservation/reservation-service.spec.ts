@@ -112,8 +112,10 @@ describe('ReservationService', () => {
 			// The booker type is forwarded, not defaulted: without it a half-hour
 			// teaching booking is refused by the member `minDurationHours`, and a
 			// term of lessons by the member advance window.
+			// And the member, whose clearance decides the notice (#2565).
 			expect(validateBooking).toHaveBeenCalledWith(params.startsAt, params.endsAt, {
-				bookerType: params.bookerType
+				bookerType: params.bookerType,
+				userId: params.userId
 			});
 			expect(result.id).toBe('res-1');
 		});
