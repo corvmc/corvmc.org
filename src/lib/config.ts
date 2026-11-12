@@ -812,6 +812,39 @@ export const contractorJobViewLabels: Record<ContractorJobView, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Parties: the outside organizations and people CMC deals with (#2622)
+// ---------------------------------------------------------------------------
+
+/**
+ * What an organization or a person is to CMC. Rows, not a column: one business
+ * can sponsor a season and service the PA in the same year.
+ */
+export const partyRoles = [
+	'funder',
+	'sponsor',
+	'contractor',
+	'performer',
+	'vendor',
+	'press',
+	'partner',
+	'supplier',
+	'donor'
+] as const;
+export type PartyRole = (typeof partyRoles)[number];
+
+export const partyRoleLabels: Record<PartyRole, string> = {
+	funder: 'Funder',
+	sponsor: 'Sponsor',
+	contractor: 'Contractor',
+	performer: 'Performer',
+	vendor: 'Vendor',
+	press: 'Press',
+	partner: 'Partner',
+	supplier: 'Supplier',
+	donor: 'Donor'
+};
+
+// ---------------------------------------------------------------------------
 // Sponsors: businesses and their sponsorship terms
 // ---------------------------------------------------------------------------
 
@@ -2244,6 +2277,9 @@ export const capabilities = {
 	incident: ['read', 'record', 'file'],
 	sponsor: ['read', 'manage'],
 	grant: ['read', 'manage'],
+	// Outside organizations and their people (#2622). The rows behind
+	// `grant`, `sponsor` and `contractor` records keep those guards.
+	contact: ['read', 'manage'],
 	project: ['read', 'manage'],
 	// The two halves of a show (business-workflows.md §14). `book`
 	// is acts, offers, deals and billing; `run` is the run of show, the advance,
@@ -2523,6 +2559,8 @@ export const grantableCapabilities = {
 	'sponsor.manage': { label: 'Manage sponsors', committee: 'org' },
 	'grant.read': { label: 'See grants', committee: 'org' },
 	'grant.manage': { label: 'Manage grants', committee: 'org' },
+	'contact.read': { label: 'See contacts', committee: 'org' },
+	'contact.manage': { label: 'Manage contacts', committee: 'org' },
 	// Powers over records a committee owns or takes part in (projects, its
 	// markets, its schedules). The guard names the record; the resolver finds the
 	// committees on it.
@@ -2682,8 +2720,8 @@ export const attachableTypes = [
 	 * the event's public poster is not that until staff promote it.
 	 */
 	'artifact_request',
-	/** A sponsor's `logo`, shown beside its credit on an event (#583). */
-	'sponsor'
+	/** An organization's `logo`, shown beside a sponsor's credit on an event (#583). */
+	'organization'
 ] as const;
 export type AttachableType = (typeof attachableTypes)[number];
 

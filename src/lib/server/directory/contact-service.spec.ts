@@ -186,7 +186,7 @@ describe('the guard travels with the data', () => {
 	 * privacy-best one.
 	 */
 	it('exempts only the token path, and says so in its name', async () => {
-		await writeContactUnguarded('de-1', { bookingName: 'A Manager' }, 'self_entered');
+		await writeContactUnguarded('de-1', { name: 'A Manager' }, 'self_entered');
 		expect(guard).not.toHaveBeenCalled();
 		expect(rowsFor('contact')[0]).toMatchObject({ source: 'self_entered' });
 	});
@@ -196,7 +196,7 @@ describe('the consent ledger', () => {
 	it('registers the address as a subscriber', async () => {
 		selectQueue = [[], []]; // no existing subscriber, no existing contact
 
-		await upsertContact('de-1', { bookingEmail: 'Manager@Example.COM' }, 'staff_entered');
+		await upsertContact('de-1', { email: 'Manager@Example.COM' }, 'staff_entered');
 
 		expect(rowsFor('subscriber')[0]).toMatchObject({ email: 'manager@example.com' });
 		expect(rowsFor('contact')[0]).toMatchObject({ subscriberId: 'sub-new' });
@@ -211,7 +211,7 @@ describe('the consent ledger', () => {
 	it('never enrols that address in an audience', async () => {
 		selectQueue = [[], []];
 
-		await upsertContact('de-1', { bookingEmail: 'manager@example.com' }, 'staff_entered');
+		await upsertContact('de-1', { email: 'manager@example.com' }, 'staff_entered');
 
 		expect(rowsFor('audience_member')).toHaveLength(0);
 	});
@@ -224,7 +224,7 @@ describe('the consent ledger', () => {
 	it('reuses an address already in the ledger, suppression and all', async () => {
 		selectQueue = [[{ id: 'sub-existing' }], []];
 
-		await upsertContact('de-1', { bookingEmail: 'manager@example.com' }, 'staff_entered');
+		await upsertContact('de-1', { email: 'manager@example.com' }, 'staff_entered');
 
 		expect(rowsFor('subscriber')).toHaveLength(0);
 		expect(rowsFor('contact')[0]).toMatchObject({ subscriberId: 'sub-existing' });
@@ -233,7 +233,7 @@ describe('the consent ledger', () => {
 	it('registers nothing when no email was given', async () => {
 		selectQueue = [[]];
 
-		await upsertContact('de-1', { bookingPhone: '555-0100' }, 'staff_entered');
+		await upsertContact('de-1', { phone: '555-0100' }, 'staff_entered');
 
 		expect(rowsFor('subscriber')).toHaveLength(0);
 		expect(rowsFor('contact')[0]).toMatchObject({ subscriberId: null });

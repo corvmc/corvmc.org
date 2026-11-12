@@ -34,6 +34,12 @@ const credits = {
 	removeSponsorLogo: vi.fn(async () => undefined)
 };
 vi.mock('#lib/server/sponsor/credit-service.js', () => credits);
+
+const people = {
+	withPrimaryContact: vi.fn(async <T>(rows: T[]) => rows),
+	savePrimaryContact: vi.fn(async () => undefined)
+};
+vi.mock('#lib/server/party/primary-contact.js', () => people);
 vi.mock('#lib/server/storage.js', () => ({
 	validateUpload: () => null,
 	resolveImageUrl: (k: string | null) => (k ? `https://img/${k}` : null)
@@ -150,7 +156,15 @@ describe('sponsor input', () => {
 		held = new Set(['sponsor.read', 'sponsor.manage']);
 		await remote.createSponsor({ ...SPONSOR, website: '', notes: '' });
 		expect(service.createSponsor).toHaveBeenCalledWith(
-			expect.objectContaining({ website: null, notes: null, contactEmail: null })
+			expect.objectContaining({ website: null, notes: null })
+		);
+		// The person goes to the contact service, never onto the organization.
+		expect(service.createSponsor).toHaveBeenCalledWith(
+			expect.not.objectContaining({ contactEmail: expect.anything() })
+		);
+		expect(people.savePrimaryContact).toHaveBeenCalledWith(
+			's1',
+			expect.objectContaining({ contactEmail: null })
 		);
 		await remote.createSponsorship({ ...SHIP, tier: '', endsOn: '' });
 		expect(service.createSponsorship).toHaveBeenCalledWith(

@@ -149,7 +149,7 @@ describe('createJob', () => {
 			createdByUserId: ACTOR
 		});
 		const wo = insertValues[0] as { id: string };
-		expect(insertValues[1]).toMatchObject({ contractorId: 'c-1', workOrderId: wo.id });
+		expect(insertValues[1]).toMatchObject({ organizationId: 'c-1', workOrderId: wo.id });
 	});
 
 	it('refuses a new work order with no title', async () => {
@@ -172,7 +172,7 @@ describe('createJob', () => {
 
 		expect(batches).toHaveLength(0);
 		expect(insertValues).toHaveLength(1);
-		expect(insertValues[0]).toMatchObject({ contractorId: 'c-1', workOrderId: WO });
+		expect(insertValues[0]).toMatchObject({ organizationId: 'c-1', workOrderId: WO });
 	});
 
 	it('refuses a work order that was called off', async () => {

@@ -1,14 +1,20 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, uniqueIndex, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import { partyRoles } from '../../../config';
 import { directoryEntry } from './directory';
 import { subscriber } from './marketing';
+import { user } from './authentication';
+import { organization } from './party';
 
 /** Who typed this in — the act itself, or staff on their behalf. */
 export const contactSources = ['self_entered', 'staff_entered'] as const;
 export type ContactSource = (typeof contactSources)[number];
 
 /**
- * The private half of a party record. See `docs/decisions/0022-external-acts-are-staff-records-with-private-contacts.md`.
+ * A person outside CMC's membership, or a member in an outside capacity: the
+ * program officer at a funder, a sponsor's store manager, an act's booker.
+ * See `docs/decisions/0022-external-acts-are-staff-records-with-private-contacts.md`
+ * and #2622.
  *
  * `directory_entry` is a **public** listing; an external act's booking details
  * are the opposite of public, and the two must not share a row.
@@ -44,6 +50,12 @@ export const contact = sqliteTable(
 		 * which is the behaviour that matters for a deletion request.
 		 */
 		entryId: text('entry_id').references(() => directoryEntry.id, { onDelete: 'cascade' }),
+		/** Where this person works. Null for a freelancer or a donor giving alone. */
+		organizationId: text('organization_id').references(() => organization.id, {
+			onDelete: 'set null'
+		}),
+		/** Set when the person is also a member. */
+		userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
 		/**
 		 * The consent ledger for this address, if it is registered.
 		 *
@@ -60,10 +72,13 @@ export const contact = sqliteTable(
 		 * a list without opt-in is how a sending domain collects spam complaints.
 		 */
 		subscriberId: text('subscriber_id').references(() => subscriber.id, { onDelete: 'set null' }),
-		/** Often a manager rather than a member of the act. */
-		bookingName: text('booking_name'),
-		bookingEmail: text('booking_email'),
-		bookingPhone: text('booking_phone'),
+		/** For an act, often a manager rather than a member of it. */
+		name: text('name'),
+		/** Their job title, such as "program officer". */
+		role: text('role'),
+		/** Stored lower-cased and trimmed, which is what auto-merge matches on. */
+		email: text('email'),
+		phone: text('phone'),
 		notes: text('notes'),
 		/** A Stripe or settlement reference. Never card data. */
 		paymentRef: text('payment_ref'),
@@ -88,9 +103,47 @@ export const contact = sqliteTable(
 	(t) => [
 		index('idx_contact_entry').on(t.entryId),
 		index('idx_contact_subscriber').on(t.subscriberId),
+		index('idx_contact_organization').on(t.organizationId),
+		index('idx_contact_user').on(t.userId),
+		index('idx_contact_email').on(t.email),
 		// The retention sweep's read: everything with a horizon that has passed.
 		index('idx_contact_retain_until').on(t.retainUntil)
 	]
 );
 
 export type Contact = typeof contact.$inferSelect;
+
+/**
+ * What an organization or a person is to CMC. Exactly one owner is set.
+ *
+ * SQLite cannot check that a `grant_application` names a funder, so the
+ * services that write those rows check for the role instead.
+ */
+export const partyRole = sqliteTable(
+	'party_role',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		organizationId: text('organization_id').references(() => organization.id, {
+			onDelete: 'cascade'
+		}),
+		contactId: text('contact_id').references(() => contact.id, { onDelete: 'cascade' }),
+		role: text('role', { enum: partyRoles }).notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		uniqueIndex('idx_party_role_organization')
+			.on(t.organizationId, t.role)
+			.where(sql`organization_id is not null`),
+		uniqueIndex('idx_party_role_contact')
+			.on(t.contactId, t.role)
+			.where(sql`contact_id is not null`),
+		index('idx_party_role_role').on(t.role),
+		check('party_role_one_owner', sql`(organization_id is null) <> (contact_id is null)`)
+	]
+);
+
+export type PartyRoleRow = typeof partyRole.$inferSelect;

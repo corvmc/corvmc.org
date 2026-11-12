@@ -40,9 +40,9 @@ function poster(key: string, alt: string | null = null) {
 }
 
 function credit(id: string, name: string, logo?: string) {
-	sqlite.exec(`insert into sponsor (id, name) values ('${id}', '${name}')`);
+	sqlite.exec(`insert into organization (id, name) values ('${id}', '${name}')`);
 	sqlite.exec(
-		`insert into sponsorship (id, sponsor_id, title, status) values ('${id}-s', '${id}', 'Show', 'active')`
+		`insert into sponsorship (id, organization_id, title, status) values ('${id}-s', '${id}', 'Show', 'active')`
 	);
 	sqlite.exec(
 		`insert into sponsor_placement (id, sponsorship_id, event_id, on_event_page, in_campaign)
@@ -54,7 +54,7 @@ function credit(id: string, name: string, logo?: string) {
 	);
 	sqlite.exec(
 		`insert into media_attachment (id, media_id, attachable_type, attachable_id, slot)
-		 values ('${id}-a', '${id}-m', 'sponsor', '${id}', 'logo')`
+		 values ('${id}-a', '${id}-m', 'organization', '${id}', 'logo')`
 	);
 	objects.set(logo, new Uint8Array([1, 2, 3]));
 }
@@ -63,7 +63,7 @@ beforeEach(() => {
 	for (const t of [
 		'sponsor_placement',
 		'sponsorship',
-		'sponsor',
+		'organization',
 		'media_attachment',
 		'media',
 		'event_band',

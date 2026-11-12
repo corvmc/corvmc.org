@@ -1,11 +1,10 @@
 import {
-	funder,
 	grantApplication,
 	grantReport,
-	type NewFunder,
 	type NewGrantApplication,
 	type NewGrantReport
 } from '../../src/lib/server/db/schema/grant';
+import { seedOrganizations, type SeedOrganization } from './parties';
 import { batchInsert } from './db';
 import { ptDate } from './util';
 
@@ -21,23 +20,33 @@ function day(offset: number): string {
 export async function seedGrants() {
 	console.log('Seeding grants...');
 
-	const funders: NewFunder[] = [
+	const funders: SeedOrganization[] = [
 		{
 			id: 'seed-funder-oac',
 			name: 'Oregon Arts Commission',
-			contactName: 'Program officer',
-			contactEmail: 'grants@example.org'
+			roles: ['funder'],
+			website: 'https://example.org/oac',
+			person: { name: 'Priya Natarajan', role: 'Program officer', email: 'grants@example.org' }
 		},
-		{ id: 'seed-funder-community-fund', name: 'Benton County Community Fund' },
-		{ id: 'seed-funder-cultural-trust', name: 'Oregon Cultural Trust' },
+		{
+			id: 'seed-funder-community-fund',
+			name: 'Benton County Community Fund',
+			roles: ['funder']
+		},
+		{ id: 'seed-funder-cultural-trust', name: 'Oregon Cultural Trust', roles: ['funder'] },
 		// Archived: off the list and the picker, its declined application kept.
-		{ id: 'seed-funder-collins', name: 'Collins Foundation', deletedAt: new Date() }
+		{
+			id: 'seed-funder-collins',
+			name: 'Collins Foundation',
+			roles: ['funder'],
+			archivedAt: new Date()
+		}
 	];
 
 	const apps: NewGrantApplication[] = [
 		{
 			id: 'seed-grant-oac',
-			funderId: 'seed-funder-oac',
+			organizationId: 'seed-funder-oac',
 			title: '2027 operating support',
 			status: 'prospect',
 			amountRequestedCents: 500_000,
@@ -45,7 +54,7 @@ export async function seedGrants() {
 		},
 		{
 			id: 'seed-grant-workshops',
-			funderId: 'seed-funder-community-fund',
+			organizationId: 'seed-funder-community-fund',
 			title: 'Youth songwriting workshops',
 			status: 'applied',
 			amountRequestedCents: 250_000,
@@ -53,7 +62,7 @@ export async function seedGrants() {
 		},
 		{
 			id: 'seed-grant-soundproofing',
-			funderId: 'seed-funder-cultural-trust',
+			organizationId: 'seed-funder-cultural-trust',
 			title: 'Practice room soundproofing',
 			status: 'awarded',
 			amountRequestedCents: 1_000_000,
@@ -64,7 +73,7 @@ export async function seedGrants() {
 		},
 		{
 			id: 'seed-grant-equipment',
-			funderId: 'seed-funder-collins',
+			organizationId: 'seed-funder-collins',
 			title: 'Capital equipment',
 			status: 'declined',
 			amountRequestedCents: 1_200_000,
@@ -85,7 +94,7 @@ export async function seedGrants() {
 		}
 	];
 
-	await batchInsert(funder, funders);
+	await seedOrganizations(funders);
 	await batchInsert(grantApplication, apps);
 	await batchInsert(grantReport, reports);
 	return { funders: funders.length, applications: apps.length };

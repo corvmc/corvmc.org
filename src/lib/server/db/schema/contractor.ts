@@ -2,96 +2,22 @@ import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-cor
 import { sql } from 'drizzle-orm';
 import { user } from './authentication';
 import { workOrder } from './volunteer';
-import { contractorJobStatuses, contractorTrades } from '../../../config';
+import { contractorJobStatuses } from '../../../config';
+import { organization } from './party';
 
 // ---------------------------------------------------------------------------
 // Contractor work
 //
 // Work done by somebody you pay. What the work is lives on `work_order`, the
 // same task a member or volunteer could answer; a contractor's engagement on it
-// is `contractor_job`. A labor invoice is not stock arriving, which is why cost
-// lives here rather than on `acquisition` or `purchase_order`.
+// is `contractor_job`. Who they are is an `organization` holding the
+// `contractor` role, with a `contractor_detail` row. A labor invoice is not
+// stock arriving, which is why cost lives here rather than on `acquisition`
+// or `purchase_order`.
 //
 // See `docs/decisions/0051-contractor-work-has-its-own-tables.md` and
 // `docs/decisions/0054-a-work-order-is-the-task.md`.
 // ---------------------------------------------------------------------------
-
-/**
- * Somebody the collective pays to do work: an instrument tech, an electrician,
- * the company that services the extinguishers.
- *
- * Inventory declined a `supplier` table until free text fragments
- * (`docs/decisions/0045-inventory-stock-is-a-ledger.md`). Servicing needs this
- * entity now: `purchase_order.supplier_name` can stay free
- * text because you never have to *phone* a receipt, and "who serviced the
- * building and when" is unanswerable without a row to hang a history off.
- *
- * It is still not the `supplier` table that record declined, and the two should
- * not be merged on the strength of the word alone. A supplier sells goods that
- * arrive and enter stock; a contractor performs work that leaves no stock
- * behind. That the same shop may one day be both is a consolidation to make
- * deliberately, not to pre-empt.
- */
-export const contractor = sqliteTable(
-	'contractor',
-	{
-		id: text('id')
-			.primaryKey()
-			.$defaultFn(() => crypto.randomUUID()),
-
-		name: text('name').notNull(),
-		trade: text('trade', { enum: contractorTrades }).notNull(),
-
-		/** The person you actually ask for. Often not whoever answers the phone. */
-		contactName: text('contact_name'),
-		phone: text('phone'),
-		email: text('email'),
-		website: text('website'),
-
-		licenseNumber: text('license_number'),
-
-		/**
-		 * When their certificate of insurance runs out.
-		 *
-		 * A bare date and **no status column**, following `member_certification`:
-		 * current, expiring soon and lapsed are three readings of one date, and a
-		 * stored status is a fourth thing that has to be kept true by something.
-		 * Null means we hold no certificate — which is not the same as current,
-		 * and the UI must not render it as if it were.
-		 */
-		insuranceExpiresAt: integer('insurance_expires_at', { mode: 'timestamp' }),
-
-		notes: text('notes'),
-
-		/**
-		 * Retired rather than deleted. A contractor with jobs against them is
-		 * history, and `contractor_job.contractor_id` restricts deletion anyway —
-		 * this is the way to get someone out of the pickers without lying about
-		 * who fixed the amp in 2024.
-		 */
-		archivedAt: integer('archived_at', { mode: 'timestamp' }),
-
-		createdAt: integer('created_at', { mode: 'timestamp' })
-			.notNull()
-			.default(sql`(unixepoch())`),
-		updatedAt: integer('updated_at', { mode: 'timestamp' })
-			.notNull()
-			.default(sql`(unixepoch())`)
-	},
-	(t) => [
-		index('idx_contractor_trade').on(t.trade),
-		// The picker's read: everyone still in service, in name order.
-		index('idx_contractor_active')
-			.on(t.name)
-			.where(sql`archived_at is null`),
-		// The renewal read: who is lapsing, soonest first.
-		index('idx_contractor_insurance')
-			.on(t.insuranceExpiresAt)
-			.where(sql`archived_at is null`)
-	]
-);
-
-export type Contractor = typeof contractor.$inferSelect;
 
 /**
  * One contractor's engagement on one work order, the way a `volunteer_signup`
@@ -109,12 +35,12 @@ export const contractorJob = sqliteTable(
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
 
-		// Restrict: a completed job names who did it, and deleting the contractor
-		// out from under it would rewrite the service history that is the whole
-		// point of keeping the record.
-		contractorId: text('contractor_id')
+		// The contractor: an organization holding the `contractor` role, which
+		// the service checks. Restrict: a completed job names who did it, and
+		// deleting them would rewrite the service history the record is for.
+		organizationId: text('organization_id')
 			.notNull()
-			.references(() => contractor.id, { onDelete: 'restrict' }),
+			.references(() => organization.id, { onDelete: 'restrict' }),
 
 		status: text('status', { enum: contractorJobStatuses }).notNull().default('asked'),
 
@@ -188,7 +114,7 @@ export const contractorJob = sqliteTable(
 			.default(sql`(unixepoch())`)
 	},
 	(t) => [
-		index('idx_contractor_job_contractor').on(t.contractorId),
+		index('idx_contractor_job_organization').on(t.organizationId),
 		index('idx_contractor_job_work_order').on(t.workOrderId),
 		index('idx_contractor_job_status').on(t.status),
 		// The overdue read: out with somebody, past its date. Partial so the

@@ -1,7 +1,8 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { contractor, contractorJob } from '#lib/server/db/schema/contractor.js';
+import { contractorJob } from '#lib/server/db/schema/contractor.js';
+import { organization } from '#lib/server/db/schema/party.js';
 import { artifactRequest } from '#lib/server/db/schema/artifact-request.js';
 import {
 	volunteerShift,
@@ -196,8 +197,8 @@ export async function engagementsOn(ids: string[]): Promise<Map<string, TaskEnga
 			.select({
 				workOrderId: contractorJob.workOrderId,
 				id: contractorJob.id,
-				contractorId: contractor.id,
-				contractorName: contractor.name,
+				contractorId: organization.id,
+				contractorName: organization.name,
 				status: contractorJob.status,
 				quotedCents: contractorJob.quotedCents,
 				costCents: contractorJob.costCents,
@@ -209,7 +210,7 @@ export async function engagementsOn(ids: string[]): Promise<Map<string, TaskEnga
 				createdAt: contractorJob.createdAt
 			})
 			.from(contractorJob)
-			.innerJoin(contractor, eq(contractor.id, contractorJob.contractorId))
+			.innerJoin(organization, eq(organization.id, contractorJob.organizationId))
 			.where(inArray(contractorJob.workOrderId, g))
 			.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id))
 	);

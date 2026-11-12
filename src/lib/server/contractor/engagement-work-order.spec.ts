@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { clearOrganizationsSql, contractorSql } from '#lib/server/testing/contractor-sql.js';
 
 /**
  * Completing an engagement ticks its work order; ticking the work order does not
@@ -44,18 +45,16 @@ beforeEach(() => {
 		'financial_entry',
 		'contractor_job',
 		'work_order',
-		'contractor',
 		'inventory_asset',
 		'inventory_item'
 	]) {
 		sqlite.exec(`delete from ${table}`);
 	}
-	sqlite.exec(
-		`insert into contractor (id, name, trade) values ('c-1', 'Benton Electric', 'electrical')`
-	);
+	sqlite.exec(clearOrganizationsSql);
+	sqlite.exec(contractorSql('c-1', 'Benton Electric', 'electrical'));
 	sqlite.exec(`insert into work_order (id, title) values ('wo-1', 'Add a dedicated circuit')`);
 	sqlite.exec(
-		`insert into contractor_job (id, contractor_id, work_order_id, status)
+		`insert into contractor_job (id, organization_id, work_order_id, status)
 			values ('job-1', 'c-1', 'wo-1', 'booked')`
 	);
 });

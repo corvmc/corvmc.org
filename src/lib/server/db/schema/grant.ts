@@ -1,29 +1,7 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { grantStatuses } from '../../../config';
-
-/**
- * A foundation, trust or agency the collective applies to.
- * See docs/decisions/0019-sponsors-and-grants-are-two-modules.md.
- */
-export const funder = sqliteTable('funder', {
-	id: text('id')
-		.primaryKey()
-		.$defaultFn(() => crypto.randomUUID()),
-	name: text('name').notNull(),
-	website: text('website'),
-	contactName: text('contact_name'),
-	contactEmail: text('contact_email'),
-	notes: text('notes'),
-	/** Archived: off the active list, with every application kept. Null is live. */
-	deletedAt: integer('deleted_at', { mode: 'timestamp' }),
-	createdAt: integer('created_at', { mode: 'timestamp' })
-		.notNull()
-		.default(sql`(unixepoch())`),
-	updatedAt: integer('updated_at', { mode: 'timestamp' })
-		.notNull()
-		.default(sql`(unixepoch())`)
-});
+import { organization } from './party';
 
 /**
  * One application to a funder, and the award if it is made. Requested and
@@ -36,9 +14,10 @@ export const grantApplication = sqliteTable(
 		id: text('id')
 			.primaryKey()
 			.$defaultFn(() => crypto.randomUUID()),
-		funderId: text('funder_id')
+		/** The funder: an organization holding the `funder` role, which the service checks. */
+		organizationId: text('organization_id')
 			.notNull()
-			.references(() => funder.id, { onDelete: 'restrict' }),
+			.references(() => organization.id, { onDelete: 'restrict' }),
 		title: text('title').notNull(),
 		status: text('status', { enum: grantStatuses }).notNull().default('prospect'),
 		amountRequestedCents: integer('amount_requested_cents'),
@@ -55,7 +34,7 @@ export const grantApplication = sqliteTable(
 			.default(sql`(unixepoch())`)
 	},
 	(t) => [
-		index('grant_application_funder_idx').on(t.funderId),
+		index('grant_application_organization_idx').on(t.organizationId),
 		index('grant_application_status_idx').on(t.status)
 	]
 );
@@ -87,8 +66,6 @@ export const grantReport = sqliteTable(
 	(t) => [index('grant_report_application_idx').on(t.grantApplicationId)]
 );
 
-export type Funder = typeof funder.$inferSelect;
-export type NewFunder = typeof funder.$inferInsert;
 export type GrantApplication = typeof grantApplication.$inferSelect;
 export type NewGrantApplication = typeof grantApplication.$inferInsert;
 export type GrantReport = typeof grantReport.$inferSelect;

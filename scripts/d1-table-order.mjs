@@ -33,10 +33,11 @@ export const tableOrder = [
 	'venue',
 	// References venue and user; `event_listing.import_source_id` points at it.
 	'calendar_source',
-	// Roots, each ahead of the children that reference it.
-	'sponsor',
+	// An outside party: references directory_entry. Parent of contractor_detail,
+	// sponsorship, grant_application, contractor_job, contact and party_role.
+	'organization',
+	'contractor_detail',
 	'sponsorship',
-	'funder',
 	'grant_application',
 	'grant_report',
 	'equipment_category',
@@ -49,8 +50,6 @@ export const tableOrder = [
 	// existing table is a rebuild in SQLite, which on D1 would take
 	// `acquisition_line` with it — so it imposes no ordering here.
 	'purchase_order',
-	// A root: references nothing. Parent of contractor_job.
-	'contractor',
 	// References `project` and `user`, so it clears after both.
 	'financial_entry',
 	// A root: no foreign key at all. `subject_id` is polymorphic, so it names
@@ -98,7 +97,7 @@ export const tableOrder = [
 	// referenced by volunteer_signup, volunteer_hour_log, work_task and
 	// member_orientation, so it sits between them.
 	'work_order',
-	// References contractor, user and work_order, so it follows
+	// References organization, user and work_order, so it follows
 	// all of them.
 	'contractor_job',
 	// The checklist inside one work order. References work_order and user.
@@ -175,9 +174,11 @@ export const tableOrder = [
 	// `packing_item` of packing_list and user.
 	'packing_list',
 	'packing_item',
-	// The private half of a party record: child of directory_entry and
-	// subscriber, so it wipes before either.
+	// A person at a party: child of directory_entry, organization, user and
+	// subscriber, so it wipes before each.
 	'contact',
+	// What an organization or a contact is to CMC: child of both.
+	'party_role',
 	// The contact-sheet link: child of directory_entry and user.
 	'directory_entry_link',
 	'credit_transaction',

@@ -5,7 +5,8 @@ import {
 } from '#lib/server/finance/contractor-entries.js';
 import { entriesStatement, listForSubject } from '#lib/server/finance/financial-entry-service.js';
 import { db } from '#lib/server/db/index.js';
-import { contractor, contractorJob } from '#lib/server/db/schema/contractor.js';
+import { contractorJob } from '#lib/server/db/schema/contractor.js';
+import { contractorDetail, organization } from '#lib/server/db/schema/party.js';
 import type { ContractorJob } from '#lib/server/db/schema/contractor.js';
 import { inventoryAsset, inventoryItem } from '#lib/server/db/schema/inventory.js';
 import { volunteerRole, workOrder } from '#lib/server/db/schema/volunteer.js';
@@ -48,6 +49,13 @@ export class ContractorJobStateError extends DomainError {
 /** Statuses an engagement does not leave. */
 const TERMINAL: ContractorJobStatus[] = ['completed', 'cancelled', 'declined', 'no_show'];
 
+/** Who a job names, as every read returns it. */
+const contractorRef = {
+	id: organization.id,
+	name: organization.name,
+	archivedAt: organization.archivedAt
+};
+
 /** The engagement with its work order's fields beside it, as every read returns it. */
 const engagementSelect = {
 	job: contractorJob,
@@ -57,7 +65,7 @@ const engagementSelect = {
 	projectId: workOrder.projectId,
 	workOrderResolvedAt: workOrder.resolvedAt,
 	workOrderCancelledAt: workOrder.cancelledAt,
-	contractorName: contractor.name
+	contractorName: organization.name
 };
 
 interface EngagementRow {
@@ -121,13 +129,14 @@ export interface CreateJobInput {
  */
 export async function createJob(data: CreateJobInput): Promise<Engagement> {
 	// Archiving is meant to stop new work, not just tidy the picker.
+	// Also the role check SQLite cannot make: only a contractor can be engaged.
 	const who = await getContractorById(data.contractorId);
 	if (who.archivedAt) {
 		throw new ContractorJobStateError('That contractor has been archived');
 	}
 
 	const engagement = {
-		contractorId: data.contractorId,
+		organizationId: data.contractorId,
 		scheduledFor: data.scheduledFor ?? null,
 		expectedBackAt: data.expectedBackAt ?? null,
 		quotedCents: data.quotedCents ?? null,
@@ -494,7 +503,7 @@ export async function getJobById(id: string): Promise<Engagement> {
 		.select(engagementSelect)
 		.from(contractorJob)
 		.innerJoin(workOrder, eq(contractorJob.workOrderId, workOrder.id))
-		.innerJoin(contractor, eq(contractorJob.contractorId, contractor.id))
+		.innerJoin(organization, eq(contractorJob.organizationId, organization.id))
 		.leftJoin(volunteerRole, eq(workOrder.volunteerRoleId, volunteerRole.id))
 		.where(eq(contractorJob.id, id))
 		.limit(1);
@@ -515,7 +524,7 @@ function jobRowQuery(now: Date) {
 	return db
 		.select({
 			...engagementSelect,
-			contractor,
+			contractor: contractorRef,
 			assetTag: inventoryAsset.assetTag,
 			itemName: inventoryItem.name,
 			late: inView('late', now),
@@ -524,13 +533,13 @@ function jobRowQuery(now: Date) {
 		.from(contractorJob)
 		.innerJoin(workOrder, eq(contractorJob.workOrderId, workOrder.id))
 		.leftJoin(volunteerRole, eq(workOrder.volunteerRoleId, volunteerRole.id))
-		.innerJoin(contractor, eq(contractorJob.contractorId, contractor.id))
+		.innerJoin(organization, eq(contractorJob.organizationId, organization.id))
 		.leftJoin(inventoryAsset, eq(workOrder.assetId, inventoryAsset.id))
 		.leftJoin(inventoryItem, eq(inventoryAsset.itemId, inventoryItem.id));
 }
 
 type JobRow = EngagementRow & {
-	contractor: typeof contractor.$inferSelect;
+	contractor: { id: string; name: string; archivedAt: Date | null };
 	assetTag: string | null;
 	itemName: string | null;
 	late: number;
@@ -601,7 +610,7 @@ export async function listJobs(
 			and(
 				opts.view ? engagementViewWhere(opts.view, now) : undefined,
 				opts.status ? eq(contractorJob.status, opts.status) : undefined,
-				opts.contractorId ? eq(contractorJob.contractorId, opts.contractorId) : undefined,
+				opts.contractorId ? eq(contractorJob.organizationId, opts.contractorId) : undefined,
 				opts.assetId ? eq(workOrder.assetId, opts.assetId) : undefined,
 				opts.workOrderId ? eq(contractorJob.workOrderId, opts.workOrderId) : undefined,
 				opts.workOrderIds ? inArray(contractorJob.workOrderId, opts.workOrderIds) : undefined
@@ -639,11 +648,11 @@ export async function listOverdueJobs(now: Date = new Date()) {
 /** This unit's service history, newest first. Drives the asset page's panel. */
 export async function jobsForAsset(assetId: string) {
 	const rows = await db
-		.select({ ...engagementSelect, contractor })
+		.select({ ...engagementSelect, contractor: contractorRef })
 		.from(contractorJob)
 		.innerJoin(workOrder, eq(contractorJob.workOrderId, workOrder.id))
 		.leftJoin(volunteerRole, eq(workOrder.volunteerRoleId, volunteerRole.id))
-		.innerJoin(contractor, eq(contractorJob.contractorId, contractor.id))
+		.innerJoin(organization, eq(contractorJob.organizationId, organization.id))
 		.where(eq(workOrder.assetId, assetId))
 		.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id));
 	return rows.map(({ contractor: who, ...engagement }) => ({
@@ -667,12 +676,12 @@ export async function jobsForAsset(assetId: string) {
 export async function contractorSpend(from: Date, to: Date) {
 	return db
 		.select({
-			trade: contractor.trade,
+			trade: contractorDetail.trade,
 			jobCount: sql<number>`COUNT(*)`,
 			totalCents: sql<number>`COALESCE(SUM(COALESCE(${contractorJob.costCents}, 0)), 0)`
 		})
 		.from(contractorJob)
-		.innerJoin(contractor, eq(contractorJob.contractorId, contractor.id))
+		.innerJoin(contractorDetail, eq(contractorJob.organizationId, contractorDetail.organizationId))
 		.where(
 			and(
 				eq(contractorJob.status, 'completed'),
@@ -681,7 +690,7 @@ export async function contractorSpend(from: Date, to: Date) {
 				sql`${contractorJob.completedAt} < ${Math.floor(to.getTime() / 1000)}`
 			)
 		)
-		.groupBy(contractor.trade)
+		.groupBy(contractorDetail.trade)
 		.orderBy(desc(sql`COALESCE(SUM(COALESCE(${contractorJob.costCents}, 0)), 0)`));
 }
 

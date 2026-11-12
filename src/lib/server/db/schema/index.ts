@@ -31,6 +31,7 @@ export * from './classified';
 export * from './volunteer';
 export * from './instructor';
 export * from './media';
+export * from './party';
 export * from './contractor';
 export * from './project';
 export * from './audio';

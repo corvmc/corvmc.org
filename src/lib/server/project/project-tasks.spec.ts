@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { clearOrganizationsSql, contractorSql } from '#lib/server/testing/contractor-sql.js';
 
 /**
  * A project's task list, against a real SQLite: ordering, sections, the
@@ -414,20 +415,14 @@ describe('assigning members', () => {
 
 /** An engagement on task `t`, by a contractor named "Sparky". */
 function engagement(id: string, status: string) {
-	if (!one(`select 1 as x from contractor where id = 'ctr'`)) {
-		const cols = all<{ name: string; notnull: number; dflt_value: unknown }>(
-			`pragma table_info(contractor)`
-		);
-		const row: Record<string, unknown> = { id: 'ctr', name: 'Sparky' };
-		for (const c of cols)
-			if (!(c.name in row) && c.notnull && c.dflt_value === null) row[c.name] = 'x';
-		insert('contractor', row);
+	if (!one(`select 1 as x from organization where id = 'ctr'`)) {
+		sqlite.exec(contractorSql('ctr', 'Sparky'));
 	}
-	insert('contractor_job', { id, work_order_id: 't', contractor_id: 'ctr', status });
+	insert('contractor_job', { id, work_order_id: 't', organization_id: 'ctr', status });
 }
 
 describe('switching away from a contractor', () => {
-	beforeEach(() => sqlite.exec(`delete from contractor`));
+	beforeEach(() => sqlite.exec(clearOrganizationsSql));
 
 	it('warns whose engagement it cancels, then cancels it and assigns', async () => {
 		task('t', { volunteer_role_id: ROLE });
@@ -628,9 +623,9 @@ describe('the rows the list draws', () => {
 		insert('work_order_assignee', { work_order_id: 'crew', user_id: CAM, assigned_at: 1 });
 
 		task('wired');
-		sqlite.exec(`delete from contractor`);
-		insert('contractor', { id: 'ctr', name: 'Benton Electric', trade: 'electrical' });
-		const base = { work_order_id: 'wired', contractor_id: 'ctr' };
+		sqlite.exec(clearOrganizationsSql);
+		sqlite.exec(contractorSql('ctr', 'Benton Electric'));
+		const base = { work_order_id: 'wired', organization_id: 'ctr' };
 		insert('contractor_job', { ...base, id: 'cj-old', status: 'declined', created_at: 1 });
 		insert('contractor_job', {
 			...base,
@@ -693,8 +688,8 @@ describe('delegating to a contractor', () => {
 		signup('su-a', 's', ADA, 'confirmed');
 		await tasks.assignMembers(PROJECT, 't', { userIds: [BO] });
 		sqlite.exec(`delete from audit_log`);
-		sqlite.exec(`delete from contractor`);
-		insert('contractor', { id: 'ctr', name: 'Benton Electric', trade: 'electrical' });
+		sqlite.exec(clearOrganizationsSql);
+		sqlite.exec(contractorSql('ctr', 'Benton Electric'));
 		const input = { contractorId: 'ctr', quotedCents: 22000, requestedByUserId: STAFF };
 
 		expect(await tasks.engageContractor(PROJECT, 't', input)).toEqual({
