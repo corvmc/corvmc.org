@@ -41,6 +41,7 @@
 			field={action.fields.reason}
 			type="text"
 			label={m.member_groups_slug_project_duty_list_reason_if_applying_agai_label()}
+			description={m.member_groups_slug_project_duty_list_reason_body()}
 		/>
 	{/snippet}
 </Action>

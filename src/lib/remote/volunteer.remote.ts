@@ -98,6 +98,8 @@ import {
 import { listTasksWithEndedShifts } from '#lib/server/volunteer/ended-shifts.js';
 import {
 	assignToTask as assignToTaskService,
+	listAssignedTasksForUser,
+	markAssignedTaskDone,
 	unassignFromTask as unassignFromTaskService
 } from '#lib/server/volunteer/assignee-service.js';
 import { getById } from '#lib/server/event/event-service.js';
@@ -2369,17 +2371,53 @@ export const getMyShifts = query(async () => {
 export const getMemberVolunteerPage = query(z.void(), async () => {
 	const access = await getMyVolunteerAccess();
 
-	const [interests, openShifts, unloggedShifts, myShifts, invitations] = await Promise.all([
+	const userId = requireUser().id;
+	const [interests, openShifts, unloggedShifts, myShifts, invitations, tasks] = await Promise.all([
 		getMyVolunteerInterests(),
 		getOpenShifts(),
 		getUnloggedShifts(),
 		getMyShifts(),
-		// Above the claim board on the page: an invitation is addressed to this
+		// Above the board on the page: an invitation is addressed to this
 		// member, where the board is addressed to everybody.
-		listInvitationsForUser(requireUser().id)
+		listInvitationsForUser(userId),
+		listAssignedTasksForUser(userId)
 	]);
 
-	return { access, interests, openShifts, unloggedShifts, myShifts, invitations };
+	const assignedTasks = tasks.filter((t) => !t.resolvedAt);
+	const unloggedTasks = tasks.filter((t) => t.resolvedAt);
+	// The role picker, only for done work whose task names no role.
+	const roles = unloggedTasks.some((t) => !t.volunteerRoleId)
+		? (await getActiveVolunteerRoles()).map((r) => ({ id: r.id, name: r.name }))
+		: [];
+
+	return {
+		access,
+		interests,
+		openShifts,
+		unloggedShifts,
+		unloggedTasks,
+		assignedTasks,
+		roles,
+		myShifts,
+		invitations
+	};
+});
+
+/**
+ * Mark a task done as its assignee. Resolves its equipment reports and stamps
+ * every assignee, which puts the task in their unlogged work.
+ */
+export const markMyTaskDone = form(z.object({ workOrderId: z.string().min(1) }), async (data) => {
+	const currentUser = requireUser();
+
+	try {
+		await markAssignedTaskDone(data.workOrderId, currentUser.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+
+	await refreshMemberViews();
+	return { success: true };
 });
 
 /**
