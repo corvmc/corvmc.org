@@ -28,8 +28,33 @@ export function isReviewKind(value: unknown): value is ReviewKind {
 	return reviewKinds.includes(value as ReviewKind);
 }
 
+export type ReviewDecision = 'approve' | 'decline';
+
+/**
+ * The kinds decided from the feed row (#2623), and how. Each binds to the remote
+ * form its own page submits, in `src/routes/staff/review-decisions.ts`, whose
+ * type requires a binding for every entry here. A kind that is absent links out.
+ */
+export const rowDecisions = {
+	suggestion_moderation: ['approve', 'decline'],
+	suggestion_edit: ['approve', 'decline'],
+	listing: ['approve', 'decline'],
+	classified: ['approve', 'decline'],
+	resource_tip: ['approve', 'decline'],
+	hour_log: ['approve', 'decline'],
+	shift_claim: ['approve', 'decline'],
+	minor_volunteer: ['approve']
+} as const satisfies Partial<Record<ReviewKind, readonly ReviewDecision[]>>;
+export type RowDecidedKind = keyof typeof rowDecisions;
+
+export function isRowDecided(kind: ReviewKind): kind is RowDecidedKind {
+	return kind in rowDecisions;
+}
+
 /** One row waiting on staff. `at` is when it started waiting; `ref` is where it is decided. */
 export interface ReviewItem extends FeedItem {
 	kind: ReviewKind;
+	/** The waiting record itself: the edit, the signup, the hours. */
+	subjectId: string;
 	ref: EntityRef;
 }
