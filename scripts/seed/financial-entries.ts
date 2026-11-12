@@ -1,6 +1,6 @@
 import { financialEntry } from '../../src/lib/server/db/schema/financial';
 import { calculateProcessingFee } from '../../src/lib/finance/fees';
-import { db } from './db';
+import { batchInsert } from './db';
 import { type SeedReservation, type SeedUser } from './types';
 import { randomInt } from './util';
 
@@ -120,11 +120,7 @@ export async function seedFinancialEntries(users: SeedUser[], reservations: Seed
 		description: 'Ticket, on the house'
 	});
 
-	// D1 caps a statement at 100 bound parameters and these rows are 16 columns
-	// wide, so chunk rather than sending one insert.
-	for (let i = 0; i < rows.length; i += 6) {
-		await db.insert(financialEntry).values(rows.slice(i, i + 6));
-	}
+	await batchInsert(financialEntry, rows);
 
 	return rows;
 }

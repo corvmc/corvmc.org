@@ -2,7 +2,7 @@ import { user, account } from '../../src/lib/server/db/schema/authentication';
 import { modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import { creditTransaction } from '../../src/lib/server/db/schema/finance';
 import { notification } from '../../src/lib/server/db/schema/notification';
-import { db } from './db';
+import { batchInsert, db } from './db';
 import { scryptHash } from './hash';
 import { type SeedRole } from './types';
 
@@ -212,7 +212,7 @@ export async function seedSustainingPersonas(roles: SeedRole[]) {
 	// them /member/notifications reads empty for exactly the members whose
 	// history is the reason the page exists — and the membership emails would
 	// be reviewable only by triggering real Stripe webhooks.
-	await db.insert(notification).values([
+	await batchInsert(notification, [
 		{
 			userId: 'seed-sus-active',
 			type: 'membership_receipt',

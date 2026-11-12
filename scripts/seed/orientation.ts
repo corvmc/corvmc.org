@@ -169,7 +169,7 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 	}
 
 	if (workOrderRows.length > 0) await insertTasksWithShifts(workOrderRows);
-	if (orientationRows.length > 0) await batchInsert(memberOrientation, orientationRows, 7);
+	if (orientationRows.length > 0) await batchInsert(memberOrientation, orientationRows);
 	if (taskRows.length > 0) await batchInsert(workTask, taskRows);
 
 	// Sam is on the cancelled one and has not been told, which is the whole point

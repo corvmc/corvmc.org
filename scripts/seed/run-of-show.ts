@@ -167,9 +167,7 @@ export async function seedRunOfShow(productions: ProductionRow[]) {
 
 	if (rows.length === 0) return { slots: 0, uncredited: 0, withoutTimes: 0 };
 
-	// Thirteen columns a row, so seven rows a statement stays under D1's
-	// 100-parameter cap (13 × 7 = 91).
-	await batchInsert(productionSlot, rows, 7);
+	await batchInsert(productionSlot, rows);
 
 	return { slots: rows.length, uncredited, withoutTimes };
 }

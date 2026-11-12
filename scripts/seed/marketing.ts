@@ -15,63 +15,58 @@ import { random } from './util';
 export async function seedMarketing(users: SeedUser[], showEventId?: string) {
 	console.log('Seeding marketing...');
 
-	const audienceRows = await db
-		.insert(audience)
-		.values([
-			{
-				id: randomUUID(),
-				name: 'Newsletter',
-				slug: 'newsletter',
-				description: 'Monthly updates from CorvMC.',
-				allowOptIn: true
-			},
-			{
-				id: randomUUID(),
-				name: 'Event Updates',
-				slug: 'event-updates',
-				description: 'Get notified about upcoming shows.',
-				allowOptIn: true
-			},
-			{
-				id: randomUUID(),
-				name: 'Member Announcements',
-				slug: 'member-announcements',
-				description: 'Important announcements for members.',
-				allowOptIn: false
-			},
-			{
-				id: randomUUID(),
-				name: 'Public Updates',
-				slug: 'public-updates',
-				description: 'General updates and news.',
-				allowOptIn: true
-			}
-		])
-		.returning();
+	const audienceRows = await batchInsert(audience, [
+		{
+			id: randomUUID(),
+			name: 'Newsletter',
+			slug: 'newsletter',
+			description: 'Monthly updates from CorvMC.',
+			allowOptIn: true
+		},
+		{
+			id: randomUUID(),
+			name: 'Event Updates',
+			slug: 'event-updates',
+			description: 'Get notified about upcoming shows.',
+			allowOptIn: true
+		},
+		{
+			id: randomUUID(),
+			name: 'Member Announcements',
+			slug: 'member-announcements',
+			description: 'Important announcements for members.',
+			allowOptIn: false
+		},
+		{
+			id: randomUUID(),
+			name: 'Public Updates',
+			slug: 'public-updates',
+			description: 'General updates and news.',
+			allowOptIn: true
+		}
+	]);
 
 	// Built-in audiences. Membership is a SQL predicate resolved at send time,
 	// so these get no audience_member rows — see marketing/system-audiences.ts.
-	const systemAudienceRows = await db
-		.insert(audience)
-		.values(
-			(Object.keys(SYSTEM_AUDIENCES) as (keyof typeof SYSTEM_AUDIENCES)[]).map((key) => ({
-				id: randomUUID(),
-				name: SYSTEM_AUDIENCES[key].name,
-				slug: key,
-				description: SYSTEM_AUDIENCES[key].description,
-				allowOptIn: false,
-				systemKey: key
-			}))
-		)
-		.returning();
+	const systemAudienceRows = await batchInsert(
+		audience,
+		(Object.keys(SYSTEM_AUDIENCES) as (keyof typeof SYSTEM_AUDIENCES)[]).map((key) => ({
+			id: randomUUID(),
+			name: SYSTEM_AUDIENCES[key].name,
+			slug: key,
+			description: SYSTEM_AUDIENCES[key].description,
+			allowOptIn: false,
+			systemKey: key
+		}))
+	);
 	const allMembersAudience = systemAudienceRows.find((a) => a.systemKey === 'all-members')!;
 	const sustainingAudience = systemAudienceRows.find((a) => a.systemKey === 'sustaining-members')!;
 	const eventAudience = systemAudienceRows.find((a) => a.systemKey === 'event-interest')!;
 
-	const subscriberRows = await db
-		.insert(subscriber)
-		.values(users.map((u) => ({ id: randomUUID(), email: u.email, name: u.name, userId: u.id })))
-		.returning();
+	const subscriberRows = await batchInsert(
+		subscriber,
+		users.map((u) => ({ id: randomUUID(), email: u.email, name: u.name, userId: u.id }))
+	);
 
 	const externalEmails = [
 		'fan1@example.com',
@@ -82,34 +77,29 @@ export async function seedMarketing(users: SeedUser[], showEventId?: string) {
 		'neighbor@example.com',
 		'sponsor@example.com'
 	];
-	const externalSubs = await db
-		.insert(subscriber)
-		.values(
-			externalEmails.map((email) => ({
-				id: randomUUID(),
-				email,
-				name: email.split('@')[0].replace(/\d+/g, ''),
-				userId: null
-			}))
-		)
-		.returning();
+	const externalSubs = await batchInsert(
+		subscriber,
+		externalEmails.map((email) => ({
+			id: randomUUID(),
+			email,
+			name: email.split('@')[0].replace(/\d+/g, ''),
+			userId: null
+		}))
+	);
 
 	// #757: an address that joined a list before its account existed, where the
 	// account has still not confirmed it. Nothing claims this row — not signup,
 	// not a system-audience send, not the account page — until Kit Alvarez
 	// clicks the verification link, which is the only way to see the refusal.
-	const unconfirmedSubs = await db
-		.insert(subscriber)
-		.values([
-			{
-				id: randomUUID(),
-				email: 'undecided@corvallismusic.org',
-				name: 'Kit Alvarez',
-				userId: null,
-				createdAt: new Date(Date.now() - 300 * 86400000)
-			}
-		])
-		.returning();
+	const unconfirmedSubs = await batchInsert(subscriber, [
+		{
+			id: randomUUID(),
+			email: 'undecided@corvallismusic.org',
+			name: 'Kit Alvarez',
+			userId: null,
+			createdAt: new Date(Date.now() - 300 * 86400000)
+		}
+	]);
 
 	const allSubs = [...subscriberRows, ...externalSubs, ...unconfirmedSubs];
 
@@ -202,7 +192,7 @@ export async function seedMarketing(users: SeedUser[], showEventId?: string) {
 				recipientCount: c.recipientCount
 			})
 			.returning();
-		await db.insert(campaignAudience).values([
+		await batchInsert(campaignAudience, [
 			{ campaignId: row.id, audienceId: audienceRows[0].id },
 			{ campaignId: row.id, audienceId: audienceRows[1].id }
 		]);
@@ -221,7 +211,7 @@ export async function seedMarketing(users: SeedUser[], showEventId?: string) {
 			recipientCount: null
 		})
 		.returning();
-	await db.insert(campaignAudience).values([
+	await batchInsert(campaignAudience, [
 		{ campaignId: scheduled.id, audienceId: audienceRows[0].id },
 		{ campaignId: scheduled.id, audienceId: audienceRows[3].id }
 	]);
@@ -275,7 +265,7 @@ export async function seedMarketing(users: SeedUser[], showEventId?: string) {
 			recipientCount: users.length
 		})
 		.returning();
-	await db.insert(campaignAudience).values([
+	await batchInsert(campaignAudience, [
 		{ campaignId: sentToAll.id, audienceId: allMembersAudience.id },
 		{ campaignId: sentToAll.id, audienceId: audienceRows[0].id }
 	]);

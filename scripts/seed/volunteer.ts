@@ -311,9 +311,7 @@ export async function seedVolunteerProfiles(users: SeedUser[], reviewer: SeedUse
 		};
 	});
 
-	// 11 columns × the default batch of 10 is 110 bound parameters, over D1's
-	// 100-variable ceiling for a single statement. 8 × 11 = 88.
-	const inserted = await batchInsert(volunteerProfile, rows, 8);
+	const inserted = await batchInsert(volunteerProfile, rows);
 
 	const blockedIds = new Set(blockedMinors.map((u) => u.id));
 	return {
@@ -685,8 +683,8 @@ export async function seedWorkOrders(users: any[], roles: any[], events: SeedEve
 		docShifts = 1;
 	}
 
-	const signups = await batchInsert(volunteerSignup, signupRows, 8);
-	const feedback = await batchInsert(volunteerShiftFeedback, feedbackRows, 8);
+	const signups = await batchInsert(volunteerSignup, signupRows);
+	const feedback = await batchInsert(volunteerShiftFeedback, feedbackRows);
 
 	return {
 		shifts: shiftRows.length + docShifts,
@@ -790,9 +788,7 @@ export async function seedVolunteerHours(
 		};
 	});
 
-	// 13 columns × the default batch of 10 is 130 bound parameters, over D1's
-	// 100-variable ceiling for a single statement. 7 × 13 = 91.
-	return batchInsert(volunteerHourLog, [...linked, ...bulk], 7);
+	return batchInsert(volunteerHourLog, [...linked, ...bulk]);
 }
 
 /**

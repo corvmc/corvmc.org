@@ -7,12 +7,10 @@ import { seedClosures } from './reservations';
 
 const inserted = vi.hoisted(() => ({ rows: [] as { startsAt: Date; endsAt: Date }[] }));
 vi.mock('./db', () => ({
-	db: {
-		insert: () => ({
-			values: async (rows: { startsAt: Date; endsAt: Date }[]) => {
-				inserted.rows = rows;
-			}
-		})
+	db: {},
+	batchInsert: async (_table: unknown, rows: { startsAt: Date; endsAt: Date }[]) => {
+		inserted.rows = rows;
+		return rows;
 	}
 }));
 

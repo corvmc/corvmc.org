@@ -1,6 +1,6 @@
 import { eventListing, eventGroup } from '../../src/lib/server/db/schema/event';
 import { ticketSale } from '../../src/lib/server/db/schema/ticket';
-import { db } from './db';
+import { batchInsert, db } from './db';
 import { seedLineup } from './lineups';
 import { BAND_EVENT_PLACES, BAND_EVENT_TITLES, EVENT_TAGS_POOL, SUPPORT_BAND_NAMES } from './pools';
 import { type SeedUser } from './types';
@@ -115,13 +115,10 @@ export async function seedBandEvents(bands: any[], _users: SeedUser[], alsoInclu
 	// `createBandEvent`, so the invariant that service maintains has to be
 	// restated here — and it is restated as one pass over what was written
 	// rather than beside each insert, which is how the two would drift.
-	// Chunked at 20: D1 caps a statement at 100 bound params.
 	const links = rows
 		.filter((e) => e.groupId)
 		.map((e) => ({ eventId: e.id, groupId: e.groupId as string, sortOrder: 0 }));
-	for (let i = 0; i < links.length; i += 20) {
-		await db.insert(eventGroup).values(links.slice(i, i + 20));
-	}
+	await batchInsert(eventGroup, links);
 
 	return rows;
 }

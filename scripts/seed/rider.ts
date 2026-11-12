@@ -357,8 +357,8 @@ export async function seedRiders(roles: SeedRole[]) {
 		{ elementId: playbackId, label: 'Playback R', source: 'di', phantom: true, sortOrder: 1 }
 	);
 
-	await batchInsert(riderElement, elementRows, 8);
-	await batchInsert(riderInput, inputRows, 8);
+	await batchInsert(riderElement, elementRows);
+	await batchInsert(riderInput, inputRows);
 
 	// ----------------------------------------------------------------- oversized
 
@@ -429,8 +429,8 @@ export async function seedRiders(roles: SeedRole[]) {
 		});
 	});
 
-	await batchInsert(riderElement, bigElements, 8);
-	await batchInsert(riderInput, bigInputs, 8);
+	await batchInsert(riderElement, bigElements);
+	await batchInsert(riderInput, bigInputs);
 
 	// ------------------------------------------------------- put them on a bill
 
