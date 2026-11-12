@@ -711,7 +711,7 @@
 	"staff_events_id_vendors_when_vendor_says_they_can_text": "For when the vendor says they can't come. This is final, and frees their table. Nothing is sent to them.",
 	"staff_events_id_what_needs_change_label": "Requested changes",
 	"staff_events_id_within_two_hours_title": "Nearby events",
-	"staff_events_title": "Calendar",
+	"staff_events_title": "Events",
 	"staff_expected_label": "Expected",
 	"staff_expires_label": "Expires",
 	"staff_export_csv_label": "Export CSV",

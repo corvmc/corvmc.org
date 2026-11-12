@@ -479,7 +479,7 @@ events use RSVP instead.
 ### Code path
 
 - **Two staff surfaces, one table, and the URLs say which is the general case.** `/staff/events`
-  is the **Calendar** — `getStaffCalendar` → `listStaffCalendar()`, every source, public
+  is **Events** — `getStaffCalendar` → `listStaffCalendar()`, every source, public
   statuses plus `pending_review`, forward from today — the staff view of the public gig guide,
   where listings are moderated. `/staff/projects/productions` is the CMC work index, `source='cmc'` at
   every status via `getStaffEvents` → `listAll()`, and the only page holding drafts. A
