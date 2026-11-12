@@ -15,8 +15,8 @@ describe('Select', () => {
 	it.each(['sm', 'md'] as const)(
 		'leaves no vertical padding on the inner control (%s)',
 		async (size) => {
-			const { container } = await render(Select, { size, children: options });
-			const style = getComputedStyle(container.querySelector('select')!);
+			await render(Select, { size, children: options });
+			const style = getComputedStyle(document.querySelector<HTMLSelectElement>('select')!);
 			expect([style.paddingTop, style.paddingBottom]).toEqual(['0px', '0px']);
 		}
 	);
