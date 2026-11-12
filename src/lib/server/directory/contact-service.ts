@@ -1,7 +1,8 @@
 import { db } from '#lib/server/db/index.js';
 import { contact, type ContactSource } from '#lib/server/db/schema/contact.js';
 import { subscriber } from '#lib/server/db/schema/marketing.js';
-import { and, asc, eq, inArray, isNull, lte } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from 'drizzle-orm';
+import { CONTACT_CLAIM_RETENTION_DAYS } from '#lib/config.js';
 import { requireCapability } from '#lib/server/authorization.js';
 
 /**
@@ -155,24 +156,19 @@ async function writeContact(
  * leave a member band holding a stale private phone number that nobody owns.
  * Contact then goes through the account.
  *
- * Archiving is a `retainUntil` in the past rather than a delete: the record is
- * why the act was paid what it was paid, and a settlement question can outlive
- * the relationship. The retention sweep is what eventually removes it.
+ * Archiving sets a `retainUntil` rather than deleting: the record is why the
+ * act was paid what it was paid, and a settlement question can outlive the
+ * relationship. `sweepExpiredContacts` removes it once that date passes.
  */
-export async function archiveContactForClaim(entryId: string): Promise<void> {
+export async function archiveContactForClaim(entryId: string, now = new Date()): Promise<void> {
+	const horizon = new Date(now.getTime() + CONTACT_CLAIM_RETENTION_DAYS * 86_400_000);
 	await db
 		.update(contact)
-		.set({ retainUntil: new Date(), updatedAt: new Date() })
+		.set({ retainUntil: horizon, updatedAt: now })
 		.where(eq(contact.entryId, entryId));
 }
 
-/**
- * Contacts past their retention horizon.
- *
- * Nothing deletes them yet — the sweep is the gap the spec names — but the read
- * exists so a staff report can show what is due, which is the difference between
- * a horizon that is recorded and one that is enforced.
- */
+/** Contacts past their retention horizon, which the next sweep deletes. */
 export async function listExpiredContacts(now: Date = new Date()) {
 	await requireCapability('directory.readContact');
 
@@ -185,6 +181,19 @@ export async function listExpiredContacts(now: Date = new Date()) {
 		})
 		.from(contact)
 		.where(and(eq(contact.source, 'staff_entered'), lte(contact.retainUntil, now)));
+}
+
+/**
+ * Delete every contact whose `retainUntil` has passed, with its roles (FK
+ * cascade). Unguarded: the daily cron runs it with no session. Writes no
+ * audit entry, since one naming the person would keep what was deleted.
+ */
+export async function sweepExpiredContacts(now = new Date()): Promise<{ deleted: number }> {
+	const deleted = await db
+		.delete(contact)
+		.where(lte(contact.retainUntil, now))
+		.returning({ id: contact.id });
+	return { deleted: deleted.length };
 }
 
 /** Whether a party has any contact on file, for a staff list. No details. */
@@ -211,8 +220,11 @@ export type PrimaryContact = {
 	phone: string | null;
 };
 
+/** Kept: no horizon, or one still ahead. */
+const kept = (now: Date) => or(isNull(contact.retainUntil), gt(contact.retainUntil, now));
+
 /** Earliest first, so the person entered with an organization stays its main one. */
-async function peopleAt(organizationIds: string[]) {
+async function peopleAt(organizationIds: string[], now = new Date()) {
 	if (organizationIds.length === 0) return [];
 	return db
 		.select({
@@ -223,7 +235,7 @@ async function peopleAt(organizationIds: string[]) {
 			phone: contact.phone
 		})
 		.from(contact)
-		.where(and(inArray(contact.organizationId, organizationIds), isNull(contact.retainUntil)))
+		.where(and(inArray(contact.organizationId, organizationIds), kept(now)))
 		.orderBy(asc(contact.createdAt), asc(contact.id));
 }
 
@@ -263,6 +275,13 @@ export async function setPrimaryContact(
 	const [existing] = await peopleAt([organizationId]);
 	if (!existing && !values.name && !values.email && !values.phone) return;
 
+	// Exact-email auto-merge: someone already on file is reused, never copied.
+	const same = !existing && values.email ? await contactByEmail(values.email) : null;
+	if (same) {
+		await attachExisting(same, organizationId, values);
+		return;
+	}
+
 	const subscriberId = values.email !== undefined ? await linkSubscriber(values.email) : undefined;
 	if (existing) {
 		await db
@@ -278,4 +297,84 @@ export async function setPrimaryContact(
 	await db
 		.insert(contact)
 		.values({ organizationId, ...values, subscriberId, source: 'staff_entered' });
+}
+
+/** The contact already holding this address, if any. Addresses are stored normalized. */
+async function contactByEmail(email: string, except?: string) {
+	const [row] = await db
+		.select({
+			id: contact.id,
+			organizationId: contact.organizationId,
+			name: contact.name,
+			phone: contact.phone
+		})
+		.from(contact)
+		.where(and(eq(contact.email, email), except ? ne(contact.id, except) : undefined))
+		.orderBy(asc(contact.createdAt), asc(contact.id))
+		.limit(1);
+	return row ?? null;
+}
+
+/**
+ * Point an existing person at an organization, filling only what they lack.
+ * Someone already at another organization keeps it: a shared address is
+ * staff's to sort out through the merge suggestions, not this write's.
+ */
+async function attachExisting(
+	same: NonNullable<Awaited<ReturnType<typeof contactByEmail>>>,
+	organizationId: string,
+	values: { name?: string | null; phone?: string | null }
+) {
+	await db
+		.update(contact)
+		.set({
+			organizationId: same.organizationId ?? organizationId,
+			name: same.name ?? values.name ?? null,
+			phone: same.phone ?? values.phone ?? null,
+			retainUntil: null,
+			updatedAt: new Date()
+		})
+		.where(eq(contact.id, same.id));
+}
+
+export type NewContactInput = {
+	organizationId?: string | null;
+	name?: string | null;
+	role?: string | null;
+	email?: string | null;
+	phone?: string | null;
+	notes?: string | null;
+};
+
+/**
+ * Add a person. A normalized email already on file attaches to that contact
+ * instead (#2622), so the Inbox, the act form and imports never make a second
+ * row for one address. Registers a subscriber, never an audience member.
+ */
+export async function createContact(
+	input: NewContactInput,
+	source: ContactSource = 'staff_entered'
+): Promise<{ id: string; merged: boolean }> {
+	await requireCapability('contact.manage');
+	const email = normalizeEmail(input.email);
+	const same = email ? await contactByEmail(email) : null;
+	if (same) {
+		if (input.organizationId) await attachExisting(same, input.organizationId, input);
+		return { id: same.id, merged: true };
+	}
+	const subscriberId = await linkSubscriber(email);
+	const [row] = await db
+		.insert(contact)
+		.values({
+			organizationId: input.organizationId ?? null,
+			name: input.name || null,
+			role: input.role || null,
+			email,
+			phone: input.phone || null,
+			notes: input.notes || null,
+			subscriberId,
+			source
+		})
+		.returning({ id: contact.id });
+	return { id: row.id, merged: false };
 }

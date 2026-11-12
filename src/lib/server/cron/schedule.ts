@@ -43,6 +43,8 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		'/api/cron/sweep-audio-purchases',
 		// Seven-year incident retention (#1468). Owns no media.
 		'/api/cron/sweep-incidents',
+		// Contacts past their retain_until (#2622). Owns no media.
+		'/api/cron/sweep-contacts',
 		// 24-month audit retention (#1376), after the sweep that writes audit rows.
 		'/api/cron/sweep-audit-log',
 		// Partner venues' feeds onto the gig guide (#1459). Owns no media.
@@ -87,6 +89,7 @@ export const CRON_MONITORS: Record<string, 'live' | RetiredMonitor> = {
 	'cancel-stale-tickets': 'live',
 	'sweep-audio-purchases': 'live',
 	'sweep-incidents': 'live',
+	'sweep-contacts': 'live',
 	'sweep-audit-log': 'live',
 	'import-partner-calendars': 'live',
 	'sweep-media': 'live',
