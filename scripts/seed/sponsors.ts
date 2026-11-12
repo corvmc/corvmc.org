@@ -5,8 +5,12 @@ import {
 	type NewSponsor,
 	type NewSponsorship
 } from '../../src/lib/server/db/schema/sponsor';
+import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { render } from '@cf-wasm/og/node';
 import type { SeedEvent } from './types';
-import { batchInsert } from './db';
+import { batchInsert, env } from './db';
 import { ptDate } from './util';
 
 /** `YYYY-MM-DD` for a day relative to today, in Pacific time. */
@@ -63,6 +67,7 @@ export async function seedSponsors(events: SeedEvent[]) {
 			endsOn: day(-91)
 		},
 		{
+			id: 'seed-sponsorship-brewery-series',
 			sponsorId: 'seed-sponsor-brewery',
 			title: 'Summer concert series',
 			tier: 'Silver',
@@ -95,20 +100,84 @@ export async function seedSponsors(events: SeedEvent[]) {
 	const upcoming = events
 		.filter((e) => e.status === 'published' && e.startsAt > now)
 		.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+	// The month calendar poster credits next month's sponsors too.
+	const nextMonth = upcoming.find((e) => clubMonth(e.startsAt) !== clubMonth(now));
+	const place = (sponsorshipId: string, list: SeedEvent[], inCampaign = true) =>
+		list.map((e) => ({ sponsorshipId, eventId: e.id, onEventPage: true, inCampaign }));
 	const placements = [
-		...upcoming.slice(0, 2).map((e) => ({
-			sponsorshipId: 'seed-sponsorship-troubadour-season',
-			eventId: e.id,
-			onEventPage: true,
-			inCampaign: true
-		})),
-		...upcoming.slice(2, 3).map((e) => ({
-			sponsorshipId: 'seed-sponsorship-credit-union-pitch',
-			eventId: e.id,
-			onEventPage: true,
-			inCampaign: false
-		}))
+		...place('seed-sponsorship-troubadour-season', [
+			...upcoming.slice(0, 2),
+			...(nextMonth ? [nextMonth] : [])
+		]),
+		...place('seed-sponsorship-credit-union-pitch', upcoming.slice(2, 3), false),
+		...place('seed-sponsorship-brewery-series', [
+			...upcoming.slice(3, 4),
+			...(nextMonth ? [nextMonth] : [])
+		])
 	];
 	if (placements.length > 0) await batchInsert(sponsorPlacement, placements);
-	return { sponsors: sponsors.length, placements: placements.length };
+	const logos = await seedSponsorLogos(sponsors.filter((s) => !s.deletedAt));
+	return { sponsors: sponsors.length, placements: placements.length, logos };
+}
+
+function clubMonth(d: Date): string {
+	return d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }).slice(0, 7);
+}
+
+const LOGO_COLORS = ['#003b5c', '#5a3d2b', '#00859b'];
+
+/**
+ * A PNG wordmark per sponsor, in the public bucket and the sponsor's `logo`
+ * slot, so the flyer and month poster draw logos rather than names. Rendered
+ * with the same satori the posters use.
+ */
+async function seedSponsorLogos(sponsors: NewSponsor[]): Promise<number> {
+	const bucket = env.R2_BUCKET as R2Bucket | undefined;
+	if (!bucket) {
+		console.warn('  R2_BUCKET is not bound — sponsor logos skipped.');
+		return 0;
+	}
+	const font = readFileSync(
+		fileURLToPath(new URL('../../src/lib/server/poster/assets/Lexend-Bold.ttf', import.meta.url))
+	);
+	let stored = 0;
+	for (const [i, s] of sponsors.entries()) {
+		const tree = {
+			type: 'div',
+			props: {
+				style: {
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					width: '100%',
+					height: '100%',
+					background: LOGO_COLORS[i % LOGO_COLORS.length],
+					color: '#fffbf6',
+					fontFamily: 'Lexend',
+					fontSize: 44,
+					fontWeight: 700,
+					padding: 24,
+					textAlign: 'center'
+				},
+				children: s.name
+			}
+		};
+		const png = (
+			await render(tree as never, {
+				width: 520,
+				height: 200,
+				fonts: [{ name: 'Lexend', data: font, weight: 700, style: 'normal' }]
+			}).asPng()
+		).image;
+		const key = `sponsors/logos/${s.id}-seed.png`;
+		await bucket.put(key, png, { httpMetadata: { contentType: 'image/png' } });
+		const [m] = await batchInsert(media, [
+			{ key, contentType: 'image/png', byteSize: png.byteLength, filename: `${s.id}.png` }
+		]);
+		await batchInsert(mediaAttachment, [
+			{ mediaId: m.id, attachableType: 'sponsor', attachableId: s.id!, slot: 'logo' }
+		]);
+		stored++;
+	}
+	return stored;
 }

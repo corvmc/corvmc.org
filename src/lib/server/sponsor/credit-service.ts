@@ -2,7 +2,7 @@ import { db } from '#lib/server/db/index.js';
 import { sponsor, sponsorship, sponsorPlacement } from '#lib/server/db/schema/sponsor.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { media, mediaAttachment } from '#lib/server/db/schema/media.js';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
 import { uploadFile } from '#lib/server/storage.js';
 import { mediaKey } from '#lib/server/storage-keys.js';
@@ -67,7 +67,26 @@ export async function creditsForEvent(
 	eventId: string,
 	surface: CreditSurface
 ): Promise<SponsorCredit[]> {
-	const rows = await db
+	return creditsForEvents([eventId], surface);
+}
+
+// D1 binds at most 100 parameters a statement; the join's own take a few.
+const EVENT_CHUNK = 90;
+
+/** Who any of several events credits on one surface, each sponsor once. */
+export async function creditsForEvents(
+	eventIds: string[],
+	surface: CreditSurface
+): Promise<SponsorCredit[]> {
+	const rows: CreditRow[] = [];
+	for (let i = 0; i < eventIds.length; i += EVENT_CHUNK) {
+		rows.push(...(await creditRows(eventIds.slice(i, i + EVENT_CHUNK))));
+	}
+	return toCredits(rows, surface);
+}
+
+function creditRows(eventIds: string[]) {
+	return db
 		.select({
 			sponsorId: sponsor.id,
 			name: sponsor.name,
@@ -89,8 +108,7 @@ export async function creditsForEvent(
 			)
 		)
 		.leftJoin(media, eq(media.id, mediaAttachment.mediaId))
-		.where(eq(sponsorPlacement.eventId, eventId));
-	return toCredits(rows, surface);
+		.where(inArray(sponsorPlacement.eventId, eventIds));
 }
 
 /** Every event a sponsor's terms are placed on, newest show first. */
