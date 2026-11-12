@@ -98,8 +98,11 @@ import {
 import { listTasksWithEndedShifts } from '#lib/server/volunteer/ended-shifts.js';
 import {
 	assignToTask as assignToTaskService,
+	getTaskChecklist,
+	isTaskAssignee,
 	listAssignedTasksForUser,
 	markAssignedTaskDone,
+	setTaskChecklistItemDone,
 	unassignFromTask as unassignFromTaskService
 } from '#lib/server/volunteer/assignee-service.js';
 import { getById } from '#lib/server/event/event-service.js';
@@ -2416,9 +2419,51 @@ export const markMyTaskDone = form(z.object({ workOrderId: z.string().min(1) }),
 		mapDomainError(err);
 	}
 
-	await refreshMemberViews();
+	await Promise.all([refreshMemberViews(), getMyTask(data.workOrderId).refresh()]);
 	return { success: true };
 });
+
+/**
+ * The task's assignee, or a holder of `volunteer.manageShifts`, else 403. The
+ * same 403 for a missing task and somebody else's, so an id is not an oracle.
+ */
+async function requireTaskAssignee(workOrderId: string) {
+	const currentUser = requireUser();
+	if (await isTaskAssignee(workOrderId, currentUser.id)) {
+		return { user: currentUser, assignee: true };
+	}
+	if (await can('volunteer.manageShifts')) return { user: currentUser, assignee: false };
+	error(403, 'That task is not assigned to you');
+}
+
+/** An assigned task's page (#2582): its notes, due date and checklist. */
+export const getMyTask = query(z.string().min(1), async (workOrderId) => {
+	const { assignee } = await requireTaskAssignee(workOrderId);
+	const task = await getTaskChecklist(workOrderId);
+	if (!task) error(404, 'Task not found');
+	// Marking it done is an assignee's act; `markAssignedTaskDone` refuses anyone else.
+	return { ...task, canMarkDone: assignee && !task.closesItself && task.resolvedAt === null };
+});
+
+/** Tick or untick a checklist item on a task assigned to the caller. */
+export const setMyTaskItemDone = form(
+	z.object({
+		workOrderId: z.string().min(1),
+		itemId: z.string().min(1),
+		// An unchecked box is not submitted, so absence reads as false.
+		done: z.boolean().optional().default(false)
+	}),
+	async (data) => {
+		const { user, assignee } = await requireTaskAssignee(data.workOrderId);
+		await setTaskChecklistItemDone(data.workOrderId, data.itemId, data.done, user.id);
+		// The dashboard's checklist count is the assignee's; staff have no dashboard row.
+		await Promise.all([
+			getMyTask(data.workOrderId).refresh(),
+			assignee ? refreshMemberViews() : undefined
+		]);
+		return { success: true };
+	}
+);
 
 /**
  * The volunteer profile: contact info, preferred roles and the hour history.

@@ -2,7 +2,12 @@ import { and, asc, eq, gte, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
-import { volunteerRole, workOrder, workOrderAssignee } from '#lib/server/db/schema/volunteer.js';
+import {
+	volunteerRole,
+	workOrder,
+	workOrderAssignee,
+	workTask
+} from '#lib/server/db/schema/volunteer.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { DomainError } from '#lib/server/errors.js';
 import { VOLUNTEER_BACKDATE_LIMIT_DAYS } from '#lib/config.js';
@@ -14,6 +19,7 @@ import {
 import { missingRequirements } from './member-certification-service';
 import { VolunteerUnderReviewError } from './volunteer-signup-service';
 import { resolveWorkOrder, ShiftValidationError, workOrderAuditLabel } from './work-order-service';
+import { listWorkTasks, setWorkTaskDone, WorkTaskNotFoundError } from './duty-list-service';
 
 // ---------------------------------------------------------------------------
 // Assignment (#2518): staff or a committee name who is doing a task. Not a
@@ -208,4 +214,84 @@ export async function markAssignedTaskDone(workOrderId: string, userId: string):
 		throw new ShiftValidationError('This task closes itself when its condition holds.');
 	}
 	await resolveWorkOrder(workOrderId, { resolvedByUserId: userId });
+}
+
+// ---------------------------------------------------------------------------
+// The assignee's task page (#2582): the task's notes, due date and checklist.
+// Who may read or tick is the remote's guard; these only load and write.
+// ---------------------------------------------------------------------------
+
+/** Whether `userId` is on the task's `work_order_assignee` rows. */
+export async function isTaskAssignee(workOrderId: string, userId: string): Promise<boolean> {
+	const [row] = await db
+		.select({ userId: workOrderAssignee.userId })
+		.from(workOrderAssignee)
+		.where(
+			and(eq(workOrderAssignee.workOrderId, workOrderId), eq(workOrderAssignee.userId, userId))
+		)
+		.limit(1);
+	return row !== undefined;
+}
+
+export interface AssignedTaskDetail {
+	workOrderId: string;
+	title: string | null;
+	eventTitle: string | null;
+	roleName: string | null;
+	notes: string | null;
+	dueAt: Date | null;
+	closesItself: boolean;
+	resolvedAt: Date | null;
+	items: { id: string; label: string; done: boolean }[];
+}
+
+/** A live task with its checklist, or null when it does not exist or was called off. */
+export async function getTaskChecklist(workOrderId: string): Promise<AssignedTaskDetail | null> {
+	const [row] = await db
+		.select({
+			workOrderId: workOrder.id,
+			title: workOrder.title,
+			eventTitle: eventListing.title,
+			roleName: volunteerRole.name,
+			notes: workOrder.notes,
+			dueAt: workOrder.dueAt,
+			doneWhen: workOrder.doneWhen,
+			resolvedAt: workOrder.resolvedAt
+		})
+		.from(workOrder)
+		.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
+		.where(and(eq(workOrder.id, workOrderId), isNull(workOrder.cancelledAt)))
+		.limit(1);
+	if (!row) return null;
+	const { doneWhen, ...task } = row;
+	const items = await listWorkTasks(workOrderId);
+	return {
+		...task,
+		closesItself: doneWhen !== null,
+		items: items.map((t) => ({ id: t.id, label: t.label, done: t.done }))
+	};
+}
+
+/**
+ * Tick or untick one checklist item on a live task. The item must hang off
+ * that task, so a caller cleared for one task cannot reach another's items.
+ * Writes through `setWorkTaskDone`, as staff's and a committee's ticks do.
+ */
+export async function setTaskChecklistItemDone(
+	workOrderId: string,
+	itemId: string,
+	done: boolean,
+	userId: string
+) {
+	const [item] = await db
+		.select({ id: workTask.id })
+		.from(workTask)
+		.innerJoin(workOrder, eq(workOrder.id, workTask.workOrderId))
+		.where(
+			and(eq(workTask.id, itemId), eq(workOrder.id, workOrderId), isNull(workOrder.cancelledAt))
+		)
+		.limit(1);
+	if (!item) throw new WorkTaskNotFoundError();
+	return setWorkTaskDone(item.id, done, userId);
 }

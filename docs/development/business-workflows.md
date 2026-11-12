@@ -1379,6 +1379,11 @@ sign up for it. A task has zero or more shifts. Deliverables and repairs usually
   (`listAssignedTasksForUser`), with **Mark done** (`markAssignedTaskDone`) unless the task has a
   done condition, which closes it by itself. A task marked done moves to **Unlogged work** beside
   the shifts that owe hours, until an hour log names the task (`workOrderId`).
+- **Open task** goes to `/member/volunteer/tasks/[workOrderId]` (#2582): the task's due date,
+  notes and checklist. The assignee ticks and unticks items there (`setMyTaskItemDone`), writing
+  through `setWorkTaskDone` as staff's and a committee's ticks do. The remote guards on the
+  caller's `work_order_assignee` row, or `volunteer.manageShifts`; a sign-up for one of the
+  task's shifts is not enough, and an item must belong to the named, live task.
 
 Certifications gate _scheduling_, never the record of work already done. A role can require
 one; whether a member held it is evaluated **as of the shift's date**, with a deliberate

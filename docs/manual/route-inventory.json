@@ -368,6 +368,10 @@
 		"panel": "member"
 	},
 	{
+		"route": "/member/volunteer/tasks/[workOrderId]",
+		"panel": "member"
+	},
+	{
 		"route": "/membership",
 		"panel": "member"
 	},
