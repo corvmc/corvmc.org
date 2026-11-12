@@ -9,12 +9,7 @@ import { query, getRequestEvent } from '$app/server';
 import { command, form } from './_remote';
 import { db } from '#lib/server/db/index.js';
 import { user, type Subscription } from '#lib/server/db/schema/authentication.js';
-import {
-	reservation,
-	type Reservation,
-	reservationStatuses,
-	type ReservationStatus
-} from '#lib/server/db/schema/reservation.js';
+import { reservation, type Reservation } from '#lib/server/db/schema/reservation.js';
 import { createReservationSchema } from '#lib/server/db/schema/reservation.js';
 import {
 	or,
@@ -24,7 +19,6 @@ import {
 	lt,
 	gt,
 	gte,
-	lte,
 	inArray,
 	notInArray,
 	sql,
@@ -44,20 +38,17 @@ const ownerMember = alias(groupMember, 'owner_member');
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { formatDateInTz, buildDateInTz } from '#lib/server/reservation/timezone.js';
 import { describeFrequency, monthlyModeOf } from '#lib/server/reservation/rrule-helpers.js';
+import { closuresOverlapping } from '#lib/server/reservation/closure-timeline.js';
 import {
-	closuresInWindow,
-	closuresOverlapping,
-	closuresPage,
-	countClosures,
-	interleave,
-	type ClosureFilters,
-	type ClosureRow
-} from '#lib/server/reservation/closure-timeline.js';
-import type { Pagination } from '#lib/types/pagination.js';
+	countOwedAfterSession,
+	countStaffStatuses,
+	listStaffReservations,
+	staffDateRanges,
+	staffStatusViews
+} from '#lib/server/reservation/staff-reservation-list.js';
 import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import {
 	bandRefColumns,
-	eventRefColumns,
 	memberRefColumns,
 	reservationRefColumns,
 	toBandRef,
@@ -82,7 +73,6 @@ import {
 	markComplete,
 	markNoShow,
 	recordCashAndComplete,
-	isFirstReservationSql,
 	priorBookingCount,
 	announceWaitlistConfirmed,
 	ReservationConflictError,
@@ -138,7 +128,7 @@ import { paginate } from '#lib/server/db/paginate.js';
 import { ensureContactPhone } from '#lib/server/user/user-service.js';
 import { PHONE_REQUIRED_MESSAGE, isValidPhone } from '#lib/utils/phone.js';
 import { recurringSeriesEnd, UNTIL_BEFORE_START } from '#lib/server/reservation/series-until.js';
-import { DEFAULT_TIMEZONE, SEARCH_LIMIT, LIST_LIMIT } from '#lib/config.js';
+import { DEFAULT_TIMEZONE, SEARCH_LIMIT } from '#lib/config.js';
 
 // ===========================================================================
 // Queries
@@ -1079,221 +1069,6 @@ export const getBandMembershipStatus = query(z.string(), async (slug) => {
 // ===========================================================================
 // Queries — staff reservations
 // ===========================================================================
-
-const staffReservationFiltersSchema = z.object({
-	tab: z.enum(['upcoming', 'all']).optional(),
-	search: z.string().optional(),
-	dateFrom: z.string().optional(),
-	dateTo: z.string().optional(),
-	statusFilter: z.array(z.string()).optional(),
-	// Derived rather than hard-listed. It was hard-listed to leave out `'lesson'`,
-	// which had no staff filter worth offering; with that value gone the two lists
-	// are identical, and deriving means a booker type added later cannot be
-	// filterable in the schema but missing from the filter, or the reverse.
-	bookerType: z.enum(bookerTypes).optional(),
-	page: z.number().optional()
-});
-
-type StaffReservationFilters = z.infer<typeof staffReservationFiltersSchema>;
-
-/** The list's filters as one `WHERE`, over `reservation` joined to its booker as the list joins it. */
-function staffReservationWhere(filters: StaffReservationFilters, now: Date) {
-	const tab = filters.tab ?? 'upcoming';
-	const conditions = [];
-
-	// A cancelled booking stays on Upcoming until its slot is over. The room is
-	// free from the moment it is cancelled, but the hour is still the one staff
-	// are looking at, and "why is nobody here?" is only answerable from a list
-	// that still shows it. `statusFilter` is how you get the old view back.
-	if (tab === 'upcoming') {
-		conditions.push(gt(reservation.endsAt, now));
-	}
-
-	if (filters.statusFilter && filters.statusFilter.length > 0) {
-		const valid = filters.statusFilter.filter((s): s is ReservationStatus =>
-			(reservationStatuses as readonly string[]).includes(s)
-		);
-		if (valid.length > 0) conditions.push(inArray(reservation.status, valid));
-	}
-
-	// Day bounds anchored to the app timezone (a bare `new Date(...)` parses in
-	// the runtime zone — UTC on Workers — shifting the window vs the LA-anchored
-	// data). Same pattern as credit-service listTransactions.
-	if (filters.dateFrom) {
-		conditions.push(
-			gte(reservation.startsAt, buildDateInTz(filters.dateFrom, '00:00', DEFAULT_TIMEZONE))
-		);
-	}
-	if (filters.dateTo) {
-		conditions.push(
-			lte(reservation.startsAt, buildDateInTz(filters.dateTo, '23:59', DEFAULT_TIMEZONE))
-		);
-	}
-
-	if (filters.bookerType) {
-		conditions.push(eq(reservation.bookerType, filters.bookerType));
-	}
-
-	if (filters.search) {
-		conditions.push(
-			or(
-				containsLiteral(user.name, filters.search),
-				containsLiteral(user.email, filters.search),
-				containsLiteral(group.name, filters.search),
-				containsLiteral(eventListing.title, filters.search)
-			)
-		);
-	}
-
-	return conditions.length > 0 ? and(...conditions) : undefined;
-}
-
-const STAFF_LIST_PAGE_SIZE = 50;
-
-/** Where the next page of the list starts, so a page knows which closures are its own. */
-async function nextStaffPageStart(filters: StaffReservationFilters, now: Date) {
-	const [row] = await db
-		.select({ startsAt: reservation.startsAt })
-		.from(reservation)
-		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(group, bandBookerJoin())
-		.leftJoin(eventListing, eventBookerJoin())
-		.where(staffReservationWhere(filters, now))
-		.orderBy(
-			(filters.tab ?? 'upcoming') === 'upcoming'
-				? asc(reservation.startsAt)
-				: desc(reservation.startsAt)
-		)
-		.limit(1)
-		.offset((filters.page ?? 1) * STAFF_LIST_PAGE_SIZE);
-	return row?.startsAt;
-}
-
-/** Staff: paginated, filtered reservation list. */
-export const getStaffReservations = query(staffReservationFiltersSchema, async (filters) => {
-	await requireCapability('reservation.read');
-
-	const now = new Date();
-	const tab = filters.tab ?? 'upcoming';
-	const where = staffReservationWhere(filters, now);
-
-	const dataQ = db
-		.select({
-			id: reservation.id,
-			status: reservation.status,
-			startsAt: reservation.startsAt,
-			endsAt: reservation.endsAt,
-			bookerType: reservation.bookerType,
-			notes: reservation.notes,
-			stripePaymentRecordId: reservation.stripePaymentRecordId,
-			paidAt: reservation.paidAt,
-			// `reservationPaymentState` reads this to tell a refunded booking from a
-			// plain cancellation, and takes it as a required field so a query that
-			// forgets it cannot compile.
-			refundedAt: reservation.refundedAt,
-			cashDueCents: reservation.cashDueCents,
-			creditsUsed: reservation.creditsUsed,
-			createdByUserId: reservation.createdByUserId,
-			recurringSeriesId: reservation.recurringSeriesId,
-			// The desk staffs a volunteer for a member's first visit, so the list
-			// has to say which booking that is without opening any of them.
-			isFirstReservation: isFirstReservationSql(),
-			// Three joins for one column: the booker is a member, a band or an
-			// event, and which one it is comes from `bookerType`.
-			member: memberRefColumns(),
-			band: bandRefColumns(),
-			event: eventRefColumns()
-		})
-		.from(reservation)
-		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(group, bandBookerJoin())
-		.leftJoin(eventListing, eventBookerJoin())
-		.where(where)
-		.orderBy(tab === 'upcoming' ? asc(reservation.startsAt) : desc(reservation.startsAt))
-		.$dynamic();
-
-	const countQ = db
-		.select({ count: count() })
-		.from(reservation)
-		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(group, bandBookerJoin())
-		.leftJoin(eventListing, eventBookerJoin())
-		.where(where);
-
-	const { rows, pagination } = await paginate(dataQ, countQ, {
-		page: filters.page ?? 1,
-		pageSize: STAFF_LIST_PAGE_SIZE
-	});
-	return {
-		rows: rows.map(({ member, band: bandRow, event: eventRow, ...r }) => ({
-			...r,
-			// SQLite has no booleans, so the correlated subquery lands as 0 or 1 —
-			// the same coercion `toMemberRef` does for `sustaining`.
-			isFirstReservation: !!r.isFirstReservation,
-			booker: toBookerRef({ bookerType: r.bookerType, member, band: bandRow, event: eventRow })
-		})),
-		pagination
-	};
-});
-
-/** Staff: tab badge counts for reservations. */
-export const getReservationCounts = query(async () => {
-	await requireCapability('reservation.read');
-	const now = new Date();
-
-	// Matches the tab's own filter, cancellations included — a badge that counts
-	// something other than what the tab lists is worse than no badge.
-	const [upcomingCount] = await db
-		.select({ count: count() })
-		.from(reservation)
-		.where(gt(reservation.endsAt, now));
-
-	const [allCount] = await db.select({ count: count() }).from(reservation);
-
-	return { upcoming: upcomingCount.count, all: allCount.count };
-});
-
-/** Staff: unresolved reservations (past end time, still scheduled). */
-export const getUnresolvedReservations = query(async () => {
-	await requireCapability('reservation.read');
-	const now = new Date();
-
-	const rows = await db
-		.select({
-			id: reservation.id,
-			status: reservation.status,
-			startsAt: reservation.startsAt,
-			endsAt: reservation.endsAt,
-			createdByUserId: reservation.createdByUserId,
-			notes: reservation.notes,
-			member: memberRefColumns(),
-			cashDueCents: reservation.cashDueCents,
-			// So the resolve modal can price a row that has no `cashDueCents` yet
-			// at the booker's own rate rather than everyone's at the member one.
-			bookerType: reservation.bookerType
-		})
-		.from(reservation)
-		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.where(
-			and(
-				lt(reservation.endsAt, now),
-				or(
-					// Never confirmed/paid — pending resolution.
-					eq(reservation.status, 'scheduled'),
-					// Confirmed with cash still owed at the door.
-					and(
-						eq(reservation.status, 'confirmed'),
-						isNull(reservation.paidAt),
-						gt(reservation.cashDueCents, 0)
-					)
-				)
-			)
-		)
-		.orderBy(asc(reservation.endsAt))
-		.limit(LIST_LIMIT);
-
-	return rows.map((r) => ({ ...r, member: toMemberRef(r.member) }));
-});
 
 /**
  * Staff: the hourly rate for every booker type, for reservation pricing.
@@ -2532,83 +2307,35 @@ export const getBandReservationsPage = query(
 	}
 );
 
-/**
- * The staff reservations page's one load-bearing query.
- *
- * Four query promises used to leave this component at once — the list, the tab counts, the
- * unresolved queue and the hourly rate — and `filters` moves on every keystroke, so each one was
- * recreated as fast as it could be typed. A superseded promise that rejects has no consumer left
- * to catch it, which is where JAVASCRIPT-SVELTEKIT-3's 33 unhandled rejections came from.
- *
- * The page derives `.then()` views off the single promise rather than awaiting it: awaiting in the
- * script would suspend the page into the staff layout boundary's `pending` snippet and blank it on
- * every keystroke, which is what `DataList` exists to avoid.
- */
-const staffReservationsPageSchema = staffReservationFiltersSchema.extend({
-	show: z.enum(['everything', 'reservations', 'closures']).optional()
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const staffReservationsPageSchema = z.object({
+	search: z.string().max(200).optional(),
+	// Derived, so a booker type added later is filterable here and in the select alike.
+	bookerType: z.enum(bookerTypes).optional(),
+	range: z.enum(staffDateRanges).optional(),
+	dateFrom: dateString.optional(),
+	dateTo: dateString.optional(),
+	status: z.enum(staffStatusViews).optional(),
+	page: z.number().int().positive().optional()
 });
 
 /**
- * The staff reservations page's one query. The list is what the room is doing
- * over time (#1833): closures interleave with bookings unless `show` narrows it
- * to one kind. A closure has no booker, so a booker or status filter is a
- * question about bookings alone and leaves them out.
+ * The staff Practice space page's one load-bearing query: the list, the status
+ * counts, the payment-due dot and the rates. One promise, because `filters`
+ * moves on every keystroke and a superseded promise that rejects has no consumer
+ * left to catch it (JAVASCRIPT-SVELTEKIT-3).
  */
-export const getStaffReservationsPage = query(staffReservationsPageSchema, async (input) => {
+export const getStaffReservationsPage = query(staffReservationsPageSchema, async (filters) => {
 	await requireCapability('reservation.read');
-	const { show = 'everything', ...filters } = input;
 	const now = new Date();
-	const tab = filters.tab ?? 'upcoming';
-	const order = tab === 'upcoming' ? 'asc' : 'desc';
-	const closureFilters: ClosureFilters = {
-		upcomingOnly: tab === 'upcoming',
-		from: filters.dateFrom ? buildDateInTz(filters.dateFrom, '00:00', DEFAULT_TIMEZONE) : undefined,
-		to: filters.dateTo ? buildDateInTz(filters.dateTo, '23:59', DEFAULT_TIMEZONE) : undefined,
-		search: filters.search
-	};
-	const withClosures =
-		show === 'everything' && !filters.bookerType && !filters.statusFilter?.length;
-
-	type Row =
-		| (Awaited<ReturnType<typeof getStaffReservations>>['rows'][number] & {
-				kind: 'reservation';
-		  })
-		| ClosureRow;
-	const listRows = async (): Promise<{ rows: Row[]; pagination: Pagination }> => {
-		if (show === 'closures') {
-			return closuresPage(closureFilters, now, order, filters.page ?? 1, STAFF_LIST_PAGE_SIZE);
-		}
-		const page = await getStaffReservations(filters);
-		const rows = page.rows.map((r) => ({ ...r, kind: 'reservation' as const }));
-		const p = page.pagination.page;
-		if (!withClosures || (p > 1 && rows.length === 0)) return { ...page, rows };
-		const closures = await closuresInWindow(closureFilters, now, order, {
-			first: p > 1 ? rows[0].startsAt : undefined,
-			next: p < page.pagination.totalPages ? await nextStaffPageStart(filters, now) : undefined
-		});
-		return { ...page, rows: interleave(rows, closures, order) };
-	};
-
-	const [list, counts, closureCounts, unresolved, hourlyRates, canManageClosures] =
-		await Promise.all([
-			listRows(),
-			getReservationCounts(),
-			show === 'closures' || withClosures ? countClosures(now) : null,
-			getUnresolvedReservations(),
-			getHourlyRates(),
-			can('reservation.manageClosures')
-		]);
-
-	// A tab's badge counts what the tab lists.
-	const add = (key: 'upcoming' | 'all') =>
-		(show === 'closures' ? 0 : counts[key]) + (closureCounts?.[key] ?? 0);
-	return {
-		list,
-		counts: { upcoming: add('upcoming'), all: add('all') },
-		unresolved,
-		hourlyRates,
-		canManageClosures
-	};
+	const [list, statusCounts, owedAfterSession, hourlyRates, canManageClosures] = await Promise.all([
+		listStaffReservations(filters, now),
+		countStaffStatuses(filters, now),
+		countOwedAfterSession(now),
+		getHourlyRates(),
+		can('reservation.manageClosures')
+	]);
+	return { list, statusCounts, owedAfterSession, hourlyRates, canManageClosures };
 });
 
 /**

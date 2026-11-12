@@ -1,8 +1,7 @@
-import { and, asc, count, desc, gt, gte, lt, lte, type SQL } from 'drizzle-orm';
+import { and, asc, desc, gt, gte, lt, lte, type SQL } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { closure } from '#lib/server/db/schema/reservation.js';
 import { containsLiteral } from '#lib/server/db/like.js';
-import { paginate, type PaginatedResult } from '#lib/server/db/paginate.js';
 
 /**
  * Closures as rows of the staff reservations list (#1833): one timeline of
@@ -19,11 +18,14 @@ export interface ClosureRow {
 
 export type ListOrder = 'asc' | 'desc';
 
+/** The same bounds the reservations of the list are held to. */
 export interface ClosureFilters {
-	/** The Upcoming tab: anything not yet over, as reservations are filtered. */
-	upcomingOnly: boolean;
+	/** `ends_at > endsAfter`: still running or ahead. */
+	endsAfter?: Date;
+	/** `starts_at >= from`. */
 	from?: Date;
-	to?: Date;
+	/** `starts_at < before`. */
+	before?: Date;
 	search?: string;
 }
 
@@ -37,11 +39,11 @@ export interface PageWindow {
 	next?: Date;
 }
 
-function conditions(f: ClosureFilters, now: Date): SQL[] {
+function conditions(f: ClosureFilters): SQL[] {
 	const out: SQL[] = [];
-	if (f.upcomingOnly) out.push(gt(closure.endsAt, now));
+	if (f.endsAfter) out.push(gt(closure.endsAt, f.endsAfter));
 	if (f.from) out.push(gte(closure.startsAt, f.from));
-	if (f.to) out.push(lte(closure.startsAt, f.to));
+	if (f.before) out.push(lt(closure.startsAt, f.before));
 	if (f.search) out.push(containsLiteral(closure.reason, f.search));
 	return out;
 }
@@ -62,11 +64,10 @@ const shape = (r: Omit<ClosureRow, 'kind'>): ClosureRow => ({ kind: 'closure', .
 
 export async function closuresInWindow(
 	f: ClosureFilters,
-	now: Date,
 	order: ListOrder,
 	window: PageWindow
 ): Promise<ClosureRow[]> {
-	const where = conditions(f, now);
+	const where = conditions(f);
 	if (window.first) {
 		where.push(
 			order === 'asc' ? gte(closure.startsAt, window.first) : lte(closure.startsAt, window.first)
@@ -83,36 +84,6 @@ export async function closuresInWindow(
 		.where(and(...where))
 		.orderBy(...orderBy(order));
 	return rows.map(shape);
-}
-
-/** The Closures filter: closures alone, paged like the reservations they replace. */
-export async function closuresPage(
-	f: ClosureFilters,
-	now: Date,
-	order: ListOrder,
-	page: number,
-	pageSize: number
-): Promise<PaginatedResult<ClosureRow>> {
-	const where = and(...conditions(f, now));
-	const { rows, pagination } = await paginate(
-		db
-			.select(columns)
-			.from(closure)
-			.where(where)
-			.orderBy(...orderBy(order))
-			.$dynamic(),
-		db.select({ count: count() }).from(closure).where(where),
-		{ page, pageSize }
-	);
-	return { rows: rows.map(shape), pagination };
-}
-
-export async function countClosures(now: Date): Promise<{ upcoming: number; all: number }> {
-	const [[upcoming], [all]] = await Promise.all([
-		db.select({ count: count() }).from(closure).where(gt(closure.endsAt, now)),
-		db.select({ count: count() }).from(closure)
-	]);
-	return { upcoming: upcoming?.count ?? 0, all: all?.count ?? 0 };
 }
 
 /**

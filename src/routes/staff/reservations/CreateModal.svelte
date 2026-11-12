@@ -19,6 +19,8 @@
 	import { formatSlotTime } from '#lib/utils/format.js';
 	import { clubToday } from '#lib/config.js';
 
+	let { class: className = '' }: { class?: string } = $props();
+
 	const { fields } = createReservation;
 
 	let bookerType = $state<'user' | 'group'>('user');
@@ -126,6 +128,7 @@
 	submitLabel={m.staff_reservations_create_modal_submit_label()}
 	variant="primary"
 	size="sm"
+	class={className}
 	maxWidth="max-w-md"
 	canSubmit={!hasBlockingConflict || overrideConflicts}
 	onsuccess={async (result) => {

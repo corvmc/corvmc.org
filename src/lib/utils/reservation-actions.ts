@@ -1,3 +1,5 @@
+import { isEventHold } from '#lib/config.js';
+
 export type ReservationActionKey =
 	'cashReceived' | 'comp' | 'complete' | 'noShow' | 'cancel' | 'refundAndCancel' | 'refundOnly';
 
@@ -148,4 +150,23 @@ export function isOverdue(
 ): boolean {
 	if (r.endsAt > now || r.paidAt || r.refundedAt || r.cashDueCents === 0) return false;
 	return r.status === 'confirmed' || r.status === 'completed' || r.status === 'no_show';
+}
+
+/**
+ * Payment due on the staff Practice space list: confirmed and unpaid, not
+ * refunded, and not an event hold, which is never charged. `confirmedUnpaidSql`
+ * in `staff-reservation-list` is the same reading in SQL.
+ */
+export function owesMoney(
+	r: PayableReservation & { bookerType: string; refundedAt: Date | null }
+): boolean {
+	return confirmedUnpaid(r) && !r.refundedAt && !isEventHold(r.bookerType);
+}
+
+/** A session that has ended still owing: its row offers Cash received and No-show. */
+export function owedAfterSession(
+	r: PayableReservation & { bookerType: string; refundedAt: Date | null; endsAt: Date },
+	now: Date = new Date()
+): boolean {
+	return r.endsAt.getTime() < now.getTime() && owesMoney(r);
 }

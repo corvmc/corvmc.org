@@ -161,17 +161,19 @@ only stamps `refundedAt`, which `reservationPaymentState` reads ahead of `paidAt
 
 ### The staff side
 
-Staff work the same table from `/staff/reservations` (filterable list, with a resolve modal
-and a create-on-behalf modal) and `/staff/reservations/[id]` (detail plus every action).
+Staff work the same table from `/staff/reservations` (the Practice space list, filtered by
+booker type, date and status, with a create-on-behalf modal) and `/staff/reservations/[id]`
+(detail plus every action).
 Two things differ from the member path:
 
 - **Staff may override.** Conflicts and business-hours violations are warnings with an
   override, not refusals. `ConflictWarnings` currently conflates "overlaps a confirmed
   booking" with "outside operating hours" into one flag — see #563; a double-booking
   deserves louder treatment than a late night.
-- **The resolve modal only surfaces unpaid reservations.** Paid ones auto-complete after
-  their end time via the `auto-complete` cron, so they never reach the queue — which is why
-  the queue is short enough to be worth working.
+- **Payment due is the settling queue.** A session that ended owing money shows Cash
+  received and No-show on its row, and a dot on the Status filter while any is left. Paid
+  ones auto-complete after their end time via the `auto-complete` cron, so they never reach
+  it, which is why the queue is short enough to be worth working.
 
 Cash settlement (`cashReceived`), comping, refunds and no-shows all live here, each as a
 shared action component under `$lib/components/actions/`, so the member and staff

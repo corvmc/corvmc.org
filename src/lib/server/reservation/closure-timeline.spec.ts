@@ -13,8 +13,7 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
-const { closuresInWindow, closuresOverlapping, closuresPage, countClosures, interleave } =
-	await import('./closure-timeline');
+const { closuresInWindow, closuresOverlapping, interleave } = await import('./closure-timeline');
 
 /** Seconds, which is what `mode: 'timestamp'` stores. */
 const at = (s: number) => new Date(s * 1000);
@@ -32,45 +31,35 @@ beforeEach(() => {
 });
 
 describe('closuresInWindow', () => {
-	const all = { upcomingOnly: false };
+	const all = {};
 
-	it('keeps Upcoming to closures not yet over', async () => {
-		const rows = await closuresInWindow({ upcomingOnly: true }, now, 'asc', {});
+	it('keeps From today to closures not yet over', async () => {
+		const rows = await closuresInWindow({ endsAfter: now }, 'asc', {});
 		expect(ids(rows)).toEqual(['soon', 'later']);
 	});
 
 	it('splits on page boundaries with nothing lost or doubled, ascending', async () => {
-		const page1 = await closuresInWindow(all, now, 'asc', { next: at(6000) });
-		const page2 = await closuresInWindow(all, now, 'asc', { first: at(6000) });
+		const page1 = await closuresInWindow(all, 'asc', { next: at(6000) });
+		const page2 = await closuresInWindow(all, 'asc', { first: at(6000) });
 		expect(ids(page1)).toEqual(['past']);
 		expect(ids(page2)).toEqual(['soon', 'later']);
 	});
 
 	it('splits on page boundaries with nothing lost or doubled, descending', async () => {
-		const page1 = await closuresInWindow(all, now, 'desc', { next: at(6000) });
-		const page2 = await closuresInWindow(all, now, 'desc', { first: at(6000) });
+		const page1 = await closuresInWindow(all, 'desc', { next: at(6000) });
+		const page2 = await closuresInWindow(all, 'desc', { first: at(6000) });
 		expect(ids(page1)).toEqual(['later']);
 		expect(ids(page2)).toEqual(['soon', 'past']);
 	});
 
 	it('matches a search against the reason', async () => {
-		const rows = await closuresInWindow({ upcomingOnly: false, search: 'clean' }, now, 'asc', {});
+		const rows = await closuresInWindow({ search: 'clean' }, 'asc', {});
 		expect(ids(rows)).toEqual(['soon']);
 	});
-});
 
-describe('closuresPage', () => {
-	it('pages closures alone and says how many there are', async () => {
-		const { rows, pagination } = await closuresPage({ upcomingOnly: false }, now, 'desc', 1, 2);
-		expect(ids(rows)).toEqual(['later', 'soon']);
-		expect(rows[0].kind).toBe('closure');
-		expect(pagination).toMatchObject({ total: 3, totalPages: 2 });
-	});
-});
-
-describe('countClosures', () => {
-	it('counts upcoming the way the Upcoming tab filters', async () => {
-		expect(await countClosures(now)).toEqual({ upcoming: 2, all: 3 });
+	it('holds a range to starts inside it', async () => {
+		const rows = await closuresInWindow({ from: at(5000), before: at(9000) }, 'asc', {});
+		expect(ids(rows)).toEqual(['soon']);
 	});
 });
 
