@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { INVITE_EXPIRY_DAYS } from '#lib/config.js';
 import { forEachTimeZone } from '#lib/test/clock-edges.js';
+import { clubInstant } from '#lib/utils/format.js';
 import { buildNotificationEmail } from './email/build-model';
 import { normalizeNotificationModel } from './email/normalize-model';
 
@@ -1793,5 +1794,18 @@ describe('notification dates are the club day in any runtime zone (#2509)', () =
 		const sent = sentOf('volunteer_shift_reminder');
 		expect(sent.body).toContain('November 10');
 		expect(sent.body).toContain('8:00');
+	});
+
+	// #2538: a pickup date is stored as noon club time, like every date input.
+	forEachTimeZone('a pickup is on the club day', async () => {
+		await emit('equipment.loan_scheduled', {
+			loanId: 'l1',
+			userId: 'u1',
+			userName: 'Cy',
+			userEmail: 'u1@test.com',
+			equipmentName: 'SM58',
+			scheduledPickupDate: clubInstant('2026-06-01', '12:00').toISOString()
+		});
+		expect(sentOf('equipment_loan_scheduled').body).toContain('June 1');
 	});
 });

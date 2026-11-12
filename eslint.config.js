@@ -292,16 +292,11 @@ export default defineConfig(
 		rules: { 'custom/no-tracked-command-in-effect': 'error' }
 	},
 	{
-		files: ['**/*.svelte', '**/*.svelte.ts', 'src/lib/remote/**/*.ts'],
+		// Workers run in UTC, so a server-built email or file is the same mistake as a
+		// template (#2509, #2537).
+		files: ['**/*.svelte', 'src/**/*.ts'],
 		ignores: ['**/*.spec.ts'],
 		rules: { 'custom/club-time-dates': 'error' }
-	},
-	{
-		// Workers run in UTC, so a server-built email or file is the same mistake (#2509).
-		// The full rule once the `isoSlice` hits in #2537 are gone.
-		files: ['src/lib/server/**/*.ts'],
-		ignores: ['**/*.spec.ts'],
-		rules: { 'custom/club-time-dates': ['error', { formattingOnly: true }] }
 	},
 	{
 		// `_remote.ts` is the wrapper, so it is the one file that may import the

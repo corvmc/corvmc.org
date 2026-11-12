@@ -5,6 +5,7 @@ import { listApprovedHoursForExport } from '#lib/server/volunteer/volunteer-repo
 import { getHourValueCents, getHourValueSource } from '#lib/server/volunteer/hour-value.js';
 import { toCsv, csvResponse } from '#lib/server/report/csv.js';
 import { valueOfMinutesCents } from '#lib/config.js';
+import { toLocalDate } from '#lib/utils/format.js';
 
 const DATE = z
 	.string()
@@ -59,10 +60,8 @@ export const GET: RequestHandler = async ({ url }) => {
 	const cents = (n: number) => (n / 100).toFixed(2);
 
 	// ISO, not a localized format: a spreadsheet sorts it correctly and a funder
-	// in another country reads it the same way. Safe as a plain UTC slice
-	// because `workedOn` is anchored at noon club time, which is mid-day UTC at
-	// every offset — the same reason `monthBucket` can bucket in UTC.
-	const isoDate = (d: Date) => d.toISOString().slice(0, 10);
+	// in another country reads it the same way.
+	const isoDate = toLocalDate;
 
 	const csv = toCsv(
 		rows.map((row) => ({

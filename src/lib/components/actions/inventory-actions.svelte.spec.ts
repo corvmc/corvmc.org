@@ -519,7 +519,7 @@ describe('RecordForm8283Action', () => {
 		const blank = await render(RecordForm8283Action, { acquisitionId: 'acq-4' });
 		const filed = await render(RecordForm8283Action, {
 			acquisitionId: 'acq-4',
-			signedOn: new Date('2026-03-14T00:00:00Z')
+			signedOn: new Date('2026-03-14T20:00:00Z')
 		});
 
 		const record = blank.locator.getByRole('button');
@@ -532,7 +532,7 @@ describe('RecordForm8283Action', () => {
 	// A date input takes `yyyy-mm-dd` and nothing else; anything longer is
 	// rejected silently and the field renders empty.
 	it('pre-fills the date already signed', async () => {
-		await expect.element(await open({ signedOn: new Date('2026-03-14T00:00:00Z') })).toBeVisible();
+		await expect.element(await open({ signedOn: new Date('2026-03-14T20:00:00Z') })).toBeVisible();
 
 		expect(input('signedOn').value).toBe('2026-03-14');
 	});

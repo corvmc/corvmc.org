@@ -79,5 +79,6 @@ export function parseBirthDateInput(
 /** A stored birth date back as `YYYY-MM-DD`, for a date input's value. */
 export function toBirthDateInput(d: Date | null | undefined): string {
 	if (!d || Number.isNaN(d.getTime())) return '';
+	// eslint-disable-next-line custom/club-time-dates -- stored as UTC midnight, so its UTC day is the day
 	return d.toISOString().slice(0, 10);
 }

@@ -7,6 +7,7 @@ import { paginate, type PaginationInput, type PaginatedResult } from '#lib/serve
 import { allRosterRows, rosterCsv, toRosterPerson } from '#lib/server/roster/roster.js';
 import type { RosterPerson } from '#lib/types/roster.js';
 import { sustainingUser, userListWhere, type UserListFilters } from './user-totals-service';
+import { toLocalDate } from '#lib/utils/format.js';
 
 export interface UserRosterRow extends RosterPerson {
 	id: string;
@@ -86,6 +87,6 @@ export function userRosterCsv(rows: UserRosterRow[]): string {
 	return rosterCsv(rows, [
 		{ header: 'phone', value: (r) => r.phone },
 		{ header: 'deactivated', value: (r) => (r.deletedAt ? 'yes' : 'no') },
-		{ header: 'joined', value: (r) => r.createdAt.toISOString().slice(0, 10) }
+		{ header: 'joined', value: (r) => toLocalDate(r.createdAt) }
 	]);
 }

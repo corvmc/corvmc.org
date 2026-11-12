@@ -143,6 +143,15 @@ function calendarDate(value: string | undefined): Date {
 	return value ? buildDateInTz(value, '12:00', DEFAULT_TIMEZONE) : new Date();
 }
 
+/** The bounds of a club day, for an inclusive date-range filter. */
+function dayStart(value: string): Date {
+	return buildDateInTz(value, '00:00', DEFAULT_TIMEZONE);
+}
+
+function dayEnd(value: string): Date {
+	return buildDateInTz(value, '23:59', DEFAULT_TIMEZONE);
+}
+
 // ---------------------------------------------------------------------------
 // Queries — Staff
 // ---------------------------------------------------------------------------
@@ -1260,7 +1269,7 @@ export const scheduleLoanForm = form('unchecked', async (data, issue) => {
 	const loanId = (data as { loanId: string }).loanId;
 	await scheduleLoan(loanId, {
 		itemId: result.data!.itemId,
-		scheduledPickupDate: result.data!.scheduledPickupDate
+		scheduledPickupDate: calendarDate(result.data!.scheduledPickupDate)
 	});
 	void getStaffLoanDetail(loanId).refresh();
 	return { success: true };
@@ -1290,7 +1299,7 @@ export const checkoutLoanForm = form('unchecked', async (data, issue) => {
 	}
 	const loanId = (data as { loanId: string }).loanId;
 	await checkoutLoan(loanId, {
-		dueDate: result.data!.dueDate,
+		dueDate: calendarDate(result.data!.dueDate),
 		assetId: result.data!.assetId,
 		actorId: currentUser.id,
 		reason: result.data!.reason
@@ -1324,8 +1333,8 @@ export const createLoan = form(
 		await requestLoan(data.userId, {
 			itemId: data.itemId || undefined,
 			quantity: data.quantity ?? 1,
-			requestedPickupDate: new Date(data.requestedPickupDate),
-			estimatedReturnDate: new Date(data.estimatedReturnDate),
+			requestedPickupDate: calendarDate(data.requestedPickupDate),
+			estimatedReturnDate: calendarDate(data.estimatedReturnDate),
 			memberNotes: data.memberNotes
 		});
 		return { success: true };
@@ -1353,8 +1362,8 @@ export const submitLoanRequest = form(
 		const loan = await requestLoan(currentUser.id, {
 			itemId: data.itemId || undefined,
 			quantity: data.quantity ? parseInt(data.quantity, 10) : 1,
-			requestedPickupDate: new Date(data.requestedPickupDate),
-			estimatedReturnDate: new Date(data.estimatedReturnDate),
+			requestedPickupDate: calendarDate(data.requestedPickupDate),
+			estimatedReturnDate: calendarDate(data.estimatedReturnDate),
 			memberNotes: data.memberNotes
 		});
 
@@ -1461,8 +1470,9 @@ export const getSpendReport = query(spendRange, async (range) => {
 	await requireCapability('inventory.report');
 
 	const now = new Date();
-	const from = range.from ? new Date(range.from) : new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
-	const to = range.to ? new Date(range.to) : now;
+	const yearStart = `${clubToday(now).slice(0, 4)}-01-01`;
+	const from = dayStart(range.from ?? yearStart);
+	const to = range.to ? dayEnd(range.to) : now;
 
 	// Two sources, deliberately not one. `spendByCategory` counts acquisition
 	// lines, and an acquisition means goods arrived and entered stock — a labor
@@ -1478,7 +1488,7 @@ export const getSpendReport = query(spendRange, async (range) => {
 	const servicesCents = services.reduce((sum, r) => sum + Number(r.totalCents), 0);
 
 	return {
-		from: range.from ?? `${from.getUTCFullYear()}-01-01`,
+		from: range.from ?? yearStart,
 		to: range.to ?? clubToday(now),
 		rows: rows.map((r) => ({
 			categoryId: r.categoryId,
@@ -1584,8 +1594,8 @@ export const getAcquisitions = query(
 			listAcquisitions(
 				{
 					kind: opts.kind,
-					from: opts.from ? new Date(opts.from) : undefined,
-					to: opts.to ? new Date(opts.to) : undefined,
+					from: opts.from ? dayStart(opts.from) : undefined,
+					to: opts.to ? dayEnd(opts.to) : undefined,
 					awaitingReimbursement: opts.awaitingReimbursement
 				},
 				{ page: opts.page ?? 1, pageSize: ACQUISITIONS_PAGE_SIZE }
@@ -1744,8 +1754,8 @@ export const recordForm8283 = form(
 		await requireCapability('inventory.manageAcquisitions');
 		const data = raw as { id: string; signedOn: string; appraisalRef?: string };
 
-		const signedOn = new Date(data.signedOn);
-		if (Number.isNaN(signedOn.getTime())) error(400, 'That is not a date');
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(data.signedOn)) error(400, 'That is not a date');
+		const signedOn = calendarDate(data.signedOn);
 
 		try {
 			await acknowledgeForm8283(data.id, {

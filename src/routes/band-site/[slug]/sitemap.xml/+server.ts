@@ -6,6 +6,7 @@ import { group } from '#lib/server/db/schema/group.js';
 import { bandSite } from '#lib/server/db/schema/band-site.js';
 
 import { eq, and, isNull } from 'drizzle-orm';
+import { toLocalDate } from '#lib/utils/format.js';
 
 // Served on band subdomains: {slug}.corvmc.org/sitemap.xml reroutes here.
 export const GET: RequestHandler = async ({ params }) => {
@@ -34,7 +35,7 @@ export const GET: RequestHandler = async ({ params }) => {
 		env.PUBLIC_SITE_URL,
 		row.status === 'active' ? row.customDomain : null
 	);
-	const lastmod = row.updatedAt ? row.updatedAt.toISOString().slice(0, 10) : undefined;
+	const lastmod = row.updatedAt ? toLocalDate(row.updatedAt) : undefined;
 
 	const paths = ['/', '/events', ...(config?.epk ? ['/epk'] : [])];
 	const urls = paths

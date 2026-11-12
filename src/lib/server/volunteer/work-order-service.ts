@@ -34,6 +34,7 @@ import { getLiveSchedule, nextOccurrenceInsert } from './maintenance-schedule-se
 
 export { isScheduled } from './scheduled';
 import { isScheduled } from './scheduled';
+import { addIsoDays } from '#lib/utils/deadline.js';
 
 // ---------------------------------------------------------------------------
 // Tasks and shifts (#2518)
@@ -510,9 +511,7 @@ function moveLocalDate(d: Date, days: number): Date {
 		minute: '2-digit',
 		hour12: false
 	}).format(d);
-	const [y, m, day] = ymd.split('-').map(Number);
-	const moved = new Date(Date.UTC(y, m - 1, day + days));
-	return buildDateInTz(moved.toISOString().slice(0, 10), hm, TZ);
+	return buildDateInTz(addIsoDays(ymd, days), hm, TZ);
 }
 
 /** One shift of a task, with its counts and who called it off. */

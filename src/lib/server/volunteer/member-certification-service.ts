@@ -19,6 +19,7 @@ import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import { getRequirementsForRoles } from './volunteer-certification-service';
 import { clubToday, CERT_EXPIRY_WARNING_DAYS, DEFAULT_TIMEZONE } from '#lib/config.js';
 import type { MemberCertification } from '#lib/server/db/schema/volunteer.js';
+import { utcCalendarDate } from '#lib/utils/format.js';
 
 // ---------------------------------------------------------------------------
 // Held certifications
@@ -193,7 +194,7 @@ export async function grantCertification(data: {
 		const targetMonth = m - 1 + cert.validityMonths;
 		const lastDayOfTarget = new Date(Date.UTC(y, targetMonth + 1, 0)).getUTCDate();
 		const target = new Date(Date.UTC(y, targetMonth, Math.min(d, lastDayOfTarget)));
-		expiresAt = atNoon(target.toISOString().slice(0, 10));
+		expiresAt = atNoon(utcCalendarDate(target));
 	}
 
 	const [row] = await db

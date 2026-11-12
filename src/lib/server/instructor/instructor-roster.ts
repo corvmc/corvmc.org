@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { instructorStatuses } from '#lib/config.js';
 import { allRosterRows, rosterCsv } from '#lib/server/roster/roster.js';
 import { listInstructorRoster, type StaffInstructorRow } from './instructor-service';
+import { toLocalDate } from '#lib/utils/format.js';
 
 /**
  * The Instructors view's filters under the keys its page writes to the URL. An
@@ -29,6 +30,6 @@ export function instructorRosterCsv(rows: StaffInstructorRow[]): string {
 		{ header: 'status', value: (r) => r.status },
 		{ header: 'teaches', value: (r) => r.headline },
 		{ header: 'accepting_students', value: (r) => (r.acceptingStudents ? 'yes' : 'no') },
-		{ header: 'since', value: (r) => (r.grantedAt ?? r.createdAt).toISOString().slice(0, 10) }
+		{ header: 'since', value: (r) => toLocalDate(r.grantedAt ?? r.createdAt) }
 	]);
 }

@@ -3,6 +3,7 @@ import { allRosterRows, rosterCsv } from '#lib/server/roster/roster.js';
 import { listVolunteers, type VolunteerListRow } from './volunteer-profile-service';
 import { listLapsingBeforeRosteredShift } from './member-certification-service';
 import { volunteerProfileStatuses } from '#lib/config.js';
+import { toLocalDate } from '#lib/utils/format.js';
 
 /**
  * The volunteers roster's filters under the keys its page writes to the URL,
@@ -46,6 +47,6 @@ export function volunteerRosterCsv(rows: VolunteerListRow[]): string {
 		{ header: 'hours', value: (r) => (r.minutes / 60).toFixed(2) },
 		{ header: 'phone', value: (r) => r.phone },
 		{ header: 'availability', value: (r) => r.availability },
-		{ header: 'since', value: (r) => r.since.toISOString().slice(0, 10) }
+		{ header: 'since', value: (r) => toLocalDate(r.since) }
 	]);
 }

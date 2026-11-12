@@ -489,6 +489,7 @@ export function formatMonthDay(d: Date): string {
  * instant: its UTC day is tomorrow in club time from 5pm on (use `toLocalDate`).
  */
 export function utcCalendarDate(d: Date): string {
+	// eslint-disable-next-line custom/club-time-dates -- the one sanctioned UTC day
 	return d.toISOString().slice(0, 10);
 }
 
