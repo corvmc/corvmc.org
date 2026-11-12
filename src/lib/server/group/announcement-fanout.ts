@@ -6,15 +6,10 @@ import { pushToUser } from '#lib/server/notification/sse.js';
 import { captureException } from '#lib/server/sentry.js';
 import { markdownExcerpt } from '#lib/utils/markdown.js';
 import type { NotificationEmailModel } from '#lib/types/notification-email.js';
-import { and, eq, isNull } from 'drizzle-orm';
-import { inboxMessage, inboxThread } from '#lib/server/db/schema/inbox.js';
-import { group } from '#lib/server/db/schema/group.js';
-import type {
-	AnnouncementPublishedEvent,
-	InboxGroupMessageEvent
-} from '#lib/server/event-bus/event-bus.js';
+import type { AnnouncementPublishedEvent } from '#lib/server/event-bus/event-bus.js';
 import {
 	claimForNotification,
+	findAnnouncementThread,
 	listRecipients,
 	recordRecipientCount,
 	type AnnouncementRecipient
@@ -81,9 +76,6 @@ export function announcementsHref(kind: string, slug: string): string {
 	return kind === 'band' ? `/band/${slug}/announcements` : `/member/groups/${slug}`;
 }
 
-/** How the post's body is written: an announcement is markdown, a room message is not. */
-type BodyFormat = 'markdown' | 'plain';
-
 /**
  * The email is the chair's message itself, carried in full — it replaces the
  * direct mail chairs used to send, so an excerpt and a link would be a step
@@ -92,8 +84,7 @@ type BodyFormat = 'markdown' | 'plain';
 function emailModel(
 	event: AnnouncementPublishedEvent,
 	recipient: AnnouncementRecipient,
-	siteUrl: string,
-	format: BodyFormat
+	siteUrl: string
 ): Record<string, unknown> {
 	const href = announcementsHref(event.groupKind, event.groupSlug);
 	const model: NotificationEmailModel = {
@@ -103,7 +94,7 @@ function emailModel(
 		byline: `From ${event.authorName}, ${event.groupName}`,
 		greeting: `Hi ${recipient.name.split(' ')[0]},`,
 		// Raw: `normalizeNotificationModel` renders and sanitizes it.
-		...(format === 'markdown' ? { body_markdown: event.body } : { body_plain: event.body }),
+		body_markdown: event.body,
 		cta: { url: `${siteUrl}${href}`, label: `Open ${event.groupName}` },
 		// The mute link, and it is not optional decoration.
 		//
@@ -128,28 +119,18 @@ function emailModel(
  */
 export async function fanOutAnnouncement(
 	event: AnnouncementPublishedEvent,
-	siteUrl: string,
-	/**
-	 * Where the latch lives. Defaults to the `announcement` table; a room
-	 * (#1304) is the same fan-out latched on `inbox_thread` instead, which is
-	 * the only thing about it that differs.
-	 */
-	latch: {
-		claim: (id: string) => Promise<boolean>;
-		record: (id: string, count: number) => Promise<void>;
-		href?: string;
-		format?: BodyFormat;
-	} = { claim: claimForNotification, record: recordRecipientCount }
+	siteUrl: string
 ): Promise<void> {
 	// 1. Claim it. The bus delivers at least once, and a roster emailed twice is
 	//    the failure this exists to prevent.
-	if (!(await latch.claim(event.announcementId))) return;
+	if (!(await claimForNotification(event.announcementId))) return;
 
 	// 2. One query for everyone who should hear it, with the author, the muted
-	//    and the deactivated already excluded.
-	const recipients = await listRecipients(event.groupId, event.authorId, event.announcementId);
+	//    (the group, or its Announcements thread) and the deactivated excluded.
+	const threadId = await findAnnouncementThread(event.groupId);
+	const recipients = await listRecipients(event.groupId, event.authorId, threadId ?? undefined);
 	if (recipients.length === 0) {
-		await latch.record(event.announcementId, 0);
+		await recordRecipientCount(event.announcementId, 0);
 		return;
 	}
 
@@ -160,7 +141,7 @@ export async function fanOutAnnouncement(
 		);
 	}
 
-	const href = latch.href ?? announcementsHref(event.groupKind, event.groupSlug);
+	const href = announcementsHref(event.groupKind, event.groupSlug);
 	const body = excerpt(event.body);
 
 	// 3. In-app rows, chunked under D1's bound-parameter cap and grouped into
@@ -222,7 +203,7 @@ export async function fanOutAnnouncement(
 				GENERIC_ALIAS,
 				byEmail.map((r) => ({
 					to: r.email,
-					model: emailModel(event, r, siteUrl, latch.format ?? 'markdown')
+					model: emailModel(event, r, siteUrl)
 				})),
 				{ tag: 'announcement' }
 			);
@@ -239,69 +220,5 @@ export async function fanOutAnnouncement(
 
 	// 5. What the send actually reached, written last so it reflects the attempt
 	//    rather than the intention.
-	await latch.record(event.announcementId, recipients.length);
-}
-
-/**
- * The same fan-out, for a group room whose `notify_policy` is `email` (#1304).
- *
- * An announcement is a thread now, so the only differences are where the latch
- * lives — `inbox_thread.notified_at` rather than `announcement.notified_at` —
- * and that the link opens the thread rather than the announcements page.
- * Everything that makes this worth batching is unchanged, which is the point
- * of reusing it rather than writing a second loop.
- */
-export async function fanOutGroupRoom(
-	event: InboxGroupMessageEvent,
-	siteUrl: string
-): Promise<void> {
-	const [row] = await db
-		.select({
-			subject: inboxThread.subject,
-			body: inboxMessage.body,
-			groupSlug: group.slug,
-			groupKind: group.kind
-		})
-		.from(inboxThread)
-		.innerJoin(group, eq(group.id, inboxThread.groupId))
-		.leftJoin(inboxMessage, eq(inboxMessage.id, event.messageId))
-		.where(eq(inboxThread.id, event.threadId))
-		.limit(1);
-	if (!row) return;
-
-	await fanOutAnnouncement(
-		{
-			announcementId: event.threadId,
-			groupId: event.groupId,
-			groupName: event.groupName,
-			groupSlug: row.groupSlug,
-			groupKind: row.groupKind,
-			title: row.subject ?? event.groupName,
-			body: row.body ?? '',
-			authorId: event.senderId,
-			authorName: event.senderName
-		},
-		siteUrl,
-		{
-			claim: claimRoomForNotification,
-			record: recordRoomRecipientCount,
-			href: `/member/messages/${event.threadId}`,
-			// A room message is plain text shown with its line breaks kept.
-			format: 'plain'
-		}
-	);
-}
-
-/** The room latch: one row back means this invocation owns the send. */
-async function claimRoomForNotification(threadId: string): Promise<boolean> {
-	const claimed = await db
-		.update(inboxThread)
-		.set({ notifiedAt: new Date() })
-		.where(and(eq(inboxThread.id, threadId), isNull(inboxThread.notifiedAt)))
-		.returning({ id: inboxThread.id });
-	return claimed.length > 0;
-}
-
-async function recordRoomRecipientCount(threadId: string, recipientCount: number): Promise<void> {
-	await db.update(inboxThread).set({ recipientCount }).where(eq(inboxThread.id, threadId));
+	await recordRecipientCount(event.announcementId, recipients.length);
 }

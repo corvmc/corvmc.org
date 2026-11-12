@@ -43,6 +43,7 @@ const chat = {
 	groupName: 'Real Book Club',
 	topicName: 'Setlists',
 	isGeneral: false,
+	readOnly: false,
 	muted: false,
 	messages: [
 		{

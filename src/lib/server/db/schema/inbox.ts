@@ -178,7 +178,11 @@ export const inboxThread = sqliteTable(
 		// newest first.
 		index('idx_inbox_thread_group_pinned').on(t.groupId, t.pinned, t.publishedAt),
 		// The fan-out cursor: unsent published rows, across every group.
-		index('idx_inbox_thread_notified').on(t.notifiedAt)
+		index('idx_inbox_thread_notified').on(t.notifiedAt),
+		// One Announcements thread per group (#2618). Its only leadership room.
+		uniqueIndex('idx_inbox_thread_group_announcements')
+			.on(t.groupId)
+			.where(sql`${t.channel} = 'group' AND ${t.postPolicy} = 'leadership'`)
 	]
 );
 
@@ -206,6 +210,46 @@ export const inboxMessage = sqliteTable(
 		index('idx_inbox_message_thread').on(t.threadId, t.createdAt),
 		index('idx_inbox_message_channel_id').on(t.channelMessageId)
 	]
+);
+
+/**
+ * One announcement: a draft until `publishedAt`, then the record of a post in
+ * the group's single Announcements thread (#2618). The reader sees
+ * `messageId`; the pin, the soft delete and the email latch are per post, so
+ * they live here rather than on the shared thread.
+ */
+export const groupAnnouncement = sqliteTable(
+	'group_announcement',
+	{
+		id: text('id')
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		groupId: text('group_id')
+			.notNull()
+			.references(() => group.id, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+		body: text('body').notNull(),
+		authorUserId: text('author_user_id').references(() => user.id, { onDelete: 'set null' }),
+		/** Stored, not joined: the post outlives the account. */
+		authorName: text('author_name'),
+		pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
+		/** Null while a draft. Nothing reaches a reader before it is stamped. */
+		publishedAt: integer('published_at', { mode: 'timestamp' }),
+		/** The post in the Announcements thread. Null for a draft or a withdrawn post. */
+		messageId: text('message_id').references(() => inboxMessage.id, { onDelete: 'set null' }),
+		/** The fan-out latch: `UPDATE … WHERE notified_at IS NULL`. */
+		notifiedAt: integer('notified_at', { mode: 'timestamp' }),
+		recipientCount: integer('recipient_count'),
+		/** Soft delete. A withdrawn announcement still happened. */
+		deletedAt: integer('deleted_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [index('idx_group_announcement_group').on(t.groupId, t.pinned, t.publishedAt)]
 );
 
 export const inboxNote = sqliteTable(
@@ -406,3 +450,4 @@ export type InboxParticipant = typeof inboxParticipant.$inferSelect;
 export type InboxGroupRead = typeof inboxGroupRead.$inferSelect;
 export type InboxSavedView = typeof inboxSavedView.$inferSelect;
 export type InboxThreadTag = typeof inboxThreadTag.$inferSelect;
+export type GroupAnnouncement = typeof groupAnnouncement.$inferSelect;

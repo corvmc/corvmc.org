@@ -1,4 +1,4 @@
-import { inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
+import { groupAnnouncement, inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
 import { groupMember } from '../../src/lib/server/db/schema/group';
 import {
 	groupApplication,
@@ -9,6 +9,9 @@ import { db } from './db';
 import { GROUP_INVITEE_PERSONA, GROUP_LEADER_PERSONAS } from './group-leaders';
 import { type SeedUser } from './types';
 import { pick, pickN } from './util';
+
+/** As `announcementMessageBody` in announcement-service writes it. */
+const announcementMessageBody = (title: string, body: string) => `${title}\n\n${body}`;
 
 /**
  * Clubs and committees — the staff-run half of the groups module.
@@ -306,41 +309,55 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			}
 		}
 
-		// An announcement is a thread now (#1304): `leadership` + `email` is what
-		// separates one from the group's chat topics, and the body is its first
-		// message.
-		//
-		// `notifiedAt` stays null on every one of these. It is the fan-out latch,
-		// written only by the notification listener — seeding it would claim these
-		// posts were sent, and seeding it *unset* is what leaves the listener a
-		// backlog to work through locally.
-		for (let j = 0; j < d.announcements.length; j++) {
-			const a = d.announcements[j];
-			const publishedAt = a.published ? new Date(Date.now() - (j + 1) * 5 * 86400000) : null;
-			const [thread] = await db
-				.insert(inboxThread)
-				.values({
-					channel: 'group',
-					groupId: g.id,
-					status: 'open',
-					subject: a.title,
-					preview: a.body.slice(0, 120),
-					pinned: a.pinned,
-					publishedAt,
-					postPolicy: 'leadership',
-					notifyPolicy: 'email',
-					messageCount: 1,
-					// Drives the list order; a draft falls back to now.
-					lastMessageAt: publishedAt ?? new Date()
-				})
-				.returning({ id: inboxThread.id });
-
-			await db.insert(inboxMessage).values({
-				threadId: thread.id,
-				direction: 'peer',
+		// An announcement is a `group_announcement` row; a published one is also a
+		// message in the group's one Announcements thread (#2618), oldest first,
+		// title on its first line. `notifiedAt` stays null: it is the fan-out
+		// latch, and only the notification listener writes it.
+		const posts = d.announcements
+			.map((a, j) => ({
+				...a,
+				publishedAt: a.published ? new Date(Date.now() - (j + 1) * 5 * 86400000) : null
+			}))
+			.sort((x, y) => (x.publishedAt?.getTime() ?? 0) - (y.publishedAt?.getTime() ?? 0));
+		const published = posts.filter((a) => a.publishedAt);
+		const threadId = published.length > 0 ? crypto.randomUUID() : null;
+		if (threadId) {
+			const last = published[published.length - 1];
+			await db.insert(inboxThread).values({
+				id: threadId,
+				channel: 'group',
+				groupId: g.id,
+				status: 'open',
+				subject: 'Announcements',
+				preview: announcementMessageBody(last.title, last.body).slice(0, 120),
+				postPolicy: 'leadership',
+				notifyPolicy: 'email',
+				messageCount: published.length,
+				lastMessageAt: last.publishedAt
+			});
+		}
+		for (const a of posts) {
+			const messageId = a.publishedAt ? crypto.randomUUID() : null;
+			if (messageId && threadId) {
+				await db.insert(inboxMessage).values({
+					id: messageId,
+					threadId,
+					direction: 'peer',
+					body: announcementMessageBody(a.title, a.body),
+					authorName: leader.name,
+					authorUserId: leader.id,
+					createdAt: a.publishedAt!
+				});
+			}
+			await db.insert(groupAnnouncement).values({
+				groupId: g.id,
+				title: a.title,
 				body: a.body,
+				authorUserId: leader.id,
 				authorName: leader.name,
-				authorUserId: leader.id
+				pinned: a.pinned,
+				publishedAt: a.publishedAt,
+				messageId
 			});
 		}
 	}

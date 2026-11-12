@@ -82,9 +82,11 @@
 		{/if}
 	</div>
 
-	<ThreadComposer
-		threadId={chat.id}
-		replyForm={postGroupChatMessage}
-		sendLabel={m.inbox_group_chat_send_label()}
-	/>
+	{#if !chat.readOnly}
+		<ThreadComposer
+			threadId={chat.id}
+			replyForm={postGroupChatMessage}
+			sendLabel={m.inbox_group_chat_send_label()}
+		/>
+	{/if}
 </div>

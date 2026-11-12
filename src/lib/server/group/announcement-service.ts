@@ -1,44 +1,34 @@
-import { and, asc, desc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
-import { inboxGroupRead, inboxMessage, inboxThread } from '#lib/server/db/schema/inbox.js';
+import {
+	groupAnnouncement,
+	inboxGroupRead,
+	inboxMessage,
+	inboxThread
+} from '#lib/server/db/schema/inbox.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { groupMember } from '#lib/server/db/schema/group.js';
 import { getNotificationType, notificationPreference } from '#lib/server/db/schema/notification.js';
 import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { renderMarkdown } from '#lib/utils/markdown.js';
+import { truncatePreview } from '#lib/server/inbox/thread-service.js';
+import { ANNOUNCEMENTS_TOPIC } from '#lib/server/inbox/group-chat-service.js';
 
 /**
  * Announcements — a group talking to its own roster. See
- * `docs/decisions/0023-group-announcements-are-transactional-and-batched.md`.
+ * `docs/decisions/0023-group-announcements-are-transactional-and-batched.md`
+ * and, for where a post lands, `0050-one-announcements-thread-per-group.md`.
  *
- * The whole module is group-scoped by argument: every function takes a
- * `groupId` and every write is scoped to it. Nothing here guards — that is
- * `requireGroupRole`'s job at the remote boundary, and doing it in both places
- * is how two answers to "may this person post" come to disagree.
+ * Group-scoped by argument: every function takes a `groupId` and every write
+ * is scoped to it. Nothing here guards — `requireGroupRole` does.
  *
- * **Publishing is a separate act from writing.** A row exists as a draft until
- * `publish()` stamps `publishedAt`, because the fan-out is irreversible: an
- * announcement emailed to 200 people cannot be unsent, and an editor that
- * notified on every keystroke-save would make that the default. Nothing reaches
- * a member before `publishedAt` is set.
- *
- * **An announcement is a thread** (#1304): `channel: 'group'` with
- * `post_policy: 'leadership'`, its title in `subject` and its body in its
- * first message. `AnnouncementView` and every signature below are unchanged,
- * which is what keeps the two pages that render them out of this change.
- *
- * `post_policy` is what separates one from a chat topic, and it is in every
- * read here. Without it a band's "Tour logistics" would appear on its
- * announcements page.
+ * **A row is a draft until `publish()`**, because the fan-out is
+ * irreversible. Publishing posts the announcement as one message in the
+ * group's single Announcements thread (#2618), title first.
  */
 
-/**
- * The hard cap on a list, because there is no pagination yet and an uncapped
- * read of a decade of committee minutes is not a query anyone chose. A group at
- * 100 posts is the signal to add paging, the first thing to add if a club stops
- * being small.
- */
+/** The hard cap on a list, because there is no pagination yet. */
 const MAX_LIST = 100;
 
 export class AnnouncementNotFoundError extends DomainError {
@@ -71,21 +61,13 @@ export interface CreateAnnouncementData {
 	pinned?: boolean;
 }
 
-/**
- * The first message of a thread — the announcement's body.
- *
- * A leadership room holds one post today, but nothing stops it holding a
- * reply once discussion is turned on, so "the announcement" is explicitly the
- * earliest message rather than whichever one the join happens to return.
- */
-const firstMessageOf = sql`${inboxMessage.id} = (
-	SELECT m2."id" FROM "inbox_message" m2
-	 WHERE m2."thread_id" = ${inboxThread.id}
-	 ORDER BY m2."created_at" ASC, m2."id" ASC
-	 LIMIT 1)`;
+/** What a reader sees in the thread: the title as the first line. */
+export function announcementMessageBody(title: string, body: string): string {
+	return `${title}\n\n${body}`;
+}
 
-/** Only a leadership room is an announcement; a chat topic is not. */
-function announcementsOf(groupId: string) {
+/** The group's one leadership room: `idx_inbox_thread_group_announcements`. */
+function announcementThreadWhere(groupId: string) {
 	return and(
 		eq(inboxThread.channel, 'group'),
 		eq(inboxThread.groupId, groupId),
@@ -93,19 +75,49 @@ function announcementsOf(groupId: string) {
 	)!;
 }
 
+export async function findAnnouncementThread(groupId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ id: inboxThread.id })
+		.from(inboxThread)
+		.where(announcementThreadWhere(groupId))
+		.limit(1);
+	return row?.id ?? null;
+}
+
+/**
+ * The group's Announcements thread, created on its first post. The unique
+ * index decides a race: the loser's insert does nothing and reads the winner's.
+ */
+export async function getOrCreateAnnouncementThread(groupId: string): Promise<string> {
+	await db
+		.insert(inboxThread)
+		.values({
+			channel: 'group',
+			groupId,
+			status: 'open',
+			subject: ANNOUNCEMENTS_TOPIC,
+			postPolicy: 'leadership',
+			notifyPolicy: 'email'
+		})
+		.onConflictDoNothing();
+	const id = await findAnnouncementThread(groupId);
+	if (!id) throw new Error(`No announcements thread for group ${groupId}`);
+	return id;
+}
+
 /** The columns every read returns, with the author resolved to a member ref. */
 function selectColumns() {
 	return {
-		id: inboxThread.id,
-		groupId: inboxThread.groupId,
-		title: inboxThread.subject,
-		body: inboxMessage.body,
-		pinned: inboxThread.pinned,
-		publishedAt: inboxThread.publishedAt,
-		notifiedAt: inboxThread.notifiedAt,
-		recipientCount: inboxThread.recipientCount,
-		createdAt: inboxThread.createdAt,
-		updatedAt: inboxThread.updatedAt,
+		id: groupAnnouncement.id,
+		groupId: groupAnnouncement.groupId,
+		title: groupAnnouncement.title,
+		body: groupAnnouncement.body,
+		pinned: groupAnnouncement.pinned,
+		publishedAt: groupAnnouncement.publishedAt,
+		notifiedAt: groupAnnouncement.notifiedAt,
+		recipientCount: groupAnnouncement.recipientCount,
+		createdAt: groupAnnouncement.createdAt,
+		updatedAt: groupAnnouncement.updatedAt,
 		author: memberRefColumns()
 	};
 }
@@ -114,17 +126,16 @@ function runSelect(where: ReturnType<typeof and>) {
 	return (
 		db
 			.select(selectColumns())
-			.from(inboxThread)
-			.innerJoin(inboxMessage, and(eq(inboxMessage.threadId, inboxThread.id), firstMessageOf))
-			.leftJoin(user, eq(user.id, inboxMessage.authorUserId))
+			.from(groupAnnouncement)
+			.leftJoin(user, eq(user.id, groupAnnouncement.authorUserId))
 			.where(where)
 			// Pinned first, then newest. A draft has no `publishedAt`, so it sorts by
 			// `createdAt` — which is why both are in the order rather than one.
 			.orderBy(
-				desc(inboxThread.pinned),
-				desc(inboxThread.publishedAt),
-				desc(inboxThread.createdAt),
-				desc(inboxThread.id)
+				desc(groupAnnouncement.pinned),
+				desc(groupAnnouncement.publishedAt),
+				desc(groupAnnouncement.createdAt),
+				desc(groupAnnouncement.id)
 			)
 			.limit(MAX_LIST)
 	);
@@ -136,7 +147,7 @@ function shape(row: Row) {
 	return {
 		id: row.id,
 		groupId: row.groupId,
-		title: row.title ?? '',
+		title: row.title,
 		body: row.body,
 		/** Sanitized on the way out — `renderMarkdown` runs the allowlist filter. */
 		bodyHtml: renderMarkdown(row.body),
@@ -153,37 +164,42 @@ function shape(row: Row) {
 
 export type AnnouncementView = ReturnType<typeof shape>;
 
+const live = (id: string, groupId: string) =>
+	and(
+		eq(groupAnnouncement.id, id),
+		eq(groupAnnouncement.groupId, groupId),
+		isNull(groupAnnouncement.deletedAt)
+	);
+
 /**
- * What a member sees: published, not deleted.
- *
- * Drafts are deliberately absent rather than filtered in the caller. A member
- * list and an editor list differ by more than a flag, and one function returning
- * both behind a boolean is how a draft ends up rendered to the roster.
+ * What a member sees: published, not deleted. Drafts are absent here rather
+ * than filtered by a caller, so a draft cannot be rendered to the roster.
  */
 export async function listPublished(groupId: string): Promise<AnnouncementView[]> {
 	const rows = await runSelect(
-		and(announcementsOf(groupId), isNull(inboxThread.deletedAt), isNotNull(inboxThread.publishedAt))
+		and(
+			eq(groupAnnouncement.groupId, groupId),
+			isNull(groupAnnouncement.deletedAt),
+			isNotNull(groupAnnouncement.publishedAt)
+		)
 	);
 	return rows.map(shape);
 }
 
 /** What an owner or admin sees: drafts included. */
 export async function listForManager(groupId: string): Promise<AnnouncementView[]> {
-	const rows = await runSelect(and(announcementsOf(groupId), isNull(inboxThread.deletedAt)));
+	const rows = await runSelect(
+		and(eq(groupAnnouncement.groupId, groupId), isNull(groupAnnouncement.deletedAt))
+	);
 	return rows.map(shape);
 }
 
 /**
- * One announcement, scoped to its group.
- *
- * `groupId` is not decorative: the caller's guard proves they administer *a*
- * group, so an id alone would let an admin of one group read or edit another's
- * draft. The same argument `group_invite.revoke` carries.
+ * One announcement, scoped to its group: the caller's guard proves they
+ * administer *a* group, so an id alone would reach another group's draft.
  */
 export async function getById(id: string, groupId: string): Promise<AnnouncementView> {
-	const [row] = await runSelect(
-		and(eq(inboxThread.id, id), announcementsOf(groupId), isNull(inboxThread.deletedAt))
-	);
+	const [row] = await runSelect(live(id, groupId));
 	if (!row) throw new AnnouncementNotFoundError();
 	return shape(row);
 }
@@ -200,120 +216,150 @@ export async function create(
 		.limit(1);
 
 	const [row] = await db
-		.insert(inboxThread)
+		.insert(groupAnnouncement)
 		.values({
-			channel: 'group',
 			groupId,
-			status: 'open',
-			subject: data.title.trim(),
-			preview: data.body.slice(0, 120),
+			title: data.title.trim(),
+			body: data.body,
 			pinned: data.pinned ?? false,
-			// What makes it an announcement rather than a chat topic.
-			postPolicy: 'leadership',
-			notifyPolicy: 'email',
-			messageCount: 1,
-			lastMessageAt: new Date()
+			authorUserId: authorId,
+			authorName: author?.name ?? 'A former member'
 		})
-		.returning({ id: inboxThread.id });
-
-	await db.insert(inboxMessage).values({
-		threadId: row.id,
-		direction: 'peer',
-		body: data.body,
-		// Stored, not joined: the post outlives the account, and the timeline
-		// renders this rather than re-reading `user`.
-		authorName: author?.name ?? 'A former member',
-		authorUserId: authorId
-	});
+		.returning({ id: groupAnnouncement.id });
 
 	return getById(row.id, groupId);
 }
 
+/** Edits a published post's message too: an edit is not a second post. */
 export async function update(
 	id: string,
 	groupId: string,
 	data: Partial<CreateAnnouncementData>
 ): Promise<AnnouncementView> {
-	const result = await db
-		.update(inboxThread)
+	const [row] = await db
+		.update(groupAnnouncement)
 		.set({
-			...(data.title !== undefined ? { subject: data.title.trim() } : {}),
-			...(data.body !== undefined ? { preview: data.body.slice(0, 120) } : {}),
+			...(data.title !== undefined ? { title: data.title.trim() } : {}),
+			...(data.body !== undefined ? { body: data.body } : {}),
 			...(data.pinned !== undefined ? { pinned: data.pinned } : {}),
 			updatedAt: new Date()
 		})
-		.where(and(eq(inboxThread.id, id), announcementsOf(groupId), isNull(inboxThread.deletedAt)))
-		.returning({ id: inboxThread.id });
+		.where(live(id, groupId))
+		.returning({
+			title: groupAnnouncement.title,
+			body: groupAnnouncement.body,
+			messageId: groupAnnouncement.messageId
+		});
 
-	if (result.length === 0) throw new AnnouncementNotFoundError();
+	if (!row) throw new AnnouncementNotFoundError();
 
-	// The body lives on the first message, and editing an announcement edits
-	// that message rather than adding one — an edit is not a second post.
-	if (data.body !== undefined) {
-		const [first] = await db
-			.select({ id: inboxMessage.id })
-			.from(inboxMessage)
-			.where(eq(inboxMessage.threadId, id))
-			.orderBy(asc(inboxMessage.createdAt), asc(inboxMessage.id))
-			.limit(1);
-		if (first) {
-			await db.update(inboxMessage).set({ body: data.body }).where(eq(inboxMessage.id, first.id));
-		}
+	if (row.messageId && (data.title !== undefined || data.body !== undefined)) {
+		await db
+			.update(inboxMessage)
+			.set({ body: announcementMessageBody(row.title, row.body) })
+			.where(eq(inboxMessage.id, row.messageId));
 	}
 
 	return getById(id, groupId);
 }
 
 /**
- * Stamp `publishedAt` and hand the caller what the fan-out needs.
+ * Stamp `publishedAt`, then post the message into the Announcements thread.
  *
- * Conditional on `published_at IS NULL` in the UPDATE itself rather than a
- * SELECT first: two admins clicking Publish on the same draft would otherwise
- * both pass the check and both emit, and the roster would be notified twice.
- * No row back means somebody got there first.
+ * The stamp is conditional on `published_at IS NULL` in the UPDATE itself, so
+ * of two admins publishing one draft only one gets a row back, and only that
+ * one posts and emits.
  */
 export async function publish(id: string, groupId: string): Promise<AnnouncementView> {
-	const result = await db
-		.update(inboxThread)
-		.set({ publishedAt: new Date(), updatedAt: new Date() })
-		.where(
-			and(
-				eq(inboxThread.id, id),
-				announcementsOf(groupId),
-				isNull(inboxThread.deletedAt),
-				isNull(inboxThread.publishedAt)
-			)
-		)
-		.returning({ id: inboxThread.id });
+	const now = new Date();
+	const [stamped] = await db
+		.update(groupAnnouncement)
+		.set({ publishedAt: now, updatedAt: now })
+		.where(and(live(id, groupId), isNull(groupAnnouncement.publishedAt)))
+		.returning({
+			title: groupAnnouncement.title,
+			body: groupAnnouncement.body,
+			authorUserId: groupAnnouncement.authorUserId,
+			authorName: groupAnnouncement.authorName
+		});
 
-	if (result.length === 0) {
+	if (!stamped) {
 		// Distinguish the two ways to get no row, so the admin is told which.
 		const [existing] = await db
-			.select({ publishedAt: inboxThread.publishedAt })
-			.from(inboxThread)
-			.where(and(eq(inboxThread.id, id), announcementsOf(groupId), isNull(inboxThread.deletedAt)))
+			.select({ id: groupAnnouncement.id })
+			.from(groupAnnouncement)
+			.where(live(id, groupId))
 			.limit(1);
 		if (existing) throw new AlreadyPublishedError();
 		throw new AnnouncementNotFoundError();
 	}
 
+	const threadId = await getOrCreateAnnouncementThread(groupId);
+	const messageId = crypto.randomUUID();
+	const body = announcementMessageBody(stamped.title, stamped.body);
+	await db.batch([
+		db.insert(inboxMessage).values({
+			id: messageId,
+			threadId,
+			direction: 'peer',
+			body,
+			authorName: stamped.authorName,
+			authorUserId: stamped.authorUserId,
+			createdAt: now
+		}),
+		db.update(groupAnnouncement).set({ messageId }).where(eq(groupAnnouncement.id, id)),
+		db
+			.update(inboxThread)
+			.set({
+				preview: truncatePreview(body),
+				messageCount: sql`${inboxThread.messageCount} + 1`,
+				lastMessageAt: now,
+				updatedAt: now
+			})
+			.where(eq(inboxThread.id, threadId))
+	]);
+
 	return getById(id, groupId);
 }
 
 /**
- * Soft delete. The post comes off the tab and stops being editable; the row
- * stays, because a committee's announcements are part of the record of the
- * committee and "we never said that" is not a claim a delete button should be
- * able to make.
+ * Soft delete. The post comes off the tab and out of the thread; the row
+ * stays, because a group's announcements are part of its record.
  */
 export async function remove(id: string, groupId: string): Promise<void> {
-	const result = await db
-		.update(inboxThread)
-		.set({ deletedAt: new Date(), updatedAt: new Date() })
-		.where(and(eq(inboxThread.id, id), announcementsOf(groupId), isNull(inboxThread.deletedAt)))
-		.returning({ id: inboxThread.id });
+	const [row] = await db
+		.select({ messageId: groupAnnouncement.messageId, threadId: inboxMessage.threadId })
+		.from(groupAnnouncement)
+		.leftJoin(inboxMessage, eq(inboxMessage.id, groupAnnouncement.messageId))
+		.where(live(id, groupId))
+		.limit(1);
+	if (!row) throw new AnnouncementNotFoundError();
 
-	if (result.length === 0) throw new AnnouncementNotFoundError();
+	const withdraw = db
+		.update(groupAnnouncement)
+		.set({ deletedAt: new Date(), updatedAt: new Date(), messageId: null })
+		.where(live(id, groupId));
+	if (!row.messageId || !row.threadId) {
+		await withdraw;
+		return;
+	}
+
+	const latest = (column: typeof inboxMessage.body | typeof inboxMessage.createdAt) =>
+		sql`(SELECT ${column} FROM ${inboxMessage} WHERE ${inboxMessage.threadId} = ${row.threadId}
+		     ORDER BY ${inboxMessage.createdAt} DESC, ${inboxMessage.id} DESC LIMIT 1)`;
+	await db.batch([
+		withdraw,
+		db.delete(inboxMessage).where(eq(inboxMessage.id, row.messageId)),
+		db
+			.update(inboxThread)
+			.set({
+				messageCount: sql`(SELECT count(*) FROM ${inboxMessage} WHERE ${inboxMessage.threadId} = ${row.threadId})`,
+				lastMessageAt: latest(inboxMessage.createdAt),
+				preview: sql`substr(${latest(inboxMessage.body)}, 1, 120)`,
+				updatedAt: new Date()
+			})
+			.where(eq(inboxThread.id, row.threadId))
+	]);
 }
 
 // ---------------------------------------------------------------------------
@@ -321,28 +367,23 @@ export async function remove(id: string, groupId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
- * Claim an announcement for notification, exactly once.
- *
- * The event bus delivers at least once, so the listener can run twice for one
- * publish — a roster emailed twice is the failure this prevents, and it cannot
- * be prevented by checking `notifiedAt` and then writing it, because two
- * invocations interleave between the read and the write. `WHERE notified_at IS
- * NULL` in the UPDATE makes the database decide. No row back means somebody
- * else is already sending; that is an ordinary outcome, not an error.
+ * Claim an announcement for notification, exactly once. The bus delivers at
+ * least once; `WHERE notified_at IS NULL` in the UPDATE makes the database
+ * decide, and no row back means another invocation is already sending.
  */
 export async function claimForNotification(id: string): Promise<boolean> {
 	const claimed = await db
-		.update(inboxThread)
+		.update(groupAnnouncement)
 		.set({ notifiedAt: new Date() })
-		.where(and(eq(inboxThread.id, id), isNull(inboxThread.notifiedAt)))
-		.returning({ id: inboxThread.id });
+		.where(and(eq(groupAnnouncement.id, id), isNull(groupAnnouncement.notifiedAt)))
+		.returning({ id: groupAnnouncement.id });
 
 	return claimed.length > 0;
 }
 
 /** Written after the send, so the number reflects what was actually attempted. */
 export async function recordRecipientCount(id: string, recipientCount: number): Promise<void> {
-	await db.update(inboxThread).set({ recipientCount }).where(eq(inboxThread.id, id));
+	await db.update(groupAnnouncement).set({ recipientCount }).where(eq(groupAnnouncement.id, id));
 }
 
 export interface AnnouncementRecipient {

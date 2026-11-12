@@ -31,10 +31,11 @@
 	 *
 	 * A booking enquiry is titled on the person who wrote in, not its subject —
 	 * every one of them carries the same `BAND_ENQUIRY_SUBJECT`, so titling on
-	 * that would render a band's whole inbox as one repeated line.
+	 * that would render a band's whole inbox as one repeated line. A group room
+	 * is titled by its topic, General being the one with none.
 	 */
 	function titleOf(c: UnifiedConversation): string {
-		if (c.channel === 'group') return 'Group chat';
+		if (c.channel === 'group') return c.subject ?? 'Group chat';
 		if (c.channel === 'direct') return c.counterpartName ?? 'Member';
 		if (c.channel === 'band') return c.counterpartName ?? c.subject ?? 'Booking enquiry';
 		return c.subject ?? c.counterpartName ?? 'Conversation';

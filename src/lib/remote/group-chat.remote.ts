@@ -34,11 +34,8 @@ export const getGroupChatThread = query(slugSchema, async (slug) => {
 
 /** The group's topics, with this reader's unread marks (#1301). */
 export const getGroupChatTopics = query(slugSchema, async (slug) => {
-	const { group, user, role } = await requireGroupRole({ slug }, 'member');
-	// Leadership decides whether a `leadership` room reads as writable. The
-	// list marks the rest read-only rather than hiding them: a member reads
-	// every room, and only posting is restricted (#1304).
-	return listGroupTopics(group.id, user.id, role === 'owner' || role === 'admin');
+	const { group, user } = await requireGroupRole({ slug }, 'member');
+	return listGroupTopics(group.id, user.id);
 });
 
 /**
@@ -69,15 +66,8 @@ export const createGroupChatTopic = form(
 	async (data) => {
 		const { group } = await requireGroupRole({ slug: data.slug }, 'member');
 		try {
-			// A chat topic, always. An announcement is made on the announcements
-			// page, which is the surface that knows about drafts and publishing —
-			// a flag here would be a second way to make one, with no control to
-			// set it and no draft step. `createGroupTopic` takes the policies for
-			// `announcement-service` to use.
-			const threadId = await createGroupTopic(group.id, data.subject, {
-				postPolicy: 'members',
-				notifyPolicy: 'in_app'
-			});
+			// A chat topic, always: announcements are posted from their own page.
+			const threadId = await createGroupTopic(group.id, data.subject);
 			await getGroupChatTopics(data.slug).refresh();
 			return { success: true, threadId };
 		} catch (err) {
@@ -101,15 +91,14 @@ export const postGroupChatMessage = form(
 			const chatGroup = await groupOfChatThread(data.threadId);
 			if (!chatGroup) error(404, 'No such conversation');
 
-			const { user, group, role } = await requireGroupRole({ id: chatGroup.id }, 'member');
+			const { user, group } = await requireGroupRole({ id: chatGroup.id }, 'member');
 			await postToGroupChat({
 				groupId: chatGroup.id,
 				groupName: group.name,
 				userId: user.id,
 				userName: user.name,
 				body: data.body,
-				threadId: data.threadId,
-				isLeader: role === 'owner' || role === 'admin'
+				threadId: data.threadId
 			});
 			// The topic the message landed in, under both queries that carry it —
 			// Messages reads it through `getMyMessageThread` — and the list that

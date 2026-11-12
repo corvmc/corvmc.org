@@ -12,6 +12,7 @@ const getGroupChat = vi.fn(async (groupId: string, threadId?: string, userId?: s
 	groupName: 'Real Book Club',
 	topicName: 'Setlists',
 	isGeneral: false,
+	readOnly: false,
 	muted: userId === 'member-1',
 	messages: []
 }));

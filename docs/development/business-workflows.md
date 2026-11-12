@@ -440,11 +440,14 @@ tabbed page per program, `/member/groups/[slug]`, loaded by `getMemberGroup`. `o
   `requireProgramGroup()` (`src/lib/server/group/group-kind.ts`) refuses a band, so only a program
   holds the room free: a `confirmed` reservation with `bookerType: 'group'`, after a `hasConflict`
   check. The recurring generator re-checks the kind.
-- **Announcements** (bands too): an announcement is a `channel: 'group'` inbox thread with
-  `post_policy: 'leadership'` (`announcement-service.ts`). Publishing emits an event; the listener in
-  `announcement-fanout.ts` latches on `notified_at`, reads recipients in one query (active, not
-  muted on `group_member.notifyAnnouncements`, not the author), inserts in-app rows in chunks, and
-  emails through `sendTemplateBatch()` on the transactional stream.
+- **Announcements** (bands too): an announcement is a `group_announcement` row, a draft until
+  published (`announcement-service.ts`). Publishing posts it as one message in the group's single
+  Announcements thread (`channel: 'group'`, `post_policy: 'leadership'`), title first, and emits an
+  event. The listener in `announcement-fanout.ts` latches on the row's `notified_at`, reads
+  recipients in one query (active, not muted on `group_member.notifyAnnouncements` or on the
+  thread, not the author), inserts in-app rows in chunks, and emails through `sendTemplateBatch()`
+  on the transactional stream. See
+  [0064](../decisions/0064-a-group-has-one-announcements-thread.md).
 - **Documents** (clubs and committees only): `files.remote.ts` → `file-service.ts`, into
   `R2_PRIVATE`, capped at 250 MB and 50 files per group. `GET /api/files/[id]` authorizes against
   the file's own group with `requireGroupRole(…, 'member', { allowStaff: true })` and answers
