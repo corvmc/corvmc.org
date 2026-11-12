@@ -58,7 +58,9 @@ export const auditActions = [
 	'project.section_created',
 	'project.section_renamed',
 	'project.section_deleted',
-	'volunteer_hours.approved_over_return'
+	'volunteer_hours.approved_over_return',
+	'organization.merged',
+	'contact.merged'
 ] as const;
 export type AuditAction = (typeof auditActions)[number];
 
@@ -73,7 +75,9 @@ export const auditSubjectTypes = [
 	'work_order',
 	'project',
 	'purchase_order',
-	'inventory_asset'
+	'inventory_asset',
+	'organization',
+	'contact'
 ] as const;
 export type AuditSubjectType = (typeof auditSubjectTypes)[number];
 
@@ -117,6 +121,10 @@ export interface AuditDetailsByAction {
 		description: string;
 	};
 	/** The retention sweep's deletion (#1468). The row is gone, so this is the record it existed. */
+	/** The subject survived; `mergedName` is the record folded into it and deleted. */
+	'organization.merged': { mergedId: string; mergedName: string };
+	/** Names only, never an address or a number. */
+	'contact.merged': { mergedId: string };
 	'incident.deleted': { category: string; occurredAt: string; retentionYears: number };
 	/** The resolution set aside, null when there was none. Kept as long as the incident is. */
 	'incident.reopened': { previousResolution: string | null };
