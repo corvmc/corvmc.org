@@ -851,6 +851,19 @@ export const partyRoleLabels: Record<PartyRole, string> = {
 	donor: 'Donor'
 };
 
+/** The Contacts page's view per role. */
+export const partyRoleViewLabels: Record<PartyRole, string> = {
+	funder: 'Funders',
+	sponsor: 'Sponsors',
+	contractor: 'Contractors',
+	performer: 'Performers',
+	vendor: 'Vendors',
+	press: 'Press',
+	partner: 'Partners',
+	supplier: 'Suppliers',
+	donor: 'Donors'
+};
+
 // ---------------------------------------------------------------------------
 // Sponsors: businesses and their sponsorship terms
 // ---------------------------------------------------------------------------

@@ -2322,6 +2322,13 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
   `contact.read` and changing them `contact.manage`, which staff and the Development committee
   hold. A new person whose normalized email is already on file attaches to that contact rather
   than making a second one (`createContact`, `setPrimaryContact`).
+- **Contacts (`/staff/contacts`):** `contacts.remote.ts` lists organizations per role. A view and
+  an organization's page open to `contact.read`, or to the role's own capability (`grant.read`,
+  `sponsor.read`, `contractor.read`) without the people. Every write needs `contact.manage`. A
+  contractor is added from `/staff/contractors`, which asks for the trade. Possible duplicates
+  (`/staff/contacts/duplicates`) lists people with the same name or phone and organizations with
+  the same website domain; merging moves roles, records and people to the one kept, deletes the
+  other, and writes `contact.merged` or `organization.merged` to the audit log.
 - **Retention:** a contact with a `retain_until` stays visible until that date, and
   `/api/cron/sweep-contacts` deletes it, with its roles, once the date passes. An act's contact
   is given a horizon a year out when the act becomes a member band.

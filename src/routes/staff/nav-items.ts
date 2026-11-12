@@ -41,7 +41,6 @@ export type StaffNavKey =
 	| 'reservations'
 	| 'gear'
 	| 'supplies'
-	| 'contractors'
 	| 'projects'
 	| 'venues'
 	| 'calendar'
@@ -52,7 +51,7 @@ export type StaffNavKey =
 	| 'help'
 	| 'local-resources'
 	| 'payments'
-	| 'sponsors'
+	| 'contacts'
 	| 'grants'
 	| 'reports'
 	| 'settings'
@@ -234,11 +233,15 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'partners',
 		title: 'Partners',
 		items: [
+			// Every outside organization (#2622). The Sponsors and Contractors pages
+			// are its records; a role's own capability opens that role's view.
 			{
-				key: 'sponsors',
-				capability: 'sponsor.read',
-				label: 'Sponsors',
-				href: resolve('staff/sponsors')
+				key: 'contacts',
+				capability: 'contact.read',
+				alsoFor: ['sponsor.read', 'grant.read', 'contractor.read'],
+				label: 'Contacts',
+				href: resolve('staff/contacts'),
+				also: [resolve('staff/sponsors'), resolve('staff/contractors')]
 			},
 			// Guarded as an event because that is what a venue is a fact about.
 			{
@@ -252,12 +255,6 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'localResource.manage',
 				label: 'Local Resources',
 				href: resolve('staff/local-resources')
-			},
-			{
-				key: 'contractors',
-				capability: 'contractor.read',
-				label: 'Contractors',
-				href: resolve('staff/contractors')
 			}
 		]
 	},

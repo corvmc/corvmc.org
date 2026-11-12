@@ -35,6 +35,7 @@ import { seedVenues } from './seed/venues';
 import { seedPartnerCalendars } from './seed/partner-calendars';
 import { seedSponsors } from './seed/sponsors';
 import { seedGrants } from './seed/grants';
+import { seedContacts } from './seed/contacts';
 import { seedBands } from './seed/bands';
 import { SOLO_ACT_LOGIN, seedSoloAct } from './seed/solo-act';
 import { seedGroups } from './seed/groups';
@@ -224,6 +225,7 @@ async function main() {
 	const help = await seedHelp();
 	const itemArticles = await seedItemArticles();
 	const contractors = await seedContractors(adminUser.id);
+	const contacts = await seedContacts();
 	const localResources = await seedLocalResources(adminUser.id);
 	const incidents = await seedIncidents(adminUser, users[0]);
 	const memberInvites = await seedMemberInvites(adminUser, users[0], users[1]);
@@ -338,6 +340,9 @@ async function main() {
 	);
 	console.log(`  ${sponsors.sponsors} sponsors, ${sponsors.placements} event placements`);
 	console.log(`  ${grants.applications} grant applications to ${grants.funders} funders`);
+	console.log(
+		`  ${contacts.organizations} more contacts (a partner, the press, two likely duplicates)`
+	);
 	console.log(`  ${bands.length} bands (${premiumBands.length} premium, 1 solo act)`);
 	console.log(`  ${groups.length} groups (clubs and committees)`);
 	console.log(

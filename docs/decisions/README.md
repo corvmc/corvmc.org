@@ -82,7 +82,7 @@ A page or less. Link the issue and the PRs.
 | 0048 | [Volunteer hours are a record, not a currency](0048-volunteer-hours-are-a-record.md)                                           | 2026-08-08 | Accepted           |
 | 0049 | [A committee is a group, chaired by its admins](0049-a-committee-is-a-group-chaired-by-admins.md)                              | 2026-08-28 | Accepted           |
 | 0050 | [A project is a budgeted body of work that events point at](0050-a-project-is-a-budgeted-body-of-work.md)                      | 2026-09-02 | Accepted           |
-| 0051 | [Contractor work has its own tables](0051-contractor-work-has-its-own-tables.md)                                               | 2026-09-02 | Accepted           |
+| 0051 | [Contractor work has its own tables](0051-contractor-work-has-its-own-tables.md)                                               | 2026-09-02 | Amended by 0065    |
 | 0052 | [Secret ballots keep a counter, not a row per vote](0052-secret-ballots-count-without-a-vote-row.md)                           | 2026-09-24 | Accepted           |
 | 0053 | [A committee owns show work; ownership grants no permission](0053-committees-own-deliverables-not-permissions.md)              | 2026-09-29 | Accepted           |
 | 0054 | [A work order is the task, and a contractor job is an engagement on it](0054-a-work-order-is-the-task.md)                      | 2026-10-13 | Accepted           |
@@ -96,3 +96,4 @@ A page or less. Link the issue and the PRs.
 | 0062 | [A print poster is the social image above a details footer](0062-a-print-poster-is-the-social-image-above-a-details-footer.md) | 2026-11-12 | Accepted           |
 | 0063 | [Renewals are recurring work](0063-renewals-are-recurring-work.md)                                                             | 2026-11-12 | Accepted           |
 | 0064 | [A group has one Announcements thread](0064-a-group-has-one-announcements-thread.md)                                           | 2026-11-12 | Accepted           |
+| 0065 | [Outside parties are organizations with roles](0065-outside-parties-are-organizations-with-roles.md)                           | 2026-11-12 | Accepted           |
