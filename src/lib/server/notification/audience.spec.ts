@@ -66,7 +66,6 @@ describe('notification audience', () => {
 				'local_resource_submitted',
 				'moderation_appeal_filed',
 				'orientation_unclaimed',
-				'renewal_expiry',
 				'volunteer_hours_submitted',
 				'volunteer_shift_claimed',
 				'volunteer_shift_declined',

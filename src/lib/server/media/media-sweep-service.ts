@@ -14,14 +14,9 @@ import { audioRelease } from '#lib/server/db/schema/audio.js';
 import { directoryEntry } from '#lib/server/db/schema/directory.js';
 import { artifactRequest } from '#lib/server/db/schema/artifact-request.js';
 import { sponsor } from '#lib/server/db/schema/sponsor.js';
-import { renewal } from '#lib/server/db/schema/renewal.js';
 import { deleteObject, objectExists } from '#lib/server/storage.js';
 import { deletePrivateObject, privateObjectExists } from '#lib/server/private-storage.js';
-import {
-	isReceiptKey,
-	isRenewalDocumentKey,
-	isWithheldPosterKey
-} from '#lib/server/storage-keys.js';
+import { isReceiptKey, isWithheldPosterKey } from '#lib/server/storage-keys.js';
 import { MEDIA_SWEEP_GRACE_MS } from '#lib/config.js';
 import { and, eq, lt, sql, notExists, inArray, type SQLWrapper } from 'drizzle-orm';
 
@@ -62,9 +57,7 @@ const PARENT_TABLES = {
 	artifact_request: artifactRequest,
 	// A sponsor's logo. Sponsors are refused deletion while they have terms, so
 	// this reaps only the logo of one deleted before it ever sponsored.
-	sponsor,
-	// A certificate, in the private bucket; pass 2 deletes it from there.
-	renewal
+	sponsor
 } as const satisfies Record<AttachableType, unknown>;
 
 export type SweepResult = {
@@ -122,7 +115,7 @@ const PRIVATE_BUCKET = { exists: privateObjectExists, remove: deletePrivateObjec
  * shape is the only hint.
  */
 function belongsInPrivate(key: string): boolean {
-	return isWithheldPosterKey(key) || isReceiptKey(key) || isRenewalDocumentKey(key);
+	return isWithheldPosterKey(key) || isReceiptKey(key);
 }
 
 /**

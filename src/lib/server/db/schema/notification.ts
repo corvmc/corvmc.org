@@ -690,14 +690,6 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		// email belongs on the broadcast stream, not the transactional one.
 		description: 'When the result of a ballot is certified',
 		defaults: { email: false, inApp: true, sms: false }
-	},
-	{
-		key: 'renewal_expiry',
-		category: 'membership',
-		label: 'Permit, license or insurance expiring',
-		description: "Sixty and fourteen days before one of CMC's own renewals expires",
-		defaults: { email: true, inApp: true, sms: false },
-		staffOnly: true
 	}
 ];
 

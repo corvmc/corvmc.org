@@ -11,7 +11,7 @@ import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
 
 /**
- * Recurring facility work, in the three states the Schedule's Recurring view renders:
+ * Recurring work, in the three states the Schedule's Recurring view renders:
  * a live schedule with history and a next one due, a live one whose open work
  * order is overdue, and a retired one whose last occurrence was closed. The
  * weekly bathroom clean has somebody on its open occurrence (#1483).
@@ -111,13 +111,68 @@ export async function seedMaintenanceSchedules(staffId: string, cleanerId?: stri
 		]);
 	}
 
+	// Permits, licences and policies are yearly recurring work (#2611). The
+	// issuer and reference live in the notes; the open occurrence is due a month
+	// before the expiry date, with the person who renews it assigned.
+	const [admin] = await db
+		.select({ id: volunteerRole.id })
+		.from(volunteerRole)
+		.where(eq(volunteerRole.name, 'Administration'))
+		.limit(1);
+	const renewals = [
+		{
+			id: randomUUID(),
+			name: 'Renew general liability insurance',
+			notes: 'Insurance from Willamette Mutual, policy GL-20417-CMC.',
+			dueIn: 9
+		},
+		{
+			id: randomUUID(),
+			name: 'Renew business license',
+			notes: 'License from the City of Corvallis, number BL-2026-0418.',
+			dueIn: 41
+		}
+	];
+	const renewalRole = admin?.id ?? role.id;
+	await batchInsert(
+		maintenanceSchedule,
+		renewals.map((s) => ({
+			id: s.id,
+			name: s.name,
+			notes: s.notes,
+			volunteerRoleId: renewalRole,
+			capacity: 1,
+			intervalDays: 365,
+			createdByUserId: staffId
+		}))
+	);
+	const renewalOpen = renewals.map((s) => ({
+		id: randomUUID(),
+		volunteerRoleId: renewalRole,
+		createdByUserId: staffId,
+		maintenanceScheduleId: s.id,
+		title: s.name,
+		notes: s.notes,
+		dueAt: at(s.dueIn)
+	}));
+	await batchInsert(workOrder, renewalOpen);
+	await batchInsert(
+		workOrderAssignee,
+		renewalOpen.map((w) => ({
+			workOrderId: w.id,
+			userId: staffId,
+			assignedByUserId: staffId,
+			assignedAt: at(-1)
+		}))
+	);
+
 	// A committee's own standing checklist (#1512), shown on its Projects tab.
 	const [booking] = await db
 		.select({ id: group.id })
 		.from(group)
 		.where(eq(group.slug, 'booking-committee'))
 		.limit(1);
-	if (!booking) return { schedules: 4 };
+	if (!booking) return { schedules: 6 };
 	const holds = {
 		id: randomUUID(),
 		name: 'Weekly holds review',
@@ -131,5 +186,5 @@ export async function seedMaintenanceSchedules(staffId: string, cleanerId?: stri
 		{ id: randomUUID(), ...base, maintenanceScheduleId: holds.id, title: holds.name, dueAt: at(4) }
 	]);
 
-	return { schedules: 5 };
+	return { schedules: 7 };
 }

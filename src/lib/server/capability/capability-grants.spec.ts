@@ -209,12 +209,12 @@ describe('orgWideCapabilities', () => {
 describe('listCommitteeHolders', () => {
 	it('returns active members of committees whose list carries the capability', async () => {
 		selectResults = [[{ id: 'u1', name: 'Ada', email: 'a@x' }]];
-		expect(await listCommitteeHolders('renewal.manage')).toEqual([
+		expect(await listCommitteeHolders('grant.manage')).toEqual([
 			{ id: 'u1', name: 'Ada', email: 'a@x' }
 		]);
 		const { sql, params } = rendered(0);
 		expect(sql).toContain('"group_capability"."capability" = ?');
-		expect(params).toContain('renewal.manage');
+		expect(params).toContain('grant.manage');
 		expect(sql).toContain('"group"."kind" = ?');
 		expect(sql).toContain('"user"."deleted_at" is null');
 	});

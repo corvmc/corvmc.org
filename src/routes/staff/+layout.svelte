@@ -38,8 +38,7 @@
 		IconCalendarMonth,
 		IconMapPin,
 		IconBuildingStore,
-		IconContract,
-		IconCertificate
+		IconContract
 	} from '@tabler/icons-svelte';
 	import { getStaffLayout, requireLayoutSession } from '#lib/remote/layout.remote.js';
 	import { panelTabs } from '#lib/components/layout/panel-tabs.js';
@@ -129,7 +128,6 @@
 		payments: IconCash,
 		sponsors: IconBuildingStore,
 		grants: IconContract,
-		renewals: IconCertificate,
 		settings: IconSettings,
 		access: IconShieldLock,
 		audit: IconHistory

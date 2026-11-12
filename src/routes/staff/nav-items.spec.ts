@@ -73,8 +73,6 @@ describe('activeNavKey', () => {
 		['/staff/sponsors/abc', 'sponsors'],
 		['/staff/grants', 'grants'],
 		['/staff/grants/abc', 'grants'],
-		['/staff/renewals', 'renewals'],
-		['/staff/renewals/abc', 'renewals'],
 		['/staff/grants/funders', 'grants'],
 		['/staff/inventory', 'gear'],
 		['/staff/inventory/abc', 'gear'],
@@ -223,7 +221,7 @@ describe('the nav tree', () => {
 		expect(keys('planning')).toEqual(['suggestions', 'ballots', 'projects', 'volunteer-schedule']);
 		// Recurring work is a Schedule view (#2087).
 		expect(activeNavKey('/staff/volunteer/schedule/recurring')).toBe('volunteer-schedule');
-		expect(keys('space')).toEqual(['reservations', 'gear', 'supplies', 'renewals']);
+		expect(keys('space')).toEqual(['reservations', 'gear', 'supplies']);
 		// Key holders is a header link on Practice space (#2574), not a row.
 		expect(activeNavKey('/staff/keys')).toBe('reservations');
 		expect(keys('partners')).toEqual(['sponsors', 'venues', 'local-resources', 'contractors']);
