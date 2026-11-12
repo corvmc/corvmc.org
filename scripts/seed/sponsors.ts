@@ -21,8 +21,8 @@ function day(offset: number): string {
 /**
  * Four sponsors: one running, one whose term has lapsed unrenewed, one being
  * pitched, and one whose only term ended. Dated relative to today. The running
- * term is placed on the next two published shows; the pitch on one more, where
- * it stays invisible until it is active.
+ * terms are placed on upcoming shows, one of them next month; the pitch on one
+ * more, where it stays invisible until it is active.
  */
 export async function seedSponsors(events: SeedEvent[]) {
 	console.log('Seeding sponsors...');
