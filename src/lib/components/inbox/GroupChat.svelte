@@ -32,7 +32,7 @@
 	}: {
 		chat: GroupChatTopic;
 		viewerUserId: string;
-		/** In an `InboxShell` the list pane is hidden below `lg`: this is the way out. */
+		/** In a `ListDetailShell` the list pane is hidden below `lg`: this is the way out. */
 		backHref?: string;
 	} = $props();
 

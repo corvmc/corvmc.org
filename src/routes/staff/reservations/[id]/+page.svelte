@@ -21,7 +21,7 @@
 	import RecordNav from '#lib/components/ui/RecordNav.svelte';
 	import CopyableId from '#lib/components/ui/CopyableId.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
-	import { IconUserPlus } from '@tabler/icons-svelte';
+	import { IconUserPlus, IconX } from '@tabler/icons-svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
@@ -42,8 +42,13 @@
 	import { describeCancellation } from '#lib/utils/reservation-cancellation.js';
 	import { retryDoorCodes } from '#lib/remote/lock.remote.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
+	import { resolve } from '$app/paths';
+	import { getReservationFilters } from '../filters.svelte';
+	import { withQuery } from '#lib/utils/with-query.js';
 
 	const params = routeParams('id');
+	// Read before the await: context is only available during synchronous init.
+	const filters = getReservationFilters();
 
 	let data = $derived(await getStaffReservationDetail(params.id));
 
@@ -134,6 +139,17 @@
 	{#if actions.has('cancel')}
 		<CancelReservationAction reservation={r} showReasonInput />
 	{/if}
+	<!-- Beside the list only; on a phone this is a page of its own with a back crumb. -->
+	<Button
+		href={withQuery(resolve('staff/reservations'), filters.urlQuery)}
+		variant="ghost"
+		shape="square"
+		class="hidden lg:inline-flex"
+		aria-label={m.ui_close_label()}
+		data-testid="close-detail"
+	>
+		<IconX size={16} />
+	</Button>
 </PageHeader>
 <PageContent width="3xl">
 	<!-- Hero card -->
@@ -206,7 +222,7 @@
 	</Card>
 
 	<!-- Member + Payment grid -->
-	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+	<div class="grid grid-cols-1 gap-4 @2xl:grid-cols-2">
 		<!-- Member card — a band or event booking leads with it, then who booked it -->
 		<InfoCard
 			title={r.bookerType === 'group'

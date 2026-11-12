@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The desktop right pane with nothing open. On a phone this route renders only
-	 * the list — `InboxShell` hides this pane below `lg` — so it is never the whole
+	 * the list — `ListDetailShell` hides this pane below `lg` — so it is never the whole
 	 * screen, and does not need to be.
 	 *
 	 * Worded for whichever lists the reader actually has: a plain member has one

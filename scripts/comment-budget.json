@@ -151,7 +151,6 @@
 	"src/lib/components/groups/MuteAnnouncementsAction.svelte",
 	"src/lib/components/inbox/DispositionBar.svelte",
 	"src/lib/components/inbox/DispositionBar.svelte.spec.ts",
-	"src/lib/components/inbox/InboxShell.svelte",
 	"src/lib/components/inbox/SendOption.svelte",
 	"src/lib/components/inbox/SnoozeMenu.svelte",
 	"src/lib/components/inbox/ThreadComposer.svelte",

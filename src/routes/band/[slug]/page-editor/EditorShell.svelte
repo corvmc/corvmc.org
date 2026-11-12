@@ -11,10 +11,10 @@
 	 *
 	 * Height: `<main>` is `flex-1 overflow-y-auto` inside an `h-dvh` column, so
 	 * `h-full` here is a definite height and each pane scrolls its own overflow —
-	 * the same arrangement `InboxShell` documents, and for the same reason: a page
+	 * the same arrangement `ListDetailShell` documents, and for the same reason: a page
 	 * and the CSS that styles it have no business sharing a scrollbar.
 	 *
-	 * Responsive rule, also `InboxShell`'s: both panes from `lg` up, one at a time
+	 * Responsive rule, also `ListDetailShell`'s: both panes from `lg` up, one at a time
 	 * below it. On a phone the canvas is the page you land on and the style pane
 	 * replaces it.
 	 */

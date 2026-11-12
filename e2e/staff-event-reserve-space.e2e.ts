@@ -189,11 +189,11 @@ test.describe('staff event creation — minimal modal', () => {
 		await row.locator('a[href^="/staff/reservations/"]').first().click();
 		await page.waitForURL(/\/staff\/reservations\/[^/]+$/, { timeout: 15000 });
 		await expect(
-			page.getByRole('main').locator(`a[href="/staff/events/${eventId}"]`).first()
+			page.locator('[data-pane="detail"]').locator(`a[href="/staff/events/${eventId}"]`).first()
 		).toBeVisible();
 		// The account that raised the hold stays on the record, below the show.
 		await expect(
-			page.getByRole('main').locator('a[href^="/staff/members/"]').first()
+			page.locator('[data-pane="detail"]').locator('a[href^="/staff/members/"]').first()
 		).toBeVisible();
 	});
 
