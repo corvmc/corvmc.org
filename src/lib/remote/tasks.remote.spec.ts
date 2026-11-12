@@ -99,7 +99,6 @@ const untouched = () =>
 const TIMES = { startsAt: '2030-01-01T18:00', endsAt: '2030-01-01T20:00' };
 
 const cases: [string, Record<string, unknown>][] = [
-	['getProjectTaskPage', pair],
 	['getTaskAssignees', pair],
 	['moveTaskCommand', { ...pair, sectionId: null, index: 0 }],
 	['assignMembersForm', { ...pair, userIds: ['usr-staff'] }],
@@ -148,18 +147,6 @@ describe('a work order named with a project it is not on', () => {
 		expect(
 			sqlite.prepare(`select capacity from volunteer_shift where work_order_id = 'wo-theirs'`).all()
 		).toEqual([{ capacity: 2 }]);
-	});
-});
-
-describe('the task page', () => {
-	it('serves the work order view under its own project', async () => {
-		const page = (await remotes.getProjectTaskPage({
-			projectId: THEIRS,
-			workOrderId: 'wo-theirs'
-		})) as { project: { name: string }; task: { id: string }; engagements: unknown[] };
-		expect(page.project.name).toBe('Theirs');
-		expect(page.task.id).toBe('wo-theirs');
-		expect(page.engagements).toEqual([]);
 	});
 });
 

@@ -174,8 +174,9 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 				out.push({ panel: 'staff', href: resolve(`staff/marketing/audiences/${id}`) });
 			break;
 		case 'shift':
-			if (can('volunteer.read'))
-				out.push({ panel: 'staff', href: resolve(`staff/volunteer/shifts/${id}`) });
+			// A task's page: Tasks reads every task, the Schedule those in no project.
+			if (can('volunteer.read') || can('project.read'))
+				out.push({ panel: 'staff', href: resolve(`staff/tasks/${id}`) });
 			break;
 		case 'role':
 			if (can('volunteer.read'))
@@ -186,7 +187,8 @@ function candidates(ref: EntityRef, viewer: Viewer): Candidate[] {
 				out.push({ panel: 'staff', href: resolve(`staff/recurring/${id}`) });
 			break;
 		case 'project':
-			if (can('project.read')) out.push({ panel: 'staff', href: resolve(`staff/projects/${id}`) });
+			if (can('project.read'))
+				out.push({ panel: 'staff', href: resolve(`staff/tasks/projects/${id}`) });
 			break;
 		case 'incident':
 			if (can('incident.read'))

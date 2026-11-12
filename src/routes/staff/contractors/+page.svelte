@@ -34,10 +34,8 @@
 </script>
 
 <PageHeader title={m.staff_contractors_contractors_title()} subtitle={m.staff_space_body()}>
-	<Button
-		href={withQuery(resolve('staff/volunteer/schedule'), 'kind=contractor')}
-		variant="ghost"
-		size="sm">{m.staff_jobs_label()}</Button
+	<Button href={withQuery(resolve('staff/tasks'), 'kind=contractor')} variant="ghost" size="sm"
+		>{m.staff_jobs_label()}</Button
 	>
 	<Action
 		action={createContractorForm}
@@ -81,8 +79,7 @@
 				>{#snippet span({ children })}<span class="font-medium">{@render children?.()}</span
 					>{/snippet}{#snippet a({ children })}<a
 						class="link"
-						href={withQuery(resolve('staff/volunteer/schedule'), 'kind=contractor&contractor=late')}
-						>{@render children?.()}</a
+						href={withQuery(resolve('staff/tasks'), 'kind=contractor')}>{@render children?.()}</a
 					>{/snippet}</ParaglideMessage
 			>
 		</Alert>

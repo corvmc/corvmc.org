@@ -109,7 +109,7 @@ test.describe('productions', () => {
 	 */
 	test('the index carries the production, the venue and the bill on one row', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/projects/productions');
+		await page.goto('/staff/tasks/productions');
 
 		const row = page.locator('tr').filter({ hasText: SEED_PRODUCTION_EVENT_TITLE });
 		await expect(row).toBeVisible({ timeout: 15000 });
@@ -131,7 +131,7 @@ test.describe('productions', () => {
 
 	test('filtering by venue narrows the index to the off-site shows', async ({ page }) => {
 		await loginAsStaff(page);
-		await page.goto('/staff/projects/productions');
+		await page.goto('/staff/tasks/productions');
 		await expect(page.locator('tr').filter({ hasText: SEED_PRODUCTION_EVENT_TITLE })).toBeVisible({
 			timeout: 15000
 		});

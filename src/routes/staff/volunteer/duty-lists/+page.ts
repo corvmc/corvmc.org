@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 
-// Duty lists became Project Templates, under Projects (#2034, #2385).
+// Duty lists became Project Templates, under Tasks (#2034, #2385, #2625).
 export function load() {
-	redirect(308, '/staff/projects/templates');
+	redirect(308, '/staff/tasks/templates');
 }

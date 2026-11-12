@@ -1,13 +1,12 @@
 import { redirect } from '@sveltejs/kit';
-import { contractorJobViews } from '#lib/config.js';
 import type { PageLoad } from './$types';
 
 /**
- * The jobs list is the Schedule's contractor filter (#2069). An old `?view=`
- * link lands on the same filter; Open is that filter's default, so it is dropped.
+ * The jobs list is the Tasks table's contractor filter (#2069, #2625). An old
+ * `?view=awaiting-invoice` link lands on that chip; the other views are rows
+ * of the same filter.
  */
 export const load: PageLoad = ({ url }) => {
-	const view = url.searchParams.get('view');
-	const keep = view && view !== 'open' && contractorJobViews.includes(view as never);
-	redirect(308, `/staff/volunteer/schedule?kind=contractor${keep ? `&contractor=${view}` : ''}`);
+	const invoice = url.searchParams.get('view') === 'awaiting-invoice';
+	redirect(308, `/staff/tasks?kind=contractor${invoice ? '&chip=invoice' : ''}`);
 };

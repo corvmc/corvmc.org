@@ -61,14 +61,16 @@ describe('activeNavKey', () => {
 		['/staff/volunteer', 'volunteer-schedule'],
 		['/staff/members/volunteers', 'users'],
 		['/staff/volunteer/roles', 'volunteer-schedule'],
-		['/staff/volunteer/shifts/abc', 'volunteer-schedule'],
-		['/staff/volunteer/schedule/recurring', 'volunteer-schedule'],
+		// Every task's page, and Recurring, are Tasks views (#2625).
+		['/staff/tasks/abc', 'projects'],
+		['/staff/tasks/recurring', 'projects'],
+		['/staff/tasks/projects/abc', 'projects'],
 		// `/staff/events/[id]` and everything under it is the general view, which
 		// the Calendar row owns — including the production console, which is a
 		// page you navigate to rather than a section of its own.
 		['/staff/events/abc/check-in', 'calendar'],
 		['/staff/events/abc/production', 'calendar'],
-		['/staff/projects/productions', 'projects'],
+		['/staff/tasks/productions', 'projects'],
 		['/staff/contacts', 'contacts'],
 		['/staff/contacts/abc', 'contacts'],
 		['/staff/sponsors', 'contacts'],
@@ -175,7 +177,7 @@ describe('the nav tree', () => {
 		expect(allStaffNavItems().some((i) => i.href === '/staff/volunteer')).toBe(false);
 	});
 
-	it('folds Productions into Projects (#2101)', () => {
+	it('folds Productions into Tasks (#2101, #2625)', () => {
 		const projects = allStaffNavItems().find((i) => i.key === 'projects')!;
 		expect(filterNavItems([projects], ['event.manage'])).toHaveLength(1);
 		expect(filterNavItems([projects], ['event.read'])).toHaveLength(0);
@@ -189,9 +191,9 @@ describe('the nav tree', () => {
 		expect(filterNavItems([groups], ['event.read'])).toHaveLength(0);
 	});
 
-	it('reaches Project Templates through Projects (#2385)', () => {
-		expect(activeNavKey('/staff/projects/templates')).toBe('projects');
-		expect(activeNavKey('/staff/projects/templates/abc')).toBe('projects');
+	it('reaches Project Templates through Tasks (#2385, #2625)', () => {
+		expect(activeNavKey('/staff/tasks/templates')).toBe('projects');
+		expect(activeNavKey('/staff/tasks/templates/abc')).toBe('projects');
 	});
 
 	it('keeps Inbox out of every section, so its badge survives a collapsed group', () => {
@@ -226,8 +228,8 @@ describe('the nav tree', () => {
 		const keys = (key: string) => section(key).items.map((i) => i.key);
 		expect(keys('people')).toEqual(['users', 'groups']);
 		expect(keys('planning')).toEqual(['suggestions', 'ballots', 'projects', 'volunteer-schedule']);
-		// Recurring work is a Schedule view (#2087).
-		expect(activeNavKey('/staff/volunteer/schedule/recurring')).toBe('volunteer-schedule');
+		// Recurring work is a Tasks view (#2087, #2625).
+		expect(activeNavKey('/staff/tasks/recurring')).toBe('projects');
 		expect(keys('space')).toEqual(['reservations', 'gear', 'supplies']);
 		// Key holders is a header link on Practice space (#2574), not a row.
 		expect(activeNavKey('/staff/keys')).toBe('reservations');
@@ -270,9 +272,10 @@ describe('route coverage', () => {
 		'/staff/members/volunteers',
 		'/staff/members/instructors',
 		'/staff/members/invites',
-		'/staff/projects/productions', // a Projects view (#2101)
-		'/staff/projects/templates', // a Projects view (#2385)
-		'/staff/volunteer/schedule/recurring', // a Schedule view (#2087)
+		'/staff/tasks/projects', // a Tasks view (#2625)
+		'/staff/tasks/productions', // a Tasks view (#2101, #2625)
+		'/staff/tasks/templates', // a Tasks view (#2385, #2625)
+		'/staff/tasks/recurring', // a Tasks view (#2087, #2625)
 		'/staff/help/create', // the create flow for Help Articles
 		'/staff/marketing/campaigns/new', // the create flow for Campaigns
 		'/staff/inventory/locations', // reached from Gear and Supplies, beside Categories

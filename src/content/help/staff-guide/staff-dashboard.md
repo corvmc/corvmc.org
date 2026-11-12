@@ -24,7 +24,9 @@ Everything else is grouped by what it's for:
 
 - **People** — **Members** (member accounts, roles, and credits, with volunteers and the hours
   queue as views) and **Bands** (all bands, their members, and moderation). Volunteer shifts
-  are **Planning → Schedule**, whose badge counts volunteer work waiting on staff.
+  are **Planning → Schedule**, whose badge counts volunteer work waiting on staff. Every task,
+  in a project or not, is on **Planning → Tasks**, with Projects, Recurring work, Productions
+  and Templates as views beside the table.
 - **Space** — **Reservations** (practice-space bookings and payments), with **Recurring** standing
   series and **Closures** blackout dates beneath it; and **Equipment** (the inventory), with
   **Loans** beneath it.

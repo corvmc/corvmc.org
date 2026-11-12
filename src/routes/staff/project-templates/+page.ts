@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 
-// Templates moved under Projects (#2385).
+// Templates moved under Tasks (#2385, #2625).
 export function load() {
-	redirect(308, '/staff/projects/templates');
+	redirect(308, '/staff/tasks/templates');
 }

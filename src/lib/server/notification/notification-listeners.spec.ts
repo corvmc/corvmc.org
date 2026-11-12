@@ -1642,7 +1642,7 @@ describe('unclaimed orientation (#2567)', () => {
 		const [params] = calls();
 		expect(params.userId).toBe('staff-1');
 		expect(params.title).toContain('Nia');
-		expect(params.href).toBe('/staff/volunteer/shifts/wo-1');
+		expect(params.href).toBe('/staff/tasks/wo-1');
 		expect(params.email.details).toHaveLength(1);
 	});
 

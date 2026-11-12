@@ -175,13 +175,14 @@ export const staffNavSections: StaffNavSection[] = [
 				label: 'Ballots',
 				href: resolve('staff/ballots')
 			},
-			// Productions is a view on it (#2101), gated as the row it replaced.
+			// Every task, with Projects, Recurring, Productions and Templates as
+			// views (#2625). The key stays `projects`, which starred rows store.
 			{
 				key: 'projects',
 				capability: 'project.read',
 				alsoFor: ['event.manage'],
-				label: 'Projects',
-				href: resolve('staff/projects')
+				label: 'Tasks',
+				href: resolve('staff/tasks')
 			},
 			// Every work order, in a project or not (#2034), and the recurring
 			// work that writes them (#2087). The Volunteering dashboard folded in

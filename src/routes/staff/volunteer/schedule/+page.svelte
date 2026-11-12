@@ -28,7 +28,6 @@
 	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
 	import LogHoursForMemberAction from '#lib/components/volunteer/LogHoursForMemberAction.svelte';
 	import NewWorkOrderAction from '../NewWorkOrderAction.svelte';
-	import ScheduleViews from './ScheduleViews.svelte';
 	import EndedShiftsTable from './EndedShiftsTable.svelte';
 	import UnscheduledActions from './UnscheduledActions.svelte';
 	import { NEEDS, parseNeeds, type Needs } from './needs-filter';
@@ -117,9 +116,6 @@
 		if (schedule.error) throw schedule.error.e;
 	});
 
-	// Whether to offer the Contractor kind; the query says, and guards it.
-	const contractorAccess = $derived(schedule.current?.contractorAccess ?? false);
-
 	type Row = Awaited<ReturnType<typeof getSchedulePage>>['unscheduled'][number];
 
 	const timeFmt = new Intl.DateTimeFormat('en-US', {
@@ -166,9 +162,7 @@
 	const refresh = () => void getSchedulePage(args).refresh();
 </script>
 
-<PageHeader title={m.staff_schedule_title()} subtitle={m.staff_planning_body()}>
-	<ScheduleViews active="orders" />
-</PageHeader>
+<PageHeader title={m.staff_schedule_title()} subtitle={m.staff_planning_body()} />
 
 <PageContent>
 	<FilterBar
@@ -217,7 +211,8 @@
 			}}
 		>
 			{#each Object.entries(KINDS) as [value, label] (value)}
-				{#if value !== 'contractor' || contractorAccess || byContractor}
+				<!-- Work with no shift and contractor work are on Tasks (#2625). -->
+				{#if value !== 'contractor' && value !== 'untimed'}
 					<option {value}>{label}</option>
 				{/if}
 			{/each}
@@ -342,7 +337,7 @@
 				{/snippet}
 
 				{#each shown as w, idx (w.shiftId ?? w.id)}
-					{@const href = resolve('/staff/volunteer/shifts/[id]', { id: w.id })}
+					{@const href = resolve('/staff/tasks/[id]', { id: w.id })}
 					{@const unconfirmed = w.claimed - w.confirmed}
 					{@const full = w.confirmed >= w.capacity}
 					{@const engaged = data.contractors[w.id] ?? []}
@@ -385,7 +380,7 @@
 								<a
 									class="link text-xs"
 									href={withQuery(
-										resolve('staff/volunteer/schedule/recurring'),
+										resolve('staff/tasks/recurring'),
 										`id=${w.maintenanceScheduleId}`
 									)}>{m.staff_recurring_text()}</a
 								>
@@ -474,7 +469,7 @@
 			<ul class="space-y-1 text-sm">
 				{#each cancelled as shift (shift.shiftId ?? shift.id)}
 					<li>
-						<a href={resolve('/staff/volunteer/shifts/[id]', { id: shift.id })} class="link">
+						<a href={resolve('/staff/tasks/[id]', { id: shift.id })} class="link">
 							{m.staff_volunteer_schedule_cancelled_text({
 								formatDateShort: formatDateShort(shift.startsAt),
 								shiftLabel: shiftLabel(shift)

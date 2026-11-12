@@ -1,12 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { workOrderHref } from './work-order-href';
+import { workOrderHref, workOrderPathname } from './work-order-href';
 
 describe('workOrderHref', () => {
-	it('sends a project work order to its task page', () => {
-		expect(workOrderHref({ id: 'wo', projectId: 'p' })).toBe('/staff/projects/p/tasks/wo');
-	});
-
-	it('keeps a work order on no project on the shift page', () => {
-		expect(workOrderHref({ id: 'wo', projectId: null })).toBe('/staff/volunteer/shifts/wo');
+	it('sends every work order to its task page, in a project or not', () => {
+		expect(workOrderHref({ id: 'wo' })).toBe('/staff/tasks/wo');
+		expect(workOrderPathname({ id: 'wo' })).toBe('staff/tasks/wo');
 	});
 });

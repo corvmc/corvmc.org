@@ -16,7 +16,7 @@ coordinator**, who owns the staffing.
 
 ## First: one project for the whole thing
 
-**Staff → Projects → New.** A project is the container — one budget, one owner, one place the burn
+**Staff → Tasks → New project.** A project is the container — one budget, one owner, one place the burn
 adds up across every night. A festival is one project and several events; a produced show is one
 project and one event; a facility improvement is one project and none.
 

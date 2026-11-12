@@ -78,7 +78,7 @@ test.describe('contractor jobs', () => {
 		expect(before.status).toBe('in_service');
 
 		// Engage a contractor on the unit's work order.
-		await page.goto(`/staff/volunteer/shifts/${asset.workOrderId}`);
+		await page.goto(`/staff/tasks/${asset.workOrderId}`);
 		await page.getByTestId('engage-contractor').click();
 		const dialog = page.getByRole('dialog');
 		await dialog.locator('select').first().selectOption({ label: SEED_CONTRACTOR_NAME });
@@ -131,11 +131,9 @@ test.describe('contractor jobs', () => {
 		expect(after.movements.reduce((sum, m) => sum + m.quantity, 0)).toBe(0);
 
 		// Finished with no cost entered: the old list's address lands on the
-		// Schedule's contractor filter, where it waits on its invoice.
+		// Tasks table's contractor filter, under its invoice chip.
 		await page.goto('/staff/contractors/jobs?view=awaiting-invoice');
-		await expect(page).toHaveURL(
-			/\/staff\/volunteer\/schedule\?kind=contractor&contractor=awaiting-invoice/
-		);
+		await expect(page).toHaveURL(/\/staff\/tasks\?kind=contractor&chip=invoice/);
 		await expect(page.getByRole('row').filter({ hasText: title })).toBeVisible({
 			timeout: 15000
 		});

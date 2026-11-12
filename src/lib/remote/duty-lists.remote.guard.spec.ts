@@ -33,10 +33,9 @@ vi.mock('#lib/server/project/project-service.js', () => ({ listCommittees: vi.fn
 vi.mock('#lib/server/volunteer/volunteer-role-service.js', () => ({ listVolunteerRoles: vi.fn() }));
 vi.mock('#lib/server/volunteer/work-order-service.js', () => ({ workOrderProjectId: vi.fn() }));
 vi.mock('./volunteer.remote', () => ({
-	getStaffShiftPage: vi.fn(),
+	getTaskPage: vi.fn(),
 	getWorkOrderActivity: vi.fn()
 }));
-vi.mock('./tasks.remote', () => ({ getProjectTaskPage: vi.fn() }));
 vi.mock('./projects.remote', () => ({ getProjectActivity: vi.fn() }));
 // Each wrapper carries `__`, which is how kit recognises a remote export.
 vi.mock('$app/server', () => {

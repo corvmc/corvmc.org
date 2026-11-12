@@ -486,7 +486,7 @@ events use RSVP instead.
   (a community draft is its author's alone), filtered by source, search, date range and status
   with the Practice space list's filter row (`ListFilters`). It opens on From today by club day,
   soonest first; Past 30 days lists newest first. Pending listings sit in date order with their
-  badge; the dashboard feed collects the ones waiting for review. `/staff/projects/productions`
+  badge; the dashboard feed collects the ones waiting for review. `/staff/tasks/productions`
   is the CMC work index, `source='cmc'` at every status via `getStaffEvents` → `listAll()`. A
   published CMC show is on both.
 - **The detail view is layered the same way.** `/staff/events/[id]` is the general view for
@@ -1383,8 +1383,8 @@ sign up for it. A task has zero or more shifts. Deliverables and repairs usually
 - **Hours** name a shift, a task (`volunteer_hour_log.work_order_id`), or neither.
 - **Capability grants** from a role last for a confirmed sign-up's shift window, and for an
   assignment the task's event window, each plus the role's grace days.
-- **The task page lists every shift** (`/staff/volunteer/shifts/[id]`, or a project's
-  `/tasks/[taskId]`), each with its own roster, invitations and edit, copy and cancel. Cancelling
+- **The task page lists every shift** (`/staff/tasks/[id]`, in a project or
+  not, #2625), each with its own roster, invitations and edit, copy and cancel. Cancelling
   a shift (`cancelOneShift`) leaves the task and its other shifts live; **Cancel task** calls off
   the task and all of them. **Copy forward** adds a shift to the same task, so a standing weekly
   slot is one task with a shift a week. Assignees are listed apart, each with Unassign. "Who to
@@ -1505,7 +1505,7 @@ So:
 
 ### Duty lists (Project Templates)
 
-> **Since #2034** these are **Project Templates** (`/staff/projects/templates`, under Projects,
+> **Since #2034** these are **Project Templates** (`/staff/tasks/templates`, under Projects,
 > edited with `project.manage`). The tables keep the `duty_list` names. A template is stamped
 > into a **project**, and the `event` and `reservation` subjects are retired. `doors`, `start`
 > and `end` read the project's earliest live event, or the show it is applied from, and the
@@ -1519,7 +1519,7 @@ So:
 > that show's console, timed from that show. The rest of this section is the history and the
 > item model, which is unchanged.
 
-**Starting from a template (#2387).** New Project on `/staff/projects` has a Template select over
+**Starting from a template (#2387).** New project on `/staff/tasks` and its Projects view has a Template select over
 active templates with items. `startProject` reads the template first, creates the project, then
 applies it through `applyDutyList`, so the once-per-project rule and the audit entry are the usual
 ones.
@@ -1882,7 +1882,7 @@ restore crew shifts or retract a cancellation notice.
    over the three pre-completed statuses; a production that already `completed`
    describes a night that happened, and cancelling the advertisement does not
    un-happen it.
-8. `/staff/projects/productions` reads everything through the one `getStaffEvents` query:
+8. `/staff/tasks/productions` reads everything through the one `getStaffEvents` query:
    `listAll()` left-joins `venue` and `production` (both 1:1, so no fan-out), and
    `getEventLineups()` — the batched helper — supplies the headliner and the count.
 9. **Run of Show** tab → the slot remotes in `productions.remote.ts` (`production.run`) →

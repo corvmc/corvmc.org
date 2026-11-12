@@ -43,10 +43,7 @@
 				item.task && projectId
 					? {
 							label: item.task.title,
-							href: resolve('/staff/projects/[id]/tasks/[taskId]', {
-								id: projectId,
-								taskId: item.task.id
-							})
+							href: resolve('/staff/tasks/[id]', { id: item.task.id })
 						}
 					: null
 		};

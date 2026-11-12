@@ -48,7 +48,7 @@
 		{@const done = resolveWorkOrder.for(task.id)}
 		<tr class="hover">
 			<td class="cell-primary">
-				<a href={resolve(`staff/volunteer/shifts/${task.id}`)} class="link font-medium">
+				<a href={resolve(`staff/tasks/${task.id}`)} class="link font-medium">
 					{subject(task)}
 				</a>
 				<div class="truncate text-subtle">{task.roleName ?? NO_ROLE_LABEL}</div>

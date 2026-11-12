@@ -54,7 +54,7 @@
 		return {
 			...row,
 			href: withHash(
-				resolve(workOrderPathname({ id: item.job.workOrderId, projectId: item.job.projectId })),
+				resolve(workOrderPathname({ id: item.job.workOrderId })),
 				`engagement-${item.job.id}`
 			),
 			context: {

@@ -22,8 +22,8 @@ import {
 
 test.use({ persona: { email: SEED_STAFF_EMAIL, password: SEED_STAFF_PASSWORD } });
 
-const projectUrl = `/staff/projects/${SEED_TASK_PROJECT_ID}`;
-const taskPages = `a[href^="/staff/projects/${SEED_TASK_PROJECT_ID}/tasks/"]`;
+const projectUrl = `/staff/tasks/projects/${SEED_TASK_PROJECT_ID}`;
+const taskPages = `a[href^="/staff/tasks/"]:not([href^="/staff/tasks/projects/"])`;
 // Check quickly once, then back off: `readLocalDb` shares the preview's file.
 const DB_POLL = { timeout: 15000, intervals: [250, 500, 1000, 2000, 3000] };
 
@@ -124,7 +124,7 @@ test.describe('project task list', () => {
 		const panel = page.getByRole('complementary', { name: SEED_TASK_WITH_DUTIES });
 		await panel.locator(taskPages).click();
 
-		const taskUrl = new RegExp(`/staff/projects/${SEED_TASK_PROJECT_ID}/tasks/([^/?#]+)$`);
+		const taskUrl = new RegExp(`/staff/tasks/([^/?#]+)$`);
 		await expect(page).toHaveURL(taskUrl);
 		await expect(
 			page.getByRole('heading', { level: 1, name: SEED_TASK_WITH_DUTIES })
@@ -182,7 +182,7 @@ test.describe('project task list', () => {
 		// With no task open, the sidebar is the activity: newest first, linked to
 		// the task. Only this test writes to the project, so the newest is ours.
 		const activity = page.getByRole('main').getByRole('complementary');
-		const ours = `a[href="/staff/projects/${SEED_TASK_PROJECT_ID}/tasks/${taskId}"]`;
+		const ours = `a[href="/staff/tasks/${taskId}"]`;
 		await expect(activity.getByRole('listitem').first().locator(ours)).toBeVisible();
 		await expect(activity.locator(ours).first()).toBeVisible();
 	});
