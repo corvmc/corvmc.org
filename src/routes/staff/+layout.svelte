@@ -37,7 +37,6 @@
 		IconCalendarWeek,
 		IconCalendarMonth,
 		IconMapPin,
-		IconKey,
 		IconBuildingStore,
 		IconContract,
 		IconCertificate
@@ -116,7 +115,6 @@
 		gear: IconTool,
 		supplies: IconPackage,
 		contractors: IconHammer,
-		keys: IconKey,
 		projects: IconFolders,
 		venues: IconMapPin,
 		calendar: IconCalendarMonth,
