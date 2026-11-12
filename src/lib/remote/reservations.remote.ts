@@ -61,7 +61,9 @@ import {
 	getAvailableSlotsForDates,
 	getConflictDetails,
 	getValidationWarnings,
+	isBookableStart,
 	noticeFor,
+	tourSlotsFor,
 	type BookingNotice
 } from '#lib/server/reservation/conflict-service.js';
 import {
@@ -99,6 +101,7 @@ import {
 import { getBalance } from '#lib/server/finance/credit-service.js';
 import { notAProgramHold } from '#lib/server/reservation/program-hold.js';
 import {
+	billableHours,
 	commitReservationCredits,
 	computeReservationCredit,
 	freeHoursResetAt,
@@ -179,8 +182,7 @@ export const getReservationPayment = query(z.string(), async (id) => {
 	// Resolved for who is booking. Reading the config directly quoted an
 	// instructor the $15 drop-in rate on the page they pay from.
 	const { hourlyRateCents } = await getBookingTerms(row.bookerType);
-	const durationMs = row.endsAt.getTime() - row.startsAt.getTime();
-	const durationHours = durationMs / (1000 * 60 * 60);
+	const durationHours = billableHours(row);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 	// The booker's, whoever pays. Zero for a session on or after the next reset.
 	const freeHoursBalance = usableFreeHours(
@@ -230,7 +232,7 @@ export const getReservationDetail = query(z.string(), async (id) => {
 	if (row.createdByUserId !== currentUser.id) throw error(403, 'Not your reservation');
 
 	const { hourlyRateCents } = await getBookingTerms(row.bookerType);
-	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
+	const durationHours = billableHours(row);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
 	// A code we issued is not a code that works: U-tec queues writes in its cloud
@@ -431,7 +433,7 @@ export const getBandReservationDetail = query(
 
 		const res = row.reservation;
 		const { hourlyRateCents } = await getBookingTerms(res.bookerType);
-		const durationHours = (res.endsAt.getTime() - res.startsAt.getTime()) / (1000 * 60 * 60);
+		const durationHours = billableHours(res);
 		const totalCents = Math.round(durationHours * hourlyRateCents);
 
 		const bandAdmin = role === 'owner' || role === 'admin';
@@ -752,23 +754,20 @@ export const getAvailableDates = query(z.enum(bookerTypes).optional(), async (bo
 		minAdvanceMinutes: notice.minutes
 	});
 
+	const tourSlots = tourSlotsFor(notice.tourMinutes, config);
+
 	const results: string[] = [];
 	for (const dateStr of dateStrs) {
 		const slots = slotsByDate.get(dateStr) ?? [];
-
-		let maxRun = 0;
-		let run = 0;
-		for (const s of slots) {
-			if (s.available) {
-				run++;
-				if (run > maxRun) maxRun = run;
-			} else {
-				run = 0;
-			}
+		if (slots.some((_, i) => isBookableStart(slots, i, minSlots, tourSlots))) {
+			results.push(dateStr);
 		}
-		if (maxRun >= minSlots) results.push(dateStr);
 	}
-	return { dates: results, newMemberNoticeMinutes: notice.newMember ? notice.minutes : null };
+	return {
+		dates: results,
+		newMemberNoticeMinutes: notice.newMember ? notice.minutes : null,
+		tourMinutes: notice.tourMinutes
+	};
 });
 
 /** Available start times for a given date, with pricing config. */
@@ -781,12 +780,7 @@ export const getReservationStartTimes = query(
 		const slots = await getAvailableSlots(dateStr, { minAdvanceMinutes: notice.minutes });
 
 		const minSlots = reservationConfig.minDurationHours * (60 / reservationConfig.timeSlotMinutes);
-
-		function contiguousFrom(startIdx: number): number {
-			let count = 0;
-			for (let i = startIdx; i < slots.length && slots[i].available; i++) count++;
-			return count;
-		}
+		const tourSlots = tourSlotsFor(notice.tourMinutes, reservationConfig);
 
 		// Every operating-hour slot, not only the bookable ones. Dropping the rest
 		// left gaps with no cause: the policy strip says 9 AM – 10 PM and the list
@@ -798,8 +792,8 @@ export const getReservationStartTimes = query(
 		return slots.map((s, i) => {
 			const label = formatSlotTime(s.startTime);
 			// Free, but with a booking or closing time too soon after it to fit the
-			// shortest session, is as unpickable as taken.
-			const bookable = s.available && contiguousFrom(i) >= minSlots;
+			// shortest session, or too soon before it to fit a tour, is unpickable.
+			const bookable = isBookableStart(slots, i, minSlots, tourSlots);
 			return { value: s.startTime, label, disabled: !bookable };
 		});
 	}
@@ -1276,7 +1270,7 @@ async function commitCreditsAndSettleIfCovered(opts: {
  * (idempotent) and not re-applied inside checkout.
  */
 async function payReservationRemainder(opts: {
-	row: { id: string; startsAt: Date; endsAt: Date; bookerType: BookerType };
+	row: { id: string; startsAt: Date; endsAt: Date; tourMinutes: number; bookerType: BookerType };
 	/** Whose free hours settle it first. */
 	booker: Person;
 	/** Who is charged the remainder. */
@@ -1287,8 +1281,7 @@ async function payReservationRemainder(opts: {
 }): Promise<{ paid: true } | { checkoutUrl: string }> {
 	const reservationConfig = await getReservationConfig();
 	const hourlyRateCents = termsFor(opts.row.bookerType, reservationConfig).hourlyRateCents;
-	const durationHours =
-		(opts.row.endsAt.getTime() - opts.row.startsAt.getTime()) / (1000 * 60 * 60);
+	const durationHours = billableHours(opts.row);
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
 	const { remainingCents, settled } = await commitCreditsAndSettleIfCovered({
@@ -1700,7 +1693,13 @@ export const bookBandReservation = form(bandBookingSchema, async (data, issue) =
 	if (data.payNow === 'on' && !waitlisted) {
 		const back = `${getRequestEvent().url.origin}/band/${band.slug}/reservations`;
 		const result = await payReservationRemainder({
-			row: { id: res.id, startsAt: res.startsAt, endsAt: res.endsAt, bookerType: 'group' },
+			row: {
+				id: res.id,
+				startsAt: res.startsAt,
+				endsAt: res.endsAt,
+				tourMinutes: res.tourMinutes,
+				bookerType: 'group'
+			},
 			booker: currentUser,
 			payer: currentUser,
 			coverFees: data.coverFees,
@@ -1798,7 +1797,7 @@ export const payForReservation = form(
 
 		const reservationConfig = await getReservationConfig();
 		const hourlyRateCents = termsFor(row.bookerType, reservationConfig).hourlyRateCents;
-		const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
+		const durationHours = billableHours(row);
 		const totalCents = Math.round(durationHours * hourlyRateCents);
 
 		if (data.skipPayment === 'on') {
@@ -1918,6 +1917,7 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 			createdByUserId: reservation.createdByUserId,
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
+			tourMinutes: reservation.tourMinutes,
 			bookerType: reservation.bookerType
 		})
 		.from(reservation)
@@ -1925,7 +1925,7 @@ export const cashReceivedReservation = form(z.object({ id: z.string() }), async 
 		.limit(1);
 	if (!row) throw error(404, 'Reservation not found');
 
-	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
+	const durationHours = billableHours(row);
 	const hourlyRateCents = (await getBookingTerms(row.bookerType)).hourlyRateCents;
 	const totalCents = Math.round(durationHours * hourlyRateCents);
 
@@ -2207,7 +2207,7 @@ export const getReservations = query(
 		return rows.map((value: Reservation) => {
 			const freeHoursBalance = usableFreeHours(wallet, value.startsAt);
 			const hasFreeHours = freeHoursBalance > 0;
-			const durationHours = (value.endsAt.getTime() - value.startsAt.getTime()) / (1000 * 60 * 60);
+			const durationHours = billableHours(value);
 			const rateInCents = termsFor(value.bookerType, reservationConfig).hourlyRateCents;
 			const totalCents = Math.round(durationHours * rateInCents);
 			const isTerminal = isTerminalStatus(value.status);
@@ -2396,7 +2396,7 @@ export const payAtReader = command(z.string().min(1), async (id) => {
 	if (!readerPayable(row)) error(400, 'This booking cannot be paid at the reader right now');
 
 	const { hourlyRateCents } = await getBookingTerms(row.bookerType);
-	const durationHours = (row.endsAt.getTime() - row.startsAt.getTime()) / (1000 * 60 * 60);
+	const durationHours = billableHours(row);
 	const { remainingCents, settled } = await commitCreditsAndSettleIfCovered({
 		reservationId: id,
 		userId: currentUser.id,

@@ -8,6 +8,7 @@ import { buildDateInTz, formatTimeInTz } from './timezone';
 import type { TimeSlot } from '#lib/server/db/schema/reservation.js';
 import { DEFAULT_TIMEZONE } from '#lib/config.js';
 import { holdsPracticeSpaceClearance } from '#lib/server/volunteer/practice-space-clearance.js';
+import { config as siteConfig } from '#lib/server/site-config/site-config-service.js';
 
 // ---------------------------------------------------------------------------
 // ConflictService — availability checks and slot generation
@@ -65,6 +66,21 @@ export interface BookingNotice {
 	minutes: number;
 	/** The new-member minimum applies: no current Practice space clearance. */
 	newMember: boolean;
+	/** Minutes held before the requested start for the tour; 0 when none. */
+	tourMinutes: number;
+}
+
+/**
+ * The tour a new member's booking starts with: the orientation length, while
+ * an orientation role is set. With no role nobody runs a tour, so none is held.
+ */
+async function tourMinutes(): Promise<number> {
+	const [roleId, minutes] = await Promise.all([
+		siteConfig('volunteer.orientationRoleId'),
+		siteConfig('volunteer.orientationMinutes')
+	]);
+	const n = Number(minutes);
+	return String(roleId).trim() && n > 0 ? n : 0;
 }
 
 /**
@@ -78,9 +94,13 @@ export async function noticeFor(
 ): Promise<BookingNotice> {
 	const own = (who.bookerType ?? 'user') === 'user' && who.userId !== null;
 	if (own && !(await holdsPracticeSpaceClearance(who.userId!))) {
-		return { minutes: config.newMemberMinAdvanceMinutes, newMember: true };
+		return {
+			minutes: config.newMemberMinAdvanceMinutes,
+			newMember: true,
+			tourMinutes: await tourMinutes()
+		};
 	}
-	return { minutes: config.minAdvanceMinutes, newMember: false };
+	return { minutes: config.minAdvanceMinutes, newMember: false, tourMinutes: 0 };
 }
 
 /**
@@ -127,6 +147,29 @@ export function buildDaySlots(
 	}
 
 	return slots;
+}
+
+/**
+ * Whether slot `i` can start a booking: free for the shortest session after it,
+ * and, when a tour comes first, free for the tour's slots before it. The slots
+ * already carry the notice cutoff, so a free tour slot is past it too.
+ */
+export function isBookableStart(
+	slots: TimeSlot[],
+	i: number,
+	minSlots: number,
+	tourSlots: number = 0
+): boolean {
+	if (i - tourSlots < 0) return false;
+	for (let j = i - tourSlots; j < i + minSlots; j++) {
+		if (!slots[j]?.available) return false;
+	}
+	return true;
+}
+
+/** The slots a tour of this many minutes takes, rounded up to whole slots. */
+export function tourSlotsFor(tourMinutes: number, config: SlotConfig): number {
+	return Math.ceil(tourMinutes / config.timeSlotMinutes);
 }
 
 /**
@@ -208,6 +251,8 @@ export interface ValidationResult {
 	valid: boolean;
 	code?: BookingRejection;
 	error?: string;
+	/** Minutes to hold before the requested start for a new member's tour. */
+	tourMinutes?: number;
 }
 
 export interface ValidateBookingOptions {
@@ -280,15 +325,26 @@ export async function validateBooking(
 		};
 	}
 
+	// The tour comes first, so the room is held from the arrival time: it has
+	// to fall inside opening hours and past the notice, like any start.
+	const notice = await noticeFor(config, {
+		userId: options?.userId ?? null,
+		bookerType: options?.bookerType
+	});
+	const arrival = new Date(startsAt.getTime() - notice.tourMinutes * 60_000);
+
 	// Check operating hours
-	const startTime = formatTimeInTz(startsAt, tz);
+	const startTime = formatTimeInTz(arrival, tz);
 	const endTime = formatTimeInTz(endsAt, tz);
 
 	if (startTime < config.operatingHoursStart) {
 		return {
 			valid: false,
 			code: 'BEFORE_OPENING',
-			error: `Cannot start before ${config.operatingHoursStart}`
+			error:
+				notice.tourMinutes > 0
+					? `Your first booking starts with a ${notice.tourMinutes}-minute tour, so it cannot start before ${addMinutes(config.operatingHoursStart, notice.tourMinutes)}`
+					: `Cannot start before ${config.operatingHoursStart}`
 		};
 	}
 
@@ -302,11 +358,7 @@ export async function validateBooking(
 
 	// The near end of the window, which the slot picker also applies. A past start
 	// falls inside it too. Staff paths use `staffCreate`, which never calls this.
-	const notice = await noticeFor(config, {
-		userId: options?.userId ?? null,
-		bookerType: options?.bookerType
-	});
-	if (startsAt.getTime() < Date.now() + notice.minutes * 60 * 1000) {
+	if (arrival.getTime() < Date.now() + notice.minutes * 60 * 1000) {
 		return notice.newMember
 			? {
 					valid: false,
@@ -331,7 +383,16 @@ export async function validateBooking(
 		};
 	}
 
-	return { valid: true };
+	return notice.tourMinutes > 0
+		? { valid: true, tourMinutes: notice.tourMinutes }
+		: { valid: true };
+}
+
+/** "09:00" + 30 → "09:30". */
+function addMinutes(hhmm: string, minutes: number): string {
+	const [h, m] = hhmm.split(':').map(Number);
+	const total = h * 60 + m + minutes;
+	return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
 /** 4320 → "3 days'", 90 → "90 minutes'": the possessive the notice sentence wants. */

@@ -109,7 +109,8 @@ function bookTenDaysOut(resetOffsetMs: number) {
 		bookerType: 'user',
 		cashDueCents: null,
 		startsAt,
-		endsAt: new Date(startsAt.getTime() + 60 * MINUTE)
+		endsAt: new Date(startsAt.getTime() + 60 * MINUTE),
+		tourMinutes: 0
 	};
 	subscription = {
 		hoursPerReset: 8,

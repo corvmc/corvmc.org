@@ -51,6 +51,7 @@ vi.mock('#lib/server/reservation/reservation-credit-service.js', async (importOr
 	const actual =
 		await importOriginal<typeof import('#lib/server/reservation/reservation-credit-service.js')>();
 	return {
+		billableHours: actual.billableHours,
 		computeReservationCredit: actual.computeReservationCredit,
 		commitReservationCredits: (...a: unknown[]) => commitReservationCredits(...a),
 		reverseReservationCredits: vi.fn()
@@ -146,6 +147,7 @@ describe('cashReceivedReservation', () => {
 					createdByUserId: member.id,
 					startsAt,
 					endsAt: new Date(startsAt.getTime() + 2 * HOUR),
+					tourMinutes: 0,
 					bookerType: 'user'
 				}
 			],

@@ -135,6 +135,7 @@ async function processSeries(
 			createdByUserId: reservation.createdByUserId,
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
+			tourMinutes: reservation.tourMinutes,
 			notes: reservation.notes
 		})
 		.from(reservation)
@@ -176,8 +177,10 @@ async function processSeries(
 
 	if (memberRemoved) return { created: 0, waitlisted: 0, skipped: 0 };
 
-	// Compute prototype duration in ms
-	const durationMs = prototype.endsAt.getTime() - prototype.startsAt.getTime();
+	// The session's length, not the window: a first booking's tour is held once
+	// and the series' rule already starts at the requested time.
+	const durationMs =
+		prototype.endsAt.getTime() - prototype.startsAt.getTime() - prototype.tourMinutes * 60_000;
 
 	// Generate occurrences within the window
 	const now = new Date();

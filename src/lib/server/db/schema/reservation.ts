@@ -69,6 +69,10 @@ export const reservation = sqliteTable(
 		status: text('status', { enum: reservationStatuses }).notNull().default('scheduled'),
 		startsAt: integer('starts_at', { mode: 'timestamp' }).notNull(),
 		endsAt: integer('ends_at', { mode: 'timestamp' }).notNull(),
+		// Minutes at the start of the window for a new member's tour. The room is
+		// held for them; the charge and free hours cover only the rest. Stored so a
+		// later change to `volunteer.orientationMinutes` moves no existing booking.
+		tourMinutes: integer('tour_minutes').notNull().default(0),
 		// A show holds the room outright; a member booking does not. Explicit
 		// rather than inferred from `booker_type`, which asked "was this created
 		// via a listing?" — so advertising a session quietly upgraded its

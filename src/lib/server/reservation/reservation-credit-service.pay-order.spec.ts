@@ -57,6 +57,7 @@ beforeEach(async () => {
 const asBooking = (r: { startsAt: Date }) => ({
 	startsAt: r.startsAt,
 	endsAt: new Date(r.startsAt.getTime() + 2 * HOUR),
+	tourMinutes: 0,
 	bookerType: 'user' as const
 });
 

@@ -1,10 +1,10 @@
 {
-  "id": "a10de0a9-7054-4dc2-b8b3-dd7b5859157d",
-  "prevIds": [
-    "710a57a0-3e3a-4d9b-a096-5416cbe53361"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "bb73f594-67df-405d-8c1f-797cfdc930c3",
+  "prevIds": [
+    "a10de0a9-7054-4dc2-b8b3-dd7b5859157d"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -1755,6 +1755,16 @@
       "default": null,
       "generated": null,
       "name": "ends_at",
+      "entityType": "columns",
+      "table": "reservation"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "tour_minutes",
       "entityType": "columns",
       "table": "reservation"
     },

@@ -24,9 +24,17 @@ vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	}))
 }));
 
-const { create, createWaitlisted, staffCreate, ReservationValidationError } =
-	await import('./reservation-service');
-const { validateBooking, getAvailableSlots, noticeFor } = await import('./conflict-service');
+const {
+	create,
+	createWaitlisted,
+	staffCreate,
+	ReservationValidationError,
+	ReservationConflictError
+} = await import('./reservation-service');
+const { validateBooking, getAvailableSlots, noticeFor, isBookableStart } =
+	await import('./conflict-service');
+const { billableHours } = await import('./reservation-credit-service');
+const siteConfig = await import('#lib/server/site-config/site-config-service.js');
 const { getReservationConfig } = await import('./config');
 const { completeOrientation, waiveOrientation } =
 	await import('#lib/server/volunteer/orientation-service.js');
@@ -131,11 +139,89 @@ describe('new-member notice', () => {
 
 	it('offers the uncleared member no start before the notice', async () => {
 		const notice = await noticeFor(await getReservationConfig(), { userId: 'u-new' });
-		expect(notice).toEqual({ minutes: 4320, newMember: true });
+		expect(notice).toEqual({ minutes: 4320, newMember: true, tourMinutes: 0 });
 
 		const wednesday = await getAvailableSlots('2026-07-15', { minAdvanceMinutes: notice.minutes });
 		expect(wednesday.some((s) => s.available)).toBe(false);
 		const thursday = await getAvailableSlots('2026-07-16', { minAdvanceMinutes: notice.minutes });
 		expect(thursday.find((s) => s.startTime === '10:00')?.available).toBe(true);
+	});
+});
+
+/** #2568: with an orientation role set, a new member's booking starts with a tour. */
+describe('tour time', () => {
+	beforeEach(() => {
+		vi.mocked(siteConfig.config).mockImplementation(async (key: string) =>
+			key === 'volunteer.orientationRoleId'
+				? 'role-orientation'
+				: key === 'volunteer.orientationMinutes'
+					? 30
+					: ''
+		);
+	});
+	afterEach(() => {
+		vi.mocked(siteConfig.config).mockImplementation(async () => '');
+	});
+
+	it('holds the room from 30 minutes before the requested start, and charges the rest', async () => {
+		const row = await create(own('u-new', FOUR_DAYS));
+		expect(row.startsAt).toEqual(at('2026-07-17', '11:30'));
+		expect(row.endsAt).toEqual(FOUR_DAYS.endsAt);
+		expect(row.tourMinutes).toBe(30);
+		expect(billableHours(row)).toBe(1);
+	});
+
+	it('holds it through the waitlist too', async () => {
+		const row = await createWaitlisted(own('u-new', FOUR_DAYS));
+		expect(row.startsAt).toEqual(at('2026-07-17', '11:30'));
+		expect(row.tourMinutes).toBe(30);
+	});
+
+	it('adds no tour for a cleared member', async () => {
+		await waiveOrientation('u-new', { waivedByUserId: 'u-staff', reason: 'Knows the room' });
+		const row = await create(own('u-new', FOUR_DAYS));
+		expect(row.startsAt).toEqual(FOUR_DAYS.startsAt);
+		expect(row.tourMinutes).toBe(0);
+	});
+
+	it('adds no tour when staff book', async () => {
+		const row = await staffCreate({ ...own('u-new', FOUR_DAYS), staffUserId: 'u-staff' });
+		expect(row.startsAt).toEqual(FOUR_DAYS.startsAt);
+		expect(row.tourMinutes).toBe(0);
+	});
+
+	it('needs the tour inside opening hours', async () => {
+		const opening = { startsAt: at('2026-07-17', '09:00'), endsAt: at('2026-07-17', '10:00') };
+		const result = await validateBooking(opening.startsAt, opening.endsAt, { userId: 'u-new' });
+		expect(result.code).toBe('BEFORE_OPENING');
+
+		const later = { startsAt: at('2026-07-17', '09:30'), endsAt: at('2026-07-17', '10:30') };
+		const row = await create(own('u-new', later));
+		expect(row.startsAt).toEqual(at('2026-07-17', '09:00'));
+	});
+
+	it('refuses a tour that overlaps another booking', async () => {
+		await staffCreate({
+			...own('u-staff', { startsAt: at('2026-07-17', '11:30'), endsAt: at('2026-07-17', '12:00') }),
+			bookerType: 'group',
+			bookerId: 'band-1'
+		});
+		await expect(create(own('u-new', FOUR_DAYS))).rejects.toBeInstanceOf(ReservationConflictError);
+	});
+
+	it('offers no start whose tour slot is taken', async () => {
+		await staffCreate({
+			...own('u-staff', { startsAt: at('2026-07-17', '11:30'), endsAt: at('2026-07-17', '12:00') }),
+			bookerType: 'group',
+			bookerId: 'band-1'
+		});
+		const notice = await noticeFor(await getReservationConfig(), { userId: 'u-new' });
+		expect(notice.tourMinutes).toBe(30);
+		const slots = await getAvailableSlots('2026-07-17', { minAdvanceMinutes: notice.minutes });
+		const index = (t: string) => slots.findIndex((s) => s.startTime === t);
+		expect(isBookableStart(slots, index('12:00'), 2, 1)).toBe(false);
+		expect(isBookableStart(slots, index('12:30'), 2, 1)).toBe(true);
+		expect(isBookableStart(slots, index('09:00'), 2, 1)).toBe(false);
+		expect(isBookableStart(slots, index('12:00'), 2, 0)).toBe(true);
 	});
 });

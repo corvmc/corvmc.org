@@ -26,7 +26,11 @@ vi.mock('#lib/server/reservation/config.js', async (importOriginal) => ({
 
 // 10:00–11:00 is taken. 09:30 and 12:00 are free but have too little room after
 // them to fit the one-hour minimum — a different thing from being booked.
-vi.mock('#lib/server/reservation/conflict-service.js', () => ({
+vi.mock('#lib/server/reservation/conflict-service.js', async (importOriginal) => ({
+	isBookableStart: (
+		await importOriginal<typeof import('#lib/server/reservation/conflict-service.js')>()
+	).isBookableStart,
+	tourSlotsFor: () => 0,
 	getAvailableSlots: vi.fn(async () => [
 		{ startTime: '09:00', available: true },
 		{ startTime: '09:30', available: true },
@@ -38,7 +42,7 @@ vi.mock('#lib/server/reservation/conflict-service.js', () => ({
 	]),
 	getConflictDetails: vi.fn(),
 	getValidationWarnings: vi.fn(),
-	noticeFor: vi.fn(async () => ({ minutes: 60, newMember: false }))
+	noticeFor: vi.fn(async () => ({ minutes: 60, newMember: false, tourMinutes: 0 }))
 }));
 
 const testUser = mockUser({ id: 'user-1', name: 'Test Member', email: 'member@example.com' });

@@ -29,6 +29,16 @@ export interface ReservationCreditResult {
 }
 
 /**
+ * The hours a reservation is charged for: its window less the tour at its
+ * start. Every price and free-hours figure for a stored row reads this, never
+ * the raw window; `billable-hours.spec.ts` enforces it.
+ */
+export function billableHours(r: { startsAt: Date; endsAt: Date; tourMinutes: number }): number {
+	const ms = r.endsAt.getTime() - r.startsAt.getTime() - r.tourMinutes * 60_000;
+	return Math.max(0, ms) / (1000 * 60 * 60);
+}
+
+/**
  * Pure pricing: how many free-hour credits apply to a reservation total, and the
  * resulting cash remainder. Single source of truth shared by display
  * (`getReservationPricing`) and settlement (`commitReservationCredits`) so the
@@ -93,14 +103,14 @@ export function usableFreeHours(wallet: FreeHoursWallet, startsAt: Date): number
  * against the same hours, and the first one paid takes them.
  */
 export function coveredByFreeHours(
-	r: { startsAt: Date; endsAt: Date; bookerType: BookerType },
+	r: { startsAt: Date; endsAt: Date; tourMinutes: number; bookerType: BookerType },
 	wallet: FreeHoursWallet,
 	cfg: ReservationConfig
 ): boolean {
 	const freeHoursBalance = usableFreeHours(wallet, r.startsAt);
 	if (freeHoursBalance <= 0) return false;
 	const { hourlyRateCents } = termsFor(r.bookerType, cfg);
-	const durationHours = (r.endsAt.getTime() - r.startsAt.getTime()) / (1000 * 60 * 60);
+	const durationHours = billableHours(r);
 	return (
 		computeReservationCredit({
 			totalCents: Math.round(durationHours * hourlyRateCents),

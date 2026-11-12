@@ -82,7 +82,8 @@
 	const conflicts = $derived(overlappingReservations(r, data.sameDayReservations));
 
 	// Derived formatting
-	const hours = $derived(calcDurationHours(r.startsAt, r.endsAt));
+	// Charged hours: a new member's tour at the start is held but not billed.
+	const hours = $derived(calcDurationHours(r.startsAt, r.endsAt) - r.tourMinutes / 60);
 	const durationLabel = $derived(
 		hours === 1
 			? m.staff_reservations_id_1_hour_label()
