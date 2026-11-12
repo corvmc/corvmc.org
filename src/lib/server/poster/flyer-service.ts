@@ -28,7 +28,13 @@ export class FlyerEventNotFoundError extends DomainError {
 	}
 }
 
-async function flyerSource(eventId: string): Promise<FlyerSource> {
+// How a generated flyer is told from uploaded art in the poster slot.
+export const FLYER_ALT_PREFIX = 'Flyer for ';
+
+/** The flyer's facts, and the street address the print poster adds. */
+export async function flyerSource(
+	eventId: string
+): Promise<FlyerSource & { address: string | null }> {
 	const [row] = await db
 		.select({
 			title: eventListing.title,
@@ -36,6 +42,10 @@ async function flyerSource(eventId: string): Promise<FlyerSource> {
 			doorsAt: eventListing.doorsAt,
 			venueName: venue.name,
 			location: eventListing.location,
+			address: eventListing.address,
+			venueAddress: venue.address1,
+			venueCity: venue.city,
+			venueState: venue.state,
 			// The sale terms live on `ticket_sale` (#1203).
 			ticketingEnabled: ticketSaleColumns.ticketingEnabled,
 			ticketPrice: ticketSaleColumns.ticketPrice,
@@ -54,7 +64,15 @@ async function flyerSource(eventId: string): Promise<FlyerSource> {
 		.where(eq(eventBand.eventId, eventId))
 		.orderBy(asc(eventBand.billingOrder));
 
-	return { ...row, venue: row.venueName ?? row.location, bill: bill.map((b) => b.name) };
+	const { venueAddress, venueCity, venueState, ...rest } = row;
+	const town = [venueCity, venueState].filter(Boolean).join(', ');
+	const venueLine = [venueAddress, town].filter(Boolean).join(', ');
+	return {
+		...rest,
+		venue: row.venueName ?? row.location,
+		address: row.address ?? (venueLine || null),
+		bill: bill.map((b) => b.name)
+	};
 }
 
 async function publishFlyer(eventId: string, title: string, png: Uint8Array): Promise<void> {
@@ -68,7 +86,7 @@ async function publishFlyer(eventId: string, title: string, png: Uint8Array): Pr
 		key,
 		contentType: 'image/png',
 		byteSize: png.byteLength,
-		altText: `Flyer for ${title}`
+		altText: `${FLYER_ALT_PREFIX}${title}`
 	});
 }
 

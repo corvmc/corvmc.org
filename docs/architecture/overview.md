@@ -30,7 +30,7 @@ server build. There is no separate API server, no queue worker, no VM.
 ```
 
 The bindings (`DB`, `R2_BUCKET`, `KV`, `ASSETS`, and `BROWSER` for Browser Rendering, which only
-the calendar poster uses) are declared in `wrangler.toml` and read from
+the calendar and print posters use) are declared in `wrangler.toml` and read from
 `env` in `cloudflare:workers` (typed by `Cloudflare.Env` in `src/app.d.ts`; kit 3 has no
 `event.platform`). The first thing the server hook does is hand them to the module-level
 singletons:

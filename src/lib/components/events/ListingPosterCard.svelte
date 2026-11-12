@@ -7,6 +7,8 @@
 	import { responseErrorMessage } from '#lib/api.js';
 	import { imageSrc } from '#lib/utils/images.js';
 	import { useTemplateFlyerAsPoster } from '#lib/remote/productions.remote.js';
+	import { printEventPoster } from '#lib/remote/event-poster.remote.js';
+	import Button from '#lib/components/ui/Button.svelte';
 
 	/**
 	 * A listing's poster: upload one, or draw the template flyer as one. Both are
@@ -31,6 +33,25 @@
 		if (!res.ok) throw new Error(await responseErrorMessage(res, 'Upload failed'));
 		toast.success(m.events_listing_poster_card_toast());
 		onchange();
+	}
+
+	let printing = $state(false);
+
+	/** Render the Letter PDF on the server, then hand it to the browser as a download. */
+	async function downloadPrintPoster() {
+		printing = true;
+		try {
+			const { file, filename } = await printEventPoster({ eventId });
+			const a = document.createElement('a');
+			a.href = file;
+			a.download = filename;
+			a.click();
+		} catch (e) {
+			const err = e as { body?: { message?: string } };
+			toast.error(err.body?.message ?? m.events_listing_poster_card_print_failed_toast());
+		} finally {
+			printing = false;
+		}
 	}
 </script>
 
@@ -79,6 +100,12 @@
 						</p>
 					{/snippet}
 				</Action>
+				{#if posterUrl}
+					<!-- The uploaded image above a details footer, as a Letter PDF; nothing is stored. -->
+					<Button variant="ghost" size="sm" disabled={printing} onclick={downloadPrintPoster}>
+						{m.events_listing_poster_card_print_label()}
+					</Button>
+				{/if}
 			{/if}
 		</div>
 	{/if}
