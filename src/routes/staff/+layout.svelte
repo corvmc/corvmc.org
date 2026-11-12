@@ -21,7 +21,6 @@
 		IconClipboardCheck,
 		IconSettings,
 		IconHistory,
-		IconShieldLock,
 		IconCash,
 		IconMail,
 		IconTool,
@@ -129,7 +128,6 @@
 		sponsors: IconBuildingStore,
 		grants: IconContract,
 		settings: IconSettings,
-		access: IconShieldLock,
 		audit: IconHistory
 	};
 
