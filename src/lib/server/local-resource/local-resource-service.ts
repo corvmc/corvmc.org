@@ -170,7 +170,8 @@ export async function listResourcesForStaff(filters: { status?: LocalResourceSta
 }
 
 /** Only a public tip is ever `pending`: staff listings publish as they save. */
-const pendingTip = () => and(eq(localResource.status, 'pending'), isNull(localResource.deletedAt));
+export const pendingTip = () =>
+	and(eq(localResource.status, 'pending'), isNull(localResource.deletedAt));
 
 /** The tips queue (#1566): oldest first, so nothing waits behind newer tips. */
 export async function listTips() {

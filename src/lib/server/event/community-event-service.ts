@@ -153,11 +153,11 @@ export async function listPendingSubmissions(pagination: PaginationInput = {}) {
 	return paginate(dataQ, countQ, pagination);
 }
 
+/** A listing waiting on staff: the review feed's predicate. */
+export const pendingListing = () => eq(eventListing.status, 'pending_review');
+
 export async function countPendingSubmissions(): Promise<number> {
-	const [row] = await db
-		.select({ value: count() })
-		.from(eventListing)
-		.where(eq(eventListing.status, 'pending_review'));
+	const [row] = await db.select({ value: count() }).from(eventListing).where(pendingListing());
 	return row?.value ?? 0;
 }
 

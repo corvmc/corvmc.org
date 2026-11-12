@@ -41,7 +41,9 @@ import {
 	IconBuildingCommunity,
 	IconSpeakerphone,
 	IconAlertTriangle,
-	IconClipboardList
+	IconClipboardList,
+	IconMapPin,
+	IconHourglass
 } from '@tabler/icons-svelte';
 import { entityTypes, type EntityType, type EntitySubtypeKey } from '#lib/config.js';
 import { entityLabels } from '#lib/terms.js';
@@ -150,7 +152,9 @@ export const entityKinds: Record<EntityType, EntityKind> = {
 	help: { icon: IconHelp, shape: 'none' },
 	classified: { icon: IconSpeakerphone, shape: 'none' },
 	incident: { icon: IconAlertTriangle, shape: 'none' },
-	project: { icon: IconClipboardList, shape: 'none' }
+	project: { icon: IconClipboardList, shape: 'none' },
+	local_resource: { icon: IconMapPin, shape: 'none' },
+	hour_log: { icon: IconHourglass, shape: 'none' }
 };
 
 /** Declaration order, for exhaustiveness checks. */

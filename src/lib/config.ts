@@ -2811,7 +2811,9 @@ export const entityTypes = [
 	'help',
 	'classified',
 	'incident',
-	'project'
+	'project',
+	'local_resource',
+	'hour_log'
 ] as const;
 export type EntityType = (typeof entityTypes)[number];
 

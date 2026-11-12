@@ -51,7 +51,6 @@ export type StaffNavKey =
 	| 'outreach'
 	| 'help'
 	| 'local-resources'
-	| 'resource-tips'
 	| 'payments'
 	| 'sponsors'
 	| 'grants'
@@ -76,13 +75,7 @@ export type StaffNavSectionKey =
  * integer, never which rows exist, and rebuilding the array on every poll
  * would churn every `{#each}` for nothing.
  */
-export type StaffNavBadgeKey =
-	| 'inboxUnread'
-	| 'resourceTipsPending'
-	| 'suggestionsAwaiting'
-	| 'volunteerPending'
-	| 'listingsPending'
-	| 'appealsPending';
+export type StaffNavBadgeKey = 'inboxUnread' | 'volunteerPending' | 'reviewWaiting';
 
 export interface StaffNavItem extends NavNode<StaffNavKey> {
 	label: string;
@@ -114,7 +107,14 @@ export const staffNavTop: StaffNavItem[] = [
 	// which is the #1237 bug. The band panel keeps its fallback because a row
 	// there can be hidden by role and the root is the honest answer; no staff
 	// spec asserts that, and none of the eight paths #1237 sampled needed it.
-	{ key: 'dashboard', label: 'Dashboard', href: resolve('staff'), exact: true },
+	// Its badge is everything waiting on a staff decision: the review feed (#2623).
+	{
+		key: 'dashboard',
+		label: 'Dashboard',
+		href: resolve('staff'),
+		exact: true,
+		badgeKey: 'reviewWaiting'
+	},
 	{
 		key: 'inbox',
 		capability: 'inbox.read',
@@ -128,8 +128,7 @@ export const staffNavTop: StaffNavItem[] = [
 		key: 'calendar',
 		capability: 'event.read',
 		label: 'Events',
-		href: resolve('staff/events'),
-		badgeKey: 'listingsPending'
+		href: resolve('staff/events')
 	}
 ];
 
@@ -168,8 +167,7 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'suggestions',
 				capability: 'suggestion.read',
 				label: 'Suggestions',
-				href: resolve('staff/suggestions'),
-				badgeKey: 'suggestionsAwaiting'
+				href: resolve('staff/suggestions')
 			},
 			{
 				key: 'ballots',
@@ -253,18 +251,7 @@ export const staffNavSections: StaffNavSection[] = [
 				key: 'local-resources',
 				capability: 'localResource.manage',
 				label: 'Local Resources',
-				href: resolve('staff/local-resources'),
-				// The count sits on the parent too, so it shows while collapsed.
-				badgeKey: 'resourceTipsPending',
-				children: [
-					{
-						key: 'resource-tips',
-						capability: 'localResource.manage',
-						label: 'Tips',
-						href: resolve('staff/local-resources/tips'),
-						badgeKey: 'resourceTipsPending'
-					}
-				]
+				href: resolve('staff/local-resources')
 			},
 			{
 				key: 'contractors',
@@ -288,8 +275,7 @@ export const staffNavSections: StaffNavSection[] = [
 				alsoFor: ['incident.read'],
 				label: 'Moderation',
 				href: resolve('staff/moderation'),
-				also: [resolve('staff/flags'), resolve('staff/incidents')],
-				badgeKey: 'appealsPending'
+				also: [resolve('staff/flags'), resolve('staff/incidents')]
 			},
 			{
 				key: 'classifieds',

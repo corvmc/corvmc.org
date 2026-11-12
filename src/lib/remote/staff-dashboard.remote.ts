@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
+import { z } from 'zod';
 import { clubToday, type Capability } from '#lib/config.js';
 import {
 	capabilitySet,
@@ -15,7 +16,9 @@ import {
 	listRoomDays,
 	listUpcomingShows
 } from '#lib/server/user/staff-dashboard-service.js';
-import { countStaffQueues } from '#lib/server/user/staff-queue-counts.js';
+import { countReviewFeed, listReviewFeed } from '#lib/server/review/review-registry.js';
+import { reviewKinds } from '#lib/types/review.js';
+import { FEED_MAX, feedLimit } from '#lib/types/activity.js';
 import { addIsoDays } from '#lib/utils/deadline.js';
 
 /** A glance at this week's short shifts; the two-week view is the Schedule. */
@@ -35,6 +38,12 @@ async function deadlinesFor(holds: (c: Capability) => boolean) {
 	return rows.map((d) => ({ ...d, overdue: d.on < today }));
 }
 
+/** The review feed's filter and how many rows the page has asked for (Show more raises it). */
+const dashboardArgs = z.object({
+	kind: z.enum(reviewKinds).optional(),
+	limit: z.number().int().min(1).max(FEED_MAX).optional()
+});
+
 const capped = <T>(rows: T[] | null) =>
 	rows ? { rows: rows.slice(0, CAP), total: rows.length } : null;
 
@@ -46,7 +55,7 @@ const capped = <T>(rows: T[] | null) =>
  * capability its own page guards on. A section the viewer cannot read is
  * `null`, not empty, so the page can tell "nothing today" from "not yours".
  */
-export const getStaffDashboard = query(async () => {
+export const getStaffDashboard = query(dashboardArgs, async ({ kind, limit }) => {
 	const me = requireUser();
 	const [positions, seat] = await Promise.all([
 		positionsFor(me.id),
@@ -56,21 +65,24 @@ export const getStaffDashboard = query(async () => {
 	if (capabilities.length === 0) error(403, 'Not permitted');
 	const holds = (c: Capability) => capabilities.includes(c);
 
-	const [room, shows, queues, lowStock, shortShifts, deadlines, members] = await Promise.all([
-		holds('reservation.read') ? listRoomDays() : null,
-		holds('event.read') ? listUpcomingShows() : null,
-		countStaffQueues(),
-		holds('inventory.report') ? listLowStock() : null,
-		holds('volunteer.read') ? listShortStaffedShifts(SHIFT_HORIZON_DAYS) : null,
-		deadlinesFor(holds),
-		holds('user.list') ? listMemberSummary() : null
-	]);
+	const [room, shows, review, reviewCounts, lowStock, shortShifts, deadlines, members] =
+		await Promise.all([
+			holds('reservation.read') ? listRoomDays() : null,
+			holds('event.read') ? listUpcomingShows() : null,
+			// Each kind is read only for a viewer who may decide it.
+			listReviewFeed(capabilities, { kind, limit: feedLimit(limit) }),
+			countReviewFeed(capabilities),
+			holds('inventory.report') ? listLowStock() : null,
+			holds('volunteer.read') ? listShortStaffedShifts(SHIFT_HORIZON_DAYS) : null,
+			deadlinesFor(holds),
+			holds('user.list') ? listMemberSummary() : null
+		]);
 
 	return {
 		capabilities,
 		room,
 		shows,
-		queues,
+		review: { ...review, counts: reviewCounts },
 		lowStock: capped(lowStock),
 		shortShifts: capped(shortShifts),
 		deadlines: capped(deadlines),

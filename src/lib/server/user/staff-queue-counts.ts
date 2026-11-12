@@ -1,49 +1,20 @@
 import { getUnresolvedCount } from '#lib/server/inbox/thread-service.js';
 import { countVolunteerWorkWaiting } from '#lib/server/volunteer/volunteer-signup-service.js';
-import { countPendingSubmissions } from '#lib/server/event/community-event-service.js';
-import { countPendingTips } from '#lib/server/local-resource/local-resource-service.js';
-import { countPendingAppeals } from '#lib/server/moderation/appeal-service.js';
-import {
-	countAwaitingModeration,
-	countAwaitingResponse,
-	countPendingEdits
-} from '#lib/server/suggestion/suggestion-service.js';
+import { countReviewFeed } from '#lib/server/review/review-registry.js';
 
 /**
- * The staff panel's queue counts: the sidebar badges and the dashboard's Pending
- * Queues read this one function, so the number and the rows cannot disagree.
- * Each count degrades to 0 on its own, since a badge is never worth a failed page.
+ * The staff sidebar's badges. Everything waiting on a staff decision is one
+ * number, the review feed's (#2623), which the dashboard's filter counts read
+ * too. Each count degrades to 0 on its own, since a badge is never worth a
+ * failed page.
  */
-export async function countStaffQueues() {
-	const [
-		inboxUnread,
-		volunteerPending,
-		listingsPending,
-		suggestionsAwaiting,
-		appealsPending,
-		resourceTipsPending
-	] = await Promise.all([
+export async function countStaffQueues(capabilities: readonly string[]) {
+	const [inboxUnread, volunteerPending, review] = await Promise.all([
 		getUnresolvedCount().catch(() => 0),
-		// Everything waiting on a coordinator, not just hour logs
-		// (docs/reports/volunteer-workflow-findings.md#d1).
 		countVolunteerWorkWaiting().catch(() => 0),
-		countPendingSubmissions().catch(() => 0),
-		// Moderation leads: everything in it is invisible to members while it waits.
-		Promise.all([countAwaitingModeration(), countAwaitingResponse(), countPendingEdits()])
-			.then(([m, r, e]) => m + r + e)
-			.catch(() => 0),
-		// Appeals, not reports: an appeal is someone waiting on an answer they were promised.
-		countPendingAppeals().catch(() => 0),
-		countPendingTips().catch(() => 0)
+		countReviewFeed(capabilities).catch(() => ({ total: 0 }))
 	]);
-	return {
-		inboxUnread,
-		volunteerPending,
-		listingsPending,
-		suggestionsAwaiting,
-		appealsPending,
-		resourceTipsPending
-	};
+	return { inboxUnread, volunteerPending, reviewWaiting: review.total };
 }
 
 export type StaffQueueCounts = Awaited<ReturnType<typeof countStaffQueues>>;
