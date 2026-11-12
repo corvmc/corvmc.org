@@ -38,7 +38,6 @@ import {
 	listRequests as listArtifactRequests,
 	requestableActs as listRequestableActs
 } from '#lib/server/production/artifact-request-service.js';
-import { listWorkOrders as listOpenWorkOrders } from '#lib/server/volunteer/work-order-service.js';
 import {
 	bandRefColumns,
 	memberRefColumns,
@@ -1233,7 +1232,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 	const [
 		detail,
 		shifts,
-		advance,
 		volunteerRoles,
 		dutyLists,
 		riders,
@@ -1248,11 +1246,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 	] = await Promise.all([
 		getStaffEventDetail(id),
 		getShifts({ eventId: id }),
-		// `listShifts` filters `starts_at IS NOT NULL`, so the advance half of an
-		// applied duty list — a `dueOffsetMinutes` item, which is where the
-		// booking work lives — never reached this page. The card said a show was
-		// unstaffed while carrying six open tasks.
-		listOpenWorkOrders({ eventId: id }),
 		getVolunteerRoles(),
 		listApplicableDutyLists(),
 		// What each act on the bill says it needs. The advance checklist has always
@@ -1292,8 +1285,6 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		budget,
 		detail,
 		shifts,
-		// The deliverables have their own card; the advance card keeps the rest.
-		advance: advance.filter((w) => !w.groupId && !w.doneWhen),
 		volunteerRoles,
 		dutyLists,
 		riders,

@@ -45,6 +45,15 @@ import { listContractors } from '#lib/server/contractor/contractor-service.js';
 import { listJobs } from '#lib/server/contractor/contractor-job-service.js';
 import { listTaskCatalogue } from '#lib/server/volunteer/task-catalogue.js';
 import { createWorkOrder } from '#lib/server/volunteer/work-order-service.js';
+import { requireListingReader } from '#lib/server/event/listing-guard.js';
+import {
+	newTaskPrefill,
+	relatedTaskWhere,
+	relatedTasks,
+	type RelatedSubject
+} from '#lib/server/task/related-tasks.js';
+import { relatedSubjectTypes } from '#lib/utils/related-tasks.js';
+import { sql } from 'drizzle-orm';
 
 /**
  * A project's task list: its work orders as a checklist, with sections.
@@ -105,10 +114,16 @@ function contractorMarks(jobs: TaskJob[]) {
  * read by view rather than by task id, which would bind one parameter per row.
  * Done work awaiting an invoice rides along so its chip can count it.
  */
+const subject = z.object({ type: z.enum(relatedSubjectTypes), id: z.string().min(1) });
+
+/** Nothing matches: `?about=` naming a type that resolves to no tasks. */
+const NONE = sql`0 = 1`;
+
 export const getTasksPage = query(
 	z.object({
 		volunteerRoleId: z.string().optional(),
-		includeDone: z.boolean().optional()
+		includeDone: z.boolean().optional(),
+		about: subject.optional()
 	}),
 	async (f) => {
 		await requireCapability('project.read');
@@ -122,7 +137,8 @@ export const getTasksPage = query(
 			listTaskCatalogue({
 				volunteerRoleId: f.volunteerRoleId || undefined,
 				includeDone: f.includeDone,
-				withAwaitingInvoice: contractorAccess
+				withAwaitingInvoice: contractorAccess,
+				...(f.about ? { where: relatedTaskWhere(f.about) ?? NONE } : {})
 			}),
 			listProjects({ archived: false }),
 			listCommittees(),
@@ -137,6 +153,52 @@ export const getTasksPage = query(
 			committees: committees.map((c) => ({ id: c.id, name: c.name })),
 			templates: templates.filter((t) => t.itemCount > 0).map((t) => ({ id: t.id, name: t.name }))
 		};
+	}
+);
+
+/** The record's own read guard; a type with no relations still needs a session. */
+async function requireSubjectReader(s: RelatedSubject) {
+	switch (s.type) {
+		case 'event':
+			return requireListingReader(s.id);
+		case 'project':
+			return requireCapability('project.read');
+		case 'group':
+			return requireCapability('group.read');
+		case 'role':
+		case 'recurring_work':
+			return requireCapability('volunteer.read');
+		default:
+			return requireUser();
+	}
+}
+
+/**
+ * `RelatedTasks` (#2630): the record's read guard first, then the Tasks
+ * table's own (`project.read`), which sees every task. A reader of the record
+ * without it gets null, so the card is left off rather than failing the page.
+ */
+export const getRelatedTasks = query(
+	subject.extend({ includeDone: z.boolean().optional() }),
+	async ({ includeDone, ...s }) => {
+		await requireSubjectReader(s);
+		if (!(await can('project.read'))) return null;
+		const [groups, prefill, contractorAccess] = await Promise.all([
+			relatedTasks(s, { includeDone }),
+			newTaskPrefill(s),
+			can('contractor.read')
+		]);
+		const workOrderIds = groups.flatMap((g) => g.tasks.map((t) => t.id));
+		const jobs =
+			contractorAccess && workOrderIds.length > 0
+				? (
+						await Promise.all([
+							listJobs({ workOrderIds, view: 'open' }),
+							listJobs({ workOrderIds, view: 'awaiting-invoice' })
+						])
+					).flat()
+				: [];
+		return { groups, contractors: contractorMarks(jobs), prefill };
 	}
 );
 
@@ -261,23 +323,38 @@ export const createCatalogueTaskForm = form(
 	z.object({
 		title: z.string().trim().min(1, 'Give it a title').max(VOLUNTEER_SHIFT_TITLE_MAX),
 		projectId: z.union([z.literal(''), projectId]).optional(),
-		dueAt: z.string().optional()
+		dueAt: z.string().optional(),
+		// What `RelatedTasks` fills in from the record it sits on (#2630).
+		eventId: optionalId,
+		groupId: optionalId,
+		volunteerRoleId: optionalId
 	}),
 	async (data) => {
 		const dueAt = data.dueAt ? buildDateInTz(data.dueAt, '12:00', DEFAULT_TIMEZONE) : null;
+		const anchors = {
+			eventId: data.eventId || null,
+			groupId: data.groupId || null,
+			volunteerRoleId: data.volunteerRoleId || null
+		};
 		if (data.projectId) {
 			const { user } = await guardProject(data.projectId);
 			const row = await createTask({
 				projectId: data.projectId,
 				title: data.title,
-				createdByUserId: user.id
+				createdByUserId: user.id,
+				...anchors
 			});
 			if (dueAt) await rescheduleTask(data.projectId, row.id, { dueAt });
 			await refresh(data.projectId);
 			return { id: row.id };
 		}
 		const staff = await requireCapability('volunteer.manageShifts');
-		const row = await createWorkOrder({ title: data.title, dueAt, createdByUserId: staff.id });
+		const row = await createWorkOrder({
+			title: data.title,
+			dueAt,
+			createdByUserId: staff.id,
+			...anchors
+		});
 		return { id: row.id };
 	}
 );

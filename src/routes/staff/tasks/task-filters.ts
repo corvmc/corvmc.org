@@ -1,33 +1,21 @@
-import { isOverdue } from '#lib/utils/work-order-due.js';
 import { matchesProject, parseProjectFilter } from '../volunteer/schedule/project-filter';
+import {
+	CHIPS,
+	whenOf,
+	type Chip,
+	type ContractorMark,
+	type TaskFacts
+} from '#lib/utils/task-facts.js';
+
+import { relatedSubjectTypes, type RelatedSubjectType } from '#lib/utils/related-tasks.js';
+
+export { CHIPS, byWhen, matchesChip, whenOf } from '#lib/utils/task-facts.js';
+export type { Chip, ContractorMark, TaskFacts } from '#lib/utils/task-facts.js';
 
 /**
  * The Tasks table's filters, chips and groups (#2625), all read from the URL so
  * a filtered view can be linked. Client-safe: no server imports.
  */
-
-export interface TaskFacts {
-	id: string;
-	volunteerRoleId: string | null;
-	projectId: string | null;
-	projectName: string | null;
-	dueAt: Date | null;
-	shiftAt: Date | null;
-	shifts: number;
-	assignees: number;
-	maintenanceScheduleId: string | null;
-	resolvedAt: Date | null;
-	createdAt: Date;
-}
-
-export interface ContractorMark {
-	name: string;
-	late: boolean;
-	awaitingInvoice: boolean;
-}
-
-export const CHIPS = ['unassigned', 'overdue', 'untimed', 'invoice'] as const;
-export type Chip = (typeof CHIPS)[number];
 
 export const KINDS = ['timed', 'untimed', 'recurring', 'contractor'] as const;
 export type Kind = (typeof KINDS)[number];
@@ -38,6 +26,12 @@ export type Window = (typeof WINDOWS)[number] | 'all';
 
 export type Grouping = 'due' | 'project';
 
+/** A record the table is narrowed to (#2630): `?about=<type>:<id>`. */
+export interface About {
+	type: RelatedSubjectType;
+	id: string;
+}
+
 export interface TaskQuery {
 	group: Grouping;
 	days: Window;
@@ -47,10 +41,21 @@ export interface TaskQuery {
 	kind: Kind | '';
 	chip: Chip | '';
 	done: boolean;
+	about: About | null;
 }
 
 const pick = <T extends string>(list: readonly T[], raw: string | null): T | '' =>
 	raw && (list as readonly string[]).includes(raw) ? (raw as T) : '';
+
+/** `type:id` with a known type and an id; anything else is no filter. */
+export function parseAbout(raw: string | null): About | null {
+	const at = raw?.indexOf(':') ?? -1;
+	if (!raw || at < 1 || at === raw.length - 1) return null;
+	const type = pick(relatedSubjectTypes, raw.slice(0, at));
+	return type ? { type, id: raw.slice(at + 1) } : null;
+}
+
+export const aboutParam = (a: About) => `${a.type}:${a.id}`;
 
 export function parseTaskQuery(params: Pick<URLSearchParams, 'get'>): TaskQuery {
 	const days = Number(params.get('days'));
@@ -62,7 +67,8 @@ export function parseTaskQuery(params: Pick<URLSearchParams, 'get'>): TaskQuery 
 		role: params.get('role') ?? '',
 		kind: pick(KINDS, params.get('kind')),
 		chip: pick(CHIPS, params.get('chip')),
-		done: params.get('done') === '1'
+		done: params.get('done') === '1',
+		about: parseAbout(params.get('about'))
 	};
 }
 
@@ -76,27 +82,8 @@ export function taskQuerySearch(q: TaskQuery): string {
 	if (q.kind) pairs.push(['kind', q.kind]);
 	if (q.chip) pairs.push(['chip', q.chip]);
 	if (q.done) pairs.push(['done', '1']);
+	if (q.about) pairs.push(['about', aboutParam(q.about)]);
 	return pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-}
-
-/** The date a task sits under: its shift's, else its deadline. */
-export const whenOf = (t: TaskFacts): Date | null => t.shiftAt ?? t.dueAt;
-
-const isOpen = (t: TaskFacts) => t.resolvedAt === null;
-
-/** What a chip counts. Only open work, except the invoice still owed on done work. */
-export function matchesChip(chip: Chip, t: TaskFacts, marks: ContractorMark[], now: Date) {
-	const nobody = t.assignees === 0 && marks.length === 0 && t.shifts === 0;
-	switch (chip) {
-		case 'unassigned':
-			return isOpen(t) && nobody;
-		case 'overdue':
-			return isOpen(t) && isOverdue(t, now);
-		case 'untimed':
-			return isOpen(t) && nobody && t.volunteerRoleId !== null;
-		case 'invoice':
-			return marks.some((m) => m.awaitingInvoice);
-	}
 }
 
 export function matchesKind(kind: Kind | '', t: TaskFacts, marks: ContractorMark[]) {
@@ -123,14 +110,6 @@ export function matchesWindow(days: Window, t: TaskFacts, now: Date) {
 export function matchesTaskProject(filter: string, t: TaskFacts) {
 	if (filter === '' || filter === 'none') return matchesProject(t, filter);
 	return t.projectId === filter;
-}
-
-/** Soonest first, undated last, then oldest created. */
-export function byWhen(a: TaskFacts, b: TaskFacts): number {
-	const wa = whenOf(a)?.getTime() ?? Infinity;
-	const wb = whenOf(b)?.getTime() ?? Infinity;
-	if (wa !== wb) return wa < wb ? -1 : 1;
-	return a.createdAt.getTime() - b.createdAt.getTime();
 }
 
 /** Tasks in no project first, then projects by name; each group keeps the order given. */

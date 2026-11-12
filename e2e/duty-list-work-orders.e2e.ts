@@ -5,7 +5,6 @@ import {
 	SEED_VOL_ADVANCE_ID,
 	SEED_VOL_ADVANCE_TASK_DONE,
 	SEED_VOL_ADVANCE_TASK_OPEN,
-	SEED_VOL_ADVANCE_ROLE_NAME,
 	SEED_VOL_EVENT_ID
 } from './fixtures/seed-volunteering';
 
@@ -51,8 +50,9 @@ test.describe('duty lists — the unscheduled half', () => {
 		await page.goto(`/staff/events/${SEED_VOL_EVENT_ID}/production?tab=advance`);
 
 		await expect(page.locator('[role="tabpanel"][aria-labelledby="tab-advance"]')).toBeVisible();
+		// The show's related tasks (#2630) list it beside the shifts card.
 		await expect(
-			page.getByRole('link', { name: SEED_VOL_ADVANCE_ROLE_NAME }).first()
+			page.locator(`[data-testid="related-tasks"] a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`)
 		).toBeVisible();
 	});
 

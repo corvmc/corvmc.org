@@ -452,6 +452,9 @@ export const workOrder = sqliteTable(
 			),
 		// The orientation cascade: "which live work orders staff this booking".
 		index('work_order_reservation_idx').on(t.reservationId),
+		// A record's related tasks, done ones included (#2630).
+		index('work_order_group_idx').on(t.groupId),
+		index('work_order_schedule_idx').on(t.maintenanceScheduleId),
 		// A committee's Open items queue.
 		index('work_order_group_open_idx')
 			.on(t.groupId, t.dueAt)

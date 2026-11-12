@@ -873,6 +873,9 @@ export async function createWorkOrder(data: {
 	/** Places for a shift opened on it later (`pendingCapacity`). */
 	capacity?: number;
 	createdByUserId: string;
+	eventId?: string | null;
+	/** The committee answerable for it. */
+	groupId?: string | null;
 }): Promise<Task> {
 	const roleId = data.volunteerRoleId || null;
 	const title = validateTitle(data.title);
@@ -886,6 +889,8 @@ export async function createWorkOrder(data: {
 			title,
 			assetId: data.assetId || null,
 			projectId: data.projectId || null,
+			eventId: data.eventId || null,
+			groupId: data.groupId || null,
 			sectionId: data.projectId ? data.sectionId || null : null,
 			sortOrder: data.sortOrder ?? 0,
 			dueAt: data.dueAt ?? null,

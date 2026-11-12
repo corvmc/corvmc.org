@@ -187,6 +187,10 @@ export async function createTask(data: {
 	title: string;
 	sectionId?: string | null;
 	createdByUserId: string;
+	/** The record it was created from, when that is not only the project (#2630). */
+	eventId?: string | null;
+	groupId?: string | null;
+	volunteerRoleId?: string | null;
 }): Promise<Task> {
 	const sectionId = data.sectionId || null;
 	if (sectionId) await requireSection(data.projectId, sectionId);
@@ -197,7 +201,10 @@ export async function createTask(data: {
 		projectId: data.projectId,
 		sectionId,
 		sortOrder: order,
-		createdByUserId: data.createdByUserId
+		createdByUserId: data.createdByUserId,
+		eventId: data.eventId,
+		groupId: data.groupId,
+		volunteerRoleId: data.volunteerRoleId
 	});
 	await recordAuditEntry({
 		action: 'work_order.created',

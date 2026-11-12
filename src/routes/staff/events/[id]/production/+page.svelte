@@ -42,6 +42,7 @@
 		openHostShift
 	} from '#lib/remote/productions.remote.js';
 	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import RelatedTasks from '#lib/components/tasks/RelatedTasks.svelte';
 	import ProductionStatusAction from './ProductionStatusAction.svelte';
 	import { isTerminalProduction } from '#lib/production/status.js';
 	import RunOfShowPanel from './RunOfShowPanel.svelte';
@@ -81,11 +82,6 @@
 	const shifts = $derived(loaded.shifts);
 	const volunteerRoles = $derived(loaded.volunteerRoles);
 	const dutyLists = $derived(loaded.dutyLists);
-	// Work orders with no window — the advance half of an applied duty list. They
-	// are a separate list rather than rows in the table below because they have no
-	// time to sort by and no confirmed/capacity story worth printing: what a
-	// producer wants from them is what is still open and by when.
-	const advance = $derived(loaded.advance);
 	const riders = $derived(loaded.riders);
 	const productionRecord = $derived(loaded.production);
 	const productionLocked = $derived(
@@ -615,6 +611,8 @@
 			and the second reading is how a calendar of events reaches production with
 			nothing booked. CMC does not staff a show it isn't producing.
 		-->
+			<RelatedTasks subject={{ type: 'event', id: evt.id }} />
+
 			<InfoCard
 				title={m.staff_events_id_production_volunteer_shifts_title()}
 				testid="volunteer-shifts"
@@ -690,36 +688,12 @@
 					</div>
 				{/snippet}
 
-				{#if advance.length > 0}
-					<div class="mb-4">
-						<h3 class="mb-2 text-sm font-semibold">
-							{m.staff_events_id_production_advance_title()}
-						</h3>
-						<ul class="flex flex-col gap-1 text-sm">
-							{#each advance as order (order.id)}
-								<li class="flex flex-wrap items-baseline justify-between gap-2">
-									<a href={resolve(`staff/tasks/${order.id}`)} class="link font-medium">
-										{order.roleName}
-									</a>
-									<span class="text-subtle whitespace-nowrap">
-										{#if order.dueAt}
-											{m.staff_due_2_text({ formatDateShort: formatDateShort(order.dueAt) })}
-										{:else}
-											{m.staff_no_deadline_text()}
-										{/if}
-									</span>
-								</li>
-							{/each}
-						</ul>
-					</div>
-				{/if}
-
-				{#if shifts.length === 0 && advance.length === 0}
+				{#if shifts.length === 0}
 					<EmptyState
 						title={m.staff_events_id_production_no_volunteer_shifts_title()}
 						description={m.staff_events_id_production_nobody_scheduled_work_show_yet_body()}
 					/>
-				{:else if shifts.length > 0}
+				{:else}
 					<Table>
 						{#snippet head()}
 							<th>{m.staff_role_label()}</th>

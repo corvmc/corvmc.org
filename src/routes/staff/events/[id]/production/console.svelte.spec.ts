@@ -74,6 +74,9 @@ vi.mock('#lib/remote/external-acts.remote.js', () =>
 	stubs('listActInDirectory searchAskableListings')
 );
 vi.mock('#lib/remote/deliverables.remote.js', () => stubs('reassignDeliverableForm'));
+vi.mock('#lib/remote/tasks.remote.js', () =>
+	stubs('createCatalogueTaskForm getRelatedTasks', { getRelatedTasks: remote(() => null) })
+);
 vi.mock('$app/state', async (original) => ({
 	...(await original<Record<string, unknown>>()),
 	page: {
@@ -113,7 +116,6 @@ function loaded(production: unknown) {
 			tickets: []
 		},
 		shifts: [],
-		advance: [],
 		volunteerRoles: [],
 		dutyLists: [],
 		riders: [],
