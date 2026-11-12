@@ -8,6 +8,7 @@ import {
 	type ProductKey
 } from '#lib/server/finance/product-config-service.js';
 import {
+	config,
 	getConfigsByPrefix,
 	updateSiteConfigs,
 	updateSiteConfig
@@ -109,9 +110,14 @@ export const getVolunteerValueSettings = query(async () => {
 /** The orientation shift a first booking raises: role, timing and checklist. */
 export const getOrientationSettings = query(async () => {
 	await requireCapability('settings.read');
-	const [setting, roles] = await Promise.all([getOrientationSetting(), listVolunteerRoles()]);
+	const [setting, roles, firstVisitNotes] = await Promise.all([
+		getOrientationSetting(),
+		listVolunteerRoles(),
+		config('volunteer.firstVisitNotes')
+	]);
 	return {
 		...setting,
+		firstVisitNotes: String(firstVisitNotes),
 		roles: roles.filter((r) => r.isActive).map((r) => ({ id: r.id, name: r.name }))
 	};
 });
@@ -364,7 +370,8 @@ const orientationSchema = z.object({
 	roleId: z.string().max(100).optional(),
 	minutes: z.string().regex(/^\d+$/, 'Whole minutes, digits only'),
 	leadMinutes: z.string().regex(/^\d+$/, 'Whole minutes, digits only'),
-	tasks: z.string().max(2000).optional()
+	tasks: z.string().max(2000).optional(),
+	firstVisitNotes: z.string().max(2000).optional()
 });
 
 export const updateOrientationSettings = form(orientationSchema, async (raw) => {
@@ -382,7 +389,8 @@ export const updateOrientationSettings = form(orientationSchema, async (raw) => 
 		{ key: 'volunteer.orientationRoleId', value: data.roleId?.trim() ?? '' },
 		{ key: 'volunteer.orientationMinutes', value: minutes },
 		{ key: 'volunteer.orientationLeadMinutes', value: leadMinutes },
-		{ key: 'volunteer.orientationTasks', value: tasks.join('\n') }
+		{ key: 'volunteer.orientationTasks', value: tasks.join('\n') },
+		{ key: 'volunteer.firstVisitNotes', value: data.firstVisitNotes?.trim() ?? '' }
 	]);
 
 	void getStaffSettingsPage().refresh();

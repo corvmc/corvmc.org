@@ -2834,6 +2834,8 @@
 	"staff_settings_features_label": "Features",
 	"staff_settings_first_booking_notice_minutes_body": "For members without the Practice space clearance. 4320 is 3 days.",
 	"staff_settings_first_booking_notice_minutes_label": "First booking notice (minutes)",
+	"staff_settings_first_visit_notes_body": "Parking, house rules and anything else for the first-visit email, sent the day before a member's first reservation. Plain text.",
+	"staff_settings_first_visit_notes_label": "First-visit notes",
 	"staff_settings_free_hours_month_title": "Free hours / month",
 	"staff_settings_hourly_rate_label": "Hourly rate",
 	"staff_settings_hourly_value_cents_label": "Hourly value (cents)",

@@ -27,6 +27,13 @@ export async function seedPracticeSpaceClearance(volunteerRoles: { id: string; n
 	if (role) {
 		await env.KV.put('site-config:volunteer.orientationRoleId', JSON.stringify(role.id));
 	}
+	// Local sample text for the first-visit email; production staff write their own.
+	await env.KV.put(
+		'site-config:volunteer.firstVisitNotes',
+		JSON.stringify(
+			'Sample notes, set by the local seed.\nPark on the street out front.\nLeave the room as you found it: gear back where it was, lights off.'
+		)
+	);
 
 	const [{ n }] = await db.all<{ n: number }>(
 		sql`select count(*) as n from member_certification where certification_id = ${PRACTICE_SPACE_CLEARANCE_ID}`

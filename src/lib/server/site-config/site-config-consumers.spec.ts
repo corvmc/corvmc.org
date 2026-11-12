@@ -39,6 +39,7 @@ const READERS: Record<string, string> = {
 	'volunteer.orientationMinutes': 'src/lib/server/volunteer/orientation-service.ts',
 	'volunteer.orientationLeadMinutes': 'src/lib/server/volunteer/orientation-service.ts',
 	'volunteer.orientationTasks': 'src/lib/server/volunteer/orientation-service.ts',
+	'volunteer.firstVisitNotes': 'src/lib/server/reminders/registry.ts',
 
 	'venue.consoleChannels': 'src/lib/remote/rider.remote.ts',
 

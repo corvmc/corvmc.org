@@ -1623,6 +1623,86 @@ describe('committee show work due (#1709)', () => {
 	});
 });
 
+describe('first visit (#2569)', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const visit = {
+		reservationId: 'res-1',
+		userId: 'user-1',
+		userEmail: 'nia@test.com',
+		userName: 'Nia',
+		date: 'Tuesday, July 14',
+		startTime: '6:00 PM',
+		endTime: '7:00 PM',
+		tourTime: '5:50 PM',
+		address: '6775 SW Philomath Blvd, Corvallis',
+		notes: 'Park in the back lot.\nNo food in the room.'
+	};
+	const sent = () => mockDispatch.mock.calls.map(([p]) => p).find((p) => p.type === 'first_visit');
+	const copy = (email: { paragraphs?: { text: string }[] }) =>
+		(email.paragraphs ?? []).map((p) => p.text).join('\n');
+
+	it('tells the member when to arrive, where, and carries the staff notes as plain text', async () => {
+		await emit('reservation.first_visit_due', visit);
+		const params = sent();
+		expect(params.userId).toBe('user-1');
+		expect(params.href).toBe('/member/reservations');
+		expect(params.email.subject).toContain(visit.date);
+		expect(copy(params.email)).toContain('5:50 PM');
+		expect(copy(params.email)).toContain(visit.address);
+		expect(params.email.body_plain).toBe(visit.notes);
+		expect(detailText(params.email)).toContain('5:50 PM');
+	});
+
+	it('leaves out the tour and the notes when there are none', async () => {
+		await emit('reservation.first_visit_due', { ...visit, tourTime: null, notes: '' });
+		const params = sent();
+		expect(params.email.body_plain).toBeUndefined();
+		expect(detailLabels(params.email)).toHaveLength(2);
+	});
+});
+
+describe('unclaimed orientation (#2567)', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const item = {
+		workOrderId: 'wo-1',
+		memberName: 'Nia',
+		startsAt: '2026-07-15T00:50:00.000Z',
+		endsAt: '2026-07-15T01:20:00.000Z'
+	};
+	const recipient = { userId: 'staff-1', userName: 'Ada', userEmail: 'ada@test.com' };
+	const calls = () =>
+		mockDispatch.mock.calls.map(([p]) => p).filter((p) => p.type === 'orientation_unclaimed');
+
+	it('names the member and links to the shift', async () => {
+		await emit('volunteer.orientation_unclaimed', { recipient, items: [item] });
+		const [params] = calls();
+		expect(params.userId).toBe('staff-1');
+		expect(params.title).toContain('Nia');
+		expect(params.href).toBe('/staff/volunteer/shifts/wo-1');
+		expect(params.email.details).toHaveLength(1);
+	});
+
+	it('sends several as one mail, soonest first, linking to the short-staffed list', async () => {
+		await emit('volunteer.orientation_unclaimed', {
+			recipient,
+			items: [{ ...item, workOrderId: 'wo-2', startsAt: '2026-07-15T03:00:00.000Z' }, item]
+		});
+		const sent = calls();
+		expect(sent).toHaveLength(1);
+		expect(sent[0].data).toEqual({ workOrderIds: ['wo-1', 'wo-2'] });
+		expect(sent[0].href).toBe('/staff/volunteer/schedule?needs=short');
+	});
+
+	it('lets a failed dispatch throw, so the drain leaves the items owed', async () => {
+		mockDispatch.mockRejectedValueOnce(new Error('down'));
+		await expect(
+			emit('volunteer.orientation_unclaimed', { recipient, items: [item] })
+		).rejects.toThrow('down');
+	});
+});
+
 describe('group application submitted (#1726)', () => {
 	beforeEach(() => registerAllNotificationListeners());
 

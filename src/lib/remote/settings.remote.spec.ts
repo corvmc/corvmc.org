@@ -48,6 +48,7 @@ type ConfigWrite = { key: string; value: unknown };
 const updateSiteConfigs = vi.fn(async (_writes: ConfigWrite[]) => undefined);
 const updateSiteConfig = vi.fn(async () => undefined);
 vi.mock('#lib/server/site-config/site-config-service.js', () => ({
+	config: async () => '',
 	getConfigsByPrefix: (...args: unknown[]) => getConfigsByPrefix(...(args as [string])),
 	updateSiteConfigs: (...args: unknown[]) => updateSiteConfigs(...(args as [ConfigWrite[]])),
 	updateSiteConfig: (...args: unknown[]) => updateSiteConfig(...(args as []))
@@ -289,12 +290,17 @@ describe('updateOrientationSettings', () => {
 			roleId: 'role-1',
 			minutes: '30',
 			leadMinutes: '10',
-			tasks: '  Meet them at the door \n\nDoor code\n'
+			tasks: '  Meet them at the door \n\nDoor code\n',
+			firstVisitNotes: '  Park on the street.\nNo food in the room.\n'
 		});
 		expect(updateSiteConfigs).toHaveBeenCalledWith(
 			expect.arrayContaining([
 				{ key: 'volunteer.orientationLeadMinutes', value: 10 },
-				{ key: 'volunteer.orientationTasks', value: 'Meet them at the door\nDoor code' }
+				{ key: 'volunteer.orientationTasks', value: 'Meet them at the door\nDoor code' },
+				{
+					key: 'volunteer.firstVisitNotes',
+					value: 'Park on the street.\nNo food in the room.'
+				}
 			])
 		);
 	});

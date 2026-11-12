@@ -1567,6 +1567,21 @@ from April's.
 > waived orientation. Staff switch the shift on by picking a role under Settings → Orientation
 > on `/staff/settings`; `pnpm db:seed` sets it locally.
 
+> **Since #2567 and #2569** two reminders in `reminders/registry.ts` cover the day before, both
+> read from `volunteer/orientation-reminders.ts`:
+>
+> - `orientation_unclaimed` — a live orientation shift starting within 24 hours with no claimed,
+>   confirmed or completed sign-up. A digest to every holder of `volunteer.manageShifts`, in-app
+>   and email, linking to the shift (or to the short-staffed schedule for several). Keyed by
+>   shift and start, so a moved shift is owed the alert again.
+> - `first_visit` — a member's own confirmed booking starting within 24 hours while they hold
+>   no Practice space clearance. It says when to arrive (the orientation shift's start), the
+>   address (`org.addressStreet`, `org.addressCity`), that the door code arrives separately and
+>   opens at the reservation's start, and staff's plain-text notes
+>   (`volunteer.firstVisitNotes`, Settings → Orientation; empty leaves them out). It replaces
+>   `reservation_reminder` for that booking: the reservation reminder skips uncleared members'
+>   own bookings and any booking already sent `first_visit`.
+
 > **Since #2034** orientation is a **setting**, not a list. `volunteer.orientationRoleId` and
 > `volunteer.orientationMinutes` are set from Settings → Orientation, and an empty role means
 > off. `raiseOrientationShift` inserts one task, marked `work_order.is_orientation`, with one
@@ -1630,7 +1645,7 @@ would sit at `scheduled` for ever with its time in the past and need a cron to u
 
 Who may run one is the ordinary clearance gate: `volunteer_role_certification` links the
 Rehearsal Orientation role to the Space Orientation Trained certification, and `claimShift`
-already enforces it. Nothing new claims, assigns, or notifies.
+already enforces it. Nothing new claims or assigns; the two notices are the reminders above.
 
 ### Committee deliverables
 

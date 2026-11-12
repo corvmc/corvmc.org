@@ -1,6 +1,6 @@
 import { db } from '#lib/server/db/index.js';
 import { memberCertification } from '#lib/server/db/schema/volunteer.js';
-import { sql } from 'drizzle-orm';
+import { sql, type SQLWrapper } from 'drizzle-orm';
 import { PRACTICE_SPACE_CLEARANCE_ID } from '#lib/config.js';
 
 /**
@@ -11,15 +11,21 @@ import { PRACTICE_SPACE_CLEARANCE_ID } from '#lib/config.js';
 
 /**
  * A grant of it held at `at`: `wasHeldOn` as SQL. Only `sql` from drizzle-orm,
- * because reservation specs mock that module export by export.
+ * because reservation specs mock that module export by export. `userId` may be
+ * a column, which correlates the predicate to an outer query's member.
  */
-function heldSql(userId: string, at: Date) {
+function heldSql(userId: string | SQLWrapper, at: Date) {
 	const ts = Math.floor(at.getTime() / 1000);
 	return sql`${memberCertification.userId} = ${userId}
 		and ${memberCertification.certificationId} = ${PRACTICE_SPACE_CLEARANCE_ID}
 		and ${memberCertification.grantedAt} <= ${ts}
 		and (${memberCertification.expiresAt} is null or ${memberCertification.expiresAt} >= ${ts})
 		and (${memberCertification.revokedAt} is null or ${memberCertification.revokedAt} > ${ts})`;
+}
+
+/** True when the member in `userId` (a column of the outer query) holds it at `at`. */
+export function holdsPracticeSpaceClearanceSql(userId: SQLWrapper, at: Date) {
+	return sql`exists (select 1 from ${memberCertification} where ${heldSql(userId, at)})`;
 }
 
 export async function holdsPracticeSpaceClearance(

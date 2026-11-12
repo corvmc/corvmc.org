@@ -150,6 +150,30 @@ export interface ReservationReminderDueEvent {
 	endTime: string;
 }
 
+/** A member's booking before they hold the Practice space clearance (#2569). */
+export interface FirstVisitDueEvent extends ReservationReminderDueEvent {
+	/** When the orientation shift starts, club time; null with no live shift. */
+	tourTime: string | null;
+	/** The club's street address, from site config. */
+	address: string;
+	/** Staff-written arrival notes: parking, house rules. Plain text, may be empty. */
+	notes: string;
+}
+
+/** One orientation shift a day out with nobody signed up for it (#2567). */
+export interface OrientationUnclaimedItem {
+	workOrderId: string;
+	memberName: string;
+	startsAt: string;
+	endsAt: string;
+}
+
+/** One coordinator's digest of unclaimed orientations for a reminder pass. */
+export interface OrientationUnclaimedEvent {
+	recipient: { userId: string; userName: string; userEmail: string };
+	items: OrientationUnclaimedItem[];
+}
+
 /** The lock has reported a booking's code as synced, so the member may be told it. */
 export interface DoorCodeReadyEvent extends ReservationReminderDueEvent {
 	code: string;
@@ -887,6 +911,7 @@ export type DomainEvents = {
 	'reservation.cancelled': ReservationCancelledEvent;
 	'reservation.reminder_due': ReservationReminderDueEvent;
 	'reservation.door_code_ready': DoorCodeReadyEvent;
+	'reservation.first_visit_due': FirstVisitDueEvent;
 	'ticket.purchased': TicketPurchasedEvent;
 	'audio.purchased': AudioPurchasedEvent;
 	'audio.radio_attestation_due': RadioAttestationDueEvent;
@@ -940,6 +965,7 @@ export type DomainEvents = {
 	'event.lineup_invited': EventLineupInvitedEvent;
 	'production.cancelled': ProductionCancelledEvent;
 	'volunteer.deliverable_due': DeliverableDueEvent;
+	'volunteer.orientation_unclaimed': OrientationUnclaimedEvent;
 	'volunteer.hours_submitted': VolunteerHoursSubmittedEvent;
 	'volunteer.hours_approved': VolunteerHoursReviewedEvent;
 	'volunteer.hours_rejected': VolunteerHoursReviewedEvent;
