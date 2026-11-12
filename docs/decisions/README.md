@@ -97,3 +97,4 @@ A page or less. Link the issue and the PRs.
 | 0063 | [Renewals are recurring work](0063-renewals-are-recurring-work.md)                                                             | 2026-11-12 | Accepted           |
 | 0064 | [A group has one Announcements thread](0064-a-group-has-one-announcements-thread.md)                                           | 2026-11-12 | Accepted           |
 | 0065 | [Outside parties are organizations with roles](0065-outside-parties-are-organizations-with-roles.md)                           | 2026-11-12 | Accepted           |
+| 0066 | [One review feed on the dashboard](0066-one-review-feed-on-the-dashboard.md)                                                   | 2026-11-12 | Accepted           |
