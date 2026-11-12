@@ -17,6 +17,7 @@ import {
 	listLapsingInsurance,
 	updateContractor
 } from '#lib/server/contractor/contractor-service.js';
+import { savePrimaryContact, withPrimaryContact } from '#lib/server/party/primary-contact.js';
 import {
 	cancelJob,
 	completeJob,
@@ -75,8 +76,41 @@ const contractorFields = {
 	notes: z.string().max(2000).optional()
 };
 
+type ContractorFormData = z.infer<z.ZodObject<typeof contractorFields>>;
+
+/** The contractor's own columns; the person goes through `savePrimaryContact`. */
+function contractorInput(data: ContractorFormData) {
+	return {
+		name: data.name,
+		trade: data.trade,
+		website: data.website || null,
+		licenseNumber: data.licenseNumber || null,
+		insuranceExpiresAt: calendarDate(data.insuranceExpiresAt) ?? null,
+		notes: data.notes || null
+	};
+}
+
+function contractorContact(data: ContractorFormData) {
+	return {
+		contactName: data.contactName || null,
+		contactPhone: data.phone || null,
+		contactEmail: data.email || null
+	};
+}
+
+/** Contractors with their main person, in the fields the pages read. */
+async function withContacts<T extends { id: string }>(rows: T[]) {
+	const withPeople = await withPrimaryContact(rows);
+	return withPeople.map(({ contactName, contactEmail, contactPhone, ...rest }) => ({
+		...rest,
+		contactName,
+		phone: contactPhone,
+		email: contactEmail
+	}));
+}
+
 const jobFields = {
-	contractorId: z.uuid(),
+	contractorId: z.string().min(1),
 	/** Engaged on existing work: what the work is, and its unit, are the work order's. */
 	workOrderId: z.uuid(),
 	scheduledFor: optionalDate,
@@ -98,13 +132,13 @@ const contractorFilters = z
 
 export const getContractors = query(contractorFilters, async (filters) => {
 	await requireCapability('contractor.read');
-	return listContractors(filters ?? {});
+	return withContacts(await listContractors(filters ?? {}));
 });
 
 const jobFilters = z
 	.object({
 		status: z.enum(contractorJobStatuses).optional(),
-		contractorId: z.uuid().optional()
+		contractorId: z.string().min(1).optional()
 	})
 	.optional();
 
@@ -130,7 +164,7 @@ export const getContractorsPage = query(contractorFilters, async (filters) => {
 		listLapsingInsurance(),
 		listOverdueJobs()
 	]);
-	return { contractors, lapsing, overdue };
+	return { contractors: await withContacts(contractors), lapsing, overdue };
 });
 
 /** One contractor, with everything they have ever done for us. */
@@ -141,7 +175,8 @@ export const getContractorDetail = query(z.string(), async (id) => {
 			getContractorById(id),
 			listJobs({ contractorId: id })
 		]);
-		return { contractor: record, jobs };
+		const [withContact] = await withContacts([record]);
+		return { contractor: withContact, jobs };
 	} catch (err) {
 		mapDomainError(err);
 	}
@@ -167,13 +202,10 @@ async function refreshWorkOrderPage(job: { workOrderId: string; projectId: strin
 
 export const createContractorForm = form(z.object(contractorFields), async (raw) => {
 	await requireCapability('contractor.manage');
-	const data = raw as z.infer<z.ZodObject<typeof contractorFields>>;
+	const data = raw as ContractorFormData;
 	try {
-		const record = await createContractor({
-			...data,
-			email: data.email || null,
-			insuranceExpiresAt: calendarDate(data.insuranceExpiresAt) ?? null
-		});
+		const record = await createContractor(contractorInput(data));
+		await savePrimaryContact(record.id, contractorContact(data));
 		void getContractorsPage().refresh();
 		return { success: true, id: record.id };
 	} catch (err) {
@@ -182,16 +214,13 @@ export const createContractorForm = form(z.object(contractorFields), async (raw)
 });
 
 export const updateContractorForm = form(
-	z.object({ id: z.uuid(), ...contractorFields }),
+	z.object({ id: z.string().min(1), ...contractorFields }),
 	async (raw) => {
 		await requireCapability('contractor.manage');
-		const { id, ...data } = raw as { id: string } & z.infer<z.ZodObject<typeof contractorFields>>;
+		const { id, ...data } = raw as { id: string } & ContractorFormData;
 		try {
-			await updateContractor(id, {
-				...data,
-				email: data.email || null,
-				insuranceExpiresAt: calendarDate(data.insuranceExpiresAt) ?? null
-			});
+			await updateContractor(id, contractorInput(data));
+			await savePrimaryContact(id, contractorContact(data));
 			void getContractorDetail(id).refresh();
 			void getContractorsPage().refresh();
 			return { success: true };
@@ -202,7 +231,7 @@ export const updateContractorForm = form(
 );
 
 export const archiveContractorForm = form(
-	z.object({ id: z.uuid(), archived: z.boolean().optional().default(false) }),
+	z.object({ id: z.string().min(1), archived: z.boolean().optional().default(false) }),
 	async (raw) => {
 		await requireCapability('contractor.manage');
 		const { id, archived } = raw as { id: string; archived: boolean };

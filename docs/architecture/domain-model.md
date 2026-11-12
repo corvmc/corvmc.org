@@ -361,6 +361,15 @@ projects are project management, and committees are social containers that hold 
 over work. The staff nav groups them as **Planning** because staff work the flow together;
 a nav section follows the work, this document follows the data.
 
+## Outside parties
+
+Every organization CMC deals with but does not contain is one `organization` row: a funder, a
+sponsor, a contractor, and later a performer, vendor, supplier or partner. What it is to CMC is a
+`party_role` row, so one business can sponsor a season and service the PA in the same year. A
+record that names an organization in a role (`grant_application`, `sponsorship`,
+`contractor_job`) is checked for the role by its service, since SQLite cannot. The people are
+`contact` rows, read only through `contact-service.ts`. See #2622.
+
 ## Duplications to leave alone
 
 A list like the above invites merging everything. These three are deliberate:

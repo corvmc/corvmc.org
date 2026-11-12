@@ -32,9 +32,11 @@ function listing(
 }
 
 function credit(sponsorId: string, eventId: string, status = 'active') {
-	sqlite.exec(`insert or ignore into sponsor (id, name) values ('${sponsorId}', '${sponsorId}')`);
 	sqlite.exec(
-		`insert into sponsorship (id, sponsor_id, title, status)
+		`insert or ignore into organization (id, name) values ('${sponsorId}', '${sponsorId}')`
+	);
+	sqlite.exec(
+		`insert into sponsorship (id, organization_id, title, status)
 		 values ('${sponsorId}-${eventId}', '${sponsorId}', 'Deal', '${status}')`
 	);
 	sqlite.exec(
@@ -48,7 +50,7 @@ beforeEach(() => {
 	for (const t of [
 		'sponsor_placement',
 		'sponsorship',
-		'sponsor',
+		'organization',
 		'event_listing',
 		'"group"',
 		'user'

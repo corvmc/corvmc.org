@@ -1,7 +1,7 @@
 import { db } from '#lib/server/db/index.js';
 import { contact, type ContactSource } from '#lib/server/db/schema/contact.js';
 import { subscriber } from '#lib/server/db/schema/marketing.js';
-import { and, eq, isNull, lte } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, lte } from 'drizzle-orm';
 import { requireCapability } from '#lib/server/authorization.js';
 
 /**
@@ -13,7 +13,8 @@ import { requireCapability } from '#lib/server/authorization.js';
  * public query touches is one refactor away from being serialized. Reaching this
  * data has to be an explicit act, and this is the only place it can happen.
  *
- * Every export here guards **itself** (reads on `directory.readContact`),
+ * Every export here guards **itself** (an act's contact on `directory.*`, an
+ * organization's people on `contact.*`),
  * rather than trusting the caller to have done it. A guard the caller owns is a
  * guard a new caller can forget; a guard the data owns cannot be.
  *
@@ -22,12 +23,16 @@ import { requireCapability } from '#lib/server/authorization.js';
  */
 
 export interface ContactData {
-	bookingName?: string | null;
-	bookingEmail?: string | null;
-	bookingPhone?: string | null;
+	name?: string | null;
+	email?: string | null;
+	phone?: string | null;
 	notes?: string | null;
 	paymentRef?: string | null;
 	retainUntil?: Date | null;
+}
+
+function normalizeEmail(email: string | null | undefined): string | null {
+	return email?.toLowerCase().trim() || null;
 }
 
 /**
@@ -45,7 +50,7 @@ export interface ContactData {
  * and all — `subscriber.email` is unique, which is what makes that safe.
  */
 async function linkSubscriber(email: string | null | undefined): Promise<string | null> {
-	const normalized = email?.toLowerCase().trim();
+	const normalized = normalizeEmail(email);
 	if (!normalized) return null;
 
 	const [existing] = await db
@@ -112,7 +117,7 @@ async function writeContact(
 	data: ContactData,
 	source: ContactSource
 ): Promise<void> {
-	const subscriberId = await linkSubscriber(data.bookingEmail);
+	const subscriberId = await linkSubscriber(data.email);
 
 	const [existing] = await db
 		.select({ id: contact.id })
@@ -121,9 +126,9 @@ async function writeContact(
 		.limit(1);
 
 	const values = {
-		bookingName: data.bookingName ?? null,
-		bookingEmail: data.bookingEmail?.toLowerCase().trim() || null,
-		bookingPhone: data.bookingPhone ?? null,
+		name: data.name ?? null,
+		email: normalizeEmail(data.email),
+		phone: data.phone ?? null,
 		notes: data.notes ?? null,
 		paymentRef: data.paymentRef ?? null,
 		retainUntil: data.retainUntil ?? null,
@@ -175,7 +180,7 @@ export async function listExpiredContacts(now: Date = new Date()) {
 		.select({
 			id: contact.id,
 			entryId: contact.entryId,
-			bookingName: contact.bookingName,
+			name: contact.name,
 			retainUntil: contact.retainUntil
 		})
 		.from(contact)
@@ -193,4 +198,84 @@ export async function hasContact(entryId: string): Promise<boolean> {
 		.limit(1);
 
 	return !!row;
+}
+
+// ---------------------------------------------------------------------------
+// An organization's people (#2622)
+// ---------------------------------------------------------------------------
+
+export type PrimaryContact = {
+	id: string;
+	name: string | null;
+	email: string | null;
+	phone: string | null;
+};
+
+/** Earliest first, so the person entered with an organization stays its main one. */
+async function peopleAt(organizationIds: string[]) {
+	if (organizationIds.length === 0) return [];
+	return db
+		.select({
+			id: contact.id,
+			organizationId: contact.organizationId,
+			name: contact.name,
+			email: contact.email,
+			phone: contact.phone
+		})
+		.from(contact)
+		.where(and(inArray(contact.organizationId, organizationIds), isNull(contact.retainUntil)))
+		.orderBy(asc(contact.createdAt), asc(contact.id));
+}
+
+/** Each organization's main person: the first one entered and still kept. */
+export async function primaryContacts(
+	organizationIds: string[]
+): Promise<Map<string, PrimaryContact>> {
+	await requireCapability('contact.read');
+	const out = new Map<string, PrimaryContact>();
+	for (const row of await peopleAt(organizationIds)) {
+		if (out.has(row.organizationId!)) continue;
+		out.set(row.organizationId!, {
+			id: row.id,
+			name: row.name,
+			email: row.email,
+			phone: row.phone
+		});
+	}
+	return out;
+}
+
+/**
+ * Write an organization's main person from its own form. Updates the first
+ * person on file, or adds one; all-blank adds nobody. A field left
+ * `undefined` keeps what is on file.
+ */
+export async function setPrimaryContact(
+	organizationId: string,
+	data: Pick<ContactData, 'name' | 'email' | 'phone'>
+): Promise<void> {
+	await requireCapability('contact.manage');
+	const values = {
+		...(data.name !== undefined && { name: data.name || null }),
+		...(data.email !== undefined && { email: normalizeEmail(data.email) }),
+		...(data.phone !== undefined && { phone: data.phone || null })
+	};
+	const [existing] = await peopleAt([organizationId]);
+	if (!existing && !values.name && !values.email && !values.phone) return;
+
+	const subscriberId = values.email !== undefined ? await linkSubscriber(values.email) : undefined;
+	if (existing) {
+		await db
+			.update(contact)
+			.set({
+				...values,
+				...(subscriberId !== undefined && { subscriberId }),
+				updatedAt: new Date()
+			})
+			.where(eq(contact.id, existing.id));
+		return;
+	}
+	await db
+		.insert(contact)
+		.values({ organizationId, ...values, subscriberId, source: 'staff_entered' });
 }

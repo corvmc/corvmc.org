@@ -33,6 +33,12 @@ const funders = {
 };
 vi.mock('#lib/server/grant/funder-service.js', () => funders);
 
+const people = {
+	withPrimaryContact: vi.fn(async <T>(rows: T[]) => rows),
+	savePrimaryContact: vi.fn(async () => undefined)
+};
+vi.mock('#lib/server/party/primary-contact.js', () => people);
+
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: {} }),
 	query: (...args: unknown[]) => {

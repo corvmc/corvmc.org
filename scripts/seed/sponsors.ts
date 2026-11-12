@@ -1,10 +1,9 @@
 import {
-	sponsor,
 	sponsorship,
 	sponsorPlacement,
-	type NewSponsor,
 	type NewSponsorship
 } from '../../src/lib/server/db/schema/sponsor';
+import { seedOrganizations, type SeedOrganization } from './parties';
 import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -27,29 +26,35 @@ function day(offset: number): string {
 export async function seedSponsors(events: SeedEvent[]) {
 	console.log('Seeding sponsors...');
 
-	const sponsors: NewSponsor[] = [
+	const sponsors: SeedOrganization[] = [
 		{
 			id: 'seed-sponsor-troubadour',
 			name: 'Troubadour Music',
+			roles: ['sponsor'],
 			website: 'https://example.com/troubadour',
-			contactName: 'Store manager',
-			contactEmail: 'sponsor@example.com'
+			person: { name: 'Dana Whitfield', role: 'Store manager', email: 'sponsor@example.com' }
 		},
-		{ id: 'seed-sponsor-brewery', name: 'Block 15 Brewing' },
-		{ id: 'seed-sponsor-credit-union', name: 'Corvallis Community Credit Union' },
+		{ id: 'seed-sponsor-brewery', name: 'Block 15 Brewing', roles: ['sponsor'] },
+		{
+			id: 'seed-sponsor-credit-union',
+			name: 'Corvallis Community Credit Union',
+			roles: ['sponsor']
+		},
 		{
 			id: 'seed-sponsor-print',
 			name: 'Valley Print Shop',
+			// A sponsor that also supplies: one organization, two roles.
+			roles: ['sponsor', 'supplier'],
 			notes: 'Printed posters at cost.',
 			// Archived: off the list until "Show archived", its ended term kept.
-			deletedAt: new Date()
+			archivedAt: new Date()
 		}
 	];
 
 	const ships: NewSponsorship[] = [
 		{
 			id: 'seed-sponsorship-troubadour-season',
-			sponsorId: 'seed-sponsor-troubadour',
+			organizationId: 'seed-sponsor-troubadour',
 			title: 'Season sponsor',
 			tier: 'Gold',
 			status: 'active',
@@ -58,7 +63,7 @@ export async function seedSponsors(events: SeedEvent[]) {
 			endsOn: day(40)
 		},
 		{
-			sponsorId: 'seed-sponsor-troubadour',
+			organizationId: 'seed-sponsor-troubadour',
 			title: 'Last season',
 			tier: 'Silver',
 			status: 'ended',
@@ -68,7 +73,7 @@ export async function seedSponsors(events: SeedEvent[]) {
 		},
 		{
 			id: 'seed-sponsorship-brewery-series',
-			sponsorId: 'seed-sponsor-brewery',
+			organizationId: 'seed-sponsor-brewery',
 			title: 'Summer concert series',
 			tier: 'Silver',
 			status: 'active',
@@ -78,13 +83,13 @@ export async function seedSponsors(events: SeedEvent[]) {
 		},
 		{
 			id: 'seed-sponsorship-credit-union-pitch',
-			sponsorId: 'seed-sponsor-credit-union',
+			organizationId: 'seed-sponsor-credit-union',
 			title: 'All-ages shows',
 			status: 'prospect',
 			amountCents: 250_000
 		},
 		{
-			sponsorId: 'seed-sponsor-print',
+			organizationId: 'seed-sponsor-print',
 			title: 'Poster printing',
 			tier: 'In kind',
 			status: 'ended',
@@ -93,7 +98,7 @@ export async function seedSponsors(events: SeedEvent[]) {
 		}
 	];
 
-	await batchInsert(sponsor, sponsors);
+	await seedOrganizations(sponsors);
 	await batchInsert(sponsorship, ships);
 
 	const now = new Date();
@@ -116,7 +121,7 @@ export async function seedSponsors(events: SeedEvent[]) {
 		])
 	];
 	if (placements.length > 0) await batchInsert(sponsorPlacement, placements);
-	const logos = await seedSponsorLogos(sponsors.filter((s) => !s.deletedAt));
+	const logos = await seedSponsorLogos(sponsors.filter((s) => !s.archivedAt));
 	return { sponsors: sponsors.length, placements: placements.length, logos };
 }
 
@@ -131,7 +136,7 @@ const LOGO_COLORS = ['#003b5c', '#5a3d2b', '#00859b'];
  * slot, so the flyer and month poster draw logos rather than names. Rendered
  * with the same satori the posters use.
  */
-async function seedSponsorLogos(sponsors: NewSponsor[]): Promise<number> {
+async function seedSponsorLogos(sponsors: SeedOrganization[]): Promise<number> {
 	const bucket = env.R2_BUCKET as R2Bucket | undefined;
 	if (!bucket) {
 		console.warn('  R2_BUCKET is not bound — sponsor logos skipped.');
@@ -175,7 +180,7 @@ async function seedSponsorLogos(sponsors: NewSponsor[]): Promise<number> {
 			{ key, contentType: 'image/png', byteSize: png.byteLength, filename: `${s.id}.png` }
 		]);
 		await batchInsert(mediaAttachment, [
-			{ mediaId: m.id, attachableType: 'sponsor', attachableId: s.id!, slot: 'logo' }
+			{ mediaId: m.id, attachableType: 'organization', attachableId: s.id, slot: 'logo' }
 		]);
 		stored++;
 	}

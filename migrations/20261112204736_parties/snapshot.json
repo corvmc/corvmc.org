@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "5a5bab23-d23a-4b3e-bc2c-3622e4c81f56",
+  "id": "5f6dabec-298c-4f5e-8f9b-9ac82f67240b",
   "prevIds": [
-    "34b41447-214a-44a1-812b-110a74fd9170"
+    "23dbf7c6-f0e6-4d3c-8e62-0777ece75f45"
   ],
   "ddl": [
     {
@@ -231,6 +231,10 @@
       "entityType": "tables"
     },
     {
+      "name": "party_role",
+      "entityType": "tables"
+    },
+    {
       "name": "directory_entry_link",
       "entityType": "tables"
     },
@@ -399,7 +403,11 @@
       "entityType": "tables"
     },
     {
-      "name": "contractor",
+      "name": "contractor_detail",
+      "entityType": "tables"
+    },
+    {
+      "name": "organization",
       "entityType": "tables"
     },
     {
@@ -499,19 +507,11 @@
       "entityType": "tables"
     },
     {
-      "name": "sponsor",
-      "entityType": "tables"
-    },
-    {
       "name": "sponsor_placement",
       "entityType": "tables"
     },
     {
       "name": "sponsorship",
-      "entityType": "tables"
-    },
-    {
-      "name": "funder",
       "entityType": "tables"
     },
     {
@@ -6754,6 +6754,26 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "table": "contact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "contact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "subscriber_id",
       "entityType": "columns",
       "table": "contact"
@@ -6764,7 +6784,7 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "booking_name",
+      "name": "name",
       "entityType": "columns",
       "table": "contact"
     },
@@ -6774,7 +6794,7 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "booking_email",
+      "name": "role",
       "entityType": "columns",
       "table": "contact"
     },
@@ -6784,7 +6804,17 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "booking_phone",
+      "name": "email",
+      "entityType": "columns",
+      "table": "contact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "phone",
       "entityType": "columns",
       "table": "contact"
     },
@@ -6847,6 +6877,56 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "contact"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "party_role"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "table": "party_role"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "contact_id",
+      "entityType": "columns",
+      "table": "party_role"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "role",
+      "entityType": "columns",
+      "table": "party_role"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "party_role"
     },
     {
       "type": "text",
@@ -11254,19 +11334,9 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "id",
+      "name": "organization_id",
       "entityType": "columns",
-      "table": "contractor"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "name",
-      "entityType": "columns",
-      "table": "contractor"
+      "table": "contractor_detail"
     },
     {
       "type": "text",
@@ -11276,47 +11346,7 @@
       "generated": null,
       "name": "trade",
       "entityType": "columns",
-      "table": "contractor"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "contact_name",
-      "entityType": "columns",
-      "table": "contractor"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "phone",
-      "entityType": "columns",
-      "table": "contractor"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "email",
-      "entityType": "columns",
-      "table": "contractor"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "website",
-      "entityType": "columns",
-      "table": "contractor"
+      "table": "contractor_detail"
     },
     {
       "type": "text",
@@ -11326,7 +11356,7 @@
       "generated": null,
       "name": "license_number",
       "entityType": "columns",
-      "table": "contractor"
+      "table": "contractor_detail"
     },
     {
       "type": "integer",
@@ -11336,37 +11366,7 @@
       "generated": null,
       "name": "insurance_expires_at",
       "entityType": "columns",
-      "table": "contractor"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "notes",
-      "entityType": "columns",
-      "table": "contractor"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "archived_at",
-      "entityType": "columns",
-      "table": "contractor"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "contractor"
+      "table": "contractor_detail"
     },
     {
       "type": "integer",
@@ -11376,7 +11376,87 @@
       "generated": null,
       "name": "updated_at",
       "entityType": "columns",
-      "table": "contractor"
+      "table": "contractor_detail"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "organization"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "organization"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "website",
+      "entityType": "columns",
+      "table": "organization"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "organization"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "directory_entry_id",
+      "entityType": "columns",
+      "table": "organization"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "archived_at",
+      "entityType": "columns",
+      "table": "organization"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "organization"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "organization"
     },
     {
       "type": "text",
@@ -11394,7 +11474,7 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "contractor_id",
+      "name": "organization_id",
       "entityType": "columns",
       "table": "contractor_job"
     },
@@ -14136,96 +14216,6 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
-      "table": "sponsor"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "name",
-      "entityType": "columns",
-      "table": "sponsor"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "website",
-      "entityType": "columns",
-      "table": "sponsor"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "contact_name",
-      "entityType": "columns",
-      "table": "sponsor"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "contact_email",
-      "entityType": "columns",
-      "table": "sponsor"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "notes",
-      "entityType": "columns",
-      "table": "sponsor"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "deleted_at",
-      "entityType": "columns",
-      "table": "sponsor"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "sponsor"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "sponsor"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
       "table": "sponsor_placement"
     },
     {
@@ -14294,7 +14284,7 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "sponsor_id",
+      "name": "organization_id",
       "entityType": "columns",
       "table": "sponsorship"
     },
@@ -14396,96 +14386,6 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
-      "table": "funder"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "name",
-      "entityType": "columns",
-      "table": "funder"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "website",
-      "entityType": "columns",
-      "table": "funder"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "contact_name",
-      "entityType": "columns",
-      "table": "funder"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "contact_email",
-      "entityType": "columns",
-      "table": "funder"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "notes",
-      "entityType": "columns",
-      "table": "funder"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "deleted_at",
-      "entityType": "columns",
-      "table": "funder"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "table": "funder"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "(unixepoch())",
-      "generated": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "table": "funder"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
       "table": "grant_application"
     },
     {
@@ -14494,7 +14394,7 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "funder_id",
+      "name": "organization_id",
       "entityType": "columns",
       "table": "grant_application"
     },
@@ -16755,6 +16655,36 @@
     },
     {
       "columns": [
+        "organization_id"
+      ],
+      "tableTo": "organization",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_contact_organization_id_organization_id_fk",
+      "entityType": "fks",
+      "table": "contact"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_contact_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "contact"
+    },
+    {
+      "columns": [
         "subscriber_id"
       ],
       "tableTo": "subscriber",
@@ -16767,6 +16697,36 @@
       "name": "fk_contact_subscriber_id_subscriber_id_fk",
       "entityType": "fks",
       "table": "contact"
+    },
+    {
+      "columns": [
+        "organization_id"
+      ],
+      "tableTo": "organization",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_party_role_organization_id_organization_id_fk",
+      "entityType": "fks",
+      "table": "party_role"
+    },
+    {
+      "columns": [
+        "contact_id"
+      ],
+      "tableTo": "contact",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_party_role_contact_id_contact_id_fk",
+      "entityType": "fks",
+      "table": "party_role"
     },
     {
       "columns": [
@@ -18285,16 +18245,46 @@
     },
     {
       "columns": [
-        "contractor_id"
+        "organization_id"
       ],
-      "tableTo": "contractor",
+      "tableTo": "organization",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_contractor_detail_organization_id_organization_id_fk",
+      "entityType": "fks",
+      "table": "contractor_detail"
+    },
+    {
+      "columns": [
+        "directory_entry_id"
+      ],
+      "tableTo": "directory_entry",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_organization_directory_entry_id_directory_entry_id_fk",
+      "entityType": "fks",
+      "table": "organization"
+    },
+    {
+      "columns": [
+        "organization_id"
+      ],
+      "tableTo": "organization",
       "columnsTo": [
         "id"
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "RESTRICT",
       "nameExplicit": false,
-      "name": "fk_contractor_job_contractor_id_contractor_id_fk",
+      "name": "fk_contractor_job_organization_id_organization_id_fk",
       "entityType": "fks",
       "table": "contractor_job"
     },
@@ -19065,31 +19055,31 @@
     },
     {
       "columns": [
-        "sponsor_id"
+        "organization_id"
       ],
-      "tableTo": "sponsor",
+      "tableTo": "organization",
       "columnsTo": [
         "id"
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "RESTRICT",
       "nameExplicit": false,
-      "name": "fk_sponsorship_sponsor_id_sponsor_id_fk",
+      "name": "fk_sponsorship_organization_id_organization_id_fk",
       "entityType": "fks",
       "table": "sponsorship"
     },
     {
       "columns": [
-        "funder_id"
+        "organization_id"
       ],
-      "tableTo": "funder",
+      "tableTo": "organization",
       "columnsTo": [
         "id"
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "RESTRICT",
       "nameExplicit": false,
-      "name": "fk_grant_application_funder_id_funder_id_fk",
+      "name": "fk_grant_application_organization_id_organization_id_fk",
       "entityType": "fks",
       "table": "grant_application"
     },
@@ -20031,6 +20021,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "party_role_pk",
+      "table": "party_role",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "directory_entry_link_pk",
       "table": "directory_entry_link",
       "entityType": "pks"
@@ -20361,11 +20360,20 @@
     },
     {
       "columns": [
+        "organization_id"
+      ],
+      "nameExplicit": false,
+      "name": "contractor_detail_pk",
+      "table": "contractor_detail",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
         "id"
       ],
       "nameExplicit": false,
-      "name": "contractor_pk",
-      "table": "contractor",
+      "name": "organization_pk",
+      "table": "organization",
       "entityType": "pks"
     },
     {
@@ -20580,15 +20588,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "sponsor_pk",
-      "table": "sponsor",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "sponsor_placement_pk",
       "table": "sponsor_placement",
       "entityType": "pks"
@@ -20600,15 +20599,6 @@
       "nameExplicit": false,
       "name": "sponsorship_pk",
       "table": "sponsorship",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "funder_pk",
-      "table": "funder",
       "entityType": "pks"
     },
     {
@@ -22547,6 +22537,48 @@
     {
       "columns": [
         {
+          "value": "organization_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_contact_organization",
+      "entityType": "indexes",
+      "table": "contact"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_contact_user",
+      "entityType": "indexes",
+      "table": "contact"
+    },
+    {
+      "columns": [
+        {
+          "value": "email",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_contact_email",
+      "entityType": "indexes",
+      "table": "contact"
+    },
+    {
+      "columns": [
+        {
           "value": "retain_until",
           "isExpression": false
         }
@@ -22557,6 +22589,56 @@
       "name": "idx_contact_retain_until",
       "entityType": "indexes",
       "table": "contact"
+    },
+    {
+      "columns": [
+        {
+          "value": "organization_id",
+          "isExpression": false
+        },
+        {
+          "value": "role",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "organization_id is not null",
+      "origin": "manual",
+      "name": "idx_party_role_organization",
+      "entityType": "indexes",
+      "table": "party_role"
+    },
+    {
+      "columns": [
+        {
+          "value": "contact_id",
+          "isExpression": false
+        },
+        {
+          "value": "role",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "contact_id is not null",
+      "origin": "manual",
+      "name": "idx_party_role_contact",
+      "entityType": "indexes",
+      "table": "party_role"
+    },
+    {
+      "columns": [
+        {
+          "value": "role",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_party_role_role",
+      "entityType": "indexes",
+      "table": "party_role"
     },
     {
       "columns": [
@@ -23880,9 +23962,9 @@
       "isUnique": false,
       "where": null,
       "origin": "manual",
-      "name": "idx_contractor_trade",
+      "name": "idx_contractor_detail_trade",
       "entityType": "indexes",
-      "table": "contractor"
+      "table": "contractor_detail"
     },
     {
       "columns": [
@@ -23892,37 +23974,37 @@
         }
       ],
       "isUnique": false,
-      "where": "archived_at is null",
+      "where": null,
       "origin": "manual",
-      "name": "idx_contractor_active",
+      "name": "idx_organization_name",
       "entityType": "indexes",
-      "table": "contractor"
+      "table": "organization"
     },
     {
       "columns": [
         {
-          "value": "insurance_expires_at",
+          "value": "directory_entry_id",
           "isExpression": false
         }
       ],
-      "isUnique": false,
-      "where": "archived_at is null",
+      "isUnique": true,
+      "where": "directory_entry_id is not null",
       "origin": "manual",
-      "name": "idx_contractor_insurance",
+      "name": "idx_organization_directory_entry",
       "entityType": "indexes",
-      "table": "contractor"
+      "table": "organization"
     },
     {
       "columns": [
         {
-          "value": "contractor_id",
+          "value": "organization_id",
           "isExpression": false
         }
       ],
       "isUnique": false,
       "where": null,
       "origin": "manual",
-      "name": "idx_contractor_job_contractor",
+      "name": "idx_contractor_job_organization",
       "entityType": "indexes",
       "table": "contractor_job"
     },
@@ -24821,28 +24903,28 @@
     {
       "columns": [
         {
-          "value": "sponsor_id",
+          "value": "organization_id",
           "isExpression": false
         }
       ],
       "isUnique": false,
       "where": null,
       "origin": "manual",
-      "name": "sponsorship_sponsor_idx",
+      "name": "sponsorship_organization_idx",
       "entityType": "indexes",
       "table": "sponsorship"
     },
     {
       "columns": [
         {
-          "value": "funder_id",
+          "value": "organization_id",
           "isExpression": false
         }
       ],
       "isUnique": false,
       "where": null,
       "origin": "manual",
-      "name": "grant_application_funder_idx",
+      "name": "grant_application_organization_idx",
       "entityType": "indexes",
       "table": "grant_application"
     },
@@ -25392,6 +25474,12 @@
       "name": "work_request_has_subject",
       "entityType": "checks",
       "table": "work_request"
+    },
+    {
+      "value": "(organization_id is null) <> (contact_id is null)",
+      "name": "party_role_one_owner",
+      "entityType": "checks",
+      "table": "party_role"
     },
     {
       "value": "(offset_minutes is null) = (duration_minutes is null)",

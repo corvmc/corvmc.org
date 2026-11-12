@@ -5,6 +5,7 @@ import { requireCapability } from '#lib/server/authorization.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import * as grants from '#lib/server/grant/grant-service.js';
 import * as funders from '#lib/server/grant/funder-service.js';
+import { savePrimaryContact, withPrimaryContact } from '#lib/server/party/primary-contact.js';
 import { clubToday, grantStatuses, LONG_TEXT_MAX, SHORT_TEXT_MAX } from '#lib/config.js';
 
 /** An `<input type="date">` value, or blank for "no date". */
@@ -30,23 +31,29 @@ function funderInput(d: z.infer<z.ZodObject<typeof funderFields>>) {
 	return {
 		name: d.name,
 		website: d.website || null,
-		contactName: d.contactName || null,
-		contactEmail: d.contactEmail || null,
 		notes: d.notes || null
 	};
+}
+
+function funderContact(d: z.infer<z.ZodObject<typeof funderFields>>) {
+	return { contactName: d.contactName || null, contactEmail: d.contactEmail || null };
 }
 
 export const getFunders = query(
 	z.object({ includeArchived: z.boolean().optional() }).optional(),
 	async (filters) => {
 		await requireCapability('grant.read');
-		return funders.listFunders({ includeArchived: filters?.includeArchived ?? false });
+		const rows = await funders.listFunders({
+			includeArchived: filters?.includeArchived ?? false
+		});
+		return withPrimaryContact(rows);
 	}
 );
 
 export const createFunder = form(z.object(funderFields), async (data) => {
 	await requireCapability('grant.manage');
 	const row = await funders.createFunder(funderInput(data));
+	await savePrimaryContact(row.id, funderContact(data));
 	return { id: row.id };
 });
 
@@ -54,8 +61,13 @@ export const updateFunder = form(
 	z.object({ id: z.string().min(1), ...funderFields }),
 	async (data) => {
 		await requireCapability('grant.manage');
-		await funders.updateFunder(data.id, funderInput(data));
-		return { success: true };
+		try {
+			await funders.updateFunder(data.id, funderInput(data));
+			await savePrimaryContact(data.id, funderContact(data));
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
 	}
 );
 
@@ -105,7 +117,7 @@ const grantFields = {
 
 function grantInput(d: z.infer<z.ZodObject<typeof grantFields>>) {
 	return {
-		funderId: d.funderId,
+		organizationId: d.funderId,
 		title: d.title,
 		status: d.status,
 		amountRequestedCents: d.amountRequestedCents ?? null,
@@ -138,7 +150,7 @@ export const getGrantDetail = query(z.string(), async (id) => {
 			funders.listFunders({ includeArchived: true })
 		]);
 		// An archived funder stays pickable on the application that already names it.
-		const pickable = funderRows.filter((f) => !f.deletedAt || f.id === grant.funderId);
+		const pickable = funderRows.filter((f) => !f.archivedAt || f.id === grant.funderId);
 		return { ...grant, funders: pickable.map((f) => ({ id: f.id, name: f.name })) };
 	} catch (err) {
 		mapDomainError(err);
@@ -147,15 +159,23 @@ export const getGrantDetail = query(z.string(), async (id) => {
 
 export const createGrant = form(z.object(grantFields), async (data) => {
 	await requireCapability('grant.manage');
-	const row = await grants.createGrant(grantInput(data));
-	return { id: row.id };
+	try {
+		const row = await grants.createGrant(grantInput(data));
+		return { id: row.id };
+	} catch (err) {
+		mapDomainError(err);
+	}
 });
 
 export const updateGrant = form(
 	z.object({ id: z.string().min(1), ...grantFields }),
 	async (data) => {
 		await requireCapability('grant.manage');
-		await grants.updateGrant(data.id, grantInput(data));
+		try {
+			await grants.updateGrant(data.id, grantInput(data));
+		} catch (err) {
+			mapDomainError(err);
+		}
 		await getGrantDetail(data.id).refresh();
 		return { success: true };
 	}
