@@ -76,7 +76,7 @@ test.describe('project tasks', () => {
 		const title = `E2E fetch the ladder ${Date.now()}`;
 		await page.getByTestId('new-task').click();
 		const dialog = page.getByRole('dialog');
-		await dialog.locator('input[name="title"]').fill(title);
+		await dialog.locator('input:is([name="title"], [name^="title/"])').fill(title);
 		await dialog.locator('button[type="submit"]').click();
 
 		await expect(page).toHaveURL(taskUrl);
