@@ -7,20 +7,21 @@ import lexendBold from './assets/Lexend-Bold.ttf?inline';
 import speaker from './assets/cmc-speaker.png?inline';
 
 /**
- * One event's social image on a Letter page, above a footer of the event's
- * details. The image keeps its ratio: full width when the footer still gets
- * `FOOTER_MIN`, otherwise scaled down and centred on cream. Sizes are CSS px
- * at 96 per inch.
+ * One event's social image full bleed on a Letter page, above a dense footer
+ * of the event's details. The art runs to the top and side edges; the footer
+ * keeps its contents `INSET` inside the page. Sizes are CSS px at 96 per inch.
  */
 
 const PAGE = { width: 816, height: 1056 };
-// 0.375 in all round, as the calendar poster: inside what office printers reach.
-const MARGIN = 36;
-// 2.4 in. A 4:5 image gets 754 px of the 984 px page; a 1:1 image runs full width.
-export const FOOTER_MIN = 230;
+// 0.25 in: the smallest margin office printers reliably reach, for footer text.
+const INSET = 24;
+// 1.5 in. A 4:5 image (1020 px tall at full width) gets 912 px: 10.6% cropped, centred.
+export const FOOTER_MIN = 144;
+// Past this share of its height cropped, the art is fitted inside cream bands instead.
+const MAX_CROP = 0.12;
 
-// Detail type sizes in px, tried in order; the first that fits the footer wins.
-const SIZES = [17, 16, 15, 14, 13, 12, 11, 10];
+// Detail type sizes in px, largest first; the first that fits the footer wins.
+const SIZES = [20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9];
 
 export interface EventLetter {
 	lines: FlyerLines;
@@ -68,38 +69,52 @@ const STYLE = `
 @page { size: 8.5in 11in; margin: 0; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { background: #fff; overflow: hidden; }
-body { width: ${PAGE.width}px; height: ${PAGE.height}px; padding: ${MARGIN}px; }
+body { width: ${PAGE.width}px; height: ${PAGE.height}px; }
 .poster { display: flex; flex-direction: column; width: 100%; height: 100%; background: ${C.cream}; font-family: Lexend; color: ${C.navy}; }
-.art { display: block; flex: 0 1 auto; width: 100%; height: auto; min-height: 0; object-fit: contain; }
+.art { display: block; flex: none; width: 100%; height: ${PAGE.height - FOOTER_MIN}px; object-fit: cover; object-position: center; }
 footer { display: flex; flex-direction: column; flex: 1 0 ${FOOTER_MIN}px; min-height: ${FOOTER_MIN}px; }
 .stripe { display: flex; flex-direction: column; flex-shrink: 0; }
-.stripe div { height: 5px; }
-.body { flex: 1 1 0; min-height: 0; display: flex; align-items: center; gap: 20px; padding: 12px 20px 14px; }
-.details { flex: 1 1 0; min-width: 0; max-height: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 0.3em; line-height: 1.2; }
-h1 { font-size: 1.9em; font-weight: 700; line-height: 1.05; text-transform: uppercase; overflow-wrap: anywhere; }
-.bill { color: ${C.orange}; font-weight: 700; font-size: 1.1em; }
-.bill span, .where span { display: inline-block; }
-.when { font-weight: 700; letter-spacing: 0.06em; }
+.stripe div { height: 3px; }
+.body { flex: 1 1 0; min-height: 0; display: flex; align-items: center; gap: 12px; padding: 6px ${INSET}px ${INSET}px; }
+.details { flex: 1 1 0; min-width: 0; max-height: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 0.12em; line-height: 1.18; }
+.details > * { flex-shrink: 0; }
+h1 { font-size: 1.8em; font-weight: 700; line-height: 1.05; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+em { font-style: normal; display: inline-block; }
+.bill { color: ${C.orange}; font-weight: 700; }
+.when { font-weight: 700; letter-spacing: 0.04em; }
 .price { color: ${C.orange}; font-weight: 700; }
-.sponsors { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4em 1.2em; margin-top: 0.3em; }
-.sponsors h2 { color: ${C.teal}; font-size: 0.7em; letter-spacing: 0.25em; }
-.sponsors img { height: 2.2em; max-width: 7em; object-fit: contain; }
-.sponsors span { font-weight: 700; font-size: 0.9em; }
-.side { display: flex; align-items: flex-end; gap: 14px; flex-shrink: 0; }
-.mascot { width: 96px; }
-.qr { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 132px; }
-.qr svg { width: 120px; height: 120px; display: block; }
-.qr div { font-size: 11px; line-height: 1.25; color: ${C.teal}; text-align: center; overflow-wrap: anywhere; }
+.sponsors { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2em 0.9em; }
+.sponsors h2 { color: ${C.teal}; font-size: 0.62em; letter-spacing: 0.2em; }
+.sponsors img { height: 1.6em; max-width: 6em; object-fit: contain; }
+.sponsors span { font-weight: 700; font-size: 0.85em; }
+.side { display: flex; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.mascot { width: 56px; }
+.qr { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.qr svg { width: 96px; height: 96px; display: block; }
+.qr div { font-size: 9px; line-height: 1.1; color: ${C.teal}; white-space: nowrap; }
 `;
+
+// Navy on cream with a one-module quiet zone; the cream footer extends it.
+export const QR_OPTIONS = { border: 1, blackColor: C.navy, whiteColor: C.cream };
+
+const sep = ' · ';
 
 /** The poster as a self-contained page: fonts, images and QR code inline. */
 export function eventLetterHtml(poster: EventLetter): string {
 	const { lines } = poster;
-	const qr = renderSVG(poster.url, { border: 2, blackColor: C.navy, whiteColor: C.cream });
+	const qr = renderSVG(poster.url, QR_OPTIONS);
 	const stripe = `<div class="stripe"><div style="background:${C.teal}"></div><div style="background:${C.goldenrod}"></div><div style="background:${C.redOrange}"></div></div>`;
 	const bill = billLine(lines);
 	const where = whereLine(lines.venue, poster.address);
-	const when = lines.doors ? `${lines.when} · ${lines.doors}` : lines.when;
+	const when = lines.doors ? `${lines.when}${sep}${lines.doors}` : lines.when;
+	const ems = (parts: string[]) => parts.map((p) => `<em>${esc(p)}</em>`).join(sep);
+	const info = [
+		`<span class="when">${esc(when)}</span>`,
+		where.length ? `<span class="where">${ems(where)}</span>` : '',
+		lines.price ? `<span class="price">${esc(lines.price)}</span>` : ''
+	]
+		.filter(Boolean)
+		.join(sep);
 	const sponsors = poster.sponsors.length
 		? `<div class="sponsors"><h2>SPONSORED BY</h2>${poster.sponsors
 				.map((s) =>
@@ -109,12 +124,8 @@ export function eventLetterHtml(poster: EventLetter): string {
 		: '';
 	const details = [
 		`<h1>${esc(lines.title)}</h1>`,
-		bill ? `<div class="bill">${bill.map((b) => `<span>${esc(b)}</span>`).join(' · ')}</div>` : '',
-		`<div class="when">${esc(when)}</div>`,
-		where.length
-			? `<div class="where">${where.map((w) => `<span>${esc(w)}</span>`).join(' · ')}</div>`
-			: '',
-		lines.price ? `<div class="price">${esc(lines.price)}</div>` : '',
+		bill ? `<div class="bill">${ems(bill)}</div>` : '',
+		`<div class="info">${info}</div>`,
 		sponsors
 	].join('');
 	return `<!doctype html><html><head><meta charset="utf-8"><style>${STYLE}</style></head><body><div class="poster">
@@ -125,14 +136,31 @@ export function eventLetterHtml(poster: EventLetter): string {
 	)}</div></div></div></div></footer></div></body></html>`;
 }
 
-// Runs in the page, as a string so no bundler helper leaks into it. Waits for
-// the art and fonts, then shrinks the details until they fit the footer.
+// Runs in the page, as a string so no bundler helper leaks into it. Sizes the
+// art box, then the QR code to the footer left, then takes the largest type
+// that fits, with the title shrunk onto one line at each size.
 const FIT_SCRIPT = `(async () => {
 	await document.fonts.ready;
 	await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
+	const art = document.querySelector('.art');
+	const natural = art.naturalWidth ? ${PAGE.width} * art.naturalHeight / art.naturalWidth : 0;
+	const box = ${PAGE.height - FOOTER_MIN};
+	art.style.height = Math.min(natural || box, box) + 'px';
+	if (natural > box && (natural - box) / natural > ${MAX_CROP}) art.style.objectFit = 'contain';
+	const body = document.querySelector('.body');
 	const details = document.querySelector('.details');
+	const title = details.querySelector('h1');
+	const qr = document.querySelector('.qr svg');
+	const room = body.clientHeight - 6 - ${INSET} - 12;
+	const side = Math.max(64, Math.min(132, room));
+	qr.style.width = qr.style.height = side + 'px';
+	document.querySelector('.mascot').style.width = Math.round(side * 0.58) + 'px';
 	for (const size of ${JSON.stringify(SIZES)}) {
 		details.style.fontSize = size + 'px';
+		for (let t = 2.4; t >= 1.1; t -= 0.05) {
+			title.style.fontSize = t + 'em';
+			if (title.scrollWidth <= title.clientWidth + 1) break;
+		}
 		if (details.scrollHeight <= details.clientHeight + 1) return;
 	}
 })()`;

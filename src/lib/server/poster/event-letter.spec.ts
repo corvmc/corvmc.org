@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderSVG } from 'uqr';
-import { C } from './brand';
 import {
 	billLine,
 	eventLetterHtml,
 	eventUrl,
 	printedUrl,
+	QR_OPTIONS,
 	renderEventLetter,
 	whereLine,
 	type EventLetter
@@ -39,13 +39,12 @@ const bare: EventLetter = {
 	sponsors: []
 };
 
-/** The footer's rows, by class, with their text. */
+/** The footer's fields, by class, with their text. */
 function rows(html: string) {
 	return Object.fromEntries(
-		[...html.matchAll(/<div class="(bill|when|where|price|sponsors)">(.*?)<\/div>/g)].map((m) => [
-			m[1],
-			m[2].replace(/<[^>]+>/g, '')
-		])
+		[...html.matchAll(/<(div|span) class="(bill|when|where|price|sponsors)">(.*?)<\/\1>/g)].map(
+			(m) => [m[2], m[3].replace(/<[^>]+>/g, '')]
+		)
 	);
 }
 
@@ -79,7 +78,7 @@ describe('eventLetterHtml', () => {
 
 	it("codes the event's page in the QR and prints the events page under it", () => {
 		const html = eventLetterHtml(full);
-		const qr = renderSVG(full.url, { border: 2, blackColor: C.navy, whiteColor: C.cream });
+		const qr = renderSVG(full.url, QR_OPTIONS);
 		expect(html).toContain(qr);
 		expect(html).toContain(`<div>${printedUrl()}</div>`);
 		expect(html.replace(qr, '')).not.toContain('evt-1');

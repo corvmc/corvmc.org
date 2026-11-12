@@ -8,7 +8,8 @@
 
 Events are promoted with a 4:5 or 1:1 social image, uploaded to the event's poster slot. The owner
 asked for a footer that turns that image into a Letter poster carrying every detail of the event.
-Letter is 0.77 wide to tall, so a 4:5 image at full width leaves almost no room below it.
+Letter is 0.77 wide to tall, so a 4:5 image at full width (8.5 x 10.625 in) leaves almost no room
+below it.
 [0061](0061-a-month-poster-is-a-printable-list-of-public-events.md) already prints the calendar
 poster through Browser Rendering.
 
@@ -17,25 +18,29 @@ poster through Browser Rendering.
 1. **The source is the event's poster slot, when it holds an upload.** A generated flyer (alt
    text starting `Flyer for `, `FLYER_ALT_PREFIX` in `flyer-service.ts`) is refused, since it
    already carries the details. No poster, or a missing object, is refused the same way.
-2. **One Letter page, 0.375 in margin, from one HTML template** (`src/lib/server/poster/event-letter.ts`),
-   printed by Browser Rendering with backgrounds. Nothing is stored.
-3. **The footer is at least 2.4 in (230 px).** The image keeps its ratio: full width when the
-   footer still gets its minimum, otherwise scaled down and centred on cream. A 4:5 image prints
-   603 x 754 px with a 230 px footer; a 1:1 image prints full width with a 240 px footer. A wider
-   image gives a deeper footer.
+2. **One Letter page with no margin, from one HTML template**
+   (`src/lib/server/poster/event-letter.ts`), printed by Browser Rendering with backgrounds.
+   Nothing is stored.
+3. **The art is full bleed; the footer is at least 1.5 in (144 px).** The art runs to the top
+   and side edges in a box 8.5 in wide and at most 9.5 in tall, cropped to fill it
+   (`object-fit: cover`, centred). A 4:5 image loses 10.6% of its height, 5.3% from the top and
+   5.3% from the bottom. A 1:1 image prints 8.5 x 8.5 in uncropped, with a 2.5 in footer. An image
+   that would lose more than 12% is fitted inside cream bands instead. The footer's background
+   runs edge to edge; its contents stay 0.25 in inside the page.
 4. **The footer carries** the title, the lineup (left out when it only repeats the title), the
    weekday, date, start and doors times, the venue and street address (the listing's own, else
    the venue's), the price in the flyer's wording, the sponsors the event page credits (logo, or
    name when there is none), a QR code to `/events/<id>` with `corvmc.org/events` printed under
-   it, the mascot and the tri-stripe. A script in the page shrinks the type until the details fit.
+   it, the mascot and the tri-stripe. A script in the page sizes the QR code to the footer and
+   takes the largest type that fits, with the title on one line.
 5. **The download is a listing write** (`requireListingWriter`), the same check as the template
    flyer, through `printEventPoster` in `src/lib/remote/event-poster.remote.ts`.
 
 ## Alternatives rejected
 
 - **Satori at 300 DPI.** The reasons in 0061 apply: a raster PDF, and a hand-measured fit.
-- **Crop the image to fill Letter's ratio.** It cuts the artist's work, and social images often
-  carry text near their edges.
+- **Fit the whole image inside a margin.** The owner chose full bleed: the art is the poster, and
+  a 4:5 image fitted whole leaves wide cream bands at its sides.
 - **Retire the satori "art with footer" flyer.** It is the social-size poster, and the publish gate
   reads it. It stays.
 
