@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { clearOrganizationsSql, contractorSql } from '#lib/server/testing/contractor-sql.js';
+import { contractorSql } from '#lib/server/testing/contractor-sql.js';
 
 /**
  * A task with several shifts (#2518, PR 3), against a real SQLite: each shift
