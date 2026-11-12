@@ -19,9 +19,8 @@ changes are validated and saved per tab. Some settings are admin-only.
 - **Reservations** — Slot duration, min/max booking length, the booking window, and
   the confirmation deadline.
 - **Organization** — Organization name, timezone, and feature flags.
-- **Integrations** — Stripe keys, email service, SMS gateway, the smart-lock /
-  equipment integration, and social integrations. Some have a **Test connection**
-  action.
+- The smart-lock (U-tec) settings are under **Lock settings** in the **Building access**
+  sidebar on **Staff → Practice space**.
 - **Inbox Channels** — Configuration for the email, SMS, web, Instagram, and
   Messenger channels that feed the [inbox](/member/help/staff-inbox).
 

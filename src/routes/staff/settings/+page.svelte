@@ -13,18 +13,10 @@
 		updateVolunteerValueSettings,
 		updateOrientationSettings,
 		updateVenueSettings,
-		updateIntegrationSettings,
-		testUtecConnection,
-		runLockSelfTest,
-		revokeLockTest,
 		updateFeatureFlag,
 		syncSubscriptions,
 		refreshCommunityStats
 	} from '#lib/remote/settings.remote.js';
-	import LockHealth from './LockHealth.svelte';
-	import UnmanagedLockCodes from './UnmanagedLockCodes.svelte';
-	import UtecDevicePicker from './UtecDevicePicker.svelte';
-	import { getLockHealth, getUnmanagedLockUsers } from '#lib/remote/lock.remote.js';
 	import { updateInboxChannelConfig, testMetaConnection } from '#lib/remote/inbox.remote.js';
 	import { isAlwaysEnabledChannel } from '#lib/config.js';
 	import { channelLabel, channelIcon } from '#lib/components/inbox/channels.js';
@@ -36,8 +28,6 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
-	import { errorMessage } from '#lib/error-message.js';
-	import { retryQuery } from '#lib/utils/retry-query.js';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
@@ -47,18 +37,9 @@
 	import { formatDollars } from '#lib/utils/format.js';
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import {
-		IconPlugConnected,
-		IconCircleCheck,
-		IconCircleX,
-		IconCopy,
-		IconToggleRight,
-		IconToggleLeft
-	} from '@tabler/icons-svelte';
+	import { IconPlugConnected, IconToggleRight, IconToggleLeft } from '@tabler/icons-svelte';
 
-	// `?tab=` opens a tab on arrival: Practice space links Door access to Integrations.
+	// `?tab=` opens a tab on arrival.
 	let activeTab = $state(page.url.searchParams.get('tab') ?? 'pricing');
 	// One query. All six are unparameterized, which is what lets every mutation that used to
 	// refresh them individually name this wrapper instead.
@@ -69,14 +50,10 @@
 	const volunteerValue = $derived(settings.volunteerValue);
 	const orientation = $derived(settings.orientation);
 	const venue = $derived(settings.venue);
-	const integrationSettings = $derived(settings.integration);
 	const channelConfigs = $derived(settings.channelConfigs);
 	const featureFlags = $derived(settings.featureFlags);
 
 	const { fields: reservationFields } = updateReservationSettings;
-
-	let connectionTestResult = $state<{ ok: boolean; error?: string } | null>(null);
-	let connectionTesting = $state(false);
 
 	// Keyed by channel: Instagram and Messenger share one token, but each has its
 	// own card, and a result printed under the card the staffer did not press
@@ -86,54 +63,10 @@
 	);
 	let metaTesting = $state<string | null>(null);
 
-	let selfTestResult = $state<Awaited<ReturnType<typeof runLockSelfTest>> | null>(null);
-	let selfTesting = $state(false);
-	let revokingTest = $state(false);
-
-	// U-tec is "connected" once a refresh token has been minted (via OAuth or
-	// pasted manually). Until then, only the Connect flow makes sense. Presence
-	// is all this needs, which is the whole reason the value can stay server-side.
-	const utecConnected = $derived(integrationSettings.connected);
-	const utecCanConnect = $derived(
-		!!integrationSettings.clientId && integrationSettings.clientSecret.configured
-	);
-
-	// Same shape as the refresh token's: the field renders empty either way, so
-	// the hint is the only thing saying which, and that blank keeps what is set.
-	const clientSecretHint = $derived(
-		{
-			kv: 'Saved here. Leave blank to keep it.',
-			env: 'Set by the ULTRALOC_CLIENT_SECRET environment variable. Saving a value here overrides it.',
-			null: 'Not set. Paste the secret from the U-tec developer console.'
-		}[String(integrationSettings.clientSecret.source)]
-	);
-
-	const utecRedirectUri = $derived(`${page.url.origin}/api/integrations/utec/callback`);
-
-	// Surface the result of the OAuth round-trip (?utec=… set by the callback).
-	$effect(() => {
-		const result = page.url.searchParams.get('utec');
-		if (!result) return;
-		activeTab = 'integrations';
-
-		const messages: Record<string, [type: 'success' | 'error', msg: string]> = {
-			connected: ['success', m.staff_settings_utec_connected_toast()],
-			denied: ['error', m.staff_settings_utec_denied_toast()],
-			state_error: ['error', m.staff_settings_utec_state_error_toast()],
-			exchange_failed: ['error', m.staff_settings_utec_exchange_failed_toast()],
-			missing_config: ['error', m.staff_settings_utec_missing_config_toast()]
-		};
-		const entry = messages[result];
-		if (entry) toast[entry[0]](entry[1]);
-
-		void goto(resolve('staff/settings'), { shallow: true, replace: true });
-	});
-
 	const tabs = [
 		{ key: 'pricing', label: m.staff_settings_pricing_label() },
 		{ key: 'reservations', label: m.staff_settings_reservations_label() },
 		{ key: 'organization', label: m.staff_settings_organization_label() },
-		{ key: 'integrations', label: m.staff_settings_integrations_label() },
 		{ key: 'inbox', label: m.staff_settings_inbox_channels_label() },
 		{ key: 'features', label: m.staff_settings_features_label() },
 		{ key: 'subscriptions', label: m.staff_settings_subscriptions_label() }
@@ -141,16 +74,6 @@
 
 	let syncResult = $state<SubscriptionSyncSummary | null>(null);
 	let statsResult = $state<CommunityStats | null>(null);
-
-	async function handleTestConnection() {
-		connectionTesting = true;
-		connectionTestResult = null;
-		try {
-			connectionTestResult = await testUtecConnection();
-		} finally {
-			connectionTesting = false;
-		}
-	}
 
 	async function handleMetaTest(channel: string) {
 		metaTesting = channel;
@@ -163,38 +86,6 @@
 			};
 		} finally {
 			metaTesting = null;
-		}
-	}
-
-	async function handleSelfTest() {
-		selfTesting = true;
-		selfTestResult = null;
-		try {
-			selfTestResult = await runLockSelfTest();
-		} catch (err) {
-			selfTestResult = {
-				ok: false,
-				steps: [{ name: 'create', ok: false, detail: (err as Error).message }]
-			};
-		} finally {
-			selfTesting = false;
-		}
-	}
-
-	async function handleRevokeTest() {
-		revokingTest = true;
-		try {
-			const { removed } = await revokeLockTest();
-			selfTestResult = null;
-			toast.success(
-				removed > 0
-					? m.staff_settings_removed_test_code_s_toast({ removed })
-					: m.staff_settings_no_test_codes_remove_toast()
-			);
-		} catch (err) {
-			toast.error((err as Error).message);
-		} finally {
-			revokingTest = false;
 		}
 	}
 </script>
@@ -732,247 +623,6 @@
 								placeholder="16"
 							/>
 						</div>
-					</CardBody>
-				</Card>
-			</Form>
-		{:else if activeTab === 'integrations'}
-			<p class="text-muted">
-				{m.staff_settings_manage_credentials_third_party_integrations_text()}
-			</p>
-
-			<Form
-				remote={updateIntegrationSettings}
-				guard
-				successToast={m.staff_settings_u_tec_credentials_updated_toast()}
-			>
-				<Card>
-					<CardBody>
-						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-2">
-								<CardTitle size="base">{m.staff_settings_u_tec_smart_lock_title()}</CardTitle>
-								<span class="badge badge-sm {utecConnected ? 'badge-success' : 'badge-ghost'}">
-									{utecConnected
-										? m.staff_settings_connected_2_text()
-										: m.staff_settings_not_connected_text()}
-								</span>
-							</div>
-							<div class="flex gap-2">
-								{#if utecConnected}
-									<!-- Test Connection only matters once a refresh token exists. -->
-									<Button
-										type="button"
-										variant="ghost"
-										size="sm"
-										onclick={handleTestConnection}
-										disabled={connectionTesting}
-									>
-										{#if connectionTesting}
-											<span class="loading loading-xs loading-spinner"></span>
-										{:else}
-											<IconPlugConnected class="size-4" />
-										{/if}
-										{m.staff_settings_test_connection_label()}
-									</Button>
-									<Button
-										href={resolve('api/integrations/utec/authorize')}
-										variant="ghost"
-										size="sm"
-										data-sveltekit-reload
-									>
-										{m.staff_settings_reconnect_label()}
-									</Button>
-								{:else}
-									<Button
-										href={resolve('api/integrations/utec/authorize')}
-										variant="primary"
-										size="sm"
-										class={utecCanConnect ? '' : 'btn-disabled'}
-										data-sveltekit-reload
-									>
-										<IconPlugConnected class="size-4" />
-										{m.staff_settings_connect_u_tec_label()}
-									</Button>
-								{/if}
-								<SubmitButton
-									label={m.staff_settings_save_label()}
-									successLabel={m.staff_settings_saved_label()}
-									errorLabel={m.staff_settings_error_label()}
-									variant="primary"
-									size="sm"
-								/>
-							</div>
-						</div>
-
-						{#if !utecConnected && !utecCanConnect}
-							<p class="text-subtle">
-								{m.staff_settings_save_client_id_client_secret_text()}
-							</p>
-						{/if}
-
-						{#if connectionTestResult}
-							<div
-								class="alert {connectionTestResult.ok
-									? 'alert-success'
-									: 'alert-error'} py-2 text-sm"
-							>
-								{#if connectionTestResult.ok}
-									{m.staff_settings_connection_successful_token_refresh_verified_text()}
-								{:else}
-									{m.staff_settings_connection_failed_text({
-										error: connectionTestResult.error ?? ''
-									})}
-								{/if}
-							</div>
-						{/if}
-
-						{#if utecConnected}
-							<!-- Live health. `utecConnected` only means a refresh token is
-							     stored; it says nothing about whether the door is reachable.
-							     Both boundaries need a `failed` snippet to catch anything at
-							     all, and this is the page you fix the lock from. -->
-							<svelte:boundary>
-								<LockHealth />
-
-								{#snippet failed(error, reset)}
-									<Alert type="warning" reset={() => retryQuery(getLockHealth(), reset)}>
-										{m.staff_settings_lock_did_not_answer_body({
-											errorMessage: errorMessage(error)
-										})}
-									</Alert>
-								{/snippet}
-							</svelte:boundary>
-
-							<svelte:boundary>
-								<UnmanagedLockCodes />
-
-								{#snippet failed(error, reset)}
-									<Alert type="warning" reset={() => retryQuery(getUnmanagedLockUsers(), reset)}>
-										{m.staff_settings_could_not_read_lock_s_body({
-											errorMessage: errorMessage(error)
-										})}
-									</Alert>
-								{/snippet}
-							</svelte:boundary>
-
-							<div class="mt-2 border-t border-base-200 pt-3">
-								<div class="flex items-start justify-between gap-2">
-									<div>
-										<p class="text-sm font-medium">{m.staff_settings_lock_self_test_text()}</p>
-										<p class="text-subtle">
-											{m.staff_settings_issues_temporary_code_expires_its_text()}
-										</p>
-									</div>
-									<div class="flex shrink-0 gap-2">
-										<Button
-											type="button"
-											variant="default"
-											size="sm"
-											outline
-											onclick={handleSelfTest}
-											disabled={selfTesting}
-										>
-											{#if selfTesting}
-												<span class="loading loading-xs loading-spinner"></span>
-											{/if}
-											{m.staff_settings_run_lock_self_test_label()}
-										</Button>
-										<Button
-											type="button"
-											variant="ghost"
-											size="sm"
-											onclick={handleRevokeTest}
-											disabled={revokingTest}
-										>
-											{#if revokingTest}
-												<span class="loading loading-xs loading-spinner"></span>
-											{/if}
-											{m.staff_settings_revoke_test_codes_label()}
-										</Button>
-									</div>
-								</div>
-
-								{#if selfTestResult}
-									<div class="mt-3 rounded-lg border border-base-300 p-3">
-										{#if selfTestResult.code}
-											<div class="mb-2 flex items-baseline gap-2">
-												<span class="text-subtle">{m.staff_settings_test_code_text()}</span>
-												<span class="font-mono text-2xl font-bold tracking-[0.2em]">
-													{selfTestResult.code}
-												</span>
-											</div>
-										{/if}
-										<ul class="space-y-1 text-sm">
-											{#each selfTestResult.steps as step (step.name)}
-												<li class="flex items-start gap-2">
-													{#if step.ok}
-														<IconCircleCheck class="size-4 shrink-0 text-success" />
-													{:else}
-														<IconCircleX class="size-4 shrink-0 text-error" />
-													{/if}
-													<span class="opacity-80">{step.detail}</span>
-												</li>
-											{/each}
-										</ul>
-									</div>
-								{/if}
-							</div>
-						{/if}
-
-						<div class="mt-2 grid gap-4 sm:grid-cols-2">
-							<FormField
-								field={updateIntegrationSettings.fields.clientId}
-								label={m.staff_settings_client_id_label()}
-								type="text"
-								value={integrationSettings.clientId}
-							/>
-							<FormField
-								field={updateIntegrationSettings.fields.clientSecret}
-								label={m.staff_settings_client_secret_label()}
-								type="password"
-								value=""
-								description={clientSecretHint}
-							/>
-							<svelte:boundary>
-								<UtecDevicePicker deviceId={integrationSettings.deviceId} />
-
-								{#snippet failed()}
-									<FormField
-										field={updateIntegrationSettings.fields.deviceId}
-										label={m.staff_settings_device_id_label()}
-										type="text"
-										value={integrationSettings.deviceId}
-										description={m.staff_settings_could_not_reach_u_tec_body()}
-									/>
-								{/snippet}
-							</svelte:boundary>
-						</div>
-
-						<div class="mt-2">
-							<p class="text-subtle">
-								{m.staff_settings_redirect_uri_register_exact_value_text()}
-							</p>
-							<div class="mt-1 flex items-center gap-2">
-								<code class="flex-1 truncate code-block px-2 py-1">
-									{utecRedirectUri}
-								</code>
-								<Button
-									type="button"
-									variant="ghost"
-									size="xs"
-									title={m.staff_settings_copy_redirect_uri_title()}
-									onclick={() => {
-										navigator.clipboard.writeText(utecRedirectUri);
-										toast.success(m.staff_settings_redirect_uri_copied_toast());
-									}}
-								>
-									<IconCopy class="size-3.5" />
-								</Button>
-							</div>
-						</div>
-
-						<p class="mt-2 text-subtle">
-							{m.staff_settings_click_connect_u_tec_authorize_text()}
-						</p>
 					</CardBody>
 				</Card>
 			</Form>

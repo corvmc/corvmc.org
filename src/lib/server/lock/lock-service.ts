@@ -42,6 +42,21 @@ const LAST_ONLINE_KEY = 'ultraloc:lastSeenOnline';
  */
 const LAST_RUN_KEY = 'ultraloc:lastJobRun';
 
+/** KV key holding when a reading last found the lock online: the sidebar's "last seen". */
+const LAST_ONLINE_AT_KEY = 'ultraloc:lastOnlineAt';
+
+/** The last health reading, from KV: no call to U-tec. `online` is null before the first. */
+export async function getLockStatus(): Promise<{
+	online: boolean | null;
+	lastOnlineAt: string | null;
+}> {
+	const [online, lastOnlineAt] = await Promise.all([
+		getJson<boolean>(LAST_ONLINE_KEY),
+		getJson<string>(LAST_ONLINE_AT_KEY)
+	]);
+	return { online: online ?? null, lastOnlineAt: lastOnlineAt ?? null };
+}
+
 /** What one run of the daily job did. */
 export interface LockJobSummary {
 	provisioned: number;
@@ -148,6 +163,7 @@ async function checkDeviceHealth(errors: string[]): Promise<boolean | null> {
 	// run during an outage still alerts.
 	const previous = (await getJson<boolean>(LAST_ONLINE_KEY)) ?? true;
 	await putJson(LAST_ONLINE_KEY, health.online);
+	if (health.online) await putJson(LAST_ONLINE_AT_KEY, new Date().toISOString());
 
 	if (!health.online) {
 		errors.push(
@@ -180,7 +196,7 @@ async function notifyStaffLockOffline(health: LockDeviceHealth): Promise<void> {
 						value: health.batteryLevel === null ? 'unknown' : `${health.batteryLevel} of 5`
 					}
 				],
-				cta: { url: '/staff/settings', label: 'Open lock settings' }
+				cta: { url: '/staff/reservations?access', label: 'Open building access' }
 			}
 		});
 	} catch (err) {

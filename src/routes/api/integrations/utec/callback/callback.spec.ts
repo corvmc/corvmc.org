@@ -68,7 +68,7 @@ describe('U-tec OAuth callback', () => {
 		const redirect = await callGET('?code=abc&state=WRONG', 'RIGHT');
 
 		expect(redirect?.status).toBe(303);
-		expect(redirect?.location).toBe('/staff/settings?utec=state_error');
+		expect(redirect?.location).toBe('/staff/reservations?utec=state_error');
 		expect(mockExchange).not.toHaveBeenCalled();
 		expect(mockUpdateSiteConfig).not.toHaveBeenCalled();
 	});
@@ -76,7 +76,7 @@ describe('U-tec OAuth callback', () => {
 	it('redirects on a provider error', async () => {
 		const redirect = await callGET('?error=access_denied&state=RIGHT', 'RIGHT');
 
-		expect(redirect?.location).toBe('/staff/settings?utec=denied');
+		expect(redirect?.location).toBe('/staff/reservations?utec=denied');
 		expect(mockExchange).not.toHaveBeenCalled();
 	});
 
@@ -90,7 +90,7 @@ describe('U-tec OAuth callback', () => {
 			'http://localhost/api/integrations/utec/callback'
 		);
 		expect(mockUpdateSiteConfig).toHaveBeenCalledWith('integration.utec.refreshToken', 'rt');
-		expect(redirect?.location).toBe('/staff/settings?utec=connected');
+		expect(redirect?.location).toBe('/staff/reservations?utec=connected');
 	});
 
 	it('redirects on an exchange failure', async () => {
@@ -99,7 +99,7 @@ describe('U-tec OAuth callback', () => {
 
 		const redirect = await callGET('?code=abc&state=RIGHT', 'RIGHT');
 
-		expect(redirect?.location).toBe('/staff/settings?utec=exchange_failed');
+		expect(redirect?.location).toBe('/staff/reservations?utec=exchange_failed');
 		expect(mockUpdateSiteConfig).not.toHaveBeenCalled();
 
 		consoleSpy.mockRestore();

@@ -13,19 +13,11 @@ import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-use
  * handed it every channel in the vocabulary, and reading `.icon` off undefined
  * blanked Settings.
  *
- * Nothing else clicks these seven, and the per-tab assertion is deliberately
+ * Nothing else clicks these six, and the per-tab assertion is deliberately
  * thin: the point is that each panel renders at all.
  */
 
-const TABS = [
-	'pricing',
-	'reservations',
-	'organization',
-	'integrations',
-	'inbox',
-	'features',
-	'subscriptions'
-];
+const TABS = ['pricing', 'reservations', 'organization', 'inbox', 'features', 'subscriptions'];
 
 const panel = (page: Page, key: string) =>
 	page.locator(`[role="tabpanel"][aria-labelledby="tab-${key}"]`);
@@ -60,5 +52,18 @@ test.describe('staff settings tabs', () => {
 		// `direct` is member↔member: staff never reply on it and there is nothing
 		// behind it to enable, so it is not one of this tab's rows.
 		await expect(panel(page, 'inbox').locator('[data-channel="direct"]')).toHaveCount(0);
+	});
+
+	test('the old Integrations tab opens Building access, where the lock card moved', async ({
+		page
+	}) => {
+		await loginAsStaff(page);
+		await page.goto('/staff/settings?tab=integrations');
+		await page.waitForURL(/\/staff\/reservations/);
+		const sidebar = page.getByRole('dialog');
+		await expect(sidebar.getByTestId('lock-status')).toBeVisible();
+		await expect(sidebar.getByTestId('active-codes')).toBeVisible();
+		await expect(sidebar.getByTestId('lock-settings')).toBeVisible();
+		await expect(page.locator('[data-boundary-failed]')).toHaveCount(0);
 	});
 });
