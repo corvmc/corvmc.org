@@ -62,7 +62,7 @@ function disposition(page: Page, which: 'reopen' | 'resolve' | 'snooze') {
 }
 
 function row(page: Page, contact: string) {
-	// The queue is a list of conversation cards, not a table — see InboxShell.
+	// The queue is a list of conversation cards, not a table — see ListDetailShell.
 	return page.getByRole('listitem').filter({ hasText: contact });
 }
 
