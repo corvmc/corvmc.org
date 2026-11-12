@@ -67,9 +67,9 @@ describe('tabs', () => {
 	it.each([
 		[
 			[READ, AUDIENCES],
-			['campaigns', 'audiences']
+			['campaigns', 'audiences', 'posters']
 		],
-		[[READ], ['campaigns']],
+		[[READ], ['campaigns', 'posters']],
 		[[AUDIENCES], ['audiences']],
 		[[], []]
 	])('holding %j shows %j', (held, keys) => {

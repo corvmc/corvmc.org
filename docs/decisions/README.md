@@ -91,3 +91,4 @@ A page or less. Link the issue and the PRs.
 | 0057 | [The day before a first visit](0057-the-day-before-a-first-visit.md)                                                      | 2026-11-11 | Accepted |
 | 0058 | [A first booking holds unbilled tour time](0058-a-first-booking-holds-unbilled-tour-time.md)                              | 2026-11-11 | Accepted |
 | 0059 | [The Practice space page runs the space](0059-the-practice-space-page-runs-the-space.md)                                  | 2026-11-11 | Accepted |
+| 0060 | [A month poster groups by who made the event](0060-a-month-poster-groups-by-who-made-the-event.md)                        | 2026-11-12 | Accepted |
