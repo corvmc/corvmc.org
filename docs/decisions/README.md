@@ -86,3 +86,4 @@ A page or less. Link the issue and the PRs.
 | 0052 | [Secret ballots keep a counter, not a row per vote](0052-secret-ballots-count-without-a-vote-row.md)                      | 2026-09-24 | Accepted |
 | 0053 | [A committee owns show work; ownership grants no permission](0053-committees-own-deliverables-not-permissions.md)         | 2026-09-29 | Accepted |
 | 0054 | [A work order is the task, and a contractor job is an engagement on it](0054-a-work-order-is-the-task.md)                 | 2026-10-13 | Accepted |
+| 0055 | [A task is the work, and a shift is when volunteers show up](0055-a-task-is-the-work-a-shift-is-when.md)                  | 2026-11-10 | Accepted |

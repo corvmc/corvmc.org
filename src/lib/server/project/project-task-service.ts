@@ -32,7 +32,6 @@ import {
 	openShift,
 	requireActiveRole,
 	resolveWorkOrder,
-	toTask,
 	validateCapacity,
 	workOrderModes,
 	type WorkOrderMode
@@ -92,7 +91,7 @@ export async function requireTaskInProject(projectId: string, workOrderId: strin
 		.where(and(eq(workOrder.id, workOrderId), eq(workOrder.projectId, projectId)))
 		.limit(1);
 	if (!row) throw new TaskNotFoundError();
-	return toTask(row);
+	return row;
 }
 
 async function requireLiveTask(projectId: string, workOrderId: string): Promise<Task> {
@@ -605,7 +604,7 @@ export async function setTaskEquipment(
 		.set({ assetId, updatedAt: new Date() })
 		.where(eq(workOrder.id, task.id))
 		.returning();
-	await auditWorkOrderChange(task, toTask(row));
+	await auditWorkOrderChange(task, row);
 }
 
 // ---------------------------------------------------------------------------
@@ -651,7 +650,7 @@ export async function reopenTask(projectId: string, workOrderId: string): Promis
 			subject: { type: 'work_order', id: task.id, label: label(task) },
 			details: {}
 		});
-		return toTask(row);
+		return row;
 	} catch (err) {
 		// A recurring occurrence: closing it already wrote the next one.
 		if (isUniqueConstraintError(err)) {
@@ -676,9 +675,8 @@ export async function rescheduleTask(
 		.set({ dueAt: data.dueAt, updatedAt: new Date() })
 		.where(eq(workOrder.id, task.id))
 		.returning();
-	const after = toTask(row);
-	await auditWorkOrderChange(task, after);
-	return after;
+	await auditWorkOrderChange(task, row);
+	return row;
 }
 
 /** Call it off. Its signups stay, as a notify list, exactly as a cancelled shift's do. */

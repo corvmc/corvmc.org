@@ -40,8 +40,8 @@ resources, which is why they are one vertical rather than "space" and "gear."
 **A show is a project.** `duty_list` stamps tasks (`work_order`) onto a listing anchored at
 `doors|start|end`; `work_task` is the checklist. A task's times are its shifts
 (`volunteer_shift`, #2518): `volunteer_signup` is who signed up for a shift, and
-`work_order_assignee` is who staff put on the task. The `work_order` columns that held a time,
-its places and the posted flag are no longer read, and go in a later migration.
+`work_order_assignee` is who staff put on the task. `work_order` holds no time and no places;
+`pending_capacity` is the count for a shift not yet opened.
 `eventKinds` includes `work_party`, which is a project outright. Volunteering is not a
 separate vertical — it is how a work order gets answered.
 

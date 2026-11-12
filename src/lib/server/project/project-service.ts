@@ -45,7 +45,7 @@ import {
 	type ProjectStatus
 } from '#lib/config.js';
 import { getHourValueCents } from '#lib/server/volunteer/hour-value.js';
-import { claimedSql, taskColumns } from '#lib/server/volunteer/work-order-service.js';
+import { claimedSql } from '#lib/server/volunteer/work-order-service.js';
 import { toEventRef } from '#lib/server/entity/refs.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import type { ProjectField } from '#lib/types/audit.js';
@@ -735,7 +735,7 @@ export async function listProjectAttachments(projectId: string) {
 		// has none, and is still the project's.
 		db
 			.select({
-				...taskColumns(),
+				...getTableColumns(workOrder),
 				title: sql<string>`coalesce(${workOrder.title}, ${eventListing.title}, ${volunteerRole.name}, 'Untitled task')`,
 				claimed: claimedSql().mapWith(Number)
 			})

@@ -4,7 +4,7 @@
  */
 import { describe, expect, it, beforeAll } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { applyMigrations, MIGRATIONS_FOLDER } from './migrate-local';
@@ -12,6 +12,17 @@ import { applyMigrations, MIGRATIONS_FOLDER } from './migrate-local';
 const dir = readdirSync(MIGRATIONS_FOLDER).find((n) =>
 	n.endsWith('_timed_work_orders_become_shifts')
 );
+
+/** Every migration up to the copy; a later one drops the columns it reads. */
+function migrationsThroughCopy(): string {
+	const out = mkdtempSync(join(tmpdir(), 'corvmc-shift-copy-migrations-'));
+	for (const tag of readdirSync(MIGRATIONS_FOLDER)) {
+		if (/^\d{14}_/.test(tag) && dir && tag <= dir) {
+			cpSync(join(MIGRATIONS_FOLDER, tag), join(out, tag), { recursive: true });
+		}
+	}
+	return out;
+}
 const COPY = readFileSync(join(MIGRATIONS_FOLDER, dir ?? 'missing', 'migration.sql'), 'utf8');
 
 function runCopy(db: DatabaseSync) {
@@ -42,7 +53,7 @@ describe('timed work orders become shifts', () => {
 
 	beforeAll(() => {
 		const file = join(mkdtempSync(join(tmpdir(), 'corvmc-shift-copy-')), 'd1.sqlite');
-		applyMigrations(file);
+		applyMigrations(file, migrationsThroughCopy());
 		db = new DatabaseSync(file);
 		// The migration ran on empty tables; these rows stand in for production's.
 		db.exec(`

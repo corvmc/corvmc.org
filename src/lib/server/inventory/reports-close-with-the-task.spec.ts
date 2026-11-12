@@ -3,9 +3,7 @@ import { describe, it, expect, vi, beforeAll } from 'vitest';
 /**
  * The clock never closes an equipment report (#2518): a report resolves when its
  * task is marked done. Runs the completion sweep and every listener the app
- * registers, except notification delivery, against a real SQLite. The task
- * carries the retired "close the reports" setting switched on, the case the old
- * listener acted on.
+ * registers, except notification delivery, against a real SQLite.
  */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
@@ -41,8 +39,8 @@ beforeAll(async () => {
 		insert into "user" (id, name, email) values
 			('staff', 'Staff', 'staff@example.com'), ('vol', 'Vol', 'vol@example.com');
 		insert into volunteer_role (id, name) values ('repair', 'Repair');
-		insert into work_order (id, volunteer_role_id, title, close_reports_on_completion)
-			values ('task', 'repair', 'Re-cone the bass cab', 1);
+		insert into work_order (id, volunteer_role_id, title)
+			values ('task', 'repair', 'Re-cone the bass cab');
 		insert into volunteer_shift (id, work_order_id, starts_at, ends_at, capacity)
 			values ('shift', 'task', ${now - 3 * HOUR}, ${now - HOUR}, 1);
 		insert into volunteer_signup (id, shift_id, user_id, status, claimed_at, confirmed_at)
