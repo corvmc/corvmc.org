@@ -1596,14 +1596,14 @@
 	"staff_marketing_campaigns_campaign_preview_start_typing_see_text": "Start typing to see a preview...",
 	"staff_marketing_campaigns_description_body": "No campaigns yet.",
 	"staff_marketing_campaigns_event_scope_picker_clear_label": "Clear",
-	"staff_marketing_campaigns_event_scope_picker_optional_pick_o_text": "Optional. Pick one and “This show's audience” resolves to its ticket holders and RSVPs; leave it blank and that audience is empty.",
+	"staff_marketing_campaigns_event_scope_picker_optional_pick_o_text": "Optional. Pick one and “Event audience” resolves to its ticket holders and RSVPs; leave it blank and that audience is empty.",
 	"staff_marketing_campaigns_event_scope_picker_show_s_audience_text": [
 		{
 			"declarations": ["input n", "local nPlural = n: plural"],
 			"selectors": ["nPlural"],
 			"match": {
-				"nPlural=one": "“This show's audience” resolves to {n} person — ticket holders and RSVPs, minus anyone who has opted out. Tick it above to send to them.",
-				"nPlural=*": "“This show's audience” resolves to {n} people — ticket holders and RSVPs, minus anyone who has opted out. Tick it above to send to them."
+				"nPlural=one": "“Event audience” resolves to {n} person — ticket holders and RSVPs, minus anyone who has opted out. Tick it above to send to them.",
+				"nPlural=*": "“Event audience” resolves to {n} people — ticket holders and RSVPs, minus anyone who has opted out. Tick it above to send to them."
 			}
 		}
 	],
@@ -2722,6 +2722,7 @@
 	"staff_reservations_recurring_series_modal_series_label": "Series",
 	"staff_reservations_reservations_closures_label": "Reservations and closures",
 	"staff_reservations_resolve_modal_all_caught_up_text": "All caught up!",
+	"staff_reservations_events_label": "Events",
 	"staff_reservations_shows_label": "Shows",
 	"staff_reservations_teaching_label": "Teaching",
 	"staff_reservations_teaching_text": "Teaching",
