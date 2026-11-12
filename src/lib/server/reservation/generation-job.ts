@@ -15,6 +15,7 @@ import { getOccurrences, generationWindowEnd } from './rrule-helpers';
 import { formatDateInTz, formatTimeInTz } from './timezone';
 import { announceConfirmed, staffCreate } from './reservation-service';
 import { hasConflict } from './conflict-service';
+import { insertReservation } from './insert-reservation';
 import { listingHoldBooker } from './event-hold';
 import { attachExisting } from '#lib/server/media/media-service.js';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
@@ -250,7 +251,7 @@ async function processSeries(
 		const hasRegularConflict = await checkReservationConflict(occStart, occEnd, series.id);
 
 		if (hasRegularConflict) {
-			await db.insert(reservation).values({
+			await insertReservation({
 				bookerType: prototype.bookerType,
 				bookerId: prototype.bookerId,
 				createdByUserId: prototype.createdByUserId,
@@ -280,19 +281,16 @@ async function processSeries(
 		}
 
 		// No conflict: an occurrence is confirmed the moment it exists (#2502).
-		const [occurrence] = await db
-			.insert(reservation)
-			.values({
-				bookerType: prototype.bookerType,
-				bookerId: prototype.bookerId,
-				createdByUserId: prototype.createdByUserId,
-				status: 'confirmed',
-				startsAt: occStart,
-				endsAt: occEnd,
-				notes: prototype.notes,
-				recurringSeriesId: series.id
-			})
-			.returning({ id: reservation.id });
+		const occurrence = await insertReservation({
+			bookerType: prototype.bookerType,
+			bookerId: prototype.bookerId,
+			createdByUserId: prototype.createdByUserId,
+			status: 'confirmed',
+			startsAt: occStart,
+			endsAt: occEnd,
+			notes: prototype.notes,
+			recurringSeriesId: series.id
+		});
 		await announceConfirmed(occurrence.id);
 
 		created++;

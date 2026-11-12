@@ -34,6 +34,8 @@ export async function seedGroupSessions(groups: any[]) {
 						bookerId: g.id,
 						createdByUserId: g.ownerId,
 						status: 'confirmed',
+						// A programme's room is free, as `insertReservation` writes it.
+						cashDueCents: 0,
 						startsAt,
 						endsAt
 					})
