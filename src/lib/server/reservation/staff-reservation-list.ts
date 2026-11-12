@@ -12,7 +12,6 @@ import {
 	notInArray,
 	or
 } from 'drizzle-orm';
-import type { SelectedFields } from 'drizzle-orm/sqlite-core';
 import { parseDate } from '@internationalized/date';
 import { db } from '#lib/server/db/index.js';
 import { user } from '#lib/server/db/schema/authentication.js';
@@ -149,44 +148,46 @@ function listWhere(f: StaffListFilters, bounds: RangeBounds) {
 	return conditions.length > 0 ? and(...conditions) : undefined;
 }
 
-function joined<T extends SelectedFields>(columns: T) {
-	return db
-		.select(columns)
-		.from(reservation)
-		.innerJoin(user, eq(reservation.createdByUserId, user.id))
-		.leftJoin(group, bandBookerJoin())
-		.leftJoin(eventListing, eventBookerJoin());
-}
-
 async function reservationPage(f: StaffListFilters, bounds: RangeBounds) {
 	const where = listWhere(f, bounds);
 	const order = bounds.order === 'asc' ? asc(reservation.startsAt) : desc(reservation.startsAt);
-	const dataQ = joined({
-		id: reservation.id,
-		status: reservation.status,
-		startsAt: reservation.startsAt,
-		endsAt: reservation.endsAt,
-		bookerType: reservation.bookerType,
-		notes: reservation.notes,
-		stripePaymentRecordId: reservation.stripePaymentRecordId,
-		paidAt: reservation.paidAt,
-		// `reservationPaymentState` takes this as a required field, so a query
-		// that forgets it cannot compile.
-		refundedAt: reservation.refundedAt,
-		cashDueCents: reservation.cashDueCents,
-		creditsUsed: reservation.creditsUsed,
-		createdByUserId: reservation.createdByUserId,
-		recurringSeriesId: reservation.recurringSeriesId,
-		// The desk staffs a volunteer for a member's first visit.
-		isFirstReservation: isFirstReservationSql(),
-		member: memberRefColumns(),
-		band: bandRefColumns(),
-		event: eventRefColumns()
-	})
+	const dataQ = db
+		.select({
+			id: reservation.id,
+			status: reservation.status,
+			startsAt: reservation.startsAt,
+			endsAt: reservation.endsAt,
+			bookerType: reservation.bookerType,
+			notes: reservation.notes,
+			stripePaymentRecordId: reservation.stripePaymentRecordId,
+			paidAt: reservation.paidAt,
+			// `reservationPaymentState` takes this as a required field, so a query
+			// that forgets it cannot compile.
+			refundedAt: reservation.refundedAt,
+			cashDueCents: reservation.cashDueCents,
+			creditsUsed: reservation.creditsUsed,
+			createdByUserId: reservation.createdByUserId,
+			recurringSeriesId: reservation.recurringSeriesId,
+			// The desk staffs a volunteer for a member's first visit.
+			isFirstReservation: isFirstReservationSql(),
+			member: memberRefColumns(),
+			band: bandRefColumns(),
+			event: eventRefColumns()
+		})
+		.from(reservation)
+		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.leftJoin(group, bandBookerJoin())
+		.leftJoin(eventListing, eventBookerJoin())
 		.where(where)
 		.orderBy(order)
 		.$dynamic();
-	const countQ = joined({ count: count() }).where(where);
+	const countQ = db
+		.select({ count: count() })
+		.from(reservation)
+		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.leftJoin(group, bandBookerJoin())
+		.leftJoin(eventListing, eventBookerJoin())
+		.where(where);
 
 	const { rows, pagination } = await paginate(dataQ, countQ, {
 		page: f.page ?? 1,
@@ -206,7 +207,12 @@ async function reservationPage(f: StaffListFilters, bounds: RangeBounds) {
 
 /** Where the next page starts, so a page knows which closures are its own. */
 async function nextPageStart(f: StaffListFilters, bounds: RangeBounds) {
-	const [row] = await joined({ startsAt: reservation.startsAt })
+	const [row] = await db
+		.select({ startsAt: reservation.startsAt })
+		.from(reservation)
+		.innerJoin(user, eq(reservation.createdByUserId, user.id))
+		.leftJoin(group, bandBookerJoin())
+		.leftJoin(eventListing, eventBookerJoin())
 		.where(listWhere(f, bounds))
 		.orderBy(bounds.order === 'asc' ? asc(reservation.startsAt) : desc(reservation.startsAt))
 		.limit(1)
@@ -254,10 +260,21 @@ export async function countStaffStatuses(
 	const anyDate = baseConditions(f, rangeBounds({ range: 'any' }, now));
 	const plain = staffStatusViews.filter((s) => s !== 'payment_due');
 	const [byStatus, [due]] = await Promise.all([
-		joined({ status: reservation.status, count: count() })
+		db
+			.select({ status: reservation.status, count: count() })
+			.from(reservation)
+			.innerJoin(user, eq(reservation.createdByUserId, user.id))
+			.leftJoin(group, bandBookerJoin())
+			.leftJoin(eventListing, eventBookerJoin())
 			.where(and(...base, inArray(reservation.status, plain)))
 			.groupBy(reservation.status),
-		joined({ count: count() }).where(and(...anyDate, confirmedUnpaidSql()))
+		db
+			.select({ count: count() })
+			.from(reservation)
+			.innerJoin(user, eq(reservation.createdByUserId, user.id))
+			.leftJoin(group, bandBookerJoin())
+			.leftJoin(eventListing, eventBookerJoin())
+			.where(and(...anyDate, confirmedUnpaidSql()))
 	]);
 	const counts = { confirmed: 0, payment_due: due?.count ?? 0, waitlisted: 0, cancelled: 0 };
 	for (const row of byStatus) counts[row.status as StaffStatusView] = row.count;

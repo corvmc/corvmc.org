@@ -3437,5 +3437,6 @@
 	"staff_reservations_status_payment_due_label": "Payment due ({count})",
 	"staff_reservations_status_waitlisted_label": "Waitlisted ({count})",
 	"staff_reservations_status_cancelled_label": "Cancelled ({count})",
-	"staff_reservations_payment_overdue_text": "Payment overdue"
+	"staff_reservations_payment_overdue_text": "Payment overdue",
+	"staff_booked_by_label": "Booked by"
 }
