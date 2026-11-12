@@ -41,6 +41,7 @@
 			modalTitle={m.staff_grants_modal_title()}
 			submitLabel={m.staff_grants_submit_label()}
 			successToast={m.staff_grants_success_toast()}
+			data-testid="new-grant"
 		>
 			{#snippet form()}
 				<GrantFields fields={createGrant.fields} {funders} />

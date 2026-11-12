@@ -326,10 +326,10 @@ export interface EquipmentLoanDueEvent {
 export interface DevelopmentDeadlineDueEvent {
 	stage: '14d' | '3d';
 	module: 'grant' | 'sponsor';
-	kind: 'apply' | 'report' | 'end';
+	kind: 'apply' | 'end';
 	/** `YYYY-MM-DD` */
 	on: string;
-	/** What is due: "Interim report", "Apply by", "Sponsorship ends". */
+	/** What is due: "Apply by", "Award ends", "Sponsorship ends". */
 	title: string;
 	/** The grant application or the sponsor, which is where the link goes. */
 	parentId: string;

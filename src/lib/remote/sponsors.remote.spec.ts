@@ -168,7 +168,8 @@ describe('sponsor input', () => {
 		);
 		await remote.createSponsorship({ ...SHIP, tier: '', endsOn: '' });
 		expect(service.createSponsorship).toHaveBeenCalledWith(
-			expect.objectContaining({ tier: null, endsOn: null, amountCents: null })
+			expect.objectContaining({ tier: null, endsOn: null, amountCents: null }),
+			{ createdByUserId: expect.any(String) }
 		);
 	});
 });

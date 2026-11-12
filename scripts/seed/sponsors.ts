@@ -4,6 +4,7 @@ import {
 	type NewSponsorship
 } from '../../src/lib/server/db/schema/sponsor';
 import { seedOrganizations, type SeedOrganization } from './parties';
+import { fundingProjects } from './funding';
 import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -63,6 +64,7 @@ export async function seedSponsors(events: SeedEvent[]) {
 			endsOn: day(40)
 		},
 		{
+			id: 'seed-sponsorship-troubadour-last',
 			organizationId: 'seed-sponsor-troubadour',
 			title: 'Last season',
 			tier: 'Silver',
@@ -89,6 +91,7 @@ export async function seedSponsors(events: SeedEvent[]) {
 			amountCents: 250_000
 		},
 		{
+			id: 'seed-sponsorship-print',
 			organizationId: 'seed-sponsor-print',
 			title: 'Poster printing',
 			tier: 'In kind',
@@ -99,6 +102,7 @@ export async function seedSponsors(events: SeedEvent[]) {
 	];
 
 	await seedOrganizations(sponsors);
+	await fundingProjects('sponsorship', ships);
 	await batchInsert(sponsorship, ships);
 
 	const now = new Date();

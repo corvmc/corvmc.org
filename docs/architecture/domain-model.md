@@ -370,6 +370,10 @@ record that names an organization in a role (`grant_application`, `sponsorship`,
 `contractor_job`) is checked for the role by its service, since SQLite cannot. The people are
 `contact` rows, read only through `contact-service.ts`. See #2622.
 
+Pursuing money is project work. A `grant_application` or a `sponsorship` is a 1:1 side table on a
+project of kind `grant` or `sponsorship`, as `production` is on a show's: the side table holds the
+money and the dates, and the project holds the tasks.
+
 ## Duplications to leave alone
 
 A list like the above invites merging everything. These three are deliberate:

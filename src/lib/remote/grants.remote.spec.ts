@@ -18,10 +18,7 @@ const grants = {
 	getGrant: vi.fn(async () => ({ id: 'g1' })),
 	createGrant: vi.fn(async () => ({ id: 'g1' })),
 	updateGrant: vi.fn(async () => undefined),
-	deleteGrant: vi.fn(async () => undefined),
-	addGrantReport: vi.fn(async () => undefined),
-	updateGrantReport: vi.fn(async () => undefined),
-	deleteGrantReport: vi.fn(async () => undefined)
+	deleteGrant: vi.fn(async () => undefined)
 };
 vi.mock('#lib/server/grant/grant-service.js', () => grants);
 
@@ -69,7 +66,6 @@ const remote = (await import('./grants.remote')) as unknown as Record<
 
 const GRANT = { funderId: 'f1', title: 'Operating support', status: 'prospect' };
 const FUNDER = { name: 'Oregon Arts Commission' };
-const REPORT = { grantApplicationId: 'g1', title: 'Final report', dueOn: '2027-01-15' };
 
 type Case = { name: string; cap: string; arg?: unknown; spy: ReturnType<typeof vi.fn> };
 const CASES: Case[] = [
@@ -91,20 +87,7 @@ const CASES: Case[] = [
 		arg: { id: 'f1', ...FUNDER },
 		spy: funders.updateFunder
 	},
-	{ name: 'deleteFunder', cap: 'grant.manage', arg: { id: 'f1' }, spy: funders.deleteFunder },
-	{ name: 'addGrantReport', cap: 'grant.manage', arg: REPORT, spy: grants.addGrantReport },
-	{
-		name: 'updateGrantReport',
-		cap: 'grant.manage',
-		arg: { id: 'r1', ...REPORT },
-		spy: grants.updateGrantReport
-	},
-	{
-		name: 'deleteGrantReport',
-		cap: 'grant.manage',
-		arg: { id: 'r1', grantApplicationId: 'g1' },
-		spy: grants.deleteGrantReport
-	}
+	{ name: 'deleteFunder', cap: 'grant.manage', arg: { id: 'f1' }, spy: funders.deleteFunder }
 ];
 
 beforeEach(() => {
@@ -138,11 +121,16 @@ describe('grant input', () => {
 				notes: null,
 				amountRequestedCents: null,
 				amountAwardedCents: null
-			})
+			}),
+			expect.anything()
 		);
-		await remote.addGrantReport({ ...REPORT, submittedOn: '' });
-		expect(grants.addGrantReport).toHaveBeenCalledWith(
-			expect.objectContaining({ submittedOn: null, notes: null })
-		);
+	});
+
+	it('names the acting staff member as the creator of the grant and its project', async () => {
+		held = new Set(['grant.read', 'grant.manage']);
+		await remote.createGrant(GRANT);
+		expect(grants.createGrant).toHaveBeenCalledWith(expect.anything(), {
+			createdByUserId: 'acting-staff'
+		});
 	});
 });

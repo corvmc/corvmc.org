@@ -29,6 +29,7 @@ import {
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { production } from '#lib/server/db/schema/production.js';
 import { project } from '#lib/server/db/schema/project.js';
+import { grantApplication } from '#lib/server/db/schema/grant.js';
 import { group } from '#lib/server/db/schema/group.js';
 import {
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
@@ -38,6 +39,7 @@ import {
 	dutyListAnchorLabels,
 	eventDutyListAnchors
 } from '#lib/config.js';
+import { clubInstant } from '#lib/utils/format.js';
 import type { DutyListAnchor, ProjectKind, WorkDoneCondition } from '#lib/config.js';
 import type { DutyList, DutyListItem } from '#lib/server/db/schema/volunteer.js';
 import { chunk, chunkSize } from '#lib/server/utils/chunk.js';
@@ -304,6 +306,13 @@ export async function getStartableTemplate(id: string): Promise<DutyList> {
 	if (detail.items.length === 0) {
 		throw new DutyListValidationError('That template has no items on it yet.', 'templateId');
 	}
+	// A grant's project is made with its grant, never from the New project form.
+	if (detail.list.grantStage) {
+		throw new DutyListValidationError(
+			'A grant template is added when its grant is created.',
+			'templateId'
+		);
+	}
 	return detail.list;
 }
 
@@ -435,11 +444,13 @@ export async function updateDutyList(
 	}
 	if (data.description !== undefined) updates.description = data.description?.trim() || null;
 	if (data.anchor !== undefined) updates.anchor = data.anchor;
-	if (data.projectKind !== undefined) updates.projectKind = data.projectKind;
+	// A grant template stays a grant's: the editor's production box cannot move it.
+	if (data.projectKind !== undefined && !existing.grantStage)
+		updates.projectKind = data.projectKind;
 	if (data.isActive !== undefined) updates.isActive = data.isActive;
 
 	const update = db.update(dutyList).set(updates).where(eq(dutyList.id, id)).returning();
-	if (data.projectKind !== 'production') return (await update)[0];
+	if (updates.projectKind !== 'production') return (await update)[0];
 	const [, [row]] = await db.batch([releaseProductionTemplate(id), update]);
 	return row;
 }
@@ -616,6 +627,8 @@ export async function projectOfEvent(eventId: string): Promise<string | null> {
 /** The times an anchor can resolve to. A null is a time not set yet. */
 interface Clock {
 	projectStartsAt: Date | null;
+	/** The dates on the project's grant application; null off a grant project. */
+	grant: { applyBy: string | null; startsOn: string | null; endsOn: string | null } | null;
 	/** The show the event anchors read, if the project has one. */
 	event: {
 		id: string;
@@ -658,11 +671,21 @@ async function loadEventClock(where: SQL): Promise<Clock['event']> {
 
 async function loadClock(subject: DutySubject): Promise<Clock | null> {
 	const [row] = await db
-		.select({ startsAt: project.startsAt })
+		.select({
+			startsAt: project.startsAt,
+			grantId: grantApplication.id,
+			applyBy: grantApplication.applyBy,
+			startsOn: grantApplication.startsOn,
+			endsOn: grantApplication.endsOn
+		})
 		.from(project)
+		.leftJoin(grantApplication, eq(grantApplication.projectId, project.id))
 		.where(eq(project.id, subject.id))
 		.limit(1);
 	if (!row) return null;
+	const grant = row.grantId
+		? { applyBy: row.applyBy, startsOn: row.startsOn, endsOn: row.endsOn }
+		: null;
 	// A festival is one project over several nights; its event anchors time
 	// from the first of them that is still on.
 	const event = await loadEventClock(
@@ -673,7 +696,12 @@ async function loadClock(subject: DutySubject): Promise<Clock | null> {
 					notInArray(eventListing.status, ['cancelled', 'rejected'])
 				)!
 	);
-	return { projectStartsAt: row.startsAt, event };
+	return { projectStartsAt: row.startsAt, grant, event };
+}
+
+/** A grant's date as an instant: the end of the working day in Corvallis. */
+export function grantDayAt(day: string): Date {
+	return clubInstant(day, '17:00');
 }
 
 /**
@@ -690,6 +718,15 @@ function resolveAnchor(
 
 	if (anchor === 'project_start') {
 		return found(clock.projectStartsAt, 'The project has no start date yet.');
+	}
+	if (anchor === 'apply_by' || anchor === 'award_start' || anchor === 'award_end') {
+		if (!clock.grant) return found(null, 'The project is not a grant.');
+		const day = {
+			apply_by: clock.grant.applyBy,
+			award_start: clock.grant.startsOn,
+			award_end: clock.grant.endsOn
+		}[anchor];
+		return found(day ? grantDayAt(day) : null, `The grant has no ${label} yet.`);
 	}
 	const event = clock.event;
 	if (!event) return found(null, 'The project has no event yet.');

@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  * Development's deadline reminders (#1477): two stages, fourteen days and three
  * days ahead, over every grant and sponsorship deadline. Pinned: the day ranges,
  * and that a subject names the deadline and its date, so a moved deadline is
- * reminded again and a grant's next report is not swallowed by its first.
+ * reminded again and one grant's deadline is not swallowed by another's.
  */
 
 const listGrantDeadlinesBetween = vi.fn(async (_from: string, _to: string) => [] as unknown[]);
@@ -29,11 +29,11 @@ const { reminders } = await import('./registry');
 const NOW = new Date('2026-06-15T12:00:00Z');
 const byKey = (key: string) => reminders.find((r) => r.key === key)!;
 
-const report = {
-	kind: 'report',
+const award = {
+	kind: 'end',
 	on: '2026-06-25',
-	subjectId: 'report:r1',
-	title: 'Interim report',
+	subjectId: 'end:g1',
+	title: 'Award ends',
 	parentId: 'g1',
 	parentTitle: '2027 operating support',
 	counterparty: 'Oregon Arts Commission'
@@ -72,20 +72,20 @@ describe('development deadline reminders', () => {
 	});
 
 	it('keys each subject by module, deadline and date, and says which module it is', async () => {
-		listGrantDeadlinesBetween.mockResolvedValueOnce([report]);
+		listGrantDeadlinesBetween.mockResolvedValueOnce([award]);
 		listSponsorshipDeadlinesBetween.mockResolvedValueOnce([term]);
 
 		const due = await byKey('development_deadline_3d').due(NOW);
 
 		expect(due.map((d) => d.subjectId)).toEqual([
 			'sponsor:sponsorship:p1:2026-06-17',
-			'grant:report:r1:2026-06-25'
+			'grant:end:g1:2026-06-25'
 		]);
 		expect(due[1].payload).toMatchObject({
 			stage: '3d',
 			module: 'grant',
 			on: '2026-06-25',
-			title: 'Interim report',
+			title: 'Award ends',
 			parentId: 'g1',
 			counterparty: 'Oregon Arts Commission'
 		});

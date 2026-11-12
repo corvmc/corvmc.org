@@ -1,11 +1,7 @@
-import {
-	grantApplication,
-	grantReport,
-	type NewGrantApplication,
-	type NewGrantReport
-} from '../../src/lib/server/db/schema/grant';
+import { grantApplication, type NewGrantApplication } from '../../src/lib/server/db/schema/grant';
 import { seedOrganizations, type SeedOrganization } from './parties';
 import { batchInsert } from './db';
+import { fundingProjects } from './funding';
 import { ptDate } from './util';
 
 /** `YYYY-MM-DD` for a day relative to today, in Pacific time. */
@@ -14,8 +10,9 @@ function day(offset: number): string {
 }
 
 /**
- * Every status, and an award with an overdue interim report beside a final one
- * still ahead. Dated relative to today so the ordering stays true.
+ * Every status, each with its project. The tasks on them, an overdue interim
+ * report among them, come from `seedFundingWork`, once the committees exist.
+ * Dated relative to today so the ordering stays true.
  */
 export async function seedGrants() {
 	console.log('Seeding grants...');
@@ -81,21 +78,8 @@ export async function seedGrants() {
 		}
 	];
 
-	const reports: NewGrantReport[] = [
-		{
-			grantApplicationId: 'seed-grant-soundproofing',
-			title: 'Interim report',
-			dueOn: day(-3)
-		},
-		{
-			grantApplicationId: 'seed-grant-soundproofing',
-			title: 'Final report',
-			dueOn: day(195)
-		}
-	];
-
 	await seedOrganizations(funders);
+	await fundingProjects('grant', apps);
 	await batchInsert(grantApplication, apps);
-	await batchInsert(grantReport, reports);
 	return { funders: funders.length, applications: apps.length };
 }

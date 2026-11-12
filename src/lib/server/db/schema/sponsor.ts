@@ -3,9 +3,11 @@ import { sql } from 'drizzle-orm';
 import { sponsorshipStatuses } from '../../../config';
 import { eventListing } from './event';
 import { organization } from './party';
+import { project } from './project';
 
 /**
- * One term of support from a sponsor organization: a tier, an amount, and the dates it runs.
+ * One term of support from a sponsor organization: a tier, an amount, and the
+ * dates it runs, on a project of kind `sponsorship` that holds the work (#2622).
  * Dates are `YYYY-MM-DD` strings, a day in Corvallis with no time.
  */
 export const sponsorship = sqliteTable(
@@ -18,6 +20,12 @@ export const sponsorship = sqliteTable(
 		organizationId: text('organization_id')
 			.notNull()
 			.references(() => organization.id, { onDelete: 'restrict' }),
+		/** The project this sponsorship is, as `grant_application.project_id`. */
+		projectId: text('project_id').references(() => project.id, { onDelete: 'restrict' }),
+		/** What the money pays for. Null is general support. */
+		fundsProjectId: text('funds_project_id').references(() => project.id, {
+			onDelete: 'set null'
+		}),
 		title: text('title').notNull(),
 		tier: text('tier'),
 		status: text('status', { enum: sponsorshipStatuses }).notNull().default('prospect'),
@@ -32,7 +40,13 @@ export const sponsorship = sqliteTable(
 			.notNull()
 			.default(sql`(unixepoch())`)
 	},
-	(t) => [index('sponsorship_organization_idx').on(t.organizationId)]
+	(t) => [
+		index('sponsorship_organization_idx').on(t.organizationId),
+		uniqueIndex('uq_sponsorship_project')
+			.on(t.projectId)
+			.where(sql`project_id is not null`),
+		index('sponsorship_funds_project_idx').on(t.fundsProjectId)
+	]
 );
 
 /**
