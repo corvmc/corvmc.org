@@ -24,7 +24,7 @@ export class ReservationFilters {
 	status = $state<Status | ''>('');
 	page = $state(1);
 
-	constructor(params: URLSearchParams) {
+	constructor(params: Pick<URLSearchParams, 'get'>) {
 		const pick = <T extends string>(list: readonly T[], key: string) =>
 			list.find((v) => v === params.get(key));
 		this.search = params.get('q') ?? '';

@@ -36,21 +36,20 @@
 
 {#if pages}
 	<!-- `-mx-6 px-6` takes the frame's padding into each pane, so a PageHeader's
-	     `-mx-6` bleed lands inside its own scroll box instead of overflowing it. -->
+	     `-mx-6` bleed lands inside its own scroll box instead of overflowing it.
+	     Block panes, not flex columns: a `PageContent` width is `mx-auto`, and an
+	     auto-margined flex item shrinks to its content instead of filling. -->
 	<div class="flex h-full min-h-0">
 		<div
 			data-pane="list"
-			class="@container -mx-6 min-h-0 w-full flex-col overflow-y-auto px-6 {open
-				? 'hidden lg:mr-0 lg:flex lg:w-96 lg:shrink-0 lg:border-r lg:border-base-300 xl:w-[28rem]'
-				: 'flex'}"
+			class="@container -mx-6 min-h-0 w-full overflow-y-auto px-6 {open
+				? 'hidden lg:mr-0 lg:block lg:w-96 lg:shrink-0 lg:border-r lg:border-base-300 xl:w-[28rem]'
+				: 'block'}"
 		>
 			{@render list()}
 		</div>
 		{#if open}
-			<div
-				data-pane="detail"
-				class="-mx-6 flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-6 lg:ml-0"
-			>
+			<div data-pane="detail" class="-mx-6 min-h-0 min-w-0 flex-1 overflow-y-auto px-6 lg:ml-0">
 				{@render children()}
 			</div>
 		{:else}
