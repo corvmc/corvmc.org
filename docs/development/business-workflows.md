@@ -2320,7 +2320,11 @@ soonest-deadline first. Status moves by hand through each edit form, with no sid
 - **People:** each form's contact name, email and phone is the organization's first `contact`,
   written and read through `primary-contact.ts`, which calls `contact-service.ts`. Seeing them needs
   `contact.read` and changing them `contact.manage`, which staff and the Development committee
-  hold.
+  hold. A new person whose normalized email is already on file attaches to that contact rather
+  than making a second one (`createContact`, `setPrimaryContact`).
+- **Retention:** a contact with a `retain_until` stays visible until that date, and
+  `/api/cron/sweep-contacts` deletes it, with its roles, once the date passes. An act's contact
+  is given a horizon a year out when the act becomes a member band.
 - The sort and date display are shared, in `src/lib/utils/deadline.ts`.
 - **Archive:** a sponsor or funder with history is archived (`archivedAt`) rather than deleted
   (#1577). It leaves the list until "Show archived", keeps its history, and can be restored. An

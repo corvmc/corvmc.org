@@ -832,6 +832,13 @@ export const partyRoles = [
 ] as const;
 export type PartyRole = (typeof partyRoles)[number];
 
+/**
+ * How long an act's contact is kept after the act becomes a member band: long
+ * enough to answer a question about what they were paid. The daily sweep
+ * deletes it after that.
+ */
+export const CONTACT_CLAIM_RETENTION_DAYS = 365;
+
 export const partyRoleLabels: Record<PartyRole, string> = {
 	funder: 'Funder',
 	sponsor: 'Sponsor',
