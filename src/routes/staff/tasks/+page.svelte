@@ -54,7 +54,7 @@
 	$effect(() => {
 		const href = withQuery(resolve('staff/tasks'), taskQuerySearch(q));
 		if (location.pathname + location.search !== href) {
-			void goto(href, { replace: true, reset: false, keepFocus: true, noScroll: true });
+			void goto(href, { replace: true, reset: false });
 		}
 	});
 

@@ -52,7 +52,7 @@ export interface TaskQuery {
 const pick = <T extends string>(list: readonly T[], raw: string | null): T | '' =>
 	raw && (list as readonly string[]).includes(raw) ? (raw as T) : '';
 
-export function parseTaskQuery(params: URLSearchParams): TaskQuery {
+export function parseTaskQuery(params: Pick<URLSearchParams, 'get'>): TaskQuery {
 	const days = Number(params.get('days'));
 	const project = params.get('project') ?? '';
 	return {
