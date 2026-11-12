@@ -1547,8 +1547,8 @@ export function registerAllNotificationListeners(): void {
 			const [first] = items;
 			const single = items.length === 1;
 			const title = single
-				? `Unclaimed orientation: ${first.memberName}`
-				: `${items.length} unclaimed orientations`;
+				? `Unstaffed orientation: ${first.memberName}`
+				: `${items.length} unstaffed orientations`;
 			const line = single
 				? `${first.memberName}'s orientation, ${formatShiftWhen(first.startsAt, first.endsAt)}, has no volunteer signed up.`
 				: `${items.length} orientations in the next day have no volunteer signed up.`;
@@ -1566,7 +1566,7 @@ export function registerAllNotificationListeners(): void {
 				email: {
 					recipientName: recipient.userName,
 					subject: title,
-					heading: 'Unclaimed orientation',
+					heading: 'Unstaffed orientation',
 					paragraphs: [
 						{ text: line },
 						{ text: 'Sign up for the shift, or invite a volunteer from the shift page.' }
