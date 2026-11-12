@@ -86,9 +86,13 @@ describe('the contact table has one access path', () => {
 			return !/requireCapability\('(directory|contact)\.\w+'\)/.test(body.slice(0, end));
 		});
 
-		// The two deliberate exceptions, each named so that using one looks like
-		// what it is: the token path has no session to check, and the archive runs
-		// inside an already-guarded claim.
-		expect(unguarded.sort()).toEqual(['archiveContactForClaim', 'writeContactUnguarded']);
+		// The deliberate exceptions, each named so that using one looks like what
+		// it is: the token path and the retention cron have no session to check,
+		// and the archive runs inside an already-guarded claim.
+		expect(unguarded.sort()).toEqual([
+			'archiveContactForClaim',
+			'sweepExpiredContacts',
+			'writeContactUnguarded'
+		]);
 	});
 });

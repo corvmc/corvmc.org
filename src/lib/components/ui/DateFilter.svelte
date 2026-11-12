@@ -27,10 +27,10 @@
 	let open = $state(false);
 
 	const presetLabel: Record<(typeof datePresets)[number], () => string> = {
-		from_today: m.staff_reservations_from_today_label,
-		next_7: m.staff_reservations_next_7_days_label,
-		past_30: m.staff_reservations_past_30_days_label,
-		any: m.staff_reservations_any_date_label
+		from_today: m.ui_date_filter_from_today_label,
+		next_7: m.ui_date_filter_next_7_days_label,
+		past_30: m.ui_date_filter_past_30_days_label,
+		any: m.ui_date_filter_any_date_label
 	};
 
 	// Noon UTC is the same calendar day in club time, whichever zone the browser is in.
@@ -56,7 +56,7 @@
 		{#snippet child({ props })}
 			<Button {...props} variant="default" size="sm" data-testid="date-filter">
 				<IconCalendar size={16} />
-				<span class="sr-only">{m.staff_reservations_date_label()}:</span>
+				<span class="sr-only">{m.ui_date_filter_label()}:</span>
 				{label}
 			</Button>
 		{/snippet}

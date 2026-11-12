@@ -1,6 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
-import type { SQL } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // Mocks — a select chain that records the where clause and limit/offset so the
@@ -8,7 +6,6 @@ import type { SQL } from 'drizzle-orm';
 // ---------------------------------------------------------------------------
 
 let capturedWhere: unknown;
-let capturedOrderBy: unknown[] = [];
 let capturedLimit: number | undefined;
 let capturedOffset: number | undefined;
 let selectRows: unknown[] = [];
@@ -22,12 +19,6 @@ function chain(): unknown {
 			if (prop === 'where') {
 				return (clause: unknown) => {
 					capturedWhere = clause;
-					return proxy;
-				};
-			}
-			if (prop === 'orderBy') {
-				return (...clauses: unknown[]) => {
-					capturedOrderBy = clauses;
 					return proxy;
 				};
 			}
@@ -67,7 +58,6 @@ import {
 	listEventsNear,
 	listPublicCalendarEvents,
 	listPublicUpcomingEvents,
-	listStaffCalendar,
 	listUpcoming,
 	listPast,
 	getShowTonight
@@ -122,7 +112,6 @@ const windowEnd = new Date('2026-09-01T07:00:00Z');
 
 beforeEach(() => {
 	capturedWhere = undefined;
-	capturedOrderBy = [];
 	capturedLimit = undefined;
 	capturedOffset = undefined;
 	selectRows = [];
@@ -198,35 +187,6 @@ describe('listPublicUpcomingEvents', () => {
 	it('applies no source filter, so band gigs are in the gig guide', async () => {
 		await listPublicUpcomingEvents(windowStart, { limit: 20, offset: 0 });
 		expect(containsParam(capturedWhere, 'cmc')).toBe(false);
-	});
-});
-
-/**
- * The staff calendar lists every listing staff may see, past and future, in
- * every status. The one exclusion is a community draft, its author's alone.
- */
-describe('listStaffCalendar', () => {
-	it('applies no status, source or date filter', async () => {
-		await listStaffCalendar({ page: 1 });
-		for (const status of ['pending_review', 'published', 'cancelled', 'rejected']) {
-			expect(containsParam(capturedWhere, status)).toBe(false);
-		}
-		expect(containsParam(capturedWhere, 'cmc')).toBe(false);
-		expect(containsParam(capturedWhere, 'band')).toBe(false);
-	});
-
-	// A listing waiting on staff is pinned above every date, so a stale one is
-	// never buried pages down.
-	it('orders pending_review rows first', async () => {
-		await listStaffCalendar({ page: 1 });
-		const first = new SQLiteSyncDialect().sqlToQuery(capturedOrderBy[0] as SQL);
-		expect(first.params).toContain('pending_review');
-	});
-
-	it('excludes community drafts', async () => {
-		await listStaffCalendar({ page: 1 });
-		expect(containsParam(capturedWhere, 'community')).toBe(true);
-		expect(containsParam(capturedWhere, 'draft')).toBe(true);
 	});
 });
 

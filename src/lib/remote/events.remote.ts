@@ -136,7 +136,7 @@ import {
 	lineupSchema
 } from '#lib/server/db/schema/event.js';
 import { group } from '#lib/server/db/schema/group.js';
-import { eventSources } from '#lib/config.js';
+import { eventSources, listDateRanges } from '#lib/config.js';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '#lib/utils/event-time.js';
 import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '#lib/config.js';
@@ -655,25 +655,29 @@ export const getStaffEvents = query(staffEventsFilters, async (filters) => {
 	};
 });
 
-/**
- * Staff: every listing, whatever its source, status or date. The moderation
- * queue is the rows badged `pending_review`; the Productions view runs the
- * shows CMC produces.
- */
 /** The Calendar page's summary counts — independent of the table's filters. */
 export const getStaffCalendarTotals = query(async () => {
 	await requireCapability('event.read');
 	return getCalendarTotals();
 });
 
+/**
+ * Staff: every listing staff may see, filtered by source, search, date range
+ * and status, with what each status option would list in the current range.
+ */
 export const getStaffCalendar = query(
-	z.object({ page: z.number().optional() }),
+	z.object({
+		source: z.enum(eventSources).optional(),
+		q: z.string().max(200).optional(),
+		range: z.enum(listDateRanges).optional(),
+		from: z.iso.date().optional(),
+		to: z.iso.date().optional(),
+		status: z.enum(eventStatuses).optional(),
+		page: z.number().int().positive().optional()
+	}),
 	async (filters) => {
 		await requireCapability('event.read');
-		const { rows, pagination } = await listStaffCalendar({
-			page: filters.page ?? 1,
-			pageSize: 50
-		});
+		const { rows, pagination, statusCounts } = await listStaffCalendar(filters);
 		return {
 			rows: rows.map((e) => ({
 				...e,
@@ -684,7 +688,8 @@ export const getStaffCalendar = query(
 				// the page renders "CMC" for that case rather than a ref to us.
 				submitter: toMemberRef(e.submitter)
 			})),
-			pagination
+			pagination,
+			statusCounts
 		};
 	}
 );

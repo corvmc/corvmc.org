@@ -9,7 +9,9 @@
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import { rowLink } from '#lib/actions/row-link.js';
 	import { resolve } from '$app/paths';
-	import { urlState, positiveInt } from '#lib/urlState.svelte.js';
+	import { urlState, positiveInt, oneOf, text } from '#lib/urlState.svelte.js';
+	import { eventSources, listDateRanges, type EventSource } from '#lib/config.js';
+	import ListFilters from '#lib/components/ui/ListFilters.svelte';
 	import { formatDate } from '#lib/utils/format.js';
 	import { formatEventTimeRange } from '#lib/utils/event-time.js';
 	import { getStaffCalendar, getStaffCalendarTotals } from '#lib/remote/events.remote.js';
@@ -17,17 +19,55 @@
 	import { retryQuery } from '#lib/utils/retry-query.js';
 	import CalendarTotals from './CalendarTotals.svelte';
 	import CreateListingAction from './CreateListingAction.svelte';
+	import { Latest } from '#lib/latest.svelte.js';
+
+	type Status = keyof Awaited<ReturnType<typeof getStaffCalendar>>['statusCounts'];
+	// A Record, so a status added to the schema fails the type check until it has a label.
+	const statusLabel: Record<Status, (count: number) => string> = {
+		draft: (count) => m.staff_events_status_draft_label({ count }),
+		pending_review: (count) => m.staff_events_status_pending_review_label({ count }),
+		published: (count) => m.staff_events_status_published_label({ count }),
+		rejected: (count) => m.staff_events_status_rejected_label({ count }),
+		cancelled: (count) => m.staff_events_status_cancelled_label({ count })
+	};
+	const statuses = Object.keys(statusLabel) as Status[];
+	const sourceLabel: Record<EventSource, () => string> = {
+		cmc: m.staff_events_source_cmc_label,
+		band: m.staff_events_source_band_label,
+		community: m.staff_events_source_community_label,
+		group: m.staff_events_source_group_label
+	};
 
 	/**
-	 * The staff calendar: every listing staff may see, newest first, with no
-	 * filters. Listings waiting on staff are pinned above the dates with a
-	 * labelled badge; the totals above count them. The Productions view on Projects runs the shows CMC produces.
+	 * Every listing staff may see, with the Practice space list's filter row. It
+	 * opens on From today, soonest first; the totals above ignore the filters.
 	 */
-	const filters = urlState(resolve('staff/events'), { page: positiveInt(1) });
+	const filters = urlState(resolve('staff/events'), {
+		source: oneOf<EventSource | ''>(eventSources, ''),
+		q: text(),
+		date: oneOf(listDateRanges, 'from_today'),
+		from: text(),
+		to: text(),
+		status: oneOf<Status | ''>(statuses, ''),
+		page: positiveInt(1)
+	});
 
 	// A promise rather than an await: `DataList` consumes it with `{#await}`, so
 	// paging does not suspend the page into the staff layout's pending snippet.
-	const result = $derived(getStaffCalendar({ page: filters.page }));
+	const result = $derived(
+		getStaffCalendar({
+			source: filters.source || undefined,
+			q: filters.q || undefined,
+			range: filters.date,
+			from: filters.date === 'custom' && filters.from ? filters.from : undefined,
+			to: filters.date === 'custom' && filters.to ? filters.to : undefined,
+			status: filters.status || undefined,
+			page: filters.page
+		})
+	);
+	// Latched so the status counts do not blank while the next page loads.
+	const latest = new Latest(() => result);
+	const statusCounts = $derived(latest.current?.statusCounts);
 
 	type CalendarRow = Awaited<typeof result>['rows'][number];
 
@@ -39,10 +79,7 @@
 			.filter(Boolean);
 	}
 
-	// Pending rows arrive pinned first, so they form one group above the dates.
-	function dayLabel(e: CalendarRow): string {
-		return e.status === 'pending_review' ? 'Pending Listings' : formatDate(e.startsAt);
-	}
+	const dayLabel = (e: CalendarRow) => formatDate(e.startsAt);
 </script>
 
 <PageHeader title={m.staff_events_title()} subtitle={m.staff_staff_body()}>
@@ -57,6 +94,21 @@
 			</Alert>
 		{/snippet}
 	</svelte:boundary>
+
+	<ListFilters
+		types={eventSources.map((s) => ({ value: s, label: sourceLabel[s]() }))}
+		typeAllLabel={m.staff_events_all_sources_label()}
+		typeLabel={m.staff_events_source_label()}
+		bind:type={filters.source}
+		searchPlaceholder={m.staff_events_search_placeholder()}
+		bind:search={filters.q}
+		bind:range={filters.date}
+		bind:from={filters.from}
+		bind:to={filters.to}
+		statuses={statuses.map((s) => ({ value: s, label: statusLabel[s](statusCounts?.[s] ?? 0) }))}
+		bind:status={filters.status}
+		bind:page={filters.page}
+	/>
 
 	<DataList {result} empty={m.staff_events_empty_body()} onpage={(p) => (filters.page = p)}>
 		{#snippet children(events)}

@@ -246,11 +246,12 @@ describe('archiving on claim', () => {
 	 * than one of the members who just joined, so carrying it forward would leave
 	 * a member band holding a stale private number nobody owns.
 	 */
-	it('stamps a retention horizon rather than deleting the record', async () => {
-		await archiveContactForClaim('de-1');
+	it('stamps a retention horizon a year out rather than deleting the record', async () => {
+		const now = new Date('2026-11-12T12:00:00Z');
+		await archiveContactForClaim('de-1', now);
 
 		const [write] = updates.filter((u) => u.table === 'contact');
-		expect(write.values.retainUntil).toBeInstanceOf(Date);
+		expect(write.values.retainUntil).toEqual(new Date('2027-11-12T12:00:00Z'));
 	});
 
 	/**

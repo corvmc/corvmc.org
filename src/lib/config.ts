@@ -832,6 +832,13 @@ export const partyRoles = [
 ] as const;
 export type PartyRole = (typeof partyRoles)[number];
 
+/**
+ * How long an act's contact is kept after the act becomes a member band: long
+ * enough to answer a question about what they were paid. The daily sweep
+ * deletes it after that.
+ */
+export const CONTACT_CLAIM_RETENTION_DAYS = 365;
+
 export const partyRoleLabels: Record<PartyRole, string> = {
 	funder: 'Funder',
 	sponsor: 'Sponsor',
@@ -842,6 +849,19 @@ export const partyRoleLabels: Record<PartyRole, string> = {
 	partner: 'Partner',
 	supplier: 'Supplier',
 	donor: 'Donor'
+};
+
+/** The Contacts page's view per role. */
+export const partyRoleViewLabels: Record<PartyRole, string> = {
+	funder: 'Funders',
+	sponsor: 'Sponsors',
+	contractor: 'Contractors',
+	performer: 'Performers',
+	vendor: 'Vendors',
+	press: 'Press',
+	partner: 'Partners',
+	supplier: 'Suppliers',
+	donor: 'Donors'
 };
 
 // ---------------------------------------------------------------------------
@@ -1612,6 +1632,10 @@ export const CERT_REVOKED_REASON_MAX = 1000;
 export const SHIFT_FEEDBACK_MIN_RATING = 1;
 export const SHIFT_FEEDBACK_MAX_RATING = 5;
 export const SHIFT_FEEDBACK_COMMENT_MAX = 2000;
+
+/** The date presets a staff list's date filter offers, and `custom` for a typed range. */
+export const listDateRanges = ['from_today', 'next_7', 'past_30', 'any', 'custom'] as const;
+export type ListDateRange = (typeof listDateRanges)[number];
 
 /**
  * Today's calendar date in club time, as YYYY-MM-DD.

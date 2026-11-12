@@ -424,6 +424,18 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/contacts",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/contacts/[id]",
+		"panel": "staff"
+	},
+	{
+		"route": "/staff/contacts/duplicates",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/contractors",
 		"panel": "staff"
 	},

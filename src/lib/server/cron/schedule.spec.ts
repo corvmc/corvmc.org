@@ -20,6 +20,7 @@ const ALL_ENDPOINTS = [
 	'/api/cron/schedule-radio',
 	'/api/cron/sweep-audio-purchases',
 	'/api/cron/sweep-incidents',
+	'/api/cron/sweep-contacts',
 	'/api/cron/sweep-audit-log',
 	'/api/cron/import-partner-calendars',
 	'/api/cron/reconcile-ledger',
@@ -86,6 +87,7 @@ describe('CRON_SCHEDULE', () => {
 			'/api/cron/sweep-audio-purchases',
 			// Seven-year incident retention (#1468). Owns no media.
 			'/api/cron/sweep-incidents',
+			'/api/cron/sweep-contacts',
 			// 24-month audit retention (#1376), after the sweep that writes audit rows.
 			'/api/cron/sweep-audit-log',
 			'/api/cron/import-partner-calendars',

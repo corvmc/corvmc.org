@@ -71,8 +71,10 @@ describe('activeNavKey', () => {
 		['/staff/events/abc/check-in', 'calendar'],
 		['/staff/events/abc/production', 'calendar'],
 		['/staff/tasks/productions', 'projects'],
-		['/staff/sponsors', 'sponsors'],
-		['/staff/sponsors/abc', 'sponsors'],
+		['/staff/contacts', 'contacts'],
+		['/staff/contacts/abc', 'contacts'],
+		['/staff/sponsors', 'contacts'],
+		['/staff/sponsors/abc', 'contacts'],
 		['/staff/grants', 'grants'],
 		['/staff/grants/abc', 'grants'],
 		['/staff/grants/funders', 'grants'],
@@ -93,8 +95,8 @@ describe('activeNavKey', () => {
 		['/staff/recurring/abc', 'reservations'],
 		['/staff/inventory/problems', 'gear'],
 		['/staff/inventory/problems/abc', 'gear'],
-		['/staff/contractors', 'contractors'],
-		['/staff/contractors/abc', 'contractors'],
+		['/staff/contractors', 'contacts'],
+		['/staff/contractors/abc', 'contacts'],
 		// Records keep their addresses under the row they moved to (#2393).
 		['/staff/moderation', 'moderation'],
 		['/staff/moderation/flags', 'moderation'],
@@ -231,7 +233,7 @@ describe('the nav tree', () => {
 		expect(keys('space')).toEqual(['reservations', 'gear', 'supplies']);
 		// Key holders is a header link on Practice space (#2574), not a row.
 		expect(activeNavKey('/staff/keys')).toBe('reservations');
-		expect(keys('partners')).toEqual(['sponsors', 'venues', 'local-resources', 'contractors']);
+		expect(keys('partners')).toEqual(['contacts', 'venues', 'local-resources']);
 		expect(keys('moderation')).toEqual(['moderation', 'classifieds']);
 		expect(keys('outreach')).toEqual(['outreach']);
 		expect(keys('money')).toContain('grants');
@@ -311,7 +313,12 @@ describe('route coverage', () => {
 		// Started from the Inbox header, and only worth starting when the queue
 		// has something in it. A nav row would offer a session that is empty most
 		// of the day, from a place that cannot tell you whether it is.
-		'/staff/inbox/daily'
+		'/staff/inbox/daily',
+		// The records behind Contacts' Sponsor, Contractor and duplicate views (#2622),
+		// reached from the Contacts header and each organization's page.
+		'/staff/sponsors',
+		'/staff/contractors',
+		'/staff/contacts/duplicates'
 	]);
 
 	it('leaves no staff page without a highlighted row', () => {
