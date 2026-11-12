@@ -3462,9 +3462,9 @@
 	"staff_calendar_poster_title": "Calendar poster",
 	"staff_calendar_poster_month_label": "Month",
 	"staff_calendar_poster_format_label": "Size",
-	"staff_calendar_poster_format_letter": "Letter (8.5 × 11 in)",
-	"staff_calendar_poster_format_tabloid": "Tabloid (11 × 17 in)",
-	"staff_calendar_poster_format_social": "Social post (1080 × 1350)",
+	"staff_calendar_poster_letter_label": "Letter (8.5 × 11 in)",
+	"staff_calendar_poster_tabloid_label": "Tabloid (11 × 17 in)",
+	"staff_calendar_poster_social_label": "Social post (1080 × 1350)",
 	"staff_calendar_poster_download_label": "Download poster",
 	"staff_calendar_poster_alt_text": "Calendar poster for {month}"
 }

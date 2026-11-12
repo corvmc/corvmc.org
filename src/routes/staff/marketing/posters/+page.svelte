@@ -22,14 +22,14 @@
 
 	// Sizes in CSS px, for the preview's aspect ratio.
 	const formats: { value: PosterFormat; label: string; width: number; height: number }[] = [
-		{ value: 'letter', label: m.staff_calendar_poster_format_letter(), width: 816, height: 1056 },
+		{ value: 'letter', label: m.staff_calendar_poster_letter_label(), width: 816, height: 1056 },
 		{
 			value: 'tabloid',
-			label: m.staff_calendar_poster_format_tabloid(),
+			label: m.staff_calendar_poster_tabloid_label(),
 			width: 1056,
 			height: 1632
 		},
-		{ value: 'social', label: m.staff_calendar_poster_format_social(), width: 1080, height: 1350 }
+		{ value: 'social', label: m.staff_calendar_poster_social_label(), width: 1080, height: 1350 }
 	];
 
 	let month = $state(months[1].value);
@@ -79,6 +79,6 @@
 		alt={m.staff_calendar_poster_alt_text({ month: label })}
 		width={size.width}
 		height={size.height}
-		class="mx-auto h-auto w-full max-w-2xl rounded border border-base-300"
+		class="h-auto w-full rounded border border-base-300"
 	/>
 </PageContent>
