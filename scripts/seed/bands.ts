@@ -6,7 +6,7 @@ import {
 	groupSlugHistory
 } from '../../src/lib/server/db/schema/group';
 import { groupInvite } from '../../src/lib/server/db/schema/group-invite';
-import { db } from './db';
+import { batchInsert, db } from './db';
 import { pendingEntries, pendingSites, pendingTags } from './pending';
 import {
 	BAND_ALIASES,
@@ -39,9 +39,10 @@ export async function insertBandWithOwner(
 ) {
 	const [b] = await db.insert(group).values(values).returning();
 	if (capabilityGrants.length > 0) {
-		await db
-			.insert(groupCapability)
-			.values(capabilityGrants.map((capability) => ({ groupId: b.id, capability })));
+		await batchInsert(
+			groupCapability,
+			capabilityGrants.map((capability) => ({ groupId: b.id, capability }))
+		);
 	}
 	await db.insert(groupMember).values({
 		groupId: b.id,

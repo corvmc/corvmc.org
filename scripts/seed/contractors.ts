@@ -32,80 +32,76 @@ export async function seedContractors(staffId: string) {
 		piano: randomUUID()
 	};
 
-	const contractors = await batchInsert(
-		contractor,
-		[
-			{
-				id: ids.amps,
-				name: 'Corvallis Amp Works',
-				trade: 'instrument_repair' as const,
-				contactName: 'Rita Alvarez',
-				phone: '541-555-0143',
-				email: 'shop@corvallisampworks.example',
-				insuranceExpiresAt: new Date(now.getTime() + 200 * day),
-				notes: 'Tube work and speaker reconing. Two-week turnaround in summer.'
-			},
-			{
-				id: ids.electric,
-				name: 'Benton Electric',
-				trade: 'electrical' as const,
-				contactName: 'Sam Okafor',
-				phone: '541-555-0188',
-				licenseNumber: 'OR-EL-44219',
-				insuranceExpiresAt: new Date(now.getTime() + 21 * day),
-				notes: 'Did the stage subpanel. Knows the building.'
-			},
-			{
-				id: ids.plumb,
-				name: 'Willamette Plumbing',
-				trade: 'plumbing' as const,
-				phone: '541-555-0107',
-				insuranceExpiresAt: new Date(now.getTime() + 120 * day)
-			},
-			{
-				id: ids.hvac,
-				name: 'Mid-Valley Heating & Air',
-				trade: 'hvac' as const,
-				phone: '541-555-0166',
-				// Lapsed a fortnight ago: the one row /staff/contractors must warn on.
-				insuranceExpiresAt: new Date(now.getTime() - 14 * day),
-				notes: 'Certificate of insurance expired — do not schedule until renewed.'
-			},
-			{
-				id: ids.fire,
-				name: 'Cascade Fire Safety',
-				trade: 'fire_safety' as const,
-				phone: '541-555-0121',
-				insuranceExpiresAt: new Date(now.getTime() + 300 * day),
-				notes: 'Annual extinguisher inspection.'
-			},
-			{
-				id: ids.lock,
-				name: 'Alsea Lock & Key',
-				trade: 'locksmith' as const,
-				phone: '541-555-0190'
-				// No certificate on file at all — not the same as lapsed, and the
-				// insurance list must leave it out.
-			},
-			{
-				id: ids.handy,
-				name: 'Dale Prescott',
-				trade: 'general' as const,
-				phone: '541-555-0134',
-				notes: 'Handyman. Drywall, doors, shelving.'
-			},
-			{
-				id: ids.piano,
-				name: 'Marguerite Chen',
-				trade: 'other' as const,
-				phone: '541-555-0175',
-				notes: 'Piano tuner. Twice a year.',
-				// Retired from the pickers, but the tuning history stays.
-				archivedAt: new Date(now.getTime() - 90 * day)
-			}
-		],
-		4
-	);
+	const contractors = await batchInsert(contractor, [
+		{
+			id: ids.amps,
+			name: 'Corvallis Amp Works',
+			trade: 'instrument_repair' as const,
+			contactName: 'Rita Alvarez',
+			phone: '541-555-0143',
+			email: 'shop@corvallisampworks.example',
+			insuranceExpiresAt: new Date(now.getTime() + 200 * day),
+			notes: 'Tube work and speaker reconing. Two-week turnaround in summer.'
+		},
+		{
+			id: ids.electric,
+			name: 'Benton Electric',
+			trade: 'electrical' as const,
+			contactName: 'Sam Okafor',
+			phone: '541-555-0188',
+			licenseNumber: 'OR-EL-44219',
+			insuranceExpiresAt: new Date(now.getTime() + 21 * day),
+			notes: 'Did the stage subpanel. Knows the building.'
+		},
+		{
+			id: ids.plumb,
+			name: 'Willamette Plumbing',
+			trade: 'plumbing' as const,
+			phone: '541-555-0107',
+			insuranceExpiresAt: new Date(now.getTime() + 120 * day)
+		},
+		{
+			id: ids.hvac,
+			name: 'Mid-Valley Heating & Air',
+			trade: 'hvac' as const,
+			phone: '541-555-0166',
+			// Lapsed a fortnight ago: the one row /staff/contractors must warn on.
+			insuranceExpiresAt: new Date(now.getTime() - 14 * day),
+			notes: 'Certificate of insurance expired — do not schedule until renewed.'
+		},
+		{
+			id: ids.fire,
+			name: 'Cascade Fire Safety',
+			trade: 'fire_safety' as const,
+			phone: '541-555-0121',
+			insuranceExpiresAt: new Date(now.getTime() + 300 * day),
+			notes: 'Annual extinguisher inspection.'
+		},
+		{
+			id: ids.lock,
+			name: 'Alsea Lock & Key',
+			trade: 'locksmith' as const,
+			phone: '541-555-0190'
+			// No certificate on file at all — not the same as lapsed, and the
+			// insurance list must leave it out.
+		},
+		{
+			id: ids.handy,
+			name: 'Dale Prescott',
+			trade: 'general' as const,
+			phone: '541-555-0134',
+			notes: 'Handyman. Drywall, doors, shelving.'
+		},
+		{
+			id: ids.piano,
+			name: 'Marguerite Chen',
+			trade: 'other' as const,
+			phone: '541-555-0175',
+			notes: 'Piano tuner. Twice a year.',
+			// Retired from the pickers, but the tuning history stays.
+			archivedAt: new Date(now.getTime() - 90 * day)
+		}
+	]);
 
 	// The unit `seedEquipment` left in the shop, and one still in service, so the
 	// asset page has both an open job and a closed one to render.

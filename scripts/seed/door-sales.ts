@@ -3,7 +3,7 @@ import { eventListing } from '../../src/lib/server/db/schema/event';
 import { randomUUID } from 'crypto';
 import { volunteerRole, volunteerSignup } from '../../src/lib/server/db/schema/volunteer';
 import { ticket, ticketSale } from '../../src/lib/server/db/schema/ticket';
-import { db } from './db';
+import { batchInsert, db } from './db';
 import { insertTasksWithShifts } from './shifts';
 
 /**
@@ -45,7 +45,7 @@ export async function seedDoorSales(
 
 	const checkedInAt = new Date();
 	const door = { eventId: show.id, attendeeName: 'Door sale', attendeeEmail: '' };
-	await db.insert(ticket).values([
+	await batchInsert(ticket, [
 		{
 			...door,
 			purchaseId: 'pi_seed_door_1',

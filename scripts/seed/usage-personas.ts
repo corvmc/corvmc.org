@@ -325,56 +325,52 @@ export async function seedUsagePersonaLife(
 	const walkUpStart = new Date(Math.floor(Date.now() / halfHour) * halfHour);
 	const walkUp = holdRoom(walkUpStart, new Date(walkUpStart.getTime() + 3 * 3_600_000), 'regular');
 
-	const reservations = await batchInsert(
-		reservation,
-		[
-			{
-				bookerType: 'user' as const,
-				bookerId: regular.id,
-				createdByUserId: regular.id,
-				status: 'completed' as const,
-				...tuesday[-7],
-				notes: 'Drum practice',
-				creditsUsed: 4,
-				cashDueCents: 0,
-				paidAt: null
-			},
-			{
-				bookerType: 'user' as const,
-				bookerId: regular.id,
-				createdByUserId: regular.id,
-				status: 'confirmed' as const,
-				...tuesday[0],
-				notes: 'Drum practice',
-				creditsUsed: 1,
-				cashDueCents: Math.round(1.5 * HOURLY_RATE_CENTS),
-				lockCode: '4417',
-				lockAccessId: '620014',
-				lockSyncedAt: ago(0)
-			},
-			{
-				bookerType: 'user' as const,
-				bookerId: regular.id,
-				createdByUserId: regular.id,
-				status: 'confirmed' as const,
-				...tuesday[7],
-				notes: 'Drum practice',
-				creditsUsed: null,
-				cashDueCents: 2 * HOURLY_RATE_CENTS
-			},
-			{
-				bookerType: 'user' as const,
-				bookerId: regular.id,
-				createdByUserId: regular.id,
-				status: 'confirmed' as const,
-				...walkUp,
-				notes: 'Walk-up session',
-				creditsUsed: 1,
-				cashDueCents: 2 * HOURLY_RATE_CENTS
-			}
-		],
-		8
-	);
+	const reservations = await batchInsert(reservation, [
+		{
+			bookerType: 'user' as const,
+			bookerId: regular.id,
+			createdByUserId: regular.id,
+			status: 'completed' as const,
+			...tuesday[-7],
+			notes: 'Drum practice',
+			creditsUsed: 4,
+			cashDueCents: 0,
+			paidAt: null
+		},
+		{
+			bookerType: 'user' as const,
+			bookerId: regular.id,
+			createdByUserId: regular.id,
+			status: 'confirmed' as const,
+			...tuesday[0],
+			notes: 'Drum practice',
+			creditsUsed: 1,
+			cashDueCents: Math.round(1.5 * HOURLY_RATE_CENTS),
+			lockCode: '4417',
+			lockAccessId: '620014',
+			lockSyncedAt: ago(0)
+		},
+		{
+			bookerType: 'user' as const,
+			bookerId: regular.id,
+			createdByUserId: regular.id,
+			status: 'confirmed' as const,
+			...tuesday[7],
+			notes: 'Drum practice',
+			creditsUsed: null,
+			cashDueCents: 2 * HOURLY_RATE_CENTS
+		},
+		{
+			bookerType: 'user' as const,
+			bookerId: regular.id,
+			createdByUserId: regular.id,
+			status: 'confirmed' as const,
+			...walkUp,
+			notes: 'Walk-up session',
+			creditsUsed: 1,
+			cashDueCents: 2 * HOURLY_RATE_CENTS
+		}
+	]);
 
 	// --- a ticket to something coming up, and a stub from one that happened ---
 	const upcoming = events.find((e) => e.startsAt > new Date() && e.status === 'published');
@@ -414,8 +410,7 @@ export async function seedUsagePersonaLife(
 			createdAt: ago(40)
 		});
 	}
-	// 17 bound parameters a row × 5 = 85, under D1's 100.
-	if (ticketRows.length) await batchInsert(ticket, ticketRows, 5);
+	if (ticketRows.length) await batchInsert(ticket, ticketRows);
 
 	// --- something borrowed, something given back ----------------------------
 	const items = await db
@@ -424,36 +419,32 @@ export async function seedUsagePersonaLife(
 		.where(eq(inventoryItem.isLoanable, true))
 		.limit(2);
 	const loans = items.length
-		? await batchInsert(
-				inventoryLoan,
-				[
-					{
-						id: randomUUID(),
-						itemId: items[0].id,
-						userId: regular.id,
-						quantity: 1,
-						requestedPickupDate: ago(9),
-						estimatedReturnDate: ago(2),
-						checkedOutAt: ago(9),
-						dueDate: ago(2),
-						status: 'checked_out' as const,
-						memberNotes: 'For the Tuesday sessions.'
-					},
-					{
-						id: randomUUID(),
-						itemId: items[items.length - 1].id,
-						userId: regular.id,
-						quantity: 1,
-						requestedPickupDate: ago(60),
-						estimatedReturnDate: ago(50),
-						checkedOutAt: ago(60),
-						returnedAt: ago(51),
-						dueDate: ago(50),
-						status: 'returned' as const
-					}
-				],
-				5
-			)
+		? await batchInsert(inventoryLoan, [
+				{
+					id: randomUUID(),
+					itemId: items[0].id,
+					userId: regular.id,
+					quantity: 1,
+					requestedPickupDate: ago(9),
+					estimatedReturnDate: ago(2),
+					checkedOutAt: ago(9),
+					dueDate: ago(2),
+					status: 'checked_out' as const,
+					memberNotes: 'For the Tuesday sessions.'
+				},
+				{
+					id: randomUUID(),
+					itemId: items[items.length - 1].id,
+					userId: regular.id,
+					quantity: 1,
+					requestedPickupDate: ago(60),
+					estimatedReturnDate: ago(50),
+					checkedOutAt: ago(60),
+					returnedAt: ago(51),
+					dueDate: ago(50),
+					status: 'returned' as const
+				}
+			])
 		: [];
 
 	// --- what they think we should fix ---------------------------------------
@@ -480,51 +471,43 @@ export async function seedUsagePersonaLife(
 	});
 
 	// --- the bell ------------------------------------------------------------
-	await batchInsert(
-		notification,
-		[
-			{
-				id: randomUUID(),
-				userId: regular.id,
-				type: 'reservation_reminder',
-				title: 'Your practice room booking is tomorrow',
-				body: 'Tuesday, 6:00–8:00 PM. Your door code is in the reservation.',
-				href: '/member/reservations',
-				readAt: null,
-				createdAt: ago(1)
-			},
-			{
-				id: randomUUID(),
-				userId: regular.id,
-				type: 'ticket_confirmation',
-				title: 'Your ticket is confirmed',
-				href: '/member/tickets',
-				readAt: ago(4),
-				createdAt: ago(4)
-			}
-		],
-		7
-	);
-	await batchInsert(
-		notificationPreference,
-		[
-			{
-				id: randomUUID(),
-				userId: regular.id,
-				notificationType: 'reservation_reminder',
-				emailEnabled: true,
-				inAppEnabled: true
-			},
-			{
-				id: randomUUID(),
-				userId: regular.id,
-				notificationType: 'ticket_confirmation',
-				emailEnabled: false,
-				inAppEnabled: true
-			}
-		],
-		7
-	);
+	await batchInsert(notification, [
+		{
+			id: randomUUID(),
+			userId: regular.id,
+			type: 'reservation_reminder',
+			title: 'Your practice room booking is tomorrow',
+			body: 'Tuesday, 6:00–8:00 PM. Your door code is in the reservation.',
+			href: '/member/reservations',
+			readAt: null,
+			createdAt: ago(1)
+		},
+		{
+			id: randomUUID(),
+			userId: regular.id,
+			type: 'ticket_confirmation',
+			title: 'Your ticket is confirmed',
+			href: '/member/tickets',
+			readAt: ago(4),
+			createdAt: ago(4)
+		}
+	]);
+	await batchInsert(notificationPreference, [
+		{
+			id: randomUUID(),
+			userId: regular.id,
+			notificationType: 'reservation_reminder',
+			emailEnabled: true,
+			inAppEnabled: true
+		},
+		{
+			id: randomUUID(),
+			userId: regular.id,
+			notificationType: 'ticket_confirmation',
+			emailEnabled: false,
+			inAppEnabled: true
+		}
+	]);
 
 	return {
 		reservations: reservations.length,

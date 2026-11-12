@@ -6,7 +6,7 @@ import {
 	lockMemberCode,
 	accessHolding
 } from '../../src/lib/server/db/schema/reservation';
-import { db } from './db';
+import { batchInsert, db } from './db';
 import { CLOSURE_REASONS } from './pools';
 import { HOURLY_RATE_CENTS, type SeedReservation, type SeedUser } from './types';
 import { claimRoomNear, holdRoom } from './room';
@@ -222,28 +222,26 @@ async function seedCancellationKinds(users: SeedUser[]): Promise<SeedReservation
 		// A row from before anyone recorded who cancelled.
 		{ cancelledBy: null, byUserId: null, reason: null }
 	] as const;
-	return db
-		.insert(reservation)
-		.values(
-			kinds.map((k, i) => ({
-				bookerType: 'user' as const,
-				bookerId: member.id,
-				createdByUserId: member.id,
-				status: 'cancelled' as const,
-				startsAt: ptDate(-3 + i, 10),
-				endsAt: ptDate(-3 + i, 12),
-				cancellationReason: k.reason,
-				cancelledBy: k.cancelledBy,
-				cancelledByUserId: k.byUserId,
-				cancelledAt: k.cancelledBy ? ptDate(-5 + i, 16) : null
-			}))
-		)
-		.returning();
+	return batchInsert(
+		reservation,
+		kinds.map((k, i) => ({
+			bookerType: 'user' as const,
+			bookerId: member.id,
+			createdByUserId: member.id,
+			status: 'cancelled' as const,
+			startsAt: ptDate(-3 + i, 10),
+			endsAt: ptDate(-3 + i, 12),
+			cancellationReason: k.reason,
+			cancelledBy: k.cancelledBy,
+			cancelledByUserId: k.byUserId,
+			cancelledAt: k.cancelledBy ? ptDate(-5 + i, 16) : null
+		}))
+	);
 }
 
 export async function seedClosures() {
 	console.log('Seeding closures...');
-	await db.insert(closure).values([
+	await batchInsert(closure, [
 		{ reason: 'Holiday closure — New Year', startsAt: ptDate(-30, 0), endsAt: ptDate(-29, 23, 59) },
 		{
 			reason: 'Building maintenance — HVAC replacement',
@@ -280,7 +278,7 @@ export async function seedLockAccess(users: SeedUser[]) {
 	const [holder, lapsed, pending] = users;
 	if (!holder) return;
 
-	await db.insert(lockMemberCode).values([
+	await batchInsert(lockMemberCode, [
 		// A member with a standing code: provisioning skips them entirely.
 		{
 			userId: holder.id,
@@ -328,7 +326,7 @@ export async function seedLockAccess(users: SeedUser[]) {
 	// The key holder register: two keys out, an alarm code held by somebody with
 	// no account, and one key back — so both tabs have rows.
 	const [, , , keyHolder, keyReturner] = users;
-	await db.insert(accessHolding).values([
+	await batchInsert(accessHolding, [
 		{
 			kind: 'key',
 			label: 'Front door key 1',
