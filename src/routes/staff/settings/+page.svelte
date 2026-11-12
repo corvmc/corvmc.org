@@ -14,8 +14,7 @@
 		refreshCommunityStats
 	} from '#lib/remote/settings.remote.js';
 	import { updateInboxChannelConfig, testMetaConnection } from '#lib/remote/inbox.remote.js';
-	import { hasCapability, isAlwaysEnabledChannel } from '#lib/config.js';
-	import { getStaffLayout } from '#lib/remote/layout.remote.js';
+	import { isAlwaysEnabledChannel } from '#lib/config.js';
 	import AccessTab from './access/AccessTab.svelte';
 	import { channelLabel, channelIcon } from '#lib/components/inbox/channels.js';
 	import { inboxChannelMeta } from './inbox-channel-meta';
@@ -54,16 +53,12 @@
 	);
 	let metaTesting = $state<string | null>(null);
 
-	// The staff layout has already fetched this. Access is admin-only; its remotes guard it.
-	const caps = $derived((await getStaffLayout()).capabilities);
 	const tabs = $derived([
 		{ key: 'organization', label: m.staff_settings_organization_label() },
 		{ key: 'inbox', label: m.staff_settings_inbox_channels_label() },
 		{ key: 'features', label: m.staff_settings_features_label() },
 		{ key: 'subscriptions', label: m.staff_settings_subscriptions_label() },
-		...(hasCapability(caps, 'user.setRole')
-			? [{ key: 'access', label: m.staff_access_access_title() }]
-			: [])
+		...(settings.canManageAccess ? [{ key: 'access', label: m.staff_settings_access_label() }] : [])
 	]);
 	// A `?tab=` naming a tab this viewer is not offered opens the first one.
 	const shown = $derived(tabs.some((t) => t.key === activeTab) ? activeTab : 'organization');

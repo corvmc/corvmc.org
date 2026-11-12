@@ -17,6 +17,7 @@ const requireCapability = vi.fn<(cap: string) => Promise<unknown>>(async () => {
 	throw new Error('403: Staff access required');
 });
 vi.mock('#lib/server/authorization.js', () => ({
+	can: async () => false,
 	requireCapability: (...args: unknown[]) => requireCapability(...(args as [string]))
 }));
 
