@@ -102,8 +102,12 @@ test.describe('member sidebar', () => {
 		await expect(header).toHaveAttribute('aria-expanded', 'true');
 		await expect(navLink(page, BROWSE_BANDS)).toBeVisible();
 
-		await header.click();
-		await expect(navLink(page, BROWSE_BANDS)).toBeHidden();
+		// A click can land before hydration and be lost (#2580). The button toggles,
+		// so the state is re-read before each attempt, as for the account menu above.
+		await expect(async () => {
+			if ((await header.getAttribute('aria-expanded')) === 'true') await header.click();
+			await expect(navLink(page, BROWSE_BANDS)).toBeHidden({ timeout: 1000 });
+		}).toPass({ timeout: 15000 });
 
 		await page.reload();
 		await expect(groupToggle(page, BROWSE_BANDS)).toHaveAttribute('aria-expanded', 'false');

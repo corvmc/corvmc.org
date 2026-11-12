@@ -17,8 +17,8 @@ import { ptDate } from './util';
  *
  * Written by hand: the seed runs outside the app, where no listener fires. The
  * shape matches the orientation setting's defaults — ten minutes before the
- * booking, 30 minutes long, with the default checklist. The role lives in KV and
- * starts empty, so the listener stays off locally until staff pick one.
+ * booking, 30 minutes long, with the default checklist. The role lives in KV;
+ * `seed/practice-space.ts` sets it, so the listener is on locally.
  *
  * Every state is seeded, not just the happy one. `pending` and `scheduled` are
  * what a fresh member looks like; `completed` and `waived` are the two the staff

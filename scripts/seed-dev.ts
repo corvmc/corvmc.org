@@ -83,6 +83,7 @@ import { seedCrewIncidentFiling, seedIncidents } from './seed/incidents';
 import { seedMemberInvites } from './seed/member-invites';
 import { seedDutyLists } from './seed/duty-lists';
 import { seedOrientation } from './seed/orientation';
+import { seedPracticeSpaceClearance } from './seed/practice-space';
 import {
 	seedVolunteerRoles,
 	seedVolunteerProfiles,
@@ -320,6 +321,8 @@ async function main() {
 	const ballots = await seedBallots(groups, adminUser);
 	// After every seeder that writes shifts: a task with both an assignee and a shift (#2518).
 	const tasksAndShifts = await seedTasksAndShifts();
+	// Last: its backfill reads every booking and orientation seeded above.
+	const practiceSpace = await seedPracticeSpaceClearance(volunteerRoles);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
 
@@ -345,6 +348,9 @@ async function main() {
 	);
 	console.log(
 		`  ${orientation.workOrders} orientation shifts, ${orientation.orientations} member orientations`
+	);
+	console.log(
+		`  ${practiceSpace.holders} Practice space clearances; orientation role ${practiceSpace.orientationRoleId ?? 'unset'}`
 	);
 	console.log(
 		`  ${tasksAndShifts.shifts} shifts, ${tasksAndShifts.assignees} task assignees, ${tasksAndShifts.taskHours} hour log naming a task`

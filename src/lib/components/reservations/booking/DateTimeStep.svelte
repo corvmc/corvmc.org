@@ -80,6 +80,8 @@
 	});
 
 	let availableDates = $state<string[]>([]);
+	// Minutes of notice when the member has no Practice space clearance yet.
+	let newMemberNotice = $state<number | null>(null);
 	let initialLoading = $state(true);
 
 	// Bound the calendar by what the server actually offers rather than
@@ -99,16 +101,18 @@
 		const forceReload = token > availSeen;
 		availSeen = token;
 		const gen = ++availGen;
-		const q = getAvailableDates();
+		const q = getAvailableDates(bookerType);
 		(async () => {
 			// refresh() re-fetches and updates the resource's reactive `current`;
 			// the awaitable itself resolves only once, so read `current` after it.
 			if (forceReload) await q.refresh();
-			const dates = (forceReload ? q.current : await q) ?? [];
+			const result = forceReload ? q.current : await q;
+			const dates = result?.dates ?? [];
 			// Drop a stale resolve (e.g. the initial load finishing after a
 			// conflict-triggered refresh already ran).
 			if (gen !== availGen) return;
 			availableDates = dates;
+			newMemberNotice = result?.newMemberNoticeMinutes ?? null;
 			// Preselect the first bookable day, and re-pick if a conflict reload
 			// took the selected day away — otherwise the user is stranded on a
 			// date the server no longer offers. untrack: reading `date` here must
@@ -150,7 +154,7 @@
 			startTimeOptions = [];
 			return;
 		}
-		const q = getReservationStartTimes(d);
+		const q = getReservationStartTimes({ date: d, bookerType });
 		(async () => {
 			if (forceReload) await q.refresh();
 			const opts = (forceReload ? q.current : await q) ?? [];
@@ -195,6 +199,14 @@
 			description={m.reservations_booking_date_time_step_every_slot_current_booki_body()}
 		/>
 	{:else}
+		{#if newMemberNotice !== null}
+			<p class="text-muted text-sm">
+				{m.reservations_booking_date_time_step_first_booking_notice_body({
+					days: Math.ceil(newMemberNotice / 1440)
+				})}
+			</p>
+		{/if}
+
 		<Form.Field
 			field={fields.date}
 			label=""

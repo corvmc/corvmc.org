@@ -29,6 +29,7 @@ const cfg: ReservationConfig = {
 	operatingHoursEnd: '22:00',
 	bufferMinutes: 0,
 	minAdvanceMinutes: 60,
+	newMemberMinAdvanceMinutes: 4320,
 	maxAdvanceDaysOneoff: DEFAULT_MAX_ADVANCE_DAYS_ONEOFF,
 	maxAdvanceDaysRecurring: DEFAULT_MAX_ADVANCE_DAYS_RECURRING,
 	hourlyRateCents: 1500,

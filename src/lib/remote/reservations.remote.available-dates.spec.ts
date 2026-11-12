@@ -48,7 +48,8 @@ vi.mock('#lib/server/reservation/conflict-service.js', () => ({
 		async (dates: string[]) => new Map(dates.map((d) => [d, openDay]))
 	),
 	getConflictDetails: vi.fn(),
-	getValidationWarnings: vi.fn()
+	getValidationWarnings: vi.fn(),
+	noticeFor: vi.fn(async () => ({ minutes: 60, newMember: false }))
 }));
 
 const testUser = mockUser({ id: 'user-1', name: 'Test Member', email: 'member@example.com' });
@@ -81,7 +82,7 @@ const { getAvailableDates } = (await import('#lib/remote/reservations.remote.js'
 
 describe('getAvailableDates window', () => {
 	it('offers exactly maxAdvanceDaysOneoff days starting today, and no farther', async () => {
-		const dates: string[] = await getAvailableDates();
+		const { dates }: { dates: string[] } = await getAvailableDates();
 
 		const today = new Date().toISOString().slice(0, 10);
 		expect(dates[0]).toBe(today);
@@ -100,7 +101,7 @@ describe('getAvailableDates window', () => {
 		// (~15 days out) past the 14.5-day limit, recreating the dead zone.
 		maxAdvanceDaysOneoff = 14.5;
 		try {
-			const dates: string[] = await getAvailableDates();
+			const { dates }: { dates: string[] } = await getAvailableDates();
 			expect(dates).toHaveLength(14);
 
 			const lastOffered = new Date(`${dates[dates.length - 1]}T23:59:59Z`);
