@@ -29,11 +29,8 @@
 />
 
 <PageContent width="md">
-	<InfoCard
-		title={m.member_volunteer_blocked_thanks_signing_up_one_thing_title({
-			firstName: me.firstName
-		})}
-	>
+	<InfoCard title={m.member_volunteer_blocked_thanks_signing_up_one_thing_title()}>
+		<p class="text-sm">{m.member_volunteer_blocked_thanks_body({ firstName: me.firstName })}</p>
 		<p class="text-sm">
 			{m.member_volunteer_blocked_we_d_love_have_because_text()}
 		</p>

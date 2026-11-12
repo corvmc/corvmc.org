@@ -187,7 +187,7 @@
 										/>
 										<FormField
 											field={reassignDeliverableForm.for(item.id).fields.groupId}
-											label={m.member_text_label()}
+											label={m.member_groups_slug_committee_open_items_committee_label()}
 											type="select"
 											options={handTo}
 										/>
