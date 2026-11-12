@@ -1043,6 +1043,26 @@ them — is `ActivityFeedCard` from `#lib/components/ui/ActivityFeed/index.js`. 
 - `toRow` maps an item to `{ summary, actor, href, context }`; a `trailing` snippet carries a
   source's own figure at the row's end. A row from an earlier venue year shows its year.
 
+### The dashboard review feed
+
+Everything waiting on a staff decision is one `ActivityFeed` on `/staff`, read oldest first from
+the registry in `src/lib/server/review/review-registry.ts` (#2623). A new kind of review is a
+registry entry, not a page section or a nav badge.
+
+- **One query.** The feed, its counts and the filter chips come from `getStaffDashboard`; the
+  Dashboard nav badge is `countReviewFeed`, so the two cannot disagree. Chips appear only for kinds
+  with something waiting, and the filter is `?review=<kind>` in the URL.
+- **A row links to the page where the kind is decided** through `entityHref`.
+- **A row decides in place** when its kind is in `rowDecisions` (`#lib/types/review.js`). Each
+  decision binds, in `src/routes/staff/review-decisions.ts`, to the remote form the kind's own page
+  submits, so the guard and the service are that page's. The binding's type requires an entry for
+  every declared decision. A form that refuses without a written reason is asked through `Action`
+  with one reason field; the rest submit in one click. After either, the page refreshes its query
+  and `getStaffLayout`, so the row leaves and the badge drops.
+- **A kind stays link-only** when its decision needs a written reply or more than two outcomes:
+  content reports, appeals, vendor and group applications, suggestions to answer, reported
+  problems.
+
 ## EmptyState
 
 Consistent empty-state message for lists and tables. Prefer it over a bare

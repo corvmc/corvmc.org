@@ -91,6 +91,7 @@ function defineReviewKind(def: {
 			const rows = await def.rows(opts);
 			return rows.map((row) => ({
 				id: `${def.kind}:${row.id}`,
+				subjectId: row.id,
 				at: row.at,
 				actorId: row.actorId,
 				actorName: row.actorName,

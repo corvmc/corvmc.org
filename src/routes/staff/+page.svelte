@@ -13,11 +13,18 @@
 	import DayTimeline from '#lib/components/reservations/DayTimeline.svelte';
 	import { rowLink } from '#lib/actions/row-link.js';
 	import { getStaffDashboard } from '#lib/remote/staff-dashboard.remote.js';
+	import { getStaffLayout } from '#lib/remote/layout.remote.js';
+	import ReviewRowDecisions from './ReviewRowDecisions.svelte';
 	import { ActivityFeed, type ActivityRow } from '#lib/components/ui/ActivityFeed/index.js';
 	import { getEntityViewer } from '#lib/components/ui/entity/context.js';
 	import { entityHref } from '#lib/utils/entity-href.js';
 	import { FEED_MAX, FEED_PAGE } from '#lib/types/activity.js';
-	import { isReviewKind, reviewKinds, type ReviewKind } from '#lib/types/review.js';
+	import {
+		isReviewKind,
+		reviewKinds,
+		type ReviewItem,
+		type ReviewKind
+	} from '#lib/types/review.js';
 	import type { ResolvedPathname } from '$app/types';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -79,7 +86,8 @@
 			.map((k) => ({ kind: k, count: data.review.counts.byKind[k] ?? 0 }))
 	);
 	let reviewRows = $derived(
-		data.review.items.map((item): ActivityRow => ({
+		data.review.items.map((item): ActivityRow & { item: ReviewItem } => ({
+			item,
 			id: item.id,
 			at: item.at,
 			actor: item.actorName ? { name: item.actorName } : null,
@@ -89,6 +97,11 @@
 			context: { label: kindLabels[item.kind]() }
 		}))
 	);
+	// A decided row leaves the feed, and the nav badge counts one fewer.
+	function refreshReview() {
+		void getStaffDashboard({ kind, limit }).refresh();
+		void getStaffLayout().refresh();
+	}
 	let doorCodes = $derived(
 		data.room?.[0].reservations.filter((r) => r.doorCodeUnconfirmed).length ?? 0
 	);
@@ -239,7 +252,15 @@
 		moreLabel={m.staff_review_show_more_label()}
 		onmore={() => (limit = Math.min(limit + FEED_PAGE, FEED_MAX))}
 		empty={{ description: m.staff_review_empty_body() }}
-	/>
+	>
+		{#snippet trailing(row)}
+			<ReviewRowDecisions
+				item={row.item}
+				kindLabel={kindLabels[row.item.kind]()}
+				ondecided={refreshReview}
+			/>
+		{/snippet}
+	</ActivityFeed>
 
 	{#if data.shortShifts?.total}
 		<!-- A show that goes out a person short cannot be fixed next week. -->
