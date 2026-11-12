@@ -30,11 +30,11 @@ const remote = {
 	result: undefined
 };
 
-// The names kit 3 renders for a remote form's fields.
+// The names kit 3 renders: `<key>/<module hash>/<export>`.
 const values = {
-	'date/f1': '2026-11-20',
-	'startTime/f1': '18:00',
-	'endTime/f1': '20:00'
+	'date/1a2b3c/bookAndPayReservation': '2026-11-20',
+	'startTime/1a2b3c/bookAndPayReservation': '18:00',
+	'endTime/1a2b3c/bookAndPayReservation': '20:00'
 };
 
 const pricing = vi.mocked(getReservationPricing);

@@ -4,7 +4,7 @@ import { SEED_APPLICANT_EMAIL, SEED_APPLICANT_PASSWORD } from './fixtures/seed-i
 
 /**
  * The member Reserve space modal reaches a priced confirm step (#2571): kit
- * names each field `<key>/<form id>`, and a read by bare key priced nothing.
+ * names each field `<key>/<hash>/<export>`, and a read by bare key priced nothing.
  * It stops at the confirm step. The band and teaching specs cover booking, and
  * a write here would race them for the first free slot.
  */

@@ -1,6 +1,6 @@
 <!--
 	Test harness for ConfirmStep: a two-step remote form whose first step holds
-	the slot under the names kit gives it, `<key>/<form id>`.
+	the slot under the names kit gives it, `<key>/<module hash>/<export>`.
 -->
 <script lang="ts">
 	import * as Form from '#lib/components/ui/Form/index.js';

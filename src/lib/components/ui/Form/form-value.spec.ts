@@ -10,15 +10,15 @@ function data(entries: [string, string][]) {
 describe('formValue', () => {
 	it('reads a field by key through the form-id suffix kit adds', () => {
 		const fd = data([
-			['date/abc123', '2026-11-20'],
-			['startTime/abc123', '18:00']
+			['date/1a2b3c/bookAndPayReservation', '2026-11-20'],
+			['startTime/1a2b3c/bookAndPayReservation', '18:00']
 		]);
 		expect(formValue(fd, 'date')).toBe('2026-11-20');
 		expect(formValue(fd, 'startTime')).toBe('18:00');
 	});
 
 	it('reads through a type prefix', () => {
-		expect(formValue(data([['n:hours/abc123', '2']]), 'hours')).toBe('2');
+		expect(formValue(data([['n:hours/1a2b3c/bookAndPayReservation', '2']]), 'hours')).toBe('2');
 	});
 
 	it('reads an unsuffixed name', () => {
@@ -26,6 +26,8 @@ describe('formValue', () => {
 	});
 
 	it('does not match a key that only starts with the one asked for', () => {
-		expect(formValue(data([['startTimeZone/abc123', 'x']]), 'startTime')).toBeNull();
+		expect(
+			formValue(data([['startTimeZone/1a2b3c/bookAndPayReservation', 'x']]), 'startTime')
+		).toBeNull();
 	});
 });

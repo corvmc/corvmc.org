@@ -1,8 +1,8 @@
 /**
  * A remote form field's current value, read from the form by key.
  *
- * Kit names each field `<key>/<form id>`, with an `n:`, `b:` or `i:` prefix on a
- * typed one, so `FormData.get('date')` is always null for a remote form. A step
+ * Kit names each field `<key>/<form id>`, where the id is the remote's own
+ * `<module hash>/<export>`, with an `n:`, `b:` or `i:` prefix on a typed one, so `FormData.get('date')` is always null for a remote form. A step
  * that reads an earlier step's values goes through this instead.
  */
 export function formValue(form: HTMLFormElement | FormData, key: string): string | null {
@@ -10,7 +10,7 @@ export function formValue(form: HTMLFormElement | FormData, key: string): string
 	const data = form instanceof FormData ? form : new FormData(form);
 	for (const [name, value] of data) {
 		if (typeof value !== 'string') continue;
-		if (name.replace(/^[nbi]:/, '').replace(/\/[^/]*$/, '') === key) return value;
+		if (name.replace(/^[nbi]:/, '').split('/')[0] === key) return value;
 	}
 	return null;
 }
