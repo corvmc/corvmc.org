@@ -20,6 +20,7 @@ import {
 } from 'drizzle-orm';
 import { validateBooking, hasConflict } from './conflict-service';
 import { notAProgramHold } from './program-hold';
+import { insertReservation } from './insert-reservation';
 import { refund } from '#lib/server/finance/payment-service.js';
 import { reverseReservationCredits } from './reservation-credit-service';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
@@ -145,19 +146,16 @@ export async function create(params: CreateReservationParams): Promise<Reservati
 	// cash owed settles at the desk or by paying ahead.
 	const status = 'confirmed';
 
-	const [row] = await db
-		.insert(reservation)
-		.values({
-			bookerType,
-			bookerId,
-			createdByUserId: userId,
-			status,
-			startsAt,
-			endsAt,
-			tourMinutes,
-			notes: notes ?? null
-		})
-		.returning();
+	const row = await insertReservation({
+		bookerType,
+		bookerId,
+		createdByUserId: userId,
+		status,
+		startsAt,
+		endsAt,
+		tourMinutes,
+		notes: notes ?? null
+	});
 
 	// Post-insert re-check narrows the check-then-insert race: two concurrent
 	// bookings can both pass the check above, but at least one of them sees the
@@ -240,19 +238,16 @@ export async function createWaitlisted(params: CreateReservationParams): Promise
 	const tourMinutes = validation.tourMinutes ?? 0;
 	const startsAt = new Date(params.startsAt.getTime() - tourMinutes * 60_000);
 
-	const [row] = await db
-		.insert(reservation)
-		.values({
-			bookerType,
-			bookerId,
-			createdByUserId: userId,
-			status: 'waitlisted',
-			startsAt,
-			endsAt,
-			tourMinutes,
-			notes: notes ?? null
-		})
-		.returning();
+	const row = await insertReservation({
+		bookerType,
+		bookerId,
+		createdByUserId: userId,
+		status: 'waitlisted',
+		startsAt,
+		endsAt,
+		tourMinutes,
+		notes: notes ?? null
+	});
 
 	return row;
 }
@@ -366,20 +361,17 @@ export async function staffCreate(params: StaffCreateReservationParams): Promise
 	if (startsAt >= endsAt)
 		throw new ReservationValidationError('Reservation must end after it starts');
 
-	const [row] = await db
-		.insert(reservation)
-		.values({
-			bookerType,
-			bookerId,
-			createdByUserId: userId,
-			createdByStaffId: staffUserId ?? null,
-			status,
-			startsAt,
-			endsAt,
-			notes: notes ?? null,
-			hardHold
-		})
-		.returning();
+	const row = await insertReservation({
+		bookerType,
+		bookerId,
+		createdByUserId: userId,
+		createdByStaffId: staffUserId ?? null,
+		status,
+		startsAt,
+		endsAt,
+		notes: notes ?? null,
+		hardHold
+	});
 
 	// A desk booking on a member's behalf is still that member's first visit —
 	// `createdByUserId` is the owning member here by design, and
