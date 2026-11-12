@@ -53,7 +53,7 @@
 		const url = new URL(page.url.href);
 		if (on) url.searchParams.set('archived', '1');
 		else url.searchParams.delete('archived');
-		goto(url, { replace: true, keepFocus: true, noScroll: true });
+		goto(url, { replace: true });
 	}
 </script>
 
@@ -81,7 +81,8 @@
 			modalTitle={m.staff_contacts_add_organization_title()}
 			successToast={m.staff_contacts_organization_added_toast()}
 			onsuccess={(r) => {
-				if (r && 'id' in r) goto(resolve(`staff/contacts/${r.id}`));
+				const id = (r as { id?: string } | undefined)?.id;
+				if (id) goto(resolve(`staff/contacts/${id}`));
 			}}
 			data-testid="new-organization"
 		>

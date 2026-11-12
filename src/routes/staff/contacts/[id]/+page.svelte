@@ -142,7 +142,8 @@
 							submitVariant="error"
 							successToast={m.staff_removed_toast()}
 							onsuccess={(r) => {
-								if (r && 'deleted' in r && r.deleted) goto(resolve('staff/contacts'));
+								if ((r as { deleted?: boolean } | undefined)?.deleted)
+									goto(resolve('staff/contacts'));
 							}}
 						>
 							{#snippet form()}
