@@ -65,11 +65,14 @@ export interface RenderedPoster {
 
 /** Where the QR code points: the public events page, opened at the month's first day. */
 export function monthUrl(month: string): string {
-	const site = (publicEnv.PUBLIC_SITE_URL ?? 'https://corvmc.org').replace(/\/$/, '');
-	return `${site}/events?from=${month}-01`;
+	return `${siteUrl()}/events?from=${month}-01`;
 }
 
-const esc = (s: string) =>
+/** The public site's origin, without a trailing slash. */
+export const siteUrl = () => (publicEnv.PUBLIC_SITE_URL ?? 'https://corvmc.org').replace(/\/$/, '');
+
+/** Text made safe to place in a poster page. */
+export const esc = (s: string) =>
 	s.replace(
 		/[&<>"']/g,
 		(c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!

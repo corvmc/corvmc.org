@@ -391,6 +391,8 @@
 	"events_listing_poster_card_label": "Use poster template",
 	"events_listing_poster_card_modal_title": "Use poster template?",
 	"events_listing_poster_card_no_poster_uploaded_text": "No poster uploaded",
+	"events_listing_poster_card_print_failed_toast": "Print poster failed",
+	"events_listing_poster_card_print_label": "Download print poster",
 	"events_listing_poster_card_replace_poster_title": "Replace poster",
 	"events_listing_poster_card_submit_label": "Create poster",
 	"events_listing_poster_card_title": "Poster",
