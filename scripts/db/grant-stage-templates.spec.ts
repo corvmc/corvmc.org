@@ -6,16 +6,14 @@
  */
 import { describe, expect, it } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { applyMigrations, MIGRATIONS_FOLDER } from './migrate-local';
-
-const dir = readdirSync(MIGRATIONS_FOLDER).find((n) => n.endsWith('_grant_stage_templates'));
-const SQL = readFileSync(join(MIGRATIONS_FOLDER, dir ?? 'missing', 'migration.sql'), 'utf8');
+import { applyMigrations } from './migrate-local';
+import { grantStageTemplateStatements } from './grant-stage-templates';
 
 function run(db: DatabaseSync) {
-	for (const statement of SQL.split('--> statement-breakpoint')) db.exec(statement);
+	for (const statement of grantStageTemplateStatements()) db.exec(statement);
 }
 
 /** Migrated, with the templates' items cleared so the committees below are what it finds. */

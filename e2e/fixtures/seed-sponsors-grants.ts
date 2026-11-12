@@ -5,7 +5,8 @@
  *
  * Idempotent: deletes and recreates its own rows on every run.
  */
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
+import { grantStageTemplateStatements } from '../../scripts/db/grant-stage-templates';
 import { withPlatformEnv } from './platform-db';
 import { sponsorship } from '../../src/lib/server/db/schema/sponsor';
 import { grantApplication } from '../../src/lib/server/db/schema/grant';
@@ -32,6 +33,8 @@ function day(offset: number): string {
 
 export async function seedSponsorsAndGrants(): Promise<void> {
 	await withPlatformEnv(async ({ db }) => {
+		// The reset emptied the grant templates a new grant is stamped from.
+		for (const statement of grantStageTemplateStatements()) await db.run(sql.raw(statement));
 		// Every project these organizations' rows hold, a spec's new grant's included.
 		const held = [
 			...(await db

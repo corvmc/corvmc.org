@@ -1,4 +1,3 @@
-import { readdirSync, readFileSync } from 'node:fs';
 import { and, asc, eq, isNotNull, sql } from 'drizzle-orm';
 import { project, projectCommittee, projectSection } from '../../src/lib/server/db/schema/project';
 import { grantApplication } from '../../src/lib/server/db/schema/grant';
@@ -8,6 +7,7 @@ import { dutyList, dutyListItem, workOrder } from '../../src/lib/server/db/schem
 import type { GrantStage } from '../../src/lib/config';
 import { batchInsert, db } from './db';
 import { ptDate } from './util';
+import { grantStageTemplateStatements } from '../db/grant-stage-templates';
 
 /**
  * A grant application or sponsorship is a project (#2622). Each seeded one is
@@ -24,20 +24,9 @@ export async function fundingProjects(
 	);
 }
 
-const MIGRATIONS = new URL('../../migrations/', import.meta.url);
-
-/**
- * The grant templates, from the migration that writes them in production: one
- * copy of their text. The wipe empties them, so the seed runs it again; every
- * statement in it is a no-op the second time.
- */
+/** The grant templates the wipe emptied, from the migration that writes them. */
 async function replayTemplateMigration() {
-	const folder = readdirSync(MIGRATIONS).find((f) => f.endsWith('_grant_stage_templates'));
-	if (!folder) throw new Error('The grant_stage_templates migration is missing.');
-	const text = readFileSync(new URL(`${folder}/migration.sql`, MIGRATIONS), 'utf8');
-	for (const statement of text.split('--> statement-breakpoint')) {
-		if (statement.trim()) await db.run(sql.raw(statement));
-	}
+	for (const statement of grantStageTemplateStatements()) await db.run(sql.raw(statement));
 }
 
 async function committeeHolding(capability: string) {
