@@ -212,7 +212,12 @@
 <PageHeader title={m.staff_reservations_practice_space_title()}>
 	<div class="flex flex-wrap justify-end gap-2">
 		{#if settled?.lock}
-			<BuildingAccess bind:open={accessOpen} offline={settled.lock.offline} utec={utecParam} />
+			<BuildingAccess
+				bind:open={accessOpen}
+				offline={settled.lock.offline}
+				canReadSettings={settled.lock.canReadSettings}
+				utec={utecParam}
+			/>
 		{/if}
 		<RecurringSeriesModal />
 		<div class="join">

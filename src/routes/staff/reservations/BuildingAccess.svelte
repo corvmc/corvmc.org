@@ -7,8 +7,6 @@
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
-	import { hasCapability } from '#lib/config.js';
-	import { getStaffLayout } from '#lib/remote/layout.remote.js';
 	import { getBuildingAccess } from '#lib/remote/lock.remote.js';
 	import { getIntegrationSettings } from '#lib/remote/settings.remote.js';
 	import { errorMessage } from '#lib/error-message.js';
@@ -19,19 +17,19 @@
 	let {
 		open = $bindable(false),
 		offline,
+		canReadSettings,
 		utec = null
 	}: {
 		open?: boolean;
 		offline: boolean;
+		/** Lock settings keeps the `settings.read` gate it had on Settings. */
+		canReadSettings: boolean;
 		/** `?utec=` from the U-tec sign-in's return, read by the page before it rewrites the URL. */
 		utec?: string | null;
 	} = $props();
 
 	// The query waits for the sidebar to open.
 	const data = $derived(open ? getBuildingAccess() : null);
-	// Deduped to the staff layout's own call.
-	const caps = $derived((await getStaffLayout()).capabilities);
-	const canReadSettings = $derived(hasCapability(caps, 'settings.read'));
 
 	const utecResult: Record<string, [type: 'success' | 'error', msg: () => string]> = {
 		connected: ['success', m.staff_settings_utec_connected_toast],

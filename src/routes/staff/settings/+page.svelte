@@ -28,8 +28,6 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
-	import { errorMessage } from '#lib/error-message.js';
-	import { retryQuery } from '#lib/utils/retry-query.js';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
@@ -39,16 +37,7 @@
 	import { formatDollars } from '#lib/utils/format.js';
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import {
-		IconPlugConnected,
-		IconCircleCheck,
-		IconCircleX,
-		IconCopy,
-		IconToggleRight,
-		IconToggleLeft
-	} from '@tabler/icons-svelte';
+	import { IconPlugConnected, IconToggleRight, IconToggleLeft } from '@tabler/icons-svelte';
 
 	// `?tab=` opens a tab on arrival.
 	let activeTab = $state(page.url.searchParams.get('tab') ?? 'pricing');

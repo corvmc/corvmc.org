@@ -2330,8 +2330,11 @@ export const getStaffReservationsPage = query(staffReservationsPageSchema, async
 	await requireCapability('reservation.read');
 	const now = new Date();
 	// The header's Building access dot: the last health reading in KV, never a U-tec call.
-	const lockReading = async () =>
-		(await can('lock.manage')) ? { offline: (await getLockStatus()).online === false } : null;
+	const lockReading = async () => {
+		if (!(await can('lock.manage'))) return null;
+		const [status, canReadSettings] = await Promise.all([getLockStatus(), can('settings.read')]);
+		return { offline: status.online === false, canReadSettings };
+	};
 	const [list, statusCounts, owedAfterSession, hourlyRates, canManageClosures, lock] =
 		await Promise.all([
 			listStaffReservations(filters, now),
