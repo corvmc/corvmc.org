@@ -45,8 +45,11 @@
 <style>
 	/* The bare inner control keeps the UA's 16px rather than picking up the
 	   wrapper's size class, which rendered select text larger than the inputs
-	   beside it. daisyUI's own `.select > select` rules don't cover this. */
+	   beside it. daisyUI's own `.select > select` rules don't cover this.
+	   `@tailwindcss/forms` pads every select by 0.5rem top and bottom; inside
+	   the fixed-height wrapper Firefox then draws the text below the box's centre. */
 	select {
 		font: inherit;
+		padding-block: 0;
 	}
 </style>
