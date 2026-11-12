@@ -143,7 +143,11 @@ export async function relatedTasks(
 						includeDone ? undefined : isNull(workOrder.resolvedAt)
 					)
 				)
-				.orderBy(sql`${workOrder.resolvedAt} is not null`, desc(workOrder.createdAt))
+				.orderBy(
+					sql`${workOrder.resolvedAt} is not null`,
+					desc(workOrder.createdAt),
+					desc(workOrder.id)
+				)
 				.limit(limitPerRelation + 1)
 		)
 	);
