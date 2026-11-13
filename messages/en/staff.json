@@ -3660,6 +3660,7 @@
 	"staff_blocklist_refused_label": "Refused sign-ups",
 	"staff_blocklist_last_refused_text": "last {date}",
 	"staff_blocklist_add_label": "Block address",
+	"staff_blocklist_add_title": "Block address",
 	"staff_blocklist_note_body": "Staff only.",
 	"staff_blocklist_blocked_toast": "Address blocked",
 	"staff_blocklist_unblock_label": "Unblock",

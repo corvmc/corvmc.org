@@ -123,5 +123,5 @@ export async function listRemovals(userId: string): Promise<RemovalHistoryRow[]>
 		.leftJoin(actor, eq(actor.id, accountRemoval.actorUserId))
 		.leftJoin(lifter, eq(lifter.id, accountRemoval.liftedByUserId))
 		.where(eq(accountRemoval.userId, userId))
-		.orderBy(desc(accountRemoval.createdAt));
+		.orderBy(desc(accountRemoval.createdAt), desc(accountRemoval.id));
 }

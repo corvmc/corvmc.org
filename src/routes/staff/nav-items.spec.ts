@@ -296,6 +296,7 @@ describe('route coverage', () => {
 		// Moderation views, reached from its tab bar (#2393).
 		'/staff/moderation/flags',
 		'/staff/moderation/incidents',
+		'/staff/moderation/blocklist',
 		// Outreach views, reached from its tab bar (#2394).
 		'/staff/marketing/campaigns',
 		'/staff/marketing/audiences',

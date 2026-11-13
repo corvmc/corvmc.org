@@ -118,5 +118,5 @@ export async function listBlocklist(): Promise<BlocklistRow[]> {
 		})
 		.from(emailBlocklist)
 		.leftJoin(user, eq(user.id, emailBlocklist.addedByUserId))
-		.orderBy(desc(emailBlocklist.createdAt));
+		.orderBy(desc(emailBlocklist.createdAt), desc(emailBlocklist.id));
 }

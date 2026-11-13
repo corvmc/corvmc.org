@@ -38,7 +38,7 @@
 				<Action
 					action={addToBlocklist}
 					label={m.staff_blocklist_add_label()}
-					modalTitle={m.staff_blocklist_add_label()}
+					modalTitle={m.staff_blocklist_add_title()}
 					submitLabel={m.staff_blocklist_add_label()}
 					successToast={m.staff_blocklist_blocked_toast()}
 					size="sm"
