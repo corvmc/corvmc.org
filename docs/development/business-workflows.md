@@ -2527,11 +2527,19 @@ owes, follow-ups) is that project's tasks, with due dates, assignees and committ
   under `contact.read`: notes staff log (`activity`: call, meeting, email or note, on a day, added,
   edited and deleted under `contact.manage`), Inbox conversations filed to it, the audit entries for the organization and for its
   grant and sponsorship projects and contractor jobs, and the tasks linked to it through
-  `work_order_link` that were marked done. Follow-ups are tasks: Related tasks on the same pages
+  `work_order_link` that were marked done, and in-kind gifts from it. Follow-ups are tasks: Related tasks on the same pages
   adds one linked to the record. A staff Inbox conversation is filed from its Details panel
   (`fileThreadForm`, `inbox.reply` and `contact.manage`) to an organization or person; one from an
   address on file is offered for filing to that person. See
   `docs/decisions/0069-a-party-has-one-timeline.md`.
+- **In-kind gifts (#2727):** a gift of goods or services that is neither stock nor volunteer
+  time (printing, food, a free night at a venue) is recorded from the giver's timeline under
+  `finance.refund` (`recordGiftForm`, `finance/in-kind-gift.ts`). It writes one `in_kind`
+  `donation` entry with the fair value, the day, an optional project, and the organization or
+  person as its subject; `metadata.giftId` lets one gift be reversed without the giver's others.
+  Gifts are not moved by a merge: the ledger is append-only, so the rows stay under the merged-away
+  party. Donated stock is still recorded as an acquisition, and specialized volunteer time
+  through hour logs.
 - **Retention:** a contact with a `retain_until` stays visible until that date, and
   `/api/cron/sweep-contacts` deletes it, with its roles, once the date passes. An act's contact
   is given a horizon a year out when the act becomes a member band.

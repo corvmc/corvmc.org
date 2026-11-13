@@ -107,6 +107,20 @@ export async function seedFinancialEntries(users: SeedUser[], reservations: Seed
 		description: 'Donated bass amp, fair value'
 	});
 
+	// An in-kind gift recorded on a party (#2727), so the Arts Center's
+	// timeline shows one. No FK on the subject, so the order of seeding is free.
+	rows.push({
+		amountCents: 25_000,
+		kind: 'in_kind',
+		category: 'donation',
+		occurredAt: new Date(Date.now() - 30 * 86_400_000),
+		settlement: 'none',
+		subjectType: 'organization',
+		subjectId: 'seed-org-arts-center',
+		description: 'Gallery space for the winter showcase',
+		metadata: { giftId: 'seed-gift-arts-center' }
+	});
+
 	// A free ticket. Without the $0 row, three comps are indistinguishable from
 	// seven sales.
 	rows.push({

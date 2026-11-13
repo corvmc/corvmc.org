@@ -13,6 +13,8 @@ import * as notes from '#lib/server/party/activity-service.js';
 import type { PartyRef } from '#lib/server/party/activity-service.js';
 import { partyTimeline } from '#lib/server/party/timeline.js';
 import { organizationListFacts } from '#lib/server/party/list-facts.js';
+import { recordInKindGift } from '#lib/server/finance/in-kind-gift.js';
+import { listFundableProjects } from '#lib/server/development/funding-project.js';
 import {
 	ACTIVITY_BODY_MAX,
 	activityKinds,
@@ -81,12 +83,13 @@ export const getContactsPage = query(
 export const getOrganizationPage = query(z.string().min(1), async (id) => {
 	const org = await requireOrganizationReader(id);
 	try {
-		const [records, contractor, vendor, staff, manage] = await Promise.all([
+		const [records, contractor, vendor, staff, manage, recordGift] = await Promise.all([
 			orgs.organizationRecords(id),
 			org.roles.includes('contractor') ? getContractorById(id).catch(() => null) : null,
 			org.roles.includes('vendor') ? orgs.getVendorDetail(id) : null,
 			can('contact.read'),
-			can('contact.manage')
+			can('contact.manage'),
+			can('finance.refund')
 		]);
 		return {
 			id: org.id,
@@ -110,7 +113,8 @@ export const getOrganizationPage = query(z.string().min(1), async (id) => {
 			},
 			records,
 			people: staff ? await people.listPeople(id) : null,
-			canManage: manage
+			canManage: manage,
+			canRecordGift: recordGift
 		};
 	} catch (err) {
 		mapDomainError(err);
@@ -271,8 +275,12 @@ export const removePerson = form(
 /** One person's page: their details, organization and roles. */
 export const getPersonPage = query(z.string().min(1), async (id) => {
 	await requireCapability('contact.read');
-	const [person, manage] = await Promise.all([people.getPerson(id), can('contact.manage')]);
-	return { ...person, canManage: manage };
+	const [person, manage, recordGift] = await Promise.all([
+		people.getPerson(id),
+		can('contact.manage'),
+		can('finance.refund')
+	]);
+	return { ...person, canManage: manage, canRecordGift: recordGift };
 });
 
 // ----------------------------------------------------------------- timeline
@@ -328,6 +336,39 @@ export const deleteActivityForm = form(z.object({ id: z.string().min(1) }), asyn
 	void getPartyTimeline(p).refresh();
 	return { success: true };
 });
+
+// ----------------------------------------------------------- in-kind gifts
+
+/** What a gift can be booked against, for the record form's picker. */
+export const getGiftProjects = query(async () => {
+	await requireCapability('finance.refund');
+	return listFundableProjects();
+});
+
+/** An in-kind gift from this party, as an `in_kind` ledger entry (#2727). */
+export const recordGiftForm = form(
+	z.object({
+		partyType: party.shape.type,
+		partyId: party.shape.id,
+		description: z.string().trim().min(1, 'Say what was given').max(SHORT_TEXT_MAX),
+		valueCents: z.number().int().positive('Enter its fair value'),
+		occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick the day it was given'),
+		projectId: z.string().optional()
+	}),
+	async ({ partyType, partyId, ...input }) => {
+		const staff = await requireCapability('finance.refund');
+		const p = { type: partyType, id: partyId };
+		await requirePartyReader(p);
+		try {
+			if (p.type === 'contact') await people.getPerson(p.id);
+			await recordInKindGift(p, input, staff.id);
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getPartyTimeline(p).refresh();
+		return { success: true };
+	}
+);
 
 // --------------------------------------------------------------- duplicates
 

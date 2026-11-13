@@ -552,6 +552,9 @@ export const financialSubjects = [
 	'band_premium',
 	'market_vendor',
 	'donation',
+	// The giver of an in-kind gift (#2727); `metadata.giftId` tells gifts apart.
+	'organization',
+	'contact',
 	'other'
 ] as const;
 export type FinancialSubject = (typeof financialSubjects)[number];
