@@ -370,6 +370,10 @@ export const workOrder = sqliteTable(
 		// trigger or deleting the list cannot orphan a booked orientation.
 		isOrientation: integer('is_orientation', { mode: 'boolean' }).notNull().default(false),
 
+		// The show's host task, opened by `openHostShift`. One per event, held by
+		// `work_order_event_host_idx` so two producers opening it at once get one.
+		isHost: integer('is_host', { mode: 'boolean' }).notNull().default(false),
+
 		// The recurring schedule this occurrence belongs to. Closing it — resolved
 		// or called off — is what writes the next one; see `maintenanceSchedule`.
 		maintenanceScheduleId: text('maintenance_schedule_id').references(
@@ -428,6 +432,9 @@ export const workOrder = sqliteTable(
 	(t) => [
 		index('work_order_role_idx').on(t.volunteerRoleId),
 		index('work_order_event_idx').on(t.eventId),
+		uniqueIndex('work_order_event_host_idx')
+			.on(t.eventId)
+			.where(sql`is_host = 1`),
 		index('work_order_project_idx').on(t.projectId),
 		// At most one open occurrence per schedule, stated by the database: this is
 		// what makes generate-on-close unable to pile up duplicates.
