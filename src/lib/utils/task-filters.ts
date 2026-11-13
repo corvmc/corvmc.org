@@ -16,7 +16,8 @@ export type Kind = (typeof KINDS)[number];
 export const WINDOWS = [7, 30, 90] as const;
 export type Window = (typeof WINDOWS)[number] | 'all';
 
-export type Grouping = 'due' | 'project';
+export const GROUPINGS = ['due', 'project', 'section'] as const;
+export type Grouping = (typeof GROUPINGS)[number];
 
 /** A record the table is narrowed to (#2630): `?about=<type>:<id>`. */
 export interface About {
@@ -25,7 +26,8 @@ export interface About {
 }
 
 export interface TaskQuery {
-	group: Grouping;
+	/** `''` is the page's own default: Section on a project with sections, else Due. */
+	group: Grouping | '';
 	days: Window;
 	/** `''`, `'none'`, or a project's id. */
 	project: string;
@@ -53,7 +55,7 @@ export function parseTaskQuery(params: Pick<URLSearchParams, 'get'>): TaskQuery 
 	const days = Number(params.get('days'));
 	const project = params.get('project') ?? '';
 	return {
-		group: params.get('group') === 'project' ? 'project' : 'due',
+		group: pick(GROUPINGS, params.get('group')),
 		days: (WINDOWS as readonly number[]).includes(days) ? (days as Window) : 'all',
 		// `project` was the Schedule's "in a project" value; Tasks groups by project instead.
 		project: project === 'project' ? '' : project,
@@ -68,7 +70,7 @@ export function parseTaskQuery(params: Pick<URLSearchParams, 'get'>): TaskQuery 
 /** The query as a search string, defaults left out. */
 export function taskQuerySearch(q: TaskQuery): string {
 	const pairs: [string, string][] = [];
-	if (q.group !== 'due') pairs.push(['group', q.group]);
+	if (q.group) pairs.push(['group', q.group]);
 	if (q.days !== 'all') pairs.push(['days', String(q.days)]);
 	if (q.project) pairs.push(['project', q.project]);
 	if (q.role) pairs.push(['role', q.role]);
@@ -123,4 +125,40 @@ export function groupByProject<T extends TaskFacts>(
 			if (b.projectId === null) return 1;
 			return (a.rows[0].projectName ?? '').localeCompare(b.rows[0].projectName ?? '');
 		});
+}
+
+/**
+ * The grouping a table shows. Section only on one project's list, and by
+ * default there once the project has sections; Project only across projects.
+ */
+export function effectiveGrouping(
+	group: Grouping | '',
+	on: { project: boolean; sections: number }
+): Grouping {
+	if (on.project) {
+		if (group === 'section' || (group === '' && on.sections > 0)) return 'section';
+		return 'due';
+	}
+	return group === 'project' ? 'project' : 'due';
+}
+
+/**
+ * Each section in its order, then the tasks in none. `keepEmpty` keeps a
+ * section with nothing in it, so it can still be renamed or added to.
+ */
+export function groupBySection<T extends { sectionId: string | null }>(
+	sections: readonly { id: string; name: string }[],
+	rows: T[],
+	keepEmpty = false
+): { section: { id: string; name: string } | null; rows: T[] }[] {
+	const known = new Set(sections.map((s) => s.id));
+	const groups = sections.map((section) => ({
+		section,
+		rows: rows.filter((r) => r.sectionId === section.id)
+	}));
+	const loose = rows.filter((r) => r.sectionId === null || !known.has(r.sectionId));
+	return [
+		...groups.filter((g) => keepEmpty || g.rows.length > 0),
+		...(loose.length > 0 ? [{ section: null, rows: loose }] : [])
+	];
 }

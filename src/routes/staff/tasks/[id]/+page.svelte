@@ -6,6 +6,7 @@
 	import { getProjectActivity } from '#lib/remote/projects.remote.js';
 	import ActivityCard from '#lib/components/project/ActivityCard.svelte';
 	import EngageContractorAction from './EngageContractorAction.svelte';
+	import TaskSectionAction from './TaskSectionAction.svelte';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
 	const params = routeParams('id');
@@ -13,6 +14,7 @@
 	/** Every task, in a project or none (#2625); a task in a project names it as a crumb. */
 	const view = $derived(await getTaskPage(params.id));
 	const project = $derived(view.project);
+	const section = $derived(view.sections.find((s) => s.id === view.task.sectionId) ?? null);
 	const projectHref = $derived(
 		project ? resolve('/staff/tasks/projects/[id]', { id: project.id }) : null
 	);
@@ -25,6 +27,13 @@
 	context={project ? projectLink : undefined}
 >
 	{#snippet actions()}
+		{#if project && view.sections.length > 0 && !view.task.cancelledAt}
+			<TaskSectionAction
+				workOrderId={view.task.id}
+				sectionId={view.task.sectionId}
+				sections={view.sections}
+			/>
+		{/if}
 		{#if view.contractors.length > 0 && !view.task.cancelledAt && !view.task.resolvedAt}
 			<EngageContractorAction workOrderId={view.task.id} contractors={view.contractors} />
 		{/if}
@@ -43,5 +52,6 @@
 {#snippet projectLink()}
 	{#if project && projectHref}
 		<a href={projectHref} class="link link-primary">{project.name}</a>
+		{#if section}<span data-testid="task-section">· {section.name}</span>{/if}
 	{/if}
 {/snippet}

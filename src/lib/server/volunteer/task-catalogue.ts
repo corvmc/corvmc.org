@@ -57,6 +57,7 @@ export function taskRowQuery(now: Date) {
 			projectName: project.name,
 			projectKind: project.kind,
 			projectStatus: project.status,
+			sectionId: workOrder.sectionId,
 			dueAt: workOrder.dueAt,
 			shiftAt: sql<Date | null>`coalesce(
 				(select min(s."starts_at") from "volunteer_shift" s

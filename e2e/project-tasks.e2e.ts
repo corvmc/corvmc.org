@@ -43,7 +43,9 @@ test.describe('project tasks', () => {
 		// Every task link is a task page; none points at another project.
 		const projectLinks = table.locator('a[href^="/staff/tasks/projects/"]');
 		await expect(projectLinks).toHaveCount(0);
-		await expect(page.locator('[data-testid="task-group"]')).toHaveCount(0);
+		// Group by offers Section here (#2653), never Project.
+		await expect(page.locator('[data-testid="task-group"] option[value="project"]')).toHaveCount(0);
+		await expect(page.locator('[data-testid="task-group"] option[value="section"]')).toHaveCount(1);
 		await expect(page.locator('[data-chip="unassigned"]')).toBeVisible();
 	});
 

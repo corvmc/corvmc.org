@@ -2,8 +2,8 @@
 	import { m } from '#lib/paraglide/messages.js';
 	/**
 	 * The task table (#2625): every task, or with `projectId` one project's. Grouped
-	 * by the date a task falls on (its shift's, else its deadline) or by project;
-	 * a project's header carries what a project row would. Assignment, a
+	 * by the date a task falls on (its shift's, else its deadline), by project, or
+	 * on one project's list by its sections (#2653), where they are also managed. Assignment, a
 	 * contractor and a shift's sign-ups all answer "who". Filters live in the URL
 	 * of whichever page shows it.
 	 */
@@ -23,15 +23,21 @@
 	import RoleOptions from '#lib/components/volunteer/RoleOptions.svelte';
 	import NewTaskAction from '#lib/components/actions/NewTaskAction.svelte';
 	import NewProjectAction from '#lib/components/actions/NewProjectAction.svelte';
+	import Action from '#lib/components/ui/Action.svelte';
+	import { Field } from '#lib/components/ui/Form/index.js';
+	import SectionMenu from './SectionMenu.svelte';
 	import TaskRow from './TaskRow.svelte';
 	import { isUnstaffed, type ContractorMark } from '#lib/utils/task-facts.js';
-	import { getTasksPage } from '#lib/remote/tasks.remote.js';
+	import { createSectionForm, getTasksPage } from '#lib/remote/tasks.remote.js';
 	import TaskRowActions from './TaskRowActions.svelte';
 	import {
 		CHIPS,
 		WINDOWS,
+		GROUPINGS,
 		byWhen,
+		effectiveGrouping,
 		groupByProject,
+		groupBySection,
 		matchesChip,
 		matchesKind,
 		matchesTaskProject,
@@ -40,6 +46,7 @@
 		taskQuerySearch,
 		whenOf,
 		type Chip,
+		type Grouping,
 		type Kind,
 		type TaskQuery
 	} from '#lib/utils/task-filters.js';
@@ -103,8 +110,13 @@
 		return when ? `${relativeDay(when)} · ${formatDateShort(when)}` : m.staff_tasks_no_date_text();
 	};
 
-	// One project's list neither groups nor filters by project.
-	const byProject = $derived(!projectId && q.group === 'project');
+	// One project's list neither groups nor filters by project; only it has sections.
+	const sections = $derived(tasks.current?.sections ?? []);
+	const grouping = $derived(
+		effectiveGrouping(q.group, { project: !!projectId, sections: sections.length })
+	);
+	const sectionIds = $derived(sections.map((s) => s.id));
+	const addSection = createSectionForm;
 	const columns = $derived(projectId ? 5 : 6);
 	const activeCount = $derived(
 		(q.days !== 'all' ? 1 : 0) +
@@ -122,18 +134,23 @@
 	{activeCount}
 	onclear={() => (q = { ...parseTaskQuery(new URLSearchParams()), group: q.group })}
 >
-	{#if !projectId}
-		<Select
-			size="sm"
-			aria-label={m.staff_tasks_group_by_label()}
-			value={q.group}
-			data-testid="task-group"
-			onchange={(e: Event) => (q.group = select(e) === 'project' ? 'project' : 'due')}
-		>
-			<option value="due">{m.staff_tasks_group_due_label()}</option>
+	<Select
+		size="sm"
+		aria-label={m.staff_tasks_group_by_label()}
+		value={grouping}
+		data-testid="task-group"
+		onchange={(e: Event) => {
+			const value = select(e);
+			q.group = (GROUPINGS as readonly string[]).includes(value) ? (value as Grouping) : '';
+		}}
+	>
+		<option value="due">{m.staff_tasks_group_due_label()}</option>
+		{#if projectId}
+			<option value="section">{m.staff_tasks_section_label()}</option>
+		{:else}
 			<option value="project">{m.staff_project_label()}</option>
-		</Select>
-	{/if}
+		{/if}
+	</Select>
 	<Select
 		size="sm"
 		aria-label={m.staff_volunteer_schedule_date_range_label()}
@@ -203,7 +220,22 @@
 					templates={tasks.current.templates}
 				/>
 			{/if}
-			<NewTaskAction projects={tasks.current.projects} {projectId} />
+			<NewTaskAction projects={tasks.current.projects} {projectId} {sections} />
+			{#if projectId}
+				<Action
+					action={addSection}
+					label={m.staff_tasks_add_section_label()}
+					variant="ghost"
+					modalTitle={m.staff_tasks_add_section_title()}
+					successToast={m.staff_tasks_section_added_toast()}
+					onsuccess={refresh}
+				>
+					{#snippet form()}
+						<input {...addSection.fields.projectId.as('hidden', projectId)} />
+						<Field field={addSection.fields.name} type="text" label={m.staff_name_label()} />
+					{/snippet}
+				</Action>
+			{/if}
 		{/if}
 	{/snippet}
 </FilterBar>
@@ -243,7 +275,11 @@
 		{/each}
 	</div>
 
-	{#if shown.length === 0}
+	<!-- With no filter on, an empty section still shows, to be added to or renamed. -->
+	{@const sectioned =
+		grouping === 'section' ? groupBySection(sections, shown, activeCount === 0) : []}
+
+	{#if shown.length === 0 && sectioned.length === 0}
 		<EmptyState title={m.staff_tasks_no_tasks_title()} />
 	{:else}
 		<!-- No zebra: the group rows are the striping, as on Reservations. -->
@@ -259,7 +295,42 @@
 				<th class="w-px"><span class="sr-only">{m.staff_actions_label()}</span></th>
 			{/snippet}
 
-			{#if byProject}
+			{#if grouping === 'section'}
+				{#each sectioned as group (group.section?.id ?? 'none')}
+					<tr data-testid="task-group-row" data-section={group.section?.id ?? 'none'}>
+						<td colspan={columns} class="cell-group">
+							<div class="flex w-max items-center gap-2">
+								<span>
+									{group.section?.name ?? m.staff_tasks_no_section_text()}
+									<span class="text-subtle font-normal">
+										· {m.staff_tasks_open_count_text({
+											count: group.rows.filter((t) => !t.resolvedAt).length
+										})}
+									</span>
+								</span>
+								<NewTaskAction
+									projects={data.projects}
+									{projectId}
+									{sections}
+									section={group.section}
+								/>
+								{#if group.section && projectId}
+									<SectionMenu
+										{projectId}
+										section={group.section}
+										{sectionIds}
+										taskCount={data.tasks.filter((t) => t.sectionId === group.section?.id).length}
+										onsuccess={refresh}
+									/>
+								{/if}
+							</div>
+						</td>
+					</tr>
+					{#each group.rows as t (t.id)}
+						{@render row(t, marksOf(t))}
+					{/each}
+				{/each}
+			{:else if grouping === 'project'}
 				{#each groupByProject(shown) as group (group.projectId ?? 'none')}
 					{@const first = group.rows[0]}
 					<tr data-testid="task-group-row">
