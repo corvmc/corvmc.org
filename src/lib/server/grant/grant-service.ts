@@ -8,14 +8,8 @@ import {
 } from '#lib/server/db/schema/grant.js';
 import { eq, inArray, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
-import {
-	grantDeadlineLabels,
-	openGrantStatuses,
-	type GrantDeadlineKind,
-	type GrantStage,
-	type GrantStatus
-} from '#lib/config.js';
-import { addIsoDays, byDeadline, due, earliest, type Deadline } from '#lib/utils/deadline.js';
+import { grantDeadlineLabels, type GrantDeadlineKind, type GrantStage } from '#lib/config.js';
+import { addIsoDays, due, earliest, type Deadline } from '#lib/utils/deadline.js';
 import {
 	appliedGrantStages,
 	assertFundable,
@@ -113,40 +107,6 @@ export async function listGrantDeadlinesBetween(from: string, to: string) {
 			.filter((d) => d.on >= from && d.on <= to)
 			.map((d) => ({ ...d, parentId: g.id, parentTitle: g.title, counterparty: g.funderName }))
 	);
-}
-
-/** Attach each application's deadline and sort soonest first, undated last. */
-export function withDeadlines<
-	G extends Pick<GrantApplication, 'id' | 'status' | 'applyBy' | 'endsOn'> & { funderName: string }
->(apps: G[], today: string) {
-	return apps
-		.map((g) => ({ ...g, deadline: grantDeadline(g, today) }))
-		.sort(byDeadline((r) => r.funderName));
-}
-
-const open: readonly GrantStatus[] = openGrantStatuses;
-
-export async function listGrants(opts: { today: string; includeClosed?: boolean }) {
-	const apps = await db
-		.select({
-			id: grantApplication.id,
-			projectId: grantApplication.projectId,
-			title: grantApplication.title,
-			status: grantApplication.status,
-			amountRequestedCents: grantApplication.amountRequestedCents,
-			amountAwardedCents: grantApplication.amountAwardedCents,
-			applyBy: grantApplication.applyBy,
-			endsOn: grantApplication.endsOn,
-			funderId: grantApplication.organizationId,
-			funderName: organization.name
-		})
-		.from(grantApplication)
-		.innerJoin(organization, eq(organization.id, grantApplication.organizationId));
-	const next = await nextOpenTasks(apps.flatMap((g) => (g.projectId ? [g.projectId] : [])));
-	return withDeadlines(
-		apps.map((g) => ({ ...g, nextTask: (g.projectId && next.get(g.projectId)) || null })),
-		opts.today
-	).filter((g) => opts.includeClosed || open.includes(g.status) || g.deadline);
 }
 
 export async function getGrant(id: string, today: string) {

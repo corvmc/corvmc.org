@@ -159,7 +159,7 @@
 			submitLabel={m.staff_delete_label()}
 			submitVariant="error"
 			successToast={m.staff_deleted_toast()}
-			onsuccess={() => goto(resolve('staff/grants'))}
+			onsuccess={() => goto(resolve('staff/funding'))}
 		>
 			{#snippet form()}
 				<input {...deleteGrant.for(grant.id).fields.id.as('hidden', grant.id)} />

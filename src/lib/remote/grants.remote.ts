@@ -139,24 +139,6 @@ function grantInput(d: z.infer<z.ZodObject<typeof grantFields>>) {
 	};
 }
 
-export const getGrants = query(
-	z.object({ includeClosed: z.boolean().optional() }),
-	async ({ includeClosed }) => {
-		await requireCapability('grant.read');
-		// The funders ride along for the create form: one load-bearing query per page.
-		const [rows, funderRows, projects] = await Promise.all([
-			grants.listGrants({ today: clubToday(), includeClosed }),
-			funders.listFunders(),
-			listFundableProjects()
-		]);
-		return {
-			grants: rows,
-			funders: funderRows.map((f) => ({ id: f.id, name: f.name })),
-			projects
-		};
-	}
-);
-
 export const getGrantDetail = query(z.string(), async (id) => {
 	await requireCapability('grant.read');
 	try {

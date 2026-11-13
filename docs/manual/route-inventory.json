@@ -476,7 +476,7 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/grants",
+		"route": "/staff/funding",
 		"panel": "staff"
 	},
 	{
@@ -709,10 +709,6 @@
 	},
 	{
 		"route": "/staff/settings",
-		"panel": "staff"
-	},
-	{
-		"route": "/staff/sponsors",
 		"panel": "staff"
 	},
 	{

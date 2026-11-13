@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	/** The create and edit forms share every field; `value` pre-fills the edit. */
+	/** The sponsor's edit form; `value` pre-fills it. A sponsor is created under Contacts. */
 	import { Field } from '#lib/components/ui/Form/index.js';
-	import type { createSponsor } from '#lib/remote/sponsors.remote.js';
+	import type { updateSponsor } from '#lib/remote/sponsors.remote.js';
 
 	interface Value {
 		name: string;
@@ -16,7 +16,7 @@
 		fields,
 		value
 	}: {
-		fields: (typeof createSponsor)['fields'];
+		fields: (typeof updateSponsor)['fields'];
 		value?: Value;
 	} = $props();
 </script>

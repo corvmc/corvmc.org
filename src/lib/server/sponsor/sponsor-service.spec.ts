@@ -29,13 +29,8 @@ vi.mock('#lib/server/db/index.js', () => ({
 	}
 }));
 
-const {
-	sponsorshipDeadline,
-	summarizeSponsors,
-	listSponsorshipDeadlinesBetween,
-	getSponsor,
-	SponsorNotFoundError
-} = await import('./sponsor-service');
+const { sponsorshipDeadline, listSponsorshipDeadlinesBetween, getSponsor, SponsorNotFoundError } =
+	await import('./sponsor-service');
 
 const TODAY = '2026-09-23';
 
@@ -90,49 +85,6 @@ describe('listSponsorshipDeadlinesBetween', () => {
 			}
 		]);
 		expect(chainCalls.some((c) => c.method === 'where')).toBe(true);
-	});
-});
-
-describe('summarizeSponsors', () => {
-	const sponsor = (id: string) => ({ id, name: id, website: null });
-	const ship = (sponsorId: string, over: Record<string, unknown>) => ({
-		id: `${sponsorId}-${String(over.status)}`,
-		organizationId: sponsorId,
-		title: 'Season',
-		tier: null,
-		amountCents: null,
-		startsOn: null,
-		endsOn: null,
-		status: 'active' as const,
-		...over
-	});
-
-	it('puts the sponsor whose term ends soonest first, idle sponsors last', () => {
-		const rows = summarizeSponsors(
-			[sponsor('idle'), sponsor('later'), sponsor('sooner')],
-			[
-				ship('later', { endsOn: '2027-06-01' }),
-				ship('sooner', { endsOn: '2026-10-15', tier: 'Gold' }),
-				ship('idle', { status: 'ended', endsOn: '2026-01-01' })
-			],
-			TODAY
-		);
-		expect(rows.map((r) => r.id)).toEqual(['sooner', 'later', 'idle']);
-		expect(rows[0].current?.tier).toBe('Gold');
-		expect(rows[2].current).toBeNull();
-	});
-
-	it('prefers a running sponsorship over a pitch as the current one', () => {
-		const [row] = summarizeSponsors(
-			[sponsor('s')],
-			[
-				ship('s', { id: 'pitch', status: 'prospect' }),
-				ship('s', { id: 'run', endsOn: '2027-01-01' })
-			],
-			TODAY
-		);
-		expect(row.current?.id).toBe('run');
-		expect(row.sponsorships).toBe(2);
 	});
 });
 
