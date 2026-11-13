@@ -267,15 +267,19 @@ async function standingNeeds(organizationId: string, input: VendorApplicationInp
 			.limit(1)
 	]);
 	if (!detail) {
-		await db.insert(vendorDetail).values({
-			organizationId,
-			offering: input.offering,
-			tablesNeeded: input.tablesRequested,
-			needsPower: input.needsPower,
-			bringsOwnTable: input.bringsOwnTable ?? false,
-			bringsTent: input.bringsTent ?? false,
-			setupNotes: input.notes || null
-		});
+		// Keyed by organization: a concurrent first application writes it once.
+		await db
+			.insert(vendorDetail)
+			.values({
+				organizationId,
+				offering: input.offering,
+				tablesNeeded: input.tablesRequested,
+				needsPower: input.needsPower,
+				bringsOwnTable: input.bringsOwnTable ?? false,
+				bringsTent: input.bringsTent ?? false,
+				setupNotes: input.notes || null
+			})
+			.onConflictDoNothing();
 	}
 	if (!org?.website && input.website) {
 		await db

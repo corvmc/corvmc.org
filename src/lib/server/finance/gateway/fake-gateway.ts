@@ -104,8 +104,8 @@ interface FakeStore {
 	paymentMethods: Map<string, Stripe.PaymentMethod>;
 	setupIntents: Map<string, Stripe.SetupIntent>;
 	readers: Map<string, Stripe.Terminal.Reader>;
-	/** Idempotency key → the intent it first created, as Stripe replays a repeated key. */
-	intentKeys: Map<string, string>;
+	/** Idempotency key → the object it first created, as Stripe replays a repeated key. */
+	idempotencyKeys: Map<string, string>;
 }
 
 const store: FakeStore = {
@@ -123,7 +123,7 @@ const store: FakeStore = {
 	paymentMethods: new Map(),
 	setupIntents: new Map(),
 	readers: new Map(),
-	intentKeys: new Map()
+	idempotencyKeys: new Map()
 };
 
 /** Customers whose seeded card and history have already been materialised. */
@@ -311,6 +311,16 @@ function presentCard(readerId: string, number: string | undefined): Stripe.Termi
 // The gateway
 // ---------------------------------------------------------------------------
 
+/** What a repeated idempotency key first created, which Stripe returns again. */
+function replayed<T>(key: string | undefined, objects: Map<string, T>): T | undefined {
+	const id = key ? store.idempotencyKeys.get(key) : undefined;
+	return id ? objects.get(id) : undefined;
+}
+
+function remember(key: string | undefined, id: string): void {
+	if (key) store.idempotencyKeys.set(key, id);
+}
+
 export function createFakeGateway(): PaymentGateway {
 	return {
 		/**
@@ -322,7 +332,9 @@ export function createFakeGateway(): PaymentGateway {
 		 * hosted onboarding, so the link here goes nowhere and is never followed.
 		 */
 		accounts: {
-			create: async (params) => {
+			create: async (params, options) => {
+				const replay = replayed(options?.idempotencyKey, store.accounts);
+				if (replay) return respond(replay);
 				const account = {
 					id: fakeId('acct'),
 					object: 'account',
@@ -336,6 +348,7 @@ export function createFakeGateway(): PaymentGateway {
 					metadata: (params?.metadata as Record<string, string>) ?? {}
 				} as Stripe.Account;
 				store.accounts.set(account.id, account);
+				remember(options?.idempotencyKey, account.id);
 				return respond(account);
 			},
 			retrieve: (async (id?: string) => {
@@ -424,13 +437,16 @@ export function createFakeGateway(): PaymentGateway {
 		},
 
 		customers: {
-			create: async (params) => {
+			create: async (params, options) => {
+				const replay = replayed(options?.idempotencyKey, store.customers);
+				if (replay) return respond(replay);
 				const customer = fakeCustomer({
 					email: params?.email ?? null,
 					name: params?.name ?? null,
 					metadata: (params?.metadata as Record<string, string>) ?? {}
 				});
 				store.customers.set(customer.id, customer);
+				remember(options?.idempotencyKey, customer.id);
 				return respond(customer);
 			},
 			// A `cus_seed_…` id is a customer the seed says exists, so it updates
@@ -479,10 +495,10 @@ export function createFakeGateway(): PaymentGateway {
 			// one does, and a repeated idempotency key returns the first intent.
 			create: async (params, options) => {
 				const key = options?.idempotencyKey;
-				const replay = key ? store.intentKeys.get(key) : undefined;
+				const replay = key ? store.idempotencyKeys.get(key) : undefined;
 				if (replay) return respond(store.paymentIntents.get(replay)!);
 				const id = fakeId('pi');
-				if (key) store.intentKeys.set(key, id);
+				if (key) store.idempotencyKeys.set(key, id);
 				const intent = fakePaymentIntent({
 					id,
 					amount: params.amount,

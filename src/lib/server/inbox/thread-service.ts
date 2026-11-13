@@ -190,6 +190,7 @@ export async function findOrCreateThread(params: FindOrCreateThreadParams) {
 		if (existing) return existing;
 	}
 
+	// eslint-disable-next-line custom/no-check-then-insert -- collapsed below, by rowid
 	const [thread] = await db
 		.insert(inboxThread)
 		.values({

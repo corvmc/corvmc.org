@@ -94,35 +94,45 @@ export async function ensureAccount(input: {
 	const existing = await getPayoutStatus(input.groupId);
 	if (existing.connected && existing.stripeAccountId) return existing.stripeAccountId;
 
-	const account = await stripe.accounts.create({
-		type: 'express',
-		business_type: 'company',
-		business_profile: {
-			name: input.bandName,
-			product_description: 'Recorded music sold through the Corvallis Music Collective'
+	// Two first calls at once both read no account. The key, from the group id,
+	// makes Stripe return one account to both; the primary key on `group_id`
+	// keeps one row, and both return what it holds.
+	const account = await stripe.accounts.create(
+		{
+			type: 'express',
+			business_type: 'company',
+			business_profile: {
+				name: input.bandName,
+				product_description: 'Recorded music sold through the Corvallis Music Collective'
+			},
+			email: input.email ?? undefined,
+			capabilities: {
+				// The only capability a destination charge needs. Deliberately not
+				// requesting `card_payments`: the band is not the merchant of record,
+				// CMC is, and asking for more than is needed lengthens onboarding.
+				transfers: { requested: true }
+			},
+			// The link back. A Stripe account that cannot be traced to a band is
+			// unresolvable from the dashboard, which is where a support question starts.
+			metadata: { corvmc_group_id: input.groupId }
 		},
-		email: input.email ?? undefined,
-		capabilities: {
-			// The only capability a destination charge needs. Deliberately not
-			// requesting `card_payments`: the band is not the merchant of record,
-			// CMC is, and asking for more than is needed lengthens onboarding.
-			transfers: { requested: true }
-		},
-		// The link back. A Stripe account that cannot be traced to a band is
-		// unresolvable from the dashboard, which is where a support question starts.
-		metadata: { corvmc_group_id: input.groupId }
-	});
+		{ idempotencyKey: `account:band:${input.groupId}` }
+	);
 
-	await db.insert(bandStripeAccount).values({
-		groupId: input.groupId,
-		stripeAccountId: account.id,
-		chargesEnabled: account.charges_enabled ?? false,
-		payoutsEnabled: account.payouts_enabled ?? false,
-		detailsSubmitted: account.details_submitted ?? false,
-		requirementsJson: account.requirements ?? null
-	});
+	await db
+		.insert(bandStripeAccount)
+		.values({
+			groupId: input.groupId,
+			stripeAccountId: account.id,
+			chargesEnabled: account.charges_enabled ?? false,
+			payoutsEnabled: account.payouts_enabled ?? false,
+			detailsSubmitted: account.details_submitted ?? false,
+			requirementsJson: account.requirements ?? null
+		})
+		.onConflictDoNothing();
 
-	return account.id;
+	const stored = await getPayoutStatus(input.groupId);
+	return stored.stripeAccountId ?? account.id;
 }
 
 /**

@@ -8,7 +8,7 @@ import {
 	buildSubscriptionLineItem,
 	getProductConfig
 } from '#lib/server/finance/product-config-service.js';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
 // BandSubscriptionService — manages premium band tier via Stripe
@@ -89,21 +89,31 @@ export async function ensureBandStripeCustomer(input: {
 
 	if (row?.stripeCustomerId) return row.stripeCustomerId;
 
-	const customer = await stripe.customers.create({
-		name: input.bandName,
-		email: input.email ?? undefined,
-		// The link back, matching the Connect account's `corvmc_group_id`: a
-		// Stripe object that cannot be traced to a band is unresolvable from the
-		// dashboard, which is where a support question starts.
-		metadata: { corvmc_group_id: input.bandId }
-	});
+	// Two first calls at once both read no id: the key, from the band id, makes
+	// Stripe return one customer to both, and the write only fills an empty column.
+	const customer = await stripe.customers.create(
+		{
+			name: input.bandName,
+			email: input.email ?? undefined,
+			// The link back, matching the Connect account's `corvmc_group_id`: a
+			// Stripe object that cannot be traced to a band is unresolvable from the
+			// dashboard, which is where a support question starts.
+			metadata: { corvmc_group_id: input.bandId }
+		},
+		{ idempotencyKey: `customer:band:${input.bandId}` }
+	);
 
 	await db
 		.update(bandSite)
 		.set({ stripeCustomerId: customer.id, updatedAt: new Date() })
-		.where(eq(bandSite.groupId, input.bandId));
+		.where(and(eq(bandSite.groupId, input.bandId), isNull(bandSite.stripeCustomerId)));
 
-	return customer.id;
+	const [stored] = await db
+		.select({ stripeCustomerId: bandSite.stripeCustomerId })
+		.from(bandSite)
+		.where(eq(bandSite.groupId, input.bandId))
+		.limit(1);
+	return stored?.stripeCustomerId ?? customer.id;
 }
 
 // ---------------------------------------------------------------------------

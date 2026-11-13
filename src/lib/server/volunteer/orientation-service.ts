@@ -242,6 +242,7 @@ export async function raiseOrientationShift(
 	const id = crypto.randomUUID();
 	const startsAt = new Date(bookingStartsAt.getTime() - setting.leadMinutes * 60_000);
 	// The orientation task on the booking, and one shift at the booking's time.
+	// eslint-disable-next-line custom/no-check-then-insert -- no unique key per booking yet (#2695)
 	const insertTask = db.insert(workOrder).values({
 		id,
 		volunteerRoleId: setting.roleId,
