@@ -13,6 +13,8 @@ vi.mock('#lib/server/authorization.js', () => ({ can: async () => permitted }));
 
 const shift = await import('./volunteer/shifts/[id]/+page');
 const schedule = await import('./volunteer/schedule/+page');
+const volunteerIndex = await import('./volunteer/+page');
+const shiftsIndex = await import('./volunteer/shifts/+page');
 const job = await import('./contractors/jobs/[id]/+page.server');
 const list = await import('./contractors/jobs/+page');
 
@@ -67,9 +69,31 @@ describe('/staff/volunteer/schedule', () => {
 		).rejects.toMatchObject({ location: '/staff/tasks?kind=contractor&chip=invoice' });
 	});
 
-	it('stays put for shifts', async () => {
-		await expect(run(schedule.load, '', '?kind=timed')).resolves.toBeUndefined();
-		await expect(run(schedule.load, '')).resolves.toBeUndefined();
+	it("sends the unassigned queue to Tasks' chip", async () => {
+		await expect(run(schedule.load, '', '?needs=unassigned')).rejects.toMatchObject({
+			location: '/staff/tasks?chip=unassigned'
+		});
+	});
+
+	it('sends shifts to Volunteering, keeping the window, role and queue', async () => {
+		await expect(run(schedule.load, '')).rejects.toMatchObject({
+			status: 308,
+			location: '/staff/volunteering'
+		});
+		await expect(
+			run(schedule.load, '', '?days=30&role=door&needs=short&kind=timed&project=none')
+		).rejects.toMatchObject({ location: '/staff/volunteering?days=30&role=door&needs=short' });
+	});
+});
+
+describe('/staff/volunteer and /staff/volunteer/shifts', () => {
+	it('land on Volunteering', async () => {
+		for (const load of [volunteerIndex.load, shiftsIndex.load]) {
+			await expect(run(load, '')).rejects.toMatchObject({
+				status: 308,
+				location: '/staff/volunteering'
+			});
+		}
 	});
 });
 

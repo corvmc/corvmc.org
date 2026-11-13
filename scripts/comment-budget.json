@@ -633,6 +633,5 @@
 	"src/routes/staff/reports/volunteering/export/+server.ts",
 	"src/routes/staff/volunteer/roles/+page.svelte",
 	"src/routes/staff/volunteer/roles/[id]/RoleInterestedCard.svelte",
-	"src/routes/staff/volunteer/roles/[id]/RoleShiftsCard.svelte",
-	"src/routes/staff/volunteer/schedule/+page.svelte"
+	"src/routes/staff/volunteer/roles/[id]/RoleShiftsCard.svelte"
 ]

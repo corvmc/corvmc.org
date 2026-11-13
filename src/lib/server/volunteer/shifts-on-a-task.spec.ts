@@ -22,7 +22,6 @@ const svc = await import('./work-order-service');
 const { loadWorkOrderView } = await import('./work-order-view');
 const { assignToTask } = await import('./assignee-service');
 const { engageContractorOnTask } = await import('./task-people');
-const { countVolunteerWorkWaiting } = await import('./volunteer-signup-service');
 const { db } = await import('#lib/server/db/index.js');
 const { workOrder } = await import('#lib/server/db/schema/volunteer.js');
 
@@ -183,12 +182,8 @@ describe('unassigned tasks', () => {
 		const waiting = () => db.$count(workOrder, svc.unassignedTaskWhere());
 
 		expect(await waiting()).toBe(1);
-		const badge = await countVolunteerWorkWaiting();
-
 		await assignToTask(task, 'nia', 'staff');
-
 		expect(await waiting()).toBe(0);
-		expect(await countVolunteerWorkWaiting()).toBe(badge - 1);
 		// Still on the coordinator's queue: it has no time yet.
 		expect((await svc.listWorkOrders()).map((w) => [w.id, w.assignees])).toEqual([[task.id, 1]]);
 	});

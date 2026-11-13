@@ -285,7 +285,7 @@
 			<Button
 				variant="ghost"
 				size="sm"
-				href={withQuery(resolve('staff/volunteer/schedule'), 'needs=short')}
+				href={withQuery(resolve('staff/volunteering'), 'needs=short')}
 			>
 				{data.shortShifts.total > data.shortShifts.rows.length
 					? m.staff_see_all_short_shifts_label({ total: data.shortShifts.total })
