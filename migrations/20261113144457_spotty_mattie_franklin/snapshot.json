@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "83946141-5445-4077-b6e5-e747ee52684e",
+  "id": "1e6f61cc-c8ee-41d4-b3d0-9f7896619c9e",
   "prevIds": [
-    "4a3c24d9-8bea-4787-9fe9-8863cec38846"
+    "83946141-5445-4077-b6e5-e747ee52684e"
   ],
   "ddl": [
     {
@@ -96,6 +96,10 @@
     },
     {
       "name": "ticket_sale",
+      "entityType": "tables"
+    },
+    {
+      "name": "event_attendance",
       "entityType": "tables"
     },
     {
@@ -3595,6 +3599,56 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "ticket_sale"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "event_attendance"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_id",
+      "entityType": "columns",
+      "table": "event_attendance"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "event_attendance"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "marked_by_user_id",
+      "entityType": "columns",
+      "table": "event_attendance"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "event_attendance"
     },
     {
       "type": "text",
@@ -16582,6 +16636,51 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_event_attendance_event_id_event_listing_id_fk",
+      "entityType": "fks",
+      "table": "event_attendance"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_event_attendance_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "event_attendance"
+    },
+    {
+      "columns": [
+        "marked_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_event_attendance_marked_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "event_attendance"
+    },
+    {
+      "columns": [
+        "event_id"
+      ],
+      "tableTo": "event_listing",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_event_rsvp_event_id_event_id_fk",
       "entityType": "fks",
       "table": "event_rsvp"
@@ -20919,6 +21018,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "event_attendance_pk",
+      "table": "event_attendance",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "event_rsvp_pk",
       "table": "event_rsvp",
       "entityType": "pks"
@@ -22664,6 +22772,38 @@
       "name": "idx_ticket_sale_group",
       "entityType": "indexes",
       "table": "ticket_sale"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_id",
+          "isExpression": false
+        },
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_event_attendance_event_user",
+      "entityType": "indexes",
+      "table": "event_attendance"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_event_attendance_user",
+      "entityType": "indexes",
+      "table": "event_attendance"
     },
     {
       "columns": [
