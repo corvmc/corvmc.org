@@ -431,6 +431,13 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'show_lead_assigned',
+		category: 'shows',
+		label: 'Event lead',
+		description: 'When somebody names you the event lead on a show',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'deliverable_due',
 		category: 'shows',
 		label: 'Show work due',

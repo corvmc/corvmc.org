@@ -328,7 +328,7 @@ export async function updateProductionDetails(
 	// A moved downbeat moves every set after it. Keyed on the field being
 	// *present* rather than on it having changed — comparing against a value read
 	// before the write is a race, and the recompute is idempotent and costs one
-	// select when nothing moved. `setProductionProducer` posts only
+	// select when nothing moved. `setShowLead` posts only
 	// `producerUserId`, so the common non-timing edit skips this entirely.
 	if ('firstSetAt' in data) await recomputeSetTimes(row.id);
 

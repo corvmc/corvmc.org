@@ -132,6 +132,9 @@
 	"src/lib/server/production/production-service.ts#createProduction(1)": {
 		"id": "internal: a caller-supplied id for batching with the show it belongs to"
 	},
+	"src/lib/server/production/production-service.ts#updateProductionDetails(1)": {
+		"producerUserId": "elsewhere: setShowLead writes it through show-lead-service#setShowLead"
+	},
 	"src/lib/server/production/run-of-show-service.ts#updateSlot(1)": {
 		"actualEndAt": "elsewhere: markSlotTiming writes it on the night",
 		"actualStartAt": "elsewhere: markSlotTiming writes it on the night"

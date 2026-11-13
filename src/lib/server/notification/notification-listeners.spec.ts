@@ -1571,6 +1571,42 @@ describe('show cancelled, to each committee with open items (#1709)', () => {
 	});
 });
 
+describe('named the event lead on a show (#2726)', () => {
+	beforeEach(() => registerAllNotificationListeners());
+
+	const assigned = {
+		productionId: 'prod-1',
+		eventId: 'evt-1',
+		eventTitle: 'Friday Night Fuzz',
+		startsAt: '2026-10-09T03:00:00.000Z',
+		leadUserId: 'u-lead',
+		leadName: 'Sam',
+		leadEmail: 'sam@test.com',
+		assignedByName: 'Ada Booker'
+	};
+	const calls = () =>
+		mockDispatch.mock.calls.map(([p]) => p).filter((p) => p.type === 'show_lead_assigned');
+
+	it('tells the lead which show and who named them, linking the console', async () => {
+		await emit('production.lead_assigned', assigned);
+
+		const [sent] = calls();
+		expect(sent.userId).toBe('u-lead');
+		expect(sent.href).toBe('/staff/events/evt-1/production');
+		expect(sent.title).toContain('Friday Night Fuzz');
+		expect(sent.body).toContain('Ada Booker');
+		expect(detailText(sent.email)).toContain('Ada Booker');
+	});
+
+	it('names nobody when the account that did it is gone', async () => {
+		await emit('production.lead_assigned', { ...assigned, assignedByName: null });
+
+		const [sent] = calls();
+		expect(sent.body).not.toContain('null');
+		expect(detailLabels(sent.email)).toHaveLength(2);
+	});
+});
+
 describe('committee show work due (#1709)', () => {
 	beforeEach(() => registerAllNotificationListeners());
 

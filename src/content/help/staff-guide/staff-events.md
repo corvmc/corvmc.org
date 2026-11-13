@@ -30,9 +30,12 @@ production together.
 ## The production console
 
 A CMC show's **Manage production** button opens its console, which is back-of-house only: the
-production record (status, producer, host), deliverables, artifact requests and tech riders,
+production record (status, event lead, host), deliverables, artifact requests and tech riders,
 volunteer shifts, the run of show, and the budget and settlement. Anything the public sees is
 edited on the event page; **View listing** on the console takes you back there.
+
+Booking names the show's **event lead** on the console. The lead can run the show from the console
+and sees it on their member dashboard.
 
 ## Check-in
 

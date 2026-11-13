@@ -1,9 +1,11 @@
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { group, groupCapability, groupMember } from '#lib/server/db/schema/group.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { projectCommittee } from '#lib/server/db/schema/project.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
+import { production } from '#lib/server/db/schema/production.js';
+import { TERMINAL_PRODUCTION_STATUSES } from '#lib/production/status.js';
 import {
 	volunteerRoleCapability,
 	volunteerShift,
@@ -93,6 +95,34 @@ export async function projectCommitteeGrantsFor(
 export function orgWideCapabilities(seats: readonly CommitteeGrant[]): Capability[] {
 	const caps = seats.flatMap((s) => s.capabilities);
 	return [...new Set(caps)].filter((c) => grantRuleFor(c)?.committee === 'org') as Capability[];
+}
+
+/** What naming a person a show's event lead gives them on that show's project (#2726). */
+export const SHOW_LEAD_CAPABILITY = 'production.run' satisfies Capability;
+
+/** Is `userId` the event lead on the production that specialises `projectId`? */
+export async function leadsProject(userId: string, projectId: string): Promise<boolean> {
+	const [row] = await db
+		.select({ id: production.id })
+		.from(production)
+		.where(and(eq(production.projectId, projectId), eq(production.producerUserId, userId)))
+		.limit(1);
+	return row != null;
+}
+
+/** Does `userId` lead any show that is not closed or cancelled? Opens the staff panel to them. */
+export async function leadsOpenShow(userId: string): Promise<boolean> {
+	const [row] = await db
+		.select({ id: production.id })
+		.from(production)
+		.where(
+			and(
+				eq(production.producerUserId, userId),
+				notInArray(production.status, [...TERMINAL_PRODUCTION_STATUSES])
+			)
+		)
+		.limit(1);
+	return row != null;
 }
 
 /** Active members of every live committee that grants `cap` org-wide, for fan-out. */

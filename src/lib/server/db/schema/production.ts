@@ -89,7 +89,10 @@ export const production = sqliteTable(
 		 */
 		projectId: text('project_id').references(() => project.id, { onDelete: 'restrict' }),
 
-		/** Who is running the night. Not a capability — the matrix names no such position. */
+		/**
+		 * The show's event lead (#2726). Booking names them; naming them grants
+		 * `production.run` on this project (`leadsProject`), not a position.
+		 */
 		producerUserId: text('producer_user_id').references(() => user.id, { onDelete: 'set null' }),
 
 		loadInAt: integer('load_in_at', { mode: 'timestamp' }),

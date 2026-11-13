@@ -2,7 +2,11 @@ import { error } from '@sveltejs/kit';
 import { requireUser, isElevated, can } from '#lib/server/authorization.js';
 import type { GroupRole } from '#lib/server/db/schema/group.js';
 import { grantRuleFor, type Capability } from '#lib/config.js';
-import { projectCommitteeGrantsFor } from '#lib/server/capability/capability-grants.js';
+import {
+	leadsProject,
+	projectCommitteeGrantsFor,
+	SHOW_LEAD_CAPABILITY
+} from '#lib/server/capability/capability-grants.js';
 import { allowlisted, committeeAllows } from '#lib/server/capability/grant-rules.js';
 import { getBySlug, getByIdActive, getUserRole } from '#lib/server/band/band-service.js';
 
@@ -122,7 +126,8 @@ export async function requireCommitteeMember(
 }
 
 /**
- * A committee taking part in the project, whose grants carry `cover`, or staff.
+ * A committee taking part in the project, whose grants carry `cover`, or staff,
+ * or for `production.run` the show's event lead (#2726).
  *
  * The project comes from the record being acted on, never from the request.
  * `groups` is every seat that passed, so the caller can refresh each committee's
@@ -134,7 +139,7 @@ export async function requireProjectCommittee(
 ): Promise<{
 	user: GroupContext['user'];
 	groups: { id: string; slug: string }[];
-	via: 'committee' | 'staff';
+	via: 'committee' | 'staff' | 'lead';
 }> {
 	const user = requireUser();
 	if (projectId && grantRuleFor(cover)?.committee) {
@@ -150,6 +155,9 @@ export async function requireProjectCommittee(
 		}
 	}
 	if (await can(cover)) return { user, groups: [], via: 'staff' };
+	if (projectId && cover === SHOW_LEAD_CAPABILITY && (await leadsProject(user.id, projectId))) {
+		return { user, groups: [], via: 'lead' };
+	}
 	throw error(403, 'Not on a committee taking part in this project');
 }
 

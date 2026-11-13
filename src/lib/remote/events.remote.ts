@@ -1283,7 +1283,11 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 	// Keyed off the production, not the listing: a listing's project is only the
 	// show's when it announces one.
 	const projectId = production?.projectId ?? null;
-	const budget = projectId ? { projectId, burn: await getProjectBurn(projectId) } : null;
+	const [budget, canSetLead] = await Promise.all([
+		projectId ? getProjectBurn(projectId).then((burn) => ({ projectId, burn })) : null,
+		// Booking names the event lead (#2726); everyone else sees who it is.
+		projectId ? can('production.book', { projectId }) : false
+	]);
 	// Each act's people, for the per-show contact. Null for a viewer who may not see them.
 	const actOrgs = [...new Set((runOfShow?.slots ?? []).flatMap((x) => x.actOrganizationId ?? []))];
 	const actContacts =
@@ -1307,7 +1311,8 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		requestableActs,
 		hostShift,
 		deliverables,
-		deliverableCommittees: committees
+		deliverableCommittees: committees,
+		canSetLead
 	};
 });
 

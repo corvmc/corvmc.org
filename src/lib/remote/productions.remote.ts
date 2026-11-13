@@ -40,6 +40,10 @@ import {
 } from '#lib/server/production/run-of-show-service.js';
 import { openHostShift as openHost } from '#lib/server/production/host-service.js';
 import {
+	searchLeadCandidates,
+	setShowLead as setShowLeadService
+} from '#lib/server/production/show-lead-service.js';
+import {
 	requestArtifact,
 	cancelArtifactRequest,
 	promotePosterArt
@@ -242,32 +246,40 @@ export const updateProduction = form(
 );
 
 /**
- * Who is running the night, as a claim rather than a picker.
- *
- * There is no `production_lead` in the capability matrix, so there is no list
- * of candidates a picker could offer that would mean anything — and the useful
- * question on the day is whether anybody has taken it. `'me'` resolves server
- * side: the client never names a user id, so this cannot be used to assign
- * somebody else their work.
+ * Name the show's event lead, or clear it with an empty `leadUserId` (#2726).
+ * Booking appoints the lead, so this is `production.book`; the lead then holds
+ * `production.run` on the show through `leadsProject`.
  */
-export const setProductionProducer = form(
+export const setShowLead = form(
 	z.object({
 		id: z.string().min(1),
 		eventId: z.string().min(1),
-		producer: z.enum(['me', 'none'])
+		leadUserId: z.string()
 	}),
 	async (data) => {
-		await requireProjectCommittee(await projectOfProduction(data.id), 'production.run');
-		const { locals } = getRequestEvent();
+		const { user } = await requireProjectCommittee(
+			await projectOfProduction(data.id),
+			'production.book'
+		);
 		try {
-			await updateService(data.id, {
-				producerUserId: data.producer === 'me' ? (locals.user?.id ?? null) : null
-			});
+			await setShowLeadService(data.id, data.leadUserId || null, user.id);
 			await getStaffEventProduction(data.eventId).refresh();
 			return { success: true };
 		} catch (err) {
 			mapDomainError(err);
 		}
+	}
+);
+
+/** Who a show's booker may name as its lead: members, by name, on the same guard. */
+export const searchShowLeadCandidates = query(
+	z.object({ eventId: z.string().min(1), q: z.string().max(100) }),
+	async ({ eventId, q }) => {
+		await requireProjectCommittee(
+			(await projectOfEvent(eventId))?.projectId ?? null,
+			'production.book'
+		);
+		return searchLeadCandidates(q);
 	}
 );
 

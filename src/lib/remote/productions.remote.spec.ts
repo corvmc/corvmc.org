@@ -122,6 +122,11 @@ const runOfShow = {
 	setSlotTerms: vi.fn(),
 	buildSlotsFromLineup: vi.fn()
 };
+const showLead = { setShowLead: vi.fn(), searchLeadCandidates: vi.fn(async () => []) };
+vi.mock('#lib/server/production/show-lead-service.js', () => ({
+	setShowLead: (...a: unknown[]) => showLead.setShowLead(...a),
+	searchLeadCandidates: (...a: unknown[]) => showLead.searchLeadCandidates(...(a as []))
+}));
 vi.mock('#lib/server/production/host-service.js', () => ({
 	openHostShift: vi.fn()
 }));
@@ -262,10 +267,16 @@ const WRITES: Write[] = [
 		args: [{ id: 'prod-1', eventId: 'evt-1' }],
 		capability: RUN
 	},
+	// Booking appoints the lead; the lead then runs the show (#2726).
 	{
-		name: 'setProductionProducer',
-		args: [{ id: 'prod-1', eventId: 'evt-1', producer: 'me' }],
-		capability: RUN
+		name: 'setShowLead',
+		args: [{ id: 'prod-1', eventId: 'evt-1', leadUserId: 'member-9' }],
+		capability: BOOK
+	},
+	{
+		name: 'searchShowLeadCandidates',
+		args: [{ eventId: 'evt-1', q: 'sam' }],
+		capability: BOOK
 	},
 	{
 		name: 'advanceProduction',
@@ -390,7 +401,8 @@ const allSpies = () =>
 		...flyers,
 		...settlement,
 		...expenses,
-		...doorCounts
+		...doorCounts,
+		...showLead
 	});
 
 beforeEach(() => {
