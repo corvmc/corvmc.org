@@ -54,6 +54,9 @@ export const publicEventStatuses = ['published', 'cancelled'] as const;
 export const eventKinds = ['show', 'work_party', 'meeting', 'class', 'market'] as const;
 export type EventKind = (typeof eventKinds)[number];
 
+/** A club's or committee's session: it is the group meeting, not a show (#2607). */
+export const programSessionKind = 'meeting' satisfies EventKind;
+
 export const eventListing = sqliteTable(
 	'event_listing',
 	{

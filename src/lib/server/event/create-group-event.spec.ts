@@ -154,6 +154,14 @@ describe('without a room booking', () => {
 		expect(evt.publishedAt).toBeInstanceOf(Date);
 	});
 
+	it.each(['club', 'committee'])("writes a %s's session as a meeting, not a show", async (kind) => {
+		groupRows = [{ kind }];
+		await createGroupEvent(params());
+
+		const [evt] = rowsFor('event_listing');
+		expect(evt).toMatchObject({ kind: 'meeting' });
+	});
+
 	it('writes the group its event_group row', async () => {
 		await createGroupEvent(params());
 		expect(rowsFor('event_group')).toHaveLength(1);

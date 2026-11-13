@@ -1039,7 +1039,9 @@ So the three surfaces that mean shows rather than listings — `listUpcoming()` 
 homepage posters, `getShowTonight()`, and `listPast()` — filter on `kind` as well. The
 public guide deliberately does not, which is what keeps the work party advertised. A
 recurring series inherits `kind` from its prototype, so a monthly deep clean does not
-generate twelve shows.
+generate twelve shows. A club's or committee's session (`source = 'group'`) is always a
+`meeting`; `createGroupEvent` writes it, and `scripts/group-listing-kind.spec.ts` fails any
+other `source = 'group'` insert that leaves `kind` to the column default.
 
 Who may publish differs by layer, and that is the whole moderation model. CMC events are
 staff work; band events are gated to band admins; community listings publish **directly**,

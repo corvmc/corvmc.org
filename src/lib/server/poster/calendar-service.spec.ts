@@ -71,7 +71,7 @@ describe('monthCalendar', () => {
 		listing('cmc-late', 'cmc', NOV(20));
 		listing('cmc-early', 'cmc', NOV(2));
 		listing('band', 'band', NOV(10), { groupId: 'g-plain' });
-		listing('club', 'group', NOV(6), { groupId: 'g-club' });
+		listing('club', 'group', NOV(6), { groupId: 'g-club', kind: 'meeting' });
 		listing('comm-b', 'community', NOV(4));
 		listing('comm-a', 'community', NOV(4));
 
@@ -92,7 +92,7 @@ describe('monthCalendar', () => {
 		listing('class', 'cmc', NOV(4), { kind: 'class' });
 		listing('market', 'cmc', NOV(5), { kind: 'market' });
 		listing('meeting', 'cmc', NOV(6), { kind: 'meeting' });
-		listing('committee', 'group', NOV(7), { groupId: 'g-committee' });
+		listing('committee', 'group', NOV(7), { groupId: 'g-committee', kind: 'meeting' });
 
 		const cal = await monthCalendar('2026-11');
 		expect(cal.events.map((e) => e.id)).toEqual(['show', 'work-party', 'class', 'market']);

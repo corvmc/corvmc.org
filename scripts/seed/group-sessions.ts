@@ -1,4 +1,4 @@
-import { eventListing, eventGroup } from '../../src/lib/server/db/schema/event';
+import { eventListing, eventGroup, programSessionKind } from '../../src/lib/server/db/schema/event';
 import { claimRoom } from './room';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { db } from './db';
@@ -55,6 +55,7 @@ export async function seedGroupSessions(groups: any[]) {
 					publishedAt: new Date(startsAt.getTime() - 10 * 86400000),
 					groupId: g.id,
 					source: 'group',
+					kind: programSessionKind,
 					reservationId,
 					createdByUserId: g.ownerId
 				})

@@ -37,9 +37,9 @@ export function monthBounds(month: string): { from: Date; to: Date } {
 
 /**
  * A month's public listings in date order, and the sponsors their event pages
- * credit. Public means published, not a meeting, and not a committee's: a
- * committee session is a meeting whatever its `kind` says. Partner-feed
- * imports are left out: no member made them.
+ * credit. Public means published, not a committee's, and not a meeting
+ * unless a club holds it: a club's session is a meeting open to anyone
+ * (decision 0061). Partner-feed imports are left out: no member made them.
  */
 export async function monthCalendar(month: string): Promise<MonthCalendar> {
 	const { from, to } = monthBounds(month);
@@ -55,7 +55,7 @@ export async function monthCalendar(month: string): Promise<MonthCalendar> {
 		.where(
 			and(
 				eq(eventListing.status, 'published'),
-				ne(eventListing.kind, 'meeting'),
+				or(ne(eventListing.kind, 'meeting'), eq(group.kind, 'club')),
 				or(isNull(group.kind), ne(group.kind, 'committee')),
 				gte(eventListing.startsAt, from),
 				lt(eventListing.startsAt, to),
