@@ -241,6 +241,58 @@ const STAFF_ONLY: Array<{ name: string; cap: string; args?: unknown[] }> = [
  */
 const PUBLIC = ['getSocialLinks', 'getContactDetails', 'getContactEmail', 'getFooterInfo'];
 
+describe('updateReservationSettings from the practice space page', () => {
+	const schema = (settings.updateReservationSettings as unknown as { schema: z.ZodType }).schema;
+	// What /staff/reservations/settings renders, as the browser submits it.
+	const PAGE = {
+		hourlyRateCents: '1500',
+		operatingHoursStart: '09:00',
+		operatingHoursEnd: '22:00',
+		timeSlotMinutes: '30',
+		bufferMinutes: '0',
+		minAdvanceMinutes: '60',
+		newMemberMinAdvanceMinutes: '4320',
+		minDurationHours: '1',
+		maxDurationHours: '8',
+		maxAdvanceDaysOneoff: '14',
+		maxAdvanceDaysRecurring: '17.5'
+	};
+	const stored = (teachingMaxAdvanceDaysRecurring: number) =>
+		getConfigsByPrefix.mockImplementationOnce(async () => ({ teachingMaxAdvanceDaysRecurring }));
+
+	beforeEach(() => requireCapability.mockResolvedValue(undefined));
+
+	it('accepts the fields the page renders', () => {
+		expect(schema.safeParse(PAGE).success).toBe(true);
+	});
+
+	it('keeps the stored teaching terms when the form omits them', async () => {
+		stored(90);
+		await settings.updateReservationSettings(schema.parse(PAGE), {});
+		const keys = updateSiteConfigs.mock.calls[0][0]!.map((c) => c.key);
+		expect(keys).toContain('reservation.maxAdvanceDaysOneoff');
+		expect(keys.filter((k) => k.startsWith('reservation.teaching'))).toEqual([]);
+	});
+
+	it('refuses a member one-off window that reaches the stored teaching horizon', async () => {
+		stored(14);
+		const issue = new Proxy({}, { get: (_t, k) => (m: string) => ({ path: [k], message: m }) });
+		await expect(
+			settings.updateReservationSettings(schema.parse(PAGE), issue)
+		).rejects.toBeTruthy();
+		expect(updateSiteConfigs).not.toHaveBeenCalled();
+	});
+
+	it('still writes teaching terms a form sends', async () => {
+		const data = schema.parse({ ...PAGE, teachingMaxAdvanceDaysRecurring: '90' });
+		await settings.updateReservationSettings(data, {});
+		expect(updateSiteConfigs.mock.calls[0][0]).toContainEqual({
+			key: 'reservation.teachingMaxAdvanceDaysRecurring',
+			value: 90
+		});
+	});
+});
+
 describe('updateOrgSettings contact email', () => {
 	const schema = (settings.updateOrgSettings as unknown as { schema: z.ZodType }).schema;
 
