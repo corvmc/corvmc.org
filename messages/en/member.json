@@ -717,6 +717,19 @@
 	"member_reservations_create_modal_modal_title": "Reserve space",
 	"member_reservations_create_modal_submit_label": "Reserve space",
 	"member_reservations_dismiss_label": "Dismiss",
+	"member_reservations_first_booking_after_tour_text": "Once the tour is done, the usual notice applies.",
+	"member_reservations_first_booking_notice_text": [
+		{
+			"declarations": ["input days", "local daysPlural = days: plural"],
+			"selectors": ["daysPlural"],
+			"match": {
+				"daysPlural=one": "Book at least {days} day ahead.",
+				"daysPlural=*": "Book at least {days} days ahead."
+			}
+		}
+	],
+	"member_reservations_first_booking_title": "First booking",
+	"member_reservations_first_booking_tour_text": "A free {minutes}-minute tour comes before your session.",
 	"member_reservations_id_booked_label": "Booked for",
 	"member_reservations_id_code_hasn_t_reached_door_body": "Your code hasn't reached the door and we don't have a backup to give you right now. Don't wait outside — {#a}get in touch{/a} and someone will let you in.",
 	"member_reservations_id_door_code_title": "Door code",

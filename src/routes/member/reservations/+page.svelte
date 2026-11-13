@@ -19,6 +19,7 @@
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import CreateModal from './CreateModal.svelte';
+	import FirstBookingRules from './FirstBookingRules.svelte';
 	import TeachingCreateModal from './TeachingCreateModal.svelte';
 	import ReservationCard from './ReservationCard.svelte';
 	import OverdueTable from './OverdueTable.svelte';
@@ -90,6 +91,9 @@
 	// above exists because `async-effect-shape.spec.ts` fails the build if it is
 	// undone.
 	const isInstructor = $derived(await pageData.then((d) => d.isInstructor));
+
+	// Null for a member who holds the Practice space clearance.
+	const firstBooking = $derived(await pageData.then((d) => d.firstBooking));
 
 	// Remote queries aren't refreshed by refreshAll() — only by their own
 	// refresh() method. Mutations (book/cancel/confirm) must call this so the
@@ -174,6 +178,9 @@
 		</div>
 	{/if}
 	<BookingPolicy />
+	{#if firstBooking}
+		<FirstBookingRules {...firstBooking} />
+	{/if}
 	<FreeHoursRemaining />
 	<article class="@container">
 		<Tabs.Root bind:value={activeTab}>

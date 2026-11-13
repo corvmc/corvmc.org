@@ -2364,12 +2364,13 @@ export const getMemberReservationsPage = query(z.void(), async () => {
 	// Joined into the page query rather than fetched by the component that needs
 	// it: a second remote query fanned out of a child is the waterfall this
 	// query exists to collapse.
-	const [active, all, membership, contact, instructor] = await Promise.all([
+	const [active, all, membership, contact, instructor, notice] = await Promise.all([
 		getReservations({ after: new Date().toISOString() }),
 		getReservations({ includeTerminal: true, newestFirst: true }),
 		getMembershipStatus(),
 		getBookingContact(),
-		getInstructorByUserId(currentUser.id)
+		getInstructorByUserId(currentUser.id),
+		getReservationConfig().then((config) => viewerNotice(config, 'user'))
 	]);
 
 	// The booking surface only ever asks whether teaching terms are available, and
@@ -2383,7 +2384,11 @@ export const getMemberReservationsPage = query(z.void(), async () => {
 		all,
 		membership,
 		contact,
-		isInstructor: instructor?.status === 'active'
+		isInstructor: instructor?.status === 'active',
+		// Null once the member holds the Practice space clearance.
+		firstBooking: notice.newMember
+			? { noticeMinutes: notice.minutes, tourMinutes: notice.tourMinutes }
+			: null
 	};
 });
 
