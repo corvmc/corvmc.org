@@ -21,7 +21,7 @@ vi.mock('#lib/server/db/index.js', () => {
 		db: Object.assign(testDb, {
 			batch: (stmts: Parameters<typeof batch>[0]) => {
 				for (const s of stmts) {
-					const n = s.toSQL().params.length;
+					const n = (s as unknown as { toSQL(): { params: unknown[] } }).toSQL().params.length;
 					largestStatement.params = Math.max(largestStatement.params, n);
 				}
 				return batch(stmts);
