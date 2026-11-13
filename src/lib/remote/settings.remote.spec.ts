@@ -34,7 +34,7 @@ const CREDENTIALS = {
 	refreshToken: 'utec-refresh-token-sentinel'
 };
 
-const getConfigsByPrefix = vi.fn(async (prefix: string) => {
+const getConfigsByPrefix = vi.fn(async (prefix: string): Promise<Record<string, unknown>> => {
 	if (prefix === 'integration.utec') {
 		return {
 			clientId: 'utec-client',
