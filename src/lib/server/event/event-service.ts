@@ -5,6 +5,7 @@ import {
 	eventBand,
 	eventGroup,
 	publicEventStatuses,
+	programSessionKind,
 	type EventKind,
 	type EventBandStatus,
 	type LineupEntry
@@ -2613,6 +2614,7 @@ export async function createGroupEvent(params: CreateGroupEventParams): Promise<
 				externalTicketUrl: externalTicketUrl ?? null,
 				groupId,
 				source: 'group',
+				kind: programSessionKind,
 				// Published, matching `processEventSeries` — a club's weekly series
 				// publishes itself, and the extra meeting the chair adds by hand used
 				// to land as a draft only staff could release. The room is held
