@@ -6,7 +6,9 @@ import {
 	type OutboxStatus
 } from '#lib/server/db/schema/outbox.js';
 import {
+	sendHtmlEmails,
 	sendTemplatedEmails,
+	type HtmlEmail,
 	type SendResult,
 	type TemplatedEmail
 } from '#lib/server/notification/email/postmark-client.js';
@@ -92,6 +94,10 @@ async function send(rows: OutboxMessage[]): Promise<Map<string, SendResult>> {
 	const emails = rows.filter((r) => r.kind === 'email');
 	const sent = await sendTemplatedEmails(emails.map((r) => r.payload as unknown as TemplatedEmail));
 	emails.forEach((r, i) => results.set(r.id, sent[i]));
+
+	const rendered = rows.filter((r) => r.kind === 'html_email');
+	const sentHtml = await sendHtmlEmails(rendered.map((r) => r.payload as unknown as HtmlEmail));
+	rendered.forEach((r, i) => results.set(r.id, sentHtml[i]));
 
 	const replies = rows.filter((row) => row.kind === 'inbox_reply');
 	if (replies.length === 0) return results;

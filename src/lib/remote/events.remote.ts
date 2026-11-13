@@ -140,6 +140,7 @@ import {
 	createEventSchema,
 	eventKinds,
 	eventVisibilities,
+	type EventVisibility,
 	lineupSchema
 } from '#lib/server/db/schema/event.js';
 import { group } from '#lib/server/db/schema/group.js';
@@ -747,11 +748,46 @@ export const searchEventsForCampaign = query(z.string(), async (q) => {
 	return searchEventRows(q);
 });
 
+/** One show as the campaign picker's option, for a campaign started from its page (#2776). */
+export const getEventForCampaign = query(z.string(), async (id) => {
+	await requireCapability('marketing.manageCampaigns');
+	const [row] = await db
+		.select(campaignEventColumns)
+		.from(eventListing)
+		.where(eq(eventListing.id, id))
+		.limit(1);
+	return row ? campaignEventOption(row) : null;
+});
+
+const campaignEventColumns = {
+	id: eventListing.id,
+	title: eventListing.title,
+	startsAt: eventListing.startsAt,
+	visibility: eventListing.visibility
+};
+
+// The date arrives as a string because SearchSelect renders its description
+// field verbatim — and it is formatted here so it lands in club time rather
+// than whatever timezone the staffer's laptop is set to.
+function campaignEventOption(e: {
+	id: string;
+	title: string;
+	startsAt: Date;
+	visibility: EventVisibility;
+}) {
+	return {
+		id: e.id,
+		title: e.title,
+		when: formatDateShortYear(e.startsAt),
+		visibility: e.visibility
+	};
+}
+
 async function searchEventRows(q: string) {
 	if (!q || q.length < 2) return [];
 
 	const rows = await db
-		.select({ id: eventListing.id, title: eventListing.title, startsAt: eventListing.startsAt })
+		.select(campaignEventColumns)
 		.from(eventListing)
 		.where(
 			and(
@@ -763,10 +799,7 @@ async function searchEventRows(q: string) {
 		.orderBy(sql`abs(${eventListing.startsAt} - unixepoch())`)
 		.limit(SEARCH_LIMIT);
 
-	// The date arrives as a string because SearchSelect renders its description
-	// field verbatim — and it is formatted here so it lands in club time rather
-	// than whatever timezone the staffer's laptop is set to.
-	return rows.map((e) => ({ id: e.id, title: e.title, when: formatDateShortYear(e.startsAt) }));
+	return rows.map(campaignEventOption);
 }
 
 export const getStaffEventDetail = query(z.string(), async (id) => {

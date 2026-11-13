@@ -24,6 +24,9 @@ vi.mock('./unsubscribe', () => ({ signUnsubscribeToken: vi.fn(() => 'unsub-token
 vi.mock('#lib/server/notification/email/index.js', () => ({
 	sendBroadcastBatch: vi.fn().mockResolvedValue(undefined)
 }));
+vi.mock('#lib/server/outbox/outbox-service.js', () => ({
+	deliverNow: vi.fn(async (id: string) => ({ id, status: 'sent', error: null }))
+}));
 vi.mock('$app/env/public', async () =>
 	(await import('#lib/testing/env-mock.js')).envMock({ PUBLIC_SITE_URL: 'https://test.com' })
 );
@@ -41,6 +44,7 @@ const {
 	sendNow,
 	executeSend,
 	processDueCampaigns,
+	sendTestCopy,
 	CampaignNotFoundError,
 	CampaignValidationError,
 	CampaignStateError
@@ -523,5 +527,115 @@ describe('processDueCampaigns', () => {
 		expect(campRow('due')?.sent_at).toBe(NOW_S);
 		expect(campRow('later')?.sent_at).toBeNull();
 		expect(campRow('draft')?.sent_at).toBeNull();
+	});
+});
+
+describe('a blast beyond its event visibility (#2773)', () => {
+	function show(id: string, visibility: 'public' | 'members' | 'group') {
+		sqlite.exec(`delete from event_listing where id = '${id}'`);
+		sqlite
+			.prepare(
+				`insert into event_listing (id, title, starts_at, ends_at, status, source, kind, created_by_user_id, visibility)
+				 values (?, ?, ?, ?, 'published', 'cmc', 'show', 'staff-1', ?)`
+			)
+			.run(id, `Show ${id}`, NOW_S + 24 * HOUR, NOW_S + 26 * HOUR, visibility);
+	}
+	const entries = () =>
+		(
+			sqlite
+				.prepare(
+					`select subject_id, details from audit_log where action = 'event.emailed_beyond_visibility'`
+				)
+				.all() as { subject_id: string; details: string }[]
+		).map((r) => ({ eventId: r.subject_id, ...JSON.parse(r.details) }));
+
+	beforeEach(() => {
+		sqlite.exec(`delete from audit_log`);
+	});
+
+	it('records a send of a members-only show to a static list', async () => {
+		show('evt-m', 'members');
+		camp('camp-1', { eventId: 'evt-m', subject: 'Doors at 7' });
+		target('camp-1', 'aud-1');
+
+		await sendNow('camp-1');
+
+		expect(entries()).toEqual([
+			{
+				eventId: 'evt-m',
+				campaignId: 'camp-1',
+				subject: 'Doors at 7',
+				visibility: 'members',
+				audiences: ['aud-1'],
+				scheduled: false
+			}
+		]);
+	});
+
+	it('records a schedule of a group session to a built-in audience', async () => {
+		show('evt-g', 'group');
+		aud('all-members', 'all-members');
+		camp('camp-1', { eventId: 'evt-g' });
+		target('camp-1', 'all-members');
+
+		await scheduleCampaign('camp-1', new Date(NOW.getTime() + 3600_000));
+
+		expect(entries()).toMatchObject([{ audiences: ['all-members'], scheduled: true }]);
+	});
+
+	it('records nothing for a public show, or for its own ticket holders', async () => {
+		show('evt-p', 'public');
+		show('evt-g', 'group');
+		aud('event-interest', 'event-interest');
+		camp('camp-1', { eventId: 'evt-p' });
+		target('camp-1', 'aud-1');
+		camp('camp-2', { eventId: 'evt-g' });
+		target('camp-2', 'event-interest');
+
+		await sendNow('camp-1');
+		await sendNow('camp-2');
+
+		expect(entries()).toEqual([]);
+	});
+});
+
+describe('sendTestCopy (#2771)', () => {
+	it('queues one rendered copy for the staffer and sends it now', async () => {
+		sqlite.exec('delete from outbox_message');
+		camp('camp-1', { subject: 'Doors at 7' });
+		target('camp-1', 'aud-1');
+
+		const delivery = await sendTestCopy('camp-1', { email: 'staff@example.com', name: 'Sam' });
+
+		const rows = sqlite.prepare('select * from outbox_message').all() as {
+			id: string;
+			kind: string;
+			payload: string;
+			subject_type: string;
+			subject_id: string;
+		}[];
+		expect(rows).toHaveLength(1);
+		expect(rows[0]).toMatchObject({
+			kind: 'html_email',
+			subject_type: 'campaign',
+			subject_id: 'camp-1'
+		});
+		expect(JSON.parse(rows[0].payload)).toMatchObject({
+			to: 'staff@example.com',
+			htmlBody: '<html>send</html>'
+		});
+		expect(delivery).toEqual({ id: rows[0].id, status: 'sent', error: null });
+		// Rendered for the staffer, with a link that unsubscribes nobody.
+		const [, name, unsubscribeUrl] = vi.mocked(renderCampaignForSend).mock.calls[0];
+		expect(name).toBe('Sam');
+		expect(unsubscribeUrl).toBe('https://test.com/unsubscribe/test');
+		expect(signUnsubscribeToken).not.toHaveBeenCalled();
+		expect(sendBroadcastBatch).not.toHaveBeenCalled();
+	});
+
+	it('refuses a campaign that does not exist', async () => {
+		await expect(
+			sendTestCopy('nope', { email: 'staff@example.com', name: null })
+		).rejects.toBeInstanceOf(CampaignNotFoundError);
 	});
 });

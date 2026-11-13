@@ -46,6 +46,7 @@
 	import RecapPhotos from './RecapPhotos.svelte';
 	import RecapText from '#lib/components/events/RecapText.svelte';
 	import EventRsvps from './EventRsvps.svelte';
+	import EventCampaigns from './EventCampaigns.svelte';
 	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
 	import { formatEventTimeRange } from '#lib/utils/event-time.js';
@@ -311,6 +312,7 @@
 
 	<RelatedTasks subject={{ type: 'event', id }} />
 	<RelatedShifts subject={{ type: 'event', id }} />
+	<EventCampaigns eventId={id} />
 
 	{#if data.recurringSeries}
 		<RecurringSeriesBar

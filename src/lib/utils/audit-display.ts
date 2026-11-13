@@ -185,6 +185,11 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 				? `Counted the door a second time: ${formatCents(d.secondCents)}, matching`
 				: `Counted the door a second time: ${formatCents(d.secondCents)} against ${formatCents(d.firstCents)}`;
 		}
+		case 'event.emailed_beyond_visibility': {
+			const d = entry.details;
+			const verb = d.scheduled ? 'Scheduled' : 'Sent';
+			return `${verb} “${d.subject}” to ${d.audiences.join(', ')}, beyond its ${d.visibility === 'group' ? 'group' : 'members'} visibility`;
+		}
 		case 'event.published_over_warnings':
 			return `Published the event over ${plural(entry.details.warnings.length, 'warning')}: “${entry.details.reason}”`;
 		case 'volunteer_hours.approved_over_return':

@@ -23,6 +23,8 @@ delivery at-least-once.
 
 - **`email`**: a Postmark template send (recipient, alias, model, reply-to, tag). Sent in
   batches of 500 with a result per message, so one refused recipient fails only its own row.
+- **`html_email`**: an email rendered here rather than from a template (recipient, subject,
+  HTML, tag), sent on the transactional stream. A campaign's test copy is one (#2771).
 - **`inbox_reply`**: an outbound message on an inbox thread. The `inbox_message` row is filed
   with the save; the outbox dispatches it on the thread's channel and stamps the channel's id
   on it.

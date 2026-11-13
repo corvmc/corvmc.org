@@ -12,10 +12,11 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 	return migratedSqlite();
 });
 
-const { mockEnv, constructed, batchSend } = vi.hoisted(() => ({
+const { mockEnv, constructed, batchSend, htmlSend } = vi.hoisted(() => ({
 	mockEnv: {} as Record<string, string | undefined>,
 	constructed: { count: 0 },
-	batchSend: vi.fn()
+	batchSend: vi.fn(),
+	htmlSend: vi.fn()
 }));
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
@@ -29,7 +30,7 @@ vi.mock('postmark', () => ({
 		}
 		sendEmailBatchWithTemplates = batchSend;
 		sendEmailWithTemplate = vi.fn();
-		sendEmailBatch = vi.fn();
+		sendEmailBatch = htmlSend;
 	}
 }));
 vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
@@ -39,7 +40,7 @@ vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 
 const { outboxMessage } = await import('#lib/server/db/schema/outbox.js');
 const { reminderSent } = await import('#lib/server/db/schema/reminder.js');
-const { emailRow } = await import('./outbox-row');
+const { emailRow, htmlEmailRow } = await import('./outbox-row');
 const { deliverOutbox, deliverNow, queueEmail, MAX_ATTEMPTS, backoffMs } =
 	await import('./outbox-service');
 const { resetMailClient } = await import('#lib/server/notification/email/postmark-client.js');
@@ -72,6 +73,7 @@ beforeEach(() => {
 	mockEnv.POSTMARK_TRANSACTIONAL_STREAM = 'outbound';
 	constructed.count = 0;
 	batchSend.mockReset();
+	htmlSend.mockReset();
 	resetMailClient();
 });
 
@@ -105,6 +107,29 @@ describe('writing with the save', () => {
 			testDb.batch([write('r-2'), testDb.insert(outboxMessage).values(row)])
 		).rejects.toThrow();
 		expect(sqlite.prepare('select count(*) n from reminder_sent').get()).toEqual({ n: 0 });
+	});
+});
+
+describe('a pre-rendered email (#2771)', () => {
+	it('goes out as HTML on the transactional stream, with its own result', async () => {
+		htmlSend.mockImplementation(async (msgs: { To: string }[]) =>
+			msgs.map((m) => ({ To: m.To, ErrorCode: 0, Message: 'OK', MessageID: 'pm-html' }))
+		);
+		const row = htmlEmailRow({ to: 'staff@example.com', subject: 'Test', htmlBody: '<p>Hi</p>' });
+		await testDb.insert(outboxMessage).values({ ...row, nextAttemptAt: T0, createdAt: T0 });
+
+		const delivery = await deliverNow(row.id);
+
+		expect(delivery).toEqual({ id: row.id, status: 'sent', error: null });
+		expect(htmlSend.mock.calls[0][0]).toEqual([
+			expect.objectContaining({
+				To: 'staff@example.com',
+				Subject: 'Test',
+				HtmlBody: '<p>Hi</p>',
+				MessageStream: 'outbound'
+			})
+		]);
+		expect(batchSend).not.toHaveBeenCalled();
 	});
 });
 

@@ -1617,16 +1617,6 @@
 	"staff_marketing_campaigns_description_body": "No campaigns yet.",
 	"staff_marketing_campaigns_event_scope_picker_clear_label": "Clear",
 	"staff_marketing_campaigns_event_scope_picker_optional_pick_o_text": "Optional. Pick one and “Event audience” resolves to its ticket holders and RSVPs; leave it blank and that audience is empty.",
-	"staff_marketing_campaigns_event_scope_picker_show_s_audience_text": [
-		{
-			"declarations": ["input n", "local nPlural = n: plural"],
-			"selectors": ["nPlural"],
-			"match": {
-				"nPlural=one": "“Event audience” resolves to {n} person — ticket holders and RSVPs, minus anyone who has opted out. Tick it above to send to them.",
-				"nPlural=*": "“Event audience” resolves to {n} people — ticket holders and RSVPs, minus anyone who has opted out. Tick it above to send to them."
-			}
-		}
-	],
 	"staff_marketing_campaigns_id_edit_campaign_deleted_toast": "Campaign deleted",
 	"staff_marketing_campaigns_id_edit_campaign_scheduled_toast": "Campaign scheduled",
 	"staff_marketing_campaigns_id_edit_campaign_sent_toast": "Campaign sent",
@@ -3715,5 +3705,13 @@
 	"staff_projects_id_parent_project_label": "Parent project",
 	"staff_projects_id_parent_project_body": "Its spend counts toward the parent's budget.",
 	"staff_projects_id_child_projects_label": "Child projects",
-	"staff_projects_id_budget_report_spend_by_project_title": "Spend by project"
+	"staff_projects_id_budget_report_spend_by_project_title": "Spend by project",
+	"staff_marketing_campaigns_audience_picker_beyond_group_body": "{names} can include people outside the group this event is shown to. The send is recorded in the event’s history.",
+	"staff_marketing_campaigns_audience_picker_beyond_members_body": "{names} can include non-members, and this event is shown to members only. The send is recorded in the event’s history.",
+	"staff_marketing_campaigns_send_test_label": "Send test",
+	"staff_marketing_campaigns_test_sent_toast": "Test sent to {email}",
+	"staff_marketing_campaigns_test_not_sent_toast": "Test not sent: {error}",
+	"staff_events_id_campaigns_title": "Campaigns",
+	"staff_events_id_email_ticket_holders_label": "Email ticket holders",
+	"staff_events_id_no_campaigns_text": "No campaigns"
 }

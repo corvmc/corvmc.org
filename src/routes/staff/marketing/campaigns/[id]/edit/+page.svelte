@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import AudiencePicker from '../../AudiencePicker.svelte';
-	import EventScopePicker from '../../EventScopePicker.svelte';
+	import EventScopePicker, { type EventOption } from '../../EventScopePicker.svelte';
 	import CampaignPreview from '../../CampaignPreview.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -18,7 +18,8 @@
 		saveDraft,
 		sendCampaignNow,
 		scheduleCampaign,
-		deleteCampaign
+		deleteCampaign,
+		sendTestCampaign
 	} from '#lib/remote/marketing.remote.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
@@ -31,7 +32,7 @@
 	let subject = $state('');
 	let markdownBody = $state('');
 	let selectedAudienceIds = $state<string[]>([]);
-	let eventId = $state('');
+	let event = $state<EventOption | null>(null);
 	let scheduledFor = $state('');
 	let submitting = $state(false);
 	let initialized = $state(false);
@@ -40,7 +41,8 @@
 
 	// What the server holds, to tell an unsaved edit from a saved one.
 	let saved = $state('');
-	const snapshot = () => JSON.stringify([subject, markdownBody, selectedAudienceIds, eventId]);
+	const snapshot = () =>
+		JSON.stringify([subject, markdownBody, selectedAudienceIds, event?.id ?? '']);
 	// Set once the campaign is sent, scheduled or deleted: nothing is left to lose.
 	let leaving = false;
 	const isDirty = () => initialized && !leaving && (snapshot() !== saved || !!scheduledFor);
@@ -50,7 +52,7 @@
 			subject = campaignData.subject;
 			markdownBody = campaignData.markdownBody;
 			selectedAudienceIds = campaignData.audiences.map((a) => a.id);
-			eventId = campaignData.eventId ?? '';
+			event = campaignData.event;
 			saved = snapshot();
 			initialized = true;
 		}
@@ -77,16 +79,43 @@
 		return !!scheduledFor && new Date(scheduledFor).getTime() > Date.now();
 	}
 
+	// Every action that reads the stored campaign saves first, so unsaved edits are what it reads.
+	function save() {
+		return saveDraft({
+			campaignId: id,
+			subject: subject.trim(),
+			markdownBody,
+			audienceIds: selectedAudienceIds,
+			eventId: event?.id ?? ''
+		});
+	}
+
+	async function handleSendTest() {
+		if (!isValid()) return;
+		submitting = true;
+		try {
+			await save();
+			saved = snapshot();
+			const result = await sendTestCampaign({ campaignId: id });
+			if (result?.sent) {
+				toast.success(m.staff_marketing_campaigns_test_sent_toast({ email: result.to }));
+			} else {
+				toast.error(
+					m.staff_marketing_campaigns_test_not_sent_toast({ error: result?.error ?? '' })
+				);
+			}
+		} catch (err) {
+			toast.error(errorMessage(err));
+		} finally {
+			submitting = false;
+		}
+	}
+
 	async function handleSave() {
 		if (!isValid()) return;
 		submitting = true;
 		try {
-			await saveDraft({
-				subject: subject.trim(),
-				markdownBody,
-				audienceIds: selectedAudienceIds,
-				eventId
-			});
+			await save();
 			saved = snapshot();
 			toast.success(m.staff_marketing_campaigns_id_edit_draft_saved_toast());
 		} catch (err) {
@@ -114,14 +143,9 @@
 		try {
 			// Save first: `sendCampaignNow` sends what is stored, so unsaved edits
 			// would otherwise go out with the old copy.
-			await saveDraft({
-				subject: subject.trim(),
-				markdownBody,
-				audienceIds: selectedAudienceIds,
-				eventId
-			});
+			await save();
 			saved = snapshot();
-			await sendCampaignNow({});
+			await sendCampaignNow({ campaignId: id });
 		} catch (err) {
 			// The try covers the calls and nothing else, and a remote rejection is
 			// not an `Error` — reading `.message` off one always fell through to
@@ -141,14 +165,12 @@
 		try {
 			// Save first: `scheduleCampaign` only sets the date, so unsaved edits
 			// would otherwise go out with the old copy.
-			await saveDraft({
-				subject: subject.trim(),
-				markdownBody,
-				audienceIds: selectedAudienceIds,
-				eventId
-			});
+			await save();
 			saved = snapshot();
-			await scheduleCampaign({ scheduledFor: new Date(scheduledFor).toISOString() });
+			await scheduleCampaign({
+				campaignId: id,
+				scheduledFor: new Date(scheduledFor).toISOString()
+			});
 			toast.success(m.staff_marketing_campaigns_id_edit_campaign_scheduled_toast());
 			leaving = true;
 			goto(resolve(`staff/marketing/campaigns/${id}`));
@@ -170,7 +192,7 @@
 	async function deleteNow() {
 		confirmingDelete = false;
 		try {
-			await deleteCampaign({});
+			await deleteCampaign({ campaignId: id });
 			toast.success(m.staff_marketing_campaigns_id_edit_campaign_deleted_toast());
 			leaving = true;
 			goto(resolve('staff/marketing/campaigns'));
@@ -213,12 +235,12 @@
 
 			<div>
 				<p class="label text-sm font-medium">{m.staff_audiences_text()}</p>
-				<AudiencePicker bind:selected={selectedAudienceIds} bind:total={totalSubscribers} />
+				<AudiencePicker bind:selected={selectedAudienceIds} bind:total={totalSubscribers} {event} />
 			</div>
 
 			<div>
 				<p class="label text-sm font-medium">{m.staff_about_show_text()}</p>
-				<EventScopePicker initial={campaignData.event} onchange={(id) => (eventId = id)} />
+				<EventScopePicker initial={campaignData.event} onchange={(e) => (event = e)} />
 			</div>
 
 			<div>
@@ -263,6 +285,15 @@
 					onclick={handleSave}
 				>
 					{m.staff_save_draft_label()}
+				</Button>
+				<Button
+					variant="default"
+					size="sm"
+					outline
+					disabled={!isValid() || submitting}
+					onclick={handleSendTest}
+				>
+					{m.staff_marketing_campaigns_send_test_label()}
 				</Button>
 				<Button
 					variant="secondary"

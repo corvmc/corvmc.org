@@ -93,3 +93,40 @@ describe('queries do not read the page from the request event', () => {
 		expect(offenders).toEqual([]);
 	});
 });
+
+/**
+ * A form or command may read the URL, but not `params`: on a remote call they
+ * come from a client header, so an id taken from them skips the schema and the
+ * mutation works from one route only (#2778). The id is a schema field instead.
+ */
+const PARAMS_KEYED = new Set([
+	// #2870
+	'src/lib/remote/bands.remote.ts#updateStaffBand',
+	'src/lib/remote/bands.remote.ts#updateMemberRole',
+	'src/lib/remote/reservations.remote.ts#payReservation'
+]);
+
+describe('mutations take their ids from the schema', () => {
+	const g = new CallGraph();
+	const mutations = g
+		.remotes(sourceFiles(REMOTE_GLOB, new Set()))
+		.filter((r) => r.kind === 'form' || r.kind === 'command');
+	const keyed = mutations
+		.filter((r) => {
+			const body = g.body(r.key);
+			return body && pageScopedReads(body.node).some((h) => h.startsWith('params '));
+		})
+		.map((r) => r.key);
+
+	it('finds the mutations', () => {
+		expect(mutations.length).toBeGreaterThan(300);
+	});
+
+	it('read no route params', () => {
+		expect(keyed.filter((k) => !PARAMS_KEYED.has(k))).toEqual([]);
+	});
+
+	it('list only mutations that still read them', () => {
+		expect([...PARAMS_KEYED].filter((k) => !keyed.includes(k))).toEqual([]);
+	});
+});
