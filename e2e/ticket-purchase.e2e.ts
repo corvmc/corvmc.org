@@ -2,34 +2,24 @@ import { test, expect } from './fixtures/test';
 import {
 	SEED_TP_EVENT_ID,
 	SEED_TP_EVENT_TITLE,
-	SEED_TP_FLOOR_EVENT_ID,
-	SEED_TP_FLOOR_EVENT_TITLE,
-	SEED_TP_FLOOR_CENTS,
 	SEED_TP_PRICE_CENTS
 } from './fixtures/seed-ticket-purchase';
 
 /**
- * Ticket checkout on the sliding scale, as a guest sees it.
+ * Ticket checkout on the sliding scale, as a guest sees it: the amount the page
+ * shows on its button, through the fake payment driver, to a valid ticket or a
+ * decline.
  *
- * What the unit tests already prove: what the server charges, what the ticket
- * row records, how the receipt splits the charge. What they cannot prove is that
- * the number the buyer reads before they commit is the number the server will
- * charge — the preview arithmetic lives in a Svelte component and the charge
- * lives in a remote function, and the two agreeing is the whole point of
- * `TicketPurchaseFields`.
- *
- * The last two cases do submit. They can, now that `PAYMENTS_DRIVER=fake` puts
- * an in-memory gateway behind checkout (see `playwright.config.ts`): the button
- * leads to a local page rather than `checkout.stripe.com`, so the round trip
- * through fulfillment — pending ticket, payment, webhook translation, valid
- * ticket — is finally assertable. It is the only coverage of that path; the unit
- * tests hand `handleCheckoutCompleted` a session literal and start from there.
+ * What the page previews before submit (opening amounts, split bar bounds, fee
+ * offer, refused amounts) is pinned in `TicketPurchaseFields.svelte.spec.ts`;
+ * the split arithmetic in `ticket-split.spec.ts`. These two cases are the only
+ * coverage of the round trip through fulfillment — pending ticket, payment,
+ * webhook translation, valid ticket — which `PAYMENTS_DRIVER=fake` makes
+ * assertable (see `playwright.config.ts`).
  */
 
 const PRICE = SEED_TP_PRICE_CENTS / 100;
-const FLOOR = SEED_TP_FLOOR_CENTS / 100;
 const ticketsUrl = `/events/${SEED_TP_EVENT_ID}/tickets`;
-const flooredUrl = `/events/${SEED_TP_FLOOR_EVENT_ID}/tickets`;
 const GUEST_EMAIL = 'e2e-guest@example.test';
 
 /** An amount as the page prints it: 91 → "$0.91". Amounts are state, not copy. */
@@ -40,14 +30,12 @@ const submitButton = (page: import('@playwright/test').Page) =>
 	page.locator('form:has(#ticketAmount) button[type="submit"]');
 
 /**
- * The page's own totals block. `goto` resolves before an awaited remote query
- * commits, so every assertion waits on real content rather than an empty
- * `<main>` — a negative assertion would otherwise pass against nothing.
+ * `goto` resolves before an awaited remote query commits, so wait on real
+ * content rather than an empty `<main>`.
  */
-async function openPurchasePage(page: import('@playwright/test').Page, url = ticketsUrl) {
-	await page.goto(url);
+async function openPurchasePage(page: import('@playwright/test').Page) {
+	await page.goto(ticketsUrl);
 	await expect(page.getByRole('heading', { name: SEED_TP_EVENT_TITLE })).toBeVisible();
-	return page.getByTestId('purchase-total');
 }
 
 /**
@@ -95,147 +83,6 @@ async function payPerTicket(page: import('@playwright/test').Page, dollars: stri
 		);
 	}).toPass({ timeout: 15000 });
 }
-
-test('the scale opens at the suggested price', async ({ page }) => {
-	const totals = await openPurchasePage(page);
-
-	await expect(totals).toContainText(`$${PRICE.toFixed(2)}`);
-	await expect(page.locator('#ticketAmount')).toHaveValue(PRICE.toFixed(2));
-});
-
-test('the split bar opens with the collective at its suggested share', async ({ page }) => {
-	// $20 less 88¢ of card processing leaves $19.12. The acts' share is anchored
-	// to the $20 base — 70% of it, $14.00 — and the collective takes what is
-	// left, so it absorbs the fee (#827). The assertion's point is that the acts
-	// are paid off the gross: 70% of the divisible amount would read $13.38, and
-	// the acts would be quietly funding most of the card fee.
-	await openPurchasePage(page);
-
-	// Read off the slider rather than off the page: SplitBar writes each amount
-	// twice — once in the bar, once in the labelled list beneath it — so a bare
-	// getByText is a strict mode violation rather than a missing element.
-	// `aria-valuetext` carries both figures in one place, and is the thing a
-	// screen reader is told, which makes it the better contract anyway.
-	const bar = page.getByRole('slider');
-	await expect(bar).toHaveAttribute('aria-valuenow', '512');
-	await expect(bar).toHaveAttribute('aria-valuetext', /\$5\.12.*\$14\.00/);
-	await expect(
-		page.locator('input:is([name$="collectiveCents"], [name*="collectiveCents/"])')
-	).toHaveValue('512');
-});
-
-test('moving the bar moves what the acts get, and what is posted', async ({ page }) => {
-	// Keyboard rather than a drag: the divider is a real slider, and the drag is
-	// the affordance rather than the mechanism.
-	await openPurchasePage(page);
-
-	// Two 25¢ steps down from the opening 512: paid at exactly the suggested $20
-	// the acts' guarantee and their opening take are the same $14.00, so the bar
-	// has nowhere above 512 to go.
-
-	// Stepped rather than pressed twice, for the hydration race `payPerTicket`
-	// documents: the slider is server-rendered, so an arrow key before
-	// `onkeydown` attaches is lost, and the budget then goes on a value that
-	// cannot change. Re-reading `aria-valuenow` each attempt is what makes the
-	// retry safe — a press that landed advances, a lost one repeats.
-	const bar = page.getByRole('slider');
-	await expect(async () => {
-		if (Number(await bar.getAttribute('aria-valuenow')) > 462) await bar.press('ArrowLeft');
-		expect(await bar.getAttribute('aria-valuenow')).toBe('462');
-	}).toPass({ timeout: 15000 });
-	await expect(
-		page.locator('input:is([name$="collectiveCents"], [name*="collectiveCents/"])')
-	).toHaveValue('462');
-});
-
-test("paying over the suggestion leaves the surplus the buyer's to direct", async ({ page }) => {
-	// The acts are guaranteed 70% of the *suggested* $20 — $14.00 — and not 70%
-	// of whatever was handed over. At $45 that is the difference between a
-	// collective capped at $11.89 and one the buyer can take to $29.39: $45 less
-	// $1.61 of card processing is $43.39 divisible, less the acts' $14.00.
-	await openPurchasePage(page);
-	await payPerTicket(page, '45');
-
-	const bar = page.getByRole('slider');
-	// Unchanged: the bar still opens at 70% of the gross to the acts ($31.50).
-	await expect(bar).toHaveAttribute('aria-valuenow', '1189');
-	await expect(bar).toHaveAttribute('aria-valuemax', '2939');
-
-	// Rightward travel is what the anchored floor buys, and it did nothing before.
-	await bar.focus();
-	await bar.press('ArrowRight');
-	await expect(bar).toHaveAttribute('aria-valuenow', '1214');
-	await expect(
-		page.locator('input:is([name$="collectiveCents"], [name*="collectiveCents/"])')
-	).toHaveValue('1214');
-
-	// All the way over: the acts keep their guarantee and not a cent less.
-	await bar.press('End');
-	await expect(bar).toHaveAttribute('aria-valuetext', /\$29\.39.*\$14\.00/);
-});
-
-test('the fee-coverage offer is priced on everything the card is charged', async ({ page }) => {
-	// Stripe takes its cut of the whole charge, so a preview that fees only the
-	// suggested price would quote a total the card statement disagrees with.
-	// $20 grosses up to a $0.91 fee; $45 to $1.66.
-	await openPurchasePage(page);
-
-	// Scoped to the checkbox by `name` rather than matched on its sentence: the
-	// grossed-up amount is the contract, the wording around it is not.
-	// `name$=`: a remote form prefixes a boolean field's name (`b:coverFees`).
-	const coverFees = page
-		.locator('input:is([name$="coverFees"], [name*="coverFees/"])')
-		.locator('..');
-	await expect(coverFees).toContainText(usd(91));
-
-	await payPerTicket(page, '45');
-
-	await expect(coverFees).toContainText(usd(166));
-});
-
-test('paying above the suggestion shows up as a contribution', async ({ page }) => {
-	const totals = await openPurchasePage(page);
-
-	await payPerTicket(page, '30');
-
-	await expect(page.getByTestId('contribution-line')).toBeVisible();
-	await expect(totals).toContainText(usd(3000));
-});
-
-test('a scale that runs to free offers a free ticket, not a $0 charge', async ({ page }) => {
-	await openPurchasePage(page);
-
-	await payPerTicket(page, '0');
-
-	// The split bar goes away with the money, and the button stops asking for a
-	// card.
-	await expect(page.getByRole('slider')).toHaveCount(0);
-	await expect(submitButton(page)).toBeEnabled();
-	// "Get ticket", not "Pay $0.00": no amount on the button.
-	expect(await submitButton(page).textContent()).not.toContain('$');
-});
-
-test('the dead zone below the charge minimum is refused on the page', async ({ page }) => {
-	await openPurchasePage(page);
-
-	await payPerTicket(page, '0.50');
-
-	await expect(page.getByTestId('amount-refused')).toHaveAttribute('data-reason', 'dead-zone');
-	await expect(submitButton(page)).toBeDisabled();
-});
-
-test('a show with a floor says so, and refuses less', async ({ page }) => {
-	await page.goto(flooredUrl);
-	await expect(page.getByRole('heading', { name: SEED_TP_FLOOR_EVENT_TITLE })).toBeVisible();
-
-	// The field's description names the floor amount.
-	await expect(page.locator('form:has(#ticketAmount)')).toContainText(`$${FLOOR.toFixed(2)}`);
-
-	await payPerTicket(page, '2');
-
-	await expect(page.getByTestId('amount-refused')).toHaveAttribute('data-reason', 'below-floor');
-	await expect(submitButton(page)).toBeDisabled();
-});
 
 /**
  * The in-app checkout page, on the fake driver. It is the same `/checkout/<session>`
