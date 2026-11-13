@@ -49,7 +49,10 @@ current **Practice space** clearance, so someone can be found to show them aroun
 clearance it is the room's 60 minutes. `noticeFor()` in `conflict-service.ts` decides it, and both
 `validateBooking()` (given the member's `userId` by `create()` and `createWaitlisted()`) and the
 picker's slot queries (`getAvailableDates`, `getReservationStartTimes`) read it, so the picker
-never offers a start the server refuses. The picker says why in one line. Band, teaching and
+never offers a start the server refuses. The picker says why in one line. Above the picker, the member
+reservations page lists the first-booking rules to a member without the clearance: the notice
+and, while an orientation role is set, the tour length and that it is free (`firstBooking` on
+`getMemberReservationsPage`, #2747); a cleared member sees nothing. Band, teaching and
 event bookings keep the room minimum, and `staffCreate()` checks neither. The clearance is
 granted when an orientation is completed or waived — see
 [Rehearsal orientation](#rehearsal-orientation).
