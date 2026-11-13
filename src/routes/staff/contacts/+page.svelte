@@ -20,6 +20,7 @@
 	import { partyRoleLabels, partyRoles, partyRoleViewLabels, type PartyRole } from '#lib/config.js';
 	import { rowLink } from '#lib/actions/row-link.js';
 	import { withQuery } from '#lib/utils/with-query.js';
+	import { clubInstant, formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
@@ -130,6 +131,8 @@
 				{#if views.all}
 					<th>{m.staff_contacts_main_person_label()}</th>
 				{/if}
+				<th class="col-support">{m.staff_contacts_last_activity_label()}</th>
+				<th class="col-support">{m.staff_contacts_next_task_label()}</th>
 				<th class="col-support">{m.staff_website_label()}</th>
 			{/snippet}
 			{#each rows as row (row.id)}
@@ -150,6 +153,21 @@
 					{#if views.all}
 						<td>{row.mainPerson ?? '—'}</td>
 					{/if}
+					<td class="col-support">
+						{row.lastActivity ? formatDateShort(clubInstant(row.lastActivity, '12:00')) : '—'}
+					</td>
+					<td class="col-support truncate">
+						{#if row.nextTask}
+							<a class="link" href={resolve('/staff/tasks/[id]', { id: row.nextTask.id })}
+								>{row.nextTask.title}</a
+							>
+							{#if row.nextTask.dueAt}
+								<div class="text-muted">{formatDateShort(row.nextTask.dueAt)}</div>
+							{/if}
+						{:else}
+							—
+						{/if}
+					</td>
 					<td class="col-support truncate">{row.website ?? '—'}</td>
 				</tr>
 			{/each}

@@ -2379,8 +2379,18 @@ owes, follow-ups) is that project's tasks, with due dates, assignees and committ
   `sponsor.read`, `contractor.read`) without the people. Every write needs `contact.manage`. A
   contractor is added from `/staff/contractors`, which asks for the trade. Possible duplicates
   (`/staff/contacts/duplicates`) lists people with the same name or phone and organizations with
-  the same website domain; merging moves roles, records and people to the one kept, deletes the
-  other, and writes `contact.merged` or `organization.merged` to the audit log.
+  the same website domain; merging moves roles, records, people, notes and task links to the one
+  kept, deletes the other, and writes `contact.merged` or `organization.merged` to the audit log.
+  The list shows each organization's last activity (its latest note, `contact.read`) and next
+  open task (`project.read`): the soonest-due open task linked to it, on its contractor jobs, or on
+  its grants' and sponsorships' projects.
+- **Timeline (#2622):** an organization's page and a person's page
+  (`/staff/contacts/people/[id]`) show one timeline, newest first, read by `getPartyTimeline`
+  under `contact.read`: notes staff log (`activity`: call, meeting, email or note, on a day, added,
+  edited and deleted under `contact.manage`), the audit entries for the organization and for its
+  grant and sponsorship projects and contractor jobs, and the tasks linked to it through
+  `work_order_link` that were marked done. Follow-ups are tasks: Related tasks on the same pages
+  adds one linked to the record.
 - **Retention:** a contact with a `retain_until` stays visible until that date, and
   `/api/cron/sweep-contacts` deletes it, with its roles, once the date passes. An act's contact
   is given a horizon a year out when the act becomes a member band.

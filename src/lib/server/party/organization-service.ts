@@ -1,3 +1,5 @@
+import { copyLinks } from '#lib/server/task/work-order-link.js';
+import { moveActivity } from './activity-service';
 import { db } from '#lib/server/db/index.js';
 import { contractorDetail, organization, type Organization } from '#lib/server/db/schema/party.js';
 import { mediaAttachment } from '#lib/server/db/schema/media.js';
@@ -299,6 +301,9 @@ export async function mergeOrganizations(survivorId: string, otherId: string) {
 		db.update(grantApplication).set(moveTo).where(eq(grantApplication.organizationId, otherId)),
 		db.update(sponsorship).set(moveTo).where(eq(sponsorship.organizationId, otherId)),
 		db.update(contractorJob).set(moveTo).where(eq(contractorJob.organizationId, otherId)),
+		// Its tasks and notes come too; the delete below takes the old links.
+		copyLinks('organizationId', otherId, survivorId),
+		moveActivity({ type: 'organization', id: otherId }, { type: 'organization', id: survivorId }),
 		...(survivorDetail
 			? []
 			: [

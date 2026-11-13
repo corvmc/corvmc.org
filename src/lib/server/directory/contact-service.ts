@@ -5,6 +5,9 @@ import { subscriber } from '#lib/server/db/schema/marketing.js';
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from 'drizzle-orm';
 import { CONTACT_CLAIM_RETENTION_DAYS } from '#lib/config.js';
 import { requireCapability } from '#lib/server/authorization.js';
+import { organization } from '#lib/server/db/schema/party.js';
+import { copyLinks } from '#lib/server/task/work-order-link.js';
+import { moveActivity } from '#lib/server/party/activity-service.js';
 
 /**
  * The **only** module permitted to touch the `contact` table.
@@ -408,6 +411,23 @@ const personColumns = {
 	source: contact.source
 };
 
+/** One kept person, with the organization they are at. */
+export async function getPerson(id: string) {
+	await requireCapability('contact.read');
+	const [row] = await db
+		.select({ ...personColumns, organizationName: organization.name })
+		.from(contact)
+		.leftJoin(organization, eq(organization.id, contact.organizationId))
+		.where(and(eq(contact.id, id), kept(new Date())))
+		.limit(1);
+	if (!row) throw new ContactNotFoundError();
+	const roles = await db
+		.select({ role: partyRole.role })
+		.from(partyRole)
+		.where(eq(partyRole.contactId, id));
+	return { ...row, roles: roles.map((r) => r.role) };
+}
+
 /** Everyone kept at an organization, the main person first. */
 export async function listPeople(organizationId: string) {
 	await requireCapability('contact.read');
@@ -549,6 +569,9 @@ export async function mergeContacts(survivorId: string, otherId: string): Promis
 		...roles.map((r) =>
 			db.insert(partyRole).values({ contactId: survivorId, role: r.role }).onConflictDoNothing()
 		),
+		// Their tasks and notes come too; the delete below takes the old links.
+		copyLinks('contactId', otherId, survivorId),
+		moveActivity({ type: 'contact', id: otherId }, { type: 'contact', id: survivorId }),
 		db.delete(contact).where(eq(contact.id, otherId))
 	]);
 	return survivor.name ?? other.name;

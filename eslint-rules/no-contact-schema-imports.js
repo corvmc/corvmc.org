@@ -27,6 +27,7 @@ const ALLOWED = [
 	'src/lib/server/directory/contact-service.ts',
 	'src/lib/server/db/schema/contact.ts',
 	'src/lib/server/db/schema/work-order-link.ts',
+	'src/lib/server/db/schema/activity.ts',
 	'src/lib/server/db/schema/index.ts'
 ];
 

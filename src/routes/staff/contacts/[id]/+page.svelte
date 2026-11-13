@@ -37,6 +37,7 @@
 	import { goto } from '$app/navigation';
 	import { routeParams } from '#lib/route-params.svelte.js';
 	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
+	import PartyTimeline from '../PartyTimeline.svelte';
 	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
 
 	const params = routeParams('id');
@@ -206,7 +207,11 @@
 					{@const dropPerson = removePerson.for(person.id)}
 					<tr>
 						<td class="cell-primary">
-							<span class="font-medium">{person.name ?? m.staff_contacts_unnamed_text()}</span>
+							<a
+								class="link font-medium"
+								href={resolve('/staff/contacts/people/[id]', { id: person.id })}
+								>{person.name ?? m.staff_contacts_unnamed_text()}</a
+							>
 							{#if person.role}<div class="truncate text-muted">{person.role}</div>{/if}
 						</td>
 						<td>{person.email ?? '—'}</td>
@@ -309,6 +314,9 @@
 		</InfoCard>
 	{/if}
 
+	{#if org.people !== null}
+		<PartyTimeline party={{ type: 'organization', id: org.id }} canManage={org.canManage} />
+	{/if}
 	<RelatedTasks subject={{ type: 'organization', id: org.id }} />
 	<RelatedShifts subject={{ type: 'organization', id: org.id }} />
 </PageContent>

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "091fb0d2-9b69-4e02-9e27-da7efcb47f4d",
+  "id": "de3492b7-2f0b-4403-8471-ffbc29950cc4",
   "prevIds": [
-    "1943e846-57f6-4119-952a-973fdc2a1476"
+    "091fb0d2-9b69-4e02-9e27-da7efcb47f4d"
   ],
   "ddl": [
     {
@@ -400,6 +400,10 @@
     },
     {
       "name": "work_order_link",
+      "entityType": "tables"
+    },
+    {
+      "name": "activity",
       "entityType": "tables"
     },
     {
@@ -11134,6 +11138,96 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "contact_id",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "occurred_on",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "author_user_id",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "instructor"
     },
     {
@@ -18393,6 +18487,51 @@
     },
     {
       "columns": [
+        "organization_id"
+      ],
+      "tableTo": "organization",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_activity_organization_id_organization_id_fk",
+      "entityType": "fks",
+      "table": "activity"
+    },
+    {
+      "columns": [
+        "contact_id"
+      ],
+      "tableTo": "contact",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_activity_contact_id_contact_id_fk",
+      "entityType": "fks",
+      "table": "activity"
+    },
+    {
+      "columns": [
+        "author_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_activity_author_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "activity"
+    },
+    {
+      "columns": [
         "user_id"
       ],
       "tableTo": "user",
@@ -20611,6 +20750,15 @@
       "nameExplicit": false,
       "name": "work_order_link_pk",
       "table": "work_order_link",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "activity_pk",
+      "table": "activity",
       "entityType": "pks"
     },
     {
@@ -24288,6 +24436,42 @@
     {
       "columns": [
         {
+          "value": "organization_id",
+          "isExpression": false
+        },
+        {
+          "value": "occurred_on",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "organization_id is not null",
+      "origin": "manual",
+      "name": "idx_activity_organization",
+      "entityType": "indexes",
+      "table": "activity"
+    },
+    {
+      "columns": [
+        {
+          "value": "contact_id",
+          "isExpression": false
+        },
+        {
+          "value": "occurred_on",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": "contact_id is not null",
+      "origin": "manual",
+      "name": "idx_activity_contact",
+      "entityType": "indexes",
+      "table": "activity"
+    },
+    {
+      "columns": [
+        {
           "value": "status",
           "isExpression": false
         },
@@ -26019,6 +26203,12 @@
       "name": "work_order_link_one_target",
       "entityType": "checks",
       "table": "work_order_link"
+    },
+    {
+      "value": "(organization_id is null) <> (contact_id is null)",
+      "name": "activity_one_owner",
+      "entityType": "checks",
+      "table": "activity"
     },
     {
       "value": "not (cost_cents < 0) and not (quoted_cents < 0)",

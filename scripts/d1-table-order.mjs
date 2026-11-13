@@ -185,6 +185,8 @@ export const tableOrder = [
 	'party_role',
 	// What a task is about: child of work_order and of each record it can name.
 	'work_order_link',
+	// A note on a party's timeline: child of organization, contact and user.
+	'activity',
 	// The contact-sheet link: child of directory_entry and user.
 	'directory_entry_link',
 	'credit_transaction',

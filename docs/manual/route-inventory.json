@@ -436,6 +436,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/contacts/people/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/contractors",
 		"panel": "staff"
 	},
