@@ -191,7 +191,7 @@ export const VOLUNTEER_ROLE_SEEDS: Array<{
 		displayOrder: 47,
 		defaultDurationMinutes: 240,
 		defaultCapacity: 1,
-		capabilityGrants: ['finance.collect']
+		capabilityGrants: ['finance.collect', 'event.checkIn']
 	},
 	{
 		// Archived so the restore path and the "archived roles still resolve in

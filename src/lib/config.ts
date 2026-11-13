@@ -2359,9 +2359,9 @@ export const capabilities = {
 	// it. A chair does this through `group_member.role = 'admin'`; this is the
 	// other door, and a headless committee has only this one.
 	committee: ['reviewApplications'],
-	// `uploadRecap` is also held for one show by that show's documentation crew,
-	// through a volunteer-role grant: see `grantableCapabilities`.
-	event: ['read', 'manage', 'publish', 'manageTickets', 'uploadRecap'],
+	// `uploadRecap` and `checkIn` are also held for one show by its crew, through
+	// a volunteer-role grant: see `grantableCapabilities`.
+	event: ['read', 'manage', 'publish', 'manageTickets', 'uploadRecap', 'checkIn'],
 	reservation: ['read', 'manage', 'comp', 'manageRecurring', 'manageClosures'],
 	// Door access: granting and revoking standing member codes, adopting the
 	// hand-made ones already on the lock, re-provisioning a booking, rotating the
@@ -2705,6 +2705,8 @@ export const grantableCapabilities = {
 	'incident.file': { label: 'File an incident report for the show', role: { graceDays: 7 } },
 	// The door shift takes card payments for its own show, during the shift (#1630).
 	'finance.collect': { label: 'Take card payments at the door', role: { graceDays: 0 } },
+	// The door list: every attendee's name and ticket code, during the shift (#2794).
+	'event.checkIn': { label: 'Check people in at the door', role: { graceDays: 0 } },
 	'sponsor.read': { label: 'See sponsors', committee: 'org' },
 	'sponsor.manage': { label: 'Manage sponsors', committee: 'org' },
 	'grant.read': { label: 'See grants', committee: 'org' },
