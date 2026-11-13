@@ -174,23 +174,28 @@
 				field.as(asType as any, value);
 	});
 
-	// Hydration would assign the spread's `value` to an input a visitor already
-	// typed into, so it and `defaultValue` are held back until mount. Typed text
-	// then differs from the server-rendered default, and an `input` event hands it
-	// to the remote form.
+	// Hydration would overwrite text typed before it, so `value` and `defaultValue`
+	// are held back until mount; the `input` event then hands typed text to the form.
+	// Not a `$derived`, and keyed on a plain flag: an input event handled while a
+	// query refresh is pending re-ran the spread with the cached pre-mount result,
+	// dropping `value` and emptying the input before submit (#2664). `hydrated`
+	// only re-runs the spread.
 	let hydrated = $state(false);
+	let mounted = false;
 	let fieldInput = $state<HTMLInputElement>();
-	let spreadAttrs = $derived.by(() => {
-		if (!fieldAttrs || hydrated) return fieldAttrs;
+	function spreadOf(attrs: NonNullable<typeof fieldAttrs>) {
+		void hydrated;
+		if (mounted) return attrs;
 		// Annotated wider so members without the keys (file, select) destructure too.
-		const wide: typeof fieldAttrs & { value?: unknown; defaultValue?: unknown } = fieldAttrs;
-		const { value: _value, defaultValue: _default, ...attrs } = wide;
-		return attrs;
-	});
+		const wide: typeof attrs & { value?: unknown; defaultValue?: unknown } = attrs;
+		const { value: _value, defaultValue: _default, ...held } = wide;
+		return held;
+	}
 	onMount(() => {
 		if (fieldInput && fieldInput.value !== fieldInput.defaultValue) {
 			fieldInput.dispatchEvent(new Event('input', { bubbles: true }));
 		}
+		mounted = true;
 		hydrated = true;
 	});
 
@@ -408,13 +413,13 @@
 			replaceLabel={rest.replaceLabel}
 			disabled={pending || readonly}
 		/>
-	{:else if field && spreadAttrs}
+	{:else if field && fieldAttrs}
 		<input
 			bind:this={fieldInput}
 			class="input w-full"
 			class:ghost={readonly}
 			{...rest}
-			{...spreadAttrs}
+			{...spreadOf(fieldAttrs)}
 			{type}
 			id={resolvedId}
 			disabled={pending || readonly}
