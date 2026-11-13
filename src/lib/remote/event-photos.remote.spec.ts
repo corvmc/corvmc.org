@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Each recap-photo write must refuse a caller without `event.manage` before
-// any service call, and must pass the event id it was given through as the
-// scope — never a client-supplied route param.
+// Each recap write must refuse a caller without its grant before any service
+// call, and must pass the event id it was given through as the scope — never a
+// client-supplied route param.
 
 let allowed = false;
 let canUploadRecap = false;
@@ -13,9 +13,10 @@ const requireCapability = vi.fn(async (cap: string) => {
 	if (!allowed) throw new Error(`403: ${cap}`);
 	return { id: 'staff-1' };
 });
-const can = vi.fn(async (_cap: string, scope?: { eventId?: string }) =>
-	scope?.eventId ? scope.eventId === crewEvent : canUploadRecap
-);
+const can = vi.fn(async (cap: string, scope?: { eventId?: string }) => {
+	if (cap === 'event.manage') return allowed;
+	return scope?.eventId ? scope.eventId === crewEvent : canUploadRecap;
+});
 const requireUser = vi.fn(() => {
 	if (!signedIn) throw new Error('401');
 	return { id: canUploadRecap ? 'staff-1' : 'member-1' };
@@ -68,8 +69,7 @@ const photo = new File([new Uint8Array(4)], 'a.jpg', { type: 'image/jpeg' });
 describe('event-photos.remote', () => {
 	it.each([
 		['removeEventPhoto', { eventId: 'e1', attachmentId: 'a1' }],
-		['describeEventPhoto', { eventId: 'e1', attachmentId: 'a1', altText: 'x', caption: '' }],
-		['saveEventRecapText', { eventId: 'e1', recapText: 'A good night' }]
+		['describeEventPhoto', { eventId: 'e1', attachmentId: 'a1', altText: 'x', caption: '' }]
 	])('%s refuses a caller without event.manage before any service call', async (name, data) => {
 		await expect(remote[name](data)).rejects.toThrow('403: event.manage');
 		for (const fn of Object.values(svc)) expect(fn).not.toHaveBeenCalled();
@@ -138,19 +138,61 @@ describe('event-photos.remote', () => {
 	it('saves the written recap for event.manage and refreshes both pages (#1401)', async () => {
 		allowed = true;
 		await remote.saveEventRecapText({ eventId: 'e1', recapText: 'A good night' });
-		expect(requireCapability).toHaveBeenCalledWith('event.manage');
+		expect(can).toHaveBeenCalledWith('event.manage');
 		expect(svc.setEventRecapText).toHaveBeenCalledWith('e1', 'A good night');
 		expect(refresh).toHaveBeenCalled();
 		expect(refreshPublic).toHaveBeenCalled();
 	});
 
-	// A photographer may upload, but the paragraph is staff's to write.
-	it('refuses the written recap to a photographer without event.manage', async () => {
+	// #2544: the show's photographer writes that show's recap, and only that show's.
+	it("saves the written recap for this event's photographer", async () => {
 		crewEvent = 'e1';
+		await remote.saveEventRecapText({ eventId: 'e1', recapText: 'Mine' });
+		expect(can).toHaveBeenCalledWith('event.uploadRecap', { eventId: 'e1' });
+		expect(svc.setEventRecapText).toHaveBeenCalledWith('e1', 'Mine');
+		expect(refreshPublic).toHaveBeenCalled();
+		expect(refresh).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		[
+			'the photographer of another event',
+			() => {
+				crewEvent = 'e2';
+			}
+		],
+		['a member without the grant', () => undefined],
+		// An org-wide uploader without event.manage writes from neither page.
+		[
+			'an uploader without event.manage',
+			() => {
+				canUploadRecap = true;
+			}
+		]
+	])('refuses the written recap to %s', async (_who, arrange) => {
+		arrange();
 		await expect(remote.saveEventRecapText({ eventId: 'e1', recapText: 'Mine' })).rejects.toThrow(
-			'403: event.manage'
+			'403'
 		);
 		expect(svc.setEventRecapText).not.toHaveBeenCalled();
+	});
+
+	it('refuses the written recap to a signed-out caller', async () => {
+		signedIn = false;
+		await expect(remote.saveEventRecapText({ eventId: 'e1', recapText: 'Mine' })).rejects.toThrow(
+			'401'
+		);
+		expect(svc.setEventRecapText).not.toHaveBeenCalled();
+	});
+
+	it('keeps captions, alt text and removal from the photographer', async () => {
+		crewEvent = 'e1';
+		await expect(remote.removeEventPhoto({ eventId: 'e1', attachmentId: 'a1' })).rejects.toThrow(
+			'403: event.manage'
+		);
+		await expect(
+			remote.describeEventPhoto({ eventId: 'e1', attachmentId: 'a1', caption: 'x' })
+		).rejects.toThrow('403: event.manage');
 	});
 
 	it('scopes removal and description to the event', async () => {

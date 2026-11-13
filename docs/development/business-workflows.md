@@ -1135,8 +1135,9 @@ on a bill and have it appear on that band's own profile without their say-so.
   (`event-photos.remote.ts`) attaches photos to the listing's `gallery` slot through
   `event/event-photo-service.ts`, at most 10 per upload and 60 per event. The uploader holds
   `event.uploadRecap` everywhere, or for that one show through a volunteer-role grant
-  (`recapUploadAccess` in `event/recap-access.ts`). Captions, alt text, removal and the written
-  `recapText` need `event.manage`. Removing a photo detaches it, and the media sweep reclaims the
+  (`recapUploadAccess` in `event/recap-access.ts`). `saveEventRecapText` writes `recapText` for
+  `event.manage`, or for that show's photographer, who gets the field beside the uploader on the
+  public event page. Captions, alt text and removal need `event.manage`. Removing a photo detaches it, and the media sweep reclaims the
   object. `/events/[id]#photos` shows the gallery, and `listRecentRecaps` feeds the Recent recaps
   strip on `/events`.
 

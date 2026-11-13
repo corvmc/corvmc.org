@@ -44,7 +44,7 @@
 	} from '#lib/remote/community-events.remote.js';
 	import { rowLink } from '#lib/actions/row-link.js';
 	import RecapPhotos from './RecapPhotos.svelte';
-	import RecapText from './RecapText.svelte';
+	import RecapText from '#lib/components/events/RecapText.svelte';
 	import EventRsvps from './EventRsvps.svelte';
 	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
 	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';

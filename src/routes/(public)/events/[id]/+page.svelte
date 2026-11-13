@@ -19,6 +19,7 @@
 	import ShareButton from '#lib/components/ui/ShareButton.svelte';
 	import EventPhotos from './EventPhotos.svelte';
 	import RecapUpload from './RecapUpload.svelte';
+	import RecapText from '#lib/components/events/RecapText.svelte';
 	import MarketVendors from './MarketVendors.svelte';
 	import SponsorCredit from './SponsorCredit.svelte';
 	import RsvpControl from './RsvpControl.svelte';
@@ -330,6 +331,11 @@
 
 		{#if data.recapUpload}
 			<RecapUpload eventId={evt.id} recap={data.recapUpload} />
+			<RecapText
+				eventId={evt.id}
+				text={data.recapUpload.recapText}
+				closedReason={data.recapUpload.closedReason}
+			/>
 		{/if}
 
 		{#if data.upcoming.length > 0}
