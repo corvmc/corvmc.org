@@ -57,7 +57,7 @@ export const BLOCK_LABELS: Record<Block['type'], { label: string; description: s
 	gallery: { label: 'Gallery', description: 'Photo gallery grid' },
 	press: { label: 'Press', description: 'Press quotes from your press kit' },
 	achievements: { label: 'Achievements', description: 'Highlights from your press kit' },
-	tech_rider: { label: 'Tech Rider', description: 'Stage plot and backline requirements' },
+	tech_rider: { label: 'Tech rider', description: 'Stage plot and backline requirements' },
 	merch: { label: 'Merch', description: 'Merchandise links' },
 	custom_html: { label: 'Custom HTML', description: 'Custom HTML content (sanitized)' },
 	contact: { label: 'Contact', description: 'Booking contacts and a message form' },

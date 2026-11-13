@@ -54,7 +54,7 @@ Everything else is grouped by what it's for:
 - **Programs** — **Events**: creating and running events, ticketing, and check-in.
 - **Moderation** — **Content Flags** and **Suggestions**. What waits on you in either is on the
   dashboard.
-- **Outreach** — **Campaigns**, **Audiences**, and **Help Articles**.
+- **Outreach** — **Campaigns**, **Audiences**, and **Help articles**.
 - **Money** — **Payments** and **Credits**.
 - **System** — **Settings**.
 

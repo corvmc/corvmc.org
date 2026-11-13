@@ -10,7 +10,7 @@ sortOrder: 3
 ## Arranging your page
 
 Your page arrives already built. Every block is on it from the start, so the
-**Page Editor** is about arranging what's there rather than assembling it:
+**Page editor** is about arranging what's there rather than assembling it:
 
 1. **Reordering** — Move blocks up and down to control the page flow.
 2. **Configuring each block** — Open a block to edit its properties (text, items,

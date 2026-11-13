@@ -264,7 +264,7 @@ export const staffNavSections: StaffNavSection[] = [
 			{
 				key: 'local-resources',
 				capability: 'localResource.manage',
-				label: 'Local Resources',
+				label: 'Local resources',
 				href: resolve('staff/local-resources')
 			}
 		]
@@ -366,10 +366,10 @@ export const staffNavSections: StaffNavSection[] = [
 			{
 				key: 'help',
 				capability: 'help.read',
-				label: 'Help Articles',
+				label: 'Help articles',
 				href: resolve('staff/help')
 			},
-			{ key: 'audit', capability: 'audit.read', label: 'Audit Log', href: resolve('staff/audit') }
+			{ key: 'audit', capability: 'audit.read', label: 'Audit log', href: resolve('staff/audit') }
 		]
 	}
 ];

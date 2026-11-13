@@ -14,7 +14,7 @@ import {
  * staff — `getBandLayout` returns `role ?? 'staff'`, so those two are the same
  * shape as a real role. This pins the whole matrix.
  */
-function labelsFor(overrides: Partial<BandNavInput> = {}): string[] {
+function keysFor(overrides: Partial<BandNavInput> = {}): string[] {
 	return bandNavItems({
 		slug: 'the-velvet-underground',
 		bandId: 'band-1',
@@ -23,16 +23,16 @@ function labelsFor(overrides: Partial<BandNavInput> = {}): string[] {
 		isStaff: false,
 		features: {},
 		...overrides
-	}).map((i) => i.label);
+	}).map((i) => i.key);
 }
 
 describe('bandNavItems', () => {
 	it('gives every role Dashboard, Members and Events', () => {
 		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
-			const labels = labelsFor({ userRole, isStaff: userRole === 'staff' });
-			expect(labels).toContain('Dashboard');
-			expect(labels).toContain('Members');
-			expect(labels).toContain('Events');
+			const keys = keysFor({ userRole, isStaff: userRole === 'staff' });
+			expect(keys).toContain('dashboard');
+			expect(keys).toContain('members');
+			expect(keys).toContain('events');
 		}
 	});
 
@@ -45,16 +45,16 @@ describe('bandNavItems', () => {
 	 */
 	it('gives the tech rider to every role, including staff', () => {
 		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
-			expect(labelsFor({ userRole, isStaff: userRole === 'staff' })).toContain('Tech rider');
+			expect(keysFor({ userRole, isStaff: userRole === 'staff' })).toContain('rider');
 		}
 	});
 
 	// The reported bug: an admin could not reach the band's address at all,
 	// because the whole Settings entry was gated on owner.
 	it('gives Settings to an owner and an admin, but not a plain member', () => {
-		expect(labelsFor({ userRole: 'owner' })).toContain('Settings');
-		expect(labelsFor({ userRole: 'admin' })).toContain('Settings');
-		expect(labelsFor({ userRole: 'member' })).not.toContain('Settings');
+		expect(keysFor({ userRole: 'owner' })).toContain('settings');
+		expect(keysFor({ userRole: 'admin' })).toContain('settings');
+		expect(keysFor({ userRole: 'member' })).not.toContain('settings');
 	});
 
 	// Answering a booking enquiry commits the act to a date and a price, so it
@@ -67,14 +67,14 @@ describe('bandNavItems', () => {
 	// `band-messages.remote.ts` is what refuses the rest, as it always was.
 	it('gives Messages to everyone in the band, and to staff reading it', () => {
 		for (const userRole of ['owner', 'admin', 'member'] as const) {
-			expect(labelsFor({ userRole }), userRole).toContain('Messages');
+			expect(keysFor({ userRole }), userRole).toContain('messages');
 		}
-		expect(labelsFor({ userRole: 'staff', isStaff: true })).toContain('Messages');
+		expect(keysFor({ userRole: 'staff', isStaff: true })).toContain('messages');
 	});
 
 	it('no longer offers Chat as a row of its own', () => {
 		for (const userRole of ['owner', 'member'] as const) {
-			expect(labelsFor({ userRole }), userRole).not.toContain('Chat');
+			expect(keysFor({ userRole }), userRole).not.toContain('chat');
 		}
 	});
 
@@ -124,19 +124,19 @@ describe('bandNavItems', () => {
 			isStaff: false,
 			features: { bandAudio: true }
 		};
-		expect(bandNavItems(premiumOwner).map((i) => i.label)).not.toContain('View Live Site');
+		expect(bandNavItems(premiumOwner).map((i) => i.key)).not.toContain('live-site');
 		// It was the only external row; nothing else in the panel leaves the app.
 		expect(bandNavItems(premiumOwner).every((i) => i.href.startsWith('/'))).toBe(true);
 	});
 
 	it('sends a staff non-member to staff tools instead of Settings', () => {
-		const labels = labelsFor({ userRole: 'staff', isStaff: true });
-		expect(labels).not.toContain('Settings');
-		expect(labels).toContain('Staff tools');
+		const keys = keysFor({ userRole: 'staff', isStaff: true });
+		expect(keys).not.toContain('settings');
+		expect(keys).toContain('staff-tools');
 	});
 
 	it('offers no staff-tools shortcut to an ordinary member', () => {
-		expect(labelsFor({ userRole: 'member' })).not.toContain('Staff tools');
+		expect(keysFor({ userRole: 'member' })).not.toContain('staff-tools');
 	});
 
 	// Music is flag-gated, and unlike Settings it is gated on the *flag only* —
@@ -147,8 +147,8 @@ describe('bandNavItems', () => {
 	it('shows Music to every role once bandAudio is on, and to none while it is off', () => {
 		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
 			const isStaff = userRole === 'staff';
-			expect(labelsFor({ userRole, isStaff, features: { bandAudio: true } })).toContain('Releases');
-			expect(labelsFor({ userRole, isStaff })).not.toContain('Releases');
+			expect(keysFor({ userRole, isStaff, features: { bandAudio: true } })).toContain('music');
+			expect(keysFor({ userRole, isStaff })).not.toContain('music');
 		}
 	});
 
@@ -158,37 +158,37 @@ describe('bandNavItems', () => {
 	it('keeps Payouts to owner and admin, while Music stays open to members', () => {
 		const on = { features: { bandAudio: true } };
 		for (const userRole of ['owner', 'admin']) {
-			expect(labelsFor({ ...on, userRole })).toContain('Payouts');
+			expect(keysFor({ ...on, userRole })).toContain('payouts');
 		}
-		const member = labelsFor({ ...on, userRole: 'member' });
-		expect(member).toContain('Releases');
-		expect(member).not.toContain('Payouts');
+		const member = keysFor({ ...on, userRole: 'member' });
+		expect(member).toContain('music');
+		expect(member).not.toContain('payouts');
 	});
 
 	it('hides Payouts with the flag off, even from an owner', () => {
-		expect(labelsFor({ userRole: 'owner' })).not.toContain('Payouts');
+		expect(keysFor({ userRole: 'owner' })).not.toContain('payouts');
 	});
 
 	// Written when `bandPremium` was still a flag, to pin that being premium was
 	// not itself enough to reach Releases. The flag has launched and gone, so the
 	// stand-in is the tier — which must still not open this row on its own.
 	it('does not let the premium tier stand in for bandAudio', () => {
-		expect(labelsFor({ userRole: 'owner', tier: 'premium' })).not.toContain('Releases');
+		expect(keysFor({ userRole: 'owner', tier: 'premium' })).not.toContain('music');
 	});
 
 	// Billing really is owner-only on the server, so this gate stays as it was.
 	// The point of the test is that widening Settings did not widen this.
 	it('keeps Subscription owner-only', () => {
-		expect(labelsFor({ userRole: 'owner' })).toContain('Subscription');
-		expect(labelsFor({ userRole: 'admin' })).not.toContain('Subscription');
-		expect(labelsFor({ userRole: 'member' })).not.toContain('Subscription');
+		expect(keysFor({ userRole: 'owner' })).toContain('subscription');
+		expect(keysFor({ userRole: 'admin' })).not.toContain('subscription');
+		expect(keysFor({ userRole: 'member' })).not.toContain('subscription');
 	});
 
 	// The `bandReservations` flag was retired on main; band booking is on for
 	// every member now, so this asserts presence rather than gating.
 	it('shows Reservations to every band member', () => {
 		for (const userRole of ['owner', 'admin', 'member']) {
-			expect(labelsFor({ userRole })).toContain('Reservations');
+			expect(keysFor({ userRole })).toContain('reservations');
 		}
 	});
 
@@ -201,7 +201,7 @@ describe('bandNavItems', () => {
 	 */
 	it('shows Announcements to every role', () => {
 		for (const userRole of ['owner', 'admin', 'member', 'staff']) {
-			expect(labelsFor({ userRole, isStaff: userRole === 'staff' })).toContain('Announcements');
+			expect(keysFor({ userRole, isStaff: userRole === 'staff' })).toContain('announcements');
 		}
 	});
 
@@ -209,31 +209,31 @@ describe('bandNavItems', () => {
 	// whole of it now — which is what the free-band case below is here to pin.
 	it('shows the page editor only to an admin of a premium band', () => {
 		const on = { tier: 'premium' };
-		expect(labelsFor({ ...on, userRole: 'admin' })).toContain('Page Editor');
-		expect(labelsFor({ ...on, userRole: 'owner' })).toContain('Page Editor');
-		expect(labelsFor({ ...on, userRole: 'member' })).not.toContain('Page Editor');
-		expect(labelsFor({ userRole: 'admin' })).not.toContain('Page Editor');
+		expect(keysFor({ ...on, userRole: 'admin' })).toContain('page-editor');
+		expect(keysFor({ ...on, userRole: 'owner' })).toContain('page-editor');
+		expect(keysFor({ ...on, userRole: 'member' })).not.toContain('page-editor');
+		expect(keysFor({ userRole: 'admin' })).not.toContain('page-editor');
 	});
 
 	it('offers Edit Profile to owners and admins only', () => {
-		expect(labelsFor({ userRole: 'owner' })).toContain('Edit Profile');
-		expect(labelsFor({ userRole: 'admin' })).toContain('Edit Profile');
-		expect(labelsFor({ userRole: 'member' })).not.toContain('Edit Profile');
-		expect(labelsFor({ userRole: 'staff', isStaff: true })).not.toContain('Edit Profile');
+		expect(keysFor({ userRole: 'owner' })).toContain('edit');
+		expect(keysFor({ userRole: 'admin' })).toContain('edit');
+		expect(keysFor({ userRole: 'member' })).not.toContain('edit');
+		expect(keysFor({ userRole: 'staff', isStaff: true })).not.toContain('edit');
 	});
 
 	it('offers Press Kit to owners and admins on every tier', () => {
 		// The whole point of the free press kit: it must not follow the band site.
 		// Asserted on both tiers so a future gate on this row fails here rather
 		// than in the wild.
-		expect(labelsFor({ userRole: 'owner' })).toContain('Press Kit');
-		expect(labelsFor({ userRole: 'admin' })).toContain('Press Kit');
-		expect(labelsFor({ userRole: 'admin', tier: 'premium' })).toContain('Press Kit');
+		expect(keysFor({ userRole: 'owner' })).toContain('press-kit');
+		expect(keysFor({ userRole: 'admin' })).toContain('press-kit');
+		expect(keysFor({ userRole: 'admin', tier: 'premium' })).toContain('press-kit');
 	});
 
 	it('withholds Press Kit from members and non-member staff', () => {
-		expect(labelsFor({ userRole: 'member' })).not.toContain('Press Kit');
-		expect(labelsFor({ userRole: 'staff', isStaff: true })).not.toContain('Press Kit');
+		expect(keysFor({ userRole: 'member' })).not.toContain('press-kit');
+		expect(keysFor({ userRole: 'staff', isStaff: true })).not.toContain('press-kit');
 	});
 
 	it('points Staff tools at the band id, not its slug', () => {

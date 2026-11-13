@@ -248,7 +248,7 @@ describe('the nav tree', () => {
 	it('has no Door Sales row', () => {
 		const hrefs = allStaffNavItems().map((i) => i.href);
 		expect(hrefs.some((h) => h.includes('/member/volunteer/door'))).toBe(false);
-		expect(allStaffNavItems().map((i) => i.label)).not.toContain('Door Sales');
+		expect(allStaffNavItems().map((i) => i.key)).not.toContain('door-sales');
 	});
 
 	it('finds the owning section for every row', () => {

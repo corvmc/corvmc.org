@@ -10,9 +10,9 @@ sortOrder: 6
 ## Electronic Press Kit (EPK)
 
 Premium bands get an EPK editor for the information venues, bookers, and press
-need. Open it from **Press Kit** in your band's menu — it is free for every band, whether or
+need. Open it from **Press kit** in your band's menu — it is free for every band, whether or
 not you have a band site. The data you enter feeds your page's
-Press, Contact, and Tech Rider blocks.
+Press, Contact, and Tech rider blocks.
 
 ## What to fill in
 

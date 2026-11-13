@@ -38,7 +38,7 @@ wrong.
 | On screen                  | In the database                             | Note                                                                                          |
 | -------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | **Act**                    | `group` where `kind = 'band'`               | The UI says "act" everywhere. There is no `band` table.                                       |
-| **Press kit**              | `band_site.epk`                             | Was "Electronic Press Kit / EPK". Do not reintroduce the acronym; the nav row is "Press Kit". |
+| **Press kit**              | `band_site.epk`                             | Was "Electronic Press Kit / EPK". Do not reintroduce the acronym; the nav row is "Press kit". |
 | **Highlights**             | `epk.achievements`                          |                                                                                               |
 | **Where enquiries go**     | `directory_entry.contact`                   | Never rendered publicly. The label has to say so or a band assumes it is on display.          |
 | **Something to listen to** | a streaming link in `directory_entry.links` | Ladder rung. Satisfied by any streaming platform, including ones with no in-page embed.       |
