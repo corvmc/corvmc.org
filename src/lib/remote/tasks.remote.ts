@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { query } from '$app/server';
-import { form } from './_remote';
+import { command, form } from './_remote';
 import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import { requireProjectCommittee } from '#lib/server/group/group-context.js';
 import { mapDomainError } from '#lib/server/errors.js';
@@ -15,6 +15,13 @@ import {
 import { listDutyLists } from '#lib/server/volunteer/duty-list-service.js';
 import { getProjectActivity, getProjectDetail } from './projects.remote';
 import { createTask, rescheduleTask } from '#lib/server/project/project-task-service.js';
+import {
+	createSection,
+	deleteSection,
+	listSections,
+	renameSection,
+	reorderSections
+} from '#lib/server/project/project-section-service.js';
 import { listJobs } from '#lib/server/contractor/contractor-job-service.js';
 import { listTaskCatalogue } from '#lib/server/volunteer/task-catalogue.js';
 import { listOpenBlockers } from '#lib/server/volunteer/task-dependencies.js';
@@ -47,6 +54,8 @@ import { relatedSubjectTypes } from '#lib/utils/related-tasks.js';
  */
 
 const projectId = z.uuid();
+const sectionId = z.string().min(1);
+const sectionName = z.string().trim().min(1, 'Give it a name').max(80);
 /** A cleared `select` posts `''`. */
 const optionalId = z.union([z.literal(''), z.string().min(1)]).optional();
 
@@ -99,7 +108,7 @@ export const getTasksPage = query(
 					await Promise.all([listJobs({ view: 'open' }), listJobs({ view: 'awaiting-invoice' })])
 				).flat()
 			: [];
-		const [tasks, projects, committees, templates, waitsOn] = await Promise.all([
+		const [tasks, projects, committees, templates, waitsOn, sections] = await Promise.all([
 			listTaskCatalogue({
 				projectId: f.projectId,
 				volunteerRoleId: f.volunteerRoleId || undefined,
@@ -110,7 +119,8 @@ export const getTasksPage = query(
 			listProjects({ archived: false }),
 			listCommittees(),
 			listDutyLists(),
-			listOpenBlockers()
+			listOpenBlockers(),
+			f.projectId ? listSections(f.projectId) : []
 		]);
 		return {
 			tasks,
@@ -123,7 +133,9 @@ export const getTasksPage = query(
 				.filter((t) => t.itemCount > 0 && !t.grantStage)
 				.map((t) => ({ id: t.id, name: t.name })),
 			// Per open task, the open tasks it waits on: Blocked, by name (#2625).
-			waitsOn
+			waitsOn,
+			// One project's headings, in order: what its list groups by.
+			sections: sections.map((sec) => ({ id: sec.id, name: sec.name }))
 		};
 	}
 );
@@ -278,6 +290,7 @@ export const createCatalogueTaskForm = form(
 		title: z.string().trim().min(1, 'Give it a title').max(VOLUNTEER_SHIFT_TITLE_MAX),
 		projectId: z.union([z.literal(''), projectId]).optional(),
 		dueAt: z.string().optional(),
+		sectionId: optionalId,
 		// What `RelatedTasks` fills in from the record it sits on (#2630).
 		eventId: optionalId,
 		groupId: optionalId,
@@ -295,6 +308,7 @@ export const createCatalogueTaskForm = form(
 			const row = await createTask({
 				projectId: data.projectId,
 				title: data.title,
+				sectionId: data.sectionId || null,
 				createdByUserId: user.id,
 				...anchors
 			});
@@ -310,5 +324,40 @@ export const createCatalogueTaskForm = form(
 			...anchors
 		});
 		return { id: row.id };
+	}
+);
+
+export const createSectionForm = form(z.object({ projectId, name: sectionName }), async (data) => {
+	await guardProject(data.projectId);
+	const row = await createSection(data.projectId, data.name);
+	await refresh(data.projectId);
+	return { id: row.id };
+});
+
+export const renameSectionForm = form(
+	z.object({ projectId, sectionId, name: sectionName }),
+	async (data) => {
+		await guardProject(data.projectId);
+		await renameSection(data.projectId, data.sectionId, data.name);
+		await refresh(data.projectId);
+		return { success: true };
+	}
+);
+
+/** Its tasks move to no section; none is deleted. */
+export const deleteSectionForm = form(z.object({ projectId, sectionId }), async (data) => {
+	await guardProject(data.projectId);
+	const moved = await deleteSection(data.projectId, data.sectionId);
+	await refresh(data.projectId);
+	return { moved };
+});
+
+/** `sectionIds` names every section of the project, in its new order. */
+export const reorderSectionsCommand = command(
+	z.object({ projectId, sectionIds: z.array(sectionId).max(200) }),
+	async (data) => {
+		await guardProject(data.projectId);
+		await reorderSections(data.projectId, data.sectionIds);
+		await refresh(data.projectId);
 	}
 );

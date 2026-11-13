@@ -16,6 +16,8 @@ import { aboutWhere } from '#lib/server/task/related-tasks.js';
 import { relatedSubjectTypes } from '#lib/utils/related-tasks.js';
 import { requireProjectCommittee } from '#lib/server/group/group-context.js';
 import { getProjectById } from '#lib/server/project/project-service.js';
+import { listSections } from '#lib/server/project/project-section-service.js';
+import { moveTask, requireTaskInProject } from '#lib/server/project/project-task-service.js';
 import {
 	addDependency as addDependencyService,
 	listDependencyOptions,
@@ -2488,7 +2490,11 @@ export const getTaskPage = query(z.string(), async (id) => {
 		listTaskDependencies(id),
 		listDependencyOptions(id)
 	]);
-	return { project, ...view, engagements, contractors, dependencies, dependencyOptions };
+	// The project's sections, which the task's page names and moves it between.
+	const sections = project
+		? (await listSections(project.id)).map((sec) => ({ id: sec.id, name: sec.name }))
+		: [];
+	return { project, ...view, engagements, contractors, dependencies, dependencyOptions, sections };
 });
 
 /** A task's write: its project's committee (or staff holding `project.manage`), else the coordinator's. */
@@ -2504,6 +2510,26 @@ async function guardTaskWrite(id: string) {
 	}
 	return user;
 }
+
+/** Move a project's task to a section, or to none; it goes to the end of that group. */
+export const setTaskSection = form(
+	z.object({ id: z.string().min(1), sectionId: z.string().optional() }),
+	async (data) => {
+		await guardTaskWrite(data.id);
+		const projectId = await workOrderProjectId(data.id);
+		if (!projectId) error(400, 'Only a task in a project has a section');
+		const sectionId = data.sectionId || null;
+		try {
+			const task = await requireTaskInProject(projectId, data.id);
+			if (task.sectionId === sectionId) return { success: true };
+			await moveTask(projectId, data.id, { sectionId, index: Number.MAX_SAFE_INTEGER });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await refreshWorkOrderPage(data.id);
+		return { success: true };
+	}
+);
 
 const dependencyEdge = z.object({
 	workOrderId: z.string().min(1),

@@ -178,9 +178,6 @@
 	"src/lib/server/volunteer/volunteer-role-service.ts#createVolunteerRole(0)": {
 		"skillMatches": "elsewhere: the role update form writes it"
 	},
-	"src/lib/server/project/project-task-service.ts#createTask(0)": {
-		"sectionId": "#2625: sections have no form since the project page lists its tasks as the Tasks table"
-	},
 	"src/lib/server/volunteer/work-order-service.ts#createWorkOrder(0)": {
 		"sectionId": "internal: project-task-service#addTask places a task in its section",
 		"sortOrder": "internal: project-task-service#addTask places a task in its section"

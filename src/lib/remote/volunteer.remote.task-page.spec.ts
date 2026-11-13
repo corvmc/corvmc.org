@@ -62,6 +62,11 @@ vi.mock('#lib/server/volunteer/task-dependencies.js', () => ({
 	addDependency: edges.add,
 	removeDependency: edges.remove
 }));
+vi.mock('#lib/server/project/project-section-service.js', () => ({
+	listSections: async () => [
+		{ id: 'sec-1', name: 'Wiring', sortOrder: 0, projectId: 'proj-1', createdAt: new Date(0) }
+	]
+}));
 const loadWorkOrderView = vi.hoisted(() => vi.fn());
 vi.mock('#lib/server/volunteer/work-order-view.js', () => ({ loadWorkOrderView }));
 const listContractors = vi.hoisted(() => vi.fn());
@@ -113,7 +118,8 @@ describe('getTaskPage, for a task in no project', () => {
 			task: { id: 'wo-1' },
 			contractors: [{ id: 'c-1', name: 'Benton Electric' }],
 			dependencies: { waitsOn: [], neededFor: [] },
-			dependencyOptions: []
+			dependencyOptions: [],
+			sections: []
 		});
 	});
 
@@ -149,7 +155,8 @@ describe('getTaskPage, for a task in a project', () => {
 		granted = new Set(['project.read']);
 		loadWorkOrderView.mockResolvedValue({ task: { id: 'wo-1' } });
 		await expect(getTaskPage('wo-1')).resolves.toMatchObject({
-			project: { id: 'proj-1', name: 'Rewire the hall' }
+			project: { id: 'proj-1', name: 'Rewire the hall' },
+			sections: [{ id: 'sec-1', name: 'Wiring' }]
 		});
 		expect(requireProjectCommittee).not.toHaveBeenCalled();
 	});

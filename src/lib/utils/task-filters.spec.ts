@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
 	byWhen,
+	effectiveGrouping,
 	groupByProject,
+	groupBySection,
 	matchesChip,
 	matchesKind,
 	matchesTaskProject,
@@ -147,5 +149,48 @@ describe('order and groups', () => {
 			['p1', ['b']],
 			['p2', ['a', 'd']]
 		]);
+	});
+
+	it('lists sections in the order given and tasks in none last', () => {
+		const sections = [
+			{ id: 's2', name: 'Load-in' },
+			{ id: 's1', name: 'Prep' },
+			{ id: 's3', name: 'Strike' }
+		];
+		const rows = [
+			{ id: 'a', sectionId: 's1' },
+			{ id: 'b', sectionId: null },
+			{ id: 'c', sectionId: 's2' },
+			{ id: 'd', sectionId: 'gone' }
+		];
+		const ids = (keep: boolean) =>
+			groupBySection(sections, rows, keep).map((g) => [
+				g.section?.id ?? null,
+				g.rows.map((r) => r.id)
+			]);
+		expect(ids(false)).toEqual([
+			['s2', ['c']],
+			['s1', ['a']],
+			[null, ['b', 'd']]
+		]);
+		expect(ids(true)).toEqual([
+			['s2', ['c']],
+			['s1', ['a']],
+			['s3', []],
+			[null, ['b', 'd']]
+		]);
+	});
+
+	it('defaults to Section on a project with sections, and offers it nowhere else', () => {
+		const project = (sections: number) => ({ project: true, sections });
+		const all = { project: false, sections: 3 };
+		expect(effectiveGrouping('', project(2))).toBe('section');
+		expect(effectiveGrouping('', project(0))).toBe('due');
+		expect(effectiveGrouping('due', project(2))).toBe('due');
+		expect(effectiveGrouping('section', project(0))).toBe('section');
+		expect(effectiveGrouping('project', project(2))).toBe('due');
+		expect(effectiveGrouping('section', all)).toBe('due');
+		expect(effectiveGrouping('project', all)).toBe('project');
+		expect(effectiveGrouping('', all)).toBe('due');
 	});
 });

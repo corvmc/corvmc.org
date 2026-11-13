@@ -3330,6 +3330,35 @@
 	"staff_tasks_new_task_title": "New task",
 	"staff_tasks_due_date_label": "Due date",
 	"staff_tasks_task_added_toast": "Task added",
+	"staff_tasks_section_label": "Section",
+	"staff_tasks_no_section_text": "No section",
+	"staff_tasks_new_task_in_section_label": "New task in {name}",
+	"staff_tasks_add_section_label": "Add section",
+	"staff_tasks_add_section_title": "Add section",
+	"staff_tasks_section_added_toast": "Section added",
+	"staff_tasks_section_menu_label": "{name} section actions",
+	"staff_tasks_rename_section_label": "Rename section",
+	"staff_tasks_rename_section_title": "Rename {name}",
+	"staff_tasks_rename_label": "Rename",
+	"staff_tasks_section_renamed_toast": "Section renamed",
+	"staff_tasks_move_section_up_label": "Move section up",
+	"staff_tasks_move_section_down_label": "Move section down",
+	"staff_tasks_delete_section_label": "Delete section",
+	"staff_tasks_section_deleted_toast": "Section deleted",
+	"staff_tasks_section_empty_text": "It has no tasks.",
+	"staff_tasks_section_tasks_move_text": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Its task moves to No section. Only the heading is deleted.",
+				"countPlural=*": "Its {count} tasks move to No section. Only the heading is deleted."
+			}
+		}
+	],
+	"staff_tasks_change_section_label": "Change section",
+	"staff_tasks_change_section_title": "Change section",
+	"staff_tasks_section_changed_toast": "Section changed",
 	"staff_related_tasks_title": "Related tasks",
 	"staff_related_tasks_view_all_label": "View all",
 	"staff_related_tasks_show_done_label": "Show done",

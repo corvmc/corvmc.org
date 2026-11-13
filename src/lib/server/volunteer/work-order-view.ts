@@ -44,7 +44,7 @@ export async function loadWorkOrderView(id: string) {
 	);
 	return {
 		// The task's own notes, not a shift's briefing: each shift carries its own.
-		task: { ...detail, notes: row.notes, cancelledByName },
+		task: { ...detail, notes: row.notes, sectionId: row.sectionId, cancelledByName },
 		shifts,
 		assignees,
 		feedback,

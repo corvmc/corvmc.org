@@ -30,6 +30,8 @@ export interface TaskRow extends TaskFacts {
 	eventTitle: string | null;
 	projectKind: ProjectKind | null;
 	projectStatus: ProjectStatus | null;
+	/** Its heading in its project's list (`project_section`); null in none. */
+	sectionId: string | null;
 	/** The next live shift still to end, else the last live one; null with no live shift. */
 	shiftAt: Date | null;
 	/** Places across its live shifts, and how many are taken. */
