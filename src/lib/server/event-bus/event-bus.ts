@@ -333,6 +333,18 @@ export interface ClassifiedExpiringEvent {
 	userEmail: string;
 }
 
+/** Staff put a classified post back on the board, or took it down (#2549). */
+export interface ClassifiedModeratedEvent {
+	postId: string;
+	title: string;
+	visibility: 'visible' | 'hidden';
+	/** Staff's reason; set on a takedown. */
+	note: string | null;
+	authorUserId: string;
+	authorName: string;
+	authorEmail: string;
+}
+
 /** A grant or sponsorship deadline coming up (#1477), for whoever manages that module. */
 export interface DevelopmentDeadlineDueEvent {
 	stage: '14d' | '3d';
@@ -977,6 +989,7 @@ export type DomainEvents = {
 	'content.flagged': ContentFlaggedEvent;
 	'suggestion.responded': SuggestionRespondedEvent;
 	'suggestion.moderated': SuggestionModeratedEvent;
+	'classified.moderated': ClassifiedModeratedEvent;
 	'suggestion.edit_reviewed': SuggestionEditReviewedEvent;
 	'moderation.appeal_filed': ModerationAppealFiledEvent;
 	'moderation.appeal_decided': ModerationAppealDecidedEvent;

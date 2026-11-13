@@ -646,6 +646,14 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'classified_moderated',
+		category: 'people',
+		label: 'Classified post reviewed',
+		// Email on: a takedown note is the author's only route back to the board.
+		description: 'Notification when staff approve, restore or take down a classified post you made',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'moderation_appeal_filed',
 		category: 'people',
 		label: 'Moderation appeal filed',

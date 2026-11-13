@@ -7,6 +7,8 @@ import { containsLiteral } from '#lib/server/db/like.js';
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { DomainError } from '../domain-error';
 import { getStanding } from '#lib/server/moderation/standing-service.js';
+import { domainEvents, type ClassifiedModeratedEvent } from '#lib/server/event-bus/event-bus.js';
+import { captureException } from '#lib/server/sentry.js';
 import {
 	CLASSIFIED_BODY_MAX,
 	CLASSIFIED_LIFETIME_DAYS,
@@ -290,23 +292,55 @@ export async function setVisibility(
 	params: { visibility: ClassifiedVisibility; note?: string | null; staffId: string | null }
 ) {
 	const [existing] = await db
-		.select({ visibility: classifiedPost.visibility })
+		.select({
+			visibility: classifiedPost.visibility,
+			title: classifiedPost.title,
+			authorUserId: classifiedPost.authorUserId,
+			authorName: user.name,
+			authorEmail: user.email
+		})
 		.from(classifiedPost)
+		.leftJoin(user, eq(user.id, classifiedPost.authorUserId))
 		.where(eq(classifiedPost.id, postId))
 		.limit(1);
 	if (!existing) throw new ClassifiedNotFoundError();
 	if (existing.visibility === params.visibility) return;
 
+	const note = params.note ? params.note.trim().slice(0, CLASSIFIED_NOTE_MAX) : null;
 	await db
 		.update(classifiedPost)
 		.set({
 			visibility: params.visibility,
-			visibilityNote: params.note ? params.note.trim().slice(0, CLASSIFIED_NOTE_MAX) : null,
+			visibilityNote: note,
 			visibilityChangedAt: new Date(),
 			visibilityChangedByUserId: params.staffId,
 			updatedAt: new Date()
 		})
 		.where(eq(classifiedPost.id, postId));
+
+	const { visibility } = params;
+	if (visibility !== 'visible' && visibility !== 'hidden') return;
+	if (!existing.authorEmail || existing.authorUserId === params.staffId) return;
+	notifyModerated({
+		postId,
+		title: existing.title,
+		visibility,
+		note,
+		authorUserId: existing.authorUserId,
+		authorName: existing.authorName ?? 'there',
+		authorEmail: existing.authorEmail
+	});
+}
+
+/** Fire-and-forget: a failed notification never fails the staff decision. */
+function notifyModerated(payload: ClassifiedModeratedEvent): void {
+	Promise.resolve().then(async () => {
+		try {
+			await domainEvents.emit('classified.moderated', payload);
+		} catch (err) {
+			captureException(err, { event: 'classified.moderated', postId: payload.postId });
+		}
+	});
 }
 
 /** Called by flag-service on each report. Only `visible` rows move, so repeats are no-ops. */

@@ -24,6 +24,9 @@ vi.mock('#lib/server/db/index.js', () => ({
 	getRowCount: (result: unknown) => (result as { changes?: number })?.changes ?? 0
 }));
 
+const emit = vi.fn(async (_name: string, _payload: unknown) => {});
+vi.mock('#lib/server/event-bus/event-bus.js', () => ({ domainEvents: { emit, on: vi.fn() } }));
+
 const svc = await import('./classified-service');
 const { classifiedPost, classifiedPostTag } = await import('#lib/server/db/schema/classified.js');
 const { memberStanding } = await import('#lib/server/db/schema/standing.js');
@@ -259,6 +262,52 @@ describe('moderation', () => {
 		await svc.setVisibility(row.id, { visibility: 'hidden', note: 'no', staffId: STAFF });
 		await svc.setVisibility(row.id, { visibility: 'visible', note: null, staffId: STAFF });
 		expect(await board({ tag: { kind: 'instrument', value: 'drums' } })).toEqual([row.id]);
+	});
+});
+
+describe('telling the author about a staff decision', () => {
+	/** The notify is fire-and-forget; let its microtask run. */
+	const settled = () => new Promise((r) => setTimeout(r, 0));
+	const moderated = () => emit.mock.calls.filter(([name]) => name === 'classified.moderated');
+
+	beforeEach(() => emit.mockClear());
+
+	it('tells the author when staff take a post down, with the note', async () => {
+		const row = await post();
+		await svc.setVisibility(row.id, { visibility: 'hidden', note: 'Say more', staffId: STAFF });
+		await settled();
+
+		expect(moderated()).toHaveLength(1);
+		expect(moderated()[0][1]).toMatchObject({
+			postId: row.id,
+			visibility: 'hidden',
+			note: 'Say more',
+			authorUserId: AUTHOR,
+			authorEmail: 'ada@example.com'
+		});
+	});
+
+	it('tells the author when staff approve a held post', async () => {
+		await testDb
+			.insert(memberStanding)
+			.values({ userId: AUTHOR, scope: 'classified', status: 'restricted' });
+		const row = await post();
+		await svc.setVisibility(row.id, { visibility: 'visible', note: null, staffId: STAFF });
+		await settled();
+
+		expect(moderated().map(([, p]) => (p as { visibility: string }).visibility)).toEqual([
+			'visible'
+		]);
+	});
+
+	it('says nothing for a report, a repeat decision, or a post sent back for review', async () => {
+		const row = await post();
+		await svc.withholdForReview(row.id);
+		await svc.setVisibility(row.id, { visibility: 'under_review', staffId: null });
+		await svc.setVisibility(row.id, { visibility: 'pending_review', staffId: STAFF });
+		await settled();
+
+		expect(moderated()).toEqual([]);
 	});
 });
 

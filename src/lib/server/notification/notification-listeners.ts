@@ -2152,6 +2152,36 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- Staff moved a classified post on or off the board (#2549) ---
+	domainEvents.on('classified.moderated', async ({ data: event }) => {
+		const shown = event.visibility === 'visible';
+		const title = shown
+			? `"${event.title}" is on the classifieds board`
+			: `"${event.title}" was taken down`;
+		await dispatch({
+			type: 'classified_moderated',
+			userId: event.authorUserId,
+			userEmail: event.authorEmail,
+			title,
+			body: event.note ?? undefined,
+			href: `/member/classifieds/${event.postId}`,
+			email: {
+				recipientName: event.authorName,
+				subject: title,
+				heading: shown ? 'Post approved' : 'Post taken down',
+				paragraphs: [
+					{
+						text: shown
+							? `Staff reviewed "${event.title}" and it is on the board.`
+							: `Staff took "${event.title}" off the board. Edit the post to send it back for review.`
+					}
+				],
+				...(event.note ? { quote: event.note } : {}),
+				cta: { label: 'View post' }
+			}
+		});
+	});
+
 	// --- A member appealed an upheld report (notify moderators) ---
 	domainEvents.on('moderation.appeal_filed', async ({ data: event }) => {
 		const staff = await listUsersWithCapability('moderation.reviewFlags');
