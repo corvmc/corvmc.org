@@ -1499,5 +1499,8 @@
 	"volunteer_work_order_view_task_updated_toast": "Task updated",
 	"volunteer_work_order_view_cancel_task_label": "Cancel task",
 	"volunteer_work_order_view_cancel_task_title": "Cancel task?",
-	"volunteer_work_order_view_cancel_task_body": "Calls off every live shift on it; the people on those shifts stay listed until they are told."
+	"volunteer_work_order_view_cancel_task_body": "Calls off every live shift on it; the people on those shifts stay listed until they are told.",
+	"grant_grant_fields_funded_project_label": "Funded project",
+	"grant_grant_fields_funded_project_body": "What the award pays for. Leave it as general support for operating money.",
+	"grant_grant_fields_general_support_label": "General support"
 }

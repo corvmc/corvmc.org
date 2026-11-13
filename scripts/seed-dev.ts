@@ -82,7 +82,7 @@ import { seedEquipmentReports } from './seed/equipment-reports';
 import { seedCrewIncidentFiling, seedIncidents } from './seed/incidents';
 import { seedMemberInvites } from './seed/member-invites';
 import { seedDutyLists } from './seed/duty-lists';
-import { seedFundingWork } from './seed/funding';
+import { seedFundedProjects, seedFundingWork } from './seed/funding';
 import { seedOrientation } from './seed/orientation';
 import { seedPracticeSpaceClearance } from './seed/practice-space';
 import {
@@ -302,6 +302,8 @@ async function main() {
 	// Last: it attaches rows every seeder above it has already written, and reads
 	// the committees, the suggestion it answers and the shows it groups.
 	const projects = await seedProjects(events, adminUser.id);
+	// After the projects it names: the seeded award and season pay for two of them.
+	await seedFundedProjects();
 	// After the committees and every show exist: Booking and Production on each show.
 	const projectCommittees = await seedProjectCommittees();
 	const maintenance = await seedMaintenanceSchedules(adminUser.id, users[0]?.id);

@@ -645,10 +645,13 @@ export interface ProductionCancelledEvent {
 
 /** A committee deliverable is due soon, or late (#1709). */
 export interface DeliverableDueItem {
-	stage: 'due_3d' | 'overdue';
+	/** `due_14d` is sent only for grant and sponsorship work. */
+	stage: 'due_14d' | 'due_3d' | 'overdue';
 	workOrderId: string;
 	title: string;
 	eventTitle: string | null;
+	/** The item's project: the show's, or the grant or sponsorship it is for. */
+	projectName: string | null;
 	/** ISO string — payload dates cross the bus serialized. */
 	dueAt: string;
 	groupName: string;

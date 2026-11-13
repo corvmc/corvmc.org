@@ -12,17 +12,22 @@ import {
 	grantDeadlineLabels,
 	openGrantStatuses,
 	type GrantDeadlineKind,
+	type GrantStage,
 	type GrantStatus
 } from '#lib/config.js';
-import { byDeadline, due, earliest, type Deadline } from '#lib/utils/deadline.js';
+import { addIsoDays, byDeadline, due, earliest, type Deadline } from '#lib/utils/deadline.js';
 import {
+	appliedGrantStages,
+	assertFundable,
 	deleteFundingProjectWrites,
 	fundingCommitteeId,
 	fundingProjectWrites,
+	grantStageTemplateId,
+	nextOpenTasks,
 	renameFundingProject,
 	stampGrantStage
 } from '#lib/server/development/funding-project.js';
-import { grantDayAt } from '#lib/server/volunteer/duty-list-service.js';
+import { applyDutyList, grantDayAt } from '#lib/server/volunteer/duty-list-service.js';
 import { placePendingWorkOrders } from '#lib/server/volunteer/retime-work-orders.js';
 
 export class GrantNotFoundError extends DomainError {
@@ -32,7 +37,35 @@ export class GrantNotFoundError extends DomainError {
 	}
 }
 
+export class GrantStageUnavailableError extends DomainError {
+	readonly httpStatus = 409;
+	constructor() {
+		super('That template is switched off or missing. Add the tasks by hand.');
+	}
+}
+
 export type GrantDeadline = Deadline<GrantDeadlineKind>;
+
+/** How far ahead of the award end the close-out template is offered. */
+const CLOSE_OUT_LEAD_DAYS = 30;
+
+/**
+ * The stage templates to offer on a grant, never applied unasked: the award's
+ * once it is awarded, and the close-out's from a month before the award ends.
+ * A stage already on the project is not offered again.
+ */
+export function grantStageOffers(
+	g: Pick<GrantApplication, 'status' | 'endsOn'>,
+	applied: ReadonlySet<GrantStage>,
+	today: string
+): GrantStage[] {
+	if (g.status !== 'awarded') return [];
+	const offers: GrantStage[] = [];
+	if (!applied.has('award')) offers.push('award');
+	const ending = g.endsOn !== null && addIsoDays(today, CLOSE_OUT_LEAD_DAYS) >= g.endsOn;
+	if (ending && !applied.has('close_out')) offers.push('close_out');
+	return offers;
+}
 
 type GrantDates = Pick<GrantApplication, 'status' | 'applyBy' | 'endsOn'>;
 
@@ -109,9 +142,11 @@ export async function listGrants(opts: { today: string; includeClosed?: boolean 
 		})
 		.from(grantApplication)
 		.innerJoin(organization, eq(organization.id, grantApplication.organizationId));
-	return withDeadlines(apps, opts.today).filter(
-		(g) => opts.includeClosed || open.includes(g.status) || g.deadline
-	);
+	const next = await nextOpenTasks(apps.flatMap((g) => (g.projectId ? [g.projectId] : [])));
+	return withDeadlines(
+		apps.map((g) => ({ ...g, nextTask: (g.projectId && next.get(g.projectId)) || null })),
+		opts.today
+	).filter((g) => opts.includeClosed || open.includes(g.status) || g.deadline);
 }
 
 export async function getGrant(id: string, today: string) {
@@ -122,18 +157,25 @@ export async function getGrant(id: string, today: string) {
 		.where(eq(grantApplication.id, id))
 		.limit(1);
 	if (!row) throw new GrantNotFoundError();
+	const projectId = row.grant.projectId;
+	const [next, applied] = await Promise.all([
+		nextOpenTasks(projectId ? [projectId] : []),
+		projectId ? appliedGrantStages(projectId) : new Set<GrantStage>()
+	]);
+	const offered = grantStageOffers(row.grant, applied, today);
+	const live = await Promise.all(offered.map(grantStageTemplateId));
 	return {
 		...row.grant,
 		funderId: row.grant.organizationId,
 		funderName: row.funderName,
-		deadline: grantDeadline(row.grant, today)
+		deadline: grantDeadline(row.grant, today),
+		nextTask: (projectId && next.get(projectId)) || null,
+		/** Stage templates to offer, each with a live template behind it. */
+		offers: offered.filter((_, i) => live[i] !== null)
 	};
 }
 
-export type GrantInput = Omit<
-	NewGrantApplication,
-	'id' | 'projectId' | 'fundsProjectId' | 'createdAt' | 'updatedAt'
->;
+export type GrantInput = Omit<NewGrantApplication, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>;
 
 /**
  * The application, its project owned by the committee holding `grant.manage`,
@@ -144,6 +186,7 @@ export async function createGrant(
 	opts: { createdByUserId?: string | null } = {}
 ): Promise<GrantApplication> {
 	await requireRole(input.organizationId, 'funder');
+	await assertFundable(input.fundsProjectId);
 	const createdByUserId = opts.createdByUserId ?? null;
 	const projectId = crypto.randomUUID();
 	const id = crypto.randomUUID();
@@ -178,6 +221,7 @@ function placeGrantWork(projectId: string, input: GrantInput) {
 
 export async function updateGrant(id: string, input: GrantInput): Promise<void> {
 	await requireRole(input.organizationId, 'funder');
+	await assertFundable(input.fundsProjectId);
 	const rows = await db
 		.update(grantApplication)
 		.set({ ...input, updatedAt: new Date() })
@@ -204,4 +248,21 @@ export async function deleteGrant(id: string): Promise<void> {
 		db.delete(grantApplication).where(eq(grantApplication.id, id)),
 		...(row.projectId ? deleteFundingProjectWrites(row.projectId) : [])
 	]);
+}
+
+/** Stamp a stage's template into the grant's project, on staff's say-so. */
+export async function applyGrantStage(
+	id: string,
+	stage: GrantStage,
+	createdByUserId: string
+): Promise<void> {
+	const [row] = await db
+		.select({ projectId: grantApplication.projectId })
+		.from(grantApplication)
+		.where(eq(grantApplication.id, id))
+		.limit(1);
+	if (!row) throw new GrantNotFoundError();
+	const templateId = await grantStageTemplateId(stage);
+	if (!templateId || !row.projectId) throw new GrantStageUnavailableError();
+	await applyDutyList(templateId, { kind: 'project', id: row.projectId }, createdByUserId);
 }

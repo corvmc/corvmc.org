@@ -164,6 +164,24 @@ describe('inline create', () => {
 		]);
 	});
 
+	it("gives a grant's or sponsorship's task its owning committee, and nobody else's", async () => {
+		const plain = await tasks.createTask({
+			projectId: PROJECT,
+			title: 'x',
+			createdByUserId: STAFF
+		});
+		expect(plain.groupId).toBeNull();
+		for (const kind of ['grant', 'sponsorship']) {
+			sqlite.exec(`update project set kind = '${kind}' where id = '${PROJECT}'`);
+			const row = await tasks.createTask({
+				projectId: PROJECT,
+				title: 'Interim report',
+				createdByUserId: STAFF
+			});
+			expect(row.groupId).toBe(COMMITTEE);
+		}
+	});
+
 	it("refuses another project's section", async () => {
 		const s = await sections.createSection(OTHER, 'Prep');
 		await expect(
