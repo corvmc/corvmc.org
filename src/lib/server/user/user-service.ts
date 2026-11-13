@@ -19,7 +19,6 @@ import { fileStaffAction } from '#lib/server/flag/flag-service.js';
 import { recordRemoval, liftOpenRemoval } from '#lib/server/moderation/removal-service.js';
 import { blockEmail, unblockForRemoval } from '#lib/server/moderation/blocklist-service.js';
 import type { RemovalLedger } from '#lib/server/db/schema/moderation.js';
-import type { RemovalLiftReason } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -315,10 +314,7 @@ export async function reactivateUser(userId: string) {
  * until `unbanUser` lifts it. An account the member already closed is banned
  * without re-running offboarding, so they cannot quietly come back.
  */
-export async function banUser(
-	userId: string,
-	opts: { actorId: string; reason: string; flagId?: string }
-) {
+export async function banUser(userId: string, opts: { actorId: string; reason: string }) {
 	if (userId === opts.actorId) throw new CannotBanSelfError();
 
 	const now = new Date();
@@ -342,16 +338,12 @@ export async function banUser(
 		? { reservationIds: [], doorCodeIds: [], billing: 'none' }
 		: (await deactivateUser(userId, { actor: 'staff' })).ledger;
 
-	const flagId =
-		opts.flagId ??
-		(
-			await fileStaffAction({
-				entityType: 'member_profile',
-				entityId: userId,
-				staffId: opts.actorId,
-				reason: opts.reason
-			})
-		).id;
+	const { id: flagId } = await fileStaffAction({
+		entityType: 'member_profile',
+		entityId: userId,
+		staffId: opts.actorId,
+		reason: opts.reason
+	});
 	const removal = await recordRemoval({
 		userId,
 		actorUserId: opts.actorId,
@@ -376,10 +368,7 @@ export async function banUser(
  * Lift a ban and restore the account. The one way back from a ban, and the
  * entry point a successful appeal would call.
  */
-export async function unbanUser(
-	userId: string,
-	opts: { actorId: string | null; liftReason?: RemovalLiftReason } = { actorId: null }
-) {
+export async function unbanUser(userId: string, opts: { actorId: string | null }) {
 	const [row] = await db
 		.update(user)
 		.set({ bannedAt: null, bannedById: null, banReason: null, updatedAt: new Date() })
@@ -397,7 +386,7 @@ export async function unbanUser(
 	const restored = await reactivateUser(userId);
 	const lifted = await liftOpenRemoval(userId, {
 		liftedByUserId: opts.actorId,
-		liftReason: opts.liftReason ?? 'staff_lifted'
+		liftReason: 'staff_lifted'
 	});
 	if (lifted) await unblockForRemoval(lifted.id);
 	await sendAccountRestoredEmail({ toEmail: row.email, name: row.name });

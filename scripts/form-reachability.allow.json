@@ -112,6 +112,9 @@
 	"src/lib/server/marketing/audience-service.ts#updateAudience(1)": {
 		"slug": "elsewhere: set at creation; renaming it would break shared opt-in links"
 	},
+	"src/lib/server/moderation/blocklist-service.ts#blockEmail(0)": {
+		"removalId": "internal: banUser links the entry to its removal"
+	},
 	"src/lib/server/notification/dispatcher.ts#dispatch(0)": {
 		"data": "internal: listeners attach notification data",
 		"email": "internal: listeners supply declared email content",

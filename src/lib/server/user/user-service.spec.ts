@@ -401,13 +401,6 @@ describe('banUser', () => {
 		);
 	});
 
-	it('uses the report it was given instead of filing one', async () => {
-		updateResult = [{ id: 'u1', email: 'm@x.com', deletedAt: new Date(), stripeId: null }];
-		await banUser('u1', { actorId: 'staff-1', reason: 'x', flagId: 'flag-9' });
-		expect(fileStaffActionMock).not.toHaveBeenCalled();
-		expect(recordRemovalMock).toHaveBeenCalledWith(expect.objectContaining({ flagId: 'flag-9' }));
-	});
-
 	it('refuses to let staff ban themselves', async () => {
 		await expect(banUser('u1', { actorId: 'u1', reason: 'x' })).rejects.toBeInstanceOf(
 			CannotBanSelfError
@@ -436,7 +429,7 @@ describe('unbanUser', () => {
 		updateResult = [{ id: 'u1', stripeId: 'cus_1', deletedAt: null }];
 		getSubscriptionMock.mockResolvedValueOnce({ cancelAtPeriodEnd: true });
 
-		const row = await unbanUser('u1');
+		const row = await unbanUser('u1', { actorId: 'staff-2' });
 
 		expect(updateSet).toHaveBeenCalledWith(
 			expect.objectContaining({ bannedAt: null, bannedById: null, banReason: null })
@@ -460,7 +453,7 @@ describe('unbanUser', () => {
 	it('emails the member that the account is restored', async () => {
 		updateResult = [{ id: 'u1', email: 'maya@example.com', name: 'Maya', stripeId: null }];
 
-		await unbanUser('u1');
+		await unbanUser('u1', { actorId: 'staff-2' });
 
 		expect(sendRestoredMock).toHaveBeenCalledWith({ toEmail: 'maya@example.com', name: 'Maya' });
 	});
@@ -468,7 +461,7 @@ describe('unbanUser', () => {
 	it('writes a user.unbanned entry before restoring the account', async () => {
 		updateResult = [{ id: 'u1', name: 'Jordan', stripeId: null, deletedAt: null }];
 
-		await unbanUser('u1');
+		await unbanUser('u1', { actorId: 'staff-2' });
 
 		expect(recordAuditEntry.mock.calls.map(([e]) => (e as { action: string }).action)).toEqual([
 			'user.unbanned',
@@ -483,7 +476,7 @@ describe('unbanUser', () => {
 
 	it('throws UserNotFoundError when the account is not banned', async () => {
 		updateResult = [];
-		await expect(unbanUser('u1')).rejects.toBeInstanceOf(UserNotFoundError);
+		await expect(unbanUser('u1', { actorId: 'staff-2' })).rejects.toBeInstanceOf(UserNotFoundError);
 		expect(sendRestoredMock).not.toHaveBeenCalled();
 	});
 });
