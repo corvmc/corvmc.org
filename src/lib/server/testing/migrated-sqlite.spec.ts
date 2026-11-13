@@ -58,6 +58,13 @@ describe('migratedSqlite', () => {
 		expect(found?.emailVerified).toBe(true);
 	});
 
+	it('gives each call its own database', () => {
+		const other = migratedSqlite();
+		other.sqlite.exec(`insert into user (id, name, email) values ('o1', 'O', 'o@example.com')`);
+		expect(sqlite.prepare(`select id from user`).all()).toEqual([{ id: 'u1' }]);
+		expect(migratedSqlite().sqlite.prepare(`select count(*) n from user`).get()).toEqual({ n: 0 });
+	});
+
 	it('refuses a statement over D1’s 100 bound parameters', async () => {
 		const insert = (n: number) =>
 			testDb
