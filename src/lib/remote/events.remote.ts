@@ -1,3 +1,4 @@
+import { getEventRiderStock } from '#lib/server/production/rider-stock-service.js';
 import { captureException } from '#lib/server/sentry.js';
 import { recordFreeTicketSale, ticketSplitMetadata } from '#lib/server/finance/ticket-entries.js';
 import { sellerFor } from '#lib/server/ticket/ticket-seller.js';
@@ -1256,7 +1257,8 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		requestableActs,
 		hostShift,
 		deliverables,
-		committees
+		committees,
+		riderStock
 	] = await Promise.all([
 		getStaffEventDetail(id),
 		listApplicableDutyLists(),
@@ -1285,7 +1287,9 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		getHostShift(id),
 		// Whose job each piece of the show is, and whether it is done (#1701).
 		listShowDeliverables(id),
-		listCommittees()
+		listCommittees(),
+		// What the bill asks CMC for, against what the catalog holds (#2724).
+		getEventRiderStock(id)
 	]);
 	// The show's budget and burn are its project's (#1673).
 	// Keyed off the production, not the listing: a listing's project is only the
@@ -1311,6 +1315,7 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		detail,
 		dutyLists,
 		riders,
+		riderStock,
 		production,
 		runOfShow,
 		actContacts,

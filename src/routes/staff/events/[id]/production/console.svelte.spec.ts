@@ -53,7 +53,7 @@ vi.mock('#lib/remote/productions.remote.js', () =>
 			'buildRunOfShowFromLineup createProduction createShow dropArtifactRequest markSlotTiming ' +
 			'moveRunOfShowSlot openHostShift recordActPayout recordDoorTake removeProductionExpense ' +
 			'removeRunOfShowSlot reopenProduction searchShowLeadCandidates setRunOfShowTerms ' +
-			'setShowLead undoActPayout updateProduction updateRunOfShowSlot usePosterArt ' +
+			'setRiderStock setShowLead undoActPayout updateProduction updateRunOfShowSlot usePosterArt ' +
 			'usePosterArtWithFooter useTemplateFlyerAsPoster'
 	)
 );
@@ -124,6 +124,7 @@ function loaded(production: unknown, canSetLead = false) {
 		},
 		dutyLists: [],
 		riders: [],
+		riderStock: { lines: [], unmatchedCount: 0, shortCount: 0, catalog: [] },
 		production,
 		runOfShow: null,
 		settlement: null,
@@ -200,6 +201,52 @@ describe('production console', () => {
 
 		// The empty state's one form is the one that opens the record.
 		await expect.element(page.getByCss('button[type="submit"]')).toBeVisible();
+	});
+
+	it('lists what the bill asks for against stock, flagging the unmatched and the short', async () => {
+		const act = {
+			id: 'eb-1',
+			name: 'Alpha',
+			entryId: 'de-1',
+			slug: 'alpha',
+			channelCount: 4,
+			phantomCount: 0,
+			venueProvidedCount: 3,
+			uploadCount: 0,
+			empty: false
+		};
+		const lines = [
+			{ id: 'el-1', match: null, short: false },
+			{
+				id: 'el-2',
+				match: { via: 'category', categoryId: 'c', categoryName: 'Mics' },
+				short: true
+			},
+			{ id: 'el-3', match: { via: 'link', itemId: 'i', itemName: 'Amp' }, short: false }
+		].map((l) => ({
+			elementId: l.id,
+			actName: 'Alpha',
+			label: l.id,
+			kind: 'vocals',
+			match: l.match,
+			needed: 3,
+			available: l.match ? 2 : null,
+			short: l.short
+		}));
+		fixture.loaded = {
+			...loaded(record),
+			riders: [act],
+			riderStock: { lines, unmatchedCount: 1, shortCount: 1, catalog: [] }
+		};
+		await render(Console);
+		await page.getByRole('tab', { name: TAB_LABELS.advance }).click();
+
+		await expect.element(page.getByTestId('stock-line').first()).toBeVisible();
+		expect(page.getByTestId('stock-line').elements()).toHaveLength(3);
+		const [unmatched, short, linked] = page.getByTestId('stock-line').elements();
+		expect(unmatched.querySelector('.badge-warning')).not.toBeNull();
+		expect(short.querySelector('.badge-error')).not.toBeNull();
+		expect(linked.querySelector('.badge-warning, .badge-error')).toBeNull();
 	});
 
 	it('marks the tab and the section that need work, and no other', async () => {

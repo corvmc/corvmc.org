@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "dff5eae0-4fb2-4c1a-afd4-c50634b4c4ae",
+  "id": "c8de3a09-49f2-4fa9-b0da-d97d00fae18a",
   "prevIds": [
-    "a6d48f73-25d3-44b6-88bf-755ecaffa303"
+    "dff5eae0-4fb2-4c1a-afd4-c50634b4c4ae"
   ],
   "ddl": [
     {
@@ -13525,6 +13525,16 @@
       "table": "rider_element"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "inventory_item_id",
+      "entityType": "columns",
+      "table": "rider_element"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -20031,6 +20041,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_rider_element_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "rider_element"
+    },
+    {
+      "columns": [
+        "inventory_item_id"
+      ],
+      "tableTo": "inventory_item",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_rider_element_inventory_item_id_inventory_item_id_fk",
       "entityType": "fks",
       "table": "rider_element"
     },

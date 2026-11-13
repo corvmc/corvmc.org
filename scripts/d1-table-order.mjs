@@ -182,7 +182,7 @@ export const tableOrder = [
 	// Group documents: child of group and user, nothing is a child of it.
 	'file',
 	// The tech rider, three deep: `rider` is a child of group and user,
-	// `rider_element` of rider and user, `rider_input` of rider_element and user.
+	// `rider_element` of rider, user and inventory_item, `rider_input` of rider_element and user.
 	// All three clear before `user`, which is why they sit here rather than
 	// beside `band_site` up top.
 	'rider',

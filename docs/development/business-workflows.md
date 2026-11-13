@@ -2082,6 +2082,17 @@ restore crew shifts or retract a cancellation notice.
     lists each one's cash spend in `parts`, which the budget page shows. Parents are one
     level deep: `updateProject` refuses a project as its own parent, a parent that has a
     parent, and a parent as a child (`ProjectParentError`, 400).
+15. **Rider against stock** (#2724). The Advance tab's Requested gear card reads
+    `getEventRiderStock` in `production/rider-stock-service.ts`, inside
+    `getStaffEventProduction`. It takes each `venue` rider element of the acts on the bill and
+    matches it to the catalog. A staff link (`rider_element.inventory_item_id`, set by
+    `setRiderStock`, `production.run`) wins. Without one, a category whose name has a word
+    starting with one of the kind's `KIND_CATEGORY_HINTS` is a suggestion: rider kinds are a
+    fixed list and category names are free text, so the link is the primary path. An element
+    with neither is listed as not in stock. Availability is `getAvailableQuantityMany`
+    (in-service units, or the ledger for bulk, less scheduled loans). Demand is counted per
+    act, because acts on one night share the backline between sets. A link survives the
+    band's re-save by label, as stage placement does.
 
 ### Data touched
 
@@ -2101,6 +2112,7 @@ restore crew shifts or retract a cancellation notice.
   practice room. Deliberately **not** duplicated onto `production`.
 - `event_band` — the bill, which the index summarises and the production never
   re-declares.
+- `rider_element.inventory_item_id` — the staff match from a rider request to a catalog item.
 
 ### Where it breaks
 
