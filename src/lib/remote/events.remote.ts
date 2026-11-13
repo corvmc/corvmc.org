@@ -874,6 +874,7 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 		event: {
 			id: evt.id,
 			title: evt.title,
+			shortCode: evt.shortCode ?? null,
 			description: evt.description,
 			recapText: evt.recapText,
 			startsAt: evt.startsAt,

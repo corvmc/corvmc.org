@@ -23,6 +23,18 @@ describe('ListingQrCard', () => {
 		expect(document.querySelector('[data-testid="listing-qr"] svg')).not.toBeNull();
 	});
 
+	it("encodes the event's short link when it has one", async () => {
+		const screen = await render(ListingQrCard, {
+			eventId: 'evt-1',
+			shortCode: 'k7m2qx',
+			title: 'Spring Workshop',
+			published: true,
+			origin
+		});
+
+		await expect.element(screen.getByText(`${origin}/e/k7m2qx`)).toBeVisible();
+	});
+
 	it('offers SVG and PNG downloads named after the listing', async () => {
 		const screen = await render(ListingQrCard, {
 			eventId: 'evt-1',

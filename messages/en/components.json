@@ -404,6 +404,7 @@
 	"events_listing_qr_card_download_png_label": "Download PNG",
 	"events_listing_qr_card_download_svg_label": "Download SVG",
 	"events_listing_qr_card_href_text": "{origin}/events/{eventId}",
+	"events_listing_qr_card_short_href_text": "{origin}/e/{shortCode}",
 	"events_listing_qr_card_listing_not_published_yet_so_body": "This event is not published yet, so the link shows nothing until it is.",
 	"events_listing_qr_card_svg_scales_any_print_size_text": "SVG scales to any print size; PNG is 1200px.",
 	"events_listing_qr_card_title": "QR code",

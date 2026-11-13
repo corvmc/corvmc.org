@@ -8,11 +8,14 @@
 
 	let {
 		eventId,
+		shortCode = null,
 		title,
 		published,
 		origin = page.url.origin
 	}: {
 		eventId: string;
+		/** The `/e/<code>` short link, which the code encodes when the event has one. */
+		shortCode?: string | null;
 		title: string;
 		published: boolean;
 		/** The site origin the code points at; the page's own unless a spec pins it. */
@@ -21,7 +24,11 @@
 
 	// Built by hand rather than with `resolve()`: the code must hold an absolute
 	// URL, and a printed poster outlives any base path the app might gain.
-	const href = $derived(m.events_listing_qr_card_href_text({ origin, eventId }));
+	const href = $derived(
+		shortCode
+			? m.events_listing_qr_card_short_href_text({ origin, shortCode })
+			: m.events_listing_qr_card_href_text({ origin, eventId })
+	);
 	const slug = $derived(
 		title
 			.toLowerCase()

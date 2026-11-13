@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "1efefb5b-825a-49d1-9469-30b157bf3293",
+  "id": "01ed20b7-94cc-4ddf-a897-731854299446",
   "prevIds": [
-    "cdb49f9d-d466-4b8a-b522-98dec9af9321"
+    "1efefb5b-825a-49d1-9469-30b157bf3293"
   ],
   "ddl": [
     {
@@ -2407,6 +2407,16 @@
       "default": null,
       "generated": null,
       "name": "title",
+      "entityType": "columns",
+      "table": "event_listing"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "short_code",
       "entityType": "columns",
       "table": "event_listing"
     },
@@ -21705,6 +21715,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_event_venue",
+      "entityType": "indexes",
+      "table": "event_listing"
+    },
+    {
+      "columns": [
+        {
+          "value": "short_code",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_event_short_code",
       "entityType": "indexes",
       "table": "event_listing"
     },
