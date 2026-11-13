@@ -1059,6 +1059,13 @@ Only four things refuse outright:
 
 Between the first state and a terminal one, anything else that blocks is a bug against this rule.
 
+**Named owner exceptions.** Refusals outside the four, each an owner decision recorded on its issue:
+
+- **Outstanding fees refuse a member's own booking** (#2748). Two or more practice space sessions
+  that ended still payment due, counted from the cutoff in Practice space settings, refuse a new
+  booking at the reservation remote. One fee warns; staff booking on a member's behalf are warned,
+  never refused. `src/lib/server/reservation/outstanding-fees.ts`.
+
 **The override is an escape hatch, not a feature.** The UI is designed for the usual path. Overrides
 live behind an overflow menu or a confirm step, never as a peer of the normal action, and nothing
 in the UI invites them. Because every non-terminal step can be repeated or walked back, a step's

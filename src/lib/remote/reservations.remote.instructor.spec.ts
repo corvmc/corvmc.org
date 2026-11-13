@@ -45,6 +45,12 @@ vi.mock('#lib/server/reservation/recurring-series-service.js', () => ({
 const ensureContactPhone = vi.fn(async () => true);
 vi.mock('#lib/server/user/user-service.js', () => ({ ensureContactPhone }));
 
+// The fee gate has its own specs; here it lets every booking through.
+vi.mock('#lib/server/reservation/outstanding-fees.js', () => ({
+	assertFeeGateAllows: vi.fn(async () => ({ state: 'off', fees: [] })),
+	getFeeGate: vi.fn(async () => ({ state: 'off', fees: [] }))
+}));
+
 // Nothing here should reach the database; a chainable stub makes that failure
 // loud (an unexpected read returns an empty array) rather than a thrown
 // "Database not initialized" from three frames away.

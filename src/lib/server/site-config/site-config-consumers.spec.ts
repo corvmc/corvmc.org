@@ -32,6 +32,7 @@ const READERS: Record<string, string> = {
 	'reservation.teachingMinDurationHours': 'src/lib/server/reservation/config.ts',
 	'reservation.teachingMaxAdvanceDaysOneoff': 'src/lib/server/reservation/config.ts',
 	'reservation.teachingMaxAdvanceDaysRecurring': 'src/lib/server/reservation/config.ts',
+	'reservation.feeGateFrom': 'src/lib/server/reservation/config.ts',
 
 	'volunteer.hourValueCents': 'src/lib/server/volunteer/hour-value.ts',
 	'volunteer.hourValueSource': 'src/lib/server/volunteer/hour-value.ts',

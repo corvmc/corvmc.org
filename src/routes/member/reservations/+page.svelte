@@ -91,6 +91,7 @@
 	// above exists because `async-effect-shape.spec.ts` fails the build if it is
 	// undone.
 	const isInstructor = $derived(await pageData.then((d) => d.isInstructor));
+	const feeGate = $derived(await pageData.then((d) => d.feeGate));
 
 	// Null for a member who holds the Practice space clearance.
 	const firstBooking = $derived(await pageData.then((d) => d.firstBooking));
@@ -160,11 +161,16 @@
 </script>
 
 <PageHeader title={m.member_reservations_reserve_practice_space_title()}>
-	<CreateModal {isSustaining} needsPhone={contact.needsPhone} onbooked={refreshReservations} />
+	<CreateModal
+		{isSustaining}
+		{feeGate}
+		needsPhone={contact.needsPhone}
+		onbooked={refreshReservations}
+	/>
 	{#if isInstructor}
 		<!-- A separate button rather than a mode: teaching time has its own rate,
 		     duration floor and advance window, and settles at the door. -->
-		<TeachingCreateModal needsPhone={contact.needsPhone} onbooked={refreshReservations} />
+		<TeachingCreateModal {feeGate} needsPhone={contact.needsPhone} onbooked={refreshReservations} />
 	{/if}
 </PageHeader>
 <PageContent>

@@ -9,6 +9,7 @@
 		checkConflicts,
 		createReservation
 	} from '#lib/remote/reservations.remote.js';
+	import MemberFeeNotice from './MemberFeeNotice.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
 	import { Field, Select } from '#lib/components/ui/Form/index.js';
 	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
@@ -178,6 +179,10 @@
 					placeholder={m.staff_search_by_name_email_placeholder()}
 				/>
 			</fieldset>
+
+			{#if selectedMember}
+				<MemberFeeNotice memberId={selectedMember.id} />
+			{/if}
 
 			<Field
 				field={createReservation.fields.date}

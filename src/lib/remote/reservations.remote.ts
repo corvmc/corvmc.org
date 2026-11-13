@@ -86,6 +86,7 @@ import { mapDomainError } from '#lib/server/errors.js';
 import { isAwaitingPayment, isOverdue, isTerminalStatus } from '#lib/utils/reservation-actions.js';
 import { bookerTypes, type BookerType } from '#lib/config.js';
 import { getReservationConfig, getBookingTerms, termsFor } from '#lib/server/reservation/config.js';
+import { assertFeeGateAllows, getFeeGate } from '#lib/server/reservation/outstanding-fees.js';
 import { requireInstructor } from '#lib/server/instructor/instructor-context.js';
 import { getByUserId as getInstructorByUserId } from '#lib/server/instructor/instructor-service.js';
 import {
@@ -647,6 +648,12 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 });
 
 /** Staff: search members by name or email for the create-reservation modal. */
+/** The fee gate as staff see it for a member they book for: a warning, never a refusal. */
+export const getMemberFeeGate = query(z.string().min(1), async (memberId) => {
+	await requireCapability('reservation.read');
+	return getFeeGate(memberId, { onBehalf: true });
+});
+
 export const searchMembers = query(z.string(), async (q) => {
 	await requireCapability('reservation.read');
 	if (!q || q.length < 2) return [];
@@ -1340,6 +1347,19 @@ async function payReservationRemainder(opts: {
 	return { checkoutUrl: result.checkoutUrl! };
 }
 
+/**
+ * Two or more outstanding fees refuse a member's own booking (#2748), a named
+ * exception to warn-record-allow. Staff booking on a member's behalf are not
+ * refused; `createReservation` never calls this.
+ */
+async function refuseOnOutstandingFees(userId: string): Promise<void> {
+	try {
+		await assertFeeGateAllows(userId);
+	} catch (err) {
+		mapDomainError(err);
+	}
+}
+
 /** Member: book a reservation and immediately initiate payment. */
 const bookAndPaySchema = createReservationSchema.extend({
 	recurring: z.enum(['', 'weekly', 'biweekly', 'monthly']).optional(),
@@ -1352,6 +1372,7 @@ const bookAndPaySchema = createReservationSchema.extend({
 export const bookAndPayReservation = form(bookAndPaySchema, async (data, issue) => {
 	const { locals, url } = getRequestEvent();
 	if (!locals.user) throw error(401, 'Not authenticated');
+	await refuseOnOutstandingFees(locals.user.id);
 
 	// Before anything is written: a reservation staff can't call about is the
 	// problem this guard exists to prevent.
@@ -1555,6 +1576,7 @@ export const bookInstructorReservation = form(instructorBookingSchema, async (da
 		// that sentence became a 500 "Internal Error" and a Sentry crash (#958).
 		mapDomainError(err);
 	}
+	await refuseOnOutstandingFees(currentUser.id);
 
 	// Same reason as every other booking path: a reservation staff cannot call
 	// about is the problem this guard exists to prevent.
@@ -1621,6 +1643,8 @@ const bandBookingSchema = createReservationSchema.extend({
 
 export const bookBandReservation = form(bandBookingSchema, async (data, issue) => {
 	const { user: currentUser, group: band } = await requireGroupRole({ slug: data.slug }, 'member');
+	// The booking member's own fees, not the band's: a person is on the hook.
+	await refuseOnOutstandingFees(currentUser.id);
 
 	// The band books, but a person is on the hook — same guard as a solo booking.
 	if (!(await ensureContactPhone(currentUser.id, data.phone))) {
@@ -2297,13 +2321,15 @@ export const getUserRecurringSeries = query(z.string(), async (userId) => {
 export const getBandReservationsPage = query(
 	z.object({ slug: z.string(), pastPage: z.number().int().min(1).default(1) }),
 	async ({ slug, pastPage }) => {
-		const [reservations, membership, contact] = await Promise.all([
+		// The fee gate reads the booking member's own fees, not the band's (#2748).
+		const [reservations, membership, contact, feeGate] = await Promise.all([
 			getBandReservations({ slug, pastPage }),
 			getBandMembershipStatus(slug),
-			getBookingContact()
+			getBookingContact(),
+			getFeeGate(requireUser().id)
 		]);
 
-		return { reservations, membership, contact };
+		return { reservations, membership, contact, feeGate };
 	}
 );
 
@@ -2364,13 +2390,14 @@ export const getMemberReservationsPage = query(z.void(), async () => {
 	// Joined into the page query rather than fetched by the component that needs
 	// it: a second remote query fanned out of a child is the waterfall this
 	// query exists to collapse.
-	const [active, all, membership, contact, instructor, notice] = await Promise.all([
+	const [active, all, membership, contact, instructor, notice, feeGate] = await Promise.all([
 		getReservations({ after: new Date().toISOString() }),
 		getReservations({ includeTerminal: true, newestFirst: true }),
 		getMembershipStatus(),
 		getBookingContact(),
 		getInstructorByUserId(currentUser.id),
-		getReservationConfig().then((config) => viewerNotice(config, 'user'))
+		getReservationConfig().then((config) => viewerNotice(config, 'user')),
+		getFeeGate(currentUser.id)
 	]);
 
 	// The booking surface only ever asks whether teaching terms are available, and
@@ -2388,7 +2415,8 @@ export const getMemberReservationsPage = query(z.void(), async () => {
 		// Null once the member holds the Practice space clearance.
 		firstBooking: notice.newMember
 			? { noticeMinutes: notice.minutes, tourMinutes: notice.tourMinutes }
-			: null
+			: null,
+		feeGate
 	};
 });
 

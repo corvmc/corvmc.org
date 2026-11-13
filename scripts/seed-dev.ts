@@ -98,6 +98,7 @@ import {
 import { seedVolunteerPersonas } from './seed/volunteer-personas';
 import { seedSustainingPersonas } from './seed/sustaining-personas';
 import { seedBannedPersona } from './seed/banned-persona';
+import { seedFeeGatePersonas } from './seed/fee-gate-personas';
 import { USAGE_PERSONAS, seedUsagePersonaLife, seedUsagePersonas } from './seed/usage-personas';
 import { STYLE_PERSONAS, seedStylePersonaHistory, seedStylePersonas } from './seed/style-personas';
 import { seedSuggestions } from './seed/suggestions';
@@ -296,6 +297,7 @@ async function main() {
 	// personas, so nothing that slices or indexes that array shifts under it.
 	const sustainingPersonas = await seedSustainingPersonas(roles);
 	const bannedPersona = await seedBannedPersona(roles, adminUser);
+	const feeGatePersonas = await seedFeeGatePersonas(roles);
 	const suggestions = await seedSuggestions(allUsers, adminUser, eq.restockAcquisitionId);
 	// After the suggestions and community listings, whose upheld reports it appeals.
 	const appeals = await seedModerationAppeals(allUsers, adminUser);
@@ -447,6 +449,9 @@ async function main() {
 	console.log(`  ${personas.users} volunteer demo personas`);
 	console.log(`  ${sustainingPersonas.users} sustaining demo personas`);
 	console.log(`  ${bannedPersona.users} banned persona (banned@, cannot sign in)`);
+	console.log(
+		`  ${feeGatePersonas.users} outstanding-fee personas (fees-one@ warns, fees-two@ refused; counting from ${feeGatePersonas.cutoff})`
+	);
 	console.log(
 		`  ${suggestions.total} suggestions (${suggestions.votes} votes, ${suggestions.pendingEdits} edit awaiting review)`
 	);

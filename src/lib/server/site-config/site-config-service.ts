@@ -45,6 +45,9 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	'reservation.teachingMinDurationHours': 0.5,
 	'reservation.teachingMaxAdvanceDaysOneoff': 60,
 	'reservation.teachingMaxAdvanceDaysRecurring': 90,
+	// The day the outstanding-fee gate starts counting (#2748), `YYYY-MM-DD` in
+	// club time. Empty is off: no warning and no refusal.
+	'reservation.feeGateFrom': '',
 
 	// What an hour of donated time is worth, for grant applications and impact
 	// reports. This is the *impact* rate and it covers every approved hour;
