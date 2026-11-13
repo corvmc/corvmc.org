@@ -16,7 +16,7 @@ describe('VisibilityField', () => {
 		[true, ['public', 'members', 'group']]
 	])('with a group %s offers %j', async (hasGroup, values) => {
 		await render(VisibilityField, { field, value: 'public', hasGroup });
-		const select = page.getByRole('combobox').element() as HTMLSelectElement;
+		const select = page.getByRole('combobox').element() as unknown as HTMLSelectElement;
 		expect([...select.options].map((o) => o.value)).toEqual(values);
 	});
 });
