@@ -54,10 +54,18 @@
 		role: m.staff_related_tasks_role_label,
 		recurringWork: m.staff_related_tasks_recurring_work_label
 	};
-	const CHIPS = {
-		claims: { label: m.staff_volunteer_needs_confirming_card_title_text, test: hasClaimsToConfirm },
-		short: { label: m.staff_volunteer_short_staffed_card_title_text, test: isShortStaffed }
-	} as const;
+	// Volunteering's chips, under its names.
+	const CHIP_LABELS: Record<Chip, () => string> = {
+		claims: m.staff_volunteer_needs_confirming_card_title_text,
+		short: m.staff_volunteer_short_staffed_card_title_text
+	};
+	const CHIP_TESTS: Record<
+		Chip,
+		(s: { capacity: number; claimed: number; confirmed: number }) => boolean
+	> = {
+		claims: hasClaimsToConfirm,
+		short: isShortStaffed
+	};
 
 	const volunteering = (extra: Record<string, string> = {}) =>
 		withQuery(
@@ -111,7 +119,7 @@
 						<Action
 							action={addRelatedShift}
 							label={m.staff_related_shifts_add_label()}
-							modalTitle={m.staff_related_shifts_add_label()}
+							modalTitle={m.staff_related_shifts_add_title()}
 							successToast={m.volunteer_open_shift_toast()}
 							variant="ghost"
 							size="sm"
@@ -135,7 +143,7 @@
 											label={m.staff_role_label()}
 											type="select"
 											bind:value={roleId}
-											placeholder={m.staff_related_shifts_pick_role_label()}
+											placeholder={m.staff_related_shifts_pick_role_placeholder()}
 											options={add.roles.map((r) => ({ value: r.id, label: r.name }))}
 										/>
 									{/if}
@@ -178,8 +186,8 @@
 			{/if}
 
 			<div class="flex flex-wrap gap-2" data-testid="related-shift-chips">
-				{#each Object.entries(CHIPS) as [key, c] (key)}
-					{@const n = all.filter(c.test).length}
+				{#each Object.entries(CHIP_TESTS) as [key, test] (key)}
+					{@const n = all.filter(test).length}
 					{#if n > 0 || chip === key}
 						<Button
 							size="sm"
@@ -188,7 +196,7 @@
 							data-chip={key}
 							onclick={() => (chip = chip === key ? '' : (key as Chip))}
 						>
-							{c.label()}
+							{CHIP_LABELS[key as Chip]()}
 							<Badge size="sm">{n}</Badge>
 						</Button>
 					{/if}
@@ -210,7 +218,7 @@
 			{#if all.length > 0}
 				<Table zebra={false} packed={false}>
 					{#each data.groups as group (group.key)}
-						{@const rows = group.shifts.filter((s) => !chip || CHIPS[chip].test(s))}
+						{@const rows = group.shifts.filter((s) => !chip || CHIP_TESTS[chip](s))}
 						{#if data.groups.length > 1 && rows.length > 0}
 							<tr data-testid="related-shift-group" data-relation={group.key}>
 								<td colspan="4" class="cell-group">{RELATION_LABELS[group.key]()}</td>
