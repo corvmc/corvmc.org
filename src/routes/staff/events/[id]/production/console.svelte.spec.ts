@@ -66,7 +66,8 @@ vi.mock('#lib/remote/volunteer.remote.js', () =>
 			'cancelShift claimShift confirmShiftClaims confirmSignup confirmSignups declineShiftInvitation ' +
 			'duplicateShift editVolunteerHours getActiveCertifications getShiftCandidates ' +
 			'getVolunteerRoles inviteMemberToShift logHoursForMember markSignupNoShow ' +
-			'markSignupNotified notifyCancelledShift releaseSignup submitVolunteerHours updateShift'
+			'markSignupNotified notifyCancelledShift releaseSignup setTrainedUnder submitVolunteerHours ' +
+			'updateShift'
 	)
 );
 vi.mock('#lib/remote/duty-lists.remote.js', () => stubs('applyDutyList setWorkTaskDone'));
