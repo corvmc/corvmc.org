@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "a6d48f73-25d3-44b6-88bf-755ecaffa303",
+  "id": "dff5eae0-4fb2-4c1a-afd4-c50634b4c4ae",
   "prevIds": [
-    "3f3fbb51-1763-4e51-b23a-f4738e122e4f"
+    "a6d48f73-25d3-44b6-88bf-755ecaffa303"
   ],
   "ddl": [
     {
@@ -12565,6 +12565,16 @@
       "table": "project"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "parent_project_id",
+      "entityType": "columns",
+      "table": "project"
+    },
+    {
       "type": "integer",
       "notNull": false,
       "autoincrement": false,
@@ -19771,6 +19781,21 @@
     },
     {
       "columns": [
+        "parent_project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_project_parent_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "project"
+    },
+    {
+      "columns": [
         "created_by_user_id"
       ],
       "tableTo": "user",
@@ -26051,6 +26076,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_project_kind",
+      "entityType": "indexes",
+      "table": "project"
+    },
+    {
+      "columns": [
+        {
+          "value": "parent_project_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_project_parent",
       "entityType": "indexes",
       "table": "project"
     },
