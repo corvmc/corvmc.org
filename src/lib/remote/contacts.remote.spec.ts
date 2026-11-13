@@ -64,6 +64,11 @@ const notes = {
 vi.mock('#lib/server/party/activity-service.js', () => notes);
 const timeline = { partyTimeline: vi.fn(async () => ({ items: [], hasMore: false })) };
 vi.mock('#lib/server/party/timeline.js', () => timeline);
+const gifts = { recordInKindGift: vi.fn(async () => ({ giftId: 'g1' })) };
+vi.mock('#lib/server/finance/in-kind-gift.js', () => gifts);
+vi.mock('#lib/server/development/funding-project.js', () => ({
+	listFundableProjects: vi.fn(async () => [])
+}));
 vi.mock('#lib/server/contractor/contractor-service.js', () => ({
 	getContractorById: vi.fn(async () => null)
 }));
@@ -168,6 +173,33 @@ describe('contacts.remote writes', () => {
 			remote.createOrganization({ name: 'Amp Works', role: 'contractor' })
 		).rejects.toMatchObject({ status: 422 });
 		expect(orgs.createOrganization).not.toHaveBeenCalled();
+	});
+});
+
+describe('recording an in-kind gift', () => {
+	const gift = {
+		partyType: 'organization',
+		partyId: 'o1',
+		description: 'Printed posters',
+		valueCents: 12000,
+		occurredOn: '2026-11-01'
+	};
+
+	it('refuses a caller without finance.refund, whatever contact powers they hold', async () => {
+		held = new Set(['contact.read', 'contact.manage']);
+		await expect(remote.recordGiftForm(gift)).rejects.toThrow('finance.refund');
+		await expect(remote.getGiftProjects()).rejects.toThrow('finance.refund');
+		expect(gifts.recordInKindGift).not.toHaveBeenCalled();
+	});
+
+	it('records it against the party for a finance holder', async () => {
+		held = new Set(['contact.read', 'finance.refund']);
+		await remote.recordGiftForm(gift);
+		expect(gifts.recordInKindGift).toHaveBeenCalledWith(
+			{ type: 'organization', id: 'o1' },
+			expect.objectContaining({ valueCents: 12000, occurredOn: '2026-11-01' }),
+			'acting-staff'
+		);
 	});
 });
 

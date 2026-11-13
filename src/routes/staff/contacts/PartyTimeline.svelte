@@ -11,17 +11,24 @@
 		updateActivityForm
 	} from '#lib/remote/contacts.remote.js';
 	import { activityKindLabels, activityKinds, type ActivityKind } from '#lib/config.js';
-	import { toLocalDate } from '#lib/utils/format.js';
+	import { formatCents, toLocalDate } from '#lib/utils/format.js';
+	import RecordGift from './RecordGift.svelte';
 
 	/**
 	 * One organization's or person's timeline (#2622): the notes staff logged,
 	 * changes to its grants, sponsorships and jobs, and the tasks about it that
-	 * were marked done. Notes are added, edited and deleted here.
+	 * were marked done, and its in-kind gifts. Notes are added, edited and
+	 * deleted here, and gifts recorded.
 	 */
 	let {
 		party,
-		canManage
-	}: { party: { type: 'organization' | 'contact'; id: string }; canManage: boolean } = $props();
+		canManage,
+		canRecordGift = false
+	}: {
+		party: { type: 'organization' | 'contact'; id: string };
+		canManage: boolean;
+		canRecordGift?: boolean;
+	} = $props();
 
 	type Item = NonNullable<Awaited<ReturnType<typeof getPartyTimeline>>>['items'][number];
 
@@ -37,6 +44,13 @@
 				...row,
 				href: resolve('/staff/inbox/[id]', { id: item.threadId }),
 				context: { label: m.staff_contacts_conversation_label() }
+			};
+		}
+		if (item.source === 'gift') {
+			return {
+				...row,
+				summary: `${item.summary} — ${formatCents(item.amountCents)}`,
+				context: { label: m.staff_contacts_gift_label() }
 			};
 		}
 		if (item.source === 'task') {
@@ -57,6 +71,9 @@
 	empty={{ title: m.staff_contacts_no_activity_title() }}
 >
 	{#snippet actions()}
+		{#if canRecordGift}
+			<RecordGift {party} />
+		{/if}
 		{#if canManage}
 			<Action
 				action={addActivityForm}

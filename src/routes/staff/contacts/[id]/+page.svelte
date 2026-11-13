@@ -445,7 +445,11 @@
 	{/if}
 
 	{#if org.people !== null}
-		<PartyTimeline party={{ type: 'organization', id: org.id }} canManage={org.canManage} />
+		<PartyTimeline
+			party={{ type: 'organization', id: org.id }}
+			canManage={org.canManage}
+			canRecordGift={org.canRecordGift}
+		/>
 	{/if}
 	<RelatedTasks subject={{ type: 'organization', id: org.id }} />
 	<RelatedShifts subject={{ type: 'organization', id: org.id }} />

@@ -51,7 +51,11 @@
 		</DefinitionList>
 	</InfoCard>
 
-	<PartyTimeline party={{ type: 'contact', id: person.id }} canManage={person.canManage} />
+	<PartyTimeline
+		party={{ type: 'contact', id: person.id }}
+		canManage={person.canManage}
+		canRecordGift={person.canRecordGift}
+	/>
 	<RelatedTasks subject={{ type: 'contact', id: person.id }} />
 	<RelatedShifts subject={{ type: 'contact', id: person.id }} />
 </PageContent>
