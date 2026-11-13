@@ -51,6 +51,8 @@ const getSubscriptionMock = vi.fn(async () => null as { cancelAtPeriodEnd: boole
 vi.mock('#lib/server/finance/subscription-service.js', () => ({
 	cancel: (...args: unknown[]) => subCancelMock(...args),
 	resume: (...args: unknown[]) => subResumeMock(...args),
+	pause: vi.fn(),
+	unpause: vi.fn(),
 	getSubscription: (...args: unknown[]) => getSubscriptionMock(...(args as []))
 }));
 
@@ -59,6 +61,10 @@ vi.mock('#lib/server/lock/member-code-service.js', () => ({
 	revokeMemberCode: (...args: unknown[]) => revokeMemberCodeMock(...args)
 }));
 
+vi.mock('#lib/server/moderation/removal-link.js', () => ({
+	removalLink: (id: string) => `https://corvmc.test/removed/${id}`,
+	REMOVAL_LINK_TTL_DAYS: 60
+}));
 vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const recordAuditEntry = vi.fn(async (_entry: unknown) => undefined);
@@ -78,9 +84,15 @@ vi.mock('#lib/server/flag/flag-service.js', () => ({
 }));
 const recordRemovalMock = vi.fn(async (_p: unknown) => ({ id: 'removal-1' }));
 const liftOpenRemovalMock = vi.fn(async (..._a: unknown[]) => ({ id: 'removal-1' }) as unknown);
+const getOpenRemovalMock = vi.fn(async (_id: string) => null as unknown);
 vi.mock('#lib/server/moderation/removal-service.js', () => ({
 	recordRemoval: (p: unknown) => recordRemovalMock(p),
-	liftOpenRemoval: (...a: unknown[]) => liftOpenRemovalMock(...a)
+	liftOpenRemoval: (...a: unknown[]) => liftOpenRemovalMock(...a),
+	getOpenRemoval: (id: string) => getOpenRemovalMock(id),
+	listLapsedSuspensions: vi.fn(async () => [])
+}));
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
+	config: vi.fn(async () => 90)
 }));
 const blockEmailMock = vi.fn(async (_p: unknown) => undefined);
 const unblockForRemovalMock = vi.fn(async (_id: string) => undefined);
@@ -360,7 +372,11 @@ describe('banUser', () => {
 
 		await banUser('u1', { actorId: 'staff-1', reason: 'Threatened another member' });
 
-		expect(sendSuspendedMock).toHaveBeenCalledWith({ toEmail: 'maya@example.com', name: 'Maya' });
+		expect(sendSuspendedMock).toHaveBeenCalledWith({
+			toEmail: 'maya@example.com',
+			name: 'Maya',
+			appealUrl: 'https://corvmc.test/removed/removal-1'
+		});
 		expect(JSON.stringify(sendSuspendedMock.mock.calls)).not.toContain('Threatened');
 	});
 

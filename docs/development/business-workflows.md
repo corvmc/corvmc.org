@@ -1263,7 +1263,8 @@ Decisions: [listings publish first and are moderated after](../decisions/0006-li
 [member standing is one table keyed by scope](../decisions/0038-member-standing-is-one-table-keyed-by-scope.md) ·
 [one report takes a suggestion off the board](../decisions/0036-one-report-takes-a-suggestion-off-the-board.md) ·
 [suggestion edits lock at the first outside vote](../decisions/0037-suggestion-edits-lock-at-the-first-outside-vote.md) ·
-[moderation appeals hang off the upheld report](../decisions/0039-moderation-appeals-hang-off-the-upheld-report.md)
+[moderation appeals hang off the upheld report](../decisions/0039-moderation-appeals-hang-off-the-upheld-report.md) ·
+[a removal is a record of an upheld report](../decisions/0077-a-removal-is-a-record-of-an-upheld-report.md)
 
 ### The story
 
@@ -1295,10 +1296,17 @@ Every moderation action is an upheld report. A staffer acting on their own files
 appeal it like any other. An appeal makes two separate decisions, one about the content and
 one about the standing. Nothing changes while an appeal waits.
 
-Removing a member's access is a ban. `user.deletedAt` enforces it, and an `account_removal`
-row records it: who, why, the upheld report it rests on, and what the deactivation cancelled.
-A ban also puts the member's address on the email blocklist, which refuses it at sign-up. The
-blocklist is never read at sign-in, so it cannot lock out an existing member.
+Removing a member's access is a suspension, which has a term, or a ban, which lasts until staff
+lift it. `user.deletedAt` enforces both, and an `account_removal` row records each: who, why,
+the upheld report it rests on, and what the deactivation cancelled. A suspension cancels only
+bookings that start in its term, pauses billing instead of cancelling it, and lifts itself when
+the term ends. A ban also puts the member's address on the email blocklist, which refuses it at
+sign-up. The blocklist is never read at sign-in, so it cannot lock out an existing member.
+
+The removal email carries a signed link to `/removed/[token]`, which works without a session.
+The page shows the notice, never the staff reason, and takes one appeal against the removal's
+report. Granting it on `/staff/flags/[id]` lifts the removal; a suspension that lapsed while the
+appeal waited can still be granted.
 
 ### Code path
 
@@ -1338,6 +1346,16 @@ blocklist is never read at sign-in, so it cannot lock out an existing member.
   index `uq_account_removal_open` allows one open removal per member. `unbanUser()` lifts the
   open row and unblocks only the address that ban added. The member record's Account tab lists
   removals (`getUserRemovals`).
+- **Suspensions:** `user-service.ts:suspendUser()` runs `deactivateUser()` with `until` (the
+  term end) and `billing: 'pause'`, then records the removal. `liftSuspension()` restores the
+  account, unpauses billing and stamps the lift. `/api/cron/lift-lapsed-removals` runs
+  `liftLapsedSuspensions()` every 15 minutes. The term is capped by `moderation.suspensionMaxDays`.
+  `reactivateUser()` refuses an open suspension, as it refuses a ban.
+- **Removal appeals:** `moderation/removal-link.ts` signs the link (60 days, `BETTER_AUTH_SECRET`).
+  `removal-notice.remote.ts` is public; the token is the bearer. `appeal-service.ts:fileRemovalAppeal()`
+  inserts against the removal's `flagId`. `decideAppeal()` records `accountOutcome`, and
+  restoring an account needs `user.ban` as well as `moderation.reviewFlags`. Staff resend the
+  notice from the member's Account tab.
 - **Blocklist:** `/staff/moderation/blocklist` → `blocklist.remote.ts`, behind `user.ban`.
   `auth.ts:beforeAuth()` refuses a listed address on `/sign-up/email`, after Turnstile, and
   counts the attempt on the entry. Blocking suppresses a deliverable `subscriber` with reason
@@ -1367,6 +1385,10 @@ blocklist is never read at sign-in, so it cannot lock out an existing member.
 - **An appeal the staffer cannot deny** → by design: whoever resolved the report may grant
   but not deny (`SelfReviewError`). A second staffer answers it. See
   [Moderation appeals hang off the upheld report](../decisions/0039-moderation-appeals-hang-off-the-upheld-report.md).
+- **A suspended member still signed in** → the session cookie cache answers for up to 60
+  seconds after the removal purges the session rows (`hooks.server.ts`).
+- **A removed member says the appeal link fails** → links expire after 60 days. Resend the
+  notice from the Account tab, which signs a new one.
 - **A restriction staff need to lift** → the Restore action on the member's Moderation panel
   (`/staff/members/[id]`), one scope at a time.
 - **A reported suggestion nobody can see** → reporting takes it off the board immediately,

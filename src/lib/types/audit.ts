@@ -17,6 +17,8 @@ export const auditActions = [
 	'user.purged',
 	'user.banned',
 	'user.unbanned',
+	'user.suspended',
+	'user.suspension_lifted',
 	'blocklist.added',
 	'blocklist.removed',
 	'user.email_change_requested',
@@ -115,6 +117,9 @@ export interface AuditDetailsByAction {
 	/** A ban also writes `user.deactivated`, which carries what the offboarding took. */
 	'user.banned': { reason: string };
 	'user.unbanned': Record<string, never>;
+	/** `endsAt` is an ISO timestamp. A suspension also writes `user.deactivated`. */
+	'user.suspended': { reason: string; endsAt: string };
+	'user.suspension_lifted': { liftReason: 'appeal_granted' | 'term_lapsed' | 'staff_lifted' };
 	/** The subject label is the address; the id is the blocklist entry. */
 	'blocklist.added': Record<string, never>;
 	'blocklist.removed': Record<string, never>;

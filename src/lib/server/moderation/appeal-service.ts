@@ -1,6 +1,6 @@
 import { db } from '#lib/server/db/index.js';
 import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
-import { moderationAppeal } from '#lib/server/db/schema/moderation.js';
+import { accountRemoval, moderationAppeal } from '#lib/server/db/schema/moderation.js';
 import { contentFlag, type FlagEntityType, type FlagOrigin } from '#lib/server/db/schema/flag.js';
 import { memberStanding } from '#lib/server/db/schema/standing.js';
 import { suggestion } from '#lib/server/db/schema/suggestion.js';
@@ -20,7 +20,7 @@ import { captureException } from '#lib/server/sentry.js';
 import { restoreStanding } from './standing-service';
 
 // The rules are in docs/decisions/0039-moderation-appeals-hang-off-the-upheld-report.md. Appeals
-// contest an upheld report and nothing else — never an account action.
+// contest an upheld report and nothing else. A removal rests on one, so it is contested here too.
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -170,6 +170,7 @@ async function appealableFlagFor(
 export interface AppealDecision {
 	contentOutcome: AppealOutcome;
 	standingOutcome: AppealOutcome;
+	accountOutcome: AppealOutcome;
 	verdict: AppealVerdict;
 	notes: string | null;
 	decidedAt: Date;
@@ -187,23 +188,26 @@ export interface MemberAppealView {
 function memberDecisionOf(row: Parameters<typeof decisionOf>[0]): MemberAppealDecision | null {
 	const decision = decisionOf(row);
 	if (!decision) return null;
-	const { contentOutcome, standingOutcome, verdict, decidedAt } = decision;
-	return { contentOutcome, standingOutcome, verdict, decidedAt };
+	const { contentOutcome, standingOutcome, accountOutcome, verdict, decidedAt } = decision;
+	return { contentOutcome, standingOutcome, accountOutcome, verdict, decidedAt };
 }
 
 function decisionOf(row: {
 	contentOutcome: AppealOutcome | null;
 	standingOutcome: AppealOutcome | null;
+	accountOutcome: AppealOutcome | null;
 	decisionNotes: string | null;
 	decidedAt: Date | null;
 }): AppealDecision | null {
 	if (!row.decidedAt) return null;
 	const content = row.contentOutcome ?? 'not_applicable';
 	const standing = row.standingOutcome ?? 'not_applicable';
+	const account = row.accountOutcome ?? 'not_applicable';
 	return {
 		contentOutcome: content,
 		standingOutcome: standing,
-		verdict: appealVerdict(content, standing),
+		accountOutcome: account,
+		verdict: appealVerdict(content, standing, account),
 		notes: row.decisionNotes,
 		decidedAt: row.decidedAt
 	};
@@ -244,6 +248,7 @@ export interface StaffAppealView {
 	/** Whether each consequence is still in force — what the decide form can offer. */
 	contentApplicable: boolean;
 	standingApplicable: boolean;
+	accountApplicable: boolean;
 	/** False for the staffer who upheld the report. They may still grant. */
 	canDeny: boolean;
 }
@@ -281,6 +286,7 @@ export async function getAppealForFlag(
 		decision: decisionOf(row.appeal),
 		contentApplicable: consequences.content,
 		standingApplicable: consequences.standings.length > 0,
+		accountApplicable: consequences.account !== null,
 		canDeny: row.resolvedByUserId !== viewerId
 	};
 }
@@ -297,6 +303,11 @@ interface Consequences {
 	content: boolean;
 	/** Standings this report is still the reason for. */
 	standings: { userId: string; scope: StandingScope }[];
+	/**
+	 * The removal this report caused, while it is open or lapsed by its term: a
+	 * suspension that ended while the appeal waited can still be granted.
+	 */
+	account: { userId: string; kind: 'suspension' | 'ban'; open: boolean } | null;
 }
 
 async function consequencesOf(flag: {
@@ -329,7 +340,22 @@ async function consequencesOf(flag: {
 		.from(memberStanding)
 		.where(and(eq(memberStanding.triggeringFlagId, flag.id), ne(memberStanding.status, 'none')));
 
-	return { content, standings };
+	const [removal] = await db
+		.select({
+			userId: accountRemoval.userId,
+			kind: accountRemoval.kind,
+			liftedAt: accountRemoval.liftedAt,
+			liftReason: accountRemoval.liftReason
+		})
+		.from(accountRemoval)
+		.where(eq(accountRemoval.flagId, flag.id))
+		.limit(1);
+	const account =
+		removal && (!removal.liftedAt || removal.liftReason === 'term_lapsed')
+			? { userId: removal.userId, kind: removal.kind, open: !removal.liftedAt }
+			: null;
+
+	return { content, standings, account };
 }
 
 // ---------------------------------------------------------------------------
@@ -379,11 +405,55 @@ export async function fileAppeal(params: {
 	return { id: row.id };
 }
 
+/**
+ * An appeal from a removed member, who has no session: the caller has already
+ * verified the signed link naming `removalId`. It attaches to the removal's
+ * report like any other appeal, so the one-per-report rule holds.
+ */
+export async function fileRemovalAppeal(params: {
+	removalId: string;
+	body: string;
+}): Promise<{ id: string }> {
+	const [removal] = await db
+		.select({ flagId: accountRemoval.flagId, userId: accountRemoval.userId, name: user.name })
+		.from(accountRemoval)
+		.innerJoin(user, eq(user.id, accountRemoval.userId))
+		.where(eq(accountRemoval.id, params.removalId))
+		.limit(1);
+	if (!removal) throw new AppealNotFoundError();
+
+	let row: { id: string };
+	try {
+		[row] = await db
+			.insert(moderationAppeal)
+			.values({
+				flagId: removal.flagId,
+				appellantUserId: removal.userId,
+				body: params.body.trim().slice(0, APPEAL_BODY_MAX)
+			})
+			.returning();
+	} catch (err) {
+		if (isUniqueConstraintError(err)) throw new AppealAlreadyFiledError();
+		throw err;
+	}
+
+	try {
+		await domainEvents.emit('moderation.appeal_filed', {
+			flagId: removal.flagId,
+			appellantName: removal.name
+		});
+	} catch (err) {
+		captureException(err, { event: 'moderation.appeal_filed', flagId: removal.flagId });
+	}
+	return { id: row.id };
+}
+
 export interface DecideAppealParams {
 	flagId: string;
 	staffId: string;
 	restoreContent: boolean;
 	restoreStanding: boolean;
+	restoreAccount?: boolean;
 	notes: string;
 }
 
@@ -392,9 +462,11 @@ export interface DecideAppealParams {
  * a crash between steps leaves the appeal pending and a second click repairs it.
  * The reverse order could show "granted" over a member still restricted.
  */
-export async function decideAppeal(
-	params: DecideAppealParams
-): Promise<{ contentOutcome: AppealOutcome; standingOutcome: AppealOutcome }> {
+export async function decideAppeal(params: DecideAppealParams): Promise<{
+	contentOutcome: AppealOutcome;
+	standingOutcome: AppealOutcome;
+	accountOutcome: AppealOutcome;
+}> {
 	const [appeal] = await db
 		.select({
 			id: moderationAppeal.id,
@@ -426,7 +498,12 @@ export async function decideAppeal(
 				? 'restored'
 				: 'upheld'
 			: 'not_applicable';
-	const verdict = appealVerdict(contentOutcome, standingOutcome);
+	const accountOutcome: AppealOutcome = consequences.account
+		? params.restoreAccount
+			? 'restored'
+			: 'upheld'
+		: 'not_applicable';
+	const verdict = appealVerdict(contentOutcome, standingOutcome, accountOutcome);
 
 	// You may overturn yourself; you may not ratify yourself.
 	if (verdict === 'denied' && flag.resolvedByUserId === params.staffId) {
@@ -437,6 +514,14 @@ export async function decideAppeal(
 		for (const s of consequences.standings) {
 			await restoreStanding({ userId: s.userId, scope: s.scope, staffId: params.staffId });
 		}
+	}
+
+	if (accountOutcome === 'restored' && consequences.account?.open) {
+		const { userId, kind } = consequences.account;
+		const users = await import('#lib/server/user/user-service.js');
+		const lift = { actorId: params.staffId, liftReason: 'appeal_granted' } as const;
+		if (kind === 'ban') await users.unbanUser(userId, lift);
+		else await users.liftSuspension(userId, lift);
 	}
 
 	if (contentOutcome === 'restored') {
@@ -461,6 +546,7 @@ export async function decideAppeal(
 		.set({
 			contentOutcome,
 			standingOutcome,
+			accountOutcome,
 			decisionNotes: notes || null,
 			decidedByUserId: params.staffId,
 			decidedAt: new Date()
@@ -469,11 +555,12 @@ export async function decideAppeal(
 
 	await notifyAppellant(appeal.appellantUserId, flag, consequences, verdict);
 
-	return { contentOutcome, standingOutcome };
+	return { contentOutcome, standingOutcome, accountOutcome };
 }
 
 /** Where the member reads the decision: the page the appeal was filed from. */
 function memberHrefFor(flag: AppealableFlag, consequences: Consequences): string {
+	if (consequences.account) return '/login';
 	if (flag.entityType === 'suggestion') return `/member/suggestions/${flag.entityId}`;
 	if (flag.entityType === 'event') return `/member/events/${flag.entityId}/manage`;
 	switch (consequences.standings[0]?.scope) {
@@ -534,6 +621,7 @@ export async function reopenAppeal(params: { flagId: string }): Promise<void> {
 			decidedByUserId: null,
 			contentOutcome: null,
 			standingOutcome: null,
+			accountOutcome: null,
 			decisionNotes: null
 		})
 		.where(eq(moderationAppeal.id, appeal.id));

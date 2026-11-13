@@ -9,7 +9,8 @@ import { db } from '#lib/server/db/index.js';
 import * as schema from '#lib/server/db/schema.js';
 import { account } from '#lib/server/db/schema/authentication.js';
 import { user } from '#lib/server/db/schema/authentication.js';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
+import { accountRemoval } from '#lib/server/db/schema/moderation.js';
 import { userAdditionalFields } from './auth-fields';
 import { captureException } from '#lib/server/sentry.js';
 import { ensureUserEntry } from '#lib/server/directory/entry-service.js';
@@ -328,15 +329,15 @@ export const ACCOUNT_SUSPENDED_CODE = 'ACCOUNT_SUSPENDED';
 
 /**
  * Why a sign-in is refused before better-auth runs, or null to let it run.
- * A ban is named only once the password matches, so the answer tells nothing
+ * A ban or open removal is named only once the password matches, so it tells nothing
  * to someone without it; any other closed account reads as a wrong password.
  */
 export async function signInRefusal(
-	row: { deletedAt: Date | null; bannedAt: Date | null } | undefined,
+	row: { deletedAt: Date | null; bannedAt: Date | null; removalId?: string | null } | undefined,
 	passwordMatches: () => Promise<boolean>
 ): Promise<'suspended' | 'invalid' | null> {
 	if (!row) return null;
-	if (row.bannedAt) return (await passwordMatches()) ? 'suspended' : 'invalid';
+	if (row.bannedAt || row.removalId) return (await passwordMatches()) ? 'suspended' : 'invalid';
 	return isDeactivated(row.deletedAt) ? 'invalid' : null;
 }
 
@@ -656,8 +657,17 @@ export async function beforeAuth(ctx: AuthBeforeContext): Promise<void> {
 	const signInEmail = normalizeEmail(body?.email);
 	if (signInEmail) {
 		const [row] = await db
-			.select({ id: user.id, deletedAt: user.deletedAt, bannedAt: user.bannedAt })
+			.select({
+				id: user.id,
+				deletedAt: user.deletedAt,
+				bannedAt: user.bannedAt,
+				removalId: accountRemoval.id
+			})
 			.from(user)
+			.leftJoin(
+				accountRemoval,
+				and(eq(accountRemoval.userId, user.id), isNull(accountRemoval.liftedAt))
+			)
 			.where(eq(user.email, signInEmail));
 		const refusal = await signInRefusal(row, async () => {
 			if (!row || typeof body?.password !== 'string') return false;

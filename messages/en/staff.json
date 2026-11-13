@@ -3666,5 +3666,19 @@
 	"staff_blocklist_blocked_toast": "Address blocked",
 	"staff_blocklist_unblock_label": "Unblock",
 	"staff_blocklist_unblocked_toast": "Address unblocked",
-	"staff_blocklist_unblock_text": "{email} can then create an account."
+	"staff_blocklist_unblock_text": "{email} can then create an account.",
+	"staff_members_id_panels_account_panel_suspend_label": "Suspend",
+	"staff_members_id_panels_account_panel_suspend_title": "Suspend {name}",
+	"staff_members_id_panels_account_panel_member_suspended_toast": "Member suspended",
+	"staff_members_id_panels_account_panel_suspend_effects_text": "Signs them out, cancels their reservations during the term, pauses membership billing and revokes their door code. The account comes back by itself when the term ends.",
+	"staff_members_id_panels_account_panel_suspend_days_label": "Days",
+	"staff_members_id_panels_account_panel_suspended_until_text": "Suspended until {date}. Lifting it now restores the account and resumes billing.",
+	"staff_members_id_panels_account_panel_lift_suspension_label": "Lift suspension",
+	"staff_members_id_panels_account_panel_suspension_lifted_toast": "Suspension lifted",
+	"staff_members_id_panels_account_panel_lift_suspension_text": "Lift the suspension on {name}? They can sign in again straight away.",
+	"staff_flags_id_appeal_card_account_label": "Account",
+	"staff_flags_id_appeal_card_restore_account_label": "Restore their account",
+	"staff_members_id_panels_account_panel_resend_notice_label": "Resend notice",
+	"staff_members_id_panels_account_panel_notice_sent_toast": "Notice sent",
+	"staff_members_id_panels_account_panel_resend_notice_text": "Emails the member their removal notice again, with a new appeal link."
 }

@@ -117,6 +117,14 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			return `Banned the account: “${entry.details.reason}”`;
 		case 'user.unbanned':
 			return 'Lifted the ban';
+		case 'user.suspended':
+			return `Suspended the account until ${entry.details.endsAt.slice(0, 10)}: “${entry.details.reason}”`;
+		case 'user.suspension_lifted':
+			return entry.details.liftReason === 'term_lapsed'
+				? 'Suspension ended at the end of its term'
+				: entry.details.liftReason === 'appeal_granted'
+					? 'Lifted the suspension on appeal'
+					: 'Lifted the suspension';
 		case 'blocklist.added':
 			return 'Blocked the address from sign-up';
 		case 'blocklist.removed':

@@ -444,3 +444,34 @@ export async function resume(stripeCustomerId: string): Promise<void> {
 
 	await stripe.subscriptions.update(sub.id, { cancel_at_period_end: false });
 }
+
+// ---------------------------------------------------------------------------
+// pause / unpause
+// ---------------------------------------------------------------------------
+
+/**
+ * Stop collecting payment without ending the subscription. A suspension uses
+ * this so lifting it needs no new checkout; invoices in the pause are voided.
+ */
+export async function pause(stripeCustomerId: string): Promise<void> {
+	const subscriptions = await stripe.subscriptions.list({
+		customer: stripeCustomerId,
+		status: 'active',
+		limit: 1
+	});
+	const sub = subscriptions.data[0];
+	if (!sub) throw new SubscriptionStateError('No active subscription found');
+	await stripe.subscriptions.update(sub.id, { pause_collection: { behavior: 'void' } });
+}
+
+/** Resume collection on a subscription `pause` stopped. */
+export async function unpause(stripeCustomerId: string): Promise<void> {
+	const subscriptions = await stripe.subscriptions.list({
+		customer: stripeCustomerId,
+		status: 'active',
+		limit: 1
+	});
+	const sub = subscriptions.data[0];
+	if (!sub) throw new SubscriptionStateError('No active subscription found');
+	await stripe.subscriptions.update(sub.id, { pause_collection: '' });
+}

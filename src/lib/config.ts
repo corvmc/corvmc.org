@@ -1306,9 +1306,13 @@ export const APPEAL_BODY_MAX = 2000;
 
 export type AppealVerdict = 'granted' | 'partly_granted' | 'denied';
 
-/** The label a human reads, derived from the two outcomes and never stored. */
-export function appealVerdict(content: AppealOutcome, standing: AppealOutcome): AppealVerdict {
-	const applicable = [content, standing].filter((o) => o !== 'not_applicable');
+/** The label a human reads, derived from the outcomes and never stored. */
+export function appealVerdict(
+	content: AppealOutcome,
+	standing: AppealOutcome,
+	account: AppealOutcome = 'not_applicable'
+): AppealVerdict {
+	const applicable = [content, standing, account].filter((o) => o !== 'not_applicable');
 	const restored = applicable.filter((o) => o === 'restored').length;
 	if (applicable.length > 0 && restored === applicable.length) return 'granted';
 	return restored > 0 ? 'partly_granted' : 'denied';

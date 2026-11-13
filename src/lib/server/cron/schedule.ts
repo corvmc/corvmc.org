@@ -19,6 +19,9 @@ export const CRON_SCHEDULE: Record<string, string[]> = {
 		'/api/cron/complete-shifts',
 		'/api/cron/expire-waitlisted',
 		'/api/cron/wake-snoozed',
+		// Suspensions whose term ended. Every 15 minutes so a member is back
+		// within the quarter hour, not the next day (#2552).
+		'/api/cron/lift-lapsed-removals',
 		// Before reminders: door_code_ready keys on the lockSyncedAt this stamps,
 		// so a same-day booking hears on the tick its code lands. Capped per run.
 		'/api/cron/lock-sync',
@@ -80,6 +83,7 @@ export const CRON_MONITORS: Record<string, 'live' | RetiredMonitor> = {
 	'complete-shifts': 'live',
 	'expire-waitlisted': 'live',
 	'wake-snoozed': 'live',
+	'lift-lapsed-removals': 'live',
 	'lock-sync': 'live',
 	reminders: 'live',
 	'schedule-radio': 'live',

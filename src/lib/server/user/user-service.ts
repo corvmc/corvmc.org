@@ -4,12 +4,14 @@ import { DomainError } from '../domain-error';
 import { user, session } from '#lib/server/db/schema/authentication.js';
 import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { lockMemberCode, reservation } from '#lib/server/db/schema/reservation.js';
-import { and, count, desc, eq, gt, isNotNull, isNull, ne, or } from 'drizzle-orm';
+import { and, count, desc, eq, gt, isNotNull, isNull, lt, ne, or } from 'drizzle-orm';
 import { cancel as cancelReservation } from '#lib/server/reservation/reservation-service.js';
 import {
 	cancel as cancelSubscription,
 	getSubscription,
-	resume as resumeSubscription
+	pause as pauseSubscription,
+	resume as resumeSubscription,
+	unpause as unpauseSubscription
 } from '#lib/server/finance/subscription-service.js';
 import { revokeMemberCode } from '#lib/server/lock/member-code-service.js';
 import { captureException } from '#lib/server/sentry.js';
@@ -17,9 +19,17 @@ import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { sendAccountRestoredEmail, sendAccountSuspendedEmail } from '#lib/server/auth-emails.js';
 import { isValidPhone, normalizePhone } from '#lib/utils/phone.js';
 import { fileStaffAction } from '#lib/server/flag/flag-service.js';
-import { recordRemoval, liftOpenRemoval } from '#lib/server/moderation/removal-service.js';
+import {
+	recordRemoval,
+	liftOpenRemoval,
+	getOpenRemoval,
+	listLapsedSuspensions
+} from '#lib/server/moderation/removal-service.js';
 import { blockEmail, unblockForRemoval } from '#lib/server/moderation/blocklist-service.js';
 import type { RemovalLedger } from '#lib/server/db/schema/moderation.js';
+import type { RemovalLiftReason } from '#lib/config.js';
+import { config } from '#lib/server/site-config/site-config-service.js';
+import { removalLink } from '#lib/server/moderation/removal-link.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -70,11 +80,38 @@ export class UserBannedError extends DomainError {
 	}
 }
 
+export class UserSuspendedError extends DomainError {
+	readonly httpStatus = 409;
+
+	constructor() {
+		super('This account is suspended; lift the suspension to restore it');
+		this.name = 'UserSuspendedError';
+	}
+}
+
+export class AccountAlreadyClosedError extends DomainError {
+	readonly httpStatus = 409;
+
+	constructor() {
+		super('This account is already closed');
+		this.name = 'AccountAlreadyClosedError';
+	}
+}
+
+export class SuspensionTermError extends DomainError {
+	readonly httpStatus = 400;
+
+	constructor(maxDays: number) {
+		super(`A suspension lasts between 1 and ${maxDays} days`);
+		this.name = 'SuspensionTermError';
+	}
+}
+
 export class CannotBanSelfError extends DomainError {
 	readonly httpStatus = 409;
 
 	constructor() {
-		super('You cannot ban your own account');
+		super('You cannot remove your own access');
 		this.name = 'CannotBanSelfError';
 	}
 }
@@ -104,7 +141,14 @@ export class UserHasLinkedRecordsError extends DomainError {
  */
 export async function deactivateUser(
 	userId: string,
-	opts: { actor: 'member' | 'staff'; batchId?: string }
+	opts: {
+		actor: 'member' | 'staff';
+		batchId?: string;
+		/** A suspension's end: only bookings starting before it are cancelled. */
+		until?: Date;
+		/** A suspension pauses collection; everything else cancels at period end. */
+		billing?: 'cancel' | 'pause';
+	}
 ) {
 	const [row] = await db
 		.update(user)
@@ -171,6 +215,7 @@ export async function deactivateUser(
 					and(eq(reservation.bookerType, 'instructor'), eq(reservation.createdByUserId, userId))
 				),
 				gt(reservation.startsAt, new Date()),
+				opts.until ? lt(reservation.startsAt, opts.until) : undefined,
 				ne(reservation.status, 'cancelled')
 			)
 		);
@@ -187,10 +232,16 @@ export async function deactivateUser(
 	// Cancel the Stripe subscription if one exists. The subscription may already
 	// be gone, so failures here are non-fatal to the deactivation.
 	let subscriptionCancelled = false;
+	let subscriptionPaused = false;
 	if (row.stripeId) {
 		try {
-			await cancelSubscription(row.stripeId);
-			subscriptionCancelled = true;
+			if (opts.billing === 'pause') {
+				await pauseSubscription(row.stripeId);
+				subscriptionPaused = true;
+			} else {
+				await cancelSubscription(row.stripeId);
+				subscriptionCancelled = true;
+			}
 		} catch {
 			// Subscription may not exist — that's fine.
 		}
@@ -210,7 +261,7 @@ export async function deactivateUser(
 	const ledger: RemovalLedger = {
 		reservationIds: futureReservations.map((r) => r.id),
 		doorCodeIds: revokedCodeIds,
-		billing: subscriptionCancelled ? 'cancel_at_period_end' : 'none'
+		billing: subscriptionPaused ? 'paused' : subscriptionCancelled ? 'cancel_at_period_end' : 'none'
 	};
 	return { ...row, ledger };
 }
@@ -261,6 +312,8 @@ export async function deactivateUsers(
  * leaving a lapsed membership to be discovered later.
  */
 export async function reactivateUser(userId: string) {
+	const open = await getOpenRemoval(userId);
+	if (open?.kind === 'suspension') throw new UserSuspendedError();
 	const [row] = await db
 		.update(user)
 		.set({ deletedAt: null, updatedAt: new Date() })
@@ -276,6 +329,23 @@ export async function reactivateUser(userId: string) {
 		throw new UserNotFoundError();
 	}
 
+	return finishRestore(row);
+}
+
+/** Clears `deletedAt` with no removal checks: for the paths that lift a removal themselves. */
+async function restoreAccount(userId: string) {
+	const [row] = await db
+		.update(user)
+		.set({ deletedAt: null, updatedAt: new Date() })
+		.where(and(eq(user.id, userId), isNotNull(user.deletedAt)))
+		.returning();
+	if (!row) throw new UserNotFoundError();
+	return finishRestore(row);
+}
+
+async function finishRestore<T extends { id: string; name: string; stripeId: string | null }>(
+	row: T
+) {
 	let subscription: 'resumed' | 'active' | 'lapsed' | 'none' = 'none';
 
 	if (row.stripeId) {
@@ -299,7 +369,7 @@ export async function reactivateUser(userId: string) {
 
 	await recordAuditEntry({
 		action: 'user.reactivated',
-		subject: { type: 'user', id: userId, label: row.name },
+		subject: { type: 'user', id: row.id, label: row.name },
 		details: { subscription }
 	});
 
@@ -360,7 +430,11 @@ export async function banUser(userId: string, opts: { actorId: string; reason: s
 		removalId: removal.id
 	});
 
-	await sendAccountSuspendedEmail({ toEmail: row.email, name: row.name });
+	await sendAccountSuspendedEmail({
+		toEmail: row.email,
+		name: row.name,
+		appealUrl: removalLink(removal.id)
+	});
 
 	return row;
 }
@@ -369,7 +443,10 @@ export async function banUser(userId: string, opts: { actorId: string; reason: s
  * Lift a ban and restore the account. The one way back from a ban, and the
  * entry point a successful appeal would call.
  */
-export async function unbanUser(userId: string, opts: { actorId: string | null }) {
+export async function unbanUser(
+	userId: string,
+	opts: { actorId: string | null; liftReason?: RemovalLiftReason }
+) {
 	const [row] = await db
 		.update(user)
 		.set({ bannedAt: null, bannedById: null, banReason: null, updatedAt: new Date() })
@@ -384,14 +461,137 @@ export async function unbanUser(userId: string, opts: { actorId: string | null }
 		details: {}
 	});
 
-	const restored = await reactivateUser(userId);
+	const restored = await restoreAccount(userId);
 	const lifted = await liftOpenRemoval(userId, {
 		liftedByUserId: opts.actorId,
-		liftReason: 'staff_lifted'
+		liftReason: opts.liftReason ?? 'staff_lifted'
 	});
 	if (lifted) await unblockForRemoval(lifted.id);
 	await sendAccountRestoredEmail({ toEmail: row.email, name: row.name });
 	return restored;
+}
+
+/**
+ * Suspend a member for a term. Enforcement is deactivation's, scoped to the
+ * term: bookings starting before it ends are cancelled, billing is paused
+ * rather than cancelled, and the address is not blocklisted. The lapse job
+ * lifts it when the term ends; staff may lift it sooner.
+ */
+export async function suspendUser(
+	userId: string,
+	opts: { actorId: string; reason: string; days: number }
+) {
+	if (userId === opts.actorId) throw new CannotBanSelfError();
+	const maxDays = await config<number>('moderation.suspensionMaxDays');
+	if (!Number.isInteger(opts.days) || opts.days < 1 || opts.days > maxDays) {
+		throw new SuspensionTermError(maxDays);
+	}
+
+	const [target] = await db
+		.select({ deletedAt: user.deletedAt })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+	if (!target) throw new UserNotFoundError();
+	if (target.deletedAt) throw new AccountAlreadyClosedError();
+
+	const endsAt = new Date(Date.now() + opts.days * 86_400_000);
+
+	// The conditional update inside deactivateUser refuses a second, concurrent
+	// suspension; the removal is stamped after the side effects.
+	const row = await deactivateUser(userId, { actor: 'staff', until: endsAt, billing: 'pause' });
+	const { id: flagId } = await fileStaffAction({
+		entityType: 'member_profile',
+		entityId: userId,
+		staffId: opts.actorId,
+		reason: opts.reason
+	});
+	const removal = await recordRemoval({
+		userId,
+		actorUserId: opts.actorId,
+		kind: 'suspension',
+		reason: opts.reason,
+		flagId,
+		endsAt,
+		ledger: row.ledger
+	});
+	await recordAuditEntry({
+		action: 'user.suspended',
+		subject: { type: 'user', id: userId, label: row.name },
+		details: { reason: opts.reason, endsAt: endsAt.toISOString() }
+	});
+	await sendAccountSuspendedEmail({
+		toEmail: row.email,
+		name: row.name,
+		endsAt,
+		appealUrl: removalLink(removal.id)
+	});
+	return { endsAt };
+}
+
+/** Send the removal notice again with a fresh appeal link, for a member whose link expired. */
+export async function resendRemovalNotice(userId: string) {
+	const open = await getOpenRemoval(userId);
+	if (!open) throw new UserNotFoundError();
+	const [row] = await db
+		.select({ email: user.email, name: user.name })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+	if (!row) throw new UserNotFoundError();
+	await sendAccountSuspendedEmail({
+		toEmail: row.email,
+		name: row.name,
+		endsAt: open.kind === 'suspension' ? open.endsAt : null,
+		appealUrl: removalLink(open.id)
+	});
+}
+
+/**
+ * End a suspension: restore the account, resume paused billing, then stamp
+ * the record. `actorId` is null when the term lapsed on its own.
+ */
+export async function liftSuspension(
+	userId: string,
+	opts: { actorId: string | null; liftReason: RemovalLiftReason }
+) {
+	const open = await getOpenRemoval(userId);
+	if (open?.kind !== 'suspension') throw new UserNotFoundError();
+
+	const restored = await restoreAccount(userId);
+	if (open.ledger?.billing === 'paused' && restored.stripeId) {
+		try {
+			await unpauseSubscription(restored.stripeId);
+		} catch (err) {
+			captureException(err);
+		}
+	}
+	await liftOpenRemoval(userId, { liftedByUserId: opts.actorId, liftReason: opts.liftReason });
+	await recordAuditEntry({
+		action: 'user.suspension_lifted',
+		subject: { type: 'user', id: userId, label: restored.name },
+		details: { liftReason: opts.liftReason }
+	});
+	await sendAccountRestoredEmail({ toEmail: restored.email, name: restored.name });
+	return restored;
+}
+
+/**
+ * Lift every suspension whose term has ended. Idempotent: a lifted row is no
+ * longer open, so a re-run finds nothing. One failure does not stop the rest.
+ */
+export async function liftLapsedSuspensions(now = new Date()) {
+	const due = await listLapsedSuspensions(now);
+	let lifted = 0;
+	for (const userId of due) {
+		try {
+			await liftSuspension(userId, { actorId: null, liftReason: 'term_lapsed' });
+			lifted++;
+		} catch (err) {
+			captureException(err, { event: 'removal.lapse', userId });
+		}
+	}
+	return { due: due.length, lifted };
 }
 
 /**

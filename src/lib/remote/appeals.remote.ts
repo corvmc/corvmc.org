@@ -77,10 +77,13 @@ export const decideAppeal = form(
 		flagId: z.string().min(1),
 		restoreContent: z.boolean().default(false),
 		restoreStanding: z.boolean().default(false),
+		restoreAccount: z.boolean().default(false),
 		notes: z.string().trim().min(1, 'Give a reason').max(APPEAL_BODY_MAX)
 	}),
 	async (data) => {
 		const staff = await requireCapability('moderation.reviewFlags');
+		// Restoring an account lifts a suspension or ban, which is `user.ban`'s to do.
+		if (data.restoreAccount) await requireCapability('user.ban');
 		await decideAppealSvc({ ...data, staffId: staff.id });
 		void getFlagDetail(data.flagId).refresh();
 		return { success: true };
