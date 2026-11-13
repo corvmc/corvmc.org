@@ -91,7 +91,6 @@ test.describe('staff events split', () => {
 		// Production controls belong to the console. Scoped to the cards, because
 		// the sidebar's own Space and Volunteering sections are on every page.
 		await expect(page.getByTestId('space-hold')).toHaveCount(0);
-		await expect(page.getByTestId('volunteer-shifts')).toHaveCount(0);
 		await expect(
 			page.locator(`a[href="/staff/events/${SEED_SPLIT_PENDING_ID}/production"]`)
 		).toHaveCount(0);
@@ -128,7 +127,7 @@ test.describe('staff events split', () => {
 		// the tab rather than by `?tab=`, because what this asserts is that the
 		// console is whole — every part of it still reachable from where you land.
 		await page.locator('#tab-advance').click();
-		await expect(page.getByTestId('volunteer-shifts')).toBeVisible();
+		await expect(page.getByTestId('related-shifts')).toBeVisible();
 
 		// The console has nothing to say about a listing, so a hand-typed URL goes
 		// back to the view that does.

@@ -2,7 +2,8 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
 	import RoleRequirementsCard from './RoleRequirementsCard.svelte';
-	import RoleShiftsCard from './RoleShiftsCard.svelte';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
+	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
 	import RoleInterestedCard from './RoleInterestedCard.svelte';
 	import RoleGrantsCard from './RoleGrantsCard.svelte';
 	import { goto } from '$app/navigation';
@@ -44,11 +45,6 @@
 
 	const requirementsList = $derived(pageData.requirements);
 	const feedbackList = $derived(pageData.feedback);
-
-	// Pinned once, not recomputed: `refresh()` is keyed by argument, so a `from` that ticked with
-	// the clock would mint a new key on every re-evaluation and the refresh after creating a shift
-	// would miss its query. RoleShiftsCard owns the query; the anchor stays here so it is stable.
-	const from = new Date().toISOString();
 
 	/** Seeded once, then owned by the tag input. */
 	// svelte-ignore state_referenced_locally
@@ -291,7 +287,8 @@
 		</div>
 	</div>
 
-	<RoleShiftsCard {role} {from} />
+	<RelatedShifts subject={{ type: 'role', id: role.id }} />
+	<RelatedTasks subject={{ type: 'role', id: role.id }} />
 
 	<RoleInterestedCard {role} />
 

@@ -4,6 +4,7 @@ import { form } from './_remote';
 import { can, requireCapability, requireUser } from '#lib/server/authorization.js';
 import { requireProjectCommittee } from '#lib/server/group/group-context.js';
 import { mapDomainError } from '#lib/server/errors.js';
+import { invalid } from '@sveltejs/kit';
 import { DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_TITLE_MAX } from '#lib/config.js';
 import { buildDateInTz } from '#lib/server/reservation/timezone.js';
 import {
@@ -16,16 +17,28 @@ import { getProjectActivity, getProjectDetail } from './projects.remote';
 import { createTask, rescheduleTask } from '#lib/server/project/project-task-service.js';
 import { listJobs } from '#lib/server/contractor/contractor-job-service.js';
 import { listTaskCatalogue } from '#lib/server/volunteer/task-catalogue.js';
-import { createWorkOrder } from '#lib/server/volunteer/work-order-service.js';
+import {
+	createWorkOrder,
+	openShift,
+	parseLocal,
+	validateTimes
+} from '#lib/server/volunteer/work-order-service.js';
+import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
+import {
+	isRelatedTask,
+	relatedEndedShifts,
+	relatedShiftTasks,
+	relatedShifts
+} from '#lib/server/task/related-shifts.js';
+import { shiftLabel } from '#lib/utils/shift-label.js';
 import { requireListingReader } from '#lib/server/event/listing-guard.js';
 import {
+	aboutWhere,
 	newTaskPrefill,
-	relatedTaskWhere,
 	relatedTasks,
 	type RelatedSubject
 } from '#lib/server/task/related-tasks.js';
 import { relatedSubjectTypes } from '#lib/utils/related-tasks.js';
-import { sql } from 'drizzle-orm';
 
 /**
  * The Tasks table (#2625) and the task it creates. A task's own writes are on
@@ -64,9 +77,6 @@ function contractorMarks(jobs: TaskJob[]) {
 
 const subject = z.object({ type: z.enum(relatedSubjectTypes), id: z.string().min(1) });
 
-/** Nothing matches: `?about=` naming a type that resolves to no tasks. */
-const NONE = sql`0 = 1`;
-
 /**
  * The Tasks table (#2625): every task, in a project or none. Engagements are
  * read by view rather than by task id, which would bind one parameter per row.
@@ -94,7 +104,7 @@ export const getTasksPage = query(
 				volunteerRoleId: f.volunteerRoleId || undefined,
 				includeDone: f.includeDone,
 				withAwaitingInvoice: contractorAccess,
-				...(f.about ? { where: relatedTaskWhere(f.about) ?? NONE } : {})
+				...(f.about ? { where: aboutWhere(f.about) } : {})
 			}),
 			listProjects({ archived: false }),
 			listCommittees(),
@@ -157,6 +167,94 @@ export const getRelatedTasks = query(
 					).flat()
 				: [];
 		return { groups, contractors: contractorMarks(jobs), prefill };
+	}
+);
+
+/**
+ * `RelatedShifts` (#2630): the record's read guard first, then Volunteering's
+ * own (`volunteer.read`); a reader of the record without it gets null. Add
+ * shift's choices come only to a viewer who can open shifts.
+ */
+export const getRelatedShifts = query(subject, async (s) => {
+	await requireSubjectReader(s);
+	if (!(await can('volunteer.read'))) return null;
+	const [groups, ended, canManage] = await Promise.all([
+		relatedShifts(s),
+		relatedEndedShifts(s),
+		can('volunteer.manageShifts')
+	]);
+	const addShift = canManage ? await addShiftChoices(s) : null;
+	return { groups, ended: ended.length, addShift };
+});
+
+async function addShiftChoices(s: RelatedSubject) {
+	const [tasks, prefill, roles] = await Promise.all([
+		relatedShiftTasks(s),
+		newTaskPrefill(s),
+		listVolunteerRoles()
+	]);
+	// Each choice carries its role's shift defaults, which the form starts from.
+	const defaults = (r: {
+		defaultCapacity: number | null;
+		defaultDurationMinutes: number | null;
+	}) => ({
+		capacity: r.defaultCapacity,
+		minutes: r.defaultDurationMinutes
+	});
+	return {
+		tasks: tasks.map((t) => ({ id: t.id, label: shiftLabel(t), ...defaults(t) })),
+		/** A new task takes the record's anchors; null where the record makes none. */
+		newTask: prefill === null ? null : { roleId: prefill.volunteerRoleId ?? null },
+		roles: roles.map((r) => ({ id: r.id, name: r.name, ...defaults(r) }))
+	};
+}
+
+/**
+ * Add shift from a record's card: on one of its tasks, or on a new task that
+ * takes the record's anchors. The times are checked before the task is made,
+ * so a refused shift leaves no empty task behind.
+ */
+export const addRelatedShift = form(
+	z.object({
+		subjectType: z.enum(relatedSubjectTypes),
+		subjectId: z.string().min(1),
+		taskId: optionalId,
+		volunteerRoleId: optionalId,
+		title: z.string().trim().max(VOLUNTEER_SHIFT_TITLE_MAX).optional(),
+		startsAt: z.string().min(1, 'Pick when it starts'),
+		endsAt: z.string().min(1, 'Pick when it ends'),
+		capacity: z.string().optional()
+	}),
+	async (data, issue) => {
+		const staff = await requireCapability('volunteer.manageShifts');
+		const s = { type: data.subjectType, id: data.subjectId };
+		await requireSubjectReader(s);
+		validateTimes(parseLocal(data.startsAt, 'Start'), parseLocal(data.endsAt, 'End'));
+
+		let taskId = data.taskId || '';
+		if (taskId) {
+			if (!(await isRelatedTask(s, taskId))) invalid(issue.taskId('Pick one of these tasks'));
+		} else {
+			const prefill = await newTaskPrefill(s);
+			if (!prefill) invalid(issue.taskId('Pick a task'));
+			const roleId = prefill.volunteerRoleId ?? (data.volunteerRoleId || '');
+			if (!roleId) invalid(issue.volunteerRoleId('Pick a role'));
+			const task = await createWorkOrder({
+				...prefill,
+				volunteerRoleId: roleId,
+				title: data.title || null,
+				createdByUserId: staff.id
+			});
+			taskId = task.id;
+		}
+		await openShift(taskId, {
+			startsAt: data.startsAt,
+			endsAt: data.endsAt,
+			capacity: data.capacity ? parseInt(data.capacity, 10) : undefined,
+			createdByUserId: staff.id
+		});
+		void getRelatedShifts(s).refresh();
+		return { id: taskId };
 	}
 );
 

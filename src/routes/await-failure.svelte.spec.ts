@@ -7,7 +7,6 @@ import VolunteerBlocked from './member/volunteer/blocked/+page.svelte';
 import CommitteeNumbers from './member/groups/[slug]/CommitteeNumbers.svelte';
 import PublicInstructors from './(public)/directory/instructors/+page.svelte';
 import ProjectTemplates from './staff/tasks/templates/+page.svelte';
-import RoleShiftsCard from './staff/volunteer/roles/[id]/RoleShiftsCard.svelte';
 import InboxIndex from './staff/inbox/+page.svelte';
 import Daily from './staff/inbox/daily/+page.svelte';
 import { session } from './staff/inbox/daily/session.svelte';
@@ -20,9 +19,7 @@ const refused = vi.hoisted(() => () => {
 });
 
 vi.mock('#lib/remote/volunteer.remote.js', () => ({
-	getVolunteerBlockedNotice: refused,
-	getShifts: refused,
-	createShift: {}
+	getVolunteerBlockedNotice: refused
 }));
 vi.mock('#lib/remote/reports.remote.js', () => ({ getCommitteeNumbers: refused }));
 vi.mock('#lib/remote/instructors.remote.js', () => ({ getPublicInstructors: refused }));
@@ -66,9 +63,6 @@ const drained = async () => {
 	await new Promise((settle) => setTimeout(settle));
 };
 
-const role = { id: 'r', name: 'Sound', isActive: false, defaultCapacity: 1 };
-const shiftsProps = { role: { ...role, defaultDurationMinutes: 60 }, from: '2026-01-01' };
-
 describe('a block whose query fails', () => {
 	// Nothing else on the page is worth keeping, so the failure belongs to the panel.
 	it.each([
@@ -86,8 +80,7 @@ describe('a block whose query fails', () => {
 	it.each([
 		['committee numbers', CommitteeNumbers, { groupId: 'g' }],
 		['public teachers', PublicInstructors, {}],
-		['booking policy', BookingPolicy, {}],
-		['role shifts', RoleShiftsCard, shiftsProps]
+		['booking policy', BookingPolicy, {}]
 	])('%s says so in place', async (_name, page, props) => {
 		const { container } = await mount(page, props);
 

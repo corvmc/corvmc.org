@@ -81,6 +81,9 @@ export function relatedTaskWhere(subject: RelatedSubject): SQL | null {
 	return all.length === 0 ? null : (or(...all.map((r) => r.where)) as SQL);
 }
 
+/** `?about=` as a filter: a type that resolves to nothing matches nothing. */
+export const aboutWhere = (subject: RelatedSubject): SQL => relatedTaskWhere(subject) ?? sql`0 = 1`;
+
 /** What New task fills in from the record; null where the record makes no tasks by hand. */
 export interface NewTaskPrefill {
 	projectId?: string;

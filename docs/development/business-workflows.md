@@ -1433,6 +1433,11 @@ So:
   review are in the staff review feed (#2623). `/staff/volunteer`, `/staff/volunteer/shifts`
   and `/staff/volunteer/schedule` 308 here; the Schedule's untimed, contractor and unassigned
   queues 308 to Tasks.
+- **A record's shifts are on the record (#2630).** The staff event, production, project, group and
+  role pages show `RelatedShifts`: the shifts of the record's related tasks that have not ended,
+  booked places against capacity, and Add shift, which opens a shift on one of the record's tasks
+  or on a new task with the record's links. `?about=<type>:<id>` narrows Volunteering to the same
+  shifts. It replaces the production page's shift card and the role page's shift list.
 - **Three homes.** Volunteering (`/staff/volunteering`) holds the shifts; Tasks
   (`/staff/tasks`) holds the work, its recurring schedules and work with no shift. Members → Volunteers (`/staff/members/volunteers`, with `/hours` for the
   review queue) holds the people, the under-18 queue (`?status=blocked`) and clearances. Roles

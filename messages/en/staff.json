@@ -3418,5 +3418,23 @@
 	"staff_contacts_merge_title": "Merge {other} into {name}",
 	"staff_volunteering_title": "Volunteering",
 	"staff_volunteering_no_shifts_title": "No shifts",
-	"staff_volunteering_find_volunteers_label": "Find volunteers"
+	"staff_volunteering_find_volunteers_label": "Find volunteers",
+	"staff_related_shifts_title": "Related shifts",
+	"staff_related_shifts_summary_text": [
+		{
+			"declarations": [
+				"input filled",
+				"input capacity",
+				"input shifts",
+				"local shiftsPlural = shifts: plural"
+			],
+			"selectors": ["shiftsPlural"],
+			"match": {
+				"shiftsPlural=one": "{filled} of {capacity} places filled across {shifts} shift",
+				"shiftsPlural=*": "{filled} of {capacity} places filled across {shifts} shifts"
+			}
+		}
+	],
+	"staff_related_shifts_add_label": "Add shift",
+	"staff_related_shifts_pick_role_label": "Pick a role"
 }
