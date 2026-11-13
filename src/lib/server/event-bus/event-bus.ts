@@ -1,4 +1,5 @@
 import Emittery from 'emittery';
+import type { ClubDate, ClubTime } from '#lib/server/reservation/timezone.js';
 import type {
 	BookerType,
 	GroupKind,
@@ -62,9 +63,9 @@ export interface ReservationConfirmedEvent {
 	userId: string;
 	userName: string;
 	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 }
 
 /**
@@ -88,9 +89,9 @@ export interface ReservationCreatedEvent {
 	userId: string;
 	userName: string;
 	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 	bookerType: BookerType;
 	startsAt: string;
 	endsAt: string;
@@ -121,9 +122,9 @@ export interface ReservationCancelledEvent {
 	userId: string;
 	userName: string;
 	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 	cancelledBy: ReservationCanceller;
 	/** The free-text reason `cancel()` was given, when there was one. */
 	reason?: string;
@@ -144,9 +145,9 @@ export interface ReservationReminderDueEvent {
 	userId: string;
 	userName: string;
 	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 }
 
 /** A member's booking before they hold the Practice space clearance (#2569). */
@@ -273,9 +274,9 @@ export interface RecurringSkippedEvent {
 	userName: string;
 	userEmail: string;
 	/** The date that was skipped (YYYY-MM-DD in America/Los_Angeles) */
-	skippedDate: string;
-	startTime: string;
-	endTime: string;
+	skippedDate: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 	/** Why it was skipped */
 	reason: string;
 }
@@ -289,9 +290,9 @@ export interface EventRecurringReservationSkippedEvent {
 	userName: string;
 	userEmail: string;
 	/** The date that could not be reserved (YYYY-MM-DD in America/Los_Angeles) */
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 	reason: string;
 }
 
@@ -467,9 +468,9 @@ export interface RecurringWaitlistedEvent {
 	userId: string;
 	userName: string;
 	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 	reason: string;
 }
 
@@ -480,9 +481,9 @@ export interface RecurringRescheduledEvent {
 	userName: string;
 	userEmail: string;
 	/** The first session of the new schedule, in club time. */
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 	/** Old-schedule bookings left in place for the booker to keep or cancel. */
 	keptCount: number;
 }
@@ -492,9 +493,9 @@ export interface WaitlistSlotAvailableEvent {
 	userId: string;
 	userName: string;
 	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 	expiresAt: string;
 	confirmUrl: string;
 }
@@ -504,9 +505,9 @@ export interface WaitlistExpiredEvent {
 	userId: string;
 	userName: string;
 	userEmail: string;
-	date: string;
-	startTime: string;
-	endTime: string;
+	date: ClubDate;
+	startTime: ClubTime;
+	endTime: ClubTime;
 }
 
 /**

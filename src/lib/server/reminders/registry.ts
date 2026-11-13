@@ -3,7 +3,12 @@ import { reservation } from '#lib/server/db/schema/reservation.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { reminderSent } from '#lib/server/db/schema/reminder.js';
 import { eq, and, gt, gte, lt, isNotNull, ne, or, sql } from 'drizzle-orm';
-import { formatDateFull, formatTimeSimple } from '#lib/server/reservation/timezone.js';
+import {
+	formatDateFull,
+	formatDateInTz,
+	formatTimeInTz,
+	formatTimeSimple
+} from '#lib/server/reservation/timezone.js';
 import {
 	CLASSIFIED_EXPIRY_REMINDER_DAYS,
 	DEFAULT_TIMEZONE,
@@ -226,9 +231,9 @@ async function reservationsStartingWithin(ms: number, now: Date) {
 }
 
 const when = (row: { startsAt: Date; endsAt: Date }) => ({
-	date: formatDateFull(row.startsAt, TZ),
-	startTime: formatTimeSimple(row.startsAt, TZ),
-	endTime: formatTimeSimple(row.endsAt, TZ)
+	date: formatDateInTz(row.startsAt, TZ),
+	startTime: formatTimeInTz(row.startsAt, TZ),
+	endTime: formatTimeInTz(row.endsAt, TZ)
 });
 
 /**
