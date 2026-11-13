@@ -147,7 +147,11 @@ export async function organizationNamed(name: string, role: PartyRole): Promise<
 		.select({ id: organization.id })
 		.from(organization)
 		.where(sql`lower(trim(${organization.name})) = lower(${clean})`)
-		.orderBy(sql`${organization.archivedAt} is not null`, asc(organization.createdAt))
+		.orderBy(
+			sql`${organization.archivedAt} is not null`,
+			asc(organization.createdAt),
+			asc(organization.id)
+		)
 		.limit(1);
 	if (!found) return (await createOrganization({ name: clean }, [role])).id;
 	await db.insert(partyRole).values({ organizationId: found.id, role }).onConflictDoNothing();
