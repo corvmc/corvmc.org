@@ -110,7 +110,7 @@ From each event's **Production** page: **Apply template**. It lands in the show'
 Applying the same template to the same project again asks for a reason, which is recorded.
 
 The advance work orders land with no window. They show up on **Staff → Tasks** under
-the **No time yet** chip, and on the event's production page under **Advance** — that is where their
+the **No set time** chip, and on the event's production page under **Advance** — that is where their
 checklists are ticked off.
 
 ### The fortnight before

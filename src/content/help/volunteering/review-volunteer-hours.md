@@ -27,7 +27,7 @@ waiting on a person, and a count you cannot see has nothing in it. Four narrow t
 Two are about people, and open the page that holds them:
 
 - **Unreviewed Hours** — the logs that need a look, in **Members → Volunteers → Hours**.
-- **Expiring Clearances** — somebody rostered for a date their clearance does not reach,
+- **Expiring clearances** — somebody rostered for a date their clearance does not reach,
   shown as a filter on **Members → Volunteers**. Not the same list as _Who's cleared_: this
   one has a deadline.
 
@@ -64,7 +64,7 @@ keeps your view.
 ### Logging hours for somebody else
 
 Members have 90 days to log their own hours, and the app tells them to ask staff for
-anything older. **Log Hours** on this page, or in the Schedule's header, is how you do that. It is also how
+anything older. **Log hours** on this page, or in the Schedule's header, is how you do that. It is also how
 you record the volunteer who does not use the app at all — which matters, because the
 report only counts what is in here, and an hour nobody typed in is an hour the board never
 hears about.
@@ -128,7 +128,7 @@ signed off; the record still says they are under 18, which is what changes how a
 staffed.
 
 Expressing interest is not a commitment to a date, so treat it as a place to start asking,
-not a rota. A role's own page has **Copy emails on this page** if you want to write to
+not a rota. A role's own page has **Copy emails** if you want to write to
 several people at once.
 
 ## Managing roles
