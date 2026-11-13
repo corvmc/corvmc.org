@@ -17,8 +17,8 @@
 	const uploadFields = uploadEventPhotos.fields;
 </script>
 
-<!-- A volunteer photographer's way in (#1398): upload only. Captions, alt text
-     and removal stay on the staff event page. -->
+<!-- A volunteer photographer's way in (#1398). The recap text card sits beside
+     it (#2544); captions, alt text and removal stay on the staff event page. -->
 <InfoCard title={m.public_events_id_recap_upload_title()} state="{recap.remaining} left">
 	{#if recap.closedReason}
 		<p class="text-muted">{recap.closedReason}</p>

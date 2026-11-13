@@ -374,6 +374,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 		(await recapUploadAccess(locals.user?.id, id)) === 'photographer'
 			? {
 					closedReason: recapClosedReason(evt),
+					recapText: evt.recapText,
 					remaining: Math.max(0, MAX_PHOTOS_PER_EVENT - photos.length),
 					maxPerUpload: MAX_PHOTOS_PER_UPLOAD
 				}

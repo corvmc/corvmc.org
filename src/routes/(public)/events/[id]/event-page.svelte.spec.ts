@@ -34,7 +34,10 @@ vi.mock('#lib/remote/event-rsvp.remote.js', () => ({
 	withdrawRsvp: remote()
 }));
 vi.mock('#lib/remote/flags.remote.js', () => ({ submitEventReport: remote() }));
-vi.mock('#lib/remote/event-photos.remote.js', () => ({ uploadEventPhotos: remote() }));
+vi.mock('#lib/remote/event-photos.remote.js', () => ({
+	uploadEventPhotos: remote(),
+	saveEventRecapText: remote()
+}));
 vi.mock('#lib/remote/market.remote.js', () => ({ getPublicMarket: remote() }));
 vi.mock('$app/state', async (original) => ({
 	...(await original<Record<string, unknown>>()),
@@ -159,5 +162,31 @@ describe('event page RSVP button', () => {
 		await expect.element(page.getByTestId('rsvp-going')).toBeVisible();
 
 		expect(ctas().textContent).not.toContain(MEMBER);
+	});
+});
+
+// #2544: the show's photographer writes the recap beside the uploader; nobody else sees the field.
+describe('event page recap text', () => {
+	const recapUpload = {
+		closedReason: null,
+		recapText: 'Loud and late',
+		remaining: 60,
+		maxPerUpload: 10
+	};
+	const recapBox = () => document.querySelector<HTMLTextAreaElement>('textarea[name="recapText"]');
+
+	it("gives the show's photographer the recap text, holding what is saved", async () => {
+		fixture.detail = { ...detail(), isPast: true, recapUpload };
+		await render(EventPage);
+		await expect.element(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+		expect(recapBox()?.value).toBe('Loud and late');
+	});
+
+	it('shows no recap text field to anyone else', async () => {
+		await render(EventPage);
+		await expect.element(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+		expect(recapBox()).toBeNull();
 	});
 });
