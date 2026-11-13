@@ -128,7 +128,7 @@ signed off; the record still says they are under 18, which is what changes how a
 staffed.
 
 Expressing interest is not a commitment to a date, so treat it as a place to start asking,
-not a rota. A role's own page has **Copy emails on this page** if you want to write to
+not a rota. A role's own page has **Copy emails** if you want to write to
 several people at once.
 
 ## Managing roles
