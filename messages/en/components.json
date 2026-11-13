@@ -1060,6 +1060,7 @@
 	"member_membership_payment_methods_card_we_couldn_t_reach_our_body": "We couldn't reach our payment processor just now, so your cards aren't shown. Everything else on this page is up to date — try again in a moment.",
 	"member_membership_setup_element_save_card_label": "Save card",
 	"member_membership_setup_element_saving_label": "Saving…",
+	"member_membership_setup_element_timed_out_body": "Saving the card did not finish. Check your saved cards before trying again.",
 	"member_membership_setup_element_title": "Waiting for the card form to load",
 	"member_membership_sliding_scale_1_hour_5_text": "1 hour = $5",
 	"member_membership_sliding_scale_change_cancel_anytime_no_com_text": "Change or cancel anytime. No commitments, no awkward conversations.",

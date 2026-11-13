@@ -83,7 +83,8 @@ const config = {
 				'self',
 				'wasm-unsafe-eval',
 				'https://challenges.cloudflare.com',
-				'https://js.stripe.com'
+				'https://js.stripe.com',
+				'https://*.js.stripe.com'
 			],
 			// SSR still emits onload/onerror="this.__e=event" on an img, link,
 			// iframe, script or style that has a spread, a `use:` or an inline
@@ -129,15 +130,22 @@ const config = {
 				// The Payment Element talks to the API directly, and reads wallet
 				// and Link availability from merchant-ui-api.
 				'https://api.stripe.com',
-				'https://merchant-ui-api.stripe.com'
+				'https://merchant-ui-api.stripe.com',
+				// Link, inside the Payment Element.
+				'https://link.com',
+				'https://*.link.com'
 			],
 			// Turnstile, the four embed origins minted by link-platform.ts, and
 			// Stripe: js.stripe.com is where the Payment Element's card fields
-			// live, hooks.stripe.com is the 3-D Secure challenge.
+			// live, hooks.stripe.com is the 3-D Secure challenge. *.js.stripe.com
+			// and the Link origins are on Stripe's published CSP list (#2862).
 			'frame-src': [
 				'https://challenges.cloudflare.com',
 				'https://js.stripe.com',
+				'https://*.js.stripe.com',
 				'https://hooks.stripe.com',
+				'https://link.com',
+				'https://*.link.com',
 				'https://www.youtube.com',
 				'https://w.soundcloud.com',
 				'https://open.spotify.com',
