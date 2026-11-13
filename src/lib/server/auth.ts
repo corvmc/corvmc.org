@@ -16,8 +16,10 @@ import { ensureUserEntry } from '#lib/server/directory/entry-service.js';
 import { assignMemberNumber } from '#lib/server/user/member-number-service.js';
 import { linkExistingSubscriberToUser } from '#lib/server/marketing/subscriber-service.js';
 import { verifyTurnstile } from '#lib/server/turnstile.js';
+import { findBlockedEmail, recordRefusedSignup } from '#lib/server/moderation/blocklist-service.js';
 import {
 	ACCOUNT_SUSPENDED_MESSAGE,
+	STAFF_CONTACT_EMAIL,
 	RESET_PASSWORD_TOKEN_TTL_SECONDS,
 	VERIFY_EMAIL_TOKEN_TTL_SECONDS,
 	sendPasswordChangedEmail,
@@ -597,63 +599,92 @@ function createAuth() {
 			}
 		},
 		hooks: {
-			before: createAuthMiddleware(async (ctx) => {
-				// Gate public sign-up behind Cloudflare Turnstile. The login page sends
-				// the widget token in the x-turnstile-token header on register.
-				if (ctx.path === '/sign-up/email') {
-					const token = ctx.headers?.get('x-turnstile-token');
-					const ip = ctx.headers?.get('CF-Connecting-IP');
-					if (!(await verifyTurnstile(token, ip))) {
-						throw new APIError('BAD_REQUEST', {
-							message: 'Verification failed. Please try again.'
-						});
-					}
-					return;
-				}
-
-				if (ctx.path !== '/sign-in/email') return;
-
-				// Closed accounts are refused here, before better-auth would sign them
-				// in. Kept outside the diagnostics try/catch below, which swallows throws.
-				const body = ctx.body as { email?: unknown; password?: unknown } | undefined;
-				const signInEmail = normalizeEmail(body?.email);
-				if (signInEmail) {
-					const [row] = await db
-						.select({ id: user.id, deletedAt: user.deletedAt, bannedAt: user.bannedAt })
-						.from(user)
-						.where(eq(user.email, signInEmail));
-					const refusal = await signInRefusal(row, async () => {
-						if (!row || typeof body?.password !== 'string') return false;
-						const [cred] = await db
-							.select({ password: account.password })
-							.from(account)
-							.where(and(eq(account.userId, row.id), eq(account.providerId, 'credential')));
-						if (!cred?.password) return false;
-						return ctx.context.password.verify({ hash: cred.password, password: body.password });
-					});
-					if (refusal === 'suspended') {
-						throw new APIError('FORBIDDEN', {
-							message: ACCOUNT_SUSPENDED_MESSAGE,
-							code: ACCOUNT_SUSPENDED_CODE
-						});
-					}
-					if (refusal === 'invalid') {
-						throw new APIError('UNAUTHORIZED', { message: 'Invalid email or password' });
-					}
-				}
-
-				try {
-					await reportSignInAnomaly((ctx.body as { email?: unknown } | undefined)?.email);
-				} catch (err) {
-					// Diagnostics must never break the sign-in flow.
-					captureException(err, { event: 'auth.sign_in', stage: 'diagnostic_error' });
-				}
-			})
+			before: createAuthMiddleware(async (ctx) => beforeAuth(ctx))
 		},
 		plugins: [
 			sveltekitCookies(getRequestEvent) // make sure this is the last plugin in the array
 		]
 	});
+}
+
+/** The `code` a refused sign-up carries. The message does not say why. */
+export const BLOCKED_SIGNUP_CODE = 'SIGNUP_BLOCKED';
+export const BLOCKED_SIGNUP_MESSAGE = `This address can't be used to create an account. Contact ${STAFF_CONTACT_EMAIL} if you think that's a mistake.`;
+
+/** What the before hook reads of better-auth's context; narrow so a spec can build one. */
+export interface AuthBeforeContext {
+	path: string;
+	headers?: Headers;
+	body?: unknown;
+	context: { password: { verify(input: { hash: string; password: string }): Promise<boolean> } };
+}
+
+/**
+ * better-auth's `before` hook. Sign-up refuses a blocklisted address; sign-in
+ * refuses a closed account. The blocklist is never read on sign-in, so it
+ * cannot lock out an existing member: only a recorded removal does that.
+ */
+export async function beforeAuth(ctx: AuthBeforeContext): Promise<void> {
+	// Gate public sign-up behind Cloudflare Turnstile. The login page sends
+	// the widget token in the x-turnstile-token header on register.
+	if (ctx.path === '/sign-up/email') {
+		const token = ctx.headers?.get('x-turnstile-token');
+		const ip = ctx.headers?.get('CF-Connecting-IP');
+		if (!(await verifyTurnstile(token, ip))) {
+			throw new APIError('BAD_REQUEST', {
+				message: 'Verification failed. Please try again.'
+			});
+		}
+		// After Turnstile, so a bot hammering the form does not inflate the count.
+		const signUpEmail = normalizeEmail((ctx.body as { email?: unknown } | undefined)?.email);
+		const blocked = signUpEmail ? await findBlockedEmail(signUpEmail) : null;
+		if (blocked) {
+			await recordRefusedSignup(blocked.id);
+			throw new APIError('FORBIDDEN', {
+				message: BLOCKED_SIGNUP_MESSAGE,
+				code: BLOCKED_SIGNUP_CODE
+			});
+		}
+		return;
+	}
+
+	if (ctx.path !== '/sign-in/email') return;
+
+	// Closed accounts are refused here, before better-auth would sign them
+	// in. Kept outside the diagnostics try/catch below, which swallows throws.
+	const body = ctx.body as { email?: unknown; password?: unknown } | undefined;
+	const signInEmail = normalizeEmail(body?.email);
+	if (signInEmail) {
+		const [row] = await db
+			.select({ id: user.id, deletedAt: user.deletedAt, bannedAt: user.bannedAt })
+			.from(user)
+			.where(eq(user.email, signInEmail));
+		const refusal = await signInRefusal(row, async () => {
+			if (!row || typeof body?.password !== 'string') return false;
+			const [cred] = await db
+				.select({ password: account.password })
+				.from(account)
+				.where(and(eq(account.userId, row.id), eq(account.providerId, 'credential')));
+			if (!cred?.password) return false;
+			return ctx.context.password.verify({ hash: cred.password, password: body.password });
+		});
+		if (refusal === 'suspended') {
+			throw new APIError('FORBIDDEN', {
+				message: ACCOUNT_SUSPENDED_MESSAGE,
+				code: ACCOUNT_SUSPENDED_CODE
+			});
+		}
+		if (refusal === 'invalid') {
+			throw new APIError('UNAUTHORIZED', { message: 'Invalid email or password' });
+		}
+	}
+
+	try {
+		await reportSignInAnomaly((ctx.body as { email?: unknown } | undefined)?.email);
+	} catch (err) {
+		// Diagnostics must never break the sign-in flow.
+		captureException(err, { event: 'auth.sign_in', stage: 'diagnostic_error' });
+	}
 }
 
 export const auth = new Proxy({} as Auth, {

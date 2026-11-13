@@ -117,6 +117,10 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			return `Banned the account: “${entry.details.reason}”`;
 		case 'user.unbanned':
 			return 'Lifted the ban';
+		case 'blocklist.added':
+			return 'Blocked the address from sign-up';
+		case 'blocklist.removed':
+			return 'Unblocked the address';
 		case 'user.email_change_requested':
 			return `Asked to change the login email to ${entry.details.email}`;
 		case 'user.email_changed':

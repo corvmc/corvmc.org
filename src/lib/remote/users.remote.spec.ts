@@ -200,6 +200,10 @@ const listAuditEntriesForSubject = vi.fn(async (..._a: unknown[]) => ({
 	entries: [],
 	hasMore: false
 }));
+vi.mock('#lib/server/moderation/removal-service.js', () => ({
+	listRemovals: vi.fn(async () => []),
+	getOpenRemoval: vi.fn(async () => null)
+}));
 vi.mock('#lib/server/audit/audit-service.js', () => ({
 	recordAuditEntry: (entry: unknown) => recordAuditEntry(entry),
 	listAuditEntriesForSubject: (...a: unknown[]) => listAuditEntriesForSubject(...a)

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "ec903719-3555-4ae1-928b-1ab6a7959e26",
+  "id": "6de3f78d-3ff4-4a68-88ac-3634fb727386",
   "prevIds": [
-    "ecb238ab-5817-4838-aed2-63edbbd5e441"
+    "ec903719-3555-4ae1-928b-1ab6a7959e26"
   ],
   "ddl": [
     {
@@ -284,6 +284,14 @@
     },
     {
       "name": "content_flag",
+      "entityType": "tables"
+    },
+    {
+      "name": "account_removal",
+      "entityType": "tables"
+    },
+    {
+      "name": "email_blocklist",
       "entityType": "tables"
     },
     {
@@ -8252,6 +8260,216 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "account_removal"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "account_removal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "actor_user_id",
+      "entityType": "columns",
+      "table": "account_removal"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "account_removal"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "reason",
+      "entityType": "columns",
+      "table": "account_removal"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "flag_id",
+      "entityType": "columns",
+      "table": "account_removal"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ends_at",
+      "entityType": "columns",
+      "table": "account_removal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ledger",
+      "entityType": "columns",
+      "table": "account_removal"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lifted_at",
+      "entityType": "columns",
+      "table": "account_removal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lifted_by_user_id",
+      "entityType": "columns",
+      "table": "account_removal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lift_reason",
+      "entityType": "columns",
+      "table": "account_removal"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "account_removal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "email_blocklist"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "email",
+      "entityType": "columns",
+      "table": "email_blocklist"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "source",
+      "entityType": "columns",
+      "table": "email_blocklist"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "note",
+      "entityType": "columns",
+      "table": "email_blocklist"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "removal_id",
+      "entityType": "columns",
+      "table": "email_blocklist"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "added_by_user_id",
+      "entityType": "columns",
+      "table": "email_blocklist"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "refused_count",
+      "entityType": "columns",
+      "table": "email_blocklist"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_refused_at",
+      "entityType": "columns",
+      "table": "email_blocklist"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "email_blocklist"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "moderation_appeal"
     },
     {
@@ -8281,6 +8499,16 @@
       "default": null,
       "generated": null,
       "name": "body",
+      "entityType": "columns",
+      "table": "moderation_appeal"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "account_outcome",
       "entityType": "columns",
       "table": "moderation_appeal"
     },
@@ -17416,6 +17644,96 @@
     },
     {
       "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_account_removal_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "account_removal"
+    },
+    {
+      "columns": [
+        "actor_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_account_removal_actor_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "account_removal"
+    },
+    {
+      "columns": [
+        "flag_id"
+      ],
+      "tableTo": "content_flag",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_account_removal_flag_id_content_flag_id_fk",
+      "entityType": "fks",
+      "table": "account_removal"
+    },
+    {
+      "columns": [
+        "lifted_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_account_removal_lifted_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "account_removal"
+    },
+    {
+      "columns": [
+        "removal_id"
+      ],
+      "tableTo": "account_removal",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_email_blocklist_removal_id_account_removal_id_fk",
+      "entityType": "fks",
+      "table": "email_blocklist"
+    },
+    {
+      "columns": [
+        "added_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_email_blocklist_added_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "email_blocklist"
+    },
+    {
+      "columns": [
         "flag_id"
       ],
       "tableTo": "content_flag",
@@ -20778,6 +21096,24 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "account_removal_pk",
+      "table": "account_removal",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "email_blocklist_pk",
+      "table": "email_blocklist",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "moderation_appeal_pk",
       "table": "moderation_appeal",
       "entityType": "pks"
@@ -23850,6 +24186,48 @@
     {
       "columns": [
         {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": "lifted_at IS NULL",
+      "origin": "manual",
+      "name": "uq_account_removal_open",
+      "entityType": "indexes",
+      "table": "account_removal"
+    },
+    {
+      "columns": [
+        {
+          "value": "flag_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_account_removal_flag",
+      "entityType": "indexes",
+      "table": "account_removal"
+    },
+    {
+      "columns": [
+        {
+          "value": "ends_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_account_removal_ends_at",
+      "entityType": "indexes",
+      "table": "account_removal"
+    },
+    {
+      "columns": [
+        {
           "value": "flag_id",
           "isExpression": false
         }
@@ -26283,6 +26661,15 @@
       "name": "inbox_channel_config_channel_unique",
       "entityType": "uniques",
       "table": "inbox_channel_config"
+    },
+    {
+      "columns": [
+        "email"
+      ],
+      "nameExplicit": false,
+      "name": "email_blocklist_email_unique",
+      "entityType": "uniques",
+      "table": "email_blocklist"
     },
     {
       "columns": [

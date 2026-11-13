@@ -1294,6 +1294,11 @@ Every moderation action is an upheld report. A staffer acting on their own files
 appeal it like any other. An appeal makes two separate decisions, one about the content and
 one about the standing. Nothing changes while an appeal waits.
 
+Removing a member's access is a ban. `user.deletedAt` enforces it, and an `account_removal`
+row records it: who, why, the upheld report it rests on, and what the deactivation cancelled.
+A ban also puts the member's address on the email blocklist, which refuses it at sign-up. The
+blocklist is never read at sign-in, so it cannot lock out an existing member.
+
 ### Code path
 
 - **Filing:** `flags.remote.ts`: `submitFlag()` for profiles and listings (narrowed to
@@ -1326,6 +1331,16 @@ one about the standing. Nothing changes while an appeal waits.
   the standing-aware submit. The staffer who resolved the report may grant but not deny
   (`SelfReviewError`). `reopenAppeal()` returns a decided appeal to the queue without undoing
   its effects. The member's notification states the verdict only.
+- **Removals:** `user/user-service.ts:banUser()` deactivates, files a `staff_action` report
+  against the member's profile when none is given, then `moderation/removal-service.ts:recordRemoval()`
+  stamps the row and `blocklist-service.ts:blockEmail()` lists the address. The partial unique
+  index `uq_account_removal_open` allows one open removal per member. `unbanUser()` lifts the
+  open row and unblocks only the address that ban added. The member record's Account tab lists
+  removals (`getUserRemovals`).
+- **Blocklist:** `/staff/moderation/blocklist` → `blocklist.remote.ts`, behind `user.ban`.
+  `auth.ts:beforeAuth()` refuses a listed address on `/sign-up/email`, after Turnstile, and
+  counts the attempt on the entry. Blocking suppresses a deliverable `subscriber` with reason
+  `blocked`; unblocking clears only that reason.
 - **Suggestions:** `suggestion/suggestion-service.ts` — the board
   (`getSuggestionBoard`, votes deduped per member), the staff queue
   (`getSuggestionsQueue`, `respondToSuggestion`, `setSuggestionVisibility`),
@@ -1336,7 +1351,8 @@ one about the standing. Nothing changes while an appeal waits.
 ### Data touched
 
 `content_flag`, `member_standing`, `suggestion`, `suggestion_vote`, `suggestion_edit`,
-`user_block`, and `event.status` when an upheld report unpublishes a listing.
+`user_block`, `account_removal`, `email_blocklist`, `subscriber.suppressionReason`, and
+`event.status` when an upheld report unpublishes a listing.
 
 ### Where it breaks
 

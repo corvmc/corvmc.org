@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getFlagsQueue } from '#lib/remote/flags.remote.js';
 import { getIncidentLog } from '#lib/remote/incidents.remote.js';
+import { getBlocklist } from '#lib/remote/blocklist.remote.js';
 import { filterNavSections, staffNavSections } from '../nav-items';
 import { visibleViews } from '../views';
 import { moderationViews } from './views';
@@ -20,6 +21,7 @@ vi.mock('$app/server', async () =>
 
 const FLAGS = 'moderation.reviewFlags';
 const INCIDENTS = 'incident.read';
+const BAN = 'user.ban';
 
 beforeEach(() => {
 	auth.held = [];
@@ -41,12 +43,13 @@ describe('tabs', () => {
 		],
 		[[FLAGS], ['flags']],
 		[[INCIDENTS], ['incidents']],
+		[[BAN], ['blocklist']],
 		[[], []]
 	])('holding %j shows %j', (held, keys) => {
 		expect(visibleViews(moderationViews, held).map((v) => v.key)).toEqual(keys);
 	});
 
-	it.each([[FLAGS], [INCIDENTS]])('offers the row to a holder of only %s', (cap) => {
+	it.each([[FLAGS], [INCIDENTS], [BAN]])('offers the row to a holder of only %s', (cap) => {
 		const rows = filterNavSections(staffNavSections, [cap]).flatMap((s) => s.items);
 		expect(rows.map((r) => r.key)).toContain('moderation');
 	});
@@ -56,6 +59,13 @@ describe('remotes', () => {
 	it('refuses the flag queue to someone holding only incidents', async () => {
 		auth.held = [INCIDENTS];
 		await expect((getFlagsQueue as never as (f: object) => unknown)({})).rejects.toMatchObject({
+			status: 403
+		});
+	});
+
+	it('refuses the blocklist to someone holding only flags', async () => {
+		auth.held = [FLAGS];
+		await expect((getBlocklist as never as () => unknown)()).rejects.toMatchObject({
 			status: 403
 		});
 	});

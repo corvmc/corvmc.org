@@ -215,6 +215,10 @@ export const tableOrder = [
 	'audit_log',
 	// References content_flag (one appeal per upheld report) and user.
 	'moderation_appeal',
+	// References user and content_flag (the report a removal rests on).
+	'account_removal',
+	// References account_removal and user; no FK to the blocked address's account.
+	'email_blocklist',
 	'user_block',
 	'suggestion_vote',
 	// References user and group; parent of classified_post_tag.
