@@ -39,3 +39,6 @@ since decision 0014 and nothing wrote it. Issue #2546 holds the proposal.
 - A series page follows `supersededBy` to show the edit history.
 - Recurrence stays two mechanisms: this applies to `recurring_series`, not to
   `maintenance_schedule`.
+- An event series follows the same rules (#2719). An occurrence's room hold goes with it: a
+  removed occurrence's hold is cancelled, and the new first session holds the room for the old
+  setup and teardown. An occurrence with an RSVP, ticket or other record is kept.

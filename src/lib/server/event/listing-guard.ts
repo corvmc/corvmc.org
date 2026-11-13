@@ -1,6 +1,9 @@
 import { error } from '@sveltejs/kit';
 import { can, requireUser } from '#lib/server/authorization.js';
-import { requireProjectCommittee } from '#lib/server/group/group-context.js';
+import { requireProgramRole, requireProjectCommittee } from '#lib/server/group/group-context.js';
+import { db } from '#lib/server/db/index.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
+import { eq } from 'drizzle-orm';
 import { projectOfEvent } from '#lib/server/production/production-scope.js';
 
 /**
@@ -27,4 +30,25 @@ export async function requireListingReader(eventId: string) {
 	const user = requireUser();
 	if (await can('event.read')) return user;
 	return requireListingWriter(eventId);
+}
+
+/**
+ * Who may change a series' schedule: `event.manage` as staff; for a program's
+ * series, a leader of that program; otherwise whoever `requireListingWriter`
+ * admits for the prototype.
+ */
+export async function requireSeriesWriter(prototypeEventId: string): Promise<'staff' | 'owner'> {
+	requireUser();
+	if (await can('event.manage')) return 'staff';
+	const [listing] = await db
+		.select({ source: eventListing.source, groupId: eventListing.groupId })
+		.from(eventListing)
+		.where(eq(eventListing.id, prototypeEventId))
+		.limit(1);
+	if (listing?.source === 'group' && listing.groupId) {
+		await requireProgramRole({ id: listing.groupId }, 'admin');
+		return 'owner';
+	}
+	await requireListingWriter(prototypeEventId);
+	return 'owner';
 }

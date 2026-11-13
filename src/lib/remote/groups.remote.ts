@@ -57,6 +57,10 @@ import {
 	listPublished
 } from '#lib/server/group/announcement-service.js';
 import { listGroupSessions } from '#lib/server/event/event-service.js';
+import {
+	activeEventSeries,
+	type EventSeriesWithPrototype
+} from '#lib/server/reservation/recurring-series-service.js';
 import { listCommitteeProjectEvents, listProjects } from '#lib/server/project/project-service.js';
 import { listDutyLists } from '#lib/server/volunteer/duty-list-service.js';
 import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
@@ -408,6 +412,18 @@ export const getMemberGroups = query(async () => {
 	};
 });
 
+function editableSeries(series: EventSeriesWithPrototype | undefined) {
+	if (!series?.prototypeEndsAt) return null;
+	return {
+		id: series.id,
+		frequencyLabel: series.frequencyLabel,
+		monthlyMode: series.monthlyMode,
+		startsAt: series.prototypeStartsAt,
+		endsAt: series.prototypeEndsAt,
+		until: series.endsAt
+	};
+}
+
 /**
  * The club page's one load-bearing query — the group, your role and the roster
  * together. A club is small by construction, so this is one read rather than a
@@ -463,7 +479,10 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		canManage ? listForManager(group.id) : listPublished(group.id),
 		// Null for a staff non-member — no roster row, so nothing to mute.
 		getMuteState(group.id, ctx.user.id),
-		listGroupSessions(group.id),
+		listGroupSessions(group.id).then(async (rows) => ({
+			rows,
+			series: await activeEventSeries(rows.map((e) => e.recurringSeriesId))
+		})),
 		listFiles(group.id),
 		// Its own statement rather than a sum over `files`: that list is capped,
 		// and it carries the quota constants the meter renders, which a
@@ -519,7 +538,7 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		notifyAnnouncements,
 		files,
 		documentUsage,
-		sessions: sessions.map((e) => ({
+		sessions: sessions.rows.map((e) => ({
 			id: e.id,
 			title: e.title,
 			// The edit form needs to open pre-filled, so it needs what it edits.
@@ -529,6 +548,8 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 			status: e.status,
 			// A session already in a series has no "Repeat" to offer.
 			repeats: !!e.recurringSeriesId,
+			// The live series, when there is one to edit the schedule of.
+			series: editableSeries(sessions.series.get(e.recurringSeriesId ?? '')),
 			// The listing half, so the edit form opens pre-filled on the fields a
 			// band gig has carried all along.
 			doorsAt: e.doorsAt,

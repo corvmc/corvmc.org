@@ -35,6 +35,28 @@ vi.mock('#lib/server/reservation/recurring-series-reschedule.js', () => ({
 	previewReschedule
 }));
 
+let prototypeType: 'reservation' | 'event_listing' = 'reservation';
+const seriesPrototype = vi.fn(async () => ({ type: prototypeType, id: 'evt-proto' }));
+const rescheduleEventSeries = vi.fn(async () => ({
+	seriesId: 'ser-2',
+	eventId: 'evt-2',
+	waitlisted: false,
+	removed: [],
+	kept: [],
+	errors: []
+}));
+const previewEventReschedule = vi.fn(async () => ({ sessions: [], kept: [], removed: 0 }));
+vi.mock('#lib/server/reservation/event-series-reschedule.js', () => ({
+	seriesPrototype,
+	rescheduleEventSeries,
+	previewEventReschedule
+}));
+const requireSeriesWriter = vi.fn(async () => {
+	if (caller === 'neither') throw new Error('403');
+	return caller;
+});
+vi.mock('#lib/server/event/listing-guard.js', () => ({ requireSeriesWriter }));
+
 vi.mock('$app/server', () => {
 	const tag = (args: unknown[], type: string) => {
 		const handler = args[args.length - 1] as (...a: unknown[]) => unknown;
@@ -75,6 +97,7 @@ const input = {
 
 beforeEach(() => {
 	caller = 'owner';
+	prototypeType = 'reservation';
 	vi.clearAllMocks();
 });
 
@@ -121,5 +144,31 @@ describe('previewSeriesSchedule', () => {
 		caller = 'neither';
 		await expect(remote.previewSeriesSchedule(input)).rejects.toThrow(/403/);
 		expect(previewReschedule).not.toHaveBeenCalled();
+	});
+});
+
+describe('an event series', () => {
+	beforeEach(() => {
+		prototypeType = 'event_listing';
+	});
+
+	it('refuses someone who may not write its prototype listing', async () => {
+		caller = 'neither';
+		await expect(rescheduleSeries(input, issue)).rejects.toThrow(/403/);
+		await expect(remote.previewSeriesSchedule(input)).rejects.toThrow(/403/);
+		expect(requireSeriesWriter).toHaveBeenCalledWith('evt-proto');
+		expect(rescheduleEventSeries).not.toHaveBeenCalled();
+		expect(previewEventReschedule).not.toHaveBeenCalled();
+	});
+
+	it('goes to the event service, not the booking one', async () => {
+		const result = await rescheduleSeries(input, issue);
+		expect(rescheduleEventSeries).toHaveBeenCalledWith('ser-1', expect.anything(), {
+			kind: 'owner',
+			userId: 'user-caller'
+		});
+		expect(reschedule).not.toHaveBeenCalled();
+		expect(requireCapabilityOrOwner).not.toHaveBeenCalled();
+		expect(result).toMatchObject({ seriesId: 'ser-2', eventId: 'evt-2' });
 	});
 });

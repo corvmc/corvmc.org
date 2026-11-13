@@ -371,5 +371,10 @@
 	"actions_edit_schedule_kept_title": "Kept bookings",
 	"actions_edit_schedule_kept_body": "These bookings on the old schedule are paid or in use, so they stay. Cancel any you no longer need.",
 	"actions_edit_schedule_removed_body": "Unpaid bookings on the old schedule from the first session on are removed.",
-	"actions_edit_schedule_waitlisted_toast": "Schedule changed. The first session is on the waitlist."
+	"actions_edit_schedule_waitlisted_toast": "Schedule changed. The first session is on the waitlist.",
+	"actions_edit_schedule_room_taken_label": "Room taken",
+	"actions_edit_schedule_kept_sessions_title": "Kept sessions",
+	"actions_edit_schedule_kept_sessions_body": "These sessions on the old schedule have RSVPs or other records, so they stay. Cancel any you no longer need.",
+	"actions_edit_schedule_removed_sessions_body": "Other sessions on the old schedule from the first session on are removed, with their room holds.",
+	"actions_edit_schedule_hold_waitlisted_toast": "Schedule changed. The first room hold is on the waitlist."
 }

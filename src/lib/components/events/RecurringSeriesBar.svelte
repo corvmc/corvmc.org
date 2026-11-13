@@ -4,20 +4,31 @@
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
 	import { cancelEventSeries } from '#lib/remote/events.remote.js';
+	import { EditScheduleAction } from '#lib/components/actions/index.js';
 	import { fullDate } from '#lib/utils/format.js';
 
 	/**
-	 * The series a listing belongs to, and the one control on it: stop making
-	 * new occurrences. Keyed on the occurrence, not the series, so the guard
-	 * reads the show's committee off the same row (#1948).
+	 * The series a listing belongs to: change its schedule, or stop making new
+	 * occurrences. Stopping is keyed on the occurrence, not the series, so the
+	 * guard reads the show's committee off the same row (#1948).
 	 */
 	interface Props {
 		eventId: string;
-		series: { frequencyLabel: string; endsAt: Date | null; cancelledAt: Date | null };
+		series: {
+			id: string;
+			frequencyLabel: string;
+			monthlyMode: 'weekday' | 'monthday' | null;
+			prototypeStartsAt: Date;
+			prototypeEndsAt: Date | null;
+			endsAt: Date | null;
+			cancelledAt: Date | null;
+		};
 		onchange: () => void;
+		/** After a schedule change, with the new series' first session. */
+		onrescheduled: (eventId: string) => void;
 	}
 
-	let { eventId, series, onchange }: Props = $props();
+	let { eventId, series, onchange, onrescheduled }: Props = $props();
 </script>
 
 <div class="flex flex-wrap items-center gap-2">
@@ -37,6 +48,21 @@
 				})}
 			{:else}{m.events_recurring_series_bar_new_occurrences_generated_automa_text()}{/if}
 		</span>
+		{#if series.prototypeEndsAt}
+			<EditScheduleAction
+				kind="event"
+				size="xs"
+				series={{
+					id: series.id,
+					frequencyLabel: series.frequencyLabel,
+					monthlyMode: series.monthlyMode,
+					startsAt: series.prototypeStartsAt,
+					endsAt: series.prototypeEndsAt,
+					until: series.endsAt
+				}}
+				onsuccess={(_, next) => (next ? onrescheduled(next) : onchange())}
+			/>
+		{/if}
 		<Form
 			remote={cancelEventSeries}
 			successToast={m.events_recurring_series_bar_success_toast()}
