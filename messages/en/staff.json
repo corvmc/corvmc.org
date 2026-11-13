@@ -1157,7 +1157,7 @@
 		}
 	],
 	"staff_inbox_first_reply_no_replies_text": "No replies",
-	"staff_inbox_first_reply_title": "First reply times",
+	"staff_inbox_first_reply_times_label": "First reply times",
 	"staff_inbox_first_reply_waiting_text": "{count} waiting for a first reply",
 	"staff_inbox_first_reply_window_text": "Median per channel, last {days} days",
 	"staff_inbox_title": "No conversation selected",

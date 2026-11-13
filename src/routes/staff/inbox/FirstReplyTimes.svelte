@@ -16,7 +16,7 @@
 
 {#if firstResponse.length > 0}
 	<section class="flex w-full max-w-md flex-col gap-2" data-testid="first-reply-times">
-		<SectionLabel label={m.staff_inbox_first_reply_title()} />
+		<SectionLabel label={m.staff_inbox_first_reply_times_label()} />
 		<p class="text-muted text-sm">
 			{m.staff_inbox_first_reply_window_text({ days: FIRST_RESPONSE_WINDOW_DAYS })}
 		</p>
