@@ -136,7 +136,7 @@
 			<div class="flex items-center justify-between border-b border-base-300 px-4 py-3">
 				<span class="text-sm font-semibold">{m.layout_notifications_text()}</span>
 				{#if unreadCount > 0}
-					<button class="text-xs text-primary hover:underline" onclick={markAllRead}>
+					<button type="button" class="text-xs text-primary hover:underline" onclick={markAllRead}>
 						{m.layout_notifications_mark_all_read_label()}
 					</button>
 				{/if}
@@ -197,6 +197,7 @@
 									<div class="flex items-start gap-2">
 										{#if isUnread}
 											<button
+												type="button"
 												class="mt-1.5 h-2 w-2 shrink-0 cursor-pointer rounded-full bg-primary"
 												onclick={() => markRead(n.id)}
 												aria-label={m.layout_notification_mark_read_label()}

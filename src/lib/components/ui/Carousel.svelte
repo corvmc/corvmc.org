@@ -71,6 +71,7 @@
 	{#if maxIndex > 0}
 		<div class="carousel__ctrls">
 			<button
+				type="button"
 				class="carousel__nav"
 				onclick={prev}
 				disabled={currentIndex === 0}
@@ -88,6 +89,7 @@
 			<div class="carousel__dots">
 				{#each Array(maxIndex + 1) as _, i (i)}
 					<button
+						type="button"
 						class="carousel__dot"
 						class:is-active={i === currentIndex}
 						onclick={() => scrollTo(i)}
@@ -96,6 +98,7 @@
 				{/each}
 			</div>
 			<button
+				type="button"
 				class="carousel__nav"
 				onclick={next}
 				disabled={currentIndex >= maxIndex}
