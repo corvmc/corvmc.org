@@ -180,6 +180,26 @@ function fakeCheckoutUrl(params: Stripe.Checkout.SessionCreateParams, sessionId:
  * synthesized on the way out, so detaching and re-defaulting work for real.
  * Keyed on the seed's prefix and nothing an e2e fixture uses.
  */
+/**
+ * A `pi_seed_…` or `pr_seed_…` id is a payment the seed wrote onto a row, so a
+ * seeded payment can be refunded locally (#2835). The seed's amount is not
+ * known here; zero means a refund reports nothing back to the store.
+ */
+function materialiseSeedPayment(id: string): void {
+	if (id.startsWith('pi_seed_') && !store.paymentIntents.has(id)) {
+		store.paymentIntents.set(id, fakePaymentIntent({ id }));
+	}
+	if (id.startsWith('pr_seed_') && !store.paymentRecords.has(id)) {
+		store.paymentRecords.set(
+			id,
+			fakePaymentRecord({
+				id,
+				amount: { value: 0, currency: 'usd' } as Stripe.PaymentRecord.Amount
+			})
+		);
+	}
+}
+
 function materialiseSeedCustomer(customerId: string | undefined): void {
 	if (!customerId?.startsWith('cus_seed')) return;
 	if (seeded.has(customerId)) return;
@@ -487,6 +507,7 @@ export function createFakeGateway(): PaymentGateway {
 
 		paymentIntents: {
 			retrieve: async (id: string) => {
+				materialiseSeedPayment(id);
 				const intent = store.paymentIntents.get(id);
 				return intent ? respond(intent) : notFound('payment_intent', id);
 			},
@@ -573,6 +594,7 @@ export function createFakeGateway(): PaymentGateway {
 				return respond(record);
 			},
 			reportRefund: async (id) => {
+				materialiseSeedPayment(id);
 				const record = store.paymentRecords.get(id);
 				if (!record) return notFound('payment_record', id);
 				const refunded = {
@@ -583,6 +605,7 @@ export function createFakeGateway(): PaymentGateway {
 				return respond(refunded);
 			},
 			retrieve: async (id: string) => {
+				materialiseSeedPayment(id);
 				const record = store.paymentRecords.get(id);
 				return record ? respond(record) : notFound('payment_record', id);
 			}
