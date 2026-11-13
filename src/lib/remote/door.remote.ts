@@ -14,6 +14,14 @@ import {
 	listDoorEvents,
 	startDoorSale as startDoorSaleService
 } from '#lib/server/ticket/door-sale.js';
+import {
+	cancelDoorDonation,
+	doorDonationEventId,
+	fulfillDoorDonation,
+	getDoorDonation,
+	startDoorDonation as startDoorDonationService
+} from '#lib/server/finance/door-donation.js';
+import { TICKET_MIN_CHARGE_CENTS } from '#lib/config.js';
 
 /**
  * Every door remote names the show it acts on. Staff hold `finance.collect`
@@ -22,12 +30,17 @@ import {
  */
 const requireDoorSeller = (eventId: string) => requireCapability('finance.collect', { eventId });
 
-/** A sale's show comes from its tickets, never from the client. */
+/**
+ * A sale's show comes from its tickets or its donation row, never from the
+ * client. `donation` says which, so one set of remotes serves both.
+ */
 async function requireSellerOfSale(paymentIntentId: string) {
 	requireUser();
-	const eventId = await doorSaleEventId(paymentIntentId);
+	const ticketEventId = await doorSaleEventId(paymentIntentId);
+	const eventId = ticketEventId ?? (await doorDonationEventId(paymentIntentId));
 	if (!eventId) error(403, 'Not permitted');
-	return requireDoorSeller(eventId);
+	await requireDoorSeller(eventId);
+	return { donation: ticketEventId === null };
 }
 
 /**
@@ -71,15 +84,32 @@ export const startDoorSale = form(
 	}
 );
 
-/** Polled after a tap until the webhook has checked the order in. */
+/** A gift at the door (#2548): one amount, no tickets. Card only, as tickets are. */
+export const startDoorDonation = form(
+	z.object({
+		eventId: z.string().min(1),
+		amountCents: z.number().int().min(TICKET_MIN_CHARGE_CENTS).max(1_000_000)
+	}),
+	async ({ eventId, amountCents }) => {
+		const seller = await requireDoorSeller(eventId);
+		return startDoorDonationService({ eventId, amountCents, staffUserId: seller.id });
+	}
+);
+
+/** Polled after a tap until the webhook has recorded the sale or the gift. */
 export const getDoorSale = query(z.string().min(1), async (paymentIntentId) => {
-	await requireSellerOfSale(paymentIntentId);
-	return getDoorSaleService(paymentIntentId);
+	const { donation } = await requireSellerOfSale(paymentIntentId);
+	if (donation) {
+		const gift = await getDoorDonation(paymentIntentId);
+		return { status: gift?.status ?? 'cancelled', quantity: 0, donationCents: gift?.amountCents };
+	}
+	return { ...(await getDoorSaleService(paymentIntentId)), donationCents: undefined };
 });
 
 export const cancelDoorSale = command(z.string().min(1), async (paymentIntentId) => {
-	await requireSellerOfSale(paymentIntentId);
-	await cancelDoorSaleService(paymentIntentId);
+	const { donation } = await requireSellerOfSale(paymentIntentId);
+	if (donation) await cancelDoorDonation(paymentIntentId);
+	else await cancelDoorSaleService(paymentIntentId);
 });
 
 /**
@@ -87,7 +117,8 @@ export const cancelDoorSale = command(z.string().min(1), async (paymentIntentId)
  * webhook to wait for. It goes through `fulfillDoorSale`, as a real tap does.
  */
 export const simulateDoorTap = command(z.string().min(1), async (paymentIntentId) => {
-	await requireSellerOfSale(paymentIntentId);
+	const { donation } = await requireSellerOfSale(paymentIntentId);
 	if (paymentDriver() !== 'fake') error(404, 'Not found');
-	await fulfillDoorSale(completeFakeTerminalPayment(paymentIntentId));
+	const intent = completeFakeTerminalPayment(paymentIntentId);
+	await (donation ? fulfillDoorDonation(intent) : fulfillDoorSale(intent));
 });

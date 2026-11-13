@@ -192,6 +192,12 @@ export const moneyColumns = {
 	'market_vendor.paid_cents': {
 		movement: 'market_vendor_fee',
 		writer: 'src/lib/server/finance/checkout-entries-listener.ts'
+	},
+
+	// -------------------------------------------------------------- donations
+	'donation.amount_cents': {
+		movement: 'door_donation',
+		writer: 'src/lib/server/finance/door-donation.ts'
 	}
 } satisfies Record<string, MoneyColumn>;
 

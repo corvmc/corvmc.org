@@ -3,6 +3,7 @@ import { eventListing } from '../../src/lib/server/db/schema/event';
 import { randomUUID } from 'crypto';
 import { volunteerRole, volunteerSignup } from '../../src/lib/server/db/schema/volunteer';
 import { ticket, ticketSale } from '../../src/lib/server/db/schema/ticket';
+import { donation } from '../../src/lib/server/db/schema/donation';
 import { batchInsert, db } from './db';
 import { insertTasksWithShifts } from './shifts';
 
@@ -11,7 +12,7 @@ import { insertTasksWithShifts } from './shifts';
  *
  * `/member/volunteer/door` lists only a collective show starting within a day, which the
  * dated event seed cannot promise, so this writes one relative to now. Two
- * sales are already in: one tapped, one let in free below the minimum. The
+ * sales and a donation are already in: one tapped, one let in free below the minimum. The
  * door shift is on now, confirmed for `doorVolunteerId`, so that login can sell.
  */
 export async function seedDoorSales(
@@ -68,6 +69,16 @@ export async function seedDoorSales(
 			checkedInByUserId: adminUserId
 		}
 	]);
+
+	// A gift tapped at the same door (#2548).
+	await db.insert(donation).values({
+		paymentIntentId: 'pi_seed_door_gift',
+		eventId: show.id,
+		amountCents: 2500,
+		status: 'paid',
+		takenByUserId: adminUserId,
+		paidAt: checkedInAt
+	});
 
 	const [role] = await db
 		.select({ id: volunteerRole.id })

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "6de3f78d-3ff4-4a68-88ac-3634fb727386",
+  "id": "e6e5adb1-a25e-4b23-b67b-1b6e5a741b9e",
   "prevIds": [
-    "ec903719-3555-4ae1-928b-1ab6a7959e26"
+    "6de3f78d-3ff4-4a68-88ac-3634fb727386"
   ],
   "ddl": [
     {
@@ -496,6 +496,10 @@
     },
     {
       "name": "financial_entry",
+      "entityType": "tables"
+    },
+    {
+      "name": "donation",
       "entityType": "tables"
     },
     {
@@ -13770,6 +13774,86 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "donation"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "payment_intent_id",
+      "entityType": "columns",
+      "table": "donation"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_id",
+      "entityType": "columns",
+      "table": "donation"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount_cents",
+      "entityType": "columns",
+      "table": "donation"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'pending'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "donation"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "taken_by_user_id",
+      "entityType": "columns",
+      "table": "donation"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "paid_at",
+      "entityType": "columns",
+      "table": "donation"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "donation"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "artifact_request"
     },
     {
@@ -19646,6 +19730,36 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_donation_event_id_event_listing_id_fk",
+      "entityType": "fks",
+      "table": "donation"
+    },
+    {
+      "columns": [
+        "taken_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_donation_taken_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "donation"
+    },
+    {
+      "columns": [
+        "event_id"
+      ],
+      "tableTo": "event_listing",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
       "name": "fk_artifact_request_event_id_event_listing_id_fk",
@@ -21494,6 +21608,15 @@
       "nameExplicit": false,
       "name": "financial_entry_pk",
       "table": "financial_entry",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "donation_pk",
+      "table": "donation",
       "entityType": "pks"
     },
     {
@@ -25870,6 +25993,34 @@
       "name": "idx_financial_entry_project",
       "entityType": "indexes",
       "table": "financial_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "payment_intent_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "uq_donation_payment_intent",
+      "entityType": "indexes",
+      "table": "donation"
+    },
+    {
+      "columns": [
+        {
+          "value": "event_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_donation_event",
+      "entityType": "indexes",
+      "table": "donation"
     },
     {
       "columns": [

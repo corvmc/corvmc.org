@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import * as env from '$app/env/private';
 import { sweepDoorSales } from '#lib/server/ticket/door-sale.js';
+import { sweepDoorDonations } from '#lib/server/finance/door-donation.js';
 
 /**
  * Checks in door card sales whose `payment_intent.succeeded` webhook never
@@ -17,5 +18,6 @@ export const POST: RequestHandler = async ({ request }) => {
 	const auth = request.headers.get('Authorization');
 	if (auth !== `Bearer ${secret}`) throw error(401, 'Unauthorized');
 
-	return Response.json(await sweepDoorSales());
+	const [tickets, donations] = await Promise.all([sweepDoorSales(), sweepDoorDonations()]);
+	return Response.json({ ...tickets, donations });
 };

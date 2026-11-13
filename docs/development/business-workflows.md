@@ -594,6 +594,12 @@ A card payment taken at the door on the CMC phone, which runs the `door-app/` sh
   attaches the payment or refunds it in Stripe. A sale
   abandoned before the tap is released by `cancelDoorSale`, or later by
   `cancelStalePendingTickets`.
+- **Donations (#2548):** `startDoorDonation` → `finance/door-donation.ts` opens a `card_present`
+  intent (`type: door_donation`) for one amount and holds a `pending` `donation` row under the
+  intent's id. The same webhook flips it to `paid` and writes an `earned`/`donation` row and the
+  card fee. `getDoorSale`, `cancelDoorSale` and `simulateDoorTap` serve both kinds; the show comes
+  from the ticket rows or the donation row. The sweep covers donations too, and reports a charged
+  gift with no pending row as `door-donation.unmatched`. No acknowledgment is sent from the app.
 
 ### Data touched
 

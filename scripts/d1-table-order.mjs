@@ -63,6 +63,8 @@ export const tableOrder = [
 	'production',
 	// Names the production it announces, so it follows one.
 	'event_listing',
+	// References event_listing and user, so it follows both.
+	'donation',
 	// Cascades from production, so it clears with it.
 	'production_expense',
 	// References event_listing and directory_entry, so it clears before both.
