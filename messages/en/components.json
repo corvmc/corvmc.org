@@ -1547,5 +1547,12 @@
 	"volunteer_shift_card_set_supervisor_title": "Set supervisor",
 	"volunteer_shift_card_supervisor_label": "Supervisor",
 	"volunteer_shift_card_no_supervisor_label": "None",
-	"volunteer_shift_card_supervisor_saved_toast": "Supervisor saved"
+	"volunteer_shift_card_supervisor_saved_toast": "Supervisor saved",
+	"events_facts_access_label": "Access",
+	"events_facts_step_free_entry_text": "Step-free entry",
+	"events_facts_no_step_free_entry_text": "No step-free entry",
+	"events_facts_accessible_restroom_text": "Accessible restroom",
+	"events_facts_no_accessible_restroom_text": "No accessible restroom",
+	"events_facts_seating_text": "Seating",
+	"events_facts_no_seating_text": "No seating"
 }

@@ -4,6 +4,7 @@ import { query } from '$app/server';
 import { form } from './_remote';
 import { requireCapability } from '#lib/server/authorization.js';
 import { mapDomainError } from '#lib/server/errors.js';
+import { accessAnswers } from '#lib/config.js';
 import {
 	createVenue as createService,
 	updateVenue as updateService,
@@ -48,7 +49,16 @@ const venueFields = {
 	notes: z.string().max(2000).optional()
 };
 
-function venueInput(data: Record<string, string | undefined>) {
+// Edit only: the create form does not ask, so a new room starts `unknown`.
+const accessFields = {
+	stepFreeEntry: z.enum(accessAnswers),
+	accessibleRestroom: z.enum(accessAnswers),
+	seating: z.enum(accessAnswers)
+};
+
+const venueSchema = z.object(venueFields);
+
+function venueInput(data: z.infer<typeof venueSchema>) {
 	const capacity =
 		data.capacity && data.capacity.trim() !== '' ? parseInt(data.capacity, 10) : null;
 
@@ -101,7 +111,7 @@ export const getVenueDetail = query(z.string(), async (id) => {
 // Forms
 // ---------------------------------------------------------------------------
 
-export const createVenue = form(z.object(venueFields), async (data) => {
+export const createVenue = form(venueSchema, async (data) => {
 	await requireCapability('event.manage');
 	try {
 		const row = await createService(venueInput(data));
@@ -114,11 +124,16 @@ export const createVenue = form(z.object(venueFields), async (data) => {
 });
 
 export const updateVenue = form(
-	z.object({ id: z.string().min(1), ...venueFields }),
+	z.object({ id: z.string().min(1), ...venueFields, ...accessFields }),
 	async (data) => {
 		await requireCapability('event.manage');
 		try {
-			await updateService(data.id, venueInput(data));
+			await updateService(data.id, {
+				...venueInput(data),
+				stepFreeEntry: data.stepFreeEntry,
+				accessibleRestroom: data.accessibleRestroom,
+				seating: data.seating
+			});
 			await Promise.all([
 				getVenues().refresh(),
 				getVenueOptions().refresh(),

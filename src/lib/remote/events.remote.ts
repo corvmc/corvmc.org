@@ -22,7 +22,11 @@ import { mapDomainError } from '#lib/server/errors.js';
 import { listRsvpsForUser } from '#lib/server/event/rsvp-service.js';
 import { rsvpClosedReason } from '#lib/server/event/rsvp-availability.js';
 import { listDutyLists } from '#lib/server/volunteer/duty-list-service.js';
-import { holdsSpace, listVenues as listLiveVenues } from '#lib/server/venue/venue-service.js';
+import {
+	getVenueAccess,
+	holdsSpace,
+	listVenues as listLiveVenues
+} from '#lib/server/venue/venue-service.js';
 import { getProductionByEvent } from '#lib/server/production/production-service.js';
 import {
 	listEventPhotos,
@@ -233,11 +237,12 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 		throw error(404, 'Event not found');
 	}
 	await requireListingVisible(id);
-	const [remaining, lineup, isSustainingMember, seller] = await Promise.all([
+	const [remaining, lineup, isSustainingMember, seller, access] = await Promise.all([
 		evt.ticketingEnabled ? getTicketsRemaining(id) : Promise.resolve(null),
 		getEventLineup(id),
 		locals.user ? checkSustainingMember(locals.user.id) : Promise.resolve(false),
-		sellerFor(evt)
+		sellerFor(evt),
+		getVenueAccess(evt.venueId)
 	]);
 
 	// Sold is derived from remaining only when the event is both ticketed and capped;
@@ -278,6 +283,7 @@ export const getMemberEventDetail = query(z.string(), async (id) => {
 			doorsAt: evt.doorsAt ?? null,
 			location: evt.location,
 			address: evt.address,
+			access,
 			tags: evt.tags as string | null,
 			posterUrl: resolveImageUrl(evt.posterKey),
 			// On sale only while somebody may sell it: a band whose payouts
@@ -356,6 +362,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 	// rest of the gate (a confirmed production, a downbeat, a credit) is in SQL.
 	const setTimes = evt.source === 'cmc' ? await getPublicSetTimes(id) : [];
 	const seller = await sellerFor(evt);
+	const access = await getVenueAccess(evt.venueId);
 	const remaining = evt.ticketingEnabled ? await getTicketsRemaining(id) : null;
 	const sold =
 		evt.ticketQuantity != null && remaining != null ? evt.ticketQuantity - remaining : null;
@@ -408,6 +415,7 @@ export const getPublicEventDetail = query(z.string(), async (id) => {
 			doorsAt: evt.doorsAt ?? null,
 			location: evt.location,
 			address: evt.address,
+			access,
 			tags: evt.tags as string | null,
 			posterUrl: resolveImageUrl(evt.posterKey),
 			// On sale only while somebody may sell it: a band whose payouts

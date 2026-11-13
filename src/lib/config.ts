@@ -3075,3 +3075,15 @@ export const helpAudienceLabels: Record<HelpAudience, string> = {
 	sustaining: 'Sustaining members',
 	staff: 'Staff'
 };
+
+// ---------------------------------------------------------------------------
+// Venue access (#2717)
+// ---------------------------------------------------------------------------
+
+/** A room's answer to one access question. `unknown` is not `no`: nobody has checked. */
+export const accessAnswers = ['yes', 'no', 'unknown'] as const;
+export type AccessAnswer = (typeof accessAnswers)[number];
+
+/** The fixed set of questions, in display order. Each is a `venue` column. */
+export const venueAccessFields = ['stepFreeEntry', 'accessibleRestroom', 'seating'] as const;
+export type VenueAccessField = (typeof venueAccessFields)[number];

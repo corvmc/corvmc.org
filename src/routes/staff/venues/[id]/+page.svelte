@@ -27,6 +27,8 @@
 		deleteVenue
 	} from '#lib/remote/venues.remote.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
+	import { venueAccessFields } from '#lib/config.js';
+	import type { AccessAnswer, VenueAccessField } from '#lib/config.js';
 
 	const params = routeParams('id');
 
@@ -41,6 +43,21 @@
 			.filter(Boolean)
 			.join(' · ')
 	);
+	const answerLabel: Record<AccessAnswer, () => string> = {
+		yes: m.staff_yes_label,
+		no: m.staff_no_label,
+		unknown: m.staff_unknown_label
+	};
+	const answerOptions = (['unknown', 'yes', 'no'] as const).map((value) => ({
+		value,
+		label: answerLabel[value]()
+	}));
+	const accessLabel: Record<VenueAccessField, () => string> = {
+		stepFreeEntry: m.staff_step_free_entry_label,
+		accessibleRestroom: m.staff_accessible_restroom_label,
+		seating: m.staff_seating_label
+	};
+
 	const contact = $derived(
 		[venue.contactName, venue.contactEmail, venue.contactPhone].filter(Boolean).join(' · ')
 	);
@@ -121,6 +138,27 @@
 				label={m.staff_notes_label()}
 				value={venue.notes ?? ''}
 			/>
+			<Field
+				field={fields.stepFreeEntry}
+				type="select"
+				label={accessLabel.stepFreeEntry()}
+				options={answerOptions}
+				value={venue.stepFreeEntry}
+			/>
+			<Field
+				field={fields.accessibleRestroom}
+				type="select"
+				label={accessLabel.accessibleRestroom()}
+				options={answerOptions}
+				value={venue.accessibleRestroom}
+			/>
+			<Field
+				field={fields.seating}
+				type="select"
+				label={accessLabel.seating()}
+				options={answerOptions}
+				value={venue.seating}
+			/>
 		{/snippet}
 	</Action>
 </PageHeader>
@@ -189,6 +227,17 @@
 		{#if venue.notes}
 			<p class="mt-3 text-sm">{venue.notes}</p>
 		{/if}
+	</InfoCard>
+
+	<InfoCard title={m.staff_access_title()}>
+		<dl class="grid gap-x-6 gap-y-2 sm:grid-cols-3">
+			{#each venueAccessFields as key (key)}
+				<div>
+					<dt class="text-subtle text-sm">{accessLabel[key]()}</dt>
+					<dd>{answerLabel[venue[key]]()}</dd>
+				</div>
+			{/each}
+		</dl>
 	</InfoCard>
 
 	{#if !venue.isPrimary}

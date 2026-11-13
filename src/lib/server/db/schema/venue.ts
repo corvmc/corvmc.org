@@ -1,5 +1,6 @@
 import { sqliteTable, text, integer, index, uniqueIndex, check } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import { accessAnswers } from '../../../config';
 
 // ---------------------------------------------------------------------------
 // Venues
@@ -63,6 +64,14 @@ export const venue = sqliteTable(
 		/** Where the van goes, which door is unlocked, who has the key. */
 		loadInNotes: text('load_in_notes'),
 		notes: text('notes'),
+
+		// Access answers, shown on every public listing at this room (#2717).
+		// `unknown` renders nothing; `no` is a published answer.
+		stepFreeEntry: text('step_free_entry', { enum: accessAnswers }).notNull().default('unknown'),
+		accessibleRestroom: text('accessible_restroom', { enum: accessAnswers })
+			.notNull()
+			.default('unknown'),
+		seating: text('seating', { enum: accessAnswers }).notNull().default('unknown'),
 
 		// Soft delete, matching every other directory-ish table: an event that
 		// happened at a venue keeps naming it after the venue closes.
