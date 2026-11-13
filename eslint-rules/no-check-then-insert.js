@@ -166,11 +166,11 @@ export default {
 			);
 
 		return {
-			IfStatement(node) {
+			IfStatement(/** @type {RuleNode} */ node) {
 				const fn = enclosingFunction(node);
 				if (fn) entry(fn).ifs.push(node);
 			},
-			CallExpression(node) {
+			CallExpression(/** @type {RuleNode} */ node) {
 				const fn = enclosingFunction(node);
 				if (!fn) return;
 
