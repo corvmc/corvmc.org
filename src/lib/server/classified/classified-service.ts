@@ -2,7 +2,8 @@ import { db } from '#lib/server/db/index.js';
 import { classifiedPost, classifiedPostTag } from '#lib/server/db/schema/classified.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { group, groupMember } from '#lib/server/db/schema/group.js';
-import { and, count, desc, eq, gt, inArray, lte, or, type SQL } from 'drizzle-orm';
+import { directoryEntry, directoryTag } from '#lib/server/db/schema/directory.js';
+import { and, count, desc, eq, gt, inArray, lte, ne, or, type SQL } from 'drizzle-orm';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { DomainError } from '../domain-error';
@@ -514,3 +515,54 @@ export async function getPost(id: string, now: Date = new Date()) {
 }
 
 export type ClassifiedDetail = Awaited<ReturnType<typeof getPost>>;
+
+/**
+ * Posts on the board that share a tag with the viewer's own profile, newest
+ * first, with the shared tags. Genre and skill match their own kind; a post's
+ * instrument matches one the viewer plays, or, on an offered post, one their
+ * project is seeking. The viewer's own posts are left out.
+ */
+export async function listPostsMatching(userId: string, limit = 6, now: Date = new Date()) {
+	// Joined rather than passed as values: a long profile would pass D1's 100
+	// bound-parameter cap.
+	const tagMatches = and(
+		eq(directoryTag.value, classifiedPostTag.value),
+		or(
+			eq(directoryTag.kind, classifiedPostTag.kind),
+			and(
+				eq(directoryTag.kind, 'seeking_instrument'),
+				eq(classifiedPostTag.kind, 'instrument'),
+				eq(classifiedPost.kind, 'offered')
+			)
+		)
+	);
+	const rows = await db
+		.select({ ...rowSelection, tagKind: classifiedPostTag.kind, tagValue: classifiedPostTag.value })
+		.from(classifiedPostTag)
+		.innerJoin(classifiedPost, eq(classifiedPost.id, classifiedPostTag.postId))
+		.innerJoin(directoryTag, tagMatches)
+		.innerJoin(
+			directoryEntry,
+			and(eq(directoryEntry.id, directoryTag.entryId), eq(directoryEntry.userId, userId))
+		)
+		.leftJoin(user, eq(user.id, classifiedPost.authorUserId))
+		.leftJoin(group, eq(group.id, classifiedPost.groupId))
+		.where(and(onBoard(now), ne(classifiedPost.authorUserId, userId)))
+		.orderBy(desc(classifiedPost.createdAt), desc(classifiedPost.id))
+		.limit(limit * CLASSIFIED_TAGS_MAX * 2);
+
+	// A post tag can match two profile tags (played and sought), so at most
+	// twice CLASSIFIED_TAGS_MAX rows per post: the limit covers `limit` posts.
+	type Match = Omit<(typeof rows)[number], 'tagKind' | 'tagValue'> & {
+		sharedTags: ClassifiedTagInput[];
+	};
+	const byPost = new Map<string, Match>();
+	for (const { tagKind, tagValue, ...post } of rows) {
+		let entry = byPost.get(post.id);
+		if (!entry) byPost.set(post.id, (entry = { ...post, sharedTags: [] }));
+		if (!entry.sharedTags.some((t) => t.kind === tagKind && t.value === tagValue)) {
+			entry.sharedTags.push({ kind: tagKind, value: tagValue });
+		}
+	}
+	return [...byPost.values()].slice(0, limit);
+}

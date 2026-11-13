@@ -6,7 +6,8 @@ import {
 	bookingLeadHorizon,
 	creditCompCeiling,
 	creditsToHours,
-	hoursToCredits
+	hoursToCredits,
+	surfaces
 } from '#lib/config.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import { error, invalid } from '@sveltejs/kit';
@@ -31,7 +32,7 @@ import { group } from '#lib/server/db/schema/group.js';
 import { eq, or, gt, gte, lte, ne, inArray, isNull, sql, and } from 'drizzle-orm';
 import { getUserRoles } from '#lib/server/authorization.js';
 import { positionChangeRefusal } from '#lib/server/access/position-service.js';
-import { toEventRef } from '#lib/server/entity/refs.js';
+import { toEventRef, toGenericRef } from '#lib/server/entity/refs.js';
 import { jsonArrayField } from '#lib/utils/zod-json.js';
 import { auditFeedItem } from '#lib/utils/audit-display.js';
 import { FEED_MAX, feedLimit, type FeedPage } from '#lib/types/activity.js';
@@ -80,6 +81,7 @@ import { resolveImageUrl } from '#lib/server/storage.js';
 import { recordAuditEntry, listAuditEntriesForSubject } from '#lib/server/audit/audit-service.js';
 import type { AuditProfileField } from '#lib/types/audit.js';
 import { findMatchesFor, isProfileComplete } from '#lib/server/directory/directory-service.js';
+import { listPostsMatching } from '#lib/server/classified/classified-service.js';
 import { startOfWeek, endOfWeek } from 'date-fns';
 import type { CreditType } from '#lib/server/db/schema/finance.js';
 import type { BatchItem } from 'drizzle-orm/batch';
@@ -635,7 +637,8 @@ export const getMemberDashboard = query(async () => {
 		dbSubscription,
 		profileComplete,
 		matches,
-		owing
+		owing,
+		classifiedMatches
 	] = await Promise.all([
 		db
 			.select()
@@ -700,7 +703,8 @@ export const getMemberDashboard = query(async () => {
 				)
 			)
 			.orderBy(reservation.startsAt)
-			.limit(5)
+			.limit(5),
+		surfaces.classifieds ? listPostsMatching(currentUser.id) : Promise.resolve([])
 	]);
 
 	const subscription = mapDbSubscription(dbSubscription);
@@ -777,7 +781,15 @@ export const getMemberDashboard = query(async () => {
 		usedThisMonth,
 		pendingInviteCount,
 		profileComplete,
-		matches
+		matches,
+		/** Classified posts sharing a tag with this member's profile; empty while the surface is off. */
+		classifiedMatches: classifiedMatches.map((p) => ({
+			id: p.id,
+			kind: p.kind,
+			category: p.category,
+			ref: toGenericRef('classified', { id: p.id, title: p.title }),
+			sharedTags: p.sharedTags.map((t) => t.value)
+		}))
 	};
 });
 

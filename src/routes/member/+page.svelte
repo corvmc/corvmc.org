@@ -15,6 +15,7 @@
 		ReportBuildingProblemAction
 	} from '#lib/components/actions/index.js';
 	import MatchesCard from './MatchesCard.svelte';
+	import ClassifiedMatchesCard from './ClassifiedMatchesCard.svelte';
 	import NeedsYouCard from './NeedsYouCard.svelte';
 	import { creditsToHours } from '#lib/config.js';
 	import { resolve } from '$app/paths';
@@ -115,6 +116,8 @@
 	<!-- Who to meet, from `directory_entry.lookingFor` — the question we already
 	     ask every member and, until this card, did nothing with. -->
 	<MatchesCard matches={data.matches} />
+
+	<ClassifiedMatchesCard posts={data.classifiedMatches} />
 
 	<!-- Upcoming events -->
 	<InfoCard title={m.member_upcoming_events_title()}>
