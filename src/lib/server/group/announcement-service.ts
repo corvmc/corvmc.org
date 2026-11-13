@@ -344,9 +344,15 @@ export async function remove(id: string, groupId: string): Promise<void> {
 		return;
 	}
 
-	const latest = (column: typeof inboxMessage.body | typeof inboxMessage.createdAt) =>
+	const latest = (column: typeof inboxMessage.id | typeof inboxMessage.createdAt) =>
 		sql`(SELECT ${column} FROM ${inboxMessage} WHERE ${inboxMessage.threadId} = ${row.threadId}
 		     ORDER BY ${inboxMessage.createdAt} DESC, ${inboxMessage.id} DESC LIMIT 1)`;
+	const [survivor] = await db
+		.select({ id: inboxMessage.id, body: inboxMessage.body })
+		.from(inboxMessage)
+		.where(and(eq(inboxMessage.threadId, row.threadId), ne(inboxMessage.id, row.messageId)))
+		.orderBy(desc(inboxMessage.createdAt), desc(inboxMessage.id))
+		.limit(1);
 	await db.batch([
 		withdraw,
 		db.delete(inboxMessage).where(eq(inboxMessage.id, row.messageId)),
@@ -355,7 +361,11 @@ export async function remove(id: string, groupId: string): Promise<void> {
 			.set({
 				messageCount: sql`(SELECT count(*) FROM ${inboxMessage} WHERE ${inboxMessage.threadId} = ${row.threadId})`,
 				lastMessageAt: latest(inboxMessage.createdAt),
-				preview: sql`substr(${latest(inboxMessage.body)}, 1, 120)`,
+				// The survivor's preview applies only while it is still the latest
+				// message; a post landing since the read has written its own.
+				preview: sql`CASE WHEN ${latest(inboxMessage.id)} IS ${survivor?.id ?? null}
+				  THEN ${survivor ? messagePreview(survivor.body, 'group') : null}
+				  ELSE ${inboxThread.preview} END`,
 				updatedAt: new Date()
 			})
 			.where(eq(inboxThread.id, row.threadId))
