@@ -1636,7 +1636,8 @@ Components in `src/lib/components/inbox/`:
 
 - `ListDetailShell` (in `ui/`) — the two-pane frame, in its default `panes` mode. Each pane scrolls its own overflow, so a conversation and a list of conversations never share a scrollbar. Every link in that flex chain needs `min-h-0`.
 - `ThreadHeader` — title, subtitle, trailing actions, and an optional disclosure below. Its back button is `lg:hidden` and is the only way out of a conversation on a phone.
-- `ThreadTimeline` — messages (and staff-only notes) on one chronological spine. Orients on `viewerUserId` when given, on direction otherwise; see [the decision](../decisions/0034-member-conversations-share-the-staff-inbox.md).
+- `ThreadTimeline` — messages (and staff-only notes) on one chronological spine. Orients on `viewerUserId` when given, on direction otherwise; see [the decision](../decisions/0034-member-conversations-share-the-staff-inbox.md). Takes the thread's `channel`, which decides each body's format.
+- `MessageBody` — the only place a message body becomes HTML. On the in-app channels (`direct`, `group`, `portal`) it renders markdown through `renderMessageMarkdown`: typed HTML shows as text, images as their alt text, external links open in a new tab. Email, SMS and form channels stay plain text. `src/message-body.spec.ts` fails a component that prints or `{@html}`s a body any other way.
 - `ThreadComposer` — the reply box. `noteForm` is **optional**: omit it and the Reply/Internal note tabs disappear, which is the member side, since notes are staff-private.
 - `channels.ts` — `channelLabel` / `channelIcon`, the single source of truth for how a channel is named and drawn. Use it rather than a local ternary on `channel`.
 
