@@ -9,7 +9,6 @@ import { and, count, eq, gte, lte } from 'drizzle-orm';
 import {
 	createOrganization,
 	getOrganizationInRole,
-	listOrganizations,
 	OrganizationNotFoundError,
 	removeRole,
 	requireRole,
@@ -26,7 +25,7 @@ import {
 	nextOpenTasks,
 	renameFundingProject
 } from '#lib/server/development/funding-project.js';
-import { byDeadline, due, type Deadline } from '#lib/utils/deadline.js';
+import { due, type Deadline } from '#lib/utils/deadline.js';
 
 export class SponsorNotFoundError extends DomainError {
 	readonly httpStatus = 404;
@@ -93,50 +92,6 @@ export async function listSponsorshipDeadlinesBetween(from: string, to: string) 
 		parentTitle: r.title,
 		counterparty: r.sponsorName
 	}));
-}
-
-type ShipSummary = Pick<
-	Sponsorship,
-	'id' | 'organizationId' | 'title' | 'tier' | 'status' | 'amountCents' | 'startsOn' | 'endsOn'
->;
-
-/** A running term beats a pitch as "current"; anything else is history. */
-function currentOf<T extends ShipSummary>(ships: T[]): T | null {
-	const active = ships
-		.filter((s) => s.status === 'active')
-		.sort((a, b) => (a.endsOn ?? '9').localeCompare(b.endsOn ?? '9'));
-	return active[0] ?? ships.find((s) => s.status === 'prospect') ?? null;
-}
-
-/** Each sponsor with its current sponsorship, soonest-ending first. */
-export function summarizeSponsors<S extends { id: string; name: string }, T extends ShipSummary>(
-	sponsors: S[],
-	ships: T[],
-	today: string
-) {
-	return sponsors
-		.map((s) => {
-			const mine = ships.filter((p) => p.organizationId === s.id);
-			const current = currentOf(mine);
-			return {
-				...s,
-				current,
-				sponsorships: mine.length,
-				deadline: current ? sponsorshipDeadline(current, today) : null
-			};
-		})
-		.sort(byDeadline((r) => r.name));
-}
-
-export async function listSponsors(
-	today: string,
-	{ includeArchived = false }: { includeArchived?: boolean } = {}
-) {
-	const [sponsors, ships] = await Promise.all([
-		listOrganizations({ role: 'sponsor', includeArchived }),
-		db.select().from(sponsorship)
-	]);
-	return summarizeSponsors(sponsors, ships, today);
 }
 
 export async function getSponsor(id: string, today: string) {

@@ -19,7 +19,6 @@ const {
 	grantDeadline,
 	grantDeadlineItems,
 	grantStageOffers,
-	withDeadlines,
 	createGrant,
 	updateGrant,
 	deleteGrant,
@@ -110,20 +109,6 @@ describe('grantDeadline', () => {
 		expect(grantDeadlineItems({ ...base, id: 'g1', applyBy: '2026-11-01' })).toEqual([
 			{ kind: 'apply', on: '2026-11-01', subjectId: 'apply:g1', title: 'Apply by' }
 		]);
-	});
-
-	it('sorts applications by deadline, undated last', () => {
-		const app = (id: string, over: Record<string, unknown>) => ({
-			id,
-			funderName: id,
-			...base,
-			...over
-		});
-		const rows = withDeadlines(
-			[app('undated', { status: 'applied' }), app('later', { applyBy: '2026-12-01' })],
-			TODAY
-		);
-		expect(rows.map((r) => r.id)).toEqual(['later', 'undated']);
 	});
 });
 

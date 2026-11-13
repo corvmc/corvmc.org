@@ -64,16 +64,6 @@ function sponsorshipInput(d: z.infer<z.ZodObject<typeof sponsorshipFields>>) {
 	};
 }
 
-export const getSponsors = query(
-	z.object({ includeArchived: z.boolean().optional() }).optional(),
-	async (filters) => {
-		await requireCapability('sponsor.read');
-		return service.listSponsors(clubToday(), {
-			includeArchived: filters?.includeArchived ?? false
-		});
-	}
-);
-
 export const getSponsorDetail = query(z.string(), async (id) => {
 	await requireCapability('sponsor.read');
 	try {
@@ -91,13 +81,6 @@ export const getSponsorDetail = query(z.string(), async (id) => {
 	} catch (err) {
 		mapDomainError(err);
 	}
-});
-
-export const createSponsor = form(z.object(sponsorFields), async (data) => {
-	await requireCapability('sponsor.manage');
-	const row = await service.createSponsor(sponsorInput(data));
-	await savePrimaryContact(row.id, sponsorContact(data));
-	return { id: row.id };
 });
 
 export const updateSponsor = form(

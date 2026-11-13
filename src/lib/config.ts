@@ -903,13 +903,6 @@ export type GrantStatus = (typeof grantStatuses)[number];
 /** An award that was made: what a funded project counts as given. */
 export const awardedGrantStatuses = ['awarded', 'closed'] as const satisfies readonly GrantStatus[];
 
-/** What the list shows by default; the rest sit behind "Show closed". */
-export const openGrantStatuses = [
-	'prospect',
-	'applied',
-	'awarded'
-] as const satisfies readonly GrantStatus[];
-
 export const grantStatusLabels: Record<GrantStatus, string> = {
 	prospect: 'Prospect',
 	applied: 'Applied',
@@ -940,6 +933,13 @@ export const grantDeadlineLabels: Record<GrantDeadlineKind, string> = {
  */
 export const grantStages = ['application', 'award', 'close_out'] as const;
 export type GrantStage = (typeof grantStages)[number];
+
+/**
+ * Where a grant or sponsorship stands on the Funding page (#2622), in list
+ * order. Both statuses map onto it; `closed` sits behind "Show closed".
+ */
+export const fundingStages = ['prospect', 'applied', 'active', 'closed'] as const;
+export type FundingStage = (typeof fundingStages)[number];
 
 // ---------------------------------------------------------------------------
 // Credit transaction sources

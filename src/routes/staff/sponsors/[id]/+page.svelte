@@ -13,7 +13,7 @@
 	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 	import SponsorFields from '#lib/components/sponsor/SponsorFields.svelte';
-	import SponsorshipFields from './SponsorshipFields.svelte';
+	import SponsorshipFields from '#lib/components/sponsor/SponsorshipFields.svelte';
 	import PlacementFields from './PlacementFields.svelte';
 	import { Field } from '#lib/components/ui/Form/index.js';
 	import {
@@ -379,7 +379,7 @@
 				submitLabel={m.staff_delete_label()}
 				submitVariant="error"
 				successToast={m.staff_deleted_toast()}
-				onsuccess={() => goto(resolve('staff/sponsors'))}
+				onsuccess={() => goto(resolve('staff/contacts'))}
 			>
 				{#snippet form()}
 					<input {...deleteSponsor.for(sponsor.id).fields.id.as('hidden', sponsor.id)} />

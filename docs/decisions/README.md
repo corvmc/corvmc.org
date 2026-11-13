@@ -50,7 +50,7 @@ A page or less. Link the issue and the PRs.
 | 0016 | [A local financial record](0016-a-local-financial-record.md)                                                                   | 2026-09-08 | Accepted           |
 | 0017 | [Payments run against a fake gateway](0017-payments-run-against-a-fake-gateway.md)                                             | 2026-09-11 | Accepted           |
 | 0018 | [Door sales on one Tap to Pay phone](0018-door-sales-on-one-tap-to-pay-phone.md)                                               | 2026-09-22 | Accepted           |
-| 0019 | [Sponsors and grants are two modules](0019-sponsors-and-grants-are-two-modules.md)                                             | 2026-09-23 | Accepted           |
+| 0019 | [Sponsors and grants are two modules](0019-sponsors-and-grants-are-two-modules.md)                                             | 2026-09-23 | Amended by 0067    |
 | 0020 | [Staff comp credits up to a ceiling](0020-staff-comp-credits-up-to-a-ceiling.md)                                               | 2026-09-23 | Accepted           |
 | 0021 | [A club gets a page, not a panel](0021-a-club-gets-a-page-not-a-panel.md)                                                      | 2026-08-08 | Accepted           |
 | 0022 | [External acts are staff records with private contacts](0022-external-acts-are-staff-records-with-private-contacts.md)         | 2026-08-08 | Accepted           |
@@ -98,3 +98,4 @@ A page or less. Link the issue and the PRs.
 | 0064 | [A group has one Announcements thread](0064-a-group-has-one-announcements-thread.md)                                           | 2026-11-12 | Accepted           |
 | 0065 | [Outside parties are organizations with roles](0065-outside-parties-are-organizations-with-roles.md)                           | 2026-11-12 | Accepted           |
 | 0066 | [One review feed on the dashboard](0066-one-review-feed-on-the-dashboard.md)                                                   | 2026-11-12 | Accepted           |
+| 0067 | [A grant application or sponsorship is a project](0067-a-grant-is-a-project.md)                                                | 2026-11-13 | Accepted           |

@@ -14,9 +14,7 @@ vi.mock('#lib/server/authorization.js', () => ({
 }));
 
 const service = {
-	listSponsors: vi.fn(async () => []),
 	getSponsor: vi.fn(async () => ({ id: 's1', sponsorships: [] })),
-	createSponsor: vi.fn(async () => ({ id: 's1' })),
 	updateSponsor: vi.fn(async () => undefined),
 	deleteSponsor: vi.fn(async () => undefined),
 	createSponsorship: vi.fn(async () => ({ id: 'p1' })),
@@ -94,9 +92,7 @@ const PLACE = {
 const LOGO = { sponsorId: 's1', logo: new File(['x'], 'logo.png', { type: 'image/png' }) };
 
 const CASES: Array<{ name: string; cap: string; arg?: unknown; spy: ReturnType<typeof vi.fn> }> = [
-	{ name: 'getSponsors', cap: 'sponsor.read', arg: undefined, spy: service.listSponsors },
 	{ name: 'getSponsorDetail', cap: 'sponsor.read', arg: 's1', spy: service.getSponsor },
-	{ name: 'createSponsor', cap: 'sponsor.manage', arg: SPONSOR, spy: service.createSponsor },
 	{
 		name: 'updateSponsor',
 		cap: 'sponsor.manage',
@@ -157,12 +153,14 @@ describe('sponsors.remote guards', () => {
 describe('sponsor input', () => {
 	it('stores blank optional fields as null, not empty strings', async () => {
 		held = new Set(['sponsor.read', 'sponsor.manage']);
-		await remote.createSponsor({ ...SPONSOR, website: '', notes: '' });
-		expect(service.createSponsor).toHaveBeenCalledWith(
+		await remote.updateSponsor({ id: 's1', ...SPONSOR, website: '', notes: '' });
+		expect(service.updateSponsor).toHaveBeenCalledWith(
+			's1',
 			expect.objectContaining({ website: null, notes: null })
 		);
 		// The person goes to the contact service, never onto the organization.
-		expect(service.createSponsor).toHaveBeenCalledWith(
+		expect(service.updateSponsor).toHaveBeenCalledWith(
+			's1',
 			expect.not.objectContaining({ contactEmail: expect.anything() })
 		);
 		expect(people.savePrimaryContact).toHaveBeenCalledWith(

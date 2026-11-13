@@ -63,11 +63,11 @@
 			{m.staff_contacts_contractors_page_label()}
 		</Button>
 	{:else if view === 'sponsor'}
-		<Button variant="ghost" size="sm" href={resolve('staff/sponsors')}>
+		<Button variant="ghost" size="sm" href={resolve('staff/funding')}>
 			{m.staff_contacts_sponsorships_page_label()}
 		</Button>
 	{:else if view === 'funder'}
-		<Button variant="ghost" size="sm" href={resolve('staff/grants')}>
+		<Button variant="ghost" size="sm" href={resolve('staff/funding')}>
 			{m.staff_contacts_grants_page_label()}
 		</Button>
 	{/if}

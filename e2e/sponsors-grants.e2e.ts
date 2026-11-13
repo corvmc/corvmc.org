@@ -30,17 +30,22 @@ test.describe('sponsors', () => {
 		).toBeVisible();
 	});
 
-	test('a new sponsor is created from the list', async ({ page }) => {
-		const name = `E2E Bakery ${Date.now()}`;
+	test('a sponsorship added on the Funding page is listed there', async ({ page }) => {
+		const title = `E2E season ${Date.now()}`;
 		await loginAsStaff(page);
-		await page.goto('/staff/sponsors');
-		await page.getByTestId('new-sponsor').click();
+		await page.goto('/staff/funding');
+		await page.getByTestId('new-sponsorship').click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible({ timeout: 15000 });
-		await dialog.locator('input:is([name="name"], [name^="name/"])').fill(name);
+		await dialog
+			.locator('select:is([name="sponsorId"], [name^="sponsorId/"])')
+			.selectOption(SEED_SPONSOR_ID);
+		await dialog.locator('input:is([name="title"], [name^="title/"])').fill(title);
 		await dialog.locator('button[type="submit"]').click();
 		await expectSuccessToast(page);
-		await expect(page.locator('tbody tr').filter({ hasText: name })).toBeVisible();
+		await expect(
+			page.locator('tr[data-funding-kind="sponsorship"]').filter({ hasText: title })
+		).toBeVisible();
 	});
 });
 
@@ -48,7 +53,7 @@ test.describe('grants', () => {
 	test('a new grant opens its project with the application tasks', async ({ page }) => {
 		const title = `E2E grant ${Date.now()}`;
 		await loginAsStaff(page);
-		await page.goto('/staff/grants');
+		await page.goto('/staff/funding');
 		await page.getByTestId('new-grant').click();
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible({ timeout: 15000 });

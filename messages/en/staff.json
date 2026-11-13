@@ -3406,8 +3406,8 @@
 	"staff_contacts_merged_toast": "Merged",
 	"staff_contacts_unnamed_text": "No name",
 	"staff_contacts_contractors_page_label": "Contractors page",
-	"staff_contacts_sponsorships_page_label": "Sponsorships",
-	"staff_contacts_grants_page_label": "Grants",
+	"staff_contacts_sponsorships_page_label": "Funding",
+	"staff_contacts_grants_page_label": "Funding",
 	"staff_contacts_add_organization_title": "Add organization",
 	"staff_contacts_archive_title": "Archive organization",
 	"staff_contacts_restore_title": "Restore organization",
@@ -3450,5 +3450,14 @@
 	"staff_sponsors_id_sponsorship_fields_funded_project_body": "What the sponsorship pays for. Leave it as general support otherwise.",
 	"staff_sponsors_id_next_task_text": "Next: {title}",
 	"staff_projects_id_budget_report_funding_title": "Grants and sponsorships",
-	"staff_projects_id_budget_report_given_text": "Given"
+	"staff_projects_id_budget_report_given_text": "Given",
+	"staff_funding_title": "Funding",
+	"staff_funding_prospect_title": "Prospects",
+	"staff_funding_applied_title": "Pending applications",
+	"staff_funding_active_title": "Active funding",
+	"staff_funding_closed_title": "Closed funding",
+	"staff_funding_sponsor_label": "Sponsor",
+	"staff_funding_term_ends_text": "Term ends",
+	"staff_funding_empty_title": "No grants or sponsorships",
+	"staff_funding_empty_body": "Add a grant application or a sponsorship to track its tasks and dates."
 }

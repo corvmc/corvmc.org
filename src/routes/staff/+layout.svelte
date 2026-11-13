@@ -122,7 +122,7 @@
 		reports: IconReportAnalytics,
 		payments: IconCash,
 		contacts: IconAddressBook,
-		grants: IconContract,
+		funding: IconContract,
 		settings: IconSettings,
 		audit: IconHistory
 	};

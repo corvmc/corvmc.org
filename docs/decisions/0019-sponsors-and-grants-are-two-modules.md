@@ -1,7 +1,8 @@
 # 0019 Sponsors and grants are two modules
 
 - **Date:** 2026-09-23
-- **Status:** Accepted
+- **Status:** Amended by [0067](0067-a-grant-is-a-project.md): reports are tasks on the grant's
+  project, and one Funding page lists both modules.
 - **Issue:** [#1479](https://github.com/corvmc/corvmc.org/issues/1479)
 
 ## Context

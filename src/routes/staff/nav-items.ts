@@ -52,7 +52,7 @@ export type StaffNavKey =
 	| 'local-resources'
 	| 'payments'
 	| 'contacts'
-	| 'grants'
+	| 'funding'
 	| 'reports'
 	| 'settings'
 	| 'audit';
@@ -242,7 +242,17 @@ export const staffNavSections: StaffNavSection[] = [
 				alsoFor: ['sponsor.read', 'grant.read', 'contractor.read'],
 				label: 'Contacts',
 				href: resolve('staff/contacts'),
-				also: [resolve('staff/sponsors'), resolve('staff/contractors')]
+				also: [resolve('staff/contractors')]
+			},
+			// Grant applications and sponsorships on one list (#2622). A grant's page
+			// and a sponsor's page are its records.
+			{
+				key: 'funding',
+				capability: 'grant.read',
+				alsoFor: ['sponsor.read'],
+				label: 'Funding',
+				href: resolve('staff/funding'),
+				also: [resolve('staff/grants'), resolve('staff/sponsors')]
 			},
 			// Guarded as an event because that is what a venue is a fact about.
 			{
@@ -322,12 +332,6 @@ export const staffNavSections: StaffNavSection[] = [
 				capability: 'music.read',
 				label: 'Releases',
 				href: resolve('staff/music')
-			},
-			{
-				key: 'grants',
-				capability: 'grant.read',
-				label: 'Grants',
-				href: resolve('staff/grants')
 			}
 		]
 	},

@@ -14,7 +14,6 @@ vi.mock('#lib/server/authorization.js', () => ({
 }));
 
 const grants = {
-	listGrants: vi.fn(async () => []),
 	getGrant: vi.fn(async () => ({ id: 'g1' })),
 	createGrant: vi.fn(async () => ({ id: 'g1' })),
 	updateGrant: vi.fn(async () => undefined),
@@ -73,7 +72,6 @@ const FUNDER = { name: 'Oregon Arts Commission' };
 
 type Case = { name: string; cap: string; arg?: unknown; spy: ReturnType<typeof vi.fn> };
 const CASES: Case[] = [
-	{ name: 'getGrants', cap: 'grant.read', arg: {}, spy: grants.listGrants },
 	{ name: 'getGrantDetail', cap: 'grant.read', arg: 'g1', spy: grants.getGrant },
 	{ name: 'getFunders', cap: 'grant.read', arg: undefined, spy: funders.listFunders },
 	{ name: 'createGrant', cap: 'grant.manage', arg: GRANT, spy: grants.createGrant },

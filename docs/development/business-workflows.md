@@ -2304,14 +2304,15 @@ it.
 
 ## 21. Sponsors and grants: what comes due next
 
-Decision: [Sponsors and grants are two modules](../decisions/0019-sponsors-and-grants-are-two-modules.md)
+Decisions: [Sponsors and grants are two modules](../decisions/0019-sponsors-and-grants-are-two-modules.md),
+[A grant application or sponsorship is a project](../decisions/0067-a-grant-is-a-project.md)
 
 ### The story
 
 The Development committee signs sponsors and applies for grants. They are two modules over one
 set of parties: a sponsor or a funder is an `organization` holding that role (#2622), and the
-person there is a `contact`. A sponsor is a business with a history of terms; staff read `/staff/sponsors` soonest-ending first. A grant
-is an application to a funder; staff read `/staff/grants` soonest-deadline first. Status moves by
+person there is a `contact`. A sponsor is a business with a history of terms; a grant is an application to a funder. Staff
+read both on `/staff/funding`, by stage, whatever needs something soonest first. Status moves by
 hand through each edit form, with no side effects.
 
 Each grant application and sponsorship is a project of kind `grant` or `sponsorship`, made with it
@@ -2319,6 +2320,13 @@ and owned by the Development committee. The work (the application's steps, the r
 owes, follow-ups) is that project's tasks, with due dates, assignees and committee reminders.
 
 ### Code path
+
+- **Funding (`/staff/funding`):** `getFunding` in `funding.remote.ts` reads grants for a viewer
+  holding `grant.read` and sponsorships for one holding `sponsor.read`, and refuses a viewer with
+  neither. `listFunding` in `development/funding-service.ts` maps each status onto a stage
+  (prospect, applied, active, closed) and orders a stage by `nextOn`, the sooner of its next open
+  task and its deadline. A closed row with open work stays listed. `/staff/grants`,
+  `/staff/sponsors` and `/staff/agreements` redirect here.
 
 - **Sponsors:** `getSponsors` / `getSponsorDetail` in `sponsors.remote.ts`, guarded by
   `sponsor.read`, call `listSponsors` / `getSponsor` in `sponsor-service.ts` with `clubToday()`.
