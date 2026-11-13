@@ -5,6 +5,7 @@
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import { clubToday } from '#lib/config.js';
 	import { Latest } from '#lib/latest.svelte.js';
+	import TrainingShiftField from './TrainingShiftField.svelte';
 
 	/**
 	 * The "Grant" button, with the catalogue it needs.
@@ -52,6 +53,7 @@
 				max={clubToday()}
 				description={m.staff_members_id_panels_grant_certification_expiry_worked_ou_body()}
 			/>
+			<TrainingShiftField {userId} />
 			<FormField
 				field={grantCertification.fields.reference}
 				label={m.staff_members_id_panels_grant_certification_card_licence_num_label()}

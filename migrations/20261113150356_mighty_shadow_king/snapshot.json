@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "1e6f61cc-c8ee-41d4-b3d0-9f7896619c9e",
+  "id": "da4c80af-8365-4a6b-8aef-036e88a437a7",
   "prevIds": [
-    "83946141-5445-4077-b6e5-e747ee52684e"
+    "1e6f61cc-c8ee-41d4-b3d0-9f7896619c9e"
   ],
   "ddl": [
     {
@@ -9871,6 +9871,16 @@
       "table": "member_certification"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "training_signup_id",
+      "entityType": "columns",
+      "table": "member_certification"
+    },
+    {
       "type": "integer",
       "notNull": false,
       "autoincrement": false,
@@ -10967,6 +10977,16 @@
       "default": null,
       "generated": null,
       "name": "notified_at",
+      "entityType": "columns",
+      "table": "volunteer_signup"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "supervising_signup_id",
       "entityType": "columns",
       "table": "volunteer_signup"
     },
@@ -18532,6 +18552,21 @@
     },
     {
       "columns": [
+        "training_signup_id"
+      ],
+      "tableTo": "volunteer_signup",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_member_certification_training_signup_id_volunteer_signup_id_fk",
+      "entityType": "fks",
+      "table": "member_certification"
+    },
+    {
+      "columns": [
         "revoked_by_user_id"
       ],
       "tableTo": "user",
@@ -18932,6 +18967,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_volunteer_signup_invited_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "volunteer_signup"
+    },
+    {
+      "columns": [
+        "supervising_signup_id"
+      ],
+      "tableTo": "volunteer_signup",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_volunteer_signup_supervising_signup_id_volunteer_signup_id_fk",
       "entityType": "fks",
       "table": "volunteer_signup"
     },

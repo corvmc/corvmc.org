@@ -14,7 +14,13 @@
 	import { EntityIdentity } from '#lib/components/ui/entity/index.js';
 	import { formatDateShort, formatDateShortYear, toLocalDateTime } from '#lib/utils/format.js';
 	import { DEFAULT_TIMEZONE, VOLUNTEER_SHIFT_NOTES_MAX } from '#lib/config.js';
-	import { IconCheck, IconUserX, IconUserMinus, IconPencil } from '@tabler/icons-svelte';
+	import {
+		IconCheck,
+		IconUserX,
+		IconUserMinus,
+		IconPencil,
+		IconSchool
+	} from '@tabler/icons-svelte';
 	import {
 		cancelShift,
 		confirmSignup,
@@ -24,6 +30,7 @@
 		markSignupNotified,
 		notifyCancelledShift,
 		releaseSignup,
+		setTrainedUnder,
 		updateShift,
 		type getTaskPage
 	} from '#lib/remote/volunteer.remote.js';
@@ -138,6 +145,7 @@
 	{:else}
 		<ul class="flex flex-col gap-4" data-testid="shift-roster">
 			{#each claimants as claimant (claimant.signupId)}
+				{@const supervisor = claimants.find((c) => c.signupId === claimant.supervisingSignupId)}
 				<li class="flex flex-col gap-2">
 					<div class="flex flex-wrap items-center justify-between gap-3">
 						<div class="flex min-w-0 flex-wrap items-center gap-2">
@@ -244,6 +252,38 @@
 									</Action>
 								{/if}
 
+								{#if claimants.length > 1}
+									{@const train = setTrainedUnder.for(claimant.signupId)}
+									<Action
+										action={train}
+										label={m.volunteer_shift_card_set_supervisor_label()}
+										iconOnly
+										icon={supervisorIcon}
+										variant="ghost"
+										size="sm"
+										modalTitle={m.volunteer_shift_card_set_supervisor_title()}
+										submitLabel={m.volunteer_save_label()}
+										successToast={m.volunteer_shift_card_supervisor_saved_toast()}
+									>
+										{#snippet form()}
+											<input {...train.fields.signupId.as('hidden', claimant.signupId)} />
+											<input {...train.fields.shiftId.as('hidden', shift.id)} />
+											<FormField
+												field={train.fields.supervisingSignupId}
+												label={m.volunteer_shift_card_supervisor_label()}
+												type="select"
+												value={claimant.supervisingSignupId ?? ''}
+												options={[
+													{ value: '', label: m.volunteer_shift_card_no_supervisor_label() },
+													...claimants
+														.filter((c) => c.signupId !== claimant.signupId)
+														.map((c) => ({ value: c.signupId, label: c.member.title }))
+												]}
+											/>
+										{/snippet}
+									</Action>
+								{/if}
+
 								{#if claimant.status === 'confirmed' || claimant.status === 'completed'}
 									<!-- Confirmed people only: a claim nobody confirmed was never a booking. -->
 									{@const noShow = markSignupNoShow.for(claimant.signupId)}
@@ -274,6 +314,12 @@
 							{/if}
 						</div>
 					</div>
+
+					{#if supervisor}
+						<p class="text-subtle text-xs" data-testid="trained-under">
+							{m.volunteer_shift_card_trained_under_text({ name: supervisor.member.title })}
+						</p>
+					{/if}
 
 					{#if !calledOff && claimant.status === 'claimed'}
 						<!-- Only confirmation sends the reminder; the claim still
@@ -440,6 +486,10 @@
 
 {#snippet noShowIcon()}
 	<IconUserX size={16} />
+{/snippet}
+
+{#snippet supervisorIcon()}
+	<IconSchool size={16} />
 {/snippet}
 
 {#snippet releaseIcon()}

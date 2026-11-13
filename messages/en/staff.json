@@ -3117,7 +3117,7 @@
 	"staff_volunteer_roles_id_lower_sorts_first_within_group_body": "Lower sorts first, within this group.",
 	"staff_volunteer_roles_id_markdown_what_members_read_their_body": "Markdown, shown to members on their volunteering page.",
 	"staff_volunteer_roles_id_briefing_label": "Briefing",
-	"staff_volunteer_roles_id_briefing_body": "A help article shown on the volunteer\u2019s shift page and at the door.",
+	"staff_volunteer_roles_id_briefing_body": "A help article shown on the volunteer’s shift page and at the door.",
 	"staff_volunteer_roles_id_briefing_draft_label": "{title} (draft)",
 	"staff_volunteer_roles_id_market_rate_hr_label": "Market rate ($/hr)",
 	"staff_volunteer_roles_id_member_skill_tags_as_members_body": "Members with these tags rank higher on a shift's Who to ask list.",
@@ -3695,5 +3695,7 @@
 	"staff_flags_id_appeal_card_restore_account_label": "Restore their account",
 	"staff_members_id_panels_account_panel_resend_notice_label": "Resend notice",
 	"staff_members_id_panels_account_panel_notice_sent_toast": "Notice sent",
-	"staff_members_id_panels_account_panel_resend_notice_text": "Emails the member their removal notice again, with a new appeal link."
+	"staff_members_id_panels_account_panel_resend_notice_text": "Emails the member their removal notice again, with a new appeal link.",
+	"staff_members_id_panels_grant_certification_training_shift_label": "Training shift",
+	"staff_members_id_panels_grant_certification_no_training_shift_label": "None"
 }

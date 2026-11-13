@@ -206,7 +206,8 @@ export async function seedVolunteerPersonas(
 			id: 'seed-vol-shift-feedback',
 			volunteerRoleId: frontDesk.id,
 			...shiftAt(-2, 18, 240),
-			capacity: 1,
+			// The volunteer and their supervisor.
+			capacity: 2,
 			shiftNotes: null
 		},
 		{
@@ -348,15 +349,27 @@ export async function seedVolunteerPersonas(
 			cancelledAt: ago(2)
 		},
 		{
+			// The coordinator worked it too, as the volunteer's supervisor (#2720).
+			id: 'seed-vol-signup-feedback-supervisor',
+			shiftId: 'seed-vol-shift-feedback-shift',
+			userId: 'seed-vol-coordinator',
+			status: 'completed',
+			claimedAt: ago(9),
+			confirmedAt: ago(7),
+			completedAt: shiftEnd('seed-vol-shift-feedback')
+		},
+		{
 			// Worked, hours already filed, feedback NOT given — this is the one
-			// /member/volunteer/feedback/[signupId] is reachable through.
+			// /member/volunteer/feedback/[signupId] is reachable through. Trained
+			// under the coordinator, so a grant has a shift to cite.
 			id: 'seed-vol-signup-feedback',
 			shiftId: 'seed-vol-shift-feedback-shift',
 			userId: 'seed-vol-active',
 			status: 'completed',
 			claimedAt: ago(9),
 			confirmedAt: ago(7),
-			completedAt: shiftEnd('seed-vol-shift-feedback')
+			completedAt: shiftEnd('seed-vol-shift-feedback'),
+			supervisingSignupId: 'seed-vol-signup-feedback-supervisor'
 		},
 		{
 			// The mirror image: feedback given, hours still owed, so the member

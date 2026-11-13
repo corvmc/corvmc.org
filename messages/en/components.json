@@ -1541,5 +1541,11 @@
 	],
 	"grant_grant_fields_funded_project_label": "Funded project",
 	"grant_grant_fields_funded_project_body": "What the award pays for. Leave it as general support for operating money.",
-	"grant_grant_fields_general_support_label": "General support"
+	"grant_grant_fields_general_support_label": "General support",
+	"volunteer_shift_card_trained_under_text": "Trained under {name}",
+	"volunteer_shift_card_set_supervisor_label": "Set supervisor",
+	"volunteer_shift_card_set_supervisor_title": "Set supervisor",
+	"volunteer_shift_card_supervisor_label": "Supervisor",
+	"volunteer_shift_card_no_supervisor_label": "None",
+	"volunteer_shift_card_supervisor_saved_toast": "Supervisor saved"
 }
