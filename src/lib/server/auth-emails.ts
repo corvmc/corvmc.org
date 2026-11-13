@@ -1,4 +1,5 @@
 import { formatDateYear } from '#lib/utils/format.js';
+import { REMOVAL_LINK_TTL_DAYS } from '#lib/server/moderation/removal-link.js';
 import { dispatchEmailOnly } from '#lib/server/notification/dispatcher.js';
 import { captureException } from '#lib/server/sentry.js';
 import { contactEmail } from '#lib/server/site-config/site-config-service.js';
@@ -215,7 +216,7 @@ export async function sendPasswordChangedEmail(params: {
 export const STAFF_CONTACT_EMAIL = 'staff@corvmc.org';
 
 /** What a banned member sees at sign-in, once their password has matched. */
-export const ACCOUNT_SUSPENDED_MESSAGE = `This account has been suspended. Contact ${STAFF_CONTACT_EMAIL} with any questions.`;
+export const ACCOUNT_SUSPENDED_MESSAGE = `This account has been suspended. The email we sent you has a link to appeal. Contact ${STAFF_CONTACT_EMAIL} with any questions.`;
 
 /**
  * The ban or suspension notice. It states the fact, the end date of a
@@ -224,6 +225,7 @@ export const ACCOUNT_SUSPENDED_MESSAGE = `This account has been suspended. Conta
 export function buildAccountSuspendedModel(params: {
 	name?: string | null;
 	endsAt?: Date | null;
+	appealUrl?: string | null;
 }): NotificationEmailModel & { transactional_only: true } {
 	const until = params.endsAt ? formatDateYear(params.endsAt) : null;
 	return {
@@ -245,7 +247,10 @@ export function buildAccountSuspendedModel(params: {
 						text: 'Staff have suspended your Corvallis Music Collective account. You have been signed out, you can no longer sign in, and any upcoming reservations have been cancelled.'
 					}
 				],
-		footnote: `If you have questions, or want to ask for this to be reconsidered, email ${STAFF_CONTACT_EMAIL}.`,
+		...(params.appealUrl ? { cta: { url: params.appealUrl, label: 'Appeal this decision' } } : {}),
+		footnote: params.appealUrl
+			? `The appeal link works for ${REMOVAL_LINK_TTL_DAYS} days. If you have questions, email ${STAFF_CONTACT_EMAIL}.`
+			: `If you have questions, or want to ask for this to be reconsidered, email ${STAFF_CONTACT_EMAIL}.`,
 		transactional_only: true
 	};
 }
@@ -274,6 +279,7 @@ export async function sendAccountSuspendedEmail(params: {
 	toEmail: string;
 	name?: string | null;
 	endsAt?: Date | null;
+	appealUrl?: string | null;
 }): Promise<void> {
 	try {
 		await dispatchEmailOnly({

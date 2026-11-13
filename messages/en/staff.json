@@ -3675,5 +3675,10 @@
 	"staff_members_id_panels_account_panel_suspended_until_text": "Suspended until {date}. Lifting it now restores the account and resumes billing.",
 	"staff_members_id_panels_account_panel_lift_suspension_label": "Lift suspension",
 	"staff_members_id_panels_account_panel_suspension_lifted_toast": "Suspension lifted",
-	"staff_members_id_panels_account_panel_lift_suspension_text": "Lift the suspension on {name}? They can sign in again straight away."
+	"staff_members_id_panels_account_panel_lift_suspension_text": "Lift the suspension on {name}? They can sign in again straight away.",
+	"staff_flags_id_appeal_card_account_label": "Account",
+	"staff_flags_id_appeal_card_restore_account_label": "Restore their account",
+	"staff_members_id_panels_account_panel_resend_notice_label": "Resend notice",
+	"staff_members_id_panels_account_panel_notice_sent_toast": "Notice sent",
+	"staff_members_id_panels_account_panel_resend_notice_text": "Emails the member their removal notice again, with a new appeal link."
 }

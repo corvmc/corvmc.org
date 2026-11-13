@@ -239,6 +239,9 @@ vi.mock('#lib/server/reservation/reservation-service.js', () => ({
 	listForMember: (...a: unknown[]) => listForMember(...(a as []))
 }));
 vi.mock('#lib/server/storage.js', () => ({ resolveImageUrl: vi.fn(() => null) }));
+vi.mock('#lib/server/site-config/site-config-service.js', () => ({
+	config: vi.fn(async () => 30)
+}));
 vi.mock('#lib/server/db/paginate.js', () => ({
 	paginate: vi.fn(async () => ({ rows: [], pagination: { page: 1, total: 0, totalPages: 0 } }))
 }));

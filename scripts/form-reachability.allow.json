@@ -175,6 +175,9 @@
 		"until": "internal: suspendUser scopes cancellation to the term",
 		"billing": "internal: suspendUser pauses billing instead of cancelling"
 	},
+	"src/lib/server/user/user-service.ts#unbanUser(1)": {
+		"liftReason": "internal: decideAppeal lifts a ban as appeal_granted"
+	},
 	"src/lib/server/volunteer/hour-log-service.ts#updateHourLog(2)": {
 		"groupId": "internal: in the Partial<SubmitHoursData> type, never written; links are fixed at submission",
 		"shiftId": "internal: in the Partial<SubmitHoursData> type, never written; links are fixed at submission",

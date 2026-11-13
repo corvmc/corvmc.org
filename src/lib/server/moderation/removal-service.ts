@@ -4,6 +4,7 @@ import { db } from '#lib/server/db/index.js';
 import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import {
 	accountRemoval,
+	moderationAppeal,
 	type AccountRemoval,
 	type RemovalLedger
 } from '#lib/server/db/schema/moderation.js';
@@ -139,4 +140,34 @@ export async function listLapsedSuspensions(now: Date): Promise<string[]> {
 			)
 		);
 	return rows.map((r) => r.userId);
+}
+
+export interface RemovalNotice {
+	kind: RemovalKind;
+	endsAt: Date | null;
+	lifted: boolean;
+	appeal: 'none' | 'pending' | 'decided';
+}
+
+/** What a removed member may read about their removal: never the staff reason. */
+export async function getRemovalNotice(removalId: string): Promise<RemovalNotice | null> {
+	const [row] = await db
+		.select({
+			kind: accountRemoval.kind,
+			endsAt: accountRemoval.endsAt,
+			liftedAt: accountRemoval.liftedAt,
+			appealId: moderationAppeal.id,
+			decidedAt: moderationAppeal.decidedAt
+		})
+		.from(accountRemoval)
+		.leftJoin(moderationAppeal, eq(moderationAppeal.flagId, accountRemoval.flagId))
+		.where(eq(accountRemoval.id, removalId))
+		.limit(1);
+	if (!row) return null;
+	return {
+		kind: row.kind,
+		endsAt: row.endsAt,
+		lifted: row.liftedAt !== null,
+		appeal: !row.appealId ? 'none' : row.decidedAt ? 'decided' : 'pending'
+	};
 }

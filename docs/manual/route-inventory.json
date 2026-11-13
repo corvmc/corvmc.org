@@ -392,6 +392,10 @@
 		"panel": "public"
 	},
 	{
+		"route": "/removed/[token]",
+		"panel": "public"
+	},
+	{
 		"route": "/reset-password",
 		"panel": "public"
 	},

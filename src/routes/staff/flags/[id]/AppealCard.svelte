@@ -18,12 +18,14 @@
 		decision: {
 			contentOutcome: AppealOutcome;
 			standingOutcome: AppealOutcome;
+			accountOutcome: AppealOutcome;
 			verdict: keyof typeof appealVerdictLabels;
 			notes: string | null;
 			decidedAt: Date;
 		} | null;
 		contentApplicable: boolean;
 		standingApplicable: boolean;
+		accountApplicable: boolean;
 		canDeny: boolean;
 	}
 
@@ -65,6 +67,11 @@
 				<Fact label={m.staff_flags_id_appeal_card_standing_label()}
 					>{outcomeLabels[appeal.decision.standingOutcome]}</Fact
 				>
+				{#if appeal.decision.accountOutcome !== 'not_applicable'}
+					<Fact label={m.staff_flags_id_appeal_card_account_label()}
+						>{outcomeLabels[appeal.decision.accountOutcome]}</Fact
+					>
+				{/if}
 				{#if appeal.decision.notes}
 					<Fact label={m.staff_flags_id_appeal_card_reason_staff_only_label()} wrap
 						>{appeal.decision.notes}</Fact
@@ -132,7 +139,15 @@
 								</span>
 							</label>
 						{/if}
-						{#if !appeal.contentApplicable && !appeal.standingApplicable}
+						{#if appeal.accountApplicable}
+							<label class="label cursor-pointer justify-start gap-2">
+								<input class="checkbox checkbox-sm" {...fields.restoreAccount.as('checkbox')} />
+								<span class="fieldset-legend text-wrap">
+									{m.staff_flags_id_appeal_card_restore_account_label()}
+								</span>
+							</label>
+						{/if}
+						{#if !appeal.contentApplicable && !appeal.standingApplicable && !appeal.accountApplicable}
 							<p class="text-muted text-wrap">
 								{m.staff_flags_id_appeal_card_nothing_from_report_still_force_text()}
 							</p>

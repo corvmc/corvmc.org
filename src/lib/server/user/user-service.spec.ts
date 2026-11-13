@@ -61,6 +61,10 @@ vi.mock('#lib/server/lock/member-code-service.js', () => ({
 	revokeMemberCode: (...args: unknown[]) => revokeMemberCodeMock(...args)
 }));
 
+vi.mock('#lib/server/moderation/removal-link.js', () => ({
+	removalLink: (id: string) => `https://corvmc.test/removed/${id}`,
+	REMOVAL_LINK_TTL_DAYS: 60
+}));
 vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
 const recordAuditEntry = vi.fn(async (_entry: unknown) => undefined);
@@ -368,7 +372,11 @@ describe('banUser', () => {
 
 		await banUser('u1', { actorId: 'staff-1', reason: 'Threatened another member' });
 
-		expect(sendSuspendedMock).toHaveBeenCalledWith({ toEmail: 'maya@example.com', name: 'Maya' });
+		expect(sendSuspendedMock).toHaveBeenCalledWith({
+			toEmail: 'maya@example.com',
+			name: 'Maya',
+			appealUrl: 'https://corvmc.test/removed/removal-1'
+		});
 		expect(JSON.stringify(sendSuspendedMock.mock.calls)).not.toContain('Threatened');
 	});
 

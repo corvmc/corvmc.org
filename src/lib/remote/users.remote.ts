@@ -78,7 +78,8 @@ import {
 	banUser as banUserService,
 	unbanUser as unbanUserService,
 	suspendUser as suspendUserService,
-	liftSuspension as liftSuspensionService
+	liftSuspension as liftSuspensionService,
+	resendRemovalNotice as resendRemovalNoticeService
 } from '#lib/server/user/user-service.js';
 import { resolveImageUrl } from '#lib/server/storage.js';
 import { recordAuditEntry, listAuditEntriesForSubject } from '#lib/server/audit/audit-service.js';
@@ -226,6 +227,7 @@ export const getUser = query(z.string(), async (id) => {
 		...rest,
 		bannedByName: bannedBy?.name ?? null,
 		suspendedUntil: openRemoval?.kind === 'suspension' ? openRemoval.endsAt : null,
+		hasOpenRemoval: openRemoval !== null,
 		suspensionDefaultDays,
 		// Matches the default `ensureUserEntry` creates an entry with, so a staff
 		// page never renders a blank where a visibility should be.
@@ -594,7 +596,7 @@ export const suspendUser = form(
 	z.object({
 		id: z.string().min(1),
 		reason: z.string().trim().min(1, 'Say why, for the record').max(LONG_TEXT_MAX),
-		days: z.coerce.number().int().min(1)
+		days: z.number().int().min(1)
 	}),
 	async (data) => {
 		const me = await requireCapability('user.ban');
@@ -629,6 +631,17 @@ export const liftSuspension = form(
 		return { success: true, subscription };
 	}
 );
+
+/** A fresh appeal link for a removed member whose last one expired or went astray. */
+export const resendRemovalNotice = form(z.object({ id: z.string().min(1) }), async (data) => {
+	await requireCapability('user.ban');
+	try {
+		await resendRemovalNoticeService(data.id);
+	} catch (err) {
+		mapDomainError(err);
+	}
+	return { success: true };
+});
 
 export const purgeUser = form(
 	z.object({

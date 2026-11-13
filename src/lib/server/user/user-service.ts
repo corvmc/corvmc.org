@@ -29,6 +29,7 @@ import { blockEmail, unblockForRemoval } from '#lib/server/moderation/blocklist-
 import type { RemovalLedger } from '#lib/server/db/schema/moderation.js';
 import type { RemovalLiftReason } from '#lib/config.js';
 import { config } from '#lib/server/site-config/site-config-service.js';
+import { removalLink } from '#lib/server/moderation/removal-link.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -429,7 +430,11 @@ export async function banUser(userId: string, opts: { actorId: string; reason: s
 		removalId: removal.id
 	});
 
-	await sendAccountSuspendedEmail({ toEmail: row.email, name: row.name });
+	await sendAccountSuspendedEmail({
+		toEmail: row.email,
+		name: row.name,
+		appealUrl: removalLink(removal.id)
+	});
 
 	return row;
 }
@@ -438,7 +443,10 @@ export async function banUser(userId: string, opts: { actorId: string; reason: s
  * Lift a ban and restore the account. The one way back from a ban, and the
  * entry point a successful appeal would call.
  */
-export async function unbanUser(userId: string, opts: { actorId: string | null }) {
+export async function unbanUser(
+	userId: string,
+	opts: { actorId: string | null; liftReason?: RemovalLiftReason }
+) {
 	const [row] = await db
 		.update(user)
 		.set({ bannedAt: null, bannedById: null, banReason: null, updatedAt: new Date() })
@@ -456,7 +464,7 @@ export async function unbanUser(userId: string, opts: { actorId: string | null }
 	const restored = await restoreAccount(userId);
 	const lifted = await liftOpenRemoval(userId, {
 		liftedByUserId: opts.actorId,
-		liftReason: 'staff_lifted'
+		liftReason: opts.liftReason ?? 'staff_lifted'
 	});
 	if (lifted) await unblockForRemoval(lifted.id);
 	await sendAccountRestoredEmail({ toEmail: row.email, name: row.name });
@@ -498,7 +506,7 @@ export async function suspendUser(
 		staffId: opts.actorId,
 		reason: opts.reason
 	});
-	await recordRemoval({
+	const removal = await recordRemoval({
 		userId,
 		actorUserId: opts.actorId,
 		kind: 'suspension',
@@ -512,8 +520,31 @@ export async function suspendUser(
 		subject: { type: 'user', id: userId, label: row.name },
 		details: { reason: opts.reason, endsAt: endsAt.toISOString() }
 	});
-	await sendAccountSuspendedEmail({ toEmail: row.email, name: row.name, endsAt });
+	await sendAccountSuspendedEmail({
+		toEmail: row.email,
+		name: row.name,
+		endsAt,
+		appealUrl: removalLink(removal.id)
+	});
 	return { endsAt };
+}
+
+/** Send the removal notice again with a fresh appeal link, for a member whose link expired. */
+export async function resendRemovalNotice(userId: string) {
+	const open = await getOpenRemoval(userId);
+	if (!open) throw new UserNotFoundError();
+	const [row] = await db
+		.select({ email: user.email, name: user.name })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+	if (!row) throw new UserNotFoundError();
+	await sendAccountSuspendedEmail({
+		toEmail: row.email,
+		name: row.name,
+		endsAt: open.kind === 'suspension' ? open.endsAt : null,
+		appealUrl: removalLink(open.id)
+	});
 }
 
 /**

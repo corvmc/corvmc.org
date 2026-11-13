@@ -14,6 +14,7 @@
 		unbanUser,
 		suspendUser,
 		liftSuspension,
+		resendRemovalNotice,
 		getUserRemovals
 	} from '#lib/remote/users.remote.js';
 	import { removalKindLabels, removalLiftReasonLabels } from '#lib/config.js';
@@ -50,6 +51,7 @@
 	const { fields: unbanFields } = unbanUser;
 	const { fields: suspendFields } = suspendUser;
 	const { fields: liftFields } = liftSuspension;
+	const { fields: resendFields } = resendRemovalNotice;
 
 	// Deactivating cancels bookings and the subscription, so the scoreboard and
 	// the needs-attention list are both wrong until the overview is re-read.
@@ -372,6 +374,22 @@
 	</Action>
 {/snippet}
 
+{#snippet resendAction()}
+	<Action
+		action={resendRemovalNotice}
+		label={m.staff_members_id_panels_account_panel_resend_notice_label()}
+		submitLabel={m.staff_members_id_panels_account_panel_resend_notice_label()}
+		successToast={m.staff_members_id_panels_account_panel_notice_sent_toast()}
+		variant="ghost"
+		size="sm"
+	>
+		{#snippet form()}
+			<input {...resendFields.id.as('hidden', id)} />
+			<p class="py-4">{m.staff_members_id_panels_account_panel_resend_notice_text()}</p>
+		{/snippet}
+	</Action>
+{/snippet}
+
 {#snippet suspendAction()}
 	<Action
 		action={suspendUser}
@@ -431,6 +449,7 @@
 					</p>
 				{/snippet}
 			</Action>
+			{@render resendAction()}
 		</div>
 	{:else if member.bannedAt}
 		<p class="mb-3 text-muted">
@@ -457,6 +476,7 @@
 					</p>
 				{/snippet}
 			</Action>
+			{#if member.hasOpenRemoval}{@render resendAction()}{/if}
 		</div>
 	{:else if member.deletedAt}
 		<p class="mb-3 text-muted">

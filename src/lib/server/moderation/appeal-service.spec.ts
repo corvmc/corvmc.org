@@ -58,6 +58,13 @@ vi.mock('#lib/server/event-bus/event-bus.js', () => ({
 }));
 vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 
+const unbanMock = vi.fn(async (..._a: unknown[]) => undefined);
+const liftSuspensionMock = vi.fn(async (..._a: unknown[]) => undefined);
+vi.mock('#lib/server/user/user-service.js', () => ({
+	unbanUser: (...a: unknown[]) => unbanMock(...a),
+	liftSuspension: (...a: unknown[]) => liftSuspensionMock(...a)
+}));
+
 const restoreStandingMock = vi.fn(async () => {
 	calls.push('restoreStanding');
 });
@@ -225,6 +232,7 @@ function queueDecision(opts: {
 	flag?: Partial<typeof FLAG>;
 	content?: unknown[];
 	standing?: unknown[];
+	removal?: unknown[];
 }) {
 	const flag = { ...FLAG, ...opts.flag };
 	selectResultQueue = [
@@ -232,6 +240,7 @@ function queueDecision(opts: {
 		[flag],
 		opts.content ?? [{ visibility: 'hidden' }],
 		opts.standing ?? [{ userId: 'm1', scope: 'suggestion' }],
+		opts.removal ?? [],
 		[{ name: 'Sam', email: 'sam@example.com' }]
 	];
 }
@@ -369,6 +378,67 @@ describe('decideAppeal', () => {
 	});
 });
 
+describe('decideAppeal on a removal', () => {
+	beforeEach(() => {
+		unbanMock.mockClear();
+		liftSuspensionMock.mockClear();
+	});
+	const none = { content: [], standing: [] };
+
+	it.each([
+		['ban', unbanMock],
+		['suspension', liftSuspensionMock]
+	] as const)('granting lifts an open %s as appeal_granted', async (kind, lift) => {
+		queueDecision({ ...none, removal: [{ userId: 'm1', kind, liftedAt: null, liftReason: null }] });
+		const result = await decideAppeal({
+			flagId: 'f1',
+			staffId: 'staff-b',
+			restoreContent: false,
+			restoreStanding: false,
+			restoreAccount: true,
+			notes: 'Misread the situation'
+		});
+		expect(result.accountOutcome).toBe('restored');
+		expect(lift).toHaveBeenCalledWith('m1', { actorId: 'staff-b', liftReason: 'appeal_granted' });
+	});
+
+	it('grants a suspension that lapsed while the appeal waited, without lifting it twice', async () => {
+		queueDecision({
+			...none,
+			removal: [
+				{ userId: 'm1', kind: 'suspension', liftedAt: new Date(), liftReason: 'term_lapsed' }
+			]
+		});
+		const result = await decideAppeal({
+			flagId: 'f1',
+			staffId: 'staff-b',
+			restoreContent: false,
+			restoreStanding: false,
+			restoreAccount: true,
+			notes: 'n/a'
+		});
+		expect(result.accountOutcome).toBe('restored');
+		expect(liftSuspensionMock).not.toHaveBeenCalled();
+	});
+
+	it('treats a removal staff already lifted as not affected', async () => {
+		queueDecision({
+			...none,
+			removal: [{ userId: 'm1', kind: 'ban', liftedAt: new Date(), liftReason: 'staff_lifted' }]
+		});
+		const result = await decideAppeal({
+			flagId: 'f1',
+			staffId: 'staff-b',
+			restoreContent: false,
+			restoreStanding: false,
+			restoreAccount: true,
+			notes: 'n/a'
+		});
+		expect(result.accountOutcome).toBe('not_applicable');
+		expect(unbanMock).not.toHaveBeenCalled();
+	});
+});
+
 // ---------------------------------------------------------------------------
 // getMemberAppeal
 // ---------------------------------------------------------------------------
@@ -408,6 +478,7 @@ describe('reopenAppeal', () => {
 			decidedByUserId: null,
 			contentOutcome: null,
 			standingOutcome: null,
+			accountOutcome: null,
 			decisionNotes: null
 		});
 	});

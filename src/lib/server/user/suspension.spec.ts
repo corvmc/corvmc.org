@@ -9,6 +9,10 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 });
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
+vi.mock('#lib/server/moderation/removal-link.js', () => ({
+	removalLink: (id: string) => `https://corvmc.test/removed/${id}`,
+	REMOVAL_LINK_TTL_DAYS: 60
+}));
 vi.mock('#lib/server/sentry.js', () => ({ captureException: vi.fn() }));
 vi.mock('#lib/server/audit/audit-service.js', () => ({ recordAuditEntry: vi.fn() }));
 vi.mock('#lib/server/site-config/site-config-service.js', () => ({
