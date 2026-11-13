@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { namesFor, plan, referencesIn, type Role } from './message-key-roles.js';
+import {
+	namesFor,
+	plan,
+	planRepo,
+	referencesIn,
+	renamesIn,
+	usageOf,
+	type Role
+} from './message-key-roles.js';
 
 const head = '<script lang="ts">import { m } from \'$lib/paraglide/messages.js\';';
 const roles = (code: string, file = 'a.svelte') =>
@@ -29,6 +37,20 @@ describe('referencesIn', () => {
 		expect(roles(code)).toEqual({ a: 'label', b: 'text' });
 	});
 
+	it('follows an object property only to reads of that property', () => {
+		const code = `${head}
+			const copy = $derived(x ? { booked: m.a(), keptBody: m.b() } : { booked: m.c(), keptBody: m.d() });
+			const status = { draft: (n: number) => m.e({ n }) };
+		</script><Badge>{copy.booked}</Badge><h3>{copy.keptBody}</h3><Select label={status[s](1)} />`;
+		expect(roles(code)).toEqual({ a: 'label', b: 'title', c: 'label', d: 'title', e: 'label' });
+	});
+
+	it('marks a use it cannot follow as unknown rather than text', () => {
+		const code = `import { m } from '$lib/paraglide/messages.js';
+			export const NEEDS = { claims: m.a_label };`;
+		expect(referencesIn('a.ts', code)).toMatchObject([{ key: 'a_label', unknown: true }]);
+	});
+
 	it('reads properties and toasts in a module', () => {
 		const code = `import { m as msg } from '$lib/paraglide/messages.js';
 			export const nav = [{ label: msg.a(), description: msg.b() }]; toast.error(msg.c());`;
@@ -36,9 +58,29 @@ describe('referencesIn', () => {
 	});
 });
 
+describe('usageOf', () => {
+	const ref = (key: string, role: Role, unknown?: true) =>
+		({ file: 'a', key, start: 0, end: 0, role, unknown }) as const;
+
+	it('gives an unknown use the role of the known ones, else the key its own', () => {
+		const usage = usageOf([
+			ref('a_title', 'label'),
+			ref('a_title', 'text', true),
+			ref('b_body', 'text', true)
+		]);
+		expect(usage).toEqual(
+			new Map([
+				['a_title', new Set(['label'])],
+				['b_body', new Set(['body'])]
+			])
+		);
+	});
+});
+
 describe('namesFor', () => {
-	it('appends the role, dropping a matching role word already there', () => {
+	it('appends the role, replacing any role word already there', () => {
 		expect(namesFor('x_delete', ['label'])).toEqual(new Map([['label', 'x_delete_label']]));
+		expect(namesFor('x_label', ['title'])).toEqual(new Map([['title', 'x_title']]));
 		expect(namesFor('x_modal_title', ['title'])).toEqual(new Map([['title', 'x_modal_title']]));
 		expect([...namesFor('x_title', ['label', 'title']).values()]).toEqual(['x_label', 'x_title']);
 	});
@@ -76,4 +118,15 @@ describe('plan', () => {
 		);
 		expect([...renames].every(([key, names]) => [...names.values()].includes(key))).toBe(true);
 	});
+});
+
+// #2640: drift is caught at the PR that causes it, not by the next PR to run the script.
+describe('the catalog', () => {
+	it('names every key for the role it plays and holds no unused key', () => {
+		const { renames, deleted } = planRepo();
+		expect({ renamed: renamesIn(renames), unused: deleted }, 'run `pnpm messages:roles`').toEqual({
+			renamed: [],
+			unused: []
+		});
+	}, 120_000);
 });
