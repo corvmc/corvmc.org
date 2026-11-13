@@ -9,4 +9,4 @@
 	let { memberId }: { memberId: string } = $props();
 </script>
 
-<FeeNotice gate={await getMemberFeeGate(memberId)} staff />
+<FeeNotice gate={await getMemberFeeGate(memberId)} />

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-/** The fee gate (#2748) against a real SQLite: which rows count is a `WHERE`. */
+/** The fee gate (#2748, #2859) against a real SQLite: which rows count is a `WHERE`. */
 
 const { sqlite, testDb } = await vi.hoisted(async () => {
 	const { migratedSqlite } = await import('#lib/server/testing/migrated-sqlite.js');
@@ -14,8 +14,13 @@ vi.mock('#lib/server/site-config/site-config-service.js', () => ({
 	getConfigsByPrefix: vi.fn(async () => stored.value)
 }));
 
-const { getFeeGate, getFeeGateCutoff, assertFeeGateAllows, OutstandingFeesError } =
-	await import('./outstanding-fees');
+const {
+	getFeeGate,
+	getFeeGateCutoff,
+	assertFeeGateAllows,
+	membersOwingFees,
+	OutstandingFeesError
+} = await import('./outstanding-fees');
 const { reservation } = await import('#lib/server/db/schema/reservation.js');
 
 const HOUR = 3_600_000;
@@ -52,7 +57,7 @@ beforeEach(() => {
 });
 
 describe('the cutoff setting', () => {
-	it('is off while unset, so two fees neither warn nor refuse', async () => {
+	it('is off while unset, so fees neither warn nor refuse', async () => {
 		await insert(row('a', -48), row('b', -72));
 		expect(await getFeeGateCutoff()).toBeNull();
 		const gate = await getFeeGate('user-1', { now });
@@ -72,30 +77,30 @@ describe('what counts', () => {
 		expect((await getFeeGate('user-1', { now, cutoff })).state).toBe('clear');
 	});
 
-	it('warns on one fee, naming it and its amount', async () => {
+	it('refuses on one fee, naming it and its amount', async () => {
 		await insert(row('owed', -48));
 		const gate = await getFeeGate('user-1', { now, cutoff });
-		expect(gate.state).toBe('warn');
+		expect(gate.state).toBe('refuse');
 		expect(gate.fees).toEqual([
 			{ id: 'owed', startsAt: at(-48), endsAt: at(-46), amountCents: 3000 }
 		]);
+		// Through the stored setting, as a booking reads it; every row here is long past.
+		stored.value = { feeGateFrom: '2026-06-01' };
+		await expect(assertFeeGateAllows('user-1')).rejects.toBeInstanceOf(OutstandingFeesError);
 	});
 
-	it('refuses on two fees', async () => {
+	it('counts a band booking the member made', async () => {
 		await insert(row('a', -48), row('b', -72, { bookerType: 'group', bookerId: 'band-1' }));
 		const gate = await getFeeGate('user-1', { now, cutoff });
 		expect(gate.state).toBe('refuse');
 		expect(ids(gate.fees)).toEqual(['a', 'b']);
-		// Through the stored setting, as a booking reads it; every row here is long past.
-		stored.value = { feeGateFrom: '2026-06-01' };
-		await expect(assertFeeGateAllows('user-1')).rejects.toBeInstanceOf(OutstandingFeesError);
 	});
 
 	it('counts a payment-due row from before the cutoff as zero', async () => {
 		await insert(row('old-1', -24 * 11), row('old-2', -24 * 30), row('new', -48));
 		const gate = await getFeeGate('user-1', { now, cutoff });
 		expect(ids(gate.fees)).toEqual(['new']);
-		expect(gate.state).toBe('warn');
+		expect(gate.state).toBe('refuse');
 	});
 
 	it('leaves out paid, waived, refunded, cancelled and event-hold rows', async () => {
@@ -125,10 +130,32 @@ describe('what counts', () => {
 });
 
 describe('staff booking on a member’s behalf', () => {
-	it('warns on two fees and never refuses', async () => {
+	it('shows the fees and never refuses', async () => {
 		await insert(row('a', -48), row('b', -72), row('c', -96));
 		const gate = await getFeeGate('user-1', { now, cutoff, onBehalf: true });
 		expect(gate.state).toBe('warn');
 		expect(gate.fees).toHaveLength(3);
+	});
+});
+
+describe('members owing fees, for withholding door code messages', () => {
+	it('names only members with a fee after the cutoff', async () => {
+		await insert(
+			row('owed', -48),
+			row('old', -24 * 30, { createdByUserId: 'user-2', bookerId: 'user-2' }),
+			row('upcoming', 24, { createdByUserId: 'user-2', bookerId: 'user-2' })
+		);
+		const owing = await membersOwingFees(['user-1', 'user-2'], now, cutoff);
+		expect([...owing]).toEqual(['user-1']);
+	});
+
+	it('names no one once the fee is paid', async () => {
+		await insert(row('owed', -48, { paidAt: at(-1) }));
+		expect((await membersOwingFees(['user-1'], now, cutoff)).size).toBe(0);
+	});
+
+	it('names no one while the cutoff is unset', async () => {
+		await insert(row('owed', -48));
+		expect((await membersOwingFees(['user-1'], now)).size).toBe(0);
 	});
 });

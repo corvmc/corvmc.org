@@ -9,10 +9,10 @@ import { ptDate } from './util';
 import { type SeedRole } from './types';
 
 /**
- * The outstanding-fee limit (#2748), switched on with both states reachable.
- * `fees-one@` owes one session since the cutoff and books with a warning;
- * `fees-two@` owes two and is refused. Each also owes one session from before
- * the cutoff, which never counts. Password `password`; member numbers 77–78.
+ * The outstanding-fee limit (#2748, #2859), switched on. `fees-one@` owes one
+ * session since the cutoff and `fees-two@` owes two; both are refused and get
+ * no door code messages. Each also owes one session from before the cutoff,
+ * which never counts. Password `password`; member numbers 77–78.
  */
 export async function seedFeeGatePersonas(roles: SeedRole[]) {
 	console.log('Seeding outstanding-fee personas...');

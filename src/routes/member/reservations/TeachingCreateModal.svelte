@@ -6,8 +6,7 @@
 	import DateTimeStep from '#lib/components/reservations/booking/DateTimeStep.svelte';
 	import ConfirmStep from '#lib/components/reservations/booking/ConfirmStep.svelte';
 	import { bookInstructorReservation } from '#lib/remote/reservations.remote.js';
-	import FeeNotice from '#lib/components/reservations/booking/FeeNotice.svelte';
-	import type { ComponentProps } from 'svelte';
+	import PaymentDue, { type FeeGate } from '#lib/components/reservations/booking/PaymentDue.svelte';
 
 	/**
 	 * Booking the room to teach.
@@ -36,34 +35,42 @@
 		onbooked
 	}: {
 		needsPhone?: boolean;
-		/** Outstanding fees (#2748): one warns above the steps, two replace them. */
-		feeGate?: ComponentProps<typeof FeeNotice>['gate'];
+		/** Outstanding fees (#2859): one swaps the booking form for `PaymentDue`. */
+		feeGate?: FeeGate;
 		onbooked?: () => void;
 	} = $props();
 </script>
 
-<Action
-	action={bookInstructorReservation}
-	label={m.member_reservations_teaching_create_modal_label()}
-	modalTitle={m.member_reservations_teaching_create_modal_title()}
-	data-testid="book-teaching"
-	noFooter
-	variant="ghost"
-	maxWidth="max-w-md"
-	onsuccess={(result) => {
-		const r = result as { waitlisted?: boolean } | undefined;
-		if (r?.waitlisted) {
-			toast.info(m.member_first_instance_waitlisted_because_slot_toast());
-		} else {
-			toast.success(m.member_reservations_teaching_create_modal_teaching_time_book_toast());
-		}
-		onbooked?.();
-	}}
->
-	{#snippet icon()}<IconSchool size={18} />{/snippet}
-	{#snippet form()}
-		{#if feeGate}<FeeNotice gate={feeGate} />{/if}
-		{#if feeGate?.state !== 'refuse'}
+{#if feeGate?.state === 'refuse'}
+	<PaymentDue
+		gate={feeGate}
+		label={m.member_reservations_teaching_create_modal_label()}
+		data-testid="book-teaching"
+		variant="ghost"
+	>
+		{#snippet icon()}<IconSchool size={18} />{/snippet}
+	</PaymentDue>
+{:else}
+	<Action
+		action={bookInstructorReservation}
+		label={m.member_reservations_teaching_create_modal_label()}
+		modalTitle={m.member_reservations_teaching_create_modal_title()}
+		data-testid="book-teaching"
+		noFooter
+		variant="ghost"
+		maxWidth="max-w-md"
+		onsuccess={(result) => {
+			const r = result as { waitlisted?: boolean } | undefined;
+			if (r?.waitlisted) {
+				toast.info(m.member_first_instance_waitlisted_because_slot_toast());
+			} else {
+				toast.success(m.member_reservations_teaching_create_modal_teaching_time_book_toast());
+			}
+			onbooked?.();
+		}}
+	>
+		{#snippet icon()}<IconSchool size={18} />{/snippet}
+		{#snippet form()}
 			<DateTimeStep isSustaining {needsPhone} bookerType="instructor" />
 			<!--
 			`payAhead={false}` because `bookInstructorReservation` takes no payment:
@@ -71,6 +78,6 @@
 			time settles at the door, the way a band session does.
 		-->
 			<ConfirmStep bookerType="instructor" payAhead={false} />
-		{/if}
-	{/snippet}
-</Action>
+		{/snippet}
+	</Action>
+{/if}

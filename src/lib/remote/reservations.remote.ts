@@ -1348,7 +1348,7 @@ async function payReservationRemainder(opts: {
 }
 
 /**
- * Two or more outstanding fees refuse a member's own booking (#2748), a named
+ * One outstanding fee refuses a member's own booking (#2748, #2859), a named
  * exception to warn-record-allow. Staff booking on a member's behalf are not
  * refused; `createReservation` never calls this.
  */

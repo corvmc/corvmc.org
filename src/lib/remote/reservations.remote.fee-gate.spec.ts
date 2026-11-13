@@ -1,5 +1,5 @@
 /**
- * The outstanding-fee gate at the remote boundary (#2748). Every member booking
+ * The outstanding-fee gate at the remote boundary (#2748, #2859). Every member booking
  * path refuses before writing when the gate says so, whatever the form showed;
  * staff booking on a member's behalf are never refused.
  */
@@ -112,7 +112,7 @@ beforeEach(() => {
 	assertFeeGateAllows.mockRejectedValue(new OutstandingFeesError(fees));
 });
 
-describe('a member with two outstanding fees', () => {
+describe('a member the gate refuses', () => {
 	it.each([
 		['bookAndPayReservation', booking],
 		['bookInstructorReservation', booking],

@@ -450,7 +450,7 @@ async function main() {
 	console.log(`  ${sustainingPersonas.users} sustaining demo personas`);
 	console.log(`  ${bannedPersona.users} banned persona (banned@, cannot sign in)`);
 	console.log(
-		`  ${feeGatePersonas.users} outstanding-fee personas (fees-one@ warns, fees-two@ refused; counting from ${feeGatePersonas.cutoff})`
+		`  ${feeGatePersonas.users} outstanding-fee personas (fees-one@ and fees-two@ refused; counting from ${feeGatePersonas.cutoff})`
 	);
 	console.log(
 		`  ${suggestions.total} suggestions (${suggestions.votes} votes, ${suggestions.pendingEdits} edit awaiting review)`

@@ -35,6 +35,13 @@ vi.mock('#lib/server/volunteer/volunteer-signup-service.js', () => ({
 	listCompletionsAwaitingFeedback: vi.fn(async () => [])
 }));
 
+const owing = vi.hoisted(() => ({ ids: new Set<string>() }));
+vi.mock('#lib/server/reservation/outstanding-fees.js', () => ({
+	membersOwingFees: vi.fn(async (userIds: string[]) => {
+		return new Set(userIds.filter((id) => owing.ids.has(id)));
+	})
+}));
+
 const { reminders } = await import('./registry');
 
 const NOW = new Date('2026-06-15T12:00:00Z');
@@ -43,6 +50,17 @@ const definition = () => reminders.find((r) => r.key === 'door_code_ready')!;
 beforeEach(() => {
 	rows = [];
 	whereArg = undefined;
+	owing.ids = new Set();
+});
+
+const synced = (id: string, userId: string) => ({
+	id,
+	lockCode: '482913',
+	startsAt: new Date('2026-06-15T18:00:00Z'),
+	endsAt: new Date('2026-06-15T20:00:00Z'),
+	userId,
+	userName: 'Robin',
+	userEmail: `${userId}@example.com`
 });
 
 describe('door_code_ready', () => {
@@ -90,5 +108,25 @@ describe('door_code_ready', () => {
 		// Bounded, so the first drain after deploy does not mail every code
 		// already on the lock.
 		expect(sql).toContain('"lock_synced_at" >= ?');
+	});
+
+	it('is withheld while the member owes a fee, and owed again once it is paid (#2859)', async () => {
+		rows = [synced('res-owing', 'u-owing'), synced('res-clear', 'u-clear')];
+		owing.ids = new Set(['u-owing']);
+		expect((await definition().due(NOW)).map((d) => d.subjectId)).toEqual(['res-clear']);
+
+		owing.ids = new Set();
+		expect((await definition().due(NOW)).map((d) => d.subjectId)).toEqual([
+			'res-owing',
+			'res-clear'
+		]);
+	});
+
+	it('stays owed for a booking starting within a day, however long ago the code synced', async () => {
+		await definition().due(NOW);
+		const { sql } = new SQLiteSyncDialect().sqlToQuery(whereArg!);
+		expect(sql).toContain(
+			'("reservation"."lock_synced_at" >= ?) or ("reservation"."starts_at" < ?)'
+		);
 	});
 });
