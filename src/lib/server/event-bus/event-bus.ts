@@ -450,6 +450,20 @@ export interface RecurringWaitlistedEvent {
 	reason: string;
 }
 
+export interface RecurringRescheduledEvent {
+	/** The replacement series. */
+	seriesId: string;
+	userId: string;
+	userName: string;
+	userEmail: string;
+	/** The first session of the new schedule, in club time. */
+	date: string;
+	startTime: string;
+	endTime: string;
+	/** Old-schedule bookings left in place for the booker to keep or cancel. */
+	keptCount: number;
+}
+
 export interface WaitlistSlotAvailableEvent {
 	reservationId: string;
 	userId: string;
@@ -929,6 +943,7 @@ export type DomainEvents = {
 	'contact.form_submitted': ContactFormSubmittedEvent;
 	'reservation.recurring_skipped': RecurringSkippedEvent;
 	'reservation.recurring_waitlisted': RecurringWaitlistedEvent;
+	'reservation.recurring_rescheduled': RecurringRescheduledEvent;
 	'reservation.waitlist_slot_available': WaitlistSlotAvailableEvent;
 	'reservation.waitlist_expired': WaitlistExpiredEvent;
 	'equipment.loan_requested': EquipmentLoanRequestedEvent;

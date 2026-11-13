@@ -84,6 +84,28 @@ export async function generateRecurringReservations(): Promise<GenerationResult>
 	return result;
 }
 
+/** Materialise one reservation series' window now, as the daily run would. */
+export async function generateSeries(seriesId: string) {
+	const [series] = await db
+		.select({
+			id: recurringSeries.id,
+			prototypeId: recurringSeries.prototypeId,
+			rrule: recurringSeries.rrule,
+			endsAt: recurringSeries.endsAt
+		})
+		.from(recurringSeries)
+		.where(
+			and(
+				eq(recurringSeries.id, seriesId),
+				eq(recurringSeries.prototypeType, 'reservation'),
+				isNull(recurringSeries.cancelledAt),
+				isNull(recurringSeries.supersededBy)
+			)
+		)
+		.limit(1);
+	return series ? processSeries(series) : { created: 0, waitlisted: 0, skipped: 0 };
+}
+
 // ---------------------------------------------------------------------------
 // Combined entry point — events first, then reservations
 // ---------------------------------------------------------------------------
@@ -307,7 +329,7 @@ interface ConflictInfo {
 	reason: string;
 }
 
-async function checkEventAndClosureConflict(
+export async function checkEventAndClosureConflict(
 	startsAt: Date,
 	endsAt: Date
 ): Promise<ConflictInfo | null> {
@@ -350,7 +372,7 @@ async function checkEventAndClosureConflict(
  * Check if any regular (non-event) reservation overlaps the time range,
  * excluding reservations from the same series to avoid self-conflict.
  */
-async function checkReservationConflict(
+export async function checkReservationConflict(
 	startsAt: Date,
 	endsAt: Date,
 	seriesId: string

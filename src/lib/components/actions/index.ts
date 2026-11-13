@@ -10,6 +10,7 @@ export { default as PayReservationAction } from './PayReservationAction.svelte';
 
 // Series
 export { default as CancelSeriesAction } from './CancelSeriesAction.svelte';
+export { default as EditScheduleAction } from './EditScheduleAction.svelte';
 
 // Band
 export { default as CreateBandAction } from './CreateBandAction.svelte';

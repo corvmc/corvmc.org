@@ -101,3 +101,4 @@ A page or less. Link the issue and the PRs.
 | 0067 | [A grant application or sponsorship is a project](0067-a-grant-is-a-project.md)                                                | 2026-11-13 | Accepted           |
 | 0068 | [A task can wait on other tasks](0068-a-task-can-wait-on-other-tasks.md)                                                       | 2026-11-13 | Accepted           |
 | 0069 | [Tasks link to what they are about, and a party has one timeline](0069-a-party-has-one-timeline.md)                            | 2026-11-13 | Accepted           |
+| 0071 | [A schedule change replaces the series](0071-a-schedule-change-replaces-the-series.md)                                         | 2026-11-13 | Accepted           |

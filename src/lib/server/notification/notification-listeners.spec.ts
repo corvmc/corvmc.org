@@ -165,6 +165,7 @@ describe('registerAllNotificationListeners', () => {
 			'announcement.published',
 			'reservation.recurring_skipped',
 			'reservation.recurring_waitlisted',
+			'reservation.recurring_rescheduled',
 			'reservation.waitlist_slot_available',
 			'reservation.waitlist_expired',
 			'equipment.loan_scheduled',
@@ -1107,6 +1108,7 @@ describe('every notification-alias model', () => {
 		await emit('reservation.confirmed', { ...member, ...when });
 		await emit('reservation.cancelled', { ...member, ...when, cancelledBy: 'staff' });
 		await emit('reservation.recurring_waitlisted', { ...member, ...when });
+		await emit('reservation.recurring_rescheduled', { ...member, ...when, keptCount: 1 });
 		await emit('reservation.waitlist_expired', { ...member, ...when });
 		await emit('reservation.waitlist_slot_available', {
 			...member,

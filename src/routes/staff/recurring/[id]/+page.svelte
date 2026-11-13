@@ -2,7 +2,8 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { withQuery } from '#lib/utils/with-query.js';
 	import { resolve } from '$app/paths';
-	import { refreshAll } from '$app/navigation';
+	import { refreshAll, goto } from '$app/navigation';
+	import { EditScheduleAction } from '#lib/components/actions/index.js';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
@@ -24,7 +25,7 @@
 	const series = $derived(data.series);
 	const history = $derived(data.history);
 
-	let isActive = $derived(!series.cancelledAt);
+	let isActive = $derived(!series.cancelledAt && !series.supersededBy);
 </script>
 
 <!-- The schedule, not the word "Recurring Series": the title was a constant, so
@@ -39,6 +40,18 @@
 	}}
 >
 	{#if isActive}
+		<EditScheduleAction
+			series={{
+				id: series.id,
+				frequencyLabel: series.frequencyLabel,
+				monthlyMode: series.monthlyMode,
+				startsAt: series.prototypeStartsAt,
+				endsAt: series.prototypeEndsAt,
+				until: series.endsAt
+			}}
+			variant="primary"
+			onsuccess={(next) => goto(resolve('/staff/recurring/[id]', { id: next }))}
+		/>
 		<Action
 			action={cancelDetailSeries}
 			label={m.staff_recurring_id_cancel_series_label()}
@@ -60,7 +73,9 @@
 </PageHeader>
 <PageContent width="3xl">
 	<div class="mb-4 flex items-center gap-2">
-		{#if series.cancelledAt}
+		{#if series.supersededBy}
+			<Badge variant="ghost">{m.staff_recurring_id_superseded_label()}</Badge>
+		{:else if series.cancelledAt}
 			<StatusBadge status="cancelled" />
 		{:else}
 			<StatusBadge status="active" />
@@ -107,15 +122,17 @@
 	{#if history.length > 1}
 		<InfoCard title={m.staff_recurring_id_supersession_history_title()}>
 			<div class="space-y-2">
-				{#each history as h, i (h.id)}
-					<div class="flex items-center gap-3 text-sm" class:opacity-50={i > 0}>
-						<span class="font-mono text-xs">{h.id.slice(0, 8)}</span>
+				{#each history as h (h.id)}
+					<div class="flex items-center gap-3 text-sm" class:opacity-50={h.id !== id}>
+						<a class="link font-mono text-xs" href={resolve('/staff/recurring/[id]', { id: h.id })}
+							>{h.id.slice(0, 8)}</a
+						>
 						<span class="flex-1 font-mono text-xs">{h.rrule}</span>
 						<span>{formatDate(h.createdAt)}</span>
-						{#if h.cancelledAt}
-							<StatusBadge status="cancelled" />
-						{:else if h.supersededBy}
+						{#if h.supersededBy}
 							<Badge variant="ghost">{m.staff_recurring_id_superseded_label()}</Badge>
+						{:else if h.cancelledAt}
+							<StatusBadge status="cancelled" />
 						{:else}
 							<StatusBadge status="active" />
 						{/if}

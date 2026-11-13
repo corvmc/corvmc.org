@@ -252,6 +252,16 @@ one is offered the slot with a 24-hour window to confirm.
   the member chose; only a recurring event may pick a fixed day of the month. A series may carry
   an end date (`recurring_series.endsAt`, from `recurringSeriesEnd()` in `series-until.ts`).
   A series is active while `cancelledAt` and `supersededBy` are both null.
+- **Changing the schedule:** `reschedule()` in `recurring-series-reschedule.ts`, from
+  **Edit schedule** on the member's recurring list or the staff series page. It writes a new
+  series whose prototype is the first session of the new schedule (waitlisted if that slot is
+  booked; refused if it falls on a closure or show), sets `cancelledAt` and `supersededBy` on
+  the old one, and generates the new window at once. Old bookings before the change day stand.
+  From that day an untouched one is deleted (the old prototype is cancelled instead); one that
+  is paid, has a door code or is referenced is kept and listed for the booker to keep or
+  cancel, so nothing is refunded in bulk. A staff edit emits
+  `reservation.recurring_rescheduled` to the booker. `previewReschedule()` shows the new
+  sessions with the conflict generation would meet, and what is removed or kept.
 - **Waitlist promotion:** `cancel()` emits `reservation.cancelled`; the listener in
   `src/lib/server/event-bus/register-listeners.ts` calls `promoteNextWaitlisted()` in
   `waitlist-service.ts` — oldest overlapping waitlisted reservation wins, gets
@@ -270,8 +280,8 @@ one is offered the slot with a 24-hour window to confirm.
 
 ### Data touched
 
-`recurringSeries` (RRULE, prototype pointer, end date; `supersededBy` is read but nothing
-writes it yet, see #2546), `reservation` rows
+`recurringSeries` (RRULE, prototype pointer, end date; `supersededBy` points at the series
+that replaced it), `reservation` rows
 (status `waitlisted`, `waitlistNotifiedAt`, `waitlistExpiresAt`).
 
 ### Where it breaks

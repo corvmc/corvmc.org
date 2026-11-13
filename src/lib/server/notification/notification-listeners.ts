@@ -1117,6 +1117,37 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// --- Recurring reservation rescheduled by staff ---
+	domainEvents.on('reservation.recurring_rescheduled', async ({ data: event }) => {
+		const kept =
+			event.keptCount > 0
+				? [
+						{
+							text: 'Some bookings on the old schedule stay booked. Cancel any you no longer need.'
+						}
+					]
+				: [];
+		await dispatch({
+			type: 'recurring_rescheduled',
+			userId: event.userId,
+			userEmail: event.userEmail,
+			title: 'Recurring reservation changed',
+			body: `New schedule from ${event.date} ${event.startTime}–${event.endTime}`,
+			href: '/member/reservations',
+			email: {
+				recipientName: event.userName,
+				subject: `Recurring reservation changed: from ${event.date}`,
+				heading: 'Recurring reservation changed',
+				paragraphs: [
+					{ text: 'Staff changed the schedule of your recurring reservation.' },
+					...kept
+				],
+				details: whenDetails(event.date, event.startTime, event.endTime),
+				cta: { label: 'View my reservations' }
+			}
+		});
+	});
+
 	// --- Waitlist slot available ---
 	domainEvents.on('reservation.waitlist_slot_available', async ({ data: event }) => {
 		await dispatch({

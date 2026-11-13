@@ -206,6 +206,13 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		staffOnly: true
 	},
 	{
+		key: 'recurring_rescheduled',
+		category: 'practice-space',
+		label: 'Recurring reservation changed',
+		description: 'When staff change the day, time or frequency of your recurring reservation',
+		defaults: { email: true, inApp: true, sms: false }
+	},
+	{
 		key: 'recurring_waitlisted',
 		category: 'practice-space',
 		label: 'Recurring reservation waitlisted',
