@@ -85,7 +85,7 @@
 	{#if issued}
 		<p class="text-xs text-fg-2" data-testid="contact-sheet-link">
 			{m.actions_send_contact_sheet_link_text()}:
-			<a class="link break-all" href={issued.url}>{issued.url}</a>
+			<code class="break-all select-all">{issued.url}</code>
 			{#if !issued.sent}
 				<span class="block">{m.actions_send_contact_sheet_link_2_text()}</span>
 			{/if}
