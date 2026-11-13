@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { m } from '#lib/paraglide/messages.js';
-import { addCalendarDays, clockEdges, forEachClockEdge } from '#lib/test/clock-edges';
+import { addCalendarDays, clockEdges, forEachClockEdge } from '#lib/test/clock-edges.js';
 
 /**
  * What a record's shift card shows (#2630): relation headers only when there
