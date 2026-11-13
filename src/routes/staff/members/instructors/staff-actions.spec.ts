@@ -3,7 +3,11 @@ import {
 	STAFF_TRANSITIONS,
 	type StaffTransition
 } from '#lib/server/instructor/instructor-transitions.js';
+import type { InstructorStatus } from '#lib/config.js';
 import { STAFF_ACTIONS, type StaffInstructorAction } from './staff-actions';
+
+const ACTIONS: Record<InstructorStatus, readonly StaffInstructorAction[]> = STAFF_ACTIONS;
+const TRANSITIONS: Record<StaffTransition, readonly InstructorStatus[]> = STAFF_TRANSITIONS;
 
 /** The service transition each control performs. */
 const PERFORMS: Record<StaffInstructorAction, StaffTransition> = {
@@ -29,11 +33,11 @@ const NOT_OFFERED = new Set([
 
 describe('staff teacher actions', () => {
 	it('offer a control for every transition the service allows, or list it', () => {
-		const missing = Object.entries(STAFF_TRANSITIONS).flatMap(([transition, from]) =>
+		const missing = Object.entries(TRANSITIONS).flatMap(([transition, from]) =>
 			from
 				.filter((status) => !NOT_OFFERED.has(`${transition}:${status}`))
 				.filter((status) =>
-					STAFF_ACTIONS[status].every((a: StaffInstructorAction) => PERFORMS[a] !== transition)
+					ACTIONS[status].every((a: StaffInstructorAction) => PERFORMS[a] !== transition)
 				)
 				.map((status) => `${transition}:${status}`)
 		);
@@ -42,11 +46,11 @@ describe('staff teacher actions', () => {
 	});
 
 	it('offer no control the service would refuse', () => {
-		const refused = Object.entries(STAFF_ACTIONS).flatMap(([status, actions]) =>
+		const refused = Object.entries(ACTIONS).flatMap(([status, actions]) =>
 			actions
 				.filter(
 					(a: StaffInstructorAction) =>
-						!(STAFF_TRANSITIONS[PERFORMS[a]] as readonly string[]).includes(status)
+						!(TRANSITIONS[PERFORMS[a]] as readonly string[]).includes(status)
 				)
 				.map((a: StaffInstructorAction) => `${a}:${status}`)
 		);
