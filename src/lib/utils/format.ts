@@ -306,6 +306,17 @@ export function formatDateShortYear(d: Date): string {
 // Time formatting
 // ---------------------------------------------------------------------------
 
+/** An instant's venue date as a date field's value: "2026-07-03". */
+export function venueDateInput(d: Date): string {
+	const { year, month, day } = venueParts(d);
+	return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/** An instant's venue clock as a time field's value: "19:30". */
+export function venueTimeInput(d: Date): string {
+	return venue(d, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }, 'en-GB');
+}
+
 /** Time only: "2:30 PM" */
 export function formatTime(d: Date): string {
 	return venue(d, { hour: 'numeric', minute: '2-digit', hour12: true });

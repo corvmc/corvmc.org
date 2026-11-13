@@ -20,6 +20,7 @@
 		previewClass = 'h-24 w-24',
 		emptyLabel = m.ui_form_file_upload_empty_label_title(),
 		replaceLabel = m.ui_form_file_upload_replace_label(),
+		hint,
 		preview,
 		showPreview = true,
 		uploadAll,
@@ -56,12 +57,17 @@
 		value?: string;
 		src?: string;
 		disabled?: boolean;
-		/** row = preview beside the picker; col = preview stacked over the picker */
-		orientation?: 'row' | 'col';
+		/**
+		 * row = preview beside the picker; col = preview stacked over the picker;
+		 * zone = one dashed drop zone that is the picker and holds the preview.
+		 */
+		orientation?: 'row' | 'col' | 'zone';
 		/** Preview box size. Square suits an avatar; a poster wants portrait. */
 		previewClass?: string;
 		emptyLabel?: string;
 		replaceLabel?: string;
+		/** The file limits, under the empty label of a `zone`. */
+		hint?: string;
 		preview?: Snippet<[{ file: File | null; src: string | null }]>;
 		/** Off for documents and audio, or where the caller renders the file itself. */
 		showPreview?: boolean;
@@ -160,67 +166,107 @@
 	<input type="hidden" {name} bind:value bind:this={hiddenInput} />
 {/if}
 
-<div class="flex items-start gap-4" class:flex-col={orientation === 'col'}>
-	{#if !showPreview}
-		<!-- The caller shows the file, or there is nothing to show. -->
-	{:else if preview}
-		{@render preview({ file: selectedFile, src: previewUrl ?? src ?? null })}
-	{:else if previewUrl || src}
-		<img src={previewUrl ?? src} alt="" class="{previewClass} rounded object-cover" />
-	{:else}
-		<!-- A placeholder rather than nothing: an empty file input reads as a
-		     setting you can skip, which is how posters went unnoticed. -->
-		<div
-			class="{previewClass} grid place-items-center rounded border border-dashed border-base-300 bg-base-200"
+{#if orientation === 'zone'}
+	<div class="flex h-full flex-col gap-1">
+		<label
+			class="flex min-h-64 grow cursor-pointer flex-col items-center justify-center gap-2 rounded-box border-2 border-dashed border-base-300 bg-base-200 p-4 text-center focus-within:outline-2 focus-within:outline-primary"
+			class:pointer-events-none={disabled}
+			class:opacity-60={disabled}
+			data-testid="file-drop-zone"
 		>
-			<IconPhoto class="size-8 opacity-30" />
-		</div>
-	{/if}
-
-	<div class="flex flex-col gap-1">
-		{#if uploadStatus === 'uploading'}
-			<span class="btn btn-disabled {VARIANTS[variant]} {SIZES[size]}" class:btn-square={square}>
-				<span class="loading loading-sm loading-spinner"></span>
-				{#if !square}{busyLabel}{/if}
-			</span>
-		{:else}
-			<label
-				class="btn {VARIANTS[variant]} {SIZES[size]}"
-				class:btn-square={square}
-				class:btn-disabled={disabled}
-			>
-				{#if children}
-					{@render children()}
-				{:else}
-					{hasPreview ? replaceLabel : emptyLabel}
-				{/if}
-				<input
-					bind:this={fileInput}
-					type="file"
-					{...deferred ? inputProps : {}}
-					{accept}
-					multiple={!!uploadAll}
-					aria-label={ariaLabel}
-					onchange={handleFileChange}
-					{disabled}
-					class="hidden"
-				/>
-			</label>
-			{#if deferred && selectedFile}
-				<p class="text-subtle">{selectedFile.name} ({formatSize(selectedFile.size)})</p>
+			{#if previewUrl || src}
+				<img src={previewUrl ?? src} alt="" class="max-h-72 w-full rounded object-contain" />
+				<span class="text-sm font-semibold">{replaceLabel}</span>
+			{:else}
+				<IconPhoto class="size-9 text-primary" stroke={1.6} />
+				<span class="font-semibold">{emptyLabel}</span>
+				{#if hint}<span class="text-muted text-sm">{hint}</span>{/if}
 			{/if}
-		{/if}
-
+			{#if uploadStatus === 'uploading'}
+				<span class="loading loading-sm loading-spinner"></span>
+			{/if}
+			{#if deferred && selectedFile}
+				<span class="text-subtle">{selectedFile.name} ({formatSize(selectedFile.size)})</span>
+			{/if}
+			<input
+				bind:this={fileInput}
+				type="file"
+				{...deferred ? inputProps : {}}
+				{accept}
+				multiple={!!uploadAll}
+				aria-label={ariaLabel}
+				onchange={handleFileChange}
+				{disabled}
+				class="sr-only"
+			/>
+		</label>
 		{#if uploadStatus === 'error'}
 			<p class="text-sm text-error">{uploadError}</p>
-		{:else if uploadStatus === 'success' && !isImage && (name || field)}
-			<p class="text-sm text-success">{m.ui_upload_done_text()}</p>
-		{:else if !deferred && selectedFile && !isImage && (name || field || uploadStatus === 'uploading')}
-			<!-- Immediate mode only. Deferred mode names the file above, beside the
+		{/if}
+	</div>
+{:else}
+	<div class="flex items-start gap-4" class:flex-col={orientation === 'col'}>
+		{#if !showPreview}
+			<!-- The caller shows the file, or there is nothing to show. -->
+		{:else if preview}
+			{@render preview({ file: selectedFile, src: previewUrl ?? src ?? null })}
+		{:else if previewUrl || src}
+			<img src={previewUrl ?? src} alt="" class="{previewClass} rounded object-cover" />
+		{:else}
+			<!-- A placeholder rather than nothing: an empty file input reads as a
+		     setting you can skip, which is how posters went unnoticed. -->
+			<div
+				class="{previewClass} grid place-items-center rounded border border-dashed border-base-300 bg-base-200"
+			>
+				<IconPhoto class="size-8 opacity-30" />
+			</div>
+		{/if}
+
+		<div class="flex flex-col gap-1">
+			{#if uploadStatus === 'uploading'}
+				<span class="btn btn-disabled {VARIANTS[variant]} {SIZES[size]}" class:btn-square={square}>
+					<span class="loading loading-sm loading-spinner"></span>
+					{#if !square}{busyLabel}{/if}
+				</span>
+			{:else}
+				<label
+					class="btn {VARIANTS[variant]} {SIZES[size]}"
+					class:btn-square={square}
+					class:btn-disabled={disabled}
+				>
+					{#if children}
+						{@render children()}
+					{:else}
+						{hasPreview ? replaceLabel : emptyLabel}
+					{/if}
+					<input
+						bind:this={fileInput}
+						type="file"
+						{...deferred ? inputProps : {}}
+						{accept}
+						multiple={!!uploadAll}
+						aria-label={ariaLabel}
+						onchange={handleFileChange}
+						{disabled}
+						class="hidden"
+					/>
+				</label>
+				{#if deferred && selectedFile}
+					<p class="text-subtle">{selectedFile.name} ({formatSize(selectedFile.size)})</p>
+				{/if}
+			{/if}
+
+			{#if uploadStatus === 'error'}
+				<p class="text-sm text-error">{uploadError}</p>
+			{:else if uploadStatus === 'success' && !isImage && (name || field)}
+				<p class="text-sm text-success">{m.ui_upload_done_text()}</p>
+			{:else if !deferred && selectedFile && !isImage && (name || field || uploadStatus === 'uploading')}
+				<!-- Immediate mode only. Deferred mode names the file above, beside the
 			     picker, and without this guard both branches match a non-image
 			     deferred pick and it is listed twice — invisible while every
 			     deferred caller uploaded images, and plain to see on a PDF. -->
-			<p class="text-muted">{selectedFile.name} ({formatSize(selectedFile.size)})</p>
-		{/if}
+				<p class="text-muted">{selectedFile.name} ({formatSize(selectedFile.size)})</p>
+			{/if}
+		</div>
 	</div>
-</div>
+{/if}

@@ -217,6 +217,32 @@ dollars and submits cents from a hidden sibling registered as a number:
 all rather than zero — an absent price and a price of zero are different claims. Use it
 for every amount; do not hand-roll the dollars/cents pair.
 
+### DateTimeField
+
+A date and a start time in one field: a calendar and a time box in one popover, shown as
+"Fri, Nov 13, 2026 · 7:00 PM". It posts two hidden fields, `YYYY-MM-DD` and `HH:MM`, so a
+schema that already takes a date and a time needs no change. Use it in place of
+`datetime-local`, which Firefox renders differently. Give the caption's id through the
+`input` snippet:
+
+```svelte
+<FormField field={fields.eventDate} label="Date and start time" required>
+	{#snippet input(id)}
+		<DateTimeField
+			{id}
+			date={fields.eventDate}
+			time={fields.eventStartTime}
+			dateValue="2026-11-13"
+			timeValue="19:00"
+			timeLabel="Start time"
+		/>
+	{/snippet}
+</FormField>
+```
+
+`FileUpload` with `orientation="zone"` is one dashed drop zone that is the picker and holds
+the preview, with `hint` for the file limits under the empty label.
+
 **A remote form encodes its field names**, so a component's own `name="foo"` prop does not reach it. Take the attributes from the form instead — `<input {...myForm.fields.foo.as('hidden', value)} />` — or the field arrives as `undefined` and fails Zod with nothing on screen to show for it. This bites hardest with `SearchSelect`, whose `name` prop emits a plain attribute: bind its value and render the hidden input from the remote form yourself.
 
 ### SplitBar

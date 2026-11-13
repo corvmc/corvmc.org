@@ -14,7 +14,8 @@
 		ownerBandId,
 		readonly = false,
 		search,
-		field
+		field,
+		hint = true
 	}: {
 		value?: LineupChip[];
 		/** The remote form field the serialized bill posts as. Absent, nothing posts. */
@@ -41,6 +42,8 @@
 		 * may not be in a band at all.
 		 */
 		search: (q: string) => Promise<Array<{ id: string; name: string }>>;
+		/** The line under the box on how confirmation works. */
+		hint?: boolean;
 	} = $props();
 
 	let query = $state('');
@@ -174,9 +177,11 @@
 				</ul>
 			{/if}
 
-			<p class="mt-1 text-subtle">
-				{msg.events_lineup_editor_anyone_can_go_bill_bands_text()}
-			</p>
+			{#if hint}
+				<p class="mt-1 text-subtle">
+					{msg.events_lineup_editor_anyone_can_go_bill_bands_text()}
+				</p>
+			{/if}
 		</div>
 	{/if}
 </div>

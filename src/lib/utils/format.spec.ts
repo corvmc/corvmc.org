@@ -28,6 +28,8 @@ import {
 	isVenueTomorrow,
 	isVenueThisWeek,
 	formatTime,
+	venueDateInput,
+	venueTimeInput,
 	formatTimeRange,
 	fullDate,
 	initials,
@@ -111,6 +113,11 @@ describe('format.ts renders in venue time, not the viewer’s zone', () => {
 
 		it('formatTime uses the venue clock', () => {
 			expect(formatTime(CROSSES_MIDNIGHT)).toBe('7:30 PM');
+		});
+
+		it('venueDateInput and venueTimeInput give field values in venue time', () => {
+			expect(venueDateInput(CROSSES_MIDNIGHT)).toBe('2026-07-03');
+			expect(venueTimeInput(CROSSES_MIDNIGHT)).toBe('19:30');
 		});
 
 		it('formatDateTime uses the venue day and clock', () => {
