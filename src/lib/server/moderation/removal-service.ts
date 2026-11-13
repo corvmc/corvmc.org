@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, lte } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { db } from '#lib/server/db/index.js';
 import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
@@ -124,4 +124,19 @@ export async function listRemovals(userId: string): Promise<RemovalHistoryRow[]>
 		.leftJoin(lifter, eq(lifter.id, accountRemoval.liftedByUserId))
 		.where(eq(accountRemoval.userId, userId))
 		.orderBy(desc(accountRemoval.createdAt), desc(accountRemoval.id));
+}
+
+/** Members whose suspension term has ended and is still open. Read by the lapse job. */
+export async function listLapsedSuspensions(now: Date): Promise<string[]> {
+	const rows = await db
+		.select({ userId: accountRemoval.userId })
+		.from(accountRemoval)
+		.where(
+			and(
+				eq(accountRemoval.kind, 'suspension'),
+				isNull(accountRemoval.liftedAt),
+				lte(accountRemoval.endsAt, now)
+			)
+		);
+	return rows.map((r) => r.userId);
 }

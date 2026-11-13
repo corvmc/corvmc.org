@@ -36,6 +36,9 @@ export const DEFAULTS: Record<string, string | number | boolean> = {
 	// A member's own booking, while they hold no Practice space clearance.
 	'reservation.newMemberMinAdvanceMinutes': 4320,
 	'reservation.hourlyRateCents': 1500,
+	// A suspension's term, in days: the form's starting value and its ceiling.
+	'moderation.suspensionDefaultDays': 30,
+	'moderation.suspensionMaxDays': 90,
 	// Teaching terms. The rate is not a discount on the one above — it is what a
 	// sustaining member's contribution already buys, with the monthly cap lifted.
 	'reservation.teachingRateCents': 500,

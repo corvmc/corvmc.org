@@ -45,6 +45,9 @@ const READERS: Record<string, string> = {
 
 	'ballot.memberOfRecordDays': 'src/lib/server/ballot/ballot-service.ts',
 
+	'moderation.suspensionDefaultDays': 'src/lib/remote/users.remote.ts',
+	'moderation.suspensionMaxDays': 'src/lib/server/user/user-service.ts',
+
 	// The footer and the public pages, via `getConfigsByPrefix('org')`.
 	'org.addressStreet': 'src/lib/remote/settings.remote.ts',
 	'org.addressCity': 'src/lib/remote/settings.remote.ts',

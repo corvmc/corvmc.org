@@ -171,7 +171,9 @@
 		"unitPriceCents": "internal: a free ticket is 0, the default"
 	},
 	"src/lib/server/user/user-service.ts#deactivateUser(1)": {
-		"batchId": "internal: deactivateUsers (bulkDeactivateUsers) mints one per batch"
+		"batchId": "internal: deactivateUsers (bulkDeactivateUsers) mints one per batch",
+		"until": "internal: suspendUser scopes cancellation to the term",
+		"billing": "internal: suspendUser pauses billing instead of cancelling"
 	},
 	"src/lib/server/volunteer/hour-log-service.ts#updateHourLog(2)": {
 		"groupId": "internal: in the Partial<SubmitHoursData> type, never written; links are fixed at submission",

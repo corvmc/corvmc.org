@@ -1,3 +1,4 @@
+import { formatDateYear } from '#lib/utils/format.js';
 import { dispatchEmailOnly } from '#lib/server/notification/dispatcher.js';
 import { captureException } from '#lib/server/sentry.js';
 import { contactEmail } from '#lib/server/site-config/site-config-service.js';
@@ -217,22 +218,33 @@ export const STAFF_CONTACT_EMAIL = 'staff@corvmc.org';
 export const ACCOUNT_SUSPENDED_MESSAGE = `This account has been suspended. Contact ${STAFF_CONTACT_EMAIL} with any questions.`;
 
 /**
- * The ban notice. It states the fact and who to contact, never the reason:
- * that is a staff record.
+ * The ban or suspension notice. It states the fact, the end date of a
+ * suspension, and who to contact, never the reason: that is a staff record.
  */
 export function buildAccountSuspendedModel(params: {
 	name?: string | null;
+	endsAt?: Date | null;
 }): NotificationEmailModel & { transactional_only: true } {
+	const until = params.endsAt ? formatDateYear(params.endsAt) : null;
 	return {
 		subject: 'Your CorvMC account has been suspended',
-		preview_text: 'You can no longer sign in to your CorvMC account.',
+		preview_text: until
+			? `You can't sign in to your CorvMC account until ${until}.`
+			: 'You can no longer sign in to your CorvMC account.',
 		heading: 'Your account has been suspended',
 		greeting: greeting(params.name),
-		paragraphs: [
-			{
-				text: 'Staff have suspended your Corvallis Music Collective account. You have been signed out, you can no longer sign in, and any upcoming reservations have been cancelled.'
-			}
-		],
+		paragraphs: until
+			? [
+					{
+						text: `Staff have suspended your Corvallis Music Collective account until ${until}. You have been signed out, and your reservations before that date have been cancelled. Membership billing is paused until then.`
+					},
+					{ text: `You can sign in again from ${until}.` }
+				]
+			: [
+					{
+						text: 'Staff have suspended your Corvallis Music Collective account. You have been signed out, you can no longer sign in, and any upcoming reservations have been cancelled.'
+					}
+				],
 		footnote: `If you have questions, or want to ask for this to be reconsidered, email ${STAFF_CONTACT_EMAIL}.`,
 		transactional_only: true
 	};
@@ -261,6 +273,7 @@ export function buildAccountRestoredModel(params: {
 export async function sendAccountSuspendedEmail(params: {
 	toEmail: string;
 	name?: string | null;
+	endsAt?: Date | null;
 }): Promise<void> {
 	try {
 		await dispatchEmailOnly({

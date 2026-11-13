@@ -12,6 +12,8 @@
 		purgeUser,
 		banUser,
 		unbanUser,
+		suspendUser,
+		liftSuspension,
 		getUserRemovals
 	} from '#lib/remote/users.remote.js';
 	import { removalKindLabels, removalLiftReasonLabels } from '#lib/config.js';
@@ -46,6 +48,8 @@
 	const { fields: purgeFields } = purgeUser;
 	const { fields: banFields } = banUser;
 	const { fields: unbanFields } = unbanUser;
+	const { fields: suspendFields } = suspendUser;
+	const { fields: liftFields } = liftSuspension;
 
 	// Deactivating cancels bookings and the subscription, so the scoreboard and
 	// the needs-attention list are both wrong until the overview is re-read.
@@ -368,11 +372,67 @@
 	</Action>
 {/snippet}
 
+{#snippet suspendAction()}
+	<Action
+		action={suspendUser}
+		label={m.staff_members_id_panels_account_panel_suspend_label()}
+		modalTitle={m.staff_members_id_panels_account_panel_suspend_title({ name: member.name })}
+		submitLabel={m.staff_members_id_panels_account_panel_suspend_label()}
+		successToast={m.staff_members_id_panels_account_panel_member_suspended_toast()}
+		variant="warning"
+		size="sm"
+		onsuccess={refreshAccount}
+	>
+		{#snippet form()}
+			<input {...suspendFields.id.as('hidden', id)} />
+			<p class="pb-4">{m.staff_members_id_panels_account_panel_suspend_effects_text()}</p>
+			<FormField
+				field={suspendFields.days}
+				type="number"
+				label={m.staff_members_id_panels_account_panel_suspend_days_label()}
+				value={member.suspensionDefaultDays}
+				min={1}
+				required
+			/>
+			<FormField
+				field={suspendFields.reason}
+				type="textarea"
+				label={m.staff_reason_label()}
+				description={m.staff_members_id_panels_account_panel_staff_only_what_they_d_body()}
+				required
+			/>
+		{/snippet}
+	</Action>
+{/snippet}
+
 <InfoCard
 	title={m.staff_members_id_panels_account_panel_danger_zone_title()}
 	class="mt-6 border border-error/30 bg-error/5 shadow-none"
 >
-	{#if member.bannedAt}
+	{#if member.suspendedUntil}
+		<p class="mb-3 text-muted">
+			{m.staff_members_id_panels_account_panel_suspended_until_text({
+				date: formatDateShortYear(new Date(member.suspendedUntil))
+			})}
+		</p>
+		<div class="flex gap-2">
+			<Action
+				action={liftSuspension}
+				label={m.staff_members_id_panels_account_panel_lift_suspension_label()}
+				successToast={m.staff_members_id_panels_account_panel_suspension_lifted_toast()}
+				variant="success"
+				size="sm"
+				onsuccess={onReactivated}
+			>
+				{#snippet form()}
+					<input {...liftFields.id.as('hidden', id)} />
+					<p class="py-4">
+						{m.staff_members_id_panels_account_panel_lift_suspension_text({ name: member.name })}
+					</p>
+				{/snippet}
+			</Action>
+		</div>
+	{:else if member.bannedAt}
 		<p class="mb-3 text-muted">
 			{m.staff_members_id_panels_account_panel_account_banned_lifting_text()}
 		</p>
@@ -466,6 +526,7 @@
 					</p>
 				{/snippet}
 			</Action>
+			{@render suspendAction()}
 			{@render banAction()}
 		</div>
 	{/if}

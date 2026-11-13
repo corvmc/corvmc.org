@@ -60,7 +60,8 @@ import {
 import { getReservationConfig } from '#lib/server/reservation/config.js';
 import { listForMember as listReservationsForMember } from '#lib/server/reservation/reservation-service.js';
 import { listActiveSessions, getLastLoginAt } from '#lib/server/user/user-service.js';
-import { listRemovals } from '#lib/server/moderation/removal-service.js';
+import { getOpenRemoval, listRemovals } from '#lib/server/moderation/removal-service.js';
+import { config } from '#lib/server/site-config/site-config-service.js';
 import {
 	inviteMember,
 	listInviteGroups,
@@ -75,7 +76,9 @@ import {
 	reactivateUser as reactivateUserService,
 	purgeUser as purgeUserService,
 	banUser as banUserService,
-	unbanUser as unbanUserService
+	unbanUser as unbanUserService,
+	suspendUser as suspendUserService,
+	liftSuspension as liftSuspensionService
 } from '#lib/server/user/user-service.js';
 import { resolveImageUrl } from '#lib/server/storage.js';
 import { recordAuditEntry, listAuditEntriesForSubject } from '#lib/server/audit/audit-service.js';
@@ -205,9 +208,13 @@ export const getUser = query(z.string(), async (id) => {
 	const roles = await getUserRoles(id);
 
 	// Not an FK, so the staffer may since have been purged; the name is then null.
-	const [bannedBy] = found.bannedById
-		? await db.select({ name: user.name }).from(user).where(eq(user.id, found.bannedById))
-		: [];
+	const [[bannedBy], openRemoval, suspensionDefaultDays] = await Promise.all([
+		found.bannedById
+			? db.select({ name: user.name }).from(user).where(eq(user.id, found.bannedById))
+			: Promise.resolve([]),
+		getOpenRemoval(id),
+		config<number>('moderation.suspensionDefaultDays')
+	]);
 
 	// `subscription` is a stored JSON blob that only staff-side code reads for
 	// its presence. It is reduced to a boolean here rather than shipped: the
@@ -218,6 +225,8 @@ export const getUser = query(z.string(), async (id) => {
 	return {
 		...rest,
 		bannedByName: bannedBy?.name ?? null,
+		suspendedUntil: openRemoval?.kind === 'suspension' ? openRemoval.endsAt : null,
+		suspensionDefaultDays,
 		// Matches the default `ensureUserEntry` creates an entry with, so a staff
 		// page never renders a blank where a visibility should be.
 		directoryVisibility: directoryVisibility ?? 'members',
@@ -571,6 +580,47 @@ export const unbanUser = form(
 		let subscription: 'resumed' | 'active' | 'lapsed' | 'none' = 'none';
 		try {
 			({ subscription } = await unbanUserService(data.id, { actorId: me.id }));
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getUserPage(data.id).refresh();
+		void getUserRemovals(data.id).refresh();
+		return { success: true, subscription };
+	}
+);
+
+/** The term is a whole number of days; the service checks it against the configured ceiling. */
+export const suspendUser = form(
+	z.object({
+		id: z.string().min(1),
+		reason: z.string().trim().min(1, 'Say why, for the record').max(LONG_TEXT_MAX),
+		days: z.coerce.number().int().min(1)
+	}),
+	async (data) => {
+		const me = await requireCapability('user.ban');
+		try {
+			await suspendUserService(data.id, { actorId: me.id, reason: data.reason, days: data.days });
+		} catch (err) {
+			mapDomainError(err);
+		}
+		void getUserPage(data.id).refresh();
+		void getUserRemovals(data.id).refresh();
+		return { success: true };
+	}
+);
+
+export const liftSuspension = form(
+	z.object({
+		id: z.string().min(1)
+	}),
+	async (data) => {
+		const me = await requireCapability('user.ban');
+		let subscription: 'resumed' | 'active' | 'lapsed' | 'none' = 'none';
+		try {
+			({ subscription } = await liftSuspensionService(data.id, {
+				actorId: me.id,
+				liftReason: 'staff_lifted'
+			}));
 		} catch (err) {
 			mapDomainError(err);
 		}

@@ -10,6 +10,7 @@ const ALL_ENDPOINTS = [
 	'/api/cron/cancel-stale-tickets',
 	'/api/cron/expire-waitlisted',
 	'/api/cron/wake-snoozed',
+	'/api/cron/lift-lapsed-removals',
 	'/api/cron/reminders',
 	'/api/cron/generate-recurring-reservations',
 	'/api/cron/lock-access',
@@ -242,13 +243,14 @@ describe('runScheduledJobs', () => {
 
 		const results = await runScheduledJobs('*/15 * * * *', env, fetcher);
 
-		expect(fetcher).toHaveBeenCalledTimes(8);
+		expect(fetcher).toHaveBeenCalledTimes(9);
 		const requests = fetcher.mock.calls.map(([request]: [Request]) => request);
 		expect(requests.map((r) => r.url)).toEqual([
 			'https://corvmc.test/api/cron/auto-complete',
 			'https://corvmc.test/api/cron/complete-shifts',
 			'https://corvmc.test/api/cron/expire-waitlisted',
 			'https://corvmc.test/api/cron/wake-snoozed',
+			'https://corvmc.test/api/cron/lift-lapsed-removals',
 			'https://corvmc.test/api/cron/lock-sync',
 			'https://corvmc.test/api/cron/reminders',
 			'https://corvmc.test/api/cron/schedule-radio',
@@ -299,12 +301,13 @@ describe('runScheduledJobs', () => {
 
 		const results = await runScheduledJobs('*/15 * * * *', env, fetcher);
 
-		expect(fetcher).toHaveBeenCalledTimes(8);
+		expect(fetcher).toHaveBeenCalledTimes(9);
 		expect(results).toEqual([
 			{ path: '/api/cron/auto-complete', ok: false, error: 'boom' },
 			{ path: '/api/cron/complete-shifts', ok: true, status: 200 },
 			{ path: '/api/cron/expire-waitlisted', ok: true, status: 200 },
 			{ path: '/api/cron/wake-snoozed', ok: true, status: 200 },
+			{ path: '/api/cron/lift-lapsed-removals', ok: true, status: 200 },
 			{ path: '/api/cron/lock-sync', ok: true, status: 200 },
 			{ path: '/api/cron/reminders', ok: true, status: 200 },
 			{ path: '/api/cron/schedule-radio', ok: true, status: 200 },
@@ -323,6 +326,7 @@ describe('runScheduledJobs', () => {
 
 		expect(results.map((r) => ({ ok: r.ok, status: r.status }))).toEqual([
 			{ ok: false, status: 401 },
+			{ ok: true, status: 200 },
 			{ ok: true, status: 200 },
 			{ ok: true, status: 200 },
 			{ ok: true, status: 200 },
@@ -355,14 +359,16 @@ describe('runScheduledJobs', () => {
 			{ slug: 'expire-waitlisted', status: 'ok', checkInId: 'ci-3' },
 			{ slug: 'wake-snoozed', status: 'in_progress', cron: '*/15 * * * *' },
 			{ slug: 'wake-snoozed', status: 'ok', checkInId: 'ci-4' },
+			{ slug: 'lift-lapsed-removals', status: 'in_progress', cron: '*/15 * * * *' },
+			{ slug: 'lift-lapsed-removals', status: 'ok', checkInId: 'ci-5' },
 			{ slug: 'lock-sync', status: 'in_progress', cron: '*/15 * * * *' },
-			{ slug: 'lock-sync', status: 'ok', checkInId: 'ci-5' },
+			{ slug: 'lock-sync', status: 'ok', checkInId: 'ci-6' },
 			{ slug: 'reminders', status: 'in_progress', cron: '*/15 * * * *' },
-			{ slug: 'reminders', status: 'ok', checkInId: 'ci-6' },
+			{ slug: 'reminders', status: 'ok', checkInId: 'ci-7' },
 			{ slug: 'schedule-radio', status: 'in_progress', cron: '*/15 * * * *' },
-			{ slug: 'schedule-radio', status: 'ok', checkInId: 'ci-7' },
+			{ slug: 'schedule-radio', status: 'ok', checkInId: 'ci-8' },
 			{ slug: 'sweep-door-sales', status: 'in_progress', cron: '*/15 * * * *' },
-			{ slug: 'sweep-door-sales', status: 'ok', checkInId: 'ci-8' }
+			{ slug: 'sweep-door-sales', status: 'ok', checkInId: 'ci-9' }
 		]);
 	});
 
@@ -385,6 +391,7 @@ describe('runScheduledJobs', () => {
 		expect(closes.map((o) => o.status)).toEqual([
 			'error',
 			'error',
+			'ok',
 			'ok',
 			'ok',
 			'ok',
