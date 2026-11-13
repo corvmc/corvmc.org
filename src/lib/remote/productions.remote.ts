@@ -54,6 +54,7 @@ import { getStaffEventPage, getStaffEventProduction, getStaffEvents } from './ev
 import { buildDateInTz, buildTimeRangeInTz } from '#lib/server/reservation/timezone.js';
 import { create as createEventListing } from '#lib/server/event/event-service.js';
 import { listAttachableListings } from '#lib/server/production/attachable-listings.js';
+import { setRiderElementStock } from '#lib/server/production/rider-stock-service.js';
 import {
 	DEFAULT_TIMEZONE,
 	productionExpenseCategories,
@@ -757,6 +758,32 @@ export const askForArtifact = form(
 				artifact: data.artifact,
 				dueAt: data.dueDate ? buildDateInTz(data.dueDate, '23:59', DEFAULT_TIMEZONE) : null,
 				requestedByUserId: locals.user?.id ?? null
+			});
+			await getStaffEventProduction(data.eventId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/** Match a rider item to a catalog item; an empty `itemId` clears the match. */
+export const setRiderStock = form(
+	z.object({
+		eventId: z.string().min(1),
+		elementId: z.string().min(1),
+		itemId: z.string().optional()
+	}),
+	async (data) => {
+		await requireProjectCommittee(
+			(await projectOfEvent(data.eventId))?.projectId ?? null,
+			'production.run'
+		);
+		try {
+			await setRiderElementStock({
+				eventId: data.eventId,
+				elementId: data.elementId,
+				itemId: data.itemId || null
 			});
 			await getStaffEventProduction(data.eventId).refresh();
 			return { success: true };

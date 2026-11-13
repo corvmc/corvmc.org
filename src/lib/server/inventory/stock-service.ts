@@ -281,6 +281,42 @@ export async function getAvailableQuantity(itemId: string): Promise<number> {
 	return Math.max(0, (await getOnHand(itemId)) - reserved);
 }
 
+/** `getAvailableQuantity` for many items in three queries, for a page that reads a list. */
+export async function getAvailableQuantityMany(itemIds: string[]): Promise<Map<string, number>> {
+	if (itemIds.length === 0) return new Map();
+
+	const [items, inService, onHand, reserved] = await Promise.all([
+		db
+			.select({ id: inventoryItem.id, kind: inventoryItem.kind })
+			.from(inventoryItem)
+			.where(and(inArray(inventoryItem.id, itemIds), isNull(inventoryItem.deletedAt))),
+		db
+			.select({ itemId: inventoryAsset.itemId, n: sql<number>`COUNT(*)` })
+			.from(inventoryAsset)
+			.where(and(inArray(inventoryAsset.itemId, itemIds), eq(inventoryAsset.status, 'in_service')))
+			.groupBy(inventoryAsset.itemId),
+		getOnHandMany(itemIds),
+		db
+			.select({
+				itemId: inventoryLoan.itemId,
+				qty: sql<number>`COALESCE(SUM(${inventoryLoan.quantity}), 0)`
+			})
+			.from(inventoryLoan)
+			.where(and(inArray(inventoryLoan.itemId, itemIds), eq(inventoryLoan.status, 'scheduled')))
+			.groupBy(inventoryLoan.itemId)
+	]);
+
+	const units = new Map(inService.map((r) => [r.itemId, Number(r.n)]));
+	const held = new Map(reserved.map((r) => [r.itemId, Number(r.qty)]));
+	const out = new Map<string, number>(itemIds.map((id) => [id, 0]));
+	for (const item of items) {
+		const base =
+			item.kind === 'serialized' ? (units.get(item.id) ?? 0) : (onHand.get(item.id) ?? 0);
+		out.set(item.id, Math.max(0, base - (held.get(item.id) ?? 0)));
+	}
+	return out;
+}
+
 export interface ListMovementsOptions {
 	itemId?: string;
 	assetId?: string;

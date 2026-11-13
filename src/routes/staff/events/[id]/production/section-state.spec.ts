@@ -5,6 +5,7 @@ import {
 	payoutsState,
 	requestsState,
 	runningOrderState,
+	stockState,
 	tabBadges
 } from './section-state';
 
@@ -54,6 +55,19 @@ describe('console section state', () => {
 			requestsState([request({})]),
 			requestsState([request({ fulfilled: true })]),
 			requestsState([])
+		]);
+		expect(states.size).toBe(4);
+	});
+
+	it('tells an unmatched request from a short one, and both from in stock and none asked', () => {
+		type Check = Loaded['riderStock'];
+		const check = (over: Partial<Check>) =>
+			({ lines: [{}], unmatchedCount: 0, shortCount: 0, catalog: [], ...over }) as Check;
+		const states = new Set([
+			stockState(check({ unmatchedCount: 1, shortCount: 1 })),
+			stockState(check({ shortCount: 1 })),
+			stockState(check({})),
+			stockState(check({ lines: [] }))
 		]);
 		expect(states.size).toBe(4);
 	});

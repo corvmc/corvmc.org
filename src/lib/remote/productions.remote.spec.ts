@@ -169,6 +169,11 @@ vi.mock('#lib/server/production/artifact-request-service.js', () => ({
 	promotePosterArt: (...a: unknown[]) => artifacts.promotePosterArt(...a)
 }));
 
+const riderStock = { setRiderElementStock: vi.fn() };
+vi.mock('#lib/server/production/rider-stock-service.js', () => ({
+	setRiderElementStock: (...a: unknown[]) => riderStock.setRiderElementStock(...a)
+}));
+
 const flyers = { useTemplateFlyer: vi.fn(), useArtWithFooter: vi.fn() };
 vi.mock('#lib/server/poster/flyer-service.js', () => ({
 	useTemplateFlyer: (...a: unknown[]) => flyers.useTemplateFlyer(...a),
@@ -338,6 +343,11 @@ const WRITES: Write[] = [
 		capability: RUN
 	},
 	{
+		name: 'setRiderStock',
+		args: [{ eventId: 'evt-1', elementId: 'el-1', itemId: 'item-1' }],
+		capability: RUN
+	},
+	{
 		name: 'usePosterArt',
 		args: [{ requestId: 'req-1', eventId: 'evt-1' }],
 		capability: BOOK
@@ -398,6 +408,7 @@ const allSpies = () =>
 		...attachable,
 		...runOfShow,
 		...artifacts,
+		...riderStock,
 		...flyers,
 		...settlement,
 		...expenses,

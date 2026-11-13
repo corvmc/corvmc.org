@@ -41,6 +41,7 @@
 	import ShowBudgetCard from './ShowBudgetCard.svelte';
 	import DeliverablesCard from './DeliverablesCard.svelte';
 	import ArtifactRequestsPanel from './ArtifactRequestsPanel.svelte';
+	import RiderStockPanel from './RiderStockPanel.svelte';
 	import { TAB_KEYS, TAB_LABELS, parseTab, type TabKey } from './tabs';
 	import { tabBadges } from './section-state';
 	import { SvelteSet } from 'svelte/reactivity';
@@ -574,6 +575,11 @@
 						</Button>
 					</div>
 				</InfoCard>
+				<RiderStockPanel
+					eventId={evt.id}
+					check={loaded.riderStock}
+					onchange={() => getStaffEventProduction(id).refresh()}
+				/>
 			{/if}
 
 			<!--

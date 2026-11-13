@@ -5,6 +5,7 @@ import { media, mediaAttachment } from '../../src/lib/server/db/schema/media';
 import { eventListing, eventBand } from '../../src/lib/server/db/schema/event';
 import { directoryEntry } from '../../src/lib/server/db/schema/directory';
 import { user, account } from '../../src/lib/server/db/schema/authentication';
+import { inventoryItem } from '../../src/lib/server/db/schema/inventory';
 import { modelHasRole } from '../../src/lib/server/db/schema/authorization';
 import { batchInsert, db } from './db';
 import { scryptHash } from './hash';
@@ -408,6 +409,25 @@ export async function seedRiders(roles: SeedRole[]) {
 		{ kind: 'playback', label: 'Tracks', inputs: ['Tracks L', 'Tracks R'] }
 	];
 
+	/**
+	 * What this band asks CMC for, so the advance's stock check has all three
+	 * outcomes (#2724): the vocals matched by staff to the one AKG, so three ask
+	 * for one unit and come up short; the bass rig left to the Amplifiers
+	 * category suggestion; the Nord, which no category serves.
+	 */
+	const [akg] = await db
+		.select({ id: inventoryItem.id })
+		.from(inventoryItem)
+		.where(eq(inventoryItem.name, 'AKG P420 Condenser'))
+		.limit(1);
+	const FROM_US: Record<string, string | null> = {
+		'Lead vocal': akg?.id ?? null,
+		'Vocal SR': akg?.id ?? null,
+		'Vocal SL': akg?.id ?? null,
+		'Bass rig': null,
+		Nord: null
+	};
+
 	const bigElements: (typeof riderElement.$inferInsert)[] = [];
 	const bigInputs: (typeof riderInput.$inferInsert)[] = [];
 
@@ -421,7 +441,8 @@ export async function seedRiders(roles: SeedRole[]) {
 			userId: null,
 			kind: entry.kind,
 			label: entry.label,
-			providedBy: 'band',
+			providedBy: entry.label in FROM_US ? 'venue' : 'band',
+			inventoryItemId: FROM_US[entry.label] ?? null,
 			sortOrder: i
 		});
 		entry.inputs.forEach((label, j) => {

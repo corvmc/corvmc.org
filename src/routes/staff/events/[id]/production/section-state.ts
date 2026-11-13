@@ -37,6 +37,17 @@ export function requestsState(requests: Loaded['artifactRequests']): string {
 	);
 }
 
+/** Not in stock first: a request nothing answers is work before one that runs short. */
+export function stockState(check: Loaded['riderStock']): string {
+	if (check.unmatchedCount > 0)
+		return m.staff_production_state_not_stocked_label({ count: check.unmatchedCount });
+	if (check.shortCount > 0)
+		return m.staff_production_state_short_label({ count: check.shortCount });
+	return check.lines.length > 0
+		? m.staff_production_state_in_stock_label()
+		: m.staff_production_state_none_asked_label();
+}
+
 export function runningOrderState(ros: RunOfShow): string {
 	if (!ros.firstSetAt) return m.staff_production_state_no_first_set_label();
 	if (ros.slots.length === 0) return m.staff_production_state_no_sets_label();
