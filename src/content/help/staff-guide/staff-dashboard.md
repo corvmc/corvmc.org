@@ -45,7 +45,9 @@ Everything else is grouped by what it's for:
   are **Planning → Volunteering**, whose badge counts shifts in the next week short of bookings
   and shifts that ended. Every task,
   in a project or not, is on **Planning → Tasks**, with Projects, Recurring work, Productions
-  and Templates as views beside the table.
+  and Templates as views beside the table. A task can wait on others: set it on the task's page
+  under **Waits on**. It shows as **Blocked** on the table until they are done, and the project's
+  **Task graph** draws the order.
 - **Space** — **Reservations** (practice-space bookings and payments), with **Recurring** standing
   series and **Closures** blackout dates beneath it; and **Equipment** (the inventory), with
   **Loans** beneath it.

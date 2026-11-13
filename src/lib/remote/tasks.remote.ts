@@ -24,7 +24,7 @@ import {
 } from '#lib/server/project/project-section-service.js';
 import { listJobs } from '#lib/server/contractor/contractor-job-service.js';
 import { listTaskCatalogue } from '#lib/server/volunteer/task-catalogue.js';
-import { listOpenBlockers } from '#lib/server/volunteer/task-dependencies.js';
+import { listOpenBlockers, listProjectGraph } from '#lib/server/volunteer/task-dependencies.js';
 import {
 	createWorkOrder,
 	openShift,
@@ -87,6 +87,12 @@ function contractorMarks(jobs: TaskJob[]) {
 }
 
 const subject = z.object({ type: z.enum(relatedSubjectTypes), id: z.string().min(1) });
+
+/** A project's tasks and what each waits on, for the project page's graph (#2625). */
+export const getProjectGraph = query(projectId, async (id) => {
+	await requireCapability('project.read');
+	return listProjectGraph(id);
+});
 
 /**
  * The Tasks table (#2625): every task, in a project or none. Engagements are

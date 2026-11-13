@@ -2072,6 +2072,15 @@ Decision: [A work order is the task](../decisions/0054-a-work-order-is-the-task.
   entries, its work orders' entries, duty ticks (from `work_task`, never audited) and the
   origin chain (suggestion, ballots, project start, from their own rows). The project page's
   Activity sidebar and the task page render it, each loaded lazily.
+- **Dependencies** ([0068](../decisions/0068-a-task-can-wait-on-other-tasks.md)): a task waits
+  on others in its project through `work_order_dependency`, added and removed on the task page
+  (`task-dependencies.ts`), and audited as `work_order.dependency_added` / `_removed`.
+  `addDependency` refuses a loop with a recursive query. Blocked is the count of open blockers,
+  read with the row (`openBlockersSql`); marking a blocked task done records `openBlockers` on
+  `work_order.resolved`. Marking a task done or calling it off on its own runs
+  `announceTasksReady`, which emits `volunteer.task_ready` for each assignee of a task that now
+  waits on nothing open. Templates keep their own edges in `duty_list_item_dependency`, and
+  `applyDutyList` copies them onto the tasks it stamps.
 
 ### Where it breaks
 

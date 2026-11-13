@@ -99,3 +99,4 @@ A page or less. Link the issue and the PRs.
 | 0065 | [Outside parties are organizations with roles](0065-outside-parties-are-organizations-with-roles.md)                           | 2026-11-12 | Accepted           |
 | 0066 | [One review feed on the dashboard](0066-one-review-feed-on-the-dashboard.md)                                                   | 2026-11-12 | Accepted           |
 | 0067 | [A grant application or sponsorship is a project](0067-a-grant-is-a-project.md)                                                | 2026-11-13 | Accepted           |
+| 0068 | [A task can wait on other tasks](0068-a-task-can-wait-on-other-tasks.md)                                                       | 2026-11-13 | Accepted           |
