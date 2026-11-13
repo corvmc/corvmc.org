@@ -1540,10 +1540,13 @@ What the list owes, in `pages` mode (`src/routes/staff/reservations/` is the exa
 
 ### Sorting
 
-There isn't any, on purpose. No `query()` accepts a sort parameter, and a
-`Table` that knows about sorting is the first step back toward the component
-this replaced. If a page genuinely needs it, add `sort`/`dir` to _that page's_
-filter schema and give it its own header control.
+Rare, and never in `Table`: a `Table` that knows about sorting is the first step
+back toward the component this replaced. A page that needs it adds `sort` to
+_its own_ query's schema and URL state, and the query sorts before it pages.
+The header control is `SortHeader` (`#lib/components/ui/`), a `<th>` with
+`aria-sort` that reads and writes one token — the column key, `-` prefixed for
+descending (`#lib/utils/sort-token.js`). `/staff/contacts` is the example: a
+sort on a column the viewer may not see falls back to name on the server.
 
 ## StatCard
 

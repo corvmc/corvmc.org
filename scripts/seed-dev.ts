@@ -355,7 +355,7 @@ async function main() {
 		`  ${fundingWork.owners} grant and sponsorship projects owned, ${fundingWork.tasks} tasks on them`
 	);
 	console.log(
-		`  ${contacts.organizations} more contacts (a partner, the press, two likely duplicates)`
+		`  ${contacts.organizations} more contacts (a partner, the press, two likely duplicates) and ${contacts.people} people with no organization`
 	);
 	console.log(
 		`  ${partyActivity.notes} contact notes, ${partyActivity.tasks} follow-up tasks, ${partyActivity.threads} emails`

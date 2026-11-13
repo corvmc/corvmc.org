@@ -73,7 +73,7 @@
 		</Button>
 	{/if}
 	{#if data.shows.sponsors}
-		<Button href={withQuery(resolve('staff/contacts'), 'view=sponsor')} variant="ghost" size="sm">
+		<Button href={withQuery(resolve('staff/contacts'), 'role=sponsor')} variant="ghost" size="sm">
 			{m.staff_sponsors_sponsors_label()}
 		</Button>
 	{/if}

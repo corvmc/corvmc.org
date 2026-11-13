@@ -2,7 +2,7 @@ import { db } from '#lib/server/db/index.js';
 import { contact, partyRole, type ContactSource } from '#lib/server/db/schema/contact.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { subscriber } from '#lib/server/db/schema/marketing.js';
-import { and, asc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import { CONTACT_CLAIM_RETENTION_DAYS, type PartyRole } from '#lib/config.js';
 import { can, requireCapability } from '#lib/server/authorization.js';
 import { organization } from '#lib/server/db/schema/party.js';
@@ -282,6 +282,45 @@ export async function primaryContacts(
 		});
 	}
 	return out;
+}
+
+/** Every organization's main person, read in one pass rather than bound per id. */
+export async function allPrimaryContacts(): Promise<Map<string, PrimaryContact>> {
+	await requireCapability('contact.read');
+	const out = new Map<string, PrimaryContact>();
+	const rows = await db
+		.select({
+			id: contact.id,
+			organizationId: contact.organizationId,
+			name: contact.name,
+			email: contact.email,
+			phone: contact.phone
+		})
+		.from(contact)
+		.where(and(isNotNull(contact.organizationId), kept(new Date())))
+		.orderBy(asc(contact.createdAt), asc(contact.id));
+	for (const { organizationId, ...person } of rows) {
+		if (!out.has(organizationId!)) out.set(organizationId!, person);
+	}
+	return out;
+}
+
+/** Kept people with no organization, such as a donor giving alone, with their roles. */
+export async function listUnaffiliatedPeople() {
+	await requireCapability('contact.read');
+	const [rows, roles] = await Promise.all([
+		db
+			.select({ id: contact.id, name: contact.name, email: contact.email })
+			.from(contact)
+			.where(and(isNull(contact.organizationId), kept(new Date()))),
+		db
+			.select({ contactId: partyRole.contactId, role: partyRole.role })
+			.from(partyRole)
+			.where(isNotNull(partyRole.contactId))
+	]);
+	const held = new Map<string, PartyRole[]>();
+	for (const r of roles) held.set(r.contactId!, [...(held.get(r.contactId!) ?? []), r.role]);
+	return rows.map((r) => ({ ...r, roles: held.get(r.id) ?? [] }));
 }
 
 /**

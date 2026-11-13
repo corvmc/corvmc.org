@@ -1,79 +1,104 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	/** Every outside organization, one view per role (#2622). */
+	/** Every outside organization and every person with none, in one table (#2760). */
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import Table from '#lib/components/ui/Table.svelte';
+	import SortHeader from '#lib/components/ui/SortHeader.svelte';
 	import Pagination from '#lib/components/ui/Pagination.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
-	import TabBar from '#lib/components/ui/TabBar.svelte';
+	import FilterBar from '#lib/components/ui/FilterBar.svelte';
+	import Select from '#lib/components/ui/Form/Select.svelte';
+	import SearchInput from '#lib/components/ui/Form/SearchInput.svelte';
 	import { Field } from '#lib/components/ui/Form/index.js';
 	import OrganizationFields from './OrganizationFields.svelte';
+	import { createOrganization, getContactsPage } from '#lib/remote/contacts.remote.js';
 	import {
-		createOrganization,
-		getContactsPage,
-		type ContactsView
-	} from '#lib/remote/contacts.remote.js';
-	import { partyRoleLabels, partyRoles, partyRoleViewLabels, type PartyRole } from '#lib/config.js';
+		contactListSorts,
+		contactListTypes,
+		partyRoleLabels,
+		partyRoles,
+		partyRoleViewLabels,
+		type ContactListSort,
+		type ContactListType
+	} from '#lib/config.js';
+	import { urlState, oneOf, positiveInt, text } from '#lib/urlState.svelte.js';
 	import { rowLink } from '#lib/actions/row-link.js';
-	import { withQuery } from '#lib/utils/with-query.js';
 	import { clubInstant, formatDateShort } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { defaultCreateRole, parseRoles, toggleRole } from './contact-filters';
 
-	const requested = $derived(
-		(page.url.searchParams.get('view') as ContactsView | null) ?? undefined
-	);
-	const includeArchived = $derived(page.url.searchParams.get('archived') === '1');
-	// One query: it settles which view the viewer may open, and lists it.
-	const data = $derived(await getContactsPage({ view: requested, includeArchived }));
-	const views = $derived(data.views);
-	const view = $derived(data.view);
-	const rows = $derived(data.rows);
+	const f = urlState(resolve('staff/contacts'), {
+		q: text(),
+		role: text(),
+		type: oneOf(['', ...contactListTypes] as const, ''),
+		archived: oneOf(['', '1'] as const, ''),
+		sort: oneOf(contactListSorts, 'name'),
+		page: positiveInt(1)
+	});
+	// `searchText`, not `search`: FilterBar's `search` snippet would shadow it.
+	let searchText = $state(f.q);
+	const roles = $derived(parseRoles(f.role));
+	const menuCount = $derived((roles.length > 0 ? 1 : 0) + (f.archived ? 1 : 0));
+	const activeCount = $derived(menuCount + (f.q ? 1 : 0) + (f.type ? 1 : 0));
 
-	const href = (key: ContactsView) =>
-		withQuery(resolve('staff/contacts'), new URLSearchParams({ view: key }));
-	const tabs = $derived([
-		...(views.all ? [{ key: 'all', label: m.staff_all_label(), href: href('all') }] : []),
-		...views.roles.map((r) => ({ key: r, label: partyRoleViewLabels[r], href: href(r) }))
-	]);
+	function clear() {
+		searchText = '';
+		f.q = '';
+		f.role = '';
+		f.type = '';
+		f.archived = '';
+		f.page = 1;
+	}
+
+	function setSort(next: string) {
+		f.sort = next as ContactListSort;
+		f.page = 1;
+	}
 
 	// Contractors carry a trade, so they are added from their own page.
 	const roleOptions = partyRoles
 		.filter((r) => r !== 'contractor')
 		.map((r) => ({ value: r, label: partyRoleLabels[r] }));
-	const defaultRole = $derived<PartyRole>(
-		view !== 'all' && view !== 'contractor' ? view : 'partner'
-	);
 
-	function setArchived(on: boolean) {
-		const url = new URL(page.url.href);
-		if (on) url.searchParams.set('archived', '1');
-		else url.searchParams.delete('archived');
-		goto(url, { replace: true });
-	}
+	// One query: it settles which roles the viewer may read, and lists them.
+	const data = $derived(
+		await getContactsPage({
+			roles: roles.length > 0 ? roles : undefined,
+			type: f.type || undefined,
+			search: f.q || undefined,
+			includeArchived: f.archived === '1',
+			sort: f.sort,
+			page: f.page
+		})
+	);
+	const only = $derived(roles.length === 1 ? roles[0] : null);
+	const href = (row: { type: ContactListType; id: string }) =>
+		row.type === 'person'
+			? resolve('/staff/contacts/people/[id]', { id: row.id })
+			: resolve('/staff/contacts/[id]', { id: row.id });
 </script>
 
 <PageHeader title={m.staff_contacts_title()} subtitle={m.staff_contacts_body()}>
-	{#if view === 'contractor'}
-		<Button variant="ghost" size="sm" href={resolve('staff/contractors')}>
+	{#if only === 'contractor'}
+		<Button variant="ghost" href={resolve('staff/contractors')}>
 			{m.staff_contacts_contractors_page_label()}
 		</Button>
-	{:else if view === 'sponsor'}
-		<Button variant="ghost" size="sm" href={resolve('staff/funding')}>
+	{:else if only === 'sponsor'}
+		<Button variant="ghost" href={resolve('staff/funding')}>
 			{m.staff_contacts_sponsorships_page_label()}
 		</Button>
-	{:else if view === 'funder'}
-		<Button variant="ghost" size="sm" href={resolve('staff/funding')}>
+	{:else if only === 'funder'}
+		<Button variant="ghost" href={resolve('staff/funding')}>
 			{m.staff_contacts_grants_page_label()}
 		</Button>
 	{/if}
-	{#if views.all}
-		<Button variant="ghost" size="sm" href={resolve('staff/contacts/duplicates')}>
+	{#if data.people}
+		<Button variant="ghost" href={resolve('staff/contacts/duplicates')}>
 			{m.staff_contacts_duplicates_label()}
 		</Button>
 		<Action
@@ -94,7 +119,7 @@
 					type="select"
 					label={m.staff_role_label()}
 					options={roleOptions}
-					value={defaultRole}
+					value={defaultCreateRole(roles)}
 					description={m.staff_contacts_contractor_hint_body()}
 				/>
 			{/snippet}
@@ -103,60 +128,136 @@
 </PageHeader>
 
 <PageContent>
-	{#if tabs.length > 1}
-		<TabBar collapse active={view} {tabs} />
-	{/if}
-
-	<div class="flex justify-end">
-		<label class="label cursor-pointer gap-2 text-sm">
-			<input
-				type="checkbox"
-				class="checkbox checkbox-sm"
-				checked={includeArchived}
-				onchange={(e) => setArchived(e.currentTarget.checked)}
+	<FilterBar {activeCount} {menuCount} onclear={clear}>
+		{#snippet search()}
+			<SearchInput
+				bind:value={searchText}
+				placeholder={m.staff_contacts_search_placeholder()}
+				onsearch={(q) => {
+					f.q = q;
+					f.page = 1;
+				}}
 			/>
-			{m.staff_show_archived_label()}
-		</label>
-	</div>
+		{/snippet}
+		{#if data.people}
+			<Select
+				size="sm"
+				aria-label={m.staff_type_label()}
+				data-testid="type-filter"
+				value={f.type}
+				onchange={(e: Event) => {
+					f.type = (e.currentTarget as HTMLSelectElement).value as typeof f.type;
+					f.page = 1;
+				}}
+			>
+				<option value="">{m.staff_contacts_all_types_label()}</option>
+				<option value="organization">{m.staff_contacts_organizations_label()}</option>
+				<option value="person">{m.staff_people_label()}</option>
+			</Select>
+		{/if}
+		{#snippet menu()}
+			{#if data.roles.length > 1}
+				<fieldset class="flex flex-col gap-1" data-testid="role-filter">
+					<legend class="mb-1 text-muted text-xs">{m.staff_roles_label()}</legend>
+					{#each data.roles as role (role)}
+						<label class="label cursor-pointer gap-2 text-sm">
+							<input
+								type="checkbox"
+								class="checkbox checkbox-sm"
+								value={role}
+								checked={roles.includes(role)}
+								onchange={(e) => {
+									f.role = toggleRole(f.role, role, e.currentTarget.checked);
+									f.page = 1;
+								}}
+							/>
+							{partyRoleViewLabels[role]}
+						</label>
+					{/each}
+				</fieldset>
+			{/if}
+			<label class="label cursor-pointer gap-2 text-sm">
+				<input
+					type="checkbox"
+					class="checkbox checkbox-sm"
+					name="archived"
+					checked={f.archived === '1'}
+					onchange={(e) => {
+						f.archived = e.currentTarget.checked ? '1' : '';
+						f.page = 1;
+					}}
+				/>
+				{m.staff_show_archived_label()}
+			</label>
+		{/snippet}
+	</FilterBar>
 
-	{#if rows.length === 0}
+	{#if data.rows.length === 0}
 		<EmptyState
-			title={m.staff_contacts_no_organizations_title()}
-			description={m.staff_contacts_no_organizations_body()}
+			title={m.staff_contacts_no_contacts_title()}
+			description={m.staff_contacts_no_contacts_body()}
 		/>
 	{:else}
 		<Table>
 			{#snippet head()}
-				<th>{m.staff_contacts_organization_label()}</th>
-				{#if views.all}
+				<SortHeader label={m.staff_name_label()} field="name" sort={data.sort} onsort={setSort} />
+				{#if data.people}
 					<th>{m.staff_contacts_main_person_label()}</th>
 				{/if}
-				<th class="col-support">{m.staff_contacts_last_activity_label()}</th>
-				<th class="col-support">{m.staff_contacts_next_task_label()}</th>
+				{#if data.sortable.activity}
+					<SortHeader
+						class="col-support"
+						label={m.staff_contacts_last_activity_label()}
+						field="activity"
+						descFirst
+						sort={data.sort}
+						onsort={setSort}
+					/>
+				{:else}
+					<th class="col-support">{m.staff_contacts_last_activity_label()}</th>
+				{/if}
+				{#if data.sortable.task}
+					<SortHeader
+						class="col-support"
+						label={m.staff_contacts_next_task_label()}
+						field="task"
+						sort={data.sort}
+						onsort={setSort}
+					/>
+				{:else}
+					<th class="col-support">{m.staff_contacts_next_task_label()}</th>
+				{/if}
 				<th class="col-support">{m.staff_website_label()}</th>
 			{/snippet}
-			{#each rows as row (row.id)}
+			{#each data.rows as row (`${row.type}:${row.id}`)}
 				<tr
 					class="hover cursor-pointer"
 					class:opacity-60={row.archivedAt}
-					use:rowLink={resolve(`staff/contacts/${row.id}`)}
+					data-type={row.type}
+					use:rowLink={href(row)}
 				>
 					<td class="cell-primary">
-						<a class="link font-medium" href={resolve(`staff/contacts/${row.id}`)}>{row.name}</a>
+						<a class="link font-medium" href={href(row)}
+							>{row.name ?? m.staff_contacts_unnamed_text()}</a
+						>
 						{#if row.archivedAt}
 							<Badge variant="ghost" size="sm" class="ml-2">{m.staff_archived_label()}</Badge>
 						{/if}
 						<div class="truncate text-muted">
-							{row.roles.map((r) => partyRoleLabels[r]).join(', ')}
+							{#if row.roles.length > 0}
+								{row.roles.map((r) => partyRoleLabels[r]).join(', ')}
+							{:else if row.type === 'person'}
+								{m.staff_contacts_person_text()}
+							{/if}
 						</div>
 					</td>
-					{#if views.all}
-						<td>{row.mainPerson ?? '—'}</td>
+					{#if data.people}
+						<td class="cell-text truncate">{row.mainPerson ?? '—'}</td>
 					{/if}
-					<td class="col-support">
+					<td class="col-support whitespace-nowrap">
 						{row.lastActivity ? formatDateShort(clubInstant(row.lastActivity, '12:00')) : '—'}
 					</td>
-					<td class="col-support truncate">
+					<td class="col-support cell-text truncate">
 						{#if row.nextTask}
 							<a class="link" href={resolve('/staff/tasks/[id]', { id: row.nextTask.id })}
 								>{row.nextTask.title}</a
@@ -168,10 +269,17 @@
 							—
 						{/if}
 					</td>
-					<td class="col-support truncate">{row.website ?? '—'}</td>
+					<td class="col-support cell-text truncate">{row.website ?? '—'}</td>
 				</tr>
 			{/each}
 		</Table>
-		<Pagination total={rows.length} unit="organizations" />
+		<Pagination
+			page={data.pagination.page}
+			totalPages={data.pagination.totalPages}
+			pageSize={data.pagination.pageSize}
+			total={data.pagination.total}
+			unit="contacts"
+			onpage={(p) => (f.page = p)}
+		/>
 	{/if}
 </PageContent>

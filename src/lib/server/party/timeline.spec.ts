@@ -19,7 +19,7 @@ vi.mock('#lib/server/authorization.js', () => ({
 
 const notes = await import('./activity-service');
 const { partyTimeline } = await import('./timeline');
-const { organizationListFacts } = await import('./list-facts');
+const { partyListFacts } = await import('./list-facts');
 const orgs = await import('./organization-service');
 const people = await import('#lib/server/directory/contact-service.js');
 const filing = await import('./thread-filing');
@@ -134,11 +134,14 @@ describe('the Contacts list facts', () => {
 		await notes.addActivity(ARTS, { kind: 'note', occurredOn: '2026-10-01', body: 'a' }, 'staff-1');
 		await notes.addActivity(ARTS, { kind: 'note', occurredOn: '2026-11-01', body: 'b' }, 'staff-1');
 
-		const facts = await organizationListFacts(['org-arts', 'org-amps', 'org-old']);
-		expect(facts.lastActivity).toEqual(new Map([['org-arts', '2026-11-01']]));
-		expect(facts.nextTask.get('org-arts')).toMatchObject({ id: 'wo-soon', title: 'Sooner' });
-		expect(facts.nextTask.get('org-amps')).toMatchObject({ id: 'wo-job' });
-		expect(facts.nextTask.has('org-old')).toBe(false);
+		const facts = await partyListFacts();
+		expect(facts.lastActivity).toEqual(new Map([['organization:org-arts', '2026-11-01']]));
+		expect(facts.nextTask.get('organization:org-arts')).toMatchObject({
+			id: 'wo-soon',
+			title: 'Sooner'
+		});
+		expect(facts.nextTask.get('organization:org-amps')).toMatchObject({ id: 'wo-job' });
+		expect(facts.nextTask.has('organization:org-old')).toBe(false);
 	});
 });
 
@@ -159,8 +162,8 @@ describe('Inbox filing', () => {
 		expect(page.items).toEqual([
 			expect.objectContaining({ source: 'thread', threadId: 't-1', summary: 'Spring cycle' })
 		]);
-		const facts = await organizationListFacts(['org-arts']);
-		expect(facts.lastActivity.get('org-arts')).toBe('2026-11-06');
+		const facts = await partyListFacts();
+		expect(facts.lastActivity.get('organization:org-arts')).toBe('2026-11-06');
 
 		await filing.fileThread('t-1', null);
 		expect((await partyTimeline(ARTS)).items).toEqual([]);

@@ -1,9 +1,10 @@
 import { db } from '#lib/server/db/index.js';
 import { inboxThread } from '#lib/server/db/schema/inbox.js';
-import { and, desc, eq, isNotNull, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
 import type { FeedItem, FeedPage } from '#lib/types/activity.js';
 import type { PartyRef } from './activity-service';
+import { partyKey } from './party-key';
 
 /**
  * Filing a staff Inbox conversation to an outside party (#2622), so it shows
@@ -102,17 +103,32 @@ export async function filedThreads(
 	};
 }
 
-/** Each organization's latest filed message, for the Contacts list. */
-export async function lastThreadByOrganization(): Promise<Map<string, Date>> {
+/** Each party's latest filed message, keyed by `partyKey`, for the Contacts list. */
+export async function lastThreadByParty(): Promise<Map<string, Date>> {
 	const rows = await db
 		.select({
-			id: inboxThread.organizationId,
+			organizationId: inboxThread.organizationId,
+			contactId: inboxThread.contactId,
 			last: sql<number>`max(coalesce(${inboxThread.lastMessageAt}, ${inboxThread.createdAt}))`
 		})
 		.from(inboxThread)
-		.where(and(isNotNull(inboxThread.organizationId), isNull(inboxThread.deletedAt)))
-		.groupBy(inboxThread.organizationId);
-	return new Map(rows.map((r) => [r.id!, new Date(Number(r.last) * 1000)]));
+		.where(
+			and(
+				or(isNotNull(inboxThread.organizationId), isNotNull(inboxThread.contactId)),
+				isNull(inboxThread.deletedAt)
+			)
+		)
+		.groupBy(inboxThread.organizationId, inboxThread.contactId);
+	return new Map(
+		rows.map((r) => [
+			partyKey(
+				r.organizationId
+					? { type: 'organization', id: r.organizationId }
+					: { type: 'contact', id: r.contactId! }
+			),
+			new Date(Number(r.last) * 1000)
+		])
+	);
 }
 
 /** Move one party's filed threads onto another, for a merge's batch. */
