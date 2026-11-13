@@ -9,7 +9,18 @@ import * as orgs from '#lib/server/party/organization-service.js';
 import * as people from '#lib/server/directory/contact-service.js';
 import { getContractorById } from '#lib/server/contractor/contractor-service.js';
 import { canSeeRole, requireOrganizationReader } from '#lib/server/party/organization-guard.js';
-import { LONG_TEXT_MAX, partyRoles, SHORT_TEXT_MAX, type PartyRole } from '#lib/config.js';
+import * as notes from '#lib/server/party/activity-service.js';
+import type { PartyRef } from '#lib/server/party/activity-service.js';
+import { partyTimeline } from '#lib/server/party/timeline.js';
+import { organizationListFacts } from '#lib/server/party/list-facts.js';
+import {
+	ACTIVITY_BODY_MAX,
+	activityKinds,
+	LONG_TEXT_MAX,
+	partyRoles,
+	SHORT_TEXT_MAX,
+	type PartyRole
+} from '#lib/config.js';
 
 /**
  * The Contacts screens (#2622): every outside organization, its roles and its
@@ -45,16 +56,22 @@ export const getContactsPage = query(
 			role: view === 'all' ? undefined : view,
 			includeArchived: includeArchived ?? false
 		});
-		const main = (await can('contact.read'))
-			? await people.primaryContacts(list.map((r) => r.id))
-			: new Map();
+		const ids = list.map((r) => r.id);
+		const [staff, tasks] = await Promise.all([can('contact.read'), can('project.read')]);
+		const [main, facts] = await Promise.all([
+			staff ? people.primaryContacts(ids) : new Map<string, people.PrimaryContact>(),
+			organizationListFacts(ids)
+		]);
 		const rows = list.map((r) => ({
 			id: r.id,
 			name: r.name,
 			website: r.website,
 			roles: r.roles,
 			archivedAt: r.archivedAt,
-			mainPerson: main.get(r.id)?.name ?? main.get(r.id)?.email ?? null
+			mainPerson: main.get(r.id)?.name ?? main.get(r.id)?.email ?? null,
+			// The notes need `contact.read`; the task, the Tasks table's own `project.read`.
+			lastActivity: staff ? (facts.lastActivity.get(r.id) ?? null) : null,
+			nextTask: tasks ? (facts.nextTask.get(r.id) ?? null) : null
 		}));
 		return { views, view, rows };
 	}
@@ -207,6 +224,67 @@ export const removePerson = form(
 		return { success: true };
 	}
 );
+
+/** One person's page: their details, organization and roles. */
+export const getPersonPage = query(z.string().min(1), async (id) => {
+	await requireCapability('contact.read');
+	const [person, manage] = await Promise.all([people.getPerson(id), can('contact.manage')]);
+	return { ...person, canManage: manage };
+});
+
+// ----------------------------------------------------------------- timeline
+
+const party = z.object({ type: z.enum(['organization', 'contact']), id: z.string().min(1) });
+
+/** Notes need `contact.read`; an organization's also need its page's own guard. */
+async function requirePartyReader(p: PartyRef) {
+	await requireCapability('contact.read');
+	if (p.type === 'organization') await requireOrganizationReader(p.id);
+}
+
+/** A party's timeline, newest first (#2622). "Show older" asks again with a longer `limit`. */
+export const getPartyTimeline = query(
+	party.extend({ limit: z.number().int().positive().optional() }),
+	async ({ limit, ...p }) => {
+		await requirePartyReader(p);
+		return partyTimeline(p, { limit });
+	}
+);
+
+const note = {
+	kind: z.enum(activityKinds),
+	occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick the day it happened'),
+	body: z.string().trim().min(1, 'Say what happened').max(ACTIVITY_BODY_MAX)
+};
+
+export const addActivityForm = form(
+	z.object({ partyType: party.shape.type, partyId: party.shape.id, ...note }),
+	async ({ partyType, partyId, ...input }) => {
+		const staff = await requireCapability('contact.manage');
+		const p = { type: partyType, id: partyId };
+		await requirePartyReader(p);
+		await notes.addActivity(p, input, staff.id);
+		void getPartyTimeline(p).refresh();
+		return { success: true };
+	}
+);
+
+export const updateActivityForm = form(
+	z.object({ id: z.string().min(1), ...note }),
+	async ({ id, ...input }) => {
+		await requireCapability('contact.manage');
+		const p = await notes.updateActivity(id, input);
+		void getPartyTimeline(p).refresh();
+		return { success: true };
+	}
+);
+
+export const deleteActivityForm = form(z.object({ id: z.string().min(1) }), async ({ id }) => {
+	await requireCapability('contact.manage');
+	const p = await notes.deleteActivity(id);
+	void getPartyTimeline(p).refresh();
+	return { success: true };
+});
 
 // --------------------------------------------------------------- duplicates
 

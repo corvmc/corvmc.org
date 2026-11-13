@@ -22,6 +22,7 @@
 		toRow,
 		empty,
 		trailing,
+		actions,
 		class: className = ''
 	}: {
 		title?: string;
@@ -29,13 +30,15 @@
 		toRow: (item: T) => R;
 		empty: { title: string; description?: string };
 		trailing?: Snippet<[R]>;
+		/** Buttons beside the title, such as a way to add to the feed. */
+		actions?: Snippet;
 		class?: string;
 	} = $props();
 
 	let limit = $state<number | undefined>(undefined);
 </script>
 
-<InfoCard {title} class={className}>
+<InfoCard {title} class={className} action={actions}>
 	<svelte:boundary>
 		<ActivityFeedPage
 			{query}

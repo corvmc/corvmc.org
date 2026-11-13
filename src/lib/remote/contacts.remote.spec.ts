@@ -42,6 +42,21 @@ const people = {
 	mergeContacts: vi.fn(async () => 'Priya')
 };
 vi.mock('#lib/server/directory/contact-service.js', () => people);
+const facts = {
+	organizationListFacts: vi.fn(async () => ({
+		lastActivity: new Map([['o1', '2026-11-01']]),
+		nextTask: new Map([['o1', { id: 'wo-1', title: 'Call them', dueAt: null }]])
+	}))
+};
+vi.mock('#lib/server/party/list-facts.js', () => facts);
+const notes = {
+	addActivity: vi.fn(async () => ({ id: 'n1' })),
+	updateActivity: vi.fn(async () => ({ type: 'organization', id: 'o1' })),
+	deleteActivity: vi.fn(async () => ({ type: 'organization', id: 'o1' }))
+};
+vi.mock('#lib/server/party/activity-service.js', () => notes);
+const timeline = { partyTimeline: vi.fn(async () => ({ items: [], hasMore: false })) };
+vi.mock('#lib/server/party/timeline.js', () => timeline);
 vi.mock('#lib/server/contractor/contractor-service.js', () => ({
 	getContractorById: vi.fn(async () => null)
 }));
@@ -100,7 +115,24 @@ const WRITES: Array<{ name: string; arg: unknown; spy: ReturnType<typeof vi.fn> 
 		name: 'mergeOrganizations',
 		arg: { survivorId: 'o1', otherId: 'o2' },
 		spy: orgs.mergeOrganizations
-	}
+	},
+	{
+		name: 'addActivityForm',
+		arg: {
+			partyType: 'organization',
+			partyId: 'o1',
+			kind: 'call',
+			occurredOn: '2026-11-01',
+			body: 'Rang'
+		},
+		spy: notes.addActivity
+	},
+	{
+		name: 'updateActivityForm',
+		arg: { id: 'n1', kind: 'call', occurredOn: '2026-11-01', body: 'Rang' },
+		spy: notes.updateActivity
+	},
+	{ name: 'deleteActivityForm', arg: { id: 'n1' }, spy: notes.deleteActivity }
 ];
 
 beforeEach(() => {
@@ -174,6 +206,30 @@ describe('contacts.remote views', () => {
 		const page = (await remote.getOrganizationPage('o1')) as { people: unknown };
 		expect(page.people).toBeNull();
 		expect(people.listPeople).not.toHaveBeenCalled();
+	});
+
+	it('lists last activity to contact.read and the next task to project.read', async () => {
+		type Page = { rows: { lastActivity: unknown; nextTask: unknown }[] };
+		held = new Set(['contact.read']);
+		const staff = (await remote.getContactsPage({ view: 'all' })) as Page;
+		expect(staff.rows[0]).toMatchObject({ lastActivity: '2026-11-01', nextTask: null });
+		held = new Set(['grant.read', 'project.read']);
+		const funders = (await remote.getContactsPage({ view: 'funder' })) as Page;
+		expect(funders.rows[0]).toMatchObject({ lastActivity: null, nextTask: { id: 'wo-1' } });
+	});
+
+	it("keeps a party's timeline behind contact.read and the organization's own guard", async () => {
+		held = new Set(['grant.read']);
+		await expect(remote.getPartyTimeline({ type: 'organization', id: 'o1' })).rejects.toThrow(
+			'403'
+		);
+		held = new Set(['contact.read']);
+		await remote.getPartyTimeline({ type: 'organization', id: 'o1' });
+		expect(orgs.getOrganization).toHaveBeenCalledWith('o1');
+		expect(timeline.partyTimeline).toHaveBeenCalledWith(
+			{ type: 'organization', id: 'o1' },
+			{ limit: undefined }
+		);
 	});
 
 	it('refuses an organization page to a viewer with none of its roles', async () => {

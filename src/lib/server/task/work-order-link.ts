@@ -56,6 +56,29 @@ export function linkInsertIfTaskExists(workOrderId: string, target: LinkTarget, 
 }
 
 /**
+ * Copy every link to one record onto another, for a merge: the caller then
+ * deletes the old record, which takes its own links. A task already linked to
+ * both keeps one link.
+ */
+export function copyLinks(target: LinkTarget, fromId: string, toId: string) {
+	const values: Record<string, SQL> = {
+		id: sql`lower(hex(randomblob(16)))`,
+		workOrderId: sql`l."work_order_id"`,
+		[target]: sql`${toId}`,
+		createdAt: sql`l."created_at"`
+	};
+	const row = sql.join(
+		Object.keys(getTableColumns(workOrderLink)).map((key) => values[key] ?? sql`null`),
+		sql`, `
+	);
+	const column = sql.identifier(workOrderLink[target].name);
+	return db
+		.insert(workOrderLink)
+		.select(sql`select ${row} from "work_order_link" l where l.${column} = ${fromId}`)
+		.onConflictDoNothing();
+}
+
+/**
  * Replace the task's links of one kind with `id`, or remove them when null.
  * The two statements are returned for the caller's batch.
  */

@@ -832,6 +832,17 @@ export const partyRoles = [
 ] as const;
 export type PartyRole = (typeof partyRoles)[number];
 
+/** What staff log on a party's timeline (#2622): a call, a meeting, an email or a note. */
+export const activityKinds = ['call', 'meeting', 'email', 'note'] as const;
+export type ActivityKind = (typeof activityKinds)[number];
+export const ACTIVITY_BODY_MAX = 4000;
+export const activityKindLabels: Record<ActivityKind, string> = {
+	call: 'Call',
+	meeting: 'Meeting',
+	email: 'Email',
+	note: 'Note'
+};
+
 /**
  * How long an act's contact is kept after the act becomes a member band: long
  * enough to answer a question about what they were paid. The daily sweep
