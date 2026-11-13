@@ -128,6 +128,20 @@ describe('getOrCreateGroupChat', () => {
 		expect(threadsOf('g1')).toEqual([{ id, subject: null }]);
 		await expect(getOrCreateGroupChat('g1')).resolves.toBe(id);
 	});
+
+	// Both reads find nothing before either insert runs (#2621).
+	it('creates one General when two first reads overlap', async () => {
+		const ids = await Promise.all([getOrCreateGroupChat('g1'), getOrCreateGroupChat('g1')]);
+
+		expect(threadsOf('g1')).toHaveLength(1);
+		expect(new Set(ids)).toEqual(new Set([threadsOf('g1')[0].id]));
+	});
+
+	it('refuses a second General at the schema', () => {
+		topic('general');
+
+		expect(() => topic('second')).toThrow(/UNIQUE/);
+	});
 });
 
 describe('listGroupTopics', () => {

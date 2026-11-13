@@ -28,25 +28,35 @@ function topicsOf(groupId: string) {
 }
 
 /**
- * The group's General topic, creating it on first use.
- *
- * Scoped to `subject IS NULL`, which is what keeps it from picking up a named
- * topic — before topics there was one thread per group and the lookup did not
- * have to say so.
+ * The group's General topic, if it has one. Scoped to `subject IS NULL`, which
+ * is what keeps it from picking up a named topic.
  */
-export async function getOrCreateGroupChat(groupId: string): Promise<string> {
+async function findGroupChat(groupId: string): Promise<string | undefined> {
 	const [existing] = await db
 		.select({ id: inboxThread.id })
 		.from(inboxThread)
 		.where(and(topicsOf(groupId), isNull(inboxThread.subject)))
 		.limit(1);
-	if (existing) return existing.id;
+	return existing?.id;
+}
 
-	const [created] = await db
+/**
+ * The group's General topic, creating it on first use.
+ *
+ * `idx_inbox_thread_group_general` allows one per group, so two first reads
+ * that both find nothing insert once between them, and both re-read it.
+ */
+export async function getOrCreateGroupChat(groupId: string): Promise<string> {
+	const existing = await findGroupChat(groupId);
+	if (existing) return existing;
+
+	await db
 		.insert(inboxThread)
 		.values({ channel: 'group', groupId, status: 'open' })
-		.returning({ id: inboxThread.id });
-	return created.id;
+		.onConflictDoNothing();
+	const id = await findGroupChat(groupId);
+	if (!id) throw new Error(`No General chat for group ${groupId}`);
+	return id;
 }
 
 export interface GroupTopic {
