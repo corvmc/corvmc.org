@@ -90,6 +90,84 @@ The panel layouts (`member/+layout.svelte`, `staff/+layout.svelte`, `band/[slug]
 
 If a page needs a custom boundary (e.g. wrapping only a subsection), it can still use `<svelte:boundary>` locally — the innermost boundary wins.
 
+## Page shapes
+
+Every page is one of twelve shapes. Name the shape before building the page: it decides what the
+page opens with and how it folds on a phone. Eight shapes are in the signed-in app:
+
+| Shape         | What it is                                                   | Example                                   |
+| ------------- | ------------------------------------------------------------ | ----------------------------------------- |
+| A · List      | Filters, a true count, column tiers, a pager                 | `staff/reservations`                      |
+| B · Detail    | Header, meta row, fact grid, related sections                | `staff/events/[id]`                       |
+| C · Desk      | Sections by job, state answered first                        | `/staff`, `staff/instructors`             |
+| D · Console   | One record across many sections; reading never needs editing | `staff/events/[id]/production`            |
+| E · Card list | Only where a clause earns it                                 | `staff/events/[id]/check-in`              |
+| F · Dashboard | `StatCard`s; exempt from the list rule, not from hierarchy   | `staff/reports/volunteering`              |
+| G · Form      | One question at a time, and what submit will do              | `member/volunteer/start`                  |
+| H · Thread    | A list of conversations, and one conversation                | `member/messages`, `member/messages/[id]` |
+
+Four are on the public site:
+
+| Shape             | What it is                                | Example                |
+| ----------------- | ----------------------------------------- | ---------------------- |
+| J · Browse        | Art-directed; exempt from the panel rules | `(public)/events`      |
+| K · Public record | Art above, the detail grammar below       | `(public)/events/[id]` |
+| L · Marketing     | No records behind it                      | `(public)/programs`    |
+| N · Transact      | Money or identity, one way through        | `checkout/[id]`        |
+
+Calling a staff page a list, desk or console is a judgement from its structure, and a few pages
+could go either way. The rules for each shape are in its own section: lists in "Lists and tables",
+desks in "Section dashboards" and "The dashboard review feed", card lists in "A table, unless the
+row earns a card", detail pages in "The detail tier".
+
+### Consoles
+
+**A console opens with what is done and what is not.** It is a staff page that edits one record
+across many sections: `staff/events/[id]/production` and `staff/settings` are the two. Built as a
+long detail page, a console hides facts behind its forms; #1068 was the show time, visible only in
+edit mode.
+
+1. **Reading never requires editing.** Every fact a section owns is legible without opening its
+   form. The production console states the date, doors, show time and room in a read-only line
+   above its tabs, and leaves changing them to the listing.
+2. **A section states its own state** — done, empty or blocked — in its heading, so the page can
+   be scanned. Pass it to `InfoCard`'s `state` prop; the production console's Tech riders heading
+   and `ShowBudgetCard` do. A console split into tabs puts the same state on each tab with
+   `TabBar`'s `badge`, since a closed tab's headings are not on screen.
+3. **Order by the work, not the schema.** An empty section that is not due yet sits below one that
+   is.
+4. **The rows inside obey the list rule.** A lineup, a shift board or a ticket table is a list.
+
+A desk and a console are different shapes. A desk's sections are queues of other people's records,
+sorted by what is waiting. A console's sections are parts of one record, sorted by the order the
+work is done in.
+
+### How each shape folds at 390px
+
+- **A list** sheds columns by tier, merging before hiding. Its action goes full width.
+- **A detail page** only restacks. Artwork is the one element that may scale.
+- **A desk** stacks its sections in urgency order. It may merge quiet sections into one counted
+  line, but never one that hides a deadline.
+- **A console** sorts unset sections above set ones.
+- **A card list** barely changes. That is the sign the card was earned.
+- **A dashboard**, and a public record's fact band, go two-up, not one-up, so figures stay
+  comparable: `grid-cols-2`, as `staff/members/UserTotals.svelte` does.
+- **A form** drops its running summary, keeps its progress bar, and moves submit to the bottom.
+- **A marketing page's** order becomes a recommendation when stacked, so set the stacked order on
+  purpose rather than inheriting the grid's reading order.
+- **A transaction** keeps its total visible, in a sticky footer or on the button. `checkout/[id]`
+  puts it on the button (`Pay $20.00`).
+- **A thread's** two panes become two screens.
+
+### Open questions
+
+- The three-fact budget for a folded card is unmeasured at 390px.
+- Relative time ("in 2 days") suits a queue worked today, not an archival list.
+- A browse grid that is mostly generated plates, in a week with little artwork, may read worse than
+  small cards.
+- A true count needs a `count(*)` that some list services do not run. Where it is expensive, the
+  fallback is "8 of many".
+
 ## Remote functions (data.remote.ts)
 
 Pages that have forms or dynamic queries use a colocated `data.remote.ts` file with SvelteKit's `query()` and `form()` from `$app/server`. This replaces `+page.server.ts` load/actions for pages that use the `Form` component.
@@ -997,6 +1075,15 @@ Pass extra classes on the outer card via `class`:
 </InfoCard>
 ```
 
+`state` puts what the section amounts to after the title — a count, "1 of 4 unfilled", "Not
+written" — so a page of sections can be scanned without reading them. A console section always
+passes it (see "Consoles"). `action` puts a control beside the title; `header` replaces the
+heading for a bespoke one.
+
+```svelte
+<InfoCard title="Recap" state={text ? 'Published' : 'Not written'}>…</InfoCard>
+```
+
 ## DefinitionList / Fact
 
 The label/value grid on staff detail pages. Replaces the hand-written
@@ -1182,14 +1269,21 @@ judgement call and the three pages it cited as precedents all failed it (#1034).
    _A poster, a sleeve, a face — not an avatar beside a name._
 3. **Three or more always-visible actions**, each needing its own target.
    _Count them. A conditional action counts as zero; a dropdown holds them._
-4. **Operated standing up.** Used one-handed, away from a desk.
+4. **The phone is the primary case.** All three checks must hold:
+   1. Name who uses it and what is in their hands.
+   2. Phone sessions outnumber desktop ones on the route. A page that works on a phone is not
+      enough.
+   3. The task is done in the room — at a door, beside a shelf — not at a desk afterwards.
+
    _56px targets, one row per screen-third, no hover-only affordance._
 
 A card list passing none of the four is a table that lost its columns.
 
-Clause 4 is what actually justifies the event check-in list, which the old rule
-justified by miscounting its actions. Clause 2 is how the art-directed exemption
-above is stated, not a change to it.
+Clause 4 justifies the event check-in list (`staff/events/[id]/check-in`): a volunteer at the
+door, phone in one hand, wristbands in the other. The open shifts on `member/volunteer` are not
+settled. They are browsed on phones, but not in the room with full hands; route analytics decide
+it, by whether phone sessions outnumber desktop ones, and the list stays as cards until then.
+Clause 2 is how the art-directed exemption above is stated, not a change to it.
 
 **A page can be both.** When its rows pass clause 4 only on a phone — the staff
 reservations list is worked at a desk, and checked at the door — render the
@@ -1315,6 +1409,26 @@ nothing, which is the same rule the registry states for subtypes.
 
 **Column budget:** 6 at ≥896px, 4 at ≥512px, 3 at 327px. Wanting a 7th means the
 fact belongs on the detail page.
+
+### Card grammar
+
+**A card is the table's four slots, folded.** The fold is a container query (`narrow-only` /
+`wide-only`), so a list folds when the sidebar or a detail pane narrows it, not only when the window
+does. `src/routes/staff/reservations/ReservationList.svelte` is the folded list in the app.
+
+| Slot        | In a card                                                                                                                                       |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 · status  | One mark, exception-only. It rides the media (see "Status rides the media"), or sits beside the title when there is none. Never a second badge. |
+| 1 · primary | Title and subline, unchanged. Still the only slot with two facts.                                                                               |
+| 2 · facts   | A labelled strip, label above value, since no header row names it.                                                                              |
+| 3 · actions | Full width, 44px, with labels, since there is no tooltip to carry them.                                                                         |
+
+Three table rules carry over: merge before you hide; another record gets its own slot as a chip;
+the budget is six facts wide and **three** folded.
+
+**A card's height does not track its content.** A browse grid of records with no artwork draws a
+generated plate in the fixed tile: `PosterCard` (`$lib/components/events/`) sets the title and
+date on a pattern in the same 8.5:11 figure a poster fills, so `(public)/events` stays an even grid.
 
 ### Visibility tiers
 
