@@ -39,8 +39,8 @@
 			</Button>
 		{/snippet}
 		{date
-			? m.reservations_booking_payment_due_text({ date })
-			: m.reservations_door_code_held_band_text({ name: bookerName ?? '' })}
+			? m.reservations_booking_payment_due_body({ date })
+			: m.reservations_door_code_held_band_body({ name: bookerName ?? '' })}
 	</Alert>
 </div>
 
