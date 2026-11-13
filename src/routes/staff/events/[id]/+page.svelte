@@ -143,13 +143,13 @@
 			>
 		{/if}
 
-		{#if (evt.status !== 'cancelled' || data.canEditCancelled) && !editing}
+		{#if (evt.status !== 'cancelled' || data.canManage) && !editing}
 			<Button variant="ghost" size="sm" data-testid="edit-listing" onclick={startEditing}>
 				{m.staff_edit_label()}
 			</Button>
 		{/if}
 
-		{#if evt.status === 'draft'}
+		{#if evt.status === 'draft' && data.canPublish}
 			<PublishEventAction eventId={evt.id} />
 		{/if}
 
@@ -191,15 +191,16 @@
 			</Action>
 		{/if}
 
-		{#if evt.status === 'published'}
+		{#if evt.status === 'published' && data.canPublish}
 			<UnpublishEventAction eventId={evt.id} />
 		{/if}
 
-		{#if evt.status !== 'cancelled'}
-			<CancelEventAction eventId={evt.id} />
+		{#if data.canManage}
+			{#if evt.status !== 'cancelled'}
+				<CancelEventAction eventId={evt.id} />
+			{/if}
+			<DeleteEventAction eventId={evt.id} />
 		{/if}
-
-		<DeleteEventAction eventId={evt.id} />
 	</div>
 </PageHeader>
 
@@ -431,7 +432,7 @@
 		eventId={evt.id}
 		posterUrl={detail.posterUrl}
 		cancelled={evt.status === 'cancelled'}
-		uploadWhileCancelled={data.canEditCancelled}
+		uploadWhileCancelled={data.canManage}
 		onchange={refresh}
 	/>
 

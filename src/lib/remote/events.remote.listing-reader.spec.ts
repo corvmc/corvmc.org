@@ -59,6 +59,8 @@ const checkRebookNeeded = vi.fn(async () => ({
 vi.mock('#lib/server/event/event-service.js', () => ({
 	getById: () => getById(),
 	checkRebookNeeded: () => checkRebookNeeded(),
+	publishBlockers: vi.fn(async () => []),
+	getDeletionImpact: vi.fn(async () => ({ deletable: false })),
 	update: vi.fn(),
 	setEventLineup: vi.fn(),
 	listAll: vi.fn(),
@@ -145,6 +147,8 @@ vi.mock('#lib/server/event/event-history.js', () => ({
 
 const {
 	getEventHistory,
+	getEventDeletionImpact,
+	getEventPublishBlockers,
 	getStaffEventPage,
 	getStaffEventDetail,
 	getEventRecurringSeries,
@@ -200,6 +204,23 @@ describe('getEventHistory', () => {
 		persona = 'outsider';
 		await expect(getEventHistory({ id: 'evt-show' })).rejects.toMatchObject({ status: 403 });
 		expect(listEventHistory).not.toHaveBeenCalled();
+	});
+});
+
+// The event page's header actions load these at render, so a refusal fails the
+// whole page for the show's committee (#2779). Each answers whoever reads the page.
+describe.each([
+	['getEventDeletionImpact', () => getEventDeletionImpact],
+	['getEventPublishBlockers', () => getEventPublishBlockers]
+])('%s', (_name, fn) => {
+	it("answers the show's committee", async () => {
+		persona = 'booker';
+		await expect(fn()('evt-show')).resolves.toBeDefined();
+	});
+
+	it('refuses someone off the committee', async () => {
+		persona = 'outsider';
+		await expect(fn()('evt-show')).rejects.toMatchObject({ status: 403 });
 	});
 });
 

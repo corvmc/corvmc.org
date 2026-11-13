@@ -1,5 +1,8 @@
 import { randomUUID } from 'crypto';
+import { eq } from 'drizzle-orm';
 import { eventListing } from '../../src/lib/server/db/schema/event';
+import { group } from '../../src/lib/server/db/schema/group';
+import { project, projectCommittee } from '../../src/lib/server/db/schema/project';
 import { inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
 import { marketDay, marketVendor } from '../../src/lib/server/db/schema/market';
 import type { MarketVendorStatus } from '../../src/lib/config';
@@ -95,9 +98,28 @@ export async function seedMarket(adminUser: SeedUser) {
 	startsAt.setUTCHours(17, 0, 0, 0);
 	const endsAt = new Date(startsAt.getTime() + 5 * 3600_000);
 
+	// Under the Art and Merchandise Committee's project, so `marketlead@` decides,
+	// seats and withdraws from /member/groups (#2834).
+	const [owner] = await db
+		.select({ id: group.id })
+		.from(group)
+		.where(eq(group.slug, 'art-and-merchandise-committee'))
+		.limit(1);
+	const projectId = owner ? randomUUID() : null;
+	if (owner && projectId) {
+		await db.insert(project).values({
+			id: projectId,
+			name: 'Fall Makers Market',
+			status: 'open',
+			createdByUserId: adminUser.id
+		});
+		await db.insert(projectCommittee).values({ projectId, groupId: owner.id, role: 'owner' });
+	}
+
 	const [event] = await db
 		.insert(eventListing)
 		.values({
+			projectId,
 			title: 'Fall Makers Market',
 			description: 'Local makers, record diggers and gear builders, with live sets all afternoon.',
 			startsAt,

@@ -43,6 +43,16 @@ export const GROUP_LEADER_PERSONAS = [
 		joinPolicy: 'invite_only' as const,
 		tagline: 'Chairs the Facilities Committee',
 		bio: 'Fixes what breaks. Keeps a list of what is about to.'
+	},
+	// Last, so `find` by join policy still lands on `facilities@`.
+	{
+		id: 'seed-group-leader-market',
+		email: 'marketlead@corvallismusic.org',
+		name: 'Tamsin Oyelaran',
+		memberNumber: 79,
+		joinPolicy: 'invite_only' as const,
+		tagline: 'Chairs the Art and Merchandise Committee',
+		bio: 'Runs the makers market. Knows which vendor needs the outlet.'
 	}
 ];
 

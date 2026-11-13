@@ -179,9 +179,7 @@ describe('the public application form', () => {
 describe('staff exports', () => {
 	const calls: [string, () => Promise<unknown>][] = [
 		['getStaffMarketVendors', () => remote.getStaffMarketVendors('evt-1')],
-		['openMarketDayForm', () => submit(remote.openMarketDayForm, { eventId: 'evt-1' })],
-		['setTableLabelForm', () => submit(remote.setTableLabelForm, { vendorId: 'v-1' })],
-		['withdrawVendorForm', () => submit(remote.withdrawVendorForm, { vendorId: 'v-1' })]
+		['openMarketDayForm', () => submit(remote.openMarketDayForm, { eventId: 'evt-1' })]
 	];
 
 	for (const [name, call] of calls) {
@@ -333,8 +331,20 @@ describe('paying the fee, with no account', () => {
 	});
 });
 
-describe('market day: check-in, no-shows and invite-back (#1505)', () => {
+describe('market day: seating, withdrawals, check-in, no-shows and invite-back (#1505, #2834)', () => {
 	const writes: [string, () => Promise<unknown>, string, unknown[]][] = [
+		[
+			'setTableLabelForm',
+			() => submit(remote.setTableLabelForm, { vendorId: 'v-1', tableLabel: 'B4' }),
+			'setTableLabel',
+			['v-1', 'B4']
+		],
+		[
+			'withdrawVendorForm',
+			() => submit(remote.withdrawVendorForm, { vendorId: 'v-1' }),
+			'withdrawApplication',
+			['v-1']
+		],
 		[
 			'checkInVendorForm',
 			() => submit(remote.checkInVendorForm, { vendorId: 'v-1', arrived: 'yes' }),
