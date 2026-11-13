@@ -1235,11 +1235,12 @@ reads as scrollable (#1965). It is still a fallback: tier or merge columns first
 
 ### FilterBar
 
-Toolbar layout, not filter state — pages keep their own `$state`. Search stays
-visible at every width. Primary filters go in `children` and sit inline; secondary
-ones go in a `menu` snippet, behind a "Filters" popover whose badge is `menuCount`.
-A bar with no `menu` collapses its `children` behind a "Filters" disclosure below
-the `@lg` container breakpoint instead.
+Toolbar layout, not filter state — pages keep their own `$state`. Nothing collapses:
+search, the `children` filters and Clear stay visible at every width, and on a narrow
+container they wrap onto further rows, each control sized to its content (#2614).
+Secondary filters go in a `menu` snippet, behind a "Filters" popover whose badge is
+`menuCount`; reach for it when a page's filters would fill more than a couple of rows
+on a phone, not to hide the primary ones.
 `actions` sits at the row's end, for what belongs to the current view rather than
 the page — a tabbed page's per-tab create button (`/staff/groups/*`).
 

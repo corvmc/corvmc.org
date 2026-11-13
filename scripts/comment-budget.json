@@ -188,7 +188,6 @@
 	"src/lib/components/ui/DataList.svelte",
 	"src/lib/components/ui/DefinitionList/DefinitionList.svelte",
 	"src/lib/components/ui/DefinitionList/Fact.svelte",
-	"src/lib/components/ui/FilterBar.svelte",
 	"src/lib/components/ui/Form/CheckboxGroup.svelte",
 	"src/lib/components/ui/Form/Form.svelte",
 	"src/lib/components/ui/Form/FormField.svelte",

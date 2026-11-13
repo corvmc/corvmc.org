@@ -40,7 +40,20 @@ describe('FilterBar menu', () => {
 		await render(FilterBarHarness, { width: 340 });
 
 		await expect.element(page.getByLabelText('Category')).toBeVisible();
-		// One disclosure: the popover trigger, and no collapsing `label.btn` beside it.
-		expect(document.querySelectorAll('[aria-haspopup], label[for^="filters-"]')).toHaveLength(1);
+		await expect.element(page.getByLabelText('Tier')).not.toBeInTheDocument();
+		expect(page.getByRole('button').elements()).toHaveLength(1);
+	});
+});
+
+describe('FilterBar without a menu', () => {
+	it('shows its filters and Clear on a phone without a toggle', async () => {
+		await render(FilterBarHarness, { width: 340, withMenu: false });
+
+		await expect.element(page.getByLabelText('Category')).toBeVisible();
+		expect(page.getByRole('button').elements()).toHaveLength(0);
+
+		await page.getByLabelText('Category').selectOptions('amps');
+		await page.getByRole('button').click();
+		await expect.poll(() => page.getByTestId('cleared').element().textContent).toBe('1');
 	});
 });
