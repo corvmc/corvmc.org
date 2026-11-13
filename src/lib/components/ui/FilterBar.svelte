@@ -13,10 +13,9 @@
 	 * Filter toolbar layout. Owns no filter state — pages keep their own `$state`
 	 * and pass the controls in.
 	 *
-	 * Search stays visible at every width. Secondary filters go in `menu`, a
-	 * "Filters" popover that stays one button at every width; `children` are the
-	 * primary ones and sit inline. A page with no `menu` keeps the older layout,
-	 * where `children` collapse behind a "Filters" disclosure below `@lg`.
+	 * Nothing collapses: search, `children` and Clear stay visible at every width,
+	 * wrapping onto further rows on a narrow container. Secondary filters go in
+	 * `menu`, a "Filters" popover that stays one button at every width.
 	 */
 	import type { Snippet } from 'svelte';
 	import { Popover } from 'bits-ui';
@@ -40,7 +39,7 @@
 		 * for an input with a button joined to it; `content` fits the snippet.
 		 */
 		searchWidth?: keyof typeof SEARCH_WIDTHS;
-		/** Inline filters. Without `menu`, collapsed on narrow containers. */
+		/** Inline filters; they wrap rather than collapse on a narrow container. */
 		children?: Snippet;
 		/** Secondary filters, behind the "Filters" button. */
 		menu?: Snippet;
@@ -56,7 +55,6 @@
 	// A view's actions sit in the row at the size of its controls, as they did in the header.
 	setDefaultButtonSize('sm');
 
-	const uid = $props.id();
 	const showClear = $derived(activeCount > 0 && !!onclear);
 </script>
 
@@ -71,10 +69,15 @@
 		<div class="w-full {SEARCH_WIDTHS[searchWidth]}">{@render search()}</div>
 	{/if}
 
+	<!-- `contents`: as a flex item this wrapper would shrink and wrap its own
+	     children; stepping out of layout lets them wrap with the row. Controls
+	     size to their content: daisyUI's 20rem default outgrows a phone. -->
+	{#if children}
+		<div class="contents [&_.input]:w-auto [&_.select]:w-auto [&_.select]:max-w-full">
+			{@render children()}
+		</div>
+	{/if}
 	{#if menu}
-		{#if children}
-			<div class="contents [&_.input]:w-auto [&_.select]:w-auto">{@render children()}</div>
-		{/if}
 		<Popover.Root>
 			<Popover.Trigger>
 				{#snippet child({ props })}
@@ -95,34 +98,9 @@
 				{@render menu()}
 			</Popover.Content>
 		</Popover.Root>
-		{#if showClear}
-			<Button variant="ghost" size="sm" onclick={onclear}>{m.ui_clear_label()}</Button>
-		{/if}
-	{:else if children}
-		<!-- Peer checkbox rather than <details>: <details> cannot be reliably
-		     forced open by CSS at wide widths across engines. -->
-		<input id="filters-{uid}" type="checkbox" class="peer hidden" />
-		<label for="filters-{uid}" class="btn btn-ghost btn-sm @lg:hidden">
-			<IconFilter size={16} />
-			{m.ui_filters_label()}
-			{@render badge(activeCount)}
-		</label>
-
-		<!-- `hidden` keeps the controls mounted so their state survives collapsing.
-		     Tailwind emits the `@lg:` variant after `hidden`, so it wins on wide
-		     containers. `contents` rather than `flex` there: as a flex *item* this
-		     wrapper shrinks and wraps its own children onto extra lines, so at wide
-		     widths it steps out of layout and the controls join the parent's row. -->
-		<!-- Controls size to their content at wide widths: daisyUI's 20rem default
-		     made three selects outgrow the row and wrap. -->
-		<div
-			class="hidden w-full flex-wrap items-end gap-2 peer-checked:flex @lg:contents @lg:[&_.input]:w-auto @lg:[&_.select]:w-auto"
-		>
-			{@render children()}
-			{#if showClear}
-				<Button variant="ghost" size="sm" onclick={onclear}>{m.ui_clear_label()}</Button>
-			{/if}
-		</div>
+	{/if}
+	{#if showClear}
+		<Button variant="ghost" size="sm" onclick={onclear}>{m.ui_clear_label()}</Button>
 	{/if}
 
 	{#if actions}

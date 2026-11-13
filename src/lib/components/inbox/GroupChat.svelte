@@ -78,7 +78,7 @@
 						})}
 			/>
 		{:else}
-			<ThreadTimeline messages={chat.messages} {viewerUserId} />
+			<ThreadTimeline messages={chat.messages} channel="group" {viewerUserId} />
 		{/if}
 	</div>
 

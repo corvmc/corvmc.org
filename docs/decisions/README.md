@@ -76,7 +76,7 @@ A page or less. Link the issue and the PRs.
 | 0042 | [A committed manifest keeps cron monitors in step with the schedule](0042-cron-monitor-manifest.md)                            | 2026-09-29 | Accepted           |
 | 0043 | [Asset tags are bound, not generated](0043-asset-tags-are-bound-not-generated.md)                                              | 2026-08-27 | Accepted           |
 | 0044 | [Form 8282 is the only inventory tax check](0044-form-8282-is-the-only-inventory-tax-check.md)                                 | 2026-08-27 | Accepted           |
-| 0045 | [Inventory stock is a ledger](0045-inventory-stock-is-a-ledger.md)                                                             | 2026-08-27 | Accepted           |
+| 0045 | [Inventory stock is a ledger](0045-inventory-stock-is-a-ledger.md)                                                             | 2026-08-27 | Amended by 0070    |
 | 0046 | [Serialization is not a capitalization threshold](0046-serialization-is-not-a-capitalization-threshold.md)                     | 2026-08-27 | Accepted           |
 | 0047 | [Certifications are an append-only catalog](0047-certifications-are-an-append-only-catalog.md)                                 | 2026-08-08 | Accepted           |
 | 0048 | [Volunteer hours are a record, not a currency](0048-volunteer-hours-are-a-record.md)                                           | 2026-08-08 | Accepted           |
@@ -101,4 +101,5 @@ A page or less. Link the issue and the PRs.
 | 0067 | [A grant application or sponsorship is a project](0067-a-grant-is-a-project.md)                                                | 2026-11-13 | Accepted           |
 | 0068 | [A task can wait on other tasks](0068-a-task-can-wait-on-other-tasks.md)                                                       | 2026-11-13 | Accepted           |
 | 0069 | [Tasks link to what they are about, and a party has one timeline](0069-a-party-has-one-timeline.md)                            | 2026-11-13 | Accepted           |
-| 0070 | [A record shows its tasks and shifts](0070-a-record-shows-its-tasks-and-shifts.md)                                             | 2026-11-13 | Accepted           |
+| 0070 | [A supplier is an organization](0070-a-supplier-is-an-organization.md)                                                         | 2026-11-13 | Accepted           |
+| 0071 | [A record shows its tasks and shifts](0071-a-record-shows-its-tasks-and-shifts.md)                                             | 2026-11-13 | Accepted           |

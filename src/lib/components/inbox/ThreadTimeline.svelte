@@ -10,6 +10,8 @@
 	 */
 	import { IconNote } from '@tabler/icons-svelte';
 	import { formatDateTime } from '#lib/utils/format.js';
+	import type { inboxChannels } from '#lib/config.js';
+	import MessageBody from './MessageBody.svelte';
 
 	type Message = {
 		id: string;
@@ -29,11 +31,14 @@
 
 	let {
 		messages,
+		channel,
 		notes = [],
 		contactName,
 		viewerUserId
 	}: {
 		messages: Message[];
+		/** The thread's channel, which decides whether bodies are markdown. */
+		channel: (typeof inboxChannels)[number];
 		/** Staff-only annotations. Omitted entirely on member-facing timelines. */
 		notes?: Note[];
 		contactName?: string | null;
@@ -103,10 +108,8 @@
 					{msg.authorName ?? (own ? ownName : otherName)}
 					<time class="ml-2 text-xs opacity-50">{formatDateTime(msg.createdAt)}</time>
 				</div>
-				<!-- Bodies arrive as plain text; without this every multi-paragraph
-				     email collapsed into one run-on block. -->
-				<div class="chat-bubble whitespace-pre-wrap {own ? 'chat-bubble-primary' : ''}">
-					{msg.body}
+				<div class="chat-bubble {own ? 'chat-bubble-primary' : ''}">
+					<MessageBody body={msg.body} {channel} />
 				</div>
 			</div>
 		{:else}

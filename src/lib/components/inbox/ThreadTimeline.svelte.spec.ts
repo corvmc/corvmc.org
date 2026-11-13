@@ -48,7 +48,7 @@ function headerFor(body: string) {
 
 describe('ThreadTimeline — member view (viewerUserId given)', () => {
 	it('puts the member’s own message on the right and the staff reply on the left', async () => {
-		await render(ThreadTimeline, { messages, viewerUserId: MEMBER });
+		await render(ThreadTimeline, { channel: 'portal', messages, viewerUserId: MEMBER });
 
 		expect(bubbleFor('Is a locker free?')?.className).toContain('chat-end');
 		expect(bubbleFor('Yes, through Friday.')?.className).toContain('chat-start');
@@ -57,7 +57,7 @@ describe('ThreadTimeline — member view (viewerUserId given)', () => {
 	it('does not fall back to direction for a message with no author id', async () => {
 		// The regression this guards: treating a null author as "outbound, so
 		// mine" would land every staff reply on the member's own side.
-		await render(ThreadTimeline, { messages, viewerUserId: MEMBER });
+		await render(ThreadTimeline, { channel: 'portal', messages, viewerUserId: MEMBER });
 
 		expect(bubbleFor('Yes, through Friday.')?.className).not.toContain('chat-end');
 	});
@@ -65,7 +65,7 @@ describe('ThreadTimeline — member view (viewerUserId given)', () => {
 
 describe('ThreadTimeline — staff view (no viewerUserId)', () => {
 	it('keeps orienting by direction, so a colleague’s reply still reads as ours', async () => {
-		await render(ThreadTimeline, { messages, contactName: 'Robin' });
+		await render(ThreadTimeline, { channel: 'portal', messages, contactName: 'Robin' });
 
 		expect(bubbleFor('Is a locker free?')?.className).toContain('chat-start');
 		expect(bubbleFor('Yes, through Friday.')?.className).toContain('chat-end');
@@ -74,6 +74,7 @@ describe('ThreadTimeline — staff view (no viewerUserId)', () => {
 	it('still renders internal notes', async () => {
 		const note = 'Checked the locker list.';
 		await render(ThreadTimeline, {
+			channel: 'portal',
 			messages,
 			contactName: 'Robin',
 			notes: [
@@ -107,20 +108,20 @@ describe('ThreadTimeline — author attribution', () => {
 	};
 
 	it('names the colleague on an outbound reply in the staff view', async () => {
-		await render(ThreadTimeline, { messages, contactName: 'Robin' });
+		await render(ThreadTimeline, { channel: 'portal', messages, contactName: 'Robin' });
 
 		expect(headerFor('Yes, through Friday.')).toContain('Ada');
 		expect(headerFor('Is a locker free?')).toContain('Robin');
 	});
 
 	it('labels an outbound reply with no stored name rather than leaving it blank', async () => {
-		await render(ThreadTimeline, { messages: [unsigned], contactName: 'Robin' });
+		await render(ThreadTimeline, { channel: 'portal', messages: [unsigned], contactName: 'Robin' });
 
 		expect(headerFor('Unsigned reply.')).toContain('Staff');
 	});
 
 	it('names the author in the member view too, since the label is not staff-only', async () => {
-		await render(ThreadTimeline, { messages, viewerUserId: MEMBER });
+		await render(ThreadTimeline, { channel: 'portal', messages, viewerUserId: MEMBER });
 
 		expect(headerFor('Yes, through Friday.')).toContain('Ada');
 	});
@@ -130,6 +131,7 @@ describe('ThreadTimeline — author attribution', () => {
 		// unsigned message is not from staff, and a nameless reply is the
 		// organisation as the member knows it.
 		await render(ThreadTimeline, {
+			channel: 'portal',
 			messages: [
 				{
 					id: 'm4',
@@ -152,8 +154,28 @@ describe('ThreadTimeline — author attribution', () => {
 
 describe('ThreadTimeline — notes', () => {
 	it('renders none when the prop is omitted, as on member-facing pages', async () => {
-		await render(ThreadTimeline, { messages, viewerUserId: MEMBER });
+		await render(ThreadTimeline, { channel: 'portal', messages, viewerUserId: MEMBER });
 
 		expect(document.querySelectorAll('.border-dashed').length).toBe(0);
+	});
+});
+
+describe('ThreadTimeline — body format', () => {
+	const formatted = [{ ...messages[0], body: 'Bring ***Blue Bossa***' }];
+
+	it('renders markdown on an in-app channel', async () => {
+		await render(ThreadTimeline, { channel: 'group', messages: formatted, viewerUserId: MEMBER });
+
+		const bubble = document.querySelector('.chat-bubble');
+		expect(bubble?.querySelector('strong')).not.toBeNull();
+		expect(bubble?.textContent).not.toContain('*');
+	});
+
+	it('keeps an email body as the text that arrived', async () => {
+		await render(ThreadTimeline, { channel: 'email', messages: formatted, contactName: 'Robin' });
+
+		const bubble = document.querySelector('.chat-bubble');
+		expect(bubble?.querySelector('strong')).toBeNull();
+		expect(bubble?.textContent).toContain('***');
 	});
 });

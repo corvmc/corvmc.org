@@ -9,7 +9,8 @@ import { partyRole } from '#lib/server/db/schema/contact.js';
 import { grantApplication } from '#lib/server/db/schema/grant.js';
 import { sponsorship } from '#lib/server/db/schema/sponsor.js';
 import { contractorJob } from '#lib/server/db/schema/contractor.js';
-import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { purchaseOrder } from '#lib/server/db/schema/inventory.js';
+import { and, asc, count, desc, eq, getTableName, inArray, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
 import { partyRoleLabels, type PartyRole } from '#lib/config.js';
 
@@ -135,6 +136,28 @@ export async function createOrganization(
 	return row;
 }
 
+/**
+ * The organization called `name`, compared trimmed and case-insensitively, now
+ * holding `role`: a live one before an archived one, and created when none is.
+ * For forms that name a party by typing it, such as a purchase order's supplier.
+ */
+export async function organizationNamed(name: string, role: PartyRole): Promise<string> {
+	const clean = name.trim();
+	const [found] = await db
+		.select({ id: organization.id })
+		.from(organization)
+		.where(sql`lower(trim(${organization.name})) = lower(${clean})`)
+		.orderBy(
+			sql`${organization.archivedAt} is not null`,
+			asc(organization.createdAt),
+			asc(organization.id)
+		)
+		.limit(1);
+	if (!found) return (await createOrganization({ name: clean }, [role])).id;
+	await db.insert(partyRole).values({ organizationId: found.id, role }).onConflictDoNothing();
+	return found.id;
+}
+
 export async function updateOrganization(id: string, input: OrganizationInput): Promise<void> {
 	const rows = await db
 		.update(organization)
@@ -159,14 +182,22 @@ export async function addRole(id: string, role: PartyRole): Promise<void> {
 	await db.insert(partyRole).values({ organizationId: id, role }).onConflictDoNothing();
 }
 
-/** How many grant applications, sponsorships and contractor jobs name it. */
+/**
+ * The records that name an organization in one of its roles. A merge moves
+ * them and a role cannot be removed while one names it. `parties.spec.ts`
+ * fails when a table references `organization` and is in neither this list
+ * nor its list of tables moved some other way.
+ */
+export const ORGANIZATION_RECORDS = [grantApplication, sponsorship, contractorJob, purchaseOrder];
+export const organizationRecordTables: string[] = ORGANIZATION_RECORDS.map((t) => getTableName(t));
+
+/** How many records name it, across every table in `ORGANIZATION_RECORDS`. */
 export async function countRecords(id: string): Promise<number> {
-	const [[g], [s], [j]] = await db.batch([
-		db.select({ n: count() }).from(grantApplication).where(eq(grantApplication.organizationId, id)),
-		db.select({ n: count() }).from(sponsorship).where(eq(sponsorship.organizationId, id)),
-		db.select({ n: count() }).from(contractorJob).where(eq(contractorJob.organizationId, id))
-	]);
-	return Number(g?.n ?? 0) + Number(s?.n ?? 0) + Number(j?.n ?? 0);
+	const [first, ...rest] = ORGANIZATION_RECORDS.map((t) =>
+		db.select({ n: count() }).from(t).where(eq(t.organizationId, id))
+	);
+	const counts = await db.batch([first, ...rest]);
+	return counts.reduce((n, [row]) => n + Number(row?.n ?? 0), 0);
 }
 
 /**
@@ -198,7 +229,7 @@ export class OrganizationMergeError extends DomainError {
 
 /** What names an organization, for its page: one list per role it holds. */
 export async function organizationRecords(id: string) {
-	const [grants, sponsorships, jobs] = await Promise.all([
+	const [grants, sponsorships, jobs, orders] = await Promise.all([
 		db
 			.select({
 				id: grantApplication.id,
@@ -226,9 +257,19 @@ export async function organizationRecords(id: string) {
 			.from(contractorJob)
 			.innerJoin(workOrder, eq(workOrder.id, contractorJob.workOrderId))
 			.where(eq(contractorJob.organizationId, id))
-			.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id))
+			.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id)),
+		db
+			.select({
+				id: purchaseOrder.id,
+				reference: purchaseOrder.reference,
+				status: purchaseOrder.status,
+				placedAt: purchaseOrder.placedAt
+			})
+			.from(purchaseOrder)
+			.where(eq(purchaseOrder.organizationId, id))
+			.orderBy(desc(purchaseOrder.createdAt), desc(purchaseOrder.id))
 	]);
-	return { grants, sponsorships, jobs };
+	return { grants, sponsorships, jobs, orders };
 }
 
 /** `https://www.example.org/about` → `example.org`; null when there is no host. */
@@ -299,9 +340,9 @@ export async function mergeOrganizations(survivorId: string, otherId: string) {
 		...other.roles.map((role) =>
 			db.insert(partyRole).values({ organizationId: survivorId, role }).onConflictDoNothing()
 		),
-		db.update(grantApplication).set(moveTo).where(eq(grantApplication.organizationId, otherId)),
-		db.update(sponsorship).set(moveTo).where(eq(sponsorship.organizationId, otherId)),
-		db.update(contractorJob).set(moveTo).where(eq(contractorJob.organizationId, otherId)),
+		...ORGANIZATION_RECORDS.map((t) =>
+			db.update(t).set(moveTo).where(eq(t.organizationId, otherId))
+		),
 		// Its tasks and notes come too; the delete below takes the old links.
 		copyLinks('organizationId', otherId, survivorId),
 		moveActivity({ type: 'organization', id: otherId }, { type: 'organization', id: survivorId }),

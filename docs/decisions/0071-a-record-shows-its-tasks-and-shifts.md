@@ -1,4 +1,4 @@
-# 0070 A record shows its tasks and shifts
+# 0071 A record shows its tasks and shifts
 
 - **Date:** 2026-11-13
 - **Status:** Accepted

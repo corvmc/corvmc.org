@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { expectSuccessToast } from './toast';
 import { readLocalDb } from './fixtures/platform-db';
 import { purchaseOrder, purchaseOrderLine } from '../src/lib/server/db/schema/inventory';
+import { organization } from '../src/lib/server/db/schema/party';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import {
 	SEED_ORDER_ITEM_ID,
@@ -50,7 +51,11 @@ test.describe('purchase orders', () => {
 		// Mark as ordered writes the order already placed: there is no draft step (#2022).
 		const readOrder = () =>
 			readLocalDb((db) =>
-				db.select().from(purchaseOrder).where(eq(purchaseOrder.supplierName, SEED_ORDER_SUPPLIER))
+				db
+					.select({ id: purchaseOrder.id, status: purchaseOrder.status })
+					.from(purchaseOrder)
+					.innerJoin(organization, eq(organization.id, purchaseOrder.organizationId))
+					.where(eq(organization.name, SEED_ORDER_SUPPLIER))
 			);
 		await expect.poll(async () => (await readOrder())[0]?.status, DB_POLL).toBe('placed');
 		const [order] = await readOrder();

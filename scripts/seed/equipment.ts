@@ -13,6 +13,7 @@ import {
 	stockMovement
 } from '../../src/lib/server/db/schema/inventory';
 import { batchInsert, db } from './db';
+import { seedOrganizations } from './parties';
 import { type SeedUser } from './types';
 import { randomUUID } from 'crypto';
 import { eq, inArray } from 'drizzle-orm';
@@ -545,10 +546,25 @@ export async function seedEquipment(users: SeedUser[]) {
 	 * The late one is what the list's "Order late" view flags; the draft proves a
 	 * shopping list still counts as missing until it is actually sent.
 	 */
+	const supplier = {
+		sweetwater: randomUUID(),
+		troubadour: randomUUID(),
+		hardware: randomUUID()
+	};
+	await seedOrganizations([
+		{
+			id: supplier.sweetwater,
+			name: 'Sweetwater',
+			roles: ['supplier'],
+			website: 'https://www.sweetwater.com'
+		},
+		{ id: supplier.troubadour, name: 'Troubadour Music', roles: ['supplier'] },
+		{ id: supplier.hardware, name: 'Corvallis Hardware', roles: ['supplier'] }
+	]);
 	const placedOrder = {
 		id: randomUUID(),
 		status: 'placed' as const,
-		supplierName: 'Sweetwater',
+		organizationId: supplier.sweetwater,
 		reference: 'SW-4472880',
 		placedAt: new Date(now.getTime() - 4 * day),
 		expectedAt: new Date(now.getTime() + 3 * day),
@@ -558,7 +574,7 @@ export async function seedEquipment(users: SeedUser[]) {
 	const lateOrder = {
 		id: randomUUID(),
 		status: 'placed' as const,
-		supplierName: 'Troubadour Music',
+		organizationId: supplier.troubadour,
 		reference: 'TM-9912',
 		placedAt: new Date(now.getTime() - 21 * day),
 		expectedAt: new Date(now.getTime() - 5 * day),
@@ -568,14 +584,14 @@ export async function seedEquipment(users: SeedUser[]) {
 	const draftOrder = {
 		id: randomUUID(),
 		status: 'draft' as const,
-		supplierName: 'Corvallis Hardware',
+		organizationId: supplier.hardware,
 		createdByUserId: staffId,
 		notes: 'Not sent yet.'
 	};
 	const receivedOrder = {
 		id: randomUUID(),
 		status: 'received' as const,
-		supplierName: 'Sweetwater',
+		organizationId: supplier.sweetwater,
 		reference: 'SW-4471902',
 		placedAt: new Date(now.getTime() - 26 * day),
 		expectedAt: new Date(now.getTime() - 21 * day),

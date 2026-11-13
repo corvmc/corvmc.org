@@ -279,7 +279,7 @@ export async function postToGroupChat(params: {
 		})
 		.returning({ id: inboxMessage.id });
 
-	await touchThread(threadId, params.body);
+	await touchThread(threadId, params.body, 'group');
 	// Your own message is read the moment you send it, or the sender's own
 	// badge lights for something they just wrote.
 	await markGroupChatRead(threadId, params.userId);

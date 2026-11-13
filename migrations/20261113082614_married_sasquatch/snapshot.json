@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "c4340b8d-f757-4d22-9537-a97c72a3ccc2",
+  "id": "1efefb5b-825a-49d1-9469-30b157bf3293",
   "prevIds": [
-    "de3492b7-2f0b-4403-8471-ffbc29950cc4"
+    "cdb49f9d-d466-4b8a-b522-98dec9af9321"
   ],
   "ddl": [
     {
@@ -5176,7 +5176,7 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "supplier_name",
+      "name": "organization_id",
       "entityType": "columns",
       "table": "purchase_order"
     },
@@ -16392,6 +16392,21 @@
     },
     {
       "columns": [
+        "organization_id"
+      ],
+      "tableTo": "organization",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_purchase_order_organization_id_organization_id_fk",
+      "entityType": "fks",
+      "table": "purchase_order"
+    },
+    {
+      "columns": [
         "created_by_user_id"
       ],
       "tableTo": "user",
@@ -22436,6 +22451,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_purchase_order_project",
+      "entityType": "indexes",
+      "table": "purchase_order"
+    },
+    {
+      "columns": [
+        {
+          "value": "organization_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_purchase_order_organization",
       "entityType": "indexes",
       "table": "purchase_order"
     },

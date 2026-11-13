@@ -599,7 +599,7 @@ Three things follow:
   View all opens `/staff/volunteering?about=`. A page adds its own controls through `actions`.
 - **On a member page, both cards take `member`** and read `member-related.remote.ts`: the
   viewer's own tasks, and the board's open shifts with Sign up. Each card is left off when empty.
-  Only the group and event pages use it (decision 0070).
+  Only the group and event pages use it (decision 0071).
 
 It was briefly split into `EntityRow` plus an `EntityHeader`. Two implementations meant two places
 for the avatar convention, the subtype glyph and the status rule to drift apart — and one had
@@ -1238,11 +1238,12 @@ reads as scrollable (#1965). It is still a fallback: tier or merge columns first
 
 ### FilterBar
 
-Toolbar layout, not filter state — pages keep their own `$state`. Search stays
-visible at every width. Primary filters go in `children` and sit inline; secondary
-ones go in a `menu` snippet, behind a "Filters" popover whose badge is `menuCount`.
-A bar with no `menu` collapses its `children` behind a "Filters" disclosure below
-the `@lg` container breakpoint instead.
+Toolbar layout, not filter state — pages keep their own `$state`. Nothing collapses:
+search, the `children` filters and Clear stay visible at every width, and on a narrow
+container they wrap onto further rows, each control sized to its content (#2614).
+Secondary filters go in a `menu` snippet, behind a "Filters" popover whose badge is
+`menuCount`; reach for it when a page's filters would fill more than a couple of rows
+on a phone, not to hide the primary ones.
 `actions` sits at the row's end, for what belongs to the current view rather than
 the page — a tabbed page's per-tab create button (`/staff/groups/*`).
 
@@ -1639,7 +1640,8 @@ Components in `src/lib/components/inbox/`:
 
 - `ListDetailShell` (in `ui/`) — the two-pane frame, in its default `panes` mode. Each pane scrolls its own overflow, so a conversation and a list of conversations never share a scrollbar. Every link in that flex chain needs `min-h-0`.
 - `ThreadHeader` — title, subtitle, trailing actions, and an optional disclosure below. Its back button is `lg:hidden` and is the only way out of a conversation on a phone.
-- `ThreadTimeline` — messages (and staff-only notes) on one chronological spine. Orients on `viewerUserId` when given, on direction otherwise; see [the decision](../decisions/0034-member-conversations-share-the-staff-inbox.md).
+- `ThreadTimeline` — messages (and staff-only notes) on one chronological spine. Orients on `viewerUserId` when given, on direction otherwise; see [the decision](../decisions/0034-member-conversations-share-the-staff-inbox.md). Takes the thread's `channel`, which decides each body's format.
+- `MessageBody` — the only place a message body becomes HTML. On the in-app channels (`direct`, `group`, `portal`) it renders markdown through `renderMessageMarkdown`: typed HTML shows as text, images as their alt text, external links open in a new tab. Email, SMS and form channels stay plain text. `src/message-body.spec.ts` fails a component that prints or `{@html}`s a body any other way.
 - `ThreadComposer` — the reply box. `noteForm` is **optional**: omit it and the Reply/Internal note tabs disappear, which is the member side, since notes are staff-private.
 - `channels.ts` — `channelLabel` / `channelIcon`, the single source of truth for how a channel is named and drawn. Use it rather than a local ternary on `channel`.
 

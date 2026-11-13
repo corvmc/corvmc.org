@@ -828,8 +828,9 @@ export async function listProjectAttachments(projectId: string) {
 			.where(eq(workOrder.projectId, projectId))
 			.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id)),
 		db
-			.select()
+			.select({ ...getTableColumns(purchaseOrder), supplierName: organization.name })
 			.from(purchaseOrder)
+			.leftJoin(organization, eq(organization.id, purchaseOrder.organizationId))
 			.where(eq(purchaseOrder.projectId, projectId))
 			.orderBy(desc(purchaseOrder.createdAt), desc(purchaseOrder.id)),
 		db
