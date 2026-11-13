@@ -18,13 +18,12 @@
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
-	import Action from '#lib/components/ui/Action.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import { formatDateShort } from '#lib/utils/format.js';
 	import { shiftLabel, shiftRoleSuffix } from '#lib/utils/shift-label.js';
 	import { DEFAULT_TIMEZONE } from '#lib/config.js';
-	import { claimShift } from '#lib/remote/volunteer.remote.js';
+	import ShiftSignUpAction from './ShiftSignUpAction.svelte';
 
 	type Shift = {
 		id: string;
@@ -167,44 +166,7 @@
 						{#if blocked}
 							<span class="text-subtle text-sm">{blocked}</span>
 						{:else}
-							<Action
-								action={claimShift.for(shift.id)}
-								label={m.volunteer_open_shifts_label()}
-								variant="primary"
-								size="xs"
-								modalTitle={m.volunteer_open_shifts_modal_title()}
-								submitLabel={m.volunteer_open_shifts_label()}
-								successToast={m.volunteer_open_shifts_success_toast()}
-							>
-								{#snippet form()}
-									<input {...claimShift.for(shift.id).fields.shiftId.as('hidden', shift.id)} />
-									<p class="text-sm">
-										{shiftLabel(shift)}, {formatDateShort(shift.startsAt)},
-										{timeRange(shift.startsAt, shift.endsAt)}.
-									</p>
-
-									<!-- Three steps, one of them lit. Signing up is not booking, and
-									     the gap between them is a person deciding — which is the
-									     thing the old copy left the member to find out. -->
-									<div class="flex flex-wrap items-center gap-2 text-xs">
-										<span class="font-bold text-success"
-											>{m.volunteer_open_shifts_claim_text()}</span
-										>
-										<span class="text-subtle">→</span>
-										<span class="text-subtle">{m.volunteer_open_shifts_staff_confirm_text()}</span>
-										<span class="text-subtle">→</span>
-										<span class="text-subtle">{m.volunteer_booked_text()}</span>
-									</div>
-
-									<p class="text-sm">
-										{m.volunteer_open_shifts_re_not_booked_until_staff_text()}
-									</p>
-
-									{#if shift.notes}
-										<p class="text-muted text-sm">“{shift.notes}”</p>
-									{/if}
-								{/snippet}
-							</Action>
+							<ShiftSignUpAction shiftId={shift.id} {shift} />
 						{/if}
 					</div>
 				</li>

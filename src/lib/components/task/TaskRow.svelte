@@ -20,7 +20,8 @@
 		compact = false,
 		project = true,
 		waitsOn = [],
-		actions
+		actions,
+		href: linkTo
 	}: {
 		task: TaskRow;
 		marks: ContractorMark[];
@@ -30,9 +31,11 @@
 		/** The open tasks it waits on, by name; empty when it is not blocked. */
 		waitsOn?: { id: string; label: string }[];
 		actions?: Snippet<[{ label: string; href: string }]>;
+		/** Where the title links; null draws it as text. A member's card sets it (#2630). */
+		href?: string | null;
 	} = $props();
 
-	const href = $derived(resolve('/staff/tasks/[id]', { id: t.id }));
+	const href = $derived(linkTo === undefined ? resolve('/staff/tasks/[id]', { id: t.id }) : linkTo);
 	const label = $derived(shiftLabel(t));
 	const when = $derived(whenOf(t));
 	const overdue = $derived(!t.resolvedAt && isOverdue(t, now));
@@ -42,7 +45,11 @@
 
 <tr class="hover" class:opacity-60={blocked} data-task={t.id} data-blocked={blocked || undefined}>
 	<td class="cell-primary">
-		<a {href} class="link truncate font-medium">{label}</a>
+		{#if href}
+			<a {href} class="link truncate font-medium">{label}</a>
+		{:else}
+			<span class="truncate font-medium">{label}</span>
+		{/if}
 		{#if t.roleName && t.roleName !== label}
 			<div class="truncate text-subtle text-xs">
 				{t.roleName}{#if t.eventTitle && t.eventTitle !== label}
@@ -97,7 +104,7 @@
 	</td>
 	{#if !compact}
 		<td class="w-px">
-			{@render actions?.({ label, href })}
+			{@render actions?.({ label, href: href ?? '' })}
 		</td>
 	{/if}
 </tr>

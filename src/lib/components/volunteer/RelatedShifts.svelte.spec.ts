@@ -21,6 +21,9 @@ type Related = {
 };
 let response: Related | null;
 const getRelatedShifts = vi.hoisted(() => vi.fn());
+const getMemberRelatedShifts = vi.hoisted(() => vi.fn());
+let memberResponse: { groups: Related['groups'] };
+vi.mock('#lib/remote/member-related.remote.js', () => ({ getMemberRelatedShifts }));
 
 vi.mock('#lib/remote/tasks.remote.js', () => {
 	const field = (name: string) => ({
@@ -52,6 +55,16 @@ vi.mock('#lib/remote/tasks.remote.js', () => {
 });
 vi.mock('#lib/remote/volunteer.remote.js', () => ({
 	confirmShiftClaims: { for: () => ({ fields: {} }) },
+	claimShift: {
+		for: () => ({
+			enhance: () => ({ method: 'POST', action: '?/claim' }),
+			fields: {
+				shiftId: { as: (type: string, value?: unknown) => ({ type, name: 'shiftId', value }) },
+				allIssues: () => null
+			},
+			result: undefined
+		})
+	},
 	assignShiftToMember: {},
 	inviteMemberToShift: {},
 	getShiftCandidates: vi.fn()
@@ -91,6 +104,7 @@ const addShift = () => card().querySelector('[data-testid="related-add-shift"]')
 beforeEach(() => {
 	document.body.innerHTML = '';
 	getRelatedShifts.mockReset().mockImplementation(async () => response);
+	getMemberRelatedShifts.mockReset().mockImplementation(async () => memberResponse);
 });
 
 describe('RelatedShifts', () => {
@@ -235,5 +249,61 @@ describe('RelatedShifts', () => {
 		await vi.waitFor(() => expect(getRelatedShifts).toHaveBeenCalled());
 		await Promise.resolve();
 		expect(document.querySelector('[data-testid="related-shifts"]')).toBeNull();
+	});
+
+	describe('on a member page', () => {
+		const signup = (over: Record<string, unknown> = {}) => ({
+			status: null,
+			id: null,
+			missing: [],
+			...over
+		});
+		const row = (id: string) => card().querySelector(`tr[data-shift="${id}"]`)!;
+
+		it('offers Sign up where the member can take the shift, and their status where on it', async () => {
+			memberResponse = {
+				groups: [
+					{
+						key: 'event',
+						shifts: [
+							shift('open', { claimed: 0, confirmed: 0, signup: signup() }),
+							shift('on', {
+								claimed: 1,
+								confirmed: 0,
+								signup: signup({ status: 'claimed', id: 'su-1' })
+							}),
+							shift('needs', { claimed: 0, confirmed: 0, signup: signup({ missing: ['Sound'] }) }),
+							shift('full', { signup: signup() })
+						],
+						more: false
+					}
+				]
+			};
+			await render(RelatedShifts, { subject: { type: 'event', id: 'e1' }, member: true });
+			await vi.waitFor(() => expect(rows()).toHaveLength(4));
+			expect(getRelatedShifts).not.toHaveBeenCalled();
+
+			const signUp = (id: string) => row(id).querySelector('[data-testid="shift-sign-up"]');
+			expect(signUp('open')).not.toBeNull();
+			expect(signUp('on')).toBeNull();
+			expect(signUp('needs')).toBeNull();
+			expect(signUp('full')).toBeNull();
+			expect(row('needs').querySelector('[data-testid="shift-needs"]')).not.toBeNull();
+
+			// Only their own shift links, and to their sign-up; no staff page.
+			const hrefs = [...card().querySelectorAll('a')].map((a) => a.getAttribute('href'));
+			expect(new Set(hrefs)).toEqual(new Set(['/member/volunteer/shifts/su-1']));
+			expect(card().querySelector('[data-testid="related-shift-chips"]')).toBeNull();
+			expect(card().querySelector('[data-testid="find-volunteers"]')).toBeNull();
+			expect(addShift()).toBeNull();
+		});
+
+		it('leaves the card off when the record has no open shifts', async () => {
+			memberResponse = { groups: [] };
+			await render(RelatedShifts, { subject: { type: 'group', id: 'g1' }, member: true });
+			await vi.waitFor(() => expect(getMemberRelatedShifts).toHaveBeenCalled());
+			await Promise.resolve();
+			expect(document.querySelector('[data-testid="related-shifts"]')).toBeNull();
+		});
 	});
 });

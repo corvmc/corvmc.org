@@ -177,6 +177,8 @@ export interface RelatedTaskOptions {
 	limitPerRelation?: number;
 	/** Done tasks are left out unless asked for. Called-off ones always are. */
 	includeDone?: boolean;
+	/** A further condition on every relation: the tasks this viewer may see. */
+	where?: SQL;
 	now?: Date;
 }
 
@@ -186,7 +188,7 @@ export interface RelatedTaskOptions {
  */
 export async function relatedTasks(
 	subject: RelatedSubject,
-	{ limitPerRelation = 20, includeDone = false, now = new Date() }: RelatedTaskOptions = {}
+	{ limitPerRelation = 20, includeDone = false, where, now = new Date() }: RelatedTaskOptions = {}
 ): Promise<RelatedGroup[]> {
 	const relations = relationsFor(subject);
 	const results = await Promise.all(
@@ -195,6 +197,7 @@ export async function relatedTasks(
 				.where(
 					and(
 						r.where,
+						where,
 						isNull(workOrder.cancelledAt),
 						includeDone ? undefined : isNull(workOrder.resolvedAt)
 					)
