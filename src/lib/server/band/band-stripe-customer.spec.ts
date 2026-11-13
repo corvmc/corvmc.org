@@ -14,13 +14,16 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
-const mockCreate = vi.fn(async (_args: unknown) => ({ id: 'cus_band' }));
+const mockCreate = vi.fn(async (..._args: unknown[]): Promise<{ id: string }> => ({
+	id: 'cus_band'
+}));
 vi.mock('#lib/server/stripe.js', () => ({
 	stripe: { customers: { create: mockCreate } }
 }));
 vi.mock('#lib/server/finance/payment-service.js', () => ({ checkout: vi.fn() }));
 
 const { ensureBandStripeCustomer, bandContactEmail } = await import('./band-subscription-service');
+const { createFakeGateway } = await import('#lib/server/finance/gateway/fake-gateway.js');
 
 function site(groupId: string, stripeCustomerId: string | null = null) {
 	sqlite
@@ -58,12 +61,15 @@ describe('the band’s own Stripe customer', () => {
 		});
 
 		expect(id).toBe('cus_band');
-		expect(mockCreate).toHaveBeenCalledWith({
-			name: 'Ninety Proof',
-			email: 'book@ninetyproof.example',
-			// Traceable from the Stripe dashboard, matching the Connect account's.
-			metadata: { corvmc_group_id: 'band-1' }
-		});
+		expect(mockCreate).toHaveBeenCalledWith(
+			{
+				name: 'Ninety Proof',
+				email: 'book@ninetyproof.example',
+				// Traceable from the Stripe dashboard, matching the Connect account's.
+				metadata: { corvmc_group_id: 'band-1' }
+			},
+			{ idempotencyKey: 'customer:band:band-1' }
+		);
 		expect(customerOf('band-1')).toBe('cus_band');
 		expect(customerOf('band-2')).toBeNull();
 	});
@@ -103,7 +109,28 @@ describe('the band’s own Stripe customer', () => {
 			email: null
 		});
 
-		expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ email: undefined }));
+		expect(mockCreate).toHaveBeenCalledWith(
+			expect.objectContaining({ email: undefined }),
+			expect.anything()
+		);
+	});
+
+	// Both reads find no customer before either Stripe call returns (#2681).
+	// The fake replays an idempotency key as Stripe does.
+	it('creates one customer when two first calls overlap', async () => {
+		const fake = createFakeGateway();
+		mockCreate.mockImplementation((...args: unknown[]) =>
+			(fake.customers.create as (...a: unknown[]) => Promise<{ id: string }>)(...args)
+		);
+		site('band-1');
+
+		const ids = await Promise.all([
+			ensureBandStripeCustomer({ bandId: 'band-1', bandName: 'Ninety Proof' }),
+			ensureBandStripeCustomer({ bandId: 'band-1', bandName: 'Ninety Proof' })
+		]);
+
+		expect(ids[1]).toBe(ids[0]);
+		expect(customerOf('band-1')).toBe(ids[0]);
 	});
 
 	it('reads the act’s contact address off its own directory entry', async () => {
