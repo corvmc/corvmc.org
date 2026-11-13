@@ -41,6 +41,7 @@ import {
 	updateChannelConfig as updateChannelConfigSvc
 } from '#lib/server/inbox/channel-config-service.js';
 import { addOutboundMessage, addNote } from '#lib/server/inbox/message-service.js';
+import { firstResponseByChannel } from '#lib/server/inbox/response-time-service.js';
 import { testMetaConnection as testMetaConnectionSvc } from '#lib/server/inbox/meta-client.js';
 import {
 	listSavedViews,
@@ -191,9 +192,15 @@ export const getInboxFilterCounts = query(threadFiltersSchema, async (filters) =
 	return countThreadFacets(toServiceFilters(filters, staff.id));
 });
 
+// First-reply times ride on the counts: the same mutations refresh both, and
+// the tabs have already awaited this entry by the time the empty pane reads it.
 export const getInboxThreadCounts = query(z.void(), async () => {
 	await requireCapability('inbox.read');
-	return countThreadsByStatus();
+	const [counts, firstResponse] = await Promise.all([
+		countThreadsByStatus(),
+		firstResponseByChannel()
+	]);
+	return { ...counts, firstResponse };
 });
 
 export const getInboxThread = query(z.string(), async (id) => {

@@ -10,16 +10,22 @@
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import { getInboxThreads } from '#lib/remote/inbox.remote.js';
 	import { toQuery } from './filters.svelte';
+	import FirstReplyTimes from './FirstReplyTimes.svelte';
 
 	const result = $derived(getInboxThreads(toQuery()));
 </script>
 
-{#await result then { rows }}
-	{#if rows.length > 0}
-		<div class="flex h-full items-center justify-center">
+<div class="flex h-full flex-col items-center justify-center gap-8">
+	{#await result then { rows }}
+		{#if rows.length > 0}
 			<EmptyState title={m.staff_inbox_title()} description={m.staff_inbox_description_body()} />
-		</div>
-	{/if}
-{:catch}
-	<!-- The list beside this pane reports its own failure. -->
-{/await}
+		{/if}
+	{:catch}
+		<!-- The list beside this pane reports its own failure. -->
+	{/await}
+
+	<svelte:boundary>
+		<FirstReplyTimes />
+		{#snippet failed()}{/snippet}
+	</svelte:boundary>
+</div>

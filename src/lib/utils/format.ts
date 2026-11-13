@@ -390,6 +390,20 @@ export function formatDuration(startsAt: Date, endsAt: Date): string {
 	return `${h} hour${h === 1 ? '' : 's'}`;
 }
 
+/** An elapsed span in its largest whole-ish unit: "40 min", "3 hr", "2 days". */
+export function formatElapsed(seconds: number): string {
+	const unit = (n: number, u: 'minute' | 'hour' | 'day') =>
+		new Intl.NumberFormat('en-US', {
+			style: 'unit',
+			unit: u,
+			unitDisplay: u === 'day' ? 'long' : 'short',
+			maximumFractionDigits: n < 10 ? 1 : 0
+		}).format(n);
+	if (seconds < 3_600) return unit(Math.max(1, Math.round(seconds / 60)), 'minute');
+	if (seconds < 172_800) return unit(seconds / 3_600, 'hour');
+	return unit(seconds / 86_400, 'day');
+}
+
 // ---------------------------------------------------------------------------
 // Currency
 // ---------------------------------------------------------------------------

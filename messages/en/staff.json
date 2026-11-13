@@ -1146,6 +1146,20 @@
 	"staff_inbox_save_view_dialog_placeholder": "Practice space, unanswered",
 	"staff_inbox_save_view_dialog_save_view_label": "Save view",
 	"staff_inbox_save_view_dialog_success_toast": "View saved",
+	"staff_inbox_first_reply_answered_text": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} conversation answered",
+				"countPlural=*": "{count} conversations answered"
+			}
+		}
+	],
+	"staff_inbox_first_reply_no_replies_text": "No replies",
+	"staff_inbox_first_reply_title": "First reply times",
+	"staff_inbox_first_reply_waiting_text": "{count} waiting for a first reply",
+	"staff_inbox_first_reply_window_text": "Median per channel, last {days} days",
 	"staff_inbox_title": "No conversation selected",
 	"staff_incidents_all_kinds_label": "All kinds",
 	"staff_incidents_awaiting_review_label": "Awaiting review",

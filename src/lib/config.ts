@@ -1068,6 +1068,9 @@ export const staffInboxChannels = [
 ] as const;
 export type StaffInboxChannel = (typeof staffInboxChannels)[number];
 
+/** How far back a thread's first inbound message may be to count toward first-reply times. */
+export const FIRST_RESPONSE_WINDOW_DAYS = 30;
+
 /**
  * The contact-form subject that reveals the event-tip fields.
  *
