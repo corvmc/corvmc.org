@@ -15,6 +15,7 @@ import { DomainError } from '#lib/server/domain-error.js';
 import { assetStatusChange, setAssetStatus } from '#lib/server/inventory/asset-service.js';
 import { prepareResolveWorkOrder } from '#lib/server/volunteer/work-order-service.js';
 import { getContractorById } from './contractor-service';
+import { linkedIdSql, linkedTo, linkInserts } from '#lib/server/task/work-order-link.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import type { RecordEntryInput } from '#lib/server/finance/financial-entry-service.js';
 import type { ContractorJobStatus, ContractorJobView } from '#lib/config.js';
@@ -61,7 +62,7 @@ const engagementSelect = {
 	job: contractorJob,
 	// A work order's own title, else its role's: one made here always has a title.
 	title: sql<string>`coalesce(${workOrder.title}, ${volunteerRole.name}, 'Work order')`,
-	assetId: workOrder.assetId,
+	assetId: linkedIdSql('assetId'),
 	projectId: workOrder.projectId,
 	workOrderResolvedAt: workOrder.resolvedAt,
 	workOrderCancelledAt: workOrder.cancelledAt,
@@ -176,11 +177,11 @@ export async function createJob(data: CreateJobInput): Promise<Engagement> {
 		db.insert(workOrder).values({
 			id: workOrderId,
 			title,
-			assetId: data.assetId ?? null,
 			projectId: data.projectId ?? null,
 			volunteerRoleId: null,
 			createdByUserId: data.requestedByUserId ?? null
 		}),
+		...linkInserts(workOrderId, { assetId: data.assetId }),
 		db.insert(contractorJob).values({ ...engagement, id: jobId, workOrderId })
 	]);
 	const asked = await getJobById(jobId);
@@ -534,7 +535,7 @@ function jobRowQuery(now: Date) {
 		.innerJoin(workOrder, eq(contractorJob.workOrderId, workOrder.id))
 		.leftJoin(volunteerRole, eq(workOrder.volunteerRoleId, volunteerRole.id))
 		.innerJoin(organization, eq(contractorJob.organizationId, organization.id))
-		.leftJoin(inventoryAsset, eq(workOrder.assetId, inventoryAsset.id))
+		.leftJoin(inventoryAsset, eq(inventoryAsset.id, linkedIdSql('assetId')))
 		.leftJoin(inventoryItem, eq(inventoryAsset.itemId, inventoryItem.id));
 }
 
@@ -611,7 +612,7 @@ export async function listJobs(
 				opts.view ? engagementViewWhere(opts.view, now) : undefined,
 				opts.status ? eq(contractorJob.status, opts.status) : undefined,
 				opts.contractorId ? eq(contractorJob.organizationId, opts.contractorId) : undefined,
-				opts.assetId ? eq(workOrder.assetId, opts.assetId) : undefined,
+				opts.assetId ? linkedTo('assetId', opts.assetId) : undefined,
 				opts.workOrderId ? eq(contractorJob.workOrderId, opts.workOrderId) : undefined,
 				opts.workOrderIds ? inArray(contractorJob.workOrderId, opts.workOrderIds) : undefined
 			)
@@ -653,7 +654,7 @@ export async function jobsForAsset(assetId: string) {
 		.innerJoin(workOrder, eq(contractorJob.workOrderId, workOrder.id))
 		.leftJoin(volunteerRole, eq(workOrder.volunteerRoleId, volunteerRole.id))
 		.innerJoin(organization, eq(contractorJob.organizationId, organization.id))
-		.where(eq(workOrder.assetId, assetId))
+		.where(linkedTo('assetId', assetId))
 		.orderBy(desc(contractorJob.createdAt), desc(contractorJob.id));
 	return rows.map(({ contractor: who, ...engagement }) => ({
 		job: flatten(engagement),

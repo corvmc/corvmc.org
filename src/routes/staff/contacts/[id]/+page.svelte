@@ -36,6 +36,8 @@
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { routeParams } from '#lib/route-params.svelte.js';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
+	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
 
 	const params = routeParams('id');
 	const id = $derived(params.id);
@@ -306,4 +308,7 @@
 			{/if}
 		</InfoCard>
 	{/if}
+
+	<RelatedTasks subject={{ type: 'organization', id: org.id }} />
+	<RelatedShifts subject={{ type: 'organization', id: org.id }} />
 </PageContent>

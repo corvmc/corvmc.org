@@ -13,7 +13,8 @@
 	import { Field } from '#lib/components/ui/Form/index.js';
 	import { createCatalogueTaskForm, getRelatedTasks } from '#lib/remote/tasks.remote.js';
 	import { CHIPS, byWhen, matchesChip, type Chip } from '#lib/utils/task-facts.js';
-	import type { RelatedSubjectType, RelationKey } from '#lib/utils/related-tasks.js';
+	import type { RelatedSubjectType } from '#lib/utils/related-tasks.js';
+	import { RELATION_LABELS } from '#lib/components/task/relation-labels.js';
 	import TaskRow from './TaskRow.svelte';
 
 	/**
@@ -34,15 +35,6 @@
 		if (related.error) throw related.error.e;
 	});
 
-	const RELATION_LABELS: Record<RelationKey, () => string> = {
-		event: m.staff_related_tasks_event_label,
-		show: m.staff_related_tasks_show_label,
-		project: m.staff_related_tasks_project_label,
-		group: m.staff_related_tasks_group_label,
-		groupProjects: m.staff_related_tasks_group_projects_label,
-		role: m.staff_related_tasks_role_label,
-		recurringWork: m.staff_related_tasks_recurring_work_label
-	};
 	// The table's invoice chip is about money; this card counts the work.
 	const CARD_CHIPS = CHIPS.filter((c) => c !== 'invoice');
 	const CHIP_LABELS: Record<Chip, () => string> = {
@@ -115,6 +107,10 @@
 								{/if}
 								{#if prefill.volunteerRoleId}
 									<input {...fields.volunteerRoleId.as('hidden', prefill.volunteerRoleId)} />
+								{/if}
+								{#if prefill.about}
+									<input {...fields.aboutType.as('hidden', prefill.about.type)} />
+									<input {...fields.aboutId.as('hidden', prefill.about.id)} />
 								{/if}
 								<Field field={fields.title} type="text" label={m.staff_title_label()} />
 								<Field field={fields.dueAt} type="date" label={m.staff_tasks_due_date_label()} />

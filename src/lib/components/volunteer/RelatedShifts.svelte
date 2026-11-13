@@ -14,7 +14,8 @@
 	import { toLocalDateTime } from '#lib/utils/format.js';
 	import { hasClaimsToConfirm, isShortStaffed } from '#lib/utils/shift-staffing.js';
 	import { addRelatedShift, getRelatedShifts } from '#lib/remote/tasks.remote.js';
-	import type { RelatedSubjectType, RelationKey } from '#lib/utils/related-tasks.js';
+	import type { RelatedSubjectType } from '#lib/utils/related-tasks.js';
+	import { RELATION_LABELS } from '#lib/components/task/relation-labels.js';
 	import ShiftRow from './ShiftRow.svelte';
 
 	/**
@@ -45,15 +46,6 @@
 	});
 	const refresh = () => void getRelatedShifts(args).refresh();
 
-	const RELATION_LABELS: Record<RelationKey, () => string> = {
-		event: m.staff_related_tasks_event_label,
-		show: m.staff_related_tasks_show_label,
-		project: m.staff_related_tasks_project_label,
-		group: m.staff_related_tasks_group_label,
-		groupProjects: m.staff_related_tasks_group_projects_label,
-		role: m.staff_related_tasks_role_label,
-		recurringWork: m.staff_related_tasks_recurring_work_label
-	};
 	// Volunteering's chips, under its names.
 	const CHIP_LABELS: Record<Chip, () => string> = {
 		claims: m.staff_volunteer_needs_confirming_card_title_text,

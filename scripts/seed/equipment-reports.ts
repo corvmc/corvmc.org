@@ -1,5 +1,6 @@
 import { inventoryAsset, workRequest } from '../../src/lib/server/db/schema/inventory';
 import { workOrder } from '../../src/lib/server/db/schema/volunteer';
+import { workOrderLink } from '../../src/lib/server/db/schema/work-order-link';
 import { batchInsert, db } from './db';
 import { insertTasksWithShifts } from './shifts';
 import { randomUUID } from 'crypto';
@@ -35,19 +36,18 @@ export async function seedEquipmentReports(
 		{
 			id: orderId,
 			volunteerRoleId: roleId,
-			assetId: c.id,
 			notes: 'Input jack is loose — resolder',
 			createdByUserId: staffId,
 			createdAt: ago(4)
 		}
 	]);
+	await db.insert(workOrderLink).values({ workOrderId: orderId, assetId: c.id });
 	// Its shift ended yesterday and the task is still open, so it sits on Today
 	// as a task with ended shifts, its report open until someone marks it done (#2518).
 	await insertTasksWithShifts([
 		{
 			id: buildingOrderId,
 			volunteerRoleId: roleId,
-			assetId: null,
 			startsAt: ago(1),
 			endsAt: new Date(ago(1).getTime() + 2 * 3600_000),
 			notes: 'Room B: Ceiling light flickers',

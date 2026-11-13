@@ -122,7 +122,9 @@ describe('completing an engagement is one write (#1914)', () => {
 		sqlite.exec(
 			`insert into inventory_asset (id, item_id, condition, status) values ('asset-1', 'item-1', 'fair', 'maintenance')`
 		);
-		sqlite.exec(`update work_order set asset_id = 'asset-1'`);
+		sqlite.exec(
+			`insert into work_order_link (id, work_order_id, asset_id) select 'l-' || id, id, 'asset-1' from work_order`
+		);
 		// The last of the writes fails, as a dropped connection would fail it.
 		sqlite.exec(`create trigger work_order_write_fails before update on work_order
 			begin select raise(abort, 'D1_ERROR: network connection lost'); end`);

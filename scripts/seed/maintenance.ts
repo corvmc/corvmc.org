@@ -6,6 +6,7 @@ import {
 } from '../../src/lib/server/db/schema/volunteer';
 import { inventoryAsset, inventoryItem } from '../../src/lib/server/db/schema/inventory';
 import { group } from '../../src/lib/server/db/schema/group';
+import { workOrderLink } from '../../src/lib/server/db/schema/work-order-link';
 import { batchInsert, db } from './db';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
@@ -57,6 +58,7 @@ export async function seedMaintenanceSchedules(staffId: string, cleanerId?: stri
 	);
 
 	const base = { volunteerRoleId: role.id, createdByUserId: staffId };
+	const paOpen = randomUUID();
 	await batchInsert(
 		workOrder,
 		[
@@ -64,13 +66,7 @@ export async function seedMaintenanceSchedules(staffId: string, cleanerId?: stri
 			{ ...base, maintenanceScheduleId: clean.id, title: clean.name, dueAt: at(-25) },
 			{ ...base, maintenanceScheduleId: clean.id, title: clean.name, dueAt: at(10) },
 			// Nobody has closed this one, and it is three days late.
-			{
-				...base,
-				maintenanceScheduleId: pa.id,
-				title: pa.name,
-				assetId: paAssetId,
-				dueAt: at(-3)
-			},
+			{ ...base, id: paOpen, maintenanceScheduleId: pa.id, title: pa.name, dueAt: at(-3) },
 			{ ...base, maintenanceScheduleId: filters.id, title: filters.name, dueAt: at(-12) }
 		].map((row, i) => ({
 			id: randomUUID(),
@@ -79,6 +75,8 @@ export async function seedMaintenanceSchedules(staffId: string, cleanerId?: stri
 			...(i === 3 ? { resolvedAt: at(-10), resolvedByUserId: staffId } : {})
 		}))
 	);
+
+	if (paAssetId) await db.insert(workOrderLink).values({ workOrderId: paOpen, assetId: paAssetId });
 
 	// Last week's is done; this week's is due in two days and is already assigned.
 	const bathroomOpen = randomUUID();

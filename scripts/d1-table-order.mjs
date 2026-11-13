@@ -183,6 +183,8 @@ export const tableOrder = [
 	'contact',
 	// What an organization or a contact is to CMC: child of both.
 	'party_role',
+	// What a task is about: child of work_order and of each record it can name.
+	'work_order_link',
 	// The contact-sheet link: child of directory_entry and user.
 	'directory_entry_link',
 	'credit_transaction',

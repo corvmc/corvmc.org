@@ -53,10 +53,13 @@ function booking(id: string, userId: string, startsAt: Date, bookerType = 'user'
 function orientation(id: string, reservationId: string, startsAt: Date) {
 	sqlite
 		.prepare(
-			`insert into work_order (id, volunteer_role_id, reservation_id, is_orientation, anchor)
-			 values (?, 'role-or', ?, 1, 'start')`
+			`insert into work_order (id, volunteer_role_id, is_orientation, anchor)
+			 values (?, 'role-or', 1, 'start')`
 		)
-		.run(id, reservationId);
+		.run(id);
+	sqlite
+		.prepare(`insert into work_order_link (id, work_order_id, reservation_id) values (?, ?, ?)`)
+		.run(`${id}-l`, id, reservationId);
 	sqlite
 		.prepare(
 			`insert into volunteer_shift (id, work_order_id, starts_at, ends_at, anchor)
@@ -84,6 +87,7 @@ beforeEach(() => {
 	emit.mockClear();
 	sqlite.exec(
 		`delete from reminder_sent; delete from volunteer_signup; delete from volunteer_shift;
+		 delete from work_order_link;
 		 delete from work_order; delete from reservation; delete from member_certification;
 		 delete from volunteer_role; delete from user;`
 	);

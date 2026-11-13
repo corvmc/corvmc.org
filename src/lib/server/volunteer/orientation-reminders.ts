@@ -1,3 +1,4 @@
+import { linkedIdSql, linkedTo } from '#lib/server/task/work-order-link.js';
 import { db } from '#lib/server/db/index.js';
 import { and, asc, eq, gte, isNull, lt, not, sql } from 'drizzle-orm';
 import { volunteerShift, workOrder } from '#lib/server/db/schema/volunteer.js';
@@ -32,7 +33,7 @@ export async function listUnclaimedOrientationsBetween(
 		})
 		.from(workOrder)
 		.innerJoin(volunteerShift, eq(volunteerShift.workOrderId, workOrder.id))
-		.innerJoin(reservation, eq(reservation.id, workOrder.reservationId))
+		.innerJoin(reservation, eq(reservation.id, linkedIdSql('reservationId')))
 		.innerJoin(user, eq(user.id, reservation.createdByUserId))
 		.where(
 			and(
@@ -76,7 +77,7 @@ export async function listFirstVisitsBetween(
 		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
 		.where(
 			and(
-				eq(workOrder.reservationId, reservation.id),
+				linkedTo('reservationId', reservation.id),
 				eq(workOrder.isOrientation, true),
 				isNull(workOrder.cancelledAt),
 				liveShift()

@@ -49,6 +49,7 @@ vi.mock('../inventory/work-request-service', () => ({
 }));
 
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
+import { db } from '#lib/server/db/index.js';
 import { resolveFlagsForWorkOrder } from '../inventory/work-request-service';
 import type { SQL } from 'drizzle-orm';
 import {
@@ -237,13 +238,12 @@ describe('createShift and the asset link', () => {
 		await createShift({ ...base, assetId: 'asset-pa' });
 		await createShift({ ...base, assetId: '' });
 
-		// Each call writes a task, which carries the asset, then its shift.
-		const tasks = chainCalls
+		// The asset is a `work_order_link` row; a blank pick writes none.
+		const links = chainCalls
 			.filter((c) => c.method === 'values')
 			.map((c) => c.args[0] as any)
 			.filter((v) => 'assetId' in v);
-		expect(tasks[0].assetId).toBe('asset-pa');
-		expect(tasks[1].assetId).toBeNull();
+		expect(links).toEqual([{ workOrderId: expect.any(String), assetId: 'asset-pa' }]);
 	});
 });
 
@@ -252,21 +252,31 @@ describe('editTask and the asset link', () => {
 		selectResult = [shiftRow()];
 	});
 
+	const linkWrites = () => ({
+		deletes: vi.mocked(db.delete).mock.calls.length,
+		inserts: chainCalls
+			.filter((c) => c.method === 'values')
+			.map((c) => c.args[0] as Record<string, unknown>)
+			.filter((v) => 'workOrderId' in v && 'assetId' in v)
+	});
+
 	it('attaches an asset', async () => {
 		await editTask('shift-1', { assetId: 'asset-pa' });
-		expect(updatedColumns().assetId).toBe('asset-pa');
+		expect(linkWrites()).toEqual({
+			deletes: 1,
+			inserts: [{ workOrderId: 'shift-1', assetId: 'asset-pa' }]
+		});
 	});
 
 	it('detaches the asset when the field arrives empty', async () => {
+		selectQueue = [[shiftRow()], [{ workOrderId: 'shift-1', assetId: 'asset-pa' }]];
 		await editTask('shift-1', { assetId: '' });
-		const set = updatedColumns();
-		expect('assetId' in set).toBe(true);
-		expect(set.assetId).toBeNull();
+		expect(linkWrites()).toEqual({ deletes: 1, inserts: [] });
 	});
 
 	it('leaves the asset alone when the field is absent', async () => {
 		await editTask('shift-1', { notes: 'Bring gloves' });
-		expect('assetId' in updatedColumns()).toBe(false);
+		expect(linkWrites()).toEqual({ deletes: 0, inserts: [] });
 	});
 });
 
@@ -338,9 +348,10 @@ describe('work orders', () => {
 			createdByUserId: 'staff-1'
 		});
 
+		// The task, then its asset link; no shift.
 		const values = chainCalls.filter((c) => c.method === 'values');
-		expect(values).toHaveLength(1);
-		expect(values[0].args[0]).toMatchObject({ assetId: 'as-1' });
+		expect(values).toHaveLength(2);
+		expect(values[1].args[0]).toEqual({ workOrderId: expect.any(String), assetId: 'as-1' });
 	});
 
 	it('anchors a work order to a project when given one, and to none otherwise', async () => {

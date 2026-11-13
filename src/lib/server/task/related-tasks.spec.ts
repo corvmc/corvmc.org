@@ -14,7 +14,8 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
-const { relatedTasks, relatedTaskWhere, resolvingTypes } = await import('./related-tasks');
+const { newTaskPrefill, relatedTasks, relatedTaskWhere, resolvingTypes } =
+	await import('./related-tasks');
 const { listTaskCatalogue } = await import('#lib/server/volunteer/task-catalogue.js');
 
 const NOW = new Date('2026-06-15T12:00:00Z');
@@ -22,6 +23,10 @@ const at = (hours: number) => Math.floor(NOW.getTime() / 1000) + hours * 3600;
 
 beforeEach(() => {
 	for (const table of [
+		'work_order_link',
+		'contractor_job',
+		'grant_application',
+		'organization',
 		'work_order',
 		'project_committee',
 		'project',
@@ -122,6 +127,47 @@ describe('relatedTasks', () => {
 	});
 });
 
+describe('linked records (#2622)', () => {
+	beforeEach(() => {
+		sqlite.exec(`
+			insert into organization (id, name) values ('amps', 'Amp Shop'), ('arts', 'Arts Council');
+			insert into project (id, name, kind, status) values ('grant', 'Spring grant', 'grant', 'in_progress');
+			insert into grant_application (id, title, organization_id, project_id, status) values
+				('ga', 'Spring', 'arts', 'grant', 'prospect');
+			insert into work_order (id, title) values ('call', 'Call them'), ('retube', 'Retube');
+			insert into work_order (id, title, project_id) values ('draft', 'Draft', 'grant');
+			insert into work_order_link (id, work_order_id, organization_id) values
+				('l1', 'call', 'arts'), ('l2', 'draft', 'arts');
+			insert into contractor_job (id, organization_id, work_order_id, status) values
+				('job', 'amps', 'retube', 'asked');
+		`);
+	});
+
+	it('lists what is linked to an organization, then its jobs and its funding projects', async () => {
+		// The linked draft is not repeated under funding.
+		expect(ids(await relatedTasks({ type: 'organization', id: 'arts' }, { now: NOW }))).toEqual([
+			{ key: 'about', ids: ['call', 'draft'] }
+		]);
+		expect(ids(await relatedTasks({ type: 'organization', id: 'amps' }, { now: NOW }))).toEqual([
+			{ key: 'contractorJobs', ids: ['retube'] }
+		]);
+	});
+
+	it('lists a grant project task under funding when nothing links it', async () => {
+		sqlite.exec(`delete from work_order_link where id = 'l2'`);
+		expect(ids(await relatedTasks({ type: 'organization', id: 'arts' }, { now: NOW }))).toEqual([
+			{ key: 'about', ids: ['call'] },
+			{ key: 'funding', ids: ['draft'] }
+		]);
+	});
+
+	it('offers a new task that links the record', async () => {
+		expect(await newTaskPrefill({ type: 'asset', id: 'amp' })).toEqual({
+			about: { type: 'asset', id: 'amp' }
+		});
+	});
+});
+
 describe('relatedTaskWhere', () => {
 	it('narrows the Tasks table to every relation at once', async () => {
 		const where = relatedTaskWhere({ type: 'event', id: 'sat' }) ?? undefined;
@@ -140,7 +186,17 @@ describe('the registry', () => {
 	// Adding a type is a deliberate choice: this list moves with it.
 	it('resolves exactly these subject types', () => {
 		expect([...resolvingTypes].sort()).toEqual(
-			['event', 'group', 'project', 'recurring_work', 'role'].sort()
+			[
+				'asset',
+				'contact',
+				'event',
+				'group',
+				'organization',
+				'project',
+				'recurring_work',
+				'reservation',
+				'role'
+			].sort()
 		);
 		for (const type of resolvingTypes) expect(relatedSubjectTypes).toContain(type);
 	});

@@ -36,6 +36,8 @@ vi.mock('#lib/server/authorization.js', async () => {
 });
 const requireListingReader = vi.hoisted(() => vi.fn());
 vi.mock('#lib/server/event/listing-guard.js', () => ({ requireListingReader }));
+const requireOrganizationReader = vi.hoisted(() => vi.fn());
+vi.mock('#lib/server/party/organization-guard.js', () => ({ requireOrganizationReader }));
 const relatedTasks = vi.hoisted(() => vi.fn());
 const newTaskPrefill = vi.hoisted(() => vi.fn());
 vi.mock('#lib/server/task/related-tasks.js', () => ({
@@ -92,6 +94,23 @@ describe('getRelatedTasks', () => {
 		);
 		expect(listJobs).toHaveBeenCalledWith({ workOrderIds: ['wo-1'], view: 'open' });
 		expect(page?.prefill).toEqual({ groupId: 'g1' });
+	});
+
+	it("guards an organization with its page's reader check (#2622)", async () => {
+		granted = new Set(['project.read']);
+		await getRelatedTasks({ type: 'organization', id: 'o1' });
+		expect(requireOrganizationReader).toHaveBeenCalledWith('o1');
+	});
+
+	it("guards a unit, a booking and a person with each one's read capability", async () => {
+		granted = new Set(['project.read']);
+		for (const type of ['asset', 'reservation', 'contact']) {
+			await expect(getRelatedTasks({ type, id: 'x' })).rejects.toMatchObject({ status: 403 });
+		}
+		granted = new Set(['project.read', 'inventory.read', 'reservation.read', 'contact.read']);
+		for (const type of ['asset', 'reservation', 'contact']) {
+			await expect(getRelatedTasks({ type, id: 'x' })).resolves.not.toBeNull();
+		}
 	});
 
 	it('refuses a subject type it does not know', async () => {

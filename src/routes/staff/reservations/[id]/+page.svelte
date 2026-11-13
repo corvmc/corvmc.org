@@ -42,6 +42,8 @@
 	import { describeCancellation } from '#lib/utils/reservation-cancellation.js';
 	import { retryDoorCodes } from '#lib/remote/lock.remote.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
+	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
 	import { resolve } from '$app/paths';
 	import { getReservationFilters } from '../filters.svelte';
 	import { withQuery } from '#lib/utils/with-query.js';
@@ -414,6 +416,9 @@
 			{/if}
 		</InfoCard>
 	{/if}
+
+	<RelatedTasks subject={{ type: 'reservation', id: r.id }} />
+	<RelatedShifts subject={{ type: 'reservation', id: r.id }} />
 
 	<!-- A labelled line, not a titled box around one paragraph (#1078). -->
 	{#if r.notes}

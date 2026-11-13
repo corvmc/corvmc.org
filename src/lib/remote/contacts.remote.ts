@@ -8,13 +8,8 @@ import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import * as orgs from '#lib/server/party/organization-service.js';
 import * as people from '#lib/server/directory/contact-service.js';
 import { getContractorById } from '#lib/server/contractor/contractor-service.js';
-import {
-	LONG_TEXT_MAX,
-	partyRoles,
-	SHORT_TEXT_MAX,
-	type Capability,
-	type PartyRole
-} from '#lib/config.js';
+import { canSeeRole, requireOrganizationReader } from '#lib/server/party/organization-guard.js';
+import { LONG_TEXT_MAX, partyRoles, SHORT_TEXT_MAX, type PartyRole } from '#lib/config.js';
 
 /**
  * The Contacts screens (#2622): every outside organization, its roles and its
@@ -23,21 +18,8 @@ import {
  * sponsors. The people on them need `contact.read`.
  */
 
-const ROLE_CAPABILITY: Partial<Record<PartyRole, Capability>> = {
-	funder: 'grant.read',
-	sponsor: 'sponsor.read',
-	contractor: 'contractor.read'
-};
-
 const view = z.enum(['all', ...partyRoles]);
 export type ContactsView = z.infer<typeof view>;
-
-/** May the viewer open organizations in this role? Contacts staff may open any. */
-async function canSeeRole(role: PartyRole | 'all'): Promise<boolean> {
-	if (await can('contact.read')) return true;
-	const cap = role === 'all' ? undefined : ROLE_CAPABILITY[role];
-	return cap ? can(cap) : false;
-}
 
 /** The views this viewer may open, for the tab bar. */
 async function viewsFor() {
@@ -79,14 +61,8 @@ export const getContactsPage = query(
 );
 
 export const getOrganizationPage = query(z.string().min(1), async (id) => {
-	await requireUser();
+	const org = await requireOrganizationReader(id);
 	try {
-		const org = await orgs.getOrganization(id);
-		const allowed = await Promise.all(
-			[...org.roles, 'all' as const].map((r) => canSeeRole(r as PartyRole | 'all'))
-		);
-		if (!allowed.some(Boolean)) error(403, 'Forbidden');
-
 		const [records, contractor, staff, manage] = await Promise.all([
 			orgs.organizationRecords(id),
 			org.roles.includes('contractor') ? getContractorById(id).catch(() => null) : null,

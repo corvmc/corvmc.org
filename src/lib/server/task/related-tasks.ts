@@ -2,9 +2,13 @@ import { db } from '#lib/server/db/index.js';
 import { workOrder } from '#lib/server/db/schema/volunteer.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { projectCommittee } from '#lib/server/db/schema/project.js';
-import { and, desc, eq, inArray, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
+import { contractorJob } from '#lib/server/db/schema/contractor.js';
+import { grantApplication } from '#lib/server/db/schema/grant.js';
+import { sponsorship } from '#lib/server/db/schema/sponsor.js';
+import { and, desc, eq, inArray, isNull, ne, not, or, sql, type SQL } from 'drizzle-orm';
+import { linkedTo, type LinkTarget, type LinkTo } from './work-order-link';
 import { taskRowQuery, toTaskRow } from '#lib/server/volunteer/task-catalogue.js';
-import type { RelatedSubjectType, RelationKey } from '#lib/utils/related-tasks.js';
+import type { LinkSubjectType, RelatedSubjectType, RelationKey } from '#lib/utils/related-tasks.js';
 import type { TaskRow } from '#lib/utils/task-facts.js';
 
 export type { RelatedSubjectType, RelationKey };
@@ -65,8 +69,55 @@ const resolvers: Partial<Record<RelatedSubjectType, Resolver>> = {
 		];
 	},
 	role: (id) => [{ key: 'role', where: eq(workOrder.volunteerRoleId, id) }],
-	recurring_work: (id) => [{ key: 'recurringWork', where: eq(workOrder.maintenanceScheduleId, id) }]
+	recurring_work: (id) => [
+		{ key: 'recurringWork', where: eq(workOrder.maintenanceScheduleId, id) }
+	],
+	organization: (id) => {
+		const about = linkedTo('organizationId', id);
+		const jobs = db
+			.select({ id: contractorJob.workOrderId })
+			.from(contractorJob)
+			.where(eq(contractorJob.organizationId, id));
+		// The follow-ups on its grants and sponsorships are tasks on their projects.
+		const funding = db
+			.select({ id: grantApplication.projectId })
+			.from(grantApplication)
+			.where(eq(grantApplication.organizationId, id))
+			.union(
+				db
+					.select({ id: sponsorship.projectId })
+					.from(sponsorship)
+					.where(eq(sponsorship.organizationId, id))
+			);
+		const onJob = inArray(workOrder.id, jobs);
+		return [
+			{ key: 'about', where: about },
+			{ key: 'contractorJobs', where: and(onJob, not(about)) as SQL },
+			{
+				key: 'funding',
+				where: and(inArray(workOrder.projectId, funding), not(about), not(onJob)) as SQL
+			}
+		];
+	},
+	contact: (id) => [{ key: 'about', where: linkedTo('contactId', id) }],
+	asset: (id) => [{ key: 'about', where: linkedTo('assetId', id) }],
+	reservation: (id) => [{ key: 'about', where: linkedTo('reservationId', id) }]
 };
+
+/** The `work_order_link` column each linkable record type writes. */
+export const LINK_TARGET: Record<LinkSubjectType, LinkTarget> = {
+	organization: 'organizationId',
+	contact: 'contactId',
+	asset: 'assetId',
+	reservation: 'reservationId'
+};
+
+const isLinkSubject = (type: RelatedSubjectType): type is LinkSubjectType => type in LINK_TARGET;
+
+/** The link a new task about this record writes. */
+export function linkFor(subject: { type: LinkSubjectType; id: string }): LinkTo {
+	return { [LINK_TARGET[subject.type]]: subject.id };
+}
 
 /** The types that resolve to anything; every other type has no related tasks. */
 export const resolvingTypes = Object.keys(resolvers) as RelatedSubjectType[];
@@ -90,6 +141,8 @@ export interface NewTaskPrefill {
 	eventId?: string;
 	groupId?: string;
 	volunteerRoleId?: string;
+	/** A `work_order_link` row to the record itself. */
+	about?: { type: LinkSubjectType; id: string };
 }
 
 export async function newTaskPrefill(subject: RelatedSubject): Promise<NewTaskPrefill | null> {
@@ -109,7 +162,7 @@ export async function newTaskPrefill(subject: RelatedSubject): Promise<NewTaskPr
 		case 'role':
 			return { volunteerRoleId: subject.id };
 		default:
-			return null;
+			return isLinkSubject(subject.type) ? { about: { type: subject.type, id: subject.id } } : null;
 	}
 }
 

@@ -35,7 +35,7 @@ import {
 	getScheduleGroupId,
 	listMaintenanceSchedules,
 	nextDueAt,
-	nextOccurrenceInsert,
+	nextOccurrenceInserts,
 	retireMaintenanceSchedule,
 	updateMaintenanceSchedule,
 	MaintenanceScheduleError,
@@ -73,10 +73,10 @@ describe('nextDueAt', () => {
 	});
 });
 
-describe('nextOccurrenceInsert', () => {
+describe('nextOccurrenceInserts', () => {
 	it('writes a task with no shift carrying the schedule, due one interval after close', () => {
 		const closed = new Date('2026-09-10T12:00:00Z');
-		nextOccurrenceInsert(schedule, closed);
+		nextOccurrenceInserts(schedule, closed);
 
 		const [values] = valuesCalls();
 		expect(values).toMatchObject({
@@ -90,15 +90,15 @@ describe('nextOccurrenceInsert', () => {
 		});
 	});
 
-	it("carries the schedule's asset onto every occurrence (#1423)", () => {
-		nextOccurrenceInsert({ ...schedule, assetId: 'asset-pa' }, new Date());
-		expect(valuesCalls()[0]).toMatchObject({ assetId: 'asset-pa' });
+	it("links every occurrence to the schedule's asset (#1423)", () => {
+		expect(nextOccurrenceInserts({ ...schedule, assetId: 'asset-pa' }, new Date())).toHaveLength(2);
+		expect(nextOccurrenceInserts(schedule, new Date())).toHaveLength(1);
 	});
 
 	// The partial unique index is what refuses a second open occurrence; this is
 	// what turns that refusal into a no-op rather than a failed close.
 	it('does nothing when an open occurrence already exists', () => {
-		nextOccurrenceInsert(schedule, new Date());
+		nextOccurrenceInserts(schedule, new Date());
 		expect(chainCalls.some((c) => c.method === 'onConflictDoNothing')).toBe(true);
 	});
 });
@@ -129,9 +129,9 @@ describe('createMaintenanceSchedule', () => {
 
 		await createMaintenanceSchedule({ ...input, assetId: 'asset-pa' });
 
-		const [scheduleValues, occurrence] = valuesCalls();
+		const [scheduleValues, occurrence, link] = valuesCalls();
 		expect(scheduleValues.assetId).toBe('asset-pa');
-		expect(occurrence.assetId).toBe('asset-pa');
+		expect(link).toEqual({ workOrderId: occurrence.id, assetId: 'asset-pa' });
 	});
 
 	it('stores no asset when none was picked', async () => {

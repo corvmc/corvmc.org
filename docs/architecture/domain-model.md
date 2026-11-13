@@ -101,8 +101,18 @@ Asset management and project management join at exactly two columns, and they ar
 two worth knowing:
 
 - **`work_request.workOrderId`** — a work request raises the work that answers it.
-- **`work_order.assetId`** — the work is done to a unit. Null means building work. A
-  contractor's engagement (`contractor_job`) reads it through its work order.
+- **`work_order_link.asset_id`** — the work is done to a unit. A task with no unit link is
+  building work. A contractor's engagement (`contractor_job`) reads it through its work order.
+
+### What a task is about: `work_order_link`
+
+A task links to the records it is about through `work_order_link` (#2622): one row per link,
+one nullable column per kind of record (`organization_id`, `contact_id`, `asset_id`,
+`reservation_id`), exactly one set, each a cascading foreign key with its own partial index. A
+new kind of target is one nullable column and its index. Columns that code acts on stay on
+`work_order`: `project_id`, `event_id`, `volunteer_role_id`, `group_id`, `duty_list_id`,
+`maintenance_schedule_id`. Reads go through `src/lib/server/task/work-order-link.ts`, and the
+related-tasks registry finds an organization's, contact's, unit's or booking's tasks with it.
 
 ## Inside the social vertical
 

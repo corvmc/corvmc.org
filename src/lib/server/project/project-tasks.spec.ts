@@ -762,6 +762,8 @@ describe('duties and equipment', () => {
 			tasks.TaskValidationError
 		);
 		await tasks.setTaskEquipment(PROJECT, 't', null);
-		expect(one(`select asset_id from work_order where id = 't'`)).toEqual({ asset_id: null });
+		expect(one(`select count(*) as n from work_order_link where work_order_id = 't'`)).toEqual({
+			n: 0
+		});
 	});
 });
