@@ -43,11 +43,11 @@
 
 	const flags = $derived(
 		[
-			r.recurringSeriesId && m.staff_recurring_text(),
-			r.bookerType === 'instructor' && m.staff_reservations_teaching_text(),
-			r.isFirstReservation && m.staff_first_reservation_text(),
-			r.notes && m.staff_reservations_member_left_note_text()
-		].filter((f): f is string => !!f)
+			r.recurringSeriesId ? m.staff_recurring_text() : '',
+			r.bookerType === 'instructor' ? m.staff_reservations_teaching_text() : '',
+			r.isFirstReservation ? m.staff_first_reservation_text() : '',
+			r.notes ? m.staff_reservations_member_left_note_text() : ''
+		].filter(Boolean)
 	);
 	const hasPayment = $derived(!isEventHold(r.bookerType));
 	const owed = $derived(owedAfterSession(r));
