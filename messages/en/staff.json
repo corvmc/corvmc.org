@@ -454,6 +454,7 @@
 	"staff_events_id_production_internal_notes_label": "Internal notes",
 	"staff_events_id_production_load_label": "Load-in",
 	"staff_events_id_production_load_out_by_label": "Load-out by",
+	"staff_events_id_production_lead_label": "Event lead",
 	"staff_events_id_production_lead_text": "Event lead",
 	"staff_events_id_production_lead_saved_toast": "Event lead saved",
 	"staff_events_id_production_lead_save_label": "Save lead",

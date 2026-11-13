@@ -260,7 +260,7 @@
 									<input {...leadFields.eventId.as('hidden', evt.id)} />
 									<MemberPicker
 										field={leadFields.leadUserId}
-										label={m.staff_events_id_production_lead_text()}
+										label={m.staff_events_id_production_lead_label()}
 										placeholder={m.staff_events_id_production_lead_search_placeholder()}
 										search={(q) => searchShowLeadCandidates({ eventId: evt.id, q })}
 										bind:value={leadId}
