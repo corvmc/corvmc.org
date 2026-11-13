@@ -14,7 +14,7 @@
 	import { tagToTapeVariant } from '#lib/utils/tag-colors.js';
 	import { getMemberEventsPage } from '#lib/remote/events.remote.js';
 	// Still needed on its own for the lazy "show more" pager, which is not a fan-out.
-	import { getPublicGigGuide } from '#lib/remote/calendar.remote.js';
+	import { getMemberGigGuide } from '#lib/remote/calendar.remote.js';
 	import MyListingsSection from './MyListingsSection.svelte';
 	import AddShowAction from './AddShowAction.svelte';
 	import type { CalendarEntry } from '#lib/types/calendar.js';
@@ -67,7 +67,7 @@
 	async function showMore() {
 		loadingMore = true;
 		try {
-			const next = await getPublicGigGuide({ offset: allEvents.length });
+			const next = await getMemberGigGuide({ offset: allEvents.length });
 			extra = [...extra, ...next.events];
 			extraHasMore = next.hasMore;
 		} finally {

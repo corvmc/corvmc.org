@@ -270,6 +270,7 @@ export type EventEditField =
 	| 'title'
 	| 'description'
 	| 'kind'
+	| 'visibility'
 	| 'tags'
 	| 'location'
 	| 'address'

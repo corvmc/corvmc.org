@@ -8,6 +8,12 @@ import { DomainError } from '#lib/server/domain-error.js';
  * anything is filed, and every staff export names `event.manage`.
  */
 
+// Visibility is `visibility.spec.ts`'s; every listing here is one the caller may see.
+vi.mock('#lib/server/event/listing-viewer.js', () => ({
+	requireListingVisible: vi.fn(async () => null),
+	currentListingViewer: vi.fn(async () => null)
+}));
+
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({
 		request: new Request('http://x/'),

@@ -16,6 +16,12 @@ const getTicketsRemaining = vi.fn(async () => null);
 const checkIn = vi.fn();
 const cancelTicket = vi.fn();
 
+// Visibility is `visibility.spec.ts`'s; every listing here is one the caller may see.
+vi.mock('#lib/server/event/listing-viewer.js', () => ({
+	requireListingVisible: vi.fn(async () => null),
+	currentListingViewer: vi.fn(async () => null)
+}));
+
 vi.mock('#lib/server/ticket/ticket-service.js', () => ({
 	getTicketsRemaining: (...a: unknown[]) => getTicketsRemaining(...(a as [])),
 	getTicketsSold: vi.fn(),

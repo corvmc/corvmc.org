@@ -134,8 +134,8 @@ describe('memberRelatedShifts', () => {
 
 describe('isPublicListing', () => {
 	it('admits a published listing and refuses a draft or an unknown one', async () => {
-		expect(await isPublicListing('fri')).toBe(true);
-		expect(await isPublicListing('draft')).toBe(false);
-		expect(await isPublicListing('nope')).toBe(false);
+		expect(await isPublicListing('fri', null)).toBe(true);
+		expect(await isPublicListing('draft', null)).toBe(false);
+		expect(await isPublicListing('nope', null)).toBe(false);
 	});
 });

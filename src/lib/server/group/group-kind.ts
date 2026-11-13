@@ -25,7 +25,7 @@ export class NotAProgramError extends DomainError {
  *
  * A group that resolves to nothing is the same 404 — it is not a program either.
  */
-export async function requireProgramGroup(groupId: string): Promise<void> {
+export async function requireProgramGroup(groupId: string): Promise<'club' | 'committee'> {
 	const [row] = await db
 		.select({ kind: group.kind })
 		.from(group)
@@ -33,4 +33,5 @@ export async function requireProgramGroup(groupId: string): Promise<void> {
 		.limit(1);
 
 	if (!row || row.kind === 'band') throw new NotAProgramError();
+	return row.kind;
 }

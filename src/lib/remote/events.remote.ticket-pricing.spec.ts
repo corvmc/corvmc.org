@@ -10,6 +10,12 @@ type TicketArgs = Record<string, unknown>;
 const createTickets = vi.fn(async (_opts: TicketArgs) => [{ id: 'ticket-1' }]);
 const issueFreeTickets = vi.fn(async (_opts: TicketArgs) => [{ id: 'ticket-1' }]);
 const countTicketsForEmail = vi.fn(async (_e: string, _m: string) => 0);
+// Visibility is `visibility.spec.ts`'s; every listing here is one the caller may see.
+vi.mock('#lib/server/event/listing-viewer.js', () => ({
+	requireListingVisible: vi.fn(async () => null),
+	currentListingViewer: vi.fn(async () => null)
+}));
+
 vi.mock('#lib/server/ticket/ticket-service.js', () => ({
 	getTicketsRemaining: vi.fn(async () => null),
 	getTicketsSold: vi.fn(),

@@ -7,7 +7,7 @@ import { directoryEntry } from './directory';
 import { reservation } from './reservation';
 import { recurringSeries } from './recurring';
 import { project } from './project';
-import { eventSources } from '../../../config';
+import { eventSources, type GroupKind } from '../../../config';
 import { venue } from './venue';
 import { calendarSource } from './calendar-source';
 import { newShortCode } from '../../../event-short-code';
@@ -57,6 +57,23 @@ export type EventKind = (typeof eventKinds)[number];
 
 /** A club's or committee's session: it is the group meeting, not a show (#2607). */
 export const programSessionKind = 'meeting' satisfies EventKind;
+
+/**
+ * Who may see a published listing (#2662): everyone, any signed-in member, or
+ * the owning group's members. Every read outside the owner's own panels goes
+ * through `visibleTo` in `src/lib/server/event/visibility.ts`.
+ */
+export const eventVisibilities = ['public', 'members', 'group'] as const;
+export type EventVisibility = (typeof eventVisibilities)[number];
+
+/**
+ * What a new listing starts as: a meeting is its group's business, and a
+ * club's meeting is open to members. Everything else is advertised.
+ */
+export function defaultVisibility(kind: EventKind, ownerKind?: GroupKind | null): EventVisibility {
+	if (kind !== 'meeting') return 'public';
+	return ownerKind === 'club' || !ownerKind ? 'members' : 'group';
+}
 
 export const eventListing = sqliteTable(
 	'event_listing',
@@ -110,6 +127,9 @@ export const eventListing = sqliteTable(
 		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
 		source: text('source', { enum: eventSources }).notNull().default('cmc'),
 		kind: text('kind', { enum: eventKinds }).notNull().default('show'),
+		// The default is for the rows that predate the column; a meeting's insert
+		// names its own, from `defaultVisibility`.
+		visibility: text('visibility', { enum: eventVisibilities }).notNull().default('public'),
 		// The venue's name as the poster typed it; on rows older than `address`
 		// it may hold an address too, and is shown as it was written.
 		location: text('location'),

@@ -4,6 +4,7 @@ import { query, getRequestEvent } from '$app/server';
 import { form } from './_remote';
 import { verifyTurnstile } from '#lib/server/turnstile.js';
 import { requireCapability } from '#lib/server/authorization.js';
+import { requireListingVisible } from '#lib/server/event/listing-viewer.js';
 import {
 	requireCommitteeMember,
 	requireProjectCommittee
@@ -70,6 +71,7 @@ const website = z
 
 /** The application page's header; 404 for anything not a public market. */
 export const getVendorApplyPage = query(eventId, async (id) => {
+	await requireListingVisible(id);
 	const info = await getApplicationWindow(id);
 	if (!info) error(404, 'Not found');
 	return info;
@@ -80,6 +82,7 @@ export const getVendorApplyPage = query(eventId, async (id) => {
  * the accepted vendors. Null for anything not a public market. Never a contact.
  */
 export const getPublicMarket = query(eventId, async (id) => {
+	await requireListingVisible(id);
 	const [info, vendors] = await Promise.all([getApplicationWindow(id), listPublicVendors(id)]);
 	return info ? { info, vendors } : null;
 });
@@ -105,6 +108,7 @@ export const submitVendorApplicationForm = form(
 		if (!(await verifyTurnstile(data.turnstileToken, ip))) {
 			invalid(issue.turnstileToken('Verification failed. Please try again.'));
 		}
+		await requireListingVisible(data.eventId);
 		await submitApplication(data.eventId, {
 			contactName: data.contactName,
 			contactEmail: data.contactEmail,

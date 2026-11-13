@@ -23,7 +23,7 @@ import {
 	unpublish,
 	getById
 } from '#lib/server/event/event-service.js';
-import { lineupSchema } from '#lib/server/db/schema/event.js';
+import { eventVisibilities, lineupSchema } from '#lib/server/db/schema/event.js';
 import { startPortalConversation } from '#lib/server/inbox/portal-service.js';
 import { formatDate } from '#lib/utils/format.js';
 import { searchBandsByName } from '#lib/server/band/band-service.js';
@@ -128,6 +128,7 @@ export const getBandEventDetail = query(
 			externalTicketUrl: evt.externalTicketUrl,
 			ticketPrice: evt.ticketPrice,
 			posterUrl: resolveImageUrl(evt.posterKey),
+			visibility: evt.visibility ?? 'public',
 			isOwner: evt.groupId === band.id,
 			lineup
 		};
@@ -226,6 +227,7 @@ export const updateBandEventForm = form(
 		externalTicketUrl: z.string().optional(),
 		ticketPriceDollars: z.string().max(12).optional(),
 		lineup: z.string().optional(),
+		visibility: z.enum(eventVisibilities).optional(),
 		posterFile: z.instanceof(File).optional()
 	}),
 	async (data, issue) => {
@@ -247,6 +249,7 @@ export const updateBandEventForm = form(
 		if (data.location !== undefined) params.location = data.location || null;
 		if (data.address !== undefined) params.address = data.address.trim() || null;
 		if (data.tags !== undefined) params.tags = data.tags || null;
+		if (data.visibility !== undefined) params.visibility = data.visibility;
 		if (data.externalTicketUrl !== undefined) {
 			params.externalTicketUrl = data.externalTicketUrl || null;
 		}

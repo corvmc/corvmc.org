@@ -8,6 +8,12 @@ let currentUser: { id: string; name: string; email: string } | null = null;
 let evt: Record<string, unknown> | null = null;
 let mine: unknown = null;
 
+// Visibility is `visibility.spec.ts`'s; every listing here is one the caller may see.
+vi.mock('#lib/server/event/listing-viewer.js', () => ({
+	requireListingVisible: vi.fn(async () => null),
+	currentListingViewer: vi.fn(async () => null)
+}));
+
 vi.mock('#lib/server/authorization.js', () => ({
 	requireUser: () => {
 		if (!currentUser) throw new Error('401: Not authenticated');

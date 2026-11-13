@@ -6,6 +6,7 @@ import { form } from './_remote';
 import { requireCapability, requireUser } from '#lib/server/authorization.js';
 import { verifyTurnstile } from '#lib/server/turnstile.js';
 import { getById as getEventById } from '#lib/server/event/event-service.js';
+import { requireListingVisible } from '#lib/server/event/listing-viewer.js';
 import { memberReportableEntityTypes, flagStatuses } from '#lib/server/db/schema/flag.js';
 import {
 	listFlags,
@@ -142,6 +143,7 @@ export const submitEventReport = form(submitEventReportSchema, async (data, issu
 	// so draft/cancelled events can't be probed by id.
 	const evt = await getEventById(data.eventId);
 	if (!evt || evt.status !== 'published') error(404, 'Event not found');
+	await requireListingVisible(evt.id);
 
 	try {
 		await createFlag({

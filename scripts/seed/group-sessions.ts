@@ -1,4 +1,9 @@
-import { eventListing, eventGroup, programSessionKind } from '../../src/lib/server/db/schema/event';
+import {
+	eventListing,
+	eventGroup,
+	programSessionKind,
+	defaultVisibility
+} from '../../src/lib/server/db/schema/event';
 import { claimRoom } from './room';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
 import { db } from './db';
@@ -56,6 +61,7 @@ export async function seedGroupSessions(groups: any[]) {
 					groupId: g.id,
 					source: 'group',
 					kind: programSessionKind,
+					visibility: defaultVisibility(programSessionKind, g.kind),
 					reservationId,
 					createdByUserId: g.ownerId
 				})

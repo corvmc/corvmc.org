@@ -3,6 +3,7 @@
 	import type { RemoteFormField } from '$app/server';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import LineupEditor, { type LineupChip } from '#lib/components/events/LineupEditor.svelte';
+	import VisibilityField from '#lib/components/events/VisibilityField.svelte';
 	import { searchBandsForLineup } from '#lib/remote/band-events.remote.js';
 	import {
 		formatDate,
@@ -45,6 +46,7 @@
 		externalTicketUrl: string | null;
 		ticketPrice: number | null;
 		posterUrl: string | null;
+		visibility: string;
 	};
 
 	let {
@@ -76,6 +78,7 @@
 			externalTicketUrl: RemoteFormField<string>;
 			ticketPriceDollars: RemoteFormField<string>;
 			lineup: RemoteFormField<string>;
+			visibility: RemoteFormField<'public' | 'members' | 'group'>;
 		};
 		/** The saved event. Absent when creating. */
 		evt?: EventForDisplay;
@@ -202,6 +205,10 @@
 		{readonly}
 		display={evt?.tags ?? undefined}
 	/>
+{/if}
+
+{#if !readonly && evt}
+	<VisibilityField field={fields.visibility} value={evt.visibility} hasGroup />
 {/if}
 
 <FormField field={fields.lineup} label={m.band_slug_events_event_fields_who_s_playing_label()}>

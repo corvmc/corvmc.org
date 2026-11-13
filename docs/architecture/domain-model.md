@@ -74,6 +74,9 @@ Three layers, not two:
 | `production`    | A show's back-of-house — the room hold, run of show, settlement | Only `source='cmc'` shows |
 | `ticket_sale`   | What is on sale for a listing, and whose money it is            | Listings with sale terms  |
 
+Who may see a listing is the listing's own `visibility`: `public`, `members` or `group` (the
+owning group's members). One predicate, `visibleTo`, answers it for every read.
+
 Doors stay on the listing: a community submission has doors and can never have a
 production. Doors is the one time the public needs; load-in, soundcheck, first set, curfew
 and load-out are internal. Ticketing is neither announcement nor back-of-house, so it is

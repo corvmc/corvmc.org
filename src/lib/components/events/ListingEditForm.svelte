@@ -8,6 +8,7 @@
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
+	import VisibilityField from './VisibilityField.svelte';
 	import ConflictWarnings from '#lib/components/reservations/ConflictWarnings.svelte';
 	import { errorMessage } from '#lib/error-message.js';
 	import { updateEvent, checkRebook, checkConflicts } from '#lib/remote/events.remote.js';
@@ -27,6 +28,9 @@
 			description: string | null;
 			tags: string | null;
 			kind: string | null;
+			visibility: string;
+			/** The owning group, which makes "group members" a choice. */
+			bandId: string | null;
 			source: string;
 			location: string | null;
 			address: string | null;
@@ -57,6 +61,7 @@
 	let editDescription = $state('');
 	let editTags = $state('');
 	let editKind = $state('show');
+	let editVisibility = $state('public');
 	let editLocation = $state('');
 	let editAddress = $state('');
 	let editVenueId = $state('');
@@ -111,6 +116,7 @@
 		editDescription = event.description ?? '';
 		editTags = event.tags ?? '';
 		editKind = event.kind ?? 'show';
+		editVisibility = event.visibility;
 		editLocation = event.location ?? '';
 		editAddress = event.address ?? '';
 		editVenueId = event.venueId ?? '';
@@ -340,6 +346,12 @@
 							{ value: 'market', label: m.events_market_label() }
 						]}
 						description={m.events_only_shows_reach_homepage_posters_body()}
+					/>
+
+					<VisibilityField
+						field={fields.visibility}
+						bind:value={editVisibility}
+						hasGroup={event.bandId !== null}
 					/>
 
 					<FormField label={m.events_listing_edit_form_tags_label()} id="editTags" issues={[]}>
