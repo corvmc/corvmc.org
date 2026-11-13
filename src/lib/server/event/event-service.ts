@@ -3486,6 +3486,16 @@ export async function countPublicUpcomingEvents(
  * An external act, not a band: both owner columns stay null, so this mints no
  * public page and no membership. Claiming remains the separate door it was.
  */
+/** The event a bill credit belongs to, or null: what a guard on the credit names. */
+export async function getCreditEventId(eventBandId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ eventId: eventBand.eventId })
+		.from(eventBand)
+		.where(eq(eventBand.id, eventBandId))
+		.limit(1);
+	return row?.eventId ?? null;
+}
+
 export async function listCreditInDirectory(eventBandId: string): Promise<string> {
 	const [credit] = await db
 		.select({ id: eventBand.id, name: eventBand.name, entryId: eventBand.directoryEntryId })

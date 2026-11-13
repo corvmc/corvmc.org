@@ -74,14 +74,15 @@ gated on onboarding stage, so `none` / `blocked` / `active` need three accounts 
 be one; `/member/membership` renders differently for an active, a cancelling, a
 fee-covering and a lapsed subscriber. Each carries that one state and little else:
 
-| set                 | logins                                              |
-| ------------------- | --------------------------------------------------- |
-| Volunteering        | `coordinator@` `volunteer@` `newcomer@` `minor@`    |
-| Membership          | `sustaining@` `cancelling@` `feecoverer@` `lapsed@` |
-| Directory matching  | `seeker@` `bandleader@` `undecided@`                |
-| Group join policies | `clubhost@` `chair@` `facilities@` `invitee@`       |
-| Tech riders         | `rideradmin@` `ridermember@`                        |
-| Solo act            | `soloact@`                                          |
+| set                 | logins                                                   |
+| ------------------- | -------------------------------------------------------- |
+| Volunteering        | `coordinator@` `volunteer@` `newcomer@` `minor@`         |
+| Membership          | `sustaining@` `cancelling@` `feecoverer@` `lapsed@`      |
+| Directory matching  | `seeker@` `bandleader@` `undecided@`                     |
+| Group join policies | `clubhost@` `chair@` `facilities@` `invitee@`            |
+| Market committee    | `marketlead@` — decides and seats the Fall Makers Market |
+| Tech riders         | `rideradmin@` `ridermember@`                             |
+| Solo act            | `soloact@`                                               |
 
 **Usage personas** (`scripts/seed/usage-personas.ts`) are the opposite shape: a goal, and
 whatever a person pursuing it would have accumulated. They exist because ordinary use is

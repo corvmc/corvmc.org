@@ -160,9 +160,15 @@ export async function seedGroups(users: SeedUser[], leaders: SeedUser[]) {
 			joinInstructions: null,
 			positions: ['Chair', 'Member'],
 			memberCount: 2,
-			capabilityGrants: ['finance.read', 'project.manage', 'volunteer.manageShifts'],
+			// `event.manage` decides and seats vendors for the market its project owns (#2834).
+			capabilityGrants: [
+				'finance.read',
+				'project.manage',
+				'volunteer.manageShifts',
+				'event.manage'
+			],
 			announcements: [],
-			leaderFromPool: true
+			leaderPersonaId: 'seed-group-leader-market'
 		},
 		{
 			kind: 'club' as const,

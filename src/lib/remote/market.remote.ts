@@ -46,9 +46,10 @@ import { mapDomainError } from '#lib/server/errors.js';
 /**
  * Market vendor applications. docs/development/business-workflows.md §19.
  *
- * The public half takes no session. Setup, seating and withdrawals guard on
- * `event.manage`; accept and decline also belong to the committees taking part
- * in the market's project (#1503), read off the row, never the request.
+ * The public half takes no session. Setup and the staff page, which carries
+ * vendor contacts, guard on `event.manage`. Deciding, seating, withdrawals and
+ * check-in also belong to the committees taking part in the market's project
+ * (#1503, #2834), read off the row, never the request.
  */
 
 /** Members of a committee on the market's project, or staff holding `event.manage`. */
@@ -253,17 +254,17 @@ export const decideVendorForm = form(
 export const setTableLabelForm = form(
 	z.object({ vendorId: z.string().min(1), tableLabel: z.string().trim().max(40).optional() }),
 	async (data) => {
-		await requireCapability('event.manage');
+		await requireVendorMarketDecider(data.vendorId);
 		const { eventId: id } = await setTableLabel(data.vendorId, data.tableLabel || null);
-		void getStaffMarketVendors(id).refresh();
+		refreshMarket(id);
 		return { success: true };
 	}
 );
 
 export const withdrawVendorForm = form(z.object({ vendorId: z.string().min(1) }), async (data) => {
-	await requireCapability('event.manage');
+	await requireVendorMarketDecider(data.vendorId);
 	const { eventId: id } = await withdrawApplication(data.vendorId);
-	void getStaffMarketVendors(id).refresh();
+	refreshMarket(id);
 	return { success: true };
 });
 

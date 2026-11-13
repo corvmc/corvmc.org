@@ -486,32 +486,34 @@
 										<span class="text-sm text-base-content/60"
 											>{m.staff_events_id_production_not_directory_yet_text()}</span
 										>
-										<Action
-											action={listActInDirectory.for(act.id)}
-											label={m.staff_events_id_production_add_directory_label()}
-											variant="ghost"
-											size="xs"
-											modalTitle={m.staff_events_id_production_add_directory_2_title({
-												name: act.name
-											})}
-											submitLabel={m.staff_events_id_production_add_directory_label()}
-											successToast={m.staff_events_id_production_can_asked_now_toast({
-												name: act.name
-											})}
-											onsuccess={() => getStaffEventProduction(id).refresh()}
-										>
-											{#snippet form()}
-												<input {...listActInDirectory.fields.eventBandId.as('hidden', act.id)} />
-												<p class="text-sm">
-													<ParaglideMessage
-														message={m.staff_events_id_production_records_as_external_act_no_text}
-														inputs={{ name: act.name }}
-														>{#snippet strong({ children })}<strong>{@render children?.()}</strong
-															>{/snippet}</ParaglideMessage
-													>
-												</p>
-											{/snippet}
-										</Action>
+										{#if loaded.canBook}
+											<Action
+												action={listActInDirectory.for(act.id)}
+												label={m.staff_events_id_production_add_directory_label()}
+												variant="ghost"
+												size="xs"
+												modalTitle={m.staff_events_id_production_add_directory_2_title({
+													name: act.name
+												})}
+												submitLabel={m.staff_events_id_production_add_directory_label()}
+												successToast={m.staff_events_id_production_can_asked_now_toast({
+													name: act.name
+												})}
+												onsuccess={() => getStaffEventProduction(id).refresh()}
+											>
+												{#snippet form()}
+													<input {...listActInDirectory.fields.eventBandId.as('hidden', act.id)} />
+													<p class="text-sm">
+														<ParaglideMessage
+															message={m.staff_events_id_production_records_as_external_act_no_text}
+															inputs={{ name: act.name }}
+															>{#snippet strong({ children })}<strong>{@render children?.()}</strong
+																>{/snippet}</ParaglideMessage
+														>
+													</p>
+												{/snippet}
+											</Action>
+										{/if}
 									{/if}
 								{:else}
 									{#if act.channelCount > 0}

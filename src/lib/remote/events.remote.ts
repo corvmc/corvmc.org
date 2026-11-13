@@ -1135,8 +1135,8 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 	await requireListingReader(id);
 
 	const detail = await getStaffEventDetail(id);
-	const [nearby, venues, production, photos, recurringSeries, canEditCancelled] = await Promise.all(
-		[
+	const [nearby, venues, production, photos, recurringSeries, canManage, canPublish] =
+		await Promise.all([
 			listEventsNear(detail.event.startsAt, { excludeEventId: id }),
 			venuePickerOptions(),
 			// The header's one entry reads this to name itself, and the production
@@ -1145,14 +1145,17 @@ export const getStaffEventPage = query(z.string(), async (id) => {
 			getProductionByEvent(id),
 			listEventPhotos(id),
 			getEventRecurringSeries(id),
-			// `updateEvent` admits staff alone to a cancelled listing (#2126).
-			can('event.manage')
-		]
-	);
+			// Staff alone edit a cancelled listing (#2126), cancel or delete one, and
+			// publish or unpublish. The show's committee reads the page without them,
+			// so the header hides what their guards would refuse (#2779).
+			can('event.manage'),
+			can('event.publish')
+		]);
 
 	return {
 		detail,
-		canEditCancelled,
+		canManage,
+		canPublish,
 		venues,
 		production,
 		recurringSeries,
@@ -1301,10 +1304,11 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 	// Keyed off the production, not the listing: a listing's project is only the
 	// show's when it announces one.
 	const projectId = production?.projectId ?? null;
-	const [budget, canSetLead] = await Promise.all([
+	const [budget, canBook] = await Promise.all([
 		projectId ? getProjectBurn(projectId).then((burn) => ({ projectId, burn })) : null,
-		// Booking names the event lead (#2726); everyone else sees who it is.
-		projectId ? can('production.book', { projectId }) : false
+		// Booking names the event lead (#2726) and lists an act in the directory
+		// (#2780); everyone else sees who it is.
+		projectId ? can('production.book', { projectId }) : can('event.manage')
 	]);
 	// Each act's people, for the per-show contact. Null for a viewer who may not see them.
 	const actOrgs = [...new Set((runOfShow?.slots ?? []).flatMap((x) => x.actOrganizationId ?? []))];
@@ -1331,7 +1335,8 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		hostShift,
 		deliverables,
 		deliverableCommittees: committees,
-		canSetLead
+		canSetLead: projectId ? canBook : false,
+		canBook
 	};
 });
 
@@ -1652,7 +1657,7 @@ export const cancelEvent = form(z.object({ id: z.string().min(1) }), async (data
  * only ever thrown *by* `publish`, so the way to find out was to fail.
  */
 export const getEventPublishBlockers = query(z.string(), async (id) => {
-	await requireCapability('event.read');
+	await requireListingReader(id);
 	return publishBlockers(id);
 });
 
@@ -1661,7 +1666,7 @@ export const getEventPublishBlockers = query(z.string(), async (id) => {
  * tell a mistake from a real event before it is gone.
  */
 export const getEventDeletionImpact = query(z.string(), async (id) => {
-	await requireCapability('event.read');
+	await requireListingReader(id);
 	return getDeletionImpact(id);
 });
 

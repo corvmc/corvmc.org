@@ -10,7 +10,7 @@
 	import Action from '#lib/components/ui/Action.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
-	import { IconCheck, IconX } from '@tabler/icons-svelte';
+	import { IconArrowBackUp, IconCheck, IconTable, IconX } from '@tabler/icons-svelte';
 	import { formatDateTime } from '#lib/utils/format.js';
 	import {
 		marketVendorStatuses,
@@ -18,19 +18,26 @@
 		type MarketVendorStatus
 	} from '#lib/config.js';
 	import PreviousMarketNote from '#lib/components/market/PreviousMarketNote.svelte';
-	import { decideVendorForm, getCommitteeMarketVendors } from '#lib/remote/market.remote.js';
+	import {
+		decideVendorForm,
+		getCommitteeMarketVendors,
+		setTableLabelForm,
+		withdrawVendorForm
+	} from '#lib/remote/market.remote.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
 	import { toastDelivery } from '#lib/utils/delivery-toast.js';
 
 	const params = routeParams('slug', 'eventId');
 
 	/**
-	 * The owning committee's half of a market day: accept or decline (#1503).
-	 * Setup, seating changes and withdrawals stay on the staff page, and so do
-	 * the vendors' contact details; the decision message reaches the vendor on
-	 * their inbox thread either way.
+	 * The owning committee's half of a market day: decide, seat and withdraw
+	 * (#1503, #2834). Setup stays on the staff page, and so do the vendors'
+	 * contact details; the decision message reaches the vendor on their inbox
+	 * thread either way.
 	 */
 	const decideFields = decideVendorForm.fields;
+	const tableFields = setTableLabelForm.fields;
+	const withdrawFields = withdrawVendorForm.fields;
 
 	const slug = $derived(params.slug);
 	const eventId = $derived(params.eventId);
@@ -150,6 +157,29 @@
 									{/snippet}
 								</Action>
 							{/if}
+							{#if row.status === 'accepted'}
+								<Action
+									action={setTableLabelForm.for(row.id)}
+									label={m.staff_events_id_vendors_move_table_label()}
+									iconOnly
+									modalTitle={m.staff_events_id_vendors_table_2_title({
+										businessName: row.businessName
+									})}
+									successToast={m.staff_events_id_vendors_table_saved_toast()}
+									variant="ghost"
+									size="sm"
+								>
+									{#snippet icon()}<IconTable size={16} />{/snippet}
+									{#snippet form()}
+										<input {...tableFields.vendorId.as('hidden', row.id)} />
+										<FormField
+											field={tableFields.tableLabel}
+											label={m.staff_events_id_vendors_table_label()}
+											value={row.tableLabel ?? ''}
+										/>
+									{/snippet}
+								</Action>
+							{/if}
 							{#if row.status === 'applied' || row.status === 'accepted'}
 								<Action
 									action={decideVendorForm.for(`decline-${row.id}`)}
@@ -178,6 +208,25 @@
 											description={m.member_groups_slug_markets_event_id_sent_by_email_their_inbo_body()}
 											value={declineMessage(row.businessName)}
 										/>
+									{/snippet}
+								</Action>
+							{/if}
+							{#if row.status !== 'withdrawn' && row.status !== 'no_show'}
+								<Action
+									action={withdrawVendorForm.for(row.id)}
+									label={m.staff_events_id_vendors_mark_withdrawn_label()}
+									iconOnly
+									modalTitle={m.staff_events_id_vendors_pulled_out_title({
+										businessName: row.businessName
+									})}
+									successToast={m.staff_events_id_vendors_marked_withdrawn_toast()}
+									variant="ghost"
+									size="sm"
+								>
+									{#snippet icon()}<IconArrowBackUp size={16} />{/snippet}
+									{#snippet form()}
+										<input {...withdrawFields.vendorId.as('hidden', row.id)} />
+										<p>{m.staff_events_id_vendors_when_vendor_says_they_can_text()}</p>
 									{/snippet}
 								</Action>
 							{/if}
