@@ -40,6 +40,7 @@
 	import DeliverablesCard from './DeliverablesCard.svelte';
 	import ArtifactRequestsPanel from './ArtifactRequestsPanel.svelte';
 	import { TAB_KEYS, TAB_LABELS, parseTab, type TabKey } from './tabs';
+	import { tabBadges } from './section-state';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
@@ -119,7 +120,10 @@
 		}
 	});
 
-	const tabs = $derived(TAB_KEYS.map((key) => ({ key, label: TAB_LABELS[key] })));
+	const badges = $derived(tabBadges(loaded));
+	const tabs = $derived(
+		TAB_KEYS.map((key) => ({ key, label: TAB_LABELS[key], badge: badges[key] }))
+	);
 
 	// ── Production form state ─────────────────────────────────────────────
 	const productionFields = updateProduction.fields;
@@ -395,7 +399,10 @@
 				     used to point back at the event page, so a first-timer who came
 				     here was sent where they had just been, with nothing on screen
 				     naming the button (#976). -->
-				<InfoCard title={m.staff_production_title()}>
+				<InfoCard
+					title={m.staff_production_title()}
+					state={m.staff_production_state_not_opened_label()}
+				>
 					<p class="text-muted">
 						{m.staff_events_id_production_no_production_record_yet_open_text()}
 					</p>

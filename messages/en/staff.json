@@ -404,8 +404,6 @@
 	"staff_events_id_production_artifact_requests_panel_nobody_ha_body": "Nobody has been asked for a rider, a press kit or poster art yet.",
 	"staff_events_id_production_artifact_requests_panel_nothing_a_title": "No requests",
 	"staff_events_id_production_artifact_requests_panel_optional_body": "Optional; without a date the request never reads as overdue.",
-	"staff_events_id_production_artifact_requests_panel_outstandi_label": "{length} outstanding",
-	"staff_events_id_production_artifact_requests_panel_overdue_label": "{overdue} overdue",
 	"staff_events_id_production_artifact_requests_panel_placehold_placeholder": "Search listings by name...",
 	"staff_events_id_production_artifact_requests_panel_poster_up_toast": "Poster updated",
 	"staff_events_id_production_artifact_requests_panel_stop_wait_title": "Cancel request?",
@@ -3544,5 +3542,108 @@
 	"staff_project_templates_id_item_label": "Item",
 	"staff_projects_id_task_graph_title": "Task graph",
 	"staff_projects_id_task_graph_label": "Tasks and what each waits on",
-	"staff_projects_id_task_graph_empty_title": "No dependencies"
+	"staff_projects_id_task_graph_empty_title": "No dependencies",
+	"staff_production_state_done_of_label": "{done} of {total} done",
+	"staff_production_state_not_opened_label": "Not opened",
+	"staff_production_state_requests_overdue_label": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} request overdue",
+				"countPlural=*": "{count} requests overdue"
+			}
+		}
+	],
+	"staff_production_state_requests_waiting_label": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} request waiting",
+				"countPlural=*": "{count} requests waiting"
+			}
+		}
+	],
+	"staff_production_state_riders_missing_label": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} rider missing",
+				"countPlural=*": "{count} riders missing"
+			}
+		}
+	],
+	"staff_production_state_all_in_label": "All in",
+	"staff_production_state_none_asked_label": "None asked",
+	"staff_production_state_no_first_set_label": "No first set",
+	"staff_production_state_no_sets_label": "No sets",
+	"staff_production_state_bands_unplaced_label": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} band not placed",
+				"countPlural=*": "{count} bands not placed"
+			}
+		}
+	],
+	"staff_production_state_sets_label": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} set",
+				"countPlural=*": "{count} sets"
+			}
+		}
+	],
+	"staff_production_state_net_label": "{amount} net",
+	"staff_production_state_door_counted_label": "{amount} counted",
+	"staff_production_state_not_counted_label": "Not counted",
+	"staff_production_state_costs_label": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} cost",
+				"countPlural=*": "{count} costs"
+			}
+		}
+	],
+	"staff_production_state_none_recorded_label": "None recorded",
+	"staff_production_state_paid_of_label": "{paid} of {total} paid",
+	"staff_production_state_settled_label": "Settled",
+	"staff_production_state_no_bands_label": "No bands",
+	"staff_production_state_bands_unpaid_label": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} band unpaid",
+				"countPlural=*": "{count} bands unpaid"
+			}
+		}
+	],
+	"staff_settings_state_set_label": "Set",
+	"staff_settings_state_not_set_label": "Not set",
+	"staff_settings_state_incomplete_label": "Incomplete",
+	"staff_settings_state_links_label": "{count} of {total} links",
+	"staff_settings_state_hour_value_label": "{amount} an hour",
+	"staff_settings_state_on_label": "On",
+	"staff_settings_state_off_label": "Off",
+	"staff_settings_state_on_of_label": "{on} of {total} on",
+	"staff_settings_state_sections_not_set_label": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} section not set",
+				"countPlural=*": "{count} sections not set"
+			}
+		}
+	],
+	"staff_production_state_no_budget_label": "No budget set",
+	"staff_production_state_spent_of_label": "{spent} of {budget}"
 }

@@ -19,8 +19,11 @@
 	);
 	const state = $derived(
 		burn.budgetCents === null
-			? 'No budget set'
-			: `${formatCents(burn.cash.totalCents)} of ${formatCents(burn.budgetCents)}`
+			? m.staff_production_state_no_budget_label()
+			: m.staff_production_state_spent_of_label({
+					spent: formatCents(burn.cash.totalCents),
+					budget: formatCents(burn.budgetCents)
+				})
 	);
 </script>
 

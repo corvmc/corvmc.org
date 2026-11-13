@@ -9,7 +9,6 @@
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import MoneyField from '#lib/components/ui/Form/MoneyField.svelte';
-	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import Form from '#lib/components/ui/Form/Form.svelte';
 	import SubmitButton from '#lib/components/ui/Form/SubmitButton.svelte';
@@ -24,6 +23,7 @@
 	import { IconTrash } from '@tabler/icons-svelte';
 	import type { Settlement } from '#lib/server/production/settlement-service.js';
 	import { isTerminalProduction } from '#lib/production/status.js';
+	import { costsState, doorState, nightState, payoutsState } from './section-state';
 	import type { ProductionStatus } from '#lib/server/db/schema/production.js';
 
 	let { settlement, eventId }: { settlement: Settlement | null; eventId: string } = $props();
@@ -55,7 +55,7 @@
 		{m.staff_events_id_production_settlement_panel_what_night_took_body()}
 	</Alert>
 
-	<InfoCard title={m.staff_night_title()}>
+	<InfoCard title={m.staff_night_title()} state={nightState(settlement)}>
 		<div class="grid gap-6 sm:grid-cols-4">
 			<div>
 				<p class="text-muted">{m.staff_events_id_production_settlement_panel_bands_pool_text()}</p>
@@ -93,7 +93,10 @@
 	<!-- The drawer, and the split that follows from it. Its own card because
 	     counting the door is a thing somebody does at the end of the night,
 	     not a figure that arrives on its own like a ticket sale (#929). -->
-	<InfoCard title={m.staff_events_id_production_settlement_panel_door_title()}>
+	<InfoCard
+		title={m.staff_events_id_production_settlement_panel_door_title()}
+		state={doorState(settlement)}
+	>
 		<Form
 			remote={recordDoorTake}
 			successToast={m.staff_events_id_production_settlement_panel_door_recorded_toast()}
@@ -159,56 +162,56 @@
 		{/if}
 	</InfoCard>
 
-	<InfoCard title={m.staff_events_id_production_settlement_panel_what_night_cost_title()}>
-		{#snippet header(title)}
-			<div class="flex flex-wrap items-center justify-between gap-2">
-				<CardTitle>{title}</CardTitle>
-				<Action
-					disabled={locked}
-					action={addProductionExpense}
-					label={m.staff_events_id_production_settlement_panel_add_cost_label()}
-					variant="ghost"
-					size="xs"
-					modalTitle={m.staff_events_id_production_settlement_panel_what_did_show_pa_title()}
-					submitLabel={m.staff_events_id_production_settlement_panel_add_label()}
-					successToast={m.staff_events_id_production_settlement_panel_cost_recorded_toast()}
-				>
-					{#snippet form()}
-						<input {...addProductionExpense.fields.eventId.as('hidden', eventId)} />
-						<input
-							{...addProductionExpense.fields.productionId.as('hidden', settlement.productionId)}
-						/>
-						<FormField
-							field={addProductionExpense.fields.label}
-							label={m.staff_description_label()}
-							required
-						/>
-						<FormField
-							field={addProductionExpense.fields.category}
-							type="select"
-							label={m.staff_category_label()}
-							options={categoryOptions}
-							value="sound"
-						/>
-						<MoneyField
-							field={addProductionExpense.fields.amountCents}
-							label={m.staff_amount_label()}
-						/>
-						<FormField
-							field={addProductionExpense.fields.paidTo}
-							label={m.staff_events_id_production_settlement_panel_paid_label()}
-							description={m.staff_events_id_production_settlement_panel_who_was_handed_m_body()}
-						/>
-						<FormField
-							field={addProductionExpense.fields.deductible}
-							type="checkbox"
-							label={m.staff_events_id_production_settlement_panel_deductible_2_label()}
-							checkboxLabel={m.staff_events_id_production_settlement_panel_checkbox_label_checkbox()}
-							value={true}
-						/>
-					{/snippet}
-				</Action>
-			</div>
+	<InfoCard
+		title={m.staff_events_id_production_settlement_panel_what_night_cost_title()}
+		state={costsState(settlement)}
+	>
+		{#snippet action()}
+			<Action
+				disabled={locked}
+				action={addProductionExpense}
+				label={m.staff_events_id_production_settlement_panel_add_cost_label()}
+				variant="ghost"
+				size="xs"
+				modalTitle={m.staff_events_id_production_settlement_panel_what_did_show_pa_title()}
+				submitLabel={m.staff_events_id_production_settlement_panel_add_label()}
+				successToast={m.staff_events_id_production_settlement_panel_cost_recorded_toast()}
+			>
+				{#snippet form()}
+					<input {...addProductionExpense.fields.eventId.as('hidden', eventId)} />
+					<input
+						{...addProductionExpense.fields.productionId.as('hidden', settlement.productionId)}
+					/>
+					<FormField
+						field={addProductionExpense.fields.label}
+						label={m.staff_description_label()}
+						required
+					/>
+					<FormField
+						field={addProductionExpense.fields.category}
+						type="select"
+						label={m.staff_category_label()}
+						options={categoryOptions}
+						value="sound"
+					/>
+					<MoneyField
+						field={addProductionExpense.fields.amountCents}
+						label={m.staff_amount_label()}
+					/>
+					<FormField
+						field={addProductionExpense.fields.paidTo}
+						label={m.staff_events_id_production_settlement_panel_paid_label()}
+						description={m.staff_events_id_production_settlement_panel_who_was_handed_m_body()}
+					/>
+					<FormField
+						field={addProductionExpense.fields.deductible}
+						type="checkbox"
+						label={m.staff_events_id_production_settlement_panel_deductible_2_label()}
+						checkboxLabel={m.staff_events_id_production_settlement_panel_checkbox_label_checkbox()}
+						value={true}
+					/>
+				{/snippet}
+			</Action>
 		{/snippet}
 
 		{#if expenses.length === 0}
@@ -277,7 +280,10 @@
 		{/if}
 	</InfoCard>
 
-	<InfoCard title={m.staff_events_id_production_settlement_panel_what_each_band_o_title()}>
+	<InfoCard
+		title={m.staff_events_id_production_settlement_panel_what_each_band_o_title()}
+		state={payoutsState(settlement)}
+	>
 		{#if acts.length === 0}
 			<p class="text-fg-2">
 				{m.staff_events_id_production_settlement_panel_no_bands_running_text()}

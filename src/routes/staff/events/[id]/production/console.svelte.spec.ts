@@ -177,4 +177,15 @@ describe('production console', () => {
 		// The empty state's one form is the one that opens the record.
 		await expect.element(page.getByCss('button[type="submit"]')).toBeVisible();
 	});
+
+	it('marks the tab and the section that need work, and no other', async () => {
+		fixture.loaded = loaded(null);
+		await render(Console);
+
+		// The unopened production states itself in its heading and on its tab.
+		await expect.element(page.getByCss('#tab-overview .badge')).toBeVisible();
+		await expect.element(page.getByCss('.card-title > span.text-muted')).toBeVisible();
+		for (const key of ['advance', 'runOfShow', 'settlement'])
+			expect(document.querySelector(`#tab-${key} .badge`)).toBeNull();
+	});
 });

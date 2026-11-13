@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import Card from '#lib/components/ui/Card/Card.svelte';
-	import CardBody from '#lib/components/ui/Card/CardBody.svelte';
-	import CardTitle from '#lib/components/ui/Card/CardTitle.svelte';
+	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import {
@@ -34,7 +32,15 @@
 	import type { CommunityStats } from '#lib/server/db/schema/finance.js';
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/state';
-	import { IconPlugConnected, IconToggleRight, IconToggleLeft } from '@tabler/icons-svelte';
+	import { IconPlugConnected } from '@tabler/icons-svelte';
+	import {
+		fieldsState,
+		hourValueState,
+		linksState,
+		onOfState,
+		organizationBadge,
+		switchState
+	} from './section-state';
 
 	// `?tab=` opens a tab on arrival.
 	let activeTab = $state(page.url.searchParams.get('tab') ?? 'organization');
@@ -54,10 +60,31 @@
 	);
 	let metaTesting = $state<string | null>(null);
 
+	const location = $derived([
+		orgSettings.addressStreet,
+		orgSettings.addressCity,
+		orgSettings.addressState,
+		orgSettings.addressZip
+	]);
+	const channelsOn = $derived(
+		channelConfigs.map((c) => c.enabled || isAlwaysEnabledChannel(c.channel))
+	);
 	const tabs = $derived([
-		{ key: 'organization', label: m.staff_settings_organization_label() },
-		{ key: 'inbox', label: m.staff_settings_inbox_channels_label() },
-		{ key: 'features', label: m.staff_settings_features_label() },
+		{
+			key: 'organization',
+			label: m.staff_settings_organization_label(),
+			badge: organizationBadge([location, [orgSettings.contactEmail]])
+		},
+		{
+			key: 'inbox',
+			label: m.staff_settings_inbox_channels_label(),
+			badge: onOfState(channelsOn)
+		},
+		{
+			key: 'features',
+			label: m.staff_settings_features_label(),
+			badge: onOfState(Object.keys(featureMeta).map((f) => featureFlags[f as FeatureFlag]))
+		},
 		{ key: 'subscriptions', label: m.staff_settings_subscriptions_label() },
 		...(settings.canManageAccess ? [{ key: 'access', label: m.staff_settings_access_label() }] : [])
 	]);
@@ -104,84 +131,81 @@
 				guard
 				successToast={m.staff_settings_organization_settings_updated_toast()}
 			>
-				<Card>
-					<CardBody>
-						<CardTitle size="base">{m.staff_settings_location_title()}</CardTitle>
-						<p class="text-subtle">{m.staff_settings_shown_site_footer_contact_page_text()}</p>
+				<InfoCard title={m.staff_settings_location_title()} state={fieldsState(location)}>
+					<p class="text-subtle">{m.staff_settings_shown_site_footer_contact_page_text()}</p>
 
-						<div class="mt-2 grid gap-4 sm:grid-cols-2">
-							<FormField
-								field={updateOrgSettings.fields.addressStreet}
-								label={m.staff_settings_street_address_label()}
-								type="text"
-								value={String(orgSettings.addressStreet ?? '')}
-								placeholder={m.staff_settings_6775_sw_philomath_blvd_placeholder()}
-							/>
-							<FormField
-								field={updateOrgSettings.fields.addressCity}
-								label={m.staff_settings_city_label()}
-								type="text"
-								value={String(orgSettings.addressCity ?? '')}
-								placeholder={m.staff_settings_corvallis_placeholder()}
-							/>
-							<FormField
-								field={updateOrgSettings.fields.addressState}
-								label={m.staff_settings_state_label()}
-								type="text"
-								value={String(orgSettings.addressState ?? '')}
-								placeholder={m.staff_settings_text_placeholder()}
-							/>
-							<FormField
-								field={updateOrgSettings.fields.addressZip}
-								label={m.staff_settings_zip_label()}
-								type="text"
-								value={String(orgSettings.addressZip ?? '')}
-								placeholder="97333"
-							/>
-						</div>
-					</CardBody>
-				</Card>
+					<div class="mt-2 grid gap-4 sm:grid-cols-2">
+						<FormField
+							field={updateOrgSettings.fields.addressStreet}
+							label={m.staff_settings_street_address_label()}
+							type="text"
+							value={String(orgSettings.addressStreet ?? '')}
+							placeholder={m.staff_settings_6775_sw_philomath_blvd_placeholder()}
+						/>
+						<FormField
+							field={updateOrgSettings.fields.addressCity}
+							label={m.staff_settings_city_label()}
+							type="text"
+							value={String(orgSettings.addressCity ?? '')}
+							placeholder={m.staff_settings_corvallis_placeholder()}
+						/>
+						<FormField
+							field={updateOrgSettings.fields.addressState}
+							label={m.staff_settings_state_label()}
+							type="text"
+							value={String(orgSettings.addressState ?? '')}
+							placeholder={m.staff_settings_text_placeholder()}
+						/>
+						<FormField
+							field={updateOrgSettings.fields.addressZip}
+							label={m.staff_settings_zip_label()}
+							type="text"
+							value={String(orgSettings.addressZip ?? '')}
+							placeholder="97333"
+						/>
+					</div>
+				</InfoCard>
 
-				<Card>
-					<CardBody>
-						<CardTitle size="base">{m.staff_settings_contact_email_title()}</CardTitle>
-						<p class="text-subtle">{m.staff_settings_contact_email_shown_text()}</p>
+				<InfoCard
+					title={m.staff_settings_contact_email_title()}
+					state={fieldsState([orgSettings.contactEmail])}
+				>
+					<p class="text-subtle">{m.staff_settings_contact_email_shown_text()}</p>
 
-						<div class="mt-2 grid gap-4 sm:grid-cols-2">
-							<FormField
-								field={updateOrgSettings.fields.contactEmail}
-								label={m.staff_settings_contact_email_label()}
-								type="email"
-								value={String(orgSettings.contactEmail ?? '')}
-								required
-							/>
-						</div>
-					</CardBody>
-				</Card>
+					<div class="mt-2 grid gap-4 sm:grid-cols-2">
+						<FormField
+							field={updateOrgSettings.fields.contactEmail}
+							label={m.staff_settings_contact_email_label()}
+							type="email"
+							value={String(orgSettings.contactEmail ?? '')}
+							required
+						/>
+					</div>
+				</InfoCard>
 
-				<Card>
-					<CardBody>
-						<CardTitle size="base">{m.staff_settings_social_links_title()}</CardTitle>
-						<p class="text-subtle">{m.staff_settings_shown_site_footer_leave_blank_text()}</p>
+				<InfoCard
+					title={m.staff_settings_social_links_title()}
+					state={linksState([orgSettings.socialFacebook, orgSettings.socialInstagram])}
+				>
+					<p class="text-subtle">{m.staff_settings_shown_site_footer_leave_blank_text()}</p>
 
-						<div class="mt-2 grid gap-4 sm:grid-cols-2">
-							<FormField
-								field={updateOrgSettings.fields.socialFacebook}
-								label={m.staff_settings_facebook_url_label()}
-								type="text"
-								value={String(orgSettings.socialFacebook ?? '')}
-								placeholder={m.staff_settings_https_facebook_com_placeholder()}
-							/>
-							<FormField
-								field={updateOrgSettings.fields.socialInstagram}
-								label={m.staff_settings_instagram_url_label()}
-								type="text"
-								value={String(orgSettings.socialInstagram ?? '')}
-								placeholder={m.staff_settings_https_instagram_com_placeholder()}
-							/>
-						</div>
-					</CardBody>
-				</Card>
+					<div class="mt-2 grid gap-4 sm:grid-cols-2">
+						<FormField
+							field={updateOrgSettings.fields.socialFacebook}
+							label={m.staff_settings_facebook_url_label()}
+							type="text"
+							value={String(orgSettings.socialFacebook ?? '')}
+							placeholder={m.staff_settings_https_facebook_com_placeholder()}
+						/>
+						<FormField
+							field={updateOrgSettings.fields.socialInstagram}
+							label={m.staff_settings_instagram_url_label()}
+							type="text"
+							value={String(orgSettings.socialInstagram ?? '')}
+							placeholder={m.staff_settings_https_instagram_com_placeholder()}
+						/>
+					</div>
+				</InfoCard>
 				<!-- One form, one Save, named for what it saves. The button used to sit
 				     in the first card's header while the form wrapped three of them, so
 				     editing an operating hour or a social URL offered no save control in
@@ -202,41 +226,41 @@
 				guard
 				successToast={m.staff_settings_volunteer_hour_value_updated_toast()}
 			>
-				<Card>
-					<CardBody>
-						<div class="flex items-center justify-between">
-							<CardTitle size="base">{m.staff_settings_volunteer_hour_value_title()}</CardTitle>
-							<SubmitButton
-								label={m.staff_settings_save_label()}
-								successLabel={m.staff_settings_saved_label()}
-								errorLabel={m.staff_settings_error_label()}
-								variant="primary"
-								size="sm"
-							/>
-						</div>
-						<p class="text-subtle">
-							{m.staff_settings_what_hour_donated_time_worth_text()}
-						</p>
+				<InfoCard
+					title={m.staff_settings_volunteer_hour_value_title()}
+					state={hourValueState(volunteerValue.hourValueCents)}
+				>
+					{#snippet action()}
+						<SubmitButton
+							label={m.staff_settings_save_label()}
+							successLabel={m.staff_settings_saved_label()}
+							errorLabel={m.staff_settings_error_label()}
+							variant="primary"
+							size="sm"
+						/>
+					{/snippet}
+					<p class="text-subtle">
+						{m.staff_settings_what_hour_donated_time_worth_text()}
+					</p>
 
-						<div class="mt-2 grid gap-4 sm:grid-cols-2">
-							<FormField
-								field={updateVolunteerValueSettings.fields.hourValueCents}
-								submitAs="text"
-								label={m.staff_settings_hourly_value_cents_label()}
-								type="number"
-								value={String(volunteerValue.hourValueCents)}
-								placeholder="3766"
-							/>
-							<FormField
-								field={updateVolunteerValueSettings.fields.hourValueSource}
-								label={m.staff_settings_source_label()}
-								type="text"
-								value={volunteerValue.hourValueSource}
-								placeholder={m.staff_settings_independent_sector_oregon_2025_placeholder()}
-							/>
-						</div>
-					</CardBody>
-				</Card>
+					<div class="mt-2 grid gap-4 sm:grid-cols-2">
+						<FormField
+							field={updateVolunteerValueSettings.fields.hourValueCents}
+							submitAs="text"
+							label={m.staff_settings_hourly_value_cents_label()}
+							type="number"
+							value={String(volunteerValue.hourValueCents)}
+							placeholder="3766"
+						/>
+						<FormField
+							field={updateVolunteerValueSettings.fields.hourValueSource}
+							label={m.staff_settings_source_label()}
+							type="text"
+							value={volunteerValue.hourValueSource}
+							placeholder={m.staff_settings_independent_sector_oregon_2025_placeholder()}
+						/>
+					</div>
+				</InfoCard>
 			</Form>
 		{:else if shown === 'features'}
 			<p class="text-muted">
@@ -246,38 +270,26 @@
 			{#each Object.entries(featureMeta) as [flag, meta] (flag)}
 				{@const enabled = featureFlags[flag as FeatureFlag]}
 				{@const toggleForm = updateFeatureFlag.for(flag)}
-				<Card>
-					<CardBody>
-						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-3">
-								{#if enabled}
-									<IconToggleRight size={20} class="text-success" />
-								{:else}
-									<IconToggleLeft size={20} class="opacity-40" />
-								{/if}
-								<div>
-									<h3 class="font-semibold">{meta.label}</h3>
-									<p class="text-subtle">{meta.description}</p>
-								</div>
-							</div>
-							<Form
-								remote={toggleForm}
-								onsuccess={() => toast.success(`${meta.label} ${enabled ? 'disabled' : 'enabled'}`)}
+				<InfoCard title={meta.label} state={switchState(enabled)}>
+					{#snippet action()}
+						<Form
+							remote={toggleForm}
+							onsuccess={() => toast.success(`${meta.label} ${enabled ? 'disabled' : 'enabled'}`)}
+						>
+							<input {...toggleForm.fields.flag.as('hidden', flag)} />
+							<input {...toggleForm.fields.enabled.as('hidden', enabled ? 'false' : 'true')} />
+							<Button
+								type="submit"
+								variant={enabled ? 'error' : 'success'}
+								outline={enabled}
+								size="sm"
 							>
-								<input {...toggleForm.fields.flag.as('hidden', flag)} />
-								<input {...toggleForm.fields.enabled.as('hidden', enabled ? 'false' : 'true')} />
-								<Button
-									type="submit"
-									variant={enabled ? 'error' : 'success'}
-									outline={enabled}
-									size="sm"
-								>
-									{enabled ? m.staff_settings_disable_label() : m.staff_settings_enable_label()}
-								</Button>
-							</Form>
-						</div>
-					</CardBody>
-				</Card>
+								{enabled ? m.staff_settings_disable_label() : m.staff_settings_enable_label()}
+							</Button>
+						</Form>
+					{/snippet}
+					<p class="text-subtle">{meta.description}</p>
+				</InfoCard>
 			{/each}
 		{:else if shown === 'inbox'}
 			<p class="text-muted">
@@ -292,84 +304,77 @@
 				{@const toggleForm = updateInboxChannelConfig.for(cfg.channel)}
 				{@const isMeta = cfg.channel === 'instagram' || cfg.channel === 'messenger'}
 				{@const metaResult = metaTestResult[cfg.channel]}
-				<Card>
-					<CardBody>
-						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-3">
-								<ChannelIcon size={20} class="opacity-60" />
-								<div>
-									<h3 class="font-semibold" data-channel={cfg.channel}>{label}</h3>
-									<p class="text-subtle">{meta.description}</p>
-								</div>
-							</div>
-							{#if isAlwaysOn}
-								<Badge variant="success">{m.staff_settings_always_label()}</Badge>
-							{:else}
-								<Form
-									remote={toggleForm}
-									onsuccess={() =>
-										toast.success(`${label} ${cfg.enabled ? 'disabled' : 'enabled'}`)}
-								>
-									<input {...toggleForm.fields.channel.as('hidden', cfg.channel)} />
-									<input
-										{...toggleForm.fields.enabled.as('hidden', cfg.enabled ? 'false' : 'true')}
-									/>
-									<Button
-										type="submit"
-										variant={cfg.enabled ? 'error' : 'success'}
-										outline={cfg.enabled}
-										size="sm"
-									>
-										{cfg.enabled
-											? m.staff_settings_disable_label()
-											: m.staff_settings_enable_label()}
-									</Button>
-								</Form>
-							{/if}
-						</div>
+				<InfoCard
+					title={label}
+					state={isAlwaysOn ? m.staff_settings_always_label() : switchState(cfg.enabled)}
+					testid="channel-{cfg.channel}"
+				>
+					{#snippet action()}
 						{#if !isAlwaysOn}
-							<div class="mt-2 flex flex-wrap items-center justify-between gap-2">
-								<div class="text-xs opacity-40">
-									{m.staff_settings_env_text({ envHint: meta.envHint })}
-								</div>
-								<!--
+							<Form
+								remote={toggleForm}
+								onsuccess={() => toast.success(`${label} ${cfg.enabled ? 'disabled' : 'enabled'}`)}
+							>
+								<input {...toggleForm.fields.channel.as('hidden', cfg.channel)} />
+								<input
+									{...toggleForm.fields.enabled.as('hidden', cfg.enabled ? 'false' : 'true')}
+								/>
+								<Button
+									type="submit"
+									variant={cfg.enabled ? 'error' : 'success'}
+									outline={cfg.enabled}
+									size="sm"
+								>
+									{cfg.enabled ? m.staff_settings_disable_label() : m.staff_settings_enable_label()}
+								</Button>
+							</Form>
+						{/if}
+					{/snippet}
+					<p class="flex items-center gap-2 text-subtle">
+						<ChannelIcon size={16} class="shrink-0 opacity-60" />{meta.description}
+					</p>
+					{#if !isAlwaysOn}
+						<div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+							<div class="text-xs opacity-40">
+								{m.staff_settings_env_text({ envHint: meta.envHint })}
+							</div>
+							<!--
 									The page token has no refresh path, so an expired one does not
 									announce itself — replies just start failing on a channel nobody is
 									watching. This is what makes that visible, and the reason the token
 									can stay an env secret rather than growing an OAuth flow.
 								-->
-								{#if isMeta}
-									<Button
-										type="button"
-										variant="ghost"
-										size="sm"
-										onclick={() => handleMetaTest(cfg.channel)}
-										disabled={metaTesting === cfg.channel}
-									>
-										{#if metaTesting === cfg.channel}
-											<span class="loading loading-xs loading-spinner"></span>
-										{:else}
-											<IconPlugConnected class="size-4" />
-										{/if}
-										{m.staff_settings_test_connection_2_label()}
-									</Button>
+							{#if isMeta}
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									onclick={() => handleMetaTest(cfg.channel)}
+									disabled={metaTesting === cfg.channel}
+								>
+									{#if metaTesting === cfg.channel}
+										<span class="loading loading-xs loading-spinner"></span>
+									{:else}
+										<IconPlugConnected class="size-4" />
+									{/if}
+									{m.staff_settings_test_connection_2_label()}
+								</Button>
+							{/if}
+						</div>
+
+						{#if metaResult}
+							<div
+								class="alert {metaResult.ok ? 'alert-success' : 'alert-error'} mt-2 py-2 text-sm"
+							>
+								{#if metaResult.ok}
+									{m.staff_settings_connected_text({ pageName: metaResult.pageName ?? '' })}
+								{:else}
+									{metaResult.error}
 								{/if}
 							</div>
-
-							{#if metaResult}
-								<div
-									class="alert {metaResult.ok ? 'alert-success' : 'alert-error'} mt-2 py-2 text-sm"
-								>
-									{#if metaResult.ok}
-										{m.staff_settings_connected_text({ pageName: metaResult.pageName ?? '' })}
-									{:else}
-										{metaResult.error}
-									{/if}
-								</div>
-							{/if}
 						{/if}
-					</CardBody>
-				</Card>
+					{/if}
+				</InfoCard>
 			{/each}
 		{:else if shown === 'subscriptions'}
 			<p class="text-muted">
