@@ -450,6 +450,11 @@ tabbed page per program, `/member/groups/[slug]`, loaded by `getMemberGroup`. `o
   `requireProgramGroup()` (`src/lib/server/group/group-kind.ts`) refuses a band, so only a program
   holds the room free: a `confirmed` reservation with `bookerType: 'group'`, after a `hasConflict`
   check. The recurring generator re-checks the kind.
+- **Attendance:** `session-attendance.remote.ts` → `attendance-service.ts`. A lead marks who came to
+  a past session (`requireProgramRole(…, 'admin')`, then the event re-scoped to the group; a
+  cancelled session refuses). The list is the active roster, the RSVPs and anyone already marked;
+  an id outside it is dropped. Saving writes the difference to `event_attendance` in one
+  `db.batch`. The Roster tab shows each member's count over the group's sessions.
 - **Announcements** (bands too): an announcement is a `group_announcement` row, a draft until
   published (`announcement-service.ts`). Publishing posts it as one message in the group's single
   Announcements thread (`channel: 'group'`, `post_policy: 'leadership'`), title first, and emits an

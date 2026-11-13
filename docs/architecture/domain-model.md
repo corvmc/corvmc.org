@@ -287,7 +287,13 @@ The `reconcile-ledger` cron compares the `stripe`-settled sum with Stripe's bala
 ### 5. Container membership `[social, projects, comms]`
 
 `group_member` · `volunteer_signup` · `audience_member` · `inbox_participant` ·
-`event_rsvp` · `member_certification`. All are (container, person, status, joined_at).
+`event_rsvp` · `event_attendance` · `member_certification`. All are (container, person, status,
+joined_at).
+
+`event_rsvp` is who said they would come; `event_attendance` is who a program lead marked as
+having come. They are two tables because a walk-in has no RSVP, and writing one for them would
+count them in RSVP totals and RSVP-built audiences. A ticketed show's check-in is
+`ticket.checkedInAt`, not either of these.
 
 One certification has a job in code: **Practice space** (`PRACTICE_SPACE_CLEARANCE_ID`, id
 `practice-space`) says a member has been shown around the room. Completing or waiving their

@@ -166,6 +166,7 @@ export const tableOrder = [
 	'ticket_sale',
 	'ticket',
 	'event_rsvp',
+	'event_attendance',
 	// The bill: references event and band, so it wipes before either.
 	'event_band',
 	// The run of show: references production and event_band, so it lands after

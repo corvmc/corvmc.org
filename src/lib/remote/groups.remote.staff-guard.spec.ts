@@ -114,6 +114,9 @@ vi.mock('#lib/server/group/application-service.js', () => ({
 	hasOpenApplication: vi.fn(async () => false)
 }));
 vi.mock('#lib/server/event/event-service.js', () => ({ listGroupSessions: vi.fn() }));
+vi.mock('#lib/server/event/attendance-service.js', () => ({
+	countAttendanceByMember: vi.fn(async () => new Map())
+}));
 vi.mock('#lib/server/volunteer/duty-list-service.js', () => ({ listDutyLists: vi.fn() }));
 vi.mock('#lib/server/volunteer/volunteer-role-service.js', () => ({
 	listVolunteerRoles: vi.fn(async () => [])

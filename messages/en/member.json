@@ -69,6 +69,7 @@
 	"member_amount_label": "Amount",
 	"member_anything_else_optional_label": "Details (optional)",
 	"member_anything_staff_should_know_not_label": "Notes for staff",
+	"member_groups_slug_attended_label": "Attended",
 	"member_not_published_body": "Not published.",
 	"member_application_sent_toast": "Application sent",
 	"member_apply_label": "Apply",
