@@ -59,6 +59,7 @@ const shifts = vi.hoisted(() => ({
 	relatedShifts: vi.fn(),
 	relatedEndedShifts: vi.fn(),
 	relatedShiftTasks: vi.fn(),
+	relatedShiftStart: vi.fn(),
 	isRelatedTask: vi.fn()
 }));
 vi.mock('#lib/server/task/related-shifts.js', () => shifts);
@@ -88,6 +89,7 @@ beforeEach(() => {
 	shifts.relatedShifts.mockReset().mockResolvedValue([]);
 	shifts.relatedEndedShifts.mockReset().mockResolvedValue([{ id: 'wo-9' }]);
 	shifts.relatedShiftTasks.mockReset().mockResolvedValue([]);
+	shifts.relatedShiftStart.mockReset().mockResolvedValue(null);
 	shifts.isRelatedTask.mockReset().mockResolvedValue(true);
 	svc.createWorkOrder.mockReset().mockResolvedValue({ id: 'wo-new' });
 	svc.openShift.mockReset().mockResolvedValue({ id: 's-1' });
@@ -123,6 +125,15 @@ describe('getRelatedShifts', () => {
 		granted.add('volunteer.manageShifts');
 		const manage = await getRelatedShifts({ type: 'group', id: 'g1' });
 		expect(manage?.addShift).toMatchObject({ newTask: { roleId: null } });
+	});
+
+	it("gives Add shift the record's own start", async () => {
+		granted = new Set(['volunteer.read', 'volunteer.manageShifts']);
+		const doors = new Date('2031-05-10T02:00:00Z');
+		shifts.relatedShiftStart.mockResolvedValue(doors);
+		const res = await getRelatedShifts({ type: 'event', id: 'e1' });
+		expect(res?.addShift).toMatchObject({ startsAt: doors });
+		expect(shifts.relatedShiftStart).toHaveBeenCalledWith({ type: 'event', id: 'e1' });
 	});
 });
 

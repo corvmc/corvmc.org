@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { m } from '#lib/paraglide/messages.js';
+import { addCalendarDays, clockEdges, forEachClockEdge } from '#lib/test/clock-edges.js';
 
 /**
  * What a record's shift card shows (#2630): relation headers only when there
@@ -15,6 +16,7 @@ type Related = {
 		tasks: { id: string; label: string; capacity: number | null; minutes: number | null }[];
 		newTask: { roleId: string | null } | null;
 		roles: { id: string; name: string; capacity: number | null; minutes: number | null }[];
+		startsAt?: Date | null;
 	} | null;
 };
 let response: Related | null;
@@ -190,6 +192,42 @@ describe('RelatedShifts', () => {
 		await vi.waitFor(() => expect(card()).not.toBeNull());
 		expect(addShift()).toBeNull();
 	});
+
+	// The server's start (an event's doors) is a club-time instant; the end adds
+	// the role's length, so a late doors time ends on the next club day.
+	const openAdd = async (startsAt: Date) => {
+		response = {
+			groups: [],
+			ended: 0,
+			addShift: {
+				tasks: [{ id: 't1', label: 'Door', capacity: 2, minutes: 120 }],
+				newTask: null,
+				roles: [],
+				startsAt
+			}
+		};
+		await render(RelatedShifts, { subject: { type: 'event', id: 'e1' } });
+		await vi.waitFor(() => expect(addShift()).not.toBeNull());
+		(addShift() as HTMLElement).click();
+		const input = (name: string) =>
+			document.querySelector<HTMLInputElement>(`[role="dialog"] input[name="${name}"]`);
+		await vi.waitFor(() => expect(input('startsAt')).not.toBeNull());
+		return { start: input('startsAt')!.value, end: input('endsAt')!.value };
+	};
+
+	forEachClockEdge('starts Add shift at the time the server gives', async (edge) => {
+		const { start } = await openAdd(edge.at);
+		expect(start).toBe(`${edge.clubDate}T${edge.clubTime}`);
+	});
+
+	it.each(['monthEnd', 'yearEnd'] as const)(
+		'ends a late start on the next club day, at %s',
+		async (name) => {
+			const edge = clockEdges[name];
+			const { end } = await openAdd(edge.at);
+			expect(end).toBe(`${addCalendarDays(edge.clubDate, 1)}T01:30`);
+		}
+	);
 
 	it('draws nothing for a viewer who may not read shifts', async () => {
 		response = null;

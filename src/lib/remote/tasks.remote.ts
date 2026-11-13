@@ -28,6 +28,7 @@ import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service
 import {
 	isRelatedTask,
 	relatedEndedShifts,
+	relatedShiftStart,
 	relatedShiftTasks,
 	relatedShifts
 } from '#lib/server/task/related-shifts.js';
@@ -192,10 +193,11 @@ export const getRelatedShifts = query(subject, async (s) => {
 });
 
 async function addShiftChoices(s: RelatedSubject) {
-	const [tasks, prefill, roles] = await Promise.all([
+	const [tasks, prefill, roles, startsAt] = await Promise.all([
 		relatedShiftTasks(s),
 		newTaskPrefill(s),
-		listVolunteerRoles()
+		listVolunteerRoles(),
+		relatedShiftStart(s)
 	]);
 	// Each choice carries its role's shift defaults, which the form starts from.
 	const defaults = (r: {
@@ -209,7 +211,9 @@ async function addShiftChoices(s: RelatedSubject) {
 		tasks: tasks.map((t) => ({ id: t.id, label: shiftLabel(t), ...defaults(t) })),
 		/** A new task takes the record's anchors; null where the record makes none. */
 		newTask: prefill === null ? null : { roleId: prefill.volunteerRoleId ?? null },
-		roles: roles.map((r) => ({ id: r.id, name: r.name, ...defaults(r) }))
+		roles: roles.map((r) => ({ id: r.id, name: r.name, ...defaults(r) })),
+		/** Where the shift starts by default; null leaves it to the form. */
+		startsAt
 	};
 }
 

@@ -87,9 +87,10 @@
 		if (!taskOptions.some((o) => o.value === taskId)) taskId = taskOptions[0]?.value ?? '';
 	});
 
-	// The times start a day from now, as on a task's own Open shift, and the
-	// length and places follow the chosen role's defaults.
-	const from = new Date(Date.now() + 86_400_000);
+	// The times start where the server says (an event's doors), else a day from
+	// now as on a task's own Open shift; length and places follow the role.
+	const dayFromNow = new Date(Date.now() + 86_400_000);
+	const from = $derived(add?.startsAt ?? dayFromNow);
 	const chosen = $derived.by(() => {
 		if (!add) return null;
 		if (taskId) return add.tasks.find((t) => t.id === taskId) ?? null;
