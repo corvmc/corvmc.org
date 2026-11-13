@@ -295,8 +295,13 @@ export async function bulkAddMembers(audienceId: string): Promise<number> {
 			.limit(1);
 
 		if (!existing) {
-			await db.insert(audienceMember).values({ audienceId, subscriberId: sub.id });
-			added++;
+			// `uq_audience_member`: a concurrent add of the same person is a no-op.
+			const [row] = await db
+				.insert(audienceMember)
+				.values({ audienceId, subscriberId: sub.id })
+				.onConflictDoNothing()
+				.returning({ id: audienceMember.id });
+			if (row) added++;
 		} else if (existing.unsubscribedAt) {
 			await db
 				.update(audienceMember)

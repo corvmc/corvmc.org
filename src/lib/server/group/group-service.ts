@@ -545,7 +545,11 @@ export async function setChairRole(groupId: string, userId: string, role: 'admin
 			.limit(1);
 		if (!person) throw new NotOnRosterError();
 		memberName = person.name;
-		await db.insert(groupMember).values({ groupId, userId, role, status: 'active' });
+		// `band_member_band_user_unique`: a concurrent add of the same person is a no-op.
+		await db
+			.insert(groupMember)
+			.values({ groupId, userId, role, status: 'active' })
+			.onConflictDoNothing();
 	}
 
 	await recordAuditEntry({

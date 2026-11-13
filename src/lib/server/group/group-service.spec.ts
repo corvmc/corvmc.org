@@ -54,7 +54,10 @@ vi.mock('#lib/server/db/index.js', () => ({
 		insert: (table: unknown) => ({
 			values: (values: Record<string, unknown>) => {
 				writes.push({ table: tableName(table), op: 'insert', values });
-				return { returning: () => Promise.resolve([]) };
+				return {
+					returning: () => Promise.resolve([]),
+					onConflictDoNothing: () => Promise.resolve()
+				};
 			}
 		}),
 		update: (table: unknown) => ({
