@@ -90,6 +90,7 @@ describe('the contact table has one access path', () => {
 		// it is: the token path, public applications and the retention cron have
 		// no session to check, and the archive runs inside an already-guarded claim.
 		expect(unguarded.sort()).toEqual([
+			'actContactNamesUnguarded',
 			'archiveActContactsForClaim',
 			'recordApplicantUnguarded',
 			'sweepExpiredContacts',

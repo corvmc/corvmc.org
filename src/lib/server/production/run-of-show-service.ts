@@ -6,7 +6,7 @@ import { eventBand, eventListing } from '#lib/server/db/schema/event.js';
 import { directoryEntry } from '#lib/server/db/schema/directory.js';
 import { group } from '#lib/server/db/schema/group.js';
 import { organization } from '#lib/server/db/schema/party.js';
-import { and, asc, eq, inArray, isNotNull, notInArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, notInArray, type SQL } from 'drizzle-orm';
 import { assertNotTerminal } from './production-scope';
 import {
 	SLOT_MAX,
@@ -643,6 +643,14 @@ export interface BandSlotTerms {
 	terms: ActTerms;
 }
 
+/** An outside act's booking: the band's view, plus its contact and what it was paid. */
+export interface ActSlotTerms extends BandSlotTerms {
+	contactId: string | null;
+	/** Null until settled; zero is a real answer for a donated set. */
+	paidCents: number | null;
+	paidAt: Date | null;
+}
+
 /**
  * The deal a band was offered, on its own page.
  *
@@ -652,6 +660,25 @@ export interface BandSlotTerms {
  * and a band reading one would be reading a guess.
  */
 export async function listBandSlotTerms(groupId: string): Promise<BandSlotTerms[]> {
+	const rows = await ownSlots(eq(directoryEntry.groupId, groupId));
+	return rows.map(({ contactId: _c, paidCents: _p, paidAt: _a, ...band }) => band);
+}
+
+/**
+ * The same, for an outside act holding a contact-sheet token.
+ *
+ * Keyed on the credit's own entry, which the caller takes from the resolved
+ * token and never from the request. Shows older than `RECENT_DAYS` drop off.
+ */
+export async function listActSlotTerms(entryId: string, now = new Date()): Promise<ActSlotTerms[]> {
+	const since = now.getTime() - RECENT_DAYS * 86_400_000;
+	const rows = await ownSlots(eq(eventBand.directoryEntryId, entryId));
+	return rows.filter((r) => r.startsAt.getTime() >= since);
+}
+
+const RECENT_DAYS = 90;
+
+async function ownSlots(act: SQL): Promise<ActSlotTerms[]> {
 	const rows = await db
 		.select({
 			eventId: eventListing.id,
@@ -667,19 +694,17 @@ export async function listBandSlotTerms(groupId: string): Promise<BandSlotTerms[
 			percentageBps: productionSlot.percentageBps,
 			versus: productionSlot.versus,
 			againstNet: productionSlot.againstNet,
-			contributed: productionSlot.contributed
+			contributed: productionSlot.contributed,
+			contactId: productionSlot.contactId,
+			paidCents: productionSlot.paidCents,
+			paidAt: productionSlot.paidAt
 		})
 		.from(productionSlot)
 		.innerJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
 		.innerJoin(directoryEntry, eq(directoryEntry.id, eventBand.directoryEntryId))
 		.innerJoin(production, eq(production.id, productionSlot.productionId))
 		.innerJoin(eventListing, eq(eventListing.projectId, production.projectId))
-		.where(
-			and(
-				eq(directoryEntry.groupId, groupId),
-				inArray(production.status, ['offered', ...PUBLISHED_STATUSES])
-			)
-		)
+		.where(and(act, inArray(production.status, ['offered', ...PUBLISHED_STATUSES])))
 		.orderBy(asc(eventListing.startsAt));
 
 	return rows.map((r) => ({
@@ -698,7 +723,10 @@ export async function listBandSlotTerms(groupId: string): Promise<BandSlotTerms[
 			versus: r.versus,
 			againstNet: r.againstNet,
 			contributed: r.contributed
-		}
+		},
+		contactId: r.contactId,
+		paidCents: r.paidCents,
+		paidAt: r.paidAt
 	}));
 }
 
