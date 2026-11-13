@@ -74,12 +74,15 @@
 		if (tasks.error) throw tasks.error.e;
 	});
 	const refresh = () => void getTasksPage(args).refresh();
+	// Per task, the open tasks it waits on, by name: the row's "waits on" line.
+	const waitsOn = $derived(tasks.current?.waitsOn ?? {});
 
 	type Row = Awaited<ReturnType<typeof getTasksPage>>['tasks'][number];
 
 	const CHIP_LABELS: Record<Chip, () => string> = {
 		unassigned: m.staff_tasks_unassigned_label,
 		overdue: m.staff_overdue_label,
+		blocked: m.staff_tasks_blocked_label,
 		untimed: m.staff_tasks_no_time_label,
 		invoice: m.staff_volunteer_schedule_awaiting_invoice_label
 	};
@@ -298,7 +301,7 @@
 {/if}
 
 {#snippet row(t: Row, marks: ContractorMark[])}
-	<TaskRow task={t} {marks} {now} project={!projectId}>
+	<TaskRow task={t} {marks} {now} project={!projectId} waitsOn={waitsOn[t.id] ?? []}>
 		{#snippet actions({ label, href })}
 			{#if !t.resolvedAt}
 				<TaskRowActions

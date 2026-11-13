@@ -1500,6 +1500,28 @@
 	"volunteer_work_order_view_cancel_task_label": "Cancel task",
 	"volunteer_work_order_view_cancel_task_title": "Cancel task?",
 	"volunteer_work_order_view_cancel_task_body": "Calls off every live shift on it; the people on those shifts stay listed until they are told.",
+	"volunteer_task_dependencies_waits_on_title": "Waits on",
+	"volunteer_task_dependencies_needed_for_title": "Needed for",
+	"volunteer_task_dependencies_nothing_text": "No tasks",
+	"volunteer_task_dependencies_remove_label": "Stop waiting on {label}",
+	"volunteer_task_dependencies_remove_title": "Stop waiting on this task?",
+	"volunteer_task_dependencies_remove_submit_label": "Stop waiting",
+	"volunteer_task_dependencies_removed_toast": "Removed from Waits on",
+	"volunteer_task_dependencies_add_label": "Add task",
+	"volunteer_task_dependencies_add_title": "Wait on a task",
+	"volunteer_task_dependencies_add_submit_label": "Add",
+	"volunteer_task_dependencies_added_toast": "Added to Waits on",
+	"volunteer_task_dependencies_task_label": "Task",
+	"volunteer_work_order_view_open_blockers_body": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "A task it waits on is open. Marking it done now is recorded.",
+				"countPlural=*": "{count} tasks it waits on are open. Marking it done now is recorded."
+			}
+		}
+	],
 	"grant_grant_fields_funded_project_label": "Funded project",
 	"grant_grant_fields_funded_project_body": "What the award pays for. Leave it as general support for operating money.",
 	"grant_grant_fields_general_support_label": "General support"

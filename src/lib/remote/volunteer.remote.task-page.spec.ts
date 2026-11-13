@@ -55,14 +55,24 @@ vi.mock('#lib/server/project/project-service.js', async (original) => ({
 	...(await original<object>()),
 	getProjectById: async (id: string) => ({ id, name: 'Rewire the hall' })
 }));
+const edges = vi.hoisted(() => ({ add: vi.fn(), remove: vi.fn() }));
+vi.mock('#lib/server/volunteer/task-dependencies.js', () => ({
+	listTaskDependencies: async () => ({ waitsOn: [], neededFor: [] }),
+	listDependencyOptions: async () => [],
+	addDependency: edges.add,
+	removeDependency: edges.remove
+}));
 const loadWorkOrderView = vi.hoisted(() => vi.fn());
 vi.mock('#lib/server/volunteer/work-order-view.js', () => ({ loadWorkOrderView }));
 const listContractors = vi.hoisted(() => vi.fn());
 vi.mock('#lib/server/contractor/contractor-service.js', () => ({ listContractors }));
 
-const { getTaskPage } = (await import('./volunteer.remote')) as unknown as {
-	getTaskPage: (id: string) => Promise<unknown>;
-};
+const { getTaskPage, addTaskDependency, removeTaskDependency } =
+	(await import('./volunteer.remote')) as unknown as {
+		getTaskPage: (id: string) => Promise<unknown>;
+		addTaskDependency: (raw: object) => Promise<unknown>;
+		removeTaskDependency: (raw: object) => Promise<unknown>;
+	};
 
 const engagement = {
 	job: { id: 'job-1', quotedCents: 50000, costCents: 48000, invoiceRef: 'INV-7' },
@@ -101,7 +111,9 @@ describe('getTaskPage, for a task in no project', () => {
 		await expect(getTaskPage('wo-1')).resolves.toEqual({
 			project: null,
 			task: { id: 'wo-1' },
-			contractors: [{ id: 'c-1', name: 'Benton Electric' }]
+			contractors: [{ id: 'c-1', name: 'Benton Electric' }],
+			dependencies: { waitsOn: [], neededFor: [] },
+			dependencyOptions: []
 		});
 	});
 
@@ -155,5 +167,28 @@ describe('getTaskPage, for a task in a project', () => {
 		loadWorkOrderView.mockResolvedValue({ task: { id: 'wo-1' }, engagements: [engagement] });
 		const page = (await getTaskPage('wo-1')) as Record<string, unknown>;
 		expect(page.engagements).toEqual([]);
+	});
+});
+
+describe('a task waiting on another (#2625)', () => {
+	const edge = { workOrderId: 'wo-1', dependsOnId: 'wo-2' };
+	beforeEach(() => {
+		edges.add.mockReset();
+		edges.remove.mockReset();
+	});
+
+	it("in no project, is the coordinator's write, refused before anything changes", async () => {
+		permitted = false;
+		await expect(addTaskDependency(edge)).rejects.toMatchObject({ status: 403 });
+		expect(requested).toContain('volunteer.manageShifts');
+		expect(edges.add).not.toHaveBeenCalled();
+	});
+
+	it("in a project, is the project's committee's write", async () => {
+		workOrderProjectId.mockResolvedValue('proj-1');
+		requireProjectCommittee.mockRejectedValueOnce(Object.assign(new Error('no'), { status: 403 }));
+		await expect(removeTaskDependency(edge)).rejects.toMatchObject({ status: 403 });
+		expect(requireProjectCommittee).toHaveBeenCalledWith('proj-1', 'project.manage');
+		expect(edges.remove).not.toHaveBeenCalled();
 	});
 });

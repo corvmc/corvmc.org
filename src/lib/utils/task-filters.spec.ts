@@ -24,6 +24,7 @@ function task(over: Partial<TaskFacts> = {}): TaskFacts {
 		shiftAt: null,
 		shifts: 0,
 		assignees: 0,
+		blockers: 0,
 		maintenanceScheduleId: null,
 		resolvedAt: null,
 		createdAt: new Date(0),
@@ -86,6 +87,12 @@ describe('chips', () => {
 		const late = task({ dueAt: new Date(NOW.getTime() - DAY) });
 		expect(matchesChip('overdue', late, [], NOW)).toBe(true);
 		expect(matchesChip('overdue', { ...late, resolvedAt: NOW }, [], NOW)).toBe(false);
+	});
+
+	it('counts open work waiting on an open task as blocked', () => {
+		expect(matchesChip('blocked', task({ blockers: 2 }), [], NOW)).toBe(true);
+		expect(matchesChip('blocked', task({ blockers: 2, resolvedAt: NOW }), [], NOW)).toBe(false);
+		expect(matchesChip('blocked', task(), [], NOW)).toBe(false);
 	});
 
 	it('counts done contractor work with no cost as awaiting an invoice', () => {

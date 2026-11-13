@@ -17,6 +17,7 @@ import { getProjectActivity, getProjectDetail } from './projects.remote';
 import { createTask, rescheduleTask } from '#lib/server/project/project-task-service.js';
 import { listJobs } from '#lib/server/contractor/contractor-job-service.js';
 import { listTaskCatalogue } from '#lib/server/volunteer/task-catalogue.js';
+import { listOpenBlockers } from '#lib/server/volunteer/task-dependencies.js';
 import {
 	createWorkOrder,
 	openShift,
@@ -98,7 +99,7 @@ export const getTasksPage = query(
 					await Promise.all([listJobs({ view: 'open' }), listJobs({ view: 'awaiting-invoice' })])
 				).flat()
 			: [];
-		const [tasks, projects, committees, templates] = await Promise.all([
+		const [tasks, projects, committees, templates, waitsOn] = await Promise.all([
 			listTaskCatalogue({
 				projectId: f.projectId,
 				volunteerRoleId: f.volunteerRoleId || undefined,
@@ -108,7 +109,8 @@ export const getTasksPage = query(
 			}),
 			listProjects({ archived: false }),
 			listCommittees(),
-			listDutyLists()
+			listDutyLists(),
+			listOpenBlockers()
 		]);
 		return {
 			tasks,
@@ -119,7 +121,9 @@ export const getTasksPage = query(
 			committees: committees.map((c) => ({ id: c.id, name: c.name })),
 			templates: templates
 				.filter((t) => t.itemCount > 0 && !t.grantStage)
-				.map((t) => ({ id: t.id, name: t.name }))
+				.map((t) => ({ id: t.id, name: t.name })),
+			// Per open task, the open tasks it waits on: Blocked, by name (#2625).
+			waitsOn
 		};
 	}
 );

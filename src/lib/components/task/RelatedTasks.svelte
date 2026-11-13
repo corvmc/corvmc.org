@@ -48,6 +48,7 @@
 	const CHIP_LABELS: Record<Chip, () => string> = {
 		unassigned: m.staff_tasks_unassigned_label,
 		overdue: m.staff_overdue_label,
+		blocked: m.staff_tasks_blocked_label,
 		untimed: m.staff_tasks_no_time_label,
 		invoice: m.staff_volunteer_schedule_awaiting_invoice_label
 	};

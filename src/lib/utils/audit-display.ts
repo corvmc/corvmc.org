@@ -193,10 +193,20 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			return `Took ${entry.details.memberName} off it`;
 		case 'work_order.rescheduled':
 			return 'Changed when it happens or is due';
-		case 'work_order.resolved':
-			return entry.details.override
+		case 'work_order.resolved': {
+			const done = entry.details.override
 				? `Marked done by hand: “${entry.details.reason ?? ''}”`
 				: 'Marked done';
+			const open = entry.details.openBlockers ?? 0;
+			if (open === 0) return done;
+			return open === 1
+				? `${done}, while a task it waits on was open`
+				: `${done}, while ${open} tasks it waits on were open`;
+		}
+		case 'work_order.dependency_added':
+			return `Set it to wait on ${entry.details.dependsOnLabel}`;
+		case 'work_order.dependency_removed':
+			return `Stopped it waiting on ${entry.details.dependsOnLabel}`;
 		case 'work_order.reopened':
 			return 'Reopened it';
 		case 'work_order.cancelled':

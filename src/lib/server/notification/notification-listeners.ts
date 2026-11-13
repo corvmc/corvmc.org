@@ -1388,6 +1388,29 @@ export function registerAllNotificationListeners(): void {
 		});
 	});
 
+	// The last task one of yours waits on is done (#2625). The member's own task
+	// page: an assignee need not be staff.
+	domainEvents.on('volunteer.task_ready', async ({ data: event }) => {
+		const title = `Ready to start: ${event.title}`;
+		const line = `"${event.closedTitle}" is done, and nothing else "${event.title}" waits on is open.`;
+		await dispatch({
+			type: 'task_ready',
+			userId: event.recipient.userId,
+			userEmail: event.recipient.userEmail,
+			title,
+			body: line,
+			href: `/member/volunteer/tasks/${event.workOrderId}`,
+			data: { workOrderId: event.workOrderId },
+			email: {
+				recipientName: event.recipient.userName,
+				subject: title,
+				heading: 'Task ready',
+				paragraphs: [{ text: line }],
+				cta: { label: 'Open the task' }
+			}
+		});
+	});
+
 	domainEvents.on('event.unpublished_by_staff', async ({ data: event }) => {
 		for (const admin of event.bandAdmins) {
 			try {

@@ -7,6 +7,7 @@ import { contractorJob } from '#lib/server/db/schema/contractor.js';
 import { engagementViewWhere } from '#lib/server/contractor/contractor-job-service.js';
 import type { TaskRow } from '#lib/utils/task-facts.js';
 import { assigneeCountSql, capacitySql, claimedSql } from './work-order-service';
+import { openBlockersSql } from './task-dependencies';
 
 export type { TaskRow };
 
@@ -66,6 +67,7 @@ export function taskRowQuery(now: Date) {
 			capacity: capacitySql(),
 			claimed: claimedSql(),
 			assignees: assigneeCountSql(),
+			blockers: openBlockersSql(),
 			maintenanceScheduleId: workOrder.maintenanceScheduleId,
 			pendingCapacity: workOrder.pendingCapacity,
 			resolvedAt: workOrder.resolvedAt,
@@ -86,7 +88,8 @@ export function toTaskRow(r: RawTaskRow): TaskRow {
 		shifts: Number(r.shifts),
 		capacity: Number(r.capacity),
 		claimed: Number(r.claimed),
-		assignees: Number(r.assignees)
+		assignees: Number(r.assignees),
+		blockers: Number(r.blockers)
 	};
 }
 

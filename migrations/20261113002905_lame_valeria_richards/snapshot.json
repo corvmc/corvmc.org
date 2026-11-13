@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "3ec5b855-99a4-4a54-bbf5-852ea7d54c70",
+  "id": "82a3c14e-4e6a-4569-931f-66be63851fcf",
   "prevIds": [
-    "9a1a4c38-5dd5-481e-9cf0-aa0c75ae5d44"
+    "3ec5b855-99a4-4a54-bbf5-852ea7d54c70"
   ],
   "ddl": [
     {
@@ -384,6 +384,10 @@
     },
     {
       "name": "work_order_assignee",
+      "entityType": "tables"
+    },
+    {
+      "name": "work_order_dependency",
       "entityType": "tables"
     },
     {
@@ -10916,6 +10920,46 @@
     },
     {
       "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "work_order_id",
+      "entityType": "columns",
+      "table": "work_order_dependency"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "depends_on_id",
+      "entityType": "columns",
+      "table": "work_order_dependency"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_by_user_id",
+      "entityType": "columns",
+      "table": "work_order_dependency"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "work_order_dependency"
+    },
+    {
+      "type": "text",
       "notNull": false,
       "autoincrement": false,
       "default": null,
@@ -18130,6 +18174,51 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "nameExplicit": false,
+      "name": "fk_work_order_dependency_work_order_id_work_order_id_fk",
+      "entityType": "fks",
+      "table": "work_order_dependency"
+    },
+    {
+      "columns": [
+        "depends_on_id"
+      ],
+      "tableTo": "work_order",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_work_order_dependency_depends_on_id_work_order_id_fk",
+      "entityType": "fks",
+      "table": "work_order_dependency"
+    },
+    {
+      "columns": [
+        "created_by_user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_work_order_dependency_created_by_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "work_order_dependency"
+    },
+    {
+      "columns": [
+        "work_order_id"
+      ],
+      "tableTo": "work_order",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
       "name": "fk_work_task_work_order_id_volunteer_shift_id_fk",
       "entityType": "fks",
       "table": "work_task"
@@ -19508,6 +19597,16 @@
       "name": "work_order_assignee_pk",
       "entityType": "pks",
       "table": "work_order_assignee"
+    },
+    {
+      "columns": [
+        "work_order_id",
+        "depends_on_id"
+      ],
+      "nameExplicit": false,
+      "name": "work_order_dependency_pk",
+      "entityType": "pks",
+      "table": "work_order_dependency"
     },
     {
       "columns": [
@@ -23913,6 +24012,20 @@
     {
       "columns": [
         {
+          "value": "depends_on_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "work_order_dependency_depends_on_idx",
+      "entityType": "indexes",
+      "table": "work_order_dependency"
+    },
+    {
+      "columns": [
+        {
           "value": "work_order_id",
           "isExpression": false
         },
@@ -25638,6 +25751,12 @@
       "name": "volunteer_shift_feedback_rating_range",
       "entityType": "checks",
       "table": "volunteer_shift_feedback"
+    },
+    {
+      "value": "work_order_id <> depends_on_id",
+      "name": "work_order_dependency_not_self",
+      "entityType": "checks",
+      "table": "work_order_dependency"
     },
     {
       "value": "(done = 0 and done_at is null) or (done = 1 and done_at is not null)",

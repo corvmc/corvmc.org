@@ -39,6 +39,11 @@ vi.mock('#lib/server/db/index.js', () => ({
 	}
 }));
 
+// Dependencies have their own SQLite spec; here they only answer "none" (#2625).
+vi.mock('./task-dependencies', () => ({
+	countOpenBlockers: async () => 0,
+	announceTasksReady: async () => {}
+}));
 vi.mock('../inventory/work-request-service', () => ({
 	resolveFlagsForWorkOrder: vi.fn().mockResolvedValue([])
 }));
