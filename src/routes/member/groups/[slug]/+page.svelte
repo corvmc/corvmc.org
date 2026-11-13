@@ -37,6 +37,7 @@
 	import ApplicationsCard from '#lib/components/groups/ApplicationsCard.svelte';
 	import EditSessionAction from '#lib/components/groups/EditSessionAction.svelte';
 	import RepeatSessionAction from '#lib/components/groups/RepeatSessionAction.svelte';
+	import SessionAttendanceAction from '#lib/components/groups/SessionAttendanceAction.svelte';
 	import ProjectStatusAction from './ProjectStatusAction.svelte';
 	import ProjectDutyListAction from './ProjectDutyListAction.svelte';
 	import CommitteeNumbers from './CommitteeNumbers.svelte';
@@ -413,6 +414,13 @@
 								<td class="w-px">
 									{#if s.status !== 'cancelled'}
 										<div class="flex w-max justify-end gap-2">
+											{#if s.startsAt <= new Date()}
+												<SessionAttendanceAction
+													groupId={group.id}
+													session={s}
+													onchanged={refreshRoster}
+												/>
+											{/if}
 											<EditSessionAction groupId={group.id} session={s} onchanged={refreshRoster} />
 											{#if !s.repeats}
 												<RepeatSessionAction
@@ -550,6 +558,7 @@
 						<th>{msg.member_member_label()}</th>
 						<th class="w-px">{msg.member_role_label()}</th>
 						<th>{msg.member_groups_slug_position_label()}</th>
+						<th class="w-px">{msg.member_groups_slug_attended_label()}</th>
 						{#if rosterActions}
 							<th class="w-px"><span class="sr-only">{msg.member_actions_label()}</span></th>
 						{/if}
@@ -562,6 +571,7 @@
 							<td class="cell-primary"><EntityIdentity ref={m.member} /></td>
 							<td class="w-px"><Badge variant="ghost">{m.role}</Badge></td>
 							<td>{m.position ?? '—'}</td>
+							<td class="w-px text-right tabular-nums">{data.attendance[m.userId] ?? 0}</td>
 							{#if rosterActions}
 								<td class="w-px">
 									<div class="flex w-max justify-end gap-2">

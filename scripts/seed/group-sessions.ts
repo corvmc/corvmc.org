@@ -6,7 +6,10 @@ import {
 } from '../../src/lib/server/db/schema/event';
 import { claimRoom } from './room';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
-import { db } from './db';
+import { eventAttendance } from '../../src/lib/server/db/schema/event-rsvp';
+import { groupMember } from '../../src/lib/server/db/schema/group';
+import { and, eq } from 'drizzle-orm';
+import { batchInsert, db } from './db';
 import { ptDate } from './util';
 
 /**
@@ -20,8 +23,15 @@ import { ptDate } from './util';
  */
 export async function seedGroupSessions(groups: any[]) {
 	const rows: any[] = [];
+	const marks: (typeof eventAttendance.$inferInsert)[] = [];
 
 	for (const g of groups) {
+		const members = await db
+			.select({ userId: groupMember.userId })
+			.from(groupMember)
+			.where(and(eq(groupMember.groupId, g.id), eq(groupMember.status, 'active')))
+			.orderBy(groupMember.userId);
+
 		// Two behind and two ahead, so the tab has an archive and a calendar.
 		for (const offset of [-21, -7, 7, 21]) {
 			const startsAt = ptDate(offset, 19);
@@ -69,8 +79,20 @@ export async function seedGroupSessions(groups: any[]) {
 
 			await db.insert(eventGroup).values({ eventId: e.id, groupId: g.id, sortOrder: 0 });
 			rows.push(e);
+
+			// A past session has attendance: most of the roster, a different few
+			// missing each time, so the roster's counts differ.
+			if (offset < 0) {
+				const skip = offset === -21 ? 3 : 2;
+				members.forEach((m, i) => {
+					if (i % skip !== skip - 1) {
+						marks.push({ eventId: e.id, userId: m.userId, markedByUserId: g.ownerId });
+					}
+				});
+			}
 		}
 	}
 
+	await batchInsert(eventAttendance, marks);
 	return rows;
 }

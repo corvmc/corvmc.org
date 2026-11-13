@@ -12,6 +12,7 @@ import {
 	type GroupApplicationStatus
 } from '#lib/config.js';
 import { mapDomainError } from '#lib/server/errors.js';
+import { countAttendanceByMember } from '#lib/server/event/attendance-service.js';
 import { getClubTotals } from '#lib/server/group/group-totals-service.js';
 import { setCommitteeCapabilityGrants } from '#lib/server/capability/capability-grant-service.js';
 import { allowlisted } from '#lib/server/capability/grant-rules.js';
@@ -455,7 +456,8 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		volunteerRoles,
 		projectEvents,
 		recurringWork,
-		unfinishedItems
+		unfinishedItems,
+		attendance
 	] = await Promise.all([
 		getMembers(group.id).then(partitionByStatus),
 		canManage ? listForManager(group.id) : listPublished(group.id),
@@ -488,7 +490,9 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 			? listMaintenanceSchedules({ groupId: group.id })
 			: Promise.resolve([]),
 		// Only whether the Open items tab shows; the tab reads its own rows.
-		group.kind === 'committee' ? countCommitteeUnfinished(group.id) : Promise.resolve(0)
+		group.kind === 'committee' ? countCommitteeUnfinished(group.id) : Promise.resolve(0),
+		// Sessions each member was marked at, for the roster's count.
+		countAttendanceByMember(group.id)
 	]);
 
 	return {
@@ -569,7 +573,8 @@ export const getMemberGroup = query(z.string(), async (slug) => {
 		members: {
 			active: roster.active,
 			pending: roster.pending
-		}
+		},
+		attendance: Object.fromEntries(attendance) as Record<string, number>
 	};
 });
 
