@@ -11,8 +11,10 @@
 		reactivateUser,
 		purgeUser,
 		banUser,
-		unbanUser
+		unbanUser,
+		getUserRemovals
 	} from '#lib/remote/users.remote.js';
+	import { removalKindLabels, removalLiftReasonLabels } from '#lib/config.js';
 	import { getUserDirectoryProfile } from '#lib/remote/directory.remote.js';
 	import StaffUserForm from '../StaffUserForm.svelte';
 	import EmailChangeCard from '../EmailChangeCard.svelte';
@@ -50,6 +52,7 @@
 	function refreshAccount() {
 		// One refresh: the page reads both halves through `getUserPage`.
 		void getUserPage(id).refresh();
+		void getUserRemovals(id).refresh();
 	}
 
 	// Reactivation resumes a subscription cancelled at period end, but a period
@@ -232,6 +235,63 @@
 		description: m.staff_members_id_panels_account_panel_role_profile_credit_ac_body()
 	}}
 />
+
+<!-- Each row is one removal; it rests on the report linked beside it. -->
+<RelatedList
+	title={m.staff_members_id_panels_account_panel_removals_title()}
+	result={getUserRemovals(id)}
+>
+	{#snippet children(rows)}
+		{#if rows.length === 0}
+			<EmptyState title={m.staff_members_id_panels_account_panel_no_removals_title()} />
+		{:else}
+			<Table>
+				{#snippet head()}
+					<th class="cell-primary">{m.staff_reason_label()}</th>
+					<th class="col-support">{m.staff_status_label()}</th>
+					<th class="col-extra">{m.staff_members_id_panels_account_panel_removal_report_label()}</th
+					>
+				{/snippet}
+				{#each rows as r (r.id)}
+					<tr>
+						<td class="cell-primary">
+							<div class="flex items-center gap-2 font-medium">
+								<Badge size="sm" variant={r.kind === 'ban' ? 'error' : 'warning'}
+									>{removalKindLabels[r.kind]}</Badge
+								>
+								{m.staff_members_id_panels_account_panel_removal_by_text({
+									date: formatDateShortYear(r.createdAt),
+									name:
+										r.actorName ?? m.staff_members_id_panels_account_panel_removed_account_text()
+								})}
+							</div>
+							<div class="text-muted whitespace-pre-line">{r.reason}</div>
+						</td>
+						<td class="col-support">
+							{#if r.liftedAt}
+								{m.staff_members_id_panels_account_panel_removal_lifted_text({
+									reason: r.liftReason ? removalLiftReasonLabels[r.liftReason] : '—',
+									date: formatDateShortYear(r.liftedAt)
+								})}
+							{:else if r.endsAt}
+								{m.staff_members_id_panels_account_panel_removal_ends_text({
+									date: formatDateShortYear(r.endsAt)
+								})}
+							{:else}
+								{m.staff_members_id_panels_account_panel_removal_open_text()}
+							{/if}
+						</td>
+						<td class="col-extra">
+							<a class="link" href={resolve(`staff/flags/${r.flagId}`)}
+								>{m.staff_members_id_panels_account_panel_removal_report_label()}</a
+							>
+						</td>
+					</tr>
+				{/each}
+			</Table>
+		{/if}
+	{/snippet}
+</RelatedList>
 
 <InfoCard title={m.staff_details_title()} class="bg-base-200 shadow-none">
 	<DefinitionList>

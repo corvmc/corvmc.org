@@ -15,6 +15,11 @@ import { captureException } from '#lib/server/sentry.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import { sendAccountRestoredEmail, sendAccountSuspendedEmail } from '#lib/server/auth-emails.js';
 import { isValidPhone, normalizePhone } from '#lib/utils/phone.js';
+import { fileStaffAction } from '#lib/server/flag/flag-service.js';
+import { recordRemoval, liftOpenRemoval } from '#lib/server/moderation/removal-service.js';
+import { blockEmail, unblockForRemoval } from '#lib/server/moderation/blocklist-service.js';
+import type { RemovalLedger } from '#lib/server/db/schema/moderation.js';
+import type { RemovalLiftReason } from '#lib/config.js';
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -132,9 +137,11 @@ export async function deactivateUser(
 		.from(lockMemberCode)
 		.where(and(eq(lockMemberCode.userId, userId), isNull(lockMemberCode.revokedAt)));
 
+	const revokedCodeIds: string[] = [];
 	for (const codeRow of standingCodes) {
 		try {
 			await revokeMemberCode(codeRow.id, 'Account deactivated');
+			revokedCodeIds.push(codeRow.id);
 		} catch (err) {
 			captureException(err);
 		}
@@ -200,7 +207,12 @@ export async function deactivateUser(
 		}
 	});
 
-	return row;
+	const ledger: RemovalLedger = {
+		reservationIds: futureReservations.map((r) => r.id),
+		doorCodeIds: revokedCodeIds,
+		billing: subscriptionCancelled ? 'cancel_at_period_end' : 'none'
+	};
+	return { ...row, ledger };
 }
 
 /**
@@ -303,7 +315,10 @@ export async function reactivateUser(userId: string) {
  * until `unbanUser` lifts it. An account the member already closed is banned
  * without re-running offboarding, so they cannot quietly come back.
  */
-export async function banUser(userId: string, opts: { actorId: string; reason: string }) {
+export async function banUser(
+	userId: string,
+	opts: { actorId: string; reason: string; flagId?: string }
+) {
 	if (userId === opts.actorId) throw new CannotBanSelfError();
 
 	const now = new Date();
@@ -321,7 +336,36 @@ export async function banUser(userId: string, opts: { actorId: string; reason: s
 		details: { reason: opts.reason }
 	});
 
-	if (!row.deletedAt) await deactivateUser(userId, { actor: 'staff' });
+	// Side effects first, the record last: a retry after a failure part-way
+	// re-runs only what is idempotent.
+	const ledger: RemovalLedger = row.deletedAt
+		? { reservationIds: [], doorCodeIds: [], billing: 'none' }
+		: (await deactivateUser(userId, { actor: 'staff' })).ledger;
+
+	const flagId =
+		opts.flagId ??
+		(
+			await fileStaffAction({
+				entityType: 'member_profile',
+				entityId: userId,
+				staffId: opts.actorId,
+				reason: opts.reason
+			})
+		).id;
+	const removal = await recordRemoval({
+		userId,
+		actorUserId: opts.actorId,
+		kind: 'ban',
+		reason: opts.reason,
+		flagId,
+		ledger
+	});
+	await blockEmail({
+		email: row.email,
+		source: 'ban',
+		addedByUserId: opts.actorId,
+		removalId: removal.id
+	});
 
 	await sendAccountSuspendedEmail({ toEmail: row.email, name: row.name });
 
@@ -332,7 +376,10 @@ export async function banUser(userId: string, opts: { actorId: string; reason: s
  * Lift a ban and restore the account. The one way back from a ban, and the
  * entry point a successful appeal would call.
  */
-export async function unbanUser(userId: string) {
+export async function unbanUser(
+	userId: string,
+	opts: { actorId: string | null; liftReason?: RemovalLiftReason } = { actorId: null }
+) {
 	const [row] = await db
 		.update(user)
 		.set({ bannedAt: null, bannedById: null, banReason: null, updatedAt: new Date() })
@@ -348,6 +395,11 @@ export async function unbanUser(userId: string) {
 	});
 
 	const restored = await reactivateUser(userId);
+	const lifted = await liftOpenRemoval(userId, {
+		liftedByUserId: opts.actorId,
+		liftReason: opts.liftReason ?? 'staff_lifted'
+	});
+	if (lifted) await unblockForRemoval(lifted.id);
 	await sendAccountRestoredEmail({ toEmail: row.email, name: row.name });
 	return restored;
 }

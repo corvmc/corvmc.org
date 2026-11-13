@@ -11,8 +11,9 @@ import { user } from './authentication';
  * Postmark webhooks; `unsubscribe` is the recipient choosing "unsubscribe from
  * all" on the unsubscribe page. The distinction matters: a self-service opt-out
  * can be reversed by opting back in, a broken or complaining address cannot.
+ * `blocked` follows the email blocklist and clears when staff unblock.
  */
-export type SuppressionReason = 'bounce' | 'complaint' | 'unsubscribe';
+export type SuppressionReason = 'bounce' | 'complaint' | 'unsubscribe' | 'blocked';
 
 export const subscriber = sqliteTable(
 	'subscriber',

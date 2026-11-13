@@ -660,6 +660,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/moderation/blocklist",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/moderation/flags",
 		"panel": "staff"
 	},

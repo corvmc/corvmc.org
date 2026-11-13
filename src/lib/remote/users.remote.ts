@@ -59,6 +59,7 @@ import {
 import { getReservationConfig } from '#lib/server/reservation/config.js';
 import { listForMember as listReservationsForMember } from '#lib/server/reservation/reservation-service.js';
 import { listActiveSessions, getLastLoginAt } from '#lib/server/user/user-service.js';
+import { listRemovals } from '#lib/server/moderation/removal-service.js';
 import {
 	inviteMember,
 	listInviteGroups,
@@ -554,6 +555,7 @@ export const banUser = form(
 			mapDomainError(err);
 		}
 		void getUserPage(data.id).refresh();
+		void getUserRemovals(data.id).refresh();
 		return { success: true };
 	}
 );
@@ -563,14 +565,15 @@ export const unbanUser = form(
 		id: z.string().min(1)
 	}),
 	async (data) => {
-		await requireCapability('user.ban');
+		const me = await requireCapability('user.ban');
 		let subscription: 'resumed' | 'active' | 'lapsed' | 'none' = 'none';
 		try {
-			({ subscription } = await unbanUserService(data.id));
+			({ subscription } = await unbanUserService(data.id, { actorId: me.id }));
 		} catch (err) {
 			mapDomainError(err);
 		}
 		void getUserPage(data.id).refresh();
+		void getUserRemovals(data.id).refresh();
 		return { success: true, subscription };
 	}
 );
@@ -871,6 +874,12 @@ export const getUserCreditHistory = query(
 );
 
 /** Who changed this member's account, newest first. Staff-only, like the rest of the record. */
+/** Every suspension or ban of this member, open or lifted. */
+export const getUserRemovals = query(z.string(), async (userId) => {
+	await requireCapability('user.read');
+	return listRemovals(userId);
+});
+
 export const getUserHistory = query(
 	z.object({ userId: z.string(), limit: z.number().int().min(1).max(FEED_MAX).optional() }),
 	async ({ userId, limit }): Promise<FeedPage> => {

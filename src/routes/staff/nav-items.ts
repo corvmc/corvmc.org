@@ -275,12 +275,12 @@ export const staffNavSections: StaffNavSection[] = [
 		key: 'moderation',
 		title: 'Moderation',
 		items: [
-			// Content Flags and Incidents are its views, each with its own gate (#2393).
+			// Flags, Incidents and Blocklist are its views, each with its own gate (#2393).
 			// Their records keep their addresses, which notifications link to.
 			{
 				key: 'moderation',
 				capability: 'moderation.reviewFlags',
-				alsoFor: ['incident.read'],
+				alsoFor: ['incident.read', 'user.ban'],
 				label: 'Moderation',
 				href: resolve('staff/moderation'),
 				also: [resolve('staff/flags'), resolve('staff/incidents')]

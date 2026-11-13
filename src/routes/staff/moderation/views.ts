@@ -2,7 +2,7 @@ import { resolve } from '$app/paths';
 import { m } from '#lib/paraglide/messages.js';
 import type { StaffView } from '../views';
 
-export const moderationViews: readonly StaffView<'flags' | 'incidents'>[] = [
+export const moderationViews: readonly StaffView<'flags' | 'incidents' | 'blocklist'>[] = [
 	{
 		key: 'flags',
 		label: () => m.staff_content_flags_label(),
@@ -14,5 +14,11 @@ export const moderationViews: readonly StaffView<'flags' | 'incidents'>[] = [
 		label: () => m.staff_incidents_label(),
 		href: resolve('staff/moderation/incidents'),
 		cap: 'incident.read'
+	},
+	{
+		key: 'blocklist',
+		label: () => m.staff_blocklist_label(),
+		href: resolve('staff/moderation/blocklist'),
+		cap: 'user.ban'
 	}
 ];

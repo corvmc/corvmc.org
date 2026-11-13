@@ -1261,6 +1261,36 @@ export const standingScopeConfig: Record<
 export const STANDING_REASON_MAX = 500;
 
 // ---------------------------------------------------------------------------
+// Account removals
+// ---------------------------------------------------------------------------
+
+/** A suspension ends on a date; a ban lasts until staff lift it. */
+export const removalKinds = ['suspension', 'ban'] as const;
+export type RemovalKind = (typeof removalKinds)[number];
+export const removalKindLabels: Record<RemovalKind, string> = {
+	suspension: 'Suspension',
+	ban: 'Ban'
+};
+
+export const removalLiftReasons = ['appeal_granted', 'term_lapsed', 'staff_lifted'] as const;
+export type RemovalLiftReason = (typeof removalLiftReasons)[number];
+export const removalLiftReasonLabels: Record<RemovalLiftReason, string> = {
+	appeal_granted: 'Appeal granted',
+	term_lapsed: 'Term ended',
+	staff_lifted: 'Lifted by staff'
+};
+
+/** Why an address is on the blocklist: a ban put it there, or staff added it. */
+export const blocklistSources = ['ban', 'staff'] as const;
+export type BlocklistSource = (typeof blocklistSources)[number];
+export const blocklistSourceLabels: Record<BlocklistSource, string> = {
+	ban: 'Ban',
+	staff: 'Added by staff'
+};
+
+export const BLOCKLIST_NOTE_MAX = 500;
+
+// ---------------------------------------------------------------------------
 // Moderation appeals
 // ---------------------------------------------------------------------------
 
