@@ -199,7 +199,11 @@ export const inboxThread = sqliteTable(
 		// One Announcements thread per group (#2618). Its only leadership room.
 		uniqueIndex('idx_inbox_thread_group_announcements')
 			.on(t.groupId)
-			.where(sql`${t.channel} = 'group' AND ${t.postPolicy} = 'leadership'`)
+			.where(sql`${t.channel} = 'group' AND ${t.postPolicy} = 'leadership'`),
+		// One General topic per group (#2621); getOrCreateGroupChat relies on it.
+		uniqueIndex('idx_inbox_thread_group_general')
+			.on(t.groupId)
+			.where(sql`${t.channel} = 'group' AND ${t.subject} IS NULL`)
 	]
 );
 
