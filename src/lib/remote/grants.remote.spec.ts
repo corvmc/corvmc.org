@@ -18,7 +18,8 @@ const grants = {
 	getGrant: vi.fn(async () => ({ id: 'g1' })),
 	createGrant: vi.fn(async () => ({ id: 'g1' })),
 	updateGrant: vi.fn(async () => undefined),
-	deleteGrant: vi.fn(async () => undefined)
+	deleteGrant: vi.fn(async () => undefined),
+	applyGrantStage: vi.fn(async () => undefined)
 };
 vi.mock('#lib/server/grant/grant-service.js', () => grants);
 
@@ -35,6 +36,9 @@ const people = {
 	savePrimaryContact: vi.fn(async () => undefined)
 };
 vi.mock('#lib/server/party/primary-contact.js', () => people);
+vi.mock('#lib/server/development/funding-project.js', () => ({
+	listFundableProjects: vi.fn(async () => [])
+}));
 
 vi.mock('$app/server', () => ({
 	getRequestEvent: () => ({ locals: {} }),
@@ -80,6 +84,12 @@ const CASES: Case[] = [
 		spy: grants.updateGrant
 	},
 	{ name: 'deleteGrant', cap: 'grant.manage', arg: { id: 'g1' }, spy: grants.deleteGrant },
+	{
+		name: 'applyGrantStage',
+		cap: 'grant.manage',
+		arg: { id: 'g1', stage: 'award' },
+		spy: grants.applyGrantStage
+	},
 	{ name: 'createFunder', cap: 'grant.manage', arg: FUNDER, spy: funders.createFunder },
 	{
 		name: 'updateFunder',

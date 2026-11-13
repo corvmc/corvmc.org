@@ -19,9 +19,11 @@ import {
 } from '#lib/server/party/organization-service.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import {
+	assertFundable,
 	deleteFundingProjectWrites,
 	fundingCommitteeId,
 	fundingProjectWrites,
+	nextOpenTasks,
 	renameFundingProject
 } from '#lib/server/development/funding-project.js';
 import { byDeadline, due, type Deadline } from '#lib/utils/deadline.js';
@@ -140,10 +142,15 @@ export async function listSponsors(
 export async function getSponsor(id: string, today: string) {
 	const row = await getSponsorOrg(id);
 	const ships = await db.select().from(sponsorship).where(eq(sponsorship.organizationId, id));
+	const next = await nextOpenTasks(ships.flatMap((s) => (s.projectId ? [s.projectId] : [])));
 	return {
 		...row,
 		sponsorships: ships
-			.map((s) => ({ ...s, deadline: sponsorshipDeadline(s, today) }))
+			.map((s) => ({
+				...s,
+				deadline: sponsorshipDeadline(s, today),
+				nextTask: (s.projectId && next.get(s.projectId)) || null
+			}))
 			// Newest first; an undated pitch is the newest thing there is.
 			.sort((a, b) => (b.startsOn ?? '9').localeCompare(a.startsOn ?? '9'))
 	};
@@ -181,10 +188,7 @@ export async function deleteSponsor(id: string): Promise<void> {
 	await removeRole(id, 'sponsor', Number(used?.n ?? 0));
 }
 
-export type SponsorshipInput = Omit<
-	NewSponsorship,
-	'id' | 'projectId' | 'fundsProjectId' | 'createdAt' | 'updatedAt'
->;
+export type SponsorshipInput = Omit<NewSponsorship, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>;
 
 /** The sponsorship and its project, owned by the committee holding `sponsor.manage`. */
 export async function createSponsorship(
@@ -192,6 +196,7 @@ export async function createSponsorship(
 	opts: { createdByUserId?: string | null } = {}
 ): Promise<Sponsorship> {
 	await requireRole(input.organizationId, 'sponsor');
+	await assertFundable(input.fundsProjectId);
 	const projectId = crypto.randomUUID();
 	const id = crypto.randomUUID();
 	await db.batch([
@@ -212,6 +217,7 @@ export async function updateSponsorship(
 	id: string,
 	input: Omit<SponsorshipInput, 'organizationId'>
 ): Promise<void> {
+	await assertFundable(input.fundsProjectId);
 	const rows = await db
 		.update(sponsorship)
 		.set({ ...input, updatedAt: new Date() })

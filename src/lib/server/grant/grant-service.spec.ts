@@ -15,8 +15,18 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
-const { grantDeadline, grantDeadlineItems, withDeadlines, createGrant, updateGrant, deleteGrant } =
-	await import('./grant-service');
+const {
+	grantDeadline,
+	grantDeadlineItems,
+	grantStageOffers,
+	withDeadlines,
+	createGrant,
+	updateGrant,
+	deleteGrant,
+	getGrant,
+	applyGrantStage
+} = await import('./grant-service');
+const { FundedProjectError } = await import('#lib/server/development/funding-project.js');
 const { grantDayAt } = await import('#lib/server/volunteer/duty-list-service.js');
 const { grantStages } = await import('#lib/config.js');
 
@@ -205,5 +215,68 @@ describe('deleteGrant', () => {
 		expect(one<{ n: number }>(`select count(*) n from project`).n).toBe(0);
 		expect(one<{ n: number }>(`select count(*) n from work_order`).n).toBe(0);
 		expect(one<{ n: number }>(`select count(*) n from grant_application`).n).toBe(0);
+	});
+});
+
+describe('grantStageOffers', () => {
+	const none = new Set<never>();
+
+	it('offers the award tasks once awarded, and the close-out from a month before the end', () => {
+		const awarded = { status: 'awarded' as const, endsOn: '2027-06-30' };
+		expect(grantStageOffers(awarded, none, TODAY)).toEqual(['award']);
+		expect(grantStageOffers({ ...awarded, endsOn: '2026-10-20' }, none, TODAY)).toEqual([
+			'award',
+			'close_out'
+		]);
+	});
+
+	it('offers nothing already on the project, and nothing before an award', () => {
+		const ending = { status: 'awarded' as const, endsOn: '2026-10-01' };
+		expect(grantStageOffers(ending, new Set(['award', 'close_out'] as const), TODAY)).toEqual([]);
+		expect(grantStageOffers({ status: 'applied', endsOn: '2026-10-01' }, none, TODAY)).toEqual([]);
+	});
+});
+
+describe('the grant page', () => {
+	it('names the earliest open task as the next step', async () => {
+		const grant = await createGrant(input({ applyBy: '2026-12-01' }));
+		const { nextTask } = await getGrant(grant.id, TODAY);
+		expect(nextTask?.title).toBe(tasks(grant.projectId!)[0].title);
+
+		sqlite.exec(`update work_order set resolved_at = 1 where project_id = '${grant.projectId}'`);
+		expect((await getGrant(grant.id, TODAY)).nextTask).toBeNull();
+	});
+
+	it('offers the award tasks until they are applied, then stops', async () => {
+		const grant = await createGrant(input({ status: 'awarded', startsOn: '2026-10-01' }));
+		expect((await getGrant(grant.id, TODAY)).offers).toEqual(['award']);
+
+		sqlite.exec(
+			`insert or ignore into user (id, name, email, email_verified) values ('staff-1', 'Staff', 's@x.test', 1)`
+		);
+		await applyGrantStage(grant.id, 'award', 'staff-1');
+		expect((await getGrant(grant.id, TODAY)).offers).toEqual([]);
+		expect(tasks(grant.projectId!).some((t) => t.section === 'Award')).toBe(true);
+	});
+
+	it('does not offer a stage whose template is switched off', async () => {
+		sqlite.exec(`update duty_list set is_active = 0 where grant_stage = 'award'`);
+		const grant = await createGrant(input({ status: 'awarded' }));
+		expect((await getGrant(grant.id, TODAY)).offers).toEqual([]);
+	});
+});
+
+describe('the funded project', () => {
+	it('refuses a grant or sponsorship project as what the money pays for', async () => {
+		const other = await createGrant(input({ title: 'Other' }));
+		await expect(createGrant(input({ fundsProjectId: other.projectId }))).rejects.toBeInstanceOf(
+			FundedProjectError
+		);
+	});
+
+	it('takes an ordinary project', async () => {
+		sqlite.exec(`insert into project (id, name) values ('fair', 'Repair fair 2027')`);
+		const grant = await createGrant(input({ fundsProjectId: 'fair' }));
+		expect(grant.fundsProjectId).toBe('fair');
 	});
 });

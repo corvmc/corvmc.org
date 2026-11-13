@@ -900,6 +900,9 @@ export const sponsorshipStatusBadge = {
 export const grantStatuses = ['prospect', 'applied', 'awarded', 'declined', 'closed'] as const;
 export type GrantStatus = (typeof grantStatuses)[number];
 
+/** An award that was made: what a funded project counts as given. */
+export const awardedGrantStatuses = ['awarded', 'closed'] as const satisfies readonly GrantStatus[];
+
 /** What the list shows by default; the rest sit behind "Show closed". */
 export const openGrantStatuses = [
 	'prospect',

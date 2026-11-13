@@ -1525,6 +1525,7 @@ describe('committee show work due (#1709)', () => {
 		workOrderId: 'wo-1',
 		title: 'Poster art made',
 		eventTitle: 'Friday Night Fuzz',
+		projectName: 'Friday Night Fuzz',
 		dueAt: '2026-10-09T03:00:00.000Z',
 		groupName: 'Art and Merchandise Committee',
 		groupSlug: 'art-and-merchandise-committee'
@@ -1545,6 +1546,23 @@ describe('committee show work due (#1709)', () => {
 		expect(sent.email.subject).toContain('Poster art made');
 		expect(sent.email.subject).toContain('Friday Night Fuzz');
 		expect(detailText(sent.email)).toContain('Committee: Art and Merchandise Committee');
+	});
+
+	it('names a grant item by its project, two weeks ahead', async () => {
+		await emit(
+			'volunteer.deliverable_due',
+			digest({
+				...item,
+				stage: 'due_14d',
+				title: 'Submit the interim report',
+				eventTitle: null,
+				projectName: 'Practice room soundproofing'
+			})
+		);
+		const [sent] = calls();
+		expect(sent.email.subject).toContain('Submit the interim report');
+		expect(sent.email.subject).toContain('Practice room soundproofing');
+		expect(detailText(sent.email)).toContain('Practice room soundproofing');
 	});
 
 	it('names the show in an overdue subject too, so two shows do not read as duplicates', async () => {

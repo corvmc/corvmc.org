@@ -8,6 +8,9 @@ import { acquisition, purchaseOrder, purchaseOrderLine } from '#lib/server/db/sc
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { financialEntry } from '#lib/server/db/schema/financial.js';
 import { production, productionExpense } from '#lib/server/db/schema/production.js';
+import { grantApplication } from '#lib/server/db/schema/grant.js';
+import { sponsorship } from '#lib/server/db/schema/sponsor.js';
+import { organization } from '#lib/server/db/schema/party.js';
 import { eventListingColumns } from '#lib/server/event/event-columns.js';
 import {
 	and,
@@ -36,7 +39,9 @@ import {
 import { createShowProject } from '#lib/server/production/production-project.js';
 import { captureException } from '#lib/server/sentry.js';
 import {
+	awardedGrantStatuses,
 	contractorJobStatusesWithoutSpend,
+	creditedSponsorshipStatuses,
 	DEFAULT_TIMEZONE,
 	projectArchivedStatuses,
 	valueOfMinutesCents,
@@ -605,8 +610,76 @@ export interface ProjectBurn {
 		/** The rate used, so a report built on this can cite itself. */
 		hourValueCents: number;
 	};
+	/**
+	 * What the project was given (#2622): awarded grants and running or finished
+	 * sponsorships whose `funds_project_id` names it, each listed. Beside the
+	 * spend, never netted against it: the budget is a ceiling, not a balance.
+	 */
+	funding: {
+		grantsCents: number;
+		sponsorshipsCents: number;
+		totalCents: number;
+		sources: FundingSource[];
+	};
 	/** Budget minus cash spend. Null when no budget is set — not zero. */
 	remainingCents: number | null;
+}
+
+export interface FundingSource {
+	kind: 'grant' | 'sponsorship';
+	id: string;
+	title: string;
+	/** The funder or sponsor, which a sponsorship's link goes to. */
+	organizationId: string;
+	organizationName: string;
+	cents: number;
+}
+
+/** Grants and sponsorships that name the project as what they pay for, and have come through. */
+async function fundingOf(projectId: string): Promise<ProjectBurn['funding']> {
+	const [grants, ships] = await Promise.all([
+		db
+			.select({
+				id: grantApplication.id,
+				title: grantApplication.title,
+				organizationId: grantApplication.organizationId,
+				organizationName: organization.name,
+				cents: grantApplication.amountAwardedCents
+			})
+			.from(grantApplication)
+			.innerJoin(organization, eq(organization.id, grantApplication.organizationId))
+			.where(
+				and(
+					eq(grantApplication.fundsProjectId, projectId),
+					inArray(grantApplication.status, [...awardedGrantStatuses])
+				)
+			),
+		db
+			.select({
+				id: sponsorship.id,
+				title: sponsorship.title,
+				organizationId: sponsorship.organizationId,
+				organizationName: organization.name,
+				cents: sponsorship.amountCents
+			})
+			.from(sponsorship)
+			.innerJoin(organization, eq(organization.id, sponsorship.organizationId))
+			.where(
+				and(
+					eq(sponsorship.fundsProjectId, projectId),
+					inArray(sponsorship.status, [...creditedSponsorshipStatuses])
+				)
+			)
+	]);
+	const sources: FundingSource[] = [
+		...grants.map((g) => ({ ...g, kind: 'grant' as const, cents: g.cents ?? 0 })),
+		...ships.map((s) => ({ ...s, kind: 'sponsorship' as const, cents: s.cents ?? 0 }))
+	];
+	const sum = (kind: FundingSource['kind']) =>
+		sources.filter((s) => s.kind === kind).reduce((n, s) => n + s.cents, 0);
+	const grantsCents = sum('grant');
+	const sponsorshipsCents = sum('sponsorship');
+	return { grantsCents, sponsorshipsCents, totalCents: grantsCents + sponsorshipsCents, sources };
 }
 
 export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
@@ -691,7 +764,7 @@ export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 		.innerJoin(production, eq(production.id, productionExpense.productionId))
 		.where(eq(production.projectId, projectId));
 
-	const hourValueCents = await getHourValueCents();
+	const [hourValueCents, funding] = await Promise.all([getHourValueCents(), fundingOf(projectId)]);
 
 	const show = {
 		ticketRevenueCents: Number(ledger?.ticketRevenueCents ?? 0),
@@ -723,6 +796,7 @@ export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 			donatedGoodsCents: Number(acquired?.donatedCents ?? 0),
 			hourValueCents
 		},
+		funding,
 		remainingCents: proj.budgetCents === null ? null : proj.budgetCents - totalCents
 	};
 }

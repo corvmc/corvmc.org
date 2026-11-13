@@ -54,8 +54,9 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	emit.mockImplementation(async () => undefined);
 	marks = [];
-	// Two items due soon, two late: one person, both stages, one pass.
+	// Nothing two weeks out; two items due soon, two late: one person, one pass.
 	listDeliverablesDueBetween
+		.mockResolvedValueOnce([])
 		.mockResolvedValueOnce([
 			item('wo-1', '2026-10-27T03:00:00Z'),
 			item('wo-2', '2026-10-28T03:00:00Z')
@@ -122,6 +123,7 @@ describe('a digest whose send fails for one recipient', () => {
 	beforeEach(() => {
 		listDeliverablesDueBetween.mockReset();
 		listDeliverablesDueBetween
+			.mockResolvedValueOnce([])
 			.mockResolvedValueOnce([
 				item('wo-1', '2026-10-27T03:00:00Z', [ada, bo]),
 				item('wo-2', '2026-10-28T03:00:00Z', [bo])

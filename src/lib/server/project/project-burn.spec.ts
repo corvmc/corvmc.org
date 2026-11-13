@@ -24,7 +24,13 @@ function engagement(id: string, workOrderId: string, status: string, money: stri
 }
 
 beforeEach(() => {
-	for (const table of ['contractor_job', 'work_order', 'project']) {
+	for (const table of [
+		'contractor_job',
+		'work_order',
+		'grant_application',
+		'sponsorship',
+		'project'
+	]) {
 		sqlite.exec(`delete from ${table}`);
 	}
 	sqlite.exec(clearOrganizationsSql);
@@ -80,5 +86,44 @@ describe('attached contractor jobs', () => {
 		expect(jobs.map((j) => [j.id, j.title, j.workOrderId])).toEqual([
 			['job-1', 'Add a dedicated circuit', 'wo-1']
 		]);
+	});
+});
+
+describe('what a project was given (#2622)', () => {
+	beforeEach(() => {
+		sqlite.exec(
+			`insert into organization (id, name) values ('oac', 'Arts Commission'), ('shop', 'Guitar Shop')`
+		);
+		const grant = (id: string, status: string, project: string, cents: number) =>
+			`('${id}', 'oac', '${id}', '${status}', '${project}', ${cents})`;
+		sqlite.exec(
+			`insert into grant_application (id, organization_id, title, status, funds_project_id, amount_awarded_cents) values
+				${grant('won', 'awarded', 'proj-1', 500000)},
+				${grant('spent', 'closed', 'proj-1', 100000)},
+				${grant('pending', 'applied', 'proj-1', 900000)},
+				${grant('elsewhere', 'awarded', 'proj-2', 700000)}`
+		);
+		const ship = (id: string, status: string, cents: number) =>
+			`('${id}', 'shop', '${id}', '${status}', 'proj-1', ${cents})`;
+		sqlite.exec(
+			`insert into sponsorship (id, organization_id, title, status, funds_project_id, amount_cents) values
+				${ship('running', 'active', 25000)}, ${ship('pitched', 'prospect', 99000)}`
+		);
+	});
+
+	it('counts awarded grants and running or finished sponsorships that name the project', async () => {
+		const { funding } = await getProjectBurn('proj-1');
+		expect(funding).toMatchObject({
+			grantsCents: 600_000,
+			sponsorshipsCents: 25_000,
+			totalCents: 625_000
+		});
+		expect(funding.sources.map((s) => s.id).sort()).toEqual(['running', 'spent', 'won']);
+	});
+
+	it('leaves the spend and the remaining budget alone', async () => {
+		sqlite.exec(`update project set budget_cents = 1000 where id = 'proj-1'`);
+		const burn = await getProjectBurn('proj-1');
+		expect([burn.cash.totalCents, burn.remainingCents]).toEqual([0, 1000]);
 	});
 });

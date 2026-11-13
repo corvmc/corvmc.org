@@ -17,15 +17,24 @@
 		startsOn: string | null;
 		endsOn: string | null;
 		notes: string | null;
+		fundsProjectId: string | null;
 	}
 
 	let {
 		fields,
+		projects,
 		value
 	}: {
 		fields: (typeof createSponsorship)['fields'];
+		/** What the money can pay for; blank is general support. */
+		projects: { id: string; name: string }[];
 		value?: Value;
 	} = $props();
+
+	const projectOptions = $derived([
+		{ value: '', label: m.grant_grant_fields_general_support_label() },
+		...projects.map((p) => ({ value: p.id, label: p.name }))
+	]);
 
 	const statusOptions = sponsorshipStatuses.map((s) => ({
 		value: s,
@@ -66,6 +75,14 @@
 	value={value?.startsOn ?? ''}
 />
 <Field field={fields.endsOn} type="date" label={m.staff_ends_label()} value={value?.endsOn ?? ''} />
+<Field
+	field={fields.fundsProjectId}
+	type="select"
+	label={m.grant_grant_fields_funded_project_label()}
+	description={m.staff_sponsors_id_sponsorship_fields_funded_project_body()}
+	options={projectOptions}
+	value={value?.fundsProjectId ?? ''}
+/>
 <Field
 	field={fields.notes}
 	type="textarea"

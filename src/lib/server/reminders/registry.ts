@@ -4,7 +4,8 @@ import { user } from '#lib/server/db/schema/authentication.js';
 import { reminderSent } from '#lib/server/db/schema/reminder.js';
 import { eq, and, gt, gte, lt, isNotNull, ne, or, sql } from 'drizzle-orm';
 import { formatDateFull, formatTimeSimple } from '#lib/server/reservation/timezone.js';
-import { DEFAULT_TIMEZONE, clubToday } from '#lib/config.js';
+import { DEFAULT_TIMEZONE, clubToday, fundingProjectKinds, type ProjectKind } from '#lib/config.js';
+import type { DeliverableDueItem } from '#lib/server/event-bus/event-bus.js';
 import { addIsoDays } from '#lib/utils/deadline.js';
 import { listDevelopmentDeadlinesBetween } from '#lib/server/development/deadline-service.js';
 import {
@@ -123,21 +124,28 @@ function radioAttestationExpiry(stage: '30d' | '7d', from: number, until: number
 }
 
 /**
- * One stage of a committee's show work (#1709): open items due between `from`
- * and `until` days from now, done ones dropped. The subject carries the due
- * date, so an item whose date moves is owed its reminders again. A digest: both
- * stages reach each person as one mail per pass (#2507).
+ * One stage of a committee's work (#1709): open items due between `from` and
+ * `until` days from now, done ones dropped, on projects of `projectKinds` when
+ * given. The subject carries the due date, so an item whose date moves is owed
+ * its reminders again. A digest: every stage reaches each person as one mail
+ * per pass (#2507).
  */
-function deliverablesDue(stage: 'due_3d' | 'overdue', from: number, until: number) {
+function deliverablesDue(
+	stage: DeliverableDueItem['stage'],
+	from: number,
+	until: number,
+	projectKinds?: readonly ProjectKind[]
+) {
 	return defineReminder({
-		key: stage === 'due_3d' ? 'deliverable_due_3d' : 'deliverable_overdue',
+		key: stage === 'overdue' ? 'deliverable_overdue' : `deliverable_${stage}`,
 		subjectType: 'work_order',
 		event: 'volunteer.deliverable_due' as const,
 		digest: true,
 		async due(now: Date) {
 			const rows = await listDeliverablesDueBetween(
 				new Date(now.getTime() + from * DAY),
-				new Date(now.getTime() + until * DAY)
+				new Date(now.getTime() + until * DAY),
+				projectKinds ? { projectKinds } : {}
 			);
 			return rows
 				.filter((r) => r.recipients.length > 0)
@@ -149,6 +157,7 @@ function deliverablesDue(stage: 'due_3d' | 'overdue', from: number, until: numbe
 						workOrderId: r.id,
 						title: r.title,
 						eventTitle: r.eventTitle,
+						projectName: r.projectName,
 						dueAt: r.dueAt.toISOString(),
 						groupName: r.groupName,
 						groupSlug: r.groupSlug
@@ -436,6 +445,8 @@ export const reminders: ReminderDefinition[] = [
 	radioAttestationExpiry('7d', 0, 7),
 	// Non-overlapping: due in the next three days, then late by one to fourteen.
 	// Past a fortnight late it gets no more; the committee's queue shows it red.
+	// A grant report needs more warning than a show item (#2622).
+	deliverablesDue('due_14d', 4, 14, fundingProjectKinds),
 	deliverablesDue('due_3d', 0, 3),
 	deliverablesDue('overdue', -14, -1)
 ];

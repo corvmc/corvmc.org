@@ -15,7 +15,7 @@ vi.mock('#lib/server/authorization.js', () => ({
 
 const service = {
 	listSponsors: vi.fn(async () => []),
-	getSponsor: vi.fn(async () => ({ id: 's1' })),
+	getSponsor: vi.fn(async () => ({ id: 's1', sponsorships: [] })),
 	createSponsor: vi.fn(async () => ({ id: 's1' })),
 	updateSponsor: vi.fn(async () => undefined),
 	deleteSponsor: vi.fn(async () => undefined),
@@ -40,6 +40,9 @@ const people = {
 	savePrimaryContact: vi.fn(async () => undefined)
 };
 vi.mock('#lib/server/party/primary-contact.js', () => people);
+vi.mock('#lib/server/development/funding-project.js', () => ({
+	listFundableProjects: vi.fn(async () => [])
+}));
 vi.mock('#lib/server/storage.js', () => ({
 	validateUpload: () => null,
 	resolveImageUrl: (k: string | null) => (k ? `https://img/${k}` : null)

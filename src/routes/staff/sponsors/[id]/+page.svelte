@@ -176,7 +176,7 @@
 			>
 				{#snippet form()}
 					<input {...createSponsorship.fields.sponsorId.as('hidden', sponsor.id)} />
-					<SponsorshipFields fields={createSponsorship.fields} />
+					<SponsorshipFields fields={createSponsorship.fields} projects={sponsor.projects} />
 				{/snippet}
 			</Action>
 		{/snippet}
@@ -203,8 +203,20 @@
 							</Badge>
 						</td>
 						<td class="cell-primary">
-							<span class="font-medium">{s.title}</span>
+							{#if s.projectId}
+								<a
+									class="link font-medium"
+									href={resolve('/staff/tasks/projects/[id]', { id: s.projectId })}>{s.title}</a
+								>
+							{:else}
+								<span class="font-medium">{s.title}</span>
+							{/if}
 							{#if s.tier}<div class="text-muted">{s.tier}</div>{/if}
+							{#if s.nextTask}
+								<div class="truncate text-muted">
+									{m.staff_sponsors_id_next_task_text({ title: s.nextTask.title })}
+								</div>
+							{/if}
 						</td>
 						<td class="whitespace-nowrap">
 							{formatIsoDay(s.startsOn)} –
@@ -247,7 +259,7 @@
 								{#snippet form()}
 									<input {...edit.fields.id.as('hidden', s.id)} />
 									<input {...edit.fields.sponsorId.as('hidden', sponsor.id)} />
-									<SponsorshipFields fields={edit.fields} value={s} />
+									<SponsorshipFields fields={edit.fields} projects={sponsor.projects} value={s} />
 								{/snippet}
 							</Action>
 							<Action
