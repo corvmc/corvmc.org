@@ -12,7 +12,7 @@ import { incident } from '#lib/server/db/schema/incident.js';
 import { workOrder } from '#lib/server/db/schema/volunteer.js';
 import { campaign } from '#lib/server/db/schema/marketing.js';
 import { and, asc, desc, eq, gt, gte, inArray, isNull, lt, ne, notInArray, sql } from 'drizzle-orm';
-import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
+import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import { detachSlot } from '#lib/server/media/media-service.js';
 import { buildRRule, generationWindowEnd, getOccurrences } from './rrule-helpers';
 import { cancel as cancelReservation, staffCreate } from './reservation-service';
@@ -47,18 +47,18 @@ const RESCHEDULE_REASON = 'Recurring schedule changed';
  * rows (`event_group`, `ticket_sale`) are not records. `event-series-touch.spec`
  * fails when a new reference to `event_listing` is in neither list.
  */
-export const LISTING_RECORDS: SQLiteColumn[] = [
-	eventRsvp.eventId,
-	ticket.eventId,
-	eventBand.eventId,
-	sponsorPlacement.eventId,
-	marketDay.eventId,
-	marketVendor.eventId,
-	artifactRequest.eventId,
-	donation.eventId,
-	incident.eventId,
-	workOrder.eventId,
-	campaign.eventId
+export const LISTING_RECORDS: { table: SQLiteTable; column: SQLiteColumn }[] = [
+	{ table: eventRsvp, column: eventRsvp.eventId },
+	{ table: ticket, column: ticket.eventId },
+	{ table: eventBand, column: eventBand.eventId },
+	{ table: sponsorPlacement, column: sponsorPlacement.eventId },
+	{ table: marketDay, column: marketDay.eventId },
+	{ table: marketVendor, column: marketVendor.eventId },
+	{ table: artifactRequest, column: artifactRequest.eventId },
+	{ table: donation, column: donation.eventId },
+	{ table: incident, column: incident.eventId },
+	{ table: workOrder, column: workOrder.eventId },
+	{ table: campaign, column: campaign.eventId }
 ];
 
 /** An occurrence no record touches, which a schedule change may delete. */
@@ -66,7 +66,8 @@ const untouched = () =>
 	and(
 		isNull(eventListing.projectId),
 		...LISTING_RECORDS.map(
-			(col) => sql`NOT EXISTS (SELECT 1 FROM ${col.table} WHERE ${col} = ${eventListing.id})`
+			({ table, column }) =>
+				sql`NOT EXISTS (SELECT 1 FROM ${table} WHERE ${column} = ${eventListing.id})`
 		)
 	);
 
