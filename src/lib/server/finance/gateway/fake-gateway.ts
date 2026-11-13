@@ -174,13 +174,6 @@ function fakeCheckoutUrl(params: Stripe.Checkout.SessionCreateParams, sessionId:
 // ---------------------------------------------------------------------------
 
 /**
- * A `cus_seed_…` customer has a card and a billing history; it just does not
- * exist in Stripe. Without this every billing surface renders empty for a
- * seeded member. Materialised into the store on first read rather than
- * synthesized on the way out, so detaching and re-defaulting work for real.
- * Keyed on the seed's prefix and nothing an e2e fixture uses.
- */
-/**
  * A `pi_seed_…` or `pr_seed_…` id is a payment the seed wrote onto a row, so a
  * seeded payment can be refunded locally (#2835). The seed's amount is not
  * known here; zero means a refund reports nothing back to the store.
@@ -200,6 +193,13 @@ function materialiseSeedPayment(id: string): void {
 	}
 }
 
+/**
+ * A `cus_seed_…` customer has a card and a billing history; it just does not
+ * exist in Stripe. Without this every billing surface renders empty for a
+ * seeded member. Materialised into the store on first read rather than
+ * synthesized on the way out, so detaching and re-defaulting work for real.
+ * Keyed on the seed's prefix and nothing an e2e fixture uses.
+ */
 function materialiseSeedCustomer(customerId: string | undefined): void {
 	if (!customerId?.startsWith('cus_seed')) return;
 	if (seeded.has(customerId)) return;
