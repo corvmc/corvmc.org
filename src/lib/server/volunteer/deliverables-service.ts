@@ -18,6 +18,7 @@ import { artifactRequest } from '#lib/server/db/schema/artifact-request.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
 import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { mediaAttachment } from '#lib/server/db/schema/media.js';
+import { project } from '#lib/server/db/schema/project.js';
 import {
 	volunteerRole,
 	workOrderAssignee,
@@ -25,7 +26,7 @@ import {
 	workTask
 } from '#lib/server/db/schema/volunteer.js';
 import { DomainError } from '#lib/server/domain-error.js';
-import type { WorkDoneCondition } from '#lib/config.js';
+import type { ProjectKind, WorkDoneCondition } from '#lib/config.js';
 import { evaluateDone, type DeliverableState } from './done-conditions';
 import { assertOwningCommittee } from './duty-list-service';
 
@@ -49,6 +50,8 @@ export interface DeliverableRow {
 	eventId: string | null;
 	eventTitle: string | null;
 	eventStartsAt: Date | null;
+	/** The project the item is on, which names a grant or sponsorship that has no show. */
+	projectName: string | null;
 	dueAt: Date | null;
 	groupId: string | null;
 	groupName: string | null;
@@ -71,6 +74,7 @@ async function readDeliverables(where: SQL): Promise<DeliverableRow[]> {
 			eventId: workOrder.eventId,
 			eventTitle: eventListing.title,
 			eventStartsAt: eventListing.startsAt,
+			projectName: project.name,
 			dueAt: workOrder.dueAt,
 			groupId: workOrder.groupId,
 			groupName: group.name,
@@ -82,6 +86,7 @@ async function readDeliverables(where: SQL): Promise<DeliverableRow[]> {
 		// Left: a committee's task may not have a role yet, and is still its deliverable.
 		.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 		.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
+		.leftJoin(project, eq(project.id, workOrder.projectId))
 		.leftJoin(group, eq(group.id, workOrder.groupId))
 		.where(where)
 		.orderBy(sql`${workOrder.dueAt} is null`, asc(workOrder.dueAt), asc(workOrder.id));
@@ -130,6 +135,7 @@ async function readDeliverables(where: SQL): Promise<DeliverableRow[]> {
 			eventId: r.eventId,
 			eventTitle: r.eventTitle,
 			eventStartsAt: r.eventStartsAt,
+			projectName: r.projectName,
 			dueAt: r.dueAt,
 			groupId: r.groupId,
 			groupName: r.groupName,
@@ -315,16 +321,39 @@ export interface DueDeliverable {
 	title: string;
 	dueAt: Date;
 	eventTitle: string | null;
+	projectName: string | null;
 	groupName: string;
 	groupSlug: string;
 	/** Its live assignees, or the owning committee's active members when nobody has it. */
 	recipients: Recipient[];
 }
 
-/** Committee-owned items due in `[from, to]` that are not already done, and whom to tell. */
-export async function listDeliverablesDueBetween(from: Date, to: Date): Promise<DueDeliverable[]> {
+/**
+ * Committee-owned items due in `[from, to]` that are not already done, and whom
+ * to tell. `projectKinds` narrows it to items on projects of those kinds.
+ */
+export async function listDeliverablesDueBetween(
+	from: Date,
+	to: Date,
+	opts: { projectKinds?: readonly ProjectKind[] } = {}
+): Promise<DueDeliverable[]> {
+	const onKinds = opts.projectKinds
+		? inArray(
+				workOrder.projectId,
+				db
+					.select({ id: project.id })
+					.from(project)
+					.where(inArray(project.kind, [...opts.projectKinds]))
+			)
+		: undefined;
 	const rows = await readDeliverables(
-		and(isNotNull(workOrder.groupId), live, gte(workOrder.dueAt, from), lte(workOrder.dueAt, to))!
+		and(
+			isNotNull(workOrder.groupId),
+			live,
+			gte(workOrder.dueAt, from),
+			lte(workOrder.dueAt, to),
+			onKinds
+		)!
 	);
 	const owed = rows.filter((r) => r.state === 'open' || r.state === 'overdue');
 	if (owed.length === 0) return [];
@@ -349,6 +378,7 @@ export async function listDeliverablesDueBetween(from: Date, to: Date): Promise<
 		title: r.title,
 		dueAt: r.dueAt!,
 		eventTitle: r.eventTitle,
+		projectName: r.projectName,
 		groupName: r.groupName ?? '',
 		groupSlug: slugOf.get(r.groupId!) ?? '',
 		recipients:

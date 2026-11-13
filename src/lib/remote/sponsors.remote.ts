@@ -8,6 +8,7 @@ import * as service from '#lib/server/sponsor/sponsor-service.js';
 import * as credits from '#lib/server/sponsor/credit-service.js';
 import { savePrimaryContact, withPrimaryContact } from '#lib/server/party/primary-contact.js';
 import { resolveImageUrl, validateUpload } from '#lib/server/storage.js';
+import { listFundableProjects } from '#lib/server/development/funding-project.js';
 import { clubToday, LONG_TEXT_MAX, SHORT_TEXT_MAX, sponsorshipStatuses } from '#lib/config.js';
 
 /** An `<input type="date">` value, or blank for "no date". */
@@ -45,7 +46,9 @@ const sponsorshipFields = {
 	amountCents: z.number().int().min(0).optional(),
 	startsOn: isoDay,
 	endsOn: isoDay,
-	notes: optionalText(LONG_TEXT_MAX)
+	notes: optionalText(LONG_TEXT_MAX),
+	/** Blank for general support. */
+	fundsProjectId: z.string().optional()
 };
 
 function sponsorshipInput(d: z.infer<z.ZodObject<typeof sponsorshipFields>>) {
@@ -56,7 +59,8 @@ function sponsorshipInput(d: z.infer<z.ZodObject<typeof sponsorshipFields>>) {
 		amountCents: d.amountCents ?? null,
 		startsOn: d.startsOn || null,
 		endsOn: d.endsOn || null,
-		notes: d.notes || null
+		notes: d.notes || null,
+		fundsProjectId: d.fundsProjectId || null
 	};
 }
 
@@ -78,8 +82,12 @@ export const getSponsorDetail = query(z.string(), async (id) => {
 			credits.listPlacementsForSponsor(id),
 			credits.sponsorLogoKey(id)
 		]);
-		const [withContact] = await withPrimaryContact([detail]);
-		return { ...withContact, placements, logoUrl: resolveImageUrl(logoKey) };
+		// A sponsorship that already names an archived project keeps it pickable.
+		const [[withContact], projects] = await Promise.all([
+			withPrimaryContact([detail]),
+			listFundableProjects(detail.sponsorships.map((s) => s.fundsProjectId))
+		]);
+		return { ...withContact, placements, logoUrl: resolveImageUrl(logoKey), projects };
 	} catch (err) {
 		mapDomainError(err);
 	}
@@ -160,7 +168,11 @@ export const updateSponsorship = form(
 	z.object({ id: z.string().min(1), sponsorId: z.string().min(1), ...sponsorshipFields }),
 	async (data) => {
 		await requireCapability('sponsor.manage');
-		await service.updateSponsorship(data.id, sponsorshipInput(data));
+		try {
+			await service.updateSponsorship(data.id, sponsorshipInput(data));
+		} catch (err) {
+			mapDomainError(err);
+		}
 		await getSponsorDetail(data.sponsorId).refresh();
 		return { success: true };
 	}

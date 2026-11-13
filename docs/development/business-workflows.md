@@ -1704,7 +1704,9 @@ publish and close-out gates (`event/show-readiness.ts`), and a deliverable never
   notifies each committee that had one (`production/cancellation-notice.ts`).
 - **Reminders:** `deliverable_due_3d` and `deliverable_overdue` in the reminders registry, over
   open, committee-owned items with a due date. Items finished early or overdue by more than 14
-  days are not chased.
+  days are not chased. Items on a grant or sponsorship project also get `deliverable_due_14d`,
+  4 to 14 days out, because a report needs more lead time (#2622). An item with no show is
+  named by its project in the mail.
 - The coordinator's unscheduled-work queue leaves out committee-owned items.
 
 ### Data touched
@@ -2336,6 +2338,18 @@ owes, follow-ups) is that project's tasks, with due dates, assignees and committ
   dates). Without that date its tasks wait, and `updateGrant` places them once it is set. Editing
   the title renames the project; deleting the row deletes the project and its tasks. The three
   stage templates come from a migration and carry their help text in each item's notes.
+- **Tasks and the next step:** a task added by hand to a grant or sponsorship project carries
+  the owning committee (`createTask`), so its reminders reach the committee while nobody holds
+  it. `nextOpenTasks` names each project's earliest open task, soonest due first; the grant page
+  and each sponsorship row show it.
+- **Stage offers:** `grantStageOffers` offers the `award` template once a grant is Awarded and
+  the `close_out` template from 30 days before its award end, each until it is on the project.
+  The grant page shows each offer with one button (`applyGrantStage`); nothing applies them
+  unasked.
+- **Funded project:** `funds_project_id` on a grant or sponsorship names what the money pays
+  for, never another grant or sponsorship project (`assertFundable`). `getProjectBurn` returns
+  `funding`: awarded or closed grants and active or ended sponsorships naming the project, each
+  listed, beside the spend and never subtracted from it. The project's budget report shows them.
 - **People:** each form's contact name, email and phone is the organization's first `contact`,
   written and read through `primary-contact.ts`, which calls `contact-service.ts`. Seeing them needs
   `contact.read` and changing them `contact.manage`, which staff and the Development committee

@@ -3,6 +3,7 @@ import { db } from '#lib/server/db/index.js';
 import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import {
 	contractorJobStatusesWithoutSpend,
+	fundingProjectKinds,
 	positions,
 	type ContractorJobStatus
 } from '#lib/config.js';
@@ -12,7 +13,7 @@ import { group, groupMember } from '#lib/server/db/schema/group.js';
 import { inventoryAsset, inventoryItem } from '#lib/server/db/schema/inventory.js';
 import { contractorJob } from '#lib/server/db/schema/contractor.js';
 import { organization } from '#lib/server/db/schema/party.js';
-import { projectCommittee } from '#lib/server/db/schema/project.js';
+import { project, projectCommittee } from '#lib/server/db/schema/project.js';
 import {
 	volunteerRole,
 	dutyList,
@@ -195,7 +196,10 @@ export async function createTask(data: {
 	const sectionId = data.sectionId || null;
 	if (sectionId) await requireSection(data.projectId, sectionId);
 	if (!data.title.trim()) throw new TaskValidationError('Give the task a title.');
-	const order = (await nextTaskOrders(data.projectId)).get(sectionId) ?? 0;
+	const [order, fundingOwner] = await Promise.all([
+		nextTaskOrders(data.projectId).then((o) => o.get(sectionId) ?? 0),
+		fundingOwnerOf(data.projectId)
+	]);
 	const row = await createWorkOrder({
 		title: data.title,
 		projectId: data.projectId,
@@ -203,7 +207,8 @@ export async function createTask(data: {
 		sortOrder: order,
 		createdByUserId: data.createdByUserId,
 		eventId: data.eventId,
-		groupId: data.groupId,
+		// A committee named here wins; a grant's or sponsorship's task falls back to its owner.
+		groupId: data.groupId || fundingOwner,
 		volunteerRoleId: data.volunteerRoleId
 	});
 	await recordAuditEntry({
@@ -212,6 +217,26 @@ export async function createTask(data: {
 		details: { projectId: data.projectId, title: row.title ?? '' }
 	});
 	return row;
+}
+
+/**
+ * A grant's or sponsorship's owning committee, so a task added to one carries
+ * it and the committee's reminders reach it unassigned (#2622). Null elsewhere.
+ */
+async function fundingOwnerOf(projectId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ groupId: projectCommittee.groupId })
+		.from(projectCommittee)
+		.innerJoin(project, eq(project.id, projectCommittee.projectId))
+		.where(
+			and(
+				eq(projectCommittee.projectId, projectId),
+				eq(projectCommittee.role, 'owner'),
+				inArray(project.kind, [...fundingProjectKinds])
+			)
+		)
+		.limit(1);
+	return row?.groupId ?? null;
 }
 
 function sectionIs(sectionId: string | null) {

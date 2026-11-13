@@ -1,9 +1,10 @@
-import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 import type { BatchItem } from 'drizzle-orm/batch';
 import { db } from '#lib/server/db/index.js';
 import { group, groupCapability } from '#lib/server/db/schema/group.js';
 import { project } from '#lib/server/db/schema/project.js';
-import { dutyList, workOrder } from '#lib/server/db/schema/volunteer.js';
+import { dutyList, volunteerRole, workOrder } from '#lib/server/db/schema/volunteer.js';
+import { DomainError } from '#lib/server/domain-error.js';
 import { ownerRow } from '#lib/server/project/project-service.js';
 import {
 	applyDutyList,
@@ -11,7 +12,7 @@ import {
 	type ApplyDutyListResult
 } from '#lib/server/volunteer/duty-list-service.js';
 import { captureException } from '#lib/server/sentry.js';
-import type { GrantStage } from '#lib/config.js';
+import { fundingProjectKinds, projectArchivedStatuses, type GrantStage } from '#lib/config.js';
 
 /**
  * A grant application or a sponsorship is a project of its own kind, holding
@@ -123,4 +124,97 @@ export async function stampGrantStage(
 		captureException(err, { event: 'grant.template', projectId, stage });
 		return null;
 	}
+}
+
+export class FundedProjectError extends DomainError {
+	readonly httpStatus = 400;
+	constructor() {
+		super('Pick a project the money pays for, not a grant or sponsorship.');
+	}
+}
+
+/** What the money pays for must be a real project, and not another funding record's. */
+export async function assertFundable(projectId: string | null | undefined): Promise<void> {
+	if (!projectId) return;
+	const [row] = await db
+		.select({ kind: project.kind })
+		.from(project)
+		.where(eq(project.id, projectId))
+		.limit(1);
+	if (!row || (fundingProjectKinds as readonly string[]).includes(row.kind)) {
+		throw new FundedProjectError();
+	}
+}
+
+/**
+ * The projects money can be pointed at: live ones that are not themselves a
+ * grant or sponsorship, plus any in `keep` that a record already names, archived or not.
+ */
+export async function listFundableProjects(keep: (string | null | undefined)[] = []) {
+	const kept = keep.filter((id): id is string => Boolean(id));
+	return db
+		.select({ id: project.id, name: project.name })
+		.from(project)
+		.where(
+			and(
+				notInArray(project.kind, [...fundingProjectKinds]),
+				or(
+					notInArray(project.status, [...projectArchivedStatuses]),
+					kept.length ? inArray(project.id, kept) : undefined
+				)
+			)
+		)
+		.orderBy(asc(project.name));
+}
+
+export interface NextTask {
+	id: string;
+	title: string;
+	dueAt: Date | null;
+}
+
+/**
+ * Each project's earliest open task: the soonest due, then undated ones in list
+ * order. What "next step" means on a grant or sponsorship.
+ */
+export async function nextOpenTasks(projectIds: string[]): Promise<Map<string, NextTask>> {
+	if (projectIds.length === 0) return new Map();
+	const rows = await db
+		.select({
+			projectId: workOrder.projectId,
+			id: workOrder.id,
+			title: sql<string>`coalesce(${workOrder.title}, ${volunteerRole.name}, 'Untitled task')`,
+			dueAt: workOrder.dueAt
+		})
+		.from(workOrder)
+		.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		.where(
+			and(
+				inArray(workOrder.projectId, projectIds),
+				isNull(workOrder.resolvedAt),
+				isNull(workOrder.cancelledAt)
+			)
+		)
+		.orderBy(sql`${workOrder.dueAt} is null`, asc(workOrder.dueAt), asc(workOrder.sortOrder));
+	const next = new Map<string, NextTask>();
+	for (const { projectId, ...task } of rows) {
+		if (projectId && !next.has(projectId)) next.set(projectId, task);
+	}
+	return next;
+}
+
+/** The stages whose template is on the project, counting only work not called off. */
+export async function appliedGrantStages(projectId: string): Promise<Set<GrantStage>> {
+	const rows = await db
+		.selectDistinct({ stage: dutyList.grantStage })
+		.from(workOrder)
+		.innerJoin(dutyList, eq(dutyList.id, workOrder.dutyListId))
+		.where(
+			and(
+				eq(workOrder.projectId, projectId),
+				isNull(workOrder.cancelledAt),
+				isNotNull(dutyList.grantStage)
+			)
+		);
+	return new Set(rows.flatMap((r) => (r.stage ? [r.stage] : [])));
 }

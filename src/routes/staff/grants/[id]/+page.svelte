@@ -9,10 +9,21 @@
 	import Action from '#lib/components/ui/Action.svelte';
 	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
+	import Form, { SubmitButton } from '#lib/components/ui/Form/index.js';
 	import GrantFields from '#lib/components/grant/GrantFields.svelte';
-	import { getGrantDetail, updateGrant, deleteGrant } from '#lib/remote/grants.remote.js';
-	import { grantStatusLabels, grantStatusBadge, grantDeadlineLabels } from '#lib/config.js';
-	import { formatCents } from '#lib/utils/format.js';
+	import {
+		getGrantDetail,
+		updateGrant,
+		deleteGrant,
+		applyGrantStage
+	} from '#lib/remote/grants.remote.js';
+	import {
+		grantStatusLabels,
+		grantStatusBadge,
+		grantDeadlineLabels,
+		type GrantStage
+	} from '#lib/config.js';
+	import { formatCents, formatDateShort } from '#lib/utils/format.js';
 	import { formatIsoDay } from '#lib/utils/deadline.js';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -20,9 +31,22 @@
 
 	const params = routeParams('id');
 
+	/** Offered, never applied unasked: the button stamps the stage's template. */
+	const stageOffer: Partial<Record<GrantStage, { text: string; label: string }>> = {
+		award: {
+			text: m.staff_grants_id_award_offer_body(),
+			label: m.staff_grants_id_add_award_tasks_label()
+		},
+		close_out: {
+			text: m.staff_grants_id_close_out_offer_body(),
+			label: m.staff_grants_id_add_close_out_tasks_label()
+		}
+	};
+
 	const id = $derived(params.id);
 	const grant = $derived(await getGrantDetail(id));
 	const editForm = $derived(updateGrant.for(id));
+	const fundedProject = $derived(grant.projects.find((p) => p.id === grant.fundsProjectId));
 
 	const cents = (n: number | null) => (n != null ? formatCents(n) : '—');
 </script>
@@ -39,12 +63,34 @@
 	>
 		{#snippet form()}
 			<input {...editForm.fields.id.as('hidden', grant.id)} />
-			<GrantFields fields={editForm.fields} funders={grant.funders} value={grant} />
+			<GrantFields
+				fields={editForm.fields}
+				funders={grant.funders}
+				projects={grant.projects}
+				value={grant}
+			/>
 		{/snippet}
 	</Action>
 </PageHeader>
 
 <PageContent width="3xl">
+	{#each grant.offers as stage (stage)}
+		{@const offer = applyGrantStage.for(stage)}
+		{@const copy = stageOffer[stage]}
+		{#if copy}
+			<Alert type="info">
+				<div class="flex flex-wrap items-center justify-between gap-2">
+					<span>{copy.text}</span>
+					<Form remote={offer} successToast={m.staff_grants_id_tasks_added_toast()}>
+						<input {...offer.fields.id.as('hidden', grant.id)} />
+						<input {...offer.fields.stage.as('hidden', stage)} />
+						<SubmitButton label={copy.label} size="sm" data-testid="apply-stage" />
+					</Form>
+				</div>
+			</Alert>
+		{/if}
+	{/each}
+
 	{#if grant.deadline?.overdue}
 		<Alert type="warning">
 			{m.staff_grants_id_has_passed_record_once_dealt_body({
@@ -68,6 +114,23 @@
 				label={m.staff_grants_id_award_period_label()}
 				value="{formatIsoDay(grant.startsOn)} – {formatIsoDay(grant.endsOn)}"
 			/>
+			<Fact label={m.staff_grants_id_funded_project_label()}>
+				{#if fundedProject}
+					<a class="link" href={resolve('/staff/tasks/projects/[id]', { id: fundedProject.id })}>
+						{fundedProject.name}
+					</a>
+				{:else}
+					{m.grant_grant_fields_general_support_label()}
+				{/if}
+			</Fact>
+			{#if grant.nextTask}
+				<Fact label={m.staff_grants_id_next_task_label()}>
+					{grant.nextTask.title}
+					{#if grant.nextTask.dueAt}
+						<span class="text-muted">· {formatDateShort(grant.nextTask.dueAt)}</span>
+					{/if}
+				</Fact>
+			{/if}
 			{#if grant.projectId}
 				<Fact label={m.staff_grants_id_project_label()}>
 					<a

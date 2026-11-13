@@ -184,4 +184,21 @@ describe('listDeliverablesDueBetween', () => {
 		wo('gone', { group_id: 'art', due_at: T0, cancelled_at: T0 });
 		expect(await svc.listDeliverablesDueBetween(from, to)).toEqual([]);
 	});
+
+	it('narrows to projects of the kinds asked for, naming the project', async () => {
+		exec(`delete from project`);
+		exec(`insert into project (id, name, kind) values
+			('g', 'Operating support', 'grant'), ('s', 'Friday', 'production')`);
+		wo('report', { group_id: 'art', event_id: null, project_id: 'g', due_at: T0 });
+		wo('poster', { group_id: 'art', project_id: 's', due_at: T0 });
+
+		const rows = await svc.listDeliverablesDueBetween(from, to, { projectKinds: ['grant'] });
+		expect(rows.map((r) => [r.id, r.projectName, r.eventTitle])).toEqual([
+			['report', 'Operating support', null]
+		]);
+		expect((await svc.listDeliverablesDueBetween(from, to)).map((r) => r.id).sort()).toEqual([
+			'poster',
+			'report'
+		]);
+	});
 });
