@@ -151,7 +151,12 @@
 	     two-line window onto the conversation — so below `sm` the whole thread
 	     pane scrolls as one instead. -->
 	<div class="sm:min-h-0 sm:flex-1 sm:overflow-y-auto">
-		<ThreadTimeline messages={t.messages} notes={t.notes} contactName={t.contactName} />
+		<ThreadTimeline
+			messages={t.messages}
+			channel={t.channel}
+			notes={t.notes}
+			contactName={t.contactName}
+		/>
 	</div>
 
 	<!--

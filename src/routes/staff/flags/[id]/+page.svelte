@@ -119,7 +119,11 @@
 				</DefinitionList>
 
 				<div class="mt-4">
-					<ThreadTimeline messages={flag.threadContext.messages} viewerUserId={reporterId} />
+					<ThreadTimeline
+						messages={flag.threadContext.messages}
+						channel="direct"
+						viewerUserId={reporterId}
+					/>
 				</div>
 			</InfoCard>
 		{/if}
