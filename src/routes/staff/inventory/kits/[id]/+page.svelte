@@ -56,13 +56,13 @@
 		</InfoCard>
 
 		{#if out.length > 0}
-			<InfoCard title={m.staff_inventory_kits_check_in_label()}>
+			<InfoCard title={m.staff_inventory_kits_check_in_title()}>
 				<Form remote={checkInKit} successToast={m.staff_inventory_kits_success_toast()}>
 					<input {...fields.kitLoanId.as('hidden', kit.id)} />
 					<!-- Unticked units stay on loan to the same member; the kit stays open. -->
 					<CheckboxGroup
 						field={fields.returnedLoanIds}
-						legend={m.staff_inventory_kits_returned_units_label()}
+						legend={m.staff_inventory_kits_returned_units_title()}
 						options={out.map((l) => ({ value: l.loanId, label: unitName(l) }))}
 						selected={out.map((l) => l.loanId)}
 					/>
@@ -74,7 +74,7 @@
 		{/if}
 	</div>
 
-	<InfoCard title={m.staff_units_label()}>
+	<InfoCard title={m.staff_inventory_kits_lent_units_title()}>
 		<Table>
 			{#snippet head()}
 				<th class="w-px"><span class="sr-only">{m.staff_status_label()}</span></th>
