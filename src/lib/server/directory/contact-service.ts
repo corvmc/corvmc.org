@@ -182,6 +182,32 @@ export async function listActContacts(
 	return rows.map((r) => ({ ...r, organizationId: r.organizationId! }));
 }
 
+/**
+ * Names of a show's contacts, for the act on `/act/{token}`.
+ *
+ * Unguarded for the same reason as `writeActContactUnguarded`: the caller
+ * resolved the token. Only people kept at that act's own performer
+ * organization come back, whatever ids are passed.
+ */
+export async function actContactNamesUnguarded(
+	entryId: string,
+	contactIds: string[]
+): Promise<Map<string, string | null>> {
+	if (contactIds.length === 0) return new Map();
+	const rows = await db
+		.select({ id: contact.id, name: contact.name })
+		.from(contact)
+		.innerJoin(organization, eq(organization.id, contact.organizationId))
+		.where(
+			and(
+				inArray(contact.id, contactIds),
+				eq(organization.directoryEntryId, entryId),
+				kept(new Date())
+			)
+		);
+	return new Map(rows.map((r) => [r.id, r.name]));
+}
+
 /** Contacts past their retention horizon, which the next sweep deletes. */
 export async function listExpiredContacts(now: Date = new Date()) {
 	await requireCapability('directory.readContact');

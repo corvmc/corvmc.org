@@ -596,5 +596,16 @@
 	"public_removed_token_appeal_body_label": "Your case",
 	"public_removed_token_appeal_help_body": "Say why you think the decision was wrong. You can send one appeal.",
 	"public_removed_token_send_appeal_label": "Send appeal",
-	"public_removed_token_contact_text": "Questions? Email {email}."
+	"public_removed_token_contact_text": "Questions? Email {email}.",
+	"public_act_token_booked_shows_title": "Booked shows",
+	"public_act_token_set_label": "Set",
+	"public_act_token_set_text": "{time}, {minutes} min",
+	"public_act_token_set_length_text": "{minutes} min",
+	"public_act_token_soundcheck_label": "Soundcheck",
+	"public_act_token_load_in_label": "Load-in",
+	"public_act_token_curfew_label": "Curfew",
+	"public_act_token_terms_label": "Terms",
+	"public_act_token_show_contact_label": "Contact",
+	"public_act_token_paid_label": "Paid",
+	"public_act_token_paid_text": "{amount} on {date}"
 }

@@ -11,7 +11,8 @@
 	import Button from '#lib/components/ui/Button.svelte';
 	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
-	import { formatDateShort, formatDateTime } from '#lib/utils/format.js';
+	import { formatCents, formatDateShort, formatDateTime, formatTime } from '#lib/utils/format.js';
+	import { describeTerms } from '#lib/production/terms.js';
 	import { toast } from 'svelte-sonner';
 	import { getContactSheet, saveContactSheetForm } from '#lib/remote/contact-sheet.remote.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
@@ -102,6 +103,54 @@
 	<Alert type="info" class="text-sm">
 		{m.public_act_token_everything_corvallis_music_collective_holds_body()}
 	</Alert>
+
+	<!-- Read-only, and only this act's own slots: never another act's terms or a show total. -->
+	{#if sheet.bookings.length > 0}
+		<h2 class="text-muted font-semibold uppercase">{m.public_act_token_booked_shows_title()}</h2>
+		{#each sheet.bookings as booking (booking.eventId)}
+			<InfoCard title={booking.eventTitle}>
+				<DefinitionList>
+					<Fact label={m.public_act_token_when_label()}>{formatDateTime(booking.startsAt)}</Fact>
+					{#if booking.location}
+						<Fact label={m.public_act_token_where_label()}>{booking.location}</Fact>
+					{/if}
+					<Fact label={m.public_act_token_set_label()}>
+						{booking.scheduledStartAt
+							? m.public_act_token_set_text({
+									time: formatTime(booking.scheduledStartAt),
+									minutes: booking.setLengthMinutes
+								})
+							: m.public_act_token_set_length_text({ minutes: booking.setLengthMinutes })}
+					</Fact>
+					{#if booking.loadInAt}
+						<Fact label={m.public_act_token_load_in_label()}>{formatTime(booking.loadInAt)}</Fact>
+					{/if}
+					{#if booking.soundcheckAt}
+						<Fact label={m.public_act_token_soundcheck_label()}>
+							{formatTime(booking.soundcheckAt)}
+						</Fact>
+					{/if}
+					{#if booking.curfewAt}
+						<Fact label={m.public_act_token_curfew_label()}>{formatTime(booking.curfewAt)}</Fact>
+					{/if}
+					<Fact label={m.public_act_token_terms_label()}>{describeTerms(booking.terms)}</Fact>
+					{#if booking.contactName}
+						<Fact label={m.public_act_token_show_contact_label()}>{booking.contactName}</Fact>
+					{/if}
+					{#if booking.paidCents !== null}
+						<Fact label={m.public_act_token_paid_label()}>
+							{booking.paidAt
+								? m.public_act_token_paid_text({
+										amount: formatCents(booking.paidCents),
+										date: formatDateShort(booking.paidAt)
+									})
+								: formatCents(booking.paidCents)}
+						</Fact>
+					{/if}
+				</DefinitionList>
+			</InfoCard>
+		{/each}
+	{/if}
 
 	<Form remote={saveContactSheetForm} successToast={m.public_act_token_success_toast()}>
 		<input {...fields.token.as('hidden', token)} />

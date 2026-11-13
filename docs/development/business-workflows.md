@@ -478,6 +478,10 @@ written by `writeActContactUnguarded()`: an email already on file updates that c
 without an email the act's own earlier entry is updated. A show's contact is
 `production_slot.contact_id`, picked on the Run of show tab from that act's people
 (`listActContacts()`: whoever books or runs the show's project, or `directory.readContact`).
+The same page lists the act's own booked shows from `offered` on, upcoming and the last 90 days
+(`listActSlotTerms()` in `run-of-show-service.ts`, keyed on the entry the token resolves to):
+call times, `describeTerms()`, the show's contact by name (`actContactNamesUnguarded()`, people at
+that act's own organization only) and, once settled, what it was paid. Never another act's slot.
 `claimExternalAct()` turns the entry into a band, sets `group.from_organization_id`, archives the
 organization and gives its people a retention horizon a year out. The band's staff page links to
 that organization, which keeps the act's gigs, payments and people.
