@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
 import { mapDomainError } from '#lib/server/errors.js';
-import { requireCapability } from '#lib/server/authorization.js';
+import { requireCapability, requireUser } from '#lib/server/authorization.js';
 import { requireListingWriter } from '#lib/server/event/listing-guard.js';
 import { LONG_TEXT_MAX, SHORT_TEXT_MAX } from '#lib/config.js';
 import {
@@ -119,6 +119,7 @@ export const claimStaffExternalAct = form(
 export const listActInDirectory = form(
 	z.object({ eventBandId: z.string().min(1) }),
 	async (data) => {
+		requireUser();
 		// The show's booking committee lists its own bill's acts (#2780).
 		const eventId = await getCreditEventId(data.eventBandId);
 		if (!eventId) error(404, 'Not found');

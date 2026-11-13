@@ -7,7 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const requireCapability = vi.fn<(cap: string) => Promise<unknown>>();
 vi.mock('#lib/server/authorization.js', () => ({
-	requireCapability: (cap: string) => requireCapability(cap)
+	requireCapability: (cap: string) => requireCapability(cap),
+	requireUser: () => ({ id: 'booker-1' })
 }));
 
 const searchAskableEntries = vi.fn(async (q: string) => [{ id: 'e-1', name: q }]);
