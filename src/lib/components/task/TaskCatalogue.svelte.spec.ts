@@ -52,6 +52,7 @@ const task = (id: string, over: Record<string, unknown> = {}) => ({
 	capacity: 0,
 	claimed: 0,
 	assignees: 1,
+	blockers: 0,
 	maintenanceScheduleId: null,
 	pendingCapacity: null,
 	resolvedAt: null,
@@ -62,8 +63,9 @@ const task = (id: string, over: Record<string, unknown> = {}) => ({
 const getTasksPage = vi.hoisted(() => ({ fn: undefined as unknown as ReturnType<typeof vi.fn> }));
 vi.mock('#lib/remote/tasks.remote.js', () => {
 	getTasksPage.fn = query.remote(() => ({
-		tasks: [task('paint'), task('sweep', { assignees: 0 })],
+		tasks: [task('paint'), task('sweep', { assignees: 0 }), task('submit', { blockers: 1 })],
 		contractors: {},
+		waitsOn: { submit: [{ id: 'paint', label: 'paint' }] },
 		contractorAccess: false,
 		projects: [{ id: 'p1', name: 'Renovation' }],
 		committees: [],
@@ -97,6 +99,20 @@ describe('TaskCatalogue', () => {
 		expect(container.querySelector('[data-chip="unassigned"]')).not.toBeNull();
 		expect(container.querySelector('[data-chip="overdue"]')).toBeNull();
 		expect(getTasksPage.fn).toHaveBeenCalledWith(expect.objectContaining({ projectId: undefined }));
+	});
+
+	it('dims a task waiting on an open one, names what it waits on, and counts it', async () => {
+		const { container } = await render(TaskCatalogue);
+		await vi.waitFor(() => expect(container.querySelector('[data-task="submit"]')).not.toBeNull());
+
+		const row = container.querySelector('[data-task="submit"]')!;
+		expect(row.hasAttribute('data-blocked')).toBe(true);
+		expect(row.classList.contains('opacity-60')).toBe(true);
+		expect(row.querySelector('.cell-primary')?.textContent).toContain('paint');
+		expect(container.querySelector('[data-task="paint"]')?.hasAttribute('data-blocked')).toBe(
+			false
+		);
+		expect(container.querySelector('[data-chip="blocked"]')).not.toBeNull();
 	});
 
 	it("on a project's page, asks for its tasks and drops the project controls", async () => {

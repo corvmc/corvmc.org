@@ -549,6 +549,36 @@ export const workOrderAssignee = sqliteTable(
 );
 
 /**
+ * A task waiting on another (#2625): the budget follows the narrative. A
+ * graph, not a tree, and never a cycle, which the service refuses on write.
+ * Blocked is derived on read from the open tasks a task waits on; nothing
+ * here stores it. Task to task only: "about that record" is a different link.
+ */
+export const workOrderDependency = sqliteTable(
+	'work_order_dependency',
+	{
+		workOrderId: text('work_order_id')
+			.notNull()
+			.references(() => workOrder.id, { onDelete: 'cascade' }),
+		dependsOnId: text('depends_on_id')
+			.notNull()
+			.references(() => workOrder.id, { onDelete: 'cascade' }),
+		createdByUserId: text('created_by_user_id').references(() => user.id, {
+			onDelete: 'set null'
+		}),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`(unixepoch())`)
+	},
+	(t) => [
+		primaryKey({ columns: [t.workOrderId, t.dependsOnId] }),
+		// "Needed for": the tasks waiting on this one.
+		index('work_order_dependency_depends_on_idx').on(t.dependsOnId),
+		check('work_order_dependency_not_self', sql`work_order_id <> depends_on_id`)
+	]
+);
+
+/**
  * One member on one shift.
  *
  * The statuses are `reservationStatuses` minus the ones that don't apply, on

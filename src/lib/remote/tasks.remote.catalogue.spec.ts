@@ -46,6 +46,9 @@ vi.mock('#lib/server/volunteer/duty-list-service.js', () => ({
 		{ id: 't2', name: 'Empty', itemCount: 0 }
 	]
 }));
+vi.mock('#lib/server/volunteer/task-dependencies.js', () => ({
+	listOpenBlockers: async () => ({ 'wo-1': [{ id: 'wo-0', label: 'Narrative' }] })
+}));
 const listTaskCatalogue = vi.hoisted(() => vi.fn());
 vi.mock('#lib/server/volunteer/task-catalogue.js', () => ({ listTaskCatalogue }));
 const listJobs = vi.hoisted(() => vi.fn());
@@ -107,5 +110,6 @@ describe('getTasksPage', () => {
 		const page = await getTasksPage({});
 		expect(page.templates).toEqual([{ id: 't1', name: 'Show deliverables' }]);
 		expect(page.projects).toEqual([{ id: 'p1', name: 'Rewire the hall' }]);
+		expect(page.waitsOn).toEqual({ 'wo-1': [{ id: 'wo-0', label: 'Narrative' }] });
 	});
 });

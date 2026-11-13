@@ -7,6 +7,7 @@ import {
 	volunteerProfile,
 	volunteerRole,
 	workOrderAssignee,
+	workOrderDependency,
 	workTask
 } from '../../src/lib/server/db/schema/volunteer';
 import { contractorJob } from '../../src/lib/server/db/schema/contractor';
@@ -150,7 +151,9 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 
 	// Unassigned: no role, no posting, nobody on it — a task just typed into the
 	// list, with only a deadline set.
+	const xlrRuns = randomUUID();
 	await db.insert(workOrder).values({
+		id: xlrRuns,
 		title: 'Replace the worst of the XLR runs',
 		projectId: ids.facility,
 		sectionId: section.finish,
@@ -174,6 +177,10 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		{ workOrderId: punchList, label: 'Touch up the trim', sortOrder: 0, done: true, doneAt: now },
 		{ workOrderId: punchList, label: 'Test every wall outlet', sortOrder: 1 }
 	]);
+	// Blocked (#2625): the walk-through waits on the cable runs being done.
+	await db
+		.insert(workOrderDependency)
+		.values({ workOrderId: punchList, dependsOnId: xlrRuns, createdByUserId: staffId });
 
 	// The project's own work orders, and its own hour log against one of them.
 	//

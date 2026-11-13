@@ -31,6 +31,7 @@ import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import type { WorkOrderField } from '#lib/types/audit.js';
 
 import { getLiveSchedule, nextOccurrenceInsert } from './maintenance-schedule-service';
+import { announceTasksReady, countOpenBlockers } from './task-dependencies';
 
 export { isScheduled } from './scheduled';
 import { isScheduled } from './scheduled';
@@ -346,6 +347,8 @@ export async function cancelShift(id: string, cancelledByUserId?: string): Promi
 		subject: { type: 'work_order', id: row.id, label: workOrderAuditLabel(row) },
 		details: {}
 	});
+	// A called-off task blocks nothing, so the tasks that waited on it may be free.
+	await announceTasksReady(row.id);
 	return row;
 }
 
@@ -944,6 +947,9 @@ export async function prepareResolveWorkOrder(id: string, opts: ResolveWorkOrder
 			'This one ticks itself when its condition holds. Say why it is done regardless.'
 		);
 	}
+	// Warn, record, allow (#2625): done while it waits on open tasks is the caller's
+	// call, and the audit entry says so.
+	const openBlockers = await countOpenBlockers(id);
 
 	const now = new Date();
 
@@ -973,8 +979,10 @@ export async function prepareResolveWorkOrder(id: string, opts: ResolveWorkOrder
 		await recordAuditEntry({
 			action: 'work_order.resolved',
 			subject: { type: 'work_order', id, label: workOrderAuditLabel(existing!) },
-			details: { override, reason: notes }
+			details: { override, reason: notes, ...(openBlockers > 0 ? { openBlockers } : {}) }
 		});
+		// The tasks that waited on this one, and now wait on nothing open.
+		await announceTasksReady(id);
 
 		// The equipment reports this work answered close with it, and only here:
 		// a shift ending never closes one (#2518). Dynamic, like the orientation

@@ -19,6 +19,7 @@
 		now,
 		compact = false,
 		project = true,
+		waitsOn = [],
 		actions
 	}: {
 		task: TaskRow;
@@ -26,6 +27,8 @@
 		now: Date;
 		compact?: boolean;
 		project?: boolean;
+		/** The open tasks it waits on, by name; empty when it is not blocked. */
+		waitsOn?: { id: string; label: string }[];
 		actions?: Snippet<[{ label: string; href: string }]>;
 	} = $props();
 
@@ -33,15 +36,22 @@
 	const label = $derived(shiftLabel(t));
 	const when = $derived(whenOf(t));
 	const overdue = $derived(!t.resolvedAt && isOverdue(t, now));
+	// Blocked is derived on read (#2625): open, with open tasks it waits on.
+	const blocked = $derived(!t.resolvedAt && t.blockers > 0);
 </script>
 
-<tr class="hover" data-task={t.id}>
+<tr class="hover" class:opacity-60={blocked} data-task={t.id} data-blocked={blocked || undefined}>
 	<td class="cell-primary">
 		<a {href} class="link truncate font-medium">{label}</a>
 		{#if t.roleName && t.roleName !== label}
 			<div class="truncate text-subtle text-xs">
 				{t.roleName}{#if t.eventTitle && t.eventTitle !== label}
 					· {t.eventTitle}{/if}
+			</div>
+		{/if}
+		{#if blocked && waitsOn.length > 0}
+			<div class="truncate text-subtle text-xs">
+				{m.staff_tasks_waits_on_text({ names: waitsOn.map((w) => w.label).join(', ') })}
 			</div>
 		{/if}
 	</td>
@@ -79,6 +89,8 @@
 			<Badge variant="success" size="sm">{m.staff_done_label()}</Badge>
 		{:else if overdue}
 			<Badge variant="warning" size="sm">{m.staff_overdue_label()}</Badge>
+		{:else if blocked}
+			<Badge size="sm">{m.staff_tasks_blocked_label()}</Badge>
 		{:else}
 			<span class="text-subtle">{m.staff_open_label()}</span>
 		{/if}

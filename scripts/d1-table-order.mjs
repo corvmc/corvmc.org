@@ -107,6 +107,8 @@ export const tableOrder = [
 	// Both reference work_order and user.
 	'volunteer_shift',
 	'work_order_assignee',
+	// Both ends reference work_order (#2625).
+	'work_order_dependency',
 	'volunteer_signup',
 	// independents (no FKs)
 	'closure',

@@ -15,6 +15,8 @@ export interface TaskFacts {
 	shiftAt: Date | null;
 	shifts: number;
 	assignees: number;
+	/** Open tasks it waits on: Blocked above zero, derived on read (#2625). */
+	blockers: number;
 	maintenanceScheduleId: string | null;
 	resolvedAt: Date | null;
 	createdAt: Date;
@@ -42,7 +44,7 @@ export interface ContractorMark {
 	awaitingInvoice: boolean;
 }
 
-export const CHIPS = ['unassigned', 'overdue', 'untimed', 'invoice'] as const;
+export const CHIPS = ['unassigned', 'overdue', 'blocked', 'untimed', 'invoice'] as const;
 export type Chip = (typeof CHIPS)[number];
 
 /** The date a task sits under: its shift's, else its deadline. */
@@ -62,6 +64,8 @@ export function matchesChip(chip: Chip, t: TaskFacts, marks: ContractorMark[], n
 			return isOpen(t) && nobody;
 		case 'overdue':
 			return isOpen(t) && isOverdue(t, now);
+		case 'blocked':
+			return isOpen(t) && t.blockers > 0;
 		case 'untimed':
 			return isOpen(t) && nobody && t.volunteerRoleId !== null;
 		case 'invoice':

@@ -3418,5 +3418,7 @@
 	"staff_contacts_merge_title": "Merge {other} into {name}",
 	"staff_volunteering_title": "Volunteering",
 	"staff_volunteering_no_shifts_title": "No shifts",
-	"staff_volunteering_find_volunteers_label": "Find volunteers"
+	"staff_volunteering_find_volunteers_label": "Find volunteers",
+	"staff_tasks_blocked_label": "Blocked",
+	"staff_tasks_waits_on_text": "Waits on {names}"
 }

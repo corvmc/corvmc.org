@@ -14,6 +14,12 @@ import { toEventRef } from '#lib/server/entity/refs.js';
 import { getStaffLayout } from './layout.remote';
 import { requireProjectCommittee } from '#lib/server/group/group-context.js';
 import { getProjectById } from '#lib/server/project/project-service.js';
+import {
+	addDependency as addDependencyService,
+	listDependencyOptions,
+	listTaskDependencies,
+	removeDependency as removeDependencyService
+} from '#lib/server/volunteer/task-dependencies.js';
 import { getProjectActivity } from './projects.remote';
 import { ACTIVITY_MAX, listActivity } from '#lib/server/project/project-activity.js';
 import { loadWorkOrderView } from '#lib/server/volunteer/work-order-view.js';
@@ -2508,7 +2514,46 @@ export const getTaskPage = query(z.string(), async (id) => {
 	const contractors = (await can('contractor.manage'))
 		? (await listContractors()).map((c) => ({ id: c.id, name: c.name }))
 		: [];
-	return { project, ...view, engagements, contractors };
+	// Within the task's own project, or among tasks in none, which the guard above covers.
+	const [dependencies, dependencyOptions] = await Promise.all([
+		listTaskDependencies(id),
+		listDependencyOptions(id)
+	]);
+	return { project, ...view, engagements, contractors, dependencies, dependencyOptions };
+});
+
+/** A task's write: its project's committee (or staff holding `project.manage`), else the coordinator's. */
+async function guardTaskWrite(id: string) {
+	const user = requireUser();
+	const projectId = await workOrderProjectId(id);
+	if (projectId === undefined) error(404, 'Task not found');
+	if (!projectId) return requireCapability('volunteer.manageShifts');
+	try {
+		await requireProjectCommittee(projectId, 'project.manage');
+	} catch (err) {
+		mapDomainError(err);
+	}
+	return user;
+}
+
+const dependencyEdge = z.object({
+	workOrderId: z.string().min(1),
+	dependsOnId: z.string().min(1, 'Pick a task')
+});
+
+/** Make a task wait on another in its project (#2625). A loop is refused. */
+export const addTaskDependency = form(dependencyEdge, async (data) => {
+	const user = await guardTaskWrite(data.workOrderId);
+	await addDependencyService({ ...data, byUserId: user.id });
+	await Promise.all([refreshTaskViews(data.workOrderId), refreshWorkOrderPage(data.dependsOnId)]);
+	return { success: true };
+});
+
+export const removeTaskDependency = form(dependencyEdge, async (data) => {
+	await guardTaskWrite(data.workOrderId);
+	await removeDependencyService(data);
+	await Promise.all([refreshTaskViews(data.workOrderId), refreshWorkOrderPage(data.dependsOnId)]);
+	return { success: true };
 });
 
 /** A task's history, for a task in no project: its audit entries and duty ticks, newest first. */

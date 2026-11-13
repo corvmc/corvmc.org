@@ -62,6 +62,7 @@ const task = (id: string, over: Record<string, unknown> = {}) => ({
 	capacity: 0,
 	claimed: 0,
 	assignees: 1,
+	blockers: 0,
 	maintenanceScheduleId: null,
 	pendingCapacity: null,
 	resolvedAt: null,

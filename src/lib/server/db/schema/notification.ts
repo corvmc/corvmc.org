@@ -432,6 +432,13 @@ export const NOTIFICATION_TYPES: NotificationTypeDef[] = [
 		defaults: { email: true, inApp: true, sms: false }
 	},
 	{
+		key: 'task_ready',
+		category: 'volunteering',
+		label: 'Task ready',
+		description: 'When the last task one of your tasks waits on is done',
+		defaults: { email: false, inApp: true, sms: false }
+	},
+	{
 		key: 'band_event_unpublished',
 		category: 'shows',
 		label: 'Event unlisted by staff',

@@ -46,6 +46,8 @@ export const auditActions = [
 	'work_order.moved',
 	'work_order.edited',
 	'work_order.member_invited',
+	'work_order.dependency_added',
+	'work_order.dependency_removed',
 	'contractor_job.status_changed',
 	'contractor_job.invoice_recorded',
 	'contractor_job.reopened',
@@ -190,8 +192,14 @@ export interface AuditDetailsByAction {
 	'work_order.assigned_over_warnings': { userId: string; memberName: string; warnings: string[] };
 	'work_order.member_unassigned': { userId: string; memberName: string };
 	'work_order.rescheduled': { from: WorkOrderTiming; to: WorkOrderTiming };
-	/** `override` when the task has a done condition and was ticked by hand regardless. */
-	'work_order.resolved': { override: boolean; reason: string | null };
+	/**
+	 * `override` when the task has a done condition and was ticked by hand regardless;
+	 * `openBlockers` when it was marked done while tasks it waits on were open (#2625).
+	 */
+	'work_order.resolved': { override: boolean; reason: string | null; openBlockers?: number };
+	/** The task it now waits on, or no longer does (#2625). */
+	'work_order.dependency_added': { dependsOnId: string; dependsOnLabel: string };
+	'work_order.dependency_removed': { dependsOnId: string; dependsOnLabel: string };
 	'work_order.reopened': Record<string, never>;
 	'work_order.cancelled': Record<string, never>;
 	/** Section ids; null is the unlabelled group. */

@@ -665,6 +665,18 @@ export interface DeliverableDueEvent {
 	items: DeliverableDueItem[];
 }
 
+/**
+ * The last open task a task waits on was closed (#2625): one per assignee of
+ * the task that is now ready to start.
+ */
+export interface TaskReadyEvent {
+	workOrderId: string;
+	title: string;
+	/** The task whose closing freed it. */
+	closedTitle: string;
+	recipient: { userId: string; userName: string; userEmail: string };
+}
+
 export interface EventUnpublishedByStaffEvent {
 	eventId: string;
 	eventTitle: string;
@@ -950,6 +962,7 @@ export type DomainEvents = {
 	'event.lineup_invited': EventLineupInvitedEvent;
 	'production.cancelled': ProductionCancelledEvent;
 	'volunteer.deliverable_due': DeliverableDueEvent;
+	'volunteer.task_ready': TaskReadyEvent;
 	'volunteer.orientation_unclaimed': OrientationUnclaimedEvent;
 	'volunteer.hours_submitted': VolunteerHoursSubmittedEvent;
 	'volunteer.hours_approved': VolunteerHoursReviewedEvent;

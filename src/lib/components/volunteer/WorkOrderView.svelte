@@ -28,6 +28,7 @@
 	import CandidateColumn from './CandidateColumn.svelte';
 	import WorkOrderHours from './WorkOrderHours.svelte';
 	import WorkOrderReports from './WorkOrderReports.svelte';
+	import TaskDependencies from './TaskDependencies.svelte';
 	import EngagementCard from '#lib/components/contractor/EngagementCard.svelte';
 	import { formatDateShort, formatDateShortYear } from '#lib/utils/format.js';
 	import { resolve } from '$app/paths';
@@ -64,6 +65,7 @@
 	const task = $derived(view.task);
 	const label = $derived(shiftLabel(task));
 	const open = $derived(!task.cancelledAt && !task.resolvedAt);
+	const openBlockers = $derived(view.dependencies.waitsOn.filter((t) => t.open).length);
 	const editForm = $derived(updateTask.for(task.id));
 	const liveShifts = $derived(
 		view.shifts.filter((s) => !s.cancelledAt && s.endsAt.getTime() > Date.now())
@@ -97,6 +99,12 @@
 		>
 			{#snippet form()}
 				<input {...resolveWorkOrder.for(task.id).fields.id.as('hidden', task.id)} />
+				{#if openBlockers > 0}
+					<!-- Warn, record, allow (#2625): the audit entry notes it was done early. -->
+					<Alert type="warning">
+						{m.volunteer_work_order_view_open_blockers_body({ count: openBlockers })}
+					</Alert>
+				{/if}
 				{#if view.reports.length > 0}
 					<p class="text-sm">
 						{m.staff_volunteer_mark_done_closes_reports_text({ reports: view.reports.length })}
@@ -208,6 +216,14 @@
 					</ul>
 				</InfoCard>
 			{/if}
+
+			<TaskDependencies
+				taskId={task.id}
+				waitsOn={view.dependencies.waitsOn}
+				neededFor={view.dependencies.neededFor}
+				options={view.dependencyOptions}
+				editable={open}
+			/>
 
 			<section class="flex flex-col gap-3" aria-labelledby="shifts-heading">
 				<h2 id="shifts-heading" class="text-lg font-semibold">
