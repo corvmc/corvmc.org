@@ -21,7 +21,7 @@
 		project = true,
 		waitsOn = [],
 		actions,
-		href: linkTo
+		link = 'staff'
 	}: {
 		task: TaskRow;
 		marks: ContractorMark[];
@@ -31,11 +31,20 @@
 		/** The open tasks it waits on, by name; empty when it is not blocked. */
 		waitsOn?: { id: string; label: string }[];
 		actions?: Snippet<[{ label: string; href: string }]>;
-		/** Where the title links; null draws it as text. A member's card sets it (#2630). */
-		href?: string | null;
+		/**
+		 * A member's card (#2630): `member` links to their own task page, `none`
+		 * draws the title as text, for a task they are not on.
+		 */
+		link?: 'staff' | 'member' | 'none';
 	} = $props();
 
-	const href = $derived(linkTo === undefined ? resolve('/staff/tasks/[id]', { id: t.id }) : linkTo);
+	const href = $derived(
+		link === 'staff'
+			? resolve('/staff/tasks/[id]', { id: t.id })
+			: link === 'member'
+				? resolve('/member/volunteer/tasks/[workOrderId]', { workOrderId: t.id })
+				: null
+	);
 	const label = $derived(shiftLabel(t));
 	const when = $derived(whenOf(t));
 	const overdue = $derived(!t.resolvedAt && isOverdue(t, now));

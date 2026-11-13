@@ -53,12 +53,8 @@
 			: getRelatedTasks(args).then((staff) => staff && { ...staff, mine: null })
 	);
 	// Staff open every task; a member only one assigned to them.
-	const linkOf = (id: string, mine: string[] | null) =>
-		mine === null
-			? undefined
-			: mine.includes(id)
-				? resolve('/member/volunteer/tasks/[workOrderId]', { workOrderId: id })
-				: null;
+	const linkOf = (id: string, mine: string[] | null): 'staff' | 'member' | 'none' =>
+		mine === null ? 'staff' : mine.includes(id) ? 'member' : 'none';
 	$effect(() => {
 		if (related.error) throw related.error.e;
 	});
@@ -184,7 +180,7 @@
 						</tr>
 					{/if}
 					{#each rows as t (t.id)}
-						<TaskRow task={t} marks={marksOf(t.id)} {now} compact href={linkOf(t.id, data.mine)} />
+						<TaskRow task={t} marks={marksOf(t.id)} {now} compact link={linkOf(t.id, data.mine)} />
 					{/each}
 				{/each}
 			</Table>
