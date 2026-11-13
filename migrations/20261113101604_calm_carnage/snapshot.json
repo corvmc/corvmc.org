@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "c1c69e6c-75ec-4d18-bedb-80c08d7a12f8",
+  "id": "dc09042c-fd8d-480d-8dee-ed80c35e8fa8",
   "prevIds": [
-    "4ba0b093-5a67-45c2-92a6-2bfe1dd015dd"
+    "0b0516d4-151a-4669-bc61-b7c6b4a86291"
   ],
   "ddl": [
     {
@@ -3140,27 +3140,7 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "contact_name",
-      "entityType": "columns",
-      "table": "production_slot"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "contact_email",
-      "entityType": "columns",
-      "table": "production_slot"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "contact_phone",
+      "name": "contact_id",
       "entityType": "columns",
       "table": "production_slot"
     },
@@ -5815,6 +5795,16 @@
       "table": "group"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "from_organization_id",
+      "entityType": "columns",
+      "table": "group"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -6761,16 +6751,6 @@
       "default": null,
       "generated": null,
       "name": "id",
-      "entityType": "columns",
-      "table": "contact"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "entry_id",
       "entityType": "columns",
       "table": "contact"
     },
@@ -16066,6 +16046,21 @@
     },
     {
       "columns": [
+        "contact_id"
+      ],
+      "tableTo": "contact",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_production_slot_contact_id_contact_id_fk",
+      "entityType": "fks",
+      "table": "production_slot"
+    },
+    {
+      "columns": [
         "paid_by_user_id"
       ],
       "tableTo": "user",
@@ -16978,21 +16973,6 @@
       "name": "fk_file_uploaded_by_id_user_id_fk",
       "entityType": "fks",
       "table": "file"
-    },
-    {
-      "columns": [
-        "entry_id"
-      ],
-      "tableTo": "directory_entry",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "nameExplicit": false,
-      "name": "fk_contact_entry_id_directory_entry_id_fk",
-      "entityType": "fks",
-      "table": "contact"
     },
     {
       "columns": [
@@ -22876,6 +22856,20 @@
     {
       "columns": [
         {
+          "value": "from_organization_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_group_from_organization",
+      "entityType": "indexes",
+      "table": "group"
+    },
+    {
+      "columns": [
+        {
           "value": "user_id",
           "isExpression": false
         }
@@ -23182,20 +23176,6 @@
       "name": "idx_file_deleted",
       "entityType": "indexes",
       "table": "file"
-    },
-    {
-      "columns": [
-        {
-          "value": "entry_id",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "idx_contact_entry",
-      "entityType": "indexes",
-      "table": "contact"
     },
     {
       "columns": [

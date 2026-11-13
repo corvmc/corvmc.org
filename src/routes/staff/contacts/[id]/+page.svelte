@@ -318,6 +318,16 @@
 		</InfoCard>
 	{/if}
 
+	{#if org.records.bands.length > 0}
+		<InfoCard title={m.staff_contacts_member_bands_title()}>
+			<ul class="space-y-1">
+				{#each org.records.bands as b (b.id)}
+					<li><a class="link" href={resolve(`staff/groups/${b.id}`)}>{b.name}</a></li>
+				{/each}
+			</ul>
+		</InfoCard>
+	{/if}
+
 	{#if org.roles.includes('vendor') || org.records.markets.length > 0}
 		<InfoCard title={m.staff_contacts_market_applications_title()}>
 			{#snippet action()}

@@ -48,6 +48,14 @@
 <StaffBandForm {band} {id} {variant} {actions} />
 
 {#snippet body()}
+	{#if band.fromOrganizationId}
+		<!-- Its gigs, payments and people as an outside act stay on that record (#2622). -->
+		<p class="text-sm">
+			<a class="link" href={resolve(`staff/contacts/${band.fromOrganizationId}`)}
+				>{msg.staff_groups_id_band_record_outside_act_label()}</a
+			>
+		</p>
+	{/if}
 	<InfoCard title={msg.staff_members_title()}>
 		{#snippet header(title)}
 			<header class="flex items-center justify-between">

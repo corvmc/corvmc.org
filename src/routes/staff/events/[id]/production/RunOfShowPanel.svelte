@@ -24,7 +24,7 @@
 		markSlotTiming
 	} from '#lib/remote/productions.remote.js';
 	import { describeTerms } from '#lib/production/terms.js';
-	import type { RunOfShow } from '#lib/types/run-of-show.js';
+	import type { RunOfShow, RunOfShowContact } from '#lib/types/run-of-show.js';
 
 	/**
 	 * How late this set actually started, in whole minutes. Positive is behind.
@@ -47,10 +47,13 @@
 	 */
 	let {
 		runOfShow,
+		actContacts = null,
 		eventId,
 		showDate
 	}: {
 		runOfShow: RunOfShow | null;
+		/** Each act's people, or null when the viewer may not see them. */
+		actContacts?: RunOfShowContact[] | null;
 		eventId: string;
 		/** The night's date, shared by every time field — see the Overview form. */
 		showDate: string;
@@ -62,6 +65,11 @@
 	let openSlotId = $state<string | null>(null);
 
 	const addFields = addRunOfShowSlot.fields;
+
+	const peopleAt = (organizationId: string | null) =>
+		(actContacts ?? []).filter((p) => p.organizationId === organizationId);
+	const personLabel = (p: RunOfShowContact) =>
+		[p.name, p.email ?? p.phone].filter(Boolean).join(' · ') || m.staff_contacts_unnamed_text();
 
 	const actOptions = $derived([
 		{ value: '', label: m.staff_events_id_production_run_of_show_panel_not_bill_dj_hos_label() },
@@ -355,26 +363,20 @@
 								label={m.staff_hospitality_label()}
 								value={slot.hospitalityNotes ?? ''}
 							/>
-							<div class="grid gap-4 md:grid-cols-3">
+							{#if actContacts !== null && slot.actOrganizationId}
 								<Field
-									field={edit.fields.contactName}
+									field={edit.fields.contactId}
+									type="select"
 									label={m.staff_events_id_production_run_of_show_panel_contact_show_label()}
-									value={slot.contactName ?? ''}
+									value={slot.contactId ?? ''}
+									placeholder={m.staff_events_id_production_run_of_show_panel_no_contact_placeholder()}
+									options={peopleAt(slot.actOrganizationId).map((p) => ({
+										value: p.id,
+										label: personLabel(p)
+									}))}
 									description={m.staff_events_id_production_run_of_show_panel_tour_manager_wh_body()}
 								/>
-								<Field
-									field={edit.fields.contactEmail}
-									type="email"
-									label={m.staff_email_label()}
-									value={slot.contactEmail ?? ''}
-								/>
-								<Field
-									field={edit.fields.contactPhone}
-									type="tel"
-									label={m.staff_phone_label()}
-									value={slot.contactPhone ?? ''}
-								/>
-							</div>
+							{/if}
 							<div class="flex items-center justify-between gap-3">
 								{#if slot.actEntryId}
 									<!-- The act fills its own details in rather than a staffer typing
@@ -383,7 +385,9 @@
 									<SendContactSheetAction
 										entryId={slot.actEntryId}
 										actName={slot.actName}
-										defaultEmail={slot.contactEmail ?? ''}
+										defaultEmail={peopleAt(slot.actOrganizationId).find(
+											(p) => p.id === slot.contactId
+										)?.email ?? ''}
 									/>
 								{:else}
 									<span></span>

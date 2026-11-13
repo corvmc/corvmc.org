@@ -17,7 +17,9 @@ import { ensureUniqueSlug, generateSlug } from '#lib/server/utils/slug.js';
 import { isReservedSlug } from '#lib/reserved-slugs.js';
 import { sanitizeBio } from '#lib/utils/markdown.js';
 import { DomainError } from '#lib/server/domain-error.js';
-import { archiveContactForClaim } from './contact-service';
+import { archiveActContactsForClaim } from './contact-service';
+import { performerFor } from '#lib/server/party/organization-service.js';
+import { organization } from '#lib/server/db/schema/party.js';
 import type { ProfileLink } from '#lib/server/db/schema/authentication.js';
 
 /**
@@ -221,6 +223,8 @@ export async function createExternalAct(data: CreateExternalActData): Promise<st
 		})
 		.returning({ id: directoryEntry.id });
 
+	// The act's private side: a performer organization, where its people go (#2622).
+	await performerFor(row.id);
 	return row.id;
 }
 
@@ -270,10 +274,10 @@ export async function listExternalActs(search?: string, pagination: PaginationIn
  * theirs to publish, but publishing it is their decision to make on their own
  * profile rather than a side effect of claiming.
  *
- * The act's `contact` row is **archived, not inherited**. The booking contact is
- * frequently a manager rather than one of the members who just joined, so
- * carrying it forward would leave a member band holding a stale private phone
- * number that nobody owns. Contact goes through the account from here.
+ * The act's performer organization is **archived, not inherited**: the band
+ * names it in `from_organization_id`, so its gigs, payments and people stay
+ * one link away, and its people get a retention horizon. The booking contact
+ * is frequently a manager rather than one of the members who just joined.
  */
 export async function claimExternalAct(entryId: string, ownerId: string) {
 	const [entry] = await db
@@ -298,12 +302,23 @@ export async function claimExternalAct(entryId: string, ownerId: string) {
 		isReservedSlug
 	);
 	const groupId = crypto.randomUUID();
+	const organizationId = await performerFor(entryId);
 
 	await db.batch([
 		// Same slug-history retirement `create()` does: a live `group.slug` always
 		// shadows a released one, so a stale redirect could only resurface later.
 		db.delete(groupSlugHistory).where(eq(groupSlugHistory.slug, slug)),
-		db.insert(group).values({ id: groupId, kind: 'band', name: entry.name, slug }),
+		db.insert(group).values({
+			id: groupId,
+			kind: 'band',
+			name: entry.name,
+			slug,
+			fromOrganizationId: organizationId
+		}),
+		db
+			.update(organization)
+			.set({ archivedAt: new Date(), updatedAt: new Date() })
+			.where(eq(organization.id, organizationId)),
 		db.insert(groupMember).values({
 			groupId,
 			userId: ownerId,
@@ -317,10 +332,9 @@ export async function claimExternalAct(entryId: string, ownerId: string) {
 		bandSiteInsert(groupId)
 	]);
 
-	// After the batch rather than in it. Archiving is bookkeeping about a record
-	// that may not exist at all, and a missing contact must not fail a claim that
-	// has already succeeded.
-	await archiveContactForClaim(entryId);
+	// After the batch rather than in it: bookkeeping that must not fail a claim
+	// that has already succeeded.
+	await archiveActContactsForClaim(organizationId);
 
 	return { groupId, slug };
 }

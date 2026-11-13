@@ -5,7 +5,8 @@ import { z } from 'zod';
 import { historyArgs } from './_history';
 import { listEventHistory } from '#lib/server/event/event-history.js';
 import { creditsForEvent } from '#lib/server/sponsor/credit-service.js';
-import { error, invalid } from '@sveltejs/kit';
+import { error, invalid, isHttpError } from '@sveltejs/kit';
+import { listActContacts } from '#lib/server/directory/contact-service.js';
 import { query, getRequestEvent } from '$app/server';
 import { form, command } from './_remote';
 import { getEventRiderSummaries } from '#lib/server/band/rider-service.js';
@@ -1276,6 +1277,15 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 	// show's when it announces one.
 	const projectId = production?.projectId ?? null;
 	const budget = projectId ? { projectId, burn: await getProjectBurn(projectId) } : null;
+	// Each act's people, for the per-show contact. Null for a viewer who may not see them.
+	const actOrgs = [...new Set((runOfShow?.slots ?? []).flatMap((x) => x.actOrganizationId ?? []))];
+	const actContacts =
+		actOrgs.length === 0
+			? []
+			: await listActContacts(actOrgs, projectId).catch((err) => {
+					if (isHttpError(err, 403)) return null;
+					throw err;
+				});
 
 	return {
 		budget,
@@ -1284,6 +1294,7 @@ export const getStaffEventProduction = query(z.string(), async (id) => {
 		riders,
 		production,
 		runOfShow,
+		actContacts,
 		settlement,
 		artifactRequests,
 		requestableActs,

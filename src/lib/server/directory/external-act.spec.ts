@@ -75,6 +75,14 @@ vi.mock('#lib/server/utils/slug.js', () => ({
 vi.mock('#lib/server/band/band-site-service.js', () => ({
 	bandSiteInsert: () => ({ __bandSite: true })
 }));
+const performerFor = vi.fn(async (entryId: string) => `org-${entryId}`);
+vi.mock('#lib/server/party/organization-service.js', () => ({
+	performerFor: (id: string) => performerFor(id)
+}));
+const archiveActContactsForClaim = vi.fn(async (_id: string) => {});
+vi.mock('./contact-service', () => ({
+	archiveActContactsForClaim: (id: string) => archiveActContactsForClaim(id)
+}));
 
 const { createExternalAct, claimExternalAct, ActAlreadyClaimedError, ExternalActNotFoundError } =
 	await import('./entry-service');
@@ -118,6 +126,11 @@ describe('createExternalAct', () => {
 		expect(rowsFor('group')).toHaveLength(0);
 		expect(rowsFor('group_member')).toHaveLength(0);
 	});
+
+	it('gives the act a performer organization for its people', async () => {
+		await createExternalAct({ name: 'Touring Act' });
+		expect(performerFor).toHaveBeenCalledWith('entry-new');
+	});
 });
 
 describe('claimExternalAct', () => {
@@ -156,6 +169,16 @@ describe('claimExternalAct', () => {
 	 * publish, but publishing is their decision on their own profile rather than
 	 * a side effect of somebody claiming.
 	 */
+	it('links the band to the act it was, archives the act, and retires its people', async () => {
+		selectQueue = [[unowned]];
+
+		await claimExternalAct('de-1', 'user-1');
+
+		expect(rowsFor('group')[0]).toMatchObject({ fromOrganizationId: 'org-de-1' });
+		expect(updates.find((u) => u.table === 'organization')?.values.archivedAt).toBeInstanceOf(Date);
+		expect(archiveActContactsForClaim).toHaveBeenCalledWith('org-de-1');
+	});
+
 	it("does not publish the listing on the band's behalf", async () => {
 		selectQueue = [[unowned]];
 

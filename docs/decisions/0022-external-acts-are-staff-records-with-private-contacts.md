@@ -1,7 +1,7 @@
 # 0022 External acts are staff records with private contacts
 
 - **Date:** 2026-08-08
-- **Status:** Accepted
+- **Status:** Superseded by [0074](0074-an-act-is-a-performer-organization.md)
 - **PRs:** #341, #351, #354, #359, #361
 
 ## Context

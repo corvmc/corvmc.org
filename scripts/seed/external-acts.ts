@@ -1,6 +1,8 @@
 import { directoryEntry } from '../../src/lib/server/db/schema/directory';
 import { directoryEntryLink } from '../../src/lib/server/db/schema/directory-link';
 import { db } from './db';
+import { seedOrganizations } from './parties';
+import { randomUUID } from 'crypto';
 
 /**
  * A live contact-sheet token, so `/act/{token}` is reachable locally.
@@ -15,12 +17,14 @@ export async function seedExternalActs() {
 	const acts = [
 		{
 			name: 'Sawtooth Rivals',
+			person: { name: 'Dana Reyes', role: 'Manager', email: 'booking@sawtoothrivals.example.com' },
 			hometown: 'Boise, ID',
 			bio: 'Toured through twice in 2025. Easy load-in, brought their own monitors.',
 			links: [{ label: 'Bandcamp', url: 'https://sawtoothrivals.bandcamp.com' }]
 		},
 		{
 			name: 'The Quiet Part',
+			person: { name: 'Lou Park', phone: '360-555-0144' },
 			hometown: 'Olympia, WA',
 			bio: 'Three-piece, quiet set, asked for a rug.',
 			links: [{ label: 'Instagram', url: 'https://instagram.com/thequietpart' }]
@@ -35,7 +39,7 @@ export async function seedExternalActs() {
 		}
 	];
 
-	const rows = [];
+	const rows: (typeof directoryEntry.$inferSelect)[] = [];
 	for (const a of acts) {
 		const [row] = await db
 			.insert(directoryEntry)
@@ -51,6 +55,17 @@ export async function seedExternalActs() {
 			.returning();
 		rows.push(row);
 	}
+
+	// Each act's private side: a performer organization holding its people (#2622).
+	await seedOrganizations(
+		acts.map((a, i) => ({
+			id: randomUUID(),
+			name: a.name,
+			roles: ['performer'],
+			directoryEntryId: rows[i].id,
+			person: 'person' in a ? a.person : undefined
+		}))
+	);
 
 	await db.insert(directoryEntryLink).values({
 		entryId: rows[0].id,

@@ -1080,6 +1080,8 @@ export async function getByIdWithDetails(bandId: string) {
 			createdAt: group.createdAt,
 			updatedAt: group.updatedAt,
 			deletedAt: group.deletedAt,
+			/** The outside act it was before it joined, on the Contacts page. */
+			fromOrganizationId: group.fromOrganizationId,
 			memberCount: activeMemberCount()
 		})
 		.from(group)

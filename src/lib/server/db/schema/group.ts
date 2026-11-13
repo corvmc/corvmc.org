@@ -54,6 +54,13 @@ export const group = sqliteTable(
 		joinPolicy: text('join_policy', { enum: groupJoinPolicies }).notNull().default('invite_only'),
 		/** Prose shown beside the Join button: "third Thursday, bring a horn, charts provided". */
 		joinInstructions: text('join_instructions'),
+		/**
+		 * The outside act this band was before it joined (#2622). Its history
+		 * stays there. No FK: `organization` reaches `group` through
+		 * `directory_entry`, and scripts/d1-table-order.mjs cannot order a cycle.
+		 * Organization merge and role removal account for it by name.
+		 */
+		fromOrganizationId: text('from_organization_id'),
 
 		createdAt: integer('created_at', { mode: 'timestamp' })
 			.notNull()
@@ -67,7 +74,10 @@ export const group = sqliteTable(
 	// through a table rename untouched, so renaming them here would turn a free
 	// rename into a drop-and-recreate for no behavioural gain. They can be
 	// renamed later in a migration that has a reason to touch them.
-	(t) => [index('idx_band_slug').on(t.slug)]
+	(t) => [
+		index('idx_band_slug').on(t.slug),
+		index('idx_group_from_organization').on(t.fromOrganizationId)
+	]
 );
 
 export type Group = typeof group.$inferSelect;

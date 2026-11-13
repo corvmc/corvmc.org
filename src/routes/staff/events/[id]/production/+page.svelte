@@ -615,7 +615,12 @@
 			class:hidden={tab !== 'runOfShow'}
 		>
 			<fieldset disabled={productionLocked} class="contents">
-				<RunOfShowPanel {runOfShow} eventId={id} showDate={productionDate} />
+				<RunOfShowPanel
+					{runOfShow}
+					actContacts={loaded.actContacts}
+					eventId={id}
+					showDate={productionDate}
+				/>
 			</fieldset>
 		</div>
 	{/if}

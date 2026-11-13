@@ -14,7 +14,8 @@ export const ROLE_CAPABILITY: Partial<Record<PartyRole, Capability>> = {
 	sponsor: 'sponsor.read',
 	contractor: 'contractor.read',
 	supplier: 'inventory.manageOrders',
-	vendor: 'event.manage'
+	vendor: 'event.manage',
+	performer: 'event.manage'
 };
 
 /** May the viewer open organizations in this role? Contacts staff may open any. */

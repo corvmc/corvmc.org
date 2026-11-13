@@ -11,6 +11,8 @@ import {
 } from '#lib/server/db/schema/party.js';
 import { marketVendor } from '#lib/server/db/schema/market.js';
 import { eventListing } from '#lib/server/db/schema/event.js';
+import { directoryEntry } from '#lib/server/db/schema/directory.js';
+import { group } from '#lib/server/db/schema/group.js';
 import { mediaAttachment } from '#lib/server/db/schema/media.js';
 import { workOrder } from '#lib/server/db/schema/volunteer.js';
 import { partyRole } from '#lib/server/db/schema/contact.js';
@@ -229,13 +231,50 @@ export const ORGANIZATION_RECORDS = [
 ];
 export const organizationRecordTables: string[] = ORGANIZATION_RECORDS.map((t) => getTableName(t));
 
-/** How many records name it, across every table in `ORGANIZATION_RECORDS`. */
+/** How many records name it: `ORGANIZATION_RECORDS`, and bands it became. */
 export async function countRecords(id: string): Promise<number> {
-	const [first, ...rest] = ORGANIZATION_RECORDS.map((t) =>
-		db.select({ n: count() }).from(t).where(eq(t.organizationId, id))
-	);
+	const [first, ...rest] = [
+		...ORGANIZATION_RECORDS.map((t) =>
+			db.select({ n: count() }).from(t).where(eq(t.organizationId, id))
+		),
+		db.select({ n: count() }).from(group).where(eq(group.fromOrganizationId, id))
+	];
 	const counts = await db.batch([first, ...rest]);
 	return counts.reduce((n, [row]) => n + Number(row?.n ?? 0), 0);
+}
+
+/**
+ * The performer organization for an act's listing, made with the role the
+ * first time it is needed. One per listing, by the unique index.
+ */
+export async function performerFor(entryId: string): Promise<string> {
+	const found = async () => {
+		const [row] = await db
+			.select({ id: organization.id })
+			.from(organization)
+			.where(eq(organization.directoryEntryId, entryId))
+			.limit(1);
+		return row?.id ?? null;
+	};
+	let id = await found();
+	if (!id) {
+		const [entry] = await db
+			.select({ name: directoryEntry.name })
+			.from(directoryEntry)
+			.where(eq(directoryEntry.id, entryId))
+			.limit(1);
+		if (!entry) throw new OrganizationNotFoundError('Act');
+		await db
+			.insert(organization)
+			.values({ name: entry.name, directoryEntryId: entryId })
+			.onConflictDoNothing();
+		id = (await found())!;
+	}
+	await db
+		.insert(partyRole)
+		.values({ organizationId: id, role: 'performer' })
+		.onConflictDoNothing();
+	return id;
 }
 
 /**
@@ -267,7 +306,7 @@ export class OrganizationMergeError extends DomainError {
 
 /** What names an organization, for its page: one list per role it holds. */
 export async function organizationRecords(id: string) {
-	const [grants, sponsorships, jobs, orders, markets] = await Promise.all([
+	const [grants, sponsorships, jobs, orders, markets, bands] = await Promise.all([
 		db
 			.select({
 				id: grantApplication.id,
@@ -317,9 +356,14 @@ export async function organizationRecords(id: string) {
 			.from(marketVendor)
 			.innerJoin(eventListing, eq(eventListing.id, marketVendor.eventId))
 			.where(eq(marketVendor.organizationId, id))
-			.orderBy(desc(eventListing.startsAt), desc(marketVendor.id))
+			.orderBy(desc(eventListing.startsAt), desc(marketVendor.id)),
+		db
+			.select({ id: group.id, name: group.name })
+			.from(group)
+			.where(eq(group.fromOrganizationId, id))
+			.orderBy(asc(group.name), asc(group.id))
 	]);
-	return { grants, sponsorships, jobs, orders, markets };
+	return { grants, sponsorships, jobs, orders, markets, bands };
 }
 
 /** `https://www.example.org/about` → `example.org`; null when there is no host. */
@@ -397,6 +441,10 @@ export async function mergeOrganizations(survivorId: string, otherId: string) {
 		...ORGANIZATION_RECORDS.map((t) =>
 			db.update(t).set(moveTo).where(eq(t.organizationId, otherId))
 		),
+		db
+			.update(group)
+			.set({ fromOrganizationId: survivorId })
+			.where(eq(group.fromOrganizationId, otherId)),
 		// Its tasks and notes come too; the delete below takes the old links.
 		copyLinks('organizationId', otherId, survivorId),
 		moveActivity({ type: 'organization', id: otherId }, { type: 'organization', id: survivorId }),

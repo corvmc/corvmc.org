@@ -72,9 +72,12 @@ vi.mock('#lib/server/authorization.js', async () => {
 	};
 });
 
-const writeContactUnguarded = vi.fn(async () => {});
+const writeActContactUnguarded = vi.fn(async () => {});
 vi.mock('./contact-service', () => ({
-	writeContactUnguarded: (...a: unknown[]) => writeContactUnguarded(...(a as []))
+	writeActContactUnguarded: (...a: unknown[]) => writeActContactUnguarded(...(a as []))
+}));
+vi.mock('#lib/server/party/organization-service.js', () => ({
+	performerFor: async (entryId: string) => `org-of-${entryId}`
 }));
 
 const {
@@ -152,7 +155,7 @@ describe('saving a sheet', () => {
 		);
 
 		expect(updates.filter((u) => u.table === 'directory_entry')).toHaveLength(0);
-		expect(writeContactUnguarded).not.toHaveBeenCalled();
+		expect(writeActContactUnguarded).not.toHaveBeenCalled();
 	});
 
 	/**
@@ -169,17 +172,14 @@ describe('saving a sheet', () => {
 		expect(write.values).not.toHaveProperty('name');
 	});
 
-	it('records the contact as self-entered', async () => {
+	it("writes the person on the act's performer organization", async () => {
 		selectQueue = [[live()]];
 
 		await saveContactSheet('tok', { contact: { email: 'a@b.test' } });
 
-		// The whole point of this path: CMC holds what the act chose to give,
-		// rather than what staff transcribed.
-		expect(writeContactUnguarded).toHaveBeenCalledWith(
-			'de-1',
-			expect.objectContaining({ email: 'a@b.test' }),
-			'self_entered'
+		expect(writeActContactUnguarded).toHaveBeenCalledWith(
+			'org-of-de-1',
+			expect.objectContaining({ email: 'a@b.test' })
 		);
 	});
 

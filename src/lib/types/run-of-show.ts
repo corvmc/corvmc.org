@@ -35,6 +35,8 @@ export interface RunOfShowSlot {
 	actSlug: string | null;
 	/** The act's directory listing — what a contact sheet is sent against. */
 	actEntryId: string | null;
+	/** The act's performer organization, whose people the show's contact is picked from. */
+	actOrganizationId: string | null;
 	sortOrder: number;
 	setLengthMinutes: number;
 	changeoverMinutes: number;
@@ -52,9 +54,8 @@ export interface RunOfShowSlot {
 	techNotes: string | null;
 	backlineNeeds: string | null;
 	hospitalityNotes: string | null;
-	contactName: string | null;
-	contactEmail: string | null;
-	contactPhone: string | null;
+	/** One of the act's contacts, for this show. Its details come from `contact-service.ts`. */
+	contactId: string | null;
 	/** What this act is paid. Per act, because a headliner and an opener differ. */
 	terms: ActTerms;
 }
@@ -73,4 +74,13 @@ export interface RunOfShow {
 export interface PublicSetTime {
 	name: string;
 	scheduledStartAt: Date;
+}
+
+/** One of an act's people, for picking a show's contact. */
+export interface RunOfShowContact {
+	id: string;
+	organizationId: string;
+	name: string | null;
+	email: string | null;
+	phone: string | null;
 }

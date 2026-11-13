@@ -12,7 +12,7 @@ import { positionOrder, type Capability, type Position } from '#lib/config.js';
  *      instead of belonging to whoever calls it;
  *   2. writing a contact registers the address in the consent ledger and
  *      **never** enrols it in an audience;
- *   3. claiming an act archives the contact rather than inheriting it.
+ *   3. claiming an act archives its people rather than inheriting them.
  *
  * The fourth rule — that no other module may import the table — is enforced by
  * `custom/no-contact-schema-imports` and asserted by `eslint-boundaries.spec.ts`,
@@ -77,17 +77,17 @@ vi.mock('#lib/server/authorization.js', async () => {
 			if (!heldPositions.some((p) => config.grantsCapability(config.positions[p], cap)))
 				throw error(403, 'Not permitted');
 			return { id: 'staff-1' };
-		}
+		},
+		// No project-scoped grants here: the bookers' path is covered on real SQLite.
+		can: async () => false
 	};
 });
 
 const {
-	getContact,
-	upsertContact,
-	writeContactUnguarded,
-	archiveContactForClaim,
+	writeActContactUnguarded,
+	archiveActContactsForClaim,
 	listExpiredContacts,
-	hasContact
+	listActContacts
 } = await import('./contact-service');
 
 function rowsFor(table: string) {
@@ -111,9 +111,8 @@ describe('the guard travels with the data', () => {
 	 * means publishing somebody's phone number.
 	 */
 	const READS = [
-		['getContact', () => getContact('de-1')],
 		['listExpiredContacts', () => listExpiredContacts()],
-		['hasContact', () => hasContact('de-1')]
+		['listActContacts', () => listActContacts(['org-1'], null)]
 	] as const;
 
 	it.each(READS)('%s requires directory.readContact itself', async (_name, run) => {
@@ -148,36 +147,6 @@ describe('the guard travels with the data', () => {
 		expect(narrowed).toHaveLength(7);
 	});
 
-	it('upsertContact requires directory.shareContactSheet itself', async () => {
-		await upsertContact('de-1', {}, 'staff_entered');
-		expect(guard.mock.calls).toEqual([['directory.shareContactSheet']]);
-	});
-
-	it('upsertContact refuses a volunteer coordinator, who can read but not write', async () => {
-		heldPositions = ['volunteer_coordinator'];
-		await expect(upsertContact('de-1', {}, 'staff_entered')).rejects.toMatchObject({
-			status: 403
-		});
-		expect(rowsFor('contact')).toEqual([]);
-	});
-
-	// Before: any position. After: admin and staff, per #1404.
-	it('upsertContact admits exactly the shareContactSheet holders', async () => {
-		const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>
-			positionOrder.filter((_, i) => mask & (1 << i))
-		);
-		for (const held of subsets) {
-			heldPositions = held;
-			const allowed = await upsertContact('de-1', {}, 'staff_entered').then(
-				() => true,
-				() => false
-			);
-			expect(allowed, held.join('+') || '(none)').toBe(
-				held.includes('admin') || held.includes('staff')
-			);
-		}
-	});
-
 	/**
 	 * The one deliberate exception, and it is named so that reaching for it looks
 	 * like what it is. `/act/{token}` is authorized by a token rather than a
@@ -186,7 +155,7 @@ describe('the guard travels with the data', () => {
 	 * privacy-best one.
 	 */
 	it('exempts only the token path, and says so in its name', async () => {
-		await writeContactUnguarded('de-1', { name: 'A Manager' }, 'self_entered');
+		await writeActContactUnguarded('org-1', { name: 'A Manager' });
 		expect(guard).not.toHaveBeenCalled();
 		expect(rowsFor('contact')[0]).toMatchObject({ source: 'self_entered' });
 	});
@@ -194,9 +163,9 @@ describe('the guard travels with the data', () => {
 
 describe('the consent ledger', () => {
 	it('registers the address as a subscriber', async () => {
-		selectQueue = [[], []]; // no existing subscriber, no existing contact
+		selectQueue = [[], []]; // no existing contact, no existing subscriber
 
-		await upsertContact('de-1', { email: 'Manager@Example.COM' }, 'staff_entered');
+		await writeActContactUnguarded('org-1', { email: 'Manager@Example.COM' });
 
 		expect(rowsFor('subscriber')[0]).toMatchObject({ email: 'manager@example.com' });
 		expect(rowsFor('contact')[0]).toMatchObject({ subscriberId: 'sub-new' });
@@ -211,7 +180,7 @@ describe('the consent ledger', () => {
 	it('never enrols that address in an audience', async () => {
 		selectQueue = [[], []];
 
-		await upsertContact('de-1', { email: 'manager@example.com' }, 'staff_entered');
+		await writeActContactUnguarded('org-1', { email: 'manager@example.com' });
 
 		expect(rowsFor('audience_member')).toHaveLength(0);
 	});
@@ -222,9 +191,9 @@ describe('the consent ledger', () => {
 	 * fresh deliverable one.
 	 */
 	it('reuses an address already in the ledger, suppression and all', async () => {
-		selectQueue = [[{ id: 'sub-existing' }], []];
+		selectQueue = [[], [{ id: 'sub-existing' }]];
 
-		await upsertContact('de-1', { email: 'manager@example.com' }, 'staff_entered');
+		await writeActContactUnguarded('org-1', { email: 'manager@example.com' });
 
 		expect(rowsFor('subscriber')).toHaveLength(0);
 		expect(rowsFor('contact')[0]).toMatchObject({ subscriberId: 'sub-existing' });
@@ -233,7 +202,7 @@ describe('the consent ledger', () => {
 	it('registers nothing when no email was given', async () => {
 		selectQueue = [[]];
 
-		await upsertContact('de-1', { phone: '555-0100' }, 'staff_entered');
+		await writeActContactUnguarded('org-1', { phone: '555-0100' });
 
 		expect(rowsFor('subscriber')).toHaveLength(0);
 		expect(rowsFor('contact')[0]).toMatchObject({ subscriberId: null });
@@ -248,7 +217,7 @@ describe('archiving on claim', () => {
 	 */
 	it('stamps a retention horizon a year out rather than deleting the record', async () => {
 		const now = new Date('2026-11-12T12:00:00Z');
-		await archiveContactForClaim('de-1', now);
+		await archiveActContactsForClaim('org-1', now);
 
 		const [write] = updates.filter((u) => u.table === 'contact');
 		expect(write.values.retainUntil).toEqual(new Date('2027-11-12T12:00:00Z'));
@@ -260,7 +229,7 @@ describe('archiving on claim', () => {
 	 * be a guard on a guard rather than on the data.
 	 */
 	it('does not re-guard inside an already-guarded claim', async () => {
-		await archiveContactForClaim('de-1');
+		await archiveActContactsForClaim('org-1');
 		expect(guard).not.toHaveBeenCalled();
 	});
 });

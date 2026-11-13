@@ -25,7 +25,8 @@ const orgs = {
 		sponsorships: [],
 		jobs: [],
 		orders: [],
-		markets: []
+		markets: [],
+		bands: []
 	})),
 	createOrganization: vi.fn(async () => ({ id: 'o2' })),
 	updateOrganization: vi.fn(async () => undefined),

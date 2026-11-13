@@ -377,12 +377,16 @@ a nav section follows the work, this document follows the data.
 ## Outside parties
 
 Every organization CMC deals with but does not contain is one `organization` row: a funder, a
-sponsor, a contractor, a supplier, a market vendor, and later a performer or partner. What it is to CMC is
+sponsor, a contractor, a supplier, a market vendor, an outside act (`performer`, linked to its
+hidden `directory_entry`), or a partner. What it is to CMC is
 a `party_role` row, so one business can sponsor a season and service the PA in the same year. A
 record that names an organization in a role (`grant_application`, `sponsorship`,
 `contractor_job`, `purchase_order`, `market_vendor`) is checked for the role by its service, since SQLite cannot,
-and `ORGANIZATION_RECORDS` in `organization-service.ts` lists them for merging. The people are
-`contact` rows, read only through `contact-service.ts`. See #2622.
+and `ORGANIZATION_RECORDS` in `organization-service.ts` lists them for merging. A band that was
+an outside act names it in `group.from_organization_id`, which has no FK because `organization`
+already reaches `group` through `directory_entry`. The people are `contact` rows, read only
+through `contact-service.ts`; a show's per-set contact is one of them
+(`production_slot.contact_id`). See #2622.
 
 Pursuing money is project work. A `grant_application` or a `sponsorship` is a 1:1 side table on a
 project of kind `grant` or `sponsorship`, as `production` is on a show's: the side table holds the

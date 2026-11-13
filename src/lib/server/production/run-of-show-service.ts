@@ -4,6 +4,7 @@ import { production, productionSlot } from '#lib/server/db/schema/production.js'
 import { eventBand, eventListing } from '#lib/server/db/schema/event.js';
 import { directoryEntry } from '#lib/server/db/schema/directory.js';
 import { group } from '#lib/server/db/schema/group.js';
+import { organization } from '#lib/server/db/schema/party.js';
 import { and, asc, eq, inArray, isNotNull, notInArray } from 'drizzle-orm';
 import { assertNotTerminal } from './production-scope';
 import {
@@ -128,9 +129,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				techNotes: productionSlot.techNotes,
 				backlineNeeds: productionSlot.backlineNeeds,
 				hospitalityNotes: productionSlot.hospitalityNotes,
-				contactName: productionSlot.contactName,
-				contactEmail: productionSlot.contactEmail,
-				contactPhone: productionSlot.contactPhone,
+				contactId: productionSlot.contactId,
 				guaranteeCents: productionSlot.guaranteeCents,
 				percentageBps: productionSlot.percentageBps,
 				versus: productionSlot.versus,
@@ -142,7 +141,8 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				actSlug: group.slug,
 				// An act with no CMC account still has a listing, which is what a
 				// contact sheet is sent against. Null for a slot with no credit.
-				actEntryId: directoryEntry.id
+				actEntryId: directoryEntry.id,
+				actOrganizationId: organization.id
 			})
 			.from(production)
 			.innerJoin(eventListing, eq(eventListing.projectId, production.projectId))
@@ -150,6 +150,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 			.leftJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
 			.leftJoin(directoryEntry, eq(directoryEntry.id, eventBand.directoryEntryId))
 			.leftJoin(group, eq(group.id, directoryEntry.groupId))
+			.leftJoin(organization, eq(organization.directoryEntryId, directoryEntry.id))
 			.where(announcedBy(eventId)),
 		db
 			.select({
@@ -179,6 +180,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				actStatus: r.actStatus,
 				actSlug: r.actSlug,
 				actEntryId: r.actEntryId,
+				actOrganizationId: r.actOrganizationId,
 				sortOrder: r.sortOrder!,
 				createdAt: r.createdAt!,
 				setLengthMinutes: r.setLengthMinutes!,
@@ -190,9 +192,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 				techNotes: r.techNotes,
 				backlineNeeds: r.backlineNeeds,
 				hospitalityNotes: r.hospitalityNotes,
-				contactName: r.contactName,
-				contactEmail: r.contactEmail,
-				contactPhone: r.contactPhone,
+				contactId: r.contactId,
 				terms: {
 					guaranteeCents: r.guaranteeCents,
 					percentageBps: r.percentageBps,
@@ -210,6 +210,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 		actStatus: r.actStatus,
 		actSlug: r.actSlug,
 		actEntryId: r.actEntryId,
+		actOrganizationId: r.actOrganizationId,
 		sortOrder: r.sortOrder,
 		setLengthMinutes: r.setLengthMinutes,
 		changeoverMinutes: r.changeoverMinutes,
@@ -223,9 +224,7 @@ export async function getRunOfShow(eventId: string): Promise<RunOfShow | null> {
 		techNotes: r.techNotes,
 		backlineNeeds: r.backlineNeeds,
 		hospitalityNotes: r.hospitalityNotes,
-		contactName: r.contactName,
-		contactEmail: r.contactEmail,
-		contactPhone: r.contactPhone,
+		contactId: r.contactId,
 		terms: r.terms
 	}));
 
@@ -426,6 +425,18 @@ export async function addSlot(productionId: string, input: AddSlotInput): Promis
 	}
 }
 
+/** The performer organization of a set's act, if the act has one. */
+export async function slotActOrganizationId(slotId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ id: organization.id })
+		.from(productionSlot)
+		.innerJoin(eventBand, eq(eventBand.id, productionSlot.eventBandId))
+		.innerJoin(organization, eq(organization.directoryEntryId, eventBand.directoryEntryId))
+		.where(eq(productionSlot.id, slotId))
+		.limit(1);
+	return row?.id ?? null;
+}
+
 export interface UpdateSlotInput {
 	setLengthMinutes?: number;
 	actualStartAt?: Date | null;
@@ -435,9 +446,8 @@ export interface UpdateSlotInput {
 	techNotes?: string | null;
 	backlineNeeds?: string | null;
 	hospitalityNotes?: string | null;
-	contactName?: string | null;
-	contactEmail?: string | null;
-	contactPhone?: string | null;
+	/** One of the act's contacts; the remote checks it is. */
+	contactId?: string | null;
 }
 
 /**

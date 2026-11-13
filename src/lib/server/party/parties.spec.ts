@@ -87,6 +87,36 @@ describe('roles', () => {
 	});
 });
 
+describe('performers', () => {
+	it('makes one performer organization per act listing, named for it, and reuses it', async () => {
+		sqlite.exec(
+			`insert into directory_entry (id, name, visibility) values ('de-p', 'Sawtooth Rivals', 'hidden')`
+		);
+		const first = await orgs.performerFor('de-p');
+		expect(await orgs.performerFor('de-p')).toBe(first);
+		expect(await orgs.getOrganization(first)).toMatchObject({
+			name: 'Sawtooth Rivals',
+			directoryEntryId: 'de-p',
+			roles: ['performer']
+		});
+		sqlite.exec(`delete from organization; delete from directory_entry where id = 'de-p'`);
+	});
+
+	it('counts the band an act became, and moves it on merge', async () => {
+		const act = await orgs.createOrganization({ name: 'Fenwick' }, ['performer']);
+		const dupe = await orgs.createOrganization({ name: 'Fenwick (solo)' }, ['performer']);
+		sqlite.exec(
+			`insert into "group" (id, kind, name, slug, from_organization_id) values ('g-f', 'band', 'Fenwick', 'fenwick', '${dupe.id}')`
+		);
+		expect(await orgs.countRecords(dupe.id)).toBe(1);
+		await orgs.mergeOrganizations(act.id, dupe.id);
+		expect(
+			sqlite.prepare(`select from_organization_id as o from "group" where id = 'g-f'`).get()
+		).toEqual({ o: act.id });
+		sqlite.exec(`delete from "group" where id = 'g-f'`);
+	});
+});
+
 describe('suppliers', () => {
 	it('reuses an organization named the same, ignoring case and spaces, and gives it the role', async () => {
 		const shop = await sponsors.createSponsor({ name: 'Guitar Shop' });
@@ -264,7 +294,8 @@ describe('merging organizations', () => {
 			'contact', // people move first, through contact-service.ts
 			'work_order_link', // copyLinks
 			'activity', // moveActivity
-			'inbox_thread' // moveThreads
+			'inbox_thread', // moveThreads
+			'group' // the band an act became, by name in mergeOrganizations
 		]);
 		const tables = (
 			sqlite
