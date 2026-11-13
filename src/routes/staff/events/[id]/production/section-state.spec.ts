@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	deliverablesState,
+	doorState,
 	payoutsState,
 	requestsState,
 	runningOrderState,
@@ -20,6 +21,7 @@ const settlement = (over: Partial<Settlement>) =>
 		acts: [{}, {}],
 		unpaidActCount: 0,
 		door: null,
+		doorCounts: null,
 		expenses: [],
 		netCents: 0,
 		...over
@@ -85,5 +87,30 @@ describe('console tab badges', () => {
 		expect(
 			tabBadges(loaded({ settlement: settlement({ unpaidActCount: 1, door }) })).settlement
 		).toBeDefined();
+	});
+});
+
+describe('door counts (#2722)', () => {
+	const counted = (check: 'single' | 'agreed' | 'mismatch') =>
+		settlement({
+			door: { cashCents: 500_00 } as Settlement['door'],
+			doorCounts: { check } as Settlement['doorCounts']
+		});
+
+	it('tells one count, two that agree and two that differ apart', () => {
+		const states = new Set([
+			doorState(settlement({})),
+			doorState(counted('single')),
+			doorState(counted('agreed')),
+			doorState(counted('mismatch'))
+		]);
+		expect(states.size).toBe(4);
+	});
+
+	it('badges the settlement tab until a second count agrees', () => {
+		const badge = (s: Settlement) => tabBadges(loaded({ settlement: s })).settlement;
+		expect(badge(counted('mismatch'))).toBe(doorState(counted('mismatch')));
+		expect(badge(counted('single'))).toBeDefined();
+		expect(badge(counted('single'))).not.toBe(badge(counted('agreed')));
 	});
 });

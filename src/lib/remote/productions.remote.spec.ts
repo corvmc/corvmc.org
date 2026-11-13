@@ -141,6 +141,12 @@ vi.mock('#lib/server/production/settlement-service.js', () => ({
 	undoSlotPayout: (...a: unknown[]) => settlement.undoSlotPayout(...(a as []))
 }));
 
+const doorCounts = { recordDoorTake: vi.fn(), recordDoorRecount: vi.fn() };
+vi.mock('#lib/server/production/door-count-service.js', () => ({
+	recordDoorTake: (...a: unknown[]) => doorCounts.recordDoorTake(...a),
+	recordDoorRecount: (...a: unknown[]) => doorCounts.recordDoorRecount(...a)
+}));
+
 const expenses = { addExpense: vi.fn(), removeExpense: vi.fn() };
 vi.mock('#lib/server/production/expense-service.js', () => ({
 	addExpense: (...a: unknown[]) => expenses.addExpense(...a),
@@ -282,6 +288,11 @@ const WRITES: Write[] = [
 		args: [{ id: 'prod-1', eventId: 'evt-1', doorCashCents: 12_000 }],
 		capability: RUN
 	},
+	{
+		name: 'recordDoorRecount',
+		args: [{ id: 'prod-1', eventId: 'evt-1', recountCents: 12_000 }],
+		capability: RUN
+	},
 	{ name: 'openHostShift', args: [{ eventId: 'evt-1' }], capability: RUN },
 	{
 		name: 'addRunOfShowSlot',
@@ -378,7 +389,8 @@ const allSpies = () =>
 		...artifacts,
 		...flyers,
 		...settlement,
-		...expenses
+		...expenses,
+		...doorCounts
 	});
 
 beforeEach(() => {
@@ -728,5 +740,25 @@ describe('run of show validation', () => {
 			'slot-1',
 			expect.objectContaining({ techNotes: null, soundcheckAt: null })
 		);
+	});
+});
+
+describe('the door counts name the caller as the counter (#2722)', () => {
+	it('passes the signed-in user, never a field, as each counter', async () => {
+		persona = 'production';
+		await submit(productions.recordDoorTake, {
+			id: 'prod-1',
+			eventId: 'evt-1',
+			doorCashCents: 500_00,
+			countedByUserId: 'someone-else'
+		});
+		expect(doorCounts.recordDoorTake).toHaveBeenCalledWith('prod-1', 'production-1', {
+			cashCents: 500_00,
+			count: null,
+			splitActsPercent: null
+		});
+		persona = 'staff';
+		await submit(productions.recordDoorRecount, { id: 'prod-1', eventId: 'evt-1' });
+		expect(doorCounts.recordDoorRecount).toHaveBeenCalledWith('prod-1', 'staff-1', null);
 	});
 });

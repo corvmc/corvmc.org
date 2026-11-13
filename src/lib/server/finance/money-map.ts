@@ -71,6 +71,9 @@ export const moneyColumns = {
 		unaccounted: 'counted but never posted — the split is derived, not journalled',
 		issue: 825
 	},
+	'production.door_cash_recount_cents': {
+		notAccounting: 'a check on `door_cash_cents` by a second person, never the figure used'
+	},
 	'production_slot.guarantee_cents': {
 		notAccounting: 'the deal. What was handed over is `paid_cents`'
 	},

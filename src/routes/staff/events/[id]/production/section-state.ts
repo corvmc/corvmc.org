@@ -48,10 +48,20 @@ export function runningOrderState(ros: RunOfShow): string {
 export const nightState = (s: Settlement) =>
 	m.staff_production_state_net_label({ amount: formatCents(s.netCents) });
 
-export const doorState = (s: Settlement) =>
-	s.door
-		? m.staff_production_state_door_counted_label({ amount: formatCents(s.door.cashCents) })
-		: m.staff_production_state_not_counted_label();
+export function doorState(s: Settlement): string {
+	if (!s.door) return m.staff_production_state_not_counted_label();
+	const amount = formatCents(s.door.cashCents);
+	switch (s.doorCounts?.check) {
+		case 'mismatch':
+			return m.staff_production_state_counts_differ_label();
+		case 'agreed':
+			return m.staff_production_state_counted_twice_label({ amount });
+		case 'single':
+			return m.staff_production_state_counted_once_label({ amount });
+		default:
+			return m.staff_production_state_door_counted_label({ amount });
+	}
+}
 
 export const costsState = (s: Settlement) =>
 	s.expenses.length === 0
@@ -83,6 +93,8 @@ function settlementBadge(s: Settlement | null): string | undefined {
 	if (s.unpaidActCount > 0)
 		return m.staff_production_state_bands_unpaid_label({ count: s.unpaidActCount });
 	if (!s.door) return m.staff_production_state_not_counted_label();
+	if (s.doorCounts?.check === 'mismatch') return m.staff_production_state_counts_differ_label();
+	if (s.doorCounts?.check === 'single') return m.staff_production_state_one_count_label();
 	return s.acts.length > 0 ? m.staff_production_state_settled_label() : undefined;
 }
 

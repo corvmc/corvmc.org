@@ -178,6 +178,12 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			return `Recorded a ${formatCents(entry.details.amountCents)} payout to ${entry.details.actName}`;
 		case 'production.payout_undone':
 			return `Undid the ${formatCents(entry.details.amountCents)} payout to ${entry.details.actName}`;
+		case 'production.door_recounted': {
+			const d = entry.details;
+			return d.firstCents === d.secondCents
+				? `Counted the door a second time: ${formatCents(d.secondCents)}, matching`
+				: `Counted the door a second time: ${formatCents(d.secondCents)} against ${formatCents(d.firstCents)}`;
+		}
 		case 'event.published_over_warnings':
 			return `Published the event over ${plural(entry.details.warnings.length, 'warning')}: “${entry.details.reason}”`;
 		case 'volunteer_hours.approved_over_return':

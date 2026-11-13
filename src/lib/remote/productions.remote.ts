@@ -15,6 +15,10 @@ import {
 	projectOfSlot
 } from '#lib/server/production/production-scope.js';
 import { mapDomainError } from '#lib/server/errors.js';
+import {
+	recordDoorTake as recordDoorTakeService,
+	recordDoorRecount as recordDoorRecountService
+} from '#lib/server/production/door-count-service.js';
 import { recordSlotPayout, undoSlotPayout } from '#lib/server/production/settlement-service.js';
 import { addExpense, removeExpense } from '#lib/server/production/expense-service.js';
 import { productionStatuses, type ProductionStatus } from '#lib/server/db/schema/production.js';
@@ -316,17 +320,46 @@ export const recordDoorTake = form(
 		splitActsPercent: z.number().int().min(0).max(100).optional()
 	}),
 	async (data) => {
-		await requireProjectCommittee(await projectOfProduction(data.id), 'production.run');
+		const { user } = await requireProjectCommittee(
+			await projectOfProduction(data.id),
+			'production.run'
+		);
 		try {
 			// `undefined` is an empty box, not an untouched one: the form renders
 			// every existing value into its field, so one that arrives missing is
 			// one somebody cleared. That is what lets a door count go back to
 			// "nobody counted" rather than being stuck at a number (#929).
-			await updateService(data.id, {
-				doorCashCents: data.doorCashCents ?? null,
-				doorCount: data.doorCount ?? null,
-				doorSplitActsPercent: data.splitActsPercent ?? null
+			await recordDoorTakeService(data.id, user.id, {
+				cashCents: data.doorCashCents ?? null,
+				count: data.doorCount ?? null,
+				splitActsPercent: data.splitActsPercent ?? null
 			});
+			await getStaffEventProduction(data.eventId).refresh();
+			return { success: true };
+		} catch (err) {
+			mapDomainError(err);
+		}
+	}
+);
+
+/**
+ * A second count of the same drawer, by somebody other than the first
+ * counter (#2722). A figure that differs is recorded and shown, not refused.
+ * An empty field takes the second count back.
+ */
+export const recordDoorRecount = form(
+	z.object({
+		id: z.string().min(1),
+		eventId: z.string().min(1),
+		recountCents: z.number().int().min(0).optional()
+	}),
+	async (data) => {
+		const { user } = await requireProjectCommittee(
+			await projectOfProduction(data.id),
+			'production.run'
+		);
+		try {
+			await recordDoorRecountService(data.id, user.id, data.recountCents ?? null);
 			await getStaffEventProduction(data.eventId).refresh();
 			return { success: true };
 		} catch (err) {

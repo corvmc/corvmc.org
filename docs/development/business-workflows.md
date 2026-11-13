@@ -1993,7 +1993,10 @@ restore crew shifts or retract a cancellation notice.
     settlement group plus the acts' share of the door cash; the collective's revenue is the
     `earned` `ticket_sales` rows plus its share of the door. `recordDoorTake`
     (`production.run`) records the drawer and count, split at `doorSplitActsPercent` or the
-    house `DOOR_SPLIT_ACTS_PERCENT`. Expenses come from `production_expense`. Each act's
+    house `DOOR_SPLIT_ACTS_PERCENT`, and stamps whoever changed the figure as the counter.
+    `recordDoorRecount` records a second count by somebody else; the first counter is
+    refused. One count, or two that differ, warns on the console and on a move to `settled`
+    or `closed`, and never blocks (#2722). Expenses come from `production_expense`. Each act's
     suggested payout comes from its deal, and a guarantee above what buyers sent the acts is
     a collective top-up. Door cash never goes to Stripe.
 11. **Poster.** `askForArtifact` (`production.run`) asks any directory entry for
@@ -2024,7 +2027,8 @@ restore crew shifts or retract a cancellation notice.
 - `production_slot`, `production_expense` — the run of show, the deal and payouts, and the
   cost sheet.
 - `financial_entry` — ticket, payout and expense rows, read by settlement group. Door cash stays
-  on `production` (`doorCashCents`, `doorCount`, `doorSplitActsPercent`).
+  on `production` (`doorCashCents`, `doorCount`, `doorSplitActsPercent`, and the counter and
+  second count beside them).
 - `event_listing.venueId` — where the show is, and therefore whether it holds the
   practice room. Deliberately **not** duplicated onto `production`.
 - `event_band` — the bill, which the index summarises and the production never
