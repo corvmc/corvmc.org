@@ -1,6 +1,6 @@
 import { linkedIdSql, linkedTo, linkInserts } from '#lib/server/task/work-order-link.js';
 import { db } from '#lib/server/db/index.js';
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { config } from '#lib/server/site-config/site-config-service.js';
 import {
 	memberOrientation,
@@ -213,20 +213,7 @@ export async function raiseOrientationShift(
 	reservationId: string,
 	bookingStartsAt: Date
 ): Promise<{ id: string; startsAt: Date } | null> {
-	const [live] = await db
-		.select({ id: workOrder.id, startsAt: volunteerShift.startsAt })
-		.from(workOrder)
-		.innerJoin(volunteerShift, eq(volunteerShift.workOrderId, workOrder.id))
-		.where(
-			and(
-				linkedTo('reservationId', reservationId),
-				eq(workOrder.isOrientation, true),
-				isNull(workOrder.cancelledAt),
-				liveShift()
-			)
-		)
-		.orderBy(asc(volunteerShift.startsAt))
-		.limit(1);
+	const [live] = await liveOrientation(reservationId, asc(volunteerShift.startsAt));
 	if (live) return live;
 
 	const setting = await getOrientationSetting();
@@ -242,7 +229,6 @@ export async function raiseOrientationShift(
 	const id = crypto.randomUUID();
 	const startsAt = new Date(bookingStartsAt.getTime() - setting.leadMinutes * 60_000);
 	// The orientation task on the booking, and one shift at the booking's time.
-	// eslint-disable-next-line custom/no-check-then-insert -- no unique key per booking yet (#2695)
 	const insertTask = db.insert(workOrder).values({
 		id,
 		volunteerRoleId: setting.roleId,
@@ -274,7 +260,35 @@ export async function raiseOrientationShift(
 						)
 				]
 	);
+
+	// No unique key: the booking is a link row, not a column. So two raises
+	// that both read nothing collapse after inserting: the earliest-inserted
+	// live orientation wins, by rowid, and the later deletes its own task (its
+	// shift, links and checklist cascade) before anyone is rostered on it.
+	const [first] = await liveOrientation(reservationId, sql`"work_order".rowid`);
+	if (first && first.id !== id) {
+		await db.delete(workOrder).where(eq(workOrder.id, id));
+		return first;
+	}
 	return { id, startsAt };
+}
+
+/** The first live orientation shift on one booking, in the caller's order. */
+function liveOrientation(reservationId: string, order: SQL) {
+	return db
+		.select({ id: workOrder.id, startsAt: volunteerShift.startsAt })
+		.from(workOrder)
+		.innerJoin(volunteerShift, eq(volunteerShift.workOrderId, workOrder.id))
+		.where(
+			and(
+				linkedTo('reservationId', reservationId),
+				eq(workOrder.isOrientation, true),
+				isNull(workOrder.cancelledAt),
+				liveShift()
+			)
+		)
+		.orderBy(order)
+		.limit(1);
 }
 
 export interface OrientationOwner {

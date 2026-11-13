@@ -88,28 +88,38 @@ export async function writeActContactUnguarded(
 	const phone = data.phone?.trim() || null;
 	if (!email && !name && !phone) return;
 
-	const same = email ? await contactByEmail(email) : await unaddressedSelfEntry(organizationId);
-	if (same) {
-		await db
-			.update(contact)
-			.set({
-				organizationId: same.organizationId ?? organizationId,
-				...(name && { name }),
-				...(phone && { phone }),
-				retainUntil: null,
-				updatedAt: new Date()
+	let same = email ? await contactByEmail(email) : await unaddressedSelfEntry(organizationId);
+	if (!same) {
+		const [row] = await db
+			.insert(contact)
+			.values({
+				organizationId,
+				name,
+				email,
+				phone,
+				subscriberId: await linkSubscriber(email),
+				source: 'self_entered'
 			})
-			.where(eq(contact.id, same.id));
-		return;
+			.returning({ id: contact.id });
+		if (email) return;
+		// No unique key: an org merge or an edit may leave two unaddressed
+		// entries. So two saves that both read nothing collapse after inserting:
+		// the earliest wins, and the later deletes its own row and updates it.
+		const first = await unaddressedSelfEntry(organizationId);
+		if (!first || first.id === row.id) return;
+		await db.delete(contact).where(eq(contact.id, row.id));
+		same = first;
 	}
-	await db.insert(contact).values({
-		organizationId,
-		name,
-		email,
-		phone,
-		subscriberId: await linkSubscriber(email),
-		source: 'self_entered'
-	});
+	await db
+		.update(contact)
+		.set({
+			organizationId: same.organizationId ?? organizationId,
+			...(name && { name }),
+			...(phone && { phone }),
+			retainUntil: null,
+			updatedAt: new Date()
+		})
+		.where(eq(contact.id, same.id));
 }
 
 async function unaddressedSelfEntry(organizationId: string) {
@@ -123,7 +133,7 @@ async function unaddressedSelfEntry(organizationId: string) {
 				isNull(contact.email)
 			)
 		)
-		.orderBy(asc(contact.createdAt), asc(contact.id))
+		.orderBy(sql`rowid`)
 		.limit(1);
 	return row ?? null;
 }

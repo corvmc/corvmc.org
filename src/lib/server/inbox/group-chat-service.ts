@@ -165,7 +165,10 @@ export async function createGroupTopic(groupId: string, subject: string): Promis
 			status: 'open',
 			subject: name
 		})
+		.onConflictDoNothing()
 		.returning({ id: inboxThread.id });
+	// `idx_inbox_thread_group_topic` refused a name a concurrent create took.
+	if (!created) throw new TopicNameTakenError();
 	return created.id;
 }
 

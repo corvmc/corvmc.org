@@ -31,7 +31,8 @@ const {
 	listDutyLists,
 	updateDutyList,
 	updateDutyListItem,
-	DutyListAlreadyAppliedError
+	DutyListAlreadyAppliedError,
+	DutyListNameTakenError
 } = await import('./duty-list-service');
 
 const at = (iso: string) => Math.floor(new Date(iso).getTime() / 1000);
@@ -393,6 +394,16 @@ describe('createDutyList', () => {
 				createDutyList({ name: `P ${a}`, anchor: a, createdByUserId: 'u1' })
 			).resolves.toMatchObject({ subject: 'project', anchor: a });
 		}
+	});
+
+	// Both name checks find nothing before either insert runs (#2695).
+	it('refuses the second of two overlapping creates of a name as taken', async () => {
+		const make = () => createDutyList({ name: 'Load-in', anchor: 'doors', createdByUserId: 'u1' });
+		const results = await Promise.allSettled([make(), make()]);
+
+		expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+		const refused = results.find((r) => r.status === 'rejected');
+		expect(refused?.reason).toBeInstanceOf(DutyListNameTakenError);
 	});
 });
 

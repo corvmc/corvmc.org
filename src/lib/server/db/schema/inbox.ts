@@ -203,7 +203,12 @@ export const inboxThread = sqliteTable(
 		// One General topic per group (#2621); getOrCreateGroupChat relies on it.
 		uniqueIndex('idx_inbox_thread_group_general')
 			.on(t.groupId)
-			.where(sql`${t.channel} = 'group' AND ${t.subject} IS NULL`)
+			.where(sql`${t.channel} = 'group' AND ${t.subject} IS NULL`),
+		// One named topic per name in a group, ignoring case, so two overlapping
+		// `createGroupTopic` calls cannot both add it.
+		uniqueIndex('idx_inbox_thread_group_topic')
+			.on(t.groupId, sql`lower(${t.subject})`)
+			.where(sql`${t.channel} = 'group' AND ${t.subject} IS NOT NULL`)
 	]
 );
 

@@ -69,10 +69,13 @@ export async function addSource(params: {
 		.limit(1);
 	if (existing) throw new CalendarSourceExistsError();
 
+	// `uq_calendar_source_url`: a concurrent add of the same feed returns nothing.
 	const [row] = await db
 		.insert(calendarSource)
 		.values({ venueId: params.venueId, url, createdByUserId: params.createdByUserId })
+		.onConflictDoNothing()
 		.returning({ id: calendarSource.id, venueId: calendarSource.venueId });
+	if (!row) throw new CalendarSourceExistsError();
 	return row;
 }
 

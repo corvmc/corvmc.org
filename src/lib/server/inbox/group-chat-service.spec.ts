@@ -271,6 +271,19 @@ describe('createGroupTopic', () => {
 		expect(threadsOf('g1')).toHaveLength(1);
 	});
 
+	// Both clash reads find nothing before either insert runs (#2695).
+	it('opens one topic when two creates of a name overlap', async () => {
+		const results = await Promise.allSettled([
+			createGroupTopic('g1', 'Tour logistics'),
+			createGroupTopic('g1', 'tour LOGISTICS')
+		]);
+
+		expect(threadsOf('g1')).toHaveLength(1);
+		expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+		const refused = results.find((r) => r.status === 'rejected');
+		expect(refused?.reason).toBeInstanceOf(TopicNameTakenError);
+	});
+
 	// A second General or Announcements would sit unreachable beside the real one.
 	it.each(['General', 'general', '  GENERAL ', 'Announcements', 'announcements'])(
 		'refuses %o',

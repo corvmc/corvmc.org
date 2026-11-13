@@ -1,5 +1,6 @@
 import { and, desc, eq, isNotNull, or } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
+import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { suggestion } from '#lib/server/db/schema/suggestion.js';
 import { project } from '#lib/server/db/schema/project.js';
@@ -91,24 +92,33 @@ export async function startProjectFromBallot(
 
 	const id = crypto.randomUUID();
 	const { groupId, ...fields } = data;
-	await db.batch([
-		db.insert(project).values({
-			...fields,
-			id,
-			ballotId,
-			suggestionId: b.suggestionId,
-			status: 'planned'
-		}),
-		...(b.suggestionId
-			? [
-					db
-						.update(suggestion)
-						.set({ status: 'planned', updatedAt: now })
-						.where(eq(suggestion.id, b.suggestionId))
-				]
-			: []),
-		...(groupId ? [ownerRow(id, groupId)] : [])
-	]);
+	try {
+		await db.batch([
+			db.insert(project).values({
+				...fields,
+				id,
+				ballotId,
+				suggestionId: b.suggestionId,
+				status: 'planned'
+			}),
+			...(b.suggestionId
+				? [
+						db
+							.update(suggestion)
+							.set({ status: 'planned', updatedAt: now })
+							.where(eq(suggestion.id, b.suggestionId))
+					]
+				: []),
+			...(groupId ? [ownerRow(id, groupId)] : [])
+		]);
+	} catch (err) {
+		// `uq_project_ballot` / `uq_project_suggestion`: a concurrent start won,
+		// and the batch rolled back whole.
+		if (isUniqueConstraintError(err)) {
+			throw new DecisionChainError('A project has already been started from this');
+		}
+		throw err;
+	}
 	return getProjectById(id);
 }
 

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "ecb238ab-5817-4838-aed2-63edbbd5e441",
+  "id": "ec903719-3555-4ae1-928b-1ab6a7959e26",
   "prevIds": [
-    "358502c4-daf9-4517-a6ad-647b147dccc2"
+    "ecb238ab-5817-4838-aed2-63edbbd5e441"
   ],
   "ddl": [
     {
@@ -23776,6 +23776,24 @@
       "where": "\"inbox_thread\".\"channel\" = 'group' AND \"inbox_thread\".\"subject\" IS NULL",
       "origin": "manual",
       "name": "idx_inbox_thread_group_general",
+      "entityType": "indexes",
+      "table": "inbox_thread"
+    },
+    {
+      "columns": [
+        {
+          "value": "group_id",
+          "isExpression": false
+        },
+        {
+          "value": "lower(\"subject\")",
+          "isExpression": true
+        }
+      ],
+      "isUnique": true,
+      "where": "\"inbox_thread\".\"channel\" = 'group' AND \"inbox_thread\".\"subject\" IS NOT NULL",
+      "origin": "manual",
+      "name": "idx_inbox_thread_group_topic",
       "entityType": "indexes",
       "table": "inbox_thread"
     },

@@ -45,8 +45,22 @@ export function migratedSqlite(opts: { foreignKeys?: boolean; through?: string }
  * `testDb` with D1's `batch`: the statements in order, as one transaction.
  * better-sqlite3's drizzle has none, and a service that batches needs one.
  * Like D1's, it takes only query builders: a `db.run` result is refused.
+ * Overlapping batches run one after the other, as D1 runs them.
  */
 export function withBatch({ sqlite, testDb }: ReturnType<typeof migratedSqlite>) {
+	let queue: Promise<unknown> = Promise.resolve();
+	const run = async (stmts: readonly PromiseLike<unknown>[]) => {
+		sqlite.exec('begin');
+		try {
+			const out = [];
+			for (const s of stmts) out.push(await s);
+			sqlite.exec('commit');
+			return out;
+		} catch (e) {
+			sqlite.exec('rollback');
+			throw e;
+		}
+	};
 	return Object.assign(testDb, {
 		batch: async (stmts: readonly PromiseLike<unknown>[]) => {
 			for (const s of stmts) {
@@ -54,16 +68,9 @@ export function withBatch({ sqlite, testDb }: ReturnType<typeof migratedSqlite>)
 					throw new TypeError('D1 batches only query builders, not a raw db.run/db.all result');
 				}
 			}
-			sqlite.exec('begin');
-			try {
-				const out = [];
-				for (const s of stmts) out.push(await s);
-				sqlite.exec('commit');
-				return out;
-			} catch (e) {
-				sqlite.exec('rollback');
-				throw e;
-			}
+			const result = queue.then(() => run(stmts));
+			queue = result.catch(() => undefined);
+			return result;
 		}
 	});
 }

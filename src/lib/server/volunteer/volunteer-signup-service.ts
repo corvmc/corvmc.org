@@ -1154,6 +1154,7 @@ export async function inviteToShift(
 		return { signupId: existing.id, missingCertifications: missing };
 	}
 
+	// `uq_volunteer_signup`: a concurrent invite of the same person returns nothing.
 	const [row] = await db
 		.insert(volunteerSignup)
 		.values({
@@ -1163,7 +1164,9 @@ export async function inviteToShift(
 			invitedAt: now,
 			invitedByUserId
 		})
+		.onConflictDoNothing()
 		.returning({ id: volunteerSignup.id });
+	if (!row) throw new AlreadyOnShiftError('invited');
 
 	void emitSignupEvent('volunteer.signup_invited', row.id);
 	await recordRosterEntry('work_order.member_invited', { shiftId, userId });
