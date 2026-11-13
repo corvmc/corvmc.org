@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "da4c80af-8365-4a6b-8aef-036e88a437a7",
+  "id": "3f3fbb51-1763-4e51-b23a-f4738e122e4f",
   "prevIds": [
-    "1e6f61cc-c8ee-41d4-b3d0-9f7896619c9e"
+    "da4c80af-8365-4a6b-8aef-036e88a437a7"
   ],
   "ddl": [
     {
@@ -2137,6 +2137,36 @@
       "default": null,
       "generated": null,
       "name": "notes",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'unknown'",
+      "generated": null,
+      "name": "step_free_entry",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'unknown'",
+      "generated": null,
+      "name": "accessible_restroom",
+      "entityType": "columns",
+      "table": "venue"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'unknown'",
+      "generated": null,
+      "name": "seating",
       "entityType": "columns",
       "table": "venue"
     },

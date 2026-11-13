@@ -3711,5 +3711,11 @@
 	"staff_members_id_panels_account_panel_notice_sent_toast": "Notice sent",
 	"staff_members_id_panels_account_panel_resend_notice_text": "Emails the member their removal notice again, with a new appeal link.",
 	"staff_members_id_panels_grant_certification_training_shift_label": "Training shift",
-	"staff_members_id_panels_grant_certification_no_training_shift_label": "None"
+	"staff_members_id_panels_grant_certification_no_training_shift_label": "None",
+	"staff_access_title": "Access",
+	"staff_step_free_entry_label": "Step-free entry",
+	"staff_accessible_restroom_label": "Accessible restroom",
+	"staff_seating_label": "Seating",
+	"staff_no_label": "No",
+	"staff_unknown_label": "Unknown"
 }

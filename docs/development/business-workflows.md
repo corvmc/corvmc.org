@@ -1157,6 +1157,11 @@ on a bill and have it appear on that band's own profile without their say-so.
   while it is `published` or `cancelled`, skips a new show already listed at that venue on that
   local day, and leaves a show that left the feed alone. A fetch failure is written to
   `lastError`.
+- **Access answers:** `venue` carries `stepFreeEntry`, `accessibleRestroom` and `seating`, each
+  `yes`, `no` or `unknown` (the default), set in the venue's edit form on `/staff/venues/[id]`.
+  `getVenueAccess()` in `venue/venue-service.ts` drops the unknown ones, and the public and member
+  event pages show what is left as one line in the event facts. A listing at a venue nobody has
+  checked, or with no venue, shows no access line.
 - **Recaps:** once an event has started and is not cancelled, `uploadEventPhotos`
   (`event-photos.remote.ts`) attaches photos to the listing's `gallery` slot through
   `event/event-photo-service.ts`, at most 10 per upload and 60 per event. The uploader holds

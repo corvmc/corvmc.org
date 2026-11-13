@@ -5,6 +5,8 @@ import { asc, count, eq, isNull } from 'drizzle-orm';
 import { DomainError } from '#lib/server/domain-error.js';
 import { generateSlug, ensureUniqueSlug } from '#lib/server/utils/slug.js';
 import type { Venue } from '#lib/server/db/schema/venue.js';
+import { venueAccessFields } from '#lib/config.js';
+import type { AccessAnswer, VenueAccessField } from '#lib/config.js';
 
 /**
  * Where a show is.
@@ -53,6 +55,9 @@ export interface VenueInput {
 	notes?: string | null;
 }
 
+/** Set on edit only: a new venue starts `unknown` on every question. */
+export type VenueAccessInput = Partial<Record<VenueAccessField, AccessAnswer>>;
+
 export async function createVenue(data: VenueInput): Promise<Venue> {
 	const slug = await ensureUniqueSlug(generateSlug(data.name), venue, venue.slug);
 	const [row] = await db
@@ -62,7 +67,10 @@ export async function createVenue(data: VenueInput): Promise<Venue> {
 	return row;
 }
 
-export async function updateVenue(id: string, data: Partial<VenueInput>): Promise<Venue> {
+export async function updateVenue(
+	id: string,
+	data: Partial<VenueInput> & VenueAccessInput
+): Promise<Venue> {
 	const existing = await getVenue(id);
 
 	// Re-slug only when the name actually moved, and exclude the row's own slug
@@ -207,4 +215,34 @@ export async function holdsSpace(venueId: string | null | undefined): Promise<bo
 		.where(eq(venue.id, venueId))
 		.limit(1);
 	return row?.isPrimary ?? true;
+}
+
+/** One answered access question. `unknown` answers are left out. */
+export interface VenueAccessFact {
+	field: VenueAccessField;
+	answer: Exclude<AccessAnswer, 'unknown'>;
+}
+
+/**
+ * What a public listing at this venue says about access, in display order.
+ * Empty for no venue, a missing venue, or a venue nobody has checked.
+ */
+export async function getVenueAccess(
+	venueId: string | null | undefined
+): Promise<VenueAccessFact[]> {
+	if (!venueId) return [];
+	const [row] = await db
+		.select({
+			stepFreeEntry: venue.stepFreeEntry,
+			accessibleRestroom: venue.accessibleRestroom,
+			seating: venue.seating
+		})
+		.from(venue)
+		.where(eq(venue.id, venueId))
+		.limit(1);
+	if (!row) return [];
+	return venueAccessFields.flatMap((field) => {
+		const answer = row[field];
+		return answer === 'unknown' ? [] : [{ field, answer }];
+	});
 }
