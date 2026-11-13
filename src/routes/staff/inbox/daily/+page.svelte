@@ -126,7 +126,12 @@
 						</div>
 
 						<div class="max-h-96 overflow-y-auto">
-							<ThreadTimeline messages={t.messages} notes={t.notes} contactName={t.contactName} />
+							<ThreadTimeline
+								messages={t.messages}
+								channel={t.channel}
+								notes={t.notes}
+								contactName={t.contactName}
+							/>
 						</div>
 
 						{#if t.awaitingReplySince}

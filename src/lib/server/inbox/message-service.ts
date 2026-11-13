@@ -2,7 +2,8 @@ import { db } from '#lib/server/db/index.js';
 import { inboxThread, inboxMessage, inboxNote } from '#lib/server/db/schema/inbox.js';
 import { eq, sql, desc, and, asc } from 'drizzle-orm';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
-import { truncatePreview } from './thread-service';
+import { messagePreview } from './thread-service';
+import type { InboxChannel } from '#lib/server/db/schema/inbox.js';
 import { dispatchReply } from './channel-dispatcher';
 
 export interface AddInboundMessageParams {
@@ -29,11 +30,15 @@ export interface AddInboundMessageParams {
  */
 // Exported for `group-chat-service.ts`, whose insert cannot go through
 // `addPeerMessage` — that one emits a DM event naming a single recipient.
-export async function touchThread(threadId: string, body: string): Promise<void> {
+export async function touchThread(
+	threadId: string,
+	body: string,
+	channel: InboxChannel
+): Promise<void> {
 	await db
 		.update(inboxThread)
 		.set({
-			preview: truncatePreview(body),
+			preview: messagePreview(body, channel),
 			messageCount: sql`${inboxThread.messageCount} + 1`,
 			lastMessageAt: new Date(),
 			awaitingReplySince: null,
@@ -81,7 +86,7 @@ export async function addPeerMessage(params: AddPeerMessageParams) {
 		})
 		.returning();
 
-	await touchThread(params.threadId, params.body);
+	await touchThread(params.threadId, params.body, 'direct');
 
 	domainEvents.emit('inbox.direct_message', {
 		threadId: params.threadId,
@@ -132,20 +137,20 @@ export async function addInboundMessage(params: AddInboundMessageParams) {
 		})
 		.returning();
 
-	await touchThread(params.threadId, params.body);
-
 	const [thread] = await db
 		.select({ channel: inboxThread.channel, contactName: inboxThread.contactName })
 		.from(inboxThread)
 		.where(eq(inboxThread.id, params.threadId))
 		.limit(1);
 
+	await touchThread(params.threadId, params.body, thread.channel);
+
 	domainEvents.emit('inbox.message_received', {
 		threadId: params.threadId,
 		messageId: message.id,
 		channel: thread.channel,
 		contactName: thread.contactName,
-		preview: truncatePreview(params.body)
+		preview: messagePreview(params.body, thread.channel)
 	});
 
 	return message;
@@ -221,7 +226,7 @@ export async function recordOutboundMessage(params: RecordOutboundMessageParams)
 	await db
 		.update(inboxThread)
 		.set({
-			preview: truncatePreview(params.body),
+			preview: messagePreview(params.body, thread.channel),
 			messageCount: sql`${inboxThread.messageCount} + 1`,
 			lastMessageAt: new Date(),
 			// Only ever set here. A thread with this null has never been answered,

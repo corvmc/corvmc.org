@@ -90,7 +90,7 @@
 <div class="min-h-0 flex-1 overflow-y-auto">
 	<!-- No `notes`: internal notes are staff-private and a band thread never
 	     acquires one. No `viewerUserId`: see the note at the top. -->
-	<ThreadTimeline messages={thread.messages} contactName={thread.contactName} />
+	<ThreadTimeline messages={thread.messages} channel="band" contactName={thread.contactName} />
 </div>
 
 <div class="flex flex-col gap-2">

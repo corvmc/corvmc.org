@@ -12,7 +12,7 @@ import { getNotificationType, notificationPreference } from '#lib/server/db/sche
 import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { renderMarkdown } from '#lib/utils/markdown.js';
-import { truncatePreview } from '#lib/server/inbox/thread-service.js';
+import { messagePreview } from '#lib/server/inbox/thread-service.js';
 import { ANNOUNCEMENTS_TOPIC } from '#lib/server/inbox/group-chat-service.js';
 
 /**
@@ -311,7 +311,7 @@ export async function publish(id: string, groupId: string): Promise<Announcement
 		db
 			.update(inboxThread)
 			.set({
-				preview: truncatePreview(body),
+				preview: messagePreview(body, 'group'),
 				messageCount: sql`${inboxThread.messageCount} + 1`,
 				lastMessageAt: now,
 				updatedAt: now

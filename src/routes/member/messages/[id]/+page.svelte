@@ -103,7 +103,11 @@
 				<Alert type="info">{m.member_messages_id_member_s_account_no_longer_body()}</Alert>
 			{/if}
 
-			<ThreadTimeline messages={t.messages} viewerUserId={t.viewerUserId} />
+			<ThreadTimeline
+				messages={t.messages}
+				channel={t.kind === 'staff' ? 'portal' : t.kind}
+				viewerUserId={t.viewerUserId}
+			/>
 		</div>
 
 		<div class="flex flex-col gap-2">

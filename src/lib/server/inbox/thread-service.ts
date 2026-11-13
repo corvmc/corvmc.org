@@ -31,6 +31,7 @@ import { paginate } from '#lib/server/db/paginate.js';
 import { z } from 'zod';
 import { contactSubjects, inboxThreadStatuses } from '#lib/config.js';
 import type { InboxView } from '#lib/config.js';
+import { markdownExcerpt, messageBodyIsMarkdown } from '#lib/utils/markdown.js';
 
 /**
  * The one expression that keeps conversations the collective is not party to out
@@ -125,6 +126,15 @@ const PREVIEW_LENGTH = 200;
 export function truncatePreview(text: string): string {
 	if (text.length <= PREVIEW_LENGTH) return text;
 	return text.slice(0, PREVIEW_LENGTH) + '…';
+}
+
+/**
+ * A thread's preview line for a new message. A markdown body loses its syntax
+ * here, since the preview lands in lists and notification emails as text.
+ */
+export function messagePreview(body: string, channel: InboxChannel): string {
+	if (!messageBodyIsMarkdown(channel)) return truncatePreview(body);
+	return markdownExcerpt(body, PREVIEW_LENGTH + 1) ?? truncatePreview(body);
 }
 
 export interface FindOrCreateThreadParams {
