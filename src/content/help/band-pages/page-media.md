@@ -15,7 +15,7 @@ in its control strip and the picker is right there:
 - **Hero** — your banner art.
 - **Gallery** — press photos. Add as many as your plan allows; they appear in
   the block as you upload them.
-- **Tech Rider** — your stage plot and your rider (an image or a PDF). Both also
+- **Tech rider** — your stage plot and your rider (an image or a PDF). Both also
   belong to your [tech rider](/member/help/electronic-press-kit) page, which is
   where the backline lives.
 

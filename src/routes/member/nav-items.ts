@@ -99,7 +99,7 @@ export function memberNavMain(input: MemberNavInput): MemberNavItem[] {
 			label: 'Equipment',
 			href: resolve('member/equipment'),
 			children: [
-				{ key: 'equipment-loans', label: 'My Loans', href: resolve('member/equipment/loans') }
+				{ key: 'equipment-loans', label: 'My loans', href: resolve('member/equipment/loans') }
 			]
 		});
 	}

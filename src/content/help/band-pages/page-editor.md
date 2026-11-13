@@ -10,7 +10,7 @@ sortOrder: 2
 ## The page editor
 
 Premium bands get a block-based editor for their custom public page. Open it from
-the band's **Page Editor**. The page comes with every block already on it, in a
+the band's **Page editor**. The page comes with every block already on it, in a
 sensible order — you arrange them, configure each one, and hide the ones you have
 nothing for.
 
@@ -26,7 +26,7 @@ nothing for.
 - **Press** — Quotes and testimonials.
 - **Achievements** — Highlights and milestones.
 - **Contact** — How to reach you.
-- **Tech Rider** — Technical requirements.
+- **Tech rider** — Technical requirements.
 - **Merch** — Items for sale.
 - **Custom HTML** — Your own markup.
 
