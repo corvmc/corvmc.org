@@ -939,6 +939,8 @@
 	"market_vendor_check_in_market_day_title": "Market day: {title}",
 	"market_vendor_check_in_modal_title": "Invite {businessName} back?",
 	"market_vendor_check_in_needs_power_text": ", needs power",
+	"market_vendor_check_in_own_table_text": ", own table",
+	"market_vendor_check_in_tent_text": ", tent",
 	"market_vendor_check_in_next_market_label": "Next market",
 	"market_vendor_check_in_no_show_label": "No-show",
 	"market_vendor_check_in_no_shows_title": "No-shows",

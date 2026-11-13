@@ -40,7 +40,7 @@ A page or less. Link the issue and the PRs.
 | 0006 | [Listings publish first and are moderated after](0006-listings-publish-first-and-are-moderated-after.md)                       | 2026-08-13 | Accepted           |
 | 0007 | [The canonical event URL holds the general view](0007-the-canonical-event-url-holds-the-general-view.md)                       | 2026-08-28 | Accepted           |
 | 0008 | [A ticket price is a sliding scale](0008-ticket-price-is-a-sliding-scale.md)                                                   | 2026-09-03 | Accepted           |
-| 0009 | [Market vendor contact lives on the inbox thread](0009-market-vendor-contact-lives-on-the-inbox-thread.md)                     | 2026-09-23 | Accepted           |
+| 0009 | [Market vendor contact lives on the inbox thread](0009-market-vendor-contact-lives-on-the-inbox-thread.md)                     | 2026-09-23 | Superseded by 0073 |
 | 0010 | [Poster art is an artifact request](0010-poster-art-is-an-artifact-request.md)                                                 | 2026-09-23 | Accepted           |
 | 0011 | [Productions are projects](0011-productions-are-projects.md)                                                                   | 2026-09-29 | Accepted           |
 | 0012 | [Partner feeds import as community listings](0012-partner-feeds-import-as-community-listings.md)                               | 2026-11-02 | Accepted           |
@@ -104,3 +104,4 @@ A page or less. Link the issue and the PRs.
 | 0070 | [A supplier is an organization](0070-a-supplier-is-an-organization.md)                                                         | 2026-11-13 | Accepted           |
 | 0071 | [A record shows its tasks and shifts](0071-a-record-shows-its-tasks-and-shifts.md)                                             | 2026-11-13 | Accepted           |
 | 0072 | [A schedule change replaces the series](0072-a-schedule-change-replaces-the-series.md)                                         | 2026-11-13 | Accepted           |
+| 0073 | [A market vendor is an organization](0073-a-market-vendor-is-an-organization.md)                                               | 2026-11-13 | Accepted           |

@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "01ed20b7-94cc-4ddf-a897-731854299446",
+  "id": "fd6c2826-813a-49c8-88fd-e842b9174dcb",
   "prevIds": [
-    "1efefb5b-825a-49d1-9469-30b157bf3293"
+    "c7109f92-a085-4acb-b4e7-a2fc6510b6e7"
   ],
   "ddl": [
     {
@@ -424,6 +424,10 @@
     },
     {
       "name": "organization",
+      "entityType": "tables"
+    },
+    {
+      "name": "vendor_detail",
       "entityType": "tables"
     },
     {
@@ -11716,6 +11720,86 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "table": "vendor_detail"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "offering",
+      "entityType": "columns",
+      "table": "vendor_detail"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "1",
+      "generated": null,
+      "name": "tables_needed",
+      "entityType": "columns",
+      "table": "vendor_detail"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "needs_power",
+      "entityType": "columns",
+      "table": "vendor_detail"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "brings_own_table",
+      "entityType": "columns",
+      "table": "vendor_detail"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "brings_tent",
+      "entityType": "columns",
+      "table": "vendor_detail"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "setup_notes",
+      "entityType": "columns",
+      "table": "vendor_detail"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "vendor_detail"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "id",
       "entityType": "columns",
       "table": "contractor_job"
@@ -14022,6 +14106,16 @@
     },
     {
       "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "organization_id",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "text",
       "notNull": true,
       "autoincrement": false,
       "default": null,
@@ -14067,6 +14161,26 @@
       "default": "false",
       "generated": null,
       "name": "needs_power",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "brings_own_table",
+      "entityType": "columns",
+      "table": "market_vendor"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "brings_tent",
       "entityType": "columns",
       "table": "market_vendor"
     },
@@ -18704,6 +18818,21 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_vendor_detail_organization_id_organization_id_fk",
+      "entityType": "fks",
+      "table": "vendor_detail"
+    },
+    {
+      "columns": [
+        "organization_id"
+      ],
+      "tableTo": "organization",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
       "onDelete": "RESTRICT",
       "nameExplicit": false,
       "name": "fk_contractor_job_organization_id_organization_id_fk",
@@ -19337,6 +19466,21 @@
       "onDelete": "SET NULL",
       "nameExplicit": false,
       "name": "fk_market_vendor_thread_id_inbox_thread_id_fk",
+      "entityType": "fks",
+      "table": "market_vendor"
+    },
+    {
+      "columns": [
+        "organization_id"
+      ],
+      "tableTo": "organization",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_market_vendor_organization_id_organization_id_fk",
       "entityType": "fks",
       "table": "market_vendor"
     },
@@ -20879,6 +21023,15 @@
       "nameExplicit": false,
       "name": "organization_pk",
       "table": "organization",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "organization_id"
+      ],
+      "nameExplicit": false,
+      "name": "vendor_detail_pk",
+      "table": "vendor_detail",
       "entityType": "pks"
     },
     {
@@ -25477,6 +25630,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_market_vendor_event_status",
+      "entityType": "indexes",
+      "table": "market_vendor"
+    },
+    {
+      "columns": [
+        {
+          "value": "organization_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_market_vendor_organization",
       "entityType": "indexes",
       "table": "market_vendor"
     },

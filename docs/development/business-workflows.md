@@ -2203,8 +2203,8 @@ password from there.
 
 ## 19. Market vendors: applications for a market day CMC hosts
 
-Decision: [market vendor contact lives on the inbox thread](../decisions/0009-market-vendor-contact-lives-on-the-inbox-thread.md)
-(#609). Open decision: #1504 (what the public sees).
+Decision: [a market vendor is an organization](../decisions/0073-a-market-vendor-is-an-organization.md)
+(#2622), superseding 0009 (#609). Open decision: #1504 (what the public sees).
 
 ### The story
 
@@ -2220,8 +2220,13 @@ vendors are listed on the event page.
   `kind` to `market`.
 - **Apply:** `submitVendorApplicationForm` checks Turnstile, then `submitApplication` refuses
   with `MarketClosedError` unless the listing is published, not started and before
-  `applications_close_at`. It opens a `web` inbox thread, posts the application as its first
-  message, and inserts `market_vendor`.
+  `applications_close_at`. It opens a `web` inbox thread and posts the application as its first
+  message. `recordApplicantUnguarded` in `contact-service.ts` finds the vendor's organization
+  through a contact already holding the email, or creates one named for the business with the
+  person as its first contact, and gives it the `vendor` role. The thread is filed to that
+  organization. A first application writes `vendor_detail`; a later one leaves it alone and takes
+  its blank setup notes and website from it and the organization. The public form shows none of
+  it. Then `market_vendor` is inserted with its own copy of what was asked.
 - **Decide:** `decideVendorForm` → `decideApplication` moves the status and sends the written
   message through `addOutboundMessage`. `withdrawn` is final. The guard is
   `requireCommitteeMember` on the committee that owns the listing's project
@@ -2249,14 +2254,21 @@ vendors are listed on the event page.
   no-show. All three use the committee guard above, with staff as cover. Tables still move on
   the staff vendors page (`setTableLabelForm`).
 - **Invite back on the next application:** `listApplications` attaches `previous`: the newest
-  invite-back record from a market that started earlier, matched on the thread's contact email,
-  ignoring case. Both applications views show it under the vendor.
+  invite-back record from a market that started earlier, matched on `organization_id`. Both
+  applications views show it under the vendor.
+- **Vendor setup:** the organization page (`/staff/contacts/[id]`) shows `vendor_detail` and
+  the vendor's applications, and `saveVendorDetail` edits it under `contact.manage`.
+  `event.manage` opens vendor organizations.
 
 ### Data touched
 
 - `market_day`: one row per market listing, with the fee setup.
-- `market_vendor`: one row per application. It has no contact columns. The name, email and
-  phone live on the linked `inbox_thread`. Fee columns: `fee_cents`, `fee_floor_cents`,
+- `organization`, `party_role` (`vendor`), `contact` and `vendor_detail`: the vendor, its people
+  and its standing setup (offering, tables, power, own table, tent, setup notes).
+- `market_vendor`: one row per application, with `organization_id`, its own copy of what was
+  asked (`tables_requested`, `needs_power`, `brings_own_table`, `brings_tent`, `notes`) and no
+  contact columns. The linked `inbox_thread` is the conversation, and keeps the address replies
+  go to. Fee columns: `fee_cents`, `fee_floor_cents`,
   `paid_cents`, `paid_at`, `stripe_payment_record_id`, `refunded_at`. Day-of columns:
   `checked_in_at`, `invite_back` (null until someone says), `invite_back_note`.
 - `financial_entry`: `market_fees` earned and `card_fees` spent, subject `market_vendor`.
@@ -2265,8 +2277,9 @@ vendors are listed on the event page.
 
 - **A vendor was never told.** The decision is recorded even if the thread was deleted
   (`thread_id` set null). In that case no message is sent.
-- **A returning vendor shows no invite-back record.** The match is on email. A vendor who
-  applied from a different address looks new.
+- **A returning vendor shows no invite-back record.** The match is on the organization. A
+  vendor who applied from an address not on file became a second organization; merging the two
+  on Possible duplicates joins their history.
 - **Applications are open but nobody can apply.** Check that the listing is `published`. A
   draft market returns 404 on the apply page.
 

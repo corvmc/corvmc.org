@@ -132,6 +132,18 @@
 					label={m.public_events_id_vendors_apply_power_label()}
 					checkboxLabel={m.public_events_id_vendors_apply_checkbox_label_checkbox()}
 				/>
+				<FormField
+					field={fields.bringsOwnTable}
+					type="checkbox"
+					label={m.public_events_id_vendors_apply_table_label()}
+					checkboxLabel={m.public_events_id_vendors_apply_own_table_checkbox()}
+				/>
+				<FormField
+					field={fields.bringsTent}
+					type="checkbox"
+					label={m.public_events_id_vendors_apply_tent_label()}
+					checkboxLabel={m.public_events_id_vendors_apply_tent_checkbox()}
+				/>
 			</div>
 
 			<FormField

@@ -2,7 +2,15 @@ import { copyLinks } from '#lib/server/task/work-order-link.js';
 import { moveActivity } from './activity-service';
 import { moveThreads } from './thread-filing';
 import { db } from '#lib/server/db/index.js';
-import { contractorDetail, organization, type Organization } from '#lib/server/db/schema/party.js';
+import {
+	contractorDetail,
+	organization,
+	vendorDetail,
+	type Organization,
+	type VendorDetail
+} from '#lib/server/db/schema/party.js';
+import { marketVendor } from '#lib/server/db/schema/market.js';
+import { eventListing } from '#lib/server/db/schema/event.js';
 import { mediaAttachment } from '#lib/server/db/schema/media.js';
 import { workOrder } from '#lib/server/db/schema/volunteer.js';
 import { partyRole } from '#lib/server/db/schema/contact.js';
@@ -177,6 +185,30 @@ export async function setOrganizationArchived(id: string, archived: boolean): Pr
 	if (rows.length === 0) throw new OrganizationNotFoundError();
 }
 
+export type VendorDetailInput = Omit<VendorDetail, 'organizationId' | 'updatedAt'>;
+
+/** A vendor's standing tabling needs, or null when none are on file. */
+export async function getVendorDetail(id: string): Promise<VendorDetail | null> {
+	const [row] = await db
+		.select()
+		.from(vendorDetail)
+		.where(eq(vendorDetail.organizationId, id))
+		.limit(1);
+	return row ?? null;
+}
+
+/** Write a vendor's standing needs. Past applications keep their own copy. */
+export async function saveVendorDetail(id: string, input: VendorDetailInput): Promise<void> {
+	await requireRole(id, 'vendor');
+	await db
+		.insert(vendorDetail)
+		.values({ organizationId: id, ...input })
+		.onConflictDoUpdate({
+			target: vendorDetail.organizationId,
+			set: { ...input, updatedAt: new Date() }
+		});
+}
+
 export async function addRole(id: string, role: PartyRole): Promise<void> {
 	await getOrganization(id);
 	await db.insert(partyRole).values({ organizationId: id, role }).onConflictDoNothing();
@@ -188,7 +220,13 @@ export async function addRole(id: string, role: PartyRole): Promise<void> {
  * fails when a table references `organization` and is in neither this list
  * nor its list of tables moved some other way.
  */
-export const ORGANIZATION_RECORDS = [grantApplication, sponsorship, contractorJob, purchaseOrder];
+export const ORGANIZATION_RECORDS = [
+	grantApplication,
+	sponsorship,
+	contractorJob,
+	purchaseOrder,
+	marketVendor
+];
 export const organizationRecordTables: string[] = ORGANIZATION_RECORDS.map((t) => getTableName(t));
 
 /** How many records name it, across every table in `ORGANIZATION_RECORDS`. */
@@ -229,7 +267,7 @@ export class OrganizationMergeError extends DomainError {
 
 /** What names an organization, for its page: one list per role it holds. */
 export async function organizationRecords(id: string) {
-	const [grants, sponsorships, jobs, orders] = await Promise.all([
+	const [grants, sponsorships, jobs, orders, markets] = await Promise.all([
 		db
 			.select({
 				id: grantApplication.id,
@@ -267,9 +305,21 @@ export async function organizationRecords(id: string) {
 			})
 			.from(purchaseOrder)
 			.where(eq(purchaseOrder.organizationId, id))
-			.orderBy(desc(purchaseOrder.createdAt), desc(purchaseOrder.id))
+			.orderBy(desc(purchaseOrder.createdAt), desc(purchaseOrder.id)),
+		db
+			.select({
+				id: marketVendor.id,
+				eventId: marketVendor.eventId,
+				title: eventListing.title,
+				startsAt: eventListing.startsAt,
+				status: marketVendor.status
+			})
+			.from(marketVendor)
+			.innerJoin(eventListing, eq(eventListing.id, marketVendor.eventId))
+			.where(eq(marketVendor.organizationId, id))
+			.orderBy(desc(eventListing.startsAt), desc(marketVendor.id))
 	]);
-	return { grants, sponsorships, jobs, orders };
+	return { grants, sponsorships, jobs, orders, markets };
 }
 
 /** `https://www.example.org/about` → `example.org`; null when there is no host. */
@@ -306,8 +356,8 @@ export async function listOrganizationMergeSuggestions() {
 }
 
 /**
- * Fold `otherId` into `survivorId`: its roles, records, contractor detail and
- * logo move over where the survivor lacks them, its notes are kept, and it is
+ * Fold `otherId` into `survivorId`: its roles, records, contractor and vendor
+ * detail and logo move over where the survivor lacks them, its notes are kept, and it is
  * deleted. Its people move first, through `contact-service.ts`.
  */
 export async function mergeOrganizations(survivorId: string, otherId: string) {
@@ -316,11 +366,15 @@ export async function mergeOrganizations(survivorId: string, otherId: string) {
 		getOrganization(survivorId),
 		getOrganization(otherId)
 	]);
-	const [[survivorDetail], [survivorLogo]] = await Promise.all([
+	const [[survivorDetail], [survivorVendor], [survivorLogo]] = await Promise.all([
 		db
 			.select({ id: contractorDetail.organizationId })
 			.from(contractorDetail)
 			.where(eq(contractorDetail.organizationId, survivorId)),
+		db
+			.select({ id: vendorDetail.organizationId })
+			.from(vendorDetail)
+			.where(eq(vendorDetail.organizationId, survivorId)),
 		db.select({ id: mediaAttachment.id }).from(mediaAttachment).where(logoOf(survivorId))
 	]);
 	const notes = [survivor.notes, other.notes && `From ${other.name}: ${other.notes}`]
@@ -354,6 +408,14 @@ export async function mergeOrganizations(survivorId: string, otherId: string) {
 						.update(contractorDetail)
 						.set({ organizationId: survivorId })
 						.where(eq(contractorDetail.organizationId, otherId))
+				]),
+		...(survivorVendor
+			? []
+			: [
+					db
+						.update(vendorDetail)
+						.set({ organizationId: survivorId })
+						.where(eq(vendorDetail.organizationId, otherId))
 				]),
 		...(survivorLogo
 			? []

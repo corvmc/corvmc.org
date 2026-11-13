@@ -3,7 +3,7 @@ import { contact, partyRole, type ContactSource } from '#lib/server/db/schema/co
 import { DomainError } from '#lib/server/domain-error.js';
 import { subscriber } from '#lib/server/db/schema/marketing.js';
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from 'drizzle-orm';
-import { CONTACT_CLAIM_RETENTION_DAYS } from '#lib/config.js';
+import { CONTACT_CLAIM_RETENTION_DAYS, type PartyRole } from '#lib/config.js';
 import { requireCapability } from '#lib/server/authorization.js';
 import { organization } from '#lib/server/db/schema/party.js';
 import { copyLinks } from '#lib/server/task/work-order-link.js';
@@ -383,6 +383,53 @@ export async function createContact(
 		.returning({ id: contact.id });
 	return { id: row.id, merged: false };
 }
+/**
+ * Someone applying from a public form, such as a market vendor: their
+ * organization, found through a contact already holding the email, else
+ * created under `organizationName`, and given `role`. Unguarded, like
+ * `writeContactUnguarded`: the caller is a public form with no session, and
+ * nothing it returns is a contact detail.
+ */
+export async function recordApplicantUnguarded(input: {
+	organizationName: string;
+	role: PartyRole;
+	name: string;
+	email: string;
+	phone?: string | null;
+}): Promise<{ organizationId: string; contactId: string }> {
+	const email = normalizeEmail(input.email);
+	if (!email) throw new Error('An applicant needs an email');
+	const same = await contactByEmail(email);
+	let organizationId = same?.organizationId ?? null;
+	if (!organizationId) {
+		const [org] = await db
+			.insert(organization)
+			.values({ name: input.organizationName.trim() })
+			.returning({ id: organization.id });
+		organizationId = org.id;
+	}
+	let contactId: string;
+	if (same) {
+		await attachExisting(same, organizationId, input);
+		contactId = same.id;
+	} else {
+		const [row] = await db
+			.insert(contact)
+			.values({
+				organizationId,
+				name: input.name.trim() || null,
+				email,
+				phone: input.phone?.trim() || null,
+				subscriberId: await linkSubscriber(email),
+				source: 'self_entered'
+			})
+			.returning({ id: contact.id });
+		contactId = row.id;
+	}
+	await db.insert(partyRole).values({ organizationId, role: input.role }).onConflictDoNothing();
+	return { organizationId, contactId };
+}
+
 // ---------------------------------------------------------------------------
 // The Contacts screens (#2622)
 // ---------------------------------------------------------------------------

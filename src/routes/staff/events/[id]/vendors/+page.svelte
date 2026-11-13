@@ -250,7 +250,15 @@
 					<tr>
 						<td><StatusBadge status={row.status} /></td>
 						<td class="cell-primary">
-							<div class="font-medium">{row.businessName}</div>
+							<div class="font-medium">
+								{#if row.organizationId}
+									<a class="link" href={resolve(`staff/contacts/${row.organizationId}`)}
+										>{row.businessName}</a
+									>
+								{:else}
+									{row.businessName}
+								{/if}
+							</div>
 							<div class="line-clamp-1 text-muted text-sm">{row.offering}</div>
 							<PreviousMarketNote previous={row.previous} />
 						</td>
@@ -260,7 +268,9 @@
 								? m.staff_events_id_vendors_table_3_text()
 								: m.staff_events_id_vendors_tables_text()}{row.needsPower
 								? m.staff_events_id_vendors_power_text()
-								: ''}
+								: ''}{row.bringsOwnTable
+								? m.staff_events_id_vendors_own_table_text()
+								: ''}{row.bringsTent ? m.staff_events_id_vendors_tent_text() : ''}
 						</td>
 						<td class="col-support">
 							{#if row.threadId}

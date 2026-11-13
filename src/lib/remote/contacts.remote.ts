@@ -17,6 +17,7 @@ import {
 	ACTIVITY_BODY_MAX,
 	activityKinds,
 	LONG_TEXT_MAX,
+	MARKET_MAX_TABLES_REQUESTED,
 	partyRoles,
 	SHORT_TEXT_MAX,
 	type PartyRole
@@ -80,9 +81,10 @@ export const getContactsPage = query(
 export const getOrganizationPage = query(z.string().min(1), async (id) => {
 	const org = await requireOrganizationReader(id);
 	try {
-		const [records, contractor, staff, manage] = await Promise.all([
+		const [records, contractor, vendor, staff, manage] = await Promise.all([
 			orgs.organizationRecords(id),
 			org.roles.includes('contractor') ? getContractorById(id).catch(() => null) : null,
+			org.roles.includes('vendor') ? orgs.getVendorDetail(id) : null,
 			can('contact.read'),
 			can('contact.manage')
 		]);
@@ -97,6 +99,14 @@ export const getOrganizationPage = query(z.string().min(1), async (id) => {
 				trade: contractor.trade,
 				licenseNumber: contractor.licenseNumber,
 				insuranceExpiresAt: contractor.insuranceExpiresAt
+			},
+			vendor: vendor && {
+				offering: vendor.offering,
+				tablesNeeded: vendor.tablesNeeded,
+				needsPower: vendor.needsPower,
+				bringsOwnTable: vendor.bringsOwnTable,
+				bringsTent: vendor.bringsTent,
+				setupNotes: vendor.setupNotes
 			},
 			records,
 			people: staff ? await people.listPeople(id) : null,
@@ -158,6 +168,36 @@ export const archiveOrganization = form(
 	}
 );
 
+/** A vendor's standing tabling needs, which a new application falls back on. */
+export const saveVendorDetail = form(
+	z.object({
+		id: z.string().min(1),
+		offering: optionalText(LONG_TEXT_MAX),
+		tablesNeeded: z.number().int().min(1).max(MARKET_MAX_TABLES_REQUESTED),
+		needsPower: z.boolean().optional(),
+		bringsOwnTable: z.boolean().optional(),
+		bringsTent: z.boolean().optional(),
+		setupNotes: optionalText(LONG_TEXT_MAX)
+	}),
+	async (data) => {
+		await requireCapability('contact.manage');
+		try {
+			await orgs.saveVendorDetail(data.id, {
+				offering: data.offering || null,
+				tablesNeeded: data.tablesNeeded,
+				needsPower: data.needsPower ?? false,
+				bringsOwnTable: data.bringsOwnTable ?? false,
+				bringsTent: data.bringsTent ?? false,
+				setupNotes: data.setupNotes || null
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
+		await getOrganizationPage(data.id).refresh();
+		return { success: true };
+	}
+);
+
 export const addOrganizationRole = form(
 	z.object({ id: z.string().min(1), role: z.enum(partyRoles) }),
 	async (data) => {
@@ -178,7 +218,8 @@ export const removeOrganizationRole = form(
 			funder: records.grants.length,
 			sponsor: records.sponsorships.length,
 			contractor: records.jobs.length,
-			supplier: records.orders.length
+			supplier: records.orders.length,
+			vendor: records.markets.length
 		} as Partial<Record<PartyRole, number>>;
 		const deleted = await orgs.removeRole(data.id, data.role, inUse[data.role] ?? 0);
 		if (!deleted) await getOrganizationPage(data.id).refresh();

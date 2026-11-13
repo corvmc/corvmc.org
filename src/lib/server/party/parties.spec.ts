@@ -30,6 +30,7 @@ beforeEach(() => {
 		'grant_application',
 		'sponsorship',
 		'contractor_detail',
+		'vendor_detail',
 		'party_role',
 		'organization'
 	]) {
@@ -220,6 +221,35 @@ describe('merging organizations', () => {
 		).toEqual({ o: keep.id });
 	});
 
+	it('moves vendor setup only when the survivor has none', async () => {
+		const keep = await orgs.createOrganization({ name: 'Rosa Ceramics' }, ['vendor']);
+		const dupe = await orgs.createOrganization({ name: 'Rosa Pottery' }, ['vendor']);
+		await orgs.saveVendorDetail(dupe.id, {
+			offering: 'Mugs',
+			tablesNeeded: 2,
+			needsPower: true,
+			bringsOwnTable: false,
+			bringsTent: true,
+			setupNotes: null
+		});
+		await orgs.mergeOrganizations(keep.id, dupe.id);
+		expect((await orgs.getVendorDetail(keep.id))?.tablesNeeded).toBe(2);
+	});
+
+	it('refuses vendor setup on an organization that is not a vendor', async () => {
+		const shop = await sponsors.createSponsor({ name: 'Guitar Shop' });
+		await expect(
+			orgs.saveVendorDetail(shop.id, {
+				offering: null,
+				tablesNeeded: 1,
+				needsPower: false,
+				bringsOwnTable: false,
+				bringsTent: false,
+				setupNotes: null
+			})
+		).rejects.toBeInstanceOf(orgs.OrganizationLacksRoleError);
+	});
+
 	/**
 	 * The class: a table that references `organization` and that merging does
 	 * not move. Its rows would be orphaned by the delete, or cascade away with
@@ -230,6 +260,7 @@ describe('merging organizations', () => {
 		const movedElsewhere = new Set([
 			'party_role', // roles are copied, then cascade
 			'contractor_detail', // moved when the survivor has none
+			'vendor_detail', // moved when the survivor has none
 			'contact', // people move first, through contact-service.ts
 			'work_order_link', // copyLinks
 			'activity', // moveActivity
