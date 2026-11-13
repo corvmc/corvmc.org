@@ -91,6 +91,8 @@ export const tableOrder = [
 	'duty_list',
 	// References duty_list and volunteer_role.
 	'duty_list_item',
+	// Both ends reference duty_list_item (#2625).
+	'duty_list_item_dependency',
 	// References volunteer_role, project and user; work_order points back at it.
 	'maintenance_schedule',
 	// references volunteer_role + event + duty_list + reservation, and is

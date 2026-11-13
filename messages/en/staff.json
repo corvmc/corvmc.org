@@ -3489,5 +3489,13 @@
 	"staff_funding_sponsor_label": "Sponsor",
 	"staff_funding_term_ends_text": "Term ends",
 	"staff_funding_empty_title": "No grants or sponsorships",
-	"staff_funding_empty_body": "Add a grant application or a sponsorship to track its tasks and dates."
+	"staff_funding_empty_body": "Add a grant application or a sponsorship to track its tasks and dates.",
+	"staff_project_templates_id_waits_on_text": "Waits on",
+	"staff_project_templates_id_stop_waiting_label": "Stop waiting on {label}",
+	"staff_project_templates_id_stop_waiting_title": "Stop waiting on this item?",
+	"staff_project_templates_id_stop_waiting_submit_label": "Stop waiting",
+	"staff_project_templates_id_wait_on_label": "Wait on an item",
+	"staff_project_templates_id_wait_on_title": "{label} waits on",
+	"staff_project_templates_id_wait_on_submit_label": "Add",
+	"staff_project_templates_id_item_label": "Item"
 }

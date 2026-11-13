@@ -10,6 +10,7 @@ import { listCommittees } from '#lib/server/project/project-service.js';
 import { listVolunteerRoles } from '#lib/server/volunteer/volunteer-role-service.js';
 import {
 	addDutyListItem as addItemService,
+	addItemDependency as addItemDependencyService,
 	applyDutyList as applyService,
 	createDutyList as createService,
 	deleteDutyList as deleteService,
@@ -17,6 +18,7 @@ import {
 	listDutyLists,
 	projectOfEvent,
 	removeDutyListItem as removeItemService,
+	removeItemDependency as removeItemDependencyService,
 	setWorkTaskDone as setTaskService,
 	updateDutyList as updateService,
 	updateDutyListItem as updateItemService
@@ -281,6 +283,34 @@ export const removeDutyListItem = form(
 		}
 	}
 );
+
+const itemEdge = z.object({
+	itemId: z.string().min(1),
+	dependsOnItemId: z.string().min(1, 'Pick an item')
+});
+
+/** One template item waiting on another (#2625); applying the template copies it. */
+export const addDutyListItemDependency = form(itemEdge, async (data) => {
+	await requireCapability('project.manage');
+	try {
+		const dutyListId = await addItemDependencyService(data.itemId, data.dependsOnItemId);
+		await getDutyListPage(dutyListId).refresh();
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
+export const removeDutyListItemDependency = form(itemEdge, async (data) => {
+	await requireCapability('project.manage');
+	try {
+		const dutyListId = await removeItemDependencyService(data.itemId, data.dependsOnItemId);
+		await getDutyListPage(dutyListId).refresh();
+		return { success: true };
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
 
 // ---------------------------------------------------------------------------
 // Applying, and ticking
