@@ -1573,6 +1573,10 @@ So:
 - **Roles and interest:** `volunteer/volunteer-role-service.ts`,
   `volunteer-interest-service.ts` (`listInterestedMembers()` filters by role with an EXISTS,
   so a filtered member still comes back with all their roles).
+- **Role briefing:** `volunteer_role.briefing_article_id` names a help article, picked on
+  `/staff/volunteer/roles/[id]`. The member's shift page (`getMyShift`) and the door screen
+  (`getDoorEvents`, through `listBriefingsForEvents`) link it. Both go through
+  `listReadableArticles`, so a draft or an article above the member's tier is not shown (#2728).
 - **Onboarding:** `volunteer-profile-service.ts` — the one-time name/phone/over-18 gate on
   `/member/volunteer/start`.
 - **Tasks and shifts:** `work-order-service.ts` (tasks, shifts, the queues) +

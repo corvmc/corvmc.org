@@ -22,6 +22,8 @@ import {
 	startDoorDonation as startDoorDonationService
 } from '#lib/server/finance/door-donation.js';
 import { TICKET_MIN_CHARGE_CENTS } from '#lib/config.js';
+import { listBriefingsForEvents } from '#lib/server/volunteer/volunteer-signup-service.js';
+import { listReadableArticles, resolveHelpReader } from '#lib/server/help/help-service.js';
 
 /**
  * Every door remote names the show it acts on. Staff hold `finance.collect`
@@ -55,9 +57,27 @@ export const getTerminalConnection = command(z.string().min(1), async (eventId) 
 	return mintConnectionToken();
 });
 
+/** The briefings of the roles the caller is on for these shows (#2728), as they may read them. */
+async function doorBriefings(userId: string, eventIds: string[]) {
+	const linked = await listBriefingsForEvents(userId, eventIds);
+	if (linked.length === 0) return [];
+	const readable = await listReadableArticles(
+		linked.map((l) => l.articleId),
+		await resolveHelpReader(userId)
+	);
+	const byId = new Map(readable.map((a) => [a.id, a]));
+	const seen = new Set<string>();
+	return linked.flatMap((l) => {
+		const article = byId.get(l.articleId);
+		if (!article || seen.has(article.id)) return [];
+		seen.add(article.id);
+		return [{ roleName: l.roleName, ...article }];
+	});
+}
+
 /** Tonight's collective-sold shows this caller may sell, and whether to fake a tap. */
 export const getDoorEvents = query(async () => {
-	requireUser();
+	const userId = requireUser().id;
 	const all = await listDoorEvents();
 	const events = (await can('finance.collect'))
 		? all
@@ -67,7 +87,14 @@ export const getDoorEvents = query(async () => {
 				)
 			).filter((e) => e !== null);
 	if (events.length === 0 && !(await can('finance.collect'))) error(403, 'Not permitted');
-	return { events, canSimulate: paymentDriver() === 'fake' };
+	return {
+		events,
+		canSimulate: paymentDriver() === 'fake',
+		briefings: await doorBriefings(
+			userId,
+			events.map((e) => e.id)
+		)
+	};
 });
 
 /** The seller is the signed-in member; nothing the client sends can name another. */

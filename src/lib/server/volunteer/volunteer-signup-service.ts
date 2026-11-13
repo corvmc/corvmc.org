@@ -782,6 +782,7 @@ export async function getSignupForUser(signupId: string, userId: string) {
 			cancelledAt: volunteerSignup.cancelledAt,
 			title: workOrder.title,
 			roleName: volunteerRole.name,
+			briefingArticleId: volunteerRole.briefingArticleId,
 			startsAt: volunteerShift.startsAt,
 			endsAt: volunteerShift.endsAt,
 			notes: briefingSql,
@@ -797,6 +798,35 @@ export async function getSignupForUser(signupId: string, userId: string) {
 		.limit(1);
 
 	return row ?? null;
+}
+
+/**
+ * The briefing articles of the roles this member is on for these shows, for
+ * the door screen. A dropped signup or a called-off shift has no briefing.
+ */
+export async function listBriefingsForEvents(userId: string, eventIds: readonly string[]) {
+	if (eventIds.length === 0) return [];
+	return db
+		.selectDistinct({
+			eventId: sql<string>`${workOrder.eventId}`,
+			roleName: volunteerRole.name,
+			articleId: sql<string>`${volunteerRole.briefingArticleId}`
+		})
+		.from(volunteerSignup)
+		.innerJoin(volunteerShift, eq(volunteerShift.id, volunteerSignup.shiftId))
+		.innerJoin(workOrder, eq(workOrder.id, volunteerShift.workOrderId))
+		.innerJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
+		.where(
+			and(
+				eq(volunteerSignup.userId, userId),
+				inArray(volunteerSignup.status, ['claimed', 'confirmed', 'completed']),
+				inArray(workOrder.eventId, [...eventIds]),
+				isNull(volunteerShift.cancelledAt),
+				isNull(workOrder.cancelledAt),
+				sql`${volunteerRole.briefingArticleId} is not null`
+			)
+		)
+		.orderBy(asc(volunteerRole.name));
 }
 
 // ---------------------------------------------------------------------------

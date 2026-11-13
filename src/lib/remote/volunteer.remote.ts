@@ -2,6 +2,11 @@ import { z } from 'zod';
 import { historyArgs } from './_history';
 import { listAuditFeed } from '#lib/server/audit/audit-feed.js';
 import { listIncidentsFiledBy } from '#lib/server/incident/incident-service.js';
+import {
+	listAllArticles,
+	listReadableArticles,
+	resolveHelpReader
+} from '#lib/server/help/help-service.js';
 import { error, invalid, redirect } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { form } from './_remote';
@@ -1151,7 +1156,9 @@ export const updateVolunteerRole = form(
 	roleFormSchema.extend({
 		id: z.string().min(1),
 		/** JSON, written by the tag input on the role page. Absent leaves the list alone. */
-		skillMatches: jsonArrayField(z.string().max(50), 'Invalid skills').optional()
+		skillMatches: jsonArrayField(z.string().max(50), 'Invalid skills').optional(),
+		/** Blank clears the briefing; absent leaves it alone. */
+		briefingArticleId: z.string().max(100).optional()
 	}),
 	async (data) => {
 		await requireCapability('volunteer.manageRoles');
@@ -1169,7 +1176,8 @@ export const updateVolunteerRole = form(
 				defaultCapacity: optionalCount(data.defaultCapacity),
 				isSpecializedSkill: data.isSpecializedSkill,
 				marketRateCents: rateToCents(data.marketRate),
-				skillMatches: data.skillMatches
+				skillMatches: data.skillMatches,
+				briefingArticleId: data.briefingArticleId
 			});
 		} catch (err) {
 			mapDomainError(err);
@@ -2433,16 +2441,22 @@ export const getVolunteerInterestsPage = query(z.void(), async () => {
  */
 export const getStaffVolunteerRolePage = query(z.string(), async (id) => {
 	await requireCapability('volunteer.read');
-	const [role, requirements, feedback, skillSuggestions, grants] = await Promise.all([
+	const [role, requirements, feedback, skillSuggestions, grants, articles] = await Promise.all([
 		getVolunteerRoleDetail(id),
 		getRoleRequirements(id),
 		getFeedbackByRole(),
 		// Skill tags members already use, so the role's list is written in their words.
 		suggestSkills(''),
-		listRoleGrants(id)
+		listRoleGrants(id),
+		listAllArticles()
 	]);
 
-	return { role, requirements, feedback, skillSuggestions, grants };
+	// Drafts are offered too: a briefing is often written for the role it links to.
+	const briefingOptions = articles
+		.map((a) => ({ id: a.id, title: a.title, published: a.published }))
+		.sort((a, b) => a.title.localeCompare(b.title));
+
+	return { role, requirements, feedback, skillSuggestions, grants, briefingOptions };
 });
 
 /**
@@ -2656,11 +2670,16 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 	const shift = await getSignupForUser(signupId, currentUser.id);
 	if (!shift) throw error(404, 'Shift not found');
 
-	const [tasks, event, crew, filedIncidents] = await Promise.all([
+	const [tasks, event, crew, filedIncidents, briefing] = await Promise.all([
 		listWorkTasks(shift.workOrderId),
 		shift.eventId ? getById(shift.eventId) : Promise.resolve(null),
 		shift.eventId ? can('incident.file', { eventId: shift.eventId }) : Promise.resolve(false),
-		shift.eventId ? listIncidentsFiledBy(currentUser.id, shift.eventId) : Promise.resolve([])
+		shift.eventId ? listIncidentsFiledBy(currentUser.id, shift.eventId) : Promise.resolve([]),
+		shift.briefingArticleId
+			? resolveHelpReader(currentUser.id).then((reader) =>
+					listReadableArticles([shift.briefingArticleId!], reader)
+				)
+			: Promise.resolve([])
 	]);
 
 	return {
@@ -2682,7 +2701,9 @@ export const getMyShift = query(z.string().min(1), async (signupId) => {
 				: null,
 		// Crew of a show can file an incident for it, and see only what they filed.
 		incidentEventId: crew ? shift.eventId : null,
-		filedIncidents
+		filedIncidents,
+		// The role's briefing (#2728), unless it is a draft or above this reader.
+		briefing: briefing[0] ?? null
 	};
 });
 

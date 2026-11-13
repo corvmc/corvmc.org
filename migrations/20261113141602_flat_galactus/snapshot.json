@@ -1,10 +1,10 @@
 {
-  "id": "4a3c24d9-8bea-4787-9fe9-8863cec38846",
-  "prevIds": [
-    "7c9cfcdf-ad83-4710-b33c-966d356421a1"
-  ],
   "version": "7",
   "dialect": "sqlite",
+  "id": "83946141-5445-4077-b6e5-e747ee52684e",
+  "prevIds": [
+    "4a3c24d9-8bea-4787-9fe9-8863cec38846"
+  ],
   "ddl": [
     {
       "name": "account",
@@ -10477,6 +10477,16 @@
       "table": "volunteer_role"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "briefing_article_id",
+      "entityType": "columns",
+      "table": "volunteer_role"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -18630,6 +18640,21 @@
       "name": "fk_volunteer_profile_approved_by_user_id_user_id_fk",
       "entityType": "fks",
       "table": "volunteer_profile"
+    },
+    {
+      "columns": [
+        "briefing_article_id"
+      ],
+      "tableTo": "help_articles",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_volunteer_role_briefing_article_id_help_articles_id_fk",
+      "entityType": "fks",
+      "table": "volunteer_role"
     },
     {
       "columns": [

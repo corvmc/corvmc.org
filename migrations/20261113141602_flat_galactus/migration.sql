@@ -1,0 +1,1 @@
+ALTER TABLE `volunteer_role` ADD `briefing_article_id` text REFERENCES help_articles(id) ON DELETE SET NULL;

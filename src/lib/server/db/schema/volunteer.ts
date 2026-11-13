@@ -11,6 +11,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
+import { helpArticle } from './help';
 import { eventListing } from './event';
 import { inventoryAsset } from './inventory';
 import { project, projectSection } from './project';
@@ -258,6 +259,15 @@ export const volunteerRole = sqliteTable('volunteer_role', {
 		.$type<string[]>()
 		.notNull()
 		.default(sql`'[]'`),
+
+	/**
+	 * The help article a volunteer reads before a shift in this role: the door
+	 * safety policy, the bar's ID rules (#2728). Shown on the shift page and the
+	 * door screen only while it is published and the reader may open it.
+	 */
+	briefingArticleId: text('briefing_article_id').references(() => helpArticle.id, {
+		onDelete: 'set null'
+	}),
 
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()

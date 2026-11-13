@@ -195,6 +195,31 @@ export async function getArticleBySlug(slug: string, reader: HelpReader) {
 	return article ?? null;
 }
 
+/**
+ * The articles among `ids` this reader may open, as links. For pages that point
+ * at an article another record names (a volunteer role's briefing): a draft or
+ * an article above the reader's tier is left out rather than linked to a 404.
+ */
+export async function listReadableArticles(ids: readonly string[], reader: HelpReader) {
+	if (ids.length === 0) return [];
+	return db
+		.select({
+			id: helpArticle.id,
+			title: helpArticle.title,
+			slug: helpArticle.slug,
+			summary: helpArticle.summary
+		})
+		.from(helpArticle)
+		.where(
+			and(
+				inArray(helpArticle.id, [...new Set(ids)]),
+				eq(helpArticle.published, true),
+				articleVisibleTo(reader)
+			)
+		)
+		.orderBy(asc(helpArticle.title));
+}
+
 export async function searchArticles(query: string, reader: HelpReader) {
 	return db
 		.select({

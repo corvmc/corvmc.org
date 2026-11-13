@@ -50,6 +50,15 @@
 	// svelte-ignore state_referenced_locally
 	let skillMatches = $state<string[]>(role.skillMatches ?? []);
 
+	const briefingOptions = $derived(
+		pageData.briefingOptions.map((a) => ({
+			value: a.id,
+			label: a.published
+				? a.title
+				: m.staff_volunteer_roles_id_briefing_draft_label({ title: a.title })
+		}))
+	);
+
 	const groupOptions = volunteerRoleGroups.map((g) => ({
 		value: g,
 		label: volunteerRoleGroupLabels[g]
@@ -153,6 +162,15 @@
 					label={m.staff_job_description_label()}
 					value={role.description ?? ''}
 					description={m.staff_volunteer_roles_id_markdown_what_members_read_their_body()}
+				/>
+				<Field
+					field={fields.briefingArticleId}
+					type="select"
+					label={m.staff_volunteer_roles_id_briefing_label()}
+					placeholder={m.ui_none_placeholder()}
+					options={briefingOptions}
+					value={role.briefingArticleId ?? ''}
+					description={m.staff_volunteer_roles_id_briefing_body()}
 				/>
 				<Field
 					field={fields.group}
