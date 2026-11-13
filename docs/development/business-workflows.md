@@ -2387,10 +2387,13 @@ owes, follow-ups) is that project's tasks, with due dates, assignees and committ
 - **Timeline (#2622):** an organization's page and a person's page
   (`/staff/contacts/people/[id]`) show one timeline, newest first, read by `getPartyTimeline`
   under `contact.read`: notes staff log (`activity`: call, meeting, email or note, on a day, added,
-  edited and deleted under `contact.manage`), the audit entries for the organization and for its
+  edited and deleted under `contact.manage`), Inbox conversations filed to it, the audit entries for the organization and for its
   grant and sponsorship projects and contractor jobs, and the tasks linked to it through
   `work_order_link` that were marked done. Follow-ups are tasks: Related tasks on the same pages
-  adds one linked to the record.
+  adds one linked to the record. A staff Inbox conversation is filed from its Details panel
+  (`fileThreadForm`, `inbox.reply` and `contact.manage`) to an organization or person; one from an
+  address on file is offered for filing to that person. See
+  `docs/decisions/0069-a-party-has-one-timeline.md`.
 - **Retention:** a contact with a `retain_until` stays visible until that date, and
   `/api/cron/sweep-contacts` deletes it, with its roles, once the date passes. An act's contact
   is given a horizon a year out when the act becomes a member band.

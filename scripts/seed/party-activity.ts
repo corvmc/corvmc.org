@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import { activity } from '../../src/lib/server/db/schema/activity';
 import { workOrder } from '../../src/lib/server/db/schema/volunteer';
 import { workOrderLink } from '../../src/lib/server/db/schema/work-order-link';
+import { inboxMessage, inboxThread } from '../../src/lib/server/db/schema/inbox';
 import { batchInsert, db } from './db';
 
 const ARTS = 'seed-org-arts-center';
@@ -9,8 +10,10 @@ const ARTS = 'seed-org-arts-center';
 /**
  * The Corvallis Arts Center's timeline (#2622): one note of each kind, a note
  * on its programs director, an open follow-up due next week and one done last
- * month, so the organization page, the person page and the Contacts list's last
- * activity and next task all render something. Needs `seedContacts`.
+ * month, and two emails from its director: one filed to it, one not yet, which
+ * the Inbox offers to file to her. So the organization page, the person page,
+ * the Inbox's filing and the Contacts list all render something. Needs
+ * `seedContacts`.
  */
 export async function seedPartyActivity(staffId: string) {
 	console.log('Seeding contact activity...');
@@ -57,5 +60,47 @@ export async function seedPartyActivity(staffId: string) {
 		{ workOrderId: open, organizationId: ARTS },
 		{ workOrderId: done, organizationId: ARTS }
 	]);
-	return { notes: notes.length + 1, tasks: 2 };
+	const filed = 'seed-thread-arts-hall';
+	const unfiled = 'seed-thread-arts-posters';
+	const email = { channel: 'email' as const, status: 'open' as const, messageCount: 1 };
+	const director = { contactName: 'Lena Ortiz', contactEmail: 'lena@example.org' };
+	await batchInsert(inboxThread, [
+		{
+			...email,
+			...director,
+			id: filed,
+			subject: 'Hall for the winter showcase',
+			preview: 'Both nights are yours.',
+			organizationId: ARTS,
+			status: 'resolved' as const,
+			lastMessageAt: new Date(now - 12 * day),
+			createdAt: new Date(now - 12 * day)
+		},
+		{
+			...email,
+			...director,
+			id: unfiled,
+			subject: 'Poster sizes',
+			preview: 'What size should the showcase posters be?',
+			lastMessageAt: new Date(now - day),
+			createdAt: new Date(now - day)
+		}
+	]);
+	await batchInsert(inboxMessage, [
+		{
+			threadId: filed,
+			direction: 'inbound' as const,
+			body: 'Both nights are yours.',
+			authorName: director.contactName,
+			createdAt: new Date(now - 12 * day)
+		},
+		{
+			threadId: unfiled,
+			direction: 'inbound' as const,
+			body: 'What size should the showcase posters be?',
+			authorName: director.contactName,
+			createdAt: new Date(now - day)
+		}
+	]);
+	return { notes: notes.length + 1, tasks: 2, threads: 2 };
 }

@@ -16,11 +16,12 @@ import { clubInstant } from '#lib/utils/format.js';
 import { feedLimit, mergeFeed, type FeedItem, type FeedPage } from '#lib/types/activity.js';
 import type { ActivityKind } from '#lib/config.js';
 import { ownedBy, type PartyRef } from './activity-service';
+import { filedThreads } from './thread-filing';
 
 /**
  * One timeline per organization or person (#2622), newest first: the notes
- * staff logged, the audit entries for its grants, sponsorships and jobs, and
- * the tasks about it that were marked done. Each source is read with
+ * staff logged, the Inbox conversations filed to it, the audit entries for its
+ * grants, sponsorships and jobs, and the tasks about it that were marked done. Each source is read with
  * `limit + 1` and merged, so "Show older" is exact.
  */
 
@@ -32,6 +33,7 @@ export type TimelineItem = FeedItem &
 		  }
 		| { source: 'audit' }
 		| { source: 'task'; workOrderId: string }
+		| { source: 'thread'; threadId: string }
 	);
 
 async function notes(party: PartyRef, limit: number): Promise<FeedPage<TimelineItem>> {
@@ -143,7 +145,8 @@ export async function partyTimeline(
 	const pages = await Promise.all([
 		notes(party, limit),
 		audits(party, limit),
-		doneTasks(party, limit)
+		doneTasks(party, limit),
+		filedThreads(party, limit)
 	]);
 	return mergeFeed(limit, ...pages);
 }

@@ -4,10 +4,16 @@ import { query, getRequestEvent } from '$app/server';
 import { form, command } from './_remote';
 import { verifyTurnstile } from '#lib/server/turnstile.js';
 import {
+	can,
 	requireCapability,
 	requireUser,
 	listUsersWithCapability
 } from '#lib/server/authorization.js';
+import { fileThread, threadFiling } from '#lib/server/party/thread-filing.js';
+import { getOrganization, listOrganizations } from '#lib/server/party/organization-service.js';
+import { findPersonByEmail, getPerson } from '#lib/server/directory/contact-service.js';
+import { getPartyTimeline } from './contacts.remote';
+import { mapDomainError } from '#lib/server/errors.js';
 import { getUserContact } from '#lib/server/user/user-service.js';
 import { dispatch } from '#lib/server/notification/dispatcher.js';
 import { handleContactForm } from '#lib/server/inbox/inbound-handlers.js';
@@ -309,6 +315,79 @@ export const getInboxThreadContext = query(z.string().min(1), async (id) => {
 	if (!context) throw error(404, 'Thread not found');
 	return context;
 });
+
+/**
+ * Where a staff conversation is filed (#2622), and the person on file with its
+ * address when it is not. Null for a band thread or a viewer without
+ * `contact.read`, so the Inbox shows nothing about it.
+ */
+export const getThreadFiling = query(z.string().min(1), async (threadId) => {
+	await requireCapability('inbox.read');
+	if (!(await can('contact.read'))) return null;
+	try {
+		const filing = await threadFiling(threadId);
+		if (filing.groupId) return null;
+		const [canFile, filed] = await Promise.all([
+			Promise.all([can('contact.manage'), can('inbox.reply')]).then((c) => c.every(Boolean)),
+			filing.organizationId
+				? getOrganization(filing.organizationId).then((o) => ({
+						type: 'organization' as const,
+						id: o.id,
+						name: o.name
+					}))
+				: filing.contactId
+					? getPerson(filing.contactId).then((p) => ({
+							type: 'contact' as const,
+							id: p.id,
+							name: p.name ?? p.email ?? ''
+						}))
+					: null
+		]);
+		const match = filed ? null : await findPersonByEmail(filing.contactEmail);
+		const organizations = canFile ? await listOrganizations({ includeArchived: false }) : [];
+		return {
+			filed,
+			suggestion: match && {
+				id: match.id,
+				name: match.name ?? filing.contactEmail ?? '',
+				organizationName: match.organizationName
+			},
+			organizations: organizations.map((o) => ({ id: o.id, name: o.name })),
+			canFile
+		};
+	} catch (err) {
+		mapDomainError(err);
+	}
+});
+
+/** File a staff conversation to an organization or a person, or unfile it. */
+export const fileThreadForm = form(
+	z.object({
+		threadId: z.string().min(1),
+		organizationId: z.string().optional(),
+		contactId: z.string().optional()
+	}),
+	async ({ threadId, organizationId, contactId }) => {
+		await requireCapability('inbox.reply');
+		await requireCapability('contact.manage');
+		const party = organizationId
+			? { type: 'organization' as const, id: organizationId }
+			: contactId
+				? { type: 'contact' as const, id: contactId }
+				: null;
+		if (party?.type === 'organization') await getOrganization(party.id);
+		if (party?.type === 'contact') await getPerson(party.id);
+		const before = await threadFiling(threadId);
+		await fileThread(threadId, party);
+		void getThreadFiling(threadId).refresh();
+		if (party) void getPartyTimeline(party).refresh();
+		if (before.organizationId)
+			void getPartyTimeline({ type: 'organization', id: before.organizationId }).refresh();
+		if (before.contactId)
+			void getPartyTimeline({ type: 'contact', id: before.contactId }).refresh();
+		return { success: true };
+	}
+);
 
 const tagSchema = z.object({
 	threadId: z.string().min(1),

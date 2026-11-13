@@ -1,5 +1,6 @@
 import { copyLinks } from '#lib/server/task/work-order-link.js';
 import { moveActivity } from './activity-service';
+import { moveThreads } from './thread-filing';
 import { db } from '#lib/server/db/index.js';
 import { contractorDetail, organization, type Organization } from '#lib/server/db/schema/party.js';
 import { mediaAttachment } from '#lib/server/db/schema/media.js';
@@ -304,6 +305,7 @@ export async function mergeOrganizations(survivorId: string, otherId: string) {
 		// Its tasks and notes come too; the delete below takes the old links.
 		copyLinks('organizationId', otherId, survivorId),
 		moveActivity({ type: 'organization', id: otherId }, { type: 'organization', id: survivorId }),
+		moveThreads({ type: 'organization', id: otherId }, { type: 'organization', id: survivorId }),
 		...(survivorDetail
 			? []
 			: [

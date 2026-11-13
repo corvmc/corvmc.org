@@ -3,6 +3,8 @@ import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { user } from './authentication';
 import { group } from './group';
+import { organization } from './party';
+import { contact } from './contact';
 import {
 	inboxChannels,
 	inboxThreadStatuses,
@@ -80,6 +82,15 @@ export const inboxThread = sqliteTable(
 		contactEmail: text('contact_email'),
 		contactPhone: text('contact_phone'),
 		contactExternalId: text('contact_external_id'),
+		/**
+		 * The outside party staff filed this conversation to (#2622), so it shows
+		 * on their timeline. At most one is set. Set-null: deleting the party
+		 * keeps the conversation, unfiled.
+		 */
+		organizationId: text('organization_id').references(() => organization.id, {
+			onDelete: 'set null'
+		}),
+		contactId: text('contact_id').references(() => contact.id, { onDelete: 'set null' }),
 		assignedToUserId: text('assigned_to_user_id').references(() => user.id, {
 			onDelete: 'set null'
 		}),
@@ -170,6 +181,12 @@ export const inboxThread = sqliteTable(
 		index('idx_inbox_thread_assigned').on(t.assignedToUserId),
 		index('idx_inbox_thread_last_message').on(t.lastMessageAt),
 		index('idx_inbox_thread_contact_email').on(t.contactEmail),
+		index('idx_inbox_thread_organization')
+			.on(t.organizationId)
+			.where(sql`organization_id is not null`),
+		index('idx_inbox_thread_contact')
+			.on(t.contactId)
+			.where(sql`contact_id is not null`),
 		index('idx_inbox_thread_contact_phone').on(t.contactPhone),
 		index('idx_inbox_thread_contact_ext').on(t.channel, t.contactExternalId),
 		// The band inbox's only list query: one group's threads, newest activity first.
