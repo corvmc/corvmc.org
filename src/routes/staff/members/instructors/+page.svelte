@@ -18,6 +18,7 @@
 	import { getStaffInstructors, getStaffInstructorEmails } from '#lib/remote/instructors.remote.js';
 	import MemberViews from '../MemberViews.svelte';
 	import GrantInstructorAction from './GrantInstructorAction.svelte';
+	import TeachingTermsAction from './TeachingTermsAction.svelte';
 	import ReviewApplicationActions from './ReviewApplicationActions.svelte';
 	import EndGrantActions from './EndGrantActions.svelte';
 	import MemberRecordPanel from '../[id]/MemberRecordPanel.svelte';
@@ -59,6 +60,7 @@
 	>
 		{#snippet toolbar()}
 			<GrantInstructorAction />
+			<TeachingTermsAction />
 		{/snippet}
 
 		{#snippet filters()}

@@ -7,9 +7,5 @@
 	"refundAndCancelReservation.reason",
 	"replyToThread.disposition",
 	"saveMemberProfile.hometown",
-	"updateContractorForm.website",
-	"updateReservationSettings.teachingMaxAdvanceDaysOneoff",
-	"updateReservationSettings.teachingMaxAdvanceDaysRecurring",
-	"updateReservationSettings.teachingMinDurationHours",
-	"updateReservationSettings.teachingRateCents"
+	"updateContractorForm.website"
 ]

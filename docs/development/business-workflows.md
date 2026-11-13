@@ -222,8 +222,10 @@ about students. Decision: [Instructors rent the room](../decisions/0015-instruct
   `requireInstructor()`, which matches `status = 'active'` only, and books with
   `bookerType: 'instructor'` and `bookerId` = the instructor row. `termsFor()` in
   `reservation/config.ts` gives that booker type `reservation.teaching*` terms: $5/hr (the rate a
-  sustaining contribution buys), 30-minute minimum, 60 days one-off and 90 recurring. Credits
-  apply. A teaching series needs no sustaining membership, and `cancelAllForUser()` cancels only
+  sustaining contribution buys), 30-minute minimum, 60 days one-off and 90 recurring by default.
+  Staff with `settings.update` change them with Edit teaching terms on the Teachers view
+  (`updateTeachingTerms` in `settings.remote.ts`); the recurring window must exceed the member
+  one-off window, checked from both forms. Credits apply. A teaching series needs no sustaining membership, and `cancelAllForUser()` cancels only
   `bookerType: 'user'` series when a subscription ends.
 - **Listing:** `/directory/instructors` (public) and `/member/directory/instructors` list active
   instructors who are accepting students and have not hidden their directory listing, through
