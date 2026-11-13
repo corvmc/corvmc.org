@@ -99,7 +99,7 @@ describe('queries do not read the page from the request event', () => {
  * come from a client header, so an id taken from them skips the schema and the
  * mutation works from one route only (#2778). The id is a schema field instead.
  */
-const PARAMS_KEYED = new Set([
+const PARAMS_KEYED = new Set<Key>([
 	// #2870
 	'src/lib/remote/bands.remote.ts#updateStaffBand',
 	'src/lib/remote/bands.remote.ts#updateMemberRole',
