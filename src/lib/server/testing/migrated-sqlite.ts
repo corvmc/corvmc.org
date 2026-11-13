@@ -13,23 +13,7 @@ import { D1_MAX_PARAMS } from '#lib/server/utils/chunk.js';
  * renames, rebuilds and indexes that lifting one table's `CREATE` does not (#847).
  */
 export function migratedSqlite(opts: { foreignKeys?: boolean; through?: string } = {}) {
-	const sqlite = new Database(':memory:');
-
-	// `through` stops after the migration so named, for a backfill whose columns a later one drops.
-	const files = globSync('migrations/*/migration.sql').sort();
-	const last = opts.through
-		? files.findLastIndex((f) => f.includes(`_${opts.through}/`))
-		: files.length - 1;
-	if (last < 0) throw new Error(`No migration named *_${opts.through}`);
-
-	for (const file of files.slice(0, last + 1)) {
-		for (const statement of readFileSync(file, 'utf8')
-			.split('--> statement-breakpoint')
-			.map((s) => s.trim())
-			.filter(Boolean)) {
-			sqlite.exec(statement);
-		}
-	}
+	const sqlite = new Database(replayed(opts.through));
 
 	// After the replay, never before: a table rebuild turns this pragma back on
 	// as its last statement, so setting it first is silently undone.
@@ -41,6 +25,36 @@ export function migratedSqlite(opts: { foreignKeys?: boolean; through?: string }
 	// reading only `err.message` passed there and missed on D1 (#2704, #2715).
 	const testDb = drizzle(d1Over(sqlite) as unknown as D1Database, { schema, relations });
 	return { sqlite, testDb };
+}
+
+/**
+ * Replaying every migration takes ~2s, and a per-test call times out under a
+ * loaded machine (#2749). One replay per `through`, then a 1ms copy per call.
+ */
+const images = new Map<string | undefined, Buffer>();
+
+function replayed(through?: string): Buffer {
+	const cached = images.get(through);
+	if (cached) return cached;
+	const sqlite = new Database(':memory:');
+
+	// `through` stops after the migration so named, for a backfill whose columns a later one drops.
+	const files = globSync('migrations/*/migration.sql').sort();
+	const last = through ? files.findLastIndex((f) => f.includes(`_${through}/`)) : files.length - 1;
+	if (last < 0) throw new Error(`No migration named *_${through}`);
+
+	for (const file of files.slice(0, last + 1)) {
+		for (const statement of readFileSync(file, 'utf8')
+			.split('--> statement-breakpoint')
+			.map((s) => s.trim())
+			.filter(Boolean)) {
+			sqlite.exec(statement);
+		}
+	}
+	const image = sqlite.serialize();
+	sqlite.close();
+	images.set(through, image);
+	return image;
 }
 
 type Row = Record<string, unknown>;
