@@ -780,7 +780,7 @@
 		"panel": "staff"
 	},
 	{
-		"route": "/staff/volunteer/schedule",
+		"route": "/staff/volunteering",
 		"panel": "staff"
 	},
 	{

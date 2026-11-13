@@ -57,7 +57,8 @@ describe('activeNavKey', () => {
 		['/staff/groups/committees', 'groups'],
 		['/staff/groups/abc', 'groups'],
 		['/staff/bands/acts', 'groups'],
-		// The dashboard folded into Schedule (#2379), which owns the rest of the path.
+		// Volunteering owns the rest of the path (#2379, #2625).
+		['/staff/volunteering', 'volunteer-schedule'],
 		['/staff/volunteer', 'volunteer-schedule'],
 		['/staff/members/volunteers', 'users'],
 		['/staff/volunteer/roles', 'volunteer-schedule'],
@@ -170,7 +171,7 @@ describe('the nav tree', () => {
 		expect(filterNavItems([members], ['band.read'])).toHaveLength(0);
 	});
 
-	it('folds the Volunteering dashboard into Schedule (#2379)', () => {
+	it('keeps the volunteer badge and gate on Volunteering (#2379, #2625)', () => {
 		const schedule = allStaffNavItems().find((i) => i.key === 'volunteer-schedule')!;
 		expect(schedule.badgeKey).toBe('volunteerPending');
 		expect(filterNavItems([schedule], ['volunteer.read'])).toHaveLength(1);
@@ -205,7 +206,7 @@ describe('the nav tree', () => {
 	});
 
 	// Submissions waiting on a decision are one badge, on the review feed (#2623).
-	it('badges only the Dashboard, Inbox and Schedule', () => {
+	it('badges only the Dashboard, Inbox and Volunteering', () => {
 		const badged = allStaffNavItems()
 			.filter((i) => i.badgeKey)
 			.map((i) => [i.key, i.badgeKey]);
@@ -266,7 +267,7 @@ describe('route coverage', () => {
 	const unlinked = new Set([
 		// The full hour-log queue, a Members → Volunteers view (#2075).
 		'/staff/members/volunteers/hours',
-		// Roles and clearances: reached from the Schedule's header (#1791).
+		// Roles and clearances: reached from Volunteering's header (#1791).
 		'/staff/volunteer/roles',
 		// Members views, reached from its tab bar (#2074).
 		'/staff/members/volunteers',

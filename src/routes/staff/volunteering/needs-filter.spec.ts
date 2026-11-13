@@ -5,7 +5,8 @@ describe('parseNeeds', () => {
 	it('keeps a known queue and drops anything else', () => {
 		expect(parseNeeds('claims')).toBe('claims');
 		expect(parseNeeds('ended')).toBe('ended');
-		expect(parseNeeds('unassigned')).toBe('unassigned');
+		// Unassigned tasks moved to Tasks' chip (#2625).
+		expect(parseNeeds('unassigned')).toBe('');
 		expect(parseNeeds('toString')).toBe('');
 		expect(parseNeeds('nope')).toBe('');
 		expect(parseNeeds(null)).toBe('');

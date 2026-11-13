@@ -109,8 +109,8 @@ into a project and timed from it, so the same template serves every show.
 From each event's **Production** page: **Apply template**. It lands in the show's project.
 Applying the same template to the same project again asks for a reason, which is recorded.
 
-The advance work orders land with no window. They show up on **Staff → Volunteer** under
-**Unscheduled Work Orders**, and on the event's production page under **Advance** — that is where their
+The advance work orders land with no window. They show up on **Staff → Tasks** under
+the **No time yet** chip, and on the event's production page under **Advance** — that is where their
 checklists are ticked off.
 
 ### The fortnight before

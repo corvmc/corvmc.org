@@ -184,14 +184,14 @@ export const staffNavSections: StaffNavSection[] = [
 				label: 'Tasks',
 				href: resolve('staff/tasks')
 			},
-			// Every work order, in a project or not (#2034), and the recurring
-			// work that writes them (#2087). The Volunteering dashboard folded in
-			// (#2379), so it takes that row's gate, badge and the rest of the path.
+			// Volunteer shifts (#2625): signing people up and closing shifts out.
+			// It keeps the rest of `/staff/volunteer` (roles, clearances) and the
+			// key `volunteer-schedule`, which starred rows store.
 			{
 				key: 'volunteer-schedule',
 				capability: 'volunteer.read',
-				label: 'Schedule',
-				href: resolve('staff/volunteer/schedule'),
+				label: 'Volunteering',
+				href: resolve('staff/volunteering'),
 				also: [resolve('staff/volunteer')],
 				badgeKey: 'volunteerPending'
 			}

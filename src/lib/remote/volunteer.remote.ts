@@ -30,7 +30,6 @@ import {
 } from '#lib/server/volunteer/volunteer-signup-service.js';
 import { mapDomainError } from '#lib/server/errors.js';
 import { jsonArrayField } from '#lib/utils/zod-json.js';
-import { byDueAt } from '#lib/utils/work-order-due.js';
 import { suggestSkills } from '#lib/server/directory/directory-service.js';
 import { listMyPrograms } from '#lib/server/group/group-service.js';
 import { renderMarkdown } from '#lib/utils/markdown.js';
@@ -131,13 +130,9 @@ import {
 	workOrderIdOfShift,
 	getWorkOrderById,
 	resolveWorkOrder as resolveWorkOrderService,
-	listWorkOrders,
-	listWorkOrdersByIds,
-	isScheduled
+	listWorkOrders
 } from '#lib/server/volunteer/work-order-service.js';
-import { listJobs } from '#lib/server/contractor/contractor-job-service.js';
 import { listContractors } from '#lib/server/contractor/contractor-service.js';
-import { contractorJobViews } from '#lib/config.js';
 import {
 	claimShift as claimShiftService,
 	cancelSignup as cancelSignupService,
@@ -1570,83 +1565,30 @@ export const getShifts = query(shiftFilters, async (f) => {
 });
 
 /**
- * Schedule's one load-bearing query: every work order a coordinator staffs, the
- * windowed ones inside the range and the ones with no time yet, which have no
- * date for a range to bound. `waiting` is what the folded-in dashboard counted
- * (#2379) that is not a row in the range: finished repairs to verify, and two
- * people queues the page links out to.
+ * Volunteering's one load-bearing query (#2625): the shifts in the window, by
+ * date, called-off ones included as a notify list. `ended` is tasks whose
+ * shifts are over, past any window; `lapsingPeople` is the clearances queue the
+ * page links out to. Tasks with no shift, and contractor work, are Tasks'.
  */
-export const getSchedulePage = query(
-	shiftFilters.extend({ contractor: z.enum(contractorJobViews).optional() }),
-	async (f) => {
-		await requireCapability('volunteer.read');
-		const now = new Date();
-		const [page, ended, counts, lapsing] = await Promise.all([
-			f.contractor ? contractorSchedule(f.contractor) : staffedSchedule(f),
-			listTasksWithEndedShifts(now),
-			getStatusCounts(),
-			listLapsingBeforeRosteredShift(now)
-		]);
-		return {
-			...page,
-			waiting: {
-				ended,
-				pendingHours: counts.pending,
-				lapsingPeople: new Set(lapsing.map((l) => l.userId)).size
-			}
-		};
-	}
-);
-
-async function staffedSchedule(f: z.infer<typeof shiftFilters>) {
-	const [shifts, unscheduled] = await Promise.all([
+export const getVolunteeringPage = query(shiftFilters, async (f) => {
+	await requireCapability('volunteer.read');
+	const now = new Date();
+	const [shifts, ended, lapsing] = await Promise.all([
 		listShifts({
 			volunteerRoleId: f.volunteerRoleId || undefined,
 			from: f.from ? new Date(f.from) : undefined,
 			to: f.to ? new Date(f.to) : undefined,
 			includeCancelled: f.includeCancelled
 		}),
-		listWorkOrders({ volunteerRoleId: f.volunteerRoleId || undefined })
+		listTasksWithEndedShifts(now),
+		listLapsingBeforeRosteredShift(now)
 	]);
-	// Re-sorted here, not in `listWorkOrders`: that is an oldest-first queue for its
-	// other callers, but on a schedule the next deadline is what reads first (#1966).
-	unscheduled.sort(byDueAt);
-	const ids = [...shifts, ...unscheduled].map((w) => w.id);
-	const contractorAccess = await can('contractor.read');
-	const jobs = contractorAccess ? await listJobs({ workOrderIds: ids }) : [];
-	return { shifts, unscheduled, contractors: contractorMarks(jobs), contractorAccess };
-}
-
-type ScheduleJob = Awaited<ReturnType<typeof listJobs>>[number];
-
-/** Per work order, who is engaged on it and whether that is late or awaiting invoice. */
-function contractorMarks(jobs: ScheduleJob[]) {
-	const marks: Record<string, { name: string; late: boolean; awaitingInvoice: boolean }[]> = {};
-	for (const j of jobs) {
-		(marks[j.job.workOrderId] ??= []).push({
-			name: j.contractor.name,
-			late: j.late,
-			awaitingInvoice: j.awaitingInvoice
-		});
-	}
-	return marks;
-}
-
-/**
- * The contractor filter: work orders with an engagement in that view, unwindowed
- * and whatever their state — work awaiting an invoice is already resolved.
- */
-async function contractorSchedule(view: (typeof contractorJobViews)[number]) {
-	await requireCapability('contractor.read');
-	const jobs = await listJobs({ view });
-	const rows = await listWorkOrdersByIds([...new Set(jobs.map((j) => j.job.workOrderId))]);
 	return {
-		shifts: rows.filter(isScheduled),
-		unscheduled: rows.filter((w) => !isScheduled(w)).sort(byDueAt),
-		contractors: contractorMarks(jobs),
-		contractorAccess: true
+		shifts,
+		ended,
+		lapsingPeople: new Set(lapsing.map((l) => l.userId)).size
 	};
-}
+});
 
 /**
  * Open shifts for the member, with the reason they can't take one attached

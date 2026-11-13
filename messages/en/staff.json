@@ -3069,10 +3069,8 @@
 	"staff_volunteer_ended_shifts_title": "Tasks with ended shifts",
 	"staff_volunteer_mark_done_label": "Mark done",
 	"staff_volunteer_work_done_label": "Work done",
-	"staff_volunteer_hours_to_review_card_title_label": "Unreviewed Hours",
 	"staff_volunteer_lapsing_card_title_label": "Expiring Clearances",
 	"staff_volunteer_needs_confirming_card_title_text": "Pending Assignments",
-	"staff_volunteer_unassigned_tasks_title": "Unassigned tasks",
 	"staff_volunteer_new_work_order_checkbox_label_checkbox": "Has a set time",
 	"staff_volunteer_new_work_order_label": "New task",
 	"staff_volunteer_new_work_order_modal_title": "New task",
@@ -3190,15 +3188,12 @@
 	"staff_volunteer_roles_staff_will_able_grant_again_text": "Staff will be able to grant this again.",
 	"staff_volunteer_roles_valid_months_label": "Valid for (months)",
 	"staff_volunteer_roles_what_covers_label": "Description",
-	"staff_volunteer_schedule_add_label": "Add {value}",
 	"staff_volunteer_schedule_awaiting_invoice_label": "Awaiting invoice",
 	"staff_volunteer_schedule_cancelled_text": "{formatDateShort} {shiftLabel} cancelled",
-	"staff_volunteer_schedule_contractor_work_label": "Contractor work",
 	"staff_volunteer_schedule_description_body": "Widen the date range, or clear the filters.",
 	"staff_volunteer_schedule_everybody_notified_text": "everybody notified",
 	"staff_volunteer_schedule_date_range_label": "Date range",
 	"staff_volunteer_schedule_label": "Confirm {unconfirmed}",
-	"staff_volunteer_schedule_no_matching_tasks_title": "No matching tasks",
 	"staff_volunteer_schedule_notify_text": "{unnotified} to notify",
 	"staff_volunteer_schedule_people_have_put_hand_up_text": [
 		{
@@ -3420,5 +3415,8 @@
 	"staff_contacts_remove_role_title": "Remove role",
 	"staff_contacts_add_person_title": "Add person",
 	"staff_contacts_remove_person_title": "Remove person",
-	"staff_contacts_merge_title": "Merge {other} into {name}"
+	"staff_contacts_merge_title": "Merge {other} into {name}",
+	"staff_volunteering_title": "Volunteering",
+	"staff_volunteering_no_shifts_title": "No shifts",
+	"staff_volunteering_find_volunteers_label": "Find volunteers"
 }

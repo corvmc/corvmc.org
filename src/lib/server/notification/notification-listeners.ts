@@ -1538,9 +1538,7 @@ export function registerAllNotificationListeners(): void {
 				userEmail: recipient.userEmail,
 				title,
 				body: single ? formatShiftWhen(first.startsAt, first.endsAt) : line,
-				href: single
-					? `/staff/tasks/${first.workOrderId}`
-					: '/staff/volunteer/schedule?needs=short',
+				href: single ? `/staff/tasks/${first.workOrderId}` : '/staff/volunteering?needs=short',
 				data: { workOrderIds: items.map((i) => i.workOrderId) },
 				email: {
 					recipientName: recipient.userName,
@@ -1572,7 +1570,7 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title: `${event.userName} can't do ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — still needs somebody`,
-					href: '/staff/volunteer/schedule'
+					href: '/staff/volunteering'
 				});
 			} catch (err) {
 				captureException(err, {
@@ -1595,7 +1593,7 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title: `${event.userName} claimed ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — needs confirming`,
-					href: '/staff/volunteer/schedule?needs=claims'
+					href: '/staff/volunteering?needs=claims'
 				});
 			} catch (err) {
 				captureException(err, {
@@ -1680,7 +1678,7 @@ export function registerAllNotificationListeners(): void {
 					userEmail: member.email,
 					title: `${event.userName} dropped ${shiftLabel(event)}`,
 					body: `${formatShiftWhen(event.startsAt, event.endsAt)} — a place is open again`,
-					href: '/staff/volunteer/schedule?needs=short'
+					href: '/staff/volunteering?needs=short'
 				});
 			} catch (err) {
 				captureException(err, {

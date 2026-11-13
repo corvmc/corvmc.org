@@ -111,7 +111,7 @@ test.describe('staff sidebar', () => {
 		// Short enough, on a page whose collapsible is expanded, that the list
 		// cannot fit however it is laid out.
 		await page.setViewportSize({ width: 1280, height: 400 });
-		await page.goto('/staff/volunteer/schedule');
+		await page.goto('/staff/volunteering');
 
 		const list = nav(page);
 		await expect(list).toBeVisible();

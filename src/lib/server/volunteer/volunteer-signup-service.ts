@@ -25,12 +25,13 @@ import {
 	liveShift,
 	notOnCancelledListing,
 	openTask,
-	unassignedTaskWhere,
+	listShifts,
 	workOrderAuditLabel,
 	type ShiftRecord
 } from './work-order-service';
 import { missingRequirements } from './member-certification-service';
 import { listTasksWithEndedShifts } from './ended-shifts';
+import { SHORT_STAFFED_BADGE_DAYS, isShortStaffed } from '#lib/utils/shift-staffing.js';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { captureException } from '#lib/server/sentry.js';
 import type { VolunteerSignup } from '#lib/server/db/schema/volunteer.js';
@@ -888,21 +889,19 @@ export async function listOutstandingClaims(
 }
 
 /**
- * Coordinator work still to do, as one number: unassigned tasks and tasks whose
- * shifts have ended. The Schedule's badge reads it. Submissions waiting on a
- * decision (hour logs, claims) are the staff review feed's (#2623), not this.
+ * Volunteering's badge (#2625): shifts in the next week short of bookings, and
+ * tasks whose shifts have ended. Each is a chip on the page, by the same
+ * predicate. Unassigned tasks are Tasks' chip; submissions waiting on a decision
+ * (hour logs, claims) are the staff review feed's (#2623).
  */
 export async function countVolunteerWorkWaiting(now = new Date()): Promise<number> {
-	const [unscheduled, ended] = await Promise.all([
-		// Unassigned tasks, by the predicate the Schedule's chip lists with.
-		// Committee-owned work is on its committee's queue instead.
-		db.select({ n: count() }).from(workOrder).where(unassignedTaskWhere()),
-		// Open tasks whose last shift has ended: the list itself, which leaves out
-		// a task whose done condition holds, so the badge cannot count one more.
+	const to = new Date(now.getTime() + SHORT_STAFFED_BADGE_DAYS * 86_400_000);
+	const [shifts, ended] = await Promise.all([
+		listShifts({ from: now, to }),
+		// The list itself, which leaves out a task whose done condition holds.
 		listTasksWithEndedShifts(now)
 	]);
-
-	return Number(unscheduled[0]?.n ?? 0) + ended.length;
+	return shifts.filter(isShortStaffed).length + ended.length;
 }
 
 // ---------------------------------------------------------------------------

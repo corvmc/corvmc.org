@@ -364,12 +364,12 @@ test.describe('volunteering — roles', () => {
 		);
 	});
 
-	// On the schedule the role is chosen inside the modal, so the prefill has to
+	// On Volunteering the role is chosen inside the modal, so the prefill has to
 	// follow the select. The select is bound, which is also how it could break:
 	// a bound value matching no option posts an empty role.
-	test('the schedule prefill follows the role picked in the modal', async ({ page }) => {
+	test('the new-shift prefill follows the role picked in the modal', async ({ page }) => {
 		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
-		await page.goto('/staff/volunteer/schedule');
+		await page.goto('/staff/volunteering');
 
 		await page.getByTestId('new-work-order').click();
 		const dialog = page.getByRole('dialog');
@@ -389,6 +389,19 @@ test.describe('volunteering — roles', () => {
 		await expect(dialog.locator('input:is([name="capacity"], [name^="capacity/"])')).toHaveValue(
 			String(SEED_VOL_GATED_DEFAULT_CAPACITY)
 		);
+	});
+
+	// Roster matching (#2625): a short-staffed shift opens the people to ask, in place.
+	test('a short-staffed shift lists people to ask beneath it', async ({ page }) => {
+		await login(page, SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD);
+		await page.goto('/staff/volunteering?needs=short');
+
+		const find = page.getByTestId('find-volunteers').first();
+		await find.click();
+		await expect(find).toHaveAttribute('aria-expanded', 'true');
+		await expect(page.getByTestId('roster-match')).toBeVisible();
+		await find.click();
+		await expect(page.getByTestId('roster-match')).toHaveCount(0);
 	});
 
 	test('the retired interest, recurring, sign-off and shift routes land on their successors', async ({
@@ -411,8 +424,14 @@ test.describe('volunteering — roles', () => {
 		await expect(page.getByRole('row', { name: SEED_VOL_BLOCKED_MINOR_NAME })).toBeVisible();
 		await expect(page.getByRole('row', { name: SEED_VOL_MEMBER_NAME })).toHaveCount(0);
 
-		await page.goto('/staff/volunteer/shifts');
-		await expect(page).toHaveURL(/\/staff\/volunteer\/schedule$/);
+		for (const old of [
+			'/staff/volunteer/shifts',
+			'/staff/volunteer',
+			'/staff/volunteer/schedule'
+		]) {
+			await page.goto(old);
+			await expect(page).toHaveURL(/\/staff\/volunteering$/);
+		}
 	});
 
 	/**

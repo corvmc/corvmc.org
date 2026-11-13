@@ -29,14 +29,13 @@ async function loginAsStaff(page: Page) {
 }
 
 test.describe('duty lists — the unscheduled half', () => {
-	test('an advance work order reaches the Schedule’s unscheduled queue', async ({ page }) => {
+	test('an advance work order reaches the unassigned tasks', async ({ page }) => {
 		await loginAsStaff(page);
-		// The old dashboard address, which now lands on the Schedule (#2379).
-		await page.goto('/staff/volunteer');
-		await expect(page).toHaveURL(/\/staff\/volunteer\/schedule/);
+		// Unassigned work is a Tasks chip (#2625).
+		await page.goto('/staff/tasks');
 
-		await page.locator('[data-testid="schedule-needs"] [data-needs="unassigned"]').click();
-		await expect(page).toHaveURL(/needs=unassigned/);
+		await page.locator('[data-testid="task-chips"] [data-chip="unassigned"]').click();
+		await expect(page).toHaveURL(/chip=unassigned/);
 		await expect(
 			page.locator(`main table a[href="/staff/tasks/${SEED_VOL_ADVANCE_ID}"]`).first()
 		).toBeVisible();

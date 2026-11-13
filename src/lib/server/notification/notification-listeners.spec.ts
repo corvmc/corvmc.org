@@ -1654,7 +1654,7 @@ describe('unclaimed orientation (#2567)', () => {
 		const sent = calls();
 		expect(sent).toHaveLength(1);
 		expect(sent[0].data).toEqual({ workOrderIds: ['wo-1', 'wo-2'] });
-		expect(sent[0].href).toBe('/staff/volunteer/schedule?needs=short');
+		expect(sent[0].href).toBe('/staff/volunteering?needs=short');
 	});
 
 	it('lets a failed dispatch throw, so the drain leaves the items owed', async () => {

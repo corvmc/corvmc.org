@@ -136,6 +136,25 @@ describe('the coordinator queues', () => {
 				('s4', 'done', ${now() - 5 * HOUR}, ${now() - 3 * HOUR});
 		`);
 		expect((await listTasksWithEndedShifts()).map((t) => t.id)).toEqual(['ended']);
+		// The ended task, and `ahead`'s coming shift, which nobody has booked.
+		expect(await signups.countVolunteerWorkWaiting()).toBe(2);
+	});
+});
+
+describe("Volunteering's badge (#2625)", () => {
+	it('counts shifts in the next week short of bookings, and nothing without a shift', async () => {
+		sqlite.exec(`
+			insert into work_order (id, volunteer_role_id) values
+				('soon', 'door'), ('booked', 'door'), ('later', 'door'), ('untimed', 'door');
+			insert into volunteer_shift (id, work_order_id, starts_at, ends_at, capacity) values
+				('s-soon', 'soon', ${now() + 24 * HOUR}, ${now() + 26 * HOUR}, 2),
+				('s-booked', 'booked', ${now() + 24 * HOUR}, ${now() + 26 * HOUR}, 1),
+				('s-later', 'later', ${now() + 10 * 24 * HOUR}, ${now() + 10 * 24 * HOUR + 2 * HOUR}, 1);
+			insert into volunteer_signup (id, shift_id, user_id, status) values
+				('a', 's-soon', 'nia', 'claimed'),
+				('b', 's-booked', 'sam', 'confirmed');
+		`);
+		// A claim is not a booking, so `soon` is still short; `later` is past the week.
 		expect(await signups.countVolunteerWorkWaiting()).toBe(1);
 	});
 });

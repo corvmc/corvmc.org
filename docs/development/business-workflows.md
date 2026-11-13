@@ -1425,13 +1425,16 @@ were bound to the session.
 
 So:
 
-- **The Schedule is the worklist (#2379).** `/staff/volunteer` was a dashboard of cards and
-  308s to `/staff/volunteer/schedule` now. Claims to confirm, short shifts, tasks with no
-  shift and tasks whose shifts have ended are count chips that filter the Schedule (`?needs=`); hours to review
-  and clearances lapsing before a booked shift are counts that link to Members → Volunteers
-  (`/hours`, `?lapsing=1`). Each is hidden at zero.
-- **Three homes.** The Schedule (`/staff/volunteer/schedule`) holds the shifts and their
-  recurring work. Members → Volunteers (`/staff/members/volunteers`, with `/hours` for the
+- **Volunteering is the shift worklist (#2379, #2625).** `/staff/volunteering` lists volunteer
+  shifts by date, 14 days ahead by default. Claims to confirm, short-staffed shifts and tasks
+  whose shifts have ended are count chips that filter it (`?needs=`); clearances lapsing before a
+  booked shift link to Members → Volunteers (`?lapsing=1`). Each is hidden at zero. A
+  short-staffed shift opens the people interested in its role beneath it, to invite. Hours to
+  review are in the staff review feed (#2623). `/staff/volunteer`, `/staff/volunteer/shifts`
+  and `/staff/volunteer/schedule` 308 here; the Schedule's untimed, contractor and unassigned
+  queues 308 to Tasks.
+- **Three homes.** Volunteering (`/staff/volunteering`) holds the shifts; Tasks
+  (`/staff/tasks`) holds the work, its recurring schedules and work with no shift. Members → Volunteers (`/staff/members/volunteers`, with `/hours` for the
   review queue) holds the people, the under-18 queue (`?status=blocked`) and clearances. Roles
   (`/staff/volunteer/roles`) holds roles and certifications, and the report is
   `/staff/reports/volunteering`. The retired routes (`shifts`, `people`, `setup`,
