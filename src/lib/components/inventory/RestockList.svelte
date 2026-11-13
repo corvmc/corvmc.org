@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SupplierField from './SupplierField.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import Table from '#lib/components/ui/Table.svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
@@ -141,7 +142,7 @@
 				<input {...markOrdered.fields.lines.as('hidden', orderLines)} />
 				<div class="flex flex-wrap items-end gap-3">
 					<Field field={fields.expectedAt} type="date" label={m.staff_expected_label()} required />
-					<Field field={fields.supplierName} type="text" label={m.staff_supplier_label()} />
+					<SupplierField field={fields.supplierName} label={m.staff_supplier_label()} />
 					<Field field={fields.reference} type="text" label={m.staff_reference_label()} />
 					<Field field={fields.notes} type="text" label={m.staff_notes_label()} />
 					<SubmitButton

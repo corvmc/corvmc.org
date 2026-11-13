@@ -699,7 +699,9 @@ reorder quantity where one is set, otherwise enough to reach the point) and an
 whole list as the `?show=restock` view on Supplies (and on Gear, for a returnable
 bulk item with a reorder point), grouped by category with
 a Receive action per row and a bulk **Mark as ordered**, which writes one `placed`
-purchase order with a line per ticked item. The lists' other cross-item views
+purchase order with a line per ticked item. Its supplier is an organization holding the
+`supplier` role: the field suggests the suppliers in Contacts, and a name not on file, compared
+trimmed and case-insensitively, becomes a new one. The lists' other cross-item views
 (`?show=on-order` and `late` on both; `on-loan`, `overdue` and `problems` on Gear)
 replaced the Orders list, and `/staff/inventory/orders` and `/staff/inventory/restock`
 redirect to Supplies; an order's own page stays, reached from the items on it.

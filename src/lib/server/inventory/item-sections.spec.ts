@@ -42,13 +42,14 @@ beforeEach(() => {
 describe('openOrderLinesForItem', () => {
 	beforeEach(() => {
 		sqlite.exec(`
-			INSERT INTO purchase_order (id, status, supplier_name, expected_at) VALUES
-				('po-late', 'placed', 'Sweetwater', ${secs('2026-11-20')}),
-				('po-soon', 'placed', 'Guitar Center', ${secs('2026-11-02')}),
+			INSERT OR IGNORE INTO organization (id, name) VALUES ('sw', 'Sweetwater'), ('gc', 'Guitar Center');
+			INSERT INTO purchase_order (id, status, organization_id, expected_at) VALUES
+				('po-late', 'placed', 'sw', ${secs('2026-11-20')}),
+				('po-soon', 'placed', 'gc', ${secs('2026-11-02')}),
 				('po-undated', 'placed', NULL, NULL),
-				('po-draft', 'draft', 'Sweetwater', NULL),
-				('po-cancelled', 'cancelled', 'Sweetwater', NULL),
-				('po-full', 'placed', 'Sweetwater', NULL);
+				('po-draft', 'draft', 'sw', NULL),
+				('po-cancelled', 'cancelled', 'sw', NULL),
+				('po-full', 'placed', 'sw', NULL);
 			INSERT INTO purchase_order_line (id, order_id, item_id, quantity_ordered, quantity_received) VALUES
 				('l1', 'po-late', 'amp', 4, 1),
 				('l2', 'po-soon', 'amp', 2, 0),
@@ -62,10 +63,10 @@ describe('openOrderLinesForItem', () => {
 
 	it('lists what is still owed on placed orders, soonest first, undated last', async () => {
 		const rows = await openOrderLinesForItem('amp');
-		expect(rows.map((r) => [r.orderId, r.outstanding])).toEqual([
-			['po-soon', 2],
-			['po-late', 3],
-			['po-undated', 1]
+		expect(rows.map((r) => [r.orderId, r.supplierName, r.outstanding])).toEqual([
+			['po-soon', 'Guitar Center', 2],
+			['po-late', 'Sweetwater', 3],
+			['po-undated', null, 1]
 		]);
 	});
 });

@@ -19,12 +19,14 @@ const funders = await import('#lib/server/grant/funder-service.js');
 const grants = await import('#lib/server/grant/grant-service.js');
 const sponsors = await import('#lib/server/sponsor/sponsor-service.js');
 const contractors = await import('#lib/server/contractor/contractor-service.js');
+const orders = await import('#lib/server/inventory/order-service.js');
 
 const count = (table: string) =>
 	(sqlite.prepare(`select count(*) as n from ${table}`).get() as { n: number }).n;
 
 beforeEach(() => {
 	for (const t of [
+		'purchase_order',
 		'grant_application',
 		'sponsorship',
 		'contractor_detail',
@@ -81,6 +83,40 @@ describe('roles', () => {
 		await expect(contractors.getContractorById(council.id)).rejects.toBeInstanceOf(
 			contractors.ContractorNotFoundError
 		);
+	});
+});
+
+describe('suppliers', () => {
+	it('reuses an organization named the same, ignoring case and spaces, and gives it the role', async () => {
+		const shop = await sponsors.createSponsor({ name: 'Guitar Shop' });
+		expect(await orgs.organizationNamed('  guitar SHOP ', 'supplier')).toBe(shop.id);
+		expect((await orgs.getOrganization(shop.id)).roles.sort()).toEqual(['sponsor', 'supplier']);
+		expect(count('organization')).toBe(1);
+	});
+
+	it('creates a supplier when no organization has the name', async () => {
+		const id = await orgs.organizationNamed('Sweetwater', 'supplier');
+		expect((await orgs.getOrganization(id)).roles).toEqual(['supplier']);
+		expect(await orders.listSupplierNames()).toEqual(['Sweetwater']);
+	});
+
+	it('refuses a purchase order naming an organization that is not a supplier', async () => {
+		const council = await funders.createFunder({ name: 'Arts Council' });
+		await expect(
+			orders.createOrder({
+				organizationId: council.id,
+				lines: [{ itemId: 'item', quantityOrdered: 1 }]
+			})
+		).rejects.toBeInstanceOf(orgs.OrganizationLacksRoleError);
+		expect(count('purchase_order')).toBe(0);
+	});
+
+	it('refuses to remove the role while an order names it', async () => {
+		const shop = await orgs.createOrganization({ name: 'Sweetwater' }, ['supplier']);
+		sqlite.exec(
+			`insert into purchase_order (id, status, organization_id) values ('po-r', 'draft', '${shop.id}')`
+		);
+		expect(await orgs.countRecords(shop.id)).toBe(1);
 	});
 });
 
@@ -170,6 +206,49 @@ describe('merging organizations', () => {
 			orgs.OrganizationNotFoundError
 		);
 		sqlite.exec(`delete from contractor_job; delete from work_order`);
+	});
+
+	it('moves purchase orders to the survivor', async () => {
+		const keep = await orgs.createOrganization({ name: 'Sweetwater' }, ['supplier']);
+		const dupe = await orgs.createOrganization({ name: 'Sweetwater Sound' }, ['supplier']);
+		sqlite.exec(
+			`insert into purchase_order (id, status, organization_id) values ('po-m', 'placed', '${dupe.id}')`
+		);
+		await orgs.mergeOrganizations(keep.id, dupe.id);
+		expect(
+			sqlite.prepare(`select organization_id as o from purchase_order where id = 'po-m'`).get()
+		).toEqual({ o: keep.id });
+	});
+
+	/**
+	 * The class: a table that references `organization` and that merging does
+	 * not move. Its rows would be orphaned by the delete, or cascade away with
+	 * the merged organization. Each table here is moved by name below, or is in
+	 * `ORGANIZATION_RECORDS`.
+	 */
+	it('moves every table that references an organization', () => {
+		const movedElsewhere = new Set([
+			'party_role', // roles are copied, then cascade
+			'contractor_detail', // moved when the survivor has none
+			'contact', // people move first, through contact-service.ts
+			'work_order_link', // copyLinks
+			'activity', // moveActivity
+			'inbox_thread' // moveThreads
+		]);
+		const tables = (
+			sqlite
+				.prepare(`select name from sqlite_master where type = 'table' and name not like 'sqlite_%'`)
+				.all() as { name: string }[]
+		).map((t) => t.name);
+		const referencing = tables.filter((t) =>
+			(sqlite.prepare(`pragma foreign_key_list("${t}")`).all() as { table: string }[]).some(
+				(fk) => fk.table === 'organization'
+			)
+		);
+		const unmoved = referencing.filter(
+			(t) => !movedElsewhere.has(t) && !orgs.organizationRecordTables.includes(t)
+		);
+		expect(unmoved).toEqual([]);
 	});
 
 	it('suggests organizations that share a website domain', async () => {

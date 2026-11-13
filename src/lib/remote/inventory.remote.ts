@@ -72,10 +72,12 @@ import {
 	closeOrderShort,
 	createOrder,
 	getOrderById,
+	listSupplierNames,
 	onOrderQuantities,
 	placeOrder,
 	reopenOrder
 } from '#lib/server/inventory/order-service.js';
+import { organizationNamed } from '#lib/server/party/organization-service.js';
 import { form8282Status } from '#lib/server/inventory/form-8282.js';
 import {
 	linkArticle,
@@ -167,6 +169,12 @@ export const getItem = query(z.string(), async (id) => {
 export const getEquipmentCategories = query(z.void(), async () => {
 	await requireCapability('inventory.read');
 	return listCategories();
+});
+
+/** Suppliers' names, offered as the order forms' supplier field is typed. */
+export const getSupplierNames = query(z.void(), async () => {
+	await requireCapability('inventory.manageOrders');
+	return listSupplierNames();
 });
 
 export const getLocations = query(z.void(), async () => {
@@ -983,9 +991,11 @@ async function placeNewOrder(
 	lines: z.infer<typeof orderLinesSchema>
 ) {
 	let orderId: string;
+	const supplier = header.supplierName?.trim();
 	try {
 		orderId = await createOrder({
-			supplierName: header.supplierName || undefined,
+			// A name not on file becomes a supplier in Contacts.
+			organizationId: supplier ? await organizationNamed(supplier, 'supplier') : undefined,
 			reference: header.reference || undefined,
 			expectedAt: calendarDate(header.expectedAt),
 			notes: header.notes?.trim() || undefined,
@@ -997,6 +1007,7 @@ async function placeNewOrder(
 		mapDomainError(err);
 	}
 	refreshRestockLists();
+	if (supplier) void getSupplierNames().refresh();
 	for (const l of lines) {
 		void getStaffItemDetail(l.itemId).refresh();
 		void getItemMovementFeed({ id: l.itemId }).refresh();

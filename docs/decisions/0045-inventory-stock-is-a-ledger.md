@@ -1,7 +1,7 @@
 # 0045 Inventory stock is a ledger
 
 - **Date:** 2026-08-27
-- **Status:** Accepted
+- **Status:** Amended by [0070](0070-a-supplier-is-an-organization.md)
 - **Issue:** PRs [#286](https://github.com/corvmc/corvmc.org/pull/286),
   [#293](https://github.com/corvmc/corvmc.org/pull/293); see
   [#605](https://github.com/corvmc/corvmc.org/issues/605)
