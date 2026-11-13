@@ -262,6 +262,15 @@ one is offered the slot with a 24-hour window to confirm.
   cancel, so nothing is refunded in bulk. A staff edit emits
   `reservation.recurring_rescheduled` to the booker. `previewReschedule()` shows the new
   sessions with the conflict generation would meet, and what is removed or kept.
+- **Changing an event series' schedule:** `rescheduleEventSeries()` in
+  `event-series-reschedule.ts`, from the same **Edit schedule** on a program's session row or
+  the staff event page's series bar. Guarded by `requireSeriesWriter()`: `event.manage`, a
+  leader of the program for a program's series, else the listing's writer. It follows the
+  booking rules above with listings for bookings. The new first session copies the prototype
+  and holds the room for the same setup and teardown, waitlisted behind a booking and refused
+  on a closure or another show. From the change day an occurrence no record touches is deleted
+  and its hold cancelled; one with an RSVP, attendance, ticket, production or other record
+  (`LISTING_RECORDS`) is kept with its hold. Nobody is notified.
 - **Waitlist promotion:** `cancel()` emits `reservation.cancelled`; the listener in
   `src/lib/server/event-bus/register-listeners.ts` calls `promoteNextWaitlisted()` in
   `waitlist-service.ts` — oldest overlapping waitlisted reservation wins, gets

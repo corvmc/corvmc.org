@@ -506,6 +506,7 @@ export interface EventSeriesWithPrototype extends SeriesRow {
 	prototypeEventId: string;
 	prototypeTitle: string;
 	prototypeStartsAt: Date;
+	prototypeEndsAt: Date | null;
 	prototypeCreatedByUserId: string;
 }
 
@@ -523,6 +524,7 @@ export async function getEventSeries(seriesId: string): Promise<EventSeriesWithP
 			prototypeEventId: eventListing.id,
 			prototypeTitle: eventListing.title,
 			prototypeStartsAt: eventListing.startsAt,
+			prototypeEndsAt: eventListing.endsAt,
 			prototypeCreatedByUserId: eventListing.createdByUserId
 		})
 		.from(recurringSeries)
@@ -538,6 +540,48 @@ export async function getEventSeries(seriesId: string): Promise<EventSeriesWithP
 		frequencyLabel: describeFrequency(row.rrule),
 		monthlyMode: monthlyModeOf(row.rrule)
 	};
+}
+
+/** The live event series among `seriesIds`, keyed by id, for a schedule edit. */
+export async function activeEventSeries(seriesIds: (string | null)[]) {
+	const ids = [...new Set(seriesIds.filter((id): id is string => !!id))];
+	if (!ids.length) return new Map<string, EventSeriesWithPrototype>();
+	const rows = await db
+		.select({
+			id: recurringSeries.id,
+			supersededBy: recurringSeries.supersededBy,
+			prototypeType: recurringSeries.prototypeType,
+			prototypeId: recurringSeries.prototypeId,
+			rrule: recurringSeries.rrule,
+			createdAt: recurringSeries.createdAt,
+			endsAt: recurringSeries.endsAt,
+			cancelledAt: recurringSeries.cancelledAt,
+			prototypeEventId: eventListing.id,
+			prototypeTitle: eventListing.title,
+			prototypeStartsAt: eventListing.startsAt,
+			prototypeEndsAt: eventListing.endsAt,
+			prototypeCreatedByUserId: eventListing.createdByUserId
+		})
+		.from(recurringSeries)
+		.innerJoin(eventListing, eq(recurringSeries.prototypeId, eventListing.id))
+		.where(
+			and(
+				inArray(recurringSeries.id, ids),
+				eq(recurringSeries.prototypeType, 'event_listing'),
+				isNull(recurringSeries.cancelledAt),
+				isNull(recurringSeries.supersededBy)
+			)
+		);
+	return new Map(
+		rows.map((row) => [
+			row.id,
+			{
+				...row,
+				frequencyLabel: describeFrequency(row.rrule),
+				monthlyMode: monthlyModeOf(row.rrule)
+			}
+		])
+	);
 }
 
 // ---------------------------------------------------------------------------

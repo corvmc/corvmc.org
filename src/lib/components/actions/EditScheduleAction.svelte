@@ -35,14 +35,37 @@
 		series,
 		variant = 'ghost',
 		size = 'sm',
+		kind = 'booking',
 		onsuccess
 	}: {
 		series: EditableSeries;
 		variant?: ButtonVariant;
 		size?: ButtonSize;
-		/** Called with the id of the series that replaced this one. */
-		onsuccess?: (seriesId: string) => void;
+		/** An event series' sessions are listings, each with a room hold. */
+		kind?: 'booking' | 'event';
+		/** Called with the series that replaced this one, and an event series' first session. */
+		onsuccess?: (seriesId: string, eventId: string | null) => void;
 	} = $props();
+
+	const copy = $derived(
+		kind === 'event'
+			? {
+					booked: m.actions_edit_schedule_room_taken_label(),
+					closed: m.actions_edit_schedule_room_taken_label(),
+					keptTitle: m.actions_edit_schedule_kept_sessions_title(),
+					keptBody: m.actions_edit_schedule_kept_sessions_body(),
+					removed: m.actions_edit_schedule_removed_sessions_body(),
+					waitlisted: m.actions_edit_schedule_hold_waitlisted_toast()
+				}
+			: {
+					booked: m.actions_edit_schedule_booked_label(),
+					closed: m.actions_edit_schedule_closed_label(),
+					keptTitle: m.actions_edit_schedule_kept_title(),
+					keptBody: m.actions_edit_schedule_kept_body(),
+					removed: m.actions_edit_schedule_removed_body(),
+					waitlisted: m.actions_edit_schedule_waitlisted_toast()
+				}
+	);
 
 	const fields = rescheduleSeries.fields;
 	const DAY_MS = 86_400_000;
@@ -112,13 +135,10 @@
 	{variant}
 	{size}
 	onsuccess={(r) => {
-		const result = r as { seriesId: string; waitlisted: boolean } | undefined;
-		toast.success(
-			result?.waitlisted
-				? m.actions_edit_schedule_waitlisted_toast()
-				: m.actions_edit_schedule_success_toast()
-		);
-		if (result) onsuccess?.(result.seriesId);
+		const result = r as
+			{ seriesId: string; eventId: string | null; waitlisted: boolean } | undefined;
+		toast.success(result?.waitlisted ? copy.waitlisted : m.actions_edit_schedule_success_toast());
+		if (result) onsuccess?.(result.seriesId, result.eventId);
 	}}
 >
 	{#snippet form()}
@@ -191,13 +211,9 @@
 											)}
 										</span>
 										{#if session.conflict === 'booked'}
-											<Badge variant="warning" size="sm"
-												>{m.actions_edit_schedule_booked_label()}</Badge
-											>
+											<Badge variant="warning" size="sm">{copy.booked}</Badge>
 										{:else if session.conflict === 'closed'}
-											<Badge variant="error" size="sm"
-												>{m.actions_edit_schedule_closed_label()}</Badge
-											>
+											<Badge variant="error" size="sm">{copy.closed}</Badge>
 										{/if}
 									</li>
 								{/each}
@@ -205,8 +221,8 @@
 						</div>
 						{#if preview.kept.length > 0}
 							<div data-testid="kept-bookings">
-								<h3 class="font-semibold">{m.actions_edit_schedule_kept_title()}</h3>
-								<p class="text-muted">{m.actions_edit_schedule_kept_body()}</p>
+								<h3 class="font-semibold">{copy.keptTitle}</h3>
+								<p class="text-muted">{copy.keptBody}</p>
 								<ul class="mt-1 space-y-1">
 									{#each preview.kept as booking (booking.id)}
 										<li>
@@ -220,7 +236,7 @@
 							</div>
 						{/if}
 						{#if preview.removed > 0}
-							<p class="text-muted">{m.actions_edit_schedule_removed_body()}</p>
+							<p class="text-muted">{copy.removed}</p>
 						{/if}
 					</div>
 				{:catch err}

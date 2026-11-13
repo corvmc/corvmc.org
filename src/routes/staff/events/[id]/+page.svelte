@@ -2,7 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { refreshAll } from '$app/navigation';
+	import { goto, refreshAll } from '$app/navigation';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
@@ -313,7 +313,12 @@
 	<RelatedShifts subject={{ type: 'event', id }} />
 
 	{#if data.recurringSeries}
-		<RecurringSeriesBar eventId={evt.id} series={data.recurringSeries} onchange={refresh} />
+		<RecurringSeriesBar
+			eventId={evt.id}
+			series={data.recurringSeries}
+			onchange={refresh}
+			onrescheduled={(next) => goto(resolve(`staff/events/${next}`))}
+		/>
 	{:else if canRepeat}
 		<div>
 			<RepeatEventAction eventId={evt.id} startsAt={evt.startsAt} onsuccess={refresh} />

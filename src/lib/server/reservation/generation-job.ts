@@ -106,6 +106,28 @@ export async function generateSeries(seriesId: string) {
 	return series ? processSeries(series) : { created: 0, waitlisted: 0, skipped: 0 };
 }
 
+/** Materialise one event series' window now, as the daily run would. */
+export async function generateEventSeries(seriesId: string) {
+	const [series] = await db
+		.select({
+			id: recurringSeries.id,
+			prototypeId: recurringSeries.prototypeId,
+			rrule: recurringSeries.rrule,
+			endsAt: recurringSeries.endsAt
+		})
+		.from(recurringSeries)
+		.where(
+			and(
+				eq(recurringSeries.id, seriesId),
+				eq(recurringSeries.prototypeType, 'event_listing'),
+				isNull(recurringSeries.cancelledAt),
+				isNull(recurringSeries.supersededBy)
+			)
+		)
+		.limit(1);
+	return series ? processEventSeries(series) : { created: 0, skipped: 0 };
+}
+
 // ---------------------------------------------------------------------------
 // Combined entry point — events first, then reservations
 // ---------------------------------------------------------------------------
@@ -448,87 +470,20 @@ export async function generateRecurringEvents(): Promise<GenerationResult> {
 	return result;
 }
 
-async function processEventSeries(
-	series: SeriesInfo
-): Promise<{ created: number; skipped: number }> {
-	// Load the prototype event
-	const [prototype] = await db
+export async function loadEventPrototype(eventId: string) {
+	const [row] = await db
 		.select(eventListingColumns)
 		.from(eventListing)
-		.where(eq(eventListing.id, series.prototypeId))
+		.where(eq(eventListing.id, eventId))
 		.limit(1);
+	return row;
+}
 
-	if (!prototype) {
-		throw new Error('Prototype event not found');
-	}
+export type EventPrototype = NonNullable<Awaited<ReturnType<typeof loadEventPrototype>>>;
+export type SeriesContext = Awaited<ReturnType<typeof seriesContext>>;
 
-	// Load creator info for staff notifications
-	const [owner] = await db
-		.select({ name: user.name, email: user.email, deletedAt: user.deletedAt })
-		.from(user)
-		.where(eq(user.id, prototype.createdByUserId))
-		.limit(1);
-
-	// `event_cmc_needs_end` guarantees this for a CMC prototype, and
-	// `createGroupEvent` requires it for a program's. Still checked rather than
-	// asserted, because this runs unattended and because the guarantee no longer
-	// comes from one place — a silent NaN duration would generate a whole series
-	// of broken occurrences.
-	if (!prototype.endsAt) {
-		throw new Error(`Recurring prototype ${prototype.id} has no end time`);
-	}
-	const protoEndsAt = prototype.endsAt;
-
-	// Offsets relative to the prototype event, applied to every occurrence
-	const durationMs = protoEndsAt.getTime() - prototype.startsAt.getTime();
-	const doorsLeadMs = prototype.doorsAt
-		? prototype.startsAt.getTime() - prototype.doorsAt.getTime()
-		: null;
-
-	// If the prototype reserved space, capture the reservation's lead/tail so each
-	// occurrence reserves an equivalent window (reservation times can differ from
-	// event times for setup/teardown).
-	let resLeadMs: number | null = null;
-	let resTailMs: number | null = null;
-	if (prototype.reservationId) {
-		const [protoRes] = await db
-			.select({ startsAt: reservation.startsAt, endsAt: reservation.endsAt })
-			.from(reservation)
-			.where(eq(reservation.id, prototype.reservationId))
-			.limit(1);
-		if (protoRes) {
-			resLeadMs = prototype.startsAt.getTime() - protoRes.startsAt.getTime();
-			resTailMs = protoRes.endsAt.getTime() - protoEndsAt.getTime();
-		}
-	}
-
-	// Generate occurrences within the window
-	const now = new Date();
-	// Event series hold the room outright. `termsFor` gives every non-instructor
-	// booker the same window, so the value only has to be one a CMC event uses.
-	let windowEnd = await generationWindowEnd(now, 'production');
-	if (series.endsAt && series.endsAt < windowEnd) {
-		windowEnd = series.endsAt;
-	}
-	const occurrences = getOccurrences(series.rrule, now, windowEnd);
-
-	// Skip occurrences already materialized for this series
-	const existingInstances =
-		occurrences.length > 0
-			? await db
-					.select({ startsAt: eventListing.startsAt })
-					.from(eventListing)
-					.where(
-						and(
-							eq(eventListing.recurringSeriesId, series.id),
-							gte(eventListing.startsAt, new Date(occurrences[0].getTime() - DAY_MS)),
-							lte(eventListing.startsAt, new Date(occurrences.at(-1)!.getTime() + DAY_MS))
-						)
-					)
-			: [];
-	// By club day, as for reservations above (#2105).
-	const existingDays = new Set(existingInstances.map((r) => formatDateInTz(r.startsAt, TZ)));
-
+/** What every occurrence of one series shares, read once per series. */
+export async function seriesContext(prototype: EventPrototype) {
 	/**
 	 * An occurrence is the prototype repeated, so it inherits what the prototype
 	 * *is* — not a fixed CMC draft.
@@ -579,7 +534,201 @@ async function processEventSeries(
 					.where(eq(directoryEntry.groupId, prototype.groupId))
 					.limit(1)
 			: [undefined];
-	const ownerEntryId = ownerEntry?.id ?? null;
+	return { occurrenceStatus, bandName: ownerGroup?.name, bandEntryId: ownerEntry?.id ?? null };
+}
+
+/**
+ * Insert one occurrence of `prototype` at `at`, without a room hold: the
+ * caller books that, so a failed booking never orphans a reservation.
+ */
+export async function copyListing(
+	prototype: EventPrototype,
+	context: SeriesContext,
+	at: { startsAt: Date; endsAt: Date; seriesId: string | null }
+): Promise<string> {
+	const occDoors = prototype.doorsAt
+		? new Date(at.startsAt.getTime() - (prototype.startsAt.getTime() - prototype.doorsAt.getTime()))
+		: null;
+
+	const newEventId = crypto.randomUUID();
+
+	// Insert the draft event first (no reservation), so a failed space booking
+	// never leaves an orphan reservation.
+	await db.insert(eventListing).values({
+		id: newEventId,
+		title: prototype.title,
+		description: prototype.description,
+		startsAt: at.startsAt,
+		endsAt: at.endsAt,
+		doorsAt: occDoors,
+		tags: prototype.tags,
+		// Inherited, all five. `location` matters for the same reason as the
+		// rest: an occurrence that lost it reads as being held somewhere it is
+		// not. `kind` matters most of all — a monthly deep clean is a recurring
+		// event, and an occurrence that defaulted back to `show` would take a
+		// hero slot on the homepage every month.
+		source: prototype.source,
+		kind: prototype.kind,
+		// A members-only meeting repeats members-only.
+		visibility: prototype.visibility,
+		// No `projectId`, so never a production: staff attach one by hand (#2009).
+		groupId: prototype.groupId,
+		location: prototype.location,
+		status: context.occurrenceStatus,
+		publishedAt: context.occurrenceStatus === 'published' ? new Date() : null,
+		createdByUserId: prototype.createdByUserId,
+		recurringSeriesId: at.seriesId
+	});
+
+	// The night is sold on the series' terms, when it has any.
+	await saveTicketSale(newEventId, {
+		enabled: prototype.ticketingEnabled || undefined,
+		priceCents: prototype.ticketPrice ?? undefined,
+		priceFloorCents: prototype.ticketPriceFloorCents || undefined,
+		quantity: prototype.ticketQuantity ?? undefined
+	});
+
+	// The two invariants a write that sets `groupId` owes. They are maintained
+	// here rather than by calling `createGroupEvent`/`createBandEvent`, because
+	// this path deliberately inserts the event *before* booking the room —
+	// reversing that order is what keeps a failed booking from orphaning a
+	// reservation, and it is the opposite of what those creators do.
+	if (prototype.groupId) {
+		await linkManagingGroup([{ eventId: newEventId, groupId: prototype.groupId }]);
+
+		// A band gig's owner heads its own bill. A program's session has no bill
+		// at all — see `createGroupEvent`.
+		if (prototype.source === 'band') {
+			await db.insert(eventBand).values({
+				eventId: newEventId,
+				name: context.bandName ?? 'Unknown band',
+				directoryEntryId: context.bandEntryId,
+				billingOrder: 0,
+				status: 'confirmed',
+				addedByGroupId: prototype.groupId
+			});
+		}
+	}
+
+	// Point the occurrence at the prototype's poster — the same R2 object, not a
+	// copy of it.
+	//
+	// This used to `copyObject` per occurrence, and the reason given was that an
+	// occurrence must be independently editable and cancellable. It had to be:
+	// deleting or re-postering one event deleted the object outright, so a
+	// shared key would have been pulled out from under its siblings. Since
+	// phase 4 nothing in a request path deletes an object — cancelling detaches,
+	// and the sweep only reclaims what no attachment points at — so sharing is
+	// now the safe option rather than the dangerous one, and a 52-week series
+	// holds one JPEG instead of 52. See docs/decisions/0026-uploads-are-detached-and-swept.md.
+	if (prototype.posterKey) {
+		try {
+			const attached = await attachExisting(
+				'event_listing',
+				newEventId,
+				'poster',
+				prototype.posterKey
+			);
+
+			// The prototype's key now comes *from* its `media` row, so this can
+			// only fire if that row vanished between the two reads. It used to be
+			// reachable — a poster written without being recorded read as a key with
+			// no row — and the key was shared anyway. Kept as the report of a race
+			// rather than of a data gap.
+			if (!attached) {
+				captureException(new Error(`No media row for prototype poster ${prototype.posterKey}`), {
+					event: 'event.recurring.poster_unrecorded',
+					eventId: newEventId
+				});
+			}
+
+			await db
+				.update(eventListing)
+				.set({ updatedAt: new Date() })
+				.where(eq(eventListing.id, newEventId));
+		} catch (err) {
+			// Best-effort: the draft event remains; staff can add a poster manually.
+			captureException(err, { event: 'event.recurring.poster', eventId: newEventId });
+		}
+	}
+
+	return newEventId;
+}
+
+async function processEventSeries(
+	series: SeriesInfo
+): Promise<{ created: number; skipped: number }> {
+	// Load the prototype event
+	const prototype = await loadEventPrototype(series.prototypeId);
+	if (!prototype) {
+		throw new Error('Prototype event not found');
+	}
+
+	// Load creator info for staff notifications
+	const [owner] = await db
+		.select({ name: user.name, email: user.email, deletedAt: user.deletedAt })
+		.from(user)
+		.where(eq(user.id, prototype.createdByUserId))
+		.limit(1);
+
+	// `event_cmc_needs_end` guarantees this for a CMC prototype, and
+	// `createGroupEvent` requires it for a program's. Still checked rather than
+	// asserted, because this runs unattended and because the guarantee no longer
+	// comes from one place — a silent NaN duration would generate a whole series
+	// of broken occurrences.
+	if (!prototype.endsAt) {
+		throw new Error(`Recurring prototype ${prototype.id} has no end time`);
+	}
+	const protoEndsAt = prototype.endsAt;
+
+	// Offsets relative to the prototype event, applied to every occurrence
+	const durationMs = protoEndsAt.getTime() - prototype.startsAt.getTime();
+
+	// If the prototype reserved space, capture the reservation's lead/tail so each
+	// occurrence reserves an equivalent window (reservation times can differ from
+	// event times for setup/teardown).
+	let resLeadMs: number | null = null;
+	let resTailMs: number | null = null;
+	if (prototype.reservationId) {
+		const [protoRes] = await db
+			.select({ startsAt: reservation.startsAt, endsAt: reservation.endsAt })
+			.from(reservation)
+			.where(eq(reservation.id, prototype.reservationId))
+			.limit(1);
+		if (protoRes) {
+			resLeadMs = prototype.startsAt.getTime() - protoRes.startsAt.getTime();
+			resTailMs = protoRes.endsAt.getTime() - protoEndsAt.getTime();
+		}
+	}
+
+	// Generate occurrences within the window
+	const now = new Date();
+	// Event series hold the room outright. `termsFor` gives every non-instructor
+	// booker the same window, so the value only has to be one a CMC event uses.
+	let windowEnd = await generationWindowEnd(now, 'production');
+	if (series.endsAt && series.endsAt < windowEnd) {
+		windowEnd = series.endsAt;
+	}
+	const occurrences = getOccurrences(series.rrule, now, windowEnd);
+
+	// Skip occurrences already materialized for this series
+	const existingInstances =
+		occurrences.length > 0
+			? await db
+					.select({ startsAt: eventListing.startsAt })
+					.from(eventListing)
+					.where(
+						and(
+							eq(eventListing.recurringSeriesId, series.id),
+							gte(eventListing.startsAt, new Date(occurrences[0].getTime() - DAY_MS)),
+							lte(eventListing.startsAt, new Date(occurrences.at(-1)!.getTime() + DAY_MS))
+						)
+					)
+			: [];
+	// By club day, as for reservations above (#2105).
+	const existingDays = new Set(existingInstances.map((r) => formatDateInTz(r.startsAt, TZ)));
+
+	const context = await seriesContext(prototype);
 
 	let created = 0;
 	let skipped = 0;
@@ -588,110 +737,12 @@ async function processEventSeries(
 		if (existingDays.has(formatDateInTz(occStart, TZ))) continue;
 
 		const occEnd = new Date(occStart.getTime() + durationMs);
-		const occDoors = doorsLeadMs != null ? new Date(occStart.getTime() - doorsLeadMs) : null;
-
-		const newEventId = crypto.randomUUID();
-
-		// Insert the draft event first (no reservation), so a failed space booking
-		// never leaves an orphan reservation.
-		await db.insert(eventListing).values({
-			id: newEventId,
-			title: prototype.title,
-			description: prototype.description,
+		const newEventId = await copyListing(prototype, context, {
 			startsAt: occStart,
 			endsAt: occEnd,
-			doorsAt: occDoors,
-			tags: prototype.tags,
-			// Inherited, all five. `location` matters for the same reason as the
-			// rest: an occurrence that lost it reads as being held somewhere it is
-			// not. `kind` matters most of all — a monthly deep clean is a recurring
-			// event, and an occurrence that defaulted back to `show` would take a
-			// hero slot on the homepage every month.
-			source: prototype.source,
-			kind: prototype.kind,
-			// A members-only meeting repeats members-only.
-			visibility: prototype.visibility,
-			// No `projectId`, so never a production: staff attach one by hand (#2009).
-			groupId: prototype.groupId,
-			location: prototype.location,
-			status: occurrenceStatus,
-			publishedAt: occurrenceStatus === 'published' ? new Date() : null,
-			createdByUserId: prototype.createdByUserId,
-			recurringSeriesId: series.id
+			seriesId: series.id
 		});
 		created++;
-
-		// The night is sold on the series' terms, when it has any.
-		await saveTicketSale(newEventId, {
-			enabled: prototype.ticketingEnabled || undefined,
-			priceCents: prototype.ticketPrice ?? undefined,
-			priceFloorCents: prototype.ticketPriceFloorCents || undefined,
-			quantity: prototype.ticketQuantity ?? undefined
-		});
-
-		// The two invariants a write that sets `groupId` owes. They are maintained
-		// here rather than by calling `createGroupEvent`/`createBandEvent`, because
-		// this path deliberately inserts the event *before* booking the room —
-		// reversing that order is what keeps a failed booking from orphaning a
-		// reservation, and it is the opposite of what those creators do.
-		if (prototype.groupId) {
-			await linkManagingGroup([{ eventId: newEventId, groupId: prototype.groupId }]);
-
-			// A band gig's owner heads its own bill. A program's session has no bill
-			// at all — see `createGroupEvent`.
-			if (prototype.source === 'band') {
-				await db.insert(eventBand).values({
-					eventId: newEventId,
-					name: ownerGroup?.name ?? 'Unknown band',
-					directoryEntryId: ownerEntryId,
-					billingOrder: 0,
-					status: 'confirmed',
-					addedByGroupId: prototype.groupId
-				});
-			}
-		}
-
-		// Point the occurrence at the prototype's poster — the same R2 object, not a
-		// copy of it.
-		//
-		// This used to `copyObject` per occurrence, and the reason given was that an
-		// occurrence must be independently editable and cancellable. It had to be:
-		// deleting or re-postering one event deleted the object outright, so a
-		// shared key would have been pulled out from under its siblings. Since
-		// phase 4 nothing in a request path deletes an object — cancelling detaches,
-		// and the sweep only reclaims what no attachment points at — so sharing is
-		// now the safe option rather than the dangerous one, and a 52-week series
-		// holds one JPEG instead of 52. See docs/decisions/0026-uploads-are-detached-and-swept.md.
-		if (prototype.posterKey) {
-			try {
-				const attached = await attachExisting(
-					'event_listing',
-					newEventId,
-					'poster',
-					prototype.posterKey
-				);
-
-				// The prototype's key now comes *from* its `media` row, so this can
-				// only fire if that row vanished between the two reads. It used to be
-				// reachable — a poster written without being recorded read as a key with
-				// no row — and the key was shared anyway. Kept as the report of a race
-				// rather than of a data gap.
-				if (!attached) {
-					captureException(new Error(`No media row for prototype poster ${prototype.posterKey}`), {
-						event: 'event.recurring.poster_unrecorded',
-						eventId: newEventId
-					});
-				}
-
-				await db
-					.update(eventListing)
-					.set({ updatedAt: new Date() })
-					.where(eq(eventListing.id, newEventId));
-			} catch (err) {
-				// Best-effort: the draft event remains; staff can add a poster manually.
-				captureException(err, { event: 'event.recurring.poster', eventId: newEventId });
-			}
-		}
 
 		// Book space for this occurrence if the prototype reserved space
 		if (resLeadMs != null && resTailMs != null) {

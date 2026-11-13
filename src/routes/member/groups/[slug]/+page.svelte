@@ -38,6 +38,7 @@
 	import EditSessionAction from '#lib/components/groups/EditSessionAction.svelte';
 	import RepeatSessionAction from '#lib/components/groups/RepeatSessionAction.svelte';
 	import SessionAttendanceAction from '#lib/components/groups/SessionAttendanceAction.svelte';
+	import { EditScheduleAction } from '#lib/components/actions/index.js';
 	import ProjectStatusAction from './ProjectStatusAction.svelte';
 	import ProjectDutyListAction from './ProjectDutyListAction.svelte';
 	import CommitteeNumbers from './CommitteeNumbers.svelte';
@@ -427,6 +428,13 @@
 													groupId={group.id}
 													session={s}
 													onchanged={refreshRoster}
+												/>
+											{:else if s.series}
+												<EditScheduleAction
+													kind="event"
+													size="xs"
+													series={s.series}
+													onsuccess={refreshRoster}
 												/>
 											{/if}
 											{#if s.status === 'published'}

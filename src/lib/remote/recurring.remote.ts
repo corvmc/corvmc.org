@@ -11,6 +11,12 @@ import {
 	type NewSchedule
 } from '#lib/server/reservation/recurring-series-reschedule.js';
 import {
+	previewEventReschedule,
+	rescheduleEventSeries,
+	seriesPrototype
+} from '#lib/server/reservation/event-series-reschedule.js';
+import { requireSeriesWriter } from '#lib/server/event/listing-guard.js';
+import {
 	requireCapability,
 	requireCapabilityOrOwner,
 	requireUser
@@ -123,11 +129,23 @@ const scheduleSchema = z.object({
 });
 type ScheduleInput = z.infer<typeof scheduleSchema>;
 
-/** The series' owner, or staff who may manage recurring bookings. */
-async function seriesEditor(id: string): Promise<'staff' | 'owner'> {
+/**
+ * A booking series: its owner, or staff who manage recurring bookings. An
+ * event series: whoever may write its prototype listing.
+ */
+async function seriesEditor(id: string) {
+	const proto = await seriesPrototype(id);
+	if (!proto) error(404, 'Series not found');
+	if (proto.type === 'event_listing') {
+		return { event: true, as: await requireSeriesWriter(proto.id) } as const;
+	}
 	const series = await get(id);
 	if (!series) error(404, 'Series not found');
-	return requireCapabilityOrOwner('reservation.manageRecurring', series.prototypeCreatedByUserId);
+	const as = await requireCapabilityOrOwner(
+		'reservation.manageRecurring',
+		series.prototypeCreatedByUserId
+	);
+	return { event: false, as } as const;
 }
 
 function toSchedule(data: ScheduleInput, until: Date | undefined): NewSchedule {
@@ -146,9 +164,10 @@ const seriesEnd = (data: ScheduleInput) =>
 /** What a schedule change would do, before it is saved. */
 export const previewSeriesSchedule = query(scheduleSchema, async (data) => {
 	requireUser();
-	await seriesEditor(data.id);
+	const editor = await seriesEditor(data.id);
+	const preview = editor.event ? previewEventReschedule : previewReschedule;
 	try {
-		return await previewReschedule(data.id, toSchedule(data, seriesEnd(data) ?? undefined));
+		return await preview(data.id, toSchedule(data, seriesEnd(data) ?? undefined));
 	} catch (err) {
 		mapDomainError(err);
 	}
@@ -157,13 +176,19 @@ export const previewSeriesSchedule = query(scheduleSchema, async (data) => {
 /** Replace a series with one on a new schedule (owner or staff). */
 export const rescheduleSeries = form(scheduleSchema, async (data, issue) => {
 	const user = requireUser();
-	const as = await seriesEditor(data.id);
+	const editor = await seriesEditor(data.id);
 	const until = seriesEnd(data);
 	if (until === null) invalid(issue.until(UNTIL_BEFORE_START));
 
-	const outcome = await reschedule(data.id, toSchedule(data, until), {
-		kind: as,
-		userId: user.id
-	});
-	return { seriesId: outcome.seriesId, waitlisted: outcome.waitlisted, kept: outcome.kept };
+	const by = { kind: editor.as, userId: user.id };
+	const schedule = toSchedule(data, until);
+	const outcome = editor.event
+		? await rescheduleEventSeries(data.id, schedule, by)
+		: { ...(await reschedule(data.id, schedule, by)), eventId: null };
+	return {
+		seriesId: outcome.seriesId,
+		eventId: outcome.eventId,
+		waitlisted: outcome.waitlisted,
+		kept: outcome.kept
+	};
 });

@@ -108,7 +108,7 @@ async function loadActive(seriesId: string): Promise<ActiveSeries> {
 }
 
 /** The old schedule ends on the club day the new one starts, not at its hour. */
-function changeDay(schedule: NewSchedule): Date {
+export function changeDay(schedule: NewSchedule): Date {
 	const day = buildDateInTz(formatDateInTz(schedule.startsAt, TZ), '00:00', TZ);
 	const now = new Date();
 	return day > now ? day : now;
@@ -137,7 +137,7 @@ async function oldBookings(series: ActiveSeries, from: Date) {
 	return { removable, kept };
 }
 
-function checkShape(schedule: NewSchedule) {
+export function checkShape(schedule: NewSchedule) {
 	if (schedule.endsAt <= schedule.startsAt) {
 		throw new RecurringSeriesError('End time must be after start time');
 	}
