@@ -12,6 +12,7 @@
 
 {#if messageBodyIsMarkdown(channel)}
 	<div class="message-body">
+		<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized by renderMessageMarkdown (markdown.spec.ts) -->
 		{@html renderMessageMarkdown(body)}
 	</div>
 {:else}
