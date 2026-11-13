@@ -564,6 +564,10 @@
 		"panel": "staff"
 	},
 	{
+		"route": "/staff/inventory/kits/[id]",
+		"panel": "staff"
+	},
+	{
 		"route": "/staff/inventory/loans",
 		"panel": "staff"
 	},

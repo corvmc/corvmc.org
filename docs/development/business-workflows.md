@@ -734,6 +734,26 @@ checking out a serialized item without naming a unit throws
 and a unit already bound to the loan satisfies it. Equipment credits are the same ledger as free hours
 (`credit-service.ts`, type `equipment_credits`).
 
+### Kit loans
+
+A location can go out as one set: the offsite kit case and everything in it (#2725).
+`kit-loan-service.ts` drives it from **Check out kit** on the Loans tab.
+
+- `checkoutKit()` walks the location and every location nested in it, and writes one
+  `inventory_kit_loan` row plus one ordinary `inventory_loan` per `in_service` unit,
+  each linked by `kit_loan_id`, already `checked_out`, with `loan_out` movements and
+  the units set `on_loan` — one `db.batch`. Those loan rows are the snapshot: moving
+  a unit afterwards does not change what was lent.
+- A unit on another loan or in the shop is left behind, not refused, and recorded as
+  `kit_loan.checked_out_incomplete`. A location with nothing to lend is refused.
+- Kit loans are the collective's own use, so the rate is zero and nothing is charged.
+- `returnKit()` on `/staff/inventory/kits/[id]` takes the ticked units back the way a
+  single return does (an open blocking report sends a unit to the shop). Unticked
+  units stay on loan to the same member, the kit stays open, and the return is
+  recorded as `kit_loan.returned_incomplete`. The kit closes (`returned_at`) once
+  every unit is back, including a unit returned on its own from its loan page.
+- Loan-due reminders skip kit units; the kit's due date shows on the Loans tab.
+
 ### Replenishment and spend
 
 A `bulk` item can carry a reorder point. `listLowStock()` in `stock-service.ts`

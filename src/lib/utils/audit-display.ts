@@ -251,6 +251,10 @@ export function summarizeAuditEntry(entry: AuditEntry): string {
 			return `Put the unit back in service from ${entry.details.from}: “${entry.details.reason}”`;
 		case 'equipment_loan.checked_out_unscheduled':
 			return `Checked out ${entry.details.equipmentName ?? 'a loan'} without scheduling it: “${entry.details.reason}”`;
+		case 'kit_loan.checked_out_incomplete':
+			return `Checked out ${entry.details.locationName} without ${entry.details.leftBehind.join(', ')}`;
+		case 'kit_loan.returned_incomplete':
+			return `Checked in ${entry.details.locationName} without ${entry.details.missing.join(', ')}`;
 		case 'project.edited':
 			return `Edited the project's ${entry.details.fields.map((f) => PROJECT_FIELDS[f] ?? f).join(', ')}`;
 		case 'project.status_changed': {

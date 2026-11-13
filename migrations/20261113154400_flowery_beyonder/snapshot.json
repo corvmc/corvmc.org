@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "3f3fbb51-1763-4e51-b23a-f4738e122e4f",
+  "id": "a6d48f73-25d3-44b6-88bf-755ecaffa303",
   "prevIds": [
-    "da4c80af-8365-4a6b-8aef-036e88a437a7"
+    "3f3fbb51-1763-4e51-b23a-f4738e122e4f"
   ],
   "ddl": [
     {
@@ -160,6 +160,10 @@
     },
     {
       "name": "inventory_item_article",
+      "entityType": "tables"
+    },
+    {
+      "name": "inventory_kit_loan",
       "entityType": "tables"
     },
     {
@@ -5028,6 +5032,116 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "location_id",
+      "entityType": "columns",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "location_name",
+      "entityType": "columns",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "checked_out_by_id",
+      "entityType": "columns",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "checked_out_at",
+      "entityType": "columns",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "due_date",
+      "entityType": "columns",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "returned_at",
+      "entityType": "columns",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "(unixepoch())",
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
       "table": "inventory_loan"
     },
     {
@@ -5057,6 +5171,16 @@
       "default": null,
       "generated": null,
       "name": "user_id",
+      "entityType": "columns",
+      "table": "inventory_loan"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kit_loan_id",
       "entityType": "columns",
       "table": "inventory_loan"
     },
@@ -17037,6 +17161,51 @@
     },
     {
       "columns": [
+        "location_id"
+      ],
+      "tableTo": "inventory_location",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_inventory_kit_loan_location_id_inventory_location_id_fk",
+      "entityType": "fks",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "columns": [
+        "user_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_inventory_kit_loan_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "columns": [
+        "checked_out_by_id"
+      ],
+      "tableTo": "user",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_inventory_kit_loan_checked_out_by_id_user_id_fk",
+      "entityType": "fks",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "columns": [
         "item_id"
       ],
       "tableTo": "inventory_item",
@@ -17077,6 +17246,21 @@
       "onDelete": "CASCADE",
       "nameExplicit": false,
       "name": "fk_inventory_loan_user_id_user_id_fk",
+      "entityType": "fks",
+      "table": "inventory_loan"
+    },
+    {
+      "columns": [
+        "kit_loan_id"
+      ],
+      "tableTo": "inventory_kit_loan",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "SET NULL",
+      "nameExplicit": false,
+      "name": "fk_inventory_loan_kit_loan_id_inventory_kit_loan_id_fk",
       "entityType": "fks",
       "table": "inventory_loan"
     },
@@ -21233,6 +21417,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "inventory_kit_loan_pk",
+      "table": "inventory_kit_loan",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "inventory_loan_pk",
       "table": "inventory_loan",
       "entityType": "pks"
@@ -23306,6 +23499,34 @@
     {
       "columns": [
         {
+          "value": "location_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_kit_loan_location",
+      "entityType": "indexes",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_kit_loan_user",
+      "entityType": "indexes",
+      "table": "inventory_kit_loan"
+    },
+    {
+      "columns": [
+        {
           "value": "item_id",
           "isExpression": false
         }
@@ -23356,6 +23577,20 @@
       "where": null,
       "origin": "manual",
       "name": "idx_loan_status",
+      "entityType": "indexes",
+      "table": "inventory_loan"
+    },
+    {
+      "columns": [
+        {
+          "value": "kit_loan_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "idx_loan_kit",
       "entityType": "indexes",
       "table": "inventory_loan"
     },

@@ -376,5 +376,10 @@
 	"actions_edit_schedule_kept_sessions_title": "Kept sessions",
 	"actions_edit_schedule_kept_sessions_body": "These sessions on the old schedule have RSVPs or other records, so they stay. Cancel any you no longer need.",
 	"actions_edit_schedule_removed_sessions_body": "Other sessions on the old schedule from the first session on are removed, with their room holds.",
-	"actions_edit_schedule_hold_waitlisted_toast": "Schedule changed. The first room hold is on the waitlist."
+	"actions_edit_schedule_hold_waitlisted_toast": "Schedule changed. The first room hold is on the waitlist.",
+	"actions_check_out_kit_label": "Check out kit",
+	"actions_check_out_kit_modal_title": "Check out kit",
+	"actions_check_out_kit_success_toast": "Kit checked out",
+	"actions_check_out_kit_due_date_label": "Due date",
+	"actions_check_out_kit_placeholder": "-- Select location --"
 }

@@ -36,11 +36,15 @@ export async function seedEquipment(users: SeedUser[]) {
 	// two deep rather than one flat list of compound names.
 	const mainRoom = { id: randomUUID(), name: 'Main room', parentId: null, displayOrder: 0 };
 	const storage = { id: randomUUID(), name: 'Storage closet', parentId: null, displayOrder: 1 };
+	const offsiteKit = { id: randomUUID(), name: 'Offsite kit', parentId: null, displayOrder: 2 };
 	const locations = await batchInsert(inventoryLocation, [
 		mainRoom,
 		storage,
 		{ id: randomUUID(), name: 'Stage left rack', parentId: mainRoom.id, displayOrder: 0 },
-		{ id: randomUUID(), name: 'Supply shelf', parentId: storage.id, displayOrder: 0 }
+		{ id: randomUUID(), name: 'Supply shelf', parentId: storage.id, displayOrder: 0 },
+		offsiteKit,
+		// Nested, so a kit checkout has a case inside the case to pick up (#2725).
+		{ id: randomUUID(), name: 'Offsite mic case', parentId: offsiteKit.id, displayOrder: 0 }
 	]);
 	const locByName = Object.fromEntries(locations.map((l) => [l.name, l.id]));
 
@@ -407,6 +411,15 @@ export async function seedEquipment(users: SeedUser[]) {
 		locationId: locByName['Stage left rack']
 	});
 	received(purchase, 'XLR Cable (25ft)', 12, 1_800, { locationId: locByName['Stage left rack'] });
+	// The offsite kit: lent as one set to a show off site.
+	received(grant, 'QSC K12.2 Powered Speaker', 2, 48_000, {
+		units: [{ tag: 'CMC-000201' }, { tag: 'CMC-000202' }],
+		locationId: locByName['Offsite kit']
+	});
+	received(purchase, 'Shure SM58', 2, 11_900, {
+		units: [{ tag: 'CMC-000203' }, { tag: 'CMC-000204' }],
+		locationId: locByName['Offsite mic case']
+	});
 	received(purchase, 'Boom Mic Stand', 4, 3_500, { locationId: locByName['Storage closet'] });
 	received(restock, "D'Addario EXL110 Strings", 12, 700, { locationId: locByName['Supply shelf'] });
 	received(restock, 'Vic Firth 5A Drumsticks', 10, 1_100, {

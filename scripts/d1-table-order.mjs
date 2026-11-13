@@ -143,6 +143,8 @@ export const tableOrder = [
 	'acquisition_line',
 	// References purchase_order and inventory_item, so it clears before neither.
 	'purchase_order_line',
+	// References inventory_location and user; inventory_loan points at it.
+	'inventory_kit_loan',
 	'inventory_loan',
 	// References inventory_asset, inventory_loan and user. `work_order_id` points
 	// at work_order but carries no foreign key -- the two schema modules
