@@ -142,11 +142,13 @@
 	"src/lib/server/project/decision-chain.ts#startProjectFromBallot(1)": {
 		"description": "elsewhere: updateProjectForm writes it once the project exists",
 		"endsAt": "elsewhere: updateProjectForm writes it once the project exists",
+		"parentProjectId": "elsewhere: updateProjectForm writes it once the project exists",
 		"startsAt": "elsewhere: updateProjectForm writes it once the project exists"
 	},
 	"src/lib/server/project/project-service.ts#startProjectFromSuggestion(1)": {
 		"description": "elsewhere: updateProjectForm writes it once the project exists",
 		"endsAt": "elsewhere: updateProjectForm writes it once the project exists",
+		"parentProjectId": "elsewhere: updateProjectForm writes it once the project exists",
 		"startsAt": "elsewhere: updateProjectForm writes it once the project exists"
 	},
 	"src/lib/server/project/project-service.ts#updateProject(1)": {

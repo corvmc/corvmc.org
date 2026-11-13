@@ -3729,5 +3729,9 @@
 	"staff_inventory_kits_check_in_title": "Kit check-in",
 	"staff_inventory_kits_lent_units_title": "Lent units",
 	"staff_inventory_kits_check_in_label": "Check in",
-	"staff_inventory_kits_success_toast": "Kit checked in"
+	"staff_inventory_kits_success_toast": "Kit checked in",
+	"staff_projects_id_parent_project_label": "Parent project",
+	"staff_projects_id_parent_project_body": "Its spend counts toward the parent's budget.",
+	"staff_projects_id_child_projects_label": "Child projects",
+	"staff_projects_id_budget_report_spend_by_project_title": "Spend by project"
 }

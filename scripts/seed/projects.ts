@@ -35,6 +35,7 @@ import type { SeedEvent } from './types';
  *   the only project a member can see.
  * - **A festival** — one project, two nights, no budget. Proves the
  *   many-events case and the "no budget set" rendering, which is not zero.
+ *   Two upcoming shows are its child projects (#2543), so its burn is a sum.
  *
  * Rows are attached by looking them up rather than being threaded through from
  * the seeders that made them, the same shortcut `seedContractors` takes: one
@@ -319,7 +320,7 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 	// --- The festival's two nights -------------------------------------------
 
 	// Only listings with no production: a show's listing names its own project
-	// (#1673), and a festival over shows is deferred.
+	// (#1673). Shows join the festival as child projects, below.
 	const free = await db
 		.select({ id: eventListing.id })
 		.from(eventListing)
@@ -340,6 +341,20 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 		await db.update(eventListing).set({ projectId: ids.festival }).where(eq(eventListing.id, id));
 	}
 
+	// Two upcoming shows as the festival's children (#2543): each keeps its own
+	// production, and their show costs sum into the festival's burn.
+	const nights = await db
+		.select({ id: project.id })
+		.from(project)
+		.where(
+			sql`${project.kind} = 'production' and ${project.startsAt} >= ${Math.floor(now.getTime() / 1000)}`
+		)
+		.orderBy(asc(project.startsAt), asc(project.id))
+		.limit(2);
+	for (const night of nights) {
+		await db.update(project).set({ parentProjectId: ids.festival }).where(eq(project.id, night.id));
+	}
+
 	const [{ attached } = { attached: 0 }] = await db
 		.select({ attached: sql<number>`count(*)` })
 		.from(workOrder)
@@ -348,6 +363,7 @@ export async function seedProjects(events: SeedEvent[], staffId: string) {
 	return {
 		projects: rows.length,
 		events: upcoming.length,
+		childShows: nights.length,
 		workOrders: Number(attached ?? 0),
 		sections: 4
 	};

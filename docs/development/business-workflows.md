@@ -2074,6 +2074,14 @@ restore crew shifts or retract a cancellation notice.
 13. **Burn.** `getProjectBurn` returns a `show` block for a production's project: ticket
     revenue, the acts' pool in, act payouts, guarantee top-ups and show expenses. Expenses
     and top-ups count as spend; the pool passes through and never does.
+14. **Festivals and runs** ([0079](../decisions/0079-a-festival-is-a-parent-project.md)). A
+    project, usually a show's, can name another project as its parent (`parent_project_id`),
+    set from Edit project on `/staff/tasks/projects/[id]` with `project.manage`. Each night
+    keeps its own production, run of show, door take and settlement. `getProjectBurn` on the
+    parent sums each child's own burn with the parent's, against the parent's budget, and
+    lists each one's cash spend in `parts`, which the budget page shows. Parents are one
+    level deep: `updateProject` refuses a project as its own parent, a parent that has a
+    parent, and a parent as a child (`ProjectParentError`, 400).
 
 ### Data touched
 

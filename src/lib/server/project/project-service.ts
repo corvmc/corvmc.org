@@ -88,6 +88,14 @@ export class ProjectOwnerError extends DomainError {
 	}
 }
 
+/** A parent link that would make a cycle or a second level (#2543). */
+export class ProjectParentError extends DomainError {
+	readonly httpStatus = 400;
+	constructor(message: string) {
+		super(message);
+	}
+}
+
 export interface CreateProjectInput {
 	name: string;
 	description?: string | null;
@@ -99,6 +107,8 @@ export interface CreateProjectInput {
 	/** The suggestion this answers. At most one project per suggestion. */
 	suggestionId?: string | null;
 	budgetCents?: number | null;
+	/** The festival or run this is one part of. One level deep, checked here. */
+	parentProjectId?: string | null;
 	startsAt?: Date | null;
 	endsAt?: Date | null;
 	status?: ProjectStatus;
@@ -147,7 +157,33 @@ async function assertClaimableSuggestion(suggestionId: string, exceptProjectId?:
 	}
 }
 
+/**
+ * Parents are one level deep: the parent has no parent, and the child has no
+ * children. A CHECK cannot read another row, so this is the rule's only guard
+ * beyond `project_not_own_parent`.
+ */
+async function assertParentable(projectId: string | null, parentId: string) {
+	if (projectId === parentId) throw new ProjectParentError('A project cannot be its own parent');
+	const [parent] = await db
+		.select({ parentProjectId: project.parentProjectId })
+		.from(project)
+		.where(eq(project.id, parentId))
+		.limit(1);
+	if (!parent) throw new ProjectParentError('That project does not exist');
+	if (parent.parentProjectId) {
+		throw new ProjectParentError('That project is already part of another');
+	}
+	if (!projectId) return;
+	const [child] = await db
+		.select({ id: project.id })
+		.from(project)
+		.where(eq(project.parentProjectId, projectId))
+		.limit(1);
+	if (child) throw new ProjectParentError('A project with parts cannot be part of another');
+}
+
 export async function createProject(data: CreateProjectInput) {
+	if (data.parentProjectId) await assertParentable(null, data.parentProjectId);
 	if (data.groupId) await assertCommittee(data.groupId);
 	if (data.suggestionId) await assertClaimableSuggestion(data.suggestionId);
 
@@ -233,6 +269,7 @@ function changedFields(
 	if (differs(data.groupId, ownerId)) fields.push('committee');
 	if (differs(data.suggestionId, before.suggestionId)) fields.push('suggestion');
 	if (differs(data.budgetCents, before.budgetCents)) fields.push('budget');
+	if (differs(data.parentProjectId, before.parentProjectId)) fields.push('parent');
 	if (
 		differs(data.startsAt === undefined ? undefined : day(data.startsAt), day(before.startsAt)) ||
 		differs(data.endsAt === undefined ? undefined : day(data.endsAt), day(before.endsAt))
@@ -253,6 +290,7 @@ async function ownerOf(projectId: string): Promise<string | null> {
 export async function updateProject(id: string, data: Partial<CreateProjectInput>) {
 	const before = await getProjectById(id);
 	const ownerBefore = await ownerOf(id);
+	if (data.parentProjectId) await assertParentable(id, data.parentProjectId);
 	if (data.groupId) await assertCommittee(data.groupId);
 	if (data.suggestionId) await assertClaimableSuggestion(data.suggestionId, id);
 
@@ -340,6 +378,47 @@ export async function getProjectShowId(projectId: string): Promise<string | null
 		.where(eq(production.projectId, projectId))
 		.limit(1);
 	return row?.id ?? null;
+}
+
+/**
+ * A project's place in a festival or run (#2543): its parent, its children, and
+ * the projects it could be made part of. A project with children is a parent,
+ * so it is offered none; a parent's spend by child is `getProjectBurn().parts`.
+ */
+export async function getProjectFamily(id: string) {
+	const proj = await getProjectById(id);
+	const [parent, children] = await Promise.all([
+		proj.parentProjectId
+			? db
+					.select({ id: project.id, name: project.name })
+					.from(project)
+					.where(eq(project.id, proj.parentProjectId))
+					.limit(1)
+			: Promise.resolve([]),
+		db
+			.select({ id: project.id, name: project.name })
+			.from(project)
+			.where(eq(project.parentProjectId, id))
+			.orderBy(asc(project.startsAt), asc(project.name), asc(project.id))
+	]);
+	const parentOptions =
+		children.length > 0
+			? []
+			: await db
+					.select({ id: project.id, name: project.name })
+					.from(project)
+					.where(
+						and(
+							isNull(project.parentProjectId),
+							sql`${project.id} != ${id}`,
+							notInArray(project.status, [...projectArchivedStatuses])
+						)
+					)
+					.orderBy(asc(project.name));
+	// An archived parent is still the value the edit form posts back.
+	const current = parent[0] ?? null;
+	if (current && !parentOptions.some((o) => o.id === current.id)) parentOptions.unshift(current);
+	return { parent: current, children, parentOptions };
 }
 
 /**
@@ -622,7 +701,20 @@ export interface ProjectBurn {
 	};
 	/** Budget minus cash spend. Null when no budget is set — not zero. */
 	remainingCents: number | null;
+	/**
+	 * A parent's cash spend by project, its own first (#2543). Every figure
+	 * above already sums these; empty on a project with no children.
+	 */
+	parts: ProjectBurnPart[];
 }
+
+export interface ProjectBurnPart {
+	projectId: string;
+	name: string;
+	cashCents: number;
+}
+
+type OwnBurn = Omit<ProjectBurn, 'budgetCents' | 'remainingCents' | 'parts'>;
 
 export interface FundingSource {
 	kind: 'grant' | 'sponsorship';
@@ -681,9 +773,62 @@ async function fundingOf(projectId: string): Promise<ProjectBurn['funding']> {
 	return { grantsCents, sponsorshipsCents, totalCents: grantsCents + sponsorshipsCents, sources };
 }
 
+/**
+ * What a project has cost, and on a festival or run what its child shows have
+ * cost too. The parent's budget is the ceiling for the sum; a child's own
+ * budget stays on the child. One level deep, so the children's own burn is all.
+ */
 export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 	const proj = await getProjectById(projectId);
+	const own = await ownBurn(projectId);
+	const children = await db
+		.select({ id: project.id, name: project.name })
+		.from(project)
+		.where(eq(project.parentProjectId, projectId))
+		.orderBy(asc(project.startsAt), asc(project.name), asc(project.id));
+	const childBurns = await Promise.all(children.map((c) => ownBurn(c.id)));
+	const total = childBurns.reduce(addBurn, own);
 
+	return {
+		budgetCents: proj.budgetCents,
+		...total,
+		remainingCents: proj.budgetCents === null ? null : proj.budgetCents - total.cash.totalCents,
+		parts:
+			children.length === 0
+				? []
+				: [
+						{ projectId, name: proj.name, cashCents: own.cash.totalCents },
+						...children.map((c, i) => ({
+							projectId: c.id,
+							name: c.name,
+							cashCents: childBurns[i].cash.totalCents
+						}))
+					]
+	};
+}
+
+/** Field by field. The hour rate is a rate, not an amount, so it is carried, not added. */
+function addBurn(a: OwnBurn, b: OwnBurn): OwnBurn {
+	const add = <T extends Record<string, number>>(x: T, y: T) =>
+		Object.fromEntries(Object.keys(x).map((k) => [k, x[k] + y[k]])) as T;
+	return {
+		cash: add(a.cash, b.cash),
+		show: add(a.show, b.show),
+		contributed: {
+			...add(a.contributed, b.contributed),
+			hourValueCents: a.contributed.hourValueCents
+		},
+		funding: {
+			grantsCents: a.funding.grantsCents + b.funding.grantsCents,
+			sponsorshipsCents: a.funding.sponsorshipsCents + b.funding.sponsorshipsCents,
+			totalCents: a.funding.totalCents + b.funding.totalCents,
+			sources: [...a.funding.sources, ...b.funding.sources]
+		}
+	};
+}
+
+/** One project's ledgers, without its children. */
+async function ownBurn(projectId: string): Promise<OwnBurn> {
 	// Two aggregates from one pass, over engagements on this project's work
 	// orders. Reading the donated flag rather than trusting a null cost keeps a
 	// mis-entered row out of cash spend. A declined or cancelled engagement is
@@ -783,7 +928,6 @@ export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 	const volunteerMinutes = Number(labour?.minutes ?? 0);
 
 	return {
-		budgetCents: proj.budgetCents,
 		cash: { contractorCents, purchaseOrderCents, acquisitionCents, showCents, totalCents },
 		show,
 		contributed: {
@@ -796,8 +940,7 @@ export async function getProjectBurn(projectId: string): Promise<ProjectBurn> {
 			donatedGoodsCents: Number(acquired?.donatedCents ?? 0),
 			hourValueCents
 		},
-		funding,
-		remainingCents: proj.budgetCents === null ? null : proj.budgetCents - totalCents
+		funding
 	};
 }
 
