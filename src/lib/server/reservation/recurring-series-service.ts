@@ -7,7 +7,8 @@ import { group } from '#lib/server/db/schema/group.js';
 
 import { bandBookerJoin, eventBookerJoin } from './event-hold';
 import { eq, and, isNull, sql, count, gt, inArray, asc } from 'drizzle-orm';
-import { workOrder, memberOrientation } from '#lib/server/db/schema/volunteer.js';
+import { memberOrientation } from '#lib/server/db/schema/volunteer.js';
+import { workOrderLink } from '#lib/server/db/schema/work-order-link.js';
 import { paymentCache } from '#lib/server/db/schema/finance.js';
 import { cancel as cancelReservation } from './reservation-service';
 import { promoteNextWaitlisted } from './waitlist-service';
@@ -228,7 +229,7 @@ const deletable = () =>
 		isNull(reservation.lockCode),
 		isNull(reservation.lockAccessId),
 		isNull(reservation.lockFallbackRevealedAt),
-		sql`NOT EXISTS (SELECT 1 FROM ${workOrder} WHERE ${workOrder.reservationId} = ${reservation.id})`,
+		sql`NOT EXISTS (SELECT 1 FROM ${workOrderLink} WHERE ${workOrderLink.reservationId} = ${reservation.id})`,
 		sql`NOT EXISTS (SELECT 1 FROM ${memberOrientation} WHERE ${memberOrientation.reservationId} = ${reservation.id})`,
 		sql`NOT EXISTS (SELECT 1 FROM ${eventListing} WHERE ${eventListing.reservationId} = ${reservation.id})`,
 		sql`NOT EXISTS (SELECT 1 FROM ${paymentCache} WHERE ${paymentCache.reservationId} = ${reservation.id})`

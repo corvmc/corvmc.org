@@ -2,6 +2,7 @@ import { contractorJob } from '../../src/lib/server/db/schema/contractor';
 import { seedOrganizations, type SeedOrganization } from './parties';
 import { inventoryAsset } from '../../src/lib/server/db/schema/inventory';
 import { workOrder } from '../../src/lib/server/db/schema/volunteer';
+import { workOrderLink } from '../../src/lib/server/db/schema/work-order-link';
 import { batchInsert, db } from './db';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
@@ -257,7 +258,6 @@ export async function seedContractors(staffId: string) {
 	const workOrders = specs.map((spec) => ({
 		id: randomUUID(),
 		title: spec.title,
-		assetId: spec.assetId ?? null,
 		volunteerRoleId: null,
 		resolvedAt: spec.status === 'completed' ? (spec.completedAt ?? null) : null,
 		resolvedByUserId: spec.status === 'completed' ? staffId : null,
@@ -266,6 +266,10 @@ export async function seedContractors(staffId: string) {
 		createdByUserId: staffId
 	}));
 	await batchInsert(workOrder, workOrders);
+	const links = specs.flatMap((spec, i) =>
+		spec.assetId ? [{ workOrderId: workOrders[i].id, assetId: spec.assetId }] : []
+	);
+	if (links.length > 0) await batchInsert(workOrderLink, links);
 
 	const jobs = await batchInsert(
 		contractorJob,

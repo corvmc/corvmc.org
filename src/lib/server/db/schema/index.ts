@@ -29,6 +29,7 @@ export * from './standing';
 export * from './suggestion';
 export * from './classified';
 export * from './volunteer';
+export * from './work-order-link';
 export * from './instructor';
 export * from './media';
 export * from './party';

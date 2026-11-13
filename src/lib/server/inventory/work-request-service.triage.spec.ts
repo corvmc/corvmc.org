@@ -110,7 +110,7 @@ describe('sendToWorkOrder', () => {
 	it('attaches the report and every other untriaged report on the unit to an open work order', async () => {
 		selectResults = [
 			[REQUEST],
-			[{ id: 'wo-1', assetId: 'as-1', resolvedAt: null, cancelledAt: null }],
+			[{ id: 'wo-1', sameUnit: 1, resolvedAt: null, cancelledAt: null }],
 			[{ id: 'wr-1' }, { id: 'wr-2' }]
 		];
 
@@ -141,10 +141,7 @@ describe('sendToWorkOrder', () => {
 	});
 
 	it('refuses a work order for a different unit', async () => {
-		selectResults = [
-			[REQUEST],
-			[{ id: 'wo-1', assetId: 'as-other', resolvedAt: null, cancelledAt: null }]
-		];
+		selectResults = [[REQUEST], [{ id: 'wo-1', sameUnit: 0, resolvedAt: null, cancelledAt: null }]];
 
 		await expect(sendToWorkOrder('wr-1', { workOrderId: 'wo-1' }, 'staff-1')).rejects.toThrow(
 			WorkRequestTriageError
@@ -154,7 +151,7 @@ describe('sendToWorkOrder', () => {
 	it('refuses a work order that is already closed', async () => {
 		selectResults = [
 			[REQUEST],
-			[{ id: 'wo-1', assetId: 'as-1', resolvedAt: new Date(), cancelledAt: null }]
+			[{ id: 'wo-1', sameUnit: 1, resolvedAt: new Date(), cancelledAt: null }]
 		];
 
 		await expect(sendToWorkOrder('wr-1', { workOrderId: 'wo-1' }, 'staff-1')).rejects.toThrow(

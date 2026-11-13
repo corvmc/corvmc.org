@@ -43,11 +43,13 @@ import { shiftLabel } from '#lib/utils/shift-label.js';
 import { requireListingReader } from '#lib/server/event/listing-guard.js';
 import {
 	aboutWhere,
+	linkFor,
 	newTaskPrefill,
 	relatedTasks,
 	type RelatedSubject
 } from '#lib/server/task/related-tasks.js';
-import { relatedSubjectTypes } from '#lib/utils/related-tasks.js';
+import { linkSubjectTypes, relatedSubjectTypes } from '#lib/utils/related-tasks.js';
+import { requireOrganizationReader } from '#lib/server/party/organization-guard.js';
 
 /**
  * The Tasks table (#2625) and the task it creates. A task's own writes are on
@@ -159,6 +161,14 @@ async function requireSubjectReader(s: RelatedSubject) {
 		case 'role':
 		case 'recurring_work':
 			return requireCapability('volunteer.read');
+		case 'organization':
+			return requireOrganizationReader(s.id);
+		case 'contact':
+			return requireCapability('contact.read');
+		case 'asset':
+			return requireCapability('inventory.read');
+		case 'reservation':
+			return requireCapability('reservation.read');
 		default:
 			return requireUser();
 	}
@@ -265,8 +275,10 @@ export const addRelatedShift = form(
 			if (!prefill) invalid(issue.taskId('Pick a task'));
 			const roleId = prefill.volunteerRoleId ?? (data.volunteerRoleId || '');
 			if (!roleId) invalid(issue.volunteerRoleId('Pick a role'));
+			const { about, ...anchors } = prefill;
 			const task = await createWorkOrder({
-				...prefill,
+				...anchors,
+				links: about && linkFor(about),
 				volunteerRoleId: roleId,
 				title: data.title || null,
 				createdByUserId: staff.id
@@ -304,14 +316,21 @@ export const createCatalogueTaskForm = form(
 		// What `RelatedTasks` fills in from the record it sits on (#2630).
 		eventId: optionalId,
 		groupId: optionalId,
-		volunteerRoleId: optionalId
+		volunteerRoleId: optionalId,
+		// The record a linked task is about (`work_order_link`, #2622).
+		aboutType: z.enum(linkSubjectTypes).optional(),
+		aboutId: optionalId
 	}),
 	async (data) => {
 		const dueAt = data.dueAt ? buildDateInTz(data.dueAt, '12:00', DEFAULT_TIMEZONE) : null;
+		const about =
+			data.aboutType && data.aboutId ? { type: data.aboutType, id: data.aboutId } : null;
+		if (about) await requireSubjectReader(about);
 		const anchors = {
 			eventId: data.eventId || null,
 			groupId: data.groupId || null,
-			volunteerRoleId: data.volunteerRoleId || null
+			volunteerRoleId: data.volunteerRoleId || null,
+			links: about ? linkFor(about) : undefined
 		};
 		if (data.projectId) {
 			const { user } = await guardProject(data.projectId);

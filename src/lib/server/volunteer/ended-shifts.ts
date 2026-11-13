@@ -1,3 +1,4 @@
+import { linkedIdSql } from '#lib/server/task/work-order-link.js';
 import { and, asc, eq, sql, type SQL } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { volunteerRole, workOrder } from '#lib/server/db/schema/volunteer.js';
@@ -50,7 +51,7 @@ export async function listTasksWithEndedShifts(
 		.from(workOrder)
 		// Left: a contractor's repair has no role.
 		.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
-		.leftJoin(inventoryAsset, eq(inventoryAsset.id, workOrder.assetId))
+		.leftJoin(inventoryAsset, eq(inventoryAsset.id, linkedIdSql('assetId')))
 		.leftJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
 		.where(and(tasksWithEndedShiftsWhere(now), where))
 		.orderBy(asc(endedAt), asc(workOrder.id));

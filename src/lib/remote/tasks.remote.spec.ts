@@ -116,6 +116,19 @@ describe('New task', () => {
 		});
 	});
 
+	it('links the task to the record it was made from (#2622)', async () => {
+		sqlite.exec(`insert into organization (id, name) values ('org-arts', 'Arts Council')`);
+		const { id } = (await remotes.createCatalogueTaskForm({
+			title: 'Call about the spring cycle',
+			aboutType: 'organization',
+			aboutId: 'org-arts'
+		})) as { id: string };
+		expect(
+			sqlite.prepare(`select organization_id from work_order_link where work_order_id = ?`).all(id)
+		).toEqual([{ organization_id: 'org-arts' }]);
+		sqlite.exec(`delete from work_order_link; delete from organization`);
+	});
+
 	it('refuses a project the caller does not manage, and writes nothing', async () => {
 		requireProjectCommittee.mockRejectedValueOnce(Object.assign(new Error('no'), { status: 403 }));
 		await expect(

@@ -1,3 +1,4 @@
+import { linkedIdSql, linkedTo, linkInserts } from '#lib/server/task/work-order-link.js';
 import { db } from '#lib/server/db/index.js';
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { config } from '#lib/server/site-config/site-config-service.js';
@@ -218,7 +219,7 @@ export async function raiseOrientationShift(
 		.innerJoin(volunteerShift, eq(volunteerShift.workOrderId, workOrder.id))
 		.where(
 			and(
-				eq(workOrder.reservationId, reservationId),
+				linkedTo('reservationId', reservationId),
 				eq(workOrder.isOrientation, true),
 				isNull(workOrder.cancelledAt),
 				liveShift()
@@ -244,7 +245,6 @@ export async function raiseOrientationShift(
 	const insertTask = db.insert(workOrder).values({
 		id,
 		volunteerRoleId: setting.roleId,
-		reservationId,
 		anchor: 'start',
 		isOrientation: true,
 		notes: 'First visit — meet them at the front door.',
@@ -261,10 +261,11 @@ export async function raiseOrientationShift(
 	});
 	await db.batch(
 		setting.tasks.length === 0
-			? [insertTask, insertShift]
+			? [insertTask, insertShift, ...linkInserts(id, { reservationId })]
 			: [
 					insertTask,
 					insertShift,
+					...linkInserts(id, { reservationId }),
 					db
 						.insert(workTask)
 						.values(
@@ -284,7 +285,7 @@ export interface OrientationOwner {
 /**
  * Whose orientation is this work order, if it is one at all?
  *
- * Both conditions are needed: `reservation_id` alone would catch any work order
+ * Both conditions are needed: a booking link alone would catch any work order
  * hanging off a booking, and `is_orientation`, stamped when the shift was made,
  * is what says this row is one. Returns the *member who booked* with their name and
  * address, because both callers need to write to them.
@@ -293,7 +294,7 @@ export async function orientationOwnerOf(workOrderId: string): Promise<Orientati
 	const [row] = await db
 		.select({ userId: user.id, name: user.name, email: user.email })
 		.from(workOrder)
-		.innerJoin(reservation, eq(reservation.id, workOrder.reservationId))
+		.innerJoin(reservation, eq(reservation.id, linkedIdSql('reservationId')))
 		.innerJoin(user, eq(user.id, reservation.createdByUserId))
 		.where(and(eq(workOrder.id, workOrderId), eq(workOrder.isOrientation, true)))
 		.limit(1);
@@ -331,7 +332,7 @@ export async function orientationForReservation(
 		.innerJoin(volunteerShift, eq(volunteerShift.workOrderId, workOrder.id))
 		.where(
 			and(
-				eq(workOrder.reservationId, reservationId),
+				linkedTo('reservationId', reservationId),
 				eq(workOrder.isOrientation, true),
 				isNull(workOrder.cancelledAt),
 				liveShift()
@@ -362,7 +363,8 @@ export async function cancelOrientationFor(
 		.from(workOrder)
 		.where(
 			and(
-				eq(workOrder.reservationId, reservationId),
+				linkedTo('reservationId', reservationId),
+				eq(workOrder.isOrientation, true),
 				isNull(workOrder.cancelledAt),
 				isNull(workOrder.resolvedAt)
 			)
@@ -403,7 +405,8 @@ export async function rescheduleOrientationFor(
 		.innerJoin(volunteerShift, eq(volunteerShift.workOrderId, workOrder.id))
 		.where(
 			and(
-				eq(workOrder.reservationId, reservationId),
+				linkedTo('reservationId', reservationId),
+				eq(workOrder.isOrientation, true),
 				isNull(workOrder.cancelledAt),
 				isNull(workOrder.resolvedAt),
 				liveShift()

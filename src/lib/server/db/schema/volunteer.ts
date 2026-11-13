@@ -324,28 +324,14 @@ export const workOrder = sqliteTable(
 		// role", which is what every shift did before this column existed.
 		title: text('title'),
 
-		// What the work is about, when it is about a thing. Null for an ordinary
-		// shift — nobody staffs the front desk on behalf of an amp.
-		assetId: text('asset_id').references(() => inventoryAsset.id, { onDelete: 'set null' }),
+		// What the work is about (an amp, a booking, a funder) is a
+		// `work_order_link` row, not a column here (#2622).
 
-		// The body of work this belongs to, when it belongs to one. A third
-		// optional anchor beside `eventId` and `assetId`, not a replacement for
-		// either: a work order can be *in* the renovation and *at* Saturday's
-		// doors. Set-null, so deleting a project never deletes the record that
-		// four people worked it.
+		// The body of work this belongs to, when it belongs to one. An optional
+		// anchor beside `eventId`, not a replacement for it: a work order can be
+		// *in* the renovation and *at* Saturday's doors. Set-null, so deleting a
+		// project never deletes the record that four people worked it.
 		projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
-
-		// The booking this staffs, when it staffs one — a member's first rehearsal
-		// wants somebody there to show them around. A fourth optional anchor, and
-		// like the other three it neither excludes nor is excluded by them: there
-		// is deliberately no "at most one anchor" CHECK, because a work order can
-		// be *in* the renovation and *at* Thursday's booking.
-		//
-		// Set-null for the reason the others give: deleting the subject must not
-		// delete the record that somebody worked it.
-		reservationId: text('reservation_id').references(() => reservation.id, {
-			onDelete: 'set null'
-		}),
 
 		/** A deadline, which is not a window: "done by Friday" is not "happens Friday 6-8". */
 		dueAt: integer('due_at', { mode: 'timestamp' }),
@@ -442,7 +428,6 @@ export const workOrder = sqliteTable(
 	(t) => [
 		index('work_order_role_idx').on(t.volunteerRoleId),
 		index('work_order_event_idx').on(t.eventId),
-		index('work_order_asset_idx').on(t.assetId),
 		index('work_order_project_idx').on(t.projectId),
 		// At most one open occurrence per schedule, stated by the database: this is
 		// what makes generate-on-close unable to pile up duplicates.
@@ -451,8 +436,6 @@ export const workOrder = sqliteTable(
 			.where(
 				sql`maintenance_schedule_id is not null and resolved_at is null and cancelled_at is null`
 			),
-		// The orientation cascade: "which live work orders staff this booking".
-		index('work_order_reservation_idx').on(t.reservationId),
 		// A record's related tasks, done ones included (#2630).
 		index('work_order_group_idx').on(t.groupId),
 		index('work_order_schedule_idx').on(t.maintenanceScheduleId),

@@ -30,7 +30,14 @@ import { memberRefColumns, toMemberRef } from '#lib/server/entity/refs.js';
 import { recordAuditEntry } from '#lib/server/audit/audit-service.js';
 import type { WorkOrderField } from '#lib/types/audit.js';
 
-import { getLiveSchedule, nextOccurrenceInsert } from './maintenance-schedule-service';
+import { getLiveSchedule, nextOccurrenceInserts } from './maintenance-schedule-service';
+import {
+	linkedAssetId,
+	linkedIdSql,
+	linkInserts,
+	replaceLink,
+	type LinkTo
+} from '#lib/server/task/work-order-link.js';
 import { announceTasksReady, countOpenBlockers } from './task-dependencies';
 
 export { isScheduled } from './scheduled';
@@ -184,7 +191,6 @@ export async function createShift(data: {
 				id: taskId,
 				volunteerRoleId: data.volunteerRoleId,
 				eventId: data.eventId || null,
-				assetId: data.assetId || null,
 				title: validateTitle(data.title),
 				createdByUserId: data.createdByUserId
 			})
@@ -199,7 +205,8 @@ export async function createShift(data: {
 				notes: validateNotes(data.notes),
 				createdByUserId: data.createdByUserId
 			})
-			.returning()
+			.returning(),
+		...linkInserts(taskId, { assetId: data.assetId })
 	]);
 
 	return { ...task, shiftId: shift.id };
@@ -260,8 +267,14 @@ const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
 /** What an audit entry compares: the task, with its shift's times and places. */
 export type WorkOrderAuditView = Pick<
 	Task,
-	'id' | 'title' | 'dueAt' | 'volunteerRoleId' | 'notes' | 'eventId' | 'assetId'
-> & { startsAt?: Date | null; endsAt?: Date | null; capacity?: number | null };
+	'id' | 'title' | 'dueAt' | 'volunteerRoleId' | 'notes' | 'eventId'
+> & {
+	/** The linked unit, where the edit can change it. */
+	assetId?: string | null;
+	startsAt?: Date | null;
+	endsAt?: Date | null;
+	capacity?: number | null;
+};
 
 function auditView(task: Task, shift: VolunteerShift | null): WorkOrderAuditView {
 	return {
@@ -338,7 +351,11 @@ export async function cancelShift(id: string, cancelledByUserId?: string): Promi
 	// Calling off a recurring occurrence is still a close: the next one is owed.
 	const schedule = await liveScheduleOf(await getWorkOrderById(id));
 	const [[row]] = schedule
-		? await db.batch([cancel, cancelLiveShifts(id, by, now), nextOccurrenceInsert(schedule, now)])
+		? await db.batch([
+				cancel,
+				cancelLiveShifts(id, by, now),
+				...nextOccurrenceInserts(schedule, now)
+			])
 		: await db.batch([cancel, cancelLiveShifts(id, by, now)]);
 
 	if (!row) throw new ShiftNotFoundError();
@@ -383,19 +400,27 @@ export async function editTask(
 	if (data.volunteerRoleId && data.volunteerRoleId !== existing.volunteerRoleId) {
 		await requireActiveRole(data.volunteerRoleId);
 	}
-	const [row] = await db
+	const assetBefore = await linkedAssetId(id);
+	const assetAfter = data.assetId !== undefined ? data.assetId || null : assetBefore;
+	const update = db
 		.update(workOrder)
 		.set({
 			...(data.volunteerRoleId ? { volunteerRoleId: data.volunteerRoleId } : {}),
 			...(data.eventId !== undefined ? { eventId: data.eventId || null } : {}),
-			...(data.assetId !== undefined ? { assetId: data.assetId || null } : {}),
 			...(data.title !== undefined ? { title: validateTitle(data.title) } : {}),
 			...(data.notes !== undefined ? { notes: validateNotes(data.notes) } : {}),
 			updatedAt: new Date()
 		})
 		.where(eq(workOrder.id, id))
 		.returning();
-	await auditWorkOrderChange(existing, row);
+	const [[row]] =
+		assetAfter === assetBefore
+			? await db.batch([update])
+			: await db.batch([update, ...replaceLink(id, 'assetId', assetAfter)]);
+	await auditWorkOrderChange(
+		{ ...existing, assetId: assetBefore },
+		{ ...row, assetId: assetAfter }
+	);
 	return row;
 }
 
@@ -642,6 +667,8 @@ export interface ShiftWithCounts extends Task {
 	roleName: string | null;
 	roleGroup: VolunteerRoleGroup | null;
 	eventTitle: string | null;
+	/** The first linked inventory unit (`work_order_link`). */
+	assetId: string | null;
 	/** The linked inventory unit as a label: item name, plus its tag. */
 	assetName?: string | null;
 	/** Places taken: claimed + confirmed + completed. */
@@ -663,6 +690,7 @@ type ShiftRowSource = {
 	roleName: string | null;
 	roleGroup: VolunteerRoleGroup | null;
 	eventTitle: string | null;
+	assetId: string | null;
 	assetName: string | null;
 	claimed: number;
 	confirmed: number;
@@ -686,6 +714,7 @@ function withCounts(rows: ShiftRowSource[]): ShiftWithCounts[] {
 		roleName: r.roleName,
 		roleGroup: r.roleGroup,
 		eventTitle: r.eventTitle,
+		assetId: r.assetId,
 		assetName: r.assetName,
 		claimed: Number(r.claimed),
 		confirmed: Number(r.confirmed),
@@ -796,10 +825,11 @@ function rowColumns() {
 		roleName: volunteerRole.name,
 		roleGroup: volunteerRole.group,
 		eventTitle: eventListing.title,
+		assetId: linkedIdSql('assetId'),
 		assetName: sql<string | null>`(
 			select ii."name" || coalesce(' · ' || ia."asset_tag", '') from "inventory_asset" ia
 			join "inventory_item" ii on ii."id" = ia."item_id"
-			where ia."id" = ${workOrder.assetId}
+			where ia."id" = ${linkedIdSql('assetId')}
 		)`,
 		claimed: shiftClaimedSql(),
 		confirmed: shiftConfirmedSql(),
@@ -879,29 +909,35 @@ export async function createWorkOrder(data: {
 	eventId?: string | null;
 	/** The committee answerable for it. */
 	groupId?: string | null;
+	/** What it is about (`work_order_link`). */
+	links?: LinkTo;
 }): Promise<Task> {
 	const roleId = data.volunteerRoleId || null;
 	const title = validateTitle(data.title);
 	if (roleId) await requireActiveRole(roleId);
 	else if (!title) throw new ShiftValidationError('Give the task a title.');
 
-	const [row] = await db
-		.insert(workOrder)
-		.values({
-			volunteerRoleId: roleId,
-			title,
-			assetId: data.assetId || null,
-			projectId: data.projectId || null,
-			eventId: data.eventId || null,
-			groupId: data.groupId || null,
-			sectionId: data.projectId ? data.sectionId || null : null,
-			sortOrder: data.sortOrder ?? 0,
-			dueAt: data.dueAt ?? null,
-			pendingCapacity: data.capacity ? validateCapacity(data.capacity) : null,
-			notes: data.notes ? validateNotes(data.notes) : null,
-			createdByUserId: data.createdByUserId
-		})
-		.returning();
+	const id = crypto.randomUUID();
+	const [[row]] = await db.batch([
+		db
+			.insert(workOrder)
+			.values({
+				id,
+				volunteerRoleId: roleId,
+				title,
+				projectId: data.projectId || null,
+				eventId: data.eventId || null,
+				groupId: data.groupId || null,
+				sectionId: data.projectId ? data.sectionId || null : null,
+				sortOrder: data.sortOrder ?? 0,
+				dueAt: data.dueAt ?? null,
+				pendingCapacity: data.capacity ? validateCapacity(data.capacity) : null,
+				notes: data.notes ? validateNotes(data.notes) : null,
+				createdByUserId: data.createdByUserId
+			})
+			.returning(),
+		...linkInserts(id, { ...data.links, ...(data.assetId ? { assetId: data.assetId } : {}) })
+	]);
 
 	return row;
 }
@@ -972,7 +1008,7 @@ export async function prepareResolveWorkOrder(id: string, opts: ResolveWorkOrder
 
 	const schedule = await liveScheduleOf(existing);
 	const statements = schedule
-		? ([completeAssignees, close, nextOccurrenceInsert(schedule, now)] as const)
+		? ([completeAssignees, close, ...nextOccurrenceInserts(schedule, now)] as const)
 		: ([completeAssignees, close] as const);
 
 	async function afterCommit() {

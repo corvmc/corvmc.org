@@ -24,6 +24,7 @@ import {
 	stockMovement
 } from '../../src/lib/server/db/schema/inventory';
 import { workOrder } from '../../src/lib/server/db/schema/volunteer';
+import { workOrderLink } from '../../src/lib/server/db/schema/work-order-link';
 import { withPlatformDb } from './platform-db';
 import { SEED_CATEGORY_ID } from './seed-inventory';
 
@@ -108,11 +109,13 @@ export async function seedContractors() {
 			SEED_SERVICE_ASSETS.map((a) => ({
 				id: a.workOrderId,
 				title: a.title,
-				assetId: a.id,
 				createdAt: now,
 				updatedAt: now
 			}))
 		);
+		await db
+			.insert(workOrderLink)
+			.values(SEED_SERVICE_ASSETS.map((a) => ({ workOrderId: a.workOrderId, assetId: a.id })));
 
 		await db.insert(organization).values([
 			{ id: SEED_CONTRACTOR_ID, name: SEED_CONTRACTOR_NAME, createdAt: now, updatedAt: now },

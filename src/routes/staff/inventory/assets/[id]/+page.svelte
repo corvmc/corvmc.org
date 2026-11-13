@@ -38,6 +38,8 @@
 		contractorJobStatusLabels
 	} from '#lib/config.js';
 	import { routeParams } from '#lib/route-params.svelte.js';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
+	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
 
 	const params = routeParams('id');
 
@@ -244,6 +246,9 @@
 			{/if}
 		</InfoCard>
 	</div>
+
+	<RelatedTasks subject={{ type: 'asset', id }} />
+	<RelatedShifts subject={{ type: 'asset', id }} />
 
 	<!--
 		The ledger and the paid work on this unit, as one feed: a movement says it

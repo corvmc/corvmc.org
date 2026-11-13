@@ -2,7 +2,8 @@ import { db } from '#lib/server/db/index.js';
 import { workRequest, inventoryAsset, inventoryItem } from '#lib/server/db/schema/inventory.js';
 import { user } from '#lib/server/db/schema/authentication.js';
 import { workOrder, volunteerRole, volunteerShift } from '#lib/server/db/schema/volunteer.js';
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, not, or, sql } from 'drizzle-orm';
+import { linkedTo, linkedToAny } from '#lib/server/task/work-order-link.js';
 import { containsLiteral } from '#lib/server/db/like.js';
 import { paginate, type PaginationInput } from '#lib/server/db/paginate.js';
 import { toGenericRef } from '#lib/server/entity/refs.js';
@@ -473,7 +474,7 @@ export async function getWorkRequestDetail(id: string) {
 			.where(
 				and(
 					isNull(workRequest.assetId),
-					isNull(workOrder.assetId),
+					not(linkedToAny('assetId')),
 					isNull(workOrder.resolvedAt),
 					isNull(workOrder.cancelledAt)
 				)
@@ -509,7 +510,7 @@ export async function getWorkRequestDetail(id: string) {
 			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 			.where(
 				and(
-					eq(workOrder.assetId, asset.id),
+					linkedTo('assetId', asset.id),
 					isNull(workOrder.resolvedAt),
 					isNull(workOrder.cancelledAt)
 				)
@@ -559,17 +560,21 @@ export async function sendToWorkOrder(
 
 	let workOrderId: string;
 	if ('workOrderId' in target) {
+		// The same unit is linked, or, for a building problem, no unit is.
+		const sameUnit = request.assetId
+			? linkedTo('assetId', request.assetId)
+			: not(linkedToAny('assetId'));
 		const [order] = await db
 			.select({
 				id: workOrder.id,
-				assetId: workOrder.assetId,
+				sameUnit: sql<number>`case when ${sameUnit} then 1 else 0 end`,
 				resolvedAt: workOrder.resolvedAt,
 				cancelledAt: workOrder.cancelledAt
 			})
 			.from(workOrder)
 			.where(eq(workOrder.id, target.workOrderId))
 			.limit(1);
-		if (!order || order.assetId !== request.assetId) {
+		if (!order || !order.sameUnit) {
 			throw new WorkRequestTriageError(
 				request.assetId
 					? 'That work order is not for this unit.'

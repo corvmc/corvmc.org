@@ -1,3 +1,9 @@
+import {
+	linkedAssetId,
+	linkedIdSql,
+	replaceLink,
+	type LinkTo
+} from '#lib/server/task/work-order-link.js';
 import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.js';
 import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
@@ -192,6 +198,8 @@ export async function createTask(data: {
 	eventId?: string | null;
 	groupId?: string | null;
 	volunteerRoleId?: string | null;
+	/** What it is about (`work_order_link`). */
+	links?: LinkTo;
 }): Promise<Task> {
 	const sectionId = data.sectionId || null;
 	if (sectionId) await requireSection(data.projectId, sectionId);
@@ -209,7 +217,8 @@ export async function createTask(data: {
 		eventId: data.eventId,
 		// A committee named here wins; a grant's or sponsorship's task falls back to its owner.
 		groupId: data.groupId || fundingOwner,
-		volunteerRoleId: data.volunteerRoleId
+		volunteerRoleId: data.volunteerRoleId,
+		links: data.links
 	});
 	await recordAuditEntry({
 		action: 'work_order.created',
@@ -632,12 +641,17 @@ export async function setTaskEquipment(
 			.limit(1);
 		if (!asset) throw new TaskValidationError('That unit does not exist.');
 	}
-	const [row] = await db
-		.update(workOrder)
-		.set({ assetId, updatedAt: new Date() })
-		.where(eq(workOrder.id, task.id))
-		.returning();
-	await auditWorkOrderChange(task, row);
+	const before = await linkedAssetId(task.id);
+	if (before === assetId) return;
+	const [[row]] = await db.batch([
+		db
+			.update(workOrder)
+			.set({ updatedAt: new Date() })
+			.where(eq(workOrder.id, task.id))
+			.returning(),
+		...replaceLink(task.id, 'assetId', assetId)
+	]);
+	await auditWorkOrderChange({ ...task, assetId: before }, { ...row, assetId });
 }
 
 // ---------------------------------------------------------------------------
@@ -825,7 +839,7 @@ export async function listProjectTasks(projectId: string) {
 				notes: workOrder.notes,
 				resolutionNotes: workOrder.resolutionNotes,
 				eventTitle: eventListing.title,
-				assetId: workOrder.assetId,
+				assetId: linkedIdSql('assetId'),
 				assetName: inventoryItem.name,
 				assetTag: inventoryAsset.assetTag,
 				assetStatus: inventoryAsset.status,
@@ -836,7 +850,7 @@ export async function listProjectTasks(projectId: string) {
 			.leftJoin(volunteerRole, eq(volunteerRole.id, workOrder.volunteerRoleId))
 			.leftJoin(eventListing, eq(eventListing.id, workOrder.eventId))
 			.leftJoin(group, eq(group.id, workOrder.groupId))
-			.leftJoin(inventoryAsset, eq(inventoryAsset.id, workOrder.assetId))
+			.leftJoin(inventoryAsset, eq(inventoryAsset.id, linkedIdSql('assetId')))
 			.leftJoin(inventoryItem, eq(inventoryItem.id, inventoryAsset.itemId))
 			.leftJoin(dutyList, eq(dutyList.id, workOrder.dutyListId))
 			.where(eq(workOrder.projectId, projectId))

@@ -7,6 +7,7 @@ import {
 	volunteerSignup
 } from '../../src/lib/server/db/schema/volunteer';
 import { reservation } from '../../src/lib/server/db/schema/reservation';
+import { workOrderLink } from '../../src/lib/server/db/schema/work-order-link';
 import { batchInsert, db } from './db';
 import { insertTasksWithShifts, shiftIdFor } from './shifts';
 import { ORIENTATION_DEFAULT_TASKS } from '../../src/lib/config';
@@ -52,13 +53,13 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 	const workOrderRows: any[] = [];
 	const orientationRows: any[] = [];
 	const taskRows: any[] = [];
+	const linkRows: { workOrderId: string; reservationId: string }[] = [];
 
 	function shiftFor(id: string, reservationId: string, startsAt: Date) {
 		const from = new Date(startsAt.getTime() - LEAD_MINUTES * 60_000);
 		workOrderRows.push({
 			id,
 			volunteerRoleId: role.id,
-			reservationId,
 			startsAt: from,
 			endsAt: new Date(from.getTime() + DURATION_MINUTES * 60_000),
 			capacity: 1,
@@ -67,6 +68,7 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 			isOrientation: true,
 			createdByUserId: null
 		});
+		linkRows.push({ workOrderId: id, reservationId });
 		ORIENTATION_DEFAULT_TASKS.forEach((label, sortOrder) =>
 			taskRows.push({ workOrderId: id, label, sortOrder })
 		);
@@ -171,6 +173,7 @@ export async function seedOrientation(volunteerRoles: any[], users: any[]) {
 	if (workOrderRows.length > 0) await insertTasksWithShifts(workOrderRows);
 	if (orientationRows.length > 0) await batchInsert(memberOrientation, orientationRows);
 	if (taskRows.length > 0) await batchInsert(workTask, taskRows);
+	if (linkRows.length > 0) await batchInsert(workOrderLink, linkRows);
 
 	// Sam is on the cancelled one and has not been told, which is the whole point
 	// of seeding it.

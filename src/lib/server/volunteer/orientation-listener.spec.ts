@@ -102,7 +102,9 @@ function shifts() {
 	return sqlite
 		.prepare(
 			// The orientation task with the times of its shift (#2518).
-			`SELECT wo.id, s.starts_at, s.ends_at, wo.reservation_id, wo.project_id,
+			`SELECT wo.id, s.starts_at, s.ends_at, wo.project_id,
+				(SELECT l.reservation_id FROM work_order_link l
+				 WHERE l.work_order_id = wo.id AND l.reservation_id IS NOT NULL) AS reservation_id,
 				wo.volunteer_role_id, wo.is_orientation, wo.duty_list_id, wo.cancelled_at
 			 FROM work_order wo LEFT JOIN volunteer_shift s ON s.work_order_id = wo.id
 			 ORDER BY wo.created_at, wo.id`
@@ -125,6 +127,7 @@ beforeEach(() => {
 	for (const t of [
 		'member_orientation',
 		'work_task',
+		'work_order_link',
 		'volunteer_shift',
 		'work_order',
 		'reservation'
@@ -157,8 +160,12 @@ function seedList() {
 /** A shift a coordinator made by hand for the booking, before the listener ran. */
 function byHandShift() {
 	sqlite.exec(
-		`INSERT INTO work_order (id, volunteer_role_id, reservation_id, is_orientation)
-		 VALUES ('wo-hand','role-orient','res-1', 1)`
+		`INSERT INTO work_order (id, volunteer_role_id, is_orientation)
+		 VALUES ('wo-hand','role-orient', 1)`
+	);
+	sqlite.exec(
+		`INSERT INTO work_order_link (id, work_order_id, reservation_id)
+		 VALUES ('wo-hand-link','wo-hand','res-1')`
 	);
 	sqlite.exec(
 		`INSERT INTO volunteer_shift (id, work_order_id, starts_at, ends_at)

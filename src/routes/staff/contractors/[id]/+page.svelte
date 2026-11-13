@@ -1,13 +1,8 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { ParaglideMessage } from '@inlang/paraglide-js-svelte';
-	import { workOrderPathname } from '#lib/utils/work-order-href.js';
 	import PageHeader from '#lib/components/ui/PageHeader.svelte';
 	import PageContent from '#lib/components/ui/PageContent.svelte';
-	import { ActivityFeed } from '#lib/components/ui/ActivityFeed/index.js';
-	import { FEED_PAGE } from '#lib/types/activity.js';
-	import { withHash } from '#lib/utils/with-query.js';
-	import Badge from '#lib/components/ui/Badge.svelte';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import InfoCard from '#lib/components/ui/InfoCard.svelte';
 	import Action from '#lib/components/ui/Action.svelte';
@@ -17,45 +12,18 @@
 		updateContractorForm,
 		archiveContractorForm
 	} from '#lib/remote/contractors.remote.js';
-	import {
-		contractorTradeLabels,
-		contractorTrades,
-		contractorJobStatusBadge,
-		contractorJobStatusLabels,
-		type ContractorTrade,
-		type ContractorJobStatus
-	} from '#lib/config.js';
-	import { formatCents, formatDateShort, toLocalDate } from '#lib/utils/format.js';
-	import { resolve } from '$app/paths';
+	import { contractorTradeLabels, contractorTrades, type ContractorTrade } from '#lib/config.js';
+	import { formatDateShort, toLocalDate } from '#lib/utils/format.js';
+	import RelatedTasks from '#lib/components/task/RelatedTasks.svelte';
+	import RelatedShifts from '#lib/components/volunteer/RelatedShifts.svelte';
 	import { routeParams } from '#lib/route-params.svelte.js';
 
 	const params = routeParams('id');
 
-	/**
-	 * One contractor, and everything they have ever done for us.
-	 *
-	 * The job history is the reason the table exists at all — "when were they
-	 * last in" is unanswerable from a free-text name — so it is the body of the
-	 * page rather than a panel on it.
-	 */
+	/** One contractor: their details, and the tasks they are engaged on. */
 	const data = $derived(await getContractorDetail(params.id));
 	const { fields } = updateContractorForm;
 	const archiveFields = archiveContractorForm.fields;
-
-	// Every job is already in the page's one query; "Show older" only reveals more of it.
-	let shown = $state(FEED_PAGE);
-	const jobRows = $derived(
-		data.jobs
-			.map(({ job, itemName, assetTag }) => ({
-				id: job.id,
-				at: job.completedAt ?? job.scheduledFor ?? job.createdAt,
-				summary: job.title,
-				href: withHash(resolve(workOrderPathname({ id: job.workOrderId })), `engagement-${job.id}`),
-				context: itemName ? { label: assetTag ? `${itemName} · ${assetTag}` : itemName } : null,
-				job
-			}))
-			.sort((a, b) => b.at.getTime() - a.at.getTime())
-	);
 
 	const tradeOptions = contractorTrades.map((t) => ({
 		value: t,
@@ -227,25 +195,6 @@
 		{/if}
 	</InfoCard>
 
-	<InfoCard title={m.staff_jobs_title()}>
-		<ActivityFeed
-			label={m.staff_jobs_label()}
-			rows={jobRows.slice(0, shown)}
-			hasMore={jobRows.length > shown}
-			onmore={() => (shown += FEED_PAGE)}
-			empty={{
-				title: m.staff_contractors_id_no_jobs_yet_title(),
-				description: m.staff_contractors_id_nothing_has_been_sent_them_body()
-			}}
-		>
-			{#snippet trailing({ job })}
-				<Badge variant={contractorJobStatusBadge[job.status as ContractorJobStatus]} size="sm">
-					{contractorJobStatusLabels[job.status as ContractorJobStatus]}
-				</Badge>
-				{#if job.costCents != null}
-					<div class="text-muted text-xs">{formatCents(job.costCents)}</div>
-				{/if}
-			{/snippet}
-		</ActivityFeed>
-	</InfoCard>
+	<RelatedTasks subject={{ type: 'organization', id: data.contractor.id }} />
+	<RelatedShifts subject={{ type: 'organization', id: data.contractor.id }} />
 </PageContent>

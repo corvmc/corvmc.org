@@ -171,12 +171,8 @@ export const getContractorsPage = query(contractorFilters, async (filters) => {
 export const getContractorDetail = query(z.string(), async (id) => {
 	await requireCapability('contractor.read');
 	try {
-		const [record, jobs] = await Promise.all([
-			getContractorById(id),
-			listJobs({ contractorId: id })
-		]);
-		const [withContact] = await withContacts([record]);
-		return { contractor: withContact, jobs };
+		const [withContact] = await withContacts([await getContractorById(id)]);
+		return { contractor: withContact };
 	} catch (err) {
 		mapDomainError(err);
 	}

@@ -41,6 +41,7 @@ beforeEach(() => {
 	for (const t of [
 		'work_task',
 		'volunteer_shift',
+		'work_order_link',
 		'work_order',
 		'duty_list_item',
 		'duty_list',
@@ -145,7 +146,8 @@ describe('orientation reads the stamped marker', () => {
 	// Raised from the orientation setting, so there is no list behind it at all.
 	beforeEach(() => {
 		sqlite.exec(`
-			insert into work_order (id, reservation_id, is_orientation) values ('wo-orient', 'res-1', 1);
+			insert into work_order (id, is_orientation) values ('wo-orient', 1);
+			insert into work_order_link (id, work_order_id, reservation_id) values ('l-orient', 'wo-orient', 'res-1');
 			insert into volunteer_shift (id, work_order_id, starts_at, ends_at)
 				values ('wo-orient-shift', 'wo-orient', ${START}, ${START + 1800});
 		`);

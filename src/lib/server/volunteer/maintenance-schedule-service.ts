@@ -4,6 +4,7 @@ import { project } from '#lib/server/db/schema/project.js';
 import { group } from '#lib/server/db/schema/group.js';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { DomainError } from '#lib/server/errors.js';
+import { linkInsertIfTaskExists, linkInserts } from '#lib/server/task/work-order-link.js';
 import {
 	MAINTENANCE_INTERVAL_MAX_DAYS,
 	VOLUNTEER_SHIFT_MAX_CAPACITY,
@@ -48,7 +49,6 @@ function occurrenceValues(s: OccurrenceSource, dueAt: Date) {
 		title: s.name,
 		volunteerRoleId: s.volunteerRoleId,
 		projectId: s.projectId,
-		assetId: s.assetId,
 		notes: s.notes,
 		// The places for a shift opened on it once it has a time.
 		pendingCapacity: s.capacity,
@@ -57,17 +57,22 @@ function occurrenceValues(s: OccurrenceSource, dueAt: Date) {
 }
 
 /**
- * The insert that writes the next occurrence, for the caller to batch with its
- * close. A conflict on `uq_work_order_open_occurrence` is a no-op.
+ * The inserts that write the next occurrence and its unit link, for the caller
+ * to batch with its close. A conflict on `uq_work_order_open_occurrence` is a
+ * no-op, and the link is then skipped with it.
  */
-export function nextOccurrenceInsert(
+export function nextOccurrenceInserts(
 	s: OccurrenceSource & Pick<MaintenanceSchedule, 'intervalDays'>,
 	closedAt: Date
 ) {
-	return db
+	const id = crypto.randomUUID();
+	const insert = db
 		.insert(workOrder)
-		.values(occurrenceValues(s, nextDueAt(closedAt, s.intervalDays)))
+		.values({ id, ...occurrenceValues(s, nextDueAt(closedAt, s.intervalDays)) })
 		.onConflictDoNothing();
+	return s.assetId
+		? ([insert, linkInsertIfTaskExists(id, 'assetId', s.assetId)] as const)
+		: ([insert] as const);
 }
 
 /** The schedule an occurrence belongs to, if it is still writing occurrences. */
@@ -159,11 +164,15 @@ export async function createMaintenanceSchedule(data: {
 		createdByUserId: data.createdByUserId
 	};
 
+	const occurrenceId = crypto.randomUUID();
 	await db.batch([
 		db.insert(maintenanceSchedule).values(row),
-		db
-			.insert(workOrder)
-			.values({ ...occurrenceValues(row, data.firstDueAt), createdByUserId: data.createdByUserId })
+		db.insert(workOrder).values({
+			id: occurrenceId,
+			...occurrenceValues(row, data.firstDueAt),
+			createdByUserId: data.createdByUserId
+		}),
+		...linkInserts(occurrenceId, { assetId: row.assetId })
 	]);
 
 	return { id: row.id };

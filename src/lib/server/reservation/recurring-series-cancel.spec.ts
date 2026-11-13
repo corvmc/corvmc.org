@@ -91,7 +91,7 @@ const statusOf = (id: string) =>
 beforeEach(() => {
 	vi.clearAllMocks();
 	sqlite.pragma('foreign_keys = OFF');
-	for (const t of ['work_order', 'reservation', 'recurring_series', 'user']) {
+	for (const t of ['work_order_link', 'work_order', 'reservation', 'recurring_series', 'user']) {
 		sqlite.exec(`DELETE FROM ${t}`);
 	}
 	sqlite.pragma('foreign_keys = ON');
@@ -118,7 +118,8 @@ beforeEach(() => {
 	insertReservation('res-gone', 36, { status: 'cancelled' });
 	insertReservation('res-staffed', 43);
 	sqlite.exec(
-		`INSERT INTO work_order (id, title, reservation_id) VALUES ('wo-1', 'Orientation', 'res-staffed')`
+		`INSERT INTO work_order (id, title) VALUES ('wo-1', 'Orientation');
+		 INSERT INTO work_order_link (id, work_order_id, reservation_id) VALUES ('l-1', 'wo-1', 'res-staffed')`
 	);
 });
 
@@ -201,6 +202,7 @@ describe('cancelling a reservation series', () => {
 	});
 
 	it('leaves an event series’ bookings alone', async () => {
+		sqlite.exec(`DELETE FROM work_order_link`);
 		sqlite.exec(`DELETE FROM work_order`);
 		sqlite.exec(`DELETE FROM reservation WHERE recurring_series_id = 'ser-1'`);
 		insertSeries('ser-event', 'evt-proto', 'event_listing');

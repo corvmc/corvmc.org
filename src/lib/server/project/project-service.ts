@@ -500,7 +500,7 @@ export async function startProjectFromSuggestion(
  * One map rather than ten near-identical functions: every attachment is the
  * same statement against a different table, and the differences that would
  * justify separate functions — validation, side effects — do not exist. A work
- * order keeps its `eventId` and `assetId` when it gains a project; these are
+ * order keeps its `eventId` and its links when it gains a project; these are
  * independent anchors, not a choice between them.
  */
 const ATTACHABLE = {

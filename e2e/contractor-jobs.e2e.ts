@@ -5,6 +5,7 @@ import { readLocalDb } from './fixtures/platform-db';
 import { inventoryAsset, stockMovement } from '../src/lib/server/db/schema/inventory';
 import { contractorJob } from '../src/lib/server/db/schema/contractor';
 import { workOrder } from '../src/lib/server/db/schema/volunteer';
+import { workOrderLink } from '../src/lib/server/db/schema/work-order-link';
 import { SEED_STAFF_EMAIL, SEED_STAFF_PASSWORD } from './fixtures/seed-staff-user';
 import { SEED_CONTRACTOR_NAME, SEED_SERVICE_ASSETS } from './fixtures/seed-contractors';
 
@@ -55,7 +56,8 @@ async function jobState(assetId: string) {
 			})
 			.from(contractorJob)
 			.innerJoin(workOrder, eq(workOrder.id, contractorJob.workOrderId))
-			.where(eq(workOrder.assetId, assetId))
+			.innerJoin(workOrderLink, eq(workOrderLink.workOrderId, workOrder.id))
+			.where(eq(workOrderLink.assetId, assetId))
 	);
 	return job ?? null;
 }
