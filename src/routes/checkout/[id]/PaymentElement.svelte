@@ -6,7 +6,12 @@
 		StripeCheckoutSavedPaymentMethod,
 		Appearance
 	} from '@stripe/stripe-js';
-	import { loadStripeOrReport, PAYMENTS_UNAVAILABLE } from '#lib/stripe.js';
+	import {
+		loadStripeOrReport,
+		PAYMENTS_UNAVAILABLE,
+		STRIPE_CONFIRM_TIMED_OUT,
+		withStripeDeadline
+	} from '#lib/stripe.js';
 	import { reportError } from '#lib/report-error.js';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
@@ -153,10 +158,13 @@
 			// On success Stripe navigates to the session's `return_url`, so there is
 			// no success branch to write here — only the error one, which keeps the
 			// buyer on this page with Stripe's own copy for the decline.
-			const result = await loaded.actions.confirm(
-				chosenCard ? { paymentMethod: chosenCard } : undefined
+			const result = await withStripeDeadline(
+				loaded.actions.confirm(chosenCard ? { paymentMethod: chosenCard } : undefined),
+				'checkout'
 			);
-			if (result.type === 'error') errorMessage = result.error.message;
+			if (result === STRIPE_CONFIRM_TIMED_OUT) {
+				errorMessage = m.public_checkout_id_payment_element_timed_out_body();
+			} else if (result.type === 'error') errorMessage = result.error.message;
 		} finally {
 			confirming = false;
 		}

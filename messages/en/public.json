@@ -81,6 +81,7 @@
 	"public_checkout_id_payment_element_pay_label": "Pay {total}",
 	"public_checkout_id_payment_element_pay_with_title": "Payment method",
 	"public_checkout_id_payment_element_paying_label": "Paying…",
+	"public_checkout_id_payment_element_timed_out_body": "The payment did not finish. Check for a charge before trying again.",
 	"public_checkout_id_payment_element_title": "Waiting for the payment form to load",
 	"public_checkout_id_payment_element_use_different_payment_met_label": "Use a different payment method",
 	"public_checkout_id_session_has_already_been_paid_body": "This reservation has already been paid.",

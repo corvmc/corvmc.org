@@ -29,3 +29,38 @@ export async function loadStripeOrReport(surface: string): Promise<Stripe | null
 	if (!stripe) reportError(new Error('Stripe.js failed to load'), { surface });
 	return stripe;
 }
+
+/** How long a Stripe confirm may run before the buyer is told to check for a charge. */
+export const STRIPE_CONFIRM_DEADLINE_MS = 60_000;
+
+export const STRIPE_CONFIRM_TIMED_OUT = 'timed_out' as const;
+
+/**
+ * `confirm` with a deadline. Stripe's confirm can wait on an invisible hCaptcha
+ * challenge that never finishes in some browsers (#2862), and its promise then
+ * never settles. Past the deadline this resolves `'timed_out'` and reports it;
+ * the original promise is left running, so a late success still redirects.
+ */
+export async function withStripeDeadline<T>(
+	confirm: Promise<T>,
+	surface: string,
+	ms: number = STRIPE_CONFIRM_DEADLINE_MS
+): Promise<T | typeof STRIPE_CONFIRM_TIMED_OUT> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const deadline = new Promise<typeof STRIPE_CONFIRM_TIMED_OUT>((resolve) => {
+		timer = setTimeout(() => resolve(STRIPE_CONFIRM_TIMED_OUT), ms);
+	});
+	try {
+		const result = await Promise.race([confirm, deadline]);
+		if (result === STRIPE_CONFIRM_TIMED_OUT) {
+			reportError(new Error('Stripe confirm did not settle'), {
+				surface,
+				ms,
+				userAgent: typeof navigator === 'undefined' ? undefined : navigator.userAgent
+			});
+		}
+		return result;
+	} finally {
+		clearTimeout(timer);
+	}
+}

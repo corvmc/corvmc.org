@@ -2,7 +2,12 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { onMount } from 'svelte';
 	import type { Stripe, StripeElements, StripePaymentElement, Appearance } from '@stripe/stripe-js';
-	import { loadStripeOrReport, PAYMENTS_UNAVAILABLE } from '#lib/stripe.js';
+	import {
+		loadStripeOrReport,
+		PAYMENTS_UNAVAILABLE,
+		STRIPE_CONFIRM_TIMED_OUT,
+		withStripeDeadline
+	} from '#lib/stripe.js';
 	import { reportError } from '#lib/report-error.js';
 	import Alert from '#lib/components/ui/Alert.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
@@ -82,11 +87,15 @@
 			// is sent away and comes back to this page, where the modal is closed —
 			// so the server is told about the intent rather than the browser being
 			// trusted to report success.
-			const result = await stripe.confirmSetup({
-				elements,
-				redirect: 'if_required'
-			});
+			const result = await withStripeDeadline(
+				stripe.confirmSetup({ elements, redirect: 'if_required' }),
+				'add-card'
+			);
 
+			if (result === STRIPE_CONFIRM_TIMED_OUT) {
+				errorMessage = m.member_membership_setup_element_timed_out_body();
+				return;
+			}
 			if (result.error) {
 				errorMessage = result.error.message ?? 'That card could not be saved.';
 				return;
