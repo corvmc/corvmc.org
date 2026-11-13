@@ -3723,5 +3723,11 @@
 	"staff_accessible_restroom_label": "Accessible restroom",
 	"staff_seating_label": "Seating",
 	"staff_no_label": "No",
-	"staff_unknown_label": "Unknown"
+	"staff_unknown_label": "Unknown",
+	"staff_inventory_kits_open_title": "Open kits",
+	"staff_inventory_kits_returned_units_title": "Returned units",
+	"staff_inventory_kits_check_in_title": "Kit check-in",
+	"staff_inventory_kits_lent_units_title": "Lent units",
+	"staff_inventory_kits_check_in_label": "Check in",
+	"staff_inventory_kits_success_toast": "Kit checked in"
 }

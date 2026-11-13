@@ -39,6 +39,7 @@ export { default as RemoveCategoryAction } from './RemoveCategoryAction.svelte';
 export { default as CreateLoanAction } from './CreateLoanAction.svelte';
 export { default as CancelLoanAction } from './CancelLoanAction.svelte';
 export { default as MarkReturnedAction } from './MarkReturnedAction.svelte';
+export { default as CheckOutKitAction } from './CheckOutKitAction.svelte';
 
 // Event
 export { default as PublishEventAction } from './PublishEventAction.svelte';

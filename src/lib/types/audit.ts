@@ -59,6 +59,8 @@ export const auditActions = [
 	'purchase_order.reopened',
 	'inventory_asset.reopened',
 	'equipment_loan.checked_out_unscheduled',
+	'kit_loan.checked_out_incomplete',
+	'kit_loan.returned_incomplete',
 	'project.edited',
 	'project.status_changed',
 	'project.duty_list_applied',
@@ -260,6 +262,14 @@ export interface AuditDetailsByAction {
 		warnings: string[];
 		reason: string;
 	};
+	/** The subject is the borrower. Units in the location that did not go out, and why (#2725). */
+	'kit_loan.checked_out_incomplete': {
+		kitLoanId: string;
+		locationName: string;
+		leftBehind: string[];
+	};
+	/** The subject is the borrower. Units still out after a kit came back (#2725). */
+	'kit_loan.returned_incomplete': { kitLoanId: string; locationName: string; missing: string[] };
 	'project.edited': { fields: ProjectField[] };
 	/** `suggestionMoved` when the suggestion it answers moved with it. */
 	'project.status_changed': { from: string; to: string; suggestionMoved: boolean };

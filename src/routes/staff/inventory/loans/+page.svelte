@@ -14,7 +14,8 @@
 	import { resolve } from '$app/paths';
 	import { formatDateShort, formatCents, titleCase } from '#lib/utils/format.js';
 	import { loanStatuses } from '#lib/config.js';
-	import { CreateLoanAction } from '#lib/components/actions/index.js';
+	import { CheckOutKitAction, CreateLoanAction } from '#lib/components/actions/index.js';
+	import OpenKits from './OpenKits.svelte';
 	import { getStaffLoans } from '#lib/remote/inventory.remote.js';
 	import StaffViews from '../../StaffViews.svelte';
 	import { gearViews } from '../views';
@@ -60,6 +61,7 @@
 			/>
 		{/snippet}
 		{#snippet actions()}
+			<CheckOutKitAction />
 			<CreateLoanAction />
 		{/snippet}
 		<Select
@@ -77,6 +79,8 @@
 			{/each}
 		</Select>
 	</FilterBar>
+
+	<OpenKits />
 
 	<DataList {result} empty={m.staff_inventory_loans_empty_body()} onpage={(p) => (page = p)}>
 		{#snippet children(loans)}

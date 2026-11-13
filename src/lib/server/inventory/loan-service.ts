@@ -3,6 +3,7 @@ import {
 	equipmentCategory,
 	inventoryAsset,
 	inventoryItem,
+	inventoryKitLoan,
 	inventoryLoan
 } from '#lib/server/db/schema/inventory.js';
 import { user } from '#lib/server/db/schema/authentication.js';
@@ -547,6 +548,8 @@ export async function returnLoan(
 		.where(eq(inventoryLoan.id, loanId))
 		.returning();
 
+	if (loan.kitLoanId) await closeKitIfComplete(loan.kitLoanId);
+
 	// Custody comes back here, so this is where availability is decided. The unit
 	// stayed `on_loan` the whole time it was out, even if somebody flagged it
 	// mid-loan -- noticing a crackle does not hand the amp back to the collective.
@@ -625,6 +628,22 @@ export async function returnLoan(
 	});
 
 	return updated;
+}
+
+/** Close a kit once none of its loans is still out. Safe to call after any return. */
+export async function closeKitIfComplete(kitLoanId: string) {
+	const out = await db
+		.select({ id: inventoryLoan.id })
+		.from(inventoryLoan)
+		.where(and(eq(inventoryLoan.kitLoanId, kitLoanId), eq(inventoryLoan.status, 'checked_out')))
+		.limit(1);
+	if (out.length > 0) return false;
+	const now = new Date();
+	await db
+		.update(inventoryKitLoan)
+		.set({ returnedAt: now, updatedAt: now })
+		.where(and(eq(inventoryKitLoan.id, kitLoanId), isNull(inventoryKitLoan.returnedAt)));
+	return true;
 }
 
 export async function cancelLoan(loanId: string) {
@@ -810,6 +829,8 @@ export async function listLoansDueBetween(from: Date, to: Date): Promise<LoanDue
 			and(
 				eq(inventoryLoan.status, 'checked_out'),
 				isNull(inventoryLoan.returnedAt),
+				// A kit's units share one due date; a reminder per cable would be noise.
+				isNull(inventoryLoan.kitLoanId),
 				isNotNull(inventoryLoan.dueDate),
 				gte(inventoryLoan.dueDate, from),
 				lt(inventoryLoan.dueDate, to)
