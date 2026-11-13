@@ -58,7 +58,7 @@ const reservation = (over: Record<string, unknown> = {}) => ({
 const show = async (over: Record<string, unknown> = {}, current = false) => {
 	const { container } = await render(ReservationCard, {
 		reservation: reservation(over) as never,
-		href: '/staff/reservations/res-1?status=confirmed',
+		query: 'status=confirmed',
 		current,
 		rates: Promise.resolve({ user: 15, group: 15, production: 0, event_listing: 0 } as never)
 	});
@@ -112,6 +112,8 @@ describe('ReservationCard', () => {
 	it('keeps the filter query on its link and marks the open row', async () => {
 		const li = await show({}, true);
 		expect(li.getAttribute('aria-current')).toBe('page');
-		expect(li.querySelector('a[href="/staff/reservations/res-1?status=confirmed"]')).not.toBeNull();
+		expect(
+			li.querySelector('a[href$="/staff/reservations/res-1?status=confirmed"]')
+		).not.toBeNull();
 	});
 });

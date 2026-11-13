@@ -438,7 +438,7 @@
 						{:else}
 							<ReservationCard
 								reservation={r}
-								href={withQuery(resolve(`staff/reservations/${r.id}`), filters.urlQuery)}
+								query={filters.urlQuery}
 								current={r.id === openId}
 								rates={hourlyRates}
 							/>

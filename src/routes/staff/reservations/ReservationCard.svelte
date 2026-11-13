@@ -5,7 +5,7 @@
 	import DefinitionList from '#lib/components/ui/DefinitionList/DefinitionList.svelte';
 	import Fact from '#lib/components/ui/DefinitionList/Fact.svelte';
 	import { EntityChip } from '#lib/components/ui/entity/index.js';
-	import { isNoteworthyStatus } from '#lib/components/ui/entity/registry';
+	import { isNoteworthyStatus } from '#lib/components/ui/entity/registry.js';
 	import CashReceivedAction from '#lib/components/actions/CashReceivedAction.svelte';
 	import NoShowReservationAction from '#lib/components/actions/NoShowReservationAction.svelte';
 	import CompleteReservationAction from '#lib/components/actions/CompleteReservationAction.svelte';
@@ -17,6 +17,8 @@
 	} from '#lib/utils/reservation-actions.js';
 	import type { getStaffReservationsPage } from '#lib/remote/reservations.remote.js';
 	import { paymentStatus } from './payment-status';
+	import { withQuery } from '#lib/utils/with-query.js';
+	import { resolve } from '$app/paths';
 
 	type Page = Awaited<ReturnType<typeof getStaffReservationsPage>>;
 	type Reservation = Extract<Page['list']['rows'][number], { kind: 'reservation' }>;
@@ -28,13 +30,13 @@
 	 */
 	let {
 		reservation: r,
-		href,
+		query,
 		current,
 		rates
 	}: {
 		reservation: Reservation;
-		/** The reservation's page, carrying the list's filter query. */
-		href: string;
+		/** The list's filter query, carried onto the reservation's link. */
+		query: string;
 		current: boolean;
 		rates: Promise<Page['hourlyRates']>;
 	} = $props();
@@ -64,7 +66,10 @@
 		{#if isNoteworthyStatus(r.status)}
 			<StatusBadge status={r.status} />
 		{/if}
-		<a {href} class="inline-flex min-h-11 items-center text-lg font-medium hover:underline">
+		<a
+			href={withQuery(resolve(`staff/reservations/${r.id}`), query)}
+			class="inline-flex min-h-11 items-center text-lg font-medium hover:underline"
+		>
 			{formatTimeRange(r.startsAt, r.endsAt)}
 		</a>
 	</div>
