@@ -97,8 +97,12 @@ not a state — it is a spread across features — so no state fixture could rea
 | `techcoord@`   | technology coordinator — settings and locks, not the flag queue                |
 | `moderator@`   | site moderator — flags and standing, not the money                             |
 | `shiftlead@`   | volunteer coordinator — the hour queue, not the role picker                    |
+| `outreach@`    | outreach coordinator — campaigns and audiences, not the event list             |
+| `editor@`      | content editor — local resources and help articles, nothing else               |
+| `teachers@`    | teacher reviewer — the teacher queue, not the member list                      |
+| `auditor@`     | auditor — the audit log, read only                                             |
 
-The last four are the only way to see the capability matrix narrow anything. `staff` holds
+The last eight are the only way to see the capability matrix narrow anything. `staff` holds
 almost everything, so a handler guarded by capability behaves identically for `admin` and
 for a position until you sign in as the position — which is also why none of them holds
 `staff` as well.

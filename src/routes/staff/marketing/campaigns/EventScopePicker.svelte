@@ -10,7 +10,7 @@
 	 */
 	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
-	import { searchEvents } from '#lib/remote/events.remote.js';
+	import { searchEventsForCampaign } from '#lib/remote/events.remote.js';
 	import { getEventAudienceCount } from '#lib/remote/marketing.remote.js';
 
 	type EventOption = { id: string; title: string; when: string };
@@ -45,7 +45,7 @@
 			labelKey="title"
 			descriptionKey="when"
 			placeholder={m.staff_search_shows_by_name_placeholder()}
-			search={(q) => searchEvents(q)}
+			search={(q) => searchEventsForCampaign(q)}
 		/>
 	</div>
 	{#if chosen}

@@ -129,7 +129,7 @@ describe('the guard travels with the data', () => {
 
 	// Before: `requireStaff`, any position. After: the holders of
 	// `directory.readContact` (admin, staff, volunteer coordinator), as #1390
-	// intends. Every combination of the six positions, including none.
+	// intends. Every combination of the positions, including none.
 	it.each(READS)('%s admits exactly the readContact holders', async (_name, run) => {
 		const subsets = Array.from({ length: 2 ** positionOrder.length }, (_, mask) =>
 			positionOrder.filter((_, i) => mask & (1 << i))
@@ -145,8 +145,8 @@ describe('the guard travels with the data', () => {
 			expect(allowed, held.join('+')).toBe(reader);
 			if (held.length > 0 && !allowed) narrowed.push(held.join('+'));
 		}
-		// Every non-empty mix of technology coordinator, site moderator, treasurer.
-		expect(narrowed).toHaveLength(7);
+		// Every non-empty mix of the positions that are not readers.
+		expect(narrowed).toHaveLength(2 ** (positionOrder.length - 3) - 1);
 	});
 
 	/**

@@ -38,6 +38,10 @@ export async function seedRoles(): Promise<SeedRole[]> {
 		'volunteer_coordinator',
 		'site_moderator',
 		'treasurer',
+		'outreach_coordinator',
+		'content_editor',
+		'teacher_reviewer',
+		'auditor',
 		'member',
 		'volunteer',
 		'sustaining'

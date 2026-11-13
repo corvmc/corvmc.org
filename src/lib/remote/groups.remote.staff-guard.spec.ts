@@ -275,7 +275,8 @@ describe.each(EXPORTS)('%s', (name, input, cap, service) => {
 		expect(narrowed).toContain(
 			'technology_coordinator+volunteer_coordinator+site_moderator+treasurer'
 		);
-		expect(narrowed).toHaveLength(15);
+		// Every non-empty set of named positions, admin and staff aside.
+		expect(narrowed).toHaveLength(2 ** (positionOrder.length - 2) - 1);
 	});
 });
 

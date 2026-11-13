@@ -71,7 +71,7 @@ vi.mock('$app/server', () => ({
 import { SQLiteSyncDialect } from 'drizzle-orm/sqlite-core';
 import type { SQL } from 'drizzle-orm';
 
-const { searchEvents, searchEventsForPlacement } =
+const { searchEvents, searchEventsForPlacement, searchEventsForCampaign } =
 	(await import('#lib/remote/events.remote.js')) as any;
 
 function rendered() {
@@ -99,6 +99,22 @@ describe('searchEventsForPlacement (#1618)', () => {
 	it('refuses someone who cannot manage sponsors, before any read', async () => {
 		held = ['event.read', 'sponsor.read'];
 		await expect(searchEventsForPlacement('fall')).rejects.toMatchObject({ status: 403 });
+		expect(chainCalls).toHaveLength(0);
+	});
+});
+
+describe('searchEventsForCampaign (#2770)', () => {
+	it('answers a campaign writer who cannot read the staff event list', async () => {
+		held = ['marketing.manageCampaigns'];
+		selectResult = [{ id: 'e1', title: 'Fall Showcase', startsAt: new Date('2026-10-01') }];
+		const rows = await searchEventsForCampaign('fall');
+		expect(rows).toEqual([expect.objectContaining({ id: 'e1' })]);
+		await expect(searchEvents('fall')).rejects.toMatchObject({ status: 403 });
+	});
+
+	it('refuses someone who cannot write campaigns, before any read', async () => {
+		held = ['event.read', 'marketing.read'];
+		await expect(searchEventsForCampaign('fall')).rejects.toMatchObject({ status: 403 });
 		expect(chainCalls).toHaveLength(0);
 	});
 });

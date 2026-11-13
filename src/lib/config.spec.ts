@@ -14,6 +14,7 @@ import {
 	hasCapability,
 	grantableCapabilities,
 	grantableBy,
+	grantRuleFor,
 	type Capability,
 	type Resource,
 	classifiedKindLabel
@@ -162,6 +163,50 @@ describe('the capability matrix', () => {
 		}
 	});
 
+	it('lets every non-admin capability be granted as a job of its own (#2838)', () => {
+		// A job is a named position, or an org-wide committee seat. A capability
+		// only `staff` holds can be given to a volunteer only with everything else.
+		// Per-shift grants are exempt: no standing job holds them.
+		// `awaitingAJob` shrinks as positions land; it never grows.
+		const awaitingAJob = [
+			'user.update',
+			'user.setEmail',
+			'user.invite',
+			'user.ban',
+			'credit.comp',
+			'directory.shareContactSheet',
+			'band.read',
+			'band.manage',
+			'band.manageMembers',
+			'band.setTier',
+			'group.read',
+			'group.manage',
+			'event.manage',
+			'event.publish',
+			'event.manageTickets',
+			'reservation.manage',
+			'reservation.manageRecurring',
+			'reservation.manageClosures',
+			'inventory.manageItems',
+			'inventory.manageAssets',
+			'inventory.manageLoans',
+			'inventory.manageStock',
+			'inventory.manageOrders',
+			'contractor.manage',
+			'incident.record',
+			'production.book',
+			'production.run'
+		];
+		const adminOnly = new Set<string>(adminOnlyCapabilities);
+		const unheld = everyCapability.filter((cap) => {
+			if (adminOnly.has(cap)) return false;
+			const rule = grantRuleFor(cap);
+			if (rule?.role || rule?.committee === 'org') return false;
+			return !positionsGranting(cap).some((p) => p !== 'admin' && p !== 'staff');
+		});
+		expect(unheld.sort()).toEqual([...awaitingAJob].sort());
+	});
+
 	it('gives no named position an admin-only capability', () => {
 		// `staff` is exempt only because it is transitional. If a named position
 		// ever grants one of these, either the matrix or the complement is wrong
@@ -280,5 +325,26 @@ describe('classifiedKindLabel', () => {
 		expect(classifiedKindLabel('offered', 'gear')).toBe('For sale');
 		expect(classifiedKindLabel('offered', 'service')).toBe('Offered');
 		expect(classifiedKindLabel('trade', 'gear')).toBe('Trade');
+	});
+});
+
+describe('job positions (#2838)', () => {
+	it('gives Outreach to the outreach coordinator alone', () => {
+		expect(grantsCapability(positions.outreach_coordinator, 'marketing.send')).toBe(true);
+		expect(grantsCapability(positions.outreach_coordinator, 'event.read')).toBe(false);
+	});
+
+	it('gives local resources and help articles to the content editor', () => {
+		expect(grantsCapability(positions.content_editor, 'localResource.manage')).toBe(true);
+		expect(grantsCapability(positions.content_editor, 'help.manage')).toBe(true);
+	});
+
+	it('gives teacher review to the teacher reviewer', () => {
+		expect(grantsCapability(positions.teacher_reviewer, 'instructor.review')).toBe(true);
+		expect(grantsCapability(positions.teacher_reviewer, 'user.list')).toBe(false);
+	});
+
+	it('gives the audit log to the auditor', () => {
+		expect(positionsGranting('audit.read').sort()).toEqual(['admin', 'auditor', 'staff']);
 	});
 });

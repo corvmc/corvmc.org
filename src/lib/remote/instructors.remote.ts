@@ -43,6 +43,12 @@ import {
  * operating mode rather than a gap.
  */
 
+/** The grant picker. Under `instructor.review`, so a teacher reviewer needs no booking access. */
+export const searchMembersToGrant = query(z.string().max(200), async (q) => {
+	await requireCapability('instructor.review');
+	return instructorService.searchMembersToGrant(q);
+});
+
 /** The Members "Instructors" view, under the keys its page writes to the URL. */
 export const getStaffInstructors = query(
 	instructorRosterFilters.extend({ page: z.number().optional() }),

@@ -23,7 +23,8 @@ const svc = {
 	sendBack: vi.fn(async () => undefined),
 	grant: vi.fn(async () => undefined),
 	pause: vi.fn(async () => undefined),
-	retire: vi.fn(async () => undefined)
+	retire: vi.fn(async () => undefined),
+	searchMembersToGrant: vi.fn(async () => [])
 };
 vi.mock('#lib/server/instructor/instructor-service.js', () => svc);
 
@@ -98,6 +99,12 @@ describe('the acting staffer is recorded, not the subject', () => {
 });
 
 describe('reads', () => {
+	it('searches members to grant under instructor.review, not a booking capability (#2815)', async () => {
+		await remote.searchMembersToGrant('al');
+		expect(requireCapability).toHaveBeenCalledWith('instructor.review');
+		expect(svc.searchMembersToGrant).toHaveBeenCalledWith('al');
+	});
+
 	it('lists for staff behind the staff guard', async () => {
 		await remote.getStaffInstructors({ status: 'requested' });
 		expect(requireCapability).toHaveBeenCalledWith('instructor.read');

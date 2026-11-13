@@ -2448,9 +2448,9 @@ export type Grants = { readonly [R in Resource]?: readonly Capabilities[R][numbe
  * that ranking is exactly what made the help centre's role ladder hide
  * articles from anyone it had not heard of.
  *
- * A position exists when a real person holds that title. That rule is what
- * keeps this list at six rather than sixty, and its absence is what produced
- * `staff`. The registry is the CMC Committees and Roles proposal.
+ * A position is one job, grantable alone (#2838): a real person holds that
+ * title, or a volunteer does that job. `staff` is the union of them until it
+ * retires. `config.spec.ts` fails on a capability no job position holds.
  *
  * A committee is NOT a position. Committee membership is plural, rotating and
  * domain-scoped, and it already has a table and a lifecycle: a committee is a
@@ -2464,7 +2464,11 @@ export const positionLabels = {
 	technology_coordinator: 'Technology Coordinator',
 	volunteer_coordinator: 'Volunteer Coordinator',
 	site_moderator: 'Site Moderator',
-	treasurer: 'Treasurer'
+	treasurer: 'Treasurer',
+	outreach_coordinator: 'Outreach Coordinator',
+	content_editor: 'Content Editor',
+	teacher_reviewer: 'Teacher Reviewer',
+	auditor: 'Auditor'
 } as const;
 
 export type Position = keyof typeof positionLabels;
@@ -2614,6 +2618,26 @@ export const positions: Record<Position, Grants> = {
 		// one load-bearing query.
 		event: ['read'],
 		user: ['list', 'read']
+	},
+	// The newsletter and show announcements. The campaign editor's show picker is
+	// `searchEventsForCampaign`, so no `event.read` comes with it.
+	outreach_coordinator: {
+		marketing: ['read', 'manageAudiences', 'manageCampaigns', 'send']
+	},
+	// The public content: the local resources directory and the help articles.
+	content_editor: {
+		localResource: ['manage'],
+		help: ['read', 'manage']
+	},
+	// `user.read` opens the applicant's record beside the queue.
+	teacher_reviewer: {
+		instructor: ['read', 'review'],
+		user: ['read']
+	},
+	// `user.read` opens the member an entry names.
+	auditor: {
+		audit: ['read'],
+		user: ['read']
 	}
 };
 
