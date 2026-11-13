@@ -14,7 +14,7 @@ const { sqlite, testDb } = await vi.hoisted(async () => {
 vi.mock('#lib/server/db/index.js', () => ({ db: testDb }));
 
 // D1's `batch` is typed for a non-empty tuple; the helpers return arrays.
-const batch = (stmts: unknown[]) =>
+const batch = (stmts: readonly unknown[]) =>
 	testDb.batch(stmts as unknown as Parameters<typeof testDb.batch>[0]);
 
 const { linkInserts, linkInsertIfTaskExists, linkedAssetIds, linkedIdSql, linkedTo, replaceLink } =
