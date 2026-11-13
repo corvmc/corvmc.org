@@ -19,7 +19,7 @@ changes are validated and saved per tab. Some settings are admin-only.
   **Practice space settings**: **Settings** in the **Staff → Practice space** header.
 - The smart-lock (U-tec) settings are under **Lock settings** in the **Building access**
   sidebar on **Staff → Practice space**.
-- **Inbox Channels** — Configuration for the email, SMS, web, Instagram, and
+- **Inbox channels** — Configuration for the email, SMS, web, Instagram, and
   Messenger channels that feed the [inbox](/member/help/staff-inbox).
 - **Access** — Admins only. Who holds which position, committee grant and clearance.
   **By person** shows one member's access; **By permission** lists everyone holding a

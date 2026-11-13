@@ -24,6 +24,6 @@ From the public site you can:
 
 ## Joining
 
-Click **Join Our Community** (or **Sign in**) to create a free account. With an
+Click **Join our community** (or **Sign in**) to create a free account. With an
 account you can book practice space, build a profile, join bands, borrow gear, and
 manage tickets. See [Create an account](create-account.md) to get started.

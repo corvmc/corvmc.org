@@ -7,9 +7,9 @@ minRole: member
 sortOrder: 2
 ---
 
-## My Loans
+## My loans
 
-Open **Equipment → My Loans** to see everything you've requested or borrowed.
+Open **Equipment → My loans** to see everything you've requested or borrowed.
 
 Each loan shows its current status:
 
