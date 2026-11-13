@@ -156,8 +156,8 @@ export async function memberRelatedShifts(
 
 	const seen = new Set<string>();
 	const picked = relations.map((r, i) => {
-		const rows = results[i].slice(0, limitPerRelation).filter((s) => !seen.has(s.shiftId!));
-		for (const s of rows) seen.add(s.shiftId!);
+		const rows = results[i].slice(0, limitPerRelation).filter((s) => !seen.has(s.shiftId));
+		for (const s of rows) seen.add(s.shiftId);
 		return { key: r.key, rows, more: results[i].length > limitPerRelation };
 	});
 	const all = picked.flatMap((p) => p.rows);
@@ -189,10 +189,10 @@ export async function memberRelatedShifts(
 			key: p.key,
 			more: p.more,
 			shifts: p.rows.map((s): MemberShift => {
-				const mine = mineByShift.get(s.shiftId!);
+				const mine = mineByShift.get(s.shiftId);
 				return {
 					id: s.id,
-					shiftId: s.shiftId!,
+					shiftId: s.shiftId,
 					title: s.title,
 					roleName: s.roleName,
 					eventId: s.eventId,

@@ -15,6 +15,7 @@
 	import { getStaffDashboard } from '#lib/remote/staff-dashboard.remote.js';
 	import { getStaffLayout } from '#lib/remote/layout.remote.js';
 	import ReviewRowDecisions from './ReviewRowDecisions.svelte';
+	import ShortShiftsTable from './ShortShiftsTable.svelte';
 	import { ActivityFeed, type ActivityRow } from '#lib/components/ui/ActivityFeed/index.js';
 	import { getEntityViewer } from '#lib/components/ui/entity/context.js';
 	import { entityHref } from '#lib/utils/entity-href.js';
@@ -265,22 +266,7 @@
 	{#if data.shortShifts?.total}
 		<!-- A show that goes out a person short cannot be fixed next week. -->
 		<SectionLabel label={m.staff_short_staffed_shifts_label()} count={data.shortShifts.total} />
-		<Table>
-			{#snippet head()}
-				<th class="whitespace-nowrap">{m.staff_when_label()}</th>
-				<th>{m.staff_role_label()}</th>
-				<th class="col-support">{m.staff_event_label()}</th>
-				<th class="cell-num whitespace-nowrap">{m.staff_still_need_label()}</th>
-			{/snippet}
-			{#each data.shortShifts.rows as shift (shift.id)}
-				<tr class="hover cursor-pointer" use:rowLink={resolve(`staff/tasks/${shift.id}`)}>
-					<td class="whitespace-nowrap">{formatDateShort(shift.startsAt)}</td>
-					<td class="cell-primary">{shift.roleName}</td>
-					<td class="col-support cell-text truncate">{shift.eventTitle ?? ''}</td>
-					<td class="cell-num text-warning">{shift.capacity - shift.claimed}</td>
-				</tr>
-			{/each}
-		</Table>
+		<ShortShiftsTable rows={data.shortShifts.rows} />
 		<div class="mt-2">
 			<Button
 				variant="ghost"

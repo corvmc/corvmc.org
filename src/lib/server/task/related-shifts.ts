@@ -46,8 +46,8 @@ export async function relatedShifts(
 	const groups: RelatedShiftGroup[] = [];
 	relations.forEach((r, i) => {
 		const rows = results[i];
-		const shifts = rows.slice(0, limitPerRelation).filter((s) => !seen.has(s.shiftId!));
-		for (const s of shifts) seen.add(s.shiftId!);
+		const shifts = rows.slice(0, limitPerRelation).filter((s) => !seen.has(s.shiftId));
+		for (const s of shifts) seen.add(s.shiftId);
 		if (shifts.length > 0)
 			groups.push({ key: r.key, shifts, more: rows.length > limitPerRelation });
 	});

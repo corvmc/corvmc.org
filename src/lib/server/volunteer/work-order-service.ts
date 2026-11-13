@@ -649,8 +649,15 @@ export async function countActiveSignups(shiftId: string): Promise<number> {
 	return Number(row?.n ?? 0);
 }
 
-/** A `ShiftWithCounts` some date filter has already narrowed. See `isScheduled`. */
-export type ScheduledShiftWithCounts = ShiftWithCounts & { startsAt: Date; endsAt: Date };
+/**
+ * A `ShiftWithCounts` some date filter has already narrowed. See `isScheduled`.
+ * One row per shift, so `shiftId` is the row's key; `id` repeats across a task's shifts.
+ */
+export type ScheduledShiftWithCounts = ShiftWithCounts & {
+	shiftId: string;
+	startsAt: Date;
+	endsAt: Date;
+};
 
 /**
  * A task as a staff list row, with one of its shifts. `id` is the task's;
