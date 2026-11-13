@@ -2748,7 +2748,7 @@
 	"staff_settings_role_label": "Role",
 	"staff_settings_room_title": "The room",
 	"staff_settings_outstanding_fees_title": "Outstanding fees",
-	"staff_settings_outstanding_fees_body": "From this date, a session that ends with payment due counts toward the member's booking limit: one warns, two stop new bookings. Empty turns the limit off.",
+	"staff_settings_outstanding_fees_text": "From this date, a session that ends with payment due counts toward the member's booking limit: one warns, two stop new bookings. Empty turns the limit off.",
 	"staff_settings_outstanding_fees_from_label": "Count from",
 	"staff_settings_outstanding_fees_updated_toast": "Outstanding fee settings updated",
 	"staff_settings_room_settings_updated_toast": "Room settings updated",

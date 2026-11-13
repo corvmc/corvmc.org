@@ -332,7 +332,7 @@
 								size="sm"
 							/>
 						</div>
-						<p class="text-subtle">{m.staff_settings_outstanding_fees_body()}</p>
+						<p class="text-subtle">{m.staff_settings_outstanding_fees_text()}</p>
 						<div class="mt-2 grid gap-4 sm:grid-cols-2">
 							<FormField
 								field={updateFeeGateSettings.fields.feeGateFrom}
