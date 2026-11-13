@@ -741,6 +741,12 @@ export const searchEventsForPlacement = query(z.string(), async (q) => {
 	return searchEventRows(q);
 });
 
+/** The same picker for a campaign's show (#2770). Outreach holds no `event.read`. */
+export const searchEventsForCampaign = query(z.string(), async (q) => {
+	await requireCapability('marketing.manageCampaigns');
+	return searchEventRows(q);
+});
+
 async function searchEventRows(q: string) {
 	if (!q || q.length < 2) return [];
 

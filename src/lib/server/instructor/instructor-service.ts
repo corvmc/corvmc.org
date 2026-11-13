@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, or } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNull, or } from 'drizzle-orm';
 import { db, getRowCount } from '#lib/server/db/index.js';
 import { instructor, type Instructor } from '#lib/server/db/schema/instructor.js';
 import { user } from '#lib/server/db/schema/authentication.js';
@@ -10,7 +10,7 @@ import type { RosterPerson } from '#lib/types/roster.js';
 import { DomainError } from '#lib/server/domain-error.js';
 import { domainEvents } from '#lib/server/event-bus/event-bus.js';
 import { isUniqueConstraintError } from '#lib/server/db/constraint-errors.js';
-import type { InstructorStatus } from '#lib/config.js';
+import { SEARCH_LIMIT, type InstructorStatus } from '#lib/config.js';
 
 /**
  * Instructors — people CMC has granted the right to rent the practice room on
@@ -352,6 +352,20 @@ export async function sendBack(
  * knows this person. Also the way back from `paused` or `retired`, because
  * reinstating and granting are the same decision made twice.
  */
+/** Members to grant teaching status to, by name or email: the grant picker. */
+export async function searchMembersToGrant(
+	q: string
+): Promise<{ id: string; name: string; email: string }[]> {
+	if (q.length < 2) return [];
+	return db
+		.select({ id: user.id, name: user.name, email: user.email })
+		.from(user)
+		.where(
+			and(or(containsLiteral(user.name, q), containsLiteral(user.email, q)), isNull(user.deletedAt))
+		)
+		.limit(SEARCH_LIMIT);
+}
+
 export async function grant(userId: string, staffUserId: string): Promise<void> {
 	const now = new Date();
 	const existing = await getByUserId(userId);

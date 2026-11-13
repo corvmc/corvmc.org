@@ -215,7 +215,10 @@ admin > staff > sustaining > member
   matrix in `src/lib/config.ts`; guards name the capability, never the role. `admin` alone
   holds `adminOnlyCapabilities` (granting roles, purging, adjusting credit, reopening a terminal
   record). `staff` holds every other capability, derived, so a new capability reaches `staff`
-  unless it is named admin-only. See
+  unless it is named admin-only. A named position is one job, grantable alone (outreach,
+  content editing, teacher review, the audit log, and the older four); `config.spec.ts` fails
+  on a capability outside the admin-only set that no job position or org-wide committee grant
+  carries, apart from a named list still waiting for a position. See
   [the decision record](../decisions/0032-guards-name-capabilities.md).
 - `sustaining` — paying member (monthly Stripe subscription). Note that most sustaining
   checks actually look at the `user.subscription` JSON column, not the role — see

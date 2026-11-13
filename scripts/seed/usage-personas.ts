@@ -96,6 +96,42 @@ export const USAGE_PERSONAS = [
 		/** "I fill Saturday's shifts." */
 		job: 'volunteer coordinator — the hour queue, not the role picker',
 		roles: ['member', 'volunteer_coordinator'] as const
+	},
+	{
+		id: 'seed-use-outreach',
+		email: 'outreach@corvallismusic.org',
+		name: 'Marisol Adeyemi',
+		memberNumber: 68,
+		/** "I send the newsletter and announce the shows." */
+		job: 'outreach coordinator — campaigns and audiences, not the event list',
+		roles: ['member', 'outreach_coordinator'] as const
+	},
+	{
+		id: 'seed-use-editor',
+		email: 'editor@corvallismusic.org',
+		name: 'Pavel Achterberg',
+		memberNumber: 69,
+		/** "I keep the local resources list and the help articles current." */
+		job: 'content editor — local resources and help articles, nothing else',
+		roles: ['member', 'content_editor'] as const
+	},
+	{
+		id: 'seed-use-teachers',
+		email: 'teachers@corvallismusic.org',
+		name: 'Ingrid Mbeki',
+		memberNumber: 94,
+		/** "I review who applies to teach." */
+		job: 'teacher reviewer — the teacher queue, not the member list',
+		roles: ['member', 'teacher_reviewer'] as const
+	},
+	{
+		id: 'seed-use-auditor',
+		email: 'auditor@corvallismusic.org',
+		name: 'Rowan Castellanos',
+		memberNumber: 95,
+		/** "I answer who changed what." */
+		job: 'auditor — the audit log, read only',
+		roles: ['member', 'auditor'] as const
 	}
 ] as const;
 

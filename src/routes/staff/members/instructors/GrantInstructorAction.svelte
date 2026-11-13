@@ -3,8 +3,7 @@
 	import Action from '#lib/components/ui/Action.svelte';
 	import FormField from '#lib/components/ui/Form/FormField.svelte';
 	import SearchSelect from '#lib/components/ui/Form/SearchSelect.svelte';
-	import { searchMembers } from '#lib/remote/reservations.remote.js';
-	import { grantInstructor } from '#lib/remote/instructors.remote.js';
+	import { grantInstructor, searchMembersToGrant } from '#lib/remote/instructors.remote.js';
 	import { refreshAll } from '$app/navigation';
 
 	/**
@@ -31,7 +30,7 @@
 		<div class="space-y-4">
 			<FormField field={grantInstructor.fields.userId} label={m.staff_member_label()} required>
 				<SearchSelect
-					search={searchMembers}
+					search={searchMembersToGrant}
 					bind:value={member}
 					field={fields.userId}
 					placeholder={m.staff_search_by_name_email_placeholder()}
