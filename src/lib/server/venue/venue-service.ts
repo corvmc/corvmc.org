@@ -53,10 +53,10 @@ export interface VenueInput {
 	contactPhone?: string | null;
 	loadInNotes?: string | null;
 	notes?: string | null;
-	stepFreeEntry?: AccessAnswer;
-	accessibleRestroom?: AccessAnswer;
-	seating?: AccessAnswer;
 }
+
+/** Set on edit only: a new venue starts `unknown` on every question. */
+export type VenueAccessInput = Partial<Record<VenueAccessField, AccessAnswer>>;
 
 export async function createVenue(data: VenueInput): Promise<Venue> {
 	const slug = await ensureUniqueSlug(generateSlug(data.name), venue, venue.slug);
@@ -67,7 +67,10 @@ export async function createVenue(data: VenueInput): Promise<Venue> {
 	return row;
 }
 
-export async function updateVenue(id: string, data: Partial<VenueInput>): Promise<Venue> {
+export async function updateVenue(
+	id: string,
+	data: Partial<VenueInput> & VenueAccessInput
+): Promise<Venue> {
 	const existing = await getVenue(id);
 
 	// Re-slug only when the name actually moved, and exclude the row's own slug

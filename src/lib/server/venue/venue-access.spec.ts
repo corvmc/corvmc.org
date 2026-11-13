@@ -41,14 +41,16 @@ describe('venue access', () => {
 	});
 
 	it('leaves answers alone when an update does not name them', async () => {
-		const row = await svc.createVenue({ name: 'Hall', accessibleRestroom: 'yes' });
+		const row = await svc.createVenue({ name: 'Hall' });
+		await svc.updateVenue(row.id, { accessibleRestroom: 'yes' });
 		await svc.updateVenue(row.id, { name: 'Hall', capacity: 80 });
 
 		expect((await svc.getVenue(row.id)).accessibleRestroom).toBe('yes');
 	});
 
 	it('can move an answer back to unknown', async () => {
-		const row = await svc.createVenue({ name: 'Hall', seating: 'no' });
+		const row = await svc.createVenue({ name: 'Hall' });
+		await svc.updateVenue(row.id, { seating: 'no' });
 		await svc.updateVenue(row.id, { seating: 'unknown' });
 
 		expect(await svc.getVenueAccess(row.id)).toEqual([]);
